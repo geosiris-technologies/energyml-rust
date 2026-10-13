@@ -99,12 +99,19 @@ impl ArraySource for Store {
             .get(&location.path_in_file)
             .ok_or_else(|| energyml_domain::Error::Missing(location.path_in_file.clone()))?;
         Ok(ArrayData {
-            metadata: ArrayMetadata { dimensions: dimensions.clone(), element_type: "f64".to_string() },
+            metadata: ArrayMetadata {
+                dimensions: dimensions.clone(),
+                element_type: "f64".to_string(),
+            },
             values: values.clone(),
         })
     }
 
-    fn read_into(&self, location: &ArrayLocation, _out: &mut ArrayBuffer<'_>) -> energyml_domain::Result<ArrayMetadata> {
+    fn read_into(
+        &self,
+        location: &ArrayLocation,
+        _out: &mut ArrayBuffer<'_>,
+    ) -> energyml_domain::Result<ArrayMetadata> {
         Ok(self.read(location)?.metadata)
     }
 }
@@ -144,16 +151,24 @@ struct Spec {
 }
 
 fn ints(store: &mut Store, path: &str, values: &[i64]) -> eml20::Hdf5Dataset {
-    store.datasets.insert(path.to_string(), (ArrayValues::I64(values.to_vec()), vec![values.len() as i64]));
+    store.datasets.insert(
+        path.to_string(),
+        (ArrayValues::I64(values.to_vec()), vec![values.len() as i64]),
+    );
     dataset(path)
 }
 
 fn bools(store: &mut Store, path: &str, values: &[bool]) -> resqml20::AbstractBooleanArray {
     store.datasets.insert(
         path.to_string(),
-        (ArrayValues::U8(values.iter().map(|v| u8::from(*v)).collect()), vec![values.len() as i64]),
+        (
+            ArrayValues::U8(values.iter().map(|v| u8::from(*v)).collect()),
+            vec![values.len() as i64],
+        ),
     );
-    resqml20::AbstractBooleanArray::BooleanHdf5Array(resqml20::BooleanHdf5Array { values: dataset(path) })
+    resqml20::AbstractBooleanArray::BooleanHdf5Array(resqml20::BooleanHdf5Array {
+        values: dataset(path),
+    })
 }
 
 fn put_grid(store: &mut Store, title: &str, spec: &Spec) {
@@ -178,7 +193,10 @@ fn put_grid(store: &mut Store, title: &str, spec: &Spec) {
             })
             .collect();
         let integer = |values: eml20::Hdf5Dataset| {
-            resqml20::AbstractIntegerArray::IntegerHdf5Array(resqml20::IntegerHdf5Array { null_value: -1, values })
+            resqml20::AbstractIntegerArray::IntegerHdf5Array(resqml20::IntegerHdf5Array {
+                null_value: -1,
+                values,
+            })
         };
         let pillar_values = ints(store, "/split/pillars", &pillars);
         let element_values = ints(store, "/split/elements", &elements);
@@ -187,10 +205,12 @@ fn put_grid(store: &mut Store, title: &str, spec: &Spec) {
             count: spec.splits.len() as u64,
             pillar_indices: Some(integer(pillar_values)),
             columns_per_split_coordinate_line: resqml20::ResqmlJaggedArray {
-                elements: Some(resqml20::AbstractValueArray::IntegerHdf5Array(resqml20::IntegerHdf5Array {
-                    null_value: -1,
-                    values: element_values,
-                })),
+                elements: Some(resqml20::AbstractValueArray::IntegerHdf5Array(
+                    resqml20::IntegerHdf5Array {
+                        null_value: -1,
+                        values: element_values,
+                    },
+                )),
                 cumulative_length: Some(integer(cumulative_values)),
             },
             ..Default::default()
@@ -201,22 +221,31 @@ fn put_grid(store: &mut Store, title: &str, spec: &Spec) {
         count: Some(flags.iter().filter(|g| **g).count() as u64),
         gap_after_layer: Some(bools(store, "/gaps", flags)),
     });
-    let crs_kind = if spec.crs == TIME_CRS { "obj_LocalTime3dCrs" } else { "obj_LocalDepth3dCrs" };
+    let crs_kind = if spec.crs == TIME_CRS {
+        "obj_LocalTime3dCrs"
+    } else {
+        "obj_LocalDepth3dCrs"
+    };
     store.objects.insert(
         GRID.to_string(),
         Held::Grid(Box::new(resqml20::IjkGridRepresentation {
             uuid: GRID.to_string(),
             schema_version: "2.0".into(),
-            citation: eml20::Citation { title: title.to_string(), ..Default::default() },
+            citation: eml20::Citation {
+                title: title.to_string(),
+                ..Default::default()
+            },
             ni: spec.size[0],
             nj: spec.size[1],
             nk: spec.size[2],
             k_gaps,
             geometry: Some(resqml20::IjkGridGeometry {
                 local_crs: dor(spec.crs, crs_kind),
-                points: Some(resqml20::AbstractPoint3dArray::Point3dHdf5Array(resqml20::Point3dHdf5Array {
-                    coordinates: dataset(&path),
-                })),
+                points: Some(resqml20::AbstractPoint3dArray::Point3dHdf5Array(
+                    resqml20::Point3dHdf5Array {
+                        coordinates: dataset(&path),
+                    },
+                )),
                 grid_is_righthanded: true,
                 cell_geometry_is_defined,
                 split_coordinate_lines,
@@ -231,9 +260,9 @@ fn depth_crs() -> resqml20::LocalDepth3dCrs {
     resqml20::LocalDepth3dCrs {
         uuid: CRS_ID.to_string(),
         schema_version: "2.0".into(),
-        projected_crs: Some(eml20::AbstractProjectedCrs::ProjectedCrsEpsgCode(eml20::ProjectedCrsEpsgCode {
-            epsg_code: 2154,
-        })),
+        projected_crs: Some(eml20::AbstractProjectedCrs::ProjectedCrsEpsgCode(
+            eml20::ProjectedCrsEpsgCode { epsg_code: 2154 },
+        )),
         projected_uom: eml20::LengthUom::M,
         vertical_uom: eml20::LengthUom::M,
         // An elevation: z is written as it stands.
@@ -246,9 +275,9 @@ fn time_crs() -> resqml20::LocalTime3dCrs {
     resqml20::LocalTime3dCrs {
         uuid: TIME_CRS.to_string(),
         schema_version: "2.0".into(),
-        projected_crs: Some(eml20::AbstractProjectedCrs::ProjectedCrsEpsgCode(eml20::ProjectedCrsEpsgCode {
-            epsg_code: 2154,
-        })),
+        projected_crs: Some(eml20::AbstractProjectedCrs::ProjectedCrsEpsgCode(
+            eml20::ProjectedCrsEpsgCode { epsg_code: 2154 },
+        )),
         projected_uom: eml20::LengthUom::M,
         vertical_uom: eml20::LengthUom::M,
         time_uom: eml20::TimeUom::Ms,
@@ -275,34 +304,60 @@ fn lattice(ni: usize, nj: usize, dx: f64, dy: f64, z: &[f64]) -> Vec<[f64; 3]> {
 fn store_with(spec: &Spec) -> Store {
     let mut store = Store::default();
     store.objects.insert(CRS_ID.to_string(), Held::Crs(depth_crs()));
-    store.objects.insert(TIME_CRS.to_string(), Held::TimeCrs(time_crs()));
+    store
+        .objects
+        .insert(TIME_CRS.to_string(), Held::TimeCrs(time_crs()));
     put_grid(&mut store, "Sugar cubes", spec);
     store
 }
 
 fn lambert() -> System {
-    System { epsg: 2154, unit: "m".into() }
+    System {
+        epsg: 2154,
+        unit: "m".into(),
+    }
 }
 
 fn long(trace: &[[f64; 2]]) -> SectionTrace {
-    SectionTrace { key: SectionKey::Long, trace: trace.to_vec(), left: 100.0, right: 100.0, crossing: None }
+    SectionTrace {
+        key: SectionKey::Long,
+        trace: trace.to_vec(),
+        left: 100.0,
+        right: 100.0,
+        crossing: None,
+    }
 }
 
 #[allow(clippy::result_large_err)]
 fn read_with(store: &Store, trace: &[[f64; 2]], time_factor: Option<f64>) -> Result<SurfaceRead, Refused> {
-    let scene = Scene { system: Some(&lambert()), time_factor, reprojector: &NoReprojection };
+    let scene = Scene {
+        system: Some(&lambert()),
+        time_factor,
+        reprojector: &NoReprojection,
+    };
     let uri = format!("eml:///resqml20.obj_IjkGridRepresentation({GRID})");
     read_surface(store, "s1", &uri, &[long(trace)], &scene)
 }
 
 /// An envelope's parts: top, bottom, fills, faults, and the cut they came in.
-type EnvelopeParts<'a> = (&'a Spans, &'a Spans, &'a Vec<Vec<[f64; 2]>>, &'a Vec<Vec<[f64; 2]>>, &'a SurfaceCut);
+type EnvelopeParts<'a> = (
+    &'a Spans,
+    &'a Spans,
+    &'a Vec<Vec<[f64; 2]>>,
+    &'a Vec<Vec<[f64; 2]>>,
+    &'a SurfaceCut,
+);
 
 fn envelope(read: &SurfaceRead) -> EnvelopeParts<'_> {
     assert_eq!(read.cuts.len(), 1, "the grid is met by the long section");
     let cut = &read.cuts[0];
     match &cut.shape {
-        CutShape::Envelope { top, bottom, fills, faults } => (top, bottom, fills, faults, cut),
+        CutShape::Envelope {
+            top,
+            bottom,
+            fills,
+            faults,
+        } => (top, bottom, fills, faults, cut),
         other => panic!("a grid is cut as an envelope, not {other:?}"),
     }
 }
@@ -351,10 +406,18 @@ fn a_plain_grid_has_a_roof_a_floor_and_the_rock_between() {
     assert_eq!(bottom.len(), 1);
     assert!(all_z(top, 1000.0) && all_z(bottom, 900.0), "{top:?} {bottom:?}");
     let (first, last) = span_ends(&top[0]);
-    assert!(first[0].abs() < 1e-9 && (last[0] - 400.0).abs() < 1e-9, "from 0 to 400: {:?}", top[0]);
+    assert!(
+        first[0].abs() < 1e-9 && (last[0] - 400.0).abs() < 1e-9,
+        "from 0 to 400: {:?}",
+        top[0]
+    );
     assert!(faults.is_empty(), "a plain grid has no fault: {faults:?}");
     assert_eq!(fills.len(), 1, "two layers with no gap are one run: {fills:?}");
-    assert!((area(&fills[0]) - 400.0 * 100.0).abs() < 1e-6, "400 m by 100 m: {}", area(&fills[0]));
+    assert!(
+        (area(&fills[0]) - 400.0 * 100.0).abs() < 1e-6,
+        "400 m by 100 m: {}",
+        area(&fills[0])
+    );
     assert!(cut.notes.is_empty(), "{:?}", cut.notes);
 }
 
@@ -395,18 +458,38 @@ fn a_fault_cuts_the_roof_and_the_floor_and_its_step_is_a_fault_segment() {
     let (top, bottom, fills, faults, _) = envelope(&read);
 
     assert_eq!(top.len(), 2, "the roof jumps at the fault: {top:?}");
-    assert!(all_z(&vec![top[0].clone()], 1000.0) && all_z(&vec![top[1].clone()], 950.0), "{top:?}");
+    assert!(
+        all_z(&vec![top[0].clone()], 1000.0) && all_z(&vec![top[1].clone()], 950.0),
+        "{top:?}"
+    );
     assert!((span_ends(&top[0]).1[0] - 100.0).abs() < 1e-9 && (span_ends(&top[1]).0[0] - 100.0).abs() < 1e-9);
     assert_eq!(bottom.len(), 2, "so does the floor: {bottom:?}");
-    assert!(all_z(&vec![bottom[0].clone()], 900.0) && all_z(&vec![bottom[1].clone()], 850.0), "{bottom:?}");
+    assert!(
+        all_z(&vec![bottom[0].clone()], 900.0) && all_z(&vec![bottom[1].clone()], 850.0),
+        "{bottom:?}"
+    );
 
-    assert_eq!(faults.len(), 2, "one step on the roof, one on the floor: {faults:?}");
+    assert_eq!(
+        faults.len(),
+        2,
+        "one step on the roof, one on the floor: {faults:?}"
+    );
     for step in faults {
-        assert!((step[0][0] - 100.0).abs() < 1e-9 && (step[1][0] - 100.0).abs() < 1e-9, "at the fault: {step:?}");
-        assert!(((step[0][1] - step[1][1]).abs() - 50.0).abs() < 1e-9, "the 50 m throw: {step:?}");
+        assert!(
+            (step[0][0] - 100.0).abs() < 1e-9 && (step[1][0] - 100.0).abs() < 1e-9,
+            "at the fault: {step:?}"
+        );
+        assert!(
+            ((step[0][1] - step[1][1]).abs() - 50.0).abs() < 1e-9,
+            "the 50 m throw: {step:?}"
+        );
     }
     assert_eq!(fills.len(), 2, "the two sides are not one block: {fills:?}");
-    assert!(fills.iter().all(|polygon| (area(polygon) - 100.0 * 100.0).abs() < 1e-6));
+    assert!(
+        fills
+            .iter()
+            .all(|polygon| (area(polygon) - 100.0 * 100.0).abs() < 1e-6)
+    );
 }
 
 /// A column with **no defined cell** is a hole, not a fault: with the middle
@@ -431,12 +514,25 @@ fn an_undefined_column_interrupts_the_roof_the_floor_and_the_fill() {
 
     assert_eq!(top.len(), 2, "{top:?}");
     assert_eq!(bottom.len(), 2, "{bottom:?}");
-    let spans: Vec<(f64, f64)> = top.iter().map(|s| (span_ends(s).0[0], span_ends(s).1[0])).collect();
-    assert!((spans[0].0).abs() < 1e-9 && (spans[0].1 - 100.0).abs() < 1e-9, "{spans:?}");
-    assert!((spans[1].0 - 200.0).abs() < 1e-9 && (spans[1].1 - 300.0).abs() < 1e-9, "{spans:?}");
+    let spans: Vec<(f64, f64)> = top
+        .iter()
+        .map(|s| (span_ends(s).0[0], span_ends(s).1[0]))
+        .collect();
+    assert!(
+        (spans[0].0).abs() < 1e-9 && (spans[0].1 - 100.0).abs() < 1e-9,
+        "{spans:?}"
+    );
+    assert!(
+        (spans[1].0 - 200.0).abs() < 1e-9 && (spans[1].1 - 300.0).abs() < 1e-9,
+        "{spans:?}"
+    );
     assert!(faults.is_empty(), "a hole is not a fault: {faults:?}");
     assert_eq!(fills.len(), 2, "{fills:?}");
-    assert!(fills.iter().all(|polygon| (area(polygon) - 100.0 * 100.0).abs() < 1e-6));
+    assert!(
+        fills
+            .iter()
+            .all(|polygon| (area(polygon) - 100.0 * 100.0).abs() < 1e-6)
+    );
 }
 
 /// A **K gap** (`KGaps`, *NKL = NK + gapCount + 1*) leaves the rock of the two
@@ -496,7 +592,10 @@ fn a_missed_section_has_no_entry_and_a_grid_in_time_is_carried_by_the_factor() {
     let read = read_with(&store, &[[0.0, 50.0], [100.0, 50.0]], Some(0.5)).unwrap();
     assert!(read.time);
     let (top, bottom, _, _, _) = envelope(&read);
-    assert!(all_z(top, -500.0), "1000 ms is an elevation of -1000, at 0.5: {top:?}");
+    assert!(
+        all_z(top, -500.0),
+        "1000 ms is an elevation of -1000, at 0.5: {top:?}"
+    );
     assert!(all_z(bottom, -550.0), "{bottom:?}");
 }
 
@@ -506,17 +605,31 @@ fn a_missed_section_has_no_entry_and_a_grid_in_time_is_carried_by_the_factor() {
 /// To make it fail: return `Ok` with no cuts when the reading fails.
 #[test]
 fn a_grid_that_cannot_be_read_is_refused_by_name() {
-    let mut store = store_with(&Spec { size: [1, 1, 1], crs: CRS_ID, ..Default::default() });
+    let mut store = store_with(&Spec {
+        size: [1, 1, 1],
+        crs: CRS_ID,
+        ..Default::default()
+    });
     store.objects.insert(
         GRID.to_string(),
         Held::Grid(Box::new(resqml20::IjkGridRepresentation {
             uuid: GRID.to_string(),
-            citation: eml20::Citation { title: "Reservoir grid".into(), ..Default::default() },
+            citation: eml20::Citation {
+                title: "Reservoir grid".into(),
+                ..Default::default()
+            },
             ..Default::default()
         })),
     );
     let refused = read_with(&store, &[[0.0, 50.0], [100.0, 50.0]], None).unwrap_err();
     assert!(refused.reason.contains("Reservoir grid"), "{}", refused.reason);
-    assert!(refused.reason.contains("IjkGridRepresentation"), "{}", refused.reason);
-    assert_eq!(refused.object.qualified_type, "resqml20.obj_IjkGridRepresentation");
+    assert!(
+        refused.reason.contains("IjkGridRepresentation"),
+        "{}",
+        refused.reason
+    );
+    assert_eq!(
+        refused.object.qualified_type,
+        "resqml20.obj_IjkGridRepresentation"
+    );
 }

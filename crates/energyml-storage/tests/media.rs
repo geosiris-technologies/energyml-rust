@@ -54,26 +54,34 @@ fn feature(uuid: &str, title: &str) -> Box<dyn energyml_core::registry::DynObjec
                           "Creation": "2026-09-25T00:00:00Z", "Format": "energyml-rust"}},
             "IsWellKnown": false}}"#
     );
-    energyml_core::json::read_string(&json, &registry()).expect("the feature reads").root
+    energyml_core::json::read_string(&json, &registry())
+        .expect("the feature reads")
+        .root
 }
 
 /// A fresh package holding two features.
 fn store() -> EpcStore {
     let bytes = empty_package(Some(1_790_000_000)).expect("an empty package");
-    let mut store = EpcStore::from_reader(Box::new(Cursor::new(bytes)), "media.epc", registry()).expect("it opens");
-    store.put(feature(FEATURE, "shown")).expect("the first feature goes in");
+    let mut store =
+        EpcStore::from_reader(Box::new(Cursor::new(bytes)), "media.epc", registry()).expect("it opens");
+    store
+        .put(feature(FEATURE, "shown"))
+        .expect("the first feature goes in");
     store.put(feature(OTHER, "not shown")).expect("the second too");
     store
 }
 
 fn write(store: &EpcStore) -> (Vec<u8>, Vec<energyml_storage::Diagnostic>) {
     let mut out = Cursor::new(Vec::new());
-    let said = store.write_to(&mut out, &SaveOptions::default()).expect("the package writes");
+    let said = store
+        .write_to(&mut out, &SaveOptions::default())
+        .expect("the package writes");
     (out.into_inner(), said)
 }
 
 fn reopen(bytes: &[u8]) -> EpcStore {
-    EpcStore::from_reader(Box::new(Cursor::new(bytes.to_vec())), "again.epc", registry()).expect("it reads back")
+    EpcStore::from_reader(Box::new(Cursor::new(bytes.to_vec())), "again.epc", registry())
+        .expect("it reads back")
 }
 
 // ------------------------------------------------------------- independent read
@@ -98,7 +106,9 @@ fn elements(xml: &[u8], name: &str) -> Vec<BTreeMap<String, String>> {
     let mut out = Vec::new();
     loop {
         match reader.read_event_into(&mut buffer).expect("well-formed XML") {
-            Event::Start(element) | Event::Empty(element) if element.local_name().as_ref() == name.as_bytes() => {
+            Event::Start(element) | Event::Empty(element)
+                if element.local_name().as_ref() == name.as_bytes() =>
+            {
                 out.push(
                     element
                         .attributes()
@@ -106,7 +116,9 @@ fn elements(xml: &[u8], name: &str) -> Vec<BTreeMap<String, String>> {
                             let attribute = attribute.expect("an attribute");
                             (
                                 String::from_utf8_lossy(attribute.key.local_name().as_ref()).into_owned(),
-                                quick_xml::escape::unescape(&String::from_utf8_lossy(&attribute.value)).expect("a value").into_owned(),
+                                quick_xml::escape::unescape(&String::from_utf8_lossy(&attribute.value))
+                                    .expect("a value")
+                                    .into_owned(),
                             )
                         })
                         .collect(),
@@ -154,7 +166,10 @@ fn relationships(archive: &BTreeMap<String, Vec<u8>>, rels: &str) -> Vec<(String
 fn declared_type(archive: &BTreeMap<String, Vec<u8>>, part: &str) -> Option<String> {
     let index = archive.get("[Content_Types].xml").expect("the index is there");
     let wanted = format!("/{part}");
-    if let Some(one) = elements(index, "Override").into_iter().find(|one| one.get("PartName") == Some(&wanted)) {
+    if let Some(one) = elements(index, "Override")
+        .into_iter()
+        .find(|one| one.get("PartName") == Some(&wanted))
+    {
         return one.get("ContentType").cloned();
     }
     let extension = part.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase())?;
@@ -192,8 +207,12 @@ fn a_media_part_is_written_typed_and_related_both_ways() {
     store
         .set_attachment("media/fiche-GTH-1.pdf", binary(), Some("application/pdf".into()))
         .expect("a PDF goes in");
-    store.relate_media(FEATURE, "media/README.md").expect("the README shows the feature");
-    store.relate_media(FEATURE, "media/fiche-GTH-1.pdf").expect("the PDF too");
+    store
+        .relate_media(FEATURE, "media/README.md")
+        .expect("the README shows the feature");
+    store
+        .relate_media(FEATURE, "media/fiche-GTH-1.pdf")
+        .expect("the PDF too");
 
     let (bytes, said) = write(&store);
     assert!(
@@ -206,21 +225,34 @@ fn a_media_part_is_written_typed_and_related_both_ways() {
     assert_eq!(archive.get("media/README.md").map(Vec::as_slice), Some(README));
     assert_eq!(archive.get("media/fiche-GTH-1.pdf"), Some(&binary()));
     // The type the caller stated, not one guessed from the extension.
-    assert_eq!(declared_type(&archive, "media/README.md").as_deref(), Some("text/markdown"));
-    assert_eq!(declared_type(&archive, "media/fiche-GTH-1.pdf").as_deref(), Some("application/pdf"));
+    assert_eq!(
+        declared_type(&archive, "media/README.md").as_deref(),
+        Some("text/markdown")
+    );
+    assert_eq!(
+        declared_type(&archive, "media/fiche-GTH-1.pdf").as_deref(),
+        Some("application/pdf")
+    );
     // Both ways, for both.
     assert_related(&archive, FEATURE, "media/README.md");
     assert_related(&archive, FEATURE, "media/fiche-GTH-1.pdf");
     // And the other feature shows nothing.
     let other = part_of(&archive, OTHER);
     assert!(
-        relationships(&archive, &format!("_rels/{other}.rels")).iter().all(|(kind, ..)| !kind.ends_with("Media")),
+        relationships(&archive, &format!("_rels/{other}.rels"))
+            .iter()
+            .all(|(kind, ..)| !kind.ends_with("Media")),
         "a media relation landed on an object nobody related"
     );
 
     // The store reads the same thing back.
     let again = reopen(&bytes);
-    assert_eq!(again.read_attachment("media/fiche-GTH-1.pdf").expect("the PDF reads"), binary());
+    assert_eq!(
+        again
+            .read_attachment("media/fiche-GTH-1.pdf")
+            .expect("the PDF reads"),
+        binary()
+    );
     let mut shown = again.media_of(FEATURE).expect("a uuid");
     shown.sort();
     assert_eq!(shown, ["media/README.md", "media/fiche-GTH-1.pdf"]);
@@ -234,15 +266,23 @@ fn a_rewrite_keeps_the_relations_the_archive_held() {
     // was lost at the next one. Written, reopened with nothing changed, written
     // again: the second package still says it.
     let mut store = store();
-    store.set_attachment("media/README.md", README.to_vec(), Some("text/markdown".into())).unwrap();
+    store
+        .set_attachment("media/README.md", README.to_vec(), Some("text/markdown".into()))
+        .unwrap();
     store.relate_media(FEATURE, "media/README.md").unwrap();
     let (first, _) = write(&store);
 
     let (second, said) = write(&reopen(&first));
-    assert!(said.iter().all(|one| one.severity < Severity::Warning), "{said:?}");
+    assert!(
+        said.iter().all(|one| one.severity < Severity::Warning),
+        "{said:?}"
+    );
     let archive = entries(&second);
     assert_related(&archive, FEATURE, "media/README.md");
-    assert_eq!(declared_type(&archive, "media/README.md").as_deref(), Some("text/markdown"));
+    assert_eq!(
+        declared_type(&archive, "media/README.md").as_deref(),
+        Some("text/markdown")
+    );
 }
 
 #[test]
@@ -251,7 +291,9 @@ fn a_relation_read_from_either_end_is_the_same_relation() {
     // non-XML part's `.rels` optional. Here the part's side is removed from the
     // archive by hand, and the object's alone must still be read as the link.
     let mut store = store();
-    store.set_attachment("media/README.md", README.to_vec(), Some("text/markdown".into())).unwrap();
+    store
+        .set_attachment("media/README.md", README.to_vec(), Some("text/markdown".into()))
+        .unwrap();
     store.relate_media(FEATURE, "media/README.md").unwrap();
     let (bytes, _) = write(&store);
 
@@ -260,11 +302,15 @@ fn a_relation_read_from_either_end_is_the_same_relation() {
         if name == "media/_rels/README.md.rels" {
             continue;
         }
-        out.start_file(name, zip::write::SimpleFileOptions::default()).unwrap();
+        out.start_file(name, zip::write::SimpleFileOptions::default())
+            .unwrap();
         std::io::Write::write_all(&mut out, &content).unwrap();
     }
     let one_way = out.finish().unwrap().into_inner();
-    assert!(!entries(&one_way).contains_key("media/_rels/README.md.rels"), "the part's side is gone");
+    assert!(
+        !entries(&one_way).contains_key("media/_rels/README.md.rels"),
+        "the part's side is gone"
+    );
 
     let again = reopen(&one_way);
     assert_eq!(again.media_of(FEATURE).unwrap(), ["media/README.md"]);
@@ -278,44 +324,77 @@ fn what_the_specification_forbids_is_refused_by_name() {
     let refused = |result: energyml_storage::Result<()>| result.expect_err("it was accepted").to_string();
 
     // Not a media type (RFC 2616 §3.7, EPC §2.2.1 p. 9, §3.3 p. 14).
-    assert!(refused(store.set_attachment("media/a.md", b"x".to_vec(), Some("markdown".into()))).contains("type/subtype"));
+    assert!(
+        refused(store.set_attachment("media/a.md", b"x".to_vec(), Some("markdown".into())))
+            .contains("type/subtype")
+    );
     // The package's own names (§2.2.1, §2.2.2 p. 9).
     assert!(refused(store.set_attachment("media/_rels/a.md", b"x".to_vec(), None)).contains("_rels"));
     // A folder EPC v1.1 §3.6 keeps for data objects.
-    assert!(refused(store.set_attachment("namespace_resqml22/a.pdf", b"x".to_vec(), None)).contains("namespace_"));
+    assert!(
+        refused(store.set_attachment("namespace_resqml22/a.pdf", b"x".to_vec(), None)).contains("namespace_")
+    );
     // OPC part names.
     assert!(refused(store.set_attachment("media/../a.pdf", b"x".to_vec(), None)).contains(".."));
     // One part twice, as OPC compares names.
-    store.set_attachment("media/README.md", README.to_vec(), Some("text/markdown".into())).unwrap();
-    assert!(refused(store.set_attachment("media/readme.md", README.to_vec(), None)).contains("differ only by case"));
+    store
+        .set_attachment("media/README.md", README.to_vec(), Some("text/markdown".into()))
+        .unwrap();
+    assert!(
+        refused(store.set_attachment("media/readme.md", README.to_vec(), None))
+            .contains("differ only by case")
+    );
     // Replacing the same name is not a clash.
-    store.set_attachment("media/README.md", README.to_vec(), Some("text/markdown".into())).expect("a replacement");
+    store
+        .set_attachment("media/README.md", README.to_vec(), Some("text/markdown".into()))
+        .expect("a replacement");
 
     // A relation needs both ends in the package.
-    assert!(store.relate_media("00000000-0000-4000-8000-000000000000", "media/README.md").is_err());
+    assert!(
+        store
+            .relate_media("00000000-0000-4000-8000-000000000000", "media/README.md")
+            .is_err()
+    );
     let missing = refused(store.relate_media(FEATURE, "media/absent.pdf"));
     assert!(missing.contains("not a file of this package"), "{missing}");
     // An object's own part is not a media representation of anything.
-    let object_part = store.find_by_uuid(OTHER).expect("the other feature").locator.clone();
+    let object_part = store
+        .find_by_uuid(OTHER)
+        .expect("the other feature")
+        .locator
+        .clone();
     assert!(refused(store.relate_media(FEATURE, &object_part)).contains("not a file of this package"));
 }
 
 #[test]
 fn a_rollback_undoes_a_relation() {
     let mut store = store();
-    store.set_attachment("media/README.md", README.to_vec(), Some("text/markdown".into())).unwrap();
+    store
+        .set_attachment("media/README.md", README.to_vec(), Some("text/markdown".into()))
+        .unwrap();
     store.start_transaction().unwrap();
     store.relate_media(FEATURE, "media/README.md").unwrap();
-    assert_eq!(store.media_of(FEATURE).unwrap(), ["media/README.md"], "inside the transaction it holds");
+    assert_eq!(
+        store.media_of(FEATURE).unwrap(),
+        ["media/README.md"],
+        "inside the transaction it holds"
+    );
     store.rollback_transaction().unwrap();
-    assert!(store.media_of(FEATURE).unwrap().is_empty(), "the rollback left the relation behind");
+    assert!(
+        store.media_of(FEATURE).unwrap().is_empty(),
+        "the rollback left the relation behind"
+    );
 }
 
 #[test]
 fn a_part_removed_takes_its_relations_and_an_object_removed_is_said() {
     let mut store = store();
-    store.set_attachment("media/README.md", README.to_vec(), Some("text/markdown".into())).unwrap();
-    store.set_attachment("media/fiche-GTH-1.pdf", binary(), Some("application/pdf".into())).unwrap();
+    store
+        .set_attachment("media/README.md", README.to_vec(), Some("text/markdown".into()))
+        .unwrap();
+    store
+        .set_attachment("media/fiche-GTH-1.pdf", binary(), Some("application/pdf".into()))
+        .unwrap();
     store.relate_media(FEATURE, "media/README.md").unwrap();
     store.relate_media(OTHER, "media/fiche-GTH-1.pdf").unwrap();
 
@@ -324,19 +403,30 @@ fn a_part_removed_takes_its_relations_and_an_object_removed_is_said() {
     // Removing the object leaves a relation to nothing: named, not written.
     store.remove(OTHER).unwrap();
     let (bytes, said) = write(&store);
-    let warned: Vec<&str> =
-        said.iter().filter(|one| one.severity >= Severity::Warning).map(|one| one.message.as_str()).collect();
+    let warned: Vec<&str> = said
+        .iter()
+        .filter(|one| one.severity >= Severity::Warning)
+        .map(|one| one.message.as_str())
+        .collect();
     assert_eq!(warned.len(), 1, "{warned:?}");
     assert!(warned[0].contains(OTHER), "{warned:?}");
 
     let archive = entries(&bytes);
     assert!(!archive.contains_key("media/README.md"));
-    assert!(archive.contains_key("media/fiche-GTH-1.pdf"), "the PDF is still a file of the package");
+    assert!(
+        archive.contains_key("media/fiche-GTH-1.pdf"),
+        "the PDF is still a file of the package"
+    );
     let dangling = relationships(&archive, "media/_rels/fiche-GTH-1.pdf.rels");
-    assert!(dangling.is_empty(), "a relation to a removed object was written: {dangling:?}");
+    assert!(
+        dangling.is_empty(),
+        "a relation to a removed object was written: {dangling:?}"
+    );
     let feature = part_of(&archive, FEATURE);
     assert!(
-        relationships(&archive, &format!("_rels/{feature}.rels")).iter().all(|(kind, ..)| !kind.ends_with("Media")),
+        relationships(&archive, &format!("_rels/{feature}.rels"))
+            .iter()
+            .all(|(kind, ..)| !kind.ends_with("Media")),
         "the removed README is still related"
     );
 }

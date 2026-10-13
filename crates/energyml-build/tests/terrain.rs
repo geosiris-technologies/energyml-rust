@@ -24,7 +24,10 @@ use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::Topology;
 
 fn when() -> When {
-    When { creation: "2026-10-01T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-10-01T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 const SOURCE: &str = "ign-rge-alti";
@@ -39,8 +42,23 @@ const STEPS: [f64; 2] = [25.0, 12.5];
 
 /// 4 × 3 nodes, `z[j·4 + i] = 100 + i + 10 j`, the node `(2, 1)` a hole.
 fn dem() -> Lattice {
-    let z = (0..3).flat_map(|j| (0..4).map(move |i| if (i, j) == (2, 1) { f64::NAN } else { 100.0 + i as f64 + 10.0 * j as f64 })).collect();
-    Lattice { origin: ORIGIN, spacing: STEPS, counts: [4, 3], z }
+    let z = (0..3)
+        .flat_map(|j| {
+            (0..4).map(move |i| {
+                if (i, j) == (2, 1) {
+                    f64::NAN
+                } else {
+                    100.0 + i as f64 + 10.0 * j as f64
+                }
+            })
+        })
+        .collect();
+    Lattice {
+        origin: ORIGIN,
+        spacing: STEPS,
+        counts: [4, 3],
+        z,
+    }
 }
 
 fn bag(lattice: Lattice) -> Pieces {
@@ -62,11 +80,16 @@ fn answers() -> Choices {
 }
 
 fn plan(bag: &Pieces, choices: &Choices) -> Result<Plan, String> {
-    Registry::new().plan("terrain", bag, choices, &Identity::derived(), &when()).map_err(|why| why.message())
+    Registry::new()
+        .plan("terrain", bag, choices, &Identity::derived(), &when())
+        .map_err(|why| why.message())
 }
 
 fn grid_of(plan: &Plan) -> &energyml_build::operation::NewObject {
-    plan.objects.iter().find(|one| one.qualified_type == "resqml22.Grid2dRepresentation").expect("a Grid2dRepresentation")
+    plan.objects
+        .iter()
+        .find(|one| one.qualified_type == "resqml22.Grid2dRepresentation")
+        .expect("a Grid2dRepresentation")
 }
 
 fn text_of(plan: &Plan, title: &str) -> Option<String> {
@@ -92,7 +115,11 @@ fn number_of(plan: &Plan, title: &str) -> Option<f64> {
 #[test]
 fn a_dem_is_written_as_it_came() {
     let made = plan(&bag(dem()), &answers()).unwrap_or_else(|why| panic!("{why}"));
-    let grids = made.objects.iter().filter(|one| one.qualified_type == "resqml22.Grid2dRepresentation").count();
+    let grids = made
+        .objects
+        .iter()
+        .filter(|one| one.qualified_type == "resqml22.Grid2dRepresentation")
+        .count();
     assert_eq!(grids, 1, "one grid per plan");
 
     let json = &grid_of(&made).json;
@@ -109,17 +136,28 @@ fn a_dem_is_written_as_it_came() {
 
     let dataset = &made.datasets[0];
     assert_eq!(dataset.dimensions, vec![3, 4], "the array is [nj, ni]");
-    let Numbers::F64(values) = &dataset.values else { panic!("heights are floats") };
+    let Numbers::F64(values) = &dataset.values else {
+        panic!("heights are floats")
+    };
     let want = dem().z;
     assert_eq!(values.len(), want.len());
     for (at, (got, want)) in values.iter().zip(&want).enumerate() {
-        assert!(got == want || (got.is_nan() && want.is_nan()), "node {at}: {got} for {want}");
+        assert!(
+            got == want || (got.is_nan() && want.is_nan()),
+            "node {at}: {got} for {want}"
+        );
     }
     assert!(values[6].is_nan(), "the hole stays where it was");
 
     // The computed shape agrees with the lattice, point by point.
     let patch = &made.shapes[0].geometry.patches[0];
-    assert_eq!(patch.topology, Topology::Grid { fastest: 4, slowest: 3 });
+    assert_eq!(
+        patch.topology,
+        Topology::Grid {
+            fastest: 4,
+            slowest: 3
+        }
+    );
     assert_eq!(patch.points.len(), 12);
     assert_eq!(patch.points[0][..2], ORIGIN);
     assert_eq!(patch.points[1][0] - patch.points[0][0], STEPS[0]);
@@ -144,7 +182,12 @@ fn the_activity_says_where_the_heights_come_from() {
     assert_eq!(text_of(&made, "fetched").as_deref(), Some(FETCHED));
     // Once each: the registry does not write again what the operation wrote.
     for title in ["source", "licence", "fetched"] {
-        let times = made.activity.parameters.iter().filter(|p| matches!(p, Parameter::Text { title: t, .. } if t == title)).count();
+        let times = made
+            .activity
+            .parameters
+            .iter()
+            .filter(|p| matches!(p, Parameter::Text { title: t, .. } if t == title))
+            .count();
         assert_eq!(times, 1, "`{title}` is recorded once");
     }
     assert_eq!(number_of(&made, "originX"), Some(ORIGIN[0]));
@@ -164,12 +207,30 @@ fn the_activity_says_where_the_heights_come_from() {
 #[test]
 fn the_licence_travels_with_the_data() {
     let made = plan(&bag(dem()), &answers()).unwrap_or_else(|why| panic!("{why}"));
-    let note = made.says.iter().find(|note| note.key == "source").expect("a note naming the source");
-    assert!(note.detail.contains(SOURCE) && note.detail.contains(LICENCE) && note.detail.contains(ATTRIBUTION), "{}", note.detail);
-    assert_eq!(made.says.first().map(|note| note.key), Some("source"), "the attribution comes first");
+    let note = made
+        .says
+        .iter()
+        .find(|note| note.key == "source")
+        .expect("a note naming the source");
+    assert!(
+        note.detail.contains(SOURCE) && note.detail.contains(LICENCE) && note.detail.contains(ATTRIBUTION),
+        "{}",
+        note.detail
+    );
+    assert_eq!(
+        made.says.first().map(|note| note.key),
+        Some("source"),
+        "the attribution comes first"
+    );
 
-    let description = grid_of(&made).json["Citation"]["Description"].as_str().expect("a description").to_string();
-    assert!(description.contains(LICENCE) && description.contains(ATTRIBUTION) && description.contains(SOURCE), "{description}");
+    let description = grid_of(&made).json["Citation"]["Description"]
+        .as_str()
+        .expect("a description")
+        .to_string();
+    assert!(
+        description.contains(LICENCE) && description.contains(ATTRIBUTION) && description.contains(SOURCE),
+        "{description}"
+    );
     assert_eq!(grid_of(&made).json["Citation"]["Title"], "MNT test");
 }
 
@@ -181,7 +242,10 @@ fn the_title_comes_from_the_source() {
     // The suggestion is the piece's name; `plan` replaces it by the source's.
     let choices = answers().set("title", "lattice");
     let made = plan(&bag(dem()), &choices).unwrap_or_else(|why| panic!("{why}"));
-    assert_eq!(grid_of(&made).json["Citation"]["Title"], format!("MNT — {SOURCE}"));
+    assert_eq!(
+        grid_of(&made).json["Citation"]["Title"],
+        format!("MNT — {SOURCE}")
+    );
 }
 
 /// **A DEM with no value is not a surface**, and a point or a line is not one
@@ -198,10 +262,20 @@ fn a_dem_without_value_or_without_surface_is_refused() {
     let why = plan(&bag(empty), &answers()).expect_err("no value anywhere");
     assert!(why.contains("a DEM with no value is not a surface"), "{why}");
 
-    let one_column = Lattice { origin: ORIGIN, spacing: STEPS, counts: [1, 5], z: vec![1.0, 2.0, 3.0, 4.0, 5.0] };
+    let one_column = Lattice {
+        origin: ORIGIN,
+        spacing: STEPS,
+        counts: [1, 5],
+        z: vec![1.0, 2.0, 3.0, 4.0, 5.0],
+    };
     let why = plan(&bag(one_column), &answers()).expect_err("one column");
     assert!(why.contains("a terrain is a surface"), "{why}");
-    let one_row = Lattice { origin: ORIGIN, spacing: STEPS, counts: [5, 1], z: vec![1.0, 2.0, 3.0, 4.0, 5.0] };
+    let one_row = Lattice {
+        origin: ORIGIN,
+        spacing: STEPS,
+        counts: [5, 1],
+        z: vec![1.0, 2.0, 3.0, 4.0, 5.0],
+    };
     let why = plan(&bag(one_row), &answers()).expect_err("one row");
     assert!(why.contains("a terrain is a surface"), "{why}");
 
@@ -219,7 +293,10 @@ fn a_dem_without_value_or_without_surface_is_refused() {
 fn a_mute_source_is_refused_by_name() {
     for slot in ["source", "service", "layer", "licence", "attribution", "fetched"] {
         let why = plan(&bag(dem()), &answers().set(slot, "  ")).expect_err(slot);
-        assert!(why.contains(&format!("`{slot}`")) && why.contains("is empty"), "{slot}: {why}");
+        assert!(
+            why.contains(&format!("`{slot}`")) && why.contains("is empty"),
+            "{slot}: {why}"
+        );
     }
     let why = plan(&bag(dem()), &answers().set("fetched", "yesterday")).expect_err("not a date");
     assert!(why.contains("`fetched`") && why.contains("ISO 8601"), "{why}");
@@ -239,14 +316,28 @@ fn identity_comes_from_the_content() {
     let again = plan(&bag(dem()), &answers()).unwrap_or_else(|why| panic!("{why}"));
     assert_eq!(grid_of(&first).uuid, grid_of(&again).uuid);
 
-    let later = plan(&bag(dem()), &answers().set("fetched", "2026-11-15T10:00:00Z")).unwrap_or_else(|why| panic!("{why}"));
-    assert_eq!(grid_of(&first).uuid, grid_of(&later).uuid, "a refetch is the same terrain");
+    let later = plan(&bag(dem()), &answers().set("fetched", "2026-11-15T10:00:00Z"))
+        .unwrap_or_else(|why| panic!("{why}"));
+    assert_eq!(
+        grid_of(&first).uuid,
+        grid_of(&later).uuid,
+        "a refetch is the same terrain"
+    );
 
-    let other = plan(&bag(dem()), &answers().set("source", "swisstopo-alti3d")).unwrap_or_else(|why| panic!("{why}"));
-    assert_ne!(grid_of(&first).uuid, grid_of(&other).uuid, "another source is another terrain");
+    let other =
+        plan(&bag(dem()), &answers().set("source", "swisstopo-alti3d")).unwrap_or_else(|why| panic!("{why}"));
+    assert_ne!(
+        grid_of(&first).uuid,
+        grid_of(&other).uuid,
+        "another source is another terrain"
+    );
 
     let mut shifted = dem();
     shifted.origin = [ORIGIN[0] + 25.0, ORIGIN[1]];
     let moved = plan(&bag(shifted), &answers()).unwrap_or_else(|why| panic!("{why}"));
-    assert_ne!(grid_of(&first).uuid, grid_of(&moved).uuid, "the same source on another tile is another terrain");
+    assert_ne!(
+        grid_of(&first).uuid,
+        grid_of(&moved).uuid,
+        "the same source on another tile is another terrain"
+    );
 }

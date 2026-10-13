@@ -118,7 +118,10 @@ use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 use crate::declare::{Choice, Inputs, Params, Shape, Suggestions, known_of};
-use crate::operation::{About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Note, Numbers, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Note, Numbers, Operation, Plan,
+    Refusal, Slot,
+};
 use crate::pieces::Pieces;
 
 use super::support;
@@ -172,17 +175,31 @@ pub struct IjkGridInputs {
 
 /// A count, as the activity records it.
 fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double { title: title.to_string(), value, uom: None }
+    Parameter::Double {
+        title: title.to_string(),
+        value,
+        uom: None,
+    }
 }
 
 /// The title the object behind a shape carries, or the shape's name.
 fn title_of(shape: &Shape) -> String {
-    shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.title.clone()).unwrap_or_else(|| shape.name.clone())
+    shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|r| r.title.clone())
+        .unwrap_or_else(|| shape.name.clone())
 }
 
 /// The key a horizon enters the seed by: its uuid, or its name in the bag.
 fn key_of(shape: &Shape) -> String {
-    shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.uuid.clone()).unwrap_or_else(|| shape.name.clone())
+    shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|r| r.uuid.clone())
+        .unwrap_or_else(|| shape.name.clone())
 }
 
 /// The counts of a horizon — `[ni, nj]` — or why it is none a pillar stands on.
@@ -202,7 +219,13 @@ fn grid_counts(shape: &Shape) -> Result<[usize; 2], String> {
     };
     let counts = [*fastest, *slowest];
     if patch.points.len() != counts[0] * counts[1] {
-        return Err(format!("`{}` declares {} × {} nodes and holds {}", title_of(shape), counts[0], counts[1], patch.points.len()));
+        return Err(format!(
+            "`{}` declares {} × {} nodes and holds {}",
+            title_of(shape),
+            counts[0],
+            counts[1],
+            patch.points.len()
+        ));
     }
     Ok(counts)
 }
@@ -241,14 +264,19 @@ fn one_lattice(horizons: &[Shape]) -> Result<analysis::Lattice, Refusal> {
             ));
         }
     }
-    first.map(|(lattice, _)| lattice).ok_or_else(|| Refusal::on("horizons", "holds no horizon"))
+    first
+        .map(|(lattice, _)| lattice)
+        .ok_or_else(|| Refusal::on("horizons", "holds no horizon"))
 }
 
 /// A boolean array: a constant when every flag is true, an external array of
 /// 0/1 otherwise — and the dataset it needs.
 fn flags(flags: &[bool], file: &str, path: String, dimensions: Vec<i64>) -> (Value, Option<Dataset>) {
     if flags.iter().all(|flag| *flag) {
-        return (json!({ "$type": "eml23.BooleanConstantArray", "Value": true, "Count": flags.len() }), None);
+        return (
+            json!({ "$type": "eml23.BooleanConstantArray", "Value": true, "Count": flags.len() }),
+            None,
+        );
     }
     let array = json!({
         "$type": "eml23.BooleanExternalArray",
@@ -311,7 +339,9 @@ pub(super) fn suggest_grid(bag: &Pieces, slots: &mut Suggestions<'_>) {
             slot.from = None;
         }
     }
-    let Some(known) = known_of(bag, "horizons") else { return };
+    let Some(known) = known_of(bag, "horizons") else {
+        return;
+    };
     if let Some(crs) = &known.crs {
         slots.inferred("crs", crs.dor(), crs.clone());
     }
@@ -329,16 +359,38 @@ pub(super) fn check_horizons(horizons: &[Shape]) -> Result<(), Refusal> {
 
 /// The counts every grid between horizons reports.
 pub(super) fn grid_reports() -> Vec<Slot> {
-    let count = |name: &'static str, about: &'static str| Slot::required(name, Need::Number { uom: None, least: None, most: None }, about);
+    let count = |name: &'static str, about: &'static str| {
+        Slot::required(
+            name,
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
+            about,
+        )
+    };
     vec![
         count("ni", "cells along I, along x"),
         count("nj", "cells along J, along y"),
         count("nk", "layers"),
         count("gapCount", "K gaps — zones of no layer"),
-        count("holeCount", "horizon nodes on the pillars with no height, written as NaN"),
-        count("undefinedCellCount", "cells with a corner of no height — CellGeometryIsDefined false"),
-        count("crossedCount", "pillar nodes where a horizon lay above the one over it — pinched when asked, refused otherwise"),
-        count("zeroThicknessCount", "pillar nodes where a zone has zero thickness"),
+        count(
+            "holeCount",
+            "horizon nodes on the pillars with no height, written as NaN",
+        ),
+        count(
+            "undefinedCellCount",
+            "cells with a corner of no height — CellGeometryIsDefined false",
+        ),
+        count(
+            "crossedCount",
+            "pillar nodes where a horizon lay above the one over it — pinched when asked, refused otherwise",
+        ),
+        count(
+            "zeroThicknessCount",
+            "pillar nodes where a zone has zero thickness",
+        ),
     ]
 }
 
@@ -354,7 +406,8 @@ pub(super) struct Cut {
 
 /// The cut, given the stacked grid, the pillars' `(x, y)` and the unit the
 /// heights are counted in (`None` when nothing states it).
-pub(super) type Cutter<'a> = Box<dyn FnOnce(&analysis::Stacked, &[[f64; 2]], Option<&str>) -> Result<Cut, Refusal> + 'a>;
+pub(super) type Cutter<'a> =
+    Box<dyn FnOnce(&analysis::Stacked, &[[f64; 2]], Option<&str>) -> Result<Cut, Refusal> + 'a>;
 
 /// What `faulted-ijk-grid` adds to a grid between horizons: the name its
 /// activity goes by, what enters the seed beyond the grid's own, and the cut.
@@ -370,7 +423,12 @@ pub(super) struct Faulting<'a> {
 /// The grid between `horizons`, cut by faults when `faulting` is given — the
 /// one writer of an `IjkGridRepresentation` between horizons (an operation
 /// that writes the same object as another delegates to it).
-pub(super) fn between(horizons: Vec<Shape>, params: IjkGridParams, cx: &Context<'_>, faulting: Option<Faulting<'_>>) -> Result<Plan, Refusal> {
+pub(super) fn between(
+    horizons: Vec<Shape>,
+    params: IjkGridParams,
+    cx: &Context<'_>,
+    faulting: Option<Faulting<'_>>,
+) -> Result<Plan, Refusal> {
     let lattice = one_lattice(&horizons)?;
 
     // -- one frame, the horizons' ------------------------------------------------
@@ -397,14 +455,23 @@ pub(super) fn between(horizons: Vec<Shape>, params: IjkGridParams, cx: &Context<
         {
             return Err(Refusal::new(
                 "units",
-                format!("`{}` counts its heights in `{a}` and `{}` in `{b}` — one unit, or no grid", title_of(&horizons[0]), title_of(shape)),
+                format!(
+                    "`{}` counts its heights in `{a}` and `{}` in `{b}` — one unit, or no grid",
+                    title_of(&horizons[0]),
+                    title_of(shape)
+                ),
             ));
         }
     }
     if let Some(frame) = &first_frame {
         match (&params.written.frame.crs, params.written.frame.source_epsg) {
             (Some(named), _) => {
-                let uuid = named.0.get("Uuid").and_then(|v| v.as_str()).or_else(|| named.0.as_str()).unwrap_or_default();
+                let uuid = named
+                    .0
+                    .get("Uuid")
+                    .and_then(|v| v.as_str())
+                    .or_else(|| named.0.as_str())
+                    .unwrap_or_default();
                 if !uuid.eq_ignore_ascii_case(&frame.uuid) {
                     return Err(Refusal::on(
                         "crs",
@@ -437,7 +504,10 @@ pub(super) fn between(horizons: Vec<Shape>, params: IjkGridParams, cx: &Context<
         Crossing::Refuse => analysis::Crossing::Refuse,
         Crossing::Pinch => analysis::Crossing::Pinch,
     };
-    let heights: Vec<Vec<f64>> = horizons.iter().map(|shape| shape.geometry.patches[0].points.iter().map(|p| p[2]).collect()).collect();
+    let heights: Vec<Vec<f64>> = horizons
+        .iter()
+        .map(|shape| shape.geometry.patches[0].points.iter().map(|p| p[2]).collect())
+        .collect();
     cx.stop_if_cancelled()?;
     let built = analysis::stack(&Request {
         heights: &heights,
@@ -475,12 +545,24 @@ pub(super) fn between(horizons: Vec<Shape>, params: IjkGridParams, cx: &Context<
     let title = written.naming.title();
     let keys: Vec<String> = horizons.iter().map(key_of).collect();
     let layers: Vec<String> = params.layers.iter().map(|n| n.to_string()).collect();
-    let grid_seed = format!("{}:{}:{}:{}", keys.join("|"), layers.join(","), params.coarsening, params.crossing.word());
+    let grid_seed = format!(
+        "{}:{}:{}:{}",
+        keys.join("|"),
+        layers.join(","),
+        params.coarsening,
+        params.crossing.word()
+    );
     // The seed of the grid between horizons is what it was before any fault:
     // its uuid does not move. A cut grid is another grid, named by its cut.
     let (recipe, seed, cutter) = match faulting {
-        None => ("ijk-grid-from-horizons", format!("ijk-grid-from-horizons:{grid_seed}:{title}"), None),
-        Some(Faulting { recipe, seed, cut }) => (recipe, format!("{recipe}:{grid_seed}:{seed}:{title}"), Some(cut)),
+        None => (
+            "ijk-grid-from-horizons",
+            format!("ijk-grid-from-horizons:{grid_seed}:{title}"),
+            None,
+        ),
+        Some(Faulting { recipe, seed, cut }) => {
+            (recipe, format!("{recipe}:{grid_seed}:{seed}:{title}"), Some(cut))
+        }
     };
     let mut rank = 0usize;
     let frame = support::frame_in(&cx.known(), &written.frame, cx.identity, cx.when, &mut rank)?;
@@ -497,7 +579,9 @@ pub(super) fn between(horizons: Vec<Shape>, params: IjkGridParams, cx: &Context<
     }
     // The unit the heights count in: the horizons' own, or the frame created
     // here — `crs::build` writes its systems in metres.
-    let unit = first_unit.clone().or_else(|| (!frame.objects.is_empty()).then(|| "m".to_string()));
+    let unit = first_unit
+        .clone()
+        .or_else(|| (!frame.objects.is_empty()).then(|| "m".to_string()));
 
     // -- the cut, when there is one --------------------------------------------------------
     let [ni, nj, nk] = built.cells;
@@ -524,7 +608,12 @@ pub(super) fn between(horizons: Vec<Shape>, params: IjkGridParams, cx: &Context<
             cut.faulted.cell_defined.clone(),
             cut.faulted.pillar_defined.clone(),
         ),
-        None => (plain, vec![built.levels as i64, pj as i64, pi as i64, 3], built.cell_defined.clone(), built.pillar_defined.clone()),
+        None => (
+            plain,
+            vec![built.levels as i64, pj as i64, pi as i64, 3],
+            built.cell_defined.clone(),
+            built.pillar_defined.clone(),
+        ),
     };
     let points_path = format!("/resqml22/{uuid}/points");
     let mut datasets = vec![Dataset {
@@ -533,10 +622,18 @@ pub(super) fn between(horizons: Vec<Shape>, params: IjkGridParams, cx: &Context<
         dimensions: point_dimensions.clone(),
         values: Numbers::F64(points.iter().flatten().copied().collect()),
     }];
-    let (cell_flags, cell_dataset) =
-        flags(&cell_defined, &file, format!("/resqml22/{uuid}/cellGeometryIsDefined"), vec![nk as i64, nj as i64, ni as i64]);
-    let (pillar_flags, pillar_dataset) =
-        flags(&pillar_defined, &file, format!("/resqml22/{uuid}/pillarGeometryIsDefined"), vec![pj as i64, pi as i64]);
+    let (cell_flags, cell_dataset) = flags(
+        &cell_defined,
+        &file,
+        format!("/resqml22/{uuid}/cellGeometryIsDefined"),
+        vec![nk as i64, nj as i64, ni as i64],
+    );
+    let (pillar_flags, pillar_dataset) = flags(
+        &pillar_defined,
+        &file,
+        format!("/resqml22/{uuid}/pillarGeometryIsDefined"),
+        vec![pj as i64, pi as i64],
+    );
     datasets.extend(cell_dataset);
     datasets.extend(pillar_dataset);
 
@@ -567,7 +664,12 @@ pub(super) fn between(horizons: Vec<Shape>, params: IjkGridParams, cx: &Context<
         // of each split line, and — a jagged array — the columns that use it.
         let faulted = &cut.faulted;
         let count = faulted.split_pillars.len();
-        let columns: Vec<i64> = faulted.split_columns.iter().flatten().map(|c| *c as i64).collect();
+        let columns: Vec<i64> = faulted
+            .split_columns
+            .iter()
+            .flatten()
+            .map(|c| *c as i64)
+            .collect();
         let mut run = 0i64;
         let cumulative: Vec<i64> = faulted
             .split_columns
@@ -596,8 +698,18 @@ pub(super) fn between(horizons: Vec<Shape>, params: IjkGridParams, cx: &Context<
             dimensions: vec![count as i64],
             values: Numbers::I64(faulted.split_pillars.iter().map(|p| *p as i64).collect()),
         });
-        datasets.push(Dataset { file: file.clone(), path: columns_path, dimensions: vec![columns.len() as i64], values: Numbers::I64(columns) });
-        datasets.push(Dataset { file: file.clone(), path: cumulative_path, dimensions: vec![count as i64], values: Numbers::I64(cumulative) });
+        datasets.push(Dataset {
+            file: file.clone(),
+            path: columns_path,
+            dimensions: vec![columns.len() as i64],
+            values: Numbers::I64(columns),
+        });
+        datasets.push(Dataset {
+            file: file.clone(),
+            path: cumulative_path,
+            dimensions: vec![count as i64],
+            values: Numbers::I64(cumulative),
+        });
     }
     let gaps = built.gaps();
     if gaps > 0 {
@@ -639,7 +751,11 @@ pub(super) fn between(horizons: Vec<Shape>, params: IjkGridParams, cx: &Context<
                 index: 0,
                 node_offset: 0,
                 points,
-                topology: Topology::Hexahedra { cells, dimensions: [ni, nj, nk], index },
+                topology: Topology::Hexahedra {
+                    cells,
+                    dimensions: [ni, nj, nk],
+                    index,
+                },
                 closed: Vec::new(),
             }],
         },
@@ -653,12 +769,18 @@ pub(super) fn between(horizons: Vec<Shape>, params: IjkGridParams, cx: &Context<
     let order: Vec<String> = horizons.iter().map(title_of).collect();
     say(
         "order",
-        format!("the horizons as declared, top to bottom: `{}` — never sorted by height", order.join("` over `")),
+        format!(
+            "the horizons as declared, top to bottom: `{}` — never sorted by height",
+            order.join("` over `")
+        ),
     );
     if built.holes > 0 {
         say(
             "holes",
-            format!("{} horizon node(s) on the pillars have no height: written as NaN", built.holes),
+            format!(
+                "{} horizon node(s) on the pillars have no height: written as NaN",
+                built.holes
+            ),
         );
     }
     if undefined > 0 {
@@ -687,7 +809,10 @@ pub(super) fn between(horizons: Vec<Shape>, params: IjkGridParams, cx: &Context<
     if built.pinched > 0 {
         say(
             "zero-thickness",
-            format!("{} pillar node(s) are where a zone has zero thickness: its cells there are flat, a pinch-out", built.pinched),
+            format!(
+                "{} pillar node(s) are where a zone has zero thickness: its cells there are flat, a pinch-out",
+                built.pinched
+            ),
         );
     }
     if built.trimmed != [0, 0] {
@@ -740,7 +865,12 @@ pub(super) fn between(horizons: Vec<Shape>, params: IjkGridParams, cx: &Context<
         objects,
         datasets,
         shapes: vec![shape],
-        activity: ActivityDraft { recipe, title: format!("{recipe} → {title}"), seed, parameters },
+        activity: ActivityDraft {
+            recipe,
+            title: format!("{recipe} → {title}"),
+            seed,
+            parameters,
+        },
         says,
         dropped: Vec::new(),
     })

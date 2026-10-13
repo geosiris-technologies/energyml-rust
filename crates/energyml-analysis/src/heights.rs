@@ -71,7 +71,10 @@ impl<'a> Heights<'a> {
                 set_aside => Error::NoUsableFace { which, set_aside },
             });
         }
-        Ok(Heights { points: surface.points, index })
+        Ok(Heights {
+            points: surface.points,
+            index,
+        })
     }
 
     /// The height under `(x, y)`.
@@ -100,17 +103,31 @@ impl<'a> Heights<'a> {
 /// The shape of the arrays, before anything is read from them.
 pub(crate) fn check(surface: &Surface) -> Result<(), Error> {
     if surface.points.len() % 3 != 0 {
-        return Err(Error::NotTriples { given: surface.points.len() });
+        return Err(Error::NotTriples {
+            given: surface.points.len(),
+        });
     }
     if surface.triangles.len() % 3 != 0 {
-        return Err(Error::NotTriangles { given: surface.triangles.len() });
+        return Err(Error::NotTriangles {
+            given: surface.triangles.len(),
+        });
     }
     if surface.quads.len() % 4 != 0 {
-        return Err(Error::NotQuads { given: surface.quads.len() });
+        return Err(Error::NotQuads {
+            given: surface.quads.len(),
+        });
     }
     let nodes = surface.points.len() / 3;
-    if let Some(&at) = surface.triangles.iter().chain(surface.quads).find(|&&i| i as usize >= nodes) {
-        return Err(Error::NodeOutOfRange { at: at as usize, nodes });
+    if let Some(&at) = surface
+        .triangles
+        .iter()
+        .chain(surface.quads)
+        .find(|&&i| i as usize >= nodes)
+    {
+        return Err(Error::NodeOutOfRange {
+            at: at as usize,
+            nodes,
+        });
     }
     Ok(())
 }
@@ -187,13 +204,29 @@ impl Index {
             }
             boxes.push((low, high));
         }
-        let scale = (0..3).map(|a| max[a] - min[a]).filter(|s| s.is_finite()).fold(1.0f64, f64::max);
+        let scale = (0..3)
+            .map(|a| max[a] - min[a])
+            .filter(|s| s.is_finite())
+            .fold(1.0f64, f64::max);
         if faces.is_empty() {
-            return Index { faces, cells: Vec::new(), min: [0.0; 2], size: [1.0; 2], counts: [0; 2], scale, set_aside };
+            return Index {
+                faces,
+                cells: Vec::new(),
+                min: [0.0; 2],
+                size: [1.0; 2],
+                counts: [0; 2],
+                scale,
+                set_aside,
+            };
         }
         // About one face per cell, the cells as square as the extent allows.
-        let span = [(max[0] - min[0]).max(scale * 1e-12), (max[1] - min[1]).max(scale * 1e-12)];
-        let per_axis = |mine: f64, other: f64| ((faces.len() as f64 * mine / other).sqrt().ceil() as usize).clamp(1, 1024);
+        let span = [
+            (max[0] - min[0]).max(scale * 1e-12),
+            (max[1] - min[1]).max(scale * 1e-12),
+        ];
+        let per_axis = |mine: f64, other: f64| {
+            ((faces.len() as f64 * mine / other).sqrt().ceil() as usize).clamp(1, 1024)
+        };
         let counts = [per_axis(span[0], span[1]), per_axis(span[1], span[0])];
         let size = [span[0] / counts[0] as f64, span[1] / counts[1] as f64];
         let mut index = Index {
@@ -219,7 +252,9 @@ impl Index {
 
     /// The cell a plan position falls in, clamped to the grid.
     fn cell_of(&self, x: f64, y: f64) -> (usize, usize) {
-        let at = |v: f64, axis: usize| (((v - self.min[axis]) / self.size[axis]).floor().max(0.0) as usize).min(self.counts[axis] - 1);
+        let at = |v: f64, axis: usize| {
+            (((v - self.min[axis]) / self.size[axis]).floor().max(0.0) as usize).min(self.counts[axis] - 1)
+        };
         (at(x, 0), at(y, 1))
     }
 
@@ -274,12 +309,20 @@ fn in_quad([a, b, c, d]: [[f64; 3]; 4], x: f64, y: f64) -> Option<f64> {
     let local = |p: [f64; 3]| [p[0] - origin[0], p[1] - origin[1], p[2]];
     let (a, b, c, d) = (local(a), local(b), local(c), local(d));
     let (x, y) = (x - origin[0], y - origin[1]);
-    let at = |u: f64, v: f64, k: usize| (1.0 - u) * (1.0 - v) * a[k] + u * (1.0 - v) * b[k] + u * v * c[k] + (1.0 - u) * v * d[k];
+    let at = |u: f64, v: f64, k: usize| {
+        (1.0 - u) * (1.0 - v) * a[k] + u * (1.0 - v) * b[k] + u * v * c[k] + (1.0 - u) * v * d[k]
+    };
     let (mut u, mut v) = (0.5, 0.5);
     for _ in 0..30 {
         let f = [at(u, v, 0) - x, at(u, v, 1) - y];
-        let du = [(1.0 - v) * (b[0] - a[0]) + v * (c[0] - d[0]), (1.0 - v) * (b[1] - a[1]) + v * (c[1] - d[1])];
-        let dv = [(1.0 - u) * (d[0] - a[0]) + u * (c[0] - b[0]), (1.0 - u) * (d[1] - a[1]) + u * (c[1] - b[1])];
+        let du = [
+            (1.0 - v) * (b[0] - a[0]) + v * (c[0] - d[0]),
+            (1.0 - v) * (b[1] - a[1]) + v * (c[1] - d[1]),
+        ];
+        let dv = [
+            (1.0 - u) * (d[0] - a[0]) + u * (c[0] - b[0]),
+            (1.0 - u) * (d[1] - a[1]) + u * (c[1] - b[1]),
+        ];
         let det = du[0] * dv[1] - du[1] * dv[0];
         if det == 0.0 || !det.is_finite() {
             return None;
@@ -295,7 +338,6 @@ fn in_quad([a, b, c, d]: [[f64; 3]; 4], x: f64, y: f64) -> Option<f64> {
     }
     None
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -313,20 +355,35 @@ mod tests {
     fn a_cell_far_from_the_origin_answers_its_height() {
         let (x0, y0) = (650_266.553_564_973_3, 6_860_917.669_104_679_5);
         let points = [
-            x0, y0, 10.0, //
-            x0 + 25.0, y0, 20.0, //
-            x0 + 25.0, y0 + 25.0, 30.0, //
-            x0, y0 + 25.0, 20.0,
+            x0,
+            y0,
+            10.0, //
+            x0 + 25.0,
+            y0,
+            20.0, //
+            x0 + 25.0,
+            y0 + 25.0,
+            30.0, //
+            x0,
+            y0 + 25.0,
+            20.0,
         ];
         let quads = [0u32, 1, 2, 3];
-        let surface = Surface { points: &points, triangles: &[], quads: &quads };
+        let surface = Surface {
+            points: &points,
+            triangles: &[],
+            quads: &quads,
+        };
         let heights = Heights::of(surface, "surface", "in a test").expect("one cell");
         match heights.height(x0 + 12.5, y0 + 12.5) {
             Height::At(z) => assert!((z - 20.0).abs() < 1e-6, "{z}"),
             other => panic!("the centre of the cell is not outside it: {other:?}"),
         }
         match heights.height(x0 + 5.0, y0 + 20.0) {
-            Height::At(z) => assert!((z - (10.0 + 0.2 * 10.0 + 0.8 * 10.0 + 0.2 * 0.8 * 0.0)).abs() < 1e-6, "{z}"),
+            Height::At(z) => assert!(
+                (z - (10.0 + 0.2 * 10.0 + 0.8 * 10.0 + 0.2 * 0.8 * 0.0)).abs() < 1e-6,
+                "{z}"
+            ),
             other => panic!("inside the cell: {other:?}"),
         }
         assert!(matches!(heights.height(x0 + 30.0, y0 + 12.5), Height::Outside));

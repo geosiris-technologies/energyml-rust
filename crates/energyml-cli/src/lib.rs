@@ -23,7 +23,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
 
 use energyml_core::json;
@@ -32,19 +32,19 @@ use energyml_core::validate::Severity as IssueSeverity;
 use energyml_core::xml::XmlWriteOptions;
 use energyml_storage::{EpcStore, Severity, graph};
 
-mod layers;
-mod registry;
-mod profile;
-mod select;
-mod rules;
-mod create;
 mod cli_reference;
+mod create;
+pub mod external;
 mod galaxy;
 mod import;
+mod layers;
+mod profile;
+mod registry;
+mod rules;
+mod select;
 mod series;
 mod sources;
 mod terrain;
-pub mod external;
 
 #[derive(Parser)]
 #[command(name = "energyml", about, version)]
@@ -1011,14 +1011,27 @@ property counts: {} error(s), {} remark(s)",
             report.counts.iter().filter(|one| one.is_error).count(),
             report.counts.iter().filter(|one| !one.is_error).count()
         );
-        for one in report.counts.iter().filter(|one| !args.errors_only || one.is_error).take(args.max) {
-            println!("  [{}] {} {}", if one.is_error { "error" } else { "remark" }, one.uuid, one.says);
+        for one in report
+            .counts
+            .iter()
+            .filter(|one| !args.errors_only || one.is_error)
+            .take(args.max)
+        {
+            println!(
+                "  [{}] {} {}",
+                if one.is_error { "error" } else { "remark" },
+                one.uuid,
+                one.says
+            );
         }
         if report.counts.len() > args.max {
             println!("  … and {} more", report.counts.len() - args.max);
         }
         if report.counts_unchecked > 0 {
-            println!("  ({} that could not be counted, so not checked)", report.counts_unchecked);
+            println!(
+                "  ({} that could not be counted, so not checked)",
+                report.counts_unchecked
+            );
         }
     }
 
@@ -1037,7 +1050,11 @@ property counts: {} error(s), {} remark(s)",
                     "  {} {} [{}] — {} (read: {read})",
                     finding.uuid,
                     finding.rule,
-                    if finding.gravity == energyml_domain::rules::Gravity::Error { "error" } else { "warning" },
+                    if finding.gravity == energyml_domain::rules::Gravity::Error {
+                        "error"
+                    } else {
+                        "warning"
+                    },
                     finding.says
                 )),
                 (None, Some(why)) if !args.errors_only => lines.push(format!(
@@ -1050,7 +1067,11 @@ property counts: {} error(s), {} remark(s)",
         println!(
             "\nbusiness rules: {violations} violation(s) over {} rule(s){}",
             report.rule_count,
-            if own > 0 { format!(" ({own} of your own)") } else { String::new() }
+            if own > 0 {
+                format!(" ({own} of your own)")
+            } else {
+                String::new()
+            }
         );
         for line in lines.iter().take(args.max) {
             println!("{line}");
@@ -1266,7 +1287,11 @@ fn properties(args: PropertiesArgs, modes: Modes) -> Result<()> {
         let dictionary = Dictionary::from_xml(&text)
             .with_context(|| format!("loading {}", path.display()))?
             .labelled(format!("the dictionary loaded from {}", path.display()));
-        eprintln!("{} property kinds loaded from {}", dictionary.len(), path.display());
+        eprintln!(
+            "{} property kinds loaded from {}",
+            dictionary.len(),
+            path.display()
+        );
         property_kind::set_default(dictionary);
     }
     let (dictionary_size, dictionary_label) = property_kind::builtin();
@@ -1304,7 +1329,12 @@ fn properties(args: PropertiesArgs, modes: Modes) -> Result<()> {
             }
         };
         if let Some(wanted) = &wanted
-            && property.supporting_representation.as_deref().map(str::to_ascii_lowercase).as_ref() != Some(wanted)
+            && property
+                .supporting_representation
+                .as_deref()
+                .map(str::to_ascii_lowercase)
+                .as_ref()
+                != Some(wanted)
         {
             continue;
         }
@@ -1350,7 +1380,11 @@ fn properties(args: PropertiesArgs, modes: Modes) -> Result<()> {
                 .as_deref()
                 .map(|u| format!("  |  uom {u}"))
                 .unwrap_or_default(),
-            if counts.is_empty() { "?".to_string() } else { counts },
+            if counts.is_empty() {
+                "?".to_string()
+            } else {
+                counts
+            },
             property.patches.len()
         );
 
@@ -1473,7 +1507,10 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
         &store,
         &Wanted {
             object: args.object.as_deref(),
-            options: Options { inherit: !args.no_inherit, viewer_kind: Some(args.viewer.clone()) },
+            options: Options {
+                inherit: !args.no_inherit,
+                viewer_kind: Some(args.viewer.clone()),
+            },
         },
     )?;
     if report.sets == 0 {
@@ -1485,7 +1522,10 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
     }
     if report.sets > 1 {
         // Nothing forbids it and nothing says how they combine.
-        println!("{} graphical information sets; they are read in order", report.sets);
+        println!(
+            "{} graphical information sets; they are read in order",
+            report.sets
+        );
     }
     for note in &report.notes {
         eprintln!("note: {note}");
@@ -1508,13 +1548,22 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
                 answered += 1;
                 let origin = match decision.level {
                     Level::Property => "on the property itself".to_string(),
-                    Level::PropertyKind => format!("on its property kind ({})", short_uuid(&decision.found_on)),
+                    Level::PropertyKind => {
+                        format!("on its property kind ({})", short_uuid(&decision.found_on))
+                    }
                     Level::Representation => "on the representation".to_string(),
                     Level::Interpretation => {
-                        format!("inherited from its interpretation ({})", short_uuid(&decision.found_on))
+                        format!(
+                            "inherited from its interpretation ({})",
+                            short_uuid(&decision.found_on)
+                        )
                     }
-                    Level::Feature => format!("inherited from its feature ({})", short_uuid(&decision.found_on)),
-                    Level::Collection => format!("inherited from a collection ({})", short_uuid(&decision.found_on)),
+                    Level::Feature => {
+                        format!("inherited from its feature ({})", short_uuid(&decision.found_on))
+                    }
+                    Level::Collection => {
+                        format!("inherited from a collection ({})", short_uuid(&decision.found_on))
+                    }
                     Level::Model => format!("inherited from the model ({})", short_uuid(&decision.found_on)),
                 };
                 match &decision.paint {
@@ -1522,7 +1571,11 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
                         "    {} — {origin}, entry {}{}",
                         rgba.to_hex(),
                         decision.entry,
-                        if decision.visible { "" } else { "  [marked invisible]" }
+                        if decision.visible {
+                            ""
+                        } else {
+                            "  [marked invisible]"
+                        }
                     ),
                     Paint::Mapped {
                         map,
@@ -1532,7 +1585,11 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
                         let (low, high) = map.range();
                         println!(
                             "    {} map `{}` — {} stop(s) over {low}–{high} — {origin}, entry {}",
-                            if map.continuous.is_some() { "continuous" } else { "discrete" },
+                            if map.continuous.is_some() {
+                                "continuous"
+                            } else {
+                                "discrete"
+                            },
                             map.title.as_deref().unwrap_or(&map.uuid),
                             map.stops.len(),
                             decision.entry
@@ -1759,7 +1816,10 @@ fn geometry(args: GeometryArgs, modes: Modes) -> Result<()> {
     // printing, which is what a command is for.
     let resources = store.resources();
     let cache = layers::cache_for("geometry");
-    let colouring = energyml_cache::colours::Colouring { cache: &cache, store: &store };
+    let colouring = energyml_cache::colours::Colouring {
+        cache: &cache,
+        store: &store,
+    };
     let read = scene::of_package(
         &resources,
         &store,
@@ -1771,7 +1831,10 @@ fn geometry(args: GeometryArgs, modes: Modes) -> Result<()> {
     );
     let (drawn, points) = (
         read.objects.len(),
-        read.objects.iter().map(|o| o.geometry.point_count()).sum::<usize>(),
+        read.objects
+            .iter()
+            .map(|o| o.geometry.point_count())
+            .sum::<usize>(),
     );
     let (refused, unparsed) = (read.refused, read.unreadable);
 
@@ -1813,9 +1876,7 @@ fn geometry(args: GeometryArgs, modes: Modes) -> Result<()> {
         // smaller output file would be a surprise. See `energyml_geometry::defined`.
         let undefined = shape.undefined_count();
         if undefined > 0 {
-            println!(
-                "    {undefined} node(s) with no position — counted here, dropped on export"
-            );
+            println!("    {undefined} node(s) with no position — counted here, dropped on export");
         }
 
         for patch in &shape.patches {
@@ -1827,7 +1888,9 @@ fn geometry(args: GeometryArgs, modes: Modes) -> Result<()> {
                 Topology::Polylines(runs) => format!("{} polyline(s)", runs.len()),
                 Topology::Segments(pairs) => format!("{} edge segment(s)", pairs.len()),
                 Topology::Grid { fastest, slowest } => format!("grid {fastest}×{slowest}"),
-                Topology::Hexahedra { cells, dimensions, .. } => format!(
+                Topology::Hexahedra {
+                    cells, dimensions, ..
+                } => format!(
                     "{} cell(s), {}×{}×{}",
                     cells.len(),
                     dimensions[0],
@@ -1945,7 +2008,10 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
     // The colour ramps are the front end's: the same rule, by the cache the command's
     // fixed layers (`layers.rs`) turn on.
     let cache = layers::cache_for("export");
-    let colouring = energyml_cache::colours::Colouring { cache: &cache, store: &store };
+    let colouring = energyml_cache::colours::Colouring {
+        cache: &cache,
+        store: &store,
+    };
     let read = scene::of_package(
         &resources,
         &store,
@@ -1972,8 +2038,7 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
     // it whether or not `--epsg` was given, and building it costs a `BTreeMap`.
     let mut backend = energyml_proj::Proj4::new();
     if let Some(path) = &args.crs_definitions {
-        let text = std::fs::read_to_string(path)
-            .with_context(|| format!("reading {}", path.display()))?;
+        let text = std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
         backend = backend.with_definitions_json(&text)?;
     }
     if args.allow_silent_datum {
@@ -1996,7 +2061,10 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
                 swept += 1;
             }
         }
-        eprintln!("{swept} object(s) swept into a tube of radius {radius} with {} sides", args.tube_sides);
+        eprintln!(
+            "{swept} object(s) swept into a tube of radius {radius} with {} sides",
+            args.tube_sides
+        );
     }
 
     let mut options = Options::new().with_reprojector(&backend);
@@ -2031,26 +2099,21 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
                 eprintln!(
                     "{in_time} representation(s) have a vertical axis in travel time; written with 1 s = {per_second} m."
                 );
-                eprintln!(
-                    "  An equivalence, not a depth: the package carries no velocity model, and"
-                );
-                eprintln!(
-                    "  RESQML does not say whether the time is one-way or two-way, so a real"
-                );
-                eprintln!(
-                    "  depth is half or double this. The number is written into each file."
-                );
+                eprintln!("  An equivalence, not a depth: the package carries no velocity model, and");
+                eprintln!("  RESQML does not say whether the time is one-way or two-way, so a real");
+                eprintln!("  depth is half or double this. The number is written into each file.");
             }
             None => {
-                eprintln!(
-                    "{in_time} representation(s) have a vertical axis in travel time and are skipped:"
-                );
+                eprintln!("{in_time} representation(s) have a vertical axis in travel time and are skipped:");
                 eprintln!("  they cannot be placed in metres. Pass --time-equivalence <M_PER_S> to");
                 eprintln!("  write them anyway; 2000 is a mid-range sediment velocity.");
                 // Named, one per line: a count says how many are missing from the
                 // folder, never which — and "which" is what somebody opening the
                 // folder asks first.
-                for o in objects.iter().filter(|o| o.crs.as_ref().is_some_and(|crs| crs.is_time())) {
+                for o in objects
+                    .iter()
+                    .filter(|o| o.crs.as_ref().is_some_and(|crs| crs.is_time()))
+                {
                     eprintln!("  skipped: {} {} ({})", o.uuid, o.qualified_type, o.title);
                 }
             }
@@ -2288,8 +2351,13 @@ fn docs(args: DocsArgs) -> Result<()> {
         .into_iter()
         .flatten()
         .filter(|release| {
-            args.package.as_deref().is_none_or(|package| release["package"] == package)
-                && args.version.as_deref().is_none_or(|version| release["version"] == version)
+            args.package
+                .as_deref()
+                .is_none_or(|package| release["package"] == package)
+                && args
+                    .version
+                    .as_deref()
+                    .is_none_or(|version| release["version"] == version)
         })
         .cloned()
         .collect();
@@ -2300,7 +2368,13 @@ fn docs(args: DocsArgs) -> Result<()> {
             .as_array()
             .into_iter()
             .flatten()
-            .map(|release| format!("{}/{}", release["package"].as_str().unwrap_or("?"), release["version"].as_str().unwrap_or("?")))
+            .map(|release| {
+                format!(
+                    "{}/{}",
+                    release["package"].as_str().unwrap_or("?"),
+                    release["version"].as_str().unwrap_or("?")
+                )
+            })
             .collect();
         anyhow::bail!(
             "no registered release matches; this build holds: {}",
@@ -2318,8 +2392,7 @@ fn docs(args: DocsArgs) -> Result<()> {
         let package = release["package"].as_str().unwrap_or("unknown");
         let version = release["version"].as_str().unwrap_or("unknown");
         let file = format!("{package}-{version}.json");
-        std::fs::write(dir.join(&file), release.to_string())
-            .with_context(|| format!("writing {file}"))?;
+        std::fs::write(dir.join(&file), release.to_string()).with_context(|| format!("writing {file}"))?;
         index.push(serde_json::json!({
             "package": package,
             "version": version,
@@ -2332,8 +2405,11 @@ fn docs(args: DocsArgs) -> Result<()> {
             release["types"].as_array().map(Vec::len).unwrap_or(0)
         );
     }
-    std::fs::write(dir.join("index.json"), serde_json::Value::Array(index).to_string())
-        .context("writing index.json")?;
+    std::fs::write(
+        dir.join("index.json"),
+        serde_json::Value::Array(index).to_string(),
+    )
+    .context("writing index.json")?;
 
     // A browser pointed at `/docs/` gets this rather than a 404 or — served
     // under a single-page application — the application itself, which reads as
@@ -2457,7 +2533,10 @@ fn describe(registry: &Registry, wanted: &str) -> Result<()> {
                 println!(
                     "    {:<44}{}",
                     variant.value,
-                    variant.xsi_type.map(|t| format!("xsi:type=\"{t}\"")).unwrap_or_default()
+                    variant
+                        .xsi_type
+                        .map(|t| format!("xsi:type=\"{t}\""))
+                        .unwrap_or_default()
                 );
             }
         }
@@ -2505,7 +2584,11 @@ fn describe(registry: &Registry, wanted: &str) -> Result<()> {
                     let shown: Vec<&str> = values.iter().map(|v| v.value).take(12).collect();
                     println!(
                         "      {} `{}`: {}{}",
-                        if type_info.is_open { "open enumeration" } else { "closed enumeration" },
+                        if type_info.is_open {
+                            "open enumeration"
+                        } else {
+                            "closed enumeration"
+                        },
                         type_info.name,
                         shown.join(", "),
                         if values.len() > shown.len() {
@@ -2604,12 +2687,10 @@ fn repair(args: RepairArgs, modes: Modes) -> Result<ExitCode> {
         for item in &broken {
             let target = directory.join(&item.part);
             if let Some(parent) = target.parent() {
-                std::fs::create_dir_all(parent)
-                    .with_context(|| format!("creating {}", parent.display()))?;
+                std::fs::create_dir_all(parent).with_context(|| format!("creating {}", parent.display()))?;
             }
             let bytes = store.raw_part(&item.part)?;
-            std::fs::write(&target, &bytes)
-                .with_context(|| format!("writing {}", target.display()))?;
+            std::fs::write(&target, &bytes).with_context(|| format!("writing {}", target.display()))?;
             println!("{} → {} ({} byte(s))", item.part, target.display(), bytes.len());
         }
         if broken.is_empty() {
@@ -2648,14 +2729,28 @@ fn repair(args: RepairArgs, modes: Modes) -> Result<ExitCode> {
 
     let Some(out) = &args.out else {
         println!("\n{staged} part(s) would be staged, {refused} refused; `--out <file>` writes them");
-        return Ok(if refused > 0 { ExitCode::FAILURE } else { ExitCode::SUCCESS });
+        return Ok(if refused > 0 {
+            ExitCode::FAILURE
+        } else {
+            ExitCode::SUCCESS
+        });
     };
     let diagnostics = store.save_as(out, &energyml_storage::SaveOptions::default())?;
-    println!("\nwrote {} — {staged} part(s) repaired, {refused} refused", out.display());
+    println!(
+        "\nwrote {} — {staged} part(s) repaired, {refused} refused",
+        out.display()
+    );
     for diagnostic in diagnostics.iter().take(10) {
-        println!("  [{:?}] {}: {}", diagnostic.severity, diagnostic.part, diagnostic.message);
+        println!(
+            "  [{:?}] {}: {}",
+            diagnostic.severity, diagnostic.part, diagnostic.message
+        );
     }
-    Ok(if refused > 0 { ExitCode::FAILURE } else { ExitCode::SUCCESS })
+    Ok(if refused > 0 {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
+    })
 }
 
 /// Every file under a directory, keyed by its path relative to the root.
@@ -2666,8 +2761,7 @@ fn repair(args: RepairArgs, modes: Modes) -> Result<ExitCode> {
 /// from one.
 fn collect_parts(root: &PathBuf, directory: &PathBuf) -> Result<Vec<(String, Vec<u8>)>> {
     let mut out = Vec::new();
-    let entries = std::fs::read_dir(directory)
-        .with_context(|| format!("reading {}", directory.display()))?;
+    let entries = std::fs::read_dir(directory).with_context(|| format!("reading {}", directory.display()))?;
     for entry in entries {
         let path = entry?.path();
         if path.is_dir() {
@@ -2684,7 +2778,6 @@ fn collect_parts(root: &PathBuf, directory: &PathBuf) -> Result<Vec<(String, Vec
     out.sort_by(|a, b| a.0.cmp(&b.0));
     Ok(out)
 }
-
 
 // ---------------------------------------------------------------------------
 // graph
@@ -2752,7 +2845,9 @@ fn graph_command(args: GraphArgs, modes: Modes) -> Result<()> {
         }
     }
     if unreadable > 0 {
-        eprintln!("{unreadable} object(s) could not be read, so their references are missing (try `--lenient`)");
+        eprintln!(
+            "{unreadable} object(s) could not be read, so their references are missing (try `--lenient`)"
+        );
     }
     Ok(())
 }
@@ -2789,7 +2884,9 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
     let mut rows: std::collections::BTreeMap<String, Row> = std::collections::BTreeMap::new();
 
     for summary in store.resources() {
-        let Ok(object) = store.get_object(&summary.uri) else { continue };
+        let Ok(object) = store.get_object(&summary.uri) else {
+            continue;
+        };
         for location in store.arrays_of(object.as_reflect()) {
             let declared = location.file.clone();
             let row = rows.entry(declared).or_default();
@@ -2811,7 +2908,11 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
 
     let mut missing: Vec<String> = Vec::new();
     for (declared, row) in &rows {
-        let name = if declared.is_empty() { "(unnamed)" } else { declared };
+        let name = if declared.is_empty() {
+            "(unnamed)"
+        } else {
+            declared
+        };
         match &row.found {
             Some(found) if found.agrees() => {
                 println!("{name}  {} pointer(s)  → {}", row.pointers, found.path.display());
@@ -2825,7 +2926,10 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
                 );
             }
             None => {
-                println!("{name}  {} pointer(s)  → NOT FOUND  (looking for `{}`)", row.pointers, row.example);
+                println!(
+                    "{name}  {} pointer(s)  → NOT FOUND  (looking for `{}`)",
+                    row.pointers, row.example
+                );
                 missing.push(declared.clone());
             }
         }
@@ -2836,7 +2940,11 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
     if args.interactive && !missing.is_empty() {
         use std::io::Write;
         for declared in &missing {
-            let name = if declared.is_empty() { "(unnamed)" } else { declared };
+            let name = if declared.is_empty() {
+                "(unnamed)"
+            } else {
+                declared
+            };
             print!("path for `{name}` (blank to skip): ");
             std::io::stdout().flush().ok();
             let mut line = String::new();
@@ -2855,7 +2963,9 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
                 continue;
             }
             for summary in store.resources() {
-                let Ok(object) = store.get_object(&summary.uri) else { continue };
+                let Ok(object) = store.get_object(&summary.uri) else {
+                    continue;
+                };
                 for location in store.arrays_of(object.as_reflect()) {
                     if &location.file == declared && row.found.is_none() {
                         row.found = store.resolve_array(&location).ok();
@@ -2929,10 +3039,7 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
     // is `declared_files` — so a name that was only ever read out of a `.rels`
     // is dropped unless it is put back first. Repairing a package by losing
     // half its pointers would be a poor repair.
-    let found: Vec<(String, String)> = store
-        .external_file_map()
-        .into_iter()
-        .collect();
+    let found: Vec<(String, String)> = store.external_file_map().into_iter().collect();
     for (uuid, file) in found {
         store.register_external_file(&uuid, file);
     }
@@ -3130,8 +3237,10 @@ fn rename_command(args: RenameArgs, modes: Modes) -> Result<ExitCode> {
         return Ok(ExitCode::FAILURE);
     }
     if !args.apply {
-        println!("
-nothing touched — pass `--apply` to carry it out");
+        println!(
+            "
+nothing touched — pass `--apply` to carry it out"
+        );
         return Ok(ExitCode::SUCCESS);
     }
 
@@ -3175,7 +3284,11 @@ fn relabel(args: RelabelArgs, modes: Modes) -> Result<ExitCode> {
     }
 
     if survey.targets.is_empty() {
-        println!("no part of package `{}` in {}", survey.package, args.file.display());
+        println!(
+            "no part of package `{}` in {}",
+            survey.package,
+            args.file.display()
+        );
         if survey.undecided > 0 {
             println!(
                 "{} part(s) declare a type this build cannot place in a package",
@@ -3250,8 +3363,7 @@ fn extract_command(args: ExtractArgs, modes: Modes) -> Result<ExitCode> {
     let store = open(&args.file, &modes)?;
     let text = std::fs::read_to_string(&args.select)
         .with_context(|| format!("reading {}", args.select.display()))?;
-    let wanted =
-        read_manifest(&text).with_context(|| format!("reading {}", args.select.display()))?;
+    let wanted = read_manifest(&text).with_context(|| format!("reading {}", args.select.display()))?;
 
     let resources = store.resources();
     let mut objects = Vec::new();
@@ -3340,7 +3452,9 @@ fn extract_command(args: ExtractArgs, modes: Modes) -> Result<ExitCode> {
         if done.arrays_missed.len() > 10 {
             eprintln!("  … and {} more", done.arrays_missed.len() - 10);
         }
-        eprintln!("  (a build without the `hdf5` feature cannot copy them; `--keep-arrays` points at the source file instead)");
+        eprintln!(
+            "  (a build without the `hdf5` feature cannot copy them; `--keep-arrays` points at the source file instead)"
+        );
     }
     println!(
         "{} → {} object(s), {} array(s)",

@@ -27,19 +27,19 @@ mod boreholes;
 mod business_associate;
 mod cardinality;
 mod change_frame;
+mod clip;
 mod collection;
 mod colormap_levels;
 mod computed_tops;
-mod clip;
 mod conditions;
 mod contacts;
 mod contacts_well_origin;
 mod cross_section;
 mod datum_in_compound;
 mod declare;
-mod describe;
 mod delete_nodes;
 mod densify;
+mod describe;
 mod earth_model;
 mod edit_object;
 mod entries;
@@ -52,10 +52,12 @@ mod fault_throw;
 mod faulted_grid;
 mod faults;
 mod galaxy;
+mod gathered_columns;
 mod gives;
 mod graphical_information;
 mod grid_properties;
 mod horizon_law;
+mod identity_versions;
 mod ijk_grid;
 mod injection_test;
 mod injectivity;
@@ -83,10 +85,10 @@ mod prodml_doublet;
 mod prodml_rest;
 mod project;
 mod properties_from_table;
-mod gathered_columns;
 mod property_time_series;
 mod pta;
 mod purpose;
+mod read_versions;
 mod recipe;
 mod refusals;
 mod representation_set;
@@ -114,8 +116,6 @@ mod wellheads;
 mod wells_from_polylines;
 mod wells_from_table;
 mod witsml_logs;
-mod identity_versions;
-mod read_versions;
 mod witsml_logs_in_hdf5;
 mod witsml_trajectory;
 mod witsml_wells;
@@ -133,14 +133,21 @@ fn no_module_here_installs_a_default() {
     let main = std::fs::read_to_string(here.join("main.rs")).expect("this file");
     let modules: Vec<&str> = main
         .lines()
-        .filter_map(|line| line.trim_start_matches("#[cfg(feature = \"hdf5\")] ").strip_prefix("mod "))
+        .filter_map(|line| {
+            line.trim_start_matches("#[cfg(feature = \"hdf5\")] ")
+                .strip_prefix("mod ")
+        })
         .map(|rest| rest.trim_end_matches(';'))
         .collect();
     assert!(modules.len() > 50, "the module list was read: {}", modules.len());
     for name in modules {
-        let text = std::fs::read_to_string(here.join(format!("{name}.rs"))).expect("a declared module has its file");
+        let text =
+            std::fs::read_to_string(here.join(format!("{name}.rs"))).expect("a declared module has its file");
         for installer in ["set_default(", "mod geolts_extract"] {
-            assert!(!text.contains(installer), "`tests/{name}.rs` has `{installer}`: it needs a binary of its own (see this file's doc)");
+            assert!(
+                !text.contains(installer),
+                "`tests/{name}.rs` has `{installer}`: it needs a binary of its own (see this file's doc)"
+            );
         }
     }
 }

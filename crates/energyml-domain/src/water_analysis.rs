@@ -52,7 +52,9 @@ pub enum WaterRead {
     #[error("the analysis states no WaterSampleComponent: no ion to place on a diagram")]
     NoComponent,
     /// An organic acid, whose charge the balance does not count.
-    #[error("component {rank} is the organic acid `{acid}`: its charge is not in the ion balance, and leaving it out would change the balance")]
+    #[error(
+        "component {rank} is the organic acid `{acid}`: its charge is not in the ion balance, and leaving it out would change the balance"
+    )]
     OrganicAcid {
         /// Its rank.
         rank: usize,
@@ -76,7 +78,9 @@ pub enum WaterRead {
         why: String,
     },
     /// A unit this reader does not convert.
-    #[error("component {rank} (`{formula}`) is in `{uom}`, which this reader does not convert to mg/L (it reads {known})")]
+    #[error(
+        "component {rank} (`{formula}`) is in `{uom}`, which this reader does not convert to mg/L (it reads {known})"
+    )]
     Unit {
         /// Its rank.
         rank: usize,
@@ -92,13 +96,18 @@ pub enum WaterRead {
 /// Whether this reads the object — a water analysis, by the field holding its
 /// components.
 pub fn reads(object: &dyn Reflect) -> bool {
-    object.type_info().field_ignore_case("WaterSampleComponent").is_some()
+    object
+        .type_info()
+        .field_ignore_case("WaterSampleComponent")
+        .is_some()
 }
 
 /// The ions a water analysis states, in the order written: formula, mg/L.
 pub fn ions(analysis: &dyn Reflect) -> Result<Vec<(String, f64)>, WaterRead> {
     if !reads(analysis) {
-        return Err(WaterRead::NotAnAnalysis { found: analysis.type_info().type_key.to_string() });
+        return Err(WaterRead::NotAnAnalysis {
+            found: analysis.type_info().type_key.to_string(),
+        });
     }
     let components = objects(analysis, "WaterSampleComponent");
     if components.is_empty() {
@@ -110,16 +119,30 @@ pub fn ions(analysis: &dyn Reflect) -> Result<Vec<(String, f64)>, WaterRead> {
         if let Some(acid) = text(component, "OrganicAcid") {
             return Err(WaterRead::OrganicAcid { rank, acid });
         }
-        let formula = text(component, "Anion").or_else(|| text(component, "Cation")).ok_or(WaterRead::NoIon { rank })?;
+        let formula = text(component, "Anion")
+            .or_else(|| text(component, "Cation"))
+            .ok_or(WaterRead::NoIon { rank })?;
         let Some(measure) = objects(component, "VolumeConcentration").into_iter().next() else {
-            let why = if objects(component, "MassConcentration").into_iter().next().is_some() {
+            let why = if objects(component, "MassConcentration")
+                .into_iter()
+                .next()
+                .is_some()
+            {
                 "a MassConcentration is a mass per mass, which needs a density to become mg/L"
-            } else if objects(component, "MolarConcentration").into_iter().next().is_some() {
+            } else if objects(component, "MolarConcentration")
+                .into_iter()
+                .next()
+                .is_some()
+            {
                 "a MolarConcentration is an amount of substance, not a mass per volume"
             } else {
                 "it states no concentration at all"
             };
-            return Err(WaterRead::NoConcentration { rank, formula, why: why.to_string() });
+            return Err(WaterRead::NoConcentration {
+                rank,
+                formula,
+                why: why.to_string(),
+            });
         };
         let uom = text(measure, "uom").unwrap_or_default();
         let value = number_of(measure, "value").unwrap_or(f64::NAN);
@@ -128,7 +151,11 @@ pub fn ions(analysis: &dyn Reflect) -> Result<Vec<(String, f64)>, WaterRead> {
                 rank,
                 formula,
                 uom,
-                known: TO_MG_PER_L.iter().map(|(known, _)| *known).collect::<Vec<_>>().join(", "),
+                known: TO_MG_PER_L
+                    .iter()
+                    .map(|(known, _)| *known)
+                    .collect::<Vec<_>>()
+                    .join(", "),
             });
         };
         // A value that is not a number reaches `ion_balance`, which refuses it

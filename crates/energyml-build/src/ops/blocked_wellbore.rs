@@ -83,7 +83,10 @@ use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Patch, Topology};
 
 use crate::declare::{Inputs, Params, Shape, Suggestions, known_of};
-use crate::operation::{About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Note, Numbers, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Note, Numbers, Operation, Plan,
+    Refusal, Slot,
+};
 use crate::pieces::Pieces;
 
 use super::support;
@@ -116,27 +119,56 @@ pub struct BlockedWellboreInputs {
 
 /// The title the object behind a shape carries, or the shape's name.
 fn title_of(shape: &Shape) -> String {
-    shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.title.clone()).unwrap_or_else(|| shape.name.clone())
+    shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|r| r.title.clone())
+        .unwrap_or_else(|| shape.name.clone())
 }
 
 /// A grid's cells in index order — see the module header.
 fn grid_of(shape: &Shape) -> Result<(Grid, usize), Refusal> {
-    let [Patch { topology: Topology::Hexahedra { cells, dimensions, index }, points, .. }] = shape.geometry.patches.as_slice() else {
+    let [
+        Patch {
+            topology:
+                Topology::Hexahedra {
+                    cells,
+                    dimensions,
+                    index,
+                },
+            points,
+            ..
+        },
+    ] = shape.geometry.patches.as_slice()
+    else {
         return Err(Refusal::on(
             "grids",
-            format!("`{}` is no IJK grid: a blocked wellbore is blocked in the cells of one", title_of(shape)),
+            format!(
+                "`{}` is no IJK grid: a blocked wellbore is blocked in the cells of one",
+                title_of(shape)
+            ),
         ));
     };
     let mut out = Vec::with_capacity(cells.len());
     for (at, cell) in cells.iter().enumerate() {
-        let number = if index.is_empty() { at as u64 } else { u64::from(index[at]) };
+        let number = if index.is_empty() {
+            at as u64
+        } else {
+            u64::from(index[at])
+        };
         // The smaller node number is the smaller K: VTK's swap undone.
         let order: [u32; 8] = if cell[0] > cell[4] {
-            [cell[4], cell[5], cell[6], cell[7], cell[0], cell[1], cell[2], cell[3]]
+            [
+                cell[4], cell[5], cell[6], cell[7], cell[0], cell[1], cell[2], cell[3],
+            ]
         } else {
             *cell
         };
-        out.push(Hexahedron { index: number, corners: order.map(|n| points[n as usize]) });
+        out.push(Hexahedron {
+            index: number,
+            corners: order.map(|n| points[n as usize]),
+        });
     }
     let [ni, nj, nk] = *dimensions;
     let undefined = (ni * nj * nk).saturating_sub(cells.len());
@@ -170,13 +202,19 @@ impl Operation for BlockedWellbore {
     }
 
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
-        let Some(known) = known_of(bag, "frame") else { return };
+        let Some(known) = known_of(bag, "frame") else {
+            return;
+        };
         // What the frame represents: the same wellbore.
         if let Some(interpretation) = &known.interpretation {
             slots.inferred("interpretation", interpretation.dor(), interpretation.clone());
         }
         if let Some(frame) = &known.reference {
-            slots.inferred("title", json!(format!("{} — blocked", frame.title)), frame.clone());
+            slots.inferred(
+                "title",
+                json!(format!("{} — blocked", frame.title)),
+                frame.clone(),
+            );
         }
     }
 
@@ -184,19 +222,38 @@ impl Operation for BlockedWellbore {
         let no_reference = |shape: &Shape, slot: &str| {
             Refusal::on(
                 slot,
-                format!("`{}` is no object of the package: a blocked wellbore names it by uuid, and an artefact has none", shape.name),
+                format!(
+                    "`{}` is no object of the package: a blocked wellbore names it by uuid, and an artefact has none",
+                    shape.name
+                ),
             )
         };
-        if inputs.frame.known.as_ref().and_then(|known| known.reference.as_ref()).is_none() {
+        if inputs
+            .frame
+            .known
+            .as_ref()
+            .and_then(|known| known.reference.as_ref())
+            .is_none()
+        {
             return Err(no_reference(&inputs.frame, "frame"));
         }
-        if let Some(grid) = inputs.grids.iter().find(|grid| grid.known.as_ref().and_then(|known| known.reference.as_ref()).is_none()) {
+        if let Some(grid) = inputs.grids.iter().find(|grid| {
+            grid.known
+                .as_ref()
+                .and_then(|known| known.reference.as_ref())
+                .is_none()
+        }) {
             return Err(no_reference(grid, "grids"));
         }
         Ok(())
     }
 
-    fn plan(&self, inputs: BlockedWellboreInputs, params: BlockedWellboreParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: BlockedWellboreInputs,
+        params: BlockedWellboreParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         self.check(&inputs)?;
         let BlockedWellboreInputs { frame, grids } = inputs;
         let known = frame.known.clone().unwrap_or_default();
@@ -208,28 +265,48 @@ impl Operation for BlockedWellbore {
         let Some(mds) = known.node_mds.clone() else {
             return Err(Refusal::on(
                 "frame",
-                format!("`{}`: its measured depths could not be read — a blocked wellbore's MD are the frame's, never derived from its drawing", frame_ref.title),
+                format!(
+                    "`{}`: its measured depths could not be read — a blocked wellbore's MD are the frame's, never derived from its drawing",
+                    frame_ref.title
+                ),
             ));
         };
         let Some(trajectory) = known.trajectory.clone() else {
             return Err(Refusal::on(
                 "frame",
-                format!("`{}` names no trajectory, and a blocked wellbore names the frame's", frame_ref.title),
+                format!(
+                    "`{}` names no trajectory, and a blocked wellbore names the frame's",
+                    frame_ref.title
+                ),
             ));
         };
         let points: Vec<[f64; 3]> = match frame.geometry.patches.as_slice() {
-            [Patch { topology: Topology::Polylines(runs), points, .. }] if runs.len() == 1 => points.clone(),
+            [
+                Patch {
+                    topology: Topology::Polylines(runs),
+                    points,
+                    ..
+                },
+            ] if runs.len() == 1 => points.clone(),
             _ => {
                 return Err(Refusal::on(
                     "frame",
-                    format!("`{}` is not one line of nodes: a frame is drawn as one polyline, top to bottom", frame_ref.title),
+                    format!(
+                        "`{}` is not one line of nodes: a frame is drawn as one polyline, top to bottom",
+                        frame_ref.title
+                    ),
                 ));
             }
         };
         if points.len() != mds.len() {
             return Err(Refusal::on(
                 "frame",
-                format!("`{}` places {} node(s) and states {} measured depth(s)", frame_ref.title, points.len(), mds.len()),
+                format!(
+                    "`{}` places {} node(s) and states {} measured depth(s)",
+                    frame_ref.title,
+                    points.len(),
+                    mds.len()
+                ),
             ));
         }
 
@@ -237,8 +314,10 @@ impl Operation for BlockedWellbore {
         let mut blocks = Vec::with_capacity(grids.len());
         let mut undefined = Vec::with_capacity(grids.len());
         for grid in &grids {
-            if let (Some(a), Some(b)) = (known.crs.as_ref(), grid.known.as_ref().and_then(|k| k.crs.as_ref()))
-                && !a.uuid.eq_ignore_ascii_case(&b.uuid)
+            if let (Some(a), Some(b)) = (
+                known.crs.as_ref(),
+                grid.known.as_ref().and_then(|k| k.crs.as_ref()),
+            ) && !a.uuid.eq_ignore_ascii_case(&b.uuid)
             {
                 return Err(Refusal::new(
                     "frames",
@@ -258,11 +337,16 @@ impl Operation for BlockedWellbore {
         cx.stop_if_cancelled()?;
         let blocked = cells::block(&points, &mds, &blocks).map_err(|why| {
             let slot = match &why {
-                CellsError::Leaning { .. } | CellsError::NotParallelogram { .. } | CellsError::Shared { .. } | CellsError::NoCell => "grids",
+                CellsError::Leaning { .. }
+                | CellsError::NotParallelogram { .. }
+                | CellsError::Shared { .. }
+                | CellsError::NoCell => "grids",
                 _ => "frame",
             };
             let named = match &why {
-                CellsError::Leaning { grid, .. } | CellsError::NotParallelogram { grid, .. } | CellsError::Shared { grid, .. } => {
+                CellsError::Leaning { grid, .. }
+                | CellsError::NotParallelogram { grid, .. }
+                | CellsError::Shared { grid, .. } => {
                     format!(" — grid {grid} is `{}`", title_of(&grids[*grid]))
                 }
                 _ => String::new(),
@@ -274,21 +358,45 @@ impl Operation for BlockedWellbore {
         // -- the object ------------------------------------------------------------------------
         let title = params.naming.title();
         let file = params.naming.data_file.clone();
-        let grid_refs: Vec<_> = grids.iter().filter_map(|grid| grid.known.as_ref().and_then(|k| k.reference.clone())).collect();
+        let grid_refs: Vec<_> = grids
+            .iter()
+            .filter_map(|grid| grid.known.as_ref().and_then(|k| k.reference.clone()))
+            .collect();
         let seed = format!(
             "blocked-wellbore:{}:{}:{title}",
             frame_ref.uuid.to_ascii_lowercase(),
-            grid_refs.iter().map(|one| one.uuid.to_ascii_lowercase()).collect::<Vec<_>>().join(",")
+            grid_refs
+                .iter()
+                .map(|one| one.uuid.to_ascii_lowercase())
+                .collect::<Vec<_>>()
+                .join(",")
         );
         let mut rank = 0usize;
         let uuid = support::next_uuid(cx.identity, &seed, &mut rank)?;
-        let represented = support::represented_in(&params.represented, None, None, cx.identity, cx.when, &seed, &title, &mut rank)?;
+        let represented = support::represented_in(
+            &params.represented,
+            None,
+            None,
+            cx.identity,
+            cx.when,
+            &seed,
+            &title,
+            &mut rank,
+        )?;
 
         let nodes = blocked.node_md.len();
         let intervals = blocked.intervals.len();
         let null = -1i64;
-        let grid_indices: Vec<i64> = blocked.intervals.iter().map(|one| one.map_or(null, |held| held.grid as i64)).collect();
-        let cell_indices: Vec<i64> = blocked.intervals.iter().map(|one| one.map_or(null, |held| held.cell as i64)).collect();
+        let grid_indices: Vec<i64> = blocked
+            .intervals
+            .iter()
+            .map(|one| one.map_or(null, |held| held.grid as i64))
+            .collect();
+        let cell_indices: Vec<i64> = blocked
+            .intervals
+            .iter()
+            .map(|one| one.map_or(null, |held| held.cell as i64))
+            .collect();
         let faces: Vec<i64> = blocked
             .intervals
             .iter()
@@ -299,9 +407,24 @@ impl Operation for BlockedWellbore {
             .collect();
         let path = |name: &str| format!("/resqml22/{uuid}/{name}");
         let datasets = vec![
-            Dataset { file: file.clone(), path: path("nodeMd"), dimensions: vec![nodes as i64], values: Numbers::F64(blocked.node_md.clone()) },
-            Dataset { file: file.clone(), path: path("gridIndices"), dimensions: vec![intervals as i64], values: Numbers::I64(grid_indices) },
-            Dataset { file: file.clone(), path: path("cellIndices"), dimensions: vec![intervals as i64], values: Numbers::I64(cell_indices) },
+            Dataset {
+                file: file.clone(),
+                path: path("nodeMd"),
+                dimensions: vec![nodes as i64],
+                values: Numbers::F64(blocked.node_md.clone()),
+            },
+            Dataset {
+                file: file.clone(),
+                path: path("gridIndices"),
+                dimensions: vec![intervals as i64],
+                values: Numbers::I64(grid_indices),
+            },
+            Dataset {
+                file: file.clone(),
+                path: path("cellIndices"),
+                dimensions: vec![intervals as i64],
+                values: Numbers::I64(cell_indices),
+            },
             Dataset {
                 file: file.clone(),
                 path: path("localFacePairPerCellIndices"),
@@ -336,9 +459,20 @@ impl Operation for BlockedWellbore {
         }
 
         // **The computed shape**: the nodes, where the path places them.
-        let placed: Vec<[f64; 3]> = cells::positions(&points, &mds, &blocked.node_md).into_iter().flatten().collect();
+        let placed: Vec<[f64; 3]> = cells::positions(&points, &mds, &blocked.node_md)
+            .into_iter()
+            .flatten()
+            .collect();
         let count = placed.len() as u32;
-        let shape = support::made_root(&title, &uuid, support::one_patch("BlockedWellboreRepresentation", placed, Topology::Polylines(vec![count])));
+        let shape = support::made_root(
+            &title,
+            &uuid,
+            support::one_patch(
+                "BlockedWellboreRepresentation",
+                placed,
+                Topology::Polylines(vec![count]),
+            ),
+        );
 
         // -- what is said ------------------------------------------------------------------------
         let outside = intervals - blocked.cell_count();
@@ -377,7 +511,10 @@ impl Operation for BlockedWellbore {
             if *holes > 0 {
                 says.push(Note {
                     key: "undefined-cells",
-                    detail: format!("`{}` leaves {holes} cell(s) without geometry: the path there is in no cell", title_of(grid)),
+                    detail: format!(
+                        "`{}` leaves {holes} cell(s) without geometry: the path there is in no cell",
+                        title_of(grid)
+                    ),
                 });
             }
         }
@@ -386,13 +523,19 @@ impl Operation for BlockedWellbore {
                 key: "grid-order",
                 detail: format!(
                     "where two grids hold one stretch the first listed holds it: {}",
-                    grids.iter().map(|grid| format!("`{}`", title_of(grid))).collect::<Vec<_>>().join(" before ")
+                    grids
+                        .iter()
+                        .map(|grid| format!("`{}`", title_of(grid)))
+                        .collect::<Vec<_>>()
+                        .join(" before ")
                 ),
             });
         }
         says.push(Note {
             key: "left-out",
-            detail: "no `IntervalStratigraphicUnits`, no `CellFluidPhaseUnits`: only the cells and their faces".to_string(),
+            detail:
+                "no `IntervalStratigraphicUnits`, no `CellFluidPhaseUnits`: only the cells and their faces"
+                    .to_string(),
         });
 
         let mut objects = represented.objects;
@@ -403,7 +546,11 @@ impl Operation for BlockedWellbore {
             title: title.clone(),
             json: object,
         });
-        let number = |title: &str, value: f64| Parameter::Double { title: title.to_string(), value, uom: None };
+        let number = |title: &str, value: f64| Parameter::Double {
+            title: title.to_string(),
+            value,
+            uom: None,
+        };
         Ok(Plan {
             media: Vec::new(),
             blocked: None,
@@ -427,12 +574,25 @@ impl Operation for BlockedWellbore {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        let count = |name: &'static str, about: &'static str| Slot::required(name, Need::Number { uom: None, least: None, most: None }, about);
+        let count = |name: &'static str, about: &'static str| {
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
         vec![
             count("nodeCount", "nodes — an entry or an exit each"),
             count("cellCount", "intervals in a cell — CellCount"),
             count("outsideIntervalCount", "intervals in no cell, written null"),
-            count("chordExcess", "the largest shortfall of a chord against its MD step, as a fraction"),
+            count(
+                "chordExcess",
+                "the largest shortfall of a chord against its MD step, as a fraction",
+            ),
         ]
     }
 }

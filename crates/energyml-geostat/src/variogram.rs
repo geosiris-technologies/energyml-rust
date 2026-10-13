@@ -55,7 +55,10 @@ pub fn empirical<const N: usize>(
     classes: usize,
 ) -> Result<Empirical, Error> {
     if samples.len() != values.len() {
-        return Err(Error::MismatchedLengths { count: samples.len(), values: values.len() });
+        return Err(Error::MismatchedLengths {
+            count: samples.len(),
+            values: values.len(),
+        });
     }
     if classes == 0 {
         return Err(Error::NoClasses);
@@ -73,11 +76,18 @@ pub fn empirical<const N: usize>(
         .collect();
     let set_aside = samples.len() - usable.len();
     if usable.len() < 2 {
-        return Err(Error::TooFewSamples { usable: usable.len(), needed: 2 });
+        return Err(Error::TooFewSamples {
+            usable: usable.len(),
+            needed: 2,
+        });
     }
 
     let distance = |a: &[f64; N], b: &[f64; N]| -> f64 {
-        a.iter().zip(b).map(|(x, y)| (x - y) * (x - y)).sum::<f64>().sqrt()
+        a.iter()
+            .zip(b)
+            .map(|(x, y)| (x - y) * (x - y))
+            .sum::<f64>()
+            .sqrt()
     };
     let farthest = {
         let mut top = 0.0f64;
@@ -152,15 +162,26 @@ impl Model {
     /// be a variogram (negative nugget, sill below nugget, range ≤ 0).
     pub fn new(kind: ModelKind, nugget: f64, sill: f64, range: f64) -> Result<Model, Error> {
         if !(nugget.is_finite() && nugget >= 0.0) {
-            return Err(Error::BadModel { what: format!("nugget {nugget}") });
+            return Err(Error::BadModel {
+                what: format!("nugget {nugget}"),
+            });
         }
         if !(sill.is_finite() && sill >= nugget) {
-            return Err(Error::BadModel { what: format!("sill {sill} below nugget {nugget}") });
+            return Err(Error::BadModel {
+                what: format!("sill {sill} below nugget {nugget}"),
+            });
         }
         if !(range.is_finite() && range > 0.0) {
-            return Err(Error::BadModel { what: format!("range {range}") });
+            return Err(Error::BadModel {
+                what: format!("range {range}"),
+            });
         }
-        Ok(Model { kind, nugget, sill, range })
+        Ok(Model {
+            kind,
+            nugget,
+            sill,
+            range,
+        })
     }
 
     /// The structured part of the model, rising from 0 to 1 over `range`.
@@ -168,7 +189,11 @@ impl Model {
         let r = h / self.range;
         match self.kind {
             ModelKind::Spherical => {
-                if r >= 1.0 { 1.0 } else { 1.5 * r - 0.5 * r * r * r }
+                if r >= 1.0 {
+                    1.0
+                } else {
+                    1.5 * r - 0.5 * r * r * r
+                }
             }
             // The practical-range convention: 1 − e⁻³ ≈ 0.95 at h = range.
             ModelKind::Exponential => 1.0 - (-3.0 * r).exp(),
@@ -194,7 +219,10 @@ impl Model {
     pub fn fit(observed: &Empirical, kind: ModelKind) -> Result<Model, Error> {
         let bins = &observed.bins;
         if bins.len() < 3 {
-            return Err(Error::TooFewClasses { held: bins.len(), needed: 3 });
+            return Err(Error::TooFewClasses {
+                held: bins.len(),
+                needed: 3,
+            });
         }
         let shortest = bins.iter().map(|b| b.distance).fold(f64::MAX, f64::min);
         let longest = bins.iter().map(|b| b.distance).fold(0.0f64, f64::max);
@@ -229,7 +257,12 @@ impl ModelKind {
     /// variogram and the clamp is re-solved, not just cut.
     fn best_linear(kind: ModelKind, bins: &[Bin], range: f64) -> Model {
         // γ = nugget · 1 + spread · shape(h): ordinary 2×2 normal equations.
-        let probe = Model { kind, nugget: 0.0, sill: 1.0, range };
+        let probe = Model {
+            kind,
+            nugget: 0.0,
+            sill: 1.0,
+            range,
+        };
         let (mut s_ww, mut s_ws, mut s_ss, mut s_wy, mut s_sy) = (0.0, 0.0, 0.0, 0.0, 0.0);
         for bin in bins {
             let w = bin.pairs as f64;
@@ -259,7 +292,12 @@ impl ModelKind {
             spread = 0.0;
             nugget = if s_ww > 0.0 { s_wy / s_ww } else { 0.0 };
         }
-        Model { kind, nugget, sill: nugget + spread, range }
+        Model {
+            kind,
+            nugget,
+            sill: nugget + spread,
+            range,
+        }
     }
 }
 
@@ -317,13 +355,19 @@ mod tests {
     fn models_hold_their_conventions() {
         let spherical = Model::new(ModelKind::Spherical, 0.5, 2.0, 10.0).unwrap();
         assert_eq!(spherical.evaluate(0.0), 0.0, "γ(0) is 0, the nugget is a limit");
-        assert!((spherical.evaluate(1e-9) - 0.5).abs() < 1e-6, "the limit is the nugget");
+        assert!(
+            (spherical.evaluate(1e-9) - 0.5).abs() < 1e-6,
+            "the limit is the nugget"
+        );
         assert_eq!(spherical.evaluate(10.0), 2.0, "the sill is reached at the range");
         assert_eq!(spherical.evaluate(50.0), 2.0, "and held beyond it");
 
         let exponential = Model::new(ModelKind::Exponential, 0.0, 1.0, 10.0).unwrap();
         let at_range = exponential.evaluate(10.0);
-        assert!((at_range - 0.95).abs() < 0.01, "practical range: ~95 % of the sill");
+        assert!(
+            (at_range - 0.95).abs() < 0.01,
+            "practical range: ~95 % of the sill"
+        );
     }
 
     #[test]
@@ -333,7 +377,11 @@ mod tests {
             bins: (1..=10)
                 .map(|at| {
                     let h = at as f64;
-                    Bin { distance: h, semivariance: truth.evaluate(h), pairs: 50 }
+                    Bin {
+                        distance: h,
+                        semivariance: truth.evaluate(h),
+                        pairs: 50,
+                    }
                 })
                 .collect(),
             set_aside: 0,
@@ -353,7 +401,11 @@ mod tests {
             bins: (1..=8)
                 .map(|at| {
                     let h = at as f64;
-                    Bin { distance: h, semivariance: truth.evaluate(h), pairs: 10 }
+                    Bin {
+                        distance: h,
+                        semivariance: truth.evaluate(h),
+                        pairs: 10,
+                    }
                 })
                 .collect(),
             set_aside: 0,
@@ -366,10 +418,7 @@ mod tests {
     #[test]
     fn every_refusal_is_named() {
         let (samples, values) = line();
-        assert_eq!(
-            empirical(&samples, &values, Some(4.0), 0),
-            Err(Error::NoClasses)
-        );
+        assert_eq!(empirical(&samples, &values, Some(4.0), 0), Err(Error::NoClasses));
         assert_eq!(
             empirical(&samples, &values[..3], None, 4),
             Err(Error::MismatchedLengths { count: 9, values: 3 })
@@ -382,7 +431,11 @@ mod tests {
         assert!(Model::new(ModelKind::Spherical, 0.5, 0.1, 5.0).is_err());
         assert!(Model::new(ModelKind::Spherical, 0.0, 1.0, 0.0).is_err());
         let thin = Empirical {
-            bins: vec![Bin { distance: 1.0, semivariance: 1.0, pairs: 4 }],
+            bins: vec![Bin {
+                distance: 1.0,
+                semivariance: 1.0,
+                pairs: 4,
+            }],
             set_aside: 0,
         };
         assert_eq!(

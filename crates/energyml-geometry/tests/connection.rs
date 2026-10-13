@@ -21,9 +21,7 @@ use energyml_core::registry::DynObject;
 use energyml_core::value::Reflect;
 use energyml_domain::source::{ArraySource, ObjectSource};
 use energyml_geometry::{Topology, geometry};
-use energyml_storage::array::{
-    ArrayBuffer, ArrayData, ArrayLocation, ArrayMetadata, ArrayValues,
-};
+use energyml_storage::array::{ArrayBuffer, ArrayData, ArrayLocation, ArrayMetadata, ArrayValues};
 
 use crate::build;
 
@@ -82,8 +80,10 @@ impl Store {
     fn with_interpretations(mut self, flat: &[i64], cumulative: &[i64]) -> Self {
         self.integers
             .insert(INTERP.to_string(), (flat.to_vec(), vec![flat.len() as i64]));
-        self.integers
-            .insert(LENGTHS.to_string(), (cumulative.to_vec(), vec![cumulative.len() as i64]));
+        self.integers.insert(
+            LENGTHS.to_string(),
+            (cumulative.to_vec(), vec![cumulative.len() as i64]),
+        );
         self
     }
 
@@ -322,8 +322,8 @@ fn every_drawn_ring_carries_the_interpretation_of_the_connection_it_came_from() 
     // single connection"*. Here connection 0 names one, connection 1 names two,
     // and each side of a connection is drawn as its own ring, so the answer has
     // one row per **ring** and not one per connection.
-    let store = Store::new(&[(0, 1), (1, 0)], Some(&[3, 5, 5, 3]), None)
-        .with_interpretations(&[0, 0, 1], &[1, 3]);
+    let store =
+        Store::new(&[(0, 1), (1, 0)], Some(&[3, 5, 5, 3]), None).with_interpretations(&[0, 0, 1], &[1, 3]);
     let set = build::interpreted(
         build::connections(&[(0, 1), (1, 0)], Some(&[3, 5, 5, 3]), None),
         &[GRID, PROXY],
@@ -335,9 +335,17 @@ fn every_drawn_ring_carries_the_interpretation_of_the_connection_it_came_from() 
 
     assert_eq!(found.features.len(), 2);
     assert_eq!(found.features[0].uuid, GRID);
-    assert_eq!(found.features[0].title, format!("fault {GRID}"), "the reference's own title, not an invented one");
+    assert_eq!(
+        found.features[0].title,
+        format!("fault {GRID}"),
+        "the reference's own title, not an invented one"
+    );
 
-    assert_eq!(patches[0].topology.cell_count(), 4, "two sides drawn for each of two connections");
+    assert_eq!(
+        patches[0].topology.cell_count(),
+        4,
+        "two sides drawn for each of two connections"
+    );
     assert_eq!(
         found.per_entry.len(),
         patches[0].topology.cell_count(),
@@ -370,7 +378,11 @@ fn a_dropped_side_shifts_nothing() {
         .expect("the set reads");
     let found = found.expect("the set names its interpretations");
 
-    assert_eq!(patches[0].topology.cell_count(), 1, "only one side of one connection is placeable");
+    assert_eq!(
+        patches[0].topology.cell_count(),
+        1,
+        "only one side of one connection is placeable"
+    );
     assert_eq!(
         found.per_entry,
         vec![vec![1]],

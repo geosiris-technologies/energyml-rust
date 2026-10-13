@@ -411,7 +411,9 @@ fn of_within(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> Result
             let mut agreed: Option<Crs> = None;
             let mut disagree = false;
             for lender in lenders {
-                let Some(resolved) = source.object_of(lender) else { continue };
+                let Some(resolved) = source.object_of(lender) else {
+                    continue;
+                };
                 let Some(crs) = of_within(resolved.as_reflect(), source, hop + 1)? else {
                     continue;
                 };
@@ -460,9 +462,15 @@ fn patch_supports_agree(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8
     };
     let mut agreed: Option<Crs> = None;
     for patch in patches {
-        let Some(FieldValue::Object(support)) = patch.field("SupportingRepresentation") else { continue };
-        let Some(resolved) = source.object_of(support) else { continue };
-        let Some(crs) = of_within(resolved.as_reflect(), source, hop + 1)? else { continue };
+        let Some(FieldValue::Object(support)) = patch.field("SupportingRepresentation") else {
+            continue;
+        };
+        let Some(resolved) = source.object_of(support) else {
+            continue;
+        };
+        let Some(crs) = of_within(resolved.as_reflect(), source, hop + 1)? else {
+            continue;
+        };
         match &agreed {
             None => agreed = Some(crs),
             Some(first) if *first == crs => {}
@@ -547,8 +555,7 @@ fn patch_supports_agree(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8
 /// direct path. That is what the standard asks for — its vertical axis is a
 /// time and the trajectory's is a depth. (Nothing draws one today: the geometry
 /// readers are keyed on `WellboreFrameRepresentation` alone.)
-pub const BORROWED_GEOMETRY_FIELDS: &[&str] =
-    &["Trajectory", "SupportingRepresentation", "Grid"];
+pub const BORROWED_GEOMETRY_FIELDS: &[&str] = &["Trajectory", "SupportingRepresentation", "Grid"];
 
 /// The parent grid reference, under every name the two versions give it.
 ///
@@ -606,11 +613,7 @@ fn from_parent_window(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) 
 ///   coordinates of the compound its `Crs` names (§13.25 p. 371). The form
 ///   an external translation tool writes for a translated `obj_MdDatum`, and the form
 ///   chosen for a datum under a compound.
-pub const DATUM_TYPES: &[&str] = &[
-    "ReferencePointInACrs",
-    DATUM_IN_COMPOUND,
-    "MdDatum",
-];
+pub const DATUM_TYPES: &[&str] = &["ReferencePointInACrs", DATUM_IN_COMPOUND, "MdDatum"];
 
 /// The reference point written in the local coordinates of a
 /// `LocalEngineeringCompoundCrs` — common TRG 2.3 §13.25 p. 371.
@@ -638,12 +641,18 @@ pub fn compound_of_datum(datum: &dyn Reflect, source: &dyn ObjectSource) -> Resu
     if datum.type_info().type_key != DATUM_IN_COMPOUND {
         return Ok(None);
     }
-    let at = format!("{DATUM_IN_COMPOUND} {}", identity::uuid_of_reflect(datum).unwrap_or_default());
+    let at = format!(
+        "{DATUM_IN_COMPOUND} {}",
+        identity::uuid_of_reflect(datum).unwrap_or_default()
+    );
     let Some(named) = reference_to(datum, "Crs") else {
         return Err(Error::malformed(at, "`Crs` names no coordinate system"));
     };
     let Some(system) = source.object_of(named) else {
-        return Err(Error::Missing(format!("the CRS {} of the reference point ({at})", uri_or_uuid(named))));
+        return Err(Error::Missing(format!(
+            "the CRS {} of the reference point ({at})",
+            uri_or_uuid(named)
+        )));
     };
     let crs = read_with(system.as_reflect(), source)?;
     if crs.kind != "LocalEngineeringCompoundCrs" {
@@ -688,12 +697,13 @@ fn from_well_datum(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> 
         Some(FieldValue::Object(interval)) => interval,
         _ => object,
     };
-    let Some(datum_named) =
-        reference_to(interval, "Datum").or_else(|| reference_to(interval, "MdDatum"))
+    let Some(datum_named) = reference_to(interval, "Datum").or_else(|| reference_to(interval, "MdDatum"))
     else {
         return Ok(None);
     };
-    let datum_uuid = identity::uuid_of_reflect(datum_named).unwrap_or_default().to_string();
+    let datum_uuid = identity::uuid_of_reflect(datum_named)
+        .unwrap_or_default()
+        .to_string();
     let Some(datum) = source.object_of(datum_named) else {
         return Err(Error::Missing(format!("the datum {}", uri_or_uuid(datum_named))));
     };
@@ -774,7 +784,7 @@ fn from_well_datum(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> 
         projected,
         vertical,
     };
-    
+
     // if let Some(horizontal_coordinates) = object.field("HorizontalCoordinates") {
     //     out.x_offset = scalar_f64(&horizontal_coordinates, "Coordinate1").unwrap_or(0.0);
     //     out.y_offset = scalar_f64(&horizontal_coordinates, "Coordinate2").unwrap_or(0.0);
@@ -796,7 +806,11 @@ fn crs_object_kind(datum: &dyn Reflect, field: &str, source: &dyn ObjectSource) 
         return CrsKind::Absent;
     };
     // Either the holder is the DOR, or it wraps one under `Crs`.
-    let named = if identity::uuid_of_reflect(holder).is_some() { Some(holder) } else { reference_to(holder, "Crs") };
+    let named = if identity::uuid_of_reflect(holder).is_some() {
+        Some(holder)
+    } else {
+        reference_to(holder, "Crs")
+    };
     let Some(named) = named else {
         return CrsKind::Absent;
     };
@@ -1043,12 +1057,7 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
 
     // eml 2.3's origin, now that both the axis and the datum are known.
     if let Some(origin) = scalar_f64(crs, "OriginVerticalCoordinate") {
-        out.z_offset = origin_along_axis(
-            origin,
-            &out,
-            datum_direction,
-            datum_uom.as_deref(),
-        )?;
+        out.z_offset = origin_along_axis(origin, &out, datum_direction, datum_uom.as_deref())?;
     }
     Ok(out)
 }
@@ -1094,7 +1103,11 @@ fn origin_along_axis(
             ),
         ));
     };
-    let along = if datum_direction == axis.vertical_direction { origin } else { -origin };
+    let along = if datum_direction == axis.vertical_direction {
+        origin
+    } else {
+        -origin
+    };
     if axis.is_time() {
         return Ok(along);
     }
@@ -1327,7 +1340,9 @@ fn reference_to<'a>(object: &'a dyn Reflect, field: &str) -> Option<&'a dyn Refl
     let FieldValue::Object(reference) = object.field(field)? else {
         return None;
     };
-    identity::uuid_of_reflect(reference).filter(|uuid| !uuid.is_empty()).map(|_| reference)
+    identity::uuid_of_reflect(reference)
+        .filter(|uuid| !uuid.is_empty())
+        .map(|_| reference)
 }
 
 /// How a message names a reference: its uri, or its uuid when it has no uri.
@@ -1360,7 +1375,7 @@ mod tests {
             vertical_quantity: VerticalQuantity::Length,
             horizontal_uom: None,
             vertical_uom: None,
-        time_uom: None,
+            time_uom: None,
             projected: CrsKind::Absent,
             vertical: CrsKind::Absent,
         }
@@ -1498,7 +1513,6 @@ mod tests {
     }
 }
 
-
 #[cfg(test)]
 mod inverse_tests {
     use super::*;
@@ -1536,5 +1550,4 @@ mod inverse_tests {
             }
         }
     }
-
 }

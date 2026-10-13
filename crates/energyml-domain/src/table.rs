@@ -226,11 +226,7 @@ impl<'a> Table<'a> {
                     .join(", ")
             ));
         }
-        Ok(Rows {
-            columns,
-            rows,
-            notes,
-        })
+        Ok(Rows { columns, rows, notes })
     }
 }
 
@@ -458,7 +454,10 @@ fn read_pairs<'a>(object: &dyn Reflect, uuid: &str) -> Result<Vec<Column<'a>>> {
 
     for (at, item) in list(object, "Value").into_iter().enumerate() {
         let Some(pair) = item.as_object() else { continue };
-        let key = pair.field("Key").and_then(|f| f.as_scalar()).and_then(|s| s.as_f64());
+        let key = pair
+            .field("Key")
+            .and_then(|f| f.as_scalar())
+            .and_then(|s| s.as_f64());
         let Some(key) = key else {
             return Err(Error::malformed(
                 uuid,
@@ -556,7 +555,9 @@ fn scalar_u64(object: &dyn Reflect, field: &str) -> Option<u64> {
 /// The uuid a reference names — the identity layer's reading, so every
 /// spelling of the field is one answer.
 fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
-    energyml_core::identity::uuid_of_reflect(object).filter(|uuid| !uuid.is_empty()).map(str::to_string)
+    energyml_core::identity::uuid_of_reflect(object)
+        .filter(|uuid| !uuid.is_empty())
+        .map(str::to_string)
 }
 
 #[cfg(test)]
@@ -612,7 +613,9 @@ mod tests {
             qualified_type: "eml23.ColumnBasedTable".into(),
             columns: vec![readable, broken],
         };
-        let rows = table.read_all(&crate::source::NoObjects).expect("the table still answers");
+        let rows = table
+            .read_all(&crate::source::NoObjects)
+            .expect("the table still answers");
         assert_eq!(rows.rows, 2, "the readable column decides the row count");
         assert_eq!(rows.cell(0, 0), Some(Cell::Text("e6".into())));
         assert_eq!(rows.cell(0, 1), None, "an unreadable cell is None, not empty");
@@ -631,10 +634,7 @@ mod tests {
             Values::Integer(vec![1, 2, 3]),
             Values::Text(vec!["shale".into(), "sand".into(), "silt".into()]),
         );
-        assert_eq!(
-            table.of(3.0).unwrap(),
-            vec![Some(Cell::Text("silt".to_string()))]
-        );
+        assert_eq!(table.of(3.0).unwrap(), vec![Some(Cell::Text("silt".to_string()))]);
         assert_eq!(table.of(9.0), None, "a key that is not there maps to nothing");
     }
 

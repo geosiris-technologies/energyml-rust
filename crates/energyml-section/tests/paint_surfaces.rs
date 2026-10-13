@@ -18,7 +18,10 @@ const GREEN: &str = "#00ff00ff";
 const NONE: &str = "#12345600";
 
 fn paint(blend: Blend, nodes: &[&str]) -> Paint {
-    Paint { nodes: nodes.iter().map(|n| n.to_string()).collect(), blend }
+    Paint {
+        nodes: nodes.iter().map(|n| n.to_string()).collect(),
+        blend,
+    }
 }
 
 fn source(a: u32, b: u32, t: f64) -> CutSource {
@@ -42,7 +45,11 @@ fn smooth_runs_from_one_nodes_colour_to_the_next_through_their_mix() {
     // before, green-ish after, never one flat colour for the whole span.
     let colours: Vec<&str> = pieces.iter().map(|p| p.colour.as_str()).collect();
     assert!(colours.len() > 2, "a ramp is split into steps: {colours:?}");
-    assert_eq!(colours.first().copied(), Some("#f90600"), "a sub-piece wears the colour at its middle");
+    assert_eq!(
+        colours.first().copied(),
+        Some("#f90600"),
+        "a sub-piece wears the colour at its middle"
+    );
     assert_eq!(colours.last().copied(), Some("#06f900"));
     assert!(pieces.iter().all(|p| p.opacity == 1.0));
     // Symmetric: the two halves mirror each other (red/green swapped).
@@ -69,7 +76,12 @@ fn net_never_mixes_two_categories() {
     assert_eq!(pieces[1].colour, "#00ff00");
     assert_eq!(pieces[1].points, vec![[15.0, 0.0], [20.0, 0.0]]);
     // Halfway on the edge goes to the node it ends on (`t >= 1/2` is `b`).
-    let tie = trace_pieces(&span[..2], &[source(0, 1, 0.5), source(0, 1, 0.5)], &paint(Blend::Net, &[RED, GREEN])).unwrap();
+    let tie = trace_pieces(
+        &span[..2],
+        &[source(0, 1, 0.5), source(0, 1, 0.5)],
+        &paint(Blend::Net, &[RED, GREEN]),
+    )
+    .unwrap();
     assert_eq!(tie[0].colour, "#00ff00");
 }
 
@@ -78,18 +90,36 @@ fn a_node_with_no_value_leaves_a_gap_never_a_line() {
     // Node 2 has alpha 0: *no value there*. The point leaning on it has no
     // colour, and the segments on either side of it are not drawn.
     let span = [[0.0, 0.0], [10.0, 0.0], [20.0, 0.0], [30.0, 0.0], [40.0, 0.0]];
-    let sources = [source(0, 1, 0.0), source(0, 1, 1.0), source(1, 2, 0.5), source(1, 0, 0.5), source(0, 1, 0.0)];
+    let sources = [
+        source(0, 1, 0.0),
+        source(0, 1, 1.0),
+        source(1, 2, 0.5),
+        source(1, 0, 0.5),
+        source(0, 1, 0.0),
+    ];
     for blend in [Blend::Net, Blend::Smooth] {
         let pieces = trace_pieces(&span, &sources, &paint(blend, &[RED, GREEN, NONE])).unwrap();
         // Segment 0-1 and 3-4 stand; 1-2 and 2-3 (one end on the empty node) go.
-        let covered: Vec<(f64, f64)> =
-            pieces.iter().map(|p| (p.points.first().unwrap()[0], p.points.last().unwrap()[0])).collect();
-        assert!(covered.iter().all(|&(from, to)| (from >= 0.0 && to <= 10.0) || (from >= 30.0 && to <= 40.0)), "{blend:?}: {covered:?}");
+        let covered: Vec<(f64, f64)> = pieces
+            .iter()
+            .map(|p| (p.points.first().unwrap()[0], p.points.last().unwrap()[0]))
+            .collect();
+        assert!(
+            covered
+                .iter()
+                .all(|&(from, to)| (from >= 0.0 && to <= 10.0) || (from >= 30.0 && to <= 40.0)),
+            "{blend:?}: {covered:?}"
+        );
         assert!(covered.iter().any(|&(from, _)| from == 0.0) && covered.iter().any(|&(_, to)| to == 40.0));
     }
     // A point exactly **on** a node with a value does not lean on its edge's
     // other end: `t = 0` ignores node `b`, even if `b` is empty.
-    let on_a = trace_pieces(&[[0.0, 0.0], [10.0, 0.0]], &[source(0, 2, 0.0), source(0, 2, 0.0)], &paint(Blend::Smooth, &[RED, GREEN, NONE])).unwrap();
+    let on_a = trace_pieces(
+        &[[0.0, 0.0], [10.0, 0.0]],
+        &[source(0, 2, 0.0), source(0, 2, 0.0)],
+        &paint(Blend::Smooth, &[RED, GREEN, NONE]),
+    )
+    .unwrap();
     assert_eq!(on_a.len(), 1);
     assert_eq!(on_a[0].colour, "#ff0000");
 }
@@ -97,8 +127,12 @@ fn a_node_with_no_value_leaves_a_gap_never_a_line() {
 #[test]
 fn the_opacity_is_the_alpha() {
     let half = "#336699";
-    let pieces =
-        trace_pieces(&[[0.0, 0.0], [1.0, 0.0]], &[source(0, 1, 0.0), source(0, 1, 0.0)], &paint(Blend::Net, &["#33669980", half])).unwrap();
+    let pieces = trace_pieces(
+        &[[0.0, 0.0], [1.0, 0.0]],
+        &[source(0, 1, 0.0), source(0, 1, 0.0)],
+        &paint(Blend::Net, &["#33669980", half]),
+    )
+    .unwrap();
     assert_eq!(pieces[0].colour, half);
     assert!((pieces[0].opacity - 128.0 / 255.0).abs() < 1e-12);
 }
@@ -123,7 +157,10 @@ fn what_does_not_fit_is_refused_by_name() {
     }
     // A `t` that is not a place on the edge.
     for t in [f64::NAN, -0.5, 1.5] {
-        assert!(trace_pieces(&span, &[source(0, 1, t), source(0, 1, 0.0)], &two).is_err(), "t = {t}");
+        assert!(
+            trace_pieces(&span, &[source(0, 1, t), source(0, 1, 0.0)], &two).is_err(),
+            "t = {t}"
+        );
     }
     // An empty span is no piece, not a refusal.
     assert_eq!(trace_pieces(&[], &[], &two).unwrap(), Vec::new());
@@ -150,7 +187,12 @@ fn prepared() -> Prepared {
         colour: None,
         age: None,
         feature: None,
-        points: vec![[0.0, 0.0, 0.0], [10.0, 0.0, 10.0], [10.0, 10.0, 30.0], [0.0, 10.0, 20.0]],
+        points: vec![
+            [0.0, 0.0, 0.0],
+            [10.0, 0.0, 10.0],
+            [10.0, 10.0, 30.0],
+            [0.0, 10.0, 20.0],
+        ],
         triangles: vec![[0, 1, 2], [0, 2, 3]],
         nodes: vec![3, 4, 6, 7],
         grid: None,
@@ -158,7 +200,13 @@ fn prepared() -> Prepared {
 }
 
 fn trace(points: &[[f64; 2]]) -> SectionTrace {
-    SectionTrace { key: SectionKey::Long, trace: points.to_vec(), left: 10.0, right: 10.0, crossing: None }
+    SectionTrace {
+        key: SectionKey::Long,
+        trace: points.to_vec(),
+        left: 10.0,
+        right: 10.0,
+        crossing: None,
+    }
 }
 
 /// The 3D point a source names, in the representation's numbering.
@@ -183,7 +231,9 @@ fn a_cut_says_where_each_of_its_points_lies_on_the_surface() {
     let read = cut_prepared(&prepared(), &[trace(&[[-5.0, 3.0], [15.0, 3.0]])]);
     assert_eq!(read.cuts.len(), 1);
     let cut = &read.cuts[0];
-    let CutShape::Trace { spans } = &cut.shape else { panic!("a trace cut") };
+    let CutShape::Trace { spans } = &cut.shape else {
+        panic!("a trace cut")
+    };
     assert_eq!(spans.len(), 1);
     assert_eq!(cut.sources.len(), spans.len(), "one list per span");
     assert_eq!(cut.sources[0].len(), spans[0].len(), "one source per point");
@@ -210,7 +260,9 @@ fn a_preparation_without_a_numbering_gives_no_sources_and_the_cut_still_stands()
     let read = cut_prepared(&flat, &[trace(&[[-5.0, 3.0], [15.0, 3.0]])]);
     let cut = &read.cuts[0];
     assert!(cut.sources.is_empty(), "the reader cannot say: flat colour");
-    let CutShape::Trace { spans } = &cut.shape else { panic!() };
+    let CutShape::Trace { spans } = &cut.shape else {
+        panic!()
+    };
     assert_eq!(spans[0].len(), 3);
 }
 
@@ -226,7 +278,12 @@ fn read_of(spans: Vec<Vec<[f64; 2]>>, sources: Vec<Vec<CutSource>>) -> SurfaceRe
         feature: None,
         cuts: Vec::new(),
     };
-    read.cuts.push(SurfaceCut { section: SectionKey::Long, shape: CutShape::Trace { spans }, notes: Vec::new(), sources });
+    read.cuts.push(SurfaceCut {
+        section: SectionKey::Long,
+        shape: CutShape::Trace { spans },
+        notes: Vec::new(),
+        sources,
+    });
     read
 }
 
@@ -241,7 +298,9 @@ fn breaking_a_cut_at_a_hole_takes_the_sources_of_the_points_that_go() {
     let mut read = read_of(spans, vec![(0..7).map(at).collect()]);
     finite_surface(&mut read);
     let cut = &read.cuts[0];
-    let CutShape::Trace { spans } = &cut.shape else { panic!() };
+    let CutShape::Trace { spans } = &cut.shape else {
+        panic!()
+    };
     assert_eq!(spans.len(), 2);
     assert_eq!(cut.sources.len(), 2);
     assert_eq!(cut.sources[0], (0..3).map(at).collect::<Vec<_>>());
@@ -265,7 +324,9 @@ fn a_piece_too_short_to_draw_is_dropped_with_its_sources() {
     let mut read = read_of(vec![points], vec![(0..6).map(at).collect()]);
     finite_surface(&mut read);
     let cut = &read.cuts[0];
-    let CutShape::Trace { spans } = &cut.shape else { panic!() };
+    let CutShape::Trace { spans } = &cut.shape else {
+        panic!()
+    };
     assert_eq!(spans.len(), 1);
     assert_eq!(cut.sources, vec![vec![at(4), at(5)]]);
 }
@@ -291,7 +352,12 @@ fn a_cut_with_no_sources_stays_without() {
 
 // --- the numbering the reader's points have in the representation -------------
 
-fn patch(index: usize, node_offset: usize, points: Vec<[f64; 3]>, triangles: Vec<[u32; 3]>) -> energyml_geometry::geometry::Patch {
+fn patch(
+    index: usize,
+    node_offset: usize,
+    points: Vec<[f64; 3]>,
+    triangles: Vec<[u32; 3]>,
+) -> energyml_geometry::geometry::Patch {
     energyml_geometry::geometry::Patch {
         index,
         node_offset,
@@ -314,8 +380,24 @@ fn the_numbering_of_the_kept_points_is_the_representations_across_holes_and_patc
     let geometry = energyml_geometry::geometry::Geometry {
         kind: "TriangulatedSetRepresentation",
         patches: vec![
-            patch(0, 0, vec![[0.0, 0.0, 0.0], [1.0, 0.0, 1.0], [nan; 3], [1.0, 1.0, 2.0], [0.0, 1.0, 3.0]], vec![[0, 1, 3], [0, 3, 4]]),
-            patch(1, 5, vec![[nan; 3], [5.0, 0.0, 6.0], [5.0, 1.0, 7.0], [6.0, 1.0, 8.0]], vec![[1, 2, 3]]),
+            patch(
+                0,
+                0,
+                vec![
+                    [0.0, 0.0, 0.0],
+                    [1.0, 0.0, 1.0],
+                    [nan; 3],
+                    [1.0, 1.0, 2.0],
+                    [0.0, 1.0, 3.0],
+                ],
+                vec![[0, 1, 3], [0, 3, 4]],
+            ),
+            patch(
+                1,
+                5,
+                vec![[nan; 3], [5.0, 0.0, 6.0], [5.0, 1.0, 7.0], [6.0, 1.0, 8.0]],
+                vec![[1, 2, 3]],
+            ),
         ],
     };
     let drawn = geometry.drawable();

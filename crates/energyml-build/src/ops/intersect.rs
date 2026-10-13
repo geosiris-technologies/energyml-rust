@@ -90,18 +90,31 @@ fn surface_of(shape: &Shape) -> Option<Surface<'_>> {
     let mut triangles = Vec::new();
     let mut base = 0u32;
     for patch in &shape.geometry.patches {
-        let Topology::Triangles(faces) = &patch.topology else { continue };
+        let Topology::Triangles(faces) = &patch.topology else {
+            continue;
+        };
         points.extend(patch.points.iter().copied());
         triangles.extend(faces.iter().map(|f| [f[0] + base, f[1] + base, f[2] + base]));
         base += patch.points.len() as u32;
     }
-    if triangles.is_empty() { None } else { Some(Surface { name: &shape.name, points, triangles }) }
+    if triangles.is_empty() {
+        None
+    } else {
+        Some(Surface {
+            name: &shape.name,
+            points,
+            triangles,
+        })
+    }
 }
 
 /// The two roles, read as surfaces — or the refusal that names what is not one.
 fn surfaces_of(inputs: &IntersectInputs) -> Result<(Surface<'_>, Vec<Surface<'_>>), Refusal> {
     let fault = surface_of(&inputs.fault).ok_or_else(|| {
-        Refusal::on("fault", "must be a triangulated surface — a fault given as lines is already a trace")
+        Refusal::on(
+            "fault",
+            "must be a triangulated surface — a fault given as lines is already a trace",
+        )
     })?;
     let mut surfaces = Vec::new();
     for one in &inputs.surfaces {
@@ -110,7 +123,10 @@ fn surfaces_of(inputs: &IntersectInputs) -> Result<(Surface<'_>, Vec<Surface<'_>
             None => {
                 return Err(Refusal::on(
                     "surfaces",
-                    format!("`{}` is not triangulated — `triangulate` makes a surface from a cloud", one.name),
+                    format!(
+                        "`{}` is not triangulated — `triangulate` makes a surface from a cloud",
+                        one.name
+                    ),
                 ));
             }
         }
@@ -144,18 +160,31 @@ impl Operation for Intersect {
         surfaces_of(inputs).map(|_| ())
     }
 
-    fn plan(&self, inputs: IntersectInputs, params: IntersectParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: IntersectInputs,
+        params: IntersectParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let (fault, surfaces) = surfaces_of(&inputs)?;
         let mut says = Vec::new();
         let mut per_surface: Vec<Traced> = Vec::new();
         let mut dropped = 0usize;
         let mut empty = 0usize;
         for surface in &surfaces {
-            let made = intersect(&fault.points, &fault.triangles, &surface.points, &surface.triangles);
+            let made = intersect(
+                &fault.points,
+                &fault.triangles,
+                &surface.points,
+                &surface.triangles,
+            );
             dropped += made.dropped;
             if made.traces.is_empty() {
                 empty += 1;
-                says.push(Note { key: "no-trace", detail: format!("{}: the fault does not cut it", surface.name) });
+                says.push(Note {
+                    key: "no-trace",
+                    detail: format!("{}: the fault does not cut it", surface.name),
+                });
                 continue;
             }
             let lines: Vec<Vec<[f64; 3]>> = made.traces.iter().map(|t| t.points.clone()).collect();
@@ -163,16 +192,26 @@ impl Operation for Intersect {
             if lines.len() > 1 {
                 says.push(Note {
                     key: "torn",
-                    detail: format!("{}: {} separate traces — a surface torn by the fault gives one per lip", surface.name, lines.len()),
+                    detail: format!(
+                        "{}: {} separate traces — a surface torn by the fault gives one per lip",
+                        surface.name,
+                        lines.len()
+                    ),
                 });
             }
             per_surface.push((surface.name.to_string(), lines, closed));
         }
         if per_surface.is_empty() {
-            return Err(Refusal::on("surfaces", format!("the fault cuts none of the {} surface(s)", surfaces.len())));
+            return Err(Refusal::on(
+                "surfaces",
+                format!("the fault cuts none of the {} surface(s)", surfaces.len()),
+            ));
         }
         if dropped > 0 {
-            says.push(Note { key: "dropped", detail: format!("{dropped} triangle(s) with a non-finite corner took no part") });
+            says.push(Note {
+                key: "dropped",
+                detail: format!("{dropped} triangle(s) with a non-finite corner took no part"),
+            });
         }
 
         // **One patch per horizon**, in a single shape: that is what makes one
@@ -184,27 +223,54 @@ impl Operation for Intersect {
         for (index, (_, lines, closed)) in per_surface.iter().enumerate() {
             let points: Vec<[f64; 3]> = lines.iter().flatten().copied().collect();
             let runs: Vec<u32> = lines.iter().map(|l| l.len() as u32).collect();
-            patches.push(Patch { index, node_offset, points, topology: Topology::Polylines(runs), closed: Vec::new() });
+            patches.push(Patch {
+                index,
+                node_offset,
+                points,
+                topology: Topology::Polylines(runs),
+                closed: Vec::new(),
+            });
             node_offset += lines.iter().map(Vec::len).sum::<usize>();
             closed_all.extend(closed.iter().copied());
         }
         let name = format!("{} on {} surface(s)", fault.name, per_surface.len());
         let shape = Shape {
             name: name.clone(),
-            geometry: Geometry { kind: "intersect", patches: patches.clone() },
+            geometry: Geometry {
+                kind: "intersect",
+                patches: patches.clone(),
+            },
             closed: Some(closed_all),
             known: None,
         };
         let title = params.written.naming.title();
-        let lines = PolylinesInputs { shape: vec![shape], features: None };
-        let mut plan = super::polylines::write(&lines, &params.written, None, &format!("{name}:{title}"), cx)?;
+        let lines = PolylinesInputs {
+            shape: vec![shape],
+            features: None,
+        };
+        let mut plan =
+            super::polylines::write(&lines, &params.written, None, &format!("{name}:{title}"), cx)?;
 
         plan.activity.recipe = "intersect";
         plan.activity.title = format!("intersect → {title}");
-        plan.activity.parameters.retain(|p| !matches!(p, Parameter::Double { title, .. } if title == "closedCount"));
-        plan.activity.parameters.push(Parameter::Double { title: "surfaceCount".to_string(), value: surfaces.len() as f64, uom: None });
-        plan.activity.parameters.push(Parameter::Double { title: "tracedSurfaces".to_string(), value: per_surface.len() as f64, uom: None });
-        plan.activity.parameters.push(Parameter::Double { title: "uncutSurfaces".to_string(), value: empty as f64, uom: None });
+        plan.activity
+            .parameters
+            .retain(|p| !matches!(p, Parameter::Double { title, .. } if title == "closedCount"));
+        plan.activity.parameters.push(Parameter::Double {
+            title: "surfaceCount".to_string(),
+            value: surfaces.len() as f64,
+            uom: None,
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "tracedSurfaces".to_string(),
+            value: per_surface.len() as f64,
+            uom: None,
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "uncutSurfaces".to_string(),
+            value: empty as f64,
+            uom: None,
+        });
         plan.says.append(&mut says);
         plan.shapes = tree_of(&plan.shapes, &per_surface, &patches);
         Ok(plan)
@@ -212,9 +278,30 @@ impl Operation for Intersect {
 
     fn reports(&self) -> Vec<Slot> {
         support::frame_reports(vec![
-            Slot::optional("surfaceCount", Need::Integer { least: Some(0), most: None }, "how many surfaces were given"),
-            Slot::optional("tracedSurfaces", Need::Integer { least: Some(0), most: None }, "how many the fault cuts — one patch each"),
-            Slot::optional("uncutSurfaces", Need::Integer { least: Some(0), most: None }, "how many the fault does not reach"),
+            Slot::optional(
+                "surfaceCount",
+                Need::Integer {
+                    least: Some(0),
+                    most: None,
+                },
+                "how many surfaces were given",
+            ),
+            Slot::optional(
+                "tracedSurfaces",
+                Need::Integer {
+                    least: Some(0),
+                    most: None,
+                },
+                "how many the fault cuts — one patch each",
+            ),
+            Slot::optional(
+                "uncutSurfaces",
+                Need::Integer {
+                    least: Some(0),
+                    most: None,
+                },
+                "how many the fault does not reach",
+            ),
         ])
     }
 }
@@ -222,8 +309,16 @@ impl Operation for Intersect {
 /// The tree: a grouping root, one child per horizon — the trace that will
 /// later be designated as `faults` for that horizon.
 fn tree_of(written: &[Made], per_surface: &[Traced], patches: &[Patch]) -> Vec<Made> {
-    let Some(first) = written.first() else { return Vec::new() };
-    let root = Made { geometry: Geometry { kind: "intersect", patches: Vec::new() }, ..first.clone() };
+    let Some(first) = written.first() else {
+        return Vec::new();
+    };
+    let root = Made {
+        geometry: Geometry {
+            kind: "intersect",
+            patches: Vec::new(),
+        },
+        ..first.clone()
+    };
     let mut out = vec![root.clone()];
     for (at, ((name, _, _), patch)) in per_surface.iter().zip(patches).enumerate() {
         let mut own = patch.clone();
@@ -233,7 +328,10 @@ fn tree_of(written: &[Made], per_surface: &[Traced], patches: &[Patch]) -> Vec<M
             id: format!("{at}-trace"),
             parent: Some(root.id.clone()),
             title: format!("trace on {name}"),
-            geometry: Geometry { kind: "intersect", patches: vec![own] },
+            geometry: Geometry {
+                kind: "intersect",
+                patches: vec![own],
+            },
             object: None,
         });
     }

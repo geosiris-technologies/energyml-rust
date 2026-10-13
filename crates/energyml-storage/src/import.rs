@@ -488,8 +488,14 @@ pub fn plan(from: &EpcStore, into: &EpcStore, request: &Request) -> Plan {
             // another type only, the old rule stands (a release, or two concepts).
             let held = here_all.get(&key).map(Vec::as_slice).unwrap_or_default();
             let version_there = version_of(object.as_reflect());
-            let same_type: Vec<_> = held.iter().filter(|(s, _, _)| s.qualified_type == summary.qualified_type).collect();
-            match same_type.iter().find(|(_, _, held_version)| *held_version == version_there) {
+            let same_type: Vec<_> = held
+                .iter()
+                .filter(|(s, _, _)| s.qualified_type == summary.qualified_type)
+                .collect();
+            match same_type
+                .iter()
+                .find(|(_, _, held_version)| *held_version == version_there)
+            {
                 Some((s, o, _)) => Some((*s, *o)),
                 None if !same_type.is_empty() => {
                     out.new_versions.push(summary.uri.clone());

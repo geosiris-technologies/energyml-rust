@@ -90,7 +90,9 @@ use crate::pieces::Lattice;
 
 use energyml_analysis::mba::{Domain, Mba};
 
-use super::interpolate::{InterpolateInputs, InterpolateParams, lattice_for, lattice_onto, queries, samples_of};
+use super::interpolate::{
+    InterpolateInputs, InterpolateParams, lattice_for, lattice_onto, queries, samples_of,
+};
 
 /// A grid nobody meant to ask for — the same ceiling `interpolate.rs`
 /// already enforces (`MOST_NODES` there) for the `Fitted` extent, restated
@@ -214,12 +216,14 @@ fn filter_by_rings(
     let mut keep: Option<Vec<u32>> = None;
     if let Some(shape) = outer {
         let ring = ring_of("outer", shape)?;
-        let kept = energyml_geometry::clip::nodes_in_ring(&flat, &ring, false).map_err(|why| Refusal::on("outer", why))?;
+        let kept = energyml_geometry::clip::nodes_in_ring(&flat, &ring, false)
+            .map_err(|why| Refusal::on("outer", why))?;
         keep = Some(kept);
     }
     for shape in inner {
         let ring = ring_of("inner", shape)?;
-        let kept = energyml_geometry::clip::nodes_in_ring(&flat, &ring, true).map_err(|why| Refusal::on("inner", why))?;
+        let kept = energyml_geometry::clip::nodes_in_ring(&flat, &ring, true)
+            .map_err(|why| Refusal::on("inner", why))?;
         keep = Some(match keep {
             Some(previous) => {
                 let allowed: std::collections::HashSet<u32> = kept.into_iter().collect();
@@ -229,7 +233,10 @@ fn filter_by_rings(
         });
     }
     let keep = keep.unwrap_or_default();
-    Ok((keep.iter().map(|&i| at[i as usize]).collect(), keep.iter().map(|&i| values[i as usize]).collect()))
+    Ok((
+        keep.iter().map(|&i| at[i as usize]).collect(),
+        keep.iter().map(|&i| values[i as usize]).collect(),
+    ))
 }
 
 /// The grid's own nodes cut by the same rings (ring usage 2): a
@@ -239,19 +246,28 @@ fn filter_by_rings(
 /// the rings filtered the samples only, so the rectangle still covered
 /// everything past the ring. `nodes` are the nodes' world `(x, y)`, in the
 /// order of `z`. Answers how many were cut.
-fn mask_by_rings(nodes: &[[f64; 2]], z: &mut [f64], outer: Option<&Shape>, inner: &[Shape]) -> Result<usize, Refusal> {
+fn mask_by_rings(
+    nodes: &[[f64; 2]],
+    z: &mut [f64],
+    outer: Option<&Shape>,
+    inner: &[Shape],
+) -> Result<usize, Refusal> {
     if outer.is_none() && inner.is_empty() {
         return Ok(0);
     }
     let flat: Vec<f64> = nodes.iter().flat_map(|p| [p[0], p[1], 0.0]).collect();
     let mut cut = vec![false; nodes.len()];
     if let Some(shape) = outer {
-        for at in energyml_geometry::clip::nodes_in_ring(&flat, &ring_of("outer", shape)?, true).map_err(|why| Refusal::on("outer", why))? {
+        for at in energyml_geometry::clip::nodes_in_ring(&flat, &ring_of("outer", shape)?, true)
+            .map_err(|why| Refusal::on("outer", why))?
+        {
             cut[at as usize] = true;
         }
     }
     for shape in inner {
-        for at in energyml_geometry::clip::nodes_in_ring(&flat, &ring_of("inner", shape)?, false).map_err(|why| Refusal::on("inner", why))? {
+        for at in energyml_geometry::clip::nodes_in_ring(&flat, &ring_of("inner", shape)?, false)
+            .map_err(|why| Refusal::on("inner", why))?
+        {
             cut[at as usize] = true;
         }
     }
@@ -268,9 +284,21 @@ fn mask_by_rings(nodes: &[[f64; 2]], z: &mut [f64], outer: Option<&Shape>, inner
 /// A ring's corners in plan, flat `[x, y, …]` — refused by `slot`'s name when
 /// it cannot enclose anything.
 fn ring_of(slot: &str, shape: &Shape) -> Result<Vec<f64>, Refusal> {
-    let points: Vec<[f64; 3]> = shape.geometry.patches.iter().flat_map(|p| p.points.iter().copied()).collect();
+    let points: Vec<[f64; 3]> = shape
+        .geometry
+        .patches
+        .iter()
+        .flat_map(|p| p.points.iter().copied())
+        .collect();
     if points.len() < 3 {
-        return Err(Refusal::on(slot, format!("`{}` holds {} point(s): a ring encloses something with at least 3", shape.name, points.len())));
+        return Err(Refusal::on(
+            slot,
+            format!(
+                "`{}` holds {} point(s): a ring encloses something with at least 3",
+                shape.name,
+                points.len()
+            ),
+        ));
     }
     Ok(points.iter().flat_map(|p| [p[0], p[1]]).collect())
 }
@@ -309,12 +337,20 @@ fn coarsest_of(mba: &MbaParams, domain_size: [f64; 2]) -> [usize; 2] {
     } else {
         [1, 1]
     };
-    [mba.coarsest_i.unwrap_or(formula[0]).max(1), mba.coarsest_j.unwrap_or(formula[1]).max(1)]
+    [
+        mba.coarsest_i.unwrap_or(formula[0]).max(1),
+        mba.coarsest_j.unwrap_or(formula[1]).max(1),
+    ]
 }
 
 /// The plan for `Method::Mba` — called from `interpolate.rs`'s `plan()` with
 /// a two-line arm; see the module doc for why the rest lives here.
-pub fn plan(inputs: &InterpolateInputs, params: &InterpolateParams, mba_settings: &MbaParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+pub fn plan(
+    inputs: &InterpolateInputs,
+    params: &InterpolateParams,
+    mba_settings: &MbaParams,
+    cx: &Context<'_>,
+) -> Result<Plan, Refusal> {
     if matches!(mba_settings.frame, MbaFrame::MeanPlane) {
         return Err(Refusal::about(
             "value",
@@ -323,7 +359,10 @@ pub fn plan(inputs: &InterpolateInputs, params: &InterpolateParams, mba_settings
         ));
     }
     if matches!(mba_settings.extent, MbaExtent::Given(_)) && inputs.onto.is_some() {
-        return Err(Refusal::on("onto", "names a grid to reuse, and `extent = given` names one directly: the two say the same thing twice"));
+        return Err(Refusal::on(
+            "onto",
+            "names a grid to reuse, and `extent = given` names one directly: the two say the same thing twice",
+        ));
     }
 
     let samples = samples_of(inputs);
@@ -349,11 +388,30 @@ pub fn plan(inputs: &InterpolateInputs, params: &InterpolateParams, mba_settings
     };
 
     plan.activity.recipe = "interpolate";
-    plan.activity.parameters.push(Parameter::Text { title: "method".to_string(), value: "mba".to_string() });
-    plan.activity.parameters.push(Parameter::Double { title: "sampleCount".to_string(), value: at.len() as f64, uom: None });
-    plan.activity.parameters.push(Parameter::Double { title: "coarsestI".to_string(), value: levels_said.0[0] as f64, uom: None });
-    plan.activity.parameters.push(Parameter::Double { title: "coarsestJ".to_string(), value: levels_said.0[1] as f64, uom: None });
-    plan.activity.parameters.push(Parameter::Double { title: "levels".to_string(), value: levels_said.1 as f64, uom: None });
+    plan.activity.parameters.push(Parameter::Text {
+        title: "method".to_string(),
+        value: "mba".to_string(),
+    });
+    plan.activity.parameters.push(Parameter::Double {
+        title: "sampleCount".to_string(),
+        value: at.len() as f64,
+        uom: None,
+    });
+    plan.activity.parameters.push(Parameter::Double {
+        title: "coarsestI".to_string(),
+        value: levels_said.0[0] as f64,
+        uom: None,
+    });
+    plan.activity.parameters.push(Parameter::Double {
+        title: "coarsestJ".to_string(),
+        value: levels_said.0[1] as f64,
+        uom: None,
+    });
+    plan.activity.parameters.push(Parameter::Double {
+        title: "levels".to_string(),
+        value: levels_said.1 as f64,
+        uom: None,
+    });
     plan.says.push(Note {
         key: "mba-levels",
         detail: format!(
@@ -362,7 +420,10 @@ pub fn plan(inputs: &InterpolateInputs, params: &InterpolateParams, mba_settings
         ),
     });
     if ring_dropped > 0 {
-        plan.says.push(Note { key: "ring-filtered", detail: format!("{ring_dropped} sample(s) removed by `outer`/`inner` before fitting") });
+        plan.says.push(Note {
+            key: "ring-filtered",
+            detail: format!("{ring_dropped} sample(s) removed by `outer`/`inner` before fitting"),
+        });
     }
     Ok(plan)
 }
@@ -388,7 +449,11 @@ fn plan_fitted(
         }
         None => {
             let spacing = params.spacing.ok_or_else(|| {
-                Refusal::about("required", "spacing", "`spacing` is required: the cell size of the grid — or give `onto`, or `extent = given`")
+                Refusal::about(
+                    "required",
+                    "spacing",
+                    "`spacing` is required: the cell size of the grid — or give `onto`, or `extent = given`",
+                )
             })?;
             let (origin, counts) = lattice_for(at, spacing, params.margin)?;
             (origin, [spacing, spacing], counts)
@@ -396,14 +461,19 @@ fn plan_fitted(
     };
     let domain = Domain {
         origin,
-        size: [steps[0] * (counts[0] - 1) as f64, steps[1] * (counts[1] - 1) as f64],
+        size: [
+            steps[0] * (counts[0] - 1) as f64,
+            steps[1] * (counts[1] - 1) as f64,
+        ],
     };
     let (at, values, domain_dropped) = filter_to_domain(at, values, domain);
     let coarsest = coarsest_of(mba_settings, domain.size);
     let mba = Mba::new(coarsest).map_err(|e| refuse_mba("coarsest", e))?;
     let finest_spacing = steps[0].min(steps[1]);
     let nodes = queries(origin, steps, counts);
-    let answer = mba.interpolate(&at, &values, domain, finest_spacing, &nodes).map_err(|e| refuse_mba("shape", e))?;
+    let answer = mba
+        .interpolate(&at, &values, domain, finest_spacing, &nodes)
+        .map_err(|e| refuse_mba("shape", e))?;
     let mut z = answer.values;
     let ring_cut = mask_by_rings(&nodes, &mut z, inputs.outer.as_ref(), &inputs.inner)?;
 
@@ -413,18 +483,40 @@ fn plan_fitted(
         None => format!("{name}:{title}"),
         Some(onto) => format!("{name}:{title}:onto {}", onto_key(onto)),
     };
-    let lattice = Lattice { origin, spacing: steps, counts, z };
+    let lattice = Lattice {
+        origin,
+        spacing: steps,
+        counts,
+        z,
+    };
     let mut plan = super::grid::write(&name, &lattice, &params.written, &seed, cx)?;
     if let Some(onto) = &inputs.onto
         && let Some(reference) = onto.known.as_ref().and_then(|known| known.reference.as_ref())
     {
-        plan.activity.parameters.push(Parameter::Object { title: "input".to_string(), reference: reference.dor() });
+        plan.activity.parameters.push(Parameter::Object {
+            title: "input".to_string(),
+            reference: reference.dor(),
+        });
     } else {
-        plan.activity.parameters.push(Parameter::Double { title: "spacing".to_string(), value: steps[0], uom: None });
-        plan.activity.parameters.push(Parameter::Double { title: "margin".to_string(), value: params.margin, uom: None });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "spacing".to_string(),
+            value: steps[0],
+            uom: None,
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "margin".to_string(),
+            value: params.margin,
+            uom: None,
+        });
     }
     if answer.set_aside > 0 {
-        plan.says.push(Note { key: "set-aside", detail: format!("{} sample(s) set aside: a value or a coordinate that is not a finite number", answer.set_aside) });
+        plan.says.push(Note {
+            key: "set-aside",
+            detail: format!(
+                "{} sample(s) set aside: a value or a coordinate that is not a finite number",
+                answer.set_aside
+            ),
+        });
     }
     if domain_dropped > 0 {
         plan.says.push(Note {
@@ -453,10 +545,24 @@ fn plan_given(
     let n1 = (dir1[0] * dir1[0] + dir1[1] * dir1[1]).sqrt();
     let n2 = (dir2[0] * dir2[0] + dir2[1] * dir2[1]).sqrt();
     if !(n1.is_finite() && n1 > 1e-9) {
-        return Err(Refusal::about("value", "direction1", format!("must be a non-zero, finite vector, not [{}, {}]", dir1[0], dir1[1])));
+        return Err(Refusal::about(
+            "value",
+            "direction1",
+            format!(
+                "must be a non-zero, finite vector, not [{}, {}]",
+                dir1[0], dir1[1]
+            ),
+        ));
     }
     if !(n2.is_finite() && n2 > 1e-9) {
-        return Err(Refusal::about("value", "direction2", format!("must be a non-zero, finite vector, not [{}, {}]", dir2[0], dir2[1])));
+        return Err(Refusal::about(
+            "value",
+            "direction2",
+            format!(
+                "must be a non-zero, finite vector, not [{}, {}]",
+                dir2[0], dir2[1]
+            ),
+        ));
     }
     let dir1_hat = [dir1[0] / n1, dir1[1] / n1];
     let dir2_hat = [dir2[0] / n2, dir2[1] / n2];
@@ -469,17 +575,28 @@ fn plan_given(
         ));
     }
     if !(given.step1.is_finite() && given.step1 > 0.0) {
-        return Err(Refusal::about("value", "step1", format!("must be a positive length, not {}", given.step1)));
+        return Err(Refusal::about(
+            "value",
+            "step1",
+            format!("must be a positive length, not {}", given.step1),
+        ));
     }
     if !(given.step2.is_finite() && given.step2 > 0.0) {
-        return Err(Refusal::about("value", "step2", format!("must be a positive length, not {}", given.step2)));
+        return Err(Refusal::about(
+            "value",
+            "step2",
+            format!("must be a positive length, not {}", given.step2),
+        ));
     }
     let nodes = given.count1.saturating_mul(given.count2);
     if nodes > MOST_NODES {
         return Err(Refusal::about(
             "value",
             "count1",
-            format!("{} by {} — {nodes} nodes, past the {MOST_NODES} this writes: reduce `count1`/`count2`", given.count1, given.count2),
+            format!(
+                "{} by {} — {nodes} nodes, past the {MOST_NODES} this writes: reduce `count1`/`count2`",
+                given.count1, given.count2
+            ),
         ));
     }
     cx.stop_if_cancelled()?;
@@ -497,8 +614,14 @@ fn plan_given(
         ]
     };
     let samples_uv: Vec<[f64; 2]> = at.iter().map(|&p| to_uv(p)).collect();
-    let domain_size = [given.step1 * (given.count1 - 1) as f64, given.step2 * (given.count2 - 1) as f64];
-    let domain = Domain { origin: [0.0, 0.0], size: domain_size };
+    let domain_size = [
+        given.step1 * (given.count1 - 1) as f64,
+        given.step2 * (given.count2 - 1) as f64,
+    ];
+    let domain = Domain {
+        origin: [0.0, 0.0],
+        size: domain_size,
+    };
     let queries_uv: Vec<[f64; 2]> = (0..given.count2)
         .flat_map(|j| (0..given.count1).map(move |i| [i as f64 * given.step1, j as f64 * given.step2]))
         .collect();
@@ -507,11 +630,18 @@ fn plan_given(
     let coarsest = coarsest_of(mba_settings, domain_size);
     let mba = Mba::new(coarsest).map_err(|e| refuse_mba("coarsest", e))?;
     let finest_spacing = given.step1.min(given.step2);
-    let answer = mba.interpolate(&samples_uv, &values, domain, finest_spacing, &queries_uv).map_err(|e| refuse_mba("shape", e))?;
+    let answer = mba
+        .interpolate(&samples_uv, &values, domain, finest_spacing, &queries_uv)
+        .map_err(|e| refuse_mba("shape", e))?;
     // The rings are in the world, the queries in (u, v): back to the world.
     let nodes: Vec<[f64; 2]> = queries_uv
         .iter()
-        .map(|q| [origin[0] + q[0] * dir1_hat[0] + q[1] * dir2_hat[0], origin[1] + q[0] * dir1_hat[1] + q[1] * dir2_hat[1]])
+        .map(|q| {
+            [
+                origin[0] + q[0] * dir1_hat[0] + q[1] * dir2_hat[0],
+                origin[1] + q[0] * dir1_hat[1] + q[1] * dir2_hat[1],
+            ]
+        })
         .collect();
     let mut z = answer.values;
     let ring_cut = mask_by_rings(&nodes, &mut z, inputs.outer.as_ref(), &inputs.inner)?;
@@ -552,17 +682,41 @@ fn plan_given(
         &seed,
         cx,
     )?;
-    plan.activity.parameters.push(Parameter::Double { title: "step1".to_string(), value: given.step1, uom: None });
-    plan.activity.parameters.push(Parameter::Double { title: "step2".to_string(), value: given.step2, uom: None });
-    plan.activity.parameters.push(Parameter::Double { title: "count1".to_string(), value: given.count1 as f64, uom: None });
-    plan.activity.parameters.push(Parameter::Double { title: "count2".to_string(), value: given.count2 as f64, uom: None });
+    plan.activity.parameters.push(Parameter::Double {
+        title: "step1".to_string(),
+        value: given.step1,
+        uom: None,
+    });
+    plan.activity.parameters.push(Parameter::Double {
+        title: "step2".to_string(),
+        value: given.step2,
+        uom: None,
+    });
+    plan.activity.parameters.push(Parameter::Double {
+        title: "count1".to_string(),
+        value: given.count1 as f64,
+        uom: None,
+    });
+    plan.activity.parameters.push(Parameter::Double {
+        title: "count2".to_string(),
+        value: given.count2 as f64,
+        uom: None,
+    });
     if answer.set_aside > 0 {
-        plan.says.push(Note { key: "set-aside", detail: format!("{} sample(s) set aside: a value or a coordinate that is not a finite number", answer.set_aside) });
+        plan.says.push(Note {
+            key: "set-aside",
+            detail: format!(
+                "{} sample(s) set aside: a value or a coordinate that is not a finite number",
+                answer.set_aside
+            ),
+        });
     }
     if domain_dropped > 0 {
         plan.says.push(Note {
             key: "outside-given-lattice",
-            detail: format!("{domain_dropped} sample(s) fell outside the given lattice's own window and did not take part"),
+            detail: format!(
+                "{domain_dropped} sample(s) fell outside the given lattice's own window and did not take part"
+            ),
         });
     }
     said_ring_cut(&mut plan, ring_cut);
@@ -572,7 +726,10 @@ fn plan_given(
 /// The nodes the rings cut, said — a hole nobody named reads as a fit that failed.
 fn said_ring_cut(plan: &mut Plan, cut: usize) {
     if cut > 0 {
-        plan.says.push(Note { key: "ring-cut", detail: format!("{cut} node(s) outside `outer` or inside an `inner` written as NaN") });
+        plan.says.push(Note {
+            key: "ring-cut",
+            detail: format!("{cut} node(s) outside `outer` or inside an `inner` written as NaN"),
+        });
     }
 }
 
@@ -580,11 +737,21 @@ fn said_ring_cut(plan: &mut Plan, cut: usize) {
 /// own `title_of`, kept local rather than reused: it is three lines, and the
 /// existing one takes a `&Shape` this file does not always have handy.
 fn samples_name(inputs: &InterpolateInputs) -> String {
-    inputs.shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.title.clone()).unwrap_or_else(|| inputs.shape.name.clone())
+    inputs
+        .shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|r| r.title.clone())
+        .unwrap_or_else(|| inputs.shape.name.clone())
 }
 
 /// The given grid's identity key, for the seed — mirrors `interpolate.rs`'s
 /// inline use at the same spot.
 fn onto_key(onto: &Shape) -> String {
-    onto.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.uuid.clone()).unwrap_or_else(|| onto.name.clone())
+    onto.known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|r| r.uuid.clone())
+        .unwrap_or_else(|| onto.name.clone())
 }

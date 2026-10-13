@@ -10,7 +10,14 @@ use quick_xml::Reader;
 use quick_xml::events::Event;
 
 fn interval(top: f64, base: f64, text: Option<&str>, colour: Option<Rgba>) -> Interval {
-    Interval { md_top: top, md_base: base, text: text.map(str::to_string), colour, uri: None, row: None }
+    Interval {
+        md_top: top,
+        md_base: base,
+        text: text.map(str::to_string),
+        colour,
+        uri: None,
+        row: None,
+    }
 }
 
 /// A small but representative board: an MD column, a filled-and-labelled
@@ -19,7 +26,12 @@ fn interval(top: f64, base: f64, text: Option<&str>, colour: Option<Rgba>) -> In
 /// `svg::write` has (a fill, a wrapped multi-line text, a blank cell, MD
 /// ticks, the header row).
 fn sample_board() -> Board {
-    let red = Rgba { r: 0.8, g: 0.2, b: 0.1, a: 1.0 };
+    let red = Rgba {
+        r: 0.8,
+        g: 0.2,
+        b: 0.1,
+        a: 1.0,
+    };
     let strata = IntervalTrack::new(
         "Stratigraphy",
         vec![
@@ -41,7 +53,13 @@ fn sample_board() -> Board {
     .with_max_chars(20);
     Board {
         title: Some("Well <GTH-1>".to_string()),
-        tracks: vec![Track::Md(MdTrack { header: "Depth (m)".to_string() }), Track::Intervals(strata), Track::Intervals(lithology)],
+        tracks: vec![
+            Track::Md(MdTrack {
+                header: "Depth (m)".to_string(),
+            }),
+            Track::Intervals(strata),
+            Track::Intervals(lithology),
+        ],
     }
 }
 
@@ -72,7 +90,9 @@ fn check_well_formed(svg: &str) -> (usize, usize) {
             }
             Ok(Event::End(_)) => depth -= 1,
             Ok(_) => {}
-            Err(error) => panic!("the SVG `energyml_sheet::svg::write` produced is not well-formed XML: {error}\n---\n{svg}"),
+            Err(error) => panic!(
+                "the SVG `energyml_sheet::svg::write` produced is not well-formed XML: {error}\n---\n{svg}"
+            ),
         }
     }
     assert_eq!(depth, 0, "every start tag must have a matching end tag");
@@ -82,14 +102,25 @@ fn check_well_formed(svg: &str) -> (usize, usize) {
 #[test]
 fn the_svg_is_well_formed_xml_with_a_header_and_a_body_group() {
     let board = sample_board();
-    let params = Params { proportion: "readable".to_string(), height: HeightGoal::Total(150.0), page_width_mm: 180.0, text_size_pt: 8.0 };
+    let params = Params {
+        proportion: "readable".to_string(),
+        height: HeightGoal::Total(150.0),
+        page_width_mm: 180.0,
+        text_size_pt: 8.0,
+    };
     let layout = compute(&board, &params).expect("a valid board");
     let svg = energyml_sheet::svg::write(&layout);
 
     let (header_groups, body_groups) = check_well_formed(&svg);
-    assert_eq!(header_groups, 1, "exactly one `<g id=\"header\">`, per the design");
+    assert_eq!(
+        header_groups, 1,
+        "exactly one `<g id=\"header\">`, per the design"
+    );
     assert_eq!(body_groups, 1, "exactly one `<g id=\"body\">`, per the design");
-    assert!(svg.starts_with("<?xml"), "the document must open with an XML declaration");
+    assert!(
+        svg.starts_with("<?xml"),
+        "the document must open with an XML declaration"
+    );
 }
 
 #[test]
@@ -98,7 +129,12 @@ fn ampersands_and_angle_brackets_in_user_text_are_escaped() {
     // special characters, or a data-* attribute value built without going
     // through it.
     let board = sample_board(); // its title and lithology text both carry `<`, `>`, `&`, `"`
-    let params = Params { proportion: "to-scale".to_string(), height: HeightGoal::Total(100.0), page_width_mm: 180.0, text_size_pt: 8.0 };
+    let params = Params {
+        proportion: "to-scale".to_string(),
+        height: HeightGoal::Total(100.0),
+        page_width_mm: 180.0,
+        text_size_pt: 8.0,
+    };
     let layout = compute(&board, &params).expect("a valid board");
     let svg = energyml_sheet::svg::write(&layout);
 
@@ -107,21 +143,35 @@ fn ampersands_and_angle_brackets_in_user_text_are_escaped() {
     // second assertion is the more direct one: the raw, unescaped text must
     // not appear verbatim in the markup.
     check_well_formed(&svg);
-    assert!(!svg.contains("Well <GTH-1>"), "the title's angle brackets must be escaped");
-    assert!(svg.contains("Well &lt;GTH-1&gt;"), "escaped as entities, not dropped");
+    assert!(
+        !svg.contains("Well <GTH-1>"),
+        "the title's angle brackets must be escaped"
+    );
+    assert!(
+        svg.contains("Well &lt;GTH-1&gt;"),
+        "escaped as entities, not dropped"
+    );
 }
 
 #[test]
 fn every_cell_carries_its_md_bounds_and_a_blank_one_says_so() {
     let board = sample_board();
-    let params = Params { proportion: "readable".to_string(), height: HeightGoal::Total(150.0), page_width_mm: 180.0, text_size_pt: 8.0 };
+    let params = Params {
+        proportion: "readable".to_string(),
+        height: HeightGoal::Total(150.0),
+        page_width_mm: 180.0,
+        text_size_pt: 8.0,
+    };
     let layout = compute(&board, &params).expect("a valid board");
     let svg = energyml_sheet::svg::write(&layout);
     check_well_formed(&svg);
 
     assert!(svg.contains("data-md-top="), "data-md-top must be written");
     assert!(svg.contains("data-md-base="), "data-md-base must be written");
-    assert!(svg.contains("data-blank=\"true\""), "the second stratigraphy interval names neither colour nor text");
+    assert!(
+        svg.contains("data-blank=\"true\""),
+        "the second stratigraphy interval names neither colour nor text"
+    );
 }
 
 /// The root `<svg>`'s attribute `name`, as a number — `width="210.000mm"`
@@ -143,10 +193,18 @@ fn root_number(svg: &str, name: &str) -> f64 {
 /// sheet drawn from Lutetia). To break it: write `…pt` again.
 #[test]
 fn the_font_size_is_in_the_viewbox_unit() {
-    let params = Params { proportion: "readable".to_string(), height: HeightGoal::Total(150.0), page_width_mm: 180.0, text_size_pt: 8.0 };
+    let params = Params {
+        proportion: "readable".to_string(),
+        height: HeightGoal::Total(150.0),
+        page_width_mm: 180.0,
+        text_size_pt: 8.0,
+    };
     let svg = energyml_sheet::svg::write(&compute(&sample_board(), &params).expect("a valid board"));
     let size = root_number(&svg, "font-size");
-    assert!((size - 8.0 * 25.4 / 72.0).abs() < 1e-3, "8 pt is 2.822 mm, the file says {size}");
+    assert!(
+        (size - 8.0 * 25.4 / 72.0).abs() < 1e-3,
+        "8 pt is 2.822 mm, the file says {size}"
+    );
 }
 
 /// **A row wider than the page widens the page; it is never squeezed.**
@@ -158,13 +216,27 @@ fn the_font_size_is_in_the_viewbox_unit() {
 #[test]
 fn a_row_wider_than_the_page_widens_it() {
     let tracks: Vec<Track> = (0..8)
-        .map(|n| Track::Intervals(IntervalTrack::new(format!("column {n}"), vec![interval(0.0, 10.0, Some("a description"), None)], vec!["text".to_string()])))
+        .map(|n| {
+            Track::Intervals(IntervalTrack::new(
+                format!("column {n}"),
+                vec![interval(0.0, 10.0, Some("a description"), None)],
+                vec!["text".to_string()],
+            ))
+        })
         .collect();
     let board = Board { title: None, tracks };
-    let params = Params { proportion: "to-scale".to_string(), height: HeightGoal::Scale(10.0), page_width_mm: 180.0, text_size_pt: 8.0 };
+    let params = Params {
+        proportion: "to-scale".to_string(),
+        height: HeightGoal::Scale(10.0),
+        page_width_mm: 180.0,
+        text_size_pt: 8.0,
+    };
     let svg = energyml_sheet::svg::write(&compute(&board, &params).expect("a valid board"));
     let width = root_number(&svg, "width");
-    assert!(width > 180.0, "eight 32-character columns in {width} mm: squeezed");
+    assert!(
+        width > 180.0,
+        "eight 32-character columns in {width} mm: squeezed"
+    );
     // And a narrow row still fills the page asked for.
     let narrow = energyml_sheet::svg::write(&compute(&sample_board(), &params).expect("a valid board"));
     assert!(root_number(&narrow, "width") >= 180.0);
@@ -177,18 +249,33 @@ fn a_row_wider_than_the_page_widens_it() {
 /// To break it: start the column headers one line lower again.
 #[test]
 fn the_header_lines_stay_inside_the_header() {
-    let params = Params { proportion: "readable".to_string(), height: HeightGoal::Total(150.0), page_width_mm: 180.0, text_size_pt: 8.0 };
+    let params = Params {
+        proportion: "readable".to_string(),
+        height: HeightGoal::Total(150.0),
+        page_width_mm: 180.0,
+        text_size_pt: 8.0,
+    };
     let layout = compute(&sample_board(), &params).expect("a valid board");
     let svg = energyml_sheet::svg::write(&layout);
-    let header = &svg[svg.find("<g id=\"header\">").expect("a header")..svg.find("<g id=\"body\"").expect("a body")];
+    let header =
+        &svg[svg.find("<g id=\"header\">").expect("a header")..svg.find("<g id=\"body\"").expect("a body")];
     let mut seen = 0;
     for part in header.split("<text ").skip(1) {
         let from = part.find(" y=\"").expect("a y") + 4;
-        let y: f64 = part[from..from + part[from..].find('"').unwrap()].parse().unwrap();
-        assert!(y <= layout.header_height_mm + 1e-9, "a header line at y = {y} mm, the header is {} mm", layout.header_height_mm);
+        let y: f64 = part[from..from + part[from..].find('"').unwrap()]
+            .parse()
+            .unwrap();
+        assert!(
+            y <= layout.header_height_mm + 1e-9,
+            "a header line at y = {y} mm, the header is {} mm",
+            layout.header_height_mm
+        );
         seen += 1;
     }
-    assert!(seen >= 3, "the mode note and the column headers were read: {seen}");
+    assert!(
+        seen >= 3,
+        "the mode note and the column headers were read: {seen}"
+    );
 }
 
 /// **Every depth label lies inside the picture, the well's base included.**
@@ -200,18 +287,39 @@ fn the_header_lines_stay_inside_the_header() {
 #[test]
 fn every_depth_label_lies_inside_the_body() {
     for proportion in ["readable", "to-scale"] {
-        let params = Params { proportion: proportion.to_string(), height: HeightGoal::Scale(10.0), page_width_mm: 180.0, text_size_pt: 8.0 };
+        let params = Params {
+            proportion: proportion.to_string(),
+            height: HeightGoal::Scale(10.0),
+            page_width_mm: 180.0,
+            text_size_pt: 8.0,
+        };
         let layout = compute(&sample_board(), &params).expect("a valid board");
         let svg = energyml_sheet::svg::write(&layout);
         let mut depths = Vec::new();
-        for part in svg.split("<text ").skip(1).filter(|part| part.contains("data-md=\"")) {
+        for part in svg
+            .split("<text ")
+            .skip(1)
+            .filter(|part| part.contains("data-md=\""))
+        {
             let from = part.find(" y=\"").expect("a y") + 4;
-            let y: f64 = part[from..from + part[from..].find('"').unwrap()].parse().unwrap();
+            let y: f64 = part[from..from + part[from..].find('"').unwrap()]
+                .parse()
+                .unwrap();
             let from = part.find("data-md=\"").unwrap() + 9;
-            let md: f64 = part[from..from + part[from..].find('"').unwrap()].parse().unwrap();
-            assert!(y > 0.0 && y <= layout.body_height_mm + 1e-9, "{proportion}: the label of MD {md} at y = {y} mm, the body is {} mm", layout.body_height_mm);
+            let md: f64 = part[from..from + part[from..].find('"').unwrap()]
+                .parse()
+                .unwrap();
+            assert!(
+                y > 0.0 && y <= layout.body_height_mm + 1e-9,
+                "{proportion}: the label of MD {md} at y = {y} mm, the body is {} mm",
+                layout.body_height_mm
+            );
             depths.push(md);
         }
-        assert_eq!(depths, vec![0.0, 10.0, 20.0], "{proportion}: every bound is labelled, the base included");
+        assert_eq!(
+            depths,
+            vec![0.0, 10.0, 20.0],
+            "{proportion}: every bound is labelled, the base included"
+        );
     }
 }

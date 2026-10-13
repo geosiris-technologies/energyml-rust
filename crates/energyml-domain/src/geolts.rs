@@ -173,8 +173,16 @@ pub struct Chart {
 impl Chart {
     /// A chart from concepts.
     fn of(concepts: Vec<Concept>, label: impl Into<String>) -> Chart {
-        let index = concepts.iter().enumerate().map(|(at, one)| (one.id, at)).collect();
-        Chart { concepts, index, label: label.into() }
+        let index = concepts
+            .iter()
+            .enumerate()
+            .map(|(at, one)| (one.id, at))
+            .collect();
+        Chart {
+            concepts,
+            index,
+            label: label.into(),
+        }
     }
 
     /// A chart read from a GeolTs export and, when given, its bounds.
@@ -186,7 +194,10 @@ impl Chart {
             Some(text) => scan::bounds(text)?,
             None => Vec::new(),
         };
-        let concepts = scan::concepts(geolts, &ages)?.into_iter().map(Concept::from).collect();
+        let concepts = scan::concepts(geolts, &ages)?
+            .into_iter()
+            .map(Concept::from)
+            .collect();
         Ok(Chart::of(concepts, "a GeolTs export given at run time"))
     }
 
@@ -230,15 +241,22 @@ impl Chart {
 
     /// Its children in the tree, youngest first.
     pub fn children(&self, id: u32) -> Vec<&Concept> {
-        let mut out: Vec<&Concept> =
-            self.concepts.iter().filter(|one| self.parent(one.id).is_some_and(|p| p.id == id)).collect();
+        let mut out: Vec<&Concept> = self
+            .concepts
+            .iter()
+            .filter(|one| self.parent(one.id).is_some_and(|p| p.id == id))
+            .collect();
         out.sort_by(|a, b| young_first(a, b));
         out
     }
 
     /// The concepts that have no parent in the chart.
     pub fn roots(&self) -> Vec<&Concept> {
-        let mut out: Vec<&Concept> = self.concepts.iter().filter(|one| self.parent(one.id).is_none()).collect();
+        let mut out: Vec<&Concept> = self
+            .concepts
+            .iter()
+            .filter(|one| self.parent(one.id).is_none())
+            .collect();
         out.sort_by(|a, b| young_first(a, b));
         out
     }
@@ -332,7 +350,9 @@ impl Chart {
         let text = text.trim();
         let id = text.trim_start_matches(REGISTER).trim_start_matches("GeolTs/");
         if let Ok(id) = id.parse::<u32>() {
-            return self.get(id).ok_or_else(|| format!("the chart has no concept {id}"));
+            return self
+                .get(id)
+                .ok_or_else(|| format!("the chart has no concept {id}"));
         }
         let lower = text.to_lowercase();
         let by_label: Vec<&Concept> = self
@@ -341,17 +361,25 @@ impl Chart {
             .filter(|one| one.label.to_lowercase() == lower || one.label_en.to_lowercase() == lower)
             .collect();
         let found = if by_label.is_empty() {
-            self.concepts.iter().filter(|one| one.notations.iter().any(|n| n.eq_ignore_ascii_case(text))).collect()
+            self.concepts
+                .iter()
+                .filter(|one| one.notations.iter().any(|n| n.eq_ignore_ascii_case(text)))
+                .collect()
         } else {
             by_label
         };
         match found.as_slice() {
-            [] => Err(format!("no concept of the chart is called `{text}` — give its label, its code or its id")),
+            [] => Err(format!(
+                "no concept of the chart is called `{text}` — give its label, its code or its id"
+            )),
             [one] => Ok(one),
             many => Err(format!(
                 "`{text}` names {} concepts — {}; give the id",
                 many.len(),
-                many.iter().map(|one| format!("{} {} ({})", one.id, one.label, one.level_name())).collect::<Vec<_>>().join(", ")
+                many.iter()
+                    .map(|one| format!("{} {} ({})", one.id, one.label, one.level_name()))
+                    .collect::<Vec<_>>()
+                    .join(", ")
             )),
         }
     }
@@ -361,7 +389,9 @@ impl Chart {
 fn young_first(a: &Concept, b: &Concept) -> std::cmp::Ordering {
     let key = |one: &Concept| (one.ends_ma.unwrap_or(f64::MAX), one.begins_ma.unwrap_or(f64::MAX));
     let (ka, kb) = (key(a), key(b));
-    ka.0.total_cmp(&kb.0).then(ka.1.total_cmp(&kb.1)).then(a.id.cmp(&b.id))
+    ka.0.total_cmp(&kb.0)
+        .then(ka.1.total_cmp(&kb.1))
+        .then(a.id.cmp(&b.id))
 }
 
 /// The chart compacted into this build (never empty: `build.rs` refuses).
@@ -372,7 +402,10 @@ static DEFAULT: OnceLock<RwLock<Chart>> = OnceLock::new();
 fn slot() -> &'static RwLock<Chart> {
     DEFAULT.get_or_init(|| {
         let chart = Chart::of(
-            scan::from_compact(BUILT_IN).into_iter().map(Concept::from).collect(),
+            scan::from_compact(BUILT_IN)
+                .into_iter()
+                .map(Concept::from)
+                .collect(),
             "the built-in BRGM chart (GeolTs, snapshot of 24/09/2026)",
         );
         RwLock::new(chart)
@@ -381,12 +414,16 @@ fn slot() -> &'static RwLock<Chart> {
 
 /// Do something with the chart in use.
 pub fn with_default<T>(f: impl FnOnce(&Chart) -> T) -> T {
-    let guard = slot().read().expect("the chart lock is never held across a panic");
+    let guard = slot()
+        .read()
+        .expect("the chart lock is never held across a panic");
     f(&guard)
 }
 
 /// Replace the chart in use — a fresh export, or a test's own extract.
 pub fn set_default(chart: Chart) {
-    let mut guard = slot().write().expect("the chart lock is never held across a panic");
+    let mut guard = slot()
+        .write()
+        .expect("the chart lock is never held across a panic");
     *guard = chart;
 }

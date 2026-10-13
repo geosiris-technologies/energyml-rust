@@ -11,7 +11,7 @@
 use energyml_build::geojson::{Flow, Keep, Wanted};
 use energyml_providers::query::{Area, Page, Query, Term};
 use energyml_providers::transport::{Answer, Request, Transport};
-use energyml_providers::{Error, Providers, Provider};
+use energyml_providers::{Error, Provider, Providers};
 
 /// A transport that returns what it was given — the repository's fake, the
 /// shape the ETP client already uses.
@@ -49,7 +49,10 @@ fn a_query_becomes_the_url_the_service_expects() {
     let query = Query {
         collection: "boreholes".to_string(),
         area: Some(paris()),
-        terms: vec![Term { name: "codeSpace".to_string(), value: "BRGM".to_string() }],
+        terms: vec![Term {
+            name: "codeSpace".to_string(),
+            value: "BRGM".to_string(),
+        }],
         most: None,
     };
     let request = provider.page(&query, Page::first(1000)).expect("a request");
@@ -65,7 +68,11 @@ fn a_query_becomes_the_url_the_service_expects() {
         "startIndex=0",
         "cql_filter=",
     ] {
-        assert!(request.url.contains(needle), "`{needle}` missing from {}", request.url);
+        assert!(
+            request.url.contains(needle),
+            "`{needle}` missing from {}",
+            request.url
+        );
     }
 
     // **The axis order is the one this service imposes in CQL**, and it is the
@@ -80,7 +87,10 @@ fn a_query_becomes_the_url_the_service_expects() {
     );
     // The ring is closed by the reader, not by the caller: it is a rule of the
     // WKT format, not one more click to ask for.
-    assert!(decoded.contains("2.2857475 48.8167257)))"), "the ring is not closed: {decoded}");
+    assert!(
+        decoded.contains("2.2857475 48.8167257)))"),
+        "the ring is not closed: {decoded}"
+    );
     // The filter path is the one the service expects, not the short name.
     assert!(
         decoded.contains("gsmlbh:logElement/gsmlbh:BoreholeInterval/gsmlbh:collectionIdentifier/@codeSpace")
@@ -91,7 +101,11 @@ fn a_query_becomes_the_url_the_service_expects() {
 #[test]
 fn the_quote_asks_for_a_count_and_nothing_else() {
     let provider = brgm();
-    let query = Query { collection: "boreholes".to_string(), area: Some(paris()), ..Default::default() };
+    let query = Query {
+        collection: "boreholes".to_string(),
+        area: Some(paris()),
+        ..Default::default()
+    };
     let request = provider.count(&query).expect("a request");
     assert!(request.url.contains("resultType=hits"), "{}", request.url);
     // **No output format**: the quote answers in XML whatever is asked, and
@@ -104,7 +118,13 @@ fn what_the_service_does_not_offer_is_refused_before_any_request() {
     let provider = brgm();
 
     let unknown = provider
-        .page(&Query { collection: "wells".to_string(), ..Default::default() }, Page::first(10))
+        .page(
+            &Query {
+                collection: "wells".to_string(),
+                ..Default::default()
+            },
+            Page::first(10),
+        )
         .expect_err("refused");
     match &unknown {
         // The refusal **lists what exists**: somebody who mistyped a name needs
@@ -119,7 +139,10 @@ fn what_the_service_does_not_offer_is_refused_before_any_request() {
         .page(
             &Query {
                 collection: "boreholes".to_string(),
-                terms: vec![Term { name: "depth".to_string(), value: "10".to_string() }],
+                terms: vec![Term {
+                    name: "depth".to_string(),
+                    value: "10".to_string(),
+                }],
                 ..Default::default()
             },
             Page::first(10),
@@ -153,9 +176,16 @@ fn a_refusal_of_the_server_is_read_and_repeated() {
   </ows:Exception>
 </ows:ExceptionReport>"#;
     let provider = brgm();
-    let answer = Canned { status: 400, body: body.to_string() }
-        .fetch(&Request { url: String::new(), accept: String::new(), about: String::new() })
-        .expect("an answer");
+    let answer = Canned {
+        status: 400,
+        body: body.to_string(),
+    }
+    .fetch(&Request {
+        url: String::new(),
+        accept: String::new(),
+        about: String::new(),
+    })
+    .expect("an answer");
 
     let why = provider
         .read_page(answer, &Wanted::default(), &mut |_| Flow::Continue)
@@ -178,9 +208,16 @@ fn a_quote_is_read_off_the_answer() {
     // `numberReturned` is zero — that is the whole point.
     let body = r#"<?xml version="1.0" encoding="UTF-8"?><wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0" numberMatched="16984" numberReturned="0" timeStamp="2026-09-20T01:00:00Z"/>"#;
     let provider = brgm();
-    let answer = Canned { status: 200, body: body.to_string() }
-        .fetch(&Request { url: String::new(), accept: String::new(), about: String::new() })
-        .expect("an answer");
+    let answer = Canned {
+        status: 200,
+        body: body.to_string(),
+    }
+    .fetch(&Request {
+        url: String::new(),
+        accept: String::new(),
+        about: String::new(),
+    })
+    .expect("an answer");
     assert_eq!(provider.read_count(answer).expect("a count"), 16_984);
 }
 
@@ -191,17 +228,30 @@ fn a_page_is_read_as_a_stream_and_keeps_what_was_asked_for() {
          "properties":{"identifier":"https://data.geoscience.fr/id/Borehole/BSS1","indexData":{"gros":[1,2,3]}}}
     ],"numberMatched":2940,"numberReturned":1}"#;
     let provider = brgm();
-    let answer = Canned { status: 200, body: body.to_string() }
-        .fetch(&Request { url: String::new(), accept: String::new(), about: String::new() })
-        .expect("an answer");
+    let answer = Canned {
+        status: 200,
+        body: body.to_string(),
+    }
+    .fetch(&Request {
+        url: String::new(),
+        accept: String::new(),
+        about: String::new(),
+    })
+    .expect("an answer");
 
     let wanted = ["identifier"];
     let mut seen = Vec::new();
     let summary = provider
-        .read_page(answer, &Wanted { properties: Keep::Only(&wanted) }, &mut |one| {
-            seen.push(one);
-            Flow::Continue
-        })
+        .read_page(
+            answer,
+            &Wanted {
+                properties: Keep::Only(&wanted),
+            },
+            &mut |one| {
+                seen.push(one);
+                Flow::Continue
+            },
+        )
         .expect("a page");
 
     assert_eq!(summary.read, 1);
@@ -231,12 +281,18 @@ fn the_registry_lists_what_this_build_can_ask() {
     let brgm = providers.get("brgm-bss").expect("a provider");
     let collections = brgm.collections();
     assert_eq!(collections.len(), 2);
-    let boreholes = collections.iter().find(|one| one.name == "boreholes").expect("boreholes");
+    let boreholes = collections
+        .iter()
+        .find(|one| one.name == "boreholes")
+        .expect("boreholes");
     assert!(!boreholes.about.is_empty());
     assert!(boreholes.area.is_some());
     assert_eq!(boreholes.feeds, vec!["sigeol-boreholes".to_string()]);
     let filter = &boreholes.filters[0];
-    assert!(!filter.about.is_empty(), "a filter with no sentence is a field nobody fills in");
+    assert!(
+        !filter.about.is_empty(),
+        "a filter with no sentence is a field nobody fills in"
+    );
     assert_eq!(filter.suggest.as_deref(), Some("BRGM"));
 
     // And the credit travels with the address, never separately.
@@ -415,7 +471,10 @@ fn a_request_from_the_front_end_comes_back_unchanged() {
     let query = Query {
         collection: "boreholes".to_string(),
         area: Some(paris()),
-        terms: vec![Term { name: "codeSpace".to_string(), value: "BRGM".to_string() }],
+        terms: vec![Term {
+            name: "codeSpace".to_string(),
+            value: "BRGM".to_string(),
+        }],
         most: Some(500),
     };
     let json = serde_json::to_string(&query).expect("serialisable");

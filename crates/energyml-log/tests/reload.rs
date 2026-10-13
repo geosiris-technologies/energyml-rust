@@ -3,7 +3,7 @@
 use std::io;
 use std::sync::{Arc, Mutex};
 
-use energyml_log::{dispatch, Format};
+use energyml_log::{Format, dispatch};
 use tracing::{debug, info, info_span};
 use tracing_subscriber::fmt::MakeWriter;
 
@@ -71,7 +71,10 @@ fn a_span_says_how_long_it_took_and_a_bad_filter_is_refused() {
         }
         let out = sink.take();
         assert!(out.contains("inside"));
-        assert!(out.contains("time.busy"), "span close carries the elapsed time: {out}");
+        assert!(
+            out.contains("time.busy"),
+            "span close carries the elapsed time: {out}"
+        );
         assert!(out.contains("rows=3"));
         assert!(handle.set_filter("energyml=[").is_err());
         // The failed change left the filter alone.
@@ -86,7 +89,10 @@ fn json_lines_are_json() {
     tracing::dispatcher::with_default(&d, || info!(n = 2, "hello"));
     let out = sink.take();
     let line = out.lines().next().unwrap();
-    assert!(line.starts_with('{') && line.ends_with('}') && line.contains("\"hello\""), "{line}");
+    assert!(
+        line.starts_with('{') && line.ends_with('}') && line.contains("\"hello\""),
+        "{line}"
+    );
 }
 
 #[test]

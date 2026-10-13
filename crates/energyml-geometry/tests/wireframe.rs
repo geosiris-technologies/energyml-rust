@@ -63,7 +63,16 @@ fn two_cells(keep_second: bool) -> Geometry {
     // Corners of a cell, in the order `Topology::Hexahedra` expects: the four
     // of the bottom layer then the four above them.
     let cell = |left: u32| -> [u32; 8] {
-        [left, left + 1, left + 3, left + 2, left + 6, left + 7, left + 9, left + 8]
+        [
+            left,
+            left + 1,
+            left + 3,
+            left + 2,
+            left + 6,
+            left + 7,
+            left + 9,
+            left + 8,
+        ]
     };
     let mut cells = vec![cell(0)];
     if keep_second {
@@ -71,7 +80,14 @@ fn two_cells(keep_second: bool) -> Geometry {
     }
     // `dimensions` is what the cells were built from; two cells in a row.
     let dimensions = [if keep_second { 2 } else { 1 }, 1, 1];
-    geometry(vec![patch(points, Topology::Hexahedra { cells, dimensions, index: Vec::new() })])
+    geometry(vec![patch(
+        points,
+        Topology::Hexahedra {
+            cells,
+            dimensions,
+            index: Vec::new(),
+        },
+    )])
 }
 
 #[test]
@@ -104,7 +120,11 @@ fn dropping_a_cell_drops_the_nodes_only_it_named_from_both() {
     let cut = two_cells(false);
 
     assert_eq!(whole.drawable().points.len(), 12, "every node is named by a cell");
-    assert_eq!(cut.drawable().points.len(), 8, "four nodes were named by the cell that went");
+    assert_eq!(
+        cut.drawable().points.len(),
+        8,
+        "four nodes were named by the cell that went"
+    );
 
     let wire = cut.wireframe().expect("edges");
     let vertices = cut.drawable().points.len();
@@ -118,7 +138,11 @@ fn dropping_a_cell_drops_the_nodes_only_it_named_from_both() {
     let reshaped = cut.as_shape(Shape::Lines).expect("reshapes").drawable();
     assert_eq!(reshaped.points.len(), 12, "this is what the old road addressed");
     assert!(
-        reshaped.lines.iter().flatten().any(|index| (*index as usize) >= vertices),
+        reshaped
+            .lines
+            .iter()
+            .flatten()
+            .any(|index| (*index as usize) >= vertices),
         "if this no longer overflows, the two roads have converged and this test is moot"
     );
 }
@@ -135,7 +159,9 @@ fn a_grid_with_nothing_undefined_is_unchanged() {
     // drawn, not read — so the set is the whole claim.
     let g = two_cells(true);
     let edges = |list: Vec<[u32; 2]>| -> std::collections::BTreeSet<(u32, u32)> {
-        list.into_iter().map(|[a, b]| if a <= b { (a, b) } else { (b, a) }).collect()
+        list.into_iter()
+            .map(|[a, b]| if a <= b { (a, b) } else { (b, a) })
+            .collect()
     };
     let wire = edges(g.wireframe().expect("edges"));
     let reshaped = edges(g.as_shape(Shape::Lines).expect("reshapes").drawable().lines);

@@ -87,7 +87,7 @@
 
 use std::collections::BTreeMap;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use energyml_domain::provenance::Parameter;
 
@@ -95,7 +95,8 @@ use crate::borehole::{self, Borehole};
 use crate::declare::{Epsg, Features, Inputs, Params, Suggestions};
 use crate::geojson::{Position, Shape};
 use crate::operation::{
-    About, ActivityDraft, Category, Context, Dropped, Identity, Need, NewObject, Note, Operation, Plan, Refusal, Slot,
+    About, ActivityDraft, Category, Context, Dropped, Identity, Need, NewObject, Note, Operation, Plan,
+    Refusal, Slot,
 };
 use crate::pieces::Pieces;
 
@@ -262,7 +263,12 @@ impl Operation for SigeolBoreholes {
         Ok(())
     }
 
-    fn plan(&self, inputs: BoreholeInputs, params: BoreholeParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: BoreholeInputs,
+        params: BoreholeParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         if let Identity::Given(_) = cx.identity {
             return Err(Refusal::new(
                 "refused",
@@ -289,7 +295,10 @@ impl Operation for SigeolBoreholes {
             &mut rank,
         )?;
         let (target, from) = frame.place.clone().ok_or_else(|| {
-            Refusal::new("sourceEpsg", "the frame was not created here: `sigeol-boreholes` places a GeoJSON's own coordinates")
+            Refusal::new(
+                "sourceEpsg",
+                "the frame was not created here: `sigeol-boreholes` places a GeoJSON's own coordinates",
+            )
         })?;
         // **A borehole cannot be written into a geographic system, and the
         // reason is that a borehole *is* a vertical extent.**
@@ -342,7 +351,10 @@ impl Operation for SigeolBoreholes {
             }
             for feature in &collection.features {
                 if !borehole::is_borehole(&feature.properties) {
-                    aside.add("not a `Borehole`: the feature is of another kind", feature.id.as_deref());
+                    aside.add(
+                        "not a `Borehole`: the feature is of another kind",
+                        feature.id.as_deref(),
+                    );
                     continue;
                 }
                 let head = match feature.shape {
@@ -350,20 +362,35 @@ impl Operation for SigeolBoreholes {
                     _ => None,
                 };
                 let Some(head) = head else {
-                    aside.add("a borehole with no head: its geometry is not a `Point`", feature.id.as_deref());
+                    aside.add(
+                        "a borehole with no head: its geometry is not a `Point`",
+                        feature.id.as_deref(),
+                    );
                     continue;
                 };
-                let Some(hole) = borehole::borehole_of(feature.id.as_deref(), Some((head.lon, head.lat)), &feature.properties)
-                else {
-                    aside.add("a `Borehole` whose properties this reader does not recognise", feature.id.as_deref());
+                let Some(hole) = borehole::borehole_of(
+                    feature.id.as_deref(),
+                    Some((head.lon, head.lat)),
+                    &feature.properties,
+                ) else {
+                    aside.add(
+                        "a `Borehole` whose properties this reader does not recognise",
+                        feature.id.as_deref(),
+                    );
                     continue;
                 };
                 let (Some(key), Some(title)) = (hole.key(), hole.title()) else {
-                    aside.add("a borehole with no identifier at all: nothing can name its objects", None);
+                    aside.add(
+                        "a borehole with no identifier at all: nothing can name its objects",
+                        None,
+                    );
                     continue;
                 };
                 let Some(elevation) = hole.elevation else {
-                    aside.add("no `referenceLocation.elevation`: the ground is unknown, and the depths start there", Some(title.as_str()));
+                    aside.add(
+                        "no `referenceLocation.elevation`: the ground is unknown, and the depths start there",
+                        Some(title.as_str()),
+                    );
                     continue;
                 };
                 let mds = match hole.mds() {
@@ -383,8 +410,15 @@ impl Operation for SigeolBoreholes {
                     ), Some(title.as_str()));
                     continue;
                 }
-                let placed = match crate::crs::place(&[Position { lon: head.lon, lat: head.lat, z: Some(elevation) }], &target, from)
-                {
+                let placed = match crate::crs::place(
+                    &[Position {
+                        lon: head.lon,
+                        lat: head.lat,
+                        z: Some(elevation),
+                    }],
+                    &target,
+                    from,
+                ) {
                     Ok(placed) => placed,
                     Err(why) => {
                         aside.add(why, Some(title.as_str()));
@@ -459,7 +493,8 @@ impl Operation for SigeolBoreholes {
                 });
 
                 // -- its interpretation ---------------------------------------
-                let interpretation_uuid = support::next_uuid(identity, &format!("well-interpretation:{key}"), &mut rank)?;
+                let interpretation_uuid =
+                    support::next_uuid(identity, &format!("well-interpretation:{key}"), &mut rank)?;
                 let interpretation_title = format!("{title} — interpretation");
                 objects.push(NewObject {
                     uuid: interpretation_uuid.clone(),
@@ -614,8 +649,15 @@ impl Operation for SigeolBoreholes {
             detail: "`dateOfDrilling` is a date and `Creation` a date-time: each was widened to midnight UTC on that day".to_string(),
         });
 
-        let text = |title: &str, value: String| Parameter::Text { title: title.to_string(), value };
-        let number = |title: &str, value: f64| Parameter::Double { title: title.to_string(), value, uom: None };
+        let text = |title: &str, value: String| Parameter::Text {
+            title: title.to_string(),
+            value,
+        };
+        let number = |title: &str, value: f64| Parameter::Double {
+            title: title.to_string(),
+            value,
+            uom: None,
+        };
         parameters.extend([
             text("source", source.clone()),
             text("dataFile", file),
@@ -649,14 +691,25 @@ impl Operation for SigeolBoreholes {
 
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
-            Slot::required(name, Need::Number { uom: None, least: None, most: None }, about)
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
         };
         support::frame_reports(vec![
             Slot::required("source", Need::Text, "the file the boreholes came from"),
             count("boreholeCount", "boreholes written"),
             count("intervalCount", "intervals their depths were read from"),
             count("frameNodeCount", "frame nodes written, over every hole"),
-            count("mdZeroAdded", "boreholes whose measured depths were given a zero at the ground"),
+            count(
+                "mdZeroAdded",
+                "boreholes whose measured depths were given a zero at the ground",
+            ),
         ])
     }
 }

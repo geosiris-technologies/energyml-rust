@@ -7,7 +7,7 @@
 //! What to break, for each test, is said in its doc.
 
 use energyml_core::registry::Registry;
-use energyml_schemas::{declare_absent_versions, KNOWN_VERSIONS};
+use energyml_schemas::{KNOWN_VERSIONS, declare_absent_versions};
 
 /// With nothing compiled, every row of `KNOWN_VERSIONS` is declared, in the
 /// spellings a document uses, with the message naming its feature.
@@ -23,12 +23,17 @@ fn a_version_that_is_not_compiled_is_declared_absent_under_every_spelling() {
         let why = registry
             .absent(known.package, known.version)
             .unwrap_or_else(|| panic!("{} {} is not declared absent", known.package, known.version));
-        assert!(why.contains(&format!("`{}`", known.feature)), "`{why}` does not name the feature");
+        assert!(
+            why.contains(&format!("`{}`", known.feature)),
+            "`{why}` does not name the feature"
+        );
         for compact in known.compact {
             // A qualified type cannot name a drop: its row answers only for the release.
             if !energyml_core::naming::is_prerelease(known.version) {
                 assert!(
-                    registry.absent_qualified_type(&format!("{}{compact}.Thing", known.package)).is_some(),
+                    registry
+                        .absent_qualified_type(&format!("{}{compact}.Thing", known.package))
+                        .is_some(),
                     "{}{compact}. is not refused",
                     known.package
                 );
@@ -53,7 +58,13 @@ fn a_compiled_version_is_not_declared_absent() {
     let mut registry = Registry::new();
     declare_absent_versions(&mut registry, &everything);
     for known in KNOWN_VERSIONS {
-        assert_eq!(registry.absent(known.package, known.version), None, "{} {}", known.package, known.version);
+        assert_eq!(
+            registry.absent(known.package, known.version),
+            None,
+            "{} {}",
+            known.package,
+            known.version
+        );
     }
 
     // Only RESQML 2.2 compiled: 2.0.1 is absent, 2.2 is not.
@@ -72,6 +83,12 @@ fn all_declares_what_this_build_lacks() {
     let registry = energyml_schemas::all();
     for known in KNOWN_VERSIONS {
         let declared = registry.absent(known.package, known.version).is_some();
-        assert_eq!(declared, !known.is_compiled(), "{} {}", known.package, known.version);
+        assert_eq!(
+            declared,
+            !known.is_compiled(),
+            "{} {}",
+            known.package,
+            known.version
+        );
     }
 }

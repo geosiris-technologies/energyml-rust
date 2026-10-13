@@ -59,7 +59,9 @@ fn an_array_of_nothing_but_holes_says_so_instead_of_drawing() {
 #[test]
 fn a_constant_array_is_one_bin_and_a_deviation_of_zero() {
     let summary = Summary::of(&floats(&[3.5; 100]), 30);
-    let histogram = summary.histogram.expect("still a distribution, just a narrow one");
+    let histogram = summary
+        .histogram
+        .expect("still a distribution, just a narrow one");
     assert_eq!(histogram.bins, vec![100]);
     assert_eq!(histogram.from, 3.5);
     assert_eq!(histogram.to, 3.5);

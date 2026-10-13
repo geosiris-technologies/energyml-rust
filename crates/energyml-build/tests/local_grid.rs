@@ -57,7 +57,10 @@ const DY: f64 = 25.0;
 const DZ: f64 = 12.0;
 
 fn when() -> When {
-    When { creation: "2026-09-28T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-28T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 /// The parent's corner at pillar `(i, j)`, level `k` — affine in `(i, j, k)`,
@@ -65,14 +68,22 @@ fn when() -> When {
 /// cannot hide behind another axis agreeing by coincidence.
 fn corner(i: usize, j: usize, k: usize) -> [f64; 3] {
     let (i, j, k) = (i as f64, j as f64, k as f64);
-    [X0 + DX * i + 0.1 * k, Y0 + DY * j + 0.2 * k, Z0 - DZ * k + 0.05 * i - 0.03 * j]
+    [
+        X0 + DX * i + 0.1 * k,
+        Y0 + DY * j + 0.2 * k,
+        Z0 - DZ * k + 0.05 * i - 0.03 * j,
+    ]
 }
 
 /// The same corner, evaluated at a **fractional** parent position — what a
 /// correct trilinear interpolation of an affine field must equal, computed
 /// here independently of `crates/energyml-build/src/ops/local_grid.rs`.
 fn expected(i: f64, j: f64, k: f64) -> [f64; 3] {
-    [X0 + DX * i + 0.1 * k, Y0 + DY * j + 0.2 * k, Z0 - DZ * k + 0.05 * i - 0.03 * j]
+    [
+        X0 + DX * i + 0.1 * k,
+        Y0 + DY * j + 0.2 * k,
+        Z0 - DZ * k + 0.05 * i - 0.03 * j,
+    ]
 }
 
 const PILLARS: usize = (PNI + 1) * (PNJ + 1);
@@ -90,7 +101,10 @@ fn cells_of(lines: usize, tops: &[usize], line_of: impl Fn(usize, usize) -> usiz
             for i in 0..PNI {
                 let column = j * PNI + i;
                 let mut node = [0u32; 8];
-                for (at, (ci, cj)) in [(i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)].into_iter().enumerate() {
+                for (at, (ci, cj)) in [(i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)]
+                    .into_iter()
+                    .enumerate()
+                {
                     let line = line_of(cj * (PNI + 1) + ci, column);
                     node[at] = (top * lines + line) as u32;
                     node[at + 4] = ((top + 1) * lines + line) as u32;
@@ -109,7 +123,11 @@ fn hexahedra(points: Vec<[f64; 3]>, cells: Vec<[u32; 8]>) -> Geometry {
             index: 0,
             node_offset: 0,
             points,
-            topology: Topology::Hexahedra { cells, dimensions: [PNI, PNJ, PNK], index: Vec::new() },
+            topology: Topology::Hexahedra {
+                cells,
+                dimensions: [PNI, PNJ, PNK],
+                index: Vec::new(),
+            },
             closed: Vec::new(),
         }],
     }
@@ -129,7 +147,10 @@ fn levels_of(levels: usize) -> Vec<[f64; 3]> {
 }
 
 fn mother_geometry() -> Geometry {
-    hexahedra(levels_of(PNK + 1), cells_of(PILLARS, &(0..PNK).collect::<Vec<_>>(), |pillar, _| pillar))
+    hexahedra(
+        levels_of(PNK + 1),
+        cells_of(PILLARS, &(0..PNK).collect::<Vec<_>>(), |pillar, _| pillar),
+    )
 }
 
 /// The mother with a **K gap after layer 0**: `PNK + 2` levels, layer 0
@@ -159,19 +180,39 @@ fn faulted_mother(pi: usize, pj: usize) -> Geometry {
     }
     let east = [(pj - 1) * PNI + pi, pj * PNI + pi];
     let cells = cells_of(lines, &(0..PNK).collect::<Vec<_>>(), |pillar, column| {
-        if pillar == split && east.contains(&column) { PILLARS } else { pillar }
+        if pillar == split && east.contains(&column) {
+            PILLARS
+        } else {
+            pillar
+        }
     });
     hexahedra(points, cells)
 }
 
 fn bag_of(geometry: Geometry) -> Pieces {
     Pieces::empty()
-        .with("parent", Source::Shape { geometry, closed: None })
-        .with("parent (object)", Source::Object(Known { reference: Some(mother_ref()), ..Default::default() }))
+        .with(
+            "parent",
+            Source::Shape {
+                geometry,
+                closed: None,
+            },
+        )
+        .with(
+            "parent (object)",
+            Source::Object(Known {
+                reference: Some(mother_ref()),
+                ..Default::default()
+            }),
+        )
 }
 
 fn mother_ref() -> Ref {
-    Ref::new("aaaaaaaa-0000-4000-8000-000000000001", "resqml22.IjkGridRepresentation", "Mother grid")
+    Ref::new(
+        "aaaaaaaa-0000-4000-8000-000000000001",
+        "resqml22.IjkGridRepresentation",
+        "Mother grid",
+    )
 }
 
 fn bag() -> Pieces {
@@ -181,19 +222,36 @@ fn bag() -> Pieces {
 /// The window, brought down to this mother's size: I 1–3, J 1–2 (spans 3
 /// and 2), every K (0–2, span 3), refined 2 × 2 × 1 — 6 × 4 × 3 = 72 cells.
 fn answers() -> Choices {
-    Choices::new().set("i0", 1).set("i1", 3).set("j0", 1).set("j1", 2).set("ri", 2).set("rj", 2).set("title", "GTH-1 local grid")
+    Choices::new()
+        .set("i0", 1)
+        .set("i1", 3)
+        .set("j0", 1)
+        .set("j1", 2)
+        .set("ri", 2)
+        .set("rj", 2)
+        .set("title", "GTH-1 local grid")
 }
 
 fn planned(pieces: &Pieces, choices: &Choices) -> Result<Plan, String> {
-    Registry::new().plan("local-grid", pieces, choices, &Identity::derived(), &when()).map_err(|why| why.message())
+    Registry::new()
+        .plan("local-grid", pieces, choices, &Identity::derived(), &when())
+        .map_err(|why| why.message())
 }
 
 fn the_child(plan: &Plan) -> &Value {
-    &plan.of_role("representation").next().expect("the local grid").json
+    &plan
+        .of_role("representation")
+        .next()
+        .expect("the local grid")
+        .json
 }
 
 fn the_set(plan: &Plan) -> &Value {
-    &plan.of_role("local-grid-set").next().expect("the local grid set").json
+    &plan
+        .of_role("local-grid-set")
+        .next()
+        .expect("the local grid set")
+        .json
 }
 
 fn says(plan: &Plan, key: &str) -> bool {
@@ -220,34 +278,67 @@ fn the_counts_come_from_the_window_and_the_refinement() {
     let plan = planned(&bag(), &answers()).unwrap_or_else(|why| panic!("{why}"));
     let child = the_child(&plan);
     assert_eq!(child["$type"], json!("resqml22.IjkGridRepresentation"));
-    assert_eq!((child["Ni"].clone(), child["Nj"].clone(), child["Nk"].clone()), (json!(6), json!(4), json!(3)));
-    assert!(child.get("Geometry").is_none(), "a local grid stores no geometry of its own: {child}");
+    assert_eq!(
+        (child["Ni"].clone(), child["Nj"].clone(), child["Nk"].clone()),
+        (json!(6), json!(4), json!(3))
+    );
+    assert!(
+        child.get("Geometry").is_none(),
+        "a local grid stores no geometry of its own: {child}"
+    );
 
     let window = &child["ParentWindow"];
     assert_eq!(window["$type"], json!("resqml22.IjkParentWindow"));
-    assert_eq!(window["ParentIjkGridRepresentation"]["Uuid"], json!(mother_ref().uuid));
+    assert_eq!(
+        window["ParentIjkGridRepresentation"]["Uuid"],
+        json!(mother_ref().uuid)
+    );
     // One interval per parent cell, one parent and `ri` children in each: *“
     // writers should set the parent count per interval to 1”* (RESQML TUG 2.2
     // §9.8.2, p. 142).
     assert_eq!(window["IRegrid"]["InitialIndexOnParentGrid"], json!(1));
     assert_eq!(window["IRegrid"]["Intervals"]["IntervalCount"], json!(3));
-    assert_eq!(window["IRegrid"]["Intervals"]["ParentCountPerInterval"], json!({ "$type": "eml23.IntegerConstantArray", "Value": 1, "Count": 3 }));
-    assert_eq!(window["IRegrid"]["Intervals"]["ChildCountPerInterval"], json!({ "$type": "eml23.IntegerConstantArray", "Value": 2, "Count": 3 }));
+    assert_eq!(
+        window["IRegrid"]["Intervals"]["ParentCountPerInterval"],
+        json!({ "$type": "eml23.IntegerConstantArray", "Value": 1, "Count": 3 })
+    );
+    assert_eq!(
+        window["IRegrid"]["Intervals"]["ChildCountPerInterval"],
+        json!({ "$type": "eml23.IntegerConstantArray", "Value": 2, "Count": 3 })
+    );
     assert_eq!(window["JRegrid"]["InitialIndexOnParentGrid"], json!(1));
     assert_eq!(window["JRegrid"]["Intervals"]["IntervalCount"], json!(2));
-    assert_eq!(window["JRegrid"]["Intervals"]["ChildCountPerInterval"], json!({ "$type": "eml23.IntegerConstantArray", "Value": 2, "Count": 2 }));
+    assert_eq!(
+        window["JRegrid"]["Intervals"]["ChildCountPerInterval"],
+        json!({ "$type": "eml23.IntegerConstantArray", "Value": 2, "Count": 2 })
+    );
     // K is not refined (`rk` defaults to 1): a 1:1 correspondence needs no
     // `Intervals` at all (Grids.xsd).
     assert_eq!(window["KRegrid"]["InitialIndexOnParentGrid"], json!(0));
-    assert!(window["KRegrid"].get("Intervals").is_none(), "no refinement on K: {window}");
+    assert!(
+        window["KRegrid"].get("Intervals").is_none(),
+        "no refinement on K: {window}"
+    );
 
     let set = the_set(&plan);
     assert_eq!(set["$type"], json!("resqml22.LocalGridSet"));
-    assert_eq!(set["ChildGrid"][0]["Uuid"], child["uuid"], "the set names the child it groups");
+    assert_eq!(
+        set["ChildGrid"][0]["Uuid"], child["uuid"],
+        "the set names the child it groups"
+    );
 
     assert!(says(&plan, "all-k"), "no K window was given: {:?}", plan.says);
-    assert_eq!(plan.shapes[0].geometry.patches[0].points.len(), 7 * 5 * 4, "(ni+1)(nj+1)(nk+1)");
-    let Topology::Hexahedra { cells, dimensions, .. } = &plan.shapes[0].geometry.patches[0].topology else { panic!("not cells") };
+    assert_eq!(
+        plan.shapes[0].geometry.patches[0].points.len(),
+        7 * 5 * 4,
+        "(ni+1)(nj+1)(nk+1)"
+    );
+    let Topology::Hexahedra {
+        cells, dimensions, ..
+    } = &plan.shapes[0].geometry.patches[0].topology
+    else {
+        panic!("not cells")
+    };
     assert_eq!(*dimensions, [6, 4, 3]);
     assert_eq!(cells.len(), 6 * 4 * 3);
 }
@@ -269,7 +360,10 @@ fn the_windows_boundary_coincides_exactly_with_the_parent() {
             for &(ck, k) in &[(0usize, 0usize), (3, 3)] {
                 let got = node(points, [6, 4], ci, cj, ck);
                 let want = corner(i, j, k);
-                assert_eq!(got, want, "child ({ci},{cj},{ck}) should be exactly parent pillar ({i},{j}) level {k}");
+                assert_eq!(
+                    got, want,
+                    "child ({ci},{cj},{ck}) should be exactly parent pillar ({i},{j}) level {k}"
+                );
             }
         }
     }
@@ -293,9 +387,17 @@ fn an_interior_node_is_the_parents_lattice_interpolated() {
     // (K is not refined): k = 1.0 exactly, still worth checking against the
     // same formula.
     let got = node(points, [6, 4], 1, 1, 1);
-    assert!(close(got, expected(1.5, 1.5, 1.0)), "got {got:?}, expected {:?}", expected(1.5, 1.5, 1.0));
+    assert!(
+        close(got, expected(1.5, 1.5, 1.0)),
+        "got {got:?}, expected {:?}",
+        expected(1.5, 1.5, 1.0)
+    );
     let got = node(points, [6, 4], 5, 3, 2);
-    assert!(close(got, expected(3.5, 2.5, 2.0)), "got {got:?}, expected {:?}", expected(3.5, 2.5, 2.0));
+    assert!(
+        close(got, expected(3.5, 2.5, 2.0)),
+        "got {got:?}, expected {:?}",
+        expected(3.5, 2.5, 2.0)
+    );
 }
 
 // -- refusals, before any computation ------------------------------------------------------
@@ -327,7 +429,10 @@ fn an_undefined_parent_corner_is_refused() {
     let at = (level * (PNJ + 1) + 2) * (PNI + 1) + 2;
     geometry.patches[0].points[at][2] = f64::NAN;
     let why = planned(&bag_of(geometry), &answers()).unwrap_err();
-    assert!(why.contains("`parent`") && why.contains("(2, 2)") && why.contains("level 1"), "{why}");
+    assert!(
+        why.contains("`parent`") && why.contains("(2, 2)") && why.contains("level 1"),
+        "{why}"
+    );
 }
 
 // -- faults and K gaps: refused inside the window, nothing outside it -----------------------
@@ -338,7 +443,10 @@ fn an_undefined_parent_corner_is_refused() {
 #[test]
 fn a_fault_inside_the_window_is_refused() {
     let why = planned(&bag_of(faulted_mother(3, 2)), &answers()).unwrap_err();
-    assert!(why.contains("`parent`") && why.contains("split coordinate line") && why.contains("(3, 2)"), "{why}");
+    assert!(
+        why.contains("`parent`") && why.contains("split coordinate line") && why.contains("(3, 2)"),
+        "{why}"
+    );
 }
 
 /// **A fault outside the window changes nothing**: the window's cells name the
@@ -348,7 +456,10 @@ fn a_fault_inside_the_window_is_refused() {
 fn a_fault_outside_the_window_changes_nothing() {
     let plain = planned(&bag(), &answers()).unwrap_or_else(|why| panic!("{why}"));
     let faulted = planned(&bag_of(faulted_mother(5, 4)), &answers()).unwrap_or_else(|why| panic!("{why}"));
-    assert_eq!(faulted.shapes[0].geometry.patches[0].points, plain.shapes[0].geometry.patches[0].points);
+    assert_eq!(
+        faulted.shapes[0].geometry.patches[0].points,
+        plain.shapes[0].geometry.patches[0].points
+    );
 }
 
 /// **A K gap inside the window is refused, naming the two layers.** Every K is
@@ -356,7 +467,10 @@ fn a_fault_outside_the_window_changes_nothing() {
 #[test]
 fn a_k_gap_inside_the_window_is_refused() {
     let why = planned(&bag_of(gapped_mother()), &answers()).unwrap_err();
-    assert!(why.contains("`parent`") && why.contains("K gap") && why.contains("layers 0 and 1"), "{why}");
+    assert!(
+        why.contains("`parent`") && why.contains("K gap") && why.contains("layers 0 and 1"),
+        "{why}"
+    );
 }
 
 /// **Below a K gap, the window starts at its first layer's top — a level, not
@@ -365,13 +479,21 @@ fn a_k_gap_inside_the_window_is_refused() {
 /// its top at level 1, inside the void.
 #[test]
 fn below_a_k_gap_the_window_starts_at_its_layers_top() {
-    let plan = planned(&bag_of(gapped_mother()), &answers().set("k0", 1).set("k1", 2)).unwrap_or_else(|why| panic!("{why}"));
+    let plan = planned(&bag_of(gapped_mother()), &answers().set("k0", 1).set("k1", 2))
+        .unwrap_or_else(|why| panic!("{why}"));
     let points = &plan.shapes[0].geometry.patches[0].points;
     assert_eq!(points.len(), 7 * 5 * 3);
     for ck in 0..=2 {
-        assert_eq!(node(points, [6, 4], 0, 0, ck), corner(1, 1, 2 + ck), "level {ck} of the child");
+        assert_eq!(
+            node(points, [6, 4], 0, 0, ck),
+            corner(1, 1, 2 + ck),
+            "level {ck} of the child"
+        );
         let got = node(points, [6, 4], 3, 1, ck);
-        assert!(close(got, expected(2.5, 1.5, (2 + ck) as f64)), "interior node at child level {ck}: {got:?}");
+        assert!(
+            close(got, expected(2.5, 1.5, (2 + ck) as f64)),
+            "interior node at child level {ck}: {got:?}"
+        );
     }
 }
 
@@ -381,13 +503,20 @@ fn below_a_k_gap_the_window_starts_at_its_layers_top() {
 #[test]
 fn a_cell_turned_for_vtk_reads_the_same() {
     let mut turned = mother_geometry();
-    let Topology::Hexahedra { cells, .. } = &mut turned.patches[0].topology else { unreachable!() };
+    let Topology::Hexahedra { cells, .. } = &mut turned.patches[0].topology else {
+        unreachable!()
+    };
     for cell in cells.iter_mut() {
-        *cell = [cell[4], cell[5], cell[6], cell[7], cell[0], cell[1], cell[2], cell[3]];
+        *cell = [
+            cell[4], cell[5], cell[6], cell[7], cell[0], cell[1], cell[2], cell[3],
+        ];
     }
     let plain = planned(&bag(), &answers()).unwrap_or_else(|why| panic!("{why}"));
     let plan = planned(&bag_of(turned), &answers()).unwrap_or_else(|why| panic!("{why}"));
-    assert_eq!(plan.shapes[0].geometry.patches[0].points, plain.shapes[0].geometry.patches[0].points);
+    assert_eq!(
+        plan.shapes[0].geometry.patches[0].points,
+        plain.shapes[0].geometry.patches[0].points
+    );
 }
 
 /// **A cell the reader dropped, inside the window, is refused by name.** The
@@ -397,10 +526,14 @@ fn a_cell_turned_for_vtk_reads_the_same() {
 #[test]
 fn a_cell_dropped_by_the_reader_inside_the_window_is_refused() {
     let mut geometry = mother_geometry();
-    let Topology::Hexahedra { cells, index, .. } = &mut geometry.patches[0].topology else { unreachable!() };
+    let Topology::Hexahedra { cells, index, .. } = &mut geometry.patches[0].topology else {
+        unreachable!()
+    };
     let dropped = PNI * PNJ + PNI + 2; // cell (2, 1, 1)
     cells.remove(dropped);
-    *index = (0..(PNI * PNJ * PNK) as u32).filter(|n| *n as usize != dropped).collect();
+    *index = (0..(PNI * PNJ * PNK) as u32)
+        .filter(|n| *n as usize != dropped)
+        .collect();
     let why = planned(&bag_of(geometry), &answers()).unwrap_err();
     assert!(why.contains("no geometry at cell (2, 1, 1)"), "{why}");
 }
@@ -508,45 +641,83 @@ fn round_trip(gapped: bool, choices: &Choices, name: &str) -> Trip {
             values: energyml_build::operation::Numbers::F64(mother_points),
         }],
         shapes: Vec::new(),
-        activity: energyml_build::operation::ActivityDraft { recipe: "local-grid", title: "mother".to_string(), seed: "mother".to_string(), parameters: Vec::new() },
+        activity: energyml_build::operation::ActivityDraft {
+            recipe: "local-grid",
+            title: "mother".to_string(),
+            seed: "mother".to_string(),
+            parameters: Vec::new(),
+        },
         says: Vec::new(),
         dropped: Vec::new(),
     };
     // `local-grid` has its canonical template (in the shipped templates,
     // 28/09), so both applies record their activity — and a refusal is a
     // failure, not something to read past.
-    energyml_build::apply::apply(&mother_plan, &mut store, &when()).activity.expect("the mother records its activity");
+    energyml_build::apply::apply(&mother_plan, &mut store, &when())
+        .activity
+        .expect("the mother records its activity");
 
     // -- the mother as the reader hands it, and the local grid planned from it --------
-    let summary = store.find_by_uuid(&mother_uuid).cloned().expect("the mother was written");
+    let summary = store
+        .find_by_uuid(&mother_uuid)
+        .cloned()
+        .expect("the mother was written");
     let object = store.get_object(&summary.uri).unwrap();
-    let mother = energyml_geometry::scene::object_of(object.as_reflect(), &store, &summary.uri).expect("the mother reads");
+    let mother = energyml_geometry::scene::object_of(object.as_reflect(), &store, &summary.uri)
+        .expect("the mother reads");
     let plan = planned(&bag_of(mother.geometry), choices).unwrap_or_else(|why| panic!("{why}"));
     let planned_points = plan.shapes[0].geometry.patches[0].points.clone();
     let child_uuid = the_child(&plan)["uuid"].as_str().unwrap().to_string();
-    energyml_build::apply::apply(&plan, &mut store, &when()).activity.expect("the local grid records its activity");
+    energyml_build::apply::apply(&plan, &mut store, &when())
+        .activity
+        .expect("the local grid records its activity");
 
-    store.save_as(&out, &energyml_storage::SaveOptions::default()).unwrap();
+    store
+        .save_as(&out, &energyml_storage::SaveOptions::default())
+        .unwrap();
     let reread = energyml_storage::EpcStore::open(&out, registry).unwrap();
     let summary = reread.find_by_uuid(&child_uuid).cloned().unwrap();
     let object = reread.get_object(&summary.uri).unwrap();
-    let built = energyml_geometry::scene::object_of(object.as_reflect(), &reread, &summary.uri).expect("the local grid reads");
+    let built = energyml_geometry::scene::object_of(object.as_reflect(), &reread, &summary.uri)
+        .expect("the local grid reads");
     let _ = std::fs::remove_dir_all(&dir);
 
-    let [patch] = built.geometry.patches.as_slice() else { panic!("one patch") };
-    let Topology::Hexahedra { cells, dimensions, .. } = &patch.topology else { panic!("not cells: {:?}", patch.topology) };
+    let [patch] = built.geometry.patches.as_slice() else {
+        panic!("one patch")
+    };
+    let Topology::Hexahedra {
+        cells, dimensions, ..
+    } = &patch.topology
+    else {
+        panic!("not cells: {:?}", patch.topology)
+    };
     assert_eq!(cells.len(), dimensions.iter().product::<usize>());
-    Trip { planned: planned_points, read: patch.points.clone(), dimensions: *dimensions }
+    Trip {
+        planned: planned_points,
+        read: patch.points.clone(),
+        dimensions: *dimensions,
+    }
 }
 
 #[cfg(feature = "hdf5")]
 #[test]
 fn the_child_reads_back_through_the_geometry_reader() {
-    let Trip { planned: planned_points, read, dimensions } = round_trip(false, &answers(), "plain");
+    let Trip {
+        planned: planned_points,
+        read,
+        dimensions,
+    } = round_trip(false, &answers(), "plain");
     assert_eq!(dimensions, [6, 4, 3]);
-    assert_eq!(read.len(), planned_points.len(), "one node per position, both sides");
+    assert_eq!(
+        read.len(),
+        planned_points.len(),
+        "one node per position, both sides"
+    );
     for (at, (read, planned)) in read.iter().zip(&planned_points).enumerate() {
-        assert!(close(*read, *planned), "node {at}: read {read:?}, planned {planned:?}");
+        assert!(
+            close(*read, *planned),
+            "node {at}: read {read:?}, planned {planned:?}"
+        );
     }
     // And both agree with the formula, not only with each other.
     assert!(close(node(&read, [6, 4], 1, 1, 1), expected(1.5, 1.5, 1.0)));
@@ -560,13 +731,23 @@ fn the_child_reads_back_through_the_geometry_reader() {
 #[cfg(feature = "hdf5")]
 #[test]
 fn below_a_k_gap_the_child_reads_back_through_the_geometry_reader() {
-    let Trip { planned: planned_points, read, dimensions } = round_trip(true, &answers().set("k0", 1).set("k1", 2), "gapped");
+    let Trip {
+        planned: planned_points,
+        read,
+        dimensions,
+    } = round_trip(true, &answers().set("k0", 1).set("k1", 2), "gapped");
     assert_eq!(dimensions, [6, 4, 2]);
     assert_eq!(read.len(), planned_points.len());
     for (at, (read, planned)) in read.iter().zip(&planned_points).enumerate() {
-        assert!(close(*read, *planned), "node {at}: read {read:?}, planned {planned:?}");
+        assert!(
+            close(*read, *planned),
+            "node {at}: read {read:?}, planned {planned:?}"
+        );
     }
     for ck in 0..=2 {
-        assert!(close(node(&read, [6, 4], 3, 1, ck), expected(2.5, 1.5, (2 + ck) as f64)), "child level {ck}");
+        assert!(
+            close(node(&read, [6, 4], 3, 1, ck), expected(2.5, 1.5, (2 + ck) as f64)),
+            "child level {ck}"
+        );
     }
 }

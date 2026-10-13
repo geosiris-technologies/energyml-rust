@@ -23,7 +23,9 @@ impl Lu {
         for column in 0..side {
             let best = (column..side)
                 .max_by(|a, b| {
-                    packed[a * side + column].abs().total_cmp(&packed[b * side + column].abs())
+                    packed[a * side + column]
+                        .abs()
+                        .total_cmp(&packed[b * side + column].abs())
                 })
                 .expect("a non-empty column");
             if packed[best * side + column].abs() < 1e-12 {

@@ -17,7 +17,10 @@ use energyml_domain::property::IndexableElement;
 use energyml_domain::provenance::Parameter;
 
 use crate::declare::{Field, Inputs, ObjectRef, Params, PropertyKindRef, Suggestions, Title, known_named};
-use crate::operation::{About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Note, Numbers, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Note, Numbers, Operation, Plan,
+    Refusal, Slot,
+};
 use crate::pieces::{Known, Pieces, Source};
 
 use super::support;
@@ -85,12 +88,23 @@ impl Operation for Property {
             return Err(Refusal::on("field", "holds no value"));
         }
         if IndexableElement::parse(&inputs.field.on).is_none() {
-            return Err(Refusal::on("field", format!("`{}` is not an indexable element (nodes, cells, …)", inputs.field.on)));
+            return Err(Refusal::on(
+                "field",
+                format!(
+                    "`{}` is not an indexable element (nodes, cells, …)",
+                    inputs.field.on
+                ),
+            ));
         }
         Ok(())
     }
 
-    fn plan(&self, inputs: PropertyInputs, params: PropertyParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: PropertyInputs,
+        params: PropertyParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let known = known_named(cx.bag, &inputs.field.over);
         let seed = cx.seed(&params.title.0);
         write(&inputs.field, known, &params, &seed, cx)
@@ -99,7 +113,15 @@ impl Operation for Property {
     fn reports(&self) -> Vec<Slot> {
         vec![
             Slot::required("indexable", Need::Text, "the indexable element the values lie on"),
-            Slot::required("valueCount", Need::Number { uom: None, least: None, most: None }, "values written"),
+            Slot::required(
+                "valueCount",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "values written",
+            ),
         ]
     }
 }
@@ -108,7 +130,13 @@ impl Operation for Property {
 /// and `surface-map` call directly with the values they computed: typed in, no
 /// bag to derive. `known` is what is known of the representation the values
 /// lie on — the one count this can check, its nodes; `seed` is the caller's.
-pub fn write(field: &Field, known: Option<&Known>, params: &PropertyParams, seed: &str, cx: &Context<'_>) -> Result<Plan, Refusal> {
+pub fn write(
+    field: &Field,
+    known: Option<&Known>,
+    params: &PropertyParams,
+    seed: &str,
+    cx: &Context<'_>,
+) -> Result<Plan, Refusal> {
     write_timed(field, known, params, seed, cx, &Timing::Timeless)
 }
 
@@ -163,19 +191,32 @@ pub fn write_timed(
     if values.len() % steps != 0 {
         return Err(Refusal::on(
             "field",
-            format!("{} value(s) do not make {steps} step(s) of equal length — each step holds one value per element", values.len()),
+            format!(
+                "{} value(s) do not make {steps} step(s) of equal length — each step holds one value per element",
+                values.len()
+            ),
         ));
     }
     let per_step = values.len() / steps;
-    let element =
-        IndexableElement::parse(on).ok_or_else(|| Refusal::on("field", format!("`{on}` is not an indexable element")))?;
+    let element = IndexableElement::parse(on)
+        .ok_or_else(|| Refusal::on("field", format!("`{on}` is not an indexable element")))?;
     let representation = match &params.representation.0 {
         value if value.is_object() && value["Uuid"].is_string() => value.clone(),
-        other => return Err(Refusal::on("representation", format!("expected a DataObjectReference, got {other}"))),
+        other => {
+            return Err(Refusal::on(
+                "representation",
+                format!("expected a DataObjectReference, got {other}"),
+            ));
+        }
     };
     let kind = match &params.property_kind.0 {
         value if value.is_object() && value["Uuid"].is_string() => value.clone(),
-        other => return Err(Refusal::on("propertyKind", format!("expected a DataObjectReference, got {other}"))),
+        other => {
+            return Err(Refusal::on(
+                "propertyKind",
+                format!("expected a DataObjectReference, got {other}"),
+            ));
+        }
     };
     let uom = params.uom.clone();
     let title = params.title.0.clone();
@@ -237,7 +278,9 @@ pub fn write_timed(
                 ..Default::default()
             });
         }
-        Timing::Series { series, use_interval, .. } => {
+        Timing::Series {
+            series, use_interval, ..
+        } => {
             object["TimeOrIntervalSeries"] = json!({
                 "$type": "eml23.TimeOrIntervalSeries",
                 "UseInterval": use_interval,
@@ -269,10 +312,23 @@ pub fn write_timed(
             title: format!("property → {title}"),
             seed,
             parameters: vec![
-                Parameter::Object { title: "input".to_string(), reference: representation },
-                Parameter::Text { title: "indexable".to_string(), value: on.to_string() },
-                Parameter::Text { title: "uom".to_string(), value: uom },
-                Parameter::Double { title: "valueCount".to_string(), value: values.len() as f64, uom: None },
+                Parameter::Object {
+                    title: "input".to_string(),
+                    reference: representation,
+                },
+                Parameter::Text {
+                    title: "indexable".to_string(),
+                    value: on.to_string(),
+                },
+                Parameter::Text {
+                    title: "uom".to_string(),
+                    value: uom,
+                },
+                Parameter::Double {
+                    title: "valueCount".to_string(),
+                    value: values.len() as f64,
+                    uom: None,
+                },
             ],
         },
         says,

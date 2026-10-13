@@ -21,7 +21,9 @@ use energyml_geometry::fence;
 use energyml_geometry::scene::{self, Placement, SceneObject};
 use energyml_geometry::section;
 
-use crate::model::{CutShape, CutSource, ObjectId, Refused, SectionTrace, SurfaceCut, SurfaceRead, TraceRole};
+use crate::model::{
+    CutShape, CutSource, ObjectId, Refused, SectionTrace, SurfaceCut, SurfaceRead, TraceRole,
+};
 use crate::read::Scene;
 use crate::read::frame::{frame_of, to_scene};
 use crate::read::grids::Grid;
@@ -75,7 +77,10 @@ pub fn read_surface_coloured(
     scene: &Scene<'_>,
     colours: Colouring<'_>,
 ) -> Result<SurfaceRead, Refused> {
-    Ok(cut_prepared(&prepare_surface(source, store, uri, scene, colours)?, sections))
+    Ok(cut_prepared(
+        &prepare_surface(source, store, uri, scene, colours)?,
+        sections,
+    ))
 }
 
 /// A surface read and brought into the scene, **before** any section cuts it:
@@ -131,7 +136,10 @@ pub fn prepare_surface(
         title: String::new(),
         qualified_type: String::new(),
     };
-    let refuse = |object: &ObjectId, reason: String| Refused { object: object.clone(), reason };
+    let refuse = |object: &ObjectId, reason: String| Refused {
+        object: object.clone(),
+        reason,
+    };
 
     let held = source
         // By the uri the section was given, never by its uuid: two versions of
@@ -143,7 +151,9 @@ pub fn prepare_surface(
     if let Some(uuid) = identity::uuid_of_reflect(representation) {
         object.uuid = uuid.to_ascii_lowercase();
     }
-    object.title = identity::title_of_reflect(representation).unwrap_or_default().to_string();
+    object.title = identity::title_of_reflect(representation)
+        .unwrap_or_default()
+        .to_string();
     object.qualified_type = energyml_core::json::qualified_type_of(info);
 
     // An IJK grid draws as cells, but what a section shows of it is its
@@ -152,7 +162,8 @@ pub fn prepare_surface(
     if info.type_key == "IjkGridRepresentation" {
         let frame = frame_of(source, representation).map_err(|why| refuse(&object, why))?;
         let named = |why: String| format!("`{}` ({}): {why}", object.title, object.qualified_type);
-        let read = scene::object_of(representation, source, uri).map_err(|why| refuse(&object, named(format!("{why}"))))?;
+        let read = scene::object_of(representation, source, uri)
+            .map_err(|why| refuse(&object, named(format!("{why}"))))?;
         let placed = read
             .geometry_in(Placement::Projected)
             .map_err(|why| refuse(&object, named(format!("{why}"))))?;
@@ -181,12 +192,16 @@ pub fn prepare_surface(
     if !energyml_geometry::geometry::is_supported(representation) {
         return Err(refuse(
             &object,
-            format!("`{}` is a {}, which this build does not read as a shape", object.title, object.qualified_type),
+            format!(
+                "`{}` is a {}, which this build does not read as a shape",
+                object.title, object.qualified_type
+            ),
         ));
     }
 
     let frame = frame_of(source, representation).map_err(|why| refuse(&object, why))?;
-    let read = scene::object_of(representation, source, uri).map_err(|why| refuse(&object, format!("{why}")))?;
+    let read =
+        scene::object_of(representation, source, uri).map_err(|why| refuse(&object, format!("{why}")))?;
     let drawn = read
         .drawable_in(Placement::Projected)
         .map_err(|why| refuse(&object, format!("{why}")))?;
@@ -207,8 +222,12 @@ pub fn prepare_surface(
     let mut points = drawn.points;
     // Named: the reason of `to_scene` speaks of "the object", and a list of
     // refusals is read without the rows' titles beside it (the CLI's).
-    to_scene(&mut points, &frame, scene)
-        .map_err(|why| refuse(&object, format!("`{}` ({}): {why}", object.title, object.qualified_type)))?;
+    to_scene(&mut points, &frame, scene).map_err(|why| {
+        refuse(
+            &object,
+            format!("`{}` ({}): {why}", object.title, object.qualified_type),
+        )
+    })?;
 
     let colour = file_colour_of(colours, &object, source);
     Ok(Prepared {
@@ -281,7 +300,9 @@ pub fn cut_prepared(prepared: &Prepared, sections: &[SectionTrace]) -> SurfaceRe
         let sources = sources_of(prepared, &made.sources).unwrap_or_default();
         cuts.push(SurfaceCut {
             section: trace.key,
-            shape: CutShape::Trace { spans: made.curve.spans },
+            shape: CutShape::Trace {
+                spans: made.curve.spans,
+            },
             notes: made.curve.notes,
             sources,
         });
@@ -315,7 +336,13 @@ fn sources_of(prepared: &Prepared, sources: &[Vec<section::CutEnd>]) -> Option<V
         .iter()
         .map(|span| {
             span.iter()
-                .map(|end| Some(CutSource { a: number(end.a)?, b: number(end.b)?, t: end.t }))
+                .map(|end| {
+                    Some(CutSource {
+                        a: number(end.a)?,
+                        b: number(end.b)?,
+                        t: end.t,
+                    })
+                })
                 .collect::<Option<Vec<_>>>()
         })
         .collect()
@@ -348,7 +375,11 @@ pub fn file_colour(colouring: Colouring<'_>, uuid: &str, source: &dyn ValueSourc
 /// [`file_colour`] for an object of the package: the face's resolver, when
 /// given, is asked by the object's **full uri** — a uuid would hand both
 /// versions of a surface the colour of one.
-pub fn file_colour_of(colouring: Colouring<'_>, object: &ObjectId, source: &dyn ValueSource) -> Option<String> {
+pub fn file_colour_of(
+    colouring: Colouring<'_>,
+    object: &ObjectId,
+    source: &dyn ValueSource,
+) -> Option<String> {
     // The face already knows: no search is made again.
     if let Some(resolver) = colouring.resolver {
         return resolver(&object.uri);
@@ -357,20 +388,37 @@ pub fn file_colour_of(colouring: Colouring<'_>, object: &ObjectId, source: &dyn 
 }
 
 /// The cascade's constant colour for `uuid` over `set`.
-fn cascade_colour(set: &GraphicalSet, index: Option<&PackageIndex>, uuid: &str, source: &dyn ValueSource) -> Option<String> {
+fn cascade_colour(
+    set: &GraphicalSet,
+    index: Option<&PackageIndex>,
+    uuid: &str,
+    source: &dyn ValueSource,
+) -> Option<String> {
     let cascade = Cascade::new(set);
     let decision = match index {
         // The whole order — the 3D viewer's (`Cascade::inherited`): Lutetia
         // colours its horizons through the collections they belong to, which
         // the shorter walk below never reaches.
-        Some(index) => cascade.inherited(index, source, uuid).ok().and_then(|walked| walked.resolution).map(|found| found.value),
+        Some(index) => cascade
+            .inherited(index, source, uuid)
+            .ok()
+            .and_then(|walked| walked.resolution)
+            .map(|found| found.value),
         None => {
-            let request = Request { representation: uuid, property: None, kind_chain: &[], element: Scope::WholeObject };
+            let request = Request {
+                representation: uuid,
+                property: None,
+                kind_chain: &[],
+                element: Scope::WholeObject,
+            };
             cascade.resolve(&request, source).ok().flatten()
         }
     };
     match decision {
-        Some(Decision { paint: Paint::Constant(colour), .. }) => Some(colour.to_hex()),
+        Some(Decision {
+            paint: Paint::Constant(colour),
+            ..
+        }) => Some(colour.to_hex()),
         _ => None,
     }
 }
@@ -419,7 +467,12 @@ fn role_of(representation: &dyn Reflect, read: &SceneObject, source: &dyn ValueS
 pub fn age_of(interpretation: &dyn Reflect) -> Option<[f64; 2]> {
     let years = |object: &dyn Reflect, name: &str| -> Option<f64> {
         match object.field(name)? {
-            FieldValue::Scalar(scalar) => scalar.to_string().trim().parse::<i64>().ok().map(|y| y as f64 / 1_000_000.0),
+            FieldValue::Scalar(scalar) => scalar
+                .to_string()
+                .trim()
+                .parse::<i64>()
+                .ok()
+                .map(|y| y as f64 / 1_000_000.0),
             _ => None,
         }
     };
@@ -433,7 +486,10 @@ pub fn age_of(interpretation: &dyn Reflect) -> Option<[f64; 2]> {
             return Some(ordered(start, stop));
         }
     }
-    if let (Some(older), Some(younger)) = (years(interpretation, "OlderPossibleAge"), years(interpretation, "YoungerPossibleAge")) {
+    if let (Some(older), Some(younger)) = (
+        years(interpretation, "OlderPossibleAge"),
+        years(interpretation, "YoungerPossibleAge"),
+    ) {
         return Some(ordered(older, younger));
     }
     if let Some(FieldValue::Object(time)) = interpretation.field("AbsoluteAge")
@@ -450,7 +506,10 @@ pub fn age_of(interpretation: &dyn Reflect) -> Option<[f64; 2]> {
 /// object names no interpretation, or the package cannot be followed to the
 /// feature: two surfaces are then never taken for one horizon.
 fn feature_of(read: &SceneObject) -> Option<String> {
-    read.feature.as_ref().map(|f| f.uuid.to_ascii_lowercase()).filter(|u| !u.is_empty())
+    read.feature
+        .as_ref()
+        .map(|f| f.uuid.to_ascii_lowercase())
+        .filter(|u| !u.is_empty())
 }
 
 /// The age of what `read` represents, when it is in the package and states one.
@@ -466,7 +525,11 @@ fn age_of_represented(representation: &dyn Reflect, source: &dyn ValueSource) ->
 /// What "every surface of the package" means for a face that lists a package
 /// (the CLI's default) — decided here, so the front end and the CLI agree.
 pub fn is_cut_type(qualified_type: &str) -> bool {
-    ["TriangulatedSetRepresentation", "Grid2dRepresentation", "IjkGridRepresentation"]
-        .iter()
-        .any(|kind| qualified_type.ends_with(kind))
+    [
+        "TriangulatedSetRepresentation",
+        "Grid2dRepresentation",
+        "IjkGridRepresentation",
+    ]
+    .iter()
+    .any(|kind| qualified_type.ends_with(kind))
 }

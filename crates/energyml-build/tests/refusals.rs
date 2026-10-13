@@ -26,7 +26,13 @@ fn cloud() -> Pieces {
         Source::Shape {
             geometry: Geometry {
                 kind: "cloud",
-                patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Points, closed: Vec::new() }],
+                patches: vec![Patch {
+                    index: 0,
+                    node_offset: 0,
+                    points,
+                    topology: Topology::Points,
+                    closed: Vec::new(),
+                }],
             },
             closed: None,
         },
@@ -34,7 +40,10 @@ fn cloud() -> Pieces {
 }
 
 fn pairs(refusals: &[Refusal]) -> Vec<(&str, Option<&str>)> {
-    refusals.iter().map(|one| (one.key, one.slot.as_deref())).collect()
+    refusals
+        .iter()
+        .map(|one| (one.key, one.slot.as_deref()))
+        .collect()
 }
 
 /// **Every** wrong field, each under its own slot and key — in the order the
@@ -61,9 +70,17 @@ fn each_faulty_field_files_its_refusal_under_its_slot() {
     );
     for one in why.refusals() {
         let slot = one.slot.as_deref().unwrap();
-        assert!(one.message.contains(&format!("`{slot}`")), "the message names its slot: {one:?}");
+        assert!(
+            one.message.contains(&format!("`{slot}`")),
+            "the message names its slot: {one:?}"
+        );
     }
-    let sentence = why.refusals().iter().map(|one| one.message.clone()).collect::<Vec<_>>().join("; ");
+    let sentence = why
+        .refusals()
+        .iter()
+        .map(|one| one.message.clone())
+        .collect::<Vec<_>>()
+        .join("; ");
     assert_eq!(why.message(), sentence);
     assert_eq!(why.to_string(), sentence, "the CLI prints the same sentence");
 }
@@ -75,11 +92,23 @@ fn a_list_is_refused_by_shape_by_count_then_element_by_element() {
     let slots = vec![Slot::many("codes", Need::Epsg, "the codes", 2)];
     let settle = |value: serde_json::Value| Choices::new().set("codes", value).settle(&slots).unwrap_err();
 
-    assert_eq!(pairs(settle(serde_json::json!(2154)).refusals()), [("shape", Some("codes"))]);
-    assert_eq!(pairs(settle(serde_json::json!([2154])).refusals()), [("count", Some("codes"))]);
+    assert_eq!(
+        pairs(settle(serde_json::json!(2154)).refusals()),
+        [("shape", Some("codes"))]
+    );
+    assert_eq!(
+        pairs(settle(serde_json::json!([2154])).refusals()),
+        [("count", Some("codes"))]
+    );
     let why = settle(serde_json::json!(["a", 2154, "b"]));
-    assert_eq!(pairs(why.refusals()), [("value", Some("codes")), ("value", Some("codes"))]);
-    assert!(why.refusals()[0].message.contains("`codes`[0]") && why.refusals()[1].message.contains("`codes`[2]"), "{why}");
+    assert_eq!(
+        pairs(why.refusals()),
+        [("value", Some("codes")), ("value", Some("codes"))]
+    );
+    assert!(
+        why.refusals()[0].message.contains("`codes`[0]") && why.refusals()[1].message.contains("`codes`[2]"),
+        "{why}"
+    );
 }
 
 /// The binder's refusal keeps the **input** slot it is about through
@@ -92,8 +121,13 @@ fn an_unfit_bag_names_its_input_slot() {
     };
     assert_eq!((why.key, why.slot.as_deref()), ("unfit", Some("base")), "{why:?}");
 
-    let when = When { creation: "2026-09-12T00:00:00Z".into(), originator: "test".into() };
-    let refused = Registry::new().plan("thickness", &alone, &Choices::new(), &Identity::derived(), &when).unwrap_err();
+    let when = When {
+        creation: "2026-09-12T00:00:00Z".into(),
+        originator: "test".into(),
+    };
+    let refused = Registry::new()
+        .plan("thickness", &alone, &Choices::new(), &Identity::derived(), &when)
+        .unwrap_err();
     assert_eq!(pairs(refused.refusals()), [("unfit", Some("base"))]);
     assert!(refused.message().contains("`thickness` is not fit"), "{refused}");
 }
@@ -103,10 +137,20 @@ fn an_unfit_bag_names_its_input_slot() {
 /// field, and the registry keeps it.
 #[test]
 fn a_refusal_of_the_computation_keeps_its_field() {
-    let when = When { creation: "2026-09-12T00:00:00Z".into(), originator: "test".into() };
+    let when = When {
+        creation: "2026-09-12T00:00:00Z".into(),
+        originator: "test".into(),
+    };
     let choices = Choices::new().set("spacing", 1e-4).set("title", "t");
     let why = Registry::new()
-        .plan_for("interpolate", &cloud(), &choices, &Identity::derived(), &when, Purpose::Geometry)
+        .plan_for(
+            "interpolate",
+            &cloud(),
+            &choices,
+            &Identity::derived(),
+            &when,
+            Purpose::Geometry,
+        )
         .unwrap_err();
     assert_eq!(pairs(why.refusals()), [("value", Some("spacing"))], "{why}");
     assert!(why.message().contains("widen the spacing"), "{why}");

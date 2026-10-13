@@ -27,9 +27,7 @@
 //! run through each other with tame neighbours).
 
 use crate::inputs::{InputsError, MAX_CROSSES, validate};
-use crate::model::{
-    CrossOwn, CrossWidths, Crosses, Inputs, Note, SectionKey, SectionTrace,
-};
+use crate::model::{CrossOwn, CrossWidths, Crosses, Inputs, Note, SectionKey, SectionTrace};
 
 type V = [f64; 2];
 
@@ -62,9 +60,7 @@ pub fn traces(inputs: &Inputs) -> Result<(Vec<SectionTrace>, Vec<Note>), InputsE
         Crosses::Every { spacing, common, own } => {
             (every(total_length(&inputs.trace), *spacing)?, common, own)
         }
-        Crosses::Count { count, common, own } => {
-            (spread(total_length(&inputs.trace), *count), common, own)
-        }
+        Crosses::Count { count, common, own } => (spread(total_length(&inputs.trace), *count), common, own),
     };
 
     for o in own {
@@ -124,7 +120,10 @@ pub fn traces(inputs: &Inputs) -> Result<(Vec<SectionTrace>, Vec<Note>), InputsE
 
 /// The length of a polyline.
 pub fn total_length(trace: &[V]) -> f64 {
-    trace.windows(2).map(|p| (p[1][0] - p[0][0]).hypot(p[1][1] - p[0][1])).sum()
+    trace
+        .windows(2)
+        .map(|p| (p[1][0] - p[0][0]).hypot(p[1][1] - p[0][1]))
+        .sum()
 }
 
 /// The multiples of `spacing` up to the end of a trace of length `total`, and
@@ -155,7 +154,9 @@ fn spread(total: f64, count: u32) -> Vec<f64> {
     if count == 1 {
         return vec![total / 2.0];
     }
-    (0..count).map(|i| total * f64::from(i) / f64::from(count - 1)).collect()
+    (0..count)
+        .map(|i| total * f64::from(i) / f64::from(count - 1))
+        .collect()
 }
 
 /// The point at abscissa `s`, and the unit direction there: the segment's, or
@@ -197,14 +198,22 @@ pub fn locate(trace: &[V], s: f64) -> (V, V) {
 fn bisector(incoming: V, outgoing: V) -> V {
     let sum = [incoming[0] + outgoing[0], incoming[1] + outgoing[1]];
     let n = sum[0].hypot(sum[1]);
-    if n > 1e-12 { [sum[0] / n, sum[1] / n] } else { incoming }
+    if n > 1e-12 {
+        [sum[0] / n, sum[1] / n]
+    } else {
+        incoming
+    }
 }
 
 /// Where two polylines meet: the abscissa on each, of the first meeting found
 /// (segments touching at an end count; two colinear segments that overlap meet
 /// where the overlap starts on the first). `None` when they do not meet.
 pub fn meet(a: &[V], b: &[V]) -> Option<[f64; 2]> {
-    let scale = a.iter().chain(b.iter()).flat_map(|p| p.iter()).fold(1.0_f64, |m, v| m.max(v.abs()));
+    let scale = a
+        .iter()
+        .chain(b.iter())
+        .flat_map(|p| p.iter())
+        .fold(1.0_f64, |m, v| m.max(v.abs()));
     let eps = 1e-9 * scale;
     let mut sa = 0.0;
     for pa in a.windows(2) {

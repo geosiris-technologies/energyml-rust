@@ -26,10 +26,18 @@ const COLOURING: Layers = Layers::none().with_index().with_colours();
 /// - `export` — the scene's colour ramps, by `energyml_cache::colours::Colouring`;
 /// - `geometry` — the same scene reading (`scene::of_package`), so the same
 ///   colours should it be asked for them.
-pub const COMMANDS: &[(&str, Layers)] = &[("colors", COLOURING), ("export", COLOURING), ("geometry", COLOURING)];
+pub const COMMANDS: &[(&str, Layers)] = &[
+    ("colors", COLOURING),
+    ("export", COLOURING),
+    ("geometry", COLOURING),
+];
 
 /// The cache of a command, from the fixed list.
 pub fn cache_for(command: &str) -> Cache {
-    let layers = COMMANDS.iter().find(|(name, _)| *name == command).map(|(_, layers)| *layers).unwrap_or(Layers::none());
+    let layers = COMMANDS
+        .iter()
+        .find(|(name, _)| *name == command)
+        .map(|(_, layers)| *layers)
+        .unwrap_or(Layers::none());
     Cache::new(layers)
 }

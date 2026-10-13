@@ -24,7 +24,10 @@ const CT_FEATURE: &str = "application/x-resqml+xml;version=2.2;type=BoundaryFeat
 const CT_HORIZON: &str = "application/x-resqml+xml;version=2.2;type=HorizonInterpretation";
 
 fn read(content_type: &str, xml: String) -> Box<dyn DynObject> {
-    energyml_schemas::all().read_xml_as(content_type, xml.as_bytes(), ReadMode::Tolerant).expect("readable").0
+    energyml_schemas::all()
+        .read_xml_as(content_type, xml.as_bytes(), ReadMode::Tolerant)
+        .expect("readable")
+        .0
 }
 
 fn feature(version: &str) -> Box<dyn DynObject> {
@@ -59,8 +62,12 @@ fn horizon() -> Box<dyn DynObject> {
 #[test]
 fn the_report_names_both_versions_when_neither_is_the_one_named() {
     let empty = energyml_storage::extract::empty_package(Some(0)).expect("an empty package");
-    let mut store =
-        EpcStore::from_reader(Box::new(Cursor::new(empty)), "check.epc", Arc::new(energyml_schemas::all())).expect("opens");
+    let mut store = EpcStore::from_reader(
+        Box::new(Cursor::new(empty)),
+        "check.epc",
+        Arc::new(energyml_schemas::all()),
+    )
+    .expect("opens");
     store.put(feature("1")).expect("v1");
     store.put_as_new_version(feature("2")).expect("v2");
     store.put(horizon()).expect("the horizon");
@@ -68,11 +75,26 @@ fn the_report_names_both_versions_when_neither_is_the_one_named() {
     uris.sort();
     assert_eq!(uris.len(), 2);
 
-    let report = check::of_store(&store, &Options { schema: false, rules: false, extra_rules: Vec::new() });
-    let told: Vec<_> = report.references.iter().filter(|one| matches!(one.kind, RefIssueKind::ObjectVersionMismatch { .. })).collect();
+    let report = check::of_store(
+        &store,
+        &Options {
+            schema: false,
+            rules: false,
+            extra_rules: Vec::new(),
+        },
+    );
+    let told: Vec<_> = report
+        .references
+        .iter()
+        .filter(|one| matches!(one.kind, RefIssueKind::ObjectVersionMismatch { .. }))
+        .collect();
     assert_eq!(told.len(), 1, "one finding: {:?}", report.references);
     match &told[0].kind {
-        RefIssueKind::ObjectVersionMismatch { referenced, candidates, .. } => {
+        RefIssueKind::ObjectVersionMismatch {
+            referenced,
+            candidates,
+            ..
+        } => {
             assert_eq!(referenced.as_deref(), Some("3"));
             assert_eq!(candidates, &uris, "both entries of the uuid, by full uri");
         }

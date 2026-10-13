@@ -40,7 +40,11 @@ pub fn resample(line: &[[f64; 3]], spacing: f64) -> Result<Vec<[f64; 3]>, String
         let mut at = spacing - since;
         while at < length {
             let t = at / length;
-            out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]);
+            out.push([
+                a[0] + (b[0] - a[0]) * t,
+                a[1] + (b[1] - a[1]) * t,
+                a[2] + (b[2] - a[2]) * t,
+            ]);
             at += spacing;
         }
         since = length - (at - spacing);
@@ -65,7 +69,11 @@ pub fn plan_distance(p: [f64; 2], lines: &[Vec<[f64; 3]>]) -> f64 {
             let (a, b) = ([pair[0][0], pair[0][1]], [pair[1][0], pair[1][1]]);
             let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
             let len2 = dx * dx + dy * dy;
-            let t = if len2 > 0.0 { (((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2).clamp(0.0, 1.0) } else { 0.0 };
+            let t = if len2 > 0.0 {
+                (((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
             let q = [a[0] + dx * t, a[1] + dy * t];
             best = best.min((p[0] - q[0]).hypot(p[1] - q[1]));
         }
@@ -96,7 +104,11 @@ mod tests {
         let out = resample(&bent, 3.0).unwrap();
         // Total length 6: nodes at 0, 3 (one past the bend), 6.
         assert_eq!(out.len(), 3);
-        assert!((out[1][0] - 2.0).abs() < 1e-12 && (out[1][1] - 1.0).abs() < 1e-12, "{:?}", out[1]);
+        assert!(
+            (out[1][0] - 2.0).abs() < 1e-12 && (out[1][1] - 1.0).abs() < 1e-12,
+            "{:?}",
+            out[1]
+        );
     }
 
     #[test]

@@ -52,7 +52,9 @@ use energyml_analysis::surface::{self as analysis, Up};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::Topology;
 
-use crate::declare::{Choice, Field, Inputs, ObjectRef, Params, PropertyKindRef, Shape, Suggestions, Title, known_of};
+use crate::declare::{
+    Choice, Field, Inputs, ObjectRef, Params, PropertyKindRef, Shape, Suggestions, Title, known_of,
+};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::Pieces;
 
@@ -92,12 +94,36 @@ struct Map {
 
 fn map_of(what: What) -> Map {
     match what {
-        What::Dip => Map { kind: "dip angle", uom: "dega", label: "dip" },
-        What::Azimuth => Map { kind: "dip azimuth", uom: "dega", label: "dip azimuth" },
-        What::MeanCurvature => Map { kind: "curvature", uom: "1/m", label: "mean curvature" },
-        What::GaussianCurvature => Map { kind: "curvature", uom: "1/m", label: "gaussian curvature" },
-        What::MaximumCurvature => Map { kind: "curvature", uom: "1/m", label: "maximum curvature" },
-        What::MinimumCurvature => Map { kind: "curvature", uom: "1/m", label: "minimum curvature" },
+        What::Dip => Map {
+            kind: "dip angle",
+            uom: "dega",
+            label: "dip",
+        },
+        What::Azimuth => Map {
+            kind: "dip azimuth",
+            uom: "dega",
+            label: "dip azimuth",
+        },
+        What::MeanCurvature => Map {
+            kind: "curvature",
+            uom: "1/m",
+            label: "mean curvature",
+        },
+        What::GaussianCurvature => Map {
+            kind: "curvature",
+            uom: "1/m",
+            label: "gaussian curvature",
+        },
+        What::MaximumCurvature => Map {
+            kind: "curvature",
+            uom: "1/m",
+            label: "maximum curvature",
+        },
+        What::MinimumCurvature => Map {
+            kind: "curvature",
+            uom: "1/m",
+            label: "minimum curvature",
+        },
     }
 }
 
@@ -187,7 +213,9 @@ impl Operation for SurfaceMap {
     }
 
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
-        let Some(known) = known_of(bag, "shape") else { return };
+        let Some(known) = known_of(bag, "shape") else {
+            return;
+        };
         if let Some(reference) = &known.reference {
             slots.inferred("representation", reference.dor(), reference.clone());
         }
@@ -206,7 +234,12 @@ impl Operation for SurfaceMap {
         Ok(())
     }
 
-    fn plan(&self, inputs: SurfaceMapInputs, params: SurfaceMapParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: SurfaceMapInputs,
+        params: SurfaceMapParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let what = params.what;
         let map = map_of(what);
         let up = match params.vertical {
@@ -221,11 +254,21 @@ impl Operation for SurfaceMap {
         let (values, undefined, aside, unreached) = match what {
             What::Dip | What::Azimuth => {
                 let found = match lattice_of(&inputs.shape) {
-                    Some((fastest, slowest)) => analysis::lattice_slope(&points, fastest, slowest, up).map_err(refuse)?,
+                    Some((fastest, slowest)) => {
+                        analysis::lattice_slope(&points, fastest, slowest, up).map_err(refuse)?
+                    }
                     None => analysis::slope(&points, &triangles, up).map_err(refuse)?,
                 };
-                let undefined = if what == What::Dip { found.unreached } else { found.flat + found.sheer + found.unreached };
-                let values = if what == What::Dip { found.dip } else { found.azimuth };
+                let undefined = if what == What::Dip {
+                    found.unreached
+                } else {
+                    found.flat + found.sheer + found.unreached
+                };
+                let values = if what == What::Dip {
+                    found.dip
+                } else {
+                    found.azimuth
+                };
                 (values, undefined, found.set_aside, found.unreached)
             }
             _ if lattice_of(&inputs.shape).is_some() => {
@@ -256,7 +299,10 @@ impl Operation for SurfaceMap {
             Some(given) => given.0,
             None => {
                 let found = energyml_domain::property_kind::with_default(|dictionary| {
-                    dictionary.by_title(map.kind).first().map(|kind| (kind.uuid.clone(), kind.title.clone()))
+                    dictionary
+                        .by_title(map.kind)
+                        .first()
+                        .map(|kind| (kind.uuid.clone(), kind.title.clone()))
                 });
                 let (uuid, title) = found.ok_or_else(|| {
                     Refusal::on(
@@ -271,7 +317,9 @@ impl Operation for SurfaceMap {
         let title = match params.title {
             Some(given) => given.0,
             None => {
-                let of = known.and_then(|k| k.reference.as_ref().map(|r| r.title.clone())).unwrap_or_else(|| source.clone());
+                let of = known
+                    .and_then(|k| k.reference.as_ref().map(|r| r.title.clone()))
+                    .unwrap_or_else(|| source.clone());
                 format!("{of} — {}", map.label)
             }
         };
@@ -282,7 +330,13 @@ impl Operation for SurfaceMap {
         // maps of one surface apart in the derived uuid.
         let count = values.len();
         let name = format!("{} of {source}", what.word());
-        let field = Field { name: name.clone(), over: source.clone(), on: "nodes".to_string(), values, uom: Some(uom.clone()) };
+        let field = Field {
+            name: name.clone(),
+            over: source.clone(),
+            on: "nodes".to_string(),
+            values,
+            uom: Some(uom.clone()),
+        };
         let property = PropertyParams {
             representation: params.representation,
             property_kind: PropertyKindRef(kind),
@@ -294,23 +348,39 @@ impl Operation for SurfaceMap {
 
         plan.activity.recipe = "surface-map";
         plan.activity.title = format!("surface-map → {title}");
-        plan.activity.parameters.push(Parameter::Text { title: "what".to_string(), value: what.word().to_string() });
-        plan.activity.parameters.push(Parameter::Text { title: "vertical".to_string(), value: params.vertical.word().to_string() });
-        plan.activity.parameters.push(Parameter::Double { title: "undefinedCount".to_string(), value: undefined as f64, uom: None });
+        plan.activity.parameters.push(Parameter::Text {
+            title: "what".to_string(),
+            value: what.word().to_string(),
+        });
+        plan.activity.parameters.push(Parameter::Text {
+            title: "vertical".to_string(),
+            value: params.vertical.word().to_string(),
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "undefinedCount".to_string(),
+            value: undefined as f64,
+            uom: None,
+        });
         if undefined > 0 {
             plan.says.push(Note {
                 key: "undefined",
                 detail: format!(
                     "{undefined} of {count} node(s) have no {}: written as NaN rather than extrapolated{}",
                     map.label,
-                    if unreached > 0 { format!(", {unreached} of them reached by no usable triangle") } else { String::new() }
+                    if unreached > 0 {
+                        format!(", {unreached} of them reached by no usable triangle")
+                    } else {
+                        String::new()
+                    }
                 ),
             });
         }
         if aside > 0 {
             plan.says.push(Note {
                 key: "set-aside",
-                detail: format!("{aside} triangle(s) set aside: no area, or a corner that is not a finite point"),
+                detail: format!(
+                    "{aside} triangle(s) set aside: no area, or a corner that is not a finite point"
+                ),
             });
         }
         Ok(plan)
@@ -323,10 +393,22 @@ impl Operation for SurfaceMap {
     fn reports(&self) -> Vec<Slot> {
         vec![
             Slot::required("indexable", Need::Text, "the indexable element the values lie on"),
-            Slot::required("valueCount", Need::Number { uom: None, least: None, most: None }, "values written"),
+            Slot::required(
+                "valueCount",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "values written",
+            ),
             Slot::required(
                 "undefinedCount",
-                Need::Number { uom: None, least: None, most: None },
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
                 "nodes with no value, written as NaN",
             ),
         ]

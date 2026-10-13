@@ -5,7 +5,7 @@
 
 use energyml_providers::error::Error;
 use energyml_providers::ign_altimetrie::{
-    elevation_request, profile_request, read_elevations, Elevation, LIDAR_HD_MNT, MAX_POINTS, RGE_ALTI,
+    Elevation, LIDAR_HD_MNT, MAX_POINTS, RGE_ALTI, elevation_request, profile_request, read_elevations,
 };
 use energyml_providers::transport::{Answer, Request, Transport};
 
@@ -27,14 +27,22 @@ impl Transport for Canned {
 
 fn answer(status: u16, body: &'static str) -> Answer {
     Canned { status, body }
-        .fetch(&Request { url: String::new(), accept: String::new(), about: String::new() })
+        .fetch(&Request {
+            url: String::new(),
+            accept: String::new(),
+            about: String::new(),
+        })
         .expect("a canned answer")
 }
 
 #[test]
 fn an_elevation_request_separates_points_with_a_pipe_and_names_the_resource() {
     let request = elevation_request(&[(2.33, 48.86), (2.34, 48.87)], RGE_ALTI).expect("a request");
-    assert!(request.url.starts_with("https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json?"));
+    assert!(
+        request
+            .url
+            .starts_with("https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json?")
+    );
 
     // `|`, never `,`: a comma makes the service fail (`BAD_PARAMETER`), as
     // measured.
@@ -48,8 +56,8 @@ fn an_elevation_request_separates_points_with_a_pipe_and_names_the_resource() {
 
 #[test]
 fn a_profile_request_needs_at_least_two_points_and_carries_the_sampling() {
-    let request =
-        profile_request(&[(2.33, 48.86), (2.335, 48.865), (2.34, 48.87)], LIDAR_HD_MNT, 3).expect("a request");
+    let request = profile_request(&[(2.33, 48.86), (2.335, 48.865), (2.34, 48.87)], LIDAR_HD_MNT, 3)
+        .expect("a request");
     assert!(request.url.contains("elevationLine.json"));
     assert!(request.url.contains(&format!("resource={LIDAR_HD_MNT}")));
     assert!(request.url.contains("sampling=3"));
@@ -65,7 +73,10 @@ fn no_point_and_too_many_points_are_refused_before_any_request() {
 
     let too_many = vec![(2.33, 48.86); MAX_POINTS + 1];
     let refused = elevation_request(&too_many, RGE_ALTI).expect_err("refused");
-    assert!(format!("{refused}").contains(&MAX_POINTS.to_string()), "{refused}");
+    assert!(
+        format!("{refused}").contains(&MAX_POINTS.to_string()),
+        "{refused}"
+    );
 }
 
 #[test]
@@ -74,7 +85,14 @@ fn a_single_point_answer_is_read_whole() {
     // and `acc` come back in one object per point.
     let body = r#"{"elevations": [{"lon": 2.33, "lat": 48.86, "z": 26.68, "acc": "Variable suivant la source de mesure"}]}"#;
     let elevations = read_elevations(answer(200, body)).expect("elevations");
-    assert_eq!(elevations, vec![Elevation { lon: 2.33, lat: 48.86, z: Some(26.68) }]);
+    assert_eq!(
+        elevations,
+        vec![Elevation {
+            lon: 2.33,
+            lat: 48.86,
+            z: Some(26.68)
+        }]
+    );
 }
 
 #[test]
@@ -117,7 +135,8 @@ fn no_coverage_is_none_not_a_measured_depth() {
 fn a_server_refusal_is_json_here_unlike_the_wfs() {
     // The real answer to an unknown resource: a `400`, in JSON — not the XML
     // `ows:ExceptionReport` of the BRGM WFS.
-    let body = r#"{"error": {"code": "BAD_PARAMETER", "description": "'nope' is not an accepted resource."}}"#;
+    let body =
+        r#"{"error": {"code": "BAD_PARAMETER", "description": "'nope' is not an accepted resource."}}"#;
     let why = read_elevations(answer(400, body)).expect_err("refused");
     match why {
         Error::Server { status, code, says } => {
@@ -136,8 +155,7 @@ fn a_mismatched_point_count_is_the_servers_own_refusal() {
     // `coordinates()` always builds them with the same length; this test
     // documents what the service would say if a caller bypassed
     // `elevation_request`.
-    let body =
-        r#"{"error": {"code": "BAD_PARAMETER", "description": "The number of [lon] values must match the number of [lat] values"}}"#;
+    let body = r#"{"error": {"code": "BAD_PARAMETER", "description": "The number of [lon] values must match the number of [lat] values"}}"#;
     let why = read_elevations(answer(400, body)).expect_err("refused");
     assert!(format!("{why}").contains("must match"), "{why}");
 }

@@ -275,7 +275,11 @@ impl Operation for GraphicalInformation {
             }
             (Some(map), true) => {
                 // The map's own title: `name` is the slot that received it.
-                let title = map.known.reference.as_ref().map_or(map.name.as_str(), |reference| reference.title.as_str());
+                let title = map
+                    .known
+                    .reference
+                    .as_ref()
+                    .map_or(map.name.as_str(), |reference| reference.title.as_str());
                 return Err(Refusal::on(
                     "mapped",
                     format!(
@@ -312,7 +316,11 @@ impl Operation for GraphicalInformation {
                         "`{}` is a {}: a colour map draws a property, a property kind or a representation{}",
                         reference.title,
                         class_of(&reference.qualified_type),
-                        if decorable(&reference.qualified_type) { " — a constant colour on it goes in `targets`" } else { "" }
+                        if decorable(&reference.qualified_type) {
+                            " — a constant colour on it goes in `targets`"
+                        } else {
+                            ""
+                        }
                     ),
                 ));
             }
@@ -341,7 +349,10 @@ impl Operation for GraphicalInformation {
     ) -> Result<Plan, Refusal> {
         let title = params.title.0.trim().to_string();
         if title.is_empty() {
-            return Err(Refusal::on("title", "a set needs a title: it names what the package chose to draw"));
+            return Err(Refusal::on(
+                "title",
+                "a set needs a title: it names what the package chose to draw",
+            ));
         }
 
         // **Every colour, and all the bad ones at once**: stopping at the first
@@ -357,7 +368,10 @@ impl Operation for GraphicalInformation {
         if !unread.is_empty() {
             return Err(Refusal::on(
                 "colours",
-                format!("{} — a colour that does not read is refused, never replaced by another", unread.join("; ")),
+                format!(
+                    "{} — a colour that does not read is refused, never replaced by another",
+                    unread.join("; ")
+                ),
             ));
         }
         if params.shared && colours.len() > 1 {
@@ -371,8 +385,11 @@ impl Operation for GraphicalInformation {
         }
 
         // The objects and their colours: one for all, or one each in order.
-        let targets: Vec<Decorated> =
-            inputs.targets.iter().map(|one| decorated("targets", one)).collect::<Result<_, _>>()?;
+        let targets: Vec<Decorated> = inputs
+            .targets
+            .iter()
+            .map(|one| decorated("targets", one))
+            .collect::<Result<_, _>>()?;
         let paired: Vec<(Decorated, Rgba)> = match (targets.len(), colours.len()) {
             (0, 0) => Vec::new(),
             (0, given) => {
@@ -405,8 +422,10 @@ impl Operation for GraphicalInformation {
         let mut coloured: Vec<(Decorated, Rgba)> = Vec::with_capacity(paired.len());
         let mut twice = 0usize;
         for (target, colour) in paired {
-            let first: Option<Rgba> =
-                coloured.iter().find(|(one, _)| same_uuid(&one.uuid, &target.uuid)).map(|(_, first)| *first);
+            let first: Option<Rgba> = coloured
+                .iter()
+                .find(|(one, _)| same_uuid(&one.uuid, &target.uuid))
+                .map(|(_, first)| *first);
             match first {
                 Some(first) if first.to_hex() == colour.to_hex() => twice += 1,
                 Some(first) => {
@@ -427,7 +446,9 @@ impl Operation for GraphicalInformation {
         // An element scope is a representation's (TRG 2.2 §8 p. 232).
         let scope = params.scope.scope();
         if scope != Scope::WholeObject
-            && let Some((target, _)) = coloured.iter().find(|(one, _)| !is_representation(&one.qualified_type))
+            && let Some((target, _)) = coloured
+                .iter()
+                .find(|(one, _)| !is_representation(&one.qualified_type))
         {
             return Err(Refusal::on(
                 "scope",
@@ -452,13 +473,23 @@ impl Operation for GraphicalInformation {
             }
         } else {
             for (target, colour) in &coloured {
-                entries.push(color::constant_colour_entry(std::slice::from_ref(target), scope, *colour, None));
+                entries.push(color::constant_colour_entry(
+                    std::slice::from_ref(target),
+                    scope,
+                    *colour,
+                    None,
+                ));
             }
         }
         let constant_entries = entries.len();
         if let Some(drawn) = &drawn {
             if params.shared {
-                entries.push(color::colour_map_entry(&drawn.objects, &drawn.map, &drawn.scaling, drawn.component));
+                entries.push(color::colour_map_entry(
+                    &drawn.objects,
+                    &drawn.map,
+                    &drawn.scaling,
+                    drawn.component,
+                ));
             } else {
                 for one in &drawn.objects {
                     entries.push(color::colour_map_entry(
@@ -473,16 +504,27 @@ impl Operation for GraphicalInformation {
         let entry_count = entries.len();
 
         // **What the set is is what it says**: the same content, the same uuid.
-        let mut content: Vec<String> =
-            vec![format!("scope={}", params.scope.word()), format!("shared={}", params.shared)];
+        let mut content: Vec<String> = vec![
+            format!("scope={}", params.scope.word()),
+            format!("shared={}", params.shared),
+        ];
         for (target, colour) in &coloured {
-            content.push(format!("{}={}", target.uuid.to_ascii_lowercase(), colour.to_hex()));
+            content.push(format!(
+                "{}={}",
+                target.uuid.to_ascii_lowercase(),
+                colour.to_hex()
+            ));
         }
         if let Some(drawn) = &drawn {
             content.push(format!(
                 "map={}:{}:{:?}:{}:{}:{:?}",
                 drawn.map.uuid.to_ascii_lowercase(),
-                drawn.objects.iter().map(|one| one.uuid.to_ascii_lowercase()).collect::<Vec<_>>().join(","),
+                drawn
+                    .objects
+                    .iter()
+                    .map(|one| one.uuid.to_ascii_lowercase())
+                    .collect::<Vec<_>>()
+                    .join(","),
                 drawn.scaling.min_max,
                 drawn.scaling.logarithmic,
                 drawn.scaling.reverse,
@@ -523,7 +565,13 @@ impl Operation for GraphicalInformation {
                 drawn.objects.len()
             ));
         }
-        says.insert(0, Note { key: "entries", detail: format!("{entry_count} entry(ies): {}", parts.join("; ")) });
+        says.insert(
+            0,
+            Note {
+                key: "entries",
+                detail: format!("{entry_count} entry(ies): {}", parts.join("; ")),
+            },
+        );
         if twice > 0 {
             says.push(Note {
                 key: "twice",
@@ -534,10 +582,16 @@ impl Operation for GraphicalInformation {
         // What was said, colour by colour: a list is not recorded by the
         // registry, and an activity that does not record its inputs is a
         // receipt (ADR-0017).
-        let mut parameters =
-            vec![Parameter::Double { title: "entryCount".to_string(), value: entry_count as f64, uom: None }];
+        let mut parameters = vec![Parameter::Double {
+            title: "entryCount".to_string(),
+            value: entry_count as f64,
+            uom: None,
+        }];
         for text in &params.colours {
-            parameters.push(Parameter::Text { title: "colours".to_string(), value: text.trim().to_string() });
+            parameters.push(Parameter::Text {
+                title: "colours".to_string(),
+                value: text.trim().to_string(),
+            });
         }
 
         Ok(Plan {
@@ -567,7 +621,11 @@ impl Operation for GraphicalInformation {
     fn reports(&self) -> Vec<Slot> {
         vec![Slot::optional(
             "entryCount",
-            Need::Number { uom: None, least: None, most: None },
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
             "the entries written in the set",
         )]
     }
@@ -613,14 +671,23 @@ fn drawn_through(
     let min_max = match (params.minimum, params.maximum) {
         (None, None) => None,
         (Some(_), None) => {
-            return Err(Refusal::on("maximum", "`minimum` is given without `maximum`: a range carries both"));
+            return Err(Refusal::on(
+                "maximum",
+                "`minimum` is given without `maximum`: a range carries both",
+            ));
         }
         (None, Some(_)) => {
-            return Err(Refusal::on("minimum", "`maximum` is given without `minimum`: a range carries both"));
+            return Err(Refusal::on(
+                "minimum",
+                "`maximum` is given without `minimum`: a range carries both",
+            ));
         }
         (Some(low), Some(high)) => {
             if !low.is_finite() || !high.is_finite() {
-                return Err(Refusal::on("minimum", format!("[{low}, {high}] is not a range of numbers")));
+                return Err(Refusal::on(
+                    "minimum",
+                    format!("[{low}, {high}] is not a range of numbers"),
+                ));
             }
             if low >= high {
                 return Err(Refusal::on(
@@ -641,14 +708,19 @@ fn drawn_through(
     {
         return Err(Refusal::on(
             "logarithmic",
-            format!("the range starts at {low}, and a value of zero or less has no logarithm to place on the map"),
+            format!(
+                "the range starts at {low}, and a value of zero or less has no logarithm to place on the map"
+            ),
         ));
     }
     let component = params
         .value_vector_index
         .map(|index| {
             u64::try_from(index).map_err(|_| {
-                Refusal::on("valueVectorIndex", format!("{index} is not an index: the first component is 0"))
+                Refusal::on(
+                    "valueVectorIndex",
+                    format!("{index} is not an index: the first component is 0"),
+                )
             })
         })
         .transpose()?;
@@ -667,7 +739,12 @@ fn drawn_through(
         // states how many values each element holds says how many components
         // there are; an index past the last names none of them.
         if let Some(index) = component {
-            match one.known.property.as_ref().filter(|property| !property.value_count.is_empty()) {
+            match one
+                .known
+                .property
+                .as_ref()
+                .filter(|property| !property.value_count.is_empty())
+            {
                 Some(property) => {
                     let components: u64 = property.value_count.iter().product();
                     if index >= components {
@@ -687,7 +764,10 @@ fn drawn_through(
         objects.push(reference);
     }
     if twice > 0 {
-        says.push(Note { key: "twice-mapped", detail: format!("{twice} object(s) given twice in `mapped`, drawn once") });
+        says.push(Note {
+            key: "twice-mapped",
+            detail: format!("{twice} object(s) given twice in `mapped`, drawn once"),
+        });
     }
     if !uncounted.is_empty() {
         says.push(Note {
@@ -701,7 +781,11 @@ fn drawn_through(
     Ok(Some(Drawn {
         map,
         objects,
-        scaling: Scaling { min_max, logarithmic: params.logarithmic, reverse: params.reverse },
+        scaling: Scaling {
+            min_max,
+            logarithmic: params.logarithmic,
+            reverse: params.reverse,
+        },
         component,
     }))
 }
@@ -710,9 +794,16 @@ fn drawn_through(
 /// qualified type, title — or a refusal naming its slot.
 fn decorated(slot: &str, input: &ObjectIn) -> Result<Decorated, Refusal> {
     let Some(known) = input.known.reference.as_ref() else {
-        return Err(Refusal::on(slot, format!("`{}` was given without a reference to write", input.name)));
+        return Err(Refusal::on(
+            slot,
+            format!("`{}` was given without a reference to write", input.name),
+        ));
     };
-    Ok(Decorated { uuid: known.uuid.clone(), qualified_type: known.qualified_type.clone(), title: known.title.clone() })
+    Ok(Decorated {
+        uuid: known.uuid.clone(),
+        qualified_type: known.qualified_type.clone(),
+        title: known.title.clone(),
+    })
 }
 
 /// Two uuids, compared as uuids: case is no part of one.
@@ -746,7 +837,9 @@ fn decorable(qualified_type: &str) -> bool {
     let class = bare(qualified_type);
     class == "model"
         || class == "dataobjectcollection"
-        || ["feature", "interpretation", "representation", "marker"].iter().any(|kind| class.ends_with(kind))
+        || ["feature", "interpretation", "representation", "marker"]
+            .iter()
+            .any(|kind| class.ends_with(kind))
 }
 
 /// Whether a `ColorInformation` may name it: *« Used for properties and

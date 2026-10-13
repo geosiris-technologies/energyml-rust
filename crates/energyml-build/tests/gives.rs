@@ -27,14 +27,17 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde_json::{Value, json};
 
 use energyml_build::operation::{Choices, Identity, NewObject, Output, Plan, Registry, When};
+use energyml_build::osdu;
 use energyml_build::pieces::{Known, KnownProperty, Pieces, Ref, Source};
 use energyml_build::tabular::{self, Dialect};
-use energyml_build::osdu;
 use energyml_domain::values::Values;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 fn when() -> When {
-    When { creation: "2026-10-07T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-10-07T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 fn choices(answers: &Value) -> Choices {
@@ -53,7 +56,10 @@ fn run(op: &str, label: &str, pieces: &Pieces, answers: Value) -> Plan {
 }
 
 fn declared(op: &str) -> Vec<Output> {
-    Registry::new().get(op).unwrap_or_else(|| panic!("no operation `{op}`")).gives()
+    Registry::new()
+        .get(op)
+        .unwrap_or_else(|| panic!("no operation `{op}`"))
+        .gives()
 }
 
 /// The declaration, against every plan of its variants.
@@ -66,8 +72,16 @@ fn hold(op: &str, plans: &[(&str, &Plan)], caller_chosen: &[&str]) {
     assert!(!gives.is_empty(), "{op} declares nothing");
     let mut roles = BTreeSet::new();
     for one in &gives {
-        assert!(roles.insert(one.role), "{op} declares the role `{}` twice", one.role);
-        assert!(!one.describe.is_empty(), "{op}: `{}` has no description", one.role);
+        assert!(
+            roles.insert(one.role),
+            "{op} declares the role `{}` twice",
+            one.role
+        );
+        assert!(
+            !one.describe.is_empty(),
+            "{op}: `{}` has no description",
+            one.role
+        );
         if let Some(most) = one.most {
             assert!(one.least <= most, "{op}: `{}` is {}..{most}", one.role, one.least);
         }
@@ -99,23 +113,39 @@ fn hold(op: &str, plans: &[(&str, &Plan)], caller_chosen: &[&str]) {
             }
             *count.entry(one.role).or_default() += 1;
             seen_roles.insert(object.role.clone());
-            seen_types.entry(object.role.clone()).or_default().insert(object.qualified_type.clone());
+            seen_types
+                .entry(object.role.clone())
+                .or_default()
+                .insert(object.qualified_type.clone());
         }
         // Counts: a bound is held only where the plan is whole — a plan that
         // writes nothing of a role is checked against `least` too, since
         // `plans` holds runs that are not refused.
         for one in &gives {
             let n = count.get(one.role).copied().unwrap_or(0);
-            assert!(n >= one.least, "{op} / {label}: `{}` holds {n}, declared at least {}", one.role, one.least);
+            assert!(
+                n >= one.least,
+                "{op} / {label}: `{}` holds {n}, declared at least {}",
+                one.role,
+                one.least
+            );
             if let Some(most) = one.most {
-                assert!(n <= most, "{op} / {label}: `{}` holds {n}, declared at most {most}", one.role);
+                assert!(
+                    n <= most,
+                    "{op} / {label}: `{}` holds {n}, declared at most {most}",
+                    one.role
+                );
             }
         }
     }
 
     // The other way: nothing declared that no variant ever wrote.
     for one in &gives {
-        assert!(seen_roles.contains(one.role), "{op}: the role `{}` is declared and no variant wrote it", one.role);
+        assert!(
+            seen_roles.contains(one.role),
+            "{op}: the role `{}` is declared and no variant wrote it",
+            one.role
+        );
         if caller_chosen.contains(&one.role) {
             continue;
         }
@@ -130,7 +160,10 @@ fn hold(op: &str, plans: &[(&str, &Plan)], caller_chosen: &[&str]) {
 }
 
 fn of_type<'a>(plan: &'a Plan, kind: &str) -> Vec<&'a NewObject> {
-    plan.objects.iter().filter(|one| one.qualified_type == kind).collect()
+    plan.objects
+        .iter()
+        .filter(|one| one.qualified_type == kind)
+        .collect()
 }
 
 // -- templates and tables ------------------------------------------------------
@@ -178,12 +211,21 @@ F2,650100,6800100,110,0,3,0.3,e7,Priabonien,c\n";
 fn table_bag(text: &str, template: &Value) -> Pieces {
     let table = tabular::read("essai.csv", text, Dialect::sniff(text)).expect("a table");
     let template = osdu::from_json(template).expect("a template");
-    Pieces::empty().with("table", Source::Table { name: "essai.csv".into(), table, template })
+    Pieces::empty().with(
+        "table",
+        Source::Table {
+            name: "essai.csv".into(),
+            table,
+            template,
+        },
+    )
 }
 
 fn without(template: &Value, dropped: &[&str]) -> Value {
     let mut all = template.clone();
-    all.as_array_mut().unwrap().retain(|one| !dropped.contains(&one["ColumnName"].as_str().unwrap()));
+    all.as_array_mut()
+        .unwrap()
+        .retain(|one| !dropped.contains(&one["ColumnName"].as_str().unwrap()));
     all
 }
 
@@ -219,9 +261,19 @@ fn held(text: &str, before: &Plan, head: [f64; 3], mds: &[f64], template: &Value
 fn wells_from_table_declares_what_its_plans_write() {
     let template = full_template();
     let slim = without(&template, &["DEB", "PHI", "STRA", "Nom_STRA"]);
-    let basic = run("wells-from-table", "basic", &table_bag(FILE, &template), json!({ "sourceEpsg": 2154 }));
+    let basic = run(
+        "wells-from-table",
+        "basic",
+        &table_bag(FILE, &template),
+        json!({ "sourceEpsg": 2154 }),
+    );
     // The passes' tops state the first depth: another frame, same roles.
-    let passes = run("wells-from-table", "passes", &table_bag(FILE, &template), json!({ "sourceEpsg": 2154, "datumKind": "kelly bushing" }));
+    let passes = run(
+        "wells-from-table",
+        "passes",
+        &table_bag(FILE, &template),
+        json!({ "sourceEpsg": 2154, "datumKind": "kelly bushing" }),
+    );
     // A table of heads writes the well and its datum, no trajectory, no frame.
     let heads_text = "SONDAGE,X,Y,Z_MNT\nF1,650000,6800000,120\nF2,650100,6800100,131\n";
     let heads_template = json!([
@@ -230,27 +282,46 @@ fn wells_from_table_declares_what_its_plans_write() {
         column("Y", Y, "number"),
         column("Z_MNT", GROUND, "number"),
     ]);
-    let heads = run("wells-from-table", "heads", &table_bag(heads_text, &heads_template), json!({ "sourceEpsg": 2154 }));
-    assert!(of_type(&heads, "resqml22.WellboreTrajectoryRepresentation").is_empty(), "the premise of the variant");
+    let heads = run(
+        "wells-from-table",
+        "heads",
+        &table_bag(heads_text, &heads_template),
+        json!({ "sourceEpsg": 2154 }),
+    );
+    assert!(
+        of_type(&heads, "resqml22.WellboreTrajectoryRepresentation").is_empty(),
+        "the premise of the variant"
+    );
     // Degrees in, metres out, a vertical system named.
     let degrees = "SONDAGE,X,Y,Z_MNT,PROF\nF1,2.3,48.85,35,3\nF1,2.3,48.85,35,9\n";
     let reprojected = run(
         "wells-from-table",
         "reprojected",
-        &table_bag(degrees, &without(&full_template(), &["DEB", "PHI", "STRA", "Nom_STRA"])),
+        &table_bag(
+            degrees,
+            &without(&full_template(), &["DEB", "PHI", "STRA", "Nom_STRA"]),
+        ),
         json!({ "sourceEpsg": 4326, "project": 2154, "vertical": 5720 }),
     );
     // A well the package holds: enriched (rewritten), then left alone.
     let first = "SONDAGE,X,Y,Z_MNT,PROF\nF1,650000,6800000,120,2.25\nF1,650000,6800000,120,26.16\n";
     let more = "SONDAGE,X,Y,Z_MNT,PROF\nF1,650000,6800000,120,12.0\n";
-    let before = run("wells-from-table", "first batch", &table_bag(first, &slim), json!({ "sourceEpsg": 2154 }));
+    let before = run(
+        "wells-from-table",
+        "first batch",
+        &table_bag(first, &slim),
+        json!({ "sourceEpsg": 2154 }),
+    );
     let enriched = run(
         "wells-from-table",
         "enriched",
         &held(more, &before, [650000.0, 6800000.0, 120.0], &[2.25, 26.16], &slim),
         json!({ "sourceEpsg": 2154, "enrich": true }),
     );
-    assert!(of_type(&enriched, "resqml22.WellboreFrameRepresentation").len() == 1, "the premise of the variant");
+    assert!(
+        of_type(&enriched, "resqml22.WellboreFrameRepresentation").len() == 1,
+        "the premise of the variant"
+    );
 
     hold(
         "wells-from-table",
@@ -269,12 +340,21 @@ fn wells_from_table_declares_what_its_plans_write() {
     let unchanged = run(
         "wells-from-table",
         "unchanged",
-        &held(first, &before, [650000.0, 6800000.0, 120.0], &[2.25, 26.16], &slim),
+        &held(
+            first,
+            &before,
+            [650000.0, 6800000.0, 120.0],
+            &[2.25, 26.16],
+            &slim,
+        ),
         json!({ "sourceEpsg": 2154 }),
     );
     let gives = declared("wells-from-table");
     for object in &unchanged.objects {
-        let one = gives.iter().find(|one| one.role == object.role).expect("a declared role");
+        let one = gives
+            .iter()
+            .find(|one| one.role == object.role)
+            .expect("a declared role");
         assert!(one.types.contains(&object.qualified_type.as_str()), "{object:?}");
     }
     for one in gives.iter().filter(|one| one.least > 0) {
@@ -291,7 +371,11 @@ fn wells_from_table_declares_what_its_plans_write() {
 
 /// A frame of the package: its shape and its depths.
 fn frame(bag: Pieces, at: usize, title: &str, mds: &[f64]) -> Pieces {
-    let name = if at == 0 { "frames".to_string() } else { format!("frames {}", at + 1) };
+    let name = if at == 0 {
+        "frames".to_string()
+    } else {
+        format!("frames {}", at + 1)
+    };
     let geometry = Geometry {
         kind: "resqml22.WellboreFrameRepresentation",
         patches: vec![Patch {
@@ -302,10 +386,21 @@ fn frame(bag: Pieces, at: usize, title: &str, mds: &[f64]) -> Pieces {
             closed: Vec::new(),
         }],
     };
-    bag.with(name.clone(), Source::Shape { geometry, closed: None }).with(
+    bag.with(
+        name.clone(),
+        Source::Shape {
+            geometry,
+            closed: None,
+        },
+    )
+    .with(
         format!("{name} (object)"),
         Source::Object(Known {
-            reference: Some(Ref::new(format!("uuid-{title}"), "resqml22.WellboreFrameRepresentation", title)),
+            reference: Some(Ref::new(
+                format!("uuid-{title}"),
+                "resqml22.WellboreFrameRepresentation",
+                title,
+            )),
             node_mds: Some(mds.to_vec()),
             ..Known::default()
         }),
@@ -337,9 +432,19 @@ fn properties_from_table_declares_what_its_plans_write() {
     let op = "properties-from-table";
     let separate = run(op, "separate", &bag, json!({}));
     let shared = run(op, "shared-table", &bag, json!({ "textColumns": "shared-table" }));
-    let per_well = run(op, "table-per-well", &bag, json!({ "textColumns": "table-per-well" }));
+    let per_well = run(
+        op,
+        "table-per-well",
+        &bag,
+        json!({ "textColumns": "table-per-well" }),
+    );
     let everything = run(op, "everything", &bag, json!({ "everything": true }));
-    let everything_shared = run(op, "everything + shared", &bag, json!({ "everything": true, "textColumns": "shared-table" }));
+    let everything_shared = run(
+        op,
+        "everything + shared",
+        &bag,
+        json!({ "everything": true, "textColumns": "shared-table" }),
+    );
     let subdivided = run(op, "subdivide", &bag, json!({ "subdivide": true }));
 
     // The modes differ in the roles they write: which is the point of the declaration.
@@ -369,8 +474,18 @@ fn wells_and_properties_declares_the_union_of_its_halves() {
     let op = "wells-and-properties-from-table";
     let bag = table_bag(FILE, &full_template());
     let plain = run(op, "plain", &bag, json!({ "sourceEpsg": 2154 }));
-    let shared = run(op, "shared-table", &bag, json!({ "sourceEpsg": 2154, "textColumns": "shared-table", "everything": true }));
-    let per_well = run(op, "table-per-well", &bag, json!({ "sourceEpsg": 2154, "textColumns": "table-per-well" }));
+    let shared = run(
+        op,
+        "shared-table",
+        &bag,
+        json!({ "sourceEpsg": 2154, "textColumns": "shared-table", "everything": true }),
+    );
+    let per_well = run(
+        op,
+        "table-per-well",
+        &bag,
+        json!({ "sourceEpsg": 2154, "textColumns": "table-per-well" }),
+    );
     // Heads only: no frame, nothing to lay a property on.
     let heads_text = "SONDAGE,X,Y,Z_MNT\nF1,650000,6800000,120\n";
     let heads_template = json!([
@@ -379,20 +494,38 @@ fn wells_and_properties_declares_the_union_of_its_halves() {
         column("Y", Y, "number"),
         column("Z_MNT", GROUND, "number"),
     ]);
-    let heads = run(op, "heads", &table_bag(heads_text, &heads_template), json!({ "sourceEpsg": 2154 }));
+    let heads = run(
+        op,
+        "heads",
+        &table_bag(heads_text, &heads_template),
+        json!({ "sourceEpsg": 2154 }),
+    );
 
-    let mut plans = vec![("plain", &plain), ("shared-table", &shared), ("table-per-well", &per_well), ("heads", &heads)];
+    let mut plans = vec![
+        ("plain", &plain),
+        ("shared-table", &shared),
+        ("table-per-well", &per_well),
+        ("heads", &heads),
+    ];
 
     // **`units`** adds the chart's column — only with the chart this build embeds.
     let with_units = if chart_is_there() {
-        Some(run(op, "units", &bag, json!({ "sourceEpsg": 2154, "units": "STRA", "unitLabels": "Nom_STRA" })))
+        Some(run(
+            op,
+            "units",
+            &bag,
+            json!({ "sourceEpsg": 2154, "units": "STRA", "unitLabels": "Nom_STRA" }),
+        ))
     } else {
         eprintln!("gives: this build has no BRGM chart, the `units` variant of {op} is skipped");
         None
     };
     if let Some(plan) = &with_units {
         plans.push(("units", plan));
-        assert!(of_type(plan, "resqml22.StratigraphicColumn").len() == 1, "the premise of the variant");
+        assert!(
+            of_type(plan, "resqml22.StratigraphicColumn").len() == 1,
+            "the premise of the variant"
+        );
         hold(op, &plans, &[]);
     } else {
         // Without the chart's half, only what the other variants write can be
@@ -400,8 +533,14 @@ fn wells_and_properties_declares_the_union_of_its_halves() {
         for (label, plan) in &plans {
             let gives = declared(op);
             for object in &plan.objects {
-                let one = gives.iter().find(|one| one.role == object.role).unwrap_or_else(|| panic!("{label}: `{}`", object.role));
-                assert!(one.types.contains(&object.qualified_type.as_str()), "{label}: {object:?}");
+                let one = gives
+                    .iter()
+                    .find(|one| one.role == object.role)
+                    .unwrap_or_else(|| panic!("{label}: `{}`", object.role));
+                assert!(
+                    one.types.contains(&object.qualified_type.as_str()),
+                    "{label}: {object:?}"
+                );
             }
         }
     }
@@ -412,7 +551,10 @@ fn wells_and_properties_declares_the_union_of_its_halves() {
     let halves = [declared("wells-from-table"), declared("properties-from-table")];
     for half in &halves {
         for one in half {
-            let here = union.iter().find(|have| have.role == one.role).unwrap_or_else(|| panic!("`{}` is lost", one.role));
+            let here = union
+                .iter()
+                .find(|have| have.role == one.role)
+                .unwrap_or_else(|| panic!("`{}` is lost", one.role));
             for kind in one.types {
                 assert!(here.types.contains(kind), "`{kind}` is lost from `{}`", one.role);
             }
@@ -420,7 +562,10 @@ fn wells_and_properties_declares_the_union_of_its_halves() {
     }
     if chart_is_there() {
         for one in declared("stratigraphy-from-geolts") {
-            let here = union.iter().find(|have| have.role == one.role).unwrap_or_else(|| panic!("`{}` is lost", one.role));
+            let here = union
+                .iter()
+                .find(|have| have.role == one.role)
+                .unwrap_or_else(|| panic!("`{}` is lost", one.role));
             for kind in one.types {
                 assert!(here.types.contains(kind), "`{kind}` is lost from `{}`", one.role);
             }
@@ -441,21 +586,48 @@ const FACIES_KIND: &str = "22222222-2222-4222-8222-222222222222";
 const FACIES_TABLE: &str = "33333333-3333-4333-8333-333333333333";
 
 fn unit(name: &str) -> Option<Ref> {
-    Some(Ref::new(format!("uuid-{name}"), "resqml22.StratigraphicUnitInterpretation", name))
+    Some(Ref::new(
+        format!("uuid-{name}"),
+        "resqml22.StratigraphicUnitInterpretation",
+        name,
+    ))
 }
 
 /// A frame of vertical nodes whose intervals name their units.
 fn unit_frame(bag: Pieces, at: usize, title: &str, units: Vec<Option<Ref>>) -> Pieces {
-    let name = if at == 0 { "frames".to_string() } else { format!("frames {}", at + 1) };
-    let points: Vec<[f64; 3]> = (0..=units.len()).map(|k| [at as f64 * 10.0, 0.0, -(k as f64)]).collect();
+    let name = if at == 0 {
+        "frames".to_string()
+    } else {
+        format!("frames {}", at + 1)
+    };
+    let points: Vec<[f64; 3]> = (0..=units.len())
+        .map(|k| [at as f64 * 10.0, 0.0, -(k as f64)])
+        .collect();
     let geometry = Geometry {
         kind: "resqml22.WellboreFrameRepresentation",
-        patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Points, closed: Vec::new() }],
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology: Topology::Points,
+            closed: Vec::new(),
+        }],
     };
-    bag.with(name.clone(), Source::Shape { geometry, closed: None }).with(
+    bag.with(
+        name.clone(),
+        Source::Shape {
+            geometry,
+            closed: None,
+        },
+    )
+    .with(
         format!("{name} (object)"),
         Source::Object(Known {
-            reference: Some(Ref::new(format!("uuid-{title}"), "resqml22.WellboreFrameRepresentation", title)),
+            reference: Some(Ref::new(
+                format!("uuid-{title}"),
+                "resqml22.WellboreFrameRepresentation",
+                title,
+            )),
             crs: Some(Ref::new(CRS, "eml23.ProjectedCrs", "EPSG:2154")),
             interval_units: Some(units),
             ..Known::default()
@@ -465,11 +637,23 @@ fn unit_frame(bag: Pieces, at: usize, title: &str, units: Vec<Option<Ref>>) -> P
 
 /// A property of a frame, as the edge would resolve it.
 fn property(frame: &str, measure: &str, discrete: bool, values: Values) -> Known {
-    let class = if discrete { "DiscreteProperty" } else { "ContinuousProperty" };
+    let class = if discrete {
+        "DiscreteProperty"
+    } else {
+        "ContinuousProperty"
+    };
     Known {
-        reference: Some(Ref::new(format!("uuid-{frame}-{measure}"), format!("resqml22.{class}"), format!("{frame} — {measure}"))),
+        reference: Some(Ref::new(
+            format!("uuid-{frame}-{measure}"),
+            format!("resqml22.{class}"),
+            format!("{frame} — {measure}"),
+        )),
         property: Some(KnownProperty {
-            supporting: Some(Ref::new(format!("uuid-{frame}"), "resqml22.WellboreFrameRepresentation", frame)),
+            supporting: Some(Ref::new(
+                format!("uuid-{frame}"),
+                "resqml22.WellboreFrameRepresentation",
+                frame,
+            )),
             indexable: "nodes".to_string(),
             value_count: vec![1],
             timed: false,
@@ -500,7 +684,11 @@ fn contacts_bag(with_properties: bool) -> Pieces {
             property("F2", "FACIES", true, Values::Integer(vec![3, 4, 4, 4])),
         ];
         for (at, known) in all.into_iter().enumerate() {
-            let name = if at == 0 { "properties".to_string() } else { format!("properties {}", at + 1) };
+            let name = if at == 0 {
+                "properties".to_string()
+            } else {
+                format!("properties {}", at + 1)
+            };
             pieces = pieces.with(name, Source::Object(known));
         }
     }
@@ -514,18 +702,34 @@ fn contacts_from_frames_declares_what_its_plans_write() {
     // Both defaults on: the copies and the well-origin property.
     let all = run(op, "copy + wellOrigin", &with, json!({}));
     // Neither: the point sets and their feature and interpretation alone.
-    let bare = run(op, "bare", &with, json!({ "copyProperties": false, "wellOrigin": false }));
+    let bare = run(
+        op,
+        "bare",
+        &with,
+        json!({ "copyProperties": false, "wellOrigin": false }),
+    );
     // The copies alone, and the well-origin alone.
     let copies = run(op, "copies", &with, json!({ "wellOrigin": false }));
     let origin = run(op, "origin", &with, json!({ "copyProperties": false }));
     // Frames that carry no property.
     let none = run(op, "no property", &contacts_bag(false), json!({}));
     // The frame created here, rather than the frames' own: projected, and in degrees.
-    let created = run(op, "frame created", &with, json!({ "sourceEpsg": 2154, "project": 2154, "vertical": 5720 }));
+    let created = run(
+        op,
+        "frame created",
+        &with,
+        json!({ "sourceEpsg": 2154, "project": 2154, "vertical": 5720 }),
+    );
     let degrees = run(op, "frame in degrees", &with, json!({ "sourceEpsg": 4326 }));
 
-    assert!(origin.objects.iter().any(|o| o.role == "category-lookup"), "the premise: wellOrigin writes its table");
-    assert!(of_type(&bare, "eml23.ColumnBasedTable").is_empty() && of_type(&bare, "resqml22.DiscreteProperty").is_empty());
+    assert!(
+        origin.objects.iter().any(|o| o.role == "category-lookup"),
+        "the premise: wellOrigin writes its table"
+    );
+    assert!(
+        of_type(&bare, "eml23.ColumnBasedTable").is_empty()
+            && of_type(&bare, "resqml22.DiscreteProperty").is_empty()
+    );
 
     hold(
         op,
@@ -555,10 +759,21 @@ fn well(bag: Pieces, name: &str, nodes: &[[f64; 3]], head: [f64; 3], frame: &Ref
             closed: Vec::new(),
         }],
     };
-    bag.with(name, Source::Shape { geometry, closed: None }).with(
+    bag.with(
+        name,
+        Source::Shape {
+            geometry,
+            closed: None,
+        },
+    )
+    .with(
         format!("{name} (object)"),
         Source::Object(Known {
-            reference: Some(Ref::new(format!("uuid-{name}"), "resqml22.WellboreTrajectoryRepresentation", name)),
+            reference: Some(Ref::new(
+                format!("uuid-{name}"),
+                "resqml22.WellboreTrajectoryRepresentation",
+                name,
+            )),
             crs: Some(frame.clone()),
             crs_epsg: Some(2154),
             vertical_epsg: Some(5720),
@@ -574,15 +789,42 @@ fn wellheads_declares_what_its_plans_write() {
     let compound = Ref::new("c", "eml23.LocalEngineeringCompoundCrs", "the frame");
     let projected = Ref::new("p", "eml23.ProjectedCrs", "Lambert-93");
     let bag = |frame: &Ref| {
-        let bag = well(Pieces::empty(), "F1", &[[0.0, 0.0, 88.5], [0.0, 0.0, 50.0]], [0.0, 0.0, 120.0], frame);
-        well(bag, "F2", &[[10.0, 20.0, 119.0], [10.0, 20.0, 90.0]], [10.0, 20.0, 131.0], frame)
+        let bag = well(
+            Pieces::empty(),
+            "F1",
+            &[[0.0, 0.0, 88.5], [0.0, 0.0, 50.0]],
+            [0.0, 0.0, 120.0],
+            frame,
+        );
+        well(
+            bag,
+            "F2",
+            &[[10.0, 20.0, 119.0], [10.0, 20.0, 90.0]],
+            [10.0, 20.0, 131.0],
+            frame,
+        )
     };
     // The wells' own codes make the collars' frame (the compound is not kept).
-    let default = run(op, "default", &bag(&compound), json!({ "crs": compound.dor(), "title": "MNT" }));
+    let default = run(
+        op,
+        "default",
+        &bag(&compound),
+        json!({ "crs": compound.dor(), "title": "MNT" }),
+    );
     // A projected frame named: nothing of the frame is written.
-    let named = run(op, "projected named", &bag(&projected), json!({ "crs": projected.dor(), "title": "MNT" }));
+    let named = run(
+        op,
+        "projected named",
+        &bag(&projected),
+        json!({ "crs": projected.dor(), "title": "MNT" }),
+    );
     // A frame asked for. (Degrees are refused: an object of the package is in its own frame.)
-    let created = run(op, "frame created", &bag(&compound), json!({ "sourceEpsg": 2154, "project": 2154, "vertical": 5720, "title": "MNT" }));
+    let created = run(
+        op,
+        "frame created",
+        &bag(&compound),
+        json!({ "sourceEpsg": 2154, "project": 2154, "vertical": 5720, "title": "MNT" }),
+    );
     // What the points represent, asked for.
     let represented = run(
         op,
@@ -591,8 +833,20 @@ fn wellheads_declares_what_its_plans_write() {
         json!({ "crs": compound.dor(), "title": "MNT", "featureType": "resqml22.BoundaryFeature", "interpretationType": "resqml22.HorizonInterpretation" }),
     );
     // Their types are the caller's choice, and are what was asked for.
-    assert_eq!(of_type(&represented, "resqml22.BoundaryFeature").iter().filter(|o| o.role == "feature").count(), 1);
-    assert_eq!(of_type(&represented, "resqml22.HorizonInterpretation").iter().filter(|o| o.role == "interpretation").count(), 1);
+    assert_eq!(
+        of_type(&represented, "resqml22.BoundaryFeature")
+            .iter()
+            .filter(|o| o.role == "feature")
+            .count(),
+        1
+    );
+    assert_eq!(
+        of_type(&represented, "resqml22.HorizonInterpretation")
+            .iter()
+            .filter(|o| o.role == "interpretation")
+            .count(),
+        1
+    );
     assert!(of_type(&default, "resqml22.PointSetRepresentation").len() == 1);
 
     hold(
@@ -617,14 +871,45 @@ fn stratigraphy_declares_what_its_plans_write() {
     }
     let op = "stratigraphy-from-geolts";
     let empty = Pieces::empty();
-    let branch = run(op, "a branch with its ancestors", &empty, json!({ "units": ["Eocène"] }));
-    let alone = run(op, "a branch alone", &empty, json!({ "units": ["Eocène"], "ancestors": false }));
-    let regional = run(op, "regional, finest", &empty, json!({ "units": ["Eocène"], "regional": true, "finest": 8 }));
-    let english = run(op, "english, titled", &empty, json!({ "units": ["Eocène"], "language": "en", "title": "Eocene" }));
-    let two = run(op, "two branches", &empty, json!({ "units": ["Eocène", "Crétacé"] }));
+    let branch = run(
+        op,
+        "a branch with its ancestors",
+        &empty,
+        json!({ "units": ["Eocène"] }),
+    );
+    let alone = run(
+        op,
+        "a branch alone",
+        &empty,
+        json!({ "units": ["Eocène"], "ancestors": false }),
+    );
+    let regional = run(
+        op,
+        "regional, finest",
+        &empty,
+        json!({ "units": ["Eocène"], "regional": true, "finest": 8 }),
+    );
+    let english = run(
+        op,
+        "english, titled",
+        &empty,
+        json!({ "units": ["Eocène"], "language": "en", "title": "Eocene" }),
+    );
+    let two = run(
+        op,
+        "two branches",
+        &empty,
+        json!({ "units": ["Eocène", "Crétacé"] }),
+    );
     hold(
         op,
-        &[("branch", &branch), ("alone", &alone), ("regional", &regional), ("english", &english), ("two", &two)],
+        &[
+            ("branch", &branch),
+            ("alone", &alone),
+            ("regional", &regional),
+            ("english", &english),
+            ("two", &two),
+        ],
         &[],
     );
 }
@@ -654,7 +939,11 @@ fn the_chain_operations_are_declared_and_the_rest_are_listed() {
             declaring += 1;
         }
     }
-    eprintln!("gives: {declaring} operation(s) declare their outputs; {} do not yet: {}", undeclared.len(), undeclared.join(", "));
+    eprintln!(
+        "gives: {declaring} operation(s) declare their outputs; {} do not yet: {}",
+        undeclared.len(),
+        undeclared.join(", ")
+    );
     for name in CHAIN {
         assert!(registry.get(name).is_some(), "`{name}` is not in the registry");
         assert!(!undeclared.contains(&name), "`{name}` declares no output");

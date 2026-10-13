@@ -249,7 +249,9 @@ impl Reader for Files {
     fn text(&mut self, source: &Where) -> Result<(String, Option<String>), String> {
         match source {
             Where::File(path) if path.ends_with("proprietes.csv") => Ok((CSV.to_string(), None)),
-            Where::File(path) if path.ends_with("proprietes.template.json") => Ok((TEMPLATE.to_string(), None)),
+            Where::File(path) if path.ends_with("proprietes.template.json") => {
+                Ok((TEMPLATE.to_string(), None))
+            }
             other => Err(format!("{other:?}: not a file of this test")),
         }
     }
@@ -266,65 +268,134 @@ fn each_anomaly_is_found_once_on_its_object_and_the_clean_objects_are_silent() {
     std::fs::create_dir_all(&dir).unwrap();
     let out = dir.join("anomalies.epc");
     let schemas = Arc::new(energyml_schemas::all());
-    recipe::run(&recipe, Path::new("."), &Registry::new(), schemas.clone(), &out, &mut Files).unwrap_or_else(|stop| panic!("{stop}"));
+    recipe::run(
+        &recipe,
+        Path::new("."),
+        &Registry::new(),
+        schemas.clone(),
+        &out,
+        &mut Files,
+    )
+    .unwrap_or_else(|stop| panic!("{stop}"));
 
     let store = EpcStore::open(&out, schemas).expect("the package opens");
     let report = energyml_domain::check::of_store(
         &store,
-        &energyml_domain::check::Options { schema: true, rules: true, extra_rules: Vec::new() },
+        &energyml_domain::check::Options {
+            schema: true,
+            rules: true,
+            extra_rules: Vec::new(),
+        },
     );
     let title = |uuid: &str| -> String {
-        let summary = store.find_by_uuid(uuid).unwrap_or_else(|| panic!("{uuid} is in the package")).clone();
+        let summary = store
+            .find_by_uuid(uuid)
+            .unwrap_or_else(|| panic!("{uuid} is in the package"))
+            .clone();
         let object = store.get_object(&summary.uri).expect("it reads");
-        energyml_core::identity::title_of_reflect(object.as_reflect()).unwrap_or_default().to_string()
+        energyml_core::identity::title_of_reflect(object.as_reflect())
+            .unwrap_or_default()
+            .to_string()
     };
 
     // Nothing else is wrong with the package: the anomalies are all there is —
     // eight weighed as errors, E-04 a warning.
-    assert_eq!(report.errors(), 8, "{:#?}", (&report.schema, &report.references, &report.diagnostics, &report.unreadable, &report.rules));
-    assert!(report.diagnostics.is_empty() && report.unreadable.is_empty(), "{:#?}", report.diagnostics);
-    assert!(report.schema.is_empty(), "every edited object still reads as its type: {:#?}", report.schema);
+    assert_eq!(
+        report.errors(),
+        8,
+        "{:#?}",
+        (
+            &report.schema,
+            &report.references,
+            &report.diagnostics,
+            &report.unreadable,
+            &report.rules
+        )
+    );
+    assert!(
+        report.diagnostics.is_empty() && report.unreadable.is_empty(),
+        "{:#?}",
+        report.diagnostics
+    );
+    assert!(
+        report.schema.is_empty(),
+        "every edited object still reads as its type: {:#?}",
+        report.schema
+    );
     assert!(report.relationships.is_empty(), "{:#?}", report.relationships);
-    assert!(report.reportable_references().is_empty(), "{:#?}", report.reportable_references());
+    assert!(
+        report.reportable_references().is_empty(),
+        "{:#?}",
+        report.reportable_references()
+    );
 
     let found: BTreeSet<(String, String)> = report
         .rules
         .iter()
         .filter(|one| one.read.is_some())
         .map(|one| (one.rule.clone(), title(&one.uuid)))
-        .chain(
-            report
-                .properties
-                .iter()
-                .filter(|one| one.is_a_defect)
-                .map(|one| (format!("property kind: {}", if one.says.contains("abstract") { "abstract" } else { &one.says }), title(&one.uuid))),
-        )
+        .chain(report.properties.iter().filter(|one| one.is_a_defect).map(|one| {
+            (
+                format!(
+                    "property kind: {}",
+                    if one.says.contains("abstract") {
+                        "abstract"
+                    } else {
+                        &one.says
+                    }
+                ),
+                title(&one.uuid),
+            )
+        }))
         .collect();
     let expected: BTreeSet<(String, String)> = [
         ("property kind: abstract", "[ERROR] GTH-9 — force per length"), // E-01
         ("property kind: abstract", "[ERROR] GTH-9 — property"),         // E-02
-        ("house/discrete-value-in-lookup", "[ERROR] GTH-9 — [ERROR] lithology"), // E-03
-        ("house/time-series-asset-resolves", "[ERROR] GTH-99 — wellhead pressure"), // E-04
+        (
+            "house/discrete-value-in-lookup",
+            "[ERROR] GTH-9 — [ERROR] lithology",
+        ), // E-03
+        (
+            "house/time-series-asset-resolves",
+            "[ERROR] GTH-99 — wellhead pressure",
+        ), // E-04
         ("trg/one-definitive-trajectory-per-wellbore", "[ERROR] GTH-9"), // E-06, on the wellbore
-        ("trg/is-listric-iff-normal", "[ERROR] F9 — interpretation"),   // E-07
+        ("trg/is-listric-iff-normal", "[ERROR] F9 — interpretation"),    // E-07
         ("trg/homogeneous-collection", "[ERROR] wells"),                 // E-08
         ("trg/wellbore-interpretation-set-holds-wellbores", "[ERROR] model"), // E-08
-        ("trg/contact-element-is-geological", "[ERROR] structure"),     // E-09
+        ("trg/contact-element-is-geological", "[ERROR] structure"),      // E-09
     ]
     .into_iter()
     .map(|(rule, title)| (rule.to_string(), title.to_string()))
     .collect();
     assert_eq!(found, expected);
     // A set would hide a finding given twice: the count says there is none.
-    assert_eq!(report.errors() + report.warnings(), expected.len(), "{:#?}", report.rules);
+    assert_eq!(
+        report.errors() + report.warnings(),
+        expected.len(),
+        "{:#?}",
+        report.rules
+    );
 
     // Each finding is on an `[ERROR]` object: the clean ones — the doublet, its
     // series, F1 — are silent.
     for (rule, on) in &found {
-        assert!(on.starts_with("[ERROR]"), "`{rule}` found on the clean object `{on}`");
+        assert!(
+            on.starts_with("[ERROR]"),
+            "`{rule}` found on the clean object `{on}`"
+        );
     }
     // What E-03 reads: code 0, the rank of `sand`, has no row under keys from 1.
-    let e03 = report.rules.iter().find(|one| one.rule == "house/discrete-value-in-lookup").unwrap();
-    assert!(e03.read.as_deref().is_some_and(|read| read.starts_with("0 (2 element(s)) not in the key column `code`")), "{e03:?}");
+    let e03 = report
+        .rules
+        .iter()
+        .find(|one| one.rule == "house/discrete-value-in-lookup")
+        .unwrap();
+    assert!(
+        e03.read
+            .as_deref()
+            .is_some_and(|read| read.starts_with("0 (2 element(s)) not in the key column `code`")),
+        "{e03:?}"
+    );
     let _ = std::fs::remove_dir_all(&dir);
 }

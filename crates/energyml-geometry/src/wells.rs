@@ -76,10 +76,15 @@ pub fn of_store(summaries: &[ObjectSummary], source: &dyn ValueSource, wanted: &
     // the bucket, and each takes only the properties whose reference does not
     // name the other.
     let mut by_support: HashMap<String, Vec<UriAndObject>> = HashMap::new();
-    for summary in summaries.iter().filter(|one| one.qualified_type.ends_with("Property")) {
+    for summary in summaries
+        .iter()
+        .filter(|one| one.qualified_type.ends_with("Property"))
+    {
         // By the **uri**: an object held in two versions shares its uuid, and
         // only the uri says which of the two this summary is.
-        let Some(object) = source.object_at(&summary.uri) else { continue };
+        let Some(object) = source.object_at(&summary.uri) else {
+            continue;
+        };
         if property::read(object.as_reflect()).is_err() {
             continue;
         }
@@ -90,15 +95,22 @@ pub fn of_store(summaries: &[ObjectSummary], source: &dyn ValueSource, wanted: &
     }
 
     let mut tables = Vec::new();
-    for summary in summaries.iter().filter(|one| one.qualified_type.contains("WellboreFrameRepresentation")) {
+    for summary in summaries
+        .iter()
+        .filter(|one| one.qualified_type.contains("WellboreFrameRepresentation"))
+    {
         let Some(frame) = source.object_at(&summary.uri) else {
             notes.push(format!("{}: the frame does not read", summary.uri));
             continue;
         };
-        let title = energyml_core::identity::title_of_reflect(frame.as_reflect()).unwrap_or_default().to_string();
+        let title = energyml_core::identity::title_of_reflect(frame.as_reflect())
+            .unwrap_or_default()
+            .to_string();
         if !wanted.is_empty()
             && !wanted.iter().any(|one| {
-                one.eq_ignore_ascii_case(&summary.uuid) || *one == summary.uri || (!one.is_empty() && title.contains(one.as_str()))
+                one.eq_ignore_ascii_case(&summary.uuid)
+                    || *one == summary.uri
+                    || (!one.is_empty() && title.contains(one.as_str()))
             })
         {
             continue;
@@ -115,7 +127,13 @@ pub fn of_store(summaries: &[ObjectSummary], source: &dyn ValueSource, wanted: &
         match wt::of_frame(frame.as_reflect(), &borrowed, source) {
             Ok(table) => {
                 notes.extend(table.notes.iter().map(|one| format!("{}: {one}", table.well)));
-                tables.push(around(table, frame.as_reflect(), &summary.uri, source, &mut notes));
+                tables.push(around(
+                    table,
+                    frame.as_reflect(),
+                    &summary.uri,
+                    source,
+                    &mut notes,
+                ));
             }
             Err(why) => notes.push(format!("{}: {why}", summary.uri)),
         }
@@ -128,12 +146,22 @@ pub fn of_store(summaries: &[ObjectSummary], source: &dyn ValueSource, wanted: &
     if let Some(first) = merged.headers.first_mut() {
         *first = "well name".to_string();
     }
-    Export { merged, tables, notes }
+    Export {
+        merged,
+        tables,
+        notes,
+    }
 }
 
 /// The frame, with what the package says **around** it, in the order of the
 /// borehole CSV: who the wellbore is, where it is, then each node.
-fn around(table: WellTable, frame: &dyn Reflect, uri: &str, source: &dyn ValueSource, notes: &mut Vec<String>) -> WellTable {
+fn around(
+    table: WellTable,
+    frame: &dyn Reflect,
+    uri: &str,
+    source: &dyn ValueSource,
+    notes: &mut Vec<String>,
+) -> WellTable {
     let rows = table.rows;
     let constant = |title: &str, what: &'static str, value: Option<String>| Column {
         title: title.to_string(),
@@ -145,8 +173,11 @@ fn around(table: WellTable, frame: &dyn Reflect, uri: &str, source: &dyn ValueSo
     };
 
     // Who: the feature, through the interpretation the frame represents.
-    let interpretation = follow(source, frame, "RepresentedObject").or_else(|| follow(source, frame, "RepresentedInterpretation"));
-    let feature = interpretation.as_ref().and_then(|one| follow(source, one.as_reflect(), "InterpretedFeature"));
+    let interpretation = follow(source, frame, "RepresentedObject")
+        .or_else(|| follow(source, frame, "RepresentedInterpretation"));
+    let feature = interpretation
+        .as_ref()
+        .and_then(|one| follow(source, one.as_reflect(), "InterpretedFeature"));
     let well = feature
         .as_ref()
         .and_then(|one| energyml_core::identity::title_of_reflect(one.as_reflect()))
@@ -157,11 +188,19 @@ fn around(table: WellTable, frame: &dyn Reflect, uri: &str, source: &dyn ValueSo
     // The aliases: an industry code, a national identifier. One per column,
     // named by its authority — two of the same name are numbered.
     let mut seen: HashMap<String, usize> = HashMap::new();
-    for owner in feature.iter().map(|one| one.as_reflect()).chain(std::iter::once(frame)) {
+    for owner in feature
+        .iter()
+        .map(|one| one.as_reflect())
+        .chain(std::iter::once(frame))
+    {
         for (authority, identifier) in aliases(owner) {
             let count = seen.entry(authority.clone()).or_default();
             *count += 1;
-            let title = if *count == 1 { authority.clone() } else { format!("{authority} {count}") };
+            let title = if *count == 1 {
+                authority.clone()
+            } else {
+                format!("{authority} {count}")
+            };
             let mut column = constant(&title, "alias", Some(identifier));
             column.kind_title = None;
             columns.push(column);
@@ -172,7 +211,9 @@ fn around(table: WellTable, frame: &dyn Reflect, uri: &str, source: &dyn ValueSo
     // the ground when the first log starts lower down.
     let head = follow(source, frame, "Trajectory")
         .ok_or_else(|| "the frame names no trajectory".to_string())
-        .and_then(|trajectory| crate::well::head_of(trajectory.as_reflect(), source).map_err(|why| why.to_string()));
+        .and_then(|trajectory| {
+            crate::well::head_of(trajectory.as_reflect(), source).map_err(|why| why.to_string())
+        });
     match head {
         Ok([x, y, z]) => {
             columns.push(constant("x coordinate", "head", Some(number(x))));
@@ -192,11 +233,27 @@ fn around(table: WellTable, frame: &dyn Reflect, uri: &str, source: &dyn ValueSo
     match &placed {
         Ok(object) => {
             if let Some(crs) = &object.crs {
-                columns.push(constant("projection code", "crs", crs.projected.epsg().map(|code| code.to_string())));
-                columns.push(constant("vertical projection code", "crs", crs.vertical.epsg().map(|code| code.to_string())));
+                columns.push(constant(
+                    "projection code",
+                    "crs",
+                    crs.projected.epsg().map(|code| code.to_string()),
+                ));
+                columns.push(constant(
+                    "vertical projection code",
+                    "crs",
+                    crs.vertical.epsg().map(|code| code.to_string()),
+                ));
             }
-            let points: Vec<[f64; 3]> = object.geometry.patches.iter().flat_map(|patch| patch.points.iter().copied()).collect();
-            let by_passes = table.columns.first().is_some_and(|one| one.from == From::TopDepth);
+            let points: Vec<[f64; 3]> = object
+                .geometry
+                .patches
+                .iter()
+                .flat_map(|patch| patch.points.iter().copied())
+                .collect();
+            let by_passes = table
+                .columns
+                .first()
+                .is_some_and(|one| one.from == From::TopDepth);
             if points.len() == rows {
                 nodes = Some(points);
             } else if by_passes && points.len() == rows + 1 {
@@ -207,7 +264,10 @@ fn around(table: WellTable, frame: &dyn Reflect, uri: &str, source: &dyn ValueSo
             } else {
                 // A point count that is not the node count: laying them row by
                 // row would shift every coordinate.
-                notes.push(format!("{well}: {} placed point(s) for {rows} node(s), so no node coordinate is written", points.len()));
+                notes.push(format!(
+                    "{well}: {} placed point(s) for {rows} node(s), so no node coordinate is written",
+                    points.len()
+                ));
             }
         }
         Err(why) => notes.push(format!("{well}: the nodes are not placed — {why}")),
@@ -215,7 +275,10 @@ fn around(table: WellTable, frame: &dyn Reflect, uri: &str, source: &dyn ValueSo
 
     // The MD first: it is the axis — the top and base of each pass when the
     // table is organised by interval.
-    let by_passes = table.columns.first().is_some_and(|one| one.from == From::TopDepth);
+    let by_passes = table
+        .columns
+        .first()
+        .is_some_and(|one| one.from == From::TopDepth);
     let axes = if by_passes { 2 } else { 1 };
     let mut properties = table.columns.into_iter();
     columns.extend(properties.by_ref().take(axes));
@@ -243,13 +306,22 @@ fn around(table: WellTable, frame: &dyn Reflect, uri: &str, source: &dyn ValueSo
     frame_uuid.kind_title = None;
     columns.push(frame_uuid);
     if let Some(feature) = &feature {
-        let mut feature_uuid =
-            constant("wellbore feature uuid", "uuid", energyml_core::identity::uuid_of_reflect(feature.as_reflect()).map(str::to_string));
+        let mut feature_uuid = constant(
+            "wellbore feature uuid",
+            "uuid",
+            energyml_core::identity::uuid_of_reflect(feature.as_reflect()).map(str::to_string),
+        );
         feature_uuid.kind_title = None;
         columns.push(feature_uuid);
     }
 
-    WellTable { well, uuid: table.uuid, columns, rows, notes: table.notes }
+    WellTable {
+        well,
+        uuid: table.uuid,
+        columns,
+        rows,
+        notes: table.notes,
+    }
 }
 
 /// The file in **a fixed order**: who, where, the system, the MD, the nodes,
@@ -274,16 +346,27 @@ fn in_order(merged: Merged, tables: &[WellTable]) -> Merged {
     let mut of_header: HashMap<&str, u8> = HashMap::new();
     for table in tables {
         for column in &table.columns {
-            of_header.entry(column.title.as_str()).or_insert_with(|| rank(&column.from));
+            of_header
+                .entry(column.title.as_str())
+                .or_insert_with(|| rank(&column.from));
         }
     }
     // The wellbore name stays first: it says whose the row is.
     let mut positions: Vec<usize> = (1..merged.headers.len()).collect();
-    positions.sort_by_key(|at| of_header.get(merged.headers[*at].as_str()).copied().unwrap_or(u8::MAX));
+    positions.sort_by_key(|at| {
+        of_header
+            .get(merged.headers[*at].as_str())
+            .copied()
+            .unwrap_or(u8::MAX)
+    });
     let order: Vec<usize> = std::iter::once(0).chain(positions).collect();
     Merged {
         headers: order.iter().map(|at| merged.headers[*at].clone()).collect(),
-        rows: merged.rows.iter().map(|row| order.iter().map(|at| row.get(*at).cloned().flatten()).collect()).collect(),
+        rows: merged
+            .rows
+            .iter()
+            .map(|row| order.iter().map(|at| row.get(*at).cloned().flatten()).collect())
+            .collect(),
         conflicts: merged.conflicts,
     }
 }
@@ -331,7 +414,9 @@ fn name_headers(tables: &mut [WellTable]) {
     let mut header: HashMap<String, String> = HashMap::new();
     for (id, title, preferred, _) in sorted {
         let mut chosen = match preferred {
-            Some(preferred) if claims.get(preferred) == Some(&1) && preferred != "unknown" => preferred.clone(),
+            Some(preferred) if claims.get(preferred) == Some(&1) && preferred != "unknown" => {
+                preferred.clone()
+            }
             _ => title.clone(),
         };
         if used.contains(&chosen) {
@@ -357,10 +442,11 @@ fn name_headers(tables: &mut [WellTable]) {
 
 /// The object a field references, when the package holds it.
 fn follow(source: &dyn ValueSource, object: &dyn Reflect, field: &str) -> Option<Box<dyn DynObject>> {
-    let FieldValue::Object(reference) = object.field(field)? else { return None };
+    let FieldValue::Object(reference) = object.field(field)? else {
+        return None;
+    };
     crate::follow::object_of(source, reference)
 }
-
 
 /// The aliases of an object: `(header, identifier)`.
 ///
@@ -370,16 +456,24 @@ fn follow(source: &dyn ValueSource, object: &dyn Reflect, field: &str) -> Option
 /// say which one is the BSS code. `authority` is an XML **attribute**, hence
 /// its case; `IdentifierKind` is an extensible enumeration, read as text.
 fn aliases(object: &dyn Reflect) -> Vec<(String, String)> {
-    let Some(FieldValue::List(items)) = object.field("Aliases") else { return Vec::new() };
+    let Some(FieldValue::List(items)) = object.field("Aliases") else {
+        return Vec::new();
+    };
     items
         .iter()
         .filter_map(|item| {
-            let FieldValue::Object(alias) = item else { return None };
+            let FieldValue::Object(alias) = item else {
+                return None;
+            };
             let text = |field: &str| {
                 alias
                     .field(field)
                     .and_then(|value| value.as_scalar())
-                    .map(|one| one.as_str().map(str::to_string).unwrap_or_else(|| one.to_string()))
+                    .map(|one| {
+                        one.as_str()
+                            .map(str::to_string)
+                            .unwrap_or_else(|| one.to_string())
+                    })
                     .filter(|one| !one.trim().is_empty())
             };
             let identifier = text("Identifier")?;

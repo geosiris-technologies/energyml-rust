@@ -56,7 +56,7 @@ fn grid_with_a_hole() -> SceneObject {
                     slowest: 4,
                 },
                 closed: Vec::new(),
-}],
+            }],
         },
         crs: None,
         interpretation: None,
@@ -67,9 +67,7 @@ fn grid_with_a_hole() -> SceneObject {
 }
 
 fn options() -> Options<'static> {
-    Options::new()
-        .with_native_crs()
-        .with_placement(Placement::Local)
+    Options::new().with_native_crs().with_placement(Placement::Local)
 }
 
 fn written_with(format: &str, object: &SceneObject, options: &Options<'_>) -> String {
@@ -102,8 +100,7 @@ fn geojson_that_came_out_can_be_read_back_as_json() {
     // A hand-rolled writer is exactly the place a NaN, a trailing comma or an
     // unescaped quote gets in, and only a parser notices all three.
     let text = written("geojson", &grid_with_a_hole());
-    let value: serde_json::Value =
-        serde_json::from_str(&text).expect("the document must parse as JSON");
+    let value: serde_json::Value = serde_json::from_str(&text).expect("the document must parse as JSON");
     let geometry = &value["features"][0]["geometry"];
     assert_eq!(geometry["type"], "MultiPolygon");
 
@@ -194,9 +191,7 @@ fn a_property_keeps_the_values_of_the_points_that_remain() {
         lut: Vec::new(),
     });
 
-    let drawable = object
-        .drawable_only()
-        .expect("node 5 has no position");
+    let drawable = object.drawable_only().expect("node 5 has no position");
     let expected: Vec<f64> = (0..16).filter(|i| *i != 5).map(|i| i as f64).collect();
     assert_eq!(
         drawable.attributes[0].values, expected,

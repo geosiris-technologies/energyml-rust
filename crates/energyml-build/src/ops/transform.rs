@@ -242,7 +242,10 @@ pub(crate) fn kind_of(geometry: &Geometry) -> Result<Kind, String> {
         };
         match found {
             Some(was) if was != kind => {
-                return Err("its patches mix kinds (faces and lines, or points) — one representation holds one kind".to_string());
+                return Err(
+                    "its patches mix kinds (faces and lines, or points) — one representation holds one kind"
+                        .to_string(),
+                );
             }
             _ => found = Some(kind),
         }
@@ -266,7 +269,11 @@ fn topology_word(topology: &Topology) -> &'static str {
 /// The rotation of a vector about a unit axis — Rodrigues' formula.
 fn rotated(v: [f64; 3], k: [f64; 3], cos: f64, sin: f64) -> [f64; 3] {
     let dot = k[0] * v[0] + k[1] * v[1] + k[2] * v[2];
-    let cross = [k[1] * v[2] - k[2] * v[1], k[2] * v[0] - k[0] * v[2], k[0] * v[1] - k[1] * v[0]];
+    let cross = [
+        k[1] * v[2] - k[2] * v[1],
+        k[2] * v[0] - k[0] * v[2],
+        k[0] * v[1] - k[1] * v[0],
+    ];
     [
         v[0] * cos + cross[0] * sin + k[0] * dot * (1.0 - cos),
         v[1] * cos + cross[1] * sin + k[1] * dot * (1.0 - cos),
@@ -288,7 +295,11 @@ fn centre_of(geometry: &Geometry, chosen: Option<&[bool]>) -> [f64; 3] {
             high[axis] = high[axis].max(p[axis]);
         }
     }
-    [(low[0] + high[0]) / 2.0, (low[1] + high[1]) / 2.0, (low[2] + high[2]) / 2.0]
+    [
+        (low[0] + high[0]) / 2.0,
+        (low[1] + high[1]) / 2.0,
+        (low[2] + high[2]) / 2.0,
+    ]
 }
 
 /// What happens about the pivot, resolved: the factors, then the turn.
@@ -301,7 +312,12 @@ struct Around {
 }
 
 /// Move the nodes — every one, or those `chosen` — and say how many moved.
-fn moved(geometry: &Geometry, chosen: Option<&[bool]>, around: Option<&Around>, by: [f64; 3]) -> (Geometry, usize) {
+fn moved(
+    geometry: &Geometry,
+    chosen: Option<&[bool]>,
+    around: Option<&Around>,
+    by: [f64; 3],
+) -> (Geometry, usize) {
     let mut count = 0usize;
     let mut rank = 0usize;
     let patches = geometry
@@ -322,7 +338,11 @@ fn moved(geometry: &Geometry, chosen: Option<&[bool]>, around: Option<&Around>, 
                         Some(a) => {
                             // Scaled, then turned — about the pivot.
                             let c = a.pivot;
-                            let s = [(p[0] - c[0]) * a.factors[0], (p[1] - c[1]) * a.factors[1], (p[2] - c[2]) * a.factors[2]];
+                            let s = [
+                                (p[0] - c[0]) * a.factors[0],
+                                (p[1] - c[1]) * a.factors[1],
+                                (p[2] - c[2]) * a.factors[2],
+                            ];
                             let r = match a.turn {
                                 Some((axis, cos, sin)) => rotated(s, axis, cos, sin),
                                 None => s,
@@ -334,19 +354,55 @@ fn moved(geometry: &Geometry, chosen: Option<&[bool]>, around: Option<&Around>, 
                     [q[0] + by[0], q[1] + by[1], q[2] + by[2]]
                 })
                 .collect();
-            Patch { index: patch.index, node_offset: patch.node_offset, points, topology: patch.topology.clone(), closed: patch.closed.clone() }
+            Patch {
+                index: patch.index,
+                node_offset: patch.node_offset,
+                points,
+                topology: patch.topology.clone(),
+                closed: patch.closed.clone(),
+            }
         })
         .collect();
-    (Geometry { kind: "transform", patches }, count)
+    (
+        Geometry {
+            kind: "transform",
+            patches,
+        },
+        count,
+    )
 }
 
 /// **Written by the writer of its kind** — the same object the shape came as,
 /// never a second copy of a writer. `transform` and `project` both end here.
-pub(crate) fn write_as(kind: Kind, result: Shape, written: Written, seed: &str, cx: &Context<'_>) -> Result<Plan, Refusal> {
+pub(crate) fn write_as(
+    kind: Kind,
+    result: Shape,
+    written: Written,
+    seed: &str,
+    cx: &Context<'_>,
+) -> Result<Plan, Refusal> {
     match kind {
-        Kind::Points => Pointset.plan(PointsetInputs { shape: vec![result], features: None }, PointsetParams { written }, cx),
-        Kind::Polylines => super::polylines::write(&PolylinesInputs { shape: vec![result], features: None }, &written, None, seed, cx),
-        Kind::Triangles => super::triangles::write(&TrianglesInputs { shape: vec![result] }, &written, seed, cx),
+        Kind::Points => Pointset.plan(
+            PointsetInputs {
+                shape: vec![result],
+                features: None,
+            },
+            PointsetParams { written },
+            cx,
+        ),
+        Kind::Polylines => super::polylines::write(
+            &PolylinesInputs {
+                shape: vec![result],
+                features: None,
+            },
+            &written,
+            None,
+            seed,
+            cx,
+        ),
+        Kind::Triangles => {
+            super::triangles::write(&TrianglesInputs { shape: vec![result] }, &written, seed, cx)
+        }
     }
 }
 
@@ -366,7 +422,11 @@ pub(crate) fn flipped_in(before: &Geometry, after: &Geometry) -> usize {
 }
 
 fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double { title: title.to_string(), value, uom: None }
+    Parameter::Double {
+        title: title.to_string(),
+        value,
+        uom: None,
+    }
 }
 
 impl Operation for Transform {
@@ -393,14 +453,21 @@ impl Operation for Transform {
     }
 
     fn check(&self, inputs: &TransformInputs) -> Result<(), Refusal> {
-        kind_of(&inputs.shape.geometry).map(|_| ()).map_err(|why| Refusal::on("shape", why))?;
+        kind_of(&inputs.shape.geometry)
+            .map(|_| ())
+            .map_err(|why| Refusal::on("shape", why))?;
         if inputs.shape.geometry.point_count() == 0 {
             return Err(Refusal::on("shape", "it has no node to move"));
         }
         Ok(())
     }
 
-    fn plan(&self, inputs: TransformInputs, params: TransformParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: TransformInputs,
+        params: TransformParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let shape = inputs.shape;
         let kind = kind_of(&shape.geometry).map_err(|why| Refusal::on("shape", why))?;
         let total = shape.geometry.point_count();
@@ -413,7 +480,9 @@ impl Operation for Transform {
                 return Err(Refusal::about(
                     "value",
                     "nodes",
-                    format!("`nodes` names node {bad}, and the shape holds {total} (ranks from 0) — a correction aimed at a node that does not exist would move nothing"),
+                    format!(
+                        "`nodes` names node {bad}, and the shape holds {total} (ranks from 0) — a correction aimed at a node that does not exist would move nothing"
+                    ),
                 ));
             }
             let mut flags = vec![false; total];
@@ -427,10 +496,17 @@ impl Operation for Transform {
         let factors = match &params.scale {
             Scale::Kept => None,
             Scale::Uniform(uniform) => Some([("factor", uniform.factor); 3]),
-            Scale::Axes(axes) => Some([("scaleX", axes.scale_x), ("scaleY", axes.scale_y), ("scaleZ", axes.scale_z)]),
+            Scale::Axes(axes) => Some([
+                ("scaleX", axes.scale_x),
+                ("scaleY", axes.scale_y),
+                ("scaleZ", axes.scale_z),
+            ]),
         };
         if let Some(factors) = &factors {
-            if let Some((name, value)) = factors.iter().find(|(_, value)| !(value.is_finite() && *value > 0.0)) {
+            if let Some((name, value)) = factors
+                .iter()
+                .find(|(_, value)| !(value.is_finite() && *value > 0.0))
+            {
                 let why = if *value < 0.0 {
                     "is negative: that is a mirror, which turns every triangle inside out without saying so"
                 } else if *value == 0.0 {
@@ -438,7 +514,11 @@ impl Operation for Transform {
                 } else {
                     "is not a number"
                 };
-                return Err(Refusal::about("value", name, format!("the scale `{name}` = {value} {why}")));
+                return Err(Refusal::about(
+                    "value",
+                    name,
+                    format!("the scale `{name}` = {value} {why}"),
+                ));
             }
         }
         let factors = factors.map(|f| [f[0].1, f[1].1, f[2].1]);
@@ -474,7 +554,14 @@ impl Operation for Transform {
                 };
                 says.push(Note {
                     key: "rotation",
-                    detail: format!("turned by {} {} about the axis ({:.6}, {:.6}, {:.6})", axis.angle, axis.unit.word(), k[0], k[1], k[2]),
+                    detail: format!(
+                        "turned by {} {} about the axis ({:.6}, {:.6}, {:.6})",
+                        axis.angle,
+                        axis.unit.word(),
+                        k[0],
+                        k[1],
+                        k[2]
+                    ),
                 });
                 Some((k, radians.cos(), radians.sin()))
             }
@@ -493,34 +580,64 @@ impl Operation for Transform {
             // be read back into the same move. Under names of their own —
             // `pivotX` is an input already, and one title cannot be both
             // (`crates/energyml-build/ARCHITECTURE.md`).
-            for (title, value) in [("pivotUsedX", pivot[0]), ("pivotUsedY", pivot[1]), ("pivotUsedZ", pivot[2])] {
+            for (title, value) in [
+                ("pivotUsedX", pivot[0]),
+                ("pivotUsedY", pivot[1]),
+                ("pivotUsedZ", pivot[2]),
+            ] {
                 parameters.push(double(title, value));
             }
             if let Some(f) = factors {
-                says.push(Note { key: "scale", detail: format!("scaled by ({}, {}, {})", f[0], f[1], f[2]) });
+                says.push(Note {
+                    key: "scale",
+                    detail: format!("scaled by ({}, {}, {})", f[0], f[1], f[2]),
+                });
             }
             says.push(Note {
                 key: "pivot",
-                detail: format!("about ({:.3}, {:.3}, {:.3}), then moved by ({}, {}, {})", pivot[0], pivot[1], pivot[2], params.dx, params.dy, params.dz),
+                detail: format!(
+                    "about ({:.3}, {:.3}, {:.3}), then moved by ({}, {}, {})",
+                    pivot[0], pivot[1], pivot[2], params.dx, params.dy, params.dz
+                ),
             });
-            Some(Around { pivot, factors: factors.unwrap_or([1.0; 3]), turn })
+            Some(Around {
+                pivot,
+                factors: factors.unwrap_or([1.0; 3]),
+                turn,
+            })
         } else {
             None
         };
 
-        let (geometry, count) = moved(&shape.geometry, chosen.as_deref(), around.as_ref(), [params.dx, params.dy, params.dz]);
+        let (geometry, count) = moved(
+            &shape.geometry,
+            chosen.as_deref(),
+            around.as_ref(),
+            [params.dx, params.dy, params.dz],
+        );
         parameters.push(double("movedNodes", count as f64));
         if kind == Kind::Triangles {
             let turned = flipped_in(&shape.geometry, &geometry);
             parameters.push(double("flippedTriangles", turned as f64));
             if turned > 0 {
-                says.push(Note { key: "flipped", detail: format!("{turned} triangle(s) turned over in plan — a fold, kept as it is") });
+                says.push(Note {
+                    key: "flipped",
+                    detail: format!("{turned} triangle(s) turned over in plan — a fold, kept as it is"),
+                });
             }
         }
         if chosen.is_some() {
-            says.push(Note { key: "nodes", detail: format!("{count} of {total} node(s) moved; the others stayed where they were") });
+            says.push(Note {
+                key: "nodes",
+                detail: format!("{count} of {total} node(s) moved; the others stayed where they were"),
+            });
         }
-        let result = Shape { name: shape.name.clone(), geometry, closed: shape.closed.clone(), known: shape.known.clone() };
+        let result = Shape {
+            name: shape.name.clone(),
+            geometry,
+            closed: shape.closed.clone(),
+            known: shape.known.clone(),
+        };
 
         let title = params.written.naming.title();
         let seed = format!("transform:{}:{title}", shape.name);
@@ -533,12 +650,38 @@ impl Operation for Transform {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        let count = |name: &'static str, about: &'static str| Slot::required(name, Need::Number { uom: None, least: None, most: None }, about);
-        let optional = |name: &'static str, about: &'static str| Slot::optional(name, Need::Number { uom: None, least: None, most: None }, about);
+        let count = |name: &'static str, about: &'static str| {
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
+        let optional = |name: &'static str, about: &'static str| {
+            Slot::optional(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
         support::frame_reports(vec![
             count("movedNodes", "nodes moved"),
-            optional("flippedTriangles", "triangles turned over in plan by the move — a surface only"),
-            optional("pivotUsedX", "the pivot the rotation and the scale were about, x — as used"),
+            optional(
+                "flippedTriangles",
+                "triangles turned over in plan by the move — a surface only",
+            ),
+            optional(
+                "pivotUsedX",
+                "the pivot the rotation and the scale were about, x — as used",
+            ),
             optional("pivotUsedY", "the pivot as used, y"),
             optional("pivotUsedZ", "the pivot as used, z"),
         ])

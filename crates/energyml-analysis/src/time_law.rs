@@ -54,7 +54,11 @@ pub enum TimeLawError {
     #[error("the change per year is a finite number, not {given}")]
     BadChange { given: f64 },
     #[error("{given} instant(s), where {needed} are needed at least: {why}")]
-    TooFewInstants { given: usize, needed: usize, why: &'static str },
+    TooFewInstants {
+        given: usize,
+        needed: usize,
+        why: &'static str,
+    },
     #[error(
         "instant {rank} ({seconds} s) does not come after the one before it ({before} s): a time index names an instant by its place in the list, so the list increases and no two instants are equal"
     )]
@@ -128,12 +132,19 @@ pub fn offsets(drift: &Drift, instants: &[i64], steps: Steps) -> Result<Vec<f64>
     }
     for rank in 1..instants.len() {
         if instants[rank] <= instants[rank - 1] {
-            return Err(TimeLawError::NotIncreasing { rank: rank + 1, seconds: instants[rank], before: instants[rank - 1] });
+            return Err(TimeLawError::NotIncreasing {
+                rank: rank + 1,
+                seconds: instants[rank],
+                before: instants[rank - 1],
+            });
         }
     }
     Ok(match steps {
         Steps::Instants => instants.iter().map(|&at| drift.at(at)).collect(),
-        Steps::Intervals => instants.windows(2).map(|pair| drift.mean(pair[0], pair[1])).collect(),
+        Steps::Intervals => instants
+            .windows(2)
+            .map(|pair| drift.mean(pair[0], pair[1]))
+            .collect(),
     })
 }
 
@@ -142,7 +153,10 @@ pub fn offsets(drift: &Drift, instants: &[i64], steps: Steps) -> Result<Vec<f64>
 /// snapshot — an element the law it came from said nothing about — stays
 /// `NaN` at every step: a drift of nothing is nothing.
 pub fn lay(base: &[f64], offsets: &[f64]) -> Vec<f64> {
-    offsets.iter().flat_map(|offset| base.iter().map(move |value| value + offset)).collect()
+    offsets
+        .iter()
+        .flat_map(|offset| base.iter().map(move |value| value + offset))
+        .collect()
 }
 
 #[cfg(test)]
@@ -171,7 +185,11 @@ mod tests {
         let drift = Drift::new(Y2016, -0.5).unwrap();
         assert_eq!(drift.at(Y2016), 0.0);
         // 3 288 days are 9.002… Julian years.
-        assert!(close(drift.at(Y2025), -0.5 * 3288.0 / 365.25), "{}", drift.at(Y2025));
+        assert!(
+            close(drift.at(Y2025), -0.5 * 3288.0 / 365.25),
+            "{}",
+            drift.at(Y2025)
+        );
         // Before the anchor, the other way.
         assert!(close(drift.at(Y2016 - 86_400 * 365), 0.5 * 365.0 / 365.25));
     }
@@ -209,12 +227,36 @@ mod tests {
         let drift = Drift::new(0, 1.0).unwrap();
         assert_eq!(
             offsets(&drift, &[0, 10, 10], Steps::Instants),
-            Err(TimeLawError::NotIncreasing { rank: 3, seconds: 10, before: 10 })
+            Err(TimeLawError::NotIncreasing {
+                rank: 3,
+                seconds: 10,
+                before: 10
+            })
         );
-        assert!(matches!(offsets(&drift, &[5, 1], Steps::Intervals), Err(TimeLawError::NotIncreasing { rank: 2, .. })));
-        assert!(matches!(offsets(&drift, &[5], Steps::Intervals), Err(TimeLawError::TooFewInstants { given: 1, needed: 2, .. })));
-        assert!(matches!(offsets(&drift, &[], Steps::Instants), Err(TimeLawError::TooFewInstants { given: 0, needed: 1, .. })));
-        assert!(matches!(Drift::new(0, f64::NAN), Err(TimeLawError::BadChange { .. })));
+        assert!(matches!(
+            offsets(&drift, &[5, 1], Steps::Intervals),
+            Err(TimeLawError::NotIncreasing { rank: 2, .. })
+        ));
+        assert!(matches!(
+            offsets(&drift, &[5], Steps::Intervals),
+            Err(TimeLawError::TooFewInstants {
+                given: 1,
+                needed: 2,
+                ..
+            })
+        ));
+        assert!(matches!(
+            offsets(&drift, &[], Steps::Instants),
+            Err(TimeLawError::TooFewInstants {
+                given: 0,
+                needed: 1,
+                ..
+            })
+        ));
+        assert!(matches!(
+            Drift::new(0, f64::NAN),
+            Err(TimeLawError::BadChange { .. })
+        ));
     }
 
     #[test]

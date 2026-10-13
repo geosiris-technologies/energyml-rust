@@ -21,8 +21,8 @@ use energyml_core::value::Reflect;
 use energyml_domain::source::{ArraySource, ObjectSource};
 use energyml_geometry::{Topology, geometry};
 use energyml_resqml_2_2::{
-    AbstractPlaneGeometry, HorizontalPlaneGeometry, PlaneSetRepresentation, Point3d,
-    TiltedPlaneGeometry, ThreePoint3d,
+    AbstractPlaneGeometry, HorizontalPlaneGeometry, PlaneSetRepresentation, Point3d, ThreePoint3d,
+    TiltedPlaneGeometry,
 };
 use energyml_storage::array::{ArrayBuffer, ArrayData, ArrayLocation, ArrayMetadata};
 
@@ -126,10 +126,7 @@ fn a_second_triple_is_indexed_from_its_own_points() {
     let patch = &found.patches[0];
     assert_eq!(patch.points.len(), 6);
     assert_eq!(patch.points[3], [100.0, 101.0, 102.0]);
-    assert_eq!(
-        patch.topology,
-        Topology::Triangles(vec![[0, 1, 2], [3, 4, 5]])
-    );
+    assert_eq!(patch.topology, Topology::Triangles(vec![[0, 1, 2], [3, 4, 5]]));
 }
 
 #[test]

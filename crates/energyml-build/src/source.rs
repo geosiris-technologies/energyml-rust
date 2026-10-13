@@ -116,7 +116,9 @@ fn unescape(text: &str) -> String {
     let mut at = 0usize;
     while at < bytes.len() {
         if bytes[at] == b'%' && at + 2 < bytes.len() {
-            let pair = std::str::from_utf8(&bytes[at + 1..at + 3]).ok().and_then(|two| u8::from_str_radix(two, 16).ok());
+            let pair = std::str::from_utf8(&bytes[at + 1..at + 3])
+                .ok()
+                .and_then(|two| u8::from_str_radix(two, 16).ok());
             if let Some(byte) = pair {
                 out.push(byte);
                 at += 3;
@@ -139,8 +141,14 @@ mod tests {
         // A Windows path has a colon and is not an address — which is why the
         // test is on the scheme and not on *contains a colon*.
         assert_eq!(source_of("C:/data/x.json"), Source::File("C:/data/x.json".into()));
-        assert_eq!(source_of("https://a.example/x.json"), Source::Url("https://a.example/x.json".into()));
-        assert_eq!(source_of("HTTP://a.example/x.json"), Source::Url("HTTP://a.example/x.json".into()));
+        assert_eq!(
+            source_of("https://a.example/x.json"),
+            Source::Url("https://a.example/x.json".into())
+        );
+        assert_eq!(
+            source_of("HTTP://a.example/x.json"),
+            Source::Url("HTTP://a.example/x.json".into())
+        );
         // Not fetchable by any caller here, so it is a path and fails as one —
         // rather than being accepted and refused a step later by the network.
         assert!(matches!(source_of("ftp://a.example/x.json"), Source::File(_)));
@@ -152,14 +160,21 @@ mod tests {
         // The whole reason this exists: `sigeol-units` reads the stage off the
         // name, and the stage decides top from base for every surface written.
         let named = |url: &str| name_of(&source_of(url));
-        assert_eq!(named("https://a.example/d/GeologicUnit_Bartonien_pretty.json"), "GeologicUnit_Bartonien_pretty.json");
         assert_eq!(
-            crate::sigeol::stage_of_file_name(&named("https://a.example/GeologicUnit_Bartonien_pretty.json")).as_deref(),
+            named("https://a.example/d/GeologicUnit_Bartonien_pretty.json"),
+            "GeologicUnit_Bartonien_pretty.json"
+        );
+        assert_eq!(
+            crate::sigeol::stage_of_file_name(&named("https://a.example/GeologicUnit_Bartonien_pretty.json"))
+                .as_deref(),
             Some("Bartonien")
         );
         // A token in the query would otherwise end up in the name — and in the
         // activity that records it.
-        assert_eq!(named("https://a.example/GeologicUnit_Lutétien.json?token=secret"), "GeologicUnit_Lutétien.json");
+        assert_eq!(
+            named("https://a.example/GeologicUnit_Lutétien.json?token=secret"),
+            "GeologicUnit_Lutétien.json"
+        );
         assert_eq!(named("https://a.example/x.json#part"), "x.json");
         // A fragment may hold a `?`: strip it first, or half of it stays.
         assert_eq!(named("https://a.example/x.json#a?b"), "x.json");
@@ -170,13 +185,18 @@ mod tests {
         // The accent is not cosmetic: the stage is compared **without** folding
         // accents, so `Lutetien` and `Lutétien` are two stages.
         assert_eq!(
-            name_of(&source_of("https://a.example/GeologicUnit_Lut%C3%A9tien_pretty.json")),
+            name_of(&source_of(
+                "https://a.example/GeologicUnit_Lut%C3%A9tien_pretty.json"
+            )),
             "GeologicUnit_Lutétien_pretty.json"
         );
         // Something that is not an escape is left exactly as it was: a name is
         // for a person to recognise, and a replacement character is worse than
         // the `%` it replaced.
-        assert_eq!(name_of(&source_of("https://a.example/100%_sure.json")), "100%_sure.json");
+        assert_eq!(
+            name_of(&source_of("https://a.example/100%_sure.json")),
+            "100%_sure.json"
+        );
         assert_eq!(name_of(&source_of("https://a.example/a%zz.json")), "a%zz.json");
     }
 
@@ -187,7 +207,10 @@ mod tests {
         assert_eq!(name_of(&source_of("https://a.example/")), "https://a.example/");
         assert_eq!(name_of(&source_of("https://a.example")), "https://a.example");
         // A port is part of the authority, not a file.
-        assert_eq!(name_of(&source_of("https://a.example:8443")), "https://a.example:8443");
+        assert_eq!(
+            name_of(&source_of("https://a.example:8443")),
+            "https://a.example:8443"
+        );
     }
 
     #[test]

@@ -19,7 +19,10 @@ use energyml_build::pieces::{Pieces, Source};
 use energyml_build::template;
 
 fn when() -> When {
-    When { creation: "2026-09-09T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-09T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 /// Three features in the shape the SIGEOL exports write, two on one place.
@@ -40,8 +43,22 @@ fn export() -> String {
             older.0, younger.0, older.1, younger.1
         )
     };
-    let a = feature("Marnes et Caillasses", 2.29, 48.87, 58.0, ("Bartonien", 37.8), ("Lutétien", 47.8));
-    let b = feature("Marnes et Caillasses supérieures", 2.40, 48.90, 50.0, ("Bartonien", 37.8), ("Bartonien", 41.2));
+    let a = feature(
+        "Marnes et Caillasses",
+        2.29,
+        48.87,
+        58.0,
+        ("Bartonien", 37.8),
+        ("Lutétien", 47.8),
+    );
+    let b = feature(
+        "Marnes et Caillasses supérieures",
+        2.40,
+        48.90,
+        50.0,
+        ("Bartonien", 37.8),
+        ("Bartonien", 41.2),
+    );
     format!(r#"{{"type":"FeatureCollection","features":[{a},{a},{b}]}}"#)
 }
 
@@ -49,7 +66,10 @@ fn sigeol_pieces() -> Pieces {
     let collection = geojson::read(&export()).expect("a collection");
     Pieces::empty().with(
         "export",
-        Source::Features { name: "GeologicUnit_Bartonien_pretty.json".into(), features: collection.features },
+        Source::Features {
+            name: "GeologicUnit_Bartonien_pretty.json".into(),
+            features: collection.features,
+        },
     )
 }
 
@@ -61,11 +81,20 @@ fn an_empty_bag_offers_crs_and_refuses_sigeol_by_name() {
     // the unfit instead of listing them with their reason.
     let registry = Registry::new();
     let offers = registry.offers(&Pieces::empty());
-    let crs = offers.iter().find(|o| o.operation.name() == "crs").expect("crs is offered");
+    let crs = offers
+        .iter()
+        .find(|o| o.operation.name() == "crs")
+        .expect("crs is offered");
     assert_eq!(crs.fitness, Fitness::Fit);
-    let sigeol = offers.iter().find(|o| o.operation.name() == "sigeol-units").expect("listed, unfit");
+    let sigeol = offers
+        .iter()
+        .find(|o| o.operation.name() == "sigeol-units")
+        .expect("listed, unfit");
     match &sigeol.fitness {
-        Fitness::Unfit(why) => assert!(why.message.contains("feature collection") && why.message.contains("nothing"), "{why}"),
+        Fitness::Unfit(why) => assert!(
+            why.message.contains("feature collection") && why.message.contains("nothing"),
+            "{why}"
+        ),
         Fitness::Fit => panic!("sigeol cannot work on nothing"),
     }
 }
@@ -80,7 +109,11 @@ fn a_feature_collection_offers_sigeol_and_suggests_the_stage_from_the_file_name(
         .find(|o| o.operation.name() == "sigeol-units")
         .expect("offered");
     assert_eq!(offer.fitness, Fitness::Fit);
-    let stage = offer.needs.iter().find(|s| s.name == "stage").expect("the stage slot");
+    let stage = offer
+        .needs
+        .iter()
+        .find(|s| s.name == "stage")
+        .expect("the stage slot");
     // The one fact that is not in the file, read off its name — and still a
     // slot, so that a file named otherwise asks for it.
     assert_eq!(stage.suggested, Some(json!("Bartonien")));
@@ -92,10 +125,22 @@ fn a_bag_of_the_wrong_kind_is_refused_naming_both_ends() {
     // A shape is not a feature collection, and the refusal says what it got.
     let pieces = Pieces::empty().with(
         "mesh",
-        Source::Shape { geometry: energyml_geometry::geometry::Geometry { kind: "obj", patches: vec![] }, closed: None },
+        Source::Shape {
+            geometry: energyml_geometry::geometry::Geometry {
+                kind: "obj",
+                patches: vec![],
+            },
+            closed: None,
+        },
     );
     let why = Registry::new()
-        .plan("sigeol-units", &pieces, &Choices::new(), &Identity::derived(), &when())
+        .plan(
+            "sigeol-units",
+            &pieces,
+            &Choices::new(),
+            &Identity::derived(),
+            &when(),
+        )
         .expect_err("refused");
     assert!(why.message().contains("shape"), "{why}");
 }
@@ -157,7 +202,10 @@ fn an_inapplicable_slot_is_neither_required_nor_filled_and_giving_it_anyway_is_r
     // Named at both ends: the slot given, and the one without which it means
     // nothing. A `crs` of the package leaves `sourceEpsg` empty, so `project`
     // has nothing to reproject *from*.
-    assert!(why.message().contains("`project`") && why.message().contains("`sourceEpsg`"), "{why}");
+    assert!(
+        why.message().contains("`project`") && why.message().contains("`sourceEpsg`"),
+        "{why}"
+    );
 
     // And the other half, the exclusion itself: both frames together.
     let both = Choices::new()
@@ -179,9 +227,13 @@ fn a_suggestion_suffices_to_satisfy_a_slot_that_depends_on_it() {
     use energyml_build::operation::Slot;
     let slots = vec![
         Slot::optional("sourceEpsg", energyml_build::operation::Need::Epsg, "").suggest(json!(4326)),
-        Slot::optional("project", energyml_build::operation::Need::Epsg, "").when(Applies::With(&["sourceEpsg"])),
+        Slot::optional("project", energyml_build::operation::Need::Epsg, "")
+            .when(Applies::With(&["sourceEpsg"])),
     ];
-    let settled = Choices::new().set("project", 2154).settle(&slots).expect("the suggested one counts");
+    let settled = Choices::new()
+        .set("project", 2154)
+        .settle(&slots)
+        .expect("the suggested one counts");
     assert_eq!(settled.integer("project"), Some(2154));
     assert_eq!(settled.integer("sourceEpsg"), Some(4326));
 }
@@ -194,12 +246,17 @@ fn an_empty_that_creates_says_so() {
     // the form read *you may do without*.
     let registry = Registry::new();
     let well = registry.get("well-from-polyline").unwrap();
-    assert_eq!(well.represents(), Some(("resqml22.WellboreFeature", "resqml22.WellboreInterpretation")));
+    assert_eq!(
+        well.represents(),
+        Some(("resqml22.WellboreFeature", "resqml22.WellboreInterpretation"))
+    );
     let needs = well.needs(&a_polyline());
     let interpretation = needs.iter().find(|s| s.name == "interpretation").unwrap();
     assert_eq!(
         interpretation.otherwise,
-        Otherwise::Creates { types: vec!["resqml22.WellboreFeature", "resqml22.WellboreInterpretation"] }
+        Otherwise::Creates {
+            types: vec!["resqml22.WellboreFeature", "resqml22.WellboreInterpretation"]
+        }
     );
     let datum = needs.iter().find(|s| s.name == "datum").unwrap();
     // **Two forms since 24/09**, and the frame decides:
@@ -210,7 +267,10 @@ fn an_empty_that_creates_says_so() {
     assert_eq!(
         datum.otherwise,
         Otherwise::Creates {
-            types: vec!["eml23.ReferencePointInALocalEngineeringCompoundCrs", "eml23.ReferencePointInACrs"]
+            types: vec![
+                "eml23.ReferencePointInALocalEngineeringCompoundCrs",
+                "eml23.ReferencePointInACrs"
+            ]
         }
     );
 
@@ -256,13 +316,21 @@ fn an_activity_records_what_the_run_was_told_and_returns_it() {
 
     let slots = registry.get("crs").unwrap().needs(&Pieces::empty());
     let read = energyml_build::exemplar::from_activity(&slots, &activity);
-    let of = |name: &str| read.iter().find(|one| one.slot == name).map(|one| one.value.clone());
+    let of = |name: &str| {
+        read.iter()
+            .find(|one| one.slot == name)
+            .map(|one| one.value.clone())
+    };
     // An integer, and not the `2154.0` that the parameter carries: see `coerce`.
     assert_eq!(of("epsg"), Some(json!(2154)));
     assert_eq!(of("title"), Some(json!("Lambert-93")));
     // A flag: eml 2.3 has none, so it travels as text and comes back
     // as a boolean — the conversion is in `coerce`, not in the caller.
-    assert_eq!(of("projected"), Some(json!(true)), "a suggestion is an input of the run like any other");
+    assert_eq!(
+        of("projected"),
+        Some(json!(true)),
+        "a suggestion is an input of the run like any other"
+    );
 }
 
 #[test]
@@ -270,7 +338,13 @@ fn a_required_slot_left_empty_is_refused_before_any_work() {
     // To break: `settle` filling a required slot with nothing, or `plan`
     // being called anyway.
     let why = Registry::new()
-        .plan("crs", &Pieces::empty(), &Choices::new(), &Identity::derived(), &when())
+        .plan(
+            "crs",
+            &Pieces::empty(),
+            &Choices::new(),
+            &Identity::derived(),
+            &when(),
+        )
         .expect_err("no epsg");
     assert!(why.message().contains("`epsg` is required"), "{why}");
 }
@@ -279,21 +353,38 @@ fn a_required_slot_left_empty_is_refused_before_any_work() {
 fn a_suggestion_fills_what_was_left_out_and_a_wrong_shape_is_refused() {
     let registry = Registry::new();
     let plan = registry
-        .plan("crs", &Pieces::empty(), &Choices::new().set("epsg", 2154), &Identity::derived(), &when())
+        .plan(
+            "crs",
+            &Pieces::empty(),
+            &Choices::new().set("epsg", 2154),
+            &Identity::derived(),
+            &when(),
+        )
         .expect("projected by suggestion");
     assert_eq!(plan.objects[0].qualified_type, "eml23.ProjectedCrs");
     // And, `projected` suggested true, the frame a geometry names is the
     // compound over it — not the `ProjectedCrs`, which is what this line alone
     // said until 24/09 (RESQML TRG 2.2 §3.1, p. 22).
     assert_eq!(
-        plan.of_role("crs").next().map(|frame| frame.qualified_type.as_str()),
+        plan.of_role("crs")
+            .next()
+            .map(|frame| frame.qualified_type.as_str()),
         Some("eml23.LocalEngineeringCompoundCrs")
     );
 
     let why = registry
-        .plan("crs", &Pieces::empty(), &Choices::new().set("epsg", "deux mille"), &Identity::derived(), &when())
+        .plan(
+            "crs",
+            &Pieces::empty(),
+            &Choices::new().set("epsg", "deux mille"),
+            &Identity::derived(),
+            &when(),
+        )
         .expect_err("not a code");
-    assert!(why.message().contains("`epsg`") && why.message().contains("EPSG code"), "{why}");
+    assert!(
+        why.message().contains("`epsg`") && why.message().contains("EPSG code"),
+        "{why}"
+    );
 }
 
 // -- crs, the operation with no input ---------------------------------------
@@ -310,12 +401,21 @@ fn crs_makes_the_two_halves_and_the_compound_that_joins_them_named_the_same_twic
     // order and their names; the plane and the compound follow them.
     let registry = Registry::new();
     let choices = Choices::new().set("epsg", 2154).set("vertical", 5720);
-    let once = registry.plan("crs", &Pieces::empty(), &choices, &Identity::derived(), &when()).unwrap();
-    let twice = registry.plan("crs", &Pieces::empty(), &choices, &Identity::derived(), &when()).unwrap();
+    let once = registry
+        .plan("crs", &Pieces::empty(), &choices, &Identity::derived(), &when())
+        .unwrap();
+    let twice = registry
+        .plan("crs", &Pieces::empty(), &choices, &Identity::derived(), &when())
+        .unwrap();
     let kinds: Vec<&str> = once.objects.iter().map(|o| o.qualified_type.as_str()).collect();
     assert_eq!(
         kinds,
-        ["eml23.ProjectedCrs", "eml23.VerticalCrs", "eml23.LocalEngineering2dCrs", "eml23.LocalEngineeringCompoundCrs"]
+        [
+            "eml23.ProjectedCrs",
+            "eml23.VerticalCrs",
+            "eml23.LocalEngineering2dCrs",
+            "eml23.LocalEngineeringCompoundCrs"
+        ]
     );
     for (a, b) in once.objects.iter().zip(&twice.objects) {
         assert_eq!(a.uuid, b.uuid, "{}", a.qualified_type);
@@ -325,20 +425,43 @@ fn crs_makes_the_two_halves_and_the_compound_that_joins_them_named_the_same_twic
     // The compound names both halves: the vertical directly, the projected
     // through the plane, which embeds it (CRS.xsd l. 504).
     let compound = &once.objects[3];
-    assert_eq!(compound.role, "crs", "the frame a geometry names is the one role `crs` says");
+    assert_eq!(
+        compound.role, "crs",
+        "the frame a geometry names is the one role `crs` says"
+    );
     assert_eq!(compound.json["VerticalCrs"]["Uuid"], json!(once.objects[1].uuid));
-    assert_eq!(compound.json["LocalEngineering2dCrs"]["Uuid"], json!(once.objects[2].uuid));
-    assert_eq!(once.objects[2].json["OriginProjectedCrs"]["uuid"], json!(once.objects[0].uuid));
+    assert_eq!(
+        compound.json["LocalEngineering2dCrs"]["Uuid"],
+        json!(once.objects[2].uuid)
+    );
+    assert_eq!(
+        once.objects[2].json["OriginProjectedCrs"]["uuid"],
+        json!(once.objects[0].uuid)
+    );
     // Degrees, when asked — and 2154 is no geographic code, so the degrees are
     // asked of 4326. No compound over degrees (CRS.xsd l. 504): the two halves,
     // the geographic one named, and the plan says it is the named exception.
     let degrees = registry
-        .plan("crs", &Pieces::empty(), &Choices::new().set("epsg", 4326).set("projected", false), &Identity::derived(), &when())
+        .plan(
+            "crs",
+            &Pieces::empty(),
+            &Choices::new().set("epsg", 4326).set("projected", false),
+            &Identity::derived(),
+            &when(),
+        )
         .unwrap();
-    let kinds: Vec<&str> = degrees.objects.iter().map(|o| o.qualified_type.as_str()).collect();
+    let kinds: Vec<&str> = degrees
+        .objects
+        .iter()
+        .map(|o| o.qualified_type.as_str())
+        .collect();
     assert_eq!(kinds, ["eml23.Geographic2dCrs", "eml23.VerticalCrs"]);
     assert_eq!(degrees.objects[0].role, "crs");
-    assert!(degrees.says.iter().any(|n| n.key == "frame-degrees"), "{:?}", degrees.says);
+    assert!(
+        degrees.says.iter().any(|n| n.key == "frame-degrees"),
+        "{:?}",
+        degrees.says
+    );
 }
 
 #[test]
@@ -349,18 +472,34 @@ fn given_uuids_are_taken_in_the_plans_order_and_too_few_is_refused() {
     let registry = Registry::new();
     let choices = Choices::new().set("epsg", 2154);
     let four: Vec<String> = (1..=4).map(|n| format!("{n}{n}{n}{n}{n}{n}{n}{n}-{n}{n}{n}{n}-4{n}{n}{n}-8{n}{n}{n}-{n}{n}{n}{n}{n}{n}{n}{n}{n}{n}{n}{n}")).collect();
-    let plan = registry.plan("crs", &Pieces::empty(), &choices, &Identity::Given(four.clone()), &when()).unwrap();
+    let plan = registry
+        .plan(
+            "crs",
+            &Pieces::empty(),
+            &choices,
+            &Identity::Given(four.clone()),
+            &when(),
+        )
+        .unwrap();
     for (at, (object, uuid)) in plan.objects.iter().zip(&four).enumerate() {
         assert_eq!(&object.uuid, uuid, "object {at}");
         assert_eq!(object.json["uuid"], json!(uuid), "object {at}");
     }
     let short = Identity::Given(four[..3].to_vec());
-    let why = registry.plan("crs", &Pieces::empty(), &choices, &short, &when()).expect_err("one short");
+    let why = registry
+        .plan("crs", &Pieces::empty(), &choices, &short, &when())
+        .expect_err("one short");
     assert!(why.message().contains("at least 4"), "{why}");
     // Degrees take two, and two suffice.
     let two = Identity::Given(four[..2].to_vec());
     let degrees = registry
-        .plan("crs", &Pieces::empty(), &Choices::new().set("epsg", 4326).set("projected", false), &two, &when())
+        .plan(
+            "crs",
+            &Pieces::empty(),
+            &Choices::new().set("epsg", 4326).set("projected", false),
+            &two,
+            &when(),
+        )
         .expect("two objects in degrees");
     assert_eq!(degrees.objects.len(), 2);
 }
@@ -391,7 +530,12 @@ fn crs_writes_an_origin_an_azimuth_and_a_vertical_origin_where_the_schema_puts_t
     let plane = plan.of_role("local-2d-crs").next().expect("the plane");
     assert_eq!(plane.json["OriginProjectedCoordinate1"], json!(651_000.0));
     assert_eq!(plane.json["OriginProjectedCoordinate2"], json!(6_862_000.0));
-    assert_eq!(plane.json["Azimuth"]["_"], json!(30.0), "{}", plane.json["Azimuth"]);
+    assert_eq!(
+        plane.json["Azimuth"]["_"],
+        json!(30.0),
+        "{}",
+        plane.json["Azimuth"]
+    );
     assert_eq!(plane.json["AzimuthReference"], json!("grid north"));
     let compound = plan.of_role("crs").next().expect("the compound");
     assert_eq!(compound.json["OriginVerticalCoordinate"], json!(35.0));
@@ -408,9 +552,26 @@ fn two_axes_on_one_code_share_the_halves_and_the_plane_and_differ_by_the_compoun
     // first), or put in the plane's (two planes where there is one).
     let registry = Registry::new();
     let base = Choices::new().set("epsg", 2154).set("vertical", 5720);
-    let depth = registry.plan("crs", &Pieces::empty(), &base.clone().set("axis", "depth"), &Identity::derived(), &when()).unwrap();
-    let time = registry.plan("crs", &Pieces::empty(), &base.set("axis", "time"), &Identity::derived(), &when()).unwrap();
-    let uuid = |plan: &energyml_build::operation::Plan, role: &str| plan.of_role(role).next().unwrap().uuid.clone();
+    let depth = registry
+        .plan(
+            "crs",
+            &Pieces::empty(),
+            &base.clone().set("axis", "depth"),
+            &Identity::derived(),
+            &when(),
+        )
+        .unwrap();
+    let time = registry
+        .plan(
+            "crs",
+            &Pieces::empty(),
+            &base.set("axis", "time"),
+            &Identity::derived(),
+            &when(),
+        )
+        .unwrap();
+    let uuid =
+        |plan: &energyml_build::operation::Plan, role: &str| plan.of_role(role).next().unwrap().uuid.clone();
     for shared in ["projected-crs", "vertical-crs", "local-2d-crs"] {
         assert_eq!(uuid(&depth, shared), uuid(&time, shared), "{shared}");
     }
@@ -419,8 +580,18 @@ fn two_axes_on_one_code_share_the_halves_and_the_plane_and_differ_by_the_compoun
     // the vertical system stays a length — a top-level one can be nothing else
     // (CRS.xsd l. 677).
     let axis = &time.of_role("crs").next().unwrap().json["VerticalAxis"];
-    assert_eq!((axis["Direction"].clone(), axis["Uom"].clone(), axis["IsTime"].clone()), (json!("down"), json!("ms"), json!(true)));
-    assert_eq!(time.of_role("vertical-crs").next().unwrap().json["uom"], json!("m"));
+    assert_eq!(
+        (
+            axis["Direction"].clone(),
+            axis["Uom"].clone(),
+            axis["IsTime"].clone()
+        ),
+        (json!("down"), json!("ms"), json!(true))
+    );
+    assert_eq!(
+        time.of_role("vertical-crs").next().unwrap().json["uom"],
+        json!("m")
+    );
     // Two runs at one instant are two events, and their activities are two.
     assert_ne!(depth.activity.seed, time.activity.seed);
 }
@@ -432,11 +603,26 @@ fn a_code_of_degrees_under_a_projected_crs_is_refused_and_the_reverse_too() {
     // metres, and `crs::is_geographic` existed without being called.
     let registry = Registry::new();
     let why = registry
-        .plan("crs", &Pieces::empty(), &Choices::new().set("epsg", 4326), &Identity::derived(), &when())
+        .plan(
+            "crs",
+            &Pieces::empty(),
+            &Choices::new().set("epsg", 4326),
+            &Identity::derived(),
+            &when(),
+        )
         .expect_err("degrees under a ProjectedCrs");
-    assert!(why.message().contains("4326") && why.message().contains("projected"), "{why}");
+    assert!(
+        why.message().contains("4326") && why.message().contains("projected"),
+        "{why}"
+    );
     let why = registry
-        .plan("crs", &Pieces::empty(), &Choices::new().set("epsg", 2154).set("projected", false), &Identity::derived(), &when())
+        .plan(
+            "crs",
+            &Pieces::empty(),
+            &Choices::new().set("epsg", 2154).set("projected", false),
+            &Identity::derived(),
+            &when(),
+        )
         .expect_err("metres under a Geographic2dCrs");
     assert!(why.message().contains("2154"), "{why}");
     // And a local frame over degrees is refused by the builder, naming the
@@ -445,7 +631,10 @@ fn a_code_of_degrees_under_a_projected_crs_is_refused_and_the_reverse_too() {
         .plan(
             "crs",
             &Pieces::empty(),
-            &Choices::new().set("epsg", 4326).set("projected", false).set("azimuth", 30.0),
+            &Choices::new()
+                .set("epsg", 4326)
+                .set("projected", false)
+                .set("azimuth", 30.0),
             &Identity::derived(),
             &when(),
         )
@@ -460,7 +649,10 @@ fn a_time_unit_that_is_no_time_is_refused_on_its_slot() {
         .plan(
             "crs",
             &Pieces::empty(),
-            &Choices::new().set("epsg", 2154).set("axis", "time").set("timeUom", "m"),
+            &Choices::new()
+                .set("epsg", 2154)
+                .set("axis", "time")
+                .set("timeUom", "m"),
             &Identity::derived(),
             &when(),
         )
@@ -475,12 +667,22 @@ fn crs_applies_into_an_empty_package_with_its_template_and_activity() {
     // activity that names nothing.
     let registry = Registry::new();
     let plan = registry
-        .plan("crs", &Pieces::empty(), &Choices::new().set("epsg", 2154), &Identity::derived(), &when())
+        .plan(
+            "crs",
+            &Pieces::empty(),
+            &Choices::new().set("epsg", 2154),
+            &Identity::derived(),
+            &when(),
+        )
         .unwrap();
     let schemas = Arc::new(energyml_schemas::all());
     let mut store = energyml_build::epc::open(None, "crs.epc", schemas).expect("a new package");
     let made = apply(&plan, &mut store, &when());
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+    assert!(
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
     // Four objects — the two halves, the plane and the compound, since 24/09 —
     // the template, the activity. The count was four when `crs` wrote two, and
@@ -493,7 +695,11 @@ fn crs_applies_into_an_empty_package_with_its_template_and_activity() {
     let template_uuid = energyml_domain::provenance::template_uuid("crs").unwrap();
     assert!(store.find_by_uuid(template_uuid).is_some());
     for object in &plan.objects {
-        assert!(store.find_by_uuid(&object.uuid).is_some(), "{} is in the package", object.qualified_type);
+        assert!(
+            store.find_by_uuid(&object.uuid).is_some(),
+            "{} is in the package",
+            object.qualified_type
+        );
     }
 
     // Nothing was there: the first writing replaces nothing.
@@ -512,7 +718,12 @@ fn crs_applies_into_an_empty_package_with_its_template_and_activity() {
     // because its uuid derives from the instant, and this test freezes one. That is what
     // makes it useful here — it shows that the count follows the derived identity
     // and nothing else.
-    assert_eq!(again.replaced.len(), 5, "the four CRS and the activity: {:?}", again.replaced);
+    assert_eq!(
+        again.replaced.len(),
+        5,
+        "the four CRS and the activity: {:?}",
+        again.replaced
+    );
 }
 
 /// **The frame a `pointset` names is read back whole, from the geometry.**
@@ -535,12 +746,21 @@ fn a_written_point_set_names_a_frame_whose_two_codes_read_back() {
             {"type":"Feature","geometry":{"type":"Point","coordinates":[2.36,48.86,40]},"properties":{}}]}"#,
     )
     .unwrap();
-    let pieces = Pieces::empty().with("points.geojson", Source::Features { name: "points.geojson".into(), features: collection.features });
+    let pieces = Pieces::empty().with(
+        "points.geojson",
+        Source::Features {
+            name: "points.geojson".into(),
+            features: collection.features,
+        },
+    );
     let plan = Registry::new()
         .plan(
             "pointset",
             &pieces,
-            &Choices::new().set("project", 2154).set("vertical", 5720).set("title", "Semis"),
+            &Choices::new()
+                .set("project", 2154)
+                .set("vertical", 5720)
+                .set("title", "Semis"),
             &Identity::derived(),
             &when(),
         )
@@ -550,17 +770,29 @@ fn a_written_point_set_names_a_frame_whose_two_codes_read_back() {
     let mut store = energyml_build::epc::open(None, "points.epc", schemas).expect("a new package");
     // The objects only: the frame is read without a single array.
     let made = energyml_build::apply::apply_with(&plan, &mut store, &when(), false);
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+    assert!(
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
 
     let representation = plan.of_role("representation").next().expect("the point set");
-    let uri = store.find_by_uuid(&representation.uuid).expect("in the package").uri.clone();
+    let uri = store
+        .find_by_uuid(&representation.uuid)
+        .expect("in the package")
+        .uri
+        .clone();
     let object = store.get_object(&uri).expect("it reads");
     let frame = energyml_domain::crs::of(object.as_reflect(), &store)
         .expect("the frame reads")
         .expect("the point set names one");
     assert_eq!(frame.projected.epsg(), Some(2154), "{frame:?}");
-    assert_eq!(frame.vertical.epsg(), Some(5720), "the vertical half, reached through the compound: {frame:?}");
+    assert_eq!(
+        frame.vertical.epsg(),
+        Some(5720),
+        "the vertical half, reached through the compound: {frame:?}"
+    );
     assert!(!frame.is_component(), "a whole system: {frame:?}");
     // The identity: a Lambert-93 easting written under it is one read back.
     assert!(frame.is_identity(), "{frame:?}");
@@ -576,9 +808,15 @@ fn a_turned_and_offset_frame_and_a_time_frame_read_back_as_written() {
     let mut store = energyml_build::epc::open(None, "frames.epc", schemas).expect("a new package");
     let registry = Registry::new();
     let mut compound_of = |choices: Choices| -> String {
-        let plan = registry.plan("crs", &Pieces::empty(), &choices, &Identity::derived(), &when()).unwrap();
+        let plan = registry
+            .plan("crs", &Pieces::empty(), &choices, &Identity::derived(), &when())
+            .unwrap();
         let made = apply(&plan, &mut store, &when());
-        assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+        assert!(
+            made.invalid.is_empty(),
+            "objects written against their schema: {:#?}",
+            made.invalid
+        );
         assert!(made.refused.is_empty(), "{:?}", made.refused);
         plan.of_role("crs").next().unwrap().uuid.clone()
     };
@@ -592,7 +830,12 @@ fn a_turned_and_offset_frame_and_a_time_frame_read_back_as_written() {
             .set("axis", "depth")
             .set("originVertical", 35.0),
     );
-    let timed = compound_of(Choices::new().set("epsg", 2154).set("vertical", 5720).set("axis", "time"));
+    let timed = compound_of(
+        Choices::new()
+            .set("epsg", 2154)
+            .set("vertical", 5720)
+            .set("axis", "time"),
+    );
 
     let read = |uuid: &str| {
         let uri = store.find_by_uuid(uuid).expect("in the package").uri.clone();
@@ -600,7 +843,11 @@ fn a_turned_and_offset_frame_and_a_time_frame_read_back_as_written() {
         energyml_domain::crs::read_with(object.as_reflect(), &store).expect("a frame")
     };
     let frame = read(&turned);
-    assert_eq!((frame.x_offset, frame.y_offset), (651_000.0, 6_862_000.0), "{frame:?}");
+    assert_eq!(
+        (frame.x_offset, frame.y_offset),
+        (651_000.0, 6_862_000.0),
+        "{frame:?}"
+    );
     assert_eq!(frame.projected.epsg(), Some(2154));
     assert_eq!(frame.vertical.epsg(), Some(5720));
     // An azimuth of 30° clockwise from grid north is the local Y axis pointing
@@ -621,7 +868,11 @@ fn a_turned_and_offset_frame_and_a_time_frame_read_back_as_written() {
     let time = read(&timed);
     assert!(time.is_time(), "{time:?}");
     assert_eq!(time.vertical_axis_uom(), Some("ms"), "{time:?}");
-    assert_eq!(time.vertical.epsg(), Some(5720), "the datum a time is counted from");
+    assert_eq!(
+        time.vertical.epsg(),
+        Some(5720),
+        "the datum a time is counted from"
+    );
 }
 
 // -- sigeol, reformulated ---------------------------------------------------
@@ -630,7 +881,13 @@ fn a_turned_and_offset_frame_and_a_time_frame_read_back_as_written() {
 fn sigeol_plans_the_same_objects_the_writer_made_and_counts_what_it_dropped() {
     let registry = Registry::new();
     let plan = registry
-        .plan("sigeol-units", &sigeol_pieces(), &Choices::new(), &Identity::derived(), &when())
+        .plan(
+            "sigeol-units",
+            &sigeol_pieces(),
+            &Choices::new(),
+            &Identity::derived(),
+            &when(),
+        )
         .expect("planned by suggestion alone");
     let roles: Vec<&str> = plan.objects.iter().map(|o| o.role.as_str()).collect();
     // Two CRS, the table, then feature / interpretation / representation /
@@ -646,7 +903,11 @@ fn sigeol_plans_the_same_objects_the_writer_made_and_counts_what_it_dropped() {
         .parameters
         .iter()
         .find_map(|p| match p {
-            energyml_domain::provenance::Parameter::Double { title, value, .. } if title == "duplicatesDropped" => Some(*value),
+            energyml_domain::provenance::Parameter::Double { title, value, .. }
+                if title == "duplicatesDropped" =>
+            {
+                Some(*value)
+            }
             _ => None,
         })
         .expect("counted");
@@ -704,14 +965,15 @@ fn the_projection_says_what_eml_cannot_type() {
     assert_eq!(output["MaxOccurs"], json!(-1));
 }
 
-
 // -- an inaptitude is not a condition of writing -----------------------------
 
 /// The release vocabulary, as a refusal would spell it.
 fn names_a_release(why: &str) -> bool {
-    ["2.0.1", "2.2", "resqml20", "resqml22", "eml20", "eml23", "release", "version"]
-        .iter()
-        .any(|word| why.to_lowercase().contains(word))
+    [
+        "2.0.1", "2.2", "resqml20", "resqml22", "eml20", "eml23", "release", "version",
+    ]
+    .iter()
+    .any(|word| why.to_lowercase().contains(word))
 }
 
 /// **No `Unfit` mentions a release** — the control the specification asks for.
@@ -788,7 +1050,6 @@ fn no_unfitness_names_a_release() {
     assert!(names_a_release("this operation writes RESQML 2.2 objects"));
 }
 
-
 // -- what an operation takes, declared -------------------------------------
 
 /// **The declaration and the verdict must agree.**
@@ -859,7 +1120,9 @@ fn what_an_operation_declares_it_takes_makes_it_fit() {
     // really refuse on content, otherwise the line is dead and the next
     // operation would slip into it unseen.
     for name in CONTENT_REFUSERS {
-        let operation = registry.get(name).unwrap_or_else(|| panic!("`{name}` is in the registry"));
+        let operation = registry
+            .get(name)
+            .unwrap_or_else(|| panic!("`{name}` is in the registry"));
         let refusal = operation.fitness(&bag_for(&operation.takes()));
         assert!(
             matches!(refusal, Fitness::Unfit(_)),
@@ -894,7 +1157,11 @@ fn a_pure_creation_declares_no_input() {
         .filter(|o| o.takes().is_empty())
         .map(energyml_build::operation::AnyOperation::name)
         .collect();
-    assert_eq!(free, vec!["crs", "stratigraphy-from-geolts", "business-associate"], "one more operation takes nothing");
+    assert_eq!(
+        free,
+        vec!["crs", "stratigraphy-from-geolts", "business-associate"],
+        "one more operation takes nothing"
+    );
 }
 
 /// **An input is not a template parameter.**
@@ -933,9 +1200,20 @@ fn bag_for(takes: &[energyml_build::operation::Slot]) -> Pieces {
     use energyml_build::operation::Need;
     use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
-    let hsv = |hue: f64| energyml_domain::color::Hsv { hue, saturation: 1.0, value: 1.0, alpha: 1.0, title: None };
+    let hsv = |hue: f64| energyml_domain::color::Hsv {
+        hue,
+        saturation: 1.0,
+        value: 1.0,
+        alpha: 1.0,
+        title: None,
+    };
     let square = || {
-        vec![[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [10.0, 10.0, 0.0], [0.0, 10.0, 0.0]]
+        vec![
+            [0.0, 0.0, 0.0],
+            [10.0, 0.0, 0.0],
+            [10.0, 10.0, 0.0],
+            [0.0, 10.0, 0.0],
+        ]
     };
     let mut pieces = Pieces::empty();
     for slot in takes {
@@ -961,25 +1239,49 @@ fn bag_for(takes: &[energyml_build::operation::Slot]) -> Pieces {
                     // `horizon-from-law` (24/09) declares `grid`, and a point
                     // cloud in its place is refused at the offer.
                     Some("grid") => (
-                        vec![[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [0.0, 10.0, 0.0], [10.0, 10.0, 0.0]],
-                        Topology::Grid { fastest: 2, slowest: 2 },
+                        vec![
+                            [0.0, 0.0, 0.0],
+                            [10.0, 0.0, 0.0],
+                            [0.0, 10.0, 0.0],
+                            [10.0, 10.0, 0.0],
+                        ],
+                        Topology::Grid {
+                            fastest: 2,
+                            slowest: 2,
+                        },
                     ),
                     // One corner-point cell, its eight corners `i` fastest,
                     // then `j`, then the level — `grid-properties` and
                     // `local-grid` (28/09) declare cells, and read them.
                     Some("hexahedra") => (
                         vec![
-                            [0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [0.0, 10.0, 0.0], [10.0, 10.0, 0.0],
-                            [0.0, 0.0, -10.0], [10.0, 0.0, -10.0], [0.0, 10.0, -10.0], [10.0, 10.0, -10.0],
+                            [0.0, 0.0, 0.0],
+                            [10.0, 0.0, 0.0],
+                            [0.0, 10.0, 0.0],
+                            [10.0, 10.0, 0.0],
+                            [0.0, 0.0, -10.0],
+                            [10.0, 0.0, -10.0],
+                            [0.0, 10.0, -10.0],
+                            [10.0, 10.0, -10.0],
                         ],
-                        Topology::Hexahedra { cells: vec![[0, 1, 3, 2, 4, 5, 7, 6]], dimensions: [1, 1, 1], index: Vec::new() },
+                        Topology::Hexahedra {
+                            cells: vec![[0, 1, 3, 2, 4, 5, 7, 6]],
+                            dimensions: [1, 1, 1],
+                            index: Vec::new(),
+                        },
                     ),
                     _ => (square(), Topology::Points),
                 };
                 Source::Shape {
                     geometry: Geometry {
                         kind: "x",
-                        patches: vec![Patch { index: 0, node_offset: 0, points, topology, closed: Vec::new() }],
+                        patches: vec![Patch {
+                            index: 0,
+                            node_offset: 0,
+                            points,
+                            topology,
+                            closed: Vec::new(),
+                        }],
                     },
                     closed: None,
                 }
@@ -1007,8 +1309,8 @@ fn bag_for(takes: &[energyml_build::operation::Slot]) -> Pieces {
 F1,650000,6800000,120,0
 F1,650000,6800000,120,25
 ";
-                let table = energyml_build::tabular::read("essai.csv", text, Default::default())
-                    .expect("a table");
+                let table =
+                    energyml_build::tabular::read("essai.csv", text, Default::default()).expect("a table");
                 let template = energyml_build::osdu::from_json(&json!([
                     column("SONDAGE", "348c9a4d-e3e4-4beb-8456-f07a46660de1"),
                     column("X", "620cec71-5ce3-4ea5-9120-833756b427d7"),
@@ -1017,7 +1319,11 @@ F1,650000,6800000,120,25
                     column("PROF", "c48c65d4-9680-4d10-903c-a1b2e30f66b5"),
                 ]))
                 .expect("a template");
-                Source::Table { name: "essai.csv".to_string(), table, template }
+                Source::Table {
+                    name: "essai.csv".to_string(),
+                    table,
+                    template,
+                }
             }
             "lattice" => Source::Lattice(energyml_build::pieces::Lattice {
                 origin: [0.0, 0.0],
@@ -1045,7 +1351,12 @@ F1,650000,6800000,120,25
             "object" => Source::Object(energyml_build::pieces::Known {
                 reference: Some(energyml_build::pieces::Ref {
                     uuid: "5d2c6fa7-8192-43a4-bfe0-5b6c7d8e9fa0".into(),
-                    qualified_type: wants.types.first().copied().unwrap_or("resqml22.Model").to_string(),
+                    qualified_type: wants
+                        .types
+                        .first()
+                        .copied()
+                        .unwrap_or("resqml22.Model")
+                        .to_string(),
                     title: slot.name.to_string(),
                     object_version: None,
                 }),
@@ -1078,7 +1389,11 @@ F1,650000,6800000,120,25
             })
         });
         for rank in 0..how_many {
-            let name = if rank == 0 { slot.name.to_string() } else { format!("{} {}", slot.name, rank + 1) };
+            let name = if rank == 0 {
+                slot.name.to_string()
+            } else {
+                format!("{} {}", slot.name, rank + 1)
+            };
             pieces = pieces.with(name.clone(), source.clone());
             if let Some(companion) = &companion {
                 pieces = pieces.with(format!("{name} (object)"), companion.clone());
@@ -1087,12 +1402,6 @@ F1,650000,6800000,120,25
     }
     pieces
 }
-
-
-
-
-
-
 
 /// What a slot **declares it creates** must be what the plan writes.
 ///
@@ -1167,12 +1476,23 @@ fn what_a_slot_declares_it_creates_is_what_the_plan_writes() {
                 // Enough to name each object of the plan: the frame, its vertical
                 // and the representation. Wider than necessary, because this
                 // test is about what is **written**, not about the uuid count.
-                &Identity::Given((0..12).map(|n| format!("00000000-0000-4000-8000-{n:012}")).collect()),
-                &When { creation: "2026-09-21T00:00:00Z".to_string(), originator: "tests".to_string() },
+                &Identity::Given(
+                    (0..12)
+                        .map(|n| format!("00000000-0000-4000-8000-{n:012}"))
+                        .collect(),
+                ),
+                &When {
+                    creation: "2026-09-21T00:00:00Z".to_string(),
+                    originator: "tests".to_string(),
+                },
             )
             .expect("un plan");
 
-        let written: Vec<String> = plan.objects.iter().map(|one| one.qualified_type.clone()).collect();
+        let written: Vec<String> = plan
+            .objects
+            .iter()
+            .map(|one| one.qualified_type.clone())
+            .collect();
         for made in &written {
             if !made.contains("Crs") {
                 continue;
@@ -1190,19 +1510,34 @@ fn what_a_slot_declares_it_creates_is_what_the_plan_writes() {
             "the vertical is declared and not written: {written:?}",
         );
         assert!(
-            written.iter().any(|one| one == "eml23.ProjectedCrs" || one == "eml23.Geographic2dCrs"),
+            written
+                .iter()
+                .any(|one| one == "eml23.ProjectedCrs" || one == "eml23.Geographic2dCrs"),
             "no horizontal written: {written:?}",
         );
         // And what the geometry names is the object of role `crs`: the compound
         // in metres, the `Geographic2dCrs` in degrees.
         let frame = plan.of_role("crs").next().expect("the frame");
-        let expected = if source == 4326 { "eml23.Geographic2dCrs" } else { "eml23.LocalEngineeringCompoundCrs" };
-        assert_eq!(frame.qualified_type, expected, "source {source}, project {project:?}");
+        let expected = if source == 4326 {
+            "eml23.Geographic2dCrs"
+        } else {
+            "eml23.LocalEngineeringCompoundCrs"
+        };
+        assert_eq!(
+            frame.qualified_type, expected,
+            "source {source}, project {project:?}"
+        );
         let representation = plan.of_role("representation").next().expect("the cloud");
-        assert_eq!(representation.json["NodePatchGeometry"][0]["LocalCrs"]["Uuid"], json!(frame.uuid));
+        assert_eq!(
+            representation.json["NodePatchGeometry"][0]["LocalCrs"]["Uuid"],
+            json!(frame.uuid)
+        );
         seen.extend(written.into_iter().filter(|one| one.contains("Crs")));
     }
     for one in &declared {
-        assert!(seen.contains(*one), "the slot declares `{one}` and no path writes it: {seen:?}");
+        assert!(
+            seen.contains(*one),
+            "the slot declares `{one}` and no path writes it: {seen:?}"
+        );
     }
 }

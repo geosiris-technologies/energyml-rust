@@ -11,7 +11,10 @@ use serde_json::json;
 use energyml_domain::provenance::Parameter;
 
 use crate::declare::{Features, Inputs, Params, Shape, Suggestions};
-use crate::operation::{About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Numbers, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Numbers, Operation, Plan, Refusal,
+    Slot,
+};
 use crate::pieces::Pieces;
 use energyml_geometry::geometry::Topology;
 
@@ -67,27 +70,52 @@ impl Operation for Pointset {
 
     fn check(&self, inputs: &PointsetInputs) -> Result<(), Refusal> {
         if inputs.shape.is_empty() && inputs.features.is_none() {
-            return Err(Refusal::new("refused", "it takes a shape or a feature collection; the input holds neither"));
+            return Err(Refusal::new(
+                "refused",
+                "it takes a shape or a feature collection; the input holds neither",
+            ));
         }
         let shape_points: usize = inputs.shape.iter().map(|one| one.geometry.point_count()).sum();
-        let feature_points = inputs.features.as_ref().map(|f| support::positions_of(&f.features).len()).unwrap_or(0);
+        let feature_points = inputs
+            .features
+            .as_ref()
+            .map(|f| support::positions_of(&f.features).len())
+            .unwrap_or(0);
         if shape_points + feature_points == 0 {
             return Err(Refusal::new("refused", "the input has no point at all"));
         }
         Ok(())
     }
 
-    fn plan(&self, inputs: PointsetInputs, params: PointsetParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: PointsetInputs,
+        params: PointsetParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         // Every point of every shape, then every position of the features —
         // each placed in the frame written, as `write` builds it again below.
         let frame = support::frame_in(&cx.known(), &params.written.frame, cx.identity, cx.when, &mut 0)?;
         let mut points: Vec<[f64; 3]> = Vec::new();
         for one in &inputs.shape {
-            let nodes: Vec<[f64; 3]> = one.geometry.patches.iter().flat_map(|p| p.points.iter().copied()).collect();
-            points.extend(support::shape_placed(&one.name, &nodes, one.known.as_ref(), &frame)?);
+            let nodes: Vec<[f64; 3]> = one
+                .geometry
+                .patches
+                .iter()
+                .flat_map(|p| p.points.iter().copied())
+                .collect();
+            points.extend(support::shape_placed(
+                &one.name,
+                &nodes,
+                one.known.as_ref(),
+                &frame,
+            )?);
         }
         if let Some(features) = &inputs.features {
-            points.extend(support::placed(&support::positions_of(&features.features), &frame)?);
+            points.extend(support::placed(
+                &support::positions_of(&features.features),
+                &frame,
+            )?);
         }
         let title = params.written.naming.title();
         let seed = cx.seed(&title);
@@ -97,7 +125,11 @@ impl Operation for Pointset {
     fn reports(&self) -> Vec<Slot> {
         support::frame_reports(vec![Slot::required(
             "pointCount",
-            Need::Number { uom: None, least: None, most: None },
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
             "points written",
         )])
     }
@@ -108,9 +140,18 @@ impl Operation for Pointset {
 /// typed in, no bag to derive and no choices read back by name. `name` is
 /// what the input is called in the one refusal this can raise; `seed` is
 /// the caller's, so that two routes to the same point set name it the same.
-pub fn write(name: &str, points: Vec<[f64; 3]>, written: &Written, seed: &str, cx: &Context<'_>) -> Result<Plan, Refusal> {
+pub fn write(
+    name: &str,
+    points: Vec<[f64; 3]>,
+    written: &Written,
+    seed: &str,
+    cx: &Context<'_>,
+) -> Result<Plan, Refusal> {
     if points.is_empty() {
-        return Err(Refusal::on("shape", format!("`{name}`: the input has no point at all")));
+        return Err(Refusal::on(
+            "shape",
+            format!("`{name}`: the input has no point at all"),
+        ));
     }
     let title = written.naming.title();
     let seed = seed.to_string();
@@ -152,17 +193,35 @@ pub fn write(name: &str, points: Vec<[f64; 3]>, written: &Written, seed: &str, c
     });
     let count = points.len();
     // The shape is the output; the array is a view of it.
-    let shape = support::made_root(&title, &uuid, support::one_patch("pointset", points, Topology::Points));
+    let shape = support::made_root(
+        &title,
+        &uuid,
+        support::one_patch("pointset", points, Topology::Points),
+    );
     let values = support::flat_points(&shape.geometry);
     let mut parameters = frame.parameters;
-    parameters.push(Parameter::Double { title: "pointCount".to_string(), value: count as f64, uom: None });
+    parameters.push(Parameter::Double {
+        title: "pointCount".to_string(),
+        value: count as f64,
+        uom: None,
+    });
     Ok(Plan {
         media: Vec::new(),
         blocked: frame.blocked.clone(),
         objects,
-        datasets: vec![Dataset { file, path, dimensions: vec![count as i64, 3], values: Numbers::F64(values) }],
+        datasets: vec![Dataset {
+            file,
+            path,
+            dimensions: vec![count as i64, 3],
+            values: Numbers::F64(values),
+        }],
         shapes: vec![shape],
-        activity: ActivityDraft { recipe: "pointset", title: format!("pointset → {title}"), seed, parameters },
+        activity: ActivityDraft {
+            recipe: "pointset",
+            title: format!("pointset → {title}"),
+            seed,
+            parameters,
+        },
         says: frame.says,
         dropped: Vec::new(),
     })

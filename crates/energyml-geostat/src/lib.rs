@@ -119,8 +119,14 @@ pub enum Error {
     // -- Thickness --------------------------------------------------------
     #[error("{given} index(es) — quadrilaterals are four node indices each")]
     NotQuads { given: usize },
-    #[error("{nodes} node(s) for a lattice of {fastest} by {slowest}: a lattice holds one node per cell corner, the fast axis first")]
-    NotALattice { nodes: usize, fastest: usize, slowest: usize },
+    #[error(
+        "{nodes} node(s) for a lattice of {fastest} by {slowest}: a lattice holds one node per cell corner, the fast axis first"
+    )]
+    NotALattice {
+        nodes: usize,
+        fastest: usize,
+        slowest: usize,
+    },
     #[error("the {which} has no face — its heights are read {how}, and points or lines have none")]
     NoFace { which: &'static str, how: &'static str },
     #[error(
@@ -130,8 +136,15 @@ pub enum Error {
 
     // -- Measures and groups -------------------------------------
     #[error("{what} {element} names node {at} where the shape has {nodes}")]
-    ElementOutOfRange { what: &'static str, element: usize, at: usize, nodes: usize },
-    #[error("the polylines add up to {total} node(s) where the shape has {nodes} — every line after a wrong count would be shifted")]
+    ElementOutOfRange {
+        what: &'static str,
+        element: usize,
+        at: usize,
+        nodes: usize,
+    },
+    #[error(
+        "the polylines add up to {total} node(s) where the shape has {nodes} — every line after a wrong count would be shifted"
+    )]
     RunsPastEnd { total: usize, nodes: usize },
     #[error("{keys} group key(s) for {values} value(s) — one key per value, on the same elements")]
     KeysAndValues { keys: usize, values: usize },

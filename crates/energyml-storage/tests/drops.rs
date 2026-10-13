@@ -99,8 +99,7 @@ fn package(name: &str, schema: Option<&str>, well_known: bool) -> PathBuf {
 /// The qualified type cannot answer: the drop and the release both compute
 /// `resqml22.BoundaryFeature`. The object's own `TypeInfo` can.
 fn read_as(name: &str, schema: Option<&str>, well_known: bool) -> String {
-    let store =
-        EpcStore::open(package(name, schema, well_known), registry()).expect("the package opens");
+    let store = EpcStore::open(package(name, schema, well_known), registry()).expect("the package opens");
     let summary = store
         .resources()
         .into_iter()
@@ -315,11 +314,7 @@ fn a_declared_content_type_still_decides_when_no_drop_is_named() {
                 .into_iter()
                 .find(|s| s.uuid == UUID)
                 .expect("listed");
-            store
-                .get_object(&summary.uri)
-                .expect("reads")
-                .type_info()
-                .version
+            store.get_object(&summary.uri).expect("reads").type_info().version
         },
         "2.2"
     );

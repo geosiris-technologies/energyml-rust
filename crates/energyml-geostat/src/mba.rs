@@ -108,7 +108,9 @@ pub enum Error {
     MismatchedLengths { count: usize, values: usize },
     #[error("the coarsest control grid must be at least 1 cell on each axis, not {coarsest:?}")]
     DegenerateCoarsest { coarsest: [usize; 2] },
-    #[error("the domain must be a finite rectangle with a positive size on each axis — origin {origin:?}, size {size:?}")]
+    #[error(
+        "the domain must be a finite rectangle with a positive size on each axis — origin {origin:?}, size {size:?}"
+    )]
     DegenerateDomain { origin: [f64; 2], size: [f64; 2] },
     #[error("the finest spacing must be a finite number > 0, not {given}")]
     BadSpacing { given: f64 },
@@ -117,16 +119,37 @@ pub enum Error {
     #[error(
         "sample {at} at ({x}, {y}) lies outside the domain — origin {origin:?}, size {size:?}: MBA does not extrapolate past a domain it was not given (Lee/Wolberg/Shin 1997, §3.1, p. 229)"
     )]
-    SampleOutsideDomain { at: usize, x: f64, y: f64, origin: [f64; 2], size: [f64; 2] },
+    SampleOutsideDomain {
+        at: usize,
+        x: f64,
+        y: f64,
+        origin: [f64; 2],
+        size: [f64; 2],
+    },
     #[error(
         "query {at} at ({x}, {y}) lies outside the domain — origin {origin:?}, size {size:?}: MBA does not extrapolate past a domain it was not given (Lee/Wolberg/Shin 1997, §3.1, p. 229); filter it out (`Domain::contains`) before calling if you want it left as NaN instead of refused"
     )]
-    QueryOutsideDomain { at: usize, x: f64, y: f64, origin: [f64; 2], size: [f64; 2] },
+    QueryOutsideDomain {
+        at: usize,
+        x: f64,
+        y: f64,
+        origin: [f64; 2],
+        size: [f64; 2],
+    },
     #[error(
         "a finest spacing of {finest_spacing} over a domain of {domain_x} by {domain_y} needs {needed} level(s) past the coarsest {coarsest:?}, past the {max_levels} allowed (`Mba::with_max_levels`): raise the cap, or widen the spacing"
     )]
-    TooManyLevels { needed: usize, max_levels: usize, coarsest: [usize; 2], domain_x: f64, domain_y: f64, finest_spacing: f64 },
-    #[error("the finest control grid would need {control_points} control point(s), past what this writes: raise the spacing or the coarsest grid")]
+    TooManyLevels {
+        needed: usize,
+        max_levels: usize,
+        coarsest: [usize; 2],
+        domain_x: f64,
+        domain_y: f64,
+        finest_spacing: f64,
+    },
+    #[error(
+        "the finest control grid would need {control_points} control point(s), past what this writes: raise the spacing or the coarsest grid"
+    )]
     GridTooLarge { control_points: usize },
 }
 
@@ -166,14 +189,19 @@ impl Domain {
     pub fn contains(&self, at: [f64; 2]) -> bool {
         let tol = self.tolerance();
         (0..2).all(|axis| {
-            at[axis].is_finite() && at[axis] >= self.origin[axis] - tol && at[axis] <= self.origin[axis] + self.size[axis] + tol
+            at[axis].is_finite()
+                && at[axis] >= self.origin[axis] - tol
+                && at[axis] <= self.origin[axis] + self.size[axis] + tol
         })
     }
 
     fn check(&self) -> Result<(), Error> {
         let finite = self.origin.iter().chain(self.size.iter()).all(|v| v.is_finite());
         if !finite || self.size[0] <= 0.0 || self.size[1] <= 0.0 {
-            return Err(Error::DegenerateDomain { origin: self.origin, size: self.size });
+            return Err(Error::DegenerateDomain {
+                origin: self.origin,
+                size: self.size,
+            });
         }
         Ok(())
     }
@@ -185,7 +213,12 @@ impl Domain {
 fn basis(t: f64) -> [f64; 4] {
     let t2 = t * t;
     let t3 = t2 * t;
-    [(1.0 - t).powi(3) / 6.0, (3.0 * t3 - 6.0 * t2 + 4.0) / 6.0, (-3.0 * t3 + 3.0 * t2 + 3.0 * t + 1.0) / 6.0, t3 / 6.0]
+    [
+        (1.0 - t).powi(3) / 6.0,
+        (3.0 * t3 - 6.0 * t2 + 4.0) / 6.0,
+        (-3.0 * t3 + 3.0 * t2 + 3.0 * t + 1.0) / 6.0,
+        t3 / 6.0,
+    ]
 }
 
 /// Where `px` (a coordinate already scaled to this level's cells, `0..=m`)
@@ -221,7 +254,11 @@ struct Level {
 
 impl Level {
     fn new(m: usize, n: usize) -> Self {
-        Level { m, n, control: vec![0.0; (m + 3) * (n + 3)] }
+        Level {
+            m,
+            n,
+            control: vec![0.0; (m + 3) * (n + 3)],
+        }
     }
 
     fn stride(&self) -> usize {
@@ -252,7 +289,10 @@ impl Level {
     /// `f_k(x, y)` — eq. (1), p. 229 — the value this level's spline gives at
     /// `(px, py)`.
     fn eval(&self, px: f64, py: f64) -> f64 {
-        self.stencil(px, py).iter().map(|&(at, w)| w * self.control[at]).sum()
+        self.stencil(px, py)
+            .iter()
+            .map(|&(at, w)| w * self.control[at])
+            .sum()
     }
 
     /// The BA algorithm, p. 231: fit this level's control grid to
@@ -350,7 +390,9 @@ impl TrendUsed {
             return TrendUsed::None;
         }
         let n = samples.len() as f64;
-        let (mx, my, mz) = samples.iter().fold((0.0, 0.0, 0.0), |acc, (p, z)| (acc.0 + p[0], acc.1 + p[1], acc.2 + z));
+        let (mx, my, mz) = samples.iter().fold((0.0, 0.0, 0.0), |acc, (p, z)| {
+            (acc.0 + p[0], acc.1 + p[1], acc.2 + z)
+        });
         let (mx, my, mz) = (mx / n, my / n, mz / n);
         let (mut sxx, mut sxy, mut syy, mut sxz, mut syz) = (0.0, 0.0, 0.0, 0.0, 0.0);
         for (p, z) in samples {
@@ -369,7 +411,11 @@ impl TrendUsed {
         }
         let b = (sxz * syy - syz * sxy) / det;
         let c = (syz * sxx - sxz * sxy) / det;
-        TrendUsed::Plane { a: mz - b * mx - c * my, b, c }
+        TrendUsed::Plane {
+            a: mz - b * mx - c * my,
+            b,
+            c,
+        }
     }
 }
 
@@ -382,7 +428,11 @@ impl Mba {
         if coarsest[0] == 0 || coarsest[1] == 0 {
             return Err(Error::DegenerateCoarsest { coarsest });
         }
-        Ok(Mba { coarsest, max_levels: DEFAULT_MAX_LEVELS, trend: Trend::Plane })
+        Ok(Mba {
+            coarsest,
+            max_levels: DEFAULT_MAX_LEVELS,
+            trend: Trend::Plane,
+        })
     }
 
     /// Override the safety cap on how many times the coarsest grid may double
@@ -409,13 +459,25 @@ impl Mba {
     /// One value per query, in the queries' order. Refuses — never guesses —
     /// on a degenerate domain, too few usable samples, or a sample or query
     /// outside `domain` (module doc, *What is refused*).
-    pub fn interpolate(&self, samples: &[[f64; 2]], values: &[f64], domain: Domain, finest_spacing: f64, queries: &[[f64; 2]]) -> Result<MbaAnswer, Error> {
+    pub fn interpolate(
+        &self,
+        samples: &[[f64; 2]],
+        values: &[f64],
+        domain: Domain,
+        finest_spacing: f64,
+        queries: &[[f64; 2]],
+    ) -> Result<MbaAnswer, Error> {
         if samples.len() != values.len() {
-            return Err(Error::MismatchedLengths { count: samples.len(), values: values.len() });
+            return Err(Error::MismatchedLengths {
+                count: samples.len(),
+                values: values.len(),
+            });
         }
         domain.check()?;
         if !(finest_spacing.is_finite() && finest_spacing > 0.0) {
-            return Err(Error::BadSpacing { given: finest_spacing });
+            return Err(Error::BadSpacing {
+                given: finest_spacing,
+            });
         }
 
         // The NaN set-aside — a sample with a non-finite position or value
@@ -428,7 +490,10 @@ impl Mba {
             .collect();
         let set_aside = samples.len() - usable.len();
         if usable.is_empty() {
-            return Err(Error::NoSample { given: samples.len(), set_aside });
+            return Err(Error::NoSample {
+                given: samples.len(),
+                set_aside,
+            });
         }
         // Every *usable* sample must be inside `Ω` — a sample the caller
         // meant to set aside (NaN) never reaches this check, but one that is
@@ -437,12 +502,24 @@ impl Mba {
         // silent guess about where it "really" belongs.
         for (at, (p, _)) in usable.iter().enumerate() {
             if !domain.contains(*p) {
-                return Err(Error::SampleOutsideDomain { at, x: p[0], y: p[1], origin: domain.origin, size: domain.size });
+                return Err(Error::SampleOutsideDomain {
+                    at,
+                    x: p[0],
+                    y: p[1],
+                    origin: domain.origin,
+                    size: domain.size,
+                });
             }
         }
         for (at, q) in queries.iter().enumerate() {
             if !domain.contains(*q) {
-                return Err(Error::QueryOutsideDomain { at, x: q[0], y: q[1], origin: domain.origin, size: domain.size });
+                return Err(Error::QueryOutsideDomain {
+                    at,
+                    x: q[0],
+                    y: q[1],
+                    origin: domain.origin,
+                    size: domain.size,
+                });
             }
         }
 
@@ -452,7 +529,11 @@ impl Mba {
         // coarsest grid may already be fine enough).
         let needed_axis = |axis: usize| {
             let ratio = domain.size[axis] / (self.coarsest[axis] as f64 * finest_spacing);
-            if ratio <= 1.0 { 0i64 } else { ratio.log2().ceil() as i64 }
+            if ratio <= 1.0 {
+                0i64
+            } else {
+                ratio.log2().ceil() as i64
+            }
         };
         let needed = needed_axis(0).max(needed_axis(1)).max(0) as usize;
         if needed > self.max_levels {
@@ -468,7 +549,9 @@ impl Mba {
         let finest = [self.coarsest[0] << needed, self.coarsest[1] << needed];
         let finest_control_points = (finest[0] + 3).saturating_mul(finest[1] + 3);
         if finest_control_points > MOST_CONTROL_POINTS {
-            return Err(Error::GridTooLarge { control_points: finest_control_points });
+            return Err(Error::GridTooLarge {
+                control_points: finest_control_points,
+            });
         }
 
         // Scale a real (x, y) to level k's cell units — px in [0, m_k].
@@ -500,14 +583,14 @@ impl Mba {
             .map(|&q| {
                 trend.at(q)
                     + levels
-                    .iter()
-                    .enumerate()
-                    .map(|(k, level)| {
-                        let (m, n) = (self.coarsest[0] << k, self.coarsest[1] << k);
-                        let (px, py) = scale(q, m, n);
-                        level.eval(px, py)
-                    })
-                    .sum::<f64>()
+                        .iter()
+                        .enumerate()
+                        .map(|(k, level)| {
+                            let (m, n) = (self.coarsest[0] << k, self.coarsest[1] << k);
+                            let (px, py) = scale(q, m, n);
+                            level.eval(px, py)
+                        })
+                        .sum::<f64>()
             })
             .collect();
 
@@ -516,7 +599,10 @@ impl Mba {
             set_aside,
             levels: needed + 1,
             finest,
-            finest_spacing: [domain.size[0] / finest[0] as f64, domain.size[1] / finest[1] as f64],
+            finest_spacing: [
+                domain.size[0] / finest[0] as f64,
+                domain.size[1] / finest[1] as f64,
+            ],
             trend,
         })
     }
@@ -598,7 +684,9 @@ mod tests {
     #[test]
     fn a_plane_is_reproduced_exactly_whatever_the_coarsest_grid() {
         let plane = |x: f64, y: f64| 2.0 + 0.3 * x - 0.7 * y;
-        let samples: Vec<[f64; 2]> = (0..7).flat_map(|i| (0..7).map(move |j| [i as f64, j as f64])).collect();
+        let samples: Vec<[f64; 2]> = (0..7)
+            .flat_map(|i| (0..7).map(move |j| [i as f64, j as f64]))
+            .collect();
         let values: Vec<f64> = samples.iter().map(|p| plane(p[0], p[1])).collect();
         let dom = domain([0.0, 0.0], [6.0, 6.0]);
         let queries = [[3.0, 3.0], [0.2, 5.8], [6.0, 0.0]];
@@ -607,7 +695,10 @@ mod tests {
             let answer = mba.interpolate(&samples, &values, dom, 1.0, &queries).unwrap();
             for (q, got) in queries.iter().zip(&answer.values) {
                 let want = plane(q[0], q[1]);
-                assert!((got - want).abs() < 1e-6, "coarsest {coarsest:?}: {got} != {want} at {q:?}");
+                assert!(
+                    (got - want).abs() < 1e-6,
+                    "coarsest {coarsest:?}: {got} != {want} at {q:?}"
+                );
             }
         }
     }
@@ -619,18 +710,30 @@ mod tests {
     #[test]
     fn the_error_at_the_samples_does_not_grow_with_more_levels() {
         let f = |x: f64, y: f64| (x * 0.7).sin() * (y * 0.5).cos() * 5.0 + x * 0.2;
-        let samples: Vec<[f64; 2]> = (0..10).flat_map(|i| (0..10).map(move |j| [i as f64 + 0.5, j as f64 + 0.3])).collect();
+        let samples: Vec<[f64; 2]> = (0..10)
+            .flat_map(|i| (0..10).map(move |j| [i as f64 + 0.5, j as f64 + 0.3]))
+            .collect();
         let values: Vec<f64> = samples.iter().map(|p| f(p[0], p[1])).collect();
         let dom = domain([0.0, 0.0], [10.0, 10.0]);
         let rms = |spacing: f64| -> f64 {
             let mba = Mba::new([1, 1]).unwrap();
-            let answer = mba.interpolate(&samples, &values, dom, spacing, &samples).unwrap();
-            let se: f64 = answer.values.iter().zip(&values).map(|(a, b)| (a - b) * (a - b)).sum();
+            let answer = mba
+                .interpolate(&samples, &values, dom, spacing, &samples)
+                .unwrap();
+            let se: f64 = answer
+                .values
+                .iter()
+                .zip(&values)
+                .map(|(a, b)| (a - b) * (a - b))
+                .sum();
             (se / samples.len() as f64).sqrt()
         };
         let coarse_rms = rms(5.0); // fewer levels
         let fine_rms = rms(0.5); // more levels
-        assert!(fine_rms <= coarse_rms + 1e-9, "finer ({fine_rms}) should not be worse than coarser ({coarse_rms})");
+        assert!(
+            fine_rms <= coarse_rms + 1e-9,
+            "finer ({fine_rms}) should not be worse than coarser ({coarse_rms})"
+        );
     }
 
     /// **A textbook case**: `f2(x, y) = tanh(9(y-x)+1)/9`,
@@ -641,19 +744,25 @@ mod tests {
     #[test]
     fn the_articles_f2_is_approximated_to_the_right_order_of_magnitude() {
         let f2 = |x: f64, y: f64| ((9.0 * (y - x) + 1.0).tanh()) / 9.0;
-        let samples: Vec<[f64; 2]> =
-            (0..15).flat_map(|i| (0..15).map(move |j| [i as f64 / 14.0, j as f64 / 14.0])).collect();
+        let samples: Vec<[f64; 2]> = (0..15)
+            .flat_map(|i| (0..15).map(move |j| [i as f64 / 14.0, j as f64 / 14.0]))
+            .collect();
         let values: Vec<f64> = samples.iter().map(|p| f2(p[0], p[1])).collect();
         let dom = domain([0.0, 0.0], [1.0, 1.0]);
         let mba = Mba::new([2, 2]).unwrap();
-        let queries: Vec<[f64; 2]> = (0..21).flat_map(|i| (0..21).map(move |j| [i as f64 / 20.0, j as f64 / 20.0])).collect();
+        let queries: Vec<[f64; 2]> = (0..21)
+            .flat_map(|i| (0..21).map(move |j| [i as f64 / 20.0, j as f64 / 20.0]))
+            .collect();
         let answer = mba.interpolate(&samples, &values, dom, 0.05, &queries).unwrap();
         let max_err = queries
             .iter()
             .zip(&answer.values)
             .map(|(q, got)| (got - f2(q[0], q[1])).abs())
             .fold(0.0, f64::max);
-        assert!(max_err < 0.05, "max error {max_err} on a smooth, densely sampled function");
+        assert!(
+            max_err < 0.05,
+            "max error {max_err} on a smooth, densely sampled function"
+        );
     }
 
     /// **NaN in the input**: set aside and counted, never averaged.
@@ -663,19 +772,27 @@ mod tests {
         let samples = [[1.0, 1.0], [5.0, 5.0], [3.0, 3.0]];
         let values = [1.0, 3.0, f64::NAN];
         let dom = domain([0.0, 0.0], [10.0, 10.0]);
-        let answer = mba.interpolate(&samples, &values, dom, 1.0, &[[1.0, 1.0]]).unwrap();
+        let answer = mba
+            .interpolate(&samples, &values, dom, 1.0, &[[1.0, 1.0]])
+            .unwrap();
         assert_eq!(answer.set_aside, 1);
     }
 
     #[test]
     fn every_refusal_is_named() {
         let mba = Mba::new([1, 1]).unwrap();
-        assert_eq!(Mba::new([0, 1]), Err(Error::DegenerateCoarsest { coarsest: [0, 1] }));
+        assert_eq!(
+            Mba::new([0, 1]),
+            Err(Error::DegenerateCoarsest { coarsest: [0, 1] })
+        );
         let dom = domain([0.0, 0.0], [10.0, 10.0]);
         // Degenerate domain.
         assert_eq!(
             mba.interpolate(&[[0.0, 0.0]], &[1.0], domain([0.0, 0.0], [0.0, 10.0]), 1.0, &[]),
-            Err(Error::DegenerateDomain { origin: [0.0, 0.0], size: [0.0, 10.0] })
+            Err(Error::DegenerateDomain {
+                origin: [0.0, 0.0],
+                size: [0.0, 10.0]
+            })
         );
         // Inconsistent lengths.
         assert_eq!(
@@ -683,21 +800,39 @@ mod tests {
             Err(Error::MismatchedLengths { count: 1, values: 2 })
         );
         // Non-positive spacing.
-        assert_eq!(mba.interpolate(&[[0.0, 0.0]], &[1.0], dom, 0.0, &[]), Err(Error::BadSpacing { given: 0.0 }));
+        assert_eq!(
+            mba.interpolate(&[[0.0, 0.0]], &[1.0], dom, 0.0, &[]),
+            Err(Error::BadSpacing { given: 0.0 })
+        );
         // No usable sample.
         assert_eq!(
             mba.interpolate(&[[0.0, 0.0]], &[f64::NAN], dom, 1.0, &[]),
-            Err(Error::NoSample { given: 1, set_aside: 1 })
+            Err(Error::NoSample {
+                given: 1,
+                set_aside: 1
+            })
         );
         // Query outside the domain.
         assert_eq!(
             mba.interpolate(&[[1.0, 1.0]], &[1.0], dom, 1.0, &[[50.0, 50.0]]),
-            Err(Error::QueryOutsideDomain { at: 0, x: 50.0, y: 50.0, origin: [0.0, 0.0], size: [10.0, 10.0] })
+            Err(Error::QueryOutsideDomain {
+                at: 0,
+                x: 50.0,
+                y: 50.0,
+                origin: [0.0, 0.0],
+                size: [10.0, 10.0]
+            })
         );
         // Sample outside the domain.
         assert_eq!(
             mba.interpolate(&[[50.0, 50.0]], &[1.0], dom, 1.0, &[]),
-            Err(Error::SampleOutsideDomain { at: 0, x: 50.0, y: 50.0, origin: [0.0, 0.0], size: [10.0, 10.0] })
+            Err(Error::SampleOutsideDomain {
+                at: 0,
+                x: 50.0,
+                y: 50.0,
+                origin: [0.0, 0.0],
+                size: [10.0, 10.0]
+            })
         );
         // Too many levels for the declared cap.
         let capped = Mba::new([1, 1]).unwrap().with_max_levels(2);
@@ -753,10 +888,14 @@ mod tests {
     #[test]
     fn a_query_on_the_domains_far_edge_does_not_panic_or_refuse() {
         let mba = Mba::new([2, 2]).unwrap();
-        let samples: Vec<[f64; 2]> = (0..5).flat_map(|i| (0..5).map(move |j| [i as f64 * 2.0, j as f64 * 2.0])).collect();
+        let samples: Vec<[f64; 2]> = (0..5)
+            .flat_map(|i| (0..5).map(move |j| [i as f64 * 2.0, j as f64 * 2.0]))
+            .collect();
         let values: Vec<f64> = samples.iter().map(|_| 3.0).collect();
         let dom = domain([0.0, 0.0], [8.0, 8.0]);
-        let answer = mba.interpolate(&samples, &values, dom, 1.0, &[[8.0, 8.0], [0.0, 0.0]]).unwrap();
+        let answer = mba
+            .interpolate(&samples, &values, dom, 1.0, &[[8.0, 8.0], [0.0, 0.0]])
+            .unwrap();
         for value in &answer.values {
             assert!((value - 3.0).abs() < 1e-9);
         }
@@ -770,14 +909,31 @@ mod tests {
     /// the evaluation — one of the two halves fails.
     #[test]
     fn without_the_trend_the_fit_sinks_away_from_the_data() {
-        let samples: Vec<[f64; 2]> = (0..4).flat_map(|i| (0..4).map(move |j| [i as f64, j as f64])).collect();
+        let samples: Vec<[f64; 2]> = (0..4)
+            .flat_map(|i| (0..4).map(move |j| [i as f64, j as f64]))
+            .collect();
         let values = vec![42.0; samples.len()];
         let dom = domain([0.0, 0.0], [40.0, 40.0]);
         let far = [[35.0, 35.0]];
-        let bare = Mba::new([2, 2]).unwrap().with_trend(Trend::None).interpolate(&samples, &values, dom, 2.0, &far).unwrap();
-        let kept = Mba::new([2, 2]).unwrap().interpolate(&samples, &values, dom, 2.0, &far).unwrap();
-        assert!(bare.values[0] < 41.0, "the bare fit far from the data: {} — it should have sunk", bare.values[0]);
-        assert!((kept.values[0] - 42.0).abs() < 1e-9, "with the trend: {}", kept.values[0]);
+        let bare = Mba::new([2, 2])
+            .unwrap()
+            .with_trend(Trend::None)
+            .interpolate(&samples, &values, dom, 2.0, &far)
+            .unwrap();
+        let kept = Mba::new([2, 2])
+            .unwrap()
+            .interpolate(&samples, &values, dom, 2.0, &far)
+            .unwrap();
+        assert!(
+            bare.values[0] < 41.0,
+            "the bare fit far from the data: {} — it should have sunk",
+            bare.values[0]
+        );
+        assert!(
+            (kept.values[0] - 42.0).abs() < 1e-9,
+            "with the trend: {}",
+            kept.values[0]
+        );
         assert_eq!(bare.trend, TrendUsed::None);
     }
 
@@ -788,7 +944,16 @@ mod tests {
     fn aligned_samples_fall_back_to_their_mean_and_say_so() {
         let samples: Vec<[f64; 2]> = (0..5).map(|i| [i as f64 * 2.0, i as f64 * 2.0]).collect();
         let values = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let answer = Mba::new([2, 2]).unwrap().interpolate(&samples, &values, domain([0.0, 0.0], [10.0, 10.0]), 2.0, &[[1.0, 9.0]]).unwrap();
+        let answer = Mba::new([2, 2])
+            .unwrap()
+            .interpolate(
+                &samples,
+                &values,
+                domain([0.0, 0.0], [10.0, 10.0]),
+                2.0,
+                &[[1.0, 9.0]],
+            )
+            .unwrap();
         assert_eq!(answer.trend, TrendUsed::Constant(3.0));
         assert!(answer.values[0].is_finite());
     }

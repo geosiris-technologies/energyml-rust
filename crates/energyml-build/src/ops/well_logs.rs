@@ -220,16 +220,27 @@ pub struct WellLogsInputs {
 
 /// The law as told, before a frame gives it its ground.
 enum Told {
-    Temperature { at: f64, from: f64, gradient_km: f64 },
-    Hydrostatic { level: f64, density: f64, gravity: f64, at_table_bar: f64 },
+    Temperature {
+        at: f64,
+        from: f64,
+        gradient_km: f64,
+    },
+    Hydrostatic {
+        level: f64,
+        density: f64,
+        gravity: f64,
+        at_table_bar: f64,
+    },
 }
 
 impl Told {
     fn of(law: &LawParams) -> Told {
         match law {
-            LawParams::Temperature(t) => {
-                Told::Temperature { at: t.reference_temperature, from: t.reference_depth, gradient_km: t.gradient }
-            }
+            LawParams::Temperature(t) => Told::Temperature {
+                at: t.reference_temperature,
+                from: t.reference_depth,
+                gradient_km: t.gradient,
+            },
             LawParams::Hydrostatic(h) => Told::Hydrostatic {
                 level: h.water_level,
                 density: h.density,
@@ -244,10 +255,26 @@ impl Told {
     /// the bar.
     fn law(&self, ground: f64, bar: f64) -> Law {
         match *self {
-            Told::Temperature { at, from, gradient_km } => Law::Geothermal { at, from, gradient: gradient_km / 1000.0 },
-            Told::Hydrostatic { level, density, gravity, at_table_bar } => {
-                Law::Hydrostatic { table: ground - level, density, gravity, at_table: at_table_bar * bar }
-            }
+            Told::Temperature {
+                at,
+                from,
+                gradient_km,
+            } => Law::Geothermal {
+                at,
+                from,
+                gradient: gradient_km / 1000.0,
+            },
+            Told::Hydrostatic {
+                level,
+                density,
+                gravity,
+                at_table_bar,
+            } => Law::Hydrostatic {
+                table: ground - level,
+                density,
+                gravity,
+                at_table: at_table_bar * bar,
+            },
         }
     }
 
@@ -287,8 +314,17 @@ impl Told {
     /// Its coefficients, exactly — what the seed carries.
     fn key(&self) -> String {
         match *self {
-            Told::Temperature { at, from, gradient_km } => format!("temperature:{at:?}:{from:?}:{gradient_km:?}"),
-            Told::Hydrostatic { level, density, gravity, at_table_bar } => {
+            Told::Temperature {
+                at,
+                from,
+                gradient_km,
+            } => format!("temperature:{at:?}:{from:?}:{gradient_km:?}"),
+            Told::Hydrostatic {
+                level,
+                density,
+                gravity,
+                at_table_bar,
+            } => {
                 format!("hydrostatic:{level:?}:{density:?}:{gravity:?}:{at_table_bar:?}")
             }
         }
@@ -297,10 +333,19 @@ impl Told {
     /// The law, in the words a description and a note use.
     fn words(&self) -> String {
         match *self {
-            Told::Temperature { at, from, gradient_km } => format!(
+            Told::Temperature {
+                at,
+                from,
+                gradient_km,
+            } => format!(
                 "a temperature of {at} degC at {from} m below the ground, changing by {gradient_km} degC per km of vertical depth below it"
             ),
-            Told::Hydrostatic { level, density, gravity, at_table_bar } => format!(
+            Told::Hydrostatic {
+                level,
+                density,
+                gravity,
+                at_table_bar,
+            } => format!(
                 "a hydrostatic pressure below a water table at {level} m of elevation: {at_table_bar} bar there, and {density} kg/m3 × {gravity} m/s2 per metre of water below it"
             ),
         }
@@ -309,7 +354,9 @@ impl Told {
     /// Where the law starts, in words.
     fn start_words(&self) -> String {
         match *self {
-            Told::Temperature { from, .. } => format!("{from} m below the ground, where the temperature is stated"),
+            Told::Temperature { from, .. } => {
+                format!("{from} m below the ground, where the temperature is stated")
+            }
             Told::Hydrostatic { level, .. } => format!("the water table, at {level} m of elevation"),
         }
     }
@@ -357,9 +404,17 @@ fn hole_of(shape: &Shape) -> Result<Hole<'_>, String> {
         .reference
         .as_ref()
         .ok_or_else(|| format!("`{name}` names no object of the package for a property to hang on"))?;
-    let title = if reference.title.is_empty() { name.to_string() } else { reference.title.clone() };
-    let points: Vec<[f64; 3]> =
-        shape.geometry.patches.iter().flat_map(|patch| patch.points.iter().copied()).collect();
+    let title = if reference.title.is_empty() {
+        name.to_string()
+    } else {
+        reference.title.clone()
+    };
+    let points: Vec<[f64; 3]> = shape
+        .geometry
+        .patches
+        .iter()
+        .flat_map(|patch| patch.points.iter().copied())
+        .collect();
     if points.is_empty() {
         return Err(format!("`{title}` places no node"));
     }
@@ -372,7 +427,9 @@ fn hole_of(shape: &Shape) -> Result<Hole<'_>, String> {
         format!("`{title}` does not say in which unit its vertical axis counts — a depth in feet read as metres is 3.28 times too deep")
     })?;
     let metres = units::metres(1.0, uom).map_err(|why| {
-        format!("`{title}` counts its vertical axis in `{uom}`, and a depth below the ground is a length: {why}")
+        format!(
+            "`{title}` counts its vertical axis in `{uom}`, and a depth below the ground is a length: {why}"
+        )
     })?;
     let mds = known.node_mds.as_deref().ok_or_else(|| {
         format!("`{title}` states no measured depth for its nodes — it is no wellbore frame, or this build cannot read its arrays")
@@ -387,8 +444,21 @@ fn hole_of(shape: &Shape) -> Result<Hole<'_>, String> {
     let head = known.wellhead.ok_or_else(|| {
         format!("`{title}` names no datum that places it — the depths are counted from the ground at its head, and its head is its datum")
     })?;
-    let nodes = points.iter().map(|p| [p[0], p[1], if up { p[2] } else { -p[2] }]).collect();
-    Ok(Hole { title, reference, known, nodes, mds, head, up, uom, metres })
+    let nodes = points
+        .iter()
+        .map(|p| [p[0], p[1], if up { p[2] } else { -p[2] }])
+        .collect();
+    Ok(Hole {
+        title,
+        reference,
+        known,
+        nodes,
+        mds,
+        head,
+        up,
+        uom,
+        metres,
+    })
 }
 
 /// The title the object behind a shape carries, or the shape's name.
@@ -404,12 +474,20 @@ fn title_of(shape: &Shape) -> String {
 
 /// Values as the seed carries them — exactly, NaN included.
 fn digest(values: &[f64]) -> String {
-    values.iter().map(|value| format!("{value:?}")).collect::<Vec<_>>().join(",")
+    values
+        .iter()
+        .map(|value| format!("{value:?}"))
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 /// A count, as the activity records it.
 fn count(title: &str, value: usize) -> Parameter {
-    Parameter::Double { title: title.to_string(), value: value as f64, uom: None }
+    Parameter::Double {
+        title: title.to_string(),
+        value: value as f64,
+        uom: None,
+    }
 }
 
 impl Operation for WellLogs {
@@ -427,20 +505,27 @@ impl Operation for WellLogs {
         }
     }
 
-
     fn check(&self, inputs: &WellLogsInputs) -> Result<(), Refusal> {
         if let Some(ground) = &inputs.ground
             && !support::Faces::of(&ground.geometry).any()
         {
             return Err(Refusal::on(
                 "ground",
-                format!("`{}` has no face — the ground is read on triangles or a grid's cells, and points or lines have none", ground.name),
+                format!(
+                    "`{}` has no face — the ground is read on triangles or a grid's cells, and points or lines have none",
+                    ground.name
+                ),
             ));
         }
         Ok(())
     }
 
-    fn plan(&self, inputs: WellLogsInputs, params: WellLogsParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: WellLogsInputs,
+        params: WellLogsParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let WellLogsInputs { frames, ground } = inputs;
         // **Said here and not in `check`**: an empty `frames` is what a list of
         // offers sees before the edge fills it (`read::every`).
@@ -465,7 +550,10 @@ impl Operation for WellLogs {
             (Some(surface), Some(_)) => {
                 return Err(Refusal::on(
                     "datumHeight",
-                    format!("`datumHeight` and `ground` (`{}`) are two answers to where the ground is: give one", title_of(surface)),
+                    format!(
+                        "`datumHeight` and `ground` (`{}`) are two answers to where the ground is: give one",
+                        title_of(surface)
+                    ),
                 ));
             }
             (None, None) => {
@@ -487,7 +575,10 @@ impl Operation for WellLogs {
             Some(given) => given.0,
             None => {
                 let found = energyml_domain::property_kind::with_default(|dictionary| {
-                    dictionary.by_title(told.kind()).first().map(|kind| (kind.uuid.clone(), kind.title.clone()))
+                    dictionary
+                        .by_title(told.kind())
+                        .first()
+                        .map(|kind| (kind.uuid.clone(), kind.title.clone()))
                 });
                 let (uuid, title) = found.ok_or_else(|| {
                     Refusal::on(
@@ -498,14 +589,22 @@ impl Operation for WellLogs {
                 json!({ "$type": "eml23.DataObjectReference", "Uuid": uuid, "QualifiedType": "eml23.PropertyKind", "Title": title })
             }
         };
-        let kind_uuid = kind.get("Uuid").and_then(|v| v.as_str()).or_else(|| kind.as_str()).unwrap_or_default().to_string();
+        let kind_uuid = kind
+            .get("Uuid")
+            .and_then(|v| v.as_str())
+            .or_else(|| kind.as_str())
+            .unwrap_or_default()
+            .to_string();
 
         // -- the ground surface, read once ---------------------------------------
-        let faces = ground.as_ref().map(|surface| support::Faces::of(&surface.geometry));
+        let faces = ground
+            .as_ref()
+            .map(|surface| support::Faces::of(&surface.geometry));
         let heights = match &faces {
-            Some(faces) => {
-                Some(Heights::of(faces.surface(), "ground", "under the wellheads").map_err(|why| Refusal::on("ground", why))?)
-            }
+            Some(faces) => Some(
+                Heights::of(faces.surface(), "ground", "under the wellheads")
+                    .map_err(|why| Refusal::on("ground", why))?,
+            ),
             None => None,
         };
         let ground_title = ground.as_ref().map(title_of).unwrap_or_default();
@@ -524,12 +623,20 @@ impl Operation for WellLogs {
         for shape in &frames {
             cx.stop_if_cancelled()?;
             let hole = hole_of(shape).map_err(|why| Refusal::on("frames", why))?;
-            inputs.push(Parameter::Object { title: "input".to_string(), reference: hole.reference.dor() });
+            inputs.push(Parameter::Object {
+                title: "input".to_string(),
+                reference: hole.reference.dor(),
+            });
 
             // Where the datum and the depths put the nodes — the one check a
             // pure plan can make that the numbers are placed ones.
             if let Some(far) = analysis::beyond_reach(hole.head, &hole.nodes, hole.mds) {
-                let datum = hole.known.datum.as_ref().map(|d| format!("`{}`", d.title)).unwrap_or_else(|| "its datum".to_string());
+                let datum = hole
+                    .known
+                    .datum
+                    .as_ref()
+                    .map(|d| format!("`{}`", d.title))
+                    .unwrap_or_else(|| "its datum".to_string());
                 return Err(Refusal::on(
                     "frames",
                     format!(
@@ -570,27 +677,43 @@ impl Operation for WellLogs {
                         Height::Outside => {
                             return Err(Refusal::on(
                                 "ground",
-                                format!("the head of `{}` ({x}, {y}) is outside `{ground_title}`: no face lies under it — give a ground that covers it, or `datumHeight`", hole.title),
+                                format!(
+                                    "the head of `{}` ({x}, {y}) is outside `{ground_title}`: no face lies under it — give a ground that covers it, or `datumHeight`",
+                                    hole.title
+                                ),
                             ));
                         }
                         Height::Folded => {
                             return Err(Refusal::on(
                                 "ground",
-                                format!("`{ground_title}` folds under the head of `{}` ({x}, {y}): several faces disagree on its height there", hole.title),
+                                format!(
+                                    "`{ground_title}` folds under the head of `{}` ({x}, {y}): several faces disagree on its height there",
+                                    hole.title
+                                ),
                             ));
                         }
                     };
-                    reads.push(Parameter::Double { title: "groundRead".to_string(), value: z, uom: Some(hole.uom.to_string()) });
+                    reads.push(Parameter::Double {
+                        title: "groundRead".to_string(),
+                        value: z,
+                        uom: Some(hole.uom.to_string()),
+                    });
                     grounds.push(Note {
                         key: "ground",
-                        detail: format!("`{}`: the ground under its head ({x}, {y}), {z} {}, read on `{ground_title}`", hole.title, hole.uom),
+                        detail: format!(
+                            "`{}`: the ground under its head ({x}, {y}), {z} {}, read on `{ground_title}`",
+                            hole.title, hole.uom
+                        ),
                     });
                     (if hole.up { z } else { -z }) * hole.metres
                 }
                 (_, _, Some(height)) => {
                     grounds.push(Note {
                         key: "ground",
-                        detail: format!("`{}`: the ground {height} m below its datum, at {} {} of elevation", hole.title, hole.head[2], hole.uom),
+                        detail: format!(
+                            "`{}`: the ground {height} m below its datum, at {} {} of elevation",
+                            hole.title, hole.head[2], hole.uom
+                        ),
                     });
                     hole.head[2] * hole.metres - height
                 }
@@ -598,7 +721,11 @@ impl Operation for WellLogs {
             };
 
             // The law, at each node's vertical depth below that ground.
-            let depths: Vec<f64> = hole.nodes.iter().map(|node| ground_m - node[2] * hole.metres).collect();
+            let depths: Vec<f64> = hole
+                .nodes
+                .iter()
+                .map(|node| ground_m - node[2] * hole.metres)
+                .collect();
             let law = told.law(ground_m, bar);
             let logged = analysis::lay(&law, &depths).map_err(|why| match &why {
                 LogError::BadDepth { .. } => Refusal::on("frames", format!("`{}`: {why}", hole.title)),
@@ -632,7 +759,12 @@ impl Operation for WellLogs {
             // -- the writing is `property`'s ---------------------------------
             let well = energyml_domain::wellbore_table::stem(&hole.title).to_string();
             let title = format!("{well} — {}", told.kind());
-            let seed = format!("well-logs:{}:{}:{kind_uuid}:{}", hole.reference.uuid, told.key(), digest(&values));
+            let seed = format!(
+                "well-logs:{}:{}:{kind_uuid}:{}",
+                hole.reference.uuid,
+                told.key(),
+                digest(&values)
+            );
             let field = Field {
                 name: format!("{} of {}", told.kind(), shape.name),
                 over: shape.name.clone(),
@@ -661,7 +793,13 @@ impl Operation for WellLogs {
                 Identity::Given(_) => Identity::Given(vec![cx.identity.uuid("", written)?]),
                 derived => derived.clone(),
             };
-            let one = Context { identity: &identity, when: cx.when, purpose: cx.purpose, feedback: cx.feedback, bag: cx.bag };
+            let one = Context {
+                identity: &identity,
+                when: cx.when,
+                purpose: cx.purpose,
+                feedback: cx.feedback,
+                bag: cx.bag,
+            };
             let mut drawn = super::property::write(&field, Some(&counted), &property, &seed, &one)?;
 
             // What the property says of itself: laid, not measured, and from what.
@@ -704,7 +842,11 @@ impl Operation for WellLogs {
                 "frames",
                 format!(
                     "no frame has a node where the law holds: {}",
-                    dropped.iter().map(|one| one.why.as_str()).collect::<Vec<_>>().join("; ")
+                    dropped
+                        .iter()
+                        .map(|one| one.why.as_str())
+                        .collect::<Vec<_>>()
+                        .join("; ")
                 ),
             ));
         }
@@ -744,13 +886,23 @@ impl Operation for WellLogs {
             });
         }
         if let Some([low, high]) = range {
-            notes.push(Note { key: "range", detail: format!("the values laid run from {low} to {high} {}", told.uom()) });
+            notes.push(Note {
+                key: "range",
+                detail: format!("the values laid run from {low} to {high} {}", told.uom()),
+            });
         }
         notes.append(&mut says);
 
         // -- the activity -------------------------------------------------------------
-        if let Some(reference) = ground.as_ref().and_then(|surface| surface.known.as_ref()).and_then(|known| known.reference.as_ref()) {
-            inputs.push(Parameter::Object { title: "input".to_string(), reference: reference.dor() });
+        if let Some(reference) = ground
+            .as_ref()
+            .and_then(|surface| surface.known.as_ref())
+            .and_then(|known| known.reference.as_ref())
+        {
+            inputs.push(Parameter::Object {
+                title: "input".to_string(),
+                reference: reference.dor(),
+            });
         }
         let mut parameters = inputs;
         parameters.push(count("propertyCount", written));
@@ -759,7 +911,13 @@ impl Operation for WellLogs {
         parameters.append(&mut reads);
         let frame_keys: Vec<&str> = frames
             .iter()
-            .filter_map(|shape| shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.uuid.as_str()))
+            .filter_map(|shape| {
+                shape
+                    .known
+                    .as_ref()
+                    .and_then(|known| known.reference.as_ref())
+                    .map(|r| r.uuid.as_str())
+            })
             .collect();
 
         Ok(Plan {
@@ -785,9 +943,17 @@ impl Operation for WellLogs {
     /// under the parameters the projection already declares — a title cannot be
     /// both.
     fn reports(&self) -> Vec<Slot> {
-        let number = || Need::Number { uom: None, least: None, most: None };
+        let number = || Need::Number {
+            uom: None,
+            least: None,
+            most: None,
+        };
         vec![
-            Slot::required("propertyCount", number(), "properties written, one per frame that has a node where the law holds"),
+            Slot::required(
+                "propertyCount",
+                number(),
+                "properties written, one per frame that has a node where the law holds",
+            ),
             Slot::required(
                 "aboveGroundCount",
                 number(),
@@ -811,9 +977,9 @@ impl Operation for WellLogs {
 /// A refusal of the analysis, under the slot its coefficient is told in.
 fn refusal_of(why: &LogError) -> Refusal {
     match why {
-        LogError::NotFinite { which, .. } | LogError::NotPositive { which, .. } | LogError::Negative { which, .. } => {
-            Refusal::on(slot_of(*which), why)
-        }
+        LogError::NotFinite { which, .. }
+        | LogError::NotPositive { which, .. }
+        | LogError::Negative { which, .. } => Refusal::on(slot_of(*which), why),
         LogError::BadDepth { .. } => Refusal::on("frames", why),
     }
 }

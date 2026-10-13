@@ -30,8 +30,8 @@
 
 // Domain-neutral modules, moved to `energyml-geostat` and re-exported.
 pub use energyml_geostat::{
-    barrier, cells, densify, extend, idw, isocontour, kriging, loft, mba, mba_frame, measure, nodes, outline, rbf, resample, triangulate,
-    variogram,
+    barrier, cells, densify, extend, idw, isocontour, kriging, loft, mba, mba_frame, measure, nodes, outline,
+    rbf, resample, triangulate, variogram,
 };
 
 pub mod fake;
@@ -41,14 +41,13 @@ pub mod flow_law;
 pub mod groups;
 pub mod hall;
 pub mod heights;
+pub mod horizon_law;
 pub mod ijk;
 pub mod ijk_faults;
-pub mod ion_balance;
-pub mod horizon_law;
-pub mod profile;
-pub mod wells_profile;
-pub mod project;
 pub mod intersect;
+pub mod ion_balance;
+pub mod profile;
+pub mod project;
 pub mod step_rate;
 pub mod surface;
 pub mod survey;
@@ -57,14 +56,15 @@ pub mod thickness;
 pub mod time_law;
 pub mod tops;
 pub mod water_diagrams;
-pub mod well_plan;
 pub mod well_logs;
+pub mod well_plan;
+pub mod wells_profile;
 
 pub use energyml_geostat::Error;
 pub use energyml_geostat::{
-    Along, At, Barriers, Contour, Densified, Empirical, Idw, IdwAnswer, Kernel, KrigingAnswer, Model, ModelKind, Ordinary, Placement,
-    Polyline, Rbf, RbfAnswer, Segment, Triangulated, chain, contour, contours, empirical, levels, levels_spaced, plan_distance,
-    triangulate_xy, triangulate_xy_constrained,
+    Along, At, Barriers, Contour, Densified, Empirical, Idw, IdwAnswer, Kernel, KrigingAnswer, Model,
+    ModelKind, Ordinary, Placement, Polyline, Rbf, RbfAnswer, Segment, Triangulated, chain, contour,
+    contours, empirical, levels, levels_spaced, plan_distance, triangulate_xy, triangulate_xy_constrained,
 };
 pub use heights::{Height, Heights};
 pub use intersect::{Intersection, Trace, intersect};

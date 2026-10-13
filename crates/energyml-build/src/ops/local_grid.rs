@@ -79,7 +79,9 @@ use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 use crate::declare::{Inputs, Params, Shape, Suggestions, known_of};
-use crate::operation::{About, ActivityDraft, Category, Context, Need, NewObject, Note, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Need, NewObject, Note, Operation, Plan, Refusal, Slot,
+};
 use crate::pieces::{Pieces, Ref};
 
 use super::support;
@@ -130,7 +132,12 @@ pub struct LocalGridInputs {
 
 /// The title the object behind a shape carries, or the shape's name.
 fn title_of(shape: &Shape) -> String {
-    shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.title.clone()).unwrap_or_else(|| shape.name.clone())
+    shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|r| r.title.clone())
+        .unwrap_or_else(|| shape.name.clone())
 }
 
 /// The parent as the geometry reader hands it: one patch of hexahedra over
@@ -154,7 +161,19 @@ struct ParentGrid<'a> {
 }
 
 fn parent_grid(shape: &Shape) -> Result<ParentGrid<'_>, Refusal> {
-    let [Patch { topology: Topology::Hexahedra { cells, dimensions, index }, points, .. }] = shape.geometry.patches.as_slice() else {
+    let [
+        Patch {
+            topology:
+                Topology::Hexahedra {
+                    cells,
+                    dimensions,
+                    index,
+                },
+            points,
+            ..
+        },
+    ] = shape.geometry.patches.as_slice()
+    else {
         return Err(Refusal::on(
             "parent",
             // Not the object's title: this is what `fitness` says, and a
@@ -173,7 +192,14 @@ fn parent_grid(shape: &Shape) -> Result<ParentGrid<'_>, Refusal> {
             ),
         ));
     }
-    Ok(ParentGrid { ni, nj, nk, points, cells, index })
+    Ok(ParentGrid {
+        ni,
+        nj,
+        nk,
+        points,
+        cells,
+        index,
+    })
 }
 
 impl ParentGrid<'_> {
@@ -182,7 +208,11 @@ impl ParentGrid<'_> {
     /// no location.
     fn cell(&self, i: usize, j: usize, k: usize) -> Option<[u32; 8]> {
         let number = (k * self.nj + j) * self.ni + i;
-        let at = if self.index.is_empty() { Some(number) } else { self.index.binary_search(&(number as u32)).ok() };
+        let at = if self.index.is_empty() {
+            Some(number)
+        } else {
+            self.index.binary_search(&(number as u32)).ok()
+        };
         at.and_then(|at| self.cells.get(at)).copied()
     }
 }
@@ -221,7 +251,12 @@ impl Window {
 /// winding VTK asks for, so the top is told by the **point index** instead —
 /// levels are stored top first, and the two corners of one pillar sit on one
 /// coordinate line, so the upper one has the smaller index.
-fn window_of(parent: &ParentGrid<'_>, title: &str, lo: [usize; 3], hi: [usize; 3]) -> Result<Window, Refusal> {
+fn window_of(
+    parent: &ParentGrid<'_>,
+    title: &str,
+    lo: [usize; 3],
+    hi: [usize; 3],
+) -> Result<Window, Refusal> {
     let span = [hi[0] - lo[0] + 1, hi[1] - lo[1] + 1, hi[2] - lo[2] + 1];
     let row = span[0] + 1;
     let plane = row * (span[1] + 1);
@@ -235,10 +270,16 @@ fn window_of(parent: &ParentGrid<'_>, title: &str, lo: [usize; 3], hi: [usize; 3
                 let Some(node) = parent.cell(i, j, k) else {
                     return Err(Refusal::on(
                         "parent",
-                        format!("`{title}` has no geometry at cell ({i}, {j}, {k}), which the window covers: a local grid cannot interpolate a cell with no location"),
+                        format!(
+                            "`{title}` has no geometry at cell ({i}, {j}, {k}), which the window covers: a local grid cannot interpolate a cell with no location"
+                        ),
                     ));
                 };
-                let (top, base) = if node[0] < node[4] { (&node[..4], &node[4..]) } else { (&node[4..], &node[..4]) };
+                let (top, base) = if node[0] < node[4] {
+                    (&node[..4], &node[4..])
+                } else {
+                    (&node[4..], &node[..4])
+                };
                 for (corner, (ci, cj)) in [(0, 0), (1, 0), (1, 1), (0, 1)].into_iter().enumerate() {
                     for (face, dl) in [(top, dk), (base, dk + 1)] {
                         let slot = (dl * (span[1] + 1) + dj + cj) * row + di + ci;
@@ -289,7 +330,10 @@ fn window_of(parent: &ParentGrid<'_>, title: &str, lo: [usize; 3], hi: [usize; 3
         }
         nodes.push(at);
     }
-    Ok(Window { span: [span[0], span[1]], nodes })
+    Ok(Window {
+        span: [span[0], span[1]],
+        nodes,
+    })
 }
 
 /// A child node's position on one axis of the window: the low lattice index,
@@ -319,7 +363,12 @@ fn axis_node(span: usize, refine: usize, index: usize) -> (usize, usize, f64) {
 /// (the geometry crate's rules, on IJK grids). A weight of exactly
 /// `0.0` skips its branch, which keeps a boundary node an exact copy rather
 /// than a sum with a zero term.
-fn interpolate(window: &Window, i: (usize, usize, f64), j: (usize, usize, f64), k: (usize, usize, f64)) -> [f64; 3] {
+fn interpolate(
+    window: &Window,
+    i: (usize, usize, f64),
+    j: (usize, usize, f64),
+    k: (usize, usize, f64),
+) -> [f64; 3] {
     let (li, hi, fi) = i;
     let (lj, hj, fj) = j;
     let (lk, hk, fk) = k;
@@ -366,9 +415,19 @@ fn oriented(node: [u32; 8], points: &[[f64; 3]]) -> [u32; 8] {
     let sub = |a: [f64; 3], b: [f64; 3]| [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
     let (c0, c1, c3, c4) = (p(node[0]), p(node[1]), p(node[3]), p(node[4]));
     let (e1, e2, e3) = (sub(c1, c0), sub(c3, c0), sub(c4, c0));
-    let cross = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+    let cross = [
+        e1[1] * e2[2] - e1[2] * e2[1],
+        e1[2] * e2[0] - e1[0] * e2[2],
+        e1[0] * e2[1] - e1[1] * e2[0],
+    ];
     let dot = cross[0] * e3[0] + cross[1] * e3[1] + cross[2] * e3[2];
-    if dot >= 0.0 { node } else { [node[4], node[5], node[6], node[7], node[0], node[1], node[2], node[3]] }
+    if dot >= 0.0 {
+        node
+    } else {
+        [
+            node[4], node[5], node[6], node[7], node[0], node[1], node[2], node[3],
+        ]
+    }
 }
 
 /// A `Regrid`: no `Intervals` for a 1:1 correspondence (`Grids.xsd`: *"If there
@@ -384,7 +443,8 @@ fn regrid(start: usize, span: usize, refine: usize) -> Value {
     if refine == 1 {
         return json!({ "$type": "resqml22.Regrid", "InitialIndexOnParentGrid": start });
     }
-    let constant = |value: usize| json!({ "$type": "eml23.IntegerConstantArray", "Value": value, "Count": span });
+    let constant =
+        |value: usize| json!({ "$type": "eml23.IntegerConstantArray", "Value": value, "Count": span });
     json!({
         "$type": "resqml22.Regrid",
         "InitialIndexOnParentGrid": start,
@@ -413,17 +473,29 @@ impl Operation for LocalGrid {
     }
 
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
-        let Some(known) = known_of(bag, "parent") else { return };
+        let Some(known) = known_of(bag, "parent") else {
+            return;
+        };
         if let Some(interpretation) = &known.interpretation {
             slots.inferred("interpretation", interpretation.dor(), interpretation.clone());
         }
         if let Some(reference) = &known.reference {
-            slots.inferred("title", json!(format!("{} — local grid", reference.title)), reference.clone());
+            slots.inferred(
+                "title",
+                json!(format!("{} — local grid", reference.title)),
+                reference.clone(),
+            );
         }
     }
 
     fn check(&self, inputs: &LocalGridInputs) -> Result<(), Refusal> {
-        if inputs.parent.known.as_ref().and_then(|known| known.reference.as_ref()).is_none() {
+        if inputs
+            .parent
+            .known
+            .as_ref()
+            .and_then(|known| known.reference.as_ref())
+            .is_none()
+        {
             return Err(Refusal::on(
                 "parent",
                 "is no object of the package: a local grid names its parent by uuid (`ParentIjkGridRepresentation`)",
@@ -432,10 +504,19 @@ impl Operation for LocalGrid {
         parent_grid(&inputs.parent).map(|_| ())
     }
 
-    fn plan(&self, inputs: LocalGridInputs, params: LocalGridParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: LocalGridInputs,
+        params: LocalGridParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         self.check(&inputs)?;
         let LocalGridInputs { parent } = inputs;
-        let parent_ref = parent.known.as_ref().and_then(|known| known.reference.clone()).expect("checked above");
+        let parent_ref = parent
+            .known
+            .as_ref()
+            .and_then(|known| known.reference.clone())
+            .expect("checked above");
         let grid = parent_grid(&parent)?;
 
         // -- the window, checked before any computation ------------------------------------
@@ -444,12 +525,18 @@ impl Operation for LocalGrid {
         let k1 = params.k1.unwrap_or_else(|| grid.nk.saturating_sub(1));
         let axis = |name: &'static str, lo: usize, hi: usize, extent: usize| -> Result<(), Refusal> {
             if hi < lo {
-                return Err(Refusal::on(name, format!("ends at parent cell {hi}, before it starts at {lo}")));
+                return Err(Refusal::on(
+                    name,
+                    format!("ends at parent cell {hi}, before it starts at {lo}"),
+                ));
             }
             if hi >= extent {
                 return Err(Refusal::on(
                     name,
-                    format!("names parent cell {hi}, and `{}` has {extent} cell(s) along this axis (0..{extent})", title_of(&parent)),
+                    format!(
+                        "names parent cell {hi}, and `{}` has {extent} cell(s) along this axis (0..{extent})",
+                        title_of(&parent)
+                    ),
                 ));
             }
             Ok(())
@@ -465,7 +552,10 @@ impl Operation for LocalGrid {
         // so the same refusal is stated here, named, rather than dividing by
         // zero further down.
         if ri == 0 || rj == 0 || rk == 0 {
-            return Err(Refusal::on("ri", "a refinement of zero would cut a parent cell into no child cell"));
+            return Err(Refusal::on(
+                "ri",
+                "a refinement of zero would cut a parent cell into no child cell",
+            ));
         }
         cx.stop_if_cancelled()?;
 
@@ -492,7 +582,8 @@ impl Operation for LocalGrid {
         for k in 0..nk {
             for j in 0..nj {
                 for i in 0..ni {
-                    let corner = |dk: usize, dj: usize, di: usize| ((k + dk) * plane + (j + dj) * row + i + di) as u32;
+                    let corner =
+                        |dk: usize, dj: usize, di: usize| ((k + dk) * plane + (j + dj) * row + i + di) as u32;
                     let node = [
                         corner(0, 0, 0),
                         corner(0, 0, 1),
@@ -516,7 +607,16 @@ impl Operation for LocalGrid {
             parent_ref.uuid.to_ascii_lowercase()
         );
         let mut rank = 0usize;
-        let represented = support::represented_in(&params.represented, None, None, cx.identity, cx.when, &seed, &title, &mut rank)?;
+        let represented = support::represented_in(
+            &params.represented,
+            None,
+            None,
+            cx.identity,
+            cx.when,
+            &seed,
+            &title,
+            &mut rank,
+        )?;
         let uuid = support::next_uuid(cx.identity, &format!("child:{seed}"), &mut rank)?;
         let set_uuid = support::next_uuid(cx.identity, &format!("set:{seed}"), &mut rank)?;
 
@@ -561,7 +661,11 @@ impl Operation for LocalGrid {
                     index: 0,
                     node_offset: 0,
                     points,
-                    topology: Topology::Hexahedra { cells, dimensions: [ni, nj, nk], index: Vec::new() },
+                    topology: Topology::Hexahedra {
+                        cells,
+                        dimensions: [ni, nj, nk],
+                        index: Vec::new(),
+                    },
                     closed: Vec::new(),
                 }],
             },
@@ -577,7 +681,13 @@ impl Operation for LocalGrid {
             ),
         }];
         if params.k0.is_none() && params.k1.is_none() {
-            says.push(Note { key: "all-k", detail: format!("no K window given: every one of the parent's {} layer(s)", grid.nk) });
+            says.push(Note {
+                key: "all-k",
+                detail: format!(
+                    "no K window given: every one of the parent's {} layer(s)",
+                    grid.nk
+                ),
+            });
         }
         says.push(Note {
             key: "left-out",
@@ -600,7 +710,11 @@ impl Operation for LocalGrid {
             json: local_grid_set,
         });
 
-        let double = |title: &str, value: f64| Parameter::Double { title: title.to_string(), value, uom: None };
+        let double = |title: &str, value: f64| Parameter::Double {
+            title: title.to_string(),
+            value,
+            uom: None,
+        };
         Ok(Plan {
             media: Vec::new(),
             blocked: None,
@@ -611,7 +725,12 @@ impl Operation for LocalGrid {
                 recipe: "local-grid",
                 title: format!("local-grid → {title}"),
                 seed,
-                parameters: vec![double("ni", ni as f64), double("nj", nj as f64), double("nk", nk as f64), double("cellCount", (ni * nj * nk) as f64)],
+                parameters: vec![
+                    double("ni", ni as f64),
+                    double("nj", nj as f64),
+                    double("nk", nk as f64),
+                    double("cellCount", (ni * nj * nk) as f64),
+                ],
             },
             says,
             dropped: Vec::new(),
@@ -622,9 +741,22 @@ impl Operation for LocalGrid {
     /// under the parameters the projection declares, the way
     /// `ijk-grid-from-horizons` reports its own counts.
     fn reports(&self) -> Vec<Slot> {
-        let count = |name: &'static str, about: &'static str| Slot::required(name, Need::Number { uom: None, least: None, most: None }, about);
+        let count = |name: &'static str, about: &'static str| {
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
         vec![
-            count("ni", "child cells along I — parent cells in the window, times the I refinement"),
+            count(
+                "ni",
+                "child cells along I — parent cells in the window, times the I refinement",
+            ),
             count("nj", "child cells along J"),
             count("nk", "child cells along K"),
             count("cellCount", "child cells total — ni × nj × nk"),

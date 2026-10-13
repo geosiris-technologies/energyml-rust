@@ -157,12 +157,17 @@ fn knows_attachment(qualified: &str) -> bool {
 /// Whether the target can carry a depth along a hole.
 fn has_depth(qualified: &str) -> bool {
     let name = bare(qualified);
-    ["Well", "Trajectory", "Log", "Frame"].iter().any(|word| name.contains(word)) || name == "DataobjectCollection"
+    ["Well", "Trajectory", "Log", "Frame"]
+        .iter()
+        .any(|word| name.contains(word))
+        || name == "DataobjectCollection"
 }
 
 /// 64-bit FNV-1a: a name for the bytes in a seed, no more.
 fn fingerprint(bytes: &[u8]) -> u64 {
-    bytes.iter().fold(0xcbf2_9ce4_8422_2325, |hash, byte| (hash ^ u64::from(*byte)).wrapping_mul(0x0100_0000_01b3))
+    bytes.iter().fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
+        (hash ^ u64::from(*byte)).wrapping_mul(0x0100_0000_01b3)
+    })
 }
 
 impl Operation for Attach {
@@ -182,18 +187,37 @@ impl Operation for Attach {
 
     fn reports(&self) -> Vec<Slot> {
         vec![
-            Slot::optional("part", Need::Text, "the part name the file was given, when it is in the package"),
+            Slot::optional(
+                "part",
+                Need::Text,
+                "the part name the file was given, when it is in the package",
+            ),
             Slot::optional("mediaType", Need::Text, "the content type written for it"),
-            Slot::optional("byteCount", Need::Number { uom: None, least: None, most: None }, "the file's size"),
+            Slot::optional(
+                "byteCount",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "the file's size",
+            ),
         ]
     }
 
     fn plan(&self, inputs: AttachInputs, params: AttachParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
         let target = inputs.target;
         let Some(reference) = target.known.reference.clone() else {
-            return Err(Refusal::on("target", format!("`{}` was given without a reference to attach to", target.name)));
+            return Err(Refusal::on(
+                "target",
+                format!("`{}` was given without a reference to attach to", target.name),
+            ));
         };
-        let address = params.address.as_deref().map(str::trim).filter(|text| !text.is_empty());
+        let address = params
+            .address
+            .as_deref()
+            .map(str::trim)
+            .filter(|text| !text.is_empty());
 
         // -- what is given decides the form, or is refused against the one asked
         let form = match (params.form, inputs.file.is_some(), address.is_some()) {
@@ -212,12 +236,18 @@ impl Operation for Attach {
             (None, true, false) => Form::Part,
             (None, false, true) => Form::External,
             (Some(Form::External), true, _) => {
-                return Err(Refusal::on("form", "the external form names a file that stays where it is: give its `address`, not the file"));
+                return Err(Refusal::on(
+                    "form",
+                    "the external form names a file that stays where it is: give its `address`, not the file",
+                ));
             }
             (Some(form @ (Form::Part | Form::Inline | Form::PartAddress)), false, _) => {
                 return Err(Refusal::on(
                     "form",
-                    format!("the {} form writes the file: give it as `file` — an address alone is the external form", form.word()),
+                    format!(
+                        "the {} form writes the file: give it as `file` — an address alone is the external form",
+                        form.word()
+                    ),
                 ));
             }
             (Some(form), _, _) => form,
@@ -238,7 +268,10 @@ impl Operation for Attach {
 
         // -- what a part cannot carry
         if form == Form::Part {
-            for (slot, given) in [("md", params.md.is_some()), ("category", params.category.is_some())] {
+            for (slot, given) in [
+                ("md", params.md.is_some()),
+                ("category", params.category.is_some()),
+            ] {
                 if given {
                     return Err(Refusal::on(
                         slot,
@@ -268,7 +301,10 @@ impl Operation for Attach {
                 // refused here, where it would otherwise be written as typed.
                 let uom = match <eml::LengthUomExt as XmlText>::from_xml_text(uom) {
                     Ok(eml::LengthUomExt::Other(_)) | Err(_) => {
-                        return Err(Refusal::on("mdUom", format!("`{uom}` is not a unit of length of the standard list (`m`, `ft`, …)")));
+                        return Err(Refusal::on(
+                            "mdUom",
+                            format!("`{uom}` is not a unit of length of the standard list (`m`, `ft`, …)"),
+                        ));
                     }
                     Ok(listed) => listed,
                 };
@@ -284,7 +320,10 @@ impl Operation for Attach {
             match value.as_deref().map(str::trim).filter(|text| !text.is_empty()) {
                 Some(text) if text.chars().count() > 64 => Err(Refusal::on(
                     slot,
-                    format!("{} characters, and the schema holds 64 (`Attachment.xsd`): shorten it, a name is never cut here", text.chars().count()),
+                    format!(
+                        "{} characters, and the schema holds 64 (`Attachment.xsd`): shorten it, a name is never cut here",
+                        text.chars().count()
+                    ),
                 )),
                 Some(text) => Ok(Some(text.to_string())),
                 None => Ok(None),
@@ -295,17 +334,31 @@ impl Operation for Attach {
         if let Some(name) = &stated_name
             && (name.contains('/') || name.contains('\\'))
         {
-            return Err(Refusal::on("fileName", "a name only, not a path (`Attachment.xsd`: *NOT a file path*)"));
+            return Err(Refusal::on(
+                "fileName",
+                "a name only, not a path (`Attachment.xsd`: *NOT a file path*)",
+            ));
         }
 
         // -- the content type: stated, never guessed
-        let stated_type = params.content_type.as_deref().map(str::trim).filter(|kind| !kind.is_empty());
-        let content_type = |declared: Option<&str>, file: &str, required: bool| -> Result<Option<String>, Refusal> {
+        let stated_type = params
+            .content_type
+            .as_deref()
+            .map(str::trim)
+            .filter(|kind| !kind.is_empty());
+        let content_type = |declared: Option<&str>,
+                            file: &str,
+                            required: bool|
+         -> Result<Option<String>, Refusal> {
             match stated_type.or(declared) {
-                Some(kind) => check_media_type(kind).map(Some).map_err(|why| Refusal::on("contentType", why.to_string())),
+                Some(kind) => check_media_type(kind)
+                    .map(Some)
+                    .map_err(|why| Refusal::on("contentType", why.to_string())),
                 None if required => Err(Refusal::on(
                     "contentType",
-                    format!("the content type of `{file}` is stated nowhere — give `contentType`; it is never guessed from a file's name"),
+                    format!(
+                        "the content type of `{file}` is stated nowhere — give `contentType`; it is never guessed from a file's name"
+                    ),
                 )),
                 None => Ok(None),
             }
@@ -316,10 +369,12 @@ impl Operation for Attach {
         // related to an object: its name is its part name, and the default
         // `media/` + name would write it a second time under another one. A
         // file from a disk has no folder in its name.
-        let part_path = params
-            .path
-            .clone()
-            .or_else(|| inputs.file.as_ref().and_then(|file| file.file.contains('/').then(|| file.file.clone())));
+        let part_path = params.path.clone().or_else(|| {
+            inputs
+                .file
+                .as_ref()
+                .and_then(|file| file.file.contains('/').then(|| file.file.clone()))
+        });
         let base_name = |file: &str| file.rsplit('/').next().unwrap_or(file).to_string();
 
         let mut says: Vec<Note> = Vec::new();
@@ -332,114 +387,198 @@ impl Operation for Attach {
         if form == Form::Part {
             let file = inputs.file.expect("a file is given for the part form");
             let mut plan = Media.plan(
-                MediaInputs { file, shows: vec![target.clone()] },
-                MediaParams { path: part_path.clone(), content_type: params.content_type.clone() },
+                MediaInputs {
+                    file,
+                    shows: vec![target.clone()],
+                },
+                MediaParams {
+                    path: part_path.clone(),
+                    content_type: params.content_type.clone(),
+                },
                 cx,
             )?;
             plan.activity.recipe = "attach";
             plan.activity.seed = format!("attach:{}", plan.activity.seed);
-            plan.activity.title = format!("attach → {}", plan.media.first().map_or("", |part| part.path.as_str()));
-            plan.activity.parameters.insert(0, Parameter::Text { title: "form".to_string(), value: form.word().to_string() });
-            plan.says.insert(0, Note { key: "form", detail: "the part form: a file of the package, related to the object".to_string() });
+            plan.activity.title = format!(
+                "attach → {}",
+                plan.media.first().map_or("", |part| part.path.as_str())
+            );
+            plan.activity.parameters.insert(
+                0,
+                Parameter::Text {
+                    title: "form".to_string(),
+                    value: form.word().to_string(),
+                },
+            );
+            plan.says.insert(
+                0,
+                Note {
+                    key: "form",
+                    detail: "the part form: a file of the package, related to the object".to_string(),
+                },
+            );
             return Ok(plan);
         }
 
         // -- B, C, D: an Attachment
         let mut parameters: Vec<Parameter> = vec![
-            Parameter::Text { title: "form".to_string(), value: form.word().to_string() },
-            Parameter::Object { title: "input".to_string(), reference: reference.dor() },
+            Parameter::Text {
+                title: "form".to_string(),
+                value: form.word().to_string(),
+            },
+            Parameter::Object {
+                title: "input".to_string(),
+                reference: reference.dor(),
+            },
         ];
         let mut media: Vec<crate::operation::Media> = Vec::new();
-        let (content, content_uri, file_type, file_name, fingerprint_of): (String, Option<String>, Option<String>, Option<String>, String) =
-            match form {
-                Form::Inline => {
-                    let file = inputs.file.as_ref().expect("a file is given");
-                    let kind = content_type(file.declared.as_deref(), &file.file, true)?;
-                    let name = stated_name.clone().or_else(|| Some(base_name(&file.file)));
-                    says.push(Note {
+        let (content, content_uri, file_type, file_name, fingerprint_of): (
+            String,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            String,
+        ) = match form {
+            Form::Inline => {
+                let file = inputs.file.as_ref().expect("a file is given");
+                let kind = content_type(file.declared.as_deref(), &file.file, true)?;
+                let name = stated_name.clone().or_else(|| Some(base_name(&file.file)));
+                says.push(Note {
                         key: "form",
                         detail: format!(
                             "the inline form: {} byte(s) in the object's `Content`, in base 64 — the object grows by a third",
                             file.bytes.len()
                         ),
                     });
-                    parameters.push(Parameter::Double { title: "byteCount".to_string(), value: file.bytes.len() as f64, uom: None });
-                    (
-                        encode_base64(&file.bytes),
-                        None,
-                        kind,
-                        name,
-                        format!("{:016x}", fingerprint(&file.bytes)),
-                    )
-                }
-                Form::PartAddress => {
-                    let file = inputs.file.as_ref().expect("a file is given");
-                    let kind = content_type(file.declared.as_deref(), &file.file, true)?;
-                    // The part is written by `media`. It is related to the
-                    // **Attachment** (set below, once its uuid is derived) and
-                    // not to the target: the target's pieces are found through
-                    // the Attachment's `ObjectReference`, and a relation from
-                    // the target too would list the file twice for it.
-                    let part = Media.plan(
-                        MediaInputs { file: file.clone(), shows: Vec::new() },
-                        MediaParams { path: part_path.clone(), content_type: params.content_type.clone() },
-                        cx,
-                    )?;
-                    let written = part.media.first().expect("`media` writes its part").clone();
-                    says.push(Note {
-                        key: "form",
-                        detail: format!("the part-address form: the file is the part `{}`, the attachment names it", written.path),
-                    });
-                    says.push(Note {
+                parameters.push(Parameter::Double {
+                    title: "byteCount".to_string(),
+                    value: file.bytes.len() as f64,
+                    uom: None,
+                });
+                (
+                    encode_base64(&file.bytes),
+                    None,
+                    kind,
+                    name,
+                    format!("{:016x}", fingerprint(&file.bytes)),
+                )
+            }
+            Form::PartAddress => {
+                let file = inputs.file.as_ref().expect("a file is given");
+                let kind = content_type(file.declared.as_deref(), &file.file, true)?;
+                // The part is written by `media`. It is related to the
+                // **Attachment** (set below, once its uuid is derived) and
+                // not to the target: the target's pieces are found through
+                // the Attachment's `ObjectReference`, and a relation from
+                // the target too would list the file twice for it.
+                let part = Media.plan(
+                    MediaInputs {
+                        file: file.clone(),
+                        shows: Vec::new(),
+                    },
+                    MediaParams {
+                        path: part_path.clone(),
+                        content_type: params.content_type.clone(),
+                    },
+                    cx,
+                )?;
+                let written = part.media.first().expect("`media` writes its part").clone();
+                says.push(Note {
+                    key: "form",
+                    detail: format!(
+                        "the part-address form: the file is the part `{}`, the attachment names it",
+                        written.path
+                    ),
+                });
+                says.push(Note {
                         key: "convention",
                         detail: "`ContentUri` names a part of the package by its path: this tool's reading of a relative address — the schema says only *a URI pointing to the location of the attached content*".to_string(),
                     });
-                    parameters.push(Parameter::Text { title: "part".to_string(), value: written.path.clone() });
-                    parameters.push(Parameter::Double { title: "byteCount".to_string(), value: written.bytes.len() as f64, uom: None });
-                    let name = stated_name.clone().or_else(|| Some(base_name(&file.file)));
-                    let print = format!("{:016x}", fingerprint(&written.bytes));
-                    let uri = written.path.clone();
-                    media.push(crate::operation::Media { related_to: Vec::new(), ..written });
-                    // (`related_to` is filled below, with the Attachment's uuid.)
-                    (String::new(), Some(uri), kind, name, print)
+                parameters.push(Parameter::Text {
+                    title: "part".to_string(),
+                    value: written.path.clone(),
+                });
+                parameters.push(Parameter::Double {
+                    title: "byteCount".to_string(),
+                    value: written.bytes.len() as f64,
+                    uom: None,
+                });
+                let name = stated_name.clone().or_else(|| Some(base_name(&file.file)));
+                let print = format!("{:016x}", fingerprint(&written.bytes));
+                let uri = written.path.clone();
+                media.push(crate::operation::Media {
+                    related_to: Vec::new(),
+                    ..written
+                });
+                // (`related_to` is filled below, with the Attachment's uuid.)
+                (String::new(), Some(uri), kind, name, print)
+            }
+            Form::External => {
+                let url = address.expect("an address is given");
+                let lower = url.to_ascii_lowercase();
+                if !(lower.starts_with("http://") || lower.starts_with("https://")) {
+                    let scheme = url.split(':').next().unwrap_or(url);
+                    return Err(Refusal::on(
+                        "address",
+                        format!(
+                            "`{scheme}` is not a scheme that is read: an external address is http or https"
+                        ),
+                    ));
                 }
-                Form::External => {
-                    let url = address.expect("an address is given");
-                    let lower = url.to_ascii_lowercase();
-                    if !(lower.starts_with("http://") || lower.starts_with("https://")) {
-                        let scheme = url.split(':').next().unwrap_or(url);
-                        return Err(Refusal::on(
-                            "address",
-                            format!("`{scheme}` is not a scheme that is read: an external address is http or https"),
-                        ));
-                    }
-                    if url.chars().any(|c| c.is_whitespace() || c.is_control()) {
-                        return Err(Refusal::on("address", "an address holds no space and no control character"));
-                    }
-                    let kind = content_type(None, url, false)?;
-                    let tail = url.split(['?', '#']).next().unwrap_or(url).trim_end_matches('/').rsplit('/').next().unwrap_or(url);
-                    let name = stated_name.clone().or_else(|| (!tail.is_empty() && tail.chars().count() <= 64).then(|| tail.to_string()));
-                    says.push(Note {
+                if url.chars().any(|c| c.is_whitespace() || c.is_control()) {
+                    return Err(Refusal::on(
+                        "address",
+                        "an address holds no space and no control character",
+                    ));
+                }
+                let kind = content_type(None, url, false)?;
+                let tail = url
+                    .split(['?', '#'])
+                    .next()
+                    .unwrap_or(url)
+                    .trim_end_matches('/')
+                    .rsplit('/')
+                    .next()
+                    .unwrap_or(url);
+                let name = stated_name
+                    .clone()
+                    .or_else(|| (!tail.is_empty() && tail.chars().count() <= 64).then(|| tail.to_string()));
+                says.push(Note {
                         key: "form",
                         detail: "the external form: the attachment names an address, and nothing is fetched — a reader follows it on request".to_string(),
                     });
-                    parameters.push(Parameter::Text { title: "address".to_string(), value: url.to_string() });
-                    (String::new(), Some(url.to_string()), kind, name, "-".to_string())
-                }
-                Form::Part => unreachable!("the part form returned above"),
-            };
+                parameters.push(Parameter::Text {
+                    title: "address".to_string(),
+                    value: url.to_string(),
+                });
+                (String::new(), Some(url.to_string()), kind, name, "-".to_string())
+            }
+            Form::Part => unreachable!("the part form returned above"),
+        };
         if let Some(kind) = &file_type {
-            parameters.push(Parameter::Text { title: "mediaType".to_string(), value: kind.clone() });
+            parameters.push(Parameter::Text {
+                title: "mediaType".to_string(),
+                value: kind.clone(),
+            });
         }
 
-        let name_for_title = file_name.clone().or_else(|| content_uri.clone()).unwrap_or_else(|| "file".to_string());
+        let name_for_title = file_name
+            .clone()
+            .or_else(|| content_uri.clone())
+            .unwrap_or_else(|| "file".to_string());
         let title = title_of(&name_for_title);
         let seed = format!(
             "attach:{}:{}:{}:{}:{}:{}",
             reference.uuid.to_ascii_lowercase(),
             form.word(),
             file_name.clone().unwrap_or_default(),
-            md.as_ref().map(|md| format!("{}{}", md.measured_depth.value, md.measured_depth.uom.as_xml_str())).unwrap_or_default(),
+            md.as_ref()
+                .map(|md| format!(
+                    "{}{}",
+                    md.measured_depth.value,
+                    md.measured_depth.uom.as_xml_str()
+                ))
+                .unwrap_or_default(),
             category.clone().unwrap_or_default(),
             fingerprint_of
         );
@@ -461,7 +600,11 @@ impl Operation for Attach {
                     "indexed at {} {}{}",
                     md.measured_depth.value,
                     md.measured_depth.uom.as_xml_str(),
-                    if md.measured_depth.value == 0.0 { " — the head of the hole, at the datum" } else { "" }
+                    if md.measured_depth.value == 0.0 {
+                        " — the head of the hole, at the datum"
+                    } else {
+                        ""
+                    }
                 ),
             });
         }
@@ -503,7 +646,12 @@ impl Operation for Attach {
             }],
             datasets: Vec::new(),
             media,
-            activity: ActivityDraft { recipe: "attach", title: format!("attach → {title}"), seed, parameters },
+            activity: ActivityDraft {
+                recipe: "attach",
+                title: format!("attach → {title}"),
+                seed,
+                parameters,
+            },
             says,
             dropped: Vec::new(),
             shapes: Vec::new(),

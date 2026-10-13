@@ -67,7 +67,9 @@ use energyml_resqml_2_2 as resqml;
 use super::earth_model::{self, Gathered, ModelIs};
 use crate::crs::{reference_of, reference_to};
 use crate::declare::{Choice, Inputs, ObjectIn, Params, Suggestions};
-use crate::operation::{About, ActivityDraft, Category, Context, Dropped, Identity, NewObject, Note, Operation, Plan, Refusal};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Dropped, Identity, NewObject, Note, Operation, Plan, Refusal,
+};
 use crate::pieces::{Pieces, Source};
 
 /// The operation.
@@ -120,14 +122,21 @@ pub struct FromStratigraphyInputs {
 /// The reference an input stands for, or a refusal naming its slot.
 fn dor(slot: &str, input: &ObjectIn) -> Result<eml::DataObjectReference, Refusal> {
     let Some(known) = input.known.reference.as_ref() else {
-        return Err(Refusal::on(slot, format!("`{}` was given without a reference to write", input.name)));
+        return Err(Refusal::on(
+            slot,
+            format!("`{}` was given without a reference to write", input.name),
+        ));
     };
     Ok(reference_of(known))
 }
 
 /// `A`'s title, or its uuid.
 fn label(named: &Named) -> &str {
-    if named.title.is_empty() { &named.uuid } else { &named.title }
+    if named.title.is_empty() {
+        &named.uuid
+    } else {
+        &named.title
+    }
 }
 
 /// The criterion a rank states, as the schema spells it.
@@ -175,7 +184,9 @@ impl Existing {
     fn of(inputs: &[ObjectIn]) -> Existing {
         let mut out = Existing::default();
         for input in inputs {
-            let Some(known) = input.known.reference.as_ref() else { continue };
+            let Some(known) = input.known.reference.as_ref() else {
+                continue;
+            };
             let key = known.title.trim().to_lowercase();
             let dor = reference_of(known);
             if known.qualified_type.ends_with("HorizonInterpretation") {
@@ -188,7 +199,11 @@ impl Existing {
     }
 
     /// The one object of that title, if there is one; two are refused by name.
-    fn one(map: &BTreeMap<String, Vec<eml::DataObjectReference>>, title: &str, what: &str) -> Result<Option<eml::DataObjectReference>, Refusal> {
+    fn one(
+        map: &BTreeMap<String, Vec<eml::DataObjectReference>>,
+        title: &str,
+        what: &str,
+    ) -> Result<Option<eml::DataObjectReference>, Refusal> {
         match map.get(&title.to_lowercase()).map(Vec::as_slice) {
             None | Some([]) => Ok(None),
             Some([one]) => Ok(Some(one.clone())),
@@ -197,7 +212,10 @@ impl Existing {
                 format!(
                     "{} {what}s of the package are titled « {title} » (compared without case): {} — which one is this model's is not said; retitle one, or turn `boundaries` off and link them by hand",
                     many.len(),
-                    many.iter().map(|one| format!("{} ({})", one.title, one.uuid)).collect::<Vec<_>>().join(", ")
+                    many.iter()
+                        .map(|one| format!("{} ({})", one.title, one.uuid))
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 ),
             )),
         }
@@ -207,18 +225,29 @@ impl Existing {
 /// Pick the subtree to model when several columns list the unit.
 fn chosen(trees: Vec<Subtree>, column: Option<&ObjectIn>, unit: &str) -> Result<Subtree, Refusal> {
     if let Some(column) = column {
-        let wanted = column.known.reference.as_ref().map(|one| one.uuid.to_ascii_lowercase()).unwrap_or_default();
+        let wanted = column
+            .known
+            .reference
+            .as_ref()
+            .map(|one| one.uuid.to_ascii_lowercase())
+            .unwrap_or_default();
         return trees
             .into_iter()
             .find(|tree| tree.column.as_ref().is_some_and(|one| one.uuid == wanted))
             .ok_or_else(|| Refusal::on("column", format!("`{}` does not list `{unit}`", column.name)));
     }
     let content = |tree: &Subtree| -> Vec<Vec<String>> {
-        tree.ranks.iter().map(|rank| rank.units.iter().map(|unit| unit.uuid.clone()).collect()).collect()
+        tree.ranks
+            .iter()
+            .map(|rank| rank.units.iter().map(|unit| unit.uuid.clone()).collect())
+            .collect()
     };
     let first = content(&trees[0]);
     if trees.iter().all(|tree| content(tree) == first) {
-        return Ok(trees.into_iter().next().expect("subtree never answers an empty list"));
+        return Ok(trees
+            .into_iter()
+            .next()
+            .expect("subtree never answers an empty list"));
     }
     Err(Refusal::on(
         "column",
@@ -227,7 +256,10 @@ fn chosen(trees: Vec<Subtree>, column: Option<&ObjectIn>, unit: &str) -> Result<
             trees.len(),
             trees
                 .iter()
-                .map(|tree| tree.column.as_ref().map_or_else(|| "a rank no column lists".to_string(), |one| format!("`{}`", label(one))))
+                .map(|tree| tree.column.as_ref().map_or_else(
+                    || "a rank no column lists".to_string(),
+                    |one| format!("`{}`", label(one))
+                ))
                 .collect::<Vec<_>>()
                 .join(", ")
         ),
@@ -261,15 +293,25 @@ impl Operation for EarthModelFromStratigraphy {
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
         // The unit's title, read from the bag — a suggestion reads nothing else.
         let unit = bag.iter().find_map(|(_, source)| match source {
-            Source::Object(known) if known.stratigraphy.is_some() => known.reference.as_ref().map(|one| one.title.clone()),
+            Source::Object(known) if known.stratigraphy.is_some() => {
+                known.reference.as_ref().map(|one| one.title.clone())
+            }
             _ => None,
         });
         if let Some(unit) = unit {
-            slots.set("title", serde_json::Value::String(format!("{unit} — earth model")));
+            slots.set(
+                "title",
+                serde_json::Value::String(format!("{unit} — earth model")),
+            );
         }
     }
 
-    fn plan(&self, inputs: FromStratigraphyInputs, params: FromStratigraphyParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: FromStratigraphyInputs,
+        params: FromStratigraphyParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         if let Identity::Given(_) = cx.identity {
             return Err(Refusal::new(
                 "refused",
@@ -282,13 +324,19 @@ impl Operation for EarthModelFromStratigraphy {
         if !from.qualified_type.starts_with("resqml22.") {
             return Err(Refusal::on(
                 "from",
-                format!("this operation writes RESQML 2.2; `{}` is a {} — translate the package first", from.title, from.qualified_type),
+                format!(
+                    "this operation writes RESQML 2.2; `{}` is a {} — translate the package first",
+                    from.title, from.qualified_type
+                ),
             ));
         }
         let Some(columns) = inputs.from.known.stratigraphy.as_ref() else {
             return Err(Refusal::on(
                 "from",
-                format!("nothing is known of the stratigraphy around `{}` — it was not read from a package", from.title),
+                format!(
+                    "nothing is known of the stratigraphy around `{}` — it was not read from a package",
+                    from.title
+                ),
             ));
         };
         let whole = from.qualified_type.ends_with("StratigraphicColumn");
@@ -297,7 +345,12 @@ impl Operation for EarthModelFromStratigraphy {
                 .columns
                 .iter()
                 .find(|one| one.column.uuid.eq_ignore_ascii_case(&from.uuid))
-                .ok_or_else(|| Refusal::on("from", format!("column `{}` is not in the package's stratigraphy", from.title)))?;
+                .ok_or_else(|| {
+                    Refusal::on(
+                        "from",
+                        format!("column `{}` is not in the package's stratigraphy", from.title),
+                    )
+                })?;
             stratigraphy::whole_column(column)
         } else {
             let trees = stratigraphy::subtree(columns, &from.uuid).map_err(|why| Refusal::on("from", why))?;
@@ -313,7 +366,10 @@ impl Operation for EarthModelFromStratigraphy {
             }
             None => {
                 let uuid = cx.identity.uuid(&format!("earth-model:model:{root_title}"), 0)?;
-                (ModelIs::Titled(root_title.clone()), reference_to(&uuid, "resqml22.Model", &root_title))
+                (
+                    ModelIs::Titled(root_title.clone()),
+                    reference_to(&uuid, "resqml22.Model", &root_title),
+                )
             }
         };
         let citation = |title: &str, description: Option<String>| eml::Citation {
@@ -326,7 +382,14 @@ impl Operation for EarthModelFromStratigraphy {
         };
         let mut objects: Vec<NewObject> = Vec::new();
         let mut says: Vec<Note> = Vec::new();
-        let mut dropped: Vec<Dropped> = tree.unplaced.iter().map(|(_, why)| Dropped { count: 1, why: why.clone() }).collect();
+        let mut dropped: Vec<Dropped> = tree
+            .unplaced
+            .iter()
+            .map(|(_, why)| Dropped {
+                count: 1,
+                why: why.clone(),
+            })
+            .collect();
 
         // -- the ranks -----------------------------------------------------------------------
         let mut ranks: Vec<eml::DataObjectReference> = Vec::new();
@@ -337,10 +400,23 @@ impl Operation for EarthModelFromStratigraphy {
             let read = criteria_of(sub, &mut says);
             criteria.push(read.clone());
             if sub.whole {
-                ranks.push(reference_to(&sub.source.uuid, "resqml22.StratigraphicColumnRankInterpretation", label(&sub.source)));
+                ranks.push(reference_to(
+                    &sub.source.uuid,
+                    "resqml22.StratigraphicColumnRankInterpretation",
+                    label(&sub.source),
+                ));
                 continue;
             }
-            ranks.push(write_rank(sub, read, &model, &root_title, at, cx, &citation, &mut objects)?);
+            ranks.push(write_rank(
+                sub,
+                read,
+                &model,
+                &root_title,
+                at,
+                cx,
+                &citation,
+                &mut objects,
+            )?);
             restricted += 1;
             contacts_left += sub.contacts.len();
         }
@@ -354,14 +430,25 @@ impl Operation for EarthModelFromStratigraphy {
         // -- the column ----------------------------------------------------------------------
         let taken = tree.ranks.iter().all(|sub| sub.whole)
             && tree.column.as_ref().is_some_and(|column| {
-                columns.columns.iter().find(|one| one.column.uuid == column.uuid).is_some_and(|one| one.ranks.len() == tree.ranks.len())
+                columns
+                    .columns
+                    .iter()
+                    .find(|one| one.column.uuid == column.uuid)
+                    .is_some_and(|one| one.ranks.len() == tree.ranks.len())
             });
         let column = if taken {
             let column = tree.column.as_ref().expect("checked above");
             reference_to(&column.uuid, "resqml22.StratigraphicColumn", label(column))
         } else {
             let keys: Vec<String> = ranks.iter().map(|one| one.uuid.to_ascii_lowercase()).collect();
-            let uuid = cx.identity.uuid(&format!("earth-model:column:{}:{}", model.uuid.to_ascii_lowercase(), keys.join(",")), 50)?;
+            let uuid = cx.identity.uuid(
+                &format!(
+                    "earth-model:column:{}:{}",
+                    model.uuid.to_ascii_lowercase(),
+                    keys.join(",")
+                ),
+                50,
+            )?;
             let title = format!("{root_title} — column");
             let written = resqml::StratigraphicColumn {
                 uuid: uuid.clone(),
@@ -383,7 +470,17 @@ impl Operation for EarthModelFromStratigraphy {
         // -- what exists in this model: an occurrence of each rank ---------------------------
         let mut occurrences: Vec<eml::DataObjectReference> = Vec::new();
         for (at, ((sub, rank), criteria)) in tree.ranks.iter().zip(&ranks).zip(criteria).enumerate() {
-            occurrences.push(write_occurrence(sub, rank, criteria, &model, &root_title, at, cx, &citation, &mut objects)?);
+            occurrences.push(write_occurrence(
+                sub,
+                rank,
+                criteria,
+                &model,
+                &root_title,
+                at,
+                cx,
+                &citation,
+                &mut objects,
+            )?);
         }
         says.push(Note {
             key: "occurrences",
@@ -412,13 +509,19 @@ impl Operation for EarthModelFromStratigraphy {
             let mut limits: Vec<Limit> = Vec::new();
             for (unit, rank) in &units {
                 for side in [Side::Top, Side::Bottom] {
-                    let (interpretation, wrote) = boundary(unit, side, &existing, cx, &citation, &mut objects)?;
+                    let (interpretation, wrote) =
+                        boundary(unit, side, &existing, cx, &citation, &mut objects)?;
                     if wrote {
                         boundaries_written += 1;
                     } else {
                         boundaries_taken += 1;
                     }
-                    limits.push(Limit { unit: unit.clone(), side, rank: *rank, interpretation });
+                    limits.push(Limit {
+                        unit: unit.clone(),
+                        side,
+                        rank: *rank,
+                        interpretation,
+                    });
                 }
             }
             match ordered_by_age(&mut limits, &ages) {
@@ -475,12 +578,18 @@ impl Operation for EarthModelFromStratigraphy {
         let keep = match (params.mode, inputs.enrich.as_ref()) {
             (Mode::Enrich, Some(given)) => Some(dor("enrich", given)?.uuid),
             (Mode::Enrich, None) => {
-                return Err(Refusal::on("enrich", "`mode = enrich` rewrites an earth model interpretation: name it in `enrich`"));
+                return Err(Refusal::on(
+                    "enrich",
+                    "`mode = enrich` rewrites an earth model interpretation: name it in `enrich`",
+                ));
             }
             (Mode::Snapshot, Some(given)) => {
                 return Err(Refusal::on(
                     "enrich",
-                    format!("`{}` is given to enrich while `mode` is `snapshot` — say `mode = enrich`, or leave `enrich` empty", given.name),
+                    format!(
+                        "`{}` is given to enrich while `mode` is `snapshot` — say `mode = enrich`, or leave `enrich` empty",
+                        given.name
+                    ),
                 ));
             }
             (Mode::Snapshot, None) => None,
@@ -491,8 +600,19 @@ impl Operation for EarthModelFromStratigraphy {
             occurrences,
             ..Default::default()
         };
-        let made = earth_model::write(model_is, params.title, &gathered, keep.as_deref(), params.variant.as_deref(), cx)?;
-        let known_before = columns.columns.iter().any(|one| one.models.iter().any(|emi| emi.uuid.eq_ignore_ascii_case(&made.interpretation.uuid)));
+        let made = earth_model::write(
+            model_is,
+            params.title,
+            &gathered,
+            keep.as_deref(),
+            params.variant.as_deref(),
+            cx,
+        )?;
+        let known_before = columns.columns.iter().any(|one| {
+            one.models
+                .iter()
+                .any(|emi| emi.uuid.eq_ignore_ascii_case(&made.interpretation.uuid))
+        });
         if known_before && keep.is_none() {
             says.push(Note {
                 key: "unchanged",
@@ -501,8 +621,10 @@ impl Operation for EarthModelFromStratigraphy {
         }
         // The model first — everything interprets it — then what the
         // interpretation references, then the interpretation.
-        let (model_objects, interpretation_objects): (Vec<_>, Vec<_>) =
-            made.objects.into_iter().partition(|one| one.qualified_type == "resqml22.Model");
+        let (model_objects, interpretation_objects): (Vec<_>, Vec<_>) = made
+            .objects
+            .into_iter()
+            .partition(|one| one.qualified_type == "resqml22.Model");
         let mut ordered = model_objects;
         ordered.extend(objects);
         ordered.extend(interpretation_objects);
@@ -523,7 +645,11 @@ impl Operation for EarthModelFromStratigraphy {
             dropped.dedup();
         }
 
-        let number = |title: &str, value: usize| Parameter::Double { title: title.to_string(), value: value as f64, uom: None };
+        let number = |title: &str, value: usize| Parameter::Double {
+            title: title.to_string(),
+            value: value as f64,
+            uom: None,
+        };
         Ok(Plan {
             media: Vec::new(),
             blocked: None,
@@ -532,7 +658,11 @@ impl Operation for EarthModelFromStratigraphy {
             activity: ActivityDraft {
                 recipe: "earth-model-from-stratigraphy",
                 title: format!("earth-model-from-stratigraphy → {}", made.interpretation_title),
-                seed: format!("earth-model-from-stratigraphy:{}:{}", from.uuid.to_ascii_lowercase(), made.seed),
+                seed: format!(
+                    "earth-model-from-stratigraphy:{}:{}",
+                    from.uuid.to_ascii_lowercase(),
+                    made.seed
+                ),
                 parameters: vec![
                     number("rankCount", tree.ranks.len()),
                     number("restrictedRankCount", restricted),
@@ -548,12 +678,26 @@ impl Operation for EarthModelFromStratigraphy {
     /// What was counted while planning.
     fn reports(&self) -> Vec<crate::operation::Slot> {
         let count = |name: &'static str, about: &'static str| {
-            crate::operation::Slot::required(name, crate::operation::Need::Number { uom: None, least: None, most: None }, about)
+            crate::operation::Slot::required(
+                name,
+                crate::operation::Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
         };
         vec![
             count("rankCount", "the ranks of the model's column"),
-            count("restrictedRankCount", "the ranks written restricted to the unit's content"),
-            count("boundaryCount", "the tops and bottoms of the model's units, written or taken"),
+            count(
+                "restrictedRankCount",
+                "the ranks written restricted to the unit's content",
+            ),
+            count(
+                "boundaryCount",
+                "the tops and bottoms of the model's units, written or taken",
+            ),
         ]
     }
 }
@@ -590,7 +734,12 @@ fn write_rank(
     let number = sub.number.unwrap_or(at as i64);
     let keys: Vec<String> = sub.units.iter().map(|one| one.uuid.clone()).collect();
     let uuid = cx.identity.uuid(
-        &format!("earth-model:rank:{}:{}:{}", model.uuid.to_ascii_lowercase(), sub.source.uuid, keys.join(",")),
+        &format!(
+            "earth-model:rank:{}:{}:{}",
+            model.uuid.to_ascii_lowercase(),
+            sub.source.uuid,
+            keys.join(",")
+        ),
         10 + at,
     )?;
     let title = format!("{} — {root_title}", label(&sub.source));
@@ -611,7 +760,13 @@ fn write_rank(
         stratigraphic_units: sub
             .units
             .iter()
-            .map(|unit| reference_to(&unit.uuid, "resqml22.StratigraphicUnitInterpretation", label(unit)))
+            .map(|unit| {
+                reference_to(
+                    &unit.uuid,
+                    "resqml22.StratigraphicUnitInterpretation",
+                    label(unit),
+                )
+            })
             .collect(),
         ..Default::default()
     };
@@ -622,7 +777,11 @@ fn write_rank(
         title: title.clone(),
         json: energyml_core::json::write_value(&rank),
     });
-    Ok(reference_to(&uuid, "resqml22.StratigraphicColumnRankInterpretation", &title))
+    Ok(reference_to(
+        &uuid,
+        "resqml22.StratigraphicColumnRankInterpretation",
+        &title,
+    ))
 }
 
 /// The occurrence of one rank in the model: the rank it is an occurrence of —
@@ -643,7 +802,11 @@ fn write_occurrence(
     citation: &dyn Fn(&str, Option<String>) -> eml::Citation,
     objects: &mut Vec<NewObject>,
 ) -> Result<eml::DataObjectReference, Refusal> {
-    let keys: Vec<String> = sub.units.iter().map(|one| one.uuid.to_ascii_lowercase()).collect();
+    let keys: Vec<String> = sub
+        .units
+        .iter()
+        .map(|one| one.uuid.to_ascii_lowercase())
+        .collect();
     let uuid = cx.identity.uuid(
         &format!(
             "earth-model:occurrence:{}:{}:{}",
@@ -670,7 +833,13 @@ fn write_occurrence(
         geologic_unit: sub
             .units
             .iter()
-            .map(|unit| reference_to(&unit.uuid, "resqml22.StratigraphicUnitInterpretation", label(unit)))
+            .map(|unit| {
+                reference_to(
+                    &unit.uuid,
+                    "resqml22.StratigraphicUnitInterpretation",
+                    label(unit),
+                )
+            })
             .collect(),
         is_occurrence_of: Some(rank.clone()),
         ..Default::default()
@@ -682,7 +851,11 @@ fn write_occurrence(
         title: title.clone(),
         json: energyml_core::json::write_value(&occurrence),
     });
-    Ok(reference_to(&uuid, "resqml22.GeologicUnitOccurrenceInterpretation", &title))
+    Ok(reference_to(
+        &uuid,
+        "resqml22.GeologicUnitOccurrenceInterpretation",
+        &title,
+    ))
 }
 
 /// A unit's top or bottom: the horizon interpretation of that title in the
@@ -701,7 +874,11 @@ fn boundary(
     }
     // The uuids come from the unit and the side only: a unit's top is the same
     // object in every model made of it.
-    let seed = format!("earth-model:boundary:{}:{}", unit.uuid.to_ascii_lowercase(), side.word().to_lowercase());
+    let seed = format!(
+        "earth-model:boundary:{}:{}",
+        unit.uuid.to_ascii_lowercase(),
+        side.word().to_lowercase()
+    );
     let feature = match Existing::one(&existing.features, &title, "boundary feature")? {
         Some(taken) => taken,
         None => {
@@ -738,7 +915,10 @@ fn boundary(
         title: title.clone(),
         json: energyml_core::json::write_value(&interpretation),
     });
-    Ok((reference_to(&uuid, "resqml22.HorizonInterpretation", &title), true))
+    Ok((
+        reference_to(&uuid, "resqml22.HorizonInterpretation", &title),
+        true,
+    ))
 }
 
 /// Every unit's age span, `[old, young]` in Ma, by uuid.
@@ -761,7 +941,11 @@ fn ages_of(columns: &Columns) -> BTreeMap<String, [f64; 2]> {
 /// first, among bottoms the finer — the outer limit encloses the inner.
 fn ordered_by_age(limits: &mut [Limit], ages: &BTreeMap<String, [f64; 2]>) -> Result<(), usize> {
     let undated = {
-        let mut seen: Vec<&str> = limits.iter().filter(|one| !ages.contains_key(&one.unit.uuid)).map(|one| one.unit.uuid.as_str()).collect();
+        let mut seen: Vec<&str> = limits
+            .iter()
+            .filter(|one| !ages.contains_key(&one.unit.uuid))
+            .map(|one| one.unit.uuid.as_str())
+            .collect();
         seen.sort_unstable();
         seen.dedup();
         seen.len()
@@ -786,10 +970,23 @@ fn ordered_by_age(limits: &mut [Limit], ages: &BTreeMap<String, [f64; 2]>) -> Re
 
 /// The model's top and bottom: those of its root — the unit, or the first and
 /// last units of a whole column's coarsest rank.
-fn frontiers(tree: &Subtree, limits: &[Limit]) -> (Option<eml::DataObjectReference>, Option<eml::DataObjectReference>) {
-    let Some(coarsest) = tree.ranks.first() else { return (None, None) };
-    let find = |unit: Option<&Named>, side: Side| {
-        unit.and_then(|unit| limits.iter().find(|one| one.unit.uuid == unit.uuid && one.side == side)).map(|one| one.interpretation.clone())
+fn frontiers(
+    tree: &Subtree,
+    limits: &[Limit],
+) -> (Option<eml::DataObjectReference>, Option<eml::DataObjectReference>) {
+    let Some(coarsest) = tree.ranks.first() else {
+        return (None, None);
     };
-    (find(coarsest.units.first(), Side::Top), find(coarsest.units.last(), Side::Bottom))
+    let find = |unit: Option<&Named>, side: Side| {
+        unit.and_then(|unit| {
+            limits
+                .iter()
+                .find(|one| one.unit.uuid == unit.uuid && one.side == side)
+        })
+        .map(|one| one.interpretation.clone())
+    };
+    (
+        find(coarsest.units.first(), Side::Top),
+        find(coarsest.units.last(), Side::Bottom),
+    )
 }

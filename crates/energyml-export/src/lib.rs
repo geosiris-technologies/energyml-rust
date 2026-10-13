@@ -65,8 +65,8 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-pub mod error;
 pub mod csv;
+pub mod error;
 pub mod geojson;
 pub mod obj;
 pub mod registry;

@@ -89,7 +89,11 @@ pub fn boundary_loops(triangles: &[[u32; 3]]) -> Result<Vec<Loop>, Error> {
             ring.push(current);
             visited.insert(current, true);
             let candidates = &next[&current];
-            let onward = if candidates[0] == previous { candidates[1] } else { candidates[0] };
+            let onward = if candidates[0] == previous {
+                candidates[1]
+            } else {
+                candidates[0]
+            };
             previous = current;
             current = onward;
         }
@@ -156,7 +160,11 @@ pub fn hull_xy(points: &[[f64; 3]]) -> Result<Loop, Error> {
 /// `tolerance` of the chord between its neighbours is dropped. Never below
 /// three nodes — a ring of two is an edge, not an outline.
 pub fn simplify(points: &[[f64; 3]], ring: &[u32], tolerance: f64) -> Loop {
-    let tolerance = if tolerance.is_finite() && tolerance >= 0.0 { tolerance } else { 0.0 };
+    let tolerance = if tolerance.is_finite() && tolerance >= 0.0 {
+        tolerance
+    } else {
+        0.0
+    };
     let mut kept: Vec<u32> = ring.to_vec();
     // Repeated until nothing is dropped: removing one node changes its
     // neighbours' chords.
@@ -172,7 +180,11 @@ pub fn simplify(points: &[[f64; 3]], ring: &[u32], tolerance: f64) -> Loop {
             let a = points[kept[(i + n - 1) % n] as usize];
             let b = points[kept[i] as usize];
             let c = points[kept[(i + 1) % n] as usize];
-            if !dropped_this_pass(&mut dropped, distance_to_chord(a, b, c) <= tolerance, next.len() + (n - i) > 3) {
+            if !dropped_this_pass(
+                &mut dropped,
+                distance_to_chord(a, b, c) <= tolerance,
+                next.len() + (n - i) > 3,
+            ) {
                 next.push(kept[i]);
             }
             i += 1;
@@ -233,7 +245,9 @@ mod tests {
 
     /// A 3 × 3 grid of nodes, two triangles per cell: eight boundary edges.
     fn grid() -> (Vec<[f64; 3]>, Vec<[u32; 3]>) {
-        let points: Vec<[f64; 3]> = (0..3).flat_map(|j| (0..3).map(move |i| [i as f64, j as f64, 0.0])).collect();
+        let points: Vec<[f64; 3]> = (0..3)
+            .flat_map(|j| (0..3).map(move |i| [i as f64, j as f64, 0.0]))
+            .collect();
         let mut triangles = Vec::new();
         for j in 0..2u32 {
             for i in 0..2u32 {
@@ -322,7 +336,13 @@ mod tests {
 
     #[test]
     fn a_step_in_z_is_a_corner_in_3d_and_a_tolerance_forgives_it() {
-        let points = vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.5], [2.0, 0.0, 0.0], [2.0, 2.0, 0.0], [0.0, 2.0, 0.0]];
+        let points = vec![
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.5],
+            [2.0, 0.0, 0.0],
+            [2.0, 2.0, 0.0],
+            [0.0, 2.0, 0.0],
+        ];
         let ring = vec![0u32, 1, 2, 3, 4];
         assert_eq!(simplify(&points, &ring, 0.0).len(), 5);
         assert_eq!(simplify(&points, &ring, 0.6).len(), 4);
@@ -337,18 +357,34 @@ mod tests {
     #[test]
     fn the_hull_of_a_cloud_is_its_outer_corners_counterclockwise() {
         // To break: an inner point kept, or the winding reversed.
-        let points = vec![[0.0, 0.0, 1.0], [2.0, 0.0, 2.0], [2.0, 2.0, 3.0], [0.0, 2.0, 4.0], [1.0, 1.0, 9.0], [1.0, 0.5, 9.0]];
+        let points = vec![
+            [0.0, 0.0, 1.0],
+            [2.0, 0.0, 2.0],
+            [2.0, 2.0, 3.0],
+            [0.0, 2.0, 4.0],
+            [1.0, 1.0, 9.0],
+            [1.0, 0.5, 9.0],
+        ];
         let hull = hull_xy(&points).unwrap();
         let mut sorted = hull.clone();
         sorted.sort_unstable();
         assert_eq!(sorted, vec![0, 1, 2, 3]);
         assert!(area_xy(&points, &hull) > 0.0);
-        assert!(matches!(hull_xy(&points[..2]), Err(Error::TooFewPoints { given: 2 })));
+        assert!(matches!(
+            hull_xy(&points[..2]),
+            Err(Error::TooFewPoints { given: 2 })
+        ));
     }
 
     #[test]
     fn a_hull_ignores_positions_without_a_plan_view() {
-        let points = vec![[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [f64::NAN, 1.0, 0.0], [2.0, 2.0, 0.0], [0.0, 2.0, 0.0]];
+        let points = vec![
+            [0.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0],
+            [f64::NAN, 1.0, 0.0],
+            [2.0, 2.0, 0.0],
+            [0.0, 2.0, 0.0],
+        ];
         let hull = hull_xy(&points).unwrap();
         assert!(!hull.contains(&2));
         assert_eq!(hull.len(), 4);

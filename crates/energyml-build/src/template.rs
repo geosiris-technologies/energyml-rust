@@ -14,9 +14,9 @@
 //! bound, a unit — goes into `Constraint`, which is free text meant for
 //! exactly that.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::operation::{Need, AnyOperation, Slot};
+use crate::operation::{AnyOperation, Need, Slot};
 use crate::pieces::Pieces;
 
 /// The `eml23.ParameterTemplate` a slot projects to.
@@ -52,7 +52,12 @@ fn condition_words(applies: &crate::operation::Applies) -> Option<String> {
     use crate::operation::Applies;
     match applies {
         Applies::When { slot, is } => Some(format!("{slot} is {}", is.join(" or "))),
-        Applies::Any(all) => Some(all.iter().filter_map(condition_words).collect::<Vec<_>>().join(", or ")),
+        Applies::Any(all) => Some(
+            all.iter()
+                .filter_map(condition_words)
+                .collect::<Vec<_>>()
+                .join(", or "),
+        ),
         _ => None,
     }
 }
@@ -80,7 +85,10 @@ fn constraint_of(need: &Need) -> Option<String> {
         // operation may pin. Said in words so that a reader of the template
         // knows what the form greys out and why.
         Need::Type(choice) => {
-            let mut parts = vec![format!("a qualified type, listed on `{}` by default", choice.filter)];
+            let mut parts = vec![format!(
+                "a qualified type, listed on `{}` by default",
+                choice.filter
+            )];
             if choice.package.is_fixed() {
                 parts.push(format!("package {}", choice.package.named().join(" or ")));
             }
@@ -114,7 +122,12 @@ pub fn template_of(operation: &dyn AnyOperation) -> Value {
         .collect();
     // What was measured while planning is an **output** of the activity, like
     // the objects: it did not exist before the run.
-    parameters.extend(operation.reports().iter().map(|slot| parameter_template(slot, false)));
+    parameters.extend(
+        operation
+            .reports()
+            .iter()
+            .map(|slot| parameter_template(slot, false)),
+    );
     parameters.push(json!({
         "$type": "eml23.ParameterTemplate",
         "AllowedKind": ["dataObject"],
@@ -168,15 +181,17 @@ pub fn disagreements(operation: &dyn AnyOperation) -> Vec<String> {
     for (title, shape) in &wanted {
         match held.iter().find(|(t, _)| t == title) {
             None => out.push(format!("`{recipe}`: the file lacks the parameter `{title}`")),
-            Some((_, has)) if has != shape => {
-                out.push(format!("`{recipe}`: `{title}` is {has} in the file and {shape} in the operation"))
-            }
+            Some((_, has)) if has != shape => out.push(format!(
+                "`{recipe}`: `{title}` is {has} in the file and {shape} in the operation"
+            )),
             Some(_) => {}
         }
     }
     for (title, _) in &held {
         if title != "input" && !wanted.iter().any(|(t, _)| t == title) {
-            out.push(format!("`{recipe}`: the file declares `{title}`, which the operation does not"));
+            out.push(format!(
+                "`{recipe}`: the file declares `{title}`, which the operation does not"
+            ));
         }
     }
     out

@@ -50,7 +50,9 @@ use serde_json::json;
 use energyml_domain::provenance::Parameter;
 
 use crate::declare::{Inputs, ObjectIn, Params, Title};
-use crate::operation::{About, ActivityDraft, Category, Context, Need, NewObject, Note, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Need, NewObject, Note, Operation, Plan, Refusal, Slot,
+};
 
 use super::support;
 use super::written::RepresentedParams;
@@ -83,7 +85,11 @@ pub struct RepresentationSetInputs {
 
 /// The bare class of a qualified type, lower case, without 2.0.1's `obj_`.
 fn bare(qualified: &str) -> String {
-    let class = qualified.rsplit('.').next().unwrap_or(qualified).to_ascii_lowercase();
+    let class = qualified
+        .rsplit('.')
+        .next()
+        .unwrap_or(qualified)
+        .to_ascii_lowercase();
     class.strip_prefix("obj_").map(str::to_string).unwrap_or(class)
 }
 
@@ -102,7 +108,12 @@ impl Operation for RepresentationSet {
         }
     }
 
-    fn plan(&self, inputs: RepresentationSetInputs, params: RepresentationSetParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: RepresentationSetInputs,
+        params: RepresentationSetParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let title = params.title.0.trim().to_string();
         if title.is_empty() {
             return Err(Refusal::on("title", "is empty: a set is written with a title"));
@@ -115,7 +126,10 @@ impl Operation for RepresentationSet {
             let Some(known) = member.known.reference.as_ref() else {
                 return Err(Refusal::on(
                     "representations",
-                    format!("`{}` was given without a reference to write: a member is an object of the package", member.name),
+                    format!(
+                        "`{}` was given without a reference to write: a member is an object of the package",
+                        member.name
+                    ),
                 ));
             };
             if !bare(&known.qualified_type).ends_with("representation") {
@@ -145,7 +159,12 @@ impl Operation for RepresentationSet {
 
         // -- homogeneous: what the members are, and what was stated --------------------
         let types: BTreeSet<String> = members.iter().map(|one| one.qualified_type.clone()).collect();
-        let homogeneous = members.iter().map(|one| bare(&one.qualified_type)).collect::<BTreeSet<_>>().len() == 1;
+        let homogeneous = members
+            .iter()
+            .map(|one| bare(&one.qualified_type))
+            .collect::<BTreeSet<_>>()
+            .len()
+            == 1;
         if let Some(stated) = params.homogeneous
             && stated != homogeneous
         {
@@ -169,11 +188,24 @@ impl Operation for RepresentationSet {
         // -- the object ----------------------------------------------------------------
         let seed = format!(
             "representation-set:{title}:{}",
-            members.iter().map(|one| one.uuid.to_ascii_lowercase()).collect::<Vec<_>>().join(",")
+            members
+                .iter()
+                .map(|one| one.uuid.to_ascii_lowercase())
+                .collect::<Vec<_>>()
+                .join(",")
         );
         let mut rank = 0usize;
         let uuid = support::next_uuid(cx.identity, &seed, &mut rank)?;
-        let represented = support::represented_in(&params.represented, None, None, cx.identity, cx.when, &seed, &title, &mut rank)?;
+        let represented = support::represented_in(
+            &params.represented,
+            None,
+            None,
+            cx.identity,
+            cx.when,
+            &seed,
+            &title,
+            &mut rank,
+        )?;
         let mut object = json!({
             "$type": "resqml22.RepresentationSetRepresentation",
             "uuid": uuid,
@@ -192,15 +224,26 @@ impl Operation for RepresentationSet {
                 detail: format!(
                     "{} member(s), indexed in the order given: {}",
                     members.len(),
-                    members.iter().map(|one| format!("`{}`", one.title)).collect::<Vec<_>>().join(", ")
+                    members
+                        .iter()
+                        .map(|one| format!("`{}`", one.title))
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 ),
             },
             Note {
                 key: "homogeneous",
                 detail: if homogeneous {
-                    format!("IsHomogeneous true: every member is a `{}`", types.iter().next().cloned().unwrap_or_default())
+                    format!(
+                        "IsHomogeneous true: every member is a `{}`",
+                        types.iter().next().cloned().unwrap_or_default()
+                    )
                 } else {
-                    format!("IsHomogeneous false: {} types — {}", types.len(), types.iter().cloned().collect::<Vec<_>>().join(", "))
+                    format!(
+                        "IsHomogeneous false: {} types — {}",
+                        types.len(),
+                        types.iter().cloned().collect::<Vec<_>>().join(", ")
+                    )
                 },
             },
         ];
@@ -223,8 +266,15 @@ impl Operation for RepresentationSet {
                 title: format!("representation-set → {title}"),
                 seed,
                 parameters: vec![
-                    Parameter::Double { title: "memberCount".to_string(), value: members.len() as f64, uom: None },
-                    Parameter::Text { title: "isHomogeneous".to_string(), value: homogeneous.to_string() },
+                    Parameter::Double {
+                        title: "memberCount".to_string(),
+                        value: members.len() as f64,
+                        uom: None,
+                    },
+                    Parameter::Text {
+                        title: "isHomogeneous".to_string(),
+                        value: homogeneous.to_string(),
+                    },
                 ],
             },
             says,
@@ -236,8 +286,20 @@ impl Operation for RepresentationSet {
 
     fn reports(&self) -> Vec<Slot> {
         vec![
-            Slot::required("memberCount", Need::Number { uom: None, least: None, most: None }, "the representations in the set"),
-            Slot::required("isHomogeneous", Need::Flag, "IsHomogeneous as written — what the members are"),
+            Slot::required(
+                "memberCount",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "the representations in the set",
+            ),
+            Slot::required(
+                "isHomogeneous",
+                Need::Flag,
+                "IsHomogeneous as written — what the members are",
+            ),
         ]
     }
 }

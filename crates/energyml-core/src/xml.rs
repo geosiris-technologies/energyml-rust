@@ -494,12 +494,7 @@ impl<'a> XmlReader<'a> {
     /// So in lenient mode the field takes its default and the departure is
     /// recorded **with the string that was there** — the only record of what
     /// the producer actually wrote, and the thing a repair needs.
-    pub fn value<T: XmlText + Default>(
-        &mut self,
-        text: &str,
-        kind: &'static str,
-        name: &str,
-    ) -> Result<T> {
+    pub fn value<T: XmlText + Default>(&mut self, text: &str, kind: &'static str, name: &str) -> Result<T> {
         match T::from_xml_text(text) {
             Ok(value) => Ok(value),
             Err(e) if self.lenient => {

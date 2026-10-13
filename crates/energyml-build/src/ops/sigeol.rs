@@ -28,14 +28,13 @@
 //! The stage is the one fact that is not in the file: it is read off the file
 //! name when that follows `GeologicUnit_<Stage>`, and is a slot otherwise.
 
-
 use energyml_domain::provenance::Parameter;
 
 use crate::crs::{Local, Target, Vertical};
 use crate::declare::{Epsg, Features, Inputs, Params, Suggestions};
 use crate::operation::{
-    About, ActivityDraft, Category, Context, Dataset, Dropped, Error, Identity, Need, NewObject, Note, Numbers, Operation, Plan, Refusal,
-    Slot,
+    About, ActivityDraft, Category, Context, Dataset, Dropped, Error, Identity, Need, NewObject, Note,
+    Numbers, Operation, Plan, Refusal, Slot,
 };
 use crate::pieces::Pieces;
 use crate::{assemble, epc};
@@ -91,7 +90,10 @@ impl Operation for SigeolUnits {
     }
 
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
-        if let Some(found) = bag.features().find_map(|(_, name, _)| crate::sigeol::stage_of_file_name(name)) {
+        if let Some(found) = bag
+            .features()
+            .find_map(|(_, name, _)| crate::sigeol::stage_of_file_name(name))
+        {
             slots.set("stage", serde_json::json!(found));
         }
     }
@@ -113,7 +115,9 @@ impl Operation for SigeolUnits {
         if units == 0 {
             return Err(Refusal::on(
                 "features",
-                format!("none of the {features} feature(s) carries a GeoSciML GeologicUnit this reader knows"),
+                format!(
+                    "none of the {features} feature(s) carries a GeoSciML GeologicUnit this reader knows"
+                ),
             ));
         }
         Ok(())
@@ -144,7 +148,9 @@ impl Operation for SigeolUnits {
         {
             return Err(Refusal::on(
                 "project",
-                format!("`project` is EPSG:{code}, which measures degrees: a projection is into metres — name a projected system (EPSG:2154 for mainland France), or leave `project` out to keep the degrees"),
+                format!(
+                    "`project` is EPSG:{code}, which measures degrees: a projection is into metres — name a projected system (EPSG:2154 for mainland France), or leave `project` out to keep the degrees"
+                ),
             ));
         }
         let options = epc::Options {
@@ -174,7 +180,12 @@ impl Operation for SigeolUnits {
             let mut named: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
             for feature in &collection.features {
                 if let Some(unit) = crate::sigeol::unit_of(&feature.properties) {
-                    named.extend([unit.young.name, unit.old.name].into_iter().flatten().map(|one| one.trim().to_string()));
+                    named.extend(
+                        [unit.young.name, unit.old.name]
+                            .into_iter()
+                            .flatten()
+                            .map(|one| one.trim().to_string()),
+                    );
                 }
             }
             let found = if named.is_empty() {
@@ -182,7 +193,11 @@ impl Operation for SigeolUnits {
             } else {
                 format!(
                     "the file's units name {}",
-                    named.iter().map(|one| format!("`{one}`")).collect::<Vec<_>>().join(", ")
+                    named
+                        .iter()
+                        .map(|one| format!("`{one}`"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 )
             };
             return Err(Refusal::on(
@@ -201,10 +216,38 @@ impl Operation for SigeolUnits {
         vec![
             Slot::required("source", Need::Text, "the file the features came from"),
             Slot::required("crsEpsg", Need::Epsg, "the EPSG code the points were written in"),
-            Slot::optional("verticalCrs", Need::Text, "the vertical system written, or unknown"),
-            Slot::required("featureCount", Need::Number { uom: None, least: None, most: None }, "features read"),
-            Slot::required("pointCount", Need::Number { uom: None, least: None, most: None }, "distinct points written"),
-            Slot::required("duplicatesDropped", Need::Number { uom: None, least: None, most: None }, "features on an already-written place"),
+            Slot::optional(
+                "verticalCrs",
+                Need::Text,
+                "the vertical system written, or unknown",
+            ),
+            Slot::required(
+                "featureCount",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "features read",
+            ),
+            Slot::required(
+                "pointCount",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "distinct points written",
+            ),
+            Slot::required(
+                "duplicatesDropped",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "features on an already-written place",
+            ),
         ]
     }
 }
@@ -229,7 +272,9 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
         })
         .collect();
     if assembled.groups.is_empty() {
-        return Err(Error::new("the plan holds no group: nothing to write".to_string()));
+        return Err(Error::new(
+            "the plan holds no group: nothing to write".to_string(),
+        ));
     }
 
     // **The frame of `support::frame_in`, by the same two functions**: the
@@ -238,9 +283,17 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
     // horizontal and vertical keep the uuids they always had; the plane and
     // the compound, over metres, are two objects more.
     let local = Local::identity();
-    let names = crate::crs::names(&crate::operation::Identity::derived(), &options.target, &options.vertical, &local, &mut 0)?;
-    let crs = crate::crs::build(&options.target, &options.vertical, &local, &names, |title| options.citation(title))
-        .map_err(Error::new)?;
+    let names = crate::crs::names(
+        &crate::operation::Identity::derived(),
+        &options.target,
+        &options.vertical,
+        &local,
+        &mut 0,
+    )?;
+    let crs = crate::crs::build(&options.target, &options.vertical, &local, &names, |title| {
+        options.citation(title)
+    })
+    .map_err(Error::new)?;
     let crs_reference = crs.reference();
     if crs.local.is_none() {
         says.push(Note {
@@ -260,7 +313,8 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
         &rows,
         options.citation(&format!("{} — imported units", options.stage)),
     );
-    let table_reference = crate::crs::reference_to(&table.uuid, "eml23.ColumnBasedTable", &table.citation.title);
+    let table_reference =
+        crate::crs::reference_to(&table.uuid, "eml23.ColumnBasedTable", &table.citation.title);
     objects.push(NewObject {
         uuid: table.uuid.clone(),
         qualified_type: "eml23.ColumnBasedTable".to_string(),
@@ -294,8 +348,11 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
             &|title| options.citation(title),
         );
         let title = made.representation.citation.title.clone();
-        let representation =
-            crate::crs::reference_to(&made.representation.uuid, "resqml22.PointSetRepresentation", &title);
+        let representation = crate::crs::reference_to(
+            &made.representation.uuid,
+            "resqml22.PointSetRepresentation",
+            &title,
+        );
         let property = crate::table::property(
             &crate::naming::point_set(&key, &group.stage, &format!("{}-unit", group.side.label())),
             row.key,
@@ -308,7 +365,10 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
         let placed = match crate::crs::place(&group.points, &options.target, options.source_epsg) {
             Ok(placed) => placed,
             Err(why) => {
-                says.push(crate::operation::Note { key: "not-placed", detail: format!("{title}: {why}") });
+                says.push(crate::operation::Note {
+                    key: "not-placed",
+                    detail: format!("{title}: {why}"),
+                });
                 continue;
             }
         };
@@ -349,12 +409,19 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
         });
     }
 
-    let text = |title: &str, value: String| Parameter::Text { title: title.to_string(), value };
-    let number = |title: &str, value: f64| Parameter::Double { title: title.to_string(), value, uom: None };
+    let text = |title: &str, value: String| Parameter::Text {
+        title: title.to_string(),
+        value,
+    };
+    let number = |title: &str, value: f64| Parameter::Double {
+        title: title.to_string(),
+        value,
+        uom: None,
+    };
     let duplicates = assembled.features().saturating_sub(assembled.points());
     Ok(Plan {
-            media: Vec::new(),
-            blocked: None,
+        media: Vec::new(),
+        blocked: None,
         objects,
         datasets,
         // **No shape for now**, and it is a named debt: this
@@ -372,10 +439,13 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
                 text("stage", options.stage.clone()),
                 number("sourceEpsg", options.source_epsg as f64),
                 number("crsEpsg", options.target.epsg() as f64),
-                text("verticalCrs", match &options.vertical {
-                    Vertical::Epsg(code) => format!("EPSG:{code}"),
-                    Vertical::Unknown(_) => "unknown".to_string(),
-                }),
+                text(
+                    "verticalCrs",
+                    match &options.vertical {
+                        Vertical::Epsg(code) => format!("EPSG:{code}"),
+                        Vertical::Unknown(_) => "unknown".to_string(),
+                    },
+                ),
                 text("dataFile", options.data_file.clone()),
                 number("featureCount", assembled.features() as f64),
                 number("pointCount", points_written as f64),

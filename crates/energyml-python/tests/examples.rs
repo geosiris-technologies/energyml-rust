@@ -135,21 +135,35 @@ fn the_first_example_writes_a_surface_a_reader_finds_again() {
         }],
     });
 
-    let written = package.put(&surface.to_string()).expect("the surface is accepted");
+    let written = package
+        .put(&surface.to_string())
+        .expect("the surface is accepted");
     assert!(written.contains(uuid), "put returns the uri it wrote: {written}");
 
-    let points = vec![0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 100.0, 100.0, 25.0, 0.0, 100.0, 0.0];
+    let points = vec![
+        0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 100.0, 100.0, 25.0, 0.0, 100.0, 0.0,
+    ];
     let triangles = vec![0_i32, 1, 2, 0, 2, 3];
-    let at = |path: &str| ArrayRef { file: file.to_string(), path_in_file: path.to_string() };
-    package.write_array(&at(&points_path), &[4, 3], Block::F64(points)).expect("the points");
-    package.write_array(&at(&triangles_path), &[2, 3], Block::I32(triangles)).expect("the triangles");
+    let at = |path: &str| ArrayRef {
+        file: file.to_string(),
+        path_in_file: path.to_string(),
+    };
+    package
+        .write_array(&at(&points_path), &[4, 3], Block::F64(points))
+        .expect("the points");
+    package
+        .write_array(&at(&triangles_path), &[2, 3], Block::I32(triangles))
+        .expect("the triangles");
     package.save_as(&epc).expect("the package writes");
 
     // The example ends by reading its own work back, and so does this. A write
     // that reported nothing and produced a package missing the object would
     // look exactly like a write that worked.
     let again = Package::open(&epc).expect("and reads back");
-    let uri = again.uri_of(uuid).expect("one entry").expect("the surface is in the package");
+    let uri = again
+        .uri_of(uuid)
+        .expect("one entry")
+        .expect("the surface is in the package");
     let arrays = again.arrays(&uri).expect("it names its arrays");
     assert_eq!(arrays.len(), 2, "the points and the triangles");
     let (shape, block) = again.read_array(&at(&points_path)).expect("the points read back");
@@ -170,7 +184,10 @@ fn the_second_example_builds_a_package_from_nothing() {
 
     let mut package = Package::create("top-chalk.epc").expect("an empty package");
     assert!(package.objects().is_empty(), "an empty package holds nothing");
-    assert!(package.path().is_none(), "and it comes from nowhere until it is saved");
+    assert!(
+        package.path().is_none(),
+        "and it comes from nowhere until it is saved"
+    );
     package.set_data_root(dir.path());
 
     let crs_uuid = "0b7514f2-d854-4e60-a6f9-d3524c3b6878";
@@ -257,33 +274,53 @@ fn the_second_example_builds_a_package_from_nothing() {
         }),
     ];
     for one in &objects {
-        package.put(&one.to_string()).unwrap_or_else(|why| panic!("{}: {why}", one["$type"]));
+        package
+            .put(&one.to_string())
+            .unwrap_or_else(|why| panic!("{}: {why}", one["$type"]));
     }
 
     let points = vec![
-        650000.0, 6860000.0, -1250.0, 650500.0, 6860000.0, -1180.0, 650500.0, 6860500.0, -1205.0,
-        650000.0, 6860500.0, -1262.0,
+        650000.0, 6860000.0, -1250.0, 650500.0, 6860000.0, -1180.0, 650500.0, 6860500.0, -1205.0, 650000.0,
+        6860500.0, -1262.0,
     ];
     let elevations = vec![-1250.0_f32, -1180.0, -1205.0, -1262.0];
-    let at = |path: &str| ArrayRef { file: file.to_string(), path_in_file: path.to_string() };
-    package.write_array(&at(&points_path), &[4, 3], Block::F64(points)).expect("the points");
-    package.write_array(&at(&values_path), &[4], Block::F32(elevations)).expect("the values");
+    let at = |path: &str| ArrayRef {
+        file: file.to_string(),
+        path_in_file: path.to_string(),
+    };
+    package
+        .write_array(&at(&points_path), &[4, 3], Block::F64(points))
+        .expect("the points");
+    package
+        .write_array(&at(&values_path), &[4], Block::F32(elevations))
+        .expect("the values");
 
     // One diagnostic, and it is the expected one: the well-known property kind
     // is not in the package, so no relationship is written for it. Any other
     // count means something changed.
     let said = package.save_as(&epc).expect("the package writes");
-    assert_eq!(said.len(), 1, "one diagnostic, about the well-known kind: {said:?}");
+    assert_eq!(
+        said.len(),
+        1,
+        "one diagnostic, about the well-known kind: {said:?}"
+    );
     assert!(said[0].contains("8508cef4"), "and it names it: {}", said[0]);
 
     let again = Package::open(&epc).expect("and reads back");
     assert_eq!(again.objects().len(), 6, "six objects went in");
-    let uri = again.uri_of(property_uuid).expect("one entry").expect("the property is there");
+    let uri = again
+        .uri_of(property_uuid)
+        .expect("one entry")
+        .expect("the property is there");
     let (shape, block) = again
         .read_array(&again.arrays(&uri).expect("it names its array")[0])
         .expect("the values read back");
     assert_eq!(shape.dimensions, vec![4]);
-    assert_eq!(block, Block::F32(vec![-1250.0, -1180.0, -1205.0, -1262.0]), "in float32, as written");
+    assert_eq!(
+        block,
+        Block::F32(vec![-1250.0, -1180.0, -1205.0, -1262.0]),
+        "in float32, as written"
+    );
 }
 
 /// A created package refuses an array when nothing said where its data goes.

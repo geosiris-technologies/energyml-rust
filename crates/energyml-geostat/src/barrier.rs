@@ -58,12 +58,16 @@ impl Barriers {
         let mut segments = Vec::new();
         for (at, line) in lines.iter().enumerate() {
             if line.len() < 2 {
-                return Err(Error::BadBarrier { what: format!("line {at} has {} position(s), a fault needs two", line.len()) });
+                return Err(Error::BadBarrier {
+                    what: format!("line {at} has {} position(s), a fault needs two", line.len()),
+                });
             }
             for pair in line.windows(2) {
                 let (a, b) = (pair[0], pair[1]);
                 if !(a.iter().chain(b.iter()).all(|c| c.is_finite())) {
-                    return Err(Error::BadBarrier { what: format!("line {at} has a non-finite coordinate") });
+                    return Err(Error::BadBarrier {
+                        what: format!("line {at} has a non-finite coordinate"),
+                    });
                 }
                 // A zero-length piece blocks nothing; kept out rather than
                 // let it make every orientation test degenerate.
@@ -72,7 +76,10 @@ impl Barriers {
                 }
             }
         }
-        let boxes = segments.chunks(CHUNK).map(|run| bounds(run.iter().flatten().copied())).collect();
+        let boxes = segments
+            .chunks(CHUNK)
+            .map(|run| bounds(run.iter().flatten().copied()))
+            .collect();
         Ok(Barriers { segments, boxes })
     }
 
@@ -89,10 +96,15 @@ impl Barriers {
     /// Whether the straight segment `a`–`b` crosses (or touches) any fault.
     pub fn blocks(&self, a: [f64; 2], b: [f64; 2]) -> bool {
         let sight = bounds([a, b]);
-        self.boxes.iter().zip(self.segments.chunks(CHUNK)).any(|(around, run)| {
-            overlap(&sight, around)
-                && run.iter().any(|[c, d]| overlap(&sight, &bounds([*c, *d])) && segments_meet(a, b, *c, *d))
-        })
+        self.boxes
+            .iter()
+            .zip(self.segments.chunks(CHUNK))
+            .any(|(around, run)| {
+                overlap(&sight, around)
+                    && run
+                        .iter()
+                        .any(|[c, d]| overlap(&sight, &bounds([*c, *d])) && segments_meet(a, b, *c, *d))
+            })
     }
 }
 
@@ -128,9 +140,14 @@ pub(crate) fn keep_visible(near: &mut Vec<(f64, usize)>, cap: Option<usize>, hid
 
 /// The closed box around some positions: `[low, high]`.
 fn bounds(points: impl IntoIterator<Item = [f64; 2]>) -> [[f64; 2]; 2] {
-    points.into_iter().fold([[f64::INFINITY; 2], [f64::NEG_INFINITY; 2]], |[low, high], p| {
-        [[low[0].min(p[0]), low[1].min(p[1])], [high[0].max(p[0]), high[1].max(p[1])]]
-    })
+    points
+        .into_iter()
+        .fold([[f64::INFINITY; 2], [f64::NEG_INFINITY; 2]], |[low, high], p| {
+            [
+                [low[0].min(p[0]), low[1].min(p[1])],
+                [high[0].max(p[0]), high[1].max(p[1])],
+            ]
+        })
 }
 
 /// Whether two closed boxes share a point — touching counts, as it does for
@@ -160,7 +177,9 @@ fn segments_meet(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> bool {
     let o2 = orient(a, b, d);
     let o3 = orient(c, d, a);
     let o4 = orient(c, d, b);
-    if ((o1 > 0.0 && o2 < 0.0) || (o1 < 0.0 && o2 > 0.0)) && ((o3 > 0.0 && o4 < 0.0) || (o3 < 0.0 && o4 > 0.0)) {
+    if ((o1 > 0.0 && o2 < 0.0) || (o1 < 0.0 && o2 > 0.0))
+        && ((o3 > 0.0 && o4 < 0.0) || (o3 < 0.0 && o4 > 0.0))
+    {
         return true;
     }
     (o1 == 0.0 && on_segment(a, b, c))
@@ -227,7 +246,9 @@ mod tests {
     fn the_boxes_skip_tests_and_never_change_an_answer() {
         let mut state = 7u64;
         let mut draw = || {
-            state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             ((state >> 33) % 41) as f64
         };
         // Short walks: traces that wander locally, as faults do, so that a
@@ -245,16 +266,25 @@ mod tests {
             })
             .collect();
         let faults = Barriers::from_polylines(&lines).unwrap();
-        assert!(faults.boxes.len() > 1, "several boxes, or the prefilter is not exercised");
+        assert!(
+            faults.boxes.len() > 1,
+            "several boxes, or the prefilter is not exercised"
+        );
         let (mut blocked, mut free) = (0, 0);
         for _ in 0..20_000 {
             let a = [draw(), draw()];
-            let b = [(a[0] + draw() % 17.0 - 8.0).clamp(0.0, 40.0), (a[1] + draw() % 17.0 - 8.0).clamp(0.0, 40.0)];
+            let b = [
+                (a[0] + draw() % 17.0 - 8.0).clamp(0.0, 40.0),
+                (a[1] + draw() % 17.0 - 8.0).clamp(0.0, 40.0),
+            ];
             let plain = faults.segments.iter().any(|[c, d]| segments_meet(a, b, *c, *d));
             assert_eq!(faults.blocks(a, b), plain, "{a:?}–{b:?}");
             if plain { blocked += 1 } else { free += 1 }
         }
-        assert!(blocked > 1000 && free > 1000, "both answers exercised: {blocked} blocked, {free} free");
+        assert!(
+            blocked > 1000 && free > 1000,
+            "both answers exercised: {blocked} blocked, {free} free"
+        );
     }
 
     /// With a cap, the nearest-first walk keeps **exactly** the neighbourhood
@@ -263,14 +293,17 @@ mod tests {
     fn the_nearest_visible_are_those_of_the_plain_rule() {
         let mut state = 11u64;
         let mut draw = || {
-            state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             (state >> 33) % 1000
         };
         for round in 0..200 {
             let near: Vec<(f64, usize)> = (0..60).map(|at| ((draw() % 50) as f64, at)).collect();
             let hidden: Vec<bool> = (0..60).map(|_| draw() % 3 == 0).collect();
             for cap in [1, 5, 20, 59, 100] {
-                let mut plain: Vec<(f64, usize)> = near.iter().copied().filter(|&(_, at)| !hidden[at]).collect();
+                let mut plain: Vec<(f64, usize)> =
+                    near.iter().copied().filter(|&(_, at)| !hidden[at]).collect();
                 plain.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
                 plain.truncate(cap);
                 let mut walked = near.clone();

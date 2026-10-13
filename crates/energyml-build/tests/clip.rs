@@ -16,7 +16,10 @@ use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 fn when() -> When {
-    When { creation: "2026-10-01T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-10-01T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 /// Inside a polygon, by the even-odd rule — the check this file does not share
@@ -52,18 +55,42 @@ fn ring(corners: &[[f64; 2]]) -> Source {
             closed: vec![true],
         }],
     };
-    Source::Shape { geometry, closed: Some(vec![true]) }
+    Source::Shape {
+        geometry,
+        closed: Some(vec![true]),
+    }
 }
 
 /// `n × n` nodes at the integers, `z = x + 10 y`, in the topology given.
 fn square(n: usize, topology: Topology) -> Source {
-    let points = (0..n).flat_map(|j| (0..n).map(move |i| [i as f64, j as f64, i as f64 + 10.0 * j as f64])).collect();
-    Source::Shape { geometry: Geometry { kind: "test", patches: vec![Patch { index: 0, node_offset: 0, points, topology, closed: Vec::new() }] }, closed: None }
+    let points = (0..n)
+        .flat_map(|j| (0..n).map(move |i| [i as f64, j as f64, i as f64 + 10.0 * j as f64]))
+        .collect();
+    Source::Shape {
+        geometry: Geometry {
+            kind: "test",
+            patches: vec![Patch {
+                index: 0,
+                node_offset: 0,
+                points,
+                topology,
+                closed: Vec::new(),
+            }],
+        },
+        closed: None,
+    }
 }
 
 fn plan(bag: &Pieces) -> Result<Plan, String> {
     Registry::new()
-        .plan_for("clip", bag, &Choices::new().set("title", "clipped"), &Identity::derived(), &when(), Purpose::Geometry)
+        .plan_for(
+            "clip",
+            bag,
+            &Choices::new().set("title", "clipped"),
+            &Identity::derived(),
+            &when(),
+            Purpose::Geometry,
+        )
         .map_err(|why| why.message())
 }
 
@@ -77,17 +104,33 @@ fn reported(plan: &Plan, title: &str) -> Option<f64> {
 /// **A cloud keeps exactly the nodes between the two rings**, in their order.
 #[test]
 fn a_cloud_keeps_what_is_between_the_two_rings() {
-    let bag = Pieces::empty().with("shape", square(10, Topology::Points)).with("outer", ring(&OUTER)).with("inner", ring(&INNER));
+    let bag = Pieces::empty()
+        .with("shape", square(10, Topology::Points))
+        .with("outer", ring(&OUTER))
+        .with("inner", ring(&INNER));
     let made = plan(&bag).unwrap_or_else(|why| panic!("{why}"));
     let want: Vec<[f64; 3]> = (0..10)
         .flat_map(|j| (0..10).map(move |i| [i as f64, j as f64, i as f64 + 10.0 * j as f64]))
         .filter(|p| kept([p[0], p[1]]))
         .collect();
-    let got: Vec<[f64; 3]> = made.shapes[0].geometry.patches.iter().flat_map(|p| p.points.iter().copied()).collect();
+    let got: Vec<[f64; 3]> = made.shapes[0]
+        .geometry
+        .patches
+        .iter()
+        .flat_map(|p| p.points.iter().copied())
+        .collect();
     assert_eq!(got, want);
-    assert!(want.len() > 10 && want.len() < 90, "sanity: the rings cut some and keep some ({})", want.len());
+    assert!(
+        want.len() > 10 && want.len() < 90,
+        "sanity: the rings cut some and keep some ({})",
+        want.len()
+    );
     assert_eq!(reported(&made, "cutNodes"), Some((100 - want.len()) as f64));
-    assert!(made.says.first().is_some_and(|note| note.key == "cut"), "{:?}", made.says);
+    assert!(
+        made.says.first().is_some_and(|note| note.key == "cut"),
+        "{:?}",
+        made.says
+    );
 }
 
 /// **A 2D grid keeps its lattice and gets holes** where the rings cut, and
@@ -95,19 +138,43 @@ fn a_cloud_keeps_what_is_between_the_two_rings() {
 #[test]
 fn a_grid_keeps_its_lattice_and_takes_holes() {
     let bag = Pieces::empty()
-        .with("shape", square(10, Topology::Grid { fastest: 10, slowest: 10 }))
+        .with(
+            "shape",
+            square(
+                10,
+                Topology::Grid {
+                    fastest: 10,
+                    slowest: 10,
+                },
+            ),
+        )
         .with("outer", ring(&OUTER))
         .with("inner", ring(&INNER));
     let made = plan(&bag).unwrap_or_else(|why| panic!("{why}"));
-    let points: Vec<[f64; 3]> = made.shapes[0].geometry.patches.iter().flat_map(|p| p.points.iter().copied()).collect();
+    let points: Vec<[f64; 3]> = made.shapes[0]
+        .geometry
+        .patches
+        .iter()
+        .flat_map(|p| p.points.iter().copied())
+        .collect();
     assert_eq!(points.len(), 100, "the lattice keeps every node");
     for p in points {
-        assert_eq!(p[2].is_finite(), kept([p[0], p[1]]), "node at ({}, {}): {}", p[0], p[1], p[2]);
+        assert_eq!(
+            p[2].is_finite(),
+            kept([p[0], p[1]]),
+            "node at ({}, {}): {}",
+            p[0],
+            p[1],
+            p[2]
+        );
         if p[2].is_finite() {
             assert_eq!(p[2], p[0] + 10.0 * p[1], "a kept node keeps its height");
         }
     }
-    assert_eq!(made.objects.last().unwrap().qualified_type, "resqml22.Grid2dRepresentation");
+    assert_eq!(
+        made.objects.last().unwrap().qualified_type,
+        "resqml22.Grid2dRepresentation"
+    );
 }
 
 /// **A surface loses the triangles that name a cut node**, and only them.
@@ -116,16 +183,37 @@ fn a_surface_loses_the_triangles_that_touch_a_cut() {
     let n = 10u32;
     let at = |i: u32, j: u32| j * n + i;
     let triangles: Vec<[u32; 3]> = (0..n - 1)
-        .flat_map(|j| (0..n - 1).flat_map(move |i| [[at(i, j), at(i + 1, j), at(i + 1, j + 1)], [at(i, j), at(i + 1, j + 1), at(i, j + 1)]]))
+        .flat_map(|j| {
+            (0..n - 1).flat_map(move |i| {
+                [
+                    [at(i, j), at(i + 1, j), at(i + 1, j + 1)],
+                    [at(i, j), at(i + 1, j + 1), at(i, j + 1)],
+                ]
+            })
+        })
         .collect();
     let node = |k: u32| [(k % n) as f64, (k / n) as f64];
-    let survive = triangles.iter().filter(|t| t.iter().all(|&k| kept(node(k)))).count();
-    let bag = Pieces::empty().with("shape", square(10, Topology::Triangles(triangles.clone()))).with("outer", ring(&OUTER)).with("inner", ring(&INNER));
+    let survive = triangles
+        .iter()
+        .filter(|t| t.iter().all(|&k| kept(node(k))))
+        .count();
+    let bag = Pieces::empty()
+        .with("shape", square(10, Topology::Triangles(triangles.clone())))
+        .with("outer", ring(&OUTER))
+        .with("inner", ring(&INNER));
     let made = plan(&bag).unwrap_or_else(|why| panic!("{why}"));
-    let Topology::Triangles(left) = &made.shapes[0].geometry.patches[0].topology else { panic!("triangles") };
+    let Topology::Triangles(left) = &made.shapes[0].geometry.patches[0].topology else {
+        panic!("triangles")
+    };
     assert_eq!(left.len(), survive);
-    assert_eq!(reported(&made, "removedTriangles"), Some((triangles.len() - survive) as f64));
-    assert!(made.says.iter().any(|note| note.key == "follows-the-mesh"), "the jagged edge is said");
+    assert_eq!(
+        reported(&made, "removedTriangles"),
+        Some((triangles.len() - survive) as f64)
+    );
+    assert!(
+        made.says.iter().any(|note| note.key == "follows-the-mesh"),
+        "the jagged edge is said"
+    );
 }
 
 /// **Refused by name**: no ring, a cut of nothing, a cut of everything.
@@ -135,10 +223,20 @@ fn without_a_ring_nothing_cuts_or_everything_cuts_is_refused() {
     assert!(no_ring.contains("nothing to cut with"), "{no_ring}");
 
     let around = [[-1.0, -1.0], [9.0, -1.0], [9.0, 9.0], [-1.0, 9.0]];
-    let nothing = plan(&Pieces::empty().with("shape", square(4, Topology::Points)).with("outer", ring(&around))).expect_err("nothing cut");
+    let nothing = plan(
+        &Pieces::empty()
+            .with("shape", square(4, Topology::Points))
+            .with("outer", ring(&around)),
+    )
+    .expect_err("nothing cut");
     assert!(nothing.contains("nothing to cut"), "{nothing}");
 
     let far = [[50.3, 50.3], [60.3, 50.3], [55.3, 60.3]];
-    let everything = plan(&Pieces::empty().with("shape", square(4, Topology::Points)).with("outer", ring(&far))).expect_err("all cut");
+    let everything = plan(
+        &Pieces::empty()
+            .with("shape", square(4, Topology::Points))
+            .with("outer", ring(&far)),
+    )
+    .expect_err("all cut");
     assert!(everything.contains("nothing would be left"), "{everything}");
 }

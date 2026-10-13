@@ -217,7 +217,9 @@ fn a_property_pointing_at_an_interpretation_is_caught() {
         .expect("the rule ran");
     assert_eq!(
         caught.outcome,
-        Outcome::Violation { read: "FaultInterpretation".into() }
+        Outcome::Violation {
+            read: "FaultInterpretation".into()
+        }
     );
 
     // And a real representation passes - including by **subtype**: that is
@@ -225,19 +227,17 @@ fn a_property_pointing_at_an_interpretation_is_caught() {
     struct Right;
     impl energyml_domain::source::ObjectSource for Right {
         fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
-            Some(Box::new(
-                energyml_resqml_2_0_1::TriangulatedSetRepresentation {
-                    uuid: uuid.into(),
-                    ..Default::default()
-                },
-            ))
+            Some(Box::new(energyml_resqml_2_0_1::TriangulatedSetRepresentation {
+                uuid: uuid.into(),
+                ..Default::default()
+            }))
         }
     }
     let good = energyml_resqml_2_0_1::ContinuousProperty {
         uuid: "00000000-0000-0000-0000-0000000000cc".into(),
         supporting_representation: energyml_eml_2_0::DataObjectReference {
-            content_type:
-                "application/x-resqml+xml;version=2.0;type=obj_TriangulatedSetRepresentation".into(),
+            content_type: "application/x-resqml+xml;version=2.0;type=obj_TriangulatedSetRepresentation"
+                .into(),
             title: "une surface".into(),
             uuid: "00000000-0000-0000-0000-0000000000dd".into(),
             ..Default::default()

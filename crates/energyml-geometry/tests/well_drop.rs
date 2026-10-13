@@ -91,10 +91,7 @@ impl ObjectSource for Wellsite {
 }
 
 impl energyml_domain::source::ArraySource for Wellsite {
-    fn locate(
-        &self,
-        _object: &dyn energyml_core::value::Reflect,
-    ) -> Vec<energyml_storage::ArrayLocation> {
+    fn locate(&self, _object: &dyn energyml_core::value::Reflect) -> Vec<energyml_storage::ArrayLocation> {
         Vec::new()
     }
     fn metadata(

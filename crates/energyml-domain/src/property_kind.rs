@@ -59,9 +59,9 @@ use crate::scan::{self, RawKind};
 // caller outside the crate could use the result of `by_uuid` and never write
 // its type: no `let kind: &RawKind`, no function taking one, no `Vec<&RawKind>`
 // of its own. A public method returning an unnameable type is only half public.
-pub use crate::scan::RawKind as DictionaryKind;
 use crate::error::{Error, Result};
 use crate::property::PropertyKindRef;
+pub use crate::scan::RawKind as DictionaryKind;
 use crate::source::ObjectSource;
 
 /// One property kind, whatever it was read from.
@@ -135,9 +135,7 @@ impl Resolution {
     /// The nearest quantity class in the chain — the property's own if it has
     /// one, otherwise the first ancestor that states one.
     pub fn quantity_class(&self) -> Option<&str> {
-        self.chain
-            .iter()
-            .find_map(|kind| kind.quantity_class.as_deref())
+        self.chain.iter().find_map(|kind| kind.quantity_class.as_deref())
     }
 
     /// Titles from the kind up to the root, for a message or a tree view.
@@ -202,7 +200,10 @@ impl Dictionary {
     /// looks exactly like a dictionary in which nothing is ever found.
     pub fn from_xml(xml: &str) -> Result<Self> {
         let kinds = scan::scan(xml).map_err(|reason| {
-            Error::malformed("property kind dictionary", format!("{reason}; nothing was loaded"))
+            Error::malformed(
+                "property kind dictionary",
+                format!("{reason}; nothing was loaded"),
+            )
         })?;
         Ok(Self::index(kinds, "a dictionary loaded by this application"))
     }
@@ -363,7 +364,8 @@ fn slot() -> &'static RwLock<Dictionary> {
     DEFAULT.get_or_init(|| {
         // The lazy half of the answer: nothing is parsed until something asks
         // for a kind, and then it is parsed once for the whole process.
-        let dictionary = Dictionary::from_compact(BUILT_IN).labelled("the built-in Energistics dictionary (eml 2.3)");
+        let dictionary =
+            Dictionary::from_compact(BUILT_IN).labelled("the built-in Energistics dictionary (eml 2.3)");
         RwLock::new(dictionary)
     })
 }
@@ -373,7 +375,9 @@ fn slot() -> &'static RwLock<Dictionary> {
 /// Borrowing rather than cloning: the dictionary is 3 662 entries and callers
 /// ask for one kind at a time.
 pub fn with_default<T>(f: impl FnOnce(&Dictionary) -> T) -> T {
-    let guard = slot().read().expect("the dictionary lock is never held across a panic");
+    let guard = slot()
+        .read()
+        .expect("the dictionary lock is never held across a panic");
     f(&guard)
 }
 
@@ -389,7 +393,9 @@ pub fn builtin() -> (usize, String) {
 /// later resolution; a resolver built with [`Resolver::with_dictionary`]
 /// ignores it entirely.
 pub fn set_default(dictionary: Dictionary) {
-    let mut guard = slot().write().expect("the dictionary lock is never held across a panic");
+    let mut guard = slot()
+        .write()
+        .expect("the dictionary lock is never held across a panic");
     *guard = dictionary;
 }
 
@@ -442,7 +448,12 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    fn resolve_with(&self, reference: &PropertyKindRef, uri: Option<&str>, dictionary: &Dictionary) -> Result<Resolution> {
+    fn resolve_with(
+        &self,
+        reference: &PropertyKindRef,
+        uri: Option<&str>,
+        dictionary: &Dictionary,
+    ) -> Result<Resolution> {
         let mut notes = Vec::new();
         let first = match reference {
             PropertyKindRef::Object { uuid, title } => {
@@ -651,12 +662,14 @@ fn from_object(object: &dyn Reflect, uuid: &str) -> Kind {
     if parent_ref.is_none()
         && let Some(inner) = object.field("ParentPropertyKind").and_then(|f| f.as_object())
     {
-        parent_ref = Some(inner).filter(|reference| uuid_of_reference(*reference).is_some()).or_else(|| {
-            inner
-                .field("LocalPropertyKind")
-                .and_then(|f| f.as_object())
-                .filter(|reference| uuid_of_reference(*reference).is_some())
-        });
+        parent_ref = Some(inner)
+            .filter(|reference| uuid_of_reference(*reference).is_some())
+            .or_else(|| {
+                inner
+                    .field("LocalPropertyKind")
+                    .and_then(|f| f.as_object())
+                    .filter(|reference| uuid_of_reference(*reference).is_some())
+            });
     }
     let parent = parent_ref.and_then(uuid_of_reference);
     let parent_uri = parent_ref.and_then(energyml_core::identity::uri_of_reflect);
@@ -687,7 +700,9 @@ fn text(object: &dyn Reflect, field: &str) -> Option<String> {
 /// The uuid a reference names — the identity layer's reading, so every
 /// spelling of the field is one answer.
 fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
-    energyml_core::identity::uuid_of_reflect(object).filter(|uuid| !uuid.is_empty()).map(str::to_string)
+    energyml_core::identity::uuid_of_reflect(object)
+        .filter(|uuid| !uuid.is_empty())
+        .map(str::to_string)
 }
 
 #[cfg(test)]
@@ -764,7 +779,10 @@ mod tests {
             .unwrap();
         assert_eq!(resolution.quantity_class(), Some("length"));
         assert!(
-            resolution.notes.iter().any(|note| note.contains("matched by title")),
+            resolution
+                .notes
+                .iter()
+                .any(|note| note.contains("matched by title")),
             "gaining an identity by title has to be said: {:?}",
             resolution.notes
         );
@@ -784,7 +802,10 @@ mod tests {
         assert_eq!(resolution.kind().found_in, Found::StandardName);
         assert!(resolution.quantity_class().is_none());
         assert!(
-            resolution.notes.iter().any(|note| note.contains("different lists")),
+            resolution
+                .notes
+                .iter()
+                .any(|note| note.contains("different lists")),
             "{:?}",
             resolution.notes
         );
@@ -801,14 +822,18 @@ mod tests {
             })
             .unwrap();
         assert_eq!(resolution.kind().found_in, Found::StandardName);
-        assert!(resolution.quantity_class().is_none(), "no class was borrowed from a guess");
+        assert!(
+            resolution.quantity_class().is_none(),
+            "no class was borrowed from a guess"
+        );
         let note = resolution.notes.join(" ");
         assert!(note.contains("cccc") && note.contains("dddd"), "{note}");
     }
 
     #[test]
     fn a_missing_parent_stops_the_chain_and_says_so() {
-        let dictionary = Dictionary::from_compact("aaaa\tchild\tzzzz\t\t0\t\n").labelled("the test dictionary");
+        let dictionary =
+            Dictionary::from_compact("aaaa\tchild\tzzzz\t\t0\t\n").labelled("the test dictionary");
         let resolver = Resolver::with_dictionary(&NoObjects, &dictionary);
         let resolution = resolver
             .resolve(&PropertyKindRef::Object {
@@ -888,7 +913,10 @@ mod tests {
             matches!(issues.as_slice(), [KindIssue::QuantityClassNotCheckable { .. }]),
             "{issues:?}"
         );
-        assert!(!issues[0].is_a_defect(), "a limit of this build is not a defect of the file");
+        assert!(
+            !issues[0].is_a_defect(),
+            "a limit of this build is not a defect of the file"
+        );
     }
 
     #[test]
@@ -906,7 +934,11 @@ mod tests {
             .unwrap();
         // The property used a kind that is current; what that kind derives
         // from is the dictionary's business, not the file's.
-        assert!(check(&resolution, Some("m")).is_empty(), "{:?}", check(&resolution, Some("m")));
+        assert!(
+            check(&resolution, Some("m")).is_empty(),
+            "{:?}",
+            check(&resolution, Some("m"))
+        );
     }
 
     #[test]
@@ -914,7 +946,10 @@ mod tests {
         // `build.rs` refuses to build without `data/property_kinds.tsv`, so an
         // empty built-in dictionary no longer exists.
         let (count, _label) = builtin();
-        assert!(count > 3000, "the Energistics dictionary has 3662 kinds, not {count}");
+        assert!(
+            count > 3000,
+            "the Energistics dictionary has 3662 kinds, not {count}"
+        );
         assert!(with_default(|d| d.by_title("length").len()) == 1);
     }
 }

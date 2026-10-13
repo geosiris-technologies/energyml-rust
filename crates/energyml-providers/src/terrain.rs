@@ -199,7 +199,9 @@ impl TerrainCatalogue {
         let mut seen: Vec<&str> = Vec::new();
         for source in &catalogue.sources {
             if source.id.trim().is_empty() {
-                return Err(Error::Unreadable("terrain catalogue: a source has an empty id".into()));
+                return Err(Error::Unreadable(
+                    "terrain catalogue: a source has an empty id".into(),
+                ));
             }
             if seen.contains(&source.id.as_str()) {
                 return Err(Error::Unreadable(format!(
@@ -411,7 +413,9 @@ fn truncated() -> Error {
 }
 
 fn slice(bytes: &[u8], at: usize, len: usize) -> Result<&[u8]> {
-    at.checked_add(len).and_then(|end| bytes.get(at..end)).ok_or_else(truncated)
+    at.checked_add(len)
+        .and_then(|end| bytes.get(at..end))
+        .ok_or_else(truncated)
 }
 
 fn u16_at(bytes: &[u8], at: usize) -> Result<u16> {
@@ -463,39 +467,63 @@ impl Ifd<'_> {
 
     /// The unsigned values of a SHORT or LONG tag.
     fn uints(&self, tag: u16) -> Result<Option<Vec<u64>>> {
-        let Some(entry) = self.entries.get(&tag) else { return Ok(None) };
+        let Some(entry) = self.entries.get(&tag) else {
+            return Ok(None);
+        };
         let data = entry.data(self.bytes)?;
         match entry.ty {
-            3 => Ok(Some(data.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes(*c) as u64).collect())),
-            4 => Ok(Some(
-                data.as_chunks::<4>().0.iter().map(|c| u32::from_le_bytes(*c) as u64).collect(),
+            3 => Ok(Some(
+                fixed_chunks::<_, 2>(data)
+                    .map(|c| u16::from_le_bytes(*c) as u64)
+                    .collect(),
             )),
-            other => Err(bad(format!("tag {tag} has field type {other}, expected SHORT or LONG"))),
+            4 => Ok(Some(
+                fixed_chunks::<_, 4>(data)
+                    .map(|c| u32::from_le_bytes(*c) as u64)
+                    .collect(),
+            )),
+            other => Err(bad(format!(
+                "tag {tag} has field type {other}, expected SHORT or LONG"
+            ))),
         }
     }
 
     /// The first value of a SHORT/LONG tag, or `default` when absent.
     fn scalar(&self, tag: u16, default: u64) -> Result<u64> {
-        Ok(self.uints(tag)?.and_then(|v| v.first().copied()).unwrap_or(default))
+        Ok(self
+            .uints(tag)?
+            .and_then(|v| v.first().copied())
+            .unwrap_or(default))
     }
 
     fn doubles(&self, tag: u16) -> Result<Option<Vec<f64>>> {
-        let Some(entry) = self.entries.get(&tag) else { return Ok(None) };
+        let Some(entry) = self.entries.get(&tag) else {
+            return Ok(None);
+        };
         if entry.ty != 12 {
-            return Err(bad(format!("tag {tag} has field type {}, expected DOUBLE", entry.ty)));
+            return Err(bad(format!(
+                "tag {tag} has field type {}, expected DOUBLE",
+                entry.ty
+            )));
         }
         let data = entry.data(self.bytes)?;
         Ok(Some(
-            data.as_chunks::<8>().0.iter()
+            fixed_chunks::<_, 8>(data)
                 .map(|c| f64::from_le_bytes(*c))
                 .collect(),
         ))
     }
 
     fn ascii(&self, tag: u16) -> Result<Option<String>> {
-        let Some(entry) = self.entries.get(&tag) else { return Ok(None) };
+        let Some(entry) = self.entries.get(&tag) else {
+            return Ok(None);
+        };
         let data = entry.data(self.bytes)?;
-        Ok(Some(String::from_utf8_lossy(data).trim_matches(|c: char| c == '\0' || c.is_whitespace()).to_string()))
+        Ok(Some(
+            String::from_utf8_lossy(data)
+                .trim_matches(|c: char| c == '\0' || c.is_whitespace())
+                .to_string(),
+        ))
     }
 }
 
@@ -518,14 +546,18 @@ pub fn read_geotiff(bytes: &[u8]) -> Result<Raster> {
     match u16_at(bytes, 2)? {
         42 => {}
         43 => return Err(bad("BigTIFF is not read")),
-        other => return Err(bad(format!("not a TIFF: the magic number is {other}, expected 42"))),
+        other => {
+            return Err(bad(format!(
+                "not a TIFF: the magic number is {other}, expected 42"
+            )));
+        }
     }
 
     let ifd_at = u32_at(bytes, 4)? as usize;
     let n = u16_at(bytes, ifd_at)? as usize;
     let table = slice(bytes, ifd_at + 2, n * 12)?;
     let mut entries = HashMap::new();
-    for (k, raw) in table.as_chunks::<12>().0.iter().enumerate() {
+    for (k, raw) in fixed_chunks::<_, 12>(table).enumerate() {
         let tag = u16::from_le_bytes([raw[0], raw[1]]);
         entries.insert(
             tag,
@@ -540,7 +572,9 @@ pub fn read_geotiff(bytes: &[u8]) -> Result<Raster> {
 
     let compression = ifd.scalar(259, 1)?;
     if compression != 1 {
-        return Err(bad(format!("compression {compression} is not read; only 1 (uncompressed)")));
+        return Err(bad(format!(
+            "compression {compression} is not read; only 1 (uncompressed)"
+        )));
     }
     if ifd.has(322) || ifd.has(323) {
         return Err(bad("tiles are not read; only strips"));
@@ -566,7 +600,7 @@ pub fn read_geotiff(bytes: &[u8]) -> Result<Raster> {
     // PixelIsPoint would put the tiepoint on a pixel centre. GeoKey 1025
     // (GTRasterTypeGeoKey): 1 = PixelIsArea, 2 = PixelIsPoint.
     if let Some(keys) = ifd.uints(34735)? {
-        for key in keys.get(4..).unwrap_or(&[]).as_chunks::<4>().0.iter() {
+        for key in fixed_chunks::<_, 4>(keys.get(4..).unwrap_or(&[])) {
             if key[0] == 1025 && key[1] == 0 && key[3] == 2 {
                 return Err(bad("PixelIsPoint rasters are not read; only PixelIsArea"));
             }
@@ -614,7 +648,7 @@ pub fn read_geotiff(bytes: &[u8]) -> Result<Raster> {
             return Err(bad(format!("strip {s} holds {count} bytes, {need} are needed")));
         }
         let data = slice(bytes, offset as usize, need)?;
-        values.extend(data.as_chunks::<4>().0.iter().map(|c| f32::from_le_bytes(*c) as f64));
+        values.extend(fixed_chunks::<_, 4>(data).map(|c| f32::from_le_bytes(*c) as f64));
     }
 
     let nodata = match ifd.ascii(42113)? {
@@ -626,7 +660,14 @@ pub fn read_geotiff(bytes: &[u8]) -> Result<Raster> {
         ),
     };
 
-    Ok(Raster { width, height, origin_top_left, pixel: [scale[0], scale[1]], values, nodata })
+    Ok(Raster {
+        width,
+        height,
+        origin_top_left,
+        pixel: [scale[0], scale[1]],
+        values,
+        nodata,
+    })
 }
 
 /// The lowest a relief value may honestly be, in metres: the Dead Sea shore,
@@ -697,7 +738,8 @@ pub fn voids_of(raster: &Raster) -> (Vec<bool>, Voids) {
                     continue;
                 }
                 let near = (row.saturating_sub(BLEND_REACH)..=(row + BLEND_REACH).min(h - 1)).any(|r| {
-                    (col.saturating_sub(BLEND_REACH)..=(col + BLEND_REACH).min(w - 1)).any(|c| seed[r * w + c])
+                    (col.saturating_sub(BLEND_REACH)..=(col + BLEND_REACH).min(w - 1))
+                        .any(|c| seed[r * w + c])
                 });
                 if near {
                     hole[row * w + col] = true;
@@ -723,7 +765,10 @@ pub fn lattice_of(raster: &Raster) -> Result<energyml_build::pieces::Lattice> {
         return Err(bad("the raster has no pixels"));
     }
     if raster.values.len() != w * h {
-        return Err(bad(format!("{} values for a {w}x{h} raster", raster.values.len())));
+        return Err(bad(format!(
+            "{} values for a {w}x{h} raster",
+            raster.values.len()
+        )));
     }
     if !(raster.pixel[0] > 0.0 && raster.pixel[1] > 0.0) {
         return Err(bad("the pixel size is not positive"));
@@ -733,7 +778,11 @@ pub fn lattice_of(raster: &Raster) -> Result<energyml_build::pieces::Lattice> {
     for j in 0..h {
         let row = h - 1 - j; // j counts from the south; the file counts from the north
         for i in 0..w {
-            z.push(if hole[row * w + i] { f64::NAN } else { raster.values[row * w + i] });
+            z.push(if hole[row * w + i] {
+                f64::NAN
+            } else {
+                raster.values[row * w + i]
+            });
         }
     }
     Ok(energyml_build::pieces::Lattice {
@@ -799,7 +848,10 @@ impl Ask<'_> {
 /// are read* would disagree the day a protocol gains its reader.
 pub fn unread(source: &TerrainSource) -> Option<String> {
     if source.kind != SourceKind::Relief {
-        return Some(format!("a source of {}, and a terrain is relief", source.kind.label()));
+        return Some(format!(
+            "a source of {}, and a terrain is relief",
+            source.kind.label()
+        ));
     }
     if source.needs_key {
         return Some("this source needs a key, and nothing here sends one".to_string());
@@ -839,19 +891,28 @@ pub fn ask<'a>(
     step: f64,
 ) -> Result<Ask<'a>> {
     if !(step.is_finite() && step > 0.0) {
-        return Err(Error::Refused(format!("the step must be a positive length, not {step}")));
+        return Err(Error::Refused(format!(
+            "the step must be a positive length, not {step}"
+        )));
     }
     if !area.iter().all(|v| v.is_finite()) || area[0] >= area[2] || area[1] >= area[3] {
-        return Err(Error::Refused(format!("the area {area:?} is not [x_min, y_min, x_max, y_max] with min < max")));
+        return Err(Error::Refused(format!(
+            "the area {area:?} is not [x_min, y_min, x_max, y_max] with min < max"
+        )));
     }
     let chosen = match source {
         Some(id) => {
             let Some(found) = catalogue.get(id) else {
                 let known: Vec<&str> = catalogue.sources().iter().map(|one| one.id.as_str()).collect();
-                return Err(Error::Refused(format!("no source `{id}` in the catalogue; it holds {}", known.join(", "))));
+                return Err(Error::Refused(format!(
+                    "no source `{id}` in the catalogue; it holds {}",
+                    known.join(", ")
+                )));
             };
             if found.needs_key {
-                return Err(Error::Refused(format!("`{id}` needs a key, and nothing here sends one")));
+                return Err(Error::Refused(format!(
+                    "`{id}` needs a key, and nothing here sends one"
+                )));
             }
             if found.kind != SourceKind::Relief {
                 return Err(Error::Refused(format!(
@@ -896,9 +957,22 @@ pub fn ask<'a>(
         )));
     }
     let (width, height) = (along_x as u32, along_y as u32);
-    let bbox = [area[0], area[1], area[0] + along_x * step, area[1] + along_y * step];
+    let bbox = [
+        area[0],
+        area[1],
+        area[0] + along_x * step,
+        area[1] + along_y * step,
+    ];
     let request = wms_raster_request(chosen, bbox, epsg, width, height)?;
-    Ok(Ask { source: chosen, bbox, epsg, width, height, step, request })
+    Ok(Ask {
+        source: chosen,
+        bbox,
+        epsg,
+        width,
+        height,
+        step,
+        request,
+    })
 }
 
 /// Read what a terrain request answered: a GeoTIFF, or the service's own
@@ -919,12 +993,18 @@ pub fn read_answer(answer: crate::transport::Answer, most: usize) -> Result<Rast
         .read_to_end(&mut body)
         .map_err(|why| Error::Transport(format!("reading the answer: {why}")))?;
     if read > most {
-        return Err(Error::TooMuch(format!("the answer is longer than {most} bytes; ask a coarser step or a smaller area")));
+        return Err(Error::TooMuch(format!(
+            "the answer is longer than {most} bytes; ask a coarser step or a smaller area"
+        )));
     }
     let is_tiff = body.starts_with(b"II*\0") || body.starts_with(b"MM\0*");
     if status != 200 || !is_tiff {
         let says: String = String::from_utf8_lossy(&body).chars().take(2000).collect();
-        return Err(Error::Server { status, code: None, says: says.trim().to_string() });
+        return Err(Error::Server {
+            status,
+            code: None,
+            says: says.trim().to_string(),
+        });
     }
     read_geotiff(&body)
 }
@@ -947,19 +1027,34 @@ pub fn area_wgs84(
     reproject: impl Fn([f64; 3]) -> std::result::Result<[f64; 3], String>,
 ) -> Result<[f64; 4]> {
     if !area.iter().all(|v| v.is_finite()) || area[0] >= area[2] || area[1] >= area[3] {
-        return Err(Error::Refused(format!("the area {area:?} is not [x_min, y_min, x_max, y_max] with min < max")));
+        return Err(Error::Refused(format!(
+            "the area {area:?} is not [x_min, y_min, x_max, y_max] with min < max"
+        )));
     }
     if epsg == 4326 {
         return Ok(area);
     }
-    let corners = [[area[0], area[1]], [area[2], area[1]], [area[0], area[3]], [area[2], area[3]]];
+    let corners = [
+        [area[0], area[1]],
+        [area[2], area[1]],
+        [area[0], area[3]],
+        [area[2], area[3]],
+    ];
     let mut out = [f64::MAX, f64::MAX, f64::MIN, f64::MIN];
     for [x, y] in corners {
-        let p = reproject([x, y, 0.0]).map_err(|why| Error::Refused(format!("EPSG:{epsg} to WGS 84: {why}")))?;
+        let p =
+            reproject([x, y, 0.0]).map_err(|why| Error::Refused(format!("EPSG:{epsg} to WGS 84: {why}")))?;
         if !(p[0].is_finite() && p[1].is_finite()) {
-            return Err(Error::Refused(format!("EPSG:{epsg} to WGS 84: the corner ({x}, {y}) has no position in degrees")));
+            return Err(Error::Refused(format!(
+                "EPSG:{epsg} to WGS 84: the corner ({x}, {y}) has no position in degrees"
+            )));
         }
-        out = [out[0].min(p[0]), out[1].min(p[1]), out[2].max(p[0]), out[3].max(p[1])];
+        out = [
+            out[0].min(p[0]),
+            out[1].min(p[1]),
+            out[2].max(p[0]),
+            out[3].max(p[1]),
+        ];
     }
     Ok(out)
 }
@@ -973,7 +1068,14 @@ pub fn area_wgs84(
 /// refused by name rather than drawn at the wrong place; another protocol is
 /// not imagery a tile layer can take.
 pub fn tile_template(source: &TerrainSource) -> Result<String> {
-    let Protocol::Wmts { url, layer, tile_matrix_set, format, style } = &source.protocol else {
+    let Protocol::Wmts {
+        url,
+        layer,
+        tile_matrix_set,
+        format,
+        style,
+    } = &source.protocol
+    else {
         return Err(Error::Refused(format!(
             "source `{}` is not a WMTS, so it has no tile address; only a WMTS in PM is drawn as a basemap",
             source.id
@@ -991,4 +1093,12 @@ pub fn tile_template(source: &TerrainSource) -> Result<String> {
         encode(style),
         encode(format),
     ))
+}
+
+/// The whole `N`-item chunks of `items`, as arrays (what `<[T]>::as_chunks` gives, which
+/// needs Rust 1.88 — above this workspace's minimum, 1.85); a trailing remainder is dropped.
+fn fixed_chunks<T, const N: usize>(items: &[T]) -> impl Iterator<Item = &[T; N]> {
+    items
+        .chunks_exact(N)
+        .map(|c| <&[T; N]>::try_from(c).expect("chunks_exact yields N items"))
 }

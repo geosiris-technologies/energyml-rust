@@ -11,8 +11,8 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
 
 use crate::session::{
-    ArrayRef, Block, CheckReport, Copied, Format, Geometry, Header, Link, Package, PropertyValues,
-    Shape, Summary, Topology, TypeDescription, TypeSummary,
+    ArrayRef, Block, CheckReport, Copied, Format, Geometry, Header, Link, Package, PropertyValues, Shape,
+    Summary, Topology, TypeDescription, TypeSummary,
 };
 
 /// A refusal from the library becomes a Python exception, text and all.
@@ -21,7 +21,7 @@ fn failed(why: String) -> PyErr {
 }
 
 /// What is known about an object without opening it.
-#[pyclass(name = "Summary", frozen, get_all)]
+#[pyclass(name = "Summary", frozen, get_all, skip_from_py_object)]
 #[derive(Clone)]
 pub struct PySummary {
     /// The ETP URI, the key to everything else.
@@ -40,7 +40,10 @@ pub struct PySummary {
 impl PySummary {
     fn __repr__(&self) -> String {
         match &self.object_version {
-            Some(version) => format!("Summary({} {:?} version {version:?})", self.qualified_type, self.title),
+            Some(version) => format!(
+                "Summary({} {:?} version {version:?})",
+                self.qualified_type, self.title
+            ),
             None => format!("Summary({} {:?})", self.qualified_type, self.title),
         }
     }
@@ -59,7 +62,7 @@ impl From<Summary> for PySummary {
 }
 
 /// Where an array is: a file, and a path inside it.
-#[pyclass(name = "ArrayRef", frozen, get_all)]
+#[pyclass(name = "ArrayRef", frozen, get_all, skip_from_py_object)]
 #[derive(Clone)]
 pub struct PyArrayRef {
     /// The file, as the package names it.
@@ -82,7 +85,10 @@ impl PyArrayRef {
 
 impl From<&PyArrayRef> for ArrayRef {
     fn from(one: &PyArrayRef) -> Self {
-        ArrayRef { file: one.file.clone(), path_in_file: one.path_in_file.clone() }
+        ArrayRef {
+            file: one.file.clone(),
+            path_in_file: one.path_in_file.clone(),
+        }
     }
 }
 
@@ -173,13 +179,21 @@ fn patch_into_py<'py>(py: Python<'py>, patch: &crate::session::Patch) -> PyResul
             // of zeros would say the second.
             out.set_item("closed", closed.clone())?;
         }
-        Topology::Polyhedra { cell_face_counts, face_node_counts, face_nodes } => {
+        Topology::Polyhedra {
+            cell_face_counts,
+            face_node_counts,
+            face_nodes,
+        } => {
             out.set_item("topology", "polyhedra")?;
             out.set_item("cell_face_counts", cell_face_counts.clone().into_pyarray(py))?;
             out.set_item("face_node_counts", face_node_counts.clone().into_pyarray(py))?;
             out.set_item("face_nodes", face_nodes.clone().into_pyarray(py))?;
         }
-        Topology::Hexahedra { cells, dimensions, index } => {
+        Topology::Hexahedra {
+            cells,
+            dimensions,
+            index,
+        } => {
             out.set_item("topology", "hexahedra")?;
             out.set_item("cells", cells.clone().into_pyarray(py))?;
             out.set_item("dimensions", *dimensions)?;
@@ -414,7 +428,10 @@ impl PyEpc {
     fn put(&mut self, py: Python<'_>, object: &Bound<'_, PyAny>) -> PyResult<String> {
         let text = match object.extract::<String>() {
             Ok(text) => text,
-            Err(_) => py.import("json")?.call_method1("dumps", (object,))?.extract::<String>()?,
+            Err(_) => py
+                .import("json")?
+                .call_method1("dumps", (object,))?
+                .extract::<String>()?,
         };
         self.inner.put(&text).map_err(failed)
     }
@@ -431,7 +448,10 @@ impl PyEpc {
             .map(|found| {
                 found
                     .into_iter()
-                    .map(|one| PyArrayRef { file: one.file, path_in_file: one.path_in_file })
+                    .map(|one| PyArrayRef {
+                        file: one.file,
+                        path_in_file: one.path_in_file,
+                    })
                     .collect()
             })
             .map_err(failed)
@@ -459,7 +479,9 @@ impl PyEpc {
     ) -> PyResult<()> {
         let block = block_from_py(values)?;
         let dimensions = dimensions.unwrap_or_else(|| vec![block.len() as i64]);
-        self.inner.write_array(&ArrayRef::from(array), &dimensions, block).map_err(failed)
+        self.inner
+            .write_array(&ArrayRef::from(array), &dimensions, block)
+            .map_err(failed)
     }
 
     /// The objects whose type or title contains what is asked.
@@ -468,7 +490,11 @@ impl PyEpc {
     /// *and*. Filtering happens before anything is parsed.
     #[pyo3(signature = (of_type = None, titled = None))]
     fn find(&self, of_type: Option<&str>, titled: Option<&str>) -> Vec<PySummary> {
-        self.inner.find(of_type, titled).into_iter().map(PySummary::from).collect()
+        self.inner
+            .find(of_type, titled)
+            .into_iter()
+            .map(PySummary::from)
+            .collect()
     }
 
     /// Read a slice of an array rather than all of it.
@@ -533,7 +559,10 @@ impl PyEpc {
         uris: Vec<String>,
         arrays: &str,
     ) -> PyResult<Bound<'py, PyDict>> {
-        let done: Copied = self.inner.copy_from(&source.inner, &uris, arrays).map_err(failed)?;
+        let done: Copied = self
+            .inner
+            .copy_from(&source.inner, &uris, arrays)
+            .map_err(failed)?;
         let out = PyDict::new(py);
         out.set_item("objects", done.objects)?;
         out.set_item("added", done.added)?;
@@ -694,12 +723,20 @@ impl PyEpc {
     /// Plural because the storage abstraction is plural. A uri that cannot be
     /// read is missing from the answer rather than failing it.
     fn headers<'py>(&self, py: Python<'py>, uris: Vec<String>) -> PyResult<Vec<Bound<'py, PyDict>>> {
-        self.inner.headers(&uris).into_iter().map(|one| header_into_py(py, one)).collect()
+        self.inner
+            .headers(&uris)
+            .into_iter()
+            .map(|one| header_into_py(py, one))
+            .collect()
     }
 
     /// The types this store can read — the generated model behind it.
     fn supported_types<'py>(&self, py: Python<'py>) -> PyResult<Vec<Bound<'py, PyDict>>> {
-        self.inner.supported_types().iter().map(|one| type_into_py(py, one)).collect()
+        self.inner
+            .supported_types()
+            .iter()
+            .map(|one| type_into_py(py, one))
+            .collect()
     }
 
     /// The parts of the package that are not objects.
@@ -875,11 +912,7 @@ fn describe<'py>(py: Python<'py>, name: &str) -> PyResult<Bound<'py, PyDict>> {
 /// made the mistake.
 #[pyfunction]
 #[pyo3(signature = (qualified_type, uuid = None))]
-fn template<'py>(
-    py: Python<'py>,
-    qualified_type: &str,
-    uuid: Option<&str>,
-) -> PyResult<Bound<'py, PyAny>> {
+fn template<'py>(py: Python<'py>, qualified_type: &str, uuid: Option<&str>) -> PyResult<Bound<'py, PyAny>> {
     let text = crate::session::template(qualified_type, uuid).map_err(failed)?;
     py.import("json")?.call_method1("loads", (text,))
 }

@@ -74,8 +74,12 @@ fn package_2_0_1(schema_version: &str, content_type: Option<&str>) -> Vec<u8> {
 }
 
 fn open(bytes: Vec<u8>) -> EpcStore {
-    EpcStore::from_reader(Box::new(Cursor::new(bytes)), "narrow.epc", Arc::new(energyml::schemas::all()))
-        .expect("the package opens")
+    EpcStore::from_reader(
+        Box::new(Cursor::new(bytes)),
+        "narrow.epc",
+        Arc::new(energyml::schemas::all()),
+    )
+    .expect("the package opens")
 }
 
 fn uri_of(store: &EpcStore) -> String {
@@ -98,8 +102,14 @@ mod resqml20_alone {
     #[test]
     fn a_part_in_either_spelling_of_the_version_is_read_as_2_0_1() {
         let cases = [
-            ("2.0", Some("application/x-resqml+xml;version=2.0;type=obj_BoundaryFeature")),
-            ("2.0.1", Some("application/x-resqml+xml;version=2.0.1;type=obj_BoundaryFeature")),
+            (
+                "2.0",
+                Some("application/x-resqml+xml;version=2.0;type=obj_BoundaryFeature"),
+            ),
+            (
+                "2.0.1",
+                Some("application/x-resqml+xml;version=2.0.1;type=obj_BoundaryFeature"),
+            ),
             ("2.0", None),
             ("2.0.1", None),
         ];
@@ -109,7 +119,11 @@ mod resqml20_alone {
                 .get_object(&uri_of(&store))
                 .unwrap_or_else(|e| panic!("`{schema_version}` / {content_type:?}: {e}"));
             let info = object.type_info();
-            assert_eq!((info.package, info.version), ("resqml", "2.0.1"), "`{schema_version}` / {content_type:?}");
+            assert_eq!(
+                (info.package, info.version),
+                ("resqml", "2.0.1"),
+                "`{schema_version}` / {content_type:?}"
+            );
         }
     }
 
@@ -120,11 +134,21 @@ mod resqml20_alone {
     fn both_spellings_of_the_qualified_type_create_the_2_0_1_type() {
         let registry = energyml::schemas::all();
         for qualified_type in ["resqml20.obj_BoundaryFeature", "resqml201.obj_BoundaryFeature"] {
-            let object = registry.create(qualified_type).unwrap_or_else(|e| panic!("{qualified_type}: {e}"));
+            let object = registry
+                .create(qualified_type)
+                .unwrap_or_else(|e| panic!("{qualified_type}: {e}"));
             assert_eq!(object.type_info().version, "2.0.1", "{qualified_type}");
         }
-        assert!(registry.by_qualified_type("resqml20.obj_BoundaryFeature").is_some());
-        assert!(registry.by_qualified_type("resqml201.obj_BoundaryFeature").is_some());
+        assert!(
+            registry
+                .by_qualified_type("resqml20.obj_BoundaryFeature")
+                .is_some()
+        );
+        assert!(
+            registry
+                .by_qualified_type("resqml201.obj_BoundaryFeature")
+                .is_some()
+        );
     }
 
     /// The other release is the one that is absent, and it is named so.
@@ -132,7 +156,9 @@ mod resqml20_alone {
     fn resqml_2_2_is_a_named_refusal_here() {
         let registry = energyml::schemas::all();
         match registry.create("resqml22.BoundaryFeature") {
-            Err(energyml::core::error::Error::VersionAbsent(why)) => assert!(why.contains("resqml22"), "{why}"),
+            Err(energyml::core::error::Error::VersionAbsent(why)) => {
+                assert!(why.contains("resqml22"), "{why}")
+            }
             other => panic!("expected the refusal, got {:?}", other.err()),
         }
     }
@@ -149,8 +175,14 @@ mod resqml22_alone {
     #[test]
     fn a_2_0_1_part_is_refused_by_name_not_read_as_2_2() {
         let cases = [
-            ("2.0", Some("application/x-resqml+xml;version=2.0;type=obj_BoundaryFeature")),
-            ("2.0.1", Some("application/x-resqml+xml;version=2.0.1;type=obj_BoundaryFeature")),
+            (
+                "2.0",
+                Some("application/x-resqml+xml;version=2.0;type=obj_BoundaryFeature"),
+            ),
+            (
+                "2.0.1",
+                Some("application/x-resqml+xml;version=2.0.1;type=obj_BoundaryFeature"),
+            ),
             ("2.0", None),
             ("2.0.1", None),
         ];
@@ -158,9 +190,14 @@ mod resqml22_alone {
             let store = open(package_2_0_1(schema_version, content_type));
             match store.get_object(&uri_of(&store)) {
                 Err(energyml::storage::Error::Core(energyml::core::error::Error::VersionAbsent(why))) => {
-                    assert!(why.contains("resqml20"), "`{schema_version}` / {content_type:?}: {why}");
+                    assert!(
+                        why.contains("resqml20"),
+                        "`{schema_version}` / {content_type:?}: {why}"
+                    );
                 }
-                Err(other) => panic!("`{schema_version}` / {content_type:?}: refused, but not by name: {other}"),
+                Err(other) => {
+                    panic!("`{schema_version}` / {content_type:?}: refused, but not by name: {other}")
+                }
                 Ok(object) => panic!(
                     "`{schema_version}` / {content_type:?}: read as {} {}, a half read",
                     object.type_info().package,
@@ -196,7 +233,9 @@ mod resqml22_alone {
             }
         }
         let store = open(package_2_0_1("2.2", Some(content_type)));
-        let object = store.get_object(&uri_of(&store)).expect("a 2.2 document under a 2.2 content type reads");
+        let object = store
+            .get_object(&uri_of(&store))
+            .expect("a 2.2 document under a 2.2 content type reads");
         assert_eq!(object.type_info().version, "2.2");
     }
 
@@ -207,7 +246,9 @@ mod resqml22_alone {
         let registry = energyml::schemas::all();
         for qualified_type in ["resqml20.obj_BoundaryFeature", "resqml201.obj_BoundaryFeature"] {
             match registry.create(qualified_type) {
-                Err(energyml::core::error::Error::VersionAbsent(why)) => assert!(why.contains("resqml20"), "{why}"),
+                Err(energyml::core::error::Error::VersionAbsent(why)) => {
+                    assert!(why.contains("resqml20"), "{why}")
+                }
                 other => panic!("{qualified_type}: expected the refusal, got {:?}", other.err()),
             }
         }
@@ -216,7 +257,9 @@ mod resqml22_alone {
             b"<resqml:obj_BoundaryFeature/>",
         );
         match read {
-            Err(energyml::core::error::Error::VersionAbsent(why)) => assert!(why.contains("resqml20"), "{why}"),
+            Err(energyml::core::error::Error::VersionAbsent(why)) => {
+                assert!(why.contains("resqml20"), "{why}")
+            }
             other => panic!("expected the refusal, got {:?}", other.err()),
         }
     }

@@ -65,7 +65,11 @@ pub struct ProductFlowModelParams {
 #[derive(Debug, Inputs)]
 pub struct ProductFlowModelInputs {
     /// the units, in the direction of flow — each flows into the next
-    #[input(types = "prodml23.ReportingEntity, prodml23.Facility, witsml21.Wellbore, resqml22.WellboreFeature", least = 2, ordered)]
+    #[input(
+        types = "prodml23.ReportingEntity, prodml23.Facility, witsml21.Wellbore, resqml22.WellboreFeature",
+        least = 2,
+        ordered
+    )]
     pub units: Vec<ObjectIn>,
 }
 
@@ -106,18 +110,34 @@ impl Operation for ProductFlowModel {
         Ok(())
     }
 
-    fn plan(&self, inputs: ProductFlowModelInputs, params: ProductFlowModelParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: ProductFlowModelInputs,
+        params: ProductFlowModelParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let title = titled("title", &params.title)?;
         let mut writer = Writer::new(cx, "product-flow-model", &params.source)?;
         let units: Vec<Ref> = inputs.units.iter().map(unit_of).collect::<Result<_, _>>()?;
         if units.len() < 2 {
-            return Err(Refusal::on("units", format!("{} unit(s): a flow runs from one unit into another, so two are needed at least", units.len())));
+            return Err(Refusal::on(
+                "units",
+                format!(
+                    "{} unit(s): a flow runs from one unit into another, so two are needed at least",
+                    units.len()
+                ),
+            ));
         }
         for (at, one) in units.iter().enumerate() {
             if let Some(before) = units[..at].iter().position(|other| same(other, one)) {
                 return Err(Refusal::on(
                     "units",
-                    format!("`{}` is given as unit {} and as unit {}: a unit is drawn once, and a loop through it twice is nothing stated", one.title, before + 1, at + 1),
+                    format!(
+                        "`{}` is given as unit {} and as unit {}: a unit is drawn once, and a loop through it twice is nothing stated",
+                        one.title,
+                        before + 1,
+                        at + 1
+                    ),
                 ));
             }
         }
@@ -125,7 +145,12 @@ impl Operation for ProductFlowModel {
             if let Some(before) = units[..at].iter().position(|other| other.title == one.title) {
                 return Err(Refusal::on(
                     "units",
-                    format!("units {} and {} are both titled `{}`: the model links its units by name, so two of one name would be one unit", before + 1, at + 1, one.title),
+                    format!(
+                        "units {} and {} are both titled `{}`: the model links its units by name, so two of one name would be one unit",
+                        before + 1,
+                        at + 1,
+                        one.title
+                    ),
                 ));
             }
         }
@@ -141,7 +166,11 @@ impl Operation for ProductFlowModel {
                     ports.push(prodml::ProductFlowPort {
                         direction: prodml::ProductFlowPortType::Inlet,
                         name: "inlet".to_string(),
-                        connected_node: vec![prodml::ConnectedNode { node: node(at - 1), uid: format!("unit-{}-inlet-node", at + 1), ..Default::default() }],
+                        connected_node: vec![prodml::ConnectedNode {
+                            node: node(at - 1),
+                            uid: format!("unit-{}-inlet-node", at + 1),
+                            ..Default::default()
+                        }],
                         uid: format!("unit-{}-inlet", at + 1),
                         ..Default::default()
                     });
@@ -150,7 +179,11 @@ impl Operation for ProductFlowModel {
                     ports.push(prodml::ProductFlowPort {
                         direction: prodml::ProductFlowPortType::Outlet,
                         name: "outlet".to_string(),
-                        connected_node: vec![prodml::ConnectedNode { node: node(at), uid: format!("unit-{}-outlet-node", at + 1), ..Default::default() }],
+                        connected_node: vec![prodml::ConnectedNode {
+                            node: node(at),
+                            uid: format!("unit-{}-outlet-node", at + 1),
+                            ..Default::default()
+                        }],
                         uid: format!("unit-{}-outlet", at + 1),
                         ..Default::default()
                     });
@@ -170,14 +203,26 @@ impl Operation for ProductFlowModel {
             })
             .collect();
 
-        let chain = units.iter().map(|one| one.title.as_str()).collect::<Vec<_>>().join(" → ");
-        let uuid = writer.uuid(&units.iter().map(|one| one.uuid.to_ascii_lowercase()).collect::<Vec<_>>().join(">"))?;
+        let chain = units
+            .iter()
+            .map(|one| one.title.as_str())
+            .collect::<Vec<_>>()
+            .join(" → ");
+        let uuid = writer.uuid(
+            &units
+                .iter()
+                .map(|one| one.uuid.to_ascii_lowercase())
+                .collect::<Vec<_>>()
+                .join(">"),
+        )?;
         let model = prodml::ProductFlowModel {
             uuid: uuid.clone(),
             schema_version: "2.3".to_string(),
             citation: writer.citation(&title, &format!("the flow of an invented installation, {chain}"))?,
             extension_name_value: vec![writer.synthetic("the flow model of an invented installation")],
-            comment: Some(format!("synthetic — {chain}; the units are named after the objects of the package, which the activity references")),
+            comment: Some(format!(
+                "synthetic — {chain}; the units are named after the objects of the package, which the activity references"
+            )),
             network: vec![prodml::ProductFlowNetwork {
                 name: title.clone(),
                 unit: flow_units,
@@ -199,9 +244,16 @@ impl Operation for ProductFlowModel {
                 detail: "the model draws an invented installation: `synthetic = true` and the source in Citation/Description".to_string(),
             },
         ];
-        let mut parameters = vec![Parameter::Double { title: "unitCount".to_string(), value: units.len() as f64, uom: None }];
+        let mut parameters = vec![Parameter::Double {
+            title: "unitCount".to_string(),
+            value: units.len() as f64,
+            uom: None,
+        }];
         for one in &units {
-            parameters.push(Parameter::Object { title: "input".to_string(), reference: one.dor() });
+            parameters.push(Parameter::Object {
+                title: "input".to_string(),
+                reference: one.dor(),
+            });
         }
         Ok(Plan {
             media: Vec::new(),
@@ -222,6 +274,14 @@ impl Operation for ProductFlowModel {
 
     /// What the run drew.
     fn reports(&self) -> Vec<Slot> {
-        vec![Slot::required("unitCount", Need::Number { uom: None, least: None, most: None }, "the units the network holds, one per object given")]
+        vec![Slot::required(
+            "unitCount",
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
+            "the units the network holds, one per object given",
+        )]
     }
 }

@@ -68,7 +68,12 @@ fn every_entry_of_every_set_reads_and_keeps_its_position() {
             // Positions are the wiring: `Active*InformationIndex` is an index
             // into this list, so an entry that could not be read is kept as
             // opaque rather than dropped.
-            assert_eq!(entry.position, at, "{}: positions must be the list order", path.display());
+            assert_eq!(
+                entry.position,
+                at,
+                "{}: positions must be the list order",
+                path.display()
+            );
             assert!(
                 !entry.targets.is_empty(),
                 "{}: entry {at} decorates nothing",
@@ -433,7 +438,12 @@ fn a_colour_written_into_a_set_is_read_back_as_itself() {
         qualified_type: "resqml22.TriangulatedSetRepresentation".to_string(),
         title: "a surface & <its> name".to_string(),
     };
-    let chosen = color::Rgba { r: 0.2, g: 0.4, b: 0.8, a: 0.5 };
+    let chosen = color::Rgba {
+        r: 0.2,
+        g: 0.4,
+        b: 0.8,
+        a: 0.5,
+    };
 
     let wrote = color::set_constant_colour(
         object.as_reflect_mut(),
@@ -442,26 +452,47 @@ fn a_colour_written_into_a_set_is_read_back_as_itself() {
         chosen,
         Some("bleu choisi"),
     )
-        .expect("the colour is written");
+    .expect("the colour is written");
     assert_eq!(wrote, color::Wrote::Added, "nothing coloured that object before");
 
     let after = GraphicalSet::read(object.as_reflect());
-    assert_eq!(after.entries.len(), before.entries.len() + 1, "one entry more, and only one");
+    assert_eq!(
+        after.entries.len(),
+        before.entries.len() + 1,
+        "one entry more, and only one"
+    );
     let entry = after.entries.last().expect("the entry just written");
-    assert_eq!(entry.targets, std::slice::from_ref(&target.uuid), "it names the object it decorates");
+    assert_eq!(
+        entry.targets,
+        std::slice::from_ref(&target.uuid),
+        "it names the object it decorates"
+    );
     let Information::Default { elements, .. } = &entry.information else {
         panic!("{:?}", entry.information)
     };
-    let element = elements.iter().find(|e| e.scope == Scope::WholeObject).expect("a whole-object colour");
+    let element = elements
+        .iter()
+        .find(|e| e.scope == Scope::WholeObject)
+        .expect("a whole-object colour");
     let read = element.constant_color.as_ref().expect("the colour").to_rgba();
-    for (wrote, read) in [(chosen.r, read.r), (chosen.g, read.g), (chosen.b, read.b), (chosen.a, read.a)] {
+    for (wrote, read) in [
+        (chosen.r, read.r),
+        (chosen.g, read.g),
+        (chosen.b, read.b),
+        (chosen.a, read.a),
+    ] {
         assert!((wrote - read).abs() < 1e-6, "wrote {wrote}, read {read}");
     }
 
     // Writing again for the same object replaces, it does not pile up: two
     // entries naming one target with one role is the ambiguity §7.2 leaves
     // undecided, and this tool must not be the one creating it.
-    let again = color::Rgba { r: 0.9, g: 0.1, b: 0.1, a: 1.0 };
+    let again = color::Rgba {
+        r: 0.9,
+        g: 0.1,
+        b: 0.1,
+        a: 1.0,
+    };
     let wrote = color::set_constant_colour(
         object.as_reflect_mut(),
         std::slice::from_ref(&target),
@@ -469,7 +500,7 @@ fn a_colour_written_into_a_set_is_read_back_as_itself() {
         again,
         None,
     )
-        .expect("the colour is written again");
+    .expect("the colour is written again");
     assert_eq!(wrote, color::Wrote::Replaced(after.entries.len() - 1));
     let third = GraphicalSet::read(object.as_reflect());
     assert_eq!(third.entries.len(), after.entries.len(), "replaced, not appended");
@@ -516,7 +547,12 @@ fn one_entry_can_colour_several_objects_and_a_scope_that_is_not_the_object() {
             title: "second".to_string(),
         },
     ];
-    let chosen = color::Rgba { r: 0.1, g: 0.7, b: 0.3, a: 1.0 };
+    let chosen = color::Rgba {
+        r: 0.1,
+        g: 0.7,
+        b: 0.3,
+        a: 1.0,
+    };
 
     let wrote = color::set_constant_colour(
         object.as_reflect_mut(),
@@ -531,8 +567,15 @@ fn one_entry_can_colour_several_objects_and_a_scope_that_is_not_the_object() {
     let after = GraphicalSet::read(object.as_reflect());
     let entry = after.entries.last().expect("the entry just written");
     // **One** entry, naming both, in the order given.
-    assert_eq!(after.entries.len(), before.entries.len() + 1, "one entry, not two");
-    assert_eq!(entry.targets, vec![targets[0].uuid.clone(), targets[1].uuid.clone()]);
+    assert_eq!(
+        after.entries.len(),
+        before.entries.len() + 1,
+        "one entry, not two"
+    );
+    assert_eq!(
+        entry.targets,
+        vec![targets[0].uuid.clone(), targets[1].uuid.clone()]
+    );
 
     let Information::Default { elements, .. } = &entry.information else {
         panic!("{:?}", entry.information)
@@ -560,8 +603,15 @@ fn one_entry_can_colour_several_objects_and_a_scope_that_is_not_the_object() {
         None,
     )
     .expect("the whole-object colour is written too");
-    assert_eq!(wrote, color::Wrote::Added, "a different scope is a different entry");
-    assert_eq!(GraphicalSet::read(object.as_reflect()).entries.len(), before.entries.len() + 2);
+    assert_eq!(
+        wrote,
+        color::Wrote::Added,
+        "a different scope is a different entry"
+    );
+    assert_eq!(
+        GraphicalSet::read(object.as_reflect()).entries.len(),
+        before.entries.len() + 2
+    );
 }
 
 /// Recolouring one object of a shared entry is refused, and used to lose the
@@ -602,7 +652,12 @@ fn recolouring_one_object_of_a_shared_entry_is_refused_rather_than_losing_the_ot
         object.as_reflect_mut(),
         &together,
         color::Scope::WholeObject,
-        color::Rgba { r: 0.5, g: 0.5, b: 0.5, a: 1.0 },
+        color::Rgba {
+            r: 0.5,
+            g: 0.5,
+            b: 0.5,
+            a: 1.0,
+        },
         None,
     )
     .expect("both are coloured together");
@@ -614,7 +669,12 @@ fn recolouring_one_object_of_a_shared_entry_is_refused_rather_than_losing_the_ot
         object.as_reflect_mut(),
         &together[1..],
         color::Scope::WholeObject,
-        color::Rgba { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+        color::Rgba {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
         None,
     )
     .expect_err("it should refuse rather than take the colour from the other object");
@@ -675,22 +735,37 @@ fn a_colour_map_written_into_a_set_is_read_back_as_itself() {
     assert_eq!(wrote, color::Wrote::Added);
 
     let after = GraphicalSet::read(object.as_reflect());
-    assert_eq!(after.entries.len(), before.entries.len() + 1, "one entry more, and only one");
+    assert_eq!(
+        after.entries.len(),
+        before.entries.len() + 1,
+        "one entry more, and only one"
+    );
     let entry = after.entries.last().expect("the entry just written");
     assert_eq!(entry.targets, vec![targets[0].uuid.clone()]);
 
-    let Information::Color { scaling: read, map: read_map, value_vector_index } = &entry.information
+    let Information::Color {
+        scaling: read,
+        map: read_map,
+        value_vector_index,
+    } = &entry.information
     else {
         panic!("{:?}", entry.information)
     };
     // Every field, because each one is a separate chance to write the wrong
     // element name into a subtree nobody type-checks.
-    assert_eq!(read_map.as_deref(), Some(map.uuid.as_str()), "the map it points at");
+    assert_eq!(
+        read_map.as_deref(),
+        Some(map.uuid.as_str()),
+        "the map it points at"
+    );
     assert_eq!(*value_vector_index, Some(2), "which component of the property");
     assert!(read.logarithmic, "the log flag crossed");
     assert!(!read.reverse, "and the reverse flag stayed false");
     let (low, high) = read.min_max.expect("the range");
-    assert!((low - 0.05).abs() < 1e-12 && (high - 0.31).abs() < 1e-12, "{low}..{high}");
+    assert!(
+        (low - 0.05).abs() < 1e-12 && (high - 0.31).abs() < 1e-12,
+        "{low}..{high}"
+    );
 
     // Writing again replaces: a colour map and a second colour map on one object
     // is the ambiguity §7.2 leaves undecided, and this tool must not create it.
@@ -706,12 +781,18 @@ fn a_colour_map_written_into_a_set_is_read_back_as_itself() {
     let third = GraphicalSet::read(object.as_reflect());
     assert_eq!(third.entries.len(), after.entries.len(), "replaced, not appended");
     // And the optionals really went away rather than keeping their old values.
-    let Information::Color { scaling: read, value_vector_index, .. } =
-        &third.entries.last().expect("the entry").information
+    let Information::Color {
+        scaling: read,
+        value_vector_index,
+        ..
+    } = &third.entries.last().expect("the entry").information
     else {
         panic!()
     };
-    assert_eq!(read.min_max, None, "an absent range is absent, not the previous one");
+    assert_eq!(
+        read.min_max, None,
+        "an absent range is absent, not the previous one"
+    );
     assert_eq!(*value_vector_index, None);
 
     // Every entry that was there before is still there, unchanged.
@@ -754,7 +835,12 @@ fn a_constant_colour_and_a_colour_map_do_not_replace_each_other() {
         object.as_reflect_mut(),
         &targets,
         color::Scope::WholeObject,
-        color::Rgba { r: 0.0, g: 0.0, b: 1.0, a: 1.0 },
+        color::Rgba {
+            r: 0.0,
+            g: 0.0,
+            b: 1.0,
+            a: 1.0,
+        },
         None,
     )
     .expect("the constant colour is written");
@@ -768,7 +854,11 @@ fn a_constant_colour_and_a_colour_map_do_not_replace_each_other() {
     .expect("the map is written too");
 
     let after = GraphicalSet::read(object.as_reflect());
-    assert_eq!(after.entries.len(), before.entries.len() + 2, "two entries, not one replaced");
+    assert_eq!(
+        after.entries.len(),
+        before.entries.len() + 2,
+        "two entries, not one replaced"
+    );
 }
 
 /// One step up from a representation is not always an interpretation.
@@ -820,7 +910,12 @@ fn a_representation_that_names_a_feature_directly_says_feature() {
             title: "the parent".to_string(),
         }],
         Scope::WholeObject,
-        color::Rgba { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+        color::Rgba {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
         None,
     )
     .expect("the colour is written");
@@ -892,13 +987,17 @@ fn the_chain_is_the_ladder_and_resolve_takes_its_first_carrying_rung() {
             assert_eq!(
                 chain.iter().find_map(|step| step.carries.clone()),
                 decided,
-                "{}: the two walks disagree", summary.uuid
+                "{}: the two walks disagree",
+                summary.uuid
             );
             // The object itself is always the first rung of the object part, so
             // a chain is never empty: an object with nothing above it still has
             // itself, and a caller must be able to show that.
             assert!(!chain.is_empty(), "{}: an empty ladder", summary.uuid);
-            assert_eq!(chain[0].uuid.to_ascii_lowercase(), summary.uuid.to_ascii_lowercase());
+            assert_eq!(
+                chain[0].uuid.to_ascii_lowercase(),
+                summary.uuid.to_ascii_lowercase()
+            );
             assert_eq!(chain[0].level, Level::Representation);
 
             if chain.iter().any(|step| step.carries.is_none()) {
@@ -1028,7 +1127,11 @@ fn a_band_is_written_as_a_pair_of_stops_and_the_last_one_is_open() {
     // Two stops per band, except the last level, which has nothing to close.
     assert_eq!(stops.len(), 5, "{stops:?}");
     assert_eq!(stops[0].index, 0.0);
-    assert!(stops[1].index < 25.0 && stops[1].index > 24.99, "{}", stops[1].index);
+    assert!(
+        stops[1].index < 25.0 && stops[1].index > 24.99,
+        "{}",
+        stops[1].index
+    );
     assert_eq!(stops[1].color, stops[0].color, "a band's pair shares its colour");
     assert_eq!(stops[2].index, 25.0);
     assert_eq!(stops[4].index, 50.0, "the last level runs upwards on its own");
@@ -1045,14 +1148,25 @@ fn the_last_band_closes_where_the_values_end() {
     let stops = color::banded_until(&[0.0, 25.0, 50.0], &colours, 80.0).expect("no refusal");
     assert_eq!(stops.len(), 6, "every band a pair: {stops:?}");
     assert_eq!(stops[5].index, 80.0);
-    assert_eq!(stops[5].color, stops[4].color, "the last band is one colour over its width");
+    assert_eq!(
+        stops[5].color, stops[4].color,
+        "the last band is one colour over its width"
+    );
     // A top at or below the last level closes nothing: the same as `banded`.
-    assert_eq!(color::banded_until(&[0.0, 25.0, 50.0], &colours, 50.0).expect("no refusal").len(), 5);
+    assert_eq!(
+        color::banded_until(&[0.0, 25.0, 50.0], &colours, 50.0)
+            .expect("no refusal")
+            .len(),
+        5
+    );
 }
 
 #[test]
 fn banding_refuses_by_name() {
-    assert!(color::banded(&[0.0, 1.0], &[hue(0.0)]).is_err(), "one colour for two levels");
+    assert!(
+        color::banded(&[0.0, 1.0], &[hue(0.0)]).is_err(),
+        "one colour for two levels"
+    );
     assert!(color::banded(&[], &[]).is_err(), "no level at all");
     assert!(
         color::banded(&[0.0, f64::NAN], &[hue(0.0), hue(1.0)]).is_err(),
@@ -1081,15 +1195,26 @@ fn several_sets_read_as_one_in_package_order() {
         targets: vec![target.to_string()],
         target_uris: Vec::new(),
         map_uri: None,
-        information: Information::Other { type_name: name.to_string() },
+        information: Information::Other {
+            type_name: name.to_string(),
+        },
     };
-    let first = GraphicalSet { entries: vec![entry(0, "a", "first a"), entry(1, "b", "first b")], notes: vec!["first note".into()] };
-    let second = GraphicalSet { entries: vec![entry(0, "b", "second b"), entry(1, "c", "second c")], notes: vec!["second note".into()] };
+    let first = GraphicalSet {
+        entries: vec![entry(0, "a", "first a"), entry(1, "b", "first b")],
+        notes: vec!["first note".into()],
+    };
+    let second = GraphicalSet {
+        entries: vec![entry(0, "b", "second b"), entry(1, "c", "second c")],
+        notes: vec!["second note".into()],
+    };
     let merged = GraphicalSet::merged([first, second]);
 
     let positions: Vec<usize> = merged.entries.iter().map(|one| one.position).collect();
     assert_eq!(positions, [0, 1, 2, 3], "one wiring, end to end");
-    assert_eq!(merged.at(3).map(|one| one.targets.clone()), Some(vec!["c".to_string()]));
+    assert_eq!(
+        merged.at(3).map(|one| one.targets.clone()),
+        Some(vec!["c".to_string()])
+    );
     // Only in the second set: found — the defect was that it was not.
     assert_eq!(merged.targeting("c").len(), 1);
     // In both: the later statement first, as `targeting` orders one set.
@@ -1097,6 +1222,13 @@ fn several_sets_read_as_one_in_package_order() {
         Information::Other { type_name } => type_name.clone(),
         other => panic!("{other:?}"),
     };
-    assert_eq!(merged.targeting("b").iter().map(|one| named(one)).collect::<Vec<_>>(), ["second b", "first b"]);
+    assert_eq!(
+        merged
+            .targeting("b")
+            .iter()
+            .map(|one| named(one))
+            .collect::<Vec<_>>(),
+        ["second b", "first b"]
+    );
     assert_eq!(merged.notes, ["first note", "second note"]);
 }

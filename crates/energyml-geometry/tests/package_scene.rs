@@ -49,12 +49,17 @@ fn package(name: &str) -> Option<PathBuf> {
 #[test]
 #[cfg(feature = "hdf5")]
 fn a_package_comes_back_as_shapes_that_name_themselves() {
-    let Some(path) = package("testingPackageCpp22.epc") else { return };
+    let Some(path) = package("testingPackageCpp22.epc") else {
+        return;
+    };
     let store = EpcStore::open(&path, registry()).expect("the package opens");
     let resources = store.resources();
 
     let read = scene::of_package(&resources, &store, &Request::default());
-    assert!(!read.objects.is_empty(), "no shape at all out of a package of them");
+    assert!(
+        !read.objects.is_empty(),
+        "no shape at all out of a package of them"
+    );
 
     for object in &read.objects {
         // **A qualified type, not a class name.** It was the Rust type name
@@ -85,7 +90,9 @@ fn a_package_comes_back_as_shapes_that_name_themselves() {
 #[test]
 #[cfg(feature = "hdf5")]
 fn nothing_is_read_that_was_not_asked_for() {
-    let Some(path) = package("testingPackageCpp22.epc") else { return };
+    let Some(path) = package("testingPackageCpp22.epc") else {
+        return;
+    };
     let store = EpcStore::open(&path, registry()).expect("the package opens");
     let resources = store.resources();
 
@@ -108,7 +115,10 @@ fn nothing_is_read_that_was_not_asked_for() {
     );
     assert!(!filtered.objects.is_empty(), "the filter kept nothing at all");
     assert!(
-        filtered.objects.iter().all(|one| one.qualified_type.contains("TriangulatedSet")),
+        filtered
+            .objects
+            .iter()
+            .all(|one| one.qualified_type.contains("TriangulatedSet")),
         "the filter let another type through"
     );
     assert!(
@@ -120,7 +130,9 @@ fn nothing_is_read_that_was_not_asked_for() {
 #[test]
 #[cfg(feature = "hdf5")]
 fn the_properties_land_on_the_shapes_they_belong_to() {
-    let Some(path) = package("testingPackageCpp22.epc") else { return };
+    let Some(path) = package("testingPackageCpp22.epc") else {
+        return;
+    };
     let store = EpcStore::open(&path, registry()).expect("the package opens");
     let resources = store.resources();
 
@@ -174,14 +186,19 @@ fn the_properties_land_on_the_shapes_they_belong_to() {
 #[test]
 #[cfg(feature = "hdf5")]
 fn asking_for_one_property_attaches_one_property() {
-    let Some(path) = package("testingPackageCpp22.epc") else { return };
+    let Some(path) = package("testingPackageCpp22.epc") else {
+        return;
+    };
     let store = EpcStore::open(&path, registry()).expect("the package opens");
     let resources = store.resources();
 
     let all = scene::of_package(
         &resources,
         &store,
-        &Request { properties: Properties::All, ..Default::default() },
+        &Request {
+            properties: Properties::All,
+            ..Default::default()
+        },
     );
     let (uuid, name) = all
         .objects
@@ -195,7 +212,10 @@ fn asking_for_one_property_attaches_one_property() {
     let one = scene::of_package(
         &resources,
         &store,
-        &Request { properties: Properties::Only(&only), ..Default::default() },
+        &Request {
+            properties: Properties::Only(&only),
+            ..Default::default()
+        },
     );
     let names: Vec<&str> = one
         .objects
@@ -203,5 +223,9 @@ fn asking_for_one_property_attaches_one_property() {
         .flat_map(|object| object.attributes.iter())
         .map(|a| a.name.as_str())
         .collect();
-    assert_eq!(names, vec![name.as_str()], "asking for one property brought back {names:?}");
+    assert_eq!(
+        names,
+        vec![name.as_str()],
+        "asking for one property brought back {names:?}"
+    );
 }

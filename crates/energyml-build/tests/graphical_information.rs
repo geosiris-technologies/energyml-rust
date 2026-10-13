@@ -51,11 +51,17 @@ const KIND: &str = "cf7e6c80-91a3-44b5-80c1-3c4d5e6f7081";
 const SERIES: &str = "d08f7d91-a2b4-45c6-91d2-4d5e6f708192";
 
 fn when() -> When {
-    When { creation: "2026-09-24T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-24T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 fn object(uuid: &str, qualified_type: &str, title: &str) -> Source {
-    Source::Object(Known { reference: Some(Ref::new(uuid, qualified_type, title)), ..Default::default() })
+    Source::Object(Known {
+        reference: Some(Ref::new(uuid, qualified_type, title)),
+        ..Default::default()
+    })
 }
 
 /// A property that states how many values each of its elements holds — what
@@ -86,25 +92,42 @@ fn property(uuid: &str, title: &str, per_element: Vec<u64>) -> Source {
 fn cascade() -> Pieces {
     Pieces::empty()
         .with("targets", object(FEATURE, "resqml22.BoundaryFeature", "H3"))
-        .with("targets 2", object(INTERPRETATION, "resqml22.HorizonInterpretation", "H3"))
-        .with("targets 3", object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"))
+        .with(
+            "targets 2",
+            object(INTERPRETATION, "resqml22.HorizonInterpretation", "H3"),
+        )
+        .with(
+            "targets 3",
+            object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+        )
 }
 
 /// A colour map and one property drawn through it.
 fn mapped(per_element: Vec<u64>) -> Pieces {
     Pieces::empty()
-        .with("colourMap", object(MAP, "resqml22.ContinuousColorMap", "porosity, rgb"))
+        .with(
+            "colourMap",
+            object(MAP, "resqml22.ContinuousColorMap", "porosity, rgb"),
+        )
         .with("mapped", property(POROSITY, "porosity", per_element))
 }
 
 fn planned(pieces: &Pieces, choices: Choices) -> Result<Plan, String> {
     Registry::new()
-        .plan("graphical-information", pieces, &choices, &Identity::derived(), &when())
+        .plan(
+            "graphical-information",
+            pieces,
+            &choices,
+            &Identity::derived(),
+            &when(),
+        )
         .map_err(|why| why.to_string())
 }
 
 fn titled(colours: Value) -> Choices {
-    Choices::new().set("title", "Lutetia — colours").set("colours", colours)
+    Choices::new()
+        .set("title", "Lutetia — colours")
+        .set("colours", colours)
 }
 
 fn untitled() -> Choices {
@@ -114,7 +137,13 @@ fn untitled() -> Choices {
 /// The one object a plan writes: the set.
 fn the_set(plan: &Plan) -> &NewObject {
     let [set] = plan.objects.as_slice() else {
-        panic!("one object, the set: {:?}", plan.objects.iter().map(|one| &one.qualified_type).collect::<Vec<_>>())
+        panic!(
+            "one object, the set: {:?}",
+            plan.objects
+                .iter()
+                .map(|one| &one.qualified_type)
+                .collect::<Vec<_>>()
+        )
     };
     assert_eq!(set.qualified_type, "eml23.GraphicalInformationSet");
     set
@@ -143,28 +172,57 @@ fn read_back(plan: &Plan) -> ReadBack {
         .map(|(at, raw)| {
             let (entry, departures) = raw
                 .typed(&schemas)
-                .unwrap_or_else(|| panic!("entry {at}: its `xsi:type` names no class this build knows: {:?}", raw.attributes))
+                .unwrap_or_else(|| {
+                    panic!(
+                        "entry {at}: its `xsi:type` names no class this build knows: {:?}",
+                        raw.attributes
+                    )
+                })
                 .unwrap_or_else(|why| panic!("entry {at} does not read as the class it names: {why}"));
-            assert!(departures.is_empty(), "entry {at} reads only with departures: {:?}", departures.lines());
+            assert!(
+                departures.is_empty(),
+                "entry {at} reads only with departures: {:?}",
+                departures.lines()
+            );
             entry
         })
         .collect();
-    ReadBack { typed, scanned: GraphicalSet::read(root) }
+    ReadBack {
+        typed,
+        scanned: GraphicalSet::read(root),
+    }
 }
 
 fn default_at(read: &ReadBack, at: usize) -> &resqml::DefaultGraphicalInformation {
-    let entry = read.typed.get(at).unwrap_or_else(|| panic!("no entry {at}: {} written", read.typed.len()));
-    entry.as_reflect().downcast_ref::<resqml::DefaultGraphicalInformation>().unwrap_or_else(|| {
-        panic!("entry {at} is a {}, not a DefaultGraphicalInformation", entry.as_reflect().type_info().name)
-    })
+    let entry = read
+        .typed
+        .get(at)
+        .unwrap_or_else(|| panic!("no entry {at}: {} written", read.typed.len()));
+    entry
+        .as_reflect()
+        .downcast_ref::<resqml::DefaultGraphicalInformation>()
+        .unwrap_or_else(|| {
+            panic!(
+                "entry {at} is a {}, not a DefaultGraphicalInformation",
+                entry.as_reflect().type_info().name
+            )
+        })
 }
 
 fn colour_at(read: &ReadBack, at: usize) -> &resqml::ColorInformation {
-    let entry = read.typed.get(at).unwrap_or_else(|| panic!("no entry {at}: {} written", read.typed.len()));
+    let entry = read
+        .typed
+        .get(at)
+        .unwrap_or_else(|| panic!("no entry {at}: {} written", read.typed.len()));
     entry
         .as_reflect()
         .downcast_ref::<resqml::ColorInformation>()
-        .unwrap_or_else(|| panic!("entry {at} is a {}, not a ColorInformation", entry.as_reflect().type_info().name))
+        .unwrap_or_else(|| {
+            panic!(
+                "entry {at} is a {}, not a ColorInformation",
+                entry.as_reflect().type_info().name
+            )
+        })
 }
 
 fn uuids(targets: &[DataObjectReference]) -> Vec<&str> {
@@ -175,7 +233,11 @@ fn uuids(targets: &[DataObjectReference]) -> Vec<&str> {
 /// schema requires to say whether it is visible.
 fn whole_object_colour(entry: &resqml::DefaultGraphicalInformation) -> &resqml::HsvColor {
     match entry.indexable_element_info.as_slice() {
-        [resqml::AbstractGraphicalInformationForIndexableElement::GraphicalInformationForWholeObject(whole)] => {
+        [
+            resqml::AbstractGraphicalInformationForIndexableElement::GraphicalInformationForWholeObject(
+                whole,
+            ),
+        ] => {
             assert!(whole.is_visible, "written to be seen");
             whole.constant_color.as_ref().expect("a constant colour")
         }
@@ -185,9 +247,15 @@ fn whole_object_colour(entry: &resqml::DefaultGraphicalInformation) -> &resqml::
 
 /// An `HsvColor` as `#rrggbbaa`, through the domain's one conversion.
 fn hex_of(colour: &resqml::HsvColor) -> String {
-    Hsv { hue: colour.hue, saturation: colour.saturation, value: colour.value, alpha: colour.alpha, title: None }
-        .to_rgba()
-        .to_hex()
+    Hsv {
+        hue: colour.hue,
+        saturation: colour.saturation,
+        value: colour.value,
+        alpha: colour.alpha,
+        title: None,
+    }
+    .to_rgba()
+    .to_hex()
 }
 
 // -- constant colours ---------------------------------------------------------
@@ -199,8 +267,14 @@ fn hex_of(colour: &resqml::HsvColor) -> String {
 #[test]
 fn each_colour_lands_on_the_object_it_names() {
     let pieces = Pieces::empty()
-        .with("targets", object(INTERPRETATION, "resqml22.HorizonInterpretation", "H3"))
-        .with("targets 2", object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"));
+        .with(
+            "targets",
+            object(INTERPRETATION, "resqml22.HorizonInterpretation", "H3"),
+        )
+        .with(
+            "targets 2",
+            object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+        );
     let plan = planned(&pieces, titled(json!(["#ff0000", "#0000ff"]))).expect("planned");
 
     let set = &the_set(&plan).json;
@@ -210,18 +284,30 @@ fn each_colour_lands_on_the_object_it_names() {
     let entries = set["GraphicalInformation"].as_array().expect("its entries");
     assert_eq!(entries.len(), 2, "{set}");
     for entry in entries {
-        assert_eq!(entry["attributes"]["xsi:type"], json!("resqml:DefaultGraphicalInformation"), "{entry}");
+        assert_eq!(
+            entry["attributes"]["xsi:type"],
+            json!("resqml:DefaultGraphicalInformation"),
+            "{entry}"
+        );
     }
 
     let read = read_back(&plan);
     let first = default_at(&read, 0);
     assert_eq!(uuids(&first.target_object), vec![INTERPRETATION]);
     let red = whole_object_colour(first);
-    assert_eq!((red.hue, red.saturation, red.value, red.alpha), (0.0, 1.0, 1.0, 1.0), "red in the HSV model");
+    assert_eq!(
+        (red.hue, red.saturation, red.value, red.alpha),
+        (0.0, 1.0, 1.0, 1.0),
+        "red in the HSV model"
+    );
     let second = default_at(&read, 1);
     assert_eq!(uuids(&second.target_object), vec![GRID]);
     let blue = whole_object_colour(second);
-    assert_eq!((blue.hue, blue.saturation, blue.value, blue.alpha), (240.0, 1.0, 1.0, 1.0), "blue in the HSV model");
+    assert_eq!(
+        (blue.hue, blue.saturation, blue.value, blue.alpha),
+        (240.0, 1.0, 1.0, 1.0),
+        "blue in the HSV model"
+    );
 
     // The second reader, the one the cascade asks.
     let found = read.scanned.targeting(GRID);
@@ -230,7 +316,10 @@ fn each_colour_lands_on_the_object_it_names() {
         panic!("a default graphical information: {:?}", found[0].information)
     };
     assert_eq!(
-        elements.first().and_then(|one| one.constant_color.as_ref()).map(|colour| colour.to_rgba().to_hex()),
+        elements
+            .first()
+            .and_then(|one| one.constant_color.as_ref())
+            .map(|colour| colour.to_rgba().to_hex()),
         Some("#0000ffff".to_string())
     );
 }
@@ -252,18 +341,30 @@ fn the_cascade_puts_one_colour_on_the_feature_the_interpretation_and_the_represe
         .enumerate()
         .map(|(at, uuid)| {
             let entry = default_at(&read, at);
-            assert_eq!(uuids(&entry.target_object), vec![*uuid], "entry {at} names its own level, and only it");
+            assert_eq!(
+                uuids(&entry.target_object),
+                vec![*uuid],
+                "entry {at} names its own level, and only it"
+            );
             whole_object_colour(entry)
         })
         .collect();
     assert_eq!(colours[0], colours[1]);
     assert_eq!(colours[1], colours[2]);
-    assert_eq!(hex_of(colours[0]), "#8b5a2bff", "the colour asked, through HSV and back");
+    assert_eq!(
+        hex_of(colours[0]),
+        "#8b5a2bff",
+        "the colour asked, through HSV and back"
+    );
 
     for uuid in levels {
         let found = read.scanned.targeting(uuid);
         assert_eq!(found.len(), 1, "{uuid}: {:?}", read.scanned.notes);
-        assert!(matches!(found[0].information, Information::Default { .. }), "{:?}", found[0].information);
+        assert!(
+            matches!(found[0].information, Information::Default { .. }),
+            "{:?}",
+            found[0].information
+        );
     }
 }
 
@@ -276,9 +377,15 @@ fn shared_writes_one_entry_naming_every_object() {
     let plan = planned(&cascade(), titled(json!(["#8b5a2b"])).set("shared", true)).expect("planned");
     let read = read_back(&plan);
     assert_eq!(read.typed.len(), 1);
-    assert_eq!(uuids(&default_at(&read, 0).target_object), vec![FEATURE, INTERPRETATION, GRID]);
+    assert_eq!(
+        uuids(&default_at(&read, 0).target_object),
+        vec![FEATURE, INTERPRETATION, GRID]
+    );
 
-    let Err(why) = planned(&cascade(), titled(json!(["#8b5a2b", "#8b5a2b", "#ff0000"])).set("shared", true)) else {
+    let Err(why) = planned(
+        &cascade(),
+        titled(json!(["#8b5a2b", "#8b5a2b", "#ff0000"])).set("shared", true),
+    ) else {
         panic!("one shared entry and three colours")
     };
     assert!(why.contains("`shared`"), "{why}");
@@ -292,17 +399,41 @@ fn shared_writes_one_entry_naming_every_object() {
 /// that stops at the first bad colour.
 #[test]
 fn a_colour_that_does_not_read_is_refused_by_name_and_never_replaced() {
-    let pieces = Pieces::empty().with("targets", object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"));
-    for bad in ["#12345g", "red", "#fff", "8b5a2b", "#8b5a2b0", "#+f+f+f", "hsv(30, 0.7, 0.5)"] {
-        let Err(why) = planned(&pieces, titled(json!([bad]))) else { panic!("`{bad}` must be refused") };
-        assert!(why.contains("`colours`") && why.contains(&format!("`{bad}`")), "{bad}: {why}");
+    let pieces = Pieces::empty().with(
+        "targets",
+        object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+    );
+    for bad in [
+        "#12345g",
+        "red",
+        "#fff",
+        "8b5a2b",
+        "#8b5a2b0",
+        "#+f+f+f",
+        "hsv(30, 0.7, 0.5)",
+    ] {
+        let Err(why) = planned(&pieces, titled(json!([bad]))) else {
+            panic!("`{bad}` must be refused")
+        };
+        assert!(
+            why.contains("`colours`") && why.contains(&format!("`{bad}`")),
+            "{bad}: {why}"
+        );
     }
 
     let two = Pieces::empty()
         .with("targets", object(FEATURE, "resqml22.BoundaryFeature", "H3"))
-        .with("targets 2", object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"));
-    let Err(why) = planned(&two, titled(json!(["#12345g", "#zzzzzz"]))) else { panic!("two unreadable colours") };
-    assert!(why.contains("`#12345g`") && why.contains("`#zzzzzz`"), "every one named: {why}");
+        .with(
+            "targets 2",
+            object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+        );
+    let Err(why) = planned(&two, titled(json!(["#12345g", "#zzzzzz"]))) else {
+        panic!("two unreadable colours")
+    };
+    assert!(
+        why.contains("`#12345g`") && why.contains("`#zzzzzz`"),
+        "every one named: {why}"
+    );
 }
 
 /// One colour for all the objects, or one each — anything else is refused
@@ -325,11 +456,21 @@ fn a_colour_for_all_or_one_per_object_and_nothing_between() {
 #[test]
 fn an_object_given_twice_is_coloured_once_and_two_colours_for_it_are_refused() {
     let twice = Pieces::empty()
-        .with("targets", object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"))
-        .with("targets 2", object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"));
+        .with(
+            "targets",
+            object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+        )
+        .with(
+            "targets 2",
+            object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+        );
     let plan = planned(&twice, titled(json!(["#ff0000"]))).expect("planned");
     assert_eq!(read_back(&plan).typed.len(), 1);
-    assert!(plan.says.iter().any(|note| note.key == "twice"), "{:?}", plan.says);
+    assert!(
+        plan.says.iter().any(|note| note.key == "twice"),
+        "{:?}",
+        plan.says
+    );
     let why = planned(&twice, titled(json!(["#ff0000", "#0000ff"]))).unwrap_err();
     assert!(why.contains("given twice"), "{why}");
 }
@@ -344,10 +485,17 @@ fn the_same_content_is_the_same_set_and_another_colour_another() {
     let uuid = |plan: &Plan| the_set(plan).uuid.clone();
     let one = planned(&cascade(), titled(json!(["#8b5a2b"]))).expect("planned");
     let again = planned(&cascade(), titled(json!(["#8B5A2BFF"]))).expect("planned");
-    assert_eq!(uuid(&one), uuid(&again), "one colour, written two ways, is one content");
+    assert_eq!(
+        uuid(&one),
+        uuid(&again),
+        "one colour, written two ways, is one content"
+    );
     let other = planned(&cascade(), titled(json!(["#8b5a2c"]))).expect("planned");
     assert_ne!(uuid(&one), uuid(&other), "another colour is another set");
-    let fewer = Pieces::empty().with("targets", object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"));
+    let fewer = Pieces::empty().with(
+        "targets",
+        object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+    );
     let fewer = planned(&fewer, titled(json!(["#8b5a2b"]))).expect("planned");
     assert_ne!(uuid(&one), uuid(&fewer), "other objects, another set");
 }
@@ -357,8 +505,14 @@ fn the_same_content_is_the_same_set_and_another_colour_another() {
 #[test]
 fn the_activity_records_every_colour_said() {
     let pieces = Pieces::empty()
-        .with("targets", object(INTERPRETATION, "resqml22.HorizonInterpretation", "H3"))
-        .with("targets 2", object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"));
+        .with(
+            "targets",
+            object(INTERPRETATION, "resqml22.HorizonInterpretation", "H3"),
+        )
+        .with(
+            "targets 2",
+            object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+        );
     let plan = planned(&pieces, titled(json!(["#ff0000", "#0000FF"]))).expect("planned");
     let said: Vec<&str> = plan
         .activity
@@ -377,7 +531,11 @@ fn the_activity_records_every_colour_said() {
 fn the_title_is_proposed_from_the_first_object() {
     let registry = Registry::new();
     let operation = registry.get("graphical-information").expect("registered");
-    let title = operation.needs(&cascade()).into_iter().find(|slot| slot.name == "title").expect("a title slot");
+    let title = operation
+        .needs(&cascade())
+        .into_iter()
+        .find(|slot| slot.name == "title")
+        .expect("a title slot");
     assert_eq!(title.suggested, Some(json!("H3 — colours")));
 }
 
@@ -390,14 +548,23 @@ fn the_title_is_proposed_from_the_first_object() {
 /// map — each read by both readers.
 #[test]
 fn a_property_is_drawn_through_its_colour_map_with_the_range_and_flags_said() {
-    let plan = planned(&mapped(vec![1]), untitled().set("minimum", 0.05).set("maximum", 0.35).set("reverse", true))
-        .expect("planned");
+    let plan = planned(
+        &mapped(vec![1]),
+        untitled()
+            .set("minimum", 0.05)
+            .set("maximum", 0.35)
+            .set("reverse", true),
+    )
+    .expect("planned");
     let read = read_back(&plan);
     assert_eq!(read.typed.len(), 1);
     let entry = colour_at(&read, 0);
     assert_eq!(uuids(&entry.target_object), vec![POROSITY]);
     let map = entry.color_map.as_ref().expect("the map is named");
-    assert_eq!((map.uuid.as_str(), map.qualified_type.as_str()), (MAP, "resqml22.ContinuousColorMap"));
+    assert_eq!(
+        (map.uuid.as_str(), map.qualified_type.as_str()),
+        (MAP, "resqml22.ContinuousColorMap")
+    );
     let range = entry.min_max.as_ref().expect("MinMax");
     assert_eq!((range.minimum, range.maximum), (0.05, 0.35));
     assert!(entry.use_reverse_mapping);
@@ -406,7 +573,12 @@ fn a_property_is_drawn_through_its_colour_map_with_the_range_and_flags_said() {
 
     let found = read.scanned.targeting(POROSITY);
     assert_eq!(found.len(), 1, "{:?}", read.scanned.notes);
-    let Information::Color { scaling, map, value_vector_index } = &found[0].information else {
+    let Information::Color {
+        scaling,
+        map,
+        value_vector_index,
+    } = &found[0].information
+    else {
         panic!("a colour information: {:?}", found[0].information)
     };
     assert_eq!(map.as_deref(), Some(MAP));
@@ -422,22 +594,56 @@ fn a_property_is_drawn_through_its_colour_map_with_the_range_and_flags_said() {
 #[test]
 fn the_settings_of_a_map_are_held_to_the_schema() {
     let refused = |pieces: &Pieces, choices: Choices, slot: &str| {
-        let Err(why) = planned(pieces, choices) else { panic!("must be refused on `{slot}`") };
+        let Err(why) = planned(pieces, choices) else {
+            panic!("must be refused on `{slot}`")
+        };
         assert!(why.contains(&format!("`{slot}`")), "on `{slot}`: {why}");
     };
     refused(&mapped(vec![1]), untitled().set("minimum", 0.1), "maximum");
     refused(&mapped(vec![1]), untitled().set("maximum", 0.1), "minimum");
-    refused(&mapped(vec![1]), untitled().set("minimum", 0.3).set("maximum", 0.3), "maximum");
-    refused(&mapped(vec![1]), untitled().set("minimum", 0.3).set("maximum", 0.1), "maximum");
-    refused(&mapped(vec![1]), untitled().set("minimum", 0.0).set("maximum", 1.0).set("logarithmic", true), "logarithmic");
+    refused(
+        &mapped(vec![1]),
+        untitled().set("minimum", 0.3).set("maximum", 0.3),
+        "maximum",
+    );
+    refused(
+        &mapped(vec![1]),
+        untitled().set("minimum", 0.3).set("maximum", 0.1),
+        "maximum",
+    );
+    refused(
+        &mapped(vec![1]),
+        untitled()
+            .set("minimum", 0.0)
+            .set("maximum", 1.0)
+            .set("logarithmic", true),
+        "logarithmic",
+    );
     // The same mapping over a range of positive values is what the flag is for.
-    let plan = planned(&mapped(vec![1]), untitled().set("minimum", 0.01).set("maximum", 1.0).set("logarithmic", true))
-        .expect("a logarithmic mapping over positive values");
+    let plan = planned(
+        &mapped(vec![1]),
+        untitled()
+            .set("minimum", 0.01)
+            .set("maximum", 1.0)
+            .set("logarithmic", true),
+    )
+    .expect("a logarithmic mapping over positive values");
     assert!(colour_at(&read_back(&plan), 0).use_logarithmic_mapping);
 
-    let no_map = Pieces::empty().with("targets", object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"));
-    refused(&no_map, titled(json!(["#ff0000"])).set("reverse", true), "reverse");
-    refused(&no_map, titled(json!(["#ff0000"])).set("minimum", 0.0).set("maximum", 1.0), "minimum");
+    let no_map = Pieces::empty().with(
+        "targets",
+        object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+    );
+    refused(
+        &no_map,
+        titled(json!(["#ff0000"])).set("reverse", true),
+        "reverse",
+    );
+    refused(
+        &no_map,
+        titled(json!(["#ff0000"])).set("minimum", 0.0).set("maximum", 1.0),
+        "minimum",
+    );
 }
 
 /// `ValueVectorIndex` is an index into the **data** — the component of a
@@ -449,20 +655,37 @@ fn the_settings_of_a_map_are_held_to_the_schema() {
 #[test]
 fn a_component_past_the_last_one_a_property_holds_is_refused() {
     let vector = Pieces::empty()
-        .with("colourMap", object(MAP, "resqml22.ContinuousColorMap", "permeability, hsv"))
+        .with(
+            "colourMap",
+            object(MAP, "resqml22.ContinuousColorMap", "permeability, hsv"),
+        )
         .with("mapped", property(PERMEABILITY, "permeability", vec![3]));
     let why = planned(&vector, untitled().set("valueVectorIndex", 3)).unwrap_err();
-    assert!(why.contains("`valueVectorIndex`") && why.contains("3 value(s) per element"), "{why}");
+    assert!(
+        why.contains("`valueVectorIndex`") && why.contains("3 value(s) per element"),
+        "{why}"
+    );
 
     let plan = planned(&vector, untitled().set("valueVectorIndex", 2)).expect("the third component");
     assert_eq!(colour_at(&read_back(&plan), 0).value_vector_index, Some(2));
-    assert!(!plan.says.iter().any(|note| note.key == "components-unchecked"), "{:?}", plan.says);
+    assert!(
+        !plan.says.iter().any(|note| note.key == "components-unchecked"),
+        "{:?}",
+        plan.says
+    );
 
     let kind = Pieces::empty()
-        .with("colourMap", object(MAP, "resqml22.ContinuousColorMap", "permeability, hsv"))
+        .with(
+            "colourMap",
+            object(MAP, "resqml22.ContinuousColorMap", "permeability, hsv"),
+        )
         .with("mapped", object(KIND, "eml23.PropertyKind", "permeability"));
     let plan = planned(&kind, untitled().set("valueVectorIndex", 2)).expect("a kind states no count");
-    assert!(plan.says.iter().any(|note| note.key == "components-unchecked"), "{:?}", plan.says);
+    assert!(
+        plan.says.iter().any(|note| note.key == "components-unchecked"),
+        "{:?}",
+        plan.says
+    );
 }
 
 // -- what each slot takes -----------------------------------------------------
@@ -476,15 +699,27 @@ fn a_component_past_the_last_one_a_property_holds_is_refused() {
 /// "attached" to the indexable elements of a representation”* (§8 p. 232).
 #[test]
 fn an_object_of_the_wrong_kind_is_refused_on_its_slot() {
-    let why = planned(&Pieces::empty().with("targets", property(POROSITY, "porosity", vec![1])), titled(json!(["#ff0000"])))
-        .unwrap_err();
-    assert!(why.contains("`targets`") && why.contains("ContinuousProperty") && why.contains("`mapped`"), "{why}");
+    let why = planned(
+        &Pieces::empty().with("targets", property(POROSITY, "porosity", vec![1])),
+        titled(json!(["#ff0000"])),
+    )
+    .unwrap_err();
+    assert!(
+        why.contains("`targets`") && why.contains("ContinuousProperty") && why.contains("`mapped`"),
+        "{why}"
+    );
 
     let feature = Pieces::empty()
-        .with("colourMap", object(MAP, "resqml22.ContinuousColorMap", "porosity, rgb"))
+        .with(
+            "colourMap",
+            object(MAP, "resqml22.ContinuousColorMap", "porosity, rgb"),
+        )
         .with("mapped", object(FEATURE, "resqml22.BoundaryFeature", "H3"));
     let why = planned(&feature, untitled()).unwrap_err();
-    assert!(why.contains("`mapped`") && why.contains("BoundaryFeature"), "{why}");
+    assert!(
+        why.contains("`mapped`") && why.contains("BoundaryFeature"),
+        "{why}"
+    );
 
     let series = Pieces::empty()
         .with("colourMap", object(SERIES, "eml23.TimeSeries", "years"))
@@ -493,8 +728,14 @@ fn an_object_of_the_wrong_kind_is_refused_on_its_slot() {
     assert!(why.contains("`colourMap`") && why.contains("TimeSeries"), "{why}");
 
     let why = planned(&cascade(), titled(json!(["#ff0000"])).set("scope", "nodes")).unwrap_err();
-    assert!(why.contains("`scope`") && why.contains("BoundaryFeature"), "{why}");
-    let grid = Pieces::empty().with("targets", object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"));
+    assert!(
+        why.contains("`scope`") && why.contains("BoundaryFeature"),
+        "{why}"
+    );
+    let grid = Pieces::empty().with(
+        "targets",
+        object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+    );
     let plan = planned(&grid, titled(json!(["#ff0000"])).set("scope", "nodes")).expect("a grid has nodes");
     let read = read_back(&plan);
     assert!(
@@ -518,7 +759,10 @@ fn an_object_of_the_wrong_kind_is_refused_on_its_slot() {
 #[test]
 fn a_collection_takes_a_constant_colour_and_both_readers_find_it() {
     const FOLDER: &str = "e19a8eb2-b3c5-47d7-82e3-5e6f70819293";
-    let pieces = Pieces::empty().with("targets", object(FOLDER, "eml23.DataobjectCollection", "case 2 — collection"));
+    let pieces = Pieces::empty().with(
+        "targets",
+        object(FOLDER, "eml23.DataobjectCollection", "case 2 — collection"),
+    );
     let plan = planned(&pieces, titled(json!(["#f58231"]))).expect("a collection is a target");
 
     let read = read_back(&plan);
@@ -530,18 +774,27 @@ fn a_collection_takes_a_constant_colour_and_both_readers_find_it() {
         panic!("a default graphical information: {:?}", found[0].information)
     };
     assert_eq!(
-        elements.first().and_then(|one| one.constant_color.as_ref()).map(|colour| colour.to_rgba().to_hex()),
+        elements
+            .first()
+            .and_then(|one| one.constant_color.as_ref())
+            .map(|colour| colour.to_rgba().to_hex()),
         Some("#f58231ff".to_string())
     );
 
     // What is no feature, interpretation, representation, marker or collection stays refused.
     let series = Pieces::empty().with("targets", object(SERIES, "eml23.TimeSeries", "years"));
     let why = planned(&series, titled(json!(["#f58231"]))).unwrap_err();
-    assert!(why.contains("`targets`") && why.contains("TimeSeries") && why.contains("collection"), "{why}");
+    assert!(
+        why.contains("`targets`") && why.contains("TimeSeries") && why.contains("collection"),
+        "{why}"
+    );
 
     // An element scope is a representation's: a collection has no nodes.
     let why = planned(&pieces, titled(json!(["#f58231"])).set("scope", "nodes")).unwrap_err();
-    assert!(why.contains("`scope`") && why.contains("DataobjectCollection"), "{why}");
+    assert!(
+        why.contains("`scope`") && why.contains("DataobjectCollection"),
+        "{why}"
+    );
 }
 
 /// Nothing to colour is an inaptitude, and so is a map with nothing to draw or
@@ -552,7 +805,10 @@ fn nothing_to_colour_is_unfit_and_a_map_goes_with_what_it_draws() {
     let registry = Registry::new();
     let operation = registry.get("graphical-information").expect("registered");
     assert!(matches!(operation.fitness(&Pieces::empty()), Fitness::Unfit(_)));
-    let lone_map = Pieces::empty().with("colourMap", object(MAP, "resqml22.ContinuousColorMap", "porosity, rgb"));
+    let lone_map = Pieces::empty().with(
+        "colourMap",
+        object(MAP, "resqml22.ContinuousColorMap", "porosity, rgb"),
+    );
     assert!(matches!(operation.fitness(&lone_map), Fitness::Unfit(_)));
     let lone_property = Pieces::empty().with("mapped", property(POROSITY, "porosity", vec![1]));
     assert!(matches!(operation.fitness(&lone_property), Fitness::Unfit(_)));

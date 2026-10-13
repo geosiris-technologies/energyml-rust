@@ -201,8 +201,11 @@ fn a_package_that_is_right_is_not_searched() {
     // need it. A package whose names are correct resolves through its own
     // declaration and records nothing — no departure, no diagnostic, no
     // wandering through the folder.
-    let Some((epc, _)) = renamed("intact", "testingPackageCpp22.epc", Some("testingPackageCpp22.h5"))
-    else {
+    let Some((epc, _)) = renamed(
+        "intact",
+        "testingPackageCpp22.epc",
+        Some("testingPackageCpp22.h5"),
+    ) else {
         return;
     };
     let store = EpcStore::open(&epc, registry()).expect("the package opens");
@@ -235,10 +238,7 @@ fn a_neighbouring_package_is_never_a_candidate() {
     files.set_root(&dir);
 
     let candidates = files.candidates("missing.h5", Some(&dir.join("first.epc")));
-    let paths: Vec<String> = candidates
-        .iter()
-        .map(|c| c.path.display().to_string())
-        .collect();
+    let paths: Vec<String> = candidates.iter().map(|c| c.path.display().to_string()).collect();
     assert!(
         paths.iter().any(|p| p.ends_with("data.h5")),
         "the data file should be a candidate: {paths:?}"

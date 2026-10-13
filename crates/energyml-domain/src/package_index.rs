@@ -224,7 +224,9 @@ fn relations_facts(node: &IndexNode, object: &dyn Reflect, strings: &mut Interne
                             let declared = raw
                                 .attributes
                                 .iter()
-                                .find(|(name, _)| name == "xsi:type" || name == "type" || name.ends_with(":type"))
+                                .find(|(name, _)| {
+                                    name == "xsi:type" || name == "type" || name.ends_with(":type")
+                                })
                                 .map(|(_, value)| value.as_str())
                                 .unwrap_or("");
                             declared.rsplit(':').next().unwrap_or(declared).to_string()
@@ -306,7 +308,9 @@ impl PropertySheet {
     /// The kind as a [`PropertyKindRef`], for code written against `property`.
     pub fn kind_ref(&self) -> Option<PropertyKindRef> {
         self.kind.as_ref().map(|kind| match kind {
-            SheetKind::Standard(name) => PropertyKindRef::Standard { name: name.to_string() },
+            SheetKind::Standard(name) => PropertyKindRef::Standard {
+                name: name.to_string(),
+            },
             SheetKind::Object { uuid, title } => PropertyKindRef::Object {
                 uuid: uuid.to_string(),
                 title: title.as_ref().map(|t| t.to_string()),
@@ -517,16 +521,27 @@ impl PackageIndex {
         let live = |id: &NodeId| !matches!(self.nodes[*id as usize].state, NodeState::Gone);
         let held: Vec<NodeId> = match self.shared.get(key.as_str()) {
             Some(held) => held.iter().copied().filter(live).collect(),
-            None => self.by_uuid.get(key.as_str()).copied().filter(live).into_iter().collect(),
+            None => self
+                .by_uuid
+                .get(key.as_str())
+                .copied()
+                .filter(live)
+                .into_iter()
+                .collect(),
         };
         if held.len() > 1
-            && let Some(exact) = held.iter().find(|&&id| self.nodes[id as usize].uri.eq_ignore_ascii_case(address))
+            && let Some(exact) = held
+                .iter()
+                .find(|&&id| self.nodes[id as usize].uri.eq_ignore_ascii_case(address))
         {
             return Some(*exact);
         }
         let mut best: Option<(identity::VersionFit, NodeId)> = None;
         for &id in &held {
-            let fit = identity::version_fit(wanted.as_deref(), version_in_uri(&self.nodes[id as usize].uri).as_deref());
+            let fit = identity::version_fit(
+                wanted.as_deref(),
+                version_in_uri(&self.nodes[id as usize].uri).as_deref(),
+            );
             if fit == identity::VersionFit::Contradicts {
                 continue;
             }
@@ -543,7 +558,10 @@ impl PackageIndex {
         if held.len() > 1
             && let Some(default) = self.by_uuid.get(key.as_str()).copied()
             && held.contains(&default)
-            && identity::version_fit(wanted.as_deref(), version_in_uri(&self.nodes[default as usize].uri).as_deref()) == fit
+            && identity::version_fit(
+                wanted.as_deref(),
+                version_in_uri(&self.nodes[default as usize].uri).as_deref(),
+            ) == fit
         {
             return Some(default);
         }
@@ -694,12 +712,19 @@ impl PackageIndex {
         }
         absent.sort_by_key(|&id| (self.nodes[id as usize].seen, id));
 
-        let nodes: Vec<Node> = present.iter().chain(absent.iter()).map(|&id| self.graph_node(id)).collect();
+        let nodes: Vec<Node> = present
+            .iter()
+            .chain(absent.iter())
+            .map(|&id| self.graph_node(id))
+            .collect();
         let mut triples: Vec<(NodeId, NodeId, PathId)> = Vec::with_capacity(self.edge_count());
         for &source in &present {
             self.edges_from(source, &mut triples);
         }
-        Graph { nodes, edges: self.sorted_edges(triples) }
+        Graph {
+            nodes,
+            edges: self.sorted_edges(triples),
+        }
     }
 
     /// What [`PackageIndex::graph`] says **around these objects** — so that a
@@ -731,11 +756,13 @@ impl PackageIndex {
         let mut sources: Vec<NodeId> = Vec::new();
         let mut gone: Vec<String> = Vec::new();
         for address in addresses {
-            let shown = self.find(address).filter(|&id| match self.nodes[id as usize].state {
-                NodeState::Present => true,
-                NodeState::Absent => self.holder(id).is_none(),
-                _ => false,
-            });
+            let shown = self
+                .find(address)
+                .filter(|&id| match self.nodes[id as usize].state {
+                    NodeState::Present => true,
+                    NodeState::Absent => self.holder(id).is_none(),
+                    _ => false,
+                });
             match shown {
                 Some(id) => {
                     if !self.uri_str(id).eq_ignore_ascii_case(address.trim()) {
@@ -801,7 +828,10 @@ impl PackageIndex {
                 Some(part) => part,
                 None => target,
             };
-            if matches!(self.nodes[target as usize].state, NodeState::Present | NodeState::Absent) {
+            if matches!(
+                self.nodes[target as usize].state,
+                NodeState::Present | NodeState::Absent
+            ) {
                 triples.push((source, target, path));
             }
         }
@@ -857,12 +887,15 @@ impl GraphAround {
         let list = |items: &[String]| -> String {
             serde_json::to_string(items).unwrap_or_else(|_| "[]".to_string())
         };
-        format!("{body},\n  \"sources\": {},\n  \"gone\": {}\n}}", list(&self.sources), list(&self.gone))
+        format!(
+            "{body},\n  \"sources\": {},\n  \"gone\": {}\n}}",
+            list(&self.sources),
+            list(&self.gone)
+        )
     }
 }
 
 impl PackageIndex {
-
     // -- Updating ----------------------------------------------------------
 
     /// Bring the index up to date with `store` after `changed` objects changed,
@@ -910,7 +943,12 @@ impl PackageIndex {
             self.shared.contains_key(key.as_str()) || store.summaries_of(&key).len() > 1
         });
         if !namesakes {
-            return self.update_with(store, &|uuid| store.find_by_uuid(uuid).cloned(), changed, revision);
+            return self.update_with(
+                store,
+                &|uuid| store.find_by_uuid(uuid).cloned(),
+                changed,
+                revision,
+            );
         }
         let mut disturbed: Vec<String> = self
             .nodes
@@ -986,7 +1024,8 @@ impl PackageIndex {
         use crate::inherit::{Part, parse_association};
 
         let uuid_of = |node: NodeId| self.nodes[node as usize].uuid.to_ascii_lowercase();
-        let is_set = id.is_some_and(|id| &*self.nodes[id as usize].type_key == "CollectionsToDataobjectsAssociationSet");
+        let is_set = id
+            .is_some_and(|id| &*self.nodes[id as usize].type_key == "CollectionsToDataobjectsAssociationSet");
         let old_set: std::collections::HashSet<(NodeId, PathId)> = old.iter().copied().collect();
         let new_set: std::collections::HashSet<(NodeId, PathId)> = new.iter().copied().collect();
         let mut collection_changed = false;
@@ -1022,7 +1061,8 @@ impl PackageIndex {
             Some(id) => self.detach(id),
             None => Vec::new(),
         };
-        self.unreadable.retain(|(uuid, _)| !uuid.eq_ignore_ascii_case(key));
+        self.unreadable
+            .retain(|(uuid, _)| !uuid.eq_ignore_ascii_case(key));
         self.unsheeted.retain(|(uuid, _)| !uuid.eq_ignore_ascii_case(key));
 
         match summary_of(key) {
@@ -1129,7 +1169,9 @@ impl PackageIndex {
             Some(first) if self.nodes[first as usize].state == NodeState::Pending => {
                 let held = self.shared.entry(key.clone()).or_insert_with(|| vec![first]);
                 held.push(id);
-                if version_in_uri(&self.nodes[first as usize].uri).is_some() && version_in_uri(&summary.uri).is_none() {
+                if version_in_uri(&self.nodes[first as usize].uri).is_some()
+                    && version_in_uri(&summary.uri).is_none()
+                {
                     self.by_uuid.insert(key, id);
                 }
             }
@@ -1156,10 +1198,17 @@ impl PackageIndex {
         let version_of = |id: NodeId| -> Option<String> { version_in_uri(&self.nodes[id as usize].uri) };
         let declared = edge.target.qualified_type();
         let mut left: Vec<NodeId> = held.to_vec();
-        if left.iter().any(|&id| *self.nodes[id as usize].qualified_type == *declared) {
+        if left
+            .iter()
+            .any(|&id| *self.nodes[id as usize].qualified_type == *declared)
+        {
             left.retain(|&id| *self.nodes[id as usize].qualified_type == *declared);
         }
-        let wanted = edge.target.object_version.map(str::trim).filter(|version| !version.is_empty());
+        let wanted = edge
+            .target
+            .object_version
+            .map(str::trim)
+            .filter(|version| !version.is_empty());
         match wanted {
             Some(wanted) => {
                 if left.iter().any(|&id| version_of(id).as_deref() == Some(wanted)) {
@@ -1167,7 +1216,11 @@ impl PackageIndex {
                 }
             }
             None if left.len() > 1 => {
-                let bare: Vec<NodeId> = left.iter().copied().filter(|&id| version_of(id).is_none()).collect();
+                let bare: Vec<NodeId> = left
+                    .iter()
+                    .copied()
+                    .filter(|&id| version_of(id).is_none())
+                    .collect();
                 if let [only] = bare[..] {
                     return vec![only];
                 }
@@ -1207,7 +1260,8 @@ impl PackageIndex {
         self.nodes[id as usize].state = NodeState::Present;
 
         for nested in identity::nested_objects(object) {
-            self.nested.insert(nested.key.uuid.to_ascii_lowercase().into_boxed_str(), id);
+            self.nested
+                .insert(nested.key.uuid.to_ascii_lowercase().into_boxed_str(), id);
         }
         let mut outgoing: Vec<(NodeId, PathId)> = Vec::new();
         for (n, edge) in identity::collect_refs(object).into_iter().enumerate() {
@@ -1247,7 +1301,8 @@ impl PackageIndex {
         // The relations the walks read, from the references just taken and the
         // two facts the object shows — no second read of it (§4.5).
         let facts = relations_facts(&self.nodes[id as usize], object, &mut self.strings);
-        self.relations.take(&self.nodes, &self.strings, id, &outgoing, facts);
+        self.relations
+            .take(&self.nodes, &self.strings, id, &outgoing, facts);
         self.out[id as usize] = outgoing.into_boxed_slice();
 
         if self.nodes[id as usize].qualified_type.ends_with("Property") {
@@ -1269,7 +1324,9 @@ impl PackageIndex {
         IndexNode {
             uri: EtpUri::object(None, &qualified_type, edge.target.uuid).into_boxed_str(),
             uuid: edge.target.uuid.into(),
-            type_key: self.strings.arc(naming::strip_obj_prefix(edge.target.object_type)),
+            type_key: self
+                .strings
+                .arc(naming::strip_obj_prefix(edge.target.object_type)),
             externally_defined: graph::is_externally_defined(&qualified_type),
             qualified_type: self.strings.arc(&qualified_type),
             title: edge.target.title.map(Arc::from),
@@ -1278,7 +1335,12 @@ impl PackageIndex {
         }
     }
 
-    fn sheet_of(&mut self, read: &Property<'_>, object: &dyn Reflect, node_title: Option<Arc<str>>) -> PropertySheet {
+    fn sheet_of(
+        &mut self,
+        read: &Property<'_>,
+        object: &dyn Reflect,
+        node_title: Option<Arc<str>>,
+    ) -> PropertySheet {
         let title = match (&read.title, node_title) {
             (None, _) => None,
             (Some(own), Some(shared)) if &*shared == own.as_str() => Some(shared),
@@ -1340,7 +1402,10 @@ impl PackageIndex {
             let found = match source.read_object_at(&referrer_uuid) {
                 Ok(object) => {
                     let mut found = None;
-                    for (n, edge) in identity::collect_refs(object.as_reflect()).into_iter().enumerate() {
+                    for (n, edge) in identity::collect_refs(object.as_reflect())
+                        .into_iter()
+                        .enumerate()
+                    {
                         if edge.target.uuid.to_ascii_lowercase() == wanted {
                             found = Some(self.absent_node(&edge, ((referrer as u64) << 32) | n as u64));
                             break;
@@ -1463,7 +1528,12 @@ impl IndexBuilder {
         for summary in &summaries {
             index.add_present(summary);
         }
-        Self { index, total, cursor: 0, settled: false }
+        Self {
+            index,
+            total,
+            cursor: 0,
+            settled: false,
+        }
     }
 
     /// How many objects the pass reads.
@@ -1473,7 +1543,10 @@ impl IndexBuilder {
 
     /// Where the pass is.
     pub fn progress(&self) -> Progress {
-        Progress { done: self.cursor, total: self.total }
+        Progress {
+            done: self.cursor,
+            total: self.total,
+        }
     }
 
     /// Read the next `n` objects, in inventory order.

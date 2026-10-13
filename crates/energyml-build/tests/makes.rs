@@ -27,7 +27,10 @@ fn every_type_an_operation_makes_is_a_part_a_release_can_hold() {
         for made in operation.makes() {
             checked += 1;
             match schemas.by_qualified_type(made) {
-                None => wrong.push(format!("`{}` makes `{made}`, which no schema of this build knows", operation.name())),
+                None => wrong.push(format!(
+                    "`{}` makes `{made}`, which no schema of this build knows",
+                    operation.name()
+                )),
                 // The drop owns the names its release does not have: that is
                 // how `resqml22.CategoricalProperty` resolves at all.
                 Some(entry) if !energyml_schemas::may_create(entry.info) => wrong.push(format!(
@@ -41,7 +44,10 @@ fn every_type_an_operation_makes_is_a_part_a_release_can_hold() {
         }
     }
     // The negative control: an empty `makes` everywhere would pass the loop.
-    assert!(checked >= 20, "only {checked} type(s) declared over the whole registry — the loop proved nothing");
+    assert!(
+        checked >= 20,
+        "only {checked} type(s) declared over the whole registry — the loop proved nothing"
+    );
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
 }
 
@@ -53,9 +59,9 @@ fn every_type_an_operation_makes_is_a_part_a_release_can_hold() {
 #[test]
 fn the_categorical_property_of_2_2_is_a_drop_name_only() {
     let schemas = energyml_schemas::all();
-    let entry = schemas
-        .by_qualified_type("resqml22.CategoricalProperty")
-        .expect("the 2.2_dev3 drop registers it, which is what made the defect invisible to a check on names");
+    let entry = schemas.by_qualified_type("resqml22.CategoricalProperty").expect(
+        "the 2.2_dev3 drop registers it, which is what made the defect invisible to a check on names",
+    );
     assert!(
         !energyml_schemas::may_create(entry.info),
         "{} {} {} is offered for creation",
@@ -64,6 +70,8 @@ fn the_categorical_property_of_2_2_is_a_drop_name_only() {
         entry.info.name
     );
     // And what replaces it is a release's own.
-    let discrete = schemas.by_qualified_type("resqml22.DiscreteProperty").expect("RESQML 2.2 has discrete properties");
+    let discrete = schemas
+        .by_qualified_type("resqml22.DiscreteProperty")
+        .expect("RESQML 2.2 has discrete properties");
     assert!(energyml_schemas::may_create(discrete.info));
 }

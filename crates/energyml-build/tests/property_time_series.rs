@@ -38,7 +38,10 @@ use energyml_build::operation::{Choices, Identity, NewObject, Numbers, Plan, Reg
 use energyml_build::pieces::{Known, KnownProperty, Pieces, Ref, Source};
 
 fn when() -> When {
-    When { creation: "2026-09-25T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-25T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 const BASE: &str = "baba0000-0000-4000-8000-00000000ba5e";
@@ -54,13 +57,21 @@ fn snapshot() -> Vec<f64> {
 
 /// The series of the tests, and the days from its first instant to each —
 /// 2016 is a leap year: 366 days to 2017, 731 to 2018.
-const INSTANTS: [&str; 3] = ["2016-01-01T00:00:00Z", "2017-01-01T00:00:00Z", "2018-01-01T00:00:00Z"];
+const INSTANTS: [&str; 3] = [
+    "2016-01-01T00:00:00Z",
+    "2017-01-01T00:00:00Z",
+    "2018-01-01T00:00:00Z",
+];
 const DAYS: [f64; 3] = [0.0, 366.0, 731.0];
 
 /// What the boundary resolves of a pressure on a frame (`read::property_of`).
 fn facts(values: Vec<f64>) -> KnownProperty {
     KnownProperty {
-        supporting: Some(Ref::new(FRAME, "resqml22.WellboreFrameRepresentation", "GTH-1 — frame")),
+        supporting: Some(Ref::new(
+            FRAME,
+            "resqml22.WellboreFrameRepresentation",
+            "GTH-1 — frame",
+        )),
         indexable: "nodes".to_string(),
         value_count: vec![1],
         timed: false,
@@ -91,12 +102,17 @@ fn series_with(instants: &[&str]) -> Source {
 }
 
 fn bag() -> Pieces {
-    Pieces::empty().with("base", base_with(facts(snapshot()))).with("series", series_with(&INSTANTS))
+    Pieces::empty()
+        .with("base", base_with(facts(snapshot())))
+        .with("series", series_with(&INSTANTS))
 }
 
 /// The law as the tests state it: half a bar less per year.
 fn steps() -> Choices {
-    Choices::new().set("form", "steps").set("change", -0.5).set("source", "synthetic: the test's own values")
+    Choices::new()
+        .set("form", "steps")
+        .set("change", -0.5)
+        .set("source", "synthetic: the test's own values")
 }
 
 fn series(use_interval: bool) -> Choices {
@@ -112,13 +128,19 @@ fn planned(pieces: &Pieces, choices: &Choices) -> Result<Plan, String> {
 }
 
 fn planned_as(pieces: &Pieces, choices: &Choices, identity: &Identity) -> Result<Plan, String> {
-    Registry::new().plan("property-time-series", pieces, choices, identity, &when()).map_err(|why| why.to_string())
+    Registry::new()
+        .plan("property-time-series", pieces, choices, identity, &when())
+        .map_err(|why| why.to_string())
 }
 
 /// The values the plan writes for a property, and the dimensions it declares.
 fn written(plan: &Plan, property: &NewObject) -> (Vec<f64>, Vec<i64>) {
     let path = format!("/resqml22/{}/values", property.uuid);
-    let dataset = plan.datasets.iter().find(|one| one.path == path).expect("the property's values");
+    let dataset = plan
+        .datasets
+        .iter()
+        .find(|one| one.path == path)
+        .expect("the property's values");
     match &dataset.values {
         Numbers::F64(values) => (values.clone(), dataset.dimensions.clone()),
         other => panic!("not floating point: {other:?}"),
@@ -141,8 +163,16 @@ fn each_step_is_a_property_dated_by_its_own_instant_and_naming_no_series() {
     let plan = planned(&bag(), &steps()).expect("a plan");
     assert_eq!(plan.objects.len(), 3, "one property per instant");
     for (index, property) in plan.objects.iter().enumerate() {
-        assert_eq!(property.json["Time"]["DateTime"], json!(INSTANTS[index]), "property {index} is dated by instant {index}");
-        assert!(property.json.get("TimeOrIntervalSeries").is_none(), "a property per step names no series: {}", property.json);
+        assert_eq!(
+            property.json["Time"]["DateTime"],
+            json!(INSTANTS[index]),
+            "property {index} is dated by instant {index}"
+        );
+        assert!(
+            property.json.get("TimeOrIntervalSeries").is_none(),
+            "a property per step names no series: {}",
+            property.json
+        );
         assert_eq!(property.json["SupportingRepresentation"]["Uuid"], json!(FRAME));
         assert_eq!(property.json["PropertyKind"]["Uuid"], json!(KIND));
         assert_eq!(property.json["Uom"], json!("bar"));
@@ -151,7 +181,10 @@ fn each_step_is_a_property_dated_by_its_own_instant_and_naming_no_series() {
         assert_eq!(dimensions, vec![5], "one value per node, no time dimension");
         for (node, value) in values.iter().enumerate() {
             let expected = snapshot()[node] + drift(DAYS[index]);
-            assert!(same(*value, expected), "step {index}, node {node}: {value} where {expected}");
+            assert!(
+                same(*value, expected),
+                "step {index}, node {node}: {value} where {expected}"
+            );
         }
     }
     assert_eq!(plan.objects[1].title, "GTH-1 — pressure — 2017-01-01T00:00:00Z");
@@ -167,10 +200,21 @@ fn a_series_is_one_property_with_time_the_slowest_dimension() {
     let timed = &property.json["TimeOrIntervalSeries"];
     assert_eq!(timed["UseInterval"], json!(false));
     assert_eq!(timed["TimeSeries"]["Uuid"], json!(SERIES));
-    assert!(property.json.get("Time").is_none(), "a series is no single instant");
-    assert_eq!(property.json["ValueCountPerIndexableElement"], json!([1]), "time is no component");
+    assert!(
+        property.json.get("Time").is_none(),
+        "a series is no single instant"
+    );
+    assert_eq!(
+        property.json["ValueCountPerIndexableElement"],
+        json!([1]),
+        "time is no component"
+    );
     let (values, dimensions) = written(&plan, property);
-    assert_eq!(dimensions, vec![3, 5], "[TimeCount][IndexableElementCount], the slowest first");
+    assert_eq!(
+        dimensions,
+        vec![3, 5],
+        "[TimeCount][IndexableElementCount], the slowest first"
+    );
     assert_eq!(
         property.json["ValuesForPatch"][0]["Values"]["ExternalDataArrayPart"][0]["Count"],
         json!([3, 5]),
@@ -179,7 +223,10 @@ fn a_series_is_one_property_with_time_the_slowest_dimension() {
     for step in 0..3 {
         for node in 0..5 {
             let expected = snapshot()[node] + drift(DAYS[step]);
-            assert!(same(values[step * 5 + node], expected), "step {step}, node {node}");
+            assert!(
+                same(values[step * 5 + node], expected),
+                "step {step}, node {node}"
+            );
         }
     }
 }
@@ -196,10 +243,17 @@ fn over_intervals_n_instants_give_n_minus_one_means() {
     for (step, middle) in [183.0, 548.5].into_iter().enumerate() {
         for node in 0..5 {
             let expected = snapshot()[node] + drift(middle);
-            assert!(same(values[step * 5 + node], expected), "interval {step}, node {node}");
+            assert!(
+                same(values[step * 5 + node], expected),
+                "interval {step}, node {node}"
+            );
         }
     }
-    assert!(plan.says.iter().any(|note| note.key == "series" && note.detail.contains("3 instants make 2 values")));
+    assert!(
+        plan.says
+            .iter()
+            .any(|note| note.key == "series" && note.detail.contains("3 instants make 2 values"))
+    );
 }
 
 #[test]
@@ -223,12 +277,23 @@ fn every_property_says_it_is_synthetic_and_cites_its_law_and_source() {
             let extension = &property.json["ExtensionNameValue"][0];
             assert_eq!(extension["Name"], json!("synthetic"));
             assert_eq!(extension["Value"]["_"], json!("true"));
-            let description = property.json["Citation"]["Description"].as_str().expect("a description");
+            let description = property.json["Citation"]["Description"]
+                .as_str()
+                .expect("a description");
             assert!(description.contains("not measured"), "{description}");
             assert!(description.contains("a sourced law — synthetic"), "{description}");
-            assert!(description.contains("GTH-1 — pressure"), "the base is named: {description}");
+            assert!(
+                description.contains("GTH-1 — pressure"),
+                "the base is named: {description}"
+            );
         }
-        assert_eq!(plan.says.iter().find(|note| note.key == "empty").map(|note| note.detail.starts_with("1 element")), Some(true));
+        assert_eq!(
+            plan.says
+                .iter()
+                .find(|note| note.key == "empty")
+                .map(|note| note.detail.starts_with("1 element")),
+            Some(true)
+        );
     }
 }
 
@@ -243,50 +308,115 @@ fn a_law_without_a_source_is_refused() {
 #[test]
 fn a_base_that_cannot_be_laid_through_time_is_refused_by_what_it_is() {
     let refused = |facts: KnownProperty, word: &str| {
-        let bag = Pieces::empty().with("base", base_with(facts)).with("series", series_with(&INSTANTS));
+        let bag = Pieces::empty()
+            .with("base", base_with(facts))
+            .with("series", series_with(&INSTANTS));
         let why = planned(&bag, &steps()).expect_err(word);
         assert!(why.contains(word), "{word}: {why}");
     };
-    refused(KnownProperty { timed: true, ..facts(snapshot()) }, "already indexed in time");
-    refused(KnownProperty { realizations: true, ..facts(snapshot()) }, "realizations");
-    refused(KnownProperty { value_count: vec![3], ..facts(snapshot()) }, "vector");
-    refused(KnownProperty { facets: vec![json!({ "Facet": "P10" })], ..facts(snapshot()) }, "facet");
-    refused(KnownProperty { values: Err("no backend".to_string()), ..facts(snapshot()) }, "no backend");
-    refused(KnownProperty { uom: None, ..facts(snapshot()) }, "unit");
+    refused(
+        KnownProperty {
+            timed: true,
+            ..facts(snapshot())
+        },
+        "already indexed in time",
+    );
+    refused(
+        KnownProperty {
+            realizations: true,
+            ..facts(snapshot())
+        },
+        "realizations",
+    );
+    refused(
+        KnownProperty {
+            value_count: vec![3],
+            ..facts(snapshot())
+        },
+        "vector",
+    );
+    refused(
+        KnownProperty {
+            facets: vec![json!({ "Facet": "P10" })],
+            ..facts(snapshot())
+        },
+        "facet",
+    );
+    refused(
+        KnownProperty {
+            values: Err("no backend".to_string()),
+            ..facts(snapshot())
+        },
+        "no backend",
+    );
+    refused(
+        KnownProperty {
+            uom: None,
+            ..facts(snapshot())
+        },
+        "unit",
+    );
 
     // And an object that is no continuous property, at the offer.
     let registry = Registry::new();
     let operation = registry.get("property-time-series").expect("in the registry");
     let wrong = Pieces::empty()
-        .with("base", Source::Object(Known { reference: Some(Ref::new(BASE, "resqml22.DiscreteProperty", "codes")), ..Known::default() }))
+        .with(
+            "base",
+            Source::Object(Known {
+                reference: Some(Ref::new(BASE, "resqml22.DiscreteProperty", "codes")),
+                ..Known::default()
+            }),
+        )
         .with("series", series_with(&INSTANTS));
-    assert!(matches!(operation.fitness(&wrong), energyml_build::operation::Fitness::Unfit(_)));
+    assert!(matches!(
+        operation.fitness(&wrong),
+        energyml_build::operation::Fitness::Unfit(_)
+    ));
 }
 
 #[test]
 fn a_series_whose_instants_are_not_known_or_do_not_increase_is_refused() {
     let unread = Pieces::empty().with("base", base_with(facts(snapshot()))).with(
         "series",
-        Source::Object(Known { reference: Some(Ref::new(SERIES, "eml23.TimeSeries", "operation")), ..Known::default() }),
+        Source::Object(Known {
+            reference: Some(Ref::new(SERIES, "eml23.TimeSeries", "operation")),
+            ..Known::default()
+        }),
     );
     let why = planned(&unread, &steps()).expect_err("no instants");
     assert!(why.contains("not read"), "{why}");
 
-    let back = Pieces::empty().with("base", base_with(facts(snapshot()))).with("series", series_with(&[INSTANTS[1], INSTANTS[0]]));
+    let back = Pieces::empty()
+        .with("base", base_with(facts(snapshot())))
+        .with("series", series_with(&[INSTANTS[1], INSTANTS[0]]));
     let why = planned(&back, &steps()).expect_err("decreasing");
     assert!(why.contains("instant 2"), "{why}");
 
-    let one = Pieces::empty().with("base", base_with(facts(snapshot()))).with("series", series_with(&INSTANTS[..1]));
+    let one = Pieces::empty()
+        .with("base", base_with(facts(snapshot())))
+        .with("series", series_with(&INSTANTS[..1]));
     let why = planned(&one, &series(true)).expect_err("no interval");
     assert!(why.contains("from one instant to the next"), "{why}");
-    assert_eq!(planned(&one, &series(false)).expect("one instant, one step").objects.len(), 1);
+    assert_eq!(
+        planned(&one, &series(false))
+            .expect("one instant, one step")
+            .objects
+            .len(),
+        1
+    );
 }
 
 // -- identity -----------------------------------------------------------------------
 
 #[test]
 fn the_same_inputs_give_the_same_uuids_and_another_change_other_properties() {
-    let uuids = |plan: &Plan| plan.objects.iter().map(|one| one.uuid.clone()).collect::<Vec<_>>();
+    let uuids = |plan: &Plan| {
+        plan.objects
+            .iter()
+            .map(|one| one.uuid.clone())
+            .collect::<Vec<_>>()
+    };
     let first = uuids(&planned(&bag(), &steps()).expect("a plan"));
     assert_eq!(first.len(), 3);
     assert_eq!(first, uuids(&planned(&bag(), &steps()).expect("a plan")));
@@ -294,8 +424,12 @@ fn the_same_inputs_give_the_same_uuids_and_another_change_other_properties() {
     // The first step holds the snapshot itself at any change: it is the same
     // property, and the others are new ones.
     assert_eq!(steeper[0], first[0]);
-    assert!(steeper[1..].iter().all(|uuid| !first.contains(uuid)), "{first:?} {steeper:?}");
-    let reworded = uuids(&planned(&bag(), &steps().set("source", "synthetic, said otherwise")).expect("a plan"));
+    assert!(
+        steeper[1..].iter().all(|uuid| !first.contains(uuid)),
+        "{first:?} {steeper:?}"
+    );
+    let reworded =
+        uuids(&planned(&bag(), &steps().set("source", "synthetic, said otherwise")).expect("a plan"));
     assert_eq!(first, reworded, "a reworded source rewrites the same properties");
 
     // The two forms never share an object.
@@ -305,9 +439,17 @@ fn the_same_inputs_give_the_same_uuids_and_another_change_other_properties() {
 
 #[test]
 fn given_uuids_are_handed_out_one_per_property() {
-    let given: Vec<String> = (1..=3).map(|k| format!("0a0a0a0a-0000-4000-8000-00000000000{k}")).collect();
+    let given: Vec<String> = (1..=3)
+        .map(|k| format!("0a0a0a0a-0000-4000-8000-00000000000{k}"))
+        .collect();
     let plan = planned_as(&bag(), &steps(), &Identity::Given(given.clone())).expect("a plan");
-    assert_eq!(plan.objects.iter().map(|one| one.uuid.clone()).collect::<Vec<_>>(), given);
+    assert_eq!(
+        plan.objects
+            .iter()
+            .map(|one| one.uuid.clone())
+            .collect::<Vec<_>>(),
+        given
+    );
 }
 
 // -- read back: the instant a property names is the series' own ------------------------
@@ -380,25 +522,51 @@ entrees = [
 set = { form = "series", useInterval = true, change = -0.5, source = "synthetic: the test's own values" }
 "#;
     let recipe = Recipe::parse(text).expect("the recipe reads");
-    let dir = std::env::temp_dir().join(format!("energyml-build-property-time-series-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!(
+        "energyml-build-property-time-series-{}",
+        std::process::id()
+    ));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     let out = dir.join("pts.epc");
     let schemas = Arc::new(energyml_schemas::all());
-    recipe::run(&recipe, Path::new("."), &Registry::new(), schemas.clone(), &out, &mut NoFile).unwrap_or_else(|stop| panic!("{stop}"));
+    recipe::run(
+        &recipe,
+        Path::new("."),
+        &Registry::new(),
+        schemas.clone(),
+        &out,
+        &mut NoFile,
+    )
+    .unwrap_or_else(|stop| panic!("{stop}"));
     let store = EpcStore::open(&out, schemas).expect("the package reads");
 
-    let json_of = |uri: &str| energyml_core::json::write_value(store.get_object(uri).expect("it reads").as_reflect());
+    let json_of =
+        |uri: &str| energyml_core::json::write_value(store.get_object(uri).expect("it reads").as_reflect());
     let values_of = |uri: &str| {
         let object = store.get_object(uri).expect("it reads");
         let read = energyml_domain::property::read(object.as_reflect()).expect("a property");
-        read.patches[0].read(&store).expect("its values").to_f64().expect("numbers")
+        read.patches[0]
+            .read(&store)
+            .expect("its values")
+            .to_f64()
+            .expect("numbers")
     };
     let objects = store.resources();
-    let series_uri = objects.iter().find(|one| one.qualified_type == "eml23.TimeSeries").expect("the series").uri.clone();
+    let series_uri = objects
+        .iter()
+        .find(|one| one.qualified_type == "eml23.TimeSeries")
+        .expect("the series")
+        .uri
+        .clone();
     let series = json_of(&series_uri);
     let series_uuid = series["uuid"].as_str().unwrap().to_string();
-    let listed: Vec<String> = series["Time"].as_array().unwrap().iter().map(|time| time["DateTime"].as_str().unwrap().to_string()).collect();
+    let listed: Vec<String> = series["Time"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|time| time["DateTime"].as_str().unwrap().to_string())
+        .collect();
     assert_eq!(listed.len(), 3);
 
     let properties: Vec<(String, serde_json::Value)> = objects
@@ -406,10 +574,17 @@ set = { form = "series", useInterval = true, change = -0.5, source = "synthetic:
         .filter(|one| one.qualified_type == "resqml22.ContinuousProperty")
         .map(|one| (one.uri.clone(), json_of(&one.uri)))
         .collect();
-    let (base_uri, base) = properties.iter().find(|(_, json)| json.get("Time").is_none() && json.get("TimeOrIntervalSeries").is_none()).expect("the snapshot");
+    let (base_uri, base) = properties
+        .iter()
+        .find(|(_, json)| json.get("Time").is_none() && json.get("TimeOrIntervalSeries").is_none())
+        .expect("the snapshot");
     let snapshot = values_of(base_uri);
     let nodes = snapshot.len();
-    assert!(nodes > 3 && snapshot.iter().any(|value| value.is_nan()) && snapshot.iter().any(|value| value.is_finite()));
+    assert!(
+        nodes > 3
+            && snapshot.iter().any(|value| value.is_nan())
+            && snapshot.iter().any(|value| value.is_finite())
+    );
 
     // The calendar, keyed by the text the series holds — never by a parser.
     let days = |instant: &str| match instant {
@@ -420,35 +595,61 @@ set = { form = "series", useInterval = true, change = -0.5, source = "synthetic:
     };
 
     // The steps: each dated by an instant of the series, each instant once.
-    let dated: Vec<&(String, serde_json::Value)> = properties.iter().filter(|(_, json)| json.get("Time").is_some()).collect();
+    let dated: Vec<&(String, serde_json::Value)> = properties
+        .iter()
+        .filter(|(_, json)| json.get("Time").is_some())
+        .collect();
     assert_eq!(dated.len(), 3, "one property per instant");
     let mut seen = [false; 3];
     for (uri, property) in &dated {
         let instant = property["Time"]["DateTime"].as_str().expect("a date-time");
-        let index = listed.iter().position(|one| one == instant).unwrap_or_else(|| panic!("{instant} is no instant of the series"));
+        let index = listed
+            .iter()
+            .position(|one| one == instant)
+            .unwrap_or_else(|| panic!("{instant} is no instant of the series"));
         assert!(!seen[index], "instant {index} dated twice");
         seen[index] = true;
         assert!(property.get("TimeOrIntervalSeries").is_none());
-        assert_eq!(property["SupportingRepresentation"]["Uuid"], base["SupportingRepresentation"]["Uuid"]);
+        assert_eq!(
+            property["SupportingRepresentation"]["Uuid"],
+            base["SupportingRepresentation"]["Uuid"]
+        );
         let values = values_of(uri);
         assert_eq!(values.len(), nodes);
         for node in 0..nodes {
             let expected = snapshot[node] + drift(days(&listed[index]));
-            assert!(same(values[node], expected), "{instant}, node {node}: {} where {expected}", values[node]);
+            assert!(
+                same(values[node], expected),
+                "{instant}, node {node}: {} where {expected}",
+                values[node]
+            );
         }
     }
 
     // The series: step k is the interval from instant k to instant k + 1.
-    let (uri, timed) = properties.iter().find(|(_, json)| json.get("TimeOrIntervalSeries").is_some()).expect("the series property");
-    assert_eq!(timed["TimeOrIntervalSeries"]["TimeSeries"]["Uuid"], json!(series_uuid));
+    let (uri, timed) = properties
+        .iter()
+        .find(|(_, json)| json.get("TimeOrIntervalSeries").is_some())
+        .expect("the series property");
+    assert_eq!(
+        timed["TimeOrIntervalSeries"]["TimeSeries"]["Uuid"],
+        json!(series_uuid)
+    );
     assert_eq!(timed["TimeOrIntervalSeries"]["UseInterval"], json!(true));
     let values = values_of(uri);
-    assert_eq!(values.len(), (listed.len() - 1) * nodes, "n instants, n − 1 steps, time the slowest");
+    assert_eq!(
+        values.len(),
+        (listed.len() - 1) * nodes,
+        "n instants, n − 1 steps, time the slowest"
+    );
     for step in 0..listed.len() - 1 {
         let middle = (days(&listed[step]) + days(&listed[step + 1])) / 2.0;
         for node in 0..nodes {
             let expected = snapshot[node] + drift(middle);
-            assert!(same(values[step * nodes + node], expected), "interval {step}, node {node}");
+            assert!(
+                same(values[step * nodes + node], expected),
+                "interval {step}, node {node}"
+            );
         }
     }
     let _ = std::fs::remove_dir_all(&dir);

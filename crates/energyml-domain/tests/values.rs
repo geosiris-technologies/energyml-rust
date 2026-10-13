@@ -405,14 +405,17 @@ fn every_value_array_in_an_object_is_found_with_its_path() {
     for path in files.iter().take(3) {
         let store = EpcStore::open(path, registry.clone()).expect("the package opens");
         for summary in store.resources() {
-            let Ok(object) = store.get_object(&summary.uri) else { continue };
+            let Ok(object) = store.get_object(&summary.uri) else {
+                continue;
+            };
             let found = values::locate(object.as_reflect());
 
             for array in &found {
                 // The path is an address, not a description: following it lands
                 // on the very object that was reported.
-                let held = energyml_core::path::get(object.as_reflect(), &array.path)
-                    .unwrap_or_else(|e| panic!("`{}` does not resolve on `{}`: {e}", array.path, summary.uri));
+                let held = energyml_core::path::get(object.as_reflect(), &array.path).unwrap_or_else(|e| {
+                    panic!("`{}` does not resolve on `{}`: {e}", array.path, summary.uri)
+                });
                 let energyml_core::value::FieldValue::Object(held) = held else {
                     panic!("`{}` leads to something that is not an object", array.path);
                 };
@@ -446,7 +449,13 @@ fn every_value_array_in_an_object_is_found_with_its_path() {
         }
     }
 
-    assert!(seen > 50, "{seen} value array(s) found — the corpus holds far more");
+    assert!(
+        seen > 50,
+        "{seen} value array(s) found — the corpus holds far more"
+    );
     // The half the file walk cannot see, and the reason this exists.
-    assert!(computed > 0, "no computed array found — the walk proves nothing new");
+    assert!(
+        computed > 0,
+        "no computed array found — the walk proves nothing new"
+    );
 }

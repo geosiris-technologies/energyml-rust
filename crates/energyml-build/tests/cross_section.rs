@@ -17,12 +17,15 @@
 //! an inverted section looks abnormal to nobody. Keeping quiet about an empty panel,
 //! or about a crossing, which are the two pieces of news a section brings.
 
-use energyml_build::operation::{Choices, Fitness, Identity, AnyOperation, Registry, When};
+use energyml_build::operation::{AnyOperation, Choices, Fitness, Identity, Registry, When};
 use energyml_build::pieces::{Pieces, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 fn when() -> When {
-    When { creation: "2026-09-12T00:00:00Z".to_string(), originator: "tests".to_string() }
+    When {
+        creation: "2026-09-12T00:00:00Z".to_string(),
+        originator: "tests".to_string(),
+    }
 }
 
 /// A straight trace from west to east, at y = 5.
@@ -67,7 +70,12 @@ fn ramp(high: f64, low: f64) -> Source {
             patches: vec![Patch {
                 index: 0,
                 node_offset: 0,
-                points: vec![[0.0, 0.0, high], [10.0, 0.0, low], [10.0, 10.0, low], [0.0, 10.0, high]],
+                points: vec![
+                    [0.0, 0.0, high],
+                    [10.0, 0.0, low],
+                    [10.0, 10.0, low],
+                    [0.0, 10.0, high],
+                ],
                 topology: Topology::Triangles(vec![[0, 1, 2], [0, 2, 3]]),
                 closed: Vec::new(),
             }],
@@ -88,7 +96,9 @@ fn choices() -> Choices {
 fn operation() -> &'static dyn AnyOperation {
     // Deliberate leak: the registry lives for the length of the test, and making it
     // static avoids passing a reference at each call.
-    Box::leak(Box::new(Registry::new())).get("cross-section").expect("`cross-section` is in the registry")
+    Box::leak(Box::new(Registry::new()))
+        .get("cross-section")
+        .expect("`cross-section` is in the registry")
 }
 
 /// The ordinary bag: a trace, two plates, the high one first.
@@ -108,7 +118,9 @@ fn bag() -> Pieces {
 /// two polylines that nothing distinguishes, and the operation would have to guess.
 #[test]
 fn without_a_named_trace_the_operation_refuses_saying_so() {
-    let no_trace = Pieces::empty().with("surfaces", plate(100.0)).with("surfaces 2", plate(50.0));
+    let no_trace = Pieces::empty()
+        .with("surfaces", plate(100.0))
+        .with("surfaces 2", plate(50.0));
     match operation().fitness(&no_trace) {
         Fitness::Unfit(why) => assert!(why.message.contains("trace"), "{why}"),
         Fitness::Fit => panic!("a bag without a trace should not be fit"),
@@ -116,7 +128,9 @@ fn without_a_named_trace_the_operation_refuses_saying_so() {
 
     // And a slot holds only one role: a polyline filed under `surfaces`
     // is not a surface, so it does not count.
-    let misfiled = Pieces::empty().with("surfaces", trace()).with("surfaces 2", plate(50.0));
+    let misfiled = Pieces::empty()
+        .with("surfaces", trace())
+        .with("surfaces 2", plate(50.0));
     assert!(matches!(operation().fitness(&misfiled), Fitness::Unfit(_)));
 }
 
@@ -154,7 +168,9 @@ fn one_more_polyline_does_not_become_the_trace() {
 /// **Cardinality, at last exercised on a real operation.**
 #[test]
 fn a_single_surface_is_refused_with_the_count() {
-    let one_surface = Pieces::empty().with("trace", trace()).with("surfaces", plate(100.0));
+    let one_surface = Pieces::empty()
+        .with("trace", trace())
+        .with("surfaces", plate(100.0));
     match operation().fitness(&one_surface) {
         Fitness::Unfit(energyml_build::operation::Refusal { message: why, .. }) => {
             assert!(why.contains("two"), "{why}");
@@ -170,7 +186,10 @@ fn a_single_surface_is_refused_with_the_count() {
 fn surfaces_are_declared_multiple_and_ordered() {
     let takes = operation().takes();
     let trace = takes.iter().find(|slot| slot.name == "trace").expect("`trace`");
-    let surfaces = takes.iter().find(|slot| slot.name == "surfaces").expect("`surfaces`");
+    let surfaces = takes
+        .iter()
+        .find(|slot| slot.name == "surfaces")
+        .expect("`surfaces`");
 
     assert_eq!(trace.least, 1);
     assert_eq!(trace.most, Some(1));
@@ -209,7 +228,10 @@ fn three_surfaces_make_two_panels_under_a_root() {
     // would draw each panel twice — once through it, once through its
     // child — and two surfaces exactly superimposed fight pixel by
     // pixel with nothing saying why. It is a **group** root.
-    assert!(roots[0].geometry.patches.is_empty(), "the root groups, it does not draw");
+    assert!(
+        roots[0].geometry.patches.is_empty(),
+        "the root groups, it does not draw"
+    );
     assert!(panels.iter().all(|made| !made.geometry.patches.is_empty()));
 
     // The title of a panel names its two bounds: it is what one reads on the
@@ -217,7 +239,11 @@ fn three_surfaces_make_two_panels_under_a_root() {
     assert!(panels[0].title.contains("surfaces"), "{}", panels[0].title);
 
     // A single object written, and it carries the two panels as patches.
-    let written = plan.objects.iter().filter(|o| o.qualified_type.contains("Triangulated")).count();
+    let written = plan
+        .objects
+        .iter()
+        .filter(|o| o.qualified_type.contains("Triangulated"))
+        .count();
     assert_eq!(written, 1);
 }
 
@@ -233,7 +259,9 @@ fn the_given_order_decides_top_and_bottom_and_an_inversion_is_said() {
         .with("trace", trace())
         .with("surfaces", ramp(100.0, 80.0))
         .with("surfaces 2", ramp(50.0, 30.0));
-    let plan = operation().plan(&right_order, &choices(), &Identity::derived(), &when()).expect("the plan succeeds");
+    let plan = operation()
+        .plan(&right_order, &choices(), &Identity::derived(), &when())
+        .expect("the plan succeeds");
     assert!(
         !plan.says.iter().any(|note| note.key == "inverted"),
         "nothing is inverted when the order is right"
@@ -243,8 +271,14 @@ fn the_given_order_decides_top_and_bottom_and_an_inversion_is_said() {
         .with("trace", trace())
         .with("surfaces", ramp(50.0, 30.0))
         .with("surfaces 2", ramp(100.0, 80.0));
-    let plan = operation().plan(&inverted_order, &choices(), &Identity::derived(), &when()).expect("the plan succeeds");
-    let said = plan.says.iter().find(|note| note.key == "inverted").expect("the inversion is said");
+    let plan = operation()
+        .plan(&inverted_order, &choices(), &Identity::derived(), &when())
+        .expect("the plan succeeds");
+    let said = plan
+        .says
+        .iter()
+        .find(|note| note.key == "inverted")
+        .expect("the inversion is said");
     assert!(said.detail.contains("below"), "{}", said.detail);
 }
 
@@ -271,9 +305,14 @@ fn a_panel_without_material_is_counted_and_the_others_stay() {
         closed: None,
     };
     let pieces = bag().with("surfaces 3", off_trace);
-    let plan = operation().plan(&pieces, &choices(), &Identity::derived(), &when()).expect("the plan succeeds");
+    let plan = operation()
+        .plan(&pieces, &choices(), &Identity::derived(), &when())
+        .expect("the plan succeeds");
 
-    assert!(plan.says.iter().any(|note| note.key == "panel-empty"), "the emptiness is said");
+    assert!(
+        plan.says.iter().any(|note| note.key == "panel-empty"),
+        "the emptiness is said"
+    );
     assert_eq!(
         plan.shapes.iter().filter(|made| made.parent.is_some()).count(),
         1,
@@ -298,7 +337,10 @@ fn no_panel_at_all_is_a_refusal_that_counts_the_pairs() {
         },
         closed: None,
     };
-    let pieces = Pieces::empty().with("trace", trace()).with("surfaces", far_plate.clone()).with("surfaces 2", far_plate);
+    let pieces = Pieces::empty()
+        .with("trace", trace())
+        .with("surfaces", far_plate.clone())
+        .with("surfaces 2", far_plate);
     let why = operation()
         .plan(&pieces, &choices(), &Identity::derived(), &when())
         .expect_err("no material: refused");
@@ -308,11 +350,13 @@ fn no_panel_at_all_is_a_refusal_that_counts_the_pairs() {
 /// What the operation **reports**, and which is nowhere else.
 #[test]
 fn the_count_of_panels_goes_into_the_activity() {
-    let plan = operation().plan(&bag(), &choices(), &Identity::derived(), &when()).expect("the plan succeeds");
+    let plan = operation()
+        .plan(&bag(), &choices(), &Identity::derived(), &when())
+        .expect("the plan succeeds");
     let named = |title: &str| {
-        plan.activity.parameters.iter().any(|p| {
-            matches!(p, energyml_domain::provenance::Parameter::Double { title: t, .. } if t == title)
-        })
+        plan.activity.parameters.iter().any(
+            |p| matches!(p, energyml_domain::provenance::Parameter::Double { title: t, .. } if t == title),
+        )
     };
     assert!(named("panelCount"));
     assert!(named("emptyPanels"));

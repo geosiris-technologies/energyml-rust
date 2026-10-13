@@ -32,7 +32,9 @@ use energyml_domain::series::{self, Quality, Readout, Refused, Series, channel_s
 use energyml_domain::source::{ArraySource, NoObjects, ObjectSource};
 use energyml_domain::values::Values;
 use energyml_eml_2_3 as eml;
-use energyml_storage::{ArrayBuffer, ArrayData, ArrayLocation, ArrayMetadata, ArrayValues, ExternalDataReason};
+use energyml_storage::{
+    ArrayBuffer, ArrayData, ArrayLocation, ArrayMetadata, ArrayValues, ExternalDataReason,
+};
 use energyml_witsml_2_1 as witsml;
 
 // ---------------------------------------------------------------------------
@@ -40,7 +42,13 @@ use energyml_witsml_2_1 as witsml;
 // ---------------------------------------------------------------------------
 
 fn citation(title: &str) -> eml::Citation {
-    eml::Citation { title: title.into(), originator: "test".into(), creation: "2026-09-28T00:00:00Z".into(), format: "test".into(), ..Default::default() }
+    eml::Citation {
+        title: title.into(),
+        originator: "test".into(),
+        creation: "2026-09-28T00:00:00Z".into(),
+        format: "test".into(),
+        ..Default::default()
+    }
 }
 
 fn unit(code: &str) -> eml::UnitOfMeasureExt {
@@ -48,14 +56,26 @@ fn unit(code: &str) -> eml::UnitOfMeasureExt {
 }
 
 fn index(kind: eml::DataIndexKind, mnemonic: &str, uom: &str) -> witsml::ChannelIndex {
-    witsml::ChannelIndex { index_kind: kind, uom: unit(uom), direction: eml::IndexDirection::Increasing, mnemonic: mnemonic.into(), ..Default::default() }
+    witsml::ChannelIndex {
+        index_kind: kind,
+        uom: unit(uom),
+        direction: eml::IndexDirection::Increasing,
+        mnemonic: mnemonic.into(),
+        ..Default::default()
+    }
 }
 
 fn md() -> witsml::ChannelIndex {
     index(eml::DataIndexKind::MeasuredDepth, "MD", "m")
 }
 
-fn channel(uuid: &str, mnemonic: &str, kind: witsml::ChannelDataKind, uom: &str, own: witsml::ChannelIndex) -> witsml::AnyChannel {
+fn channel(
+    uuid: &str,
+    mnemonic: &str,
+    kind: witsml::ChannelDataKind,
+    uom: &str,
+    own: witsml::ChannelIndex,
+) -> witsml::AnyChannel {
     witsml::AnyChannel::Channel(witsml::Channel {
         citation: citation(mnemonic),
         uuid: uuid.into(),
@@ -78,7 +98,11 @@ const N_CHANNEL: &str = "60000000-0000-4000-8000-000000000013";
 const FILE: &str = "model.h5";
 const PATH: &str = "/witsml21/60000000-0000-4000-8000-000000000001/ChannelData";
 
-fn set_with(indexes: Vec<witsml::ChannelIndex>, channels: Vec<witsml::AnyChannel>, data: witsml::ChannelData) -> witsml::ChannelSet {
+fn set_with(
+    indexes: Vec<witsml::ChannelIndex>,
+    channels: Vec<witsml::AnyChannel>,
+    data: witsml::ChannelData,
+) -> witsml::ChannelSet {
     witsml::ChannelSet {
         citation: citation("a set"),
         uuid: SET.into(),
@@ -100,12 +124,26 @@ fn columns() -> Vec<witsml::AnyChannel> {
 }
 
 fn inline(rows: &str) -> witsml::ChannelSet {
-    set_with(vec![md()], columns(), witsml::ChannelData { data: Some(rows.into()), file_uri: None })
+    set_with(
+        vec![md()],
+        columns(),
+        witsml::ChannelData {
+            data: Some(rows.into()),
+            file_uri: None,
+        },
+    )
 }
 
 /// The extension: `FileUri` names the file, `Data` the dataset.
 fn in_file(file: &str, path: &str) -> witsml::ChannelSet {
-    set_with(vec![md()], columns(), witsml::ChannelData { data: Some(path.into()), file_uri: Some(file.into()) })
+    set_with(
+        vec![md()],
+        columns(),
+        witsml::ChannelData {
+            data: Some(path.into()),
+            file_uri: Some(file.into()),
+        },
+    )
 }
 
 /// The test's own rows: a gap in T at 10 m, an infinity in P at 20 m.
@@ -113,8 +151,27 @@ const ROWS: &str = r#"[[0,10.5,1.0,7],[10,null,2.0,8],[20,11.5,"+Infinity",9]]"#
 
 /// The same rows as the dataset of the extension, row-major.
 fn dataset() -> ArrayData {
-    let values = vec![0.0, 10.5, 1.0, 7.0, 10.0, f64::NAN, 2.0, 8.0, 20.0, 11.5, f64::INFINITY, 9.0];
-    ArrayData { metadata: ArrayMetadata { dimensions: vec![3, 4], element_type: "float64".into() }, values: ArrayValues::F64(values) }
+    let values = vec![
+        0.0,
+        10.5,
+        1.0,
+        7.0,
+        10.0,
+        f64::NAN,
+        2.0,
+        8.0,
+        20.0,
+        11.5,
+        f64::INFINITY,
+        9.0,
+    ];
+    ArrayData {
+        metadata: ArrayMetadata {
+            dimensions: vec![3, 4],
+            element_type: "float64".into(),
+        },
+        values: ArrayValues::F64(values),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -133,7 +190,10 @@ impl Datasets {
     fn with(file: &str, path: &str, data: ArrayData) -> Datasets {
         let mut held = BTreeMap::new();
         held.insert((file.to_string(), path.to_string()), data);
-        Datasets { held, reads: Cell::new(0) }
+        Datasets {
+            held,
+            reads: Cell::new(0),
+        }
     }
 }
 
@@ -152,16 +212,26 @@ impl ArraySource for Datasets {
     }
     fn read(&self, location: &ArrayLocation) -> energyml_domain::Result<ArrayData> {
         self.reads.set(self.reads.get() + 1);
-        self.held.get(&(location.file.clone(), location.path_in_file.clone())).cloned().ok_or_else(|| {
-            energyml_storage::Error::ExternalData {
-                location: format!("{}:{}", location.file, location.path_in_file),
-                reason: ExternalDataReason::PathMissing(location.path_in_file.clone()),
-            }
-            .into()
-        })
+        self.held
+            .get(&(location.file.clone(), location.path_in_file.clone()))
+            .cloned()
+            .ok_or_else(|| {
+                energyml_storage::Error::ExternalData {
+                    location: format!("{}:{}", location.file, location.path_in_file),
+                    reason: ExternalDataReason::PathMissing(location.path_in_file.clone()),
+                }
+                .into()
+            })
     }
-    fn read_into(&self, _location: &ArrayLocation, _out: &mut ArrayBuffer<'_>) -> energyml_domain::Result<ArrayMetadata> {
-        Err(energyml_domain::Error::unsupported("reading into a buffer", "this test's source reads whole"))
+    fn read_into(
+        &self,
+        _location: &ArrayLocation,
+        _out: &mut ArrayBuffer<'_>,
+    ) -> energyml_domain::Result<ArrayMetadata> {
+        Err(energyml_domain::Error::unsupported(
+            "reading into a buffer",
+            "this test's source reads whole",
+        ))
     }
 }
 
@@ -184,12 +254,22 @@ impl ArraySource for NoBackend {
     fn read(&self, location: &ArrayLocation) -> energyml_domain::Result<ArrayData> {
         Err(energyml_storage::Error::ExternalData {
             location: format!("{}:{}", location.file, location.path_in_file),
-            reason: ExternalDataReason::FeatureNotEnabled { feature: "hdf5", mime: location.mime.clone() },
+            reason: ExternalDataReason::FeatureNotEnabled {
+                feature: "hdf5",
+                mime: location.mime.clone(),
+            },
         }
         .into())
     }
-    fn read_into(&self, _location: &ArrayLocation, _out: &mut ArrayBuffer<'_>) -> energyml_domain::Result<ArrayMetadata> {
-        Err(energyml_domain::Error::unsupported("reading into a buffer", "no backend"))
+    fn read_into(
+        &self,
+        _location: &ArrayLocation,
+        _out: &mut ArrayBuffer<'_>,
+    ) -> energyml_domain::Result<ArrayMetadata> {
+        Err(energyml_domain::Error::unsupported(
+            "reading into a buffer",
+            "no backend",
+        ))
     }
 }
 
@@ -198,7 +278,11 @@ fn refused(result: Result<Series, Refused>) -> Refused {
 }
 
 fn floats(series: &Series, mnemonic: &str) -> Vec<f64> {
-    match &series.channel(mnemonic).unwrap_or_else(|| panic!("a channel `{mnemonic}`")).values {
+    match &series
+        .channel(mnemonic)
+        .unwrap_or_else(|| panic!("a channel `{mnemonic}`"))
+        .values
+    {
         Values::Floating(values) => values.clone(),
         other => panic!("`{mnemonic}` holds {:?}", other.family()),
     }
@@ -226,10 +310,19 @@ fn the_rows_inline_and_in_a_dataset_read_as_the_same_series() {
         let t = floats(series, "T");
         assert_eq!((t[0], t[2]), (10.5, 11.5));
         assert!(t[1].is_nan());
-        assert_eq!(series.channel("T").unwrap().quality, vec![Quality::Good, Quality::Absent, Quality::Good]);
+        assert_eq!(
+            series.channel("T").unwrap().quality,
+            vec![Quality::Good, Quality::Absent, Quality::Good]
+        );
         assert_eq!(floats(series, "P"), vec![1.0, 2.0, f64::INFINITY]);
-        assert_eq!(series.channel("P").unwrap().quality[2], Quality::Flagged("+Infinity".into()));
-        assert_eq!(series.channel("N").unwrap().values, Values::Integer(vec![7, 8, 9]));
+        assert_eq!(
+            series.channel("P").unwrap().quality[2],
+            Quality::Flagged("+Infinity".into())
+        );
+        assert_eq!(
+            series.channel("N").unwrap().values,
+            Values::Integer(vec![7, 8, 9])
+        );
     }
 }
 
@@ -239,10 +332,14 @@ fn an_integer_dataset_keeps_its_integers_exact() {
     // dataset's integers are read as integers.
     let big = 9_007_199_254_740_993_i64; // 2^53 + 1
     let data = ArrayData {
-        metadata: ArrayMetadata { dimensions: vec![2, 4], element_type: "int64".into() },
+        metadata: ArrayMetadata {
+            dimensions: vec![2, 4],
+            element_type: "int64".into(),
+        },
         values: ArrayValues::I64(vec![0, 1, 2, big, 10, 3, 4, 5]),
     };
-    let series = channel_set::read_with(&in_file(FILE, PATH), &Datasets::with(FILE, PATH, data)).expect("reads");
+    let series =
+        channel_set::read_with(&in_file(FILE, PATH), &Datasets::with(FILE, PATH, data)).expect("reads");
     assert_eq!(series.channel("N").unwrap().values, Values::Integer(vec![big, 5]));
 }
 
@@ -250,7 +347,10 @@ fn an_integer_dataset_keeps_its_integers_exact() {
 fn the_same_checks_run_on_a_dataset_as_on_inline_rows() {
     // One row loop: an index that goes back is refused in both forms.
     let back = ArrayData {
-        metadata: ArrayMetadata { dimensions: vec![2, 4], element_type: "float64".into() },
+        metadata: ArrayMetadata {
+            dimensions: vec![2, 4],
+            element_type: "float64".into(),
+        },
         values: ArrayValues::F64(vec![10.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0]),
     };
     let read = channel_set::read_with(&in_file(FILE, PATH), &Datasets::with(FILE, PATH, back));
@@ -271,10 +371,14 @@ fn a_log_and_the_registry_read_a_dataset_through_the_source_they_are_given() {
     assert_eq!(sets[0].index.values, vec![0.0, 10.0, 20.0]);
 
     let objects: Vec<(&str, &dyn Reflect)> = vec![(LOG, &log)];
-    let Ok(Readout::Sets(read)) = series::read(LOG, &objects, &source) else { panic!("the registry reads the log") };
+    let Ok(Readout::Sets(read)) = series::read(LOG, &objects, &source) else {
+        panic!("the registry reads the log")
+    };
     assert_eq!(read[0].to_json(), sets[0].to_json());
     // The nested set by its own uuid, through the part that holds it.
-    let Ok(Readout::Sets(nested)) = series::read(SET, &objects, &source) else { panic!("the nested set reads") };
+    let Ok(Readout::Sets(nested)) = series::read(SET, &objects, &source) else {
+        panic!("the nested set reads")
+    };
     assert_eq!(nested[0].to_json(), sets[0].to_json());
 }
 
@@ -288,15 +392,44 @@ fn a_file_uri_beside_an_inline_blob_is_the_standard_form_not_a_dataset() {
     // ignored." A blob beside `FileUri` is never read as rows, and never taken
     // for a dataset path either: JSON cannot begin with `/`.
     let source = Datasets::with(FILE, PATH, dataset());
-    let beside = set_with(vec![md()], columns(), witsml::ChannelData { data: Some(ROWS.into()), file_uri: Some("./abc.avro".into()) });
-    assert!(matches!(refused(channel_set::read_with(&beside, &source)), Refused::FileUri { uri } if uri == "./abc.avro"));
-    let alone = set_with(vec![md()], columns(), witsml::ChannelData { data: None, file_uri: Some("./abc.avro".into()) });
-    assert!(matches!(refused(channel_set::read_with(&alone, &source)), Refused::FileUri { .. }));
+    let beside = set_with(
+        vec![md()],
+        columns(),
+        witsml::ChannelData {
+            data: Some(ROWS.into()),
+            file_uri: Some("./abc.avro".into()),
+        },
+    );
+    assert!(
+        matches!(refused(channel_set::read_with(&beside, &source)), Refused::FileUri { uri } if uri == "./abc.avro")
+    );
+    let alone = set_with(
+        vec![md()],
+        columns(),
+        witsml::ChannelData {
+            data: None,
+            file_uri: Some("./abc.avro".into()),
+        },
+    );
+    assert!(matches!(
+        refused(channel_set::read_with(&alone, &source)),
+        Refused::FileUri { .. }
+    ));
     assert_eq!(source.reads.get(), 0, "the standard's form reads no dataset");
 
     // A path with no file is no dataset: it is inline data that is not JSON.
-    let orphan = set_with(vec![md()], columns(), witsml::ChannelData { data: Some(PATH.into()), file_uri: None });
-    assert!(matches!(refused(channel_set::read_with(&orphan, &source)), Refused::NotRows { .. }));
+    let orphan = set_with(
+        vec![md()],
+        columns(),
+        witsml::ChannelData {
+            data: Some(PATH.into()),
+            file_uri: None,
+        },
+    );
+    assert!(matches!(
+        refused(channel_set::read_with(&orphan, &source)),
+        Refused::NotRows { .. }
+    ));
 }
 
 #[test]
@@ -305,11 +438,21 @@ fn the_storage_locates_the_dataset_form_and_nothing_else() {
     // array location there, the standard's forms are not.
     let found = energyml_storage::array::locate(&in_file(FILE, PATH));
     assert_eq!(found.len(), 1, "{found:?}");
-    assert_eq!((found[0].file.as_str(), found[0].path_in_file.as_str()), (FILE, PATH));
+    assert_eq!(
+        (found[0].file.as_str(), found[0].path_in_file.as_str()),
+        (FILE, PATH)
+    );
     assert_eq!(found[0].mime.as_deref(), Some("application/x-hdf5"));
     assert_eq!(found[0].field_path, "Data", "the field of the set that holds it");
     assert!(energyml_storage::array::locate(&inline(ROWS)).is_empty());
-    let beside = set_with(vec![md()], columns(), witsml::ChannelData { data: Some(ROWS.into()), file_uri: Some("./abc.avro".into()) });
+    let beside = set_with(
+        vec![md()],
+        columns(),
+        witsml::ChannelData {
+            data: Some(ROWS.into()),
+            file_uri: Some("./abc.avro".into()),
+        },
+    );
     assert!(energyml_storage::array::locate(&beside).is_empty());
     // And what a rename or an import rewrites, by the part's type.
     assert_eq!(energyml_storage::array::file_field("ChannelData"), "file_uri");
@@ -323,7 +466,9 @@ fn the_storage_locates_the_dataset_form_and_nothing_else() {
 #[test]
 fn with_no_array_source_a_dataset_is_refused_by_name() {
     let read = channel_set::read(&in_file(FILE, PATH));
-    assert!(matches!(refused(read), Refused::DatasetNotLocated { file, path } if file == FILE && path == PATH));
+    assert!(
+        matches!(refused(read), Refused::DatasetNotLocated { file, path } if file == FILE && path == PATH)
+    );
     let read = channel_set::read_with(&in_file(FILE, PATH), &NoObjects);
     assert!(matches!(refused(read), Refused::DatasetNotLocated { .. }));
 }
@@ -332,7 +477,9 @@ fn with_no_array_source_a_dataset_is_refused_by_name() {
 fn a_dataset_the_file_does_not_hold_is_refused_by_name() {
     let source = Datasets::with(FILE, "/elsewhere", dataset());
     let read = channel_set::read_with(&in_file(FILE, PATH), &source);
-    assert!(matches!(refused(read), Refused::DatasetNotRead { file, path, .. } if file == FILE && path == PATH));
+    assert!(
+        matches!(refused(read), Refused::DatasetNotRead { file, path, .. } if file == FILE && path == PATH)
+    );
 }
 
 #[test]
@@ -345,14 +492,31 @@ fn a_build_without_hdf5_says_so_and_never_reads_an_empty_series() {
 #[test]
 fn a_dataset_that_is_not_the_rows_is_refused_by_its_shape() {
     let shaped = |dimensions: Vec<i64>, count: usize| ArrayData {
-        metadata: ArrayMetadata { dimensions, element_type: "float64".into() },
+        metadata: ArrayMetadata {
+            dimensions,
+            element_type: "float64".into(),
+        },
         values: ArrayValues::F64(vec![1.0; count]),
     };
     // One dimension: the rows flattened, which says nothing of their width.
-    let flat = channel_set::read_with(&in_file(FILE, PATH), &Datasets::with(FILE, PATH, shaped(vec![12], 12)));
-    assert!(matches!(refused(flat), Refused::DatasetShape { expected: 4, indexes: 1, channels: 3, .. }));
+    let flat = channel_set::read_with(
+        &in_file(FILE, PATH),
+        &Datasets::with(FILE, PATH, shaped(vec![12], 12)),
+    );
+    assert!(matches!(
+        refused(flat),
+        Refused::DatasetShape {
+            expected: 4,
+            indexes: 1,
+            channels: 3,
+            ..
+        }
+    ));
     // Three columns where MD and three channels make four.
-    let narrow = channel_set::read_with(&in_file(FILE, PATH), &Datasets::with(FILE, PATH, shaped(vec![4, 3], 12)));
+    let narrow = channel_set::read_with(
+        &in_file(FILE, PATH),
+        &Datasets::with(FILE, PATH, shaped(vec![4, 3], 12)),
+    );
     assert!(matches!(refused(narrow), Refused::DatasetShape { dimensions, .. } if dimensions == vec![4, 3]));
 }
 
@@ -361,15 +525,37 @@ fn a_column_no_number_holds_is_refused_before_anything_is_read() {
     let source = Datasets::with(FILE, PATH, dataset());
     let dated = set_with(
         vec![index(eml::DataIndexKind::DateTime, "TIME", "s")],
-        vec![channel(T_CHANNEL, "T", witsml::ChannelDataKind::Double, "degC", index(eml::DataIndexKind::DateTime, "TIME", "s"))],
-        witsml::ChannelData { data: Some(PATH.into()), file_uri: Some(FILE.into()) },
+        vec![channel(
+            T_CHANNEL,
+            "T",
+            witsml::ChannelDataKind::Double,
+            "degC",
+            index(eml::DataIndexKind::DateTime, "TIME", "s"),
+        )],
+        witsml::ChannelData {
+            data: Some(PATH.into()),
+            file_uri: Some(FILE.into()),
+        },
     );
-    assert!(matches!(refused(channel_set::read_with(&dated, &source)), Refused::DatasetColumnKind { column, kind } if column == "TIME" && kind == "date time"));
+    assert!(
+        matches!(refused(channel_set::read_with(&dated, &source)), Refused::DatasetColumnKind { column, kind } if column == "TIME" && kind == "date time")
+    );
     let text = set_with(
         vec![md()],
-        vec![channel(T_CHANNEL, "LITHO", witsml::ChannelDataKind::String, "Euc", md())],
-        witsml::ChannelData { data: Some(PATH.into()), file_uri: Some(FILE.into()) },
+        vec![channel(
+            T_CHANNEL,
+            "LITHO",
+            witsml::ChannelDataKind::String,
+            "Euc",
+            md(),
+        )],
+        witsml::ChannelData {
+            data: Some(PATH.into()),
+            file_uri: Some(FILE.into()),
+        },
     );
-    assert!(matches!(refused(channel_set::read_with(&text, &source)), Refused::DatasetColumnKind { column, .. } if column == "LITHO"));
+    assert!(
+        matches!(refused(channel_set::read_with(&text, &source)), Refused::DatasetColumnKind { column, .. } if column == "LITHO")
+    );
     assert_eq!(source.reads.get(), 0, "nothing read for a column no number holds");
 }

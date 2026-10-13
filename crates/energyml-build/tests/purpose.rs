@@ -21,7 +21,10 @@ use energyml_build::pieces::{Pieces, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 fn when() -> When {
-    When { creation: "2026-09-12T00:00:00Z".to_string(), originator: "tests".to_string() }
+    When {
+        creation: "2026-09-12T00:00:00Z".to_string(),
+        originator: "tests".to_string(),
+    }
 }
 
 fn ring() -> Pieces {
@@ -33,7 +36,12 @@ fn ring() -> Pieces {
                 patches: vec![Patch {
                     index: 0,
                     node_offset: 0,
-                    points: vec![[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [10.0, 10.0, 0.0], [0.0, 10.0, 0.0]],
+                    points: vec![
+                        [0.0, 0.0, 0.0],
+                        [10.0, 0.0, 0.0],
+                        [10.0, 10.0, 0.0],
+                        [0.0, 10.0, 0.0],
+                    ],
                     topology: Topology::Polylines(vec![4]),
                     closed: Vec::new(),
                 }],
@@ -49,7 +57,14 @@ fn ring() -> Pieces {
 fn a_geometry_plan_asks_for_neither_frame_nor_title() {
     let registry = Registry::new();
     let plan = registry
-        .plan_for("polylines", &ring(), &Choices::new(), &Identity::derived(), &when(), Purpose::Geometry)
+        .plan_for(
+            "polylines",
+            &ring(),
+            &Choices::new(),
+            &Identity::derived(),
+            &when(),
+            Purpose::Geometry,
+        )
         .expect("the geometry comes out with nothing");
     assert_eq!(plan.shapes.len(), 1, "one shape to keep");
     assert!(plan.shapes[0].geometry.point_count() == 4);
@@ -69,7 +84,13 @@ fn a_geometry_plan_asks_for_neither_frame_nor_title() {
 fn without_a_frame_the_writing_also_comes_back_blocked() {
     let registry = Registry::new();
     let plan = registry
-        .plan("polylines", &ring(), &Choices::new(), &Identity::derived(), &when())
+        .plan(
+            "polylines",
+            &ring(),
+            &Choices::new(),
+            &Identity::derived(),
+            &when(),
+        )
         .expect("the title and the file are suggested, the frame blocks");
     assert!(plan.blocked.is_some());
 }
@@ -83,18 +104,44 @@ fn without_a_frame_the_writing_also_comes_back_blocked() {
 fn the_relaxation_only_touches_what_only_the_writing_asks_for() {
     use energyml_build::operation::{Need, Slot};
     let title = Slot::required("title", Need::Title, "the title").grouped("naming");
-    let spacing = Slot::required("spacing", Need::Number { uom: None, least: None, most: None }, "the cell");
+    let spacing = Slot::required(
+        "spacing",
+        Need::Number {
+            uom: None,
+            least: None,
+            most: None,
+        },
+        "the cell",
+    );
     let slots = [title, spacing];
     let empty = Choices::new();
 
-    let why = empty.settle_for(&slots, Purpose::Writing).expect_err("writing demands both");
-    assert!(why.message().contains("`title`") && why.message().contains("`spacing`"), "{}", why.message());
+    let why = empty
+        .settle_for(&slots, Purpose::Writing)
+        .expect_err("writing demands both");
+    assert!(
+        why.message().contains("`title`") && why.message().contains("`spacing`"),
+        "{}",
+        why.message()
+    );
 
-    let why = empty.settle_for(&slots, Purpose::Geometry).expect_err("the computation still demands `spacing`");
-    assert!(why.message().contains("`spacing`") && !why.message().contains("`title`"), "{}", why.message());
+    let why = empty
+        .settle_for(&slots, Purpose::Geometry)
+        .expect_err("the computation still demands `spacing`");
+    assert!(
+        why.message().contains("`spacing`") && !why.message().contains("`title`"),
+        "{}",
+        why.message()
+    );
 
-    let settled = Choices::new().set("spacing", 2.0).settle_for(&slots, Purpose::Geometry).expect("the geometry can be set");
-    assert!(settled.text("title").is_none(), "the title stays empty, it is not invented here");
+    let settled = Choices::new()
+        .set("spacing", 2.0)
+        .settle_for(&slots, Purpose::Geometry)
+        .expect("the geometry can be set");
+    assert!(
+        settled.text("title").is_none(),
+        "the title stays empty, it is not invented here"
+    );
 }
 
 /// **What the computation asks for stays required**, geometry or not: a
@@ -111,7 +158,12 @@ fn what_the_computation_asks_for_stays_required_on_a_geometry_plan() {
                 patches: vec![Patch {
                     index: 0,
                     node_offset: 0,
-                    points: vec![[0.0, 0.0, 1.0], [10.0, 0.0, 2.0], [0.0, 10.0, 3.0], [10.0, 10.0, 4.0]],
+                    points: vec![
+                        [0.0, 0.0, 1.0],
+                        [10.0, 0.0, 2.0],
+                        [0.0, 10.0, 3.0],
+                        [10.0, 10.0, 4.0],
+                    ],
                     topology: Topology::Points,
                     closed: Vec::new(),
                 }],
@@ -120,7 +172,14 @@ fn what_the_computation_asks_for_stays_required_on_a_geometry_plan() {
         },
     );
     let why = registry
-        .plan_for("interpolate", &cloud, &Choices::new(), &Identity::derived(), &when(), Purpose::Geometry)
+        .plan_for(
+            "interpolate",
+            &cloud,
+            &Choices::new(),
+            &Identity::derived(),
+            &when(),
+            Purpose::Geometry,
+        )
         .expect_err("`spacing` manque");
     assert!(why.message().contains("spacing"), "{}", why.message());
     // And with it, the geometry comes out — still without a frame.
@@ -144,7 +203,14 @@ fn what_the_computation_asks_for_stays_required_on_a_geometry_plan() {
 fn an_operation_without_geometry_stays_so_whatever_the_aim() {
     let registry = Registry::new();
     let plan = registry
-        .plan_for("crs", &Pieces::empty(), &Choices::new().set("epsg", 2154), &Identity::derived(), &when(), Purpose::Geometry)
+        .plan_for(
+            "crs",
+            &Pieces::empty(),
+            &Choices::new().set("epsg", 2154),
+            &Identity::derived(),
+            &when(),
+            Purpose::Geometry,
+        )
         .expect("crs se planifie");
     assert!(plan.shapes.is_empty());
     assert!(plan.blocked.is_none());

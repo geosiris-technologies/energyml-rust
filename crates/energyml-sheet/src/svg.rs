@@ -70,10 +70,18 @@ pub fn write(layout: &Layout) -> String {
     let line_height = crate::layout::line_height_mm(layout.text_size_pt);
 
     let natural_widths = column_widths_mm(layout);
-    let ruler_natural = if layout.ruler.is_some() { RULER_WIDTH_MM } else { 0.0 };
+    let ruler_natural = if layout.ruler.is_some() {
+        RULER_WIDTH_MM
+    } else {
+        0.0
+    };
     let natural_total: f64 = ruler_natural + natural_widths.iter().sum::<f64>();
     let page_width_mm = page_width_of(layout.page_width_mm, natural_total);
-    let scale = if natural_total > 0.0 { page_width_mm / natural_total } else { 1.0 };
+    let scale = if natural_total > 0.0 {
+        page_width_mm / natural_total
+    } else {
+        1.0
+    };
 
     // `x[i]` is where track `i` starts; `x[tracks.len()]` is the row's own
     // right edge. `x[0]` is the ruler's width, scaled — the ruler sits to
@@ -124,10 +132,16 @@ fn column_widths_mm(layout: &Layout) -> Vec<f64> {
         .tracks
         .iter()
         .map(|track| match track {
-            LaidTrack::Md { .. } => MD_COLUMN_CHARS * text::average_char_width_pt(layout.text_size_pt) * crate::layout::PT_TO_MM,
-            LaidTrack::Intervals { max_chars, renders, .. } => {
+            LaidTrack::Md { .. } => {
+                MD_COLUMN_CHARS * text::average_char_width_pt(layout.text_size_pt) * crate::layout::PT_TO_MM
+            }
+            LaidTrack::Intervals {
+                max_chars, renders, ..
+            } => {
                 if renders.iter().any(|render| render == "text") {
-                    *max_chars as f64 * text::average_char_width_pt(layout.text_size_pt) * crate::layout::PT_TO_MM
+                    *max_chars as f64
+                        * text::average_char_width_pt(layout.text_size_pt)
+                        * crate::layout::PT_TO_MM
                 } else if renders.iter().any(|render| render == "fill") {
                     FILL_ONLY_COLUMN_MM
                 } else {
@@ -153,7 +167,11 @@ fn write_header(out: &mut String, layout: &Layout, x: &[f64], line_height: f64) 
         ));
         row_y += line_height;
     }
-    out.push_str(&format!("<text x=\"0\" y=\"{}\" font-style=\"italic\">{}</text>\n", fmt(row_y), escape(&layout.mode_note)));
+    out.push_str(&format!(
+        "<text x=\"0\" y=\"{}\" font-style=\"italic\">{}</text>\n",
+        fmt(row_y),
+        escape(&layout.mode_note)
+    ));
     row_y += line_height;
 
     for (index, track) in layout.tracks.iter().enumerate() {
@@ -182,7 +200,10 @@ fn write_header(out: &mut String, layout: &Layout, x: &[f64], line_height: f64) 
 /// column's cells, all positioned from the body's own top (the header sits
 /// above it, and this group is translated down past it).
 fn write_body(out: &mut String, layout: &Layout, x: &[f64], line_height: f64) {
-    out.push_str(&format!("<g id=\"body\" transform=\"translate(0, {})\">\n", fmt(layout.header_height_mm)));
+    out.push_str(&format!(
+        "<g id=\"body\" transform=\"translate(0, {})\">\n",
+        fmt(layout.header_height_mm)
+    ));
 
     // Every section boundary, once — "at each MD... a black line" spans
     // the whole row, not just the MD column (the original request, sheet
@@ -247,8 +268,20 @@ fn write_body(out: &mut String, layout: &Layout, x: &[f64], line_height: f64) {
             }
             LaidTrack::Intervals { cells, .. } => {
                 for (section_index, cell) in cells.iter().enumerate() {
-                    let Some(section) = layout.sections.get(section_index) else { continue };
-                    write_cell(out, cell, section.md_top, section.md_base, x0, width, section.y_top_mm, section.y_base_mm, line_height);
+                    let Some(section) = layout.sections.get(section_index) else {
+                        continue;
+                    };
+                    write_cell(
+                        out,
+                        cell,
+                        section.md_top,
+                        section.md_base,
+                        x0,
+                        width,
+                        section.y_top_mm,
+                        section.y_base_mm,
+                        line_height,
+                    );
                 }
             }
         }
@@ -271,7 +304,11 @@ fn write_cell(
     y1: f64,
     line_height: f64,
 ) {
-    let mut attributes = format!(" data-md-top=\"{}\" data-md-base=\"{}\"", fmt(md_top), fmt(md_base));
+    let mut attributes = format!(
+        " data-md-top=\"{}\" data-md-base=\"{}\"",
+        fmt(md_top),
+        fmt(md_base)
+    );
     if let Some(uri) = &cell.uri {
         attributes.push_str(&format!(" data-uri=\"{}\"", escape(uri)));
     }
@@ -287,7 +324,10 @@ fn write_cell(
     if let Some(text) = &cell.text {
         out.push_str(&format!("<title>{}</title>\n", escape(&text.full_text)));
     }
-    let fill = cell.colour.map(|colour| colour.to_hex()).unwrap_or_else(|| "none".to_string());
+    let fill = cell
+        .colour
+        .map(|colour| colour.to_hex())
+        .unwrap_or_else(|| "none".to_string());
     out.push_str(&format!(
         "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"{}\" stroke=\"#000000\" stroke-width=\"{}\"/>\n",
         fmt(x0),

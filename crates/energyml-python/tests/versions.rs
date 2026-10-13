@@ -65,9 +65,17 @@ fn horizon() -> String {
 fn package() -> (tempfile::TempDir, Package) {
     let directory = tempfile::tempdir().expect("a scratch folder");
     let start = directory.path().join("start.epc");
-    std::fs::write(&start, energyml_storage::extract::empty_package(None).expect("an empty package")).unwrap();
+    std::fs::write(
+        &start,
+        energyml_storage::extract::empty_package(None).expect("an empty package"),
+    )
+    .unwrap();
     let mut store = EpcStore::open(&start, Arc::new(energyml_schemas::all())).expect("it opens");
-    let read = |store: &EpcStore, json: &str| energyml_core::json::read_string(json, store.registry()).expect("it reads").root;
+    let read = |store: &EpcStore, json: &str| {
+        energyml_core::json::read_string(json, store.registry())
+            .expect("it reads")
+            .root
+    };
     let first = read(&store, &feature(X, Some("1"), "X"));
     store.put(first).expect("version 1");
     let second = read(&store, &feature(X, Some("2"), "X, second"));
@@ -108,14 +116,25 @@ fn a_link_carries_the_version_of_the_object_it_describes() {
     let (_directory, package) = package();
     // Backwards: the horizon points at the package's version 2, and the horizon
     // itself declares none — each end says its own.
-    let second = package.objects().into_iter().find(|one| one.object_version.as_deref() == Some("2")).expect("v2");
+    let second = package
+        .objects()
+        .into_iter()
+        .find(|one| one.object_version.as_deref() == Some("2"))
+        .expect("v2");
     let back = package.referenced_by(&second.uri).expect("it reads");
-    let horizon = back.iter().find(|link| link.uuid == HORIZON).expect("the horizon points at it");
+    let horizon = back
+        .iter()
+        .find(|link| link.uuid == HORIZON)
+        .expect("the horizon points at it");
     assert_eq!(horizon.object_version, None, "the horizon declares no version");
     // Forwards: the link's version comes from the object found when the package
     // holds it. (The version a reference *states* is read from `graph::references`,
     // whose `Pointer` does not carry it yet — a known gap.)
-    let horizon = package.objects().into_iter().find(|one| one.uuid == HORIZON).expect("the horizon");
+    let horizon = package
+        .objects()
+        .into_iter()
+        .find(|one| one.uuid == HORIZON)
+        .expect("the horizon");
     let links = package.references(&horizon.uri).expect("it reads");
     assert_eq!(links.len(), 1);
 }
@@ -124,7 +143,10 @@ fn a_link_carries_the_version_of_the_object_it_describes() {
 fn uri_of_refuses_a_uuid_held_under_two_versions_naming_both() {
     let (_directory, package) = package();
     let refusal = package.uri_of(X).expect_err("two versions, no way to say which");
-    assert!(refusal.contains("version='1'") && refusal.contains("version='2'"), "{refusal}");
+    assert!(
+        refusal.contains("version='1'") && refusal.contains("version='2'"),
+        "{refusal}"
+    );
     // A uuid held once still answers, and one that is not held is `None`.
     assert!(package.uri_of(PLAIN).expect("one entry").is_some());
     assert_eq!(package.uri_of("00000000-0000-4000-8000-000000000000"), Ok(None));

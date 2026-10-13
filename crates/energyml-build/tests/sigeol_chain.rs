@@ -18,7 +18,10 @@ use energyml_build::pieces::{Known, Pieces, Ref, Source};
 use energyml_build::tabular::{self, Dialect};
 
 fn when() -> When {
-    When { creation: "2026-10-01T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-10-01T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 /// One `GeologicUnit` feature as the SIGEOL exports write it: a point at the
@@ -44,7 +47,10 @@ fn unit(id: &str, formation: &str, older: (&str, f64), younger: (&str, f64)) -> 
 }
 
 fn features(items: &[String]) -> Vec<geojson::Feature> {
-    let text = format!(r#"{{"type":"FeatureCollection","features":[{}]}}"#, items.join(","));
+    let text = format!(
+        r#"{{"type":"FeatureCollection","features":[{}]}}"#,
+        items.join(",")
+    );
     let read = geojson::read(&text).expect("a collection");
     assert!(read.refused.is_empty(), "{:?}", read.refused);
     read.features
@@ -54,13 +60,21 @@ fn features(items: &[String]) -> Vec<geojson::Feature> {
 fn files(named: &[(&str, Vec<geojson::Feature>)]) -> Pieces {
     let mut pieces = Pieces::empty();
     for (at, (name, items)) in named.iter().enumerate() {
-        pieces = pieces.with(format!("export{at}"), Source::Features { name: (*name).into(), features: items.clone() });
+        pieces = pieces.with(
+            format!("export{at}"),
+            Source::Features {
+                name: (*name).into(),
+                features: items.clone(),
+            },
+        );
     }
     pieces
 }
 
 fn plan_units(pieces: &Pieces, choices: Choices) -> Result<Plan, String> {
-    Registry::new().plan("sigeol-units", pieces, &choices, &Identity::derived(), &when()).map_err(|why| why.to_string())
+    Registry::new()
+        .plan("sigeol-units", pieces, &choices, &Identity::derived(), &when())
+        .map_err(|why| why.to_string())
 }
 
 fn number(plan: &Plan, title: &str) -> f64 {
@@ -68,7 +82,9 @@ fn number(plan: &Plan, title: &str) -> f64 {
         .parameters
         .iter()
         .find_map(|one| match one {
-            energyml_domain::provenance::Parameter::Double { title: name, value, .. } if name == title => Some(*value),
+            energyml_domain::provenance::Parameter::Double {
+                title: name, value, ..
+            } if name == title => Some(*value),
             _ => None,
         })
         .unwrap_or_else(|| panic!("no `{title}` in the activity"))
@@ -83,7 +99,12 @@ fn number(plan: &Plan, title: &str) -> f64 {
 /// `stage_of_file_name` back — the three names below each come out whole.
 #[test]
 fn the_second_exports_file_names_suggest_their_stage() {
-    let one = vec![unit("1", "Marnes et Caillasses", ("Bartonien", 37.8), ("Lutétien", 47.8))];
+    let one = vec![unit(
+        "1",
+        "Marnes et Caillasses",
+        ("Bartonien", 37.8),
+        ("Lutétien", 47.8),
+    )];
     for (name, stage) in [
         ("GeologicUnit_Bartonien_olderNamedAge_ZONE_2.json", "Bartonien"),
         ("GeologicUnit_Lutétien_youngerNamedAge_ZONE_2.json", "Lutétien"),
@@ -97,7 +118,11 @@ fn the_second_exports_file_names_suggest_their_stage() {
             .into_iter()
             .find(|offer| offer.operation.name() == "sigeol-units")
             .expect("offered");
-        let slot = offer.needs.iter().find(|slot| slot.name == "stage").expect("the stage slot");
+        let slot = offer
+            .needs
+            .iter()
+            .find(|slot| slot.name == "stage")
+            .expect("the stage slot");
         assert_eq!(slot.suggested, Some(json!(stage)), "{name}");
     }
 }
@@ -109,11 +134,25 @@ fn the_second_exports_file_names_suggest_their_stage() {
 fn a_run_on_a_second_exports_name_plans_by_the_suggested_stage_alone() {
     let pieces = files(&[(
         "GeologicUnit_Bartonien_olderNamedAge_ZONE_2.json",
-        features(&[unit("1", "Marnes et Caillasses", ("Bartonien", 37.8), ("Lutétien", 47.8))]),
+        features(&[unit(
+            "1",
+            "Marnes et Caillasses",
+            ("Bartonien", 37.8),
+            ("Lutétien", 47.8),
+        )]),
     )]);
     let registry = Registry::new();
-    let offer = registry.offers(&pieces).into_iter().find(|o| o.operation.name() == "sigeol-units").unwrap();
-    let stage = offer.needs.iter().find(|s| s.name == "stage").and_then(|s| s.suggested.clone()).expect("suggested");
+    let offer = registry
+        .offers(&pieces)
+        .into_iter()
+        .find(|o| o.operation.name() == "sigeol-units")
+        .unwrap();
+    let stage = offer
+        .needs
+        .iter()
+        .find(|s| s.name == "stage")
+        .and_then(|s| s.suggested.clone())
+        .expect("suggested");
     let made = plan_units(&pieces, Choices::new().set("stage", stage)).expect("a plan");
     let titles: Vec<&str> = made
         .objects
@@ -163,30 +202,60 @@ fn the_side_follows_the_ma_and_the_stage_of_the_file_never_the_field_names() {
 #[test]
 fn a_unit_stated_in_two_exports_is_one_pass() {
     let items = features(&[
-        unit("3127257", "Calcaire grossier", ("Lutétien", 41.2), ("Lutétien", 47.8)),
+        unit(
+            "3127257",
+            "Calcaire grossier",
+            ("Lutétien", 41.2),
+            ("Lutétien", 47.8),
+        ),
         // Another borehole, so another place: two passes, two points.
-        unit("3127259", "Calcaire grossier", ("Lutétien", 41.2), ("Lutétien", 47.8)).replace("2.4321,48.9135,46", "2.5,48.95,46"),
+        unit(
+            "3127259",
+            "Calcaire grossier",
+            ("Lutétien", 41.2),
+            ("Lutétien", 47.8),
+        )
+        .replace("2.4321,48.9135,46", "2.5,48.95,46"),
     ]);
     let pieces = files(&[
         ("GeologicUnit_Lutétien_olderNamedAge_ZONE_2.json", items.clone()),
         ("GeologicUnit_Lutétien_youngerNamedAge_ZONE_2.json", items),
     ]);
     let made = plan_units(&pieces, Choices::new().set("stage", json!("Lutétien"))).expect("a plan");
-    assert_eq!(number(&made, "featureCount"), 2.0, "two passes, however many files state them");
-    assert_eq!(number(&made, "duplicatesDropped"), 0.0, "a repeat is not a duplicate place");
+    assert_eq!(
+        number(&made, "featureCount"),
+        2.0,
+        "two passes, however many files state them"
+    );
+    assert_eq!(
+        number(&made, "duplicatesDropped"),
+        0.0,
+        "a repeat is not a duplicate place"
+    );
     assert!(
-        made.dropped.iter().any(|one| one.count == 2 && one.why.contains("already read")),
+        made.dropped
+            .iter()
+            .any(|one| one.count == 2 && one.why.contains("already read")),
         "the repeat is named: {:?}",
         made.dropped
     );
 
     // The table says the same, row by row: `passes` is the last column.
-    let table = made.objects.iter().find(|one| one.role == "table").expect("the table");
+    let table = made
+        .objects
+        .iter()
+        .find(|one| one.role == "table")
+        .expect("the table");
     let passes = table.json["Column"]
         .as_array()
         .and_then(|columns| columns.iter().find(|column| column["Title"] == "passes"))
         .expect("the passes column");
-    let counted: Vec<i64> = passes["Values"]["Values"].as_array().expect("values").iter().filter_map(Value::as_i64).collect();
+    let counted: Vec<i64> = passes["Values"]["Values"]
+        .as_array()
+        .expect("values")
+        .iter()
+        .filter_map(Value::as_i64)
+        .collect();
     assert_eq!(counted, vec![2]);
 }
 
@@ -218,7 +287,11 @@ fn borehole(passes: &[(f64, f64)]) -> String {
                    "collectionIdentifier":{{"value":"B_{at}"}}}}}}"#
         )
     };
-    let log: Vec<String> = passes.iter().enumerate().map(|(at, pass)| interval(at, *pass)).collect();
+    let log: Vec<String> = passes
+        .iter()
+        .enumerate()
+        .map(|(at, pass)| interval(at, *pass))
+        .collect();
     format!(
         r#"{{"type":"FeatureCollection","features":[{{"type":"Feature","id":"BSS000TEST",
             "geometry":{{"type":"Point","coordinates":[2.4321,48.9135]}},
@@ -236,14 +309,30 @@ fn borehole(passes: &[(f64, f64)]) -> String {
 fn imported(passes: &[(f64, f64)]) -> Plan {
     let read = geojson::read(&borehole(passes)).expect("a collection");
     assert!(read.refused.is_empty(), "{:?}", read.refused);
-    let pieces = Pieces::empty().with("features", Source::Features { name: "Borehole.json".into(), features: read.features });
+    let pieces = Pieces::empty().with(
+        "features",
+        Source::Features {
+            name: "Borehole.json".into(),
+            features: read.features,
+        },
+    );
     Registry::new()
-        .plan("sigeol-boreholes", &pieces, &Choices::new().set("project", json!(2154)), &Identity::derived(), &when())
+        .plan(
+            "sigeol-boreholes",
+            &pieces,
+            &Choices::new().set("project", json!(2154)),
+            &Identity::derived(),
+            &when(),
+        )
         .expect("planned")
 }
 
 fn node_mds(plan: &Plan) -> Vec<f64> {
-    let nodes = plan.datasets.iter().find(|one| one.path.ends_with("/nodeMd")).expect("the frame's depths");
+    let nodes = plan
+        .datasets
+        .iter()
+        .find(|one| one.path.ends_with("/nodeMd"))
+        .expect("the frame's depths");
     match &nodes.values {
         energyml_build::operation::Numbers::F64(values) => values.clone(),
         other => panic!("{other:?}"),
@@ -261,8 +350,16 @@ fn the_frame_of_an_imported_hole_has_a_node_at_every_bound_of_its_log() {
     let made = imported(&[(0.0, 2.0), (1.0, 3.0), (3.5, 4.0)]);
     assert_eq!(node_mds(&made), vec![0.0, 1.0, 2.0, 3.0, 3.5, 4.0]);
     let late = imported(&[(3.0, 5.0), (5.0, 8.0)]);
-    assert_eq!(node_mds(&late), vec![0.0, 3.0, 5.0, 8.0], "no depth at the ground: one is added, and said");
-    assert!(late.says.iter().any(|note| note.key == "md-zero-added"), "{:?}", late.says);
+    assert_eq!(
+        node_mds(&late),
+        vec![0.0, 3.0, 5.0, 8.0],
+        "no depth at the ground: one is added, and said"
+    );
+    assert!(
+        late.says.iter().any(|note| note.key == "md-zero-added"),
+        "{:?}",
+        late.says
+    );
 }
 
 /// The `Known` the package would give back for the frame `made` wrote — what
@@ -276,8 +373,14 @@ fn known_of(made: &Plan) -> Known {
             .find(|one| one.qualified_type == kind)
             .map(|one| Ref::new(one.uuid.clone(), one.qualified_type.clone(), one.title.clone()))
     };
-    let controls = made.datasets.iter().find(|one| one.path.ends_with("/controlPoints")).expect("the line");
-    let energyml_build::operation::Numbers::F64(points) = &controls.values else { panic!("{:?}", controls.values) };
+    let controls = made
+        .datasets
+        .iter()
+        .find(|one| one.path.ends_with("/controlPoints"))
+        .expect("the line");
+    let energyml_build::operation::Numbers::F64(points) = &controls.values else {
+        panic!("{:?}", controls.values)
+    };
     Known {
         reference: of("resqml22.WellboreFrameRepresentation"),
         interpretation: of("resqml22.WellboreInterpretation"),
@@ -321,13 +424,22 @@ fn enrich(csv: &str, known: Known) -> Plan {
     ]);
     let table = tabular::read("passes.csv", csv, Dialect::sniff(csv)).expect("a table");
     let pieces = Pieces::empty()
-        .with("table", Source::Table { name: "passes.csv".into(), table, template: osdu::from_json(&template).expect("a template") })
+        .with(
+            "table",
+            Source::Table {
+                name: "passes.csv".into(),
+                table,
+                template: osdu::from_json(&template).expect("a template"),
+            },
+        )
         .with("wells", Source::Object(known));
     Registry::new()
         .plan(
             "wells-from-table",
             &pieces,
-            &Choices::new().set("sourceEpsg", json!(2154)).set("enrich", json!(true)),
+            &Choices::new()
+                .set("sourceEpsg", json!(2154))
+                .set("enrich", json!(true)),
             &Identity::derived(),
             &when(),
         )
@@ -350,7 +462,10 @@ fn enrich(csv: &str, known: Known) -> Plan {
 fn the_csv_enrichment_lands_on_the_imported_frame_without_moving_a_node() {
     for (log, rows) in [
         // Overlap in the log: the script writes the elementary intervals.
-        (vec![(0.0, 2.0), (1.0, 3.0), (3.5, 4.0)], vec![(0.0, 1.0), (1.0, 2.0), (2.0, 3.0), (3.5, 4.0)]),
+        (
+            vec![(0.0, 2.0), (1.0, 3.0), (3.5, 4.0)],
+            vec![(0.0, 1.0), (1.0, 2.0), (2.0, 3.0), (3.5, 4.0)],
+        ),
         // A log that starts below the ground: the import adds the zero, the
         // table never states it.
         (vec![(3.0, 5.0), (5.0, 8.0)], vec![(3.0, 5.0), (5.0, 8.0)]),
@@ -359,8 +474,16 @@ fn the_csv_enrichment_lands_on_the_imported_frame_without_moving_a_node() {
         let known = known_of(&imported);
         let csv = passes_csv(&known, &rows);
         let again = enrich(&csv, known);
-        assert!(again.says.iter().any(|note| note.key == "unchanged"), "{log:?}: {:?}", again.says);
-        let frames = again.objects.iter().filter(|one| one.qualified_type == "resqml22.WellboreFrameRepresentation").count();
+        assert!(
+            again.says.iter().any(|note| note.key == "unchanged"),
+            "{log:?}: {:?}",
+            again.says
+        );
+        let frames = again
+            .objects
+            .iter()
+            .filter(|one| one.qualified_type == "resqml22.WellboreFrameRepresentation")
+            .count();
         assert_eq!(frames, 0, "{log:?}: the frame stays the one the import wrote");
     }
 }

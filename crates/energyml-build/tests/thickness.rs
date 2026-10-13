@@ -15,7 +15,10 @@ use energyml_build::pieces::{Known, Pieces, Ref, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 fn when() -> When {
-    When { creation: "2026-09-12T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-12T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 fn crs(uuid: &str, title: &str) -> Ref {
@@ -28,7 +31,13 @@ fn plate(z: impl Fn(f64, f64) -> f64) -> Geometry {
     let points = corners.iter().map(|&[x, y]| [x, y, z(x, y)]).collect();
     Geometry {
         kind: "surface",
-        patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Triangles(vec![[0, 1, 2], [0, 2, 3]]), closed: Vec::new() }],
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology: Topology::Triangles(vec![[0, 1, 2], [0, 2, 3]]),
+            closed: Vec::new(),
+        }],
     }
 }
 
@@ -52,7 +61,13 @@ fn top_grid(z: impl Fn(f64, f64) -> f64) -> Geometry {
     }
     Geometry {
         kind: "surface",
-        patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Triangles(faces), closed: Vec::new() }],
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology: Topology::Triangles(faces),
+            closed: Vec::new(),
+        }],
     }
 }
 
@@ -75,9 +90,21 @@ const BASE: &str = "22222222-0000-4000-8000-000000000002";
 fn pair(slope: f64, uom: &str) -> Pieces {
     let frame = crs("cccccccc-0000-4000-8000-000000000003", "The frame");
     Pieces::empty()
-        .with("top", Source::Shape { geometry: top_grid(|x, _| 1000.0 + slope * x), closed: None })
+        .with(
+            "top",
+            Source::Shape {
+                geometry: top_grid(|x, _| 1000.0 + slope * x),
+                closed: None,
+            },
+        )
         .with("top (object)", known(TOP, "Toit", &frame, uom, 25))
-        .with("base", Source::Shape { geometry: plate(|x, _| 1020.0 + slope * x), closed: None })
+        .with(
+            "base",
+            Source::Shape {
+                geometry: plate(|x, _| 1020.0 + slope * x),
+                closed: None,
+            },
+        )
         .with("base (object)", known(BASE, "Mur", &frame, uom, 4))
 }
 
@@ -97,14 +124,29 @@ fn choices(what: &str) -> Choices {
 /// the frame's unit — and the vertical convention suggested from the frame.
 #[test]
 fn the_isochore_is_the_vertical_gap_laid_on_the_top() {
-    let plan = Registry::new().plan("thickness", &pair(0.1, "m"), &choices("isochore"), &Identity::derived(), &when()).unwrap();
+    let plan = Registry::new()
+        .plan(
+            "thickness",
+            &pair(0.1, "m"),
+            &choices("isochore"),
+            &Identity::derived(),
+            &when(),
+        )
+        .unwrap();
     let values = values_of(&plan);
-    assert_eq!(values.len(), 25, "one value per node of the top — not of the base");
+    assert_eq!(
+        values.len(),
+        25,
+        "one value per node of the top — not of the base"
+    );
     assert!(values.iter().all(|v| (v - 20.0).abs() < 1e-9), "{values:?}");
     let object = &plan.objects[0].json;
     assert_eq!(object["SupportingRepresentation"]["Uuid"], json!(TOP));
     assert_eq!(object["PropertyKind"]["Title"], json!("true vertical thickness"));
-    assert_eq!(object["PropertyKind"]["Uuid"], json!("193d165b-bfec-4d11-b093-21e0bdc77433"));
+    assert_eq!(
+        object["PropertyKind"]["Uuid"],
+        json!("193d165b-bfec-4d11-b093-21e0bdc77433")
+    );
     assert_eq!(object["Uom"], json!("m"));
     assert_eq!(plan.objects[0].title, "Toit — Mur isochore");
 }
@@ -126,14 +168,28 @@ fn roles_are_read_by_name_and_a_reversed_bag_still_crosses() {
         };
         swapped = swapped.with(renamed, source.clone());
     }
-    let plan = Registry::new().plan("thickness", &swapped, &choices("isochore"), &Identity::derived(), &when()).unwrap();
+    let plan = Registry::new()
+        .plan(
+            "thickness",
+            &swapped,
+            &choices("isochore"),
+            &Identity::derived(),
+            &when(),
+        )
+        .unwrap();
     let values = values_of(&plan);
     assert_eq!(values.len(), 4, "on the plate, now the top");
     assert!(values.iter().all(|v| (v + 20.0).abs() < 1e-9), "{values:?}");
     assert!(plan.says.iter().any(|n| n.key == "crossed"), "{:?}", plan.says);
 
     // Without a `base`, unfit — and the reason names the role.
-    let alone = Pieces::empty().with("top", Source::Shape { geometry: top_grid(|_, _| 0.0), closed: None });
+    let alone = Pieces::empty().with(
+        "top",
+        Source::Shape {
+            geometry: top_grid(|_, _| 0.0),
+            closed: None,
+        },
+    );
     match Registry::new().get("thickness").unwrap().fitness(&alone) {
         Fitness::Unfit(why) => assert!(why.message.contains("`base`"), "{why}"),
         Fitness::Fit => panic!("a thickness needs two surfaces"),
@@ -146,10 +202,21 @@ fn roles_are_read_by_name_and_a_reversed_bag_still_crosses() {
 #[test]
 fn the_isopach_is_the_isochore_times_the_cosine_of_the_dip_and_says_so() {
     let slope: f64 = 0.25;
-    let plan = Registry::new().plan("thickness", &pair(slope, "m"), &choices("isopach"), &Identity::derived(), &when()).unwrap();
+    let plan = Registry::new()
+        .plan(
+            "thickness",
+            &pair(slope, "m"),
+            &choices("isopach"),
+            &Identity::derived(),
+            &when(),
+        )
+        .unwrap();
     let expected = 20.0 * slope.atan().cos();
     assert!(values_of(&plan).iter().all(|v| (v - expected).abs() < 1e-9));
-    assert_eq!(plan.objects[0].json["PropertyKind"]["Title"], json!("true stratigraphic thickness"));
+    assert_eq!(
+        plan.objects[0].json["PropertyKind"]["Title"],
+        json!("true stratigraphic thickness")
+    );
     assert!(plan.says.iter().any(|n| n.key == "parallel-beds"));
 }
 
@@ -157,17 +224,42 @@ fn the_isopach_is_the_isochore_times_the_cosine_of_the_dip_and_says_so() {
 #[test]
 fn in_time_the_isochore_is_an_isochron_and_the_isopach_is_refused() {
     let pieces = pair(0.0, "ms");
-    let plan = Registry::new().plan("thickness", &pieces, &choices("isochore"), &Identity::derived(), &when()).unwrap();
-    assert_eq!(plan.objects[0].json["PropertyKind"]["Title"], json!("vertical time thickness"));
+    let plan = Registry::new()
+        .plan(
+            "thickness",
+            &pieces,
+            &choices("isochore"),
+            &Identity::derived(),
+            &when(),
+        )
+        .unwrap();
+    assert_eq!(
+        plan.objects[0].json["PropertyKind"]["Title"],
+        json!("vertical time thickness")
+    );
     assert_eq!(plan.objects[0].json["Uom"], json!("ms"));
     assert!(plan.says.iter().any(|n| n.key == "isochron"));
 
-    let why = Registry::new().plan("thickness", &pieces, &choices("isopach"), &Identity::derived(), &when()).unwrap_err();
+    let why = Registry::new()
+        .plan(
+            "thickness",
+            &pieces,
+            &choices("isopach"),
+            &Identity::derived(),
+            &when(),
+        )
+        .unwrap_err();
     assert!(why.message().contains("not an angle"), "{}", why.message());
 
     // A length unit answered over a frame that counts in time is refused too.
     let why = Registry::new()
-        .plan("thickness", &pieces, &choices("isochore").set("uom", "m"), &Identity::derived(), &when())
+        .plan(
+            "thickness",
+            &pieces,
+            &choices("isochore").set("uom", "m"),
+            &Identity::derived(),
+            &when(),
+        )
         .unwrap_err();
     assert!(why.message().contains("wrong family"), "{}", why.message());
 }
@@ -181,16 +273,39 @@ fn two_frames_or_two_units_are_not_subtracted() {
     for (name, source) in pair(0.0, "m").iter() {
         let (a, b) = if name == "base (object)" {
             let frame = crs("cccccccc-0000-4000-8000-000000000003", "The frame");
-            (known(BASE, "Mur", &other, "m", 4), known(BASE, "Mur", &frame, "ft", 4))
+            (
+                known(BASE, "Mur", &other, "m", 4),
+                known(BASE, "Mur", &frame, "ft", 4),
+            )
         } else {
             (source.clone(), source.clone())
         };
         two_frames = two_frames.with(name, a);
         two_units = two_units.with(name, b);
     }
-    let why = Registry::new().plan("thickness", &two_frames, &choices("isochore"), &Identity::derived(), &when()).unwrap_err();
-    assert!(why.message().contains("two origins") && why.message().contains("The other frame"), "{}", why.message());
-    let why = Registry::new().plan("thickness", &two_units, &choices("isochore"), &Identity::derived(), &when()).unwrap_err();
+    let why = Registry::new()
+        .plan(
+            "thickness",
+            &two_frames,
+            &choices("isochore"),
+            &Identity::derived(),
+            &when(),
+        )
+        .unwrap_err();
+    assert!(
+        why.message().contains("two origins") && why.message().contains("The other frame"),
+        "{}",
+        why.message()
+    );
+    let why = Registry::new()
+        .plan(
+            "thickness",
+            &two_units,
+            &choices("isochore"),
+            &Identity::derived(),
+            &when(),
+        )
+        .unwrap_err();
     assert!(why.message().contains("`ft`"), "{}", why.message());
 }
 
@@ -209,7 +324,13 @@ fn a_grid_base_is_read_and_an_overflowing_top_is_counted() {
     let quads = vec![[0, 1, 4, 3], [1, 2, 5, 4], [3, 4, 7, 6], [4, 5, 8, 7]];
     let grid = Geometry {
         kind: "grid",
-        patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Quads(quads), closed: Vec::new() }],
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology: Topology::Quads(quads),
+            closed: Vec::new(),
+        }],
     };
     let top = Geometry {
         kind: "points",
@@ -222,13 +343,27 @@ fn a_grid_base_is_read_and_an_overflowing_top_is_counted() {
         }],
     };
     let pieces = Pieces::empty()
-        .with("top", Source::Shape { geometry: top, closed: None })
-        .with("base", Source::Shape { geometry: grid, closed: None });
-    let answers = choices("isochore")
-        .set("vertical", "depth")
-        .set("uom", "m")
-        .set("representation", Ref::new(TOP, "resqml22.PointSetRepresentation", "Toit").dor());
-    let plan = Registry::new().plan("thickness", &pieces, &answers, &Identity::derived(), &when()).unwrap();
+        .with(
+            "top",
+            Source::Shape {
+                geometry: top,
+                closed: None,
+            },
+        )
+        .with(
+            "base",
+            Source::Shape {
+                geometry: grid,
+                closed: None,
+            },
+        );
+    let answers = choices("isochore").set("vertical", "depth").set("uom", "m").set(
+        "representation",
+        Ref::new(TOP, "resqml22.PointSetRepresentation", "Toit").dor(),
+    );
+    let plan = Registry::new()
+        .plan("thickness", &pieces, &answers, &Identity::derived(), &when())
+        .unwrap();
     let values = values_of(&plan);
     // Bilinear at the centre of the first cell: 1000 + 25·25/100 = 1006.25.
     assert!((values[0] - 106.25).abs() < 1e-9, "{values:?}");
@@ -251,20 +386,53 @@ fn a_lattice_base_is_read_like_its_cells() {
     }
     let lattice = Geometry {
         kind: "grid",
-        patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Grid { fastest: 3, slowest: 3 }, closed: Vec::new() }],
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology: Topology::Grid {
+                fastest: 3,
+                slowest: 3,
+            },
+            closed: Vec::new(),
+        }],
     };
     let top = Geometry {
         kind: "points",
-        patches: vec![Patch { index: 0, node_offset: 0, points: vec![[25.0, 25.0, 900.0]], topology: Topology::Points, closed: Vec::new() }],
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points: vec![[25.0, 25.0, 900.0]],
+            topology: Topology::Points,
+            closed: Vec::new(),
+        }],
     };
     let pieces = Pieces::empty()
-        .with("top", Source::Shape { geometry: top, closed: None })
-        .with("base", Source::Shape { geometry: lattice, closed: None });
-    let answers = choices("isochore")
-        .set("vertical", "depth")
-        .set("uom", "m")
-        .set("representation", Ref::new(TOP, "resqml22.PointSetRepresentation", "Toit").dor());
-    let plan = Registry::new().plan("thickness", &pieces, &answers, &Identity::derived(), &when()).unwrap_or_else(|why| panic!("{why}"));
+        .with(
+            "top",
+            Source::Shape {
+                geometry: top,
+                closed: None,
+            },
+        )
+        .with(
+            "base",
+            Source::Shape {
+                geometry: lattice,
+                closed: None,
+            },
+        );
+    let answers = choices("isochore").set("vertical", "depth").set("uom", "m").set(
+        "representation",
+        Ref::new(TOP, "resqml22.PointSetRepresentation", "Toit").dor(),
+    );
+    let plan = Registry::new()
+        .plan("thickness", &pieces, &answers, &Identity::derived(), &when())
+        .unwrap_or_else(|why| panic!("{why}"));
     // The same cell as with listed quadrilaterals: 1000 + 25·25/100.
-    assert!((values_of(&plan)[0] - 106.25).abs() < 1e-9, "{:?}", values_of(&plan));
+    assert!(
+        (values_of(&plan)[0] - 106.25).abs() < 1e-9,
+        "{:?}",
+        values_of(&plan)
+    );
 }

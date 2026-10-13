@@ -133,7 +133,10 @@ pub fn save_reindexed_bytes(
 ) -> std::result::Result<Vec<u8>, (String, Vec<u8>)> {
     let mut first = std::io::Cursor::new(Vec::new());
     if let Err(e) = store.write_to(&mut first, options) {
-        return Err((format!("the relabelled package could not be written: {e}"), Vec::new()));
+        return Err((
+            format!("the relabelled package could not be written: {e}"),
+            Vec::new(),
+        ));
     }
     let bytes = first.into_inner();
 

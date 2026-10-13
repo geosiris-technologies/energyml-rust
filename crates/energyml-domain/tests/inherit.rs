@@ -56,7 +56,10 @@ pub(crate) fn dor(uuid: &str, qualified_type: &str) -> eml23::DataObjectReferenc
 }
 
 pub(crate) fn citation(title: &str) -> eml23::Citation {
-    eml23::Citation { title: title.to_string(), ..Default::default() }
+    eml23::Citation {
+        title: title.to_string(),
+        ..Default::default()
+    }
 }
 
 /// A package under construction: the objects, in the order they are written.
@@ -127,7 +130,11 @@ impl Package {
         self.add(
             &id,
             "resqml22.Model",
-            Box::new(resqml22::Model { uuid: id.clone(), citation: citation("the model"), ..Default::default() }),
+            Box::new(resqml22::Model {
+                uuid: id.clone(),
+                citation: citation("the model"),
+                ..Default::default()
+            }),
         );
         self
     }
@@ -210,7 +217,10 @@ impl Package {
                 uuid: id.clone(),
                 citation: citation(&format!("property {uuid}")),
                 property_kind: dor(&u(kind), "eml23.PropertyKind"),
-                supporting_representation: dor(&u(representation), "resqml22.WellboreTrajectoryRepresentation"),
+                supporting_representation: dor(
+                    &u(representation),
+                    "resqml22.WellboreTrajectoryRepresentation",
+                ),
                 ..Default::default()
             }),
         );
@@ -243,7 +253,10 @@ impl Package {
         let mut builder = IndexBuilder::new(summaries, 1);
         let total = builder.total();
         builder.step(&source, total);
-        Built { source, index: builder.finish() }
+        Built {
+            source,
+            index: builder.finish(),
+        }
     }
 }
 
@@ -289,9 +302,16 @@ fn the_object_itself_comes_first() {
     let mut package = chain();
     package.folder(10).set(20, &[(10, &[1])]);
     let built = package.built();
-    let walked = walk(&built, 1, &[(1, "own"), (10, "collection"), (2, "interpretation")]);
+    let walked = walk(
+        &built,
+        1,
+        &[(1, "own"), (10, "collection"), (2, "interpretation")],
+    );
     let found = hit(&walked);
-    assert_eq!((found.value, found.rank, found.carrier.as_str()), ("own", 1, u(1).as_str()));
+    assert_eq!(
+        (found.value, found.rank, found.carrier.as_str()),
+        ("own", 1, u(1).as_str())
+    );
     assert!(found.path.is_empty());
     assert!(found.ties.is_empty());
 }
@@ -313,7 +333,10 @@ fn a_collection_of_the_object_beats_its_interpretation() {
     assert_eq!((found.value, found.rank, found.distance()), ("collection", 2, 1));
     assert_eq!(found.carrier, u(10));
     let step = &found.path[0];
-    assert_eq!((step.from.as_str(), step.to.as_str(), step.via), (u(1).as_str(), u(10).as_str(), Via::Collection));
+    assert_eq!(
+        (step.from.as_str(), step.to.as_str(), step.via),
+        (u(1).as_str(), u(10).as_str(), Via::Collection)
+    );
     assert_eq!(step.field, "SingleCollectionAssociation[0].Dataobject[0]");
     assert_eq!(step.held_by.as_deref(), Some(u(20).as_str()));
 }
@@ -326,15 +349,15 @@ fn a_collection_of_the_object_beats_its_interpretation() {
 #[test]
 fn a_collection_of_a_collection_is_one_step_further() {
     let mut package = chain();
-    package
-        .folder(10)
-        .folder(11)
-        .set(20, &[(10, &[1]), (11, &[10])]);
+    package.folder(10).folder(11).set(20, &[(10, &[1]), (11, &[10])]);
     let built = package.built();
     let walked = walk(&built, 1, &[(11, "outer"), (2, "interpretation")]);
     let found = hit(&walked);
     assert_eq!((found.value, found.rank, found.distance()), ("outer", 2, 2));
-    assert_eq!(route(found), vec![(u(10), Via::Collection), (u(11), Via::Collection)]);
+    assert_eq!(
+        route(found),
+        vec![(u(10), Via::Collection), (u(11), Via::Collection)]
+    );
 }
 
 // -- rank 3, 4, 4 bis ----------------------------------------------------------
@@ -348,9 +371,16 @@ fn the_parent_beats_the_collection_of_the_parent() {
     let mut package = chain();
     package.folder(10).set(20, &[(10, &[2])]);
     let built = package.built();
-    let walked = walk(&built, 1, &[(2, "interpretation"), (10, "collection of the interpretation")]);
+    let walked = walk(
+        &built,
+        1,
+        &[(2, "interpretation"), (10, "collection of the interpretation")],
+    );
     let found = hit(&walked);
-    assert_eq!((found.value, found.rank, found.distance()), ("interpretation", 3, 1));
+    assert_eq!(
+        (found.value, found.rank, found.distance()),
+        ("interpretation", 3, 1)
+    );
     assert_eq!(route(found), vec![(u(2), Via::Parent)]);
     assert_eq!(found.path[0].field, "RepresentedObject");
 }
@@ -364,9 +394,16 @@ fn a_collection_of_the_interpretation_beats_the_feature() {
     let mut package = chain();
     package.folder(10).set(20, &[(10, &[2])]);
     let built = package.built();
-    let walked = walk(&built, 1, &[(3, "feature"), (10, "collection of the interpretation")]);
+    let walked = walk(
+        &built,
+        1,
+        &[(3, "feature"), (10, "collection of the interpretation")],
+    );
     let found = hit(&walked);
-    assert_eq!((found.value, found.rank, found.distance()), ("collection of the interpretation", 4, 2));
+    assert_eq!(
+        (found.value, found.rank, found.distance()),
+        ("collection of the interpretation", 4, 2)
+    );
     assert_eq!(route(found), vec![(u(2), Via::Parent), (u(10), Via::Collection)]);
 }
 
@@ -399,7 +436,10 @@ fn the_walk_goes_up_and_the_stages_are_read_in_order() {
     let on_the_feature = walk(&built, 1, &[(3, "feature")]);
     let found_feature = hit(&on_the_feature);
     assert_eq!((found_feature.rank, found_feature.distance()), (5, 2));
-    assert_eq!(route(found_feature), vec![(u(2), Via::Parent), (u(3), Via::Parent)]);
+    assert_eq!(
+        route(found_feature),
+        vec![(u(2), Via::Parent), (u(3), Via::Parent)]
+    );
     assert_eq!(found_feature.path[1].field, "InterpretedFeature");
 
     // The feature itself is before the feature's collections.
@@ -471,7 +511,10 @@ fn a_project_collection_is_not_followed_and_is_noted() {
     let walked = walk(&built, 1, &[(10, "project colour")]);
     assert!(walked.resolution.is_none(), "{walked:?}");
     assert!(
-        walked.notes.iter().any(|n| n.contains("project") && n.contains("not followed")),
+        walked
+            .notes
+            .iter()
+            .any(|n| n.contains("project") && n.contains("not followed")),
         "{:?}",
         walked.notes
     );
@@ -479,7 +522,11 @@ fn a_project_collection_is_not_followed_and_is_noted() {
     // The project does not pass in front of the interpretation, and the note stays.
     let walked = walk(&built, 1, &[(10, "project colour"), (2, "interpretation")]);
     assert_eq!(hit(&walked).value, "interpretation");
-    assert!(walked.notes.iter().any(|n| n.contains("project")), "{:?}", walked.notes);
+    assert!(
+        walked.notes.iter().any(|n| n.contains("project")),
+        "{:?}",
+        walked.notes
+    );
 
     let mut folder = chain();
     folder.folder(10).set(20, &[(10, &[1, 2, 3])]);
@@ -500,7 +547,10 @@ fn the_collections_of_the_model_are_not_followed_and_are_noted() {
     let walked = walk(&built, 1, &[(10, "collection of the earth model")]);
     assert!(walked.resolution.is_none(), "{walked:?}");
     assert!(
-        walked.notes.iter().any(|n| n.contains("collections of the model are not followed")),
+        walked
+            .notes
+            .iter()
+            .any(|n| n.contains("collections of the model are not followed")),
         "{:?}",
         walked.notes
     );
@@ -524,8 +574,14 @@ fn a_tie_takes_the_first_in_the_document_and_keeps_the_others() {
     let found = hit(&walked);
     assert_eq!((found.value, found.carrier.as_str()), ("eleven", u(11).as_str()));
     assert_eq!(found.ties.len(), 1);
-    assert_eq!((found.ties[0].carrier.as_str(), found.ties[0].value), (u(10).as_str(), "ten"));
-    assert_eq!(found.ties[0].path[0].field, "SingleCollectionAssociation[1].Dataobject[0]");
+    assert_eq!(
+        (found.ties[0].carrier.as_str(), found.ties[0].value),
+        (u(10).as_str(), "ten")
+    );
+    assert_eq!(
+        found.ties[0].path[0].field,
+        "SingleCollectionAssociation[1].Dataobject[0]"
+    );
 
     let mut reversed = chain();
     reversed.folder(10).folder(11).set(20, &[(10, &[1]), (11, &[1])]);
@@ -544,7 +600,11 @@ fn a_tie_takes_the_first_in_the_document_and_keeps_the_others() {
 fn the_shortest_path_wins_before_the_order() {
     let mut package = chain();
     // 10 holds 1 and is itself held by 12 (distance 2 for 12); 11 holds 1 directly, written after.
-    package.folder(10).folder(11).folder(12).set(20, &[(10, &[1]), (12, &[10]), (11, &[1])]);
+    package
+        .folder(10)
+        .folder(11)
+        .folder(12)
+        .set(20, &[(10, &[1]), (12, &[10]), (11, &[1])]);
     let built = package.built();
     let walked = walk(&built, 1, &[(12, "far"), (11, "near")]);
     let found = hit(&walked);
@@ -562,11 +622,22 @@ fn the_shortest_path_wins_before_the_order() {
 #[test]
 fn a_cycle_of_collections_is_named_and_the_walk_ends() {
     let mut package = chain();
-    package.folder(10).folder(11).set(20, &[(10, &[1]), (11, &[10])]).set(21, &[(10, &[11])]);
+    package
+        .folder(10)
+        .folder(11)
+        .set(20, &[(10, &[1]), (11, &[10])])
+        .set(21, &[(10, &[11])]);
     let built = package.built();
     let walked = walk(&built, 1, &[]);
     assert!(walked.resolution.is_none());
-    assert!(walked.notes.iter().any(|n| n.starts_with("cycle in the collections")), "{:?}", walked.notes);
+    assert!(
+        walked
+            .notes
+            .iter()
+            .any(|n| n.starts_with("cycle in the collections")),
+        "{:?}",
+        walked.notes
+    );
 
     // A cycle on the way does not forbid an answer found beyond it.
     let walked = walk(&built, 1, &[(11, "outer")]);
@@ -580,7 +651,14 @@ fn a_cycle_of_collections_is_named_and_the_walk_ends() {
     let built = itself.built();
     let walked = walk(&built, 1, &[]);
     assert!(walked.resolution.is_none());
-    assert!(walked.notes.iter().any(|n| n.starts_with("cycle in the collections")), "{:?}", walked.notes);
+    assert!(
+        walked
+            .notes
+            .iter()
+            .any(|n| n.starts_with("cycle in the collections")),
+        "{:?}",
+        walked.notes
+    );
 }
 
 /// An object listed twice in one association counts once (common TRG 2.3
@@ -596,8 +674,15 @@ fn an_object_listed_twice_counts_once() {
     let found = hit(&walked);
     assert_eq!(found.carrier, u(10));
     assert!(found.ties.is_empty());
-    assert!(found.notes.iter().any(|n| n.contains("§8.5")), "{:?}", found.notes);
-    assert_eq!(found.path[0].field, "SingleCollectionAssociation[0].Dataobject[0]", "the first listing");
+    assert!(
+        found.notes.iter().any(|n| n.contains("§8.5")),
+        "{:?}",
+        found.notes
+    );
+    assert_eq!(
+        found.path[0].field, "SingleCollectionAssociation[0].Dataobject[0]",
+        "the first listing"
+    );
 }
 
 /// A collection named in two associations of one set counts once — the first
@@ -614,7 +699,11 @@ fn a_collection_named_twice_in_a_set_counts_once() {
     let built = package.built();
     let walked = walk(&built, 1, &[(10, "collection")]);
     assert!(walked.resolution.is_none(), "{walked:?}");
-    assert!(walked.notes.iter().any(|n| n.contains("§8.3")), "{:?}", walked.notes);
+    assert!(
+        walked.notes.iter().any(|n| n.contains("§8.3")),
+        "{:?}",
+        walked.notes
+    );
     // The first association stands: object 2 is in the collection.
     let walked = walk(&built, 2, &[(10, "collection")]);
     assert_eq!(hit(&walked).value, "collection");
@@ -669,7 +758,10 @@ fn a_collection_is_not_a_member_of_itself() {
     let built = package.built();
     let walked = walk(&built, 1, &[(11, "outer")]);
     let found = hit(&walked);
-    assert_eq!((found.carrier.clone(), found.rank, found.distance()), (u(11), 2, 2));
+    assert_eq!(
+        (found.carrier.clone(), found.rank, found.distance()),
+        (u(11), 2, 2)
+    );
 }
 
 /// Only an **association set** writes a membership (common TRG 2.3 §8.3): the
@@ -709,7 +801,10 @@ fn only_an_association_set_writes_a_membership() {
 #[test]
 fn a_property_does_not_climb_to_its_representation() {
     let mut package = chain();
-    package.property_kind(40, Some(41)).property_kind(41, None).property(50, 1, 40);
+    package
+        .property_kind(40, Some(41))
+        .property_kind(41, None)
+        .property(50, 1, 40);
     package.model(30).earth_model(31, 30, &[2]);
     let built = package.built();
     let kinds = vec![u(40), u(41)];
@@ -719,7 +814,12 @@ fn a_property_does_not_climb_to_its_representation() {
     };
 
     // Everything above is coloured; the property has nothing.
-    let has = carriers(&[(1, "representation"), (2, "interpretation"), (3, "feature"), (31, "model")]);
+    let has = carriers(&[
+        (1, "representation"),
+        (2, "interpretation"),
+        (3, "feature"),
+        (31, "model"),
+    ]);
     let walker = Walker::new(&built.index, &built.source, &has);
     let walked = walker.resolve_property(&u(50), &kinds);
     assert!(walked.resolution.is_none(), "{walked:?}");
@@ -763,7 +863,10 @@ fn a_property_has_its_collections_at_each_step() {
         let found = hit(&walked);
         (found.value, found.rank, found.distance())
     };
-    assert_eq!(run(&[(10, "of the property"), (40, "kind")]), ("of the property", 2, 1));
+    assert_eq!(
+        run(&[(10, "of the property"), (40, "kind")]),
+        ("of the property", 2, 1)
+    );
     assert_eq!(run(&[(40, "kind"), (11, "of the kind")]), ("kind", 3, 1));
     assert_eq!(run(&[(11, "of the kind")]), ("of the kind", 4, 2));
 }
@@ -776,7 +879,10 @@ fn a_property_has_its_collections_at_each_step() {
 #[test]
 fn the_kind_chain_is_the_resolvers() {
     let mut package = chain();
-    package.property_kind(40, Some(41)).property_kind(41, None).property(50, 1, 40);
+    package
+        .property_kind(40, Some(41))
+        .property_kind(41, None)
+        .property(50, 1, 40);
     let built = package.built();
     let chain = inherit::kind_chain(&built.index, &built.source, &u(50));
     assert_eq!(chain.uuids.first(), Some(&u(40)), "{chain:?}");
@@ -810,7 +916,11 @@ fn the_batch_equals_the_unit_and_asks_each_object_once() {
     let uuids: Vec<String> = members.iter().map(|n| u(*n)).collect();
     let batch = inherit::resolve_all(&built.index, &built.source, &uuids, &has);
     assert_eq!(batch.len(), 5);
-    assert_eq!(asked.borrow()[&u(10)], 1, "the shared collection is asked once, not once per object");
+    assert_eq!(
+        asked.borrow()[&u(10)],
+        1,
+        "the shared collection is asked once, not once per object"
+    );
     assert!(asked.borrow().values().all(|n| *n == 1), "{:?}", asked.borrow());
 
     for (uuid, from_batch) in uuids.iter().zip(&batch) {
@@ -839,7 +949,12 @@ fn the_parents_are_the_cascades_parents() {
     let built = chain().built();
     let set = GraphicalSet::default();
     let cascade = Cascade::new(&set);
-    let request = Request { representation: &u(1), property: None, kind_chain: &[], element: Scope::WholeObject };
+    let request = Request {
+        representation: &u(1),
+        property: None,
+        kind_chain: &[],
+        element: Scope::WholeObject,
+    };
     let from_cascade: Vec<String> = cascade
         .chain(&request, &built.source)
         .expect("the cascade reads")
@@ -866,7 +981,11 @@ fn a_loop_of_parents_is_named() {
     let built = package.built();
     let walked = walk(&built, 1, &[]);
     assert!(walked.resolution.is_none());
-    assert!(walked.notes.iter().any(|n| n.starts_with("cycle:")), "{:?}", walked.notes);
+    assert!(
+        walked.notes.iter().any(|n| n.starts_with("cycle:")),
+        "{:?}",
+        walked.notes
+    );
 
     let walked = walk(&built, 99, &[(99, "alone")]);
     assert_eq!(hit(&walked).rank, 1);

@@ -228,7 +228,11 @@ fn header(
             };
             // *"metres, z up"* would be a lie on a time axis, and the sort of
             // lie a reader has no way to catch: the numbers look like depths.
-            let vertical = if crs.is_time() { "z from travel time" } else { "metres, z up" };
+            let vertical = if crs.is_time() {
+                "z from travel time"
+            } else {
+                "metres, z up"
+            };
             writeln!(out, "# crs {} {system}, {vertical}", crs.uuid)?;
         }
         (None, _) => writeln!(out, "# crs none stated; coordinates are as written")?,

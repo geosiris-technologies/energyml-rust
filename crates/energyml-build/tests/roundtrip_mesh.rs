@@ -108,7 +108,11 @@ fn a_geojson_from_our_exporter_comes_back_in_metres() {
        "properties":{"uuid":"x"}}]}"#;
     let made = mesh::read("trace.geojson", text).expect("a trace");
     assert_eq!(nodes(&made), 2);
-    assert!(made.patches[0].points[0][0] > 100_000.0, "{:?}", made.patches[0].points[0]);
+    assert!(
+        made.patches[0].points[0][0] > 100_000.0,
+        "{:?}",
+        made.patches[0].points[0]
+    );
     // The elevation of the file is kept as it is: it is already in metres, and
     // only the horizontal changes system.
     assert_eq!(made.patches[0].points[0][2], 38.5);

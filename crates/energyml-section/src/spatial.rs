@@ -49,7 +49,10 @@ impl Rect {
         if !a.iter().chain(b.iter()).all(|v| v.is_finite()) {
             return None;
         }
-        Some(Self { min: [a[0].min(b[0]), a[1].min(b[1])], max: [a[0].max(b[0]), a[1].max(b[1])] })
+        Some(Self {
+            min: [a[0].min(b[0]), a[1].min(b[1])],
+            max: [a[0].max(b[0]), a[1].max(b[1])],
+        })
     }
 
     /// A point, as a degenerate box; `None` if not finite.
@@ -126,7 +129,13 @@ pub struct Index<T> {
 
 impl<T> Default for Index<T> {
     fn default() -> Self {
-        Self { entries: Vec::new(), built: 0, nodes: Vec::new(), root: None, rebuilds: 0 }
+        Self {
+            entries: Vec::new(),
+            built: 0,
+            nodes: Vec::new(),
+            root: None,
+            rebuilds: 0,
+        }
     }
 }
 
@@ -138,7 +147,10 @@ impl<T> Index<T> {
 
     /// An index built at once over `items`.
     pub fn build(items: Vec<(Rect, T)>) -> Self {
-        let mut index = Self { entries: items, ..Self::default() };
+        let mut index = Self {
+            entries: items,
+            ..Self::default()
+        };
         index.rebuild();
         index
     }
@@ -198,7 +210,11 @@ impl<T> Index<T> {
             let mut next_rects: Vec<Rect> = Vec::new();
             for group in order.chunks(FAN_OUT) {
                 let kids: Vec<usize> = group.iter().map(|&i| level[i]).collect();
-                let rect = group.iter().map(|&i| rects_of_level[i]).reduce(|a, b| a.union(&b)).expect("non-empty chunk");
+                let rect = group
+                    .iter()
+                    .map(|&i| rects_of_level[i])
+                    .reduce(|a, b| a.union(&b))
+                    .expect("non-empty chunk");
                 next_nodes.push(self.nodes.len());
                 next_rects.push(rect);
                 self.nodes.push(Node { rect, kids, leaf });

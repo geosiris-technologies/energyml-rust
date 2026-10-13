@@ -70,12 +70,7 @@ impl Exporter for CsvExporter {
         self.write_all(std::slice::from_ref(object), out, options)
     }
 
-    fn write_all(
-        &self,
-        objects: &[SceneObject],
-        out: &mut dyn Write,
-        options: &Options<'_>,
-    ) -> Result<()> {
+    fn write_all(&self, objects: &[SceneObject], out: &mut dyn Write, options: &Options<'_>) -> Result<()> {
         // One header for the whole file — that is what makes a group export
         // pasteable as it stands: the well is a column, not a block.
         writeln!(out, "object,uuid,element,index,x,y,z,property,kind,uom,value")?;

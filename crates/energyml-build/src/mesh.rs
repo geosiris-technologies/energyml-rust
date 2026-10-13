@@ -119,12 +119,18 @@ pub struct Refused {
 impl Refused {
     /// A refusal that no answer will lift.
     pub fn flat(why: impl Into<String>) -> Self {
-        Refused { why: why.into(), missing: Vec::new() }
+        Refused {
+            why: why.into(),
+            missing: Vec::new(),
+        }
     }
 
     /// A refusal that names what it expects.
     pub fn wanting(why: impl Into<String>, missing: Vec<Ask>) -> Self {
-        Refused { why: why.into(), missing }
+        Refused {
+            why: why.into(),
+            missing,
+        }
     }
 }
 
@@ -258,7 +264,10 @@ pub const FORMATS: &[Format] = &[
 /// the next ones drift — which no assertion on a number of points would
 /// see.
 pub fn read_vtk_xml(text: &str) -> Result<Geometry, String> {
-    if let Some(bad) = ["\"binary\"", "\"appended\""].iter().find(|kind| text.contains(**kind)) {
+    if let Some(bad) = ["\"binary\"", "\"appended\""]
+        .iter()
+        .find(|kind| text.contains(**kind))
+    {
         return Err(format!(
             "this file has {} DataArrays; this build reads `ascii` only — re-export it as ascii",
             bad.trim_matches('"')
@@ -267,16 +276,21 @@ pub fn read_vtk_xml(text: &str) -> Result<Geometry, String> {
     let points = xml_array(text, Some("Points"), None)
         .ok_or_else(|| "no <Points> section with an ascii DataArray".to_string())?;
     if points.len() % 3 != 0 {
-        return Err(format!("{} coordinate(s) is not a whole number of points", points.len()));
+        return Err(format!(
+            "{} coordinate(s) is not a whole number of points",
+            points.len()
+        ));
     }
-    let places: Vec<[f64; 3]> = points
-        .chunks_exact(3)
-        .map(|c| [c[0], c[1], c[2]])
-        .collect();
+    let places: Vec<[f64; 3]> = points.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect();
 
     let mut triangles = Vec::new();
     let mut segments = Vec::new();
-    for (section, as_area) in [("Polys", true), ("Strips", true), ("Cells", true), ("Lines", false)] {
+    for (section, as_area) in [
+        ("Polys", true),
+        ("Strips", true),
+        ("Cells", true),
+        ("Lines", false),
+    ] {
         let Some(connectivity) = xml_array(text, Some(section), Some("connectivity")) else {
             continue;
         };
@@ -286,13 +300,21 @@ pub fn read_vtk_xml(text: &str) -> Result<Geometry, String> {
         // from the first corner are diagonals through the cell, not its faces.
         // Only `Cells` carries the array; `Polys`, `Lines` and `Strips` are
         // polygons, polylines and strips by their section name.
-        let types = if section == "Cells" { xml_array(text, Some(section), Some("types")) } else { None };
+        let types = if section == "Cells" {
+            xml_array(text, Some(section), Some("types"))
+        } else {
+            None
+        };
         // VTK_POLYHEDRON keeps its faces apart from the connectivity:
         // `faceoffsets[i]` is where cell `i`'s run in `faces` ends.
         let faces = xml_array(text, Some(section), Some("faces")).unwrap_or_default();
         let face_ends = xml_array(text, Some(section), Some("faceoffsets")).unwrap_or_default();
         if types.as_ref().is_some_and(|kinds| kinds.len() != offsets.len()) {
-            return Err(format!("<{section}> has {} offsets but {} types", offsets.len(), types.map_or(0, |k| k.len())));
+            return Err(format!(
+                "<{section}> has {} offsets but {} types",
+                offsets.len(),
+                types.map_or(0, |k| k.len())
+            ));
         }
         let mut from = 0usize;
         let mut face_from = 0usize;
@@ -318,9 +340,14 @@ pub fn read_vtk_xml(text: &str) -> Result<Geometry, String> {
             } else if let Some(kinds) = &types {
                 let kind = kinds[at] as i64;
                 if kind == 42 {
-                    let stop = face_ends.get(at).map(|v| *v as usize).filter(|stop| *stop <= faces.len() && *stop >= face_from);
+                    let stop = face_ends
+                        .get(at)
+                        .map(|v| *v as usize)
+                        .filter(|stop| *stop <= faces.len() && *stop >= face_from);
                     let Some(stop) = stop else {
-                        return Err(format!("<{section}> polyhedron {at} has no usable `faces`/`faceoffsets`"));
+                        return Err(format!(
+                            "<{section}> polyhedron {at} has no usable `faces`/`faceoffsets`"
+                        ));
                     };
                     let run: Vec<u32> = faces[face_from..stop].iter().map(|v| *v as u32).collect();
                     face_from = stop;
@@ -522,11 +549,7 @@ this build projects, or give the columns projected coordinates"
 /// coordinate, so it is a decision. `crs::utm_epsg_of` **proposes** one,
 /// drawn from the longitude of the data itself, and the caller replaces it —
 /// provided it knows it was proposed: see [`read_geojson_placed`].
-pub fn read_geojson(
-    text: &str,
-    projection: Option<i64>,
-    height: Option<f64>,
-) -> Result<Geometry, Refused> {
+pub fn read_geojson(text: &str, projection: Option<i64>, height: Option<f64>) -> Result<Geometry, Refused> {
     read_geojson_placed(text, projection, height).map(|read| read.geometry)
 }
 
@@ -620,7 +643,9 @@ makes optional",
 /// of its dialect.
 pub fn format_of(name: &str) -> Option<&'static Format> {
     let lower = name.to_ascii_lowercase();
-    FORMATS.iter().find(|format| format.extensions.iter().any(|ext| lower.ends_with(ext)))
+    FORMATS
+        .iter()
+        .find(|format| format.extensions.iter().any(|ext| lower.ends_with(ext)))
 }
 
 /// Read a mesh, the format decided by the file name.
@@ -651,7 +676,10 @@ pub fn read_placed(name: &str, text: &str, given: &Given) -> Result<Read, Refuse
     // Nothing was decided for these formats: they are in the scene's system
     // or in none, and saying `None` rather than a code prevents a
     // caller from comparing a system that nobody chose.
-    let unplaced = |geometry: Geometry| Read { geometry, placed: None };
+    let unplaced = |geometry: Geometry| Read {
+        geometry,
+        placed: None,
+    };
     match format_of(name) {
         Some(format) if format.name == "obj" => read_obj(text).map(unplaced).map_err(Refused::flat),
         Some(format) if format.name == "vtk" => read_vtk(text).map(unplaced).map_err(Refused::flat),
@@ -662,9 +690,7 @@ pub fn read_placed(name: &str, text: &str, given: &Given) -> Result<Read, Refuse
         // find out by reading: a `z` column may be there, an altitude
         // may be written position by position.
         Some(format) if format.name == "csv" => read_csv(text, given.height).map(unplaced),
-        Some(format) if format.name == "geojson" => {
-            read_geojson_placed(text, given.projection, given.height)
-        }
+        Some(format) if format.name == "geojson" => read_geojson_placed(text, given.projection, given.height),
         _ => Err(Refused::flat(format!(
             "`{name}` is not a mesh this build reads — it reads {}",
             FORMATS.iter().map(|f| f.name).collect::<Vec<_>>().join(", ")
@@ -673,7 +699,12 @@ pub fn read_placed(name: &str, text: &str, given: &Given) -> Result<Read, Refuse
 }
 
 /// A single-patch shape, the way a foreign file arrives.
-fn one_patch(kind: &'static str, points: Vec<[f64; 3]>, triangles: Vec<[u32; 3]>, segments: Vec<[u32; 2]>) -> Geometry {
+fn one_patch(
+    kind: &'static str,
+    points: Vec<[f64; 3]>,
+    triangles: Vec<[u32; 3]>,
+    segments: Vec<[u32; 2]>,
+) -> Geometry {
     // **Triangles win over segments when there are both.** A patch carries one
     // topology; an OBJ that declares faces *and* `l`s is a surface with lines
     // on it, and it is the surface that describes it. The segments then
@@ -706,7 +737,13 @@ fn one_patch(kind: &'static str, points: Vec<[f64; 3]>, triangles: Vec<[u32; 3]>
         });
     }
     if patches.is_empty() {
-        patches.push(Patch { index: 0, node_offset: 0, points, topology: Topology::Points, closed: Vec::new() });
+        patches.push(Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology: Topology::Points,
+            closed: Vec::new(),
+        });
     }
     Geometry { kind, patches }
 }
@@ -775,12 +812,20 @@ fn indices<'a>(words: impl Iterator<Item = &'a str>, count: usize, line: usize) 
             return Err(format!("line {line}: `{word}` is not an index"));
         };
         if index == 0 {
-            return Err(format!("line {line}: index 0 does not exist — the format counts from 1"));
+            return Err(format!(
+                "line {line}: index 0 does not exist — the format counts from 1"
+            ));
         }
         // Negative: relative to the end, as the format defines.
-        let at = if index < 0 { count as i64 + index } else { index - 1 };
+        let at = if index < 0 {
+            count as i64 + index
+        } else {
+            index - 1
+        };
         if at < 0 || at >= count as i64 {
-            return Err(format!("line {line}: index {index} is outside the {count} vertex(es) declared so far"));
+            return Err(format!(
+                "line {line}: index {index} is outside the {count} vertex(es) declared so far"
+            ));
         }
         out.push(at as u32);
     }
@@ -805,7 +850,9 @@ pub fn read_vtk(text: &str) -> Result<Geometry, String> {
         let lower = first.to_ascii_lowercase();
         lower.starts_with("# vtk datafile") || lower.starts_with("#vtk datafile")
     }) {
-        return Err("the first line is not `# vtk DataFile Version …` — this is not a legacy VTK".to_string());
+        return Err(
+            "the first line is not `# vtk DataFile Version …` — this is not a legacy VTK".to_string(),
+        );
     }
     if rows.iter().any(|row| row.trim().eq_ignore_ascii_case("BINARY")) {
         return Err("this VTK is BINARY; this build reads the ASCII dialect".to_string());
@@ -814,7 +861,10 @@ pub fn read_vtk(text: &str) -> Result<Geometry, String> {
         let word = row.split_whitespace().next().unwrap_or("");
         word.eq_ignore_ascii_case("OFFSETS") || word.eq_ignore_ascii_case("CONNECTIVITY")
     }) {
-        return Err("this VTK uses the 5.1 layout (OFFSETS/CONNECTIVITY); re-export it as the classic one".to_string());
+        return Err(
+            "this VTK uses the 5.1 layout (OFFSETS/CONNECTIVITY); re-export it as the classic one"
+                .to_string(),
+        );
     }
 
     let dataset = rows
@@ -843,10 +893,17 @@ pub fn read_vtk(text: &str) -> Result<Geometry, String> {
         let cells = vtk_cells(&rows, "CELLS", count)?;
         let kinds = vtk_numbers(&rows, "CELL_TYPES");
         for (at, cell) in cells.iter().enumerate() {
-            cell_triangles(kinds.get(at).copied().unwrap_or(-1), cell, &mut triangles, &mut segments)?;
+            cell_triangles(
+                kinds.get(at).copied().unwrap_or(-1),
+                cell,
+                &mut triangles,
+                &mut segments,
+            )?;
         }
     } else {
-        return Err(format!("`DATASET {dataset}` is not one this build reads (POLYDATA, UNSTRUCTURED_GRID)"));
+        return Err(format!(
+            "`DATASET {dataset}` is not one this build reads (POLYDATA, UNSTRUCTURED_GRID)"
+        ));
     }
 
     if points.is_empty() {
@@ -859,8 +916,14 @@ pub fn read_vtk(text: &str) -> Result<Geometry, String> {
 /// "Cell types": VTK_HEXAHEDRON = 12, corners 0-3 the bottom face
 /// counter-clockwise seen from above, 4-7 the top face above them). Each face
 /// is wound outward, the same table `energyml-export` writes.
-const HEXAHEDRON_FACES: [[usize; 4]; 6] =
-    [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]];
+const HEXAHEDRON_FACES: [[usize; 4]; 6] = [
+    [0, 3, 2, 1],
+    [4, 5, 6, 7],
+    [0, 1, 5, 4],
+    [1, 2, 6, 5],
+    [2, 3, 7, 6],
+    [3, 0, 4, 7],
+];
 
 /// What one VTK cell of type `kind` contributes: triangles for an area, segments
 /// for a line, nothing for a vertex, and a refusal naming the type for the rest.
@@ -923,8 +986,11 @@ fn fan(ring: &[u32], out: &mut Vec<[u32; 3]>) {
 /// The points of a VTK — **the numbers may spread over several lines**,
 /// which the format allows and the exports do.
 fn vtk_points(rows: &[&str]) -> Result<Vec<[f64; 3]>, String> {
-    let Some(at) = rows.iter().position(|row| row.split_whitespace().next().is_some_and(|w| w.eq_ignore_ascii_case("POINTS")))
-    else {
+    let Some(at) = rows.iter().position(|row| {
+        row.split_whitespace()
+            .next()
+            .is_some_and(|w| w.eq_ignore_ascii_case("POINTS"))
+    }) else {
         return Ok(Vec::new());
     };
     let declared: usize = rows[at]
@@ -940,29 +1006,48 @@ fn vtk_points(rows: &[&str]) -> Result<Vec<[f64; 3]>, String> {
         // A line that starts with a keyword stops the harvest: a file
         // that declares more points than it writes stops there rather than
         // eating the next section.
-        if row.split_whitespace().next().is_some_and(|w| w.parse::<f64>().is_err()) {
+        if row
+            .split_whitespace()
+            .next()
+            .is_some_and(|w| w.parse::<f64>().is_err())
+        {
             break;
         }
         numbers.extend(row.split_whitespace().filter_map(|w| w.parse::<f64>().ok()));
     }
     if numbers.len() < declared * 3 {
-        return Err(format!("`POINTS` declares {declared} point(s) and the file holds {}", numbers.len() / 3));
+        return Err(format!(
+            "`POINTS` declares {declared} point(s) and the file holds {}",
+            numbers.len() / 3
+        ));
     }
-    Ok(numbers[..declared * 3].chunks_exact(3).map(|p| [p[0], p[1], p[2]]).collect())
+    Ok(numbers[..declared * 3]
+        .chunks_exact(3)
+        .map(|p| [p[0], p[1], p[2]])
+        .collect())
 }
 
 /// The cells of a section, each prefixed by its count.
 fn vtk_cells(rows: &[&str], section: &str, points: usize) -> Result<Vec<Vec<u32>>, String> {
-    let Some(at) = rows
-        .iter()
-        .position(|row| row.split_whitespace().next().is_some_and(|w| w.eq_ignore_ascii_case(section)))
-    else {
+    let Some(at) = rows.iter().position(|row| {
+        row.split_whitespace()
+            .next()
+            .is_some_and(|w| w.eq_ignore_ascii_case(section))
+    }) else {
         return Ok(Vec::new());
     };
-    let declared: usize = rows[at].split_whitespace().nth(1).and_then(|w| w.parse().ok()).unwrap_or(0);
+    let declared: usize = rows[at]
+        .split_whitespace()
+        .nth(1)
+        .and_then(|w| w.parse().ok())
+        .unwrap_or(0);
     let mut flat: Vec<i64> = Vec::new();
     for row in &rows[at + 1..] {
-        if row.split_whitespace().next().is_some_and(|w| w.parse::<i64>().is_err()) {
+        if row
+            .split_whitespace()
+            .next()
+            .is_some_and(|w| w.parse::<i64>().is_err())
+        {
             break;
         }
         flat.extend(row.split_whitespace().filter_map(|w| w.parse::<i64>().ok()));
@@ -978,7 +1063,9 @@ fn vtk_cells(rows: &[&str], section: &str, points: usize) -> Result<Vec<Vec<u32>
                 return Err(format!("`{section}` stops in the middle of a cell"));
             };
             if index < 0 || index as usize >= points {
-                return Err(format!("`{section}`: index {index} is outside the {points} point(s) declared"));
+                return Err(format!(
+                    "`{section}`: index {index} is outside the {points} point(s) declared"
+                ));
             }
             cell.push(index as u32);
         }
@@ -990,15 +1077,20 @@ fn vtk_cells(rows: &[&str], section: &str, points: usize) -> Result<Vec<Vec<u32>
 
 /// The integers of a section, flat — `CELL_TYPES` is the case.
 fn vtk_numbers(rows: &[&str], section: &str) -> Vec<i64> {
-    let Some(at) = rows
-        .iter()
-        .position(|row| row.split_whitespace().next().is_some_and(|w| w.eq_ignore_ascii_case(section)))
-    else {
+    let Some(at) = rows.iter().position(|row| {
+        row.split_whitespace()
+            .next()
+            .is_some_and(|w| w.eq_ignore_ascii_case(section))
+    }) else {
         return Vec::new();
     };
     let mut out = Vec::new();
     for row in &rows[at + 1..] {
-        if row.split_whitespace().next().is_some_and(|w| w.parse::<i64>().is_err()) {
+        if row
+            .split_whitespace()
+            .next()
+            .is_some_and(|w| w.parse::<i64>().is_err())
+        {
             break;
         }
         out.extend(row.split_whitespace().filter_map(|w| w.parse::<i64>().ok()));

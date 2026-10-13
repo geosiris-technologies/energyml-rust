@@ -46,11 +46,13 @@ use energyml_domain::provenance::Parameter;
 
 use crate::crs::FrameKind;
 use crate::declare::{Features, Inputs, Params, Shape as ShapeIn, Suggestions};
-use crate::operation::{About, ActivityDraft, Category, Context, NewObject, Need, Note, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Need, NewObject, Note, Operation, Plan, Refusal, Slot,
+};
 use crate::pieces::Pieces;
 
 use super::support;
-use super::well::{self, DatumKind, Datum, Found, TrajectoryShape, Wellbore};
+use super::well::{self, Datum, DatumKind, Found, TrajectoryShape, Wellbore};
 use super::written::{FrameParams, NamingParams};
 
 /// The operation.
@@ -142,7 +144,8 @@ impl Operation for WellsFromPolylines {
             ));
         }
         for (at, line) in found.iter().enumerate() {
-            well::valid_polyline(line).map_err(|why| Refusal::on("trace", format!("polyline {at}: {why}")))?;
+            well::valid_polyline(line)
+                .map_err(|why| Refusal::on("trace", format!("polyline {at}: {why}")))?;
         }
         Ok(())
     }
@@ -161,7 +164,13 @@ impl Operation for WellsFromPolylines {
         // a frame any reader reconciles.
         if frame.kind == Some(FrameKind::Geographic) {
             let (slot, what) = match params.frame.crs.as_ref() {
-                Some(_) => ("crs", format!("the frame `{}` named", frame.crs["Title"].as_str().unwrap_or_default())),
+                Some(_) => (
+                    "crs",
+                    format!(
+                        "the frame `{}` named",
+                        frame.crs["Title"].as_str().unwrap_or_default()
+                    ),
+                ),
                 None => ("project", "the frame created without `project`".to_string()),
             };
             return Err(Refusal::on(
@@ -171,14 +180,22 @@ impl Operation for WellsFromPolylines {
                 ),
             ));
         }
-        let vertical_up = if frame.objects.is_empty() { known.first().and_then(|k| k.vertical_up) } else { Some(true) };
+        let vertical_up = if frame.objects.is_empty() {
+            known.first().and_then(|k| k.vertical_up)
+        } else {
+            Some(true)
+        };
 
         let found = every_polyline(&inputs);
         if found.is_empty() {
-            return Err(Refusal::on("trace", "it takes one or more polylines; the input holds none"));
+            return Err(Refusal::on(
+                "trace",
+                "it takes one or more polylines; the input holds none",
+            ));
         }
         for (at, line) in found.iter().enumerate() {
-            well::valid_polyline(line).map_err(|why| Refusal::on("trace", format!("polyline {at}: {why}")))?;
+            well::valid_polyline(line)
+                .map_err(|why| Refusal::on("trace", format!("polyline {at}: {why}")))?;
         }
 
         let base = params.naming.title();
@@ -240,7 +257,8 @@ impl Operation for WellsFromPolylines {
                     "IsWellKnown": false,
                 }),
             });
-            let interpretation_uuid = support::next_uuid(identity, &format!("well-interpretation:{seed}"), &mut rank)?;
+            let interpretation_uuid =
+                support::next_uuid(identity, &format!("well-interpretation:{seed}"), &mut rank)?;
             let interpretation_title = format!("{title} — interpretation");
             objects.push(NewObject {
                 uuid: interpretation_uuid.clone(),
@@ -295,16 +313,32 @@ impl Operation for WellsFromPolylines {
             objects.extend(written.objects);
             datasets.extend(written.datasets);
             for note in written.says {
-                says.push(Note { key: note.key, detail: format!("`{title}`: {}", note.detail) });
+                says.push(Note {
+                    key: note.key,
+                    detail: format!("`{title}`: {}", note.detail),
+                });
             }
             titles.push(title);
         }
 
-        parameters.push(Parameter::Double { title: "wellCount".to_string(), value: found.len() as f64, uom: None });
-        parameters.push(Parameter::Double { title: "frameNodeCount".to_string(), value: total_nodes as f64, uom: None });
+        parameters.push(Parameter::Double {
+            title: "wellCount".to_string(),
+            value: found.len() as f64,
+            uom: None,
+        });
+        parameters.push(Parameter::Double {
+            title: "frameNodeCount".to_string(),
+            value: total_nodes as f64,
+            uom: None,
+        });
         says.push(Note {
             key: "wells",
-            detail: format!("{} wellbore(s) from {} polyline(s), titled {}", titles.len(), found.len(), titles.join(", ")),
+            detail: format!(
+                "{} wellbore(s) from {} polyline(s), titled {}",
+                titles.len(),
+                found.len(),
+                titles.join(", ")
+            ),
         });
         says.extend(frame.says.clone());
 
@@ -316,7 +350,12 @@ impl Operation for WellsFromPolylines {
             // No shape: same reason as `well-from-polyline` — a parametric
             // line's control points are its trajectory only when linear.
             shapes: Vec::new(),
-            activity: ActivityDraft { recipe: "wells-from-polylines", title: format!("wells-from-polylines → {base}"), seed: base, parameters },
+            activity: ActivityDraft {
+                recipe: "wells-from-polylines",
+                title: format!("wells-from-polylines → {base}"),
+                seed: base,
+                parameters,
+            },
             says,
             dropped: Vec::new(),
         })
@@ -324,8 +363,24 @@ impl Operation for WellsFromPolylines {
 
     fn reports(&self) -> Vec<Slot> {
         support::frame_reports(vec![
-            Slot::required("wellCount", Need::Number { uom: None, least: None, most: None }, "wellbores written"),
-            Slot::required("frameNodeCount", Need::Number { uom: None, least: None, most: None }, "frame nodes written, total"),
+            Slot::required(
+                "wellCount",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "wellbores written",
+            ),
+            Slot::required(
+                "frameNodeCount",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "frame nodes written, total",
+            ),
         ])
     }
 }

@@ -151,7 +151,9 @@ use energyml_prodml_2_3 as prodml;
 use energyml_storage::epc::core_props::{unix_seconds, w3cdtf};
 
 use crate::declare::{Choice, Inputs, ObjectIn, Params};
-use crate::operation::{About, ActivityDraft, Category, Context, Need, NewObject, Note, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Need, NewObject, Note, Operation, Plan, Refusal, Slot,
+};
 use crate::pieces::Ref;
 
 /// The operation.
@@ -327,11 +329,12 @@ pub(crate) fn class_of(qualified_type: &str) -> &str {
 
 /// What an object input stands for, or a refusal naming its slot.
 pub(crate) fn reference<'a>(slot: &str, input: &'a ObjectIn) -> Result<&'a Ref, Refusal> {
-    input
-        .known
-        .reference
-        .as_ref()
-        .ok_or_else(|| Refusal::on(slot, format!("`{}` was given without a reference to write", input.name)))
+    input.known.reference.as_ref().ok_or_else(|| {
+        Refusal::on(
+            slot,
+            format!("`{}` was given without a reference to write", input.name),
+        )
+    })
 }
 
 /// A wellbore, or why the object given is none.
@@ -348,11 +351,19 @@ fn wellbore<'a>(slot: &str, input: &'a ObjectIn) -> Result<&'a Ref, Refusal> {
 /// hole — or why the object given is none: `not_a_well` follows *“is a
 /// `Well`, and”*, `other` follows *“is a `…`, and”*. Shared by the PRODML
 /// operations, each saying why it wants a hole.
-pub(crate) fn wellbore_because<'a>(slot: &str, input: &'a ObjectIn, not_a_well: &str, other: &str) -> Result<&'a Ref, Refusal> {
+pub(crate) fn wellbore_because<'a>(
+    slot: &str,
+    input: &'a ObjectIn,
+    not_a_well: &str,
+    other: &str,
+) -> Result<&'a Ref, Refusal> {
     let known = reference(slot, input)?;
     match class_of(&known.qualified_type) {
         "Wellbore" | "WellboreFeature" => Ok(known),
-        "Well" => Err(Refusal::on(slot, format!("`{}` is a `Well`, and {not_a_well}", known.title))),
+        "Well" => Err(Refusal::on(
+            slot,
+            format!("`{}` is a `Well`, and {not_a_well}", known.title),
+        )),
         "WellboreInterpretation" => Err(Refusal::on(
             slot,
             format!(
@@ -360,18 +371,29 @@ pub(crate) fn wellbore_because<'a>(slot: &str, input: &'a ObjectIn, not_a_well: 
                 known.title
             ),
         )),
-        found => Err(Refusal::on(slot, format!("`{}` is a `{found}`, and {other}", known.title))),
+        found => Err(Refusal::on(
+            slot,
+            format!("`{}` is a `{found}`, and {other}", known.title),
+        )),
     }
 }
 
 /// An object of one of these classes, or a refusal naming what it is.
-pub(crate) fn of_class<'a>(slot: &str, input: &'a ObjectIn, classes: &[&str], why: &str) -> Result<&'a Ref, Refusal> {
+pub(crate) fn of_class<'a>(
+    slot: &str,
+    input: &'a ObjectIn,
+    classes: &[&str],
+    why: &str,
+) -> Result<&'a Ref, Refusal> {
     let known = reference(slot, input)?;
     let class = class_of(&known.qualified_type);
     if classes.contains(&class) {
         Ok(known)
     } else {
-        Err(Refusal::on(slot, format!("`{}` is a `{class}`, and {why}", known.title)))
+        Err(Refusal::on(
+            slot,
+            format!("`{}` is a `{class}`, and {why}", known.title),
+        ))
     }
 }
 
@@ -408,7 +430,11 @@ fn is_identifier(text: &str) -> bool {
         let byte = bytes[at];
         if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~') {
             at += 1;
-        } else if byte == b'%' && at + 2 < bytes.len() && bytes[at + 1].is_ascii_hexdigit() && bytes[at + 2].is_ascii_hexdigit() {
+        } else if byte == b'%'
+            && at + 2 < bytes.len()
+            && bytes[at + 1].is_ascii_hexdigit()
+            && bytes[at + 2].is_ascii_hexdigit()
+        {
             at += 3;
         } else {
             return false;
@@ -421,7 +447,10 @@ fn is_identifier(text: &str) -> bool {
 /// `//authority`, then `/`-separated path parts `component-type [ "("
 /// identifier ")" ]` (Identifier Specification v4.0 §6.1–§6.3, p. 13–15).
 fn uri_fault(uri: &str) -> Option<String> {
-    if !uri.get(..4).is_some_and(|scheme| scheme.eq_ignore_ascii_case("eml:")) {
+    if !uri
+        .get(..4)
+        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("eml:"))
+    {
         return Some("it does not start with the scheme `eml:`".to_string());
     }
     let mut rest = &uri[4..];
@@ -527,7 +556,10 @@ fn synthetic(what: &str) -> eml::ExtensionNameValue {
 pub(crate) fn synthetic_by(operation: &str, what: &str) -> eml::ExtensionNameValue {
     eml::ExtensionNameValue {
         name: "synthetic".to_string(),
-        value: eml::StringMeasure { value: "true".to_string(), uom: None },
+        value: eml::StringMeasure {
+            value: "true".to_string(),
+            uom: None,
+        },
         description: Some(format!("{what} — written by `{operation}`, not measured")),
         ..Default::default()
     }
@@ -535,7 +567,10 @@ pub(crate) fn synthetic_by(operation: &str, what: &str) -> eml::ExtensionNameVal
 
 /// A keyword and its value.
 fn key(keyword: prodml::TimeSeriesKeyword, value: &str) -> prodml::KeywordValueStruct {
-    prodml::KeywordValueStruct { value: value.to_string(), keyword }
+    prodml::KeywordValueStruct {
+        value: value.to_string(),
+        keyword,
+    }
 }
 
 /// The samples of a head series, the frozen ones said.
@@ -548,7 +583,9 @@ fn samples(at: &[i64], values: &[f64], frozen: Option<&Range<usize>>) -> Vec<pro
                 double_value: prodml::TimeSeriesDoubleSample {
                     value: *value,
                     d_tim: Some(w3cdtf(*at)),
-                    status: frozen.is_some_and(|range| range.contains(&rank)).then_some(prodml::ValueStatus::Frozen),
+                    status: frozen
+                        .is_some_and(|range| range.contains(&rank))
+                        .then_some(prodml::ValueStatus::Frozen),
                 },
             })
         })
@@ -562,7 +599,9 @@ fn frozen_range(window: &FrozenWindow, from: i64, end: i64, at: &[i64]) -> Resul
     let Some(start) = unix_seconds(text) else {
         return Err(Refusal::on(
             "frozenFrom",
-            format!("`{text}` is not a UTC date-time as `2025-06-02T12:00:00Z`: it is refused rather than read some other way"),
+            format!(
+                "`{text}` is not a UTC date-time as `2025-06-02T12:00:00Z`: it is refused rather than read some other way"
+            ),
         ));
     };
     let stop = start + window.frozen_minutes as i64 * 60;
@@ -588,7 +627,10 @@ fn frozen_range(window: &FrozenWindow, from: i64, end: i64, at: &[i64]) -> Resul
     if first >= last {
         return Err(Refusal::on(
             "frozenMinutes",
-            format!("the gap from `{text}` covers no sample: {} minute(s) fall between two samples", window.frozen_minutes),
+            format!(
+                "the gap from `{text}` covers no sample: {} minute(s) fall between two samples",
+                window.frozen_minutes
+            ),
         ));
     }
     Ok(first..last)
@@ -614,10 +656,19 @@ fn refused_instants(stated: &[(String, i64)], why: LawError) -> Refusal {
 pub(crate) fn titled(slot: &str, given: &str) -> Result<String, Refusal> {
     let title = given.trim();
     if title.is_empty() {
-        return Err(Refusal::on(slot, "is empty: it is the title of an object this operation writes"));
+        return Err(Refusal::on(
+            slot,
+            "is empty: it is the title of an object this operation writes",
+        ));
     }
     if title.chars().count() > 256 {
-        return Err(Refusal::on(slot, format!("has {} characters, and a Citation/Title holds 256", title.chars().count())));
+        return Err(Refusal::on(
+            slot,
+            format!(
+                "has {} characters, and a Citation/Title holds 256",
+                title.chars().count()
+            ),
+        ));
     }
     Ok(title.to_string())
 }
@@ -685,7 +736,12 @@ impl Operation for ProdmlDoublet {
         if let Some(observation) = &inputs.observation {
             wellbore("observation", observation)?;
         }
-        of_class("series", &inputs.series, &["TimeSeries"], "the periods count on the instants of a time series")?;
+        of_class(
+            "series",
+            &inputs.series,
+            &["TimeSeries"],
+            "the periods count on the instants of a time series",
+        )?;
         if let Some(organisation) = &inputs.fluid_organization {
             of_class(
                 "fluidOrganization",
@@ -697,7 +753,12 @@ impl Operation for ProdmlDoublet {
         Ok(())
     }
 
-    fn plan(&self, inputs: ProdmlDoubletInputs, params: ProdmlDoubletParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: ProdmlDoubletInputs,
+        params: ProdmlDoubletParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         // -- what the run is told, before anything is computed -----------------
         let facility_title = titled("facility", &params.facility)?;
         let fluid_title = titled("fluid", &params.fluid)?;
@@ -712,11 +773,18 @@ impl Operation for ProdmlDoublet {
         // -- the wellbores, the series, the organisation ------------------------
         let producer = wellbore("producer", &inputs.producer)?.clone();
         let injector = wellbore("injector", &inputs.injector)?.clone();
-        let observation = inputs.observation.as_ref().map(|one| wellbore("observation", one).cloned()).transpose()?;
+        let observation = inputs
+            .observation
+            .as_ref()
+            .map(|one| wellbore("observation", one).cloned())
+            .transpose()?;
         if same(&producer, &injector) {
             return Err(Refusal::on(
                 "injector",
-                format!("`{}` is also the producer: a doublet is two holes, one pumping and one returning", injector.title),
+                format!(
+                    "`{}` is also the producer: a doublet is two holes, one pumping and one returning",
+                    injector.title
+                ),
             ));
         }
         if let Some(observing) = &observation
@@ -724,10 +792,19 @@ impl Operation for ProdmlDoublet {
         {
             return Err(Refusal::on(
                 "observation",
-                format!("`{}` is already a hole of the doublet: an observing wellbore neither produces nor injects", observing.title),
+                format!(
+                    "`{}` is already a hole of the doublet: an observing wellbore neither produces nor injects",
+                    observing.title
+                ),
             ));
         }
-        let series = of_class("series", &inputs.series, &["TimeSeries"], "the periods count on the instants of a time series")?.clone();
+        let series = of_class(
+            "series",
+            &inputs.series,
+            &["TimeSeries"],
+            "the periods count on the instants of a time series",
+        )?
+        .clone();
         let organisation = inputs
             .fluid_organization
             .as_ref()
@@ -758,24 +835,39 @@ impl Operation for ProdmlDoublet {
             stated.push((text.to_string(), seconds));
         }
         let Some((first_text, anchor)) = stated.first().cloned() else {
-            return Err(Refusal::on("times", "no instant: a period runs from one instant to the next"));
+            return Err(Refusal::on(
+                "times",
+                "no instant: a period runs from one instant to the next",
+            ));
         };
         let last_text = stated.last().map(|(text, _)| text.clone()).unwrap_or_default();
-        let hours: Vec<f64> = stated.iter().map(|(_, seconds)| (seconds - anchor) as f64 / 3600.0).collect();
+        let hours: Vec<f64> = stated
+            .iter()
+            .map(|(_, seconds)| (seconds - anchor) as f64 / 3600.0)
+            .collect();
 
         let producer_law = Law::new(params.rate, params.decline).map_err(|why| {
-            let slot = if matches!(why, LawError::BadDecline { .. }) { "decline" } else { "rate" };
+            let slot = if matches!(why, LawError::BadDecline { .. }) {
+                "decline"
+            } else {
+                "rate"
+            };
             Refusal::on(slot, why)
         })?;
         if !(params.reinjected > 0.0 && params.reinjected <= 1.0) {
             return Err(Refusal::on(
                 "reinjected",
-                format!("{} is not a share an injector returns: in (0, 1], and 1 for a doublet's loop", params.reinjected),
+                format!(
+                    "{} is not a share an injector returns: in (0, 1], and 1 for a doublet's loop",
+                    params.reinjected
+                ),
             ));
         }
         let injector_law = producer_law.scaled(params.reinjected);
-        let produced = flow_law::periods(&producer_law, &hours).map_err(|why| refused_instants(&stated, why))?;
-        let injected = flow_law::periods(&injector_law, &hours).map_err(|why| refused_instants(&stated, why))?;
+        let produced =
+            flow_law::periods(&producer_law, &hours).map_err(|why| refused_instants(&stated, why))?;
+        let injected =
+            flow_law::periods(&injector_law, &hours).map_err(|why| refused_instants(&stated, why))?;
         let produced_volume: f64 = produced.iter().map(|one| one.volume).sum();
         let injected_volume: f64 = injected.iter().map(|one| one.volume).sum();
 
@@ -784,7 +876,9 @@ impl Operation for ProdmlDoublet {
         let Some(from) = unix_seconds(&from_text) else {
             return Err(Refusal::on(
                 "samplesFrom",
-                format!("`{from_text}` is not a UTC date-time as `2025-06-02T00:00:00Z`: it is refused rather than read some other way"),
+                format!(
+                    "`{from_text}` is not a UTC date-time as `2025-06-02T00:00:00Z`: it is refused rather than read some other way"
+                ),
             ));
         };
         let step = params.sample_step;
@@ -812,9 +906,18 @@ impl Operation for ProdmlDoublet {
         let instants: Vec<i64> = (0..count).map(|rank| from + rank as i64 * step_seconds).collect();
         let (frozen_head, frozen) = match &params.frozen {
             Frozen::Never => (None, None),
-            Frozen::Pressure(window) => (Some(Head::Pressure), Some(frozen_range(window, from, end, &instants)?)),
-            Frozen::Temperature(window) => (Some(Head::Temperature), Some(frozen_range(window, from, end, &instants)?)),
-            Frozen::Rate(window) => (Some(Head::Rate), Some(frozen_range(window, from, end, &instants)?)),
+            Frozen::Pressure(window) => (
+                Some(Head::Pressure),
+                Some(frozen_range(window, from, end, &instants)?),
+            ),
+            Frozen::Temperature(window) => (
+                Some(Head::Temperature),
+                Some(frozen_range(window, from, end, &instants)?),
+            ),
+            Frozen::Rate(window) => (
+                Some(Head::Rate),
+                Some(frozen_range(window, from, end, &instants)?),
+            ),
         };
         let frozen_count = frozen.as_ref().map(ExactSizeIterator::len).unwrap_or(0);
 
@@ -830,7 +933,10 @@ impl Operation for ProdmlDoublet {
         };
         let rate_keys = vec![
             key(prodml::TimeSeriesKeyword::AssetIdentifier, &injector_asset),
-            key(prodml::TimeSeriesKeyword::Product, prodml::ReportingProduct::Water.as_xml_str()),
+            key(
+                prodml::TimeSeriesKeyword::Product,
+                prodml::ReportingProduct::Water.as_xml_str(),
+            ),
             key(prodml::TimeSeriesKeyword::Flow, Direction::Injecting.word()),
             key(prodml::TimeSeriesKeyword::Qualifier, simulated),
         ];
@@ -863,7 +969,10 @@ impl Operation for ProdmlDoublet {
                 keys: rate_keys.clone(),
                 uom: eml::UnitOfMeasureExt::M3PerH,
                 class: eml::MeasureClass::VolumePerTime,
-                values: instants.iter().map(|at| injector_law.rate_at((at - anchor) as f64 / 3600.0)).collect(),
+                values: instants
+                    .iter()
+                    .map(|at| injector_law.rate_at((at - anchor) as f64 / 3600.0))
+                    .collect(),
             },
         ];
         // A frozen sensor repeats its last reading: `frozen_range` refuses a
@@ -879,9 +988,18 @@ impl Operation for ProdmlDoublet {
 
         // The daily statistic: the injector's rate over the first day, frozen
         // readings set aside.
-        let frozen_rate = |rank: usize| frozen_head == Some(Head::Rate) && frozen.as_ref().is_some_and(|range| range.contains(&rank));
-        let rate_values = heads.iter().find(|one| one.head == Head::Rate).map(|one| one.values.clone()).unwrap_or_default();
-        let day: Vec<f64> = (0..per_day.min(rate_values.len())).filter(|rank| !frozen_rate(*rank)).map(|rank| rate_values[rank]).collect();
+        let frozen_rate = |rank: usize| {
+            frozen_head == Some(Head::Rate) && frozen.as_ref().is_some_and(|range| range.contains(&rank))
+        };
+        let rate_values = heads
+            .iter()
+            .find(|one| one.head == Head::Rate)
+            .map(|one| one.values.clone())
+            .unwrap_or_default();
+        let day: Vec<f64> = (0..per_day.min(rate_values.len()))
+            .filter(|rank| !frozen_rate(*rank))
+            .map(|rank| rate_values[rank])
+            .collect();
         let set_aside = per_day - day.len();
         let Some(daily) = flow_law::summary(&day) else {
             return Err(Refusal::on(
@@ -903,7 +1021,9 @@ impl Operation for ProdmlDoublet {
             if length > 2000 {
                 return Err(Refusal::on(
                     "source",
-                    format!("makes a description of {length} characters, and a Citation/Description holds 2000 — cite the document shorter"),
+                    format!(
+                        "makes a description of {length} characters, and a Citation/Description holds 2000 — cite the document shorter"
+                    ),
                 ));
             }
             Ok(text)
@@ -917,9 +1037,11 @@ impl Operation for ProdmlDoublet {
             ..Default::default()
         };
         let conditions = || {
-            eml::AbstractTemperaturePressure::ReferenceTemperaturePressure(eml::ReferenceTemperaturePressure {
-                reference_temp_pres: params.standard_conditions.written(),
-            })
+            eml::AbstractTemperaturePressure::ReferenceTemperaturePressure(
+                eml::ReferenceTemperaturePressure {
+                    reference_temp_pres: params.standard_conditions.written(),
+                },
+            )
         };
         let mut objects: Vec<NewObject> = Vec::new();
 
@@ -930,7 +1052,9 @@ impl Operation for ProdmlDoublet {
             schema_version: "2.3".to_string(),
             citation: citation(
                 &facility_title,
-                described("the surface facility an invented doublet's loop runs through, a processing facility")?,
+                described(
+                    "the surface facility an invented doublet's loop runs through, a processing facility",
+                )?,
             ),
             extension_name_value: vec![synthetic("the facility of an invented doublet")],
             kind: prodml::ReportingFacilityExt::ProcessingFacility,
@@ -948,11 +1072,20 @@ impl Operation for ProdmlDoublet {
         // observing one when given.
         let mut entities: Vec<Ref> = Vec::new();
         for hole in [&producer, &injector].into_iter().chain(observation.iter()) {
-            let uuid = uuid_of(&format!("prodml-doublet:reporting-entity:{}", hole.uuid.to_ascii_lowercase()))?;
+            let uuid = uuid_of(&format!(
+                "prodml-doublet:reporting-entity:{}",
+                hole.uuid.to_ascii_lowercase()
+            ))?;
             let entity = prodml::ReportingEntity {
                 uuid: uuid.clone(),
                 schema_version: "2.3".to_string(),
-                citation: citation(&hole.title, described(&format!("`{}` as a reporting entity of an invented doublet", hole.title))?),
+                citation: citation(
+                    &hole.title,
+                    described(&format!(
+                        "`{}` as a reporting entity of an invented doublet",
+                        hole.title
+                    ))?,
+                ),
                 extension_name_value: vec![synthetic("a reporting entity of an invented doublet")],
                 kind: prodml::ReportingEntityKind::Wellbore,
                 associated_object: Some(crate::crs::reference_of(hole)),
@@ -972,8 +1105,22 @@ impl Operation for ProdmlDoublet {
         let joined: Vec<&str> = stated.iter().map(|(text, _)| text.as_str()).collect();
         let joined = joined.join(",");
         let reports: [Report<'_>; 2] = [
-            (&producer, &entities[0], &produced, &producer_law, Direction::Producing, Some(params.producer_head_temperature)),
-            (&injector, &entities[1], &injected, &injector_law, Direction::Injecting, params.injector_head_temperature),
+            (
+                &producer,
+                &entities[0],
+                &produced,
+                &producer_law,
+                Direction::Producing,
+                Some(params.producer_head_temperature),
+            ),
+            (
+                &injector,
+                &entities[1],
+                &injected,
+                &injector_law,
+                Direction::Injecting,
+                params.injector_head_temperature,
+            ),
         ];
         for (hole, entity, periods, law, direction, head) in reports {
             let word = direction.word();
@@ -983,7 +1130,8 @@ impl Operation for ProdmlDoublet {
                 law.rate,
                 law.decline,
                 params.standard_conditions.word(),
-                head.map(|temperature| temperature.to_string()).unwrap_or_default()
+                head.map(|temperature| temperature.to_string())
+                    .unwrap_or_default()
             );
             let uuid = uuid_of(&seed)?;
             let title = format!("{} — {word}", hole.title);
@@ -1010,7 +1158,10 @@ impl Operation for ProdmlDoublet {
                     .zip(&stated)
                     .map(|(period, (start, _))| prodml::ProductionWellPeriod {
                         start_time: start.clone(),
-                        duration: eml::TimeMeasure { value: period.hours(), uom: eml::TimeUom::H },
+                        duration: eml::TimeMeasure {
+                            value: period.hours(),
+                            uom: eml::TimeUom::H,
+                        },
                         well_status: Some(direction.status()),
                         well_flowing_condition: head.map(|temperature| prodml::WellFlowingCondition {
                             tubing_head_stabilized_temperature: Some(eml::ThermodynamicTemperatureMeasure {
@@ -1047,10 +1198,17 @@ impl Operation for ProdmlDoublet {
         }
 
         // The head series.
-        let window_words = format!("every {step} min over {} day(s) from {from_text}", params.sample_days);
+        let window_words = format!(
+            "every {step} min over {} day(s) from {from_text}",
+            params.sample_days
+        );
         let mut rate_series: Option<(String, String)> = None;
         for series_of in &heads {
-            let frozen_here = if frozen_head == Some(series_of.head) { frozen.as_ref() } else { None };
+            let frozen_here = if frozen_head == Some(series_of.head) {
+                frozen.as_ref()
+            } else {
+                None
+            };
             let values_seed: String = match series_of.head {
                 Head::Pressure => format!("{} bar", params.producer_head_pressure),
                 Head::Temperature => format!("{} degC", params.producer_head_temperature),
@@ -1058,11 +1216,21 @@ impl Operation for ProdmlDoublet {
             };
             let seed = format!(
                 "prodml-doublet:series:{}:{}:{from_text}:{}:{step}:{values_seed}:{}:{}",
-                series_of.keys.first().map(|one| one.value.as_str()).unwrap_or_default(),
+                series_of
+                    .keys
+                    .first()
+                    .map(|one| one.value.as_str())
+                    .unwrap_or_default(),
                 series_of.what,
                 params.sample_days,
-                if series_of.head == Head::Rate { first_text.as_str() } else { "" },
-                frozen_here.map(|range| format!("{}..{}", range.start, range.end)).unwrap_or_default()
+                if series_of.head == Head::Rate {
+                    first_text.as_str()
+                } else {
+                    ""
+                },
+                frozen_here
+                    .map(|range| format!("{}..{}", range.start, range.end))
+                    .unwrap_or_default()
             );
             let uuid = uuid_of(&seed)?;
             let value_words = match series_of.head {
@@ -1071,7 +1239,13 @@ impl Operation for ProdmlDoublet {
                 Head::Rate => law_words(&injector_law, &first_text),
             };
             let frozen_words = frozen_here
-                .map(|range| format!(", frozen for {} sample(s) from {}", range.len(), w3cdtf(instants[range.start])))
+                .map(|range| {
+                    format!(
+                        ", frozen for {} sample(s) from {}",
+                        range.len(),
+                        w3cdtf(instants[range.start])
+                    )
+                })
                 .unwrap_or_default();
             let what = format!(
                 "the {} of `{}`, {value_words}, {window_words}{frozen_words}",
@@ -1085,7 +1259,9 @@ impl Operation for ProdmlDoublet {
                 key: series_of.keys.clone(),
                 uom: Some(series_of.uom.clone()),
                 measure_class: Some(series_of.class.clone()),
-                comment: Some(format!("synthetic, qualified `simulated`: {value_words}{frozen_words}")),
+                comment: Some(format!(
+                    "synthetic, qualified `simulated`: {value_words}{frozen_words}"
+                )),
                 data_value: samples(&instants, &series_of.values, frozen_here),
                 ..Default::default()
             };
@@ -1125,11 +1301,26 @@ impl Operation for ProdmlDoublet {
                 "{} sample(s) of the first day, {set_aside} frozen set aside; the values are in m3/h (the statistic's Uom), written as the DimensionlessMeasure the schema types them with",
                 daily.count
             )),
-            minimum: Some(eml::DimensionlessMeasure { value: daily.minimum, uom: eml::DimensionlessUom::Euc }),
-            maximum: Some(eml::DimensionlessMeasure { value: daily.maximum, uom: eml::DimensionlessUom::Euc }),
-            mean: Some(eml::DimensionlessMeasure { value: daily.mean, uom: eml::DimensionlessUom::Euc }),
-            d_tim_min: prodml::EndpointDateTime { value: w3cdtf(from), endpoint: prodml::EndpointQualifierInterval::Inclusive },
-            d_tim_max: prodml::EndpointDateTime { value: w3cdtf(day_end), endpoint: prodml::EndpointQualifierInterval::Exclusive },
+            minimum: Some(eml::DimensionlessMeasure {
+                value: daily.minimum,
+                uom: eml::DimensionlessUom::Euc,
+            }),
+            maximum: Some(eml::DimensionlessMeasure {
+                value: daily.maximum,
+                uom: eml::DimensionlessUom::Euc,
+            }),
+            mean: Some(eml::DimensionlessMeasure {
+                value: daily.mean,
+                uom: eml::DimensionlessUom::Euc,
+            }),
+            d_tim_min: prodml::EndpointDateTime {
+                value: w3cdtf(from),
+                endpoint: prodml::EndpointQualifierInterval::Inclusive,
+            },
+            d_tim_max: prodml::EndpointDateTime {
+                value: w3cdtf(day_end),
+                endpoint: prodml::EndpointQualifierInterval::Exclusive,
+            },
             ..Default::default()
         };
         objects.push(NewObject {
@@ -1144,23 +1335,29 @@ impl Operation for ProdmlDoublet {
         let fluid_uuid = uuid_of(&format!(
             "prodml-doublet:fluid:{fluid_title}:{}:{}",
             params.standard_conditions.word(),
-            organisation.as_ref().map(|one| one.uuid.to_ascii_lowercase()).unwrap_or_default()
+            organisation
+                .as_ref()
+                .map(|one| one.uuid.to_ascii_lowercase())
+                .unwrap_or_default()
         ))?;
         let fluid = prodml::FluidSystem {
             uuid: fluid_uuid.clone(),
             schema_version: "2.3".to_string(),
             citation: citation(
                 &fluid_title,
-                described("the water an invented doublet pumps, classified as the reference model decides — its gas-oil ratio stated negligible, not measured")?,
+                described(
+                    "the water an invented doublet pumps, classified as the reference model decides — its gas-oil ratio stated negligible, not measured",
+                )?,
             ),
             extension_name_value: vec![synthetic("the fluid system of an invented doublet")],
             standard_conditions: Some(conditions()),
             reservoir_fluid_kind: prodml::ReservoirFluidKind::Unknown,
             phases_present: Some(prodml::PhasePresent::Water),
-            rock_fluid_organization_interpretation: organisation
-                .as_ref()
-                .map(crate::crs::reference_of),
-            solution_gor: eml::VolumePerVolumeMeasure { value: 0.0, uom: eml::VolumePerVolumeUomWithLegacy::M3PerM3 },
+            rock_fluid_organization_interpretation: organisation.as_ref().map(crate::crs::reference_of),
+            solution_gor: eml::VolumePerVolumeMeasure {
+                value: 0.0,
+                uom: eml::VolumePerVolumeUomWithLegacy::M3PerM3,
+            },
             remark: Some(FLUID_REMARK.to_string()),
             ..Default::default()
         };
@@ -1259,14 +1456,38 @@ impl Operation for ProdmlDoublet {
         // -- the activity -------------------------------------------------------------
         let seed = format!(
             "prodml-doublet:{}",
-            objects.iter().map(|one| one.uuid.as_str()).collect::<Vec<_>>().join(",")
+            objects
+                .iter()
+                .map(|one| one.uuid.as_str())
+                .collect::<Vec<_>>()
+                .join(",")
         );
         let mut parameters = vec![
-            Parameter::Double { title: "periodCount".to_string(), value: produced.len() as f64, uom: None },
-            Parameter::Double { title: "producedVolume".to_string(), value: produced_volume, uom: Some("m3".to_string()) },
-            Parameter::Double { title: "injectedVolume".to_string(), value: injected_volume, uom: Some("m3".to_string()) },
-            Parameter::Double { title: "sampleCount".to_string(), value: count as f64, uom: None },
-            Parameter::Double { title: "frozenCount".to_string(), value: frozen_count as f64, uom: None },
+            Parameter::Double {
+                title: "periodCount".to_string(),
+                value: produced.len() as f64,
+                uom: None,
+            },
+            Parameter::Double {
+                title: "producedVolume".to_string(),
+                value: produced_volume,
+                uom: Some("m3".to_string()),
+            },
+            Parameter::Double {
+                title: "injectedVolume".to_string(),
+                value: injected_volume,
+                uom: Some("m3".to_string()),
+            },
+            Parameter::Double {
+                title: "sampleCount".to_string(),
+                value: count as f64,
+                uom: None,
+            },
+            Parameter::Double {
+                title: "frozenCount".to_string(),
+                value: frozen_count as f64,
+                uom: None,
+            },
         ];
         // The objects taken, as inputs — the series among them: no PRODML
         // field can reference it, and this is where the run says which one
@@ -1277,7 +1498,10 @@ impl Operation for ProdmlDoublet {
             .chain(std::iter::once(&series))
             .chain(organisation.iter())
         {
-            parameters.push(Parameter::Object { title: "input".to_string(), reference: input.dor() });
+            parameters.push(Parameter::Object {
+                title: "input".to_string(),
+                reference: input.dor(),
+            });
         }
 
         Ok(Plan {
@@ -1300,17 +1524,33 @@ impl Operation for ProdmlDoublet {
 
     /// What the run measured: the periods, the volumes, the samples.
     fn reports(&self) -> Vec<Slot> {
-        let number = |uom: Option<&'static str>| Need::Number { uom, least: None, most: None };
+        let number = |uom: Option<&'static str>| Need::Number {
+            uom,
+            least: None,
+            most: None,
+        };
         vec![
             Slot::required(
                 "periodCount",
                 number(None),
                 "periods written for the producer and for the injector — one fewer than the instants",
             ),
-            Slot::required("producedVolume", number(Some("m3")), "what the producer pumps over the periods — its rate integrated"),
-            Slot::required("injectedVolume", number(Some("m3")), "what the injector returns over the periods"),
+            Slot::required(
+                "producedVolume",
+                number(Some("m3")),
+                "what the producer pumps over the periods — its rate integrated",
+            ),
+            Slot::required(
+                "injectedVolume",
+                number(Some("m3")),
+                "what the injector returns over the periods",
+            ),
             Slot::required("sampleCount", number(None), "samples in each head series"),
-            Slot::required("frozenCount", number(None), "samples written with the status `frozen`"),
+            Slot::required(
+                "frozenCount",
+                number(None),
+                "samples written with the status `frozen`",
+            ),
         ]
     }
 }
@@ -1338,10 +1578,16 @@ mod tests {
     #[test]
     fn the_reference_model_convention_is_a_uri_and_its_faults_are_named() {
         // The convention of the synthetic model, verbatim.
-        assert_eq!(uri_fault("eml://lutetia.geosiris.com/well(GTH-1)/wellbore(01)/wellhead"), None);
+        assert_eq!(
+            uri_fault("eml://lutetia.geosiris.com/well(GTH-1)/wellbore(01)/wellhead"),
+            None
+        );
         // Identifier Specification v4.0 §6.3.1 p. 14, verbatim — a component
         // type may hold a space.
-        assert_eq!(uri_fault("eml://prodml.mycompany.com/well(123456)/wellbore(01)/bottomhole/pressure meter"), None);
+        assert_eq!(
+            uri_fault("eml://prodml.mycompany.com/well(123456)/wellbore(01)/bottomhole/pressure meter"),
+            None
+        );
         // §6.2.1 p. 14: a wellbore identified alone under a well-known authority.
         assert_eq!(uri_fault("eml://api/wellbore(123456789012)"), None);
         assert!(uri_fault("http://lutetia/well(GTH-1)").is_some());

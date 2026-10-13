@@ -125,7 +125,9 @@ impl<'a> Options<'a> {
     /// ALWYN used to abort a run that had forty perfectly writable surfaces in
     /// it, and "the export failed" is not what a person needed to be told.
     pub fn can_place_vertical(&self, object: &SceneObject) -> bool {
-        let Some(crs) = object.crs.as_ref() else { return true };
+        let Some(crs) = object.crs.as_ref() else {
+            return true;
+        };
         if !crs.is_time() {
             return true;
         }
@@ -361,9 +363,7 @@ pub fn prepare<'a>(
     let reshaped = object.as_shape(shape)?;
     Ok(match reshaped {
         std::borrow::Cow::Borrowed(same) => drawable(same),
-        std::borrow::Cow::Owned(owned) => {
-            std::borrow::Cow::Owned(owned.drawable_only().unwrap_or(owned))
-        }
+        std::borrow::Cow::Owned(owned) => std::borrow::Cow::Owned(owned.drawable_only().unwrap_or(owned)),
     })
 }
 

@@ -33,7 +33,10 @@ use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 fn when() -> When {
-    When { creation: "2026-09-28T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-28T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 const GRID: &str = "40100000-0000-4000-8000-000000000401";
@@ -41,7 +44,11 @@ const FRAME: &str = "cccccccc-0000-4000-8000-000000000001";
 const GROUND: &str = "eeeeeeee-0000-4000-8000-000000000005";
 
 fn crs() -> Ref {
-    Ref::new(FRAME, "eml23.LocalEngineeringCompoundCrs", "test frame — elevation")
+    Ref::new(
+        FRAME,
+        "eml23.LocalEngineeringCompoundCrs",
+        "test frame — elevation",
+    )
 }
 
 /// A 2 × 2 × 2 IJK grid of flat, vertical-pillar boxes, 100 m square cells,
@@ -86,13 +93,27 @@ fn grid_geometry(undefined: Option<u32>) -> Geometry {
     }
     Geometry {
         kind: "resqml22.IjkGridRepresentation",
-        patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Hexahedra { cells, dimensions: [ni, nj, nk], index }, closed: Vec::new() }],
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology: Topology::Hexahedra {
+                cells,
+                dimensions: [ni, nj, nk],
+                index,
+            },
+            closed: Vec::new(),
+        }],
     }
 }
 
 fn grid_known() -> Known {
     Known {
-        reference: Some(Ref::new(GRID, "resqml22.IjkGridRepresentation", "Chalk grid test")),
+        reference: Some(Ref::new(
+            GRID,
+            "resqml22.IjkGridRepresentation",
+            "Chalk grid test",
+        )),
         crs: Some(crs()),
         vertical_uom: Some("m".into()),
         vertical_up: Some(true),
@@ -106,13 +127,23 @@ fn ground_geometry() -> Geometry {
     let points = corners.iter().map(|&[x, y]| [x, y, 1050.0]).collect();
     Geometry {
         kind: "resqml22.TriangulatedSetRepresentation",
-        patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Triangles(vec![[0, 1, 2], [0, 2, 3]]), closed: Vec::new() }],
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology: Topology::Triangles(vec![[0, 1, 2], [0, 2, 3]]),
+            closed: Vec::new(),
+        }],
     }
 }
 
 fn ground_known() -> Known {
     Known {
-        reference: Some(Ref::new(GROUND, "resqml22.TriangulatedSetRepresentation", "test ground")),
+        reference: Some(Ref::new(
+            GROUND,
+            "resqml22.TriangulatedSetRepresentation",
+            "test ground",
+        )),
         crs: Some(crs()),
         vertical_uom: Some("m".into()),
         vertical_up: Some(true),
@@ -122,24 +153,42 @@ fn ground_known() -> Known {
 
 fn bag(undefined: Option<u32>, with_ground: bool) -> Pieces {
     let mut out = Pieces::empty()
-        .with("grid", Source::Shape { geometry: grid_geometry(undefined), closed: None })
+        .with(
+            "grid",
+            Source::Shape {
+                geometry: grid_geometry(undefined),
+                closed: None,
+            },
+        )
         .with("grid (object)", Source::Object(grid_known()));
     if with_ground {
         out = out
-            .with("ground", Source::Shape { geometry: ground_geometry(), closed: None })
+            .with(
+                "ground",
+                Source::Shape {
+                    geometry: ground_geometry(),
+                    closed: None,
+                },
+            )
             .with("ground (object)", Source::Object(ground_known()));
     }
     out
 }
 
 fn planned(pieces: &Pieces, choices: &Choices) -> Result<Plan, String> {
-    Registry::new().plan("grid-properties", pieces, choices, &Identity::derived(), &when()).map_err(|why| why.to_string())
+    Registry::new()
+        .plan("grid-properties", pieces, choices, &Identity::derived(), &when())
+        .map_err(|why| why.to_string())
 }
 
 /// The values written for the property of that uuid.
 fn values_of(plan: &Plan, uuid: &str) -> Vec<f64> {
     let path = format!("/resqml22/{uuid}/values");
-    let dataset = plan.datasets.iter().find(|one| one.path == path).expect("the property's values");
+    let dataset = plan
+        .datasets
+        .iter()
+        .find(|one| one.path == path)
+        .expect("the property's values");
     match &dataset.values {
         Numbers::F64(values) => values.clone(),
         other => panic!("not floating point: {other:?}"),
@@ -195,10 +244,18 @@ fn a_temperature_follows_the_cells_own_depth_and_a_cell_with_no_geometry_is_nan(
     }
     // k = 1: depth 1050 − 925 = 125 m, 10 + 0.02 × 125 = 12.5 °C. Cells 4, 6, 7.
     for cell in [4usize, 6, 7] {
-        assert!(close(values[cell], 12.5), "cell {cell} at k=1: {} (expected 12.5)", values[cell]);
+        assert!(
+            close(values[cell], 12.5),
+            "cell {cell} at k=1: {} (expected 12.5)",
+            values[cell]
+        );
     }
     // Cell 5 has no defined geometry: no depth to read.
-    assert!(values[5].is_nan(), "cell 5 has no defined geometry and no depth to read: {}", values[5]);
+    assert!(
+        values[5].is_nan(),
+        "cell 5 has no defined geometry and no depth to read: {}",
+        values[5]
+    );
 
     assert_eq!(recorded_double(&plan, "cellCount"), 8.0);
     assert_eq!(recorded_double(&plan, "undefinedCellCount"), 1.0);
@@ -207,13 +264,21 @@ fn a_temperature_follows_the_cells_own_depth_and_a_cell_with_no_geometry_is_nan(
 
     // The rule for invented values: synthetic, and it says so.
     assert_eq!(property.json["ExtensionNameValue"][0]["Name"], json!("synthetic"));
-    assert!(property.json["Citation"]["Description"].as_str().unwrap().contains("Laid by a law"));
+    assert!(
+        property.json["Citation"]["Description"]
+            .as_str()
+            .unwrap()
+            .contains("Laid by a law")
+    );
 }
 
 /// A hydrostatic pressure follows the same reading of depth, in bar.
 #[test]
 fn a_hydrostatic_pressure_follows_the_same_depth() {
-    let choices = Choices::new().set("what", "pressure").set("waterLevel", 1050.0).set("source", "synthetic: the test's own values");
+    let choices = Choices::new()
+        .set("what", "pressure")
+        .set("waterLevel", 1050.0)
+        .set("source", "synthetic: the test's own values");
     let plan = planned(&bag(None, true), &choices).unwrap_or_else(|why| panic!("{why}"));
     let property = &plan.objects[0];
     assert_eq!(property.json["PropertyKind"]["Title"], json!("pressure"));
@@ -238,7 +303,11 @@ fn a_depth_law_without_a_ground_is_refused_by_name() {
 /// value.
 #[test]
 fn a_porosity_is_the_same_on_every_cell_of_its_k_layer_defined_geometry_or_not() {
-    let choices = Choices::new().set("what", "porosity").set("layers", json!([0.2, 0.35])).set("uom", "Euc").set("source", "synthetic: test");
+    let choices = Choices::new()
+        .set("what", "porosity")
+        .set("layers", json!([0.2, 0.35]))
+        .set("uom", "Euc")
+        .set("source", "synthetic: test");
     let plan = planned(&bag(Some(5), false), &choices).unwrap_or_else(|why| panic!("{why}"));
     let property = &plan.objects[0];
     assert_eq!(property.json["PropertyKind"]["Title"], json!("porosity"));
@@ -248,28 +317,46 @@ fn a_porosity_is_the_same_on_every_cell_of_its_k_layer_defined_geometry_or_not()
         assert!(close(*value, 0.2), "cell {cell} at k=0: {value}");
     }
     for (cell, value) in values.iter().enumerate().skip(4) {
-        assert!(close(*value, 0.35), "cell {cell} at k=1 (5 has no defined geometry): {value}");
+        assert!(
+            close(*value, 0.35),
+            "cell {cell} at k=1 (5 has no defined geometry): {value}"
+        );
     }
     assert_eq!(recorded_double(&plan, "layerCount"), 2.0);
 }
 
 #[test]
 fn a_net_to_gross_ratio_is_looked_up_by_its_dictionary_title() {
-    let choices = Choices::new().set("what", "ntg").set("layers", json!([1.0, 0.8])).set("uom", "Euc").set("source", "synthetic: test");
+    let choices = Choices::new()
+        .set("what", "ntg")
+        .set("layers", json!([1.0, 0.8]))
+        .set("uom", "Euc")
+        .set("source", "synthetic: test");
     let plan = planned(&bag(None, false), &choices).unwrap_or_else(|why| panic!("{why}"));
-    assert_eq!(plan.objects[0].json["PropertyKind"]["Title"], json!("net gross thickness ratio"));
+    assert_eq!(
+        plan.objects[0].json["PropertyKind"]["Title"],
+        json!("net gross thickness ratio")
+    );
 }
 
 #[test]
 fn a_layer_count_that_does_not_match_the_grids_nk_is_refused_by_name() {
-    let choices = Choices::new().set("what", "porosity").set("layers", json!([0.5])).set("uom", "Euc").set("source", "test");
+    let choices = Choices::new()
+        .set("what", "porosity")
+        .set("layers", json!([0.5]))
+        .set("uom", "Euc")
+        .set("source", "test");
     let why = planned(&bag(None, false), &choices).unwrap_err();
     assert!(why.contains("layers"), "{why}");
 }
 
 #[test]
 fn a_porosity_outside_zero_one_is_refused_by_name() {
-    let choices = Choices::new().set("what", "porosity").set("layers", json!([0.2, 1.4])).set("uom", "Euc").set("source", "test");
+    let choices = Choices::new()
+        .set("what", "porosity")
+        .set("layers", json!([0.2, 1.4]))
+        .set("uom", "Euc")
+        .set("source", "test");
     let why = planned(&bag(None, false), &choices).unwrap_err();
     assert!(why.contains("layers"), "{why}");
 }
@@ -288,10 +375,17 @@ fn a_permeability_is_written_as_three_scalar_properties_one_per_direction() {
     let plan = planned(&bag(None, false), &choices).unwrap_or_else(|why| panic!("{why}"));
     assert_eq!(plan.objects.len(), 3, "kx, ky, kz — three scalar properties");
     for object in &plan.objects {
-        assert_eq!(object.json["PropertyKind"]["Title"], json!("absolute permeability"));
+        assert_eq!(
+            object.json["PropertyKind"]["Title"],
+            json!("absolute permeability")
+        );
         assert_eq!(object.json["ValueCountPerIndexableElement"], json!([1]));
     }
-    let mut facets: Vec<String> = plan.objects.iter().map(|one| one.json["Facet"][0]["Facet"].as_str().unwrap().to_string()).collect();
+    let mut facets: Vec<String> = plan
+        .objects
+        .iter()
+        .map(|one| one.json["Facet"][0]["Facet"].as_str().unwrap().to_string())
+        .collect();
     facets.sort();
     assert_eq!(facets, vec!["I".to_string(), "J".to_string(), "K".to_string()]);
     // The three uuids differ: not the same property written thrice.
@@ -305,7 +399,11 @@ fn a_permeability_is_written_as_three_scalar_properties_one_per_direction() {
 
 #[test]
 fn an_empty_source_is_refused_by_name() {
-    let choices = Choices::new().set("what", "porosity").set("layers", json!([0.5, 0.5])).set("uom", "Euc").set("source", "  ");
+    let choices = Choices::new()
+        .set("what", "porosity")
+        .set("layers", json!([0.5, 0.5]))
+        .set("uom", "Euc")
+        .set("source", "  ");
     let why = planned(&bag(None, false), &choices).unwrap_err();
     assert!(why.contains("source"), "{why}");
 }
@@ -313,9 +411,22 @@ fn an_empty_source_is_refused_by_name() {
 #[test]
 fn a_shape_that_is_no_ijk_grid_is_refused_by_name() {
     let pieces = Pieces::empty()
-        .with("grid", Source::Shape { geometry: ground_geometry(), closed: None })
+        .with(
+            "grid",
+            Source::Shape {
+                geometry: ground_geometry(),
+                closed: None,
+            },
+        )
         .with("grid (object)", Source::Object(grid_known()));
-    let choices = Choices::new().set("what", "porosity").set("layers", json!([0.5, 0.5])).set("uom", "Euc").set("source", "test");
+    let choices = Choices::new()
+        .set("what", "porosity")
+        .set("layers", json!([0.5, 0.5]))
+        .set("uom", "Euc")
+        .set("source", "test");
     let why = planned(&pieces, &choices).unwrap_err();
-    assert!(why.to_lowercase().contains("ijk") || why.to_lowercase().contains("hexahedra"), "{why}");
+    assert!(
+        why.to_lowercase().contains("ijk") || why.to_lowercase().contains("hexahedra"),
+        "{why}"
+    );
 }

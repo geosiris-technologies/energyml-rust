@@ -85,11 +85,19 @@ pub struct Series<'a> {
 #[derive(Debug, Clone, thiserror::Error, PartialEq)]
 pub enum SeriesError {
     #[error("{hours} instant(s), {rates} rate(s), {pressures} pressure(s): one of each per sample")]
-    MismatchedLengths { hours: usize, rates: usize, pressures: usize },
+    MismatchedLengths {
+        hours: usize,
+        rates: usize,
+        pressures: usize,
+    },
     #[error("{given} sample(s) where {needed} are needed")]
     TooFewSamples { given: usize, needed: usize },
     #[error("sample {rank}: the {what} is not a finite number ({given})")]
-    NotFinite { rank: usize, what: &'static str, given: f64 },
+    NotFinite {
+        rank: usize,
+        what: &'static str,
+        given: f64,
+    },
     #[error(
         "sample {rank} ({hours} h) does not come after the one before it ({before} h): time runs forward, and two samples at one instant have no rate of change between them"
     )]
@@ -101,23 +109,43 @@ impl<'a> Series<'a> {
     /// the record — and judged by whoever reads it.
     pub fn new(hours: &'a [f64], rates: &'a [f64], pressures: &'a [f64]) -> Result<Series<'a>, SeriesError> {
         if hours.len() != rates.len() || hours.len() != pressures.len() {
-            return Err(SeriesError::MismatchedLengths { hours: hours.len(), rates: rates.len(), pressures: pressures.len() });
+            return Err(SeriesError::MismatchedLengths {
+                hours: hours.len(),
+                rates: rates.len(),
+                pressures: pressures.len(),
+            });
         }
         if hours.is_empty() {
             return Err(SeriesError::TooFewSamples { given: 0, needed: 1 });
         }
         for (at, (&hour, &rate)) in hours.iter().zip(rates).enumerate() {
             if !hour.is_finite() {
-                return Err(SeriesError::NotFinite { rank: at + 1, what: "instant", given: hour });
+                return Err(SeriesError::NotFinite {
+                    rank: at + 1,
+                    what: "instant",
+                    given: hour,
+                });
             }
             if !rate.is_finite() {
-                return Err(SeriesError::NotFinite { rank: at + 1, what: "rate", given: rate });
+                return Err(SeriesError::NotFinite {
+                    rank: at + 1,
+                    what: "rate",
+                    given: rate,
+                });
             }
             if at > 0 && hour <= hours[at - 1] {
-                return Err(SeriesError::NotIncreasing { rank: at + 1, hours: hour, before: hours[at - 1] });
+                return Err(SeriesError::NotIncreasing {
+                    rank: at + 1,
+                    hours: hour,
+                    before: hours[at - 1],
+                });
             }
         }
-        Ok(Series { hours, rates, pressures })
+        Ok(Series {
+            hours,
+            rates,
+            pressures,
+        })
     }
 
     /// The instants, hours.
@@ -170,12 +198,27 @@ pub enum StepRateError {
     BadStaticPressure { given: f64 },
 
     // -- one step ------------------------------------------------------------
-    #[error("step {rank} holds {samples} sample(s) where the window declared asks {window}: too short to say it settled")]
-    TooShort { rank: usize, samples: usize, window: usize },
-    #[error("step {rank}: sample {sample} of its window has no finite pressure (NaN or infinite) — a window with a hole cannot be called settled")]
+    #[error(
+        "step {rank} holds {samples} sample(s) where the window declared asks {window}: too short to say it settled"
+    )]
+    TooShort {
+        rank: usize,
+        samples: usize,
+        window: usize,
+    },
+    #[error(
+        "step {rank}: sample {sample} of its window has no finite pressure (NaN or infinite) — a window with a hole cannot be called settled"
+    )]
     NanInWindow { rank: usize, sample: usize },
-    #[error("step {rank} has not settled: |dp/dt| reaches {steepest} in its last {window} samples, where {tolerance} was declared")]
-    NotSettled { rank: usize, steepest: f64, window: usize, tolerance: f64 },
+    #[error(
+        "step {rank} has not settled: |dp/dt| reaches {steepest} in its last {window} samples, where {tolerance} was declared"
+    )]
+    NotSettled {
+        rank: usize,
+        steepest: f64,
+        window: usize,
+        tolerance: f64,
+    },
 
     // -- the index -----------------------------------------------------------
     #[error("{settled} settled step(s) where a line needs 2 — steps set aside: {set_aside:?}")]
@@ -223,7 +266,9 @@ impl Settle {
             return Err(StepRateError::BadWindow { given: self.window });
         }
         if !(self.tolerance.is_finite() && self.tolerance > 0.0) {
-            return Err(StepRateError::BadTolerance { given: self.tolerance });
+            return Err(StepRateError::BadTolerance {
+                given: self.tolerance,
+            });
         }
         Ok(())
     }
@@ -244,7 +289,11 @@ pub fn steps(series: &Series<'_>, settle: &Settle) -> Result<Vec<Step>, StepRate
         let rank = found.len() + 1;
         let samples = end - first;
         let verdict = if samples < settle.window {
-            Err(StepRateError::TooShort { rank, samples, window: settle.window })
+            Err(StepRateError::TooShort {
+                rank,
+                samples,
+                window: settle.window,
+            })
         } else {
             let from = end - settle.window;
             match (from..end).find(|&at| !pressures[at].is_finite()) {
@@ -254,14 +303,29 @@ pub fn steps(series: &Series<'_>, settle: &Settle) -> Result<Vec<Step>, StepRate
                         .map(|at| ((pressures[at] - pressures[at - 1]) / (hours[at] - hours[at - 1])).abs())
                         .fold(0.0_f64, f64::max);
                     if steepest >= settle.tolerance {
-                        Err(StepRateError::NotSettled { rank, steepest, window: settle.window, tolerance: settle.tolerance })
+                        Err(StepRateError::NotSettled {
+                            rank,
+                            steepest,
+                            window: settle.window,
+                            tolerance: settle.tolerance,
+                        })
                     } else {
-                        Ok(Settled { pressure: pressures[end - 1], hours: hours[end - 1], steepest })
+                        Ok(Settled {
+                            pressure: pressures[end - 1],
+                            hours: hours[end - 1],
+                            steepest,
+                        })
                     }
                 }
             }
         };
-        found.push(Step { rank, rate, first, samples, verdict });
+        found.push(Step {
+            rank,
+            rate,
+            first,
+            samples,
+            verdict,
+        });
         first = end;
     }
     Ok(found)
@@ -319,21 +383,34 @@ pub struct Injectivity {
 
 /// The injectivity index of a step-rate test: the settled steps under
 /// `settle`, then `1 / slope` of their `p − static_pressure` against their rate.
-pub fn injectivity(series: &Series<'_>, settle: &Settle, static_pressure: f64) -> Result<Injectivity, StepRateError> {
+pub fn injectivity(
+    series: &Series<'_>,
+    settle: &Settle,
+    static_pressure: f64,
+) -> Result<Injectivity, StepRateError> {
     if !static_pressure.is_finite() {
-        return Err(StepRateError::BadStaticPressure { given: static_pressure });
+        return Err(StepRateError::BadStaticPressure {
+            given: static_pressure,
+        });
     }
     let mut points = Vec::new();
     let mut set_aside = Vec::new();
     for step in steps(series, settle)? {
         match step.verdict {
-            Ok(settled) => points.push(Point { rank: step.rank, rate: step.rate, delta_p: settled.pressure - static_pressure }),
+            Ok(settled) => points.push(Point {
+                rank: step.rank,
+                rate: step.rate,
+                delta_p: settled.pressure - static_pressure,
+            }),
             Err(why) => set_aside.push(why),
         }
     }
     if points.len() < 2 {
         let ranks = set_aside.iter().filter_map(rank_of).collect();
-        return Err(StepRateError::TooFewSettled { settled: points.len(), set_aside: ranks });
+        return Err(StepRateError::TooFewSettled {
+            settled: points.len(),
+            set_aside: ranks,
+        });
     }
     let x: Vec<f64> = points.iter().map(|one| one.rate).collect();
     let y: Vec<f64> = points.iter().map(|one| one.delta_p).collect();
@@ -345,21 +422,38 @@ pub fn injectivity(series: &Series<'_>, settle: &Settle, static_pressure: f64) -
         .iter()
         .map(|one| {
             if one.rate == 0.0 {
-                Err(StepRateError::ZeroRate { rank: one.rank, delta_p: one.delta_p })
+                Err(StepRateError::ZeroRate {
+                    rank: one.rank,
+                    delta_p: one.delta_p,
+                })
             } else if one.delta_p == 0.0 {
-                Err(StepRateError::NoPressureRise { rank: one.rank, rate: one.rate })
+                Err(StepRateError::NoPressureRise {
+                    rank: one.rank,
+                    rate: one.rate,
+                })
             } else {
-                Ok(Ratio { rank: one.rank, index: one.rate / one.delta_p })
+                Ok(Ratio {
+                    rank: one.rank,
+                    index: one.rate / one.delta_p,
+                })
             }
         })
         .collect();
-    Ok(Injectivity { index: 1.0 / fit.slope, fit, points, set_aside, ratios })
+    Ok(Injectivity {
+        index: 1.0 / fit.slope,
+        fit,
+        points,
+        set_aside,
+        ratios,
+    })
 }
 
 /// The rank a per-step refusal names.
 fn rank_of(why: &StepRateError) -> Option<usize> {
     match why {
-        StepRateError::TooShort { rank, .. } | StepRateError::NanInWindow { rank, .. } | StepRateError::NotSettled { rank, .. } => Some(*rank),
+        StepRateError::TooShort { rank, .. }
+        | StepRateError::NanInWindow { rank, .. }
+        | StepRateError::NotSettled { rank, .. } => Some(*rank),
         _ => None,
     }
 }
@@ -376,11 +470,20 @@ pub(crate) fn least_squares(x: &[f64], y: &[f64]) -> Option<Fit> {
     let sxy: f64 = x.iter().zip(y).map(|(a, b)| (a - mean_x) * (b - mean_y)).sum();
     let slope = sxy / sxx;
     let intercept = mean_y - slope * mean_x;
-    let residuals: Vec<f64> = x.iter().zip(y).map(|(a, b)| b - (intercept + slope * a)).collect();
+    let residuals: Vec<f64> = x
+        .iter()
+        .zip(y)
+        .map(|(a, b)| b - (intercept + slope * a))
+        .collect();
     let ss_res: f64 = residuals.iter().map(|one| one * one).sum();
     let ss_tot: f64 = y.iter().map(|one| (one - mean_y).powi(2)).sum();
     // Every y equal: a flat line fits exactly; its slope is 0 and the caller
     // refuses it — R² is then 1 by the same convention as two points.
     let r_squared = if ss_tot == 0.0 { 1.0 } else { 1.0 - ss_res / ss_tot };
-    Some(Fit { slope, intercept, residuals, r_squared })
+    Some(Fit {
+        slope,
+        intercept,
+        residuals,
+        r_squared,
+    })
 }

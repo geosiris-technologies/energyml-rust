@@ -9,11 +9,10 @@
 # are mutually exclusive: CI requires the committed generated code to be
 # byte-identical to what the generator emits, and rustfmt rewrites ~190 of those
 # files. So `--all` turns a green build red, and the fix is to regenerate, not
-# to reformat. Format the hand-written crates by name instead:
+# to reformat. Every hand-written crate is formatted by name, by one script:
 #
-#     cargo fmt -p energyml-core -p energyml-derive -p energyml-codegen \
-#               -p energyml-storage -p energyml-geometry -p energyml-cli \
-#               -p energyml-tests -p energyml-roundtrip
+#     bash ci/fmt.sh            # format
+#     bash ci/fmt.sh --check    # what the pre-push hook and CI check
 #
-# CI checks clippy, not formatting, for exactly this reason.
+# Since 13/10/2026 the hand-written crates are rustfmt-clean, and the public CI checks it.
 max_width = 110

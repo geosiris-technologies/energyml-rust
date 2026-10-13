@@ -108,13 +108,19 @@ impl Operation for NewVersion {
         }
     }
 
-    fn plan(&self, inputs: NewVersionInputs, params: NewVersionParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: NewVersionInputs,
+        params: NewVersionParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let object = &inputs.object;
-        let reference = object
-            .known
-            .reference
-            .as_ref()
-            .ok_or_else(|| Refusal::on("object", format!("`{}` was given without a reference", object.name)))?;
+        let reference = object.known.reference.as_ref().ok_or_else(|| {
+            Refusal::on(
+                "object",
+                format!("`{}` was given without a reference", object.name),
+            )
+        })?;
         let mut json = object.known.json.clone().ok_or_else(|| {
             Refusal::on(
                 "object",
@@ -160,7 +166,12 @@ impl Operation for NewVersion {
             Place::Citation => {
                 json["Citation"]
                     .as_object_mut()
-                    .ok_or_else(|| Refusal::on("object", format!("`{}` has no Citation to carry a VersionString", reference.title)))?
+                    .ok_or_else(|| {
+                        Refusal::on(
+                            "object",
+                            format!("`{}` has no Citation to carry a VersionString", reference.title),
+                        )
+                    })?
                     .insert("VersionString".to_string(), json!(version));
             }
         }
@@ -171,7 +182,10 @@ impl Operation for NewVersion {
             citation.insert("Format".to_string(), json!(energyml_core::CITATION_FORMAT));
         }
 
-        let title = json["Citation"]["Title"].as_str().unwrap_or(&reference.title).to_string();
+        let title = json["Citation"]["Title"]
+            .as_str()
+            .unwrap_or(&reference.title)
+            .to_string();
         let says = vec![Note {
             key: "new-version",
             detail: format!(
@@ -199,7 +213,10 @@ impl Operation for NewVersion {
                 recipe: "new-version",
                 title: format!("new-version → {title} @ {version}"),
                 seed: format!("new-version:{}:{version}", reference.uuid),
-                parameters: vec![Parameter::Object { title: "input".to_string(), reference: reference.dor() }],
+                parameters: vec![Parameter::Object {
+                    title: "input".to_string(),
+                    reference: reference.dor(),
+                }],
             },
             says,
             dropped: Vec::new(),
@@ -215,11 +232,23 @@ mod tests {
     #[test]
     fn the_place_of_a_version_is_the_one_the_object_uses_or_its_release() {
         let two_one = json!({ "Citation": { "Title": "t" } });
-        assert_eq!(place_of(&two_one, "resqml20.obj_TriangulatedSetRepresentation"), Some(Place::Citation));
-        assert_eq!(place_of(&two_one, "resqml22.TriangulatedSetRepresentation"), Some(Place::Root));
+        assert_eq!(
+            place_of(&two_one, "resqml20.obj_TriangulatedSetRepresentation"),
+            Some(Place::Citation)
+        );
+        assert_eq!(
+            place_of(&two_one, "resqml22.TriangulatedSetRepresentation"),
+            Some(Place::Root)
+        );
         // What the object already has wins over its release.
-        assert_eq!(place_of(&json!({ "objectVersion": "1" }), "resqml20.obj_X"), Some(Place::Root));
-        assert_eq!(place_of(&json!({ "Citation": { "VersionString": "1" } }), "resqml22.X"), Some(Place::Citation));
+        assert_eq!(
+            place_of(&json!({ "objectVersion": "1" }), "resqml20.obj_X"),
+            Some(Place::Root)
+        );
+        assert_eq!(
+            place_of(&json!({ "Citation": { "VersionString": "1" } }), "resqml22.X"),
+            Some(Place::Citation)
+        );
         // Nothing to say.
         assert_eq!(place_of(&json!({}), "resqml22.X"), None);
     }

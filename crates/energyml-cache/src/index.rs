@@ -125,7 +125,11 @@ impl IndexSlot {
     /// Whether the index covers the store's whole inventory; `None` when there
     /// is no index.
     pub fn is_complete(&self) -> Option<bool> {
-        self.index.try_borrow().ok()?.as_ref().map(PackageIndex::is_complete)
+        self.index
+            .try_borrow()
+            .ok()?
+            .as_ref()
+            .map(PackageIndex::is_complete)
     }
 
     /// What the updates of the index disturbed since this consumer last asked —
@@ -210,7 +214,10 @@ impl IndexSlot {
                     .ok()
                     .and_then(|slot| slot.as_ref().map(PackageIndex::len))
                     .unwrap_or(0);
-                return Progress { done: held, total: held };
+                return Progress {
+                    done: held,
+                    total: held,
+                };
             }
         }
         let Some(builder) = building.as_mut() else {

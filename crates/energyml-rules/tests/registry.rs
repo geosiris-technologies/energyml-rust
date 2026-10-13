@@ -1,6 +1,8 @@
 //! The shipped registry, read through the public API.
 
-use energyml_rules::{AnchorKind, Status, all, at, get, id, in_theme, locales, superseded_by, text_in, themes};
+use energyml_rules::{
+    AnchorKind, Status, all, at, get, id, in_theme, locales, superseded_by, text_in, themes,
+};
 use std::collections::BTreeSet;
 
 /// Ids are unique, aliases included — the build refuses otherwise, and this
@@ -28,12 +30,26 @@ fn ids_are_unique() {
 fn ids_carry_their_theme() {
     let declared: BTreeSet<_> = themes().iter().map(|t| t.id).collect();
     for rule in all() {
-        assert!(declared.contains(rule.theme), "{} names the undeclared theme {}", rule.id, rule.theme);
+        assert!(
+            declared.contains(rule.theme),
+            "{} names the undeclared theme {}",
+            rule.id,
+            rule.theme
+        );
         let flat = rule.id.matches('/').count() == 1;
         if flat {
-            assert!(rule.id == id::DISCRETE_VALUE_IN_LOOKUP || rule.id == id::TIME_SERIES_ASSET_RESOLVES, "{} is flat and is not one of the two published ids", rule.id);
+            assert!(
+                rule.id == id::DISCRETE_VALUE_IN_LOOKUP || rule.id == id::TIME_SERIES_ASSET_RESOLVES,
+                "{} is flat and is not one of the two published ids",
+                rule.id
+            );
         } else {
-            assert!(rule.id.starts_with(&format!("house/{}/", rule.theme)), "{} is not under its theme {}", rule.id, rule.theme);
+            assert!(
+                rule.id.starts_with(&format!("house/{}/", rule.theme)),
+                "{} is not under its theme {}",
+                rule.id,
+                rule.theme
+            );
         }
     }
 }
@@ -46,7 +62,11 @@ fn ids_carry_their_theme() {
 #[test]
 fn english_is_present_everywhere() {
     for rule in all() {
-        assert!(!rule.title.trim().is_empty() && !rule.title.contains('\n'), "{}: the title is one line", rule.id);
+        assert!(
+            !rule.title.trim().is_empty() && !rule.title.contains('\n'),
+            "{}: the title is one line",
+            rule.id
+        );
         assert!(!rule.text.trim().is_empty(), "{}: text", rule.id);
         assert!(!rule.why.trim().is_empty(), "{}: why", rule.id);
     }
@@ -64,7 +84,11 @@ fn english_is_present_everywhere() {
 #[test]
 fn the_rules_are_complete_and_statuses_follow_the_design() {
     let count = |theme: &str| in_theme(theme).count();
-    assert_eq!((count("inherit"), count("colour"), count("attach")), (9, 14, 9), "the 32 rules of the registry");
+    assert_eq!(
+        (count("inherit"), count("colour"), count("attach")),
+        (9, 14, 9),
+        "the 32 rules of the registry"
+    );
     assert_eq!(count("table") + count("series"), 2, "the two published ids");
     assert_eq!(all().len(), 34);
 
@@ -80,12 +104,27 @@ fn the_rules_are_complete_and_statuses_follow_the_design() {
     for rule_id in coded_by_the_new_walk {
         assert_eq!(get(rule_id).unwrap().status, Status::Active, "{rule_id}");
     }
-    assert_eq!(get(id::INHERIT_FIRP_PARENTS).unwrap().status, Status::Superseded, "superseded when the rank order was written");
-    assert_eq!(get("house/colour/specific-wins-with-fallbacks").unwrap().status, Status::Superseded, "superseded when the rank order was written");
+    assert_eq!(
+        get(id::INHERIT_FIRP_PARENTS).unwrap().status,
+        Status::Superseded,
+        "superseded when the rank order was written"
+    );
+    assert_eq!(
+        get("house/colour/specific-wins-with-fallbacks").unwrap().status,
+        Status::Superseded,
+        "superseded when the rank order was written"
+    );
     let replacements: Vec<&str> = superseded_by(id::INHERIT_FIRP_PARENTS).map(|r| r.id).collect();
-    assert_eq!(replacements, vec![id::INHERIT_RANK_ORDER], "the history is read beside what replaces it");
+    assert_eq!(
+        replacements,
+        vec![id::INHERIT_RANK_ORDER],
+        "the history is read beside what replaces it"
+    );
     assert_eq!(get(id::DISCRETE_VALUE_IN_LOOKUP).unwrap().status, Status::Active);
-    assert_eq!(get(id::TIME_SERIES_ASSET_RESOLVES).unwrap().status, Status::Active);
+    assert_eq!(
+        get(id::TIME_SERIES_ASSET_RESOLVES).unwrap().status,
+        Status::Active
+    );
 }
 
 /// History is information: a superseded rule, if there is one, is read beside
@@ -95,11 +134,20 @@ fn the_rules_are_complete_and_statuses_follow_the_design() {
 #[test]
 fn every_superseded_rule_has_a_replacement_that_names_it() {
     for rule in all().iter().filter(|r| r.status == Status::Superseded) {
-        assert!(superseded_by(rule.id).count() >= 1, "{} is superseded by nobody", rule.id);
+        assert!(
+            superseded_by(rule.id).count() >= 1,
+            "{} is superseded by nobody",
+            rule.id
+        );
     }
     for rule in all() {
         for old in rule.supersedes {
-            assert_eq!(get(old).map(|r| r.status), Some(Status::Superseded), "{} supersedes {old}", rule.id);
+            assert_eq!(
+                get(old).map(|r| r.status),
+                Some(Status::Superseded),
+                "{} supersedes {old}",
+                rule.id
+            );
         }
     }
 }
@@ -112,7 +160,11 @@ fn every_superseded_rule_has_a_replacement_that_names_it() {
 /// that the code citing `id::TYPO` does not **compile** (tried by hand).
 #[test]
 fn constants_resolve() {
-    for (constant, theme) in [(id::INHERIT_RANK_ORDER, "inherit"), (id::COLOUR_STACK_TOP_WINS, "colour"), (id::ATTACH_MD_MEANING, "attach")] {
+    for (constant, theme) in [
+        (id::INHERIT_RANK_ORDER, "inherit"),
+        (id::COLOUR_STACK_TOP_WINS, "colour"),
+        (id::ATTACH_MD_MEANING, "attach"),
+    ] {
         let rule = get(constant).unwrap_or_else(|| panic!("{constant} resolves nothing"));
         assert_eq!(rule.id, constant);
         assert_eq!(rule.theme, theme);
@@ -127,7 +179,9 @@ fn constants_resolve() {
 /// `house/colour/stack-top-wins`.
 #[test]
 fn the_reverse_link_finds_rules_at_an_anchor() {
-    let here: Vec<_> = at(AnchorKind::View, "object.colour-stack").map(|r| r.id).collect();
+    let here: Vec<_> = at(AnchorKind::View, "object.colour-stack")
+        .map(|r| r.id)
+        .collect();
     assert!(here.contains(&id::COLOUR_STACK_TOP_WINS));
     assert!(here.contains(&id::INHERIT_RANK_ORDER));
     assert!(!here.contains(&id::ATTACH_MD_MEANING));
@@ -183,16 +237,29 @@ fn the_json_agrees_with_the_registry() {
     for (rule, value) in all().iter().zip(written) {
         assert_eq!(value["id"], rule.id);
         assert_eq!(value["status"], rule.status.as_str());
-        assert_eq!(value["text"]["en"], rule.text, "{}: text survives the escaping", rule.id);
+        assert_eq!(
+            value["text"]["en"], rule.text,
+            "{}: text survives the escaping",
+            rule.id
+        );
         assert_eq!(value["refs"].as_array().unwrap().len(), rule.refs.len());
         assert_eq!(value["rulings"].as_array().unwrap().len(), rule.rulings.len());
     }
     #[cfg(feature = "fr")]
     {
-        let rank = written.iter().find(|v| v["id"] == id::INHERIT_RANK_ORDER).unwrap();
+        let rank = written
+            .iter()
+            .find(|v| v["id"] == id::INHERIT_RANK_ORDER)
+            .unwrap();
         assert!(rank["title"]["fr"].is_string());
-        assert!(rank["why"].get("fr").is_none(), "French appears only where translated");
-        let top = written.iter().find(|v| v["id"] == id::COLOUR_STACK_TOP_WINS).unwrap();
+        assert!(
+            rank["why"].get("fr").is_none(),
+            "French appears only where translated"
+        );
+        let top = written
+            .iter()
+            .find(|v| v["id"] == id::COLOUR_STACK_TOP_WINS)
+            .unwrap();
         assert!(top["title"].get("fr").is_none());
     }
 }

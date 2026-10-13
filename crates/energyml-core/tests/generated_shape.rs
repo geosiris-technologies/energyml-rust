@@ -307,7 +307,11 @@ fn a_missing_required_element_is_read_past_and_reported() {
     let parsed = xml::from_xml_str::<TriangulatedSetRepresentation>(&doc)
         .expect("everything the document does carry is still worth having");
     assert_eq!(parsed.citation.title, "");
-    assert_eq!(parsed.triangle_patch.len(), 2, "and the rest of the object survived");
+    assert_eq!(
+        parsed.triangle_patch.len(),
+        2,
+        "and the rest of the object survived"
+    );
     assert!(parsed.geometry.is_some());
 
     // Strictly: refused, for the caller that will write this back. An object
@@ -329,8 +333,10 @@ fn a_missing_required_element_is_read_past_and_reported() {
 /// string the document carried**.
 #[test]
 fn a_value_that_is_there_and_wrong_is_a_different_question() {
-    let doc = to_xml(&sample(), XmlWriteOptions::COMPACT)
-        .replace("<resqml:Count>12</resqml:Count>", "<resqml:Count>douze</resqml:Count>");
+    let doc = to_xml(&sample(), XmlWriteOptions::COMPACT).replace(
+        "<resqml:Count>12</resqml:Count>",
+        "<resqml:Count>douze</resqml:Count>",
+    );
     assert!(
         doc.contains("douze"),
         "the substitution missed; the test would pass without testing anything"
@@ -338,7 +344,10 @@ fn a_value_that_is_there_and_wrong_is_a_different_question() {
 
     let err = xml::from_xml_str::<TriangulatedSetRepresentation>(&doc)
         .expect_err("tolerating absence is not tolerating nonsense");
-    assert!(matches!(err, energyml_core::Error::ParseValue { .. }), "got {err:?}");
+    assert!(
+        matches!(err, energyml_core::Error::ParseValue { .. }),
+        "got {err:?}"
+    );
 
     let (parsed, defaulted) =
         xml::from_xml_str_lenient::<TriangulatedSetRepresentation>(&doc).expect("lenient reads it");
@@ -384,8 +393,10 @@ fn a_lenient_read_defaults_what_is_missing_and_says_so() {
 /// use.
 #[test]
 fn a_lenient_read_repairs_an_unparsable_value_and_keeps_what_was_there() {
-    let doc = to_xml(&sample(), XmlWriteOptions::COMPACT)
-        .replace("<resqml:Count>12</resqml:Count>", "<resqml:Count>oops</resqml:Count>");
+    let doc = to_xml(&sample(), XmlWriteOptions::COMPACT).replace(
+        "<resqml:Count>12</resqml:Count>",
+        "<resqml:Count>oops</resqml:Count>",
+    );
 
     let strictly = xml::from_xml_str::<TriangulatedSetRepresentation>(&doc)
         .expect_err("strictly, `oops` is not an integer");

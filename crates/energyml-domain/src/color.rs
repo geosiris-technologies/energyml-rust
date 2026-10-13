@@ -131,12 +131,16 @@ impl Rgba {
                 "`{text}` is not a colour written `#rrggbb` or `#rrggbbaa` — red, green, blue and, with eight digits, alpha, two hexadecimal digits each"
             )
         };
-        let Some(digits) = text.strip_prefix('#') else { return Err(refused()) };
+        let Some(digits) = text.strip_prefix('#') else {
+            return Err(refused());
+        };
         if !matches!(digits.len(), 6 | 8) || !digits.bytes().all(|byte| byte.is_ascii_hexdigit()) {
             return Err(refused());
         }
         let channel = |at: usize| -> std::result::Result<f64, String> {
-            u8::from_str_radix(&digits[at..at + 2], 16).map(|value| f64::from(value) / 255.0).map_err(|_| refused())
+            u8::from_str_radix(&digits[at..at + 2], 16)
+                .map(|value| f64::from(value) / 255.0)
+                .map_err(|_| refused())
         };
         Ok(Rgba {
             r: channel(0)?,
@@ -388,7 +392,9 @@ impl ColorMap {
                 Some(other) => {
                     return Err(Error::malformed(
                         &uuid,
-                        format!("`{other}` is not an interpolation method the schema defines (linear, logarithmic)"),
+                        format!(
+                            "`{other}` is not an interpolation method the schema defines (linear, logarithmic)"
+                        ),
                     ));
                 }
             };
@@ -496,10 +502,14 @@ impl ColorMap {
                 map_low + (clamped - min) / (max - min) * (map_high - map_low)
             };
         } else {
-            if value < map_low && let Some(color) = &self.below_min {
+            if value < map_low
+                && let Some(color) = &self.below_min
+            {
                 return Some(color.to_rgba());
             }
-            if value > map_high && let Some(color) = &self.above_max {
+            if value > map_high
+                && let Some(color) = &self.above_max
+            {
                 return Some(color.to_rgba());
             }
         }
@@ -533,13 +543,7 @@ impl ColorMap {
         chosen.color.to_rgba()
     }
 
-    fn continuous_at(
-        &self,
-        position: f64,
-        domain: Domain,
-        method: Interpolation,
-        scaling: &Scaling,
-    ) -> Rgba {
+    fn continuous_at(&self, position: f64, domain: Domain, method: Interpolation, scaling: &Scaling) -> Rgba {
         let first = &self.stops[0];
         let last = &self.stops[self.stops.len() - 1];
         if position <= first.index {
@@ -565,7 +569,10 @@ impl ColorMap {
         // colour information. Both mean the same thing here, and either one
         // turns it on.
         if matches!(method, Interpolation::Logarithmic) || scaling.logarithmic {
-            let (a, b) = (low.index.max(f64::MIN_POSITIVE), high.index.max(f64::MIN_POSITIVE));
+            let (a, b) = (
+                low.index.max(f64::MIN_POSITIVE),
+                high.index.max(f64::MIN_POSITIVE),
+            );
             let p = position.max(f64::MIN_POSITIVE);
             if b > a {
                 t = ((p / a).ln() / (b / a).ln()).clamp(0.0, 1.0);
@@ -688,7 +695,10 @@ pub fn banded_until(levels: &[f64], colours: &[Hsv], top: f64) -> Result<Vec<Sto
     let mut stops = banded(levels, colours)?;
     let last = levels[levels.len() - 1];
     if top.is_finite() && top > last {
-        stops.push(Stop { index: top, color: colours[colours.len() - 1].clone() });
+        stops.push(Stop {
+            index: top,
+            color: colours[colours.len() - 1].clone(),
+        });
     }
     Ok(stops)
 }
@@ -722,7 +732,13 @@ pub enum Scope {
 
 impl Scope {
     /// The five targets, the whole object first.
-    pub const ALL: [Scope; 5] = [Scope::WholeObject, Scope::Nodes, Scope::Edges, Scope::Faces, Scope::Volumes];
+    pub const ALL: [Scope; 5] = [
+        Scope::WholeObject,
+        Scope::Nodes,
+        Scope::Edges,
+        Scope::Faces,
+        Scope::Volumes,
+    ];
 
     /// Position in [`Scope::ALL`].
     pub fn index(self) -> usize {
@@ -877,7 +893,11 @@ impl Entry {
     /// What the entry names, by address: [`Entry::target_uris`] when they say
     /// one per target, else the uuids — which name every version.
     pub fn addresses(&self) -> &[String] {
-        if self.target_uris.len() == self.targets.len() { &self.target_uris } else { &self.targets }
+        if self.target_uris.len() == self.targets.len() {
+            &self.target_uris
+        } else {
+            &self.targets
+        }
     }
 }
 
@@ -951,8 +971,9 @@ impl GraphicalSet {
                 continue;
             }
             let Some(entry) = item.as_object() else {
-                set.notes
-                    .push(format!("entry {position} is not an object and was kept as opaque"));
+                set.notes.push(format!(
+                    "entry {position} is not an object and was kept as opaque"
+                ));
                 set.entries.push(Entry {
                     position,
                     targets: Vec::new(),
@@ -1026,9 +1047,10 @@ impl GraphicalSet {
                     elements,
                 }
             } else if type_name.contains("ColorInformation") {
-                let min_max = entry.field("MinMax").and_then(|f| f.as_object()).and_then(|range| {
-                    Some((scalar_f64(range, "Minimum")?, scalar_f64(range, "Maximum")?))
-                });
+                let min_max = entry
+                    .field("MinMax")
+                    .and_then(|f| f.as_object())
+                    .and_then(|range| Some((scalar_f64(range, "Minimum")?, scalar_f64(range, "Maximum")?)));
                 Information::Color {
                     scaling: Scaling {
                         min_max,
@@ -1305,19 +1327,27 @@ impl<'a> Cascade<'a> {
     fn targeting(&self, address: &str) -> Vec<&'a Entry> {
         let set: &'a GraphicalSet = self.set;
         let mut held = self.targets.borrow_mut();
-        let fresh = matches!(&*held, Some(map) if std::ptr::eq(map.set, set) && map.entries == set.entries.len());
+        let fresh =
+            matches!(&*held, Some(map) if std::ptr::eq(map.set, set) && map.entries == set.entries.len());
         if !fresh {
             let mut by_target: HashMap<String, Vec<(usize, Option<String>)>> = HashMap::new();
             for (at, entry) in set.entries.iter().enumerate() {
-                let mut named: Vec<(String, Option<String>)> =
-                    entry.addresses().iter().map(|address| identity::parse_address(address)).collect();
+                let mut named: Vec<(String, Option<String>)> = entry
+                    .addresses()
+                    .iter()
+                    .map(|address| identity::parse_address(address))
+                    .collect();
                 named.sort_unstable();
                 named.dedup();
                 for (uuid, version) in named {
                     by_target.entry(uuid).or_default().push((at, version));
                 }
             }
-            *held = Some(TargetMap { set, entries: set.entries.len(), by_target });
+            *held = Some(TargetMap {
+                set,
+                entries: set.entries.len(),
+                by_target,
+            });
         }
         let map = held.as_ref().expect("just built");
         let (uuid, version) = identity::parse_address(address);
@@ -1373,7 +1403,12 @@ impl<'a> Cascade<'a> {
         }
         for kind in request.kind_chain {
             let carries = self.color_information_on(kind, Level::PropertyKind, objects, &mut notes)?;
-            out.push(Step { level: Level::PropertyKind, uuid: uuid_of_identity(kind), uri: kind.clone(), carries });
+            out.push(Step {
+                level: Level::PropertyKind,
+                uuid: uuid_of_identity(kind),
+                uri: kind.clone(),
+                carries,
+            });
         }
 
         let mut level = Level::Representation;
@@ -1385,7 +1420,12 @@ impl<'a> Cascade<'a> {
         let mut guard = 0;
         loop {
             let carries = self.default_information_on(&current, level, request.element, &mut notes);
-            out.push(Step { level, uuid: uuid_of_identity(&current), uri: current.clone(), carries });
+            out.push(Step {
+                level,
+                uuid: uuid_of_identity(&current),
+                uri: current.clone(),
+                carries,
+            });
             if !self.inherit {
                 break;
             }
@@ -1415,7 +1455,8 @@ impl<'a> Cascade<'a> {
 
         // 1 — the property itself.
         if let Some(property) = request.property
-            && let Some(decision) = self.color_information_on(property, Level::Property, objects, &mut notes)?
+            && let Some(decision) =
+                self.color_information_on(property, Level::Property, objects, &mut notes)?
         {
             return Ok(Some(decision));
         }
@@ -1441,7 +1482,8 @@ impl<'a> Cascade<'a> {
         let mut current = request.representation.to_string();
         let mut guard = 0;
         loop {
-            if let Some(decision) = self.default_information_on(&current, level, request.element, &mut notes) {
+            if let Some(decision) = self.default_information_on(&current, level, request.element, &mut notes)
+            {
                 return Ok(Some(decision));
             }
             if !self.inherit {
@@ -1584,7 +1626,7 @@ impl<'a> Cascade<'a> {
                     paint: Paint::Constant(rgba),
                     level,
                     found_on: uuid_of_identity(uuid),
-                found_on_uri: uuid.to_string(),
+                    found_on_uri: uuid.to_string(),
                     entry: entry.position,
                     visible: info.visible,
                     notes: skips.clone(),
@@ -1601,7 +1643,12 @@ impl<'a> Cascade<'a> {
     /// object second. [`Cascade::default_information_on`] decides by it, and
     /// [`Cascade::constant_written`] answers with it, so *the colour shown* and
     /// *the value edited* cannot be two different entries.
-    fn constant_on(&self, uuid: &str, element: Scope, notes: &mut Vec<String>) -> Option<(&'a Entry, &'a ElementInfo)> {
+    fn constant_on(
+        &self,
+        uuid: &str,
+        element: Scope,
+        notes: &mut Vec<String>,
+    ) -> Option<(&'a Entry, &'a ElementInfo)> {
         for entry in self.targeting(uuid) {
             let Information::Default {
                 viewer_kind,
@@ -1663,7 +1710,7 @@ impl<'a> Cascade<'a> {
             paint: Paint::Constant(rgba),
             level,
             found_on: uuid_of_identity(uuid),
-                found_on_uri: uuid.to_string(),
+            found_on_uri: uuid.to_string(),
             entry: entry.position,
             visible: info.visible,
             notes: std::mem::take(notes),
@@ -1762,10 +1809,10 @@ fn read_raw_entry(raw: &AnyXml, position: usize, notes: &mut Vec<String>) -> Ent
         .into_iter()
         .filter_map(|target| {
             let uuid = scan::element_text(target, "Uuid")?;
-            let declared =
-                scan::element_text(target, "QualifiedType").or_else(|| scan::element_text(target, "ContentType"));
-            let version =
-                scan::element_text(target, "ObjectVersion").or_else(|| scan::element_text(target, "VersionString"));
+            let declared = scan::element_text(target, "QualifiedType")
+                .or_else(|| scan::element_text(target, "ContentType"));
+            let version = scan::element_text(target, "ObjectVersion")
+                .or_else(|| scan::element_text(target, "VersionString"));
             let address = identity::address_of_parts(declared.as_deref(), &uuid, version.as_deref());
             Some((uuid, address))
         })
@@ -1778,7 +1825,10 @@ fn read_raw_entry(raw: &AnyXml, position: usize, notes: &mut Vec<String>) -> Ent
 
     let information = if type_name.contains("DefaultGraphicalInformation") {
         let mut elements = Vec::new();
-        for (at, info) in scan::sections_all(content, "IndexableElementInfo").into_iter().enumerate() {
+        for (at, info) in scan::sections_all(content, "IndexableElementInfo")
+            .into_iter()
+            .enumerate()
+        {
             let inner = scan::attribute_local(info, "type").unwrap_or_default();
             let inner_name = inner.rsplit(':').next().unwrap_or(&inner).to_string();
             let Some(scope) = Scope::from_type_name(&inner_name) else {
@@ -1817,9 +1867,8 @@ fn read_raw_entry(raw: &AnyXml, position: usize, notes: &mut Vec<String>) -> Ent
             elements,
         }
     } else if type_name.contains("ColorInformation") {
-        let min_max = scan::section(content, "MinMax").and_then(|range| {
-            Some((raw_f64(range, "Minimum")?, raw_f64(range, "Maximum")?))
-        });
+        let min_max = scan::section(content, "MinMax")
+            .and_then(|range| Some((raw_f64(range, "Minimum")?, raw_f64(range, "Maximum")?)));
         Information::Color {
             scaling: Scaling {
                 min_max,
@@ -1907,7 +1956,11 @@ fn parent_of(address: &str, objects: &dyn ObjectSource) -> Option<(String, Optio
     let reflect = object.as_reflect();
     // `RepresentedObject` in RESQML 2.2, `RepresentedInterpretation` in 2.0.1,
     // `InterpretedFeature` on an interpretation. One of the three answers.
-    for field in ["RepresentedObject", "RepresentedInterpretation", "InterpretedFeature"] {
+    for field in [
+        "RepresentedObject",
+        "RepresentedInterpretation",
+        "InterpretedFeature",
+    ] {
         if let Some(target) = reflect.field(field).and_then(|f| f.as_object())
             && let Some(next) = identity::address_of_reflect(target)
         {
@@ -1977,7 +2030,9 @@ fn scalar_u64(object: &dyn Reflect, field: &str) -> Option<u64> {
 /// The uuid a reference names — the identity layer's reading, so every
 /// spelling of the field is one answer.
 fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
-    energyml_core::identity::uuid_of_reflect(object).filter(|uuid| !uuid.is_empty()).map(str::to_string)
+    energyml_core::identity::uuid_of_reflect(object)
+        .filter(|uuid| !uuid.is_empty())
+        .map(str::to_string)
 }
 
 #[cfg(test)]
@@ -1992,7 +2047,10 @@ mod tests {
         assert_eq!(red.to_bytes(), [255, 0, 0, 255]);
         let clear = Rgba::parse("#00ff0080").expect("eight digits");
         assert_eq!(clear.to_bytes(), [0, 255, 0, 128]);
-        assert_eq!(Rgba::parse(&clear.to_hex()).map(Rgba::to_bytes), Ok(clear.to_bytes()));
+        assert_eq!(
+            Rgba::parse(&clear.to_hex()).map(Rgba::to_bytes),
+            Ok(clear.to_bytes())
+        );
         for wrong in ["ff0000", "#+f+f+f", "#fff", "#ff00zz", "#ff00000", ""] {
             let why = Rgba::parse(wrong).expect_err(wrong);
             assert!(why.contains(&format!("`{wrong}`")), "{why}");
@@ -2028,7 +2086,10 @@ mod tests {
         let mut notes = Vec::new();
         let entry = read_raw_entry(&raw, 0, &mut notes);
         let Information::Default { elements, .. } = entry.information else {
-            panic!("a DefaultGraphicalInformation reads as one: {:?}", entry.information);
+            panic!(
+                "a DefaultGraphicalInformation reads as one: {:?}",
+                entry.information
+            );
         };
         assert_eq!(elements.len(), 1, "the unknown one is skipped: {notes:?}");
         assert_eq!(elements[0].scope, Scope::WholeObject);
@@ -2093,7 +2154,10 @@ mod tests {
 
         let yellow = in_hsv.sample(Some(0.5), &scaling).unwrap();
         let olive = in_rgb.sample(Some(0.5), &scaling).unwrap();
-        assert!(yellow.r > 0.9 && yellow.g > 0.9, "HSV midpoint is yellow: {yellow:?}");
+        assert!(
+            yellow.r > 0.9 && yellow.g > 0.9,
+            "HSV midpoint is yellow: {yellow:?}"
+        );
         assert!(olive.r < 0.6 && olive.g < 0.6, "RGB midpoint is dull: {olive:?}");
         assert_ne!(yellow.to_hex(), olive.to_hex());
     }
@@ -2136,7 +2200,10 @@ mod tests {
     fn min_max_clamps_and_rescales_onto_the_map() {
         // `MinMax` is the range of the *property*: a value outside it keeps
         // the extreme colour of that range.
-        let map = map(Some((Domain::Rgb, Interpolation::Linear)), vec![(0.0, 120.0), (1.0, 0.0)]);
+        let map = map(
+            Some((Domain::Rgb, Interpolation::Linear)),
+            vec![(0.0, 120.0), (1.0, 0.0)],
+        );
         let scaling = Scaling {
             min_max: Some((100.0, 200.0)),
             ..Default::default()
@@ -2152,7 +2219,10 @@ mod tests {
         // With `MinMax` given, the clamp makes them unreachable — which is the
         // only reading of the two TRG sections that does not contradict
         // itself.
-        let mut m = map(Some((Domain::Rgb, Interpolation::Linear)), vec![(0.0, 120.0), (1.0, 0.0)]);
+        let mut m = map(
+            Some((Domain::Rgb, Interpolation::Linear)),
+            vec![(0.0, 120.0), (1.0, 0.0)],
+        );
         m.above_max = Some(hsv(240.0));
         assert_eq!(
             m.sample(Some(5.0), &Scaling::default()).unwrap().to_hex(),
@@ -2180,7 +2250,10 @@ mod tests {
 
     #[test]
     fn reversing_swaps_the_ends() {
-        let m = map(Some((Domain::Rgb, Interpolation::Linear)), vec![(0.0, 120.0), (1.0, 0.0)]);
+        let m = map(
+            Some((Domain::Rgb, Interpolation::Linear)),
+            vec![(0.0, 120.0), (1.0, 0.0)],
+        );
         let forward = m.sample(Some(0.0), &Scaling::default()).unwrap();
         let reversed = m
             .sample(
@@ -2289,7 +2362,10 @@ pub fn constant_colour_entry(
         title = escape(&title),
     ));
     AnyXml {
-        attributes: vec![("xsi:type".to_string(), format!("{}:DefaultGraphicalInformation", RESQML.0))],
+        attributes: vec![(
+            "xsi:type".to_string(),
+            format!("{}:DefaultGraphicalInformation", RESQML.0),
+        )],
         content,
         namespaces: vec![
             (EML.0.to_string(), EML.1.to_string()),
@@ -2479,18 +2555,36 @@ pub fn recolour_element(
     let colour_path = format!("IndexableElementInfo[{at}].ConstantColor");
     let hsv = Hsv::from_rgba(colour);
     let write = |target: &mut dyn Reflect, base: &str| -> Result<()> {
-        let at_field = |field: &str| if base.is_empty() { format!("{colour_path}.{field}") } else { format!("{base}.{colour_path}.{field}") };
-        let present = path::get(target, &if base.is_empty() { colour_path.clone() } else { format!("{base}.{colour_path}") })
-            .ok()
-            .and_then(|value| value.as_object().map(|_| ()))
-            .is_some();
+        let at_field = |field: &str| {
+            if base.is_empty() {
+                format!("{colour_path}.{field}")
+            } else {
+                format!("{base}.{colour_path}.{field}")
+            }
+        };
+        let present = path::get(
+            target,
+            &if base.is_empty() {
+                colour_path.clone()
+            } else {
+                format!("{base}.{colour_path}")
+            },
+        )
+        .ok()
+        .and_then(|value| value.as_object().map(|_| ()))
+        .is_some();
         if !present {
             return Err(Error::unsupported(
                 "recolouring an element",
                 format!("{entry_path}, element {at}, states no constant colour to change"),
             ));
         }
-        for (field, value) in [("Hue", hsv.hue), ("Saturation", hsv.saturation), ("Value", hsv.value), ("Alpha", hsv.alpha)] {
+        for (field, value) in [
+            ("Hue", hsv.hue),
+            ("Saturation", hsv.saturation),
+            ("Value", hsv.value),
+            ("Alpha", hsv.alpha),
+        ] {
             path::set(target, &at_field(field), OwnedValue::Double(value))
                 .map_err(|why| Error::malformed(&entry_path, format!("writing `{field}`: {why}")))?;
         }
@@ -2502,9 +2596,13 @@ pub fn recolour_element(
     // The usual case: the entry is a subtree nothing could type when it was read.
     if let Some(any) = object.downcast_mut::<AnyXml>() {
         let read = any.typed(registry).ok_or_else(|| {
-            Error::unsupported("recolouring an element", format!("{entry_path} declares no type this build knows"))
+            Error::unsupported(
+                "recolouring an element",
+                format!("{entry_path} declares no type this build knows"),
+            )
         })?;
-        let (mut typed, _) = read.map_err(|why| Error::malformed(&entry_path, format!("reading it: {why}")))?;
+        let (mut typed, _) =
+            read.map_err(|why| Error::malformed(&entry_path, format!("reading it: {why}")))?;
         write(typed.as_reflect_mut(), "")?;
         *any = any
             .rebuilt(typed.as_ref())
@@ -2559,10 +2657,16 @@ pub fn set_constant_colour(
     colour: Rgba,
     name: Option<&str>,
 ) -> Result<Wrote> {
-    put(set, targets, &format!("{scope}"), |entry| {
-        matches!(&entry.information, Information::Default { elements, .. }
+    put(
+        set,
+        targets,
+        &format!("{scope}"),
+        |entry| {
+            matches!(&entry.information, Information::Default { elements, .. }
             if elements.iter().any(|element| element.scope == scope))
-    }, || constant_colour_entry(targets, scope, colour, name))
+        },
+        || constant_colour_entry(targets, scope, colour, name),
+    )
 }
 
 /// Colour these objects **by a colour map**, in place.
@@ -2615,7 +2719,11 @@ fn put(
         .entries
         .iter()
         .filter(|entry| {
-            entry.targets.iter().any(|uuid| wanted.contains(&uuid.to_lowercase())) && says(entry)
+            entry
+                .targets
+                .iter()
+                .any(|uuid| wanted.contains(&uuid.to_lowercase()))
+                && says(entry)
         })
         .collect();
 
@@ -2624,7 +2732,10 @@ fn put(
     // entry*, and doing it anyway is how the colours of the other objects went
     // missing.
     if let Some(entry) = touching.iter().find(|entry| {
-        entry.targets.iter().any(|uuid| !wanted.contains(&uuid.to_lowercase()))
+        entry
+            .targets
+            .iter()
+            .any(|uuid| !wanted.contains(&uuid.to_lowercase()))
     }) {
         return Err(Error::unsupported(
             "recolouring one object of a shared colour entry",
@@ -2633,7 +2744,11 @@ fn put(
                  recoloured; replacing it would take the colour away from the others",
                 entry.position,
                 entry.targets.len(),
-                entry.targets.iter().filter(|uuid| wanted.contains(&uuid.to_lowercase())).count(),
+                entry
+                    .targets
+                    .iter()
+                    .filter(|uuid| wanted.contains(&uuid.to_lowercase()))
+                    .count(),
             ),
         ));
     }
@@ -2657,8 +2772,7 @@ fn put(
             .cloned()
             .ok_or_else(|| Error::Malformed {
                 at: format!("GraphicalInformation[{index}]"),
-                reason: "not a subtree this build can carry, so the set cannot be rewritten"
-                    .to_string(),
+                reason: "not a subtree this build can carry, so the set cannot be rewritten".to_string(),
             })?;
         let value = if Some(index) == position { make() } else { kept };
         items.push(energyml_core::value::OwnedValue::Object(Box::new(value)));
@@ -2666,8 +2780,14 @@ fn put(
     if position.is_none() {
         items.push(energyml_core::value::OwnedValue::Object(Box::new(make())));
     }
-    set.set_field("GraphicalInformation", energyml_core::value::OwnedValue::List(items))
-        .map_err(|e| Error::Malformed { at: "GraphicalInformation".to_string(), reason: e.to_string() })?;
+    set.set_field(
+        "GraphicalInformation",
+        energyml_core::value::OwnedValue::List(items),
+    )
+    .map_err(|e| Error::Malformed {
+        at: "GraphicalInformation".to_string(),
+        reason: e.to_string(),
+    })?;
     Ok(match position {
         Some(index) => Wrote::Replaced(index),
         None => Wrote::Added,

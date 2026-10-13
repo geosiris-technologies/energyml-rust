@@ -87,7 +87,11 @@ struct Key {
 type Line = Vec<[u64; 2]>;
 
 fn line_of(section: &SectionTrace) -> Line {
-    section.trace.iter().map(|p| [p[0].to_bits(), p[1].to_bits()]).collect()
+    section
+        .trace
+        .iter()
+        .map(|p| [p[0].to_bits(), p[1].to_bits()])
+        .collect()
 }
 
 /// One package's reads, kept — see the module.
@@ -145,7 +149,11 @@ impl PackageCache {
     }
 
     /// A well, read once.
-    pub(crate) fn well<E>(&mut self, uri: &str, read: impl FnOnce() -> Result<WellRead, E>) -> Result<WellRead, E> {
+    pub(crate) fn well<E>(
+        &mut self,
+        uri: &str,
+        read: impl FnOnce() -> Result<WellRead, E>,
+    ) -> Result<WellRead, E> {
         if let Some(kept) = self.wells.get(uri) {
             self.work.reused += 1;
             return Ok(kept.clone());
@@ -167,7 +175,10 @@ impl PackageCache {
                     if let Some(rect) = Rect::point([head.head[0], head.head[1]]) {
                         self.spatial.insert(rect, at);
                     }
-                    HeadSlot::Head { at, head: Box::new(head) }
+                    HeadSlot::Head {
+                        at,
+                        head: Box::new(head),
+                    }
                 }
                 _ => HeadSlot::Unusable,
             };
@@ -204,7 +215,9 @@ impl PackageCache {
         let missing: Vec<usize> = lines
             .iter()
             .enumerate()
-            .filter(|(_, line)| !self.cuts.contains_key(&(uri.to_string(), (*line).clone())) && seen.insert(line))
+            .filter(|(_, line)| {
+                !self.cuts.contains_key(&(uri.to_string(), (*line).clone())) && seen.insert(line)
+            })
             .map(|(at, _)| at)
             .collect();
 
@@ -235,7 +248,10 @@ impl PackageCache {
             .zip(&lines)
             .filter_map(|(section, line)| {
                 let kept = self.cuts.get(&(uri.to_string(), line.clone()))?.as_ref()?;
-                Some(SurfaceCut { section: section.key, ..kept.clone() })
+                Some(SurfaceCut {
+                    section: section.key,
+                    ..kept.clone()
+                })
             })
             .collect();
         Ok(SurfaceRead {

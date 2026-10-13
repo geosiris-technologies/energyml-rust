@@ -40,20 +40,42 @@ impl ArraySource for Package {
         Vec::new()
     }
     fn metadata(&self, _location: &ArrayLocation) -> energyml_domain::Result<ArrayMetadata> {
-        Err(energyml_domain::Error::unsupported("an external array", "the test's arrays are inline"))
+        Err(energyml_domain::Error::unsupported(
+            "an external array",
+            "the test's arrays are inline",
+        ))
     }
     fn read(&self, _location: &ArrayLocation) -> energyml_domain::Result<ArrayData> {
-        Err(energyml_domain::Error::unsupported("an external array", "the test's arrays are inline"))
+        Err(energyml_domain::Error::unsupported(
+            "an external array",
+            "the test's arrays are inline",
+        ))
     }
-    fn read_into(&self, _location: &ArrayLocation, _out: &mut ArrayBuffer<'_>) -> energyml_domain::Result<ArrayMetadata> {
-        Err(energyml_domain::Error::unsupported("an external array", "the test's arrays are inline"))
+    fn read_into(
+        &self,
+        _location: &ArrayLocation,
+        _out: &mut ArrayBuffer<'_>,
+    ) -> energyml_domain::Result<ArrayMetadata> {
+        Err(energyml_domain::Error::unsupported(
+            "an external array",
+            "the test's arrays are inline",
+        ))
     }
 }
 
 /// Run every check over these objects, the package lending them.
 fn judge(objects: Vec<(&str, Box<dyn DynObject>)>, arrays: bool) -> Vec<Finding> {
-    let package = Package(objects.into_iter().map(|(uuid, object)| (uuid.to_string(), object)).collect());
-    let pairs: Vec<(&str, &dyn Reflect)> = package.0.iter().map(|(uuid, object)| (uuid.as_str(), object.as_reflect())).collect();
+    let package = Package(
+        objects
+            .into_iter()
+            .map(|(uuid, object)| (uuid.to_string(), object))
+            .collect(),
+    );
+    let pairs: Vec<(&str, &dyn Reflect)> = package
+        .0
+        .iter()
+        .map(|(uuid, object)| (uuid.as_str(), object.as_reflect()))
+        .collect();
     let arrays: Option<&dyn ArraySource> = if arrays { Some(&package) } else { None };
     integrity::run(&pairs, &package, arrays)
 }
@@ -133,7 +155,9 @@ fn discrete(uuid: &str, values: &[i64]) -> resqml22::DiscreteProperty {
         indexable_element: eml23::IndexableElement::Cells,
         value_count_per_indexable_element: vec![1],
         category_lookup: Some(reference("eml23.ColumnBasedTable", TABLE)),
-        values_for_patch: vec![resqml22::AbstractValueArray::IntegerXmlArray(integers(values, -1))],
+        values_for_patch: vec![resqml22::AbstractValueArray::IntegerXmlArray(integers(
+            values, -1,
+        ))],
         ..Default::default()
     }
 }
@@ -157,7 +181,10 @@ fn e03_a_discrete_value_no_key_names_is_found_once() {
     assert_eq!(found.len(), 1, "{findings:?}");
     assert_eq!(found[0].uuid, bad);
     let read = read_of(found[0]);
-    assert!(read.contains("7 (2 element(s))") && read.contains("code"), "{read}");
+    assert!(
+        read.contains("7 (2 element(s))") && read.contains("code"),
+        "{read}"
+    );
     assert!(!read.contains("-1"), "the null value is not a value: {read}");
 }
 
@@ -166,10 +193,16 @@ fn e03_a_discrete_value_no_key_names_is_found_once() {
 #[test]
 fn e03_without_an_array_reader_is_uncheckable_never_a_pass() {
     let bad = "00000000-0000-0000-0000-00000000e304";
-    let findings = judge(vec![(TABLE, boxed(table())), (bad, boxed(discrete(bad, &[7])))], false);
+    let findings = judge(
+        vec![(TABLE, boxed(table())), (bad, boxed(discrete(bad, &[7])))],
+        false,
+    );
     let found = of(&findings, "house/discrete-value-in-lookup");
     assert_eq!(found.len(), 1, "{findings:?}");
-    assert!(matches!(&found[0].outcome, Outcome::Unverifiable { .. }), "{found:?}");
+    assert!(
+        matches!(&found[0].outcome, Outcome::Unverifiable { .. }),
+        "{found:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -198,7 +231,10 @@ fn series(uuid: &str, asset: &str) -> Box<dyn DynObject> {
 </prodml:TimeSeriesData>"#
     );
     energyml_schemas::all()
-        .read_xml("application/x-prodml+xml;version=2.3;type=TimeSeriesData", xml.as_bytes())
+        .read_xml(
+            "application/x-prodml+xml;version=2.3;type=TimeSeriesData",
+            xml.as_bytes(),
+        )
         .expect("the series reads")
 }
 
@@ -219,9 +255,24 @@ fn e04_a_series_naming_an_absent_well_is_found_once() {
     let rooted = "00000000-0000-0000-0000-00000000e402";
     let findings = judge(
         vec![
-            ("00000000-0000-0000-0000-00000000e403", boxed(well("00000000-0000-0000-0000-00000000e403", "GTH-1"))),
-            (orphan, series(orphan, "eml://lutetia.geosiris.com/well(GTH-9)/wellbore(01)/wellhead")),
-            (rooted, series(rooted, "eml://lutetia.geosiris.com/well(GTH-1)/wellbore(01)/wellhead")),
+            (
+                "00000000-0000-0000-0000-00000000e403",
+                boxed(well("00000000-0000-0000-0000-00000000e403", "GTH-1")),
+            ),
+            (
+                orphan,
+                series(
+                    orphan,
+                    "eml://lutetia.geosiris.com/well(GTH-9)/wellbore(01)/wellhead",
+                ),
+            ),
+            (
+                rooted,
+                series(
+                    rooted,
+                    "eml://lutetia.geosiris.com/well(GTH-1)/wellbore(01)/wellhead",
+                ),
+            ),
         ],
         true,
     );
@@ -238,15 +289,27 @@ fn e04_a_name_two_wells_answer_to_is_uncheckable() {
     let series_uuid = "00000000-0000-0000-0000-00000000e404";
     let findings = judge(
         vec![
-            ("00000000-0000-0000-0000-00000000e405", boxed(well("00000000-0000-0000-0000-00000000e405", "GTH-1"))),
-            ("00000000-0000-0000-0000-00000000e406", boxed(well("00000000-0000-0000-0000-00000000e406", "GTH-1"))),
-            (series_uuid, series(series_uuid, "eml://lutetia.geosiris.com/well(GTH-1)/wellhead")),
+            (
+                "00000000-0000-0000-0000-00000000e405",
+                boxed(well("00000000-0000-0000-0000-00000000e405", "GTH-1")),
+            ),
+            (
+                "00000000-0000-0000-0000-00000000e406",
+                boxed(well("00000000-0000-0000-0000-00000000e406", "GTH-1")),
+            ),
+            (
+                series_uuid,
+                series(series_uuid, "eml://lutetia.geosiris.com/well(GTH-1)/wellhead"),
+            ),
         ],
         true,
     );
     let found = of(&findings, "house/time-series-asset-resolves");
     assert_eq!(found.len(), 1, "{findings:?}");
-    assert!(matches!(&found[0].outcome, Outcome::Unverifiable { why } if why.contains("not an identity")), "{found:?}");
+    assert!(
+        matches!(&found[0].outcome, Outcome::Unverifiable { why } if why.contains("not an identity")),
+        "{found:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -272,12 +335,43 @@ fn e06_two_definitive_trajectories_on_one_wellbore_are_found_once() {
     let once = "00000000-0000-0000-0000-00000000e602";
     let findings = judge(
         vec![
-            ("00000000-0000-0000-0000-00000000e611", boxed(trajectory("00000000-0000-0000-0000-00000000e611", twice, Some(true)))),
-            ("00000000-0000-0000-0000-00000000e612", boxed(trajectory("00000000-0000-0000-0000-00000000e612", twice, Some(true)))),
+            (
+                "00000000-0000-0000-0000-00000000e611",
+                boxed(trajectory(
+                    "00000000-0000-0000-0000-00000000e611",
+                    twice,
+                    Some(true),
+                )),
+            ),
+            (
+                "00000000-0000-0000-0000-00000000e612",
+                boxed(trajectory(
+                    "00000000-0000-0000-0000-00000000e612",
+                    twice,
+                    Some(true),
+                )),
+            ),
             // The twin: one definitive, one explicitly not, one silent.
-            ("00000000-0000-0000-0000-00000000e621", boxed(trajectory("00000000-0000-0000-0000-00000000e621", once, Some(true)))),
-            ("00000000-0000-0000-0000-00000000e622", boxed(trajectory("00000000-0000-0000-0000-00000000e622", once, Some(false)))),
-            ("00000000-0000-0000-0000-00000000e623", boxed(trajectory("00000000-0000-0000-0000-00000000e623", once, None))),
+            (
+                "00000000-0000-0000-0000-00000000e621",
+                boxed(trajectory(
+                    "00000000-0000-0000-0000-00000000e621",
+                    once,
+                    Some(true),
+                )),
+            ),
+            (
+                "00000000-0000-0000-0000-00000000e622",
+                boxed(trajectory(
+                    "00000000-0000-0000-0000-00000000e622",
+                    once,
+                    Some(false),
+                )),
+            ),
+            (
+                "00000000-0000-0000-0000-00000000e623",
+                boxed(trajectory("00000000-0000-0000-0000-00000000e623", once, None)),
+            ),
         ],
         true,
     );
@@ -292,7 +386,11 @@ fn e06_two_definitive_trajectories_on_one_wellbore_are_found_once() {
 // trg/is-listric-iff-normal
 // ---------------------------------------------------------------------------
 
-fn fault(uuid: &str, throws: &[resqml22::ThrowKindExt], listric: Option<bool>) -> resqml22::FaultInterpretation {
+fn fault(
+    uuid: &str,
+    throws: &[resqml22::ThrowKindExt],
+    listric: Option<bool>,
+) -> resqml22::FaultInterpretation {
     resqml22::FaultInterpretation {
         uuid: uuid.to_string(),
         citation: citation("a fault"),
@@ -318,9 +416,26 @@ fn e07_is_listric_on_a_reverse_fault_is_found_once() {
             // The twins, all conforming under the rule (present if and only if the only
             // set is normal): a normal fault that says whether it is listric,
             // a reverse one that does not, an oblique one that does not.
-            ("00000000-0000-0000-0000-00000000e702", boxed(fault("00000000-0000-0000-0000-00000000e702", &[Normal], Some(false)))),
-            ("00000000-0000-0000-0000-00000000e703", boxed(fault("00000000-0000-0000-0000-00000000e703", &[Reverse], None))),
-            ("00000000-0000-0000-0000-00000000e704", boxed(fault("00000000-0000-0000-0000-00000000e704", &[Normal, StrikeMinusSlip], None))),
+            (
+                "00000000-0000-0000-0000-00000000e702",
+                boxed(fault(
+                    "00000000-0000-0000-0000-00000000e702",
+                    &[Normal],
+                    Some(false),
+                )),
+            ),
+            (
+                "00000000-0000-0000-0000-00000000e703",
+                boxed(fault("00000000-0000-0000-0000-00000000e703", &[Reverse], None)),
+            ),
+            (
+                "00000000-0000-0000-0000-00000000e704",
+                boxed(fault(
+                    "00000000-0000-0000-0000-00000000e704",
+                    &[Normal, StrikeMinusSlip],
+                    None,
+                )),
+            ),
         ],
         true,
     );
@@ -353,7 +468,10 @@ fn e07_a_thrust_written_as_the_guide_says_is_uncheckable() {
     let findings = judge(vec![(thrust, boxed(fault(thrust, &[Thrust], Some(false))))], true);
     let found = of(&findings, "trg/is-listric-iff-normal");
     assert_eq!(found.len(), 1, "{findings:?}");
-    assert!(matches!(&found[0].outcome, Outcome::Unverifiable { why } if why.contains("thrust")), "{found:?}");
+    assert!(
+        matches!(&found[0].outcome, Outcome::Unverifiable { why } if why.contains("thrust")),
+        "{found:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -369,14 +487,22 @@ fn collection(uuid: &str, homogeneous: Option<bool>) -> eml23::DataobjectCollect
     }
 }
 
-fn associations(uuid: &str, collection: &str, members: &[(&str, &str)], flag: Option<bool>) -> eml23::CollectionsToDataobjectsAssociationSet {
+fn associations(
+    uuid: &str,
+    collection: &str,
+    members: &[(&str, &str)],
+    flag: Option<bool>,
+) -> eml23::CollectionsToDataobjectsAssociationSet {
     eml23::CollectionsToDataobjectsAssociationSet {
         uuid: uuid.to_string(),
         citation: citation("memberships"),
         single_collection_association: vec![eml23::SingleCollectionAssociation {
             homogeneous_datatype: flag,
             collection: reference("eml23.DataobjectCollection", collection),
-            dataobject: members.iter().map(|(kind, member)| reference(kind, member)).collect(),
+            dataobject: members
+                .iter()
+                .map(|(kind, member)| reference(kind, member))
+                .collect(),
         }],
         ..Default::default()
     }
@@ -399,8 +525,14 @@ fn earth_model(uuid: &str, set: &str) -> resqml22::EarthModelInterpretation {
 /// WellboreInterpretation"*) on the earth model's set.
 #[test]
 fn e08_a_mixed_wellbore_set_is_found_by_its_two_rules_once_each() {
-    let (bad_set, bad_model) = ("00000000-0000-0000-0000-00000000e801", "00000000-0000-0000-0000-00000000e802");
-    let (good_set, good_model) = ("00000000-0000-0000-0000-00000000e811", "00000000-0000-0000-0000-00000000e812");
+    let (bad_set, bad_model) = (
+        "00000000-0000-0000-0000-00000000e801",
+        "00000000-0000-0000-0000-00000000e802",
+    );
+    let (good_set, good_model) = (
+        "00000000-0000-0000-0000-00000000e811",
+        "00000000-0000-0000-0000-00000000e812",
+    );
     let findings = judge(
         vec![
             (bad_set, boxed(collection(bad_set, Some(true)))),
@@ -410,8 +542,14 @@ fn e08_a_mixed_wellbore_set_is_found_by_its_two_rules_once_each() {
                     "00000000-0000-0000-0000-00000000e803",
                     bad_set,
                     &[
-                        ("resqml22.WellboreInterpretation", "00000000-0000-0000-0000-00000000e804"),
-                        ("resqml22.HorizonInterpretation", "00000000-0000-0000-0000-00000000e805"),
+                        (
+                            "resqml22.WellboreInterpretation",
+                            "00000000-0000-0000-0000-00000000e804",
+                        ),
+                        (
+                            "resqml22.HorizonInterpretation",
+                            "00000000-0000-0000-0000-00000000e805",
+                        ),
                     ],
                     None,
                 )),
@@ -424,8 +562,14 @@ fn e08_a_mixed_wellbore_set_is_found_by_its_two_rules_once_each() {
                     "00000000-0000-0000-0000-00000000e813",
                     good_set,
                     &[
-                        ("resqml22.WellboreInterpretation", "00000000-0000-0000-0000-00000000e814"),
-                        ("resqml22.WellboreInterpretation", "00000000-0000-0000-0000-00000000e815"),
+                        (
+                            "resqml22.WellboreInterpretation",
+                            "00000000-0000-0000-0000-00000000e814",
+                        ),
+                        (
+                            "resqml22.WellboreInterpretation",
+                            "00000000-0000-0000-0000-00000000e815",
+                        ),
                     ],
                     Some(true),
                 )),
@@ -439,17 +583,26 @@ fn e08_a_mixed_wellbore_set_is_found_by_its_two_rules_once_each() {
     assert_eq!(homogeneous.len(), 1, "{findings:?}");
     assert_eq!(homogeneous[0].uuid, bad_set);
     let read = read_of(homogeneous[0]);
-    assert!(read.contains("1 WellboreInterpretation") && read.contains("1 HorizonInterpretation"), "{read}");
+    assert!(
+        read.contains("1 WellboreInterpretation") && read.contains("1 HorizonInterpretation"),
+        "{read}"
+    );
 
     let set = of(&findings, "trg/wellbore-interpretation-set-holds-wellbores");
     assert_eq!(set.len(), 1, "{findings:?}");
     assert_eq!(set[0].uuid, bad_model);
     let read = read_of(set[0]);
-    assert!(read.contains("e805") && !read.contains("e804"), "only the stranger is named: {read}");
+    assert!(
+        read.contains("e805") && !read.contains("e804"),
+        "only the stranger is named: {read}"
+    );
 
     // The association of the bad set declares nothing, the good one's is
     // right: the association-level rule has nothing to say here.
-    assert!(of(&findings, "trg/homogeneous-association").is_empty(), "{findings:?}");
+    assert!(
+        of(&findings, "trg/homogeneous-association").is_empty(),
+        "{findings:?}"
+    );
 }
 
 /// The same flag, written on the association itself (Collection.xsd
@@ -465,8 +618,14 @@ fn e08_an_association_claiming_one_type_and_listing_two_is_found_once() {
                 set,
                 "00000000-0000-0000-0000-00000000e822",
                 &[
-                    ("resqml22.WellboreInterpretation", "00000000-0000-0000-0000-00000000e823"),
-                    ("resqml22.HorizonInterpretation", "00000000-0000-0000-0000-00000000e824"),
+                    (
+                        "resqml22.WellboreInterpretation",
+                        "00000000-0000-0000-0000-00000000e823",
+                    ),
+                    (
+                        "resqml22.HorizonInterpretation",
+                        "00000000-0000-0000-0000-00000000e824",
+                    ),
                 ],
                 Some(true),
             )),
@@ -476,7 +635,10 @@ fn e08_an_association_claiming_one_type_and_listing_two_is_found_once() {
     let found = of(&findings, "trg/homogeneous-association");
     assert_eq!(found.len(), 1, "{findings:?}");
     assert_eq!(found[0].uuid, set);
-    assert!(read_of(found[0]).starts_with("SingleCollectionAssociation[0]"), "{found:?}");
+    assert!(
+        read_of(found[0]).starts_with("SingleCollectionAssociation[0]"),
+        "{found:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -509,11 +671,17 @@ fn e05_a_unit_outside_its_kinds_quantity_class_is_a_defect() {
     };
     let package = Package(vec![(uuid.to_string(), boxed(kind))]);
     let resolution = Resolver::new(&package)
-        .resolve(&PropertyKindRef::Object { uuid: uuid.to_string(), title: None })
+        .resolve(&PropertyKindRef::Object {
+            uuid: uuid.to_string(),
+            title: None,
+        })
         .expect("the local kind resolves");
 
     let wrong = property_kind::check(&resolution, Some("g/L"));
-    assert!(matches!(wrong.as_slice(), [KindIssue::UomOutsideQuantityClass { .. }]), "{wrong:?}");
+    assert!(
+        matches!(wrong.as_slice(), [KindIssue::UomOutsideQuantityClass { .. }]),
+        "{wrong:?}"
+    );
     let right = property_kind::check(&resolution, Some("ppm"));
     assert!(right.is_empty(), "{right:?}");
 }

@@ -273,7 +273,12 @@ mod tests {
         assert_eq!(unix_seconds("1970-01-01T00:00:00Z"), Some(0));
         assert_eq!(unix_seconds("2024-02-29T12:30:45Z"), Some(1_709_209_845));
         for seconds in [0, 951_782_400, 1_709_209_845, 1_790_208_000, -86_400] {
-            assert_eq!(unix_seconds(&w3cdtf(seconds)), Some(seconds), "{}", w3cdtf(seconds));
+            assert_eq!(
+                unix_seconds(&w3cdtf(seconds)),
+                Some(seconds),
+                "{}",
+                w3cdtf(seconds)
+            );
         }
         // No zone, a local offset, a nonsense month: not guessed.
         assert_eq!(unix_seconds("2026-09-24T00:00:00"), None);

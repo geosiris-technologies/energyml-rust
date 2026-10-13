@@ -148,8 +148,7 @@ impl Geometry {
                 }
             }
 
-            let (topology, kept_here, dropped_here) =
-                compact_topology(&patch.topology, &keep, cell_base);
+            let (topology, kept_here, dropped_here) = compact_topology(&patch.topology, &keep, cell_base);
             kept_cells.extend(kept_here);
             dropped_cells += dropped_here;
 

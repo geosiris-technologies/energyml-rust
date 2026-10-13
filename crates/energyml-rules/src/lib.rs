@@ -127,9 +127,15 @@ impl AnchorKind {
 
     /// The reverse of [`AnchorKind::as_str`].
     pub fn parse(word: &str) -> Option<Self> {
-        [AnchorKind::Type, AnchorKind::View, AnchorKind::Finding, AnchorKind::Operation, AnchorKind::Diagnostic]
-            .into_iter()
-            .find(|k| k.as_str() == word)
+        [
+            AnchorKind::Type,
+            AnchorKind::View,
+            AnchorKind::Finding,
+            AnchorKind::Operation,
+            AnchorKind::Diagnostic,
+        ]
+        .into_iter()
+        .find(|k| k.as_str() == word)
     }
 }
 
@@ -257,7 +263,9 @@ pub fn in_theme(theme: &str) -> impl Iterator<Item = &'static Rule> + '_ {
 /// The rules anchored at a place — *which rules hold here?* This is the
 /// reverse link the front end and the CLI call. The match is on the exact key.
 pub fn at<'a>(kind: AnchorKind, key: &'a str) -> impl Iterator<Item = &'static Rule> + 'a {
-    RULES.iter().filter(move |r| r.at.iter().any(|a| a.kind == kind && a.key == key))
+    RULES
+        .iter()
+        .filter(move |r| r.at.iter().any(|a| a.kind == kind && a.key == key))
 }
 
 /// The rules that replace `id` — read a `superseded` rule beside what
@@ -301,7 +309,12 @@ pub struct Localised {
     pub fallback: bool,
 }
 
-fn pick(rule: &Rule, lang: &str, field: fn(&Translation) -> Option<&'static str>, english: &'static str) -> Text {
+fn pick(
+    rule: &Rule,
+    lang: &str,
+    field: fn(&Translation) -> Option<&'static str>,
+    english: &'static str,
+) -> Text {
     if lang != "en" {
         if let Some(t) = TRANSLATIONS.iter().find(|t| t.id == rule.id && t.lang == lang) {
             if let Some(value) = field(t) {
@@ -309,7 +322,10 @@ fn pick(rule: &Rule, lang: &str, field: fn(&Translation) -> Option<&'static str>
             }
         }
     }
-    Text { value: english, lang: "en" }
+    Text {
+        value: english,
+        lang: "en",
+    }
 }
 
 /// A rule's texts in `lang`, English where it is not translated, and the
@@ -319,17 +335,28 @@ pub fn text_in(rule: &Rule, lang: &str) -> Localised {
     let text = pick(rule, lang, |t| t.text, rule.text);
     let why = pick(rule, lang, |t| t.why, rule.why);
     let fallback = lang != "en" && [title, text, why].iter().any(|t| t.lang == "en");
-    Localised { title, text, why, fallback }
+    Localised {
+        title,
+        text,
+        why,
+        fallback,
+    }
 }
 
 /// A theme's title in `lang`, English where it is not translated.
 pub fn theme_title(theme: &Theme, lang: &str) -> Text {
     if lang != "en" {
-        if let Some(t) = THEME_TRANSLATIONS.iter().find(|t| t.id == theme.id && t.lang == lang) {
+        if let Some(t) = THEME_TRANSLATIONS
+            .iter()
+            .find(|t| t.id == theme.id && t.lang == lang)
+        {
             if let Some(value) = t.title {
                 return Text { value, lang: t.lang };
             }
         }
     }
-    Text { value: theme.title, lang: "en" }
+    Text {
+        value: theme.title,
+        lang: "en",
+    }
 }

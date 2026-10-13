@@ -111,7 +111,9 @@ use energyml_witsml_2_1 as witsml;
 
 use crate::crs::FrameKind;
 use crate::declare::{Choice, Inputs, ObjectIn, Params, Shape};
-use crate::operation::{About, ActivityDraft, Category, Context, Made, Need, NewObject, Note, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Made, Need, NewObject, Note, Operation, Plan, Refusal, Slot,
+};
 use crate::pieces::Ref;
 
 use super::support;
@@ -194,7 +196,12 @@ pub struct WitsmlWellsInputs {
     /// **Left empty, every frame of the package.** A sidetrack and its parent
     /// must come in the same run: which wellbore leaves which is read between
     /// them.
-    #[input(least = 1, topology = "polylines", types = "resqml22.WellboreFrameRepresentation", every)]
+    #[input(
+        least = 1,
+        topology = "polylines",
+        types = "resqml22.WellboreFrameRepresentation",
+        every
+    )]
     pub frames: Vec<Shape>,
     /// the ProjectedCrs the frames' compound is built on — given, each Well is located in it too
     #[input(types = "eml23.ProjectedCrs")]
@@ -294,25 +301,40 @@ fn dor(one: &Ref) -> eml::DataObjectReference {
 }
 
 fn metres(value: f64) -> eml::LengthMeasure {
-    eml::LengthMeasure { value, uom: eml::LengthUom::M }
+    eml::LengthMeasure {
+        value,
+        uom: eml::LengthUom::M,
+    }
 }
 
 /// A measured depth, in metres, from the datum its object names by default.
 fn measured(value: f64) -> eml::MeasuredDepth {
-    eml::MeasuredDepth { measured_depth: eml::LengthMeasureExt { value, uom: eml::LengthUomExt::M }, datum: None }
+    eml::MeasuredDepth {
+        measured_depth: eml::LengthMeasureExt {
+            value,
+            uom: eml::LengthUomExt::M,
+        },
+        datum: None,
+    }
 }
 
 /// A vertical depth below the datum its object names by default.
 fn vertical_depth(value: f64) -> eml::AbstractVerticalDepth {
     eml::AbstractVerticalDepth::DatumVerticalDepth(eml::DatumVerticalDepth {
-        vertical_depth: eml::LengthMeasureExt { value, uom: eml::LengthUomExt::M },
+        vertical_depth: eml::LengthMeasureExt {
+            value,
+            uom: eml::LengthUomExt::M,
+        },
         trajectory: None,
         datum: None,
     })
 }
 
 fn degrees(value: f64) -> eml::PlaneAngleMeasure {
-    eml::PlaneAngleMeasure { value, uom: eml::PlaneAngleUom::Dega }
+    eml::PlaneAngleMeasure {
+        value,
+        uom: eml::PlaneAngleUom::Dega,
+    }
 }
 
 /// A node, located in the frame the RESQML geometry is in.
@@ -335,7 +357,10 @@ fn located(node: &Node, head: &Head) -> eml::AbstractPosition {
 /// A frame, or the refusal that says what it lacks.
 fn read_frame(one: &Shape) -> Result<Read, Refusal> {
     let known = one.known.as_ref();
-    let name = known.and_then(|k| k.reference.as_ref()).map(|r| r.title.clone()).unwrap_or_else(|| one.name.clone());
+    let name = known
+        .and_then(|k| k.reference.as_ref())
+        .map(|r| r.title.clone())
+        .unwrap_or_else(|| one.name.clone());
     let refuse = |why: String| Refusal::on("frames", why);
     let Some(known) = known else {
         return Err(refuse(format!(
@@ -345,7 +370,12 @@ fn read_frame(one: &Shape) -> Result<Read, Refusal> {
     let mds = known.node_mds.as_deref().ok_or_else(|| {
         refuse(format!("`{name}` states no measured depth for its nodes — it is no wellbore frame, or this build cannot read its arrays"))
     })?;
-    let points: Vec<[f64; 3]> = one.geometry.patches.iter().flat_map(|patch| patch.points.iter().copied()).collect();
+    let points: Vec<[f64; 3]> = one
+        .geometry
+        .patches
+        .iter()
+        .flat_map(|patch| patch.points.iter().copied())
+        .collect();
     if points.len() != mds.len() {
         return Err(refuse(format!(
             "`{name}` has {} node(s) and {} measured depth(s): each node is where its depth is",
@@ -354,26 +384,47 @@ fn read_frame(one: &Shape) -> Result<Read, Refusal> {
         )));
     }
     if mds.len() < 2 {
-        return Err(refuse(format!("`{name}` has {} node(s): a trajectory is two stations at least", mds.len())));
+        return Err(refuse(format!(
+            "`{name}` has {} node(s): a trajectory is two stations at least",
+            mds.len()
+        )));
     }
-    if let Some(at) = mds.iter().zip(&points).position(|(md, place)| !md.is_finite() || place.iter().any(|v| !v.is_finite())) {
-        return Err(refuse(format!("node {} of `{name}` has a measured depth or a position that is not a number", at + 1)));
+    if let Some(at) = mds
+        .iter()
+        .zip(&points)
+        .position(|(md, place)| !md.is_finite() || place.iter().any(|v| !v.is_finite()))
+    {
+        return Err(refuse(format!(
+            "node {} of `{name}` has a measured depth or a position that is not a number",
+            at + 1
+        )));
     }
     if let Some(at) = mds.windows(2).position(|pair| pair[1] <= pair[0]) {
-        return Err(refuse(format!("the measured depths of `{name}` do not increase at node {}: {} then {}", at + 2, mds[at], mds[at + 1])));
+        return Err(refuse(format!(
+            "the measured depths of `{name}` do not increase at node {}: {} then {}",
+            at + 2,
+            mds[at],
+            mds[at + 1]
+        )));
     }
     let interpretation = known.interpretation.clone().ok_or_else(|| {
         refuse(format!("`{name}` represents no interpretation: a WITSML Wellbore is the RESQML wellbore a frame represents"))
     })?;
     let trajectory = known.trajectory.clone().ok_or_else(|| {
-        refuse(format!("`{name}` names no trajectory: the stations of a WITSML trajectory are those of a RESQML one"))
+        refuse(format!(
+            "`{name}` names no trajectory: the stations of a WITSML trajectory are those of a RESQML one"
+        ))
     })?;
     let datum = known.datum.clone().ok_or_else(|| {
         refuse(format!(
             "`{name}` names no datum through its trajectory — a WITSML Well is the head its wellbores are measured from, and the datum is where the package says that head is (RESQML 2.2 Wells.xsd, `MdInterval.Datum`)"
         ))
     })?;
-    let crs = known.crs.clone().ok_or_else(|| refuse(format!("`{name}` names no coordinate system: where its stations are cannot be said")))?;
+    let crs = known.crs.clone().ok_or_else(|| {
+        refuse(format!(
+            "`{name}` names no coordinate system: where its stations are cannot be said"
+        ))
+    })?;
     let kind = match crate::crs::frame_kind(&crs.qualified_type) {
         Ok(FrameKind::Geographic) => {
             return Err(refuse(format!(
@@ -399,9 +450,15 @@ fn read_frame(one: &Shape) -> Result<Read, Refusal> {
     if let Some(uom) = known.vertical_uom.as_deref()
         && uom != "m"
     {
-        return Err(refuse(format!("`{name}` counts its vertical axis in `{uom}`, and the stations are written in metres")));
+        return Err(refuse(format!(
+            "`{name}` counts its vertical axis in `{uom}`, and the stations are written in metres"
+        )));
     }
-    let nodes = mds.iter().zip(&points).map(|(&md, &at)| Node { md, at }).collect();
+    let nodes = mds
+        .iter()
+        .zip(&points)
+        .map(|(&md, &at)| Node { md, at })
+        .collect();
     Ok(Read {
         name,
         interpretation,
@@ -420,7 +477,11 @@ fn read_frame(one: &Shape) -> Result<Read, Refusal> {
 /// both place must be one point.
 fn merge(traj: &mut Traj, one: &Read) -> Result<(), Refusal> {
     for node in &one.nodes {
-        let held = traj.nodes.iter().find(|held| held.md == node.md).map(|held| held.at);
+        let held = traj
+            .nodes
+            .iter()
+            .find(|held| held.md == node.md)
+            .map(|held| held.at);
         match held {
             Some(at) if distance(at, node.at) > SAME_NODE => {
                 return Err(Refusal::on(
@@ -448,7 +509,10 @@ fn gather(read: &[Read]) -> Result<Gathered, Refusal> {
     let mut bores: Vec<Bore> = Vec::new();
     let mut trajs: Vec<Traj> = Vec::new();
     for one in read {
-        let h = match heads.iter().position(|head| same(&head.datum.uuid, &one.datum.uuid)) {
+        let h = match heads
+            .iter()
+            .position(|head| same(&head.datum.uuid, &one.datum.uuid))
+        {
             Some(h) => {
                 let head = &mut heads[h];
                 if !same(&head.crs.uuid, &one.crs.uuid) || head.up != one.up {
@@ -477,7 +541,10 @@ fn gather(read: &[Read]) -> Result<Gathered, Refusal> {
                 heads.len() - 1
             }
         };
-        let b = match bores.iter().position(|bore| same(&bore.interpretation.uuid, &one.interpretation.uuid)) {
+        let b = match bores
+            .iter()
+            .position(|bore| same(&bore.interpretation.uuid, &one.interpretation.uuid))
+        {
             Some(b) if bores[b].head != h => {
                 return Err(Refusal::on(
                     "frames",
@@ -493,21 +560,37 @@ fn gather(read: &[Read]) -> Result<Gathered, Refusal> {
                     "" => stem(&one.name).to_string(),
                     found => found.to_string(),
                 };
-                bores.push(Bore { interpretation: one.interpretation.clone(), name, head: h, trajectories: Vec::new(), parent: None });
+                bores.push(Bore {
+                    interpretation: one.interpretation.clone(),
+                    name,
+                    head: h,
+                    trajectories: Vec::new(),
+                    parent: None,
+                });
                 heads[h].bores.push(bores.len() - 1);
                 bores.len() - 1
             }
         };
-        match trajs.iter().position(|traj| same(&traj.reference.uuid, &one.trajectory.uuid)) {
+        match trajs
+            .iter()
+            .position(|traj| same(&traj.reference.uuid, &one.trajectory.uuid))
+        {
             Some(t) if trajs[t].bore != b => {
                 return Err(Refusal::on(
                     "frames",
-                    format!("`{}` samples `{}`, which another frame gives to another wellbore", one.name, one.trajectory.title),
+                    format!(
+                        "`{}` samples `{}`, which another frame gives to another wellbore",
+                        one.name, one.trajectory.title
+                    ),
                 ));
             }
             Some(t) => merge(&mut trajs[t], one)?,
             None => {
-                trajs.push(Traj { reference: one.trajectory.clone(), bore: b, nodes: one.nodes.clone() });
+                trajs.push(Traj {
+                    reference: one.trajectory.clone(),
+                    bore: b,
+                    nodes: one.nodes.clone(),
+                });
                 bores[b].trajectories.push(trajs.len() - 1);
             }
         }
@@ -521,7 +604,10 @@ fn start_of(bore: &Bore, trajs: &[Traj]) -> Node {
         .iter()
         .map(|&t| trajs[t].nodes[0])
         .min_by(|a, b| a.md.total_cmp(&b.md))
-        .unwrap_or(Node { md: f64::INFINITY, at: [f64::NAN; 3] })
+        .unwrap_or(Node {
+            md: f64::INFINITY,
+            at: [f64::NAN; 3],
+        })
 }
 
 /// Where a path of nodes is at `md` — between two of its nodes, on the
@@ -536,7 +622,11 @@ fn on_path(nodes: &[Node], md: f64) -> Option<[f64; 3]> {
     let at = nodes.windows(2).position(|pair| md <= pair[1].md)?;
     let (a, b) = (nodes[at], nodes[at + 1]);
     let f = (md - a.md) / (b.md - a.md);
-    Some([a.at[0] + f * (b.at[0] - a.at[0]), a.at[1] + f * (b.at[1] - a.at[1]), a.at[2] + f * (b.at[2] - a.at[2])])
+    Some([
+        a.at[0] + f * (b.at[0] - a.at[0]),
+        a.at[1] + f * (b.at[1] - a.at[1]),
+        a.at[2] + f * (b.at[2] - a.at[2]),
+    ])
 }
 
 /// Which wellbore of a head leaves which — see the module.
@@ -553,7 +643,11 @@ fn sidetracks(heads: &[Head], bores: &mut [Bore], trajs: &[Traj]) -> Result<(), 
                     if let Some(on) = on_path(&trajs[t].nodes, start.md)
                         && distance(on, start.at) <= ON_PARENT
                     {
-                        found.push(Kickoff { bore: a, trajectory: t, md: start.md });
+                        found.push(Kickoff {
+                            bore: a,
+                            trajectory: t,
+                            md: start.md,
+                        });
                     }
                 }
             }
@@ -561,7 +655,10 @@ fn sidetracks(heads: &[Head], bores: &mut [Bore], trajs: &[Traj]) -> Result<(), 
                 [] => {}
                 [one] => bores[b].parent = Some(*one),
                 many => {
-                    let named: Vec<String> = many.iter().map(|k| format!("`{}`", trajs[k.trajectory].reference.title)).collect();
+                    let named: Vec<String> = many
+                        .iter()
+                        .map(|k| format!("`{}`", trajs[k.trajectory].reference.title))
+                        .collect();
                     return Err(Refusal::on(
                         "frames",
                         format!(
@@ -575,8 +672,12 @@ fn sidetracks(heads: &[Head], bores: &mut [Bore], trajs: &[Traj]) -> Result<(), 
                 }
             }
         }
-        let roots: Vec<String> =
-            head.bores.iter().filter(|&&b| bores[b].parent.is_none()).map(|&b| format!("`{}`", bores[b].name)).collect();
+        let roots: Vec<String> = head
+            .bores
+            .iter()
+            .filter(|&&b| bores[b].parent.is_none())
+            .map(|&b| format!("`{}`", bores[b].name))
+            .collect();
         if roots.len() != 1 {
             return Err(Refusal::on(
                 "frames",
@@ -593,7 +694,11 @@ fn sidetracks(heads: &[Head], bores: &mut [Bore], trajs: &[Traj]) -> Result<(), 
 
 /// What makes a trajectory what it is: its depths and its places.
 fn content(nodes: &[Node]) -> String {
-    nodes.iter().map(|n| format!("{:?}@{:?},{:?},{:?}", n.md, n.at[0], n.at[1], n.at[2])).collect::<Vec<_>>().join(";")
+    nodes
+        .iter()
+        .map(|n| format!("{:?}@{:?},{:?},{:?}", n.md, n.at[0], n.at[1], n.at[2]))
+        .collect::<Vec<_>>()
+        .join(";")
 }
 
 /// The stations of one trajectory, read as a survey.
@@ -602,7 +707,10 @@ fn survey_of(nodes: &[Node], head: &Head) -> Surveyed {
     // axis, or the opposite of it when it counts up.
     let points: Vec<Point> = nodes
         .iter()
-        .map(|n| Point { md: n.md, at: [n.at[1], n.at[0], if head.up { -n.at[2] } else { n.at[2] }] })
+        .map(|n| Point {
+            md: n.md,
+            at: [n.at[1], n.at[0], if head.up { -n.at[2] } else { n.at[2] }],
+        })
         .collect();
     let directions = survey::directions(&points).map_err(|why| why.to_string());
     let datum_at = nodes.iter().position(|n| n.md == 0.0);
@@ -617,19 +725,31 @@ fn survey_of(nodes: &[Node], head: &Head) -> Surveyed {
         (_, Some(_), None) => North::Plant("the package does not place its datum in the projected system".to_string()),
         (_, None, _) => North::Plant("its first station is below its datum, so its axes cannot be checked against the projected system".to_string()),
     };
-    Surveyed { directions, datum_at, offsets, north }
+    Surveyed {
+        directions,
+        datum_at,
+        offsets,
+        north,
+    }
 }
 
 /// A list of names, in words.
 fn listed(names: &[String]) -> String {
-    names.iter().map(|one| format!("`{one}`")).collect::<Vec<_>>().join(", ")
+    names
+        .iter()
+        .map(|one| format!("`{one}`"))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// The seed a WITSML `Wellbore`'s uuid is derived from: the RESQML wellbore
 /// interpretation it stands for. The one formula — `witsml-logs` references
 /// the same Wellbore without writing it, and recomputes its uuid from here.
 pub(crate) fn wellbore_seed(interpretation_uuid: &str) -> String {
-    format!("witsml-wells:wellbore:{}", interpretation_uuid.to_ascii_lowercase())
+    format!(
+        "witsml-wells:wellbore:{}",
+        interpretation_uuid.to_ascii_lowercase()
+    )
 }
 
 impl Operation for WitsmlWells {
@@ -648,25 +768,63 @@ impl Operation for WitsmlWells {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        let number = || Need::Number { uom: None, least: None, most: None };
+        let number = || Need::Number {
+            uom: None,
+            least: None,
+            most: None,
+        };
         vec![
-            Slot::required("wellCount", number(), "Well objects written — one per datum the wellbores are measured from"),
-            Slot::required("wellboreCount", number(), "Wellbore objects written — one per RESQML wellbore interpretation"),
-            Slot::required("trajectoryCount", number(), "Trajectory objects written — one per RESQML trajectory"),
-            Slot::required("stationCount", number(), "trajectory stations written, over every trajectory"),
-            Slot::required("sidetrackCount", number(), "wellbores written as the sidetrack of another"),
+            Slot::required(
+                "wellCount",
+                number(),
+                "Well objects written — one per datum the wellbores are measured from",
+            ),
+            Slot::required(
+                "wellboreCount",
+                number(),
+                "Wellbore objects written — one per RESQML wellbore interpretation",
+            ),
+            Slot::required(
+                "trajectoryCount",
+                number(),
+                "Trajectory objects written — one per RESQML trajectory",
+            ),
+            Slot::required(
+                "stationCount",
+                number(),
+                "trajectory stations written, over every trajectory",
+            ),
+            Slot::required(
+                "sidetrackCount",
+                number(),
+                "wellbores written as the sidetrack of another",
+            ),
         ]
     }
 
-    fn plan(&self, inputs: WitsmlWellsInputs, params: WitsmlWellsParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: WitsmlWellsInputs,
+        params: WitsmlWellsParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         if inputs.frames.is_empty() {
-            return Err(Refusal::on("frames", "it takes wellbore frames; the input holds none, and the package gives none either"));
+            return Err(Refusal::on(
+                "frames",
+                "it takes wellbore frames; the input holds none, and the package gives none either",
+            ));
         }
         for (slot, text) in [("country", &params.country), ("basin", &params.basin)] {
             if let Some(text) = text
                 && text.chars().count() > SHORT_TEXT
             {
-                return Err(Refusal::on(slot, format!("holds {} characters, and the schema caps it at {SHORT_TEXT} (Well.xsd, String64)", text.chars().count())));
+                return Err(Refusal::on(
+                    slot,
+                    format!(
+                        "holds {} characters, and the schema caps it at {SHORT_TEXT} (Well.xsd, String64)",
+                        text.chars().count()
+                    ),
+                ));
             }
         }
 
@@ -676,15 +834,27 @@ impl Operation for WitsmlWells {
             None => None,
             Some(one) => {
                 let Some(reference) = one.known.reference.clone() else {
-                    return Err(Refusal::on("projected", format!("`{}` was given without a reference to write", one.name)));
+                    return Err(Refusal::on(
+                        "projected",
+                        format!("`{}` was given without a reference to write", one.name),
+                    ));
                 };
                 if crate::crs::frame_kind(&reference.qualified_type) != Ok(FrameKind::Projected) {
-                    return Err(Refusal::on("projected", format!("`{}` is a `{}`, not a ProjectedCrs", reference.title, reference.qualified_type)));
+                    return Err(Refusal::on(
+                        "projected",
+                        format!(
+                            "`{}` is a `{}`, not a ProjectedCrs",
+                            reference.title, reference.qualified_type
+                        ),
+                    ));
                 }
                 let Some(code) = one.known.crs_epsg else {
                     return Err(Refusal::on(
                         "projected",
-                        format!("`{}` names no EPSG code, so whether the wells' heads are in it cannot be told", reference.title),
+                        format!(
+                            "`{}` names no EPSG code, so whether the wells' heads are in it cannot be told",
+                            reference.title
+                        ),
                     ));
                 };
                 Some((reference, code))
@@ -694,7 +864,10 @@ impl Operation for WitsmlWells {
             None => None,
             Some(one) => {
                 let Some(reference) = one.known.reference.clone() else {
-                    return Err(Refusal::on("target", format!("`{}` was given without a reference to write", one.name)));
+                    return Err(Refusal::on(
+                        "target",
+                        format!("`{}` was given without a reference to write", one.name),
+                    ));
                 };
                 // “Pointer to a RESQML GeologicUnitInterpretation” (WITSML
                 // 2.1 Wellbore.xsd) — which a stratigraphic and a rock-fluid
@@ -702,7 +875,10 @@ impl Operation for WitsmlWells {
                 if !reference.qualified_type.ends_with("UnitInterpretation") {
                     return Err(Refusal::on(
                         "target",
-                        format!("`{}` is a `{}`, and a wellbore's target is a RESQML geologic unit interpretation", reference.title, reference.qualified_type),
+                        format!(
+                            "`{}` is a `{}`, and a wellbore's target is a RESQML geologic unit interpretation",
+                            reference.title, reference.qualified_type
+                        ),
                     ));
                 }
                 Some(reference)
@@ -714,7 +890,11 @@ impl Operation for WitsmlWells {
         sidetracks(&heads, &mut bores, &trajs)?;
         // Parents before their sidetracks: a parent starts higher.
         for head in &mut heads {
-            head.bores.sort_by(|&a, &b| start_of(&bores[a], &trajs).md.total_cmp(&start_of(&bores[b], &trajs).md));
+            head.bores.sort_by(|&a, &b| {
+                start_of(&bores[a], &trajs)
+                    .md
+                    .total_cmp(&start_of(&bores[b], &trajs).md)
+            });
         }
         if let Some((reference, code)) = &projected {
             for head in &heads {
@@ -742,7 +922,11 @@ impl Operation for WitsmlWells {
                     let nodes = match bores[b].parent {
                         Some(k) if own[0].md == k.md => {
                             tie[t] = Some(k);
-                            let mut all: Vec<Node> = composite[k.trajectory].iter().copied().filter(|n| n.md < k.md).collect();
+                            let mut all: Vec<Node> = composite[k.trajectory]
+                                .iter()
+                                .copied()
+                                .filter(|n| n.md < k.md)
+                                .collect();
                             all.extend(own.iter().copied());
                             all
                         }
@@ -752,8 +936,11 @@ impl Operation for WitsmlWells {
                 }
             }
         }
-        let surveyed: Vec<Surveyed> =
-            trajs.iter().enumerate().map(|(t, traj)| survey_of(&composite[t], &heads[bores[traj.bore].head])).collect();
+        let surveyed: Vec<Surveyed> = trajs
+            .iter()
+            .enumerate()
+            .map(|(t, traj)| survey_of(&composite[t], &heads[bores[traj.bore].head]))
+            .collect();
 
         // -- identity: the head, the interpretation, the stations ------------
         let mut rank = 0usize;
@@ -761,8 +948,11 @@ impl Operation for WitsmlWells {
         let mut bore_uuid = vec![String::new(); bores.len()];
         let mut traj_uuid = vec![String::new(); trajs.len()];
         for (h, head) in heads.iter().enumerate() {
-            well_uuid[h] =
-                support::next_uuid(cx.identity, &format!("witsml-wells:well:{}", head.datum.uuid.to_ascii_lowercase()), &mut rank)?;
+            well_uuid[h] = support::next_uuid(
+                cx.identity,
+                &format!("witsml-wells:well:{}", head.datum.uuid.to_ascii_lowercase()),
+                &mut rank,
+            )?;
             for &b in &head.bores {
                 bore_uuid[b] = support::next_uuid(
                     cx.identity,
@@ -772,7 +962,11 @@ impl Operation for WitsmlWells {
                 for &t in &bores[b].trajectories {
                     traj_uuid[t] = support::next_uuid(
                         cx.identity,
-                        &format!("witsml-wells:trajectory:{}:{}", trajs[t].reference.uuid.to_ascii_lowercase(), content(&composite[t])),
+                        &format!(
+                            "witsml-wells:trajectory:{}:{}",
+                            trajs[t].reference.uuid.to_ascii_lowercase(),
+                            content(&composite[t])
+                        ),
                         &mut rank,
                     )?;
                 }
@@ -781,7 +975,8 @@ impl Operation for WitsmlWells {
 
         // -- what every object carries ---------------------------------------
         let existence = params.existence.map(Existence::written);
-        let citation = |title: &str, of: &str| eml::Citation {
+        let citation = |title: &str, of: &str| {
+            eml::Citation {
             title: title.to_string(),
             originator: cx.when.originator.clone(),
             creation: cx.when.creation.clone(),
@@ -790,6 +985,7 @@ impl Operation for WitsmlWells {
                 format!("Synthetic: the WITSML side of the RESQML wellbore `{of}`, which is invented — not a measured well.")
             }),
             ..Default::default()
+        }
         };
         let mark = || -> Vec<eml::ExtensionNameValue> {
             if !params.synthetic {
@@ -797,8 +993,14 @@ impl Operation for WitsmlWells {
             }
             vec![eml::ExtensionNameValue {
                 name: "synthetic".to_string(),
-                value: eml::StringMeasure { value: "true".to_string(), uom: None },
-                description: Some("written by `witsml-wells` from a RESQML wellbore declared invented, not measured".to_string()),
+                value: eml::StringMeasure {
+                    value: "true".to_string(),
+                    uom: None,
+                },
+                description: Some(
+                    "written by `witsml-wells` from a RESQML wellbore declared invented, not measured"
+                        .to_string(),
+                ),
                 ..Default::default()
             }]
         };
@@ -820,12 +1022,20 @@ impl Operation for WitsmlWells {
                 .iter()
                 .flat_map(|&b| bores[b].trajectories.iter())
                 .find_map(|&t| surveyed[t].datum_at.map(|at| composite[t][at]));
-            let mut surface: Vec<eml::AbstractPosition> = datum_node.iter().map(|node| located(node, head)).collect();
+            let mut surface: Vec<eml::AbstractPosition> =
+                datum_node.iter().map(|node| located(node, head)).collect();
             let informational = match (&projected, head.wellhead, head.epsg) {
                 (Some((reference, _)), Some(w), Some(_)) => {
-                    let position = eml::Projected2dPosition { coordinate1: w[0], coordinate2: w[1], projected_crs: dor(reference) };
+                    let position = eml::Projected2dPosition {
+                        coordinate1: w[0],
+                        coordinate2: w[1],
+                        projected_crs: dor(reference),
+                    };
                     // A frame that is itself that system has said it already.
-                    if !(head.kind == FrameKind::Projected && same(&head.crs.uuid, &reference.uuid) && datum_node.is_some()) {
+                    if !(head.kind == FrameKind::Projected
+                        && same(&head.crs.uuid, &reference.uuid)
+                        && datum_node.is_some())
+                    {
                         surface.push(eml::AbstractPosition::Projected2dPosition(position.clone()));
                     }
                     Some(position)
@@ -866,7 +1076,10 @@ impl Operation for WitsmlWells {
                     .iter()
                     .map(|&t| {
                         let last = composite[t].len() - 1;
-                        (composite[t][last].md, surveyed[t].offsets.as_ref().map(|all| all[last].tvd))
+                        (
+                            composite[t][last].md,
+                            surveyed[t].offsets.as_ref().map(|all| all[last].tvd),
+                        )
                     })
                     .max_by(|a, b| a.0.total_cmp(&b.0));
                 let kickoff_tvd = bore.parent.and_then(|k| {
@@ -883,9 +1096,9 @@ impl Operation for WitsmlWells {
                     schema_version: "2.1".to_string(),
                     active_status: eml::ActiveStatusKind::Inactive,
                     well: crate::crs::reference_to(&well_uuid[h], "witsml21.Well", &well_title),
-                    parent_wellbore: bore
-                        .parent
-                        .map(|k| crate::crs::reference_to(&bore_uuid[k.bore], "witsml21.Wellbore", &bores[k.bore].name)),
+                    parent_wellbore: bore.parent.map(|k| {
+                        crate::crs::reference_to(&bore_uuid[k.bore], "witsml21.Wellbore", &bores[k.bore].name)
+                    }),
                     type_wellbore: bore.parent.map(|_| witsml::WellboreType::Sidetrack),
                     md_kickoff: bore.parent.map(|k| measured(k.md)),
                     tvd_kickoff: kickoff_tvd.map(vertical_depth),
@@ -936,15 +1149,18 @@ impl Operation for WitsmlWells {
                                 } else {
                                     witsml::TrajStationType::NEAndTVD
                                 },
-                                calc_algorithm: direction.map(|_| witsml::TrajStnCalcAlgorithm::MinimumCurvature),
+                                calc_algorithm: direction
+                                    .map(|_| witsml::TrajStnCalcAlgorithm::MinimumCurvature),
                                 tvd: offset.map(|o| vertical_depth(o.tvd)),
                                 incl: direction.map(|d| degrees(d.inclination)),
                                 azi: direction.and_then(|d| d.azimuth).map(degrees),
                                 disp_ns: offset.map(|o| metres(o.north)),
                                 disp_ew: offset.map(|o| metres(o.east)),
-                                dls: direction.and_then(|d| d.dogleg_severity).map(|value| eml::AnglePerLengthMeasure {
-                                    value,
-                                    uom: eml::AnglePerLengthUom::V1Per30DegaPerM,
+                                dls: direction.and_then(|d| d.dogleg_severity).map(|value| {
+                                    eml::AnglePerLengthMeasure {
+                                        value,
+                                        uom: eml::AnglePerLengthUom::V1Per30DegaPerM,
+                                    }
                                 }),
                                 location: vec![located(node, head)],
                                 ..Default::default()
@@ -989,17 +1205,23 @@ impl Operation for WitsmlWells {
                             datum: Some(dor(&head.datum)),
                         }),
                         // Surface to bottom, and the only one of its hole.
-                        definitive: (read_back.datum_at == Some(0) && bore.trajectories.len() == 1).then_some(true),
+                        definitive: (read_back.datum_at == Some(0) && bore.trajectories.len() == 1)
+                            .then_some(true),
                         default_md_datum: Some(dor(&head.datum)),
                         default_tvd_datum: Some(dor(&head.datum)),
                         parent_trajectory: tie[t].map(|k| {
-                            crate::crs::reference_to(&traj_uuid[k.trajectory], "witsml21.Trajectory", &trajs[k.trajectory].reference.title)
+                            crate::crs::reference_to(
+                                &traj_uuid[k.trajectory],
+                                "witsml21.Trajectory",
+                                &trajs[k.trajectory].reference.title,
+                            )
                         }),
                         md_tie_on: kickoff.map(measured),
                         trajectory_station: stations,
                         wellbore: crate::crs::reference_to(&bore_uuid[b], "witsml21.Wellbore", &bore.name),
                         acquisition_remark: Some(remark),
-                        nominal_calc_algorithm: angles.map(|_| witsml::TrajStnCalcAlgorithmExt::MinimumCurvature),
+                        nominal_calc_algorithm: angles
+                            .map(|_| witsml::TrajStnCalcAlgorithmExt::MinimumCurvature),
                         nominal_type_traj_station: Some(witsml::TrajStationTypeExt::NEAndTVD),
                         azi_ref: Some(match read_back.north {
                             North::Grid => eml::NorthReferenceKind::GridNorth,
@@ -1018,8 +1240,15 @@ impl Operation for WitsmlWells {
                     let line: Vec<[f64; 3]> = nodes.iter().map(|n| n.at).collect();
                     let count = line.len() as u32;
                     // One root per trajectory, each its own id in the plan.
-                    let root = support::made_root(&title, &traj_uuid[t], support::one_patch("polyline", line, Topology::Polylines(vec![count])));
-                    shapes.push(Made { id: shapes.len().to_string(), ..root });
+                    let root = support::made_root(
+                        &title,
+                        &traj_uuid[t],
+                        support::one_patch("polyline", line, Topology::Polylines(vec![count])),
+                    );
+                    shapes.push(Made {
+                        id: shapes.len().to_string(),
+                        ..root
+                    });
                 }
             }
         }
@@ -1046,7 +1275,10 @@ impl Operation for WitsmlWells {
                 ),
             });
         }
-        let derived: Vec<String> = (0..trajs.len()).filter(|&t| surveyed[t].directions.is_ok()).map(name_of).collect();
+        let derived: Vec<String> = (0..trajs.len())
+            .filter(|&t| surveyed[t].directions.is_ok())
+            .map(name_of)
+            .collect();
         if !derived.is_empty() {
             says.push(Note {
                 key: "angles",
@@ -1060,7 +1292,10 @@ impl Operation for WitsmlWells {
             if let Err(why) = &one.directions {
                 says.push(Note {
                     key: "angles-not-derived",
-                    detail: format!("`{}` keeps its stations and gets no inclination or azimuth: {why}", name_of(t)),
+                    detail: format!(
+                        "`{}` keeps its stations and gets no inclination or azimuth: {why}",
+                        name_of(t)
+                    ),
                 });
             }
         }
@@ -1075,7 +1310,10 @@ impl Operation for WitsmlWells {
                 detail: format!("{vertical} station(s) where the hole is vertical are written with no azimuth: a vertical hole has none"),
             });
         }
-        let from_below: Vec<String> = (0..trajs.len()).filter(|&t| surveyed[t].datum_at.is_none()).map(name_of).collect();
+        let from_below: Vec<String> = (0..trajs.len())
+            .filter(|&t| surveyed[t].datum_at.is_none())
+            .map(name_of)
+            .collect();
         if !from_below.is_empty() {
             says.push(Note {
                 key: "no-datum-station",
@@ -1085,7 +1323,11 @@ impl Operation for WitsmlWells {
                 ),
             });
         }
-        let several: Vec<String> = bores.iter().filter(|bore| bore.trajectories.len() > 1).map(|bore| bore.name.clone()).collect();
+        let several: Vec<String> = bores
+            .iter()
+            .filter(|bore| bore.trajectories.len() > 1)
+            .map(|bore| bore.name.clone())
+            .collect();
         if !several.is_empty() {
             says.push(Note {
                 key: "several-trajectories",
@@ -1095,15 +1337,24 @@ impl Operation for WitsmlWells {
                 ),
             });
         }
-        let grid: Vec<String> = (0..trajs.len()).filter(|&t| matches!(surveyed[t].north, North::Grid)).map(name_of).collect();
+        let grid: Vec<String> = (0..trajs.len())
+            .filter(|&t| matches!(surveyed[t].north, North::Grid))
+            .map(name_of)
+            .collect();
         if !grid.is_empty() {
-            says.push(Note { key: "grid-north", detail: format!("azimuths from grid north: {}", listed(&grid)) });
+            says.push(Note {
+                key: "grid-north",
+                detail: format!("azimuths from grid north: {}", listed(&grid)),
+            });
         }
         for (t, one) in surveyed.iter().enumerate() {
             if let North::Plant(why) = &one.north {
                 says.push(Note {
                     key: "plant-north",
-                    detail: format!("`{}` has its azimuths from its frame's own north (plant north): {why}", name_of(t)),
+                    detail: format!(
+                        "`{}` has its azimuths from its frame's own north (plant north): {why}",
+                        name_of(t)
+                    ),
                 });
             }
         }
@@ -1115,7 +1366,10 @@ impl Operation for WitsmlWells {
                 .collect();
             says.push(Note {
                 key: "projected",
-                detail: format!("each Well located in `{}` where the package places its datum", reference.title),
+                detail: format!(
+                    "each Well located in `{}` where the package places its datum",
+                    reference.title
+                ),
             });
             if !unplaced.is_empty() {
                 says.push(Note {
@@ -1137,7 +1391,9 @@ impl Operation for WitsmlWells {
         if params.synthetic {
             says.push(Note {
                 key: "synthetic",
-                detail: "every object says it is invented: `synthetic = true` and a sentence in its description".to_string(),
+                detail:
+                    "every object says it is invented: `synthetic = true` and a sentence in its description"
+                        .to_string(),
             });
         }
         says.push(Note {
@@ -1149,8 +1405,19 @@ impl Operation for WitsmlWells {
             detail: "not written: markers, geology, logs and channel sets, wellbore geometry and completions, and a geographic location — nothing in a frame states them".to_string(),
         });
 
-        let seed = format!("witsml-wells:{}", objects.iter().map(|o| o.uuid.as_str()).collect::<Vec<_>>().join(","));
-        let count = |title: &str, value: usize| Parameter::Double { title: title.to_string(), value: value as f64, uom: None };
+        let seed = format!(
+            "witsml-wells:{}",
+            objects
+                .iter()
+                .map(|o| o.uuid.as_str())
+                .collect::<Vec<_>>()
+                .join(",")
+        );
+        let count = |title: &str, value: usize| Parameter::Double {
+            title: title.to_string(),
+            value: value as f64,
+            uom: None,
+        };
         Ok(Plan {
             media: Vec::new(),
             blocked: None,

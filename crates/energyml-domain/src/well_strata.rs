@@ -95,7 +95,10 @@ use crate::values::{self, Values};
 /// The spellings of the frame's mapping — RESQML 2.0.1 drops a `c`.
 const MAPPINGS: &[&str] = &["IntervalStratigraphicUnits", "IntervalStratigraphiUnits"];
 /// The spellings of what a mapping indexes into.
-const ORGANISATION: &[&str] = &["StratigraphicOrganizationInterpretation", "StratigraphicOrganization"];
+const ORGANISATION: &[&str] = &[
+    "StratigraphicOrganizationInterpretation",
+    "StratigraphicOrganization",
+];
 /// The indices: a jagged array in 2.2, one integer per interval in 2.0.1.
 const UNIT_INDICES: &str = "UnitIndices";
 /// The measured depth of each node — one spelling in every release.
@@ -166,19 +169,31 @@ pub enum Refusal {
 
 impl Refusal {
     fn absent(what: impl Into<String>, why: impl Into<String>) -> Self {
-        Refusal::Absent { what: what.into(), why: why.into() }
+        Refusal::Absent {
+            what: what.into(),
+            why: why.into(),
+        }
     }
 
     fn defect(what: impl Into<String>, why: impl Into<String>) -> Self {
-        Refusal::Defect { what: what.into(), why: why.into() }
+        Refusal::Defect {
+            what: what.into(),
+            why: why.into(),
+        }
     }
 
     fn ambiguous(what: impl Into<String>, why: impl Into<String>) -> Self {
-        Refusal::Ambiguous { what: what.into(), why: why.into() }
+        Refusal::Ambiguous {
+            what: what.into(),
+            why: why.into(),
+        }
     }
 
     fn unsupported(what: impl Into<String>, why: impl Into<String>) -> Self {
-        Refusal::Unsupported { what: what.into(), why: why.into() }
+        Refusal::Unsupported {
+            what: what.into(),
+            why: why.into(),
+        }
     }
 
     /// Nothing to colour here, as opposed to something to repair.
@@ -314,7 +329,10 @@ pub struct Strata {
 impl Strata {
     /// The colour a section is drawn with, or `None` when the file gives none.
     pub fn colour_of(&self, section: &Section) -> Option<Rgba> {
-        section.unit.and_then(|unit| self.units.get(unit)).and_then(|unit| unit.colour)
+        section
+            .unit
+            .and_then(|unit| self.units.get(unit))
+            .and_then(|unit| unit.colour)
     }
 
     /// One colour per **node** of the frame, as RGBA bytes — what a tube or a
@@ -402,7 +420,8 @@ impl Strata {
     /// Whether [`Strata::drawn`] had to reuse a colour of `fallback` — more
     /// units the file does not colour than the palette has colours.
     pub fn fallback_cycled(&self, fallback: &[Rgba]) -> bool {
-        !fallback.is_empty() && self.units.iter().filter(|unit| unit.colour.is_none()).count() > fallback.len()
+        !fallback.is_empty()
+            && self.units.iter().filter(|unit| unit.colour.is_none()).count() > fallback.len()
     }
 
     /// The units a section names and the file gives no colour — what a legend
@@ -537,11 +556,15 @@ pub fn of_frame(
             ),
         ));
     }
-    let uuid = identity::uuid_of_reflect(frame).unwrap_or_default().to_ascii_lowercase();
+    let uuid = identity::uuid_of_reflect(frame)
+        .unwrap_or_default()
+        .to_ascii_lowercase();
 
     let mut notes = Vec::new();
     let read = match wanted {
-        Wanted::IntervalUnits { rank } => interval_units(frame, &title, &mds, *rank, source, known, &mut notes)?,
+        Wanted::IntervalUnits { rank } => {
+            interval_units(frame, &title, &mds, *rank, source, known, &mut notes)?
+        }
         Wanted::Category { property } => category(*property, &uuid, &title, &mds, source, known, &mut notes)?,
     };
 
@@ -555,19 +578,38 @@ pub fn of_frame(
                 [one] => (Some(*one), Vec::new()),
                 many => (None, many.to_vec()),
             };
-            Section { top: mds[at], base: mds[at + 1], unit, several }
+            Section {
+                top: mds[at],
+                base: mds[at + 1],
+                unit,
+                several,
+            }
         })
         .collect();
 
-    let several = sections.iter().filter(|section| !section.several.is_empty()).count();
+    let several = sections
+        .iter()
+        .filter(|section| !section.several.is_empty())
+        .count();
     if several > 0 {
         notes.push(format!(
             "{several} interval(s) name several units at once, which the jagged UnitIndices allows \
              (TRG 2.2 §5.34); they are drawn as having no single unit rather than one of them chosen"
         ));
     }
-    let mut strata = Strata { frame: uuid, title, source: read.source, units: read.units, sections, notes };
-    let uncoloured: Vec<String> = strata.uncoloured().iter().map(|unit| unit.title.clone()).collect();
+    let mut strata = Strata {
+        frame: uuid,
+        title,
+        source: read.source,
+        units: read.units,
+        sections,
+        notes,
+    };
+    let uncoloured: Vec<String> = strata
+        .uncoloured()
+        .iter()
+        .map(|unit| unit.title.clone())
+        .collect();
     if !uncoloured.is_empty() {
         strata.notes.push(format!(
             "{} unit(s) the file gives no colour — drawn with a colour the caller chooses (its palette, or \
@@ -584,12 +626,18 @@ pub fn of_frame(
 /// one that does not before its `NodeMd` is read (`crate::strata_by_md`, which
 /// must not be stopped by an unreadable array of a frame that says nothing).
 pub fn states_units(frame: &dyn Reflect) -> bool {
-    MAPPINGS.iter().any(|name| frame.field(name).is_some_and(|value| !value.is_empty()))
+    MAPPINGS
+        .iter()
+        .any(|name| frame.field(name).is_some_and(|value| !value.is_empty()))
 }
 
 /// Where an interval is, for a message: its rank and its two MDs.
 fn interval(title: &str, mds: &[f64], at: usize) -> String {
-    format!("`{title}`, interval {at} (MD {} to {})", number(mds[at]), number(mds[at + 1]))
+    format!(
+        "`{title}`, interval {at} (MD {} to {})",
+        number(mds[at]),
+        number(mds[at + 1])
+    )
 }
 
 /// The frame's `IntervalStratigraphicUnits`, merged — or only the rank asked.
@@ -633,7 +681,10 @@ fn interval_units(
             .filter(|uuid| !uuid.is_empty())
             .map(str::to_ascii_lowercase)
         else {
-            return Err(Refusal::defect(what, "names no stratigraphic organisation, so its indices index nothing"));
+            return Err(Refusal::defect(
+                what,
+                "names no stratigraphic organisation, so its indices index nothing",
+            ));
         };
         let rank_uri = reference.and_then(identity::uri_of_reflect);
         named_ranks.push(rank_uuid.clone());
@@ -690,7 +741,8 @@ fn interval_units(
             let position = match position_of.get(&member.unit.uri) {
                 Some(position) => *position,
                 None => {
-                    let (colour, colour_from) = unit_colour(&member.unit.uri, &cascade, known, &objects, notes);
+                    let (colour, colour_from) =
+                        unit_colour(&member.unit.uri, &cascade, known, &objects, notes);
                     units.push(Unit {
                         code: 0.0,
                         uuid: Some(member.unit.uuid.clone()),
@@ -736,7 +788,10 @@ fn interval_units(
     for (at, found) in given.into_iter().enumerate() {
         let mappings: BTreeSet<usize> = found.iter().map(|(_, mapping)| *mapping).collect();
         if mappings.len() > 1 {
-            let names: Vec<&str> = found.iter().map(|(unit, _)| units[*unit].title.as_str()).collect();
+            let names: Vec<&str> = found
+                .iter()
+                .map(|(unit, _)| units[*unit].title.as_str())
+                .collect();
             return Err(Refusal::ambiguous(
                 interval(title, mds, at),
                 format!(
@@ -753,7 +808,11 @@ fn interval_units(
     for (code, unit) in units.iter_mut().enumerate() {
         unit.code = code as f64;
     }
-    Ok(Read { source: Source::IntervalUnits { ranks }, units, named })
+    Ok(Read {
+        source: Source::IntervalUnits { ranks },
+        units,
+        named,
+    })
 }
 
 /// A rank, through the column view's own reader.
@@ -843,7 +902,9 @@ fn unit_runs(indices: &dyn Reflect, source: &dyn ArraySource, what: &str) -> Res
             let Some(end) = end.filter(|end| *end >= 0).map(|end| end as usize) else {
                 return Err(Refusal::defect(
                     what,
-                    format!("CumulativeLength {at} is null or negative, so interval {at} has no run of indices"),
+                    format!(
+                        "CumulativeLength {at} is null or negative, so interval {at} has no run of indices"
+                    ),
                 ));
             };
             if end < start || end > elements.len() {
@@ -856,7 +917,12 @@ fn unit_runs(indices: &dyn Reflect, source: &dyn ArraySource, what: &str) -> Res
                     ),
                 ));
             }
-            runs.push(elements[start..end].iter().filter_map(|index| index.filter(|value| *value >= 0)).collect());
+            runs.push(
+                elements[start..end]
+                    .iter()
+                    .filter_map(|index| index.filter(|value| *value >= 0))
+                    .collect(),
+            );
             start = end;
         }
         return Ok(runs);
@@ -880,7 +946,10 @@ fn null_value(array: &dyn Reflect) -> Option<i64> {
 fn integers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Vec<Option<i64>>, Refusal> {
     let null = null_value(array);
     match values::read(array, source, at)? {
-        Values::Integer(values) => Ok(values.into_iter().map(|value| (null != Some(value)).then_some(value)).collect()),
+        Values::Integer(values) => Ok(values
+            .into_iter()
+            .map(|value| (null != Some(value)).then_some(value))
+            .collect()),
         Values::Floating(values) => values
             .into_iter()
             .map(|value| {
@@ -889,7 +958,10 @@ fn integers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<V
                 } else if value.fract() == 0.0 && value.is_finite() {
                     Ok(Some(value as i64))
                 } else {
-                    Err(Refusal::defect(at, format!("holds {value}, which is not an index")))
+                    Err(Refusal::defect(
+                        at,
+                        format!("holds {value}, which is not an index"),
+                    ))
                 }
             })
             .collect(),
@@ -906,7 +978,10 @@ fn numbers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Ve
             .into_iter()
             .map(|value| (null != Some(value)).then_some(value as f64))
             .collect()),
-        Values::Floating(values) => Ok(values.into_iter().map(|value| (!value.is_nan()).then_some(value)).collect()),
+        Values::Floating(values) => Ok(values
+            .into_iter()
+            .map(|value| (!value.is_nan()).then_some(value))
+            .collect()),
         _ => Err(Refusal::defect(at, "is not an array of numbers")),
     }
 }
@@ -934,18 +1009,29 @@ fn category(
             what,
             format!(
                 "hangs on {}, not on `{title}`, so it says nothing about this frame's intervals",
-                read.supporting_representation.as_deref().unwrap_or("no representation")
+                read.supporting_representation
+                    .as_deref()
+                    .unwrap_or("no representation")
             ),
         ));
     }
-    if !matches!(read.indexable, IndexableElement::Intervals | IndexableElement::IntervalsFromDatum) {
+    if !matches!(
+        read.indexable,
+        IndexableElement::Intervals | IndexableElement::IntervalsFromDatum
+    ) {
         return Err(Refusal::unsupported(
             what,
-            format!("hangs on {}, and a section of a well is an interval", read.indexable.as_str()),
+            format!(
+                "hangs on {}, and a section of a well is an interval",
+                read.indexable.as_str()
+            ),
         ));
     }
     let Some(table_uuid) = read.lookup.clone() else {
-        return Err(Refusal::absent(what, "names no CategoryLookup, so its values are codes with no unit to name"));
+        return Err(Refusal::absent(
+            what,
+            "names no CategoryLookup, so its values are codes with no unit to name",
+        ));
     };
     let found = match read.lookup_uri.as_deref() {
         Some(uri) => source.object_at(uri),
@@ -954,7 +1040,9 @@ fn category(
     let Some(table_object) = found else {
         return Err(Refusal::absent(
             format!("table {table_uuid}"),
-            format!("is the CategoryLookup of `{name}`, and the package does not hold it — what each code means is unknown"),
+            format!(
+                "is the CategoryLookup of `{name}`, and the package does not hold it — what each code means is unknown"
+            ),
         ));
     };
     let lookup = Lookup::read(table_object.as_reflect(), source)?;
@@ -979,7 +1067,13 @@ fn category(
     let key_column = lookup.key_columns.first().copied();
     let key_of = |row: usize| -> Option<f64> {
         let column = key_column?;
-        lookup.rows.cell(row, column)?.to_string().trim().parse::<f64>().ok()
+        lookup
+            .rows
+            .cell(row, column)?
+            .to_string()
+            .trim()
+            .parse::<f64>()
+            .ok()
     };
     if !lookup.duplicate_keys().is_empty() {
         notes.push(format!(
@@ -998,7 +1092,11 @@ fn category(
         // The row's number is what the front end's legend keys it on: the key,
         // the position where the key does not read as a number.
         let code = key_of(row).unwrap_or(row as f64);
-        let label = if cells.is_empty() { number(code) } else { cells.join(JOIN) };
+        let label = if cells.is_empty() {
+            number(code)
+        } else {
+            cells.join(JOIN)
+        };
         let (uuid, by_title) = unit_titled(&cells, &label, known, notes);
         units.push(Unit {
             code,
@@ -1016,7 +1114,10 @@ fn category(
         return Err(Refusal::absent(what, "states no values"));
     };
     if read.patches.len() > 1 {
-        notes.push(format!("`{name}` has {} patches; a frame has one, and the first is read", read.patches.len()));
+        notes.push(format!(
+            "`{name}` has {} patches; a frame has one, and the first is read",
+            read.patches.len()
+        ));
     }
     let values = numbers(patch.array, source, &what)?;
     if values.len() != intervals {
@@ -1048,7 +1149,11 @@ fn category(
                 format!(
                     "`{name}` stores {}, which no row of table {table_uuid} holds{}",
                     number(*value),
-                    if key_column.is_some() { " in its key column" } else { "" }
+                    if key_column.is_some() {
+                        " in its key column"
+                    } else {
+                        ""
+                    }
                 ),
             ));
         };
@@ -1076,7 +1181,14 @@ fn category(
         }
     }
 
-    Ok(Read { source: Source::Category { property: read.uuid.clone(), table: table_uuid }, units, named })
+    Ok(Read {
+        source: Source::Category {
+            property: read.uuid.clone(),
+            table: table_uuid,
+        },
+        units,
+        named,
+    })
 }
 
 /// The unit of the package whose title a table row carries — when exactly one
@@ -1086,8 +1198,17 @@ fn category(
 /// row `e6 — Bartonian` names the unit titled `Bartonian` as well as one
 /// titled `e6 — Bartonian`. Two units with one title are **not** chosen
 /// between: the row keeps its label and the ambiguity is noted.
-fn unit_titled(cells: &[String], label: &str, known: &Known<'_>, notes: &mut Vec<String>) -> (Option<String>, bool) {
-    let wanted: Vec<&str> = cells.iter().map(|cell| cell.trim()).chain(std::iter::once(label.trim())).collect();
+fn unit_titled(
+    cells: &[String],
+    label: &str,
+    known: &Known<'_>,
+    notes: &mut Vec<String>,
+) -> (Option<String>, bool) {
+    let wanted: Vec<&str> = cells
+        .iter()
+        .map(|cell| cell.trim())
+        .chain(std::iter::once(label.trim()))
+        .collect();
     let found: BTreeSet<String> = known
         .units
         .iter()
@@ -1137,7 +1258,12 @@ fn unit_colour(
 ) -> (Option<Rgba>, Option<String>) {
     // The cascade is asked by the unit's uri; the messages say its uuid.
     let uuid = crate::inherit::uuid_of_identity(address);
-    let request = Request { representation: address, property: None, kind_chain: &[], element: Scope::WholeObject };
+    let request = Request {
+        representation: address,
+        property: None,
+        kind_chain: &[],
+        element: Scope::WholeObject,
+    };
     let decision = match cascade.resolve(&request, objects) {
         Ok(Some(decision)) => decision,
         Ok(None) => return (None, None),
@@ -1197,7 +1323,14 @@ fn property_map(
         .kind
         .as_ref()
         .and_then(|kind| Resolver::new(objects).resolve(kind).ok())
-        .map(|resolution| resolution.chain.into_iter().map(|kind| kind.uuid).filter(|uuid| !uuid.is_empty()).collect())
+        .map(|resolution| {
+            resolution
+                .chain
+                .into_iter()
+                .map(|kind| kind.uuid)
+                .filter(|uuid| !uuid.is_empty())
+                .collect()
+        })
         .unwrap_or_default();
     let request = Request {
         representation: frame,
@@ -1209,7 +1342,10 @@ fn property_map(
         Ok(Some(decision)) if matches!(decision.level, Level::Property | Level::PropertyKind) => decision,
         Ok(_) => return None,
         Err(why) => {
-            notes.push(format!("the colour map of property {} could not be read: {why}", read.uuid));
+            notes.push(format!(
+                "the colour map of property {} could not be read: {why}",
+                read.uuid
+            ));
             return None;
         }
     };

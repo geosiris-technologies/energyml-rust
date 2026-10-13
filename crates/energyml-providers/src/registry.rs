@@ -39,7 +39,10 @@ impl Providers {
 
     /// All of them, the added ones first.
     pub fn all(&self) -> impl Iterator<Item = &dyn Provider> {
-        self.added.iter().chain(self.builtin.iter()).map(|one| one.as_ref())
+        self.added
+            .iter()
+            .chain(self.builtin.iter())
+            .map(|one| one.as_ref())
     }
 
     /// The one with this name.

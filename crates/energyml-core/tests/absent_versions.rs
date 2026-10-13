@@ -40,7 +40,11 @@ fn only_the_declared_version_of_the_declared_package_is_absent() {
     let registry = registry();
     assert_eq!(registry.absent("resqml", "2.2"), None);
     assert_eq!(registry.absent("witsml", "2.0"), None);
-    assert_eq!(registry.absent("resqml", "2.0.9"), None, "a version nobody ships is unknown, not absent");
+    assert_eq!(
+        registry.absent("resqml", "2.0.9"),
+        None,
+        "a version nobody ships is unknown, not absent"
+    );
 }
 
 /// The drop and the release are two versions: declaring the drop absent says
@@ -61,8 +65,14 @@ fn a_development_drop_is_not_its_release() {
 #[test]
 fn a_qualified_type_names_the_release_in_either_spelling() {
     let registry = registry();
-    assert_eq!(registry.absent_qualified_type("resqml20.obj_Activity"), Some(WHY_20));
-    assert_eq!(registry.absent_qualified_type("resqml201.obj_Activity"), Some(WHY_20));
+    assert_eq!(
+        registry.absent_qualified_type("resqml20.obj_Activity"),
+        Some(WHY_20)
+    );
+    assert_eq!(
+        registry.absent_qualified_type("resqml201.obj_Activity"),
+        Some(WHY_20)
+    );
     assert_eq!(registry.absent_qualified_type("resqml22.Activity"), None);
     assert_eq!(registry.absent_qualified_type("eml20.Citation"), None);
     assert_eq!(registry.absent_qualified_type("not a qualified type"), None);
@@ -74,7 +84,11 @@ fn a_content_type_names_the_version() {
     let registry = registry();
     for version in ["2.0", "2.0.1"] {
         let content_type = format!("application/x-resqml+xml;version={version};type=obj_Activity");
-        assert_eq!(registry.absent_content_type(&content_type), Some(WHY_20), "{content_type}");
+        assert_eq!(
+            registry.absent_content_type(&content_type),
+            Some(WHY_20),
+            "{content_type}"
+        );
     }
     assert_eq!(
         registry.absent_content_type("application/x-resqml+xml;version=2.2;type=Activity"),
@@ -103,9 +117,16 @@ fn creating_and_reading_an_absent_version_is_a_named_refusal() {
     }
 
     // The converse: nothing declared, nothing named.
-    assert!(matches!(registry.create("resqml22.Activity"), Err(Error::UnknownType(_))));
     assert!(matches!(
-        registry.read_xml_as("application/x-resqml+xml;version=9.9;type=Activity", b"<x/>", ReadMode::Tolerant),
+        registry.create("resqml22.Activity"),
+        Err(Error::UnknownType(_))
+    ));
+    assert!(matches!(
+        registry.read_xml_as(
+            "application/x-resqml+xml;version=9.9;type=Activity",
+            b"<x/>",
+            ReadMode::Tolerant
+        ),
         Err(Error::UnknownType(_))
     ));
 }

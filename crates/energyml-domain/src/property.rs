@@ -434,8 +434,12 @@ pub fn read(object: &dyn Reflect) -> Result<Property<'_>> {
         .ok_or_else(|| Error::malformed(name, "a property with no uuid"))?
         .to_string();
 
-    let indexable_text = text(object, "IndexableElement")
-        .ok_or_else(|| Error::malformed(&uuid, "no `IndexableElement`, so nothing says what the values hang on"))?;
+    let indexable_text = text(object, "IndexableElement").ok_or_else(|| {
+        Error::malformed(
+            &uuid,
+            "no `IndexableElement`, so nothing says what the values hang on",
+        )
+    })?;
     let indexable = IndexableElement::parse(&indexable_text).ok_or_else(|| {
         Error::malformed(
             &uuid,
@@ -470,9 +474,7 @@ pub fn read(object: &dyn Reflect) -> Result<Property<'_>> {
         lookup_uri: reference_uri(object, "Lookup").or_else(|| reference_uri(object, "CategoryLookup")),
         time: read_time(object),
         realization: integer(object, "RealizationIndex"),
-        has_realization_indices: object
-            .field("RealizationIndices")
-            .is_some_and(|f| !f.is_empty()),
+        has_realization_indices: object.field("RealizationIndices").is_some_and(|f| !f.is_empty()),
         facets: read_facets(object),
         patches,
     })
@@ -676,7 +678,10 @@ impl Index {
         match &property.supporting_representation {
             Some(uuid) => {
                 if let Some(uri) = &property.supporting_representation_uri {
-                    self.by_uri.entry(uri.to_ascii_lowercase()).or_default().push(entry.clone());
+                    self.by_uri
+                        .entry(uri.to_ascii_lowercase())
+                        .or_default()
+                        .push(entry.clone());
                 }
                 self.by_representation
                     .entry(uuid.to_ascii_lowercase())
@@ -981,7 +986,9 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
             Intervals | Interval => Ok(required(representation, "NodeCount")?.saturating_sub(1)),
             _ => refuse(),
         },
-        "WellboreFrameRepresentation" | "WellboreMarkerFrameRepresentation" | "SeismicWellboreFrameRepresentation" => {
+        "WellboreFrameRepresentation"
+        | "WellboreMarkerFrameRepresentation"
+        | "SeismicWellboreFrameRepresentation" => {
             match element {
                 Nodes => required(representation, "NodeCount"),
                 // The narrative documentation is explicit for this one:
@@ -1025,7 +1032,11 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
         // A sub-representation lists its own elements, so the count it
         // declares is the answer whatever kind of element it selects — the one
         // type where the pair does not matter.
-        "SubRepresentation" => counted(sum_over_patches(representation, "SubRepresentationPatch", "Count")),
+        "SubRepresentation" => counted(sum_over_patches(
+            representation,
+            "SubRepresentationPatch",
+            "Count",
+        )),
         _ => refuse(),
     }
 }
@@ -1238,7 +1249,9 @@ fn required(object: &dyn Reflect, field: &str) -> Result<u64> {
 /// The uuid a reference names — the identity layer's reading, so every
 /// spelling of the field is one answer.
 fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
-    energyml_core::identity::uuid_of_reflect(object).filter(|uuid| !uuid.is_empty()).map(str::to_string)
+    energyml_core::identity::uuid_of_reflect(object)
+        .filter(|uuid| !uuid.is_empty())
+        .map(str::to_string)
 }
 
 /// The uri of the object a field names, version included.
@@ -1257,7 +1270,12 @@ mod tests {
     #[test]
     fn every_indexable_element_round_trips() {
         for text in [
-            "cells", "nodes", "triangles", "I0 edges", "interval edges", "nodes per cell",
+            "cells",
+            "nodes",
+            "triangles",
+            "I0 edges",
+            "interval edges",
+            "nodes per cell",
         ] {
             let parsed = IndexableElement::parse(text).expect(text);
             assert_eq!(IndexableElement::parse(parsed.as_str()), Some(parsed));
@@ -1280,21 +1298,36 @@ mod tests {
         use energyml_resqml_2_2::properties::PointsProperty;
 
         let object = PointsProperty {
-            points_for_patch: vec![AbstractPoint3dArray::Point3dExternalArray(Point3dExternalArray::default())],
+            points_for_patch: vec![AbstractPoint3dArray::Point3dExternalArray(
+                Point3dExternalArray::default(),
+            )],
             ..Default::default()
         };
 
         let patches = read_patches(&object);
-        assert_eq!(patches.len(), 1, "PointsForPatch must be found, not read as absent");
-        assert_eq!(patches[0].patch_index, None, "2.2 attaches by position, like ValuesForPatch");
+        assert_eq!(
+            patches.len(),
+            1,
+            "PointsForPatch must be found, not read as absent"
+        );
+        assert_eq!(
+            patches[0].patch_index, None,
+            "2.2 attaches by position, like ValuesForPatch"
+        );
     }
 
     #[test]
     fn spelling_differences_do_not_lose_a_property() {
         // The two versions do not agree on spacing, and a reader that insists
         // on one spelling silently loses every property of the other version.
-        assert_eq!(IndexableElement::parse("I0Edges"), Some(IndexableElement::I0Edges));
-        assert_eq!(IndexableElement::parse("i0 edges"), Some(IndexableElement::I0Edges));
+        assert_eq!(
+            IndexableElement::parse("I0Edges"),
+            Some(IndexableElement::I0Edges)
+        );
+        assert_eq!(
+            IndexableElement::parse("i0 edges"),
+            Some(IndexableElement::I0Edges)
+        );
         assert_eq!(
             IndexableElement::parse("nodes_per_face"),
             Some(IndexableElement::NodesPerFace)
@@ -1324,9 +1357,8 @@ mod tests {
     #[test]
     fn the_spellings_are_the_schemas_own() {
         for text in ["enumerated elements", "intervals from datum"] {
-            let parsed = IndexableElement::parse(text).unwrap_or_else(|| {
-                panic!("`{text}` is spelled by every recent schema and must parse")
-            });
+            let parsed = IndexableElement::parse(text)
+                .unwrap_or_else(|| panic!("`{text}` is spelled by every recent schema and must parse"));
             assert_eq!(parsed.as_str(), text, "and it must write back the same word");
         }
         // `enumeration` was the invented spelling of this very variant, so

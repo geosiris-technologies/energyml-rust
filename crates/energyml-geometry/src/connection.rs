@@ -216,10 +216,7 @@ fn build(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<(Vec<
             let Some(cell) = pairs[at] else {
                 continue;
             };
-            let grid = which
-                .as_ref()
-                .and_then(|list| list[at])
-                .unwrap_or(0) as usize;
+            let grid = which.as_ref().and_then(|list| list[at]).unwrap_or(0) as usize;
             let Some(shape) = grids.get(grid) else {
                 return Err(Error::malformed(
                     "GridConnectionSetRepresentation.GridIndexPairs",
@@ -299,7 +296,7 @@ fn build(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<(Vec<
                 Topology::Segments(segments)
             },
             closed: Vec::new(),
-}],
+        }],
         origin,
     ))
 }
@@ -442,17 +439,18 @@ fn read_grids(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<
     let mut out = Vec::new();
     for field in GRIDS {
         for reference in crate::geometry::field_list(representation, field) {
-            let uri = crate::follow::address_of(reference)
-                .ok_or_else(|| {
-                    Error::malformed(
-                        "GridConnectionSetRepresentation.Grid",
-                        "a grid reference with no uuid",
-                    )
-                })?;
+            let uri = crate::follow::address_of(reference).ok_or_else(|| {
+                Error::malformed(
+                    "GridConnectionSetRepresentation.Grid",
+                    "a grid reference with no uuid",
+                )
+            })?;
             // **A grid the package does not hold is a named refusal**, never a
             // connection quietly dropped: the set says these cells are joined,
             // and not being able to place them is news.
-            let object = source.object_at(&uri).ok_or_else(|| Error::Missing(uri.clone()))?;
+            let object = source
+                .object_at(&uri)
+                .ok_or_else(|| Error::Missing(uri.clone()))?;
             let grid = object.as_reflect();
             // Checked **before** the geometry is read, because the refusal is
             // about what the cell numbers mean and not about the shape: reading
@@ -518,7 +516,9 @@ fn face_of(shape: &Geometry, cell: u64, face: usize) -> Result<Option<Vec<Point>
                     }
                 };
                 Ok(Some(
-                    quad.iter().map(|at| patch.points[corners[*at] as usize]).collect(),
+                    quad.iter()
+                        .map(|at| patch.points[corners[*at] as usize])
+                        .collect(),
                 ))
             }
             Topology::Polyhedra(cells) => {

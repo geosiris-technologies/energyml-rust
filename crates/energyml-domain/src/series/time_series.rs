@@ -43,7 +43,8 @@ use serde_json::{Value, json};
 use energyml_core::value::Reflect;
 
 use super::{
-    Channel, Direction, Index, IndexKind, Quality, Refused, Series, identity_of, instant, monotone, objects, text,
+    Channel, Direction, Index, IndexKind, Quality, Refused, Series, identity_of, instant, monotone, objects,
+    text,
 };
 use crate::values::Values;
 
@@ -85,7 +86,11 @@ pub enum Content {
 impl TimeSeries {
     /// The well its `asset identifier` names, if it names one.
     pub fn well_named(&self) -> Result<Option<String>, Refused> {
-        well_in_keys(self.keys.iter().map(|(keyword, value)| (keyword.as_str(), value.as_str())))
+        well_in_keys(
+            self.keys
+                .iter()
+                .map(|(keyword, value)| (keyword.as_str(), value.as_str())),
+        )
     }
 
     /// As the bridges hand it to a front end.
@@ -128,12 +133,20 @@ pub fn reads(object: &dyn Reflect) -> bool {
 /// Read a `TimeSeriesData`.
 pub fn read(object: &dyn Reflect) -> Result<TimeSeries, Refused> {
     if !reads(object) {
-        return Err(Refused::NotThisReader { expected: "a PRODML TimeSeriesData", found: object.type_info().type_key.to_string() });
+        return Err(Refused::NotThisReader {
+            expected: "a PRODML TimeSeriesData",
+            found: object.type_info().type_key.to_string(),
+        });
     }
     let (uuid, title) = identity_of(object);
     let keys: Vec<(String, String)> = objects(object, "Key")
         .into_iter()
-        .map(|key| (text(key, "keyword").unwrap_or_default(), text(key, "value").unwrap_or_default()))
+        .map(|key| {
+            (
+                text(key, "keyword").unwrap_or_default(),
+                text(key, "value").unwrap_or_default(),
+            )
+        })
         .collect();
     let uom = text(object, "Uom");
     let measure_class = text(object, "MeasureClass");
@@ -153,13 +166,19 @@ pub fn read(object: &dyn Reflect) -> Result<TimeSeries, Refused> {
             "DoubleValue" => ("double", "DoubleValue"),
             "StringValue" => ("string", "StringValue"),
             other => {
-                return Err(Refused::MixedValueKinds { first: "double or string".into(), at: rank + 1, found: other.to_string() });
+                return Err(Refused::MixedValueKinds {
+                    first: "double or string".into(),
+                    at: rank + 1,
+                    found: other.to_string(),
+                });
             }
         };
         let inner = objects(value, inner_name)
             .into_iter()
             .next()
-            .ok_or_else(|| Refused::Missing { what: format!("sample {}: its {inner_name}", rank + 1) })?;
+            .ok_or_else(|| Refused::Missing {
+                what: format!("sample {}: its {inner_name}", rank + 1),
+            })?;
         samples.push(Sample {
             kind,
             number: super::number_of(inner, "value").unwrap_or(f64::NAN),
@@ -171,7 +190,11 @@ pub fn read(object: &dyn Reflect) -> Result<TimeSeries, Refused> {
     if let Some(first) = samples.first()
         && let Some(other) = samples.iter().position(|one| one.kind != first.kind)
     {
-        return Err(Refused::MixedValueKinds { first: first.kind.into(), at: other + 1, found: samples[other].kind.into() });
+        return Err(Refused::MixedValueKinds {
+            first: first.kind.into(),
+            at: other + 1,
+            found: samples[other].kind.into(),
+        });
     }
 
     let quality_of = |sample: &Sample| -> Quality {
@@ -180,7 +203,11 @@ pub fn read(object: &dyn Reflect) -> Result<TimeSeries, Refused> {
         } else if sample.kind == "double" && sample.number.is_nan() {
             Quality::Absent
         } else if sample.kind == "double" && sample.number.is_infinite() {
-            Quality::Flagged(if sample.number > 0.0 { "+Infinity".into() } else { "-Infinity".into() })
+            Quality::Flagged(if sample.number > 0.0 {
+                "+Infinity".into()
+            } else {
+                "-Infinity".into()
+            })
         } else {
             Quality::Good
         }
@@ -194,10 +221,16 @@ pub fn read(object: &dyn Reflect) -> Result<TimeSeries, Refused> {
 
     let content = match samples.as_slice() {
         [] => Content::Empty,
-        [only] if only.at.is_none() => Content::Static { value: values_of(&samples), quality: quality_of(only) },
+        [only] if only.at.is_none() => Content::Static {
+            value: values_of(&samples),
+            quality: quality_of(only),
+        },
         _ => {
             if let Some(at) = samples.iter().position(|one| one.at.is_none()) {
-                return Err(Refused::UntimedSample { at: at + 1, samples: samples.len() });
+                return Err(Refused::UntimedSample {
+                    at: at + 1,
+                    samples: samples.len(),
+                });
             }
             let mut instants = Vec::with_capacity(samples.len());
             for (rank, sample) in samples.iter().enumerate() {
@@ -228,10 +261,24 @@ pub fn read(object: &dyn Reflect) -> Result<TimeSeries, Refused> {
                 values: values_of(&samples),
                 quality: samples.iter().map(quality_of).collect(),
             };
-            Content::Samples(Series { uuid: uuid.clone(), title: title.clone(), index, secondary: Vec::new(), channels: vec![channel] })
+            Content::Samples(Series {
+                uuid: uuid.clone(),
+                title: title.clone(),
+                index,
+                secondary: Vec::new(),
+                channels: vec![channel],
+            })
         }
     };
-    Ok(TimeSeries { uuid, title, keys, uom, measure_class, comment, content })
+    Ok(TimeSeries {
+        uuid,
+        title,
+        keys,
+        uom,
+        measure_class,
+        comment,
+        content,
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -253,7 +300,12 @@ fn well_in_keys<'a>(keys: impl Iterator<Item = (&'a str, &'a str)>) -> Result<Op
                 }
             }
             Ok(None) => {}
-            Err(why) => return Err(Refused::AssetIdentifier { uri: value.to_string(), why }),
+            Err(why) => {
+                return Err(Refused::AssetIdentifier {
+                    uri: value.to_string(),
+                    why,
+                });
+            }
         }
     }
     match names.len() {
@@ -268,9 +320,17 @@ fn well_in_keys<'a>(keys: impl Iterator<Item = (&'a str, &'a str)>) -> Result<Op
 fn well_named_by_object(series: &dyn Reflect) -> Result<Option<String>, Refused> {
     let keys: Vec<(String, String)> = objects(series, "Key")
         .into_iter()
-        .map(|key| (text(key, "keyword").unwrap_or_default(), text(key, "value").unwrap_or_default()))
+        .map(|key| {
+            (
+                text(key, "keyword").unwrap_or_default(),
+                text(key, "value").unwrap_or_default(),
+            )
+        })
         .collect();
-    well_in_keys(keys.iter().map(|(keyword, value)| (keyword.as_str(), value.as_str())))
+    well_in_keys(
+        keys.iter()
+            .map(|(keyword, value)| (keyword.as_str(), value.as_str())),
+    )
 }
 
 /// The well a series names, among `objects` (every object of the package,
@@ -291,8 +351,14 @@ pub fn well_of<'a>(
         .collect();
     match found.as_slice() {
         [one] => Ok(*one),
-        [] => Err(Refused::NoMatch { what: "well", names: vec![name] }),
-        several => Err(Refused::NameNotAnIdentity { name, uuids: several.iter().map(|(uuid, _)| uuid.to_string()).collect() }),
+        [] => Err(Refused::NoMatch {
+            what: "well",
+            names: vec![name],
+        }),
+        several => Err(Refused::NameNotAnIdentity {
+            name,
+            uuids: several.iter().map(|(uuid, _)| uuid.to_string()).collect(),
+        }),
     }
 }
 
@@ -335,21 +401,33 @@ pub fn of_well<'a>(
         if !rivals.is_empty() {
             let mut uuids = vec![uuid.clone()];
             uuids.extend(rivals);
-            return Err(Refused::NameNotAnIdentity { name: name.clone(), uuids });
+            return Err(Refused::NameNotAnIdentity {
+                name: name.clone(),
+                uuids,
+            });
         }
     }
     let found: Vec<(&'a str, &'a dyn Reflect)> = objects
         .iter()
         .filter(|(_, object)| reads(*object))
-        .filter(|(_, object)| matches!(well_named_by_object(*object), Ok(Some(named)) if names.contains(&named)))
-        .filter(|(_, object)| measure_class.is_none_or(|wanted| text(*object, "MeasureClass").as_deref() == Some(wanted)))
+        .filter(
+            |(_, object)| matches!(well_named_by_object(*object), Ok(Some(named)) if names.contains(&named)),
+        )
+        .filter(|(_, object)| {
+            measure_class.is_none_or(|wanted| text(*object, "MeasureClass").as_deref() == Some(wanted))
+        })
         .copied()
         .collect();
     match found.as_slice() {
         [one] => Ok(*one),
-        [] => Err(Refused::NoMatch { what: "time series", names }),
-        several => {
-            Err(Refused::SeveralMatch { what: "time series", names, uuids: several.iter().map(|(uuid, _)| uuid.to_string()).collect() })
-        }
+        [] => Err(Refused::NoMatch {
+            what: "time series",
+            names,
+        }),
+        several => Err(Refused::SeveralMatch {
+            what: "time series",
+            names,
+            uuids: several.iter().map(|(uuid, _)| uuid.to_string()).collect(),
+        }),
     }
 }

@@ -28,7 +28,9 @@ const CT: &str = "application/x-resqml+xml;version=2.2;type=BoundaryFeature";
 const CT_H: &str = "application/x-resqml+xml;version=2.2;type=HorizonInterpretation";
 
 fn feature(version: Option<&str>) -> String {
-    let version = version.map(|v| format!(" objectVersion=\"{v}\"")).unwrap_or_default();
+    let version = version
+        .map(|v| format!(" objectVersion=\"{v}\""))
+        .unwrap_or_default();
     format!(
         "<resqml:BoundaryFeature xmlns:resqml=\"{RESQML}\" xmlns:eml=\"{EML}\" uuid=\"{S}\" \
          schemaVersion=\"2.2\"{version}><eml:Citation><eml:Title>a surface</eml:Title>\
@@ -39,7 +41,9 @@ fn feature(version: Option<&str>) -> String {
 }
 
 fn horizon(uuid: &str, version: Option<&str>) -> String {
-    let version = version.map(|v| format!("<eml:ObjectVersion>{v}</eml:ObjectVersion>")).unwrap_or_default();
+    let version = version
+        .map(|v| format!("<eml:ObjectVersion>{v}</eml:ObjectVersion>"))
+        .unwrap_or_default();
     format!(
         "<resqml:HorizonInterpretation xmlns:resqml=\"{RESQML}\" xmlns:eml=\"{EML}\" uuid=\"{uuid}\" \
          schemaVersion=\"2.2\"><eml:Citation><eml:Title>a horizon</eml:Title>\
@@ -54,7 +58,11 @@ fn horizon(uuid: &str, version: Option<&str>) -> String {
 /// An object from its XML, read tolerantly (the fixtures are short).
 fn object(content_type: &str, xml: String) -> Box<dyn energyml_core::registry::DynObject> {
     energyml_schemas::all()
-        .read_xml_as(content_type, xml.as_bytes(), energyml_core::registry::ReadMode::Tolerant)
+        .read_xml_as(
+            content_type,
+            xml.as_bytes(),
+            energyml_core::registry::ReadMode::Tolerant,
+        )
         .expect("readable")
         .0
 }
@@ -64,24 +72,41 @@ fn object(content_type: &str, xml: String) -> Box<dyn energyml_core::registry::D
 fn package() -> EpcStore {
     let registry = Arc::new(energyml_schemas::all());
     let empty = energyml_storage::extract::empty_package(Some(0)).expect("an empty package");
-    let mut store = EpcStore::from_reader(Box::new(Cursor::new(empty)), "versions.epc", registry.clone()).expect("opens");
+    let mut store =
+        EpcStore::from_reader(Box::new(Cursor::new(empty)), "versions.epc", registry.clone()).expect("opens");
     store.put(object(CT, feature(None))).expect("the original");
-    store.put_as_new_version(object(CT, feature(Some("2")))).expect("a second version");
+    store
+        .put_as_new_version(object(CT, feature(Some("2"))))
+        .expect("a second version");
     store.put(object(CT_H, horizon(H, Some("2")))).expect("a horizon");
     store.put(object(CT_H, horizon(H0, None))).expect("another");
     let mut bytes = Cursor::new(Vec::new());
-    store.write_to(&mut bytes, &energyml_storage::epc::SaveOptions::default()).expect("written");
-    EpcStore::from_reader(Box::new(Cursor::new(bytes.into_inner())), "versions.epc", registry).expect("reads back")
+    store
+        .write_to(&mut bytes, &energyml_storage::epc::SaveOptions::default())
+        .expect("written");
+    EpcStore::from_reader(
+        Box::new(Cursor::new(bytes.into_inner())),
+        "versions.epc",
+        registry,
+    )
+    .expect("reads back")
 }
 
 /// The reference side: `graph::build` over every object the store reads.
 fn expected(store: &EpcStore) -> graph::Graph {
     let read = store.read_objects(None).0;
-    graph::build(read.iter().map(|(summary, object)| (summary, object.as_reflect())))
+    graph::build(
+        read.iter()
+            .map(|(summary, object)| (summary, object.as_reflect())),
+    )
 }
 
 fn sorted_nodes(graph: &graph::Graph) -> Vec<(String, bool)> {
-    let mut nodes: Vec<(String, bool)> = graph.nodes.iter().map(|node| (node.uri.clone(), node.present)).collect();
+    let mut nodes: Vec<(String, bool)> = graph
+        .nodes
+        .iter()
+        .map(|node| (node.uri.clone(), node.present))
+        .collect();
     nodes.sort();
     nodes
 }
@@ -90,20 +115,42 @@ fn sorted_nodes(graph: &graph::Graph) -> Vec<(String, bool)> {
 fn the_index_has_a_node_per_entry_and_agrees_with_the_graph() {
     let store = package();
     let index = PackageIndex::build(&store, store.revision());
-    assert!(index.unreadable().is_empty(), "every entry reads by its own uri: {:?}", index.unreadable());
+    assert!(
+        index.unreadable().is_empty(),
+        "every entry reads by its own uri: {:?}",
+        index.unreadable()
+    );
     let built = index.graph();
     let reference = expected(&store);
     assert_eq!(sorted_nodes(&built), sorted_nodes(&reference));
-    assert_eq!(built.edges, reference.edges, "edge for edge, as `graph::build` draws them");
+    assert_eq!(
+        built.edges, reference.edges,
+        "edge for edge, as `graph::build` draws them"
+    );
     // The two entries of the surface are two present nodes.
-    let surface: Vec<&str> = built.nodes.iter().filter(|n| n.uuid == S).map(|n| n.uri.as_str()).collect();
+    let surface: Vec<&str> = built
+        .nodes
+        .iter()
+        .filter(|n| n.uuid == S)
+        .map(|n| n.uri.as_str())
+        .collect();
     assert_eq!(surface.len(), 2, "{surface:?}");
-    assert!(index.nodes().filter(|n| n.uuid.as_ref() == S).all(|n| n.state == NodeState::Present));
+    assert!(
+        index
+            .nodes()
+            .filter(|n| n.uuid.as_ref() == S)
+            .all(|n| n.state == NodeState::Present)
+    );
     // H names version 2: one edge, to it. H0 names none, and the surface that
     // declares no version is the one the short reference means (ADR-0003):
     // one edge, to it.
     let to = |from: &str| -> Vec<&str> {
-        built.edges.iter().filter(|e| e.from.contains(from)).map(|e| e.to.as_str()).collect()
+        built
+            .edges
+            .iter()
+            .filter(|e| e.from.contains(from))
+            .map(|e| e.to.as_str())
+            .collect()
     };
     assert_eq!(to(H).len(), 1);
     assert!(to(H)[0].contains("version='2'"), "{:?}", to(H));
@@ -124,5 +171,9 @@ fn an_update_that_touches_a_uuid_held_twice_rebuilds_and_still_agrees() {
     let built = index.graph();
     assert_eq!(sorted_nodes(&built), sorted_nodes(&reference));
     assert_eq!(built.edges, reference.edges);
-    assert_eq!(built.nodes.iter().filter(|n| n.uuid == S).count(), 3, "three versions, three nodes");
+    assert_eq!(
+        built.nodes.iter().filter(|n| n.uuid == S).count(),
+        3,
+        "three versions, three nodes"
+    );
 }

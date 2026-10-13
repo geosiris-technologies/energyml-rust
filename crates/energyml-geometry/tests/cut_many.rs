@@ -78,7 +78,10 @@ fn cut_many_is_cut_trace_by_trace_to_the_bit() {
     assert!(!many[0].is_empty() && !many[1].is_empty() && !many[4].is_empty());
     assert!(many[2].is_empty());
     // And the welding downstream is the same too: a chain is a function of the cuts.
-    assert_eq!(section::chain(&many[0]).len(), section::chain(&cut(&points, &triangles, &traces[0])).len());
+    assert_eq!(
+        section::chain(&many[0]).len(),
+        section::chain(&cut(&points, &triangles, &traces[0])).len()
+    );
 }
 
 /// The prefilter is a count, not a stopwatch: a short trace over a big sheet
@@ -92,7 +95,11 @@ fn the_box_prefilter_spares_the_pairs_a_short_trace_cannot_touch() {
     let (points, triangles) = sheet(40); // 3 200 triangles
     let traces = vec![vec![[10.5, 10.5], [14.5, 10.5]], vec![[30.5, 5.5], [30.5, 9.5]]];
     let (many, work) = cut_many_counted(&points, &triangles, &traces);
-    assert_eq!(work.pairs, 2 * triangles.len(), "one segment each, over every triangle");
+    assert_eq!(
+        work.pairs,
+        2 * triangles.len(),
+        "one segment each, over every triangle"
+    );
     assert!(work.tested > 0, "a prefilter that keeps nothing proves nothing");
     assert!(
         work.tested * 20 < work.pairs,
@@ -100,7 +107,11 @@ fn the_box_prefilter_spares_the_pairs_a_short_trace_cannot_touch() {
     );
     // Each answer is still `cut`'s own.
     for (at, trace) in traces.iter().enumerate() {
-        assert_eq!(bits(&many[at]), bits(&cut(&points, &triangles, trace)), "trace {at}");
+        assert_eq!(
+            bits(&many[at]),
+            bits(&cut(&points, &triangles, trace)),
+            "trace {at}"
+        );
         assert!(!many[at].is_empty());
     }
 }

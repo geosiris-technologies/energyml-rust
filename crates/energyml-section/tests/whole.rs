@@ -24,8 +24,14 @@ fn root(svg: &str, name: &str) -> Vec<f64> {
     let tag = &svg[svg.find("<svg").expect("a root")..];
     let tag = &tag[..tag.find('>').expect("a closed root")];
     let key = format!(" {name}=\"");
-    let at = tag.find(&key).unwrap_or_else(|| panic!("no {name} on the root: {tag}")) + key.len();
-    tag[at..][..tag[at..].find('"').unwrap()].split(' ').map(|n| n.parse().unwrap()).collect()
+    let at = tag
+        .find(&key)
+        .unwrap_or_else(|| panic!("no {name} on the root: {tag}"))
+        + key.len();
+    tag[at..][..tag[at..].find('"').unwrap()]
+        .split(' ')
+        .map(|n| n.parse().unwrap())
+        .collect()
 }
 
 fn window_of(w: &Window) -> Vec<f64> {
@@ -61,14 +67,31 @@ fn the_whole_is_the_same_whatever_window_was_asked() {
     let cat = catalogue(items());
     let whole = root(&svg::write(&layout(&cat, &section_view(None))), "data-whole");
     for asked in [
-        Window { x: [0.0, 1000.0], y: [-500.0, 0.0] },
+        Window {
+            x: [0.0, 1000.0],
+            y: [-500.0, 0.0],
+        },
         // Left of well B: B is not even written, and the whole still counts it.
-        Window { x: [100.0, 300.0], y: [-200.0, -50.0] },
-        Window { x: [650.0, 750.0], y: [-40.0, 0.0] },
+        Window {
+            x: [100.0, 300.0],
+            y: [-200.0, -50.0],
+        },
+        Window {
+            x: [650.0, 750.0],
+            y: [-40.0, 0.0],
+        },
     ] {
         let out = svg::write(&layout(&cat, &section_view(Some(asked))));
-        assert_eq!(root(&out, "data-window"), window_of(&asked), "the window is the one asked");
-        assert_eq!(root(&out, "data-whole"), whole, "the whole does not follow the window {asked:?}");
+        assert_eq!(
+            root(&out, "data-window"),
+            window_of(&asked),
+            "the window is the one asked"
+        );
+        assert_eq!(
+            root(&out, "data-whole"),
+            whole,
+            "the whole does not follow the window {asked:?}"
+        );
     }
 }
 
@@ -80,7 +103,10 @@ fn the_whole_is_the_same_in_the_plan_and_follows_the_frame_proportions() {
     v.window = None;
     let bare = svg::write(&layout(&cat, &v));
     assert_eq!(root(&bare, "data-whole"), root(&bare, "data-window"));
-    v.window = Some(Window { x: [100.0, 200.0], y: [20.0, 60.0] });
+    v.window = Some(Window {
+        x: [100.0, 200.0],
+        y: [20.0, 60.0],
+    });
     let zoomed = svg::write(&layout(&cat, &v));
     assert_ne!(root(&zoomed, "data-window"), root(&bare, "data-window"));
     assert_eq!(root(&zoomed, "data-whole"), root(&bare, "data-whole"));
@@ -93,7 +119,10 @@ fn only_that_attribute_is_new_on_a_drawing_without_the_script() {
     let out = svg::write(&layout(&catalogue(items()), &v));
     // Take the attribute out and what is left is the root as it always was.
     let whole = root(&out, "data-whole");
-    let spelled = format!(" data-whole=\"{} {} {} {}\"", whole[0], whole[1], whole[2], whole[3]);
+    let spelled = format!(
+        " data-whole=\"{} {} {} {}\"",
+        whole[0], whole[1], whole[2], whole[3]
+    );
     assert!(out.contains(&spelled), "written as the window is: {spelled}");
     let before = out.replacen(&spelled, "", 1);
     assert_eq!(before.matches("data-whole").count(), 0);

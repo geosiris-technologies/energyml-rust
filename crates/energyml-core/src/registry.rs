@@ -140,7 +140,11 @@ impl AbsentVersion {
             (Some(a), Some(b)) => naming::prerelease_eq(a, b),
             _ => false,
         };
-        same_drop && self.compact.iter().any(|c| *c == naming::compact_version(release))
+        same_drop
+            && self
+                .compact
+                .iter()
+                .any(|c| *c == naming::compact_version(release))
     }
 }
 
@@ -203,13 +207,7 @@ impl Departures {
 ///
 /// Free rather than a method so it borrows one map and the entry list, not the
 /// whole `Registry`.
-fn claim(
-    map: &mut HashMap<String, usize>,
-    key: String,
-    idx: usize,
-    entries: &[TypeEntry],
-    is_drop: bool,
-) {
+fn claim(map: &mut HashMap<String, usize>, key: String, idx: usize, entries: &[TypeEntry], is_drop: bool) {
     if is_drop
         && let Some(held) = map.get(&key)
         && !naming::is_prerelease(entries[*held].info.version)
@@ -468,9 +466,7 @@ impl Registry {
             let wanted = normalize_qualified_type(name);
             self.walk(|info| normalize_qualified_type(&computed_qualified_type(info)) == wanted)
         } else {
-            self.walk(|info| {
-                info.name.eq_ignore_ascii_case(name) || info.xml_name.eq_ignore_ascii_case(name)
-            })
+            self.walk(|info| info.name.eq_ignore_ascii_case(name) || info.xml_name.eq_ignore_ascii_case(name))
         }
     }
 
@@ -533,7 +529,9 @@ impl Registry {
     /// it is refused by name: the fallback exists for documents that write
     /// none, not to paper over a type nobody knows.
     fn substitute<'e>(&'e self, entry: &'e TypeEntry, root: &BytesStart<'_>) -> Result<&'e TypeEntry> {
-        let Some(named) = crate::xml::xsi_type(root)? else { return Ok(entry) };
+        let Some(named) = crate::xml::xsi_type(root)? else {
+            return Ok(entry);
+        };
         let local = naming::strip_obj_prefix(crate::xml::local_part(&named));
         // Any of the type's own names: producers write the **complex type**
         // there as often as not — `h+g_PaleoGTM.epc` roots a
@@ -783,7 +781,6 @@ pub fn to_part(object: &dyn DynObject, opts: crate::xml::XmlWriteOptions) -> Res
     let info = object.as_reflect().type_info();
     let namespace = crate::ns::Namespace::well_known(info.package)
         .ok_or_else(|| Error::UnknownType(format!("no namespace for package `{}`", info.package)))?;
-
 
     // `eml` is declared for the inherited citation fields, `xsi` for the
     // `xsi:type` of any substituted child. Declaring the same one twice would

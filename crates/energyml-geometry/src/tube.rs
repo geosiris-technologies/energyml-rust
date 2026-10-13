@@ -249,14 +249,20 @@ pub fn sweep(points: &[Point], tube: &Tube) -> Result<Swept> {
             // Re-orthogonalised at every station: the transported normal drifts
             // off the plane by a rounding error each time, and a hundred
             // stations of drift is a visibly elliptical tube.
-            normal = normalise(subtract(normal, scale(tangents[index], dot(normal, tangents[index]))))
-                .unwrap_or_else(|| any_perpendicular(tangents[index]));
+            normal = normalise(subtract(
+                normal,
+                scale(tangents[index], dot(normal, tangents[index])),
+            ))
+            .unwrap_or_else(|| any_perpendicular(tangents[index]));
         }
         let binormal = cross(tangents[index], normal);
         for side in 0..tube.sides {
             let angle = std::f64::consts::TAU * side as f64 / tube.sides as f64;
             let (sin, cos) = angle.sin_cos();
-            let offset = add(scale(normal, cos * tube.radius), scale(binormal, sin * tube.radius));
+            let offset = add(
+                scale(normal, cos * tube.radius),
+                scale(binormal, sin * tube.radius),
+            );
             points_out.push(add(*centre, offset));
             station_of.push(index as u32);
         }
@@ -443,7 +449,14 @@ mod tests {
 
     #[test]
     fn a_straight_run_gives_a_ring_at_every_station() {
-        let swept = sweep(&straight(4), &Tube { radius: 2.0, sides: 8 }).unwrap();
+        let swept = sweep(
+            &straight(4),
+            &Tube {
+                radius: 2.0,
+                sides: 8,
+            },
+        )
+        .unwrap();
         assert_eq!(swept.points.len(), 4 * 8);
         // Two triangles a side, a segment at a time.
         assert_eq!(swept.triangles.len(), 3 * 8 * 2);
@@ -457,7 +470,14 @@ mod tests {
         // The one thing a person sets and can see. A radius that came out
         // scaled by the path's length, or by a frame that was not normalised,
         // is a well that is fat where it is straight.
-        let swept = sweep(&straight(5), &Tube { radius: 3.5, sides: 12 }).unwrap();
+        let swept = sweep(
+            &straight(5),
+            &Tube {
+                radius: 3.5,
+                sides: 12,
+            },
+        )
+        .unwrap();
         for (vertex, station) in swept.points.iter().zip(&swept.station_of) {
             let centre = [0.0, 0.0, -(*station as f64)];
             let offset = subtract(*vertex, centre);
@@ -515,7 +535,14 @@ mod tests {
                 [a.cos() * 10.0, a.sin() * 10.0, 0.0]
             })
             .collect();
-        let swept = sweep(&path, &Tube { radius: 1.0, sides: 8 }).unwrap();
+        let swept = sweep(
+            &path,
+            &Tube {
+                radius: 1.0,
+                sides: 8,
+            },
+        )
+        .unwrap();
 
         let mut worst: f64 = 0.0;
         for station in 1..path.len() {
@@ -531,7 +558,14 @@ mod tests {
     fn the_faces_look_outward() {
         // A hexahedron built the other way round renders as a hole, and so does
         // a tube. Measured against the axis, not assumed from the winding.
-        let swept = sweep(&straight(3), &Tube { radius: 2.0, sides: 8 }).unwrap();
+        let swept = sweep(
+            &straight(3),
+            &Tube {
+                radius: 2.0,
+                sides: 8,
+            },
+        )
+        .unwrap();
         for triangle in &swept.triangles {
             let [a, b, c] = triangle.map(|i| swept.points[i as usize]);
             let normal = cross(subtract(b, a), subtract(c, a));
@@ -539,10 +573,7 @@ mod tests {
             let station = swept.station_of[triangle[0] as usize] as f64;
             let axis = [0.0, 0.0, -station];
             let outward = subtract(a, axis);
-            assert!(
-                dot(normal, outward) > 0.0,
-                "a face points inward: {triangle:?}"
-            );
+            assert!(dot(normal, outward) > 0.0, "a face points inward: {triangle:?}");
         }
     }
 

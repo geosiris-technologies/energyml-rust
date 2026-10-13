@@ -19,7 +19,9 @@
 /// Seconds since 1970-01-01T00:00:00Z, fractions kept.
 pub fn unix_seconds(text: &str) -> Result<f64, String> {
     let text = text.trim();
-    let (date, rest) = text.split_once('T').ok_or("no `T` between the date and the time")?;
+    let (date, rest) = text
+        .split_once('T')
+        .ok_or("no `T` between the date and the time")?;
 
     // The date: an optional minus, a year of four digits or more.
     let (negative, date) = match date.strip_prefix('-') {
@@ -73,7 +75,12 @@ pub fn unix_seconds(text: &str) -> Result<f64, String> {
             if fraction.is_empty() || !all_digits(fraction) {
                 return Err("the fraction of a second does not read".into());
             }
-            (whole, format!("0.{fraction}").parse::<f64>().map_err(|_| "the fraction of a second does not read")?)
+            (
+                whole,
+                format!("0.{fraction}")
+                    .parse::<f64>()
+                    .map_err(|_| "the fraction of a second does not read")?,
+            )
         }
         None => (seconds_text, 0.0),
     };
@@ -98,7 +105,11 @@ fn all_digits(text: &str) -> bool {
 }
 
 fn two_digits(text: &str) -> Option<i64> {
-    if text.len() == 2 && all_digits(text) { text.parse().ok() } else { None }
+    if text.len() == 2 && all_digits(text) {
+        text.parse().ok()
+    } else {
+        None
+    }
 }
 
 fn leap(year: i64) -> bool {

@@ -149,7 +149,10 @@ impl RefIssue {
             self.kind,
             RefIssueKind::Dangling
                 | RefIssueKind::ConceptMismatch { .. }
-                | RefIssueKind::ObjectVersionMismatch { referenced: Some(_), .. }
+                | RefIssueKind::ObjectVersionMismatch {
+                    referenced: Some(_),
+                    ..
+                }
         )
     }
 
@@ -198,39 +201,68 @@ impl fmt::Display for RefIssue {
                 self.declared_type.as_deref().unwrap_or("?"),
                 should_be_one_of(candidates)
             ),
-            RefIssueKind::ObjectVersionMismatch { referenced: Some(referenced), found: Some(found), candidates } => write!(
+            RefIssueKind::ObjectVersionMismatch {
+                referenced: Some(referenced),
+                found: Some(found),
+                candidates,
+            } => write!(
                 f,
                 "references {} at version `{referenced}`, but that object is at version `{found}`{}",
                 self.target_uuid,
                 should_be_one_of(candidates)
             ),
-            RefIssueKind::ObjectVersionMismatch { referenced: Some(referenced), found: None, candidates } => write!(
+            RefIssueKind::ObjectVersionMismatch {
+                referenced: Some(referenced),
+                found: None,
+                candidates,
+            } => write!(
                 f,
                 "references {} at version `{referenced}`, but {}{}",
                 self.target_uuid,
-                if candidates.len() > 1 { "no object of that uuid and type carries it" } else { "that object carries no objectVersion" },
+                if candidates.len() > 1 {
+                    "no object of that uuid and type carries it"
+                } else {
+                    "that object carries no objectVersion"
+                },
                 should_be_one_of(candidates)
             ),
-            RefIssueKind::ObjectVersionMismatch { referenced: None, found, candidates } if candidates.len() > 1 => write!(
+            RefIssueKind::ObjectVersionMismatch {
+                referenced: None,
+                found,
+                candidates,
+            } if candidates.len() > 1 => write!(
                 f,
                 "references {} without an ObjectVersion, and {} objects of that uuid and type are held{}{}",
                 self.target_uuid,
                 candidates.len(),
-                found.as_deref().map(|version| format!(" (the nearest at version `{version}`)")).unwrap_or_default(),
+                found
+                    .as_deref()
+                    .map(|version| format!(" (the nearest at version `{version}`)"))
+                    .unwrap_or_default(),
                 should_be_one_of(candidates)
             ),
-            RefIssueKind::ObjectVersionMismatch { referenced: None, found, .. } => write!(
+            RefIssueKind::ObjectVersionMismatch {
+                referenced: None,
+                found,
+                ..
+            } => write!(
                 f,
                 "references {} without an ObjectVersion, and that object is at version `{}` — a reader assumes the latest, which is this one; say it",
                 self.target_uuid,
                 found.as_deref().unwrap_or("?")
             ),
-            RefIssueKind::TitleMismatch { referenced: Some(referenced), found } => write!(
+            RefIssueKind::TitleMismatch {
+                referenced: Some(referenced),
+                found,
+            } => write!(
                 f,
                 "calls {} `{referenced}`, and that object calls itself `{found}` — the title in a reference is a copy, and this one is stale",
                 self.target_uuid
             ),
-            RefIssueKind::TitleMismatch { referenced: None, found } => write!(
+            RefIssueKind::TitleMismatch {
+                referenced: None,
+                found,
+            } => write!(
                 f,
                 "references {} with no title, and that object is called `{found}` — the title in a reference is a copy, and this one is empty",
                 self.target_uuid
@@ -251,7 +283,10 @@ fn should_be_one_of(candidates: &[String]) -> String {
     if candidates.is_empty() {
         String::new()
     } else {
-        format!(": uuid found but type or version should be one of the following: {}", candidates.join(", "))
+        format!(
+            ": uuid found but type or version should be one of the following: {}",
+            candidates.join(", ")
+        )
     }
 }
 
@@ -277,7 +312,13 @@ pub enum Cached {
 /// The reference's `ObjectVersion` against the object's — see
 /// [`RefIssueKind::ObjectVersionMismatch`] for which way each case goes.
 fn revision_check(referenced: Option<&str>, found: &Cached, candidates: &[String]) -> Option<RefIssueKind> {
-    let Cached::Read { object_version: found, .. } = found else { return None };
+    let Cached::Read {
+        object_version: found,
+        ..
+    } = found
+    else {
+        return None;
+    };
     let referenced = referenced.map(str::trim).filter(|v| !v.is_empty());
     let found = found.as_deref().map(str::trim).filter(|v| !v.is_empty());
     match (referenced, found) {
@@ -294,20 +335,30 @@ fn revision_check(referenced: Option<&str>, found: &Cached, candidates: &[String
 /// The `objectVersion` an entry states, as the target says of itself: the
 /// outer `None` is *not read* (nothing can be compared), the inner one *carries
 /// none*.
-fn stated_version(target: &ObjectSummary, cached_of: &dyn Fn(&ObjectSummary) -> Cached) -> Option<Option<String>> {
+fn stated_version(
+    target: &ObjectSummary,
+    cached_of: &dyn Fn(&ObjectSummary) -> Cached,
+) -> Option<Option<String>> {
     match cached_of(target) {
         // Not read — but the store spells **the version into the uri** of an entry
         // that declares one, so a uri that carries a version says it. One that
         // carries none says nothing: *not read* and *states none* differ.
         Cached::Unread => match identity::ObjectId::parse(&target.uri) {
-            Ok((_, id)) if id.object_version.as_deref().is_some_and(|version| !version.trim().is_empty()) => {
+            Ok((_, id))
+                if id
+                    .object_version
+                    .as_deref()
+                    .is_some_and(|version| !version.trim().is_empty()) =>
+            {
                 Some(id.object_version.map(|version| version.trim().to_string()))
             }
             _ => None,
         },
-        Cached::Read { object_version, .. } => {
-            Some(object_version.map(|version| version.trim().to_string()).filter(|version| !version.is_empty()))
-        }
+        Cached::Read { object_version, .. } => Some(
+            object_version
+                .map(|version| version.trim().to_string())
+                .filter(|version| !version.is_empty()),
+        ),
     }
 }
 
@@ -317,7 +368,12 @@ fn stated_version(target: &ObjectSummary, cached_of: &dyn Fn(&ObjectSummary) -> 
 /// no original for the copy to disagree with, and a reference that names one
 /// anyway is the only record of a name the package has otherwise lost.
 fn title_check(referenced: Option<&str>, found: &Cached) -> Option<RefIssueKind> {
-    let Cached::Read { title: Some(found), .. } = found else { return None };
+    let Cached::Read {
+        title: Some(found), ..
+    } = found
+    else {
+        return None;
+    };
     let found = found.trim();
     if found.is_empty() {
         return None;
@@ -381,7 +437,12 @@ pub fn check_references<'i>(
     known: &dyn Fn(&str) -> Option<&'i ObjectSummary>,
     cached_of: &dyn Fn(&str) -> Cached,
 ) -> Vec<RefIssue> {
-    check_references_by(source, object, &|uuid| known(uuid).into_iter().collect(), &|target| cached_of(&target.uuid))
+    check_references_by(
+        source,
+        object,
+        &|uuid| known(uuid).into_iter().collect(),
+        &|target| cached_of(&target.uuid),
+    )
 }
 
 /// [`check_references`] for a package that may hold **one uuid several times** —
@@ -428,13 +489,20 @@ pub fn check_references_by<'i>(
         let mut uris: Vec<String> = candidates.iter().map(|one| one.uri.clone()).collect();
         uris.sort();
         uris.dedup();
-        let wanted = edge.target.object_version.map(str::trim).filter(|version| !version.is_empty());
+        let wanted = edge
+            .target
+            .object_version
+            .map(str::trim)
+            .filter(|version| !version.is_empty());
 
         // **Exact resolution**: the entries of the right type — *a wrong version
         // is not a wrong type*, so a release that differs is not exact — and,
         // among them, the one at the version the reference names.
-        let same_type: Vec<&ObjectSummary> =
-            candidates.iter().copied().filter(|one| same_qualified_type(&declared, &one.qualified_type)).collect();
+        let same_type: Vec<&ObjectSummary> = candidates
+            .iter()
+            .copied()
+            .filter(|one| same_qualified_type(&declared, &one.qualified_type))
+            .collect();
         match exact_among(&same_type, wanted, cached_of) {
             Some(target) => {
                 // The revision and the title: the four fields of a reference are
@@ -450,7 +518,11 @@ pub fn check_references_by<'i>(
             // The right type, and no entry at the version named — or several
             // and none that is *the* one a reference without a version means.
             None if !same_type.is_empty() => {
-                let sole = if same_type.len() == 1 { Some(same_type[0]) } else { None };
+                let sole = if same_type.len() == 1 {
+                    Some(same_type[0])
+                } else {
+                    None
+                };
                 let found = sole.and_then(|one| stated_version(one, cached_of)).flatten();
                 out.push(issue(RefIssueKind::ObjectVersionMismatch {
                     referenced: wanted.map(str::to_string),
@@ -468,12 +540,19 @@ pub fn check_references_by<'i>(
             // "different version" and "different thing" must not come out as the
             // same complaint — the nearest candidate decides which this is.
             None => {
-                let near = candidates.iter().copied().find(|one| same_concept(&declared, &one.qualified_type));
+                let near = candidates
+                    .iter()
+                    .copied()
+                    .find(|one| same_concept(&declared, &one.qualified_type));
                 let kind = match near {
-                    Some(one) => RefIssueKind::VersionMismatch { found: one.qualified_type.clone(), candidates: uris.clone() },
-                    None => {
-                        RefIssueKind::ConceptMismatch { found: candidates[0].qualified_type.clone(), candidates: uris.clone() }
-                    }
+                    Some(one) => RefIssueKind::VersionMismatch {
+                        found: one.qualified_type.clone(),
+                        candidates: uris.clone(),
+                    },
+                    None => RefIssueKind::ConceptMismatch {
+                        found: candidates[0].qualified_type.clone(),
+                        candidates: uris.clone(),
+                    },
                 };
                 out.push(issue(kind));
                 // One candidate is *the* object the reference means to name: its
@@ -504,10 +583,13 @@ fn exact_among<'a>(
     cached_of: &dyn Fn(&ObjectSummary) -> Cached,
 ) -> Option<&'a ObjectSummary> {
     match wanted {
-        Some(wanted) => same_type.iter().copied().find(|one| match stated_version(one, cached_of) {
-            None => true,
-            Some(version) => version.as_deref() == Some(wanted),
-        }),
+        Some(wanted) => same_type
+            .iter()
+            .copied()
+            .find(|one| match stated_version(one, cached_of) {
+                None => true,
+                Some(version) => version.as_deref() == Some(wanted),
+            }),
         None => match same_type {
             [only] => Some(*only),
             many => {
@@ -570,7 +652,10 @@ pub fn nested_index<'a>(
     objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn Reflect)>,
 ) -> std::collections::HashMap<String, (ObjectSummary, String, Cached)> {
     let objects: Vec<(&ObjectSummary, &dyn Reflect)> = objects.into_iter().collect();
-    let parts: std::collections::HashSet<String> = objects.iter().map(|(summary, _)| summary.uuid.to_ascii_lowercase()).collect();
+    let parts: std::collections::HashSet<String> = objects
+        .iter()
+        .map(|(summary, _)| summary.uuid.to_ascii_lowercase())
+        .collect();
     let mut out = std::collections::HashMap::new();
     for (container, object) in objects {
         for nested in identity::nested_objects(object) {
@@ -589,7 +674,8 @@ pub fn nested_index<'a>(
                 object_version: nested.key.object_version.map(str::to_string),
                 title: nested.key.title.map(str::to_string),
             };
-            out.entry(uuid).or_insert((summary, container.uuid.to_ascii_lowercase(), cached));
+            out.entry(uuid)
+                .or_insert((summary, container.uuid.to_ascii_lowercase(), cached));
         }
     }
     out
@@ -643,7 +729,10 @@ pub fn check_all_references_with<'a, 'i>(
     // choose among.
     let mut in_batch: std::collections::HashMap<String, Vec<usize>> = std::collections::HashMap::new();
     for (at, (summary, _)) in objects.iter().enumerate() {
-        in_batch.entry(summary.uuid.to_ascii_lowercase()).or_default().push(at);
+        in_batch
+            .entry(summary.uuid.to_ascii_lowercase())
+            .or_default()
+            .push(at);
     }
     // A reference naming an object nested in one of these resolves to it
     // (see [`nested_index`]).
@@ -652,7 +741,11 @@ pub fn check_all_references_with<'a, 'i>(
         stated
             .get(target.uri.as_str())
             .cloned()
-            .or_else(|| nested.get(&target.uuid.to_ascii_lowercase()).map(|(_, _, cached)| cached.clone()))
+            .or_else(|| {
+                nested
+                    .get(&target.uuid.to_ascii_lowercase())
+                    .map(|(_, _, cached)| cached.clone())
+            })
             .unwrap_or(Cached::Unread)
     };
     // Every entry that carries the uuid: the batch's, then what the caller knows
@@ -660,8 +753,10 @@ pub fn check_all_references_with<'a, 'i>(
     // uri — and, when nothing holds the uuid, the object nested in a part.
     let held = |uuid: &str| -> Vec<&ObjectSummary> {
         let key = uuid.to_ascii_lowercase();
-        let mut out: Vec<&ObjectSummary> =
-            in_batch.get(&key).map(|ats| ats.iter().map(|at| objects[*at].0).collect()).unwrap_or_default();
+        let mut out: Vec<&ObjectSummary> = in_batch
+            .get(&key)
+            .map(|ats| ats.iter().map(|at| objects[*at].0).collect())
+            .unwrap_or_default();
         for other in elsewhere(uuid) {
             if !out.iter().any(|one| one.uri == other.uri) {
                 out.push(other);
@@ -915,7 +1010,9 @@ pub fn repair_references(
                 continue;
             }
         };
-        let uuid = identity::uuid_of_reflect(&*reference).unwrap_or_default().to_string();
+        let uuid = identity::uuid_of_reflect(&*reference)
+            .unwrap_or_default()
+            .to_string();
         let Ok(id) = identity::ObjectId::from_qualified_type(&qualified_type, &uuid) else {
             continue;
         };
@@ -1033,7 +1130,11 @@ mod tests {
         assert_eq!(revision(Some("3"), &Cached::Unread), None);
         assert_eq!(revision(None, &read(None)), None);
         assert_eq!(revision(Some("3"), &read(Some("3"))), None);
-        assert_eq!(revision(Some(" 3 "), &read(Some("3"))), None, "whitespace is not a revision");
+        assert_eq!(
+            revision(Some(" 3 "), &read(Some("3"))),
+            None,
+            "whitespace is not a revision"
+        );
 
         let issue = |kind| RefIssue {
             source: "eml:///resqml22.HorizonInterpretation(a)".into(),
@@ -1045,13 +1146,20 @@ mod tests {
         let differ = revision(Some("2"), &read(Some("3"))).expect("a finding");
         assert_eq!(
             differ,
-            RefIssueKind::ObjectVersionMismatch { referenced: Some("2".into()), found: Some("3".into()), candidates: vec![] }
+            RefIssueKind::ObjectVersionMismatch {
+                referenced: Some("2".into()),
+                found: Some("3".into()),
+                candidates: vec![]
+            }
         );
         assert!(issue(differ.clone()).is_error());
         assert!(issue(differ).to_string().contains("`2`"));
 
         let named_none = revision(Some("2"), &read(None)).expect("a finding");
-        assert!(issue(named_none).is_error(), "a revision the object does not carry is promised");
+        assert!(
+            issue(named_none).is_error(),
+            "a revision the object does not carry is promised"
+        );
 
         // What our own translation used to write: objects at `0`, references
         // silent. The Identifier Specification lets a reader assume the
@@ -1059,7 +1167,11 @@ mod tests {
         let silent = revision(None, &read(Some("0"))).expect("a finding");
         assert_eq!(
             silent,
-            RefIssueKind::ObjectVersionMismatch { referenced: None, found: Some("0".into()), candidates: vec![] }
+            RefIssueKind::ObjectVersionMismatch {
+                referenced: None,
+                found: Some("0".into()),
+                candidates: vec![]
+            }
         );
         assert!(!issue(silent.clone()).is_error());
         assert!(!issue(silent.clone()).is_info());
@@ -1079,10 +1191,22 @@ mod tests {
             title: title.map(str::to_string),
         };
         assert_eq!(title_check(Some("The base"), &Cached::Unread), None);
-        assert_eq!(title_check(Some("The base"), &read(None)), None, "no original, no stale copy");
-        assert_eq!(title_check(None, &read(Some("  "))), None, "a blank title is not a title");
+        assert_eq!(
+            title_check(Some("The base"), &read(None)),
+            None,
+            "no original, no stale copy"
+        );
+        assert_eq!(
+            title_check(None, &read(Some("  "))),
+            None,
+            "a blank title is not a title"
+        );
         assert_eq!(title_check(Some("The base"), &read(Some("The base"))), None);
-        assert_eq!(title_check(Some(" The base "), &read(Some("The base"))), None, "whitespace is not a name");
+        assert_eq!(
+            title_check(Some(" The base "), &read(Some("The base"))),
+            None,
+            "whitespace is not a name"
+        );
 
         let issue = |kind| RefIssue {
             source: "eml:///eml23.LocalEngineeringCompoundCrs(a)".into(),
@@ -1092,8 +1216,17 @@ mod tests {
             kind,
         };
         let empty = title_check(None, &read(Some("Default local time CRS"))).expect("un constat");
-        assert_eq!(empty, RefIssueKind::TitleMismatch { referenced: None, found: "Default local time CRS".into() });
-        assert!(!issue(empty.clone()).is_error(), "the uuid resolves: this is not an error");
+        assert_eq!(
+            empty,
+            RefIssueKind::TitleMismatch {
+                referenced: None,
+                found: "Default local time CRS".into()
+            }
+        );
+        assert!(
+            !issue(empty.clone()).is_error(),
+            "the uuid resolves: this is not an error"
+        );
         assert!(!issue(empty.clone()).is_info());
         assert!(issue(empty).to_string().contains("no title"));
 
@@ -1131,15 +1264,26 @@ mod tests {
         // kind as a reference into nothing. `assemble` rather than `build`
         // because it is the path with no object to walk — the one an ETP client
         // takes — and because it needs no reflection here.
-        let held = summary("00000000-0000-4000-8000-000000000001", "resqml22.ContinuousProperty");
+        let held = summary(
+            "00000000-0000-4000-8000-000000000001",
+            "resqml22.ContinuousProperty",
+        );
         let kind = "eml:///eml23.PropertyKind(00000000-0000-4000-8000-000000000002)";
         let gone = "eml:///resqml22.HorizonInterpretation(00000000-0000-4000-8000-000000000003)";
         let graph = assemble(
             [&held],
             &|_| None,
             [
-                Edge { from: held.uri.clone(), to: kind.into(), path: "PropertyKind".into() },
-                Edge { from: held.uri.clone(), to: gone.into(), path: "Represents".into() },
+                Edge {
+                    from: held.uri.clone(),
+                    to: kind.into(),
+                    path: "PropertyKind".into(),
+                },
+                Edge {
+                    from: held.uri.clone(),
+                    to: gone.into(),
+                    path: "Represents".into(),
+                },
             ],
         );
 
@@ -1324,8 +1468,7 @@ pub fn check_relationships(objects: &[Related<'_>]) -> Vec<RelIssue> {
     };
 
     // Part file name → uuid, for turning a relationship target into an object.
-    let mut by_part: std::collections::HashMap<String, &ObjectSummary> =
-        std::collections::HashMap::new();
+    let mut by_part: std::collections::HashMap<String, &ObjectSummary> = std::collections::HashMap::new();
     for item in objects {
         by_part.insert(leaf(&item.summary.locator), item.summary);
     }
@@ -1333,10 +1476,11 @@ pub fn check_relationships(objects: &[Related<'_>]) -> Vec<RelIssue> {
     // `find` over every object **per reference**: 108 s on a package of
     // 77 090 objects and 319 244 references), invisible on the corpus.
     // The first object holding a uuid wins, as `find` did.
-    let mut by_uuid: std::collections::HashMap<String, &ObjectSummary> =
-        std::collections::HashMap::new();
+    let mut by_uuid: std::collections::HashMap<String, &ObjectSummary> = std::collections::HashMap::new();
     for item in objects {
-        by_uuid.entry(item.summary.uuid.to_ascii_lowercase()).or_insert(item.summary);
+        by_uuid
+            .entry(item.summary.uuid.to_ascii_lowercase())
+            .or_insert(item.summary);
     }
     // A reference to a nested object is a link to the part that holds it —
     // what the writer records (see [`nested_index`]).
@@ -1649,12 +1793,24 @@ pub fn build<'a>(objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn R
                 if *container == summary.uuid.to_ascii_lowercase() {
                     continue;
                 }
-                if let Some(at) = index.get(container).and_then(|held| held.first()).map(|held| held.at) {
-                    edges.push(Edge { from: summary.uri.clone(), to: nodes[at].uri.clone(), path: edge.path.clone() });
+                if let Some(at) = index
+                    .get(container)
+                    .and_then(|held| held.first())
+                    .map(|held| held.at)
+                {
+                    edges.push(Edge {
+                        from: summary.uri.clone(),
+                        to: nodes[at].uri.clone(),
+                        path: edge.path.clone(),
+                    });
                     continue;
                 }
             }
-            let wanted_version = edge.target.object_version.map(str::trim).filter(|version| !version.is_empty());
+            let wanted_version = edge
+                .target
+                .object_version
+                .map(str::trim)
+                .filter(|version| !version.is_empty());
             let held = index.entry(key).or_default();
             if held.is_empty() {
                 // Referenced and not in the package. It gets a node saying so
@@ -1666,7 +1822,12 @@ pub fn build<'a>(objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn R
                     version: wanted_version.map(str::to_string),
                 });
                 nodes.push(Node {
-                    uri: identifiers::EtpUri::object_versioned(None, &qualified_type, edge.target.uuid, wanted_version),
+                    uri: identifiers::EtpUri::object_versioned(
+                        None,
+                        &qualified_type,
+                        edge.target.uuid,
+                        wanted_version,
+                    ),
                     uuid: edge.target.uuid.to_string(),
                     type_key: naming::strip_obj_prefix(edge.target.object_type).to_string(),
                     externally_defined: is_externally_defined(&qualified_type),
@@ -1751,10 +1912,7 @@ pub fn assemble<'a>(
                 .and_then(|u| u.qualified_type())
                 .map(|q| q.to_string())
                 .unwrap_or_default();
-            let uuid = parsed
-                .as_ref()
-                .and_then(|u| u.uuid.clone())
-                .unwrap_or_default();
+            let uuid = parsed.as_ref().and_then(|u| u.uuid.clone()).unwrap_or_default();
             index.insert(uri.clone(), nodes.len());
             nodes.push(Node {
                 uri: uri.clone(),
@@ -1892,8 +2050,7 @@ pub struct Closure {
 /// Seeds the graph does not hold are ignored rather than invented; `plan`
 /// reports them as `unknown`, which is where that news belongs.
 pub fn closure(graph: &Graph, seeds: &[String]) -> Closure {
-    let mut out_edges: std::collections::HashMap<&str, Vec<&Edge>> =
-        std::collections::HashMap::new();
+    let mut out_edges: std::collections::HashMap<&str, Vec<&Edge>> = std::collections::HashMap::new();
     for edge in &graph.edges {
         out_edges.entry(edge.from.as_str()).or_default().push(edge);
     }
@@ -1904,8 +2061,7 @@ pub fn closure(graph: &Graph, seeds: &[String]) -> Closure {
     let mut missing: Vec<String> = Vec::new();
     let mut stack: Vec<String> = Vec::new();
     for seed in seeds {
-        if node_of.get(seed.as_str()).is_some_and(|node| node.present) && reached.insert(seed.clone())
-        {
+        if node_of.get(seed.as_str()).is_some_and(|node| node.present) && reached.insert(seed.clone()) {
             stack.push(seed.clone());
         }
     }
@@ -1995,10 +2151,7 @@ impl Graph {
                 None => out.push_str("\"title\": null, "),
             }
             out.push_str(&format!("\"present\": {}, ", node.present));
-            out.push_str(&format!(
-                "\"externallyDefined\": {}",
-                node.externally_defined
-            ));
+            out.push_str(&format!("\"externallyDefined\": {}", node.externally_defined));
             out.push('}');
             if n + 1 < self.nodes.len() {
                 out.push(',');

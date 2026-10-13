@@ -44,7 +44,10 @@ pub struct Grouped<K> {
 /// Split `values` by the key of the element at the same position.
 pub fn partition<K: Ord + Clone>(values: &[f64], keys: &[Option<K>]) -> Result<Grouped<K>, Error> {
     if values.len() != keys.len() {
-        return Err(Error::KeysAndValues { keys: keys.len(), values: values.len() });
+        return Err(Error::KeysAndValues {
+            keys: keys.len(),
+            values: values.len(),
+        });
     }
     let mut groups: BTreeMap<K, Vec<f64>> = BTreeMap::new();
     let mut ungrouped = 0usize;
@@ -54,7 +57,13 @@ pub fn partition<K: Ord + Clone>(values: &[f64], keys: &[Option<K>]) -> Result<G
             None => ungrouped += 1,
         }
     }
-    Ok(Grouped { groups: groups.into_iter().map(|(key, values)| Group { key, values }).collect(), ungrouped })
+    Ok(Grouped {
+        groups: groups
+            .into_iter()
+            .map(|(key, values)| Group { key, values })
+            .collect(),
+        ungrouped,
+    })
 }
 
 #[cfg(test)]
@@ -76,6 +85,9 @@ mod tests {
 
     #[test]
     fn keys_and_values_of_two_lengths_are_refused() {
-        assert_eq!(partition(&[1.0, 2.0], &[Some(1)]).unwrap_err(), Error::KeysAndValues { keys: 1, values: 2 });
+        assert_eq!(
+            partition(&[1.0, 2.0], &[Some(1)]).unwrap_err(),
+            Error::KeysAndValues { keys: 1, values: 2 }
+        );
     }
 }

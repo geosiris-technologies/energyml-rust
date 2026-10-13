@@ -311,12 +311,8 @@ impl Proj4 {
 
     fn build(&self, epsg: u64) -> Result<proj4rs::Proj> {
         let proj4 = self.checked(epsg)?;
-        proj4rs::Proj::from_proj_string(proj4).map_err(|e| {
-            Error::malformed(
-                format!("EPSG:{epsg}"),
-                format!("proj4rs rejected `{proj4}`: {e}"),
-            )
-        })
+        proj4rs::Proj::from_proj_string(proj4)
+            .map_err(|e| Error::malformed(format!("EPSG:{epsg}"), format!("proj4rs rejected `{proj4}`: {e}")))
     }
 }
 
@@ -444,7 +440,9 @@ mod tests {
         // 4267 NAD27: `crs-definitions` gives it `+datum=NAD27`, so build one
         // that is genuinely silent to exercise the check.
         let backend = Proj4::new().with_definition(99999, "+proj=utm +zone=31 +ellps=intl +units=m");
-        let error = backend.reproject([500000.0, 4650000.0, 0.0], 99999, 4326).unwrap_err();
+        let error = backend
+            .reproject([500000.0, 4650000.0, 0.0], 99999, 4326)
+            .unwrap_err();
         let message = format!("{error}");
         assert!(message.contains("states no datum"), "{message}");
         assert!(message.contains("99999"), "{message}");
@@ -455,7 +453,9 @@ mod tests {
         let backend = Proj4::new()
             .with_definition(99999, "+proj=utm +zone=31 +ellps=intl +units=m")
             .allowing_a_silent_datum();
-        let out = backend.reproject([500000.0, 4650000.0, 0.0], 99999, 4326).unwrap();
+        let out = backend
+            .reproject([500000.0, 4650000.0, 0.0], 99999, 4326)
+            .unwrap();
         // The no-shift answer: exactly on the central meridian.
         assert!((out[0] - 3.0).abs() < 1e-9, "{out:?}");
     }
@@ -467,7 +467,9 @@ mod tests {
             "+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 \
              +ellps=airy +nadgrids=OSTN15_NTv2_OSGBtoETRS.gsb +units=m",
         );
-        let error = backend.reproject([400000.0, 300000.0, 0.0], 99998, 4326).unwrap_err();
+        let error = backend
+            .reproject([400000.0, 300000.0, 0.0], 99998, 4326)
+            .unwrap_err();
         let message = format!("{error}");
         assert!(message.contains("correction grid"), "{message}");
         assert!(message.contains("OSTN15"), "{message}");
@@ -547,8 +549,12 @@ mod tests {
         // horizontal answer depends slightly on the height fed to the Helmert,
         // and this build always feeds zero.
         let backend = Proj4::new();
-        let flat = backend.reproject([500000.0, 4650000.0, 0.0], 23031, 4326).unwrap();
-        let deep = backend.reproject([500000.0, 4650000.0, -1234.5], 23031, 4326).unwrap();
+        let flat = backend
+            .reproject([500000.0, 4650000.0, 0.0], 23031, 4326)
+            .unwrap();
+        let deep = backend
+            .reproject([500000.0, 4650000.0, -1234.5], 23031, 4326)
+            .unwrap();
         assert_eq!(flat[0], deep[0]);
         assert_eq!(flat[1], deep[1]);
 
@@ -560,12 +566,14 @@ mod tests {
         let mut with_height = (500000.0, 4650000.0, -1234.5);
         proj4rs::transform::transform(&source, &target, &mut with_height).unwrap();
         let metres_per_degree = 111_320.0;
-        let east = (with_height.0.to_degrees() - flat[0]) * metres_per_degree
-            * flat[1].to_radians().cos();
+        let east = (with_height.0.to_degrees() - flat[0]) * metres_per_degree * flat[1].to_radians().cos();
         let north = (with_height.1.to_degrees() - flat[1]) * metres_per_degree;
         let offset = east.hypot(north);
         assert!(offset < 0.05, "{offset} m");
-        assert!(offset > 0.01, "{offset} m — suspiciously small, is the datum shift running?");
+        assert!(
+            offset > 0.01,
+            "{offset} m — suspiciously small, is the datum shift running?"
+        );
     }
 
     #[test]

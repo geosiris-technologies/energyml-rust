@@ -79,7 +79,14 @@ pub struct KrigingAnswer {
 
 impl Ordinary {
     pub fn new(model: Model) -> Self {
-        Ordinary { model, exact_within: 1e-12, radius: None, neighbours: None, barriers: None, variance: true }
+        Ordinary {
+            model,
+            exact_within: 1e-12,
+            radius: None,
+            neighbours: None,
+            barriers: None,
+            variance: true,
+        }
     }
 
     /// Only the estimates: no variance is computed, and `variances` comes
@@ -125,7 +132,9 @@ impl Ordinary {
 
     /// Whether the sample set depends on the query.
     fn is_local(&self) -> bool {
-        self.radius.is_some() || self.neighbours.is_some() || self.barriers.as_ref().is_some_and(|b| !b.is_empty())
+        self.radius.is_some()
+            || self.neighbours.is_some()
+            || self.barriers.as_ref().is_some_and(|b| !b.is_empty())
     }
 
     /// Estimate `values` known at `samples` onto `queries`.
@@ -136,7 +145,10 @@ impl Ordinary {
         queries: &[[f64; N]],
     ) -> Result<KrigingAnswer, Error> {
         if samples.len() != values.len() {
-            return Err(Error::MismatchedLengths { count: samples.len(), values: values.len() });
+            return Err(Error::MismatchedLengths {
+                count: samples.len(),
+                values: values.len(),
+            });
         }
         if let Some(radius) = self.radius {
             if !(radius.is_finite() && radius > 0.0) {
@@ -154,11 +166,18 @@ impl Ordinary {
             .collect();
         let set_aside = samples.len() - usable.len();
         if usable.is_empty() {
-            return Err(Error::NoSample { given: samples.len(), set_aside });
+            return Err(Error::NoSample {
+                given: samples.len(),
+                set_aside,
+            });
         }
 
         let distance = |a: &[f64; N], b: &[f64; N]| -> f64 {
-            a.iter().zip(b).map(|(x, y)| (x - y) * (x - y)).sum::<f64>().sqrt()
+            a.iter()
+                .zip(b)
+                .map(|(x, y)| (x - y) * (x - y))
+                .sum::<f64>()
+                .sqrt()
         };
         // Coincident samples make two identical rows — singular by
         // construction, and better refused with both names than found as
@@ -200,22 +219,35 @@ impl Ordinary {
             let values = queries
                 .iter()
                 .map(|query| {
-                    if let Some((_, value)) = usable.iter().find(|(point, _)| distance(point, query) <= self.exact_within) {
+                    if let Some((_, value)) = usable
+                        .iter()
+                        .find(|(point, _)| distance(point, query) <= self.exact_within)
+                    {
                         return *value;
                     }
-                    usable.iter().zip(&dual).map(|((point, _), a)| a * self.model.evaluate(distance(point, query))).sum::<f64>()
+                    usable
+                        .iter()
+                        .zip(&dual)
+                        .map(|((point, _), a)| a * self.model.evaluate(distance(point, query)))
+                        .sum::<f64>()
                         + dual[n]
                 })
                 .collect();
-            return Ok(KrigingAnswer { values, variances: Vec::new(), set_aside, unreached: 0 });
+            return Ok(KrigingAnswer {
+                values,
+                variances: Vec::new(),
+                set_aside,
+                unreached: 0,
+            });
         }
 
         let mut out = Vec::with_capacity(queries.len());
         let mut variances = Vec::with_capacity(queries.len());
         let mut rhs = vec![0.0f64; side];
         for query in queries {
-            if let Some((_, value)) =
-                usable.iter().find(|(point, _)| distance(point, query) <= self.exact_within)
+            if let Some((_, value)) = usable
+                .iter()
+                .find(|(point, _)| distance(point, query) <= self.exact_within)
             {
                 out.push(*value);
                 variances.push(0.0);
@@ -226,15 +258,23 @@ impl Ordinary {
             }
             rhs[n] = 1.0;
             let weights = factored.solve(&rhs);
-            let estimate: f64 =
-                weights[..n].iter().zip(&usable).map(|(w, (_, z))| w * z).sum();
+            let estimate: f64 = weights[..n].iter().zip(&usable).map(|(w, (_, z))| w * z).sum();
             // σ² = Σ wᵢ γ(dᵢ) + μ — the Lagrange multiplier is weights[n].
-            let variance: f64 =
-                weights[..n].iter().zip(&rhs[..n]).map(|(w, g)| w * g).sum::<f64>() + weights[n];
+            let variance: f64 = weights[..n]
+                .iter()
+                .zip(&rhs[..n])
+                .map(|(w, g)| w * g)
+                .sum::<f64>()
+                + weights[n];
             out.push(estimate);
             variances.push(variance.max(0.0));
         }
-        Ok(KrigingAnswer { values: out, variances, set_aside, unreached: 0 })
+        Ok(KrigingAnswer {
+            values: out,
+            variances,
+            set_aside,
+            unreached: 0,
+        })
     }
 
     /// The by-neighbourhood path: one small system per query.
@@ -277,7 +317,9 @@ impl Ordinary {
             // The fault after the radius (cheap first), the cap after the
             // fault (the rule) — see `keep_visible`.
             match &self.barriers {
-                Some(faults) => keep_visible(&mut near, self.neighbours, |at| faults.blocks(plan(&usable[at].0), plan(query))),
+                Some(faults) => keep_visible(&mut near, self.neighbours, |at| {
+                    faults.blocks(plan(&usable[at].0), plan(query))
+                }),
                 None => {
                     if let Some(k) = self.neighbours {
                         if near.len() > k {
@@ -300,7 +342,9 @@ impl Ordinary {
             let mut matrix = vec![0.0f64; side * side];
             for i in 0..n {
                 for j in 0..n {
-                    matrix[i * side + j] = self.model.evaluate(distance(&usable[near[i].1].0, &usable[near[j].1].0));
+                    matrix[i * side + j] = self
+                        .model
+                        .evaluate(distance(&usable[near[i].1].0, &usable[near[j].1].0));
                 }
                 matrix[i * side + n] = 1.0;
                 matrix[n * side + i] = 1.0;
@@ -312,15 +356,28 @@ impl Ordinary {
             }
             rhs[n] = 1.0;
             let weights = factored.solve(&rhs);
-            let estimate: f64 = weights[..n].iter().zip(&near).map(|(w, (_, at))| w * usable[*at].1).sum();
+            let estimate: f64 = weights[..n]
+                .iter()
+                .zip(&near)
+                .map(|(w, (_, at))| w * usable[*at].1)
+                .sum();
             out.push(estimate);
             if self.variance {
-                let variance: f64 =
-                    weights[..n].iter().zip(&rhs[..n]).map(|(w, g)| w * g).sum::<f64>() + weights[n];
+                let variance: f64 = weights[..n]
+                    .iter()
+                    .zip(&rhs[..n])
+                    .map(|(w, g)| w * g)
+                    .sum::<f64>()
+                    + weights[n];
                 variances.push(variance.max(0.0));
             }
         }
-        Ok(KrigingAnswer { values: out, variances, set_aside, unreached })
+        Ok(KrigingAnswer {
+            values: out,
+            variances,
+            set_aside,
+            unreached,
+        })
     }
 }
 
@@ -340,22 +397,41 @@ mod tests {
     fn the_estimates_alone_are_those_of_the_full_solve() {
         let mut state = 5u64;
         let mut draw = || {
-            state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             (state >> 11) as f64 / (1u64 << 53) as f64
         };
         let samples: Vec<[f64; 2]> = (0..120).map(|_| [draw() * 100.0, draw() * 100.0]).collect();
-        let values: Vec<f64> = samples.iter().map(|p| (p[0] / 17.0).sin() * 30.0 + p[1] * 0.2).collect();
-        let mut queries: Vec<[f64; 2]> = (0..300).map(|_| [draw() * 140.0 - 20.0, draw() * 140.0 - 20.0]).collect();
+        let values: Vec<f64> = samples
+            .iter()
+            .map(|p| (p[0] / 17.0).sin() * 30.0 + p[1] * 0.2)
+            .collect();
+        let mut queries: Vec<[f64; 2]> = (0..300)
+            .map(|_| [draw() * 140.0 - 20.0, draw() * 140.0 - 20.0])
+            .collect();
         queries.push(samples[7]);
         for kind in [ModelKind::Spherical, ModelKind::Exponential] {
             let model = Model::new(kind, 0.5, 40.0, 35.0).unwrap();
-            let full = Ordinary::new(model.clone()).interpolate(&samples, &values, &queries).unwrap();
-            let alone = Ordinary::new(model).without_variance().interpolate(&samples, &values, &queries).unwrap();
+            let full = Ordinary::new(model.clone())
+                .interpolate(&samples, &values, &queries)
+                .unwrap();
+            let alone = Ordinary::new(model)
+                .without_variance()
+                .interpolate(&samples, &values, &queries)
+                .unwrap();
             assert!(alone.variances.is_empty() && full.variances.len() == queries.len());
             for (at, (a, b)) in alone.values.iter().zip(&full.values).enumerate() {
-                assert!((a - b).abs() <= 1e-9 * (1.0 + b.abs()), "{kind:?}, query {at}: {a} against {b}");
+                assert!(
+                    (a - b).abs() <= 1e-9 * (1.0 + b.abs()),
+                    "{kind:?}, query {at}: {a} against {b}"
+                );
             }
-            assert_eq!(alone.values.last(), Some(&values[7]), "a query on a sample is that sample");
+            assert_eq!(
+                alone.values.last(),
+                Some(&values[7]),
+                "a query on a sample is that sample"
+            );
         }
     }
 
@@ -363,7 +439,9 @@ mod tests {
     fn kriging_is_exact_at_its_samples_with_zero_variance() {
         let samples = [[0.0, 0.0], [4.0, 0.0], [2.0, 3.0]];
         let values = [1.0, 2.0, 3.0];
-        let answer = Ordinary::new(model()).interpolate(&samples, &values, &samples).unwrap();
+        let answer = Ordinary::new(model())
+            .interpolate(&samples, &values, &samples)
+            .unwrap();
         assert_eq!(answer.values, vec![1.0, 2.0, 3.0]);
         assert_eq!(answer.variances, vec![0.0, 0.0, 0.0]);
     }
@@ -375,7 +453,9 @@ mod tests {
         let samples = [[0.0, 0.0], [5.0, 1.0], [2.0, 8.0], [7.0, 6.0]];
         let values = [4.2; 4];
         let queries = [[3.0, 3.0], [-10.0, -10.0], [100.0, 0.0]];
-        let answer = Ordinary::new(model()).interpolate(&samples, &values, &queries).unwrap();
+        let answer = Ordinary::new(model())
+            .interpolate(&samples, &values, &queries)
+            .unwrap();
         for value in &answer.values {
             assert!((value - 4.2).abs() < 1e-9);
         }
@@ -399,9 +479,16 @@ mod tests {
     fn the_local_path_reproduces_the_global_one_when_nothing_restricts_it() {
         let samples = [[0.0, 0.0], [5.0, 1.0], [2.0, 8.0], [7.0, 6.0], [3.0, 3.5]];
         let values = [1.0, 4.0, 2.5, 6.0, 3.0];
-        let queries: Vec<[f64; 2]> = (0..20).map(|i| [(i as f64) * 0.4, ((i * 3) % 9) as f64]).collect();
-        let global = Ordinary::new(model()).interpolate(&samples, &values, &queries).unwrap();
-        let local = Ordinary::new(model()).with_neighbours(50).interpolate(&samples, &values, &queries).unwrap();
+        let queries: Vec<[f64; 2]> = (0..20)
+            .map(|i| [(i as f64) * 0.4, ((i * 3) % 9) as f64])
+            .collect();
+        let global = Ordinary::new(model())
+            .interpolate(&samples, &values, &queries)
+            .unwrap();
+        let local = Ordinary::new(model())
+            .with_neighbours(50)
+            .interpolate(&samples, &values, &queries)
+            .unwrap();
         for (g, l) in global.values.iter().zip(&local.values) {
             assert!((g - l).abs() < 1e-9, "global {g} vs local {l}");
         }
@@ -419,10 +506,20 @@ mod tests {
         let samples = [[0.0, 0.0], [1.0, 1.0], [6.0, 0.0]];
         let values = [1.0, 1.0, 100.0];
         let query = [[4.9, 0.0]];
-        let seen = Ordinary::new(model()).interpolate(&samples, &values, &query).unwrap().values[0];
-        let cut = Ordinary::new(model()).with_barriers(fault).interpolate(&samples, &values, &query).unwrap().values[0];
+        let seen = Ordinary::new(model())
+            .interpolate(&samples, &values, &query)
+            .unwrap()
+            .values[0];
+        let cut = Ordinary::new(model())
+            .with_barriers(fault)
+            .interpolate(&samples, &values, &query)
+            .unwrap()
+            .values[0];
         assert!(seen > 50.0, "without the fault the near sample dominates: {seen}");
-        assert!((cut - 1.0).abs() < 1e-9, "with the fault only the visible samples answer: {cut}");
+        assert!(
+            (cut - 1.0).abs() < 1e-9,
+            "with the fault only the visible samples answer: {cut}"
+        );
     }
 
     #[test]
@@ -470,8 +567,9 @@ mod tests {
         // the far-field limit is then the GLS mean, not the arithmetic one.
         let samples = [[0.0, 0.0], [100.0, 0.0], [0.0, 100.0]];
         let values = [1.0, 2.0, 6.0];
-        let answer =
-            Ordinary::new(model()).interpolate(&samples, &values, &[[500.0, 500.0]]).unwrap();
+        let answer = Ordinary::new(model())
+            .interpolate(&samples, &values, &[[500.0, 500.0]])
+            .unwrap();
         assert!((answer.values[0] - 3.0).abs() < 1e-6, "got {}", answer.values[0]);
     }
 
@@ -480,7 +578,9 @@ mod tests {
         let samples = [[0.0, 0.0], [1.0, 0.0]];
         let values = [1.0, 2.0];
         let queries = [[0.5, 0.0], [0.5, 3.0], [0.5, 30.0]];
-        let answer = Ordinary::new(model()).interpolate(&samples, &values, &queries).unwrap();
+        let answer = Ordinary::new(model())
+            .interpolate(&samples, &values, &queries)
+            .unwrap();
         assert!(answer.variances[0] < answer.variances[1]);
         assert!(answer.variances[1] < answer.variances[2]);
     }
@@ -497,15 +597,21 @@ mod tests {
         let g12 = m.evaluate(4.0);
         let w2 = 0.5 - (g2q - g1q) / (2.0 * g12);
         let answer = Ordinary::new(m).interpolate(&samples, &values, &query).unwrap();
-        assert!((answer.values[0] - w2).abs() < 1e-9, "{} vs {}", answer.values[0], w2);
+        assert!(
+            (answer.values[0] - w2).abs() < 1e-9,
+            "{} vs {}",
+            answer.values[0],
+            w2
+        );
     }
 
     #[test]
     fn a_nan_sample_is_set_aside_and_counted() {
         let samples = [[0.0, 0.0], [2.0, 0.0], [1.0, 4.0]];
         let values = [1.0, 3.0, f64::NAN];
-        let answer =
-            Ordinary::new(model()).interpolate(&samples, &values, &[[1.0, 0.0]]).unwrap();
+        let answer = Ordinary::new(model())
+            .interpolate(&samples, &values, &[[1.0, 0.0]])
+            .unwrap();
         assert_eq!(answer.set_aside, 1);
         assert!((answer.values[0] - 2.0).abs() < 1e-9);
     }
@@ -513,9 +619,11 @@ mod tests {
     #[test]
     fn coincident_samples_are_refused_naming_both() {
         let samples = [[0.0, 0.0], [2.0, 0.0], [0.0, 0.0]];
-        let refusal =
-            Ordinary::new(model()).interpolate(&samples, &[1.0, 2.0, 3.0], &[[1.0, 0.0]]);
-        assert_eq!(refusal, Err(Error::DuplicateSamplePositions { first: 0, second: 2 }));
+        let refusal = Ordinary::new(model()).interpolate(&samples, &[1.0, 2.0, 3.0], &[[1.0, 0.0]]);
+        assert_eq!(
+            refusal,
+            Err(Error::DuplicateSamplePositions { first: 0, second: 2 })
+        );
     }
 
     #[test]

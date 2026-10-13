@@ -120,7 +120,13 @@ struct Run {
 
 impl Run {
     fn start(bucket: usize, point: Point) -> Run {
-        Run { bucket, first: point, min: point, max: point, last: point }
+        Run {
+            bucket,
+            first: point,
+            min: point,
+            max: point,
+            last: point,
+        }
     }
 
     fn add(&mut self, point: Point) {
@@ -157,9 +163,18 @@ impl Run {
 ///
 /// Refused by name: no such channel, a channel that holds no numbers, a range
 /// that is not finite or has no width, no bucket.
-pub fn decimate(series: &Series, channel: usize, from: f64, to: f64, buckets: usize) -> Result<Decimated, Refused> {
+pub fn decimate(
+    series: &Series,
+    channel: usize,
+    from: f64,
+    to: f64,
+    buckets: usize,
+) -> Result<Decimated, Refused> {
     let Some(chosen) = series.channels.get(channel) else {
-        return Err(Refused::NoSuchChannel { at: channel, channels: series.channels.len() });
+        return Err(Refused::NoSuchChannel {
+            at: channel,
+            channels: series.channels.len(),
+        });
     };
     let Some(values) = chosen.numbers() else {
         return Err(Refused::NotNumeric {
@@ -170,7 +185,12 @@ pub fn decimate(series: &Series, channel: usize, from: f64, to: f64, buckets: us
             },
         });
     };
-    let bad = |why: &'static str| Refused::BadWindow { from, to, buckets, why };
+    let bad = |why: &'static str| Refused::BadWindow {
+        from,
+        to,
+        buckets,
+        why,
+    };
     if buckets == 0 {
         return Err(bad("no bucket to put a point in"));
     }
@@ -212,13 +232,23 @@ pub fn decimate(series: &Series, channel: usize, from: f64, to: f64, buckets: us
                 gap.to = x;
                 gap.samples += 1;
             } else {
-                gaps.push(Gap { from: x, to: x, samples: 1, quality: label });
+                gaps.push(Gap {
+                    from: x,
+                    to: x,
+                    samples: 1,
+                    quality: label,
+                });
             }
             in_gap = true;
             broken = true;
             continue;
         }
-        let point = Point { index: x, value, sample: at, starts_run: broken };
+        let point = Point {
+            index: x,
+            value,
+            sample: at,
+            starts_run: broken,
+        };
         let bucket = bucket_of(x);
         match run.as_mut() {
             Some(current) if current.bucket == bucket => current.add(point),
@@ -235,5 +265,13 @@ pub fn decimate(series: &Series, channel: usize, from: f64, to: f64, buckets: us
     if let Some(done) = run.take() {
         done.flush(&mut points);
     }
-    Ok(Decimated { channel: chosen.mnemonic.clone(), from: low, to: high, buckets, samples, points, gaps })
+    Ok(Decimated {
+        channel: chosen.mnemonic.clone(),
+        from: low,
+        to: high,
+        buckets,
+        samples,
+        points,
+        gaps,
+    })
 }

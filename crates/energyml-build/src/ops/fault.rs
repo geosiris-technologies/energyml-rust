@@ -109,7 +109,9 @@ use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use energyml_resqml_2_2 as resqml;
 
 use crate::crs::FrameKind;
-use crate::declare::{Choice, CrsRef, Inputs, InterpretationRef, ObjectIn, Params, Shape, Suggestions, TypeName};
+use crate::declare::{
+    Choice, CrsRef, Inputs, InterpretationRef, ObjectIn, Params, Shape, Suggestions, TypeName,
+};
 use crate::operation::{About, Category, Context, Identity, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::Pieces;
 
@@ -255,7 +257,10 @@ fn points_of(text: &str) -> Result<Vec<[f64; 3]>, String> {
         }
         let words: Vec<&str> = piece.split_whitespace().collect();
         if words.len() != 3 {
-            return Err(format!("point {} is `{piece}` — a point is `x y z`, three numbers separated by spaces, and points are separated by `;`", at + 1));
+            return Err(format!(
+                "point {} is `{piece}` — a point is `x y z`, three numbers separated by spaces, and points are separated by `;`",
+                at + 1
+            ));
         }
         let mut point = [0.0f64; 3];
         for (slot, word) in point.iter_mut().zip(&words) {
@@ -263,7 +268,12 @@ fn points_of(text: &str) -> Result<Vec<[f64; 3]>, String> {
                 .parse::<f64>()
                 .ok()
                 .filter(|v| v.is_finite())
-                .ok_or_else(|| format!("point {}: `{word}` is not a finite number — a decimal separator is `.`", at + 1))?;
+                .ok_or_else(|| {
+                    format!(
+                        "point {}: `{word}` is not a finite number — a decimal separator is `.`",
+                        at + 1
+                    )
+                })?;
         }
         out.push(point);
     }
@@ -275,21 +285,38 @@ fn one_stick(shape: &Shape) -> Result<Vec<[f64; 3]>, Refusal> {
     let mut found: Option<Vec<[f64; 3]>> = None;
     let mut global = 0usize;
     for patch in &shape.geometry.patches {
-        let Topology::Polylines(runs) = &patch.topology else { continue };
+        let Topology::Polylines(runs) = &patch.topology else {
+            continue;
+        };
         let mut start = 0usize;
         for (local, &run) in runs.iter().enumerate() {
             let run = run as usize;
             if found.is_some() {
                 return Err(Refusal::on(
                     "lines",
-                    format!("`{}` holds several polylines — a stick is one line: give one per input, in order along the strike", shape.name),
+                    format!(
+                        "`{}` holds several polylines — a stick is one line: give one per input, in order along the strike",
+                        shape.name
+                    ),
                 ));
             }
             let points = patch.points.get(start..start + run).ok_or_else(|| {
-                Refusal::on("lines", format!("`{}`: the polylines add up to more nodes than the patch holds", shape.name))
+                Refusal::on(
+                    "lines",
+                    format!(
+                        "`{}`: the polylines add up to more nodes than the patch holds",
+                        shape.name
+                    ),
+                )
             })?;
             if said_closed(patch, local, shape.closed.as_deref(), global) == Some(true) {
-                return Err(Refusal::on("lines", format!("`{}` is a ring — a stick is an open line, top to bottom", shape.name)));
+                return Err(Refusal::on(
+                    "lines",
+                    format!(
+                        "`{}` is a ring — a stick is an open line, top to bottom",
+                        shape.name
+                    ),
+                ));
             }
             found = Some(points.to_vec());
             start += run;
@@ -301,7 +328,12 @@ fn one_stick(shape: &Shape) -> Result<Vec<[f64; 3]>, Refusal> {
 
 /// The reference a dating input stands for.
 fn dated(slot: &str, input: &ObjectIn) -> Result<eml::DataObjectReference, Refusal> {
-    let known = input.known.reference.as_ref().ok_or_else(|| Refusal::on(slot, format!("`{}` was given without a reference to write", input.name)))?;
+    let known = input.known.reference.as_ref().ok_or_else(|| {
+        Refusal::on(
+            slot,
+            format!("`{}` was given without a reference to write", input.name),
+        )
+    })?;
     Ok(crate::crs::reference_of(known))
 }
 
@@ -391,7 +423,11 @@ impl Operation for FaultFromSticks {
             (false, Some(_)) => {
                 let what = match throws.as_slice() {
                     [] => "not stated".to_string(),
-                    list => list.iter().map(|one| one.word()).collect::<Vec<_>>().join(" and "),
+                    list => list
+                        .iter()
+                        .map(|one| one.word())
+                        .collect::<Vec<_>>()
+                        .join(" and "),
                 };
                 return Err(Refusal::on(
                     "listric",
@@ -402,7 +438,12 @@ impl Operation for FaultFromSticks {
             }
             _ => {}
         }
-        let source = params.source.as_deref().map(str::trim).filter(|one| !one.is_empty()).map(str::to_string);
+        let source = params
+            .source
+            .as_deref()
+            .map(str::trim)
+            .filter(|one| !one.is_empty())
+            .map(str::to_string);
         if params.synthetic && source.is_none() {
             return Err(Refusal::on(
                 "source",
@@ -428,7 +469,10 @@ impl Operation for FaultFromSticks {
             GeometryParams::Sticks(given) => {
                 match (given.sticks.is_empty(), inputs.lines.is_empty()) {
                     (false, false) => {
-                        return Err(Refusal::on("sticks", "the sticks are given twice — as text in `sticks` and as `lines`: give them one way"));
+                        return Err(Refusal::on(
+                            "sticks",
+                            "the sticks are given twice — as text in `sticks` and as `lines`: give them one way",
+                        ));
                     }
                     (true, true) => {
                         return Err(Refusal::on(
@@ -445,19 +489,28 @@ impl Operation for FaultFromSticks {
                                 if current.is_empty() {
                                     return Err(Refusal::on(
                                         "sticks",
-                                        format!("`sticks[{at}]` is blank where no patch has begun — a blank entry ends a patch that holds sticks"),
+                                        format!(
+                                            "`sticks[{at}]` is blank where no patch has begun — a blank entry ends a patch that holds sticks"
+                                        ),
                                     ));
                                 }
                                 patches.push(std::mem::take(&mut current));
                                 continue;
                             }
                             count += 1;
-                            let points = points_of(entry).map_err(|why| Refusal::on("sticks", format!("`sticks[{at}]`: {why}")))?;
-                            let stick = Stick { name: format!("stick {count}"), points };
+                            let points = points_of(entry)
+                                .map_err(|why| Refusal::on("sticks", format!("`sticks[{at}]`: {why}")))?;
+                            let stick = Stick {
+                                name: format!("stick {count}"),
+                                points,
+                            };
                             // The first stick after a break, bit for bit the last
                             // one before it: the edge the two patches share.
                             let shared = current.is_empty()
-                                && patches.last().and_then(|patch| patch.last()).is_some_and(|last| same(&last.points, &stick.points));
+                                && patches
+                                    .last()
+                                    .and_then(|patch| patch.last())
+                                    .is_some_and(|last| same(&last.points, &stick.points));
                             if shared {
                                 repeated += 1;
                             } else {
@@ -466,7 +519,10 @@ impl Operation for FaultFromSticks {
                             current.push(stick);
                         }
                         if current.is_empty() {
-                            return Err(Refusal::on("sticks", "the last entry is blank — a blank entry ends a patch, and the patch after it would hold no stick"));
+                            return Err(Refusal::on(
+                                "sticks",
+                                "the last entry is blank — a blank entry ends a patch, and the patch after it would hold no stick",
+                            ));
                         }
                         patches.push(current);
                         if repeated > 0 {
@@ -481,8 +537,15 @@ impl Operation for FaultFromSticks {
                     (true, false) => {
                         let mut patch = Vec::new();
                         for shape in &inputs.lines {
-                            let stick = Stick { name: shape.name.clone(), points: one_stick(shape)? };
-                            if shape.known.as_ref().is_some_and(|known| known.reference.is_some()) {
+                            let stick = Stick {
+                                name: shape.name.clone(),
+                                points: one_stick(shape)?,
+                            };
+                            if shape
+                                .known
+                                .as_ref()
+                                .is_some_and(|known| known.reference.is_some())
+                            {
                                 in_package += 1;
                             } else {
                                 written_sticks.push(stick.clone());
@@ -499,12 +562,23 @@ impl Operation for FaultFromSticks {
                     }
                 }
                 let sticks: usize = patches.iter().map(Vec::len).sum();
-                let slot = if inputs.lines.is_empty() { "sticks" } else { "lines" };
-                (slot, format!("lofted between {sticks} stick(s) given in order along its strike"), given.write_sticks)
+                let slot = if inputs.lines.is_empty() {
+                    "sticks"
+                } else {
+                    "lines"
+                };
+                (
+                    slot,
+                    format!("lofted between {sticks} stick(s) given in order along its strike"),
+                    given.write_sticks,
+                )
             }
             GeometryParams::Plane(plane) => {
                 if !inputs.lines.is_empty() {
-                    return Err(Refusal::on("lines", "a plane draws its own sticks from `trace`: give polylines with `geometry: sticks`"));
+                    return Err(Refusal::on(
+                        "lines",
+                        "a plane draws its own sticks from `trace`: give polylines with `geometry: sticks`",
+                    ));
                 }
                 let Some(up) = frame.up else {
                     return Err(Refusal::on(
@@ -517,11 +591,20 @@ impl Operation for FaultFromSticks {
                 {
                     return Err(Refusal::on(
                         "crs",
-                        format!("the frame counts its vertical axis in `{unit}`, and a plane is drawn in metres — a dip is an angle between two lengths of one unit"),
+                        format!(
+                            "the frame counts its vertical axis in `{unit}`, and a plane is drawn in metres — a dip is an angle between two lengths of one unit"
+                        ),
                     ));
                 }
                 let trace = points_of(&plane.trace).map_err(|why| Refusal::on("trace", why))?;
-                let drawn = fault_sticks::sticks_from_plane(&trace, plane.dip, plane.dip_azimuth, plane.vertical_extent, up).map_err(|why| {
+                let drawn = fault_sticks::sticks_from_plane(
+                    &trace,
+                    plane.dip,
+                    plane.dip_azimuth,
+                    plane.vertical_extent,
+                    up,
+                )
+                .map_err(|why| {
                     let slot = match why {
                         fault_sticks::PlaneError::Dip { .. } => "dip",
                         fault_sticks::PlaneError::Azimuth { .. } => "dipAzimuth",
@@ -530,7 +613,16 @@ impl Operation for FaultFromSticks {
                     };
                     Refusal::on(slot, why)
                 })?;
-                patches.push(drawn.into_iter().enumerate().map(|(at, points)| Stick { name: format!("stick {}", at + 1), points }).collect());
+                patches.push(
+                    drawn
+                        .into_iter()
+                        .enumerate()
+                        .map(|(at, points)| Stick {
+                            name: format!("stick {}", at + 1),
+                            points,
+                        })
+                        .collect(),
+                );
                 (
                     "trace",
                     format!(
@@ -543,10 +635,24 @@ impl Operation for FaultFromSticks {
         };
         for (at, patch) in patches.iter().enumerate() {
             if patch.len() < 2 {
-                return Err(Refusal::on(slot, format!("patch {} holds {} stick(s) — a band is lofted between two at least", at + 1, patch.len())));
+                return Err(Refusal::on(
+                    slot,
+                    format!(
+                        "patch {} holds {} stick(s) — a band is lofted between two at least",
+                        at + 1,
+                        patch.len()
+                    ),
+                ));
             }
             if let Some(short) = patch.iter().find(|stick| stick.points.len() < 2) {
-                return Err(Refusal::on(slot, format!("`{}` has {} point(s) — a stick is a line, two points at least", short.name, short.points.len())));
+                return Err(Refusal::on(
+                    slot,
+                    format!(
+                        "`{}` has {} point(s) — a stick is a line, two points at least",
+                        short.name,
+                        short.points.len()
+                    ),
+                ));
             }
         }
 
@@ -556,13 +662,30 @@ impl Operation for FaultFromSticks {
         let mut all_points: Vec<[f64; 3]> = Vec::new();
         let mut all_triangles: Vec<[u32; 3]> = Vec::new();
         for (at, patch) in patches.iter().enumerate() {
-            let lines: Vec<LoftLine> = patch.iter().map(|stick| LoftLine { name: &stick.name, points: &stick.points, closed: false }).collect();
+            let lines: Vec<LoftLine> = patch
+                .iter()
+                .map(|stick| LoftLine {
+                    name: &stick.name,
+                    points: &stick.points,
+                    closed: false,
+                })
+                .collect();
             let band = loft(&lines).map_err(|why| Refusal::on(slot, why))?;
             let base = all_points.len() as u32;
             all_points.extend(band.points.iter().copied());
-            all_triangles.extend(band.triangles.iter().map(|t| [t[0] + base, t[1] + base, t[2] + base]));
+            all_triangles.extend(
+                band.triangles
+                    .iter()
+                    .map(|t| [t[0] + base, t[1] + base, t[2] + base]),
+            );
             let node_offset = made.iter().map(|one| one.points.len()).sum();
-            made.push(Patch { index: at, node_offset, points: band.points, topology: Topology::Triangles(band.triangles), closed: Vec::new() });
+            made.push(Patch {
+                index: at,
+                node_offset,
+                points: band.points,
+                topology: Topology::Triangles(band.triangles),
+                closed: Vec::new(),
+            });
             let order: Vec<Vec<[f64; 3]>> = patch.iter().map(|stick| stick.points.clone()).collect();
             for back in fault_sticks::backtracking(&order) {
                 says.push(Note {
@@ -576,7 +699,10 @@ impl Operation for FaultFromSticks {
             }
         }
         if made.len() > 1 {
-            says.push(Note { key: "patches", detail: format!("{} patches, one band each, in one triangulated set", made.len()) });
+            says.push(Note {
+                key: "patches",
+                detail: format!("{} patches, one band each, in one triangulated set", made.len()),
+            });
         }
 
         // -- the surface, and the pair — written by their writers -----------------
@@ -591,8 +717,17 @@ impl Operation for FaultFromSticks {
                 feature_kind: None,
             },
         };
-        let surface = Shape { name: title.clone(), geometry: Geometry { kind: "fault", patches: made }, closed: None, known: None };
-        let mut plan = super::triangles::write(&TrianglesInputs { shape: vec![surface] }, &written, &seed, cx)?;
+        let surface = Shape {
+            name: title.clone(),
+            geometry: Geometry {
+                kind: "fault",
+                patches: made,
+            },
+            closed: None,
+            known: None,
+        };
+        let mut plan =
+            super::triangles::write(&TrianglesInputs { shape: vec![surface] }, &written, &seed, cx)?;
         let (feature_uuid, feature_title) = plan
             .objects
             .iter()
@@ -604,7 +739,8 @@ impl Operation for FaultFromSticks {
             .iter()
             .position(|one| one.role == "interpretation")
             .ok_or_else(|| Refusal::new("refused", "the surface's writer made no interpretation"))?;
-        let (interpretation_uuid, interpretation_title) = (plan.objects[at].uuid.clone(), plan.objects[at].title.clone());
+        let (interpretation_uuid, interpretation_title) =
+            (plan.objects[at].uuid.clone(), plan.objects[at].title.clone());
 
         // -- what is said of every object ------------------------------------------
         let description = source.as_ref().map(|source| {
@@ -620,7 +756,10 @@ impl Operation for FaultFromSticks {
             // A source cut short cites nothing.
             return Err(Refusal::on(
                 "source",
-                format!("makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter", text.chars().count()),
+                format!(
+                    "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                    text.chars().count()
+                ),
             ));
         }
 
@@ -641,24 +780,49 @@ impl Operation for FaultFromSticks {
                 description: description.clone(),
                 ..Default::default()
             },
-            extension_name_value: if params.synthetic { vec![synthetic_mark()] } else { Vec::new() },
+            extension_name_value: if params.synthetic {
+                vec![synthetic_mark()]
+            } else {
+                Vec::new()
+            },
             domain,
             has_occurred_during: chrono.clone().map(|(chrono_bottom, chrono_top)| {
-                resqml::AbstractTimeInterval::GeneticBoundaryBasedTimeInterval(resqml::GeneticBoundaryBasedTimeInterval { chrono_bottom, chrono_top })
+                resqml::AbstractTimeInterval::GeneticBoundaryBasedTimeInterval(
+                    resqml::GeneticBoundaryBasedTimeInterval {
+                        chrono_bottom,
+                        chrono_top,
+                    },
+                )
             }),
-            interpreted_feature: crate::crs::reference_to(&feature_uuid, "resqml22.BoundaryFeature", &feature_title),
+            interpreted_feature: crate::crs::reference_to(
+                &feature_uuid,
+                "resqml22.BoundaryFeature",
+                &feature_title,
+            ),
             is_listric: params.listric,
             is_sealed: params.sealed,
-            maximum_throw: params.maximum_throw.map(|value| eml::LengthMeasure { value, uom: eml::LengthUom::M }),
-            mean_azimuth: params.mean_azimuth.map(|value| eml::PlaneAngleMeasure { value, uom: eml::PlaneAngleUom::Dega }),
-            mean_dip: params.mean_dip.map(|value| eml::PlaneAngleMeasure { value, uom: eml::PlaneAngleUom::Dega }),
+            maximum_throw: params.maximum_throw.map(|value| eml::LengthMeasure {
+                value,
+                uom: eml::LengthUom::M,
+            }),
+            mean_azimuth: params.mean_azimuth.map(|value| eml::PlaneAngleMeasure {
+                value,
+                uom: eml::PlaneAngleUom::Dega,
+            }),
+            mean_dip: params.mean_dip.map(|value| eml::PlaneAngleMeasure {
+                value,
+                uom: eml::PlaneAngleUom::Dega,
+            }),
             throw_interpretation: if throws.is_empty() {
                 Vec::new()
             } else {
                 // **One** `FaultThrow` naming every play: separate ones would
                 // each want a `HasOccurredDuring` to say which came first, and
                 // the model gives none (a fault that is both normal and strike-slip).
-                vec![resqml::FaultThrow { throw: throws.iter().map(|one| one.written()).collect(), has_occurred_during: None }]
+                vec![resqml::FaultThrow {
+                    throw: throws.iter().map(|one| one.written()).collect(),
+                    has_occurred_during: None,
+                }]
             },
             ..Default::default()
         };
@@ -694,10 +858,20 @@ impl Operation for FaultFromSticks {
                         "Title": interpretation_title,
                     }))),
                 },
-                naming: NamingParams { title: Some(crate::declare::Title(format!("{title} — sticks"))), data_file: params.naming.data_file.clone() },
-                new_feature: NewFeatureParams { feature_type: None, interpretation_type: TypeName("resqml22.GenericFeatureInterpretation".to_string()), feature_kind: None },
+                naming: NamingParams {
+                    title: Some(crate::declare::Title(format!("{title} — sticks"))),
+                    data_file: params.naming.data_file.clone(),
+                },
+                new_feature: NewFeatureParams {
+                    feature_type: None,
+                    interpretation_type: TypeName("resqml22.GenericFeatureInterpretation".to_string()),
+                    feature_kind: None,
+                },
             };
-            let runs: Vec<u32> = written_sticks.iter().map(|stick| stick.points.len() as u32).collect();
+            let runs: Vec<u32> = written_sticks
+                .iter()
+                .map(|stick| stick.points.len() as u32)
+                .collect();
             let lines = Shape {
                 name: format!("{title} — sticks"),
                 geometry: Geometry {
@@ -705,7 +879,10 @@ impl Operation for FaultFromSticks {
                     patches: vec![Patch {
                         index: 0,
                         node_offset: 0,
-                        points: written_sticks.iter().flat_map(|stick| stick.points.iter().copied()).collect(),
+                        points: written_sticks
+                            .iter()
+                            .flat_map(|stick| stick.points.iter().copied())
+                            .collect(),
                         topology: Topology::Polylines(runs.clone()),
                         closed: vec![false; runs.len()],
                     }],
@@ -717,12 +894,23 @@ impl Operation for FaultFromSticks {
             // counts its own from zero, and a list given by the caller would
             // otherwise name two objects with one uuid.
             let shifted = match cx.identity {
-                Identity::Given(list) => Identity::Given(list.iter().skip(plan.objects.len()).cloned().collect()),
+                Identity::Given(list) => {
+                    Identity::Given(list.iter().skip(plan.objects.len()).cloned().collect())
+                }
                 other => other.clone(),
             };
-            let sticks_cx = Context { identity: &shifted, when: cx.when, purpose: cx.purpose, feedback: cx.feedback, bag: cx.bag };
+            let sticks_cx = Context {
+                identity: &shifted,
+                when: cx.when,
+                purpose: cx.purpose,
+                feedback: cx.feedback,
+                bag: cx.bag,
+            };
             let sticks = super::polylines::write(
-                &PolylinesInputs { shape: vec![lines], features: None },
+                &PolylinesInputs {
+                    shape: vec![lines],
+                    features: None,
+                },
                 &sticks_written_as,
                 Some(false),
                 &format!("{seed}:sticks"),
@@ -762,7 +950,8 @@ impl Operation for FaultFromSticks {
                 object.json["Citation"]["Description"] = json!(text);
             }
             if params.synthetic {
-                object.json["ExtensionNameValue"] = json!([energyml_core::json::write_value(&synthetic_mark())]);
+                object.json["ExtensionNameValue"] =
+                    json!([energyml_core::json::write_value(&synthetic_mark())]);
             }
         }
 
@@ -785,7 +974,10 @@ impl Operation for FaultFromSticks {
             (Some(up), _) => fault_sticks::orientation(&all_points, &all_triangles, up),
         };
         if let Some(found) = measured {
-            let mut detail = format!("measured on the surface: dip {:.1}° toward {:.1}°", found.dip, found.dip_azimuth);
+            let mut detail = format!(
+                "measured on the surface: dip {:.1}° toward {:.1}°",
+                found.dip, found.dip_azimuth
+            );
             match (params.mean_dip, params.mean_azimuth) {
                 (None, None) => detail.push_str("; nothing stated"),
                 (dip, azimuth) => {
@@ -801,12 +993,18 @@ impl Operation for FaultFromSticks {
             if found.dip > 89.9 {
                 detail.push_str(" — a vertical surface dips either way, and its measured azimuth is one of two opposite directions");
             }
-            says.push(Note { key: "orientation", detail });
+            says.push(Note {
+                key: "orientation",
+                detail,
+            });
         }
 
         // -- what the plan says -----------------------------------------------------------
         if throws.is_empty() {
-            says.push(Note { key: "no-throw", detail: "no throw is stated: the interpretation carries none".to_string() });
+            says.push(Note {
+                key: "no-throw",
+                detail: "no throw is stated: the interpretation carries none".to_string(),
+            });
         }
         if throws.contains(&Throw::Thrust) {
             says.push(Note {
@@ -823,30 +1021,51 @@ impl Operation for FaultFromSticks {
         if chrono.is_none() {
             says.push(Note {
                 key: "not-dated",
-                detail: "no `chronoBottom` and `chronoTop`: when the fault occurred is not written".to_string(),
+                detail: "no `chronoBottom` and `chronoTop`: when the fault occurred is not written"
+                    .to_string(),
             });
         }
 
         // -- the activity -------------------------------------------------------------------
         plan.activity.recipe = "fault-from-sticks";
         plan.activity.title = format!("fault-from-sticks → {title}");
-        let number = |title: &str, value: f64, uom: Option<&str>| Parameter::Double { title: title.to_string(), value, uom: uom.map(str::to_string) };
+        let number = |title: &str, value: f64, uom: Option<&str>| Parameter::Double {
+            title: title.to_string(),
+            value,
+            uom: uom.map(str::to_string),
+        };
         let sticks_count: usize = patches.iter().map(Vec::len).sum();
-        plan.activity.parameters.push(number("stickCount", sticks_count as f64, None));
-        plan.activity.parameters.push(number("patchCount", patches.len() as f64, None));
-        plan.activity.parameters.push(number("writtenStickCount", sticks_written as f64, None));
+        plan.activity
+            .parameters
+            .push(number("stickCount", sticks_count as f64, None));
+        plan.activity
+            .parameters
+            .push(number("patchCount", patches.len() as f64, None));
+        plan.activity
+            .parameters
+            .push(number("writtenStickCount", sticks_written as f64, None));
         if let Some(found) = measured {
-            plan.activity.parameters.push(number("measuredDip", found.dip, Some("dega")));
-            plan.activity.parameters.push(number("measuredDipAzimuth", found.dip_azimuth, Some("dega")));
+            plan.activity
+                .parameters
+                .push(number("measuredDip", found.dip, Some("dega")));
+            plan.activity
+                .parameters
+                .push(number("measuredDipAzimuth", found.dip_azimuth, Some("dega")));
         }
         // What the registry cannot record — a list is no single value — and a
         // second run needs, in the order given.
         for one in &throws {
-            plan.activity.parameters.push(Parameter::Text { title: "throw".to_string(), value: one.word().to_string() });
+            plan.activity.parameters.push(Parameter::Text {
+                title: "throw".to_string(),
+                value: one.word().to_string(),
+            });
         }
         if let GeometryParams::Sticks(given) = &params.geometry {
             for entry in &given.sticks {
-                plan.activity.parameters.push(Parameter::Text { title: "sticks".to_string(), value: entry.clone() });
+                plan.activity.parameters.push(Parameter::Text {
+                    title: "sticks".to_string(),
+                    value: entry.clone(),
+                });
             }
         }
         // What the frame said, after what the fault says.
@@ -859,23 +1078,52 @@ impl Operation for FaultFromSticks {
     /// `sticks` and the stated numbers are inputs, recorded under the
     /// parameters the projection already declares — a title cannot be both.
     fn reports(&self) -> Vec<Slot> {
-        let count = |name: &'static str, about: &'static str| Slot::required(name, Need::Number { uom: None, least: None, most: None }, about);
-        let angle = |name: &'static str, about: &'static str| Slot::optional(name, Need::Number { uom: Some("dega"), least: None, most: None }, about);
+        let count = |name: &'static str, about: &'static str| {
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
+        let angle = |name: &'static str, about: &'static str| {
+            Slot::optional(
+                name,
+                Need::Number {
+                    uom: Some("dega"),
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
         support::frame_reports(vec![
             count("pointCount", "nodes of the surface"),
             count("triangleCount", "triangles of the surface"),
             count("stickCount", "sticks the surface is lofted between"),
             count("patchCount", "bands of the surface, one per patch"),
             count("writtenStickCount", "sticks written as a polyline set"),
-            angle("measuredDip", "the dip of the surface as lofted, area-weighted — when the frame says which way is up"),
-            angle("measuredDipAzimuth", "the direction the lofted surface goes down, clockwise from grid north"),
+            angle(
+                "measuredDip",
+                "the dip of the surface as lofted, area-weighted — when the frame says which way is up",
+            ),
+            angle(
+                "measuredDipAzimuth",
+                "the direction the lofted surface goes down, clockwise from grid north",
+            ),
         ])
     }
 }
 
 /// Two sticks the same, bit for bit.
 fn same(a: &[[f64; 3]], b: &[[f64; 3]]) -> bool {
-    a.len() == b.len() && a.iter().zip(b).all(|(p, q)| p.iter().zip(q).all(|(x, y)| x.to_bits() == y.to_bits()))
+    a.len() == b.len()
+        && a.iter()
+            .zip(b)
+            .all(|(p, q)| p.iter().zip(q).all(|(x, y)| x.to_bits() == y.to_bits()))
 }
 
 /// What the frame the plan will write is — read by the frame's own reader
@@ -894,7 +1142,9 @@ fn inspect(params: &FrameParams, cx: &Context<'_>) -> Result<Inspected, Refusal>
         };
         return Err(Refusal::on(
             slot,
-            format!("a fault is a vertical extent, and {what} measures its horizontal axes in degrees while its depths are metres — name a projected system in `project`, or a LocalEngineeringCompoundCrs as `crs`"),
+            format!(
+                "a fault is a vertical extent, and {what} measures its horizontal axes in degrees while its depths are metres — name a projected system in `project`, or a LocalEngineeringCompoundCrs as `crs`"
+            ),
         ));
     }
     let created = !frame.objects.is_empty();
@@ -912,12 +1162,22 @@ fn inspect(params: &FrameParams, cx: &Context<'_>) -> Result<Inspected, Refusal>
     }
     if created {
         // `crs::build` writes an identity compound over metres, counting up.
-        return Ok(Inspected { up: Some(true), unit: Some("m".to_string()) });
+        return Ok(Inspected {
+            up: Some(true),
+            unit: Some("m".to_string()),
+        });
     }
     let uuid = frame.crs["Uuid"].as_str().unwrap_or_default().to_string();
     let known = cx.known();
-    let in_frame: Vec<&crate::pieces::Known> =
-        known.iter().copied().filter(|one| one.crs.as_ref().is_some_and(|crs| crs.uuid.eq_ignore_ascii_case(&uuid))).collect();
+    let in_frame: Vec<&crate::pieces::Known> = known
+        .iter()
+        .copied()
+        .filter(|one| {
+            one.crs
+                .as_ref()
+                .is_some_and(|crs| crs.uuid.eq_ignore_ascii_case(&uuid))
+        })
+        .collect();
     Ok(Inspected {
         up: in_frame.iter().find_map(|one| one.vertical_up),
         unit: in_frame.iter().find_map(|one| one.vertical_uom.clone()),

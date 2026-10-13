@@ -265,9 +265,10 @@ fn every_reference_this_build_makes_names_its_target() {
         // A plain loop: `field` borrows the reference, so a lazy chain would
         // drop the value it is reading through.
         for index in [roles.qualified_type, roles.content_type].into_iter().flatten() {
-            let Some(field) = info.fields.get(index as usize) else { continue };
-            if let Some(energyml_core::value::FieldValue::Scalar(scalar)) =
-                reference.field(field.name)
+            let Some(field) = info.fields.get(index as usize) else {
+                continue;
+            };
+            if let Some(energyml_core::value::FieldValue::Scalar(scalar)) = reference.field(field.name)
                 && scalar.as_str().is_some_and(|text| !text.trim().is_empty())
             {
                 spelled = true;

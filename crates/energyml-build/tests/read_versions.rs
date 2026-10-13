@@ -39,16 +39,25 @@ fn feature(version: &str, title: &str) -> Box<dyn DynObject> {
          <eml:Format>test</eml:Format></eml:Citation>\
          <resqml:IsWellKnown>false</resqml:IsWellKnown></resqml:BoundaryFeature>"
     );
-    energyml_schemas::all().read_xml_as(CT, xml.as_bytes(), ReadMode::Tolerant).expect("readable").0
+    energyml_schemas::all()
+        .read_xml_as(CT, xml.as_bytes(), ReadMode::Tolerant)
+        .expect("readable")
+        .0
 }
 
 /// `X` in two versions, titled apart.
 fn two_versions() -> EpcStore {
     let empty = energyml_storage::extract::empty_package(Some(0)).expect("an empty package");
-    let mut store =
-        EpcStore::from_reader(Box::new(Cursor::new(empty)), "versions.epc", Arc::new(energyml_schemas::all())).expect("opens");
+    let mut store = EpcStore::from_reader(
+        Box::new(Cursor::new(empty)),
+        "versions.epc",
+        Arc::new(energyml_schemas::all()),
+    )
+    .expect("opens");
     store.put(feature("1", "X, first")).expect("the first");
-    store.put_as_new_version(feature("2", "X, second")).expect("the second");
+    store
+        .put_as_new_version(feature("2", "X, second"))
+        .expect("the second");
     store
 }
 
@@ -63,10 +72,22 @@ fn every_reads_each_version_as_itself() {
     let store = two_versions();
     assert_eq!(uris(&store).len(), 2, "two entries under one uuid");
 
-    let slots = vec![Slot::many("objects", Need::Input(Takes::object(&["resqml22.BoundaryFeature"])), "boundary features", 0)
-        .otherwise(Otherwise::Every)];
-    let filled =
-        energyml_build::read::every(&store, &slots, Pieces::empty(), energyml_geometry::Placement::Local).expect("the objects fill");
+    let slots = vec![
+        Slot::many(
+            "objects",
+            Need::Input(Takes::object(&["resqml22.BoundaryFeature"])),
+            "boundary features",
+            0,
+        )
+        .otherwise(Otherwise::Every),
+    ];
+    let filled = energyml_build::read::every(
+        &store,
+        &slots,
+        Pieces::empty(),
+        energyml_geometry::Placement::Local,
+    )
+    .expect("the objects fill");
 
     let mut titles = BTreeSet::new();
     let mut seen = 0;
@@ -80,8 +101,15 @@ fn every_reads_each_version_as_itself() {
             }
         }
         // And the reference it carries is the title of **this** entry.
-        let named = known.reference.as_ref().map(|one| one.title.as_str()).expect("a reference");
-        assert!(json.contains(named), "the reference ({named}) and the object read ({json}) are the same entry");
+        let named = known
+            .reference
+            .as_ref()
+            .map(|one| one.title.as_str())
+            .expect("a reference");
+        assert!(
+            json.contains(named),
+            "the reference ({named}) and the object read ({json}) are the same entry"
+        );
     }
     assert_eq!(seen, 2, "one piece per entry");
     assert_eq!(
@@ -95,15 +123,23 @@ fn every_reads_each_version_as_itself() {
 fn a_uri_reads_its_version_and_a_bare_uuid_that_names_two_is_refused() {
     let store = two_versions();
     let all = uris(&store);
-    let second = all.iter().find(|one| one.contains("version='2'")).expect("the second's uri").clone();
+    let second = all
+        .iter()
+        .find(|one| one.contains("version='2'"))
+        .expect("the second's uri")
+        .clone();
 
     let known = energyml_build::read::known_of_object(&store, &second).expect("read by its uri");
-    assert_eq!(known.reference.as_ref().map(|one| one.title.as_str()), Some("X, second"));
+    assert_eq!(
+        known.reference.as_ref().map(|one| one.title.as_str()),
+        Some("X, second")
+    );
     let json = known.json.as_ref().expect("the object whole").to_string();
     assert!(json.contains("X, second") && !json.contains("X, first"), "{json}");
 
     // The uuid alone does not say which: the refusal names both candidates.
-    let refused = energyml_build::read::known_of_object(&store, X).expect_err("a bare uuid is ambiguous here");
+    let refused =
+        energyml_build::read::known_of_object(&store, X).expect_err("a bare uuid is ambiguous here");
     for uri in &all {
         assert!(refused.contains(uri.as_str()), "{refused} names {uri}");
     }

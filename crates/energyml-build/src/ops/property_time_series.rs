@@ -90,7 +90,9 @@ use energyml_domain::provenance::Parameter;
 use energyml_storage::epc::core_props::unix_seconds;
 
 use crate::declare::{Field, Inputs, ObjectIn, ObjectRef, Params, PropertyKindRef, Title};
-use crate::operation::{About, ActivityDraft, Category, Context, Identity, Need, Note, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Identity, Need, Note, Operation, Plan, Refusal, Slot,
+};
 use crate::pieces::{Known, KnownProperty, Ref};
 
 use super::property::{PropertyParams, Timing};
@@ -152,7 +154,11 @@ pub struct PropertyTimeSeriesInputs {
 /// The class of a qualified type — `ContinuousProperty` of
 /// `resqml22.ContinuousProperty`.
 fn class_of(qualified_type: &str) -> &str {
-    qualified_type.rsplit('.').next().unwrap_or(qualified_type).trim_start_matches("obj_")
+    qualified_type
+        .rsplit('.')
+        .next()
+        .unwrap_or(qualified_type)
+        .trim_start_matches("obj_")
 }
 
 /// The reference an object input names, of the class wanted — or a refusal
@@ -166,7 +172,10 @@ fn of_class<'a>(slot: &str, input: &'a ObjectIn, class: &str, why: &str) -> Resu
     if class_of(&reference.qualified_type) != class {
         return Err(Refusal::on(
             slot,
-            format!("`{}` is a `{}`, where a `{class}` is wanted: {why}", reference.title, reference.qualified_type),
+            format!(
+                "`{}` is a `{}`, where a `{class}` is wanted: {why}",
+                reference.title, reference.qualified_type
+            ),
         ));
     }
     Ok(reference)
@@ -176,12 +185,17 @@ fn of_class<'a>(slot: &str, input: &'a ObjectIn, class: &str, why: &str) -> Resu
 fn facts_of<'a>(base: &'a Ref, known: &'a Known) -> Result<(&'a KnownProperty, Vec<f64>), Refusal> {
     let title = &base.title;
     let facts = known.property.as_ref().ok_or_else(|| {
-        Refusal::on("base", format!("nothing is known of `{title}` as a property: give a property of the package"))
+        Refusal::on(
+            "base",
+            format!("nothing is known of `{title}` as a property: give a property of the package"),
+        )
     })?;
     if facts.timed {
         return Err(Refusal::on(
             "base",
-            format!("`{title}` is already indexed in time: a series laid on a series would give each step a history of its own"),
+            format!(
+                "`{title}` is already indexed in time: a series laid on a series would give each step a history of its own"
+            ),
         ));
     }
     if facts.realizations {
@@ -193,13 +207,19 @@ fn facts_of<'a>(base: &'a Ref, known: &'a Known) -> Result<(&'a KnownProperty, V
     if facts.value_count.iter().product::<u64>() != 1 {
         return Err(Refusal::on(
             "base",
-            format!("`{title}` holds {:?} value(s) per element — a vector or a tensor, which this writer does not carry", facts.value_count),
+            format!(
+                "`{title}` holds {:?} value(s) per element — a vector or a tensor, which this writer does not carry",
+                facts.value_count
+            ),
         ));
     }
     if !facts.facets.is_empty() {
         return Err(Refusal::on(
             "base",
-            format!("`{title}` is qualified by {} facet(s), which this writer does not carry — dropped, the property would say something else", facts.facets.len()),
+            format!(
+                "`{title}` is qualified by {} facet(s), which this writer does not carry — dropped, the property would say something else",
+                facts.facets.len()
+            ),
         ));
     }
     let values = facts
@@ -217,19 +237,29 @@ fn facts_of<'a>(base: &'a Ref, known: &'a Known) -> Result<(&'a KnownProperty, V
 
 /// Values as the seed carries them — exactly, NaN included.
 fn digest(values: &[f64]) -> String {
-    values.iter().map(|value| format!("{value:?}")).collect::<Vec<_>>().join(",")
+    values
+        .iter()
+        .map(|value| format!("{value:?}"))
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 /// A count, as the activity records it.
 fn count(title: &str, value: usize) -> Parameter {
-    Parameter::Double { title: title.to_string(), value: value as f64, uom: None }
+    Parameter::Double {
+        title: title.to_string(),
+        value: value as f64,
+        uom: None,
+    }
 }
 
 /// A refusal of the time law, under the slot it comes from.
 fn refusal_of(why: &TimeLawError) -> Refusal {
     match why {
         TimeLawError::BadChange { .. } => Refusal::on("change", why),
-        TimeLawError::TooFewInstants { .. } | TimeLawError::NotIncreasing { .. } => Refusal::on("series", why),
+        TimeLawError::TooFewInstants { .. } | TimeLawError::NotIncreasing { .. } => {
+            Refusal::on("series", why)
+        }
     }
 }
 
@@ -252,12 +282,27 @@ impl Operation for PropertyTimeSeries {
     /// declaration of a slot's kind can say. What the base holds is the plan's
     /// to refuse: an offer is judged on what each input *is*.
     fn check(&self, inputs: &PropertyTimeSeriesInputs) -> Result<(), Refusal> {
-        of_class("base", &inputs.base, "ContinuousProperty", "the values laid through time are a continuous property's")?;
-        of_class("series", &inputs.series, "TimeSeries", "the steps are the instants of a time series")?;
+        of_class(
+            "base",
+            &inputs.base,
+            "ContinuousProperty",
+            "the values laid through time are a continuous property's",
+        )?;
+        of_class(
+            "series",
+            &inputs.series,
+            "TimeSeries",
+            "the steps are the instants of a time series",
+        )?;
         Ok(())
     }
 
-    fn plan(&self, inputs: PropertyTimeSeriesInputs, params: PropertyTimeSeriesParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: PropertyTimeSeriesInputs,
+        params: PropertyTimeSeriesParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         // -- the source, before anything is laid --------------------------------
         let source = params.source.trim().to_string();
         if source.is_empty() {
@@ -268,22 +313,42 @@ impl Operation for PropertyTimeSeries {
         }
 
         // -- the base: a snapshot of one value per element ------------------------
-        let base = of_class("base", &inputs.base, "ContinuousProperty", "the values laid through time are a continuous property's")?;
+        let base = of_class(
+            "base",
+            &inputs.base,
+            "ContinuousProperty",
+            "the values laid through time are a continuous property's",
+        )?;
         let (facts, snapshot) = facts_of(base, &inputs.base.known)?;
         let supporting = facts.supporting.as_ref().ok_or_else(|| {
-            Refusal::on("base", format!("`{}` names no representation its values hang on", base.title))
+            Refusal::on(
+                "base",
+                format!("`{}` names no representation its values hang on", base.title),
+            )
         })?;
-        let kind = facts
-            .kind
-            .as_ref()
-            .ok_or_else(|| Refusal::on("base", format!("`{}` names no property kind by reference", base.title)))?;
-        let uom = facts
-            .uom
-            .clone()
-            .ok_or_else(|| Refusal::on("base", format!("`{}` states no unit — the change per year is in its unit", base.title)))?;
+        let kind = facts.kind.as_ref().ok_or_else(|| {
+            Refusal::on(
+                "base",
+                format!("`{}` names no property kind by reference", base.title),
+            )
+        })?;
+        let uom = facts.uom.clone().ok_or_else(|| {
+            Refusal::on(
+                "base",
+                format!(
+                    "`{}` states no unit — the change per year is in its unit",
+                    base.title
+                ),
+            )
+        })?;
 
         // -- the series: its instants, read at the boundary -----------------------
-        let series = of_class("series", &inputs.series, "TimeSeries", "the steps are the instants of a time series")?;
+        let series = of_class(
+            "series",
+            &inputs.series,
+            "TimeSeries",
+            "the steps are the instants of a time series",
+        )?;
         let texts = inputs.series.known.instants.as_ref().ok_or_else(|| {
             Refusal::on(
                 "series",
@@ -305,13 +370,21 @@ impl Operation for PropertyTimeSeries {
         let (anchor_text, anchor) = match params.anchor.as_deref().map(str::trim) {
             Some(text) => {
                 let seconds = unix_seconds(text).ok_or_else(|| {
-                    Refusal::on("anchor", format!("`{text}` is not a UTC date-time as `2016-01-01T00:00:00Z`"))
+                    Refusal::on(
+                        "anchor",
+                        format!("`{text}` is not a UTC date-time as `2016-01-01T00:00:00Z`"),
+                    )
                 })?;
                 (text.to_string(), seconds)
             }
             None => match (texts.first(), instants.first()) {
                 (Some(text), Some(&seconds)) => (text.clone(), seconds),
-                _ => return Err(Refusal::on("series", format!("`{}` holds no instant", series.title))),
+                _ => {
+                    return Err(Refusal::on(
+                        "series",
+                        format!("`{}` holds no instant", series.title),
+                    ));
+                }
             },
         };
         let drift = Drift::new(anchor, params.change).map_err(|why| refusal_of(&why))?;
@@ -328,7 +401,11 @@ impl Operation for PropertyTimeSeries {
         let empty = snapshot.iter().filter(|value| value.is_nan()).count();
 
         // -- what each property is written with ------------------------------------------
-        let given = params.title.as_deref().map(str::trim).filter(|title| !title.is_empty());
+        let given = params
+            .title
+            .as_deref()
+            .map(str::trim)
+            .filter(|title| !title.is_empty());
         let stem = given.unwrap_or(&base.title).to_string();
         let property_params = |title: String| PropertyParams {
             representation: ObjectRef(supporting.dor()),
@@ -396,7 +473,13 @@ impl Operation for PropertyTimeSeries {
                         Identity::Given(_) => Identity::Given(vec![cx.identity.uuid("", index)?]),
                         derived => derived.clone(),
                     };
-                    let one = Context { identity: &identity, when: cx.when, purpose: cx.purpose, feedback: cx.feedback, bag: cx.bag };
+                    let one = Context {
+                        identity: &identity,
+                        when: cx.when,
+                        purpose: cx.purpose,
+                        feedback: cx.feedback,
+                        bag: cx.bag,
+                    };
                     let mut drawn = super::property::write_timed(
                         &field(values),
                         Some(&counted),
@@ -437,7 +520,11 @@ impl Operation for PropertyTimeSeries {
                     }),
                     &seed,
                     cx,
-                    &Timing::Series { series: series.dor(), use_interval, steps: offsets.len() },
+                    &Timing::Series {
+                        series: series.dor(),
+                        use_interval,
+                        steps: offsets.len(),
+                    },
                 )?;
                 let over = if use_interval {
                     format!(
@@ -446,11 +533,17 @@ impl Operation for PropertyTimeSeries {
                         series.title
                     )
                 } else {
-                    format!("Each of its {} steps holds at an instant of the time series `{}` — step k at instant k", offsets.len(), series.title)
+                    format!(
+                        "Each of its {} steps holds at an instant of the time series `{}` — step k at instant k",
+                        offsets.len(),
+                        series.title
+                    )
                 };
                 marked(
                     &mut drawn,
-                    format!("Laid by a law, not measured: {law_words}. {over}, time the slowest dimension. Source: {source}"),
+                    format!(
+                        "Laid by a law, not measured: {law_words}. {over}, time the slowest dimension. Source: {source}"
+                    ),
                     "series",
                 )?;
                 objects.append(&mut drawn.objects);
@@ -494,15 +587,24 @@ impl Operation for PropertyTimeSeries {
         if empty > 0 {
             notes.push(Note {
                 key: "empty",
-                detail: format!("{empty} element(s) of `{}` hold no value (NaN) — they hold none at any step", base.title),
+                detail: format!(
+                    "{empty} element(s) of `{}` hold no value (NaN) — they hold none at any step",
+                    base.title
+                ),
             });
         }
         notes.append(&mut says);
 
         // -- the activity -----------------------------------------------------------------
         let parameters = vec![
-            Parameter::Object { title: "input".to_string(), reference: base.dor() },
-            Parameter::Object { title: "input".to_string(), reference: series.dor() },
+            Parameter::Object {
+                title: "input".to_string(),
+                reference: base.dor(),
+            },
+            Parameter::Object {
+                title: "input".to_string(),
+                reference: series.dor(),
+            },
             count("propertyCount", written),
             count("stepCount", offsets.len()),
             count("emptyCount", empty),
@@ -518,7 +620,10 @@ impl Operation for PropertyTimeSeries {
             shapes: Vec::new(),
             activity: ActivityDraft {
                 recipe: "property-time-series",
-                title: format!("property-time-series → {stem} through {} ({form_word})", series.title),
+                title: format!(
+                    "property-time-series → {stem} through {} ({form_word})",
+                    series.title
+                ),
                 seed: format!(
                     "property-time-series:{form_word}:{use_interval}:{}:{}:{:?}:{anchor}",
                     base.uuid, series.uuid, params.change
@@ -533,11 +638,27 @@ impl Operation for PropertyTimeSeries {
     /// The law's settings are inputs, recorded under the parameters the
     /// projection already declares — a title cannot be both.
     fn reports(&self) -> Vec<Slot> {
-        let number = || Need::Number { uom: None, least: None, most: None };
+        let number = || Need::Number {
+            uom: None,
+            least: None,
+            most: None,
+        };
         vec![
-            Slot::required("propertyCount", number(), "properties written — one per instant, or one holding the series"),
-            Slot::required("stepCount", number(), "steps the values go through — the series' instants, one fewer over intervals"),
-            Slot::required("emptyCount", number(), "elements the base holds no value for — none at any step"),
+            Slot::required(
+                "propertyCount",
+                number(),
+                "properties written — one per instant, or one holding the series",
+            ),
+            Slot::required(
+                "stepCount",
+                number(),
+                "steps the values go through — the series' instants, one fewer over intervals",
+            ),
+            Slot::required(
+                "emptyCount",
+                number(),
+                "elements the base holds no value for — none at any step",
+            ),
         ]
     }
 }

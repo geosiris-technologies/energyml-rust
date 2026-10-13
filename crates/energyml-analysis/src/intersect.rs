@@ -60,7 +60,11 @@ type Boxed = ([Point; 3], [u32; 3], [f64; 3], [f64; 3]);
 fn plane(t: &[Point; 3]) -> Option<([f64; 3], f64)> {
     let u = [t[1][0] - t[0][0], t[1][1] - t[0][1], t[1][2] - t[0][2]];
     let v = [t[2][0] - t[0][0], t[2][1] - t[0][1], t[2][2] - t[0][2]];
-    let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    let n = [
+        u[1] * v[2] - u[2] * v[1],
+        u[2] * v[0] - u[0] * v[2],
+        u[0] * v[1] - u[1] * v[0],
+    ];
     let len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
     if len < 1e-18 {
         return None;
@@ -114,7 +118,11 @@ fn meet(t1: &[Point; 3], i1: &[u32; 3], t2: &[Point; 3], i2: &[u32; 3]) -> Optio
     }
     // Both segments lie on the same line: order them along its direction and
     // keep the overlap. The direction is the cross product of the normals.
-    let dir = [n1[1] * n2[2] - n1[2] * n2[1], n1[2] * n2[0] - n1[0] * n2[2], n1[0] * n2[1] - n1[1] * n2[0]];
+    let dir = [
+        n1[1] * n2[2] - n1[2] * n2[1],
+        n1[2] * n2[0] - n1[0] * n2[2],
+        n1[0] * n2[1] - n1[1] * n2[0],
+    ];
     let along = |p: &Point| p[0] * dir[0] + p[1] * dir[1] + p[2] * dir[2];
     let order = |s: &[Point]| -> (Point, Point, f64, f64) {
         let (a, b) = (s[0], s[1]);
@@ -156,8 +164,16 @@ pub fn pieces(
     triangles_b: &[[u32; 3]],
 ) -> (Vec<Piece>, usize) {
     let corners = |points: &[Point], t: &[u32; 3]| -> Option<[Point; 3]> {
-        let c = [*points.get(t[0] as usize)?, *points.get(t[1] as usize)?, *points.get(t[2] as usize)?];
-        if c.iter().any(|p| p.iter().any(|v| !v.is_finite())) { None } else { Some(c) }
+        let c = [
+            *points.get(t[0] as usize)?,
+            *points.get(t[1] as usize)?,
+            *points.get(t[2] as usize)?,
+        ];
+        if c.iter().any(|p| p.iter().any(|v| !v.is_finite())) {
+            None
+        } else {
+            Some(c)
+        }
     };
     let mut dropped = 0usize;
     // Bucket B by AABB into a grid sized by B's own extent and count.
@@ -165,7 +181,10 @@ pub fn pieces(
     let mut hi = [f64::NEG_INFINITY; 3];
     let mut boxed_b: Vec<Boxed> = Vec::with_capacity(triangles_b.len());
     for t in triangles_b {
-        let Some(c) = corners(points_b, t) else { dropped += 1; continue };
+        let Some(c) = corners(points_b, t) else {
+            dropped += 1;
+            continue;
+        };
         let (l, h) = aabb(&c);
         for k in 0..3 {
             lo[k] = lo[k].min(l[k]);
@@ -178,7 +197,8 @@ pub fn pieces(
     }
     let per_axis = ((boxed_b.len() as f64).cbrt().ceil() as usize).clamp(1, 256);
     let size = [0, 1, 2].map(|k| ((hi[k] - lo[k]) / per_axis as f64).max(1e-9));
-    let cell = |v: f64, k: usize| (((v - lo[k]) / size[k]).floor() as i64).clamp(0, per_axis as i64 - 1) as usize;
+    let cell =
+        |v: f64, k: usize| (((v - lo[k]) / size[k]).floor() as i64).clamp(0, per_axis as i64 - 1) as usize;
     let mut grid: HashMap<(usize, usize, usize), Vec<usize>> = HashMap::new();
     for (at, (_, _, l, h)) in boxed_b.iter().enumerate() {
         for x in cell(l[0], 0)..=cell(h[0], 0) {
@@ -193,7 +213,10 @@ pub fn pieces(
     let mut out = Vec::new();
     let mut seen: Vec<usize> = Vec::new();
     for t in triangles_a {
-        let Some(ca) = corners(points_a, t) else { dropped += 1; continue };
+        let Some(ca) = corners(points_a, t) else {
+            dropped += 1;
+            continue;
+        };
         let (l, h) = aabb(&ca);
         if (0..3).any(|k| h[k] < lo[k] || l[k] > hi[k]) {
             continue;
@@ -243,17 +266,27 @@ pub fn chain(pieces: &[Piece]) -> Vec<Trace> {
         let mut points = vec![pieces[start].ends[0], pieces[start].ends[1]];
         for forward in [true, false] {
             loop {
-                let tip = if forward { *points.last().unwrap() } else { points[0] };
+                let tip = if forward {
+                    *points.last().unwrap()
+                } else {
+                    points[0]
+                };
                 let at_tip = by_end.get(&key(&tip)).map(Vec::as_slice).unwrap_or(&[]);
                 // Degree two or nothing: a junction is a stop.
                 if at_tip.len() != 2 {
                     break;
                 }
-                let Some(&next) = at_tip.iter().find(|&&i| !used[i]) else { break };
+                let Some(&next) = at_tip.iter().find(|&&i| !used[i]) else {
+                    break;
+                };
                 used[next] = true;
                 let [a, b] = pieces[next].ends;
                 let extend = if key(&a) == key(&tip) { b } else { a };
-                if forward { points.push(extend) } else { points.insert(0, extend) }
+                if forward {
+                    points.push(extend)
+                } else {
+                    points.insert(0, extend)
+                }
             }
         }
         let closed = points.len() > 2 && key(points.first().unwrap()) == key(points.last().unwrap());
@@ -273,7 +306,10 @@ pub fn intersect(
     triangles_b: &[[u32; 3]],
 ) -> Intersection {
     let (found, dropped) = pieces(points_a, triangles_a, points_b, triangles_b);
-    Intersection { traces: chain(&found), dropped }
+    Intersection {
+        traces: chain(&found),
+        dropped,
+    }
 }
 
 #[cfg(test)]
@@ -282,12 +318,23 @@ mod tests {
 
     /// A horizontal square at height `z`, split in two triangles.
     fn plate(z: f64) -> (Vec<Point>, Vec<[u32; 3]>) {
-        (vec![[0.0, 0.0, z], [10.0, 0.0, z], [10.0, 10.0, z], [0.0, 10.0, z]], vec![[0, 1, 2], [0, 2, 3]])
+        (
+            vec![[0.0, 0.0, z], [10.0, 0.0, z], [10.0, 10.0, z], [0.0, 10.0, z]],
+            vec![[0, 1, 2], [0, 2, 3]],
+        )
     }
 
     /// A vertical wall at x = 4, from z = -5 to 15, along y.
     fn wall() -> (Vec<Point>, Vec<[u32; 3]>) {
-        (vec![[4.0, -1.0, -5.0], [4.0, 11.0, -5.0], [4.0, 11.0, 15.0], [4.0, -1.0, 15.0]], vec![[0, 1, 2], [0, 2, 3]])
+        (
+            vec![
+                [4.0, -1.0, -5.0],
+                [4.0, 11.0, -5.0],
+                [4.0, 11.0, 15.0],
+                [4.0, -1.0, 15.0],
+            ],
+            vec![[0, 1, 2], [0, 2, 3]],
+        )
     }
 
     /// A gently dipping horizon: z = 10 + 0.5·x, as a 4×4 grid of triangles.
@@ -358,7 +405,12 @@ mod tests {
     #[test]
     fn a_wall_that_stops_inside_the_plate_gives_a_trace_that_stops_there() {
         // The wall only spans y in [2, 6].
-        let pa = vec![[4.0, 2.0, -5.0], [4.0, 6.0, -5.0], [4.0, 6.0, 15.0], [4.0, 2.0, 15.0]];
+        let pa = vec![
+            [4.0, 2.0, -5.0],
+            [4.0, 6.0, -5.0],
+            [4.0, 6.0, 15.0],
+            [4.0, 2.0, 15.0],
+        ];
         let ta = vec![[0, 1, 2], [0, 2, 3]];
         let (pb, tb) = plate(7.0);
         let made = intersect(&pa, &ta, &pb, &tb);

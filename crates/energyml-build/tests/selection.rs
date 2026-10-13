@@ -12,12 +12,20 @@ fn square(x0: f64, y0: f64, x1: f64, y1: f64) -> Vec<[f64; 2]> {
 }
 
 fn outer(ring: Vec<[f64; 2]>) -> Rings {
-    Rings { epsg: None, outer: vec![ring], inner: vec![] }
+    Rings {
+        epsg: None,
+        outer: vec![ring],
+        inner: vec![],
+    }
 }
 
 fn line(nodes: Vec<[f64; 2]>) -> Footprint {
     let edges = (1..nodes.len() as u32).map(|at| [at - 1, at]).collect();
-    Footprint { nodes, edges, head: None }
+    Footprint {
+        nodes,
+        edges,
+        head: None,
+    }
 }
 
 fn holds(footprint: &Footprint, rings: &Rings, test: Test) -> bool {
@@ -56,19 +64,35 @@ fn a_triangle_side_counts_as_an_edge() {
     // cross it: the left side runs from (0, 50) to (-50, -50), far away, and
     // the right side from (50, -50) to (0, 50) passes x = 10 near y = 30: none
     // of the sides crosses, the ring is inside the triangle. It touches nothing.
-    let far = Footprint { nodes, edges: vec![[0, 1], [1, 2], [2, 0]], head: None };
+    let far = Footprint {
+        nodes,
+        edges: vec![[0, 1], [1, 2], [2, 0]],
+        head: None,
+    };
     assert!(!holds(&far, &rings, Test::Touches));
     let nodes = vec![[-5.0, -5.0], [-5.0, 5.0], [-20.0, 5.0]];
-    let side = Footprint { nodes, edges: vec![[0, 1], [1, 2], [2, 0]], head: None };
+    let side = Footprint {
+        nodes,
+        edges: vec![[0, 1], [1, 2], [2, 0]],
+        head: None,
+    };
     assert!(!holds(&side, &rings, Test::Touches));
     let nodes = vec![[-5.0, 5.0], [15.0, 5.0], [15.0, 50.0]];
-    let crossing = Footprint { nodes, edges: vec![[0, 1], [1, 2], [2, 0]], head: None };
+    let crossing = Footprint {
+        nodes,
+        edges: vec![[0, 1], [1, 2], [2, 0]],
+        head: None,
+    };
     assert!(holds(&crossing, &rings, Test::Touches));
 }
 
 #[test]
 fn an_inner_ring_makes_a_hole_in_the_outer() {
-    let rings = Rings { epsg: None, outer: vec![square(0.0, 0.0, 10.0, 10.0)], inner: vec![square(4.0, 4.0, 6.0, 6.0)] };
+    let rings = Rings {
+        epsg: None,
+        outer: vec![square(0.0, 0.0, 10.0, 10.0)],
+        inner: vec![square(4.0, 4.0, 6.0, 6.0)],
+    };
     assert!(!holds(&line(vec![[5.0, 5.0]]), &rings, Test::Touches));
     assert!(holds(&line(vec![[1.0, 1.0]]), &rings, Test::Touches));
     // An edge entirely inside the hole does not touch; one that leaves it does.
@@ -81,7 +105,11 @@ fn an_inner_ring_makes_a_hole_in_the_outer() {
 
 #[test]
 fn no_outer_ring_means_everywhere_but_the_inner_rings() {
-    let rings = Rings { epsg: None, outer: vec![], inner: vec![square(0.0, 0.0, 10.0, 10.0)] };
+    let rings = Rings {
+        epsg: None,
+        outer: vec![],
+        inner: vec![square(0.0, 0.0, 10.0, 10.0)],
+    };
     assert!(holds(&line(vec![[50.0, 50.0]]), &rings, Test::Inside));
     assert!(!holds(&line(vec![[5.0, 5.0]]), &rings, Test::Inside));
     let nothing = Rings::default();
@@ -97,7 +125,11 @@ fn a_node_on_the_border_counts_inside() {
 
 #[test]
 fn several_outer_rings_are_a_union() {
-    let rings = Rings { epsg: None, outer: vec![square(0.0, 0.0, 1.0, 1.0), square(5.0, 5.0, 6.0, 6.0)], inner: vec![] };
+    let rings = Rings {
+        epsg: None,
+        outer: vec![square(0.0, 0.0, 1.0, 1.0), square(5.0, 5.0, 6.0, 6.0)],
+        inner: vec![],
+    };
     assert!(holds(&line(vec![[0.5, 0.5], [5.5, 5.5]]), &rings, Test::Inside));
     assert!(!holds(&line(vec![[3.0, 3.0]]), &rings, Test::Touches));
 }
@@ -130,9 +162,17 @@ fn a_footprint_with_no_node_is_refused_not_inside() {
 
 #[test]
 fn rings_that_enclose_nothing_are_refused() {
-    let rings = Rings { epsg: None, outer: vec![vec![[0.0, 0.0], [1.0, 1.0]]], inner: vec![] };
+    let rings = Rings {
+        epsg: None,
+        outer: vec![vec![[0.0, 0.0], [1.0, 1.0]]],
+        inner: vec![],
+    };
     assert!(rings.check().unwrap_err().contains("outer ring #0"));
-    let rings = Rings { epsg: None, outer: vec![vec![[0.0, 0.0], [1.0, f64::NAN], [1.0, 0.0]]], inner: vec![] };
+    let rings = Rings {
+        epsg: None,
+        outer: vec![vec![[0.0, 0.0], [1.0, f64::NAN], [1.0, 0.0]]],
+        inner: vec![],
+    };
     assert!(rings.check().is_err());
 }
 
@@ -146,5 +186,8 @@ fn the_wire_is_camel_case_and_the_defaults_are_the_empty_ones() {
     assert!(request.rings.inner.is_empty() && !request.invert);
     assert_eq!(request.test, Test::Touches);
     let answer = serde_json::to_value(Selected::default()).unwrap();
-    assert_eq!(answer, serde_json::json!({"kept": [], "dropped": [], "refused": [], "notes": []}));
+    assert_eq!(
+        answer,
+        serde_json::json!({"kept": [], "dropped": [], "refused": [], "notes": []})
+    );
 }

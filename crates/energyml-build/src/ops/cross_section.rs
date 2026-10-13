@@ -112,10 +112,18 @@ struct Section<'a> {
 
 /// What the two bound roles say — or the refusal that names what is wrong.
 fn section_of(inputs: &CrossSectionInputs) -> Result<Section<'_>, Refusal> {
-    let trace: Vec<[f64; 2]> =
-        inputs.trace.geometry.patches.iter().flat_map(|patch| patch.points.iter().map(|point| [point[0], point[1]])).collect();
+    let trace: Vec<[f64; 2]> = inputs
+        .trace
+        .geometry
+        .patches
+        .iter()
+        .flat_map(|patch| patch.points.iter().map(|point| [point[0], point[1]]))
+        .collect();
     if trace.len() < 2 {
-        return Err(Refusal::on("trace", format!("needs at least two positions — it holds {}", trace.len())));
+        return Err(Refusal::on(
+            "trace",
+            format!("needs at least two positions — it holds {}", trace.len()),
+        ));
     }
     let mut surfaces = Vec::new();
     for one in &inputs.surfaces {
@@ -123,12 +131,18 @@ fn section_of(inputs: &CrossSectionInputs) -> Result<Section<'_>, Refusal> {
         let mut triangles: Vec<[u32; 3]> = Vec::new();
         let mut base = 0u32;
         for patch in &one.geometry.patches {
-            let Topology::Triangles(faces) = &patch.topology else { continue };
+            let Topology::Triangles(faces) = &patch.topology else {
+                continue;
+            };
             points.extend(patch.points.iter().copied());
             // **Offset by the rank of the patch's first node**: a patch's
             // indices are local to it, and cutting two patches laid end to end without
             // this offset would read the second on the first's nodes.
-            triangles.extend(faces.iter().map(|face| [face[0] + base, face[1] + base, face[2] + base]));
+            triangles.extend(
+                faces
+                    .iter()
+                    .map(|face| [face[0] + base, face[1] + base, face[2] + base]),
+            );
             base += patch.points.len() as u32;
         }
         if triangles.is_empty() {
@@ -136,10 +150,17 @@ fn section_of(inputs: &CrossSectionInputs) -> Result<Section<'_>, Refusal> {
             // shifts every pair below it by one rank.
             return Err(Refusal::on(
                 "surfaces",
-                format!("`{}` is not triangulated — `triangulate` makes a surface from a cloud", one.name),
+                format!(
+                    "`{}` is not triangulated — `triangulate` makes a surface from a cloud",
+                    one.name
+                ),
             ));
         }
-        surfaces.push(Surface { name: &one.name, points, triangles });
+        surfaces.push(Surface {
+            name: &one.name,
+            points,
+            triangles,
+        });
     }
     Ok(Section { trace, surfaces })
 }
@@ -158,7 +179,10 @@ fn geometry_of(panel: &fence::Panel) -> Geometry {
         });
         node_offset += piece.points.len();
     }
-    Geometry { kind: "cross-section", patches }
+    Geometry {
+        kind: "cross-section",
+        patches,
+    }
 }
 
 impl Operation for CrossSection {
@@ -188,7 +212,12 @@ impl Operation for CrossSection {
         section_of(inputs).map(|_| ())
     }
 
-    fn plan(&self, inputs: CrossSectionInputs, params: CrossSectionParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: CrossSectionInputs,
+        params: CrossSectionParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let found = section_of(&inputs)?;
 
         // Each surface gives its (s, z) curve along the trace. A surface
@@ -209,7 +238,10 @@ impl Operation for CrossSection {
             let upper = found.surfaces[at].name;
             let lower = found.surfaces[at + 1].name;
             for note in &made.notes {
-                says.push(Note { key: "panel", detail: format!("{upper} → {lower}: {note}") });
+                says.push(Note {
+                    key: "panel",
+                    detail: format!("{upper} → {lower}: {note}"),
+                });
             }
             if made.is_empty() {
                 // **An answer, not a failure**: the two surfaces do not
@@ -242,9 +274,15 @@ impl Operation for CrossSection {
         let seed = format!("{}:{title}", panels[0].0);
         let shapes: Vec<Shape> = panels
             .iter()
-            .map(|(name, geometry)| Shape { name: name.clone(), geometry: geometry.clone(), closed: None, known: None })
+            .map(|(name, geometry)| Shape {
+                name: name.clone(),
+                geometry: geometry.clone(),
+                closed: None,
+                known: None,
+            })
             .collect();
-        let mut plan = super::triangles::write(&TrianglesInputs { shape: shapes }, &params.written, &seed, cx)?;
+        let mut plan =
+            super::triangles::write(&TrianglesInputs { shape: shapes }, &params.written, &seed, cx)?;
 
         plan.activity.recipe = "cross-section";
         plan.activity.title = format!("cross-section → {title}");
@@ -282,11 +320,28 @@ impl Operation for CrossSection {
 
     fn reports(&self) -> Vec<Slot> {
         support::frame_reports(vec![
-            Slot::optional("panelCount", Need::Integer { least: Some(0), most: None }, "how many panels hold material"),
-            Slot::optional("emptyPanels", Need::Integer { least: Some(0), most: None }, "how many pairs of surfaces meet nowhere along the trace"),
+            Slot::optional(
+                "panelCount",
+                Need::Integer {
+                    least: Some(0),
+                    most: None,
+                },
+                "how many panels hold material",
+            ),
+            Slot::optional(
+                "emptyPanels",
+                Need::Integer {
+                    least: Some(0),
+                    most: None,
+                },
+                "how many pairs of surfaces meet nowhere along the trace",
+            ),
             Slot::optional(
                 "invertedPatches",
-                Need::Integer { least: Some(0), most: None },
+                Need::Integer {
+                    least: Some(0),
+                    most: None,
+                },
                 "how many pieces run the other way round — the order given disagrees with the geometry there",
             ),
         ])
@@ -306,9 +361,14 @@ impl Operation for CrossSection {
 /// sections without hiding the node would leave a lit line that draws
 /// nothing — a group root is a line that draws nothing, by construction.
 fn tree_of(written: &[Made], panels: &[(String, Geometry)]) -> Vec<Made> {
-    let Some(first) = written.first() else { return Vec::new() };
+    let Some(first) = written.first() else {
+        return Vec::new();
+    };
     let root = Made {
-        geometry: Geometry { kind: "cross-section", patches: Vec::new() },
+        geometry: Geometry {
+            kind: "cross-section",
+            patches: Vec::new(),
+        },
         ..first.clone()
     };
     let mut out = vec![root.clone()];

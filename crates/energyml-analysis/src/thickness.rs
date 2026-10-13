@@ -113,7 +113,10 @@ pub fn thickness(top: &Surface, base: &Surface, up: Up, measure: Measure) -> Res
             triangles.extend_from_slice(&[q[0], q[1], q[2], q[0], q[2], q[3]]);
         }
         if triangles.is_empty() {
-            return Err(Error::NoFace { which: "top", how: "for its dip, which a stratigraphic thickness needs" });
+            return Err(Error::NoFace {
+                which: "top",
+                how: "for its dip, which a stratigraphic thickness needs",
+            });
         }
         let slope = surface::slope(top.points, &triangles, up)?;
         for (value, dip) in out.values.iter_mut().zip(&slope.dip) {
@@ -145,7 +148,11 @@ mod tests {
     }
 
     fn triangles<'a>(points: &'a [f64], triangles: &'a [u32]) -> Surface<'a> {
-        Surface { points, triangles, quads: &[] }
+        Surface {
+            points,
+            triangles,
+            quads: &[],
+        }
     }
 
     /// A top with a node at each of these plan positions, on `z(x, y)`, and
@@ -181,12 +188,20 @@ mod tests {
         let base = triangles(&base_points, &base_tris);
 
         let vertical = thickness(&top, &base, Up::PlusZ, Measure::Vertical).unwrap();
-        assert!(vertical.values.iter().all(|v| (v - 20.0).abs() < 1e-9), "{:?}", vertical.values);
+        assert!(
+            vertical.values.iter().all(|v| (v - 20.0).abs() < 1e-9),
+            "{:?}",
+            vertical.values
+        );
         assert_eq!((vertical.outside, vertical.folded, vertical.crossed), (0, 0, 0));
 
         let strati = thickness(&top, &base, Up::PlusZ, Measure::Stratigraphic).unwrap();
         let expected = 20.0 * slope.atan().cos();
-        assert!(strati.values.iter().all(|v| (v - expected).abs() < 1e-9), "{:?} ≠ {expected}", strati.values);
+        assert!(
+            strati.values.iter().all(|v| (v - expected).abs() < 1e-9),
+            "{:?} ≠ {expected}",
+            strati.values
+        );
     }
 
     /// **Which way is up turns the sign, and a negative is kept.** The same
@@ -197,7 +212,11 @@ mod tests {
         let (base_points, base_tris) = plane(10.0, |_, _| 1020.0);
         let top_points = vec![5.0, 5.0, 1000.0, 2.0, 7.0, 1000.0];
         let base = triangles(&base_points, &base_tris);
-        let top = Surface { points: &top_points, triangles: &[], quads: &[] };
+        let top = Surface {
+            points: &top_points,
+            triangles: &[],
+            quads: &[],
+        };
         let depth = thickness(&top, &base, Up::MinusZ, Measure::Vertical).unwrap();
         assert_eq!(depth.values, vec![20.0, 20.0]);
         assert_eq!(depth.crossed, 0);
@@ -212,11 +231,30 @@ mod tests {
     fn outside_the_base_on_a_fold_and_on_a_hole_are_counted() {
         // Two squares, the second over the first's right half and 30 lower.
         let mut base_points = vec![0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 10.0, 10.0, 0.0, 0.0, 10.0, 0.0];
-        base_points.extend([5.0, 0.0, -30.0, 10.0, 0.0, -30.0, 10.0, 10.0, -30.0, 5.0, 10.0, -30.0]);
+        base_points.extend([
+            5.0, 0.0, -30.0, 10.0, 0.0, -30.0, 10.0, 10.0, -30.0, 5.0, 10.0, -30.0,
+        ]);
         let base_tris = vec![0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7];
-        let top_points = vec![2.0, 5.0, 10.0, 7.0, 5.0, 10.0, 20.0, 5.0, 10.0, f64::NAN, 5.0, 10.0];
+        let top_points = vec![
+            2.0,
+            5.0,
+            10.0,
+            7.0,
+            5.0,
+            10.0,
+            20.0,
+            5.0,
+            10.0,
+            f64::NAN,
+            5.0,
+            10.0,
+        ];
         let base = triangles(&base_points, &base_tris);
-        let top = Surface { points: &top_points, triangles: &[], quads: &[] };
+        let top = Surface {
+            points: &top_points,
+            triangles: &[],
+            quads: &[],
+        };
         let found = thickness(&top, &base, Up::PlusZ, Measure::Vertical).unwrap();
         assert_eq!(found.values[0], 10.0);
         assert!(found.values[1..].iter().all(|v| v.is_nan()));
@@ -231,7 +269,11 @@ mod tests {
         let base = triangles(&base_points, &base_tris);
         // On the diagonal the two triangles share, and on a corner.
         let top_points = vec![4.0, 4.0, 50.0, 0.0, 0.0, 50.0];
-        let top = Surface { points: &top_points, triangles: &[], quads: &[] };
+        let top = Surface {
+            points: &top_points,
+            triangles: &[],
+            quads: &[],
+        };
         let found = thickness(&top, &base, Up::PlusZ, Measure::Vertical).unwrap();
         assert_eq!(found.folded, 0);
         assert!((found.values[0] - (50.0 - 0.4)).abs() < 1e-9 && (found.values[1] - 50.0).abs() < 1e-12);
@@ -243,12 +285,24 @@ mod tests {
     #[test]
     fn a_grid_cell_reads_bilinearly() {
         let base_points = vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0];
-        let base = Surface { points: &base_points, triangles: &[], quads: &[0, 1, 2, 3] };
+        let base = Surface {
+            points: &base_points,
+            triangles: &[],
+            quads: &[0, 1, 2, 3],
+        };
         let top_points = vec![0.5, 0.5, 1.0, 0.25, 0.75, 1.0];
-        let top = Surface { points: &top_points, triangles: &[], quads: &[] };
+        let top = Surface {
+            points: &top_points,
+            triangles: &[],
+            quads: &[],
+        };
         let found = thickness(&top, &base, Up::PlusZ, Measure::Vertical).unwrap();
         assert!((found.values[0] - 0.75).abs() < 1e-12, "{:?}", found.values);
-        assert!((found.values[1] - (1.0 - 0.25 * 0.75)).abs() < 1e-12, "{:?}", found.values);
+        assert!(
+            (found.values[1] - (1.0 - 0.25 * 0.75)).abs() < 1e-12,
+            "{:?}",
+            found.values
+        );
     }
 
     /// A face that says nothing about *one* height — vertical, or with a `NaN`
@@ -261,7 +315,11 @@ mod tests {
         let base_tris = vec![0, 1, 2, 0, 3, 2, 0, 4, 1];
         let base = triangles(&base_points, &base_tris);
         let top_points = vec![1.0, 1.0, 3.0];
-        let top = Surface { points: &top_points, triangles: &[], quads: &[] };
+        let top = Surface {
+            points: &top_points,
+            triangles: &[],
+            quads: &[],
+        };
         let found = thickness(&top, &base, Up::PlusZ, Measure::Vertical).unwrap();
         assert_eq!(found.set_aside, 2);
         assert_eq!(found.values, vec![3.0]);
@@ -272,7 +330,11 @@ mod tests {
     #[test]
     fn without_a_face_the_refusal_names_the_surface() {
         let points = vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0];
-        let bare = Surface { points: &points, triangles: &[], quads: &[] };
+        let bare = Surface {
+            points: &points,
+            triangles: &[],
+            quads: &[],
+        };
         let tris = [0u32, 1, 2];
         let faced = triangles(&points, &tris);
         let why = thickness(&faced, &bare, Up::PlusZ, Measure::Vertical).unwrap_err();

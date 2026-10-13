@@ -72,16 +72,26 @@ fn abscissas(points: &[[f64; 3]], closed: bool) -> Option<Vec<f64>> {
 /// Twice the signed area of a ring in plan.
 fn winding(points: &[[f64; 3]]) -> f64 {
     let n = points.len();
-    (0..n).map(|i| {
-        let (a, b) = (points[i], points[(i + 1) % n]);
-        a[0] * b[1] - b[0] * a[1]
-    }).sum()
+    (0..n)
+        .map(|i| {
+            let (a, b) = (points[i], points[(i + 1) % n]);
+            a[0] * b[1] - b[0] * a[1]
+        })
+        .sum()
 }
 
 /// The band between two lines, as triangles over their vertex numbers (`a`'s
 /// from `offset_a`, `b`'s from `offset_b`). For rings, the vertex sequences
 /// are walked once around and back to their first.
-fn stitch(ua: &[f64], ub: &[f64], na: usize, nb: usize, offset_a: u32, offset_b: u32, out: &mut Vec<[u32; 3]>) {
+fn stitch(
+    ua: &[f64],
+    ub: &[f64],
+    na: usize,
+    nb: usize,
+    offset_a: u32,
+    offset_b: u32,
+    out: &mut Vec<[u32; 3]>,
+) {
     // `ua` and `ub` hold one abscissa per step of the walk: n for an open
     // line, n + 1 for a ring (its first vertex again, at 1).
     let (last_a, last_b) = (ua.len() - 1, ub.len() - 1);
@@ -110,18 +120,33 @@ fn stitch(ua: &[f64], ub: &[f64], na: usize, nb: usize, offset_a: u32, offset_b:
 /// is refused, and why.
 pub fn loft(lines: &[LoftLine]) -> Result<Lofted, String> {
     if lines.len() < 2 {
-        return Err(format!("a loft needs at least two lines, and {} was given", lines.len()));
+        return Err(format!(
+            "a loft needs at least two lines, and {} was given",
+            lines.len()
+        ));
     }
     for line in lines {
         let least = if line.closed { 3 } else { 2 };
         if line.points.len() < least {
-            return Err(format!("`{}` has {} node(s) — a{} line needs at least {least}", line.name, line.points.len(), if line.closed { " closed" } else { "n open" }));
+            return Err(format!(
+                "`{}` has {} node(s) — a{} line needs at least {least}",
+                line.name,
+                line.points.len(),
+                if line.closed { " closed" } else { "n open" }
+            ));
         }
     }
     let first = lines[0];
     if let Some(other) = lines.iter().find(|line| line.closed != first.closed) {
-        let (closed, open) = if first.closed { (first, *other) } else { (*other, first) };
-        return Err(format!("`{}` is closed and `{}` is open — there is no correspondence between a ring and a line", closed.name, open.name));
+        let (closed, open) = if first.closed {
+            (first, *other)
+        } else {
+            (*other, first)
+        };
+        return Err(format!(
+            "`{}` is closed and `{}` is open — there is no correspondence between a ring and a line",
+            closed.name, open.name
+        ));
     }
 
     let mut points: Vec<[f64; 3]> = Vec::new();
@@ -149,7 +174,10 @@ pub fn loft(lines: &[LoftLine]) -> Result<Lofted, String> {
                 .iter()
                 .enumerate()
                 .map(|(k, p)| (k, distance(start, *p)))
-                .fold((0, f64::INFINITY), |best, one| if one.1 < best.1 { one } else { best });
+                .fold(
+                    (0, f64::INFINITY),
+                    |best, one| if one.1 < best.1 { one } else { best },
+                );
             next.rotate_left(shift);
             turned.push(shift);
         } else {
@@ -166,12 +194,24 @@ pub fn loft(lines: &[LoftLine]) -> Result<Lofted, String> {
         let ua = abscissas(&previous, a.closed).ok_or_else(|| format!("`{}` has no length", a.name))?;
         let ub = abscissas(&next, b.closed).ok_or_else(|| format!("`{}` has no length", b.name))?;
         let offset = points.len() as u32;
-        stitch(&ua, &ub, previous.len(), next.len(), previous_offset, offset, &mut triangles);
+        stitch(
+            &ua,
+            &ub,
+            previous.len(),
+            next.len(),
+            previous_offset,
+            offset,
+            &mut triangles,
+        );
         points.extend(&next);
         previous = next;
         previous_offset = offset;
     }
-    Ok(Lofted { points, triangles, turned })
+    Ok(Lofted {
+        points,
+        triangles,
+        turned,
+    })
 }
 
 #[cfg(test)]
@@ -179,20 +219,32 @@ mod tests {
     use super::*;
 
     fn line<'a>(name: &'a str, points: &'a [[f64; 3]]) -> LoftLine<'a> {
-        LoftLine { name, points, closed: false }
+        LoftLine {
+            name,
+            points,
+            closed: false,
+        }
     }
 
     #[test]
     fn every_vertex_kept_and_every_triangle_spans_both_lines() {
         let a = [[0.0, 0.0, 0.0], [5.0, 0.0, 0.0], [10.0, 0.0, 0.0]];
-        let b = [[0.0, 10.0, 0.0], [2.0, 10.0, 0.0], [4.0, 10.0, 0.0], [10.0, 10.0, 0.0]];
+        let b = [
+            [0.0, 10.0, 0.0],
+            [2.0, 10.0, 0.0],
+            [4.0, 10.0, 0.0],
+            [10.0, 10.0, 0.0],
+        ];
         let made = loft(&[line("a", &a), line("b", &b)]).unwrap();
         assert_eq!(made.points.len(), 7, "all vertices, none resampled");
         // A band between n and m vertices has n + m − 2 triangles.
         assert_eq!(made.triangles.len(), 5);
         for t in &made.triangles {
             let on_a = t.iter().filter(|&&v| v < 3).count();
-            assert!(on_a == 1 || on_a == 2, "two corners on one line, one on the other: {t:?}");
+            assert!(
+                on_a == 1 || on_a == 2,
+                "two corners on one line, one on the other: {t:?}"
+            );
         }
     }
 
@@ -211,15 +263,29 @@ mod tests {
         let a = [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0]];
         let b = [[10.0, 10.0, 0.0], [0.0, 10.0, 0.0]];
         let why = loft(&[line("stick 1", &a), line("stick 2", &b)]).unwrap_err();
-        assert!(why.contains("`stick 1`") && why.contains("`stick 2`") && why.contains("reverse"), "{why}");
+        assert!(
+            why.contains("`stick 1`") && why.contains("`stick 2`") && why.contains("reverse"),
+            "{why}"
+        );
     }
 
     #[test]
     fn a_ring_and_a_line_are_refused() {
         let ring = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]];
         let open = [[0.0, 0.0, 1.0], [1.0, 0.0, 1.0]];
-        let why = loft(&[LoftLine { name: "ring", points: &ring, closed: true }, line("open", &open)]).unwrap_err();
-        assert!(why.contains("`ring` is closed") && why.contains("`open` is open"), "{why}");
+        let why = loft(&[
+            LoftLine {
+                name: "ring",
+                points: &ring,
+                closed: true,
+            },
+            line("open", &open),
+        ])
+        .unwrap_err();
+        assert!(
+            why.contains("`ring` is closed") && why.contains("`open` is open"),
+            "{why}"
+        );
     }
 
     #[test]
@@ -227,8 +293,24 @@ mod tests {
         let low = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]];
         // The same square higher, its start one vertex along.
         let high = [[1.0, 0.0, 5.0], [1.0, 1.0, 5.0], [0.0, 1.0, 5.0], [0.0, 0.0, 5.0]];
-        let made = loft(&[LoftLine { name: "low", points: &low, closed: true }, LoftLine { name: "high", points: &high, closed: true }]).unwrap();
-        assert_eq!(made.turned, vec![3], "turned so that it starts above the first ring's start");
+        let made = loft(&[
+            LoftLine {
+                name: "low",
+                points: &low,
+                closed: true,
+            },
+            LoftLine {
+                name: "high",
+                points: &high,
+                closed: true,
+            },
+        ])
+        .unwrap();
+        assert_eq!(
+            made.turned,
+            vec![3],
+            "turned so that it starts above the first ring's start"
+        );
         assert_eq!(made.points[4], [0.0, 0.0, 5.0]);
         // A closed band between two rings of four: eight triangles, every
         // vertex used, around and back.
@@ -242,7 +324,19 @@ mod tests {
     fn rings_wound_opposite_ways_are_refused() {
         let ccw = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]];
         let cw = [[0.0, 0.0, 5.0], [0.0, 1.0, 5.0], [1.0, 1.0, 5.0], [1.0, 0.0, 5.0]];
-        let why = loft(&[LoftLine { name: "a", points: &ccw, closed: true }, LoftLine { name: "b", points: &cw, closed: true }]).unwrap_err();
+        let why = loft(&[
+            LoftLine {
+                name: "a",
+                points: &ccw,
+                closed: true,
+            },
+            LoftLine {
+                name: "b",
+                points: &cw,
+                closed: true,
+            },
+        ])
+        .unwrap_err();
         assert!(why.contains("opposite ways"), "{why}");
     }
 

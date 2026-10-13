@@ -143,19 +143,32 @@ struct Measured {
 /// The kind the standard dictionary holds under `title`, or a refusal.
 fn standard_kind(title: &str) -> Result<eml::DataObjectReference, Refusal> {
     energyml_domain::property_kind::with_default(|dictionary| {
-        dictionary.by_title(title).first().map(|kind| crate::crs::reference_to(&kind.uuid, "eml23.PropertyKind", &kind.title))
+        dictionary
+            .by_title(title)
+            .first()
+            .map(|kind| crate::crs::reference_to(&kind.uuid, "eml23.PropertyKind", &kind.title))
     })
-    .ok_or_else(|| Refusal::new("refused", format!("the dictionary in use holds no kind called `{title}`")))
+    .ok_or_else(|| {
+        Refusal::new(
+            "refused",
+            format!("the dictionary in use holds no kind called `{title}`"),
+        )
+    })
 }
 
 /// A unit code as the schema spells it.
 fn unit(code: &str) -> Result<eml::UnitOfMeasureExt, Refusal> {
-    eml::UnitOfMeasureExt::from_xml_text(code).map_err(|why| Refusal::new("refused", format!("`{code}` is no unit this build writes: {why}")))
+    eml::UnitOfMeasureExt::from_xml_text(code)
+        .map_err(|why| Refusal::new("refused", format!("`{code}` is no unit this build writes: {why}")))
 }
 
 /// A finite number, or a refusal naming the slot.
 fn finite(slot: &str, value: f64, what: &str) -> Result<f64, Refusal> {
-    if value.is_finite() { Ok(value) } else { Err(Refusal::on(slot, format!("{value} is not {what}"))) }
+    if value.is_finite() {
+        Ok(value)
+    } else {
+        Err(Refusal::on(slot, format!("{value} is not {what}")))
+    }
 }
 
 impl Operation for InjectionTest {
@@ -167,21 +180,38 @@ impl Operation for InjectionTest {
             name: "injection-test",
             describe: "a step-rate injection test down a wellbore — its WITSML log in date time, the PRODML test pointing at the log's channels, the collection of well tests — every value stated by a law and sourced",
             category: Category::Synthetic,
-            makes: &["witsml21.Log", "prodml23.InjectionFlowTest", "prodml23.ProductionWellTests"],
+            makes: &[
+                "witsml21.Log",
+                "prodml23.InjectionFlowTest",
+                "prodml23.ProductionWellTests",
+            ],
             recipe: "injection-test",
             represents: None,
         }
     }
 
-
     fn check(&self, inputs: &InjectionTestInputs) -> Result<(), Refusal> {
-        match inputs.wellbore.known.reference.as_ref().map(|one| class_of(&one.qualified_type)) {
+        match inputs
+            .wellbore
+            .known
+            .reference
+            .as_ref()
+            .map(|one| class_of(&one.qualified_type))
+        {
             Some("Wellbore") => Ok(()),
-            _ => Err(Refusal::on("wellbore", "the object given is no WITSML `Wellbore`: an injection test is logged down one")),
+            _ => Err(Refusal::on(
+                "wellbore",
+                "the object given is no WITSML `Wellbore`: an injection test is logged down one",
+            )),
         }
     }
 
-    fn plan(&self, inputs: InjectionTestInputs, params: InjectionTestParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: InjectionTestInputs,
+        params: InjectionTestParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let title = titled("title", &params.title)?;
         let mut writer = Writer::new(cx, "injection-test", &params.source)?;
         let (start_text, start) = instant("start", &params.start)?;
@@ -190,12 +220,28 @@ impl Operation for InjectionTest {
             Some(one) => {
                 return Err(Refusal::on(
                     "wellbore",
-                    format!("`{}` is a `{}`: an injection test is logged down a WITSML `Wellbore`", one.title, class_of(&one.qualified_type)),
+                    format!(
+                        "`{}` is a `{}`: an injection test is logged down a WITSML `Wellbore`",
+                        one.title,
+                        class_of(&one.qualified_type)
+                    ),
                 ));
             }
-            None => return Err(Refusal::on("wellbore", format!("`{}` was given without a reference to write", inputs.wellbore.name))),
+            None => {
+                return Err(Refusal::on(
+                    "wellbore",
+                    format!(
+                        "`{}` was given without a reference to write",
+                        inputs.wellbore.name
+                    ),
+                ));
+            }
         };
-        let logging_company = reference_from("loggingCompany", &params.logging_company.0, "eml23.BusinessAssociate")?;
+        let logging_company = reference_from(
+            "loggingCompany",
+            &params.logging_company.0,
+            "eml23.BusinessAssociate",
+        )?;
         let nominal = prodml::ReportingDurationKindExt::from_xml_text(params.nominal_period.trim())
             .ok()
             .filter(|kind| !matches!(kind, prodml::ReportingDurationKindExt::Other(_)))
@@ -209,29 +255,49 @@ impl Operation for InjectionTest {
         // -- the schedule ------------------------------------------------------
         for (at, rate) in params.steps.iter().enumerate() {
             if !(rate.is_finite() && *rate >= 0.0) {
-                return Err(Refusal::on("steps", format!("step {} is {rate} m3/h: a rate is a finite number ≥ 0", at + 1)));
+                return Err(Refusal::on(
+                    "steps",
+                    format!("step {} is {rate} m3/h: a rate is a finite number ≥ 0", at + 1),
+                ));
             }
         }
         let step_hours = finite("stepHours", params.step_hours, "a duration")?;
         if step_hours <= 0.0 {
-            return Err(Refusal::on("stepHours", format!("{step_hours} h: a step lasts a while")));
+            return Err(Refusal::on(
+                "stepHours",
+                format!("{step_hours} h: a step lasts a while"),
+            ));
         }
         let step_minutes = step_hours * 60.0;
         let per_step = step_minutes / params.sample_minutes as f64;
         if per_step.fract() != 0.0 || per_step < 1.0 {
             return Err(Refusal::on(
                 "sampleMinutes",
-                format!("{} min does not divide a step of {step_minutes} min: a sample would straddle two rates", params.sample_minutes),
+                format!(
+                    "{} min does not divide a step of {step_minutes} min: a sample would straddle two rates",
+                    params.sample_minutes
+                ),
             ));
         }
         let per_step = per_step as usize;
         let injectivity = finite("injectivity", params.injectivity, "an injectivity index")?;
         if injectivity <= 0.0 {
-            return Err(Refusal::on("injectivity", "an index of 0 would take an infinite pressure to inject anything"));
+            return Err(Refusal::on(
+                "injectivity",
+                "an index of 0 would take an infinite pressure to inject anything",
+            ));
         }
         let static_pressure = finite("staticPressure", params.static_pressure, "a pressure")?;
-        let reservoir = finite("reservoirTemperature", params.reservoir_temperature, "a temperature")?;
-        let injected = finite("injectionTemperature", params.injection_temperature, "a temperature")?;
+        let reservoir = finite(
+            "reservoirTemperature",
+            params.reservoir_temperature,
+            "a temperature",
+        )?;
+        let injected = finite(
+            "injectionTemperature",
+            params.injection_temperature,
+            "a temperature",
+        )?;
         let response = finite("responseMinutes", params.response_minutes, "a time constant")?;
         let cooling = finite("coolingHours", params.cooling_hours, "a time constant")? * 60.0;
 
@@ -240,7 +306,13 @@ impl Operation for InjectionTest {
         // the last one ending the test. A step starts from the pressure the
         // previous one left.
         let count = params.steps.len() * per_step;
-        let relax = |from: f64, to: f64, elapsed: f64, tau: f64| if tau == 0.0 { to } else { to + (from - to) * (-elapsed / tau).exp() };
+        let relax = |from: f64, to: f64, elapsed: f64, tau: f64| {
+            if tau == 0.0 {
+                to
+            } else {
+                to + (from - to) * (-elapsed / tau).exp()
+            }
+        };
         let mut times: Vec<String> = Vec::with_capacity(count + 1);
         let (mut rates, mut pressures, mut temperatures) = (Vec::new(), Vec::new(), Vec::new());
         let mut from = static_pressure;
@@ -253,7 +325,11 @@ impl Operation for InjectionTest {
             let rate = params.steps[step];
             let into_step = (i - step * per_step) as f64 * params.sample_minutes as f64;
             let elapsed = i as f64 * params.sample_minutes as f64;
-            let pressure = if i == 0 { static_pressure } else { relax(from, static_pressure + rate / injectivity, into_step, response) };
+            let pressure = if i == 0 {
+                static_pressure
+            } else {
+                relax(from, static_pressure + rate / injectivity, into_step, response)
+            };
             let temperature = relax(reservoir, injected, elapsed, cooling);
             times.push(w3cdtf(start + (elapsed * 60.0) as i64));
             rates.push(rate);
@@ -263,10 +339,34 @@ impl Operation for InjectionTest {
         let end_text = times.last().cloned().unwrap_or_else(|| start_text.clone());
 
         let measured = [
-            Measured { mnemonic: "TIME", kind: "absolute time", uom: "s", data_kind: witsml::ChannelDataKind::DateTime, values: times.iter().map(|one| json!(one)).collect() },
-            Measured { mnemonic: "QINJ", kind: "water flowrate", uom: "m3/h", data_kind: witsml::ChannelDataKind::Double, values: rates.iter().map(|v| json_number(*v)).collect() },
-            Measured { mnemonic: "BHP", kind: "pressure", uom: "bar", data_kind: witsml::ChannelDataKind::Double, values: pressures.iter().map(|v| json_number(*v)).collect() },
-            Measured { mnemonic: "BHT", kind: "temperature", uom: "degC", data_kind: witsml::ChannelDataKind::Double, values: temperatures.iter().map(|v| json_number(*v)).collect() },
+            Measured {
+                mnemonic: "TIME",
+                kind: "absolute time",
+                uom: "s",
+                data_kind: witsml::ChannelDataKind::DateTime,
+                values: times.iter().map(|one| json!(one)).collect(),
+            },
+            Measured {
+                mnemonic: "QINJ",
+                kind: "water flowrate",
+                uom: "m3/h",
+                data_kind: witsml::ChannelDataKind::Double,
+                values: rates.iter().map(|v| json_number(*v)).collect(),
+            },
+            Measured {
+                mnemonic: "BHP",
+                kind: "pressure",
+                uom: "bar",
+                data_kind: witsml::ChannelDataKind::Double,
+                values: pressures.iter().map(|v| json_number(*v)).collect(),
+            },
+            Measured {
+                mnemonic: "BHT",
+                kind: "temperature",
+                uom: "degC",
+                data_kind: witsml::ChannelDataKind::Double,
+                values: temperatures.iter().map(|v| json_number(*v)).collect(),
+            },
         ];
 
         // -- the uuids, from what they are -------------------------------------
@@ -278,8 +378,10 @@ impl Operation for InjectionTest {
         );
         let log_uuid = writer.uuid(&format!("log:{digest}"))?;
         let set_uuid = writer.uuid(&format!("channel-set:{digest}"))?;
-        let channel_uuids: Vec<String> =
-            measured.iter().map(|one| writer.uuid(&format!("channel:{}:{digest}", one.mnemonic))).collect::<Result<_, _>>()?;
+        let channel_uuids: Vec<String> = measured
+            .iter()
+            .map(|one| writer.uuid(&format!("channel:{}:{digest}", one.mnemonic)))
+            .collect::<Result<_, _>>()?;
         let test_uuid = writer.uuid(&format!("test:{digest}"))?;
         let tests_uuid = writer.uuid(&format!("tests:{test_uuid}"))?;
 
@@ -299,7 +401,13 @@ impl Operation for InjectionTest {
         let mut channel_refs: Vec<eml::DataObjectReference> = Vec::new();
         for (one, uuid) in measured.iter().zip(&channel_uuids) {
             let channel = witsml::Channel {
-                citation: writer.citation(one.mnemonic, &format!("the `{}` of an invented injection test of `{}`", one.kind, hole.title))?,
+                citation: writer.citation(
+                    one.mnemonic,
+                    &format!(
+                        "the `{}` of an invented injection test of `{}`",
+                        one.kind, hole.title
+                    ),
+                )?,
                 extension_name_value: vec![writer.synthetic("a channel of an invented injection test")],
                 uuid: uuid.clone(),
                 schema_version: "2.1".to_string(),
@@ -325,23 +433,39 @@ impl Operation for InjectionTest {
                 Value::Array(row)
             })
             .collect();
-        let data = serde_json::to_string(&Value::Array(rows)).map_err(|why| Refusal::new("refused", format!("the channel data did not encode: {why}")))?;
+        let data = serde_json::to_string(&Value::Array(rows))
+            .map_err(|why| Refusal::new("refused", format!("the channel data did not encode: {why}")))?;
         let set_title = format!("{title} — channels");
         let channel_set = witsml::ChannelSet {
-            citation: writer.citation(&set_title, &format!("the channels of an invented injection test of `{}`, in date time", hole.title))?,
+            citation: writer.citation(
+                &set_title,
+                &format!(
+                    "the channels of an invented injection test of `{}`, in date time",
+                    hole.title
+                ),
+            )?,
             extension_name_value: vec![writer.synthetic("the channels of an invented injection test")],
             uuid: set_uuid.clone(),
             schema_version: "2.1".to_string(),
             active_status: eml::ActiveStatusKind::Inactive,
             index: vec![index],
             channel: channels,
-            data: Some(witsml::ChannelData { data: Some(data), file_uri: None }),
+            data: Some(witsml::ChannelData {
+                data: Some(data),
+                file_uri: None,
+            }),
             wellbore: Some(hole_dor.clone()),
             ..Default::default()
         };
         let log_title = format!("{title} — Log");
         let log = witsml::Log {
-            citation: writer.citation(&log_title, &format!("the log of an invented injection test of `{}`, from {start_text} to {end_text}", hole.title))?,
+            citation: writer.citation(
+                &log_title,
+                &format!(
+                    "the log of an invented injection test of `{}`, from {start_text} to {end_text}",
+                    hole.title
+                ),
+            )?,
             extension_name_value: vec![writer.synthetic("the log of an invented injection test")],
             uuid: log_uuid.clone(),
             schema_version: "2.1".to_string(),
@@ -354,10 +478,18 @@ impl Operation for InjectionTest {
 
         // -- the test ---------------------------------------------------
         let set_ref = crate::crs::reference_to(&set_uuid, "witsml21.ChannelSet", &set_title);
-        let [time_ref, rate_ref, pressure_ref, temperature_ref] = [0, 1, 2, 3].map(|at| channel_refs[at].clone());
+        let [time_ref, rate_ref, pressure_ref, temperature_ref] =
+            [0, 1, 2, 3].map(|at| channel_refs[at].clone());
         let test_title = title.clone();
         let test = prodml::InjectionFlowTest {
-            citation: writer.citation(&test_title, &format!("an invented step-rate injection test of `{}`, {} step(s) of {step_hours} h", hole.title, params.steps.len()))?,
+            citation: writer.citation(
+                &test_title,
+                &format!(
+                    "an invented step-rate injection test of `{}`, {} step(s) of {step_hours} h",
+                    hole.title,
+                    params.steps.len()
+                ),
+            )?,
             extension_name_value: vec![writer.synthetic("an invented injection test")],
             uuid: test_uuid.clone(),
             schema_version: "2.3".to_string(),
@@ -365,7 +497,10 @@ impl Operation for InjectionTest {
             well_test_method: Some(params.method.trim().to_string()).filter(|one| !one.is_empty()),
             effective_date: Some(start_text.clone()),
             interval_measurement_set: prodml::FlowTestMeasurementSet {
-                location: prodml::FlowTestLocation { wellbore: Some(hole_dor.clone()), ..Default::default() },
+                location: prodml::FlowTestLocation {
+                    wellbore: Some(hole_dor.clone()),
+                    ..Default::default()
+                },
                 test_period: Some(prodml::TestPeriod {
                     start_time: start_text.clone(),
                     end_time: end_text.clone(),
@@ -377,25 +512,33 @@ impl Operation for InjectionTest {
                     uid: Some(TEST_PERIOD.to_string()),
                     ..Default::default()
                 }),
-                measured_flow_rate: vec![prodml::AbstractPtaFlowData::MeasuredFlowData(prodml::MeasuredFlowData {
-                    channel_set: set_ref.clone(),
-                    time_channel: time_ref.clone(),
-                    time_series_point_representation: Some(prodml::TimeSeriesPointRepresentation::PointByPoint),
-                    fluid_phase_measured_kind: Some(prodml::FluidPhaseKind::SinglePhaseWater),
-                    flow_channel: rate_ref,
-                    ..Default::default()
-                })],
+                measured_flow_rate: vec![prodml::AbstractPtaFlowData::MeasuredFlowData(
+                    prodml::MeasuredFlowData {
+                        channel_set: set_ref.clone(),
+                        time_channel: time_ref.clone(),
+                        time_series_point_representation: Some(
+                            prodml::TimeSeriesPointRepresentation::PointByPoint,
+                        ),
+                        fluid_phase_measured_kind: Some(prodml::FluidPhaseKind::SinglePhaseWater),
+                        flow_channel: rate_ref,
+                        ..Default::default()
+                    },
+                )],
                 measured_pressure: vec![prodml::MeasuredPressureData {
                     channel_set: set_ref.clone(),
                     time_channel: time_ref.clone(),
-                    time_series_point_representation: Some(prodml::TimeSeriesPointRepresentation::PointByPoint),
+                    time_series_point_representation: Some(
+                        prodml::TimeSeriesPointRepresentation::PointByPoint,
+                    ),
                     pressure_channel: pressure_ref,
                     ..Default::default()
                 }],
                 other_data: vec![prodml::OtherData {
                     channel_set: set_ref,
                     time_channel: time_ref,
-                    time_series_point_representation: Some(prodml::TimeSeriesPointRepresentation::PointByPoint),
+                    time_series_point_representation: Some(
+                        prodml::TimeSeriesPointRepresentation::PointByPoint,
+                    ),
                     remark: Some("the bottom-hole temperature".to_string()),
                     data_channel: temperature_ref,
                     ..Default::default()
@@ -404,27 +547,52 @@ impl Operation for InjectionTest {
             },
             ..Default::default()
         };
-        writer.push(&test_uuid, "prodml23.InjectionFlowTest", "test", &test_title, &test);
+        writer.push(
+            &test_uuid,
+            "prodml23.InjectionFlowTest",
+            "test",
+            &test_title,
+            &test,
+        );
 
         // -- the collection ---------------------------------------------
         let tests_title = format!("{title} — well tests");
         let tests = prodml::ProductionWellTests {
-            citation: writer.citation(&tests_title, &format!("the well tests of `{}`: one invented injection test", hole.title))?,
+            citation: writer.citation(
+                &tests_title,
+                &format!("the well tests of `{}`: one invented injection test", hole.title),
+            )?,
             extension_name_value: vec![writer.synthetic("a collection of invented well tests")],
             uuid: tests_uuid.clone(),
             schema_version: "2.3".to_string(),
-            standard_conditions: Some(eml::AbstractTemperaturePressure::ReferenceTemperaturePressure(eml::ReferenceTemperaturePressure {
-                reference_temp_pres: params.standard_conditions.written(),
-            })),
+            standard_conditions: Some(eml::AbstractTemperaturePressure::ReferenceTemperaturePressure(
+                eml::ReferenceTemperaturePressure {
+                    reference_temp_pres: params.standard_conditions.written(),
+                },
+            )),
             nominal_period_kind: nominal,
             start_date: start_text.clone(),
             end_date: end_text.clone(),
-            flow_test_activity: vec![crate::crs::reference_to(&test_uuid, "prodml23.InjectionFlowTest", &test_title)],
+            flow_test_activity: vec![crate::crs::reference_to(
+                &test_uuid,
+                "prodml23.InjectionFlowTest",
+                &test_title,
+            )],
             ..Default::default()
         };
-        writer.push(&tests_uuid, "prodml23.ProductionWellTests", "tests", &tests_title, &tests);
+        writer.push(
+            &tests_uuid,
+            "prodml23.ProductionWellTests",
+            "tests",
+            &tests_title,
+            &tests,
+        );
 
-        let settled: Vec<String> = params.steps.iter().map(|q| format!("{:.2}", static_pressure + q / injectivity)).collect();
+        let settled: Vec<String> = params
+            .steps
+            .iter()
+            .map(|q| format!("{:.2}", static_pressure + q / injectivity))
+            .collect();
         let says = vec![
             Note {
                 key: "channels",
@@ -445,8 +613,15 @@ impl Operation for InjectionTest {
             },
         ];
         let parameters = vec![
-            Parameter::Object { title: "input".to_string(), reference: hole.dor() },
-            Parameter::Double { title: "sampleCount".to_string(), value: times.len() as f64, uom: None },
+            Parameter::Object {
+                title: "input".to_string(),
+                reference: hole.dor(),
+            },
+            Parameter::Double {
+                title: "sampleCount".to_string(),
+                value: times.len() as f64,
+                uom: None,
+            },
         ];
         Ok(Plan {
             media: Vec::new(),
@@ -467,6 +642,14 @@ impl Operation for InjectionTest {
 
     /// What the run wrote.
     fn reports(&self) -> Vec<Slot> {
-        vec![Slot::required("sampleCount", Need::Number { uom: None, least: None, most: None }, "how many instants the log holds")]
+        vec![Slot::required(
+            "sampleCount",
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
+            "how many instants the log holds",
+        )]
     }
 }

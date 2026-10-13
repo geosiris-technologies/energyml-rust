@@ -60,8 +60,18 @@ const F_ALONE: &str = "50000000-0000-4000-8000-0000000000a3";
 const F_LOST: &str = "50000000-0000-4000-8000-0000000000a4";
 const SURFACE: &str = "90000000-0000-4000-8000-000000000001";
 
-const RED: Rgba = Rgba { r: 1.0, g: 0.0, b: 0.0, a: 1.0 };
-const BLUE: Rgba = Rgba { r: 0.0, g: 0.0, b: 1.0, a: 1.0 };
+const RED: Rgba = Rgba {
+    r: 1.0,
+    g: 0.0,
+    b: 0.0,
+    a: 1.0,
+};
+const BLUE: Rgba = Rgba {
+    r: 0.0,
+    g: 0.0,
+    b: 1.0,
+    a: 1.0,
+};
 
 // -- building blocks -----------------------------------------------------------
 
@@ -75,7 +85,10 @@ fn dor(uuid: &str, qualified_type: &str) -> eml23::DataObjectReference {
 }
 
 fn citation(title: &str) -> eml23::Citation {
-    eml23::Citation { title: title.to_string(), ..Default::default() }
+    eml23::Citation {
+        title: title.to_string(),
+        ..Default::default()
+    }
 }
 
 fn doubles(values: &[f64]) -> eml23::AbstractFloatingPointArray {
@@ -87,7 +100,12 @@ fn doubles(values: &[f64]) -> eml23::AbstractFloatingPointArray {
 }
 
 fn integers(values: &[i64]) -> eml23::IntegerXmlArray {
-    eml23::IntegerXmlArray { count_per_value: 1, null_value: -1, values: values.to_vec(), ..Default::default() }
+    eml23::IntegerXmlArray {
+        count_per_value: 1,
+        null_value: -1,
+        values: values.to_vec(),
+        ..Default::default()
+    }
 }
 
 /// The datum of every well here: (1000, 2000), 37.73 above the sea, in a
@@ -163,7 +181,10 @@ fn mapping(indices: &[i64]) -> resqml22::IntervalStratigraphicUnits {
             elements: Some(eml23::AbstractValueArray::IntegerXmlArray(integers(indices))),
             cumulative_length: Some(eml23::AbstractIntegerArray::IntegerXmlArray(integers(&ends))),
         },
-        stratigraphic_organization_interpretation: dor(RANK, "resqml22.StratigraphicColumnRankInterpretation"),
+        stratigraphic_organization_interpretation: dor(
+            RANK,
+            "resqml22.StratigraphicColumnRankInterpretation",
+        ),
     }
 }
 
@@ -226,16 +247,16 @@ fn package() -> Prefetched {
         Box::new(eml23::VerticalCrs {
             uuid: VCRS.to_string(),
             direction: eml23::VerticalDirection::Up,
-            abstract_vertical_crs: Some(eml23::AbstractVerticalCrs::VerticalEpsgCrs(eml23::VerticalEpsgCrs {
-                epsg_code: 5714,
-            })),
+            abstract_vertical_crs: Some(eml23::AbstractVerticalCrs::VerticalEpsgCrs(
+                eml23::VerticalEpsgCrs { epsg_code: 5714 },
+            )),
             ..Default::default()
         }),
         Box::new(eml23::ProjectedCrs {
             uuid: PCRS.to_string(),
-            abstract_projected_crs: Some(eml23::AbstractProjectedCrs::ProjectedEpsgCrs(eml23::ProjectedEpsgCrs {
-                epsg_code: 2154,
-            })),
+            abstract_projected_crs: Some(eml23::AbstractProjectedCrs::ProjectedEpsgCrs(
+                eml23::ProjectedEpsgCrs { epsg_code: 2154 },
+            )),
             ..Default::default()
         }),
         Box::new(datum()),
@@ -257,10 +278,22 @@ fn package() -> Prefetched {
         Box::new(trajectory(T_ALONE, None)),
         Box::new(trajectory(T_ODD, Some(OF_BOUNDARY))),
         // Priabonian from MD 10 to 20, Bartonian from 20 to 30.
-        Box::new(frame(F_STATING, T_DRILLED, Some(DRILLED), &[10.0, 20.0, 30.0], vec![mapping(&[0, 1])])),
+        Box::new(frame(
+            F_STATING,
+            T_DRILLED,
+            Some(DRILLED),
+            &[10.0, 20.0, 30.0],
+            vec![mapping(&[0, 1])],
+        )),
         Box::new(frame(F_SILENT, T_DRILLED, Some(DRILLED), &[10.0, 25.0], vec![])),
         Box::new(frame(F_ALONE, T_ALONE, None, &[10.0, 20.0], vec![])),
-        Box::new(frame(F_LOST, "99999999-9999-4999-8999-999999999999", None, &[10.0, 20.0], vec![])),
+        Box::new(frame(
+            F_LOST,
+            "99999999-9999-4999-8999-999999999999",
+            None,
+            &[10.0, 20.0],
+            vec![],
+        )),
         Box::new(resqml22::TriangulatedSetRepresentation {
             uuid: SURFACE.to_string(),
             citation: citation("a horizon"),
@@ -277,14 +310,21 @@ fn package() -> Prefetched {
 
 /// The scene's system — that of the objects, so nothing is reprojected.
 fn lambert() -> System {
-    System { epsg: 2154, unit: "m".to_string() }
+    System {
+        epsg: 2154,
+        unit: "m".to_string(),
+    }
 }
 
 /// A scene in the objects' own system, with no time: nothing is moved.
 #[allow(clippy::result_large_err)]
 fn read(uri: &str) -> Result<energyml_section::model::WellRead, energyml_section::model::Refused> {
     let system = lambert();
-    let scene = Scene { system: Some(&system), time_factor: None, reprojector: &NoReprojection };
+    let scene = Scene {
+        system: Some(&system),
+        time_factor: None,
+        reprojector: &NoReprojection,
+    };
     read_well(&package(), "s1", uri, &scene)
 }
 
@@ -294,12 +334,19 @@ fn read_with(
     context: &WellContext<'_>,
 ) -> Result<energyml_section::model::WellRead, energyml_section::model::Refused> {
     let system = lambert();
-    let scene = Scene { system: Some(&system), time_factor: None, reprojector: &NoReprojection };
+    let scene = Scene {
+        system: Some(&system),
+        time_factor: None,
+        reprojector: &NoReprojection,
+    };
     read_well_with(&package(), "s1", uri, &scene, context)
 }
 
 fn spans(intervals: &[energyml_section::model::Interval]) -> Vec<(f64, f64, &str, Option<&str>)> {
-    intervals.iter().map(|one| (one.from, one.to, one.unit.as_str(), one.colour.as_deref())).collect()
+    intervals
+        .iter()
+        .map(|one| (one.from, one.to, one.unit.as_str(), one.colour.as_deref()))
+        .collect()
 }
 
 // -- the head, the path, the MD --------------------------------------------------
@@ -323,12 +370,22 @@ fn the_head_is_the_datum_and_not_the_first_node() {
     let trajectory = read(T_DRILLED).expect("the trajectory is read");
     assert_eq!(trajectory.kind, WellKind::Trajectory);
     assert_eq!(trajectory.head, [1000.0, 2000.0, 37.73]);
-    assert_eq!(trajectory.path, vec![[1000.0, 2000.0, 37.73 - 2.5], [1000.0, 2000.0, 37.73 - 65.0]]);
-    assert_eq!(trajectory.md, Some(vec![2.5, 65.0]), "a trajectory with no geometry is drawn at its bounds");
+    assert_eq!(
+        trajectory.path,
+        vec![[1000.0, 2000.0, 37.73 - 2.5], [1000.0, 2000.0, 37.73 - 65.0]]
+    );
+    assert_eq!(
+        trajectory.md,
+        Some(vec![2.5, 65.0]),
+        "a trajectory with no geometry is drawn at its bounds"
+    );
     assert_eq!(trajectory.md.as_ref().map(Vec::len), Some(trajectory.path.len()));
     assert_eq!(trajectory.object.uuid, T_DRILLED);
     assert_eq!(trajectory.object.store, "s1");
-    assert_eq!(trajectory.object.qualified_type, "resqml22.WellboreTrajectoryRepresentation");
+    assert_eq!(
+        trajectory.object.qualified_type,
+        "resqml22.WellboreTrajectoryRepresentation"
+    );
 }
 
 // -- one wellbore, one key -------------------------------------------------------
@@ -344,7 +401,11 @@ fn a_frame_and_its_trajectory_are_one_wellbore() {
     assert_eq!(key(F_STATING).as_deref(), Some(WELLBORE));
     assert_eq!(key(F_SILENT), key(F_STATING));
     assert_eq!(key(T_DRILLED), key(F_STATING));
-    assert_eq!(key(T_PLANNED).as_deref(), Some(WELLBORE), "two interpretations, one wellbore feature");
+    assert_eq!(
+        key(T_PLANNED).as_deref(),
+        Some(WELLBORE),
+        "two interpretations, one wellbore feature"
+    );
 }
 
 /// With no chain the frame takes the key of the trajectory it hangs on — and
@@ -360,7 +421,11 @@ fn without_a_chain_a_frame_takes_the_trajectory_it_hangs_on() {
     assert_eq!(read(F_ALONE).expect("read").wellbore.as_deref(), Some(T_ALONE));
 
     let odd = read(T_ODD).expect("read");
-    assert_eq!(odd.wellbore.as_deref(), Some(T_ODD), "a boundary is not a wellbore");
+    assert_eq!(
+        odd.wellbore.as_deref(),
+        Some(T_ODD),
+        "a boundary is not a wellbore"
+    );
     assert_ne!(odd.wellbore.as_deref(), Some(BOUNDARY));
 }
 
@@ -384,10 +449,22 @@ fn a_frame_with_strata_gives_its_intervals() {
     assert_eq!(plain.strata, None);
 
     let sets = graphics();
-    let coloured = read_with(F_STATING, &WellContext { graphics: &sets, frames_of: None, index: None, colour_of: None }).expect("read");
+    let coloured = read_with(
+        F_STATING,
+        &WellContext {
+            graphics: &sets,
+            frames_of: None,
+            index: None,
+            colour_of: None,
+        },
+    )
+    .expect("read");
     assert_eq!(
         spans(&coloured.intervals),
-        [(10.0, 20.0, "Priabonian", Some("#ff0000")), (20.0, 30.0, "Bartonian", Some("#0000ff"))]
+        [
+            (10.0, 20.0, "Priabonian", Some("#ff0000")),
+            (20.0, 30.0, "Bartonian", Some("#0000ff"))
+        ]
     );
 }
 
@@ -415,7 +492,12 @@ fn a_silent_frame_says_why_it_has_no_interval() {
         vec![source.object(F_STATING).expect("held")]
     };
     let sets = graphics();
-    let context = WellContext { graphics: &sets, frames_of: Some(&sisters), index: None, colour_of: None };
+    let context = WellContext {
+        graphics: &sets,
+        frames_of: Some(&sisters),
+        index: None,
+        colour_of: None,
+    };
     let carried = read_with(F_SILENT, &context).expect("read");
     assert_eq!(carried.strata, None);
     // The stating frame's rock between the silent frame's nodes: Priabonian to
@@ -442,7 +524,11 @@ fn a_silent_frame_says_why_it_has_no_interval() {
 #[test]
 fn what_is_no_well_is_refused_by_name() {
     let surface = read(SURFACE).expect_err("a surface is no well");
-    assert!(surface.reason.contains("TriangulatedSetRepresentation"), "{}", surface.reason);
+    assert!(
+        surface.reason.contains("TriangulatedSetRepresentation"),
+        "{}",
+        surface.reason
+    );
     assert_eq!(surface.object.uuid, SURFACE);
     assert_eq!(surface.object.store, "s1");
 
@@ -453,7 +539,8 @@ fn what_is_no_well_is_refused_by_name() {
     let lost = read(F_LOST).expect_err("its trajectory is not held");
     // The trajectory is named by the uri of the reference, whose uuid is in it.
     assert!(
-        lost.reason.contains("trajectory eml:///") && lost.reason.contains("99999999-9999-4999-8999-999999999999"),
+        lost.reason.contains("trajectory eml:///")
+            && lost.reason.contains("99999999-9999-4999-8999-999999999999"),
         "{}",
         lost.reason
     );
@@ -476,12 +563,19 @@ const F_VERSIONED: &str = "50000000-0000-4000-8000-0000000000a5";
 
 impl ObjectSource for TwoVersions<'_> {
     fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
-        if uuid == F_VERSIONED { Some(Box::new(self.frame.clone())) } else { self.inner.object(uuid) }
+        if uuid == F_VERSIONED {
+            Some(Box::new(self.frame.clone()))
+        } else {
+            self.inner.object(uuid)
+        }
     }
 
     fn object_at(&self, uri: &str) -> Option<Box<dyn DynObject>> {
         match energyml_core::identifiers::EtpUri::parse(uri) {
-            Ok(parsed) if parsed.uuid.as_deref() == Some(T_ALONE) && parsed.object_version.as_deref() == Some("2") => {
+            Ok(parsed)
+                if parsed.uuid.as_deref() == Some(T_ALONE)
+                    && parsed.object_version.as_deref() == Some("2") =>
+            {
                 Some(Box::new(self.second.clone()))
             }
             Ok(_) => self.inner.object_at(uri),
@@ -494,7 +588,10 @@ impl energyml_domain::source::ArraySource for TwoVersions<'_> {
     fn locate(&self, object: &dyn Reflect) -> Vec<ArrayLocation> {
         self.inner.locate(object)
     }
-    fn metadata(&self, location: &ArrayLocation) -> energyml_domain::Result<energyml_storage::array::ArrayMetadata> {
+    fn metadata(
+        &self,
+        location: &ArrayLocation,
+    ) -> energyml_domain::Result<energyml_storage::array::ArrayMetadata> {
         self.inner.metadata(location)
     }
     fn read(&self, location: &ArrayLocation) -> energyml_domain::Result<energyml_storage::array::ArrayData> {
@@ -523,9 +620,21 @@ fn a_frame_belongs_to_the_wellbore_of_the_trajectory_version_it_names() {
     let inner = package();
     let mut frame = frame(F_VERSIONED, T_ALONE, None, &[10.0, 20.0], vec![]);
     frame.trajectory.object_version = Some("2".to_string());
-    let source = TwoVersions { inner: &inner, frame, second: trajectory(T_ALONE, Some(DRILLED)) };
+    let source = TwoVersions {
+        inner: &inner,
+        frame,
+        second: trajectory(T_ALONE, Some(DRILLED)),
+    };
     let system = lambert();
-    let scene = Scene { system: Some(&system), time_factor: None, reprojector: &NoReprojection };
+    let scene = Scene {
+        system: Some(&system),
+        time_factor: None,
+        reprojector: &NoReprojection,
+    };
     let read = read_well(&source, "s1", F_VERSIONED, &scene).expect("reads");
-    assert_eq!(read.wellbore.as_deref(), Some(WELLBORE), "version 2 represents the drilled interpretation");
+    assert_eq!(
+        read.wellbore.as_deref(),
+        Some(WELLBORE),
+        "version 2 represents the drilled interpretation"
+    );
 }

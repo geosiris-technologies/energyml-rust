@@ -55,7 +55,10 @@ fn property_kinds(data: &Path) {
     let text = read(&source);
     let kinds = scan::from_compact(&text);
     if kinds.is_empty() {
-        fail(format!("{} holds no property kind; refusing to build an empty dictionary", source.display()));
+        fail(format!(
+            "{} holds no property kind; refusing to build an empty dictionary",
+            source.display()
+        ));
     }
     eprintln!("energyml-domain: {} property kinds", kinds.len());
     std::fs::write(out_dir().join("property_kinds.tsv"), text).expect("the staged dictionary is writable");
@@ -72,7 +75,8 @@ fn chart_snapshot(data: &Path) {
         .unwrap_or_else(|reason| fail(format!("{} could not be read ({reason})", bounds.display())));
     let found = chart::concepts(&concepts_text, &ages)
         .unwrap_or_else(|reason| fail(format!("{} could not be read ({reason})", concepts.display())));
-    std::fs::write(out_dir().join("geolts.tsv"), chart::to_compact(&found)).expect("the compacted chart is writable");
+    std::fs::write(out_dir().join("geolts.tsv"), chart::to_compact(&found))
+        .expect("the compacted chart is writable");
 }
 
 fn main() {

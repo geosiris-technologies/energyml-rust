@@ -5,7 +5,12 @@ use energyml_section::inputs::{InputsError, MAX_CROSSES, validate};
 use energyml_section::model::{CrossOwn, CrossWidths, Crosses, Inputs};
 
 fn widths() -> CrossWidths {
-    CrossWidths { before: 40.0, after: 40.0, left: 5.0, right: 5.0 }
+    CrossWidths {
+        before: 40.0,
+        after: 40.0,
+        left: 5.0,
+        right: 5.0,
+    }
 }
 
 fn base() -> Inputs {
@@ -28,7 +33,11 @@ fn refused(inputs: &Inputs) -> String {
 fn a_good_set_of_inputs_passes() {
     assert_eq!(validate(&base()), Ok(()));
     let mut i = base();
-    i.crosses = Crosses::Every { spacing: 25.0, common: widths(), own: Vec::new() };
+    i.crosses = Crosses::Every {
+        spacing: 25.0,
+        common: widths(),
+        own: Vec::new(),
+    };
     i.time_factor = Some(0.5);
     assert_eq!(validate(&i), Ok(()));
 }
@@ -84,14 +93,26 @@ fn the_time_factor_is_above_zero_when_given() {
 fn the_spacing_and_the_count_are_usable() {
     for bad in [0.0, -5.0, f64::NAN] {
         let mut i = base();
-        i.crosses = Crosses::Every { spacing: bad, common: widths(), own: Vec::new() };
+        i.crosses = Crosses::Every {
+            spacing: bad,
+            common: widths(),
+            own: Vec::new(),
+        };
         let said = refused(&i);
         assert!(said.contains("spacing"), "{said}");
     }
     let mut i = base();
-    i.crosses = Crosses::Count { count: 0, common: widths(), own: Vec::new() };
+    i.crosses = Crosses::Count {
+        count: 0,
+        common: widths(),
+        own: Vec::new(),
+    };
     assert!(refused(&i).contains("at least 1, got 0"));
-    i.crosses = Crosses::Count { count: MAX_CROSSES as u32 + 1, common: widths(), own: Vec::new() };
+    i.crosses = Crosses::Count {
+        count: MAX_CROSSES as u32 + 1,
+        common: widths(),
+        own: Vec::new(),
+    };
     assert!(refused(&i).contains("limit"));
 }
 
@@ -100,9 +121,16 @@ fn the_widths_of_a_cross_are_checked_common_and_own() {
     let mut i = base();
     let mut w = widths();
     w.before = -1.0;
-    i.crosses = Crosses::Every { spacing: 25.0, common: w, own: Vec::new() };
+    i.crosses = Crosses::Every {
+        spacing: 25.0,
+        common: w,
+        own: Vec::new(),
+    };
     let said = refused(&i);
-    assert!(said.contains("common") && said.contains("length before") && said.contains("-1"), "{said}");
+    assert!(
+        said.contains("common") && said.contains("length before") && said.contains("-1"),
+        "{said}"
+    );
 
     let mut w = widths();
     w.after = f64::NAN;
@@ -112,14 +140,35 @@ fn the_widths_of_a_cross_are_checked_common_and_own() {
         own: vec![CrossOwn { index: 2, widths: w }],
     };
     let said = refused(&i);
-    assert!(said.contains("cross section 2") && said.contains("length after"), "{said}");
+    assert!(
+        said.contains("cross section 2") && said.contains("length after"),
+        "{said}"
+    );
 
     // A cross of no length, or with no corridor, has nothing to compute.
-    let w = CrossWidths { before: 0.0, after: 0.0, left: 5.0, right: 5.0 };
-    i.crosses = Crosses::Every { spacing: 25.0, common: w, own: Vec::new() };
+    let w = CrossWidths {
+        before: 0.0,
+        after: 0.0,
+        left: 5.0,
+        right: 5.0,
+    };
+    i.crosses = Crosses::Every {
+        spacing: 25.0,
+        common: w,
+        own: Vec::new(),
+    };
     assert!(refused(&i).contains("no length"));
-    let w = CrossWidths { before: 5.0, after: 5.0, left: 0.0, right: 0.0 };
-    i.crosses = Crosses::Every { spacing: 25.0, common: w, own: Vec::new() };
+    let w = CrossWidths {
+        before: 5.0,
+        after: 5.0,
+        left: 0.0,
+        right: 0.0,
+    };
+    i.crosses = Crosses::Every {
+        spacing: 25.0,
+        common: w,
+        own: Vec::new(),
+    };
     assert!(refused(&i).contains("keep nothing"));
 }
 
@@ -130,8 +179,14 @@ fn a_cross_set_apart_twice_is_refused() {
         spacing: 25.0,
         common: widths(),
         own: vec![
-            CrossOwn { index: 1, widths: widths() },
-            CrossOwn { index: 1, widths: widths() },
+            CrossOwn {
+                index: 1,
+                widths: widths(),
+            },
+            CrossOwn {
+                index: 1,
+                widths: widths(),
+            },
         ],
     };
     assert!(refused(&i).contains("cross section 1 is set apart twice"));

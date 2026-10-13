@@ -21,7 +21,10 @@ use energyml_core::value::{OwnedValue, Reflect};
 use energyml_core::xml;
 
 /// The field of a type, by XML name.
-fn field(info: &'static energyml_core::reflect::TypeInfo, name: &str) -> &'static energyml_core::reflect::FieldInfo {
+fn field(
+    info: &'static energyml_core::reflect::TypeInfo,
+    name: &str,
+) -> &'static energyml_core::reflect::FieldInfo {
     info.fields
         .iter()
         .find(|f| f.xml_name == name)
@@ -56,7 +59,9 @@ fn a_choice_says_which_xsi_type_selects_each_of_its_types() {
     assert_eq!(info.kind, TypeKind::Choice);
     assert!(info.variants.len() >= 2);
     for variant in info.variants {
-        let xsi = variant.xsi_type.unwrap_or_else(|| panic!("{} has no xsi:type", variant.name));
+        let xsi = variant
+            .xsi_type
+            .unwrap_or_else(|| panic!("{} has no xsi:type", variant.name));
         assert!(xsi.contains(':'), "an xsi:type carries its prefix: {xsi}");
         assert!(variant.ty.is_some(), "a choice variant names its payload type");
     }
@@ -107,10 +112,13 @@ fn a_value_outside_an_open_enumeration_is_accepted_and_kept_verbatim() {
         .and_then(|f| f.as_scalar())
         .and_then(|s| s.as_str().map(str::to_string))
         .expect("it reads back");
-    assert_eq!(value, "torque per angstrom", "kept verbatim, not folded to a variant");
+    assert_eq!(
+        value, "torque per angstrom",
+        "kept verbatim, not folded to a variant"
+    );
 
-    let written = energyml_core::registry::to_part(&kind, xml::XmlWriteOptions::default())
-        .expect("it writes");
+    let written =
+        energyml_core::registry::to_part(&kind, xml::XmlWriteOptions::default()).expect("it writes");
     assert!(
         written.contains("torque per angstrom"),
         "the string has to survive to the document: {written}"
@@ -245,11 +253,7 @@ fn an_object_in_an_enumeration_slot_is_refused_by_name() {
     // `match`, not `expect_err`: the success half carries `Box<dyn DynObject>`,
     // which is deliberately not `Debug`, so the ordinary helpers do not compile
     // over this result.
-    let message = match energyml_core::json::read_field_value(
-        &serde_json::json!({}),
-        throw,
-        &registry,
-    ) {
+    let message = match energyml_core::json::read_field_value(&serde_json::json!({}), throw, &registry) {
         Err(refusal) => refusal.to_string(),
         Ok(_) => panic!("an enumeration slot must refuse an object"),
     };
@@ -270,7 +274,10 @@ fn an_object_in_an_enumeration_slot_is_refused_by_name() {
     // And the value it *should* have been is accepted.
     match energyml_core::json::read_field_value(&serde_json::json!("normal"), throw, &registry) {
         Ok((value, _)) => {
-            assert!(matches!(value, OwnedValue::Str(ref s) if s == "normal"), "got {value:?}")
+            assert!(
+                matches!(value, OwnedValue::Str(ref s) if s == "normal"),
+                "got {value:?}"
+            )
         }
         Err(why) => panic!("a declared value is legal: {why}"),
     }
@@ -335,8 +342,10 @@ fn a_qualified_name_is_not_matched_as_a_bare_one() {
     // `TrianglePatch` exists in resqml 2.0.1 and 2.2. Asked for by qualified
     // type, each must come back as itself — not as whichever the walk reached
     // first.
-    for (asked, version) in [("resqml22.TrianglePatch", "2.2"), ("resqml20.TrianglePatch", "2.0.1")]
-    {
+    for (asked, version) in [
+        ("resqml22.TrianglePatch", "2.2"),
+        ("resqml20.TrianglePatch", "2.0.1"),
+    ] {
         let found = registry
             .find_type(asked)
             .unwrap_or_else(|| panic!("`{asked}` resolves"));
@@ -377,7 +386,9 @@ fn the_docs_dump_reaches_the_types_the_registry_does_not_construct() {
             "a release without a package or version: {release}"
         );
         for info in release["types"].as_array().into_iter().flatten() {
-            *kinds.entry(info["kind"].as_str().unwrap_or("?").to_string()).or_insert(0usize) += 1;
+            *kinds
+                .entry(info["kind"].as_str().unwrap_or("?").to_string())
+                .or_insert(0usize) += 1;
             if release["package"] == "eml"
                 && release["version"] == "2.3"
                 && info["kind"] == "enumeration"
@@ -390,7 +401,10 @@ fn the_docs_dump_reaches_the_types_the_registry_does_not_construct() {
     assert!(kinds.get("struct").copied().unwrap_or(0) > 1000, "{kinds:?}");
     assert!(kinds.get("enumeration").copied().unwrap_or(0) > 500, "{kinds:?}");
     assert!(kinds.get("choice").copied().unwrap_or(0) > 50, "{kinds:?}");
-    assert!(open_enums_in_eml23 > 0, "eml 2.3 declares the `…Ext` vocabularies");
+    assert!(
+        open_enums_in_eml23 > 0,
+        "eml 2.3 declares the `…Ext` vocabularies"
+    );
 
     // And a field's offer survives the trip: an enumeration field carries its
     // values, an abstract field its concrete subtypes — the two answers a
@@ -422,7 +436,12 @@ fn every_key_the_json_writes_is_a_name_the_description_announces() {
         uom: None,
     };
     let written = energyml_core::json::write_value(&measure);
-    let keys: Vec<&str> = written.as_object().expect("an object").keys().map(String::as_str).collect();
+    let keys: Vec<&str> = written
+        .as_object()
+        .expect("an object")
+        .keys()
+        .map(String::as_str)
+        .collect();
     assert!(keys.contains(&"_"), "the text is keyed `_`: {written}");
 
     let info = <energyml_eml_2_3::StringMeasure as EnergymlType>::type_info();
@@ -434,9 +453,15 @@ fn every_key_the_json_writes_is_a_name_the_description_announces() {
         .filter_map(|field| field["jsonName"].as_str())
         .collect();
     for key in keys.iter().filter(|key| !key.starts_with('$')) {
-        assert!(announced.contains(key), "`{key}` is written but described as one of {announced:?}");
+        assert!(
+            announced.contains(key),
+            "`{key}` is written but described as one of {announced:?}"
+        );
     }
-    assert!(!announced.contains(&"Value"), "the text is not written under `Value`: {announced:?}");
+    assert!(
+        !announced.contains(&"Value"),
+        "the text is not written under `Value`: {announced:?}"
+    );
 }
 
 /// A union keeps **every** enumerated member, not the first.
@@ -496,7 +521,10 @@ fn an_open_enumeration_still_refuses_free_text_of_the_wrong_shape() {
         ..Default::default()
     };
     assert!(
-        validate_with(&good, &[]).issues.iter().all(|i| i.code != "pattern"),
+        validate_with(&good, &[])
+            .issues
+            .iter()
+            .all(|i| i.code != "pattern"),
         "a value bearing the colon is what the schema widens to"
     );
 

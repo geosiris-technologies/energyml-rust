@@ -89,8 +89,7 @@ fn strip_element(xml: &[u8], local: &[u8]) -> Vec<u8> {
             .find(|(at, _)| {
                 let after = &rest[at + 1..];
                 let after = after.split_once(':').map(|(_, r)| r).unwrap_or(after);
-                after.starts_with(&local)
-                    && after[local.len()..].starts_with(['>', ' ', '/'])
+                after.starts_with(&local) && after[local.len()..].starts_with(['>', ' ', '/'])
             })
             .map(|(at, _)| at)
         else {
@@ -191,13 +190,18 @@ fn a_value_that_is_there_and_wrong_is_still_refused() {
 
     let text = String::from_utf8(bytes).expect("a part is UTF-8");
     let broken = text.replace("<resqml:Ni>2</resqml:Ni>", "<resqml:Ni>deux</resqml:Ni>");
-    assert_ne!(broken, text, "the substitution missed; the test would prove nothing");
+    assert_ne!(
+        broken, text,
+        "the substitution missed; the test would prove nothing"
+    );
     let broken = broken.as_bytes();
 
     let content_type = "application/x-resqml+xml;version=2.2;type=IjkGridRepresentation";
     let registry = registry();
     assert!(
-        registry.read_xml_as(content_type, broken, ReadMode::Tolerant).is_err(),
+        registry
+            .read_xml_as(content_type, broken, ReadMode::Tolerant)
+            .is_err(),
         "tolerating what is absent is not tolerating what is wrong"
     );
     let (_, departures) = registry
@@ -237,7 +241,9 @@ fn the_version_a_part_is_read_as_does_not_change() {
     for (name, path) in &packages {
         let store = EpcStore::open(path, registry()).expect("the package opens");
         for summary in store.resources() {
-            let Ok(object) = store.get_object(&summary.uri) else { continue };
+            let Ok(object) = store.get_object(&summary.uri) else {
+                continue;
+            };
             let info = object.as_reflect().type_info();
             let read_as = info.qualified_type.unwrap_or(info.name);
             if read_as == summary.qualified_type {
@@ -261,9 +267,10 @@ fn the_version_a_part_is_read_as_does_not_change() {
             // is the thing this repository actually cares about — *the
             // disagreement is named, not swallowed* — and `get_object` already
             // records it whenever it settles on a lower-ranked candidate.
-            let said = store.diagnostics().into_iter().any(|d| {
-                d.message.contains(&summary.qualified_type) && d.message.contains(read_as)
-            });
+            let said = store
+                .diagnostics()
+                .into_iter()
+                .any(|d| d.message.contains(&summary.qualified_type) && d.message.contains(read_as));
             assert!(
                 said,
                 "{name}: {} was inventoried as `{}` and read as `{read_as}`, and the store said nothing",

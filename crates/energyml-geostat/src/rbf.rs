@@ -51,7 +51,11 @@ impl Kernel {
     fn evaluate(&self, r: f64) -> f64 {
         match *self {
             Kernel::ThinPlate => {
-                if r <= 0.0 { 0.0 } else { r * r * r.ln() }
+                if r <= 0.0 {
+                    0.0
+                } else {
+                    r * r * r.ln()
+                }
             }
             Kernel::Multiquadric { epsilon } => (r * r + epsilon * epsilon).sqrt(),
             Kernel::Linear => r,
@@ -72,7 +76,9 @@ impl Kernel {
         match *self {
             Kernel::Multiquadric { epsilon } | Kernel::Gaussian { epsilon } => {
                 if !(epsilon.is_finite() && epsilon > 0.0) {
-                    return Err(Error::BadModel { what: format!("epsilon {epsilon}") });
+                    return Err(Error::BadModel {
+                        what: format!("epsilon {epsilon}"),
+                    });
                 }
             }
             Kernel::ThinPlate | Kernel::Linear => {}
@@ -101,7 +107,10 @@ pub struct RbfAnswer {
 
 impl Rbf {
     pub fn new(kernel: Kernel) -> Self {
-        Rbf { kernel, exact_within: 1e-12 }
+        Rbf {
+            kernel,
+            exact_within: 1e-12,
+        }
     }
 
     /// Interpolate `values` known at `samples` onto `queries`.
@@ -113,7 +122,10 @@ impl Rbf {
     ) -> Result<RbfAnswer, Error> {
         self.kernel.check()?;
         if samples.len() != values.len() {
-            return Err(Error::MismatchedLengths { count: samples.len(), values: values.len() });
+            return Err(Error::MismatchedLengths {
+                count: samples.len(),
+                values: values.len(),
+            });
         }
         let usable: Vec<([f64; N], f64)> = samples
             .iter()
@@ -124,11 +136,18 @@ impl Rbf {
         let set_aside = samples.len() - usable.len();
         let terms = self.kernel.polynomial_terms(N);
         if usable.len() < terms.max(1) {
-            return Err(Error::TooFewSamples { usable: usable.len(), needed: terms.max(1) });
+            return Err(Error::TooFewSamples {
+                usable: usable.len(),
+                needed: terms.max(1),
+            });
         }
 
         let distance = |a: &[f64; N], b: &[f64; N]| -> f64 {
-            a.iter().zip(b).map(|(x, y)| (x - y) * (x - y)).sum::<f64>().sqrt()
+            a.iter()
+                .zip(b)
+                .map(|(x, y)| (x - y) * (x - y))
+                .sum::<f64>()
+                .sqrt()
         };
         for (at, (a, _)) in usable.iter().enumerate() {
             for (offset, (b, _)) in usable[at + 1..].iter().enumerate() {
@@ -147,8 +166,7 @@ impl Rbf {
         let mut matrix = vec![0.0f64; side * side];
         for i in 0..n {
             for j in 0..n {
-                matrix[i * side + j] =
-                    self.kernel.evaluate(distance(&usable[i].0, &usable[j].0));
+                matrix[i * side + j] = self.kernel.evaluate(distance(&usable[i].0, &usable[j].0));
             }
             if terms > 0 {
                 matrix[i * side + n] = 1.0;
@@ -163,18 +181,21 @@ impl Rbf {
             // The one degenerate geometry a caller can actually hit: the
             // affine term of the thin-plate needs samples spanning the
             // space, and a survey along one seismic line does not.
-            if terms > 1 { Error::DegenerateGeometry } else { refusal }
+            if terms > 1 {
+                Error::DegenerateGeometry
+            } else {
+                refusal
+            }
         })?;
         let mut rhs = vec![0.0f64; side];
-        rhs[..n].copy_from_slice(
-            &usable.iter().map(|(_, value)| *value).collect::<Vec<f64>>(),
-        );
+        rhs[..n].copy_from_slice(&usable.iter().map(|(_, value)| *value).collect::<Vec<f64>>());
         let coefficients = factored.solve(&rhs);
 
         let mut out = Vec::with_capacity(queries.len());
         for query in queries {
-            if let Some((_, value)) =
-                usable.iter().find(|(point, _)| distance(point, query) <= self.exact_within)
+            if let Some((_, value)) = usable
+                .iter()
+                .find(|(point, _)| distance(point, query) <= self.exact_within)
             {
                 out.push(*value);
                 continue;
@@ -192,7 +213,10 @@ impl Rbf {
             }
             out.push(value);
         }
-        Ok(RbfAnswer { values: out, set_aside })
+        Ok(RbfAnswer {
+            values: out,
+            set_aside,
+        })
     }
 }
 
@@ -229,7 +253,9 @@ mod tests {
         let affine = |p: &[f64; 2]| 2.0 + 3.0 * p[0] - 0.5 * p[1];
         let values: Vec<f64> = samples.iter().map(affine).collect();
         let queries = [[10.0, 10.0], [-3.0, 7.0]];
-        let answer = Rbf::new(Kernel::ThinPlate).interpolate(&samples, &values, &queries).unwrap();
+        let answer = Rbf::new(Kernel::ThinPlate)
+            .interpolate(&samples, &values, &queries)
+            .unwrap();
         for (got, query) in answer.values.iter().zip(&queries) {
             assert!((got - affine(query)).abs() < 1e-8, "{got} vs {}", affine(query));
         }
@@ -257,8 +283,9 @@ mod tests {
     fn a_nan_sample_is_set_aside_and_counted() {
         let samples = [[0.0, 0.0], [2.0, 0.0], [1.0, 4.0], [3.0, 1.0]];
         let values = [1.0, 3.0, f64::NAN, 2.0];
-        let answer =
-            Rbf::new(Kernel::Linear).interpolate(&samples, &values, &[[0.0, 0.0]]).unwrap();
+        let answer = Rbf::new(Kernel::Linear)
+            .interpolate(&samples, &values, &[[0.0, 0.0]])
+            .unwrap();
         assert_eq!(answer.set_aside, 1);
         assert_eq!(answer.values, vec![1.0]);
     }
@@ -272,7 +299,11 @@ mod tests {
         let refusal = Rbf::new(Kernel::ThinPlate).interpolate(&samples, &values, &[[1.0, 1.0]]);
         assert_eq!(refusal, Err(Error::DegenerateGeometry));
         // The constant-term kernels do not care.
-        assert!(Rbf::new(Kernel::Linear).interpolate(&samples, &values, &[[1.0, 1.0]]).is_ok());
+        assert!(
+            Rbf::new(Kernel::Linear)
+                .interpolate(&samples, &values, &[[1.0, 1.0]])
+                .is_ok()
+        );
     }
 
     #[test]
@@ -290,7 +321,9 @@ mod tests {
         let s = [[0.0, 0.0], [1.0, 0.0]];
         assert_eq!(
             Rbf::new(Kernel::Multiquadric { epsilon: 0.0 }).interpolate(&s, &[1.0, 2.0], &[]),
-            Err(Error::BadModel { what: "epsilon 0".into() })
+            Err(Error::BadModel {
+                what: "epsilon 0".into()
+            })
         );
         assert_eq!(
             Rbf::new(Kernel::Linear).interpolate(&s, &[1.0], &[]),
@@ -301,11 +334,7 @@ mod tests {
             Err(Error::TooFewSamples { usable: 2, needed: 3 })
         );
         assert_eq!(
-            Rbf::new(Kernel::Linear).interpolate(
-                &[[0.0, 0.0], [0.0, 0.0]],
-                &[1.0, 2.0],
-                &[[1.0, 0.0]]
-            ),
+            Rbf::new(Kernel::Linear).interpolate(&[[0.0, 0.0], [0.0, 0.0]], &[1.0, 2.0], &[[1.0, 0.0]]),
             Err(Error::DuplicateSamplePositions { first: 0, second: 1 })
         );
     }

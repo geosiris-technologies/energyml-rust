@@ -314,13 +314,23 @@ impl Channel {
 
     /// Good, absent and flagged samples, and the extremes of the good ones.
     pub fn tally(&self) -> Tally {
-        let mut tally = Tally { good: 0, absent: 0, flagged: Vec::new(), min: None, max: None };
+        let mut tally = Tally {
+            good: 0,
+            absent: 0,
+            flagged: Vec::new(),
+            min: None,
+            max: None,
+        };
         let numbers = self.numbers();
         for (at, quality) in self.quality.iter().enumerate() {
             match quality {
                 Quality::Good => {
                     tally.good += 1;
-                    if let Some(value) = numbers.as_ref().map(|all| all[at]).filter(|value| value.is_finite()) {
+                    if let Some(value) = numbers
+                        .as_ref()
+                        .map(|all| all[at])
+                        .filter(|value| value.is_finite())
+                    {
                         tally.min = Some(tally.min.map_or(value, |least: f64| least.min(value)));
                         tally.max = Some(tally.max.map_or(value, |most: f64| most.max(value)));
                     }
@@ -339,15 +349,21 @@ impl Channel {
         let absent = |at: usize| matches!(self.quality.get(at), Some(Quality::Absent));
         let values: Vec<Value> = match &self.values {
             Values::Floating(values) => values.iter().map(|value| number(*value)).collect(),
-            Values::Integer(values) => {
-                values.iter().enumerate().map(|(at, value)| if absent(at) { Value::Null } else { json!(value) }).collect()
-            }
-            Values::Boolean(values) => {
-                values.iter().enumerate().map(|(at, value)| if absent(at) { Value::Null } else { json!(value) }).collect()
-            }
-            Values::Text(values) => {
-                values.iter().enumerate().map(|(at, value)| if absent(at) { Value::Null } else { json!(value) }).collect()
-            }
+            Values::Integer(values) => values
+                .iter()
+                .enumerate()
+                .map(|(at, value)| if absent(at) { Value::Null } else { json!(value) })
+                .collect(),
+            Values::Boolean(values) => values
+                .iter()
+                .enumerate()
+                .map(|(at, value)| if absent(at) { Value::Null } else { json!(value) })
+                .collect(),
+            Values::Text(values) => values
+                .iter()
+                .enumerate()
+                .map(|(at, value)| if absent(at) { Value::Null } else { json!(value) })
+                .collect(),
         };
         // The flagged samples as runs, [from, to): a series of a million
         // minutes carries a handful of frozen windows, not a million labels.
@@ -396,7 +412,11 @@ fn family_word(family: Family) -> &'static str {
 
 /// A number JSON can carry, or `null`.
 pub(crate) fn number(value: f64) -> Value {
-    if value.is_finite() { json!(value) } else { Value::Null }
+    if value.is_finite() {
+        json!(value)
+    } else {
+        Value::Null
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -444,7 +464,9 @@ pub enum Refused {
     /// A sample with no instant in a series of several — TimeSeriesData.xsd
     /// l. 100: *"If no time is specified then the value is static and only one
     /// sample can be defined."*
-    #[error("sample {at} of {samples} has no dTim, and only a series of one sample may be static (TimeSeriesData.xsd l. 100)")]
+    #[error(
+        "sample {at} of {samples} has no dTim, and only a series of one sample may be static (TimeSeriesData.xsd l. 100)"
+    )]
     UntimedSample {
         /// Its 1-based rank.
         at: usize,
@@ -492,14 +514,18 @@ pub enum Refused {
     NoIndex,
 
     /// An index declared `unordered`.
-    #[error("the index `{index}` is declared unordered: this reader draws an index in order and does not sort rows the file did not sort")]
+    #[error(
+        "the index `{index}` is declared unordered: this reader draws an index in order and does not sort rows the file did not sort"
+    )]
     UnorderedIndex {
         /// Its mnemonic.
         index: String,
     },
 
     /// An index that is neither time nor depth.
-    #[error("the index `{index}` is a `{kind}` index: a channel set is in time or in depth (WITSML TRG v2.1 §7.7 p. 151)")]
+    #[error(
+        "the index `{index}` is a `{kind}` index: a channel set is in time or in depth (WITSML TRG v2.1 §7.7 p. 151)"
+    )]
     IndexNotTimeOrDepth {
         /// Its mnemonic.
         index: String,
@@ -508,14 +534,18 @@ pub enum Refused {
     },
 
     /// A `pass indexed depth`, whose JSON form no document here states.
-    #[error("`{what}` is a pass indexed depth, whose form in a row no document this repository holds states (the WITSML v2.1 release notes are not among this repository's reference documents)")]
+    #[error(
+        "`{what}` is a pass indexed depth, whose form in a row no document this repository holds states (the WITSML v2.1 release notes are not among this repository's reference documents)"
+    )]
     PassIndexedDepth {
         /// The index or channel.
         what: String,
     },
 
     /// Time and depth indexes in one set — WITSML TRG v2.1 §7.7 p. 151.
-    #[error("the index `{other}` is in {other_family} where the primary `{primary}` is in {primary_family}: a channel set is in time or in depth, never both (WITSML TRG v2.1 §7.7 p. 151)")]
+    #[error(
+        "the index `{other}` is in {other_family} where the primary `{primary}` is in {primary_family}: a channel set is in time or in depth, never both (WITSML TRG v2.1 §7.7 p. 151)"
+    )]
     IndexFamilyMix {
         /// The primary index.
         primary: String,
@@ -528,20 +558,26 @@ pub enum Refused {
     },
 
     /// The bulk data is in a file this build does not read.
-    #[error("the data is in `{uri}`, a file this build does not read (FileUri; WITSML TRG v2.1 §7.2 p. 146: when it is set, Data is ignored)")]
+    #[error(
+        "the data is in `{uri}`, a file this build does not read (FileUri; WITSML TRG v2.1 §7.2 p. 146: when it is set, Data is ignored)"
+    )]
     FileUri {
         /// The file named.
         uri: String,
     },
 
     /// A channel set carrying no data.
-    #[error("the channel set carries no ChannelData: there is nothing to read, which is not a series of zero rows")]
+    #[error(
+        "the channel set carries no ChannelData: there is nothing to read, which is not a series of zero rows"
+    )]
     NoData,
 
     /// Rows in an HDF5 dataset — the extension of ADR-0013 — that the array
     /// source does not locate: a source that holds no arrays, or one that does
     /// not know the form.
-    #[error("the rows are the dataset `{path}` of `{file}` (FileUri, and a dataset path in Data: an extension beyond WITSML 2.1), and the array source given locates no such array")]
+    #[error(
+        "the rows are the dataset `{path}` of `{file}` (FileUri, and a dataset path in Data: an extension beyond WITSML 2.1), and the array source given locates no such array"
+    )]
     DatasetNotLocated {
         /// The file `FileUri` names.
         file: String,
@@ -551,7 +587,9 @@ pub enum Refused {
 
     /// That dataset could not be read because this build has no backend for
     /// its format — a missing **capability**, never missing data.
-    #[error("the rows are the dataset `{path}` of `{file}`, and reading it needs the `{feature}` feature, which this build does not have — a missing capability, not missing data")]
+    #[error(
+        "the rows are the dataset `{path}` of `{file}`, and reading it needs the `{feature}` feature, which this build does not have — a missing capability, not missing data"
+    )]
     DatasetNeedsFeature {
         /// The file.
         file: String,
@@ -575,7 +613,9 @@ pub enum Refused {
 
     /// A dataset that is not one row per index value and one column per index
     /// then per channel.
-    #[error("the dataset `{path}` is {dimensions:?} where a row per sample of {indexes} index(es) and {channels} channel(s) makes [rows, {expected}]")]
+    #[error(
+        "the dataset `{path}` is {dimensions:?} where a row per sample of {indexes} index(es) and {channels} channel(s) makes [rows, {expected}]"
+    )]
     DatasetShape {
         /// The dataset.
         path: String,
@@ -591,7 +631,9 @@ pub enum Refused {
 
     /// A column a numeric dataset cannot hold — a date-time, a string, a
     /// boolean.
-    #[error("`{column}` holds `{kind}`, and a column of an HDF5 dataset holds numbers: this form carries numeric indexes and channels only")]
+    #[error(
+        "`{column}` holds `{kind}`, and a column of an HDF5 dataset holds numbers: this form carries numeric indexes and channels only"
+    )]
     DatasetColumnKind {
         /// The index or channel.
         column: String,
@@ -607,7 +649,9 @@ pub enum Refused {
     },
 
     /// A row whose length is not *indexes + channels*.
-    #[error("row {row} holds {found} value(s) where {indexes} index(es) and {channels} channel(s) make {expected}")]
+    #[error(
+        "row {row} holds {found} value(s) where {indexes} index(es) and {channels} channel(s) make {expected}"
+    )]
     RowLength {
         /// The 1-based row.
         row: usize,
@@ -666,7 +710,9 @@ pub enum Refused {
     },
 
     /// A flow test's channel set, nowhere to be found.
-    #[error("the channel set `{uuid}` ({title}) is neither a part of its own nor nested in one of the objects given")]
+    #[error(
+        "the channel set `{uuid}` ({title}) is neither a part of its own nor nested in one of the objects given"
+    )]
     ChannelSetNotFound {
         /// Its uuid.
         uuid: String,
@@ -689,7 +735,9 @@ pub enum Refused {
 
     /// A rate and a pressure indexed on different instants — pairing them
     /// would interpolate one ([`rate_pressure`]).
-    #[error("the rate is indexed by `{first}` and the pressure by `{second}`, on different instants: pairing them would interpolate one of the two")]
+    #[error(
+        "the rate is indexed by `{first}` and the pressure by `{second}`, on different instants: pairing them would interpolate one of the two"
+    )]
     DifferentInstants {
         /// The rate's index mnemonic.
         first: String,
@@ -847,7 +895,9 @@ impl Readout {
     /// As the bridges hand it to a front end.
     pub fn to_json(&self) -> Value {
         match self {
-            Readout::Sets(sets) => json!({ "kind": "sets", "sets": sets.iter().map(Series::to_json).collect::<Vec<_>>() }),
+            Readout::Sets(sets) => {
+                json!({ "kind": "sets", "sets": sets.iter().map(Series::to_json).collect::<Vec<_>>() })
+            }
             Readout::TimeSeries(series) => json!({ "kind": "timeSeries", "timeSeries": series.to_json() }),
             Readout::FlowTest(measured) => {
                 json!({ "kind": "flowTest", "measured": measured.iter().map(flow_test::Measured::to_json).collect::<Vec<_>>() })
@@ -890,14 +940,26 @@ const READERS: &[Reader] = &[
         reads: channel_set::reads,
         read: |object, _, source| Ok(Readout::Sets(vec![channel_set::read_with(object, source)?])),
     },
-    Reader { name: "log", reads: channel_set::reads_log, read: |object, _, source| Ok(Readout::Sets(channel_set::read_log_with(object, source)?)) },
-    Reader { name: "time series", reads: time_series::reads, read: |object, _, _| Ok(Readout::TimeSeries(Box::new(time_series::read(object)?))) },
+    Reader {
+        name: "log",
+        reads: channel_set::reads_log,
+        read: |object, _, source| Ok(Readout::Sets(channel_set::read_log_with(object, source)?)),
+    },
+    Reader {
+        name: "time series",
+        reads: time_series::reads,
+        read: |object, _, _| Ok(Readout::TimeSeries(Box::new(time_series::read(object)?))),
+    },
     Reader {
         name: "flow test",
         reads: flow_test::reads,
         read: |object, objects, source| Ok(Readout::FlowTest(flow_test::read(object, objects, source)?)),
     },
-    Reader { name: "production periods", reads: production::reads, read: |object, _, _| Ok(Readout::Periods(production::read(object)?)) },
+    Reader {
+        name: "production periods",
+        reads: production::reads,
+        read: |object, _, _| Ok(Readout::Periods(production::read(object)?)),
+    },
 ];
 
 /// Read the object `uuid` — a part among `objects`, one nested in them, or one
@@ -915,7 +977,13 @@ pub fn read(
     objects: &[(&str, &dyn energyml_core::value::Reflect)],
     source: &dyn crate::source::ArraySource,
 ) -> Result<Readout, Refused> {
-    read_found(resolve(uuid, objects), || source.object(uuid), uuid, objects, source)
+    read_found(
+        resolve(uuid, objects),
+        || source.object(uuid),
+        uuid,
+        objects,
+        source,
+    )
 }
 
 /// [`read`] by **uri**: the version it names is the version read, among
@@ -929,7 +997,13 @@ pub fn read_at(
         .ok()
         .and_then(|parsed| parsed.uuid)
         .unwrap_or_else(|| uri.to_string());
-    read_found(resolve_at(uri, objects), || source.object_at(uri), &uuid, objects, source)
+    read_found(
+        resolve_at(uri, objects),
+        || source.object_at(uri),
+        &uuid,
+        objects,
+        source,
+    )
 }
 
 fn read_found(
@@ -943,7 +1017,9 @@ fn read_found(
         let reader = READERS
             .iter()
             .find(|reader| (reader.reads)(object))
-            .ok_or_else(|| Refused::NoReader { found: object.type_info().type_key.to_string() })?;
+            .ok_or_else(|| Refused::NoReader {
+                found: object.type_info().type_key.to_string(),
+            })?;
         (reader.read)(object, objects, source)
     };
     if let Some(object) = found {
@@ -951,7 +1027,9 @@ fn read_found(
     }
     match lent() {
         Some(object) => with(object.as_reflect()),
-        None => Err(Refused::NotFound { uuid: uuid.to_string() }),
+        None => Err(Refused::NotFound {
+            uuid: uuid.to_string(),
+        }),
     }
 }
 
@@ -1024,7 +1102,9 @@ fn resolve_named<'a>(
             {
                 continue;
             }
-            if let Ok(energyml_core::value::FieldValue::Object(found)) = energyml_core::path::get(*object, &nested.path) {
+            if let Ok(energyml_core::value::FieldValue::Object(found)) =
+                energyml_core::path::get(*object, &nested.path)
+            {
                 return Some(found);
             }
         }
@@ -1041,7 +1121,9 @@ use energyml_core::value::{FieldValue, Reflect, Scalar};
 /// A scalar field as its wire text; `None` when absent or blank.
 pub(crate) fn text(object: &dyn Reflect, name: &str) -> Option<String> {
     match object.field(name)? {
-        FieldValue::Scalar(Scalar::Str(value)) => Some(value.to_string()).filter(|value| !value.trim().is_empty()),
+        FieldValue::Scalar(Scalar::Str(value)) => {
+            Some(value.to_string()).filter(|value| !value.trim().is_empty())
+        }
         FieldValue::Scalar(scalar) => Some(scalar.to_string()),
         _ => None,
     }
@@ -1091,8 +1173,12 @@ pub(crate) fn reference_of(child: &dyn Reflect) -> Option<(String, String)> {
 /// The uuid and title of an object.
 pub(crate) fn identity_of(object: &dyn Reflect) -> (String, String) {
     (
-        energyml_core::identity::uuid_of_reflect(object).unwrap_or_default().to_string(),
-        energyml_core::identity::title_of_reflect(object).unwrap_or_default().to_string(),
+        energyml_core::identity::uuid_of_reflect(object)
+            .unwrap_or_default()
+            .to_string(),
+        energyml_core::identity::title_of_reflect(object)
+            .unwrap_or_default()
+            .to_string(),
     )
 }
 

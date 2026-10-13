@@ -40,17 +40,32 @@ pub struct RulesArgs {
 /// Runs the command.
 pub fn run(args: RulesArgs) -> Result<()> {
     if !args.house {
-        bail!("say which rules: `--house` is the only family this build holds (the standard's `trg/` and `brt` rules are listed by `energyml check`)");
+        bail!(
+            "say which rules: `--house` is the only family this build holds (the standard's `trg/` and `brt` rules are listed by `energyml check`)"
+        );
     }
     let filter = Filter {
         theme: args.theme.as_deref(),
         id: args.id.as_deref(),
-        anchor: args.anchor.as_deref().map(parse_anchor).transpose().map_err(anyhow::Error::msg)?,
-        status: args.status.as_deref().map(parse_status).transpose().map_err(anyhow::Error::msg)?,
+        anchor: args
+            .anchor
+            .as_deref()
+            .map(parse_anchor)
+            .transpose()
+            .map_err(anyhow::Error::msg)?,
+        status: args
+            .status
+            .as_deref()
+            .map(parse_status)
+            .transpose()
+            .map_err(anyhow::Error::msg)?,
     };
     let rules = select(&filter);
     if rules.is_empty() {
-        bail!("no house rule matches (the registry holds {})", energyml_rules::all().len());
+        bail!(
+            "no house rule matches (the registry holds {})",
+            energyml_rules::all().len()
+        );
     }
     if args.json {
         println!("{}", to_json(&rules));
@@ -73,15 +88,28 @@ fn list(rules: &[&energyml_rules::Rule], lang: &str) {
         if mine.is_empty() {
             continue;
         }
-        println!("{} ({})", energyml_rules::theme_title(theme, lang).value, theme.id);
+        println!(
+            "{} ({})",
+            energyml_rules::theme_title(theme, lang).value,
+            theme.id
+        );
         for rule in mine {
             let said = energyml_rules::text_in(rule, lang);
             fell_back += usize::from(said.title.lang == "en" && lang != "en");
-            println!("  {:<58} {:<10} {}", rule.id, rule.status.as_str(), said.title.value);
+            println!(
+                "  {:<58} {:<10} {}",
+                rule.id,
+                rule.status.as_str(),
+                said.title.value
+            );
         }
     }
     println!();
-    println!("{} rules, registry version {}", rules.len(), energyml_rules::RULESET_VERSION);
+    println!(
+        "{} rules, registry version {}",
+        rules.len(),
+        energyml_rules::RULESET_VERSION
+    );
     if lang != "en" && fell_back > 0 {
         println!("{fell_back} of them have no `{lang}` title and are shown in English.");
     }
@@ -89,7 +117,14 @@ fn list(rules: &[&energyml_rules::Rule], lang: &str) {
 
 fn full(rule: &energyml_rules::Rule, lang: &str) {
     let said = energyml_rules::text_in(rule, lang);
-    println!("{}  [{}; spec {}; level {}; since {}]", rule.id, rule.status.as_str(), rule.stance.as_str(), rule.level, rule.since);
+    println!(
+        "{}  [{}; spec {}; level {}; since {}]",
+        rule.id,
+        rule.status.as_str(),
+        rule.stance.as_str(),
+        rule.level,
+        rule.since
+    );
     println!("{}\n", said.title.value);
     println!("{}\n", said.text.value);
     println!("Why: {}", said.why.value);
@@ -97,11 +132,24 @@ fn full(rule: &energyml_rules::Rule, lang: &str) {
         println!("(some of this is not translated into `{lang}` and is shown in English)");
     }
     for g in rule.rulings {
-        println!("Decided by {} on {}{}", g.by, g.on, g.quote.map(|q| format!(": {q}")).unwrap_or_default());
+        println!(
+            "Decided by {} on {}{}",
+            g.by,
+            g.on,
+            g.quote.map(|q| format!(": {q}")).unwrap_or_default()
+        );
     }
     for f in rule.refs {
-        let place = [f.doc, f.path, f.at].into_iter().flatten().collect::<Vec<_>>().join(" ");
-        println!("See ({}): {place}{}", f.kind.as_str(), f.note.map(|n| format!(" - {n}")).unwrap_or_default());
+        let place = [f.doc, f.path, f.at]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+            .join(" ");
+        println!(
+            "See ({}): {place}{}",
+            f.kind.as_str(),
+            f.note.map(|n| format!(" - {n}")).unwrap_or_default()
+        );
     }
     for a in rule.at {
         println!("Shows at {}:{}", a.kind.as_str(), a.key);

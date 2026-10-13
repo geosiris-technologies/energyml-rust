@@ -91,7 +91,10 @@ impl Plan {
     pub fn skipped(&self) -> Vec<String> {
         let mut out = Vec::new();
         let say = |n: usize, why: &str| (n > 0).then(|| format!("{n} {why}"));
-        out.extend(say(self.not_units, "feature(s) carry no GeoSciML unit this reader knows"));
+        out.extend(say(
+            self.not_units,
+            "feature(s) carry no GeoSciML unit this reader knows",
+        ));
         out.extend(say(
             self.untouched,
             "feature(s) name a unit that does not touch the queried stage",
@@ -139,7 +142,14 @@ pub fn plan(collection: &Collection, stage: &str) -> Plan {
         if let Some(id) = &feature.id {
             let places = feature
                 .positions()
-                .map(|at| [at.lon.to_bits(), at.lat.to_bits(), at.z.map_or(0, f64::to_bits), u64::from(at.z.is_some())])
+                .map(|at| {
+                    [
+                        at.lon.to_bits(),
+                        at.lat.to_bits(),
+                        at.z.map_or(0, f64::to_bits),
+                        u64::from(at.z.is_some()),
+                    ]
+                })
                 .collect();
             if !read.insert((id.clone(), places)) {
                 plan.repeated += 1;
@@ -335,7 +345,10 @@ mod tests {
         assert_eq!(rows[1].key, 2);
         assert_eq!(rows[0].side, "Top");
         // Two passes on one place, and the row says both numbers.
-        let doubled = rows.iter().find(|r| r.features == 2).expect("a row of two passes");
+        let doubled = rows
+            .iter()
+            .find(|r| r.features == 2)
+            .expect("a row of two passes");
         assert_eq!(doubled.stage, "Bartonien");
         assert!(doubled.old_ma > doubled.young_ma);
     }

@@ -12,9 +12,9 @@
 mod construction;
 mod content_models;
 mod crossaudit;
-mod fixtures;
 mod custom_data;
 mod firewall;
+mod fixtures;
 mod generated_resqml;
 mod identity;
 mod inheritance;

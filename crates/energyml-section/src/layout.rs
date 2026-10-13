@@ -51,8 +51,9 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::model::{
-    AxisMode, Catalogue, CutSource, EnvelopeItem, FORMAT, FillChoice, Inputs, Interval, Item, LabelMode, Mark, Outcome, Paint, Plan,
-    Section, SectionKey, Side, Target, TraceItem, TraceRole, UnstratifiedStyle, View, WellColouring, WellItem, Window, NEUTRAL_COLOUR,
+    AxisMode, Catalogue, CutSource, EnvelopeItem, FORMAT, FillChoice, Inputs, Interval, Item, LabelMode,
+    Mark, NEUTRAL_COLOUR, Outcome, Paint, Plan, Section, SectionKey, Side, Target, TraceItem, TraceRole,
+    UnstratifiedStyle, View, WellColouring, WellItem, Window,
 };
 use fill::Span;
 
@@ -370,7 +371,13 @@ impl Layout {
         self.layers
             .iter()
             .flat_map(|l| l.objects.iter())
-            .filter_map(|o| if let Attr::Key(k) = &o.attr { Some(k.as_str()) } else { None })
+            .filter_map(|o| {
+                if let Attr::Key(k) = &o.attr {
+                    Some(k.as_str())
+                } else {
+                    None
+                }
+            })
             .collect()
     }
 
@@ -428,17 +435,31 @@ fn metadata(catalogue: &Catalogue, view: &View) -> Metadata {
 }
 
 fn unit_of(catalogue: &Catalogue) -> String {
-    catalogue.inputs.system.as_ref().map(|s| s.unit.clone()).unwrap_or_default()
+    catalogue
+        .inputs
+        .system
+        .as_ref()
+        .map(|s| s.unit.clone())
+        .unwrap_or_default()
 }
 
 /// Warnings common to every target — what the drawing owes its reader.
 fn common_warnings(catalogue: &Catalogue) -> Vec<String> {
     let mut out = Vec::new();
-    let refused = catalogue.objects.iter().filter(|r| matches!(r.outcome, Outcome::Refused { .. })).count();
+    let refused = catalogue
+        .objects
+        .iter()
+        .filter(|r| matches!(r.outcome, Outcome::Refused { .. }))
+        .count();
     if refused > 0 {
         out.push(format!("{refused} objects refused — see the objects list"));
     }
-    let set_aside = catalogue.plan.wells.iter().filter(|w| w.rejected.is_some()).count();
+    let set_aside = catalogue
+        .plan
+        .wells
+        .iter()
+        .filter(|w| w.rejected.is_some())
+        .count();
     if set_aside > 0 {
         out.push(format!("{set_aside} wells set aside — projected nowhere"));
     }
@@ -462,7 +483,12 @@ impl Map {
         ]
     }
     fn points(&self, pts: &[[f64; 2]]) -> Vec<[f64; 2]> {
-        dedupe(pts.iter().filter(|p| p[0].is_finite() && p[1].is_finite()).map(|&p| self.px(p)).collect())
+        dedupe(
+            pts.iter()
+                .filter(|p| p[0].is_finite() && p[1].is_finite())
+                .map(|&p| self.px(p))
+                .collect(),
+        )
     }
 }
 
@@ -472,7 +498,10 @@ impl Map {
 fn dedupe(points: Vec<[f64; 2]>) -> Vec<[f64; 2]> {
     let mut out: Vec<[f64; 2]> = Vec::with_capacity(points.len());
     for p in points {
-        if out.last().is_none_or(|q| (q[0] - p[0]).abs() >= 0.05 || (q[1] - p[1]).abs() >= 0.05) {
+        if out
+            .last()
+            .is_none_or(|q| (q[0] - p[0]).abs() >= 0.05 || (q[1] - p[1]).abs() >= 0.05)
+        {
             out.push(p);
         }
     }
@@ -534,7 +563,12 @@ fn frame_of(view: &View, lines: usize, right: f64, left: f64, top: f64) -> Rect 
 /// down to one, the line that counts them — then levels of labels down to one,
 /// until the plot keeps [`PLOT_SHARE`] of the height. Returns the top margin,
 /// the levels kept and the lines of notes.
-fn budget(h: f64, wanted_levels: usize, wanted_lines: usize, top_for: impl Fn(usize) -> f64) -> (f64, usize, usize) {
+fn budget(
+    h: f64,
+    wanted_levels: usize,
+    wanted_lines: usize,
+    top_for: impl Fn(usize) -> f64,
+) -> (f64, usize, usize) {
     let floor = (h * PLOT_SHARE).max(PLOT_MIN_PX);
     let (mut levels, mut lines) = (wanted_levels, wanted_lines);
     loop {
@@ -560,7 +594,12 @@ fn is_hidden(view: &View, key: &str) -> bool {
 /// The width an object is drawn at: the view's own for it when it is valid,
 /// else `default`. A refused width is not drawn here — [`width_warnings`] names it.
 fn width_of(view: &View, key: &str, default: f64) -> f64 {
-    view.widths.iter().find(|(k, _)| k == key).map(|(_, w)| *w).filter(|w| valid_width(*w)).unwrap_or(default)
+    view.widths
+        .iter()
+        .find(|(k, _)| k == key)
+        .map(|(_, w)| *w)
+        .filter(|w| valid_width(*w))
+        .unwrap_or(default)
 }
 
 fn valid_width(w: f64) -> bool {
@@ -581,7 +620,10 @@ fn width_warnings(view: &View) -> Vec<String> {
 }
 
 pub(crate) fn colour_of(view: &View, key: &str) -> Option<String> {
-    view.colours.iter().find(|(k, _)| k == key).map(|(_, c)| c.clone())
+    view.colours
+        .iter()
+        .find(|(k, _)| k == key)
+        .map(|(_, c)| c.clone())
 }
 
 // ---------------------------------------------------------------------------
@@ -688,8 +730,13 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     let mut traces: Vec<KeptTrace> = Vec::new();
     // An envelope, its top and bottom kept within the window, and its fills and faults.
     #[allow(clippy::type_complexity)]
-    let mut envelopes: Vec<(&EnvelopeItem, Vec<Span>, Vec<Span>, Vec<Vec<[f64; 2]>>, Vec<Vec<[f64; 2]>>)> =
-        Vec::new();
+    let mut envelopes: Vec<(
+        &EnvelopeItem,
+        Vec<Span>,
+        Vec<Span>,
+        Vec<Vec<[f64; 2]>>,
+        Vec<Vec<[f64; 2]>>,
+    )> = Vec::new();
     let mut time_drawn = false;
     for item in &sec.items {
         match item {
@@ -704,7 +751,11 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
                 if is_hidden(view, &k) {
                     continue;
                 }
-                let spans: Vec<Span> = t.spans.iter().filter_map(|s| fill::clip_span(s, plo, phi)).collect();
+                let spans: Vec<Span> = t
+                    .spans
+                    .iter()
+                    .filter_map(|s| fill::clip_span(s, plo, phi))
+                    .collect();
                 if spans.is_empty() {
                     continue;
                 }
@@ -713,18 +764,39 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
                 // file gives, then the role's — never a colour invented in the
                 // file's name.
                 let colour = trace_colour(view, t);
-                traces.push(KeptTrace { item: t, key: k, colour, spans });
+                traces.push(KeptTrace {
+                    item: t,
+                    key: k,
+                    colour,
+                    spans,
+                });
             }
             Item::Envelope(e) => {
                 let k = e.object.key();
                 if is_hidden(view, &k) {
                     continue;
                 }
-                let top: Vec<Span> = e.top.iter().filter_map(|s| fill::clip_span(s, plo, phi)).collect();
-                let bottom: Vec<Span> = e.bottom.iter().filter_map(|s| fill::clip_span(s, plo, phi)).collect();
-                let fills: Vec<_> =
-                    e.fills.iter().map(|p| fill::clip_polygon(p, plo, phi)).filter(|p| !p.is_empty()).collect();
-                let faults: Vec<_> = e.faults.iter().filter_map(|s| fill::clip_span(s, plo, phi)).collect();
+                let top: Vec<Span> = e
+                    .top
+                    .iter()
+                    .filter_map(|s| fill::clip_span(s, plo, phi))
+                    .collect();
+                let bottom: Vec<Span> = e
+                    .bottom
+                    .iter()
+                    .filter_map(|s| fill::clip_span(s, plo, phi))
+                    .collect();
+                let fills: Vec<_> = e
+                    .fills
+                    .iter()
+                    .map(|p| fill::clip_polygon(p, plo, phi))
+                    .filter(|p| !p.is_empty())
+                    .collect();
+                let faults: Vec<_> = e
+                    .faults
+                    .iter()
+                    .filter_map(|s| fill::clip_span(s, plo, phi))
+                    .collect();
                 if top.is_empty() && bottom.is_empty() && fills.is_empty() && faults.is_empty() {
                     continue;
                 }
@@ -735,7 +807,9 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     }
     if time_drawn {
         warnings.push(match catalogue.inputs.time_factor {
-            Some(f) => format!("surfaces in time are drawn on the depth axis at {f} depth units per time unit"),
+            Some(f) => {
+                format!("surfaces in time are drawn on the depth axis at {f} depth units per time unit")
+            }
             None => "surfaces in time are drawn on the depth axis without a time scale".to_string(),
         });
     }
@@ -744,9 +818,16 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
         (crate::erosion::CODE, "erosion suspected", "erosions suspected"),
         ("crossingMismatch", "crossing mismatch", "crossing mismatches"),
     ] {
-        let count = catalogue.notes.iter().filter(|n| n.code == code && n.sections.contains(&key)).count();
+        let count = catalogue
+            .notes
+            .iter()
+            .filter(|n| n.code == code && n.sections.contains(&key))
+            .count();
         if count > 0 {
-            warnings.push(format!("{count} {} — see the notes", if count == 1 { one } else { many }));
+            warnings.push(format!(
+                "{count} {} — see the notes",
+                if count == 1 { one } else { many }
+            ));
         }
     }
 
@@ -768,13 +849,19 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
             top.iter().chain(bottom).chain(faults).for_each(|s| z.add_all(s));
             fills.iter().for_each(|s| z.add_all(s));
         }
-        Window { x: padded(e.x, 0.02), y: padded(z.y, 0.05) }
+        Window {
+            x: padded(e.x, 0.02),
+            y: padded(z.y, 0.05),
+        }
     };
     let window = view.window.unwrap_or(whole);
     // Wells wholly outside a given window are not written (the cost of a drawing is its nodes).
     wells.retain(|w| {
         view.window.is_none()
-            || w.path.iter().chain(std::iter::once(&w.head)).any(|p| p[0] >= window.x[0] && p[0] <= window.x[1])
+            || w.path
+                .iter()
+                .chain(std::iter::once(&w.head))
+                .any(|p| p[0] >= window.x[0] && p[0] <= window.x[1])
     });
 
     // Axes: what can be drawn.
@@ -799,13 +886,20 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     // The strata legend: what the wells could show, decided before the frame
     // since it takes its room on the left. What is *drawn* is read back from the
     // laid wells below, so that it is never a second reading of the colours.
-    let strata = if view.strata_legend { strata_units(&wells, view) } else { Vec::new() };
+    let strata = if view.strata_legend {
+        strata_units(&wells, view)
+    } else {
+        Vec::new()
+    };
     if view.strata_legend && strata.is_empty() {
         warnings.push(strata_refusal(&wells, view));
     }
     let unstratified = effective_style(view, &mut warnings);
     if unstratified == UnstratifiedStyle::Hidden && view.well_colouring == WellColouring::Strata {
-        let lost = wells.iter().filter(|w| !painted(view, w) && has_unstratified(w)).count();
+        let lost = wells
+            .iter()
+            .filter(|w| !painted(view, w) && has_unstratified(w))
+            .count();
         if lost > 0 {
             warnings.push(format!(
                 "{lost} well(s) drawn only where a stratigraphic unit is known — the portions with no strata information are not drawn"
@@ -824,11 +918,19 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     // legend takes its room on the right.
     let marked = marking::resolve(view, &wells, &traces, &mut warnings);
     let strata_w = strata_width(&strata, no_strata.is_some(), view);
-    let left_shift = if strata_w > 0.0 { strata_w + STRATA_GAP_PX } else { 0.0 };
+    let left_shift = if strata_w > 0.0 {
+        strata_w + STRATA_GAP_PX
+    } else {
+        0.0
+    };
     let labelled = view.show.names || view.show.distances;
     // One line more than the warnings known now: the labels folded are only
     // known once they are placed.
-    let reserved = if view.show.notes { warnings.len() + usize::from(labelled && !wells.is_empty()) } else { 0 };
+    let reserved = if view.show.notes {
+        warnings.len() + usize::from(labelled && !wells.is_empty())
+    } else {
+        0
+    };
     // Names: in codes mode, the codes and their legend — decided before the
     // frame, since the legend takes its room on the right.
     let coded = (view.labels == LabelMode::Codes).then(|| codes(catalogue));
@@ -836,17 +938,32 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     if let Some(coded) = &coded {
         for w in &wells {
             if let Some(code) = coded.get(&w.object.key()) {
-                entries.push(LegendEntry { code: code.clone(), title: well_name(&w.object), colour: NEUTRAL_COLOUR.into(), round: true });
+                entries.push(LegendEntry {
+                    code: code.clone(),
+                    title: well_name(&w.object),
+                    colour: NEUTRAL_COLOUR.into(),
+                    round: true,
+                });
             }
         }
         for t in &traces {
             if let Some(code) = coded.get(&t.key) {
-                entries.push(LegendEntry { code: code.clone(), title: t.item.object.title.clone(), colour: t.colour.clone(), round: false });
+                entries.push(LegendEntry {
+                    code: code.clone(),
+                    title: t.item.object.title.clone(),
+                    colour: t.colour.clone(),
+                    round: false,
+                });
             }
         }
         for (e, ..) in &envelopes {
             if let Some(code) = coded.get(&e.object.key()) {
-                entries.push(LegendEntry { code: code.clone(), title: e.object.title.clone(), colour: envelope_colour(view, e), round: false });
+                entries.push(LegendEntry {
+                    code: code.clone(),
+                    title: e.object.title.clone(),
+                    colour: envelope_colour(view, e),
+                    round: false,
+                });
             }
         }
     }
@@ -860,13 +977,28 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     let banded = label_lines > 0 && !wells.is_empty();
     let line_h = (label_lines as f64 - 1.0) * LINE_PX + FONT_PX + 3.0;
     let top_for = |levels: usize| {
-        if banded { TITLE_BAND_PX + levels as f64 * (line_h + 3.0) + 8.0 } else { MARGIN_TOP }
+        if banded {
+            TITLE_BAND_PX + levels as f64 * (line_h + 3.0) + 8.0
+        } else {
+            MARGIN_TOP
+        }
     };
     let (top, _, note_lines) = budget(view.size_px[1], HEAD_BAND_LEVELS, reserved, top_for);
-    let frame = frame_of(view, note_lines, if right_w > 0.0 { right_w + 12.0 } else { 0.0 }, left_shift, top);
+    let frame = frame_of(
+        view,
+        note_lines,
+        if right_w > 0.0 { right_w + 12.0 } else { 0.0 },
+        left_shift,
+        top,
+    );
     let sx = frame.w / (window.x[1] - window.x[0]);
     let sy = frame.h / (window.y[1] - window.y[0]);
-    let map = Map { window, frame, sx, sy };
+    let map = Map {
+        window,
+        frame,
+        sx,
+        sy,
+    };
     let exaggeration = sy / sx;
     let exaggeration_text = format!("vertical exaggeration ×{}", round_sig(exaggeration));
     let (origin_text, origin_x) = origin_line(
@@ -892,7 +1024,13 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
         let colour = envelope_colour(view, e);
         let polygons: Vec<Shape> = fills
             .iter()
-            .map(|poly| Shape::Polygon { points: map.points(poly), fill: colour.clone(), opacity: FILL_OPACITY, stroke: None, dash: false })
+            .map(|poly| Shape::Polygon {
+                points: map.points(poly),
+                fill: colour.clone(),
+                opacity: FILL_OPACITY,
+                stroke: None,
+                dash: false,
+            })
             .collect();
         if !polygons.is_empty() {
             env_fills.push(LaidObject {
@@ -909,7 +1047,12 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
             .iter()
             .chain(bottom)
             .chain(faults)
-            .map(|line| Shape::Polyline { points: map.points(line), stroke: colour.clone(), width: width_of(view, &key, 1.0), dash: false })
+            .map(|line| Shape::Polyline {
+                points: map.points(line),
+                stroke: colour.clone(),
+                width: width_of(view, &key, 1.0),
+                dash: false,
+            })
             .collect();
         env_lines.push(LaidObject {
             highlighted: view.highlight.contains(&key),
@@ -921,11 +1064,21 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
             intervals: Vec::new(),
         });
     }
-    layers.push(Layer { name: "envelopes", clipped: true, objects: env_fills });
+    layers.push(Layer {
+        name: "envelopes",
+        clipped: true,
+        objects: env_fills,
+    });
 
     // fills — a trace to its neighbour, per the view's choices.
-    let lines: Vec<fill::Line<'_>> =
-        traces.iter().map(|t| fill::Line { key: &t.key, item: t.item, spans: &t.spans }).collect();
+    let lines: Vec<fill::Line<'_>> = traces
+        .iter()
+        .map(|t| fill::Line {
+            key: &t.key,
+            item: t.item,
+            spans: &t.spans,
+        })
+        .collect();
     let mut fill_objects = Vec::new();
     for (t, mine) in traces.iter().zip(&lines) {
         let Some(FillChoice { up, down, .. }) = view.fills.iter().find(|f| f.key == t.key) else {
@@ -958,14 +1111,26 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
             });
         }
     }
-    layers.push(Layer { name: "fills", clipped: true, objects: fill_objects });
-    layers.push(Layer { name: "outlines", clipped: true, objects: env_lines });
+    layers.push(Layer {
+        name: "fills",
+        clipped: true,
+        objects: fill_objects,
+    });
+    layers.push(Layer {
+        name: "outlines",
+        clipped: true,
+        objects: env_lines,
+    });
 
     // erosions — a background of the lines, so it sits before them; a section
     // with none suspected adds no layer, and its drawing is what it was.
     let erosion_objects = erosion_marks(sec, &traces, [plo, phi], &map);
     if !erosion_objects.is_empty() {
-        layers.push(Layer { name: "erosions", clipped: true, objects: erosion_objects });
+        layers.push(Layer {
+            name: "erosions",
+            clipped: true,
+            objects: erosion_objects,
+        });
     }
 
     // traces
@@ -976,7 +1141,11 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
         let line_width = width_of(view, &t.key, 1.5) + if highlighted { 1.5 } else { 0.0 };
         // What the scene paints along the surface, when its cut says where
         // each point comes from: per span, else the flat colour as before.
-        let paint = view.paints.iter().find(|(k, _)| *k == t.key).map(|(_, paint)| paint);
+        let paint = view
+            .paints
+            .iter()
+            .find(|(k, _)| *k == t.key)
+            .map(|(_, paint)| paint);
         let sources = cut_sources(t.item);
         let mut paint_refusal: Option<String> = None;
         let mut shapes: Vec<Shape> = Vec::new();
@@ -1002,7 +1171,12 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
                     }
                 }
             }
-            shapes.push(Shape::Polyline { points: map.points(s), stroke: t.colour.clone(), width: line_width, dash: false });
+            shapes.push(Shape::Polyline {
+                points: map.points(s),
+                stroke: t.colour.clone(),
+                width: line_width,
+                dash: false,
+            });
         }
         if let Some(why) = paint_refusal {
             warnings.push(format!(
@@ -1015,7 +1189,10 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
         // the name at the end the line runs out on. Placed below, all together,
         // so two names never sit on each other (`line_names`).
         if view.show.surface_names
-            && let Some(longest) = t.spans.iter().max_by(|a, b| span_extent(a).total_cmp(&span_extent(b)))
+            && let Some(longest) = t
+                .spans
+                .iter()
+                .max_by(|a, b| span_extent(a).total_cmp(&span_extent(b)))
             && let Some(&end) = longest.last()
             && let Some(&end) = map.points(&[end]).first()
         {
@@ -1043,7 +1220,12 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     }
     // marks
     let mut mark_shapes = Vec::new();
-    let mut mark_placer = labels::Placer::new(labels::Rect2 { x0: frame.x, y0: frame.y, x1: frame.x + frame.w, y1: frame.y + frame.h });
+    let mut mark_placer = labels::Placer::new(labels::Rect2 {
+        x0: frame.x,
+        y0: frame.y,
+        x1: frame.x + frame.w,
+        y1: frame.y + frame.h,
+    });
     let mut marks_unlabelled = 0usize;
     for mark in &sec.marks {
         let (s, kind, text, show) = match *mark {
@@ -1079,8 +1261,16 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
         // on its own level reads better than a long one stacked into the plot,
         // where it covers what is drawn. The line is always drawn: a mark with
         // no place keeps it and loses only its text, and that is counted.
-        let base_y = if kind == "vertex" { frame.y + frame.h - 10.0 } else { frame.y + SMALL_PX + 2.0 };
-        let step = if kind == "vertex" { -MARK_LEVEL_PX } else { MARK_LEVEL_PX };
+        let base_y = if kind == "vertex" {
+            frame.y + frame.h - 10.0
+        } else {
+            frame.y + SMALL_PX + 2.0
+        };
+        let step = if kind == "vertex" {
+            -MARK_LEVEL_PX
+        } else {
+            MARK_LEVEL_PX
+        };
         let mut forms = vec![text.clone()];
         let short = short_mark_text(&text);
         if short != text {
@@ -1091,9 +1281,17 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
             let y = base_y + step * level as f64;
             for form in &forms {
                 let w = labels::width_px(form, SMALL_PX);
-                for (text_x, anchor, x0) in [(x + 3.0, Anchor::Start, x + 3.0), (x - 3.0, Anchor::End, x - 3.0 - w)] {
+                for (text_x, anchor, x0) in [
+                    (x + 3.0, Anchor::Start, x + 3.0),
+                    (x - 3.0, Anchor::End, x - 3.0 - w),
+                ] {
                     // The same box `text_rects` reads back for this text.
-                    let rect = labels::Rect2 { x0, y0: y - SMALL_PX, x1: x0 + w, y1: y + 2.0 };
+                    let rect = labels::Rect2 {
+                        x0,
+                        y0: y - SMALL_PX,
+                        x1: x0 + w,
+                        y1: y + 2.0,
+                    };
                     candidates.push((form.clone(), rect, [text_x, y], anchor));
                 }
             }
@@ -1102,13 +1300,21 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
         match mark_placer.place(&rects) {
             Some(at) => {
                 let (text, _, at, anchor) = candidates.swap_remove(at);
-                mark_shapes.push(Shape::Text { at, text, anchor, size: SMALL_PX, fill: MARK_COLOUR.into() });
+                mark_shapes.push(Shape::Text {
+                    at,
+                    text,
+                    anchor,
+                    size: SMALL_PX,
+                    fill: MARK_COLOUR.into(),
+                });
             }
             None => marks_unlabelled += 1,
         }
     }
     if marks_unlabelled > 0 {
-        warnings.push(format!("{marks_unlabelled} section marks unlabelled — they did not fit"));
+        warnings.push(format!(
+            "{marks_unlabelled} section marks unlabelled — they did not fit"
+        ));
     }
     let marks_group = if mark_shapes.is_empty() {
         Vec::new()
@@ -1125,7 +1331,12 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     };
     // The marks' texts are where they are: the names placed after them keep clear.
     let mark_texts = text_rects(marks_group.iter().flat_map(|o| o.shapes.iter()));
-    let bounds = labels::Rect2 { x0: frame.x, y0: frame.y, x1: frame.x + frame.w, y1: frame.y + frame.h };
+    let bounds = labels::Rect2 {
+        x0: frame.x,
+        y0: frame.y,
+        x1: frame.x + frame.w,
+        y1: frame.y + frame.h,
+    };
     let (placed, names_folded) = line_names(names, bounds, &mark_texts);
     for (owner, text) in placed {
         trace_objects[owner].shapes.push(text);
@@ -1136,9 +1347,17 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     // A contour is a line under the lines it marks: behind the traces and the wells.
     let contours = marked.contours(&map);
     if !contours.is_empty() {
-        layers.push(Layer { name: "marker-contours", clipped: true, objects: contours });
+        layers.push(Layer {
+            name: "marker-contours",
+            clipped: true,
+            objects: contours,
+        });
     }
-    layers.push(Layer { name: "traces", clipped: true, objects: trace_objects });
+    layers.push(Layer {
+        name: "traces",
+        clipped: true,
+        objects: trace_objects,
+    });
 
     // wells
     let mut well_objects = Vec::new();
@@ -1147,38 +1366,86 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     }
     // What the wells drew, read back for the strata legend: the units and the
     // colours of the intervals as laid.
-    let drawn_units: std::collections::HashSet<(String, String)> =
-        well_objects.iter().flat_map(|o| o.intervals.iter()).map(|iv| (iv.unit.clone(), iv.colour.clone())).collect();
-    layers.push(Layer { name: "wells", clipped: true, objects: well_objects });
+    let drawn_units: std::collections::HashSet<(String, String)> = well_objects
+        .iter()
+        .flat_map(|o| o.intervals.iter())
+        .map(|iv| (iv.unit.clone(), iv.colour.clone()))
+        .collect();
+    layers.push(Layer {
+        name: "wells",
+        clipped: true,
+        objects: well_objects,
+    });
 
     let symbols = marked.symbols(&map);
     if !symbols.is_empty() {
-        layers.push(Layer { name: "markers", clipped: true, objects: symbols });
+        layers.push(Layer {
+            name: "markers",
+            clipped: true,
+            objects: symbols,
+        });
     }
 
-    layers.push(Layer { name: "marks", clipped: true, objects: marks_group });
+    layers.push(Layer {
+        name: "marks",
+        clipped: true,
+        objects: marks_group,
+    });
 
     // labels
     let (label_objects, folded) = well_labels(&wells, view, &map, &unit, coded.as_ref(), &mark_texts);
-    layers.push(Layer { name: "labels", clipped: false, objects: label_objects });
-    let legend_box = legend(entries, frame.x + frame.w + 12.0, legend_w, frame.y, frame.y + frame.h);
+    layers.push(Layer {
+        name: "labels",
+        clipped: false,
+        objects: label_objects,
+    });
+    let legend_box = legend(
+        entries,
+        frame.x + frame.w + 12.0,
+        legend_w,
+        frame.y,
+        frame.y + frame.h,
+    );
     // The legend of markers goes on the right, **under** the legend of codes: that
     // margin is already reserved for a legend, the strata legend owns the left, and
     // the drawing's own frame stays clear.
     let codes_bottom = legend_box.as_ref().and_then(marking::bottom_of);
-    layers.push(Layer { name: "legend", clipped: false, objects: legend_box.into_iter().collect() });
+    layers.push(Layer {
+        name: "legend",
+        clipped: false,
+        objects: legend_box.into_iter().collect(),
+    });
     if !marked.is_empty() {
         let top = codes_bottom.map_or(frame.y, |b| b + 8.0);
         let objects = marked.legend(frame.x + frame.w + 12.0, markers_w, top, frame.y + frame.h);
-        layers.push(Layer { name: MARKERS_LAYER, clipped: false, objects });
+        layers.push(Layer {
+            name: MARKERS_LAYER,
+            clipped: false,
+            objects,
+        });
     }
     if folded > 0 {
         warnings.push(format!("{folded} well labels folded — they did not fit"));
     }
     if view.strata_legend {
-        let shown: Vec<StrataEntry> = strata.into_iter().filter(|e| drawn_units.contains(&(e.unit.clone(), e.colour.clone()))).collect();
-        let objects = strata_legend(&shown, view, no_strata.as_ref(), STRATA_LEFT_PX, strata_w, frame.y, frame.y + frame.h);
-        layers.push(Layer { name: STRATA_LAYER, clipped: false, objects });
+        let shown: Vec<StrataEntry> = strata
+            .into_iter()
+            .filter(|e| drawn_units.contains(&(e.unit.clone(), e.colour.clone())))
+            .collect();
+        let objects = strata_legend(
+            &shown,
+            view,
+            no_strata.as_ref(),
+            STRATA_LEFT_PX,
+            strata_w,
+            frame.y,
+            frame.y + frame.h,
+        );
+        layers.push(Layer {
+            name: STRATA_LAYER,
+            clipped: false,
+            objects,
+        });
     }
 
     // axes
@@ -1216,7 +1483,12 @@ const EROSION_COLOUR: &str = "#d81b60";
 /// surfaces over the portion, and the older surface thickened there — it is the
 /// one that should stop. Only what is drawn counts: a hidden surface marks
 /// nothing, and a portion cut to the view's `portion`.
-fn erosion_marks(sec: &Section, traces: &[KeptTrace<'_>], [plo, phi]: [f64; 2], map: &Map) -> Vec<LaidObject> {
+fn erosion_marks(
+    sec: &Section,
+    traces: &[KeptTrace<'_>],
+    [plo, phi]: [f64; 2],
+    map: &Map,
+) -> Vec<LaidObject> {
     let mut out = Vec::new();
     for portion in crate::erosion::of_section(sec) {
         let (Some(older), Some(younger)) = (
@@ -1230,7 +1502,9 @@ fn erosion_marks(sec: &Section, traces: &[KeptTrace<'_>], [plo, phi]: [f64; 2], 
             continue;
         }
         let part = |t: &KeptTrace<'_>| t.item.spans.iter().find_map(|s| fill::clip_span(s, lo, hi));
-        let (Some(upper), Some(lower)) = (part(older), part(younger)) else { continue };
+        let (Some(upper), Some(lower)) = (part(older), part(younger)) else {
+            continue;
+        };
         let mut ring = upper.clone();
         ring.extend(lower.iter().rev().copied());
         out.push(LaidObject {
@@ -1240,8 +1514,19 @@ fn erosion_marks(sec: &Section, traces: &[KeptTrace<'_>], [plo, phi]: [f64; 2], 
             highlighted: false,
             at: None,
             shapes: vec![
-                Shape::Polygon { points: map.points(&ring), fill: EROSION_COLOUR.into(), opacity: FILL_OPACITY, stroke: None, dash: false },
-                Shape::Polyline { points: map.points(&upper), stroke: EROSION_COLOUR.into(), width: 3.0, dash: true },
+                Shape::Polygon {
+                    points: map.points(&ring),
+                    fill: EROSION_COLOUR.into(),
+                    opacity: FILL_OPACITY,
+                    stroke: None,
+                    dash: false,
+                },
+                Shape::Polyline {
+                    points: map.points(&upper),
+                    stroke: EROSION_COLOUR.into(),
+                    width: 3.0,
+                    dash: true,
+                },
             ],
             intervals: Vec::new(),
         });
@@ -1298,11 +1583,20 @@ fn direction_marks(px: &[[f64; 2]], colour: &str) -> Vec<Shape> {
             let back = [c[0] - ux * CHEVRON_ALONG_PX, c[1] - uy * CHEVRON_ALONG_PX];
             let left = [back[0] + nx * CHEVRON_ACROSS_PX, back[1] + ny * CHEVRON_ACROSS_PX];
             let right = [back[0] - nx * CHEVRON_ACROSS_PX, back[1] - ny * CHEVRON_ACROSS_PX];
-            out.push(Shape::Polyline { points: vec![left, tip, right], stroke: colour.to_string(), width: 1.2, dash: false });
+            out.push(Shape::Polyline {
+                points: vec![left, tip, right],
+                stroke: colour.to_string(),
+                width: 1.2,
+                dash: false,
+            });
         }
     }
     if !out.is_empty() {
-        out.push(Shape::Circle { c: *first, r: 2.5, fill: colour.to_string() });
+        out.push(Shape::Circle {
+            c: *first,
+            r: 2.5,
+            fill: colour.to_string(),
+        });
     }
     out
 }
@@ -1328,7 +1622,9 @@ fn origin_line(
     frame: &Rect,
     warnings: &mut Vec<String>,
 ) -> (String, f64) {
-    let (true, Some([x, y])) = (on, origin) else { return (String::new(), 0.0) };
+    let (true, Some([x, y])) = (on, origin) else {
+        return (String::new(), 0.0);
+    };
     if !x.is_finite() || !y.is_finite() {
         return (String::new(), 0.0);
     }
@@ -1351,7 +1647,9 @@ fn origin_line(
     if let Some(c) = code {
         let short = format!("origin: {c}");
         if labels::width_px(&short, FONT_PX) <= room {
-            warnings.push("origin position shortened to its EPSG code — the title band is too narrow".to_string());
+            warnings.push(
+                "origin position shortened to its EPSG code — the title band is too narrow".to_string(),
+            );
             return put(short);
         }
     }
@@ -1366,12 +1664,20 @@ fn round_sig(v: f64) -> String {
     }
     let decimals = (2 - v.log10().floor() as i64).clamp(0, 6) as usize;
     let text = format!("{v:.decimals$}");
-    if text.contains('.') { text.trim_end_matches('0').trim_end_matches('.').to_string() } else { text }
+    if text.contains('.') {
+        text.trim_end_matches('0').trim_end_matches('.').to_string()
+    } else {
+        text
+    }
 }
 
 fn x_axis(sec: &Section, map: &Map, mode: AxisMode, unit: &str) -> Axis {
     let (step, values) = ticks::values(map.window.x[0], map.window.x[1], map.frame.w / 90.0);
-    let suffix = if unit.is_empty() { String::new() } else { format!(" ({unit})") };
+    let suffix = if unit.is_empty() {
+        String::new()
+    } else {
+        format!(" ({unit})")
+    };
     let ticks = values
         .into_iter()
         .map(|v| {
@@ -1379,7 +1685,12 @@ fn x_axis(sec: &Section, map: &Map, mode: AxisMode, unit: &str) -> Axis {
                 let [x, y] = energyml_geometry::fence::point_at(&sec.trace, v);
                 format!("{x:.0}, {y:.0}")
             });
-            Tick { value: v, at: map.px([v, 0.0])[0], label: ticks::label(v, step), sublabel }
+            Tick {
+                value: v,
+                at: map.px([v, 0.0])[0],
+                label: ticks::label(v, step),
+                sublabel,
+            }
         })
         .collect();
     Axis {
@@ -1394,13 +1705,22 @@ fn x_axis(sec: &Section, map: &Map, mode: AxisMode, unit: &str) -> Axis {
 
 fn y_axis(map: &Map, unit: &str, name: &str) -> Axis {
     let (step, values) = ticks::values(map.window.y[0], map.window.y[1], map.frame.h / 40.0);
-    let suffix = if unit.is_empty() { String::new() } else { format!(" ({unit})") };
+    let suffix = if unit.is_empty() {
+        String::new()
+    } else {
+        format!(" ({unit})")
+    };
     Axis {
         title: format!("{name}{suffix}"),
         mode: AxisMode::Projected,
         ticks: values
             .into_iter()
-            .map(|v| Tick { value: v, at: map.px([0.0, v])[1], label: ticks::label(v, step), sublabel: None })
+            .map(|v| Tick {
+                value: v,
+                at: map.px([0.0, v])[1],
+                label: ticks::label(v, step),
+                sublabel: None,
+            })
             .collect(),
     }
 }
@@ -1415,10 +1735,14 @@ fn well_colour(w: &WellItem, view: &View) -> String {
         WellColouring::Side => side.to_string(),
         // The scene's colour — or, when the scene gives none, a neutral one
         // rather than a side colour the user did not ask for.
-        WellColouring::Scene => colour_of(view, &w.object.key()).unwrap_or_else(|| NEUTRAL_COLOUR.to_string()),
+        WellColouring::Scene => {
+            colour_of(view, &w.object.key()).unwrap_or_else(|| NEUTRAL_COLOUR.to_string())
+        }
         // Under strata, the line itself is the well's scene colour or neutral:
         // an interval with no colour is drawn in it, never left transparent.
-        WellColouring::Strata => colour_of(view, &w.object.key()).unwrap_or_else(|| NEUTRAL_COLOUR.to_string()),
+        WellColouring::Strata => {
+            colour_of(view, &w.object.key()).unwrap_or_else(|| NEUTRAL_COLOUR.to_string())
+        }
     }
 }
 
@@ -1435,8 +1759,16 @@ fn cut_sources(item: &TraceItem) -> Option<&[Vec<CutSource>]> {
 /// The sources of one kept span: the original span it still is, point for
 /// point — a span a portion cut (or whose repeated points were dropped) is no
 /// longer parallel to its sources and is not painted.
-fn source_of_span<'a>(item: &TraceItem, sources: &'a [Vec<CutSource>], span: &[[f64; 2]]) -> Option<&'a [CutSource]> {
-    item.spans.iter().zip(sources).find(|(own, from)| own.as_slice() == span && from.len() == span.len()).map(|(_, from)| from.as_slice())
+fn source_of_span<'a>(
+    item: &TraceItem,
+    sources: &'a [Vec<CutSource>],
+    span: &[[f64; 2]],
+) -> Option<&'a [CutSource]> {
+    item.spans
+        .iter()
+        .zip(sources)
+        .find(|(own, from)| own.as_slice() == span && from.len() == span.len())
+        .map(|(_, from)| from.as_slice())
 }
 
 /// The paint the scene gives a well: its own key's first, and — one line being
@@ -1454,13 +1786,21 @@ fn paint_of<'a>(view: &'a View, w: &WellItem) -> Option<(&'a Paint, String)> {
     if view.well_colouring != WellColouring::Scene {
         return None;
     }
-    std::iter::once(w.object.key()).chain(w.merged.iter().map(|o| o.key())).find_map(|key| {
-        view.paints.iter().find(|(k, _)| *k == key).map(|(_, paint)| (paint, key))
-    })
+    std::iter::once(w.object.key())
+        .chain(w.merged.iter().map(|o| o.key()))
+        .find_map(|key| {
+            view.paints
+                .iter()
+                .find(|(k, _)| *k == key)
+                .map(|(_, paint)| (paint, key))
+        })
 }
 
 fn paint_refusal(w: &WellItem, why: &str) -> String {
-    format!("scene colours refused for {} — {why}; the well is drawn in its own colour", well_name(&w.object))
+    format!(
+        "scene colours refused for {} — {why}; the well is drawn in its own colour",
+        well_name(&w.object)
+    )
 }
 
 /// The MD at a pixel point of a well's laid path: the nearest segment's, the
@@ -1471,7 +1811,11 @@ fn md_at_px(path_px: &[[f64; 2]], md: &[f64], p: [f64; 2]) -> f64 {
         let (a, b) = (pair[0], pair[1]);
         let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
         let len2 = dx * dx + dy * dy;
-        let t = if len2 > 0.0 { (((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2).clamp(0.0, 1.0) } else { 0.0 };
+        let t = if len2 > 0.0 {
+            (((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2).clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
         let (ex, ey) = (a[0] + dx * t - p[0], a[1] + dy * t - p[1]);
         let d2 = ex * ex + ey * ey;
         if d2 < best.0 {
@@ -1481,7 +1825,14 @@ fn md_at_px(path_px: &[[f64; 2]], md: &[f64], p: [f64; 2]) -> f64 {
     best.1
 }
 
-fn laid_well(w: &WellItem, view: &View, unstratified: &UnstratifiedStyle, map: &Map, unit: &str, warnings: &mut Vec<String>) -> LaidObject {
+fn laid_well(
+    w: &WellItem,
+    view: &View,
+    unstratified: &UnstratifiedStyle,
+    map: &Map,
+    unit: &str,
+    warnings: &mut Vec<String>,
+) -> LaidObject {
     let key = w.object.key();
     let colour = well_colour(w, view);
     let highlighted = view.highlight.contains(&key);
@@ -1489,20 +1840,30 @@ fn laid_well(w: &WellItem, view: &View, unstratified: &UnstratifiedStyle, map: &
     let path = map.points(&w.path);
     let mut shapes = Vec::new();
     if highlighted {
-        shapes.push(Shape::Polyline { points: path.clone(), stroke: "#ffb300".into(), width: width + 5.0, dash: false });
+        shapes.push(Shape::Polyline {
+            points: path.clone(),
+            stroke: "#ffb300".into(),
+            width: width + 5.0,
+            dash: false,
+        });
     }
 
     // What the scene paints along the well, under scene colouring, when it gives
     // something that fits: the pieces replace the single line — the scene's
     // paint is what the scene shows. A paint that does not fit was
     // said before the frame (`check`); the well is then drawn as below.
-    let painted = paint_of(view, w).filter(|(paint, _)| crate::paint::check(w.path.len(), paint, &view.joints).is_ok());
+    let painted =
+        paint_of(view, w).filter(|(paint, _)| crate::paint::check(w.path.len(), paint, &view.joints).is_ok());
     if let Some((paint, _)) = painted {
         // One pixel per node, none dropped and none merged: the paint is read per node.
         let path_px: Vec<[f64; 2]> = w.path.iter().map(|&p| map.px(p)).collect();
         match crate::paint::well_pieces(&path_px, paint, &view.joints) {
             Ok(pieces) => {
-                shapes.push(Shape::Circle { c: map.px(w.head), r: (width / 2.0 + 1.5).max(2.5), fill: colour.clone() });
+                shapes.push(Shape::Circle {
+                    c: map.px(w.head),
+                    r: (width / 2.0 + 1.5).max(2.5),
+                    fill: colour.clone(),
+                });
                 let md = w.md.as_ref().filter(|md| md.len() == w.path.len());
                 // The writer's interval has a butt cap: a gap between two
                 // pieces stays a gap (a polyline's round cap would close it).
@@ -1510,11 +1871,22 @@ fn laid_well(w: &WellItem, view: &View, unstratified: &UnstratifiedStyle, map: &
                     .into_iter()
                     .map(|piece| {
                         let (from, to) = match (md, piece.points.first(), piece.points.last()) {
-                            (Some(md), Some(&a), Some(&b)) => (md_at_px(&path_px, md, a), md_at_px(&path_px, md, b)),
+                            (Some(md), Some(&a), Some(&b)) => {
+                                (md_at_px(&path_px, md, a), md_at_px(&path_px, md, b))
+                            }
                             _ => (0.0, 0.0),
                         };
                         let stroke = crate::paint::over(&piece.colour, piece.opacity, &view.background);
-                        LaidInterval { from, to, unit: String::new(), unit_uri: None, colour: stroke, width, points: piece.points, tick: None }
+                        LaidInterval {
+                            from,
+                            to,
+                            unit: String::new(),
+                            unit_uri: None,
+                            colour: stroke,
+                            width,
+                            points: piece.points,
+                            tick: None,
+                        }
                     })
                     .collect();
                 return LaidObject {
@@ -1537,11 +1909,20 @@ fn laid_well(w: &WellItem, view: &View, unstratified: &UnstratifiedStyle, map: &
     // style, only what lies under the intervals. Off: only the intervals draw.
     if view.well_colouring != WellColouring::Strata || unstratified.is_default() {
         // The line under the intervals — what a drawing always was, byte for byte.
-        shapes.push(Shape::Polyline { points: path, stroke: colour.clone(), width, dash: false });
+        shapes.push(Shape::Polyline {
+            points: path,
+            stroke: colour.clone(),
+            width,
+            dash: false,
+        });
     } else {
         shapes.extend(unstratified_shapes(w, map, unstratified, width));
     }
-    shapes.push(Shape::Circle { c: map.px(w.head), r: (width / 2.0 + 1.5).max(2.5), fill: colour.clone() });
+    shapes.push(Shape::Circle {
+        c: map.px(w.head),
+        r: (width / 2.0 + 1.5).max(2.5),
+        fill: colour.clone(),
+    });
 
     let mut intervals = Vec::new();
     let mut last_to: Option<f64> = None;
@@ -1556,12 +1937,25 @@ fn laid_well(w: &WellItem, view: &View, unstratified: &UnstratifiedStyle, map: &
             let drawn = interval_colour(iv, &w.object.store, &colour, view);
             let tick = if view.strata_ticks && view.well_colouring == WellColouring::Strata {
                 let adjacent = last_to.is_some_and(|before| (before - iv.from).abs() < 1e-9);
-                if adjacent { tick_across(&points, width) } else { None }
+                if adjacent {
+                    tick_across(&points, width)
+                } else {
+                    None
+                }
             } else {
                 None
             };
             last_to = Some(iv.to);
-            intervals.push(LaidInterval { from: iv.from, to: iv.to, unit: iv.unit.clone(), unit_uri: iv.unit_uri.clone(), colour: drawn, width, points, tick });
+            intervals.push(LaidInterval {
+                from: iv.from,
+                to: iv.to,
+                unit: iv.unit.clone(),
+                unit_uri: iv.unit_uri.clone(),
+                colour: drawn,
+                width,
+                points,
+                tick,
+            });
         }
     }
     let _ = unit;
@@ -1583,7 +1977,9 @@ fn effective_style(view: &View, warnings: &mut Vec<String>) -> UnstratifiedStyle
     match style.refusal() {
         None => style,
         Some(why) => {
-            warnings.push(format!("unstratified style not drawn: {why}; the default is drawn"));
+            warnings.push(format!(
+                "unstratified style not drawn: {why}; the default is drawn"
+            ));
             UnstratifiedStyle::default()
         }
     }
@@ -1603,9 +1999,16 @@ pub fn hatch_ref() -> String {
 /// on, so the whole path is one portion. **The one reading** of "unstratified":
 /// the drawing, the note counting lost wells and the legend all ask it.
 pub fn unstratified_spans(w: &WellItem) -> Option<Vec<(f64, f64)>> {
-    let md = w.md.as_ref().filter(|md| md.len() == w.path.len() && md.len() > 1)?;
+    let md =
+        w.md.as_ref()
+            .filter(|md| md.len() == w.path.len() && md.len() > 1)?;
     let (lo, hi) = (md[0], md[md.len() - 1]);
-    let mut covered: Vec<(f64, f64)> = w.intervals.iter().map(|iv| (iv.from.max(lo), iv.to.min(hi))).filter(|(a, b)| b > a).collect();
+    let mut covered: Vec<(f64, f64)> = w
+        .intervals
+        .iter()
+        .map(|iv| (iv.from.max(lo), iv.to.min(hi)))
+        .filter(|(a, b)| b > a)
+        .collect();
     covered.sort_by(|a, b| a.0.total_cmp(&b.0));
     let mut out = Vec::new();
     let mut reached = lo;
@@ -1626,7 +2029,10 @@ pub fn unstratified_spans(w: &WellItem) -> Option<Vec<(f64, f64)>> {
 /// the path between its two MDs.
 fn unstratified_shapes(w: &WellItem, map: &Map, style: &UnstratifiedStyle, width: f64) -> Vec<Shape> {
     let pieces: Vec<Vec<[f64; 2]>> = match (unstratified_spans(w), w.md.as_ref()) {
-        (Some(spans), Some(md)) => spans.into_iter().map(|(a, b)| map.points(&sub_path(&w.path, md, a, b))).collect(),
+        (Some(spans), Some(md)) => spans
+            .into_iter()
+            .map(|(a, b)| map.points(&sub_path(&w.path, md, a, b)))
+            .collect(),
         _ => vec![map.points(&w.path)],
     };
     pieces
@@ -1634,11 +2040,25 @@ fn unstratified_shapes(w: &WellItem, map: &Map, style: &UnstratifiedStyle, width
         .filter(|points| points.len() >= 2)
         .filter_map(|points| match style {
             UnstratifiedStyle::Hidden => None,
-            UnstratifiedStyle::Solid { colour } => Some(Shape::Polyline { points, stroke: colour.clone(), width, dash: false }),
-            UnstratifiedStyle::Dashed { colour, dash, gap } => {
-                Some(Shape::Dashed { points, stroke: colour.clone(), width, dash: *dash, gap: *gap })
-            }
-            UnstratifiedStyle::Hatched { .. } => Some(Shape::Polyline { points, stroke: hatch_ref(), width, dash: false }),
+            UnstratifiedStyle::Solid { colour } => Some(Shape::Polyline {
+                points,
+                stroke: colour.clone(),
+                width,
+                dash: false,
+            }),
+            UnstratifiedStyle::Dashed { colour, dash, gap } => Some(Shape::Dashed {
+                points,
+                stroke: colour.clone(),
+                width,
+                dash: *dash,
+                gap: *gap,
+            }),
+            UnstratifiedStyle::Hatched { .. } => Some(Shape::Polyline {
+                points,
+                stroke: hatch_ref(),
+                width,
+                dash: false,
+            }),
         })
         .collect()
 }
@@ -1669,7 +2089,10 @@ fn tick_across(points: &[[f64; 2]], width: f64) -> Option<[[f64; 2]; 2]> {
 fn own_colour(iv: &Interval, store: &str, view: &View) -> Option<String> {
     let told = iv.unit_uri.as_deref().and_then(|uri| {
         let key = crate::model::object_key(store, uri);
-        view.unit_colours.iter().find(|(k, _)| *k == key).map(|(_, colour)| colour.clone())
+        view.unit_colours
+            .iter()
+            .find(|(k, _)| *k == key)
+            .map(|(_, colour)| colour.clone())
     });
     told.or_else(|| iv.colour.clone())
 }
@@ -1695,7 +2118,10 @@ fn sub_path(path: &[[f64; 2]], md: &[f64], from: f64, to: f64) -> Vec<[f64; 2]> 
         }
         let at = |m: f64| {
             let t = (m - m0) / (m1 - m0);
-            [path[i][0] + (path[i + 1][0] - path[i][0]) * t, path[i][1] + (path[i + 1][1] - path[i][1]) * t]
+            [
+                path[i][0] + (path[i + 1][0] - path[i][0]) * t,
+                path[i][1] + (path[i + 1][1] - path[i][1]) * t,
+            ]
         };
         let a = at(lo);
         if out.last() != Some(&a) {
@@ -1708,7 +2134,11 @@ fn sub_path(path: &[[f64; 2]], md: &[f64], from: f64, to: f64) -> Vec<[f64; 2]> 
 
 /// A well's name: its title, or the head of its uuid when the title is empty.
 fn well_name(object: &crate::model::ObjectId) -> String {
-    if object.title.is_empty() { object.uuid.chars().take(8).collect() } else { object.title.clone() }
+    if object.title.is_empty() {
+        object.uuid.chars().take(8).collect()
+    } else {
+        object.title.clone()
+    }
 }
 
 fn side_letter(side: Side) -> &'static str {
@@ -1739,7 +2169,11 @@ fn well_labels(
         }
         let mut lines = Vec::new();
         if view.show.names {
-            lines.push(labels::fit(&shown_name(coded, &w.object), FONT_PX, labels::MAX_WIDTH_PX));
+            lines.push(labels::fit(
+                &shown_name(coded, &w.object),
+                FONT_PX,
+                labels::MAX_WIDTH_PX,
+            ));
         }
         if view.show.distances {
             let space = if unit.is_empty() { "" } else { " " };
@@ -1747,12 +2181,26 @@ fn well_labels(
         }
         // A head near the top of the plot is labelled above the plot — the
         // labels do not cover the data, the marks or each other's wells.
-        let floor = if head[1] < map.frame.y + map.frame.h * 0.2 { map.frame.y - 2.0 } else { head[1] - 4.0 };
-        cands.push(HeadLabel { key: w.object.key(), title: w.object.title.clone(), head, lines, floor });
+        let floor = if head[1] < map.frame.y + map.frame.h * 0.2 {
+            map.frame.y - 2.0
+        } else {
+            head[1] - 4.0
+        };
+        cands.push(HeadLabel {
+            key: w.object.key(),
+            title: w.object.title.clone(),
+            head,
+            lines,
+            floor,
+        });
     }
     // Anywhere below the drawing's title and left of the legend.
-    let bounds =
-        labels::Rect2 { x0: 2.0, y0: TITLE_BAND_PX, x1: map.frame.x + map.frame.w, y1: map.frame.y + map.frame.h };
+    let bounds = labels::Rect2 {
+        x0: 2.0,
+        y0: TITLE_BAND_PX,
+        x1: map.frame.x + map.frame.w,
+        y1: map.frame.y + map.frame.h,
+    };
     head_labels(cands, bounds, obstacles)
 }
 
@@ -1767,7 +2215,11 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
     if view.axis != AxisMode::Projected {
         warnings.push("the plan is drawn in local plan coordinates whatever the axis mode".to_string());
     }
-    let wells: Vec<_> = p.wells.iter().filter(|w| !is_hidden(view, &w.object.key())).collect();
+    let wells: Vec<_> = p
+        .wells
+        .iter()
+        .filter(|w| !is_hidden(view, &w.object.key()))
+        .collect();
 
     let mut e = Extent::default();
     for (_, t) in &p.sections {
@@ -1787,16 +2239,26 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
         }
     }
     let given = view.window;
-    let everything = Window { x: padded(e.x, 0.05), y: padded(e.y, 0.05) };
+    let everything = Window {
+        x: padded(e.x, 0.05),
+        y: padded(e.y, 0.05),
+    };
     let wanted = given.unwrap_or(everything);
     if view.strata_legend {
         warnings.push("strata legend not drawn: the plan shows no strata along its wells".to_string());
     }
     if !view.markers.is_empty() {
-        warnings.push(format!("{} marker(s) not drawn: markers are drawn in sections only", view.markers.len()));
+        warnings.push(format!(
+            "{} marker(s) not drawn: markers are drawn in sections only",
+            view.markers.len()
+        ));
     }
     let labelled = view.show.names;
-    let reserved = if view.show.notes { warnings.len() + usize::from(labelled && !wells.is_empty()) } else { 0 };
+    let reserved = if view.show.notes {
+        warnings.len() + usize::from(labelled && !wells.is_empty())
+    } else {
+        0
+    };
     // Codes mode: the same codes as on every section, and their legend.
     let coded = (view.labels == LabelMode::Codes).then(|| codes(catalogue));
     let mut entries: Vec<LegendEntry> = Vec::new();
@@ -1806,13 +2268,24 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
                 continue;
             }
             if let Some(code) = coded.get(&w.object.key()) {
-                entries.push(LegendEntry { code: code.clone(), title: well_name(&w.object), colour: NEUTRAL_COLOUR.into(), round: true });
+                entries.push(LegendEntry {
+                    code: code.clone(),
+                    title: well_name(&w.object),
+                    colour: NEUTRAL_COLOUR.into(),
+                    round: true,
+                });
             }
         }
     }
     let legend_w = legend_width(&entries);
     let (_, _, note_lines) = budget(view.size_px[1], 1, reserved, |_| PLAN_TOP);
-    let frame = frame_of(view, note_lines, if legend_w > 0.0 { legend_w + 12.0 } else { 0.0 }, 0.0, PLAN_TOP);
+    let frame = frame_of(
+        view,
+        note_lines,
+        if legend_w > 0.0 { legend_w + 12.0 } else { 0.0 },
+        0.0,
+        PLAN_TOP,
+    );
     // Equal scales: the window is widened, never one axis stretched.
     let equal = |w: Window| {
         let scale = (frame.w / (w.x[1] - w.x[0])).min(frame.h / (w.y[1] - w.y[0]));
@@ -1826,8 +2299,17 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
         )
     };
     let (scale, window) = equal(wanted);
-    let whole = if given.is_some() { equal(everything).1 } else { window };
-    let map = Map { window, frame, sx: scale, sy: scale };
+    let whole = if given.is_some() {
+        equal(everything).1
+    } else {
+        window
+    };
+    let map = Map {
+        window,
+        frame,
+        sx: scale,
+        sy: scale,
+    };
 
     let mut layers = Vec::new();
     let mut section_objects = Vec::new();
@@ -1850,7 +2332,11 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
             });
         }
     }
-    layers.push(Layer { name: "fills", clipped: true, objects: section_objects });
+    layers.push(Layer {
+        name: "fills",
+        clipped: true,
+        objects: section_objects,
+    });
 
     let mut lines = Vec::new();
     let mut directions = Vec::new();
@@ -1886,7 +2372,11 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
         });
     }
     lines.extend(directions);
-    layers.push(Layer { name: "traces", clipped: true, objects: lines });
+    layers.push(Layer {
+        name: "traces",
+        clipped: true,
+        objects: lines,
+    });
 
     let mut well_objects = Vec::new();
     for w in &wells {
@@ -1895,7 +2385,11 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
         if out && !view.show.rejected {
             continue;
         }
-        let colour = if out { "#9e9e9e".to_string() } else { colour_of(view, &key).unwrap_or_else(|| NEUTRAL_COLOUR.into()) };
+        let colour = if out {
+            "#9e9e9e".to_string()
+        } else {
+            colour_of(view, &key).unwrap_or_else(|| NEUTRAL_COLOUR.into())
+        };
         let head = map.px(w.head);
         let mut shapes = Vec::new();
         for (_, foot) in &w.feet {
@@ -1906,7 +2400,11 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
                 dash: true,
             });
         }
-        shapes.push(Shape::Circle { c: head, r: 3.5, fill: colour });
+        shapes.push(Shape::Circle {
+            c: head,
+            r: 3.5,
+            fill: colour,
+        });
         well_objects.push(LaidObject {
             highlighted: view.highlight.contains(&key),
             attr: Attr::Key(key),
@@ -1917,8 +2415,16 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
             intervals: Vec::new(),
         });
     }
-    layers.push(Layer { name: "wells", clipped: true, objects: well_objects });
-    layers.push(Layer { name: "marks", clipped: true, objects: Vec::new() });
+    layers.push(Layer {
+        name: "wells",
+        clipped: true,
+        objects: well_objects,
+    });
+    layers.push(Layer {
+        name: "marks",
+        clipped: true,
+        objects: Vec::new(),
+    });
 
     // Labels: names only, above the head, by the same placer as in a section.
     let mut label_objects = Vec::new();
@@ -1930,39 +2436,83 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
                 continue;
             }
             let head = map.px(w.head);
-            if head[0] < frame.x || head[0] > frame.x + frame.w || head[1] < frame.y || head[1] > frame.y + frame.h {
+            if head[0] < frame.x
+                || head[0] > frame.x + frame.w
+                || head[1] < frame.y
+                || head[1] > frame.y + frame.h
+            {
                 continue;
             }
             cands.push(HeadLabel {
                 key: w.object.key(),
                 title: w.object.title.clone(),
                 head,
-                lines: vec![labels::fit(&shown_name(coded.as_ref(), &w.object), FONT_PX, labels::MAX_WIDTH_PX)],
+                lines: vec![labels::fit(
+                    &shown_name(coded.as_ref(), &w.object),
+                    FONT_PX,
+                    labels::MAX_WIDTH_PX,
+                )],
                 floor: head[1] - 4.0,
             });
         }
         // A label never covers a head: a head is what the plan is read for.
         let heads: Vec<labels::Rect2> = cands
             .iter()
-            .map(|c| labels::Rect2 { x0: c.head[0] - 4.0, y0: c.head[1] - 4.0, x1: c.head[0] + 4.0, y1: c.head[1] + 4.0 })
+            .map(|c| labels::Rect2 {
+                x0: c.head[0] - 4.0,
+                y0: c.head[1] - 4.0,
+                x1: c.head[0] + 4.0,
+                y1: c.head[1] + 4.0,
+            })
             .collect();
-        let bounds = labels::Rect2 { x0: frame.x, y0: frame.y, x1: frame.x + frame.w, y1: frame.y + frame.h };
+        let bounds = labels::Rect2 {
+            x0: frame.x,
+            y0: frame.y,
+            x1: frame.x + frame.w,
+            y1: frame.y + frame.h,
+        };
         (label_objects, folded) = head_labels(cands, bounds, &heads);
     }
-    layers.push(Layer { name: "labels", clipped: false, objects: label_objects });
-    let legend_box = legend(entries, frame.x + frame.w + 12.0, legend_w, frame.y, frame.y + frame.h);
-    layers.push(Layer { name: "legend", clipped: false, objects: legend_box.into_iter().collect() });
+    layers.push(Layer {
+        name: "labels",
+        clipped: false,
+        objects: label_objects,
+    });
+    let legend_box = legend(
+        entries,
+        frame.x + frame.w + 12.0,
+        legend_w,
+        frame.y,
+        frame.y + frame.h,
+    );
+    layers.push(Layer {
+        name: "legend",
+        clipped: false,
+        objects: legend_box.into_iter().collect(),
+    });
     if folded > 0 {
         warnings.push(format!("{folded} well labels folded — they did not fit"));
     }
 
     let (xs, xv) = ticks::values(window.x[0], window.x[1], frame.w / 90.0);
     let x_axis = Axis {
-        title: format!("x, local{}", if unit.is_empty() { String::new() } else { format!(" ({unit})") }),
+        title: format!(
+            "x, local{}",
+            if unit.is_empty() {
+                String::new()
+            } else {
+                format!(" ({unit})")
+            }
+        ),
         mode: AxisMode::Projected,
         ticks: xv
             .into_iter()
-            .map(|v| Tick { value: v, at: map.px([v, 0.0])[0], label: ticks::label(v, xs), sublabel: None })
+            .map(|v| Tick {
+                value: v,
+                at: map.px([v, 0.0])[0],
+                label: ticks::label(v, xs),
+                sublabel: None,
+            })
             .collect(),
     };
     let y_axis = y_axis(&map, &unit, "y, local");
@@ -1970,7 +2520,11 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
     let (origin_text, origin_x) = origin_line(
         view.show.origin,
         Some(catalogue.plan.origin),
-        catalogue.inputs.system.as_ref().or(catalogue.plan.system.as_ref()),
+        catalogue
+            .inputs
+            .system
+            .as_ref()
+            .or(catalogue.plan.system.as_ref()),
         "Plan",
         "scale 1:1 on both axes",
         &frame,
@@ -2023,7 +2577,9 @@ const LEGEND_MAX_PX: f64 = 280.0;
 /// and other surfaces top first (their mean height where first cut); faults
 /// along the trace.
 fn codes(catalogue: &Catalogue) -> HashMap<String, String> {
-    let sections: Vec<&Section> = std::iter::once(&catalogue.long).chain(&catalogue.crosses).collect();
+    let sections: Vec<&Section> = std::iter::once(&catalogue.long)
+        .chain(&catalogue.crosses)
+        .collect();
     let mut wells: Vec<(String, usize, f64)> = Vec::new();
     // (key, family, sort value) — the first cut met decides.
     let mut surfaces: Vec<(String, char, f64)> = Vec::new();
@@ -2077,14 +2633,19 @@ fn codes(catalogue: &Catalogue) -> HashMap<String, String> {
 
 /// The mean of one coordinate over spans (0: s, 1: z); 0 when there is none.
 fn mean_of(spans: &[Vec<[f64; 2]>], axis: usize) -> f64 {
-    let (sum, n) = spans.iter().flatten().fold((0.0, 0usize), |(sum, n), p| (sum + p[axis], n + 1));
+    let (sum, n) = spans
+        .iter()
+        .flatten()
+        .fold((0.0, 0usize), |(sum, n), p| (sum + p[axis], n + 1));
     if n == 0 { 0.0 } else { sum / n as f64 }
 }
 
 /// What an object is called on the drawing: its code in codes mode, else its
 /// title (or the head of its uuid).
 fn shown_name(codes: Option<&HashMap<String, String>>, object: &crate::model::ObjectId) -> String {
-    codes.and_then(|c| c.get(&object.key()).cloned()).unwrap_or_else(|| well_name(object))
+    codes
+        .and_then(|c| c.get(&object.key()).cloned())
+        .unwrap_or_else(|| well_name(object))
 }
 
 /// A label that hangs above a head: a well's name and distance.
@@ -2103,7 +2664,11 @@ struct HeadLabel {
 /// on the head, then a whole width to the right, then to the left; a label not
 /// centred straight above its head gets a **dotted leader** to it. A label that
 /// finds no place within [`HEAD_LEVELS`] levels is folded and counted.
-fn head_labels(mut cands: Vec<HeadLabel>, bounds: labels::Rect2, obstacles: &[labels::Rect2]) -> (Vec<LaidObject>, usize) {
+fn head_labels(
+    mut cands: Vec<HeadLabel>,
+    bounds: labels::Rect2,
+    obstacles: &[labels::Rect2],
+) -> (Vec<LaidObject>, usize) {
     cands.sort_by(|a, b| a.head[0].total_cmp(&b.head[0]));
     let mut placer = labels::Placer::new(bounds);
     obstacles.iter().for_each(|r| placer.block(*r));
@@ -2111,7 +2676,11 @@ fn head_labels(mut cands: Vec<HeadLabel>, bounds: labels::Rect2, obstacles: &[la
     let mut folded = 0;
     for c in cands {
         let n = c.lines.len().max(1) as f64;
-        let w = c.lines.iter().map(|l| labels::width_px(l, FONT_PX)).fold(0.0, f64::max);
+        let w = c
+            .lines
+            .iter()
+            .map(|l| labels::width_px(l, FONT_PX))
+            .fold(0.0, f64::max);
         let h = (n - 1.0) * LINE_PX + FONT_PX + 3.0;
         let mut spots: Vec<(labels::Rect2, f64, f64)> = Vec::new(); // rect, centre x, last baseline
         // Up first, straight above the head; then a little aside (the right
@@ -2122,8 +2691,12 @@ fn head_labels(mut cands: Vec<HeadLabel>, bounds: labels::Rect2, obstacles: &[la
             for level in 0..HEAD_LEVELS {
                 let baseline = c.head[1] - 7.0 - level as f64 * (h + 3.0);
                 let cx = c.head[0] + dx;
-                let rect =
-                    labels::Rect2 { x0: cx - w / 2.0, y0: baseline + 3.0 - h, x1: cx + w / 2.0, y1: baseline + 3.0 };
+                let rect = labels::Rect2 {
+                    x0: cx - w / 2.0,
+                    y0: baseline + 3.0 - h,
+                    x1: cx + w / 2.0,
+                    y1: baseline + 3.0,
+                };
                 // A label never goes down into the plot past its own head's
                 // band: above the plot when the head is near its top.
                 if rect.y1 <= c.floor {
@@ -2175,14 +2748,25 @@ fn head_labels(mut cands: Vec<HeadLabel>, bounds: labels::Rect2, obstacles: &[la
 fn text_rects<'a>(shapes: impl Iterator<Item = &'a Shape>) -> Vec<labels::Rect2> {
     shapes
         .filter_map(|shape| match shape {
-            Shape::Text { at, text, anchor, size, .. } => {
+            Shape::Text {
+                at,
+                text,
+                anchor,
+                size,
+                ..
+            } => {
                 let w = labels::width_px(text, *size);
                 let x0 = match anchor {
                     Anchor::Start => at[0],
                     Anchor::Middle => at[0] - w / 2.0,
                     Anchor::End => at[0] - w,
                 };
-                Some(labels::Rect2 { x0, y0: at[1] - size, x1: x0 + w, y1: at[1] + 2.0 })
+                Some(labels::Rect2 {
+                    x0,
+                    y0: at[1] - size,
+                    x1: x0 + w,
+                    y1: at[1] + 2.0,
+                })
             }
             _ => None,
         })
@@ -2203,7 +2787,11 @@ struct LineName {
 /// own width — above, below — step by step; the names are taken top first, so a
 /// name far from the others finds its first place free (the *reset*). A name
 /// with no place within [`NAME_SHIFTS`] steps is folded and counted.
-fn line_names(mut names: Vec<LineName>, bounds: labels::Rect2, obstacles: &[labels::Rect2]) -> (Vec<(usize, Shape)>, usize) {
+fn line_names(
+    mut names: Vec<LineName>,
+    bounds: labels::Rect2,
+    obstacles: &[labels::Rect2],
+) -> (Vec<(usize, Shape)>, usize) {
     names.sort_by(|a, b| a.end[1].total_cmp(&b.end[1]));
     let mut placer = labels::Placer::new(bounds);
     obstacles.iter().for_each(|r| placer.block(*r));
@@ -2217,7 +2805,12 @@ fn line_names(mut names: Vec<LineName>, bounds: labels::Rect2, obstacles: &[labe
             let above = n.end[1] - 3.0;
             let below = n.end[1] + SMALL_PX + 2.0;
             for baseline in [above, below] {
-                let rect = labels::Rect2 { x0: right - w, y0: baseline - SMALL_PX, x1: right, y1: baseline + 2.0 };
+                let rect = labels::Rect2 {
+                    x0: right - w,
+                    y0: baseline - SMALL_PX,
+                    x1: right,
+                    y1: baseline + 2.0,
+                };
                 spots.push((rect, [right, baseline]));
             }
         }
@@ -2225,7 +2818,13 @@ fn line_names(mut names: Vec<LineName>, bounds: labels::Rect2, obstacles: &[labe
         match placer.place(&rects) {
             Some(at) => out.push((
                 n.owner,
-                Shape::Text { at: spots[at].1, text: n.text, anchor: Anchor::End, size: SMALL_PX, fill: n.colour },
+                Shape::Text {
+                    at: spots[at].1,
+                    text: n.text,
+                    anchor: Anchor::End,
+                    size: SMALL_PX,
+                    fill: n.colour,
+                },
             )),
             None => folded += 1,
         }
@@ -2290,9 +2889,15 @@ fn strata_titles(entries: &[StrataEntry], view: &View) -> Vec<String> {
         .enumerate()
         .map(|(i, e)| {
             let title = unit_title(&e.unit);
-            let twice = entries.iter().enumerate().any(|(j, other)| j != i && other.same_unit(e));
+            let twice = entries
+                .iter()
+                .enumerate()
+                .any(|(j, other)| j != i && other.same_unit(e));
             if twice && !e.stores.is_empty() {
-                format!("{title} — {}", e.stores.iter().map(|s| name(s)).collect::<Vec<_>>().join(", "))
+                format!(
+                    "{title} — {}",
+                    e.stores.iter().map(|s| name(s)).collect::<Vec<_>>().join(", ")
+                )
             } else {
                 title
             }
@@ -2321,12 +2926,19 @@ fn strata_units(wells: &[&WellItem], view: &View) -> Vec<StrataEntry> {
         if painted(view, w) || w.md.as_ref().is_none_or(|md| md.len() != w.path.len()) {
             continue;
         }
-        let mut intervals: Vec<&Interval> = w.intervals.iter().filter(|iv| own_colour(iv, &w.object.store, view).is_some()).collect();
+        let mut intervals: Vec<&Interval> = w
+            .intervals
+            .iter()
+            .filter(|iv| own_colour(iv, &w.object.store, view).is_some())
+            .collect();
         intervals.sort_by(|a, b| a.from.total_cmp(&b.from));
         let mut previous: Option<usize> = None;
         for iv in intervals {
             let colour = interval_colour(iv, &w.object.store, "", view);
-            let at = match nodes.iter().position(|n| n.same_line(&iv.unit, &colour, iv.unit_uri.as_deref())) {
+            let at = match nodes
+                .iter()
+                .position(|n| n.same_line(&iv.unit, &colour, iv.unit_uri.as_deref()))
+            {
                 Some(at) => {
                     if !nodes[at].stores.contains(&w.object.store) {
                         nodes[at].stores.push(w.object.store.clone());
@@ -2358,7 +2970,9 @@ fn strata_units(wells: &[&WellItem], view: &View) -> Vec<StrataEntry> {
     let mut done = vec![false; nodes.len()];
     let mut order = Vec::with_capacity(nodes.len());
     while order.len() < nodes.len() {
-        let next = (0..nodes.len()).find(|&i| !done[i] && waiting[i] == 0).or_else(|| (0..nodes.len()).find(|&i| !done[i]));
+        let next = (0..nodes.len())
+            .find(|&i| !done[i] && waiting[i] == 0)
+            .or_else(|| (0..nodes.len()).find(|&i| !done[i]));
         let Some(next) = next else { break };
         done[next] = true;
         order.push(nodes[next].clone());
@@ -2414,20 +3028,36 @@ fn strata_width(entries: &[StrataEntry], no_strata: bool, view: &View) -> f64 {
 const NO_STRATA_TITLE: &str = "No strata";
 
 fn unit_title(unit: &str) -> String {
-    if unit.is_empty() { "(unnamed unit)".to_string() } else { unit.to_string() }
+    if unit.is_empty() {
+        "(unnamed unit)".to_string()
+    } else {
+        unit.to_string()
+    }
 }
 
 /// The strata legend, in a box at `x` from `top` down to at most `bottom`: a
 /// heading, then a swatch and a title per unit — **one object per unit**, with
 /// the unit's title and the colour its interval is drawn in. What does not fit is
 /// said on its last line. Nothing when there is no unit: never an empty box.
-fn strata_legend(entries: &[StrataEntry], view: &View, no_strata: Option<&UnstratifiedStyle>, x: f64, width: f64, top: f64, bottom: f64) -> Vec<LaidObject> {
+fn strata_legend(
+    entries: &[StrataEntry],
+    view: &View,
+    no_strata: Option<&UnstratifiedStyle>,
+    x: f64,
+    width: f64,
+    top: f64,
+    bottom: f64,
+) -> Vec<LaidObject> {
     if entries.is_empty() {
         return Vec::new();
     }
     let room = (((bottom - top) - LINE_PX - 8.0) / LINE_PX).floor().max(1.0) as usize;
     let extra = usize::from(no_strata.is_some());
-    let shown = if entries.len() + extra > room { room.saturating_sub(1 + extra) } else { entries.len() };
+    let shown = if entries.len() + extra > room {
+        room.saturating_sub(1 + extra)
+    } else {
+        entries.len()
+    };
     let height = LINE_PX * (shown + 1 + extra + usize::from(shown < entries.len())) as f64 + 10.0;
     let decor = |name: &str, title: String, shapes: Vec<Shape>| LaidObject {
         attr: Attr::Decor(name.into()),
@@ -2440,13 +3070,24 @@ fn strata_legend(entries: &[StrataEntry], view: &View, no_strata: Option<&Unstra
     };
     let mut frame = vec![
         Shape::Polygon {
-            points: vec![[x, top], [x + width, top], [x + width, top + height], [x, top + height]],
+            points: vec![
+                [x, top],
+                [x + width, top],
+                [x + width, top + height],
+                [x, top + height],
+            ],
             fill: "#ffffff".into(),
             opacity: 0.92,
             stroke: Some("#999999".into()),
             dash: false,
         },
-        Shape::Text { at: [x + 8.0, top + LINE_PX], text: "Stratigraphy".into(), anchor: Anchor::Start, size: FONT_PX, fill: INK.into() },
+        Shape::Text {
+            at: [x + 8.0, top + LINE_PX],
+            text: "Stratigraphy".into(),
+            anchor: Anchor::Start,
+            size: FONT_PX,
+            fill: INK.into(),
+        },
     ];
     if shown < entries.len() {
         frame.push(Shape::Text {
@@ -2467,7 +3108,12 @@ fn strata_legend(entries: &[StrataEntry], view: &View, no_strata: Option<&Unstra
             e.unit.clone(),
             vec![
                 Shape::Polygon {
-                    points: vec![[x + 8.0, y - 9.0], [x + 22.0, y - 9.0], [x + 22.0, y - 1.0], [x + 8.0, y - 1.0]],
+                    points: vec![
+                        [x + 8.0, y - 9.0],
+                        [x + 22.0, y - 9.0],
+                        [x + 22.0, y - 1.0],
+                        [x + 8.0, y - 1.0],
+                    ],
                     fill: e.colour.clone(),
                     opacity: 1.0,
                     stroke: Some("#666666".into()),
@@ -2490,8 +3136,19 @@ fn strata_legend(entries: &[StrataEntry], view: &View, no_strata: Option<&Unstra
     if let Some(style) = no_strata {
         // After the units: the portions no unit covers, in the style they are drawn in.
         let y = top + LINE_PX * (shown as f64 + 2.0);
-        let swatch = [[x + 8.0, y - 9.0], [x + 22.0, y - 9.0], [x + 22.0, y - 1.0], [x + 8.0, y - 1.0]];
-        let boxed = |fill: String| Shape::Polygon { points: swatch.to_vec(), fill, opacity: 1.0, stroke: Some("#666666".into()), dash: false };
+        let swatch = [
+            [x + 8.0, y - 9.0],
+            [x + 22.0, y - 9.0],
+            [x + 22.0, y - 1.0],
+            [x + 8.0, y - 1.0],
+        ];
+        let boxed = |fill: String| Shape::Polygon {
+            points: swatch.to_vec(),
+            fill,
+            opacity: 1.0,
+            stroke: Some("#666666".into()),
+            dash: false,
+        };
         let mut shapes = match style {
             UnstratifiedStyle::Solid { colour } => vec![boxed(colour.clone())],
             UnstratifiedStyle::Dashed { colour, dash, gap } => vec![Shape::Dashed {
@@ -2543,15 +3200,33 @@ fn legend(mut entries: Vec<LegendEntry>, x: f64, width: f64, top: f64, bottom: f
     if entries.is_empty() {
         return None;
     }
-    let family = |c: &str| ["W", "H", "F", "S", "G"].iter().position(|f| c.starts_with(f)).unwrap_or(9);
+    let family = |c: &str| {
+        ["W", "H", "F", "S", "G"]
+            .iter()
+            .position(|f| c.starts_with(f))
+            .unwrap_or(9)
+    };
     let number = |c: &str| c[1..].parse::<usize>().unwrap_or(0);
-    entries.sort_by(|a, b| family(&a.code).cmp(&family(&b.code)).then(number(&a.code).cmp(&number(&b.code))));
+    entries.sort_by(|a, b| {
+        family(&a.code)
+            .cmp(&family(&b.code))
+            .then(number(&a.code).cmp(&number(&b.code)))
+    });
     let room = (((bottom - top) - LINE_PX - 8.0) / LINE_PX).floor().max(1.0) as usize;
-    let shown = if entries.len() > room { room.saturating_sub(1) } else { entries.len() };
+    let shown = if entries.len() > room {
+        room.saturating_sub(1)
+    } else {
+        entries.len()
+    };
     let height = LINE_PX * (shown + 1 + usize::from(shown < entries.len())) as f64 + 10.0;
     let mut shapes = vec![
         Shape::Polygon {
-            points: vec![[x, top], [x + width, top], [x + width, top + height], [x, top + height]],
+            points: vec![
+                [x, top],
+                [x + width, top],
+                [x + width, top + height],
+                [x, top + height],
+            ],
             fill: "#ffffff".into(),
             opacity: 0.92,
             stroke: Some("#999999".into()),
@@ -2565,11 +3240,18 @@ fn legend(mut entries: Vec<LegendEntry>, x: f64, width: f64, top: f64, bottom: f
             fill: INK.into(),
         },
     ];
-    let code_w = entries.iter().map(|e| labels::width_px(&e.code, SMALL_PX)).fold(0.0, f64::max);
+    let code_w = entries
+        .iter()
+        .map(|e| labels::width_px(&e.code, SMALL_PX))
+        .fold(0.0, f64::max);
     for (i, e) in entries.iter().take(shown).enumerate() {
         let y = top + LINE_PX * (i as f64 + 2.0);
         if e.round {
-            shapes.push(Shape::Circle { c: [x + 12.0, y - 4.0], r: 3.5, fill: e.colour.clone() });
+            shapes.push(Shape::Circle {
+                c: [x + 12.0, y - 4.0],
+                r: 3.5,
+                fill: e.colour.clone(),
+            });
         } else {
             shapes.push(Shape::Polyline {
                 points: vec![[x + 6.0, y - 4.0], [x + 18.0, y - 4.0]],

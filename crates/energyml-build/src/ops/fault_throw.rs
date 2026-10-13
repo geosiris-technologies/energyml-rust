@@ -91,7 +91,9 @@ use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use energyml_resqml_2_2 as resqml;
 
 use crate::declare::{Choice, CrsRef, Inputs, ObjectIn, Params, Shape, Suggestions, TypeName};
-use crate::operation::{About, Category, Context, Dataset, Identity, Need, Note, Numbers, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, Category, Context, Dataset, Identity, Need, Note, Numbers, Operation, Plan, Refusal, Slot,
+};
 use crate::pieces::Pieces;
 
 use super::fault::Throw;
@@ -180,8 +182,13 @@ pub struct FaultThrowInputs {
 fn synthetic_mark() -> eml::ExtensionNameValue {
     eml::ExtensionNameValue {
         name: "synthetic".to_string(),
-        value: eml::StringMeasure { value: "true".to_string(), ..Default::default() },
-        description: Some("an invented throw, written by `fault-throw` from a stated law, not measured".to_string()),
+        value: eml::StringMeasure {
+            value: "true".to_string(),
+            ..Default::default()
+        },
+        description: Some(
+            "an invented throw, written by `fault-throw` from a stated law, not measured".to_string(),
+        ),
         ..Default::default()
     }
 }
@@ -195,7 +202,9 @@ fn surface_of(shape: &Shape) -> Option<Surface> {
     let mut points = Vec::new();
     let mut triangles = Vec::new();
     for patch in &shape.geometry.patches {
-        let Topology::Triangles(faces) = &patch.topology else { continue };
+        let Topology::Triangles(faces) = &patch.topology else {
+            continue;
+        };
         let base = points.len() as u32;
         points.extend(patch.points.iter().copied());
         triangles.extend(faces.iter().map(|f| [f[0] + base, f[1] + base, f[2] + base]));
@@ -205,7 +214,12 @@ fn surface_of(shape: &Shape) -> Option<Surface> {
 
 /// What names a shape in a message: its object's title, or its name in the bag.
 fn name_of(shape: &Shape) -> String {
-    shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|one| one.title.clone()).unwrap_or_else(|| shape.name.clone())
+    shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|one| one.title.clone())
+        .unwrap_or_else(|| shape.name.clone())
 }
 
 /// The slot a refusal of the computation belongs to.
@@ -228,7 +242,11 @@ impl Operation for FaultThrow {
             name: "fault-throw",
             describe: "a horizon torn along the faults that cut it — the triangulated surface with its split edges, its hanging walls offset by a stated throw, a new interpretation of its feature, and the lips",
             category: Category::Faults,
-            makes: &["resqml22.TriangulatedSetRepresentation", "resqml22.HorizonInterpretation", "resqml22.PolylineSetRepresentation"],
+            makes: &[
+                "resqml22.TriangulatedSetRepresentation",
+                "resqml22.HorizonInterpretation",
+                "resqml22.PolylineSetRepresentation",
+            ],
             recipe: "fault-throw",
             represents: None,
         }
@@ -259,7 +277,13 @@ impl Operation for FaultThrow {
                 }
                 Topology::Points | Topology::Grid { .. } => {}
                 _ => {
-                    return Err(Refusal::on("horizon", format!("`{}` is not a surface's nodes — give a grid or a cloud", name_of(&inputs.horizon))));
+                    return Err(Refusal::on(
+                        "horizon",
+                        format!(
+                            "`{}` is not a surface's nodes — give a grid or a cloud",
+                            name_of(&inputs.horizon)
+                        ),
+                    ));
                 }
             }
         }
@@ -267,14 +291,22 @@ impl Operation for FaultThrow {
             if surface_of(fault).is_none() {
                 return Err(Refusal::on(
                     "faults",
-                    format!("`{}` is not a triangulated surface — a fault's trace on the horizon is computed from its surface", name_of(fault)),
+                    format!(
+                        "`{}` is not a triangulated surface — a fault's trace on the horizon is computed from its surface",
+                        name_of(fault)
+                    ),
                 ));
             }
         }
         Ok(())
     }
 
-    fn plan(&self, inputs: FaultThrowInputs, params: FaultThrowParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: FaultThrowInputs,
+        params: FaultThrowParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let title = params.naming.title();
         let count = inputs.faults.len();
 
@@ -282,13 +314,19 @@ impl Operation for FaultThrow {
         if params.maximum_throw.len() != count {
             return Err(Refusal::on(
                 "maximumThrow",
-                format!("{} throw(s) for {count} fault(s) — one per fault, in the order of `faults`", params.maximum_throw.len()),
+                format!(
+                    "{} throw(s) for {count} fault(s) — one per fault, in the order of `faults`",
+                    params.maximum_throw.len()
+                ),
             ));
         }
         if params.throw.len() != count {
             return Err(Refusal::on(
                 "throw",
-                format!("{} kind(s) of throw for {count} fault(s) — one per fault, in the order of `faults`", params.throw.len()),
+                format!(
+                    "{} kind(s) of throw for {count} fault(s) — one per fault, in the order of `faults`",
+                    params.throw.len()
+                ),
             ));
         }
         let names: Vec<String> = inputs.faults.iter().map(name_of).collect();
@@ -308,7 +346,12 @@ impl Operation for FaultThrow {
                 }
             });
         }
-        let source = params.source.as_deref().map(str::trim).filter(|one| !one.is_empty()).map(str::to_string);
+        let source = params
+            .source
+            .as_deref()
+            .map(str::trim)
+            .filter(|one| !one.is_empty())
+            .map(str::to_string);
         if params.synthetic && source.is_none() {
             return Err(Refusal::on(
                 "source",
@@ -323,7 +366,10 @@ impl Operation for FaultThrow {
             if params.frame.source_epsg.is_some() {
                 return Err(Refusal::on(
                     "sourceEpsg",
-                    format!("`{horizon_name}` is in `{}`, and its torn copy is written there — name it as `crs` rather than creating a frame", own.title),
+                    format!(
+                        "`{horizon_name}` is in `{}`, and its torn copy is written there — name it as `crs` rather than creating a frame",
+                        own.title
+                    ),
                 ));
             }
             if let Some(named) = params.frame.crs.as_ref().and_then(|one| one.0["Uuid"].as_str())
@@ -331,17 +377,25 @@ impl Operation for FaultThrow {
             {
                 return Err(Refusal::on(
                     "crs",
-                    format!("`{horizon_name}` is in `{}`, and the frame named is another — its torn copy is written in the horizon's own frame", own.title),
+                    format!(
+                        "`{horizon_name}` is in `{}`, and the frame named is another — its torn copy is written in the horizon's own frame",
+                        own.title
+                    ),
                 ));
             }
         }
         for (fault, name) in inputs.faults.iter().zip(&names) {
-            if let (Some(own), Some(theirs)) = (&horizon_frame, fault.known.as_ref().and_then(|known| known.crs.as_ref()))
-                && !own.uuid.eq_ignore_ascii_case(&theirs.uuid)
+            if let (Some(own), Some(theirs)) = (
+                &horizon_frame,
+                fault.known.as_ref().and_then(|known| known.crs.as_ref()),
+            ) && !own.uuid.eq_ignore_ascii_case(&theirs.uuid)
             {
                 return Err(Refusal::on(
                     "faults",
-                    format!("`{name}` is in `{}` and `{horizon_name}` in `{}` — a trace read across two frames is read across two origins", theirs.title, own.title),
+                    format!(
+                        "`{name}` is in `{}` and `{horizon_name}` in `{}` — a trace read across two frames is read across two origins",
+                        theirs.title, own.title
+                    ),
                 ));
             }
         }
@@ -357,7 +411,9 @@ impl Operation for FaultThrow {
             Some(other) => {
                 return Err(Refusal::on(
                     "crs",
-                    format!("the frame counts its vertical axis in `{other}`, and a throw and a reach are given in metres — no conversion is made"),
+                    format!(
+                        "the frame counts its vertical axis in `{other}`, and a throw and a reach are given in metres — no conversion is made"
+                    ),
                 ));
             }
             None => {
@@ -369,7 +425,13 @@ impl Operation for FaultThrow {
         }
 
         // -- the horizon's nodes ----------------------------------------------------
-        let nodes: Vec<[f64; 3]> = inputs.horizon.geometry.patches.iter().flat_map(|patch| patch.points.iter().copied()).collect();
+        let nodes: Vec<[f64; 3]> = inputs
+            .horizon
+            .geometry
+            .patches
+            .iter()
+            .flat_map(|patch| patch.points.iter().copied())
+            .collect();
         let holes = nodes.iter().filter(|p| !p.iter().all(|c| c.is_finite())).count();
         if holes > 0 {
             return Err(Refusal::on(
@@ -383,7 +445,11 @@ impl Operation for FaultThrow {
 
         // -- the computation ----------------------------------------------------------
         cx.stop_if_cancelled()?;
-        let surfaces: Vec<Surface> = inputs.faults.iter().map(|fault| surface_of(fault).unwrap_or_default()).collect();
+        let surfaces: Vec<Surface> = inputs
+            .faults
+            .iter()
+            .map(|fault| surface_of(fault).unwrap_or_default())
+            .collect();
         let faults: Vec<Fault<'_>> = surfaces
             .iter()
             .zip(&names)
@@ -396,14 +462,25 @@ impl Operation for FaultThrow {
                 sense: *sense,
             })
             .collect();
-        let settings = Settings { profile: params.profile.computed(), reach: params.reach, heave: params.heave, up };
+        let settings = Settings {
+            profile: params.profile.computed(),
+            reach: params.reach,
+            heave: params.heave,
+            up,
+        };
         let torn = fault_throw::throw(&nodes, &faults, &settings).map_err(refusal)?;
         cx.stop_if_cancelled()?;
 
         // -- the torn surface, by its writer -------------------------------------------
         let seed = format!(
             "fault-throw:{}:{title}",
-            inputs.horizon.known.as_ref().and_then(|known| known.reference.as_ref()).map(|one| one.uuid.to_ascii_lowercase()).unwrap_or_else(|| inputs.horizon.name.clone())
+            inputs
+                .horizon
+                .known
+                .as_ref()
+                .and_then(|known| known.reference.as_ref())
+                .map(|one| one.uuid.to_ascii_lowercase())
+                .unwrap_or_else(|| inputs.horizon.name.clone())
         );
         let written = Written {
             frame: params.frame.clone(),
@@ -419,12 +496,19 @@ impl Operation for FaultThrow {
             name: title.clone(),
             geometry: Geometry {
                 kind: "fault-throw",
-                patches: vec![Patch { index: 0, node_offset: 0, points: torn.points.clone(), topology: Topology::Triangles(torn.triangles.clone()), closed: Vec::new() }],
+                patches: vec![Patch {
+                    index: 0,
+                    node_offset: 0,
+                    points: torn.points.clone(),
+                    topology: Topology::Triangles(torn.triangles.clone()),
+                    closed: Vec::new(),
+                }],
             },
             closed: None,
             known: None,
         };
-        let mut plan = super::triangles::write(&TrianglesInputs { shape: vec![surface] }, &written, &seed, cx)?;
+        let mut plan =
+            super::triangles::write(&TrianglesInputs { shape: vec![surface] }, &written, &seed, cx)?;
         let at = plan
             .objects
             .iter()
@@ -440,7 +524,10 @@ impl Operation for FaultThrow {
             for lip in [&fault.lip.footwall, &fault.lip.hanging_wall] {
                 let rank = edge_patches.len();
                 let path = format!("/resqml22/{surface_uuid}/patch0/splitEdges{rank}");
-                let pairs: Vec<i64> = lip.windows(2).flat_map(|pair| [pair[0] as i64, pair[1] as i64]).collect();
+                let pairs: Vec<i64> = lip
+                    .windows(2)
+                    .flat_map(|pair| [pair[0] as i64, pair[1] as i64])
+                    .collect();
                 let edges = lip.len().saturating_sub(1);
                 split_edges += edges;
                 edge_patches.push(json!({
@@ -453,7 +540,12 @@ impl Operation for FaultThrow {
                         "Values": support::external(&file, &path, &[edges as i64, 2]),
                     },
                 }));
-                plan.datasets.push(Dataset { file: file.clone(), path, dimensions: vec![edges as i64, 2], values: Numbers::I64(pairs) });
+                plan.datasets.push(Dataset {
+                    file: file.clone(),
+                    path,
+                    dimensions: vec![edges as i64, 2],
+                    values: Numbers::I64(pairs),
+                });
             }
         }
         plan.objects[at].json["TrianglePatch"][0]["SplitEdgePatch"] = json!(edge_patches);
@@ -463,7 +555,11 @@ impl Operation for FaultThrow {
             "throw(s) = maximum · {}, s along the trace from 0 to 1; the hanging wall dragged over {} m, the offset falling linearly to zero there{}",
             params.profile.law(),
             params.reach,
-            if params.heave { ", along the fault's measured mean dip" } else { ", straight down" }
+            if params.heave {
+                ", along the fault's measured mean dip"
+            } else {
+                ", straight down"
+            }
         );
         let description = source.as_ref().map(|source| {
             if params.synthetic {
@@ -477,18 +573,23 @@ impl Operation for FaultThrow {
         {
             return Err(Refusal::on(
                 "source",
-                format!("makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter", text.chars().count()),
+                format!(
+                    "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                    text.chars().count()
+                ),
             ));
         }
 
         // -- the new interpretation ------------------------------------------------------------
-        let feature = inputs
-            .feature
-            .known
-            .reference
-            .clone()
-            .ok_or_else(|| Refusal::on("feature", format!("`{}` was given without a reference to write", inputs.feature.name)))?;
-        let interpretation_uuid = cx.identity.uuid(&format!("interpretation:{seed}"), plan.objects.len())?;
+        let feature = inputs.feature.known.reference.clone().ok_or_else(|| {
+            Refusal::on(
+                "feature",
+                format!("`{}` was given without a reference to write", inputs.feature.name),
+            )
+        })?;
+        let interpretation_uuid = cx
+            .identity
+            .uuid(&format!("interpretation:{seed}"), plan.objects.len())?;
         let interpretation_title = format!("{title} — interpretation");
         let interpretation = resqml::HorizonInterpretation {
             uuid: interpretation_uuid.clone(),
@@ -501,7 +602,11 @@ impl Operation for FaultThrow {
                 description: description.clone(),
                 ..Default::default()
             },
-            extension_name_value: if params.synthetic { vec![synthetic_mark()] } else { Vec::new() },
+            extension_name_value: if params.synthetic {
+                vec![synthetic_mark()]
+            } else {
+                Vec::new()
+            },
             domain: match unit.as_deref().and_then(Dimension::of) {
                 Some(Dimension::Length) => Some(resqml::Domain::Depth),
                 _ => None,
@@ -541,7 +646,10 @@ impl Operation for FaultThrow {
         let lips_written = Written {
             frame: lips_frame,
             represented: RepresentedParams { interpretation: None },
-            naming: NamingParams { title: Some(crate::declare::Title(format!("{title} — lips"))), data_file: file.clone() },
+            naming: NamingParams {
+                title: Some(crate::declare::Title(format!("{title} — lips"))),
+                data_file: file.clone(),
+            },
             new_feature: NewFeatureParams {
                 feature_type: None,
                 interpretation_type: TypeName("resqml22.GenericFeatureInterpretation".to_string()),
@@ -551,22 +659,59 @@ impl Operation for FaultThrow {
         let mut patches = Vec::new();
         let mut node_offset = 0usize;
         for (index, fault) in torn.faults.iter().enumerate() {
-            let points: Vec<[f64; 3]> =
-                fault.lip.footwall.iter().chain(&fault.lip.hanging_wall).map(|&v| torn.points[v as usize]).collect();
-            let runs = vec![fault.lip.footwall.len() as u32, fault.lip.hanging_wall.len() as u32];
+            let points: Vec<[f64; 3]> = fault
+                .lip
+                .footwall
+                .iter()
+                .chain(&fault.lip.hanging_wall)
+                .map(|&v| torn.points[v as usize])
+                .collect();
+            let runs = vec![
+                fault.lip.footwall.len() as u32,
+                fault.lip.hanging_wall.len() as u32,
+            ];
             let length = points.len();
-            patches.push(Patch { index, node_offset, points, topology: Topology::Polylines(runs), closed: vec![false, false] });
+            patches.push(Patch {
+                index,
+                node_offset,
+                points,
+                topology: Topology::Polylines(runs),
+                closed: vec![false, false],
+            });
             node_offset += length;
         }
-        let lips = Shape { name: format!("{title} — lips"), geometry: Geometry { kind: "lips", patches }, closed: None, known: None };
+        let lips = Shape {
+            name: format!("{title} — lips"),
+            geometry: Geometry {
+                kind: "lips",
+                patches,
+            },
+            closed: None,
+            known: None,
+        };
         // **The ranks the surface and the interpretation took are not the
         // lips'**: each writer counts its own from zero.
         let shifted = match cx.identity {
             Identity::Given(list) => Identity::Given(list.iter().skip(plan.objects.len()).cloned().collect()),
             other => other.clone(),
         };
-        let lips_cx = Context { identity: &shifted, when: cx.when, purpose: cx.purpose, feedback: cx.feedback, bag: cx.bag };
-        let lips_plan = super::polylines::write(&PolylinesInputs { shape: vec![lips], features: None }, &lips_written, Some(false), &format!("{seed}:lips"), &lips_cx)?;
+        let lips_cx = Context {
+            identity: &shifted,
+            when: cx.when,
+            purpose: cx.purpose,
+            feedback: cx.feedback,
+            bag: cx.bag,
+        };
+        let lips_plan = super::polylines::write(
+            &PolylinesInputs {
+                shape: vec![lips],
+                features: None,
+            },
+            &lips_written,
+            Some(false),
+            &format!("{seed}:lips"),
+            &lips_cx,
+        )?;
         for mut object in lips_plan.objects {
             if object.role == "representation" {
                 // The lips' `LineRole` `contact` — *« Used to represent
@@ -603,7 +748,8 @@ impl Operation for FaultThrow {
                 object.json["Citation"]["Description"] = json!(text);
             }
             if params.synthetic {
-                object.json["ExtensionNameValue"] = json!([energyml_core::json::write_value(&synthetic_mark())]);
+                object.json["ExtensionNameValue"] =
+                    json!([energyml_core::json::write_value(&synthetic_mark())]);
             }
         }
 
@@ -631,7 +777,10 @@ impl Operation for FaultThrow {
                     " — moved straight down, the hanging wall's lip lies off a plane of that dip by up to {off:.3} m (`heave` moves it along)"
                 ));
             }
-            says.push(Note { key: "thrown", detail });
+            says.push(Note {
+                key: "thrown",
+                detail,
+            });
         }
         says.push(Note {
             key: "split-edges",
@@ -643,7 +792,10 @@ impl Operation for FaultThrow {
         if torn.added > 0 {
             says.push(Note {
                 key: "nodes-added",
-                detail: format!("{} node(s) come from the faults' traces, not from the horizon's nodes", torn.added),
+                detail: format!(
+                    "{} node(s) come from the faults' traces, not from the horizon's nodes",
+                    torn.added
+                ),
             });
         }
         if torn.duplicates > 0 {
@@ -668,18 +820,37 @@ impl Operation for FaultThrow {
         // -- the activity -------------------------------------------------------------------------------
         plan.activity.recipe = "fault-throw";
         plan.activity.title = format!("fault-throw → {title}");
-        let number = |title: &str, value: usize| Parameter::Double { title: title.to_string(), value: value as f64, uom: None };
+        let number = |title: &str, value: usize| Parameter::Double {
+            title: title.to_string(),
+            value: value as f64,
+            uom: None,
+        };
         plan.activity.parameters.push(number("faultCount", count));
         plan.activity.parameters.push(number("nodesAdded", torn.added));
-        plan.activity.parameters.push(number("splitNodeCount", torn.split));
-        plan.activity.parameters.push(number("splitEdgeCount", split_edges));
-        plan.activity.parameters.push(number("movedNodeCount", torn.moved));
-        plan.activity.parameters.push(number("flippedTriangleCount", torn.flipped));
+        plan.activity
+            .parameters
+            .push(number("splitNodeCount", torn.split));
+        plan.activity
+            .parameters
+            .push(number("splitEdgeCount", split_edges));
+        plan.activity
+            .parameters
+            .push(number("movedNodeCount", torn.moved));
+        plan.activity
+            .parameters
+            .push(number("flippedTriangleCount", torn.flipped));
         // What the registry cannot record — a list is no single value — and a
         // second run needs, in the order given.
         for (one, throw) in params.throw.iter().zip(&params.maximum_throw) {
-            plan.activity.parameters.push(Parameter::Text { title: "throw".to_string(), value: one.word().to_string() });
-            plan.activity.parameters.push(Parameter::Double { title: "maximumThrow".to_string(), value: *throw, uom: Some("m".to_string()) });
+            plan.activity.parameters.push(Parameter::Text {
+                title: "throw".to_string(),
+                value: one.word().to_string(),
+            });
+            plan.activity.parameters.push(Parameter::Double {
+                title: "maximumThrow".to_string(),
+                value: *throw,
+                uom: Some("m".to_string()),
+            });
         }
         says.extend(std::mem::take(&mut plan.says));
         plan.says = says;
@@ -688,7 +859,17 @@ impl Operation for FaultThrow {
 
     /// The counts the writers record, and what the tear counted.
     fn reports(&self) -> Vec<Slot> {
-        let count = |name: &'static str, about: &'static str| Slot::required(name, Need::Number { uom: None, least: None, most: None }, about);
+        let count = |name: &'static str, about: &'static str| {
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
         support::frame_reports(vec![
             count("pointCount", "nodes of the torn surface"),
             count("triangleCount", "triangles of the torn surface"),
@@ -705,7 +886,11 @@ impl Operation for FaultThrow {
 /// Which way the vertical axis points, and in what unit — the horizon's own
 /// frame when the bag knows it, else the frame named, else the one created
 /// here (`crs::build`: an identity compound over metres, counting up).
-fn vertical_of(inputs: &FaultThrowInputs, params: &FrameParams, cx: &Context<'_>) -> Result<(Option<bool>, Option<String>), Refusal> {
+fn vertical_of(
+    inputs: &FaultThrowInputs,
+    params: &FrameParams,
+    cx: &Context<'_>,
+) -> Result<(Option<bool>, Option<String>), Refusal> {
     if let Some(known) = inputs.horizon.known.as_ref()
         && known.crs.is_some()
         && (known.vertical_up.is_some() || known.vertical_uom.is_some())
@@ -726,7 +911,10 @@ fn vertical_of(inputs: &FaultThrowInputs, params: &FrameParams, cx: &Context<'_>
         {
             return Err(Refusal::on(
                 "project",
-                format!("the horizon's nodes are torn as they are given, never reprojected: with `sourceEpsg` {}, give `project` {} or leave it out", source.0, source.0),
+                format!(
+                    "the horizon's nodes are torn as they are given, never reprojected: with `sourceEpsg` {}, give `project` {} or leave it out",
+                    source.0, source.0
+                ),
             ));
         }
         // `crs::build` writes an identity compound over metres, counting up.
@@ -734,7 +922,17 @@ fn vertical_of(inputs: &FaultThrowInputs, params: &FrameParams, cx: &Context<'_>
     }
     let uuid = frame.crs["Uuid"].as_str().unwrap_or_default().to_string();
     let known = cx.known();
-    let in_frame: Vec<&crate::pieces::Known> =
-        known.iter().copied().filter(|one| one.crs.as_ref().is_some_and(|crs| crs.uuid.eq_ignore_ascii_case(&uuid))).collect();
-    Ok((in_frame.iter().find_map(|one| one.vertical_up), in_frame.iter().find_map(|one| one.vertical_uom.clone())))
+    let in_frame: Vec<&crate::pieces::Known> = known
+        .iter()
+        .copied()
+        .filter(|one| {
+            one.crs
+                .as_ref()
+                .is_some_and(|crs| crs.uuid.eq_ignore_ascii_case(&uuid))
+        })
+        .collect();
+    Ok((
+        in_frame.iter().find_map(|one| one.vertical_up),
+        in_frame.iter().find_map(|one| one.vertical_uom.clone()),
+    ))
 }

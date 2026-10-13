@@ -50,7 +50,11 @@ pub struct DeleteNodesInputs {
 }
 
 fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double { title: title.to_string(), value, uom: None }
+    Parameter::Double {
+        title: title.to_string(),
+        value,
+        uom: None,
+    }
 }
 
 impl Operation for DeleteNodes {
@@ -77,10 +81,17 @@ impl Operation for DeleteNodes {
     }
 
     fn check(&self, inputs: &DeleteNodesInputs) -> Result<(), Refusal> {
-        kind_of(&inputs.shape.geometry).map(|_| ()).map_err(|why| Refusal::on("shape", why))
+        kind_of(&inputs.shape.geometry)
+            .map(|_| ())
+            .map_err(|why| Refusal::on("shape", why))
     }
 
-    fn plan(&self, inputs: DeleteNodesInputs, params: DeleteNodesParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: DeleteNodesInputs,
+        params: DeleteNodesParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let shape = inputs.shape;
         let kind = kind_of(&shape.geometry).map_err(|why| Refusal::on("shape", why))?;
         let total = shape.geometry.point_count();
@@ -88,15 +99,22 @@ impl Operation for DeleteNodes {
             return Err(Refusal::about(
                 "value",
                 "nodes",
-                format!("`nodes` names node {bad}, and the shape holds {total} (ranks from 0) — a deletion aimed at nothing would look as if it had worked"),
+                format!(
+                    "`nodes` names node {bad}, and the shape holds {total} (ranks from 0) — a deletion aimed at nothing would look as if it had worked"
+                ),
             ));
         }
         let mut gone = vec![false; total];
         for &rank in &params.nodes {
             gone[rank] = true;
         }
-        let erased = erase(&shape, &gone, "delete-nodes")
-            .map_err(|taken| Refusal::about("value", "nodes", format!("taking out these {taken} node(s) leaves nothing of the shape to write")))?;
+        let erased = erase(&shape, &gone, "delete-nodes").map_err(|taken| {
+            Refusal::about(
+                "value",
+                "nodes",
+                format!("taking out these {taken} node(s) leaves nothing of the shape to write"),
+            )
+        })?;
         let (result, counts) = erased;
         let says = counts.says();
 
@@ -116,7 +134,17 @@ impl Operation for DeleteNodes {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        let count = |name: &'static str, about: &'static str| Slot::required(name, Need::Number { uom: None, least: None, most: None }, about);
+        let count = |name: &'static str, about: &'static str| {
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
         support::frame_reports(vec![
             count("deletedNodes", "nodes taken out"),
             count("droppedPieces", "pieces of line left with a single node, dropped"),
@@ -142,15 +170,39 @@ pub(crate) struct Erased {
 impl Erased {
     /// The notes a plan carries for these counts.
     pub(crate) fn says(&self) -> Vec<Note> {
-        let mut says = vec![Note { key: "deleted", detail: format!("{} node(s) taken out; the ranks of the others have changed", self.taken) }];
+        let mut says = vec![Note {
+            key: "deleted",
+            detail: format!(
+                "{} node(s) taken out; the ranks of the others have changed",
+                self.taken
+            ),
+        }];
         if self.dropped > 0 {
-            says.push(Note { key: "dropped", detail: format!("{} piece(s) of line left with a single node — dropped", self.dropped) });
+            says.push(Note {
+                key: "dropped",
+                detail: format!(
+                    "{} piece(s) of line left with a single node — dropped",
+                    self.dropped
+                ),
+            });
         }
         if self.removed > 0 {
-            says.push(Note { key: "triangles", detail: format!("{} triangle(s) that named a node taken out — removed", self.removed) });
+            says.push(Note {
+                key: "triangles",
+                detail: format!(
+                    "{} triangle(s) that named a node taken out — removed",
+                    self.removed
+                ),
+            });
         }
         if self.orphans > 0 {
-            says.push(Note { key: "orphans", detail: format!("{} node(s) no triangle names any more — compacted away", self.orphans) });
+            says.push(Note {
+                key: "orphans",
+                detail: format!(
+                    "{} node(s) no triangle names any more — compacted away",
+                    self.orphans
+                ),
+            });
         }
         says
     }
@@ -164,7 +216,10 @@ impl Erased {
 /// Every patch must be points, polylines or triangles (`kind_of`). `Err` holds
 /// how many were taken when **nothing** is left to write.
 pub(crate) fn erase(shape: &Shape, gone: &[bool], kind_name: &'static str) -> Result<(Shape, Erased), usize> {
-    let mut counts = Erased { taken: gone.iter().filter(|g| **g).count(), ..Erased::default() };
+    let mut counts = Erased {
+        taken: gone.iter().filter(|g| **g).count(),
+        ..Erased::default()
+    };
     let mut patches = Vec::new();
     let mut first = 0usize;
     let mut line_at = 0usize;
@@ -172,7 +227,11 @@ pub(crate) fn erase(shape: &Shape, gone: &[bool], kind_name: &'static str) -> Re
         let local = &gone[first..first + patch.points.len()];
         first += patch.points.len();
         let (points, topology, closed) = match &patch.topology {
-            Topology::Points => (erase_from_cloud(&patch.points, local), Topology::Points, Vec::new()),
+            Topology::Points => (
+                erase_from_cloud(&patch.points, local),
+                Topology::Points,
+                Vec::new(),
+            ),
             Topology::Polylines(runs) => {
                 let closure: Vec<bool> = (0..runs.len())
                     .map(|k| said_closed(patch, k, shape.closed.as_deref(), line_at + k).unwrap_or(false))
@@ -192,7 +251,13 @@ pub(crate) fn erase(shape: &Shape, gone: &[bool], kind_name: &'static str) -> Re
             _ => continue,
         };
         if !points.is_empty() {
-            patches.push(Patch { index: patch.index, node_offset: 0, points, topology, closed });
+            patches.push(Patch {
+                index: patch.index,
+                node_offset: 0,
+                points,
+                topology,
+                closed,
+            });
         }
     }
     if patches.is_empty() {
@@ -206,6 +271,14 @@ pub(crate) fn erase(shape: &Shape, gone: &[bool], kind_name: &'static str) -> Re
     }
     // The closures now travel on the patches; the shape-wide list spoke of
     // the lines before the cut.
-    let result = Shape { name: shape.name.clone(), geometry: Geometry { kind: kind_name, patches }, closed: None, known: shape.known.clone() };
+    let result = Shape {
+        name: shape.name.clone(),
+        geometry: Geometry {
+            kind: kind_name,
+            patches,
+        },
+        closed: None,
+        known: shape.known.clone(),
+    };
     Ok((result, counts))
 }

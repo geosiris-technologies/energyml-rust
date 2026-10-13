@@ -170,7 +170,7 @@ pub fn read(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Ve
         points,
         topology: Topology::Polyhedra(polyhedra),
         closed: Vec::new(),
-}])
+    }])
 }
 
 /// A required positive count.

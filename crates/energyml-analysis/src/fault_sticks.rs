@@ -57,7 +57,9 @@ pub enum PlaneError {
         at: usize,
     },
     /// The dip is outside `]0, 90]`.
-    #[error("a dip is in ]0°, 90°] from the horizontal, and {given}° is not: a horizontal plane has no stick going down")]
+    #[error(
+        "a dip is in ]0°, 90°] from the horizontal, and {given}° is not: a horizontal plane has no stick going down"
+    )]
     Dip {
         /// What was given.
         given: f64,
@@ -69,7 +71,9 @@ pub enum PlaneError {
         given: f64,
     },
     /// The vertical extent is not a positive length.
-    #[error("the vertical extent is how far the fault goes down below its trace, a length above zero — {given} is not")]
+    #[error(
+        "the vertical extent is how far the fault goes down below its trace, a length above zero — {given} is not"
+    )]
     Extent {
         /// What was given.
         given: f64,
@@ -112,7 +116,11 @@ pub fn sticks_from_plane(
     if !(extent.is_finite() && extent > 0.0) {
         return Err(PlaneError::Extent { given: extent });
     }
-    let across = if dip == 90.0 { 0.0 } else { extent / dip.to_radians().tan() };
+    let across = if dip == 90.0 {
+        0.0
+    } else {
+        extent / dip.to_radians().tan()
+    };
     let (east, north) = (dip_azimuth.to_radians().sin(), dip_azimuth.to_radians().cos());
     let down = if up { -extent } else { extent };
     Ok(trace
@@ -140,14 +148,19 @@ pub fn orientation(points: &[[f64; 3]], triangles: &[[u32; 3]], up: bool) -> Opt
     let mut sum = [0.0f64; 3];
     for triangle in triangles {
         let corner = |i: u32| points.get(i as usize).copied();
-        let (Some(a), Some(b), Some(c)) = (corner(triangle[0]), corner(triangle[1]), corner(triangle[2])) else {
+        let (Some(a), Some(b), Some(c)) = (corner(triangle[0]), corner(triangle[1]), corner(triangle[2]))
+        else {
             return None;
         };
         // Relative to the triangle's first corner, and with the vertical turned
         // to grow upward: a depth frame measures the same dip.
         let u = [b[0] - a[0], b[1] - a[1], sign * (b[2] - a[2])];
         let v = [c[0] - a[0], c[1] - a[1], sign * (c[2] - a[2])];
-        let mut n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+        let mut n = [
+            u[1] * v[2] - u[2] * v[1],
+            u[2] * v[0] - u[0] * v[2],
+            u[0] * v[1] - u[1] * v[0],
+        ];
         if !n.iter().all(|x| x.is_finite()) || n.iter().all(|x| *x == 0.0) {
             continue;
         }
@@ -201,7 +214,9 @@ pub fn backtracking(sticks: &[Vec<[f64; 3]>]) -> Vec<usize> {
     // Centres relative to the first stick's first point, in plan.
     let centre = |stick: &[[f64; 3]]| {
         let n = stick.len() as f64;
-        let (sx, sy) = stick.iter().fold((0.0, 0.0), |(sx, sy), p| (sx + (p[0] - origin[0]), sy + (p[1] - origin[1])));
+        let (sx, sy) = stick.iter().fold((0.0, 0.0), |(sx, sy), p| {
+            (sx + (p[0] - origin[0]), sy + (p[1] - origin[1]))
+        });
         [sx / n, sy / n]
     };
     let centres: Vec<[f64; 2]> = sticks.iter().map(|stick| centre(stick.as_slice())).collect();
@@ -210,7 +225,10 @@ pub fn backtracking(sticks: &[Vec<[f64; 3]>]) -> Vec<usize> {
     if axis[0] == 0.0 && axis[1] == 0.0 {
         return Vec::new();
     }
-    let along: Vec<f64> = centres.iter().map(|c| (c[0] - first[0]) * axis[0] + (c[1] - first[1]) * axis[1]).collect();
+    let along: Vec<f64> = centres
+        .iter()
+        .map(|c| (c[0] - first[0]) * axis[0] + (c[1] - first[1]) * axis[1])
+        .collect();
     (1..along.len()).filter(|&k| along[k] <= along[k - 1]).collect()
 }
 
@@ -232,13 +250,28 @@ mod tests {
     /// the strike is the azimuth turned by 90°.
     fn trace(azimuth: f64, z: f64) -> Vec<[f64; 3]> {
         let strike = (azimuth - 90.0).to_radians();
-        (0..5).map(|k| [X0 + 100.0 * k as f64 * strike.sin(), Y0 + 100.0 * k as f64 * strike.cos(), z]).collect()
+        (0..5)
+            .map(|k| {
+                [
+                    X0 + 100.0 * k as f64 * strike.sin(),
+                    Y0 + 100.0 * k as f64 * strike.cos(),
+                    z,
+                ]
+            })
+            .collect()
     }
 
     fn lofted(sticks: &[Vec<[f64; 3]>]) -> (Vec<[f64; 3]>, Vec<[u32; 3]>) {
         let names: Vec<String> = (0..sticks.len()).map(|k| format!("stick {}", k + 1)).collect();
-        let lines: Vec<LoftLine> =
-            sticks.iter().zip(&names).map(|(points, name)| LoftLine { name, points, closed: false }).collect();
+        let lines: Vec<LoftLine> = sticks
+            .iter()
+            .zip(&names)
+            .map(|(points, name)| LoftLine {
+                name,
+                points,
+                closed: false,
+            })
+            .collect();
         let made = loft(&lines).expect("the sticks loft");
         (made.points, made.triangles)
     }
@@ -269,8 +302,22 @@ mod tests {
         let sticks = sticks_from_plane(&trace(120.0, 20.0), 60.0, 120.0, 100.0, true).unwrap();
         let across = 100.0 / 60f64.to_radians().tan();
         let stick = &sticks[2];
-        assert!(close(stick[1][0] - stick[0][0], across * 120f64.to_radians().sin(), 1e-9), "{stick:?}");
-        assert!(close(stick[1][1] - stick[0][1], across * 120f64.to_radians().cos(), 1e-9), "{stick:?}");
+        assert!(
+            close(
+                stick[1][0] - stick[0][0],
+                across * 120f64.to_radians().sin(),
+                1e-9
+            ),
+            "{stick:?}"
+        );
+        assert!(
+            close(
+                stick[1][1] - stick[0][1],
+                across * 120f64.to_radians().cos(),
+                1e-9
+            ),
+            "{stick:?}"
+        );
     }
 
     #[test]
@@ -282,14 +329,32 @@ mod tests {
     #[test]
     fn a_plane_that_cannot_be_drawn_is_refused_by_its_name() {
         let line = trace(90.0, 0.0);
-        assert_eq!(sticks_from_plane(&line[..1], 60.0, 90.0, 10.0, true), Err(PlaneError::ShortTrace { given: 1 }));
-        assert_eq!(sticks_from_plane(&line, 0.0, 90.0, 10.0, true), Err(PlaneError::Dip { given: 0.0 }));
-        assert_eq!(sticks_from_plane(&line, 95.0, 90.0, 10.0, true), Err(PlaneError::Dip { given: 95.0 }));
-        assert_eq!(sticks_from_plane(&line, 60.0, 400.0, 10.0, true), Err(PlaneError::Azimuth { given: 400.0 }));
-        assert_eq!(sticks_from_plane(&line, 60.0, 90.0, 0.0, true), Err(PlaneError::Extent { given: 0.0 }));
+        assert_eq!(
+            sticks_from_plane(&line[..1], 60.0, 90.0, 10.0, true),
+            Err(PlaneError::ShortTrace { given: 1 })
+        );
+        assert_eq!(
+            sticks_from_plane(&line, 0.0, 90.0, 10.0, true),
+            Err(PlaneError::Dip { given: 0.0 })
+        );
+        assert_eq!(
+            sticks_from_plane(&line, 95.0, 90.0, 10.0, true),
+            Err(PlaneError::Dip { given: 95.0 })
+        );
+        assert_eq!(
+            sticks_from_plane(&line, 60.0, 400.0, 10.0, true),
+            Err(PlaneError::Azimuth { given: 400.0 })
+        );
+        assert_eq!(
+            sticks_from_plane(&line, 60.0, 90.0, 0.0, true),
+            Err(PlaneError::Extent { given: 0.0 })
+        );
         let mut broken = line.clone();
         broken[2][1] = f64::NAN;
-        assert_eq!(sticks_from_plane(&broken, 60.0, 90.0, 10.0, true), Err(PlaneError::NotFinite { at: 3 }));
+        assert_eq!(
+            sticks_from_plane(&broken, 60.0, 90.0, 10.0, true),
+            Err(PlaneError::NotFinite { at: 3 })
+        );
     }
 
     /// Two readings of one fact: the plane stated, and the surface lofted
@@ -302,8 +367,14 @@ mod tests {
                 let sticks = sticks_from_plane(&trace(azimuth, z), dip, azimuth, 180.0, up).unwrap();
                 let (points, triangles) = lofted(&sticks);
                 let found = orientation(&points, &triangles, up).expect("a surface with area");
-                assert!(close(found.dip, dip, 1e-6), "dip {dip} toward {azimuth} (up {up}): measured {found:?}");
-                assert!(close(found.dip_azimuth, azimuth, 1e-6), "dip {dip} toward {azimuth} (up {up}): measured {found:?}");
+                assert!(
+                    close(found.dip, dip, 1e-6),
+                    "dip {dip} toward {azimuth} (up {up}): measured {found:?}"
+                );
+                assert!(
+                    close(found.dip_azimuth, azimuth, 1e-6),
+                    "dip {dip} toward {azimuth} (up {up}): measured {found:?}"
+                );
             }
         }
     }
@@ -314,7 +385,10 @@ mod tests {
         let (points, triangles) = lofted(&sticks);
         let found = orientation(&points, &triangles, true).unwrap();
         assert!(close(found.dip, 90.0, 1e-9), "{found:?}");
-        assert!(close(found.dip_azimuth, 10.0, 1e-6) || close(found.dip_azimuth, 190.0, 1e-6), "{found:?}");
+        assert!(
+            close(found.dip_azimuth, 10.0, 1e-6) || close(found.dip_azimuth, 190.0, 1e-6),
+            "{found:?}"
+        );
     }
 
     #[test]
@@ -326,14 +400,25 @@ mod tests {
             triangle.swap(1, 2);
         }
         let after = orientation(&points, &triangles, true).unwrap();
-        assert!(close(before.dip, after.dip, 1e-9) && close(before.dip_azimuth, after.dip_azimuth, 1e-9), "{before:?} {after:?}");
+        assert!(
+            close(before.dip, after.dip, 1e-9) && close(before.dip_azimuth, after.dip_azimuth, 1e-9),
+            "{before:?} {after:?}"
+        );
     }
 
     #[test]
     fn a_surface_without_area_or_with_a_node_it_does_not_have_has_no_orientation() {
         let flat = [[X0, Y0, 0.0], [X0 + 1.0, Y0, 0.0], [X0 + 2.0, Y0, 0.0]];
-        assert_eq!(orientation(&flat, &[[0, 1, 2]], true), None, "three aligned points");
-        assert_eq!(orientation(&flat, &[[0, 1, 7]], true), None, "a node out of range");
+        assert_eq!(
+            orientation(&flat, &[[0, 1, 2]], true),
+            None,
+            "three aligned points"
+        );
+        assert_eq!(
+            orientation(&flat, &[[0, 1, 7]], true),
+            None,
+            "a node out of range"
+        );
     }
 
     #[test]
@@ -344,6 +429,9 @@ mod tests {
         swapped.swap(2, 3);
         // 1, 2, 4, 3, 5: the fourth given (rank 3) steps back.
         assert_eq!(backtracking(&swapped), vec![3]);
-        assert!(backtracking(&sticks[..2]).is_empty(), "two sticks have no order to break");
+        assert!(
+            backtracking(&sticks[..2]).is_empty(),
+            "two sticks have no order to break"
+        );
     }
 }

@@ -38,7 +38,9 @@ fn corpus(name: &str) -> Option<std::path::PathBuf> {
 /// before `H5Tget_order` there was nothing here to answer with.
 #[test]
 fn a_multi_byte_dataset_names_its_byte_order() {
-    let Some(file) = corpus("testingPackageCpp.h5") else { return };
+    let Some(file) = corpus("testingPackageCpp.h5") else {
+        return;
+    };
     let backend = Hdf5Backend;
 
     // A dataset of doubles the corpus really holds — the coordinates of the
@@ -68,7 +70,11 @@ fn a_backend_that_cannot_say_says_nothing() {
         fn handles(&self, _mime: Option<&str>, _file: &Path) -> bool {
             true
         }
-        fn metadata(&self, _f: &Path, _p: &str) -> energyml_storage::Result<energyml_storage::array::ArrayMetadata> {
+        fn metadata(
+            &self,
+            _f: &Path,
+            _p: &str,
+        ) -> energyml_storage::Result<energyml_storage::array::ArrayMetadata> {
             unreachable!("this test asks only for the byte order")
         }
         fn read(
@@ -93,7 +99,12 @@ fn a_backend_that_cannot_say_says_nothing() {
     }
 
     // The default implementation of the trait: no guess.
-    assert_eq!(Silent.byte_order(Path::new("nowhere"), "/x").expect("the default answers"), None);
+    assert_eq!(
+        Silent
+            .byte_order(Path::new("nowhere"), "/x")
+            .expect("the default answers"),
+        None
+    );
 }
 
 /// A file nobody could open is an **error**, not a `None`.
@@ -105,5 +116,8 @@ fn a_backend_that_cannot_say_says_nothing() {
 #[test]
 fn an_unreadable_file_is_an_error_and_not_an_absent_answer() {
     let missing = Hdf5Backend.byte_order(Path::new("no-such-file.h5"), "/x");
-    assert!(missing.is_err(), "a file that cannot be opened is an error, not `None`");
+    assert!(
+        missing.is_err(),
+        "a file that cannot be opened is an error, not `None`"
+    );
 }

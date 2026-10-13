@@ -93,7 +93,12 @@ impl Method {
 
     /// Every method this build offers, for a chooser to list.
     pub fn all() -> [Method; 4] {
-        [Method::Average, Method::Majority, Method::Minimum, Method::Maximum]
+        [
+            Method::Average,
+            Method::Majority,
+            Method::Minimum,
+            Method::Maximum,
+        ]
     }
 
     /// Read a name, refusing an unknown one **by listing what there is**.
@@ -106,9 +111,7 @@ impl Method {
                     "a transfer method",
                     format!(
                         "`{name}` is not one of {}",
-                        Method::all()
-                            .map(|m| m.name())
-                            .join_with(", ")
+                        Method::all().map(|m| m.name()).join_with(", ")
                     ),
                 )
             })
@@ -344,7 +347,7 @@ mod tests {
                     .collect(),
                 topology: Topology::Grid { fastest, slowest },
                 closed: Vec::new(),
-}],
+            }],
         }
     }
 
@@ -382,7 +385,15 @@ mod tests {
         // 3×2 points holding 0..5; cell 0 has corners 0, 1, 4, 3 → mean 2.
         let geometry = grid(3, 2);
         let values: Vec<f64> = (0..6).map(|i| i as f64).collect();
-        let cells = transfer(&values, 1, Scope::Points, Scope::Cells, Method::Average, &geometry).unwrap();
+        let cells = transfer(
+            &values,
+            1,
+            Scope::Points,
+            Scope::Cells,
+            Method::Average,
+            &geometry,
+        )
+        .unwrap();
         assert_eq!(cells, vec![2.0, 3.0]);
     }
 
@@ -393,8 +404,24 @@ mod tests {
         // majority is 0, which is a rock.
         let geometry = grid(3, 2);
         let values = vec![0.0, 0.0, 9.0, 0.0, 3.0, 9.0];
-        let mean = transfer(&values, 1, Scope::Points, Scope::Cells, Method::Average, &geometry).unwrap();
-        let vote = transfer(&values, 1, Scope::Points, Scope::Cells, Method::Majority, &geometry).unwrap();
+        let mean = transfer(
+            &values,
+            1,
+            Scope::Points,
+            Scope::Cells,
+            Method::Average,
+            &geometry,
+        )
+        .unwrap();
+        let vote = transfer(
+            &values,
+            1,
+            Scope::Points,
+            Scope::Cells,
+            Method::Majority,
+            &geometry,
+        )
+        .unwrap();
         assert_eq!(mean[0], 0.75, "the mean of 0, 0, 3, 0 — not one of the values");
         assert_eq!(vote[0], 0.0, "the value three of the four corners hold");
         // And the two really do differ, so this is not passing on a constant.
@@ -407,7 +434,15 @@ mod tests {
         // picture, and a HashMap's order is not a rule.
         let geometry = grid(2, 2);
         let values = vec![7.0, 7.0, 2.0, 2.0];
-        let vote = transfer(&values, 1, Scope::Points, Scope::Cells, Method::Majority, &geometry).unwrap();
+        let vote = transfer(
+            &values,
+            1,
+            Scope::Points,
+            Scope::Cells,
+            Method::Majority,
+            &geometry,
+        )
+        .unwrap();
         assert_eq!(vote, vec![2.0]);
     }
 
@@ -417,7 +452,15 @@ mod tests {
         // through the mean would lose a cell for one missing corner.
         let geometry = grid(3, 2);
         let values = vec![0.0, f64::NAN, 4.0, 2.0, 6.0, 8.0];
-        let cells = transfer(&values, 1, Scope::Points, Scope::Cells, Method::Average, &geometry).unwrap();
+        let cells = transfer(
+            &values,
+            1,
+            Scope::Points,
+            Scope::Cells,
+            Method::Average,
+            &geometry,
+        )
+        .unwrap();
         assert_eq!(cells[0], (0.0 + 2.0 + 6.0) / 3.0);
     }
 
@@ -427,7 +470,15 @@ mod tests {
         // the same thing, and a colour map has a null colour for the first.
         let geometry = grid(2, 2);
         let values = vec![f64::NAN; 4];
-        let cells = transfer(&values, 1, Scope::Points, Scope::Cells, Method::Average, &geometry).unwrap();
+        let cells = transfer(
+            &values,
+            1,
+            Scope::Points,
+            Scope::Cells,
+            Method::Average,
+            &geometry,
+        )
+        .unwrap();
         assert!(cells[0].is_nan(), "got {}", cells[0]);
     }
 
@@ -450,15 +501,30 @@ mod tests {
         // would average a velocity's x into its y and look like a picture.
         let geometry = grid(3, 2);
         let values: Vec<f64> = (0..6).flat_map(|i| [i as f64, 100.0 + i as f64]).collect();
-        let cells = transfer(&values, 2, Scope::Points, Scope::Cells, Method::Average, &geometry).unwrap();
+        let cells = transfer(
+            &values,
+            2,
+            Scope::Points,
+            Scope::Cells,
+            Method::Average,
+            &geometry,
+        )
+        .unwrap();
         assert_eq!(cells, vec![2.0, 102.0, 3.0, 103.0]);
     }
 
     #[test]
     fn a_count_that_does_not_line_up_is_refused_with_both_numbers() {
         let geometry = grid(3, 2);
-        let refused = transfer(&[1.0, 2.0], 1, Scope::Points, Scope::Cells, Method::Average, &geometry)
-            .expect_err("2 values for 6 points");
+        let refused = transfer(
+            &[1.0, 2.0],
+            1,
+            Scope::Points,
+            Scope::Cells,
+            Method::Average,
+            &geometry,
+        )
+        .expect_err("2 values for 6 points");
         let message = refused.to_string();
         assert!(message.contains('2') && message.contains('6'), "{message}");
     }
@@ -467,7 +533,15 @@ mod tests {
     fn the_same_scope_is_a_pass_through() {
         let geometry = grid(3, 2);
         let values: Vec<f64> = (0..6).map(|i| i as f64).collect();
-        let same = transfer(&values, 1, Scope::Points, Scope::Points, Method::Average, &geometry).unwrap();
+        let same = transfer(
+            &values,
+            1,
+            Scope::Points,
+            Scope::Points,
+            Method::Average,
+            &geometry,
+        )
+        .unwrap();
         assert_eq!(same, values);
     }
 
@@ -491,11 +565,19 @@ mod tests {
                 points: (0..5).map(|_| -> Point { [0.0, 0.0, 0.0] }).collect(),
                 topology: Topology::Polylines(vec![3, 2]),
                 closed: Vec::new(),
-}],
+            }],
         };
         let map = cell_nodes(&geometry);
         assert_eq!(map, vec![vec![0, 1, 2], vec![3, 4]]);
-        let points = transfer(&[1.0, 5.0], 1, Scope::Cells, Scope::Points, Method::Average, &geometry).unwrap();
+        let points = transfer(
+            &[1.0, 5.0],
+            1,
+            Scope::Cells,
+            Scope::Points,
+            Method::Average,
+            &geometry,
+        )
+        .unwrap();
         assert_eq!(points, vec![1.0, 1.0, 1.0, 5.0, 5.0]);
     }
 }

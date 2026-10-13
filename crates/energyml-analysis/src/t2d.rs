@@ -43,10 +43,14 @@ impl LinearVelocity {
     /// must be a finite positive number, `k` finite.
     pub fn new(v0: f64, k: f64) -> Result<LinearVelocity, Error> {
         if !(v0.is_finite() && v0 > 0.0) {
-            return Err(Error::BadModel { what: format!("v0 {v0} (a velocity is > 0)") });
+            return Err(Error::BadModel {
+                what: format!("v0 {v0} (a velocity is > 0)"),
+            });
         }
         if !k.is_finite() {
-            return Err(Error::BadModel { what: format!("k {k}") });
+            return Err(Error::BadModel {
+                what: format!("k {k}"),
+            });
         }
         Ok(LinearVelocity { v0, k })
     }
@@ -132,7 +136,10 @@ mod tests {
     #[test]
     fn a_positive_gradient_deepens_faster_than_its_datum_velocity() {
         let law = LinearVelocity::new(2000.0, 0.5).unwrap();
-        assert!(law.depth_of_twt(2.0) > 2000.0, "the ray accelerates below the datum");
+        assert!(
+            law.depth_of_twt(2.0) > 2000.0,
+            "the ray accelerates below the datum"
+        );
         // And time-to-depth stays monotonic — a fold here would let one
         // time mean two depths.
         let depths = law.depths_of_twt(&[0.5, 1.0, 1.5, 2.0]);
@@ -148,7 +155,10 @@ mod tests {
     #[test]
     fn nan_stays_nan_and_the_unreachable_depth_says_so() {
         let law = LinearVelocity::new(2000.0, -0.5).unwrap();
-        assert!(law.depth_of_twt(f64::NAN).is_nan(), "an undefined node stays undefined");
+        assert!(
+            law.depth_of_twt(f64::NAN).is_nan(),
+            "an undefined node stays undefined"
+        );
         // With k = −0.5, V hits zero at z = 4000: no ray reaches below.
         assert!(law.owt_of_depth(5000.0).is_nan());
         assert!(law.owt_of_depth(3000.0).is_finite());

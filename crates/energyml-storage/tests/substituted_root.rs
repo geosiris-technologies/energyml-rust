@@ -56,14 +56,18 @@ fn registry() -> Arc<Registry> {
 fn declared_as_its_element_the_part_is_read_as_what_its_xsi_type_says() {
     // Read as the empty base, everything the test says would be lost — and an
     // object with every field at its default reads exactly like a right one.
-    let object = registry().read_xml(ELEMENT, document("prodml:InjectionFlowTest").as_bytes()).expect("it reads");
+    let object = registry()
+        .read_xml(ELEMENT, document("prodml:InjectionFlowTest").as_bytes())
+        .expect("it reads");
     assert_eq!(object.as_reflect().type_info().name, "InjectionFlowTest");
     assert_eq!(method(object.as_reflect()).as_deref(), Some("step rate"));
 }
 
 #[test]
 fn declared_as_the_concrete_type_it_reads_too() {
-    let object = registry().read_xml(CONCRETE, document("prodml:InjectionFlowTest").as_bytes()).expect("it reads");
+    let object = registry()
+        .read_xml(CONCRETE, document("prodml:InjectionFlowTest").as_bytes())
+        .expect("it reads");
     assert_eq!(object.as_reflect().type_info().name, "InjectionFlowTest");
     assert_eq!(method(object.as_reflect()).as_deref(), Some("step rate"));
 }
@@ -78,10 +82,18 @@ fn an_xsi_type_that_names_no_subtype_is_refused_by_name() {
 
 #[test]
 fn it_is_written_under_the_ancestors_element_and_says_what_it_is() {
-    let object = registry().read_xml(CONCRETE, document("prodml:InjectionFlowTest").as_bytes()).expect("it reads");
+    let object = registry()
+        .read_xml(CONCRETE, document("prodml:InjectionFlowTest").as_bytes())
+        .expect("it reads");
     let xml = to_part(object.as_ref(), XmlWriteOptions::default()).expect("it writes");
-    let root = xml.lines().find(|line| line.contains("<prodml:")).expect("a root");
-    assert!(root.contains("<prodml:FlowTestActivity "), "the schema declares no `InjectionFlowTest` element: {root}");
+    let root = xml
+        .lines()
+        .find(|line| line.contains("<prodml:"))
+        .expect("a root");
+    assert!(
+        root.contains("<prodml:FlowTestActivity "),
+        "the schema declares no `InjectionFlowTest` element: {root}"
+    );
     assert!(root.contains(r#"xsi:type="prodml:InjectionFlowTest""#), "{root}");
     assert!(!xml.contains("<prodml:InjectionFlowTest"), "{xml}");
 }
@@ -90,18 +102,29 @@ fn it_is_written_under_the_ancestors_element_and_says_what_it_is() {
 fn a_type_with_its_own_element_is_written_as_before() {
     // The rule must not reach a type the schema gives an element: every part of
     // the corpus is one, and an `xsi:type` there is a gratuitous difference.
-    let object = registry().create("prodml23.PressureTransientAnalysis").expect("a type");
+    let object = registry()
+        .create("prodml23.PressureTransientAnalysis")
+        .expect("a type");
     let xml = to_part(object.as_ref(), XmlWriteOptions::default()).expect("it writes");
     assert!(xml.contains("<prodml:PressureTransientAnalysis "), "{xml}");
-    assert!(!xml.contains("xsi:type=\"prodml:PressureTransientAnalysis\""), "{xml}");
+    assert!(
+        !xml.contains("xsi:type=\"prodml:PressureTransientAnalysis\""),
+        "{xml}"
+    );
 }
 
 #[test]
 fn through_a_package_it_keeps_its_identity_and_its_content() {
     let registry = registry();
-    let object = registry.read_xml(CONCRETE, document("prodml:InjectionFlowTest").as_bytes()).expect("it reads");
-    let mut store = EpcStore::from_reader(Box::new(std::io::Cursor::new(empty_package(None).unwrap())), "flow.epc", registry.clone())
-        .expect("an empty package");
+    let object = registry
+        .read_xml(CONCRETE, document("prodml:InjectionFlowTest").as_bytes())
+        .expect("it reads");
+    let mut store = EpcStore::from_reader(
+        Box::new(std::io::Cursor::new(empty_package(None).unwrap())),
+        "flow.epc",
+        registry.clone(),
+    )
+    .expect("an empty package");
     store.put(object).expect("a part");
     let dir = std::env::temp_dir().join(format!("energyml-substituted-root-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
@@ -113,7 +136,11 @@ fn through_a_package_it_keeps_its_identity_and_its_content() {
     assert_eq!(summary.qualified_type, "prodml23.InjectionFlowTest");
     assert_eq!(summary.content_type.replace(' ', ""), CONCRETE);
     let raw = String::from_utf8(reopened.raw_part(&summary.locator).expect("the part").to_vec()).unwrap();
-    assert!(raw.contains(r#"<prodml:FlowTestActivity "#) && raw.contains(r#"xsi:type="prodml:InjectionFlowTest""#), "{raw}");
+    assert!(
+        raw.contains(r#"<prodml:FlowTestActivity "#)
+            && raw.contains(r#"xsi:type="prodml:InjectionFlowTest""#),
+        "{raw}"
+    );
     let back = reopened.get_object(&summary.uri).expect("it reads back");
     assert_eq!(back.as_reflect().type_info().name, "InjectionFlowTest");
     assert_eq!(method(back.as_reflect()).as_deref(), Some("step rate"));
@@ -140,7 +167,10 @@ fn a_root_typed_by_its_own_complex_type_reads_as_itself() {
   <eml:Citation><eml:Title>depth</eml:Title><eml:Originator>test</eml:Originator><eml:Creation>2026-09-27T00:00:00Z</eml:Creation><eml:Format>test</eml:Format></eml:Citation>
 </resqml2:LocalDepth3dCrs>"#;
     let object = registry()
-        .read_xml("application/x-resqml+xml;version=2.0;type=obj_LocalDepth3dCrs", xml.as_bytes())
+        .read_xml(
+            "application/x-resqml+xml;version=2.0;type=obj_LocalDepth3dCrs",
+            xml.as_bytes(),
+        )
         .unwrap_or_else(|why| panic!("it reads as itself: {why}"));
     assert_eq!(object.as_reflect().type_info().object_type, "obj_LocalDepth3dCrs");
     let peeked = energyml_storage::epc::header::peek(xml.as_bytes());

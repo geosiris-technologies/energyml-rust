@@ -30,7 +30,10 @@ const II: f64 = 10.0;
 fn planned(response_minutes: f64) -> Plan {
     let pieces = Pieces::empty().with(
         "wellbore",
-        Source::Object(Known { reference: Some(Ref::new(GTH2, "witsml21.Wellbore", "GTH-2")), ..Default::default() }),
+        Source::Object(Known {
+            reference: Some(Ref::new(GTH2, "witsml21.Wellbore", "GTH-2")),
+            ..Default::default()
+        }),
     );
     let choices = Choices::new()
         .set("title", "GTH-2 — injection test")
@@ -47,8 +50,13 @@ fn planned(response_minutes: f64) -> Plan {
         .set("nominalPeriod", "day")
         .set("standardConditions", "15 degC 1 atm")
         .set("loggingCompany", serde_json::json!({ "Uuid": COMPANY, "QualifiedType": "eml23.BusinessAssociate", "Title": "Geosiris" }));
-    let when = When { creation: "2026-09-28T00:00:00Z".into(), originator: "test".into() };
-    Registry::new().plan("injection-test", &pieces, &choices, &Identity::derived(), &when).unwrap_or_else(|why| panic!("a plan: {why}"))
+    let when = When {
+        creation: "2026-09-28T00:00:00Z".into(),
+        originator: "test".into(),
+    };
+    Registry::new()
+        .plan("injection-test", &pieces, &choices, &Identity::derived(), &when)
+        .unwrap_or_else(|why| panic!("a plan: {why}"))
 }
 
 /// Seconds since 1970 of `YYYY-MM-DDTHH:MM:SSZ` — the civil-to-days algorithm
@@ -56,8 +64,15 @@ fn planned(response_minutes: f64) -> Plan {
 /// (`days_from_civil`), so that the instants come from the strings written
 /// and not from the operation's own clock.
 fn seconds(text: &str) -> i64 {
-    let number = |range: std::ops::Range<usize>| text[range].parse::<i64>().unwrap_or_else(|_| panic!("`{text}` is no UTC date-time"));
-    assert!(text.len() == 20 && text.ends_with('Z'), "`{text}` is no UTC date-time");
+    let number = |range: std::ops::Range<usize>| {
+        text[range]
+            .parse::<i64>()
+            .unwrap_or_else(|_| panic!("`{text}` is no UTC date-time"))
+    };
+    assert!(
+        text.len() == 20 && text.ends_with('Z'),
+        "`{text}` is no UTC date-time"
+    );
     let (y, m, d) = (number(0..4), number(5..7), number(8..10));
     let y = if m <= 2 { y - 1 } else { y };
     let era = y.div_euclid(400);
@@ -71,18 +86,41 @@ fn seconds(text: &str) -> i64 {
 /// The TIME, QINJ and BHP columns of the plan's channel set, read from the
 /// log's JSON: instants in hours since the first, m3/h, bar.
 fn columns(plan: &Plan) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
-    let log = plan.objects.iter().find(|one| one.qualified_type == "witsml21.Log").expect("a log");
+    let log = plan
+        .objects
+        .iter()
+        .find(|one| one.qualified_type == "witsml21.Log")
+        .expect("a log");
     let set = &log.json["ChannelSet"][0];
-    let names: Vec<&str> = set["Channel"].as_array().expect("channels").iter().map(|one| one["Mnemonic"].as_str().expect("a mnemonic")).collect();
+    let names: Vec<&str> = set["Channel"]
+        .as_array()
+        .expect("channels")
+        .iter()
+        .map(|one| one["Mnemonic"].as_str().expect("a mnemonic"))
+        .collect();
     // A row is the index, then one value per channel in the order listed.
-    let column = |mnemonic: &str| 1 + names.iter().position(|one| *one == mnemonic).unwrap_or_else(|| panic!("a channel `{mnemonic}` in {names:?}"));
+    let column = |mnemonic: &str| {
+        1 + names
+            .iter()
+            .position(|one| *one == mnemonic)
+            .unwrap_or_else(|| panic!("a channel `{mnemonic}` in {names:?}"))
+    };
     let (time, rate, pressure) = (column("TIME"), column("QINJ"), column("BHP"));
     let text = set["Data"]["Data"].as_str().expect("the values inline");
     let rows: Vec<Vec<Value>> = serde_json::from_str(text).expect("a JSON array of rows");
     let origin = seconds(rows[0][time].as_str().expect("a date-time"));
-    let hours = rows.iter().map(|row| (seconds(row[time].as_str().expect("a date-time")) - origin) as f64 / 3_600.0).collect();
-    let rates = rows.iter().map(|row| row[rate].as_f64().expect("a rate")).collect();
-    let pressures = rows.iter().map(|row| row[pressure].as_f64().expect("a pressure")).collect();
+    let hours = rows
+        .iter()
+        .map(|row| (seconds(row[time].as_str().expect("a date-time")) - origin) as f64 / 3_600.0)
+        .collect();
+    let rates = rows
+        .iter()
+        .map(|row| row[rate].as_f64().expect("a rate"))
+        .collect();
+    let pressures = rows
+        .iter()
+        .map(|row| row[pressure].as_f64().expect("a pressure"))
+        .collect();
     (hours, rates, pressures)
 }
 
@@ -100,15 +138,38 @@ fn the_index_read_from_the_settled_steps_is_the_one_that_synthesized_them() {
     let plan = planned(10.0);
     let (hours, rates, pressures) = columns(&plan);
     let series = Series::new(&hours, &rates, &pressures).expect("a series");
-    let settle = Settle { window: 4, tolerance: 1e-3 };
+    let settle = Settle {
+        window: 4,
+        tolerance: 1e-3,
+    };
     let found = injectivity(&series, &settle, P0).expect("an index");
-    assert_eq!(found.points.iter().map(|one| (one.rank, one.rate)).collect::<Vec<_>>(), [(1, 20.0), (2, 40.0), (3, 60.0)]);
+    assert_eq!(
+        found
+            .points
+            .iter()
+            .map(|one| (one.rank, one.rate))
+            .collect::<Vec<_>>(),
+        [(1, 20.0), (2, 40.0), (3, 60.0)]
+    );
     assert!(found.set_aside.is_empty(), "{:?}", found.set_aside);
-    assert!((found.index - II).abs() < 1e-3, "recovered {} where {II} synthesized", found.index);
-    assert!(found.fit.intercept.abs() < 1e-3, "Δp is q / II through the origin: {:?}", found.fit);
+    assert!(
+        (found.index - II).abs() < 1e-3,
+        "recovered {} where {II} synthesized",
+        found.index
+    );
+    assert!(
+        found.fit.intercept.abs() < 1e-3,
+        "Δp is q / II through the origin: {:?}",
+        found.fit
+    );
     for ratio in &found.ratios {
         let ratio = ratio.as_ref().expect("a ratio");
-        assert!((ratio.index - II).abs() < 1e-2, "step {}: {}", ratio.rank, ratio.index);
+        assert!(
+            (ratio.index - II).abs() < 1e-2,
+            "step {}: {}",
+            ratio.rank,
+            ratio.index
+        );
     }
 }
 
@@ -122,13 +183,25 @@ fn a_test_whose_steps_never_settle_is_refused_step_by_step() {
     let plan = planned(120.0);
     let (hours, rates, pressures) = columns(&plan);
     let series = Series::new(&hours, &rates, &pressures).expect("a series");
-    let settle = Settle { window: 4, tolerance: 1e-3 };
+    let settle = Settle {
+        window: 4,
+        tolerance: 1e-3,
+    };
     let all = steps(&series, &settle).expect("steps");
     assert_eq!(all.len(), 3);
     for step in &all {
-        assert!(matches!(step.verdict, Err(StepRateError::NotSettled { rank, .. }) if rank == step.rank), "{step:?}");
+        assert!(
+            matches!(step.verdict, Err(StepRateError::NotSettled { rank, .. }) if rank == step.rank),
+            "{step:?}"
+        );
     }
-    assert_eq!(injectivity(&series, &settle, P0), Err(StepRateError::TooFewSettled { settled: 0, set_aside: vec![1, 2, 3] }));
+    assert_eq!(
+        injectivity(&series, &settle, P0),
+        Err(StepRateError::TooFewSettled {
+            settled: 0,
+            set_aside: vec![1, 2, 3]
+        })
+    );
 }
 
 #[test]
@@ -151,5 +224,9 @@ fn the_hall_slope_of_an_instant_response_is_the_inverse_of_the_index() {
     // interval that ends each step is credited the mean of two rates: the
     // trapezoid the module states counts (20 / 2) × (5 / 60) m3 too much at
     // each of the two jumps. Said by the rule, checked here.
-    assert!((plot.volume[last] - (240.0 + 2.0 * 10.0 * 5.0 / 60.0)).abs() < 1e-9, "{}", plot.volume[last]);
+    assert!(
+        (plot.volume[last] - (240.0 + 2.0 * 10.0 * 5.0 / 60.0)).abs() < 1e-9,
+        "{}",
+        plot.volume[last]
+    );
 }

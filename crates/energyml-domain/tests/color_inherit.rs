@@ -19,7 +19,13 @@ use energyml_resqml_2_2 as resqml22;
 use crate::inherit::{Built, Package, chain, citation, u, with_model};
 
 fn hsv(hue: f64) -> Hsv {
-    Hsv { hue, saturation: 1.0, value: 1.0, alpha: 1.0, title: None }
+    Hsv {
+        hue,
+        saturation: 1.0,
+        value: 1.0,
+        alpha: 1.0,
+        title: None,
+    }
 }
 
 /// The `#rrggbbaa` of the colour named by `hue`.
@@ -92,7 +98,13 @@ fn colour_map(package: &mut Package, uuid: u32) {
                 .iter()
                 .map(|index| resqml22::ContinuousColorMapEntry {
                     index: *index,
-                    hsv: resqml22::HsvColor { hue: 120.0, saturation: 1.0, value: 1.0, alpha: 1.0, ..Default::default() },
+                    hsv: resqml22::HsvColor {
+                        hue: 120.0,
+                        saturation: 1.0,
+                        value: 1.0,
+                        alpha: 1.0,
+                        ..Default::default()
+                    },
                 })
                 .collect(),
             ..Default::default()
@@ -107,8 +119,14 @@ fn hex_of(paint: &Paint) -> String {
     }
 }
 
-fn inherited(built: &Built, set: &GraphicalSet, from: u32) -> inherit::Walked<energyml_domain::color::Decision> {
-    Cascade::new(set).inherited(&built.index, &built.source, &u(from)).expect("the walk reads")
+fn inherited(
+    built: &Built,
+    set: &GraphicalSet,
+    from: u32,
+) -> inherit::Walked<energyml_domain::color::Decision> {
+    Cascade::new(set)
+        .inherited(&built.index, &built.source, &u(from))
+        .expect("the walk reads")
 }
 
 /// The collection of the object answers before the interpretation, and the
@@ -130,10 +148,17 @@ fn a_collection_answers_before_the_interpretation_and_says_so() {
     assert_eq!(found.rank, 2);
     assert_eq!(found.value.level, Level::Collection);
     assert_eq!(found.value.found_on, u(10));
-    assert_eq!(hex_of(&found.value.paint), hex(240.0), "the collection's colour, not the interpretation's");
+    assert_eq!(
+        hex_of(&found.value.paint),
+        hex(240.0),
+        "the collection's colour, not the interpretation's"
+    );
     assert_eq!(found.path.len(), 1);
     assert_eq!(found.path[0].via, Via::Collection);
-    assert_eq!(found.path[0].field, "SingleCollectionAssociation[0].Dataobject[0]");
+    assert_eq!(
+        found.path[0].field,
+        "SingleCollectionAssociation[0].Dataobject[0]"
+    );
     assert_eq!(found.path[0].held_by.as_deref(), Some(u(20).as_str()));
 }
 
@@ -149,18 +174,30 @@ fn the_parents_answer_at_the_level_of_their_type() {
 
     let walked = inherited(&built, &painted(&[(2, 120.0), (3, 30.0)]), 1);
     let found = walked.resolution.expect("a colour");
-    assert_eq!((found.value.level, found.rank, found.path.len()), (Level::Interpretation, 3, 1));
+    assert_eq!(
+        (found.value.level, found.rank, found.path.len()),
+        (Level::Interpretation, 3, 1)
+    );
     assert_eq!(hex_of(&found.value.paint), hex(120.0));
 
     let walked = inherited(&built, &painted(&[(3, 30.0)]), 1);
     let found = walked.resolution.expect("a colour");
-    assert_eq!((found.value.level, found.rank, found.path.len()), (Level::Feature, 5, 2));
-    assert_eq!(found.path.iter().map(|s| s.via).collect::<Vec<_>>(), vec![Via::Parent, Via::Parent]);
+    assert_eq!(
+        (found.value.level, found.rank, found.path.len()),
+        (Level::Feature, 5, 2)
+    );
+    assert_eq!(
+        found.path.iter().map(|s| s.via).collect::<Vec<_>>(),
+        vec![Via::Parent, Via::Parent]
+    );
 
     // The object's own colour: no path, the representation.
     let walked = inherited(&built, &painted(&[(1, 10.0), (2, 120.0)]), 1);
     let found = walked.resolution.expect("a colour");
-    assert_eq!((found.value.level, found.rank, found.path.len()), (Level::Representation, 1, 0));
+    assert_eq!(
+        (found.value.level, found.rank, found.path.len()),
+        (Level::Representation, 1, 0)
+    );
 }
 
 /// The model closes the walk — after the whole chain — and says so.
@@ -196,8 +233,15 @@ fn nothing_found_is_none_and_a_project_colour_is_noted() {
     assert!(walked.resolution.is_none());
 
     let walked = inherited(&built, &painted(&[(12, 99.0)]), 1);
-    assert!(walked.resolution.is_none(), "a project colour is applied to nothing: {walked:?}");
-    assert!(walked.notes.iter().any(|n| n.contains("not followed")), "{:?}", walked.notes);
+    assert!(
+        walked.resolution.is_none(),
+        "a project colour is applied to nothing: {walked:?}"
+    );
+    assert!(
+        walked.notes.iter().any(|n| n.contains("not followed")),
+        "{:?}",
+        walked.notes
+    );
 }
 
 /// §2.2: a property goes to its kind and **stops** — a colour on its
@@ -209,7 +253,10 @@ fn nothing_found_is_none_and_a_project_colour_is_noted() {
 #[test]
 fn a_property_does_not_inherit_what_its_representation_carries() {
     let mut package = chain();
-    package.property_kind(40, Some(41)).property_kind(41, None).property(50, 1, 40);
+    package
+        .property_kind(40, Some(41))
+        .property_kind(41, None)
+        .property(50, 1, 40);
     colour_map(&mut package, 60);
     let built = package.built();
     let kinds = inherit::kind_chain(&built.index, &built.source, &u(50)).uuids;
@@ -218,12 +265,19 @@ fn a_property_does_not_inherit_what_its_representation_carries() {
     // Everything above the property carries a default colour; it has none.
     let set = painted(&[(1, 10.0), (2, 120.0), (3, 30.0)]);
     let cascade = Cascade::new(&set);
-    let walked = cascade.inherited_property(&built.index, &built.source, &u(50), &kinds).expect("reads");
+    let walked = cascade
+        .inherited_property(&built.index, &built.source, &u(50), &kinds)
+        .expect("reads");
     assert!(walked.resolution.is_none(), "{walked:?}");
     // And the order it replaces does fall through, which is what made it differ.
     let old = cascade
         .resolve(
-            &Request { representation: &u(1), property: Some(&u(50)), kind_chain: &kinds, element: Scope::WholeObject },
+            &Request {
+                representation: &u(1),
+                property: Some(&u(50)),
+                kind_chain: &kinds,
+                element: Scope::WholeObject,
+            },
             &built.source,
         )
         .expect("the old order reads");
@@ -237,7 +291,10 @@ fn a_property_does_not_inherit_what_its_representation_carries() {
         .expect("reads")
         .resolution
         .expect("the parent kind answers");
-    assert_eq!((found.value.level, found.rank, found.path.len()), (Level::PropertyKind, 5, 2));
+    assert_eq!(
+        (found.value.level, found.rank, found.path.len()),
+        (Level::PropertyKind, 5, 2)
+    );
     assert_eq!(found.carrier, u(41));
     assert!(matches!(found.value.paint, Paint::Mapped { .. }));
 }
@@ -248,7 +305,11 @@ fn a_property_does_not_inherit_what_its_representation_carries() {
 #[test]
 fn a_collection_of_the_property_answers_for_it() {
     let mut package = chain();
-    package.property_kind(40, None).property(50, 1, 40).folder(10).set(20, &[(10, &[50])]);
+    package
+        .property_kind(40, None)
+        .property(50, 1, 40)
+        .folder(10)
+        .set(20, &[(10, &[50])]);
     colour_map(&mut package, 60);
     let built = package.built();
     let kinds = vec![u(40)];
@@ -295,7 +356,10 @@ fn a_member_is_paired_with_the_collection_of_its_own_association() {
     use energyml_eml_2_3 as eml23;
 
     let mut package = Package::default();
-    package.representation(1, None).representation(2, None).representation(3, None);
+    package
+        .representation(1, None)
+        .representation(2, None)
+        .representation(3, None);
     package.folder(10).folder(11);
     let id = u(20);
     let association = |collection: Option<u32>, members: &[u32]| eml23::SingleCollectionAssociation {
@@ -303,7 +367,10 @@ fn a_member_is_paired_with_the_collection_of_its_own_association() {
             Some(n) => crate::inherit::dor(&u(n), "eml23.DataobjectCollection"),
             None => eml23::DataObjectReference::default(),
         },
-        dataobject: members.iter().map(|m| crate::inherit::dor(&u(*m), "resqml22.Anything")).collect(),
+        dataobject: members
+            .iter()
+            .map(|m| crate::inherit::dor(&u(*m), "resqml22.Anything"))
+            .collect(),
         ..Default::default()
     };
     package.add(
@@ -324,15 +391,26 @@ fn a_member_is_paired_with_the_collection_of_its_own_association() {
     let built = package.built();
     let set = painted(&[(10, 10.0), (11, 220.0)]);
 
-    let one = inherited(&built, &set, 1).resolution.expect("object 1 is in the second association's collection");
-    assert_eq!(one.carrier, u(11), "paired with association 1, not with the first");
+    let one = inherited(&built, &set, 1)
+        .resolution
+        .expect("object 1 is in the second association's collection");
+    assert_eq!(
+        one.carrier,
+        u(11),
+        "paired with association 1, not with the first"
+    );
     assert_eq!(one.path[0].field, "SingleCollectionAssociation[1].Dataobject[0]");
 
-    let two = inherited(&built, &set, 2).resolution.expect("object 2 is in the first");
+    let two = inherited(&built, &set, 2)
+        .resolution
+        .expect("object 2 is in the first");
     assert_eq!(two.carrier, u(10));
 
     let three = inherited(&built, &set, 3);
-    assert!(three.resolution.is_none(), "an association with no collection holds nobody: {three:?}");
+    assert!(
+        three.resolution.is_none(),
+        "an association with no collection holds nobody: {three:?}"
+    );
 }
 
 /// A population answers what each object answers alone.
@@ -341,21 +419,37 @@ fn a_member_is_paired_with_the_collection_of_its_own_association() {
 #[test]
 fn the_batch_says_what_the_unit_says() {
     let mut package = chain();
-    package.representation(4, Some(2)).folder(10).set(20, &[(10, &[1])]);
+    package
+        .representation(4, Some(2))
+        .folder(10)
+        .set(20, &[(10, &[1])]);
     let built = package.built();
     let set = painted(&[(2, 120.0), (10, 240.0)]);
     let cascade = Cascade::new(&set);
     let uuids = vec![u(1), u(4), u(2), u(3)];
-    let batch = cascade.inherited_all(&built.index, &built.source, &uuids).expect("reads");
+    let batch = cascade
+        .inherited_all(&built.index, &built.source, &uuids)
+        .expect("reads");
     assert_eq!(batch.len(), 4);
     for (uuid, from_batch) in uuids.iter().zip(&batch) {
-        let alone = cascade.inherited(&built.index, &built.source, uuid).expect("reads");
+        let alone = cascade
+            .inherited(&built.index, &built.source, uuid)
+            .expect("reads");
         assert_eq!(&alone, from_batch, "{uuid}");
     }
     // 1 has the collection, 4 the interpretation, 2 itself, 3 nothing.
-    assert_eq!(batch[0].resolution.as_ref().map(|r| r.value.level), Some(Level::Collection));
-    assert_eq!(batch[1].resolution.as_ref().map(|r| r.value.level), Some(Level::Interpretation));
-    assert_eq!(batch[2].resolution.as_ref().map(|r| r.value.level), Some(Level::Representation));
+    assert_eq!(
+        batch[0].resolution.as_ref().map(|r| r.value.level),
+        Some(Level::Collection)
+    );
+    assert_eq!(
+        batch[1].resolution.as_ref().map(|r| r.value.level),
+        Some(Level::Interpretation)
+    );
+    assert_eq!(
+        batch[2].resolution.as_ref().map(|r| r.value.level),
+        Some(Level::Representation)
+    );
     assert!(batch[3].resolution.is_none());
 }
 
@@ -372,12 +466,22 @@ fn the_ladder_puts_the_answering_collection_after_the_object() {
     let built = package.built();
     let set = painted(&[(2, 120.0), (10, 240.0)]);
     let cascade = Cascade::new(&set);
-    let request = Request { representation: &u(1), property: None, kind_chain: &[], element: Scope::WholeObject };
-    let ladders = cascade.ladders(&built.index, &built.source, &[request]).expect("reads");
+    let request = Request {
+        representation: &u(1),
+        property: None,
+        kind_chain: &[],
+        element: Scope::WholeObject,
+    };
+    let ladders = cascade
+        .ladders(&built.index, &built.source, &[request])
+        .expect("reads");
     let ladder = &ladders[0];
 
     let order: Vec<&str> = ladder.steps.iter().map(|rung| rung.uuid.as_str()).collect();
-    assert_eq!(order, vec![u(1).as_str(), u(10).as_str(), u(2).as_str(), u(3).as_str()]);
+    assert_eq!(
+        order,
+        vec![u(1).as_str(), u(10).as_str(), u(2).as_str(), u(3).as_str()]
+    );
     assert_eq!(ladder.chosen, Some(1));
     assert_eq!(ladder.steps[1].level, Level::Collection);
     assert!(ladder.steps[1].carries.is_some());
@@ -386,7 +490,10 @@ fn the_ladder_puts_the_answering_collection_after_the_object() {
     assert!(ladder.steps[3].carries.is_none());
     let decision = &ladder.walked.resolution.as_ref().expect("a walk").value;
     assert_eq!(decision.level, ladder.steps[1].level);
-    assert_eq!(decision.paint, ladder.steps[1].carries.as_ref().expect("carries").paint);
+    assert_eq!(
+        decision.paint,
+        ladder.steps[1].carries.as_ref().expect("carries").paint
+    );
 }
 
 /// A property's ladder is the property and its kinds — no representation
@@ -402,9 +509,16 @@ fn a_property_ladder_has_no_representation_rung() {
     let set = mapped(&[(40, 60)]);
     let cascade = Cascade::new(&set);
     let kinds = vec![u(40)];
-    let request =
-        Request { representation: &u(1), property: Some(&u(50)), kind_chain: &kinds, element: Scope::WholeObject };
-    let ladder = cascade.ladders(&built.index, &built.source, &[request]).expect("reads").remove(0);
+    let request = Request {
+        representation: &u(1),
+        property: Some(&u(50)),
+        kind_chain: &kinds,
+        element: Scope::WholeObject,
+    };
+    let ladder = cascade
+        .ladders(&built.index, &built.source, &[request])
+        .expect("reads")
+        .remove(0);
     let levels: Vec<Level> = ladder.steps.iter().map(|rung| rung.level).collect();
     assert_eq!(levels, vec![Level::Property, Level::PropertyKind]);
     assert_eq!(ladder.chosen, Some(1));
@@ -421,9 +535,15 @@ fn with_inheritance_off_only_the_object_answers() {
     let set = painted(&[(2, 120.0), (10, 240.0)]);
     let mut cascade = Cascade::new(&set);
     cascade.inherit = false;
-    let walked = cascade.inherited(&built.index, &built.source, &u(1)).expect("reads");
+    let walked = cascade
+        .inherited(&built.index, &built.source, &u(1))
+        .expect("reads");
     assert!(walked.resolution.is_none());
-    assert!(walked.notes.iter().any(|n| n.contains("switched off")), "{:?}", walked.notes);
+    assert!(
+        walked.notes.iter().any(|n| n.contains("switched off")),
+        "{:?}",
+        walked.notes
+    );
 }
 
 /// **The whole order, one rung at a time.** One object carries every place a
@@ -449,7 +569,10 @@ fn every_rung_answers_in_the_order_of_the_design() {
     let mut package = with_model();
     package.folder(10).folder(11).folder(12).folder(13).folder(14);
     // 10 holds the object, 11 holds 10; 12 holds the interpretation, 13 holds 12; 14 holds the feature.
-    package.set(20, &[(10, &[1]), (11, &[10]), (12, &[2]), (13, &[12]), (14, &[3])]);
+    package.set(
+        20,
+        &[(10, &[1]), (11, &[10]), (12, &[2]), (13, &[12]), (14, &[3])],
+    );
     let built = package.built();
 
     // (carrier, level, rank, distance) in the order they must answer.
@@ -466,16 +589,30 @@ fn every_rung_answers_in_the_order_of_the_design() {
     ];
     let mut standing: Vec<u32> = rungs.iter().map(|rung| rung.0).collect();
     for (carrier, level, rank, distance) in rungs {
-        let set = painted(&standing.iter().map(|n| (*n, f64::from(*n) * 7.0)).collect::<Vec<_>>());
+        let set = painted(
+            &standing
+                .iter()
+                .map(|n| (*n, f64::from(*n) * 7.0))
+                .collect::<Vec<_>>(),
+        );
         let found = inherited(&built, &set, 1)
             .resolution
             .unwrap_or_else(|| panic!("a colour is left on {standing:?}"));
         assert_eq!(
-            (found.carrier.as_str(), found.value.level, found.rank, found.distance()),
+            (
+                found.carrier.as_str(),
+                found.value.level,
+                found.rank,
+                found.distance()
+            ),
             (u(carrier).as_str(), level, rank, distance),
             "with {standing:?} standing"
         );
-        assert_eq!(hex_of(&found.value.paint), hex(f64::from(carrier) * 7.0), "the colour is the carrier's");
+        assert_eq!(
+            hex_of(&found.value.paint),
+            hex(f64::from(carrier) * 7.0),
+            "the colour is the carrier's"
+        );
         standing.retain(|n| *n != carrier);
     }
     // Nothing left: the hue of the uuid, and no colour invented.
@@ -496,13 +633,21 @@ fn a_collection_holding_the_model_is_not_followed_and_is_noted() {
     let built = package.built();
 
     let walked = inherited(&built, &painted(&[(10, 240.0)]), 1);
-    assert!(walked.resolution.is_none(), "the model's collection is applied to nothing: {walked:?}");
     assert!(
-        walked.notes.iter().any(|n| n.contains("collections of the model are not followed")),
+        walked.resolution.is_none(),
+        "the model's collection is applied to nothing: {walked:?}"
+    );
+    assert!(
+        walked
+            .notes
+            .iter()
+            .any(|n| n.contains("collections of the model are not followed")),
         "{:?}",
         walked.notes
     );
 
-    let on_the_model = inherited(&built, &painted(&[(31, 240.0)]), 1).resolution.expect("the model answers");
+    let on_the_model = inherited(&built, &painted(&[(31, 240.0)]), 1)
+        .resolution
+        .expect("the model answers");
     assert_eq!((on_the_model.value.level, on_the_model.rank), (Level::Model, 6));
 }

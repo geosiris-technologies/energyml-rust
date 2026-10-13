@@ -19,16 +19,38 @@ fn the_blocks_return_the_earlier_slots_in_the_earlier_order() {
     let names = |slots: &[energyml_build::operation::Slot]| slots.iter().map(|s| s.name).collect::<Vec<_>>();
     assert_eq!(
         names(&Written::slots()),
-        ["crs", "sourceEpsg", "project", "vertical", "interpretation", "title", "dataFile", "featureType", "interpretationType", "featureKind"]
+        [
+            "crs",
+            "sourceEpsg",
+            "project",
+            "vertical",
+            "interpretation",
+            "title",
+            "dataFile",
+            "featureType",
+            "interpretationType",
+            "featureKind"
+        ]
     );
     assert_eq!(
         names(&WrittenImposed::slots()),
-        ["crs", "sourceEpsg", "project", "vertical", "interpretation", "title", "dataFile"]
+        [
+            "crs",
+            "sourceEpsg",
+            "project",
+            "vertical",
+            "interpretation",
+            "title",
+            "dataFile"
+        ]
     );
     let slots = Written::slots();
     let of = |name: &str| slots.iter().find(|s| s.name == name).unwrap().clone();
     assert_eq!(of("crs").applies, Applies::Without(&["sourceEpsg"]));
-    assert_eq!(of("crs").reads, ["Geometry/LocalCrs", "Patches/0/Geometry/LocalCrs", "LocalCrs"]);
+    assert_eq!(
+        of("crs").reads,
+        ["Geometry/LocalCrs", "Patches/0/Geometry/LocalCrs", "LocalCrs"]
+    );
     assert_eq!(of("project").applies, Applies::With(&["sourceEpsg"]));
     // **This slot declared a type that the crate never writes**, and this test
     // pinned it word for word — so it defended it. Measured on 21/09 by
@@ -60,9 +82,16 @@ fn the_blocks_return_the_earlier_slots_in_the_earlier_order() {
             ]
         }
     );
-    assert_eq!((of("title").least, of("title").group), (1, "naming"), "required for writing");
+    assert_eq!(
+        (of("title").least, of("title").group),
+        (1, "naming"),
+        "required for writing"
+    );
     assert_eq!(of("interpretationType").least, 0);
-    assert_eq!(of("interpretationType").suggested, Some(serde_json::json!("resqml22.GenericFeatureInterpretation")));
+    assert_eq!(
+        of("interpretationType").suggested,
+        Some(serde_json::json!("resqml22.GenericFeatureInterpretation"))
+    );
 }
 
 /// **An operation that imposes what it represents says that the empty
@@ -71,20 +100,47 @@ fn the_blocks_return_the_earlier_slots_in_the_earlier_order() {
 #[test]
 fn the_bag_suggests_and_the_imposition_is_said() {
     let crs = Ref::new("c-1", "eml23.LocalEngineeringCompoundCrs", "The frame");
-    let bag = Pieces::empty().with("shape", Source::Object(Known { crs: Some(crs.clone()), crs_epsg: Some(2154), ..Default::default() }));
-    let slots = common_slots(&bag, Some(("resqml22.CulturalFeature", "resqml22.GenericFeatureInterpretation")));
+    let bag = Pieces::empty().with(
+        "shape",
+        Source::Object(Known {
+            crs: Some(crs.clone()),
+            crs_epsg: Some(2154),
+            ..Default::default()
+        }),
+    );
+    let slots = common_slots(
+        &bag,
+        Some((
+            "resqml22.CulturalFeature",
+            "resqml22.GenericFeatureInterpretation",
+        )),
+    );
     let of = |name: &str| slots.iter().find(|s| s.name == name).unwrap().clone();
     assert_eq!(
         of("interpretation").otherwise,
-        Otherwise::Creates { types: vec!["resqml22.CulturalFeature", "resqml22.GenericFeatureInterpretation"] }
+        Otherwise::Creates {
+            types: vec![
+                "resqml22.CulturalFeature",
+                "resqml22.GenericFeatureInterpretation"
+            ]
+        }
     );
     assert!(of("interpretation").about.contains("created here"));
     assert_eq!(of("crs").suggested, Some(crs.dor()));
     assert_eq!(of("project").suggested, Some(serde_json::json!(2154)));
-    assert!(slots.iter().all(|s| s.name != "featureType"), "imposed: no feature to choose");
+    assert!(
+        slots.iter().all(|s| s.name != "featureType"),
+        "imposed: no feature to choose"
+    );
     // Imposing nothing, the empty interpretation creates nothing.
     let free = common_slots(&bag, None);
-    assert_eq!(free.iter().find(|s| s.name == "interpretation").unwrap().otherwise, Otherwise::Nothing);
+    assert_eq!(
+        free.iter()
+            .find(|s| s.name == "interpretation")
+            .unwrap()
+            .otherwise,
+        Otherwise::Nothing
+    );
 }
 
 /// A geometry plan may leave the title out: the block still reads, and writes
@@ -96,5 +152,9 @@ fn an_absent_title_is_read_and_not_written() {
     let back = written.write(Choices::new());
     assert_eq!(back.text("crs"), Some("c-1"));
     assert!(back.get("title").is_none());
-    assert_eq!(back.text("dataFile"), Some("data.h5"), "the default, written once");
+    assert_eq!(
+        back.text("dataFile"),
+        Some("data.h5"),
+        "the default, written once"
+    );
 }

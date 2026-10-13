@@ -148,31 +148,33 @@ pub fn group(
             "resqml22.StratigraphicUnitInterpretation",
             &interpretation.citation.title,
         )),
-        node_patch_geometry: vec![resqml::AnyPointGeometry::PointGeometry(
-            resqml::PointGeometry {
-                local_crs: crs.clone(),
-                points: Some(resqml::AbstractPoint3dArray::Point3dExternalArray(
-                    resqml::Point3dExternalArray {
-                        coordinates: eml::ExternalDataArray {
-                            external_data_array_part: vec![eml::ExternalDataArrayPart {
-                                // Rows of three: the shape a `Point3d` array has,
-                                // and what a reader will slice on.
-                                count: vec![group.points.len() as i64, 3],
-                                path_in_external_file: array.path.clone(),
-                                start_index: vec![0, 0],
-                                uri: array.file.clone(),
-                                mime_type: Some(array.mime.clone()),
-                            }],
-                        },
+        node_patch_geometry: vec![resqml::AnyPointGeometry::PointGeometry(resqml::PointGeometry {
+            local_crs: crs.clone(),
+            points: Some(resqml::AbstractPoint3dArray::Point3dExternalArray(
+                resqml::Point3dExternalArray {
+                    coordinates: eml::ExternalDataArray {
+                        external_data_array_part: vec![eml::ExternalDataArrayPart {
+                            // Rows of three: the shape a `Point3d` array has,
+                            // and what a reader will slice on.
+                            count: vec![group.points.len() as i64, 3],
+                            path_in_external_file: array.path.clone(),
+                            start_index: vec![0, 0],
+                            uri: array.file.clone(),
+                            mime_type: Some(array.mime.clone()),
+                        }],
                     },
-                )),
-                ..Default::default()
-            },
-        )],
+                },
+            )),
+            ..Default::default()
+        })],
         ..Default::default()
     };
 
-    Built { feature, interpretation, representation }
+    Built {
+        feature,
+        interpretation,
+        representation,
+    }
 }
 
 /// The unit's age span, as EML 2.3 can state it.
@@ -257,8 +259,16 @@ mod tests {
             side: Side::Top,
             stage: "Bartonien".to_string(),
             points: vec![
-                Position { lon: 2.29, lat: 48.87, z: Some(58.0) },
-                Position { lon: 2.40, lat: 48.90, z: Some(50.0) },
+                Position {
+                    lon: 2.29,
+                    lat: 48.87,
+                    z: Some(58.0),
+                },
+                Position {
+                    lon: 2.40,
+                    lat: 48.90,
+                    z: Some(50.0),
+                },
             ],
             features: 10_354,
         };
@@ -276,10 +286,7 @@ mod tests {
         // What makes the package readable rather than a bag of points. Each
         // link is a uuid, and a broken one would still validate.
         let made = built();
-        assert_eq!(
-            made.interpretation.interpreted_feature.uuid,
-            made.feature.uuid
-        );
+        assert_eq!(made.interpretation.interpreted_feature.uuid, made.feature.uuid);
         assert_eq!(
             made.representation.represented_object.as_ref().unwrap().uuid,
             made.interpretation.uuid
@@ -317,7 +324,11 @@ mod tests {
             unit: bare,
             side: Side::Top,
             stage: "Bartonien".to_string(),
-            points: vec![Position { lon: 2.29, lat: 48.87, z: None }],
+            points: vec![Position {
+                lon: 2.29,
+                lat: 48.87,
+                z: None,
+            }],
             features: 1,
         };
         let array = Array {
@@ -333,13 +344,11 @@ mod tests {
     #[test]
     fn the_array_is_declared_as_rows_of_three_and_the_path_is_left_alone() {
         let made = built();
-        let resqml::AnyPointGeometry::PointGeometry(geometry) =
-            &made.representation.node_patch_geometry[0]
+        let resqml::AnyPointGeometry::PointGeometry(geometry) = &made.representation.node_patch_geometry[0]
         else {
             panic!("expected a point geometry")
         };
-        let Some(resqml::AbstractPoint3dArray::Point3dExternalArray(array)) = &geometry.points
-        else {
+        let Some(resqml::AbstractPoint3dArray::Point3dExternalArray(array)) = &geometry.points else {
             panic!("expected an external array")
         };
         let part = &array.coordinates.external_data_array_part[0];
@@ -372,7 +381,10 @@ mod tests {
         // What somebody reads in a list of forty objects. The unit alone would
         // give two objects the same name the day a second surface is imported.
         let made = built();
-        assert_eq!(made.representation.citation.title, "Marnes et Caillasses — Bartonien Top");
+        assert_eq!(
+            made.representation.citation.title,
+            "Marnes et Caillasses — Bartonien Top"
+        );
         assert_eq!(made.feature.citation.title, "Marnes et Caillasses");
     }
 

@@ -98,20 +98,47 @@ pub struct ChoiceValue {
 }
 
 fn style(id: &str, label: &str, params: Vec<ParamDecl>) -> StyleDecl {
-    StyleDecl { id: id.to_string(), label_key: format!("sectionView.unstratified.style.{id}"), label: label.to_string(), params, suggested: false }
+    StyleDecl {
+        id: id.to_string(),
+        label_key: format!("sectionView.unstratified.style.{id}"),
+        label: label.to_string(),
+        params,
+        suggested: false,
+    }
 }
 
 fn param(id: &str, label: &str, kind: ParamKind) -> ParamDecl {
-    ParamDecl { id: id.to_string(), label_key: format!("sectionView.unstratified.param.{id}"), label: label.to_string(), kind }
+    ParamDecl {
+        id: id.to_string(),
+        label_key: format!("sectionView.unstratified.param.{id}"),
+        label: label.to_string(),
+        kind,
+    }
 }
 
 fn colour() -> ParamDecl {
-    param("colour", "Colour", ParamKind::Colour { default: NEUTRAL_COLOUR.to_string() })
+    param(
+        "colour",
+        "Colour",
+        ParamKind::Colour {
+            default: NEUTRAL_COLOUR.to_string(),
+        },
+    )
 }
 
 fn length(id: &str, label: &str, default: f64) -> ParamDecl {
     let (min, max) = style_limits::LENGTH;
-    param(id, label, ParamKind::Number { unit: "px".into(), min, max, step: 1.0, default })
+    param(
+        id,
+        label,
+        ParamKind::Number {
+            unit: "px".into(),
+            min,
+            max,
+            step: 1.0,
+            default,
+        },
+    )
 }
 
 /// The styles the portions with no strata can be drawn in, and their parameters.
@@ -122,7 +149,11 @@ pub fn declared() -> Vec<StyleDecl> {
     let (amin, amax) = style_limits::ANGLE;
     vec![
         style("solid", "Solid line", vec![colour()]),
-        style("dashed", "Dashed line", vec![colour(), length("dash", "Dash", 6.0), length("gap", "Gap", 4.0)]),
+        style(
+            "dashed",
+            "Dashed line",
+            vec![colour(), length("dash", "Dash", 6.0), length("gap", "Gap", 4.0)],
+        ),
         StyleDecl {
             suggested: true,
             ..style(
@@ -130,8 +161,28 @@ pub fn declared() -> Vec<StyleDecl> {
                 "Hatched texture",
                 vec![
                     colour(),
-                    param("spacing", "Spacing", ParamKind::Number { unit: "px".into(), min: smin, max: smax, step: 1.0, default: 4.0 }),
-                    param("angle", "Angle", ParamKind::Number { unit: "°".into(), min: amin, max: amax, step: 5.0, default: 45.0 }),
+                    param(
+                        "spacing",
+                        "Spacing",
+                        ParamKind::Number {
+                            unit: "px".into(),
+                            min: smin,
+                            max: smax,
+                            step: 1.0,
+                            default: 4.0,
+                        },
+                    ),
+                    param(
+                        "angle",
+                        "Angle",
+                        ParamKind::Number {
+                            unit: "°".into(),
+                            min: amin,
+                            max: amax,
+                            step: 5.0,
+                            default: 45.0,
+                        },
+                    ),
                 ],
             )
         },
@@ -166,32 +217,51 @@ pub fn parse(text: &str) -> Result<UnstratifiedStyle, String> {
     let styles = declared();
     let Some(style) = styles.iter().find(|s| s.id == id.trim()) else {
         let names: Vec<&str> = styles.iter().map(|s| s.id.as_str()).collect();
-        return Err(format!("unknown style `{}`: one of {}", id.trim(), names.join(", ")));
+        return Err(format!(
+            "unknown style `{}`: one of {}",
+            id.trim(),
+            names.join(", ")
+        ));
     };
     let mut object = serde_json::Map::new();
     object.insert("kind".into(), serde_json::Value::String(style.id.clone()));
     for p in &style.params {
         let value = match &p.kind {
-            ParamKind::Colour { default } | ParamKind::Choice { default, .. } => serde_json::Value::from(default.clone()),
+            ParamKind::Colour { default } | ParamKind::Choice { default, .. } => {
+                serde_json::Value::from(default.clone())
+            }
             ParamKind::Number { default, .. } => serde_json::Value::from(*default),
         };
         object.insert(p.id.clone(), value);
     }
     for pair in rest.split(',').map(str::trim).filter(|p| !p.is_empty()) {
-        let (name, value) = pair.split_once('=').ok_or_else(|| format!("`{pair}`: expected name=value"))?;
+        let (name, value) = pair
+            .split_once('=')
+            .ok_or_else(|| format!("`{pair}`: expected name=value"))?;
         let Some(p) = style.params.iter().find(|p| p.id == name.trim()) else {
             let names: Vec<&str> = style.params.iter().map(|p| p.id.as_str()).collect();
-            return Err(format!("style `{}` has no parameter `{}`: it has [{}]", style.id, name.trim(), names.join(", ")));
+            return Err(format!(
+                "style `{}` has no parameter `{}`: it has [{}]",
+                style.id,
+                name.trim(),
+                names.join(", ")
+            ));
         };
         let value = match &p.kind {
             ParamKind::Number { .. } => serde_json::Value::from(
-                value.trim().parse::<f64>().map_err(|_| format!("parameter `{}`: `{}` is not a number", p.id, value.trim()))?,
+                value
+                    .trim()
+                    .parse::<f64>()
+                    .map_err(|_| format!("parameter `{}`: `{}` is not a number", p.id, value.trim()))?,
             ),
-            ParamKind::Colour { .. } | ParamKind::Choice { .. } => serde_json::Value::from(value.trim().to_string()),
+            ParamKind::Colour { .. } | ParamKind::Choice { .. } => {
+                serde_json::Value::from(value.trim().to_string())
+            }
         };
         object.insert(p.id.clone(), value);
     }
-    let parsed: UnstratifiedStyle = serde_json::from_value(serde_json::Value::Object(object)).map_err(|why| why.to_string())?;
+    let parsed: UnstratifiedStyle =
+        serde_json::from_value(serde_json::Value::Object(object)).map_err(|why| why.to_string())?;
     match parsed.refusal() {
         Some(why) => Err(format!("style `{}`: {why}", style.id)),
         None => Ok(parsed),

@@ -23,7 +23,10 @@ struct Held(Vec<(String, Box<dyn DynObject>)>);
 
 impl ObjectSource for Held {
     fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
-        self.0.iter().find(|(held, _)| held.eq_ignore_ascii_case(uuid)).map(|(_, one)| one.clone_box())
+        self.0
+            .iter()
+            .find(|(held, _)| held.eq_ignore_ascii_case(uuid))
+            .map(|(_, one)| one.clone_box())
     }
 }
 
@@ -32,13 +35,26 @@ impl ArraySource for Held {
         Vec::new()
     }
     fn metadata(&self, _location: &ArrayLocation) -> energyml_domain::Result<ArrayMetadata> {
-        Err(energyml_domain::Error::unsupported("an external array", "the test's arrays are inline"))
+        Err(energyml_domain::Error::unsupported(
+            "an external array",
+            "the test's arrays are inline",
+        ))
     }
     fn read(&self, _location: &ArrayLocation) -> energyml_domain::Result<ArrayData> {
-        Err(energyml_domain::Error::unsupported("an external array", "the test's arrays are inline"))
+        Err(energyml_domain::Error::unsupported(
+            "an external array",
+            "the test's arrays are inline",
+        ))
     }
-    fn read_into(&self, _location: &ArrayLocation, _out: &mut ArrayBuffer<'_>) -> energyml_domain::Result<ArrayMetadata> {
-        Err(energyml_domain::Error::unsupported("an external array", "the test's arrays are inline"))
+    fn read_into(
+        &self,
+        _location: &ArrayLocation,
+        _out: &mut ArrayBuffer<'_>,
+    ) -> energyml_domain::Result<ArrayMetadata> {
+        Err(energyml_domain::Error::unsupported(
+            "an external array",
+            "the test's arrays are inline",
+        ))
     }
 }
 
@@ -54,12 +70,24 @@ fn summary(uuid: &str, ty: &str) -> ObjectSummary {
 }
 
 fn citation() -> eml23::Citation {
-    eml23::Citation { title: "t".into(), originator: "o".into(), creation: "2026-10-04T00:00:00Z".into(), format: "f".into(), ..Default::default() }
+    eml23::Citation {
+        title: "t".into(),
+        originator: "o".into(),
+        creation: "2026-10-04T00:00:00Z".into(),
+        format: "f".into(),
+        ..Default::default()
+    }
 }
 
 /// A grid of 3 × 4 = 12 nodes (Grids.xsd, `Grid2dRepresentation`).
 fn grid() -> resqml22::Grid2dRepresentation {
-    resqml22::Grid2dRepresentation { uuid: GRID.into(), citation: citation(), slowest_axis_count: 3, fastest_axis_count: 4, ..Default::default() }
+    resqml22::Grid2dRepresentation {
+        uuid: GRID.into(),
+        citation: citation(),
+        slowest_axis_count: 3,
+        fastest_axis_count: 4,
+        ..Default::default()
+    }
 }
 
 /// A property on the nodes of that grid, holding `values` values.
@@ -75,40 +103,79 @@ fn property(values: i64) -> resqml22::ContinuousProperty {
             title: "g".into(),
             ..Default::default()
         },
-        values_for_patch: vec![resqml22::AbstractValueArray::FloatingPointConstantArray(eml23::FloatingPointConstantArray {
-            value: 1.0,
-            count: values,
-            ..Default::default()
-        })],
+        values_for_patch: vec![resqml22::AbstractValueArray::FloatingPointConstantArray(
+            eml23::FloatingPointConstantArray {
+                value: 1.0,
+                count: values,
+                ..Default::default()
+            },
+        )],
         ..Default::default()
     }
 }
 
 fn judge(values: i64) -> check::Report {
-    let held = Held(vec![(GRID.to_string(), Box::new(grid()) as Box<dyn DynObject>), (PROPERTY.to_string(), Box::new(property(values)) as Box<dyn DynObject>)]);
-    let summaries = vec![summary(GRID, "resqml22.Grid2dRepresentation"), summary(PROPERTY, "resqml22.ContinuousProperty")];
+    let held = Held(vec![
+        (GRID.to_string(), Box::new(grid()) as Box<dyn DynObject>),
+        (
+            PROPERTY.to_string(),
+            Box::new(property(values)) as Box<dyn DynObject>,
+        ),
+    ]);
+    let summaries = vec![
+        summary(GRID, "resqml22.Grid2dRepresentation"),
+        summary(PROPERTY, "resqml22.ContinuousProperty"),
+    ];
     let parts: Vec<Part<'_>> = summaries
         .iter()
         .zip(&held.0)
-        .map(|(summary, (_, object))| Part { summary, object: object.as_ref(), relationships: &[] })
+        .map(|(summary, (_, object))| Part {
+            summary,
+            object: object.as_ref(),
+            relationships: &[],
+        })
         .collect();
     let registry = energyml_schemas::all();
-    let package = Package { objects: &parts, summaries: &summaries, unreadable: &[], diagnostics: &[], source: &held, known: Some(&registry) };
-    check::check_with_arrays(&package, &Options { schema: false, rules: true, extra_rules: Vec::new() }, Some(&held))
+    let package = Package {
+        objects: &parts,
+        summaries: &summaries,
+        unreadable: &[],
+        diagnostics: &[],
+        source: &held,
+        known: Some(&registry),
+    };
+    check::check_with_arrays(
+        &package,
+        &Options {
+            schema: false,
+            rules: true,
+            extra_rules: Vec::new(),
+        },
+        Some(&held),
+    )
 }
 
 #[test]
 fn the_right_count_is_silent() {
     let report = judge(12);
     assert!(report.counts.is_empty(), "{:?}", report.counts);
-    assert_eq!(report.counts_unchecked, 0, "the grid counts its nodes, so it was judged");
+    assert_eq!(
+        report.counts_unchecked, 0,
+        "the grid counts its nodes, so it was judged"
+    );
 }
 
 #[test]
 fn a_count_that_does_not_fit_is_an_error_of_the_file() {
     let report = judge(7);
     assert_eq!(report.counts.len(), 1, "{:?}", report.counts);
-    assert!(report.counts[0].is_error && report.counts[0].says.contains("12") && report.counts[0].says.contains('7'), "{:?}", report.counts);
+    assert!(
+        report.counts[0].is_error
+            && report.counts[0].says.contains("12")
+            && report.counts[0].says.contains('7'),
+        "{:?}",
+        report.counts
+    );
     assert_eq!(report.errors(), 1, "and it counts");
 }
 
@@ -120,18 +187,50 @@ fn a_whole_multiple_is_a_remark_not_an_error() {
     assert_eq!(report.counts.len(), 1, "{:?}", report.counts);
     assert!(!report.counts[0].is_error, "{:?}", report.counts);
     assert_eq!(report.errors(), 0);
-    assert_eq!(report.warnings(), judge(12).warnings(), "listed and not counted: no more warnings than the same package with the right count");
+    assert_eq!(
+        report.warnings(),
+        judge(12).warnings(),
+        "listed and not counted: no more warnings than the same package with the right count"
+    );
 }
 
 /// Without something to count the values with, the section is **not run**, and
 /// says so — never a clean zero.
 #[test]
 fn with_no_array_source_the_counts_are_unchecked_not_fine() {
-    let held = Held(vec![(GRID.to_string(), Box::new(grid()) as Box<dyn DynObject>), (PROPERTY.to_string(), Box::new(property(7)) as Box<dyn DynObject>)]);
-    let summaries = vec![summary(GRID, "resqml22.Grid2dRepresentation"), summary(PROPERTY, "resqml22.ContinuousProperty")];
-    let parts: Vec<Part<'_>> = summaries.iter().zip(&held.0).map(|(summary, (_, object))| Part { summary, object: object.as_ref(), relationships: &[] }).collect();
-    let package = Package { objects: &parts, summaries: &summaries, unreadable: &[], diagnostics: &[], source: &held, known: None };
-    let report = check::check(&package, &Options { schema: false, rules: true, extra_rules: Vec::new() });
+    let held = Held(vec![
+        (GRID.to_string(), Box::new(grid()) as Box<dyn DynObject>),
+        (PROPERTY.to_string(), Box::new(property(7)) as Box<dyn DynObject>),
+    ]);
+    let summaries = vec![
+        summary(GRID, "resqml22.Grid2dRepresentation"),
+        summary(PROPERTY, "resqml22.ContinuousProperty"),
+    ];
+    let parts: Vec<Part<'_>> = summaries
+        .iter()
+        .zip(&held.0)
+        .map(|(summary, (_, object))| Part {
+            summary,
+            object: object.as_ref(),
+            relationships: &[],
+        })
+        .collect();
+    let package = Package {
+        objects: &parts,
+        summaries: &summaries,
+        unreadable: &[],
+        diagnostics: &[],
+        source: &held,
+        known: None,
+    };
+    let report = check::check(
+        &package,
+        &Options {
+            schema: false,
+            rules: true,
+            extra_rules: Vec::new(),
+        },
+    );
     assert!(report.counts.is_empty());
     assert_eq!(report.counts_unchecked, 1);
 }

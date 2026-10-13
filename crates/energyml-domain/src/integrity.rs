@@ -53,7 +53,7 @@ use energyml_core::identity;
 use energyml_core::value::{FieldValue, Reflect, Scalar};
 
 use crate::property;
-use crate::rules::{Gravity, Finding, Outcome, concepts_of};
+use crate::rules::{Finding, Gravity, Outcome, concepts_of};
 use crate::source::{ArraySource, ObjectSource};
 use crate::table::{Cell, Lookup};
 use crate::values::Values;
@@ -142,7 +142,11 @@ pub fn run(
     source: &dyn ObjectSource,
     arrays: Option<&dyn ArraySource>,
 ) -> Vec<Finding> {
-    let context = Context { objects, source, arrays };
+    let context = Context {
+        objects,
+        source,
+        arrays,
+    };
     let mut out = Vec::new();
     for check in CHECKS {
         (check.judge)(&context, check, &mut out);
@@ -298,7 +302,10 @@ fn time_series_asset_resolves(context: &Context<'_>, check: &Integrity, out: &mu
         .collect();
 
     for (uuid, object) in context.objects {
-        if !matches!(object.type_info().type_key, "TimeSeriesData" | "TimeSeriesStatistic") {
+        if !matches!(
+            object.type_info().type_key,
+            "TimeSeriesData" | "TimeSeriesStatistic"
+        ) {
             continue;
         }
         for key in objects(*object, "Key") {
@@ -350,7 +357,10 @@ fn time_series_asset_resolves(context: &Context<'_>, check: &Integrity, out: &mu
 /// matches a series to a well by the same names — one reading of *which well
 /// this name means*, not two.
 pub(crate) fn names_of(object: &dyn Reflect) -> Vec<String> {
-    let mut names: Vec<String> = identity::title_of_reflect(object).map(str::to_owned).into_iter().collect();
+    let mut names: Vec<String> = identity::title_of_reflect(object)
+        .map(str::to_owned)
+        .into_iter()
+        .collect();
     names.extend(text(object, "NameLegal"));
     names
 }
@@ -365,14 +375,26 @@ pub(crate) fn well_named_by(uri: &str) -> Result<Option<String>, String> {
     let rest = uri.trim();
     let rest = match rest.get(..4) {
         Some(scheme) if scheme.eq_ignore_ascii_case("eml:") => &rest[4..],
-        _ => return Err("not an Energistics URI (Identifier Specification v4.0 §6.1: it begins with `eml:`)".into()),
+        _ => {
+            return Err(
+                "not an Energistics URI (Identifier Specification v4.0 §6.1: it begins with `eml:`)".into(),
+            );
+        }
     };
     let path = match rest.strip_prefix("//") {
-        Some(authority_and_path) => authority_and_path.split_once('/').map(|(_, path)| path).unwrap_or(""),
-        None => rest.strip_prefix('/').ok_or("an Energistics URI's path begins with `/` (§6.1)")?,
+        Some(authority_and_path) => authority_and_path
+            .split_once('/')
+            .map(|(_, path)| path)
+            .unwrap_or(""),
+        None => rest
+            .strip_prefix('/')
+            .ok_or("an Energistics URI's path begins with `/` (§6.1)")?,
     };
     for part in path.split('/') {
-        if let Some(identifier) = part.strip_prefix("well(").and_then(|inner| inner.strip_suffix(')')) {
+        if let Some(identifier) = part
+            .strip_prefix("well(")
+            .and_then(|inner| inner.strip_suffix(')'))
+        {
             return Ok(Some(percent_decoded(identifier)));
         }
     }
@@ -416,7 +438,9 @@ fn one_definitive_trajectory_per_wellbore(context: &Context<'_>, check: &Integri
     // Lower-cased wellbore uuid → (the uuid as first written, the claimants).
     let mut by_wellbore: BTreeMap<String, (String, Vec<String>)> = BTreeMap::new();
     for (uuid, object) in context.objects {
-        if object.type_info().type_key != "Trajectory" || text(*object, "Definitive").as_deref() != Some("true") {
+        if object.type_info().type_key != "Trajectory"
+            || text(*object, "Definitive").as_deref() != Some("true")
+        {
             continue;
         }
         // A trajectory with no readable wellbore is `Validate`'s business: the
@@ -424,7 +448,9 @@ fn one_definitive_trajectory_per_wellbore(context: &Context<'_>, check: &Integri
         let Some(wellbore) = reference(*object, "Wellbore") else {
             continue;
         };
-        let title = identity::title_of_reflect(*object).map(|title| format!(" ({title})")).unwrap_or_default();
+        let title = identity::title_of_reflect(*object)
+            .map(|title| format!(" ({title})"))
+            .unwrap_or_default();
         by_wellbore
             .entry(wellbore.uuid.to_ascii_lowercase())
             .or_insert_with(|| (wellbore.uuid.clone(), Vec::new()))
@@ -436,7 +462,11 @@ fn one_definitive_trajectory_per_wellbore(context: &Context<'_>, check: &Integri
             out.push(violation(
                 check,
                 &wellbore,
-                format!("{} trajectories say they are definitive: {}", claimants.len(), claimants.join(", ")),
+                format!(
+                    "{} trajectories say they are definitive: {}",
+                    claimants.len(),
+                    claimants.join(", ")
+                ),
             ));
         }
     }
@@ -541,8 +571,13 @@ fn memberships(context: &Context<'_>) -> Memberships {
                 continue;
             };
             let version = field_version(association, "Collection");
-            let members: Vec<Member> = objects(association, "Dataobject").into_iter().filter_map(reference_of).collect();
-            out.entry(collection.uuid.to_ascii_lowercase()).or_default().push((version, members));
+            let members: Vec<Member> = objects(association, "Dataobject")
+                .into_iter()
+                .filter_map(reference_of)
+                .collect();
+            out.entry(collection.uuid.to_ascii_lowercase())
+                .or_default()
+                .push((version, members));
         }
     }
     out
@@ -553,7 +588,9 @@ fn memberships(context: &Context<'_>) -> Memberships {
 fn homogeneous_collection(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
     let held = memberships(context);
     for (uuid, object) in context.objects {
-        if object.type_info().type_key != "DataobjectCollection" || text(*object, "HomogeneousDatatype").as_deref() != Some("true") {
+        if object.type_info().type_key != "DataobjectCollection"
+            || text(*object, "HomogeneousDatatype").as_deref() != Some("true")
+        {
             continue;
         }
         let members = members_of(&held, uuid, identity::object_version_of_reflect(*object));
@@ -561,7 +598,11 @@ fn homogeneous_collection(context: &Context<'_>, check: &Integrity, out: &mut Ve
             continue;
         }
         if let Some(read) = mixed(&members) {
-            out.push(violation(check, uuid, format!("declares HomogeneousDatatype true and holds {read}")));
+            out.push(violation(
+                check,
+                uuid,
+                format!("declares HomogeneousDatatype true and holds {read}"),
+            ));
         }
     }
 }
@@ -573,11 +614,17 @@ fn homogeneous_association(context: &Context<'_>, check: &Integrity, out: &mut V
         if object.type_info().type_key != "CollectionsToDataobjectsAssociationSet" {
             continue;
         }
-        for (at, association) in objects(*object, "SingleCollectionAssociation").into_iter().enumerate() {
+        for (at, association) in objects(*object, "SingleCollectionAssociation")
+            .into_iter()
+            .enumerate()
+        {
             if text(association, "HomogeneousDatatype").as_deref() != Some("true") {
                 continue;
             }
-            let members: Vec<Member> = objects(association, "Dataobject").into_iter().filter_map(reference_of).collect();
+            let members: Vec<Member> = objects(association, "Dataobject")
+                .into_iter()
+                .filter_map(reference_of)
+                .collect();
             if let Some(read) = mixed(&members.iter().collect::<Vec<_>>()) {
                 out.push(violation(
                     check,
@@ -611,14 +658,21 @@ fn mixed(members: &[&Member]) -> Option<String> {
 /// `trg/wellbore-interpretation-set-holds-wellbores`. Filed under the earth
 /// model, whose association the guide constrains; one finding for every
 /// stranger across its sets, each named with the set it sits in.
-fn wellbore_interpretation_set_holds_wellbores(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
+fn wellbore_interpretation_set_holds_wellbores(
+    context: &Context<'_>,
+    check: &Integrity,
+    out: &mut Vec<Finding>,
+) {
     let held = memberships(context);
     for (uuid, object) in context.objects {
         if !concepts_of(*object).contains(&"EarthModelInterpretation") {
             continue;
         }
         let mut strangers = Vec::new();
-        for (at, set) in objects(*object, "WellboreInterpretationSet").into_iter().enumerate() {
+        for (at, set) in objects(*object, "WellboreInterpretationSet")
+            .into_iter()
+            .enumerate()
+        {
             let Some(collection) = reference_of(set) else {
                 continue;
             };
@@ -724,11 +778,7 @@ fn reference(object: &dyn Reflect, name: &str) -> Option<Member> {
 /// name that version, and those that name none (a short reference is accepted
 /// when nothing contradicts it). A collection asked for with no version takes
 /// every association.
-fn members_of<'a>(
-    held: &'a Memberships,
-    uuid: &str,
-    version: Option<&str>,
-) -> Vec<&'a Member> {
+fn members_of<'a>(held: &'a Memberships, uuid: &str, version: Option<&str>) -> Vec<&'a Member> {
     held.get(&uuid.to_ascii_lowercase())
         .into_iter()
         .flatten()
@@ -746,7 +796,9 @@ fn field_version(object: &dyn Reflect, name: &str) -> Option<String> {
 }
 
 fn field_version_of(reference: &dyn Reflect) -> Option<&str> {
-    identity::object_version_of_reflect(reference).map(str::trim).filter(|version| !version.is_empty())
+    identity::object_version_of_reflect(reference)
+        .map(str::trim)
+        .filter(|version| !version.is_empty())
 }
 
 /// What a reference names: its uuid and the concept it declares.
@@ -770,7 +822,10 @@ mod tests {
             Ok(Some("123456".into()))
         );
         // No authority (§6.2 allows it), and an escaped identifier.
-        assert_eq!(well_named_by("eml:/well(GTH%2D9)/wellhead"), Ok(Some("GTH-9".into())));
+        assert_eq!(
+            well_named_by("eml:/well(GTH%2D9)/wellhead"),
+            Ok(Some("GTH-9".into()))
+        );
         // The scheme is not case sensitive (§6.1); `wellbore(…)` is not `well(…)`.
         assert_eq!(well_named_by("EML://a.b/wellbore(01)/wellhead"), Ok(None));
         // Not an Energistics URI: an error, which the check turns into an

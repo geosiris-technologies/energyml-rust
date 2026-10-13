@@ -32,7 +32,13 @@ fn grid() -> Geometry {
     }
     Geometry {
         kind: "Grid2dRepresentation",
-        patches: vec![patch(points, Topology::Grid { fastest: 3, slowest: 2 })],
+        patches: vec![patch(
+            points,
+            Topology::Grid {
+                fastest: 3,
+                slowest: 2,
+            },
+        )],
     }
 }
 
@@ -118,7 +124,11 @@ fn a_ring_the_file_calls_closed_gets_the_segment_that_closes_it() {
         topology: Topology::Polylines(vec![4]),
         closed: vec![true],
     };
-    let drawn = Geometry { kind: "PolylineSetRepresentation", patches: vec![ring] }.drawable();
+    let drawn = Geometry {
+        kind: "PolylineSetRepresentation",
+        patches: vec![ring],
+    }
+    .drawable();
     assert_eq!(drawn.lines, vec![[0, 1], [1, 2], [2, 3], [3, 0]]);
     assert_eq!(drawn.points.len(), 4, "the first node is not repeated");
 
@@ -135,11 +145,22 @@ fn a_ring_the_file_calls_closed_gets_the_segment_that_closes_it() {
     let mixed = Patch {
         index: 0,
         node_offset: 0,
-        points: vec![[0.0; 3], [1.0, 0.0, 0.0], [2.0, 0.0, 0.0], [5.0, 0.0, 0.0], [6.0, 0.0, 0.0], [6.0, 1.0, 0.0]],
+        points: vec![
+            [0.0; 3],
+            [1.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0],
+            [5.0, 0.0, 0.0],
+            [6.0, 0.0, 0.0],
+            [6.0, 1.0, 0.0],
+        ],
         topology: Topology::Polylines(vec![3, 3]),
         closed: vec![false, true],
     };
-    let drawn = Geometry { kind: "PolylineSetRepresentation", patches: vec![mixed] }.drawable();
+    let drawn = Geometry {
+        kind: "PolylineSetRepresentation",
+        patches: vec![mixed],
+    }
+    .drawable();
     assert_eq!(drawn.lines, vec![[0, 1], [1, 2], [3, 4], [4, 5], [5, 3]]);
 
     // Two nodes do not make a ring: closing it would lay two segments on the
@@ -151,7 +172,11 @@ fn a_ring_the_file_calls_closed_gets_the_segment_that_closes_it() {
         topology: Topology::Polylines(vec![2]),
         closed: vec![true],
     };
-    let drawn = Geometry { kind: "PolylineSetRepresentation", patches: vec![thin] }.drawable();
+    let drawn = Geometry {
+        kind: "PolylineSetRepresentation",
+        patches: vec![thin],
+    }
+    .drawable();
     assert_eq!(drawn.lines, vec![[0, 1]]);
 }
 
@@ -190,7 +215,13 @@ fn quadrilaterals_and_rings_are_fanned() {
     let ring = Geometry {
         kind: "x",
         patches: vec![patch(
-            vec![[0.0; 3], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.5, 2.0, 0.0], [0.0, 1.0, 0.0]],
+            vec![
+                [0.0; 3],
+                [1.0, 0.0, 0.0],
+                [1.0, 1.0, 0.0],
+                [0.5, 2.0, 0.0],
+                [0.0, 1.0, 0.0],
+            ],
             Topology::Polygons(vec![vec![0, 1, 2, 3, 4]]),
         )],
     };
@@ -317,7 +348,11 @@ mod corpus {
         for path in &found {
             let store = EpcStore::open(path, registry()).expect("the package opens");
             for summary in store.resources() {
-                if !summary.qualified_type.to_lowercase().contains("grid2drepresentation") {
+                if !summary
+                    .qualified_type
+                    .to_lowercase()
+                    .contains("grid2drepresentation")
+                {
                     continue;
                 }
                 let Ok(object) = store.get_object(&summary.uri) else {
@@ -343,9 +378,7 @@ mod corpus {
                     let Topology::Grid { fastest, slowest } = patch.topology else {
                         continue;
                     };
-                    let defined = |index: usize| {
-                        patch.points[index].iter().all(|c: &f64| c.is_finite())
-                    };
+                    let defined = |index: usize| patch.points[index].iter().all(|c: &f64| c.is_finite());
                     for row in 0..slowest.saturating_sub(1) {
                         for column in 0..fastest.saturating_sub(1) {
                             let a = row * fastest + column;
@@ -369,8 +402,15 @@ mod corpus {
                 }
             }
         }
-        assert!(seen > 0, "the corpus holds no 2D grid, so this test proves nothing");
-        assert!(wrong.is_empty(), "cells the reader had and did not draw:\n{}", wrong.join("\n"));
+        assert!(
+            seen > 0,
+            "the corpus holds no 2D grid, so this test proves nothing"
+        );
+        assert!(
+            wrong.is_empty(),
+            "cells the reader had and did not draw:\n{}",
+            wrong.join("\n")
+        );
         assert!(surfaces > 0, "not one 2D grid of the corpus drew a surface");
         eprintln!("{seen} 2D grid(s), {surfaces} of them with a surface to draw");
     }
@@ -414,11 +454,19 @@ mod corpus {
                     .flatten()
                     .chain(drawn.lines.iter().flatten())
                     .any(|index| *index as usize >= drawn.points.len());
-                assert!(!outside, "{}: an index past the end of the point list", summary.uri);
+                assert!(
+                    !outside,
+                    "{}: an index past the end of the point list",
+                    summary.uri
+                );
             }
         }
         assert!(checked > 0, "nothing was read, so this test proves nothing");
-        assert!(guilty.is_empty(), "non-finite coordinates handed to a viewer:\n{}", guilty.join("\n"));
+        assert!(
+            guilty.is_empty(),
+            "non-finite coordinates handed to a viewer:\n{}",
+            guilty.join("\n")
+        );
         eprintln!("{checked} representation(s) drawable, {dropped} node(s) without a location");
     }
 }
@@ -505,7 +553,11 @@ fn a_volume_node_no_cell_names_is_dropped_not_drawn_as_a_dot() {
     assert_eq!(drawn.dropped, 4, "the skipped cube's exclusive corners");
     assert_eq!(drawn.points.len(), 8);
     assert_eq!(drawn.triangles.len(), 12, "the kept cube's skin, whole");
-    assert!(drawn.points.iter().all(|p| p[0] < 1.5), "no point of the skipped cube survives: {:?}", drawn.points);
+    assert!(
+        drawn.points.iter().all(|p| p[0] < 1.5),
+        "no point of the skipped cube survives: {:?}",
+        drawn.points
+    );
 
     // A surface keeps its lone nodes: a node a lattice samples is a location
     // whether or not the cells around it are complete — the ALWYN horizons are
@@ -513,12 +565,23 @@ fn a_volume_node_no_cell_names_is_dropped_not_drawn_as_a_dot() {
     let lone = Geometry {
         kind: "Grid2dRepresentation",
         patches: vec![patch(
-            vec![[0.0, 0.0, 0.0], [1.0, 0.0, f64::NAN], [0.0, 1.0, f64::NAN], [1.0, 1.0, 0.0]],
-            Topology::Grid { fastest: 2, slowest: 2 },
+            vec![
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, f64::NAN],
+                [0.0, 1.0, f64::NAN],
+                [1.0, 1.0, 0.0],
+            ],
+            Topology::Grid {
+                fastest: 2,
+                slowest: 2,
+            },
         )],
     };
     let drawn = lone.drawable();
-    assert_eq!((drawn.points.len(), drawn.dropped, drawn.triangles.len()), (2, 2, 0));
+    assert_eq!(
+        (drawn.points.len(), drawn.dropped, drawn.triangles.len()),
+        (2, 2, 0)
+    );
 }
 
 #[test]
@@ -608,8 +671,16 @@ fn every_triangle_names_the_cell_it_was_cut_from() {
     };
     let drawn = two_patches.drawable();
     assert_eq!(drawn.triangles.len(), 3, "one triangle, then a quad as two");
-    assert_eq!(drawn.triangle_cells, vec![0, 1, 1], "the quad is cell 1, both halves");
-    assert_eq!(two_patches.cell_count(), 2, "the table's numbering is cell_count's");
+    assert_eq!(
+        drawn.triangle_cells,
+        vec![0, 1, 1],
+        "the quad is cell 1, both halves"
+    );
+    assert_eq!(
+        two_patches.cell_count(),
+        2,
+        "the table's numbering is cell_count's"
+    );
 }
 
 #[test]
@@ -626,7 +697,13 @@ fn a_grid_cell_and_a_dropped_corner_keep_the_table_in_lockstep() {
     points[2] = [f64::NAN, f64::NAN, f64::NAN]; // the far corner of cell 1
     let holed = Geometry {
         kind: "Grid2dRepresentation",
-        patches: vec![patch(points, Topology::Grid { fastest: 3, slowest: 2 })],
+        patches: vec![patch(
+            points,
+            Topology::Grid {
+                fastest: 3,
+                slowest: 2,
+            },
+        )],
     };
     let drawn = holed.drawable();
     assert_eq!(drawn.dropped, 1);
@@ -668,7 +745,10 @@ fn a_volume_drawn_by_its_skin_refuses_the_table_rather_than_guessing() {
     };
     let drawn = cube.drawable();
     assert!(!drawn.triangles.is_empty(), "the skin is drawn");
-    assert!(drawn.triangle_cells.is_empty(), "and the table is withheld, not invented");
+    assert!(
+        drawn.triangle_cells.is_empty(),
+        "and the table is withheld, not invented"
+    );
 }
 
 #[test]
@@ -700,7 +780,15 @@ fn every_polyline_node_names_its_run_and_surface_nodes_name_none() {
     use energyml_geometry::geometry::Drawable;
     assert_eq!(
         drawn.node_cells,
-        vec![Drawable::NO_CELL, Drawable::NO_CELL, Drawable::NO_CELL, 1, 1, 2, 2],
+        vec![
+            Drawable::NO_CELL,
+            Drawable::NO_CELL,
+            Drawable::NO_CELL,
+            1,
+            1,
+            2,
+            2
+        ],
         "surface nodes name no cell; each run's nodes name their run, cell_count's numbering"
     );
 }
@@ -749,16 +837,33 @@ fn a_terrain_lattice_with_a_nan_node_draws_a_surface_with_a_hole() {
     points[hole][2] = f64::NAN;
     let geometry = Geometry {
         kind: "Grid2dRepresentation",
-        patches: vec![patch(points, Topology::Grid { fastest: 4, slowest: 4 })],
+        patches: vec![patch(
+            points,
+            Topology::Grid {
+                fastest: 4,
+                slowest: 4,
+            },
+        )],
     };
 
     let drawn = geometry.drawable();
     assert_eq!(drawn.dropped, 1, "the NaN node is counted, not silent");
     assert_eq!(drawn.points.len(), 15);
-    assert!(drawn.points.iter().all(|p| p.iter().all(|c| c.is_finite())), "no NaN reaches the front end");
-    assert_eq!(drawn.triangles.len(), 18 - 6, "the six triangles that touched the node are gone");
     assert!(
-        drawn.triangles.iter().flatten().all(|&i| (i as usize) < drawn.points.len()),
+        drawn.points.iter().all(|p| p.iter().all(|c| c.is_finite())),
+        "no NaN reaches the front end"
+    );
+    assert_eq!(
+        drawn.triangles.len(),
+        18 - 6,
+        "the six triangles that touched the node are gone"
+    );
+    assert!(
+        drawn
+            .triangles
+            .iter()
+            .flatten()
+            .all(|&i| (i as usize) < drawn.points.len()),
         "every index follows the renumbering"
     );
 }

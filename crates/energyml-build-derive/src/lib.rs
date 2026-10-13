@@ -39,7 +39,11 @@ fn doc_of(attrs: &[Attribute]) -> Option<String> {
             continue;
         }
         if let syn::Meta::NameValue(nv) = &attr.meta {
-            if let Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(text), .. }) = &nv.value {
+            if let Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Str(text),
+                ..
+            }) = &nv.value
+            {
                 let line = text.value().trim().to_string();
                 if line.is_empty() {
                     if !lines.is_empty() {
@@ -57,20 +61,28 @@ fn doc_of(attrs: &[Attribute]) -> Option<String> {
 /// `["A", "B"]` as a list of strings.
 fn strings_of(expr: &Expr) -> syn::Result<Vec<String>> {
     let Expr::Array(array) = expr else {
-        return Err(syn::Error::new(expr.span(), "expected a list of strings: [\"a\", \"b\"]"));
+        return Err(syn::Error::new(
+            expr.span(),
+            "expected a list of strings: [\"a\", \"b\"]",
+        ));
     };
     array
         .elems
         .iter()
         .map(|one| match one {
-            Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(text), .. }) => Ok(text.value()),
+            Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Str(text),
+                ..
+            }) => Ok(text.value()),
             other => Err(syn::Error::new(other.span(), "expected a string")),
         })
         .collect()
 }
 
 fn lits(list: &[String]) -> Vec<LitStr> {
-    list.iter().map(|one| LitStr::new(one, Span::call_site())).collect()
+    list.iter()
+        .map(|one| LitStr::new(one, Span::call_site()))
+        .collect()
 }
 
 // ---------------------------------------------------------------- Choice
@@ -89,13 +101,19 @@ pub fn derive_choice(input: TokenStream) -> TokenStream {
 fn choice(input: &DeriveInput) -> syn::Result<Tokens> {
     let name = &input.ident;
     let Data::Enum(data) = &input.data else {
-        return Err(syn::Error::new(input.span(), "`Choice` is for an enum of unit variants"));
+        return Err(syn::Error::new(
+            input.span(),
+            "`Choice` is for an enum of unit variants",
+        ));
     };
     let mut idents = Vec::new();
     let mut words = Vec::new();
     for variant in &data.variants {
         if !matches!(variant.fields, Fields::Unit) {
-            return Err(syn::Error::new(variant.span(), "a choice is a word: a unit variant, with no fields"));
+            return Err(syn::Error::new(
+                variant.span(),
+                "a choice is a word: a unit variant, with no fields",
+            ));
         }
         let mut word = variant.ident.to_string().to_kebab_case();
         for attr in variant.attrs.iter().filter(|a| a.path().is_ident("choice")) {
@@ -147,7 +165,10 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
     let result = match &input.data {
         Data::Struct(_) => params_struct(&input),
         Data::Enum(_) => params_union(&input),
-        Data::Union(_) => Err(syn::Error::new(input.span(), "`Params` is for a struct or an enum")),
+        Data::Union(_) => Err(syn::Error::new(
+            input.span(),
+            "`Params` is for a struct or an enum",
+        )),
     };
     match result {
         Ok(tokens) => tokens.into(),
@@ -220,14 +241,24 @@ fn param_attrs(attrs: &[Attribute]) -> syn::Result<ParamAttrs> {
 /// `"bands: true"` as one `Applies::When`.
 fn when_one(text: &str, span: Span) -> syn::Result<Tokens> {
     let Some((slot, values)) = text.split_once(':') else {
-        return Err(syn::Error::new(span, format!("`when`: `{text}` is not `slot: value, value`")));
+        return Err(syn::Error::new(
+            span,
+            format!("`when`: `{text}` is not `slot: value, value`"),
+        ));
     };
     if text.contains(';') {
-        return Err(syn::Error::new(span, "`when` is one condition — two or more are `when_any`"));
+        return Err(syn::Error::new(
+            span,
+            "`when` is one condition — two or more are `when_any`",
+        ));
     }
     let slot = LitStr::new(slot.trim(), Span::call_site());
-    let values: Vec<LitStr> =
-        values.split(',').map(str::trim).filter(|one| !one.is_empty()).map(|one| LitStr::new(one, Span::call_site())).collect();
+    let values: Vec<LitStr> = values
+        .split(',')
+        .map(str::trim)
+        .filter(|one| !one.is_empty())
+        .map(|one| LitStr::new(one, Span::call_site()))
+        .collect();
     if values.is_empty() {
         return Err(syn::Error::new(span, format!("`when`: `{text}` names no value")));
     }
@@ -239,27 +270,47 @@ fn when_any(text: &str, span: Span) -> syn::Result<Tokens> {
     let mut branches = Vec::new();
     for branch in text.split(';').map(str::trim).filter(|one| !one.is_empty()) {
         let Some((slot, values)) = branch.split_once(':') else {
-            return Err(syn::Error::new(span, format!("`when_any`: `{branch}` is not `slot: value, value`")));
+            return Err(syn::Error::new(
+                span,
+                format!("`when_any`: `{branch}` is not `slot: value, value`"),
+            ));
         };
         let slot = LitStr::new(slot.trim(), Span::call_site());
-        let values: Vec<LitStr> =
-            values.split(',').map(str::trim).filter(|one| !one.is_empty()).map(|one| LitStr::new(one, Span::call_site())).collect();
+        let values: Vec<LitStr> = values
+            .split(',')
+            .map(str::trim)
+            .filter(|one| !one.is_empty())
+            .map(|one| LitStr::new(one, Span::call_site()))
+            .collect();
         if values.is_empty() {
-            return Err(syn::Error::new(span, format!("`when_any`: `{branch}` names no value")));
+            return Err(syn::Error::new(
+                span,
+                format!("`when_any`: `{branch}` names no value"),
+            ));
         }
-        branches.push(quote! { ::energyml_build::operation::Applies::When { slot: #slot, is: vec![#(#values),*] } });
+        branches.push(
+            quote! { ::energyml_build::operation::Applies::When { slot: #slot, is: vec![#(#values),*] } },
+        );
     }
     if branches.len() < 2 {
-        return Err(syn::Error::new(span, "`when_any` joins two conditions or more — one is `when`, by a union's case"));
+        return Err(syn::Error::new(
+            span,
+            "`when_any` joins two conditions or more — one is `when`, by a union's case",
+        ));
     }
     Ok(quote! { ::energyml_build::operation::Applies::Any(vec![#(#branches),*]) })
 }
 
 fn params_struct(input: &DeriveInput) -> syn::Result<Tokens> {
     let name = &input.ident;
-    let Data::Struct(data) = &input.data else { unreachable!() };
+    let Data::Struct(data) = &input.data else {
+        unreachable!()
+    };
     let Fields::Named(fields) = &data.fields else {
-        return Err(syn::Error::new(input.span(), "`Params` on a struct needs named fields"));
+        return Err(syn::Error::new(
+            input.span(),
+            "`Params` on a struct needs named fields",
+        ));
     };
     let mut declare = Vec::new();
     let mut read = Vec::new();
@@ -271,7 +322,9 @@ fn params_struct(input: &DeriveInput) -> syn::Result<Tokens> {
         let attrs = param_attrs(&field.attrs)?;
         idents.push(ident.clone());
         let any = match (&attrs.when_any, &attrs.when) {
-            (Some(_), Some(_)) => return Err(syn::Error::new(field.span(), "`when` or `when_any`, not both")),
+            (Some(_), Some(_)) => {
+                return Err(syn::Error::new(field.span(), "`when` or `when_any`, not both"));
+            }
             (Some(text), None) => Some(when_any(text, field.span())?),
             (None, Some(text)) => Some(when_one(text, field.span())?),
             (None, None) => None,
@@ -289,27 +342,53 @@ fn params_struct(input: &DeriveInput) -> syn::Result<Tokens> {
                         out.push(slot);
                     }
                 }),
-                None => declare.push(quote! { out.extend(<#ty as ::energyml_build::declare::Params>::slots()); }),
+                None => {
+                    declare.push(quote! { out.extend(<#ty as ::energyml_build::declare::Params>::slots()); })
+                }
             }
             read.push(quote! { let #ident = <#ty as ::energyml_build::declare::Params>::read(choices)?; });
             write.push(quote! { choices = ::energyml_build::declare::Params::write(&self.#ident, choices); });
             continue;
         }
-        let slot = attrs.name.clone().unwrap_or_else(|| ident.to_string().to_lower_camel_case());
+        let slot = attrs
+            .name
+            .clone()
+            .unwrap_or_else(|| ident.to_string().to_lower_camel_case());
         let slot_lit = LitStr::new(&slot, Span::call_site());
-        let about = attrs.about.clone().or_else(|| doc_of(&field.attrs)).ok_or_else(|| {
-            syn::Error::new(field.span(), "a parameter says what it is: a doc comment, or `#[param(about = \"…\")]`")
-        })?;
+        let about = attrs
+            .about
+            .clone()
+            .or_else(|| doc_of(&field.attrs))
+            .ok_or_else(|| {
+                syn::Error::new(
+                    field.span(),
+                    "a parameter says what it is: a doc comment, or `#[param(about = \"…\")]`",
+                )
+            })?;
         let about = LitStr::new(&about, Span::call_site());
         let mut steps = Vec::new();
         if let Some(need) = &attrs.need {
             steps.push(quote! { slot.need = #need; });
         }
         if attrs.min.is_some() || attrs.max.is_some() || attrs.uom.is_some() {
-            let min = attrs.min.as_ref().map(|e| quote! { Some((#e) as f64) }).unwrap_or(quote! { None });
-            let max = attrs.max.as_ref().map(|e| quote! { Some((#e) as f64) }).unwrap_or(quote! { None });
-            let uom = attrs.uom.as_ref().map(|u| quote! { Some(#u) }).unwrap_or(quote! { None });
-            steps.push(quote! { slot.need = ::energyml_build::declare::bounded(slot.need, #min, #max, #uom); });
+            let min = attrs
+                .min
+                .as_ref()
+                .map(|e| quote! { Some((#e) as f64) })
+                .unwrap_or(quote! { None });
+            let max = attrs
+                .max
+                .as_ref()
+                .map(|e| quote! { Some((#e) as f64) })
+                .unwrap_or(quote! { None });
+            let uom = attrs
+                .uom
+                .as_ref()
+                .map(|u| quote! { Some(#u) })
+                .unwrap_or(quote! { None });
+            steps.push(
+                quote! { slot.need = ::energyml_build::declare::bounded(slot.need, #min, #max, #uom); },
+            );
         }
         if let Some(default) = &attrs.default {
             steps.push(quote! {
@@ -328,11 +407,15 @@ fn params_struct(input: &DeriveInput) -> syn::Result<Tokens> {
         }
         if !attrs.with.is_empty() {
             let with = lits(&attrs.with);
-            steps.push(quote! { slot = slot.when(::energyml_build::operation::Applies::With(&[#(#with),*])); });
+            steps.push(
+                quote! { slot = slot.when(::energyml_build::operation::Applies::With(&[#(#with),*])); },
+            );
         }
         if !attrs.without.is_empty() {
             let without = lits(&attrs.without);
-            steps.push(quote! { slot = slot.when(::energyml_build::operation::Applies::Without(&[#(#without),*])); });
+            steps.push(
+                quote! { slot = slot.when(::energyml_build::operation::Applies::Without(&[#(#without),*])); },
+            );
         }
         if let Some(any) = &any {
             steps.push(quote! { slot = slot.when(#any); });
@@ -406,7 +489,9 @@ fn params_struct(input: &DeriveInput) -> syn::Result<Tokens> {
 
 fn params_union(input: &DeriveInput) -> syn::Result<Tokens> {
     let name = &input.ident;
-    let Data::Enum(data) = &input.data else { unreachable!() };
+    let Data::Enum(data) = &input.data else {
+        unreachable!()
+    };
     let mut tag = None;
     let mut about = doc_of(&input.attrs);
     let mut group = None;
@@ -425,9 +510,13 @@ fn params_union(input: &DeriveInput) -> syn::Result<Tokens> {
         })?;
     }
     let tag = tag.ok_or_else(|| {
-        syn::Error::new(input.span(), "a union of cases names its choice: `#[params(tag = \"method\")]`")
+        syn::Error::new(
+            input.span(),
+            "a union of cases names its choice: `#[params(tag = \"method\")]`",
+        )
     })?;
-    let about = about.ok_or_else(|| syn::Error::new(input.span(), "a union says what it chooses: a doc comment"))?;
+    let about =
+        about.ok_or_else(|| syn::Error::new(input.span(), "a union says what it chooses: a doc comment"))?;
     let tag_lit = LitStr::new(&tag, Span::call_site());
     let about = LitStr::new(&about, Span::call_site());
 
@@ -468,7 +557,8 @@ fn params_union(input: &DeriveInput) -> syn::Result<Tokens> {
             }
             Fields::Unnamed(one) if one.unnamed.len() == 1 => {
                 let ty = &one.unnamed[0].ty;
-                cases_declare.push(quote! { (#word_lit, <#ty as ::energyml_build::declare::Params>::slots()) });
+                cases_declare
+                    .push(quote! { (#word_lit, <#ty as ::energyml_build::declare::Params>::slots()) });
                 cases_read.push(quote! {
                     Some(#word_lit) => Ok(#name::#ident(<#ty as ::energyml_build::declare::Params>::read(choices)?)),
                 });
@@ -484,7 +574,9 @@ fn params_union(input: &DeriveInput) -> syn::Result<Tokens> {
             }
         }
     }
-    let suggest = default.as_ref().map(|word| quote! { slot = slot.suggest(::energyml_build::declare::Json::from(#word)); });
+    let suggest = default
+        .as_ref()
+        .map(|word| quote! { slot = slot.suggest(::energyml_build::declare::Json::from(#word)); });
     // The default case is also **the reading of an absent choice** — the rule
     // of a field's default: one expression, two readers.
     let absent = default.as_ref().map(|word| quote! { .or(Some(#word)) });
@@ -590,7 +682,10 @@ fn inputs(input: &DeriveInput) -> syn::Result<Tokens> {
             })?;
         }
         let about = about.ok_or_else(|| {
-            syn::Error::new(field.span(), "an input says what it is: a doc comment, or `#[input(about = \"…\")]`")
+            syn::Error::new(
+                field.span(),
+                "an input says what it is: a doc comment, or `#[input(about = \"…\")]`",
+            )
         })?;
         let slot_lit = LitStr::new(&slot, Span::call_site());
         let about = LitStr::new(&about, Span::call_site());
@@ -598,7 +693,8 @@ fn inputs(input: &DeriveInput) -> syn::Result<Tokens> {
         let types = quote! { &[#(#types),*] };
         let least = least.map(|l| quote! { slot.least = #l; });
         let ordered = ordered.then(|| quote! { slot = slot.in_order(); });
-        let every = every.then(|| quote! { slot = slot.otherwise(::energyml_build::operation::Otherwise::Every); });
+        let every =
+            every.then(|| quote! { slot = slot.otherwise(::energyml_build::operation::Otherwise::Every); });
         let palette = palette.then(|| {
             quote! {
                 if let ::energyml_build::operation::Need::Input(takes) = &mut slot.need {

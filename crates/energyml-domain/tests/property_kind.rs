@@ -70,7 +70,10 @@ fn properties(store: &EpcStore) -> Vec<(String, Box<dyn energyml_core::registry:
 #[test]
 fn every_kind_of_the_corpus_resolves_or_says_precisely_why_not() {
     let files = corpus();
-    if skip_if_empty(&files, "every_kind_of_the_corpus_resolves_or_says_precisely_why_not") {
+    if skip_if_empty(
+        &files,
+        "every_kind_of_the_corpus_resolves_or_says_precisely_why_not",
+    ) {
         return;
     }
     let registry = registry();
@@ -125,7 +128,10 @@ fn every_kind_of_the_corpus_resolves_or_says_precisely_why_not() {
         "{from_package} kinds from the package, {from_dictionary} from the dictionary, \
          {by_name} left as a standard name, {refused} refused"
     );
-    assert!(from_package > 0, "the corpus carries PropertyKind objects; none was used");
+    assert!(
+        from_package > 0,
+        "the corpus carries PropertyKind objects; none was used"
+    );
 }
 
 #[test]
@@ -137,7 +143,10 @@ fn a_local_kind_walks_up_to_the_root_of_the_dictionary() {
     if skip_if_empty(&files, "a_local_kind_walks_up_to_the_root_of_the_dictionary") {
         return;
     }
-    let Some(path) = files.iter().find(|p| p.ends_with("80wells_surf_modified_val_color.epc")) else {
+    let Some(path) = files
+        .iter()
+        .find(|p| p.ends_with("80wells_surf_modified_val_color.epc"))
+    else {
         eprintln!("skipped: 80wells is not in the corpus");
         return;
     };
@@ -145,7 +154,10 @@ fn a_local_kind_walks_up_to_the_root_of_the_dictionary() {
     let resolver = Resolver::new(&store);
 
     let (count, _label) = property_kind::builtin();
-    assert!(count > 0, "the built-in dictionary is never empty: build.rs refuses to build without data/property_kinds.tsv");
+    assert!(
+        count > 0,
+        "the built-in dictionary is never empty: build.rs refuses to build without data/property_kinds.tsv"
+    );
 
     let mut crossed = 0usize;
     for (_, object) in properties(&store) {
@@ -214,7 +226,10 @@ fn the_wrong_file_is_named_rather_than_loaded_as_an_empty_dictionary() {
 #[test]
 fn the_shipped_dictionary_holds_what_it_claims() {
     let (count, _label) = property_kind::builtin();
-    assert!(count > 0, "the built-in dictionary is never empty: build.rs refuses to build without data/property_kinds.tsv");
+    assert!(
+        count > 0,
+        "the built-in dictionary is never empty: build.rs refuses to build without data/property_kinds.tsv"
+    );
     assert_eq!(count, 3662, "the Energistics 2.3 dictionary has 3662 kinds");
     property_kind::with_default(|dictionary| {
         let length = dictionary.by_title("length");
@@ -236,7 +251,10 @@ fn a_search_puts_the_word_someone_typed_first() {
     // a large part of the dictionary; a list that opens on `absolute pressure`
     // and buries `pressure` itself is a list a person scrolls past.
     let (count, _label) = property_kind::builtin();
-    assert!(count > 0, "the built-in dictionary is never empty: build.rs refuses to build without data/property_kinds.tsv");
+    assert!(
+        count > 0,
+        "the built-in dictionary is never empty: build.rs refuses to build without data/property_kinds.tsv"
+    );
     property_kind::with_default(|dictionary| {
         let found = dictionary.search("pressure", 20);
         assert!(found.len() > 3, "only {} match(es) for `pressure`", found.len());
@@ -269,8 +287,16 @@ fn a_search_puts_the_word_someone_typed_first() {
         // Stable: the same call twice gives the same list, which a dictionary
         // holding two kinds of the same title does not get for free.
         assert_eq!(
-            dictionary.search("stiffness", 10).iter().map(|k| &k.uuid).collect::<Vec<_>>(),
-            dictionary.search("stiffness", 10).iter().map(|k| &k.uuid).collect::<Vec<_>>()
+            dictionary
+                .search("stiffness", 10)
+                .iter()
+                .map(|k| &k.uuid)
+                .collect::<Vec<_>>(),
+            dictionary
+                .search("stiffness", 10)
+                .iter()
+                .map(|k| &k.uuid)
+                .collect::<Vec<_>>()
         );
 
         // Case is noise, and the limit is honoured.
@@ -284,11 +310,17 @@ fn a_search_puts_the_word_someone_typed_first() {
 #[test]
 fn an_ancestry_stops_at_the_root_that_is_its_own_parent() {
     let (count, _label) = property_kind::builtin();
-    assert!(count > 0, "the built-in dictionary is never empty: build.rs refuses to build without data/property_kinds.tsv");
+    assert!(
+        count > 0,
+        "the built-in dictionary is never empty: build.rs refuses to build without data/property_kinds.tsv"
+    );
     property_kind::with_default(|dictionary| {
         let length = dictionary.by_title("length")[0];
         let chain = dictionary.ancestry(&length.uuid);
-        assert_eq!(chain[0].uuid, length.uuid, "the chain starts with the kind itself");
+        assert_eq!(
+            chain[0].uuid, length.uuid,
+            "the chain starts with the kind itself"
+        );
         assert!(chain.len() > 1, "`length` has a parent");
         assert_eq!(
             chain.last().unwrap().title.to_ascii_lowercase(),

@@ -72,15 +72,28 @@ pub fn of_wells(
     arc_step: f64,
     placement: Placement,
 ) -> Result<WellsProfile, WellsProfileError> {
-    let read = heads::of_objects(source, asked, placement).map_err(|e| WellsProfileError::Heads(e.to_string()))?;
-    let batch: Vec<profile::Head> = read.heads.iter().map(|h| profile::Head::new(h.id.clone(), h.xy)).collect();
+    let read =
+        heads::of_objects(source, asked, placement).map_err(|e| WellsProfileError::Heads(e.to_string()))?;
+    let batch: Vec<profile::Head> = read
+        .heads
+        .iter()
+        .map(|h| profile::Head::new(h.id.clone(), h.xy))
+        .collect();
     let section = profile::project(track, left, right, &batch, arc_step)?;
     Ok(WellsProfile {
         profile: section.profile,
         band: section.band,
         length: section.length,
-        titles: read.heads.iter().map(|h| (h.id.clone(), h.title.clone())).collect(),
-        refused: read.refused.iter().map(|r| (r.id.clone(), r.why.clone())).collect(),
+        titles: read
+            .heads
+            .iter()
+            .map(|h| (h.id.clone(), h.title.clone()))
+            .collect(),
+        refused: read
+            .refused
+            .iter()
+            .map(|r| (r.id.clone(), r.why.clone()))
+            .collect(),
         system: read.system,
         heads: read.heads.len(),
     })

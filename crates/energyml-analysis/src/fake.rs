@@ -84,9 +84,14 @@ impl Cuts {
     fn validate(&self) -> Result<(), Error> {
         match *self {
             Cuts::Fixed(count) if count >= 1 => Ok(()),
-            Cuts::Fixed(count) => Err(Error::BadCuts { given: f64::from(count) }),
+            Cuts::Fixed(count) => Err(Error::BadCuts {
+                given: f64::from(count),
+            }),
             Cuts::Random { min, max } if min >= 1 && max >= min => Ok(()),
-            Cuts::Random { min, max } => Err(Error::BadCutsRange { min: f64::from(min), max: f64::from(max) }),
+            Cuts::Random { min, max } => Err(Error::BadCutsRange {
+                min: f64::from(min),
+                max: f64::from(max),
+            }),
         }
     }
 
@@ -112,7 +117,9 @@ impl Length {
         match *self {
             Length::Fixed(length) if length.is_finite() && length >= 0.0 => Ok(()),
             Length::Fixed(length) => Err(Error::BadLength { given: length }),
-            Length::Random { min, max } if min.is_finite() && max.is_finite() && min >= 0.0 && max >= min => Ok(()),
+            Length::Random { min, max } if min.is_finite() && max.is_finite() && min >= 0.0 && max >= min => {
+                Ok(())
+            }
             Length::Random { min, max } => Err(Error::BadLengthRange { min, max }),
         }
     }
@@ -198,10 +205,18 @@ pub fn vertical_polylines(
         let mut travelled = 0.0;
         for weight in &weights {
             travelled += weight / sum * total;
-            let z = if up { head[2] - travelled } else { head[2] + travelled };
+            let z = if up {
+                head[2] - travelled
+            } else {
+                head[2] + travelled
+            };
             points.push([head[0], head[1], z]);
         }
-        out.push(Polyline { points, cuts: n, length: total });
+        out.push(Polyline {
+            points,
+            cuts: n,
+            length: total,
+        });
     }
     Ok(out)
 }
@@ -213,7 +228,15 @@ mod tests {
     #[test]
     fn end_lands_at_the_requested_length_in_the_up_direction() {
         let heads = [[0.0, 0.0, 100.0]];
-        let made = vertical_polylines(&heads, &Cuts::Fixed(3), &Length::Fixed(30.0), &Spacing::Regular, true, 1).unwrap();
+        let made = vertical_polylines(
+            &heads,
+            &Cuts::Fixed(3),
+            &Length::Fixed(30.0),
+            &Spacing::Regular,
+            true,
+            1,
+        )
+        .unwrap();
         assert_eq!(made[0].points.len(), 4);
         assert_eq!(made[0].points[0], [0.0, 0.0, 100.0]);
         let last = *made[0].points.last().unwrap();
@@ -227,7 +250,15 @@ mod tests {
     #[test]
     fn direction_depends_on_the_crs_not_on_a_convention() {
         let heads = [[0.0, 0.0, 100.0]];
-        let down = vertical_polylines(&heads, &Cuts::Fixed(1), &Length::Fixed(10.0), &Spacing::Regular, false, 1).unwrap();
+        let down = vertical_polylines(
+            &heads,
+            &Cuts::Fixed(1),
+            &Length::Fixed(10.0),
+            &Spacing::Regular,
+            false,
+            1,
+        )
+        .unwrap();
         assert!((down[0].points[1][2] - 110.0).abs() < 1e-9);
     }
 
@@ -248,15 +279,35 @@ mod tests {
         }
         // And a different seed draws differently — else the test could not fail.
         let c = vertical_polylines(&heads, &cuts, &length, &spacing, true, 43).unwrap();
-        assert!(a.iter().zip(&c).any(|(one, other)| one.cuts != other.cuts || one.length != other.length));
+        assert!(
+            a.iter()
+                .zip(&c)
+                .any(|(one, other)| one.cuts != other.cuts || one.length != other.length)
+        );
     }
 
     #[test]
     fn a_single_tip_does_not_merge_two_points() {
         // A point added at the end must not change the draw of the ones before it —
         // each point's stream is independent of how many others there are.
-        let a = vertical_polylines(&[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], &Cuts::Random { min: 1, max: 20 }, &Length::Fixed(10.0), &Spacing::Regular, true, 7).unwrap();
-        let b = vertical_polylines(&[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [2.0, 0.0, 0.0]], &Cuts::Random { min: 1, max: 20 }, &Length::Fixed(10.0), &Spacing::Regular, true, 7).unwrap();
+        let a = vertical_polylines(
+            &[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
+            &Cuts::Random { min: 1, max: 20 },
+            &Length::Fixed(10.0),
+            &Spacing::Regular,
+            true,
+            7,
+        )
+        .unwrap();
+        let b = vertical_polylines(
+            &[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [2.0, 0.0, 0.0]],
+            &Cuts::Random { min: 1, max: 20 },
+            &Length::Fixed(10.0),
+            &Spacing::Regular,
+            true,
+            7,
+        )
+        .unwrap();
         assert_eq!(a[0].cuts, b[0].cuts);
         assert_eq!(a[1].cuts, b[1].cuts);
     }
@@ -264,13 +315,29 @@ mod tests {
     #[test]
     fn a_zero_cut_count_is_refused() {
         let heads = [[0.0, 0.0, 0.0]];
-        let why = vertical_polylines(&heads, &Cuts::Fixed(0), &Length::Fixed(10.0), &Spacing::Regular, true, 1).unwrap_err();
+        let why = vertical_polylines(
+            &heads,
+            &Cuts::Fixed(0),
+            &Length::Fixed(10.0),
+            &Spacing::Regular,
+            true,
+            1,
+        )
+        .unwrap_err();
         assert!(matches!(why, Error::BadCuts { .. }), "{why}");
     }
 
     #[test]
     fn an_empty_cloud_is_refused() {
-        let why = vertical_polylines(&[], &Cuts::Fixed(1), &Length::Fixed(10.0), &Spacing::Regular, true, 1).unwrap_err();
+        let why = vertical_polylines(
+            &[],
+            &Cuts::Fixed(1),
+            &Length::Fixed(10.0),
+            &Spacing::Regular,
+            true,
+            1,
+        )
+        .unwrap_err();
         assert!(matches!(why, Error::NoHeads));
     }
 }

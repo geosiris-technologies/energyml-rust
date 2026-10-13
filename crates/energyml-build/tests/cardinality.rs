@@ -25,13 +25,14 @@
 
 use serde_json::{Value, json};
 
-use energyml_build::operation::{
-    Choices, Error, Fitness, Identity, Need, AnyOperation, Plan, Slot, When,
-};
+use energyml_build::operation::{AnyOperation, Choices, Error, Fitness, Identity, Need, Plan, Slot, When};
 use energyml_build::pieces::Pieces;
 
 fn when() -> When {
-    When { creation: "2026-09-11T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-11T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 /// An operation that takes **as many titles as you like**, and names them all.
@@ -75,9 +76,15 @@ impl AnyOperation for ManyTitles {
         // **All of them**, not the first. This is the line that this file watches:
         // a consumer that read `choices.text("titles")` would take `None`
         // on a list and say nothing.
-        let given = choices.get("titles").and_then(Value::as_array).cloned().unwrap_or_default();
-        let names: Vec<String> =
-            given.iter().filter_map(|v| v.as_str().map(str::to_string)).collect();
+        let given = choices
+            .get("titles")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        let names: Vec<String> = given
+            .iter()
+            .filter_map(|v| v.as_str().map(str::to_string))
+            .collect();
         Ok(Plan {
             media: Vec::new(),
             blocked: None,
@@ -143,7 +150,10 @@ fn a_multiple_slot_is_declared_as_such() {
 fn the_order_is_stated_and_not_deduced() {
     let plain = Slot::many("surfaces", Need::Title, "", 2);
     assert!(plain.takes_many());
-    assert!(!plain.ordered, "taking several values says nothing of their order");
+    assert!(
+        !plain.ordered,
+        "taking several values says nothing of their order"
+    );
     assert_eq!(plain.json()["ordered"], json!(false));
 
     let ranked = Slot::many("surfaces", Need::Title, "", 2).in_order();
@@ -191,7 +201,10 @@ fn too_few_values_is_refused_with_the_count() {
 
 #[test]
 fn too_many_values_is_refused_with_the_count() {
-    let op = ManyTitles { least: 0, most: Some(2) };
+    let op = ManyTitles {
+        least: 0,
+        most: Some(2),
+    };
     let why = settle(&op, Choices::new().set("titles", json!(["a", "b", "c"]))).unwrap_err();
     assert!(why.to_string().contains("at most 2"), "{why}");
     assert!(why.to_string().contains("has 3"), "{why}");
@@ -233,10 +246,14 @@ fn every_element_is_checked_not_only_the_first() {
 #[test]
 fn the_plan_sees_all_the_values_and_not_the_first() {
     let op = free();
-    let choices =
-        settle(&op, Choices::new().set("titles", json!(["Top Brent", "Base Brent", "Ness"])))
-            .unwrap();
-    let plan = op.plan(&Pieces::empty(), &choices, &Identity::derived(), &when()).unwrap();
+    let choices = settle(
+        &op,
+        Choices::new().set("titles", json!(["Top Brent", "Base Brent", "Ness"])),
+    )
+    .unwrap();
+    let plan = op
+        .plan(&Pieces::empty(), &choices, &Identity::derived(), &when())
+        .unwrap();
 
     assert_eq!(plan.activity.title, "Top Brent + Base Brent + Ness");
     let note = plan.says.iter().find(|n| n.key == "named").expect("the note");

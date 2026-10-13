@@ -6,7 +6,7 @@
 //! earns the feature its keep — which references the cut would break, told apart
 //! from the ones the source was already breaking.
 
-use energyml_storage::extract::{plan, Broken};
+use energyml_storage::extract::{Broken, plan};
 use energyml_storage::graph::{Edge, Graph, Node};
 use energyml_storage::resource::ObjectSummary;
 
@@ -43,7 +43,12 @@ fn edge(from: &str, to: &str) -> Edge {
 /// A representation, its interpretation, that one's feature, and a spare object
 /// nothing kept will point at.
 fn package() -> (Vec<ObjectSummary>, Graph) {
-    let resources = vec![summary("rep"), summary("interp"), summary("feature"), summary("spare")];
+    let resources = vec![
+        summary("rep"),
+        summary("interp"),
+        summary("feature"),
+        summary("spare"),
+    ];
     let graph = Graph {
         nodes: vec![
             node("rep", true),
@@ -175,15 +180,13 @@ fn the_proxy_relationship_counts_as_a_declaration() {
 
     let proxy = Relationship {
         id: "x".into(),
-        kind: "http://schemas.energistics.org/package/2012/relationships/mlToExternalPartProxy"
-            .into(),
+        kind: "http://schemas.energistics.org/package/2012/relationships/mlToExternalPartProxy".into(),
         target: "obj_EpcExternalPartReference_a.xml".into(),
         external: false,
     };
     assert_eq!(proxy.short_kind(), "mlToExternalPartProxy");
     let back = Relationship {
-        kind: "http://schemas.energistics.org/package/2012/relationships/externalPartProxyToMl"
-            .into(),
+        kind: "http://schemas.energistics.org/package/2012/relationships/externalPartProxyToMl".into(),
         ..proxy.clone()
     };
     assert_eq!(back.short_kind(), "externalPartProxyToMl");

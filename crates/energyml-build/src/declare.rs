@@ -125,10 +125,16 @@ impl<T: Scalar> Param for Vec<T> {
 
 impl Scalar for f64 {
     fn need() -> Need {
-        Need::Number { uom: None, least: None, most: None }
+        Need::Number {
+            uom: None,
+            least: None,
+            most: None,
+        }
     }
     fn from_json(value: &Json) -> Result<Self, String> {
-        value.as_f64().ok_or_else(|| format!("expected a number, got {value}"))
+        value
+            .as_f64()
+            .ok_or_else(|| format!("expected a number, got {value}"))
     }
     fn to_json(&self) -> Json {
         Json::from(*self)
@@ -138,12 +144,20 @@ impl Scalar for f64 {
 /// A whole number — an integral float accepted, because EML 2.3 has no
 /// integer parameter and a code read back from an activity is a `double`.
 fn whole(value: &Json) -> Option<i64> {
-    value.as_i64().or_else(|| value.as_f64().filter(|f| f.fract() == 0.0 && f.is_finite()).map(|f| f as i64))
+    value.as_i64().or_else(|| {
+        value
+            .as_f64()
+            .filter(|f| f.fract() == 0.0 && f.is_finite())
+            .map(|f| f as i64)
+    })
 }
 
 impl Scalar for i64 {
     fn need() -> Need {
-        Need::Integer { least: None, most: None }
+        Need::Integer {
+            least: None,
+            most: None,
+        }
     }
     fn from_json(value: &Json) -> Result<Self, String> {
         whole(value).ok_or_else(|| format!("expected a whole number, got {value}"))
@@ -155,7 +169,10 @@ impl Scalar for i64 {
 
 impl Scalar for usize {
     fn need() -> Need {
-        Need::Integer { least: Some(0), most: None }
+        Need::Integer {
+            least: Some(0),
+            most: None,
+        }
     }
     fn from_json(value: &Json) -> Result<Self, String> {
         whole(value)
@@ -172,7 +189,10 @@ impl Scalar for String {
         Need::Text
     }
     fn from_json(value: &Json) -> Result<Self, String> {
-        value.as_str().map(str::to_string).ok_or_else(|| format!("expected text, got {value}"))
+        value
+            .as_str()
+            .map(str::to_string)
+            .ok_or_else(|| format!("expected text, got {value}"))
     }
     fn to_json(&self) -> Json {
         Json::from(self.as_str())
@@ -222,7 +242,10 @@ impl Scalar for Epsg {
         Need::Epsg
     }
     fn from_json(value: &Json) -> Result<Self, String> {
-        whole(value).filter(|v| *v > 0).map(Epsg).ok_or_else(|| format!("expected an EPSG code, got {value}"))
+        whole(value)
+            .filter(|v| *v > 0)
+            .map(Epsg)
+            .ok_or_else(|| format!("expected an EPSG code, got {value}"))
     }
     fn to_json(&self) -> Json {
         Json::from(self.0)
@@ -271,7 +294,9 @@ impl Scalar for TypeName {
         Need::Type(crate::types::TypeChoice::filtered(""))
     }
     fn from_json(value: &Json) -> Result<Self, String> {
-        <Self as Scalar>::need().accepts(value).map(|()| TypeName(value.as_str().unwrap_or_default().to_string()))
+        <Self as Scalar>::need()
+            .accepts(value)
+            .map(|()| TypeName(value.as_str().unwrap_or_default().to_string()))
     }
     fn to_json(&self) -> Json {
         Json::from(self.0.as_str())
@@ -289,9 +314,13 @@ impl Scalar for ChartTerm {
     }
     fn from_json(value: &Json) -> Result<Self, String> {
         match value {
-            Json::String(text) => <Self as Scalar>::need().accepts(value).map(|()| ChartTerm(text.clone())),
+            Json::String(text) => <Self as Scalar>::need()
+                .accepts(value)
+                .map(|()| ChartTerm(text.clone())),
             // An id typed as a number, or read back from an activity as a double.
-            Json::Number(_) => whole(value).map(|id| ChartTerm(id.to_string())).ok_or_else(|| format!("expected a term of the chart, got {value}")),
+            Json::Number(_) => whole(value)
+                .map(|id| ChartTerm(id.to_string()))
+                .ok_or_else(|| format!("expected a term of the chart, got {value}")),
             other => Err(format!("expected a term of the chart, got {other}")),
         }
     }
@@ -300,19 +329,43 @@ impl Scalar for ChartTerm {
     }
 }
 
-scalar_param!(f64, i64, usize, String, bool, Title, Epsg, ObjectRef, CrsRef, InterpretationRef, PropertyKindRef, TypeName, ChartTerm);
+scalar_param!(
+    f64,
+    i64,
+    usize,
+    String,
+    bool,
+    Title,
+    Epsg,
+    ObjectRef,
+    CrsRef,
+    InterpretationRef,
+    PropertyKindRef,
+    TypeName,
+    ChartTerm
+);
 
 /// The slot a field of type `T` declares, before its attributes.
 pub fn slot_of<T: Param>(name: &'static str, about: &'static str) -> Slot {
-    Slot { least: T::least(), most: T::most(), ..Slot::required(name, T::need(), about) }
+    Slot {
+        least: T::least(),
+        most: T::most(),
+        ..Slot::required(name, T::need(), about)
+    }
 }
 
 /// A number's bounds and unit, from the field's attributes.
 pub fn bounded(need: Need, min: Option<f64>, max: Option<f64>, uom: Option<&'static str>) -> Need {
     match need {
-        Need::Number { uom: own, least, most } => {
-            Need::Number { uom: uom.or(own), least: min.or(least), most: max.or(most) }
-        }
+        Need::Number {
+            uom: own,
+            least,
+            most,
+        } => Need::Number {
+            uom: uom.or(own),
+            least: min.or(least),
+            most: max.or(most),
+        },
         Need::Integer { least, most } => Need::Integer {
             least: min.map(|v| v as i64).or(least),
             most: max.map(|v| v as i64).or(most),
@@ -383,7 +436,9 @@ pub fn union_slots(tag: Slot, cases: Vec<(&'static str, Vec<Slot>)>) -> Vec<Slot
                     slot.name
                 );
                 match &mut existing.applies {
-                    Applies::When { slot: controller, is } if *controller == tag_name && !is.contains(&case) => {
+                    Applies::When { slot: controller, is }
+                        if *controller == tag_name && !is.contains(&case) =>
+                    {
                         is.push(case);
                     }
                     _ => {}
@@ -391,7 +446,10 @@ pub fn union_slots(tag: Slot, cases: Vec<(&'static str, Vec<Slot>)>) -> Vec<Slot
                 continue;
             }
             slot.applies = match slot.applies {
-                Applies::Always => Applies::When { slot: tag_name, is: vec![case] },
+                Applies::Always => Applies::When {
+                    slot: tag_name,
+                    is: vec![case],
+                },
                 nested @ Applies::When { .. } => nested,
                 other => panic!(
                     "`{}` is under the case `{case}` of `{tag_name}` and is also {other:?}: a flat form cannot combine the two",
@@ -459,12 +517,24 @@ pub fn paired(bag: &Pieces) -> Vec<Piece<'_>> {
                 // An object piece **is** what is known of it: looking for a
                 // companion named `X (object)` would be expecting a second one.
                 Source::Object(known) => Some(known),
-                _ => objects.iter().find(|(object, _)| *object == format!("{name} (object)")).map(|(_, k)| *k),
+                _ => objects
+                    .iter()
+                    .find(|(object, _)| *object == format!("{name} (object)"))
+                    .map(|(_, k)| *k),
             },
         })
         .collect();
-    let legacy: Vec<&Known> = objects.iter().filter(|(name, _)| *name == "object").map(|(_, k)| *k).collect();
-    let unpaired: Vec<usize> = out.iter().enumerate().filter(|(_, p)| p.known.is_none()).map(|(at, _)| at).collect();
+    let legacy: Vec<&Known> = objects
+        .iter()
+        .filter(|(name, _)| *name == "object")
+        .map(|(_, k)| *k)
+        .collect();
+    let unpaired: Vec<usize> = out
+        .iter()
+        .enumerate()
+        .filter(|(_, p)| p.known.is_none())
+        .map(|(at, _)| at)
+        .collect();
     if let ([known], [at]) = (legacy.as_slice(), unpaired.as_slice()) {
         out[*at].known = Some(known);
     }
@@ -491,7 +561,10 @@ pub fn known_of<'a>(bag: &'a Pieces, slot: &str) -> Option<&'a Known> {
 pub fn known_named<'a>(bag: &'a Pieces, name: &str) -> Option<&'a Known> {
     match bag.get(name) {
         Some(Source::Object(known)) => Some(known),
-        Some(_) => paired(bag).into_iter().find(|piece| piece.name == name).and_then(|piece| piece.known),
+        Some(_) => paired(bag)
+            .into_iter()
+            .find(|piece| piece.name == name)
+            .and_then(|piece| piece.known),
         None => None,
     }
 }
@@ -563,7 +636,11 @@ impl Input for Shape {
                 closed: closed.clone(),
                 known: piece.known.cloned(),
             }),
-            other => Err(format!("`{}` is {}, and a shape is wanted", piece.name, other.kind())),
+            other => Err(format!(
+                "`{}` is {}, and a shape is wanted",
+                piece.name,
+                other.kind()
+            )),
         }
     }
 }
@@ -583,10 +660,16 @@ impl Input for Features {
     const KIND: &'static str = "features";
     fn from_piece(piece: &Piece<'_>) -> Result<Self, String> {
         match piece.source {
-            Source::Features { name, features } => {
-                Ok(Features { name: piece.name.to_string(), file: name.clone(), features: features.clone() })
-            }
-            other => Err(format!("`{}` is {}, and features are wanted", piece.name, other.kind())),
+            Source::Features { name, features } => Ok(Features {
+                name: piece.name.to_string(),
+                file: name.clone(),
+                features: features.clone(),
+            }),
+            other => Err(format!(
+                "`{}` is {}, and features are wanted",
+                piece.name,
+                other.kind()
+            )),
         }
     }
 }
@@ -608,13 +691,21 @@ impl Input for TableIn {
     const KIND: &'static str = "table";
     fn from_piece(piece: &Piece<'_>) -> Result<Self, String> {
         match piece.source {
-            Source::Table { name, table, template } => Ok(TableIn {
+            Source::Table {
+                name,
+                table,
+                template,
+            } => Ok(TableIn {
                 name: piece.name.to_string(),
                 file: name.clone(),
                 table: table.clone(),
                 template: template.clone(),
             }),
-            other => Err(format!("`{}` is {}, and a table is wanted", piece.name, other.kind())),
+            other => Err(format!(
+                "`{}` is {}, and a table is wanted",
+                piece.name,
+                other.kind()
+            )),
         }
     }
 }
@@ -637,7 +728,10 @@ impl Input for ObjectIn {
     const KIND: &'static str = "object";
     fn from_piece(piece: &Piece<'_>) -> Result<Self, String> {
         match (piece.source, piece.known) {
-            (Source::Object(known), _) => Ok(ObjectIn { name: piece.name.to_string(), known: known.clone() }),
+            (Source::Object(known), _) => Ok(ObjectIn {
+                name: piece.name.to_string(),
+                known: known.clone(),
+            }),
             // **Having a geometry does not disqualify.** An object given to an
             // object slot arrives as **two** pieces when it is a
             // representation — the shape and its companion `X (object)`, which
@@ -651,10 +745,15 @@ impl Input for ObjectIn {
             // knows. `properties-from-table` already refuses by name a
             // `lookups` that holds no category, `wells-from-table` a
             // `wells` that states neither its head nor its depths.
-            (_, Some(known)) => Ok(ObjectIn { name: piece.name.to_string(), known: known.clone() }),
-            (other, None) => {
-                Err(format!("`{}` is {}, and an object of the package is wanted", piece.name, other.kind()))
-            }
+            (_, Some(known)) => Ok(ObjectIn {
+                name: piece.name.to_string(),
+                known: known.clone(),
+            }),
+            (other, None) => Err(format!(
+                "`{}` is {}, and an object of the package is wanted",
+                piece.name,
+                other.kind()
+            )),
         }
     }
 }
@@ -674,10 +773,16 @@ impl Input for LatticeIn {
     const KIND: &'static str = "lattice";
     fn from_piece(piece: &Piece<'_>) -> Result<Self, String> {
         match piece.source {
-            Source::Lattice(lattice) => {
-                Ok(LatticeIn { name: piece.name.to_string(), lattice: lattice.clone(), known: piece.known.cloned() })
-            }
-            other => Err(format!("`{}` is {}, and a lattice is wanted", piece.name, other.kind())),
+            Source::Lattice(lattice) => Ok(LatticeIn {
+                name: piece.name.to_string(),
+                lattice: lattice.clone(),
+                known: piece.known.cloned(),
+            }),
+            other => Err(format!(
+                "`{}` is {}, and a lattice is wanted",
+                piece.name,
+                other.kind()
+            )),
         }
     }
 }
@@ -701,14 +806,23 @@ impl Input for Field {
     const KIND: &'static str = "field";
     fn from_piece(piece: &Piece<'_>) -> Result<Self, String> {
         match piece.source {
-            Source::Field { over, on, values, uom } => Ok(Field {
+            Source::Field {
+                over,
+                on,
+                values,
+                uom,
+            } => Ok(Field {
                 name: piece.name.to_string(),
                 over: over.clone(),
                 on: on.clone(),
                 values: values.clone(),
                 uom: uom.clone(),
             }),
-            other => Err(format!("`{}` is {}, and a field is wanted", piece.name, other.kind())),
+            other => Err(format!(
+                "`{}` is {}, and a field is wanted",
+                piece.name,
+                other.kind()
+            )),
         }
     }
 }
@@ -728,10 +842,16 @@ impl Input for Ramp {
     const KIND: &'static str = "ramp";
     fn from_piece(piece: &Piece<'_>) -> Result<Self, String> {
         match piece.source {
-            Source::Ramp { levels, colours } => {
-                Ok(Ramp { name: piece.name.to_string(), levels: levels.clone(), colours: colours.clone() })
-            }
-            other => Err(format!("`{}` is {}, and a ramp is wanted", piece.name, other.kind())),
+            Source::Ramp { levels, colours } => Ok(Ramp {
+                name: piece.name.to_string(),
+                levels: levels.clone(),
+                colours: colours.clone(),
+            }),
+            other => Err(format!(
+                "`{}` is {}, and a ramp is wanted",
+                piece.name,
+                other.kind()
+            )),
         }
     }
 }
@@ -745,8 +865,17 @@ pub fn input_slot_of<T: InputParam>(
     topology: Option<&'static str>,
     types: &'static [&'static str],
 ) -> Slot {
-    let takes = Takes { kind: <T::Item as Input>::KIND, topology, types, palette: false };
-    Slot { least: T::least(), most: T::most(), ..Slot::required(name, Need::Input(takes), about) }
+    let takes = Takes {
+        kind: <T::Item as Input>::KIND,
+        topology,
+        types,
+        palette: false,
+    };
+    Slot {
+        least: T::least(),
+        most: T::most(),
+        ..Slot::required(name, Need::Input(takes), about)
+    }
 }
 
 /// What an operation takes — a struct of inputs, bound by the framework.
@@ -787,7 +916,10 @@ pub struct Binder<'a> {
 impl<'a> Binder<'a> {
     /// A binder over this bag.
     pub fn new(bag: &'a Pieces, _slots: &[Slot]) -> Self {
-        Binder { pieces: paired(bag), kinds: bag.kinds() }
+        Binder {
+            pieces: paired(bag),
+            kinds: bag.kinds(),
+        }
     }
 
     /// The rank of a piece name under a slot name — `surfaces` 1,
@@ -812,18 +944,32 @@ impl<'a> Binder<'a> {
     /// The slots an unnamed piece of that kind could go to: the required ones
     /// of its kind, or every one of its kind when none is required.
     fn rivals(kind: &str, slots: &[Slot]) -> Vec<&'static str> {
-        let of_kind: Vec<&Slot> =
-            slots.iter().filter(|one| matches!(&one.need, Need::Input(takes) if takes.kind == kind)).collect();
-        let required: Vec<&'static str> = of_kind.iter().filter(|one| one.is_required()).map(|one| one.name).collect();
-        if required.is_empty() { of_kind.iter().map(|one| one.name).collect() } else { required }
+        let of_kind: Vec<&Slot> = slots
+            .iter()
+            .filter(|one| matches!(&one.need, Need::Input(takes) if takes.kind == kind))
+            .collect();
+        let required: Vec<&'static str> = of_kind
+            .iter()
+            .filter(|one| one.is_required())
+            .map(|one| one.name)
+            .collect();
+        if required.is_empty() {
+            of_kind.iter().map(|one| one.name).collect()
+        } else {
+            required
+        }
     }
 
     /// Whether a piece of the bag goes to `slot` — named after it, or unnamed
     /// with `slot` its one candidate: the rule of [`Binder::take`], asked
     /// before anything is bound. See [`given_inputs`].
     pub fn receives(&self, slot: &Slot, slots: &[Slot]) -> bool {
-        let Need::Input(takes) = &slot.need else { return false };
-        self.pieces.iter().any(|piece| Self::rank(slot.name, piece.name).is_some())
+        let Need::Input(takes) = &slot.need else {
+            return false;
+        };
+        self.pieces
+            .iter()
+            .any(|piece| Self::rank(slot.name, piece.name).is_some())
             || (!self.unnamed(takes.kind, slots).is_empty() && Self::rivals(takes.kind, slots) == [slot.name])
     }
 
@@ -831,8 +977,11 @@ impl<'a> Binder<'a> {
     pub fn take<P: InputParam>(&self, slot: &'static str, slots: &[Slot]) -> Result<P, Refusal> {
         let kind = <P::Item as Input>::KIND;
         let declared = slots.iter().find(|one| one.name == slot);
-        let mut named: Vec<(usize, &Piece<'a>)> =
-            self.pieces.iter().filter_map(|piece| Self::rank(slot, piece.name).map(|rank| (rank, piece))).collect();
+        let mut named: Vec<(usize, &Piece<'a>)> = self
+            .pieces
+            .iter()
+            .filter_map(|piece| Self::rank(slot, piece.name).map(|rank| (rank, piece)))
+            .collect();
         named.sort_by_key(|(rank, _)| *rank);
         let mut chosen: Vec<&Piece<'a>> = named.into_iter().map(|(_, piece)| piece).collect();
 
@@ -864,8 +1013,8 @@ impl<'a> Binder<'a> {
         // from the package (`read::every`) when it plans, and a list of offers
         // is judged before that. The operation says what an empty one means
         // when nothing filled it — `properties-from-table` refuses by its name.
-        let filled_later = count == 0
-            && declared.is_some_and(|one| one.otherwise == crate::operation::Otherwise::Every);
+        let filled_later =
+            count == 0 && declared.is_some_and(|one| one.otherwise == crate::operation::Otherwise::Every);
         if count < least && !filled_later {
             let about = declared.map(|one| one.about).unwrap_or_default();
             return Err(Refusal::on(
@@ -883,7 +1032,10 @@ impl<'a> Binder<'a> {
                 // With what the slot says of itself: *at most one* is a count,
                 // *one grid per plan* is the reason.
                 let about = declared.map(|one| one.about).unwrap_or_default();
-                return Err(Refusal::on(slot, format!("at most {most} piece(s), and {count} were given — {about}")));
+                return Err(Refusal::on(
+                    slot,
+                    format!("at most {most} piece(s), and {count} were given — {about}"),
+                ));
             }
         }
         let items = chosen
@@ -906,7 +1058,11 @@ impl<'a> Binder<'a> {
 /// [`Binder::take`], so that the condition and the binding cannot disagree.
 pub fn given_inputs(bag: &Pieces, takes: &[Slot]) -> Vec<&'static str> {
     let binder = Binder::new(bag, takes);
-    takes.iter().filter(|slot| binder.receives(slot, takes)).map(|slot| slot.name).collect()
+    takes
+        .iter()
+        .filter(|slot| binder.receives(slot, takes))
+        .map(|slot| slot.name)
+        .collect()
 }
 
 // ---------------------------------------------------------------- suggestions
@@ -922,7 +1078,10 @@ pub struct Suggestions<'a> {
 impl<'a> Suggestions<'a> {
     /// Suggestions over these slots.
     pub fn new(slots: &'a mut Vec<Slot>) -> Self {
-        Suggestions { slots, missed: Vec::new() }
+        Suggestions {
+            slots,
+            missed: Vec::new(),
+        }
     }
 
     /// Propose `value` for `slot`.

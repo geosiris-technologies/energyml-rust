@@ -139,7 +139,10 @@ impl Borehole {
     /// producer's uuid — in that order, and `None` when it has none of the
     /// three.
     pub fn title(&self) -> Option<String> {
-        self.bss.clone().or_else(|| self.id.clone()).or_else(|| self.producer_id.clone())
+        self.bss
+            .clone()
+            .or_else(|| self.id.clone())
+            .or_else(|| self.producer_id.clone())
     }
 
     /// What names every object written for this hole.
@@ -149,7 +152,10 @@ impl Borehole {
     /// lithostratigraphic unit's referential uuid. The BSS code is the
     /// fallback, and `None` means nothing here can be named deterministically.
     pub fn key(&self) -> Option<String> {
-        self.producer_id.clone().or_else(|| self.bss.clone()).or_else(|| self.id.clone())
+        self.producer_id
+            .clone()
+            .or_else(|| self.bss.clone())
+            .or_else(|| self.id.clone())
     }
 
     /// The `parameter_id_forage`, when it really is a uuid.
@@ -159,7 +165,9 @@ impl Borehole {
     /// this field to a code tomorrow must give nothing rather than something
     /// that fails at write time, far from here.
     pub fn producer_uuid(&self) -> Option<&str> {
-        self.producer_id.as_deref().filter(|text| energyml_core::identifiers::is_uuid(text))
+        self.producer_id
+            .as_deref()
+            .filter(|text| energyml_core::identifiers::is_uuid(text))
     }
 
     /// The measured depths, rebuilt from the intervals.
@@ -176,7 +184,10 @@ impl Borehole {
         let mut bounds: Vec<f64> = Vec::with_capacity(self.intervals.len() * 2);
         for interval in &self.intervals {
             if !interval.begin.is_finite() || !interval.end.is_finite() {
-                return Err(format!("an interval bound is not a number: [{}, {}]", interval.begin, interval.end));
+                return Err(format!(
+                    "an interval bound is not a number: [{}, {}]",
+                    interval.begin, interval.end
+                ));
             }
             if interval.end < interval.begin {
                 return Err(format!(
@@ -211,9 +222,17 @@ impl Borehole {
             bounds.insert(0, 0.0);
         }
         if bounds.len() < 2 {
-            return Err(format!("the intervals state one depth only ({}) — a frame needs two", bounds[0]));
+            return Err(format!(
+                "the intervals state one depth only ({}) — a frame needs two",
+                bounds[0]
+            ));
         }
-        Ok(Mds { values: bounds, uom, zero_added, gaps })
+        Ok(Mds {
+            values: bounds,
+            uom,
+            zero_added,
+            gaps,
+        })
     }
 
     /// The unit every interval is in, or why there is not exactly one.
@@ -229,11 +248,16 @@ impl Borehole {
         }
         match seen.as_slice() {
             [] => Err("no `logElement`: no unit to read the depths in".to_string()),
-            [""] => {
-                Err("the intervals carry no `@uom`: the depths have no unit, and metres is not a safe guess".to_string())
-            }
+            [""] => Err(
+                "the intervals carry no `@uom`: the depths have no unit, and metres is not a safe guess"
+                    .to_string(),
+            ),
             [one] => Ok((*one).to_string()),
-            many => Err(format!("the intervals are in {} different units ({})", many.len(), many.join(", "))),
+            many => Err(format!(
+                "the intervals are in {} different units ({})",
+                many.len(),
+                many.join(", ")
+            )),
         }
     }
 
@@ -262,7 +286,6 @@ impl Borehole {
     }
 }
 
-
 /// Whether a feature's `properties` say it is a borehole.
 ///
 /// The `@featureType`, and not the presence of a `logElement`: a file that
@@ -282,12 +305,17 @@ pub fn borehole_of(id: Option<&str>, head: Option<(f64, f64)>, properties: &Valu
         return None;
     }
     let text = |value: Option<&Value>| value.and_then(Value::as_str).map(str::to_string);
-    let details = properties.get("indexData").and_then(|one| one.get("BoreholeDetails"));
+    let details = properties
+        .get("indexData")
+        .and_then(|one| one.get("BoreholeDetails"));
 
     let mut parameters: Vec<(String, String)> = Vec::new();
     if let Some(list) = properties.get("parameter").and_then(Value::as_array) {
         for one in list {
-            let title = one.get("name").and_then(|n| n.get("@title")).and_then(Value::as_str);
+            let title = one
+                .get("name")
+                .and_then(|n| n.get("@title"))
+                .and_then(Value::as_str);
             let value = one.get("value").and_then(Value::as_str);
             if let (Some(title), Some(value)) = (title, value) {
                 parameters.push((title.to_string(), value.to_string()));
@@ -295,14 +323,21 @@ pub fn borehole_of(id: Option<&str>, head: Option<(f64, f64)>, properties: &Valu
         }
     }
     let parameter = |wanted: &str| {
-        parameters.iter().find(|(title, _)| title == wanted).map(|(_, value)| value.clone())
+        parameters
+            .iter()
+            .find(|(title, _)| title == wanted)
+            .map(|(_, value)| value.clone())
     };
 
     let mut purposes = Vec::new();
     let mut purpose_hrefs = Vec::new();
     if let Some(list) = details.and_then(|d| d.get("purpose")).and_then(Value::as_array) {
         for outer in list {
-            let inner = outer.get("purpose").and_then(Value::as_array).map(|l| l.as_slice()).unwrap_or(&[]);
+            let inner = outer
+                .get("purpose")
+                .and_then(Value::as_array)
+                .map(|l| l.as_slice())
+                .unwrap_or(&[]);
             for one in inner {
                 if let Some(title) = one.get("@title").and_then(Value::as_str) {
                     purposes.push(title.to_string());
@@ -314,7 +349,9 @@ pub fn borehole_of(id: Option<&str>, head: Option<(f64, f64)>, properties: &Valu
         }
     }
 
-    let reference = properties.get("referenceLocation").and_then(|one| one.get("properties"));
+    let reference = properties
+        .get("referenceLocation")
+        .and_then(|one| one.get("properties"));
     let intervals = properties
         .get("logElement")
         .and_then(Value::as_array)
@@ -328,13 +365,19 @@ pub fn borehole_of(id: Option<&str>, head: Option<(f64, f64)>, properties: &Valu
         indice: parameter("parameter_indice_bss"),
         identifier: text(properties.get("identifier")),
         description: text(properties.get("description")),
-        drilled: text(details.and_then(|d| d.get("dateOfDrilling")).and_then(|d| d.get("endPosition"))),
+        drilled: text(
+            details
+                .and_then(|d| d.get("dateOfDrilling"))
+                .and_then(|d| d.get("endPosition")),
+        ),
         purposes,
         purpose_hrefs,
         length: quantity(details.and_then(|d| d.get("boreholeLength"))),
         drilled_interval: drilled_interval(properties),
         head,
-        elevation: reference.and_then(|one| one.get("elevation")).and_then(Value::as_f64),
+        elevation: reference
+            .and_then(|one| one.get("elevation"))
+            .and_then(Value::as_f64),
         intervals,
     })
 }
@@ -349,13 +392,21 @@ fn interval_of(entry: &Value) -> Option<Interval> {
     let end = quantity(properties.get("mappedIntervalEnd"))?;
     // The two bounds of one interval in two units would be a range with no
     // length; the caller's `md_uom` sees only one of them, so it is settled here.
-    let uom = if begin.uom == end.uom { begin.uom.clone() } else { String::new() };
+    let uom = if begin.uom == end.uom {
+        begin.uom.clone()
+    } else {
+        String::new()
+    };
     Some(Interval {
         id: entry.get("id").and_then(Value::as_str).map(str::to_string),
         begin: begin.value,
         end: end.value,
         uom,
-        unit: properties.get("specification").and_then(|one| one.get("@href")).and_then(Value::as_str).map(str::to_string),
+        unit: properties
+            .get("specification")
+            .and_then(|one| one.get("@href"))
+            .and_then(Value::as_str)
+            .map(str::to_string),
         collection: properties
             .get("collectionIdentifier")
             .and_then(|one| one.get("value"))
@@ -367,7 +418,10 @@ fn interval_of(entry: &Value) -> Option<Interval> {
 /// The drilled interval, `downholeDrillingDetails[0]`.
 fn drilled_interval(properties: &Value) -> Option<(Quantity, Quantity)> {
     let first = properties.get("downholeDrillingDetails")?.get(0)?;
-    Some((quantity(first.get("intervalBegin"))?, quantity(first.get("intervalEnd"))?))
+    Some((
+        quantity(first.get("intervalBegin"))?,
+        quantity(first.get("intervalEnd"))?,
+    ))
 }
 
 /// A `{ Quantity: { value, @uom } }`, wherever the export puts one.
@@ -375,7 +429,11 @@ fn quantity(value: Option<&Value>) -> Option<Quantity> {
     let inner = value?.get("Quantity")?;
     Some(Quantity {
         value: inner.get("value").and_then(Value::as_f64)?,
-        uom: inner.get("@uom").and_then(Value::as_str).unwrap_or_default().to_string(),
+        uom: inner
+            .get("@uom")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
     })
 }
 
@@ -442,7 +500,10 @@ mod tests {
     #[test]
     fn everything_the_export_states_about_a_hole_is_read() {
         let hole = read();
-        assert_eq!(hole.producer_id.as_deref(), Some("3ca79312-f3fa-4959-bae0-311c7a5c7359"));
+        assert_eq!(
+            hole.producer_id.as_deref(),
+            Some("3ca79312-f3fa-4959-bae0-311c7a5c7359")
+        );
         assert_eq!(hole.bss.as_deref(), Some("BSS000LKCG"));
         assert_eq!(hole.indice.as_deref(), Some("01536X0058"));
         assert_eq!(hole.elevation, Some(38.5));
@@ -452,7 +513,10 @@ mod tests {
         // The producer's uuid is what names the objects, and it is validated
         // rather than trusted.
         assert_eq!(hole.producer_uuid(), Some("3ca79312-f3fa-4959-bae0-311c7a5c7359"));
-        assert_eq!(hole.key().as_deref(), Some("3ca79312-f3fa-4959-bae0-311c7a5c7359"));
+        assert_eq!(
+            hole.key().as_deref(),
+            Some("3ca79312-f3fa-4959-bae0-311c7a5c7359")
+        );
         assert_eq!(hole.title().as_deref(), Some("BSS000LKCG"));
     }
 
@@ -486,7 +550,10 @@ mod tests {
         // `BSS000NDQC` is the one hole of the export with gaps — three of them.
         let mut props = properties();
         props["logElement"] = json!([interval("a", 0.0, 2.0, "k"), interval("b", 2.5, 4.0, "k")]);
-        let mds = borehole_of(Some("x"), Some((0.0, 0.0)), &props).unwrap().mds().expect("depths");
+        let mds = borehole_of(Some("x"), Some((0.0, 0.0)), &props)
+            .unwrap()
+            .mds()
+            .expect("depths");
         assert_eq!(mds.values, vec![0.0, 2.0, 2.5, 4.0]);
         assert_eq!(mds.gaps, vec![(2.0, 2.5)]);
     }
@@ -498,7 +565,10 @@ mod tests {
         let mut props = properties();
         props["logElement"][0]["properties"]["mappedIntervalBegin"]["Quantity"]["@uom"] = json!("ft");
         props["logElement"][0]["properties"]["mappedIntervalEnd"]["Quantity"]["@uom"] = json!("ft");
-        let why = borehole_of(Some("x"), None, &props).unwrap().md_uom().expect_err("refused");
+        let why = borehole_of(Some("x"), None, &props)
+            .unwrap()
+            .md_uom()
+            .expect_err("refused");
         assert!(why.contains("ft") && why.contains('m'), "{why}");
 
         let mut none = properties();
@@ -509,7 +579,10 @@ mod tests {
                 "mappedIntervalEnd": { "Quantity": { "value": 1 } }
             }
         }]);
-        let why = borehole_of(Some("x"), None, &none).unwrap().md_uom().expect_err("refused");
+        let why = borehole_of(Some("x"), None, &none)
+            .unwrap()
+            .md_uom()
+            .expect_err("refused");
         assert!(why.contains("not a safe guess"), "{why}");
     }
 
@@ -532,7 +605,10 @@ mod tests {
     fn a_hole_with_no_interval_states_no_depth_and_says_so() {
         let mut props = properties();
         props["logElement"] = json!([]);
-        let why = borehole_of(Some("x"), None, &props).unwrap().mds().expect_err("refused");
+        let why = borehole_of(Some("x"), None, &props)
+            .unwrap()
+            .mds()
+            .expect_err("refused");
         assert!(why.contains("no `logElement`"), "{why}");
     }
 
@@ -542,7 +618,10 @@ mod tests {
         // reader invented. None of the 41 367 intervals is backwards.
         let mut props = properties();
         props["logElement"] = json!([interval("a", 8.0, 3.0, "k")]);
-        let why = borehole_of(Some("x"), None, &props).unwrap().mds().expect_err("refused");
+        let why = borehole_of(Some("x"), None, &props)
+            .unwrap()
+            .mds()
+            .expect_err("refused");
         assert!(why.contains("upwards"), "{why}");
     }
 

@@ -157,8 +157,8 @@ use energyml_witsml_2_1 as witsml;
 
 use crate::declare::{Inputs, ObjectIn, ObjectRef, Params, Shape};
 use crate::operation::{
-    About, ActivityDraft, Category, Context, Dataset, Dropped, Need, NewObject, Note, Numbers, Operation, Plan, Refusal,
-    Slot,
+    About, ActivityDraft, Category, Context, Dataset, Dropped, Need, NewObject, Note, Numbers, Operation,
+    Plan, Refusal, Slot,
 };
 use crate::pieces::{KnownProperty, Ref};
 
@@ -230,11 +230,17 @@ fn frame_of(shape: &Shape) -> Result<FrameInfo, String> {
     let known = shape.known.as_ref().ok_or_else(|| {
         format!("`{}` comes with nothing known of it: a Log is written from what the package says of a RESQML wellbore frame", shape.name)
     })?;
-    let reference = known
-        .reference
-        .clone()
-        .ok_or_else(|| format!("`{}` names no object of the package for a Log to name", shape.name))?;
-    let name = if reference.title.is_empty() { shape.name.clone() } else { reference.title.clone() };
+    let reference = known.reference.clone().ok_or_else(|| {
+        format!(
+            "`{}` names no object of the package for a Log to name",
+            shape.name
+        )
+    })?;
+    let name = if reference.title.is_empty() {
+        shape.name.clone()
+    } else {
+        reference.title.clone()
+    };
     let interpretation = known.interpretation.clone().ok_or_else(|| {
         format!(
             "`{name}` represents no interpretation: the WITSML Wellbore a Log names is the one `witsml-wells` writes for the RESQML wellbore a frame represents"
@@ -247,15 +253,31 @@ fn frame_of(shape: &Shape) -> Result<FrameInfo, String> {
         format!("`{name}` states no measured depth for its nodes — it is no wellbore frame, or this build cannot read its arrays")
     })?;
     if mds.is_empty() {
-        return Err(format!("`{name}` has no node: there is nothing to index a channel by"));
+        return Err(format!(
+            "`{name}` has no node: there is nothing to index a channel by"
+        ));
     }
     if let Some(at) = mds.iter().position(|md| !md.is_finite()) {
-        return Err(format!("node {} of `{name}` has a measured depth that is not a number", at + 1));
+        return Err(format!(
+            "node {} of `{name}` has a measured depth that is not a number",
+            at + 1
+        ));
     }
     if let Some(at) = mds.windows(2).position(|pair| pair[1] <= pair[0]) {
-        return Err(format!("the measured depths of `{name}` do not increase at node {}: {} then {}", at + 2, mds[at], mds[at + 1]));
+        return Err(format!(
+            "the measured depths of `{name}` do not increase at node {}: {} then {}",
+            at + 2,
+            mds[at],
+            mds[at + 1]
+        ));
     }
-    Ok(FrameInfo { name, reference, interpretation, datum, mds })
+    Ok(FrameInfo {
+        name,
+        reference,
+        interpretation,
+        datum,
+        mds,
+    })
 }
 
 /// A continuous property, read as one channel's worth of values — or why it
@@ -294,52 +316,84 @@ fn uom_of(uom: &str) -> Option<eml::UnitOfMeasureExt> {
 /// A property that can become a channel, or the reason it cannot — every
 /// reason a reason **not to read**, never a reading made anyway.
 fn judge_property(reference: &Ref, facts: &KnownProperty, nodes: usize) -> Result<Judged, String> {
-    if class_of(&reference.qualified_type) != "ContinuousProperty" || !reference.qualified_type.starts_with("resqml22.") {
+    if class_of(&reference.qualified_type) != "ContinuousProperty"
+        || !reference.qualified_type.starts_with("resqml22.")
+    {
         return Err(format!(
             "it is a `{}`, and this operation turns RESQML 2.2 continuous properties into channels",
             reference.qualified_type
         ));
     }
-    let raw = facts.values.as_ref().map_err(|why| format!("its values did not read — {why}"))?;
+    let raw = facts
+        .values
+        .as_ref()
+        .map_err(|why| format!("its values did not read — {why}"))?;
     if facts.timed {
-        return Err("it is indexed in time — a channel here is indexed by measured depth, not by a time step".to_string());
+        return Err(
+            "it is indexed in time — a channel here is indexed by measured depth, not by a time step"
+                .to_string(),
+        );
     }
     if facts.realizations {
-        return Err("it holds several realizations, and which one a channel takes is stated nowhere".to_string());
+        return Err(
+            "it holds several realizations, and which one a channel takes is stated nowhere".to_string(),
+        );
     }
     let per_element: u64 = facts.value_count.iter().product();
     if per_element > 1 {
-        return Err(format!("it holds {per_element} value(s) per node — a vector or a tensor — and a channel holds one value per node"));
+        return Err(format!(
+            "it holds {per_element} value(s) per node — a vector or a tensor — and a channel holds one value per node"
+        ));
     }
     if facts.indexable != "nodes" {
-        return Err(format!("its values hang on `{}`, and a channel here is indexed by the frame's own nodes", facts.indexable));
+        return Err(format!(
+            "its values hang on `{}`, and a channel here is indexed by the frame's own nodes",
+            facts.indexable
+        ));
     }
     if !facts.facets.is_empty() {
         return Err("it carries a facet, and a Channel has no field for one".to_string());
     }
     let Some(kind) = facts.kind.as_ref() else {
-        return Err("it names no property kind by reference, and a Channel's ChannelPropertyKind must point to one".to_string());
+        return Err(
+            "it names no property kind by reference, and a Channel's ChannelPropertyKind must point to one"
+                .to_string(),
+        );
     };
     let Some(uom) = facts.uom.as_deref().filter(|u| !u.is_empty()) else {
         return Err("it states no unit, and a Channel's Uom is required".to_string());
     };
     let Some(uom_ext) = uom_of(uom) else {
-        return Err(format!("is in `{uom}`, and this build does not know its WITSML unit code"));
+        return Err(format!(
+            "is in `{uom}`, and this build does not know its WITSML unit code"
+        ));
     };
     if raw.len() != nodes {
-        return Err(format!("it holds {} value(s) where the frame has {nodes} node(s) — a channel takes one value per node", raw.len()));
+        return Err(format!(
+            "it holds {} value(s) where the frame has {nodes} node(s) — a channel takes one value per node",
+            raw.len()
+        ));
     }
     let values: Vec<f64> = match raw {
         Values::Floating(reals) => reals.clone(),
         Values::Integer(whole) => whole.iter().map(|v| *v as f64).collect(),
         _ => return Err("it is continuous and its values are not numbers".to_string()),
     };
-    Ok(Judged { reference: reference.clone(), kind: kind.clone(), uom: uom_ext, values })
+    Ok(Judged {
+        reference: reference.clone(),
+        kind: kind.clone(),
+        uom: uom_ext,
+        values,
+    })
 }
 
 /// A reference read from a settled `ObjectRef` — a bare uuid, or a
 /// `DataObjectReference` given whole.
-pub(crate) fn reference_from(slot: &str, value: &Value, fallback_type: &str) -> Result<eml::DataObjectReference, Refusal> {
+pub(crate) fn reference_from(
+    slot: &str,
+    value: &Value,
+    fallback_type: &str,
+) -> Result<eml::DataObjectReference, Refusal> {
     match value {
         Value::String(uuid) => Ok(crate::crs::reference_to(uuid, fallback_type, "")),
         Value::Object(_) => {
@@ -351,7 +405,10 @@ pub(crate) fn reference_from(slot: &str, value: &Value, fallback_type: &str) -> 
             let title = value["Title"].as_str().unwrap_or_default();
             Ok(crate::crs::reference_to(uuid, qualified_type, title))
         }
-        other => Err(Refusal::on(slot, format!("expected an object reference, got {other}"))),
+        other => Err(Refusal::on(
+            slot,
+            format!("expected an object reference, got {other}"),
+        )),
     }
 }
 
@@ -364,7 +421,11 @@ fn dor(one: &Ref) -> eml::DataObjectReference {
 /// JSON Style Guide (p. 8) names the
 /// arrays of this very format as the ones that "may have NULLs".
 pub(crate) fn json_number(value: f64) -> Value {
-    if value.is_finite() { json!(value) } else { Value::Null }
+    if value.is_finite() {
+        json!(value)
+    } else {
+        Value::Null
+    }
 }
 
 /// A value as a dataset of the extension writes it: `NaN` for whatever inline
@@ -377,13 +438,26 @@ fn nan_unless_finite(value: f64) -> f64 {
 /// `digest`, duplicated: a small, pure formatting helper, not the kind of
 /// formula this module's doc asks a caller to share rather than copy).
 fn digest(values: &[f64]) -> String {
-    values.iter().map(|value| format!("{value:?}")).collect::<Vec<_>>().join(",")
+    values
+        .iter()
+        .map(|value| format!("{value:?}"))
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 /// A few names and how many more.
 fn listed(names: &[String]) -> String {
-    let shown = names.iter().take(3).map(|one| format!("`{one}`")).collect::<Vec<_>>().join(", ");
-    if names.len() > 3 { format!("{shown} and {} more", names.len() - 3) } else { shown }
+    let shown = names
+        .iter()
+        .take(3)
+        .map(|one| format!("`{one}`"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    if names.len() > 3 {
+        format!("{shown} and {} more", names.len() - 3)
+    } else {
+        shown
+    }
 }
 
 impl Operation for WitsmlLogs {
@@ -406,19 +480,43 @@ impl Operation for WitsmlLogs {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        let number = || Need::Number { uom: None, least: None, most: None };
+        let number = || Need::Number {
+            uom: None,
+            least: None,
+            most: None,
+        };
         vec![
-            Slot::required("logCount", number(), "Log objects written — one per frame that ends up with a channel"),
-            Slot::required("channelCount", number(), "Channel objects written, over every Log"),
+            Slot::required(
+                "logCount",
+                number(),
+                "Log objects written — one per frame that ends up with a channel",
+            ),
+            Slot::required(
+                "channelCount",
+                number(),
+                "Channel objects written, over every Log",
+            ),
         ]
     }
 
-    fn plan(&self, inputs: WitsmlLogsInputs, params: WitsmlLogsParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: WitsmlLogsInputs,
+        params: WitsmlLogsParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         if inputs.frames.is_empty() {
-            return Err(Refusal::on("frames", "it takes wellbore frames; the input holds none, and the package gives none either"));
+            return Err(Refusal::on(
+                "frames",
+                "it takes wellbore frames; the input holds none, and the package gives none either",
+            ));
         }
 
-        let logging_company = reference_from("loggingCompany", &params.logging_company.0, "eml23.BusinessAssociate")?;
+        let logging_company = reference_from(
+            "loggingCompany",
+            &params.logging_company.0,
+            "eml23.BusinessAssociate",
+        )?;
 
         // -- inline, or the extension (module doc) ---------------------------
         let in_file: Option<String> = match params.channel_data_file.as_deref() {
@@ -444,9 +542,16 @@ impl Operation for WitsmlLogs {
         };
         let mut datasets: Vec<Dataset> = Vec::new();
 
-        let frames: Vec<FrameInfo> =
-            inputs.frames.iter().map(frame_of).collect::<Result<_, _>>().map_err(|why| Refusal::on("frames", why))?;
-        let frame_uuids: Vec<String> = frames.iter().map(|frame| frame.reference.uuid.to_ascii_lowercase()).collect();
+        let frames: Vec<FrameInfo> = inputs
+            .frames
+            .iter()
+            .map(frame_of)
+            .collect::<Result<_, _>>()
+            .map_err(|why| Refusal::on("frames", why))?;
+        let frame_uuids: Vec<String> = frames
+            .iter()
+            .map(|frame| frame.reference.uuid.to_ascii_lowercase())
+            .collect();
 
         // -- what every object says of itself ----------------------------------
         let citation = |title: &str, description: Option<String>| eml::Citation {
@@ -463,8 +568,13 @@ impl Operation for WitsmlLogs {
             }
             vec![eml::ExtensionNameValue {
                 name: "synthetic".to_string(),
-                value: eml::StringMeasure { value: "true".to_string(), uom: None },
-                description: Some("written by `witsml-logs` from a RESQML property laid by a law, not measured".to_string()),
+                value: eml::StringMeasure {
+                    value: "true".to_string(),
+                    uom: None,
+                },
+                description: Some(
+                    "written by `witsml-logs` from a RESQML property laid by a law, not measured".to_string(),
+                ),
                 ..Default::default()
             }]
         };
@@ -482,21 +592,33 @@ impl Operation for WitsmlLogs {
             // -- the channels this frame gives -------------------------------
             let mut channels: Vec<Judged> = Vec::new();
             for property in &inputs.properties {
-                let Some(reference) = property.known.reference.as_ref() else { continue };
-                let Some(facts) = property.known.property.as_ref() else { continue };
-                let Some(supporting) = facts.supporting.as_ref() else { continue };
+                let Some(reference) = property.known.reference.as_ref() else {
+                    continue;
+                };
+                let Some(facts) = property.known.property.as_ref() else {
+                    continue;
+                };
+                let Some(supporting) = facts.supporting.as_ref() else {
+                    continue;
+                };
                 if !supporting.uuid.eq_ignore_ascii_case(&frame.reference.uuid) {
                     continue;
                 }
                 match judge_property(reference, facts, frame.mds.len()) {
                     Ok(judged) => channels.push(judged),
-                    Err(why) => dropped.push(Dropped { count: 1, why: format!("`{}`: not turned into a channel — {why}", reference.title) }),
+                    Err(why) => dropped.push(Dropped {
+                        count: 1,
+                        why: format!("`{}`: not turned into a channel — {why}", reference.title),
+                    }),
                 }
             }
             if channels.is_empty() {
                 dropped.push(Dropped {
                     count: 1,
-                    why: format!("`{}`: no continuous property hangs on it, or none of what does can become a channel", frame.name),
+                    why: format!(
+                        "`{}`: no continuous property hangs on it, or none of what does can become a channel",
+                        frame.name
+                    ),
                 });
                 continue;
             }
@@ -505,7 +627,9 @@ impl Operation for WitsmlLogs {
             // See the module doc: the same seed `witsml-wells` derives its
             // Wellbore's uuid from, recomputed rather than duplicated as a
             // second formula that happens to agree.
-            let wellbore_uuid = cx.identity.uuid(&super::witsml_wells::wellbore_seed(&frame.interpretation.uuid), 0)?;
+            let wellbore_uuid = cx
+                .identity
+                .uuid(&super::witsml_wells::wellbore_seed(&frame.interpretation.uuid), 0)?;
             let wellbore_title = match stem(&frame.interpretation.title) {
                 "" => stem(&frame.name).to_string(),
                 found => found.to_string(),
@@ -528,7 +652,10 @@ impl Operation for WitsmlLogs {
             let mut channel_uuids: Vec<String> = Vec::new();
             let mut channel_titles: Vec<String> = Vec::new();
             for judged in &channels {
-                activity_inputs.push(Parameter::Object { title: "input".to_string(), reference: judged.reference.dor() });
+                activity_inputs.push(Parameter::Object {
+                    title: "input".to_string(),
+                    reference: judged.reference.dor(),
+                });
                 let mnemonic = judged.kind.title.clone();
                 if mnemonic.chars().count() > SHORT_TEXT {
                     return Err(Refusal::on(
@@ -550,7 +677,11 @@ impl Operation for WitsmlLogs {
                 // uuid with new numbers inside.
                 let channel_uuid = support::next_uuid(
                     cx.identity,
-                    &marked(format!("witsml-logs:channel:{}:{}", judged.reference.uuid.to_ascii_lowercase(), digest(&judged.values))),
+                    &marked(format!(
+                        "witsml-logs:channel:{}:{}",
+                        judged.reference.uuid.to_ascii_lowercase(),
+                        digest(&judged.values)
+                    )),
                     &mut rank,
                 )?;
                 let description = format!(
@@ -581,8 +712,11 @@ impl Operation for WitsmlLogs {
             }
 
             // -- the ChannelSet's uuid: the dataset's path names it ------------
-            let channelset_seed =
-                marked(format!("witsml-logs:channelset:{}:{}", frame.reference.uuid.to_ascii_lowercase(), channel_uuids.join(",")));
+            let channelset_seed = marked(format!(
+                "witsml-logs:channelset:{}:{}",
+                frame.reference.uuid.to_ascii_lowercase(),
+                channel_uuids.join(",")
+            ));
             let channelset_uuid = support::next_uuid(cx.identity, &channelset_seed, &mut rank)?;
 
             // -- the data: inline, or one dataset (the extension) -------
@@ -596,9 +730,15 @@ impl Operation for WitsmlLogs {
                         })
                         .collect();
                     let data_text = serde_json::to_string(&Value::Array(rows)).map_err(|why| {
-                        Refusal::new("refused", format!("the channel data of `{}` did not encode: {why}", frame.name))
+                        Refusal::new(
+                            "refused",
+                            format!("the channel data of `{}` did not encode: {why}", frame.name),
+                        )
                     })?;
-                    witsml::ChannelData { data: Some(data_text), file_uri: None }
+                    witsml::ChannelData {
+                        data: Some(data_text),
+                        file_uri: None,
+                    }
                 }
                 Some(file) => {
                     // The inline rows, row for row: `[rows, 1 + channels]`,
@@ -616,7 +756,10 @@ impl Operation for WitsmlLogs {
                         dimensions: vec![frame.mds.len() as i64, width as i64],
                         values: Numbers::F64(values),
                     });
-                    witsml::ChannelData { data: Some(path), file_uri: Some(file.clone()) }
+                    witsml::ChannelData {
+                        data: Some(path),
+                        file_uri: Some(file.clone()),
+                    }
                 }
             };
 
@@ -624,7 +767,11 @@ impl Operation for WitsmlLogs {
             let channel_set = witsml::ChannelSet {
                 citation: citation(
                     &titled(format!("{wellbore_title} — channels")),
-                    Some(format!("The channels of `{}`: {}.", frame.name, listed(&channel_titles))),
+                    Some(format!(
+                        "The channels of `{}`: {}.",
+                        frame.name,
+                        listed(&channel_titles)
+                    )),
                 ),
                 extension_name_value: mark(),
                 uuid: channelset_uuid.clone(),
@@ -649,10 +796,17 @@ impl Operation for WitsmlLogs {
             if log_description.chars().count() > DESCRIPTION_LIMIT {
                 return Err(Refusal::on(
                     "properties",
-                    format!("`{}`'s Log would carry a description of {} characters, and Citation/Description holds {DESCRIPTION_LIMIT}", frame.name, log_description.chars().count()),
+                    format!(
+                        "`{}`'s Log would carry a description of {} characters, and Citation/Description holds {DESCRIPTION_LIMIT}",
+                        frame.name,
+                        log_description.chars().count()
+                    ),
                 ));
             }
-            let log_seed = marked(format!("witsml-logs:log:{}:{channelset_uuid}", frame.reference.uuid.to_ascii_lowercase()));
+            let log_seed = marked(format!(
+                "witsml-logs:log:{}:{channelset_uuid}",
+                frame.reference.uuid.to_ascii_lowercase()
+            ));
             let log_uuid = support::next_uuid(cx.identity, &log_seed, &mut rank)?;
             let log = witsml::Log {
                 citation: citation(&log_title, Some(log_description)),
@@ -665,8 +819,17 @@ impl Operation for WitsmlLogs {
                 ..Default::default()
             };
 
-            activity_inputs.push(Parameter::Object { title: "input".to_string(), reference: frame.reference.dor() });
-            objects.push(NewObject { uuid: log_uuid, qualified_type: "witsml21.Log".to_string(), role: "log".to_string(), title: log_title, json: energyml_core::json::write_value(&log) });
+            activity_inputs.push(Parameter::Object {
+                title: "input".to_string(),
+                reference: frame.reference.dor(),
+            });
+            objects.push(NewObject {
+                uuid: log_uuid,
+                qualified_type: "witsml21.Log".to_string(),
+                role: "log".to_string(),
+                title: log_title,
+                json: energyml_core::json::write_value(&log),
+            });
             log_count += 1;
         }
 
@@ -675,7 +838,11 @@ impl Operation for WitsmlLogs {
                 "frames",
                 format!(
                     "no frame ends up with a channel: {}",
-                    dropped.iter().map(|one| one.why.as_str()).collect::<Vec<_>>().join("; ")
+                    dropped
+                        .iter()
+                        .map(|one| one.why.as_str())
+                        .collect::<Vec<_>>()
+                        .join("; ")
                 ),
             ));
         }
@@ -685,8 +852,12 @@ impl Operation for WitsmlLogs {
             .properties
             .iter()
             .filter(|property| {
-                let Some(facts) = property.known.property.as_ref() else { return false };
-                let Some(supporting) = facts.supporting.as_ref() else { return true };
+                let Some(facts) = property.known.property.as_ref() else {
+                    return false;
+                };
+                let Some(supporting) = facts.supporting.as_ref() else {
+                    return true;
+                };
                 !frame_uuids.contains(&supporting.uuid.to_ascii_lowercase())
             })
             .count();
@@ -695,7 +866,9 @@ impl Operation for WitsmlLogs {
         let mut notes = vec![match &in_file {
             None => Note {
                 key: "written",
-                detail: format!("{log_count} Log(s), {channel_count} Channel(s), the values inline — never a FileUri, never the HDF5"),
+                detail: format!(
+                    "{log_count} Log(s), {channel_count} Channel(s), the values inline — never a FileUri, never the HDF5"
+                ),
             },
             Some(file) => Note {
                 key: "written",
@@ -711,7 +884,10 @@ impl Operation for WitsmlLogs {
             });
         }
         for one in &dropped {
-            notes.push(Note { key: "dropped", detail: one.why.clone() });
+            notes.push(Note {
+                key: "dropped",
+                detail: one.why.clone(),
+            });
         }
         if params.synthetic {
             notes.push(Note {
@@ -720,11 +896,22 @@ impl Operation for WitsmlLogs {
             });
         }
 
-        let count = |title: &str, value: usize| Parameter::Double { title: title.to_string(), value: value as f64, uom: None };
+        let count = |title: &str, value: usize| Parameter::Double {
+            title: title.to_string(),
+            value: value as f64,
+            uom: None,
+        };
         let mut parameters = activity_inputs;
         parameters.push(count("logCount", log_count));
         parameters.push(count("channelCount", channel_count));
-        let seed = format!("witsml-logs:{}", objects.iter().map(|o| o.uuid.as_str()).collect::<Vec<_>>().join(","));
+        let seed = format!(
+            "witsml-logs:{}",
+            objects
+                .iter()
+                .map(|o| o.uuid.as_str())
+                .collect::<Vec<_>>()
+                .join(",")
+        );
 
         Ok(Plan {
             media: Vec::new(),

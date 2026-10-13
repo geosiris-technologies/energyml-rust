@@ -14,11 +14,16 @@ use std::collections::BTreeSet;
 #[test]
 fn every_house_check_is_in_the_registry() {
     let houses: Vec<_> = checks().iter().filter(|c| c.id.starts_with("house/")).collect();
-    assert!(!houses.is_empty(), "a vacuous cross-check proves nothing: integrity.rs has house/ checks");
+    assert!(
+        !houses.is_empty(),
+        "a vacuous cross-check proves nothing: integrity.rs has house/ checks"
+    );
     for check in houses {
         let rule = get(check.id).unwrap_or_else(|| panic!("check {} has no rule in the registry", check.id));
         assert!(
-            rule.at.iter().any(|a| a.kind == AnchorKind::Finding && a.key == check.id),
+            rule.at
+                .iter()
+                .any(|a| a.kind == AnchorKind::Finding && a.key == check.id),
             "rule {} must anchor itself as a finding",
             rule.id
         );
@@ -37,7 +42,12 @@ fn every_finding_anchor_names_a_check_that_exists() {
     for rule in all() {
         for anchor in rule.at.iter().filter(|a| a.kind == AnchorKind::Finding) {
             seen += 1;
-            assert!(known.contains(anchor.key), "rule {} anchors on the unknown check {}", rule.id, anchor.key);
+            assert!(
+                known.contains(anchor.key),
+                "rule {} anchors on the unknown check {}",
+                rule.id,
+                anchor.key
+            );
         }
     }
     assert_eq!(seen, 2, "the two published ids");

@@ -162,9 +162,8 @@ pub fn read<'a>(objects: impl Iterator<Item = &'a dyn Reflect>) -> Order {
         let entries = match field_any(object, ORDERED) {
             Some(FieldValue::List(entries)) if !entries.is_empty() => entries,
             _ => {
-                out.notes.push(format!(
-                    "organisation {organisation} lists no ordered horizon"
-                ));
+                out.notes
+                    .push(format!("organisation {organisation} lists no ordered horizon"));
                 continue;
             }
         };
@@ -704,7 +703,9 @@ fn named(reference: &dyn Reflect, held: &Held<'_>) -> Named {
             kind: target.type_info().type_key.to_owned(),
             // The identity of the object found — the version it declares — not
             // what the reference spelt.
-            uri: identity::uri_of_reflect(target).or(address).unwrap_or_else(|| uuid.clone()),
+            uri: identity::uri_of_reflect(target)
+                .or(address)
+                .unwrap_or_else(|| uuid.clone()),
             uuid,
         },
         None => Named {
@@ -774,20 +775,32 @@ fn read_unconformities(
 ) {
     for contact in contacts {
         let mut sides = Vec::new();
-        for (side, mode) in [(&contact.subject, &contact.subject_mode), (&contact.object, &contact.object_mode)] {
-            if let Some(mode) = mode.as_deref().filter(|mode| UNCONFORMABLE_MODES.contains(&mode.trim())) {
+        for (side, mode) in [
+            (&contact.subject, &contact.subject_mode),
+            (&contact.object, &contact.object_mode),
+        ] {
+            if let Some(mode) = mode
+                .as_deref()
+                .filter(|mode| UNCONFORMABLE_MODES.contains(&mode.trim()))
+            {
                 sides.push(Unconformable {
                     unit: side.uri.clone(),
                     says: format!("{} is qualified \"{}\" in the contact", side.title, mode.trim()),
                 });
             }
         }
-        let horizon = contact.part_of.as_ref().and_then(|part| held.get(&part.uuid).map(|object| (part, *object)));
+        let horizon = contact
+            .part_of
+            .as_ref()
+            .and_then(|part| held.get(&part.uuid).map(|object| (part, *object)));
         if let (Some((part, horizon)), Some(position)) = (horizon, position) {
             let at = |named: &Named| position.get(&named.uuid).copied();
             if let (Some(a), Some(b)) = (at(&contact.subject), at(&contact.object)) {
-                let (above, below) =
-                    if a < b { (&contact.subject, &contact.object) } else { (&contact.object, &contact.subject) };
+                let (above, below) = if a < b {
+                    (&contact.subject, &contact.object)
+                } else {
+                    (&contact.object, &contact.subject)
+                };
                 let flag = |name: &str| match horizon.field(name) {
                     Some(FieldValue::Scalar(value)) => Some(value.to_string() == "false"),
                     _ => None,
@@ -804,18 +817,29 @@ fn read_unconformities(
                     _ => Vec::new(),
                 };
                 let relation = |which: &str| {
-                    relations.iter().any(|r| r == &format!("unconformable {which}") || r == "unconformable below and above")
+                    relations.iter().any(|r| {
+                        r == &format!("unconformable {which}") || r == "unconformable below and above"
+                    })
                 };
-                for (unit, flag_name, which) in [(above, "IsConformableAbove", "above"), (below, "IsConformableBelow", "below")] {
+                for (unit, flag_name, which) in [
+                    (above, "IsConformableAbove", "above"),
+                    (below, "IsConformableBelow", "below"),
+                ] {
                     let says = if flag(flag_name) == Some(true) {
                         Some(format!("{} states {flag_name} = false", part.title))
                     } else if relation(which) {
-                        Some(format!("{} states BoundaryRelation \"unconformable {which}\"", part.title))
+                        Some(format!(
+                            "{} states BoundaryRelation \"unconformable {which}\"",
+                            part.title
+                        ))
                     } else {
                         None
                     };
                     if let Some(says) = says {
-                        sides.push(Unconformable { unit: unit.uri.clone(), says });
+                        sides.push(Unconformable {
+                            unit: unit.uri.clone(),
+                            says,
+                        });
                     }
                 }
             }
@@ -836,9 +860,13 @@ fn read_unconformities(
 /// whatever the file wrote, since a reversed interval is a slip of the writer,
 /// not a different age.
 fn age_of(unit: &dyn Reflect) -> Option<[f64; 2]> {
-    let FieldValue::Object(interval) = unit.field("HasOccurredDuring")? else { return None };
+    let FieldValue::Object(interval) = unit.field("HasOccurredDuring")? else {
+        return None;
+    };
     let offset = |end: &str| -> Option<f64> {
-        let FieldValue::Object(time) = interval.field(end)? else { return None };
+        let FieldValue::Object(time) = interval.field(end)? else {
+            return None;
+        };
         integer(time, "AgeOffsetAttribute").map(|years| years as f64 / 1_000_000.0)
     };
     let (start, end) = (offset("Start")?, offset("End")?);
@@ -854,11 +882,7 @@ fn age_of(unit: &dyn Reflect) -> Option<[f64; 2]> {
 /// one the list states - the declared `Index` of 2.0.1, the position in 2.2,
 /// where `StratigraphicUnits` is a plain run of references - and its
 /// **direction** comes from the criterion, descending for all three values.
-fn read_rank(
-    object: &dyn Reflect,
-    held: &Held<'_>,
-    represents: &HashMap<String, Vec<Named>>,
-) -> ColumnRank {
+fn read_rank(object: &dyn Reflect, held: &Held<'_>, represents: &HashMap<String, Vec<Named>>) -> ColumnRank {
     let mut notes = Vec::new();
     let rank = named(object, held);
     let criteria = text_any(object, CRITERIA).unwrap_or_default();
@@ -929,8 +953,11 @@ fn read_rank(
 
     let mut contacts = contacts_of(object, held);
     let descends = matches!(criteria.trim(), "age" | "apparent depth" | "measured depth");
-    let position: HashMap<String, usize> =
-        units.iter().enumerate().map(|(at, unit)| (unit.unit.uuid.clone(), at)).collect();
+    let position: HashMap<String, usize> = units
+        .iter()
+        .enumerate()
+        .map(|(at, unit)| (unit.unit.uuid.clone(), at))
+        .collect();
     read_unconformities(&mut contacts, descends.then_some(&position), held);
 
     ColumnRank {
@@ -1010,7 +1037,11 @@ pub fn columns<'a>(objects: impl Iterator<Item = &'a dyn Reflect>) -> Columns {
         // list rather than being pushed to one end: `Ranks` is ordered and
         // that is the only thing known about it.
         ranks.sort_by_key(|rank| rank.number.unwrap_or(i64::MAX));
-        out.columns.push(StratigraphicColumn { column, ranks, models: Vec::new() });
+        out.columns.push(StratigraphicColumn {
+            column,
+            ranks,
+            models: Vec::new(),
+        });
     }
 
     for object in &all {
@@ -1049,7 +1080,9 @@ fn attach_models(out: &mut Columns, all: &[&dyn Reflect], held: &Held<'_>) {
         let Some(FieldValue::Object(column)) = object.field("StratigraphicColumn") else {
             continue;
         };
-        let column_uuid = identity::uuid_of_reflect(column).unwrap_or_default().to_ascii_lowercase();
+        let column_uuid = identity::uuid_of_reflect(column)
+            .unwrap_or_default()
+            .to_ascii_lowercase();
         let model = match object.field("InterpretedFeature") {
             Some(FieldValue::Object(feature)) => named(feature, held),
             _ => Named::default(),
@@ -1072,7 +1105,11 @@ fn attach_models(out: &mut Columns, all: &[&dyn Reflect], held: &Held<'_>) {
         };
         target.models.push(emi.clone());
         // The coarsest rank is the first: `columns` sorts them so.
-        let root = target.ranks.first().filter(|rank| rank.units.len() == 1).map(|rank| rank.units[0].unit.uuid.clone());
+        let root = target
+            .ranks
+            .first()
+            .filter(|rank| rank.units.len() == 1)
+            .map(|rank| rank.units[0].unit.uuid.clone());
         let of = |unit: &str| ModelOf {
             emi: emi.clone(),
             model: model.clone(),
@@ -1111,7 +1148,11 @@ fn attach_models(out: &mut Columns, all: &[&dyn Reflect], held: &Held<'_>) {
     // The most recent snapshot first, on every card.
     let newest_first = |units: &mut Vec<ColumnUnit>| {
         for unit in units {
-            unit.models.sort_by(|a, b| b.created.cmp(&a.created).then_with(|| a.emi.uuid.cmp(&b.emi.uuid)));
+            unit.models.sort_by(|a, b| {
+                b.created
+                    .cmp(&a.created)
+                    .then_with(|| a.emi.uuid.cmp(&b.emi.uuid))
+            });
         }
     };
     for column in out.columns.iter_mut() {
@@ -1195,7 +1236,9 @@ pub fn subtree(columns: &Columns, root: &str) -> Result<Vec<Subtree>, String> {
         }
     }
     if out.is_empty() {
-        return Err(format!("unit {root} is listed by no rank — nothing says what it contains"));
+        return Err(format!(
+            "unit {root} is listed by no rank — nothing says what it contains"
+        ));
     }
     Ok(out)
 }
@@ -1222,10 +1265,16 @@ pub fn whole_column(column: &StratigraphicColumn) -> Subtree {
 }
 
 fn subtree_in(column: Option<&Named>, ranks: &[ColumnRank], root: &str) -> Option<Subtree> {
-    let at = ranks.iter().position(|rank| rank.units.iter().any(|unit| unit.unit.uuid == root))?;
+    let at = ranks
+        .iter()
+        .position(|rank| rank.units.iter().any(|unit| unit.unit.uuid == root))?;
     let home = &ranks[at];
     let root_unit = home.units.iter().find(|unit| unit.unit.uuid == root)?;
-    let mut tree = Subtree { column: column.cloned(), ranks: Vec::new(), unplaced: Vec::new() };
+    let mut tree = Subtree {
+        column: column.cloned(),
+        ranks: Vec::new(),
+        unplaced: Vec::new(),
+    };
     tree.ranks.push(restricted(home, &[root.to_string()]));
 
     for finer in &ranks[at + 1..] {
@@ -1273,10 +1322,20 @@ fn subtree_in(column: Option<&Named>, ranks: &[ColumnRank], root: &str) -> Optio
 
 /// Rule 3: the units of `finer` between the markers that bound `root` in `home`.
 fn between_markers(home: &ColumnRank, finer: &ColumnRank, root: &str) -> Result<Vec<String>, String> {
-    let in_finer: HashMap<&str, usize> =
-        finer.units.iter().enumerate().map(|(at, unit)| (unit.unit.uuid.as_str(), at)).collect();
-    let here = home.units.iter().position(|unit| unit.unit.uuid == root).expect("the root is in its rank");
-    let above = home.units[..here].iter().rposition(|unit| in_finer.contains_key(unit.unit.uuid.as_str()));
+    let in_finer: HashMap<&str, usize> = finer
+        .units
+        .iter()
+        .enumerate()
+        .map(|(at, unit)| (unit.unit.uuid.as_str(), at))
+        .collect();
+    let here = home
+        .units
+        .iter()
+        .position(|unit| unit.unit.uuid == root)
+        .expect("the root is in its rank");
+    let above = home.units[..here]
+        .iter()
+        .rposition(|unit| in_finer.contains_key(unit.unit.uuid.as_str()));
     let below = home.units[here + 1..]
         .iter()
         .position(|unit| in_finer.contains_key(unit.unit.uuid.as_str()))
@@ -1302,14 +1361,26 @@ fn between_markers(home: &ColumnRank, finer: &ColumnRank, root: &str) -> Result<
         ));
     }
     let start = above.map_or(0, |at| in_finer[home.units[at].unit.uuid.as_str()] + 1);
-    let end = below.map_or(finer.units.len(), |at| in_finer[home.units[at].unit.uuid.as_str()]);
-    Ok(finer.units.get(start..end).unwrap_or_default().iter().map(|unit| unit.unit.uuid.clone()).collect())
+    let end = below.map_or(finer.units.len(), |at| {
+        in_finer[home.units[at].unit.uuid.as_str()]
+    });
+    Ok(finer
+        .units
+        .get(start..end)
+        .unwrap_or_default()
+        .iter()
+        .map(|unit| unit.unit.uuid.clone())
+        .collect())
 }
 
 /// A rank restricted to some of its units, in its own order.
 fn restricted(rank: &ColumnRank, keep: &[String]) -> SubRank {
-    let units: Vec<Named> =
-        rank.units.iter().filter(|unit| keep.contains(&unit.unit.uuid)).map(|unit| unit.unit.clone()).collect();
+    let units: Vec<Named> = rank
+        .units
+        .iter()
+        .filter(|unit| keep.contains(&unit.unit.uuid))
+        .map(|unit| unit.unit.clone())
+        .collect();
     let kept = |uuid: &str| units.iter().any(|unit| unit.uuid == uuid);
     SubRank {
         source: rank.rank.clone(),
@@ -1328,7 +1399,11 @@ fn restricted(rank: &ColumnRank, keep: &[String]) -> SubRank {
 
 /// A title when there is one, the uuid otherwise.
 fn label(named: &Named) -> String {
-    if named.title.is_empty() { named.uuid.clone() } else { format!("`{}`", named.title) }
+    if named.title.is_empty() {
+        named.uuid.clone()
+    } else {
+        format!("`{}`", named.title)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1413,15 +1488,21 @@ pub struct Organisation {
 
 /// A measure as `value uom`, whatever the spelling of its two fields.
 fn measure(object: &dyn Reflect, name: &str) -> Option<String> {
-    let FieldValue::Object(measure) = object.field(name)? else { return None };
-    let value = ["Value", "value"].iter().find_map(|field| match measure.field(field) {
-        Some(FieldValue::Scalar(scalar)) => Some(scalar.to_string()),
-        _ => None,
-    })?;
-    let uom = ["uom", "Uom"].iter().find_map(|field| match measure.field(field) {
-        Some(FieldValue::Scalar(scalar)) => Some(scalar.to_string()),
-        _ => None,
-    });
+    let FieldValue::Object(measure) = object.field(name)? else {
+        return None;
+    };
+    let value = ["Value", "value"]
+        .iter()
+        .find_map(|field| match measure.field(field) {
+            Some(FieldValue::Scalar(scalar)) => Some(scalar.to_string()),
+            _ => None,
+        })?;
+    let uom = ["uom", "Uom"]
+        .iter()
+        .find_map(|field| match measure.field(field) {
+            Some(FieldValue::Scalar(scalar)) => Some(scalar.to_string()),
+            _ => None,
+        });
     Some(match uom {
         Some(uom) => format!("{value} {uom}"),
         None => value,
@@ -1493,11 +1574,15 @@ fn read_organisation(object: &dyn Reflect, held: &Held<'_>) -> Organisation {
         _ => Vec::new(),
     };
     for (position, entry) in entries.iter().enumerate() {
-        let FieldValue::Object(entry) = entry else { continue };
+        let FieldValue::Object(entry) = entry else {
+            continue;
+        };
         let Some(FieldValue::Object(reference)) = field_any(*entry, ENTRY_REF) else {
             // A `FeatureInterpretationSet` in place of a single surface: said,
             // not guessed at.
-            notes.push(format!("entry {position} of the ordered list is not a single surface — left out"));
+            notes.push(format!(
+                "entry {position} of the ordered list is not a single surface — left out"
+            ));
             continue;
         };
         let surface = named(reference, held);
@@ -1526,7 +1611,9 @@ fn read_organisation(object: &dyn Reflect, held: &Held<'_>) -> Organisation {
 
     if let Some(FieldValue::List(references)) = object.field(FAULTS) {
         for reference in references {
-            let FieldValue::Object(reference) = reference else { continue };
+            let FieldValue::Object(reference) = reference else {
+                continue;
+            };
             let fault = named(reference, held);
             if !faults.iter().any(|f| f.fault.uuid == fault.uuid) {
                 faults.push(read_fault(fault, held));
@@ -1549,8 +1636,11 @@ fn read_organisation(object: &dyn Reflect, held: &Held<'_>) -> Organisation {
     }
 
     let mut contacts = contacts_of(object, held);
-    let position: HashMap<String, usize> =
-        horizons.iter().enumerate().map(|(at, h)| (h.surface.uuid.clone(), at)).collect();
+    let position: HashMap<String, usize> = horizons
+        .iter()
+        .enumerate()
+        .map(|(at, h)| (h.surface.uuid.clone(), at))
+        .collect();
     read_unconformities(&mut contacts, descends.then_some(&position), held);
 
     // Cross-cutting: a fault that splits or crosses a horizon is younger than
@@ -1577,7 +1667,16 @@ fn read_organisation(object: &dyn Reflect, held: &Held<'_>) -> Organisation {
         fault.offsets = offsets;
     }
 
-    Organisation { organisation, criteria, horizons, descends, faults, frontiers, contacts, notes }
+    Organisation {
+        organisation,
+        criteria,
+        horizons,
+        descends,
+        faults,
+        frontiers,
+        contacts,
+        notes,
+    }
 }
 
 /// Every structural organisation of a package.
@@ -1827,10 +1926,7 @@ mod tests {
             "the declared index orders, not the position in the document"
         );
         assert_eq!(read.number, Some(0));
-        assert!(
-            read.descends(),
-            "`age` is one of the three criteria that descend"
-        );
+        assert!(read.descends(), "`age` is one of the three criteria that descend");
         // The units are not in the package: drawn from the reference alone,
         // and saying so stops an empty title passing for an object with no
         // title.
@@ -1939,7 +2035,8 @@ mod tests {
             unit: reference("StratigraphicUnitInterpretation", uuid),
         };
         let side = |uuid: &str, mode: Option<resqml20::ContactMode>| resqml20::ContactElementReference {
-            content_type: "application/x-resqml+xml;version=2.0;type=obj_StratigraphicUnitInterpretation".into(),
+            content_type: "application/x-resqml+xml;version=2.0;type=obj_StratigraphicUnitInterpretation"
+                .into(),
             title: uuid.into(),
             uuid: uuid.into(),
             secondary_qualifier: mode,
@@ -1962,13 +2059,20 @@ mod tests {
             contact_interpretation: vec![
                 // Written bottom-up on purpose: the direction is not data.
                 contact(side("u-b", None), side("u-a", None), "h-ab"),
-                contact(side("u-c", Some(resqml20::ContactMode::Erosion)), side("u-b", None), "h-bc"),
+                contact(
+                    side("u-c", Some(resqml20::ContactMode::Erosion)),
+                    side("u-b", None),
+                    "h-bc",
+                ),
             ],
             ..Default::default()
         };
         let unconformable = resqml20::HorizonInterpretation {
             uuid: "h-ab".into(),
-            citation: energyml_eml_2_0::Citation { title: "H1".into(), ..Default::default() },
+            citation: energyml_eml_2_0::Citation {
+                title: "H1".into(),
+                ..Default::default()
+            },
             boundary_relation: vec![resqml20::BoundaryRelation::UnconformableBelow],
             ..Default::default()
         };
@@ -1978,18 +2082,37 @@ mod tests {
             ..Default::default()
         };
         let all = columns(
-            [&rank as &dyn Reflect, &unconformable as &dyn Reflect, &conformable as &dyn Reflect].into_iter(),
+            [
+                &rank as &dyn Reflect,
+                &unconformable as &dyn Reflect,
+                &conformable as &dyn Reflect,
+            ]
+            .into_iter(),
         );
         let read = &all.loose_ranks[0];
         let sides = |at: usize| {
-            read.contacts[at].unconformable.iter().map(|side| side.unit.as_str()).collect::<Vec<_>>()
+            read.contacts[at]
+                .unconformable
+                .iter()
+                .map(|side| side.unit.as_str())
+                .collect::<Vec<_>>()
         };
         // "unconformable below" H1: the unit under it, u-b — though the
         // contact names u-b as its subject. A side names its unit by full uri.
-        assert_eq!(sides(0), ["eml:///resqml20.obj_StratigraphicUnitInterpretation(u-b)"]);
-        assert!(read.contacts[0].unconformable[0].says.contains("H1"), "{:?}", read.contacts[0]);
+        assert_eq!(
+            sides(0),
+            ["eml:///resqml20.obj_StratigraphicUnitInterpretation(u-b)"]
+        );
+        assert!(
+            read.contacts[0].unconformable[0].says.contains("H1"),
+            "{:?}",
+            read.contacts[0]
+        );
         // `erosion` on u-c's side; the conformable horizon adds nothing.
-        assert_eq!(sides(1), ["eml:///resqml20.obj_StratigraphicUnitInterpretation(u-c)"]);
+        assert_eq!(
+            sides(1),
+            ["eml:///resqml20.obj_StratigraphicUnitInterpretation(u-c)"]
+        );
         assert!(read.contacts[1].unconformable[0].says.contains("erosion"));
     }
 
@@ -2039,7 +2162,10 @@ mod tests {
         };
         let fault = resqml20::FaultInterpretation {
             uuid: "f-1".into(),
-            citation: energyml_eml_2_0::Citation { title: "F1".into(), ..Default::default() },
+            citation: energyml_eml_2_0::Citation {
+                title: "F1".into(),
+                ..Default::default()
+            },
             throw_interpretation: vec![resqml20::FaultThrow {
                 throw: vec![resqml20::ThrowKind::Normal],
                 ..Default::default()
@@ -2051,7 +2177,10 @@ mod tests {
         let one = &read[0];
         assert!(one.descends);
         assert_eq!(
-            one.horizons.iter().map(|h| h.surface.uuid.as_str()).collect::<Vec<_>>(),
+            one.horizons
+                .iter()
+                .map(|h| h.surface.uuid.as_str())
+                .collect::<Vec<_>>(),
             ["h-top", "h-base"]
         );
         assert_eq!(one.faults.len(), 1);
@@ -2098,12 +2227,24 @@ mod tests {
         let read = structures([&organisation as &dyn Reflect, &horizon as &dyn Reflect].into_iter());
         let one = &read[0];
         assert_eq!(
-            one.horizons.iter().map(|h| h.surface.uuid.as_str()).collect::<Vec<_>>(),
+            one.horizons
+                .iter()
+                .map(|h| h.surface.uuid.as_str())
+                .collect::<Vec<_>>(),
             ["h-1", "h-2"]
         );
-        assert_eq!(one.faults.iter().map(|f| f.fault.uuid.as_str()).collect::<Vec<_>>(), ["f-2"]);
+        assert_eq!(
+            one.faults
+                .iter()
+                .map(|f| f.fault.uuid.as_str())
+                .collect::<Vec<_>>(),
+            ["f-2"]
+        );
         assert_eq!(one.horizons[0].conformable_below, Some(false));
-        assert_eq!(one.horizons[1].conformable_below, None, "not said is not conformable");
+        assert_eq!(
+            one.horizons[1].conformable_below, None,
+            "not said is not conformable"
+        );
     }
 
     /// Two entries carrying the same index are a fault of the file, and it is

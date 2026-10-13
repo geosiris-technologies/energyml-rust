@@ -156,7 +156,10 @@ impl NamingParams {
     /// The title, or `untitled` on a plan asked for its geometry — the
     /// writing refuses a missing one before this is ever reached.
     pub fn title(&self) -> String {
-        self.title.as_ref().map(|title| title.0.clone()).unwrap_or_else(|| "untitled".to_string())
+        self.title
+            .as_ref()
+            .map(|title| title.0.clone())
+            .unwrap_or_else(|| "untitled".to_string())
     }
 }
 
@@ -179,11 +182,18 @@ impl NamingParams {
 /// - and, when the operation **imposes** what it represents, that the
 ///   interpretation left out is **created** — an optional field reads *you
 ///   may do without*, not *I make it for you*.
-pub fn suggest_written(pieces: &Pieces, represents: Option<(&'static str, &'static str)>, slots: &mut Suggestions<'_>) {
+pub fn suggest_written(
+    pieces: &Pieces,
+    represents: Option<(&'static str, &'static str)>,
+    slots: &mut Suggestions<'_>,
+) {
     let has_features = pieces.features().next().is_some();
     let mut known_crs: Vec<&Ref> = Vec::new();
     for one in pieces.objects().filter_map(|(_, known)| known.crs.as_ref()) {
-        if !known_crs.iter().any(|seen| seen.uuid.eq_ignore_ascii_case(&one.uuid)) {
+        if !known_crs
+            .iter()
+            .any(|seen| seen.uuid.eq_ignore_ascii_case(&one.uuid))
+        {
             known_crs.push(one);
         }
     }
@@ -193,7 +203,10 @@ pub fn suggest_written(pieces: &Pieces, represents: Option<(&'static str, &'stat
     if has_features && known_crs.is_empty() {
         slots.set("sourceEpsg", json!(4326));
     }
-    if let Some((known, code)) = pieces.objects().find_map(|(_, k)| k.crs_epsg.map(|code| (k, code))) {
+    if let Some((known, code)) = pieces
+        .objects()
+        .find_map(|(_, k)| k.crs_epsg.map(|code| (k, code)))
+    {
         match known.crs.as_ref() {
             Some(one) => slots.inferred("project", json!(code), one.clone()),
             None => {
@@ -201,7 +214,10 @@ pub fn suggest_written(pieces: &Pieces, represents: Option<(&'static str, &'stat
             }
         }
     }
-    if let Some((known, code)) = pieces.objects().find_map(|(_, k)| k.vertical_epsg.map(|code| (k, code))) {
+    if let Some((known, code)) = pieces
+        .objects()
+        .find_map(|(_, k)| k.vertical_epsg.map(|code| (k, code)))
+    {
         match known.vertical_crs.as_ref().or(known.crs.as_ref()) {
             Some(one) => slots.inferred("vertical", json!(code), one.clone()),
             None => {
@@ -216,7 +232,11 @@ pub fn suggest_written(pieces: &Pieces, represents: Option<(&'static str, &'stat
     // path in `well-from-polyline`). Compared on the bare class, as
     // `Takes::accepts` compares types.
     let bare = |qualified: &str| {
-        let class = qualified.rsplit('.').next().unwrap_or(qualified).to_ascii_lowercase();
+        let class = qualified
+            .rsplit('.')
+            .next()
+            .unwrap_or(qualified)
+            .to_ascii_lowercase();
         class.strip_prefix("obj_").map(str::to_string).unwrap_or(class)
     };
     let imposed = represents.map(|(_, interpretation)| bare(interpretation));
@@ -224,9 +244,16 @@ pub fn suggest_written(pieces: &Pieces, represents: Option<(&'static str, &'stat
     for one in pieces
         .objects()
         .filter_map(|(_, known)| known.interpretation.as_ref())
-        .filter(|one| imposed.as_ref().is_none_or(|wanted| bare(&one.qualified_type) == *wanted))
+        .filter(|one| {
+            imposed
+                .as_ref()
+                .is_none_or(|wanted| bare(&one.qualified_type) == *wanted)
+        })
     {
-        if !known_interpretation.iter().any(|seen| seen.uuid.eq_ignore_ascii_case(&one.uuid)) {
+        if !known_interpretation
+            .iter()
+            .any(|seen| seen.uuid.eq_ignore_ascii_case(&one.uuid))
+        {
             known_interpretation.push(one);
         }
     }
@@ -243,7 +270,9 @@ pub fn suggest_written(pieces: &Pieces, represents: Option<(&'static str, &'stat
         && let Some(slot) = slots.slot_mut("interpretation")
     {
         slot.about = "what the representation represents — an interpretation of the package; left out, it is created here with its feature";
-        slot.otherwise = Otherwise::Creates { types: vec![feature, interpreted] };
+        slot.otherwise = Otherwise::Creates {
+            types: vec![feature, interpreted],
+        };
     }
     // Left out too by an operation that titles its objects itself
     // (`contacts-from-frames`: one title per unit and side).

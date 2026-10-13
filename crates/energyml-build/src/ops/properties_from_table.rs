@@ -40,12 +40,12 @@ use serde_json::{Value, json};
 
 use crate::declare::{Choice, Inputs, ObjectIn, Params, Shape, Suggestions, TableIn};
 use crate::operation::{
-    About, ActivityDraft, Category, Context, Dataset, Identity, Need, NewObject, Note, Numbers, Operation, Output,
-    Plan, Refusal, Slot,
+    About, ActivityDraft, Category, Context, Dataset, Identity, Need, NewObject, Note, Numbers, Operation,
+    Output, Plan, Refusal, Slot,
 };
-use energyml_domain::provenance::Parameter;
 use crate::osdu::{Column, ValueType};
 use crate::pieces::Pieces;
+use energyml_domain::provenance::Parameter;
 
 use super::support;
 use super::wells_from_table::{SetAside, column_at, group, intervals, role};
@@ -135,7 +135,11 @@ pub struct PropertiesInputs {
     /// declaration as `wells` of `wells-from-table`, and for the same reason:
     /// they are found by the name of the borehole, so those that no row
     /// names receive nothing.
-    #[input(least = 1, types = "resqml22.WellboreFrameRepresentation, resqml20.obj_WellboreFrameRepresentation", every)]
+    #[input(
+        least = 1,
+        types = "resqml22.WellboreFrameRepresentation, resqml20.obj_WellboreFrameRepresentation",
+        every
+    )]
     pub frames: Vec<Shape>,
     /// the category tables to continue rather than duplicate
     ///
@@ -231,8 +235,24 @@ impl Operation for PropertiesFromTable {
                 Need::Text,
                 "what each column of the table was taken to mean, as `column → property kind`",
             ),
-            Slot::optional("propertyCount", Need::Number { uom: None, least: None, most: None }, "properties written"),
-            Slot::optional("wellCount", Need::Number { uom: None, least: None, most: None }, "wellbores enriched"),
+            Slot::optional(
+                "propertyCount",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "properties written",
+            ),
+            Slot::optional(
+                "wellCount",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "wellbores enriched",
+            ),
         ]
     }
 
@@ -243,7 +263,12 @@ impl Operation for PropertiesFromTable {
         Ok(())
     }
 
-    fn plan(&self, inputs: PropertiesInputs, params: PropertiesParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: PropertiesInputs,
+        params: PropertiesParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         // **Said here and not in `check`**: an empty `frames` is what an offers
         // list sees before the edge fills it (`read::every`), and
         // refusing there would make the operation unfit while it is being chosen. Empty
@@ -278,7 +303,6 @@ pub(crate) fn lay(
     params: &PropertiesParams,
     cx: &Context<'_>,
 ) -> Result<Plan, Refusal> {
-
     let mut objects: Vec<NewObject> = Vec::new();
     let mut datasets: Vec<Dataset> = Vec::new();
     let mut says: Vec<Note> = Vec::new();
@@ -312,7 +336,9 @@ pub(crate) fn lay(
     // code is the rank of its row, so reordering would make everything that
     // has already been written against it lie.
     for table in lookups {
-        let Some(reference) = table.known.reference.as_ref() else { continue };
+        let Some(reference) = table.known.reference.as_ref() else {
+            continue;
+        };
         let Some(values) = table.known.categories.clone() else {
             return Err(Refusal::on(
                 "lookups",
@@ -426,7 +452,10 @@ pub(crate) fn lay(
                             ),
                         ));
                     }
-                    (passes.iter().map(|(_, base, row)| (*base, *row)).collect(), places)
+                    (
+                        passes.iter().map(|(_, base, row)| (*base, *row)).collect(),
+                        places,
+                    )
                 }
             };
             tally.added += places.added.len();
@@ -480,7 +509,10 @@ pub(crate) fn lay(
             }
             for (group, columns) in groups {
                 let cells = gathered_cells(table, &columns, &places);
-                let key = (group, columns.iter().map(|one| one.title.clone()).collect::<Vec<_>>());
+                let key = (
+                    group,
+                    columns.iter().map(|one| one.title.clone()).collect::<Vec<_>>(),
+                );
                 let title = format!("{} — {}", hole.title, group.words());
                 let (values, lookup, lookup_title) = match params.text_columns {
                     TextColumns::TablePerWell => {
@@ -500,10 +532,19 @@ pub(crate) fn lay(
                                 }
                             }
                         }
-                        let joined = rows.iter().map(|row| row.join("\u{1f}")).collect::<Vec<_>>().join("\u{1e}");
+                        let joined = rows
+                            .iter()
+                            .map(|row| row.join("\u{1f}"))
+                            .collect::<Vec<_>>()
+                            .join("\u{1e}");
                         let uuid = support::next_uuid(
                             cx.identity,
-                            &format!("gathered-table:{}|{}|{}|{joined}", hole.title, group.words(), key.1.join("\u{1f}")),
+                            &format!(
+                                "gathered-table:{}|{}|{}|{joined}",
+                                hole.title,
+                                group.words(),
+                                key.1.join("\u{1f}")
+                            ),
                             &mut rank,
                         )?;
                         // Titled apart from the property that points at it:
@@ -536,7 +577,12 @@ pub(crate) fn lay(
                 };
                 let uuid = support::next_uuid(
                     cx.identity,
-                    &seed_on(&hole.title, &format!("gathered:{}", group.words()), &integers(&values), places.on),
+                    &seed_on(
+                        &hole.title,
+                        &format!("gathered:{}", group.words()),
+                        &integers(&values),
+                        places.on,
+                    ),
                     &mut rank,
                 )?;
                 let path = format!("/resqml22/{uuid}/values");
@@ -548,7 +594,18 @@ pub(crate) fn lay(
                     qualified_type: "resqml22.DiscreteProperty".to_string(),
                     role: "discrete-property".to_string(),
                     title: title.clone(),
-                    json: pointer(&uuid, &title, frame, places.on, &params.data_file, &path, values.len(), params.null_value, (&lookup, &lookup_title), cx.when),
+                    json: pointer(
+                        &uuid,
+                        &title,
+                        frame,
+                        places.on,
+                        &params.data_file,
+                        &path,
+                        values.len(),
+                        params.null_value,
+                        (&lookup, &lookup_title),
+                        cx.when,
+                    ),
                 });
                 datasets.push(Dataset {
                     file: params.data_file.clone(),
@@ -566,10 +623,19 @@ pub(crate) fn lay(
     // below, and for the same reason: a table emitted after the first frame
     // would hold its rows only. Their uuid comes from what they hold.
     for (key, one) in shared.iter_mut() {
-        let joined = one.rows.iter().map(|row| row.join("\u{1f}")).collect::<Vec<_>>().join("\u{1e}");
+        let joined = one
+            .rows
+            .iter()
+            .map(|row| row.join("\u{1f}"))
+            .collect::<Vec<_>>()
+            .join("\u{1e}");
         one.lookup = support::next_uuid(
             cx.identity,
-            &format!("gathered-table:{}|{}|{joined}", key.0.words(), key.1.join("\u{1f}")),
+            &format!(
+                "gathered-table:{}|{}|{joined}",
+                key.0.words(),
+                key.1.join("\u{1f}")
+            ),
             &mut rank,
         )?;
     }
@@ -581,7 +647,13 @@ pub(crate) fn lay(
         }
     }
     for one in shared.values() {
-        objects.push(gathered_table(&one.lookup, &one.title, &one.columns, &one.rows, cx.when));
+        objects.push(gathered_table(
+            &one.lookup,
+            &one.title,
+            &one.columns,
+            &one.rows,
+            cx.when,
+        ));
         tally.tables += 1;
     }
     if tally.gathered > 0 {
@@ -605,13 +677,22 @@ pub(crate) fn lay(
     }
 
     if tally.properties == 0 {
-        let why = aside.0.iter().map(|(why, n)| format!("{n} × {why}")).collect::<Vec<_>>().join("; ");
+        let why = aside
+            .0
+            .iter()
+            .map(|(why, n)| format!("{n} × {why}"))
+            .collect::<Vec<_>>()
+            .join("; ");
         return Err(Refusal::on(
             "table",
             format!(
                 "no property could be written: {} well(s) of the table name no frame of the package{}",
                 tally.unmatched.len(),
-                if why.is_empty() { String::new() } else { format!("; {why}") }
+                if why.is_empty() {
+                    String::new()
+                } else {
+                    format!("; {why}")
+                }
             ),
         ));
     }
@@ -663,12 +744,18 @@ pub(crate) fn lay(
     // file; only this count tells them apart.
     says.push(Note {
         key: "filled",
-        detail: format!("{} element(s) had no value in the file and were written as null", tally.filled),
+        detail: format!(
+            "{} element(s) had no value in the file and were written as null",
+            tally.filled
+        ),
     });
     if tally.added > 0 {
         says.push(Note {
             key: "depths-added",
-            detail: format!("{} measured depth(s) of the file were added to the frames", tally.added),
+            detail: format!(
+                "{} measured depth(s) of the file were added to the frames",
+                tally.added
+            ),
         });
     }
     if tally.dropped > 0 {
@@ -682,18 +769,31 @@ pub(crate) fn lay(
         });
     }
     if !tally.unmatched.is_empty() {
-        let named = tally.unmatched.iter().take(3).cloned().collect::<Vec<_>>().join(", ");
+        let named = tally
+            .unmatched
+            .iter()
+            .take(3)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(", ");
         says.push(Note {
             key: "wells-unmatched",
             detail: format!(
                 "{} well(s) of the table name no frame of the package: {named}{}",
                 tally.unmatched.len(),
-                if tally.unmatched.len() > 3 { ", and more" } else { "" }
+                if tally.unmatched.len() > 3 {
+                    ", and more"
+                } else {
+                    ""
+                }
             ),
         });
     }
     for (why, count) in &aside.0 {
-        says.push(Note { key: "rows-aside", detail: format!("{count} × {why}") });
+        says.push(Note {
+            key: "rows-aside",
+            detail: format!("{count} × {why}"),
+        });
     }
 
     // **The mapping, written out in full.** It is what a second
@@ -709,7 +809,12 @@ pub(crate) fn lay(
     let mapping = tables
         .iter()
         .flat_map(|one| one.template.columns.iter())
-        .filter_map(|column| column.kind.as_deref().map(|kind| format!("{} → {kind}", column.name)))
+        .filter_map(|column| {
+            column
+                .kind
+                .as_deref()
+                .map(|kind| format!("{} → {kind}", column.name))
+        })
         .collect::<Vec<_>>()
         .join("; ");
     // `Parameter.Value` is bounded to 2,000 by `Activity.xsd`. A wide template
@@ -736,13 +841,20 @@ pub(crate) fn lay(
             title: format!("properties-from-table → {source}"),
             seed: source,
             parameters: vec![
-                Parameter::Text { title: "mapping".to_string(), value: mapping },
+                Parameter::Text {
+                    title: "mapping".to_string(),
+                    value: mapping,
+                },
                 Parameter::Double {
                     title: "propertyCount".to_string(),
                     value: tally.properties as f64,
                     uom: None,
                 },
-                Parameter::Double { title: "wellCount".to_string(), value: tally.holes as f64, uom: None },
+                Parameter::Double {
+                    title: "wellCount".to_string(),
+                    value: tally.holes as f64,
+                    uom: None,
+                },
             ],
         },
         says,
@@ -781,8 +893,15 @@ impl<'a> Frames<'a> {
                 mute.push(one.name.clone());
                 continue;
             };
-            if let Some(other) = what.reference.as_ref().filter(|r| !frame.accepts(&r.qualified_type)) {
-                strangers.push(format!("`{}` is `{}` ({})", one.name, other.qualified_type, other.title));
+            if let Some(other) = what
+                .reference
+                .as_ref()
+                .filter(|r| !frame.accepts(&r.qualified_type))
+            {
+                strangers.push(format!(
+                    "`{}` is `{}` ({})",
+                    one.name, other.qualified_type, other.title
+                ));
                 continue;
             }
             match (what.reference.as_ref(), what.node_mds.as_deref()) {
@@ -838,9 +957,14 @@ impl<'a> Frames<'a> {
         // its writer suffix — `“F1 — frame”`, `“F1 : trajectory”` —
         // is never alphanumeric.
         let named = |title: &str| {
-            title.starts_with(well) && title[well.len()..].chars().next().is_none_or(|next| !next.is_alphanumeric())
+            title.starts_with(well)
+                && title[well.len()..]
+                    .chars()
+                    .next()
+                    .is_none_or(|next| !next.is_alphanumeric())
         };
-        let near: Vec<&(String, KnownFrame<'a>)> = self.known.iter().filter(|(title, _)| named(title)).collect();
+        let near: Vec<&(String, KnownFrame<'a>)> =
+            self.known.iter().filter(|(title, _)| named(title)).collect();
         match near.as_slice() {
             // A mute frame that bears this name is the one thing that cannot
             // be kept quiet: the values of this borehole would go nowhere,
@@ -861,7 +985,10 @@ impl<'a> Frames<'a> {
                     "`{well}` names {} frames of the package — {} — and which one carries these values cannot be \
                      guessed",
                     many.len(),
-                    many.iter().map(|(title, _)| title.as_str()).collect::<Vec<_>>().join(", ")
+                    many.iter()
+                        .map(|(title, _)| title.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 ),
             )),
         }
@@ -962,7 +1089,12 @@ fn places_of(rows: &[(f64, usize)], mds: &[f64], subdivide: bool) -> Places {
             None => dropped += 1,
         }
     }
-    Places { at, on: "nodes", added, dropped }
+    Places {
+        at,
+        on: "nodes",
+        added,
+        dropped,
+    }
 }
 
 /// Where each **interval** of the frame takes its value, for passes.
@@ -1002,7 +1134,12 @@ fn places_of_passes(passes: &[(f64, f64, usize)], mds: &[f64], subdivide: bool) 
             *slot = Some(*row);
         }
     }
-    Places { at, on: "intervals", added, dropped }
+    Places {
+        at,
+        on: "intervals",
+        added,
+        dropped,
+    }
 }
 
 // -- writing a column --------------------------------------------------------
@@ -1033,7 +1170,11 @@ fn seed_of(well: &str, column: &str, values: &str) -> String {
 /// keep their uuid. On intervals, the word is added — the same
 /// codes laid on passes are another object.
 fn seed_on(well: &str, column: &str, values: &str, on: &str) -> String {
-    if on == "nodes" { seed_of(well, column, values) } else { format!("{}|{on}", seed_of(well, column, values)) }
+    if on == "nodes" {
+        seed_of(well, column, values)
+    } else {
+        format!("{}|{on}", seed_of(well, column, values))
+    }
 }
 
 /// The values, as **exact** text.
@@ -1083,7 +1224,10 @@ fn payload_columns<'a>(
     table: &crate::tabular::Table,
     template: &'a crate::osdu::Template,
 ) -> Vec<(&'a Column, usize)> {
-    let roles: Vec<&str> = super::wells_from_table::ROLES.iter().map(|one| one.uuid).collect();
+    let roles: Vec<&str> = super::wells_from_table::ROLES
+        .iter()
+        .map(|one| one.uuid)
+        .collect();
     template
         .columns
         .iter()
@@ -1113,7 +1257,11 @@ fn one_column(
         let value = table.rows[row?].get(*at)?.trim();
         // An empty cell **and** the template's absence value say the same
         // thing: the file says nothing here.
-        if value.is_empty() || column.absent.as_deref() == Some(value) { None } else { Some(value) }
+        if value.is_empty() || column.absent.as_deref() == Some(value) {
+            None
+        } else {
+            Some(value)
+        }
     };
 
     let mut filled = 0usize;
@@ -1136,10 +1284,24 @@ fn one_column(
                 }
             }
         }
-        uuid = support::next_uuid(identity, &seed_on(well, &column.name, &numbers(&values), places.on), rank)?;
+        uuid = support::next_uuid(
+            identity,
+            &seed_on(well, &column.name, &numbers(&values), places.on),
+            rank,
+        )?;
         path = format!("/resqml22/{uuid}/values");
         (
-            continuous(&uuid, &title, column, frame, places.on, &params.data_file, &path, values.len(), when),
+            continuous(
+                &uuid,
+                &title,
+                column,
+                frame,
+                places.on,
+                &params.data_file,
+                &path,
+                values.len(),
+                when,
+            ),
             Dataset {
                 file: params.data_file.clone(),
                 path: path.clone(),
@@ -1182,10 +1344,26 @@ fn one_column(
                 }
             }
         }
-        uuid = support::next_uuid(identity, &seed_on(well, &column.name, &integers(&values), places.on), rank)?;
+        uuid = support::next_uuid(
+            identity,
+            &seed_on(well, &column.name, &integers(&values), places.on),
+            rank,
+        )?;
         path = format!("/resqml22/{uuid}/values");
         (
-            discrete(&uuid, &title, column, frame, places.on, &params.data_file, &path, values.len(), params.null_value, PATCH, when),
+            discrete(
+                &uuid,
+                &title,
+                column,
+                frame,
+                places.on,
+                &params.data_file,
+                &path,
+                values.len(),
+                params.null_value,
+                PATCH,
+                when,
+            ),
             Dataset {
                 file: params.data_file.clone(),
                 path,
@@ -1204,7 +1382,11 @@ fn one_column(
             } else {
                 "resqml22.DiscreteProperty".to_string()
             },
-            role: if numeric { "continuous-property".to_string() } else { "discrete-property".to_string() },
+            role: if numeric {
+                "continuous-property".to_string()
+            } else {
+                "discrete-property".to_string()
+            },
             title,
             json: object,
         }],
@@ -1476,13 +1658,22 @@ impl GatheredColumn {
 
 /// The columns of the file no template column names, in the file's order —
 /// each with the dictionary's `unknown` kind.
-fn undeclared_columns(table: &crate::tabular::Table, template: &crate::osdu::Template) -> Vec<GatheredColumn> {
-    let named: Vec<String> = template.columns.iter().map(|one| one.name.trim().to_ascii_lowercase()).collect();
+fn undeclared_columns(
+    table: &crate::tabular::Table,
+    template: &crate::osdu::Template,
+) -> Vec<GatheredColumn> {
+    let named: Vec<String> = template
+        .columns
+        .iter()
+        .map(|one| one.name.trim().to_ascii_lowercase())
+        .collect();
     table
         .headers
         .iter()
         .enumerate()
-        .filter(|(_, header)| !header.trim().is_empty() && !named.contains(&header.trim().to_ascii_lowercase()))
+        .filter(|(_, header)| {
+            !header.trim().is_empty() && !named.contains(&header.trim().to_ascii_lowercase())
+        })
         .map(|(at, header)| GatheredColumn {
             title: header.trim().to_string(),
             kind: json!({
@@ -1499,7 +1690,11 @@ fn undeclared_columns(table: &crate::tabular::Table, template: &crate::osdu::Tem
 
 /// A row of the gathered table for each element of the frame — `None` where
 /// every cell is empty, which is a null of the pointing property and no row.
-fn gathered_cells(table: &crate::tabular::Table, columns: &[GatheredColumn], places: &Places) -> Vec<Option<Vec<String>>> {
+fn gathered_cells(
+    table: &crate::tabular::Table,
+    columns: &[GatheredColumn],
+    places: &Places,
+) -> Vec<Option<Vec<String>>> {
     places
         .at
         .iter()
@@ -1508,8 +1703,15 @@ fn gathered_cells(table: &crate::tabular::Table, columns: &[GatheredColumn], pla
             let cells: Vec<String> = columns
                 .iter()
                 .map(|column| {
-                    let value = table.rows[row].get(column.at).map(|cell| cell.trim()).unwrap_or("");
-                    if column.absent.as_deref() == Some(value) { String::new() } else { value.to_string() }
+                    let value = table.rows[row]
+                        .get(column.at)
+                        .map(|cell| cell.trim())
+                        .unwrap_or("");
+                    if column.absent.as_deref() == Some(value) {
+                        String::new()
+                    } else {
+                        value.to_string()
+                    }
                 })
                 .collect();
             cells.iter().any(|cell| !cell.is_empty()).then_some(cells)
@@ -1545,7 +1747,13 @@ impl Gathered {
 /// own** property kind — what a table is for (`eml23.ColumnBasedTable`: *“the
 /// values are arranged against columns that are defined by PropertyKind, UOM
 /// and Facet”*). The values are in the XML, as `lookup_table` writes them.
-fn gathered_table(uuid: &str, title: &str, columns: &[GatheredColumn], rows: &[Vec<String>], when: &crate::operation::When) -> NewObject {
+fn gathered_table(
+    uuid: &str,
+    title: &str,
+    columns: &[GatheredColumn],
+    rows: &[Vec<String>],
+    when: &crate::operation::When,
+) -> NewObject {
     let column_values = |at: usize| -> Vec<String> { rows.iter().map(|row| row[at].clone()).collect() };
     let columns: Vec<Value> = columns
         .iter()

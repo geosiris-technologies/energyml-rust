@@ -7,12 +7,10 @@
 //! (50, 0), so the crossing is at `s = 50` on the long section and `s = 40` on
 //! the cross. Every surface here is cut by hand.
 
-use energyml_section::assemble::{
-    CROSSING_TOLERANCE_FLOOR, CROSSING_TOLERANCE_SHARE, assemble,
-};
+use energyml_section::assemble::{CROSSING_TOLERANCE_FLOOR, CROSSING_TOLERANCE_SHARE, assemble};
 use energyml_section::model::{
-    Catalogue, Contribution, CrossWidths, Crosses, CutShape, Inputs, Note, ObjectId, SectionKey,
-    SurfaceCut, SurfaceRead, TraceRole,
+    Catalogue, Contribution, CrossWidths, Crosses, CutShape, Inputs, Note, ObjectId, SectionKey, SurfaceCut,
+    SurfaceRead, TraceRole,
 };
 
 const LONG: SectionKey = SectionKey::Long;
@@ -29,11 +27,24 @@ fn oid(uuid: &str, title: &str) -> ObjectId {
 }
 
 fn trace_cut(section: SectionKey, spans: Vec<Vec<[f64; 2]>>) -> SurfaceCut {
-    SurfaceCut { section, shape: CutShape::Trace { spans }, notes: Vec::new(), sources: Vec::new() }
+    SurfaceCut {
+        section,
+        shape: CutShape::Trace { spans },
+        notes: Vec::new(),
+        sources: Vec::new(),
+    }
 }
 
 fn surface(title: &str, role: TraceRole, cuts: Vec<SurfaceCut>) -> SurfaceRead {
-    SurfaceRead { object: oid(title, title), role, time: false, colour: None, age: None, feature: None, cuts }
+    SurfaceRead {
+        object: oid(title, title),
+        role,
+        time: false,
+        colour: None,
+        age: None,
+        feature: None,
+        cuts,
+    }
 }
 
 fn catalogue(surfaces: Vec<SurfaceRead>) -> Catalogue {
@@ -44,13 +55,22 @@ fn catalogue(surfaces: Vec<SurfaceRead>) -> Catalogue {
         right: 20.0,
         crosses: Crosses::Every {
             spacing: 50.0,
-            common: CrossWidths { before: 40.0, after: 40.0, left: 5.0, right: 5.0 },
+            common: CrossWidths {
+                before: 40.0,
+                after: 40.0,
+                left: 5.0,
+                right: 5.0,
+            },
             own: Vec::new(),
         },
         objects: Vec::new(),
         time_factor: None,
     };
-    let c = Contribution { store: "s1".to_string(), surfaces, ..Contribution::default() };
+    let c = Contribution {
+        store: "s1".to_string(),
+        surfaces,
+        ..Contribution::default()
+    };
     assemble(&inputs, &[c]).expect("assembles")
 }
 
@@ -68,7 +88,10 @@ fn horizon(on_cross: f64) -> SurfaceRead {
 }
 
 fn crossing_notes(cat: &Catalogue) -> Vec<&Note> {
-    cat.notes.iter().filter(|n| n.code.starts_with("crossing")).collect()
+    cat.notes
+        .iter()
+        .filter(|n| n.code.starts_with("crossing"))
+        .collect()
 }
 
 #[test]
@@ -87,7 +110,14 @@ fn a_surface_offset_on_one_section_is_said_with_both_elevations_and_the_gap() {
     assert_eq!(n.sections, vec![LONG, CROSS]);
     assert_eq!(n.objects.len(), 1);
     assert_eq!(n.objects[0].title, "Top");
-    for want in ["'Top'", "long section", "cross section 1", "-15.00", "-18.00", "3.00"] {
+    for want in [
+        "'Top'",
+        "long section",
+        "cross section 1",
+        "-15.00",
+        "-18.00",
+        "3.00",
+    ] {
         assert!(n.said.contains(want), "{want} missing from: {}", n.said);
     }
 }
@@ -174,13 +204,27 @@ fn grid(cuts: Vec<SurfaceCut>) -> SurfaceRead {
 fn a_grid_is_compared_by_its_top_and_its_bottom() {
     // The top agrees, the bottom is 5 deeper on the cross section.
     let cat = catalogue(vec![grid(vec![
-        SurfaceCut { section: LONG, shape: envelope(-10.0, -50.0, 100.0), notes: Vec::new(), sources: Vec::new() },
-        SurfaceCut { section: CROSS, shape: envelope(-10.0, -55.0, 80.0), notes: Vec::new(), sources: Vec::new() },
+        SurfaceCut {
+            section: LONG,
+            shape: envelope(-10.0, -50.0, 100.0),
+            notes: Vec::new(),
+            sources: Vec::new(),
+        },
+        SurfaceCut {
+            section: CROSS,
+            shape: envelope(-10.0, -55.0, 80.0),
+            notes: Vec::new(),
+            sources: Vec::new(),
+        },
     ])]);
     let notes = crossing_notes(&cat);
     assert_eq!(notes.len(), 1, "{:?}", cat.notes);
     assert_eq!(notes[0].code, "crossingMismatch");
-    assert!(notes[0].said.contains("bottom of grid 'Grid'"), "{}", notes[0].said);
+    assert!(
+        notes[0].said.contains("bottom of grid 'Grid'"),
+        "{}",
+        notes[0].said
+    );
     assert!(notes[0].said.contains("5.00"), "{}", notes[0].said);
 }
 
@@ -207,7 +251,11 @@ fn a_step_in_a_grid_at_the_crossing_is_compared_as_two_sets() {
         top_cut(CROSS, cross_top.clone()),
     ])]);
     assert_eq!(crossing_notes(&cat).len(), 1, "{:?}", cat.notes);
-    assert!(cat.notes.iter().any(|n| n.said.contains("-20.00")), "{:?}", cat.notes);
+    assert!(
+        cat.notes.iter().any(|n| n.said.contains("-20.00")),
+        "{:?}",
+        cat.notes
+    );
     // Without the step, the same cross section agrees.
     let flat = vec![vec![[0.0, -10.0], [100.0, -10.0]]];
     let cat = catalogue(vec![grid(vec![top_cut(LONG, flat), top_cut(CROSS, cross_top)])]);

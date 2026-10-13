@@ -17,13 +17,28 @@ use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 fn when() -> When {
-    When { creation: "2026-09-25T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-25T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 fn shape(points: Vec<[f64; 3]>, topology: Topology, closed: Option<Vec<bool>>) -> Pieces {
     Pieces::empty().with(
         "shape",
-        Source::Shape { geometry: Geometry { kind: "test", patches: vec![Patch { index: 0, node_offset: 0, points, topology, closed: Vec::new() }] }, closed },
+        Source::Shape {
+            geometry: Geometry {
+                kind: "test",
+                patches: vec![Patch {
+                    index: 0,
+                    node_offset: 0,
+                    points,
+                    topology,
+                    closed: Vec::new(),
+                }],
+            },
+            closed,
+        },
     )
 }
 
@@ -50,7 +65,14 @@ fn fault(side: usize) -> (Vec<[f64; 3]>, Vec<[u32; 3]>) {
 
 fn plan(bag: &Pieces, choices: Choices) -> Plan {
     Registry::new()
-        .plan_for("extend", bag, &choices, &Identity::derived(), &when(), Purpose::Geometry)
+        .plan_for(
+            "extend",
+            bag,
+            &choices,
+            &Identity::derived(),
+            &when(),
+            Purpose::Geometry,
+        )
         .unwrap_or_else(|why| panic!("planned: {why}"))
 }
 
@@ -89,13 +111,29 @@ fn a_fault_extends_10_m_up_5_down_8_on_the_sides() {
     );
     let root = &made.shapes[0];
     let patch = &root.geometry.patches[0];
-    let Topology::Triangles(out) = &patch.topology else { panic!("a surface comes out: {:?}", patch.topology) };
+    let Topology::Triangles(out) = &patch.topology else {
+        panic!("a surface comes out: {:?}", patch.topology)
+    };
     let n = points.len();
-    assert_eq!(bits(&patch.points[..n]), bits(&points), "the original nodes, bit for bit and first");
-    assert_eq!(&out[..triangles.len()], triangles.as_slice(), "the original triangles, as they were and first");
-    assert!(patch.points.len() > n && out.len() > triangles.len(), "something was added");
+    assert_eq!(
+        bits(&patch.points[..n]),
+        bits(&points),
+        "the original nodes, bit for bit and first"
+    );
+    assert_eq!(
+        &out[..triangles.len()],
+        triangles.as_slice(),
+        "the original triangles, as they were and first"
+    );
+    assert!(
+        patch.points.len() > n && out.len() > triangles.len(),
+        "something was added"
+    );
     for p in &patch.points[n..] {
-        assert!((p[2] - p[1]).abs() < 1e-9, "an invented node off the fault's plane z = y: {p:?}");
+        assert!(
+            (p[2] - p[1]).abs() < 1e-9,
+            "an invented node off the fault's plane z = y: {p:?}"
+        );
     }
     // The tip of a border node's extension: the farthest invented node on the
     // ray from it — found here by geometry, the ray recomputed from the plane.
@@ -106,8 +144,13 @@ fn a_fault_extends_10_m_up_5_down_8_on_the_sides() {
             .filter_map(|q| {
                 let d = [q[0] - p[0], q[1] - p[1], q[2] - p[2]];
                 let along = d[0] * direction[0] + d[1] * direction[1] + d[2] * direction[2];
-                let off = [d[0] - along * direction[0], d[1] - along * direction[1], d[2] - along * direction[2]];
-                ((off[0] * off[0] + off[1] * off[1] + off[2] * off[2]).sqrt() < 1e-9 && along > 0.0).then_some(along)
+                let off = [
+                    d[0] - along * direction[0],
+                    d[1] - along * direction[1],
+                    d[2] - along * direction[2],
+                ];
+                ((off[0] * off[0] + off[1] * off[1] + off[2] * off[2]).sqrt() < 1e-9 && along > 0.0)
+                    .then_some(along)
             })
             .fold(0.0, f64::max)
     };
@@ -117,20 +160,52 @@ fn a_fault_extends_10_m_up_5_down_8_on_the_sides() {
     let bottom_middle = side / 2;
     let left_middle = (side / 2) * side;
     // Ten metres of height along a 45° line is 10·√2 of length.
-    assert!((tip(top_middle, up) * up[2] - 10.0).abs() < 1e-9, "the top rises by 10 m: {}", tip(top_middle, up));
-    assert!((tip(bottom_middle, down) * up[2] - 5.0).abs() < 1e-9, "the bottom sinks by 5 m: {}", tip(bottom_middle, down));
-    assert!((tip(left_middle, [-1.0, 0.0, 0.0]) - 8.0).abs() < 1e-9, "the side goes 8 m along the strike: {}", tip(left_middle, [-1.0, 0.0, 0.0]));
+    assert!(
+        (tip(top_middle, up) * up[2] - 10.0).abs() < 1e-9,
+        "the top rises by 10 m: {}",
+        tip(top_middle, up)
+    );
+    assert!(
+        (tip(bottom_middle, down) * up[2] - 5.0).abs() < 1e-9,
+        "the bottom sinks by 5 m: {}",
+        tip(bottom_middle, down)
+    );
+    assert!(
+        (tip(left_middle, [-1.0, 0.0, 0.0]) - 8.0).abs() < 1e-9,
+        "the side goes 8 m along the strike: {}",
+        tip(left_middle, [-1.0, 0.0, 0.0])
+    );
 
     // Marked, not mixed: the counts, the note, and the child of the tree.
     let added = patch.points.len() - n;
     assert_eq!(count(&made, "originalNodes"), Some(n as f64));
     assert_eq!(count(&made, "addedNodes"), Some(added as f64));
-    assert!(made.says.iter().any(|s| s.key == "invented" && s.detail.contains(&format!("nodes 0..{n}"))), "{:?}", made.says);
-    let child = made.shapes.iter().find(|s| s.parent.as_deref() == Some(root.id.as_str())).expect("the invented nodes, a child of the result");
+    assert!(
+        made.says
+            .iter()
+            .any(|s| s.key == "invented" && s.detail.contains(&format!("nodes 0..{n}"))),
+        "{:?}",
+        made.says
+    );
+    let child = made
+        .shapes
+        .iter()
+        .find(|s| s.parent.as_deref() == Some(root.id.as_str()))
+        .expect("the invented nodes, a child of the result");
     assert_eq!(child.geometry.patches[0].topology, Topology::Points);
-    assert_eq!(bits(&child.geometry.patches[0].points), bits(&patch.points[n..]), "the child holds exactly the invented nodes");
-    assert!(child.object.is_none(), "the child is a part of the result, not an object");
-    assert_eq!(made.objects.last().unwrap().qualified_type, "resqml22.TriangulatedSetRepresentation");
+    assert_eq!(
+        bits(&child.geometry.patches[0].points),
+        bits(&patch.points[n..]),
+        "the child holds exactly the invented nodes"
+    );
+    assert!(
+        child.object.is_none(),
+        "the child is a part of the result, not an object"
+    );
+    assert_eq!(
+        made.objects.last().unwrap().qualified_type,
+        "resqml22.TriangulatedSetRepresentation"
+    );
     assert_eq!(made.activity.recipe, "extend");
 }
 
@@ -148,7 +223,11 @@ fn a_badly_placed_edge_node_does_not_twist_the_extension() {
     let made = plan(&bag, Choices::new().set("band", 2.5).set("distance", 3.0));
     let patch = &made.shapes[0].geometry.patches[0];
     let n = points.len();
-    assert_eq!(bits(&patch.points[..n]), bits(&points), "the misplaced node is kept where it was, bit for bit");
+    assert_eq!(
+        bits(&patch.points[..n]),
+        bits(&points),
+        "the misplaced node is kept where it was, bit for bit"
+    );
     // The plane's unit normal, and the component of a direction along it.
     let normal = [0.0, -(0.5f64.sqrt()), 0.5f64.sqrt()];
     let off_plane = |d: [f64; 3]| {
@@ -167,8 +246,14 @@ fn a_badly_placed_edge_node_does_not_twist_the_extension() {
     let inner = points[lifted - side];
     let last_edge = off_plane([p[0] - inner[0], p[1] - inner[1], p[2] - inner[2]]);
     assert!(robust < 1e-9, "the band's plane is the fault's: {robust}");
-    assert!(last_edge > 0.2, "and the last edge would have climbed by: {last_edge}");
-    assert!(count(&made, "outlierNodes").unwrap() >= 1.0, "the misplaced node is counted");
+    assert!(
+        last_edge > 0.2,
+        "and the last edge would have climbed by: {last_edge}"
+    );
+    assert!(
+        count(&made, "outlierNodes").unwrap() >= 1.0,
+        "the misplaced node is counted"
+    );
     assert!(made.says.iter().any(|s| s.key == "outliers"), "{:?}", made.says);
 }
 
@@ -176,29 +261,56 @@ fn a_badly_placed_edge_node_does_not_twist_the_extension() {
 /// last exactly at the distance asked from its end, the originals in the middle.
 #[test]
 fn a_straight_polyline_extends_straight_at_each_end() {
-    let line: Vec<[f64; 3]> = (0..6).map(|k| [100.0 + 3.0 * k as f64, 50.0 - 4.0 * k as f64, -10.0]).collect();
+    let line: Vec<[f64; 3]> = (0..6)
+        .map(|k| [100.0 + 3.0 * k as f64, 50.0 - 4.0 * k as f64, -10.0])
+        .collect();
     let bag = shape(line.clone(), Topology::Polylines(vec![6]), None);
-    let made = plan(&bag, Choices::new().set("band", 20.0).set("toward", "ends").set("start", 12.0).set("end", 7.5));
+    let made = plan(
+        &bag,
+        Choices::new()
+            .set("band", 20.0)
+            .set("toward", "ends")
+            .set("start", 12.0)
+            .set("end", 7.5),
+    );
     let patch = &made.shapes[0].geometry.patches[0];
-    let Topology::Polylines(runs) = &patch.topology else { panic!() };
+    let Topology::Polylines(runs) = &patch.topology else {
+        panic!()
+    };
     assert_eq!(runs.len(), 1, "one line still");
     let direction = [0.6, -0.8, 0.0];
     let at = |p: [f64; 3], from: [f64; 3]| {
         let d = [p[0] - from[0], p[1] - from[1], p[2] - from[2]];
         let along = d[0] * direction[0] + d[1] * direction[1] + d[2] * direction[2];
-        let off = (d[0] - along * direction[0]).hypot(d[1] - along * direction[1]).hypot(d[2]);
+        let off = (d[0] - along * direction[0])
+            .hypot(d[1] - along * direction[1])
+            .hypot(d[2]);
         (along, off)
     };
-    let before = patch.points.iter().position(|p| p.map(f64::to_bits) == line[0].map(f64::to_bits)).expect("the first node is there");
-    assert_eq!(bits(&patch.points[before..before + 6]), bits(&line), "the originals in the middle, bit for bit");
+    let before = patch
+        .points
+        .iter()
+        .position(|p| p.map(f64::to_bits) == line[0].map(f64::to_bits))
+        .expect("the first node is there");
+    assert_eq!(
+        bits(&patch.points[before..before + 6]),
+        bits(&line),
+        "the originals in the middle, bit for bit"
+    );
     for p in patch.points[..before].iter().chain(&patch.points[before + 6..]) {
         assert!(at(*p, line[0]).1 < 1e-9, "an added node off the line: {p:?}");
     }
     let (first, _) = at(patch.points[0], line[0]);
     let (last, _) = at(*patch.points.last().unwrap(), line[5]);
-    assert!((first + 12.0).abs() < 1e-9 && (last - 7.5).abs() < 1e-9, "{first} before, {last} after");
+    assert!(
+        (first + 12.0).abs() < 1e-9 && (last - 7.5).abs() < 1e-9,
+        "{first} before, {last} after"
+    );
     assert!(made.says.iter().any(|s| s.key == "invented"), "{:?}", made.says);
-    assert_eq!(made.objects.last().unwrap().qualified_type, "resqml22.PolylineSetRepresentation");
+    assert_eq!(
+        made.objects.last().unwrap().qualified_type,
+        "resqml22.PolylineSetRepresentation"
+    );
 }
 
 /// A fault stick in the dip frame: its top goes up, its bottom down — read in
@@ -208,7 +320,15 @@ fn a_fault_stick_goes_up_and_down_in_the_sense_of_the_frame() {
     let stick: Vec<[f64; 3]> = (0..5).map(|k| [0.0, 0.0, 1000.0 + 10.0 * k as f64]).collect();
     let bag = shape(stick.clone(), Topology::Polylines(vec![5]), None);
     let run = |axis: &str| {
-        let made = plan(&bag, Choices::new().set("band", 30.0).set("toward", "dip").set("up", 20.0).set("down", 5.0).set("axis", axis));
+        let made = plan(
+            &bag,
+            Choices::new()
+                .set("band", 30.0)
+                .set("toward", "dip")
+                .set("up", 20.0)
+                .set("down", 5.0)
+                .set("axis", axis),
+        );
         let points = made.shapes[0].geometry.patches[0].points.clone();
         (points[0][2], points.last().unwrap()[2])
     };
@@ -228,16 +348,36 @@ fn a_cloud_and_a_ring_are_refused_saying_so() {
         other => panic!("fit: {other:?}"),
     };
     let cloud = unfit(&shape(square.clone(), Topology::Points, None));
-    assert!(cloud.contains("triangulate"), "the refusal says where to go: {cloud}");
-    let ring = unfit(&shape(square.clone(), Topology::Polylines(vec![4]), Some(vec![true])));
+    assert!(
+        cloud.contains("triangulate"),
+        "the refusal says where to go: {cloud}"
+    );
+    let ring = unfit(&shape(
+        square.clone(),
+        Topology::Polylines(vec![4]),
+        Some(vec![true]),
+    ));
     assert!(ring.contains("closed"), "{ring}");
-    assert_eq!(op.fitness(&shape(square, Topology::Polylines(vec![4]), None)), Fitness::Fit, "the same line, open, is fit");
+    assert_eq!(
+        op.fitness(&shape(square, Topology::Polylines(vec![4]), None)),
+        Fitness::Fit,
+        "the same line, open, is fit"
+    );
 }
 
 #[test]
 fn refusals_name_their_field() {
     let refused = |bag: &Pieces, choices: Choices| {
-        Registry::new().plan_for("extend", bag, &choices, &Identity::derived(), &when(), Purpose::Geometry).expect_err("refused")
+        Registry::new()
+            .plan_for(
+                "extend",
+                bag,
+                &choices,
+                &Identity::derived(),
+                &when(),
+                Purpose::Geometry,
+            )
+            .expect_err("refused")
     };
     // A flat surface has no up: the refusal names the dip it measured.
     let (mut points, triangles) = fault(4);
@@ -245,13 +385,26 @@ fn refusals_name_their_field() {
         p[2] = 0.0;
     }
     let flat = shape(points, Topology::Triangles(triangles.clone()), None);
-    let why = refused(&flat, Choices::new().set("band", 1.0).set("toward", "dip").set("up", 1.0).set("axis", "elevation"));
+    let why = refused(
+        &flat,
+        Choices::new()
+            .set("band", 1.0)
+            .set("toward", "dip")
+            .set("up", 1.0)
+            .set("axis", "elevation"),
+    );
     assert_eq!(why.refusals()[0].slot.as_deref(), Some("toward"), "{why}");
     assert!(why.to_string().contains("dips 0.000°"), "{why}");
     // A surface has no ends.
     let (points, _) = fault(4);
     let tilted = shape(points, Topology::Triangles(triangles), None);
-    let why = refused(&tilted, Choices::new().set("band", 1.0).set("toward", "ends").set("end", 1.0));
+    let why = refused(
+        &tilted,
+        Choices::new()
+            .set("band", 1.0)
+            .set("toward", "ends")
+            .set("end", 1.0),
+    );
     assert_eq!(why.refusals()[0].slot.as_deref(), Some("toward"), "{why}");
     // Nothing to extend.
     let why = refused(&tilted, Choices::new().set("band", 1.0).set("distance", 0.0));

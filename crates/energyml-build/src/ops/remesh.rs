@@ -73,32 +73,68 @@ impl Operation for Remesh {
     }
 
     fn check(&self, inputs: &RemeshInputs) -> Result<(), Refusal> {
-        let triangulated = inputs.shape.geometry.patches.iter().any(|p| matches!(p.topology, Topology::Triangles(_)));
+        let triangulated = inputs
+            .shape
+            .geometry
+            .patches
+            .iter()
+            .any(|p| matches!(p.topology, Topology::Triangles(_)));
         if !triangulated {
-            return Err(Refusal::on("shape", "it takes a triangulated surface to mesh again — a cloud goes to `triangulate`"));
+            return Err(Refusal::on(
+                "shape",
+                "it takes a triangulated surface to mesh again — a cloud goes to `triangulate`",
+            ));
         }
         let nodes = inputs.shape.geometry.point_count();
         if nodes < 3 {
-            return Err(Refusal::on("shape", format!("a mesh needs at least 3 nodes; the surface holds {nodes}")));
+            return Err(Refusal::on(
+                "shape",
+                format!("a mesh needs at least 3 nodes; the surface holds {nodes}"),
+            ));
         }
         Ok(())
     }
 
-    fn plan(&self, inputs: RemeshInputs, params: TriangulateParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
-        let points: Vec<[f64; 3]> = inputs.shape.geometry.patches.iter().flat_map(|p| p.points.iter().copied()).collect();
+    fn plan(
+        &self,
+        inputs: RemeshInputs,
+        params: TriangulateParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
+        let points: Vec<[f64; 3]> = inputs
+            .shape
+            .geometry
+            .patches
+            .iter()
+            .flat_map(|p| p.points.iter().copied())
+            .collect();
         // The nodes, the topology left out: it is all that `triangulate` needs
         // not to see in order to agree to decide.
         let cloud = Shape {
             name: "shape".to_string(),
             geometry: Geometry {
                 kind: "remesh",
-                patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Points, closed: Vec::new() }],
+                patches: vec![Patch {
+                    index: 0,
+                    node_offset: 0,
+                    points,
+                    topology: Topology::Points,
+                    closed: Vec::new(),
+                }],
             },
             closed: None,
             known: inputs.shape.known.clone(),
         };
         let title = params.written.naming.title();
-        let mut plan = super::triangulate::run(TriangulateInputs { shape: vec![cloud], faults: inputs.faults }, params, "shape", cx)?;
+        let mut plan = super::triangulate::run(
+            TriangulateInputs {
+                shape: vec![cloud],
+                faults: inputs.faults,
+            },
+            params,
+            "shape",
+            cx,
+        )?;
         plan.activity.recipe = "remesh";
         plan.activity.title = format!("remesh → {title}");
         Ok(plan)

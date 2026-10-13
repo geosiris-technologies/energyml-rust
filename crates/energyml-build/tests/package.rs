@@ -35,11 +35,23 @@ fn export() -> String {
             older.0, younger.0, older.1, younger.1
         )
     };
-    let a = feature("Marnes et Caillasses", 2.29, 48.87, 58.0, ("Bartonien", 37.8), ("Lutétien", 47.8));
-    let b = feature("Marnes et Caillasses supérieures", 2.40, 48.90, 50.0, ("Bartonien", 37.8), ("Bartonien", 41.2));
-    format!(
-        r#"{{"type":"FeatureCollection","features":[{a},{a},{b}]}}"#
-    )
+    let a = feature(
+        "Marnes et Caillasses",
+        2.29,
+        48.87,
+        58.0,
+        ("Bartonien", 37.8),
+        ("Lutétien", 47.8),
+    );
+    let b = feature(
+        "Marnes et Caillasses supérieures",
+        2.40,
+        48.90,
+        50.0,
+        ("Bartonien", 37.8),
+        ("Bartonien", 41.2),
+    );
+    format!(r#"{{"type":"FeatureCollection","features":[{a},{a},{b}]}}"#)
 }
 
 fn options() -> Options {
@@ -184,7 +196,6 @@ fn an_empty_plan_does_not_produce_an_empty_package_in_silence() {
     assert!(!report.skipped.is_empty());
 }
 
-
 /// A square polyline, in pieces, in its own system.
 fn a_square() -> energyml_build::pieces::Pieces {
     use energyml_geometry::geometry::{Geometry, Patch, Topology};
@@ -196,7 +207,12 @@ fn a_square() -> energyml_build::pieces::Pieces {
                 patches: vec![Patch {
                     index: 0,
                     node_offset: 0,
-                    points: vec![[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [10.0, 10.0, 0.0], [0.0, 10.0, 0.0]],
+                    points: vec![
+                        [0.0, 0.0, 0.0],
+                        [10.0, 0.0, 0.0],
+                        [10.0, 10.0, 0.0],
+                        [0.0, 10.0, 0.0],
+                    ],
                     topology: Topology::Polylines(vec![4]),
                     closed: Vec::new(),
                 }],
@@ -217,7 +233,10 @@ fn the_chosen_triplet_is_written_and_the_package_reads_it_back() {
     // To make it turn red: write the feature without `IsWellKnown`, or link
     // the interpretation to something other than the feature just made.
     use energyml_build::operation::{Choices, Identity, Registry, When};
-    let when = When { creation: "2026-09-10T00:00:00Z".into(), originator: "test".into() };
+    let when = When {
+        creation: "2026-09-10T00:00:00Z".into(),
+        originator: "test".into(),
+    };
     let choices = Choices::new()
         .set("title", "AOI")
         .set("sourceEpsg", 4326)
@@ -229,13 +248,22 @@ fn the_chosen_triplet_is_written_and_the_package_reads_it_back() {
         .expect("planned");
 
     let roles: Vec<&str> = plan.objects.iter().map(|o| o.role.as_str()).collect();
-    assert!(roles.contains(&"feature") && roles.contains(&"interpretation"), "{roles:?}");
+    assert!(
+        roles.contains(&"feature") && roles.contains(&"interpretation"),
+        "{roles:?}"
+    );
     let feature = plan.of_role("feature").next().expect("a feature");
     assert_eq!(feature.qualified_type, "resqml22.BoundaryFeature");
     let interpretation = plan.of_role("interpretation").next().expect("an interpretation");
-    assert_eq!(interpretation.json["InterpretedFeature"]["Uuid"], serde_json::json!(feature.uuid));
+    assert_eq!(
+        interpretation.json["InterpretedFeature"]["Uuid"],
+        serde_json::json!(feature.uuid)
+    );
     let representation = plan.of_role("representation").next().expect("a representation");
-    assert_eq!(representation.json["RepresentedObject"]["Uuid"], serde_json::json!(interpretation.uuid));
+    assert_eq!(
+        representation.json["RepresentedObject"]["Uuid"],
+        serde_json::json!(interpretation.uuid)
+    );
 
     // And the package: written, then read back by the ordinary reader. It is the
     // triangulation that the repository demands — two sources of the same fact, one of which
@@ -246,9 +274,15 @@ fn the_chosen_triplet_is_written_and_the_package_reads_it_back() {
     let _ = std::fs::create_dir_all(&dir);
     store.external_files_mut().set_root(&dir);
     let made = energyml_build::apply::apply(&plan, &mut store, &when);
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
     assert!(
-        made.refused.iter().all(|why| why.contains("array") || why.contains("backend") || why.contains("hdf5")),
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
+    assert!(
+        made.refused
+            .iter()
+            .all(|why| why.contains("array") || why.contains("backend") || why.contains("hdf5")),
         "refused: {:?}",
         made.refused
     );
@@ -257,7 +291,9 @@ fn the_chosen_triplet_is_written_and_the_package_reads_it_back() {
             .find_by_uuid(&object.uuid)
             .unwrap_or_else(|| panic!("`{}` is not in the package", object.title));
         assert_eq!(found.qualified_type, object.qualified_type);
-        store.get_object(&found.uri).unwrap_or_else(|e| panic!("`{}` does not read back: {e}", object.title));
+        store
+            .get_object(&found.uri)
+            .unwrap_or_else(|e| panic!("`{}` does not read back: {e}", object.title));
     }
 }
 
@@ -267,7 +303,10 @@ fn without_a_chosen_type_nothing_is_invented() {
     // is perfectly legal, and making one that nobody asked for
     // would put in the package a kind of feature coming from nowhere.
     use energyml_build::operation::{Choices, Identity, Registry, When};
-    let when = When { creation: "2026-09-10T00:00:00Z".into(), originator: "test".into() };
+    let when = When {
+        creation: "2026-09-10T00:00:00Z".into(),
+        originator: "test".into(),
+    };
     let plan = Registry::new()
         .plan(
             "polylines",

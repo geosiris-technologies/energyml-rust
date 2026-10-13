@@ -164,7 +164,10 @@ pub trait ArrayBackend: Send + Sync {
     /// dataset reopening and flushing a growing file, 55.6 s of the 58 s it took
     /// to write 9 576 small arrays for 1 300 SIGEOL boreholes (measured 28/09).
     fn write_many(&self, file: &Path, items: &[(&str, &ArrayData)]) -> Vec<Result<()>> {
-        items.iter().map(|(path, data)| self.write(file, path, data)).collect()
+        items
+            .iter()
+            .map(|(path, data)| self.write(file, path, data))
+            .collect()
     }
 
     /// Put the uuid of the owning `EpcExternalPartReference` at the file root.
@@ -442,11 +445,7 @@ impl ExternalFiles {
                 .map(|entry| entry.path())
                 .filter(|path| path.is_file())
                 .filter(|path| Some(path.as_path()) != package)
-                .filter(|path| {
-                    !path
-                        .extension()
-                        .is_some_and(|e| e.eq_ignore_ascii_case("epc"))
-                })
+                .filter(|path| !path.extension().is_some_and(|e| e.eq_ignore_ascii_case("epc")))
                 .collect();
             neighbours.sort();
             for path in neighbours {

@@ -79,17 +79,19 @@ pub fn rate_and_pressure(measured: &[Measured]) -> Result<RateAndPressure, Refus
 
     let (rate_index, pressure_index) = (&rate.series.index, &pressure.series.index);
     if rate_index.values != pressure_index.values {
-        return Err(Refused::DifferentInstants { first: rate_index.mnemonic.clone(), second: pressure_index.mnemonic.clone() });
+        return Err(Refused::DifferentInstants {
+            first: rate_index.mnemonic.clone(),
+            second: pressure_index.mnemonic.clone(),
+        });
     }
     let hours = hours_of(&rate.series.index)?;
 
     let rate_channel = only_channel(rate)?;
     let pressure_channel = only_channel(pressure)?;
 
-    let rate_uom = rate_channel
-        .uom
-        .clone()
-        .ok_or_else(|| Refused::Missing { what: format!("the unit of the flow rate `{}`", rate_channel.mnemonic) })?;
+    let rate_uom = rate_channel.uom.clone().ok_or_else(|| Refused::Missing {
+        what: format!("the unit of the flow rate `{}`", rate_channel.mnemonic),
+    })?;
     let (volume, per) = rate_uom.rsplit_once('/').ok_or_else(|| Refused::Unit {
         what: format!("the flow rate `{}`", rate_channel.mnemonic),
         uom: rate_uom.clone(),
@@ -110,10 +112,9 @@ pub fn rate_and_pressure(measured: &[Measured]) -> Result<RateAndPressure, Refus
     // One `per` is `seconds_per` seconds; an hour holds 3600 / seconds_per of them.
     let to_hourly = 3600.0 / seconds_per;
 
-    let pressure_uom = pressure_channel
-        .uom
-        .clone()
-        .ok_or_else(|| Refused::Missing { what: format!("the unit of the pressure `{}`", pressure_channel.mnemonic) })?;
+    let pressure_uom = pressure_channel.uom.clone().ok_or_else(|| Refused::Missing {
+        what: format!("the unit of the pressure `{}`", pressure_channel.mnemonic),
+    })?;
     if crate::units::Dimension::of(&pressure_uom) != Some(crate::units::Dimension::Pressure) {
         return Err(Refused::Unit {
             what: format!("the pressure `{}`", pressure_channel.mnemonic),
@@ -122,7 +123,10 @@ pub fn rate_and_pressure(measured: &[Measured]) -> Result<RateAndPressure, Refus
         });
     }
 
-    let rates = good_numbers(rate_channel)?.into_iter().map(|value| value * to_hourly).collect();
+    let rates = good_numbers(rate_channel)?
+        .into_iter()
+        .map(|value| value * to_hourly)
+        .collect();
     let pressures = good_numbers(pressure_channel)?;
 
     Ok(RateAndPressure {
@@ -140,14 +144,28 @@ pub fn rate_and_pressure(measured: &[Measured]) -> Result<RateAndPressure, Refus
 
 /// The one item of `group` naming its channel by `role`.
 fn one_of<'a>(measured: &'a [Measured], group: &str, role: &str) -> Result<&'a Measured, Refused> {
-    let found: Vec<&Measured> = measured.iter().filter(|one| one.group == group && one.role == role).collect();
+    let found: Vec<&Measured> = measured
+        .iter()
+        .filter(|one| one.group == group && one.role == role)
+        .collect();
     match found.as_slice() {
         [one] => Ok(one),
-        [] => Err(Refused::Missing { what: format!("a {group} item with a {role}") }),
+        [] => Err(Refused::Missing {
+            what: format!("a {group} item with a {role}"),
+        }),
         several => Err(Refused::SeveralMatch {
             what: "channel",
             names: vec![format!("{group}/{role}")],
-            uuids: several.iter().map(|one| one.series.channels.first().and_then(|c| c.uuid.clone()).unwrap_or_default()).collect(),
+            uuids: several
+                .iter()
+                .map(|one| {
+                    one.series
+                        .channels
+                        .first()
+                        .and_then(|c| c.uuid.clone())
+                        .unwrap_or_default()
+                })
+                .collect(),
         }),
     }
 }
@@ -156,7 +174,9 @@ fn one_of<'a>(measured: &'a [Measured], group: &str, role: &str) -> Result<&'a M
 fn only_channel(measured: &Measured) -> Result<&Channel, Refused> {
     match measured.series.channels.as_slice() {
         [one] => Ok(one),
-        _ => Err(Refused::Missing { what: format!("the one channel of {}/{}", measured.group, measured.role) }),
+        _ => Err(Refused::Missing {
+            what: format!("the one channel of {}/{}", measured.group, measured.role),
+        }),
     }
 }
 
@@ -169,7 +189,17 @@ fn good_numbers(channel: &Channel) -> Result<Vec<f64>, Refused> {
             _ => "text",
         },
     })?;
-    Ok(numbers.into_iter().zip(&channel.quality).map(|(value, quality)| if *quality == Quality::Good { value } else { f64::NAN }).collect())
+    Ok(numbers
+        .into_iter()
+        .zip(&channel.quality)
+        .map(|(value, quality)| {
+            if *quality == Quality::Good {
+                value
+            } else {
+                f64::NAN
+            }
+        })
+        .collect())
 }
 
 /// Hours since the first sample of a time index.
@@ -177,7 +207,9 @@ fn hours_of(index: &super::Index) -> Result<Vec<f64>, Refused> {
     let seconds_each = match index.kind {
         IndexKind::DateTime => 1.0,
         IndexKind::ElapsedTime => {
-            let uom = index.uom.clone().ok_or_else(|| Refused::Missing { what: format!("the unit of the time index `{}`", index.mnemonic) })?;
+            let uom = index.uom.clone().ok_or_else(|| Refused::Missing {
+                what: format!("the unit of the time index `{}`", index.mnemonic),
+            })?;
             crate::units::seconds(1.0, &uom).map_err(|why| Refused::Unit {
                 what: format!("the time index `{}`", index.mnemonic),
                 uom,
@@ -186,9 +218,16 @@ fn hours_of(index: &super::Index) -> Result<Vec<f64>, Refused> {
         }
         // `flow_test::read` builds only the two above; said all the same.
         other => {
-            return Err(Refused::TimeChannelKind { channel: index.mnemonic.clone(), kind: other.wire().to_string() });
+            return Err(Refused::TimeChannelKind {
+                channel: index.mnemonic.clone(),
+                kind: other.wire().to_string(),
+            });
         }
     };
     let origin = index.values.first().copied().unwrap_or(0.0);
-    Ok(index.values.iter().map(|value| (value - origin) * seconds_each / 3600.0).collect())
+    Ok(index
+        .values
+        .iter()
+        .map(|value| (value - origin) * seconds_each / 3600.0)
+        .collect())
 }

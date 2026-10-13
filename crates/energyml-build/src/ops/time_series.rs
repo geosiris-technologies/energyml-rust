@@ -81,14 +81,22 @@ impl Operation for TimeSeries {
         }
     }
 
-    fn plan(&self, inputs: TimeSeriesInputs, params: TimeSeriesParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: TimeSeriesInputs,
+        params: TimeSeriesParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let mut instants: Vec<(String, i64)> = Vec::with_capacity(params.times.len());
         for (at, text) in params.times.iter().enumerate() {
             let text = text.trim();
             let Some(seconds) = energyml_storage::epc::core_props::unix_seconds(text) else {
                 return Err(Refusal::on(
                     "times",
-                    format!("instant {} `{text}` is not a UTC date-time as `2016-01-01T00:00:00Z`: it is refused rather than read some other way", at + 1),
+                    format!(
+                        "instant {} `{text}` is not a UTC date-time as `2016-01-01T00:00:00Z`: it is refused rather than read some other way",
+                        at + 1
+                    ),
                 ));
             };
             if let Some((before, previous)) = instants.last()
@@ -108,20 +116,32 @@ impl Operation for TimeSeries {
         let parentage = match (&inputs.parent, params.parent_index) {
             (None, None) => None,
             (None, Some(_)) => {
-                return Err(Refusal::on("parentIndex", "an index in a parent series, and no parent series: give the series this one continues"));
+                return Err(Refusal::on(
+                    "parentIndex",
+                    "an index in a parent series, and no parent series: give the series this one continues",
+                ));
             }
             (Some(parent), index) => {
                 let Some(reference) = parent.known.reference.as_ref() else {
-                    return Err(Refusal::on("parent", "the parent series was given without a reference to write"));
+                    return Err(Refusal::on(
+                        "parent",
+                        "the parent series was given without a reference to write",
+                    ));
                 };
                 let index = index.ok_or_else(|| {
                     Refusal::on(
                         "parentIndex",
-                        format!("`{}` is continued, and from which of its instants is not said: give its index", reference.title),
+                        format!(
+                            "`{}` is continued, and from which of its instants is not said: give its index",
+                            reference.title
+                        ),
                     )
                 })?;
                 if index < 0 {
-                    return Err(Refusal::on("parentIndex", format!("{index} is not an index: the first instant of a series is 0")));
+                    return Err(Refusal::on(
+                        "parentIndex",
+                        format!("{index} is not an index: the first instant of a series is 0"),
+                    ));
                 }
                 Some((reference.clone(), index))
             }
@@ -134,8 +154,15 @@ impl Operation for TimeSeries {
         // what it is, and a parent it continues is part of that.
         let seed = format!(
             "time-series:{title}:{}:{}",
-            instants.iter().map(|(text, _)| text.as_str()).collect::<Vec<_>>().join(","),
-            parentage.as_ref().map(|(parent, index)| format!("{}#{index}:{}", parent.uuid, params.overlap)).unwrap_or_default()
+            instants
+                .iter()
+                .map(|(text, _)| text.as_str())
+                .collect::<Vec<_>>()
+                .join(","),
+            parentage
+                .as_ref()
+                .map(|(parent, index)| format!("{}#{index}:{}", parent.uuid, params.overlap))
+                .unwrap_or_default()
         );
         let uuid = cx.identity.uuid(&seed, 0)?;
 
@@ -151,7 +178,10 @@ impl Operation for TimeSeries {
             },
             time: instants
                 .iter()
-                .map(|(text, _)| eml::GeologicTime { date_time: text.clone(), ..Default::default() })
+                .map(|(text, _)| eml::GeologicTime {
+                    date_time: text.clone(),
+                    ..Default::default()
+                })
                 .collect(),
             time_step: params.time_steps.then(|| {
                 eml::AbstractIntegerArray::IntegerXmlArray(eml::IntegerXmlArray {
@@ -161,13 +191,15 @@ impl Operation for TimeSeries {
                     ..Default::default()
                 })
             }),
-            time_series_parentage: parentage.as_ref().map(|(parent, index)| eml::TimeSeriesParentage {
-                has_overlap: params.overlap,
-                parent_time_index: eml::TimeIndex {
-                    index: *index,
-                    time_series: crate::crs::reference_of(parent),
-                },
-            }),
+            time_series_parentage: parentage
+                .as_ref()
+                .map(|(parent, index)| eml::TimeSeriesParentage {
+                    has_overlap: params.overlap,
+                    parent_time_index: eml::TimeIndex {
+                        index: *index,
+                        time_series: crate::crs::reference_of(parent),
+                    },
+                }),
             ..Default::default()
         };
 
@@ -187,11 +219,22 @@ impl Operation for TimeSeries {
         }
 
         let mut parameters = vec![
-            Parameter::Text { title: "title".to_string(), value: title.clone() },
-            Parameter::Double { title: "instantCount".to_string(), value: instants.len() as f64, uom: None },
+            Parameter::Text {
+                title: "title".to_string(),
+                value: title.clone(),
+            },
+            Parameter::Double {
+                title: "instantCount".to_string(),
+                value: instants.len() as f64,
+                uom: None,
+            },
         ];
         if let Some((_, index)) = &parentage {
-            parameters.push(Parameter::Double { title: "parentIndex".to_string(), value: *index as f64, uom: None });
+            parameters.push(Parameter::Double {
+                title: "parentIndex".to_string(),
+                value: *index as f64,
+                uom: None,
+            });
         }
 
         Ok(Plan {

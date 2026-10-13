@@ -16,8 +16,8 @@
 //! store, does the looking. This is what keeps `plan()` pure and testable
 //! without a package, the rule every deciding module of the workspace follows.
 
-use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use energyml_domain::color::Hsv;
+use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 use crate::geojson::Feature;
 
@@ -46,12 +46,19 @@ pub struct Ref {
 impl Ref {
     /// A reference from its three parts, naming no version.
     pub fn new(uuid: impl Into<String>, qualified_type: impl Into<String>, title: impl Into<String>) -> Self {
-        Self { uuid: uuid.into(), qualified_type: qualified_type.into(), title: title.into(), object_version: None }
+        Self {
+            uuid: uuid.into(),
+            qualified_type: qualified_type.into(),
+            title: title.into(),
+            object_version: None,
+        }
     }
 
     /// The same, with the version the object declares. A blank one is none.
     pub fn with_version(mut self, object_version: Option<String>) -> Self {
-        self.object_version = object_version.map(|version| version.trim().to_string()).filter(|version| !version.is_empty());
+        self.object_version = object_version
+            .map(|version| version.trim().to_string())
+            .filter(|version| !version.is_empty());
         self
     }
 
@@ -59,7 +66,9 @@ impl Ref {
     /// **version** — read from the summary's uri, which names the version
     /// whenever the entry declares one — and the title given.
     pub fn of_summary(summary: &energyml_storage::resource::ObjectSummary, title: impl Into<String>) -> Self {
-        let version = energyml_core::identifiers::EtpUri::parse(&summary.uri).ok().and_then(|uri| uri.object_version);
+        let version = energyml_core::identifiers::EtpUri::parse(&summary.uri)
+            .ok()
+            .and_then(|uri| uri.object_version);
         Self::new(summary.uuid.clone(), summary.qualified_type.clone(), title).with_version(version)
     }
 
@@ -84,7 +93,12 @@ impl Ref {
     /// (Identifier Specification v5.0 §3.4.2, p. 14). The only way a `Ref`
     /// becomes a uri — a uuid alone names every version of an object.
     pub fn uri(&self) -> String {
-        energyml_core::identifiers::EtpUri::object_versioned(None, &self.qualified_type, &self.uuid.to_ascii_lowercase(), self.object_version.as_deref())
+        energyml_core::identifiers::EtpUri::object_versioned(
+            None,
+            &self.qualified_type,
+            &self.uuid.to_ascii_lowercase(),
+            self.object_version.as_deref(),
+        )
     }
 
     /// Whether `other` is the same object: same uuid (without case), same
@@ -461,7 +475,16 @@ impl Source {
                 }
                 let points = geometry.nodes_at(ranks)?;
                 Ok(Source::Shape {
-                    geometry: Geometry { kind: "nodes", patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Points, closed: Vec::new() }] },
+                    geometry: Geometry {
+                        kind: "nodes",
+                        patches: vec![Patch {
+                            index: 0,
+                            node_offset: 0,
+                            points,
+                            topology: Topology::Points,
+                            closed: Vec::new(),
+                        }],
+                    },
                     closed: None,
                 })
             }
@@ -547,7 +570,11 @@ impl Pieces {
         &self,
     ) -> impl Iterator<Item = (&str, &str, &crate::tabular::Table, &crate::osdu::Template)> {
         self.entries.iter().filter_map(|(n, s)| match s {
-            Source::Table { name, table, template } => Some((n.as_str(), name.as_str(), table, template)),
+            Source::Table {
+                name,
+                table,
+                template,
+            } => Some((n.as_str(), name.as_str(), table, template)),
             _ => None,
         })
     }
@@ -581,6 +608,10 @@ impl Pieces {
         let mut kinds: Vec<&str> = self.entries.iter().map(|(_, s)| s.kind()).collect();
         kinds.sort_unstable();
         kinds.dedup();
-        if kinds.is_empty() { "nothing".to_string() } else { kinds.join(", ") }
+        if kinds.is_empty() {
+            "nothing".to_string()
+        } else {
+            kinds.join(", ")
+        }
     }
 }

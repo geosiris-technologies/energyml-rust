@@ -62,23 +62,37 @@ pub fn recipe_dir() -> Option<PathBuf> {
         candidates.push(dir.join("recipe"));
     }
     candidates.push(workspace().join("models/lutetia"));
-    candidates.into_iter().find(|dir| dir.join("recette.toml").is_file()).or_else(|| missing("recipe"))
+    candidates
+        .into_iter()
+        .find(|dir| dir.join("recette.toml").is_file())
+        .or_else(|| missing("recipe"))
 }
 
 /// The EPC of one variant (its `.h5` sits beside it).
 pub fn package(variant: Variant) -> Option<PathBuf> {
     let (public, names, monorepo, what) = match variant {
-        Variant::Clean => ("package", &["Lutetia.epc"][..], "web/public/examples/lutetia-sans-erreurs", "clean package"),
-        Variant::WithErrors => {
-            ("package-with-errors", &["Lutetia-with-errors.epc", "Lutetia.epc"][..], "web/public/examples/lutetia", "package with errors")
-        }
+        Variant::Clean => (
+            "package",
+            &["Lutetia.epc"][..],
+            "web/public/examples/lutetia-sans-erreurs",
+            "clean package",
+        ),
+        Variant::WithErrors => (
+            "package-with-errors",
+            &["Lutetia-with-errors.epc", "Lutetia.epc"][..],
+            "web/public/examples/lutetia",
+            "package with errors",
+        ),
     };
     let mut candidates = Vec::new();
     if let Some(dir) = env_dir() {
         candidates.extend(names.iter().map(|name| dir.join(public).join(name)));
     }
     candidates.push(workspace().join(monorepo).join("Lutetia.epc"));
-    candidates.into_iter().find(|path| path.is_file()).or_else(|| missing(what))
+    candidates
+        .into_iter()
+        .find(|path| path.is_file())
+        .or_else(|| missing(what))
 }
 
 /// Who wrote the packages: what decides between a byte-for-byte comparison and
@@ -108,7 +122,9 @@ impl Stamp {
     fn parse(text: &str) -> Option<Stamp> {
         let mut lines = text.lines().map(str::trim).filter(|line| !line.is_empty());
         let platform = lines.next()?.to_string();
-        let arch = lines.find_map(|line| line.strip_prefix("arch:")).map(|arch| arch.trim().to_string());
+        let arch = lines
+            .find_map(|line| line.strip_prefix("arch:"))
+            .map(|arch| arch.trim().to_string());
         Some(Stamp { platform, arch })
     }
 
@@ -159,7 +175,10 @@ pub fn written_on() -> Option<Stamp> {
         candidates.push(dir.join("written-on"));
     }
     candidates.push(workspace().join("web/public/examples/written-on"));
-    candidates.into_iter().find_map(|path| std::fs::read_to_string(path).ok()).and_then(|text| Stamp::parse(&text))
+    candidates
+        .into_iter()
+        .find_map(|path| std::fs::read_to_string(path).ok())
+        .and_then(|text| Stamp::parse(&text))
 }
 
 /// What to run when a versioned Lutetia file (read from `path`) is stale: the

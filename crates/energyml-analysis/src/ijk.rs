@@ -118,8 +118,11 @@ impl Lattice {
         }
         let tolerance = TOLERANCE * self.spacing[0].min(self.spacing[1]);
         (0..2).all(|axis| {
-            let far = |lattice: &Lattice| lattice.origin[axis] + (lattice.counts[axis] - 1) as f64 * lattice.spacing[axis];
-            (self.origin[axis] - other.origin[axis]).abs() <= tolerance && (far(self) - far(other)).abs() <= tolerance
+            let far = |lattice: &Lattice| {
+                lattice.origin[axis] + (lattice.counts[axis] - 1) as f64 * lattice.spacing[axis]
+            };
+            (self.origin[axis] - other.origin[axis]).abs() <= tolerance
+                && (far(self) - far(other)).abs() <= tolerance
         })
     }
 }
@@ -161,15 +164,25 @@ impl fmt::Display for LatticeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LatticeError::TooSmall { counts: [ni, nj] } => {
-                write!(f, "is a grid of {ni} × {nj} nodes: a lattice has at least 2 along each axis")
+                write!(
+                    f,
+                    "is a grid of {ni} × {nj} nodes: a lattice has at least 2 along each axis"
+                )
             }
-            LatticeError::Count { counts: [ni, nj], held } => write!(f, "declares {ni} × {nj} nodes and holds {held}"),
+            LatticeError::Count {
+                counts: [ni, nj],
+                held,
+            } => write!(f, "declares {ni} × {nj} nodes and holds {held}"),
             LatticeError::Turned { along_i, along_j } => write!(
                 f,
                 "runs along ({}, {}) then ({}, {}): the pillars stand on a lattice along +x then +y of its frame, and a turned or reversed one is not re-indexed here — grid the horizons in the frame the lattice is straight in",
                 along_i[0], along_i[1], along_j[0], along_j[1]
             ),
-            LatticeError::Irregular { node: [i, j], at, expected } => write!(
+            LatticeError::Irregular {
+                node: [i, j],
+                at,
+                expected,
+            } => write!(
                 f,
                 "node ({i}, {j}) is at ({}, {}) where a regular lattice puts it at ({}, {})",
                 at[0], at[1], expected[0], expected[1]
@@ -188,7 +201,10 @@ pub fn lattice_of(points: &[[f64; 3]], counts: [usize; 2]) -> Result<Lattice, La
         return Err(LatticeError::TooSmall { counts });
     }
     if points.len() != ni * nj {
-        return Err(LatticeError::Count { counts, held: points.len() });
+        return Err(LatticeError::Count {
+            counts,
+            held: points.len(),
+        });
     }
     let at = |i: usize, j: usize| points[j * ni + i];
     let origin = at(0, 0);
@@ -207,11 +223,19 @@ pub fn lattice_of(points: &[[f64; 3]], counts: [usize; 2]) -> Result<Lattice, La
             let node = at(i, j);
             let expected = [origin[0] + i as f64 * dx, origin[1] + j as f64 * dy];
             if !((node[0] - expected[0]).abs() <= tolerance && (node[1] - expected[1]).abs() <= tolerance) {
-                return Err(LatticeError::Irregular { node: [i, j], at: [node[0], node[1]], expected });
+                return Err(LatticeError::Irregular {
+                    node: [i, j],
+                    at: [node[0], node[1]],
+                    expected,
+                });
             }
         }
     }
-    Ok(Lattice { origin: [origin[0], origin[1]], spacing: [dx, dy], counts })
+    Ok(Lattice {
+        origin: [origin[0], origin[1]],
+        spacing: [dx, dy],
+        counts,
+    })
 }
 
 /// What to do where a horizon lies above the one declared over it.
@@ -317,9 +341,19 @@ pub enum IjkError {
 impl fmt::Display for IjkError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            IjkError::TooFewHorizons(n) => write!(f, "{n} horizon(s) given: a grid lies between two at least"),
-            IjkError::Heights { horizon, expected, given } => {
-                write!(f, "horizon {} holds {given} height(s) where its lattice has {expected} node(s)", horizon + 1)
+            IjkError::TooFewHorizons(n) => {
+                write!(f, "{n} horizon(s) given: a grid lies between two at least")
+            }
+            IjkError::Heights {
+                horizon,
+                expected,
+                given,
+            } => {
+                write!(
+                    f,
+                    "horizon {} holds {given} height(s) where its lattice has {expected} node(s)",
+                    horizon + 1
+                )
             }
             IjkError::LayerCount { zones, given } => write!(
                 f,
@@ -337,13 +371,19 @@ impl fmt::Display for IjkError {
                 zone,
                 zone + 1
             ),
-            IjkError::Step { step, counts: [ni, nj] } => write!(
+            IjkError::Step {
+                step,
+                counts: [ni, nj],
+            } => write!(
                 f,
                 "a pillar every {step} node(s) of a {ni} × {nj} lattice leaves fewer than 2 pillars along an axis — at least 1, and at most {}",
                 (*ni).min(*nj).saturating_sub(1)
             ),
             IjkError::TooMany { nodes } => {
-                write!(f, "the grid would have {nodes} nodes, past the {MAX_NODES} a grid may have — coarsen the pillars or use fewer layers")
+                write!(
+                    f,
+                    "the grid would have {nodes} nodes, past the {MAX_NODES} a grid may have — coarsen the pillars or use fewer layers"
+                )
             }
             IjkError::Crossed { count, first } => write!(
                 f,
@@ -427,7 +467,10 @@ impl Stacked {
         for level in 0..self.levels {
             for j in 0..pj {
                 for i in 0..pi {
-                    let node = nodes.get(j * self.step * li + i * self.step).copied().unwrap_or([f64::NAN; 3]);
+                    let node = nodes
+                        .get(j * self.step * li + i * self.step)
+                        .copied()
+                        .unwrap_or([f64::NAN; 3]);
                     out.push([node[0], node[1], self.z[level * per_level + j * pi + i]]);
                 }
             }
@@ -490,7 +533,14 @@ impl Stacked {
 
 /// The grid between the horizons — or the first reason there is none.
 pub fn stack(request: &Request<'_>) -> Result<Stacked, IjkError> {
-    let Request { heights, counts, layers, step, up, crossing } = *request;
+    let Request {
+        heights,
+        counts,
+        layers,
+        step,
+        up,
+        crossing,
+    } = *request;
     let [li, lj] = counts;
     let horizons = heights.len();
     if horizons < 2 {
@@ -498,12 +548,19 @@ pub fn stack(request: &Request<'_>) -> Result<Stacked, IjkError> {
     }
     for (horizon, one) in heights.iter().enumerate() {
         if one.len() != li * lj {
-            return Err(IjkError::Heights { horizon, expected: li * lj, given: one.len() });
+            return Err(IjkError::Heights {
+                horizon,
+                expected: li * lj,
+                given: one.len(),
+            });
         }
     }
     let zones = horizons - 1;
     if layers.len() != zones {
-        return Err(IjkError::LayerCount { zones, given: layers.len() });
+        return Err(IjkError::LayerCount {
+            zones,
+            given: layers.len(),
+        });
     }
     for zone in [0, zones - 1] {
         if layers[zone] == 0 {
@@ -531,7 +588,11 @@ pub fn stack(request: &Request<'_>) -> Result<Stacked, IjkError> {
     // The horizons on the pillars, top to bottom.
     let mut on: Vec<Vec<f64>> = heights
         .iter()
-        .map(|one| (0..pj).flat_map(|j| (0..pi).map(move |i| one[j * step * li + i * step])).collect())
+        .map(|one| {
+            (0..pj)
+                .flat_map(|j| (0..pi).map(move |i| one[j * step * li + i * step]))
+                .collect()
+        })
         .collect();
     let holes = on.iter().flatten().filter(|z| !z.is_finite()).count();
 
@@ -572,7 +633,10 @@ pub fn stack(request: &Request<'_>) -> Result<Stacked, IjkError> {
         }
     }
     if let (Crossing::Refuse, Some(first)) = (crossing, first) {
-        return Err(IjkError::Crossed { count: crossed, first });
+        return Err(IjkError::Crossed {
+            count: crossed,
+            first,
+        });
     }
 
     // The levels: the top horizon, then each zone down to its base.
@@ -586,7 +650,9 @@ pub fn stack(request: &Request<'_>) -> Result<Stacked, IjkError> {
     let mut level = 0usize;
     for (zone, &n) in layers.iter().enumerate() {
         let (top, base) = (&on[zone], &on[zone + 1]);
-        pinched += (0..per_level).filter(|&p| top[p].is_finite() && top[p] == base[p]).count();
+        pinched += (0..per_level)
+            .filter(|&p| top[p].is_finite() && top[p] == base[p])
+            .count();
         if n == 0 {
             // A gap after the layer just written: the first zone is never one.
             if let Some(flag) = gap_after_layer.last_mut() {
@@ -635,7 +701,9 @@ pub fn stack(request: &Request<'_>) -> Result<Stacked, IjkError> {
         }
     }
     if !cell_defined.iter().any(|defined| *defined) {
-        return Err(IjkError::NothingDefined { cells: cell_defined.len() });
+        return Err(IjkError::NothingDefined {
+            cells: cell_defined.len(),
+        });
     }
 
     Ok(Stacked {
@@ -675,7 +743,14 @@ mod tests {
     }
 
     fn request<'a>(heights: &'a [Vec<f64>], layers: &'a [usize]) -> Request<'a> {
-        Request { heights, counts: [3, 2], layers, step: 1, up: Up::PlusZ, crossing: Crossing::Refuse }
+        Request {
+            heights,
+            counts: [3, 2],
+            layers,
+            step: 1,
+            up: Up::PlusZ,
+            crossing: Crossing::Refuse,
+        }
     }
 
     /// The lattice read off its nodes, with both spacings — a transposed
@@ -686,9 +761,18 @@ mod tests {
         assert_eq!(lattice.origin, [651_000.0, 6_861_000.0]);
         assert_eq!(lattice.spacing, [25.0, 40.0]);
         assert!(lattice.same_as(&lattice));
-        let shifted = Lattice { origin: [651_010.0, 6_861_000.0], ..lattice };
-        assert!(!lattice.same_as(&shifted), "an origin 10 m off is another lattice");
-        let finer = Lattice { counts: [3, 3], ..lattice };
+        let shifted = Lattice {
+            origin: [651_010.0, 6_861_000.0],
+            ..lattice
+        };
+        assert!(
+            !lattice.same_as(&shifted),
+            "an origin 10 m off is another lattice"
+        );
+        let finer = Lattice {
+            counts: [3, 3],
+            ..lattice
+        };
         assert!(!lattice.same_as(&finer));
     }
 
@@ -703,10 +787,16 @@ mod tests {
                 [651_000.0 + c * u - s * v, 6_861_000.0 + s * u + c * v, z]
             })
             .collect();
-        assert!(matches!(lattice_of(&turned, [3, 2]), Err(LatticeError::Turned { .. })));
+        assert!(matches!(
+            lattice_of(&turned, [3, 2]),
+            Err(LatticeError::Turned { .. })
+        ));
         let mut irregular = nodes();
         irregular[4][0] += 3.0;
-        assert!(matches!(lattice_of(&irregular, [3, 2]), Err(LatticeError::Irregular { node: [1, 1], .. })));
+        assert!(matches!(
+            lattice_of(&irregular, [3, 2]),
+            Err(LatticeError::Irregular { node: [1, 1], .. })
+        ));
     }
 
     /// Two layers between two flat horizons: the middle level halfway, the
@@ -726,7 +816,10 @@ mod tests {
         assert_eq!(cells.len(), 4);
         assert!(index.is_empty(), "every cell defined: positions are the indices");
         // Elevation, K down: the lower face first.
-        assert_eq!(cells[0][0], 6, "the first cell's face (0,1,2,3) is its bottom, level 1");
+        assert_eq!(
+            cells[0][0], 6,
+            "the first cell's face (0,1,2,3) is its bottom, level 1"
+        );
         assert!(!built.right_handed());
     }
 
@@ -739,9 +832,16 @@ mod tests {
         assert_eq!(built.gap_after_layer, vec![true, false, false]);
         assert_eq!(built.levels, 4 + 1 + 1);
         assert_eq!(built.horizon_levels, vec![0, 1, 2, 5]);
-        assert_eq!(built.layer_tops, vec![0, 2, 3, 4], "the layer under the gap starts one level further");
+        assert_eq!(
+            built.layer_tops,
+            vec![0, 2, 3, 4],
+            "the layer under the gap starts one level further"
+        );
         assert_eq!(built.z[2 * 6], -30.0);
-        assert!((built.z[3 * 6] + 40.0).abs() < 1e-12, "a third of the way from −30 to −60");
+        assert!(
+            (built.z[3 * 6] + 40.0).abs() < 1e-12,
+            "a third of the way from −30 to −60"
+        );
     }
 
     /// A hole in the middle horizon undefines the cells of the two zones it
@@ -755,7 +855,10 @@ mod tests {
         assert_eq!(built.holes, 1);
         // Layer 0 and 1, column (0, 0): undefined; layer 2 whole.
         assert_eq!(built.cell_defined, vec![false, true, false, true, true, true]);
-        assert!(built.pillar_defined.iter().all(|defined| *defined), "every pillar has a defined cell in layer 2");
+        assert!(
+            built.pillar_defined.iter().all(|defined| *defined),
+            "every pillar has a defined cell in layer 2"
+        );
         let (cells, index) = built.hexahedra();
         assert_eq!(cells.len(), 4);
         assert_eq!(index, vec![1, 3, 4, 5]);
@@ -769,15 +872,39 @@ mod tests {
         lower[5] = 5.0;
         let heights = vec![vec![0.0; 6], lower];
         let refused = stack(&request(&heights, &[2])).unwrap_err();
-        assert!(matches!(refused, IjkError::Crossed { count: 1, first: Crossed { node: [2, 1], upper: 0, lower: 1, .. } }), "{refused:?}");
-        let pinched = stack(&Request { crossing: Crossing::Pinch, ..request(&heights, &[2]) }).unwrap();
+        assert!(
+            matches!(
+                refused,
+                IjkError::Crossed {
+                    count: 1,
+                    first: Crossed {
+                        node: [2, 1],
+                        upper: 0,
+                        lower: 1,
+                        ..
+                    }
+                }
+            ),
+            "{refused:?}"
+        );
+        let pinched = stack(&Request {
+            crossing: Crossing::Pinch,
+            ..request(&heights, &[2])
+        })
+        .unwrap();
         assert_eq!(pinched.crossed, 1);
         assert_eq!(pinched.pinched, 1);
         assert_eq!(pinched.z[2 * 6 + 5], 0.0, "brought up to the upper horizon");
         assert_eq!(pinched.z[6 + 5], 0.0, "and the level between with it");
         // The same numbers read as depths are in order.
-        let depth = stack(&Request { up: Up::MinusZ, ..request(&heights, &[2]) });
-        assert!(matches!(depth, Err(IjkError::Crossed { .. })), "in depth, −10 is above 0 everywhere else");
+        let depth = stack(&Request {
+            up: Up::MinusZ,
+            ..request(&heights, &[2])
+        });
+        assert!(
+            matches!(depth, Err(IjkError::Crossed { .. })),
+            "in depth, −10 is above 0 everywhere else"
+        );
     }
 
     /// A pillar every second node of a 5-node axis keeps 3; of a 4-node one,
@@ -785,11 +912,26 @@ mod tests {
     #[test]
     fn a_coarser_lattice_takes_every_step_th_node() {
         let heights = vec![vec![0.0; 20], vec![-10.0; 20]];
-        let built = stack(&Request { heights: &heights, counts: [5, 4], layers: &[1], step: 2, up: Up::PlusZ, crossing: Crossing::Refuse }).unwrap();
+        let built = stack(&Request {
+            heights: &heights,
+            counts: [5, 4],
+            layers: &[1],
+            step: 2,
+            up: Up::PlusZ,
+            crossing: Crossing::Refuse,
+        })
+        .unwrap();
         assert_eq!(built.pillars, [3, 2]);
         assert_eq!(built.cells, [2, 1, 1]);
         assert_eq!(built.trimmed, [0, 1]);
-        let too_far = stack(&Request { heights: &heights, counts: [5, 4], layers: &[1], step: 4, up: Up::PlusZ, crossing: Crossing::Refuse });
+        let too_far = stack(&Request {
+            heights: &heights,
+            counts: [5, 4],
+            layers: &[1],
+            step: 4,
+            up: Up::PlusZ,
+            crossing: Crossing::Refuse,
+        });
         assert!(matches!(too_far, Err(IjkError::Step { .. })));
     }
 
@@ -798,14 +940,38 @@ mod tests {
     fn a_stack_that_cannot_be_is_refused_by_name() {
         let two = vec![vec![0.0; 6], vec![-10.0; 6]];
         let four = vec![vec![0.0; 6], vec![-10.0; 6], vec![-20.0; 6], vec![-30.0; 6]];
-        assert!(matches!(stack(&request(&two[..1], &[])), Err(IjkError::TooFewHorizons(1))));
-        assert!(matches!(stack(&request(&two, &[1, 1])), Err(IjkError::LayerCount { zones: 1, given: 2 })));
-        assert!(matches!(stack(&request(&two, &[0])), Err(IjkError::GapAtEdge { zone: 0 })));
-        assert!(matches!(stack(&request(&four, &[1, 1, 0])), Err(IjkError::GapAtEdge { zone: 2 })));
-        let five = vec![vec![0.0; 6], vec![-10.0; 6], vec![-20.0; 6], vec![-30.0; 6], vec![-40.0; 6]];
-        assert!(matches!(stack(&request(&five, &[1, 0, 0, 1])), Err(IjkError::GapsTogether { zone: 2 })));
+        assert!(matches!(
+            stack(&request(&two[..1], &[])),
+            Err(IjkError::TooFewHorizons(1))
+        ));
+        assert!(matches!(
+            stack(&request(&two, &[1, 1])),
+            Err(IjkError::LayerCount { zones: 1, given: 2 })
+        ));
+        assert!(matches!(
+            stack(&request(&two, &[0])),
+            Err(IjkError::GapAtEdge { zone: 0 })
+        ));
+        assert!(matches!(
+            stack(&request(&four, &[1, 1, 0])),
+            Err(IjkError::GapAtEdge { zone: 2 })
+        ));
+        let five = vec![
+            vec![0.0; 6],
+            vec![-10.0; 6],
+            vec![-20.0; 6],
+            vec![-30.0; 6],
+            vec![-40.0; 6],
+        ];
+        assert!(matches!(
+            stack(&request(&five, &[1, 0, 0, 1])),
+            Err(IjkError::GapsTogether { zone: 2 })
+        ));
         let holes = vec![vec![f64::NAN; 6], vec![-10.0; 6]];
-        assert!(matches!(stack(&request(&holes, &[1])), Err(IjkError::NothingDefined { cells: 2 })));
+        assert!(matches!(
+            stack(&request(&holes, &[1])),
+            Err(IjkError::NothingDefined { cells: 2 })
+        ));
     }
 
     /// The points stand on the lattice's own nodes.

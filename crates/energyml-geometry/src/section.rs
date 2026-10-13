@@ -77,7 +77,10 @@ pub struct SourcedCut {
 /// The intersection of a triangulated surface with the vertical planes of a
 /// trace in plan. `trace` is the `[x, y]` polyline of the top-down view.
 pub fn cut(points: &[[f64; 3]], triangles: &[[u32; 3]], trace: &[[f64; 2]]) -> Vec<Cut> {
-    cut_sourced(points, triangles, trace).into_iter().map(|one| one.cut).collect()
+    cut_sourced(points, triangles, trace)
+        .into_iter()
+        .map(|one| one.cut)
+        .collect()
 }
 
 /// [`cut`], each segment carrying the edge its ends lie on.
@@ -95,8 +98,7 @@ pub fn cut_sourced(points: &[[f64; 3]], triangles: &[[u32; 3]], trace: &[[f64; 2
         }
         let (ux, uy) = (dx / length, dy / length);
         // The vertical plane's normal: perpendicular to the segment, in plan.
-        let distance =
-            |point: &[f64; 3]| -> f64 { (point[0] - p[0]) * -uy + (point[1] - p[1]) * ux };
+        let distance = |point: &[f64; 3]| -> f64 { (point[0] - p[0]) * -uy + (point[1] - p[1]) * ux };
         // A point's local abscissa, along the segment.
         let along = |point: &[f64; 3]| -> f64 { (point[0] - p[0]) * ux + (point[1] - p[1]) * uy };
 
@@ -128,12 +130,9 @@ pub fn cut_sourced(points: &[[f64; 3]], triangles: &[[u32; 3]], trace: &[[f64; 2
                     corners[a][1] + (corners[b][1] - corners[a][1]) * t,
                     corners[a][2] + (corners[b][2] - corners[a][2]) * t,
                 ];
-                if !hits
-                    .iter()
-                    .any(|seen: &[f64; 3]| {
-                        (seen[0] - hit[0]).hypot(seen[1] - hit[1]).hypot(seen[2] - hit[2]) < 1e-9
-                    })
-                {
+                if !hits.iter().any(|seen: &[f64; 3]| {
+                    (seen[0] - hit[0]).hypot(seen[1] - hit[1]).hypot(seen[2] - hit[2]) < 1e-9
+                }) {
                     hits.push(hit);
                     edges.push((triangle[a], triangle[b], t));
                 }
@@ -342,7 +341,10 @@ pub struct Chain {
 /// edge — see the module); a node where three or more segments meet stops the
 /// chain, because choosing a branch would draw a path the cut does not state.
 pub fn chain(cuts: &[Cut]) -> Vec<Chain> {
-    chain_walk(cuts, None).into_iter().map(|(chain, _)| chain).collect()
+    chain_walk(cuts, None)
+        .into_iter()
+        .map(|(chain, _)| chain)
+        .collect()
 }
 
 /// A [`Chain`] and the source of each of its nodes.
@@ -375,8 +377,7 @@ fn chain_walk(cuts: &[Cut], sources_of: Option<&[[CutEnd; 2]]>) -> Vec<(Chain, V
     // The ends, indexed by their bits: exact equality is the criterion, so the
     // key can be the binary representation.
     let key = |p: &[f64; 3]| -> [u64; 3] { [p[0].to_bits(), p[1].to_bits(), p[2].to_bits()] };
-    let mut by_end: std::collections::HashMap<[u64; 3], Vec<usize>> =
-        std::collections::HashMap::new();
+    let mut by_end: std::collections::HashMap<[u64; 3], Vec<usize>> = std::collections::HashMap::new();
     for (index, one) in cuts.iter().enumerate() {
         for end in &one.ends {
             by_end.entry(key(end)).or_default().push(index);
@@ -402,7 +403,11 @@ fn chain_walk(cuts: &[Cut], sources_of: Option<&[[CutEnd; 2]]>) -> Vec<(Chain, V
         // three-way junction would be crossed as soon as two were consumed.
         for forward in [true, false] {
             loop {
-                let tip = if forward { *points.last().unwrap() } else { points[0] };
+                let tip = if forward {
+                    *points.last().unwrap()
+                } else {
+                    points[0]
+                };
                 let at_tip = by_end.get(&key(&tip)).map(Vec::as_slice).unwrap_or(&[]);
                 // Two ends in all, or nothing: a junction (≥ 3) is a stop —
                 // choosing a branch would draw a path nobody stated.
@@ -437,14 +442,20 @@ fn chain_walk(cuts: &[Cut], sources_of: Option<&[[CutEnd; 2]]>) -> Vec<(Chain, V
         }
         // Closed: the two ends are the same point. The node is not repeated —
         // closure is stated, not stored (the same rule as promoting rings).
-        let closed = points.len() > 2
-            && key(points.first().unwrap()) == key(points.last().unwrap());
+        let closed = points.len() > 2 && key(points.first().unwrap()) == key(points.last().unwrap());
         if closed {
             points.pop();
             profile.pop();
             sources.pop();
         }
-        out.push((Chain { points, profile, closed }, sources));
+        out.push((
+            Chain {
+                points,
+                profile,
+                closed,
+            },
+            sources,
+        ));
     }
     out
 }
@@ -484,8 +495,16 @@ mod tests {
             }
         }
         // The extent in s covers the crossing: from s=5 (x=0) to s=15 (x=10).
-        let s_min = cuts.iter().flat_map(|c| c.profile).map(|p| p[0]).fold(f64::MAX, f64::min);
-        let s_max = cuts.iter().flat_map(|c| c.profile).map(|p| p[0]).fold(f64::MIN, f64::max);
+        let s_min = cuts
+            .iter()
+            .flat_map(|c| c.profile)
+            .map(|p| p[0])
+            .fold(f64::MAX, f64::min);
+        let s_max = cuts
+            .iter()
+            .flat_map(|c| c.profile)
+            .map(|p| p[0])
+            .fold(f64::MIN, f64::max);
         assert!((s_min - 5.0).abs() < 1e-9, "{s_min}");
         assert!((s_max - 15.0).abs() < 1e-9, "{s_max}");
     }
@@ -495,8 +514,15 @@ mod tests {
         let (points, triangles) = a_flat_square();
         // The trace stops in the middle of the square: so does the cut.
         let cuts = cut(&points, &triangles, &[[-5.0, 5.0], [5.0, 5.0]]);
-        let s_max = cuts.iter().flat_map(|c| c.profile).map(|p| p[0]).fold(f64::MIN, f64::max);
-        assert!((s_max - 10.0).abs() < 1e-9, "clipped at the trace's end, s = {s_max}");
+        let s_max = cuts
+            .iter()
+            .flat_map(|c| c.profile)
+            .map(|p| p[0])
+            .fold(f64::MIN, f64::max);
+        assert!(
+            (s_max - 10.0).abs() < 1e-9,
+            "clipped at the trace's end, s = {s_max}"
+        );
         let x_max = cuts
             .iter()
             .flat_map(|c| c.ends)
@@ -530,14 +556,21 @@ mod tests {
         assert!(cut(&points, &triangles, &[[20.0, 20.0], [30.0, 20.0]]).is_empty());
         // A bend: the second segment starts at the accumulated abscissa, not zero.
         let cuts = cut(&points, &triangles, &[[5.0, -5.0], [5.0, 5.0], [15.0, 5.0]]);
-        let s_min = cuts.iter().flat_map(|c| c.profile).map(|p| p[0]).fold(f64::MAX, f64::min);
+        let s_min = cuts
+            .iter()
+            .flat_map(|c| c.profile)
+            .map(|p| p[0])
+            .fold(f64::MAX, f64::min);
         // The first segment (10 long) enters the square at y=0, s=5.
         assert!((s_min - 5.0).abs() < 1e-9, "{s_min}");
     }
 
     #[test]
     fn chaining_welds_shared_ends_and_keeps_gaps_apart() {
-        let seg = |a: [f64; 3], b: [f64; 3]| Cut { ends: [a, b], profile: [[0.0, 0.0]; 2] };
+        let seg = |a: [f64; 3], b: [f64; 3]| Cut {
+            ends: [a, b],
+            profile: [[0.0, 0.0]; 2],
+        };
         // Three segments following each other, then one isolated across a gap:
         // a chain of four nodes, and one of two — never welded together.
         let cuts = vec![
@@ -556,7 +589,10 @@ mod tests {
 
     #[test]
     fn a_loop_closes_and_does_not_repeat_its_node() {
-        let seg = |a: [f64; 3], b: [f64; 3]| Cut { ends: [a, b], profile: [[0.0, 0.0]; 2] };
+        let seg = |a: [f64; 3], b: [f64; 3]| Cut {
+            ends: [a, b],
+            profile: [[0.0, 0.0]; 2],
+        };
         let cuts = vec![
             seg([0.0, 0.0, 0.0], [1.0, 0.0, 0.0]),
             seg([1.0, 0.0, 0.0], [1.0, 1.0, 0.0]),
@@ -571,7 +607,10 @@ mod tests {
 
     #[test]
     fn a_junction_of_three_stops_the_chain_rather_than_choosing() {
-        let seg = |a: [f64; 3], b: [f64; 3]| Cut { ends: [a, b], profile: [[0.0, 0.0]; 2] };
+        let seg = |a: [f64; 3], b: [f64; 3]| Cut {
+            ends: [a, b],
+            profile: [[0.0, 0.0]; 2],
+        };
         // Three segments share the same node: no chain crosses it — choosing a
         // branch would draw a path nobody stated.
         let hub = [0.0, 0.0, 0.0];
@@ -605,6 +644,9 @@ mod tests {
         let cuts = cut(&points, &triangles, &[[-5.0, 5.0], [15.0, 5.0]]);
         // The holed triangle is dropped; the other still answers.
         assert!(!cuts.is_empty());
-        assert!(cuts.iter().all(|c| c.ends.iter().all(|e| e.iter().all(|v| v.is_finite()))));
+        assert!(
+            cuts.iter()
+                .all(|c| c.ends.iter().all(|e| e.iter().all(|v| v.is_finite())))
+        );
     }
 }

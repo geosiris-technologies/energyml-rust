@@ -72,7 +72,10 @@ pub struct Curve {
 /// The refusal names the span; it does not empty the curve, the other spans
 /// still answer.
 pub fn curve(cuts: &[Cut]) -> Curve {
-    let chains = section::chain(cuts).into_iter().map(|chain| (chain, Vec::new())).collect();
+    let chains = section::chain(cuts)
+        .into_iter()
+        .map(|chain| (chain, Vec::new()))
+        .collect();
     curve_of_chains(chains).curve
 }
 
@@ -131,7 +134,10 @@ fn curve_of_chains(chains: Vec<(section::Chain, Vec<section::CutEnd>)>) -> Sourc
         out.spans.push(samples);
         sourced.push(sources);
     }
-    SourcedCurve { curve: out, sources: sourced }
+    SourcedCurve {
+        curve: out,
+        sources: sourced,
+    }
 }
 
 /// A curve's z at an abscissa, interpolated **within a span** — `None` outside
@@ -255,12 +261,7 @@ pub fn panel(upper: &Curve, lower: &Curve, trace: &[[f64; 2]]) -> Panel {
 
 /// Build the quadrilaterals of a run of samples, cutting at every sign change
 /// of the thickness. Returns the number of crossings.
-fn build(
-    out: &mut Panel,
-    samples: &[(f64, f64, f64)],
-    trace: &[[f64; 2]],
-    pinch: f64,
-) -> usize {
+fn build(out: &mut Panel, samples: &[(f64, f64, f64)], trace: &[[f64; 2]], pinch: f64) -> usize {
     let mut crossed = 0usize;
     // The current sign: `None` while the thickness is nil — a panel that starts
     // on a wedge has no side yet.
@@ -466,9 +467,11 @@ pub fn crosslines(trace: &[[f64; 2]], spacing: f64, half_width: f64) -> Result<C
     for pair in trace.windows(2) {
         let (a, b) = (pair[0], pair[1]);
         if !a.iter().chain(b.iter()).all(|v| v.is_finite()) {
-            return Err("the trace carries a point with no position — nothing is perpendicular \
+            return Err(
+                "the trace carries a point with no position — nothing is perpendicular \
                         to it"
-                .into());
+                    .into(),
+            );
         }
         let length = (b[0] - a[0]).hypot(b[1] - a[1]);
         if length < 1e-12 {
@@ -672,7 +675,13 @@ mod tests {
             assert!((point[1] - 5.0).abs() < 1e-9, "{point:?}");
             assert!((0.0..=10.0).contains(&point[0]), "{point:?}");
         }
-        assert!(patch.triangles.iter().flatten().all(|i| (*i as usize) < patch.points.len()));
+        assert!(
+            patch
+                .triangles
+                .iter()
+                .flatten()
+                .all(|i| (*i as usize) < patch.points.len())
+        );
     }
 
     #[test]
@@ -681,7 +690,11 @@ mod tests {
         // ordinary geology — no message, and one continuous sheet.
         let panel = panel(&curve_of(sloped(100.0, 50.0)), &curve_of(flat(50.0)), &trace());
         assert_eq!(panel.patches.len(), 1, "{:?}", panel.notes);
-        assert!(panel.notes.is_empty(), "a wedge is not an anomaly: {:?}", panel.notes);
+        assert!(
+            panel.notes.is_empty(),
+            "a wedge is not an anomaly: {:?}",
+            panel.notes
+        );
         assert!(!panel.patches[0].inverted);
         // The thickness never turns negative.
         let patch = &panel.patches[0];
@@ -695,7 +708,11 @@ mod tests {
         // Two surfaces crossing in the middle: the "upper" one ends up below
         // the "lower" one. The panel is cut at the crossing and the second half
         // is marked — neither straightened nor removed.
-        let panel = panel(&curve_of(sloped(100.0, 0.0)), &curve_of(sloped(0.0, 100.0)), &trace());
+        let panel = panel(
+            &curve_of(sloped(100.0, 0.0)),
+            &curve_of(sloped(0.0, 100.0)),
+            &trace(),
+        );
         assert_eq!(panel.patches.len(), 2, "{:?}", panel.notes);
         assert!(!panel.patches[0].inverted);
         assert!(panel.patches[1].inverted, "the inverted half must say so");
@@ -718,8 +735,14 @@ mod tests {
         // the middle of the trace. The panel must stop there and resume after —
         // never bridge, which would invent material.
         let points = vec![
-            [0.0, 0.0, 100.0], [3.0, 0.0, 100.0], [3.0, 10.0, 100.0], [0.0, 10.0, 100.0],
-            [7.0, 0.0, 100.0], [10.0, 0.0, 100.0], [10.0, 10.0, 100.0], [7.0, 10.0, 100.0],
+            [0.0, 0.0, 100.0],
+            [3.0, 0.0, 100.0],
+            [3.0, 10.0, 100.0],
+            [0.0, 10.0, 100.0],
+            [7.0, 0.0, 100.0],
+            [10.0, 0.0, 100.0],
+            [10.0, 10.0, 100.0],
+            [7.0, 10.0, 100.0],
         ];
         let triangles = vec![[0, 1, 2], [0, 2, 3], [4, 5, 6], [4, 6, 7]];
         let upper = curve(&section::cut(&points, &triangles, &trace()));
@@ -765,8 +788,14 @@ mod tests {
         // A surface folded along the trace: z is not a function of s there. A
         // panel built on it would twist through itself.
         let cuts = vec![
-            Cut { ends: [[0.0, 5.0, 10.0], [5.0, 5.0, 20.0]], profile: [[0.0, 10.0], [5.0, 20.0]] },
-            Cut { ends: [[5.0, 5.0, 20.0], [2.0, 5.0, 30.0]], profile: [[5.0, 20.0], [2.0, 30.0]] },
+            Cut {
+                ends: [[0.0, 5.0, 10.0], [5.0, 5.0, 20.0]],
+                profile: [[0.0, 10.0], [5.0, 20.0]],
+            },
+            Cut {
+                ends: [[5.0, 5.0, 20.0], [2.0, 5.0, 30.0]],
+                profile: [[5.0, 20.0], [2.0, 30.0]],
+            },
         ];
         let made = curve(&cuts);
         assert!(made.spans.is_empty());

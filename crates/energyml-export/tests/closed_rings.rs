@@ -26,7 +26,13 @@ fn two_runs(closed: Vec<bool>) -> SceneObject {
             patches: vec![Patch {
                 index: 0,
                 node_offset: 0,
-                points: vec![[2.0, 48.0, 0.0], [3.0, 48.0, 0.0], [2.5, 49.0, 0.0], [4.0, 48.0, 0.0], [5.0, 48.0, 0.0]],
+                points: vec![
+                    [2.0, 48.0, 0.0],
+                    [3.0, 48.0, 0.0],
+                    [2.5, 49.0, 0.0],
+                    [4.0, 48.0, 0.0],
+                    [5.0, 48.0, 0.0],
+                ],
                 topology: Topology::Polylines(vec![3, 2]),
                 closed,
             }],
@@ -56,9 +62,13 @@ fn two_runs(closed: Vec<bool>) -> SceneObject {
 
 fn written(format: &str, object: &SceneObject) -> String {
     let exporters = Exporters::builtin();
-    let exporter = exporters.get(format).unwrap_or_else(|why| panic!("{format}: {why}"));
+    let exporter = exporters
+        .get(format)
+        .unwrap_or_else(|why| panic!("{format}: {why}"));
     let mut out = Vec::new();
-    exporter.write(object, &mut out, &Options::default()).expect("writes");
+    exporter
+        .write(object, &mut out, &Options::default())
+        .expect("writes");
     String::from_utf8(out).expect("utf-8")
 }
 
@@ -66,7 +76,11 @@ fn written(format: &str, object: &SceneObject) -> String {
 /// real parser, not by looking for brackets.
 fn geojson_lines(object: &SceneObject) -> Vec<Vec<(f64, f64)>> {
     let json: serde_json::Value = serde_json::from_str(&written("geojson", object)).expect("valid JSON");
-    let geometry = if json["type"] == "FeatureCollection" { &json["features"][0]["geometry"] } else { &json["geometry"] };
+    let geometry = if json["type"] == "FeatureCollection" {
+        &json["features"][0]["geometry"]
+    } else {
+        &json["geometry"]
+    };
     assert_eq!(geometry["type"], "MultiLineString");
     geometry["coordinates"]
         .as_array()
@@ -86,7 +100,12 @@ fn geojson_lines(object: &SceneObject) -> Vec<Vec<(f64, f64)>> {
 fn a_closed_ring_repeats_its_first_position_in_geojson() {
     let lines = geojson_lines(&two_runs(vec![true, false]));
     assert_eq!(lines.len(), 2);
-    assert_eq!(lines[0].len(), 4, "three nodes and the first one again: {:?}", lines[0]);
+    assert_eq!(
+        lines[0].len(),
+        4,
+        "three nodes and the first one again: {:?}",
+        lines[0]
+    );
     assert_eq!(lines[0].first(), lines[0].last());
     assert_eq!(lines[1].len(), 2, "the open run stays open");
 }
@@ -94,7 +113,10 @@ fn a_closed_ring_repeats_its_first_position_in_geojson() {
 #[test]
 fn a_ring_the_file_says_nothing_about_stays_open() {
     // `ClosedPolylines` absent is not *all closed*: nothing is invented.
-    for lines in [geojson_lines(&two_runs(Vec::new())), geojson_lines(&two_runs(vec![false, false]))] {
+    for lines in [
+        geojson_lines(&two_runs(Vec::new())),
+        geojson_lines(&two_runs(vec![false, false])),
+    ] {
         assert_eq!(lines[0].len(), 3);
         assert_ne!(lines[0].first(), lines[0].last());
     }

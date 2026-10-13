@@ -77,14 +77,14 @@
 
 use std::collections::BTreeMap;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use energyml_domain::provenance::Parameter;
 
 use crate::declare::{Inputs, Params, Shape};
 use crate::operation::{
-    About, ActivityDraft, Category, Context, Dataset, Dropped, Identity, Need, NewObject, Note, Operation, Plan,
-    Refusal, Slot, When,
+    About, ActivityDraft, Category, Context, Dataset, Dropped, Identity, Need, NewObject, Note, Operation,
+    Plan, Refusal, Slot, When,
 };
 use crate::pieces::Known;
 
@@ -114,7 +114,11 @@ pub struct ExtendParams {
 #[derive(Debug, Inputs)]
 pub struct ExtendInputs {
     /// the wellbore frames to extend — left empty, every frame of the package
-    #[input(least = 1, types = "resqml22.WellboreFrameRepresentation, resqml20.obj_WellboreFrameRepresentation", every)]
+    #[input(
+        least = 1,
+        types = "resqml22.WellboreFrameRepresentation, resqml20.obj_WellboreFrameRepresentation",
+        every
+    )]
     pub frames: Vec<Shape>,
 }
 
@@ -123,7 +127,11 @@ pub struct ExtendInputs {
 /// differ.
 fn last_direction(nodes: &[[f64; 3]], vertical_up: Option<bool>) -> Result<[f64; 3], &'static str> {
     for pair in nodes.windows(2).rev() {
-        let d = [pair[1][0] - pair[0][0], pair[1][1] - pair[0][1], pair[1][2] - pair[0][2]];
+        let d = [
+            pair[1][0] - pair[0][0],
+            pair[1][1] - pair[0][1],
+            pair[1][2] - pair[0][2],
+        ];
         let len = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
         if len > 1e-9 {
             return Ok([d[0] / len, d[1] / len, d[2] / len]);
@@ -132,9 +140,9 @@ fn last_direction(nodes: &[[f64; 3]], vertical_up: Option<bool>) -> Result<[f64;
     match vertical_up {
         Some(true) => Ok([0.0, 0.0, -1.0]),
         Some(false) => Ok([0.0, 0.0, 1.0]),
-        None => {
-            Err("has no two nodes that differ, and its frame states no vertical direction to fall back on: nothing says which way to continue")
-        }
+        None => Err(
+            "has no two nodes that differ, and its frame states no vertical direction to fall back on: nothing says which way to continue",
+        ),
     }
 }
 
@@ -191,30 +199,49 @@ fn extend_one(
     rank: &mut usize,
 ) -> Result<Extended, String> {
     let known: &Known = one.known.as_ref().ok_or_else(|| {
-        format!("`{}` states nothing of itself — no wellhead, no measured depths, no datum, no interpretation", one.name)
+        format!(
+            "`{}` states nothing of itself — no wellhead, no measured depths, no datum, no interpretation",
+            one.name
+        )
     })?;
-    let frame_ref = known.reference.as_ref().ok_or_else(|| format!("`{}` is not itself an object of the package", one.name))?;
+    let frame_ref = known
+        .reference
+        .as_ref()
+        .ok_or_else(|| format!("`{}` is not itself an object of the package", one.name))?;
     let title = frame_ref.title.clone();
     let Some(mds) = known.node_mds.as_deref().filter(|m| !m.is_empty()) else {
         return Err(format!("`{title}` states no measured depths for its nodes"));
     };
     let Some(datum) = known.datum.as_ref() else {
-        return Err(format!("`{title}` names no datum: nothing states where its measured depths are counted from"));
+        return Err(format!(
+            "`{title}` names no datum: nothing states where its measured depths are counted from"
+        ));
     };
     let Some(interpretation) = known.interpretation.as_ref() else {
-        return Err(format!("`{title}` names no interpretation: a second trajectory has nothing to hang off"));
+        return Err(format!(
+            "`{title}` names no interpretation: a second trajectory has nothing to hang off"
+        ));
     };
     let Some(crs) = known.crs.as_ref() else {
-        return Err(format!("`{title}` names no local CRS: nothing states the frame the new nodes would be written in"));
+        return Err(format!(
+            "`{title}` names no local CRS: nothing states the frame the new nodes would be written in"
+        ));
     };
     let Some(uom) = known.vertical_uom.clone() else {
         return Err(format!("`{title}` states no unit for its measured depths"));
     };
     let Some(wellhead) = known.wellhead else {
-        return Err(format!("`{title}` states no wellhead: nothing says where it is collared"));
+        return Err(format!(
+            "`{title}` states no wellhead: nothing says where it is collared"
+        ));
     };
 
-    let nodes: Vec<[f64; 3]> = one.geometry.patches.iter().flat_map(|patch| patch.points.iter().copied()).collect();
+    let nodes: Vec<[f64; 3]> = one
+        .geometry
+        .patches
+        .iter()
+        .flat_map(|patch| patch.points.iter().copied())
+        .collect();
     if nodes.len() != mds.len() {
         return Err(format!(
             "`{title}` has {} node(s) for {} measured depth(s): they should be the same",
@@ -225,7 +252,10 @@ fn extend_one(
 
     let last_md = *mds.last().expect("checked non-empty above");
     if last_md >= params.max_depth {
-        return Err(format!("`{title}` already reaches {last_md} {uom}, at or beyond the {} {uom} limit", params.max_depth));
+        return Err(format!(
+            "`{title}` already reaches {last_md} {uom}, at or beyond the {} {uom} limit",
+            params.max_depth
+        ));
     }
 
     let direction = last_direction(&nodes, known.vertical_up).map_err(|why| format!("`{title}` {why}"))?;
@@ -257,7 +287,11 @@ fn extend_one(
     let seed = format!(
         "extend-borehole:{}:{}",
         frame_ref.uuid.to_ascii_lowercase(),
-        new_mds.iter().map(|v| format!("{:?}", super::support::seed_mm(*v))).collect::<Vec<_>>().join(",")
+        new_mds
+            .iter()
+            .map(|v| format!("{:?}", super::support::seed_mm(*v)))
+            .collect::<Vec<_>>()
+            .join(",")
     );
     let cite = |name: &str| support::citation(when, name);
     // Bound once, rather than as inline temporaries: three references into
@@ -304,7 +338,11 @@ fn extend_one(
         }
     }
 
-    Ok(Extended { objects, datasets: written.datasets, added: new_mds.len() })
+    Ok(Extended {
+        objects,
+        datasets: written.datasets,
+        added: new_mds.len(),
+    })
 }
 
 impl Operation for ExtendBoreholes {
@@ -316,7 +354,10 @@ impl Operation for ExtendBoreholes {
             name: "extend-boreholes",
             describe: "continue a wellbore frame below its logged base, at most to a stated depth, on a second trajectory and frame marked as laid rather than measured",
             category: Category::Synthetic,
-            makes: &["resqml22.WellboreTrajectoryRepresentation", "resqml22.WellboreFrameRepresentation"],
+            makes: &[
+                "resqml22.WellboreTrajectoryRepresentation",
+                "resqml22.WellboreFrameRepresentation",
+            ],
             recipe: "extend-boreholes",
             represents: None,
         }
@@ -326,13 +367,19 @@ impl Operation for ExtendBoreholes {
         if params.step <= 0.0 {
             return Err(Refusal::on(
                 "step",
-                format!("is {}, and a node every zero or negative metres never reaches `maxDepth`", params.step),
+                format!(
+                    "is {}, and a node every zero or negative metres never reaches `maxDepth`",
+                    params.step
+                ),
             ));
         }
         if params.max_depth <= 0.0 {
             return Err(Refusal::on(
                 "maxDepth",
-                format!("is {}, and a frame cannot be extended to at or above the ground", params.max_depth),
+                format!(
+                    "is {}, and a frame cannot be extended to at or above the ground",
+                    params.max_depth
+                ),
             ));
         }
         if params.source.trim().is_empty() {
@@ -388,8 +435,15 @@ impl Operation for ExtendBoreholes {
         // frame given, this is the refusal a caller sees by name — the same
         // sentence the aggregate below only joins.
         if extended == 0 {
-            let why = aside.iter().map(|(why, count)| format!("{count} × {why}")).collect::<Vec<_>>().join("; ");
-            return Err(Refusal::on("frames", format!("no frame could be extended: {why}")));
+            let why = aside
+                .iter()
+                .map(|(why, count)| format!("{count} × {why}"))
+                .collect::<Vec<_>>()
+                .join("; ");
+            return Err(Refusal::on(
+                "frames",
+                format!("no frame could be extended: {why}"),
+            ));
         }
 
         let says = vec![
@@ -418,21 +472,51 @@ impl Operation for ExtendBoreholes {
                 title: format!("extend-boreholes → {extended} frame(s) to {} m", params.max_depth),
                 seed,
                 parameters: vec![
-                    Parameter::Double { title: "maxDepth".to_string(), value: params.max_depth, uom: Some("m".to_string()) },
-                    Parameter::Double { title: "step".to_string(), value: params.step, uom: Some("m".to_string()) },
-                    Parameter::Text { title: "source".to_string(), value: params.source.clone() },
-                    Parameter::Double { title: "frameCount".to_string(), value: extended as f64, uom: None },
-                    Parameter::Double { title: "nodeCount".to_string(), value: nodes_added as f64, uom: None },
+                    Parameter::Double {
+                        title: "maxDepth".to_string(),
+                        value: params.max_depth,
+                        uom: Some("m".to_string()),
+                    },
+                    Parameter::Double {
+                        title: "step".to_string(),
+                        value: params.step,
+                        uom: Some("m".to_string()),
+                    },
+                    Parameter::Text {
+                        title: "source".to_string(),
+                        value: params.source.clone(),
+                    },
+                    Parameter::Double {
+                        title: "frameCount".to_string(),
+                        value: extended as f64,
+                        uom: None,
+                    },
+                    Parameter::Double {
+                        title: "nodeCount".to_string(),
+                        value: nodes_added as f64,
+                        uom: None,
+                    },
                 ],
             },
             says,
-            dropped: aside.into_iter().map(|(why, count)| Dropped { count, why }).collect(),
+            dropped: aside
+                .into_iter()
+                .map(|(why, count)| Dropped { count, why })
+                .collect(),
         })
     }
 
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
-            Slot::required(name, Need::Number { uom: None, least: None, most: None }, about)
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
         };
         vec![
             count("frameCount", "frames extended"),

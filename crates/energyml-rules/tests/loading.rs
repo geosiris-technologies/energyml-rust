@@ -7,7 +7,10 @@ use crate::loader::{Error, Source, parse};
 const THEMES: &str = "[[theme]]\nid = \"t\"\ntitle = \"T\"\n";
 
 fn src(name: &str, text: impl Into<String>) -> Source {
-    Source { name: name.into(), text: text.into() }
+    Source {
+        name: name.into(),
+        text: text.into(),
+    }
 }
 
 /// A valid rule `house/t/<name>`, plus `extra` lines (which may override
@@ -24,8 +27,15 @@ fn rule_with(id: &str, theme: &str, status: &str, stance: &str, extra: &str) -> 
 }
 
 fn load(rules: &[String], translations: &[(&str, String)]) -> Result<crate::loader::Parsed, Error> {
-    let rules: Vec<Source> = rules.iter().enumerate().map(|(i, t)| src(&format!("rules/f{i}.toml"), t.clone())).collect();
-    let tr: Vec<(String, Source)> = translations.iter().map(|(l, t)| (l.to_string(), src(&format!("{l}/x.toml"), t.clone()))).collect();
+    let rules: Vec<Source> = rules
+        .iter()
+        .enumerate()
+        .map(|(i, t)| src(&format!("rules/f{i}.toml"), t.clone()))
+        .collect();
+    let tr: Vec<(String, Source)> = translations
+        .iter()
+        .map(|(l, t)| (l.to_string(), src(&format!("{l}/x.toml"), t.clone())))
+        .collect();
     parse(&src("rules/themes.toml", THEMES), &rules, &tr)
 }
 
@@ -39,19 +49,48 @@ fn a_superseded_rule_is_read_beside_its_replacement() {
     let old = rule("old", "superseded", "");
     let new = rule("new", "active", "supersedes = [\"house/t/old\"]");
     let parsed = load(&[old.clone(), new], &[]).expect("a rule and what replaces it load");
-    let replacement = parsed.rules.iter().find(|r| r.supersedes.iter().any(|s| s == "house/t/old")).expect("the replacement names the old rule");
+    let replacement = parsed
+        .rules
+        .iter()
+        .find(|r| r.supersedes.iter().any(|s| s == "house/t/old"))
+        .expect("the replacement names the old rule");
     assert_eq!(replacement.id, "house/t/new");
-    assert_eq!(parsed.rules.iter().find(|r| r.id == "house/t/old").unwrap().status, "superseded");
+    assert_eq!(
+        parsed
+            .rules
+            .iter()
+            .find(|r| r.id == "house/t/old")
+            .unwrap()
+            .status,
+        "superseded"
+    );
 
     // Alone, a superseded rule is a history with no future: refused by name.
-    assert_eq!(load(&[old], &[]).unwrap_err(), Error::SupersededByNobody { id: "house/t/old".into() });
+    assert_eq!(
+        load(&[old], &[]).unwrap_err(),
+        Error::SupersededByNobody {
+            id: "house/t/old".into()
+        }
+    );
     // A replacement of a rule still in force would hide a live rule.
     let live = rule("live", "active", "");
     let new = rule("new", "active", "supersedes = [\"house/t/live\"]");
-    assert_eq!(load(&[live, new], &[]).unwrap_err(), Error::SupersedesNotSuperseded { id: "house/t/new".into(), target: "house/t/live".into() });
+    assert_eq!(
+        load(&[live, new], &[]).unwrap_err(),
+        Error::SupersedesNotSuperseded {
+            id: "house/t/new".into(),
+            target: "house/t/live".into()
+        }
+    );
     // And one that replaces nothing that exists is a typo.
     let new = rule("new", "active", "supersedes = [\"house/t/ghost\"]");
-    assert_eq!(load(&[new], &[]).unwrap_err(), Error::SupersedesUnknown { id: "house/t/new".into(), target: "house/t/ghost".into() });
+    assert_eq!(
+        load(&[new], &[]).unwrap_err(),
+        Error::SupersedesUnknown {
+            id: "house/t/new".into(),
+            target: "house/t/ghost".into()
+        }
+    );
 }
 
 /// A translation that names an id which does not exist is refused **by its
@@ -86,8 +125,13 @@ fn a_translation_carries_only_id_title_text_why() {
     let fr = "[[rule]]\nid = \"house/t/a\"\ntitle = \"une\"\nstatus = \"superseded\"\n".to_string();
     assert!(matches!(load(&rules, &[("fr", fr)]), Err(Error::Field { field, .. }) if field == "status"));
     // Twice into the same language is two sources of the same fact.
-    let fr = "[[rule]]\nid = \"house/t/a\"\ntitle = \"une\"\n\n[[rule]]\nid = \"house/t/a\"\ntitle = \"deux\"\n".to_string();
-    assert!(matches!(load(&rules, &[("fr", fr)]), Err(Error::DuplicateTranslation { .. })));
+    let fr =
+        "[[rule]]\nid = \"house/t/a\"\ntitle = \"une\"\n\n[[rule]]\nid = \"house/t/a\"\ntitle = \"deux\"\n"
+            .to_string();
+    assert!(matches!(
+        load(&rules, &[("fr", fr)]),
+        Err(Error::DuplicateTranslation { .. })
+    ));
 }
 
 /// Ids are unique across files, and an alias counts as an id.
@@ -96,7 +140,10 @@ fn a_translation_carries_only_id_title_text_why() {
 #[test]
 fn ids_and_aliases_never_collide() {
     let a = rule("a", "active", "");
-    assert!(matches!(load(&[a.clone(), a.clone()], &[]), Err(Error::DuplicateId { .. })));
+    assert!(matches!(
+        load(&[a.clone(), a.clone()], &[]),
+        Err(Error::DuplicateId { .. })
+    ));
     let b = rule("b", "active", "aliases = [\"house/t/a\"]");
     assert!(matches!(load(&[a, b], &[]), Err(Error::DuplicateId { id, .. }) if id == "house/t/a"));
 }
@@ -110,12 +157,24 @@ fn ids_and_aliases_never_collide() {
 fn the_shape_of_an_id_is_enforced() {
     let bad = |id: &str, theme: &str| load(&[rule_with(id, theme, "active", "restates", "")], &[]);
     assert!(bad("house/t/ok-name", "t").is_ok());
-    assert!(matches!(bad("house/flat-one", "t"), Err(Error::Field { field, .. }) if field == "id"), "a new flat id is refused");
-    assert!(bad("house/discrete-value-in-lookup", "t").is_ok(), "the published flat ids are admitted");
-    assert!(matches!(bad("house/u/name", "t"), Err(Error::Field { field, .. }) if field == "theme"), "the id and the theme field disagree");
+    assert!(
+        matches!(bad("house/flat-one", "t"), Err(Error::Field { field, .. }) if field == "id"),
+        "a new flat id is refused"
+    );
+    assert!(
+        bad("house/discrete-value-in-lookup", "t").is_ok(),
+        "the published flat ids are admitted"
+    );
+    assert!(
+        matches!(bad("house/u/name", "t"), Err(Error::Field { field, .. }) if field == "theme"),
+        "the id and the theme field disagree"
+    );
     assert!(matches!(bad("house/t/Upper", "t"), Err(Error::Field { field, .. }) if field == "id"));
     assert!(matches!(bad("other/t/name", "t"), Err(Error::Field { field, .. }) if field == "id"));
-    assert!(matches!(bad("house/z/name", "z"), Err(Error::UnknownTheme { .. })), "a theme `themes.toml` does not declare");
+    assert!(
+        matches!(bad("house/z/name", "z"), Err(Error::UnknownTheme { .. })),
+        "a theme `themes.toml` does not declare"
+    );
 }
 
 /// Two ids that make the same Rust constant would make one shadow the other:
@@ -124,9 +183,18 @@ fn the_shape_of_an_id_is_enforced() {
 /// To break it: remove the `ConstantClash` check; the test goes red.
 #[test]
 fn two_ids_cannot_make_one_constant() {
-    let themes = src("rules/themes.toml", "[[theme]]\nid = \"a-b\"\ntitle = \"x\"\n\n[[theme]]\nid = \"a\"\ntitle = \"y\"\n");
-    let one = src("rules/one.toml", rule_with("house/a-b/c", "a-b", "active", "restates", ""));
-    let two = src("rules/two.toml", rule_with("house/a/b-c", "a", "active", "restates", ""));
+    let themes = src(
+        "rules/themes.toml",
+        "[[theme]]\nid = \"a-b\"\ntitle = \"x\"\n\n[[theme]]\nid = \"a\"\ntitle = \"y\"\n",
+    );
+    let one = src(
+        "rules/one.toml",
+        rule_with("house/a-b/c", "a-b", "active", "restates", ""),
+    );
+    let two = src(
+        "rules/two.toml",
+        rule_with("house/a/b-c", "a", "active", "restates", ""),
+    );
     match parse(&themes, &[one, two], &[]) {
         Err(Error::ConstantClash { constant, ids }) => {
             assert_eq!(constant, "A_B_C");
@@ -134,7 +202,10 @@ fn two_ids_cannot_make_one_constant() {
         }
         other => panic!("expected ConstantClash, got {other:?}"),
     }
-    assert_eq!(crate::loader::constant_of("house/discrete-value-in-lookup"), "DISCRETE_VALUE_IN_LOOKUP");
+    assert_eq!(
+        crate::loader::constant_of("house/discrete-value-in-lookup"),
+        "DISCRETE_VALUE_IN_LOOKUP"
+    );
 }
 
 /// The English text is **obligatory**: a rule with no title, text or why, or an
@@ -145,10 +216,20 @@ fn two_ids_cannot_make_one_constant() {
 fn the_english_is_present_everywhere() {
     for missing in ["title", "text", "why"] {
         let full = rule("a", "active", "");
-        let without: String = full.lines().filter(|l| !l.starts_with(&format!("{missing} ="))).collect::<Vec<_>>().join("\n");
-        assert!(matches!(load(&[without], &[]), Err(Error::Field { field, .. }) if field == missing), "{missing} may not be missing");
+        let without: String = full
+            .lines()
+            .filter(|l| !l.starts_with(&format!("{missing} =")))
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(
+            matches!(load(&[without], &[]), Err(Error::Field { field, .. }) if field == missing),
+            "{missing} may not be missing"
+        );
         let empty = full.replace(&format!("{missing} = \"x\""), &format!("{missing} = \"  \""));
-        assert!(matches!(load(&[empty], &[]), Err(Error::Field { field, .. }) if field == missing), "{missing} may not be empty");
+        assert!(
+            matches!(load(&[empty], &[]), Err(Error::Field { field, .. }) if field == missing),
+            "{missing} may not be empty"
+        );
     }
 }
 
@@ -160,10 +241,27 @@ fn the_english_is_present_everywhere() {
 #[test]
 fn silent_must_say_where_it_looked() {
     let bare = rule_with("house/t/a", "t", "active", "silent", "");
-    assert_eq!(load(&[bare], &[]).unwrap_err(), Error::StanceWithoutLook { id: "house/t/a".into() });
-    let noted = rule_with("house/t/a", "t", "active", "silent", "refs = [ { kind = \"design\", path = \"docs/x.md\", note = \"no word in the TRG\" } ]");
+    assert_eq!(
+        load(&[bare], &[]).unwrap_err(),
+        Error::StanceWithoutLook {
+            id: "house/t/a".into()
+        }
+    );
+    let noted = rule_with(
+        "house/t/a",
+        "t",
+        "active",
+        "silent",
+        "refs = [ { kind = \"design\", path = \"docs/x.md\", note = \"no word in the TRG\" } ]",
+    );
     assert!(load(&[noted], &[]).is_ok());
-    let cited = rule_with("house/t/a", "t", "active", "ambiguous", "refs = [ { kind = \"spec\", doc = \"common TRG 2.3\", at = \"§8.3 p. 188\" } ]");
+    let cited = rule_with(
+        "house/t/a",
+        "t",
+        "active",
+        "ambiguous",
+        "refs = [ { kind = \"spec\", doc = \"common TRG 2.3\", at = \"§8.3 p. 188\" } ]",
+    );
     assert!(load(&[cited], &[]).is_ok());
 }
 
@@ -174,18 +272,56 @@ fn silent_must_say_where_it_looked() {
 /// To break it: remove the `one_of(.., SPEC_DOCS)` from `parse_rule`; the test goes red.
 #[test]
 fn references_are_checked_by_their_form() {
-    let with = |r: &str| load(&[rule_with("house/t/a", "t", "active", "restates", &format!("refs = [ {r} ]"))], &[]);
+    let with = |r: &str| {
+        load(
+            &[rule_with(
+                "house/t/a",
+                "t",
+                "active",
+                "restates",
+                &format!("refs = [ {r} ]"),
+            )],
+            &[],
+        )
+    };
     assert!(with("{ kind = \"spec\", doc = \"common TRG 2.3\", at = \"§8.3\" }").is_ok());
-    assert!(with("{ kind = \"spec\", doc = \"Some Invented Guide\", at = \"§1\" }").is_err(), "a document outside the closed list");
-    assert!(with("{ kind = \"spec\", doc = \"common TRG 2.3\", at = \"somewhere\" }").is_err(), "a place with no section, page or line");
-    assert!(with("{ kind = \"spec\", doc = \"common TRG 2.3\" }").is_err(), "a spec reference with no place");
+    assert!(
+        with("{ kind = \"spec\", doc = \"Some Invented Guide\", at = \"§1\" }").is_err(),
+        "a document outside the closed list"
+    );
+    assert!(
+        with("{ kind = \"spec\", doc = \"common TRG 2.3\", at = \"somewhere\" }").is_err(),
+        "a place with no section, page or line"
+    );
+    assert!(
+        with("{ kind = \"spec\", doc = \"common TRG 2.3\" }").is_err(),
+        "a spec reference with no place"
+    );
     assert!(with("{ kind = \"design\", path = \"docs/adr/x.md\" }").is_ok());
-    assert!(with("{ kind = \"design\", path = \"doc/design/x.md\" }").is_err(), "a document that does not ship with the repository");
-    assert!(with("{ kind = \"code\", path = \"web/src/x.ts\" }").is_err(), "code outside the crates");
-    assert!(with("{ kind = \"design\", path = \"/etc/passwd\" }").is_err(), "absolute");
-    assert!(with("{ kind = \"design\", path = \"crates/x.rs\" }").is_err(), "a design document lives under docs/");
-    assert!(with("{ kind = \"code\", path = \"crates/a/../../b.rs\" }").is_err(), "no parent segments");
-    assert!(with("{ kind = \"letter\", path = \"doc/x\" }").is_err(), "a kind outside the closed list");
+    assert!(
+        with("{ kind = \"design\", path = \"doc/design/x.md\" }").is_err(),
+        "a document that does not ship with the repository"
+    );
+    assert!(
+        with("{ kind = \"code\", path = \"web/src/x.ts\" }").is_err(),
+        "code outside the crates"
+    );
+    assert!(
+        with("{ kind = \"design\", path = \"/etc/passwd\" }").is_err(),
+        "absolute"
+    );
+    assert!(
+        with("{ kind = \"design\", path = \"crates/x.rs\" }").is_err(),
+        "a design document lives under docs/"
+    );
+    assert!(
+        with("{ kind = \"code\", path = \"crates/a/../../b.rs\" }").is_err(),
+        "no parent segments"
+    );
+    assert!(
+        with("{ kind = \"letter\", path = \"doc/x\" }").is_err(),
+        "a kind outside the closed list"
+    );
 }
 
 /// An anchor on a view names a view the registry declares; a typo is refused
@@ -194,7 +330,18 @@ fn references_are_checked_by_their_form() {
 /// To break it: remove the `VIEWS.contains` check; the test goes red.
 #[test]
 fn a_view_anchor_must_be_a_declared_view() {
-    let with = |a: &str| load(&[rule_with("house/t/a", "t", "active", "restates", &format!("at = [ {a} ]"))], &[]);
+    let with = |a: &str| {
+        load(
+            &[rule_with(
+                "house/t/a",
+                "t",
+                "active",
+                "restates",
+                &format!("at = [ {a} ]"),
+            )],
+            &[],
+        )
+    };
     assert!(with("{ type = \"view\", key = \"object.colour-stack\" }").is_ok());
     assert!(with("{ type = \"view\", key = \"create.op:crs\" }").is_ok());
     assert!(with("{ type = \"view\", key = \"object.colour-stak\" }").is_err());

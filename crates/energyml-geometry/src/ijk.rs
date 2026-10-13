@@ -227,7 +227,7 @@ pub fn read(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Ve
             index: if skipped == 0 { Vec::new() } else { numbering },
         },
         closed: Vec::new(),
-}])
+    }])
 }
 
 /// Put the eight corners in the order VTK asks for.

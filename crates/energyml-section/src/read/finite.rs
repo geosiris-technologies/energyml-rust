@@ -42,17 +42,32 @@ pub const NOT_A_NUMBER: &str = "notANumber";
 /// why it cannot be drawn at all.
 #[allow(clippy::result_large_err)]
 pub fn finite_well(mut well: WellRead) -> Result<(WellRead, Option<Note>), Refused> {
-    let name = if well.object.title.is_empty() { well.object.uuid.clone() } else { well.object.title.clone() };
-    let refuse = |well: &WellRead, reason: String| Refused { object: well.object.clone(), reason };
+    let name = if well.object.title.is_empty() {
+        well.object.uuid.clone()
+    } else {
+        well.object.title.clone()
+    };
+    let refuse = |well: &WellRead, reason: String| Refused {
+        object: well.object.clone(),
+        reason,
+    };
     if !finite3(&well.head) {
         return Err(refuse(
             &well,
-            format!("`{name}`: its head has a coordinate that is not a number (no elevation?), so it cannot be placed"),
+            format!(
+                "`{name}`: its head has a coordinate that is not a number (no elevation?), so it cannot be placed"
+            ),
         ));
     }
     let total = well.path.len();
     let keep: Vec<bool> = (0..total)
-        .map(|at| finite3(&well.path[at]) && well.md.as_ref().is_none_or(|md| md.get(at).is_none_or(|value| value.is_finite())))
+        .map(|at| {
+            finite3(&well.path[at])
+                && well
+                    .md
+                    .as_ref()
+                    .is_none_or(|md| md.get(at).is_none_or(|value| value.is_finite()))
+        })
         .collect();
     let dropped_nodes = keep.iter().filter(|kept| !**kept).count();
     if dropped_nodes > 0 {
@@ -72,19 +87,26 @@ pub fn finite_well(mut well: WellRead) -> Result<(WellRead, Option<Note>), Refus
     if well.path.len() < 2 {
         return Err(refuse(
             &well,
-            format!("`{name}`: {dropped_nodes} of its {total} nodes have a coordinate or an MD that is not a number, too few are left to draw it"),
+            format!(
+                "`{name}`: {dropped_nodes} of its {total} nodes have a coordinate or an MD that is not a number, too few are left to draw it"
+            ),
         ));
     }
     let intervals = well.intervals.len();
-    well.intervals.retain(|interval| interval.from.is_finite() && interval.to.is_finite());
+    well.intervals
+        .retain(|interval| interval.from.is_finite() && interval.to.is_finite());
     let dropped_intervals = intervals - well.intervals.len();
 
     let mut said = Vec::new();
     if dropped_nodes > 0 {
-        said.push(format!("{dropped_nodes} of its {total} nodes dropped: a coordinate or an MD is not a number"));
+        said.push(format!(
+            "{dropped_nodes} of its {total} nodes dropped: a coordinate or an MD is not a number"
+        ));
     }
     if dropped_intervals > 0 {
-        said.push(format!("{dropped_intervals} of its {intervals} intervals not drawn: their top or base MD is not a number"));
+        said.push(format!(
+            "{dropped_intervals} of its {intervals} intervals not drawn: their top or base MD is not a number"
+        ));
     }
     let note = (!said.is_empty()).then(|| Note {
         code: NOT_A_NUMBER.to_string(),
@@ -112,13 +134,20 @@ fn split_spans(spans: &mut Vec<Vec<[f64; 2]>>) -> usize {
 fn split_spans_sourced(spans: &mut Vec<Vec<[f64; 2]>>, sources: &mut Vec<Vec<CutSource>>) -> usize {
     let parallel = !sources.is_empty()
         && sources.len() == spans.len()
-        && spans.iter().zip(sources.iter()).all(|(span, list)| span.len() == list.len());
+        && spans
+            .iter()
+            .zip(sources.iter())
+            .all(|(span, list)| span.len() == list.len());
     let mut dropped = 0;
     let mut out = Vec::with_capacity(spans.len());
     let mut out_sources = Vec::new();
     let mut lists = std::mem::take(sources).into_iter();
     for span in spans.drain(..) {
-        let list = if parallel { lists.next().unwrap_or_default() } else { Vec::new() };
+        let list = if parallel {
+            lists.next().unwrap_or_default()
+        } else {
+            Vec::new()
+        };
         if span.iter().all(finite2) {
             out.push(span);
             if parallel {
@@ -177,12 +206,17 @@ pub fn finite_surface(surface: &mut SurfaceRead) {
     for cut in &mut surface.cuts {
         let dropped = match &mut cut.shape {
             CutShape::Trace { spans } => split_spans_sourced(spans, &mut cut.sources),
-            CutShape::Envelope { top, bottom, fills, faults } => {
-                split_spans(top) + split_spans(bottom) + split_spans(faults) + drop_rings(fills)
-            }
+            CutShape::Envelope {
+                top,
+                bottom,
+                fills,
+                faults,
+            } => split_spans(top) + split_spans(bottom) + split_spans(faults) + drop_rings(fills),
         };
         if dropped > 0 {
-            cut.notes.push(format!("{dropped} point(s) of the cut are not numbers: the cut is broken there"));
+            cut.notes.push(format!(
+                "{dropped} point(s) of the cut are not numbers: the cut is broken there"
+            ));
         }
     }
 }

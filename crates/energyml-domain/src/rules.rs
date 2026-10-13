@@ -655,11 +655,8 @@ pub fn trg() -> Vec<Rule> {
 /// Read a rule registry from its JSON - refused naming the rule and the
 /// field, never a silently partial registry.
 pub fn parse(json: &str) -> Result<Vec<Rule>, String> {
-    let root: Value =
-        serde_json::from_str(json).map_err(|e| format!("the rule set is not JSON: {e}"))?;
-    let list = root
-        .as_array()
-        .ok_or("a rule set is a JSON array of rules")?;
+    let root: Value = serde_json::from_str(json).map_err(|e| format!("the rule set is not JSON: {e}"))?;
+    let list = root.as_array().ok_or("a rule set is a JSON array of rules")?;
     let mut out = Vec::with_capacity(list.len());
     for (at, entry) in list.iter().enumerate() {
         let text = |name: &str| -> Result<String, String> {
@@ -679,7 +676,10 @@ pub fn parse(json: &str) -> Result<Vec<Rule>, String> {
                 "id", "source", "nested", "except", "release", "when", "check", "checks", "says", "severity",
             ];
             if let Some(unknown) = map.keys().find(|key| !KEYS.contains(&key.as_str())) {
-                return Err(format!("rule `{id}`: unknown key `{unknown}` (known: {})", KEYS.join(", ")));
+                return Err(format!(
+                    "rule `{id}`: unknown key `{unknown}` (known: {})",
+                    KEYS.join(", ")
+                ));
             }
         }
         let mut checks = Vec::new();
@@ -720,7 +720,11 @@ pub fn parse(json: &str) -> Result<Vec<Rule>, String> {
                         .ok_or_else(|| format!("rule `{id}`: every `except` entry is a concept name"))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
-            _ => return Err(format!("rule `{id}`: `except` is a concept name or a list of them")),
+            _ => {
+                return Err(format!(
+                    "rule `{id}`: `except` is a concept name or a list of them"
+                ));
+            }
         };
         let release: Vec<String> = match &entry["release"] {
             Value::Null => Vec::new(),
@@ -732,7 +736,9 @@ pub fn parse(json: &str) -> Result<Vec<Rule>, String> {
                         .as_str()
                         .filter(|v| !v.is_empty())
                         .map(str::to_owned)
-                        .ok_or_else(|| format!("rule `{id}`: every `release` entry is a version such as `2.0.1`"))
+                        .ok_or_else(|| {
+                            format!("rule `{id}`: every `release` entry is a version such as `2.0.1`")
+                        })
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             _ => return Err(format!("rule `{id}`: `release` is a version or a list of them")),
@@ -741,7 +747,11 @@ pub fn parse(json: &str) -> Result<Vec<Rule>, String> {
             Value::Null => Gravity::Warning,
             Value::String(word) if word == "warning" => Gravity::Warning,
             Value::String(word) if word == "error" => Gravity::Error,
-            other => return Err(format!("rule `{id}`: `severity` is \"warning\" or \"error\", not {other}")),
+            other => {
+                return Err(format!(
+                    "rule `{id}`: `severity` is \"warning\" or \"error\", not {other}"
+                ));
+            }
         };
         out.push(Rule {
             id,
@@ -768,7 +778,10 @@ fn parse_check(id: &str, check: &Value) -> Result<Check, String> {
     if let Some(map) = check.as_object()
         && let Some(unknown) = map.keys().find(|key| !KEYS.contains(&key.as_str()))
     {
-        return Err(format!("rule `{id}`: unknown check key `{unknown}` (known: {})", KEYS.join(", ")));
+        return Err(format!(
+            "rule `{id}`: unknown check key `{unknown}` (known: {})",
+            KEYS.join(", ")
+        ));
     }
     if let Some(each) = check["each"].as_str().filter(|v| !v.is_empty()) {
         let field = check["field"]
@@ -785,7 +798,11 @@ fn parse_check(id: &str, check: &Value) -> Result<Check, String> {
                 ));
             }
         };
-        return Ok(Check::ForEach { each: each.to_owned(), field, expect });
+        return Ok(Check::ForEach {
+            each: each.to_owned(),
+            field,
+            expect,
+        });
     }
     if let Some(compare) = check["compare"].as_str().filter(|v| !v.is_empty()) {
         let op = match check["op"].as_str() {
@@ -857,7 +874,11 @@ fn parse_check(id: &str, check: &Value) -> Result<Check, String> {
                 })
                 .collect::<Result<Vec<_>, _>>()?,
         ),
-        _ => return Err(format!("rule `{id}`: `targets` is a concept name or a list of them")),
+        _ => {
+            return Err(format!(
+                "rule `{id}`: `targets` is a concept name or a list of them"
+            ));
+        }
     };
     let subtypes = match &check["subtypes"] {
         Value::Null => false,
@@ -877,21 +898,41 @@ fn parse_check(id: &str, check: &Value) -> Result<Check, String> {
                 note.as_str()
                     .filter(|v| !v.is_empty())
                     .map(|note| (concept.clone(), note.to_owned()))
-                    .ok_or_else(|| format!("rule `{id}`: every `notes` entry is a concept name and a sentence"))
+                    .ok_or_else(|| {
+                        format!("rule `{id}`: every `notes` entry is a concept name and a sentence")
+                    })
             })
             .collect::<Result<Vec<_>, _>>()?,
-        Value::Object(_) => return Err(format!("rule `{id}`: `notes` qualifies `targets`, and there are none")),
+        Value::Object(_) => {
+            return Err(format!(
+                "rule `{id}`: `notes` qualifies `targets`, and there are none"
+            ));
+        }
         _ => return Err(format!("rule `{id}`: `notes` maps a concept name to a sentence")),
     };
     let through: Option<Through> = match &check["through"] {
         Value::Null => None,
         Value::Object(_) if targets.is_some() => Some(parse_through(id, &check["through"])?),
-        Value::Object(_) => return Err(format!("rule `{id}`: `through` qualifies `targets`, and there are none")),
+        Value::Object(_) => {
+            return Err(format!(
+                "rule `{id}`: `through` qualifies `targets`, and there are none"
+            ));
+        }
         _ => return Err(format!("rule `{id}`: `through` is an object")),
     };
     match (targets, check["equals"].as_str(), check["field"].as_str()) {
-        (Some(targets), None, None) => Ok(Check::Targets { path, targets, subtypes, exact, notes, through }),
-        (None, Some(equals), None) => Ok(Check::Equals { path, equals: equals.to_owned() }),
+        (Some(targets), None, None) => Ok(Check::Targets {
+            path,
+            targets,
+            subtypes,
+            exact,
+            notes,
+            through,
+        }),
+        (None, Some(equals), None) => Ok(Check::Equals {
+            path,
+            equals: equals.to_owned(),
+        }),
         (None, Some(equals), Some(field)) => Ok(Check::TargetField {
             path,
             field: field.to_owned(),
@@ -922,7 +963,11 @@ fn parse_through(id: &str, value: &Value) -> Result<Through, String> {
                     .ok_or_else(|| format!("rule `{id}`: every `through.targets` entry is a concept name"))
             })
             .collect::<Result<Vec<_>, _>>()?,
-        _ => return Err(format!("rule `{id}`: `through.targets` is a concept name or a list of them")),
+        _ => {
+            return Err(format!(
+                "rule `{id}`: `through.targets` is a concept name or a list of them"
+            ));
+        }
     };
     let subtypes = match &value["subtypes"] {
         Value::Null => false,
@@ -933,14 +978,24 @@ fn parse_through(id: &str, value: &Value) -> Result<Through, String> {
         Value::Null => Gravity::Warning,
         Value::String(word) if word == "warning" => Gravity::Warning,
         Value::String(word) if word == "error" => Gravity::Error,
-        other => return Err(format!("rule `{id}`: `through.severity` is \"warning\" or \"error\", not {other}")),
+        other => {
+            return Err(format!(
+                "rule `{id}`: `through.severity` is \"warning\" or \"error\", not {other}"
+            ));
+        }
     };
     let says = value["says"]
         .as_str()
         .filter(|v| !v.is_empty())
         .ok_or_else(|| format!("rule `{id}`: `through.says` is required"))?
         .to_owned();
-    Ok(Through { path, targets, subtypes, gravity, says })
+    Ok(Through {
+        path,
+        targets,
+        subtypes,
+        gravity,
+        says,
+    })
 }
 
 /// The `type_key` of a reference's target, read from the reference itself -
@@ -1026,7 +1081,11 @@ pub fn run<'a>(
             if !concepts.iter().any(|key| *key == rule.source) {
                 continue;
             }
-            if rule.except.iter().any(|concept| concepts.iter().any(|key| key == concept)) {
+            if rule
+                .except
+                .iter()
+                .any(|concept| concepts.iter().any(|key| key == concept))
+            {
                 continue;
             }
             judge(rule, uuid, object, "", source, known, &mut findings);
@@ -1047,7 +1106,13 @@ fn judge(
     known: Option<&energyml_core::registry::Registry>,
     findings: &mut Vec<Finding>,
 ) {
-    let located = |text: String| if at.is_empty() { text } else { format!("{at}: {text}") };
+    let located = |text: String| {
+        if at.is_empty() {
+            text
+        } else {
+            format!("{at}: {text}")
+        }
+    };
     if let Some(condition) = &rule.when {
         match applies(condition, object, source) {
             Applicability::Applies => {}
@@ -1060,7 +1125,9 @@ fn judge(
                     rule: rule.id.clone(),
                     uuid: uuid.to_owned(),
                     says: rule.says.clone(),
-                    outcome: Outcome::Unverifiable { why: located(format!("`when`: {why}")) },
+                    outcome: Outcome::Unverifiable {
+                        why: located(format!("`when`: {why}")),
+                    },
                     gravity: rule.gravity,
                 });
                 return;
@@ -1104,7 +1171,11 @@ struct Verdict {
 impl Verdict {
     /// The ordinary case: the rule's own `gravity` and `says` apply.
     fn plain(outcome: Outcome) -> Verdict {
-        Verdict { outcome, gravity: None, says: None }
+        Verdict {
+            outcome,
+            gravity: None,
+            says: None,
+        }
     }
 }
 
@@ -1114,7 +1185,12 @@ impl Verdict {
 /// A match is not walked into, and fields holding scalars are not read at all:
 /// asking for one would build a list of every value of an inline array to find
 /// no object in it.
-fn parts_of<'a>(object: &'a dyn Reflect, concept: &str, at: String, out: &mut Vec<(String, &'a dyn Reflect)>) {
+fn parts_of<'a>(
+    object: &'a dyn Reflect,
+    concept: &str,
+    at: String,
+    out: &mut Vec<(String, &'a dyn Reflect)>,
+) {
     if is_concept(object, concept) {
         out.push((at, object));
         return;
@@ -1123,7 +1199,11 @@ fn parts_of<'a>(object: &'a dyn Reflect, concept: &str, at: String, out: &mut Ve
         if matches!(field.ty, energyml_core::reflect::FieldType::Scalar(_)) {
             continue;
         }
-        let here = if at.is_empty() { field.xml_name.to_string() } else { format!("{at}.{}", field.xml_name) };
+        let here = if at.is_empty() {
+            field.xml_name.to_string()
+        } else {
+            format!("{at}.{}", field.xml_name)
+        };
         match object.field(field.name) {
             Some(FieldValue::Object(child)) => parts_of(child, concept, here, out),
             Some(FieldValue::List(items)) => {
@@ -1227,8 +1307,7 @@ fn evaluate(
             if metadata::absent_at(object, path) {
                 return None;
             }
-            let (key, matches) = match concept_at(object, path, targets, *subtypes, source, known)
-            {
+            let (key, matches) = match concept_at(object, path, targets, *subtypes, source, known) {
                 Ok(Some(found)) => found,
                 Ok(None) => {
                     return Some(Verdict::plain(Outcome::Unverifiable {
@@ -1257,16 +1336,16 @@ fn evaluate(
                     });
                 }
             }
-            Some(Verdict::plain(Outcome::Violation { read: noted(notes, key) }))
+            Some(Verdict::plain(Outcome::Violation {
+                read: noted(notes, key),
+            }))
         }
         Check::TargetField { path, field, equals } => {
             let reference = match reference_at(object, path) {
                 Ok(reference) => reference,
                 Err(why) => return Some(Verdict::plain(Outcome::Unverifiable { why })),
             };
-            let Some(target_uuid) = identity::key_of_reflect(reference)
-                .map(|key| key.uuid.to_owned())
-            else {
+            let Some(target_uuid) = identity::key_of_reflect(reference).map(|key| key.uuid.to_owned()) else {
                 return Some(Verdict::plain(Outcome::Unverifiable {
                     why: format!("`{path}` is not a readable reference"),
                 }));
@@ -1308,7 +1387,11 @@ fn evaluate(
                         why: format!("`{each}` is not a list"),
                     }));
                 }
-                Err(why) => return Some(Verdict::plain(Outcome::Unverifiable { why: format!("{why}") })),
+                Err(why) => {
+                    return Some(Verdict::plain(Outcome::Unverifiable {
+                        why: format!("{why}"),
+                    }));
+                }
             };
             // One finding for the list, each disagreement **named by its
             // index** - forty findings for forty faults would be a report
@@ -1336,7 +1419,9 @@ fn evaluate(
                 }
                 Some(Verdict::plain(Outcome::Violation { read }))
             } else if !unreadable.is_empty() {
-                Some(Verdict::plain(Outcome::Unverifiable { why: unreadable.join(", ") }))
+                Some(Verdict::plain(Outcome::Unverifiable {
+                    why: unreadable.join(", "),
+                }))
             } else {
                 None
             }
@@ -1451,7 +1536,9 @@ fn concept_at(
                     chain.push(parent.type_key);
                     base = parent.base;
                 }
-                targets.iter().any(|wanted| chain.iter().any(|concept| concept == wanted))
+                targets
+                    .iter()
+                    .any(|wanted| chain.iter().any(|concept| concept == wanted))
             });
             return Ok(Some((key, descends)));
         }
@@ -1482,7 +1569,9 @@ fn concept_at(
     };
     Ok(Some((
         key,
-        targets.iter().any(|wanted| is_concept(target.as_reflect(), wanted)),
+        targets
+            .iter()
+            .any(|wanted| is_concept(target.as_reflect(), wanted)),
     )))
 }
 
@@ -1542,8 +1631,7 @@ mod tests {
         let refusal = parse(r#"[{ "id": "x", "source": "Y", "says": "z" }]"#).unwrap_err();
         assert!(refusal.contains("check"), "{refusal}");
         let refusal =
-            parse(r#"[{ "id": "x", "source": "Y", "says": "z", "check": { "path": "P" } }]"#)
-                .unwrap_err();
+            parse(r#"[{ "id": "x", "source": "Y", "says": "z", "check": { "path": "P" } }]"#).unwrap_err();
         assert!(refusal.contains('x') && refusal.contains("targets"), "{refusal}");
     }
 
@@ -1578,10 +1666,8 @@ mod tests {
         )
         .unwrap_err();
         assert!(refusal.contains('>'), "{refusal}");
-        let refusal = parse(
-            r#"[{ "id": "x", "source": "Y", "says": "z", "check": { "compare": "A" } }]"#,
-        )
-        .unwrap_err();
+        let refusal =
+            parse(r#"[{ "id": "x", "source": "Y", "says": "z", "check": { "compare": "A" } }]"#).unwrap_err();
         assert!(refusal.contains("to"), "{refusal}");
         let refusal = parse(
             r#"[{ "id": "x", "source": "Y", "says": "z", "when": { "compare": "A", "to": "B" }, "check": { "path": "P", "equals": "v" } }]"#,
@@ -1636,7 +1722,10 @@ mod tests {
     #[test]
     fn a_note_goes_with_its_concept_and_no_other() {
         let notes = [("Geographic2dCrs".to_string(), "the named exception".to_string())];
-        assert_eq!(noted(&notes, "Geographic2dCrs".into()), "Geographic2dCrs — the named exception");
+        assert_eq!(
+            noted(&notes, "Geographic2dCrs".into()),
+            "Geographic2dCrs — the named exception"
+        );
         assert_eq!(noted(&notes, "ProjectedCrs".into()), "ProjectedCrs");
     }
 
@@ -1736,10 +1825,9 @@ mod tests {
         );
 
         // Neither `sameAs` nor `equals`, or both: a named refusal.
-        let refusal = parse(
-            r#"[{ "id": "x", "source": "Y", "says": "z", "check": { "each": "L", "field": "F" } }]"#,
-        )
-        .unwrap_err();
+        let refusal =
+            parse(r#"[{ "id": "x", "source": "Y", "says": "z", "check": { "each": "L", "field": "F" } }]"#)
+                .unwrap_err();
         assert!(refusal.contains("sameAs"), "{refusal}");
         let refusal = parse(
             r#"[{ "id": "x", "source": "Y", "says": "z", "check": { "each": "L", "field": "F", "sameAs": "A", "equals": "b" } }]"#,

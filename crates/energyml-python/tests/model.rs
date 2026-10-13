@@ -21,11 +21,19 @@ fn the_catalogue_is_the_generated_model_itself() {
     // registry, so it grows with the workspace. What must hold is the shape —
     // every top-level type is nameable, and there are far more types than
     // top-level ones, because most of the model is nested.
-    assert!(top.len() > 100, "the eleven releases carry more than that: {}", top.len());
+    assert!(
+        top.len() > 100,
+        "the eleven releases carry more than that: {}",
+        top.len()
+    );
     assert!(all.len() > top.len(), "most of the model is not top-level");
     for one in &top {
         assert!(one.is_top_level);
-        assert!(one.qualified_type.is_some(), "{} is top-level and unnameable", one.type_key);
+        assert!(
+            one.qualified_type.is_some(),
+            "{} is top-level and unnameable",
+            one.type_key
+        );
         assert!(!one.package.is_empty() && !one.version.is_empty(), "{one:?}");
     }
 
@@ -41,7 +49,10 @@ fn the_catalogue_is_the_generated_model_itself() {
         top.iter().all(|one| !one.version.contains("dev")),
         "a development drop is offered for creation"
     );
-    let mut qualified: Vec<&str> = top.iter().filter_map(|one| one.qualified_type.as_deref()).collect();
+    let mut qualified: Vec<&str> = top
+        .iter()
+        .filter_map(|one| one.qualified_type.as_deref())
+        .collect();
     let before = qualified.len();
     qualified.sort_unstable();
     qualified.dedup();
@@ -104,14 +115,19 @@ fn a_template_is_an_object_the_package_accepts_once_it_is_filled() {
     let value: serde_json::Value = serde_json::from_str(&made).expect("JSON");
     assert_eq!(value["$type"], "resqml22.BoundaryFeature", "it knows what it is");
     assert!(value.get("uuid").is_some(), "and where its identity goes");
-    assert!(value.get("Citation").is_some(), "with the fields the type declares");
+    assert!(
+        value.get("Citation").is_some(),
+        "with the fields the type declares"
+    );
 
     // **Empty where the caller must decide**, and the refusal says so rather
     // than inventing: a template that made up a uuid would put an object in a
     // package under an identity nobody chose.
     assert_eq!(value["uuid"], "", "the uuid is the caller's");
     let mut package = Package::create("t.epc").expect("an empty package");
-    let why = package.put(&made).expect_err("an object with no uuid is not a part");
+    let why = package
+        .put(&made)
+        .expect_err("an object with no uuid is not a part");
     assert!(why.contains("uuid"), "and the refusal names it: {why}");
 
     // Filled in, it goes in.
@@ -139,8 +155,7 @@ fn a_uuid_can_be_given_to_the_template_instead_of_after_it() {
     // a malformed uuid here would otherwise travel into the object and come
     // back as "this object cannot be a part", a message about a different
     // line.
-    let why = template("resqml22.BoundaryFeature", Some("not-a-uuid"))
-        .expect_err("`not-a-uuid` is not one");
+    let why = template("resqml22.BoundaryFeature", Some("not-a-uuid")).expect_err("`not-a-uuid` is not one");
     assert!(why.contains("not-a-uuid"), "the refusal names the value: {why}");
 
     // And a type with nowhere to put an identity is an answer, not a failure:

@@ -91,7 +91,11 @@ use crate::source::ObjectSource;
 
 /// The three fields a representation, an interpretation and a feature climb by,
 /// in the order `color::parent_of` tries them.
-pub(crate) const PARENT_FIELDS: [&str; 3] = ["RepresentedObject", "RepresentedInterpretation", "InterpretedFeature"];
+pub(crate) const PARENT_FIELDS: [&str; 3] = [
+    "RepresentedObject",
+    "RepresentedInterpretation",
+    "InterpretedFeature",
+];
 
 /// The upper bound on a chain of parents: past it, it is a loop, not a chain.
 const MAX_STAGES: usize = 64;
@@ -212,7 +216,9 @@ pub fn kind_chain(index: &PackageIndex, objects: &dyn ObjectSource, property_uui
     let Some(reference) = index.sheet(property_uuid).and_then(|sheet| sheet.kind_ref()) else {
         return KindChain {
             uuids: Vec::new(),
-            notes: vec![format!("`{property_uuid}` has no property sheet in the index, or its sheet names no kind")],
+            notes: vec![format!(
+                "`{property_uuid}` has no property sheet in the index, or its sheet names no kind"
+            )],
         };
     };
     match Resolver::new(objects).resolve(&reference) {
@@ -225,7 +231,10 @@ pub fn kind_chain(index: &PackageIndex, objects: &dyn ObjectSource, property_uui
                 .collect(),
             notes: resolution.notes,
         },
-        Err(why) => KindChain { uuids: Vec::new(), notes: vec![why.to_string()] },
+        Err(why) => KindChain {
+            uuids: Vec::new(),
+            notes: vec![why.to_string()],
+        },
     }
 }
 
@@ -254,7 +263,11 @@ pub(crate) fn uuid_of_identity(identity: &str) -> String {
     let text = identity.trim();
     let (uuid, _) = energyml_core::identity::parse_address(text);
     // A bare uuid comes back as written, not lowercased.
-    if uuid.eq_ignore_ascii_case(text) { text.to_string() } else { uuid }
+    if uuid.eq_ignore_ascii_case(text) {
+        text.to_string()
+    } else {
+        uuid
+    }
 }
 
 /// An object a walk reaches, and the steps it went by.
@@ -297,7 +310,12 @@ impl Candidate {
         });
         let mut key = self.key.clone();
         key.push(hop.key.clone());
-        Candidate { uuid: hop.to.clone(), uri: hop.to_uri.clone(), steps, key }
+        Candidate {
+            uuid: hop.to.clone(),
+            uri: hop.to_uri.clone(),
+            steps,
+            key,
+        }
     }
 }
 
@@ -352,7 +370,10 @@ fn numbers(path: &str) -> (u64, u64) {
             digits.clear();
         }
     }
-    (found.first().copied().unwrap_or(0), found.get(1).copied().unwrap_or(0))
+    (
+        found.first().copied().unwrap_or(0),
+        found.get(1).copied().unwrap_or(0),
+    )
 }
 
 fn lower(uuid: &str) -> String {
@@ -515,7 +536,11 @@ impl<'a, I: Clone> Walker<'a, I> {
     /// collection, which the index now records while it reads the collection
     /// ([`PackageIndex::is_project`]). The parameter stays so that no caller
     /// changes.
-    pub fn new(index: &'a PackageIndex, _objects: &'a dyn ObjectSource, has: &'a dyn Fn(&str) -> Option<I>) -> Self {
+    pub fn new(
+        index: &'a PackageIndex,
+        _objects: &'a dyn ObjectSource,
+        has: &'a dyn Fn(&str) -> Option<I>,
+    ) -> Self {
         Self {
             index,
             has,
@@ -547,7 +572,10 @@ impl<'a, I: Clone> Walker<'a, I> {
 
     /// [`Walker::resolve`] for a population, sharing what is common.
     pub fn resolve_all<S: AsRef<str>>(&self, addresses: &[S]) -> Vec<Walked<I>> {
-        addresses.iter().map(|address| self.resolve(address.as_ref())).collect()
+        addresses
+            .iter()
+            .map(|address| self.resolve(address.as_ref()))
+            .collect()
     }
 
     /// What a property inherits: itself, its kind, the kind's parents, a
@@ -665,7 +693,11 @@ impl<'a, I: Clone> Walker<'a, I> {
                 field: format!("SingleCollectionAssociation[{i}].Dataobject[{j}]"),
                 held_by: Some(holder_uuid.clone()),
                 held_by_uri: Some(holder.clone()),
-                key: (i, j, format!("{}/{}", lower(&holder), lower(&association.collection_uri))),
+                key: (
+                    i,
+                    j,
+                    format!("{}/{}", lower(&holder), lower(&association.collection_uri)),
+                ),
             };
             match best.get(&lower(&hop.to_uri)) {
                 Some(kept) if kept.key <= hop.key => {}
@@ -755,7 +787,10 @@ impl<'a, I: Clone> Walker<'a, I> {
                 return found;
             }
         }
-        Walked { resolution: None, notes: state.notes.clone() }
+        Walked {
+            resolution: None,
+            notes: state.notes.clone(),
+        }
     }
 
     /// The next [`Tier`] of the walk of an object — **the walk, resumable**.
@@ -800,7 +835,11 @@ impl<'a, I: Clone> Walker<'a, I> {
                         edges: Vec::new(),
                     });
                     st.phase = Phase::Collections;
-                    return Some(Tier { rank: rank_self, candidates: st.stage.clone(), notes: st.notes.clone() });
+                    return Some(Tier {
+                        rank: rank_self,
+                        candidates: st.stage.clone(),
+                        notes: st.notes.clone(),
+                    });
                 }
                 Phase::Collections => {
                     let mut coll = st.collections.take().expect("a collections phase has its state");
@@ -816,8 +855,8 @@ impl<'a, I: Clone> Walker<'a, I> {
                     for node in &st.stage {
                         for hop in self.climb(climb, &st.start, &node.uri) {
                             let target = lower(&hop.to_uri);
-                            let on_the_way =
-                                target == lower(&st.start) || node.steps.iter().any(|s| lower(&s.to_uri) == target);
+                            let on_the_way = target == lower(&st.start)
+                                || node.steps.iter().any(|s| lower(&s.to_uri) == target);
                             if on_the_way {
                                 push_note(
                                     &mut st.notes,
@@ -855,11 +894,17 @@ impl<'a, I: Clone> Walker<'a, I> {
                     }
                     let distance = st.models[st.models_next].steps.len();
                     let mut group = Vec::new();
-                    while st.models_next < st.models.len() && st.models[st.models_next].steps.len() == distance {
+                    while st.models_next < st.models.len()
+                        && st.models[st.models_next].steps.len() == distance
+                    {
                         group.push(st.models[st.models_next].clone());
                         st.models_next += 1;
                     }
-                    return Some(Tier { rank: 6, candidates: group, notes: st.notes.clone() });
+                    return Some(Tier {
+                        rank: 6,
+                        candidates: group,
+                        notes: st.notes.clone(),
+                    });
                 }
                 Phase::Done => return None,
             }
@@ -899,7 +944,10 @@ impl<'a, I: Clone> Walker<'a, I> {
             ties,
             notes: notes.to_vec(),
         };
-        Some(Walked { notes: notes.to_vec(), resolution: Some(resolution) })
+        Some(Walked {
+            notes: notes.to_vec(),
+            resolution: Some(resolution),
+        })
     }
 
     /// Ranks 2, 4, 4 bis, 5, one level at a time: the collections of the
@@ -953,7 +1001,11 @@ impl<'a, I: Clone> Walker<'a, I> {
                 continue;
             }
             kept.sort_by(|a, b| a.key.cmp(&b.key));
-            return Some(Tier { rank: coll.rank, candidates: kept, notes: st.notes.clone() });
+            return Some(Tier {
+                rank: coll.rank,
+                candidates: kept,
+                notes: st.notes.clone(),
+            });
         }
     }
 

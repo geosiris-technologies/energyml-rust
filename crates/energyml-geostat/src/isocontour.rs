@@ -369,7 +369,11 @@ pub fn chain(segments: &[Segment]) -> Vec<Polyline> {
 
 /// The coordinates of the end of `segment` that sits at `where_`.
 fn point_at(segment: &Segment, where_: At) -> [f64; 3] {
-    if segment.on_a == where_ { segment.a } else { segment.b }
+    if segment.on_a == where_ {
+        segment.a
+    } else {
+        segment.b
+    }
 }
 
 /// The other end of `segment` from `where_`.
@@ -574,7 +578,10 @@ mod tests {
         let values = elevations(&points);
 
         assert_eq!(levels(0.0, 1.0, 0), Err(Error::NoLevels));
-        assert!(matches!(levels_spaced(0.0, 1.0, 0.0), Err(Error::BadSpacing { .. })));
+        assert!(matches!(
+            levels_spaced(0.0, 1.0, 0.0),
+            Err(Error::BadSpacing { .. })
+        ));
         assert!(matches!(
             levels_spaced(0.0, 1.0, 1e-9),
             Err(Error::TooManyLevels { .. })
@@ -710,7 +717,6 @@ mod tests {
         );
     }
 
-
     /// A field rough enough that the two faces sharing an edge really do
     /// interpolate it from opposite ends.
     ///
@@ -772,7 +778,13 @@ mod tests {
 
         let drawn: usize = lines
             .iter()
-            .map(|line| if line.closed { line.points.len() } else { line.points.len() - 1 })
+            .map(|line| {
+                if line.closed {
+                    line.points.len()
+                } else {
+                    line.points.len() - 1
+                }
+            })
             .sum();
         assert_eq!(
             drawn,

@@ -263,7 +263,9 @@ pub enum TearError {
         fault: String,
     },
     /// Two traces that meet.
-    #[error("the traces of `{first}` and `{second}` cross or touch — tearing a horizon across a crossing of faults is not done here")]
+    #[error(
+        "the traces of `{first}` and `{second}` cross or touch — tearing a horizon across a crossing of faults is not done here"
+    )]
     Crossing {
         /// One fault.
         first: String,
@@ -303,7 +305,9 @@ pub enum TearError {
         b: u32,
     },
     /// A chain node whose triangles do not split in two.
-    #[error("the triangles around node {node} of the trace of `{fault}` fall in {groups} group(s) where the trace makes two sides")]
+    #[error(
+        "the triangles around node {node} of the trace of `{fault}` fall in {groups} group(s) where the trace makes two sides"
+    )]
     Fan {
         /// The fault.
         fault: String,
@@ -339,7 +343,11 @@ pub(crate) fn project(line: &[Point], p: &Point) -> Option<(f64, f64, f64)> {
         let w = plan(&pair[0], p);
         let long = v[0] * v[0] + v[1] * v[1];
         let len = long.sqrt();
-        let t = if long > 0.0 { ((w[0] * v[0] + w[1] * v[1]) / long).clamp(0.0, 1.0) } else { 0.0 };
+        let t = if long > 0.0 {
+            ((w[0] * v[0] + w[1] * v[1]) / long).clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
         let q = [pair[0][0] + t * v[0], pair[0][1] + t * v[1]];
         let d = ((p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2)).sqrt();
         if best.is_none_or(|(_, bd, _)| d < bd) {
@@ -352,13 +360,20 @@ pub(crate) fn project(line: &[Point], p: &Point) -> Option<(f64, f64, f64)> {
 
 /// Plan-view length of a polyline.
 pub(crate) fn plan_length(line: &[Point]) -> f64 {
-    line.windows(2).map(|pair| length2(plan(&pair[0], &pair[1]))).sum()
+    line.windows(2)
+        .map(|pair| length2(plan(&pair[0], &pair[1])))
+        .sum()
 }
 
 /// Whether two segments meet in plan, ends included, within [`TOLERANCE`].
 fn segments_meet(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
-    let distance = |p: &Point, s: &Point, e: &Point| project(&[*s, *e], p).map_or(f64::INFINITY, |(_, d, _)| d);
-    if distance(a, c, d) <= TOLERANCE || distance(b, c, d) <= TOLERANCE || distance(c, a, b) <= TOLERANCE || distance(d, a, b) <= TOLERANCE {
+    let distance =
+        |p: &Point, s: &Point, e: &Point| project(&[*s, *e], p).map_or(f64::INFINITY, |(_, d, _)| d);
+    if distance(a, c, d) <= TOLERANCE
+        || distance(b, c, d) <= TOLERANCE
+        || distance(c, a, b) <= TOLERANCE
+        || distance(d, a, b) <= TOLERANCE
+    {
         return true;
     }
     let (ab, ac, ad) = (plan(a, b), plan(a, c), plan(a, d));
@@ -369,7 +384,11 @@ fn segments_meet(a: &Point, b: &Point, c: &Point, d: &Point) -> bool {
 }
 
 fn lines_meet(first: &[Point], second: &[Point]) -> bool {
-    first.windows(2).any(|p| second.windows(2).any(|q| segments_meet(&p[0], &p[1], &q[0], &q[1])))
+    first.windows(2).any(|p| {
+        second
+            .windows(2)
+            .any(|q| segments_meet(&p[0], &p[1], &q[0], &q[1]))
+    })
 }
 
 fn close3(a: &Point, b: &Point) -> bool {
@@ -389,13 +408,36 @@ pub(crate) fn weld(mut lines: Vec<Vec<Point>>) -> Vec<(Vec<Point>, bool)> {
                 let (first, last) = (line[0], line[line.len() - 1]);
                 let (o_first, o_last) = (other[0], other[other.len() - 1]);
                 let merged = if close3(&last, &o_first) {
-                    Some(line.iter().copied().chain(other.iter().skip(1).copied()).collect::<Vec<_>>())
+                    Some(
+                        line.iter()
+                            .copied()
+                            .chain(other.iter().skip(1).copied())
+                            .collect::<Vec<_>>(),
+                    )
                 } else if close3(&last, &o_last) {
-                    Some(line.iter().copied().chain(other.iter().rev().skip(1).copied()).collect())
+                    Some(
+                        line.iter()
+                            .copied()
+                            .chain(other.iter().rev().skip(1).copied())
+                            .collect(),
+                    )
                 } else if close3(&first, &o_last) {
-                    Some(other.iter().copied().chain(line.iter().skip(1).copied()).collect())
+                    Some(
+                        other
+                            .iter()
+                            .copied()
+                            .chain(line.iter().skip(1).copied())
+                            .collect(),
+                    )
                 } else if close3(&first, &o_first) {
-                    Some(other.iter().rev().copied().chain(line.iter().skip(1).copied()).collect())
+                    Some(
+                        other
+                            .iter()
+                            .rev()
+                            .copied()
+                            .chain(line.iter().skip(1).copied())
+                            .collect(),
+                    )
                 } else {
                     None
                 };
@@ -448,7 +490,12 @@ fn edges_of(triangles: &[[u32; 3]]) -> HashMap<(u32, u32), Vec<usize>> {
 
 /// The nodes of the triangulation that lie on the trace, in the order of their
 /// abscissa along it — and every consecutive pair an edge, or the refusal.
-fn chain_along(points: &[Point], trace: &[Point], edges: &HashMap<(u32, u32), Vec<usize>>, fault: &str) -> Result<Vec<u32>, TearError> {
+fn chain_along(
+    points: &[Point],
+    trace: &[Point],
+    edges: &HashMap<(u32, u32), Vec<usize>>,
+    fault: &str,
+) -> Result<Vec<u32>, TearError> {
     let (mut lo, mut hi) = ([f64::INFINITY; 2], [f64::NEG_INFINITY; 2]);
     for p in trace {
         for axis in 0..2 {
@@ -458,7 +505,11 @@ fn chain_along(points: &[Point], trace: &[Point], edges: &HashMap<(u32, u32), Ve
     }
     let mut on: Vec<(f64, u32)> = Vec::new();
     for (at, p) in points.iter().enumerate() {
-        if p[0] < lo[0] - TOLERANCE || p[0] > hi[0] + TOLERANCE || p[1] < lo[1] - TOLERANCE || p[1] > hi[1] + TOLERANCE {
+        if p[0] < lo[0] - TOLERANCE
+            || p[0] > hi[0] + TOLERANCE
+            || p[1] < lo[1] - TOLERANCE
+            || p[1] > hi[1] + TOLERANCE
+        {
             continue;
         }
         if let Some((abscissa, d, _)) = project(trace, p)
@@ -469,11 +520,17 @@ fn chain_along(points: &[Point], trace: &[Point], edges: &HashMap<(u32, u32), Ve
     }
     on.sort_by(|a, b| a.0.total_cmp(&b.0));
     if on.len() < 2 {
-        return Err(TearError::NoTrace { fault: fault.to_string() });
+        return Err(TearError::NoTrace {
+            fault: fault.to_string(),
+        });
     }
     for pair in on.windows(2) {
         if !edges.contains_key(&key(pair[0].1, pair[1].1)) {
-            return Err(TearError::NotAlong { fault: fault.to_string(), from: pair[0].1, to: pair[1].1 });
+            return Err(TearError::NotAlong {
+                fault: fault.to_string(),
+                from: pair[0].1,
+                to: pair[1].1,
+            });
         }
     }
     Ok(on.into_iter().map(|(_, node)| node).collect())
@@ -481,7 +538,12 @@ fn chain_along(points: &[Point], trace: &[Point], edges: &HashMap<(u32, u32), Ve
 
 /// The sign of the hanging-wall side of a chain walked forward: the side the
 /// dip direction points to, on average over its edges.
-fn hanging_wall_side(points: &[Point], chain: &[u32], dip_azimuth: f64, fault: &str) -> Result<f64, TearError> {
+fn hanging_wall_side(
+    points: &[Point],
+    chain: &[u32],
+    dip_azimuth: f64,
+    fault: &str,
+) -> Result<f64, TearError> {
     let direction = [dip_azimuth.to_radians().sin(), dip_azimuth.to_radians().cos()];
     let (mut sum, mut total) = (0.0f64, 0.0f64);
     for pair in chain.windows(2) {
@@ -491,7 +553,10 @@ fn hanging_wall_side(points: &[Point], chain: &[u32], dip_azimuth: f64, fault: &
     }
     let mean = if total > 0.0 { sum / total } else { 0.0 };
     if mean.abs() < ACROSS {
-        return Err(TearError::AlongDip { fault: fault.to_string(), angle: mean.abs().clamp(0.0, 1.0).asin().to_degrees() });
+        return Err(TearError::AlongDip {
+            fault: fault.to_string(),
+            angle: mean.abs().clamp(0.0, 1.0).asin().to_degrees(),
+        });
     }
     Ok(mean.signum())
 }
@@ -503,11 +568,33 @@ fn side(points: &[Point], a: u32, b: u32, c: u32) -> f64 {
 }
 
 /// The hanging-wall and footwall triangles of a chain edge.
-fn sides_of(points: &[Point], triangles: &[[u32; 3]], edges: &HashMap<(u32, u32), Vec<usize>>, a: u32, b: u32, sigma: f64, fault: &str) -> Result<(usize, usize), TearError> {
-    let refuse = || TearError::Sides { fault: fault.to_string(), a, b };
-    let Some(on) = edges.get(&key(a, b)) else { return Err(refuse()) };
-    let [one, two] = on.as_slice() else { return Err(refuse()) };
-    let third = |t: usize| triangles[t].iter().copied().find(|&v| v != a && v != b).unwrap_or(a);
+fn sides_of(
+    points: &[Point],
+    triangles: &[[u32; 3]],
+    edges: &HashMap<(u32, u32), Vec<usize>>,
+    a: u32,
+    b: u32,
+    sigma: f64,
+    fault: &str,
+) -> Result<(usize, usize), TearError> {
+    let refuse = || TearError::Sides {
+        fault: fault.to_string(),
+        a,
+        b,
+    };
+    let Some(on) = edges.get(&key(a, b)) else {
+        return Err(refuse());
+    };
+    let [one, two] = on.as_slice() else {
+        return Err(refuse());
+    };
+    let third = |t: usize| {
+        triangles[t]
+            .iter()
+            .copied()
+            .find(|&v| v != a && v != b)
+            .unwrap_or(a)
+    };
     let (s1, s2) = (side(points, a, b, third(*one)), side(points, a, b, third(*two)));
     if s1 * sigma > 0.0 && s2 * sigma < 0.0 {
         Ok((*one, *two))
@@ -529,11 +616,19 @@ fn find(parent: &mut [usize], mut at: usize) -> usize {
 /// Tear the triangulation along one chain: each node but the ends gets a copy,
 /// which the triangles of the hanging-wall side take. Returns the copies, in
 /// the chain's order.
-fn tear(points: &mut Vec<Point>, triangles: &mut [[u32; 3]], chain: &[u32], sigma: f64, fault: &str) -> Result<Vec<u32>, TearError> {
+fn tear(
+    points: &mut Vec<Point>,
+    triangles: &mut [[u32; 3]],
+    chain: &[u32],
+    sigma: f64,
+    fault: &str,
+) -> Result<Vec<u32>, TearError> {
     let edges = edges_of(triangles);
     let mut sides: Vec<(usize, usize)> = Vec::with_capacity(chain.len().saturating_sub(1));
     for pair in chain.windows(2) {
-        sides.push(sides_of(points, triangles, &edges, pair[0], pair[1], sigma, fault)?);
+        sides.push(sides_of(
+            points, triangles, &edges, pair[0], pair[1], sigma, fault,
+        )?);
     }
     let mut incident: HashMap<u32, Vec<usize>> = HashMap::new();
     let interior: HashSet<u32> = chain[1..chain.len() - 1].iter().copied().collect();
@@ -570,9 +665,18 @@ fn tear(points: &mut Vec<Point>, triangles: &mut [[u32; 3]], chain: &[u32], sigm
         }
         let roots: HashSet<usize> = (0..around.len()).map(|rank| find(&mut parent, rank)).collect();
         if roots.len() != 2 {
-            return Err(TearError::Fan { fault: fault.to_string(), node, groups: roots.len() });
+            return Err(TearError::Fan {
+                fault: fault.to_string(),
+                node,
+                groups: roots.len(),
+            });
         }
-        let group_of = |t: usize, parent: &mut Vec<usize>| around.iter().position(|one| *one == t).map(|rank| find(parent, rank));
+        let group_of = |t: usize, parent: &mut Vec<usize>| {
+            around
+                .iter()
+                .position(|one| *one == t)
+                .map(|rank| find(parent, rank))
+        };
         let (hw_before, fw_before) = sides[at - 1];
         let (hw_after, fw_after) = sides[at];
         let hw = group_of(hw_after, &mut parent);
@@ -581,10 +685,19 @@ fn tear(points: &mut Vec<Point>, triangles: &mut [[u32; 3]], chain: &[u32], sigm
             && group_of(fw_before, &mut parent) != hw
             && group_of(fw_after, &mut parent) != hw;
         if !consistent {
-            return Err(TearError::Fan { fault: fault.to_string(), node, groups: 2 });
+            return Err(TearError::Fan {
+                fault: fault.to_string(),
+                node,
+                groups: 2,
+            });
         }
         let hw = hw.unwrap_or_default();
-        let taken: Vec<usize> = around.iter().enumerate().filter(|(rank, _)| find(&mut parent, *rank) == hw).map(|(_, t)| *t).collect();
+        let taken: Vec<usize> = around
+            .iter()
+            .enumerate()
+            .filter(|(rank, _)| find(&mut parent, *rank) == hw)
+            .map(|(_, t)| *t)
+            .collect();
         moves.push((node, taken));
     }
     let mut copies = Vec::with_capacity(moves.len());
@@ -610,24 +723,36 @@ fn tear(points: &mut Vec<Point>, triangles: &mut [[u32; 3]], chain: &[u32], sigm
 /// over the rest would span it.
 pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Result<Torn, TearError> {
     if !(settings.reach.is_finite() && settings.reach > 0.0) {
-        return Err(TearError::BadReach { given: settings.reach });
+        return Err(TearError::BadReach {
+            given: settings.reach,
+        });
     }
     for fault in faults {
         if !(fault.maximum_throw.is_finite() && fault.maximum_throw > 0.0) {
-            return Err(TearError::BadThrow { fault: fault.name.to_string(), given: fault.maximum_throw });
+            return Err(TearError::BadThrow {
+                fault: fault.name.to_string(),
+                given: fault.maximum_throw,
+            });
         }
     }
     let Some(origin) = cloud.first().copied() else {
-        return Err(TearError::Horizon { why: "it has no node".to_string() });
+        return Err(TearError::Horizon {
+            why: "it has no node".to_string(),
+        });
     };
     if let Some(at) = cloud.iter().position(|p| !p.iter().all(|c| c.is_finite())) {
-        return Err(TearError::Horizon { why: format!("node {at} is not a finite position") });
+        return Err(TearError::Horizon {
+            why: format!("node {at} is not a finite position"),
+        });
     }
     let local = |p: &Point| [p[0] - origin[0], p[1] - origin[1], p[2] - origin[2]];
     let nodes: Vec<Point> = cloud.iter().map(local).collect();
     let flat: Vec<f64> = nodes.iter().flatten().copied().collect();
-    let first: Vec<[u32; 3]> =
-        triangulate_xy(&flat).map_err(|why| TearError::Horizon { why })?.chunks_exact(3).map(|t| [t[0], t[1], t[2]]).collect();
+    let first: Vec<[u32; 3]> = triangulate_xy(&flat)
+        .map_err(|why| TearError::Horizon { why })?
+        .chunks_exact(3)
+        .map(|t| [t[0], t[1], t[2]])
+        .collect();
 
     // -- each fault: its dip, and its trace on this horizon ----------------------
     let mut orientations: Vec<Orientation> = Vec::with_capacity(faults.len());
@@ -635,19 +760,43 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
     for fault in faults {
         let surface: Vec<Point> = fault.points.iter().map(local).collect();
         let orientation =
-            fault_sticks::orientation(&surface, fault.triangles, settings.up).ok_or_else(|| TearError::NoSurface { fault: fault.name.to_string() })?;
+            fault_sticks::orientation(&surface, fault.triangles, settings.up).ok_or_else(|| {
+                TearError::NoSurface {
+                    fault: fault.name.to_string(),
+                }
+            })?;
         if orientation.dip > VERTICAL {
-            return Err(TearError::Vertical { fault: fault.name.to_string(), dip: orientation.dip });
+            return Err(TearError::Vertical {
+                fault: fault.name.to_string(),
+                dip: orientation.dip,
+            });
         }
         let cut = intersect(&surface, fault.triangles, &nodes, &first);
-        let mut pieces = weld(cut.traces.into_iter().map(|trace| trace.points).filter(|line| line.len() >= 2).collect());
+        let mut pieces = weld(
+            cut.traces
+                .into_iter()
+                .map(|trace| trace.points)
+                .filter(|line| line.len() >= 2)
+                .collect(),
+        );
         let (line, closed) = match pieces.len() {
-            0 => return Err(TearError::NoTrace { fault: fault.name.to_string() }),
+            0 => {
+                return Err(TearError::NoTrace {
+                    fault: fault.name.to_string(),
+                });
+            }
             1 => pieces.remove(0),
-            count => return Err(TearError::Pieces { fault: fault.name.to_string(), count }),
+            count => {
+                return Err(TearError::Pieces {
+                    fault: fault.name.to_string(),
+                    count,
+                });
+            }
         };
         if closed {
-            return Err(TearError::Ring { fault: fault.name.to_string() });
+            return Err(TearError::Ring {
+                fault: fault.name.to_string(),
+            });
         }
         traces.push(snap(line, &nodes));
         orientations.push(orientation);
@@ -655,7 +804,10 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
     for i in 0..traces.len() {
         for j in i + 1..traces.len() {
             if lines_meet(&traces[i], &traces[j]) {
-                return Err(TearError::Crossing { first: faults[i].name.to_string(), second: faults[j].name.to_string() });
+                return Err(TearError::Crossing {
+                    first: faults[i].name.to_string(),
+                    second: faults[j].name.to_string(),
+                });
             }
         }
     }
@@ -663,7 +815,11 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
     // -- the triangulation with the traces as constraints -------------------------
     let made = triangulate_xy_constrained(&flat, &traces).map_err(|why| TearError::Horizon { why })?;
     let mut points = made.points;
-    let mut triangles: Vec<[u32; 3]> = made.triangles.chunks_exact(3).map(|t| [t[0], t[1], t[2]]).collect();
+    let mut triangles: Vec<[u32; 3]> = made
+        .triangles
+        .chunks_exact(3)
+        .map(|t| [t[0], t[1], t[2]])
+        .collect();
     let edges = edges_of(&triangles);
     let mut chains: Vec<Vec<u32>> = Vec::with_capacity(faults.len());
     for (trace, fault) in traces.iter().zip(faults) {
@@ -702,12 +858,19 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
         let vertical = if settings.up { -sense } else { sense };
         let horizontal = if settings.heave {
             let spread = sense / orientation.dip.to_radians().tan();
-            [spread * orientation.dip_azimuth.to_radians().sin(), spread * orientation.dip_azimuth.to_radians().cos()]
+            [
+                spread * orientation.dip_azimuth.to_radians().sin(),
+                spread * orientation.dip_azimuth.to_radians().cos(),
+            ]
         } else {
             [0.0, 0.0]
         };
         let own: HashSet<u32> = chain.iter().copied().collect();
-        let copy_at: HashMap<u32, usize> = copies[k].iter().enumerate().map(|(rank, copy)| (*copy, rank + 1)).collect();
+        let copy_at: HashMap<u32, usize> = copies[k]
+            .iter()
+            .enumerate()
+            .map(|(rank, copy)| (*copy, rank + 1))
+            .collect();
         let (mut lo, mut hi) = ([f64::INFINITY; 2], [f64::NEG_INFINITY; 2]);
         for p in &line {
             for axis in 0..2 {
@@ -744,9 +907,19 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
                 moved += 1;
             }
         }
-        let hanging_wall: Vec<u32> =
-            std::iter::once(chain[0]).chain(copies[k].iter().copied()).chain(std::iter::once(chain[chain.len() - 1])).collect();
-        thrown.push(Thrown { orientation, lip: Lip { footwall: chain.clone(), hanging_wall }, largest, moved });
+        let hanging_wall: Vec<u32> = std::iter::once(chain[0])
+            .chain(copies[k].iter().copied())
+            .chain(std::iter::once(chain[chain.len() - 1]))
+            .collect();
+        thrown.push(Thrown {
+            orientation,
+            lip: Lip {
+                footwall: chain.clone(),
+                hanging_wall,
+            },
+            largest,
+            moved,
+        });
     }
     for (p, d) in points.iter_mut().zip(&shift) {
         p[0] += d[0];
@@ -755,8 +928,20 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
     }
     let flipped = crate::nodes::flipped(&before, &points, &triangles);
     let moved = touched.iter().filter(|one| **one).count();
-    let world: Vec<Point> = points.iter().map(|p| [p[0] + origin[0], p[1] + origin[1], p[2] + origin[2]]).collect();
-    Ok(Torn { points: world, triangles, faults: thrown, added: made.added, duplicates: made.duplicates, split, moved, flipped })
+    let world: Vec<Point> = points
+        .iter()
+        .map(|p| [p[0] + origin[0], p[1] + origin[1], p[2] + origin[2]])
+        .collect();
+    Ok(Torn {
+        points: world,
+        triangles,
+        faults: thrown,
+        added: made.added,
+        duplicates: made.duplicates,
+        split,
+        moved,
+        flipped,
+    })
 }
 
 #[cfg(test)]
@@ -783,7 +968,15 @@ mod tests {
     /// A plane fault striking north (along y), through x = `x` at elevation
     /// `z0`, dipping `dip`° toward the east (azimuth 90°), from `top` down to
     /// `bottom`, from `y_from` to `y_to`.
-    fn fault(x: f64, z0: f64, dip: f64, top: f64, bottom: f64, y_from: f64, y_to: f64) -> (Vec<Point>, Vec<[u32; 3]>) {
+    fn fault(
+        x: f64,
+        z0: f64,
+        dip: f64,
+        top: f64,
+        bottom: f64,
+        y_from: f64,
+        y_to: f64,
+    ) -> (Vec<Point>, Vec<[u32; 3]>) {
         let at = |z: f64| X0 + x + (z0 - z) / dip.to_radians().tan();
         let points = vec![
             [at(top), Y0 + y_from, top],
@@ -795,7 +988,12 @@ mod tests {
     }
 
     fn settings(reach: f64, heave: bool) -> Settings {
-        Settings { profile: Profile::Parabolic, reach, heave, up: true }
+        Settings {
+            profile: Profile::Parabolic,
+            reach,
+            heave,
+            up: true,
+        }
     }
 
     /// A fault dying out inside a 21 × 21 horizon 10 m apart: from y = 45 to
@@ -804,7 +1002,13 @@ mod tests {
     fn thrown(throw: f64, reach: f64, heave: bool) -> Torn {
         let cloud = horizon(21, 10.0, -50.0);
         let (points, triangles) = fault(105.0, -50.0, 60.0, 0.0, -100.0, 45.0, 155.0);
-        let one = Fault { name: "F1", points: &points, triangles: &triangles, maximum_throw: throw, sense: Sense::Down };
+        let one = Fault {
+            name: "F1",
+            points: &points,
+            triangles: &triangles,
+            maximum_throw: throw,
+            sense: Sense::Down,
+        };
         super::throw(&cloud, &[one], &settings(reach, heave)).expect("thrown")
     }
 
@@ -831,16 +1035,30 @@ mod tests {
         assert_eq!(lip.footwall.first(), lip.hanging_wall.first());
         assert_eq!(lip.footwall.last(), lip.hanging_wall.last());
         let inner_fw: HashSet<u32> = lip.footwall[1..lip.footwall.len() - 1].iter().copied().collect();
-        assert!(lip.hanging_wall[1..lip.hanging_wall.len() - 1].iter().all(|v| !inner_fw.contains(v)));
+        assert!(
+            lip.hanging_wall[1..lip.hanging_wall.len() - 1]
+                .iter()
+                .all(|v| !inner_fw.contains(v))
+        );
         assert_eq!(torn.split, lip.footwall.len() - 2);
         for &v in &lip.footwall {
             let p = torn.points[v as usize];
-            assert!((p[0] - (X0 + 105.0)).abs() < 1e-6, "on the fault at the horizon's level: {p:?}");
+            assert!(
+                (p[0] - (X0 + 105.0)).abs() < 1e-6,
+                "on the fault at the horizon's level: {p:?}"
+            );
             assert!((p[2] + 50.0).abs() < 1e-9, "the footwall does not move: {p:?}");
         }
         // The trace runs where the fault meets the horizon, 45 → 155 in y.
-        let ys: Vec<f64> = lip.footwall.iter().map(|v| torn.points[*v as usize][1] - Y0).collect();
-        assert!((ys[0] - 45.0).abs() < 1e-6 && (ys[ys.len() - 1] - 155.0).abs() < 1e-6, "{ys:?}");
+        let ys: Vec<f64> = lip
+            .footwall
+            .iter()
+            .map(|v| torn.points[*v as usize][1] - Y0)
+            .collect();
+        assert!(
+            (ys[0] - 45.0).abs() < 1e-6 && (ys[ys.len() - 1] - 155.0).abs() < 1e-6,
+            "{ys:?}"
+        );
     }
 
     /// The offset on the hanging wall's lip is the profile, confronted with an
@@ -856,7 +1074,11 @@ mod tests {
             assert_eq!([f[0], f[1]], [h[0], h[1]], "no heave: straight down");
             let s = (f[1] - (Y0 + 45.0)) / 110.0;
             let expected = 10.0 * 4.0 * s * (1.0 - s);
-            assert!(((f[2] - h[2]) - expected).abs() < 1e-9, "at s = {s}: dropped {} for {expected}", f[2] - h[2]);
+            assert!(
+                ((f[2] - h[2]) - expected).abs() < 1e-9,
+                "at s = {s}: dropped {} for {expected}",
+                f[2] - h[2]
+            );
             largest = largest.max(f[2] - h[2]);
         }
         assert!((torn.faults[0].largest - largest).abs() < 1e-12);
@@ -871,7 +1093,10 @@ mod tests {
         let torn = thrown(10.0, 50.0, false);
         let lip = &torn.faults[0].lip;
         let fw: HashSet<u32> = lip.footwall[1..lip.footwall.len() - 1].iter().copied().collect();
-        let hw: HashSet<u32> = lip.hanging_wall[1..lip.hanging_wall.len() - 1].iter().copied().collect();
+        let hw: HashSet<u32> = lip.hanging_wall[1..lip.hanging_wall.len() - 1]
+            .iter()
+            .copied()
+            .collect();
         let mut east = 0usize;
         let mut west = 0usize;
         for t in &torn.triangles {
@@ -886,7 +1111,10 @@ mod tests {
                 west += names_fw as usize;
             }
         }
-        assert!(east > 0 && west > 0, "the lips are used: {east} east, {west} west");
+        assert!(
+            east > 0 && west > 0,
+            "the lips are used: {east} east, {west} west"
+        );
     }
 
     /// The drag: the offset falls with the distance to the trace and is gone
@@ -906,7 +1134,11 @@ mod tests {
             } else {
                 let s = (y - 45.0) / 110.0;
                 let expected = 10.0 * 4.0 * s * (1.0 - s) * (1.0 - dx / 50.0);
-                assert!(((p[2] - q[2]) - expected).abs() < 1e-9, "node {at}: {} for {expected}", p[2] - q[2]);
+                assert!(
+                    ((p[2] - q[2]) - expected).abs() < 1e-9,
+                    "node {at}: {} for {expected}",
+                    p[2] - q[2]
+                );
             }
         }
     }
@@ -922,7 +1154,10 @@ mod tests {
             let h = torn.points[*hw as usize];
             assert!((h[0] - plane_x(h[2])).abs() < 1e-6, "off the fault: {h:?}");
         }
-        assert_eq!(torn.flipped, 0, "a heave of 5.8 m over a drag of 50 m folds nothing");
+        assert_eq!(
+            torn.flipped, 0,
+            "a heave of 5.8 m over a drag of 50 m folds nothing"
+        );
     }
 
     /// A reverse fault lifts its hanging wall; a depth frame counts the other
@@ -933,22 +1168,54 @@ mod tests {
         let (points, triangles) = fault(105.0, -50.0, 60.0, 0.0, -100.0, 45.0, 155.0);
         let mut drops = Vec::new();
         for (sense, up) in [(Sense::Down, true), (Sense::Up, true)] {
-            let one = Fault { name: "F", points: &points, triangles: &triangles, maximum_throw: 10.0, sense };
-            let torn = super::throw(&cloud, &[one], &Settings { up, ..settings(50.0, false) }).expect("thrown");
+            let one = Fault {
+                name: "F",
+                points: &points,
+                triangles: &triangles,
+                maximum_throw: 10.0,
+                sense,
+            };
+            let torn = super::throw(
+                &cloud,
+                &[one],
+                &Settings {
+                    up,
+                    ..settings(50.0, false)
+                },
+            )
+            .expect("thrown");
             let lip = &torn.faults[0].lip;
             let middle = lip.footwall.len() / 2;
-            drops.push(torn.points[lip.footwall[middle] as usize][2] - torn.points[lip.hanging_wall[middle] as usize][2]);
+            drops.push(
+                torn.points[lip.footwall[middle] as usize][2]
+                    - torn.points[lip.hanging_wall[middle] as usize][2],
+            );
         }
         assert!(drops[0] > 0.0 && (drops[0] + drops[1]).abs() < 1e-9, "{drops:?}");
         // In a depth frame the same fault, drawn in depths, goes down by a
         // larger depth.
         let deep: Vec<Point> = cloud.iter().map(|p| [p[0], p[1], 50.0]).collect();
         let points_deep: Vec<Point> = points.iter().map(|p| [p[0], p[1], -p[2]]).collect();
-        let one = Fault { name: "F", points: &points_deep, triangles: &triangles, maximum_throw: 10.0, sense: Sense::Down };
-        let torn = super::throw(&deep, &[one], &Settings { up: false, ..settings(50.0, false) }).expect("thrown");
+        let one = Fault {
+            name: "F",
+            points: &points_deep,
+            triangles: &triangles,
+            maximum_throw: 10.0,
+            sense: Sense::Down,
+        };
+        let torn = super::throw(
+            &deep,
+            &[one],
+            &Settings {
+                up: false,
+                ..settings(50.0, false)
+            },
+        )
+        .expect("thrown");
         let lip = &torn.faults[0].lip;
         let middle = lip.footwall.len() / 2;
-        let deeper = torn.points[lip.hanging_wall[middle] as usize][2] - torn.points[lip.footwall[middle] as usize][2];
+        let deeper =
+            torn.points[lip.hanging_wall[middle] as usize][2] - torn.points[lip.footwall[middle] as usize][2];
         assert!((deeper - drops[0]).abs() < 1e-9, "{deeper} for {}", drops[0]);
     }
 
@@ -957,23 +1224,77 @@ mod tests {
         let cloud = horizon(21, 10.0, -50.0);
         // Vertical.
         let (points, triangles) = fault(105.0, -50.0, 90.0, 0.0, -100.0, 45.0, 155.0);
-        let one = Fault { name: "F3", points: &points, triangles: &triangles, maximum_throw: 5.0, sense: Sense::Down };
-        assert!(matches!(super::throw(&cloud, &[one], &settings(50.0, false)), Err(TearError::Vertical { .. })));
+        let one = Fault {
+            name: "F3",
+            points: &points,
+            triangles: &triangles,
+            maximum_throw: 5.0,
+            sense: Sense::Down,
+        };
+        assert!(matches!(
+            super::throw(&cloud, &[one], &settings(50.0, false)),
+            Err(TearError::Vertical { .. })
+        ));
         // Above the horizon.
         let (points, triangles) = fault(105.0, -50.0, 60.0, 0.0, -40.0, 45.0, 155.0);
-        let one = Fault { name: "F2", points: &points, triangles: &triangles, maximum_throw: 5.0, sense: Sense::Down };
-        assert_eq!(super::throw(&cloud, &[one], &settings(50.0, false)), Err(TearError::NoTrace { fault: "F2".into() }));
+        let one = Fault {
+            name: "F2",
+            points: &points,
+            triangles: &triangles,
+            maximum_throw: 5.0,
+            sense: Sense::Down,
+        };
+        assert_eq!(
+            super::throw(&cloud, &[one], &settings(50.0, false)),
+            Err(TearError::NoTrace { fault: "F2".into() })
+        );
         // Two faults crossing.
         let (a, ta) = fault(105.0, -50.0, 60.0, 0.0, -100.0, 45.0, 155.0);
-        let turned: Vec<Point> = a.iter().map(|p| [X0 + (p[1] - Y0), Y0 + (p[0] - X0), p[2]]).collect();
-        let one = Fault { name: "F1", points: &a, triangles: &ta, maximum_throw: 5.0, sense: Sense::Down };
-        let two = Fault { name: "F4", points: &turned, triangles: &ta, maximum_throw: 5.0, sense: Sense::Down };
-        assert!(matches!(super::throw(&cloud, &[one, two], &settings(50.0, false)), Err(TearError::Crossing { .. })));
+        let turned: Vec<Point> = a
+            .iter()
+            .map(|p| [X0 + (p[1] - Y0), Y0 + (p[0] - X0), p[2]])
+            .collect();
+        let one = Fault {
+            name: "F1",
+            points: &a,
+            triangles: &ta,
+            maximum_throw: 5.0,
+            sense: Sense::Down,
+        };
+        let two = Fault {
+            name: "F4",
+            points: &turned,
+            triangles: &ta,
+            maximum_throw: 5.0,
+            sense: Sense::Down,
+        };
+        assert!(matches!(
+            super::throw(&cloud, &[one, two], &settings(50.0, false)),
+            Err(TearError::Crossing { .. })
+        ));
         // A bad throw, a bad reach.
-        let one = Fault { name: "F1", points: &a, triangles: &ta, maximum_throw: 0.0, sense: Sense::Down };
-        assert!(matches!(super::throw(&cloud, &[one], &settings(50.0, false)), Err(TearError::BadThrow { .. })));
-        let one = Fault { name: "F1", points: &a, triangles: &ta, maximum_throw: 5.0, sense: Sense::Down };
-        assert!(matches!(super::throw(&cloud, &[one], &settings(0.0, false)), Err(TearError::BadReach { .. })));
+        let one = Fault {
+            name: "F1",
+            points: &a,
+            triangles: &ta,
+            maximum_throw: 0.0,
+            sense: Sense::Down,
+        };
+        assert!(matches!(
+            super::throw(&cloud, &[one], &settings(50.0, false)),
+            Err(TearError::BadThrow { .. })
+        ));
+        let one = Fault {
+            name: "F1",
+            points: &a,
+            triangles: &ta,
+            maximum_throw: 5.0,
+            sense: Sense::Down,
+        };
+        assert!(matches!(
+            super::throw(&cloud, &[one], &settings(0.0, false)),
+            Err(TearError::BadReach { .. })
+        ));
     }
 
     /// A fault in two patches cuts the horizon in two pieces that share an
@@ -986,11 +1307,24 @@ mod tests {
         let (north, _) = fault(105.0, -50.0, 60.0, 0.0, -100.0, 100.0, 155.0);
         let points: Vec<Point> = south.iter().chain(&north).copied().collect();
         let triangles = vec![[0, 1, 2], [1, 3, 2], [4, 5, 6], [5, 7, 6]];
-        let one = Fault { name: "F1", points: &points, triangles: &triangles, maximum_throw: 10.0, sense: Sense::Down };
+        let one = Fault {
+            name: "F1",
+            points: &points,
+            triangles: &triangles,
+            maximum_throw: 10.0,
+            sense: Sense::Down,
+        };
         let torn = super::throw(&cloud, &[one], &settings(50.0, false)).expect("one trace");
         let lip = &torn.faults[0].lip;
-        let ys: Vec<f64> = lip.footwall.iter().map(|v| torn.points[*v as usize][1] - Y0).collect();
-        assert!((ys[0] - 45.0).abs() < 1e-6 && (ys[ys.len() - 1] - 155.0).abs() < 1e-6, "{ys:?}");
+        let ys: Vec<f64> = lip
+            .footwall
+            .iter()
+            .map(|v| torn.points[*v as usize][1] - Y0)
+            .collect();
+        assert!(
+            (ys[0] - 45.0).abs() < 1e-6 && (ys[ys.len() - 1] - 155.0).abs() < 1e-6,
+            "{ys:?}"
+        );
     }
 
     /// Two faults apart: each its lips, each its drop, the offsets added where
@@ -1001,17 +1335,39 @@ mod tests {
         let (a, ta) = fault(65.0, -50.0, 60.0, 0.0, -100.0, 45.0, 155.0);
         let (b, tb) = fault(145.0, -50.0, 60.0, 0.0, -100.0, 45.0, 155.0);
         let faults = [
-            Fault { name: "F1", points: &a, triangles: &ta, maximum_throw: 10.0, sense: Sense::Down },
-            Fault { name: "F2", points: &b, triangles: &tb, maximum_throw: 4.0, sense: Sense::Down },
+            Fault {
+                name: "F1",
+                points: &a,
+                triangles: &ta,
+                maximum_throw: 10.0,
+                sense: Sense::Down,
+            },
+            Fault {
+                name: "F2",
+                points: &b,
+                triangles: &tb,
+                maximum_throw: 4.0,
+                sense: Sense::Down,
+            },
         ];
         let torn = super::throw(&cloud, &faults, &settings(100.0, false)).expect("thrown");
         assert_eq!(torn.faults.len(), 2);
-        assert_eq!(torn.split, torn.faults.iter().map(|f| f.lip.footwall.len() - 2).sum::<usize>());
+        assert_eq!(
+            torn.split,
+            torn.faults
+                .iter()
+                .map(|f| f.lip.footwall.len() - 2)
+                .sum::<usize>()
+        );
         // The node at x = 150, y = 100: 85 m east of F1's trace, 5 m east of
         // F2's, both at their middle — the two drags add.
-        let at = cloud.iter().position(|p| p[0] == X0 + 150.0 && p[1] == Y0 + 100.0).expect("a node");
+        let at = cloud
+            .iter()
+            .position(|p| p[0] == X0 + 150.0 && p[1] == Y0 + 100.0)
+            .expect("a node");
         let s = (100.0 - 45.0) / 110.0;
-        let expected = 10.0 * 4.0 * s * (1.0 - s) * (1.0 - 85.0 / 100.0) + 4.0 * 4.0 * s * (1.0 - s) * (1.0 - 5.0 / 100.0);
+        let expected = 10.0 * 4.0 * s * (1.0 - s) * (1.0 - 85.0 / 100.0)
+            + 4.0 * 4.0 * s * (1.0 - s) * (1.0 - 5.0 / 100.0);
         assert!(((cloud[at][2] - torn.points[at][2]) - expected).abs() < 1e-9);
     }
 }

@@ -45,10 +45,30 @@ const TABLE: &str = "c0000000-0000-4000-8000-000000000002";
 const SET: &str = "d0000000-0000-4000-8000-000000000001";
 const CHART_SET: &str = "d0000000-0000-4000-8000-000000000002";
 
-const RED: Rgba = Rgba { r: 1.0, g: 0.0, b: 0.0, a: 1.0 };
-const BLUE: Rgba = Rgba { r: 0.0, g: 0.0, b: 1.0, a: 1.0 };
-const GREEN: Rgba = Rgba { r: 0.0, g: 1.0, b: 0.0, a: 1.0 };
-const GONE: Rgba = Rgba { r: 0.0, g: 0.0, b: 0.0, a: 0.0 };
+const RED: Rgba = Rgba {
+    r: 1.0,
+    g: 0.0,
+    b: 0.0,
+    a: 1.0,
+};
+const BLUE: Rgba = Rgba {
+    r: 0.0,
+    g: 0.0,
+    b: 1.0,
+    a: 1.0,
+};
+const GREEN: Rgba = Rgba {
+    r: 0.0,
+    g: 1.0,
+    b: 0.0,
+    a: 1.0,
+};
+const GONE: Rgba = Rgba {
+    r: 0.0,
+    g: 0.0,
+    b: 0.0,
+    a: 0.0,
+};
 
 // -- building blocks ---------------------------------------------------------
 
@@ -80,24 +100,37 @@ fn dor(uuid: &str, qualified_type: &str, title: &str) -> eml23::DataObjectRefere
 }
 
 fn citation(title: &str) -> eml23::Citation {
-    eml23::Citation { title: title.to_string(), ..Default::default() }
+    eml23::Citation {
+        title: title.to_string(),
+        ..Default::default()
+    }
 }
 
 fn integers(values: &[i64]) -> eml23::IntegerXmlArray {
-    eml23::IntegerXmlArray { count_per_value: 1, null_value: -1, values: values.to_vec(), ..Default::default() }
+    eml23::IntegerXmlArray {
+        count_per_value: 1,
+        null_value: -1,
+        values: values.to_vec(),
+        ..Default::default()
+    }
 }
 
 /// A 2.2 frame at these measured depths, with these mappings.
-fn frame(mds: &[f64], maps: Vec<resqml22::IntervalStratigraphicUnits>) -> resqml22::WellboreFrameRepresentation {
+fn frame(
+    mds: &[f64],
+    maps: Vec<resqml22::IntervalStratigraphicUnits>,
+) -> resqml22::WellboreFrameRepresentation {
     resqml22::WellboreFrameRepresentation {
         uuid: FRAME.to_string(),
         citation: citation("F1 — frame"),
         node_count: mds.len() as i64,
-        node_md: Some(eml23::AbstractFloatingPointArray::FloatingPointXmlArray(eml23::FloatingPointXmlArray {
-            count_per_value: 1,
-            values: mds.to_vec(),
-            ..Default::default()
-        })),
+        node_md: Some(eml23::AbstractFloatingPointArray::FloatingPointXmlArray(
+            eml23::FloatingPointXmlArray {
+                count_per_value: 1,
+                values: mds.to_vec(),
+                ..Default::default()
+            },
+        )),
         trajectory: dor(TRAJECTORY, "resqml22.WellboreTrajectoryRepresentation", "F1"),
         interval_stratigraphic_units: maps,
         ..Default::default()
@@ -111,7 +144,11 @@ fn mapping(rank: &str, elements: &[i64], ends: &[i64]) -> resqml22::IntervalStra
             elements: Some(eml23::AbstractValueArray::IntegerXmlArray(integers(elements))),
             cumulative_length: Some(eml23::AbstractIntegerArray::IntegerXmlArray(integers(ends))),
         },
-        stratigraphic_organization_interpretation: dor(rank, "resqml22.StratigraphicColumnRankInterpretation", "rank"),
+        stratigraphic_organization_interpretation: dor(
+            rank,
+            "resqml22.StratigraphicColumnRankInterpretation",
+            "rank",
+        ),
     }
 }
 
@@ -125,7 +162,13 @@ fn rank(uuid: &str, units: &[&str]) -> resqml22::StratigraphicColumnRankInterpre
         rank_in_stratigraphic_column: 1,
         stratigraphic_units: units
             .iter()
-            .map(|unit| dor(unit, "resqml22.StratigraphicUnitInterpretation", "a stale cached title"))
+            .map(|unit| {
+                dor(
+                    unit,
+                    "resqml22.StratigraphicUnitInterpretation",
+                    "a stale cached title",
+                )
+            })
             .collect(),
         interpreted_feature: dor(FEATURE, "resqml22.RockVolumeFeature", "column"),
         ..Default::default()
@@ -197,7 +240,10 @@ fn sections_come_from_the_interval_units_through_the_rank() {
     // order `age` means. Not the order the uuids sort in, and not the order
     // the objects are added to the package below.
     let the_rank = rank(RANK, &[PRIABONIAN, BARTONIAN, LUTETIAN]);
-    let well = frame(&[0.0, 10.0, 25.0, 40.0, 60.0], vec![mapping(RANK, &[0, 1, -1, 2], &[1, 2, 3, 4])]);
+    let well = frame(
+        &[0.0, 10.0, 25.0, 40.0, 60.0],
+        vec![mapping(RANK, &[0, 1, -1, 2], &[1, 2, 3, 4])],
+    );
     let source = held(vec![
         unit(LUTETIAN, "Lutetian"),
         unit(BARTONIAN, "Bartonian"),
@@ -206,29 +252,53 @@ fn sections_come_from_the_interval_units_through_the_rank() {
         boxed(well.clone()),
     ]);
     let set = graphics(&[(PRIABONIAN, RED), (LUTETIAN, BLUE)]);
-    let known = Known { graphics: &set, units: &[] };
+    let known = Known {
+        graphics: &set,
+        units: &[],
+    };
 
     let strata = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &known)
         .expect("the frame maps its intervals");
 
-    assert_eq!(strata.source, Source::IntervalUnits { ranks: vec![RANK.to_string()] });
+    assert_eq!(
+        strata.source,
+        Source::IntervalUnits {
+            ranks: vec![RANK.to_string()]
+        }
+    );
     // The whole rank, in its order — a legend for every frame mapped through it
     // — and each title the unit's own, not the stale one the rank cached.
     let titles: Vec<&str> = strata.units.iter().map(|unit| unit.title.as_str()).collect();
     assert_eq!(titles, ["Priabonian", "Bartonian", "Lutetian"]);
-    assert_eq!(strata.units.iter().map(|unit| unit.code).collect::<Vec<_>>(), [0.0, 1.0, 2.0]);
+    assert_eq!(
+        strata.units.iter().map(|unit| unit.code).collect::<Vec<_>>(),
+        [0.0, 1.0, 2.0]
+    );
 
-    assert_eq!(units_of(&strata), [Some("Priabonian"), Some("Bartonian"), None, Some("Lutetian")]);
-    let spans: Vec<(f64, f64)> = strata.sections.iter().map(|section| (section.top, section.base)).collect();
+    assert_eq!(
+        units_of(&strata),
+        [Some("Priabonian"), Some("Bartonian"), None, Some("Lutetian")]
+    );
+    let spans: Vec<(f64, f64)> = strata
+        .sections
+        .iter()
+        .map(|section| (section.top, section.base))
+        .collect();
     assert_eq!(spans, [(0.0, 10.0), (10.0, 25.0), (25.0, 40.0), (40.0, 60.0)]);
 
     // The colour is the unit's own entry, and the object it came from is said.
-    assert_eq!(strata.colour_of(&strata.sections[0]).map(Rgba::to_hex), Some("#ff0000ff".to_string()));
+    assert_eq!(
+        strata.colour_of(&strata.sections[0]).map(Rgba::to_hex),
+        Some("#ff0000ff".to_string())
+    );
     assert_eq!(strata.units[0].colour_from.as_deref(), Some(PRIABONIAN));
     // Bartonian has none, and none is made up.
     assert_eq!(strata.units[1].colour, None);
     assert!(
-        strata.notes.iter().any(|note| note.contains("Bartonian") && note.contains("no colour")),
+        strata
+            .notes
+            .iter()
+            .any(|note| note.contains("Bartonian") && note.contains("no colour")),
         "an uncoloured unit is said: {:?}",
         strata.notes
     );
@@ -241,7 +311,12 @@ fn sections_come_from_the_interval_units_through_the_rank() {
         ["#ff0000ff", "#00000000", "#00000000", "#0000ffff", "#0000ffff"]
     );
     // And the caller's colour when it gives one.
-    let grey = Rgba { r: 0.5, g: 0.5, b: 0.5, a: 1.0 };
+    let grey = Rgba {
+        r: 0.5,
+        g: 0.5,
+        b: 0.5,
+        a: 1.0,
+    };
     assert_eq!(node_hex(&strata, grey)[1], grey.to_hex());
 }
 
@@ -256,7 +331,10 @@ fn sections_come_from_the_interval_units_through_the_rank() {
 #[test]
 fn a_unit_the_file_does_not_colour_takes_the_callers_palette_and_says_so() {
     let the_rank = rank(RANK, &[PRIABONIAN, BARTONIAN, LUTETIAN, YPRESIAN]);
-    let well = frame(&[0.0, 10.0, 20.0, 30.0], vec![mapping(RANK, &[3, 1, 0], &[1, 2, 3])]);
+    let well = frame(
+        &[0.0, 10.0, 20.0, 30.0],
+        vec![mapping(RANK, &[3, 1, 0], &[1, 2, 3])],
+    );
     let source = held(vec![
         unit(PRIABONIAN, "Priabonian"),
         unit(BARTONIAN, "Bartonian"),
@@ -265,22 +343,42 @@ fn a_unit_the_file_does_not_colour_takes_the_callers_palette_and_says_so() {
         boxed(the_rank),
     ]);
     let set = graphics(&[(PRIABONIAN, RED), (LUTETIAN, BLUE)]);
-    let known = Known { graphics: &set, units: &[] };
-    let strata = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &known).expect("it reads");
-    assert_eq!(units_of(&strata), [Some("Ypresian"), Some("Bartonian"), Some("Priabonian")]);
+    let known = Known {
+        graphics: &set,
+        units: &[],
+    };
+    let strata = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &known)
+        .expect("it reads");
+    assert_eq!(
+        units_of(&strata),
+        [Some("Ypresian"), Some("Bartonian"), Some("Priabonian")]
+    );
 
-    let grey = Rgba { r: 0.5, g: 0.5, b: 0.5, a: 1.0 };
+    let grey = Rgba {
+        r: 0.5,
+        g: 0.5,
+        b: 0.5,
+        a: 1.0,
+    };
     let palette = [GREEN, grey];
     assert_eq!(
         strata.drawn(&palette),
-        [Drawn::File(RED), Drawn::Fallback(GREEN), Drawn::File(BLUE), Drawn::Fallback(grey)],
+        [
+            Drawn::File(RED),
+            Drawn::Fallback(GREEN),
+            Drawn::File(BLUE),
+            Drawn::Fallback(grey)
+        ],
         "the file's colour where it gives one, the palette in the rank's order elsewhere"
     );
     // The unit's own colour stays `None`: the palette is how it is drawn, not
     // what the file says.
     assert_eq!(strata.units[1].colour, None);
     let hex = |bytes: Vec<u8>| -> Vec<String> {
-        bytes.chunks(4).map(|c| format!("#{:02x}{:02x}{:02x}{:02x}", c[0], c[1], c[2], c[3])).collect()
+        bytes
+            .chunks(4)
+            .map(|c| format!("#{:02x}{:02x}{:02x}{:02x}", c[0], c[1], c[2], c[3]))
+            .collect()
     };
     assert_eq!(
         hex(strata.node_colours_with(GONE, &palette)),
@@ -289,7 +387,14 @@ fn a_unit_the_file_does_not_colour_takes_the_callers_palette_and_says_so() {
     // No palette: what it did before — the colour of absent values.
     assert_eq!(hex(strata.node_colours_with(GONE, &[])), node_hex(&strata, GONE));
     assert_eq!(node_hex(&strata, GONE)[..2], ["#00000000", "#00000000"]);
-    assert!(strata.drawn(&[]).iter().filter(|drawn| **drawn == Drawn::Nothing).count() == 2);
+    assert!(
+        strata
+            .drawn(&[])
+            .iter()
+            .filter(|drawn| **drawn == Drawn::Nothing)
+            .count()
+            == 2
+    );
 
     // Two uncoloured units and one colour: they share it, and that is said.
     assert!(!strata.fallback_cycled(&palette));
@@ -312,7 +417,10 @@ fn a_unit_the_file_does_not_colour_takes_the_callers_palette_and_says_so() {
 #[test]
 fn every_set_is_read_and_two_that_disagree_give_the_later_statement_and_say_so() {
     let the_rank = rank(RANK, &[PRIABONIAN, BARTONIAN, LUTETIAN]);
-    let well = frame(&[0.0, 10.0, 20.0, 30.0], vec![mapping(RANK, &[0, 1, 2], &[1, 2, 3])]);
+    let well = frame(
+        &[0.0, 10.0, 20.0, 30.0],
+        vec![mapping(RANK, &[0, 1, 2], &[1, 2, 3])],
+    );
     let source = held(vec![
         unit(PRIABONIAN, "Priabonian"),
         unit(BARTONIAN, "Bartonian"),
@@ -321,10 +429,17 @@ fn every_set_is_read_and_two_that_disagree_give_the_later_statement_and_say_so()
     ]);
     let sets = vec![
         (SET.to_string(), one_set(&[(FEATURE, GREEN), (LUTETIAN, RED)])),
-        (CHART_SET.to_string(), one_set(&[(BARTONIAN, BLUE), (LUTETIAN, BLUE)])),
+        (
+            CHART_SET.to_string(),
+            one_set(&[(BARTONIAN, BLUE), (LUTETIAN, BLUE)]),
+        ),
     ];
-    let known = Known { graphics: &sets, units: &[] };
-    let strata = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &known).expect("it reads");
+    let known = Known {
+        graphics: &sets,
+        units: &[],
+    };
+    let strata = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &known)
+        .expect("it reads");
 
     // Priabonian has no entry of its own: its feature's, from the first set.
     assert_eq!(strata.units[0].colour, Some(GREEN));
@@ -337,7 +452,10 @@ fn every_set_is_read_and_two_that_disagree_give_the_later_statement_and_say_so()
     assert_eq!(strata.units[2].colour, Some(BLUE));
     assert_eq!(strata.units[2].colour_from.as_deref(), Some(LUTETIAN));
     assert!(
-        strata.notes.iter().any(|note| note.contains(LUTETIAN) && note.contains(SET) && note.contains("later statement")),
+        strata
+            .notes
+            .iter()
+            .any(|note| note.contains(LUTETIAN) && note.contains(SET) && note.contains("later statement")),
         "the disagreement names the set that is not taken: {:?}",
         strata.notes
     );
@@ -345,11 +463,17 @@ fn every_set_is_read_and_two_that_disagree_give_the_later_statement_and_say_so()
     // The package's order is the order of the statements: swapped, the other
     // set is the later one — and the answer is the one the colour column gives.
     let swapped = vec![sets[1].clone(), sets[0].clone()];
-    let known = Known { graphics: &swapped, units: &[] };
-    let again = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &known).expect("it reads");
+    let known = Known {
+        graphics: &swapped,
+        units: &[],
+    };
+    let again = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &known)
+        .expect("it reads");
     assert_eq!(again.units[2].colour, Some(RED));
     assert!(
-        again.notes.iter().any(|note| note.contains(LUTETIAN) && note.contains(CHART_SET) && note.contains("later statement")),
+        again.notes.iter().any(|note| note.contains(LUTETIAN)
+            && note.contains(CHART_SET)
+            && note.contains("later statement")),
         "{:?}",
         again.notes
     );
@@ -369,7 +493,10 @@ fn a_2_0_1_frame_indexes_its_units_by_their_declared_index() {
     };
     let the_rank = resqml20::StratigraphicColumnRankInterpretation {
         uuid: RANK.to_string(),
-        citation: energyml_eml_2_0::Citation { title: "formations".to_string(), ..Default::default() },
+        citation: energyml_eml_2_0::Citation {
+            title: "formations".to_string(),
+            ..Default::default()
+        },
         ordering_criteria: resqml20::OrderingCriteria::Age,
         index: 0,
         // Listed 5 then 3: a positional reading finds nothing at 3.
@@ -387,18 +514,25 @@ fn a_2_0_1_frame_indexes_its_units_by_their_declared_index() {
     };
     let well = resqml20::WellboreFrameRepresentation {
         uuid: FRAME.to_string(),
-        citation: energyml_eml_2_0::Citation { title: "F2".to_string(), ..Default::default() },
+        citation: energyml_eml_2_0::Citation {
+            title: "F2".to_string(),
+            ..Default::default()
+        },
         node_count: 3,
         // 100, 110, 120: a lattice, the only inline form 2.0.1 has.
-        node_md: Some(resqml20::AbstractDoubleArray::DoubleLatticeArray(resqml20::DoubleLatticeArray {
-            start_value: 100.0,
-            offset: vec![resqml20::DoubleConstantArray { value: 10.0, count: 2 }],
-        })),
+        node_md: Some(resqml20::AbstractDoubleArray::DoubleLatticeArray(
+            resqml20::DoubleLatticeArray {
+                start_value: 100.0,
+                offset: vec![resqml20::DoubleConstantArray {
+                    value: 10.0,
+                    count: 2,
+                }],
+            },
+        )),
         interval_stratigraphi_units: Some(resqml20::IntervalStratigraphicUnits {
-            unit_indices: Some(resqml20::AbstractIntegerArray::IntegerConstantArray(resqml20::IntegerConstantArray {
-                value: 3,
-                count: 2,
-            })),
+            unit_indices: Some(resqml20::AbstractIntegerArray::IntegerConstantArray(
+                resqml20::IntegerConstantArray { value: 3, count: 2 },
+            )),
             stratigraphic_organization: dor20(RANK, "StratigraphicColumnRankInterpretation", "formations"),
         }),
         trajectory: dor20(TRAJECTORY, "WellboreTrajectoryRepresentation", "F2"),
@@ -406,15 +540,27 @@ fn a_2_0_1_frame_indexes_its_units_by_their_declared_index() {
     };
     let source = held(vec![boxed(the_rank), boxed(well.clone())]);
 
-    let strata = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &Known::default())
-        .expect("the 2.0.1 spelling is read");
+    let strata = well_strata::of_frame(
+        &well,
+        &Wanted::IntervalUnits { rank: None },
+        &source,
+        &Known::default(),
+    )
+    .expect("the 2.0.1 spelling is read");
 
     assert_eq!(units_of(&strata), [Some("Calcaires"), Some("Calcaires")]);
     assert_eq!(strata.sections[1].top, 110.0);
     assert_eq!(strata.sections[1].base, 120.0);
     // The units are not in this package: the rank's cached titles are all there
     // is, and the reader says so rather than presenting them as the units'.
-    assert!(strata.notes.iter().any(|note| note.contains("not in the package")), "{:?}", strata.notes);
+    assert!(
+        strata
+            .notes
+            .iter()
+            .any(|note| note.contains("not in the package")),
+        "{:?}",
+        strata.notes
+    );
 }
 
 /// *"Since a single interval may corresponds to several units, the mapping is
@@ -424,22 +570,40 @@ fn a_2_0_1_frame_indexes_its_units_by_their_declared_index() {
 fn an_interval_naming_several_units_is_listed_and_drawn_as_none() {
     let the_rank = rank(RANK, &[PRIABONIAN, BARTONIAN]);
     let well = frame(&[0.0, 10.0, 20.0], vec![mapping(RANK, &[0, 1, 1], &[2, 3])]);
-    let source = held(vec![unit(PRIABONIAN, "Priabonian"), unit(BARTONIAN, "Bartonian"), boxed(the_rank)]);
+    let source = held(vec![
+        unit(PRIABONIAN, "Priabonian"),
+        unit(BARTONIAN, "Bartonian"),
+        boxed(the_rank),
+    ]);
     let set = graphics(&[(PRIABONIAN, RED), (BARTONIAN, BLUE)]);
-    let known = Known { graphics: &set, units: &[] };
+    let known = Known {
+        graphics: &set,
+        units: &[],
+    };
 
-    let strata = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &known).expect("it reads");
+    let strata = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &known)
+        .expect("it reads");
     assert_eq!(strata.sections[0].unit, None, "two units, and neither is chosen");
     assert_eq!(strata.sections[0].several, [0, 1]);
     assert_eq!(strata.sections[1].unit, Some(1));
-    assert!(strata.notes.iter().any(|note| note.contains("several units")), "{:?}", strata.notes);
+    assert!(
+        strata.notes.iter().any(|note| note.contains("several units")),
+        "{:?}",
+        strata.notes
+    );
     assert_eq!(node_hex(&strata, GONE), ["#00000000", "#0000ffff", "#0000ffff"]);
 }
 
 // -- a category property --------------------------------------------------------
 
 /// A category table keyed `10, 20, 35`, and a property naming its rows by key.
-fn category_package(values: &[i64]) -> (resqml22::WellboreFrameRepresentation, resqml22::DiscreteProperty, Prefetched) {
+fn category_package(
+    values: &[i64],
+) -> (
+    resqml22::WellboreFrameRepresentation,
+    resqml22::DiscreteProperty,
+    Prefetched,
+) {
     let well = frame(&[0.0, 5.0, 12.0, 20.0, 31.0], Vec::new());
     let table = eml23::ColumnBasedTable {
         uuid: TABLE.to_string(),
@@ -460,7 +624,9 @@ fn category_package(values: &[i64]) -> (resqml22::WellboreFrameRepresentation, r
         key_column: vec![eml23::Column {
             title: Some("STRA".to_string()),
             value_count_per_row: 1,
-            values: Some(eml23::AbstractValueArray::IntegerXmlArray(integers(&[10, 20, 35]))),
+            values: Some(eml23::AbstractValueArray::IntegerXmlArray(integers(&[
+                10, 20, 35,
+            ]))),
             ..Default::default()
         }],
         ..Default::default()
@@ -492,19 +658,31 @@ fn a_category_is_looked_up_by_its_key_not_by_its_position() {
         (YPRESIAN.to_string(), "Lutetian".to_string()),
     ];
     let set = graphics(&[(BARTONIAN, GREEN)]);
-    let known = Known { graphics: &set, units: &units };
+    let known = Known {
+        graphics: &set,
+        units: &units,
+    };
 
     let strata = well_strata::of_frame(&well, &Wanted::Category { property: &property }, &source, &known)
         .expect("the property names its rows");
 
     assert_eq!(
         strata.source,
-        Source::Category { property: PROPERTY.to_string(), table: TABLE.to_string() }
+        Source::Category {
+            property: PROPERTY.to_string(),
+            table: TABLE.to_string()
+        }
     );
-    assert_eq!(units_of(&strata), [Some("Bartonian"), Some("Lutetian"), Some("Priabonian"), None]);
+    assert_eq!(
+        units_of(&strata),
+        [Some("Bartonian"), Some("Lutetian"), Some("Priabonian"), None]
+    );
     // One unit per row, keyed on the key — what the front end's category legend
     // keys on too.
-    assert_eq!(strata.units.iter().map(|unit| unit.code).collect::<Vec<_>>(), [10.0, 20.0, 35.0]);
+    assert_eq!(
+        strata.units.iter().map(|unit| unit.code).collect::<Vec<_>>(),
+        [10.0, 20.0, 35.0]
+    );
 
     let bartonian = &strata.units[1];
     assert_eq!(bartonian.uuid.as_deref(), Some(BARTONIAN));
@@ -513,17 +691,29 @@ fn a_category_is_looked_up_by_its_key_not_by_its_position() {
 
     let lutetian = &strata.units[0];
     assert_eq!(lutetian.uuid, None, "two units carry that title");
-    assert!(strata.notes.iter().any(|note| note.contains("matches 2 units")), "{:?}", strata.notes);
+    assert!(
+        strata.notes.iter().any(|note| note.contains("matches 2 units")),
+        "{:?}",
+        strata.notes
+    );
 }
 
 #[test]
 fn a_code_no_row_holds_is_refused_by_name() {
     let (well, property, source) = category_package(&[20, 15, 35, 10]);
-    let refused = well_strata::of_frame(&well, &Wanted::Category { property: &property }, &source, &Known::default())
-        .expect_err("15 names no row");
+    let refused = well_strata::of_frame(
+        &well,
+        &Wanted::Category { property: &property },
+        &source,
+        &Known::default(),
+    )
+    .expect_err("15 names no row");
     assert!(matches!(refused, Refusal::Defect { .. }), "{refused:?}");
     let said = refused.to_string();
-    assert!(said.contains("stores 15") && said.contains("interval 1"), "{said}");
+    assert!(
+        said.contains("stores 15") && said.contains("interval 1"),
+        "{said}"
+    );
 }
 
 // -- refusals -----------------------------------------------------------------
@@ -532,18 +722,31 @@ fn a_code_no_row_holds_is_refused_by_name() {
 fn a_frame_that_maps_no_unit_is_an_absence_not_a_fault() {
     let well = frame(&[0.0, 10.0], Vec::new());
     let source = held(vec![boxed(well.clone())]);
-    let refused = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &Known::default())
-        .expect_err("nothing to read");
+    let refused = well_strata::of_frame(
+        &well,
+        &Wanted::IntervalUnits { rank: None },
+        &source,
+        &Known::default(),
+    )
+    .expect_err("nothing to read");
     assert!(refused.is_absence(), "{refused:?}");
-    assert!(refused.to_string().contains("IntervalStratigraphicUnits"), "{refused}");
+    assert!(
+        refused.to_string().contains("IntervalStratigraphicUnits"),
+        "{refused}"
+    );
 }
 
 #[test]
 fn a_rank_the_package_does_not_hold_is_named() {
     let well = frame(&[0.0, 10.0], vec![mapping(RANK, &[0], &[1])]);
     let source = held(vec![boxed(well.clone())]);
-    let refused = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &Known::default())
-        .expect_err("the rank is missing");
+    let refused = well_strata::of_frame(
+        &well,
+        &Wanted::IntervalUnits { rank: None },
+        &source,
+        &Known::default(),
+    )
+    .expect_err("the rank is missing");
     assert!(refused.is_absence(), "{refused:?}");
     assert!(refused.to_string().contains(RANK), "{refused}");
 }
@@ -553,8 +756,13 @@ fn an_index_outside_its_rank_is_a_fault_of_the_file() {
     let the_rank = rank(RANK, &[PRIABONIAN, BARTONIAN, LUTETIAN]);
     let well = frame(&[0.0, 10.0, 20.0], vec![mapping(RANK, &[0, 7], &[1, 2])]);
     let source = held(vec![boxed(the_rank), boxed(well.clone())]);
-    let refused = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &Known::default())
-        .expect_err("7 is not in the rank");
+    let refused = well_strata::of_frame(
+        &well,
+        &Wanted::IntervalUnits { rank: None },
+        &source,
+        &Known::default(),
+    )
+    .expect_err("7 is not in the rank");
     assert!(matches!(refused, Refusal::Defect { .. }), "{refused:?}");
     let said = refused.to_string();
     assert!(said.contains("unit 7") && said.contains("interval 1"), "{said}");
@@ -567,8 +775,13 @@ fn a_mapping_one_interval_short_is_refused() {
     let the_rank = rank(RANK, &[PRIABONIAN]);
     let well = frame(&[0.0, 10.0, 20.0, 30.0], vec![mapping(RANK, &[0, 0], &[1, 2])]);
     let source = held(vec![boxed(the_rank), boxed(well.clone())]);
-    let refused = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &Known::default())
-        .expect_err("two runs for three intervals");
+    let refused = well_strata::of_frame(
+        &well,
+        &Wanted::IntervalUnits { rank: None },
+        &source,
+        &Known::default(),
+    )
+    .expect_err("two runs for three intervals");
     assert!(matches!(refused, Refusal::Defect { .. }), "{refused:?}");
     assert!(refused.to_string().contains("§5.34"), "{refused}");
 }
@@ -581,7 +794,10 @@ fn two_ranks_that_disagree_are_ambiguous_until_one_is_named() {
     let series = rank(OTHER_RANK, &[YPRESIAN]);
     let well = frame(
         &[0.0, 10.0, 20.0],
-        vec![mapping(RANK, &[0, -1], &[1, 2]), mapping(OTHER_RANK, &[0, 0], &[1, 2])],
+        vec![
+            mapping(RANK, &[0, -1], &[1, 2]),
+            mapping(OTHER_RANK, &[0, 0], &[1, 2]),
+        ],
     );
     let source = held(vec![
         unit(BARTONIAN, "Bartonian"),
@@ -591,31 +807,54 @@ fn two_ranks_that_disagree_are_ambiguous_until_one_is_named() {
         boxed(well.clone()),
     ]);
 
-    let refused = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &Known::default())
-        .expect_err("interval 0 is given two units");
+    let refused = well_strata::of_frame(
+        &well,
+        &Wanted::IntervalUnits { rank: None },
+        &source,
+        &Known::default(),
+    )
+    .expect_err("interval 0 is given two units");
     assert!(matches!(refused, Refusal::Ambiguous { .. }), "{refused:?}");
     let said = refused.to_string();
-    assert!(said.contains("Bartonian") && said.contains("Eocene") && said.contains("interval 0"), "{said}");
+    assert!(
+        said.contains("Bartonian") && said.contains("Eocene") && said.contains("interval 0"),
+        "{said}"
+    );
 
     let chosen = well_strata::of_frame(
         &well,
-        &Wanted::IntervalUnits { rank: Some(&OTHER_RANK.to_uppercase()) },
+        &Wanted::IntervalUnits {
+            rank: Some(&OTHER_RANK.to_uppercase()),
+        },
         &source,
         &Known::default(),
     )
     .expect("one rank named");
     assert_eq!(units_of(&chosen), [Some("Eocene"), Some("Eocene")]);
-    assert_eq!(chosen.source, Source::IntervalUnits { ranks: vec![OTHER_RANK.to_string()] });
+    assert_eq!(
+        chosen.source,
+        Source::IntervalUnits {
+            ranks: vec![OTHER_RANK.to_string()]
+        }
+    );
 
     // Where they do **not** disagree — a mapping per rank, each interval named
     // by one of them — the two merge, which is how a package written by
     // `wells-and-properties-from-table` maps its passes.
     let merged = frame(
         &[0.0, 10.0, 20.0],
-        vec![mapping(RANK, &[-1, 0], &[1, 2]), mapping(OTHER_RANK, &[0, -1], &[1, 2])],
+        vec![
+            mapping(RANK, &[-1, 0], &[1, 2]),
+            mapping(OTHER_RANK, &[0, -1], &[1, 2]),
+        ],
     );
-    let strata = well_strata::of_frame(&merged, &Wanted::IntervalUnits { rank: None }, &source, &Known::default())
-        .expect("no interval is given two units");
+    let strata = well_strata::of_frame(
+        &merged,
+        &Wanted::IntervalUnits { rank: None },
+        &source,
+        &Known::default(),
+    )
+    .expect("no interval is given two units");
     assert_eq!(units_of(&strata), [Some("Eocene"), Some("Bartonian")]);
 }
 
@@ -628,14 +867,27 @@ fn an_occurrence_is_refused_as_the_choice_it_leaves_open() {
     let occurrence = resqml22::GeologicUnitOccurrenceInterpretation {
         uuid: RANK.to_string(),
         citation: citation("along F1"),
-        geologic_unit: vec![dor(BARTONIAN, "resqml22.StratigraphicUnitInterpretation", "Bartonian")],
-        is_occurrence_of: Some(dor(OTHER_RANK, "resqml22.StratigraphicColumnRankInterpretation", "stages")),
+        geologic_unit: vec![dor(
+            BARTONIAN,
+            "resqml22.StratigraphicUnitInterpretation",
+            "Bartonian",
+        )],
+        is_occurrence_of: Some(dor(
+            OTHER_RANK,
+            "resqml22.StratigraphicColumnRankInterpretation",
+            "stages",
+        )),
         ..Default::default()
     };
     let well = frame(&[0.0, 10.0], vec![mapping(RANK, &[0], &[1])]);
     let source = held(vec![boxed(occurrence), boxed(well.clone())]);
-    let refused = well_strata::of_frame(&well, &Wanted::IntervalUnits { rank: None }, &source, &Known::default())
-        .expect_err("two lists, and nothing says which");
+    let refused = well_strata::of_frame(
+        &well,
+        &Wanted::IntervalUnits { rank: None },
+        &source,
+        &Known::default(),
+    )
+    .expect_err("two lists, and nothing says which");
     assert!(matches!(refused, Refusal::Ambiguous { .. }), "{refused:?}");
     assert!(refused.to_string().contains("IsOccurrenceOf"), "{refused}");
 }
@@ -643,8 +895,13 @@ fn an_occurrence_is_refused_as_the_choice_it_leaves_open() {
 #[test]
 fn a_witsml_wellbore_is_refused_by_name_rather_than_drawn() {
     let geology = energyml_witsml_2_1::WellboreGeology::default();
-    let refused = well_strata::of_frame(&geology, &Wanted::IntervalUnits { rank: None }, &held(Vec::new()), &Known::default())
-        .expect_err("no WITSML wellbore is drawn");
+    let refused = well_strata::of_frame(
+        &geology,
+        &Wanted::IntervalUnits { rank: None },
+        &held(Vec::new()),
+        &Known::default(),
+    )
+    .expect_err("no WITSML wellbore is drawn");
     assert!(matches!(refused, Refusal::Unsupported { .. }), "{refused:?}");
     assert!(refused.to_string().contains("WITSML"), "{refused}");
 }
@@ -652,8 +909,13 @@ fn a_witsml_wellbore_is_refused_by_name_rather_than_drawn() {
 #[test]
 fn what_is_not_a_frame_is_refused_by_name() {
     let surface = resqml22::TriangulatedSetRepresentation::default();
-    let refused = well_strata::of_frame(&surface, &Wanted::IntervalUnits { rank: None }, &held(Vec::new()), &Known::default())
-        .expect_err("a surface has no MD");
+    let refused = well_strata::of_frame(
+        &surface,
+        &Wanted::IntervalUnits { rank: None },
+        &held(Vec::new()),
+        &Known::default(),
+    )
+    .expect_err("a surface has no MD");
     assert!(matches!(refused, Refusal::Unsupported { .. }), "{refused:?}");
     assert!(refused.to_string().contains("NodeMd"), "{refused}");
 }

@@ -135,7 +135,12 @@ impl Area {
     /// which of the two it did.
     pub fn bounds(&self) -> (f64, f64, f64, f64) {
         match self {
-            Area::Box { west, south, east, north } => (*west, *south, *east, *north),
+            Area::Box {
+                west,
+                south,
+                east,
+                north,
+            } => (*west, *south, *east, *north),
             Area::Ring(points) => points.iter().fold(
                 (f64::MAX, f64::MAX, f64::MIN, f64::MIN),
                 |(w, s, e, n), (lon, lat)| (w.min(*lon), s.min(*lat), e.max(*lon), n.max(*lat)),
@@ -203,6 +208,9 @@ impl Page {
 
     /// The next one, of the same size.
     pub fn next(self) -> Self {
-        Page { start: self.start + self.count, count: self.count }
+        Page {
+            start: self.start + self.count,
+            count: self.count,
+        }
     }
 }

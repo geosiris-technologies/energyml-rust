@@ -62,7 +62,13 @@ pub struct Dialect {
 
 impl Default for Dialect {
     fn default() -> Self {
-        Dialect { separator: ',', comment: Some('#'), skip: 0, header: true, decimal: '.' }
+        Dialect {
+            separator: ',',
+            comment: Some('#'),
+            skip: 0,
+            header: true,
+            decimal: '.',
+        }
     }
 }
 
@@ -84,9 +90,13 @@ impl Dialect {
     /// combination that is not ambiguous.
     pub fn sniff(text: &str) -> Dialect {
         let base = Dialect::default();
-        let Some(line) = first_line(text, &base) else { return base };
-        let counts: Vec<(char, usize)> =
-            CANDIDATES.iter().map(|sep| (*sep, outside_quotes(&line, *sep))).collect();
+        let Some(line) = first_line(text, &base) else {
+            return base;
+        };
+        let counts: Vec<(char, usize)> = CANDIDATES
+            .iter()
+            .map(|sep| (*sep, outside_quotes(&line, *sep)))
+            .collect();
         let best = counts.iter().filter(|(_, n)| *n > 0).max_by_key(|(_, n)| *n);
         match best {
             Some((sep, _)) => Dialect {
@@ -167,7 +177,9 @@ impl Table {
     /// spaces.
     pub fn column(&self, name: &str) -> Option<usize> {
         let wanted = name.trim().to_ascii_lowercase();
-        self.headers.iter().position(|h| h.trim().to_ascii_lowercase() == wanted)
+        self.headers
+            .iter()
+            .position(|h| h.trim().to_ascii_lowercase() == wanted)
     }
 
     /// How many rows.
@@ -244,7 +256,12 @@ fn finish(
         }
         kept.push(cells);
     }
-    Ok(Table { name: name.to_string(), headers, rows: kept, dialect })
+    Ok(Table {
+        name: name.to_string(),
+        headers,
+        rows: kept,
+        dialect,
+    })
 }
 
 /// The names carried more than once, in the order they appear.

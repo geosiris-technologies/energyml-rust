@@ -25,11 +25,17 @@ const SERIES: &str = "1a1a1a1a-0000-4000-8000-000000000004";
 const ORGANISATION: &str = "1a1a1a1a-0000-4000-8000-000000000005";
 
 fn when() -> When {
-    When { creation: "2026-09-25T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-25T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 fn object(uuid: &str, qualified_type: &str, title: &str) -> Source {
-    Source::Object(Known { reference: Some(Ref::new(uuid, qualified_type, title)), ..Default::default() })
+    Source::Object(Known {
+        reference: Some(Ref::new(uuid, qualified_type, title)),
+        ..Default::default()
+    })
 }
 
 fn bag() -> Pieces {
@@ -63,7 +69,10 @@ fn monthly_2025() -> Vec<&'static str> {
 /// takes, computed independently of the operation (it goes through
 /// `unix_seconds` too, but never through `prodml_doublet` itself).
 fn monthly_hours() -> Vec<f64> {
-    let seconds: Vec<i64> = monthly_2025().iter().map(|text| unix_seconds(text).expect("a date")).collect();
+    let seconds: Vec<i64> = monthly_2025()
+        .iter()
+        .map(|text| unix_seconds(text).expect("a date"))
+        .collect();
     let anchor = seconds[0];
     seconds.iter().map(|s| (s - anchor) as f64 / 3600.0).collect()
 }
@@ -86,21 +95,31 @@ fn choices() -> Choices {
         .set("standardConditions", "15 degC 1 atm")
         .set("producerHeadTemperature", 16.5)
         .set("producerHeadPressure", 3.2)
-        .set("assetIdentifier", "eml://lutetia.geosiris.com/well({wellbore})/wellbore(01)/wellhead")
+        .set(
+            "assetIdentifier",
+            "eml://lutetia.geosiris.com/well({wellbore})/wellbore(01)/wellhead",
+        )
         .set("samplesFrom", "2025-06-02T00:00:00Z")
         .set("sampleDays", 2)
         .set("sampleStep", 60)
 }
 
 fn planned(pieces: &Pieces, choices: Choices) -> Result<Plan, String> {
-    Registry::new().plan("prodml-doublet", pieces, &choices, &Identity::derived(), &when()).map_err(|why| why.to_string())
+    Registry::new()
+        .plan("prodml-doublet", pieces, &choices, &Identity::derived(), &when())
+        .map_err(|why| why.to_string())
 }
 
 fn titled<'a>(plan: &'a Plan, qualified: &str, title: &str) -> &'a energyml_build::operation::NewObject {
     plan.objects
         .iter()
         .find(|object| object.qualified_type == qualified && object.title == title)
-        .unwrap_or_else(|| panic!("a `{qualified}` titled `{title}` in the plan: {:?}", plan.objects.iter().map(|o| &o.title).collect::<Vec<_>>()))
+        .unwrap_or_else(|| {
+            panic!(
+                "a `{qualified}` titled `{title}` in the plan: {:?}",
+                plan.objects.iter().map(|o| &o.title).collect::<Vec<_>>()
+            )
+        })
 }
 
 /// The JSON of a plan's object, read back into its generated type — the road
@@ -112,7 +131,13 @@ fn read<T: energyml_core::value::Reflect + Clone>(object: &energyml_build::opera
     let root: &dyn DynObject = &*document.root;
     root.as_reflect()
         .downcast_ref::<T>()
-        .unwrap_or_else(|| panic!("`{}` does not read back as {}", object.title, std::any::type_name::<T>()))
+        .unwrap_or_else(|| {
+            panic!(
+                "`{}` does not read back as {}",
+                object.title,
+                std::any::type_name::<T>()
+            )
+        })
         .clone()
 }
 
@@ -138,21 +163,43 @@ fn thirteen_monthly_instants_make_twelve_periods_each_referencing_its_own_wellbo
     let producer_entity = titled(&plan, "prodml23.ReportingEntity", "GTH-1");
     let injector_entity = titled(&plan, "prodml23.ReportingEntity", "GTH-2");
 
-    let producer_report: prodml::WellProductionParameters = read(titled(&plan, "prodml23.WellProductionParameters", "GTH-1 — production"));
-    let injector_report: prodml::WellProductionParameters = read(titled(&plan, "prodml23.WellProductionParameters", "GTH-2 — injection"));
+    let producer_report: prodml::WellProductionParameters = read(titled(
+        &plan,
+        "prodml23.WellProductionParameters",
+        "GTH-1 — production",
+    ));
+    let injector_report: prodml::WellProductionParameters = read(titled(
+        &plan,
+        "prodml23.WellProductionParameters",
+        "GTH-2 — injection",
+    ));
 
-    assert_eq!(producer_report.production_period.len(), 12, "13 instants make 12 periods — n instants make n − 1 periods");
+    assert_eq!(
+        producer_report.production_period.len(),
+        12,
+        "13 instants make 12 periods — n instants make n − 1 periods"
+    );
     assert_eq!(injector_report.production_period.len(), 12);
 
     for period in &producer_report.production_period {
-        assert_eq!(period.reporting_entity.uuid, producer_entity.uuid, "a producer period names GTH-1, never GTH-2");
+        assert_eq!(
+            period.reporting_entity.uuid, producer_entity.uuid,
+            "a producer period names GTH-1, never GTH-2"
+        );
     }
     for period in &injector_report.production_period {
-        assert_eq!(period.reporting_entity.uuid, injector_entity.uuid, "an injector period names GTH-2, never GTH-1");
+        assert_eq!(
+            period.reporting_entity.uuid, injector_entity.uuid,
+            "an injector period names GTH-2, never GTH-1"
+        );
     }
 
     // The instants themselves, in order — not reshuffled, not dropped.
-    let starts: Vec<&str> = producer_report.production_period.iter().map(|p| p.start_time.as_str()).collect();
+    let starts: Vec<&str> = producer_report
+        .production_period
+        .iter()
+        .map(|p| p.start_time.as_str())
+        .collect();
     assert_eq!(starts, monthly_2025()[..12].to_vec());
 }
 
@@ -161,27 +208,55 @@ fn a_periods_mean_rate_times_its_duration_gives_back_the_laws_volume() {
     // Cross-checked against `energyml_analysis::flow_law` directly — a second
     // source of the same fact, never the operation's own arithmetic re-read.
     let plan = planned(&bag(), choices()).expect("a plan");
-    let producer_report: prodml::WellProductionParameters = read(titled(&plan, "prodml23.WellProductionParameters", "GTH-1 — production"));
+    let producer_report: prodml::WellProductionParameters = read(titled(
+        &plan,
+        "prodml23.WellProductionParameters",
+        "GTH-1 — production",
+    ));
 
     let expected = flow_law::periods(&law(), &monthly_hours()).unwrap();
     assert_eq!(producer_report.production_period.len(), expected.len());
 
     let mut total = 0.0;
     for (found, want) in producer_report.production_period.iter().zip(&expected) {
-        assert_eq!(found.duration.uom, energyml_eml_2_3::TimeUom::H, "a period's duration is in hours");
-        assert!((found.duration.value - want.hours()).abs() < 1e-9, "{} against {}", found.duration.value, want.hours());
+        assert_eq!(
+            found.duration.uom,
+            energyml_eml_2_3::TimeUom::H,
+            "a period's duration is in hours"
+        );
+        assert!(
+            (found.duration.value - want.hours()).abs() < 1e-9,
+            "{} against {}",
+            found.duration.value,
+            want.hours()
+        );
         let rate = found.product_rate.first().expect("a rate");
-        assert_eq!(rate.product_fluid_kind, prodml::ProductFluidKindExt::WaterMinusProcessed, "water - processed");
+        assert_eq!(
+            rate.product_fluid_kind,
+            prodml::ProductFluidKindExt::WaterMinusProcessed,
+            "water - processed"
+        );
         let flow = rate.volume_flow_rate.as_ref().expect("a flow rate");
-        assert_eq!(flow.flow_rate.uom, energyml_eml_2_3::VolumePerTimeUomWithLegacy::M3PerH);
-        assert!((flow.flow_rate.value - want.mean_rate).abs() < 1e-9, "{} against {}", flow.flow_rate.value, want.mean_rate);
+        assert_eq!(
+            flow.flow_rate.uom,
+            energyml_eml_2_3::VolumePerTimeUomWithLegacy::M3PerH
+        );
+        assert!(
+            (flow.flow_rate.value - want.mean_rate).abs() < 1e-9,
+            "{} against {}",
+            flow.flow_rate.value,
+            want.mean_rate
+        );
         // Volume = rate × duration, in the units the two fields carry.
         assert!((flow.flow_rate.value * found.duration.value - want.volume).abs() < 1e-6);
         total += flow.flow_rate.value * found.duration.value;
     }
 
     let recorded = double_param(&plan, "producedVolume");
-    assert!((recorded - total).abs() < 1e-6, "the activity's producedVolume ({recorded}) is rate × duration summed ({total})");
+    assert!(
+        (recorded - total).abs() < 1e-6,
+        "the activity's producedVolume ({recorded}) is rate × duration summed ({total})"
+    );
 }
 
 #[test]
@@ -189,7 +264,10 @@ fn the_injector_returns_what_the_producer_pumps_by_default() {
     let plan = planned(&bag(), choices()).expect("a plan");
     let produced = double_param(&plan, "producedVolume");
     let injected = double_param(&plan, "injectedVolume");
-    assert!((produced - injected).abs() < 1e-6, "reinjected defaults to 1 — the doublet's loop");
+    assert!(
+        (produced - injected).abs() < 1e-6,
+        "reinjected defaults to 1 — the doublet's loop"
+    );
 
     // A partial return is a different, smaller volume — not the same law
     // written twice.
@@ -206,9 +284,18 @@ fn the_head_series_name_their_wellbores_by_the_reference_models_uri_convention()
     // from the wellbore's own title, not a made-up asset name.
     let plan = planned(&bag(), choices()).expect("a plan");
 
-    let pressure: prodml::TimeSeriesData = read(titled(&plan, "prodml23.TimeSeriesData", "GTH-1 — wellhead pressure"));
-    let temperature: prodml::TimeSeriesData = read(titled(&plan, "prodml23.TimeSeriesData", "GTH-1 — wellhead temperature"));
-    let rate: prodml::TimeSeriesData = read(titled(&plan, "prodml23.TimeSeriesData", "GTH-2 — injection rate"));
+    let pressure: prodml::TimeSeriesData = read(titled(
+        &plan,
+        "prodml23.TimeSeriesData",
+        "GTH-1 — wellhead pressure",
+    ));
+    let temperature: prodml::TimeSeriesData = read(titled(
+        &plan,
+        "prodml23.TimeSeriesData",
+        "GTH-1 — wellhead temperature",
+    ));
+    let rate: prodml::TimeSeriesData =
+        read(titled(&plan, "prodml23.TimeSeriesData", "GTH-2 — injection rate"));
 
     let asset_of = |series: &prodml::TimeSeriesData| -> String {
         series
@@ -219,20 +306,45 @@ fn the_head_series_name_their_wellbores_by_the_reference_models_uri_convention()
             .value
             .clone()
     };
-    assert_eq!(asset_of(&pressure), "eml://lutetia.geosiris.com/well(GTH-1)/wellbore(01)/wellhead");
-    assert_eq!(asset_of(&temperature), "eml://lutetia.geosiris.com/well(GTH-1)/wellbore(01)/wellhead");
-    assert_eq!(asset_of(&rate), "eml://lutetia.geosiris.com/well(GTH-2)/wellbore(01)/wellhead");
+    assert_eq!(
+        asset_of(&pressure),
+        "eml://lutetia.geosiris.com/well(GTH-1)/wellbore(01)/wellhead"
+    );
+    assert_eq!(
+        asset_of(&temperature),
+        "eml://lutetia.geosiris.com/well(GTH-1)/wellbore(01)/wellhead"
+    );
+    assert_eq!(
+        asset_of(&rate),
+        "eml://lutetia.geosiris.com/well(GTH-2)/wellbore(01)/wellhead"
+    );
 
     // §3, rule 4: invented values are qualified `simulated`, not `measured`.
     let qualifier_of = |series: &prodml::TimeSeriesData| -> String {
-        series.key.iter().find(|k| k.keyword == prodml::TimeSeriesKeyword::Qualifier).expect("a qualifier key").value.clone()
+        series
+            .key
+            .iter()
+            .find(|k| k.keyword == prodml::TimeSeriesKeyword::Qualifier)
+            .expect("a qualifier key")
+            .value
+            .clone()
     };
     assert_eq!(qualifier_of(&pressure), "simulated");
     assert_eq!(qualifier_of(&rate), "simulated");
 
     // §7.6: `product` is written for the rate only.
-    assert!(rate.key.iter().any(|k| k.keyword == prodml::TimeSeriesKeyword::Product && k.value == "water"));
-    assert!(!pressure.key.iter().any(|k| k.keyword == prodml::TimeSeriesKeyword::Product), "meaningless for a pressure");
+    assert!(
+        rate.key
+            .iter()
+            .any(|k| k.keyword == prodml::TimeSeriesKeyword::Product && k.value == "water")
+    );
+    assert!(
+        !pressure
+            .key
+            .iter()
+            .any(|k| k.keyword == prodml::TimeSeriesKeyword::Product),
+        "meaningless for a pressure"
+    );
 }
 
 #[test]
@@ -242,9 +354,20 @@ fn a_percent_encoded_title_still_names_the_right_wellbore() {
         .with("injector", object(INJECTOR, "witsml21.Wellbore", "GTH-2"))
         .with("series", object(SERIES, "eml23.TimeSeries", "Monthly 2025"));
     let plan = planned(&with_sidetrack, choices()).expect("a plan");
-    let pressure: prodml::TimeSeriesData = read(titled(&plan, "prodml23.TimeSeriesData", "GTH-3 ST1 — wellhead pressure"));
-    let asset = pressure.key.iter().find(|k| k.keyword == prodml::TimeSeriesKeyword::AssetIdentifier).unwrap();
-    assert_eq!(asset.value, "eml://lutetia.geosiris.com/well(GTH-3%20ST1)/wellbore(01)/wellhead");
+    let pressure: prodml::TimeSeriesData = read(titled(
+        &plan,
+        "prodml23.TimeSeriesData",
+        "GTH-3 ST1 — wellhead pressure",
+    ));
+    let asset = pressure
+        .key
+        .iter()
+        .find(|k| k.keyword == prodml::TimeSeriesKeyword::AssetIdentifier)
+        .unwrap();
+    assert_eq!(
+        asset.value,
+        "eml://lutetia.geosiris.com/well(GTH-3%20ST1)/wellbore(01)/wellhead"
+    );
 }
 
 // ---------------------------------------------------------------- the fluid system and the observing hole
@@ -253,14 +376,26 @@ fn a_percent_encoded_title_still_names_the_right_wellbore() {
 fn the_fluid_system_references_the_rock_fluid_organisation_when_one_is_given() {
     let with_organisation = bag().with(
         "fluidOrganization",
-        object(ORGANISATION, "resqml22.RockFluidOrganizationInterpretation", "Chalk water table"),
+        object(
+            ORGANISATION,
+            "resqml22.RockFluidOrganizationInterpretation",
+            "Chalk water table",
+        ),
     );
     let plan = planned(&with_organisation, choices()).expect("a plan");
     let fluid: prodml::FluidSystem = read(titled(&plan, "prodml23.FluidSystem", "Chalk water"));
-    assert_eq!(fluid.reservoir_fluid_kind, prodml::ReservoirFluidKind::Unknown, "none of the six hydrocarbon kinds fits fresh water");
+    assert_eq!(
+        fluid.reservoir_fluid_kind,
+        prodml::ReservoirFluidKind::Unknown,
+        "none of the six hydrocarbon kinds fits fresh water"
+    );
     assert_eq!(fluid.solution_gor.value, 0.0, "negligible, declared — not NaN");
     assert_eq!(
-        fluid.rock_fluid_organization_interpretation.as_ref().expect("a reference").uuid,
+        fluid
+            .rock_fluid_organization_interpretation
+            .as_ref()
+            .expect("a reference")
+            .uuid,
         ORGANISATION
     );
 
@@ -281,7 +416,10 @@ fn an_observing_wellbore_gets_its_own_reporting_entity_and_no_production() {
     let observing = titled(&plan, "prodml23.ReportingEntity", "GTH-3");
     let entity: prodml::ReportingEntity = read(observing);
     assert_eq!(entity.kind, prodml::ReportingEntityKind::Wellbore);
-    assert_eq!(entity.associated_object.as_ref().expect("a reference").uuid, OBSERVATION);
+    assert_eq!(
+        entity.associated_object.as_ref().expect("a reference").uuid,
+        OBSERVATION
+    );
 
     // No `WellProductionParameters` names GTH-3: an observing hole neither
     // produces nor injects.
@@ -296,7 +434,11 @@ fn an_observing_wellbore_gets_its_own_reporting_entity_and_no_production() {
             assert_ne!(period.reporting_entity.uuid, OBSERVATION);
         }
     }
-    assert_eq!(reports.len(), 2, "still exactly the producer's and the injector's");
+    assert_eq!(
+        reports.len(),
+        2,
+        "still exactly the producer's and the injector's"
+    );
 }
 
 // ---------------------------------------------------------------- the frozen sensor and its statistic
@@ -308,11 +450,15 @@ fn a_frozen_rate_window_repeats_the_last_reading_and_is_set_aside_from_the_daily
     // step) and not at the first sample, which `frozen_range` would refuse.
     let plan = planned(
         &bag(),
-        choices().set("frozen", "rate").set("frozenFrom", "2025-06-02T02:00:00Z").set("frozenMinutes", 120),
+        choices()
+            .set("frozen", "rate")
+            .set("frozenFrom", "2025-06-02T02:00:00Z")
+            .set("frozenMinutes", 120),
     )
     .expect("a plan");
 
-    let rate: prodml::TimeSeriesData = read(titled(&plan, "prodml23.TimeSeriesData", "GTH-2 — injection rate"));
+    let rate: prodml::TimeSeriesData =
+        read(titled(&plan, "prodml23.TimeSeriesData", "GTH-2 — injection rate"));
     let injector_law = law(); // reinjected = 1.0 by default: the same law.
     // One law for the whole doublet, anchored on the first stated instant
     // (2025-01-01): the head samples of 2025-06-02 lie on the same curve, 152
@@ -321,28 +467,52 @@ fn a_frozen_rate_window_repeats_the_last_reading_and_is_set_aside_from_the_daily
     let since_anchor = 152.0 * 24.0;
 
     let held = {
-        let prodml::AbstractValue::DoubleValue(sample) = &rate.data_value[1] else { panic!("a double sample") };
+        let prodml::AbstractValue::DoubleValue(sample) = &rate.data_value[1] else {
+            panic!("a double sample")
+        };
         sample.double_value.value
     };
     for rank in [2usize, 3] {
-        let prodml::AbstractValue::DoubleValue(sample) = &rate.data_value[rank] else { panic!("a double sample") };
-        assert_eq!(sample.double_value.status, Some(prodml::ValueStatus::Frozen), "sample {rank} is frozen");
-        assert_eq!(sample.double_value.value, held, "a frozen sensor repeats its last reading, sample {rank}");
+        let prodml::AbstractValue::DoubleValue(sample) = &rate.data_value[rank] else {
+            panic!("a double sample")
+        };
+        assert_eq!(
+            sample.double_value.status,
+            Some(prodml::ValueStatus::Frozen),
+            "sample {rank} is frozen"
+        );
+        assert_eq!(
+            sample.double_value.value, held,
+            "a frozen sensor repeats its last reading, sample {rank}"
+        );
     }
     // The rank just before and just after the gap are ordinary readings of
     // the declining law — not held.
-    let prodml::AbstractValue::DoubleValue(rank4) = &rate.data_value[4] else { panic!("a double sample") };
+    let prodml::AbstractValue::DoubleValue(rank4) = &rate.data_value[4] else {
+        panic!("a double sample")
+    };
     assert_eq!(rank4.double_value.status, None);
     assert!((rank4.double_value.value - injector_law.rate_at(since_anchor + 4.0)).abs() < 1e-9);
 
     // The daily statistic: the first day (ranks 0..24) with the two frozen
     // ranks set aside — computed independently through `flow_law::summary`.
-    let day: Vec<f64> = (0..24).filter(|rank| !(2..4).contains(rank)).map(|rank| injector_law.rate_at(since_anchor + rank as f64)).collect();
+    let day: Vec<f64> = (0..24)
+        .filter(|rank| !(2..4).contains(rank))
+        .map(|rank| injector_law.rate_at(since_anchor + rank as f64))
+        .collect();
     let want = flow_law::summary(&day).expect("a summary");
 
-    let statistic: prodml::TimeSeriesStatistic = read(titled(&plan, "prodml23.TimeSeriesStatistic", "GTH-2 — injection rate — daily statistic"));
+    let statistic: prodml::TimeSeriesStatistic = read(titled(
+        &plan,
+        "prodml23.TimeSeriesStatistic",
+        "GTH-2 — injection rate — daily statistic",
+    ));
     assert_eq!(statistic.uom, Some(energyml_eml_2_3::UnitOfMeasureExt::M3PerH));
-    assert_eq!(statistic.minimum.as_ref().unwrap().uom, energyml_eml_2_3::DimensionlessUom::Euc, "typed as the schema requires");
+    assert_eq!(
+        statistic.minimum.as_ref().unwrap().uom,
+        energyml_eml_2_3::DimensionlessUom::Euc,
+        "typed as the schema requires"
+    );
     assert!((statistic.minimum.as_ref().unwrap().value - want.minimum).abs() < 1e-9);
     assert!((statistic.maximum.as_ref().unwrap().value - want.maximum).abs() < 1e-9);
     assert!((statistic.mean.as_ref().unwrap().value - want.mean).abs() < 1e-9);
@@ -357,13 +527,29 @@ fn a_frozen_rate_window_repeats_the_last_reading_and_is_set_aside_from_the_daily
 fn the_same_inputs_make_the_same_uuids_and_a_different_facility_makes_others() {
     let first = planned(&bag(), choices()).expect("a plan");
     let second = planned(&bag(), choices()).expect("a plan");
-    let uuids = |plan: &Plan| -> Vec<(String, String)> { plan.objects.iter().map(|o| (o.role.clone(), o.uuid.clone())).collect() };
-    assert_eq!(uuids(&first), uuids(&second), "the same run, twice, writes the same uuids");
+    let uuids = |plan: &Plan| -> Vec<(String, String)> {
+        plan.objects
+            .iter()
+            .map(|o| (o.role.clone(), o.uuid.clone()))
+            .collect()
+    };
+    assert_eq!(
+        uuids(&first),
+        uuids(&second),
+        "the same run, twice, writes the same uuids"
+    );
 
     let renamed = planned(&bag(), choices().set("facility", "Another heat exchanger")).expect("a plan");
-    let facility_before = titled(&first, "prodml23.Facility", "Lutetia heat exchanger").uuid.clone();
-    let facility_after = titled(&renamed, "prodml23.Facility", "Another heat exchanger").uuid.clone();
-    assert_ne!(facility_before, facility_after, "a different facility title derives a different uuid");
+    let facility_before = titled(&first, "prodml23.Facility", "Lutetia heat exchanger")
+        .uuid
+        .clone();
+    let facility_after = titled(&renamed, "prodml23.Facility", "Another heat exchanger")
+        .uuid
+        .clone();
+    assert_ne!(
+        facility_before, facility_after,
+        "a different facility title derives a different uuid"
+    );
 }
 
 // ---------------------------------------------------------------- everything reads back, and is declared synthetic
@@ -373,19 +559,62 @@ fn every_object_written_reads_back_into_its_generated_type_and_is_declared_synth
     let plan = planned(
         &bag()
             .with("observation", object(OBSERVATION, "witsml21.Wellbore", "GTH-3"))
-            .with("fluidOrganization", object(ORGANISATION, "resqml22.RockFluidOrganizationInterpretation", "Chalk water table")),
+            .with(
+                "fluidOrganization",
+                object(
+                    ORGANISATION,
+                    "resqml22.RockFluidOrganizationInterpretation",
+                    "Chalk water table",
+                ),
+            ),
         choices(),
     )
     .expect("a plan");
 
     // One of each, plus three reporting entities, two production reports and
     // three head series.
-    assert_eq!(plan.objects.iter().filter(|o| o.qualified_type == "prodml23.Facility").count(), 1);
-    assert_eq!(plan.objects.iter().filter(|o| o.qualified_type == "prodml23.ReportingEntity").count(), 3);
-    assert_eq!(plan.objects.iter().filter(|o| o.qualified_type == "prodml23.WellProductionParameters").count(), 2);
-    assert_eq!(plan.objects.iter().filter(|o| o.qualified_type == "prodml23.TimeSeriesData").count(), 3);
-    assert_eq!(plan.objects.iter().filter(|o| o.qualified_type == "prodml23.TimeSeriesStatistic").count(), 1);
-    assert_eq!(plan.objects.iter().filter(|o| o.qualified_type == "prodml23.FluidSystem").count(), 1);
+    assert_eq!(
+        plan.objects
+            .iter()
+            .filter(|o| o.qualified_type == "prodml23.Facility")
+            .count(),
+        1
+    );
+    assert_eq!(
+        plan.objects
+            .iter()
+            .filter(|o| o.qualified_type == "prodml23.ReportingEntity")
+            .count(),
+        3
+    );
+    assert_eq!(
+        plan.objects
+            .iter()
+            .filter(|o| o.qualified_type == "prodml23.WellProductionParameters")
+            .count(),
+        2
+    );
+    assert_eq!(
+        plan.objects
+            .iter()
+            .filter(|o| o.qualified_type == "prodml23.TimeSeriesData")
+            .count(),
+        3
+    );
+    assert_eq!(
+        plan.objects
+            .iter()
+            .filter(|o| o.qualified_type == "prodml23.TimeSeriesStatistic")
+            .count(),
+        1
+    );
+    assert_eq!(
+        plan.objects
+            .iter()
+            .filter(|o| o.qualified_type == "prodml23.FluidSystem")
+            .count(),
+        1
+    );
 
     for object in &plan.objects {
         let synthetic_and_sourced = match object.qualified_type.as_str() {
@@ -393,7 +622,11 @@ fn every_object_written_reads_back_into_its_generated_type_and_is_declared_synth
                 let typed: prodml::Facility = read(object);
                 assert_eq!(typed.uuid, object.uuid);
                 typed.extension_name_value.iter().any(|e| e.name == "synthetic")
-                    && typed.citation.description.as_deref().is_some_and(|d| d.contains("a trial source"))
+                    && typed
+                        .citation
+                        .description
+                        .as_deref()
+                        .is_some_and(|d| d.contains("a trial source"))
             }
             "prodml23.ReportingEntity" => {
                 let typed: prodml::ReportingEntity = read(object);
@@ -417,7 +650,11 @@ fn every_object_written_reads_back_into_its_generated_type_and_is_declared_synth
             }
             other => panic!("an object of an unexpected type: {other}"),
         };
-        assert!(synthetic_and_sourced, "`{}` ({}) is not declared synthetic", object.title, object.qualified_type);
+        assert!(
+            synthetic_and_sourced,
+            "`{}` ({}) is not declared synthetic",
+            object.title, object.qualified_type
+        );
     }
 }
 
@@ -450,10 +687,20 @@ fn fewer_than_two_instants_and_instants_out_of_order_are_refused_by_name() {
 
     let backwards = planned(
         &bag(),
-        choices().set("times", json!(["2025-01-01T00:00:00Z", "2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"])),
+        choices().set(
+            "times",
+            json!([
+                "2025-01-01T00:00:00Z",
+                "2024-01-01T00:00:00Z",
+                "2026-01-01T00:00:00Z"
+            ]),
+        ),
     )
     .unwrap_err();
-    assert!(backwards.contains("`times`") && backwards.contains("come after"), "{backwards}");
+    assert!(
+        backwards.contains("`times`") && backwards.contains("come after"),
+        "{backwards}"
+    );
 }
 
 #[test]
@@ -472,13 +719,27 @@ fn a_sample_step_that_does_not_divide_a_day_is_refused() {
 
 #[test]
 fn an_asset_identifier_pattern_without_the_wellbore_placeholder_is_refused() {
-    let why = planned(&bag(), choices().set("assetIdentifier", "eml://lutetia.geosiris.com/facility(GTH)/wellhead")).unwrap_err();
-    assert!(why.contains("`assetIdentifier`") && why.contains("{wellbore}"), "{why}");
+    let why = planned(
+        &bag(),
+        choices().set(
+            "assetIdentifier",
+            "eml://lutetia.geosiris.com/facility(GTH)/wellhead",
+        ),
+    )
+    .unwrap_err();
+    assert!(
+        why.contains("`assetIdentifier`") && why.contains("{wellbore}"),
+        "{why}"
+    );
 }
 
 #[test]
 fn an_asset_identifier_that_is_not_an_energistics_uri_is_refused() {
-    let why = planned(&bag(), choices().set("assetIdentifier", "http://lutetia/well({wellbore})")).unwrap_err();
+    let why = planned(
+        &bag(),
+        choices().set("assetIdentifier", "http://lutetia/well({wellbore})"),
+    )
+    .unwrap_err();
     assert!(why.contains("`assetIdentifier`") && why.contains("eml:"), "{why}");
 }
 
@@ -486,17 +747,26 @@ fn an_asset_identifier_that_is_not_an_energistics_uri_is_refused() {
 fn a_frozen_window_starting_at_the_first_sample_is_refused() {
     let why = planned(
         &bag(),
-        choices().set("frozen", "pressure").set("frozenFrom", "2025-06-02T00:00:00Z").set("frozenMinutes", 60),
+        choices()
+            .set("frozen", "pressure")
+            .set("frozenFrom", "2025-06-02T00:00:00Z")
+            .set("frozenMinutes", 60),
     )
     .unwrap_err();
-    assert!(why.contains("`frozenFrom`") && why.contains("first sample"), "{why}");
+    assert!(
+        why.contains("`frozenFrom`") && why.contains("first sample"),
+        "{why}"
+    );
 }
 
 #[test]
 fn a_frozen_window_outside_the_head_series_is_refused() {
     let why = planned(
         &bag(),
-        choices().set("frozen", "temperature").set("frozenFrom", "2025-06-10T00:00:00Z").set("frozenMinutes", 60),
+        choices()
+            .set("frozen", "temperature")
+            .set("frozenFrom", "2025-06-10T00:00:00Z")
+            .set("frozenMinutes", 60),
     )
     .unwrap_err();
     assert!(why.contains("`frozenFrom`"), "{why}");

@@ -210,7 +210,10 @@ mod tests {
         for spelling in ["2.2_dev3", "2.2dev3", "2.2-dev3", "2.2 dev3"] {
             assert_eq!(
                 split_prerelease(spelling),
-                ("2.2", Some(spelling.trim_start_matches(['2', '.', '_', '-', ' '])))
+                (
+                    "2.2",
+                    Some(spelling.trim_start_matches(['2', '.', '_', '-', ' ']))
+                )
             );
             assert_eq!(release_of(spelling), "2.2");
             assert!(is_prerelease(spelling));

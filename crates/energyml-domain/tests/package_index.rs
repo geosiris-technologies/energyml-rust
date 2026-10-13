@@ -82,7 +82,10 @@ fn expected_graph(store: &EpcStore) -> Graph {
             read.push((summary, object));
         }
     }
-    graph::build(read.iter().map(|(summary, object)| (*summary, object.as_reflect())))
+    graph::build(
+        read.iter()
+            .map(|(summary, object)| (*summary, object.as_reflect())),
+    )
 }
 
 /// The nodes sorted by uri, for comparing an updated index with a rebuilt one:
@@ -97,7 +100,11 @@ fn canonical(graph: &Graph) -> Graph {
 /// Where two graphs first differ, or `None`.
 fn difference(left: &Graph, right: &Graph) -> Option<String> {
     if left.nodes.len() != right.nodes.len() {
-        return Some(format!("{} nodes against {}", left.nodes.len(), right.nodes.len()));
+        return Some(format!(
+            "{} nodes against {}",
+            left.nodes.len(),
+            right.nodes.len()
+        ));
     }
     for (at, (a, b)) in left.nodes.iter().zip(&right.nodes).enumerate() {
         if a != b {
@@ -105,7 +112,11 @@ fn difference(left: &Graph, right: &Graph) -> Option<String> {
         }
     }
     if left.edges.len() != right.edges.len() {
-        return Some(format!("{} edges against {}", left.edges.len(), right.edges.len()));
+        return Some(format!(
+            "{} edges against {}",
+            left.edges.len(),
+            right.edges.len()
+        ));
     }
     for (at, (a, b)) in left.edges.iter().zip(&right.edges).enumerate() {
         if a != b {
@@ -119,7 +130,11 @@ fn difference(left: &Graph, right: &Graph) -> Option<String> {
 }
 
 /// One sheet against the `Property` it was taken from.
-fn sheet_difference(sheet: &PropertySheet, read: &Property<'_>, object: &dyn energyml_core::value::Reflect) -> Option<String> {
+fn sheet_difference(
+    sheet: &PropertySheet,
+    read: &Property<'_>,
+    object: &dyn energyml_core::value::Reflect,
+) -> Option<String> {
     macro_rules! same {
         ($name:literal, $a:expr, $b:expr) => {
             if $a != $b {
@@ -129,9 +144,17 @@ fn sheet_difference(sheet: &PropertySheet, read: &Property<'_>, object: &dyn ene
     }
     same!("uuid", &*sheet.uuid, read.uuid.as_str());
     same!("title", sheet.title.as_deref(), read.title.as_deref());
-    same!("qualified_type", &*sheet.qualified_type, read.qualified_type.as_str());
+    same!(
+        "qualified_type",
+        &*sheet.qualified_type,
+        read.qualified_type.as_str()
+    );
     same!("indexable", sheet.indexable, read.indexable);
-    same!("value_count_per_element", &*sheet.value_count_per_element, read.value_count_per_element.as_slice());
+    same!(
+        "value_count_per_element",
+        &*sheet.value_count_per_element,
+        read.value_count_per_element.as_slice()
+    );
     same!("uom", sheet.uom.as_deref(), read.uom.as_deref());
     same!("kind", sheet.kind_ref(), read.kind);
     same!(
@@ -142,10 +165,22 @@ fn sheet_difference(sheet: &PropertySheet, read: &Property<'_>, object: &dyn ene
     same!("lookup", sheet.lookup.as_deref(), read.lookup.as_deref());
     same!("time", sheet.time.as_deref(), read.time.as_ref());
     same!("realization", sheet.realization, read.realization);
-    same!("has_realization_indices", sheet.has_realization_indices, read.has_realization_indices);
+    same!(
+        "has_realization_indices",
+        sheet.has_realization_indices,
+        read.has_realization_indices
+    );
     let located = values::locate(object);
-    same!("values_path", sheet.values_path.as_deref(), located.first().map(|found| found.path.as_str()));
-    same!("values_per_element", sheet.values_per_element(), read.values_per_element());
+    same!(
+        "values_path",
+        sheet.values_path.as_deref(),
+        located.first().map(|found| found.path.as_str())
+    );
+    same!(
+        "values_per_element",
+        sheet.values_per_element(),
+        read.values_per_element()
+    );
     None
 }
 
@@ -164,8 +199,12 @@ fn property_difference(store: &EpcStore, index: &PackageIndex) -> Option<String>
         if !summary.qualified_type.ends_with("Property") {
             continue;
         }
-        let Ok(object) = store.get_object(&summary.uri) else { continue };
-        let Ok(read) = property::read(object.as_reflect()) else { continue };
+        let Ok(object) = store.get_object(&summary.uri) else {
+            continue;
+        };
+        let Ok(read) = property::read(object.as_reflect()) else {
+            continue;
+        };
         read_count += 1;
 
         let Some(sheet) = index.sheet(&read.uuid) else {
@@ -182,7 +221,10 @@ fn property_difference(store: &EpcStore, index: &PackageIndex) -> Option<String>
         }
     }
     if index.sheet_count() != read_count {
-        return Some(format!("{} sheets against {read_count} properties read", index.sheet_count()));
+        return Some(format!(
+            "{} sheets against {read_count} properties read",
+            index.sheet_count()
+        ));
     }
 
     // Every representation of the package, and every uuid a property names —
@@ -196,7 +238,9 @@ fn property_difference(store: &EpcStore, index: &PackageIndex) -> Option<String>
             .collect();
         let want = expected.get(&representation).cloned().unwrap_or_default();
         if got != want {
-            return Some(format!("properties of {representation}: {got:?} against {want:?}"));
+            return Some(format!(
+                "properties of {representation}: {got:?} against {want:?}"
+            ));
         }
     }
     None
@@ -268,7 +312,10 @@ fn the_index_draws_the_graph_graph_build_draws() {
         }
         // The JSON is what the front end receives; the contract is byte for byte.
         assert_eq!(index.graph_json(), expected.to_json(), "{name}");
-        assert!(index.is_complete(), "{name}: a finished pass over a whole store is complete");
+        assert!(
+            index.is_complete(),
+            "{name}: a finished pass over a whole store is complete"
+        );
         assert_eq!(index.revision(), 1);
         compared += 1;
     }
@@ -376,13 +423,20 @@ fn the_corpus_confrontations_can_fail() {
     let mut sabotaged = 0usize;
     for (name, store) in packages() {
         let expected = expected_graph(&store);
-        let Some(edge) = expected.edges.first() else { continue };
-        let Some(node) = expected.nodes.iter().find(|n| n.uri == edge.from) else { continue };
+        let Some(edge) = expected.edges.first() else {
+            continue;
+        };
+        let Some(node) = expected.nodes.iter().find(|n| n.uri == edge.from) else {
+            continue;
+        };
 
         // SABOTAGE 1: the index forgets one reference. `difference` must say so;
         // if it does not, every graph test above proves nothing.
         let mut index = PackageIndex::build(&store, 1);
-        assert!(index.sabotage_forget_an_edge(&node.uuid), "{name}: nothing to forget");
+        assert!(
+            index.sabotage_forget_an_edge(&node.uuid),
+            "{name}: nothing to forget"
+        );
         assert!(
             difference(&index.graph(), &expected).is_some(),
             "{name}: a forgotten edge was not noticed"
@@ -418,7 +472,10 @@ fn dor(uuid: &str, qualified_type: &str, title: &str) -> eml23::DataObjectRefere
 }
 
 fn citation(title: &str) -> eml23::Citation {
-    eml23::Citation { title: title.to_string(), ..Default::default() }
+    eml23::Citation {
+        title: title.to_string(),
+        ..Default::default()
+    }
 }
 
 fn representation(uuid: &str, title: &str) -> resqml22::WellboreTrajectoryRepresentation {
@@ -440,7 +497,11 @@ fn property_on(uuid: &str, support: &str, title: &str) -> resqml22::ContinuousPr
         property_kind: dor(KIND, "eml23.PropertyKind", "length"),
         supporting_representation: dor(support, REPRESENTATION, "a representation"),
         values_for_patch: vec![resqml22::AbstractValueArray::IntegerConstantArray(
-            eml23::IntegerConstantArray { value: 1, count: 3, ..Default::default() },
+            eml23::IntegerConstantArray {
+                value: 1,
+                count: 3,
+                ..Default::default()
+            },
         )],
         ..Default::default()
     }
@@ -461,7 +522,11 @@ fn put(store: &mut EpcStore, object: impl energyml_core::registry::DynObject + '
 }
 
 fn uri_of(store: &EpcStore, uuid: &str) -> String {
-    store.find_by_uuid(uuid).expect("the object is in the store").uri.clone()
+    store
+        .find_by_uuid(uuid)
+        .expect("the object is in the store")
+        .uri
+        .clone()
 }
 
 /// Two representations, four properties — one of them on a representation the
@@ -478,7 +543,10 @@ fn package() -> EpcStore {
 }
 
 fn uris(index: &PackageIndex, representation: &str) -> BTreeSet<String> {
-    index.properties_of(representation).map(|(uri, _)| uri.to_string()).collect()
+    index
+        .properties_of(representation)
+        .map(|(uri, _)| uri.to_string())
+        .collect()
 }
 
 /// What an update must be: the graph of a rebuild from scratch and of
@@ -599,7 +667,10 @@ fn an_update_follows_a_reference_that_moves_leaves_and_arrives() {
     index.update(&store, &[REP_A.to_string()], 6);
     assert_update_is_a_rebuild("after REP_A came back", &store, &index);
     assert_eq!(index.node(REP_A).map(|n| n.state), Some(NodeState::Present));
-    assert_eq!(index.node(REP_A).and_then(|n| n.title.as_deref()), Some("rep a again"));
+    assert_eq!(
+        index.node(REP_A).and_then(|n| n.title.as_deref()),
+        Some("rep a again")
+    );
     assert_eq!(index.revision(), 6);
 
     // 5. The FIRST referrer of a shared absent node leaves. The kind's type and
@@ -631,8 +702,18 @@ fn an_update_follows_a_reference_that_moves_leaves_and_arrives() {
 fn a_changed_uuid_the_index_never_saw_is_added() {
     let mut store = package();
     let mut index = PackageIndex::build(&store, 1);
-    put(&mut store, representation("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", "brand new"));
-    put(&mut store, property_on("66666666-6666-4666-8666-666666666666", "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", "p6"));
+    put(
+        &mut store,
+        representation("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", "brand new"),
+    );
+    put(
+        &mut store,
+        property_on(
+            "66666666-6666-4666-8666-666666666666",
+            "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+            "p6",
+        ),
+    );
     index.update(
         &store,
         &[
@@ -698,7 +779,12 @@ fn the_synthetic_confrontations_can_fail() {
 fn asked_after(old: &Graph, store: &EpcStore, changed: &[&str]) -> Vec<String> {
     let mut asked: Vec<String> = Vec::new();
     for uuid in changed {
-        let held: Vec<String> = old.nodes.iter().filter(|n| n.uuid.eq_ignore_ascii_case(uuid)).map(|n| n.uri.clone()).collect();
+        let held: Vec<String> = old
+            .nodes
+            .iter()
+            .filter(|n| n.uuid.eq_ignore_ascii_case(uuid))
+            .map(|n| n.uri.clone())
+            .collect();
         for uri in &held {
             asked.extend(old.edges.iter().filter(|e| &e.from == uri).map(|e| e.to.clone()));
         }
@@ -716,15 +802,29 @@ fn asked_after(old: &Graph, store: &EpcStore, changed: &[&str]) -> Vec<String> {
 /// sabotage: a copy that keeps what the graph no longer shows.
 fn patched(old: &Graph, around: &GraphAround, asked: &[String], skip_gone: bool) -> Graph {
     let dropped: BTreeSet<&str> = asked.iter().chain(&around.sources).map(String::as_str).collect();
-    let gone: BTreeSet<&str> = if skip_gone { BTreeSet::new() } else { around.gone.iter().map(String::as_str).collect() };
-    let mut nodes: Vec<graph::Node> = old.nodes.iter().filter(|n| !gone.contains(n.uri.as_str())).cloned().collect();
+    let gone: BTreeSet<&str> = if skip_gone {
+        BTreeSet::new()
+    } else {
+        around.gone.iter().map(String::as_str).collect()
+    };
+    let mut nodes: Vec<graph::Node> = old
+        .nodes
+        .iter()
+        .filter(|n| !gone.contains(n.uri.as_str()))
+        .cloned()
+        .collect();
     for node in &around.graph.nodes {
         match nodes.iter_mut().find(|n| n.uri == node.uri) {
             Some(held) => *held = node.clone(),
             None => nodes.push(node.clone()),
         }
     }
-    let mut edges: Vec<graph::Edge> = old.edges.iter().filter(|e| !dropped.contains(e.from.as_str())).cloned().collect();
+    let mut edges: Vec<graph::Edge> = old
+        .edges
+        .iter()
+        .filter(|e| !dropped.contains(e.from.as_str()))
+        .cloned()
+        .collect();
     edges.extend(around.graph.edges.iter().cloned());
     Graph { nodes, edges }
 }
@@ -732,7 +832,9 @@ fn patched(old: &Graph, around: &GraphAround, asked: &[String], skip_gone: bool)
 /// Nodes by uri, edges by `(from, to, path)`: a patched copy appends.
 fn sorted(graph: &Graph) -> Graph {
     let mut graph = canonical(graph);
-    graph.edges.sort_by(|a, b| (&a.from, &a.to, &a.path).cmp(&(&b.from, &b.to, &b.path)));
+    graph
+        .edges
+        .sort_by(|a, b| (&a.from, &a.to, &a.path).cmp(&(&b.from, &b.to, &b.path)));
     graph
 }
 
@@ -743,11 +845,19 @@ fn a_copy_patched_around_the_changed_objects_is_the_whole_graph() {
     let mut revision = 1;
     // Every move of `an_update_follows_a_reference_that_moves_leaves_and_arrives`,
     // and a creation that links to a held object — the case of 08/10.
-    let mut step = |store: &mut EpcStore, index: &mut PackageIndex, label: &str, edit: &dyn Fn(&mut EpcStore), changed: &[&str]| {
+    let mut step = |store: &mut EpcStore,
+                    index: &mut PackageIndex,
+                    label: &str,
+                    edit: &dyn Fn(&mut EpcStore),
+                    changed: &[&str]| {
         let old = index.graph();
         edit(store);
         revision += 1;
-        index.update(store, &changed.iter().map(|u| u.to_string()).collect::<Vec<_>>(), revision);
+        index.update(
+            store,
+            &changed.iter().map(|u| u.to_string()).collect::<Vec<_>>(),
+            revision,
+        );
         let asked = asked_after(&old, store, changed);
         let around = index.graph_around(&asked);
         let copy = patched(&old, &around, &asked, false);
@@ -756,26 +866,80 @@ fn a_copy_patched_around_the_changed_objects_is_the_whole_graph() {
         }
         (old, around, asked)
     };
-    step(&mut store, &mut index, "a creation on REP_B", &|s| put(s, property_on("66666666-6666-4666-8666-666666666666", REP_B, "p6")), &["66666666-6666-4666-8666-666666666666"]);
-    step(&mut store, &mut index, "P2 moves", &|s| put(s, property_on(P2, REP_B, "p2")), &[P2]);
-    step(&mut store, &mut index, "REP_A leaves", &|s| {
-        let uri = uri_of(s, REP_A);
-        s.remove(&uri).expect("removed");
-    }, &[REP_A]);
-    let (old, around, asked) =
-        step(&mut store, &mut index, "the last reference to GHOST goes", &|s| put(s, property_on(P4, REP_B, "p4")), &[P4]);
+    step(
+        &mut store,
+        &mut index,
+        "a creation on REP_B",
+        &|s| {
+            put(
+                s,
+                property_on("66666666-6666-4666-8666-666666666666", REP_B, "p6"),
+            )
+        },
+        &["66666666-6666-4666-8666-666666666666"],
+    );
+    step(
+        &mut store,
+        &mut index,
+        "P2 moves",
+        &|s| put(s, property_on(P2, REP_B, "p2")),
+        &[P2],
+    );
+    step(
+        &mut store,
+        &mut index,
+        "REP_A leaves",
+        &|s| {
+            let uri = uri_of(s, REP_A);
+            s.remove(&uri).expect("removed");
+        },
+        &[REP_A],
+    );
+    let (old, around, asked) = step(
+        &mut store,
+        &mut index,
+        "the last reference to GHOST goes",
+        &|s| put(s, property_on(P4, REP_B, "p4")),
+        &[P4],
+    );
     // The control: a copy that ignores `gone` keeps GHOST, and is caught.
-    assert!(around.gone.iter().any(|uri| uri.contains(GHOST)), "GHOST is said gone: {:?}", around.gone);
     assert!(
-        difference(&sorted(&patched(&old, &around, &asked, true)), &sorted(&index.graph())).is_some(),
+        around.gone.iter().any(|uri| uri.contains(GHOST)),
+        "GHOST is said gone: {:?}",
+        around.gone
+    );
+    assert!(
+        difference(
+            &sorted(&patched(&old, &around, &asked, true)),
+            &sorted(&index.graph())
+        )
+        .is_some(),
         "a copy that keeps a node the graph dropped must be caught"
     );
-    step(&mut store, &mut index, "P5 arrives naming the absent REP_A", &|s| put(s, property_on(P5, REP_A, "p5")), &[P5]);
-    step(&mut store, &mut index, "REP_A comes back", &|s| put(s, representation(REP_A, "rep a again")), &[REP_A]);
-    step(&mut store, &mut index, "P1 leaves", &|s| {
-        let uri = uri_of(s, P1);
-        s.remove(&uri).expect("removed");
-    }, &[P1]);
+    step(
+        &mut store,
+        &mut index,
+        "P5 arrives naming the absent REP_A",
+        &|s| put(s, property_on(P5, REP_A, "p5")),
+        &[P5],
+    );
+    step(
+        &mut store,
+        &mut index,
+        "REP_A comes back",
+        &|s| put(s, representation(REP_A, "rep a again")),
+        &[REP_A],
+    );
+    step(
+        &mut store,
+        &mut index,
+        "P1 leaves",
+        &|s| {
+            let uri = uri_of(s, P1);
+            s.remove(&uri).expect("removed");
+        },
+        &[P1],
+    );
 }
 
 #[test]

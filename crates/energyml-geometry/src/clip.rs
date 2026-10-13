@@ -65,12 +65,7 @@ pub fn inside_ring(point: [f64; 2], ring: &[[f64; 2]]) -> bool {
 /// `keep_inside` says which side survives — keeping the inside cuts out a
 /// patch, keeping the outside punches a hole. A triangle with a `NaN` corner is
 /// dropped (no side is its own), and so is one with an invalid index.
-pub fn trim(
-    points: &[[f64; 3]],
-    triangles: &[[u32; 3]],
-    ring: &[[f64; 2]],
-    keep_inside: bool,
-) -> Cutout {
+pub fn trim(points: &[[f64; 3]], triangles: &[[u32; 3]], ring: &[[f64; 2]], keep_inside: bool) -> Cutout {
     let mut kept: Vec<[u32; 3]> = Vec::new();
     for triangle in triangles {
         let corners: Vec<&[f64; 3]> = triangle
@@ -125,11 +120,7 @@ pub fn side_of_line(point: [f64; 2], line: &[[f64; 2]]) -> f64 {
 /// each compacted. Same rule as [`trim`]: a triangle goes to the side its
 /// centroid is on, the boundary is jagged at the triangle's scale, and a `NaN`
 /// corner drops its triangle from both sides.
-pub fn split_by_line(
-    points: &[[f64; 3]],
-    triangles: &[[u32; 3]],
-    line: &[[f64; 2]],
-) -> [Cutout; 2] {
+pub fn split_by_line(points: &[[f64; 3]], triangles: &[[u32; 3]], line: &[[f64; 2]]) -> [Cutout; 2] {
     let mut left: Vec<[u32; 3]> = Vec::new();
     let mut right: Vec<[u32; 3]> = Vec::new();
     for triangle in triangles {
@@ -195,7 +186,10 @@ pub fn nodes_in_ring(points: &[f64], ring: &[f64], outside: bool) -> Result<Vec<
     }
     let corners: Vec<[f64; 2]> = ring.chunks_exact(2).map(|c| [c[0], c[1]]).collect();
     if corners.len() < 3 {
-        return Err(format!("a ring of {} corner(s) encloses nothing — three at least", corners.len()));
+        return Err(format!(
+            "a ring of {} corner(s) encloses nothing — three at least",
+            corners.len()
+        ));
     }
     Ok(points
         .chunks_exact(3)
@@ -214,7 +208,20 @@ mod tests {
     fn the_nodes_inside_a_ring_and_those_outside() {
         // A square ring in plan, drawn open: its last side is implied.
         let ring = [0.0, 0.0, 10.0, 0.0, 10.0, 10.0, 0.0, 10.0];
-        let points = [5.0, 5.0, -100.0, 20.0, 5.0, 0.0, 10.0, 5.0, 3.0, f64::NAN, 5.0, 0.0];
+        let points = [
+            5.0,
+            5.0,
+            -100.0,
+            20.0,
+            5.0,
+            0.0,
+            10.0,
+            5.0,
+            3.0,
+            f64::NAN,
+            5.0,
+            0.0,
+        ];
         // z does not matter; the edge counts inside; a node with no place is in neither.
         assert_eq!(nodes_in_ring(&points, &ring, false).unwrap(), vec![0, 2]);
         assert_eq!(nodes_in_ring(&points, &ring, true).unwrap(), vec![1]);
@@ -222,7 +229,11 @@ mod tests {
 
     #[test]
     fn a_ring_of_two_corners_is_refused() {
-        assert!(nodes_in_ring(&[0.0; 3], &[0.0, 0.0, 1.0, 1.0], false).unwrap_err().contains("three"));
+        assert!(
+            nodes_in_ring(&[0.0; 3], &[0.0, 0.0, 1.0, 1.0], false)
+                .unwrap_err()
+                .contains("three")
+        );
         assert!(nodes_in_ring(&[0.0; 4], &[0.0; 6], false).is_err());
     }
 
@@ -268,7 +279,10 @@ mod tests {
     fn the_boundary_counts_as_inside_deterministically() {
         let ring = [[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]];
         assert!(inside_ring([1.0, 1.0], &ring));
-        assert!(inside_ring([2.0, 1.0], &ring), "on the edge: inside, without flickering");
+        assert!(
+            inside_ring([2.0, 1.0], &ring),
+            "on the edge: inside, without flickering"
+        );
         assert!(inside_ring([0.0, 0.0], &ring), "a corner too");
         assert!(!inside_ring([3.0, 1.0], &ring));
     }
@@ -287,10 +301,13 @@ mod tests {
         let (points, triangles) = a_meshed_square();
         // The vertical x = 2, travelled towards +y: the left is x < 2.
         let line = [[2.0, -1.0], [2.0, 5.0]];
-        let [(left_points, left), (right_points, right)] =
-            split_by_line(&points, &triangles, &line);
+        let [(left_points, left), (right_points, right)] = split_by_line(&points, &triangles, &line);
         assert_eq!(left.len() + right.len(), triangles.len());
-        assert_eq!(left.len(), right.len(), "a vertical down the middle shares it out evenly");
+        assert_eq!(
+            left.len(),
+            right.len(),
+            "a vertical down the middle shares it out evenly"
+        );
         // Each half is compacted and consistent.
         for (half_points, half) in [(&left_points, &left), (&right_points, &right)] {
             for triangle in half.iter() {

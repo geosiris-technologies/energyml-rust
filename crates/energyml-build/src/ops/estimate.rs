@@ -125,28 +125,55 @@ fn plan(p: [f64; 3]) -> [f64; 2] {
 /// `inner` — the same rule `interpolate_mba::filter_by_rings` applies to
 /// samples, restated on plain ranks so it can be reused for the query cloud
 /// too (provisional: open question on the query cloud).
-fn ring_keep(points: &[[f64; 3]], outer: Option<&Shape>, inner: &[Shape]) -> Result<Option<Vec<usize>>, Refusal> {
+fn ring_keep(
+    points: &[[f64; 3]],
+    outer: Option<&Shape>,
+    inner: &[Shape],
+) -> Result<Option<Vec<usize>>, Refusal> {
     if outer.is_none() && inner.is_empty() {
         return Ok(None);
     }
-    let flat: Vec<f64> = points.iter().flat_map(|&p| { let [x, y] = plan(p); [x, y, 0.0] }).collect();
+    let flat: Vec<f64> = points
+        .iter()
+        .flat_map(|&p| {
+            let [x, y] = plan(p);
+            [x, y, 0.0]
+        })
+        .collect();
     let ring_of = |slot: &str, shape: &Shape| -> Result<Vec<f64>, Refusal> {
-        let ring_points: Vec<[f64; 3]> = shape.geometry.patches.iter().flat_map(|p| p.points.iter().copied()).collect();
+        let ring_points: Vec<[f64; 3]> = shape
+            .geometry
+            .patches
+            .iter()
+            .flat_map(|p| p.points.iter().copied())
+            .collect();
         if ring_points.len() < 3 {
-            return Err(Refusal::on(slot, format!("`{}` holds {} point(s): a ring encloses something with at least 3", shape.name, ring_points.len())));
+            return Err(Refusal::on(
+                slot,
+                format!(
+                    "`{}` holds {} point(s): a ring encloses something with at least 3",
+                    shape.name,
+                    ring_points.len()
+                ),
+            ));
         }
         Ok(ring_points.iter().flat_map(|p| [p[0], p[1]]).collect())
     };
     let mut keep: Option<Vec<usize>> = None;
     if let Some(shape) = outer {
         let ring = ring_of("outer", shape)?;
-        let kept = energyml_geometry::clip::nodes_in_ring(&flat, &ring, false).map_err(|why| Refusal::on("outer", why))?;
+        let kept = energyml_geometry::clip::nodes_in_ring(&flat, &ring, false)
+            .map_err(|why| Refusal::on("outer", why))?;
         keep = Some(kept.into_iter().map(|at| at as usize).collect());
     }
     for shape in inner {
         let ring = ring_of("inner", shape)?;
         let kept: std::collections::HashSet<usize> =
-            energyml_geometry::clip::nodes_in_ring(&flat, &ring, true).map_err(|why| Refusal::on("inner", why))?.into_iter().map(|at| at as usize).collect();
+            energyml_geometry::clip::nodes_in_ring(&flat, &ring, true)
+                .map_err(|why| Refusal::on("inner", why))?
+                .into_iter()
+                .map(|at| at as usize)
+                .collect();
         keep = Some(match keep {
             Some(previous) => previous.into_iter().filter(|at| kept.contains(at)).collect(),
             None => kept.into_iter().collect(),
@@ -175,7 +202,13 @@ impl Operation for Estimate {
     }
 
     fn check(&self, inputs: &EstimateInputs) -> Result<(), Refusal> {
-        let samples: usize = inputs.samples.geometry.patches.iter().map(|p| p.points.len()).sum();
+        let samples: usize = inputs
+            .samples
+            .geometry
+            .patches
+            .iter()
+            .map(|p| p.points.len())
+            .sum();
         if samples == 0 {
             return Err(Refusal::on("samples", "no samples to fit MBA to"));
         }
@@ -187,13 +220,30 @@ impl Operation for Estimate {
             && field.over != inputs.samples.name
             && !field.over.starts_with(&format!("{} ", inputs.samples.name))
         {
-            return Err(Refusal::on("field", format!("lies over `{}`, and the samples are `{}`", field.over, inputs.samples.name)));
+            return Err(Refusal::on(
+                "field",
+                format!(
+                    "lies over `{}`, and the samples are `{}`",
+                    field.over, inputs.samples.name
+                ),
+            ));
         }
         Ok(())
     }
 
-    fn plan(&self, inputs: EstimateInputs, params: EstimateParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
-        let samples_points: Vec<[f64; 3]> = inputs.samples.geometry.patches.iter().flat_map(|p| p.points.iter().copied()).collect();
+    fn plan(
+        &self,
+        inputs: EstimateInputs,
+        params: EstimateParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
+        let samples_points: Vec<[f64; 3]> = inputs
+            .samples
+            .geometry
+            .patches
+            .iter()
+            .flat_map(|p| p.points.iter().copied())
+            .collect();
         let field_values = inputs.field.as_ref().map(|f| f.values.clone());
         let from_field = field_values.is_some();
         if from_field && matches!(&params.frame, MbaFrame::MeanPlane) {
@@ -207,10 +257,21 @@ impl Operation for Estimate {
         if samples_points.len() != values.len() {
             return Err(Refusal::on(
                 "field",
-                format!("`{}` holds {} node(s) and the field {} value(s)", inputs.samples.name, samples_points.len(), values.len()),
+                format!(
+                    "`{}` holds {} node(s) and the field {} value(s)",
+                    inputs.samples.name,
+                    samples_points.len(),
+                    values.len()
+                ),
             ));
         }
-        let at_points: Vec<[f64; 3]> = inputs.at.geometry.patches.iter().flat_map(|p| p.points.iter().copied()).collect();
+        let at_points: Vec<[f64; 3]> = inputs
+            .at
+            .geometry
+            .patches
+            .iter()
+            .flat_map(|p| p.points.iter().copied())
+            .collect();
 
         cx.stop_if_cancelled()?;
 
@@ -223,7 +284,10 @@ impl Operation for Estimate {
         };
         let ring_dropped_samples = samples_points.len() - fit_points.len();
         if fit_points.is_empty() {
-            return Err(Refusal::on("outer", "no sample remains inside `outer`/outside every `inner`"));
+            return Err(Refusal::on(
+                "outer",
+                "no sample remains inside `outer`/outside every `inner`",
+            ));
         }
         let at_keep = ring_keep(&at_points, inputs.outer.as_ref(), &inputs.inner)?;
         let at_excluded: std::collections::HashSet<usize> = match &at_keep {
@@ -234,12 +298,20 @@ impl Operation for Estimate {
         // The frame — world, or the mean plane fitted to the *kept* samples.
         let frame = match &params.frame {
             MbaFrame::World => None,
-            MbaFrame::MeanPlane => Some(MeanFrame::fit(&fit_points).map_err(|e| Refusal::on("samples", e.to_string()))?),
+            MbaFrame::MeanPlane => {
+                Some(MeanFrame::fit(&fit_points).map_err(|e| Refusal::on("samples", e.to_string()))?)
+            }
         };
         let to_local = |p: [f64; 3]| -> [f64; 3] { frame.map(|f| f.to_local(p)).unwrap_or(p) };
         let to_world = |local: [f64; 3]| -> [f64; 3] { frame.map(|f| f.to_world(local)).unwrap_or(local) };
 
-        let samples_uv: Vec<[f64; 2]> = fit_points.iter().map(|&p| { let l = to_local(p); [l[0], l[1]] }).collect();
+        let samples_uv: Vec<[f64; 2]> = fit_points
+            .iter()
+            .map(|&p| {
+                let l = to_local(p);
+                [l[0], l[1]]
+            })
+            .collect();
         // What is fitted: in the world frame, **the values** — the elevation,
         // or the field when one is given; in the mean-plane frame, the local
         // height above the plane (a field is refused there, above). The first
@@ -251,8 +323,16 @@ impl Operation for Estimate {
             None => fit_values,
             Some(_) => fit_points.iter().map(|&p| to_local(p)[2]).collect(),
         };
-        let evaluate_at: Vec<usize> = (0..at_points.len()).filter(|i| !at_excluded.contains(i)).collect();
-        let queries_uv: Vec<[f64; 2]> = evaluate_at.iter().map(|&i| { let l = to_local(at_points[i]); [l[0], l[1]] }).collect();
+        let evaluate_at: Vec<usize> = (0..at_points.len())
+            .filter(|i| !at_excluded.contains(i))
+            .collect();
+        let queries_uv: Vec<[f64; 2]> = evaluate_at
+            .iter()
+            .map(|&i| {
+                let l = to_local(at_points[i]);
+                [l[0], l[1]]
+            })
+            .collect();
 
         let mut lo = [f64::INFINITY; 2];
         let mut hi = [f64::NEG_INFINITY; 2];
@@ -265,14 +345,34 @@ impl Operation for Estimate {
             }
         }
         if !(lo[0].is_finite() && lo[1].is_finite()) {
-            return Err(Refusal::on("samples", "no sample or query has a finite plan-view position: there is no domain to fit on"));
+            return Err(Refusal::on(
+                "samples",
+                "no sample or query has a finite plan-view position: there is no domain to fit on",
+            ));
         }
-        let domain = Domain { origin: [lo[0] - params.margin, lo[1] - params.margin], size: [(hi[0] - lo[0]) + 2.0 * params.margin, (hi[1] - lo[1]) + 2.0 * params.margin] };
+        let domain = Domain {
+            origin: [lo[0] - params.margin, lo[1] - params.margin],
+            size: [
+                (hi[0] - lo[0]) + 2.0 * params.margin,
+                (hi[1] - lo[1]) + 2.0 * params.margin,
+            ],
+        };
         let ratio = domain.size[0] / domain.size[1];
-        let formula = if ratio.is_finite() && ratio >= 1.0 { [ratio.round().max(1.0) as usize, 1] } else if ratio.is_finite() && ratio > 0.0 { [1, (1.0 / ratio).round().max(1.0) as usize] } else { [1, 1] };
-        let coarsest = [params.coarsest_i.unwrap_or(formula[0]).max(1), params.coarsest_j.unwrap_or(formula[1]).max(1)];
+        let formula = if ratio.is_finite() && ratio >= 1.0 {
+            [ratio.round().max(1.0) as usize, 1]
+        } else if ratio.is_finite() && ratio > 0.0 {
+            [1, (1.0 / ratio).round().max(1.0) as usize]
+        } else {
+            [1, 1]
+        };
+        let coarsest = [
+            params.coarsest_i.unwrap_or(formula[0]).max(1),
+            params.coarsest_j.unwrap_or(formula[1]).max(1),
+        ];
         let mba = Mba::new(coarsest).map_err(|e| Refusal::on("coarsest", e.to_string()))?;
-        let answer = mba.interpolate(&samples_uv, &fitted_w, domain, params.spacing, &queries_uv).map_err(|e| Refusal::on("spacing", e.to_string()))?;
+        let answer = mba
+            .interpolate(&samples_uv, &fitted_w, domain, params.spacing, &queries_uv)
+            .map_err(|e| Refusal::on("spacing", e.to_string()))?;
 
         // Scatter back onto every query, in `at`'s own order: an excluded
         // one keeps its own (x, y), height `NaN` — counted, never silently
@@ -290,22 +390,62 @@ impl Operation for Estimate {
         }
 
         let seed = cx.seed(&params.written.naming.title());
-        let mut plan = super::pointset::write(&format!("estimate of {}", inputs.samples.name), written_points, &params.written, &seed, cx)?;
+        let mut plan = super::pointset::write(
+            &format!("estimate of {}", inputs.samples.name),
+            written_points,
+            &params.written,
+            &seed,
+            cx,
+        )?;
         plan.activity.recipe = "estimate";
         plan.activity.title = format!("estimate → {}", params.written.naming.title());
-        plan.activity.parameters.push(Parameter::Text { title: "method".to_string(), value: "mba".to_string() });
-        plan.activity.parameters.push(Parameter::Double { title: "spacing".to_string(), value: params.spacing, uom: None });
-        plan.activity.parameters.push(Parameter::Double { title: "margin".to_string(), value: params.margin, uom: None });
-        plan.activity.parameters.push(Parameter::Double { title: "sampleCount".to_string(), value: fit_points.len() as f64, uom: None });
-        plan.activity.parameters.push(Parameter::Double { title: "levels".to_string(), value: answer.levels as f64, uom: None });
+        plan.activity.parameters.push(Parameter::Text {
+            title: "method".to_string(),
+            value: "mba".to_string(),
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "spacing".to_string(),
+            value: params.spacing,
+            uom: None,
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "margin".to_string(),
+            value: params.margin,
+            uom: None,
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "sampleCount".to_string(),
+            value: fit_points.len() as f64,
+            uom: None,
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "levels".to_string(),
+            value: answer.levels as f64,
+            uom: None,
+        });
         if ring_dropped_samples > 0 {
-            plan.says.push(Note { key: "ring-filtered", detail: format!("{ring_dropped_samples} sample(s) removed by `outer`/`inner` before fitting") });
+            plan.says.push(Note {
+                key: "ring-filtered",
+                detail: format!("{ring_dropped_samples} sample(s) removed by `outer`/`inner` before fitting"),
+            });
         }
         if !at_excluded.is_empty() {
-            plan.says.push(Note { key: "ring-excluded-queries", detail: format!("{} query point(s) outside `outer`/`inner`: left NaN, not evaluated", at_excluded.len()) });
+            plan.says.push(Note {
+                key: "ring-excluded-queries",
+                detail: format!(
+                    "{} query point(s) outside `outer`/`inner`: left NaN, not evaluated",
+                    at_excluded.len()
+                ),
+            });
         }
         if answer.set_aside > 0 {
-            plan.says.push(Note { key: "set-aside", detail: format!("{} sample(s) set aside: a value or a coordinate that is not a finite number", answer.set_aside) });
+            plan.says.push(Note {
+                key: "set-aside",
+                detail: format!(
+                    "{} sample(s) set aside: a value or a coordinate that is not a finite number",
+                    answer.set_aside
+                ),
+            });
         }
         Ok(plan)
     }

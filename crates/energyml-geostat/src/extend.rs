@@ -147,7 +147,10 @@ impl std::fmt::Display for ExtendError {
 impl std::error::Error for ExtendError {}
 
 fn setting(which: Setting, why: impl Into<String>) -> ExtendError {
-    ExtendError::Setting { which, why: why.into() }
+    ExtendError::Setting {
+        which,
+        why: why.into(),
+    }
 }
 
 /// More nodes than any extension somebody meant to ask for.
@@ -168,7 +171,11 @@ fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
 }
 fn norm(a: [f64; 3]) -> f64 {
     dot(a, a).sqrt()
@@ -349,8 +356,17 @@ fn robust(points: &[[f64; 3]], kind: Kind) -> Option<Fitted> {
     }
     let (centre, axis, residuals, sigma) = last?;
     let beyond = (2.5 * sigma).max(tolerance);
-    let outliers = residuals.iter().enumerate().filter(|(_, r)| **r > beyond).map(|(k, _)| k).collect();
-    Some(Fitted { centre, axis, outliers })
+    let outliers = residuals
+        .iter()
+        .enumerate()
+        .filter(|(_, r)| **r > beyond)
+        .map(|(k, _)| k)
+        .collect();
+    Some(Fitted {
+        centre,
+        axis,
+        outliers,
+    })
 }
 
 /// The robust line through `points` — public for a test to confront.
@@ -369,7 +385,10 @@ fn check_band(band: f64) -> Result<(), ExtendError> {
     if band.is_finite() && band > 0.0 {
         Ok(())
     } else {
-        Err(setting(Setting::Band, format!("the band must be a finite length > 0, not {band}")))
+        Err(setting(
+            Setting::Band,
+            format!("the band must be a finite length > 0, not {band}"),
+        ))
     }
 }
 
@@ -377,7 +396,10 @@ fn check_distance(what: &str, d: f64) -> Result<(), ExtendError> {
     if d.is_finite() && d >= 0.0 {
         Ok(())
     } else {
-        Err(setting(Setting::Distance, format!("`{what}` must be a finite length ≥ 0, not {d}")))
+        Err(setting(
+            Setting::Distance,
+            format!("`{what}` must be a finite length ≥ 0, not {d}"),
+        ))
     }
 }
 
@@ -393,7 +415,13 @@ fn check_reach(reach: &Reach) -> Result<(), ExtendError> {
             check_distance("down", dip.down)?;
             check_distance("sides", dip.sides)?;
             if !(dip.flat_below.is_finite() && (0.0..90.0).contains(&dip.flat_below)) {
-                return Err(setting(Setting::Toward, format!("`flatBelow` is an angle in [0, 90) degrees, not {}", dip.flat_below)));
+                return Err(setting(
+                    Setting::Toward,
+                    format!(
+                        "`flatBelow` is an angle in [0, 90) degrees, not {}",
+                        dip.flat_below
+                    ),
+                ));
             }
             Ok(())
         }
@@ -456,7 +484,12 @@ pub struct LineExtension {
 type EndMade = (End, Vec<[f64; 3]>, usize);
 
 /// The distance an end gets, and the direction it goes.
-fn line_end(tail: &[[f64; 3]], reach: &Reach, is_start: bool, band: f64) -> Result<Option<EndMade>, ExtendError> {
+fn line_end(
+    tail: &[[f64; 3]],
+    reach: &Reach,
+    is_start: bool,
+    band: f64,
+) -> Result<Option<EndMade>, ExtendError> {
     // `tail` runs from the end node inward.
     let mut taken = vec![tail[0]];
     let mut length = 0.0;
@@ -498,7 +531,11 @@ fn line_end(tail: &[[f64; 3]], reach: &Reach, is_start: bool, band: f64) -> Resu
         }
         Reach::Around(d) => *d,
         Reach::Dip(dip) => {
-            let upward_z = if dip.plus_z_is_up { direction[2] } else { -direction[2] };
+            let upward_z = if dip.plus_z_is_up {
+                direction[2]
+            } else {
+                -direction[2]
+            };
             let sin2 = upward_z * upward_z;
             blend(dip, upward_z > 0.0, sin2, upward_z.abs())
         }
@@ -511,12 +548,25 @@ fn line_end(tail: &[[f64; 3]], reach: &Reach, is_start: bool, band: f64) -> Resu
     if count > MOST_ADDED as f64 {
         return Err(setting(
             Setting::Distance,
-            format!("{distance} at a step of {step} would add {count} nodes to one end — more than {MOST_ADDED}"),
+            format!(
+                "{distance} at a step of {step} would add {count} nodes to one end — more than {MOST_ADDED}"
+            ),
         ));
     }
     let count = count as usize;
-    let added: Vec<[f64; 3]> = (1..=count).map(|k| add(tail[0], scale(direction, distance * k as f64 / count as f64))).collect();
-    Ok(Some((End { direction, distance, added: count, band_nodes: taken.len() }, added, fit.outliers.len())))
+    let added: Vec<[f64; 3]> = (1..=count)
+        .map(|k| add(tail[0], scale(direction, distance * k as f64 / count as f64)))
+        .collect();
+    Ok(Some((
+        End {
+            direction,
+            distance,
+            added: count,
+            band_nodes: taken.len(),
+        },
+        added,
+        fit.outliers.len(),
+    )))
 }
 
 /// An open polyline extended at its ends. The original nodes are kept, bit for
@@ -526,7 +576,10 @@ pub fn extend_line(line: &[[f64; 3]], reach: &Reach, band: f64) -> Result<LineEx
     check_band(band)?;
     check_reach(reach)?;
     if line.len() < 2 {
-        return Err(ExtendError::Shape(format!("a line of {} node(s) has no direction", line.len())));
+        return Err(ExtendError::Shape(format!(
+            "a line of {} node(s) has no direction",
+            line.len()
+        )));
     }
     let reversed: Vec<[f64; 3]> = line.iter().rev().copied().collect();
     let start = line_end(line, reach, true, band)?;
@@ -544,7 +597,14 @@ pub fn extend_line(line: &[[f64; 3]], reach: &Reach, band: f64) -> Result<LineEx
         points.extend(added.iter());
         outliers += out;
     }
-    Ok(LineExtension { points, before, after, start: start.map(|s| s.0), end: end.map(|e| e.0), outliers })
+    Ok(LineExtension {
+        points,
+        before,
+        after,
+        start: start.map(|s| s.0),
+        end: end.map(|e| e.0),
+        outliers,
+    })
 }
 
 // ---------------------------------------------------------------- surfaces
@@ -602,19 +662,31 @@ fn inside(polygon: &[[f64; 2]], p: [f64; 2]) -> bool {
 /// A triangulated surface extended past its outer border. The input nodes and
 /// triangles are kept as they are; only rings of nodes and bands of triangles
 /// are added.
-pub fn extend_surface(points: &[[f64; 3]], triangles: &[[u32; 3]], reach: &Reach, band: f64) -> Result<SurfaceExtension, ExtendError> {
+pub fn extend_surface(
+    points: &[[f64; 3]],
+    triangles: &[[u32; 3]],
+    reach: &Reach,
+    band: f64,
+) -> Result<SurfaceExtension, ExtendError> {
     check_band(band)?;
     check_reach(reach)?;
     if let Reach::Ends { .. } = reach {
-        return Err(setting(Setting::Toward, "a surface has no start and no end — extend it `around`, or by `dip`"));
+        return Err(setting(
+            Setting::Toward,
+            "a surface has no start and no end — extend it `around`, or by `dip`",
+        ));
     }
     let n = points.len();
     if let Some(bad) = triangles.iter().flatten().find(|&&i| i as usize >= n) {
-        return Err(ExtendError::Shape(format!("a triangle names node {bad} where the surface has {n}")));
+        return Err(ExtendError::Shape(format!(
+            "a triangle names node {bad} where the surface has {n}"
+        )));
     }
     let loops = boundary_loops(triangles).map_err(|e| ExtendError::Shape(e.to_string()))?;
     if loops.is_empty() {
-        return Err(ExtendError::Shape("the surface is closed — it has no border to extend".to_string()));
+        return Err(ExtendError::Shape(
+            "the surface is closed — it has no border to extend".to_string(),
+        ));
     }
 
     // The mean plane, over every node a triangle names.
@@ -624,7 +696,9 @@ pub fn extend_surface(points: &[[f64; 3]], triangles: &[[u32; 3]], reach: &Reach
     }
     let named: Vec<usize> = (0..n).filter(|i| used[*i]).collect();
     let cloud: Vec<[f64; 3]> = named.iter().map(|i| points[*i]).collect();
-    let mean = fit_plane(&cloud).ok_or_else(|| ExtendError::Shape("the surface's nodes are on one line — it has no plane".to_string()))?;
+    let mean = fit_plane(&cloud).ok_or_else(|| {
+        ExtendError::Shape("the surface's nodes are on one line — it has no plane".to_string())
+    })?;
     let normal = mean.axis;
     let dip = normal[2].abs().min(1.0).acos().to_degrees();
 
@@ -649,7 +723,11 @@ pub fn extend_surface(points: &[[f64; 3]], triangles: &[[u32; 3]], reach: &Reach
             (side, up)
         }
         _ => {
-            let helper = if normal[0].abs() < 0.9 { [1.0, 0.0, 0.0] } else { [0.0, 1.0, 0.0] };
+            let helper = if normal[0].abs() < 0.9 {
+                [1.0, 0.0, 0.0]
+            } else {
+                [0.0, 1.0, 0.0]
+            };
             let side = unit(cross(helper, normal)).expect("a unit normal");
             (side, cross(normal, side))
         }
@@ -663,7 +741,10 @@ pub fn extend_surface(points: &[[f64; 3]], triangles: &[[u32; 3]], reach: &Reach
             let d = sub(points[i as usize], mean.centre);
             [dot(d, side), dot(d, up_dip)]
         };
-        let polygons: Vec<Vec<[f64; 2]>> = loops.iter().map(|l| l.iter().map(|i| flat(*i)).collect()).collect();
+        let polygons: Vec<Vec<[f64; 2]>> = loops
+            .iter()
+            .map(|l| l.iter().map(|i| flat(*i)).collect())
+            .collect();
         let outer: Vec<usize> = (0..loops.len())
             .filter(|a| !(0..loops.len()).any(|b| b != *a && inside(&polygons[b], polygons[*a][0])))
             .collect();
@@ -702,8 +783,11 @@ pub fn extend_surface(points: &[[f64; 3]], triangles: &[[u32; 3]], reach: &Reach
         // neighbours on the border and across, so three are never missing.
         let must = [i, prev, next, across_prev, across_next];
         let band2 = band * band;
-        let chosen: Vec<usize> =
-            named.iter().copied().filter(|j| must.contains(&(*j as u32)) || dot(sub(points[*j], p), sub(points[*j], p)) <= band2).collect();
+        let chosen: Vec<usize> = named
+            .iter()
+            .copied()
+            .filter(|j| must.contains(&(*j as u32)) || dot(sub(points[*j], p), sub(points[*j], p)) <= band2)
+            .collect();
         let local: Vec<[f64; 3]> = chosen.iter().map(|j| points[*j]).collect();
         let fit = fit_plane(&local).ok_or_else(|| {
             ExtendError::Shape(format!("near border node {i}, the band's nodes are on one line — no plane to extend along; widen `band`"))
@@ -712,10 +796,15 @@ pub fn extend_surface(points: &[[f64; 3]], triangles: &[[u32; 3]], reach: &Reach
             outlier[chosen[*r]] = true;
         }
         let m = fit.axis;
-        let bisector = add(unit(sub(p, at(prev))).unwrap_or([0.0; 3]), unit(sub(at(next), p)).unwrap_or([0.0; 3]));
+        let bisector = add(
+            unit(sub(p, at(prev))).unwrap_or([0.0; 3]),
+            unit(sub(at(next), p)).unwrap_or([0.0; 3]),
+        );
         let tangent = sub(bisector, scale(m, dot(bisector, m)));
         let Some(tangent) = unit(tangent).filter(|_| norm(tangent) > 1e-9) else {
-            return Err(ExtendError::Shape(format!("the border folds back on itself at node {i} — it has no outward direction there")));
+            return Err(ExtendError::Shape(format!(
+                "the border folds back on itself at node {i} — it has no outward direction there"
+            )));
         };
         let mut direction = unit(cross(tangent, m)).expect("two unit vectors at right angles");
         let inward = sub(scale(add(at(across_prev), at(across_next)), 0.5), p);
@@ -738,21 +827,32 @@ pub fn extend_surface(points: &[[f64; 3]], triangles: &[[u32; 3]], reach: &Reach
             }
             Reach::Ends { .. } => unreachable!("refused above"),
         };
-        outward.push(Outward { node: i, direction, distance });
+        outward.push(Outward {
+            node: i,
+            direction,
+            distance,
+        });
     }
 
     let longest = outward.iter().map(|o| o.distance).fold(0.0, f64::max);
     if longest <= 0.0 {
-        return Err(setting(Setting::Distance, "every distance is zero — there is nothing to extend"));
+        return Err(setting(
+            Setting::Distance,
+            "every distance is zero — there is nothing to extend",
+        ));
     }
-    let perimeter: f64 = (0..count).map(|k| norm(sub(at(ring[(k + 1) % count]), at(ring[k])))).sum();
+    let perimeter: f64 = (0..count)
+        .map(|k| norm(sub(at(ring[(k + 1) % count]), at(ring[k]))))
+        .sum();
     let step = (perimeter / count as f64).max(f64::MIN_POSITIVE);
     let rings = (longest / step).ceil().max(1.0);
     let moving = outward.iter().filter(|o| o.distance > 0.0).count();
     if rings * moving as f64 > MOST_ADDED as f64 {
         return Err(setting(
             Setting::Distance,
-            format!("{longest} at the border's mean edge of {step} is {rings} rings of {moving} nodes — more than {MOST_ADDED}"),
+            format!(
+                "{longest} at the border's mean edge of {step} is {rings} rings of {moving} nodes — more than {MOST_ADDED}"
+            ),
         ));
     }
     let rings = rings as usize;
@@ -780,7 +880,10 @@ pub fn extend_surface(points: &[[f64; 3]], triangles: &[[u32; 3]], reach: &Reach
                 if o.distance <= 0.0 {
                     o.node
                 } else {
-                    out.push(add(at(o.node), scale(o.direction, o.distance * k as f64 / rings as f64)));
+                    out.push(add(
+                        at(o.node),
+                        scale(o.direction, o.distance * k as f64 / rings as f64),
+                    ));
                     (out.len() - 1) as u32
                 }
             })
@@ -793,8 +896,17 @@ pub fn extend_surface(points: &[[f64; 3]], triangles: &[[u32; 3]], reach: &Reach
         let ([a, _], _) = edge(ring[pos], ring[next]);
         let forward = a == ring[pos];
         for k in 1..=rings {
-            let (i0, j0, i1, j1) = (index[k - 1][pos], index[k - 1][next], index[k][pos], index[k][next]);
-            let pair = if forward { [[j0, i0, i1], [j0, i1, j1]] } else { [[i0, j0, j1], [i0, j1, i1]] };
+            let (i0, j0, i1, j1) = (
+                index[k - 1][pos],
+                index[k - 1][next],
+                index[k][pos],
+                index[k][next],
+            );
+            let pair = if forward {
+                [[j0, i0, i1], [j0, i1, j1]]
+            } else {
+                [[i0, j0, j1], [i0, j1, i1]]
+            };
             for t in pair {
                 if t[0] != t[1] && t[1] != t[2] && t[0] != t[2] {
                     made.push(t);
@@ -848,19 +960,31 @@ mod tests {
     fn the_eigenvectors_of_a_known_matrix() {
         // Diagonal in a turned frame: values 1, 2, 5.
         let pairs = eigen([[2.0, 0.0, 0.0], [0.0, 3.0, 2.0], [0.0, 2.0, 3.0]]);
-        assert!(close(pairs[0].0, 1.0) && close(pairs[1].0, 2.0) && close(pairs[2].0, 5.0), "{pairs:?}");
+        assert!(
+            close(pairs[0].0, 1.0) && close(pairs[1].0, 2.0) && close(pairs[2].0, 5.0),
+            "{pairs:?}"
+        );
         let v = pairs[2].1;
-        assert!(close(v[1].abs(), 0.5f64.sqrt()) && close(v[2].abs(), 0.5f64.sqrt()) && close(v[0], 0.0), "{v:?}");
+        assert!(
+            close(v[1].abs(), 0.5f64.sqrt()) && close(v[2].abs(), 0.5f64.sqrt()) && close(v[0], 0.0),
+            "{v:?}"
+        );
     }
 
     /// The robust fit ignores a misplaced node, and says so: the least-squares
     /// plane would tilt toward it.
     #[test]
     fn a_misplaced_node_is_weighted_down_and_counted() {
-        let mut points: Vec<[f64; 3]> = (0..5).flat_map(|j| (0..5).map(move |i| [i as f64, j as f64, 0.0])).collect();
+        let mut points: Vec<[f64; 3]> = (0..5)
+            .flat_map(|j| (0..5).map(move |i| [i as f64, j as f64, 0.0]))
+            .collect();
         points[24][2] = 3.0;
         let fit = fit_plane(&points).unwrap();
-        assert!(close(fit.axis[2].abs(), 1.0), "the plane is z = 0 still: {:?}", fit.axis);
+        assert!(
+            close(fit.axis[2].abs(), 1.0),
+            "the plane is z = 0 still: {:?}",
+            fit.axis
+        );
         assert_eq!(fit.outliers, vec![24]);
     }
 
@@ -875,8 +999,14 @@ mod tests {
         let first = made.points[0];
         let tip = *made.points.last().unwrap();
         let along = |p: [f64; 3], from: [f64; 3]| dot(sub(p, from), d);
-        assert!(close(along(tip, line[4]), 7.0) && close(norm(sub(tip, line[4])), 7.0), "{tip:?}");
-        assert!(close(along(first, line[0]), -3.0) && close(norm(sub(first, line[0])), 3.0), "{first:?}");
+        assert!(
+            close(along(tip, line[4]), 7.0) && close(norm(sub(tip, line[4])), 7.0),
+            "{tip:?}"
+        );
+        assert!(
+            close(along(first, line[0]), -3.0) && close(norm(sub(first, line[0])), 3.0),
+            "{first:?}"
+        );
         // The step is the band's mean segment, √6: 3 → 2 nodes, 7 → 3.
         assert_eq!((made.before, made.after), (2, 3));
     }
@@ -890,8 +1020,14 @@ mod tests {
         let made = extend_line(&line, &Reach::Ends { start: 0.0, end: 5.0 }, 10.0).unwrap();
         let direction = made.end.unwrap().direction;
         let last_edge = unit(sub(line[7], line[6])).unwrap();
-        assert!(direction[1].abs() < 1e-9, "the robust direction stays along x: {direction:?}");
-        assert!(last_edge[1] > 0.3, "and the last edge would have turned by: {last_edge:?}");
+        assert!(
+            direction[1].abs() < 1e-9,
+            "the robust direction stays along x: {direction:?}"
+        );
+        assert!(
+            last_edge[1] > 0.3,
+            "and the last edge would have turned by: {last_edge:?}"
+        );
         assert_eq!(made.outliers, 1);
     }
 
@@ -918,7 +1054,14 @@ mod tests {
     #[test]
     fn up_as_a_height_rises_by_that_height_on_a_plane() {
         let (points, triangles) = tilted(5, 1.0);
-        let dip = Dip { up: 10.0, down: 0.0, sides: 0.0, height: true, plus_z_is_up: true, flat_below: 5.0 };
+        let dip = Dip {
+            up: 10.0,
+            down: 0.0,
+            sides: 0.0,
+            height: true,
+            plus_z_is_up: true,
+            flat_below: 5.0,
+        };
         let made = extend_surface(&points, &triangles, &Reach::Dip(dip), 1.5).unwrap();
         assert!(close(made.dip, 45.0));
         // Node 22 is on the top edge, away from the corners.
@@ -931,9 +1074,25 @@ mod tests {
     #[test]
     fn a_flat_surface_has_no_up_and_says_its_dip() {
         let (points, triangles) = tilted(4, 0.0);
-        let dip = Dip { up: 1.0, down: 1.0, sides: 1.0, height: false, plus_z_is_up: true, flat_below: 5.0 };
+        let dip = Dip {
+            up: 1.0,
+            down: 1.0,
+            sides: 1.0,
+            height: false,
+            plus_z_is_up: true,
+            flat_below: 5.0,
+        };
         let why = extend_surface(&points, &triangles, &Reach::Dip(dip), 1.0).unwrap_err();
-        assert!(matches!(why, ExtendError::Setting { which: Setting::Toward, .. }), "{why}");
+        assert!(
+            matches!(
+                why,
+                ExtendError::Setting {
+                    which: Setting::Toward,
+                    ..
+                }
+            ),
+            "{why}"
+        );
         assert!(why.to_string().contains("dips 0.000°"), "{why}");
     }
 

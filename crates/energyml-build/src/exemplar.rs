@@ -81,14 +81,21 @@ pub fn prefill(slots: &[Slot], object: &Value) -> Vec<Copied> {
             }
             // An external array is not a setting: refuse it here rather
             // than let a description object land in a field.
-            if found.is_array() || found.get("Values").is_some() || found.get("ExternalDataArrayPart").is_some() {
+            if found.is_array()
+                || found.get("Values").is_some()
+                || found.get("ExternalDataArrayPart").is_some()
+            {
                 continue;
             }
             let value = coerce(&slot.need, found);
             if slot.need.accepts(&value).is_err() {
                 continue;
             }
-            out.push(Copied { slot: slot.name.to_string(), value, path });
+            out.push(Copied {
+                slot: slot.name.to_string(),
+                value,
+                path,
+            });
             break;
         }
     }
@@ -115,7 +122,11 @@ fn coerce(need: &Need, found: &Value) -> Value {
             _ => found.clone(),
         },
         Need::Number { .. } => match found {
-            Value::String(text) => text.trim().parse::<f64>().map(Value::from).unwrap_or_else(|_| found.clone()),
+            Value::String(text) => text
+                .trim()
+                .parse::<f64>()
+                .map(Value::from)
+                .unwrap_or_else(|_| found.clone()),
             other => other.clone(),
         },
         // **An integer read back from a measure comes back as a float.** eml 2.3 has no
@@ -189,7 +200,11 @@ pub fn from_activity(slots: &[Slot], activity: &Value) -> Vec<Copied> {
         if slot.need.accepts(&value).is_err() {
             continue;
         }
-        out.push(Copied { slot: slot.name.to_string(), value, path: "Parameter" });
+        out.push(Copied {
+            slot: slot.name.to_string(),
+            value,
+            path: "Parameter",
+        });
     }
     out
 }
@@ -216,8 +231,16 @@ mod tests {
         vec![
             Slot::required("mdUom", Need::Text, "").reads(&["NodeMd/Uom", "MdUom"]),
             Slot::optional("datum", Need::Object { types: &[] }, "").reads(&["MdDatum"]),
-            Slot::optional("ground", Need::Number { uom: None, least: None, most: None }, "")
-                .reads(&["MdDatum/VerticalCoordinate"]),
+            Slot::optional(
+                "ground",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "",
+            )
+            .reads(&["MdDatum/VerticalCoordinate"]),
             Slot::optional("shape", Need::Choice(&["linear", "cubic"]), "").reads(&["Shape"]),
             // Declares a path that targets an array: nothing must come out of it.
             Slot::optional("points", Need::Text, "").reads(&["Geometry/Points"]),
@@ -274,8 +297,18 @@ mod tests {
 
     #[test]
     fn a_measure_gives_its_number_to_a_number_slot() {
-        let slots = vec![Slot::optional("ground", Need::Number { uom: None, least: None, most: None }, "")
-            .reads(&["Elevation"])];
+        let slots = vec![
+            Slot::optional(
+                "ground",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "",
+            )
+            .reads(&["Elevation"]),
+        ];
         let object = serde_json::json!({ "Elevation": { "value": "23.5", "uom": "m" } });
         let copied = prefill(&slots, &object);
         assert_eq!(copied.len(), 1);
@@ -309,11 +342,19 @@ mod tests {
         // To make it fail: read the parameters other than by the slot's
         // title, or forget one of the three forms that `Parameter` writes.
         let copied = from_activity(&slots(), &an_activity());
-        let by = |name: &str| copied.iter().find(|one| one.slot == name).map(|one| one.value.clone());
+        let by = |name: &str| {
+            copied
+                .iter()
+                .find(|one| one.slot == name)
+                .map(|one| one.value.clone())
+        };
         assert_eq!(by("mdUom"), Some(serde_json::json!("ft")));
         assert_eq!(by("shape"), Some(serde_json::json!("cubic")));
         assert_eq!(by("ground"), Some(serde_json::json!(80.0)));
-        assert_eq!(by("datum").and_then(|v| v["Uuid"].as_str().map(str::to_string)), Some("d-1".to_string()));
+        assert_eq!(
+            by("datum").and_then(|v| v["Uuid"].as_str().map(str::to_string)),
+            Some("d-1".to_string())
+        );
     }
 
     #[test]

@@ -29,7 +29,8 @@ fn locate() -> Option<PathBuf> {
         candidates.push(with_errors.join("Lutetia-with-errors.epc"));
         candidates.push(with_errors.join("Lutetia.epc"));
     }
-    candidates.push(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../web/public/examples/lutetia/Lutetia.epc"));
+    candidates
+        .push(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../web/public/examples/lutetia/Lutetia.epc"));
     candidates.into_iter().find(|path| path.is_file())
 }
 
@@ -53,7 +54,11 @@ pub fn bytes() -> Option<Vec<u8>> {
 pub fn store() -> Option<EpcStore> {
     let bytes = bytes()?;
     Some(
-        EpcStore::from_reader(Box::new(std::io::Cursor::new(bytes)), "Lutetia.epc", Arc::new(energyml_schemas::all()))
-            .expect("Lutetia opens"),
+        EpcStore::from_reader(
+            Box::new(std::io::Cursor::new(bytes)),
+            "Lutetia.epc",
+            Arc::new(energyml_schemas::all()),
+        )
+        .expect("Lutetia opens"),
     )
 }

@@ -52,7 +52,10 @@ fn package() -> energyml_storage::EpcStore {
             uuid: PLANE.to_string(),
             schema_version: "2.3".to_string(),
             citation: citation("plane"),
-            azimuth: eml::PlaneAngleMeasureExt { value: 30.0, uom: eml::PlaneAngleUomExt::Dega },
+            azimuth: eml::PlaneAngleMeasureExt {
+                value: 30.0,
+                uom: eml::PlaneAngleUomExt::Dega,
+            },
             azimuth_reference: eml::NorthReferenceKind::GridNorth,
             origin_projected_coordinate1: 1000.0,
             origin_projected_coordinate2: 2000.0,
@@ -63,9 +66,9 @@ fn package() -> energyml_storage::EpcStore {
                 is_time: false,
             },
             origin_projected_crs: eml::ProjectedCrs {
-                abstract_projected_crs: Some(eml::AbstractProjectedCrs::ProjectedEpsgCrs(eml::ProjectedEpsgCrs {
-                    epsg_code: 2154,
-                })),
+                abstract_projected_crs: Some(eml::AbstractProjectedCrs::ProjectedEpsgCrs(
+                    eml::ProjectedEpsgCrs { epsg_code: 2154 },
+                )),
                 ..Default::default()
             },
             ..Default::default()
@@ -105,7 +108,10 @@ fn package() -> energyml_storage::EpcStore {
             uuid: POINT.to_string(),
             schema_version: "2.3".to_string(),
             citation: citation("collar"),
-            horizontal_coordinates: Some(eml::HorizontalCoordinates { coordinate1: 10.0, coordinate2: 0.0 }),
+            horizontal_coordinates: Some(eml::HorizontalCoordinates {
+                coordinate1: 10.0,
+                coordinate2: 0.0,
+            }),
             vertical_coordinate: Some(5.0),
             crs: dor(COMPOUND, "eml23.LocalEngineeringCompoundCrs", "depths"),
             ..Default::default()
@@ -120,7 +126,11 @@ fn package() -> energyml_storage::EpcStore {
                 md_min: 0.0,
                 md_max: 100.0,
                 uom: eml::LengthUomExt::M,
-                datum: Some(dor(POINT, "eml23.ReferencePointInALocalEngineeringCompoundCrs", "collar")),
+                datum: Some(dor(
+                    POINT,
+                    "eml23.ReferencePointInALocalEngineeringCompoundCrs",
+                    "collar",
+                )),
                 ..Default::default()
             },
             ..Default::default()
@@ -151,10 +161,15 @@ fn a_well_anchored_in_a_compound_is_collared_where_the_compound_places_it() {
     let expected = [1000.0 + 10.0 * cos, 2000.0 - 10.0 * sin, 30.0];
     let head = known.wellhead.expect("the collar is stated");
     for axis in 0..3 {
-        assert!((head[axis] - expected[axis]).abs() < 1e-9, "collar {head:?}, expected {expected:?}");
+        assert!(
+            (head[axis] - expected[axis]).abs() < 1e-9,
+            "collar {head:?}, expected {expected:?}"
+        );
     }
 
-    let vertical = known.vertical_crs.expect("the vertical half, through the compound");
+    let vertical = known
+        .vertical_crs
+        .expect("the vertical half, through the compound");
     assert_eq!(vertical.uuid, VERTICAL);
     assert_eq!(known.vertical_epsg, Some(5720));
 }

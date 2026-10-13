@@ -231,14 +231,22 @@ fn allowed(hole: f64) -> f64 {
 
 /// `sin x / x`, its series where the quotient loses its digits.
 fn sinc(x: f64) -> f64 {
-    if x.abs() < 1e-4 { 1.0 - x * x / 6.0 + x.powi(4) / 120.0 } else { x.sin() / x }
+    if x.abs() < 1e-4 {
+        1.0 - x * x / 6.0 + x.powi(4) / 120.0
+    } else {
+        x.sin() / x
+    }
 }
 
 /// A direction in the horizontal plane, in degrees clockwise from north, in
 /// [0, 360) — a remainder of −1e-15 is 360 once rounded, and 360 is north.
 fn bearing(north: f64, east: f64) -> f64 {
     let degrees = east.atan2(north).to_degrees().rem_euclid(360.0);
-    if degrees >= 360.0 { degrees - 360.0 } else { degrees }
+    if degrees >= 360.0 {
+        degrees - 360.0
+    } else {
+        degrees
+    }
 }
 
 /// One interval: its two depths and its chord.
@@ -298,11 +306,18 @@ pub fn directions(points: &[Point]) -> Result<Vec<Direction>, SurveyError> {
     if points.len() < 2 {
         return Err(SurveyError::TooFew { given: points.len() });
     }
-    if let Some(at) = points.iter().position(|point| !point.md.is_finite() || point.at.iter().any(|v| !v.is_finite())) {
+    if let Some(at) = points
+        .iter()
+        .position(|point| !point.md.is_finite() || point.at.iter().any(|v| !v.is_finite()))
+    {
         return Err(SurveyError::NotFinite { station: at + 1 });
     }
     if let Some(at) = points.windows(2).position(|pair| pair[1].md <= pair[0].md) {
-        return Err(SurveyError::NotIncreasing { station: at + 2, md: points[at + 1].md, before: points[at].md });
+        return Err(SurveyError::NotIncreasing {
+            station: at + 2,
+            md: points[at + 1].md,
+            before: points[at].md,
+        });
     }
 
     // -- every chord, checked against its hole ------------------------------
@@ -313,12 +328,23 @@ pub fn directions(points: &[Point]) -> Result<Vec<Direction>, SurveyError> {
         let d = sub(pair[1].at, pair[0].at);
         let length = norm(d);
         if length > hole + allowed(hole) {
-            return Err(SurveyError::ChordLongerThanHole { from, to, chord: length, hole });
+            return Err(SurveyError::ChordLongerThanHole {
+                from,
+                to,
+                chord: length,
+                hole,
+            });
         }
         if length <= FLOOR {
             return Err(SurveyError::NoChord { from, to, hole });
         }
-        chords.push(Chord { from, to, unit: mul(d, 1.0 / length), length, hole });
+        chords.push(Chord {
+            from,
+            to,
+            unit: mul(d, 1.0 / length),
+            length,
+            hole,
+        });
     }
 
     // -- the anchor: the straightest straight interval ----------------------
@@ -328,7 +354,9 @@ pub fn directions(points: &[Point]) -> Result<Vec<Direction>, SurveyError> {
         .filter(|(_, chord)| chord.straight())
         .min_by(|(_, a), (_, b)| a.deficit().abs().total_cmp(&b.deficit().abs()))
         .map(|(at, _)| at)
-        .ok_or(SurveyError::NoStraightInterval { intervals: chords.len() })?;
+        .ok_or(SurveyError::NoStraightInterval {
+            intervals: chords.len(),
+        })?;
 
     let count = points.len();
     let mut t: Vec<Vector> = vec![[0.0; 3]; count];
@@ -344,12 +372,20 @@ pub fn directions(points: &[Point]) -> Result<Vec<Direction>, SurveyError> {
         turn[at] = chord.arc(t[at], chord.from)?;
         // A straight interval reads its direction again from its chord: what
         // the mirrors accumulated in rounding starts over at each hold.
-        t[at + 1] = if chord.straight() && turn[at] < 1e-6 { chord.unit } else { mirrored(t[at], chord.unit) };
+        t[at + 1] = if chord.straight() && turn[at] < 1e-6 {
+            chord.unit
+        } else {
+            mirrored(t[at], chord.unit)
+        };
     }
     for at in (0..anchor).rev() {
         let chord = &chords[at];
         turn[at] = chord.arc(t[at + 1], chord.to)?;
-        t[at] = if chord.straight() && turn[at] < 1e-6 { chord.unit } else { mirrored(t[at + 1], chord.unit) };
+        t[at] = if chord.straight() && turn[at] < 1e-6 {
+            chord.unit
+        } else {
+            mirrored(t[at + 1], chord.unit)
+        };
     }
 
     Ok(t.iter()
@@ -361,7 +397,8 @@ pub fn directions(points: &[Point]) -> Result<Vec<Direction>, SurveyError> {
                 // turns one unit of rounding into 1e-6 degrees.
                 inclination: horizontal.atan2(down).to_degrees(),
                 azimuth: (horizontal > VERTICAL).then(|| bearing(north, east)),
-                dogleg_severity: (at > 0).then(|| turn[at - 1].to_degrees() / chords[at - 1].hole * RATE_LENGTH),
+                dogleg_severity: (at > 0)
+                    .then(|| turn[at - 1].to_degrees() / chords[at - 1].hole * RATE_LENGTH),
             }
         })
         .collect())
@@ -405,14 +442,22 @@ mod tests {
     }
 
     fn curve(rate: f64, inclination: f64, azimuth: f64, turn: Turn) -> Section {
-        Section::Curve { rate, inclination, azimuth, turn }
+        Section::Curve {
+            rate,
+            inclination,
+            azimuth,
+            turn,
+        }
     }
 
     /// The stations of a plan as points, moved by `shift` (north, east, down).
     fn points_of(stations: &[Station], shift: [f64; 3]) -> Vec<Point> {
         stations
             .iter()
-            .map(|s| Point { md: s.md, at: [shift[0] + s.north, shift[1] + s.east, shift[2] + s.tvd] })
+            .map(|s| Point {
+                md: s.md,
+                at: [shift[0] + s.north, shift[1] + s.east, shift[2] + s.tvd],
+            })
             .collect()
     }
 
@@ -438,12 +483,29 @@ mod tests {
     fn agrees(stations: &[Station], read: &[Direction], tolerance: f64) {
         assert_eq!(stations.len(), read.len());
         for (station, direction) in stations.iter().zip(read) {
-            assert!(near(direction.inclination, station.inclination, tolerance), "MD {}: {direction:?} for {station:?}", station.md);
+            assert!(
+                near(direction.inclination, station.inclination, tolerance),
+                "MD {}: {direction:?} for {station:?}",
+                station.md
+            );
             if station.inclination > 0.0 {
-                let azimuth = direction.azimuth.unwrap_or_else(|| panic!("MD {}: no azimuth at inclination {}", station.md, station.inclination));
-                assert!(near_bearing(azimuth, station.azimuth, tolerance), "MD {}: {direction:?} for {station:?}", station.md);
+                let azimuth = direction.azimuth.unwrap_or_else(|| {
+                    panic!(
+                        "MD {}: no azimuth at inclination {}",
+                        station.md, station.inclination
+                    )
+                });
+                assert!(
+                    near_bearing(azimuth, station.azimuth, tolerance),
+                    "MD {}: {direction:?} for {station:?}",
+                    station.md
+                );
             } else {
-                assert_eq!(direction.azimuth, None, "MD {}: a vertical hole has no azimuth", station.md);
+                assert_eq!(
+                    direction.azimuth, None,
+                    "MD {}: a vertical hole has no azimuth",
+                    station.md
+                );
             }
         }
     }
@@ -469,7 +531,10 @@ mod tests {
         // stays well under 1e-5 degree.
         let stations = gth1();
         let points = points_of(&stations, [6_861_170.0, 651_620.0, -48.0]);
-        assert!(points[10].at[0] > 6.8e6, "the test must be far from the origin to test anything");
+        assert!(
+            points[10].at[0] > 6.8e6,
+            "the test must be far from the origin to test anything"
+        );
         let read = directions(&points).expect("stations on arcs");
         agrees(&stations, &read, 1e-5);
     }
@@ -478,12 +543,23 @@ mod tests {
     fn the_dogleg_severity_is_the_rate_of_the_arc_and_zero_on_a_hold() {
         let stations = gth1();
         let read = directions(&points_of(&stations, [0.0; 3])).expect("stations on arcs");
-        assert_eq!(read[0].dogleg_severity, None, "no interval ends at the first station");
+        assert_eq!(
+            read[0].dogleg_severity, None,
+            "no interval ends at the first station"
+        );
         // MD 20 ends the first 5 m of the build at 15°/30 m; MD 10 is on the
         // vertical hold.
         let at = |md: f64| stations.iter().position(|s| s.md == md).expect("a station");
-        assert!(near(read[at(20.0)].dogleg_severity.unwrap(), 15.0, 1e-8), "{:?}", read[at(20.0)]);
-        assert!(near(read[at(10.0)].dogleg_severity.unwrap(), 0.0, 1e-9), "{:?}", read[at(10.0)]);
+        assert!(
+            near(read[at(20.0)].dogleg_severity.unwrap(), 15.0, 1e-8),
+            "{:?}",
+            read[at(20.0)]
+        );
+        assert!(
+            near(read[at(10.0)].dogleg_severity.unwrap(), 0.0, 1e-9),
+            "{:?}",
+            read[at(10.0)]
+        );
     }
 
     #[test]
@@ -493,17 +569,34 @@ mod tests {
         // counter-clockwise reading would say 90.
         let stations = well_plan::plan(
             Tie::vertical(),
-            &[Section::HoldTo { md: 30.0 }, curve(15.0, 90.0, 270.0, Turn::Build), Section::Hold { length: 250.0 }],
+            &[
+                Section::HoldTo { md: 30.0 },
+                curve(15.0, 90.0, 270.0, Turn::Build),
+                Section::Hold { length: 250.0 },
+            ],
             10.0,
         )
         .expect("a plan")
         .stations;
-        let read = directions(&points_of(&stations, [6_861_145.0, 651_595.0, -47.0])).expect("stations on arcs");
-        let drain: Vec<&Direction> = stations.iter().zip(&read).filter(|(s, _)| s.md >= 210.0).map(|(_, d)| d).collect();
+        let read =
+            directions(&points_of(&stations, [6_861_145.0, 651_595.0, -47.0])).expect("stations on arcs");
+        let drain: Vec<&Direction> = stations
+            .iter()
+            .zip(&read)
+            .filter(|(s, _)| s.md >= 210.0)
+            .map(|(_, d)| d)
+            .collect();
         assert!(drain.len() > 20, "the drain has its stations");
         for direction in drain {
             assert!(near(direction.inclination, 90.0, 1e-6), "{direction:?}");
-            assert!(near_bearing(direction.azimuth.expect("a horizontal hole has an azimuth"), 270.0, 1e-6), "{direction:?}");
+            assert!(
+                near_bearing(
+                    direction.azimuth.expect("a horizontal hole has an azimuth"),
+                    270.0,
+                    1e-6
+                ),
+                "{direction:?}"
+            );
         }
     }
 
@@ -512,7 +605,11 @@ mod tests {
         for azimuth in [0.0, 90.0, 180.0, 270.0, 45.0] {
             let stations = well_plan::plan(
                 Tie::vertical(),
-                &[Section::HoldTo { md: 20.0 }, curve(10.0, 30.0, azimuth, Turn::Build), Section::Hold { length: 50.0 }],
+                &[
+                    Section::HoldTo { md: 20.0 },
+                    curve(10.0, 30.0, azimuth, Turn::Build),
+                    Section::Hold { length: 50.0 },
+                ],
                 10.0,
             )
             .expect("a plan")
@@ -520,20 +617,30 @@ mod tests {
             let read = directions(&points_of(&stations, [0.0; 3])).expect("stations on arcs");
             let last = read.last().expect("a station");
             assert!(near(last.inclination, 30.0, 1e-8), "{azimuth}: {last:?}");
-            assert!(near_bearing(last.azimuth.expect("an azimuth"), azimuth, 1e-8), "{azimuth}: {last:?}");
+            assert!(
+                near_bearing(last.azimuth.expect("an azimuth"), azimuth, 1e-8),
+                "{azimuth}: {last:?}"
+            );
         }
     }
 
     #[test]
     fn a_vertical_hole_has_no_azimuth_and_no_dogleg() {
-        let points: Vec<Point> =
-            (0..=20).map(|k| Point { md: k as f64 * 10.0, at: [6_861_200.0, 651_800.0, -48.0 + k as f64 * 10.0] }).collect();
+        let points: Vec<Point> = (0..=20)
+            .map(|k| Point {
+                md: k as f64 * 10.0,
+                at: [6_861_200.0, 651_800.0, -48.0 + k as f64 * 10.0],
+            })
+            .collect();
         let read = directions(&points).expect("a straight hole");
         for direction in &read {
             assert_eq!(direction.inclination, 0.0, "{direction:?}");
             assert_eq!(direction.azimuth, None, "{direction:?}");
         }
-        assert!(read[1..].iter().all(|d| d.dogleg_severity == Some(0.0)), "{read:?}");
+        assert!(
+            read[1..].iter().all(|d| d.dogleg_severity == Some(0.0)),
+            "{read:?}"
+        );
     }
 
     #[test]
@@ -542,11 +649,23 @@ mod tests {
         // towards the north, then a hold. The first interval is an arc, so the
         // direction at the kick-off comes back from the hold — and must be the
         // parent's, vertical.
-        let tie = Tie { md: 43.0, inclination: 0.0, azimuth: 0.0 };
-        let stations = well_plan::plan(tie, &[curve(15.0, 45.0, 0.0, Turn::Build), Section::Hold { length: 40.0 }], 5.0)
-            .expect("a plan")
-            .stations;
-        let read = directions(&points_of(&stations, [6_861_200.0, 651_800.0, -5.0])).expect("stations on arcs");
+        let tie = Tie {
+            md: 43.0,
+            inclination: 0.0,
+            azimuth: 0.0,
+        };
+        let stations = well_plan::plan(
+            tie,
+            &[
+                curve(15.0, 45.0, 0.0, Turn::Build),
+                Section::Hold { length: 40.0 },
+            ],
+            5.0,
+        )
+        .expect("a plan")
+        .stations;
+        let read =
+            directions(&points_of(&stations, [6_861_200.0, 651_800.0, -5.0])).expect("stations on arcs");
         assert!(near(read[0].inclination, 0.0, 1e-5), "{:?}", read[0]);
         agrees(&stations, &read, 1e-5);
     }
@@ -558,14 +677,32 @@ mod tests {
         // and the corner is where no arc turns 30° in no hole.
         let (s, c) = (30f64.to_radians().sin(), 30f64.to_radians().cos());
         let points = vec![
-            Point { md: 0.0, at: [0.0, 0.0, 0.0] },
-            Point { md: 10.0, at: [0.0, 0.0, 10.0] },
-            Point { md: 20.0, at: [10.0 * s, 0.0, 10.0 + 10.0 * c] },
+            Point {
+                md: 0.0,
+                at: [0.0, 0.0, 0.0],
+            },
+            Point {
+                md: 10.0,
+                at: [0.0, 0.0, 10.0],
+            },
+            Point {
+                md: 20.0,
+                at: [10.0 * s, 0.0, 10.0 + 10.0 * c],
+            },
         ];
         match directions(&points) {
-            Err(SurveyError::NotAnArc { from, to, known_at, turn, .. }) => {
+            Err(SurveyError::NotAnArc {
+                from,
+                to,
+                known_at,
+                turn,
+                ..
+            }) => {
                 assert_eq!((from, to, known_at), (10.0, 20.0, 10.0));
-                assert!(near(turn, 60.0, 1e-9), "the direction and the chord part by 30°, an arc would turn twice that: {turn}");
+                assert!(
+                    near(turn, 60.0, 1e-9),
+                    "the direction and the chord part by 30°, an arc would turn twice that: {turn}"
+                );
             }
             other => panic!("a kink is no arc: {other:?}"),
         }
@@ -573,18 +710,35 @@ mod tests {
 
     #[test]
     fn what_no_path_can_be_is_refused_by_name() {
-        let p = |md: f64, down: f64| Point { md, at: [0.0, 0.0, down] };
+        let p = |md: f64, down: f64| Point {
+            md,
+            at: [0.0, 0.0, down],
+        };
         assert_eq!(directions(&[p(0.0, 0.0)]), Err(SurveyError::TooFew { given: 1 }));
         assert_eq!(
             directions(&[p(0.0, 0.0), p(10.0, 10.0), p(10.0, 20.0)]),
-            Err(SurveyError::NotIncreasing { station: 3, md: 10.0, before: 10.0 })
+            Err(SurveyError::NotIncreasing {
+                station: 3,
+                md: 10.0,
+                before: 10.0
+            })
         );
-        assert_eq!(directions(&[p(0.0, 0.0), p(f64::NAN, 10.0)]), Err(SurveyError::NotFinite { station: 2 }));
+        assert_eq!(
+            directions(&[p(0.0, 0.0), p(f64::NAN, 10.0)]),
+            Err(SurveyError::NotFinite { station: 2 })
+        );
         assert!(matches!(
             directions(&[p(0.0, 0.0), p(10.0, 12.0)]),
             Err(SurveyError::ChordLongerThanHole { from, to, .. }) if from == 0.0 && to == 10.0
         ));
-        assert_eq!(directions(&[p(0.0, 0.0), p(10.0, 0.0)]), Err(SurveyError::NoChord { from: 0.0, to: 10.0, hole: 10.0 }));
+        assert_eq!(
+            directions(&[p(0.0, 0.0), p(10.0, 0.0)]),
+            Err(SurveyError::NoChord {
+                from: 0.0,
+                to: 10.0,
+                hole: 10.0
+            })
+        );
     }
 
     #[test]
@@ -592,11 +746,14 @@ mod tests {
         // A build from the surface with no hold anywhere: each arc's dogleg is
         // known, the plane it turns in is not — refused rather than assumed to
         // start vertical.
-        let stations =
-            well_plan::plan(Tie::vertical(), &[curve(10.0, 60.0, 90.0, Turn::Build)], 10.0).expect("a plan").stations;
+        let stations = well_plan::plan(Tie::vertical(), &[curve(10.0, 60.0, 90.0, Turn::Build)], 10.0)
+            .expect("a plan")
+            .stations;
         assert_eq!(
             directions(&points_of(&stations, [0.0; 3])),
-            Err(SurveyError::NoStraightInterval { intervals: stations.len() - 1 })
+            Err(SurveyError::NoStraightInterval {
+                intervals: stations.len() - 1
+            })
         );
     }
 
@@ -605,13 +762,20 @@ mod tests {
         let datum = [6_861_200.0, 651_800.0, -48.0];
         let points = [
             Point { md: 0.0, at: datum },
-            Point { md: 150.0, at: [6_861_210.0, 651_790.0, 52.0] },
+            Point {
+                md: 150.0,
+                at: [6_861_210.0, 651_790.0, 52.0],
+            },
         ];
         let read = offsets(&points, datum);
         assert_eq!(read[0].closure, 0.0);
         assert_eq!(read[0].closure_direction, None, "no direction under the datum");
         assert_eq!((read[1].tvd, read[1].north, read[1].east), (100.0, 10.0, -10.0));
         assert!(near(read[1].closure, 200f64.sqrt(), 1e-9));
-        assert!(near(read[1].closure_direction.unwrap(), 315.0, 1e-9), "north-west is 315: {:?}", read[1]);
+        assert!(
+            near(read[1].closure_direction.unwrap(), 315.0, 1e-9),
+            "north-west is 315: {:?}",
+            read[1]
+        );
     }
 }

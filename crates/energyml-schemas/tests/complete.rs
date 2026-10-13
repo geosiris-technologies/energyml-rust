@@ -29,7 +29,9 @@ type Pair = (String, String);
 /// (`retp-types`, the ETP messages).
 fn pair_of_directory(name: &str) -> Option<Pair> {
     let mut parts = name.strip_prefix("energyml-")?.split('-');
-    let package = parts.next().filter(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_lowercase()))?;
+    let package = parts
+        .next()
+        .filter(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_lowercase()))?;
     let mut numbers: Vec<&str> = Vec::new();
     let mut suffix = None;
     for part in parts {
@@ -62,12 +64,17 @@ fn pair_of_directory(name: &str) -> Option<Pair> {
 fn on_disk() -> Vec<Pair> {
     let generated = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../generated");
     let mut out = Vec::new();
-    for entry in std::fs::read_dir(&generated).unwrap_or_else(|e| panic!("{} is the home of the generated crates: {e}", generated.display())) {
+    for entry in std::fs::read_dir(&generated)
+        .unwrap_or_else(|e| panic!("{} is the home of the generated crates: {e}", generated.display()))
+    {
         let path = entry.expect("a directory entry").path();
         if !path.join("Cargo.toml").is_file() {
             continue;
         }
-        let name = path.file_name().and_then(|n| n.to_str()).expect("a utf-8 directory name");
+        let name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .expect("a utf-8 directory name");
         if let Some(pair) = pair_of_directory(name) {
             out.push(pair);
         }
@@ -78,12 +85,17 @@ fn on_disk() -> Vec<Pair> {
 }
 
 /// What is on one side and not on the other: `(only_on_disk, only_registered)`.
-fn disagreements(
-    on_disk: &[Pair],
-    registered: &[Pair],
-) -> (Vec<Pair>, Vec<Pair>) {
-    let missing = on_disk.iter().filter(|pair| !registered.contains(pair)).cloned().collect();
-    let extra = registered.iter().filter(|pair| !on_disk.contains(pair)).cloned().collect();
+fn disagreements(on_disk: &[Pair], registered: &[Pair]) -> (Vec<Pair>, Vec<Pair>) {
+    let missing = on_disk
+        .iter()
+        .filter(|pair| !registered.contains(pair))
+        .cloned()
+        .collect();
+    let extra = registered
+        .iter()
+        .filter(|pair| !on_disk.contains(pair))
+        .cloned()
+        .collect();
     (missing, extra)
 }
 
@@ -106,10 +118,12 @@ fn every_generated_version_is_registered() {
     // crate the table does not know is kept, so that it is reported here too.
     let on_disk: Vec<Pair> = on_disk
         .into_iter()
-        .filter(|(package, version)| match energyml_schemas::known_version(package, version) {
-            Some(known) => known.is_compiled(),
-            None => true,
-        })
+        .filter(
+            |(package, version)| match energyml_schemas::known_version(package, version) {
+                Some(known) => known.is_compiled(),
+                None => true,
+            },
+        )
         .collect();
 
     let registered: Vec<Pair> = energyml_schemas::registered()
@@ -137,8 +151,14 @@ fn every_generated_version_is_registered() {
 #[test]
 fn the_disk_reader_and_the_comparison_can_fail() {
     let pair = |p: &str, v: &str| (p.to_string(), v.to_string());
-    assert_eq!(pair_of_directory("energyml-resqml-2-0-1"), Some(pair("resqml", "2.0.1")));
-    assert_eq!(pair_of_directory("energyml-resqml-2-2-dev3"), Some(pair("resqml", "2.2_dev3")));
+    assert_eq!(
+        pair_of_directory("energyml-resqml-2-0-1"),
+        Some(pair("resqml", "2.0.1"))
+    );
+    assert_eq!(
+        pair_of_directory("energyml-resqml-2-2-dev3"),
+        Some(pair("resqml", "2.2_dev3"))
+    );
     assert_eq!(pair_of_directory("energyml-eml-2-3"), Some(pair("eml", "2.3")));
     assert_eq!(pair_of_directory("retp-types"), None);
     assert_eq!(pair_of_directory("schemas.lock"), None);
@@ -146,14 +166,24 @@ fn the_disk_reader_and_the_comparison_can_fail() {
     let disk = vec![pair("eml", "2.3"), pair("resqml", "2.2")];
     let (missing, extra) = disagreements(&disk, &[pair("eml", "2.3")]);
     assert_eq!((missing, extra), (vec![pair("resqml", "2.2")], vec![]));
-    let (missing, extra) = disagreements(&disk, &[pair("eml", "2.3"), pair("resqml", "2.2"), pair("witsml", "2.1")]);
+    let (missing, extra) = disagreements(
+        &disk,
+        &[pair("eml", "2.3"), pair("resqml", "2.2"), pair("witsml", "2.1")],
+    );
     assert_eq!((missing, extra), (vec![], vec![pair("witsml", "2.1")]));
 
     // And the listing is not trivially the whole registry by construction: it
     // finds the released RESQML, the drop and the oldest EML.
     let found = on_disk();
-    for expected in [pair("resqml", "2.2"), pair("resqml", "2.2_dev3"), pair("eml", "2.0")] {
-        assert!(found.contains(&expected), "{expected:?} is not among the crates found: {found:?}");
+    for expected in [
+        pair("resqml", "2.2"),
+        pair("resqml", "2.2_dev3"),
+        pair("eml", "2.0"),
+    ] {
+        assert!(
+            found.contains(&expected),
+            "{expected:?} is not among the crates found: {found:?}"
+        );
     }
 }
 
@@ -338,7 +368,11 @@ fn a_development_drop_is_read_but_never_offered() {
     }
 
     // The release it precedes is offered, type for type.
-    for name in ["Model", "EarthModelInterpretation", "TriangulatedSetRepresentation"] {
+    for name in [
+        "Model",
+        "EarthModelInterpretation",
+        "TriangulatedSetRepresentation",
+    ] {
         let entry = registry
             .by_name("resqml", "2.2", name)
             .unwrap_or_else(|| panic!("resqml 2.2 has no {name}"));
@@ -353,7 +387,11 @@ fn a_development_drop_is_read_but_never_offered() {
         .types()
         .find(|info| info.package == "resqml" && info.version == "2.2" && info.qualified_type.is_none())
         .expect("resqml 2.2 registers nested types too");
-    assert!(!energyml_schemas::may_create(nested), "{} is nested and offered", nested.name);
+    assert!(
+        !energyml_schemas::may_create(nested),
+        "{} is nested and offered",
+        nested.name
+    );
 
     // Refusing the offer must not have cost the read: the drop's own address
     // still resolves to the drop.
@@ -395,10 +433,16 @@ fn every_creatable_type_is_what_its_qualified_type_creates() {
                 "{qualified} ({} {}) creates {} {} {}",
                 info.package, info.version, entry.info.package, entry.info.version, entry.info.name
             )),
-            None => elsewhere.push(format!("{qualified} ({} {}) creates nothing", info.package, info.version)),
+            None => elsewhere.push(format!(
+                "{qualified} ({} {}) creates nothing",
+                info.package, info.version
+            )),
         }
     }
-    assert!(offered > 0, "nothing is offered for creation; the loop above proved nothing");
+    assert!(
+        offered > 0,
+        "nothing is offered for creation; the loop above proved nothing"
+    );
     assert!(
         elsewhere.is_empty(),
         "{} offered rows make something other than what they show:\n{}",
@@ -416,13 +460,21 @@ fn every_creatable_type_is_what_its_qualified_type_creates() {
 #[test]
 fn a_release_version_spelling_resolves_like_its_schema_version_spelling() {
     let registry = energyml_schemas::all();
-    let by_schema = registry.by_qualified_type("resqml20.obj_ActivityTemplate").expect("resqml20");
-    let by_release = registry.by_qualified_type("resqml201.obj_ActivityTemplate").expect("resqml201");
+    let by_schema = registry
+        .by_qualified_type("resqml20.obj_ActivityTemplate")
+        .expect("resqml20");
+    let by_release = registry
+        .by_qualified_type("resqml201.obj_ActivityTemplate")
+        .expect("resqml201");
     assert!(std::ptr::eq(by_schema.info, by_release.info));
     let by_content = registry
         .by_content_type("application/x-resqml+xml;version=2.0.1;type=obj_ActivityTemplate")
         .expect("version=2.0.1");
     assert!(std::ptr::eq(by_schema.info, by_content.info));
     // And a version nothing has is still nothing.
-    assert!(registry.by_qualified_type("resqml209.obj_ActivityTemplate").is_none());
+    assert!(
+        registry
+            .by_qualified_type("resqml209.obj_ActivityTemplate")
+            .is_none()
+    );
 }

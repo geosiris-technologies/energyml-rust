@@ -308,8 +308,7 @@ impl Geometry {
                 .map(|patch| Patch {
                     index: patch.index,
                     node_offset: patch.node_offset,
-                    points: crate::geometry::orphans_as_holes(&patch.points, &patch.topology)
-                        .into_owned(),
+                    points: crate::geometry::orphans_as_holes(&patch.points, &patch.topology).into_owned(),
                     topology: patch.topology.clone(),
                     closed: Vec::new(),
                 })
@@ -360,7 +359,7 @@ impl Geometry {
                 points,
                 topology,
                 closed: Vec::new(),
-}],
+            }],
         })
     }
 }
@@ -384,9 +383,8 @@ fn hull(points: &[Point]) -> Vec<Point> {
     }
 
     // > 0 when o→a→b turns left.
-    let cross = |o: &Point, a: &Point, b: &Point| {
-        (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
-    };
+    let cross =
+        |o: &Point, a: &Point, b: &Point| (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
 
     let mut chain: Vec<Point> = Vec::with_capacity(sorted.len() * 2);
     for pass in 0..2 {
@@ -488,9 +486,7 @@ pub(crate) fn reshape(topology: &Topology, points: &[Point], shape: Shape) -> Re
         },
 
         Shape::Surface => match topology {
-            Topology::Triangles(_) | Topology::Quads(_) | Topology::Polygons(_) => {
-                Ok(topology.clone())
-            }
+            Topology::Triangles(_) | Topology::Quads(_) | Topology::Polygons(_) => Ok(topology.clone()),
             Topology::Grid { fastest, slowest } => {
                 Ok(Topology::Quads(grid_cells(*fastest, *slowest, points)))
             }
@@ -544,12 +540,7 @@ fn grid_cells(fastest: usize, slowest: usize, points: &[Point]) -> Vec<[u32; 4]>
     for j in 0..slowest - 1 {
         for i in 0..fastest - 1 {
             let corner = |di: usize, dj: usize| ((j + dj) * fastest + i + di) as u32;
-            let ring = [
-                corner(0, 0),
-                corner(1, 0),
-                corner(1, 1),
-                corner(0, 1),
-            ];
+            let ring = [corner(0, 0), corner(1, 0), corner(1, 1), corner(0, 1)];
             if ring.iter().any(|c| *c as usize >= points.len()) {
                 continue;
             }
@@ -604,12 +595,7 @@ fn boundary_of(cells: &[[u32; 8]], points: &[Point]) -> Vec<[u32; 4]> {
     let mut seen: HashMap<[u32; 4], (usize, [u32; 4])> = HashMap::new();
     for cell in cells {
         for face in FACES {
-            let ring = [
-                cell[face[0]],
-                cell[face[1]],
-                cell[face[2]],
-                cell[face[3]],
-            ];
+            let ring = [cell[face[0]], cell[face[1]], cell[face[2]], cell[face[3]]];
             // The key ignores winding and starting corner, so the same face
             // seen from either of its two cells hashes the same.
             let mut key = ring;

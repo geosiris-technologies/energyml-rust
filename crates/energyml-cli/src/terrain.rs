@@ -68,7 +68,8 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
     let mut catalogue = TerrainCatalogue::builtin().map_err(|why| anyhow::anyhow!("{why}"))?;
     if let Some(path) = &args.catalogue {
         let text = std::fs::read_to_string(path).with_context(|| format!("lecture de {}", path.display()))?;
-        let user = TerrainCatalogue::parse(&text).map_err(|why| anyhow::anyhow!("{}: {why}", path.display()))?;
+        let user =
+            TerrainCatalogue::parse(&text).map_err(|why| anyhow::anyhow!("{}: {why}", path.display()))?;
         catalogue = catalogue.with_user(user);
     }
 
@@ -86,8 +87,15 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
         bail!("`--area x_min,y_min,x_max,y_max` is required (or `--list` to see the catalogue)");
     };
 
-    let ask = terrain::ask(&catalogue, args.source.as_deref(), area, args.crs, area_wgs84, args.step)
-        .map_err(|why| anyhow::anyhow!("{why}"))?;
+    let ask = terrain::ask(
+        &catalogue,
+        args.source.as_deref(),
+        area,
+        args.crs,
+        area_wgs84,
+        args.step,
+    )
+    .map_err(|why| anyhow::anyhow!("{why}"))?;
     println!("source      {} — {}", ask.source.id, ask.source.title);
     println!("licence     {}", ask.source.licence);
     println!("attribution {}", ask.source.attribution);
@@ -114,7 +122,9 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
     };
 
     let started = Instant::now();
-    let answer = Native::new().fetch(&ask.request).map_err(|why| anyhow::anyhow!("{why}"))?;
+    let answer = Native::new()
+        .fetch(&ask.request)
+        .map_err(|why| anyhow::anyhow!("{why}"))?;
     // Four bytes a node, and the header: a ceiling that names a typo, never the data.
     let most = (u64::from(ask.width) * u64::from(ask.height) * 4 + (1 << 20)) as usize;
     let raster = terrain::read_answer(answer, most).map_err(|why| anyhow::anyhow!("{why}"))?;
@@ -157,7 +167,10 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
     // The heights go in a data file named after the package, unless one is
     // named: two terrains written side by side would otherwise share `data.h5`.
     if !args.choices.iter().any(|one| one.starts_with("dataFile=")) && args.into.is_none() {
-        let stem = out.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| "terrain".to_string());
+        let stem = out
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "terrain".to_string());
         choices = choices.set("dataFile", format!("{stem}.h5"));
     }
     for one in &args.choices {
@@ -176,13 +189,19 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
         Some(into) if names_a_frame => {
             let store = energyml_storage::EpcStore::open(into, std::sync::Arc::new(super::registry::all()))
                 .with_context(|| format!("opening {}", into.display()))?;
-            let takes = Registry::new().get("terrain").map(|op| op.takes()).unwrap_or_default();
+            let takes = Registry::new()
+                .get("terrain")
+                .map(|op| op.takes())
+                .unwrap_or_default();
             energyml_build::read::every(&store, &takes, pieces, energyml_geometry::Placement::Local)
                 .map_err(|why| anyhow::anyhow!("{}: {why}", into.display()))?
         }
         _ => pieces,
     };
-    let when = When { creation: fetched.clone(), originator: args.originator.clone() };
+    let when = When {
+        creation: fetched.clone(),
+        originator: args.originator.clone(),
+    };
     let plan = Registry::new()
         .plan("terrain", &pieces, &choices, &Identity::derived(), &when)
         .map_err(|why| anyhow::anyhow!("{why}"))?;
@@ -190,12 +209,23 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
         println!("  [{}] {}", note.key, note.detail);
     }
 
-    let name = out.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| out.display().to_string());
-    let mut store = epc::open(args.into.as_deref(), &name, std::sync::Arc::new(super::registry::all())).with_context(|| match &args.into {
+    let name = out
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| out.display().to_string());
+    let mut store = epc::open(
+        args.into.as_deref(),
+        &name,
+        std::sync::Arc::new(super::registry::all()),
+    )
+    .with_context(|| match &args.into {
         Some(path) => format!("opening {}", path.display()),
         None => "making an empty package".to_string(),
     })?;
-    let parent = out.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(std::path::Path::new("."));
+    let parent = out
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(std::path::Path::new("."));
     store.external_files_mut().set_root(parent);
     let made = apply::apply(&plan, &mut store, &when);
     store
@@ -208,14 +238,22 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
     for why in &made.invalid {
         eprintln!("  [non-conforming] {why}");
     }
-    Ok(if made.written.is_empty() { ExitCode::from(1) } else { ExitCode::SUCCESS })
+    Ok(if made.written.is_empty() {
+        ExitCode::from(1)
+    } else {
+        ExitCode::SUCCESS
+    })
 }
 
 /// `x_min,y_min,x_max,y_max`.
 fn parse_area(text: &str) -> Result<[f64; 4]> {
     let numbers: Vec<f64> = text
         .split(',')
-        .map(|one| one.trim().parse::<f64>().with_context(|| format!("`{one}` is not a number")))
+        .map(|one| {
+            one.trim()
+                .parse::<f64>()
+                .with_context(|| format!("`{one}` is not a number"))
+        })
         .collect::<Result<_>>()?;
     let Ok(area) = <[f64; 4]>::try_from(numbers) else {
         bail!("`--area {text}` : quatre nombres attendus, x_min,y_min,x_max,y_max");
@@ -227,8 +265,12 @@ fn parse_area(text: &str) -> Result<[f64; 4]> {
 /// library's (`terrain::area_wgs84`), the geodesy is `energyml-proj`.
 fn to_wgs84(area: [f64; 4], epsg: u32) -> Result<[f64; 4]> {
     let backend = energyml_proj::Proj4::new();
-    terrain::area_wgs84(area, epsg, |p| backend.reproject(p, u64::from(epsg), 4326).map_err(|why| why.to_string()))
-        .map_err(|why| anyhow::anyhow!("{why}"))
+    terrain::area_wgs84(area, epsg, |p| {
+        backend
+            .reproject(p, u64::from(epsg), 4326)
+            .map_err(|why| why.to_string())
+    })
+    .map_err(|why| anyhow::anyhow!("{why}"))
 }
 
 /// The catalogue, and with an area, what covers it.
@@ -255,6 +297,9 @@ fn list(catalogue: &TerrainCatalogue, area_wgs84: Option<[f64; 4]>) {
         );
     }
     if let Some(area) = area_wgs84 {
-        println!("\nwindow in WGS 84: [{:.5}, {:.5}, {:.5}, {:.5}]", area[0], area[1], area[2], area[3]);
+        println!(
+            "\nwindow in WGS 84: [{:.5}, {:.5}, {:.5}, {:.5}]",
+            area[0], area[1], area[2], area[3]
+        );
     }
 }

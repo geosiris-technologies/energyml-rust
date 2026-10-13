@@ -80,7 +80,10 @@ use serde_json::json;
 use energyml_domain::provenance::Parameter;
 
 use crate::declare::{Inputs, ObjectIn, Params, Shape};
-use crate::operation::{About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Note, Numbers, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Note, Numbers, Operation, Plan,
+    Refusal, Slot,
+};
 use crate::pieces::Ref;
 
 use super::support;
@@ -120,7 +123,11 @@ pub struct FrameworkInputs {
 
 /// The bare class of a qualified type, lower case.
 fn class_of(qualified_type: &str) -> String {
-    qualified_type.rsplit('.').next().unwrap_or(qualified_type).to_ascii_lowercase()
+    qualified_type
+        .rsplit('.')
+        .next()
+        .unwrap_or(qualified_type)
+        .to_ascii_lowercase()
 }
 
 /// A position, exactly — the key nodes are found by.
@@ -149,17 +156,25 @@ impl Operation for SurfaceFramework {
         }
     }
 
-    fn plan(&self, inputs: FrameworkInputs, params: FrameworkParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: FrameworkInputs,
+        params: FrameworkParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let title = params.naming.title();
         let file = params.naming.data_file.clone();
 
         // -- what it represents ---------------------------------------------------------
-        let organisation: Ref = inputs
-            .organisation
-            .known
-            .reference
-            .clone()
-            .ok_or_else(|| Refusal::on("organisation", format!("`{}` was given without a reference to write", inputs.organisation.name)))?;
+        let organisation: Ref = inputs.organisation.known.reference.clone().ok_or_else(|| {
+            Refusal::on(
+                "organisation",
+                format!(
+                    "`{}` was given without a reference to write",
+                    inputs.organisation.name
+                ),
+            )
+        })?;
         if class_of(&organisation.qualified_type) != "structuralorganizationinterpretation" {
             return Err(Refusal::on(
                 "organisation",
@@ -172,7 +187,8 @@ impl Operation for SurfaceFramework {
 
         // -- the representations, in order ------------------------------------------------
         let mut members: Vec<Ref> = Vec::with_capacity(inputs.representations.len());
-        let mut nodes: std::collections::HashMap<[u64; 3], Vec<(usize, i64)>> = std::collections::HashMap::new();
+        let mut nodes: std::collections::HashMap<[u64; 3], Vec<(usize, i64)>> =
+            std::collections::HashMap::new();
         for (rank, shape) in inputs.representations.iter().enumerate() {
             let reference = shape.known.as_ref().and_then(|known| known.reference.clone()).ok_or_else(|| {
                 Refusal::on(
@@ -180,10 +196,16 @@ impl Operation for SurfaceFramework {
                     format!("`{}` is no object of the package — a framework gathers representations by reference", shape.name),
                 )
             })?;
-            if let Some(twice) = members.iter().find(|one| one.uuid.eq_ignore_ascii_case(&reference.uuid)) {
+            if let Some(twice) = members
+                .iter()
+                .find(|one| one.uuid.eq_ignore_ascii_case(&reference.uuid))
+            {
                 return Err(Refusal::on(
                     "representations",
-                    format!("`{}` is given twice — one representation has one index in a framework", twice.title),
+                    format!(
+                        "`{}` is given twice — one representation has one index in a framework",
+                        twice.title
+                    ),
                 ));
             }
             let mut global = 0i64;
@@ -201,13 +223,25 @@ impl Operation for SurfaceFramework {
         for lips in &inputs.lips {
             for patch in &lips.geometry.patches {
                 let energyml_geometry::geometry::Topology::Polylines(runs) = &patch.topology else {
-                    return Err(Refusal::on("lips", format!("`{}` holds a patch that is no set of lines — a contact is lines of nodes", lips.name)));
+                    return Err(Refusal::on(
+                        "lips",
+                        format!(
+                            "`{}` holds a patch that is no set of lines — a contact is lines of nodes",
+                            lips.name
+                        ),
+                    ));
                 };
                 let mut contact = Vec::new();
                 let mut start = 0usize;
                 for (line, &run) in runs.iter().enumerate() {
                     let points = patch.points.get(start..start + run as usize).ok_or_else(|| {
-                        Refusal::on("lips", format!("`{}`: the lines add up to more nodes than the patch holds", lips.name))
+                        Refusal::on(
+                            "lips",
+                            format!(
+                                "`{}`: the lines add up to more nodes than the patch holds",
+                                lips.name
+                            ),
+                        )
                     })?;
                     start += run as usize;
                     // Every representation that holds each node once.
@@ -215,8 +249,10 @@ impl Operation for SurfaceFramework {
                     for (rank, member) in members.iter().enumerate() {
                         let mut list = Vec::with_capacity(points.len());
                         for p in points {
-                            let here: Vec<i64> =
-                                nodes.get(&at(p)).map(|all| all.iter().filter(|(r, _)| *r == rank).map(|(_, n)| *n).collect()).unwrap_or_default();
+                            let here: Vec<i64> = nodes
+                                .get(&at(p))
+                                .map(|all| all.iter().filter(|(r, _)| *r == rank).map(|(_, n)| *n).collect())
+                                .unwrap_or_default();
                             match here.as_slice() {
                                 [one] => list.push(*one),
                                 [] => break,
@@ -232,7 +268,10 @@ impl Operation for SurfaceFramework {
                             }
                         }
                         if list.len() == points.len() {
-                            contact.push(ContactPatch { representation: rank, nodes: list });
+                            contact.push(ContactPatch {
+                                representation: rank,
+                                nodes: list,
+                            });
                             found += 1;
                         }
                     }
@@ -261,12 +300,17 @@ impl Operation for SurfaceFramework {
         }
         for (at, index) in params.contact_index.iter().enumerate() {
             if *index < 0 {
-                return Err(Refusal::on("contactIndex", format!("`contactIndex[{at}]` is {index} — a position counts from 0")));
+                return Err(Refusal::on(
+                    "contactIndex",
+                    format!("`contactIndex[{at}]` is {index} — a position counts from 0"),
+                ));
             }
             if params.contact_index[..at].contains(index) {
                 return Err(Refusal::on(
                     "contactIndex",
-                    format!("`contactIndex[{at}]` repeats {index} — the index is the contact's identity in the framework (Structural.xsd l. 119–124)"),
+                    format!(
+                        "`contactIndex[{at}]` repeats {index} — the index is the contact's identity in the framework (Structural.xsd l. 119–124)"
+                    ),
                 ));
             }
         }
@@ -275,13 +319,21 @@ impl Operation for SurfaceFramework {
         let seed = format!(
             "surface-framework:{title}:{}:{}:{}",
             organisation.uuid.to_ascii_lowercase(),
-            members.iter().map(|one| one.uuid.to_ascii_lowercase()).collect::<Vec<_>>().join(","),
+            members
+                .iter()
+                .map(|one| one.uuid.to_ascii_lowercase())
+                .collect::<Vec<_>>()
+                .join(","),
             contacts
                 .iter()
                 .zip(&params.contact_index)
                 .map(|(contact, index)| format!(
                     "{index}={}",
-                    contact.iter().map(|one| format!("{}#{}", one.representation, one.nodes.len())).collect::<Vec<_>>().join("+")
+                    contact
+                        .iter()
+                        .map(|one| format!("{}#{}", one.representation, one.nodes.len()))
+                        .collect::<Vec<_>>()
+                        .join("+")
                 ))
                 .collect::<Vec<_>>()
                 .join(";")
@@ -307,7 +359,12 @@ impl Operation for SurfaceFramework {
                         "Values": support::external(&file, &path, &[one.nodes.len() as i64]),
                     },
                 }));
-                datasets.push(Dataset { file: file.clone(), path, dimensions: vec![one.nodes.len() as i64], values: Numbers::I64(one.nodes.clone()) });
+                datasets.push(Dataset {
+                    file: file.clone(),
+                    path,
+                    dimensions: vec![one.nodes.len() as i64],
+                    values: Numbers::I64(one.nodes.clone()),
+                });
                 patch_count += 1;
             }
             written_contacts.push(json!({
@@ -316,7 +373,9 @@ impl Operation for SurfaceFramework {
                 "Patches": patches,
             }));
         }
-        let homogeneous = members.windows(2).all(|pair| class_of(&pair[0].qualified_type) == class_of(&pair[1].qualified_type));
+        let homogeneous = members
+            .windows(2)
+            .all(|pair| class_of(&pair[0].qualified_type) == class_of(&pair[1].qualified_type));
         let mut object = json!({
             "$type": "resqml22.NonSealedSurfaceFrameworkRepresentation",
             "uuid": uuid,
@@ -336,7 +395,12 @@ impl Operation for SurfaceFramework {
             detail: format!(
                 "{} representation(s), indexed as given: {}",
                 members.len(),
-                members.iter().enumerate().map(|(at, one)| format!("{at} `{}`", one.title)).collect::<Vec<_>>().join(", ")
+                members
+                    .iter()
+                    .enumerate()
+                    .map(|(at, one)| format!("{at} `{}`", one.title))
+                    .collect::<Vec<_>>()
+                    .join(", ")
             ),
         }];
         if contacts.is_empty() {
@@ -359,7 +423,11 @@ impl Operation for SurfaceFramework {
         });
 
         // -- the activity -----------------------------------------------------------------------------------
-        let number = |name: &str, value: usize| Parameter::Double { title: name.to_string(), value: value as f64, uom: None };
+        let number = |name: &str, value: usize| Parameter::Double {
+            title: name.to_string(),
+            value: value as f64,
+            uom: None,
+        };
         let mut parameters = vec![
             number("representationCount", members.len()),
             number("contactCount", contacts.len()),
@@ -368,7 +436,11 @@ impl Operation for SurfaceFramework {
         // What the registry cannot record — a list is no single value — and a
         // second run needs, in the order given.
         for index in &params.contact_index {
-            parameters.push(Parameter::Double { title: "contactIndex".to_string(), value: *index as f64, uom: None });
+            parameters.push(Parameter::Double {
+                title: "contactIndex".to_string(),
+                value: *index as f64,
+                uom: None,
+            });
         }
         Ok(Plan {
             media: Vec::new(),
@@ -381,7 +453,12 @@ impl Operation for SurfaceFramework {
                 json: object,
             }],
             datasets,
-            activity: ActivityDraft { recipe: "surface-framework", title: format!("surface-framework → {title}"), seed, parameters },
+            activity: ActivityDraft {
+                recipe: "surface-framework",
+                title: format!("surface-framework → {title}"),
+                seed,
+                parameters,
+            },
             says,
             dropped: Vec::new(),
             shapes: Vec::new(),
@@ -390,11 +467,24 @@ impl Operation for SurfaceFramework {
 
     /// What was counted while planning.
     fn reports(&self) -> Vec<Slot> {
-        let count = |name: &'static str, about: &'static str| Slot::required(name, Need::Number { uom: None, least: None, most: None }, about);
+        let count = |name: &'static str, about: &'static str| {
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
         vec![
             count("representationCount", "representations gathered"),
             count("contactCount", "contacts written"),
-            count("contactPatchCount", "contact patches written, one per line of nodes"),
+            count(
+                "contactPatchCount",
+                "contact patches written, one per line of nodes",
+            ),
         ]
     }
 }

@@ -196,7 +196,10 @@ fn stated(rank: usize, text: &str) -> Result<Stated, Refusal> {
             ),
         ));
     }
-    Ok(Stated { formula: formula.to_string(), mg_per_l })
+    Ok(Stated {
+        formula: formula.to_string(),
+        mg_per_l,
+    })
 }
 
 /// The component PRODML writes for an ion, its formula checked against the
@@ -204,19 +207,37 @@ fn stated(rank: usize, text: &str) -> Result<Stated, Refusal> {
 /// extensible twin is written.
 fn component(rank: usize, ion: &Stated) -> Result<prodml::WaterSampleComponent, Refusal> {
     let (anion, cation) = if prodml::AnionKind::from_xml_text(&ion.formula).is_ok() {
-        (Some(prodml::AnionKindExt::from_xml_text(&ion.formula).map_err(|why| Refusal::on("components", why.to_string()))?), None)
+        (
+            Some(
+                prodml::AnionKindExt::from_xml_text(&ion.formula)
+                    .map_err(|why| Refusal::on("components", why.to_string()))?,
+            ),
+            None,
+        )
     } else if prodml::CationKind::from_xml_text(&ion.formula).is_ok() {
-        (None, Some(prodml::CationKindExt::from_xml_text(&ion.formula).map_err(|why| Refusal::on("components", why.to_string()))?))
+        (
+            None,
+            Some(
+                prodml::CationKindExt::from_xml_text(&ion.formula)
+                    .map_err(|why| Refusal::on("components", why.to_string()))?,
+            ),
+        )
     } else {
         return Err(Refusal::on(
             "components",
-            format!("`{}` is neither an anion nor a cation PRODML 2.3 names (AnionKind, CationKind — FluidAnalysis.xsd)", ion.formula),
+            format!(
+                "`{}` is neither an anion nor a cation PRODML 2.3 names (AnionKind, CationKind — FluidAnalysis.xsd)",
+                ion.formula
+            ),
         ));
     };
     Ok(prodml::WaterSampleComponent {
         anion,
         cation,
-        volume_concentration: Some(eml::MassPerVolumeMeasureExt { value: ion.mg_per_l, uom: eml::MassPerVolumeUomExt::MgPerL }),
+        volume_concentration: Some(eml::MassPerVolumeMeasureExt {
+            value: ion.mg_per_l,
+            uom: eml::MassPerVolumeUomExt::MgPerL,
+        }),
         uid: format!("component-{rank}"),
         ..Default::default()
     })
@@ -247,7 +268,12 @@ impl Operation for FluidSample {
 
     fn check(&self, inputs: &FluidSampleInputs) -> Result<(), Refusal> {
         wellbore_because("wellbore", &inputs.wellbore, NOT_A_WELL, NOT_A_HOLE)?;
-        of_class("fluidSystem", &inputs.fluid_system, &["FluidSystem"], "a sample is drawn from a fluid system (`FluidSystem` 1..1)")?;
+        of_class(
+            "fluidSystem",
+            &inputs.fluid_system,
+            &["FluidSystem"],
+            "a sample is drawn from a fluid system (`FluidSystem` 1..1)",
+        )?;
         if let Some(unit) = &inputs.rock_fluid_unit {
             of_class(
                 "rockFluidUnit",
@@ -259,17 +285,31 @@ impl Operation for FluidSample {
         Ok(())
     }
 
-    fn plan(&self, inputs: FluidSampleInputs, params: FluidSampleParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: FluidSampleInputs,
+        params: FluidSampleParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         // -- what the run is told ---------------------------------------------------
         let title = titled("title", &params.title)?;
         let mut writer = Writer::new(cx, "fluid-sample", &params.source)?;
         let (sampled_text, sampled) = instant("sampledAt", &params.sampled_at)?;
         if !(params.duration.is_finite() && params.duration > 0.0) {
-            return Err(Refusal::on("duration", format!("{} h: an acquisition lasts a while, so its end comes after its start", params.duration)));
+            return Err(Refusal::on(
+                "duration",
+                format!(
+                    "{} h: an acquisition lasts a while, so its end comes after its start",
+                    params.duration
+                ),
+            ));
         }
         let ended = w3cdtf(sampled + (params.duration * 3600.0).round() as i64);
         if !(params.sample_md.is_finite() && params.sample_md >= 0.0) {
-            return Err(Refusal::on("sampleMd", format!("{} m is not a measured depth", params.sample_md)));
+            return Err(Refusal::on(
+                "sampleMd",
+                format!("{} m is not a measured depth", params.sample_md),
+            ));
         }
         for (slot, value) in [
             ("waterDensity", params.water_density),
@@ -277,27 +317,52 @@ impl Operation for FluidSample {
             ("waterCompressibility", params.water_compressibility),
         ] {
             if !(value.is_finite() && value > 0.0) {
-                return Err(Refusal::on(slot, format!("{value} is not a property of a water: a finite number > 0")));
+                return Err(Refusal::on(
+                    slot,
+                    format!("{value} is not a property of a water: a finite number > 0"),
+                ));
             }
         }
 
         let hole = wellbore_because("wellbore", &inputs.wellbore, NOT_A_WELL, NOT_A_HOLE)?.clone();
-        let system = of_class("fluidSystem", &inputs.fluid_system, &["FluidSystem"], "a sample is drawn from a fluid system (`FluidSystem` 1..1)")?.clone();
+        let system = of_class(
+            "fluidSystem",
+            &inputs.fluid_system,
+            &["FluidSystem"],
+            "a sample is drawn from a fluid system (`FluidSystem` 1..1)",
+        )?
+        .clone();
         let unit: Option<Ref> = match &inputs.rock_fluid_unit {
             Some(one) => Some(
-                of_class("rockFluidUnit", one, &["RockFluidUnitInterpretation"], "a sample comes from a rock-fluid unit")?
-                    .clone(),
+                of_class(
+                    "rockFluidUnit",
+                    one,
+                    &["RockFluidUnitInterpretation"],
+                    "a sample comes from a rock-fluid unit",
+                )?
+                .clone(),
             ),
             None => None,
         };
 
         // -- the ions, balanced before anything is written ---------------------------
-        let ions: Vec<Stated> = params.components.iter().enumerate().map(|(at, text)| stated(at + 1, text)).collect::<Result<_, _>>()?;
-        let pairs: Vec<(&str, f64)> = ions.iter().map(|one| (one.formula.as_str(), one.mg_per_l)).collect();
+        let ions: Vec<Stated> = params
+            .components
+            .iter()
+            .enumerate()
+            .map(|(at, text)| stated(at + 1, text))
+            .collect::<Result<_, _>>()?;
+        let pairs: Vec<(&str, f64)> = ions
+            .iter()
+            .map(|one| (one.formula.as_str(), one.mg_per_l))
+            .collect();
         let balance = ion_balance::balance(&pairs).map_err(|why| Refusal::on("components", why))?;
         let tolerance = params.balance_tolerance;
         if !(tolerance.is_finite() && (0.0..=100.0).contains(&tolerance)) {
-            return Err(Refusal::on("balanceTolerance", format!("{tolerance} is not a percentage")));
+            return Err(Refusal::on(
+                "balanceTolerance",
+                format!("{tolerance} is not a percentage"),
+            ));
         }
         if balance.error.abs() > tolerance {
             return Err(Refusal::on(
@@ -310,22 +375,35 @@ impl Operation for FluidSample {
         }
         let hardness = ion_balance::total_hardness(&pairs);
         let sum = ion_balance::sum_of_ions(&pairs);
-        let components: Vec<prodml::WaterSampleComponent> =
-            ions.iter().enumerate().map(|(at, ion)| component(at + 1, ion)).collect::<Result<_, _>>()?;
+        let components: Vec<prodml::WaterSampleComponent> = ions
+            .iter()
+            .enumerate()
+            .map(|(at, ion)| component(at + 1, ion))
+            .collect::<Result<_, _>>()?;
 
         let conditions = || {
-            eml::AbstractTemperaturePressure::ReferenceTemperaturePressure(eml::ReferenceTemperaturePressure {
-                reference_temp_pres: params.standard_conditions.written(),
-            })
+            eml::AbstractTemperaturePressure::ReferenceTemperaturePressure(
+                eml::ReferenceTemperaturePressure {
+                    reference_temp_pres: params.standard_conditions.written(),
+                },
+            )
         };
         let dor = |known: &Ref| crate::crs::reference_of(known);
 
         // -- the uuids, before the objects: they name one another ----------------------
-        let base = format!("{}:{sampled_text}:{}", hole.uuid.to_ascii_lowercase(), params.sample_md);
+        let base = format!(
+            "{}:{sampled_text}:{}",
+            hole.uuid.to_ascii_lowercase(),
+            params.sample_md
+        );
         let job_uuid = writer.uuid(&format!("job:{base}"))?;
         let container_uuid = writer.uuid(&format!("container:{base}"))?;
         let sample_uuid = writer.uuid(&format!("sample:{base}"))?;
-        let concentrations = ions.iter().map(|one| format!("{}={}", one.formula, one.mg_per_l)).collect::<Vec<_>>().join(",");
+        let concentrations = ions
+            .iter()
+            .map(|one| format!("{}={}", one.formula, one.mg_per_l))
+            .collect::<Vec<_>>()
+            .join(",");
         let analysis_uuid = writer.uuid(&format!(
             "analysis:{sample_uuid}:{concentrations}:{:?}:{:?}:{}",
             params.dissolved_solids,
@@ -344,10 +422,22 @@ impl Operation for FluidSample {
         let container_title = format!("{title} — container");
         let analysis_title = format!("{title} — water analysis");
         let characterization_title = format!("{title} — characterization");
-        let job_ref = Ref::new(job_uuid.clone(), "prodml23.FluidSampleAcquisitionJob", job_title.clone());
-        let container_ref = Ref::new(container_uuid.clone(), "prodml23.FluidSampleContainer", container_title.clone());
+        let job_ref = Ref::new(
+            job_uuid.clone(),
+            "prodml23.FluidSampleAcquisitionJob",
+            job_title.clone(),
+        );
+        let container_ref = Ref::new(
+            container_uuid.clone(),
+            "prodml23.FluidSampleContainer",
+            container_title.clone(),
+        );
         let sample_ref = Ref::new(sample_uuid.clone(), "prodml23.FluidSample", title.clone());
-        let analysis_ref = Ref::new(analysis_uuid.clone(), "prodml23.WaterAnalysis", analysis_title.clone());
+        let analysis_ref = Ref::new(
+            analysis_uuid.clone(),
+            "prodml23.WaterAnalysis",
+            analysis_title.clone(),
+        );
 
         // The acquisition job: one downhole acquisition.
         let job = prodml::FluidSampleAcquisitionJob {
@@ -355,44 +445,78 @@ impl Operation for FluidSample {
             schema_version: "2.3".to_string(),
             citation: writer.citation(
                 &job_title,
-                &format!("the job that took the invented sample `{title}` down `{}` at MD {} m on {sampled_text}", hole.title, params.sample_md),
+                &format!(
+                    "the job that took the invented sample `{title}` down `{}` at MD {} m on {sampled_text}",
+                    hole.title, params.sample_md
+                ),
             )?,
             extension_name_value: vec![writer.synthetic("an acquisition job of an invented sample")],
             start_time: Some(sampled_text.clone()),
             end_time: Some(ended.clone()),
             fluid_system: dor(&system),
-            fluid_sample_acquisition: vec![prodml::AnyFluidSampleAcquisition::DownholeSampleAcquisition(prodml::DownholeSampleAcquisition {
-                start_time: sampled_text.clone(),
-                end_time: ended.clone(),
-                remark: format!("synthetic — one downhole acquisition at MD {} m; no pressure, temperature or volume of acquisition is stated", params.sample_md),
-                fluid_sample_container: dor(&container_ref),
-                fluid_sample: dor(&sample_ref),
-                uid: ACQUISITION.to_string(),
-                wellbore: dor(&hole),
-                sampling_run: 1,
-                top_md: eml::LengthMeasure { value: params.sample_md, uom: eml::LengthUom::M },
-                ..Default::default()
-            })],
+            fluid_sample_acquisition: vec![prodml::AnyFluidSampleAcquisition::DownholeSampleAcquisition(
+                prodml::DownholeSampleAcquisition {
+                    start_time: sampled_text.clone(),
+                    end_time: ended.clone(),
+                    remark: format!(
+                        "synthetic — one downhole acquisition at MD {} m; no pressure, temperature or volume of acquisition is stated",
+                        params.sample_md
+                    ),
+                    fluid_sample_container: dor(&container_ref),
+                    fluid_sample: dor(&sample_ref),
+                    uid: ACQUISITION.to_string(),
+                    wellbore: dor(&hole),
+                    sampling_run: 1,
+                    top_md: eml::LengthMeasure {
+                        value: params.sample_md,
+                        uom: eml::LengthUom::M,
+                    },
+                    ..Default::default()
+                },
+            )],
             ..Default::default()
         };
-        writer.push(&job_uuid, "prodml23.FluidSampleAcquisitionJob", "acquisition-job", &job_title, &job);
+        writer.push(
+            &job_uuid,
+            "prodml23.FluidSampleAcquisitionJob",
+            "acquisition-job",
+            &job_title,
+            &job,
+        );
 
         // The container: that it exists, nothing more.
         let container = prodml::FluidSampleContainer {
             uuid: container_uuid.clone(),
             schema_version: "2.3".to_string(),
-            citation: writer.citation(&container_title, &format!("the container the invented sample `{title}` went into"))?,
+            citation: writer.citation(
+                &container_title,
+                &format!("the container the invented sample `{title}` went into"),
+            )?,
             extension_name_value: vec![writer.synthetic("the container of an invented sample")],
-            remark: Some("synthetic — no make, model, capacity or rating is stated: none is written".to_string()),
+            remark: Some(
+                "synthetic — no make, model, capacity or rating is stated: none is written".to_string(),
+            ),
             ..Default::default()
         };
-        writer.push(&container_uuid, "prodml23.FluidSampleContainer", "container", &container_title, &container);
+        writer.push(
+            &container_uuid,
+            "prodml23.FluidSampleContainer",
+            "container",
+            &container_title,
+            &container,
+        );
 
         // The sample.
         let sample = prodml::FluidSample {
             uuid: sample_uuid.clone(),
             schema_version: "2.3".to_string(),
-            citation: writer.citation(&title, &format!("a water sample of `{}` taken at MD {} m on {sampled_text}", hole.title, params.sample_md))?,
+            citation: writer.citation(
+                &title,
+                &format!(
+                    "a water sample of `{}` taken at MD {} m on {sampled_text}",
+                    hole.title, params.sample_md
+                ),
+            )?,
             extension_name_value: vec![writer.synthetic("an invented water sample")],
             sample_kind: Some(prodml::FluidSampleKindExt::Water),
             rock_fluid_unit_interpretation: unit.as_ref().map(dor),
@@ -444,22 +568,32 @@ impl Operation for FluidSample {
             fluid_sample: dor(&sample_ref),
             ..Default::default()
         };
-        writer.push(&analysis_uuid, "prodml23.WaterAnalysis", "water-analysis", &analysis_title, &analysis);
+        writer.push(
+            &analysis_uuid,
+            "prodml23.WaterAnalysis",
+            "water-analysis",
+            &analysis_title,
+            &analysis,
+        );
 
         // The characterization: parameters, no model.
-        let parameter = |property: prodml::OutputFluidPropertyExt, value: f64, uom: &str| prodml::FluidCharacterizationParameter {
-            property,
-            phase: Some(prodml::ThermodynamicPhase::Aqueous),
-            value,
-            uom: uom.to_string(),
-            ..Default::default()
+        let parameter = |property: prodml::OutputFluidPropertyExt, value: f64, uom: &str| {
+            prodml::FluidCharacterizationParameter {
+                property,
+                phase: Some(prodml::ThermodynamicPhase::Aqueous),
+                value,
+                uom: uom.to_string(),
+                ..Default::default()
+            }
         };
         let characterization = prodml::FluidCharacterization {
             uuid: characterization_uuid.clone(),
             schema_version: "2.3".to_string(),
             citation: writer.citation(
                 &characterization_title,
-                &format!("the water of the invented sample `{title}` as a parameter set, without equation of state"),
+                &format!(
+                    "the water of the invented sample `{title}` as a parameter set, without equation of state"
+                ),
             )?,
             extension_name_value: vec![writer.synthetic("an invented fluid characterization")],
             rock_fluid_unit_interpretation: unit.as_ref().map(dor),
@@ -478,9 +612,21 @@ impl Operation for FluidSample {
                 remark: Some(NO_EOS.to_string()),
                 fluid_characterization_parameter_set: Some(prodml::FluidCharacterizationParameterSet {
                     fluid_characterization_parameter: vec![
-                        parameter(prodml::OutputFluidPropertyExt::Density, params.water_density, "kg/m3"),
-                        parameter(prodml::OutputFluidPropertyExt::Viscosity, params.water_viscosity, "mPa.s"),
-                        parameter(prodml::OutputFluidPropertyExt::Compressibility, params.water_compressibility, "1/bar"),
+                        parameter(
+                            prodml::OutputFluidPropertyExt::Density,
+                            params.water_density,
+                            "kg/m3",
+                        ),
+                        parameter(
+                            prodml::OutputFluidPropertyExt::Viscosity,
+                            params.water_viscosity,
+                            "mPa.s",
+                        ),
+                        parameter(
+                            prodml::OutputFluidPropertyExt::Compressibility,
+                            params.water_compressibility,
+                            "1/bar",
+                        ),
                     ],
                 }),
                 ..Default::default()
@@ -489,7 +635,13 @@ impl Operation for FluidSample {
             fluid_system: Some(dor(&system)),
             ..Default::default()
         };
-        writer.push(&characterization_uuid, "prodml23.FluidCharacterization", "characterization", &characterization_title, &characterization);
+        writer.push(
+            &characterization_uuid,
+            "prodml23.FluidCharacterization",
+            "characterization",
+            &characterization_title,
+            &characterization,
+        );
 
         // -- what the plan says -------------------------------------------------------
         let mut says = vec![
@@ -528,10 +680,16 @@ impl Operation for FluidSample {
             });
         }
         if params.dissolved_solids.is_none() {
-            says.push(Note { key: "dissolved-solids", detail: "no total dissolved solids is written: none was given".to_string() });
+            says.push(Note {
+                key: "dissolved-solids",
+                detail: "no total dissolved solids is written: none was given".to_string(),
+            });
         }
         if params.salinity.is_none() {
-            says.push(Note { key: "salinity", detail: "no salinity is written: none was given".to_string() });
+            says.push(Note {
+                key: "salinity",
+                detail: "no salinity is written: none was given".to_string(),
+            });
         }
 
         // -- the activity -------------------------------------------------------------
@@ -539,21 +697,52 @@ impl Operation for FluidSample {
             // In meq/L, which the Energistics unit dictionary does not name: an
             // activity parameter's `Uom` outside it must be `authority:unit`,
             // so the unit is said by the template's words, not by a made-up code.
-            Parameter::Double { title: "cationCharge".to_string(), value: balance.cations, uom: None },
-            Parameter::Double { title: "anionCharge".to_string(), value: balance.anions, uom: None },
-            Parameter::Double { title: "balanceError".to_string(), value: balance.error, uom: Some("%".to_string()) },
-            Parameter::Double { title: "sumOfIons".to_string(), value: sum, uom: Some("mg/L".to_string()) },
+            Parameter::Double {
+                title: "cationCharge".to_string(),
+                value: balance.cations,
+                uom: None,
+            },
+            Parameter::Double {
+                title: "anionCharge".to_string(),
+                value: balance.anions,
+                uom: None,
+            },
+            Parameter::Double {
+                title: "balanceError".to_string(),
+                value: balance.error,
+                uom: Some("%".to_string()),
+            },
+            Parameter::Double {
+                title: "sumOfIons".to_string(),
+                value: sum,
+                uom: Some("mg/L".to_string()),
+            },
         ];
         if let Some(value) = hardness {
-            parameters.push(Parameter::Double { title: "totalHardness".to_string(), value, uom: Some("mg/L".to_string()) });
+            parameters.push(Parameter::Double {
+                title: "totalHardness".to_string(),
+                value,
+                uom: Some("mg/L".to_string()),
+            });
         }
-        for input in std::iter::once(&hole).chain(std::iter::once(&system)).chain(unit.iter()) {
-            parameters.push(Parameter::Object { title: "input".to_string(), reference: input.dor() });
+        for input in std::iter::once(&hole)
+            .chain(std::iter::once(&system))
+            .chain(unit.iter())
+        {
+            parameters.push(Parameter::Object {
+                title: "input".to_string(),
+                reference: input.dor(),
+            });
         }
         Ok(Plan {
             media: Vec::new(),
             blocked: None,
-            activity: ActivityDraft { recipe: "fluid-sample", title: format!("fluid-sample → {title}"), seed: writer.activity_seed(), parameters },
+            activity: ActivityDraft {
+                recipe: "fluid-sample",
+                title: format!("fluid-sample → {title}"),
+                seed: writer.activity_seed(),
+                parameters,
+            },
             objects: writer.objects,
             datasets: Vec::new(),
             says,
@@ -565,13 +754,37 @@ impl Operation for FluidSample {
 
     /// What the run computed from the ions.
     fn reports(&self) -> Vec<Slot> {
-        let number = |uom: Option<&'static str>| Need::Number { uom, least: None, most: None };
+        let number = |uom: Option<&'static str>| Need::Number {
+            uom,
+            least: None,
+            most: None,
+        };
         vec![
-            Slot::required("cationCharge", number(None), "the charges the cations stated carry, in milliequivalents per litre"),
-            Slot::required("anionCharge", number(None), "the charges the anions stated carry, in milliequivalents per litre"),
-            Slot::required("balanceError", number(Some("%")), "how far the two are apart, relative to their sum"),
-            Slot::required("sumOfIons", number(Some("mg/L")), "what the concentrations stated add up to"),
-            Slot::optional("totalHardness", number(Some("mg/L")), "the calcium and magnesium stated, as CaCO3"),
+            Slot::required(
+                "cationCharge",
+                number(None),
+                "the charges the cations stated carry, in milliequivalents per litre",
+            ),
+            Slot::required(
+                "anionCharge",
+                number(None),
+                "the charges the anions stated carry, in milliequivalents per litre",
+            ),
+            Slot::required(
+                "balanceError",
+                number(Some("%")),
+                "how far the two are apart, relative to their sum",
+            ),
+            Slot::required(
+                "sumOfIons",
+                number(Some("mg/L")),
+                "what the concentrations stated add up to",
+            ),
+            Slot::optional(
+                "totalHardness",
+                number(Some("mg/L")),
+                "the calcium and magnesium stated, as CaCO3",
+            ),
         ]
     }
 }

@@ -73,7 +73,11 @@ pub struct MediaLink {
 /// the way the archive does.
 pub fn check_part_name(part: &str) -> Result<String> {
     let name = part.trim_start_matches('/').to_string();
-    let refuse = |why: &str| Err(Error::Package(format!("`{part}` is not a part name a package may hold: {why}")));
+    let refuse = |why: &str| {
+        Err(Error::Package(format!(
+            "`{part}` is not a part name a package may hold: {why}"
+        )))
+    };
     if name.is_empty() || name.ends_with('/') {
         return refuse("it names a folder, not a file");
     }
@@ -102,7 +106,9 @@ pub fn check_part_name(part: &str) -> Result<String> {
         return refuse("`[Content_Types].xml` is the package's index (EPC §2.2.1 p. 9), regenerated on save");
     }
     if lower.ends_with(".rels") || lower.split('/').any(|segment| segment == "_rels") {
-        return refuse("`_rels` and `.rels` are the package's relationships (EPC §2.2.2 p. 9), regenerated on save");
+        return refuse(
+            "`_rels` and `.rels` are the package's relationships (EPC §2.2.2 p. 9), regenerated on save",
+        );
     }
     let folders: Vec<&str> = lower.split('/').collect();
     if let Some(folder) = folders[..folders.len() - 1]
@@ -156,9 +162,9 @@ pub fn check_media_type(text: &str) -> Result<String> {
 /// separators.
 fn is_token(text: &str) -> bool {
     !text.is_empty()
-        && text.chars().all(|c| {
-            c.is_ascii() && !c.is_ascii_control() && !"()<>@,;:\\\"/[]?={} \t".contains(c)
-        })
+        && text
+            .chars()
+            .all(|c| c.is_ascii() && !c.is_ascii_control() && !"()<>@,;:\\\"/[]?={} \t".contains(c))
 }
 
 /// Where a relationship's `Target` lands, as a part name — relative to the
@@ -194,7 +200,10 @@ mod tests {
     #[test]
     fn a_media_part_under_media_is_a_part_name() {
         assert_eq!(check_part_name("/media/README.md").unwrap(), "media/README.md");
-        assert_eq!(check_part_name("media/export/grille-craie.vtu").unwrap(), "media/export/grille-craie.vtu");
+        assert_eq!(
+            check_part_name("media/export/grille-craie.vtu").unwrap(),
+            "media/export/grille-craie.vtu"
+        );
     }
 
     #[test]
@@ -233,17 +242,37 @@ mod tests {
         ] {
             assert!(check_media_type(good).is_ok(), "`{good}` was refused");
         }
-        for bad in ["", "pdf", "text/", "/markdown", "text/mark down", "text/markdown; charset", "text/(md)"] {
+        for bad in [
+            "",
+            "pdf",
+            "text/",
+            "/markdown",
+            "text/mark down",
+            "text/markdown; charset",
+            "text/(md)",
+        ] {
             assert!(check_media_type(bad).is_err(), "`{bad}` was accepted");
         }
     }
 
     #[test]
     fn a_target_resolves_against_the_folder_of_its_rels() {
-        assert_eq!(resolve_target("Foo.xml", "media/README.md").as_deref(), Some("media/README.md"));
-        assert_eq!(resolve_target("media/README.md", "../Foo.xml").as_deref(), Some("Foo.xml"));
-        assert_eq!(resolve_target("media/export/a.obj", "../../resqml22/B.xml").as_deref(), Some("resqml22/B.xml"));
-        assert_eq!(resolve_target("resqml22/B.xml", "/media/a.pdf").as_deref(), Some("media/a.pdf"));
+        assert_eq!(
+            resolve_target("Foo.xml", "media/README.md").as_deref(),
+            Some("media/README.md")
+        );
+        assert_eq!(
+            resolve_target("media/README.md", "../Foo.xml").as_deref(),
+            Some("Foo.xml")
+        );
+        assert_eq!(
+            resolve_target("media/export/a.obj", "../../resqml22/B.xml").as_deref(),
+            Some("resqml22/B.xml")
+        );
+        assert_eq!(
+            resolve_target("resqml22/B.xml", "/media/a.pdf").as_deref(),
+            Some("media/a.pdf")
+        );
         assert_eq!(resolve_target("Foo.xml", "../outside.pdf"), None);
     }
 }

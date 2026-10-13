@@ -146,7 +146,11 @@ fn since(store: &EpcStore, from: u64) -> Change {
 
 /// What the window says of one object — `None` when it does not name it.
 fn what_of(change: &Change, uuid: &str) -> Option<What> {
-    change.objects.iter().find(|object| object.uuid.eq_ignore_ascii_case(uuid)).map(|object| object.what)
+    change
+        .objects
+        .iter()
+        .find(|object| object.uuid.eq_ignore_ascii_case(uuid))
+        .map(|object| object.what)
 }
 
 // ---------------------------------------------------------------------------
@@ -167,7 +171,13 @@ impl ArrayBackend for Silent {
     fn metadata(&self, _file: &std::path::Path, _path: &str) -> energyml_storage::Result<ArrayMetadata> {
         unreachable!("the journal tests read nothing")
     }
-    fn read(&self, _f: &std::path::Path, _p: &str, _s: &[i64], _c: &[i64]) -> energyml_storage::Result<ArrayData> {
+    fn read(
+        &self,
+        _f: &std::path::Path,
+        _p: &str,
+        _s: &[i64],
+        _c: &[i64],
+    ) -> energyml_storage::Result<ArrayData> {
         unreachable!("the journal tests read nothing")
     }
     fn read_into(
@@ -184,14 +194,20 @@ impl ArrayBackend for Silent {
         true
     }
     fn write(&self, file: &std::path::Path, path: &str, _data: &ArrayData) -> energyml_storage::Result<()> {
-        self.written.lock().unwrap().push((file.display().to_string(), path.to_string()));
+        self.written
+            .lock()
+            .unwrap()
+            .push((file.display().to_string(), path.to_string()));
         Ok(())
     }
 }
 
 fn numbers(values: usize, dimensions: Vec<i64>) -> ArrayData {
     ArrayData {
-        metadata: ArrayMetadata { dimensions, element_type: "double".to_string() },
+        metadata: ArrayMetadata {
+            dimensions,
+            element_type: "double".to_string(),
+        },
         values: ArrayValues::F64(vec![1.0; values]),
     }
 }
@@ -199,13 +215,18 @@ fn numbers(values: usize, dimensions: Vec<i64>) -> ArrayData {
 /// A store with a backend that can write, and a place to write to.
 fn writable(name: &str) -> EpcStore {
     let mut store = open(&features(name, &[A]));
-    store.add_array_backend(Box::new(Silent { written: Arc::default() }));
+    store.add_array_backend(Box::new(Silent {
+        written: Arc::default(),
+    }));
     store.external_files_mut().set_root(std::env::temp_dir());
     store
 }
 
 fn dataset(file: &str, path: &str) -> DatasetId {
-    DatasetId { file: file.to_string(), path: path.to_string() }
+    DatasetId {
+        file: file.to_string(),
+        path: path.to_string(),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -221,7 +242,14 @@ fn a_path_says_what_an_edit_of_it_changes() {
     // `Citation` is a path segment, not a prefix of a name.
     assert_eq!(What::of_edit("CitationNote.Text"), What::BODY | What::LINKS_OUT);
     // What may move the identity says everything, the row being keyed by it.
-    for path in ["uuid", "Uuid", "UID", "objectVersion", "schemaVersion", "InterpretedFeature.UUID"] {
+    for path in [
+        "uuid",
+        "Uuid",
+        "UID",
+        "objectVersion",
+        "schemaVersion",
+        "InterpretedFeature.UUID",
+    ] {
         let what = What::of_edit(path);
         assert!(what.contains(What::IDENTITY), "{path}: {what:?}");
         assert!(what.contains(What::BROAD), "{path}: {what:?}");
@@ -244,7 +272,11 @@ fn an_edit_in_the_citation_says_citation_and_nothing_more() {
     let change = since(&store, before);
     assert_eq!(what_of(&change, A), Some(What::CITATION));
     assert_eq!(change.objects.len(), 1, "one object, one line: {change:?}");
-    assert_eq!(change.objects[0].uri.as_deref(), Some(uri.as_str()), "the store's spelling");
+    assert_eq!(
+        change.objects[0].uri.as_deref(),
+        Some(uri.as_str()),
+        "the store's spelling"
+    );
     assert!(change.datasets.is_empty() && !change.files);
 }
 
@@ -276,7 +308,11 @@ fn an_edit_that_moved_a_reference_keeps_links() {
     let object = store.edit_at(&uri, "Domain").expect("borrowed");
     energyml_core::path::set(object, "InterpretedFeature.Uuid", OwnedValue::Str(OTHER.into())).expect("set");
     let what = what_of(&since(&store, before), I).expect("named");
-    assert_eq!(what, What::BODY | What::LINKS_OUT, "the reference moved: {what:?}");
+    assert_eq!(
+        what,
+        What::BODY | What::LINKS_OUT,
+        "the reference moved: {what:?}"
+    );
 }
 
 #[test]
@@ -289,7 +325,10 @@ fn an_edit_that_may_move_the_identity_says_so_and_is_not_narrowed() {
     // citation — see `object_versions.rs`.)
     store.edit_at(&uri, "uuid").expect("borrowed");
     let what = what_of(&since(&store, before), A).expect("named");
-    assert!(what.contains(What::IDENTITY) && what.contains(What::BROAD), "{what:?}");
+    assert!(
+        what.contains(What::IDENTITY) && what.contains(What::BROAD),
+        "{what:?}"
+    );
 }
 
 #[test]
@@ -327,7 +366,11 @@ fn a_remove_says_removed_and_keeps_the_uri_it_was_given() {
     store.remove(&uri).expect("removed");
     let change = since(&store, before);
     assert_eq!(what_of(&change, B), Some(What::REMOVED));
-    assert_eq!(change.objects[0].uri.as_deref(), Some(uri.as_str()), "a removed object is still named");
+    assert_eq!(
+        change.objects[0].uri.as_deref(),
+        Some(uri.as_str()),
+        "a removed object is still named"
+    );
 }
 
 /// Several writes of one window are **one line per object**, and the order
@@ -348,10 +391,20 @@ fn the_writes_of_a_window_merge_per_object() {
 
     let change = since(&store, before);
     let a = what_of(&change, A).expect("A");
-    assert!(a.contains(What::CITATION) && a.contains(What::BODY), "both edits survive: {a:?}");
+    assert!(
+        a.contains(What::CITATION) && a.contains(What::BODY),
+        "both edits survive: {a:?}"
+    );
     let b = what_of(&change, B).expect("B");
-    assert!(b.contains(What::CREATED) && b.contains(What::BROAD) && !b.contains(What::REMOVED), "back: {b:?}");
-    assert_eq!(what_of(&change, C), Some(What::REMOVED), "a reader never saw it, and is told it is gone");
+    assert!(
+        b.contains(What::CREATED) && b.contains(What::BROAD) && !b.contains(What::REMOVED),
+        "back: {b:?}"
+    );
+    assert_eq!(
+        what_of(&change, C),
+        Some(What::REMOVED),
+        "a reader never saw it, and is told it is gone"
+    );
     assert_eq!(change.objects.len(), 3);
 }
 
@@ -428,7 +481,9 @@ fn changed_since_still_names_the_objects_for_the_index() {
 fn write_array_to_journals_the_dataset_it_wrote() {
     let store = writable("one-array");
     let before = store.revision();
-    store.write_array_to("model.h5", "/a/points", &numbers(6, vec![2, 3])).expect("written");
+    store
+        .write_array_to("model.h5", "/a/points", &numbers(6, vec![2, 3]))
+        .expect("written");
     let change = since(&store, before);
     assert_eq!(change.datasets, vec![dataset("model.h5", "/a/points")]);
     assert!(change.objects.is_empty(), "an array is not an object: {change:?}");
@@ -443,14 +498,21 @@ fn write_arrays_to_journals_the_datasets_it_wrote_and_only_those() {
     let results = store.write_arrays_to("model.h5", &[("/b", &good), ("/lie", &lying), ("/c", &good)]);
     assert!(results[0].is_ok() && results[1].is_err() && results[2].is_ok());
     // The shape that disagrees was refused before the file was touched.
-    assert_eq!(since(&store, before).datasets, vec![dataset("model.h5", "/b"), dataset("model.h5", "/c")]);
+    assert_eq!(
+        since(&store, before).datasets,
+        vec![dataset("model.h5", "/b"), dataset("model.h5", "/c")]
+    );
 }
 
 #[test]
 fn a_refused_write_before_the_file_is_reached_journals_nothing() {
     let store = writable("refused");
     let before = store.revision();
-    assert!(store.write_array_to("model.h5", "/lie", &numbers(3, vec![2, 2])).is_err());
+    assert!(
+        store
+            .write_array_to("model.h5", "/lie", &numbers(3, vec![2, 2]))
+            .is_err()
+    );
     assert!(since(&store, before).is_empty());
 }
 
@@ -465,9 +527,16 @@ fn arrays_written_says_what_a_face_wrote_itself() {
     let change = since(&store, before);
     assert_eq!(
         change.datasets,
-        vec![dataset("model.h5", "/p"), dataset("model.h5", "/q"), dataset("other.h5", "/r")]
+        vec![
+            dataset("model.h5", "/p"),
+            dataset("model.h5", "/q"),
+            dataset("other.h5", "/r")
+        ]
     );
-    assert!(store.revision() > before, "the revision moves: whoever follows it is told");
+    assert!(
+        store.revision() > before,
+        "the revision moves: whoever follows it is told"
+    );
     // No paths: the file as a whole.
     let mid = store.revision();
     store.arrays_written("whole.h5", &[]);
@@ -478,8 +547,12 @@ fn arrays_written_says_what_a_face_wrote_itself() {
 fn a_dataset_written_twice_is_named_once() {
     let store = writable("twice");
     let before = store.revision();
-    store.write_array_to("model.h5", "/p", &numbers(1, vec![1])).expect("written");
-    store.write_array_to("model.h5", "/p", &numbers(1, vec![1])).expect("written");
+    store
+        .write_array_to("model.h5", "/p", &numbers(1, vec![1]))
+        .expect("written");
+    store
+        .write_array_to("model.h5", "/p", &numbers(1, vec![1]))
+        .expect("written");
     assert_eq!(since(&store, before).datasets.len(), 1);
 }
 
@@ -488,12 +561,21 @@ fn a_dataset_written_twice_is_named_once() {
 #[test]
 fn consecutive_writes_into_one_file_share_a_line_without_hiding_the_first() {
     let store = writable("shared-line");
-    store.write_array_to("model.h5", "/p", &numbers(1, vec![1])).expect("written");
+    store
+        .write_array_to("model.h5", "/p", &numbers(1, vec![1]))
+        .expect("written");
     let between = store.revision();
-    store.write_array_to("model.h5", "/q", &numbers(1, vec![1])).expect("written");
-    store.write_array_to("model.h5", "/r", &numbers(1, vec![1])).expect("written");
+    store
+        .write_array_to("model.h5", "/q", &numbers(1, vec![1]))
+        .expect("written");
+    store
+        .write_array_to("model.h5", "/r", &numbers(1, vec![1]))
+        .expect("written");
     let after = since(&store, between).datasets;
-    assert!(after.contains(&dataset("model.h5", "/q")) && after.contains(&dataset("model.h5", "/r")), "{after:?}");
+    assert!(
+        after.contains(&dataset("model.h5", "/q")) && after.contains(&dataset("model.h5", "/r")),
+        "{after:?}"
+    );
     // Too wide, never too narrow: the shared line names `/p` again.
     assert_eq!(since(&store, 0).datasets.len(), 3);
 }
@@ -504,14 +586,22 @@ fn a_file_name_given_to_a_proxy_is_a_line_of_its_own() {
     let before = store.revision();
     store.register_external_file("7C000000-0000-4000-8000-0000000000AA", "moved.h5");
     let change = since(&store, before);
-    assert_eq!(change.renamed, vec![("7c000000-0000-4000-8000-0000000000aa".to_string(), "moved.h5".to_string())]);
+    assert_eq!(
+        change.renamed,
+        vec![(
+            "7c000000-0000-4000-8000-0000000000aa".to_string(),
+            "moved.h5".to_string()
+        )]
+    );
 }
 
 #[test]
 fn a_part_or_a_media_relation_moves_the_files_flag() {
     let mut store = open(&features("files", &[A]));
     let before = store.revision();
-    store.set_attachment("docs/note.txt", b"hello".to_vec(), Some("text/plain".into())).expect("attached");
+    store
+        .set_attachment("docs/note.txt", b"hello".to_vec(), Some("text/plain".into()))
+        .expect("attached");
     assert!(since(&store, before).files);
     let mid = store.revision();
     let uri = uri_of(&store, A);
@@ -560,7 +650,10 @@ fn an_import_plan_says_created_and_replaced_and_a_carried_file_says_the_file() {
     let mut into = open(&features("import-into", &[B]));
     let before = into.revision();
 
-    let request = Request { all: Some(Keep::Imported), ..Default::default() };
+    let request = Request {
+        all: Some(Keep::Imported),
+        ..Default::default()
+    };
     let quote = plan(&from, &into, &request);
     assert!(quote.is_allowed(), "{:?}", quote.refusals);
     apply_plan(&from, &mut into, &quote).expect("applied");
@@ -568,7 +661,10 @@ fn an_import_plan_says_created_and_replaced_and_a_carried_file_says_the_file() {
     let change = since(&into, before);
     assert_eq!(what_of(&change, A), Some(What::CREATED), "{change:?}");
     let replaced = what_of(&change, B).expect("B is named");
-    assert!(replaced.contains(What::BROAD) && !replaced.contains(What::CREATED), "{replaced:?}");
+    assert!(
+        replaced.contains(What::BROAD) && !replaced.contains(What::CREATED),
+        "{replaced:?}"
+    );
 
     // A data file carried beside the package.
     let dir = std::env::temp_dir().join(format!("energyml-journal-carry-{}", std::process::id()));
@@ -580,7 +676,11 @@ fn an_import_plan_says_created_and_replaced_and_a_carried_file_says_the_file() {
     let mid = into.revision();
     carry_files(
         &into,
-        &[FileCarry { from: "imported.h5".into(), held: held.display().to_string(), to: "carried.h5".into() }],
+        &[FileCarry {
+            from: "imported.h5".into(),
+            held: held.display().to_string(),
+            to: "carried.h5".into(),
+        }],
     )
     .expect("carried");
     assert_eq!(since(&into, mid).datasets, vec![dataset("carried.h5", "")]);

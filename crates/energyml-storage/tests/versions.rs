@@ -89,7 +89,11 @@ uuid=\"{UUID}\"{schema}>\
 </resqml:{root}>",
             root = self.root,
             ns = self.namespace,
-            feature = if self.root.ends_with("FaultInterpretation") { feature } else { "" },
+            feature = if self.root.ends_with("FaultInterpretation") {
+                feature
+            } else {
+                ""
+            },
         )
     }
 }
@@ -242,10 +246,9 @@ fn a_version_that_will_not_parse_falls_through_to_one_that_will() {
         "and the object is the version that actually parses"
     );
     assert!(
-        store
-            .diagnostics()
-            .iter()
-            .any(|d| d.message.contains("read as `resqml22.FaultInterpretation` instead")),
+        store.diagnostics().iter().any(|d| d
+            .message
+            .contains("read as `resqml22.FaultInterpretation` instead")),
         "the substitution is said out loud: {:?}",
         store.diagnostics()
     );

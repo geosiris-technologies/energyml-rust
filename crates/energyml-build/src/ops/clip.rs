@@ -72,12 +72,21 @@ pub struct ClipInputs {
 }
 
 fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double { title: title.to_string(), value, uom: None }
+    Parameter::Double {
+        title: title.to_string(),
+        value,
+        uom: None,
+    }
 }
 
 /// The title of the object behind a shape, or the shape's name.
 fn title_of(shape: &Shape) -> String {
-    shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.title.clone()).unwrap_or_else(|| shape.name.clone())
+    shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|r| r.title.clone())
+        .unwrap_or_else(|| shape.name.clone())
 }
 
 /// The single 2D grid a shape is, if it is one.
@@ -93,9 +102,21 @@ fn grid_counts(shape: &Shape) -> Option<[usize; 2]> {
 
 /// A ring's corners in plan, flat `[x, y, …]`.
 fn corners(slot: &str, ring: &Shape) -> Result<Vec<f64>, Refusal> {
-    let points: Vec<[f64; 3]> = ring.geometry.patches.iter().flat_map(|p| p.points.iter().copied()).collect();
+    let points: Vec<[f64; 3]> = ring
+        .geometry
+        .patches
+        .iter()
+        .flat_map(|p| p.points.iter().copied())
+        .collect();
     if points.len() < 3 {
-        return Err(Refusal::on(slot, format!("`{}` holds {} point(s): a ring encloses something with at least 3", title_of(ring), points.len())));
+        return Err(Refusal::on(
+            slot,
+            format!(
+                "`{}` holds {} point(s): a ring encloses something with at least 3",
+                title_of(ring),
+                points.len()
+            ),
+        ));
     }
     Ok(points.iter().flat_map(|p| [p[0], p[1]]).collect())
 }
@@ -124,18 +145,26 @@ fn same_frame(slot: &str, shape: &Shape, ring: &Shape) -> Result<(), Refusal> {
 
 /// One flag per node of the shape: outside `outer`, or inside an `inner`.
 fn cut_nodes(inputs: &ClipInputs) -> Result<Vec<bool>, Refusal> {
-    let flat: Vec<f64> = inputs.shape.geometry.patches.iter().flat_map(|p| p.points.iter().flat_map(|q| [q[0], q[1], 0.0])).collect();
+    let flat: Vec<f64> = inputs
+        .shape
+        .geometry
+        .patches
+        .iter()
+        .flat_map(|p| p.points.iter().flat_map(|q| [q[0], q[1], 0.0]))
+        .collect();
     let mut gone = vec![false; flat.len() / 3];
     if let Some(ring) = &inputs.outer {
         same_frame("outer", &inputs.shape, ring)?;
-        let outside = energyml_geometry::clip::nodes_in_ring(&flat, &corners("outer", ring)?, true).map_err(|why| Refusal::on("outer", why))?;
+        let outside = energyml_geometry::clip::nodes_in_ring(&flat, &corners("outer", ring)?, true)
+            .map_err(|why| Refusal::on("outer", why))?;
         for at in outside {
             gone[at as usize] = true;
         }
     }
     for ring in &inputs.inner {
         same_frame("inner", &inputs.shape, ring)?;
-        let inside = energyml_geometry::clip::nodes_in_ring(&flat, &corners("inner", ring)?, false).map_err(|why| Refusal::on("inner", why))?;
+        let inside = energyml_geometry::clip::nodes_in_ring(&flat, &corners("inner", ring)?, false)
+            .map_err(|why| Refusal::on("inner", why))?;
         for at in inside {
             gone[at as usize] = true;
         }
@@ -171,14 +200,19 @@ impl Operation for Clip {
         if grid_counts(&inputs.shape).is_some() {
             return Ok(());
         }
-        kind_of(&inputs.shape.geometry).map(|_| ()).map_err(|why| Refusal::on("shape", why))
+        kind_of(&inputs.shape.geometry)
+            .map(|_| ())
+            .map_err(|why| Refusal::on("shape", why))
     }
 
     fn plan(&self, inputs: ClipInputs, params: ClipParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
         // Refused here and not in `check`: each ring is optional on its own,
         // and only the pair says « at least one » — which no slot can declare.
         if inputs.outer.is_none() && inputs.inner.is_empty() {
-            return Err(Refusal::on("outer", "give `outer`, `inner` or both: without a ring there is nothing to cut with"));
+            return Err(Refusal::on(
+                "outer",
+                "give `outer`, `inner` or both: without a ring there is nothing to cut with",
+            ));
         }
         let gone = cut_nodes(&inputs)?;
         let cut = gone.iter().filter(|g| **g).count();
@@ -187,11 +221,20 @@ impl Operation for Clip {
         if cut == 0 {
             return Err(Refusal::on(
                 "shape",
-                format!("every node of `{}` lies inside `outer` and outside every `inner`: nothing to cut — the result would be the shape itself", title_of(shape)),
+                format!(
+                    "every node of `{}` lies inside `outer` and outside every `inner`: nothing to cut — the result would be the shape itself",
+                    title_of(shape)
+                ),
             ));
         }
         if cut == total {
-            return Err(Refusal::on("shape", format!("the rings cut all {total} node(s) of `{}`: nothing would be left to write", title_of(shape))));
+            return Err(Refusal::on(
+                "shape",
+                format!(
+                    "the rings cut all {total} node(s) of `{}`: nothing would be left to write",
+                    title_of(shape)
+                ),
+            ));
         }
         cx.stop_if_cancelled()?;
 
@@ -215,14 +258,28 @@ impl Operation for Clip {
                     },
                 )
             })?;
-            let z = points.iter().zip(&gone).map(|(p, cut)| if *cut { f64::NAN } else { p[2] }).collect();
-            let lattice = Lattice { origin: lattice.origin, spacing: lattice.spacing, counts: lattice.counts, z };
+            let z = points
+                .iter()
+                .zip(&gone)
+                .map(|(p, cut)| if *cut { f64::NAN } else { p[2] })
+                .collect();
+            let lattice = Lattice {
+                origin: lattice.origin,
+                spacing: lattice.spacing,
+                counts: lattice.counts,
+                z,
+            };
             let mut plan = super::grid::write(&shape.name, &lattice, &params.written, &seed, cx)?;
             plan.activity.parameters.push(double("cutNodes", cut as f64));
             plan
         } else {
             let kind = kind_of(&shape.geometry).map_err(|why| Refusal::on("shape", why))?;
-            let (result, counts) = erase(shape, &gone, "clip").map_err(|taken| Refusal::on("shape", format!("the rings cut {taken} node(s) and leave nothing to write")))?;
+            let (result, counts) = erase(shape, &gone, "clip").map_err(|taken| {
+                Refusal::on(
+                    "shape",
+                    format!("the rings cut {taken} node(s) and leave nothing to write"),
+                )
+            })?;
             let mut plan = write_as(kind, result, params.written, &seed, cx)?;
             plan.activity.parameters.extend([
                 double("cutNodes", counts.taken as f64),
@@ -230,19 +287,46 @@ impl Operation for Clip {
                 double("removedTriangles", counts.removed as f64),
                 double("orphanNodes", counts.orphans as f64),
             ]);
-            plan.says.extend(counts.says().into_iter().filter(|note| note.key != "deleted"));
+            plan.says
+                .extend(counts.says().into_iter().filter(|note| note.key != "deleted"));
             plan.says.push(Note { key: "follows-the-mesh", detail: "the cut follows the nodes: a triangle or a segment across a ring goes whole, and no node is added on the ring".to_string() });
             plan
         };
         plan.activity.recipe = "clip";
         plan.activity.title = format!("clip → {title}");
-        plan.says.insert(0, Note { key: "cut", detail: format!("{cut} of {total} node(s) outside `outer` or inside an `inner`") });
+        plan.says.insert(
+            0,
+            Note {
+                key: "cut",
+                detail: format!("{cut} of {total} node(s) outside `outer` or inside an `inner`"),
+            },
+        );
         Ok(plan)
     }
 
     fn reports(&self) -> Vec<Slot> {
-        let count = |name: &'static str, about: &'static str| Slot::required(name, Need::Number { uom: None, least: None, most: None }, about);
-        let optional = |name: &'static str, about: &'static str| Slot::optional(name, Need::Number { uom: None, least: None, most: None }, about);
+        let count = |name: &'static str, about: &'static str| {
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
+        let optional = |name: &'static str, about: &'static str| {
+            Slot::optional(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
         support::frame_reports(vec![
             count("cutNodes", "nodes outside the outer ring or inside an inner one"),
             optional("droppedPieces", "pieces of line left with a single node, dropped"),

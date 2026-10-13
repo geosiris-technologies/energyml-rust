@@ -59,7 +59,11 @@ pub fn compute(
     mut read_one: impl FnMut(&Asked, &[SectionTrace]) -> Contribution,
 ) -> Result<Catalogue, InputsError> {
     let (sections, _) = crosses::traces(inputs)?;
-    let contributions: Vec<Contribution> = inputs.objects.iter().map(|asked| read_one(asked, &sections)).collect();
+    let contributions: Vec<Contribution> = inputs
+        .objects
+        .iter()
+        .map(|asked| read_one(asked, &sections))
+        .collect();
     assemble::assemble(inputs, &contributions)
 }
 
@@ -95,14 +99,20 @@ pub fn compute_packages(
     packages: &mut [Opened<'_>],
     reprojector: &dyn energyml_domain::reproject::Reprojector,
 ) -> Result<Catalogue, InputsError> {
-    let scene = read::Scene { system: inputs.system.as_ref(), time_factor: inputs.time_factor, reprojector };
-    compute(inputs, |asked, sections| match packages.iter_mut().find(|one| one.store == asked.store) {
-        Some(opened) => {
-            let mut thrown = read::PackageCache::new();
-            let cache = opened.cache.as_deref_mut().unwrap_or(&mut thrown);
-            read::contribution_cached(opened.source, asked, sections, &scene, &opened.context, cache)
+    let scene = read::Scene {
+        system: inputs.system.as_ref(),
+        time_factor: inputs.time_factor,
+        reprojector,
+    };
+    compute(inputs, |asked, sections| {
+        match packages.iter_mut().find(|one| one.store == asked.store) {
+            Some(opened) => {
+                let mut thrown = read::PackageCache::new();
+                let cache = opened.cache.as_deref_mut().unwrap_or(&mut thrown);
+                read::contribution_cached(opened.source, asked, sections, &scene, &opened.context, cache)
+            }
+            None => not_open(asked),
         }
-        None => not_open(asked),
     })
 }
 
@@ -120,10 +130,17 @@ fn not_open(asked: &Asked) -> Contribution {
                 title: String::new(),
                 qualified_type: String::new(),
             },
-            reason: format!("the package `{}` this object was asked from is not open", asked.store),
+            reason: format!(
+                "the package `{}` this object was asked from is not open",
+                asked.store
+            ),
         })
         .collect();
-    Contribution { store: asked.store.clone(), refused, ..Contribution::default() }
+    Contribution {
+        store: asked.store.clone(),
+        refused,
+        ..Contribution::default()
+    }
 }
 
 /// Why a drawing could not be made again.

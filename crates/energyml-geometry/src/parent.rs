@@ -554,7 +554,7 @@ fn build(axes: &[Axis; 3], lattice: &Lattice, dimensions: [usize; 3]) -> Result<
             index: Vec::new(),
         },
         closed: Vec::new(),
-}])
+    }])
 }
 
 /// The parent lattice at a fractional position, in parent cells from the
@@ -690,7 +690,8 @@ pub(crate) fn sub_representation(
         };
         let indices = crate::values::read_integers(indices, source, &where_)?;
 
-        let Some(support_uri) = crate::well::reference_of(*patch, "SupportingRepresentation").or_else(|| object_support.clone())
+        let Some(support_uri) =
+            crate::well::reference_of(*patch, "SupportingRepresentation").or_else(|| object_support.clone())
         else {
             return Err(Error::malformed(
                 &where_,
@@ -908,4 +909,3 @@ fn extra_supports(object: &dyn Reflect) -> Option<usize> {
             .count(),
     )
 }
-

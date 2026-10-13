@@ -44,7 +44,11 @@ struct Rule {
 }
 
 /// The adapters that exist in the public tree.
-const PUBLIC_ADAPTERS: &[&str] = &["energyml-storage/src/", "energyml-cli/src/", "energyml-python/src/"];
+const PUBLIC_ADAPTERS: &[&str] = &[
+    "energyml-storage/src/",
+    "energyml-cli/src/",
+    "energyml-python/src/",
+];
 
 /// Faces that exist only in the monorepo (the private repositories). They are
 /// adapters like the others, but the public tree does not hold them: a prefix
@@ -54,7 +58,10 @@ const PUBLIC_ADAPTERS: &[&str] = &["energyml-storage/src/", "energyml-cli/src/",
 const PRIVATE_ADAPTERS: &[&str] = &["energyml-wasm/src/", "energyml-ui/src/"];
 
 fn is_adapter(file: &str) -> bool {
-    PUBLIC_ADAPTERS.iter().chain(PRIVATE_ADAPTERS).any(|prefix| file.starts_with(prefix))
+    PUBLIC_ADAPTERS
+        .iter()
+        .chain(PRIVATE_ADAPTERS)
+        .any(|prefix| file.starts_with(prefix))
 }
 
 const RULES: &[Rule] = &[
@@ -156,7 +163,11 @@ fn sources() -> Vec<(String, Vec<(usize, String)>)> {
         let mut files = Vec::new();
         rust_sources(&entry.path().join("src"), &mut files);
         for file in files {
-            let relative = file.strip_prefix(&root).expect("under crates/").to_string_lossy().replace('\\', "/");
+            let relative = file
+                .strip_prefix(&root)
+                .expect("under crates/")
+                .to_string_lossy()
+                .replace('\\', "/");
             let text = fs::read_to_string(&file).unwrap_or_default();
             let mut lines = Vec::new();
             for (at, line) in text.lines().enumerate() {
@@ -177,13 +188,19 @@ fn sources() -> Vec<(String, Vec<(usize, String)>)> {
 fn allowed(rule: &Rule, file: &str) -> bool {
     rule.allowed_under.iter().any(|prefix| file.starts_with(prefix))
         || (rule.adapters_too && is_adapter(file))
-        || EXCEPTIONS.iter().any(|(path, needle, _)| *path == file && *needle == rule.needle)
+        || EXCEPTIONS
+            .iter()
+            .any(|(path, needle, _)| *path == file && *needle == rule.needle)
 }
 
 #[test]
 fn no_internal_code_looks_an_object_up_by_a_bare_uuid_or_reads_an_address_by_hand() {
     let sources = sources();
-    assert!(sources.len() > 100, "the walk found {} sources: it is not looking where it thinks", sources.len());
+    assert!(
+        sources.len() > 100,
+        "the walk found {} sources: it is not looking where it thinks",
+        sources.len()
+    );
     let mut violations = Vec::new();
     for (file, lines) in &sources {
         for rule in RULES {
@@ -197,7 +214,11 @@ fn no_internal_code_looks_an_object_up_by_a_bare_uuid_or_reads_an_address_by_han
             }
         }
     }
-    assert!(violations.is_empty(), "the identity rule is broken:\n{}", violations.join("\n"));
+    assert!(
+        violations.is_empty(),
+        "the identity rule is broken:\n{}",
+        violations.join("\n")
+    );
 }
 
 /// An exception that no source needs any more is removed: the list does not
@@ -210,7 +231,10 @@ fn every_exception_is_still_needed() {
             .iter()
             .filter(|(file, _)| file == path)
             .any(|(_, lines)| lines.iter().any(|(_, line)| line.contains(needle)));
-        assert!(used, "`{path}` no longer contains `{needle}`: remove its exception ({reason})");
+        assert!(
+            used,
+            "`{path}` no longer contains `{needle}`: remove its exception ({reason})"
+        );
     }
 }
 
@@ -220,13 +244,30 @@ fn every_exception_is_still_needed() {
 #[test]
 fn the_rule_names_a_forbidden_call_and_lets_an_adapter_through() {
     let rule = &RULES[0];
-    assert!(!allowed(rule, "energyml-geometry/src/scene.rs"), "internal code may not look a uuid up");
-    assert!(allowed(rule, "energyml-cli/src/main.rs"), "a face is the entry of the library");
+    assert!(
+        !allowed(rule, "energyml-geometry/src/scene.rs"),
+        "internal code may not look a uuid up"
+    );
+    assert!(
+        allowed(rule, "energyml-cli/src/main.rs"),
+        "a face is the entry of the library"
+    );
     // A fabricated crate no list names is not an adapter, whatever its name suggests.
-    assert!(!allowed(rule, "energyml-unlisted-face/src/lib.rs"), "only the listed adapters are let through");
+    assert!(
+        !allowed(rule, "energyml-unlisted-face/src/lib.rs"),
+        "only the listed adapters are let through"
+    );
     // The same violation seen by the walk: a line in a non-adapter source is refused.
-    assert!(!is_adapter("energyml-geometry/src/scene.rs") && "store.lookup_uuid(&u)".contains(RULES[1].needle));
-    assert!(allowed(rule, "energyml-build/src/apply.rs"), "an exception names its file");
-    assert!(!allowed(rule, "energyml-build/src/read.rs"), "another file of the same crate is not covered");
+    assert!(
+        !is_adapter("energyml-geometry/src/scene.rs") && "store.lookup_uuid(&u)".contains(RULES[1].needle)
+    );
+    assert!(
+        allowed(rule, "energyml-build/src/apply.rs"),
+        "an exception names its file"
+    );
+    assert!(
+        !allowed(rule, "energyml-build/src/read.rs"),
+        "another file of the same crate is not covered"
+    );
     assert!("let found = store.find_by_uuid(&uuid);".contains(rule.needle));
 }

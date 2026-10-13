@@ -80,7 +80,10 @@ const NODE_MD: &str = "NodeMd";
 const MAPPINGS: &[&str] = &["IntervalStratigraphicUnits", "IntervalStratigraphiUnits"];
 /// And what a mapping names as the rank its indices count in —
 /// `well_strata`'s own (private) `ORGANISATION`.
-const ORGANISATION: &[&str] = &["StratigraphicOrganizationInterpretation", "StratigraphicOrganization"];
+const ORGANISATION: &[&str] = &[
+    "StratigraphicOrganizationInterpretation",
+    "StratigraphicOrganization",
+];
 
 // ---------------------------------------------------------------------------
 // What is asked
@@ -263,7 +266,9 @@ pub fn board_of_frame(
     options: &Options,
 ) -> Result<Read, Refusal> {
     let raw_title = identity::title_of_reflect(frame).filter(|title| !title.is_empty());
-    let display_title = raw_title.unwrap_or_else(|| frame.type_info().type_key).to_string();
+    let display_title = raw_title
+        .unwrap_or_else(|| frame.type_info().type_key)
+        .to_string();
 
     let Some(FieldValue::Object(node_md)) = frame.field(NODE_MD) else {
         return Err(Refusal::NoNodeMd {
@@ -291,39 +296,65 @@ pub fn board_of_frame(
 
     let frame_key = identity::key_of_reflect(frame);
     let mut notes: Vec<String> = Vec::new();
-    let mut tracks: Vec<Track> = vec![Track::Md(MdTrack { header: options.md_header.clone() })];
+    let mut tracks: Vec<Track> = vec![Track::Md(MdTrack {
+        header: options.md_header.clone(),
+    })];
 
     // Every `GraphicalInformationSet` and every `StratigraphicUnitInterpretation`
     // of the package, read once — `well_strata::Known`'s own contract: several
     // sets may exist (the GeolTs import writes the chart's colours in a set of
     // its own beside the package's), and a category row is matched to a unit by
     // title only among the units the package actually holds.
-    let uri_of: HashMap<String, String> =
-        resources.iter().map(|summary| (summary.uuid.to_ascii_lowercase(), summary.uri.clone())).collect();
+    let uri_of: HashMap<String, String> = resources
+        .iter()
+        .map(|summary| (summary.uuid.to_ascii_lowercase(), summary.uri.clone()))
+        .collect();
     let graphics: Vec<(String, GraphicalSet)> = resources
         .iter()
         .filter(|summary| summary.qualified_type.ends_with("GraphicalInformationSet"))
-        .filter_map(|summary| source.object_at(&summary.uri).map(|object| (summary.uuid.clone(), GraphicalSet::read(object.as_reflect()))))
-        .collect();
-    let unit_titles: Vec<(String, String)> = resources
-        .iter()
-        .filter(|summary| summary.qualified_type.ends_with("StratigraphicUnitInterpretation"))
         .filter_map(|summary| {
             source
                 .object_at(&summary.uri)
-                .map(|object| (summary.uuid.clone(), identity::title_of_reflect(object.as_reflect()).unwrap_or_default().to_string()))
+                .map(|object| (summary.uuid.clone(), GraphicalSet::read(object.as_reflect())))
         })
         .collect();
-    let known = Known { graphics: &graphics, units: &unit_titles };
+    let unit_titles: Vec<(String, String)> = resources
+        .iter()
+        .filter(|summary| {
+            summary
+                .qualified_type
+                .ends_with("StratigraphicUnitInterpretation")
+        })
+        .filter_map(|summary| {
+            source.object_at(&summary.uri).map(|object| {
+                (
+                    summary.uuid.clone(),
+                    identity::title_of_reflect(object.as_reflect())
+                        .unwrap_or_default()
+                        .to_string(),
+                )
+            })
+        })
+        .collect();
+    let known = Known {
+        graphics: &graphics,
+        units: &unit_titles,
+    };
 
     // -- one track per stratigraphic rank the frame carries -----
     let ranks = stratigraphy_ranks(frame);
     if !ranks.is_empty() {
         match well_strata::of_frame(frame, &Wanted::IntervalUnits { rank: None }, source, &known) {
             Ok(strata) => {
-                let header = if ranks.len() == 1 { rank_header(&ranks[0].1, source) } else { "Stratigraphy".to_string() };
+                let header = if ranks.len() == 1 {
+                    rank_header(&ranks[0].1, source)
+                } else {
+                    "Stratigraphy".to_string()
+                };
                 notes.extend(strata.notes.clone());
-                tracks.push(Track::Intervals(track_from_strata(&strata, header, options, &uri_of)));
+                tracks.push(Track::Intervals(track_from_strata(
+                    &strata, header, options, &uri_of,
+                )));
             }
             Err(well_strata::Refusal::Ambiguous { why, .. }) => {
                 // "Two contradictory sources of strata... two
@@ -334,10 +365,22 @@ pub fn board_of_frame(
                      as separate tracks, one per rank, never merged"
                 ));
                 for (rank_uuid, rank_uri) in &ranks {
-                    match well_strata::of_frame(frame, &Wanted::IntervalUnits { rank: Some(rank_uuid) }, source, &known) {
+                    match well_strata::of_frame(
+                        frame,
+                        &Wanted::IntervalUnits {
+                            rank: Some(rank_uuid),
+                        },
+                        source,
+                        &known,
+                    ) {
                         Ok(strata) => {
                             notes.extend(strata.notes.clone());
-                            tracks.push(Track::Intervals(track_from_strata(&strata, rank_header(rank_uri, source), options, &uri_of)));
+                            tracks.push(Track::Intervals(track_from_strata(
+                                &strata,
+                                rank_header(rank_uri, source),
+                                options,
+                                &uri_of,
+                            )));
                         }
                         Err(why) => notes.push(format!("stratigraphic rank {rank_uuid}: {why}")),
                     }
@@ -361,7 +404,10 @@ pub fn board_of_frame(
         let object = match source.read_object_at(&summary.uri) {
             Ok(object) => object,
             Err(why) => {
-                notes.push(format!("property {} ({}): {why}", summary.uuid, summary.qualified_type));
+                notes.push(format!(
+                    "property {} ({}): {why}",
+                    summary.uuid, summary.qualified_type
+                ));
                 continue;
             }
         };
@@ -376,11 +422,14 @@ pub fn board_of_frame(
         // a package holding the frame in two versions has properties on each,
         // and the uuid alone would give this sheet both sets.
         let matches_frame = match (object.as_reflect().field("SupportingRepresentation"), &frame_key) {
-            (Some(FieldValue::Object(supporting)), Some(frame_key)) => match identity::key_of_reflect(supporting) {
-                Some(supporting) => supporting.same_object(frame_key),
-                // A reference that names no type has no full identity: its uuid is all it says.
-                None => identity::uuid_of_reflect(supporting).is_some_and(|uuid| uuid.eq_ignore_ascii_case(frame_key.uuid)),
-            },
+            (Some(FieldValue::Object(supporting)), Some(frame_key)) => {
+                match identity::key_of_reflect(supporting) {
+                    Some(supporting) => supporting.same_object(frame_key),
+                    // A reference that names no type has no full identity: its uuid is all it says.
+                    None => identity::uuid_of_reflect(supporting)
+                        .is_some_and(|uuid| uuid.eq_ignore_ascii_case(frame_key.uuid)),
+                }
+            }
             _ => false,
         };
         if !matches_frame {
@@ -401,7 +450,12 @@ pub fn board_of_frame(
         TrackSelection::All => candidates,
         TrackSelection::Only(wanted) => wanted
             .iter()
-            .filter_map(|uuid| candidates.iter().find(|summary| summary.uuid.eq_ignore_ascii_case(uuid)).copied())
+            .filter_map(|uuid| {
+                candidates
+                    .iter()
+                    .find(|summary| summary.uuid.eq_ignore_ascii_case(uuid))
+                    .copied()
+            })
             .collect(),
     };
 
@@ -426,9 +480,18 @@ pub fn board_of_frame(
 
     for (read, property_object, label) in &labelled {
         let header = with_unit(label, read.uom.as_deref());
-        if let Some(track) =
-            build_property_track(read, *property_object, frame, &mds, source, &known, options, &header, &uri_of, &mut notes)
-        {
+        if let Some(track) = build_property_track(
+            read,
+            *property_object,
+            frame,
+            &mds,
+            source,
+            &known,
+            options,
+            &header,
+            &uri_of,
+            &mut notes,
+        ) {
             tracks.push(track);
         }
     }
@@ -442,7 +505,10 @@ pub fn board_of_frame(
         ));
     }
 
-    Ok(Read { board: Board { title: None, tracks }, notes })
+    Ok(Read {
+        board: Board { title: None, tracks },
+        notes,
+    })
 }
 
 /// Distinct stratigraphic ranks the frame's mapping names — read on the
@@ -493,7 +559,12 @@ fn rank_header(rank_uri: &str, source: &dyn ArraySource) -> String {
 /// A [`well_strata::Strata`] turned into an [`IntervalTrack`] — the only new
 /// code a stratigraphy or a categorical-property track needs, since every
 /// section, unit, colour and title already came from `well_strata`.
-fn track_from_strata(strata: &well_strata::Strata, header: String, options: &Options, uri_of: &HashMap<String, String>) -> IntervalTrack {
+fn track_from_strata(
+    strata: &well_strata::Strata,
+    header: String,
+    options: &Options,
+    uri_of: &HashMap<String, String>,
+) -> IntervalTrack {
     let intervals: Vec<Interval> = strata
         .sections
         .iter()
@@ -504,7 +575,10 @@ fn track_from_strata(strata: &well_strata::Strata, header: String, options: &Opt
                 md_base: section.base,
                 text: unit.map(|unit| unit.title.clone()),
                 colour: strata.colour_of(section),
-                uri: unit.and_then(|unit| unit.uuid.as_deref()).and_then(|uuid| uri_of.get(&uuid.to_ascii_lowercase())).cloned(),
+                uri: unit
+                    .and_then(|unit| unit.uuid.as_deref())
+                    .and_then(|uuid| uri_of.get(&uuid.to_ascii_lowercase()))
+                    .cloned(),
                 row: unit.map(|unit| format_number(unit.code)),
             }
         })
@@ -548,13 +622,21 @@ fn with_unit(label: &str, uom: Option<&str>) -> String {
 /// [`beyond_shared`] of what it repeats of the frame's title — the well's
 /// name, which the sheet already is. Said in a
 /// note, since the header is then not the one asked for.
-fn disambiguate(labelled: &mut [(property::Property<'_>, &dyn Reflect, String)], frame_title: &str, notes: &mut Vec<String>) {
+fn disambiguate(
+    labelled: &mut [(property::Property<'_>, &dyn Reflect, String)],
+    frame_title: &str,
+    notes: &mut Vec<String>,
+) {
     let mut counts: HashMap<String, usize> = HashMap::new();
     for (_, _, label) in labelled.iter() {
         *counts.entry(label.clone()).or_default() += 1;
     }
     let shared: Vec<String> = {
-        let mut shared: Vec<String> = counts.into_iter().filter(|(_, count)| *count > 1).map(|(label, _)| label).collect();
+        let mut shared: Vec<String> = counts
+            .into_iter()
+            .filter(|(_, count)| *count > 1)
+            .map(|(label, _)| label)
+            .collect();
         shared.sort();
         shared
     };
@@ -582,16 +664,28 @@ fn disambiguate(labelled: &mut [(property::Property<'_>, &dyn Reflect, String)],
 /// that shares nothing, is returned whole: shortening is a courtesy, never a
 /// reason to lose the name.
 pub fn beyond_shared<'a>(title: &'a str, frame_title: &str) -> &'a str {
-    let common = title.char_indices().zip(frame_title.chars()).take_while(|((_, a), b)| a == b).last();
-    let Some(((at, last), _)) = common else { return title };
+    let common = title
+        .char_indices()
+        .zip(frame_title.chars())
+        .take_while(|((_, a), b)| a == b)
+        .last();
+    let Some(((at, last), _)) = common else {
+        return title;
+    };
     let end = at + last.len_utf8();
     // Back to the last boundary inside the shared part, unless the shared
     // part ends exactly on one in both titles.
     let whole_words = end == title.len()
         || title[end..].starts_with(char::is_whitespace)
         || title[..end].ends_with(char::is_whitespace);
-    let cut = if whole_words { end } else { title[..end].rfind(char::is_whitespace).map_or(0, |at| at + 1) };
-    let rest = title[cut..].trim_start_matches(|c: char| c.is_whitespace() || matches!(c, '—' | '–' | '-' | ':' | ',' | '/' | '|'));
+    let cut = if whole_words {
+        end
+    } else {
+        title[..end].rfind(char::is_whitespace).map_or(0, |at| at + 1)
+    };
+    let rest = title[cut..].trim_start_matches(|c: char| {
+        c.is_whitespace() || matches!(c, '—' | '–' | '-' | ':' | ',' | '/' | '|')
+    });
     if rest.is_empty() || cut == 0 { title } else { rest }
 }
 
@@ -626,10 +720,22 @@ fn build_property_track(
     }
 
     if read.lookup.is_some() {
-        return match well_strata::of_frame(frame, &Wanted::Category { property: property_object }, source, known) {
+        return match well_strata::of_frame(
+            frame,
+            &Wanted::Category {
+                property: property_object,
+            },
+            source,
+            known,
+        ) {
             Ok(strata) => {
                 notes.extend(strata.notes.clone());
-                Some(Track::Intervals(track_from_strata(&strata, header.to_string(), options, uri_of)))
+                Some(Track::Intervals(track_from_strata(
+                    &strata,
+                    header.to_string(),
+                    options,
+                    uri_of,
+                )))
             }
             Err(why) => {
                 notes.push(format!("`{header}`: {why}"));
@@ -656,7 +762,10 @@ fn build_property_track(
         }
     };
     let numbers: Vec<Option<f64>> = match values {
-        Values::Floating(values) => values.into_iter().map(|value| (!value.is_nan()).then_some(value)).collect(),
+        Values::Floating(values) => values
+            .into_iter()
+            .map(|value| (!value.is_nan()).then_some(value))
+            .collect(),
         Values::Integer(values) => values.into_iter().map(|value| Some(value as f64)).collect(),
         _ => {
             notes.push(format!("`{header}` holds no numbers"));

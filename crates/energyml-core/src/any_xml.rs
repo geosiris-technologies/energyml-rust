@@ -382,7 +382,10 @@ impl AnyXml {
             .filter(|info| info.xml_name == local && info.package == package && !info.version.is_empty())
             .collect();
         candidates.sort_by_key(|info| {
-            (crate::naming::is_prerelease(info.version), std::cmp::Reverse(version_rank(info.version)))
+            (
+                crate::naming::is_prerelease(info.version),
+                std::cmp::Reverse(version_rank(info.version)),
+            )
         });
         candidates.into_iter().next()
     }
@@ -396,7 +399,8 @@ impl AnyXml {
     pub fn typed(
         &self,
         registry: &crate::registry::Registry,
-    ) -> Option<crate::error::Result<(Box<dyn crate::registry::DynObject>, crate::registry::Departures)>> {
+    ) -> Option<crate::error::Result<(Box<dyn crate::registry::DynObject>, crate::registry::Departures)>>
+    {
         let info = self.declared_type(registry)?;
         let declarations: String = self
             .namespaces
@@ -433,9 +437,15 @@ impl AnyXml {
             namespace,
             info.xml_name,
             &[namespace, crate::ns::EML, crate::ns::XSI],
-            crate::xml::XmlWriteOptions { declaration: false, ..Default::default() },
+            crate::xml::XmlWriteOptions {
+                declaration: false,
+                ..Default::default()
+            },
         )?;
-        Ok(AnyXml { content: inner_of(&written), ..self.clone() })
+        Ok(AnyXml {
+            content: inner_of(&written),
+            ..self.clone()
+        })
     }
 }
 
@@ -474,11 +484,15 @@ impl AnyXml {
 /// A self-closing root has no content, and neither does an empty one; both come
 /// back as the empty string rather than as a slice of the tag.
 fn inner_of(xml: &str) -> String {
-    let Some(open) = xml.find('>') else { return String::new() };
+    let Some(open) = xml.find('>') else {
+        return String::new();
+    };
     if xml[..open].ends_with('/') {
         return String::new();
     }
-    let Some(close) = xml.rfind("</") else { return String::new() };
+    let Some(close) = xml.rfind("</") else {
+        return String::new();
+    };
     if close <= open {
         return String::new();
     }

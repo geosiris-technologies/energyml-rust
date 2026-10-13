@@ -17,13 +17,14 @@ use energyml_core::registry::DynObject;
 use energyml_core::value::Reflect;
 use energyml_domain::source::{ArraySource, ObjectSource};
 use energyml_eml_2_3::{
-    AbstractHorizontalCoordinates, AbstractIntegerArray, AbstractProjectedCrs, AbstractVerticalCrs, DataObjectReference,
-    IntegerConstantArray, MdInterval, ProjectedCoordinates, ProjectedCrs, ProjectedEpsgCrs, ReferencePointInACrs, VerticalCrs,
-    VerticalDirection, VerticalEpsgCrs,
+    AbstractHorizontalCoordinates, AbstractIntegerArray, AbstractProjectedCrs, AbstractVerticalCrs,
+    DataObjectReference, IntegerConstantArray, MdInterval, ProjectedCoordinates, ProjectedCrs,
+    ProjectedEpsgCrs, ReferencePointInACrs, VerticalCrs, VerticalDirection, VerticalEpsgCrs,
 };
 use energyml_geometry::{Placement, connection, heads, scene};
 use energyml_resqml_2_2::{
-    GridConnectionSetRepresentation, HorizonInterpretation, WellboreFrameRepresentation, WellboreTrajectoryRepresentation,
+    GridConnectionSetRepresentation, HorizonInterpretation, WellboreFrameRepresentation,
+    WellboreTrajectoryRepresentation,
 };
 
 const VCRS: &str = "22222222-2222-2222-2222-222222222222";
@@ -51,11 +52,13 @@ fn datum(version: &str, x: f64, y: f64) -> ReferencePointInACrs {
         object_version: Some(version.to_string()),
         vertical_crs: Some(dor(VCRS, None, "eml23.VerticalCrs")),
         vertical_coordinate: Some(37.73),
-        horizontal_coordinates: Some(AbstractHorizontalCoordinates::ProjectedCoordinates(ProjectedCoordinates {
-            coordinate1: x,
-            coordinate2: y,
-            crs: dor(PCRS, None, "eml23.ProjectedCrs"),
-        })),
+        horizontal_coordinates: Some(AbstractHorizontalCoordinates::ProjectedCoordinates(
+            ProjectedCoordinates {
+                coordinate1: x,
+                coordinate2: y,
+                crs: dor(PCRS, None, "eml23.ProjectedCrs"),
+            },
+        )),
         ..Default::default()
     }
 }
@@ -92,12 +95,17 @@ impl ObjectSource for Versions {
     fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
         self.0
             .iter()
-            .find(|one| identity::uuid_of_reflect(one.as_reflect()).is_some_and(|held| held.eq_ignore_ascii_case(uuid)))
+            .find(|one| {
+                identity::uuid_of_reflect(one.as_reflect())
+                    .is_some_and(|held| held.eq_ignore_ascii_case(uuid))
+            })
             .map(|one| one.clone_box())
     }
 
     fn object_at(&self, uri: &str) -> Option<Box<dyn DynObject>> {
-        let Ok(parsed) = EtpUri::parse(uri) else { return self.object(uri) };
+        let Ok(parsed) = EtpUri::parse(uri) else {
+            return self.object(uri);
+        };
         self.0
             .iter()
             .find(|one| {
@@ -109,7 +117,8 @@ impl ObjectSource for Versions {
     }
 
     fn read_object_at(&self, uri: &str) -> Result<Box<dyn DynObject>, String> {
-        self.object_at(uri).ok_or_else(|| format!("no such object: {uri}"))
+        self.object_at(uri)
+            .ok_or_else(|| format!("no such object: {uri}"))
     }
 }
 
@@ -117,10 +126,16 @@ impl ArraySource for Versions {
     fn locate(&self, _object: &dyn Reflect) -> Vec<energyml_storage::ArrayLocation> {
         Vec::new()
     }
-    fn metadata(&self, location: &energyml_storage::ArrayLocation) -> energyml_domain::Result<energyml_storage::ArrayMetadata> {
+    fn metadata(
+        &self,
+        location: &energyml_storage::ArrayLocation,
+    ) -> energyml_domain::Result<energyml_storage::ArrayMetadata> {
         Err(energyml_domain::Error::Missing(location.field_path.clone()))
     }
-    fn read(&self, location: &energyml_storage::ArrayLocation) -> energyml_domain::Result<energyml_storage::ArrayData> {
+    fn read(
+        &self,
+        location: &energyml_storage::ArrayLocation,
+    ) -> energyml_domain::Result<energyml_storage::ArrayData> {
         Err(energyml_domain::Error::Missing(location.field_path.clone()))
     }
     fn read_into(
@@ -137,12 +152,16 @@ fn systems() -> Vec<Box<dyn DynObject>> {
         Box::new(VerticalCrs {
             uuid: VCRS.to_string(),
             direction: VerticalDirection::Up,
-            abstract_vertical_crs: Some(AbstractVerticalCrs::VerticalEpsgCrs(VerticalEpsgCrs { epsg_code: 5714 })),
+            abstract_vertical_crs: Some(AbstractVerticalCrs::VerticalEpsgCrs(VerticalEpsgCrs {
+                epsg_code: 5714,
+            })),
             ..Default::default()
         }),
         Box::new(ProjectedCrs {
             uuid: PCRS.to_string(),
-            abstract_projected_crs: Some(AbstractProjectedCrs::ProjectedEpsgCrs(ProjectedEpsgCrs { epsg_code: 2154 })),
+            abstract_projected_crs: Some(AbstractProjectedCrs::ProjectedEpsgCrs(ProjectedEpsgCrs {
+                epsg_code: 2154,
+            })),
             ..Default::default()
         }),
     ]
@@ -166,7 +185,11 @@ fn a_trajectory_is_collared_at_the_datum_version_it_names() {
 
     let found = heads::of_objects(&source, &ask(&[TRAJ]), Placement::Projected).unwrap();
     assert!(found.refused.is_empty(), "{:?}", found.refused);
-    assert_eq!(found.heads[0].xy, [7000.0, 8000.0], "the datum of version 2, not the first of its uuid");
+    assert_eq!(
+        found.heads[0].xy,
+        [7000.0, 8000.0],
+        "the datum of version 2, not the first of its uuid"
+    );
 }
 
 /// A frame hangs on the **version** of the trajectory it names; the two
@@ -204,7 +227,11 @@ fn a_frame_hangs_on_the_trajectory_version_it_names() {
     }));
     let found = heads::of_objects(&Versions(held), &ask(&[FRAME]), Placement::Projected).unwrap();
     assert!(found.heads.is_empty());
-    assert!(found.refused[0].why.contains("version='3'"), "{}", found.refused[0].why);
+    assert!(
+        found.refused[0].why.contains("version='3'"),
+        "{}",
+        found.refused[0].why
+    );
 }
 
 /// The interpretation a representation represents is the version it names.
@@ -249,5 +276,8 @@ fn a_connection_set_refuses_a_grid_version_the_package_does_not_hold() {
     };
     let error = connection::read_with_interpretations(&set, &source).unwrap_err();
     let message = format!("{error}");
-    assert!(message.contains("version='3'"), "the refusal names the uri asked: {message}");
+    assert!(
+        message.contains("version='3'"),
+        "the refusal names the uri asked: {message}"
+    );
 }

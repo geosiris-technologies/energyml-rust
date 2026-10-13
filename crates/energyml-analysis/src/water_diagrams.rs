@@ -90,16 +90,34 @@ pub struct Axis {
 
 /// The cation axes, in Piper's order: `Ca`, `Mg`, `Na+K`.
 pub const CATION_AXES: [Axis; 3] = [
-    Axis { label: "Ca", formulas: &["Ca+2"] },
-    Axis { label: "Mg", formulas: &["Mg+2"] },
-    Axis { label: "Na+K", formulas: &["Na+", "K+"] },
+    Axis {
+        label: "Ca",
+        formulas: &["Ca+2"],
+    },
+    Axis {
+        label: "Mg",
+        formulas: &["Mg+2"],
+    },
+    Axis {
+        label: "Na+K",
+        formulas: &["Na+", "K+"],
+    },
 ];
 
 /// The anion axes, in Piper's order: `Cl`, `SO4`, `HCO3+CO3`.
 pub const ANION_AXES: [Axis; 3] = [
-    Axis { label: "Cl", formulas: &["Cl-"] },
-    Axis { label: "SO4", formulas: &["SO4-2"] },
-    Axis { label: "HCO3+CO3", formulas: &["HCO3-", "CO3-2"] },
+    Axis {
+        label: "Cl",
+        formulas: &["Cl-"],
+    },
+    Axis {
+        label: "SO4",
+        formulas: &["SO4-2"],
+    },
+    Axis {
+        label: "HCO3+CO3",
+        formulas: &["HCO3-", "CO3-2"],
+    },
 ];
 
 /// What a water diagram refuses, by name.
@@ -112,7 +130,12 @@ pub enum WaterError {
     #[error(
         "the analysis does not balance: {cations:.3} meq/L of cations against {anions:.3} meq/L of anions, an error of {error:.2} % beyond the {tolerance} % declared — a facies drawn from it could be a typing error's"
     )]
-    Unbalanced { cations: f64, anions: f64, error: f64, tolerance: f64 },
+    Unbalanced {
+        cations: f64,
+        anions: f64,
+        error: f64,
+        tolerance: f64,
+    },
     #[error(
         "{formulas:?} not stated, and an axis needs each: an absent ion is never drawn as zero — state it (0 when measured below detection) or declare it absent"
     )]
@@ -157,34 +180,55 @@ pub struct MajorIons {
 
 /// Every formula an axis reads.
 fn axis_formulas() -> impl Iterator<Item = &'static str> {
-    CATION_AXES.iter().chain(ANION_AXES.iter()).flat_map(|axis| axis.formulas.iter().copied())
+    CATION_AXES
+        .iter()
+        .chain(ANION_AXES.iter())
+        .flat_map(|axis| axis.formulas.iter().copied())
 }
 
 /// The analysis checked for the diagrams — `tolerance` the largest balance
 /// error accepted, in percent; `declared_absent` the axis ions the caller
 /// states were not measured and are negligible.
-pub fn major_ions(analysis: &[(&str, f64)], tolerance: f64, declared_absent: &[&str]) -> Result<MajorIons, WaterError> {
+pub fn major_ions(
+    analysis: &[(&str, f64)],
+    tolerance: f64,
+    declared_absent: &[&str],
+) -> Result<MajorIons, WaterError> {
     if !(tolerance.is_finite() && tolerance >= 0.0) {
         return Err(WaterError::BadTolerance { given: tolerance });
     }
     let balance = ion_balance::balance(analysis)?;
     if balance.error.abs() > tolerance {
-        return Err(WaterError::Unbalanced { cations: balance.cations, anions: balance.anions, error: balance.error, tolerance });
+        return Err(WaterError::Unbalanced {
+            cations: balance.cations,
+            anions: balance.anions,
+            error: balance.error,
+            tolerance,
+        });
     }
     let mut declared: Vec<&'static str> = Vec::new();
     for formula in declared_absent {
         let Some(known) = axis_formulas().find(|one| one == formula) else {
-            return Err(WaterError::NotAnAxisIon { formula: (*formula).to_string(), known: axis_formulas().collect::<Vec<_>>().join(", ") });
+            return Err(WaterError::NotAnAxisIon {
+                formula: (*formula).to_string(),
+                known: axis_formulas().collect::<Vec<_>>().join(", "),
+            });
         };
         if let Some((_, given)) = analysis.iter().find(|(stated, _)| stated == formula) {
-            return Err(WaterError::DeclaredAndStated { formula: (*formula).to_string(), given: *given });
+            return Err(WaterError::DeclaredAndStated {
+                formula: (*formula).to_string(),
+                given: *given,
+            });
         }
         if !declared.contains(&known) {
             declared.push(known);
         }
     }
-    let missing: Vec<&'static str> =
-        axis_formulas().filter(|formula| !declared.contains(formula) && !analysis.iter().any(|(stated, _)| stated == formula)).collect();
+    let missing: Vec<&'static str> = axis_formulas()
+        .filter(|formula| {
+            !declared.contains(formula) && !analysis.iter().any(|(stated, _)| stated == formula)
+        })
+        .collect();
     if !missing.is_empty() {
         return Err(WaterError::Missing { formulas: missing });
     }
@@ -199,10 +243,22 @@ pub fn major_ions(analysis: &[(&str, f64)], tolerance: f64, declared_absent: &[&
             })
         })
         .collect();
-    let of = |axis: &Axis| -> f64 { stated.iter().filter(|one| axis.formulas.contains(&one.formula.as_str())).map(|one| one.meq_per_l).sum() };
+    let of = |axis: &Axis| -> f64 {
+        stated
+            .iter()
+            .filter(|one| axis.formulas.contains(&one.formula.as_str()))
+            .map(|one| one.meq_per_l)
+            .sum()
+    };
     let cations = CATION_AXES.map(|axis| of(&axis));
     let anions = ANION_AXES.map(|axis| of(&axis));
-    Ok(MajorIons { balance, stated, declared_absent: declared, cations, anions })
+    Ok(MajorIons {
+        balance,
+        stated,
+        declared_absent: declared,
+        cations,
+        anions,
+    })
 }
 
 /// A Piper diagram: the two ternaries in percent, and the analysis they come
@@ -244,12 +300,19 @@ pub struct PiperFrame {
 const H: f64 = 0.866_025_403_784_438_6;
 
 fn checked_gap(gap: f64) -> Result<f64, WaterError> {
-    if gap.is_finite() && gap >= 0.0 { Ok(gap) } else { Err(WaterError::BadGap { given: gap }) }
+    if gap.is_finite() && gap >= 0.0 {
+        Ok(gap)
+    } else {
+        Err(WaterError::BadGap { given: gap })
+    }
 }
 
 /// The diamond's point for fractions of `Na+K` and of `HCO3+CO3`.
 fn diamond(na_k: f64, hco3_co3: f64, gap: f64) -> [f64; 2] {
-    [(2.0 + gap + na_k - hco3_co3) / 2.0, H * (2.0 + gap - na_k - hco3_co3)]
+    [
+        (2.0 + gap + na_k - hco3_co3) / 2.0,
+        H * (2.0 + gap - na_k - hco3_co3),
+    ]
 }
 
 impl Piper {
@@ -271,7 +334,12 @@ impl Piper {
         Ok(PiperFrame {
             cation: [[0.0, 0.0], [1.0, 0.0], [0.5, H]],
             anion: [[1.0 + gap, 0.0], [2.0 + gap, 0.0], [1.5 + gap, H]],
-            diamond: [diamond(1.0, 1.0, gap), diamond(1.0, 0.0, gap), diamond(0.0, 0.0, gap), diamond(0.0, 1.0, gap)],
+            diamond: [
+                diamond(1.0, 1.0, gap),
+                diamond(1.0, 0.0, gap),
+                diamond(0.0, 0.0, gap),
+                diamond(0.0, 1.0, gap),
+            ],
         })
     }
 }
@@ -287,11 +355,19 @@ fn shares(meq: [f64; 3], which: &'static str) -> Result<[f64; 3], WaterError> {
 
 /// The Piper diagram of an analysis — see [`major_ions`] for `tolerance` and
 /// `declared_absent`.
-pub fn piper(analysis: &[(&str, f64)], tolerance: f64, declared_absent: &[&str]) -> Result<Piper, WaterError> {
+pub fn piper(
+    analysis: &[(&str, f64)],
+    tolerance: f64,
+    declared_absent: &[&str],
+) -> Result<Piper, WaterError> {
     let ions = major_ions(analysis, tolerance, declared_absent)?;
     let cations = shares(ions.cations, "cation")?;
     let anions = shares(ions.anions, "anion")?;
-    Ok(Piper { cations, anions, ions })
+    Ok(Piper {
+        cations,
+        anions,
+        ions,
+    })
 }
 
 /// One horizontal axis of a Stiff pattern.
@@ -318,7 +394,11 @@ pub struct Stiff {
 
 /// The Stiff pattern of an analysis — see [`major_ions`] for `tolerance` and
 /// `declared_absent`.
-pub fn stiff(analysis: &[(&str, f64)], tolerance: f64, declared_absent: &[&str]) -> Result<Stiff, WaterError> {
+pub fn stiff(
+    analysis: &[(&str, f64)],
+    tolerance: f64,
+    declared_absent: &[&str],
+) -> Result<Stiff, WaterError> {
     let ions = major_ions(analysis, tolerance, declared_absent)?;
     // (cation axis, anion axis) as indices into CATION_AXES and ANION_AXES,
     // top to bottom.

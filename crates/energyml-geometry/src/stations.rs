@@ -98,7 +98,10 @@ pub(crate) fn declared(trajectory: &dyn Reflect) -> Option<u64> {
 pub(crate) fn read(trajectory: &dyn Reflect, source: &dyn ValueSource) -> Result<Vec<Patch>> {
     let listed = field_list(trajectory, "TrajectoryStation");
     if listed.is_empty() {
-        return Err(Error::malformed(AT, "a trajectory with no `TrajectoryStation`: nothing states where the hole is"));
+        return Err(Error::malformed(
+            AT,
+            "a trajectory with no `TrajectoryStation`: nothing states where the hole is",
+        ));
     }
     stated_method(trajectory, "NominalCalcAlgorithm", AT)?;
 
@@ -115,7 +118,8 @@ pub(crate) fn read(trajectory: &dyn Reflect, source: &dyn ValueSource) -> Result
             ));
         }
         stated_method(*station, "CalcAlgorithm", &here)?;
-        let holder = field_object(*station, "Md").ok_or_else(|| Error::malformed(&here, "a station with no `Md`"))?;
+        let holder =
+            field_object(*station, "Md").ok_or_else(|| Error::malformed(&here, "a station with no `Md`"))?;
         let md = measured_depth(holder, &here)?;
         let counted_from = reference_of(holder, "Datum").or_else(|| default_datum.clone()).ok_or_else(|| {
             Error::unsupported(
@@ -162,16 +166,28 @@ pub(crate) fn read(trajectory: &dyn Reflect, source: &dyn ValueSource) -> Result
     let located = stations::positions(&measured).map_err(|why| Error::malformed(AT, why))?;
     let placed = place_datum(&datum, source, AT)?;
     let moves = located.iter().any(|one| one.north != 0.0 || one.east != 0.0);
-    let horizontal = if moves { Some(Horizontal::of(trajectory, &datum, &placed, source)?) } else { None };
+    let horizontal = if moves {
+        Some(Horizontal::of(trajectory, &datum, &placed, source)?)
+    } else {
+        None
+    };
     let points = located
         .iter()
         .map(|one| {
-            let (dx, dy) = horizontal.as_ref().map_or((0.0, 0.0), |frame| frame.offset(one.east, one.north));
+            let (dx, dy) = horizontal
+                .as_ref()
+                .map_or((0.0, 0.0), |frame| frame.offset(one.east, one.north));
             [placed.x + dx, placed.y + dy, placed.elevation - one.tvd]
         })
         .collect::<Vec<_>>();
     let count = points.len() as u32;
-    Ok(vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Polylines(vec![count]), closed: Vec::new() }])
+    Ok(vec![Patch {
+        index: 0,
+        node_offset: 0,
+        points,
+        topology: Topology::Polylines(vec![count]),
+        closed: Vec::new(),
+    }])
 }
 
 /// A method the file states, which must be the one applied.
@@ -191,7 +207,9 @@ fn measured_depth(holder: &dyn Reflect, at: &str) -> Result<f64> {
     let found = measure::read(holder)
         .or_else(|| field_object(holder, "MeasuredDepth").and_then(measure::read))
         .ok_or_else(|| Error::malformed(at, "an `Md` holding no number"))?;
-    let unit = found.uom.ok_or_else(|| Error::malformed(at, "an `Md` with no unit: a length in nothing is not a depth"))?;
+    let unit = found
+        .uom
+        .ok_or_else(|| Error::malformed(at, "an `Md` with no unit: a length in nothing is not a depth"))?;
     Ok(units::metres(found.value, &unit)?)
 }
 
@@ -201,10 +219,14 @@ fn angle(station: &dyn Reflect, field: &str, at: &str) -> Result<Option<f64>> {
     let Some(holder) = field_object(station, field) else {
         return Ok(None);
     };
-    let found = measure::read(holder).ok_or_else(|| Error::malformed(format!("{at}.{field}"), "no number"))?;
-    let unit = found
-        .uom
-        .ok_or_else(|| Error::malformed(format!("{at}.{field}"), "an angle with no unit — degrees or radians is not a guess to make"))?;
+    let found =
+        measure::read(holder).ok_or_else(|| Error::malformed(format!("{at}.{field}"), "no number"))?;
+    let unit = found.uom.ok_or_else(|| {
+        Error::malformed(
+            format!("{at}.{field}"),
+            "an angle with no unit — degrees or radians is not a guess to make",
+        )
+    })?;
     // Into degrees directly: `convert` leaves a value in `dega` untouched, so
     // 360 stays 360 and is not refused as 360.00000000000006.
     Ok(Some(units::convert(found.value, &unit, "dega")?))
@@ -215,7 +237,10 @@ enum Horizontal {
     /// Along the projected axes, in their unit.
     Grid { metres_per_unit: f64 },
     /// Along the axes of the compound, turned by its azimuth.
-    Plant { compound: Box<energyml_domain::Crs>, metres_per_unit: f64 },
+    Plant {
+        compound: Box<energyml_domain::Crs>,
+        metres_per_unit: f64,
+    },
 }
 
 impl Horizontal {
@@ -223,7 +248,10 @@ impl Horizontal {
     fn offset(&self, east: f64, north: f64) -> (f64, f64) {
         match self {
             Horizontal::Grid { metres_per_unit } => (east / metres_per_unit, north / metres_per_unit),
-            Horizontal::Plant { compound, metres_per_unit } => {
+            Horizontal::Plant {
+                compound,
+                metres_per_unit,
+            } => {
                 // The compound's own turn, not a second copy of it: the
                 // placement of the displacement less that of its origin.
                 let there = compound.to_projected([east / metres_per_unit, north / metres_per_unit, 0.0]);
@@ -233,7 +261,12 @@ impl Horizontal {
         }
     }
 
-    fn of(trajectory: &dyn Reflect, datum_uri: &str, placed: &PlacedDatum, source: &dyn ValueSource) -> Result<Self> {
+    fn of(
+        trajectory: &dyn Reflect,
+        datum_uri: &str,
+        placed: &PlacedDatum,
+        source: &dyn ValueSource,
+    ) -> Result<Self> {
         let at = format!("{AT}.AziRef");
         let Some(north) = measure::enum_value(trajectory, "AziRef") else {
             return Err(Error::unsupported(
@@ -241,16 +274,21 @@ impl Horizontal {
                 at,
             ));
         };
-        let datum = source.object_at(datum_uri).ok_or_else(|| Error::Missing(format!("the datum {datum_uri}")))?;
+        let datum = source
+            .object_at(datum_uri)
+            .ok_or_else(|| Error::Missing(format!("the datum {datum_uri}")))?;
         let datum = datum.as_reflect();
         match (north.as_str(), &placed.compound) {
             ("grid north", Some(compound)) => {
-                if let Some(order) = compound_plane(datum, source)
-                    .and_then(|plane| field_object(plane.as_reflect(), "OriginProjectedCrs").and_then(|p| measure::enum_value(p, "AxisOrder")))
-                {
+                if let Some(order) = compound_plane(datum, source).and_then(|plane| {
+                    field_object(plane.as_reflect(), "OriginProjectedCrs")
+                        .and_then(|p| measure::enum_value(p, "AxisOrder"))
+                }) {
                     east_then_north(&order, &at)?;
                 }
-                Ok(Horizontal::Grid { metres_per_unit: horizontal_unit(compound.horizontal_uom.as_deref(), &at)? })
+                Ok(Horizontal::Grid {
+                    metres_per_unit: horizontal_unit(compound.horizontal_uom.as_deref(), &at)?,
+                })
             }
             ("grid north", None) => {
                 // A point in a CRS: its projected system states its axes and
@@ -269,22 +307,34 @@ impl Horizontal {
                 match measure::enum_value(projected, "AxisOrder") {
                     Some(order) => east_then_north(&order, &at)?,
                     None => {
-                        return Err(Error::unsupported("a projected CRS that states no axis order", &at));
+                        return Err(Error::unsupported(
+                            "a projected CRS that states no axis order",
+                            &at,
+                        ));
                     }
                 }
-                Ok(Horizontal::Grid { metres_per_unit: horizontal_unit(measure::enum_value(projected, "uom").as_deref(), &at)? })
+                Ok(Horizontal::Grid {
+                    metres_per_unit: horizontal_unit(measure::enum_value(projected, "uom").as_deref(), &at)?,
+                })
             }
             ("plant north", Some(compound)) => {
                 let axes = compound_plane(datum, source).and_then(|plane| {
                     let axes = field_object(plane.as_reflect(), "HorizontalAxes")?;
-                    Some((measure::enum_value(axes, "Direction1"), measure::enum_value(axes, "Direction2")))
+                    Some((
+                        measure::enum_value(axes, "Direction1"),
+                        measure::enum_value(axes, "Direction2"),
+                    ))
                 });
                 match axes {
                     Some((Some(first), Some(second))) if first == "east" && second == "north" => {}
                     Some((first, second)) => {
                         return Err(Error::unsupported(
                             "a plant-north survey in a compound whose axes are not east then north",
-                            format!("{at}: `{}`, `{}`", first.unwrap_or_default(), second.unwrap_or_default()),
+                            format!(
+                                "{at}: `{}`, `{}`",
+                                first.unwrap_or_default(),
+                                second.unwrap_or_default()
+                            ),
                         ));
                     }
                     None => {
@@ -312,7 +362,10 @@ impl Horizontal {
 }
 
 /// The 2D half of the compound a datum is written in.
-fn compound_plane(datum: &dyn Reflect, source: &dyn ValueSource) -> Option<Box<dyn energyml_core::registry::DynObject>> {
+fn compound_plane(
+    datum: &dyn Reflect,
+    source: &dyn ValueSource,
+) -> Option<Box<dyn energyml_core::registry::DynObject>> {
     let compound = source.object_at(&reference_of(datum, "Crs")?)?;
     source.object_at(&reference_of(compound.as_reflect(), "LocalEngineering2dCrs")?)
 }
@@ -330,7 +383,10 @@ fn east_then_north(order: &str, at: &str) -> Result<()> {
 /// Metres per unit of the projected axes — stated, or refused.
 fn horizontal_unit(unit: Option<&str>, at: &str) -> Result<f64> {
     let unit = unit.ok_or_else(|| {
-        Error::unsupported("a projected system that states no unit — a displacement in metres cannot be added to it", at)
+        Error::unsupported(
+            "a projected system that states no unit — a displacement in metres cannot be added to it",
+            at,
+        )
     })?;
     Ok(units::metres(1.0, unit)?)
 }

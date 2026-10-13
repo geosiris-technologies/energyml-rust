@@ -15,8 +15,12 @@ venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-dist/
-build/
+# Python packaging output, at the root and in the Python crate only: a bare `build/`
+# would also hide Rust sources (`crates/energyml-rules/build/`, a `tests/build/` module).
+/dist/
+/build/
+crates/energyml-python/dist/
+crates/energyml-python/build/
 *.whl
 # maturin build products
 *.so

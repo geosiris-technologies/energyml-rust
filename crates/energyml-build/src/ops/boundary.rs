@@ -81,11 +81,18 @@ impl Operation for Boundary {
             name: "boundary",
             describe: "a cultural feature — a model frontier, a licence block, a pipeline — with its interpretation and its outline as closed polylines",
             category: Category::Create,
-            makes: &["resqml22.CulturalFeature", "resqml22.GenericFeatureInterpretation", "resqml22.PolylineSetRepresentation"],
+            makes: &[
+                "resqml22.CulturalFeature",
+                "resqml22.GenericFeatureInterpretation",
+                "resqml22.PolylineSetRepresentation",
+            ],
             recipe: "boundary",
             // It writes the pair itself — declared so that the form can offer
             // *create one* beside *choose one*, before anything is planned.
-            represents: Some(("resqml22.CulturalFeature", "resqml22.GenericFeatureInterpretation")),
+            represents: Some((
+                "resqml22.CulturalFeature",
+                "resqml22.GenericFeatureInterpretation",
+            )),
         }
     }
 
@@ -105,12 +112,20 @@ impl Operation for Boundary {
             })
             .sum();
         if runs == 0 {
-            return Err(Refusal::on("shape", "the shape has no polyline — its topology is points, triangles or cells"));
+            return Err(Refusal::on(
+                "shape",
+                "the shape has no polyline — its topology is points, triangles or cells",
+            ));
         }
         Ok(())
     }
 
-    fn plan(&self, inputs: BoundaryInputs, params: BoundaryParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: BoundaryInputs,
+        params: BoundaryParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let title = params.naming.title();
         let seed = cx.seed(&title);
         let kind = params.feature_kind.word();
@@ -125,14 +140,18 @@ impl Operation for Boundary {
                 feature_kind: None,
             },
         };
-        let lines = PolylinesInputs { shape: vec![inputs.shape], features: None };
+        let lines = PolylinesInputs {
+            shape: vec![inputs.shape],
+            features: None,
+        };
         let mut plan = super::polylines::write(&lines, &written, Some(params.closed), &seed, cx)?;
 
         // The feature and its interpretation, numbered after what the polylines
         // took, so that given uuids land in a predictable order.
         let mut rank = plan.objects.len();
         let feature_uuid = support::next_uuid(cx.identity, &format!("boundary-feature:{seed}"), &mut rank)?;
-        let interpretation_uuid = support::next_uuid(cx.identity, &format!("boundary-interpretation:{seed}"), &mut rank)?;
+        let interpretation_uuid =
+            support::next_uuid(cx.identity, &format!("boundary-interpretation:{seed}"), &mut rank)?;
         let feature_title = format!("{title} — feature");
         let interpretation_title = format!("{title} — interpretation");
         let feature = crate::operation::NewObject {
@@ -174,14 +193,21 @@ impl Operation for Boundary {
             "Title": interpretation_title,
         });
         // The representation points at the interpretation; it is put after it.
-        let at = plan.objects.iter().position(|o| o.role == "representation").ok_or_else(|| Refusal::new("refused", "no representation was planned"))?;
+        let at = plan
+            .objects
+            .iter()
+            .position(|o| o.role == "representation")
+            .ok_or_else(|| Refusal::new("refused", "no representation was planned"))?;
         plan.objects[at].json["RepresentedObject"] = dor;
         plan.objects.insert(at, interpretation);
         plan.objects.insert(at, feature);
 
         plan.activity.recipe = "boundary";
         plan.activity.title = format!("boundary → {title}");
-        plan.activity.parameters.push(Parameter::Text { title: "featureKind".to_string(), value: kind.to_string() });
+        plan.activity.parameters.push(Parameter::Text {
+            title: "featureKind".to_string(),
+            value: kind.to_string(),
+        });
         Ok(plan)
     }
 

@@ -44,9 +44,17 @@ fn package(name: &str) -> PathBuf {
     let _ = std::fs::remove_dir_all(&directory);
     std::fs::create_dir_all(&directory).unwrap();
     let start = directory.join("start.epc");
-    std::fs::write(&start, energyml_storage::extract::empty_package(None).expect("an empty package")).unwrap();
+    std::fs::write(
+        &start,
+        energyml_storage::extract::empty_package(None).expect("an empty package"),
+    )
+    .unwrap();
     let mut store = EpcStore::open(&start, Arc::new(energyml_schemas::all())).expect("it opens");
-    let read = |store: &EpcStore, json: &str| energyml_core::json::read_string(json, store.registry()).expect("it reads").root;
+    let read = |store: &EpcStore, json: &str| {
+        energyml_core::json::read_string(json, store.registry())
+            .expect("it reads")
+            .root
+    };
     let first = read(&store, &feature(X, Some("1"), "X"));
     store.put(first).expect("version 1");
     let second = read(&store, &feature(X, Some("2"), "X"));
@@ -59,7 +67,11 @@ fn package(name: &str) -> PathBuf {
 }
 
 fn run(args: &[&str], file: &PathBuf) -> String {
-    let out = Command::new(env!("CARGO_BIN_EXE_energyml")).args(args).arg(file).output().expect("the binary runs");
+    let out = Command::new(env!("CARGO_BIN_EXE_energyml"))
+        .args(args)
+        .arg(file)
+        .output()
+        .expect("the binary runs");
     String::from_utf8_lossy(&out.stdout).into_owned()
 }
 
@@ -67,10 +79,16 @@ fn run(args: &[&str], file: &PathBuf) -> String {
 fn list_tells_two_versions_apart_and_prints_nothing_extra_for_an_unversioned_object() {
     let file = package("list");
     let out = run(&["list"], &file);
-    let lines: Vec<&str> = out.lines().filter(|line| line.contains("BoundaryFeature")).collect();
+    let lines: Vec<&str> = out
+        .lines()
+        .filter(|line| line.contains("BoundaryFeature"))
+        .collect();
     assert_eq!(lines.len(), 3, "{out}");
     assert!(lines.iter().any(|line| line.ends_with("X (version 1)")), "{out}");
     assert!(lines.iter().any(|line| line.ends_with("X (version 2)")), "{out}");
-    let plain = lines.iter().find(|line| line.contains(PLAIN)).expect("the plain feature");
+    let plain = lines
+        .iter()
+        .find(|line| line.contains(PLAIN))
+        .expect("the plain feature");
     assert!(plain.ends_with("plain"), "no version, nothing added: {plain}");
 }

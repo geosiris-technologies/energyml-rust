@@ -105,7 +105,12 @@ pub fn type_doc(info: &'static TypeInfo) -> Value {
     // The JSON key comes from `json::json_keys`, the writer's own mapping —
     // `json_name` says `Value` where the JSON writes `_`.
     let keys = crate::json::json_keys(info);
-    let fields: Vec<Value> = info.fields.iter().zip(&keys).map(|(field, key)| field_doc(field, key)).collect();
+    let fields: Vec<Value> = info
+        .fields
+        .iter()
+        .zip(&keys)
+        .map(|(field, key)| field_doc(field, key))
+        .collect();
     let variants: Vec<Value> = info.variants.iter().map(variant_doc).collect();
     json!({
         "name": info.name,

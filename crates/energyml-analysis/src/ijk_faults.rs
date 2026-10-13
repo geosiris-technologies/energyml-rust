@@ -176,7 +176,11 @@ impl Faulted {
     /// The pillar a line stands on.
     pub fn pillar_of(&self, line: usize) -> usize {
         let per_level = self.pillars[0] * self.pillars[1];
-        if line < per_level { line } else { self.split_pillars[line - per_level] }
+        if line < per_level {
+            line
+        } else {
+            self.split_pillars[line - per_level]
+        }
     }
 
     /// The line a column takes its corner from on a pillar.
@@ -194,7 +198,10 @@ impl Faulted {
         let mut out = Vec::with_capacity(self.levels * self.lines);
         for level in 0..self.levels {
             for line in 0..self.lines {
-                let [x, y] = pillars.get(self.pillar_of(line)).copied().unwrap_or([f64::NAN; 2]);
+                let [x, y] = pillars
+                    .get(self.pillar_of(line))
+                    .copied()
+                    .unwrap_or([f64::NAN; 2]);
                 out.push([x, y, self.z[level * self.lines + line]]);
             }
         }
@@ -245,7 +252,9 @@ impl Faulted {
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum CutError {
     /// No fault given.
-    #[error("no fault given: a grid cut by nothing is the grid between its horizons — `ijk-grid-from-horizons` writes it")]
+    #[error(
+        "no fault given: a grid cut by nothing is the grid between its horizons — `ijk-grid-from-horizons` writes it"
+    )]
     NoFault,
     /// A maximum throw that is not a positive length.
     #[error("the maximum throw of `{fault}` must be a finite number > 0, not {given}")]
@@ -294,7 +303,9 @@ pub enum CutError {
         dip: f64,
     },
     /// A fault whose vertical extent misses the grid's.
-    #[error("`{fault}` runs from {top} to {bottom} and the grid from {grid_top} to {grid_bottom}: it does not reach the grid's heights")]
+    #[error(
+        "`{fault}` runs from {top} to {bottom} and the grid from {grid_top} to {grid_bottom}: it does not reach the grid's heights"
+    )]
     Misses {
         /// The fault.
         fault: String,
@@ -316,7 +327,9 @@ pub enum CutError {
         level: f64,
     },
     /// A trace in several pieces.
-    #[error("`{fault}` is cut at {level} in {count} separate traces — which of them splits the grid, and how their throws meet, is not decided here")]
+    #[error(
+        "`{fault}` is cut at {level} in {count} separate traces — which of them splits the grid, and how their throws meet, is not decided here"
+    )]
     Pieces {
         /// The fault.
         fault: String,
@@ -326,7 +339,9 @@ pub enum CutError {
         count: usize,
     },
     /// A trace that closes on itself.
-    #[error("`{fault}` is cut at {level} along a closed ring — a ring has no end for its throw to die out at")]
+    #[error(
+        "`{fault}` is cut at {level} along a closed ring — a ring has no end for its throw to die out at"
+    )]
     Ring {
         /// The fault.
         fault: String,
@@ -344,7 +359,9 @@ pub enum CutError {
         angle: f64,
     },
     /// A fault that splits no pillar.
-    #[error("`{fault}` splits no pillar: its trace at {level} runs outside the grid, or its throw is zero wherever it passes between two columns")]
+    #[error(
+        "`{fault}` splits no pillar: its trace at {level} runs outside the grid, or its throw is zero wherever it passes between two columns"
+    )]
     Uncut {
         /// The fault.
         fault: String,
@@ -366,7 +383,9 @@ pub enum CutError {
         above: usize,
     },
     /// Nothing left.
-    #[error("none of the {cells} cell(s) keeps a geometry once the cells next to the faults are removed — nothing would be drawn")]
+    #[error(
+        "none of the {cells} cell(s) keeps a geometry once the cells next to the faults are removed — nothing would be drawn"
+    )]
     NothingLeft {
         /// The cells.
         cells: usize,
@@ -385,7 +404,10 @@ fn hanging_wall_side(trace: &[Point], dip_azimuth: f64, fault: &str) -> Result<f
     }
     let mean = if total > 0.0 { sum / total } else { 0.0 };
     if mean.abs() < fault_throw::ACROSS {
-        return Err(CutError::AlongDip { fault: fault.to_string(), angle: mean.abs().clamp(0.0, 1.0).asin().to_degrees() });
+        return Err(CutError::AlongDip {
+            fault: fault.to_string(),
+            angle: mean.abs().clamp(0.0, 1.0).asin().to_degrees(),
+        });
     }
     Ok(mean.signum())
 }
@@ -410,7 +432,12 @@ struct Read {
 /// Cut a grid by its faults — see the module.
 ///
 /// `pillars` is each pillar's `(x, y)`, `i` fastest, in the grid's frame.
-pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settings: &Settings<'_>) -> Result<Faulted, CutError> {
+pub fn cut(
+    stacked: &Stacked,
+    pillars: &[[f64; 2]],
+    faults: &[Fault<'_>],
+    settings: &Settings<'_>,
+) -> Result<Faulted, CutError> {
     let [ni, nj, nk] = stacked.cells;
     let [pi, pj] = stacked.pillars;
     let per_level = pi * pj;
@@ -419,14 +446,22 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
         return Err(CutError::NoFault);
     }
     if pillars.len() != per_level {
-        return Err(CutError::Pillars { expected: per_level, given: pillars.len() });
+        return Err(CutError::Pillars {
+            expected: per_level,
+            given: pillars.len(),
+        });
     }
     if !(settings.reach.is_finite() && settings.reach > 0.0) {
-        return Err(CutError::BadReach { given: settings.reach });
+        return Err(CutError::BadReach {
+            given: settings.reach,
+        });
     }
     for fault in faults {
         if !(fault.maximum_throw.is_finite() && fault.maximum_throw > 0.0) {
-            return Err(CutError::BadThrow { fault: fault.name.to_string(), given: fault.maximum_throw });
+            return Err(CutError::BadThrow {
+                fault: fault.name.to_string(),
+                given: fault.maximum_throw,
+            });
         }
     }
     if let Some(&layer) = settings.dead_layers.iter().find(|&&layer| layer >= nk) {
@@ -436,7 +471,10 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
     // -- plan positions, relative to the first pillar ------------------------------
     let origin = pillars[0];
     let local = |p: &Point| -> Point { [p[0] - origin[0], p[1] - origin[1], p[2]] };
-    let at_pillar: Vec<Point> = pillars.iter().map(|[x, y]| [x - origin[0], y - origin[1], 0.0]).collect();
+    let at_pillar: Vec<Point> = pillars
+        .iter()
+        .map(|[x, y]| [x - origin[0], y - origin[1], 0.0])
+        .collect();
     let centre = |i: usize, j: usize| -> Point {
         let corners = [j * pi + i, j * pi + i + 1, (j + 1) * pi + i + 1, (j + 1) * pi + i];
         let mut sum = [0.0f64; 3];
@@ -458,13 +496,22 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
     for fault in faults {
         let surface: Vec<Point> = fault.points.iter().map(local).collect();
         let orientation =
-            fault_sticks::orientation(&surface, fault.triangles, up).ok_or_else(|| CutError::NoSurface { fault: fault.name.to_string() })?;
+            fault_sticks::orientation(&surface, fault.triangles, up).ok_or_else(|| CutError::NoSurface {
+                fault: fault.name.to_string(),
+            })?;
         if orientation.dip > VERTICAL {
-            return Err(CutError::Vertical { fault: fault.name.to_string(), dip: orientation.dip });
+            return Err(CutError::Vertical {
+                fault: fault.name.to_string(),
+                dip: orientation.dip,
+            });
         }
         let (mut low, mut high) = (f64::INFINITY, f64::NEG_INFINITY);
         let (mut lo, mut hi) = ([f64::INFINITY; 2], [f64::NEG_INFINITY; 2]);
-        for p in surface.iter().chain(&at_pillar).filter(|p| p.iter().all(|c| c.is_finite())) {
+        for p in surface
+            .iter()
+            .chain(&at_pillar)
+            .filter(|p| p.iter().all(|c| c.is_finite()))
+        {
             for axis in 0..2 {
                 lo[axis] = lo[axis].min(p[axis]);
                 hi[axis] = hi[axis].max(p[axis]);
@@ -475,10 +522,23 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
             high = high.max(p[2]);
         }
         let (bottom, top) = (low.max(grid_low), high.min(grid_high));
-        if !matches!(bottom.partial_cmp(&top), Some(std::cmp::Ordering::Less | std::cmp::Ordering::Equal)) {
+        if !matches!(
+            bottom.partial_cmp(&top),
+            Some(std::cmp::Ordering::Less | std::cmp::Ordering::Equal)
+        ) {
             let (top_of, bottom_of) = if up { (high, low) } else { (low, high) };
-            let (grid_top, grid_bottom) = if up { (grid_high, grid_low) } else { (grid_low, grid_high) };
-            return Err(CutError::Misses { fault: fault.name.to_string(), top: top_of, bottom: bottom_of, grid_top, grid_bottom });
+            let (grid_top, grid_bottom) = if up {
+                (grid_high, grid_low)
+            } else {
+                (grid_low, grid_high)
+            };
+            return Err(CutError::Misses {
+                fault: fault.name.to_string(),
+                top: top_of,
+                bottom: bottom_of,
+                grid_top,
+                grid_bottom,
+            });
         }
         let level = (bottom + top) / 2.0;
         // A horizontal plate over everything, at that level.
@@ -489,14 +549,35 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
             [lo[0] - 1.0, hi[1] + 1.0, level],
         ];
         let found = intersect(&surface, fault.triangles, &plate, &[[0, 1, 2], [0, 2, 3]]);
-        let mut pieces = fault_throw::weld(found.traces.into_iter().map(|trace| trace.points).filter(|line| line.len() >= 2).collect());
+        let mut pieces = fault_throw::weld(
+            found
+                .traces
+                .into_iter()
+                .map(|trace| trace.points)
+                .filter(|line| line.len() >= 2)
+                .collect(),
+        );
         let (trace, closed) = match pieces.len() {
-            0 => return Err(CutError::NoTrace { fault: fault.name.to_string(), level }),
+            0 => {
+                return Err(CutError::NoTrace {
+                    fault: fault.name.to_string(),
+                    level,
+                });
+            }
             1 => pieces.remove(0),
-            count => return Err(CutError::Pieces { fault: fault.name.to_string(), level, count }),
+            count => {
+                return Err(CutError::Pieces {
+                    fault: fault.name.to_string(),
+                    level,
+                    count,
+                });
+            }
         };
         if closed {
-            return Err(CutError::Ring { fault: fault.name.to_string(), level });
+            return Err(CutError::Ring {
+                fault: fault.name.to_string(),
+                level,
+            });
         }
         let sigma = hanging_wall_side(&trace, orientation.dip_azimuth, fault.name)?;
         let length = fault_throw::plan_length(&trace);
@@ -522,8 +603,20 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
             Sense::Up => 1.0,
         };
         let sign = if up { sense } else { -sense };
-        let world: Vec<Point> = trace.iter().map(|p| [p[0] + origin[0], p[1] + origin[1], p[2]]).collect();
-        read.push(Read { orientation, level, trace: world, length, hanging_wall, amount, sign, span: [low, high] });
+        let world: Vec<Point> = trace
+            .iter()
+            .map(|p| [p[0] + origin[0], p[1] + origin[1], p[2]])
+            .collect();
+        read.push(Read {
+            orientation,
+            level,
+            trace: world,
+            length,
+            hanging_wall,
+            amount,
+            sign,
+            span: [low, high],
+        });
     }
 
     // -- the displacement a column takes at a pillar, level by level -----------------
@@ -533,7 +626,11 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
                 let z = stacked.z[level * per_level + pillar];
                 let mut shift = 0.0f64;
                 for one in &read {
-                    if one.hanging_wall[column] && one.amount[pillar] > 0.0 && z >= one.span[0] && z <= one.span[1] {
+                    if one.hanging_wall[column]
+                        && one.amount[pillar] > 0.0
+                        && z >= one.span[0]
+                        && z <= one.span[1]
+                    {
                         shift += one.sign * one.amount[pillar];
                     }
                 }
@@ -553,7 +650,12 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
         for a in 0..pi {
             let pillar = b * pi + a;
             let mut around: Vec<usize> = Vec::with_capacity(4);
-            for (ci, cj) in [(a.wrapping_sub(1), b.wrapping_sub(1)), (a, b.wrapping_sub(1)), (a.wrapping_sub(1), b), (a, b)] {
+            for (ci, cj) in [
+                (a.wrapping_sub(1), b.wrapping_sub(1)),
+                (a, b.wrapping_sub(1)),
+                (a.wrapping_sub(1), b),
+                (a, b),
+            ] {
                 if ci < ni && cj < nj {
                     around.push(cj * ni + ci);
                 }
@@ -574,7 +676,10 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
             let mut groups: Vec<(Vec<f64>, Vec<usize>)> = Vec::new();
             for &column in &around {
                 let shift = displacement(column, pillar);
-                match groups.iter_mut().find(|(s, _)| s.iter().zip(&shift).all(|(a, b)| a.to_bits() == b.to_bits())) {
+                match groups
+                    .iter_mut()
+                    .find(|(s, _)| s.iter().zip(&shift).all(|(a, b)| a.to_bits() == b.to_bits()))
+                {
                     Some((_, members)) => members.push(column),
                     None => groups.push((shift, vec![column])),
                 }
@@ -587,8 +692,17 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
                 .min_by(|(_, a), (_, b)| size(&a.0).total_cmp(&size(&b.0)))
                 .map(|(at, _)| at)
                 .unwrap_or(0);
-            let line_z = |shift: &[f64]| -> Vec<f64> { (0..levels).map(|level| stacked.z[level * per_level + pillar] + shift[level]).collect() };
-            own.push(groups.get(keeper).map(|(shift, _)| line_z(shift)).unwrap_or_else(|| line_z(&vec![0.0; levels])));
+            let line_z = |shift: &[f64]| -> Vec<f64> {
+                (0..levels)
+                    .map(|level| stacked.z[level * per_level + pillar] + shift[level])
+                    .collect()
+            };
+            own.push(
+                groups
+                    .get(keeper)
+                    .map(|(shift, _)| line_z(shift))
+                    .unwrap_or_else(|| line_z(&vec![0.0; levels])),
+            );
             for (at, (shift, members)) in groups.iter().enumerate() {
                 if at == keeper {
                     continue;
@@ -601,7 +715,10 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
     }
     for (f, fault) in faults.iter().enumerate() {
         if !cuts[f] {
-            return Err(CutError::Uncut { fault: fault.name.to_string(), level: read[f].level });
+            return Err(CutError::Uncut {
+                fault: fault.name.to_string(),
+                level: read[f].level,
+            });
         }
     }
 
@@ -616,8 +733,17 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
             if let Some((upper, top)) = last
                 && above(z, top)
             {
-                let pillar = if line < per_level { line } else { split_pillars[line - per_level] };
-                return Err(CutError::Overturned { i: pillar % pi, j: pillar / pi, level, above: upper });
+                let pillar = if line < per_level {
+                    line
+                } else {
+                    split_pillars[line - per_level]
+                };
+                return Err(CutError::Overturned {
+                    i: pillar % pi,
+                    j: pillar / pi,
+                    level,
+                    above: upper,
+                });
             }
             last = Some((level, z));
         }
@@ -639,7 +765,11 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
     // -- the cells removed next to a fault ----------------------------------------------
     let mut cell_defined = stacked.cell_defined.clone();
     let mut dead: Vec<usize> = Vec::new();
-    let layers: Vec<usize> = if settings.dead_layers.is_empty() { (0..nk).collect() } else { settings.dead_layers.to_vec() };
+    let layers: Vec<usize> = if settings.dead_layers.is_empty() {
+        (0..nk).collect()
+    } else {
+        settings.dead_layers.to_vec()
+    };
     let mut cut_faults: Vec<FaultCut> = Vec::with_capacity(faults.len());
     for (f, (fault, one)) in faults.iter().zip(read).enumerate() {
         let mut marked: Vec<usize> = Vec::new();
@@ -715,7 +845,9 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
     }
     dead.sort_unstable();
     if !cell_defined.iter().any(|defined| *defined) {
-        return Err(CutError::NothingLeft { cells: cell_defined.len() });
+        return Err(CutError::NothingLeft {
+            cells: cell_defined.len(),
+        });
     }
     let mut pillar_defined = vec![false; per_level];
     for k in 0..nk {
@@ -747,4 +879,3 @@ pub fn cut(stacked: &Stacked, pillars: &[[f64; 2]], faults: &[Fault<'_>], settin
         lookup,
     })
 }
-

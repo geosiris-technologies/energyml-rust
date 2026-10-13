@@ -27,9 +27,9 @@ use energyml_core::registry::DynObject;
 use energyml_eml_2_0::{DataObjectReference, Hdf5Dataset};
 use energyml_geometry::geometry;
 use energyml_resqml_2_0_1::{
-    AbstractPoint3dArray, AnyPointGeometry, Grid2dPatch, Grid2dRepresentation, NodePatch,
-    Point3dHdf5Array, PointGeometry, PointSetRepresentation, PolylineSetPatch,
-    PolylineSetRepresentation, TrianglePatch, TriangulatedSetRepresentation,
+    AbstractPoint3dArray, AnyPointGeometry, Grid2dPatch, Grid2dRepresentation, NodePatch, Point3dHdf5Array,
+    PointGeometry, PointSetRepresentation, PolylineSetPatch, PolylineSetRepresentation, TrianglePatch,
+    TriangulatedSetRepresentation,
 };
 
 /// Points that live in a file this test never opens.

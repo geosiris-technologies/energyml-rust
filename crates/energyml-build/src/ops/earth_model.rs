@@ -140,7 +140,10 @@ pub(crate) fn write(
                 title: title.clone(),
                 json: energyml_core::json::write_value(&model),
             });
-            (crate::crs::reference_to(&model_uuid, "resqml22.Model", &title), title)
+            (
+                crate::crs::reference_to(&model_uuid, "resqml22.Model", &title),
+                title,
+            )
         }
         ModelIs::Given(reference) => {
             let title = reference.title.clone();
@@ -209,7 +212,10 @@ pub(crate) fn write(
 /// The reference an input stands for, or a refusal naming its slot.
 fn reference(slot: &str, input: &ObjectIn) -> Result<eml::DataObjectReference, Refusal> {
     let Some(known) = input.known.reference.as_ref() else {
-        return Err(Refusal::on(slot, format!("`{}` was given without a reference to write", input.name)));
+        return Err(Refusal::on(
+            slot,
+            format!("`{}` was given without a reference to write", input.name),
+        ));
     };
     Ok(crate::crs::reference_of(known))
 }
@@ -229,23 +235,67 @@ impl Operation for EarthModel {
         }
     }
 
-    fn plan(&self, inputs: EarthModelInputs, params: EarthModelParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: EarthModelInputs,
+        params: EarthModelParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let title = params.title.0.trim().to_string();
         if title.is_empty() {
-            return Err(Refusal::on("title", "a model needs a title: it is what makes two runs name the same model"));
+            return Err(Refusal::on(
+                "title",
+                "a model needs a title: it is what makes two runs name the same model",
+            ));
         }
-        let column = inputs.column.as_ref().map(|one| reference("column", one)).transpose()?;
-        let structures = inputs.structures.iter().map(|one| reference("structures", one)).collect::<Result<Vec<_>, _>>()?;
-        let fluids = inputs.fluids.iter().map(|one| reference("fluids", one)).collect::<Result<Vec<_>, _>>()?;
-        let occurrences =
-            inputs.occurrences.iter().map(|one| reference("occurrences", one)).collect::<Result<Vec<_>, _>>()?;
-        let wellbore_sets =
-            inputs.wellbore_sets.iter().map(|one| reference("wellboreSets", one)).collect::<Result<Vec<_>, _>>()?;
+        let column = inputs
+            .column
+            .as_ref()
+            .map(|one| reference("column", one))
+            .transpose()?;
+        let structures = inputs
+            .structures
+            .iter()
+            .map(|one| reference("structures", one))
+            .collect::<Result<Vec<_>, _>>()?;
+        let fluids = inputs
+            .fluids
+            .iter()
+            .map(|one| reference("fluids", one))
+            .collect::<Result<Vec<_>, _>>()?;
+        let occurrences = inputs
+            .occurrences
+            .iter()
+            .map(|one| reference("occurrences", one))
+            .collect::<Result<Vec<_>, _>>()?;
+        let wellbore_sets = inputs
+            .wellbore_sets
+            .iter()
+            .map(|one| reference("wellboreSets", one))
+            .collect::<Result<Vec<_>, _>>()?;
 
-        let gathered = Gathered { column, structures, fluids, occurrences, wellbore_sets };
-        let made = write(ModelIs::Titled(title.clone()), params.interpretation_title, &gathered, None, None, cx)?;
-        let (column, structures, fluids, occurrences, wellbore_sets) =
-            (gathered.column, gathered.structures, gathered.fluids, gathered.occurrences, gathered.wellbore_sets);
+        let gathered = Gathered {
+            column,
+            structures,
+            fluids,
+            occurrences,
+            wellbore_sets,
+        };
+        let made = write(
+            ModelIs::Titled(title.clone()),
+            params.interpretation_title,
+            &gathered,
+            None,
+            None,
+            cx,
+        )?;
+        let (column, structures, fluids, occurrences, wellbore_sets) = (
+            gathered.column,
+            gathered.structures,
+            gathered.fluids,
+            gathered.occurrences,
+            gathered.wellbore_sets,
+        );
         let content_len = made.content;
         let interpretation_title = made.interpretation_title.clone();
         let seed = made.seed.clone();
@@ -278,8 +328,15 @@ impl Operation for EarthModel {
                 title: format!("earth-model → {interpretation_title}"),
                 seed,
                 parameters: vec![
-                    Parameter::Text { title: "title".to_string(), value: title },
-                    Parameter::Double { title: "references".to_string(), value: content_len as f64, uom: None },
+                    Parameter::Text {
+                        title: "title".to_string(),
+                        value: title,
+                    },
+                    Parameter::Double {
+                        title: "references".to_string(),
+                        value: content_len as f64,
+                        uom: None,
+                    },
                 ],
             },
             says,

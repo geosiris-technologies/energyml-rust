@@ -121,7 +121,10 @@ fn a_number_that_is_not_a_number_becomes_zero_and_says_so() {
 fn a_boolean_spelled_in_words_is_repaired() {
     // XSD allows `true`, `false`, `1` and `0` — and nothing else. `yes` is a
     // producer being helpful in the wrong direction.
-    assert!(xml::from_xml_str::<bool>("<v>yes</v>").is_err(), "strictly, `yes` is not a boolean");
+    assert!(
+        xml::from_xml_str::<bool>("<v>yes</v>").is_err(),
+        "strictly, `yes` is not a boolean"
+    );
     let (value, _) = xml::from_xml_str_lenient::<bool>("<v>yes</v>").expect("leniently, it reads");
     assert!(!value, "the default of a boolean is false");
 }
@@ -180,7 +183,10 @@ fn an_unknown_xsi_type_falls_back_to_the_base_when_there_is_one() {
                 .find(|r| r.kind == "xsi:type")
                 .unwrap_or_else(|| panic!("no xsi:type repair: {:?}", departures.repaired));
             assert!(repaired.found.contains("GeometryFromTheFuture"), "{repaired}");
-            assert!(!repaired.used.is_empty(), "the base it fell back to has to be named");
+            assert!(
+                !repaired.used.is_empty(),
+                "the base it fell back to has to be named"
+            );
         }
         // The fixture is hand-written against a schema this test does not
         // control; if it stops reaching the branch, say so rather than pass.

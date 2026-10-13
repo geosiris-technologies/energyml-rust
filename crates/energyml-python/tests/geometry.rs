@@ -25,7 +25,11 @@ fn package() -> Option<Package> {
 
 /// The first object whose type contains this.
 fn first_of(package: &Package, kind: &str) -> Option<String> {
-    package.find(Some(kind), None).into_iter().map(|one| one.uri).next()
+    package
+        .find(Some(kind), None)
+        .into_iter()
+        .map(|one| one.uri)
+        .next()
 }
 
 #[test]
@@ -45,8 +49,7 @@ fn a_surface_comes_back_as_points_and_triangles_the_json_agrees_with() {
     // number of values in the triangle array; the geometry reader never looks
     // at either — it reads the arrays. If the two disagree, one of them is
     // wrong, and that is exactly the bug that would otherwise ship.
-    let object: Value =
-        serde_json::from_str(&package.get(&uri).expect("the object reads")).expect("JSON");
+    let object: Value = serde_json::from_str(&package.get(&uri).expect("the object reads")).expect("JSON");
     let patch = &object["TrianglePatch"][0];
     let declared_nodes = patch["NodeCount"].as_u64().expect("the JSON states a node count");
     let declared_indices = patch["Triangles"]["Values"]["ExternalDataArrayPart"][0]["Count"][0]
@@ -54,12 +57,23 @@ fn a_surface_comes_back_as_points_and_triangles_the_json_agrees_with() {
         .expect("the JSON states how many indices there are");
 
     let read = &shape.patches[0];
-    assert_eq!(read.points.len() as u64, declared_nodes * 3, "three numbers per point");
+    assert_eq!(
+        read.points.len() as u64,
+        declared_nodes * 3,
+        "three numbers per point"
+    );
     match &read.topology {
         Topology::Triangles(indices) => {
-            assert_eq!(indices.len() as u64, declared_indices, "as many indices as the file says");
+            assert_eq!(
+                indices.len() as u64,
+                declared_indices,
+                "as many indices as the file says"
+            );
             let highest = indices.iter().copied().max().unwrap_or(0) as u64;
-            assert!(highest < declared_nodes, "an index points inside the patch: {highest}");
+            assert!(
+                highest < declared_nodes,
+                "an index points inside the patch: {highest}"
+            );
         }
         other => panic!("a triangulated set came back as {other:?}"),
     }
@@ -68,7 +82,9 @@ fn a_surface_comes_back_as_points_and_triangles_the_json_agrees_with() {
 #[test]
 fn the_same_surface_as_a_mesh_has_the_same_points() {
     let Some(package) = package() else { return };
-    let Some(uri) = first_of(&package, "TriangulatedSetRepresentation") else { return };
+    let Some(uri) = first_of(&package, "TriangulatedSetRepresentation") else {
+        return;
+    };
 
     let shape = package.geometry(&uri, "projected").expect("the shape reads");
     let (points, triangles) = package.mesh(&uri, "projected").expect("the mesh reads");
@@ -87,13 +103,17 @@ fn the_same_surface_as_a_mesh_has_the_same_points() {
 #[test]
 fn a_placement_that_is_not_one_is_refused_with_the_list() {
     let Some(package) = package() else { return };
-    let Some(uri) = first_of(&package, "TriangulatedSetRepresentation") else { return };
+    let Some(uri) = first_of(&package, "TriangulatedSetRepresentation") else {
+        return;
+    };
 
     // Nothing to skip and nothing to read: this is the check that runs even on
     // a machine with no corpus geometry at all, and it protects the one thing
     // a silent default would ruin — a model placed in the wrong system looks
     // exactly like a model placed in the right one.
-    let why = package.geometry(&uri, "global").expect_err("`global` is not a placement here");
+    let why = package
+        .geometry(&uri, "global")
+        .expect_err("`global` is not a placement here");
     assert!(why.contains("local"), "the refusal lists what is accepted: {why}");
     assert!(why.contains("projected"), "{why}");
     assert!(why.contains("metres"), "{why}");
@@ -102,7 +122,9 @@ fn a_placement_that_is_not_one_is_refused_with_the_list() {
 #[test]
 fn local_and_projected_are_not_the_same_answer_when_the_crs_offsets() {
     let Some(package) = package() else { return };
-    let Some(uri) = first_of(&package, "TriangulatedSetRepresentation") else { return };
+    let Some(uri) = first_of(&package, "TriangulatedSetRepresentation") else {
+        return;
+    };
 
     let local = package.geometry(&uri, "local").expect("local reads");
     let projected = package.geometry(&uri, "projected").expect("projected reads");
@@ -137,7 +159,9 @@ fn the_values_hanging_on_a_representation_come_back_with_their_scope() {
         return;
     };
 
-    let shape = package.geometry(&representation.uri, "projected").expect("its shape reads");
+    let shape = package
+        .geometry(&representation.uri, "projected")
+        .expect("its shape reads");
     let points: usize = shape.patches.iter().map(|one| one.points.len() / 3).sum();
 
     for value in &values {
@@ -185,36 +209,58 @@ fn a_slice_of_an_array_is_the_same_numbers_as_the_whole() {
         .read_array_part(&array, &[1, 0], &[1, width])
         .expect("the second row reads");
 
-    assert_eq!(part_shape.dimensions, vec![1, width], "the slice is the shape asked for");
+    assert_eq!(
+        part_shape.dimensions,
+        vec![1, width],
+        "the slice is the shape asked for"
+    );
     // Row 1 of the whole array, by hand, against the row the backend sliced.
     // Two ways of getting the same numbers, and they are not the same code.
     let (Block::F64(whole), Block::F64(part)) = (&whole, &part) else {
         panic!("a `double` array did not come back as doubles");
     };
     let from = width as usize;
-    assert_eq!(&part[..], &whole[from..from + width as usize], "number for number");
+    assert_eq!(
+        &part[..],
+        &whole[from..from + width as usize],
+        "number for number"
+    );
 }
 
 #[test]
 fn a_slice_whose_two_halves_disagree_is_refused() {
     let Some(package) = package() else { return };
-    let array = ArrayRef { file: "x.h5".to_string(), path_in_file: "/x".to_string() };
+    let array = ArrayRef {
+        file: "x.h5".to_string(),
+        path_in_file: "/x".to_string(),
+    };
     let why = package
         .read_array_part(&array, &[0, 0], &[4])
         .expect_err("two starts and one count");
-    assert!(why.contains('2') && why.contains('1'), "the refusal names both counts: {why}");
+    assert!(
+        why.contains('2') && why.contains('1'),
+        "the refusal names both counts: {why}"
+    );
 }
 
 #[test]
 fn the_catalogue_answers_a_question_instead_of_being_walked() {
     let Some(package) = package() else { return };
     let all = package.objects();
-    assert_eq!(package.find(None, None).len(), all.len(), "asking nothing returns everything");
+    assert_eq!(
+        package.find(None, None).len(),
+        all.len(),
+        "asking nothing returns everything"
+    );
 
     let crs = package.find(Some("crs"), None);
     assert!(!crs.is_empty(), "this package holds CRSs");
     for one in &crs {
-        assert!(one.qualified_type.to_lowercase().contains("crs"), "{}", one.qualified_type);
+        assert!(
+            one.qualified_type.to_lowercase().contains("crs"),
+            "{}",
+            one.qualified_type
+        );
     }
     // Case does not matter, and the two filters are an AND — a filter that
     // quietly ORed would return more, which is the failure a test of one

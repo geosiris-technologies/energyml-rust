@@ -265,9 +265,13 @@ impl ArrayBackend for Hdf5Backend {
     fn write(&self, file: &Path, path_in_file: &str, data: &ArrayData) -> Result<()> {
         let handle = open_for_writing(file)?;
         write_into(&handle, file, path_in_file, data)?;
-        handle
-            .flush()
-            .map_err(|e| external(file, path_in_file, ExternalDataReason::Backend(format!("flushing the file: {e}"))))
+        handle.flush().map_err(|e| {
+            external(
+                file,
+                path_in_file,
+                ExternalDataReason::Backend(format!("flushing the file: {e}")),
+            )
+        })
     }
 
     /// **The file opened once, flushed once**, whatever the number of
@@ -286,7 +290,10 @@ impl ArrayBackend for Hdf5Backend {
             Ok(handle) => handle,
             Err(why) => return every(why.to_string()),
         };
-        let written: Vec<Result<()>> = items.iter().map(|(path, data)| write_into(&handle, file, path, data)).collect();
+        let written: Vec<Result<()>> = items
+            .iter()
+            .map(|(path, data)| write_into(&handle, file, path, data))
+            .collect();
         if let Err(e) = handle.flush() {
             return every(format!("flushing the file: {e}"));
         }
@@ -452,7 +459,10 @@ fn stamp_of(file: &Path) -> (Option<SystemTime>, u64) {
 
 /// How many HDF5 files may stay open at once.
 pub fn open_file_limit() -> usize {
-    cache().lock().map(|files| files.limit).unwrap_or(DEFAULT_OPEN_LIMIT)
+    cache()
+        .lock()
+        .map(|files| files.limit)
+        .unwrap_or(DEFAULT_OPEN_LIMIT)
 }
 
 /// Change that bound. Zero turns the cache off entirely.
@@ -551,80 +561,79 @@ fn open(file: &Path) -> Result<hdf5::File> {
 /// it, the dataset replaced when it exists. Neither opens nor flushes: that is
 /// the caller's, once for one dataset or for many.
 fn write_into(handle: &hdf5::File, file: &Path, path_in_file: &str, data: &ArrayData) -> Result<()> {
-        let bad = |message: String| external(file, path_in_file, ExternalDataReason::Backend(message));
+    let bad = |message: String| external(file, path_in_file, ExternalDataReason::Backend(message));
 
-        // The shape is the object's, not the buffer's, and the two disagreeing
-        // is the caller's bug — writing the values under a shape that does not
-        // describe them produces a file that reads back as something else.
-        let shape: Vec<usize> = data
-            .metadata
-            .dimensions
-            .iter()
-            .map(|d| (*d).max(0) as usize)
-            .collect();
-        let declared: usize = shape.iter().product();
-        if shape.is_empty() {
-            return Err(bad("the array declares no dimensions".to_string()));
-        }
-        if declared != data.values.len() {
-            return Err(bad(format!(
-                "the shape {shape:?} describes {declared} element(s), the values hold {}",
-                data.values.len()
-            )));
-        }
+    // The shape is the object's, not the buffer's, and the two disagreeing
+    // is the caller's bug — writing the values under a shape that does not
+    // describe them produces a file that reads back as something else.
+    let shape: Vec<usize> = data
+        .metadata
+        .dimensions
+        .iter()
+        .map(|d| (*d).max(0) as usize)
+        .collect();
+    let declared: usize = shape.iter().product();
+    if shape.is_empty() {
+        return Err(bad("the array declares no dimensions".to_string()));
+    }
+    if declared != data.values.len() {
+        return Err(bad(format!(
+            "the shape {shape:?} describes {declared} element(s), the values hold {}",
+            data.values.len()
+        )));
+    }
 
-        // Groups first: `/resqml20/<uuid>/points_patch0` needs two of them, and
-        // HDF5 will not create them on the way past.
-        if let Some((groups, _)) = path_in_file.rsplit_once('/') {
-            let mut current = String::new();
-            for name in groups.split('/').filter(|s| !s.is_empty()) {
-                current.push('/');
-                current.push_str(name);
-                if handle.group(&current).is_err() {
-                    handle
-                        .create_group_builder()
-                        // No modification time in the header: see `open_for_writing`.
-                        .obj_track_times(false)
-                        .create(current.as_str())
-                        .map_err(|e| bad(format!("creating the group `{current}`: {e}")))?;
-                }
+    // Groups first: `/resqml20/<uuid>/points_patch0` needs two of them, and
+    // HDF5 will not create them on the way past.
+    if let Some((groups, _)) = path_in_file.rsplit_once('/') {
+        let mut current = String::new();
+        for name in groups.split('/').filter(|s| !s.is_empty()) {
+            current.push('/');
+            current.push_str(name);
+            if handle.group(&current).is_err() {
+                handle
+                    .create_group_builder()
+                    // No modification time in the header: see `open_for_writing`.
+                    .obj_track_times(false)
+                    .create(current.as_str())
+                    .map_err(|e| bad(format!("creating the group `{current}`: {e}")))?;
             }
         }
+    }
 
-        // HDF5 cannot resize a dataset in place, so replacing one means
-        // unlinking it first. The space is not reclaimed — see the trait doc.
-        if handle.dataset(path_in_file).is_ok() {
-            handle
-                .unlink(path_in_file)
-                .map_err(|e| bad(format!("replacing the existing dataset: {e}")))?;
-        }
+    // HDF5 cannot resize a dataset in place, so replacing one means
+    // unlinking it first. The space is not reclaimed — see the trait doc.
+    if handle.dataset(path_in_file).is_ok() {
+        handle
+            .unlink(path_in_file)
+            .map_err(|e| bad(format!("replacing the existing dataset: {e}")))?;
+    }
 
-        macro_rules! put {
-            ($values:expr, $ty:ty) => {{
-                let builder = handle.new_dataset::<$ty>().shape(shape.clone());
-                let dataset = builder
-                    .create(path_in_file)
-                    .map_err(|e| bad(format!("creating the dataset: {e}")))?;
-                dataset
-                    .write_raw($values)
-                    .map_err(|e| bad(format!("writing the values: {e}")))?;
-            }};
-        }
-        match &data.values {
-            ArrayValues::F64(v) => put!(v, f64),
-            ArrayValues::F32(v) => put!(v, f32),
-            ArrayValues::I64(v) => put!(v, i64),
-            ArrayValues::I32(v) => put!(v, i32),
-            ArrayValues::I16(v) => put!(v, i16),
-            ArrayValues::I8(v) => put!(v, i8),
-            ArrayValues::U64(v) => put!(v, u64),
-            ArrayValues::U32(v) => put!(v, u32),
-            ArrayValues::U16(v) => put!(v, u16),
-            ArrayValues::U8(v) => put!(v, u8),
-        }
-        Ok(())
+    macro_rules! put {
+        ($values:expr, $ty:ty) => {{
+            let builder = handle.new_dataset::<$ty>().shape(shape.clone());
+            let dataset = builder
+                .create(path_in_file)
+                .map_err(|e| bad(format!("creating the dataset: {e}")))?;
+            dataset
+                .write_raw($values)
+                .map_err(|e| bad(format!("writing the values: {e}")))?;
+        }};
+    }
+    match &data.values {
+        ArrayValues::F64(v) => put!(v, f64),
+        ArrayValues::F32(v) => put!(v, f32),
+        ArrayValues::I64(v) => put!(v, i64),
+        ArrayValues::I32(v) => put!(v, i32),
+        ArrayValues::I16(v) => put!(v, i16),
+        ArrayValues::I8(v) => put!(v, i8),
+        ArrayValues::U64(v) => put!(v, u64),
+        ArrayValues::U32(v) => put!(v, u32),
+        ArrayValues::U16(v) => put!(v, u16),
+        ArrayValues::U8(v) => put!(v, u8),
+    }
+    Ok(())
 }
-
 
 fn open_for_writing(file: &Path) -> Result<hdf5::File> {
     // A read handle held on this file would go stale the moment the write

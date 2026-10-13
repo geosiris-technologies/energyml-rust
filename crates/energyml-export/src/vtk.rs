@@ -380,7 +380,11 @@ impl VtkExporter {
                 + cells.polygons.len()
                 + cells.lines.len();
             let size: usize = cells.hexahedra.len() * 9
-                + cells.polyhedra.iter().map(|c| legacy_polyhedron_len(c) + 1).sum::<usize>()
+                + cells
+                    .polyhedra
+                    .iter()
+                    .map(|c| legacy_polyhedron_len(c) + 1)
+                    .sum::<usize>()
                 + cells.triangles.len() * 4
                 + cells.quads.len() * 5
                 + cells.polygons.iter().map(|p| p.len() + 1).sum::<usize>()
@@ -436,9 +440,7 @@ impl VtkExporter {
             }
         }
         if !volumetric
-            && (!cells.triangles.is_empty()
-                || !cells.quads.is_empty()
-                || !cells.polygons.is_empty())
+            && (!cells.triangles.is_empty() || !cells.quads.is_empty() || !cells.polygons.is_empty())
         {
             let size: usize = cells.triangles.len() * 4
                 + cells.quads.len() * 5
@@ -725,7 +727,11 @@ fn number(value: &f64) -> String {
     if value.is_nan() {
         "nan".to_string()
     } else if value.is_infinite() {
-        if *value > 0.0 { "inf".to_string() } else { "-inf".to_string() }
+        if *value > 0.0 {
+            "inf".to_string()
+        } else {
+            "-inf".to_string()
+        }
     } else {
         value.to_string()
     }

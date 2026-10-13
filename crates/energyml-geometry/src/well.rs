@@ -62,7 +62,10 @@ pub(crate) fn datum_trajectory(
     // Anything that says the shape lives elsewhere makes "vertical" a guess
     // rather than the only reading, so those are refused by name.
     for field in ["WitsmlTrajectory", "ParentIntersection"] {
-        if representation.field(field).is_some_and(|value| value.as_object().is_some()) {
+        if representation
+            .field(field)
+            .is_some_and(|value| value.as_object().is_some())
+        {
             return Err(Error::unsupported(
                 "a wellbore trajectory whose shape is deferred to another object",
                 format!("{at}.{field}"),
@@ -78,7 +81,7 @@ pub(crate) fn datum_trajectory(
         points: vec![top, bottom],
         topology: Topology::Polylines(vec![2]),
         closed: Vec::new(),
-}])
+    }])
 }
 
 /// Where a trajectory is collared: `[x, y, elevation]` of the datum its
@@ -186,7 +189,7 @@ pub(crate) fn frame(representation: &dyn Reflect, source: &dyn ValueSource) -> R
         points,
         topology: Topology::Polylines(vec![count]),
         closed: Vec::new(),
-}])
+    }])
 }
 
 /// How many points sample a deviated trajectory's head portion.
@@ -323,14 +326,15 @@ impl Anchor {
                 .ok_or_else(|| Error::malformed(at, "a reference point with no `Coordinate1`"))?;
             let y = scalar_f64(horizontal, "Coordinate2")
                 .ok_or_else(|| Error::malformed(at, "a reference point with no `Coordinate2`"))?;
-            let vertical = scalar_f64(datum, "VerticalCoordinate").ok_or_else(|| {
-                Error::malformed(at, "a reference point with no `VerticalCoordinate`")
-            })?;
+            let vertical = scalar_f64(datum, "VerticalCoordinate")
+                .ok_or_else(|| Error::malformed(at, "a reference point with no `VerticalCoordinate`"))?;
             return Ok((x, y, vertical));
         }
         let point = crate::geometry::field_object(datum, "Location")
             .and_then(|location| crate::geometry::field_object(location, "Point3d"))
-            .ok_or_else(|| Error::malformed(at, "a datum with neither horizontal coordinates nor a `Location`"))?;
+            .ok_or_else(|| {
+                Error::malformed(at, "a datum with neither horizontal coordinates nor a `Location`")
+            })?;
         let x = scalar_f64(point, "Coordinate1")
             .ok_or_else(|| Error::malformed(at, "a datum location with no `Coordinate1`"))?;
         let y = scalar_f64(point, "Coordinate2")
@@ -431,9 +435,7 @@ pub(crate) fn place_datum(datum_uri: &str, source: &dyn ValueSource, at: &str) -
     // the elevation goes to metres to meet the measured depths.
     // `energyml_domain::crs::of` gives such a well the compound's identity
     // and none of its offsets, so nothing is placed twice.
-    if let Some(compound) =
-        energyml_domain::crs::compound_of_datum(datum, source).map_err(Error::Domain)?
-    {
+    if let Some(compound) = energyml_domain::crs::compound_of_datum(datum, source).map_err(Error::Domain)? {
         if compound.is_time() {
             // A measured depth is a length; a datum in a time system has
             // no depth to count it from without a velocity model.
@@ -510,19 +512,19 @@ fn vertical_sense(datum: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Re
         }
     }
     // A local CRS states it as a boolean rather than a word.
-    if let Some(energyml_core::value::FieldValue::Scalar(
-        energyml_core::value::Scalar::Bool(down),
-    )) = crs.field("z_increasing_downward")
+    if let Some(energyml_core::value::FieldValue::Scalar(energyml_core::value::Scalar::Bool(down))) =
+        crs.field("z_increasing_downward")
     {
-        return Ok(if down { VerticalSense::Down } else { VerticalSense::Up });
+        return Ok(if down {
+            VerticalSense::Down
+        } else {
+            VerticalSense::Up
+        });
     }
     match string_of(crs, "Direction").as_deref() {
         Some("up") => Ok(VerticalSense::Up),
         Some("down") => Ok(VerticalSense::Down),
-        _ => Err(Error::unsupported(
-            "a vertical CRS that states no direction",
-            at,
-        )),
+        _ => Err(Error::unsupported("a vertical CRS that states no direction", at)),
     }
 }
 
@@ -597,9 +599,7 @@ pub(crate) fn same_uri(a: &str, b: &str) -> bool {
 /// A scalar string field.
 fn string_of(object: &dyn Reflect, field: &str) -> Option<String> {
     match object.field(field)? {
-        energyml_core::value::FieldValue::Scalar(scalar) => {
-            scalar.as_str().map(|s| s.to_string())
-        }
+        energyml_core::value::FieldValue::Scalar(scalar) => scalar.as_str().map(|s| s.to_string()),
         _ => None,
     }
 }

@@ -69,7 +69,6 @@ pub trait ObjectSource {
     }
 }
 
-
 impl ObjectSource for EpcStore {
     fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
         self.get_object(uuid).ok()
@@ -278,7 +277,11 @@ impl Prefetched {
     ///
     /// `locate` is how the store resolves an `EpcExternalPartReference`; pass
     /// the store's own [`energyml_storage::storage::EnergymlStorage::arrays_of`].
-    pub fn insert(&mut self, object: Box<dyn DynObject>, locate: &dyn Fn(&dyn Reflect) -> Vec<ArrayLocation>) {
+    pub fn insert(
+        &mut self,
+        object: Box<dyn DynObject>,
+        locate: &dyn Fn(&dyn Reflect) -> Vec<ArrayLocation>,
+    ) {
         let Some(uuid) = energyml_core::identity::uuid_of_reflect(object.as_reflect()) else {
             // An object with no uuid cannot be reached by reference, so
             // caching it would be caching something nothing can ask for.

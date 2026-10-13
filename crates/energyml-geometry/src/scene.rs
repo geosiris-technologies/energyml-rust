@@ -28,9 +28,9 @@ use energyml_domain::metadata::{Metadata, Spec};
 
 use crate::error::Result;
 use crate::geometry::{self, Geometry};
-use crate::shape::Shape;
 use crate::points::Point;
 use crate::readers::Readers;
+use crate::shape::Shape;
 use crate::source::ValueSource;
 
 /// Which coordinates an exporter wants.
@@ -521,7 +521,12 @@ pub fn colour_ramp(
         return Vec::new();
     };
 
-    let finite: Vec<f64> = attribute.values.iter().copied().filter(|v| v.is_finite()).collect();
+    let finite: Vec<f64> = attribute
+        .values
+        .iter()
+        .copied()
+        .filter(|v| v.is_finite())
+        .collect();
     let (low, high) = match (
         finite.iter().copied().reduce(f64::min),
         finite.iter().copied().reduce(f64::max),
@@ -533,7 +538,8 @@ pub fn colour_ramp(
     (0..256)
         .filter_map(|step| {
             let value = low + (high - low) * (step as f64) / 255.0;
-            map.sample(Some(value), scaling).map(|rgba| [rgba.r, rgba.g, rgba.b, rgba.a])
+            map.sample(Some(value), scaling)
+                .map(|rgba| [rgba.r, rgba.g, rgba.b, rgba.a])
         })
         .collect()
 }
@@ -550,12 +556,7 @@ pub fn colour_ramp(
 /// The rule is **this build's**, not a quotation: a marker at a depth names the
 /// unit beneath it, which is how a depth-indexed log is read. Callers report it
 /// rather than applying it silently.
-fn intervals_onto_nodes(
-    values: &[f64],
-    components: usize,
-    point_count: usize,
-    segments: usize,
-) -> Vec<f64> {
+fn intervals_onto_nodes(values: &[f64], components: usize, point_count: usize, segments: usize) -> Vec<f64> {
     let mut out = Vec::with_capacity(point_count * components);
     for node in 0..point_count {
         let interval = node.min(segments.saturating_sub(1));
@@ -591,10 +592,15 @@ impl<'a> PropertiesOf<'a> {
         let by_uuid = properties
             .iter()
             .filter_map(|property| {
-                energyml_core::identity::uuid_of_reflect(*property).map(|uuid| (uuid.to_ascii_lowercase(), *property))
+                energyml_core::identity::uuid_of_reflect(*property)
+                    .map(|uuid| (uuid.to_ascii_lowercase(), *property))
             })
             .collect();
-        Self { index, by_uuid, unread }
+        Self {
+            index,
+            by_uuid,
+            unread,
+        }
     }
 
     /// The properties hanging on this representation, in package order —
@@ -795,10 +801,7 @@ pub fn attributes_for(
         }
 
         out.push(Attribute {
-            name: read
-                .title
-                .clone()
-                .unwrap_or_else(|| read.uuid.clone()),
+            name: read.title.clone().unwrap_or_else(|| read.uuid.clone()),
             kind: match &read.kind {
                 Some(energyml_domain::property::PropertyKindRef::Standard { name }) => Some(name.clone()),
                 Some(energyml_domain::property::PropertyKindRef::Object { title, .. }) => title.clone(),
@@ -835,10 +838,12 @@ pub fn interpretation_of(
     representation: &dyn Reflect,
     source: &dyn energyml_domain::source::ObjectSource,
 ) -> Option<Box<dyn energyml_core::registry::DynObject>> {
-    INTERPRETS.iter().find_map(|field| match representation.field(field) {
-        Some(FieldValue::Object(reference)) => crate::follow::object_of(source, reference),
-        _ => None,
-    })
+    INTERPRETS
+        .iter()
+        .find_map(|field| match representation.field(field) {
+            Some(FieldValue::Object(reference)) => crate::follow::object_of(source, reference),
+            _ => None,
+        })
 }
 
 fn related(object: &dyn Reflect, fields: &[&str]) -> Option<Related> {
@@ -1045,10 +1050,8 @@ pub fn of_package(
         let object = match source.read_object_at(&summary.uri) {
             Ok(object) => object,
             Err(why) => {
-                out.unreadable.push(format!(
-                    "{}  {}  {why}",
-                    summary.uuid, summary.qualified_type
-                ));
+                out.unreadable
+                    .push(format!("{}  {}  {why}", summary.uuid, summary.qualified_type));
                 continue;
             }
         };
@@ -1060,10 +1063,9 @@ pub fn of_package(
         }
         match object_of_with(readers, object.as_reflect(), source, &summary.uri, request.spec) {
             Ok(built) => out.objects.push(built),
-            Err(why) => out.refused.push(format!(
-                "{}  {}  {why}",
-                summary.uuid, summary.qualified_type
-            )),
+            Err(why) => out
+                .refused
+                .push(format!("{}  {}  {why}", summary.uuid, summary.qualified_type)),
         }
     }
 
@@ -1093,9 +1095,7 @@ fn attach(
         if !summary.qualified_type.ends_with("Property") {
             continue;
         }
-        if !wanted.is_empty()
-            && !wanted.iter().any(|uuid| uuid.eq_ignore_ascii_case(&summary.uuid))
-        {
+        if !wanted.is_empty() && !wanted.iter().any(|uuid| uuid.eq_ignore_ascii_case(&summary.uuid)) {
             continue;
         }
         match source.read_object_at(&summary.uri) {
@@ -1179,12 +1179,12 @@ pub fn move_attributes(
                 // and ParaView shows a name with arrows in it as one it cannot
                 // select. The suffix is readable and it survives the trip
                 // through every reader.
-                attribute.name =
-                    format!("{}__{from}_to_{target}_by_{}", attribute.name, method.name());
+                attribute.name = format!("{}__{from}_to_{target}_by_{}", attribute.name, method.name());
             }
-            Err(why) => {
-                refused.push(format!("`{}` was not moved onto the {target}: {why}", attribute.name))
-            }
+            Err(why) => refused.push(format!(
+                "`{}` was not moved onto the {target}: {why}",
+                attribute.name
+            )),
         }
     }
     refused

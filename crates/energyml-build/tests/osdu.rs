@@ -23,10 +23,14 @@ fn a_bare_list_is_a_template() {
     // *“or simply a list of the columns of this template”* — and the schema
     // confirms it: `Columns[]` is a list of `AbstractReferencePropertyType`,
     // so the list alone loses nothing.
-    let read = osdu::from_json(&json!([entry("PROF", "c48c65d4-9680-4d10-903c-a1b2e30f66b5")])).expect("reads");
+    let read =
+        osdu::from_json(&json!([entry("PROF", "c48c65d4-9680-4d10-903c-a1b2e30f66b5")])).expect("reads");
     assert_eq!(read.columns.len(), 1);
     assert_eq!(read.columns[0].name, "PROF");
-    assert_eq!(read.columns[0].kind.as_deref(), Some("c48c65d4-9680-4d10-903c-a1b2e30f66b5"));
+    assert_eq!(
+        read.columns[0].kind.as_deref(),
+        Some("c48c65d4-9680-4d10-903c-a1b2e30f66b5")
+    );
     assert_eq!(read.columns[0].uom.as_deref(), Some("m"));
     assert_eq!(read.columns[0].value_type, ValueType::Number);
 }
@@ -129,7 +133,9 @@ fn two_columns_for_one_kind_are_not_guessed_between() {
         entry("XX", "620cec71-5ce3-4ea5-9120-833756b427d7"),
     ]))
     .expect("reads");
-    let why = read.for_kind("620cec71-5ce3-4ea5-9120-833756b427d7").expect_err("refuses to pick");
+    let why = read
+        .for_kind("620cec71-5ce3-4ea5-9120-833756b427d7")
+        .expect_err("refuses to pick");
     assert!(why.contains("`X`") && why.contains("`XX`"), "{why}");
 }
 
@@ -145,7 +151,6 @@ fn a_unit_on_a_text_column_is_said_and_not_refused() {
     .expect("reads");
     assert!(read.notes.iter().any(|n| n.contains("Z_MNT")), "{:?}", read.notes);
 }
-
 
 #[test]
 fn what_this_module_writes_it_reads_back() {
@@ -191,7 +196,10 @@ fn what_this_module_writes_it_reads_back() {
     assert_eq!(again.keys, osdu.keys, "the keys survive the round trip");
     for (before, after) in osdu.columns.iter().zip(again.columns.iter()) {
         assert_eq!(after.name, before.name);
-        assert_eq!(after.kind, before.kind, "the uuid is the key: losing it loses everything");
+        assert_eq!(
+            after.kind, before.kind,
+            "the uuid is the key: losing it loses everything"
+        );
         assert_eq!(after.uom, before.uom);
         assert_eq!(after.value_type, before.value_type);
     }
@@ -217,7 +225,10 @@ fn a_date_declared_as_text_is_not_a_reason_to_shout() {
     .expect("a template that declares a date as text reads");
     assert_eq!(read.columns[0].uom.as_deref(), Some("time"), "the unit is kept");
     assert_eq!(read.columns[0].value_type, ValueType::Text);
-    assert!(read.notes.iter().any(|n| n.contains("DateFin")), "and the remark is made, without refusing");
+    assert!(
+        read.notes.iter().any(|n| n.contains("DateFin")),
+        "and the remark is made, without refusing"
+    );
     // **And it is carried by its column**, so that a front end can mark
     // the row without searching for its name in the sentence — which would be rereading our
     // own messages.

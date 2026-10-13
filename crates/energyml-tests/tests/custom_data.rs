@@ -49,8 +49,7 @@ fn to_xml(value: &resqml::TriangulatedSetRepresentation) -> String {
 
 #[test]
 fn a_vendor_extension_survives_a_round_trip() {
-    let object: resqml::TriangulatedSetRepresentation =
-        xml::from_xml_str(SOURCE).expect("the object reads");
+    let object: resqml::TriangulatedSetRepresentation = xml::from_xml_str(SOURCE).expect("the object reads");
 
     let custom = object
         .custom_data

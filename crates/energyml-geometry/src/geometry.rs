@@ -138,9 +138,7 @@ impl Topology {
             Topology::Polygons(rings) => rings.len(),
             Topology::Polylines(runs) => runs.len(),
             Topology::Hexahedra { cells, .. } => cells.len(),
-            Topology::Grid { fastest, slowest } => {
-                fastest.saturating_sub(1) * slowest.saturating_sub(1)
-            }
+            Topology::Grid { fastest, slowest } => fastest.saturating_sub(1) * slowest.saturating_sub(1),
             Topology::Polyhedra(cells) => cells.cell_count(),
             // A segment is a wireframe's cell — which is also what drops
             // per-cell attributes through the conversion: the count changes,
@@ -395,7 +393,7 @@ impl Topology {
         match self {
             Topology::Hexahedra { cells, index, .. } => {
                 if index.is_empty() {
-                    return (( cell as usize) < cells.len()).then_some(cell as usize);
+                    return ((cell as usize) < cells.len()).then_some(cell as usize);
                 }
                 // Sorted by construction — the reader walks k, then j, then i —
                 // so a binary search rather than a scan over ten million cells.
@@ -433,13 +431,20 @@ impl Geometry {
     /// reads. A rank the shape does not hold is refused by name: a node taken
     /// from past the end would be another shape's, or nothing.
     pub fn nodes_at(&self, ranks: &[usize]) -> std::result::Result<Vec<[f64; 3]>, String> {
-        let all: Vec<&[f64; 3]> = self.patches.iter().flat_map(|patch| patch.points.iter()).collect();
+        let all: Vec<&[f64; 3]> = self
+            .patches
+            .iter()
+            .flat_map(|patch| patch.points.iter())
+            .collect();
         ranks
             .iter()
             .map(|&rank| {
-                all.get(rank)
-                    .map(|p| **p)
-                    .ok_or_else(|| format!("node {rank} is named, and the shape holds {} (ranks from 0)", all.len()))
+                all.get(rank).map(|p| **p).ok_or_else(|| {
+                    format!(
+                        "node {rank} is named, and the shape holds {} (ranks from 0)",
+                        all.len()
+                    )
+                })
             })
             .collect()
     }
@@ -989,14 +994,26 @@ pub(crate) fn builtin_readers() -> Vec<Box<dyn RepresentationReader>> {
     // `SubRepresentation`, an IJK grid drawn by its skin — has nothing to say
     // here that would not have to be measured anyway.
     vec![
-        reader!("TriangulatedSetRepresentation", triangulated, Some(triangulated_nodes)),
+        reader!(
+            "TriangulatedSetRepresentation",
+            triangulated,
+            Some(triangulated_nodes)
+        ),
         reader!("PointSetRepresentation", point_set, Some(patch_count_nodes)),
         reader!("PolylineRepresentation", polyline, Some(patch_count_nodes)),
         reader!("PolylineSetRepresentation", polyline_set),
         reader!("Grid2dRepresentation", grid_2d, Some(grid_2d_nodes)),
-        reader!("WellboreFrameRepresentation", crate::well::frame, Some(stated_node_count)),
+        reader!(
+            "WellboreFrameRepresentation",
+            crate::well::frame,
+            Some(stated_node_count)
+        ),
         reader!("IjkGridRepresentation", crate::ijk::read),
-        reader!("WellboreTrajectoryRepresentation", trajectory, Some(trajectory_nodes)),
+        reader!(
+            "WellboreTrajectoryRepresentation",
+            trajectory,
+            Some(trajectory_nodes)
+        ),
         reader!("SubRepresentation", crate::parent::sub_representation),
         reader!(
             "UnstructuredGridRepresentation",
@@ -1009,7 +1026,11 @@ pub(crate) fn builtin_readers() -> Vec<Box<dyn RepresentationReader>> {
         // stations (`crate::stations`). Keyed on the concept like the rest, so
         // a WITSML 2.0 `Trajectory` reaches it too — and is refused there by
         // name, having no `DefaultMdDatum` to count its depths from.
-        reader!("Trajectory", crate::stations::read, Some(crate::stations::declared)),
+        reader!(
+            "Trajectory",
+            crate::stations::read,
+            Some(crate::stations::declared)
+        ),
     ]
 }
 
@@ -1288,8 +1309,7 @@ fn polyline_set(representation: &dyn Reflect, source: &dyn ValueSource) -> Resul
         // has said nothing, and closing anyway would invent a ring.
         let closed = match field_object(patch.owner, "ClosedPolylines") {
             Some(array) => {
-                let mut flags =
-                    values::read_flags(array, source, &format!("{at}.ClosedPolylines"))?;
+                let mut flags = values::read_flags(array, source, &format!("{at}.ClosedPolylines"))?;
                 // An array that states more flags than there are lines is
                 // truncated; one that states fewer leaves the last lines
                 // unanswered rather than inventing an answer for them.
@@ -1340,7 +1360,7 @@ fn trajectory(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<
         points,
         topology: Topology::Polylines(vec![length]),
         closed: Vec::new(),
-}])
+    }])
 }
 
 fn grid_2d(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Vec<Patch>> {
@@ -1377,7 +1397,7 @@ fn grid_2d(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Vec
         points,
         topology: Topology::Grid { fastest, slowest },
         closed: Vec::new(),
-}])
+    }])
 }
 
 // ---------------------------------------------------------------------------

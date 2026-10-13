@@ -32,7 +32,9 @@ const SET: u32 = 9;
 
 fn store() -> EpcStore {
     EpcStore::from_reader(
-        Box::new(Cursor::new(energyml_storage::extract::empty_package(None).expect("an empty package"))),
+        Box::new(Cursor::new(
+            energyml_storage::extract::empty_package(None).expect("an empty package"),
+        )),
         "color-versions.epc",
         Arc::new(energyml_schemas::all()),
     )
@@ -52,7 +54,9 @@ fn representation(version: &str) -> Box<dyn DynObject> {
 /// A `DefaultGraphicalInformation` of the whole object, in `hue`, whose target
 /// names the representation at `version` (or at none).
 fn entry(version: Option<&str>, hue: f64) -> AnyXml {
-    let version = version.map(|v| format!("<eml23:ObjectVersion>{v}</eml23:ObjectVersion>")).unwrap_or_default();
+    let version = version
+        .map(|v| format!("<eml23:ObjectVersion>{v}</eml23:ObjectVersion>"))
+        .unwrap_or_default();
     let content = format!(
         "<eml23:TargetObject><eml23:Uuid>{}</eml23:Uuid>{version}\
          <eml23:QualifiedType>resqml22.WellboreTrajectoryRepresentation</eml23:QualifiedType>\
@@ -66,7 +70,10 @@ fn entry(version: Option<&str>, hue: f64) -> AnyXml {
         u(REPRESENTATION)
     );
     AnyXml {
-        attributes: vec![("xsi:type".to_string(), "resqml22:DefaultGraphicalInformation".to_string())],
+        attributes: vec![(
+            "xsi:type".to_string(),
+            "resqml22:DefaultGraphicalInformation".to_string(),
+        )],
         content,
         namespaces: Vec::new(),
     }
@@ -119,11 +126,24 @@ fn hex(paint: &Paint) -> String {
 #[test]
 fn two_versions_of_one_representation_have_two_colours_of_the_file() {
     let (store, uris) = package(vec![entry(Some("1"), 0.0), entry(Some("2"), 120.0)]);
-    assert_eq!(uris.len(), 2, "the package holds the representation twice: {uris:?}");
-    assert!(uris[0].contains("version='1'") && uris[1].contains("version='2'"), "{uris:?}");
+    assert_eq!(
+        uris.len(),
+        2,
+        "the package holds the representation twice: {uris:?}"
+    );
+    assert!(
+        uris[0].contains("version='1'") && uris[1].contains("version='2'"),
+        "{uris:?}"
+    );
     let index = PackageIndex::build(&store, store.revision());
     let set = the_set(&store);
-    assert_eq!(set.entries.iter().map(|one| one.addresses().len()).collect::<Vec<_>>(), vec![1, 1]);
+    assert_eq!(
+        set.entries
+            .iter()
+            .map(|one| one.addresses().len())
+            .collect::<Vec<_>>(),
+        vec![1, 1]
+    );
     assert!(
         set.entries[0].addresses()[0].contains("version='1'"),
         "the entry keeps the version its reference names: {:?}",
@@ -133,15 +153,32 @@ fn two_versions_of_one_representation_have_two_colours_of_the_file() {
     let cascade = Cascade::new(&set);
     let requests: Vec<Request<'_>> = uris
         .iter()
-        .map(|uri| Request { representation: uri, property: None, kind_chain: &[], element: Scope::WholeObject })
+        .map(|uri| Request {
+            representation: uri,
+            property: None,
+            kind_chain: &[],
+            element: Scope::WholeObject,
+        })
         .collect();
     let ladders = cascade.ladders(&index, &store, &requests).expect("the ladders");
 
     let colours: Vec<String> = ladders
         .iter()
-        .map(|ladder| hex(&ladder.walked.resolution.as_ref().expect("the file colours it").value.paint))
+        .map(|ladder| {
+            hex(&ladder
+                .walked
+                .resolution
+                .as_ref()
+                .expect("the file colours it")
+                .value
+                .paint)
+        })
         .collect();
-    assert_eq!(colours, vec!["#ff0000ff".to_string(), "#00ff00ff".to_string()], "one colour per version");
+    assert_eq!(
+        colours,
+        vec!["#ff0000ff".to_string(), "#00ff00ff".to_string()],
+        "one colour per version"
+    );
 
     // The rung that carried is the one of the version asked, and its uri says so.
     for (ladder, uri) in ladders.iter().zip(&uris) {
@@ -168,8 +205,15 @@ fn the_cache_keeps_a_walk_per_version_and_disturbs_one_alone() {
     assert_eq!(cache.len(), 2, "a walk per version");
     assert!(cache.holds(&uris[0]) && cache.holds(&uris[1]));
 
-    assert_eq!(cache.disturb(std::slice::from_ref(&uris[0])), 1, "only the walk that looked at version 1");
-    assert!(!cache.holds(&uris[0]) && cache.holds(&uris[1]), "version 2 is exact still");
+    assert_eq!(
+        cache.disturb(std::slice::from_ref(&uris[0])),
+        1,
+        "only the walk that looked at version 1"
+    );
+    assert!(
+        !cache.holds(&uris[0]) && cache.holds(&uris[1]),
+        "version 2 is exact still"
+    );
 
     // A bare uuid is the entry adapter, and it names every version.
     assert_eq!(cache.disturb(&[u(REPRESENTATION)]), 1);
@@ -188,7 +232,11 @@ fn an_entry_naming_no_version_paints_every_version_and_one_naming_another_paints
     for uri in &uris {
         let walked = cascade.inherited(&index, &store, uri).expect("it walks");
         let found = walked.resolution.expect("the version-less entry paints it");
-        assert_eq!(hex(&found.value.paint), "#ffff00ff", "hue 60 for both, not the entry naming version 3");
+        assert_eq!(
+            hex(&found.value.paint),
+            "#ffff00ff",
+            "hue 60 for both, not the entry naming version 3"
+        );
         assert_eq!(found.value.entry, 0);
     }
 }

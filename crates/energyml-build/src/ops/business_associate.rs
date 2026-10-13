@@ -98,7 +98,9 @@ impl OrganizationKind {
             OrganizationKind::AcademicInstitution => eml::OrganizationKindExt::AcademicInstitution,
             OrganizationKind::GovernmentAgency => eml::OrganizationKindExt::GovernmentAgency,
             OrganizationKind::IndustryOrganization => eml::OrganizationKindExt::IndustryOrganization,
-            OrganizationKind::NonGovernmentalOrganization => eml::OrganizationKindExt::NonMinusGovernmentalOrganization,
+            OrganizationKind::NonGovernmentalOrganization => {
+                eml::OrganizationKindExt::NonMinusGovernmentalOrganization
+            }
             OrganizationKind::OrganizationUnit => eml::OrganizationKindExt::OrganizationUnit,
         }
     }
@@ -200,7 +202,9 @@ fn bounded(slot: &str, what: &str, text: &str, limit: usize) -> Result<String, R
     if count > limit {
         return Err(Refusal::on(
             slot,
-            format!("{what} `{text}` has {count} characters and the schema holds {limit}: refused rather than cut — half a name reads exactly like a whole one"),
+            format!(
+                "{what} `{text}` has {count} characters and the schema holds {limit}: refused rather than cut — half a name reads exactly like a whole one"
+            ),
         ));
     }
     Ok(text.to_string())
@@ -232,27 +236,53 @@ impl Operation for BusinessAssociate {
     fn plan(&self, _inputs: (), params: BusinessAssociateParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
         let name = params.title.0.trim().to_string();
         if name.is_empty() {
-            return Err(Refusal::on("title", "a business associate needs a name: it is its one required element, and what makes two runs name the same associate"));
+            return Err(Refusal::on(
+                "title",
+                "a business associate needs a name: it is its one required element, and what makes two runs name the same associate",
+            ));
         }
         let name = bounded("title", "the name", &name, NAME_LIMIT)?;
 
-        let authority = optional("roleAuthority", "the naming system", params.role_authority.as_deref(), SHORT_LIMIT)?;
+        let authority = optional(
+            "roleAuthority",
+            "the naming system",
+            params.role_authority.as_deref(),
+            SHORT_LIMIT,
+        )?;
         let mut roles = Vec::with_capacity(params.roles.len());
         let mut seen = BTreeSet::new();
         for (at, role) in params.roles.iter().enumerate() {
             let role = bounded("roles", &format!("role {}", at + 1), role, SHORT_LIMIT)?;
             if !seen.insert(role.clone()) {
-                return Err(Refusal::on("roles", format!("role {} `{role}` is given twice", at + 1)));
+                return Err(Refusal::on(
+                    "roles",
+                    format!("role {} `{role}` is given twice", at + 1),
+                ));
             }
-            roles.push(eml::NameStruct { value: role, authority: authority.clone() });
+            roles.push(eml::NameStruct {
+                value: role,
+                authority: authority.clone(),
+            });
         }
         if authority.is_some() && roles.is_empty() {
-            return Err(Refusal::on("roleAuthority", "a naming system for the roles, and no role: give the roles it names"));
+            return Err(Refusal::on(
+                "roleAuthority",
+                "a naming system for the roles, and no role: give the roles it names",
+            ));
         }
 
-        let authority_code = optional("authorityCode", "the authority code", params.authority_code.as_deref(), SHORT_LIMIT)?;
-        let description =
-            optional("description", "the description", params.description.as_deref(), DESCRIPTION_LIMIT)?;
+        let authority_code = optional(
+            "authorityCode",
+            "the authority code",
+            params.authority_code.as_deref(),
+            SHORT_LIMIT,
+        )?;
+        let description = optional(
+            "description",
+            "the description",
+            params.description.as_deref(),
+            DESCRIPTION_LIMIT,
+        )?;
 
         if !params.alias_kinds.is_empty() && params.alias_kinds.len() != params.aliases.len() {
             return Err(Refusal::on(
@@ -270,13 +300,30 @@ impl Operation for BusinessAssociate {
             let Some((owner, identifier)) = alias.split_once('=') else {
                 return Err(Refusal::on(
                     "aliases",
-                    format!("alias {} `{}` names no authority: write it authority=identifier — an alias without its authority resolves nowhere", at + 1, alias.trim()),
+                    format!(
+                        "alias {} `{}` names no authority: write it authority=identifier — an alias without its authority resolves nowhere",
+                        at + 1,
+                        alias.trim()
+                    ),
                 ));
             };
-            let owner = bounded("aliases", &format!("the authority of alias {}", at + 1), owner, SHORT_LIMIT)?;
-            let identifier = bounded("aliases", &format!("the identifier of alias {}", at + 1), identifier, SHORT_LIMIT)?;
+            let owner = bounded(
+                "aliases",
+                &format!("the authority of alias {}", at + 1),
+                owner,
+                SHORT_LIMIT,
+            )?;
+            let identifier = bounded(
+                "aliases",
+                &format!("the identifier of alias {}", at + 1),
+                identifier,
+                SHORT_LIMIT,
+            )?;
             if !known.insert((owner.clone(), identifier.clone())) {
-                return Err(Refusal::on("aliases", format!("alias {} `{owner}={identifier}` is given twice", at + 1)));
+                return Err(Refusal::on(
+                    "aliases",
+                    format!("alias {} `{owner}={identifier}` is given twice", at + 1),
+                ));
             }
             aliases.push(eml::ObjectAlias {
                 authority: owner,
@@ -334,7 +381,10 @@ impl Operation for BusinessAssociate {
                 recipe: "business-associate",
                 title: format!("business-associate → {name}"),
                 seed,
-                parameters: vec![Parameter::Text { title: "title".to_string(), value: name }],
+                parameters: vec![Parameter::Text {
+                    title: "title".to_string(),
+                    value: name,
+                }],
             },
             says,
             dropped: Vec::new(),

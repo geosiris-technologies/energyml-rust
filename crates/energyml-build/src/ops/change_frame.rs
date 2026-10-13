@@ -110,7 +110,7 @@
 //! - The linear velocity law `V(z) = v0 + k·z` of `energyml-analysis` (`t2d`).
 //!   TODO(reference): verify — no publication is cited for the law; add one if it follows a published source.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use energyml_analysis::t2d::LinearVelocity;
 use energyml_domain::crs::{Crs, CrsKind, VerticalDirection};
@@ -221,14 +221,23 @@ fn form_of(geometry: &Geometry) -> Result<Form, String> {
     {
         let (ni, nj) = (*fastest, *slowest);
         if ni < 2 || nj < 2 {
-            return Err(format!("is a grid of {ni} × {nj} nodes: a lattice has at least 2 along each axis"));
+            return Err(format!(
+                "is a grid of {ni} × {nj} nodes: a lattice has at least 2 along each axis"
+            ));
         }
         if patch.points.len() != ni * nj {
-            return Err(format!("declares {ni} × {nj} nodes and holds {}", patch.points.len()));
+            return Err(format!(
+                "declares {ni} × {nj} nodes and holds {}",
+                patch.points.len()
+            ));
         }
         return Ok(Form::Lattice { ni, nj });
     }
-    if geometry.patches.iter().any(|patch| matches!(patch.topology, Topology::Grid { .. })) {
+    if geometry
+        .patches
+        .iter()
+        .any(|patch| matches!(patch.topology, Topology::Grid { .. }))
+    {
         return Err(format!(
             "holds {} patches, a grid among them: a 2D grid is written from one lattice",
             geometry.patches.len()
@@ -280,12 +289,17 @@ fn side<'a>(reference: &'a Ref, crs: &'a Crs, slot: &str) -> Result<Side<'a>, Re
     let unit = crs.vertical_axis_uom();
     let counts = if crs.is_time() {
         let Some(unit) = unit else {
-            return Err(Refusal::on(slot, format!("`{title}` counts time and states no unit for it")));
+            return Err(Refusal::on(
+                slot,
+                format!("`{title}` counts time and states no unit for it"),
+            ));
         };
         if Dimension::of(unit) != Some(Dimension::Time) {
             return Err(Refusal::on(
                 slot,
-                format!("`{title}` says its third ordinate is a time and counts it in `{unit}`, which is no time unit this build knows"),
+                format!(
+                    "`{title}` says its third ordinate is a time and counts it in `{unit}`, which is no time unit this build knows"
+                ),
             ));
         }
         // `t = 0` is the frame's vertical origin: `to_projected` of a zero time
@@ -293,14 +307,21 @@ fn side<'a>(reference: &'a Ref, crs: &'a Crs, slot: &str) -> Result<Side<'a>, Re
         let origin = crs.to_projected([0.0, 0.0, 0.0])[2];
         let origin = match crs.vertical_uom.as_deref() {
             Some(datum) if origin != 0.0 => units::metres(origin, datum).map_err(|why| {
-                Refusal::on(slot, format!("`{title}` places its time origin at {origin} `{datum}`: {why}"))
+                Refusal::on(
+                    slot,
+                    format!("`{title}` places its time origin at {origin} `{datum}`: {why}"),
+                )
             })?,
             _ => origin,
         };
         Counts::Time(TimeAxis {
             seconds: units::factor(unit).unwrap_or(1.0),
             origin: plain(origin),
-            sense: if crs.vertical_direction == VerticalDirection::Down { 1.0 } else { -1.0 },
+            sense: if crs.vertical_direction == VerticalDirection::Down {
+                1.0
+            } else {
+                -1.0
+            },
         })
     } else {
         match unit {
@@ -311,19 +332,27 @@ fn side<'a>(reference: &'a Ref, crs: &'a Crs, slot: &str) -> Result<Side<'a>, Re
                 Some(Dimension::Time) => {
                     return Err(Refusal::on(
                         slot,
-                        format!("`{title}` counts its third ordinate in `{unit}`, a time, and does not say it is a time frame (`IsTime`)"),
+                        format!(
+                            "`{title}` counts its third ordinate in `{unit}`, a time, and does not say it is a time frame (`IsTime`)"
+                        ),
                     ));
                 }
                 _ => {
                     return Err(Refusal::on(
                         slot,
-                        format!("`{title}` counts its third ordinate in `{unit}`, which is no length unit this build knows"),
+                        format!(
+                            "`{title}` counts its third ordinate in `{unit}`, which is no length unit this build knows"
+                        ),
                     ));
                 }
             },
         }
     };
-    Ok(Side { reference, crs, counts })
+    Ok(Side {
+        reference,
+        crs,
+        counts,
+    })
 }
 
 /// A system, in words.
@@ -342,14 +371,21 @@ fn system_words(kind: &CrsKind) -> String {
 fn same_system(a: &CrsKind, b: &CrsKind) -> bool {
     match (a, b) {
         (CrsKind::Epsg(x), CrsKind::Epsg(y)) => x == y,
-        (CrsKind::Wkt(x), CrsKind::Wkt(y)) | (CrsKind::LocalAuthority(x), CrsKind::LocalAuthority(y)) => x == y,
+        (CrsKind::Wkt(x), CrsKind::Wkt(y)) | (CrsKind::LocalAuthority(x), CrsKind::LocalAuthority(y)) => {
+            x == y
+        }
         _ => false,
     }
 }
 
 /// The two frames sit on one projected system, in one horizontal unit, over
 /// one vertical datum — or the refusal that names the two.
-fn same_ground(from: &Side<'_>, to: &Side<'_>, from_datum: Option<&Ref>, to_datum: Option<&Ref>) -> Result<(), Refusal> {
+fn same_ground(
+    from: &Side<'_>,
+    to: &Side<'_>,
+    from_datum: Option<&Ref>,
+    to_datum: Option<&Ref>,
+) -> Result<(), Refusal> {
     let (a, b) = (&from.reference.title, &to.reference.title);
     let (p, q) = (&from.crs.projected, &to.crs.projected);
     if !same_system(p, q) {
@@ -372,7 +408,9 @@ fn same_ground(from: &Side<'_>, to: &Side<'_>, from_datum: Option<&Ref>, to_datu
     {
         return Err(Refusal::new(
             "frames",
-            format!("`{a}` counts x and y in `{x}` and `{b}` in `{y}` over one projected system: one of the two contradicts it"),
+            format!(
+                "`{a}` counts x and y in `{x}` and `{b}` in `{y}` over one projected system: one of the two contradicts it"
+            ),
         ));
     }
     let same_datum = match (&from.crs.vertical, &to.crs.vertical) {
@@ -403,9 +441,19 @@ enum Vertical {
     /// Two times from one origin: a unit and a sense.
     Times { from: TimeAxis, to: TimeAxis },
     /// A length to a time, through the law.
-    ToTime { law: LinearVelocity, travel: TravelTime, from: f64, to: TimeAxis },
+    ToTime {
+        law: LinearVelocity,
+        travel: TravelTime,
+        from: f64,
+        to: TimeAxis,
+    },
     /// A time to a length, through the law.
-    ToLength { law: LinearVelocity, travel: TravelTime, from: TimeAxis, to: f64 },
+    ToLength {
+        law: LinearVelocity,
+        travel: TravelTime,
+        from: TimeAxis,
+        to: f64,
+    },
 }
 
 /// The law as `t2d` takes it, or why it is none — its source first: a law
@@ -421,7 +469,10 @@ fn law_of(linear: &LinearLaw) -> Result<LinearVelocity, Refusal> {
         if linear.v0.is_finite() && linear.v0 > 0.0 {
             Refusal::on("k", format!("is {}: a gradient is a finite number", linear.k))
         } else {
-            Refusal::on("v0", format!("is {}: a velocity is a finite number > 0", linear.v0))
+            Refusal::on(
+                "v0",
+                format!("is {}: a velocity is a finite number > 0", linear.v0),
+            )
         }
     })
 }
@@ -434,9 +485,13 @@ fn vertical_of(from: &Side<'_>, to: &Side<'_>, law: Option<&LinearLaw>) -> Resul
         (Counts::Length(x), Counts::Length(y), None) => Ok(Vertical::Lengths { from: x, to: y }),
         (Counts::Length(_), Counts::Length(_), Some(_)) => Err(Refusal::on(
             "law",
-            format!("neither `{a}` nor `{b}` counts time, so no law is used — and an activity recording one would say it was: leave `law` at none"),
+            format!(
+                "neither `{a}` nor `{b}` counts time, so no law is used — and an activity recording one would say it was: leave `law` at none"
+            ),
         )),
-        (Counts::Time(x), Counts::Time(y), None) if (x.origin - y.origin).abs() <= 1e-9 => Ok(Vertical::Times { from: x, to: y }),
+        (Counts::Time(x), Counts::Time(y), None) if (x.origin - y.origin).abs() <= 1e-9 => {
+            Ok(Vertical::Times { from: x, to: y })
+        }
         (Counts::Time(x), Counts::Time(y), None) => Err(Refusal::new(
             "frames",
             format!(
@@ -446,20 +501,30 @@ fn vertical_of(from: &Side<'_>, to: &Side<'_>, law: Option<&LinearLaw>) -> Resul
         )),
         (Counts::Time(_), Counts::Time(_), Some(_)) => Err(Refusal::on(
             "law",
-            format!("`{a}` and `{b}` both count time: a law is stated below one time origin, and none is needed between two times from one — leave `law` at none, or go through a depth frame"),
-        )),
-        (Counts::Length(_), Counts::Time(_), None) | (Counts::Time(_), Counts::Length(_), None) => Err(Refusal::on(
-            "law",
             format!(
-                "`{a}` and `{b}` are a length and a time: a time has no depth without a velocity, and no frame carries one — state the law (`law = linear`, with `v0`, `k`, `travelTime` and its `source`)"
+                "`{a}` and `{b}` both count time: a law is stated below one time origin, and none is needed between two times from one — leave `law` at none, or go through a depth frame"
             ),
         )),
-        (Counts::Length(x), Counts::Time(y), Some(linear)) => {
-            Ok(Vertical::ToTime { law: law_of(linear)?, travel: linear.travel_time, from: x, to: y })
+        (Counts::Length(_), Counts::Time(_), None) | (Counts::Time(_), Counts::Length(_), None) => {
+            Err(Refusal::on(
+                "law",
+                format!(
+                    "`{a}` and `{b}` are a length and a time: a time has no depth without a velocity, and no frame carries one — state the law (`law = linear`, with `v0`, `k`, `travelTime` and its `source`)"
+                ),
+            ))
         }
-        (Counts::Time(x), Counts::Length(y), Some(linear)) => {
-            Ok(Vertical::ToLength { law: law_of(linear)?, travel: linear.travel_time, from: x, to: y })
-        }
+        (Counts::Length(x), Counts::Time(y), Some(linear)) => Ok(Vertical::ToTime {
+            law: law_of(linear)?,
+            travel: linear.travel_time,
+            from: x,
+            to: y,
+        }),
+        (Counts::Time(x), Counts::Length(y), Some(linear)) => Ok(Vertical::ToLength {
+            law: law_of(linear)?,
+            travel: linear.travel_time,
+            from: x,
+            to: y,
+        }),
     }
 }
 
@@ -511,7 +576,12 @@ impl Change<'_> {
                 let [x, y, _] = unplaced(0.0);
                 [x, y, to.sense * seconds / to.seconds]
             }
-            Vertical::ToTime { law, travel, from, to } => {
+            Vertical::ToTime {
+                law,
+                travel,
+                from,
+                to,
+            } => {
                 let elevation = placed[2] * from;
                 let depth = to.origin - elevation;
                 let seconds = time_at(&law, travel, depth);
@@ -524,7 +594,12 @@ impl Change<'_> {
                 let [x, y, _] = unplaced(0.0);
                 [x, y, to.sense * seconds / to.seconds]
             }
-            Vertical::ToLength { law, travel, from, to } => {
+            Vertical::ToLength {
+                law,
+                travel,
+                from,
+                to,
+            } => {
                 let seconds = from.sense * p[2] * from.seconds;
                 let elevation = from.origin - depth_at(&law, travel, seconds);
                 if seconds < 0.0 {
@@ -588,10 +663,20 @@ fn lattice_of(points: &[[f64; 3]], ni: usize, nj: usize) -> Result<([f64; 2], [f
 /// `ObjectVersion`), a uri (read by `EtpUri`, the version it names included), or
 /// a bare uuid, which names no version.
 fn reference_of(value: &Value) -> Option<Ref> {
-    let text = |name: &str| value.get(name).and_then(Value::as_str).map(str::trim).filter(|one| !one.is_empty()).map(str::to_string);
+    let text = |name: &str| {
+        value
+            .get(name)
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|one| !one.is_empty())
+            .map(str::to_string)
+    };
     if let Some(uuid) = text("Uuid") {
         let qualified_type = text("QualifiedType").unwrap_or_default();
-        return Some(Ref::new(uuid, qualified_type, text("Title").unwrap_or_default()).with_version(text("ObjectVersion")));
+        return Some(
+            Ref::new(uuid, qualified_type, text("Title").unwrap_or_default())
+                .with_version(text("ObjectVersion")),
+        );
     }
     let said = value.as_str()?.trim();
     Ref::of_uri(said, "").or_else(|| (!said.is_empty()).then(|| Ref::new(said, "", "")))
@@ -600,7 +685,8 @@ fn reference_of(value: &Value) -> Option<Ref> {
 /// Whether the answer `target` names this frame: the same uuid, and the same
 /// version when the answer states one.
 fn names(frame: &Ref, target: &Ref) -> bool {
-    frame.uuid.eq_ignore_ascii_case(&target.uuid) && (target.object_version.is_none() || target.object_version == frame.object_version)
+    frame.uuid.eq_ignore_ascii_case(&target.uuid)
+        && (target.object_version.is_none() || target.object_version == frame.object_version)
 }
 
 /// One step of FNV-1a over eight bytes.
@@ -644,10 +730,17 @@ fn seeded(bag: &Pieces, key: &str) -> Pieces {
 fn axis_words(side: &Side<'_>) -> String {
     let unit = side.crs.vertical_axis_uom().unwrap_or("an unstated unit");
     match side.counts {
-        Counts::Time(axis) => format!("time in {unit}, t = 0 at {} m above the vertical datum", axis.origin),
+        Counts::Time(axis) => format!(
+            "time in {unit}, t = 0 at {} m above the vertical datum",
+            axis.origin
+        ),
         Counts::Length(_) => {
             let zero = plain(side.crs.to_projected([0.0, 0.0, 0.0])[2]);
-            let word = if side.crs.vertical_direction == VerticalDirection::Down { "depth" } else { "elevation" };
+            let word = if side.crs.vertical_direction == VerticalDirection::Down {
+                "depth"
+            } else {
+                "elevation"
+            };
             format!("{word} in {unit}, its zero {zero} {unit} above the vertical datum")
         }
     }
@@ -665,7 +758,11 @@ fn rounded(value: f64) -> f64 {
 }
 
 fn double(title: &str, value: f64, uom: Option<&str>) -> Parameter {
-    Parameter::Double { title: title.to_string(), value, uom: uom.map(str::to_string) }
+    Parameter::Double {
+        title: title.to_string(),
+        value,
+        uom: uom.map(str::to_string),
+    }
 }
 
 impl Operation for ChangeFrame {
@@ -691,7 +788,9 @@ impl Operation for ChangeFrame {
     /// The shape's interpretation and its title — the same horizon, see the
     /// module. **Not** the frame: the one it is in is the one it cannot go to.
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
-        let Some(known) = known_of(bag, "shape") else { return };
+        let Some(known) = known_of(bag, "shape") else {
+            return;
+        };
         if let Some(interpretation) = &known.interpretation {
             slots.inferred("interpretation", interpretation.dor(), interpretation.clone());
         }
@@ -708,7 +807,12 @@ impl Operation for ChangeFrame {
         Ok(())
     }
 
-    fn plan(&self, inputs: ChangeFrameInputs, params: ChangeFrameParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: ChangeFrameInputs,
+        params: ChangeFrameParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let shape = inputs.shape;
         let form = form_of(&shape.geometry).map_err(|why| Refusal::on("shape", why))?;
 
@@ -732,12 +836,22 @@ impl Operation for ChangeFrame {
 
         // -- the frame they go to ------------------------------------------------------
         let target = reference_of(&params.crs.0).ok_or_else(|| {
-            Refusal::about("value", "crs", format!("`crs`: expected a DataObjectReference, a uri or a uuid, got {}", params.crs.0))
+            Refusal::about(
+                "value",
+                "crs",
+                format!(
+                    "`crs`: expected a DataObjectReference, a uri or a uuid, got {}",
+                    params.crs.0
+                ),
+            )
         })?;
         if names(from_ref, &target) {
             return Err(Refusal::on(
                 "crs",
-                format!("names `{}`, the frame the shape is already in — nothing would change", from_ref.title),
+                format!(
+                    "names `{}`, the frame the shape is already in — nothing would change",
+                    from_ref.title
+                ),
             ));
         }
         // The frame the answer names — by its version when the answer states
@@ -793,7 +907,11 @@ impl Operation for ChangeFrame {
         }
 
         // -- every node, in its order ----------------------------------------------------
-        let change = Change { from: from_crs, to: to_crs, vertical };
+        let change = Change {
+            from: from_crs,
+            to: to_crs,
+            vertical,
+        };
         let mut tally = Tally::default();
         let mut patches: Vec<Patch> = Vec::with_capacity(shape.geometry.patches.len());
         for patch in &shape.geometry.patches {
@@ -815,7 +933,12 @@ impl Operation for ChangeFrame {
         let title = params.naming.title();
         let law_key = match stated {
             None => "none".to_string(),
-            Some(linear) => format!("linear v0={:?} k={:?} {}", linear.v0, linear.k, linear.travel_time.word()),
+            Some(linear) => format!(
+                "linear v0={:?} k={:?} {}",
+                linear.v0,
+                linear.k,
+                linear.travel_time.word()
+            ),
         };
         // The version joins a seed only when the object declares one, so what
         // was derived for an unversioned object keeps its uuid.
@@ -823,15 +946,34 @@ impl Operation for ChangeFrame {
             Some(version) => format!("{}@{version}", one.uuid.to_ascii_lowercase()),
             None => one.uuid.to_ascii_lowercase(),
         };
-        let input_key = known.and_then(|k| k.reference.as_ref()).map(seed_of).unwrap_or_else(|| shape.name.clone());
-        let key = format!("change-frame:{input_key}#{:016x}:{}>{}:{law_key}", digest(&shape.geometry), seed_of(from_ref), seed_of(to_ref));
+        let input_key = known
+            .and_then(|k| k.reference.as_ref())
+            .map(seed_of)
+            .unwrap_or_else(|| shape.name.clone());
+        let key = format!(
+            "change-frame:{input_key}#{:016x}:{}>{}:{law_key}",
+            digest(&shape.geometry),
+            seed_of(from_ref),
+            seed_of(to_ref)
+        );
         let seed = format!("{key}:{title}");
         let bag = seeded(cx.bag, &key);
-        let inner = Context { identity: cx.identity, when: cx.when, purpose: cx.purpose, feedback: cx.feedback, bag: &bag };
+        let inner = Context {
+            identity: cx.identity,
+            when: cx.when,
+            purpose: cx.purpose,
+            feedback: cx.feedback,
+            bag: &bag,
+        };
 
         // -- the writing is the writer's of the kind ---------------------------------------
         let written = Written {
-            frame: FrameParams { crs: Some(params.crs.clone()), source_epsg: None, project: None, vertical: None },
+            frame: FrameParams {
+                crs: Some(params.crs.clone()),
+                source_epsg: None,
+                project: None,
+                vertical: None,
+            },
             represented: params.represented.clone(),
             naming: params.naming.clone(),
             // Nothing to create: the shape's interpretation, or none — what it
@@ -845,14 +987,29 @@ impl Operation for ChangeFrame {
         let mut plan = match form {
             Form::Lattice { ni, nj } => {
                 let points = &patches[0].points;
-                let (origin, spacing) = lattice_of(points, ni, nj).map_err(|why| Refusal::on("shape", why))?;
-                let lattice = Lattice { origin, spacing, counts: [ni, nj], z: points.iter().map(|p| p[2]).collect() };
-                super::grid::write(&format!("change-frame of {}", shape.name), &lattice, &written, &seed, &inner)?
+                let (origin, spacing) =
+                    lattice_of(points, ni, nj).map_err(|why| Refusal::on("shape", why))?;
+                let lattice = Lattice {
+                    origin,
+                    spacing,
+                    counts: [ni, nj],
+                    z: points.iter().map(|p| p[2]).collect(),
+                };
+                super::grid::write(
+                    &format!("change-frame of {}", shape.name),
+                    &lattice,
+                    &written,
+                    &seed,
+                    &inner,
+                )?
             }
             Form::Other(kind) => {
                 let result = Shape {
                     name: shape.name.clone(),
-                    geometry: Geometry { kind: "change-frame", patches },
+                    geometry: Geometry {
+                        kind: "change-frame",
+                        patches,
+                    },
                     closed: shape.closed.clone(),
                     known: shape.known.clone(),
                 };
@@ -862,7 +1019,10 @@ impl Operation for ChangeFrame {
 
         // -- what the object says of itself, and what the plan says ---------------------
         let mut says: Vec<Note> = Vec::new();
-        let horizontal = if from_crs.x_offset == to_crs.x_offset && from_crs.y_offset == to_crs.y_offset && turn.abs() <= TURN_TOLERANCE {
+        let horizontal = if from_crs.x_offset == to_crs.x_offset
+            && from_crs.y_offset == to_crs.y_offset
+            && turn.abs() <= TURN_TOLERANCE
+        {
             "the same horizontal placement, x and y unchanged".to_string()
         } else {
             format!(
@@ -886,8 +1046,18 @@ impl Operation for ChangeFrame {
         });
         let mut parameters: Vec<Parameter> = Vec::new();
         let timed = match vertical {
-            Vertical::ToTime { law, travel, to: axis, .. } => Some((law, travel, axis, to_ref)),
-            Vertical::ToLength { law, travel, from: axis, .. } => Some((law, travel, axis, from_ref)),
+            Vertical::ToTime {
+                law,
+                travel,
+                to: axis,
+                ..
+            } => Some((law, travel, axis, to_ref)),
+            Vertical::ToLength {
+                law,
+                travel,
+                from: axis,
+                ..
+            } => Some((law, travel, axis, from_ref)),
             Vertical::Lengths { .. } | Vertical::Times { .. } => None,
         };
         if let (Some((law, travel, axis, frame)), Some(linear)) = (timed, stated) {
@@ -916,7 +1086,11 @@ impl Operation for ChangeFrame {
                     ),
                 ));
             }
-            if let Some(object) = plan.objects.iter_mut().find(|object| object.role == "representation") {
+            if let Some(object) = plan
+                .objects
+                .iter_mut()
+                .find(|object| object.role == "representation")
+            {
                 object.json["Citation"]["Description"] = json!(description);
                 // The reference-model rule on invented objects (ADR-0019), as `horizon-from-law`
                 // writes it: a time converted by a law is not a time measured.
@@ -927,7 +1101,10 @@ impl Operation for ChangeFrame {
                     "Description": "converted by `change-frame` through a stated velocity law, not measured",
                 }]);
             }
-            says.push(Note { key: "law", detail: format!("{stated_law} — source: {source}") });
+            says.push(Note {
+                key: "law",
+                detail: format!("{stated_law} — source: {source}"),
+            });
             says.push(Note {
                 key: "synthetic",
                 detail: "the heights come through a law, not a measurement: the object carries `synthetic = true` and a description of its law and its source".to_string(),
@@ -968,16 +1145,34 @@ impl Operation for ChangeFrame {
     /// The inputs (`law`, `v0`, …) are recorded under their own titles.
     fn reports(&self) -> Vec<Slot> {
         let optional = |name: &'static str, about: &'static str| {
-            Slot::optional(name, Need::Number { uom: None, least: None, most: None }, about)
+            Slot::optional(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
         };
         vec![
             Slot::optional(
                 "timeOrigin",
-                Need::Number { uom: Some("m"), least: None, most: None },
+                Need::Number {
+                    uom: Some("m"),
+                    least: None,
+                    most: None,
+                },
                 "with a law: the elevation of the time frame's origin, where t = 0, above the vertical datum",
             ),
-            optional("aboveTimeOrigin", "with a law: nodes above the time origin — negative times, the law extended above its datum"),
-            optional("unreachedNodes", "with a law: nodes deeper than the law reaches — written with no height"),
+            optional(
+                "aboveTimeOrigin",
+                "with a law: nodes above the time origin — negative times, the law extended above its datum",
+            ),
+            optional(
+                "unreachedNodes",
+                "with a law: nodes deeper than the law reaches — written with no height",
+            ),
             optional("nodeCount", "a grid: nodes written"),
             optional("fastestAxisCount", "a grid: nodes along x"),
             optional("slowestAxisCount", "a grid: nodes along y"),
@@ -1002,8 +1197,12 @@ mod tests {
         let second = Ref::new(FRAME, type_, "frame").with_version(Some("2".to_string()));
 
         // A `DataObjectReference` states its version, and so does a uri.
-        let dor = reference_of(&json!({ "Uuid": FRAME, "QualifiedType": type_, "ObjectVersion": "2" })).expect("a reference");
-        assert!(names(&second, &dor) && !names(&first, &dor), "the version stated is the version taken");
+        let dor = reference_of(&json!({ "Uuid": FRAME, "QualifiedType": type_, "ObjectVersion": "2" }))
+            .expect("a reference");
+        assert!(
+            names(&second, &dor) && !names(&first, &dor),
+            "the version stated is the version taken"
+        );
         let uri = reference_of(&json!(second.uri())).expect("a uri");
         assert_eq!(uri.object_version.as_deref(), Some("2"), "read by `EtpUri`");
         assert!(names(&second, &uri) && !names(&first, &uri));

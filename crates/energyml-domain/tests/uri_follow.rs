@@ -47,7 +47,9 @@ fn crs_in(version: &str, epsg: u64) -> Box<dyn DynObject> {
         schema_version: "2.0".into(),
         object_version: Some(version.into()),
         citation: citation(&format!("crs v{version}"), version),
-        projected_crs: Some(eml20::AbstractProjectedCrs::ProjectedCrsEpsgCode(eml20::ProjectedCrsEpsgCode { epsg_code: epsg })),
+        projected_crs: Some(eml20::AbstractProjectedCrs::ProjectedCrsEpsgCode(
+            eml20::ProjectedCrsEpsgCode { epsg_code: epsg },
+        )),
         ..Default::default()
     })
 }
@@ -68,7 +70,10 @@ fn grid(uuid: &str, names: &str) -> Box<dyn DynObject> {
         uuid: uuid.into(),
         schema_version: "2.0".into(),
         citation: citation("a grid", "1"),
-        geometry: Some(resqml20::IjkGridGeometry { local_crs: crs_reference(names), ..Default::default() }),
+        geometry: Some(resqml20::IjkGridGeometry {
+            local_crs: crs_reference(names),
+            ..Default::default()
+        }),
         ..Default::default()
     })
 }
@@ -95,9 +100,12 @@ fn property_on(uuid: &str, support: &str, version: &str) -> Box<dyn DynObject> {
 fn package() -> EpcStore {
     let registry = Arc::new(energyml_schemas::all());
     let empty = energyml_storage::extract::empty_package(Some(0)).expect("an empty package");
-    let mut store = EpcStore::from_reader(Box::new(Cursor::new(empty)), "uri_follow.epc", registry).expect("opens");
+    let mut store =
+        EpcStore::from_reader(Box::new(Cursor::new(empty)), "uri_follow.epc", registry).expect("opens");
     store.put(crs_in("1", EPSG_V1)).expect("version 1 of the CRS");
-    store.put_as_new_version(crs_in("2", EPSG_V2)).expect("version 2 of the CRS");
+    store
+        .put_as_new_version(crs_in("2", EPSG_V2))
+        .expect("version 2 of the CRS");
     store.put(grid(GRID_ON_1, "1")).expect("a grid naming version 1");
     store.put(grid(GRID_ON_2, "2")).expect("a grid naming version 2");
     store
@@ -105,7 +113,9 @@ fn package() -> EpcStore {
 
 fn epsg_of(store: &EpcStore, grid: &str) -> Option<u64> {
     let object = store.object(grid).expect("the grid");
-    crs::of(object.as_reflect(), store).expect("the CRS reads").and_then(|read| read.projected.epsg())
+    crs::of(object.as_reflect(), store)
+        .expect("the CRS reads")
+        .and_then(|read| read.projected.epsg())
 }
 
 /// What would have to break: `crs::of` asking for the CRS by its uuid — two
@@ -113,8 +123,16 @@ fn epsg_of(store: &EpcStore, grid: &str) -> Option<u64> {
 #[test]
 fn a_crs_is_read_at_the_version_the_reference_names() {
     let store = package();
-    assert_eq!(epsg_of(&store, GRID_ON_1), Some(EPSG_V1), "the grid naming version 1");
-    assert_eq!(epsg_of(&store, GRID_ON_2), Some(EPSG_V2), "the grid naming version 2");
+    assert_eq!(
+        epsg_of(&store, GRID_ON_1),
+        Some(EPSG_V1),
+        "the grid naming version 1"
+    );
+    assert_eq!(
+        epsg_of(&store, GRID_ON_2),
+        Some(EPSG_V2),
+        "the grid naming version 2"
+    );
 }
 
 #[test]
@@ -123,7 +141,11 @@ fn the_uri_of_the_crs_an_object_names_carries_its_version() {
     let grid = store.object(GRID_ON_2).expect("the grid");
     let uri = crs::reference_uri(grid.as_reflect()).expect("a uri");
     assert!(uri.contains("version='2'"), "{uri}");
-    assert_eq!(crs::reference(grid.as_reflect()).as_deref(), Some(CRS), "the uuid adapter is unchanged");
+    assert_eq!(
+        crs::reference(grid.as_reflect()).as_deref(),
+        Some(CRS),
+        "the uuid adapter is unchanged"
+    );
 }
 
 /// A path that crosses a reference reads the target the reference names.
@@ -149,8 +171,15 @@ fn a_reference_resolves_among_held_objects_at_its_version() {
     assert_eq!(object_version_of_reflect(found), Some("2"));
     let named_1 = series::resolve_reference(&crs_reference("1"), &held).expect("version 1 is held");
     assert_eq!(object_version_of_reflect(named_1), Some("1"));
-    assert!(series::resolve_reference(&crs_reference("3"), &held).is_none(), "a version nobody holds is not guessed");
-    let by_uri = series::resolve_at(&format!("eml:///resqml20.obj_LocalDepth3dCrs({CRS},version='2')"), &held).expect("by uri");
+    assert!(
+        series::resolve_reference(&crs_reference("3"), &held).is_none(),
+        "a version nobody holds is not guessed"
+    );
+    let by_uri = series::resolve_at(
+        &format!("eml:///resqml20.obj_LocalDepth3dCrs({CRS},version='2')"),
+        &held,
+    )
+    .expect("by uri");
     assert_eq!(object_version_of_reflect(by_uri), Some("2"));
 }
 
@@ -158,7 +187,10 @@ fn a_reference_resolves_among_held_objects_at_its_version() {
 /// versions of a support apart where the uuid cannot.
 #[test]
 fn a_property_keeps_the_uri_of_its_support_and_the_index_separates_the_versions() {
-    let (first, second) = (property_on(PROPERTY_ON_1, GRID_ON_1, "1"), property_on(PROPERTY_ON_2, GRID_ON_1, "2"));
+    let (first, second) = (
+        property_on(PROPERTY_ON_1, GRID_ON_1, "1"),
+        property_on(PROPERTY_ON_2, GRID_ON_1, "2"),
+    );
     let read = property::read(second.as_reflect()).expect("a property");
     assert_eq!(read.supporting_representation.as_deref(), Some(GRID_ON_1));
     let uri = read.supporting_representation_uri.clone().expect("a uri");

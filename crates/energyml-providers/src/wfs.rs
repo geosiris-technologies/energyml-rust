@@ -82,17 +82,20 @@ impl Wfs {
     /// List rather than say "unknown": somebody who mistyped a name needs the
     /// names, not a finding.
     fn collection(&self, name: &str) -> Result<&Collection> {
-        self.collections.iter().find(|one| one.name == name).ok_or_else(|| {
-            Error::Refused(format!(
-                "`{name}` is not a collection of `{}` — it offers {}",
-                self.name,
-                self.collections
-                    .iter()
-                    .map(|one| one.name.as_str())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ))
-        })
+        self.collections
+            .iter()
+            .find(|one| one.name == name)
+            .ok_or_else(|| {
+                Error::Refused(format!(
+                    "`{name}` is not a collection of `{}` — it offers {}",
+                    self.name,
+                    self.collections
+                        .iter()
+                        .map(|one| one.name.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ))
+            })
     }
 
     /// The parameters common to every request on a collection.
@@ -174,8 +177,19 @@ impl Wfs {
             Axes::LatLon => format!("{lat} {lon}"),
         };
         match area {
-            Area::Box { west, south, east, north } => {
-                let corners = [(*west, *south), (*west, *north), (*east, *north), (*east, *south), (*west, *south)];
+            Area::Box {
+                west,
+                south,
+                east,
+                north,
+            } => {
+                let corners = [
+                    (*west, *south),
+                    (*west, *north),
+                    (*east, *north),
+                    (*east, *south),
+                    (*west, *south),
+                ];
                 let points: Vec<String> = corners.iter().map(|(lon, lat)| pair(*lon, *lat)).collect();
                 format!("POLYGON(({}))", points.join(","))
             }
@@ -260,7 +274,11 @@ impl Provider for Wfs {
         let status = answer.status;
         let text = answer.text(SMALL)?;
         if let Some(why) = exception(&text) {
-            return Err(Error::Server { status, code: why.0, says: why.1 });
+            return Err(Error::Server {
+                status,
+                code: why.0,
+                says: why.1,
+            });
         }
         attribute(&text, "numberMatched")
             .and_then(|value| value.parse().ok())
@@ -288,8 +306,7 @@ impl Provider for Wfs {
             let (code, says) = exception(&text).unwrap_or((None, text));
             return Err(Error::Server { status, code, says });
         }
-        geojson::read_streaming(answer.body, wanted, sink)
-            .map_err(|why| Error::Unreadable(why.to_string()))
+        geojson::read_streaming(answer.body, wanted, sink).map_err(|why| Error::Unreadable(why.to_string()))
     }
 }
 
@@ -399,9 +416,7 @@ pub fn encode(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     for byte in value.as_bytes() {
         match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
-                out.push(*byte as char)
-            }
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => out.push(*byte as char),
             other => out.push_str(&format!("%{other:02X}")),
         }
     }

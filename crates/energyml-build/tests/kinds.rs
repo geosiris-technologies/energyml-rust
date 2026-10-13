@@ -11,8 +11,8 @@
 //! dangling reference that no store resolves — precisely the fault that the
 //! graph has distinguished since yesterday from a legitimate absence.
 
-use energyml_domain::property_kind;
 use energyml_build::table;
+use energyml_domain::property_kind;
 
 #[test]
 fn every_kind_named_by_the_table_is_in_the_official_dictionary() {
@@ -57,12 +57,16 @@ fn the_check_can_fail() {
     // anything — two checks of this suite have already passed on empty
     // sets on the first try.
     property_kind::with_default(|dictionary| {
-        assert!(dictionary.by_uuid("00000000-0000-4000-8000-000000000000").is_none());
+        assert!(
+            dictionary
+                .by_uuid("00000000-0000-4000-8000-000000000000")
+                .is_none()
+        );
         // And the dictionary is not empty, otherwise everything above is
         // vacuity.
         assert!(
             dictionary.by_uuid(table::FORMATION_NAME.uuid).is_some(),
-        "the dictionary was not loaded"
+            "the dictionary was not loaded"
         );
     });
 }

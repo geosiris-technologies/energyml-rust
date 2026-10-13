@@ -268,7 +268,9 @@ mod tests {
             if recipe.starts_with("__") {
                 continue;
             }
-            let uuid = template["uuid"].as_str().unwrap_or_else(|| panic!("{recipe} has no uuid"));
+            let uuid = template["uuid"]
+                .as_str()
+                .unwrap_or_else(|| panic!("{recipe} has no uuid"));
             assert!(!seen.contains(&uuid), "{recipe} reuses the uuid {uuid}");
             seen.push(uuid);
         }
@@ -305,9 +307,20 @@ mod tests {
             output_title: Some("Top Brent"),
             descriptor: json!({ "$type": "eml23.DataObjectReference" }),
             parameters: vec![
-                Parameter::Double { title: "dx".into(), value: 12.5, uom: Some("m".into()) },
-                Parameter::Double { title: "dz".into(), value: 0.0, uom: None },
-                Parameter::Text { title: "mode".into(), value: "line".into() },
+                Parameter::Double {
+                    title: "dx".into(),
+                    value: 12.5,
+                    uom: Some("m".into()),
+                },
+                Parameter::Double {
+                    title: "dz".into(),
+                    value: 0.0,
+                    uom: None,
+                },
+                Parameter::Text {
+                    title: "mode".into(),
+                    value: "line".into(),
+                },
                 Parameter::Object {
                     title: "output".into(),
                     reference: json!({ "Uuid": "abc" }),
@@ -338,9 +351,15 @@ mod tests {
             descriptor: Value::Null,
             parameters: Vec::new(),
         };
-        assert_eq!(activity(&base(Some("À la main"), Some("x"))).unwrap()["Citation"]["Title"], "À la main");
+        assert_eq!(
+            activity(&base(Some("À la main"), Some("x"))).unwrap()["Citation"]["Title"],
+            "À la main"
+        );
         // No output name is not a reason to write `offset → ` with nothing after
         // the arrow, which reads like a truncated title.
-        assert_eq!(activity(&base(None, None)).unwrap()["Citation"]["Title"], "offset");
+        assert_eq!(
+            activity(&base(None, None)).unwrap()["Citation"]["Title"],
+            "offset"
+        );
     }
 }

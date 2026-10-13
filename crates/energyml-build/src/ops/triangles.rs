@@ -13,7 +13,10 @@ use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Patch, Topology};
 
 use crate::declare::{Inputs, Params, Shape, Suggestions};
-use crate::operation::{About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Numbers, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Numbers, Operation, Plan, Refusal,
+    Slot,
+};
 use crate::pieces::Pieces;
 
 use super::support;
@@ -89,18 +92,28 @@ impl Operation for Triangles {
             "shape",
             format!(
                 "the shape's topology is {} — a triangulated surface takes triangles, and triangulating is not decided here",
-                if other.is_empty() { "empty".to_string() } else { other.join(", ") }
+                if other.is_empty() {
+                    "empty".to_string()
+                } else {
+                    other.join(", ")
+                }
             ),
         ))
     }
 
-    fn plan(&self, mut inputs: TrianglesInputs, params: TrianglesParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        mut inputs: TrianglesInputs,
+        params: TrianglesParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         // The shapes given are placed here, not in `write`: `write` is also
         // called with surfaces an operation computed (`triangulate`,
         // `cross-section`), already in the frame, which nothing may move again.
         let frame = support::frame_in(&cx.known(), &params.written.frame, cx.identity, cx.when, &mut 0)?;
         for shape in &mut inputs.shape {
-            shape.geometry = support::geometry_placed(&shape.name, &shape.geometry, shape.known.as_ref(), &frame)?;
+            shape.geometry =
+                support::geometry_placed(&shape.name, &shape.geometry, shape.known.as_ref(), &frame)?;
         }
         let seed = cx.seed(&params.written.naming.title());
         write(&inputs, &params.written, &seed, cx)
@@ -108,9 +121,20 @@ impl Operation for Triangles {
 
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
-            Slot::required(name, Need::Number { uom: None, least: None, most: None }, about)
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
         };
-        support::frame_reports(vec![count("pointCount", "nodes written"), count("triangleCount", "triangles written")])
+        support::frame_reports(vec![
+            count("pointCount", "nodes written"),
+            count("triangleCount", "triangles written"),
+        ])
     }
 }
 
@@ -118,7 +142,12 @@ impl Operation for Triangles {
 /// operation that decides triangles (`triangulate`, `cross-section`) calls
 /// directly: typed in, no bag to derive and no choices read back by name.
 /// `seed` is the caller's, so that two routes to the same set name it the same.
-pub fn write(inputs: &TrianglesInputs, written: &Written, seed: &str, cx: &Context<'_>) -> Result<Plan, Refusal> {
+pub fn write(
+    inputs: &TrianglesInputs,
+    written: &Written,
+    seed: &str,
+    cx: &Context<'_>,
+) -> Result<Plan, Refusal> {
     let title = written.naming.title();
     let seed = seed.to_string();
     let mut rank = 0usize;
@@ -137,7 +166,9 @@ pub fn write(inputs: &TrianglesInputs, written: &Written, seed: &str, cx: &Conte
     let mut triangles_total = 0usize;
     for shape in &inputs.shape {
         for patch in &shape.geometry.patches {
-            let Topology::Triangles(triangles) = &patch.topology else { continue };
+            let Topology::Triangles(triangles) = &patch.topology else {
+                continue;
+            };
             if triangles.is_empty() {
                 continue;
             }
@@ -224,8 +255,16 @@ pub fn write(inputs: &TrianglesInputs, written: &Written, seed: &str, cx: &Conte
         json: object,
     });
     let mut parameters = frame.parameters;
-    parameters.push(Parameter::Double { title: "pointCount".to_string(), value: points_total as f64, uom: None });
-    parameters.push(Parameter::Double { title: "triangleCount".to_string(), value: triangles_total as f64, uom: None });
+    parameters.push(Parameter::Double {
+        title: "pointCount".to_string(),
+        value: points_total as f64,
+        uom: None,
+    });
+    parameters.push(Parameter::Double {
+        title: "triangleCount".to_string(),
+        value: triangles_total as f64,
+        uom: None,
+    });
     Ok(Plan {
         media: Vec::new(),
         // What the frame signalled travels up to here: the geometry is
@@ -236,9 +275,17 @@ pub fn write(inputs: &TrianglesInputs, written: &Written, seed: &str, cx: &Conte
         shapes: vec![support::made_root(
             &title,
             &uuid,
-            energyml_geometry::geometry::Geometry { kind: "triangles", patches: made },
+            energyml_geometry::geometry::Geometry {
+                kind: "triangles",
+                patches: made,
+            },
         )],
-        activity: ActivityDraft { recipe: "triangles", title: format!("triangles → {title}"), seed, parameters },
+        activity: ActivityDraft {
+            recipe: "triangles",
+            title: format!("triangles → {title}"),
+            seed,
+            parameters,
+        },
         // What the frame must say of itself — degrees, a `ProjectedCrs` taken
         // as it stands — and nothing when it is a compound.
         says: frame.says,

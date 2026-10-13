@@ -92,8 +92,21 @@ pub struct Outputs {
 
 impl Manifest {
     /// A manifest of `steps`.
-    pub fn new(epc: impl Into<String>, data_files: Vec<String>, recipe: Option<String>, steps: Vec<Step>) -> Manifest {
-        Manifest { format: FORMAT.to_string(), package: Package { epc: epc.into(), data_files }, recipe, steps }
+    pub fn new(
+        epc: impl Into<String>,
+        data_files: Vec<String>,
+        recipe: Option<String>,
+        steps: Vec<Step>,
+    ) -> Manifest {
+        Manifest {
+            format: FORMAT.to_string(),
+            package: Package {
+                epc: epc.into(),
+                data_files,
+            },
+            recipe,
+            steps,
+        }
     }
 
     /// The JSON, pretty-printed.
@@ -127,9 +140,15 @@ pub fn step(name: &str, operation: &dyn AnyOperation, plan: &Plan, made: &Made) 
                     role: object.role.clone(),
                     declared: named.is_some(),
                     describe: named.map(|one| one.describe.to_string()).unwrap_or_default(),
-                    types: named.map(|one| one.types.iter().map(|one| one.to_string()).collect()).unwrap_or_default(),
+                    types: named
+                        .map(|one| one.types.iter().map(|one| one.to_string()).collect())
+                        .unwrap_or_default(),
                     count: 0,
-                    collection: made.collections.iter().find(|(role, _)| *role == object.role).map(|(_, uri)| uri.clone()),
+                    collection: made
+                        .collections
+                        .iter()
+                        .find(|(role, _)| *role == object.role)
+                        .map(|(_, uri)| uri.clone()),
                     uris: Vec::new(),
                 });
                 outputs.len() - 1

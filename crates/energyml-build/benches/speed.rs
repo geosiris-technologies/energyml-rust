@@ -45,11 +45,23 @@ fn relief(x: f64, y: f64) -> f64 {
 }
 
 fn patch(points: Vec<[f64; 3]>, topology: Topology) -> Geometry {
-    Geometry { kind: "surface", patches: vec![Patch { index: 0, node_offset: 0, points, topology, closed: Vec::new() }] }
+    Geometry {
+        kind: "surface",
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology,
+            closed: Vec::new(),
+        }],
+    }
 }
 
 fn shape(geometry: Geometry) -> Source {
-    Source::Shape { geometry, closed: None }
+    Source::Shape {
+        geometry,
+        closed: None,
+    }
 }
 
 /// A surface of about `nodes` nodes on a regular grid, two triangles a cell.
@@ -111,7 +123,11 @@ fn fault_sheet(nodes: usize) -> Geometry {
     for (at, point) in sheet.patches[0].points.iter_mut().enumerate() {
         let (i, j) = (at as u32 % side, at as u32 / side);
         let along = f64::from(i) * step * EXTENT;
-        *point = [0.5 * EXTENT + 0.1 * along, along, -600.0 - f64::from(j) * step * 1200.0];
+        *point = [
+            0.5 * EXTENT + 0.1 * along,
+            along,
+            -600.0 - f64::from(j) * step * 1200.0,
+        ];
     }
     sheet
 }
@@ -172,9 +188,19 @@ struct Case {
 
 fn plan(name: &'static str, pieces: Pieces, choices: Choices) -> Box<dyn FnMut()> {
     let registry = Registry::new();
-    let when = When { creation: "2026-09-12T00:00:00Z".into(), originator: "speed".into() };
+    let when = When {
+        creation: "2026-09-12T00:00:00Z".into(),
+        originator: "speed".into(),
+    };
     Box::new(move || {
-        let made = registry.plan_for(name, &pieces, &choices, &Identity::derived(), &when, Purpose::Geometry);
+        let made = registry.plan_for(
+            name,
+            &pieces,
+            &choices,
+            &Identity::derived(),
+            &when,
+            Purpose::Geometry,
+        );
         if let Err(why) = made {
             panic!("`{name}` refused: {why}");
         }
@@ -193,7 +219,13 @@ fn cases() -> Vec<Case> {
                     let points = (0..n).map(|k| [x, 0.1 * seed * k as f64, -(k as f64)]).collect();
                     shape(patch(points, Topology::Polylines(vec![n as u32])))
                 };
-                plan("loft", Pieces::empty().with("lines", stick(0.0, 1.0)).with("lines 2", stick(100.0, 2.0)), Choices::new())
+                plan(
+                    "loft",
+                    Pieces::empty()
+                        .with("lines", stick(0.0, 1.0))
+                        .with("lines 2", stick(100.0, 2.0)),
+                    Choices::new(),
+                )
             }),
         },
         Case {
@@ -203,7 +235,10 @@ fn cases() -> Vec<Case> {
             run: Box::new(|n| {
                 plan(
                     "project",
-                    Pieces::empty().with("shape", shape(cloud(n, 6))).with("surface", shape(surface(40_000, |x, y| -2000.0 + 0.01 * x - 0.02 * y))),
+                    Pieces::empty().with("shape", shape(cloud(n, 6))).with(
+                        "surface",
+                        shape(surface(40_000, |x, y| -2000.0 + 0.01 * x - 0.02 * y)),
+                    ),
                     Choices::new(),
                 )
             }),
@@ -240,7 +275,9 @@ fn cases() -> Vec<Case> {
                 plan(
                     "interpolate",
                     Pieces::empty().with("shape", shape(cloud(n, 2))),
-                    Choices::new().set("method", "idw").set("spacing", spacing_for(40_000)),
+                    Choices::new()
+                        .set("method", "idw")
+                        .set("spacing", spacing_for(40_000)),
                 )
             }),
         },
@@ -249,12 +286,21 @@ fn cases() -> Vec<Case> {
             counts: "grid nodes, 2 000 samples",
             sizes: vec![10_000, 40_000, 160_000],
             run: Box::new(|n| {
-                let samples: Vec<[f64; 2]> =
-                    cloud(SAMPLES, 1).patches[0].points.iter().map(|p| [p[0], p[1]]).collect();
+                let samples: Vec<[f64; 2]> = cloud(SAMPLES, 1).patches[0]
+                    .points
+                    .iter()
+                    .map(|p| [p[0], p[1]])
+                    .collect();
                 let values: Vec<f64> = cloud(SAMPLES, 1).patches[0].points.iter().map(|p| p[2]).collect();
-                let queries: Vec<[f64; 2]> = surface(n, |_, _| 0.0).patches[0].points.iter().map(|p| [p[0], p[1]]).collect();
+                let queries: Vec<[f64; 2]> = surface(n, |_, _| 0.0).patches[0]
+                    .points
+                    .iter()
+                    .map(|p| [p[0], p[1]])
+                    .collect();
                 Box::new(move || {
-                    energyml_analysis::Idw::new(2.0).interpolate(&samples, &values, &queries).expect("idw");
+                    energyml_analysis::Idw::new(2.0)
+                        .interpolate(&samples, &values, &queries)
+                        .expect("idw");
                 })
             }),
         },
@@ -265,7 +311,9 @@ fn cases() -> Vec<Case> {
             run: Box::new(|n| {
                 plan(
                     "interpolate",
-                    Pieces::empty().with("shape", shape(cloud(SAMPLES, 3))).with("faults", shape(traces(10, 50, 4))),
+                    Pieces::empty()
+                        .with("shape", shape(cloud(SAMPLES, 3)))
+                        .with("faults", shape(traces(10, 50, 4))),
                     Choices::new().set("method", "idw").set("spacing", spacing_for(n)),
                 )
             }),
@@ -277,8 +325,13 @@ fn cases() -> Vec<Case> {
             run: Box::new(|n| {
                 plan(
                     "interpolate",
-                    Pieces::empty().with("shape", shape(cloud(SAMPLES, 3))).with("faults", shape(traces(10, 50, 4))),
-                    Choices::new().set("method", "idw").set("neighbours", 32).set("spacing", spacing_for(n)),
+                    Pieces::empty()
+                        .with("shape", shape(cloud(SAMPLES, 3)))
+                        .with("faults", shape(traces(10, 50, 4))),
+                    Choices::new()
+                        .set("method", "idw")
+                        .set("neighbours", 32)
+                        .set("spacing", spacing_for(n)),
                 )
             }),
         },
@@ -290,7 +343,9 @@ fn cases() -> Vec<Case> {
                 plan(
                     "interpolate",
                     Pieces::empty().with("shape", shape(cloud(n, 5))),
-                    Choices::new().set("method", "kriging").set("spacing", spacing_for(10_000)),
+                    Choices::new()
+                        .set("method", "kriging")
+                        .set("spacing", spacing_for(10_000)),
                 )
             }),
         },
@@ -301,8 +356,13 @@ fn cases() -> Vec<Case> {
             run: Box::new(|n| {
                 plan(
                     "interpolate",
-                    Pieces::empty().with("shape", shape(cloud(500, 6))).with("faults", shape(traces(10, 50, 7))),
-                    Choices::new().set("method", "kriging").set("neighbours", 32).set("spacing", spacing_for(n)),
+                    Pieces::empty()
+                        .with("shape", shape(cloud(500, 6)))
+                        .with("faults", shape(traces(10, 50, 7))),
+                    Choices::new()
+                        .set("method", "kriging")
+                        .set("neighbours", 32)
+                        .set("spacing", spacing_for(n)),
                 )
             }),
         },
@@ -310,7 +370,13 @@ fn cases() -> Vec<Case> {
             name: "triangulate",
             counts: "points",
             sizes: vec![10_000, 100_000, 1_000_000],
-            run: Box::new(|n| plan("triangulate", Pieces::empty().with("shape", shape(cloud(n, 8))), Choices::new())),
+            run: Box::new(|n| {
+                plan(
+                    "triangulate",
+                    Pieces::empty().with("shape", shape(cloud(n, 8))),
+                    Choices::new(),
+                )
+            }),
         },
         Case {
             name: "triangulate alone (energyml-analysis)",
@@ -330,7 +396,9 @@ fn cases() -> Vec<Case> {
             run: Box::new(|n| {
                 plan(
                     "triangulate",
-                    Pieces::empty().with("shape", shape(cloud(n, 9))).with("faults", shape(traces(10, 50, 10))),
+                    Pieces::empty()
+                        .with("shape", shape(cloud(n, 9)))
+                        .with("faults", shape(traces(10, 50, 10))),
                     Choices::new(),
                 )
             }),
@@ -344,7 +412,9 @@ fn cases() -> Vec<Case> {
                 let nodes = nodes_of(&geometry);
                 plan(
                     "surface-map",
-                    Pieces::empty().with("shape", shape(geometry)).with("object", known("Horizon", nodes)),
+                    Pieces::empty()
+                        .with("shape", shape(geometry))
+                        .with("object", known("Horizon", nodes)),
                     Choices::new().set("what", "dip"),
                 )
             }),
@@ -358,7 +428,9 @@ fn cases() -> Vec<Case> {
                 let nodes = nodes_of(&geometry);
                 plan(
                     "surface-map",
-                    Pieces::empty().with("shape", shape(geometry)).with("object", known("Horizon", nodes)),
+                    Pieces::empty()
+                        .with("shape", shape(geometry))
+                        .with("object", known("Horizon", nodes)),
                     Choices::new().set("what", "mean-curvature"),
                 )
             }),
@@ -384,7 +456,13 @@ fn cases() -> Vec<Case> {
             name: "isocontours",
             counts: "surface nodes, 10 levels",
             sizes: vec![10_000, 40_000, 160_000, 640_000],
-            run: Box::new(|n| plan("isocontours", Pieces::empty().with("shape", shape(surface(n, relief))), Choices::new())),
+            run: Box::new(|n| {
+                plan(
+                    "isocontours",
+                    Pieces::empty().with("shape", shape(surface(n, relief))),
+                    Choices::new(),
+                )
+            }),
         },
         Case {
             name: "intersect",
@@ -406,7 +484,14 @@ fn cases() -> Vec<Case> {
             counts: "nodes of each of 3 surfaces",
             sizes: vec![10_000, 40_000, 160_000],
             run: Box::new(|n| {
-                let trace = patch(vec![[100.0, 200.0, 0.0], [5_000.0, 5_200.0, 0.0], [9_900.0, 9_700.0, 0.0]], Topology::Polylines(vec![3]));
+                let trace = patch(
+                    vec![
+                        [100.0, 200.0, 0.0],
+                        [5_000.0, 5_200.0, 0.0],
+                        [9_900.0, 9_700.0, 0.0],
+                    ],
+                    Topology::Polylines(vec![3]),
+                );
                 plan(
                     "cross-section",
                     Pieces::empty()
@@ -425,7 +510,10 @@ fn cases() -> Vec<Case> {
 fn exponent(points: &[(usize, f64)]) -> f64 {
     let logs: Vec<(f64, f64)> = points.iter().map(|&(n, t)| ((n as f64).ln(), t.ln())).collect();
     let count = logs.len() as f64;
-    let (mx, my) = (logs.iter().map(|p| p.0).sum::<f64>() / count, logs.iter().map(|p| p.1).sum::<f64>() / count);
+    let (mx, my) = (
+        logs.iter().map(|p| p.0).sum::<f64>() / count,
+        logs.iter().map(|p| p.1).sum::<f64>() / count,
+    );
     let num: f64 = logs.iter().map(|p| (p.0 - mx) * (p.1 - my)).sum();
     let den: f64 = logs.iter().map(|p| (p.0 - mx).powi(2)).sum();
     num / den
@@ -458,9 +546,21 @@ fn main() {
         }
         let slope = exponent(&measured);
         for (at, &(size, seconds)) in measured.iter().enumerate() {
-            let label = if at == 0 { format!("{} ({})", case.name, case.counts) } else { String::new() };
-            let slope = if at == 0 { format!("{slope:.2}") } else { String::new() };
-            println!("| {label} | {size} | {} | {:.0} | {slope} |", readable(seconds), size as f64 / seconds);
+            let label = if at == 0 {
+                format!("{} ({})", case.name, case.counts)
+            } else {
+                String::new()
+            };
+            let slope = if at == 0 {
+                format!("{slope:.2}")
+            } else {
+                String::new()
+            };
+            println!(
+                "| {label} | {size} | {} | {:.0} | {slope} |",
+                readable(seconds),
+                size as f64 / seconds
+            );
         }
     }
 }

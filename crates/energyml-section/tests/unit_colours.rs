@@ -12,7 +12,9 @@
 //! (the first two), or draw a tick at every interval's start (the last).
 
 use crate::layout::{catalogue, view};
-use crate::strata_legend::{El, elements, entries_of_the_legend, inside, interval, on, strata_of_the_wells, well_with};
+use crate::strata_legend::{
+    El, elements, entries_of_the_legend, inside, interval, on, strata_of_the_wells, well_with,
+};
 use energyml_section::layout::layout;
 use energyml_section::model::*;
 use energyml_section::svg;
@@ -25,10 +27,18 @@ fn named(unit: &str, colour: &str, uri: &str) -> Interval {
 
 /// One well, two units: Top (0-100, red) then Mid (100-200, green), the catalogue's colours.
 fn baked() -> Catalogue {
-    let mut top = named("Top", "#aa0000", "eml:///resqml22.StratigraphicUnitInterpretation(top)");
+    let mut top = named(
+        "Top",
+        "#aa0000",
+        "eml:///resqml22.StratigraphicUnitInterpretation(top)",
+    );
     top.from = 0.0;
     top.to = 100.0;
-    let mut mid = named("Mid", "#00aa00", "eml:///resqml22.StratigraphicUnitInterpretation(mid)");
+    let mut mid = named(
+        "Mid",
+        "#00aa00",
+        "eml:///resqml22.StratigraphicUnitInterpretation(mid)",
+    );
     mid.from = 100.0;
     mid.to = 200.0;
     catalogue(vec![well_with("A", 150.0, vec![top, mid])])
@@ -41,14 +51,29 @@ fn key(uri: &str) -> String {
 #[test]
 fn a_colour_told_now_is_the_one_the_wells_and_the_legend_are_drawn_in() {
     let mut now = on();
-    now.unit_colours = vec![(key("eml:///resqml22.StratigraphicUnitInterpretation(top)"), "#0000ff".into())];
+    now.unit_colours = vec![(
+        key("eml:///resqml22.StratigraphicUnitInterpretation(top)"),
+        "#0000ff".into(),
+    )];
     let els = elements(&svg::write(&layout(&baked(), &now)));
     let wells = strata_of_the_wells(&els);
-    assert!(wells.contains(&("Top".to_string(), "#0000ff".to_string())), "the well: {wells:?}");
-    assert!(wells.contains(&("Mid".to_string(), "#00aa00".to_string())), "a unit not told keeps its baked colour: {wells:?}");
+    assert!(
+        wells.contains(&("Top".to_string(), "#0000ff".to_string())),
+        "the well: {wells:?}"
+    );
+    assert!(
+        wells.contains(&("Mid".to_string(), "#00aa00".to_string())),
+        "a unit not told keeps its baked colour: {wells:?}"
+    );
     let legend = entries_of_the_legend(&els);
-    assert!(legend.contains(&("Top".to_string(), "#0000ff".to_string())), "the legend says what the wells say: {legend:?}");
-    assert!(!legend.iter().any(|(_, colour)| colour == "#aa0000"), "the baked colour is nowhere: {legend:?}");
+    assert!(
+        legend.contains(&("Top".to_string(), "#0000ff".to_string())),
+        "the legend says what the wells say: {legend:?}"
+    );
+    assert!(
+        !legend.iter().any(|(_, colour)| colour == "#aa0000"),
+        "the baked colour is nowhere: {legend:?}"
+    );
     // The two read one table: every legend entry is the colour of a well path of that unit.
     for (unit, colour) in &legend {
         assert!(wells.contains(&(unit.clone(), colour.clone())), "{unit} {colour}");
@@ -62,21 +87,39 @@ fn without_the_table_the_drawing_is_what_it_was_byte_for_byte() {
     empty.unit_colours = Vec::new();
     let a = svg::write(&layout(&baked(), &plain));
     assert_eq!(a, svg::write(&layout(&baked(), &empty)));
-    assert!(!a.contains("unitColours"), "not written into the metadata when empty");
+    assert!(
+        !a.contains("unitColours"),
+        "not written into the metadata when empty"
+    );
     assert!(!a.contains("strataTicks"), "nor is the option, off");
-    assert!(!serde_json::to_string(&crate::strata_legend::catalogue_of_two()).unwrap().contains("unitUri"), "an interval that names no unit writes no field");
+    assert!(
+        !serde_json::to_string(&crate::strata_legend::catalogue_of_two())
+            .unwrap()
+            .contains("unitUri"),
+        "an interval that names no unit writes no field"
+    );
 }
 
 #[test]
 fn a_unit_of_another_package_is_not_told_the_colour_of_this_one() {
     let mut now = on();
-    now.unit_colours = vec![(object_key("s2", "eml:///resqml22.StratigraphicUnitInterpretation(top)"), "#0000ff".into())];
+    now.unit_colours = vec![(
+        object_key("s2", "eml:///resqml22.StratigraphicUnitInterpretation(top)"),
+        "#0000ff".into(),
+    )];
     let wells = strata_of_the_wells(&elements(&svg::write(&layout(&baked(), &now))));
-    assert!(wells.contains(&("Top".to_string(), "#aa0000".to_string())), "{wells:?}");
+    assert!(
+        wells.contains(&("Top".to_string(), "#aa0000".to_string())),
+        "{wells:?}"
+    );
 }
 
 fn ticks_of(svg_text: &str) -> Vec<El> {
-    elements(svg_text).into_iter().filter(|e| e.name == "line" && inside(e, "kind=well")).filter(|e| e.attr("stroke") == Some("#000000")).collect()
+    elements(svg_text)
+        .into_iter()
+        .filter(|e| e.name == "line" && inside(e, "kind=well"))
+        .filter(|e| e.attr("stroke") == Some("#000000"))
+        .collect()
 }
 
 #[test]
@@ -84,7 +127,11 @@ fn a_tick_crosses_the_well_at_each_boundary_between_units_when_asked() {
     let mut cat = baked();
     // A third unit after a gap: no boundary there, a gap is not a change of unit.
     if let Item::Well(w) = &mut cat.long.items[0] {
-        let mut last = named("Last", "#0000aa", "eml:///resqml22.StratigraphicUnitInterpretation(last)");
+        let mut last = named(
+            "Last",
+            "#0000aa",
+            "eml:///resqml22.StratigraphicUnitInterpretation(last)",
+        );
         last.from = 300.0;
         last.to = 350.0;
         w.intervals.push(last);
@@ -102,9 +149,18 @@ fn a_tick_crosses_the_well_at_each_boundary_between_units_when_asked() {
         t.attr("y2").unwrap().parse().unwrap(),
     );
     // The well is drawn between x = 150 and 150 + (200 - 0)/320*... : it goes down the front end, so the tick is across it.
-    assert!((y1 - y2).abs() < 1e-6 || (x1 - x2).abs() > 1.0, "across a vertical-ish path, not along it");
-    assert!(((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt() > 4.0, "wider than nothing");
-    assert!(text.contains("data-part=\"strata-ticks\""), "in a group of its own, inside the well's");
+    assert!(
+        (y1 - y2).abs() < 1e-6 || (x1 - x2).abs() > 1.0,
+        "across a vertical-ish path, not along it"
+    );
+    assert!(
+        ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt() > 4.0,
+        "wider than nothing"
+    );
+    assert!(
+        text.contains("data-part=\"strata-ticks\""),
+        "in a group of its own, inside the well's"
+    );
     // In the option's metadata, so a redraw keeps it.
     assert!(svg::read_metadata(&text).unwrap().view.strata_ticks);
     // Off: none, and the bytes are those of before.
@@ -123,17 +179,33 @@ fn a_tick_crosses_the_well_at_each_boundary_between_units_when_asked() {
 fn intervals_and_legend_entries_name_their_unit_by_uri() {
     let text = svg::write(&layout(&baked(), &on()));
     let els = elements(&text);
-    let intervals: Vec<&El> = els.iter().filter(|e| e.name == "g" && e.attr("data-unit").is_some()).collect();
+    let intervals: Vec<&El> = els
+        .iter()
+        .filter(|e| e.name == "g" && e.attr("data-unit").is_some())
+        .collect();
     assert!(!intervals.is_empty());
     for iv in &intervals {
-        let uri = iv.attr("data-unit-uri").expect("an interval names its unit by uri");
-        assert!(uri.starts_with("eml:///resqml22.StratigraphicUnitInterpretation("), "{uri}");
+        let uri = iv
+            .attr("data-unit-uri")
+            .expect("an interval names its unit by uri");
+        assert!(
+            uri.starts_with("eml:///resqml22.StratigraphicUnitInterpretation("),
+            "{uri}"
+        );
     }
-    let entries: Vec<&El> = els.iter().filter(|e| e.name == "g" && e.attr("data-decor") == Some("strata-entry")).collect();
+    let entries: Vec<&El> = els
+        .iter()
+        .filter(|e| e.name == "g" && e.attr("data-decor") == Some("strata-entry"))
+        .collect();
     assert!(!entries.is_empty(), "the legend is on");
     for entry in &entries {
-        let uri = entry.attr("data-unit-uri").expect("a legend entry names its unit by uri");
-        assert!(intervals.iter().any(|iv| iv.attr("data-unit-uri") == Some(uri)), "{uri} is the uri of a drawn interval");
+        let uri = entry
+            .attr("data-unit-uri")
+            .expect("a legend entry names its unit by uri");
+        assert!(
+            intervals.iter().any(|iv| iv.attr("data-unit-uri") == Some(uri)),
+            "{uri} is the uri of a drawn interval"
+        );
     }
 }
 
@@ -147,12 +219,25 @@ fn a_tick_keeps_its_pixel_size_when_the_drawing_zooms() {
     assert!(!ticks.is_empty());
     for t in &ticks {
         let n = |name: &str| -> f64 { t.attr(name).unwrap().parse().unwrap() };
-        let at: Vec<f64> = t.attr("data-zoom-fixed").expect("a tick is zoom-fixed").split(' ').map(|v| v.parse().unwrap()).collect();
-        assert!((at[0] - (n("x1") + n("x2")) / 2.0).abs() < 0.01 && (at[1] - (n("y1") + n("y2")) / 2.0).abs() < 0.01, "around its middle");
+        let at: Vec<f64> = t
+            .attr("data-zoom-fixed")
+            .expect("a tick is zoom-fixed")
+            .split(' ')
+            .map(|v| v.parse().unwrap())
+            .collect();
+        assert!(
+            (at[0] - (n("x1") + n("x2")) / 2.0).abs() < 0.01
+                && (at[1] - (n("y1") + n("y2")) / 2.0).abs() < 0.01,
+            "around its middle"
+        );
     }
     // Without the script, nothing to counter-scale: the bytes of before.
     asked.zoom_script = false;
-    assert!(ticks_of(&svg::write(&layout(&baked(), &asked))).iter().all(|t| t.attr("data-zoom-fixed").is_none()));
+    assert!(
+        ticks_of(&svg::write(&layout(&baked(), &asked)))
+            .iter()
+            .all(|t| t.attr("data-zoom-fixed").is_none())
+    );
 }
 
 #[test]
@@ -166,7 +251,11 @@ fn no_tick_on_a_well_that_is_not_coloured_by_strata() {
 /// The same unit, Top, in a well of `s1` and a well of `s2` — one uri, as two
 /// packages written against one chart carry it.
 fn two_packages() -> Catalogue {
-    let mut top_a = named("Top", "#aa0000", "eml:///resqml22.StratigraphicUnitInterpretation(top)");
+    let mut top_a = named(
+        "Top",
+        "#aa0000",
+        "eml:///resqml22.StratigraphicUnitInterpretation(top)",
+    );
     top_a.to = 100.0;
     let mut top_b = top_a.clone();
     top_b.to = 150.0;
@@ -182,7 +271,9 @@ fn legend_stores(els: &[El]) -> Vec<(String, String)> {
     let titles = entries_of_the_legend(els);
     let stores: Vec<String> = els
         .iter()
-        .filter(|e| e.name == "g" && e.attr("data-kind") == Some("strata-entry") && inside(e, "id=strata-legend"))
+        .filter(|e| {
+            e.name == "g" && e.attr("data-kind") == Some("strata-entry") && inside(e, "id=strata-legend")
+        })
         .map(|e| e.attr("data-unit-stores").unwrap_or_default().to_string())
         .collect();
     titles.into_iter().map(|(title, _)| title).zip(stores).collect()
@@ -197,7 +288,10 @@ fn legend_stores(els: &[El]) -> Vec<(String, String)> {
 #[test]
 fn packages_that_agree_on_a_unit_are_one_entry_carrying_both() {
     let els = elements(&svg::write(&layout(&two_packages(), &on())));
-    assert_eq!(legend_stores(&els), vec![("Top".to_string(), "s1 s2".to_string())]);
+    assert_eq!(
+        legend_stores(&els),
+        vec![("Top".to_string(), "s1 s2".to_string())]
+    );
 }
 
 /// …and two lines for packages that do not, each with its package — named in
@@ -208,17 +302,27 @@ fn packages_that_agree_on_a_unit_are_one_entry_carrying_both() {
 #[test]
 fn packages_that_disagree_on_a_unit_are_two_entries_each_named_by_its_package() {
     let mut now = on();
-    now.unit_colours = vec![(object_key("s2", "eml:///resqml22.StratigraphicUnitInterpretation(top)"), "#0000ff".into())];
+    now.unit_colours = vec![(
+        object_key("s2", "eml:///resqml22.StratigraphicUnitInterpretation(top)"),
+        "#0000ff".into(),
+    )];
     now.store_names = vec![("s2".into(), "second.epc".into())];
     let els = elements(&svg::write(&layout(&two_packages(), &now)));
     assert_eq!(
         legend_stores(&els),
-        vec![("Top — s1".to_string(), "s1".to_string()), ("Top — second.epc".to_string(), "s2".to_string())],
+        vec![
+            ("Top — s1".to_string(), "s1".to_string()),
+            ("Top — second.epc".to_string(), "s2".to_string())
+        ],
         "a package with no name is named by its id"
     );
     // A unit shown once says nothing of its package.
     let alone = elements(&svg::write(&layout(&baked(), &now)));
-    assert!(entries_of_the_legend(&alone).iter().all(|(title, _)| !title.contains('—')));
+    assert!(
+        entries_of_the_legend(&alone)
+            .iter()
+            .all(|(title, _)| !title.contains('—'))
+    );
 }
 
 #[test]

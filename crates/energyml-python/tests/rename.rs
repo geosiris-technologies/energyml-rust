@@ -13,7 +13,8 @@ use energyml_rust::session::Package;
 /// A copy of a corpus package and its data file, in a folder of its own —
 /// renaming inside the fixtures would take the file away from every other test.
 fn workbench(case: &str, package: &str, data: &str) -> Option<(PathBuf, String)> {
-    let (Some(source_epc), Some(source_h5)) = (crate::fixtures::find(package), crate::fixtures::find(data)) else {
+    let (Some(source_epc), Some(source_h5)) = (crate::fixtures::find(package), crate::fixtures::find(data))
+    else {
         eprintln!("skipped: {package} is absent from the fixtures");
         return None;
     };
@@ -28,8 +29,7 @@ fn workbench(case: &str, package: &str, data: &str) -> Option<(PathBuf, String)>
 
 #[test]
 fn the_quote_crosses_whole() {
-    let Some((epc, h5)) = workbench("plan", "testingPackageCpp22.epc", "testingPackageCpp22.h5")
-    else {
+    let Some((epc, h5)) = workbench("plan", "testingPackageCpp22.epc", "testingPackageCpp22.h5") else {
         return;
     };
     let package = Package::open(&epc).expect("the package opens");
@@ -47,8 +47,7 @@ fn the_quote_crosses_whole() {
 
 #[test]
 fn a_refusal_arrives_as_words_rather_than_as_an_empty_plan() {
-    let Some((epc, h5)) = workbench("refused", "testingPackageCpp22.epc", "testingPackageCpp22.h5")
-    else {
+    let Some((epc, h5)) = workbench("refused", "testingPackageCpp22.epc", "testingPackageCpp22.h5") else {
         return;
     };
     let mut package = Package::open(&epc).expect("the package opens");
@@ -68,20 +67,23 @@ fn a_refusal_arrives_as_words_rather_than_as_an_empty_plan() {
 
 #[test]
 fn renaming_says_which_of_the_three_things_happened_to_the_file() {
-    let Some((epc, h5)) = workbench("done", "testingPackageCpp22.epc", "testingPackageCpp22.h5")
-    else {
+    let Some((epc, h5)) = workbench("done", "testingPackageCpp22.epc", "testingPackageCpp22.h5") else {
         return;
     };
     let mut package = Package::open(&epc).expect("the package opens");
 
-    let done = package.rename_data_file(&h5, "renamed.h5").expect("it is carried out");
+    let done = package
+        .rename_data_file(&h5, "renamed.h5")
+        .expect("it is carried out");
     assert!(done.fields > 0);
     // Three answers and not two: *moved*, *there was nothing to move*, *this
     // store has no disk*. Here the file is beside the package, so it moved, and
     // the caller is told where.
     assert_eq!(done.file, "moved");
     assert!(
-        done.moved_to.as_deref().is_some_and(|path| path.ends_with("renamed.h5")),
+        done.moved_to
+            .as_deref()
+            .is_some_and(|path| path.ends_with("renamed.h5")),
         "the new path was not reported: {:?}",
         done.moved_to
     );

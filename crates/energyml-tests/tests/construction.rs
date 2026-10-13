@@ -53,7 +53,10 @@ fn what_comes_back_is_writable() {
     built
         .set_field("Title", OwnedValue::Str("a title".to_string()))
         .expect("a freshly built object takes values");
-    let title = built.field("Title").and_then(|v| v.as_scalar()).and_then(|s| s.as_str().map(str::to_string));
+    let title = built
+        .field("Title")
+        .and_then(|v| v.as_scalar())
+        .and_then(|s| s.as_str().map(str::to_string));
     assert_eq!(title.as_deref(), Some("a title"));
 }
 

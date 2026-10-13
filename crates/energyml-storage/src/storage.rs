@@ -235,7 +235,8 @@ pub trait EnergymlStorage {
             .filter_map(|(summary, object)| object.ok().map(|object| (summary, object)))
             .collect();
         Ok(crate::graph::build(
-            held.iter().map(|(summary, object)| (summary, object.as_reflect())),
+            held.iter()
+                .map(|(summary, object)| (summary, object.as_reflect())),
         ))
     }
 }

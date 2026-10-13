@@ -19,7 +19,9 @@ use serde_json::json;
 use energyml_domain::provenance::Parameter;
 
 use crate::declare::{Inputs, Params, Ramp, Suggestions, Title};
-use crate::operation::{About, ActivityDraft, Category, Context, Need, NewObject, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Need, NewObject, Operation, Plan, Refusal, Slot,
+};
 use crate::pieces::{Pieces, Source};
 
 use super::support;
@@ -61,7 +63,10 @@ impl Operation for Colormap {
     }
 
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
-        if let Some((name, _)) = bag.iter().find(|(_, source)| matches!(source, Source::Ramp { .. })) {
+        if let Some((name, _)) = bag
+            .iter()
+            .find(|(_, source)| matches!(source, Source::Ramp { .. }))
+        {
             slots.set("title", json!(name));
         }
     }
@@ -74,8 +79,16 @@ impl Operation for Colormap {
         bands_refusal(ramp.levels.len(), ramp.colours.len(), "ramp").map_or(Ok(()), Err)
     }
 
-    fn plan(&self, inputs: ColormapInputs, params: ColormapParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
-        let (levels, colours, slot) = match (inputs.ramp, params.levels.is_empty() && params.colours.is_empty()) {
+    fn plan(
+        &self,
+        inputs: ColormapInputs,
+        params: ColormapParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
+        let (levels, colours, slot) = match (
+            inputs.ramp,
+            params.levels.is_empty() && params.colours.is_empty(),
+        ) {
             (Some(_), false) => {
                 return Err(Refusal::on(
                     "levels",
@@ -84,7 +97,10 @@ impl Operation for Colormap {
             }
             (Some(ramp), true) => (ramp.levels, ramp.colours, "ramp"),
             (None, true) => {
-                return Err(Refusal::on("ramp", "no ramp, and no `levels` and `colours`: a colour map needs its bands"));
+                return Err(Refusal::on(
+                    "ramp",
+                    "no ramp, and no `levels` and `colours`: a colour map needs its bands",
+                ));
             }
             (None, false) => {
                 let mut colours = Vec::with_capacity(params.colours.len());
@@ -113,9 +129,21 @@ impl Operation for Colormap {
                 title: format!("colormap → {title}"),
                 seed,
                 parameters: vec![
-                    Parameter::Double { title: "levelCount".to_string(), value: levels.len() as f64, uom: None },
-                    Parameter::Double { title: "low".to_string(), value: levels[0], uom: None },
-                    Parameter::Double { title: "high".to_string(), value: levels[levels.len() - 1], uom: None },
+                    Parameter::Double {
+                        title: "levelCount".to_string(),
+                        value: levels.len() as f64,
+                        uom: None,
+                    },
+                    Parameter::Double {
+                        title: "low".to_string(),
+                        value: levels[0],
+                        uom: None,
+                    },
+                    Parameter::Double {
+                        title: "high".to_string(),
+                        value: levels[levels.len() - 1],
+                        uom: None,
+                    },
                 ],
             },
             says: Vec::new(),
@@ -128,9 +156,21 @@ impl Operation for Colormap {
 
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
-            Slot::required(name, Need::Number { uom: None, least: None, most: None }, about)
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
         };
-        vec![count("levelCount", "levels"), count("low", "the lowest level"), count("high", "the highest level")]
+        vec![
+            count("levelCount", "levels"),
+            count("low", "the lowest level"),
+            count("high", "the highest level"),
+        ]
     }
 }
 
@@ -139,12 +179,17 @@ impl Operation for Colormap {
 /// `banded`'s own contract, named before any work.
 fn bands_refusal(levels: usize, colours: usize, slot: &'static str) -> Option<Refusal> {
     if levels < 2 {
-        return Some(Refusal::on(slot, format!("a band needs two levels; {levels} given")));
+        return Some(Refusal::on(
+            slot,
+            format!("a band needs two levels; {levels} given"),
+        ));
     }
     if colours != levels {
         return Some(Refusal::on(
             slot,
-            format!("{levels} level(s) and {colours} colour(s): one colour per band, and a band starts at each level"),
+            format!(
+                "{levels} level(s) and {colours} colour(s): one colour per band, and a band starts at each level"
+            ),
         ));
     }
     None
@@ -203,4 +248,3 @@ pub fn write(
         }),
     })
 }
-

@@ -98,7 +98,10 @@
 //!   TODO(reference): verify — the citation above (journal, pages, DOI) was not re-checked against the paper (see `energyml-geostat/src/mba.rs`).
 
 use energyml_analysis::ijk::{self, LatticeError};
-use energyml_analysis::{Barriers, Idw as IdwAnalysis, Kernel as KernelAnalysis, Model as ModelAnalysis, ModelKind, Ordinary, Rbf as RbfAnalysis, empirical};
+use energyml_analysis::{
+    Barriers, Idw as IdwAnalysis, Kernel as KernelAnalysis, Model as ModelAnalysis, ModelKind, Ordinary,
+    Rbf as RbfAnalysis, empirical,
+};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::Topology;
 
@@ -272,7 +275,12 @@ pub struct InterpolateInputs {
 
 /// The title of the object behind a shape, or the shape's name.
 fn title_of(shape: &Shape) -> String {
-    shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.title.clone()).unwrap_or_else(|| shape.name.clone())
+    shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|r| r.title.clone())
+        .unwrap_or_else(|| shape.name.clone())
 }
 
 /// The counts of the grid `onto` names — `[ni, nj]` — or why it is none.
@@ -280,13 +288,20 @@ fn grid_counts(onto: &Shape) -> Result<[usize; 2], Refusal> {
     let [patch] = onto.geometry.patches.as_slice() else {
         return Err(Refusal::on(
             "onto",
-            format!("`{}` holds {} patch(es): the lattice is taken from one 2D grid", title_of(onto), onto.geometry.patches.len()),
+            format!(
+                "`{}` holds {} patch(es): the lattice is taken from one 2D grid",
+                title_of(onto),
+                onto.geometry.patches.len()
+            ),
         ));
     };
     let Topology::Grid { fastest, slowest } = &patch.topology else {
         return Err(Refusal::on(
             "onto",
-            format!("`{}` is no 2D grid: only a Grid2dRepresentation's lattice can be reused", title_of(onto)),
+            format!(
+                "`{}` is no 2D grid: only a Grid2dRepresentation's lattice can be reused",
+                title_of(onto)
+            ),
         ));
     };
     Ok([*fastest, *slowest])
@@ -297,7 +312,11 @@ fn grid_counts(onto: &Shape) -> Result<[usize; 2], Refusal> {
 ///
 /// Its frame is checked against the samples' and against the frame written:
 /// see the module, *Or it is given*.
-pub(crate) fn lattice_onto(onto: &Shape, samples: &Shape, frame: &super::written::FrameParams) -> Result<ijk::Lattice, Refusal> {
+pub(crate) fn lattice_onto(
+    onto: &Shape,
+    samples: &Shape,
+    frame: &super::written::FrameParams,
+) -> Result<ijk::Lattice, Refusal> {
     let counts = grid_counts(onto)?;
     let lattice = ijk::lattice_of(&onto.geometry.patches[0].points, counts).map_err(|why| {
         let title = title_of(onto);
@@ -313,7 +332,9 @@ pub(crate) fn lattice_onto(onto: &Shape, samples: &Shape, frame: &super::written
         )
     })?;
     let frame_of = |shape: &Shape| shape.known.as_ref().and_then(|known| known.crs.clone());
-    let Some(grid_frame) = frame_of(onto) else { return Ok(lattice) };
+    let Some(grid_frame) = frame_of(onto) else {
+        return Ok(lattice);
+    };
     if let Some(seeds_frame) = frame_of(samples)
         && !seeds_frame.uuid.eq_ignore_ascii_case(&grid_frame.uuid)
     {
@@ -331,7 +352,12 @@ pub(crate) fn lattice_onto(onto: &Shape, samples: &Shape, frame: &super::written
     }
     match (&frame.crs, frame.source_epsg) {
         (Some(named), _) => {
-            let uuid = named.0.get("Uuid").and_then(|v| v.as_str()).or_else(|| named.0.as_str()).unwrap_or_default();
+            let uuid = named
+                .0
+                .get("Uuid")
+                .and_then(|v| v.as_str())
+                .or_else(|| named.0.as_str())
+                .unwrap_or_default();
             if !uuid.eq_ignore_ascii_case(&grid_frame.uuid) {
                 return Err(Refusal::on(
                     "crs",
@@ -366,7 +392,9 @@ pub(crate) fn lattice_onto(onto: &Shape, samples: &Shape, frame: &super::written
 fn without_onto(bag: &Pieces) -> Pieces {
     bag.iter()
         .filter(|(name, _)| *name != "onto" && *name != "onto (object)")
-        .fold(Pieces::empty(), |kept, (name, source)| kept.with(name, source.clone()))
+        .fold(Pieces::empty(), |kept, (name, source)| {
+            kept.with(name, source.clone())
+        })
 }
 
 // ---------------------------------------------------------------- the computation
@@ -384,22 +412,44 @@ pub(crate) struct Samples {
 /// The samples of the bound inputs: the shape's nodes, valued by the field
 /// laid over it when there is one, by their elevation otherwise.
 pub(crate) fn samples_of(inputs: &InterpolateInputs) -> Samples {
-    let points: Vec<[f64; 3]> = inputs.shape.geometry.patches.iter().flat_map(|patch| patch.points.iter().copied()).collect();
+    let points: Vec<[f64; 3]> = inputs
+        .shape
+        .geometry
+        .patches
+        .iter()
+        .flat_map(|patch| patch.points.iter().copied())
+        .collect();
     let field = inputs.field.as_ref().map(|field| field.values.clone());
     let from_field = field.is_some();
     let values = field.unwrap_or_else(|| points.iter().map(|p| p[2]).collect());
-    Samples { name: inputs.shape.name.clone(), at: points.iter().map(|p| [p[0], p[1]]).collect(), values, from_field }
+    Samples {
+        name: inputs.shape.name.clone(),
+        at: points.iter().map(|p| [p[0], p[1]]).collect(),
+        values,
+        from_field,
+    }
 }
 
 /// The lattice the samples ask for: their bounding box, widened and covered
 /// by whole cells of `spacing`.
-pub(crate) fn lattice_for(at: &[[f64; 2]], spacing: f64, margin: f64) -> Result<([f64; 2], [usize; 2]), Error> {
+pub(crate) fn lattice_for(
+    at: &[[f64; 2]],
+    spacing: f64,
+    margin: f64,
+) -> Result<([f64; 2], [usize; 2]), Error> {
     if !(spacing.is_finite() && spacing > 0.0) {
-        return Err(Refusal::about("value", "spacing", format!("`spacing` must be a positive length — {spacing} given")).into());
+        return Err(Refusal::about(
+            "value",
+            "spacing",
+            format!("`spacing` must be a positive length — {spacing} given"),
+        )
+        .into());
     }
     let finite: Vec<&[f64; 2]> = at.iter().filter(|p| p.iter().all(|c| c.is_finite())).collect();
     if finite.is_empty() {
-        return Err(Error::new("no sample has a finite position: there is no extent to grid".to_string()));
+        return Err(Error::new(
+            "no sample has a finite position: there is no extent to grid".to_string(),
+        ));
     }
     let fold = |pick: fn(f64, f64) -> f64, axis: usize| finite.iter().map(|p| p[axis]).fold(f64::NAN, pick);
     let (x0, x1) = (fold(f64::min, 0) - margin, fold(f64::max, 0) + margin);
@@ -434,7 +484,9 @@ pub(crate) fn lattice_for(at: &[[f64; 2]], spacing: f64, margin: f64) -> Result<
 pub(crate) fn queries(origin: [f64; 2], steps: [f64; 2], counts: [usize; 2]) -> Vec<[f64; 2]> {
     let [ni, nj] = counts;
     (0..nj)
-        .flat_map(|j| (0..ni).map(move |i| [origin[0] + i as f64 * steps[0], origin[1] + j as f64 * steps[1]]))
+        .flat_map(|j| {
+            (0..ni).map(move |i| [origin[0] + i as f64 * steps[0], origin[1] + j as f64 * steps[1]])
+        })
         .collect()
 }
 
@@ -449,12 +501,21 @@ struct Ran {
 }
 
 fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double { title: title.to_string(), value, uom: None }
+    Parameter::Double {
+        title: title.to_string(),
+        value,
+        uom: None,
+    }
 }
 
 /// The run — **one arm per case of the union**, each reading only its own
 /// settings, because those are the only ones its case has.
-fn run(method: &Method, samples: &Samples, queries: &[[f64; 2]], faults: Option<Barriers>) -> Result<Ran, Error> {
+fn run(
+    method: &Method,
+    samples: &Samples,
+    queries: &[[f64; 2]],
+    faults: Option<Barriers>,
+) -> Result<Ran, Error> {
     let refuse = |e: energyml_analysis::Error| Error::new(e.to_string());
     let mut parameters = Vec::new();
     if let Some(faults) = &faults {
@@ -475,8 +536,16 @@ fn run(method: &Method, samples: &Samples, queries: &[[f64; 2]], faults: Option<
                 parameters.push(double("neighbours", k as f64));
             }
             parameters.push(double("power", settings.power));
-            let answer = idw.interpolate(&samples.at, &samples.values, queries).map_err(refuse)?;
-            Ok(Ran { values: answer.values, set_aside: answer.set_aside, unreached: answer.unreached, parameters, says: Vec::new() })
+            let answer = idw
+                .interpolate(&samples.at, &samples.values, queries)
+                .map_err(refuse)?;
+            Ok(Ran {
+                values: answer.values,
+                set_aside: answer.set_aside,
+                unreached: answer.unreached,
+                parameters,
+                says: Vec::new(),
+            })
         }
         Method::Kriging(settings) => {
             let mut says = Vec::new();
@@ -497,15 +566,24 @@ fn run(method: &Method, samples: &Samples, queries: &[[f64; 2]], faults: Option<
                 }
                 VariogramModel::Spherical(stated) => (
                     "spherical",
-                    ModelAnalysis::new(ModelKind::Spherical, stated.nugget, stated.sill, stated.range).map_err(refuse)?,
+                    ModelAnalysis::new(ModelKind::Spherical, stated.nugget, stated.sill, stated.range)
+                        .map_err(refuse)?,
                 ),
                 VariogramModel::Exponential(stated) => (
                     "exponential",
-                    ModelAnalysis::new(ModelKind::Exponential, stated.nugget, stated.sill, stated.range).map_err(refuse)?,
+                    ModelAnalysis::new(ModelKind::Exponential, stated.nugget, stated.sill, stated.range)
+                        .map_err(refuse)?,
                 ),
             };
-            parameters.push(Parameter::Text { title: "model".to_string(), value: named.to_string() });
-            for (title, value) in [("nugget", model.nugget), ("sill", model.sill), ("range", model.range)] {
+            parameters.push(Parameter::Text {
+                title: "model".to_string(),
+                value: named.to_string(),
+            });
+            for (title, value) in [
+                ("nugget", model.nugget),
+                ("sill", model.sill),
+                ("range", model.range),
+            ] {
                 parameters.push(double(title, value));
             }
             // Only the estimates: the grid writes no variance, and asking for
@@ -525,8 +603,16 @@ fn run(method: &Method, samples: &Samples, queries: &[[f64; 2]], faults: Option<
             if let Some(faults) = faults {
                 kriging = kriging.with_barriers(faults);
             }
-            let answer = kriging.interpolate(&samples.at, &samples.values, queries).map_err(refuse)?;
-            Ok(Ran { values: answer.values, set_aside: answer.set_aside, unreached: answer.unreached, parameters, says })
+            let answer = kriging
+                .interpolate(&samples.at, &samples.values, queries)
+                .map_err(refuse)?;
+            Ok(Ran {
+                values: answer.values,
+                set_aside: answer.set_aside,
+                unreached: answer.unreached,
+                parameters,
+                says,
+            })
         }
         Method::Rbf(settings) => {
             if faults.is_some() {
@@ -546,22 +632,45 @@ fn run(method: &Method, samples: &Samples, queries: &[[f64; 2]], faults: Option<
                 RadialKernel::Linear => ("linear", KernelAnalysis::Linear),
                 RadialKernel::Multiquadric(shape) => {
                     parameters.push(double("epsilon", shape.epsilon));
-                    ("multiquadric", KernelAnalysis::Multiquadric { epsilon: shape.epsilon })
+                    (
+                        "multiquadric",
+                        KernelAnalysis::Multiquadric {
+                            epsilon: shape.epsilon,
+                        },
+                    )
                 }
                 RadialKernel::Gaussian(shape) => {
                     parameters.push(double("epsilon", shape.epsilon));
-                    ("gaussian", KernelAnalysis::Gaussian { epsilon: shape.epsilon })
+                    (
+                        "gaussian",
+                        KernelAnalysis::Gaussian {
+                            epsilon: shape.epsilon,
+                        },
+                    )
                 }
             };
-            parameters.push(Parameter::Text { title: "kernel".to_string(), value: named.to_string() });
-            let answer = RbfAnalysis::new(kernel).interpolate(&samples.at, &samples.values, queries).map_err(refuse)?;
+            parameters.push(Parameter::Text {
+                title: "kernel".to_string(),
+                value: named.to_string(),
+            });
+            let answer = RbfAnalysis::new(kernel)
+                .interpolate(&samples.at, &samples.values, queries)
+                .map_err(refuse)?;
             let unreached = answer.values.iter().filter(|v| !v.is_finite()).count();
-            Ok(Ran { values: answer.values, set_aside: answer.set_aside, unreached, parameters, says: Vec::new() })
+            Ok(Ran {
+                values: answer.values,
+                set_aside: answer.set_aside,
+                unreached,
+                parameters,
+                says: Vec::new(),
+            })
         }
         // `Method::Mba` is planned by `super::interpolate_mba::plan` before
         // `run` is ever called — see the arm added to `Operation::plan`
         // below. This arm only keeps the match exhaustive.
-        Method::Mba(_) => Err(Error::new("`mba` is planned by `interpolate_mba::plan`, never `run`".to_string())),
+        Method::Mba(_) => Err(Error::new(
+            "`mba` is planned by `interpolate_mba::plan`, never `run`".to_string(),
+        )),
     }
 }
 
@@ -602,9 +711,18 @@ impl Operation for Interpolate {
     }
 
     fn check(&self, inputs: &InterpolateInputs) -> Result<(), Refusal> {
-        let nodes: usize = inputs.shape.geometry.patches.iter().map(|patch| patch.points.len()).sum();
+        let nodes: usize = inputs
+            .shape
+            .geometry
+            .patches
+            .iter()
+            .map(|patch| patch.points.len())
+            .sum();
         if nodes < 3 {
-            return Err(Refusal::on("shape", format!("an interpolation needs at least 3 samples; the shape holds {nodes}")));
+            return Err(Refusal::on(
+                "shape",
+                format!("an interpolation needs at least 3 samples; the shape holds {nodes}"),
+            ));
         }
         if let Some(onto) = &inputs.onto {
             grid_counts(onto)?;
@@ -617,13 +735,21 @@ impl Operation for Interpolate {
         {
             return Err(Refusal::on(
                 "field",
-                format!("lies over `{}`, and the samples are `{}`", field.over, inputs.shape.name),
+                format!(
+                    "lies over `{}`, and the samples are `{}`",
+                    field.over, inputs.shape.name
+                ),
             ));
         }
         Ok(())
     }
 
-    fn plan(&self, inputs: InterpolateInputs, params: InterpolateParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: InterpolateInputs,
+        params: InterpolateParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         if let Method::Mba(settings) = &params.method {
             return super::interpolate_mba::plan(&inputs, &params, settings, cx);
         }
@@ -657,12 +783,23 @@ impl Operation for Interpolate {
         // trace's z, if it has one, is not what cuts a neighbourhood.
         // Only the traces **at this horizon's depth**: an object holding one
         // trace per horizon must not wall this horizon off with the others'.
-        let horizon_z = inputs.shape.geometry.patches.iter().flat_map(|p| p.points.iter().map(|q| q[2]));
-        let traces: super::triangulate::Traces =
-            inputs.faults.iter().flat_map(|fault| super::triangulate::traces_of(&fault.geometry)).collect();
+        let horizon_z = inputs
+            .shape
+            .geometry
+            .patches
+            .iter()
+            .flat_map(|p| p.points.iter().map(|q| q[2]));
+        let traces: super::triangulate::Traces = inputs
+            .faults
+            .iter()
+            .flat_map(|fault| super::triangulate::traces_of(&fault.geometry))
+            .collect();
         let (kept, other_horizons) =
             super::triangulate::faults_on(traces, horizon_z).map_err(|why| Refusal::on("faults", why))?;
-        let plan_view: Vec<Vec<[f64; 2]>> = kept.into_iter().map(|line| line.into_iter().map(|p| [p[0], p[1]]).collect()).collect();
+        let plan_view: Vec<Vec<[f64; 2]>> = kept
+            .into_iter()
+            .map(|line| line.into_iter().map(|p| [p[0], p[1]]).collect())
+            .collect();
         let faults = if plan_view.is_empty() {
             None
         } else {
@@ -685,12 +822,21 @@ impl Operation for Interpolate {
         // are named as they always were.
         let method = method_word(&params.method);
         let name = format!("{method} of {}", samples.name);
-        let lattice = Lattice { origin, spacing: steps, counts, z: ran.values };
+        let lattice = Lattice {
+            origin,
+            spacing: steps,
+            counts,
+            z: ran.values,
+        };
         let title = params.written.naming.title();
         // The given grid enters the seed — the same samples on another lattice
         // are another grid — and a run without it keeps the seed it had.
         let onto_key = inputs.onto.as_ref().map(|onto| {
-            onto.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.uuid.clone()).unwrap_or_else(|| onto.name.clone())
+            onto.known
+                .as_ref()
+                .and_then(|known| known.reference.as_ref())
+                .map(|r| r.uuid.clone())
+                .unwrap_or_else(|| onto.name.clone())
         });
         let seed = match &onto_key {
             None => format!("{name}:{title}"),
@@ -700,13 +846,19 @@ impl Operation for Interpolate {
 
         plan.activity.recipe = "interpolate";
         plan.activity.title = format!("interpolate → {title}");
-        plan.activity.parameters.push(Parameter::Text { title: "method".to_string(), value: method.to_string() });
+        plan.activity.parameters.push(Parameter::Text {
+            title: "method".to_string(),
+            value: method.to_string(),
+        });
         match &inputs.onto {
             // What the run was told: the grid whose lattice it reused, as an
             // input — `spacing` and `margin` were not asked, so not recorded.
             Some(onto) => {
                 if let Some(reference) = onto.known.as_ref().and_then(|known| known.reference.as_ref()) {
-                    plan.activity.parameters.push(Parameter::Object { title: "input".to_string(), reference: reference.dor() });
+                    plan.activity.parameters.push(Parameter::Object {
+                        title: "input".to_string(),
+                        reference: reference.dor(),
+                    });
                 }
                 plan.says.push(Note {
                     key: "onto",
@@ -729,7 +881,9 @@ impl Operation for Interpolate {
         }
         plan.activity.parameters.push(double("originX", origin[0]));
         plan.activity.parameters.push(double("originY", origin[1]));
-        plan.activity.parameters.push(double("sampleCount", samples.at.len() as f64));
+        plan.activity
+            .parameters
+            .push(double("sampleCount", samples.at.len() as f64));
         plan.activity.parameters.extend(ran.parameters);
         plan.says.extend(ran.says);
         plan.says.push(Note {
@@ -737,22 +891,36 @@ impl Operation for Interpolate {
             detail: format!(
                 "{} sample(s) {}, on a grid of {} by {} at a spacing of {}",
                 samples.at.len(),
-                if samples.from_field { "valued by the field" } else { "valued by their elevation" },
+                if samples.from_field {
+                    "valued by the field"
+                } else {
+                    "valued by their elevation"
+                },
                 counts[0],
                 counts[1],
-                if steps[0] == steps[1] { steps[0].to_string() } else { format!("{} by {}", steps[0], steps[1]) }
+                if steps[0] == steps[1] {
+                    steps[0].to_string()
+                } else {
+                    format!("{} by {}", steps[0], steps[1])
+                }
             ),
         });
         if ran.set_aside > 0 {
             plan.says.push(Note {
                 key: "set-aside",
-                detail: format!("{} sample(s) set aside: a value or a coordinate that is not a finite number", ran.set_aside),
+                detail: format!(
+                    "{} sample(s) set aside: a value or a coordinate that is not a finite number",
+                    ran.set_aside
+                ),
             });
         }
         if ran.unreached > 0 {
             plan.says.push(Note {
                 key: "unreached",
-                detail: format!("{} node(s) out of reach of every sample: written as holes rather than extrapolated", ran.unreached),
+                detail: format!(
+                    "{} node(s) out of reach of every sample: written as holes rather than extrapolated",
+                    ran.unreached
+                ),
             });
         }
         Ok(plan)
@@ -760,7 +928,15 @@ impl Operation for Interpolate {
 
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
-            Slot::required(name, Need::Number { uom: None, least: None, most: None }, about)
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
         };
         support::frame_reports(vec![
             count("nodeCount", "nodes written"),

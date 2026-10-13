@@ -45,7 +45,12 @@ fn parse_colour(text: &str) -> Option<Rgba> {
         return None;
     }
     let byte = |i: usize| u8::from_str_radix(&hex[i..i + 2], 16).ok();
-    Some([byte(0)?, byte(2)?, byte(4)?, if hex.len() == 8 { byte(6)? } else { 255 }])
+    Some([
+        byte(0)?,
+        byte(2)?,
+        byte(4)?,
+        if hex.len() == 8 { byte(6)? } else { 255 },
+    ])
 }
 
 fn hex_of(rgb: [f64; 3]) -> String {
@@ -72,11 +77,13 @@ fn read(nodes: usize, paint: &Paint, joints: &Joint) -> Result<Read, String> {
     }
     let mut colours = Vec::with_capacity(nodes);
     for (k, text) in paint.nodes.iter().enumerate() {
-        colours.push(parse_colour(text).ok_or_else(|| format!("node {k}'s colour {text:?} is not #rrggbbaa"))?);
+        colours
+            .push(parse_colour(text).ok_or_else(|| format!("node {k}'s colour {text:?} is not #rrggbbaa"))?);
     }
     let mut joint = [0, 0, 0, 255];
     if joints.kind != JointKind::None {
-        joint = parse_colour(&joints.colour).ok_or_else(|| format!("the joint colour {:?} is not #rrggbb", joints.colour))?;
+        joint = parse_colour(&joints.colour)
+            .ok_or_else(|| format!("the joint colour {:?} is not #rrggbb", joints.colour))?;
         if !joints.px.is_finite() || joints.px < 0.0 {
             return Err(format!("the joint length {} px is not a length", joints.px));
         }
@@ -84,7 +91,10 @@ fn read(nodes: usize, paint: &Paint, joints: &Joint) -> Result<Read, String> {
             return Err(format!("the joint alpha {} is not a number", joints.alpha));
         }
     }
-    Ok(Read { nodes: colours, joint })
+    Ok(Read {
+        nodes: colours,
+        joint,
+    })
 }
 
 /// Whether a paint fits a well of `nodes` nodes and its colours read: the
@@ -138,12 +148,18 @@ fn at(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
 ///
 /// Consecutive pieces of one colour that touch are one piece.
 pub fn well_pieces(path_px: &[[f64; 2]], paint: &Paint, joints: &Joint) -> Result<Vec<Piece>, String> {
-    let Read { nodes: colours, joint } = read(path_px.len(), paint, joints)?;
+    let Read {
+        nodes: colours,
+        joint,
+    } = read(path_px.len(), paint, joints)?;
     let count = path_px.len();
     if count < 2 {
         return Err(format!("a well of {count} node(s) has no stretch to paint"));
     }
-    if let Some(k) = path_px.iter().position(|p| !(p[0].is_finite() && p[1].is_finite())) {
+    if let Some(k) = path_px
+        .iter()
+        .position(|p| !(p[0].is_finite() && p[1].is_finite()))
+    {
         return Err(format!("node {k} of the well has no position on the drawing"));
     }
     let absent = |k: usize| colours[k][3] < ABSENT_BELOW;
@@ -199,7 +215,11 @@ pub fn well_pieces(path_px: &[[f64; 2]], paint: &Paint, joints: &Joint) -> Resul
         {
             last.points.extend(points.into_iter().skip(1));
         } else {
-            out.push(Piece { points, colour, opacity: 1.0 });
+            out.push(Piece {
+                points,
+                colour,
+                opacity: 1.0,
+            });
         }
     };
 
@@ -213,7 +233,11 @@ pub fn well_pieces(path_px: &[[f64; 2]], paint: &Paint, joints: &Joint) -> Resul
             continue;
         }
         let from = colours[k];
-        let to = if paint.blend == Blend::Smooth && !absent(k + 1) { colours[k + 1] } else { from };
+        let to = if paint.blend == Blend::Smooth && !absent(k + 1) {
+            colours[k + 1]
+        } else {
+            from
+        };
         // The stretch cut where a joint span begins or ends inside it, each
         // part either joint or paint.
         let (s0, s1) = (arc[k], arc[k + 1]);
@@ -241,9 +265,15 @@ pub fn well_pieces(path_px: &[[f64; 2]], paint: &Paint, joints: &Joint) -> Resul
             } else {
                 let n = (((u1 - u0) * len / SMOOTH_STEP_PX).ceil() as usize).clamp(1, SMOOTH_MOST);
                 for j in 0..n {
-                    let (v0, v1) = (u0 + (u1 - u0) * j as f64 / n as f64, u0 + (u1 - u0) * (j + 1) as f64 / n as f64);
+                    let (v0, v1) = (
+                        u0 + (u1 - u0) * j as f64 / n as f64,
+                        u0 + (u1 - u0) * (j + 1) as f64 / n as f64,
+                    );
                     // The colour at the middle of the sub-piece, along the whole stretch.
-                    push(vec![at(a, b, v0), at(a, b, v1)], hex_of(mix(from, to, (v0 + v1) / 2.0)));
+                    push(
+                        vec![at(a, b, v0), at(a, b, v1)],
+                        hex_of(mix(from, to, (v0 + v1) / 2.0)),
+                    );
                 }
             }
         }

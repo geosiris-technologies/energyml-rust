@@ -10,8 +10,8 @@
 use energyml_providers::error::Error;
 use energyml_providers::terrain;
 use energyml_providers::terrain::{
-    lat_lon_first, lattice_of, read_geotiff, voids_of, wms_raster_request, Protocol, SourceKind, TerrainCatalogue,
-    MAX_PIXELS,
+    MAX_PIXELS, Protocol, SourceKind, TerrainCatalogue, lat_lon_first, lattice_of, read_geotiff, voids_of,
+    wms_raster_request,
 };
 
 fn builtin() -> TerrainCatalogue {
@@ -31,12 +31,18 @@ fn the_builtin_catalogue_parses_and_every_entry_carries_licence_and_attribution(
     assert!(catalogue.sources().len() >= 7, "the seven entries shipped");
     for source in catalogue.sources() {
         assert!(!source.licence.trim().is_empty(), "{} has no licence", source.id);
-        assert!(!source.attribution.trim().is_empty(), "{} has no attribution", source.id);
+        assert!(
+            !source.attribution.trim().is_empty(),
+            "{} has no attribution",
+            source.id
+        );
         assert!(source.resolution_m > 0.0, "{} has no resolution", source.id);
         assert!(!source.crs.is_empty(), "{} lists no CRS", source.id);
     }
     let rge = catalogue.get("ign-rge-alti").expect("RGE ALTI is there");
-    assert!(matches!(&rge.protocol, Protocol::WmsRaster { layer, .. } if layer == "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES"));
+    assert!(
+        matches!(&rge.protocol, Protocol::WmsRaster { layer, .. } if layer == "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES")
+    );
     assert!(!rge.needs_key);
 }
 
@@ -78,7 +84,10 @@ fn a_user_entry_replaces_the_builtin_with_the_same_id_and_is_tried_first() {
 
     // replaced, not duplicated: one new id, one replaced id
     assert_eq!(merged.sources().len(), before + 1);
-    assert_eq!(merged.sources().iter().filter(|s| s.id == "ign-rge-alti").count(), 1);
+    assert_eq!(
+        merged.sources().iter().filter(|s| s.id == "ign-rge-alti").count(),
+        1
+    );
     let rge = merged.get("ign-rge-alti").unwrap();
     assert_eq!(rge.resolution_m, 7.0, "the user's entry wins");
     assert_eq!(rge.title, "mine");
@@ -88,7 +97,11 @@ fn a_user_entry_replaces_the_builtin_with_the_same_id_and_is_tried_first() {
     assert_eq!(merged.sources()[1].id, "mine-too");
 
     // and a tie on resolution is won by the user's entry
-    let tie = TerrainCatalogue::parse(&format!(r#"{{"sources":[{}]}}"#, one("user-30", 30.0, "[[-180,-90,180,90]]"))).unwrap();
+    let tie = TerrainCatalogue::parse(&format!(
+        r#"{{"sources":[{}]}}"#,
+        one("user-30", 30.0, "[[-180,-90,180,90]]")
+    ))
+    .unwrap();
     let merged = builtin().with_user(tie);
     let found = merged.covering(SourceKind::Relief, [100.0, -10.0, 100.5, -9.5]);
     assert_eq!(found[0].id, "user-30", "same 30 m as Copernicus, user first");
@@ -100,20 +113,43 @@ fn covering_ranks_by_resolution_and_a_covered_box_is_not_a_partial_one() {
     let catalogue = builtin();
     // Central Paris: inside every French relief source and the world ones.
     let paris = [2.30, 48.84, 2.36, 48.88];
-    let ids: Vec<&str> = catalogue.covering(SourceKind::Relief, paris).iter().map(|s| s.id.as_str()).collect();
-    assert_eq!(ids.first().copied(), Some("ign-lidar-hd-mnt"), "0.5 m first: {ids:?}");
-    let resolutions: Vec<f64> =
-        catalogue.covering(SourceKind::Relief, paris).iter().map(|s| s.resolution_m).collect();
-    assert!(resolutions.windows(2).all(|w| w[0] <= w[1]), "ascending metres: {resolutions:?}");
+    let ids: Vec<&str> = catalogue
+        .covering(SourceKind::Relief, paris)
+        .iter()
+        .map(|s| s.id.as_str())
+        .collect();
+    assert_eq!(
+        ids.first().copied(),
+        Some("ign-lidar-hd-mnt"),
+        "0.5 m first: {ids:?}"
+    );
+    let resolutions: Vec<f64> = catalogue
+        .covering(SourceKind::Relief, paris)
+        .iter()
+        .map(|s| s.resolution_m)
+        .collect();
+    assert!(
+        resolutions.windows(2).all(|w| w[0] <= w[1]),
+        "ascending metres: {resolutions:?}"
+    );
     assert!(ids.contains(&"copernicus-dem-30"));
 
     // Only Imagery sources are offered for Imagery.
-    assert!(catalogue.covering(SourceKind::Imagery, paris).iter().all(|s| s.kind == SourceKind::Imagery));
+    assert!(
+        catalogue
+            .covering(SourceKind::Imagery, paris)
+            .iter()
+            .all(|s| s.kind == SourceKind::Imagery)
+    );
 
     // A box that sticks out of metropolitan France is not covered by the
     // metropolitan LiDAR HD, though it overlaps it.
     let across = [9.0, 45.0, 12.0, 46.0];
-    let ids: Vec<&str> = catalogue.covering(SourceKind::Relief, across).iter().map(|s| s.id.as_str()).collect();
+    let ids: Vec<&str> = catalogue
+        .covering(SourceKind::Relief, across)
+        .iter()
+        .map(|s| s.id.as_str())
+        .collect();
     assert!(!ids.contains(&"ign-lidar-hd-mnt"), "{ids:?}");
 }
 
@@ -128,12 +164,19 @@ fn nothing_covering_an_area_is_empty_and_the_refusal_names_the_area_and_the_sour
     let brazil = [-47.9, -15.9, -47.8, -15.8];
     assert!(only_france.covering(SourceKind::Relief, brazil).is_empty());
     let why = message(only_france.refusal(SourceKind::Relief, brazil));
-    assert!(why.contains("-47.9") && why.contains("-15.8"), "names the area: {why}");
+    assert!(
+        why.contains("-47.9") && why.contains("-15.8"),
+        "names the area: {why}"
+    );
     assert!(why.contains("france-only"), "names what was considered: {why}");
 
     // No building source at all: said as such, not as an empty list.
     let catalogue = builtin();
-    assert!(catalogue.covering(SourceKind::Buildings, [2.3, 48.8, 2.4, 48.9]).is_empty());
+    assert!(
+        catalogue
+            .covering(SourceKind::Buildings, [2.3, 48.8, 2.4, 48.9])
+            .is_empty()
+    );
     let why = message(catalogue.refusal(SourceKind::Buildings, [2.3, 48.8, 2.4, 48.9]));
     assert!(why.contains("no buildings source at all"), "{why}");
 }
@@ -182,7 +225,10 @@ fn the_bbox_axis_order_follows_the_crs_projected_xy_geographic_latlon() {
     let request = wms_raster_request(rge, [651000.0, 6860000.0, 652000.0, 6861000.0], 2154, 20, 20).unwrap();
     let q = query_of(&request.url);
     assert_eq!(q["CRS"], "EPSG:2154");
-    assert_eq!(numbers(&q["BBOX"]), vec![651000.0, 6860000.0, 652000.0, 6861000.0]);
+    assert_eq!(
+        numbers(&q["BBOX"]),
+        vec![651000.0, 6860000.0, 652000.0, 6861000.0]
+    );
     assert_eq!(q["VERSION"], "1.3.0");
     assert_eq!(q["REQUEST"], "GetMap");
     assert_eq!(q["LAYERS"], "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES");
@@ -194,7 +240,11 @@ fn the_bbox_axis_order_follows_the_crs_projected_xy_geographic_latlon() {
     let request = wms_raster_request(rge, [2.0, 48.0, 2.1, 48.1], 4326, 10, 10).unwrap();
     let q = query_of(&request.url);
     assert_eq!(q["CRS"], "EPSG:4326");
-    assert_eq!(numbers(&q["BBOX"]), vec![48.0, 2.0, 48.1, 2.1], "WMS 1.3.0, EPSG:4326: lat,lon");
+    assert_eq!(
+        numbers(&q["BBOX"]),
+        vec![48.0, 2.0, 48.1, 2.1],
+        "WMS 1.3.0, EPSG:4326: lat,lon"
+    );
 
     assert!(lat_lon_first(4326) && !lat_lon_first(2154));
 }
@@ -206,7 +256,10 @@ fn refusals_before_any_request_size_crs_window_and_unread_protocols() {
     let rge = catalogue.get("ign-rge-alti").unwrap();
     let window = [651000.0, 6860000.0, 652000.0, 6861000.0];
 
-    assert!(wms_raster_request(rge, window, 2154, MAX_PIXELS, MAX_PIXELS).is_ok(), "5010 is the limit, accepted");
+    assert!(
+        wms_raster_request(rge, window, 2154, MAX_PIXELS, MAX_PIXELS).is_ok(),
+        "5010 is the limit, accepted"
+    );
     assert_eq!(MAX_PIXELS, 5010);
     assert!(message(wms_raster_request(rge, window, 2154, 5011, 10).unwrap_err()).contains("5010"));
     assert!(message(wms_raster_request(rge, window, 2154, 10, 5011).unwrap_err()).contains("5010"));
@@ -219,7 +272,11 @@ fn refusals_before_any_request_size_crs_window_and_unread_protocols() {
     assert!(wms_raster_request(rge, [652000.0, 6861000.0, 651000.0, 6860000.0], 2154, 10, 10).is_err());
 
     // Protocols with no builder: refused by name, never an empty answer.
-    for (id, name) in [("copernicus-dem-30", "cog"), ("aws-terrain-tiles", "xyzTerrarium"), ("ign-ortho", "wmts")] {
+    for (id, name) in [
+        ("copernicus-dem-30", "cog"),
+        ("aws-terrain-tiles", "xyzTerrarium"),
+        ("ign-ortho", "wmts"),
+    ] {
         let source = catalogue.get(id).unwrap();
         let epsg = source.crs[0];
         let why = message(wms_raster_request(source, [0.0, 0.0, 1.0, 1.0], epsg, 10, 10).unwrap_err());
@@ -283,13 +340,28 @@ impl Tiff {
         }
 
         let short = |tag: u16, v: &[u16]| -> Field {
-            (tag, 3, v.len() as u32, v.iter().flat_map(|x| x.to_le_bytes()).collect())
+            (
+                tag,
+                3,
+                v.len() as u32,
+                v.iter().flat_map(|x| x.to_le_bytes()).collect(),
+            )
         };
         let long = |tag: u16, v: &[u32]| -> Field {
-            (tag, 4, v.len() as u32, v.iter().flat_map(|x| x.to_le_bytes()).collect())
+            (
+                tag,
+                4,
+                v.len() as u32,
+                v.iter().flat_map(|x| x.to_le_bytes()).collect(),
+            )
         };
         let doubles = |tag: u16, v: &[f64]| -> Field {
-            (tag, 12, v.len() as u32, v.iter().flat_map(|x| x.to_le_bytes()).collect())
+            (
+                tag,
+                12,
+                v.len() as u32,
+                v.iter().flat_map(|x| x.to_le_bytes()).collect(),
+            )
         };
 
         let mut fields: Vec<Field> = vec![
@@ -367,7 +439,11 @@ fn asymmetric() -> Tiff {
 fn a_fabricated_float32_geotiff_reads_back_with_its_values_origin_and_nodata() {
     let raster = read_geotiff(&asymmetric().build()).unwrap();
     assert_eq!((raster.width, raster.height), (3, 2));
-    assert_eq!(raster.values, vec![1.0, 2.0, 3.0, 4.0, -99999.0, 6.0], "file order, north row first");
+    assert_eq!(
+        raster.values,
+        vec![1.0, 2.0, 3.0, 4.0, -99999.0, 6.0],
+        "file order, north row first"
+    );
     assert_eq!(raster.origin_top_left, [1000.0, 2000.0]);
     assert_eq!(raster.pixel, [10.0, 20.0]);
     assert_eq!(raster.nodata, Some(-99999.0));
@@ -387,7 +463,10 @@ fn several_strips_read_like_one() {
     let mut tiff = Tiff::new(2, 5, values.clone());
     tiff.rows_per_strip = 2;
     let raster = read_geotiff(&tiff.build()).unwrap();
-    assert_eq!(raster.values, values.iter().map(|&v| v as f64).collect::<Vec<_>>());
+    assert_eq!(
+        raster.values,
+        values.iter().map(|&v| v as f64).collect::<Vec<_>>()
+    );
 }
 
 /// To make it fail: do not flip the rows, or forget the half pixel (origin = corner instead of centre).
@@ -455,7 +534,10 @@ fn a_sentinel_the_file_does_not_declare_is_a_hole_and_is_counted_apart() {
     assert!(hole[4 * 9 + 4]);
     let lattice = lattice_of(&raster).unwrap();
     assert_eq!(lattice.z.iter().filter(|v| v.is_nan()).count(), 1);
-    assert!(lattice.z.iter().all(|v| v.is_nan() || *v == 50.0), "no -9999 is left as a height");
+    assert!(
+        lattice.z.iter().all(|v| v.is_nan() || *v == 50.0),
+        "no -9999 is left as a height"
+    );
 
     // The declared one is counted as declared.
     tiff = field(-99999.0, &[]);
@@ -471,7 +553,11 @@ fn a_declared_value_is_compared_as_the_float32_it_was_stored_as() {
     let mut tiff = field(-3.4e38_f32, &[]);
     tiff.nodata = Some("-3.4e38");
     let raster = read_geotiff(&tiff.build()).unwrap();
-    assert_ne!(raster.values[4 * 9 + 4], -3.4e38_f64, "the premise: a strict f64 comparison misses it");
+    assert_ne!(
+        raster.values[4 * 9 + 4],
+        -3.4e38_f64,
+        "the premise: a strict f64 comparison misses it"
+    );
     let (hole, voids) = voids_of(&raster);
     assert!(hole[4 * 9 + 4]);
     assert_eq!(voids.declared, 1);
@@ -501,8 +587,14 @@ fn a_resampled_answer_loses_the_pixels_its_blend_reached_and_no_more() {
     }
     let raster = read_geotiff(&field(-9999.0, &edits).build()).unwrap();
     let (hole, voids) = voids_of(&raster);
-    assert_eq!(voids.undeclared, 9, "the centre and its eight neighbours are under the floor");
-    assert_eq!(voids.blended_ring, 40, "the 7 x 7 block is 49 pixels, 9 of them under the floor");
+    assert_eq!(
+        voids.undeclared, 9,
+        "the centre and its eight neighbours are under the floor"
+    );
+    assert_eq!(
+        voids.blended_ring, 40,
+        "the 7 x 7 block is 49 pixels, 9 of them under the floor"
+    );
     assert_eq!(voids.total(), 49);
     for r in 0..9usize {
         for c in 0..9usize {
@@ -511,7 +603,10 @@ fn a_resampled_answer_loses_the_pixels_its_blend_reached_and_no_more() {
         }
     }
     let z = lattice_of(&raster).unwrap().z;
-    assert!(z.iter().all(|v| v.is_nan() || *v == 50.0), "no blend survives as a height");
+    assert!(
+        z.iter().all(|v| v.is_nan() || *v == 50.0),
+        "no blend survives as a height"
+    );
 }
 
 /// Rule: a whole-number sentinel alone is no evidence of resampling, so a
@@ -582,7 +677,10 @@ fn what_is_not_read_is_refused_by_name() {
 
     let mut cut = asymmetric().build();
     cut.truncate(cut.len() - 20);
-    assert!(read_geotiff(&cut).is_err(), "a cut file is an error, not a short raster");
+    assert!(
+        read_geotiff(&cut).is_err(),
+        "a cut file is an error, not a short raster"
+    );
 }
 
 // -- asking for a window, and reading what comes back ------------------------
@@ -603,7 +701,10 @@ fn a_window_is_snapped_to_whole_pixels_of_the_step() {
     assert_eq!(ask.layer(), "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES");
     assert_eq!(ask.service(), "https://data.geopf.fr/wms-r");
     let query = query_of(&ask.request.url);
-    assert_eq!(numbers(&query["BBOX"]), vec![651_000.0, 6_860_000.0, 652_200.0, 6_861_200.0]);
+    assert_eq!(
+        numbers(&query["BBOX"]),
+        vec![651_000.0, 6_860_000.0, 652_200.0, 6_861_200.0]
+    );
     assert_eq!((query["WIDTH"].as_str(), query["HEIGHT"].as_str()), ("4", "4"));
 }
 
@@ -615,14 +716,21 @@ fn a_window_is_snapped_to_whole_pixels_of_the_step() {
 fn left_to_choose_the_finest_readable_relief_source_is_taken() {
     let catalogue = builtin();
     let ask = terrain::ask(&catalogue, None, PARIS, 2154, PARIS_WGS84, 50.0).expect("asked");
-    assert!(matches!(ask.source.protocol, terrain::Protocol::WmsRaster { .. }), "{}", ask.source.id);
+    assert!(
+        matches!(ask.source.protocol, terrain::Protocol::WmsRaster { .. }),
+        "{}",
+        ask.source.id
+    );
     let readable: Vec<f64> = catalogue
         .covering(terrain::SourceKind::Relief, PARIS_WGS84)
         .into_iter()
         .filter(|one| matches!(one.protocol, terrain::Protocol::WmsRaster { .. }))
         .map(|one| one.resolution_m)
         .collect();
-    assert_eq!(ask.source.resolution_m, readable.iter().cloned().fold(f64::MAX, f64::min));
+    assert_eq!(
+        ask.source.resolution_m,
+        readable.iter().cloned().fold(f64::MAX, f64::min)
+    );
 }
 
 /// Refused by name, each with what to do. To make it fail: let an image through
@@ -630,21 +738,36 @@ fn left_to_choose_the_finest_readable_relief_source_is_taken() {
 #[test]
 fn a_window_is_refused_by_name_before_anything_is_asked() {
     let catalogue = builtin();
-    let too_wide = message(terrain::ask(&catalogue, Some("ign-rge-alti"), PARIS, 2154, PARIS_WGS84, 0.1).unwrap_err());
-    assert!(too_wide.contains("5010") && too_wide.contains("a step of 1 or more"), "{too_wide}");
-    let unknown = message(terrain::ask(&catalogue, Some("nowhere"), PARIS, 2154, PARIS_WGS84, 50.0).unwrap_err());
-    assert!(unknown.contains("no source `nowhere`") && unknown.contains("ign-rge-alti"), "{unknown}");
-    let imagery = message(terrain::ask(&catalogue, Some("ign-ortho"), PARIS, 2154, PARIS_WGS84, 50.0).unwrap_err());
+    let too_wide =
+        message(terrain::ask(&catalogue, Some("ign-rge-alti"), PARIS, 2154, PARIS_WGS84, 0.1).unwrap_err());
+    assert!(
+        too_wide.contains("5010") && too_wide.contains("a step of 1 or more"),
+        "{too_wide}"
+    );
+    let unknown =
+        message(terrain::ask(&catalogue, Some("nowhere"), PARIS, 2154, PARIS_WGS84, 50.0).unwrap_err());
+    assert!(
+        unknown.contains("no source `nowhere`") && unknown.contains("ign-rge-alti"),
+        "{unknown}"
+    );
+    let imagery =
+        message(terrain::ask(&catalogue, Some("ign-ortho"), PARIS, 2154, PARIS_WGS84, 50.0).unwrap_err());
     assert!(imagery.contains("a terrain is relief"), "{imagery}");
-    let flat = message(terrain::ask(&catalogue, Some("ign-rge-alti"), PARIS, 2154, PARIS_WGS84, 0.0).unwrap_err());
+    let flat =
+        message(terrain::ask(&catalogue, Some("ign-rge-alti"), PARIS, 2154, PARIS_WGS84, 0.0).unwrap_err());
     assert!(flat.contains("positive"), "{flat}");
     let far = [-80.0, -40.0, -79.9, -39.9];
-    let outside = message(terrain::ask(&catalogue, Some("ign-lidar-hd-mnt"), PARIS, 2154, far, 50.0).unwrap_err());
+    let outside =
+        message(terrain::ask(&catalogue, Some("ign-lidar-hd-mnt"), PARIS, 2154, far, 50.0).unwrap_err());
     assert!(outside.contains("does not cover"), "{outside}");
 }
 
 fn answer(status: u16, body: Vec<u8>) -> energyml_providers::transport::Answer {
-    energyml_providers::transport::Answer { status, content_type: None, body: Box::new(std::io::Cursor::new(body)) }
+    energyml_providers::transport::Answer {
+        status,
+        content_type: None,
+        body: Box::new(std::io::Cursor::new(body)),
+    }
 }
 
 /// **A refusal is the server's words**, even sent with a 200: a WMS answers
@@ -654,7 +777,10 @@ fn answer(status: u16, body: Vec<u8>) -> energyml_providers::transport::Answer {
 fn what_a_service_answers_instead_of_a_tiff_is_its_own_refusal() {
     let xml = b"<ServiceExceptionReport><ServiceException code=\"InvalidCRS\">CRS EPSG:9999 unknown</ServiceException></ServiceExceptionReport>".to_vec();
     let refused = terrain::read_answer(answer(200, xml), 1 << 20).unwrap_err();
-    assert!(matches!(&refused, Error::Server { status: 200, .. }), "{refused:?}");
+    assert!(
+        matches!(&refused, Error::Server { status: 200, .. }),
+        "{refused:?}"
+    );
     assert!(message(refused).contains("EPSG:9999 unknown"));
     let tiff = asymmetric().build();
     let raster = terrain::read_answer(answer(200, tiff), 1 << 20).expect("a tiff reads");
@@ -672,14 +798,23 @@ fn what_a_service_answers_instead_of_a_tiff_is_its_own_refusal() {
 fn the_area_in_degrees_envelopes_all_four_corners() {
     // A fake projection that shears: x' = x + y/10, y' = y. Two opposite corners
     // alone would miss the east edge of the top row.
-    let shear = |p: [f64; 3]| -> std::result::Result<[f64; 3], String> { Ok([p[0] + p[1] / 10.0, p[1], 0.0]) };
+    let shear =
+        |p: [f64; 3]| -> std::result::Result<[f64; 3], String> { Ok([p[0] + p[1] / 10.0, p[1], 0.0]) };
     let degrees = terrain::area_wgs84([0.0, 0.0, 10.0, 20.0], 2154, shear).unwrap();
     assert_eq!(degrees, [0.0, 0.0, 12.0, 20.0]);
     // Degrees already: untouched, the projection never asked.
     let never = |_: [f64; 3]| -> std::result::Result<[f64; 3], String> { Err("asked".into()) };
-    assert_eq!(terrain::area_wgs84([1.0, 2.0, 3.0, 4.0], 4326, never).unwrap(), [1.0, 2.0, 3.0, 4.0]);
+    assert_eq!(
+        terrain::area_wgs84([1.0, 2.0, 3.0, 4.0], 4326, never).unwrap(),
+        [1.0, 2.0, 3.0, 4.0]
+    );
     // A failing projection and a degenerate area are refused by name.
-    assert!(terrain::area_wgs84([0.0, 0.0, 1.0, 1.0], 2154, never).unwrap_err().to_string().contains("asked"));
+    assert!(
+        terrain::area_wgs84([0.0, 0.0, 1.0, 1.0], 2154, never)
+            .unwrap_err()
+            .to_string()
+            .contains("asked")
+    );
     assert!(terrain::area_wgs84([1.0, 0.0, 0.0, 1.0], 2154, shear).is_err());
 }
 
@@ -706,7 +841,21 @@ fn a_wmts_in_pm_is_a_zxy_template_and_nothing_else_is() {
         "https://x.test/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=A.B&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image%2Fjpeg"
     );
     // No style declared: the standard's `default`.
-    assert!(terrain::tile_template(catalogue.get("nostyle").unwrap()).unwrap().contains("STYLE=default"));
-    assert!(terrain::tile_template(catalogue.get("geo").unwrap()).unwrap_err().to_string().contains("WGS84"));
-    assert!(terrain::tile_template(catalogue.get("wms").unwrap()).unwrap_err().to_string().contains("not a WMTS"));
+    assert!(
+        terrain::tile_template(catalogue.get("nostyle").unwrap())
+            .unwrap()
+            .contains("STYLE=default")
+    );
+    assert!(
+        terrain::tile_template(catalogue.get("geo").unwrap())
+            .unwrap_err()
+            .to_string()
+            .contains("WGS84")
+    );
+    assert!(
+        terrain::tile_template(catalogue.get("wms").unwrap())
+            .unwrap_err()
+            .to_string()
+            .contains("not a WMTS")
+    );
 }

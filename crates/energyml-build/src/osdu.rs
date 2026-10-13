@@ -141,7 +141,9 @@ impl Template {
     /// The column bearing this name, case ignored.
     pub fn column(&self, name: &str) -> Option<&Column> {
         let wanted = name.trim().to_ascii_lowercase();
-        self.columns.iter().find(|c| c.name.trim().to_ascii_lowercase() == wanted)
+        self.columns
+            .iter()
+            .find(|c| c.name.trim().to_ascii_lowercase() == wanted)
     }
 
     /// The column declared for this property kind, if there is only one.
@@ -151,8 +153,11 @@ impl Template {
     /// a well's abscissa at random.
     pub fn for_kind(&self, uuid: &str) -> Result<Option<&Column>, String> {
         let wanted = uuid.to_ascii_lowercase();
-        let found: Vec<&Column> =
-            self.columns.iter().filter(|c| c.kind.as_deref().map(str::to_ascii_lowercase) == Some(wanted.clone())).collect();
+        let found: Vec<&Column> = self
+            .columns
+            .iter()
+            .filter(|c| c.kind.as_deref().map(str::to_ascii_lowercase) == Some(wanted.clone()))
+            .collect();
         match found.as_slice() {
             [] => Ok(None),
             [one] => Ok(Some(one)),
@@ -160,7 +165,10 @@ impl Template {
                 "{} columns are declared for the same property kind ({}): {}",
                 many.len(),
                 uuid,
-                many.iter().map(|c| format!("`{}`", c.name)).collect::<Vec<_>>().join(", ")
+                many.iter()
+                    .map(|c| format!("`{}`", c.name))
+                    .collect::<Vec<_>>()
+                    .join(", ")
             )),
         }
     }
@@ -168,8 +176,8 @@ impl Template {
 
 /// Read a template, in any one of its three forms.
 pub fn read(text: &str) -> Result<Template, Refused> {
-    let root: Value = serde_json::from_str(text)
-        .map_err(|why| Refused::flat(format!("this is not JSON: {why}")))?;
+    let root: Value =
+        serde_json::from_str(text).map_err(|why| Refused::flat(format!("this is not JSON: {why}")))?;
     from_json(&root)
 }
 
@@ -208,7 +216,11 @@ pub fn from_json(root: &Value) -> Result<Template, Refused> {
     for c in &columns {
         *seen.entry(c.name.trim().to_ascii_lowercase()).or_default() += 1;
     }
-    let twice: Vec<String> = seen.iter().filter(|(_, n)| **n > 1).map(|(k, _)| format!("`{k}`")).collect();
+    let twice: Vec<String> = seen
+        .iter()
+        .filter(|(_, n)| **n > 1)
+        .map(|(k, _)| format!("`{k}`"))
+        .collect();
     if !twice.is_empty() {
         return Err(Refused::flat(format!(
             "this template declares the same column more than once ({}) — the mapping keys on the column name",
@@ -216,7 +228,12 @@ pub fn from_json(root: &Value) -> Result<Template, Refused> {
         )));
     }
 
-    Ok(Template { columns, keys, dialect, notes })
+    Ok(Template {
+        columns,
+        keys,
+        dialect,
+        notes,
+    })
 }
 
 /// Where the columns are, depending on the form received.
@@ -262,14 +279,22 @@ fn shape(root: &Value) -> Result<(Vec<Value>, Vec<Value>, Option<Dialect>), Refu
 
 /// The named array, or empty.
 fn array(node: &Value, name: &str) -> Vec<Value> {
-    node.get(name).and_then(Value::as_array).cloned().unwrap_or_default()
+    node.get(name)
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default()
 }
 
 /// What `File.TabularData` says of the reading.
 fn dialect_of(data: &Value) -> Option<Dialect> {
-    let has = ["ColumnSeparator", "ColumnNamesInFirstRow", "NumberOfRowsToSkip", "CommentIndicator"]
-        .iter()
-        .any(|name| data.get(*name).is_some());
+    let has = [
+        "ColumnSeparator",
+        "ColumnNamesInFirstRow",
+        "NumberOfRowsToSkip",
+        "CommentIndicator",
+    ]
+    .iter()
+    .any(|name| data.get(*name).is_some());
     if !has {
         return None;
     }
@@ -284,8 +309,14 @@ fn dialect_of(data: &Value) -> Option<Dialect> {
             Some(s) => s.chars().next(),
             None => base.comment,
         },
-        skip: data.get("NumberOfRowsToSkip").and_then(Value::as_u64).unwrap_or(base.skip as u64) as usize,
-        header: data.get("ColumnNamesInFirstRow").and_then(Value::as_bool).unwrap_or(base.header),
+        skip: data
+            .get("NumberOfRowsToSkip")
+            .and_then(Value::as_u64)
+            .unwrap_or(base.skip as u64) as usize,
+        header: data
+            .get("ColumnNamesInFirstRow")
+            .and_then(Value::as_bool)
+            .unwrap_or(base.header),
         decimal: base.decimal,
     })
 }
@@ -297,10 +328,18 @@ fn with_specifications(mut columns: Vec<Value>, data: &Value) -> Vec<Value> {
         return columns;
     }
     for spec in specs {
-        let Some(name) = spec.get("ColumnName").and_then(Value::as_str) else { continue };
-        let Some(absent) = spec.get("AbsentValue") else { continue };
+        let Some(name) = spec.get("ColumnName").and_then(Value::as_str) else {
+            continue;
+        };
+        let Some(absent) = spec.get("AbsentValue") else {
+            continue;
+        };
         for column in &mut columns {
-            if column.get("ColumnName").and_then(Value::as_str).is_some_and(|n| n.eq_ignore_ascii_case(name)) {
+            if column
+                .get("ColumnName")
+                .and_then(Value::as_str)
+                .is_some_and(|n| n.eq_ignore_ascii_case(name))
+            {
                 if let Some(map) = column.as_object_mut() {
                     map.insert("AbsentValue".to_string(), absent.clone());
                 }
@@ -351,9 +390,20 @@ fn column(entry: &Value, at: usize, notes: &mut Vec<String>) -> Result<Column, R
         .and_then(Value::as_str)
         .map(str::to_string);
 
-    let value_type = entry.get("ValueType").and_then(Value::as_str).map(ValueType::read).unwrap_or_default();
-    let count = entry.get("ValueCount").and_then(Value::as_u64).unwrap_or(1).max(1) as usize;
-    let uom = entry.get("UnitOfMeasureID").and_then(Value::as_str).and_then(tail);
+    let value_type = entry
+        .get("ValueType")
+        .and_then(Value::as_str)
+        .map(ValueType::read)
+        .unwrap_or_default();
+    let count = entry
+        .get("ValueCount")
+        .and_then(Value::as_u64)
+        .unwrap_or(1)
+        .max(1) as usize;
+    let uom = entry
+        .get("UnitOfMeasureID")
+        .and_then(Value::as_str)
+        .and_then(tail);
     let quantity = entry.get("UnitQuantityID").and_then(Value::as_str).and_then(tail);
 
     // The schema: *« Only populated if the ValueType is "number" »*. The earlier
@@ -371,12 +421,31 @@ fn column(entry: &Value, at: usize, notes: &mut Vec<String>) -> Result<Column, R
     let facets = entry
         .get("FacetIDs")
         .and_then(Value::as_array)
-        .map(|list| list.iter().filter_map(Value::as_str).map(str::to_string).collect())
+        .map(|list| {
+            list.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
         .unwrap_or_default();
 
-    let absent = entry.get("AbsentValue").and_then(Value::as_str).map(str::to_string);
+    let absent = entry
+        .get("AbsentValue")
+        .and_then(Value::as_str)
+        .map(str::to_string);
 
-    Ok(Column { name: name.to_string(), kind, label, value_type, count, uom, quantity, facets, absent, notes: mine })
+    Ok(Column {
+        name: name.to_string(),
+        kind,
+        label,
+        value_type,
+        count,
+        uom,
+        quantity,
+        facets,
+        absent,
+        notes: mine,
+    })
 }
 
 /// The reduced form: the fields as this module returns them.
@@ -392,22 +461,39 @@ fn compact_column(entry: &Value, at: usize) -> Result<Column, Refused> {
         .ok_or_else(|| Refused::flat(format!("entry {at} of this template has no `name`")))?;
     Ok(Column {
         name: name.to_string(),
-        kind: entry.get("kind").and_then(Value::as_str).map(|s| s.to_ascii_lowercase()),
+        kind: entry
+            .get("kind")
+            .and_then(Value::as_str)
+            .map(|s| s.to_ascii_lowercase()),
         label: entry.get("label").and_then(Value::as_str).map(str::to_string),
-        value_type: entry.get("valueType").and_then(Value::as_str).map(ValueType::read).unwrap_or_default(),
+        value_type: entry
+            .get("valueType")
+            .and_then(Value::as_str)
+            .map(ValueType::read)
+            .unwrap_or_default(),
         count: entry.get("count").and_then(Value::as_u64).unwrap_or(1).max(1) as usize,
         uom: entry.get("uom").and_then(Value::as_str).map(str::to_string),
         quantity: entry.get("quantity").and_then(Value::as_str).map(str::to_string),
         facets: entry
             .get("facets")
             .and_then(Value::as_array)
-            .map(|list| list.iter().filter_map(Value::as_str).map(str::to_string).collect())
+            .map(|list| {
+                list.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_string)
+                    .collect()
+            })
             .unwrap_or_default(),
         absent: entry.get("absent").and_then(Value::as_str).map(str::to_string),
         notes: entry
             .get("notes")
             .and_then(Value::as_array)
-            .map(|list| list.iter().filter_map(Value::as_str).map(str::to_string).collect())
+            .map(|list| {
+                list.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_string)
+                    .collect()
+            })
             .unwrap_or_default(),
     })
 }
@@ -419,7 +505,9 @@ fn compact_column(entry: &Value, at: usize) -> Result<Column, Refused> {
 /// uri** — an object's uri is read by `EtpUri::parse`, never here — hence this
 /// name, which `recipe.rs` no longer shares.
 fn uuid_of_osdu_id(id: &str) -> Option<String> {
-    id.split(':').find(|part| energyml_core::identifiers::is_uuid(part)).map(|found| found.to_ascii_lowercase())
+    id.split(':')
+        .find(|part| energyml_core::identifiers::is_uuid(part))
+        .map(|found| found.to_ascii_lowercase())
 }
 
 /// The last non-empty part of an OSDU identifier — the name of a unit or
@@ -432,4 +520,3 @@ fn tail(id: &str) -> Option<String> {
     let decoded = last.replace("%20", " ");
     (!decoded.trim().is_empty()).then(|| decoded.trim().to_string())
 }
-

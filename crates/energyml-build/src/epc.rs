@@ -129,9 +129,9 @@ pub fn open(
     match source {
         Some(path) => EpcStore::open(path, registry),
         None => EpcStore::from_reader(
-            Box::new(std::io::Cursor::new(
-                energyml_storage::extract::empty_package(None)?,
-            )),
+            Box::new(std::io::Cursor::new(energyml_storage::extract::empty_package(
+                None,
+            )?)),
             name,
             registry,
         ),
@@ -146,7 +146,8 @@ const INFORMATIVE: &[&str] = &["frame-degrees"];
 /// Does **not** save: the caller decides where the package goes, and a function
 /// that both built and saved would give a caller no way to look before writing.
 pub fn write(store: &mut EpcStore, plan: &Plan, options: &Options) -> Report {
-    let _span = tracing::info_span!("build.write", points = plan.points(), features = plan.features()).entered();
+    let _span =
+        tracing::info_span!("build.write", points = plan.points(), features = plan.features()).entered();
     let mut report = Report {
         skipped: plan.skipped(),
         points: plan.points(),
@@ -176,7 +177,10 @@ pub fn write(store: &mut EpcStore, plan: &Plan, options: &Options) -> Report {
     let made = crate::apply::apply(
         &planned,
         store,
-        &crate::operation::When { creation: options.creation.clone(), originator: options.originator.clone() },
+        &crate::operation::When {
+            creation: options.creation.clone(),
+            originator: options.originator.clone(),
+        },
     );
     report.written = made.written;
     report.refused.extend(made.refused);

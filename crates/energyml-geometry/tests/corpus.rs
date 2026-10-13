@@ -44,7 +44,10 @@ fn declares_nothing(object: &dyn energyml_core::value::Reflect) -> bool {
     }
     patches.iter().all(|patch| {
         matches!(
-            patch.as_object().and_then(|p| p.field("Count")).and_then(|f| f.as_scalar()),
+            patch
+                .as_object()
+                .and_then(|p| p.field("Count"))
+                .and_then(|f| f.as_scalar()),
             Some(Scalar::UInt(0)) | Some(Scalar::Int(0))
         )
     })
@@ -561,7 +564,10 @@ fn a_fault_keeps_the_two_cells_apart() {
                 continue;
             };
             let patch = &geometry.patches[0];
-            let Topology::Hexahedra { cells, dimensions, .. } = &patch.topology else {
+            let Topology::Hexahedra {
+                cells, dimensions, ..
+            } = &patch.topology
+            else {
                 continue;
             };
             // The faulted example, and only it: 2×1×1 with two cells.
@@ -1941,7 +1947,10 @@ fn every_declared_patch_is_read_and_none_is_lost_on_the_way_out() {
     // non-finite ones it counts in `dropped`: a patch read and then lost in
     // the merge would pass every per-patch assertion above it.
     let files = corpus();
-    if skip(&files, "every_declared_patch_is_read_and_none_is_lost_on_the_way_out") {
+    if skip(
+        &files,
+        "every_declared_patch_is_read_and_none_is_lost_on_the_way_out",
+    ) {
         return;
     }
     let mut multi = 0usize;
@@ -1991,7 +2000,10 @@ fn every_declared_patch_is_read_and_none_is_lost_on_the_way_out() {
     // A test that never met a multi-patch representation proved nothing — the
     // first attempt at two checks in the cross-audit suite passed over empty
     // sets, and this clause is what that lesson looks like here.
-    assert!(multi > 0, "no multi-patch representation in the corpus; the assertion never bit");
+    assert!(
+        multi > 0,
+        "no multi-patch representation in the corpus; the assertion never bit"
+    );
     eprintln!("multi-patch representations checked: {multi}");
 }
 
@@ -2055,11 +2067,10 @@ fn a_panel_between_two_real_surfaces_stays_on_its_trace() {
         // A trace crossing the two surfaces' common footprint, corner to
         // corner: it meets material if there is any.
         let finite = |points: &[[f64; 3]], axis: usize, low: bool| -> f64 {
-            points
-                .iter()
-                .map(|p| p[axis])
-                .filter(|v| v.is_finite())
-                .fold(if low { f64::MAX } else { f64::MIN }, if low { f64::min } else { f64::max })
+            points.iter().map(|p| p[axis]).filter(|v| v.is_finite()).fold(
+                if low { f64::MAX } else { f64::MIN },
+                if low { f64::min } else { f64::max },
+            )
         };
         let x0 = finite(&surfaces[0].1, 0, true).max(finite(&surfaces[1].1, 0, true));
         let x1 = finite(&surfaces[0].1, 0, false).min(finite(&surfaces[1].1, 0, false));
@@ -2091,12 +2102,18 @@ fn a_panel_between_two_real_surfaces_stays_on_its_trace() {
         }
 
         for patch in &panel.patches {
-            assert!(!patch.triangles.is_empty(), "a patch with no triangle is not material");
+            assert!(
+                !patch.triangles.is_empty(),
+                "a patch with no triangle is not material"
+            );
             for point in &patch.points {
                 assert!(point.iter().all(|v| v.is_finite()), "{point:?} is not finite");
                 // The trace is horizontal here: every vertex must be on it.
                 assert!((point[1] - mid).abs() < 1e-6, "{point:?} is not on the trace");
-                assert!(point[0] >= x0 - 1e-6 && point[0] <= x1 + 1e-6, "{point:?} leaves the trace");
+                assert!(
+                    point[0] >= x0 - 1e-6 && point[0] <= x1 + 1e-6,
+                    "{point:?} leaves the trace"
+                );
             }
             for triangle in &patch.triangles {
                 for index in triangle {

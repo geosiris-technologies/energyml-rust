@@ -43,7 +43,9 @@ use crate::inherit::{citation, dor, u};
 
 fn store() -> EpcStore {
     EpcStore::from_reader(
-        Box::new(Cursor::new(energyml_storage::extract::empty_package(None).expect("an empty package"))),
+        Box::new(Cursor::new(
+            energyml_storage::extract::empty_package(None).expect("an empty package"),
+        )),
         "relations.epc",
         Arc::new(energyml_schemas::all()),
     )
@@ -57,7 +59,12 @@ fn put(store: &mut EpcStore, object: impl DynObject + 'static) {
 fn feature(store: &mut EpcStore, n: u32) {
     put(
         store,
-        resqml22::WellboreFeature { uuid: u(n), schema_version: "2.2".into(), citation: citation(&format!("feature {n}")), ..Default::default() },
+        resqml22::WellboreFeature {
+            uuid: u(n),
+            schema_version: "2.2".into(),
+            citation: citation(&format!("feature {n}")),
+            ..Default::default()
+        },
     );
 }
 
@@ -124,7 +131,12 @@ fn set(store: &mut EpcStore, n: u32, associations: &[(u32, &[u32])]) {
 fn model(store: &mut EpcStore, n: u32) {
     put(
         store,
-        resqml22::Model { uuid: u(n), schema_version: "2.2".into(), citation: citation("the model"), ..Default::default() },
+        resqml22::Model {
+            uuid: u(n),
+            schema_version: "2.2".into(),
+            citation: citation("the model"),
+            ..Default::default()
+        },
     );
 }
 
@@ -136,7 +148,10 @@ fn earth_model(store: &mut EpcStore, n: u32, model: u32, wells: &[u32]) {
             schema_version: "2.2".into(),
             citation: citation("the earth model"),
             interpreted_feature: dor(&u(model), "resqml22.Model"),
-            wellbore_interpretation_set: wells.iter().map(|w| dor(&u(*w), "resqml22.WellboreInterpretation")).collect(),
+            wellbore_interpretation_set: wells
+                .iter()
+                .map(|w| dor(&u(*w), "resqml22.WellboreInterpretation"))
+                .collect(),
             ..Default::default()
         },
     );
@@ -218,12 +233,24 @@ fn fabricated() -> EpcStore {
     collection(&mut store, 10, eml23::CollectionKindExt::Folder);
     collection(&mut store, 11, eml23::CollectionKindExt::Folder);
     collection(&mut store, 12, eml23::CollectionKindExt::Project);
-    set(&mut store, 20, &[(10, &[3, 4]), (11, &[10]), (10, &[4]), (12, &[11])]);
+    set(
+        &mut store,
+        20,
+        &[(10, &[3, 4]), (11, &[10]), (10, &[4]), (12, &[11])],
+    );
     model(&mut store, 30);
     earth_model(&mut store, 31, 30, &[2]);
     attach(&mut store, 40, 3, IMAGE, PNG);
     attach(&mut store, 41, 1, "resqml22.WellboreFeature", PNG);
-    graphical_set(&mut store, 50, vec![entry("DefaultGraphicalInformation", &[3]), entry("ColorInformation", &[1]), entry("DefaultGraphicalInformation", &[4, 11])]);
+    graphical_set(
+        &mut store,
+        50,
+        vec![
+            entry("DefaultGraphicalInformation", &[3]),
+            entry("ColorInformation", &[1]),
+            entry("DefaultGraphicalInformation", &[4, 11]),
+        ],
+    );
     store
 }
 
@@ -241,13 +268,19 @@ fn digest_of_index(index: &PackageIndex, uuids: &[String]) -> BTreeSet<String> {
             lines.insert(format!("parent {uuid} {rank} {}", parent.uuid));
         }
         for row in index.associations_of(uuid) {
-            lines.insert(format!("association {uuid} {} {} repeated={:?}", row.index, row.collection, row.repeated_of));
+            lines.insert(format!(
+                "association {uuid} {} {} repeated={:?}",
+                row.index, row.collection, row.repeated_of
+            ));
             for member in index.members_of_association(uuid, row.index) {
                 lines.insert(format!("member {uuid} {} {}", row.index, member.uuid));
             }
         }
         for held in index.memberships_of(uuid) {
-            lines.insert(format!("held {uuid} {} {} {}", held.holder, held.association, held.position));
+            lines.insert(format!(
+                "held {uuid} {} {} {}",
+                held.holder, held.association, held.position
+            ));
         }
         if index.is_project(uuid) {
             lines.insert(format!("project {uuid}"));
@@ -259,7 +292,12 @@ fn digest_of_index(index: &PackageIndex, uuids: &[String]) -> BTreeSet<String> {
             lines.insert(format!("attached {uuid} {attachment}"));
         }
         for row in index.graphical_entries_of(uuid) {
-            lines.insert(format!("graphical {uuid} {} {} default={}", row.set, row.entry, row.is_default()));
+            lines.insert(format!(
+                "graphical {uuid} {} {} default={}",
+                row.set,
+                row.entry,
+                row.is_default()
+            ));
         }
     }
     lines
@@ -268,7 +306,13 @@ fn digest_of_index(index: &PackageIndex, uuids: &[String]) -> BTreeSet<String> {
 fn names(object: &dyn Reflect, field: &str) -> Vec<String> {
     let one = |value: &FieldValue<'_>| -> Option<String> {
         let reference = value.as_object()?;
-        Some(reference.field("Uuid")?.as_scalar()?.to_string().to_ascii_lowercase())
+        Some(
+            reference
+                .field("Uuid")?
+                .as_scalar()?
+                .to_string()
+                .to_ascii_lowercase(),
+        )
     };
     match object.field(field) {
         Some(FieldValue::List(items)) => items.iter().filter_map(one).collect(),
@@ -285,16 +329,31 @@ fn reread(store: &EpcStore) -> BTreeSet<String> {
         let uuid = summary.uuid.to_ascii_lowercase();
         let object = store.get_object(&summary.uri).expect("it reads");
         let object: &dyn Reflect = object.as_reflect();
-        let ty = summary.qualified_type.rsplit('.').next().unwrap().trim_start_matches("obj_").to_string();
+        let ty = summary
+            .qualified_type
+            .rsplit('.')
+            .next()
+            .unwrap()
+            .trim_start_matches("obj_")
+            .to_string();
 
-        for (rank, field) in ["RepresentedObject", "RepresentedInterpretation", "InterpretedFeature"].iter().enumerate() {
+        for (rank, field) in [
+            "RepresentedObject",
+            "RepresentedInterpretation",
+            "InterpretedFeature",
+        ]
+        .iter()
+        .enumerate()
+        {
             for parent in names(object, field) {
                 lines.insert(format!("parent {uuid} {rank} {parent}"));
             }
         }
         match ty.as_str() {
             "CollectionsToDataobjectsAssociationSet" => {
-                let Some(FieldValue::List(associations)) = object.field("SingleCollectionAssociation") else { continue };
+                let Some(FieldValue::List(associations)) = object.field("SingleCollectionAssociation") else {
+                    continue;
+                };
                 let mut first: BTreeMap<String, usize> = BTreeMap::new();
                 for (i, association) in associations.iter().enumerate() {
                     let association = association.as_object().expect("an association");
@@ -308,12 +367,17 @@ fn reread(store: &EpcStore) -> BTreeSet<String> {
                     if let Some(collection) = names(association, "Collection").into_iter().next() {
                         let repeated = first.get(&collection).copied();
                         first.entry(collection.clone()).or_insert(i);
-                        lines.insert(format!("association {uuid} {i} {collection} repeated={repeated:?}"));
+                        lines.insert(format!(
+                            "association {uuid} {i} {collection} repeated={repeated:?}"
+                        ));
                     }
                 }
             }
             "DataobjectCollection" => {
-                let project = object.field("Kind").and_then(|k| k.as_scalar()).is_some_and(|k| k.to_string() == "project");
+                let project = object
+                    .field("Kind")
+                    .and_then(|k| k.as_scalar())
+                    .is_some_and(|k| k.to_string() == "project");
                 if project {
                     lines.insert(format!("project {uuid}"));
                 }
@@ -337,7 +401,11 @@ fn reread(store: &EpcStore) -> BTreeSet<String> {
                 for entry in &read.entries {
                     let default = matches!(entry.information, Information::Default { .. });
                     for target in &entry.targets {
-                        lines.insert(format!("graphical {} {uuid} {} default={default}", target.to_ascii_lowercase(), entry.position));
+                        lines.insert(format!(
+                            "graphical {} {uuid} {} default={default}",
+                            target.to_ascii_lowercase(),
+                            entry.position
+                        ));
                     }
                 }
             }
@@ -348,13 +416,20 @@ fn reread(store: &EpcStore) -> BTreeSet<String> {
 }
 
 fn uuids_of(store: &EpcStore) -> Vec<String> {
-    store.resources().into_iter().map(|summary| summary.uuid.to_ascii_lowercase()).collect()
+    store
+        .resources()
+        .into_iter()
+        .map(|summary| summary.uuid.to_ascii_lowercase())
+        .collect()
 }
 
 fn assert_same(label: &str, got: &BTreeSet<String>, wanted: &BTreeSet<String>) {
     let missing: Vec<_> = wanted.difference(got).collect();
     let extra: Vec<_> = got.difference(wanted).collect();
-    assert!(missing.is_empty() && extra.is_empty(), "{label}\n  the index lacks: {missing:#?}\n  the index adds: {extra:#?}");
+    assert!(
+        missing.is_empty() && extra.is_empty(),
+        "{label}\n  the index lacks: {missing:#?}\n  the index adds: {extra:#?}"
+    );
 }
 
 // -- the tables against a second reading ---------------------------------------
@@ -376,8 +451,20 @@ fn the_tables_say_what_a_second_reading_says() {
     let got = digest_of_index(&index, &uuids);
     let wanted = reread(&store);
     // The negative control is in the shape: a digest that holds every table.
-    for table in ["parent ", "association ", "member ", "held ", "project ", "model ", "attached ", "graphical "] {
-        assert!(wanted.iter().any(|line| line.starts_with(table)), "the fabricated package has no `{table}` row to prove anything on");
+    for table in [
+        "parent ",
+        "association ",
+        "member ",
+        "held ",
+        "project ",
+        "model ",
+        "attached ",
+        "graphical ",
+    ] {
+        assert!(
+            wanted.iter().any(|line| line.starts_with(table)),
+            "the fabricated package has no `{table}` row to prove anything on"
+        );
     }
     assert_same("tables against a second reading", &got, &wanted);
     assert!(index.relation_rows() > 0);
@@ -393,9 +480,17 @@ fn a_collection_named_twice_in_a_set_is_marked_repeated_once_and_for_all() {
     let repeated: Vec<(u64, Option<u64>)> = rows.iter().map(|row| (row.index, row.repeated_of)).collect();
     assert_eq!(repeated, vec![(0, None), (1, None), (2, Some(0)), (3, None)]);
     // The way back: who holds folder 11, and who the associations list.
-    let named: Vec<(&str, u64)> = index.collection_named_by(&u(11)).into_iter().map(|(holder, at)| (&*holder.uuid, at)).collect();
+    let named: Vec<(&str, u64)> = index
+        .collection_named_by(&u(11))
+        .into_iter()
+        .map(|(holder, at)| (&*holder.uuid, at))
+        .collect();
     assert_eq!(named, vec![(u(20).as_str(), 1)]);
-    let members: Vec<String> = index.members_of_association(&u(20), 0).into_iter().map(|node| node.uuid.to_string()).collect();
+    let members: Vec<String> = index
+        .members_of_association(&u(20), 0)
+        .into_iter()
+        .map(|node| node.uuid.to_string())
+        .collect();
     assert_eq!(members, vec![u(3), u(4)]);
 }
 
@@ -405,12 +500,24 @@ fn a_collection_named_twice_in_a_set_is_marked_repeated_once_and_for_all() {
 fn who_carries_a_default_graphical_information_is_a_table() {
     let store = fabricated();
     let index = index_of(&store);
-    let default_of = |n: u32| index.graphical_entries_of(&u(n)).iter().any(|row| row.is_default());
+    let default_of = |n: u32| {
+        index
+            .graphical_entries_of(&u(n))
+            .iter()
+            .any(|row| row.is_default())
+    };
     assert!(default_of(3) && default_of(4) && default_of(11));
-    assert!(!default_of(1), "object 1 is decorated by a ColorInformation, not a default one");
+    assert!(
+        !default_of(1),
+        "object 1 is decorated by a ColorInformation, not a default one"
+    );
     assert!(index.is_graphically_decorated(&u(1)));
     assert!(!index.is_graphically_decorated(&u(2)));
-    let sets: Vec<String> = index.graphical_sets().iter().map(|node| node.uuid.to_string()).collect();
+    let sets: Vec<String> = index
+        .graphical_sets()
+        .iter()
+        .map(|node| node.uuid.to_string())
+        .collect();
     assert_eq!(sets, vec![u(50)]);
     assert_eq!(index.graphical_entry_counts(), vec![3]);
 }
@@ -422,8 +529,16 @@ fn who_carries_a_default_graphical_information_is_a_table() {
 fn assert_update_equals_rebuild(store: &EpcStore, updated: &PackageIndex) {
     let uuids = uuids_of(store);
     let rebuilt = digest_of_index(&index_of(store), &uuids);
-    assert_same("updated against rebuilt", &digest_of_index(updated, &uuids), &rebuilt);
-    assert_same("updated against the objects", &digest_of_index(updated, &uuids), &reread(store));
+    assert_same(
+        "updated against rebuilt",
+        &digest_of_index(updated, &uuids),
+        &rebuilt,
+    );
+    assert_same(
+        "updated against the objects",
+        &digest_of_index(updated, &uuids),
+        &reread(store),
+    );
 }
 
 /// A collection that **gains a member**: the member's memberships grow, nobody
@@ -439,15 +554,25 @@ fn a_collection_that_gains_a_member_is_followed_by_the_tables() {
     assert_eq!(before, 0);
 
     // The set 20 writes association 0 again with member 2 added.
-    set(&mut store, 20, &[(10, &[3, 4, 2]), (11, &[10]), (10, &[4]), (12, &[11])]);
+    set(
+        &mut store,
+        20,
+        &[(10, &[3, 4, 2]), (11, &[10]), (10, &[4]), (12, &[11])],
+    );
     let disturbed = index.update(&store, &[u(20)], store.revision());
 
     assert_eq!(index.memberships_of(&u(2)).len(), 1, "2 is now listed once");
     assert_eq!(index.memberships_of(&u(3)).len(), 1, "3 is untouched");
     assert_update_equals_rebuild(&store, &index);
     // The set itself and the new member; not the collection, not the old members.
-    assert!(disturbed.contains(&u(2)) && disturbed.contains(&u(20)), "{disturbed:?}");
-    assert!(!disturbed.contains(&u(3)) && !disturbed.contains(&u(10)), "{disturbed:?}");
+    assert!(
+        disturbed.contains(&u(2)) && disturbed.contains(&u(20)),
+        "{disturbed:?}"
+    );
+    assert!(
+        !disturbed.contains(&u(3)) && !disturbed.contains(&u(10)),
+        "{disturbed:?}"
+    );
 
     // And the walk reads it: 2 now inherits from the folder.
     let has = |identity: &str| (crate::inherit::uuid_of(identity) == u(10)).then_some("folder");
@@ -465,29 +590,33 @@ fn a_collection_whose_kind_changes_is_followed_and_the_walks_through_it_are_drop
     assert!(index.is_project(&u(12)) && !index.is_project(&u(10)));
 
     // Colour on the project 12, which holds the folder 11, which holds 10, which holds 3.
-    let colour = |hue: f64| {
-        GraphicalSet {
-            entries: vec![energyml_domain::color::Entry {
-                position: 0,
-                targets: vec![u(12)],
-                target_uris: Vec::new(),
-                map_uri: None,
-                information: Information::Default {
-                    viewer_kind: None,
-                    viewer_id: None,
-                    elements: vec![energyml_domain::color::ElementInfo {
-                        at: 0,
-                        scope: Scope::WholeObject,
-                        visible: true,
-                        constant_color: Some(energyml_domain::color::Hsv { hue, saturation: 1.0, value: 1.0, alpha: 1.0, title: None }),
-                        constant_alpha: None,
-                        overwrite_color_alpha: false,
-                        active_color: None,
-                    }],
-                },
-            }],
-            notes: Vec::new(),
-        }
+    let colour = |hue: f64| GraphicalSet {
+        entries: vec![energyml_domain::color::Entry {
+            position: 0,
+            targets: vec![u(12)],
+            target_uris: Vec::new(),
+            map_uri: None,
+            information: Information::Default {
+                viewer_kind: None,
+                viewer_id: None,
+                elements: vec![energyml_domain::color::ElementInfo {
+                    at: 0,
+                    scope: Scope::WholeObject,
+                    visible: true,
+                    constant_color: Some(energyml_domain::color::Hsv {
+                        hue,
+                        saturation: 1.0,
+                        value: 1.0,
+                        alpha: 1.0,
+                        title: None,
+                    }),
+                    constant_alpha: None,
+                    overwrite_color_alpha: false,
+                    active_color: None,
+                }],
+            },
+        }],
+        notes: Vec::new(),
     };
     let set_of_colours = colour(120.0);
     let mut cache = ColourCache::new();
@@ -495,12 +624,30 @@ fn a_collection_whose_kind_changes_is_followed_and_the_walks_through_it_are_drop
         let cascade = Cascade::new(&set_of_colours);
         let uuid = u(3);
         let scopes = [Scope::WholeObject];
-        cache.resolve(&cascade, index, store, &[Ask { uri: &uuid, scopes: &scopes }]).remove(0).remove(0)
+        cache
+            .resolve(
+                &cascade,
+                index,
+                store,
+                &[Ask {
+                    uri: &uuid,
+                    scopes: &scopes,
+                }],
+            )
+            .remove(0)
+            .remove(0)
     };
     // A project's collections are not followed: nothing is found, and it is said.
     let answer = ask(&mut cache, &index, &store);
-    assert!(answer.walked.resolution.is_none(), "the colour sits on a project: it is not followed");
-    assert!(answer.walked.notes.iter().any(|note| note.contains("project")), "{:?}", answer.walked.notes);
+    assert!(
+        answer.walked.resolution.is_none(),
+        "the colour sits on a project: it is not followed"
+    );
+    assert!(
+        answer.walked.notes.iter().any(|note| note.contains("project")),
+        "{:?}",
+        answer.walked.notes
+    );
 
     // The collection stops being a project.
     collection(&mut store, 12, eml23::CollectionKindExt::Folder);
@@ -508,10 +655,16 @@ fn a_collection_whose_kind_changes_is_followed_and_the_walks_through_it_are_drop
     assert!(!index.is_project(&u(12)));
     assert_update_equals_rebuild(&store, &index);
     let dropped = cache.disturb(&disturbed);
-    assert_eq!(dropped, 1, "the walk of 3 went through the collection 12; no other was held");
+    assert_eq!(
+        dropped, 1,
+        "the walk of 3 went through the collection 12; no other was held"
+    );
     let answer = ask(&mut cache, &index, &store);
     let found = answer.walked.resolution.expect("a folder is followed");
-    assert_eq!((found.carrier.as_str(), found.value.level), (u(12).as_str(), Level::Collection));
+    assert_eq!(
+        (found.carrier.as_str(), found.value.level),
+        (u(12).as_str(), Level::Collection)
+    );
 }
 
 /// A `GraphicalInformationSet` **modified**: the decoration moves from one
@@ -522,18 +675,33 @@ fn a_graphical_set_that_changes_moves_its_rows() {
     let mut index = index_of(&store);
     assert!(index.is_graphically_decorated(&u(3)));
 
-    graphical_set(&mut store, 50, vec![entry("DefaultGraphicalInformation", &[2]), entry("ColorInformation", &[1])]);
+    graphical_set(
+        &mut store,
+        50,
+        vec![
+            entry("DefaultGraphicalInformation", &[2]),
+            entry("ColorInformation", &[1]),
+        ],
+    );
     let disturbed = index.update(&store, &[u(50)], store.revision());
 
     assert!(!index.is_graphically_decorated(&u(3)), "3 is no longer targeted");
-    assert!(index.graphical_entries_of(&u(2)).iter().any(|row| row.is_default() && row.entry == 0));
+    assert!(
+        index
+            .graphical_entries_of(&u(2))
+            .iter()
+            .any(|row| row.is_default() && row.entry == 0)
+    );
     assert_eq!(index.graphical_entry_counts(), vec![2]);
     assert_update_equals_rebuild(&store, &index);
     // Gained or lost a reference from the set: 2, 3, 4, 11 (and 50 itself).
     for gone in [3, 4, 11, 2] {
         assert!(disturbed.contains(&u(gone)), "{gone}: {disturbed:?}");
     }
-    assert!(!disturbed.contains(&u(1)), "1 is targeted before and after: {disturbed:?}");
+    assert!(
+        !disturbed.contains(&u(1)),
+        "1 is targeted before and after: {disturbed:?}"
+    );
 }
 
 /// An `Attachment` **added**: the table names it, the update disturbs the
@@ -550,11 +718,16 @@ fn an_attachment_that_is_added_is_followed_and_disturbs_its_object() {
     assert_eq!(index.attachments_naming(&u(4)), vec![u(42)]);
     assert_eq!(index.attachments_naming(&u(3)), vec![u(40)], "3 keeps its own");
     assert_update_equals_rebuild(&store, &index);
-    assert!(disturbed.contains(&u(4)) && disturbed.contains(&u(42)), "{disturbed:?}");
+    assert!(
+        disturbed.contains(&u(4)) && disturbed.contains(&u(42)),
+        "{disturbed:?}"
+    );
     assert!(!disturbed.contains(&u(3)), "{disturbed:?}");
 
     // And an attachment that leaves the package takes its row with it.
-    store.remove(&format!("eml:///eml23.Attachment({})", u(42))).expect("it goes out");
+    store
+        .remove(&format!("eml:///eml23.Attachment({})", u(42)))
+        .expect("it goes out");
     let disturbed = index.update(&store, &[u(42)], store.revision());
     assert!(index.attachments_naming(&u(4)).is_empty());
     assert!(disturbed.contains(&u(4)));
@@ -579,8 +752,14 @@ fn a_walk_reads_rows_and_never_turns_edges_into_pointers() {
     let found = walked.resolution.expect("the folder 10 holds 3");
     assert_eq!((found.rank, found.carrier.as_str()), (2, u(10).as_str()));
     let after = index.traffic();
-    assert_eq!(after.edges_read, before.edges_read, "no Pointer was built by the walk");
-    assert_eq!(after.nodes_scanned, before.nodes_scanned, "no node was scanned by the walk");
+    assert_eq!(
+        after.edges_read, before.edges_read,
+        "no Pointer was built by the walk"
+    );
+    assert_eq!(
+        after.nodes_scanned, before.nodes_scanned,
+        "no node was scanned by the walk"
+    );
     assert!(after.rows_read > before.rows_read, "the walk read rows");
 }
 
@@ -615,11 +794,25 @@ fn listing_what_is_attached_does_not_scan_the_package() {
     assert_eq!(listings[0].pieces.len(), 1, "the attachment is found");
     let all: Vec<String> = (1..=N).map(u).collect();
     let listings = attachments_of_with(&files, &store, &index, &all);
-    assert_eq!(listings.iter().filter(|listing| !listing.pieces.is_empty()).count(), 1);
+    assert_eq!(
+        listings
+            .iter()
+            .filter(|listing| !listing.pieces.is_empty())
+            .count(),
+        1
+    );
 
     let after = index.traffic();
-    assert_eq!(after.nodes_scanned - before.nodes_scanned, 0, "no node is scanned — the package holds {N}+");
-    assert_eq!(after.edges_read - before.edges_read, 0, "no reference is spelt out");
+    assert_eq!(
+        after.nodes_scanned - before.nodes_scanned,
+        0,
+        "no node is scanned — the package holds {N}+"
+    );
+    assert_eq!(
+        after.edges_read - before.edges_read,
+        0,
+        "no reference is spelt out"
+    );
 }
 
 /// A listing is **kept**: asking again walks nothing, and what an update
@@ -637,10 +830,23 @@ fn a_listing_is_kept_and_dropped_by_what_it_was_read_from() {
     // 3 has its own attachment; 4 has none and inherits the feature's (41), by its
     // interpretation.
     let first = cache.listings(&store, store.files_revision(), &index, &[u(3), u(4)]);
-    assert_eq!((first[0].pieces.len(), first[0].pieces[0].provenance.kind), (1, "self"));
-    assert_eq!((first[1].pieces.len(), first[1].pieces[0].provenance.kind), (1, "parent"));
+    assert_eq!(
+        (first[0].pieces.len(), first[0].pieces[0].provenance.kind),
+        (1, "self")
+    );
+    assert_eq!(
+        (first[1].pieces.len(), first[1].pieces[0].provenance.kind),
+        (1, "parent")
+    );
     assert_eq!(first[1].pieces[0].provenance.carrier, u(1));
-    assert_eq!(cache.stats(), attachments::CacheStats { listings_built: 2, listings_dropped: 0, files_read: 1 });
+    assert_eq!(
+        cache.stats(),
+        attachments::CacheStats {
+            listings_built: 2,
+            listings_dropped: 0,
+            files_read: 1
+        }
+    );
 
     // Asked again: nothing is walked, nothing is listed again.
     let again = cache.listings(&store, store.files_revision(), &index, &[u(4), u(3), u(3)]);
@@ -660,7 +866,10 @@ fn a_listing_is_kept_and_dropped_by_what_it_was_read_from() {
     let listings = cache.listings(&store, store.files_revision(), &index, &[u(3), u(4)]);
     assert_eq!(listings[0].pieces.len(), 2, "3 lists its second attachment");
     assert_eq!(cache.stats().listings_built, 3, "only 3 was walked again");
-    assert_eq!(listings, attachments::attachments_of(&store, &index, &[u(3), u(4)]));
+    assert_eq!(
+        listings,
+        attachments::attachments_of(&store, &index, &[u(3), u(4)])
+    );
 
     // The feature's attachment is replaced by another: 4 read the carrier and its
     // attachments, so 4 goes — 3 stays.
@@ -687,12 +896,27 @@ fn a_change_of_the_packages_files_drops_every_listing() {
     let first = cache.listings(&store, stamp, &index, &[u(3), u(4)]);
     assert_eq!(first[0].pieces.len(), 1);
 
-    store.set_attachment("media/fiche.pdf", b"%PDF".to_vec(), Some("application/pdf".into())).unwrap();
+    store
+        .set_attachment(
+            "media/fiche.pdf",
+            b"%PDF".to_vec(),
+            Some("application/pdf".into()),
+        )
+        .unwrap();
     store.relate_media(&u(3), "media/fiche.pdf").unwrap();
-    assert_ne!(store.files_revision(), stamp, "the store counts a change of its files");
+    assert_ne!(
+        store.files_revision(),
+        stamp,
+        "the store counts a change of its files"
+    );
 
     let second = cache.listings(&store, store.files_revision(), &index, &[u(3), u(4)]);
-    assert_eq!(second[0].pieces.len(), 2, "the new part is listed: {:?}", second[0].pieces);
+    assert_eq!(
+        second[0].pieces.len(),
+        2,
+        "the new part is listed: {:?}",
+        second[0].pieces
+    );
     assert_eq!(cache.stats().files_read, 2);
     assert_eq!(cache.stats().listings_dropped, 2, "both went");
     assert_eq!(second, attachments::attachments_of(&store, &index, &[u(3), u(4)]));
@@ -708,7 +932,9 @@ fn the_files_stamp_moves_with_the_files_and_with_nothing_else() {
     let _ = store.parts();
     assert_eq!(store.files_revision(), stamp, "reading does not count");
 
-    store.set_attachment("media/a.png", PNG.to_vec(), Some("image/png".into())).unwrap();
+    store
+        .set_attachment("media/a.png", PNG.to_vec(), Some("image/png".into()))
+        .unwrap();
     let after_set = store.files_revision();
     assert!(after_set > stamp);
     store.relate_media(&u(1), "media/a.png").unwrap();

@@ -80,12 +80,20 @@ pub struct Layers {
 impl Layers {
     /// Nothing on.
     pub const fn none() -> Self {
-        Self { index: false, colours: false, attachments: false }
+        Self {
+            index: false,
+            colours: false,
+            attachments: false,
+        }
     }
 
     /// Every layer there is — what a long-lived session wants.
     pub const fn all() -> Self {
-        Self { index: true, colours: true, attachments: true }
+        Self {
+            index: true,
+            colours: true,
+            attachments: true,
+        }
     }
 
     /// Turn the index on.
@@ -195,7 +203,11 @@ impl Cache {
     /// whose index layer is off builds nothing between questions and answers
     /// *nothing to do*.
     pub fn index_step(&self, store: &EpcStore, n: usize) -> Progress {
-        if self.layers.index { self.index.step(store, n) } else { Progress { done: 0, total: 0 } }
+        if self.layers.index {
+            self.index.step(store, n)
+        } else {
+            Progress { done: 0, total: 0 }
+        }
     }
 
     /// The slot holding the index — for a face's negative controls (`tamper`,
@@ -249,12 +261,18 @@ impl Cache {
     /// What the listing cache did so far — listings built and dropped, files
     /// read. **Work, not time.**
     pub fn attachment_stats(&self) -> CacheStats {
-        self.listings.try_borrow().map(|cache| cache.stats()).unwrap_or_default()
+        self.listings
+            .try_borrow()
+            .map(|cache| cache.stats())
+            .unwrap_or_default()
     }
 
     /// Whether the cache holds the listing of this object.
     #[doc(hidden)]
     pub fn attachment_listing_held(&self, uuid: &str) -> bool {
-        self.listings.try_borrow().map(|cache| cache.holds(uuid)).unwrap_or(false)
+        self.listings
+            .try_borrow()
+            .map(|cache| cache.holds(uuid))
+            .unwrap_or(false)
     }
 }

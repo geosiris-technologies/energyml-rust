@@ -307,7 +307,10 @@ impl EtpUri {
     ) -> String {
         let name = match object_version {
             Some(version) => {
-                format!("{qualified_type}(uuid={uuid},version='{}')", version.replace('\'', "''"))
+                format!(
+                    "{qualified_type}(uuid={uuid},version='{}')",
+                    version.replace('\'', "''")
+                )
             }
             None => format!("{qualified_type}({uuid})"),
         };
@@ -427,12 +430,17 @@ mod tests {
         let uri = EtpUri::parse(text).unwrap();
         assert_eq!(uri.uuid.as_deref(), Some("421a7a05-033a-450d-bcef-051352023578"));
         assert_eq!(uri.object_version.as_deref(), Some("2.0"));
-        assert_eq!(uri.version.as_deref(), Some("20"), "the schema version is another field");
+        assert_eq!(
+            uri.version.as_deref(),
+            Some("20"),
+            "the schema version is another field"
+        );
         assert_eq!(uri.rest, None);
         assert_eq!(uri.to_string(), text);
         assert!(EtpUri::is_canonical(text));
         // `uuid=` without a version reads, and is not canonical (§25.3.9 item 7).
-        let alternate = "eml:///resqml20.obj_HorizonInterpretation(uuid=421a7a05-033a-450d-bcef-051352023578)";
+        let alternate =
+            "eml:///resqml20.obj_HorizonInterpretation(uuid=421a7a05-033a-450d-bcef-051352023578)";
         assert!(EtpUri::parse(alternate).is_ok());
         assert!(!EtpUri::is_canonical(alternate));
     }

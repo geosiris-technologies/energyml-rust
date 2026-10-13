@@ -131,14 +131,19 @@ pub fn sources(args: SourcesArgs) -> Result<()> {
 /// `energyml fetch`.
 pub fn fetch(args: FetchArgs) -> Result<()> {
     let providers = Providers::builtin();
-    let provider = providers.get(&args.provider).map_err(|why| anyhow::anyhow!("{why}"))?;
+    let provider = providers
+        .get(&args.provider)
+        .map_err(|why| anyhow::anyhow!("{why}"))?;
 
     let mut terms = Vec::new();
     for term in &args.terms {
         let (name, value) = term
             .split_once('=')
             .with_context(|| format!("`{term}` is not a `name=value` condition"))?;
-        terms.push(Term { name: name.to_string(), value: value.to_string() });
+        terms.push(Term {
+            name: name.to_string(),
+            value: value.to_string(),
+        });
     }
     let area = match &args.area {
         Some(path) => Some(area_of(path)?),
@@ -158,7 +163,9 @@ pub fn fetch(args: FetchArgs) -> Result<()> {
     // are written at the end of the document.
     let request = provider.count(&query).map_err(|why| anyhow::anyhow!("{why}"))?;
     let started = Instant::now();
-    let answer = transport.fetch(&request).map_err(|why| anyhow::anyhow!("{why}"))?;
+    let answer = transport
+        .fetch(&request)
+        .map_err(|why| anyhow::anyhow!("{why}"))?;
     let matched = provider
         .read_count(answer)
         .map_err(|why| anyhow::anyhow!("{why}"))?;
@@ -171,7 +178,10 @@ pub fn fetch(args: FetchArgs) -> Result<()> {
     if let Some(most) = args.most
         && (most as u64) < matched
     {
-        println!("  the ceiling `--most {most}` will leave {} aside", matched - most as u64);
+        println!(
+            "  the ceiling `--most {most}` will leave {} aside",
+            matched - most as u64
+        );
     }
 
     if args.out.is_none() && !args.read {
@@ -181,8 +191,11 @@ pub fn fetch(args: FetchArgs) -> Result<()> {
 
     // The list must live as long as the `Keep` that borrows it, hence
     // the two steps: the vector first, what is kept of it afterwards.
-    let only: Vec<&str> =
-        args.only.as_deref().map(|list| list.split(',').map(str::trim).collect()).unwrap_or_default();
+    let only: Vec<&str> = args
+        .only
+        .as_deref()
+        .map(|list| list.split(',').map(str::trim).collect())
+        .unwrap_or_default();
     let wanted = Wanted {
         properties: match (args.shapes_only, only.is_empty()) {
             (true, _) => Keep::None,
@@ -200,8 +213,12 @@ pub fn fetch(args: FetchArgs) -> Result<()> {
     let mut first_byte = None;
 
     loop {
-        let request = provider.page(&query, page).map_err(|why| anyhow::anyhow!("{why}"))?;
-        let mut answer = transport.fetch(&request).map_err(|why| anyhow::anyhow!("{why}"))?;
+        let request = provider
+            .page(&query, page)
+            .map_err(|why| anyhow::anyhow!("{why}"))?;
+        let mut answer = transport
+            .fetch(&request)
+            .map_err(|why| anyhow::anyhow!("{why}"))?;
         if first_byte.is_none() {
             first_byte = Some(started.elapsed());
         }
@@ -222,8 +239,8 @@ pub fn fetch(args: FetchArgs) -> Result<()> {
                 // a successful harvest. Measured: three pages of the Paris
                 // area wrote 71.5 MB of unreadable JSON.
                 let path = numbered(path, page.start / page.count.max(1), pages);
-                let mut out = std::fs::File::create(&path)
-                    .with_context(|| format!("creating {}", path.display()))?;
+                let mut out =
+                    std::fs::File::create(&path).with_context(|| format!("creating {}", path.display()))?;
                 bytes += std::io::copy(&mut answer.body, &mut out).context("writing the harvest")?;
                 written.push(path);
                 // A page written as it is does not say how many entities it
@@ -303,7 +320,10 @@ fn numbered(path: &std::path::Path, index: usize, pages: u64) -> PathBuf {
     if pages <= 1 {
         return path.to_path_buf();
     }
-    let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let stem = path
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
     let extension = path.extension().map(|s| s.to_string_lossy().into_owned());
     let name = match &extension {
         Some(ext) => format!("{stem}.{:0>3}.{ext}", index + 1),
@@ -319,8 +339,8 @@ fn numbered(path: &std::path::Path, index: usize, pages: u64) -> PathBuf {
 /// parses GeoJSON again.
 fn area_of(path: &PathBuf) -> Result<Area> {
     let text = std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
-    let collection = energyml_build::geojson::read(&text)
-        .map_err(|why| anyhow::anyhow!("{}: {why}", path.display()))?;
+    let collection =
+        energyml_build::geojson::read(&text).map_err(|why| anyhow::anyhow!("{}: {why}", path.display()))?;
     let ring = collection
         .features
         .iter()

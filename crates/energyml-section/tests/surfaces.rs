@@ -18,8 +18,8 @@ use energyml_domain::source::{ArraySource, ObjectSource};
 use energyml_eml_2_0 as eml20;
 use energyml_resqml_2_0_1 as resqml20;
 use energyml_section::model::{CutShape, Refused, SectionKey, SectionTrace, SurfaceRead, System, TraceRole};
-use energyml_section::read::surfaces::{read_surface, uuid_of_uri};
 use energyml_section::read::Scene;
+use energyml_section::read::surfaces::{read_surface, uuid_of_uri};
 use energyml_storage::array::{ArrayBuffer, ArrayData, ArrayLocation, ArrayMetadata, ArrayValues};
 
 const CRS_ID: &str = "c0000000-0000-4000-8000-000000000001";
@@ -114,12 +114,19 @@ impl ArraySource for Store {
             .get(&location.path_in_file)
             .ok_or_else(|| energyml_domain::Error::Missing(location.path_in_file.clone()))?;
         Ok(ArrayData {
-            metadata: ArrayMetadata { dimensions: dimensions.clone(), element_type: "f64".to_string() },
+            metadata: ArrayMetadata {
+                dimensions: dimensions.clone(),
+                element_type: "f64".to_string(),
+            },
             values: values.clone(),
         })
     }
 
-    fn read_into(&self, location: &ArrayLocation, _out: &mut ArrayBuffer<'_>) -> energyml_domain::Result<ArrayMetadata> {
+    fn read_into(
+        &self,
+        location: &ArrayLocation,
+        _out: &mut ArrayBuffer<'_>,
+    ) -> energyml_domain::Result<ArrayMetadata> {
         Ok(self.read(location)?.metadata)
     }
 }
@@ -133,16 +140,19 @@ fn dor(uuid: &str, qualified: &str) -> eml20::DataObjectReference {
 }
 
 fn dataset(path: &str) -> eml20::Hdf5Dataset {
-    eml20::Hdf5Dataset { path_in_hdf_file: path.to_string(), hdf_proxy: dor(PROXY, "obj_EpcExternalPartReference") }
+    eml20::Hdf5Dataset {
+        path_in_hdf_file: path.to_string(),
+        hdf_proxy: dor(PROXY, "obj_EpcExternalPartReference"),
+    }
 }
 
 fn local_crs(uuid: &str, epsg: u64, unit: eml20::LengthUom) -> resqml20::LocalDepth3dCrs {
     resqml20::LocalDepth3dCrs {
         uuid: uuid.to_string(),
         schema_version: "2.0".into(),
-        projected_crs: Some(eml20::AbstractProjectedCrs::ProjectedCrsEpsgCode(eml20::ProjectedCrsEpsgCode {
-            epsg_code: epsg,
-        })),
+        projected_crs: Some(eml20::AbstractProjectedCrs::ProjectedCrsEpsgCode(
+            eml20::ProjectedCrsEpsgCode { epsg_code: epsg },
+        )),
         projected_uom: unit,
         vertical_uom: eml20::LengthUom::M,
         // An elevation: the third coordinate is the height, written as it stands.
@@ -155,9 +165,9 @@ fn time_crs(uuid: &str, epsg: u64) -> resqml20::LocalTime3dCrs {
     resqml20::LocalTime3dCrs {
         uuid: uuid.to_string(),
         schema_version: "2.0".into(),
-        projected_crs: Some(eml20::AbstractProjectedCrs::ProjectedCrsEpsgCode(eml20::ProjectedCrsEpsgCode {
-            epsg_code: epsg,
-        })),
+        projected_crs: Some(eml20::AbstractProjectedCrs::ProjectedCrsEpsgCode(
+            eml20::ProjectedCrsEpsgCode { epsg_code: epsg },
+        )),
         projected_uom: eml20::LengthUom::M,
         vertical_uom: eml20::LengthUom::M,
         time_uom: eml20::TimeUom::Ms,
@@ -180,7 +190,10 @@ fn surface(
     let (points_path, triangles_path) = (format!("/{uuid}/points"), format!("/{uuid}/triangles"));
     store.datasets.insert(
         points_path.clone(),
-        (ArrayValues::F64(points.iter().flatten().copied().collect()), vec![points.len() as i64, 3]),
+        (
+            ArrayValues::F64(points.iter().flatten().copied().collect()),
+            vec![points.len() as i64, 3],
+        ),
     );
     store.datasets.insert(
         triangles_path.clone(),
@@ -189,7 +202,11 @@ fn surface(
             vec![triangles.len() as i64, 3],
         ),
     );
-    let local_crs = if crs.is_empty() { eml20::DataObjectReference::default() } else { dor(crs, "obj_LocalDepth3dCrs") };
+    let local_crs = if crs.is_empty() {
+        eml20::DataObjectReference::default()
+    } else {
+        dor(crs, "obj_LocalDepth3dCrs")
+    };
     let patch = resqml20::TrianglePatch {
         patch_index: 0,
         count: triangles.len() as u64,
@@ -202,9 +219,11 @@ fn surface(
         }),
         geometry: resqml20::AnyPointGeometry::PointGeometry(resqml20::PointGeometry {
             local_crs,
-            points: Some(resqml20::AbstractPoint3dArray::Point3dHdf5Array(resqml20::Point3dHdf5Array {
-                coordinates: dataset(&points_path),
-            })),
+            points: Some(resqml20::AbstractPoint3dArray::Point3dHdf5Array(
+                resqml20::Point3dHdf5Array {
+                    coordinates: dataset(&points_path),
+                },
+            )),
             ..Default::default()
         }),
         ..Default::default()
@@ -214,7 +233,10 @@ fn surface(
         Held::Surface(resqml20::TriangulatedSetRepresentation {
             uuid: uuid.to_string(),
             schema_version: "2.0".into(),
-            citation: eml20::Citation { title: title.to_string(), ..Default::default() },
+            citation: eml20::Citation {
+                title: title.to_string(),
+                ..Default::default()
+            },
             represented_interpretation: interpretation.map(|(id, kind)| dor(id, kind)),
             triangle_patch: vec![patch],
             ..Default::default()
@@ -232,7 +254,10 @@ fn plane(x: f64, y: f64) -> f64 {
 /// coordinates, every z computed by [`plane`].
 fn plane_mesh() -> (Vec<[f64; 3]>, Vec<[u32; 3]>) {
     let corners = [[0.0, 0.0], [1000.0, 0.0], [1000.0, 1000.0], [0.0, 1000.0]];
-    (corners.iter().map(|c| [c[0], c[1], plane(c[0], c[1])]).collect(), vec![[0, 1, 2], [0, 2, 3]])
+    (
+        corners.iter().map(|c| [c[0], c[1], plane(c[0], c[1])]).collect(),
+        vec![[0, 1, 2], [0, 2, 3]],
+    )
 }
 
 fn uri(uuid: &str) -> String {
@@ -244,16 +269,33 @@ fn plane_store(uuid: &str, title: &str, interpretation: Option<(&str, &str)>) ->
     let mut store = Store::default();
     store.put(CRS_ID, Held::Crs(local_crs(CRS_ID, 2154, eml20::LengthUom::M)));
     let (points, triangles) = plane_mesh();
-    surface(&mut store, uuid, title, CRS_ID, interpretation, &points, &triangles);
+    surface(
+        &mut store,
+        uuid,
+        title,
+        CRS_ID,
+        interpretation,
+        &points,
+        &triangles,
+    );
     store
 }
 
 fn lambert() -> System {
-    System { epsg: 2154, unit: "m".into() }
+    System {
+        epsg: 2154,
+        unit: "m".into(),
+    }
 }
 
 fn long(trace: &[[f64; 2]]) -> SectionTrace {
-    SectionTrace { key: SectionKey::Long, trace: trace.to_vec(), left: 100.0, right: 100.0, crossing: None }
+    SectionTrace {
+        key: SectionKey::Long,
+        trace: trace.to_vec(),
+        left: 100.0,
+        right: 100.0,
+        crossing: None,
+    }
 }
 
 #[allow(clippy::result_large_err)]
@@ -265,7 +307,11 @@ fn read_with(
     time_factor: Option<f64>,
     reprojector: &dyn Reprojector,
 ) -> Result<SurfaceRead, Refused> {
-    let scene = Scene { system, time_factor, reprojector };
+    let scene = Scene {
+        system,
+        time_factor,
+        reprojector,
+    };
     read_surface(store, "s1", &uri(uuid), sections, &scene)
 }
 
@@ -287,7 +333,11 @@ fn z_at(spans: &[Vec<[f64; 2]>], s: f64) -> f64 {
         for pair in span.windows(2) {
             if s >= pair[0][0] - 1e-9 && s <= pair[1][0] + 1e-9 {
                 let width = pair[1][0] - pair[0][0];
-                let t = if width < 1e-12 { 0.0 } else { (s - pair[0][0]) / width };
+                let t = if width < 1e-12 {
+                    0.0
+                } else {
+                    (s - pair[0][0]) / width
+                };
                 return pair[0][1] + (pair[1][1] - pair[0][1]) * t;
             }
         }
@@ -312,24 +362,40 @@ fn a_plane_cut_along_a_straight_trace_is_the_line_the_formula_gives() {
     assert_eq!(found.object.store, "s1");
     assert_eq!(found.object.uuid, HORIZON);
     assert_eq!(found.object.title, "Top reservoir");
-    assert_eq!(found.object.qualified_type, "resqml20.obj_TriangulatedSetRepresentation");
+    assert_eq!(
+        found.object.qualified_type,
+        "resqml20.obj_TriangulatedSetRepresentation"
+    );
     assert!(!found.time);
     assert_eq!(found.cuts.len(), 1);
     assert_eq!(found.cuts[0].section, SectionKey::Long);
     assert!(found.cuts[0].notes.is_empty());
 
     let spans = spans_of(&found.cuts[0]);
-    assert_eq!(spans.len(), 1, "two triangles welded on their shared edge: one span");
+    assert_eq!(
+        spans.len(),
+        1,
+        "two triangles welded on their shared edge: one span"
+    );
     let span = &spans[0];
     let (first, last) = (span.first().unwrap(), span.last().unwrap());
-    assert!(first[0].abs() < 1e-9 && (last[0] - 800.0).abs() < 1e-9, "from s = 0 to s = 800: {span:?}");
+    assert!(
+        first[0].abs() < 1e-9 && (last[0] - 800.0).abs() < 1e-9,
+        "from s = 0 to s = 800: {span:?}"
+    );
     assert!((first[1] - plane(100.0, 500.0)).abs() < 1e-9, "{first:?}");
     assert!((last[1] - plane(900.0, 500.0)).abs() < 1e-9, "{last:?}");
     for point in span {
         // The slope is 0.05 whatever the node: the line is straight.
-        assert!((point[1] - (plane(100.0, 500.0) + 0.05 * point[0])).abs() < 1e-9, "{point:?}");
+        assert!(
+            (point[1] - (plane(100.0, 500.0) + 0.05 * point[0])).abs() < 1e-9,
+            "{point:?}"
+        );
     }
-    assert!(span.windows(2).all(|pair| pair[1][0] >= pair[0][0]), "s increases");
+    assert!(
+        span.windows(2).all(|pair| pair[1][0] >= pair[0][0]),
+        "s increases"
+    );
 }
 
 /// A trace that does not cross the surface gives **no entry**: the surface is
@@ -345,7 +411,10 @@ fn a_trace_that_misses_the_surface_has_no_cut_and_the_one_that_crosses_keeps_its
     let found = read(&store, HORIZON, std::slice::from_ref(&missing)).unwrap();
     assert!(found.cuts.is_empty());
 
-    let crossing = SectionTrace { key: SectionKey::Cross { index: 2 }, ..long(&[[500.0, -100.0], [500.0, 1100.0]]) };
+    let crossing = SectionTrace {
+        key: SectionKey::Cross { index: 2 },
+        ..long(&[[500.0, -100.0], [500.0, 1100.0]])
+    };
     let found = read(&store, HORIZON, &[missing, crossing]).unwrap();
     assert_eq!(found.cuts.len(), 1);
     assert_eq!(found.cuts[0].section, SectionKey::Cross { index: 2 });
@@ -421,7 +490,10 @@ fn an_object_in_another_system_is_cut_where_the_scene_draws_it() {
         fn reproject(&self, point: [f64; 3], from: u64, to: u64) -> energyml_domain::Result<[f64; 3]> {
             match (from, to) {
                 (32631, 2154) => Ok([point[0] + 1000.0, point[1] + 2000.0, point[2]]),
-                _ => Err(energyml_domain::Error::unsupported("the test's reprojection", format!("{from} to {to}"))),
+                _ => Err(energyml_domain::Error::unsupported(
+                    "the test's reprojection",
+                    format!("{from} to {to}"),
+                )),
             }
         }
     }
@@ -433,12 +505,33 @@ fn an_object_in_another_system_is_cut_where_the_scene_draws_it() {
 
     // The scene trace of the first test, moved by the vector.
     let trace = long(&[[1100.0, 2500.0], [1900.0, 2500.0]]);
-    let moved = read_with(&store, HORIZON, std::slice::from_ref(&trace), Some(&lambert()), None, &Shift).unwrap();
-    let reference = read(&plane_store(HORIZON, "Top", None), HORIZON, &[long(&[[100.0, 500.0], [900.0, 500.0]])]).unwrap();
-    assert_eq!(spans_of(&moved.cuts[0]), spans_of(&reference.cuts[0]), "the same line in (s, z)");
+    let moved = read_with(
+        &store,
+        HORIZON,
+        std::slice::from_ref(&trace),
+        Some(&lambert()),
+        None,
+        &Shift,
+    )
+    .unwrap();
+    let reference = read(
+        &plane_store(HORIZON, "Top", None),
+        HORIZON,
+        &[long(&[[100.0, 500.0], [900.0, 500.0]])],
+    )
+    .unwrap();
+    assert_eq!(
+        spans_of(&moved.cuts[0]),
+        spans_of(&reference.cuts[0]),
+        "the same line in (s, z)"
+    );
 
     let refused = read_with(&store, HORIZON, &[trace], Some(&lambert()), None, &NoReprojection).unwrap_err();
-    assert!(refused.reason.contains("32631") && refused.reason.contains("2154"), "{}", refused.reason);
+    assert!(
+        refused.reason.contains("32631") && refused.reason.contains("2154"),
+        "{}",
+        refused.reason
+    );
 }
 
 /// The same EPSG code in another unit is a conversion, not an identity: a plane
@@ -450,18 +543,28 @@ fn an_object_in_another_system_is_cut_where_the_scene_draws_it() {
 #[test]
 fn the_same_system_in_feet_is_converted_to_the_scenes_metres() {
     let mut store = Store::default();
-    store.put(FEET_CRS, Held::Crs(local_crs(FEET_CRS, 2154, eml20::LengthUom::Ft)));
+    store.put(
+        FEET_CRS,
+        Held::Crs(local_crs(FEET_CRS, 2154, eml20::LengthUom::Ft)),
+    );
     let (points, triangles) = plane_mesh();
     surface(&mut store, HORIZON, "Top", FEET_CRS, None, &points, &triangles);
 
     // 1000 ft = 304.8 m: a trace along y = 150 m from x = 30 m to x = 270 m.
     let found = read(&store, HORIZON, &[long(&[[30.0, 150.0], [270.0, 150.0]])]).unwrap();
     let span = &spans_of(&found.cuts[0])[0];
-    assert!((span.last().unwrap()[0] - 240.0).abs() < 1e-6, "the whole trace is on the plane: {span:?}");
+    assert!(
+        (span.last().unwrap()[0] - 240.0).abs() < 1e-6,
+        "the whole trace is on the plane: {span:?}"
+    );
     // Horizontal numbers in metres, z as the file says it (the vertical is not
     // the horizontal's to convert): the height at x = 30 m is that of x = 30 / 0.3048 ft.
     let expected = plane(30.0 / 0.3048, 150.0 / 0.3048);
-    assert!((span[0][1] - expected).abs() < 1e-6, "{} vs {expected}", span[0][1]);
+    assert!(
+        (span[0][1] - expected).abs() < 1e-6,
+        "{} vs {expected}",
+        span[0][1]
+    );
 }
 
 /// A system the object names and the scene does not (and the reverse) is
@@ -476,14 +579,22 @@ fn a_system_on_one_side_only_is_refused_by_name() {
     let trace = [long(&[[100.0, 500.0], [900.0, 500.0]])];
 
     let refused = read_with(&store, HORIZON, &trace, None, None, &NoReprojection).unwrap_err();
-    assert!(refused.reason.contains("EPSG:2154") && refused.reason.contains("scene names no system"), "{}", refused.reason);
+    assert!(
+        refused.reason.contains("EPSG:2154") && refused.reason.contains("scene names no system"),
+        "{}",
+        refused.reason
+    );
     assert_eq!(refused.object.title, "Top", "the refusal names the object");
 
     let mut bare = Store::default();
     let (points, triangles) = plane_mesh();
     surface(&mut bare, FAULT, "No CRS", "", None, &points, &triangles);
     let refused = read_with(&bare, FAULT, &trace, Some(&lambert()), None, &NoReprojection).unwrap_err();
-    assert!(refused.reason.contains("names no horizontal system"), "{}", refused.reason);
+    assert!(
+        refused.reason.contains("names no horizontal system"),
+        "{}",
+        refused.reason
+    );
     // Neither side names one: the local numbers are the only ones there are.
     let found = read_with(&bare, FAULT, &trace, None, None, &NoReprojection).unwrap();
     assert_eq!(found.cuts.len(), 1);
@@ -500,14 +611,30 @@ fn a_system_on_one_side_only_is_refused_by_name() {
 #[test]
 fn an_object_in_time_takes_the_scenes_time_factor_or_is_refused() {
     let flat = |z: f64| -> (Vec<[f64; 3]>, Vec<[u32; 3]>) {
-        (vec![[0.0, 0.0, z], [1000.0, 0.0, z], [1000.0, 1000.0, z], [0.0, 1000.0, z]], vec![[0, 1, 2], [0, 2, 3]])
+        (
+            vec![
+                [0.0, 0.0, z],
+                [1000.0, 0.0, z],
+                [1000.0, 1000.0, z],
+                [0.0, 1000.0, z],
+            ],
+            vec![[0, 1, 2], [0, 2, 3]],
+        )
     };
     let trace = [long(&[[100.0, 500.0], [900.0, 500.0]])];
     let mut store = Store::default();
     store.put(TIME_CRS, Held::TimeCrs(time_crs(TIME_CRS, 2154)));
     store.put(CRS_ID, Held::Crs(local_crs(CRS_ID, 2154, eml20::LengthUom::M)));
     let (points, triangles) = flat(2000.0);
-    surface(&mut store, HORIZON, "Seismic top", TIME_CRS, None, &points, &triangles);
+    surface(
+        &mut store,
+        HORIZON,
+        "Seismic top",
+        TIME_CRS,
+        None,
+        &points,
+        &triangles,
+    );
     let (points, triangles) = flat(2000.0);
     surface(&mut store, FAULT, "Depth top", CRS_ID, None, &points, &triangles);
 
@@ -515,16 +642,40 @@ fn an_object_in_time_takes_the_scenes_time_factor_or_is_refused() {
     assert!(refused.reason.contains("time factor"), "{}", refused.reason);
     assert_eq!(refused.object.title, "Seismic top");
 
-    let found = read_with(&store, HORIZON, &trace, Some(&lambert()), Some(0.75), &NoReprojection).unwrap();
+    let found = read_with(
+        &store,
+        HORIZON,
+        &trace,
+        Some(&lambert()),
+        Some(0.75),
+        &NoReprojection,
+    )
+    .unwrap();
     assert!(found.time);
     for point in &spans_of(&found.cuts[0])[0] {
         // The CRS says z increases downward, so the placement turns 2 000 into
         // an elevation of -2 000 first, and the factor scales that.
-        assert!((point[1] + 1500.0).abs() < 1e-9, "-2 000 ms at 0.75 m per ms: {point:?}");
+        assert!(
+            (point[1] + 1500.0).abs() < 1e-9,
+            "-2 000 ms at 0.75 m per ms: {point:?}"
+        );
     }
-    let depth = read_with(&store, FAULT, &trace, Some(&lambert()), Some(0.75), &NoReprojection).unwrap();
+    let depth = read_with(
+        &store,
+        FAULT,
+        &trace,
+        Some(&lambert()),
+        Some(0.75),
+        &NoReprojection,
+    )
+    .unwrap();
     assert!(!depth.time);
-    assert!(spans_of(&depth.cuts[0])[0].iter().all(|p| (p[1] - 2000.0).abs() < 1e-9), "a depth is not scaled");
+    assert!(
+        spans_of(&depth.cuts[0])[0]
+            .iter()
+            .all(|p| (p[1] - 2000.0).abs() < 1e-9),
+        "a depth is not scaled"
+    );
 }
 
 /// What cannot be cut is refused by name: a grid the reader cannot read (its
@@ -540,18 +691,33 @@ fn what_cannot_be_cut_is_refused_by_name() {
         FAULT,
         Held::Grid(resqml20::IjkGridRepresentation {
             uuid: FAULT.to_string(),
-            citation: eml20::Citation { title: "Reservoir grid".into(), ..Default::default() },
+            citation: eml20::Citation {
+                title: "Reservoir grid".into(),
+                ..Default::default()
+            },
             ..Default::default()
         }),
     );
     let (points, _) = plane_mesh();
-    surface(&mut store, "e0000000-0000-4000-8000-000000000001", "Triangle-less", CRS_ID, None, &points, &[]);
+    surface(
+        &mut store,
+        "e0000000-0000-4000-8000-000000000001",
+        "Triangle-less",
+        CRS_ID,
+        None,
+        &points,
+        &[],
+    );
     let trace = [long(&[[100.0, 500.0], [900.0, 500.0]])];
 
     let grid = read(&store, FAULT, &trace).unwrap_err();
     // An IJK grid has its own reading: this one states no size, so it
     // is refused by the grid reader, naming the grid.
-    assert!(grid.reason.contains("Reservoir grid") && grid.reason.contains("IjkGridRepresentation"), "{}", grid.reason);
+    assert!(
+        grid.reason.contains("Reservoir grid") && grid.reason.contains("IjkGridRepresentation"),
+        "{}",
+        grid.reason
+    );
     assert_eq!(grid.object.title, "Reservoir grid");
     assert_eq!(grid.object.qualified_type, "resqml20.obj_IjkGridRepresentation");
 
@@ -562,7 +728,11 @@ fn what_cannot_be_cut_is_refused_by_name() {
     assert!(none.reason.contains("no triangles"), "{}", none.reason);
 
     let absent = read(&store, "f0000000-0000-4000-8000-0000000000ff", &trace).unwrap_err();
-    assert!(absent.reason.contains("cannot be read from the package"), "{}", absent.reason);
+    assert!(
+        absent.reason.contains("cannot be read from the package"),
+        "{}",
+        absent.reason
+    );
     assert_eq!(absent.object.uri, uri("f0000000-0000-4000-8000-0000000000ff"));
 }
 
@@ -576,7 +746,14 @@ fn what_cannot_be_cut_is_refused_by_name() {
 /// holds the interpretation (it does here, and carries a different spelling).
 #[test]
 fn the_role_comes_from_the_interpretation_and_never_from_the_title() {
-    let mut store = plane_store(HORIZON, "Fault_3", Some(("b0000000-0000-4000-8000-000000000001", "obj_HorizonInterpretation")));
+    let mut store = plane_store(
+        HORIZON,
+        "Fault_3",
+        Some((
+            "b0000000-0000-4000-8000-000000000001",
+            "obj_HorizonInterpretation",
+        )),
+    );
     store.put(
         "b0000000-0000-4000-8000-000000000001",
         Held::Horizon(resqml20::HorizonInterpretation {
@@ -612,13 +789,31 @@ fn the_role_comes_from_the_interpretation_and_never_from_the_title() {
         &points,
         &triangles,
     );
-    surface(&mut store, "d0000000-0000-4000-8000-000000000004", "Horizon_2", CRS_ID, None, &points, &triangles);
+    surface(
+        &mut store,
+        "d0000000-0000-4000-8000-000000000004",
+        "Horizon_2",
+        CRS_ID,
+        None,
+        &points,
+        &triangles,
+    );
     let trace = [long(&[[100.0, 500.0], [900.0, 500.0]])];
 
     assert_eq!(read(&store, HORIZON, &trace).unwrap().role, TraceRole::Horizon);
     assert_eq!(read(&store, FAULT, &trace).unwrap().role, TraceRole::Fault);
-    assert_eq!(read(&store, "d0000000-0000-4000-8000-000000000003", &trace).unwrap().role, TraceRole::Fault);
-    assert_eq!(read(&store, "d0000000-0000-4000-8000-000000000004", &trace).unwrap().role, TraceRole::Other);
+    assert_eq!(
+        read(&store, "d0000000-0000-4000-8000-000000000003", &trace)
+            .unwrap()
+            .role,
+        TraceRole::Fault
+    );
+    assert_eq!(
+        read(&store, "d0000000-0000-4000-8000-000000000004", &trace)
+            .unwrap()
+            .role,
+        TraceRole::Other
+    );
 }
 
 /// A source that holds the interpretation of [`the_role_comes_from_the_version_the_reference_names`]
@@ -638,7 +833,10 @@ impl ObjectSource for TwoVersions<'_> {
     fn object_at(&self, uri: &str) -> Option<Box<dyn DynObject>> {
         let parsed = energyml_core::identifiers::EtpUri::parse(uri).ok();
         match parsed {
-            Some(parsed) if parsed.uuid.as_deref() == Some(self.interpretation) && parsed.object_version.as_deref() == Some("2") => {
+            Some(parsed)
+                if parsed.uuid.as_deref() == Some(self.interpretation)
+                    && parsed.object_version.as_deref() == Some("2") =>
+            {
                 Some(Box::new(self.second.clone()))
             }
             _ => self.inner.object_at(uri),
@@ -656,7 +854,11 @@ impl ArraySource for TwoVersions<'_> {
     fn read(&self, location: &ArrayLocation) -> energyml_domain::Result<ArrayData> {
         self.inner.read(location)
     }
-    fn read_into(&self, location: &ArrayLocation, out: &mut ArrayBuffer<'_>) -> energyml_domain::Result<ArrayMetadata> {
+    fn read_into(
+        &self,
+        location: &ArrayLocation,
+        out: &mut ArrayBuffer<'_>,
+    ) -> energyml_domain::Result<ArrayMetadata> {
         self.inner.read_into(location, out)
     }
 }
@@ -675,18 +877,41 @@ fn the_role_comes_from_the_version_the_reference_names() {
     let mut store = plane_store(HORIZON, "Top", Some((interpretation, "obj_FaultInterpretation")));
     store.put(
         interpretation,
-        Held::Horizon(resqml20::HorizonInterpretation { uuid: interpretation.into(), ..Default::default() }),
+        Held::Horizon(resqml20::HorizonInterpretation {
+            uuid: interpretation.into(),
+            ..Default::default()
+        }),
     );
-    let Some(Held::Surface(held)) = store.objects.get_mut(HORIZON) else { panic!("the surface") };
-    held.represented_interpretation.as_mut().expect("its interpretation").version_string = Some("2".into());
+    let Some(Held::Surface(held)) = store.objects.get_mut(HORIZON) else {
+        panic!("the surface")
+    };
+    held.represented_interpretation
+        .as_mut()
+        .expect("its interpretation")
+        .version_string = Some("2".into());
 
-    let second = resqml20::FaultInterpretation { uuid: interpretation.into(), ..Default::default() };
-    let source = TwoVersions { inner: &store, interpretation, second };
+    let second = resqml20::FaultInterpretation {
+        uuid: interpretation.into(),
+        ..Default::default()
+    };
+    let source = TwoVersions {
+        inner: &store,
+        interpretation,
+        second,
+    };
     let trace = [long(&[[100.0, 500.0], [900.0, 500.0]])];
     let system = lambert();
-    let scene = Scene { system: Some(&system), time_factor: None, reprojector: &NoReprojection };
+    let scene = Scene {
+        system: Some(&system),
+        time_factor: None,
+        reprojector: &NoReprojection,
+    };
     let found = read_surface(&source, "s1", &uri(HORIZON), &trace, &scene).expect("reads");
-    assert_eq!(found.role, TraceRole::Fault, "version 2 is a fault; the uuid alone would have given a horizon");
+    assert_eq!(
+        found.role,
+        TraceRole::Fault,
+        "version 2 is a fault; the uuid alone would have given a horizon"
+    );
 }
 
 /// A uri names its object by the uuid in its parentheses; a bare uuid is taken
@@ -695,8 +920,18 @@ fn the_role_comes_from_the_version_the_reference_names() {
 /// To make it fail: return the uri untouched.
 #[test]
 fn a_uri_gives_its_uuid_in_lower_case() {
-    assert_eq!(uuid_of_uri("eml:///resqml20.obj_TriangulatedSetRepresentation(A0000000-0000-4000-8000-000000000001)"), HORIZON);
-    assert_eq!(uuid_of_uri("eml:///dataspace('x')/resqml22.TriangulatedSetRepresentation(a0000000-0000-4000-8000-000000000001)"), HORIZON);
+    assert_eq!(
+        uuid_of_uri(
+            "eml:///resqml20.obj_TriangulatedSetRepresentation(A0000000-0000-4000-8000-000000000001)"
+        ),
+        HORIZON
+    );
+    assert_eq!(
+        uuid_of_uri(
+            "eml:///dataspace('x')/resqml22.TriangulatedSetRepresentation(a0000000-0000-4000-8000-000000000001)"
+        ),
+        HORIZON
+    );
     assert_eq!(uuid_of_uri("A0000000-0000-4000-8000-000000000001"), HORIZON);
 }
 
@@ -708,7 +943,11 @@ fn a_resolver_the_face_passes_answers_instead_of_the_cascade() {
     let store = plane_store(HORIZON, "Top", None);
     let trace = [long(&[[100.0, 500.0], [900.0, 500.0]])];
     let system = lambert();
-    let scene = Scene { system: Some(&system), time_factor: None, reprojector: &NoReprojection };
+    let scene = Scene {
+        system: Some(&system),
+        time_factor: None,
+        reprojector: &NoReprojection,
+    };
     let asked = std::cell::RefCell::new(Vec::new());
     let resolver = |uri: &str| -> Option<String> {
         asked.borrow_mut().push(uri.to_string());
@@ -716,14 +955,26 @@ fn a_resolver_the_face_passes_answers_instead_of_the_cascade() {
     };
     // A set is present too: given a resolver, it is never read.
     let set = GraphicalSet::default();
-    let colouring = Colouring { set: Some(&set), index: None, resolver: Some(&resolver) };
+    let colouring = Colouring {
+        set: Some(&set),
+        index: None,
+        resolver: Some(&resolver),
+    };
     let read = read_surface_coloured(&store, "s1", &uri(HORIZON), &trace, &scene, colouring).expect("reads");
     assert_eq!(read.colour.as_deref(), Some("#010203"));
     // By the full uri: two versions of a surface are two surfaces (identity).
-    assert_eq!(*asked.borrow(), vec![uri(HORIZON)], "asked once, by the object's uri");
+    assert_eq!(
+        *asked.borrow(),
+        vec![uri(HORIZON)],
+        "asked once, by the object's uri"
+    );
 
     // No resolver and an empty set: the file says nothing, and nothing is made up.
-    let quiet = Colouring { set: Some(&set), index: None, resolver: None };
+    let quiet = Colouring {
+        set: Some(&set),
+        index: None,
+        resolver: None,
+    };
     let read = read_surface_coloured(&store, "s1", &uri(HORIZON), &trace, &scene, quiet).expect("reads");
     assert_eq!(read.colour, None);
 }
@@ -753,29 +1004,83 @@ fn a_package_cache_reads_each_surface_once_and_cuts_again_only_when_the_trace_mo
 
     let store = plane_store(HORIZON, "Top", None);
     let system = lambert();
-    let scene = Scene { system: Some(&system), time_factor: None, reprojector: &NoReprojection };
+    let scene = Scene {
+        system: Some(&system),
+        time_factor: None,
+        reprojector: &NoReprojection,
+    };
     let context = PackageContext::default();
     let east = [long(&[[100.0, 500.0], [900.0, 500.0]])];
     let north = [long(&[[500.0, 100.0], [500.0, 900.0]])];
     let mut cache = PackageCache::new();
 
-    let first = contribution_cached(&store, &asked("s1", 0, &[HORIZON]), &east, &scene, &context, &mut cache);
+    let first = contribution_cached(
+        &store,
+        &asked("s1", 0, &[HORIZON]),
+        &east,
+        &scene,
+        &context,
+        &mut cache,
+    );
     let reads = store.reads.get();
     assert!(reads > 0, "the first run reads the surface");
-    assert_eq!(first, contribution(&store, &asked("s1", 0, &[HORIZON]), &east, &scene, &context), "a cached answer is the answer");
+    assert_eq!(
+        first,
+        contribution(&store, &asked("s1", 0, &[HORIZON]), &east, &scene, &context),
+        "a cached answer is the answer"
+    );
     let reads_uncached = store.reads.get() - reads;
 
-    let again = contribution_cached(&store, &asked("s1", 0, &[HORIZON]), &east, &scene, &context, &mut cache);
+    let again = contribution_cached(
+        &store,
+        &asked("s1", 0, &[HORIZON]),
+        &east,
+        &scene,
+        &context,
+        &mut cache,
+    );
     assert_eq!(again, first);
-    assert_eq!(cache.work(), Work { wells_read: 0, surfaces_read: 1, surfaces_cut: 1, sections_cut: 1, reused: 1, ..Work::default() });
+    assert_eq!(
+        cache.work(),
+        Work {
+            wells_read: 0,
+            surfaces_read: 1,
+            surfaces_cut: 1,
+            sections_cut: 1,
+            reused: 1,
+            ..Work::default()
+        }
+    );
 
-    let moved = contribution_cached(&store, &asked("s1", 0, &[HORIZON]), &north, &scene, &context, &mut cache);
-    assert_eq!(store.reads.get(), reads + reads_uncached, "moving the trace reads nothing");
+    let moved = contribution_cached(
+        &store,
+        &asked("s1", 0, &[HORIZON]),
+        &north,
+        &scene,
+        &context,
+        &mut cache,
+    );
+    assert_eq!(
+        store.reads.get(),
+        reads + reads_uncached,
+        "moving the trace reads nothing"
+    );
     assert_eq!(cache.work().surfaces_cut, 2);
     assert_ne!(moved, first, "and it cuts along the new trace");
 
-    contribution_cached(&store, &asked("s1", 1, &[HORIZON]), &north, &scene, &context, &mut cache);
-    assert_eq!(cache.work().surfaces_read, 2, "another revision of the package is read again");
+    contribution_cached(
+        &store,
+        &asked("s1", 1, &[HORIZON]),
+        &north,
+        &scene,
+        &context,
+        &mut cache,
+    );
+    assert_eq!(
+        cache.work().surfaces_read,
+        2,
+        "another revision of the package is read again"
+    );
 }
 
 /// `read::cache`, lot 6a: a cut is kept under (surface, **line**), several per
@@ -793,13 +1098,27 @@ fn a_cut_is_kept_for_its_line_whoever_asks() {
 
     let store = plane_store(HORIZON, "Top", None);
     let system = lambert();
-    let scene = Scene { system: Some(&system), time_factor: None, reprojector: &NoReprojection };
+    let scene = Scene {
+        system: Some(&system),
+        time_factor: None,
+        reprojector: &NoReprojection,
+    };
     let context = PackageContext::default();
     let east = long(&[[100.0, 500.0], [900.0, 500.0]]);
-    let north = SectionTrace { key: SectionKey::Cross { index: 0 }, ..long(&[[500.0, 100.0], [500.0, 900.0]]) };
+    let north = SectionTrace {
+        key: SectionKey::Cross { index: 0 },
+        ..long(&[[500.0, 100.0], [500.0, 900.0]])
+    };
     let mut cache = PackageCache::new();
     let run = |sections: &[SectionTrace], cache: &mut PackageCache| {
-        contribution_cached(&store, &asked("s1", 0, &[HORIZON]), sections, &scene, &context, cache)
+        contribution_cached(
+            &store,
+            &asked("s1", 0, &[HORIZON]),
+            sections,
+            &scene,
+            &context,
+            cache,
+        )
     };
 
     run(std::slice::from_ref(&east), &mut cache);
@@ -808,22 +1127,55 @@ fn a_cut_is_kept_for_its_line_whoever_asks() {
     // A second section: only its line is cut.
     let both = run(&[east.clone(), north.clone()], &mut cache);
     assert_eq!((cache.work().surfaces_cut, cache.work().sections_cut), (2, 2));
-    assert_eq!(both, contribution(&store, &asked("s1", 0, &[HORIZON]), &[east.clone(), north.clone()], &scene, &context));
+    assert_eq!(
+        both,
+        contribution(
+            &store,
+            &asked("s1", 0, &[HORIZON]),
+            &[east.clone(), north.clone()],
+            &scene,
+            &context
+        )
+    );
 
     // A corridor is not a line.
-    let wider = SectionTrace { left: 250.0, right: 30.0, ..east.clone() };
+    let wider = SectionTrace {
+        left: 250.0,
+        right: 30.0,
+        ..east.clone()
+    };
     run(&[wider, north.clone()], &mut cache);
-    assert_eq!((cache.work().surfaces_cut, cache.work().sections_cut), (2, 2), "nothing cut for a width");
+    assert_eq!(
+        (cache.work().surfaces_cut, cache.work().sections_cut),
+        (2, 2),
+        "nothing cut for a width"
+    );
 
     // The same two lines under the other keys, in the other order: nothing cut, and each cut carries the key of the section that asked.
     let swapped = [
-        SectionTrace { key: SectionKey::Cross { index: 0 }, ..east.clone() },
-        SectionTrace { key: SectionKey::Long, ..north.clone() },
+        SectionTrace {
+            key: SectionKey::Cross { index: 0 },
+            ..east.clone()
+        },
+        SectionTrace {
+            key: SectionKey::Long,
+            ..north.clone()
+        },
     ];
     let served = run(&swapped, &mut cache);
-    assert_eq!((cache.work().surfaces_cut, cache.work().sections_cut), (2, 2), "keys and order are not lines");
-    assert_eq!(served, contribution(&store, &asked("s1", 0, &[HORIZON]), &swapped, &scene, &context));
-    assert!(!served.surfaces[0].cuts.is_empty(), "the horizon is cut by the lines (else the equality above proves nothing)");
+    assert_eq!(
+        (cache.work().surfaces_cut, cache.work().sections_cut),
+        (2, 2),
+        "keys and order are not lines"
+    );
+    assert_eq!(
+        served,
+        contribution(&store, &asked("s1", 0, &[HORIZON]), &swapped, &scene, &context)
+    );
+    assert!(
+        !served.surfaces[0].cuts.is_empty(),
+        "the horizon is cut by the lines (else the equality above proves nothing)"
+    );
 }
 
 /// `compute_packages`: two packages, each with its own selection, give **one**
@@ -847,22 +1199,52 @@ fn two_packages_merge_into_one_catalogue_and_an_unopened_one_is_refused_by_name(
         left: 100.0,
         right: 100.0,
         crosses: Crosses::None,
-        objects: vec![asked("s1", 0, &[HORIZON]), asked("s2", 0, &[FAULT]), asked("s3", 0, &[PROXY])],
+        objects: vec![
+            asked("s1", 0, &[HORIZON]),
+            asked("s2", 0, &[FAULT]),
+            asked("s3", 0, &[PROXY]),
+        ],
         time_factor: None,
     };
     let mut kept = PackageCache::new();
     let mut opened = [
-        Opened { store: "s1".into(), source: &first, context: PackageContext::default(), cache: Some(&mut kept) },
-        Opened { store: "s2".into(), source: &second, context: PackageContext::default(), cache: None },
+        Opened {
+            store: "s1".into(),
+            source: &first,
+            context: PackageContext::default(),
+            cache: Some(&mut kept),
+        },
+        Opened {
+            store: "s2".into(),
+            source: &second,
+            context: PackageContext::default(),
+            cache: None,
+        },
     ];
     let catalogue = compute_packages(&inputs, &mut opened, &NoReprojection).expect("the inputs are valid");
 
-    let row = |store: &str| catalogue.objects.iter().find(|row| row.object.store == store).unwrap_or_else(|| panic!("no row from {store}"));
-    assert!(matches!(row("s1").outcome, Outcome::Drawn { .. }), "{:?}", row("s1").outcome);
-    assert!(matches!(row("s2").outcome, Outcome::Drawn { .. }), "{:?}", row("s2").outcome);
+    let row = |store: &str| {
+        catalogue
+            .objects
+            .iter()
+            .find(|row| row.object.store == store)
+            .unwrap_or_else(|| panic!("no row from {store}"))
+    };
+    assert!(
+        matches!(row("s1").outcome, Outcome::Drawn { .. }),
+        "{:?}",
+        row("s1").outcome
+    );
+    assert!(
+        matches!(row("s2").outcome, Outcome::Drawn { .. }),
+        "{:?}",
+        row("s2").outcome
+    );
     assert_eq!(row("s2").object.title, "Base");
     match &row("s3").outcome {
-        Outcome::Refused { reason } => assert!(reason.contains("`s3`") && reason.contains("not open"), "{reason}"),
+        Outcome::Refused { reason } => {
+            assert!(reason.contains("`s3`") && reason.contains("not open"), "{reason}")
+        }
         other => panic!("{other:?}"),
     }
     assert_eq!(kept.work().surfaces_read, 1, "the first package's cache was used");

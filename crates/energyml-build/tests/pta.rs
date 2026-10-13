@@ -27,18 +27,37 @@ const PERMEABILITY: &str = "2d2d2d2d-0000-4000-8000-000000000412";
 const POROSITY: &str = "2d2d2d2d-0000-4000-8000-000000000411";
 
 fn when() -> When {
-    When { creation: "2026-09-28T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-28T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 fn object(uuid: &str, qualified: &str, title: &str) -> Source {
-    Source::Object(Known { reference: Some(Ref::new(uuid, qualified, title)), ..Default::default() })
+    Source::Object(Known {
+        reference: Some(Ref::new(uuid, qualified, title)),
+        ..Default::default()
+    })
 }
 
 fn bag() -> Pieces {
     Pieces::empty()
-        .with("test", object(TEST, "prodml23.InjectionFlowTest", "GTH-2 — injection test"))
-        .with("permeabilityArray", object(PERMEABILITY, "resqml22.ContinuousProperty", "grid — permeability (kx)"))
-        .with("porosityArray", object(POROSITY, "resqml22.ContinuousProperty", "grid — porosity"))
+        .with(
+            "test",
+            object(TEST, "prodml23.InjectionFlowTest", "GTH-2 — injection test"),
+        )
+        .with(
+            "permeabilityArray",
+            object(
+                PERMEABILITY,
+                "resqml22.ContinuousProperty",
+                "grid — permeability (kx)",
+            ),
+        )
+        .with(
+            "porosityArray",
+            object(POROSITY, "resqml22.ContinuousProperty", "grid — porosity"),
+        )
 }
 
 fn choices() -> Choices {
@@ -53,29 +72,53 @@ fn choices() -> Choices {
 }
 
 fn planned(pieces: &Pieces, choices: Choices) -> Result<Plan, String> {
-    let plan = Registry::new().plan("pressure-transient-analysis", pieces, &choices, &Identity::derived(), &when()).map_err(|why| why.to_string())?;
+    let plan = Registry::new()
+        .plan(
+            "pressure-transient-analysis",
+            pieces,
+            &choices,
+            &Identity::derived(),
+            &when(),
+        )
+        .map_err(|why| why.to_string())?;
     // What is planned is checked against the schema, every time: this plan wrote
     // `k`, `kh` and `phi` where PtaParameters.xsd fixes `K`, `k.h` and `Phi`
     // (`fixed=`), and no test looked.
     let broken = energyml_build::apply::conformance(&plan, &energyml_schemas::all());
-    assert!(broken.is_empty(), "objects planned against their schema: {broken:#?}");
+    assert!(
+        broken.is_empty(),
+        "objects planned against their schema: {broken:#?}"
+    );
     Ok(plan)
 }
 
 fn the_analysis(plan: &Plan) -> (&NewObject, prodml::PressureTransientAnalysis) {
-    assert_eq!(plan.objects.len(), 1, "one object: {:?}", plan.objects.iter().map(|o| &o.qualified_type).collect::<Vec<_>>());
+    assert_eq!(
+        plan.objects.len(),
+        1,
+        "one object: {:?}",
+        plan.objects.iter().map(|o| &o.qualified_type).collect::<Vec<_>>()
+    );
     let object = &plan.objects[0];
     assert_eq!(object.qualified_type, "prodml23.PressureTransientAnalysis");
     let schemas = energyml_schemas::all();
-    let document = energyml_core::json::read_value(&object.json, &schemas).unwrap_or_else(|why| panic!("the analysis does not read back: {why}"));
+    let document = energyml_core::json::read_value(&object.json, &schemas)
+        .unwrap_or_else(|why| panic!("the analysis does not read back: {why}"));
     let root: &dyn DynObject = &*document.root;
-    let analysis = root.as_reflect().downcast_ref::<prodml::PressureTransientAnalysis>().expect("a PressureTransientAnalysis").clone();
+    let analysis = root
+        .as_reflect()
+        .downcast_ref::<prodml::PressureTransientAnalysis>()
+        .expect("a PressureTransientAnalysis")
+        .clone();
     (object, analysis)
 }
 
 fn reservoir(analysis: &prodml::PressureTransientAnalysis) -> &prodml::ReservoirBaseModel {
     assert_eq!(analysis.layer_model.len(), 1, "one layer");
-    analysis.layer_model[0].reservoir_model.as_ref().expect("a reservoir model")
+    analysis.layer_model[0]
+        .reservoir_model
+        .as_ref()
+        .expect("a reservoir model")
 }
 
 /// **Given a grid property, the model is the numerical one and cites it.**
@@ -89,9 +132,24 @@ fn a_grid_property_makes_the_model_numerical_and_is_cited() {
     };
     let grid = &model.distributed_parameters_sub_model;
     assert!(grid.is_permeability_gridded && grid.is_porosity_gridded);
-    assert!(!grid.is_thickness_gridded && !grid.is_depth_gridded && !grid.is_kv_to_kr_gridded && !grid.is_kx_to_ky_gridded);
-    assert_eq!(grid.permeability_array_ref_id.as_ref().unwrap().resqml_model_ref.uuid, PERMEABILITY);
-    assert_eq!(grid.porosity_array_ref_id.as_ref().unwrap().resqml_model_ref.uuid, POROSITY);
+    assert!(
+        !grid.is_thickness_gridded
+            && !grid.is_depth_gridded
+            && !grid.is_kv_to_kr_gridded
+            && !grid.is_kx_to_ky_gridded
+    );
+    assert_eq!(
+        grid.permeability_array_ref_id
+            .as_ref()
+            .unwrap()
+            .resqml_model_ref
+            .uuid,
+        PERMEABILITY
+    );
+    assert_eq!(
+        grid.porosity_array_ref_id.as_ref().unwrap().resqml_model_ref.uuid,
+        POROSITY
+    );
     assert_eq!(analysis.is_numerical_analysis, Some(true));
 }
 
@@ -99,10 +157,20 @@ fn a_grid_property_makes_the_model_numerical_and_is_cited() {
 /// numerical model can say a parameter is on a grid, so nothing is said.
 #[test]
 fn without_a_grid_property_the_model_is_analytical() {
-    let pieces = Pieces::empty().with("test", object(TEST, "prodml23.InjectionFlowTest", "GTH-2 — injection test"));
+    let pieces = Pieces::empty().with(
+        "test",
+        object(TEST, "prodml23.InjectionFlowTest", "GTH-2 — injection test"),
+    );
     let plan = planned(&pieces, choices()).unwrap_or_else(|why| panic!("{why}"));
     let (_, analysis) = the_analysis(&plan);
-    assert!(matches!(reservoir(&analysis), prodml::ReservoirBaseModel::HomogeneousModel(_)), "{:?}", reservoir(&analysis));
+    assert!(
+        matches!(
+            reservoir(&analysis),
+            prodml::ReservoirBaseModel::HomogeneousModel(_)
+        ),
+        "{:?}",
+        reservoir(&analysis)
+    );
     assert_eq!(analysis.is_numerical_analysis, Some(false));
 }
 
@@ -112,10 +180,15 @@ fn without_a_grid_property_the_model_is_analytical() {
 fn the_constants_are_written_with_their_units() {
     let plan = planned(&bag(), choices()).unwrap();
     let (object, analysis) = the_analysis(&plan);
-    let prodml::ReservoirBaseModel::NumericalHomogeneousReservoirModel(model) = reservoir(&analysis) else { panic!() };
+    let prodml::ReservoirBaseModel::NumericalHomogeneousReservoirModel(model) = reservoir(&analysis) else {
+        panic!()
+    };
     assert_eq!(model.horizontal_radial_permeability.permeability.value, 5.0);
     assert_eq!(model.total_thickness.length.value, 95.0);
-    assert_eq!(model.permeability_thickness_product.permeability_length.value, 5.0 * 95.0);
+    assert_eq!(
+        model.permeability_thickness_product.permeability_length.value,
+        5.0 * 95.0
+    );
     assert_eq!(model.porosity.volume_per_volume.value, 0.35);
     assert_eq!(model.initial_pressure.pressure.value, 12.0);
     // The units as the file spells them.
@@ -131,22 +204,46 @@ fn the_analysis_names_its_test_and_the_period() {
     let plan = planned(&bag(), choices()).unwrap();
     let (object, analysis) = the_analysis(&plan);
     assert_eq!(analysis.flow_test_activity.uuid, TEST);
-    assert_eq!(analysis.flow_test_activity.qualified_type, "prodml23.InjectionFlowTest");
+    assert_eq!(
+        analysis.flow_test_activity.qualified_type,
+        "prodml23.InjectionFlowTest"
+    );
     assert_eq!(analysis.principal_test_period_ref, vec!["step-rate".to_string()]);
-    assert!(matches!(analysis.fluid_phase_analysis_kind, prodml::FluidPhaseKind::SinglePhaseWater));
+    assert!(matches!(
+        analysis.fluid_phase_analysis_kind,
+        prodml::FluidPhaseKind::SinglePhaseWater
+    ));
     // Invented, and saying so.
     let synthetic = &object.json["ExtensionNameValue"];
-    assert!(synthetic.as_array().is_some_and(|all| !all.is_empty()), "{synthetic}");
-    assert!(object.json["Citation"]["Description"].as_str().unwrap().contains("a trial source"));
-    assert!(plan.says.iter().any(|note| note.key == "test-period"), "{:?}", plan.says);
+    assert!(
+        synthetic.as_array().is_some_and(|all| !all.is_empty()),
+        "{synthetic}"
+    );
+    assert!(
+        object.json["Citation"]["Description"]
+            .as_str()
+            .unwrap()
+            .contains("a trial source")
+    );
+    assert!(
+        plan.says.iter().any(|note| note.key == "test-period"),
+        "{:?}",
+        plan.says
+    );
 }
 
 /// **An object that is no flow test is refused**, before anything is planned.
 #[test]
 fn an_object_that_is_no_flow_test_is_refused() {
-    let pieces = Pieces::empty().with("test", object(TEST, "prodml23.ProductionWellTests", "GTH-2 — well tests"));
+    let pieces = Pieces::empty().with(
+        "test",
+        object(TEST, "prodml23.ProductionWellTests", "GTH-2 — well tests"),
+    );
     let why = planned(&pieces, choices()).unwrap_err();
-    assert!(why.contains("`test`") && why.contains("no PRODML flow test"), "{why}");
+    assert!(
+        why.contains("`test`") && why.contains("no PRODML flow test"),
+        "{why}"
+    );
 }
 
 /// **What cannot be analysed is refused by its slot**: no period, a porosity

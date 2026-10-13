@@ -47,7 +47,9 @@ use energyml_analysis::thickness::{self as analysis, Measure};
 use energyml_domain::provenance::Parameter;
 use energyml_domain::units::Dimension;
 
-use crate::declare::{Choice, Inputs, ObjectRef, Params, PropertyKindRef, Shape, Suggestions, Title, known_of};
+use crate::declare::{
+    Choice, Inputs, ObjectRef, Params, PropertyKindRef, Shape, Suggestions, Title, known_of,
+};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::Pieces;
 
@@ -113,7 +115,12 @@ pub struct ThicknessInputs {
 
 /// The title the reference of a surface gives it, or its role.
 fn title_of(shape: &Shape, role: &str) -> String {
-    shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.title.clone()).unwrap_or_else(|| role.to_string())
+    shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|r| r.title.clone())
+        .unwrap_or_else(|| role.to_string())
 }
 
 impl Operation for Thickness {
@@ -144,7 +151,13 @@ impl Operation for Thickness {
     }
 
     fn check(&self, inputs: &ThicknessInputs) -> Result<(), Refusal> {
-        if inputs.top.geometry.patches.iter().all(|patch| patch.points.is_empty()) {
+        if inputs
+            .top
+            .geometry
+            .patches
+            .iter()
+            .all(|patch| patch.points.is_empty())
+        {
             return Err(Refusal::on("top", "holds no node"));
         }
         if !support::Faces::of(&inputs.base.geometry).any() {
@@ -156,7 +169,12 @@ impl Operation for Thickness {
         Ok(())
     }
 
-    fn plan(&self, inputs: ThicknessInputs, params: ThicknessParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: ThicknessInputs,
+        params: ThicknessParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let ThicknessInputs { top, base } = inputs;
         let measure = match params.what {
             What::Isochore => Measure::Vertical,
@@ -210,7 +228,9 @@ impl Operation for Thickness {
         {
             return Err(Refusal::on(
                 "uom",
-                format!("`{uom}` is a {given:?} and the frame counts its heights in a {frame:?} — the values would be read in the wrong family"),
+                format!(
+                    "`{uom}` is a {given:?} and the frame counts its heights in a {frame:?} — the values would be read in the wrong family"
+                ),
             ));
         }
         if time && measure == Measure::Stratigraphic {
@@ -220,8 +240,13 @@ impl Operation for Thickness {
             ));
         }
 
-        let found = analysis::thickness(&support::Faces::of(&top.geometry).surface(), &support::Faces::of(&base.geometry).surface(), up, measure)
-            .map_err(|e| Refusal::new("refused", e.to_string()))?;
+        let found = analysis::thickness(
+            &support::Faces::of(&top.geometry).surface(),
+            &support::Faces::of(&base.geometry).surface(),
+            up,
+            measure,
+        )
+        .map_err(|e| Refusal::new("refused", e.to_string()))?;
         cx.stop_if_cancelled()?;
 
         // The kind of the standard dictionary, looked up by title: the
@@ -235,7 +260,10 @@ impl Operation for Thickness {
             Some(given) => given.0,
             None => {
                 let found = energyml_domain::property_kind::with_default(|dictionary| {
-                    dictionary.by_title(kind_title).first().map(|kind| (kind.uuid.clone(), kind.title.clone()))
+                    dictionary
+                        .by_title(kind_title)
+                        .first()
+                        .map(|kind| (kind.uuid.clone(), kind.title.clone()))
                 });
                 let (uuid, title) = found.ok_or_else(|| {
                     Refusal::on(
@@ -255,7 +283,12 @@ impl Operation for Thickness {
         // The field over the top, handed to the property writer **typed** —
         // with what is known of the top, whose node count it checks. The seed
         // is the one the derived bag's field gave before.
-        let over = if top.known.is_some() { "top (object)" } else { "top" }.to_string();
+        let over = if top.known.is_some() {
+            "top (object)"
+        } else {
+            "top"
+        }
+        .to_string();
         let count = found.values.len();
         let name = format!("{label} of top");
         let field = crate::declare::Field {
@@ -272,15 +305,35 @@ impl Operation for Thickness {
             title: Title(title.clone()),
             data_file: params.data_file,
         };
-        let mut plan = super::property::write(&field, top.known.as_ref(), &property, &format!("{name}:{title}"), cx)?;
+        let mut plan = super::property::write(
+            &field,
+            top.known.as_ref(),
+            &property,
+            &format!("{name}:{title}"),
+            cx,
+        )?;
 
         plan.activity.recipe = "thickness";
         plan.activity.title = format!("thickness → {title}");
-        plan.activity.parameters.push(Parameter::Text { title: "what".to_string(), value: params.what.word().to_string() });
-        plan.activity.parameters.push(Parameter::Text { title: "vertical".to_string(), value: params.vertical.word().to_string() });
+        plan.activity.parameters.push(Parameter::Text {
+            title: "what".to_string(),
+            value: params.what.word().to_string(),
+        });
+        plan.activity.parameters.push(Parameter::Text {
+            title: "vertical".to_string(),
+            value: params.vertical.word().to_string(),
+        });
         let undefined = found.outside + found.folded + found.unplaced + found.undipped;
-        plan.activity.parameters.push(Parameter::Double { title: "undefinedCount".to_string(), value: undefined as f64, uom: None });
-        plan.activity.parameters.push(Parameter::Double { title: "crossedCount".to_string(), value: found.crossed as f64, uom: None });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "undefinedCount".to_string(),
+            value: undefined as f64,
+            uom: None,
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "crossedCount".to_string(),
+            value: found.crossed as f64,
+            uom: None,
+        });
 
         let mut say = |key: &'static str, detail: String| plan.says.push(Note { key, detail });
         if measure == Measure::Stratigraphic {
@@ -291,10 +344,21 @@ impl Operation for Thickness {
             );
         }
         if time {
-            say("isochron", format!("the heights are in `{uom}`: the difference is an isochron, written as `vertical time thickness`"));
+            say(
+                "isochron",
+                format!(
+                    "the heights are in `{uom}`: the difference is an isochron, written as `vertical time thickness`"
+                ),
+            );
         }
         if found.outside > 0 {
-            say("outside", format!("{} of {count} node(s) of the top have no base under them: NaN, not extrapolated", found.outside));
+            say(
+                "outside",
+                format!(
+                    "{} of {count} node(s) of the top have no base under them: NaN, not extrapolated",
+                    found.outside
+                ),
+            );
         }
         if found.folded > 0 {
             say(
@@ -306,21 +370,39 @@ impl Operation for Thickness {
             );
         }
         if found.unplaced > 0 {
-            say("unplaced", format!("{} node(s) of the top have no finite position: NaN", found.unplaced));
+            say(
+                "unplaced",
+                format!(
+                    "{} node(s) of the top have no finite position: NaN",
+                    found.unplaced
+                ),
+            );
         }
         if found.undipped > 0 {
-            say("undipped", format!("{} node(s) of the top have no dip, so no isopach: NaN", found.undipped));
+            say(
+                "undipped",
+                format!(
+                    "{} node(s) of the top have no dip, so no isopach: NaN",
+                    found.undipped
+                ),
+            );
         }
         if found.crossed > 0 {
             say(
                 "crossed",
-                format!("{} node(s) have the base above the top: their thickness is negative, and kept — two picks that cross", found.crossed),
+                format!(
+                    "{} node(s) have the base above the top: their thickness is negative, and kept — two picks that cross",
+                    found.crossed
+                ),
             );
         }
         if found.set_aside > 0 {
             say(
                 "set-aside",
-                format!("{} face(s) of the base set aside: a corner that is not a finite point, no area in plan, or a cell that is not convex", found.set_aside),
+                format!(
+                    "{} face(s) of the base set aside: a corner that is not a finite point, no area in plan, or a cell that is not convex",
+                    found.set_aside
+                ),
             );
         }
         Ok(plan)
@@ -330,13 +412,24 @@ impl Operation for Thickness {
     /// projection already declares — a title cannot be both.
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
-            Slot::required(name, Need::Number { uom: None, least: None, most: None }, about)
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
         };
         vec![
             Slot::required("indexable", Need::Text, "the indexable element the values lie on"),
             count("valueCount", "values written"),
             count("undefinedCount", "nodes with no thickness, written as NaN"),
-            count("crossedCount", "nodes where the base lies above the top — negative, kept"),
+            count(
+                "crossedCount",
+                "nodes where the base lies above the top — negative, kept",
+            ),
         ]
     }
 }

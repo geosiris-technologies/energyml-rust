@@ -160,7 +160,9 @@ fn time_part(s: &str) -> Res {
 
 fn date_time(s: &str) -> Res {
     let body = split_timezone(s)?;
-    let (d, t) = body.split_once('T').ok_or("expected the `T` between date and time")?;
+    let (d, t) = body
+        .split_once('T')
+        .ok_or("expected the `T` between date and time")?;
     date_part(d)?;
     time_part(t)
 }
@@ -182,7 +184,10 @@ fn g_month(s: &str) -> Res {
     // XSD 1.0's gMonth is `--MM--`, corrected to `--MM` in 1.0 second edition;
     // both are read.
     let body = body.strip_suffix("--").unwrap_or(body);
-    let m = body.strip_prefix("--").and_then(digits).filter(|_| body.len() == 4);
+    let m = body
+        .strip_prefix("--")
+        .and_then(digits)
+        .filter(|_| body.len() == 4);
     match m {
         Some(1..=12) => Ok(()),
         _ => Err("expected --MM with a month 01 to 12"),
@@ -191,7 +196,10 @@ fn g_month(s: &str) -> Res {
 
 fn g_day(s: &str) -> Res {
     let body = split_timezone(s)?;
-    let d = body.strip_prefix("---").and_then(digits).filter(|_| body.len() == 5);
+    let d = body
+        .strip_prefix("---")
+        .and_then(digits)
+        .filter(|_| body.len() == 5);
     match d {
         Some(1..=31) => Ok(()),
         _ => Err("expected ---DD with a day 01 to 31"),

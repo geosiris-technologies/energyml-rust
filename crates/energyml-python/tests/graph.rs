@@ -38,7 +38,9 @@ fn what_an_object_points_at_points_back_at_it() {
         // **The confrontation.** `references` read one object and believed its
         // DORs; `referenced_by` read every object and kept the ones that name
         // this uuid. They have to meet, path included.
-        let back = package.referenced_by(&link.uri).expect("the other direction answers");
+        let back = package
+            .referenced_by(&link.uri)
+            .expect("the other direction answers");
         let mine: Vec<&str> = back
             .iter()
             .filter(|one| one.uri == object.uri)
@@ -59,7 +61,9 @@ fn what_an_object_points_at_points_back_at_it() {
 #[test]
 fn an_object_is_never_its_own_dependent() {
     let Some(package) = package() else { return };
-    let Some(first) = package.objects().into_iter().next() else { return };
+    let Some(first) = package.objects().into_iter().next() else {
+        return;
+    };
     for one in package.referenced_by(&first.uri).expect("the question answers") {
         assert_ne!(one.uri, first.uri, "an object listed as pointing at itself");
     }
@@ -87,7 +91,10 @@ fn a_reference_into_nothing_is_said_to_be_absent() {
         }
     }
     assert!(present > 0, "a package of references has some that resolve");
-    assert!(absent > 0, "this corpus package is known to name what it does not hold");
+    assert!(
+        absent > 0,
+        "this corpus package is known to name what it does not hold"
+    );
     eprintln!("{present} reference(s) resolve, {absent} point outside the package");
 }
 
@@ -103,9 +110,14 @@ fn what_an_object_needs_is_a_set_that_closes() {
         return;
     };
 
-    let (needed, _missing) = package.needs(std::slice::from_ref(&object.uri)).expect("the closure answers");
+    let (needed, _missing) = package
+        .needs(std::slice::from_ref(&object.uri))
+        .expect("the closure answers");
     assert!(needed.contains(&object.uri), "the seed is part of what it needs");
-    assert!(needed.len() > 1, "a representation needs at least its interpretation or its CRS");
+    assert!(
+        needed.len() > 1,
+        "a representation needs at least its interpretation or its CRS"
+    );
 
     // **Closed means closed**, and this checks it the other way round: for
     // every object kept, every reference it holds that the package *has* must

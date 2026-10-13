@@ -36,7 +36,15 @@ pub fn values(min: f64, max: f64, target: f64) -> (f64, Vec<f64>) {
 
 /// A tick's text: as many decimals as the step needs, no "-0".
 pub fn label(value: f64, step: f64) -> String {
-    let decimals = if step >= 1.0 { 0 } else { (-step.log10().floor()) as usize };
+    let decimals = if step >= 1.0 {
+        0
+    } else {
+        (-step.log10().floor()) as usize
+    };
     let text = format!("{value:.decimals$}");
-    if text.starts_with('-') && text[1..].chars().all(|c| c == '0' || c == '.') { text[1..].to_string() } else { text }
+    if text.starts_with('-') && text[1..].chars().all(|c| c == '0' || c == '.') {
+        text[1..].to_string()
+    } else {
+        text
+    }
 }

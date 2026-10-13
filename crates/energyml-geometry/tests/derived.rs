@@ -23,9 +23,8 @@ use energyml_eml_2_0::{DataObjectReference, Hdf5Dataset};
 use energyml_geometry::{Topology, geometry};
 use energyml_resqml_2_0_1::{
     AbstractBooleanArray, AbstractDoubleArray, AbstractIntegerArray, AbstractParentWindow,
-    AbstractPoint3dArray, BooleanConstantArray, DoubleHdf5Array, IjkGridGeometry,
-    IjkGridRepresentation, IjkParentWindow, IntegerHdf5Array, Intervals, KGaps, Point3dHdf5Array,
-    Regrid,
+    AbstractPoint3dArray, BooleanConstantArray, DoubleHdf5Array, IjkGridGeometry, IjkGridRepresentation,
+    IjkParentWindow, IntegerHdf5Array, Intervals, KGaps, Point3dHdf5Array, Regrid,
 };
 use energyml_storage::array::{ArrayBuffer, ArrayData, ArrayLocation, ArrayMetadata, ArrayValues};
 
@@ -181,29 +180,21 @@ impl Axis {
             initial_index_on_parent_grid: self.start,
             intervals: Some(Intervals {
                 interval_count: count,
-                parent_count_per_interval: Some(AbstractIntegerArray::IntegerHdf5Array(
-                    IntegerHdf5Array {
-                        null_value: -1,
-                        values: dataset(&format!("/{tag}/parents")),
-                    },
-                )),
-                child_count_per_interval: Some(AbstractIntegerArray::IntegerHdf5Array(
-                    IntegerHdf5Array {
-                        null_value: -1,
-                        values: dataset(&format!("/{tag}/children")),
-                    },
-                )),
+                parent_count_per_interval: Some(AbstractIntegerArray::IntegerHdf5Array(IntegerHdf5Array {
+                    null_value: -1,
+                    values: dataset(&format!("/{tag}/parents")),
+                })),
+                child_count_per_interval: Some(AbstractIntegerArray::IntegerHdf5Array(IntegerHdf5Array {
+                    null_value: -1,
+                    values: dataset(&format!("/{tag}/children")),
+                })),
                 child_cell_weights: weights,
             }),
         }
     }
 }
 
-fn child(
-    dimensions: [u64; 3],
-    axes: [Axis; 3],
-    store: &mut Store,
-) -> IjkGridRepresentation {
+fn child(dimensions: [u64; 3], axes: [Axis; 3], store: &mut Store) -> IjkGridRepresentation {
     let [i, j, k] = axes;
     let (i, j, k) = (i.build("i", store), j.build("j", store), k.build("k", store));
     IjkGridRepresentation {
@@ -269,7 +260,11 @@ impl Store {
             POINTS.to_string(),
             (
                 gapped_points(),
-                vec![(PARENT_NK + 2) as i64, ((PARENT_NI + 1) * (PARENT_NJ + 1)) as i64, 3],
+                vec![
+                    (PARENT_NK + 2) as i64,
+                    ((PARENT_NI + 1) * (PARENT_NJ + 1)) as i64,
+                    3,
+                ],
             ),
         );
         store.gapped = true;
@@ -284,7 +279,8 @@ impl Store {
 
 impl ObjectSource for Store {
     fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
-        (uuid == PARENT).then(|| Box::new(if self.gapped { gapped_parent() } else { parent() }) as Box<dyn DynObject>)
+        (uuid == PARENT)
+            .then(|| Box::new(if self.gapped { gapped_parent() } else { parent() }) as Box<dyn DynObject>)
     }
 }
 
@@ -561,7 +557,13 @@ fn below_a_k_gap_the_window_starts_at_its_layers_top() {
     let points = nodes(&grid, &store);
     assert_eq!(points.len(), 2 * 2 * 3);
     // Node order: i fastest, then j, then k — two nodes per row, four per level.
-    for (ck, j, i) in [(0usize, 0usize, 0usize), (0, 0, 1), (0, 1, 1), (1, 1, 0), (2, 1, 1)] {
+    for (ck, j, i) in [
+        (0usize, 0usize, 0usize),
+        (0, 0, 1),
+        (0, 1, 1),
+        (1, 1, 0),
+        (2, 1, 1),
+    ] {
         let at = ck * 4 + j * 2 + i;
         let level = 2.0 + ck as f64 / 2.0;
         assert_eq!(points[at], expected(1.0 + i as f64, j as f64, level), "node {at}");
@@ -584,7 +586,10 @@ fn a_window_across_a_k_gap_is_refused() {
         &mut store,
     );
     let error = geometry::of(&grid, &store).unwrap_err().to_string();
-    assert!(error.contains("K gap") && error.contains("after parent layer 0"), "the refusal should name the gap: {error}");
+    assert!(
+        error.contains("K gap") && error.contains("after parent layer 0"),
+        "the refusal should name the gap: {error}"
+    );
 }
 
 /// A window running off the edge of its parent is refused by name rather than
@@ -645,7 +650,10 @@ fn a_local_grid_comes_out_as_cells() {
         &mut store,
     );
     let found = geometry::of(&grid, &store).expect("it evaluates");
-    let Topology::Hexahedra { cells, dimensions, .. } = &found.patches[0].topology else {
+    let Topology::Hexahedra {
+        cells, dimensions, ..
+    } = &found.patches[0].topology
+    else {
         panic!("a local IJK grid is a set of hexahedra");
     };
     assert_eq!(*dimensions, [2, 2, 2]);
@@ -787,7 +795,10 @@ fn a_sub_representation_of_cells_carries_only_their_nodes() {
     let patch = &found.patches[0];
     // Two cells that share no corner: 16 distinct nodes, not 45.
     assert_eq!(patch.points.len(), 16);
-    let Topology::Hexahedra { cells, dimensions, .. } = &patch.topology else {
+    let Topology::Hexahedra {
+        cells, dimensions, ..
+    } = &patch.topology
+    else {
         panic!("cells come out as hexahedra");
     };
     assert_eq!(cells.len(), 2);
@@ -852,11 +863,7 @@ fn an_index_outside_the_support_is_refused() {
 #[test]
 fn a_pairwise_sub_representation_is_refused_by_name() {
     let mut store = Store::default();
-    let mut sub = sub_201(
-        energyml_resqml_2_0_1::IndexableElements::Cells,
-        &[0],
-        &mut store,
-    );
+    let mut sub = sub_201(energyml_resqml_2_0_1::IndexableElements::Cells, &[0], &mut store);
     let extra = energyml_resqml_2_0_1::ElementIndices {
         indexable_element: energyml_resqml_2_0_1::IndexableElements::Faces,
         indices: Some(indices("/sub/pair", &[0], &mut store)),
@@ -874,11 +881,7 @@ fn a_pairwise_sub_representation_is_refused_by_name() {
 #[test]
 fn an_element_with_no_geometry_here_is_named() {
     let mut store = Store::default();
-    let sub = sub_201(
-        energyml_resqml_2_0_1::IndexableElements::Edges,
-        &[0],
-        &mut store,
-    );
+    let sub = sub_201(energyml_resqml_2_0_1::IndexableElements::Edges, &[0], &mut store);
     let error = geometry::of(&sub, &store).unwrap_err().to_string();
     assert!(
         error.contains("edges") || error.contains("Edges"),

@@ -21,7 +21,10 @@ use energyml_resqml_2_2 as resqml22;
 const GOOD_UUID: &str = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
 fn codes(report: &ValidationReport) -> Vec<String> {
-    report.errors().map(|i| format!("{} @ {}", i.code, i.path)).collect()
+    report
+        .errors()
+        .map(|i| format!("{} @ {}", i.code, i.path))
+        .collect()
 }
 
 fn has(report: &ValidationReport, code: &str) -> bool {
@@ -63,7 +66,10 @@ fn control_eml_unit_of_measure_ext_refuses_text_without_colon() {
 fn control_a_named_variant_and_a_colon_value_pass() {
     let named = cultural_feature(resqml22::CulturalFeatureKindExt::ModelFrontier).validate();
     assert!(!has(&named, "pattern"), "{:?}", codes(&named));
-    let colon = cultural_feature(resqml22::CulturalFeatureKindExt::Other("acme:section line".into())).validate();
+    let colon = cultural_feature(resqml22::CulturalFeatureKindExt::Other(
+        "acme:section line".into(),
+    ))
+    .validate();
     assert!(!has(&colon, "pattern"), "{:?}", codes(&colon));
 }
 
@@ -71,7 +77,11 @@ fn control_a_named_variant_and_a_colon_value_pass() {
 #[test]
 fn cultural_feature_kind_section_line() {
     let report = cultural_feature(resqml22::CulturalFeatureKindExt::Other("section line".into())).validate();
-    assert!(has(&report, "pattern"), "section line (no colon) is neither listed nor `.*:.*`: {:?}", codes(&report));
+    assert!(
+        has(&report, "pattern"),
+        "section line (no colon) is neither listed nor `.*:.*`: {:?}",
+        codes(&report)
+    );
 }
 
 /// Same defect, other resqml 2.2 `…Ext` enumerations: every union whose
@@ -82,16 +92,28 @@ fn cultural_feature_kind_section_line() {
 #[test]
 fn other_resqml22_open_enumerations_accept_text_without_colon() {
     let mut silent = Vec::new();
-    if !has(&resqml22::ThrowKindExt::Other("nonsense".into()).validate(), "pattern") {
+    if !has(
+        &resqml22::ThrowKindExt::Other("nonsense".into()).validate(),
+        "pattern",
+    ) {
         silent.push("ThrowKindExt");
     }
-    if !has(&resqml22::DepositionalFaciesKindExt::Other("nonsense".into()).validate(), "pattern") {
+    if !has(
+        &resqml22::DepositionalFaciesKindExt::Other("nonsense".into()).validate(),
+        "pattern",
+    ) {
         silent.push("DepositionalFaciesKindExt");
     }
-    if !has(&resqml22::LineRoleExt::Other("nonsense".into()).validate(), "pattern") {
+    if !has(
+        &resqml22::LineRoleExt::Other("nonsense".into()).validate(),
+        "pattern",
+    ) {
         silent.push("LineRoleExt");
     }
-    if !has(&resqml22::ViewerKindExt::Other("nonsense".into()).validate(), "pattern") {
+    if !has(
+        &resqml22::ViewerKindExt::Other("nonsense".into()).validate(),
+        "pattern",
+    ) {
         silent.push("ViewerKindExt");
     }
     assert!(silent.is_empty(), "no pattern check on: {silent:?}");
@@ -118,8 +140,14 @@ fn closed_union_of_two_enumerations_refuses_any_other_string() {
         "closed union"
     );
     assert!(eml23::PressureUomWithLegacy::from_xml_text("bar2").is_err());
-    assert!(eml23::PressureUomWithLegacy::from_xml_text("psia").is_ok(), "a legacy member");
-    assert!(eml23::PressureUomWithLegacy::from_xml_text("bar").is_ok(), "a current member");
+    assert!(
+        eml23::PressureUomWithLegacy::from_xml_text("psia").is_ok(),
+        "a legacy member"
+    );
+    assert!(
+        eml23::PressureUomWithLegacy::from_xml_text("bar").is_ok(),
+        "a current member"
+    );
 }
 
 // Not a hole, checked: the over-long `Other` value. The union's pattern member,
@@ -154,7 +182,11 @@ fn control_datetime_pattern() {
 fn datetime_lexical_validity() {
     let mut f = cultural_feature(resqml22::CulturalFeatureKindExt::Fieldblock);
     f.citation.creation = "2024-13-45T99:99:99Z".into();
-    assert!(has(&f.validate(), "lexical-dateTime"), "{:?}", codes(&f.validate()));
+    assert!(
+        has(&f.validate(), "lexical-dateTime"),
+        "{:?}",
+        codes(&f.validate())
+    );
     f.citation.creation = "2024-02-30T00:00:00Z".into();
     assert!(has(&f.validate(), "lexical-dateTime"), "30 February");
     f.citation.creation = "2024-02-29T23:59:59.5+01:00".into();
@@ -213,14 +245,19 @@ fn control_min_occurs_of_a_list() {
 
 #[test]
 fn control_max_occurs_of_a_list() {
-    let t = resqml22::ThreePoint3d { point3d: vec![Default::default(); 4] };
+    let t = resqml22::ThreePoint3d {
+        point3d: vec![Default::default(); 4],
+    };
     assert!(has(&t.validate(), "too-many-occurrences"));
 }
 
 /// XSD: resqml 2.2 Interpretations.xsd `FluidUnits` maxOccurs="3".
 #[test]
 fn control_max_occurs_bounded_dor_list() {
-    let u = resqml22::ReservoirCompartmentUnitInterpretation { fluid_units: vec![Default::default(); 4], ..Default::default() };
+    let u = resqml22::ReservoirCompartmentUnitInterpretation {
+        fluid_units: vec![Default::default(); 4],
+        ..Default::default()
+    };
     assert!(has(&u.validate(), "too-many-occurrences"));
 }
 
@@ -228,7 +265,10 @@ fn control_max_occurs_bounded_dor_list() {
 /// `minInclusive 1` ("Must be positive").
 #[test]
 fn control_min_inclusive() {
-    let p = resqml22::ParametricLineIntersections { count: 0, ..Default::default() };
+    let p = resqml22::ParametricLineIntersections {
+        count: 0,
+        ..Default::default()
+    };
     assert!(has(&p.validate(), "min-inclusive"));
 }
 
@@ -236,11 +276,19 @@ fn control_min_inclusive() {
 #[test]
 fn control_validation_descends_into_nested_objects() {
     let u = resqml22::ReservoirCompartmentUnitInterpretation {
-        fluid_units: vec![eml23::DataObjectReference { uuid: "bad".into(), ..Default::default() }],
+        fluid_units: vec![eml23::DataObjectReference {
+            uuid: "bad".into(),
+            ..Default::default()
+        }],
         ..Default::default()
     };
     let r = u.validate();
-    assert!(r.errors().any(|i| i.code == "pattern" && i.path.contains("FluidUnits")), "{:?}", codes(&r));
+    assert!(
+        r.errors()
+            .any(|i| i.code == "pattern" && i.path.contains("FluidUnits")),
+        "{:?}",
+        codes(&r)
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -329,8 +377,14 @@ fn every_generated_pattern_compiles() {
         }
     }
     assert!(seen.len() >= 8, "only {} distinct patterns found", seen.len());
-    let broken: Vec<_> = seen.iter().filter(|p| !energyml_core::validate::pattern_compiles(p)).collect();
-    assert!(broken.is_empty(), "patterns the regex engine cannot run: {broken:?}");
+    let broken: Vec<_> = seen
+        .iter()
+        .filter(|p| !energyml_core::validate::pattern_compiles(p))
+        .collect();
+    assert!(
+        broken.is_empty(),
+        "patterns the regex engine cannot run: {broken:?}"
+    );
 }
 
 /// Every open enumeration of the generated crates that the schema widens with
@@ -347,10 +401,17 @@ fn every_open_enumeration_carries_its_extension_pattern() {
         .map(|i| format!("{} {} {}", i.package, i.version, i.name))
         .collect();
     assert!(bare.is_empty(), "open enumerations with no pattern: {bare:?}");
-    let closed_unions = ["PressureUomWithLegacy", "VolumeUomWithLegacy", "MassPerVolumeUomWithLegacy"];
+    let closed_unions = [
+        "PressureUomWithLegacy",
+        "VolumeUomWithLegacy",
+        "MassPerVolumeUomWithLegacy",
+    ];
     for name in closed_unions {
         assert!(
-            every_type(&reg).into_iter().filter(|i| i.name == name).all(|i| !i.is_open),
+            every_type(&reg)
+                .into_iter()
+                .filter(|i| i.name == name)
+                .all(|i| !i.is_open),
             "{name} is a union of two closed enumerations"
         );
     }
@@ -362,7 +423,15 @@ fn every_open_enumeration_carries_its_extension_pattern() {
 #[test]
 fn control_facets_struct_is_exactly_the_documented_seven() {
     let f = energyml_core::reflect::Facets::NONE;
-    let _ = (f.min_inclusive, f.max_inclusive, f.min_exclusive, f.max_exclusive, f.min_length, f.max_length, f.pattern);
+    let _ = (
+        f.min_inclusive,
+        f.max_inclusive,
+        f.min_exclusive,
+        f.max_exclusive,
+        f.min_length,
+        f.max_length,
+        f.pattern,
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -384,9 +453,13 @@ fn control_unreadable_boolean_is_refused_on_read() {
 </resqml:CulturalFeature>"#;
     let r = energyml_schemas::all();
     // a boolean outside `true/false/1/0`: a value that is present and unreadable
-    assert!(r
-        .read_xml("application/x-resqml+xml;version=2.2;type=CulturalFeature", xml.as_bytes())
-        .is_err());
+    assert!(
+        r.read_xml(
+            "application/x-resqml+xml;version=2.2;type=CulturalFeature",
+            xml.as_bytes()
+        )
+        .is_err()
+    );
 }
 
 /// The reading side of the open enumeration: `section line` read from a file
@@ -405,11 +478,18 @@ fn reading_then_validating_a_file_with_section_line() {
 </resqml:CulturalFeature>"#;
     let r = energyml_schemas::all();
     let obj = r
-        .read_xml("application/x-resqml+xml;version=2.2;type=CulturalFeature", xml.as_bytes())
+        .read_xml(
+            "application/x-resqml+xml;version=2.2;type=CulturalFeature",
+            xml.as_bytes(),
+        )
         .expect("reads");
     let report = obj.as_validate();
     let mut ctx = energyml_core::validate::ValidationCtx::new();
     report.validate_into(&mut ctx);
     let report = ctx.finish();
-    assert!(!report.is_valid(), "the file is invalid per the XSD, the validator says: {:?}", report.issues);
+    assert!(
+        !report.is_valid(),
+        "the file is invalid per the XSD, the validator says: {:?}",
+        report.issues
+    );
 }

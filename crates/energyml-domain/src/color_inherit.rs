@@ -75,14 +75,21 @@ struct Probe<'c, 'a> {
 
 impl Probe<'_, '_> {
     fn new<'c, 'a>(cascade: &'c Cascade<'a>) -> Probe<'c, 'a> {
-        Probe { cascade, error: RefCell::default(), skipped: RefCell::default() }
+        Probe {
+            cascade,
+            error: RefCell::default(),
+            skipped: RefCell::default(),
+        }
     }
 
     /// A `ColorInformation` on the object — what a property, its kind or a
     /// collection of either carries.
     fn colour(&self, objects: &dyn ObjectSource, uuid: &str) -> Option<Decision> {
         let mut notes = Vec::new();
-        match self.cascade.color_information_on(uuid, Level::Property, objects, &mut notes) {
+        match self
+            .cascade
+            .color_information_on(uuid, Level::Property, objects, &mut notes)
+        {
             Ok(found) => {
                 if found.is_none() && !notes.is_empty() {
                     self.skipped.borrow_mut().insert(uuid.to_ascii_lowercase(), notes);
@@ -175,8 +182,13 @@ impl<'a> Cascade<'a> {
     ) -> Result<Vec<Walked<Decision>>> {
         let mut cache = ColourCache::new();
         let scopes = [Scope::WholeObject];
-        let asks: Vec<Ask<'_>> =
-            addresses.iter().map(|address| Ask { uri: address.as_ref(), scopes: &scopes }).collect();
+        let asks: Vec<Ask<'_>> = addresses
+            .iter()
+            .map(|address| Ask {
+                uri: address.as_ref(),
+                scopes: &scopes,
+            })
+            .collect();
         let answers = cache.resolve(self, index, objects, &asks);
         Ok(answers.into_iter().map(|mut one| one.remove(0).walked).collect())
     }
@@ -197,7 +209,9 @@ impl<'a> Cascade<'a> {
         let mut walked = if self.inherit {
             walker.resolve_property(property, kinds)
         } else {
-            self.own_only(&walker.identity(property), |identity| probe.colour(objects, identity))
+            self.own_only(&walker.identity(property), |identity| {
+                probe.colour(objects, identity)
+            })
         };
         Self::settle(index, &probe, true, &mut walked);
         probe.failed()?;
@@ -218,7 +232,10 @@ impl<'a> Cascade<'a> {
                     ties: Vec::new(),
                     notes: Vec::new(),
                 };
-                Walked { notes: Vec::new(), resolution: Some(resolution) }
+                Walked {
+                    notes: Vec::new(),
+                    resolution: Some(resolution),
+                }
             }
             None => Walked {
                 resolution: None,
@@ -239,8 +256,12 @@ impl<'a> Cascade<'a> {
         };
         relevel(index, property, resolution);
         let skipped = probe.skipped.borrow();
-        let on_path = std::iter::once(resolution.carrier_uri.clone())
-            .chain(resolution.path.iter().flat_map(|step| [step.from_uri.clone(), step.to_uri.clone()]));
+        let on_path = std::iter::once(resolution.carrier_uri.clone()).chain(
+            resolution
+                .path
+                .iter()
+                .flat_map(|step| [step.from_uri.clone(), step.to_uri.clone()]),
+        );
         for identity in on_path {
             if let Some(notes) = skipped.get(&identity.to_ascii_lowercase()) {
                 for note in notes {
@@ -299,7 +320,12 @@ impl<'a> Cascade<'a> {
             if request.property.is_some() {
                 continue;
             }
-            let shape = drawn_by(index.node(request.representation).map(|node| &*node.type_key).unwrap_or(""));
+            let shape = drawn_by(
+                index
+                    .node(request.representation)
+                    .map(|node| &*node.type_key)
+                    .unwrap_or(""),
+            );
             let mut scopes = vec![Scope::WholeObject];
             scopes.extend_from_slice(shape.scopes);
             wanted.push(scopes);
@@ -309,7 +335,10 @@ impl<'a> Cascade<'a> {
         let asks: Vec<Ask<'_>> = asked
             .iter()
             .zip(&wanted)
-            .map(|(at, scopes)| Ask { uri: requests[*at].representation, scopes })
+            .map(|(at, scopes)| Ask {
+                uri: requests[*at].representation,
+                scopes,
+            })
             .collect();
         let mut answers = cache.resolve(self, index, objects, &asks).into_iter();
         let mut shapes = shapes_of.into_iter();
@@ -319,7 +348,10 @@ impl<'a> Cascade<'a> {
         for request in requests {
             let property = request.property.is_some();
             let (walked, targets) = match request.property {
-                Some(property) => (self.inherited_property(index, objects, property, request.kind_chain)?, Vec::new()),
+                Some(property) => (
+                    self.inherited_property(index, objects, property, request.kind_chain)?,
+                    Vec::new(),
+                ),
                 None => {
                     let mut scoped = answers.next().expect("one answer per object request");
                     let shape = shapes.next().expect("one shape per object request");
@@ -338,7 +370,11 @@ impl<'a> Cascade<'a> {
             // comparing uris and nothing else.
             let representation = identity_of(index, request.representation);
             let property_uri = request.property.map(|property| identity_of(index, property));
-            let kinds: Vec<String> = request.kind_chain.iter().map(|kind| identity_of(index, kind)).collect();
+            let kinds: Vec<String> = request
+                .kind_chain
+                .iter()
+                .map(|kind| identity_of(index, kind))
+                .collect();
             let canonical = Request {
                 representation: &representation,
                 property: property_uri.as_deref(),
@@ -363,7 +399,12 @@ impl<'a> Cascade<'a> {
             if let (Some(at), Some(resolution)) = (chosen, walked.resolution.as_mut()) {
                 resolution.value.level = steps[at].level;
             }
-            out.push(Ladder { steps, chosen, walked, targets });
+            out.push(Ladder {
+                steps,
+                chosen,
+                walked,
+                targets,
+            });
         }
         probe.failed()?;
         Ok(out)
@@ -384,7 +425,8 @@ impl<'a> Cascade<'a> {
         };
         // By uri: the identity of a rung, which two versions of one object do
         // not share.
-        let find = |steps: &[Rung], uri: &str| steps.iter().position(|rung| rung.uri.eq_ignore_ascii_case(uri));
+        let find =
+            |steps: &[Rung], uri: &str| steps.iter().position(|rung| rung.uri.eq_ignore_ascii_case(uri));
         for (n, step) in resolution.path.iter().enumerate() {
             if find(steps, &step.to_uri).is_some() {
                 continue;
@@ -397,7 +439,15 @@ impl<'a> Cascade<'a> {
             } else {
                 self.default_information_on(&step.to_uri, level, Scope::WholeObject, &mut notes)
             };
-            steps.insert(after + 1, Rung { level, uuid: step.to.clone(), uri: step.to_uri.clone(), carries });
+            steps.insert(
+                after + 1,
+                Rung {
+                    level,
+                    uuid: step.to.clone(),
+                    uri: step.to_uri.clone(),
+                    carries,
+                },
+            );
         }
         Ok(find(steps, &resolution.carrier_uri))
     }
@@ -413,7 +463,10 @@ fn merged_edges(cache: &ColourCache, index: &PackageIndex, address: &str, target
         Some(faces) => faces.clone(),
         None => Scoped {
             scope: Scope::Edges,
-            walked: Walked { resolution: None, notes: Vec::new() },
+            walked: Walked {
+                resolution: None,
+                notes: Vec::new(),
+            },
             exact: true,
             merged_into: None,
             merged_note: None,
@@ -426,7 +479,8 @@ fn merged_edges(cache: &ColourCache, index: &PackageIndex, address: &str, target
     if let Some(own) = cache.peek(index, address, Scope::Edges)
         && let Some(theirs) = own.decision()
         && own.exact
-        && faces.and_then(Scoped::decision).map(|d| (&d.paint, d.visible)) != Some((&theirs.paint, theirs.visible))
+        && faces.and_then(Scoped::decision).map(|d| (&d.paint, d.visible))
+            != Some((&theirs.paint, theirs.visible))
     {
         edges.merged_note = Some(format!(
             "the file gives the edges of {uuid} a colour of their own (on {}); they are drawn with the colour of \

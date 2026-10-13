@@ -45,7 +45,13 @@ pub struct Projected {
 
 /// The nodes projected — every one, or those `chosen`.
 pub fn project(points: &[[f64; 3]], chosen: Option<&[bool]>, onto: &Onto) -> Projected {
-    let mut out = Projected { points: points.to_vec(), projected: 0, outside: 0, folded: 0, unplaced: 0 };
+    let mut out = Projected {
+        points: points.to_vec(),
+        projected: 0,
+        outside: 0,
+        folded: 0,
+        unplaced: 0,
+    };
     for (at, p) in out.points.iter_mut().enumerate() {
         if chosen.is_some_and(|flags| !flags.get(at).copied().unwrap_or(false)) {
             continue;
@@ -82,14 +88,30 @@ mod tests {
     /// A square of side 10 split in two, its height `z = x + 100`.
     fn tilted() -> (Vec<f64>, Vec<u32>) {
         let corners = [[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]];
-        (corners.iter().flat_map(|&[x, y]| [x, y, x + 100.0]).collect(), vec![0, 1, 2, 0, 2, 3])
+        (
+            corners.iter().flat_map(|&[x, y]| [x, y, x + 100.0]).collect(),
+            vec![0, 1, 2, 0, 2, 3],
+        )
     }
 
     #[test]
     fn the_z_is_replaced_and_x_y_kept() {
         let (points, triangles) = tilted();
-        let heights = Heights::of(Surface { points: &points, triangles: &triangles, quads: &[] }, "surface", "under the nodes").unwrap();
-        let made = project(&[[2.0, 3.0, -5.0], [7.5, 1.0, 999.0]], None, &Onto::Surface(&heights));
+        let heights = Heights::of(
+            Surface {
+                points: &points,
+                triangles: &triangles,
+                quads: &[],
+            },
+            "surface",
+            "under the nodes",
+        )
+        .unwrap();
+        let made = project(
+            &[[2.0, 3.0, -5.0], [7.5, 1.0, 999.0]],
+            None,
+            &Onto::Surface(&heights),
+        );
         assert_eq!(made.points, vec![[2.0, 3.0, 102.0], [7.5, 1.0, 107.5]]);
         assert_eq!(made.projected, 2);
     }
@@ -98,15 +120,32 @@ mod tests {
     #[test]
     fn outside_is_left_and_counted() {
         let (points, triangles) = tilted();
-        let heights = Heights::of(Surface { points: &points, triangles: &triangles, quads: &[] }, "surface", "under the nodes").unwrap();
-        let made = project(&[[20.0, 3.0, -5.0], [5.0, 5.0, 0.0]], None, &Onto::Surface(&heights));
+        let heights = Heights::of(
+            Surface {
+                points: &points,
+                triangles: &triangles,
+                quads: &[],
+            },
+            "surface",
+            "under the nodes",
+        )
+        .unwrap();
+        let made = project(
+            &[[20.0, 3.0, -5.0], [5.0, 5.0, 0.0]],
+            None,
+            &Onto::Surface(&heights),
+        );
         assert_eq!(made.points[0], [20.0, 3.0, -5.0], "where it was");
         assert_eq!((made.projected, made.outside), (1, 1));
     }
 
     #[test]
     fn a_level_and_the_chosen_nodes_alone() {
-        let made = project(&[[0.0, 0.0, 1.0], [1.0, 0.0, 2.0], [f64::NAN, 0.0, 3.0]], Some(&[false, true, true]), &Onto::Level(-50.0));
+        let made = project(
+            &[[0.0, 0.0, 1.0], [1.0, 0.0, 2.0], [f64::NAN, 0.0, 3.0]],
+            Some(&[false, true, true]),
+            &Onto::Level(-50.0),
+        );
         assert_eq!(made.points[0], [0.0, 0.0, 1.0], "not chosen, not moved");
         assert_eq!(made.points[1], [1.0, 0.0, -50.0]);
         assert_eq!((made.projected, made.unplaced), (1, 1));
@@ -115,9 +154,20 @@ mod tests {
     /// Two faces over the same place at two heights: a fold — left, counted.
     #[test]
     fn a_fold_is_left_and_counted() {
-        let points = vec![0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 50.0, 10.0, 0.0, 50.0, 0.0, 10.0, 50.0];
+        let points = vec![
+            0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 50.0, 10.0, 0.0, 50.0, 0.0, 10.0, 50.0,
+        ];
         let triangles = vec![0, 1, 2, 3, 4, 5];
-        let heights = Heights::of(Surface { points: &points, triangles: &triangles, quads: &[] }, "surface", "under the nodes").unwrap();
+        let heights = Heights::of(
+            Surface {
+                points: &points,
+                triangles: &triangles,
+                quads: &[],
+            },
+            "surface",
+            "under the nodes",
+        )
+        .unwrap();
         let made = project(&[[1.0, 1.0, 7.0]], None, &Onto::Surface(&heights));
         assert_eq!((made.points[0][2], made.folded), (7.0, 1));
     }

@@ -245,7 +245,15 @@ impl Operation for StratigraphyFromGeolts {
 
     /// What the run reports: how many divisions it wrote.
     fn reports(&self) -> Vec<Slot> {
-        vec![Slot::optional("unitCount", Need::Number { uom: None, least: None, most: None }, "divisions of the chart written")]
+        vec![Slot::optional(
+            "unitCount",
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
+            "divisions of the chart written",
+        )]
     }
 
     fn plan(&self, _inputs: (), params: StratigraphyParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
@@ -283,7 +291,10 @@ pub fn selection(chart: &Chart, params: &StratigraphyParams) -> Result<Selected,
     if chart.is_empty() {
         return Err(Refusal::new(
             "refused",
-            format!("{} holds no division — this build has no BRGM chart to draw a column from", chart.label()),
+            format!(
+                "{} holds no division — this build has no BRGM chart to draw a column from",
+                chart.label()
+            ),
         ));
     }
     let mut taken: Vec<u32> = Vec::new();
@@ -367,7 +378,11 @@ pub(crate) struct Ancestor {
 /// same `RankInStratigraphicColumn` in every column — see the module. `None`
 /// for a division the chart gives no level (0), which has no rank to be in.
 fn rank_number(level: u8) -> Option<i64> {
-    if level == 0 { None } else { Some(i64::from(level) - 1) }
+    if level == 0 {
+        None
+    } else {
+        Some(i64::from(level) - 1)
+    }
 }
 
 /// The URL-namespace uuid of a text — computable by anyone, without this tool.
@@ -420,7 +435,10 @@ fn extensions(one: &Concept) -> Vec<eml::ExtensionNameValue> {
         }
         out.push(eml::ExtensionNameValue {
             name: name.to_string(),
-            value: eml::StringMeasure { value, ..Default::default() },
+            value: eml::StringMeasure {
+                value,
+                ..Default::default()
+            },
             ..Default::default()
         });
     };
@@ -484,25 +502,38 @@ fn occurred_during(one: &Concept) -> Option<resqml::AbstractTimeInterval> {
         date_time: crate::build::AGE_REFERENCE.to_string(),
         age_offset_attribute: Some((ma * 1_000_000.0).round() as i64),
     };
-    Some(resqml::AbstractTimeInterval::GeologicTimeBasedTimeInterval(resqml::GeologicTimeBasedTimeInterval {
-        start: at(old),
-        end: at(young),
-    }))
+    Some(resqml::AbstractTimeInterval::GeologicTimeBasedTimeInterval(
+        resqml::GeologicTimeBasedTimeInterval {
+            start: at(old),
+            end: at(young),
+        },
+    ))
 }
 
 /// The column of a selection.
 fn column(chart: &Chart, params: &StratigraphyParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
     let selected = selection(chart, params)?;
-    let chosen: Vec<&Concept> = params.units.iter().filter_map(|term| chart.resolve(&term.0).ok()).collect();
+    let chosen: Vec<&Concept> = params
+        .units
+        .iter()
+        .filter_map(|term| chart.resolve(&term.0).ok())
+        .collect();
     let roots: Vec<String> = chosen.iter().map(|one| params.language.of(one)).collect();
-    let title = params.title.clone().unwrap_or_else(|| format!("BRGM chronostratigraphy — {}", roots.join(", ")));
+    let title = params
+        .title
+        .clone()
+        .unwrap_or_else(|| format!("BRGM chronostratigraphy — {}", roots.join(", ")));
     // What each added parent sits above: the chosen divisions whose chain holds it.
     let ancestors: Vec<Ancestor> = selected
         .added
         .iter()
         .map(|id| Ancestor {
             id: *id,
-            above: chosen.iter().filter(|one| chart.ancestors(one.id).contains(id)).map(|one| params.language.of(one)).collect(),
+            above: chosen
+                .iter()
+                .filter(|one| chart.ancestors(one.id).contains(id))
+                .map(|one| params.language.of(one))
+                .collect(),
         })
         .collect();
     let written = write_column_with(chart, &selected.taken, &ancestors, &title, params.language, cx)?;
@@ -556,7 +587,10 @@ fn column(chart: &Chart, params: &StratigraphyParams, cx: &Context<'_>) -> Resul
     }
     says.push(Note {
         key: "source",
-        detail: format!("{} — https://data.geoscience.fr/ncl/GeolTs, CC BY 4.0", chart.label()),
+        detail: format!(
+            "{} — https://data.geoscience.fr/ncl/GeolTs, CC BY 4.0",
+            chart.label()
+        ),
     });
     Ok(Plan {
         media: Vec::new(),
@@ -662,13 +696,21 @@ pub(crate) fn write_column_with(
     }
 
     // The ranks: one per level present, coarsest first.
-    let mut levels: Vec<u8> = taken.iter().filter_map(|id| chart.get(*id)).map(|one| one.level).collect();
+    let mut levels: Vec<u8> = taken
+        .iter()
+        .filter_map(|id| chart.get(*id))
+        .map(|one| one.level)
+        .collect();
     levels.sort_unstable();
     levels.dedup();
 
     let mut sorted_ids = taken.to_vec();
     sorted_ids.sort_unstable();
-    let mut selection_key = sorted_ids.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
+    let mut selection_key = sorted_ids
+        .iter()
+        .map(u32::to_string)
+        .collect::<Vec<_>>()
+        .join(",");
     // **Which of them were added is part of the selection.** Two runs can hold
     // the same divisions and differ in what was chosen — a parent with a
     // single child, chosen, or brought by that child — and their ranks say
@@ -706,7 +748,11 @@ pub(crate) fn write_column_with(
     for level in &levels {
         // Checked above: every level here is 1 or more.
         let number = rank_number(*level).unwrap_or_default();
-        let ids: Vec<u32> = taken.iter().copied().filter(|id| chart.get(*id).is_some_and(|one| one.level == *level)).collect();
+        let ids: Vec<u32> = taken
+            .iter()
+            .copied()
+            .filter(|id| chart.get(*id).is_some_and(|one| one.level == *level))
+            .collect();
         let ordered = chart.by_age(&ids).map_err(|why| Refusal::on("units", why))?;
         let mut units: Vec<eml::DataObjectReference> = Vec::new();
         let mut order: Vec<u32> = Vec::new();
@@ -741,7 +787,11 @@ pub(crate) fn write_column_with(
                 stratigraphic_role: Some(resqml::StratigraphicRole::Chronostratigraphic),
                 ..Default::default()
             };
-            units.push(reference(&interpretation.uuid, "resqml22.StratigraphicUnitInterpretation", &name));
+            units.push(reference(
+                &interpretation.uuid,
+                "resqml22.StratigraphicUnitInterpretation",
+                &name,
+            ));
             order.push(one.id);
             if let Some(colour) = one.colour {
                 painted.push((
@@ -778,7 +828,10 @@ pub(crate) fn write_column_with(
             units_written += 1;
         }
         let rank_title = format!("{title} — {}", geolts::level_name(*level));
-        let rank_uuid = url_uuid(&format!("{}?selection={selection_key}#rank-{level}", geolts::REGISTER));
+        let rank_uuid = url_uuid(&format!(
+            "{}?selection={selection_key}#rank-{level}",
+            geolts::REGISTER
+        ));
         // The parents this rank lists without their being chosen, in the order
         // the rank lists them. `Index` numbers the entries of one name, as the
         // schema's own documentation of the field asks.
@@ -789,7 +842,10 @@ pub(crate) fn write_column_with(
             .enumerate()
             .map(|(at, (added, one))| eml::ExtensionNameValue {
                 name: ANCESTOR.to_string(),
-                value: eml::StringMeasure { value: one.uri(), ..Default::default() },
+                value: eml::StringMeasure {
+                    value: one.uri(),
+                    ..Default::default()
+                },
                 index: Some(at as i64 + 1),
                 description: Some(
                     format!(
@@ -819,7 +875,11 @@ pub(crate) fn write_column_with(
         ranks.push(RankMade {
             level: *level,
             number,
-            reference: reference(&rank_uuid, "resqml22.StratigraphicColumnRankInterpretation", &rank_title),
+            reference: reference(
+                &rank_uuid,
+                "resqml22.StratigraphicColumnRankInterpretation",
+                &rank_title,
+            ),
             units: order,
         });
         objects.push(NewObject {
@@ -885,5 +945,10 @@ pub(crate) fn write_column_with(
             json: energyml_core::json::write_value(&set),
         });
     }
-    Ok(ColumnMade { objects, ranks, units: units_written, key: selection_key })
+    Ok(ColumnMade {
+        objects,
+        ranks,
+        units: units_written,
+        key: selection_key,
+    })
 }

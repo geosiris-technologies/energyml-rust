@@ -72,11 +72,12 @@ impl Exporter for GeoJsonExporter {
         // come out as a Feature with empty coordinates - a file every reader
         // loads and that shows nothing, seen from the interface.
         // Dropped and counted beats written empty.
-        let has_defined = object
-            .geometry
-            .patches
-            .iter()
-            .any(|patch| patch.points.iter().any(|point| point.iter().all(|v| v.is_finite())));
+        let has_defined = object.geometry.patches.iter().any(|patch| {
+            patch
+                .points
+                .iter()
+                .any(|point| point.iter().all(|v| v.is_finite()))
+        });
         has_defined && object.epsg().is_some()
     }
 
@@ -242,7 +243,12 @@ impl GeoJsonExporter {
         // the property's own name, would look like the value of the object.
         for attribute in &object.attributes {
             let name = sanitise_key(&attribute.name);
-            let finite: Vec<f64> = attribute.values.iter().copied().filter(|v| v.is_finite()).collect();
+            let finite: Vec<f64> = attribute
+                .values
+                .iter()
+                .copied()
+                .filter(|v| v.is_finite())
+                .collect();
             properties.push(format!("\"{name}_count\":{}", attribute.values.len()));
             if let (Some(min), Some(max)) = (
                 finite.iter().copied().reduce(f64::min),

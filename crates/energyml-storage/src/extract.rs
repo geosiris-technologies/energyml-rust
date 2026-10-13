@@ -97,8 +97,7 @@ impl Plan {
 /// cheaper and more useful half: a set that is not closed is reported reference
 /// by reference rather than silently repaired.
 pub fn plan(resources: &[ObjectSummary], graph: &Graph, wanted: &[String]) -> Plan {
-    let held: std::collections::HashSet<&str> =
-        resources.iter().map(|one| one.uri.as_str()).collect();
+    let held: std::collections::HashSet<&str> = resources.iter().map(|one| one.uri.as_str()).collect();
     let mut asked: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut unknown = Vec::new();
     for uri in wanted {
@@ -146,10 +145,7 @@ pub fn plan(resources: &[ObjectSummary], graph: &Graph, wanted: &[String]) -> Pl
         .filter(|edge| asked.contains(&edge.from))
         .map(|edge| edge.to.as_str())
         .collect();
-    let left: Vec<&ObjectSummary> = resources
-        .iter()
-        .filter(|one| !asked.contains(&one.uri))
-        .collect();
+    let left: Vec<&ObjectSummary> = resources.iter().filter(|one| !asked.contains(&one.uri)).collect();
     let clean = left
         .iter()
         .filter(|one| !named_by_kept.contains(one.uri.as_str()))
@@ -225,9 +221,11 @@ pub struct Extraction {
 /// small XML parts in a zip* is one more than anybody wants; three would be a
 /// habit.
 pub fn empty_package(created: Option<i64>) -> Result<Vec<u8>> {
+    use crate::epc::core_props::{
+        CORE_CONTENT_TYPE, CORE_PART, CORE_RELATIONSHIP, CoreProperties, EPC_VERSION,
+    };
     use std::fmt::Write as _;
     use std::io::Write;
-    use crate::epc::core_props::{CORE_CONTENT_TYPE, CORE_PART, CORE_RELATIONSHIP, CoreProperties, EPC_VERSION};
 
     // `created` is in Unix seconds. `None` takes the machine's clock, which is what
     // the CLI, the Python bridge and the tests do; a browser **must** give
@@ -279,8 +277,10 @@ pub fn empty_package(created: Option<i64>) -> Result<Vec<u8>> {
         rels,
         "  <Relationship Id=\"coreProperties\" Type=\"{CORE_RELATIONSHIP}\" Target=\"{CORE_PART}\"/>"
     );
-    rels.push_str("</Relationships>
-");
+    rels.push_str(
+        "</Relationships>
+",
+    );
 
     let mut bytes = Vec::new();
     {
@@ -497,7 +497,11 @@ impl Cut {
 /// the rename's refusals are only known once there is a package to rename in,
 /// and a quote that computed them another way would be a second answer to the
 /// question [`to_bytes`] answers.
-pub fn quote(source: &EpcStore, wanted: &[String], names: &std::collections::BTreeMap<String, String>) -> Result<Cut> {
+pub fn quote(
+    source: &EpcStore,
+    wanted: &[String],
+    names: &std::collections::BTreeMap<String, String>,
+) -> Result<Cut> {
     // **A fixed date, never the machine's clock.** A quote's package is never
     // written, so the date it would carry is nobody's concern — while
     // `SystemTime::now()` **panics** on `wasm32-unknown-unknown` (*"time not
@@ -544,7 +548,10 @@ fn prepare(
 ) -> Result<(Cut, EpcStore)> {
     let resources = source.resources();
     let (held, _) = source.read_objects(None);
-    let graph = crate::graph::build(held.iter().map(|(summary, object)| (summary, object.as_reflect())));
+    let graph = crate::graph::build(
+        held.iter()
+            .map(|(summary, object)| (summary, object.as_reflect())),
+    );
     let made = plan(&resources, &graph, wanted);
 
     let blank = empty_package(created)?;
@@ -564,7 +571,8 @@ fn prepare(
     // the rename (`rename::names_file`), so they are one file here too.
     for location in &filled.arrays {
         if location.file.is_empty() {
-            cut.unnamed.push(format!("{} ({})", location.path_in_file, location.field_path));
+            cut.unnamed
+                .push(format!("{} ({})", location.path_in_file, location.field_path));
             continue;
         }
         let bare = bare_name(&location.file);
@@ -593,7 +601,11 @@ fn prepare(
             let named: Vec<&str> = cut.files.iter().map(|one| one.from.as_str()).collect();
             cut.refusals.push(format!(
                 "`{asked}` is not a data file the kept objects name — they name {}",
-                if named.is_empty() { "none".to_string() } else { named.join(", ") }
+                if named.is_empty() {
+                    "none".to_string()
+                } else {
+                    named.join(", ")
+                }
             ));
         }
     }
@@ -700,14 +712,12 @@ pub struct Copied {
 /// Objects already in the target are written over: a uuid is an identity, and
 /// two packages holding the same uuid hold the same object. The alternative —
 /// renumbering on the way in — would break every reference that names it.
-pub fn copy_into(
-    from: &EpcStore,
-    into: &mut EpcStore,
-    wanted: &[String],
-    arrays: Arrays,
-) -> Result<Copied> {
+pub fn copy_into(from: &EpcStore, into: &mut EpcStore, wanted: &[String], arrays: Arrays) -> Result<Copied> {
     let (held, unreadable) = from.read_objects(None);
-    let graph = crate::graph::build(held.iter().map(|(summary, object)| (summary, object.as_reflect())));
+    let graph = crate::graph::build(
+        held.iter()
+            .map(|(summary, object)| (summary, object.as_reflect())),
+    );
     let closed = crate::graph::closure(&graph, wanted);
 
     let asked: std::collections::HashSet<&str> = wanted.iter().map(String::as_str).collect();

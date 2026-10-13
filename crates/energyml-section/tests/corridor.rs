@@ -27,7 +27,9 @@ use energyml_eml_2_3 as eml23;
 use energyml_resqml_2_2 as resqml22;
 use energyml_section::assemble::assemble;
 use energyml_section::crosses::traces;
-use energyml_section::model::{Asked, Catalogue, Contribution, Crosses, CrossWidths, Inputs, Outcome, System};
+use energyml_section::model::{
+    Asked, Catalogue, Contribution, CrossWidths, Crosses, Inputs, Outcome, System,
+};
 use energyml_section::read::{Bound, PackageCache, PackageContext, Scene, contribution_bounded};
 use energyml_section::spatial::{Index, Rect};
 use energyml_storage::array::ArrayLocation;
@@ -39,19 +41,30 @@ struct Lcg(u64);
 
 impl Lcg {
     fn next(&mut self) -> f64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         (self.0 >> 11) as f64 / (1u64 << 53) as f64
     }
     fn rect(&mut self, span: f64, size: f64) -> Rect {
         let (x, y) = (self.next() * span, self.next() * span);
         let (w, h) = (self.next() * size, self.next() * size);
         // One in five is a point: the heads of wells are.
-        if self.next() < 0.2 { Rect::point([x, y]).unwrap() } else { Rect::new([x, y], [x + w, y + h]).unwrap() }
+        if self.next() < 0.2 {
+            Rect::point([x, y]).unwrap()
+        } else {
+            Rect::new([x, y], [x + w, y + h]).unwrap()
+        }
     }
 }
 
 fn scan(items: &[(Rect, usize)], window: &Rect) -> BTreeSet<usize> {
-    items.iter().filter(|(rect, _)| rect.intersects(window)).map(|(_, id)| *id).collect()
+    items
+        .iter()
+        .filter(|(rect, _)| rect.intersects(window))
+        .map(|(_, id)| *id)
+        .collect()
 }
 
 fn tree(index: &Index<usize>, window: &Rect) -> Vec<usize> {
@@ -92,7 +105,10 @@ fn the_rtree_equals_a_linear_scan_on_random_boxes() {
         index.insert(rect, id);
         items.push((rect, id));
     }
-    assert!(index.overflow() > 0 && index.rebuilds() == 1, "still in the overflow");
+    assert!(
+        index.overflow() > 0 && index.rebuilds() == 1,
+        "still in the overflow"
+    );
     check(&index, &items, &mut random, 200);
 
     // Past its share the overflow is folded in, and the answers do not move.
@@ -110,7 +126,12 @@ fn the_rtree_equals_a_linear_scan_on_random_boxes() {
 #[test]
 fn the_rtree_handles_the_small_and_the_degenerate() {
     let empty: Index<usize> = Index::new();
-    assert!(empty.is_empty() && empty.query(&Rect::new([0.0, 0.0], [1.0, 1.0]).unwrap()).is_empty());
+    assert!(
+        empty.is_empty()
+            && empty
+                .query(&Rect::new([0.0, 0.0], [1.0, 1.0]).unwrap())
+                .is_empty()
+    );
     // One item, then every point on one spot.
     let one = Index::build(vec![(Rect::point([1.0, 1.0]).unwrap(), 0)]);
     assert_eq!(tree(&one, &Rect::new([0.0, 0.0], [1.0, 1.0]).unwrap()), vec![0]);
@@ -143,7 +164,10 @@ fn dor(uuid: &str, qualified_type: &str) -> eml23::DataObjectReference {
 }
 
 fn citation(title: &str) -> eml23::Citation {
-    eml23::Citation { title: title.to_string(), ..Default::default() }
+    eml23::Citation {
+        title: title.to_string(),
+        ..Default::default()
+    }
 }
 
 fn datum(uuid: &str, x: f64, y: f64) -> eml23::ReferencePointInACrs {
@@ -152,13 +176,21 @@ fn datum(uuid: &str, x: f64, y: f64) -> eml23::ReferencePointInACrs {
         vertical_crs: Some(dor(VCRS, "eml23.VerticalCrs")),
         vertical_coordinate: Some(40.0),
         horizontal_coordinates: Some(eml23::AbstractHorizontalCoordinates::ProjectedCoordinates(
-            eml23::ProjectedCoordinates { coordinate1: x, coordinate2: y, crs: dor(PCRS, "eml23.ProjectedCrs") },
+            eml23::ProjectedCoordinates {
+                coordinate1: x,
+                coordinate2: y,
+                crs: dor(PCRS, "eml23.ProjectedCrs"),
+            },
         )),
         ..Default::default()
     }
 }
 
-fn trajectory(id: &str, datum_uuid: &str, represents: Option<&str>) -> resqml22::WellboreTrajectoryRepresentation {
+fn trajectory(
+    id: &str,
+    datum_uuid: &str,
+    represents: Option<&str>,
+) -> resqml22::WellboreTrajectoryRepresentation {
     resqml22::WellboreTrajectoryRepresentation {
         uuid: id.to_string(),
         citation: citation(&format!("{id} trajectory")),
@@ -180,7 +212,10 @@ fn nowhere(_: &dyn energyml_core::value::Reflect) -> Vec<ArrayLocation> {
 }
 
 fn lambert() -> System {
-    System { epsg: 2154, unit: "m".to_string() }
+    System {
+        epsg: 2154,
+        unit: "m".to_string(),
+    }
 }
 
 /// The package: 14 columns by 8 rows of vertical wells, one every 100 m from
@@ -199,26 +234,27 @@ fn package() -> Package {
         Box::new(eml23::VerticalCrs {
             uuid: VCRS.to_string(),
             direction: eml23::VerticalDirection::Up,
-            abstract_vertical_crs: Some(eml23::AbstractVerticalCrs::VerticalEpsgCrs(eml23::VerticalEpsgCrs {
-                epsg_code: 5714,
-            })),
+            abstract_vertical_crs: Some(eml23::AbstractVerticalCrs::VerticalEpsgCrs(
+                eml23::VerticalEpsgCrs { epsg_code: 5714 },
+            )),
             ..Default::default()
         }),
         Box::new(eml23::ProjectedCrs {
             uuid: PCRS.to_string(),
-            abstract_projected_crs: Some(eml23::AbstractProjectedCrs::ProjectedEpsgCrs(eml23::ProjectedEpsgCrs {
-                epsg_code: 2154,
-            })),
+            abstract_projected_crs: Some(eml23::AbstractProjectedCrs::ProjectedEpsgCrs(
+                eml23::ProjectedEpsgCrs { epsg_code: 2154 },
+            )),
             ..Default::default()
         }),
     ];
     let mut wells = Vec::new();
-    let mut add = |objects: &mut Vec<Box<dyn DynObject>>, n: usize, at: [f64; 2], represents: Option<&str>| {
-        let (d, t) = (uuid(0x10, n), uuid(0x70, n));
-        objects.push(Box::new(datum(&d, at[0], at[1])));
-        objects.push(Box::new(trajectory(&t, &d, represents)));
-        wells.push((t, at));
-    };
+    let mut add =
+        |objects: &mut Vec<Box<dyn DynObject>>, n: usize, at: [f64; 2], represents: Option<&str>| {
+            let (d, t) = (uuid(0x10, n), uuid(0x70, n));
+            objects.push(Box::new(datum(&d, at[0], at[1])));
+            objects.push(Box::new(trajectory(&t, &d, represents)));
+            wells.push((t, at));
+        };
     let mut n = 0;
     for column in 0..14 {
         for row in 0..8 {
@@ -241,7 +277,12 @@ fn package() -> Package {
                     ..Default::default()
                 }));
                 add(&mut objects, n, at, Some(&interpretation));
-                add(&mut objects, n + 10_000, [at[0] + 30.0, at[1]], Some(&interpretation));
+                add(
+                    &mut objects,
+                    n + 10_000,
+                    [at[0] + 30.0, at[1]],
+                    Some(&interpretation),
+                );
             } else {
                 add(&mut objects, n, at, None);
             }
@@ -255,7 +296,11 @@ fn package() -> Package {
 }
 
 fn scene(system: &System) -> Scene<'_> {
-    Scene { system: Some(system), time_factor: None, reprojector: &NoReprojection }
+    Scene {
+        system: Some(system),
+        time_factor: None,
+        reprojector: &NoReprojection,
+    }
 }
 
 /// The long section along y = 250 over 1 000 m, 90 m each side, and cross
@@ -268,7 +313,12 @@ fn inputs(package: &Package, left: f64, right: f64) -> Inputs {
         right,
         crosses: Crosses::Count {
             count: 2,
-            common: CrossWidths { before: 60.0, after: 60.0, left: 40.0, right: 40.0 },
+            common: CrossWidths {
+                before: 60.0,
+                after: 60.0,
+                left: 40.0,
+                right: 40.0,
+            },
             own: Vec::new(),
         },
         objects: vec![Asked {
@@ -313,14 +363,23 @@ fn near_a_trace(package: &Package, inputs: &Inputs) -> usize {
         .wells
         .iter()
         .filter(|(_, at)| {
-            sections.iter().any(|st| st.trace.windows(2).any(|s| distance(*at, s[0], s[1]) <= st.left.max(st.right)))
+            sections.iter().any(|st| {
+                st.trace
+                    .windows(2)
+                    .any(|s| distance(*at, s[0], s[1]) <= st.left.max(st.right))
+            })
         })
         .count()
 }
 
 /// The uuids of the wells told by their head alone.
 fn far_of(contribution: &Contribution) -> BTreeSet<String> {
-    contribution.wells.iter().filter(|w| w.head_only).map(|w| w.object.uuid.clone()).collect()
+    contribution
+        .wells
+        .iter()
+        .filter(|w| w.head_only)
+        .map(|w| w.object.uuid.clone())
+        .collect()
 }
 
 /// **The drawn part of the catalogue does not change**: everything but the rows
@@ -328,8 +387,14 @@ fn far_of(contribution: &Contribution) -> BTreeSet<String> {
 fn same_but_far(a: &Catalogue, b: &Catalogue, far: &BTreeSet<String>, what: &str) {
     let (mut a, mut b) = (serde_json::to_value(a).unwrap(), serde_json::to_value(b).unwrap());
     for catalogue in [&mut a, &mut b] {
-        catalogue["objects"].as_array_mut().unwrap().retain(|row| !far.contains(row["object"]["uuid"].as_str().unwrap()));
-        catalogue["plan"]["wells"].as_array_mut().unwrap().retain(|well| !far.contains(well["object"]["uuid"].as_str().unwrap()));
+        catalogue["objects"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|row| !far.contains(row["object"]["uuid"].as_str().unwrap()));
+        catalogue["plan"]["wells"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|well| !far.contains(well["object"]["uuid"].as_str().unwrap()));
     }
     assert_eq!(a, b, "{what}");
 }
@@ -338,17 +403,32 @@ fn same_but_far(a: &Catalogue, b: &Catalogue, far: &BTreeSet<String>, what: &str
 /// and a `PlanWell` each.
 fn far_wells_stand_alone(bounded: &Catalogue, far: &BTreeSet<String>) {
     for uuid in far {
-        let rows: Vec<_> = bounded.objects.iter().filter(|row| row.object.uuid == *uuid).collect();
+        let rows: Vec<_> = bounded
+            .objects
+            .iter()
+            .filter(|row| row.object.uuid == *uuid)
+            .collect();
         assert_eq!(rows.len(), 1, "one row for the far well {uuid}");
         assert!(
             matches!(&rows[0].outcome, Outcome::Refused { reason } if reason.contains("farther than")),
             "{uuid}: {:?}",
             rows[0].outcome
         );
-        assert_eq!(bounded.plan.wells.iter().filter(|w| w.object.uuid == *uuid).count(), 1);
+        assert_eq!(
+            bounded
+                .plan
+                .wells
+                .iter()
+                .filter(|w| w.object.uuid == *uuid)
+                .count(),
+            1
+        );
     }
     assert!(
-        !bounded.objects.iter().any(|row| far.contains(&row.object.uuid) && matches!(row.outcome, Outcome::Merged { .. })),
+        !bounded
+            .objects
+            .iter()
+            .any(|row| far.contains(&row.object.uuid) && matches!(row.outcome, Outcome::Merged { .. })),
         "no far well is folded into another"
     );
 }
@@ -376,18 +456,34 @@ fn the_catalogue_is_the_same_with_and_without_the_corridor_filter() {
         let refused_far = a
             .objects
             .iter()
-            .filter(|row| matches!(&row.outcome, Outcome::Refused { reason } if reason.contains("farther than")))
+            .filter(
+                |row| matches!(&row.outcome, Outcome::Refused { reason } if reason.contains("farther than")),
+            )
             .count();
-        assert!(refused_far > 10, "the fixture has wells far from every section: {refused_far}");
+        assert!(
+            refused_far > 10,
+            "the fixture has wells far from every section: {refused_far}"
+        );
 
         // The work: all of them read in full, against only those near.
         assert_eq!(all.work().wells_read, package.wells.len());
         let read = near.work().wells_read;
         let must = near_a_trace(&package, &inputs);
-        assert!(read >= must, "a well within reach of a trace was not read ({read} < {must})");
-        assert!(read < package.wells.len(), "the filter read {read} of {}", package.wells.len());
+        assert!(
+            read >= must,
+            "a well within reach of a trace was not read ({read} < {must})"
+        );
+        assert!(
+            read < package.wells.len(),
+            "the filter read {read} of {}",
+            package.wells.len()
+        );
         // The wells of the wellbores far from every section are the ones left unread.
-        assert!(package.wells.len() - read > 30, "{} wells unread", package.wells.len() - read);
+        assert!(
+            package.wells.len() - read > 30,
+            "{} wells unread",
+            package.wells.len() - read
+        );
         assert_eq!(near.work().heads_computed, package.wells.len());
     }
 }
@@ -403,7 +499,10 @@ fn a_well_at_the_edge_of_the_band_is_read() {
     // On the long section's first leg, (0,250) to (500,280): 81 m above a foot
     // at x = 300 — a perpendicular distance of about 80.9, inside the 90 m.
     let at = [300.0, 250.0 + 300.0 * 30.0 / 500.0 + 81.0];
-    let mut extra: Vec<Box<dyn DynObject>> = vec![Box::new(datum(&d, at[0], at[1])), Box::new(trajectory(&edge, &d, None))];
+    let mut extra: Vec<Box<dyn DynObject>> = vec![
+        Box::new(datum(&d, at[0], at[1])),
+        Box::new(trajectory(&edge, &d, None)),
+    ];
     for object in extra.drain(..) {
         package.source.insert(object, &nowhere);
     }
@@ -412,13 +511,23 @@ fn a_well_at_the_edge_of_the_band_is_read() {
     let inputs = inputs(&package, 90.0, 90.0);
     let mut cache = PackageCache::new();
     let bounded = contribution(&package, &inputs, &mut cache, Bound::Corridor);
-    assert!(bounded.wells.iter().any(|w| w.object.uuid == edge && !w.path.is_empty()), "the edge well was read in full");
+    assert!(
+        bounded
+            .wells
+            .iter()
+            .any(|w| w.object.uuid == edge && !w.path.is_empty()),
+        "the edge well was read in full"
+    );
     let row = catalogue(&inputs, &bounded)
         .objects
         .into_iter()
         .find(|row| row.object.uuid == edge)
         .expect("its row");
-    assert!(matches!(row.outcome, Outcome::Drawn { .. }), "kept by the corridor: {:?}", row.outcome);
+    assert!(
+        matches!(row.outcome, Outcome::Drawn { .. }),
+        "kept by the corridor: {:?}",
+        row.outcome
+    );
 }
 
 /// The work is counted, and kept: the second call computes no head and reads no
@@ -435,7 +544,10 @@ fn heads_are_computed_once_and_a_moved_trace_reads_only_what_it_newly_reaches() 
 
     contribution(&package, &inputs_a, &mut cache, Bound::Corridor);
     let second = cache.work();
-    assert_eq!((second.heads_computed, second.wells_read), (first.heads_computed, first.wells_read));
+    assert_eq!(
+        (second.heads_computed, second.wells_read),
+        (first.heads_computed, first.wells_read)
+    );
     assert!(second.spatial_queries > first.spatial_queries && second.reused > first.reused);
 
     // Wider: the same wells are reused, the others newly read.
@@ -446,7 +558,11 @@ fn heads_are_computed_once_and_a_moved_trace_reads_only_what_it_newly_reaches() 
     assert!(third.wells_read > first.wells_read, "wider reaches more wells");
     let mut fresh = PackageCache::new();
     contribution(&package, &inputs_b, &mut fresh, Bound::Corridor);
-    assert_eq!(third.wells_read, fresh.work().wells_read, "every well read once, none twice");
+    assert_eq!(
+        third.wells_read,
+        fresh.work().wells_read,
+        "every well read once, none twice"
+    );
 }
 
 /// Without a section there is nothing to bound by: every well is read.
@@ -481,8 +597,20 @@ fn far_wells_are_each_refused_on_their_own_row() {
     let mut cache = PackageCache::new();
     let bounded = contribution(&package, &inputs, &mut cache, Bound::Corridor);
     let far = far_of(&bounded);
-    let twins: Vec<&String> = far.iter().filter(|uuid| uuid.ends_with(&format!("{:012x}", 10_000 + 5)) || uuid.rsplit('-').next().is_some_and(|n| usize::from_str_radix(n, 16).is_ok_and(|n| n > 10_000))).collect();
-    assert!(!twins.is_empty(), "a far wellbore with two members exists in the fixture");
+    let twins: Vec<&String> = far
+        .iter()
+        .filter(|uuid| {
+            uuid.ends_with(&format!("{:012x}", 10_000 + 5))
+                || uuid
+                    .rsplit('-')
+                    .next()
+                    .is_some_and(|n| usize::from_str_radix(n, 16).is_ok_and(|n| n > 10_000))
+        })
+        .collect();
+    assert!(
+        !twins.is_empty(),
+        "a far wellbore with two members exists in the fixture"
+    );
     let b = catalogue(&inputs, &bounded);
     far_wells_stand_alone(&b, &far);
     // Each twin and its partner both have a row of their own.

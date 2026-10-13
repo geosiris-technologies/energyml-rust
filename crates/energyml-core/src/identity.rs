@@ -150,7 +150,9 @@ impl<'a> ObjectKey<'a> {
             dataspace,
             &self.qualified_type(),
             self.uuid,
-            self.object_version.map(str::trim).filter(|version| !version.is_empty()),
+            self.object_version
+                .map(str::trim)
+                .filter(|version| !version.is_empty()),
         )
     }
 
@@ -173,7 +175,8 @@ impl<'a> ObjectKey<'a> {
     /// not contradict each other — an absent one means "the latest", so it
     /// matches anything.
     pub fn same_object(&self, other: &ObjectKey<'_>) -> bool {
-        self.uuid.eq_ignore_ascii_case(other.uuid) && versions_agree(self.object_version, other.object_version)
+        self.uuid.eq_ignore_ascii_case(other.uuid)
+            && versions_agree(self.object_version, other.object_version)
     }
 
     /// Same concept, whatever the version: `obj_Activity` of resqml 2.0.1 and
@@ -331,8 +334,16 @@ impl ObjectId {
     /// or absent (ADR-0003).
     /// `resqml22.TriangulatedSetRepresentation — H3 (version 2)`.
     pub fn label(&self, title: Option<&str>) -> String {
-        let title = title.map(str::trim).filter(|title| !title.is_empty()).unwrap_or(&self.uuid);
-        match self.object_version.as_deref().map(str::trim).filter(|version| !version.is_empty()) {
+        let title = title
+            .map(str::trim)
+            .filter(|title| !title.is_empty())
+            .unwrap_or(&self.uuid);
+        match self
+            .object_version
+            .as_deref()
+            .map(str::trim)
+            .filter(|version| !version.is_empty())
+        {
             Some(version) => format!("{} — {title} (version {version})", self.qualified_type()),
             None => format!("{} — {title}", self.qualified_type()),
         }
@@ -763,8 +774,12 @@ pub fn uri_of_reflect(object: &dyn Reflect) -> Option<String> {
 /// since a uri is built from the type. A store resolves that uuid when it is
 /// unique and refuses it by name when it is not. `None` for no identity at all.
 pub fn address_of_reflect(object: &dyn Reflect) -> Option<String> {
-    uri_of_reflect(object)
-        .or_else(|| uuid_of_reflect(object).map(str::trim).filter(|uuid| !uuid.is_empty()).map(str::to_string))
+    uri_of_reflect(object).or_else(|| {
+        uuid_of_reflect(object)
+            .map(str::trim)
+            .filter(|uuid| !uuid.is_empty())
+            .map(str::to_string)
+    })
 }
 
 /// How the version of a held object stands against the version a reference (or
@@ -811,16 +826,22 @@ pub fn versions_agree(wanted: Option<&str>, held: Option<&str>) -> bool {
 /// reference's.
 pub fn address_of_parts(declared_type: Option<&str>, uuid: &str, object_version: Option<&str>) -> String {
     let uuid = uuid.trim();
-    let parsed = declared_type.map(str::trim).filter(|declared| !declared.is_empty()).and_then(|declared| {
-        if declared.contains("+xml") {
-            ObjectId::from_content_type(declared, uuid).ok()
-        } else {
-            ObjectId::from_qualified_type(declared, uuid).ok()
-        }
-    });
+    let parsed = declared_type
+        .map(str::trim)
+        .filter(|declared| !declared.is_empty())
+        .and_then(|declared| {
+            if declared.contains("+xml") {
+                ObjectId::from_content_type(declared, uuid).ok()
+            } else {
+                ObjectId::from_qualified_type(declared, uuid).ok()
+            }
+        });
     match parsed {
         Some(mut id) => {
-            id.object_version = object_version.map(str::trim).filter(|version| !version.is_empty()).map(str::to_string);
+            id.object_version = object_version
+                .map(str::trim)
+                .filter(|version| !version.is_empty())
+                .map(str::to_string);
             id.etp_uri(None)
         }
         None => uuid.to_string(),
@@ -833,7 +854,9 @@ pub fn address_of_parts(declared_type: Option<&str>, uuid: &str, object_version:
 /// of an address into the two things a comparison needs.
 pub fn parse_address(address: &str) -> (String, Option<String>) {
     let address = address.trim();
-    if address.get(..4).is_some_and(|scheme| scheme.eq_ignore_ascii_case("eml:"))
+    if address
+        .get(..4)
+        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("eml:"))
         && let Ok(parsed) = crate::identifiers::EtpUri::parse(address)
         && let Some(uuid) = parsed.uuid
     {
@@ -1067,8 +1090,14 @@ pub fn nested_objects(root: &dyn Reflect) -> Vec<NestedObject<'_>> {
 
 fn walk_nested<'a>(object: &'a dyn Reflect, prefix: String, out: &mut Vec<NestedObject<'a>>) {
     for field in object.type_info().fields {
-        let Some(value) = object.field(field.name) else { continue };
-        let base = if prefix.is_empty() { field.xml_name.to_string() } else { format!("{prefix}.{}", field.xml_name) };
+        let Some(value) = object.field(field.name) else {
+            continue;
+        };
+        let base = if prefix.is_empty() {
+            field.xml_name.to_string()
+        } else {
+            format!("{prefix}.{}", field.xml_name)
+        };
         visit_nested(value, base, out);
     }
 }
@@ -1084,7 +1113,10 @@ fn visit_nested<'a>(value: FieldValue<'a>, path: String, out: &mut Vec<NestedObj
                 && let Some(key) = key_of_reflect(child)
                 && !key.uuid.trim().is_empty()
             {
-                out.push(NestedObject { path: path.clone(), key });
+                out.push(NestedObject {
+                    path: path.clone(),
+                    key,
+                });
             }
             walk_nested(child, path, out);
         }
@@ -1215,7 +1247,11 @@ fn refs_in_source<'a>(source: &'a str, prefix: &str, out: &mut Vec<RefEdge<'a>>)
                         Err(_) => ("", VersionRef::Dotted(""), ""),
                     },
                     Some(declared) => match parse_qualified_type(declared) {
-                        Ok(parts) => (parts.domain, VersionRef::Compact(parts.version), parts.object_type),
+                        Ok(parts) => (
+                            parts.domain,
+                            VersionRef::Compact(parts.version),
+                            parts.object_type,
+                        ),
                         Err(_) => ("", VersionRef::Dotted(""), ""),
                     },
                     None => ("", VersionRef::Dotted(""), ""),
@@ -1262,10 +1298,18 @@ mod tests {
         );
         let mut out = Vec::new();
         refs_in_source(source, "GraphicalInformation[0]", &mut out);
-        let by_uuid = |uuid: &str| out.iter().find(|e| e.target.uuid == uuid).unwrap_or_else(|| panic!("{uuid}"));
+        let by_uuid = |uuid: &str| {
+            out.iter()
+                .find(|e| e.target.uuid == uuid)
+                .unwrap_or_else(|| panic!("{uuid}"))
+        };
         assert_eq!(out.len(), 3);
         assert_eq!(by_uuid("aaaa").target.object_version, Some("0"));
-        assert_eq!(by_uuid("aaaa").target.title, Some("t"), "the title is there too, and reading it avoids taking it for empty");
+        assert_eq!(
+            by_uuid("aaaa").target.title,
+            Some("t"),
+            "the title is there too, and reading it avoids taking it for empty"
+        );
         assert_eq!(by_uuid("aaaa").path, "GraphicalInformation[0].TargetObject");
         assert_eq!(by_uuid("bbbb").target.object_version, Some("7"));
         assert_eq!(by_uuid("cccc").target.object_version, None);
@@ -1335,8 +1379,16 @@ mod tests {
         assert_eq!(version_fit(Some("1"), None), Compatible);
         assert_eq!(version_fit(None, Some("2")), Compatible);
         assert_eq!(version_fit(None, None), Exact);
-        assert_eq!(version_fit(Some(" 1 "), Some("1")), Exact, "spaces are not part of a version");
-        assert_eq!(version_fit(Some("1"), Some("  ")), Compatible, "a blank version says nothing");
+        assert_eq!(
+            version_fit(Some(" 1 "), Some("1")),
+            Exact,
+            "spaces are not part of a version"
+        );
+        assert_eq!(
+            version_fit(Some("1"), Some("  ")),
+            Compatible,
+            "a blank version says nothing"
+        );
         assert!(versions_agree(None, Some("2")) && !versions_agree(Some("1"), Some("2")));
     }
 

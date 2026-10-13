@@ -58,8 +58,17 @@ impl<'a> Row<'a> {
     /// holds the object in two versions and the name cannot say which).
     /// A name the package does not hold is walked as given: a cascade may ask
     /// about a target that lives elsewhere.
-    pub fn at(store: &EpcStore, name: &str, kinds: Vec<String>, property: Option<&'a str>) -> Result<Self, Error> {
-        Ok(Row { key: walk_key(store, name)?, kinds, property })
+    pub fn at(
+        store: &EpcStore,
+        name: &str,
+        kinds: Vec<String>,
+        property: Option<&'a str>,
+    ) -> Result<Self, Error> {
+        Ok(Row {
+            key: walk_key(store, name)?,
+            kinds,
+            property,
+        })
     }
 }
 
@@ -107,7 +116,10 @@ pub struct Options {
 
 impl Default for Options {
     fn default() -> Self {
-        Self { inherit: true, viewer_kind: Some("3d".to_string()) }
+        Self {
+            inherit: true,
+            viewer_kind: Some("3d".to_string()),
+        }
     }
 }
 
@@ -120,7 +132,10 @@ pub fn graphical_sets(store: &EpcStore) -> Result<Vec<(String, GraphicalSet)>, E
             continue;
         }
         let object = store.get_object(&summary.uri)?;
-        sets.push((summary.uuid.to_ascii_lowercase(), GraphicalSet::read(object.as_reflect())));
+        sets.push((
+            summary.uuid.to_ascii_lowercase(),
+            GraphicalSet::read(object.as_reflect()),
+        ));
     }
     Ok(sets)
 }
@@ -159,7 +174,11 @@ pub fn kind_chain_at(store: &EpcStore, name: &str) -> Result<Vec<String>, Error>
     Ok(store
         .get_object(&summary.uri)
         .ok()
-        .and_then(|object| property::read(object.as_reflect()).ok().map(|read| kind_chain(store, &read)))
+        .and_then(|object| {
+            property::read(object.as_reflect())
+                .ok()
+                .map(|read| kind_chain(store, &read))
+        })
         .unwrap_or_default())
 }
 
@@ -174,12 +193,24 @@ pub fn kind_chain_of(store: &EpcStore, property_uuid: &str) -> Vec<String> {
 /// The walks that looked at a disturbed object go; the set is read again when
 /// one of the objects is a `GraphicalInformationSet` (or was), and the walks of
 /// the objects whose entries changed go with it.
-fn settle(store: &EpcStore, slot: &mut ColourSlot, index: &PackageIndex, dirty: Disturbed) -> Result<(), Error> {
-    let ColourSlot { cache, set, sets, read } = slot;
+fn settle(
+    store: &EpcStore,
+    slot: &mut ColourSlot,
+    index: &PackageIndex,
+    dirty: Disturbed,
+) -> Result<(), Error> {
+    let ColourSlot {
+        cache,
+        set,
+        sets,
+        read,
+    } = slot;
     let touches_a_set = dirty.everything
         || dirty.uuids.iter().any(|uuid| {
             sets.contains(uuid)
-                || index.node(uuid).is_some_and(|node| node.type_key.ends_with("GraphicalInformationSet"))
+                || index
+                    .node(uuid)
+                    .is_some_and(|node| node.type_key.ends_with("GraphicalInformationSet"))
         });
     if dirty.everything {
         cache.clear();
@@ -189,10 +220,17 @@ fn settle(store: &EpcStore, slot: &mut ColourSlot, index: &PackageIndex, dirty: 
     if !*read || touches_a_set {
         let found = graphical_sets(store)?;
         let uuids: HashSet<String> = found.iter().map(|(uuid, _)| uuid.clone()).collect();
-        let fresh = if found.is_empty() { None } else { Some(GraphicalSet::merged(found.into_iter().map(|(_, one)| one))) };
+        let fresh = if found.is_empty() {
+            None
+        } else {
+            Some(GraphicalSet::merged(found.into_iter().map(|(_, one)| one)))
+        };
         if *read && !dirty.everything {
             let nothing = GraphicalSet::default();
-            let changed = changed_targets(set.as_ref().unwrap_or(&nothing), fresh.as_ref().unwrap_or(&nothing));
+            let changed = changed_targets(
+                set.as_ref().unwrap_or(&nothing),
+                fresh.as_ref().unwrap_or(&nothing),
+            );
             cache.disturb(&changed);
         }
         *set = fresh;
@@ -249,7 +287,11 @@ impl Cache {
             _ => (&mut fresh, false),
         };
         self.with_index(store, |index| -> Result<Option<Vec<Ladder>>, Error> {
-            let dirty = if kept { self.index.take_disturbed(Consumer::Colours) } else { Disturbed::default() };
+            let dirty = if kept {
+                self.index.take_disturbed(Consumer::Colours)
+            } else {
+                Disturbed::default()
+            };
             settle(store, slot, index, dirty)?;
             let ColourSlot { cache, set, .. } = slot;
             let Some(set) = set.as_ref() else {
@@ -280,7 +322,11 @@ impl Cache {
     /// *answers* is bounded by the walk beneath, which compares uuids: the
     /// answers are two, one per uri, and they agree until the domain's walk is
     /// keyed by identity too.
-    pub fn file_colours_at(&self, store: &EpcStore, names: &[String]) -> Result<HashMap<String, Option<String>>, Error> {
+    pub fn file_colours_at(
+        &self,
+        store: &EpcStore,
+        names: &[String],
+    ) -> Result<HashMap<String, Option<String>>, Error> {
         let mut keys = Vec::with_capacity(names.len());
         let mut rows: Vec<Row<'_>> = Vec::with_capacity(names.len());
         for name in names {
@@ -300,7 +346,10 @@ impl Cache {
             .zip(ladders)
             .map(|(key, ladder)| {
                 let colour = match ladder.walked.resolution.map(|found| found.value) {
-                    Some(Decision { paint: Paint::Constant(colour), .. }) => Some(colour.to_hex()),
+                    Some(Decision {
+                        paint: Paint::Constant(colour),
+                        ..
+                    }) => Some(colour.to_hex()),
                     _ => None,
                 };
                 (key, colour)
@@ -311,7 +360,11 @@ impl Cache {
     /// [`Cache::file_colours_at`] for the callers that hold a bare uuid: the
     /// answer is keyed by the **lowercase uuid** asked. A uuid the package
     /// holds in two versions is refused by name; ask by uri.
-    pub fn file_colours(&self, store: &EpcStore, uuids: &[String]) -> Result<HashMap<String, Option<String>>, Error> {
+    pub fn file_colours(
+        &self,
+        store: &EpcStore,
+        uuids: &[String],
+    ) -> Result<HashMap<String, Option<String>>, Error> {
         let by_uri = self.file_colours_at(store, uuids)?;
         let mut out = HashMap::with_capacity(uuids.len());
         for uuid in uuids {
@@ -348,7 +401,9 @@ impl Cache {
         chain: &[String],
         options: &Options,
     ) -> Result<Option<Decision>, Error> {
-        self.with_index(store, |index| decide_in(index, store, set, representation, property, chain, options))
+        self.with_index(store, |index| {
+            decide_in(index, store, set, representation, property, chain, options)
+        })
     }
 
     /// [`Cache::decision`] for the object `name` names: its **full uri** (a
@@ -371,14 +426,20 @@ impl Cache {
     /// objects read. **Work, not time**: what a test asserts to say a walk was
     /// not done twice, and what an invalidation cost.
     pub fn colour_walk_stats(&self) -> Stats {
-        self.colours.try_borrow().map(|slot| slot.cache.stats()).unwrap_or_default()
+        self.colours
+            .try_borrow()
+            .map(|slot| slot.cache.stats())
+            .unwrap_or_default()
     }
 
     /// Whether the cache holds the walk of this object — for the tests of the
     /// invalidation, which say what was thrown away and what was kept.
     #[doc(hidden)]
     pub fn colour_walk_held(&self, uuid: &str) -> bool {
-        self.colours.try_borrow().map(|slot| slot.cache.holds(uuid)).unwrap_or(false)
+        self.colours
+            .try_borrow()
+            .map(|slot| slot.cache.holds(uuid))
+            .unwrap_or(false)
     }
 }
 
@@ -394,7 +455,14 @@ pub struct Colouring<'a> {
 impl energyml_geometry::scene::Decide for Colouring<'_> {
     fn decide(&self, set: &GraphicalSet, request: &Request<'_>) -> Option<Decision> {
         self.cache
-            .decision(self.store, set, request.representation, request.property, request.kind_chain, &Options::default())
+            .decision(
+                self.store,
+                set,
+                request.representation,
+                request.property,
+                request.kind_chain,
+                &Options::default(),
+            )
             .ok()
             .flatten()
     }
@@ -495,14 +563,30 @@ pub fn of_package(cache: &Cache, store: &EpcStore, wanted: &Wanted<'_>) -> Resul
                     .clone()
                     .or_else(|| read.supporting_representation.clone())
                     .unwrap_or_default();
-                decide_in(index, store, &set, &representation, Some(&summary.uri), &chain, &wanted.options)?
+                decide_in(
+                    index,
+                    store,
+                    &set,
+                    &representation,
+                    Some(&summary.uri),
+                    &chain,
+                    &wanted.options,
+                )?
             } else {
                 decide_in(index, store, &set, &summary.uri, None, &[], &wanted.options)?
             };
-            rows.push(Coloured { summary: summary.clone(), decision });
+            rows.push(Coloured {
+                summary: summary.clone(),
+                decision,
+            });
         }
         Ok(rows)
     })?;
     let coloured = rows.iter().filter(|row| row.decision.is_some()).count();
-    Ok(Report { sets: count, notes, rows, coloured })
+    Ok(Report {
+        sets: count,
+        notes,
+        rows,
+        coloured,
+    })
 }

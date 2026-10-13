@@ -108,13 +108,21 @@ impl Operation for Collection {
             name: "collection",
             describe: "a collection of data objects — a folder, a project, a study — and the association set that says what it holds",
             category: Category::Create,
-            makes: &["eml23.DataobjectCollection", "eml23.CollectionsToDataobjectsAssociationSet"],
+            makes: &[
+                "eml23.DataobjectCollection",
+                "eml23.CollectionsToDataobjectsAssociationSet",
+            ],
             recipe: "collection",
             represents: None,
         }
     }
 
-    fn plan(&self, inputs: CollectionInputs, params: CollectionParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: CollectionInputs,
+        params: CollectionParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let title = params.title.0.trim().to_string();
         let mut seen = BTreeSet::new();
         let mut members = Vec::with_capacity(inputs.members.len());
@@ -123,7 +131,10 @@ impl Operation for Collection {
         let mut twice: Vec<(String, String, usize)> = Vec::new();
         for member in &inputs.members {
             let Some(known) = member.known.reference.as_ref() else {
-                return Err(Refusal::on("members", format!("`{}` was given without a reference to write", member.name)));
+                return Err(Refusal::on(
+                    "members",
+                    format!("`{}` was given without a reference to write", member.name),
+                ));
             };
             // By the **uri**: two versions of one object are two members, and
             // only the same version twice is a repetition.
@@ -138,7 +149,10 @@ impl Operation for Collection {
             members.push(crate::crs::reference_of(known));
         }
         if members.is_empty() {
-            return Err(Refusal::on("members", "a collection holds at least one object: its association cannot be written empty"));
+            return Err(Refusal::on(
+                "members",
+                "a collection holds at least one object: its association cannot be written empty",
+            ));
         }
 
         let types: BTreeSet<&str> = members.iter().map(|dor| dor.qualified_type.as_str()).collect();
@@ -155,7 +169,9 @@ impl Operation for Collection {
         }
 
         let kind = params.kind;
-        let collection_uuid = cx.identity.uuid(&format!("collection:{}:{title}", kind.word()), 0)?;
+        let collection_uuid = cx
+            .identity
+            .uuid(&format!("collection:{}:{title}", kind.word()), 0)?;
         let seed = format!(
             "collection:set:{collection_uuid}:{}",
             members
@@ -205,15 +221,25 @@ impl Operation for Collection {
                 "{} member(s) of {} type(s){}",
                 members.len(),
                 types.len(),
-                if homogeneous { format!(" — all {}", types.iter().next().copied().unwrap_or_default()) } else { String::new() }
+                if homogeneous {
+                    format!(" — all {}", types.iter().next().copied().unwrap_or_default())
+                } else {
+                    String::new()
+                }
             ),
         }];
         if !twice.is_empty() {
             let count: usize = twice.iter().map(|(_, _, again)| again).sum();
-            let named: Vec<String> = twice.iter().map(|(_, title, again)| format!("`{title}` ×{}", again + 1)).collect();
+            let named: Vec<String> = twice
+                .iter()
+                .map(|(_, title, again)| format!("`{title}` ×{}", again + 1))
+                .collect();
             says.push(Note {
                 key: "twice",
-                detail: format!("{count} member(s) given more than once, each written once: {}", named.join(", ")),
+                detail: format!(
+                    "{count} member(s) given more than once, each written once: {}",
+                    named.join(", ")
+                ),
             });
         }
 
@@ -242,8 +268,15 @@ impl Operation for Collection {
                 title: format!("collection → {title}"),
                 seed,
                 parameters: vec![
-                    Parameter::Text { title: "title".to_string(), value: title },
-                    Parameter::Double { title: "memberCount".to_string(), value: members.len() as f64, uom: None },
+                    Parameter::Text {
+                        title: "title".to_string(),
+                        value: title,
+                    },
+                    Parameter::Double {
+                        title: "memberCount".to_string(),
+                        value: members.len() as f64,
+                        uom: None,
+                    },
                 ],
             },
             says,

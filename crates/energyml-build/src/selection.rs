@@ -51,9 +51,9 @@
 //! latitude) for a geographic one.
 
 use energyml_domain::reproject::{self, System};
+use energyml_geometry::Placement;
 use energyml_geometry::clip::inside_ring;
 use energyml_geometry::scene;
-use energyml_geometry::Placement;
 use energyml_storage::EpcStore;
 use serde::{Deserialize, Serialize};
 
@@ -80,10 +80,15 @@ impl Rings {
         for (role, rings) in [("outer", &self.outer), ("inner", &self.inner)] {
             for (at, ring) in rings.iter().enumerate() {
                 if ring.len() < 3 {
-                    return Err(format!("the {role} ring #{at} has {} vertices: a ring needs at least three", ring.len()));
+                    return Err(format!(
+                        "the {role} ring #{at} has {} vertices: a ring needs at least three",
+                        ring.len()
+                    ));
                 }
                 if ring.iter().any(|[x, y]| !x.is_finite() || !y.is_finite()) {
-                    return Err(format!("the {role} ring #{at} has a coordinate that is not a finite number"));
+                    return Err(format!(
+                        "the {role} ring #{at} has a coordinate that is not a finite number"
+                    ));
                 }
             }
         }
@@ -123,7 +128,9 @@ impl Test {
             "inside" => Ok(Test::Inside),
             "touches" => Ok(Test::Touches),
             "head" => Ok(Test::Head),
-            other => Err(format!("unknown test `{other}`: one of `inside`, `touches` or `head`")),
+            other => Err(format!(
+                "unknown test `{other}`: one of `inside`, `touches` or `head`"
+            )),
         }
     }
 }
@@ -201,7 +208,12 @@ pub fn judge(footprint: &Footprint, rings: &Rings, test: Test) -> Result<Judgeme
     }
     let mut substituted = false;
     let test = match (test, footprint.head) {
-        (Test::Head, Some(head)) => return Ok(Judgement { holds: rings.contains(head), substituted }),
+        (Test::Head, Some(head)) => {
+            return Ok(Judgement {
+                holds: rings.contains(head),
+                substituted,
+            });
+        }
         (Test::Head, None) => {
             substituted = true;
             Test::Touches
@@ -232,7 +244,11 @@ fn edge_touches(a: [f64; 2], b: [f64; 2], rings: &Rings) -> bool {
     let mut cuts = vec![0.0, 1.0];
     for (p, q) in rings.borders() {
         // The border's box against the edge's: most are far away.
-        if p[0].max(q[0]) < lo[0] || p[0].min(q[0]) > hi[0] || p[1].max(q[1]) < lo[1] || p[1].min(q[1]) > hi[1] {
+        if p[0].max(q[0]) < lo[0]
+            || p[0].min(q[0]) > hi[0]
+            || p[1].max(q[1]) < lo[1]
+            || p[1].min(q[1]) > hi[1]
+        {
             continue;
         }
         let e = [q[0] - p[0], q[1] - p[1]];
@@ -262,47 +278,83 @@ pub fn candidates(store: &EpcStore, types: &[String]) -> Vec<String> {
         .resources()
         .into_iter()
         .filter(|one| {
-            let concept = one.qualified_type.rsplit('.').next().unwrap_or(&one.qualified_type);
+            let concept = one
+                .qualified_type
+                .rsplit('.')
+                .next()
+                .unwrap_or(&one.qualified_type);
             energyml_geometry::geometry::supports(concept.strip_prefix("obj_").unwrap_or(concept))
         })
-        .filter(|one| types.is_empty() || types.iter().any(|t| energyml_storage::resource::type_matches(&one.qualified_type, t)))
+        .filter(|one| {
+            types.is_empty()
+                || types
+                    .iter()
+                    .any(|t| energyml_storage::resource::type_matches(&one.qualified_type, t))
+        })
         .map(|one| one.uri)
         .collect()
 }
 
 /// A wellbore trajectory or frame: the objects that have a head.
 fn is_well(qualified_type: &str) -> bool {
-    qualified_type.ends_with("WellboreTrajectoryRepresentation") || qualified_type.ends_with("WellboreFrameRepresentation")
+    qualified_type.ends_with("WellboreTrajectoryRepresentation")
+        || qualified_type.ends_with("WellboreFrameRepresentation")
 }
 
 /// Read one object placed, in the rings' system when it has one.
-fn footprint_of(store: &EpcStore, asked: &str, rings_system: Option<&System>, backend: &dyn reproject::Reprojector) -> Result<Footprint, String> {
+fn footprint_of(
+    store: &EpcStore,
+    asked: &str,
+    rings_system: Option<&System>,
+    backend: &dyn reproject::Reprojector,
+) -> Result<Footprint, String> {
     // **By the store's one resolution** (`resolve`: a uri, a short uri or a bare
     // uuid, each by its own rule): an uuid held in two versions is refused with
     // its candidates, never read as one of them.
     let summary = match store.resolve(asked) {
         Ok(summary) => summary.clone(),
-        Err(energyml_storage::Error::NotFound(_)) => return Err("it is not an object of the package".to_string()),
+        Err(energyml_storage::Error::NotFound(_)) => {
+            return Err("it is not an object of the package".to_string());
+        }
         Err(other) => return Err(other.to_string()),
     };
-    let object = store.get_object(&summary.uri).map_err(|why| format!("it does not read: {why}"))?;
-    let built = scene::object_of(object.as_reflect(), store, &summary.uri).map_err(|why| format!("no geometry could be read: {why}"))?;
-    let drawable = built.drawable_in(Placement::Projected).map_err(|why| format!("it cannot be placed: {why}"))?;
+    let object = store
+        .get_object(&summary.uri)
+        .map_err(|why| format!("it does not read: {why}"))?;
+    let built = scene::object_of(object.as_reflect(), store, &summary.uri)
+        .map_err(|why| format!("no geometry could be read: {why}"))?;
+    let drawable = built
+        .drawable_in(Placement::Projected)
+        .map_err(|why| format!("it cannot be placed: {why}"))?;
     let mut points = drawable.points;
     if let Some(target) = rings_system {
         let own = match &built.crs {
-            None => return Err(format!("it names no coordinate system and the rings are in EPSG:{}", target.epsg)),
-            Some(crs) => System::of(crs).map_err(|why| format!("its system cannot be compared with the rings': {why}"))?,
+            None => {
+                return Err(format!(
+                    "it names no coordinate system and the rings are in EPSG:{}",
+                    target.epsg
+                ));
+            }
+            Some(crs) => System::of(crs)
+                .map_err(|why| format!("its system cannot be compared with the rings': {why}"))?,
         };
-        points = reproject::reproject_placed(&points, &own, target, backend)
-            .map_err(|why| format!("reprojecting from EPSG:{} to EPSG:{}: {why}", own.epsg, target.epsg))?;
+        points = reproject::reproject_placed(&points, &own, target, backend).map_err(|why| {
+            format!(
+                "reprojecting from EPSG:{} to EPSG:{}: {why}",
+                own.epsg, target.epsg
+            )
+        })?;
     }
     let nodes: Vec<[f64; 2]> = points.iter().map(|p| [p[0], p[1]]).collect();
     let mut edges = drawable.lines;
     for [a, b, c] in drawable.triangles {
         edges.extend([[a, b], [b, c], [c, a]]);
     }
-    let head = if is_well(&summary.qualified_type) { nodes.first().copied() } else { None };
+    let head = if is_well(&summary.qualified_type) {
+        nodes.first().copied()
+    } else {
+        None
+    };
     Ok(Footprint { nodes, edges, head })
 }
 
@@ -310,12 +362,24 @@ fn footprint_of(store: &EpcStore, asked: &str, rings_system: Option<&System>, ba
 pub fn select(store: &EpcStore, uris: &[String], request: &Request) -> Selected {
     let mut out = Selected::default();
     let mut seen = std::collections::HashSet::new();
-    let uris: Vec<&String> = uris.iter().filter(|uri| seen.insert(uri.to_ascii_lowercase())).collect();
+    let uris: Vec<&String> = uris
+        .iter()
+        .filter(|uri| seen.insert(uri.to_ascii_lowercase()))
+        .collect();
     if let Err(why) = request.rings.check() {
-        out.refused = uris.iter().map(|uri| Refused { uri: (*uri).clone(), why: format!("the rings are refused: {why}") }).collect();
+        out.refused = uris
+            .iter()
+            .map(|uri| Refused {
+                uri: (*uri).clone(),
+                why: format!("the rings are refused: {why}"),
+            })
+            .collect();
         return out;
     }
-    let target = request.rings.epsg.map(|epsg| System { epsg: u64::from(epsg), unit: "m".to_string() });
+    let target = request.rings.epsg.map(|epsg| System {
+        epsg: u64::from(epsg),
+        unit: "m".to_string(),
+    });
     if target.is_none() {
         out.notes.push(
             "the rings name no EPSG code: every object is compared in its own coordinates, without reprojection".to_string(),
@@ -324,9 +388,13 @@ pub fn select(store: &EpcStore, uris: &[String], request: &Request) -> Selected 
     let backend = energyml_proj::Proj4::new();
     let mut substituted = Vec::new();
     for uri in uris {
-        let verdict = footprint_of(store, uri, target.as_ref(), &backend).and_then(|footprint| judge(&footprint, &request.rings, request.test));
+        let verdict = footprint_of(store, uri, target.as_ref(), &backend)
+            .and_then(|footprint| judge(&footprint, &request.rings, request.test));
         match verdict {
-            Err(why) => out.refused.push(Refused { uri: uri.clone(), why }),
+            Err(why) => out.refused.push(Refused {
+                uri: uri.clone(),
+                why,
+            }),
             Ok(judged) => {
                 if judged.substituted {
                     substituted.push(uri.clone());

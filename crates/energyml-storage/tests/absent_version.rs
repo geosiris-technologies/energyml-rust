@@ -22,7 +22,8 @@ use energyml_storage::{EpcStore, Error};
 const UUID: &str = "3c9a41d2-7b05-4e8a-9d17-5f20c8b6a914";
 const RESQML: &str = "http://www.energistics.org/energyml/data/resqmlv2";
 const EML: &str = "http://www.energistics.org/energyml/data/commonv2";
-const WHY: &str = "RESQML 2.0.1 is not compiled in: enable the `resqml20` feature of energyml-schemas (or of energyml)";
+const WHY: &str =
+    "RESQML 2.0.1 is not compiled in: enable the `resqml20` feature of energyml-schemas (or of energyml)";
 
 /// RESQML 2.2 and EML 2.3 only; RESQML 2.0.1 declared absent when asked.
 fn registry(declare_absent: bool) -> Arc<Registry> {
@@ -59,8 +60,11 @@ fn package(root: &str, schema_version: &str, content_type: Option<&str>) -> Vec<
     zip.start_file(part.clone(), options).unwrap();
     // An empty `schema_version` leaves the attribute out: a document that
     // declares no version.
-    let schema_attribute =
-        if schema_version.is_empty() { String::new() } else { format!(" schemaVersion=\"{schema_version}\"") };
+    let schema_attribute = if schema_version.is_empty() {
+        String::new()
+    } else {
+        format!(" schemaVersion=\"{schema_version}\"")
+    };
     zip.write_all(
         format!(
             "<resqml:{root} xmlns:resqml=\"{RESQML}\" xmlns:eml=\"{EML}\" uuid=\"{UUID}\"\
@@ -92,10 +96,17 @@ fn assert_refused(store: &EpcStore, what: &str) {
     match store.get_object(&uri_of(store)) {
         Err(Error::Core(energyml_core::error::Error::VersionAbsent(message))) => {
             assert_eq!(message, WHY, "{what}");
-            assert!(message.contains("resqml20"), "the message names the feature: {message}");
+            assert!(
+                message.contains("resqml20"),
+                "the message names the feature: {message}"
+            );
         }
         Err(other) => panic!("{what}: refused, but not by name: {other}"),
-        Ok(object) => panic!("{what}: read as `{}` {}, a half read", object.type_info().package, object.type_info().version),
+        Ok(object) => panic!(
+            "{what}: read as `{}` {}, a half read",
+            object.type_info().package,
+            object.type_info().version
+        ),
     }
     assert!(
         store.diagnostics().iter().any(|d| d.message.contains("resqml20")),
@@ -113,7 +124,10 @@ fn assert_refused(store: &EpcStore, what: &str) {
 fn a_part_of_an_absent_version_is_refused_by_name_not_read_as_another() {
     for version in ["2.0", "2.0.1"] {
         let content_type = format!("application/x-resqml+xml;version={version};type=obj_BoundaryFeature");
-        let store = open(package("obj_BoundaryFeature", "2.0", Some(&content_type)), registry(true));
+        let store = open(
+            package("obj_BoundaryFeature", "2.0", Some(&content_type)),
+            registry(true),
+        );
         assert_refused(&store, &content_type);
     }
 }
@@ -139,11 +153,19 @@ fn an_undeclared_part_of_an_absent_version_is_refused_too() {
 #[test]
 fn without_the_declaration_the_same_part_is_substituted() {
     let content_type = "application/x-resqml+xml;version=2.0;type=obj_BoundaryFeature";
-    let store = open(package("obj_BoundaryFeature", "2.0", Some(content_type)), registry(false));
-    let object = store.get_object(&uri_of(&store)).expect("read as another release of the package");
+    let store = open(
+        package("obj_BoundaryFeature", "2.0", Some(content_type)),
+        registry(false),
+    );
+    let object = store
+        .get_object(&uri_of(&store))
+        .expect("read as another release of the package");
     assert_eq!(object.type_info().version, "2.2");
     assert!(
-        store.diagnostics().iter().any(|d| d.message.contains("not registered in this build")),
+        store
+            .diagnostics()
+            .iter()
+            .any(|d| d.message.contains("not registered in this build")),
         "the substitution is said out loud"
     );
 }
@@ -156,8 +178,13 @@ fn without_the_declaration_the_same_part_is_substituted() {
 #[test]
 fn a_version_nobody_declared_still_takes_the_substitution() {
     let content_type = "application/x-resqml+xml;version=2.0.9;type=BoundaryFeature";
-    let store = open(package("BoundaryFeature", "2.0.9", Some(content_type)), registry(true));
-    let object = store.get_object(&uri_of(&store)).expect("an unknown version is substituted, as before");
+    let store = open(
+        package("BoundaryFeature", "2.0.9", Some(content_type)),
+        registry(true),
+    );
+    let object = store
+        .get_object(&uri_of(&store))
+        .expect("an unknown version is substituted, as before");
     assert_eq!(object.type_info().version, "2.2");
 }
 
@@ -173,7 +200,10 @@ fn a_version_nobody_declared_still_takes_the_substitution() {
 fn a_registered_content_type_over_an_absent_document_version_is_refused() {
     for version in ["2.0", "2.0.1"] {
         let content_type = "application/x-resqml+xml;version=2.2;type=BoundaryFeature";
-        let store = open(package("BoundaryFeature", version, Some(content_type)), registry(true));
+        let store = open(
+            package("BoundaryFeature", version, Some(content_type)),
+            registry(true),
+        );
         assert_refused(&store, &format!("2.2 index over schemaVersion `{version}`"));
         let listed = store.resources().into_iter().find(|s| s.uuid == UUID).unwrap();
         assert!(
@@ -198,11 +228,18 @@ fn a_registered_content_type_over_an_absent_document_version_is_refused() {
 fn a_registered_content_type_over_a_silent_or_matching_document_still_reads() {
     let content_type = "application/x-resqml+xml;version=2.2;type=BoundaryFeature";
     let silent = open(package("BoundaryFeature", "", Some(content_type)), registry(true));
-    let object = silent.get_object(&uri_of(&silent)).expect("no declaration, the index stands");
+    let object = silent
+        .get_object(&uri_of(&silent))
+        .expect("no declaration, the index stands");
     assert_eq!(object.type_info().version, "2.2");
 
-    let matching = open(package("BoundaryFeature", "2.2", Some(content_type)), registry(true));
-    let object = matching.get_object(&uri_of(&matching)).expect("a 2.2 document under a 2.2 content type");
+    let matching = open(
+        package("BoundaryFeature", "2.2", Some(content_type)),
+        registry(true),
+    );
+    let object = matching
+        .get_object(&uri_of(&matching))
+        .expect("a 2.2 document under a 2.2 content type");
     assert_eq!(object.type_info().version, "2.2");
 }
 
@@ -213,7 +250,10 @@ fn a_registered_content_type_over_a_silent_or_matching_document_still_reads() {
 #[test]
 fn a_registered_version_is_read_as_itself() {
     let content_type = "application/x-resqml+xml;version=2.2;type=BoundaryFeature";
-    let store = open(package("BoundaryFeature", "2.2", Some(content_type)), registry(true));
+    let store = open(
+        package("BoundaryFeature", "2.2", Some(content_type)),
+        registry(true),
+    );
     let object = store.get_object(&uri_of(&store)).expect("registered");
     assert_eq!(object.type_info().version, "2.2");
 }

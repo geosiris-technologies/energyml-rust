@@ -58,7 +58,9 @@ use energyml_geometry::{Related, SceneObject};
 use energyml_storage::epc::media::{check_media_type, check_part_name};
 
 use crate::declare::{Inputs, Params, Shape};
-use crate::operation::{About, ActivityDraft, Category, Context, Media as Part, Need, Note, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Media as Part, Need, Note, Operation, Plan, Refusal, Slot,
+};
 use crate::pieces::{Known, Ref};
 
 /// The operation.
@@ -86,7 +88,11 @@ pub struct ExportMediaInputs {
 /// The object of the package the shape is, and what is known of it — or the
 /// refusal that says it is none.
 fn object_of(shape: &Shape) -> Result<(&Ref, &Known), Refusal> {
-    match shape.known.as_ref().and_then(|known| known.reference.as_ref().map(|reference| (reference, known))) {
+    match shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref().map(|reference| (reference, known)))
+    {
         Some(found) => Ok(found),
         None => Err(Refusal::on(
             "shape",
@@ -178,7 +184,8 @@ fn declined(exporter: &dyn Exporter, object: &SceneObject, options: &Options<'_>
     }
     if !options.can_place_vertical(object) {
         facts.push(
-            "its vertical axis is a travel time, and an export here states no equivalence to metres".to_string(),
+            "its vertical axis is a travel time, and an export here states no equivalence to metres"
+                .to_string(),
         );
     }
     if object.crs.is_none() {
@@ -191,7 +198,11 @@ fn declined(exporter: &dyn Exporter, object: &SceneObject, options: &Options<'_>
         exporter.name(),
         object.title,
         object.qualified_type,
-        if facts.is_empty() { String::new() } else { format!(": {}", facts.join("; ")) }
+        if facts.is_empty() {
+            String::new()
+        } else {
+            format!(": {}", facts.join("; "))
+        }
     )
 }
 
@@ -219,14 +230,33 @@ impl Operation for ExportMedia {
     fn reports(&self) -> Vec<Slot> {
         vec![
             Slot::required("part", Need::Text, "the part name the export was given"),
-            Slot::required("mediaType", Need::Text, "the content type written for it — the exporter's own"),
-            Slot::required("byteCount", Need::Number { uom: None, least: None, most: None }, "its size"),
+            Slot::required(
+                "mediaType",
+                Need::Text,
+                "the content type written for it — the exporter's own",
+            ),
+            Slot::required(
+                "byteCount",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "its size",
+            ),
         ]
     }
 
-    fn plan(&self, inputs: ExportMediaInputs, params: ExportMediaParams, _cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: ExportMediaInputs,
+        params: ExportMediaParams,
+        _cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let exporters = Exporters::builtin();
-        let exporter = exporters.get(&params.format).map_err(|why| Refusal::on("format", why))?;
+        let exporter = exporters
+            .get(&params.format)
+            .map_err(|why| Refusal::on("format", why))?;
         let object = scene_object(&inputs.shape)?;
 
         // The one Reprojector the workspace ships. Only a GeoJSON asks for it,
@@ -238,51 +268,100 @@ impl Operation for ExportMedia {
         }
         let mut bytes = Vec::new();
         exporter.write(&object, &mut bytes, &options).map_err(|why| {
-            Refusal::on("format", format!("the `{}` exporter refuses `{}`: {why}", exporter.name(), object.title))
+            Refusal::on(
+                "format",
+                format!(
+                    "the `{}` exporter refuses `{}`: {why}",
+                    exporter.name(),
+                    object.title
+                ),
+            )
         })?;
 
-        let path = match params.path.as_deref().map(str::trim).filter(|path| !path.is_empty()) {
+        let path = match params
+            .path
+            .as_deref()
+            .map(str::trim)
+            .filter(|path| !path.is_empty())
+        {
             Some(path) => path.to_string(),
             None => {
                 let name = file_name_of(&object.title);
-                let name = if name.is_empty() { object.uuid.clone() } else { name };
+                let name = if name.is_empty() {
+                    object.uuid.clone()
+                } else {
+                    name
+                };
                 format!("media/export/{name}.{}", exporter.extension())
             }
         };
         let path = check_part_name(&path).map_err(|why| Refusal::on("path", why.to_string()))?;
         // The exporter's word, checked as any content type is: a registry
         // entry brought by a caller could spell it wrong.
-        let content_type = check_media_type(exporter.mime())
-            .map_err(|why| Refusal::on("format", format!("the `{}` exporter declares {why}", exporter.name())))?;
+        let content_type = check_media_type(exporter.mime()).map_err(|why| {
+            Refusal::on(
+                "format",
+                format!("the `{}` exporter declares {why}", exporter.name()),
+            )
+        })?;
 
         let (reference, _) = object_of(&inputs.shape)?;
         let uuid = reference.uuid.to_ascii_lowercase();
         let says = vec![
             Note {
                 key: "media",
-                detail: format!("`{path}`, {content_type} (the `{}` exporter's), {} byte(s)", exporter.name(), bytes.len()),
+                detail: format!(
+                    "`{path}`, {content_type} (the `{}` exporter's), {} byte(s)",
+                    exporter.name(),
+                    bytes.len()
+                ),
             },
-            Note { key: "shows", detail: format!("destinationMedia from `{}`, sourceMedia back", reference.title) },
+            Note {
+                key: "shows",
+                detail: format!("destinationMedia from `{}`, sourceMedia back", reference.title),
+            },
             Note {
                 key: "identity",
                 detail: format!(
                     "the file names the object{} and no feature: the bag carries the interpretation's reference, \
                      not what it interprets; and no property is written",
-                    if object.interpretation.is_some() { " and its interpretation" } else { "" }
+                    if object.interpretation.is_some() {
+                        " and its interpretation"
+                    } else {
+                        ""
+                    }
                 ),
             },
         ];
         let parameters = vec![
-            Parameter::Text { title: "part".to_string(), value: path.clone() },
-            Parameter::Text { title: "mediaType".to_string(), value: content_type.clone() },
-            Parameter::Double { title: "byteCount".to_string(), value: bytes.len() as f64, uom: None },
-            Parameter::Object { title: "input".to_string(), reference: reference.dor() },
+            Parameter::Text {
+                title: "part".to_string(),
+                value: path.clone(),
+            },
+            Parameter::Text {
+                title: "mediaType".to_string(),
+                value: content_type.clone(),
+            },
+            Parameter::Double {
+                title: "byteCount".to_string(),
+                value: bytes.len() as f64,
+                uom: None,
+            },
+            Parameter::Object {
+                title: "input".to_string(),
+                reference: reference.dor(),
+            },
         ];
         Ok(Plan {
             blocked: None,
             objects: Vec::new(),
             datasets: Vec::new(),
-            media: vec![Part { path: path.clone(), content_type, bytes, related_to: vec![uuid.clone()] }],
+            media: vec![Part {
+                path: path.clone(),
+                content_type,
+                bytes,
+                related_to: vec![uuid.clone()],
+            }],
             activity: ActivityDraft {
                 recipe: "export-media",
                 title: format!("export-media → {path}"),

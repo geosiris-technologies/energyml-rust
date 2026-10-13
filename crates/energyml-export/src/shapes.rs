@@ -73,9 +73,7 @@ impl Selector {
     pub fn matches(&self, qualified_type: &str) -> bool {
         match self {
             Selector::Any => true,
-            Selector::Contains(needle) => {
-                qualified_type.to_ascii_lowercase().contains(needle.as_str())
-            }
+            Selector::Contains(needle) => qualified_type.to_ascii_lowercase().contains(needle.as_str()),
         }
     }
 }

@@ -67,7 +67,9 @@ use crate::pieces::Pieces;
 
 use super::properties_from_table::{self, Frames, PropertiesParams, TextColumns};
 use super::well::DatumKind;
-use super::wells_from_table::{SetAside, TableInputs, TableParams, WellsFromTable, column_at, group, intervals};
+use super::wells_from_table::{
+    SetAside, TableInputs, TableParams, WellsFromTable, column_at, group, intervals,
+};
 
 /// The operation.
 pub struct WellsAndProperties;
@@ -129,7 +131,10 @@ pub struct BothInputs {
     ///
     /// Left empty, these are all the frames of the target package — the declaration
     /// of `wells-from-table`, taken over as it is.
-    #[input(types = "resqml22.WellboreFrameRepresentation, resqml20.obj_WellboreFrameRepresentation", every)]
+    #[input(
+        types = "resqml22.WellboreFrameRepresentation, resqml20.obj_WellboreFrameRepresentation",
+        every
+    )]
     pub wells: Vec<ObjectIn>,
     /// the category tables to continue rather than duplicate
     #[input(types = "eml23.ColumnBasedTable, resqml20.StringTableLookup")]
@@ -168,15 +173,26 @@ impl BothParams {
 /// are written only when `units` is given, so none of them is owed (`least`
 /// 0).
 fn union() -> Vec<Output> {
-    let chart = super::stratigraphy::outputs().into_iter().map(|one| Output { least: 0, ..one });
-    let parts = [super::wells_from_table::outputs(), super::properties_from_table::outputs(), chart.collect()];
+    let chart = super::stratigraphy::outputs()
+        .into_iter()
+        .map(|one| Output { least: 0, ..one });
+    let parts = [
+        super::wells_from_table::outputs(),
+        super::properties_from_table::outputs(),
+        chart.collect(),
+    ];
     let mut merged: Vec<Output> = Vec::new();
     for one in parts.into_iter().flatten() {
         match merged.iter_mut().find(|have| have.role == one.role) {
             None => merged.push(one),
             Some(have) => {
                 let mut types: Vec<&'static str> = have.types.to_vec();
-                types.extend(one.types.iter().copied().filter(|kind| !have.types.contains(kind)));
+                types.extend(
+                    one.types
+                        .iter()
+                        .copied()
+                        .filter(|kind| !have.types.contains(kind)),
+                );
                 // Declarations are static; a merged list is built once and kept.
                 have.types = Box::leak(types.into_boxed_slice());
                 have.least += one.least;
@@ -240,11 +256,18 @@ impl Operation for WellsAndProperties {
     /// The content of the table, judged by `wells-from-table`: without the roles
     /// of a borehole, there is nothing to create and therefore nothing to lay on.
     fn check(&self, inputs: &BothInputs) -> Result<(), Refusal> {
-        WellsFromTable.check(&TableInputs { table: inputs.table.clone(), wells: Vec::new() })
+        WellsFromTable.check(&TableInputs {
+            table: inputs.table.clone(),
+            wells: Vec::new(),
+        })
     }
 
     fn plan(&self, inputs: BothInputs, params: BothParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
-        let BothInputs { table, wells, lookups } = inputs;
+        let BothInputs {
+            table,
+            wells,
+            lookups,
+        } = inputs;
         // **The units of each pass, read before a frame is written**: they
         // enter its identity (see the module).
         let passes = match &params.units {
@@ -258,15 +281,29 @@ impl Operation for WellsAndProperties {
             let passes = passes.as_ref()?.get(hole)?;
             Some(format!(
                 "units:{}",
-                passes.iter().map(|(_, _, code, label)| format!("{code}/{label}")).collect::<Vec<_>>().join(",")
+                passes
+                    .iter()
+                    .map(|(_, _, code, label)| format!("{code}/{label}"))
+                    .collect::<Vec<_>>()
+                    .join(",")
             ))
         };
         let (first, ends) = {
             let _span = tracing::info_span!("wells_props.wells").entered();
-            WellsFromTable.plan_ending(TableInputs { table: table.clone(), wells }, params.wells(), cx, &more)?
+            WellsFromTable.plan_ending(
+                TableInputs {
+                    table: table.clone(),
+                    wells,
+                },
+                params.wells(),
+                cx,
+                &more,
+            )?
         };
-        let frames: Vec<(crate::pieces::Ref, Vec<f64>)> =
-            ends.iter().map(|(_, frame, mds)| (frame.clone(), mds.clone())).collect();
+        let frames: Vec<(crate::pieces::Ref, Vec<f64>)> = ends
+            .iter()
+            .map(|(_, frame, mds)| (frame.clone(), mds.clone()))
+            .collect();
 
         // **A table of heads has nothing to lay**: no frame, no MD.
         // This is the first plan, said as it is, and not the refusal of
@@ -283,7 +320,13 @@ impl Operation for WellsAndProperties {
 
         let second = {
             let _span = tracing::info_span!("wells_props.properties", frames = frames.len()).entered();
-            properties_from_table::lay(&table, &Frames::given(&frames), &lookups, &params.properties(), cx)?
+            properties_from_table::lay(
+                &table,
+                &Frames::given(&frames),
+                &lookups,
+                &params.properties(),
+                cx,
+            )?
         };
 
         let mut plan = first;
@@ -298,7 +341,10 @@ impl Operation for WellsAndProperties {
         plan.dropped.extend(second.dropped);
         plan.activity.parameters.extend(second.activity.parameters);
         if let (Some(passes), Some(column)) = (&passes, &params.units) {
-            let title = format!("{} — {column}", table.first().map(|one| one.file.as_str()).unwrap_or("table"));
+            let title = format!(
+                "{} — {column}",
+                table.first().map(|one| one.file.as_str()).unwrap_or("table")
+            );
             let language = params.language;
             let _span = tracing::info_span!("wells_props.attach_units").entered();
             geolts::with_default(|chart| attach(chart, &mut plan, &ends, passes, &title, language, cx))?;
@@ -321,14 +367,25 @@ fn rename(mut plan: Plan) -> Plan {
 }
 
 /// The passes of each borehole, with the code and the label of their unit.
-fn passes_of(tables: &[TableIn], column: &str, labels: Option<&str>) -> Result<BTreeMap<String, Vec<Pass>>, Refusal> {
+fn passes_of(
+    tables: &[TableIn],
+    column: &str,
+    labels: Option<&str>,
+) -> Result<BTreeMap<String, Vec<Pass>>, Refusal> {
     let mut out: BTreeMap<String, Vec<Pass>> = BTreeMap::new();
     let mut aside = SetAside::default();
     for input in tables {
         let table = &input.table;
         let at = |name: &str, slot: &str| -> Result<usize, Refusal> {
             table.column(name).ok_or_else(|| {
-                Refusal::on(slot, format!("`{}` has no column `{name}` (it names: {})", input.file, table.headers.join(", ")))
+                Refusal::on(
+                    slot,
+                    format!(
+                        "`{}` has no column `{name}` (it names: {})",
+                        input.file,
+                        table.headers.join(", ")
+                    ),
+                )
             })
         };
         let unit_at = at(column, "units")?;
@@ -347,13 +404,26 @@ fn passes_of(tables: &[TableIn], column: &str, labels: Option<&str>) -> Result<B
             ));
         };
         for hole in group(table, name_at, &mut aside) {
-            let found = intervals(table, &hole.rows, top_at, md_at, &hole.title).map_err(|why| Refusal::on("table", why))?;
-            let cell = |row: usize, at: usize| table.rows[row].get(at).map(|one| one.trim().to_string()).unwrap_or_default();
+            let found = intervals(table, &hole.rows, top_at, md_at, &hole.title)
+                .map_err(|why| Refusal::on("table", why))?;
+            let cell = |row: usize, at: usize| {
+                table.rows[row]
+                    .get(at)
+                    .map(|one| one.trim().to_string())
+                    .unwrap_or_default()
+            };
             out.insert(
                 hole.title.clone(),
                 found
                     .iter()
-                    .map(|(top, base, row)| (*top, *base, cell(*row, unit_at), label_at.map(|at| cell(*row, at)).unwrap_or_default()))
+                    .map(|(top, base, row)| {
+                        (
+                            *top,
+                            *base,
+                            cell(*row, unit_at),
+                            label_at.map(|at| cell(*row, at)).unwrap_or_default(),
+                        )
+                    })
                     .collect(),
             );
         }
@@ -382,7 +452,10 @@ fn attach(
                 // `resolve`, never the first that comes.
                 chart.resolve(&key.0).ok().map(|one| one.id)
             } else {
-                chart.find(&key.0, &key.1).map_err(|why| Refusal::on("units", why))?.map(|one| one.id)
+                chart
+                    .find(&key.0, &key.1)
+                    .map_err(|why| Refusal::on("units", why))?
+                    .map(|one| one.id)
             };
             named.insert(key.clone(), found);
         }
@@ -396,11 +469,13 @@ fn attach(
     if ids.is_empty() {
         plan.says.push(Note {
             key: "units-unknown",
-            detail: "no pass names a division of the BRGM chart, so no frame maps its intervals to units".to_string(),
+            detail: "no pass names a division of the BRGM chart, so no frame maps its intervals to units"
+                .to_string(),
         });
         return Ok(());
     }
-    let column = super::stratigraphy::write_column(chart, &ids, &format!("{title} (BRGM chart)"), language, cx)?;
+    let column =
+        super::stratigraphy::write_column(chart, &ids, &format!("{title} (BRGM chart)"), language, cx)?;
 
     let mut mapped = 0usize;
     let mut intervals_mapped = 0usize;
@@ -423,7 +498,11 @@ fn attach(
         for rank in &column.ranks {
             let indices: Vec<i64> = per_interval
                 .iter()
-                .map(|id| id.and_then(|id| rank.units.iter().position(|one| *one == id)).map(|at| at as i64).unwrap_or(-1))
+                .map(|id| {
+                    id.and_then(|id| rank.units.iter().position(|one| *one == id))
+                        .map(|at| at as i64)
+                        .unwrap_or(-1)
+                })
                 .collect();
             if indices.iter().all(|one| *one < 0) {
                 continue;
@@ -439,12 +518,14 @@ fn attach(
                         values: indices,
                         ..Default::default()
                     })),
-                    cumulative_length: Some(eml::AbstractIntegerArray::IntegerXmlArray(eml::IntegerXmlArray {
-                        count_per_value: 1,
-                        null_value: -1,
-                        values: (1..=count).collect(),
-                        ..Default::default()
-                    })),
+                    cumulative_length: Some(eml::AbstractIntegerArray::IntegerXmlArray(
+                        eml::IntegerXmlArray {
+                            count_per_value: 1,
+                            null_value: -1,
+                            values: (1..=count).collect(),
+                            ..Default::default()
+                        },
+                    )),
                 },
                 stratigraphic_organization_interpretation: rank.reference.clone(),
             };
@@ -480,7 +561,14 @@ fn attach(
                 unknown.values().sum::<usize>(),
                 unknown
                     .iter()
-                    .map(|((code, label), n)| format!("{code}{} × {n}", if label.is_empty() { String::new() } else { format!(" {label}") }))
+                    .map(|((code, label), n)| format!(
+                        "{code}{} × {n}",
+                        if label.is_empty() {
+                            String::new()
+                        } else {
+                            format!(" {label}")
+                        }
+                    ))
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
@@ -489,7 +577,11 @@ fn attach(
     if !missing.is_empty() {
         plan.says.push(Note {
             key: "units-not-written",
-            detail: format!("{} frame(s) are not written by this run, so their units are not either: {}", missing.len(), missing.join(", ")),
+            detail: format!(
+                "{} frame(s) are not written by this run, so their units are not either: {}",
+                missing.len(),
+                missing.join(", ")
+            ),
         });
     }
     Ok(())

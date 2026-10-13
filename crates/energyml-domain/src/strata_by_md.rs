@@ -156,8 +156,16 @@ pub fn comparable(target: &MdReference, stated: &MdReference) -> Result<f64, Str
         return Err(format!(
             "the datum of {} is not stated, so its MDs cannot be compared with those of {} \
              (common TRG 2.3 §6.48: only MDs with the same datum are directly comparable)",
-            if target.datum.is_none() { &target.trajectory } else { &stated.trajectory },
-            if target.datum.is_none() { &stated.trajectory } else { &target.trajectory },
+            if target.datum.is_none() {
+                &target.trajectory
+            } else {
+                &stated.trajectory
+            },
+            if target.datum.is_none() {
+                &stated.trajectory
+            } else {
+                &target.trajectory
+            },
         ));
     };
     if ours != theirs {
@@ -184,7 +192,11 @@ pub fn comparable(target: &MdReference, stated: &MdReference) -> Result<f64, Str
         },
         _ => Err(format!(
             "the unit of the MDs of {} is not stated, so they cannot be compared with MDs in another unit",
-            if target.uom.is_none() { &target.trajectory } else { &stated.trajectory }
+            if target.uom.is_none() {
+                &target.trajectory
+            } else {
+                &stated.trajectory
+            }
         )),
     }
 }
@@ -230,7 +242,8 @@ pub fn md_reference(representation: &dyn Reflect, source: &dyn ArraySource) -> R
         other => {
             return Err(Refusal::Unsupported {
                 what: format!("`{other}` `{title}`"),
-                why: "is neither a wellbore frame nor a wellbore trajectory, so it has no measured depth".to_string(),
+                why: "is neither a wellbore frame nor a wellbore trajectory, so it has no measured depth"
+                    .to_string(),
             });
         }
     };
@@ -239,8 +252,13 @@ pub fn md_reference(representation: &dyn Reflect, source: &dyn ArraySource) -> R
         _ => trajectory,
     };
     Ok(MdReference {
-        trajectory: identity::uuid_of_reflect(trajectory).unwrap_or_default().to_ascii_lowercase(),
-        datum: MD_DATUM.iter().find_map(|name| reference_of(interval, name)).map(|uuid| uuid.to_ascii_lowercase()),
+        trajectory: identity::uuid_of_reflect(trajectory)
+            .unwrap_or_default()
+            .to_ascii_lowercase(),
+        datum: MD_DATUM
+            .iter()
+            .find_map(|name| reference_of(interval, name))
+            .map(|uuid| uuid.to_ascii_lowercase()),
         uom: MD_UOM.iter().find_map(|name| string_of(interval, name)),
         domain: string_of(trajectory, MD_DOMAIN),
     })
@@ -261,7 +279,10 @@ pub fn node_mds(representation: &dyn Reflect, source: &dyn ArraySource) -> Resul
     match representation.type_info().type_key {
         FRAME => {
             let Some(FieldValue::Object(array)) = representation.field("NodeMd") else {
-                return Err(Refusal::Defect { what: format!("`{title}`"), why: "states no NodeMd".to_string() });
+                return Err(Refusal::Defect {
+                    what: format!("`{title}`"),
+                    why: "states no NodeMd".to_string(),
+                });
             };
             doubles(array, source, &format!("`{title}`.NodeMd"))
         }
@@ -276,7 +297,8 @@ pub fn node_mds(representation: &dyn Reflect, source: &dyn ArraySource) -> Resul
                     (Some(min), Some(max)) => Ok(vec![min, max]),
                     _ => Err(Refusal::Absent {
                         what: format!("`{title}`"),
-                        why: "has neither a geometry nor MD bounds, so none of its points has an MD".to_string(),
+                        why: "has neither a geometry nor MD bounds, so none of its points has an MD"
+                            .to_string(),
                     }),
                 };
             };
@@ -302,7 +324,8 @@ pub fn node_mds(representation: &dyn Reflect, source: &dyn ArraySource) -> Resul
         }
         other => Err(Refusal::Unsupported {
             what: format!("`{other}` `{title}`"),
-            why: "is neither a wellbore frame nor a wellbore trajectory, so it has no measured depth".to_string(),
+            why: "is neither a wellbore frame nor a wellbore trajectory, so it has no measured depth"
+                .to_string(),
         }),
     }
 }
@@ -376,12 +399,18 @@ impl Carried {
 
     /// Nodes where two frames name two units.
     pub fn disagreements(&self) -> usize {
-        self.nodes.iter().filter(|node| **node == Node::Disagreement).count()
+        self.nodes
+            .iter()
+            .filter(|node| **node == Node::Disagreement)
+            .count()
     }
 
     /// Nodes given a unit.
     pub fn named(&self) -> usize {
-        self.nodes.iter().filter(|node| matches!(node, Node::Unit(_))).count()
+        self.nodes
+            .iter()
+            .filter(|node| matches!(node, Node::Unit(_)))
+            .count()
     }
 
     /// One RGBA per node — [`Strata::node_colours_with`]'s contract: a unit is
@@ -446,7 +475,10 @@ fn says(strata: &Strata, md: f64) -> Says {
 fn runs_down(strata: &Strata) -> Result<(), String> {
     // A `NaN` limit orders against nothing, and is refused with the rest.
     let backwards = |section: &well_strata::Section| {
-        section.top.partial_cmp(&section.base).is_none_or(|order| order == std::cmp::Ordering::Greater)
+        section
+            .top
+            .partial_cmp(&section.base)
+            .is_none_or(|order| order == std::cmp::Ordering::Greater)
     };
     match strata.sections.iter().position(backwards) {
         None => Ok(()),
@@ -550,7 +582,10 @@ pub fn carry(
                         disputed.push(format!(
                             "at MD {md}, {}",
                             many.iter()
-                                .map(|(unit, which)| format!("`{}` says {}", used[*which].0.title, units[*unit].title))
+                                .map(|(unit, which)| format!(
+                                    "`{}` says {}",
+                                    used[*which].0.title, units[*unit].title
+                                ))
                                 .collect::<Vec<_>>()
                                 .join(" and ")
                         ));
@@ -595,7 +630,11 @@ pub fn carry(
             "{disagreements} node(s) where two frames of the wellbore name two different units — left \
              uncoloured, neither frame chosen: {}{}",
             disputed.join("; "),
-            if disagreements > disputed.len() { "; …" } else { "" }
+            if disagreements > disputed.len() {
+                "; …"
+            } else {
+                ""
+            }
         ));
     }
     let outside = carried.outside();
@@ -723,7 +762,9 @@ impl Painting {
             }
             Painting::Carried(carried) => {
                 let finite = mds.iter().copied().filter(|md| md.is_finite());
-                let (low, high) = finite.fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), md| (lo.min(md), hi.max(md)));
+                let (low, high) = finite.fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), md| {
+                    (lo.min(md), hi.max(md))
+                });
                 // Every limit a frame states inside the nodes' reach, and the
                 // reach itself: between two of them, one unit or none.
                 let mut cuts: Vec<f64> = vec![low, high];
@@ -734,7 +775,11 @@ impl Painting {
                 cuts.dedup();
                 for pair in cuts.windows(2) {
                     let middle = (pair[0] + pair[1]) / 2.0;
-                    let mut held = carried.spans.iter().filter(|(top, base, _)| *top <= middle && middle < *base).map(|(_, _, unit)| *unit);
+                    let mut held = carried
+                        .spans
+                        .iter()
+                        .filter(|(top, base, _)| *top <= middle && middle < *base)
+                        .map(|(_, _, unit)| *unit);
                     if let Some(unit) = held.next()
                         && held.all(|other| other == unit)
                     {
@@ -815,7 +860,9 @@ pub fn of_representation(
         }
     }
     let title = title_of(target);
-    let uuid = identity::uuid_of_reflect(target).unwrap_or_default().to_ascii_lowercase();
+    let uuid = identity::uuid_of_reflect(target)
+        .unwrap_or_default()
+        .to_ascii_lowercase();
     let Some(wellbore) = represented(target) else {
         return Err(Refusal::Absent {
             what: format!("`{title}`"),
@@ -829,7 +876,9 @@ pub fn of_representation(
     let frames = frames_of(&wellbore);
     for frame in &frames {
         let frame = frame.as_reflect();
-        let theirs = identity::uuid_of_reflect(frame).unwrap_or_default().to_ascii_lowercase();
+        let theirs = identity::uuid_of_reflect(frame)
+            .unwrap_or_default()
+            .to_ascii_lowercase();
         // Told apart on the document alone: a frame that states no unit is
         // not asked, so an array of it that cannot be read stops nothing.
         if theirs == uuid
@@ -849,15 +898,18 @@ pub fn of_representation(
             what: format!("`{title}`"),
             why: format!(
                 "states no stratigraphic unit itself, and no frame of the same wellbore ({wellbore}) does{}",
-                rank.map(|rank| format!(" through rank {rank}")).unwrap_or_default()
+                rank.map(|rank| format!(" through rank {rank}"))
+                    .unwrap_or_default()
             ),
         });
     }
 
     let reference = md_reference(target, source)?;
     let mds = node_mds(target, source)?;
-    let stated: Vec<Stated<'_>> =
-        read.iter().map(|(strata, reference)| Stated { strata, reference }).collect();
+    let stated: Vec<Stated<'_>> = read
+        .iter()
+        .map(|(strata, reference)| Stated { strata, reference })
+        .collect();
     carry(&uuid, &title, &mds, &reference, &stated).map(Painting::Carried)
 }
 
@@ -876,12 +928,17 @@ fn reference_of(object: &dyn Reflect, field: &str) -> Option<String> {
     let FieldValue::Object(reference) = object.field(field)? else {
         return None;
     };
-    identity::uuid_of_reflect(reference).filter(|uuid| !uuid.is_empty()).map(str::to_string)
+    identity::uuid_of_reflect(reference)
+        .filter(|uuid| !uuid.is_empty())
+        .map(str::to_string)
 }
 
 fn string_of(object: &dyn Reflect, field: &str) -> Option<String> {
     match object.field(field)? {
-        FieldValue::Scalar(scalar) => scalar.as_str().map(str::to_string).filter(|text| !text.trim().is_empty()),
+        FieldValue::Scalar(scalar) => scalar
+            .as_str()
+            .map(str::to_string)
+            .filter(|text| !text.trim().is_empty()),
         _ => None,
     }
 }
@@ -897,6 +954,9 @@ fn doubles(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Ve
     match values::read(array, source, at)? {
         Values::Floating(values) => Ok(values),
         Values::Integer(values) => Ok(values.into_iter().map(|value| value as f64).collect()),
-        _ => Err(Refusal::Defect { what: at.to_string(), why: "holds no numbers".to_string() }),
+        _ => Err(Refusal::Defect {
+            what: at.to_string(),
+            why: "holds no numbers".to_string(),
+        }),
     }
 }

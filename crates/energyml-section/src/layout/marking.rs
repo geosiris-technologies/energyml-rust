@@ -19,7 +19,8 @@
 use std::collections::HashSet;
 
 use super::{
-    Anchor, Attr, FONT_PX, INK, KeptTrace, LEGEND_MAX_PX, LEGEND_MIN_PX, LINE_PX, LaidObject, Map, SMALL_PX, Shape, labels, width_of,
+    Anchor, Attr, FONT_PX, INK, KeptTrace, LEGEND_MAX_PX, LEGEND_MIN_PX, LINE_PX, LaidObject, Map, SMALL_PX,
+    Shape, labels, width_of,
 };
 use crate::markers::{self, CONTOUR};
 use crate::model::{MarkerPlace, View, WellItem};
@@ -61,7 +62,9 @@ pub(super) struct Resolved {
 }
 
 fn valid_colour(colour: &str) -> bool {
-    colour.strip_prefix('#').is_some_and(|hex| (hex.len() == 6 || hex.len() == 8) && hex.chars().all(|c| c.is_ascii_hexdigit()))
+    colour
+        .strip_prefix('#')
+        .is_some_and(|hex| (hex.len() == 6 || hex.len() == 8) && hex.chars().all(|c| c.is_ascii_hexdigit()))
 }
 
 /// Why a marker has no point on a well.
@@ -76,7 +79,10 @@ fn well_point(w: &WellItem, place: MarkerPlace) -> Result<[f64; 2], Miss> {
         MarkerPlace::Head => Ok(w.head),
         MarkerPlace::Bottom => w.path.last().copied().ok_or(Miss::Nothing),
         MarkerPlace::Md { value } => {
-            let md = w.md.as_ref().filter(|md| md.len() == w.path.len() && md.len() >= 2).ok_or(Miss::NoMd)?;
+            let md =
+                w.md.as_ref()
+                    .filter(|md| md.len() == w.path.len() && md.len() >= 2)
+                    .ok_or(Miss::NoMd)?;
             for i in 0..md.len() - 1 {
                 let (m0, m1) = (md[i], md[i + 1]);
                 if value >= m0.min(m1) && value <= m0.max(m1) {
@@ -92,8 +98,16 @@ fn well_point(w: &WellItem, place: MarkerPlace) -> Result<[f64; 2], Miss> {
 
 /// Decide, in the drawing's units, what the view's markers draw — and say what
 /// they cannot, one note per marker and cause, counted.
-pub(super) fn resolve(view: &View, wells: &[&WellItem], traces: &[KeptTrace<'_>], warnings: &mut Vec<String>) -> Resolved {
-    let mut out = Resolved { entries: Vec::new(), placed: Vec::new() };
+pub(super) fn resolve(
+    view: &View,
+    wells: &[&WellItem],
+    traces: &[KeptTrace<'_>],
+    warnings: &mut Vec<String>,
+) -> Resolved {
+    let mut out = Resolved {
+        entries: Vec::new(),
+        placed: Vec::new(),
+    };
     let mut unnamed = 0;
     for marker in view.markers.iter().filter(|marker| !marker.hidden) {
         let name = marker.name.trim();
@@ -104,9 +118,15 @@ pub(super) fn resolve(view: &View, wells: &[&WellItem], traces: &[KeptTrace<'_>]
         let refusal = if !markers::is_drawn(&marker.shape) {
             Some(format!("shape \"{}\" is not drawn by this build", marker.shape))
         } else if !valid_colour(&marker.colour) {
-            Some(format!("colour \"{}\" is not #rrggbb or #rrggbbaa", marker.colour))
+            Some(format!(
+                "colour \"{}\" is not #rrggbb or #rrggbbaa",
+                marker.colour
+            ))
         } else if !(marker.size_px.is_finite() && marker.size_px > 0.0 && marker.size_px <= MAX_SIZE_PX) {
-            Some(format!("size {} px is not above 0 and at most {MAX_SIZE_PX}", marker.size_px))
+            Some(format!(
+                "size {} px is not above 0 and at most {MAX_SIZE_PX}",
+                marker.size_px
+            ))
         } else if matches!(marker.at, MarkerPlace::Md { value } if !value.is_finite()) {
             Some("the measured depth is not a number".to_string())
         } else {
@@ -125,7 +145,10 @@ pub(super) fn resolve(view: &View, wells: &[&WellItem], traces: &[KeptTrace<'_>]
         for key in marker.keys.iter().filter(|k| seen_keys.insert(k.as_str())) {
             // A wellbore's frame and trajectory are one line: the marker of
             // either lands on it.
-            let well = wells.iter().enumerate().find(|(_, w)| w.object.key() == *key || w.merged.iter().any(|m| m.key() == *key));
+            let well = wells
+                .iter()
+                .enumerate()
+                .find(|(_, w)| w.object.key() == *key || w.merged.iter().any(|m| m.key() == *key));
             if let Some((at, w)) = well {
                 if !seen_wells.insert(at) {
                     continue;
@@ -137,12 +160,21 @@ pub(super) fn resolve(view: &View, wells: &[&WellItem], traces: &[KeptTrace<'_>]
                         key: key.clone(),
                         title,
                         size: marker.size_px,
-                        spot: Spot::Line(vec![w.path.clone()], width_of(view, &w.object.key(), view.well_width_px.max(1.0))),
+                        spot: Spot::Line(
+                            vec![w.path.clone()],
+                            width_of(view, &w.object.key(), view.well_width_px.max(1.0)),
+                        ),
                     });
                     continue;
                 }
                 match well_point(w, marker.at) {
-                    Ok(point) => out.placed.push(Placed { entry, key: key.clone(), title, size: marker.size_px, spot: Spot::Point(point) }),
+                    Ok(point) => out.placed.push(Placed {
+                        entry,
+                        key: key.clone(),
+                        title,
+                        size: marker.size_px,
+                        spot: Spot::Point(point),
+                    }),
                     Err(Miss::NoMd) => no_md += 1,
                     Err(Miss::Outside) => outside += 1,
                     Err(Miss::Nothing) => unplaceable += 1,
@@ -168,14 +200,26 @@ pub(super) fn resolve(view: &View, wells: &[&WellItem], traces: &[KeptTrace<'_>]
                     _ => None,
                 };
                 match point {
-                    Some(point) => out.placed.push(Placed { entry, key: key.clone(), title, size: marker.size_px, spot: Spot::Point(point) }),
+                    Some(point) => out.placed.push(Placed {
+                        entry,
+                        key: key.clone(),
+                        title,
+                        size: marker.size_px,
+                        spot: Spot::Point(point),
+                    }),
                     None => unplaceable += 1,
                 }
             } else {
                 absent += 1;
             }
         }
-        let plural = |n: usize, one: &str, many: &str| if n == 1 { format!("1 {one}") } else { format!("{n} {many}") };
+        let plural = |n: usize, one: &str, many: &str| {
+            if n == 1 {
+                format!("1 {one}")
+            } else {
+                format!("{n} {many}")
+            }
+        };
         if absent > 0 {
             warnings.push(format!(
                 "marker \"{name}\": {} not in this drawing (hidden, outside the portion, or neither a well nor a surface) — nothing marked there",
@@ -183,7 +227,10 @@ pub(super) fn resolve(view: &View, wells: &[&WellItem], traces: &[KeptTrace<'_>]
             ));
         }
         if no_md > 0 {
-            warnings.push(format!("marker \"{name}\": {} no measured depths — nothing marked there", plural(no_md, "well has", "wells have")));
+            warnings.push(format!(
+                "marker \"{name}\": {} no measured depths — nothing marked there",
+                plural(no_md, "well has", "wells have")
+            ));
         }
         if outside > 0 {
             warnings.push(format!(
@@ -198,11 +245,17 @@ pub(super) fn resolve(view: &View, wells: &[&WellItem], traces: &[KeptTrace<'_>]
             ));
         }
         if out.placed.len() > before {
-            out.entries.push(Entry { name: name.to_string(), shape: marker.shape.clone(), colour: marker.colour.clone() });
+            out.entries.push(Entry {
+                name: name.to_string(),
+                shape: marker.shape.clone(),
+                colour: marker.colour.clone(),
+            });
         }
     }
     if unnamed > 0 {
-        warnings.push(format!("{unnamed} marker(s) without a name not drawn — a marker needs a name for the legend"));
+        warnings.push(format!(
+            "{unnamed} marker(s) without a name not drawn — a marker needs a name for the legend"
+        ));
     }
     out
 }
@@ -216,8 +269,16 @@ fn symbol(at: [f64; 2], shape: &str, size: f64, colour: &str) -> Shape {
         at,
         kind: shape.to_string(),
         size,
-        fill: if outline { "none".into() } else { colour.to_string() },
-        stroke: if outline { colour.to_string() } else { "#ffffff".into() },
+        fill: if outline {
+            "none".into()
+        } else {
+            colour.to_string()
+        },
+        stroke: if outline {
+            colour.to_string()
+        } else {
+            "#ffffff".into()
+        },
     }
 }
 
@@ -245,15 +306,23 @@ impl Resolved {
         self.placed
             .iter()
             .filter_map(|p| {
-                let Spot::Line(lines, base) = &p.spot else { return None };
+                let Spot::Line(lines, base) = &p.spot else {
+                    return None;
+                };
                 let entry = &self.entries[p.entry];
                 let shapes: Vec<Shape> = lines
                     .iter()
                     .map(|line| map.points(line))
                     .filter(|px| px.len() >= 2)
-                    .map(|points| Shape::Polyline { points, stroke: entry.colour.clone(), width: base + CONTOUR_HALO_PX, dash: false })
+                    .map(|points| Shape::Polyline {
+                        points,
+                        stroke: entry.colour.clone(),
+                        width: base + CONTOUR_HALO_PX,
+                        dash: false,
+                    })
                     .collect();
-                (!shapes.is_empty()).then(|| marked(&entry.name, Some(&p.key), "marker-contour", &p.title, shapes))
+                (!shapes.is_empty())
+                    .then(|| marked(&entry.name, Some(&p.key), "marker-contour", &p.title, shapes))
             })
             .collect()
     }
@@ -268,7 +337,13 @@ impl Resolved {
                     return None;
                 }
                 let entry = &self.entries[p.entry];
-                Some(marked(&entry.name, Some(&p.key), "marker", &p.title, vec![symbol(map.px(*at), &entry.shape, p.size, &entry.colour)]))
+                Some(marked(
+                    &entry.name,
+                    Some(&p.key),
+                    "marker",
+                    &p.title,
+                    vec![symbol(map.px(*at), &entry.shape, p.size, &entry.colour)],
+                ))
             })
             .collect()
     }
@@ -280,17 +355,32 @@ impl Resolved {
             return Vec::new();
         }
         let room = (((bottom - top) - LINE_PX - 8.0) / LINE_PX).floor().max(1.0) as usize;
-        let shown = if self.entries.len() > room { room.saturating_sub(1) } else { self.entries.len() };
+        let shown = if self.entries.len() > room {
+            room.saturating_sub(1)
+        } else {
+            self.entries.len()
+        };
         let height = LINE_PX * (shown + 1 + usize::from(shown < self.entries.len())) as f64 + 10.0;
         let mut frame = vec![
             Shape::Polygon {
-                points: vec![[x, top], [x + width, top], [x + width, top + height], [x, top + height]],
+                points: vec![
+                    [x, top],
+                    [x + width, top],
+                    [x + width, top + height],
+                    [x, top + height],
+                ],
                 fill: "#ffffff".into(),
                 opacity: 0.92,
                 stroke: Some("#999999".into()),
                 dash: false,
             },
-            Shape::Text { at: [x + 8.0, top + LINE_PX], text: "Markers".into(), anchor: Anchor::Start, size: FONT_PX, fill: INK.into() },
+            Shape::Text {
+                at: [x + 8.0, top + LINE_PX],
+                text: "Markers".into(),
+                anchor: Anchor::Start,
+                size: FONT_PX,
+                fill: INK.into(),
+            },
         ];
         if shown < self.entries.len() {
             frame.push(Shape::Text {
@@ -305,7 +395,12 @@ impl Resolved {
         for (i, e) in self.entries.iter().take(shown).enumerate() {
             let y = top + LINE_PX * (i as f64 + 2.0);
             let sample = if e.shape == CONTOUR {
-                Shape::Polyline { points: vec![[x + 7.0, y - 4.0], [x + 21.0, y - 4.0]], stroke: e.colour.clone(), width: 5.0, dash: false }
+                Shape::Polyline {
+                    points: vec![[x + 7.0, y - 4.0], [x + 21.0, y - 4.0]],
+                    stroke: e.colour.clone(),
+                    width: 5.0,
+                    dash: false,
+                }
             } else {
                 symbol([x + 14.0, y - 4.0], &e.shape, LEGEND_SYMBOL_PX, &e.colour)
             };
@@ -316,7 +411,13 @@ impl Resolved {
                 size: SMALL_PX,
                 fill: INK.into(),
             };
-            out.push(marked(&e.name, None, "markers-entry", &e.name, vec![sample, text]));
+            out.push(marked(
+                &e.name,
+                None,
+                "markers-entry",
+                &e.name,
+                vec![sample, text],
+            ));
         }
         out
     }
@@ -324,7 +425,10 @@ impl Resolved {
 
 fn marked(name: &str, key: Option<&str>, kind: &str, title: &str, shapes: Vec<Shape>) -> LaidObject {
     LaidObject {
-        attr: Attr::Marker { name: name.to_string(), key: key.map(str::to_string) },
+        attr: Attr::Marker {
+            name: name.to_string(),
+            key: key.map(str::to_string),
+        },
         kind: kind.to_string(),
         title: title.to_string(),
         highlighted: false,

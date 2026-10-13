@@ -858,7 +858,9 @@ pub enum UnstratifiedStyle {
 impl Default for UnstratifiedStyle {
     /// Solid neutral grey: what a drawing always showed there.
     fn default() -> Self {
-        UnstratifiedStyle::Solid { colour: NEUTRAL_COLOUR.to_string() }
+        UnstratifiedStyle::Solid {
+            colour: NEUTRAL_COLOUR.to_string(),
+        }
     }
 }
 
@@ -874,7 +876,8 @@ impl UnstratifiedStyle {
     pub fn refusal(&self) -> Option<String> {
         let colour = |c: &str| (c.trim().is_empty()).then(|| "its colour is empty".to_string());
         let range = |name: &str, v: f64, lo: f64, hi: f64| {
-            (!(v.is_finite() && v >= lo && v <= hi)).then(|| format!("its {name} ({v}) is not a number in [{lo}, {hi}]"))
+            (!(v.is_finite() && v >= lo && v <= hi))
+                .then(|| format!("its {name} ({v}) is not a number in [{lo}, {hi}]"))
         };
         match self {
             Self::Hidden => None,
@@ -882,8 +885,19 @@ impl UnstratifiedStyle {
             Self::Dashed { colour: c, dash, gap } => colour(c)
                 .or_else(|| range("dash", *dash, style_limits::LENGTH.0, style_limits::LENGTH.1))
                 .or_else(|| range("gap", *gap, style_limits::LENGTH.0, style_limits::LENGTH.1)),
-            Self::Hatched { colour: c, spacing, angle } => colour(c)
-                .or_else(|| range("spacing", *spacing, style_limits::SPACING.0, style_limits::SPACING.1))
+            Self::Hatched {
+                colour: c,
+                spacing,
+                angle,
+            } => colour(c)
+                .or_else(|| {
+                    range(
+                        "spacing",
+                        *spacing,
+                        style_limits::SPACING.0,
+                        style_limits::SPACING.1,
+                    )
+                })
                 .or_else(|| range("angle", *angle, style_limits::ANGLE.0, style_limits::ANGLE.1)),
         }
     }
@@ -966,7 +980,12 @@ pub struct Joint {
 
 impl Default for Joint {
     fn default() -> Self {
-        Self { kind: JointKind::None, px: 3.0, colour: "#000000".to_string(), alpha: 1.0 }
+        Self {
+            kind: JointKind::None,
+            px: 3.0,
+            colour: "#000000".to_string(),
+            alpha: 1.0,
+        }
     }
 }
 
@@ -992,7 +1011,11 @@ impl View {
     /// legacy `draw_unstratified` is off, whatever `unstratified` says — the one
     /// place the two are read together.
     pub fn unstratified_style(&self) -> UnstratifiedStyle {
-        if self.draw_unstratified { self.unstratified.clone() } else { UnstratifiedStyle::Hidden }
+        if self.draw_unstratified {
+            self.unstratified.clone()
+        } else {
+            UnstratifiedStyle::Hidden
+        }
     }
 
     /// A view of `target` at `size_px`, everything else at its default: the

@@ -52,7 +52,10 @@ pub struct Rect2 {
 impl Rect2 {
     /// Whether two rectangles overlap, `gap` pixels of air kept between them.
     pub fn hits(&self, other: &Rect2, gap: f64) -> bool {
-        self.x0 < other.x1 + gap && other.x0 < self.x1 + gap && self.y0 < other.y1 + gap && other.y0 < self.y1 + gap
+        self.x0 < other.x1 + gap
+            && other.x0 < self.x1 + gap
+            && self.y0 < other.y1 + gap
+            && other.y0 < self.y1 + gap
     }
 
     /// Whether this rectangle lies wholly inside `bounds`.
@@ -75,7 +78,10 @@ pub struct Placer {
 impl Placer {
     /// An empty drawing area.
     pub fn new(bounds: Rect2) -> Self {
-        Self { bounds, taken: Vec::new() }
+        Self {
+            bounds,
+            taken: Vec::new(),
+        }
     }
 
     /// A place nothing may take — a text or a mark already drawn there.

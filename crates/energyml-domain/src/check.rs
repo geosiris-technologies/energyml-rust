@@ -30,10 +30,10 @@
 
 use energyml_core::registry::{DynObject, Registry};
 use energyml_core::validate::{self, Severity as IssueSeverity};
+use energyml_storage::Relationship;
 use energyml_storage::error::{Diagnostic, Severity};
 use energyml_storage::graph::{self, RefIssue, RelIssue, Related};
 use energyml_storage::resource::{ObjectSummary, type_matches};
-use energyml_storage::Relationship;
 
 use crate::source::ObjectSource;
 
@@ -247,13 +247,24 @@ impl Report {
     /// reader's**, so the reader's own count is where it has to be honoured.
     ///
     pub fn errors(&self) -> usize {
-        self.diagnostics.iter().filter(|one| one.severity == Severity::Warning).count()
+        self.diagnostics
+            .iter()
+            .filter(|one| one.severity == Severity::Warning)
+            .count()
             + self.unreadable.len()
-            + self.schema.iter().filter(|one| one.severity == IssueSeverity::Error).count()
+            + self
+                .schema
+                .iter()
+                .filter(|one| one.severity == IssueSeverity::Error)
+                .count()
             + self.references.iter().filter(|one| one.is_error()).count()
             + self.properties.iter().filter(|one| one.is_error).count()
             + self.counts.iter().filter(|one| one.is_error).count()
-            + self.rules.iter().filter(|one| one.read.is_some() && one.gravity == crate::rules::Gravity::Error).count()
+            + self
+                .rules
+                .iter()
+                .filter(|one| one.read.is_some() && one.gravity == crate::rules::Gravity::Error)
+                .count()
     }
 
     /// How many findings are worth knowing without condemning the file.
@@ -265,10 +276,25 @@ impl Report {
     /// BRGM package that is 495 findings, and drowning eight real ones in them
     /// is how the eight went unnoticed.
     pub fn warnings(&self) -> usize {
-        self.schema.iter().filter(|one| one.severity == IssueSeverity::Warning).count()
-            + self.properties.iter().filter(|one| one.is_a_defect && !one.is_error).count()
-            + self.rules.iter().filter(|one| one.read.is_some() && one.gravity == crate::rules::Gravity::Warning).count()
-            + self.references.iter().filter(|one| !one.is_error() && !one.is_info()).count()
+        self.schema
+            .iter()
+            .filter(|one| one.severity == IssueSeverity::Warning)
+            .count()
+            + self
+                .properties
+                .iter()
+                .filter(|one| one.is_a_defect && !one.is_error)
+                .count()
+            + self
+                .rules
+                .iter()
+                .filter(|one| one.read.is_some() && one.gravity == crate::rules::Gravity::Warning)
+                .count()
+            + self
+                .references
+                .iter()
+                .filter(|one| !one.is_error() && !one.is_info())
+                .count()
             + self.relationships.len()
     }
 
@@ -327,7 +353,10 @@ impl validate::ValidationRule for CitationFormat {
     }
 
     fn check(&self, object: &dyn energyml_core::value::Reflect, ctx: &mut validate::ValidationCtx<'_>) {
-        let format = energyml_core::path::get_string(object, "Format").ok().flatten().unwrap_or_default();
+        let format = energyml_core::path::get_string(object, "Format")
+            .ok()
+            .flatten()
+            .unwrap_or_default();
         if format.trim().is_empty() {
             ctx.enter("Format");
             ctx.warn(
@@ -362,14 +391,22 @@ pub fn of_store(store: &energyml_storage::EpcStore, options: &Options) -> Report
         .collect();
     let relationships: std::collections::HashMap<String, Vec<energyml_storage::Relationship>> = summaries
         .iter()
-        .filter_map(|summary| store.relationships(&summary.locator).ok().map(|rels| (summary.locator.clone(), rels)))
+        .filter_map(|summary| {
+            store
+                .relationships(&summary.locator)
+                .ok()
+                .map(|rels| (summary.locator.clone(), rels))
+        })
         .collect();
     let parts: Vec<Part<'_>> = held
         .iter()
         .map(|(summary, object)| Part {
             summary,
             object: object.as_ref(),
-            relationships: relationships.get(&summary.locator).map(Vec::as_slice).unwrap_or(&[]),
+            relationships: relationships
+                .get(&summary.locator)
+                .map(Vec::as_slice)
+                .unwrap_or(&[]),
         })
         .collect();
     let diagnostics = store.diagnostics();
@@ -447,7 +484,9 @@ pub fn check_with_arrays(
             if !type_matches(&one.summary.qualified_type, "Property") {
                 continue;
             }
-            let Ok(read) = property::read(one.object.as_reflect()) else { continue };
+            let Ok(read) = property::read(one.object.as_reflect()) else {
+                continue;
+            };
             let Some(reference) = &read.kind else { continue };
             let Ok(resolution) = resolver.resolve_at(reference, read.kind_uri.as_deref()) else {
                 report.properties_unresolved += 1;
@@ -476,7 +515,9 @@ pub fn check_with_arrays(
             if !type_matches(&one.summary.qualified_type, "Property") {
                 continue;
             }
-            let Ok(read) = property::read(one.object.as_reflect()) else { continue };
+            let Ok(read) = property::read(one.object.as_reflect()) else {
+                continue;
+            };
             let (Some(arrays), Some(support)) = (arrays, read.supporting_representation.as_deref()) else {
                 report.counts_unchecked += 1;
                 continue;
@@ -513,11 +554,17 @@ pub fn check_with_arrays(
                                 if *expected > 0 && actual > expected && actual % expected == 0
                         );
                         let says = if multiple {
-                            format!("{other} — a whole multiple: a time series or realizations in one dataset, which the guides neither describe nor forbid")
+                            format!(
+                                "{other} — a whole multiple: a time series or realizations in one dataset, which the guides neither describe nor forbid"
+                            )
                         } else {
                             format!("{other}")
                         };
-                        report.counts.push(CountIssue { uuid: one.summary.uuid.clone(), says, is_error: !multiple });
+                        report.counts.push(CountIssue {
+                            uuid: one.summary.uuid.clone(),
+                            says,
+                            is_error: !multiple,
+                        });
                     }
                 }
             }
@@ -567,21 +614,38 @@ pub fn check_with_arrays(
 
     // 4 — the references. Nothing else finds these: each DOR is well-formed on
     // its own, and no XSD validator knows what the package contains.
-    let pairs = package.objects.iter().map(|one| (one.summary, one.object.as_reflect()));
+    let pairs = package
+        .objects
+        .iter()
+        .map(|one| (one.summary, one.object.as_reflect()));
     // **Every** entry of a uuid, not the first: a package may hold one object in
     // several versions, and a reference is resolved by uuid, type and version.
     // Indexed once — a lookup per reference would scan the inventory each time.
-    let mut by_uuid: std::collections::HashMap<String, Vec<&ObjectSummary>> = std::collections::HashMap::new();
+    let mut by_uuid: std::collections::HashMap<String, Vec<&ObjectSummary>> =
+        std::collections::HashMap::new();
     for one in package.summaries.iter() {
-        by_uuid.entry(one.uuid.to_ascii_lowercase()).or_default().push(one);
+        by_uuid
+            .entry(one.uuid.to_ascii_lowercase())
+            .or_default()
+            .push(one);
     }
-    let known = |uuid: &str| by_uuid.get(&uuid.to_ascii_lowercase()).cloned().unwrap_or_default();
+    let known = |uuid: &str| {
+        by_uuid
+            .get(&uuid.to_ascii_lowercase())
+            .cloned()
+            .unwrap_or_default()
+    };
     report.references = graph::check_all_references_with(pairs, &known);
     // …and the type each one names, when this build can say what types exist.
     if let Some(registry) = package.known {
         let knows = |qualified: &str| registry.find_type(qualified).is_some();
-        let pairs = package.objects.iter().map(|one| (one.summary, one.object.as_reflect()));
-        report.references.extend(graph::check_declared_types(pairs, &knows));
+        let pairs = package
+            .objects
+            .iter()
+            .map(|one| (one.summary, one.object.as_reflect()));
+        report
+            .references
+            .extend(graph::check_declared_types(pairs, &knows));
     }
 
     // 5 — the index against the objects. The `.rels` are a cache of the graph

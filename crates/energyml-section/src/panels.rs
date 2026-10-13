@@ -71,8 +71,14 @@ fn of_section(section: &Section, view: &View, out: &mut Vec<Panel>) {
         let colour = trace_colour(view, t);
         kept.push((key, t, colour, spans));
     }
-    let lines: Vec<fill::Line<'_>> =
-        kept.iter().map(|(k, item, _, s)| fill::Line { key: k, item, spans: s }).collect();
+    let lines: Vec<fill::Line<'_>> = kept
+        .iter()
+        .map(|(k, item, _, s)| fill::Line {
+            key: k,
+            item,
+            spans: s,
+        })
+        .collect();
     for ((key, _, colour, _), mine) in kept.iter().zip(&lines) {
         let Some(FillChoice { up, down, .. }) = view.fills.iter().find(|f| f.key == *key) else {
             continue;
@@ -96,7 +102,13 @@ fn of_section(section: &Section, view: &View, out: &mut Vec<Panel>) {
             }
         }
         if !polygons.is_empty() {
-            out.push(Panel { section: section.key, key: key.clone(), colour: colour.clone(), polygons, sz });
+            out.push(Panel {
+                section: section.key,
+                key: key.clone(),
+                colour: colour.clone(),
+                polygons,
+                sz,
+            });
         }
     }
 }

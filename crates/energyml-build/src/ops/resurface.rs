@@ -148,7 +148,11 @@ fn kind_of(shape: &Shape) -> Result<(Kind, Vec<[f64; 3]>), Refusal> {
     let [patch] = shape.geometry.patches.as_slice() else {
         return Err(Refusal::on(
             "shape",
-            format!("`{}` holds {} patch(es): resurfacing one ajustement at a time needs exactly one", shape.name, shape.geometry.patches.len()),
+            format!(
+                "`{}` holds {} patch(es): resurfacing one ajustement at a time needs exactly one",
+                shape.name,
+                shape.geometry.patches.len()
+            ),
         ));
     };
     match &patch.topology {
@@ -156,12 +160,26 @@ fn kind_of(shape: &Shape) -> Result<(Kind, Vec<[f64; 3]>), Refusal> {
             if *fastest < 2 || *slowest < 2 || patch.points.len() != fastest * slowest {
                 return Err(Refusal::on(
                     "shape",
-                    format!("`{}`'s grid is {} by {} for {} point(s): its own two axis steps cannot be read off a malformed lattice", shape.name, fastest, slowest, patch.points.len()),
+                    format!(
+                        "`{}`'s grid is {} by {} for {} point(s): its own two axis steps cannot be read off a malformed lattice",
+                        shape.name,
+                        fastest,
+                        slowest,
+                        patch.points.len()
+                    ),
                 ));
             }
-            Ok((Kind::Grid { fastest: *fastest, slowest: *slowest }, patch.points.clone()))
+            Ok((
+                Kind::Grid {
+                    fastest: *fastest,
+                    slowest: *slowest,
+                },
+                patch.points.clone(),
+            ))
         }
-        Topology::Triangles(list) if !list.is_empty() => Ok((Kind::Triangles(list.clone()), patch.points.clone())),
+        Topology::Triangles(list) if !list.is_empty() => {
+            Ok((Kind::Triangles(list.clone()), patch.points.clone()))
+        }
         other => Err(Refusal::on(
             "shape",
             format!(
@@ -183,9 +201,21 @@ fn fit_ranks(points: &[[f64; 3]], outer: Option<&Shape>, inner: &[Shape]) -> Res
     }
     let flat: Vec<f64> = points.iter().flat_map(|p| [p[0], p[1], 0.0]).collect();
     let ring_of = |slot: &str, shape: &Shape| -> Result<Vec<f64>, Refusal> {
-        let ring_points: Vec<[f64; 3]> = shape.geometry.patches.iter().flat_map(|p| p.points.iter().copied()).collect();
+        let ring_points: Vec<[f64; 3]> = shape
+            .geometry
+            .patches
+            .iter()
+            .flat_map(|p| p.points.iter().copied())
+            .collect();
         if ring_points.len() < 3 {
-            return Err(Refusal::on(slot, format!("`{}` holds {} point(s): a ring encloses something with at least 3", shape.name, ring_points.len())));
+            return Err(Refusal::on(
+                slot,
+                format!(
+                    "`{}` holds {} point(s): a ring encloses something with at least 3",
+                    shape.name,
+                    ring_points.len()
+                ),
+            ));
         }
         Ok(ring_points.iter().flat_map(|p| [p[0], p[1]]).collect())
     };
@@ -193,13 +223,21 @@ fn fit_ranks(points: &[[f64; 3]], outer: Option<&Shape>, inner: &[Shape]) -> Res
     if let Some(shape) = outer {
         let ring = ring_of("outer", shape)?;
         let kept: std::collections::HashSet<usize> =
-            energyml_geometry::clip::nodes_in_ring(&flat, &ring, false).map_err(|why| Refusal::on("outer", why))?.into_iter().map(|at| at as usize).collect();
+            energyml_geometry::clip::nodes_in_ring(&flat, &ring, false)
+                .map_err(|why| Refusal::on("outer", why))?
+                .into_iter()
+                .map(|at| at as usize)
+                .collect();
         keep = Some(kept);
     }
     for shape in inner {
         let ring = ring_of("inner", shape)?;
         let kept: std::collections::HashSet<usize> =
-            energyml_geometry::clip::nodes_in_ring(&flat, &ring, true).map_err(|why| Refusal::on("inner", why))?.into_iter().map(|at| at as usize).collect();
+            energyml_geometry::clip::nodes_in_ring(&flat, &ring, true)
+                .map_err(|why| Refusal::on("inner", why))?
+                .into_iter()
+                .map(|at| at as usize)
+                .collect();
         keep = Some(match keep {
             Some(previous) => previous.into_iter().filter(|at| kept.contains(at)).collect(),
             None => kept,
@@ -219,7 +257,10 @@ impl Operation for Resurface {
             name: "resurface",
             describe: "MBA's own re-approximation of a grid's or a triangulated surface's z, keeping its topology bit for bit",
             category: Category::Geometry,
-            makes: &["resqml22.Grid2dRepresentation", "resqml22.TriangulatedSetRepresentation"],
+            makes: &[
+                "resqml22.Grid2dRepresentation",
+                "resqml22.TriangulatedSetRepresentation",
+            ],
             recipe: "resurface",
             represents: None,
         }
@@ -233,7 +274,12 @@ impl Operation for Resurface {
         kind_of(&inputs.shape).map(|_| ())
     }
 
-    fn plan(&self, inputs: ResurfaceInputs, params: ResurfaceParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: ResurfaceInputs,
+        params: ResurfaceParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let (kind, points) = kind_of(&inputs.shape)?;
         if matches!(&kind, Kind::Grid { .. }) && matches!(&params.frame, MbaFrame::MeanPlane) {
             return Err(Refusal::about(
@@ -246,7 +292,10 @@ impl Operation for Resurface {
         cx.stop_if_cancelled()?;
         let fit_ranks = fit_ranks(&points, inputs.outer.as_ref(), &inputs.inner)?;
         if fit_ranks.is_empty() {
-            return Err(Refusal::on("outer", "no node remains inside `outer`/outside every `inner`: nothing left to fit"));
+            return Err(Refusal::on(
+                "outer",
+                "no node remains inside `outer`/outside every `inner`: nothing left to fit",
+            ));
         }
         let ring_excluded = points.len() - fit_ranks.len();
 
@@ -255,7 +304,8 @@ impl Operation for Resurface {
             MbaFrame::MeanPlane => {
                 let fitted = MeanFrame::fit(&points).map_err(|e| Refusal::on("shape", e.to_string()))?;
                 if let Kind::Triangles(triangles) = &kind {
-                    check_not_folded(&points, triangles, &fitted).map_err(|e| Refusal::on("shape", e.to_string()))?;
+                    check_not_folded(&points, triangles, &fitted)
+                        .map_err(|e| Refusal::on("shape", e.to_string()))?;
                 }
                 Some(fitted)
             }
@@ -282,31 +332,61 @@ impl Operation for Resurface {
             }
         }
         if !(lo[0].is_finite() && lo[1].is_finite()) {
-            return Err(Refusal::on("shape", "no node has a finite plan-view position: there is no domain to fit on"));
+            return Err(Refusal::on(
+                "shape",
+                "no node has a finite plan-view position: there is no domain to fit on",
+            ));
         }
         // A hair wider than the exact bounding box: the box is built from
         // *every* node while only `fit_uv` (its `outer`/`inner`-kept subset)
         // is actually fitted, and a kept node can sit exactly on the box's
         // own edge without ever being the one that defined it.
         let pad = 1e-6 * (hi[0] - lo[0]).max(hi[1] - lo[1]).max(1.0);
-        let domain = Domain { origin: [lo[0] - pad, lo[1] - pad], size: [(hi[0] - lo[0]) + 2.0 * pad, (hi[1] - lo[1]) + 2.0 * pad] };
+        let domain = Domain {
+            origin: [lo[0] - pad, lo[1] - pad],
+            size: [(hi[0] - lo[0]) + 2.0 * pad, (hi[1] - lo[1]) + 2.0 * pad],
+        };
         let ratio = domain.size[0] / domain.size[1];
-        let formula = if ratio.is_finite() && ratio >= 1.0 { [ratio.round().max(1.0) as usize, 1] } else if ratio.is_finite() && ratio > 0.0 { [1, (1.0 / ratio).round().max(1.0) as usize] } else { [1, 1] };
-        let coarsest = [params.coarsest_i.unwrap_or(formula[0]).max(1), params.coarsest_j.unwrap_or(formula[1]).max(1)];
+        let formula = if ratio.is_finite() && ratio >= 1.0 {
+            [ratio.round().max(1.0) as usize, 1]
+        } else if ratio.is_finite() && ratio > 0.0 {
+            [1, (1.0 / ratio).round().max(1.0) as usize]
+        } else {
+            [1, 1]
+        };
+        let coarsest = [
+            params.coarsest_i.unwrap_or(formula[0]).max(1),
+            params.coarsest_j.unwrap_or(formula[1]).max(1),
+        ];
         let mba = Mba::new(coarsest).map_err(|e| Refusal::on("coarsest", e.to_string()))?;
-        let answer = mba.interpolate(&fit_uv, &fit_w, domain, params.spacing, &all_uv).map_err(|e| Refusal::on("spacing", e.to_string()))?;
+        let answer = mba
+            .interpolate(&fit_uv, &fit_w, domain, params.spacing, &all_uv)
+            .map_err(|e| Refusal::on("spacing", e.to_string()))?;
 
-        let new_points: Vec<[f64; 3]> = local.iter().zip(&answer.values).map(|(p, &w)| to_world([p[0], p[1], w])).collect();
+        let new_points: Vec<[f64; 3]> = local
+            .iter()
+            .zip(&answer.values)
+            .map(|(p, &w)| to_world([p[0], p[1], w]))
+            .collect();
 
         let seed = cx.seed(&params.written.naming.title());
         let mut plan = match kind {
             Kind::Grid { fastest, slowest } => {
                 let origin = [points[0][0], points[0][1]];
-                let (dir1_raw, dir2_raw) = ([points[1][0] - points[0][0], points[1][1] - points[0][1]], [points[fastest][0] - points[0][0], points[fastest][1] - points[0][1]]);
+                let (dir1_raw, dir2_raw) = (
+                    [points[1][0] - points[0][0], points[1][1] - points[0][1]],
+                    [
+                        points[fastest][0] - points[0][0],
+                        points[fastest][1] - points[0][1],
+                    ],
+                );
                 let step1 = (dir1_raw[0] * dir1_raw[0] + dir1_raw[1] * dir1_raw[1]).sqrt();
                 let step2 = (dir2_raw[0] * dir2_raw[0] + dir2_raw[1] * dir2_raw[1]).sqrt();
                 if !(step1.is_finite() && step1 > 0.0 && step2.is_finite() && step2 > 0.0) {
-                    return Err(Refusal::on("shape", "the grid's own two axis steps could not be read off its first row and column"));
+                    return Err(Refusal::on(
+                        "shape",
+                        "the grid's own two axis steps could not be read off its first row and column",
+                    ));
                 }
                 let dir1 = [dir1_raw[0] / step1, dir1_raw[1] / step1];
                 let dir2 = [dir2_raw[0] / step2, dir2_raw[1] / step2];
@@ -322,28 +402,70 @@ impl Operation for Resurface {
                     None
                 };
                 let z: Vec<f64> = new_points.iter().map(|p| p[2]).collect();
-                super::oblique_grid::write(&format!("resurface of {}", inputs.shape.name), origin, dir1, step1, fastest, dir2, step2, slowest, orthogonal, &z, &params.written, &seed, cx)?
+                super::oblique_grid::write(
+                    &format!("resurface of {}", inputs.shape.name),
+                    origin,
+                    dir1,
+                    step1,
+                    fastest,
+                    dir2,
+                    step2,
+                    slowest,
+                    orthogonal,
+                    &z,
+                    &params.written,
+                    &seed,
+                    cx,
+                )?
             }
             Kind::Triangles(triangles) => {
                 let new_shape = Shape {
                     name: inputs.shape.name.clone(),
                     geometry: Geometry {
                         kind: "triangles",
-                        patches: vec![Patch { index: 0, node_offset: 0, points: new_points, topology: Topology::Triangles(triangles), closed: Vec::new() }],
+                        patches: vec![Patch {
+                            index: 0,
+                            node_offset: 0,
+                            points: new_points,
+                            topology: Topology::Triangles(triangles),
+                            closed: Vec::new(),
+                        }],
                     },
                     closed: None,
                     known: None,
                 };
-                super::triangles::write(&TrianglesInputs { shape: vec![new_shape] }, &params.written, &seed, cx)?
+                super::triangles::write(
+                    &TrianglesInputs {
+                        shape: vec![new_shape],
+                    },
+                    &params.written,
+                    &seed,
+                    cx,
+                )?
             }
         };
 
         plan.activity.recipe = "resurface";
         plan.activity.title = format!("resurface → {}", params.written.naming.title());
-        plan.activity.parameters.push(Parameter::Text { title: "method".to_string(), value: "mba".to_string() });
-        plan.activity.parameters.push(Parameter::Double { title: "spacing".to_string(), value: params.spacing, uom: None });
-        plan.activity.parameters.push(Parameter::Double { title: "levels".to_string(), value: answer.levels as f64, uom: None });
-        plan.activity.parameters.push(Parameter::Double { title: "fitSampleCount".to_string(), value: fit_ranks.len() as f64, uom: None });
+        plan.activity.parameters.push(Parameter::Text {
+            title: "method".to_string(),
+            value: "mba".to_string(),
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "spacing".to_string(),
+            value: params.spacing,
+            uom: None,
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "levels".to_string(),
+            value: answer.levels as f64,
+            uom: None,
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "fitSampleCount".to_string(),
+            value: fit_ranks.len() as f64,
+            uom: None,
+        });
         if ring_excluded > 0 {
             plan.says.push(Note {
                 key: "ring-filtered",
@@ -351,7 +473,13 @@ impl Operation for Resurface {
             });
         }
         if answer.set_aside > 0 {
-            plan.says.push(Note { key: "set-aside", detail: format!("{} sample(s) set aside: a value or a coordinate that is not a finite number", answer.set_aside) });
+            plan.says.push(Note {
+                key: "set-aside",
+                detail: format!(
+                    "{} sample(s) set aside: a value or a coordinate that is not a finite number",
+                    answer.set_aside
+                ),
+            });
         }
         Ok(plan)
     }

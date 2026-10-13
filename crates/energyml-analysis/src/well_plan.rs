@@ -131,7 +131,11 @@ pub struct Tie {
 impl Tie {
     /// A new well: MD 0, straight down.
     pub fn vertical() -> Tie {
-        Tie { md: 0.0, inclination: 0.0, azimuth: 0.0 }
+        Tie {
+            md: 0.0,
+            inclination: 0.0,
+            azimuth: 0.0,
+        }
     }
 }
 
@@ -183,7 +187,9 @@ pub enum PlanError {
     NotAfter { section: usize, md: f64, at: f64 },
     #[error("section {section}: a rate is a finite number of degrees per 30 m > 0, not {given}")]
     BadRate { section: usize, given: f64 },
-    #[error("section {section}: an inclination is in [0°, 180°] — 0 down, 90 horizontal, 180 up — not {given}")]
+    #[error(
+        "section {section}: an inclination is in [0°, 180°] — 0 down, 90 horizontal, 180 up — not {given}"
+    )]
     BadInclination { section: usize, given: f64 },
     #[error("section {section}: an azimuth is in [0°, 360°], not {given}")]
     BadAzimuth { section: usize, given: f64 },
@@ -198,12 +204,18 @@ pub enum PlanError {
     #[error(
         "section {section}: the hole already points at inclination {inclination}°, azimuth {azimuth}° — a curve to where it points has no length"
     )]
-    NoTurn { section: usize, inclination: f64, azimuth: f64 },
+    NoTurn {
+        section: usize,
+        inclination: f64,
+        azimuth: f64,
+    },
     #[error(
         "section {section}: the curve turns the hole back on itself, a dogleg of 180° — no single arc does that, the plane it would turn in is undefined"
     )]
     Reversal { section: usize },
-    #[error("the plan would place {count} stations, more than the {most} one plan may hold — take a larger step")]
+    #[error(
+        "the plan would place {count} stations, more than the {most} one plan may hold — take a larger step"
+    )]
     TooManyStations { count: usize, most: usize },
 }
 
@@ -221,9 +233,10 @@ impl PlanError {
             | PlanError::NotADrop { section, .. }
             | PlanError::NoTurn { section, .. }
             | PlanError::Reversal { section } => Some(*section),
-            PlanError::BadStep { .. } | PlanError::NoSection | PlanError::BadTie { .. } | PlanError::TooManyStations { .. } => {
-                None
-            }
+            PlanError::BadStep { .. }
+            | PlanError::NoSection
+            | PlanError::BadTie { .. }
+            | PlanError::TooManyStations { .. } => None,
         }
     }
 }
@@ -248,7 +261,11 @@ pub use energyml_geometry::min_curvature::{direction, dogleg, ratio_factor};
 pub fn angles(t: [f64; 3], carried: f64) -> (f64, f64) {
     let inclination = t[2].clamp(-1.0, 1.0).acos().to_degrees();
     let horizontal = t[0].hypot(t[1]);
-    let azimuth = if horizontal > 1e-12 { t[1].atan2(t[0]).to_degrees().rem_euclid(360.0) } else { carried };
+    let azimuth = if horizontal > 1e-12 {
+        t[1].atan2(t[0]).to_degrees().rem_euclid(360.0)
+    } else {
+        carried
+    };
     (inclination, azimuth)
 }
 
@@ -302,7 +319,9 @@ fn grid_between(from: f64, to: f64, step: f64) -> impl Iterator<Item = f64> {
     let slack = step * 1e-9;
     let first = ((from + slack) / step).floor() as i64 + 1;
     let last = ((to - slack) / step).ceil() as i64 - 1;
-    (first..=last).map(move |k| k as f64 * step).filter(move |md| *md > from + slack && *md < to - slack)
+    (first..=last)
+        .map(move |k| k as f64 * step)
+        .filter(move |md| *md > from + slack && *md < to - slack)
 }
 
 /// How many grid depths `grid_between` would give, without giving them.
@@ -310,11 +329,22 @@ fn grid_count(from: f64, to: f64, step: f64) -> usize {
     let slack = step * 1e-9;
     let first = ((from + slack) / step).floor() + 1.0;
     let last = ((to - slack) / step).ceil() - 1.0;
-    if last >= first { (last - first + 1.0) as usize } else { 0 }
+    if last >= first {
+        (last - first + 1.0) as usize
+    } else {
+        0
+    }
 }
 
 fn station(md: f64, p: Vector, inclination: f64, azimuth: f64) -> Station {
-    Station { md, inclination, azimuth, north: p[0], east: p[1], tvd: p[2] }
+    Station {
+        md,
+        inclination,
+        azimuth,
+        north: p[0],
+        east: p[1],
+        tvd: p[2],
+    }
 }
 
 /// The plan laid out from `tie`, a station every `step` metres of MD — the
@@ -327,7 +357,11 @@ pub fn plan(tie: Tie, sections: &[Section], step: f64) -> Result<Planned, PlanEr
         return Err(PlanError::NoSection);
     }
     if !(tie.md.is_finite() && tie.azimuth.is_finite() && (0.0..=180.0).contains(&tie.inclination)) {
-        return Err(PlanError::BadTie { md: tie.md, inclination: tie.inclination, azimuth: tie.azimuth });
+        return Err(PlanError::BadTie {
+            md: tie.md,
+            inclination: tie.inclination,
+            azimuth: tie.azimuth,
+        });
     }
 
     // -- every section checked and measured, before a station is placed -----
@@ -341,43 +375,88 @@ pub fn plan(tie: Tie, sections: &[Section], step: f64) -> Result<Planned, PlanEr
         match *section {
             Section::Hold { length } => {
                 if !(length.is_finite() && length > 0.0) {
-                    return Err(PlanError::BadLength { section: number, given: length });
+                    return Err(PlanError::BadLength {
+                        section: number,
+                        given: length,
+                    });
                 }
-                laid.push(Laid::Straight { from: md, to: md + length, t, inclination, azimuth });
+                laid.push(Laid::Straight {
+                    from: md,
+                    to: md + length,
+                    t,
+                    inclination,
+                    azimuth,
+                });
                 md += length;
             }
             Section::HoldTo { md: to } => {
                 if !to.is_finite() || to <= md {
-                    return Err(PlanError::NotAfter { section: number, md: to, at: md });
+                    return Err(PlanError::NotAfter {
+                        section: number,
+                        md: to,
+                        at: md,
+                    });
                 }
-                laid.push(Laid::Straight { from: md, to, t, inclination, azimuth });
+                laid.push(Laid::Straight {
+                    from: md,
+                    to,
+                    t,
+                    inclination,
+                    azimuth,
+                });
                 // **The depth said, not a sum**: the next section starts at
                 // exactly the number written.
                 md = to;
             }
-            Section::Curve { rate, inclination: to_inclination, azimuth: to_azimuth, turn } => {
+            Section::Curve {
+                rate,
+                inclination: to_inclination,
+                azimuth: to_azimuth,
+                turn,
+            } => {
                 if !(rate.is_finite() && rate > 0.0) {
-                    return Err(PlanError::BadRate { section: number, given: rate });
+                    return Err(PlanError::BadRate {
+                        section: number,
+                        given: rate,
+                    });
                 }
                 if !(to_inclination.is_finite() && (0.0..=180.0).contains(&to_inclination)) {
-                    return Err(PlanError::BadInclination { section: number, given: to_inclination });
+                    return Err(PlanError::BadInclination {
+                        section: number,
+                        given: to_inclination,
+                    });
                 }
                 if !(to_azimuth.is_finite() && (0.0..=360.0).contains(&to_azimuth)) {
-                    return Err(PlanError::BadAzimuth { section: number, given: to_azimuth });
+                    return Err(PlanError::BadAzimuth {
+                        section: number,
+                        given: to_azimuth,
+                    });
                 }
                 match turn {
                     Turn::Build if to_inclination <= inclination => {
-                        return Err(PlanError::NotABuild { section: number, from: inclination, to: to_inclination });
+                        return Err(PlanError::NotABuild {
+                            section: number,
+                            from: inclination,
+                            to: to_inclination,
+                        });
                     }
                     Turn::Drop if to_inclination >= inclination => {
-                        return Err(PlanError::NotADrop { section: number, from: inclination, to: to_inclination });
+                        return Err(PlanError::NotADrop {
+                            section: number,
+                            from: inclination,
+                            to: to_inclination,
+                        });
                     }
                     _ => {}
                 }
                 let t2 = direction(to_inclination, to_azimuth);
                 let beta = dogleg(t, t2);
                 if beta < NO_TURN {
-                    return Err(PlanError::NoTurn { section: number, inclination, azimuth });
+                    return Err(PlanError::NoTurn {
+                        section: number,
+                        inclination,
+                        azimuth,
+                    });
                 }
                 if PI - beta < 1e-9 {
                     return Err(PlanError::Reversal { section: number });
@@ -389,7 +468,16 @@ pub fn plan(tie: Tie, sections: &[Section], step: f64) -> Result<Planned, PlanEr
                 let r = radius(rate);
                 tightest = Some(tightest.map_or(r, |seen: f64| seen.min(r)));
                 let end = (to_inclination, to_azimuth.rem_euclid(360.0));
-                laid.push(Laid::Arc { from: md, to: md + length, t1: t, t2, beta, per_metre, start_azimuth: azimuth, end });
+                laid.push(Laid::Arc {
+                    from: md,
+                    to: md + length,
+                    t1: t,
+                    t2,
+                    beta,
+                    per_metre,
+                    start_azimuth: azimuth,
+                    end,
+                });
                 md += length;
                 t = t2;
                 (inclination, azimuth) = end;
@@ -406,17 +494,31 @@ pub fn plan(tie: Tie, sections: &[Section], step: f64) -> Result<Planned, PlanEr
         })
         .sum::<usize>();
     if count > MOST_STATIONS {
-        return Err(PlanError::TooManyStations { count, most: MOST_STATIONS });
+        return Err(PlanError::TooManyStations {
+            count,
+            most: MOST_STATIONS,
+        });
     }
 
     // -- the stations ---------------------------------------------------------
     let mut stations = Vec::with_capacity(count);
     let mut ends = Vec::with_capacity(laid.len());
     let mut at: Vector = [0.0, 0.0, 0.0];
-    stations.push(station(tie.md, at, tie.inclination, tie.azimuth.rem_euclid(360.0)));
+    stations.push(station(
+        tie.md,
+        at,
+        tie.inclination,
+        tie.azimuth.rem_euclid(360.0),
+    ));
     for one in &laid {
         match *one {
-            Laid::Straight { from, to, t, inclination, azimuth } => {
+            Laid::Straight {
+                from,
+                to,
+                t,
+                inclination,
+                azimuth,
+            } => {
                 let p0 = at;
                 for md in grid_between(from, to, step) {
                     stations.push(station(md, add(p0, mul(t, md - from)), inclination, azimuth));
@@ -424,7 +526,16 @@ pub fn plan(tie: Tie, sections: &[Section], step: f64) -> Result<Planned, PlanEr
                 at = add(p0, mul(t, to - from));
                 stations.push(station(to, at, inclination, azimuth));
             }
-            Laid::Arc { from, to, t1, t2, beta, per_metre, start_azimuth, end } => {
+            Laid::Arc {
+                from,
+                to,
+                t1,
+                t2,
+                beta,
+                per_metre,
+                start_azimuth,
+                end,
+            } => {
                 let p0 = at;
                 let sin_beta = beta.sin();
                 let mut carried = start_azimuth;
@@ -433,7 +544,10 @@ pub fn plan(tie: Tie, sections: &[Section], step: f64) -> Result<Planned, PlanEr
                     let theta = s * per_metre;
                     // The direction part of the way, then the minimum
                     // curvature chord from the section's start to here.
-                    let t = add(mul(t1, (beta - theta).sin() / sin_beta), mul(t2, theta.sin() / sin_beta));
+                    let t = add(
+                        mul(t1, (beta - theta).sin() / sin_beta),
+                        mul(t2, theta.sin() / sin_beta),
+                    );
                     let p = add(p0, mul(add(t1, t), s / 2.0 * ratio_factor(theta)));
                     let (i, a) = angles(t, carried);
                     carried = a;
@@ -447,7 +561,11 @@ pub fn plan(tie: Tie, sections: &[Section], step: f64) -> Result<Planned, PlanEr
         }
         ends.push(stations.len() - 1);
     }
-    Ok(Planned { stations, ends, tightest })
+    Ok(Planned {
+        stations,
+        ends,
+        tightest,
+    })
 }
 
 #[cfg(test)]
@@ -469,7 +587,10 @@ mod tests {
         // accumulated rather than put on the multiples of the step.
         let planned = plan(Tie::vertical(), &[Section::HoldTo { md: 100.0 }], 10.0).unwrap();
         let mds: Vec<f64> = planned.stations.iter().map(|s| s.md).collect();
-        assert_eq!(mds, vec![0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]);
+        assert_eq!(
+            mds,
+            vec![0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
+        );
         for station in &planned.stations {
             assert_eq!(station.north, 0.0);
             assert_eq!(station.east, 0.0);
@@ -484,7 +605,12 @@ mod tests {
     fn a_depth_given_is_the_depth_written_and_the_ends_are_stations() {
         // `hold to 43.7` ends at the number written — the grid goes on at the
         // multiples of the step on the other side of it.
-        let planned = plan(Tie::vertical(), &[Section::HoldTo { md: 43.7 }, Section::HoldTo { md: 61.3 }], 10.0).unwrap();
+        let planned = plan(
+            Tie::vertical(),
+            &[Section::HoldTo { md: 43.7 }, Section::HoldTo { md: 61.3 }],
+            10.0,
+        )
+        .unwrap();
         let mds: Vec<f64> = planned.stations.iter().map(|s| s.md).collect();
         assert_eq!(mds, vec![0.0, 10.0, 20.0, 30.0, 40.0, 43.7, 50.0, 60.0, 61.3]);
         assert_eq!(planned.ends, vec![5, 8]);
@@ -503,7 +629,12 @@ mod tests {
         // and a quarter turn from vertical ends R north of and R below its start.
         let planned = plan(
             Tie::vertical(),
-            &[Section::Curve { rate: 3.0, inclination: 90.0, azimuth: 0.0, turn: Turn::Build }],
+            &[Section::Curve {
+                rate: 3.0,
+                inclination: 90.0,
+                azimuth: 0.0,
+                turn: Turn::Build,
+            }],
             100.0,
         )
         .unwrap();
@@ -517,7 +648,11 @@ mod tests {
         // A station inside the arc sits on the same circle: at MD 300 the
         // hole has turned 30°, so N = R (1 − cos 30°) = 572.9577951 ·
         // 0.1339745962 = 76.7617893, and TVD = R sin 30° = 286.4788976.
-        let inside = planned.stations.iter().find(|s| s.md == 300.0).expect("a station at 300");
+        let inside = planned
+            .stations
+            .iter()
+            .find(|s| s.md == 300.0)
+            .expect("a station at 300");
         assert!(near(inside.north, 76.761_789_3, 1e-6), "{inside:?}");
         assert!(near(inside.tvd, 286.478_897_6, 1e-6), "{inside:?}");
         assert!(near(inside.inclination, 30.0, 1e-9), "{inside:?}");
@@ -535,7 +670,12 @@ mod tests {
             Tie::vertical(),
             &[
                 Section::HoldTo { md: 40.0 },
-                Section::Curve { rate: 15.0, inclination: 45.0, azimuth: 90.0, turn: Turn::Build },
+                Section::Curve {
+                    rate: 15.0,
+                    inclination: 45.0,
+                    azimuth: 90.0,
+                    turn: Turn::Build,
+                },
                 Section::Hold { length: 50.0 },
             ],
             10.0,
@@ -545,13 +685,22 @@ mod tests {
         assert!(near(end_of_build.md, 130.0, 1e-9), "{end_of_build:?}");
         assert_eq!(end_of_build.inclination, 45.0);
         assert!(near(end_of_build.east, 33.563_090_6, 1e-6), "{end_of_build:?}");
-        assert!(near(end_of_build.tvd, 40.0 + 81.028_468_5, 1e-6), "{end_of_build:?}");
+        assert!(
+            near(end_of_build.tvd, 40.0 + 81.028_468_5, 1e-6),
+            "{end_of_build:?}"
+        );
         assert!(near(end_of_build.north, 0.0, 1e-9), "{end_of_build:?}");
         // The hold after it goes on at 45°: as far east as down.
         let end = last(&planned);
         assert!(near(end.md, 180.0, 1e-9));
-        assert!(near(end.east - end_of_build.east, 50.0 * 0.5f64.sqrt(), 1e-9), "{end:?}");
-        assert!(near(end.tvd - end_of_build.tvd, 50.0 * 0.5f64.sqrt(), 1e-9), "{end:?}");
+        assert!(
+            near(end.east - end_of_build.east, 50.0 * 0.5f64.sqrt(), 1e-9),
+            "{end:?}"
+        );
+        assert!(
+            near(end.tvd - end_of_build.tvd, 50.0 * 0.5f64.sqrt(), 1e-9),
+            "{end:?}"
+        );
     }
 
     #[test]
@@ -560,9 +709,22 @@ mod tests {
         // cos β = cos 0 − sin 90° sin 90° (1 − cos 90°) = 1 − 1 = 0, β = 90°;
         // RF = 4/π; ΔN = 450 · (1 + 0) · RF = R, ΔE = 450 · (0 + 1) · RF = R,
         // ΔTVD = 450 · (0 + 0) · RF = 0.
-        let tie = Tie { md: 1000.0, inclination: 90.0, azimuth: 0.0 };
-        let planned =
-            plan(tie, &[Section::Curve { rate: 3.0, inclination: 90.0, azimuth: 90.0, turn: Turn::Any }], 50.0).unwrap();
+        let tie = Tie {
+            md: 1000.0,
+            inclination: 90.0,
+            azimuth: 0.0,
+        };
+        let planned = plan(
+            tie,
+            &[Section::Curve {
+                rate: 3.0,
+                inclination: 90.0,
+                azimuth: 90.0,
+                turn: Turn::Any,
+            }],
+            50.0,
+        )
+        .unwrap();
         let end = last(&planned);
         assert!(near(end.md, 1900.0, 1e-9), "{end:?}");
         assert!(near(end.north, 572.957_795_1, 1e-6), "{end:?}");
@@ -583,15 +745,31 @@ mod tests {
         let planned = plan(
             Tie::vertical(),
             &[
-                Section::Curve { rate, inclination: 30.0, azimuth: 0.0, turn: Turn::Build },
-                Section::Curve { rate, inclination: 0.0, azimuth: 0.0, turn: Turn::Drop },
+                Section::Curve {
+                    rate,
+                    inclination: 30.0,
+                    azimuth: 0.0,
+                    turn: Turn::Build,
+                },
+                Section::Curve {
+                    rate,
+                    inclination: 0.0,
+                    azimuth: 0.0,
+                    turn: Turn::Drop,
+                },
             ],
             5.0,
         )
         .unwrap();
         let end = last(&planned);
-        assert!(near(end.md, 180.0, 1e-9), "30° at 10°/30 m is 90 m, twice: {end:?}");
-        assert!(near(end.north, 2.0 * r * (1.0 - 30f64.to_radians().cos()), 1e-9), "{end:?}");
+        assert!(
+            near(end.md, 180.0, 1e-9),
+            "30° at 10°/30 m is 90 m, twice: {end:?}"
+        );
+        assert!(
+            near(end.north, 2.0 * r * (1.0 - 30f64.to_radians().cos()), 1e-9),
+            "{end:?}"
+        );
         assert!(near(end.tvd, 2.0 * r * 30f64.to_radians().sin(), 1e-9), "{end:?}");
         assert_eq!(end.inclination, 0.0);
     }
@@ -604,38 +782,112 @@ mod tests {
         assert!(near(ratio_factor(2e-6), 2.0 / 2e-6 * (1e-6f64).tan(), 1e-12));
         // A 10 m chord on the 114.59 m radius of 15°/30 m sags
         // R (1 − cos(5 / 114.59)) = 0.1090658 m.
-        assert!(near(sag(radius(15.0), 10.0), 0.109_065_8, 1e-6), "{}", sag(radius(15.0), 10.0));
+        assert!(
+            near(sag(radius(15.0), 10.0), 0.109_065_8, 1e-6),
+            "{}",
+            sag(radius(15.0), 10.0)
+        );
     }
 
     #[test]
     fn impossible_plans_are_refused_by_name() {
         let v = Tie::vertical();
-        assert_eq!(plan(v, &[Section::Hold { length: -5.0 }], 10.0), Err(PlanError::BadLength { section: 1, given: -5.0 }));
         assert_eq!(
-            plan(v, &[Section::HoldTo { md: 50.0 }, Section::HoldTo { md: 40.0 }], 10.0),
-            Err(PlanError::NotAfter { section: 2, md: 40.0, at: 50.0 })
-        );
-        let curve = |rate, inclination, azimuth, turn| Section::Curve { rate, inclination, azimuth, turn };
-        assert_eq!(
-            plan(v, &[Section::HoldTo { md: 30.0 }, curve(0.0, 30.0, 0.0, Turn::Build)], 10.0),
-            Err(PlanError::BadRate { section: 2, given: 0.0 })
-        );
-        assert_eq!(plan(v, &[curve(10.0, 190.0, 0.0, Turn::Any)], 10.0), Err(PlanError::BadInclination { section: 1, given: 190.0 }));
-        assert_eq!(plan(v, &[curve(10.0, 30.0, 400.0, Turn::Any)], 10.0), Err(PlanError::BadAzimuth { section: 1, given: 400.0 }));
-        assert_eq!(
-            plan(v, &[curve(10.0, 40.0, 0.0, Turn::Build), curve(10.0, 50.0, 0.0, Turn::Drop)], 10.0),
-            Err(PlanError::NotADrop { section: 2, from: 40.0, to: 50.0 })
+            plan(v, &[Section::Hold { length: -5.0 }], 10.0),
+            Err(PlanError::BadLength {
+                section: 1,
+                given: -5.0
+            })
         );
         assert_eq!(
-            plan(v, &[curve(10.0, 40.0, 0.0, Turn::Build), curve(10.0, 20.0, 0.0, Turn::Build)], 10.0),
-            Err(PlanError::NotABuild { section: 2, from: 40.0, to: 20.0 })
+            plan(
+                v,
+                &[Section::HoldTo { md: 50.0 }, Section::HoldTo { md: 40.0 }],
+                10.0
+            ),
+            Err(PlanError::NotAfter {
+                section: 2,
+                md: 40.0,
+                at: 50.0
+            })
+        );
+        let curve = |rate, inclination, azimuth, turn| Section::Curve {
+            rate,
+            inclination,
+            azimuth,
+            turn,
+        };
+        assert_eq!(
+            plan(
+                v,
+                &[Section::HoldTo { md: 30.0 }, curve(0.0, 30.0, 0.0, Turn::Build)],
+                10.0
+            ),
+            Err(PlanError::BadRate {
+                section: 2,
+                given: 0.0
+            })
+        );
+        assert_eq!(
+            plan(v, &[curve(10.0, 190.0, 0.0, Turn::Any)], 10.0),
+            Err(PlanError::BadInclination {
+                section: 1,
+                given: 190.0
+            })
+        );
+        assert_eq!(
+            plan(v, &[curve(10.0, 30.0, 400.0, Turn::Any)], 10.0),
+            Err(PlanError::BadAzimuth {
+                section: 1,
+                given: 400.0
+            })
+        );
+        assert_eq!(
+            plan(
+                v,
+                &[
+                    curve(10.0, 40.0, 0.0, Turn::Build),
+                    curve(10.0, 50.0, 0.0, Turn::Drop)
+                ],
+                10.0
+            ),
+            Err(PlanError::NotADrop {
+                section: 2,
+                from: 40.0,
+                to: 50.0
+            })
+        );
+        assert_eq!(
+            plan(
+                v,
+                &[
+                    curve(10.0, 40.0, 0.0, Turn::Build),
+                    curve(10.0, 20.0, 0.0, Turn::Build)
+                ],
+                10.0
+            ),
+            Err(PlanError::NotABuild {
+                section: 2,
+                from: 40.0,
+                to: 20.0
+            })
         );
         assert_eq!(
             plan(v, &[curve(10.0, 0.0, 90.0, Turn::Any)], 10.0),
-            Err(PlanError::NoTurn { section: 1, inclination: 0.0, azimuth: 0.0 })
+            Err(PlanError::NoTurn {
+                section: 1,
+                inclination: 0.0,
+                azimuth: 0.0
+            })
         );
-        assert_eq!(plan(v, &[curve(10.0, 180.0, 0.0, Turn::Any)], 10.0), Err(PlanError::Reversal { section: 1 }));
-        assert_eq!(plan(v, &[Section::Hold { length: 10.0 }], 0.0), Err(PlanError::BadStep { given: 0.0 }));
+        assert_eq!(
+            plan(v, &[curve(10.0, 180.0, 0.0, Turn::Any)], 10.0),
+            Err(PlanError::Reversal { section: 1 })
+        );
+        assert_eq!(
+            plan(v, &[Section::Hold { length: 10.0 }], 0.0),
+            Err(PlanError::BadStep { given: 0.0 })
+        );
         assert_eq!(plan(v, &[], 10.0), Err(PlanError::NoSection));
         assert!(matches!(
             plan(v, &[Section::HoldTo { md: 2000.0 }], 1e-3),
@@ -649,12 +901,35 @@ mod tests {
         // 15°/30 m: the first station is the tie, at the origin, and the arc
         // ends 90 m of MD later, R (1 − cos 45°) = 33.5630906 west and
         // R sin 45° = 81.0284685 down.
-        let tie = Tie { md: 60.0, inclination: 0.0, azimuth: 0.0 };
-        let planned =
-            plan(tie, &[Section::Curve { rate: 15.0, inclination: 45.0, azimuth: 270.0, turn: Turn::Build }], 10.0).unwrap();
+        let tie = Tie {
+            md: 60.0,
+            inclination: 0.0,
+            azimuth: 0.0,
+        };
+        let planned = plan(
+            tie,
+            &[Section::Curve {
+                rate: 15.0,
+                inclination: 45.0,
+                azimuth: 270.0,
+                turn: Turn::Build,
+            }],
+            10.0,
+        )
+        .unwrap();
         assert_eq!(planned.stations[0].md, 60.0);
-        assert_eq!((planned.stations[0].north, planned.stations[0].east, planned.stations[0].tvd), (0.0, 0.0, 0.0));
-        assert_eq!(planned.stations[1].md, 70.0, "the grid is the multiples of the step, not the tie plus the step");
+        assert_eq!(
+            (
+                planned.stations[0].north,
+                planned.stations[0].east,
+                planned.stations[0].tvd
+            ),
+            (0.0, 0.0, 0.0)
+        );
+        assert_eq!(
+            planned.stations[1].md, 70.0,
+            "the grid is the multiples of the step, not the tie plus the step"
+        );
         let end = last(&planned);
         assert!(near(end.md, 150.0, 1e-9), "{end:?}");
         assert!(near(end.east, -33.563_090_6, 1e-6), "{end:?}");

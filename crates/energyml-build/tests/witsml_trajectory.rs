@@ -57,12 +57,20 @@ struct Frame {
 impl Frame {
     /// The compound that is Lambert-93 itself.
     fn identity() -> Frame {
-        Frame { origin: [0.0, 0.0], azimuth: 0.0, down_from: None }
+        Frame {
+            origin: [0.0, 0.0],
+            azimuth: 0.0,
+            down_from: None,
+        }
     }
 
     /// Offset, turned 30°, counting depths from 35 m above NGF-IGN69.
     fn turned() -> Frame {
-        Frame { origin: [650_000.0, 6_860_000.0], azimuth: 30.0, down_from: Some(35.0) }
+        Frame {
+            origin: [650_000.0, 6_860_000.0],
+            azimuth: 30.0,
+            down_from: Some(35.0),
+        }
     }
 
     /// A point on the map, into the frame's local axes — **by hand**, so the
@@ -110,7 +118,10 @@ fn gth3() -> Hole {
         interpretation: "33333333-0000-4000-8000-00000000000c",
         datum: "33333333-0000-4000-8000-00000000000d",
         head,
-        nodes: (0..=20).map(|k| k as f64 * 10.0).map(|md| (md, [head[0], head[1], head[2] - md])).collect(),
+        nodes: (0..=20)
+            .map(|k| k as f64 * 10.0)
+            .map(|md| (md, [head[0], head[1], head[2] - md]))
+            .collect(),
     }
 }
 
@@ -131,9 +142,19 @@ fn st1() -> Hole {
                 (r * (1.0 - theta.cos()), r * theta.sin())
             } else {
                 let theta = 90.0 / r;
-                (r * (1.0 - theta.cos()) + (md - 130.0) * s, r * theta.sin() + (md - 130.0) * c)
+                (
+                    r * (1.0 - theta.cos()) + (md - 130.0) * s,
+                    r * theta.sin() + (md - 130.0) * c,
+                )
             };
-            (md, [parent.head[0] + out * along, parent.head[1] + out * along, parent.head[2] - 40.0 - down])
+            (
+                md,
+                [
+                    parent.head[0] + out * along,
+                    parent.head[1] + out * along,
+                    parent.head[2] - 40.0 - down,
+                ],
+            )
         })
         .collect();
     Hole {
@@ -179,7 +200,12 @@ fn gth2() -> Hole {
 }
 
 fn dor(uuid: &str, qualified_type: &str, title: &str) -> eml::DataObjectReference {
-    eml::DataObjectReference { uuid: uuid.into(), qualified_type: qualified_type.into(), title: title.into(), ..Default::default() }
+    eml::DataObjectReference {
+        uuid: uuid.into(),
+        qualified_type: qualified_type.into(),
+        title: title.into(),
+        ..Default::default()
+    }
 }
 
 fn citation(title: &str) -> eml::Citation {
@@ -202,7 +228,10 @@ fn package(frame: Frame, heads: &[&Hole]) -> EpcStore {
             uuid: PLANE.into(),
             schema_version: "2.3".into(),
             citation: citation("plane"),
-            azimuth: eml::PlaneAngleMeasureExt { value: frame.azimuth, uom: eml::PlaneAngleUomExt::Dega },
+            azimuth: eml::PlaneAngleMeasureExt {
+                value: frame.azimuth,
+                uom: eml::PlaneAngleUomExt::Dega,
+            },
             azimuth_reference: eml::NorthReferenceKind::GridNorth,
             origin_projected_coordinate1: frame.origin[0],
             origin_projected_coordinate2: frame.origin[1],
@@ -213,7 +242,9 @@ fn package(frame: Frame, heads: &[&Hole]) -> EpcStore {
                 is_time: false,
             },
             origin_projected_crs: eml::ProjectedCrs {
-                abstract_projected_crs: Some(eml::AbstractProjectedCrs::ProjectedEpsgCrs(eml::ProjectedEpsgCrs { epsg_code: 2154 })),
+                abstract_projected_crs: Some(eml::AbstractProjectedCrs::ProjectedEpsgCrs(
+                    eml::ProjectedEpsgCrs { epsg_code: 2154 },
+                )),
                 ..Default::default()
             },
             ..Default::default()
@@ -226,7 +257,9 @@ fn package(frame: Frame, heads: &[&Hole]) -> EpcStore {
             citation: citation("NGF-IGN69"),
             direction: eml::VerticalDirection::Up,
             uom: eml::LengthUomExt::M,
-            abstract_vertical_crs: Some(eml::AbstractVerticalCrs::VerticalEpsgCrs(eml::VerticalEpsgCrs { epsg_code: 5720 })),
+            abstract_vertical_crs: Some(eml::AbstractVerticalCrs::VerticalEpsgCrs(eml::VerticalEpsgCrs {
+                epsg_code: 5720,
+            })),
             ..Default::default()
         }))
         .expect("the vertical datum is a part");
@@ -238,7 +271,11 @@ fn package(frame: Frame, heads: &[&Hole]) -> EpcStore {
             vertical_crs: dor(VERTICAL, "eml23.VerticalCrs", "NGF-IGN69"),
             origin_vertical_coordinate: frame.down_from.unwrap_or(0.0),
             vertical_axis: eml::VerticalAxis {
-                direction: if frame.down_from.is_some() { eml::VerticalDirection::Down } else { eml::VerticalDirection::Up },
+                direction: if frame.down_from.is_some() {
+                    eml::VerticalDirection::Down
+                } else {
+                    eml::VerticalDirection::Up
+                },
                 uom: eml::LengthAndTimeUomExt::M,
                 is_time: false,
             },
@@ -253,7 +290,10 @@ fn package(frame: Frame, heads: &[&Hole]) -> EpcStore {
                 uuid: hole.datum.into(),
                 schema_version: "2.3".into(),
                 citation: citation(&format!("{} — datum", hole.name)),
-                horizontal_coordinates: Some(eml::HorizontalCoordinates { coordinate1: x, coordinate2: y }),
+                horizontal_coordinates: Some(eml::HorizontalCoordinates {
+                    coordinate1: x,
+                    coordinate2: y,
+                }),
                 vertical_coordinate: Some(z),
                 crs: dor(COMPOUND, "eml23.LocalEngineeringCompoundCrs", "compound"),
                 ..Default::default()
@@ -271,24 +311,50 @@ fn frame_of(hole: &Hole, frame: Frame) -> (Source, Known) {
     let shape = Source::Shape {
         geometry: Geometry {
             kind: "polyline",
-            patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Polylines(vec![count]), closed: Vec::new() }],
+            patches: vec![Patch {
+                index: 0,
+                node_offset: 0,
+                points,
+                topology: Topology::Polylines(vec![count]),
+                closed: Vec::new(),
+            }],
         },
         closed: None,
     };
     let known = Known {
-        reference: Some(Ref::new(hole.frame, "resqml22.WellboreFrameRepresentation", format!("{} — frame", hole.name))),
-        crs: Some(Ref::new(COMPOUND, "eml23.LocalEngineeringCompoundCrs", "compound")),
+        reference: Some(Ref::new(
+            hole.frame,
+            "resqml22.WellboreFrameRepresentation",
+            format!("{} — frame", hole.name),
+        )),
+        crs: Some(Ref::new(
+            COMPOUND,
+            "eml23.LocalEngineeringCompoundCrs",
+            "compound",
+        )),
         crs_epsg: Some(2154),
         vertical_epsg: Some(5720),
-        interpretation: Some(Ref::new(hole.interpretation, "resqml22.WellboreInterpretation", format!("{} — interpretation", hole.name))),
+        interpretation: Some(Ref::new(
+            hole.interpretation,
+            "resqml22.WellboreInterpretation",
+            format!("{} — interpretation", hole.name),
+        )),
         vertical_uom: Some("m".into()),
         vertical_up: Some(frame.down_from.is_none()),
         node_count: Some(hole.nodes.len()),
         // The datum placed through the compound: where the head is.
         wellhead: Some(hole.head),
         node_mds: Some(hole.nodes.iter().map(|(md, _)| *md).collect()),
-        trajectory: Some(Ref::new(hole.trajectory, "resqml22.WellboreTrajectoryRepresentation", format!("{} — trajectory", hole.name))),
-        datum: Some(Ref::new(hole.datum, "eml23.ReferencePointInALocalEngineeringCompoundCrs", format!("{} — datum", hole.name))),
+        trajectory: Some(Ref::new(
+            hole.trajectory,
+            "resqml22.WellboreTrajectoryRepresentation",
+            format!("{} — trajectory", hole.name),
+        )),
+        datum: Some(Ref::new(
+            hole.datum,
+            "eml23.ReferencePointInALocalEngineeringCompoundCrs",
+            format!("{} — datum", hole.name),
+        )),
         ..Default::default()
     };
     (shape, known)
@@ -298,16 +364,31 @@ fn bag(holes: &[Hole], frame: Frame) -> Pieces {
     let mut pieces = Pieces::empty();
     for (at, hole) in holes.iter().enumerate() {
         let (shape, known) = frame_of(hole, frame);
-        let name = if at == 0 { "frames".to_string() } else { format!("frames {}", at + 1) };
-        pieces = pieces.with(name.clone(), shape).with(format!("{name} (object)"), Source::Object(known));
+        let name = if at == 0 {
+            "frames".to_string()
+        } else {
+            format!("frames {}", at + 1)
+        };
+        pieces = pieces
+            .with(name.clone(), shape)
+            .with(format!("{name} (object)"), Source::Object(known));
     }
     pieces
 }
 
 fn planned(holes: &[Hole], frame: Frame) -> Plan {
-    let when = When { creation: "2026-09-28T00:00:00Z".into(), originator: "test".into() };
+    let when = When {
+        creation: "2026-09-28T00:00:00Z".into(),
+        originator: "test".into(),
+    };
     Registry::new()
-        .plan("witsml-wells", &bag(holes, frame), &Choices::new(), &Identity::derived(), &when)
+        .plan(
+            "witsml-wells",
+            &bag(holes, frame),
+            &Choices::new(),
+            &Identity::derived(),
+            &when,
+        )
         .unwrap_or_else(|why| panic!("witsml-wells plans: {why}"))
 }
 
@@ -320,35 +401,54 @@ fn stored(plan: &Plan, store: &mut EpcStore, title: &str) -> witsml::Trajectory 
         .find(|object| object.qualified_type == "witsml21.Trajectory" && object.title == title)
         .unwrap_or_else(|| panic!("a trajectory titled `{title}`"));
     let schemas = energyml_schemas::all();
-    let document = energyml_core::json::read_value(&object.json, &schemas).expect("the trajectory reads back");
+    let document =
+        energyml_core::json::read_value(&object.json, &schemas).expect("the trajectory reads back");
     let trajectory = document
         .root
         .as_reflect()
         .downcast_ref::<witsml::Trajectory>()
         .expect("a witsml21.Trajectory")
         .clone();
-    store.put(Box::new(trajectory.clone())).expect("the trajectory is a part");
+    store
+        .put(Box::new(trajectory.clone()))
+        .expect("the trajectory is a part");
     trajectory
 }
 
 /// Where the reader puts the trajectory, **as the front end places it**: its
 /// geometry, then the CRS it is given.
 fn drawn(store: &EpcStore, trajectory: &witsml::Trajectory) -> Vec<[f64; 3]> {
-    let geometry = energyml_geometry::geometry::of(trajectory, store).unwrap_or_else(|why| panic!("drawn: {why}"));
-    let crs = energyml_domain::crs::of(trajectory, store).expect("no error").expect("a CRS through its datum");
-    geometry.patches.iter().flat_map(|patch| patch.points.iter()).map(|point| crs.to_projected(*point)).collect()
+    let geometry =
+        energyml_geometry::geometry::of(trajectory, store).unwrap_or_else(|why| panic!("drawn: {why}"));
+    let crs = energyml_domain::crs::of(trajectory, store)
+        .expect("no error")
+        .expect("a CRS through its datum");
+    geometry
+        .patches
+        .iter()
+        .flat_map(|patch| patch.points.iter())
+        .map(|point| crs.to_projected(*point))
+        .collect()
 }
 
 /// The largest distance between what was drawn and the hand-made hole at the
 /// same measured depths — `expected` looked up by MD, which is the one thing
 /// both sides state.
 fn worst(trajectory: &witsml::Trajectory, found: &[[f64; 3]], expected: &[(f64, [f64; 3])]) -> f64 {
-    assert_eq!(found.len(), trajectory.trajectory_station.len(), "a node per station");
+    assert_eq!(
+        found.len(),
+        trajectory.trajectory_station.len(),
+        "a node per station"
+    );
     let mut worst: f64 = 0.0;
     for (station, point) in trajectory.trajectory_station.iter().zip(found) {
         let md = station.md.measured_depth.value;
-        let (_, at) = expected.iter().find(|(depth, _)| *depth == md).unwrap_or_else(|| panic!("a node at MD {md}"));
-        let distance = ((point[0] - at[0]).powi(2) + (point[1] - at[1]).powi(2) + (point[2] - at[2]).powi(2)).sqrt();
+        let (_, at) = expected
+            .iter()
+            .find(|(depth, _)| *depth == md)
+            .unwrap_or_else(|| panic!("a node at MD {md}"));
+        let distance =
+            ((point[0] - at[0]).powi(2) + (point[1] - at[1]).powi(2) + (point[2] - at[2]).powi(2)).sqrt();
         worst = worst.max(distance);
     }
     worst
@@ -358,7 +458,13 @@ fn worst(trajectory: &witsml::Trajectory, found: &[[f64; 3]], expected: &[(f64, 
 /// through its parent above the kick-off.
 fn composite(parent: &Hole, own: &Hole) -> Vec<(f64, [f64; 3])> {
     let kickoff = own.nodes[0].0;
-    parent.nodes.iter().filter(|(md, _)| *md < kickoff).chain(own.nodes.iter()).copied().collect()
+    parent
+        .nodes
+        .iter()
+        .filter(|(md, _)| *md < kickoff)
+        .chain(own.nodes.iter())
+        .copied()
+        .collect()
 }
 
 fn round_trip(frame: Frame, north: eml::NorthReferenceKind) {
@@ -371,9 +477,18 @@ fn round_trip(frame: Frame, north: eml::NorthReferenceKind) {
         ("GTH-2 — trajectory", holes[2].nodes.clone()),
     ] {
         let trajectory = stored(&plan, &mut store, title);
-        assert_eq!(trajectory.azi_ref, Some(north.clone()), "{title}: the writer's north — the premise of this frame");
+        assert_eq!(
+            trajectory.azi_ref,
+            Some(north.clone()),
+            "{title}: the writer's north — the premise of this frame"
+        );
         assert!(
-            trajectory.trajectory_station.iter().skip(1).any(|s| s.azi.is_some()) || title == "GTH-3 — trajectory",
+            trajectory
+                .trajectory_station
+                .iter()
+                .skip(1)
+                .any(|s| s.azi.is_some())
+                || title == "GTH-3 — trajectory",
             "{title}: a deviated hole carries azimuths"
         );
         let found = drawn(&store, &trajectory);

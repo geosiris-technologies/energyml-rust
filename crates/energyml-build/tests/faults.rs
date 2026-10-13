@@ -15,16 +15,21 @@
 //! to triangulate; letting `rbf` ignore the fault in silence; not saying the
 //! nodes that a constraint adds to the surface.
 
-use energyml_build::operation::{Choices, Fitness, Identity, AnyOperation, Registry, When};
+use energyml_build::operation::{AnyOperation, Choices, Fitness, Identity, Registry, When};
 use energyml_build::pieces::{Pieces, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 fn when() -> When {
-    When { creation: "2026-09-12T00:00:00Z".to_string(), originator: "tests".to_string() }
+    When {
+        creation: "2026-09-12T00:00:00Z".to_string(),
+        originator: "tests".to_string(),
+    }
 }
 
 fn operation(name: &'static str) -> &'static dyn AnyOperation {
-    Box::leak(Box::new(Registry::new())).get(name).unwrap_or_else(|| panic!("`{name}` is in the registry"))
+    Box::leak(Box::new(Registry::new()))
+        .get(name)
+        .unwrap_or_else(|| panic!("`{name}` is in the registry"))
 }
 
 /// A cloud: four corners at z = 1, and a point to the east at z = 100.
@@ -82,7 +87,11 @@ fn frame(extra: &[(&str, serde_json::Value)]) -> Choices {
 /// The heights of the lattice of an interpolation plan.
 fn heights(plan: &energyml_build::operation::Plan) -> Vec<f64> {
     let made = plan.shapes.first().expect("a shape");
-    made.geometry.patches.iter().flat_map(|p| p.points.iter().map(|q| q[2])).collect()
+    made.geometry
+        .patches
+        .iter()
+        .flat_map(|p| p.points.iter().map(|q| q[2]))
+        .collect()
 }
 
 // -- the interpolation -------------------------------------------------------
@@ -110,8 +119,12 @@ fn a_fault_filed_under_faults_cuts_the_interpolation() {
     };
 
     for method in ["idw", "kriging"] {
-        let open = op.plan(&bare, &settings(method), &Identity::derived(), &when()).expect("without a fault");
-        let closed = op.plan(&cut, &settings(method), &Identity::derived(), &when()).expect("with a fault");
+        let open = op
+            .plan(&bare, &settings(method), &Identity::derived(), &when())
+            .expect("without a fault");
+        let closed = op
+            .plan(&cut, &settings(method), &Identity::derived(), &when())
+            .expect("with a fault");
         let z_open = heights(&open);
         let z_cut = heights(&closed);
         assert_eq!(z_open.len(), z_cut.len());
@@ -119,8 +132,16 @@ fn a_fault_filed_under_faults_cuts_the_interpolation() {
         // with it, it stays at the level of the four corners.
         // ni = 7 (x from 0 to 6 in steps of 1), and row j = 5: node (2, 5).
         let at = |z: &[f64]| z[5 * 7 + 2];
-        assert!(at(&z_open) > 1.5, "{method}: without a fault the 100 pulls upward — {}", at(&z_open));
-        assert!((at(&z_cut) - 1.0).abs() < 1e-6, "{method}: with a fault the 100 is invisible — {}", at(&z_cut));
+        assert!(
+            at(&z_open) > 1.5,
+            "{method}: without a fault the 100 pulls upward — {}",
+            at(&z_open)
+        );
+        assert!(
+            (at(&z_cut) - 1.0).abs() < 1e-6,
+            "{method}: with a fault the 100 is invisible — {}",
+            at(&z_cut)
+        );
         // And the number of fault segments is in the activity.
         assert!(closed.activity.parameters.iter().any(|p| matches!(
             p,
@@ -136,9 +157,18 @@ fn rbf_with_a_fault_is_refused_by_name() {
     let op = operation("interpolate");
     let cut = Pieces::empty().with("shape", cloud()).with("faults", wall());
     let why = op
-        .plan(&cut, &frame(&[("method", "rbf".into()), ("spacing", 1.0.into())]), &Identity::derived(), &when())
+        .plan(
+            &cut,
+            &frame(&[("method", "rbf".into()), ("spacing", 1.0.into())]),
+            &Identity::derived(),
+            &when(),
+        )
         .expect_err("refused");
-    assert!(why.message().contains("rbf") && why.message().contains("faults"), "{}", why.message());
+    assert!(
+        why.message().contains("rbf") && why.message().contains("faults"),
+        "{}",
+        why.message()
+    );
 }
 
 /// Kriging gained the neighbourhood — radius, ceiling — and says so.
@@ -164,13 +194,16 @@ fn kriging_takes_a_radius_and_a_ceiling() {
         )
         .expect("the plan succeeds");
     let named = |title: &str| {
-        plan.activity.parameters.iter().any(|p| {
-            matches!(p, energyml_domain::provenance::Parameter::Double { title: t, .. } if t == title)
-        })
+        plan.activity.parameters.iter().any(
+            |p| matches!(p, energyml_domain::provenance::Parameter::Double { title: t, .. } if t == title),
+        )
     };
     assert!(named("radius") && named("neighbours"));
     // A radius of 3 leaves nodes without a sample: holes, counted.
-    assert!(heights(&plan).iter().any(|z| z.is_nan()), "a short radius leaves holes");
+    assert!(
+        heights(&plan).iter().any(|z| z.is_nan()),
+        "a short radius leaves holes"
+    );
 }
 
 /// The fault is **not** one more sample: `fitness` and the count
@@ -207,8 +240,12 @@ fn a_fault_constrains_the_triangulation_and_its_nodes_are_said() {
     let cut = bare.clone().with("faults", wall());
     assert_eq!(op.fitness(&cut), Fitness::Fit);
 
-    let open = op.plan(&bare, &frame(&[]), &Identity::derived(), &when()).expect("without a fault");
-    let closed = op.plan(&cut, &frame(&[]), &Identity::derived(), &when()).expect("with a fault");
+    let open = op
+        .plan(&bare, &frame(&[]), &Identity::derived(), &when())
+        .expect("without a fault");
+    let closed = op
+        .plan(&cut, &frame(&[]), &Identity::derived(), &when())
+        .expect("with a fault");
     let nodes = |plan: &energyml_build::operation::Plan| plan.shapes[0].geometry.point_count();
     assert_eq!(nodes(&open), 5);
     // The two vertices of the trace entered the surface.
@@ -216,7 +253,9 @@ fn a_fault_constrains_the_triangulation_and_its_nodes_are_said() {
     assert!(closed.says.iter().any(|note| note.key == "nodes-added"));
     let how = |plan: &energyml_build::operation::Plan| {
         plan.activity.parameters.iter().find_map(|p| match p {
-            energyml_domain::provenance::Parameter::Text { title, value } if title == "how" => Some(value.clone()),
+            energyml_domain::provenance::Parameter::Text { title, value } if title == "how" => {
+                Some(value.clone())
+            }
             _ => None,
         })
     };
@@ -227,7 +266,9 @@ fn a_fault_constrains_the_triangulation_and_its_nodes_are_said() {
     // on one side only, or touches the trace.
     let geometry = &closed.shapes[0].geometry;
     let patch = &geometry.patches[0];
-    let Topology::Triangles(triangles) = &patch.topology else { panic!("triangles") };
+    let Topology::Triangles(triangles) = &patch.topology else {
+        panic!("triangles")
+    };
     for t in triangles {
         let xs: Vec<f64> = t.iter().map(|&i| patch.points[i as usize][0]).collect();
         let west = xs.iter().any(|&x| x < 5.0 - 1e-9);
@@ -296,10 +337,17 @@ fn the_buffer_sets_aside_close_points_and_the_step_regularises_the_trace() {
     };
     let pieces = Pieces::empty().with("shape", noisy).with("faults", wall());
     let plan = op
-        .plan(&pieces, &frame(&[("faultBuffer", 0.8.into()), ("faultSpacing", 4.0.into())]), &Identity::derived(), &when())
+        .plan(
+            &pieces,
+            &frame(&[("faultBuffer", 0.8.into()), ("faultSpacing", 4.0.into())]),
+            &Identity::derived(),
+            &when(),
+        )
         .expect("the plan succeeds");
     let buffered = plan.activity.parameters.iter().find_map(|p| match p {
-        energyml_domain::provenance::Parameter::Double { title, value, .. } if title == "nodesBuffered" => Some(*value),
+        energyml_domain::provenance::Parameter::Double { title, value, .. } if title == "nodesBuffered" => {
+            Some(*value)
+        }
         _ => None,
     });
     assert_eq!(buffered, Some(2.0), "the two points within 0.8 of the fault");
@@ -307,7 +355,12 @@ fn the_buffer_sets_aside_close_points_and_the_step_regularises_the_trace() {
     // 4 corners kept + 4 trace vertices (0, 4, 8, 12 on a trace of 12).
     assert_eq!(plan.shapes[0].geometry.point_count(), 8);
     let patch = &plan.shapes[0].geometry.patches[0];
-    let on_trace: Vec<f64> = patch.points.iter().filter(|p| (p[0] - 5.0).abs() < 1e-9).map(|p| p[1]).collect();
+    let on_trace: Vec<f64> = patch
+        .points
+        .iter()
+        .filter(|p| (p[0] - 5.0).abs() < 1e-9)
+        .map(|p| p[1])
+        .collect();
     assert_eq!(on_trace.len(), 4, "{on_trace:?}");
 }
 
@@ -317,7 +370,12 @@ fn without_a_fault_the_buffer_and_the_step_have_no_effect() {
     let op = operation("triangulate");
     let pieces = Pieces::empty().with("shape", cloud());
     let plan = op
-        .plan(&pieces, &frame(&[("faultBuffer", 100.0.into()), ("faultSpacing", 0.1.into())]), &Identity::derived(), &when())
+        .plan(
+            &pieces,
+            &frame(&[("faultBuffer", 100.0.into()), ("faultSpacing", 0.1.into())]),
+            &Identity::derived(),
+            &when(),
+        )
         .expect("the plan succeeds");
     assert_eq!(plan.shapes[0].geometry.point_count(), 5);
 }
@@ -338,7 +396,12 @@ fn only_the_traces_at_the_depth_of_the_horizon_act() {
                 node_offset: 0,
                 // At the depth of the cloud (z ≈ 1): the wall at x = 5. A hundred metres
                 // lower: a trace at x = 2, which would cut the cloud in two.
-                points: vec![[5.0, -1.0, 1.0], [5.0, 11.0, 1.0], [2.0, -1.0, -100.0], [2.0, 11.0, -100.0]],
+                points: vec![
+                    [5.0, -1.0, 1.0],
+                    [5.0, 11.0, 1.0],
+                    [2.0, -1.0, -100.0],
+                    [2.0, 11.0, -100.0],
+                ],
                 topology: Topology::Polylines(vec![2, 2]),
                 closed: Vec::new(),
             }],
@@ -352,7 +415,13 @@ fn only_the_traces_at_the_depth_of_the_horizon_act() {
             patches: vec![Patch {
                 index: 0,
                 node_offset: 0,
-                points: vec![[0.0, 0.0, 1.0], [4.0, 0.0, 1.0], [4.0, 10.0, 1.0], [0.0, 10.0, 1.0], [6.0, 5.0, 1.0]],
+                points: vec![
+                    [0.0, 0.0, 1.0],
+                    [4.0, 0.0, 1.0],
+                    [4.0, 10.0, 1.0],
+                    [0.0, 10.0, 1.0],
+                    [6.0, 5.0, 1.0],
+                ],
                 topology: Topology::Points,
                 closed: Vec::new(),
             }],
@@ -360,9 +429,16 @@ fn only_the_traces_at_the_depth_of_the_horizon_act() {
         closed: None,
     };
     let op = operation("triangulate");
-    let pieces = Pieces::empty().with("shape", flat.clone()).with("faults", two_traces.clone());
-    let plan = op.plan(&pieces, &frame(&[]), &Identity::derived(), &when()).expect("the plan succeeds");
-    assert!(plan.says.iter().any(|n| n.key == "faults-elsewhere"), "the lower trace is said");
+    let pieces = Pieces::empty()
+        .with("shape", flat.clone())
+        .with("faults", two_traces.clone());
+    let plan = op
+        .plan(&pieces, &frame(&[]), &Identity::derived(), &when())
+        .expect("the plan succeeds");
+    assert!(
+        plan.says.iter().any(|n| n.key == "faults-elsewhere"),
+        "the lower trace is said"
+    );
     // Only the two vertices of the trace at x = 5 entered: 5 + 2.
     assert_eq!(plan.shapes[0].geometry.point_count(), 7);
 
@@ -381,7 +457,9 @@ fn only_the_traces_at_the_depth_of_the_horizon_act() {
         closed: None,
     };
     let pieces = Pieces::empty().with("shape", flat).with("faults", deep);
-    let why = op.plan(&pieces, &frame(&[]), &Identity::derived(), &when()).expect_err("refused");
+    let why = op
+        .plan(&pieces, &frame(&[]), &Identity::derived(), &when())
+        .expect_err("refused");
     assert!(why.message().contains("intersect"), "{}", why.message());
 }
 
@@ -398,7 +476,13 @@ fn remesh_redoes_the_mesh_from_the_nodes() {
             patches: vec![Patch {
                 index: 0,
                 node_offset: 0,
-                points: vec![[0.0, 0.0, 1.0], [10.0, 0.0, 1.0], [10.0, 10.0, 1.0], [0.0, 10.0, 1.0], [5.0, 5.0, 2.0]],
+                points: vec![
+                    [0.0, 0.0, 1.0],
+                    [10.0, 0.0, 1.0],
+                    [10.0, 10.0, 1.0],
+                    [0.0, 10.0, 1.0],
+                    [5.0, 5.0, 2.0],
+                ],
                 topology: Topology::Triangles(vec![[0, 1, 2]]),
                 closed: Vec::new(),
             }],
@@ -406,12 +490,23 @@ fn remesh_redoes_the_mesh_from_the_nodes() {
         closed: None,
     };
     let pieces = Pieces::empty().with("shape", poor.clone());
-    assert!(matches!(operation("triangulate").fitness(&pieces), Fitness::Unfit(_)), "already triangulated: refused there");
+    assert!(
+        matches!(operation("triangulate").fitness(&pieces), Fitness::Unfit(_)),
+        "already triangulated: refused there"
+    );
     let op = operation("remesh");
     assert_eq!(op.fitness(&pieces), Fitness::Fit);
-    let plan = op.plan(&pieces, &frame(&[]), &Identity::derived(), &when()).expect("the plan succeeds");
-    let Topology::Triangles(t) = &plan.shapes[0].geometry.patches[0].topology else { panic!("triangles") };
-    assert_eq!(t.len(), 4, "five nodes of which one at the centre: four triangles");
+    let plan = op
+        .plan(&pieces, &frame(&[]), &Identity::derived(), &when())
+        .expect("the plan succeeds");
+    let Topology::Triangles(t) = &plan.shapes[0].geometry.patches[0].topology else {
+        panic!("triangles")
+    };
+    assert_eq!(
+        t.len(),
+        4,
+        "five nodes of which one at the centre: four triangles"
+    );
     assert_eq!(plan.activity.recipe, "remesh");
 
     // And a cloud is not for it: it names `triangulate`.

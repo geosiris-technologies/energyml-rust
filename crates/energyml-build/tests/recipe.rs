@@ -30,7 +30,9 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 
 use energyml_build::entries::Reader;
-use energyml_build::operation::{AnyOperation, Choices, Error, Fitness, Identity, Need, NewObject, Note, Plan, Registry, Slot, When};
+use energyml_build::operation::{
+    AnyOperation, Choices, Error, Fitness, Identity, Need, NewObject, Note, Plan, Registry, Slot, When,
+};
 use energyml_build::pieces::{Pieces, Source};
 use energyml_build::recipe::{self, Mode, Recipe, StoppedAt};
 use energyml_build::source::Source as Where;
@@ -63,11 +65,23 @@ impl AnyOperation for NamesAFrame {
     }
     fn needs(&self, _pieces: &Pieces) -> Vec<Slot> {
         vec![
-            Slot::optional("frame", Need::Object { types: &["eml23.VerticalCrs"] }, "the frame to name"),
+            Slot::optional(
+                "frame",
+                Need::Object {
+                    types: &["eml23.VerticalCrs"],
+                },
+                "the frame to name",
+            ),
             Slot::required("title", Need::Title, "the feature's title"),
         ]
     }
-    fn plan(&self, pieces: &Pieces, choices: &Choices, identity: &Identity, when: &When) -> Result<Plan, Error> {
+    fn plan(
+        &self,
+        pieces: &Pieces,
+        choices: &Choices,
+        identity: &Identity,
+        when: &When,
+    ) -> Result<Plan, Error> {
         let title = choices.text("title").unwrap_or("untitled").to_string();
         let uuid = identity.uuid(&format!("names-a-frame:{title}"), 0)?;
         // The object pieces it was given — the inputs, not the companions.
@@ -102,7 +116,10 @@ impl AnyOperation for NamesAFrame {
                 seed: title.clone(),
                 parameters: Vec::new(),
             },
-            says: vec![Note { key: "inputs", detail: inputs.join(",") }],
+            says: vec![Note {
+                key: "inputs",
+                detail: inputs.join(","),
+            }],
             dropped: Vec::new(),
             shapes: Vec::new(),
         })
@@ -129,7 +146,8 @@ impl Reader for NoFile {
 }
 
 fn empty_store() -> EpcStore {
-    energyml_build::epc::open(None, "recipe.epc", Arc::new(energyml_schemas::all())).expect("an empty package")
+    energyml_build::epc::open(None, "recipe.epc", Arc::new(energyml_schemas::all()))
+        .expect("an empty package")
 }
 
 /// Three steps: two frames of one seed, then a step that names the vertical
@@ -163,14 +181,24 @@ sert = ["CU_00"]
 fn played(text: &str) -> (recipe::Played, EpcStore) {
     let recipe = Recipe::parse(text).expect("the recipe reads");
     let mut store = empty_store();
-    let played = recipe::play(&recipe, Path::new("."), &operations(), &mut store, &mut NoFile, Mode::Write)
-        .unwrap_or_else(|stop| panic!("{stop}"));
+    let played = recipe::play(
+        &recipe,
+        Path::new("."),
+        &operations(),
+        &mut store,
+        &mut NoFile,
+        Mode::Write,
+    )
+    .unwrap_or_else(|stop| panic!("{stop}"));
     (played, store)
 }
 
 /// An object of the package, as the workspace's JSON writes it — read **back**.
 fn read_back(store: &EpcStore, uuid: &str) -> Value {
-    let summary = store.find_by_uuid(uuid).unwrap_or_else(|| panic!("{uuid} is in the package")).clone();
+    let summary = store
+        .find_by_uuid(uuid)
+        .unwrap_or_else(|| panic!("{uuid} is in the package"))
+        .clone();
     let object = store.get_object(&summary.uri).expect("it reads");
     energyml_core::json::write_value(object.as_reflect())
 }
@@ -192,17 +220,32 @@ fn the_objects_each_step_writes_are_in_the_package() {
         assert!(done.held.is_none(), "{}", done.step);
         assert!(!done.objects.is_empty(), "{} wrote nothing", done.step);
         for object in &done.objects {
-            assert!(store.find_by_uuid(&object.uuid).is_some(), "{}: {} is missing", done.step, object.title);
+            assert!(
+                store.find_by_uuid(&object.uuid).is_some(),
+                "{}: {} is missing",
+                done.step,
+                object.title
+            );
         }
         let made = done.made.as_ref().expect("applied");
         assert!(made.refused.is_empty(), "{}: {:?}", done.step, made.refused);
     }
     let first = &played.steps[0];
-    assert!(first.objects.iter().any(|one| one.qualified_type == "eml23.VerticalCrs"), "{:?}", first.objects);
+    assert!(
+        first
+            .objects
+            .iter()
+            .any(|one| one.qualified_type == "eml23.VerticalCrs"),
+        "{:?}",
+        first.objects
+    );
     assert_eq!(first.serves, ["O_001", "O_002"]);
     // The second `crs` step writes the same systems — replaced, and said.
     let again = played.steps[1].made.as_ref().expect("applied");
-    assert!(!again.replaced.is_empty(), "the same systems a second time are replacements, and counted");
+    assert!(
+        !again.replaced.is_empty(),
+        "the same systems a second time are replacements, and counted"
+    );
 }
 
 /// **By the step's name.** The setting `frame` arrives as the reference to the
@@ -231,7 +274,11 @@ fn a_step_names_what_an_earlier_step_wrote_by_its_name() {
     // — **then what `apply` wrote beside them, its activity last**: the
     // template it added, and the activity. A step wrote them too, and a project
     // collection holds them.
-    let note = naming.says.iter().find(|one| one.key == "inputs").expect("the test operation says what it got");
+    let note = naming
+        .says
+        .iter()
+        .find(|one| one.key == "inputs")
+        .expect("the test operation says what it got");
     let got: Vec<&str> = note.detail.split(',').collect();
     let frames_step = &played.steps[0];
     let made = frames_step.made.as_ref().expect("the step was applied");
@@ -239,21 +286,44 @@ fn a_step_names_what_an_earlier_step_wrote_by_its_name() {
         .written
         .iter()
         .filter(|uri| Some(*uri) != made.activity.as_ref())
-        .map(|uri| uri.rsplit_once('(').map(|(_, inside)| inside.trim_end_matches(')')).unwrap_or(uri).to_string())
+        .map(|uri| {
+            uri.rsplit_once('(')
+                .map(|(_, inside)| inside.trim_end_matches(')'))
+                .unwrap_or(uri)
+                .to_string()
+        })
         .filter(|uuid| !frames_step.objects.iter().any(|one| &one.uuid == uuid))
         .collect();
-    assert!(!beside.is_empty(), "the `crs` template was added by this step: {:?}", made.written);
+    assert!(
+        !beside.is_empty(),
+        "the `crs` template was added by this step: {:?}",
+        made.written
+    );
     let wanted: Vec<String> = frames_step
         .objects
         .iter()
         .map(|one| one.uuid.clone())
         .chain(beside.iter().cloned())
-        .chain(frames_step.activity.as_ref().map(|activity| activity.uuid.clone()))
+        .chain(
+            frames_step
+                .activity
+                .as_ref()
+                .map(|activity| activity.uuid.clone()),
+        )
         .enumerate()
-        .map(|(at, uuid)| if at == 0 { format!("seen={uuid}") } else { format!("seen {}={uuid}", at + 1) })
+        .map(|(at, uuid)| {
+            if at == 0 {
+                format!("seen={uuid}")
+            } else {
+                format!("seen {}={uuid}", at + 1)
+            }
+        })
         .collect();
     assert_eq!(got, wanted);
-    assert!(frames_step.activity.is_some() && got.len() == frames_step.objects.len() + beside.len() + 1, "{got:?}");
+    assert!(
+        frames_step.activity.is_some() && got.len() == frames_step.objects.len() + beside.len() + 1,
+        "{got:?}"
+    );
 }
 
 /// **Two runs, one package.** Every uuid — the objects', the activities', the
@@ -280,7 +350,10 @@ fn two_runs_of_one_recipe_write_the_same_uuids() {
 fn every_operation_activity_has_the_workflow_as_its_parent() {
     let (played, store) = played(THREE_STEPS);
     let root = &played.workflow.activity.uuid;
-    let children: Vec<Value> = activities(&store).into_iter().filter(|one| one["uuid"] != json!(root)).collect();
+    let children: Vec<Value> = activities(&store)
+        .into_iter()
+        .filter(|one| one["uuid"] != json!(root))
+        .collect();
     // One per step played: were the step's name out of the seed, the two
     // `crs` steps would be one activity written twice.
     assert_eq!(children.len(), 3, "{children:?}");
@@ -288,9 +361,17 @@ fn every_operation_activity_has_the_workflow_as_its_parent() {
         assert_eq!(child["Parent"]["Uuid"], json!(root), "{child}");
         assert_eq!(child["Parent"]["QualifiedType"], "eml23.Activity");
     }
-    let named: Vec<&str> = played.steps.iter().filter_map(|done| done.activity.as_ref()).map(|one| one.uuid.as_str()).collect();
+    let named: Vec<&str> = played
+        .steps
+        .iter()
+        .filter_map(|done| done.activity.as_ref())
+        .map(|one| one.uuid.as_str())
+        .collect();
     for uuid in &named {
-        assert!(children.iter().any(|child| child["uuid"] == json!(uuid)), "{uuid}");
+        assert!(
+            children.iter().any(|child| child["uuid"] == json!(uuid)),
+            "{uuid}"
+        );
     }
 }
 
@@ -302,7 +383,10 @@ fn the_workflow_template_has_a_sub_activity_per_step_and_the_root_names_each_chi
     let (played, store) = played(THREE_STEPS);
     let template = read_back(&store, &played.workflow.template.uuid);
     let parameters = template["Parameter"].as_array().expect("parameters");
-    let titles: Vec<&str> = parameters.iter().filter_map(|one| one["Title"].as_str()).collect();
+    let titles: Vec<&str> = parameters
+        .iter()
+        .filter_map(|one| one["Title"].as_str())
+        .collect();
     assert_eq!(titles, ["reperes", "reperes-encore", "nomme"]);
     for parameter in parameters {
         assert_eq!(parameter["AllowedKind"], json!(["subActivity"]), "{parameter}");
@@ -310,17 +394,38 @@ fn the_workflow_template_has_a_sub_activity_per_step_and_the_root_names_each_chi
         assert_eq!(parameter["MaxOccurs"], json!(1));
     }
     let crs_template = energyml_domain::provenance::template_uuid("crs").expect("canonical");
-    assert!(parameters[0]["Constraint"].as_str().is_some_and(|text| text.contains(crs_template)), "{}", parameters[0]);
-    assert!(parameters[0]["Constraint"].as_str().is_some_and(|text| text.contains("O_001")), "{}", parameters[0]);
+    assert!(
+        parameters[0]["Constraint"]
+            .as_str()
+            .is_some_and(|text| text.contains(crs_template)),
+        "{}",
+        parameters[0]
+    );
+    assert!(
+        parameters[0]["Constraint"]
+            .as_str()
+            .is_some_and(|text| text.contains("O_001")),
+        "{}",
+        parameters[0]
+    );
 
     let root = read_back(&store, &played.workflow.activity.uuid);
-    assert_eq!(root["ActivityDescriptor"]["Uuid"], json!(played.workflow.template.uuid));
-    assert!(root.get("Parent").is_none_or(Value::is_null), "the root has no parent: {root}");
+    assert_eq!(
+        root["ActivityDescriptor"]["Uuid"],
+        json!(played.workflow.template.uuid)
+    );
+    assert!(
+        root.get("Parent").is_none_or(Value::is_null),
+        "the root has no parent: {root}"
+    );
     let children = root["Parameter"].as_array().expect("the root names its children");
     assert_eq!(children.len(), 3);
     for (child, done) in children.iter().zip(&played.steps) {
         assert_eq!(child["Title"], json!(done.step));
-        assert_eq!(child["DataObject"]["Uuid"], json!(done.activity.as_ref().expect("played").uuid));
+        assert_eq!(
+            child["DataObject"]["Uuid"],
+            json!(done.activity.as_ref().expect("played").uuid)
+        );
     }
 }
 
@@ -349,15 +454,37 @@ set = { title = "never" }
 "#;
     let recipe = Recipe::parse(text).expect("reads");
     let mut store = empty_store();
-    let stop = recipe::play(&recipe, Path::new("."), &operations(), &mut store, &mut NoFile, Mode::Write)
-        .expect_err("`epsg` is required");
-    assert_eq!(stop.at, StoppedAt::Step { name: "sans-code".to_string(), operation: "crs".to_string() });
-    assert!(stop.refusals.iter().any(|why| why.contains("epsg")), "{:?}", stop.refusals);
+    let stop = recipe::play(
+        &recipe,
+        Path::new("."),
+        &operations(),
+        &mut store,
+        &mut NoFile,
+        Mode::Write,
+    )
+    .expect_err("`epsg` is required");
+    assert_eq!(
+        stop.at,
+        StoppedAt::Step {
+            name: "sans-code".to_string(),
+            operation: "crs".to_string()
+        }
+    );
+    assert!(
+        stop.refusals.iter().any(|why| why.contains("epsg")),
+        "{:?}",
+        stop.refusals
+    );
     assert!(stop.to_string().contains("`sans-code`"), "{stop}");
     // What ran before it is reported; what comes after never ran.
     assert_eq!(stop.done.len(), 1);
     assert_eq!(stop.done[0].step, "reperes");
-    assert!(store.resources().iter().all(|one| one.qualified_type != "resqml22.BoundaryFeature"));
+    assert!(
+        store
+            .resources()
+            .iter()
+            .all(|one| one.qualified_type != "resqml22.BoundaryFeature")
+    );
 }
 
 /// A malformed recipe, refused **by name, before any plan**: an unknown
@@ -417,11 +544,22 @@ set = { epsg = 2154 }
     let recipe = Recipe::parse(text).expect("it reads — it does not hold together");
     let mut store = empty_store();
     let before = store.resources().len();
-    let stop = recipe::play(&recipe, Path::new("."), &operations(), &mut store, &mut NoFile, Mode::Write)
-        .expect_err("refused");
+    let stop = recipe::play(
+        &recipe,
+        Path::new("."),
+        &operations(),
+        &mut store,
+        &mut NoFile,
+        Mode::Write,
+    )
+    .expect_err("refused");
     assert_eq!(stop.at, StoppedAt::Recipe);
     assert!(stop.done.is_empty());
-    assert_eq!(store.resources().len(), before, "nothing was planned, so nothing was written");
+    assert_eq!(
+        store.resources().len(),
+        before,
+        "nothing was planned, so nothing was written"
+    );
     let said = stop.refusals.join("\n");
     for expected in [
         "step 2 `reperes`: the name is already step 1's",
@@ -480,12 +618,22 @@ attente = "the table is not reviewed"
     let held = &played.steps[1];
     assert_eq!(held.held.as_deref(), Some("the table is not reviewed"));
     assert!(held.activity.is_none() && held.objects.is_empty());
-    assert!(store.resources().iter().all(|one| one.qualified_type != "resqml22.BoundaryFeature"));
+    assert!(
+        store
+            .resources()
+            .iter()
+            .all(|one| one.qualified_type != "resqml22.BoundaryFeature")
+    );
     let template = read_back(&store, &played.workflow.template.uuid);
     let parameter = &template["Parameter"][1];
     assert_eq!(parameter["Title"], "plus-tard");
     assert_eq!(parameter["MinOccurs"], json!(0));
-    assert!(parameter["Constraint"].as_str().is_some_and(|text| text.contains("held")), "{parameter}");
+    assert!(
+        parameter["Constraint"]
+            .as_str()
+            .is_some_and(|text| text.contains("held")),
+        "{parameter}"
+    );
     // The root names only what ran.
     let root = read_back(&store, &played.workflow.activity.uuid);
     assert_eq!(root["Parameter"].as_array().map(Vec::len), Some(1));
@@ -513,10 +661,29 @@ set = { frame = { etape = "reperes" }, title = "x" }
 "#;
     let recipe = Recipe::parse(text).expect("reads");
     let mut store = empty_store();
-    let stop = recipe::play(&recipe, Path::new("."), &operations(), &mut store, &mut NoFile, Mode::Write)
-        .expect_err("two systems for one setting");
-    assert_eq!(stop.at, StoppedAt::Step { name: "nomme".to_string(), operation: "names-a-frame".to_string() });
-    assert!(stop.refusals.iter().any(|why| why.contains("a setting takes one")), "{:?}", stop.refusals);
+    let stop = recipe::play(
+        &recipe,
+        Path::new("."),
+        &operations(),
+        &mut store,
+        &mut NoFile,
+        Mode::Write,
+    )
+    .expect_err("two systems for one setting");
+    assert_eq!(
+        stop.at,
+        StoppedAt::Step {
+            name: "nomme".to_string(),
+            operation: "names-a-frame".to_string()
+        }
+    );
+    assert!(
+        stop.refusals
+            .iter()
+            .any(|why| why.contains("a setting takes one")),
+        "{:?}",
+        stop.refusals
+    );
 }
 
 /// **A variant is the recipe without a group**, never a second recipe.
@@ -545,12 +712,29 @@ groupe = "erreur"
 "#;
     let recipe = Recipe::parse(text).expect("the recipe reads");
     let clean = recipe.without(&["erreur"]).expect("a group of the recipe");
-    assert!(clean.steps[1].held.as_deref().is_some_and(|why| why.contains("erreur")), "{:?}", clean.steps[1].held);
+    assert!(
+        clean.steps[1]
+            .held
+            .as_deref()
+            .is_some_and(|why| why.contains("erreur")),
+        "{:?}",
+        clean.steps[1].held
+    );
     assert!(clean.steps[0].held.is_none(), "the others play");
     let mut store = empty_store();
-    let played = recipe::play(&clean, Path::new("."), &operations(), &mut store, &mut NoFile, Mode::Write)
-        .unwrap_or_else(|stop| panic!("{stop}"));
-    assert!(played.steps[1].objects.is_empty(), "the left-out step writes nothing");
+    let played = recipe::play(
+        &clean,
+        Path::new("."),
+        &operations(),
+        &mut store,
+        &mut NoFile,
+        Mode::Write,
+    )
+    .unwrap_or_else(|stop| panic!("{stop}"));
+    assert!(
+        played.steps[1].objects.is_empty(),
+        "the left-out step writes nothing"
+    );
     // The whole recipe is untouched: `without` is a copy.
     assert!(recipe.steps[1].held.is_none());
 
@@ -559,14 +743,22 @@ groupe = "erreur"
     assert!(why.contains("erreurs") && why.contains("`erreur`"), "{why}");
 
     // A step kept that takes what a left-out one writes: refused by name.
-    let leaning = format!("{text}
+    let leaning = format!(
+        "{text}
 [[etape]]
 nom = \"apres\"
 operation = \"names-a-frame\"
 set = {{ title = \"x\" }}
 entrees = [ {{ creneau = \"seen\", etape = \"erreur\" }} ]
-");
-    let refused = Recipe::parse(&leaning).expect("reads").without(&["erreur"]).expect("a group").check(&operations());
-    assert!(refused.is_err_and(|stop| stop.to_string().contains("apres")), "the step taking from a left-out one is named");
+"
+    );
+    let refused = Recipe::parse(&leaning)
+        .expect("reads")
+        .without(&["erreur"])
+        .expect("a group")
+        .check(&operations());
+    assert!(
+        refused.is_err_and(|stop| stop.to_string().contains("apres")),
+        "the step taking from a left-out one is named"
+    );
 }
-

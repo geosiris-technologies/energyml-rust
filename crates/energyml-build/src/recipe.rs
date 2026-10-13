@@ -303,7 +303,11 @@ impl Played {
                 }
             }
         }
-        let steps = self.steps.iter().filter_map(|done| done.manifest.clone()).collect();
+        let steps = self
+            .steps
+            .iter()
+            .filter_map(|done| done.manifest.clone())
+            .collect();
         crate::manifest::Manifest::new(epc, files, Some(recipe.to_string()), steps)
     }
 }
@@ -339,7 +343,11 @@ pub struct Stop {
 
 impl Stop {
     fn recipe(refusals: Vec<String>) -> Stop {
-        Stop { at: StoppedAt::Recipe, refusals, done: Vec::new() }
+        Stop {
+            at: StoppedAt::Recipe,
+            refusals,
+            done: Vec::new(),
+        }
     }
 }
 
@@ -348,7 +356,10 @@ impl std::fmt::Display for Stop {
         let said = self.refusals.join("; ");
         match &self.at {
             StoppedAt::Recipe => write!(f, "the recipe is refused before any step: {said}"),
-            StoppedAt::Step { name, operation } => write!(f, "step `{name}` (`{operation}`) refused, and the run stops there: {said}"),
+            StoppedAt::Step { name, operation } => write!(
+                f,
+                "step `{name}` (`{operation}`) refused, and the run stops there: {said}"
+            ),
             StoppedAt::Workflow => write!(f, "the workflow could not be written: {said}"),
             StoppedAt::Package => write!(f, "the package could not be saved: {said}"),
         }
@@ -386,11 +397,27 @@ impl Recipe {
     /// otherwise.
     pub fn without(&self, groups: &[&str]) -> Result<Recipe, String> {
         for group in groups {
-            if !self.steps.iter().any(|step| step.group.as_deref() == Some(*group)) {
-                let known: std::collections::BTreeSet<&str> = self.steps.iter().filter_map(|step| step.group.as_deref()).collect();
+            if !self
+                .steps
+                .iter()
+                .any(|step| step.group.as_deref() == Some(*group))
+            {
+                let known: std::collections::BTreeSet<&str> = self
+                    .steps
+                    .iter()
+                    .filter_map(|step| step.group.as_deref())
+                    .collect();
                 return Err(format!(
                     "no step of this recipe is in the group `{group}` — its groups are {}",
-                    if known.is_empty() { "none".to_string() } else { known.iter().map(|one| format!("`{one}`")).collect::<Vec<_>>().join(", ") }
+                    if known.is_empty() {
+                        "none".to_string()
+                    } else {
+                        known
+                            .iter()
+                            .map(|one| format!("`{one}`"))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    }
                 ));
             }
         }
@@ -400,7 +427,9 @@ impl Recipe {
                 && groups.contains(&group)
                 && step.held.is_none()
             {
-                step.held = Some(format!("left out of this variant of the package: group `{group}`"));
+                step.held = Some(format!(
+                    "left out of this variant of the package: group `{group}`"
+                ));
             }
         }
         Ok(out)
@@ -441,7 +470,10 @@ impl Recipe {
         for (at, step) in self.steps.iter().enumerate() {
             let named = format!("step {} `{}`", at + 1, step.name);
             if step.name.trim().is_empty() {
-                wrong.push(format!("step {} has no `nom`: a later step names what it wrote by it", at + 1));
+                wrong.push(format!(
+                    "step {} has no `nom`: a later step names what it wrote by it",
+                    at + 1
+                ));
             } else if let Some(first) = self.steps[..at].iter().position(|one| one.name == step.name) {
                 wrong.push(format!(
                     "{named}: the name is already step {}'s — a step is named to be referenced, and two of one name are one ambiguity",
@@ -460,19 +492,28 @@ impl Recipe {
                 // template is projected from — so every slot is there, the
                 // conditional ones included.
                 Some(operation) => {
-                    let declared: Vec<&'static str> =
-                        operation.needs(&Pieces::empty()).into_iter().map(|slot| slot.name).collect();
+                    let declared: Vec<&'static str> = operation
+                        .needs(&Pieces::empty())
+                        .into_iter()
+                        .map(|slot| slot.name)
+                        .collect();
                     for key in step.set.keys().filter(|key| !declared.contains(&key.as_str())) {
                         wrong.push(format!(
                             "{named}: `{}` has no setting `{key}` — it takes {}",
                             step.operation,
-                            declared.iter().map(|one| format!("`{one}`")).collect::<Vec<_>>().join(", ")
+                            declared
+                                .iter()
+                                .map(|one| format!("`{one}`"))
+                                .collect::<Vec<_>>()
+                                .join(", ")
                         ));
                     }
                 }
             }
             if step.held.as_deref().is_some_and(|why| why.trim().is_empty()) {
-                wrong.push(format!("{named}: `attente` is empty — a held step says why it waits"));
+                wrong.push(format!(
+                    "{named}: `attente` is empty — a held step says why it waits"
+                ));
             }
 
             let mut targets: Vec<String> = Vec::new();
@@ -482,7 +523,9 @@ impl Recipe {
                     (Some(_), Some(_)) => wrong.push(format!(
                         "{entry_named}: it names a file **and** a step — an input is one or the other"
                     )),
-                    (None, None) => wrong.push(format!("{entry_named}: it names neither a `fichier` nor an `etape`")),
+                    (None, None) => wrong.push(format!(
+                        "{entry_named}: it names neither a `fichier` nor an `etape`"
+                    )),
                     (Some(file), None) => {
                         if entry.qualified_type.is_some() || entry.title.is_some() || entry.role.is_some() {
                             wrong.push(format!(
@@ -512,7 +555,9 @@ impl Recipe {
             }
             for target in targets {
                 if target == step.name {
-                    wrong.push(format!("{named}: it takes what it writes itself — a step reads what earlier steps wrote"));
+                    wrong.push(format!(
+                        "{named}: it takes what it writes itself — a step reads what earlier steps wrote"
+                    ));
                 } else if let Some((_, held)) = earlier.iter().find(|(name, _)| *name == target) {
                     if let (Some(why), None) = (held, &step.held) {
                         wrong.push(format!(
@@ -524,12 +569,18 @@ impl Recipe {
                         "{named}: it takes what `{target}` writes, and `{target}` comes after it — a step reads what earlier steps wrote"
                     ));
                 } else {
-                    wrong.push(format!("{named}: it takes what `{target}` writes, and no step is called `{target}`"));
+                    wrong.push(format!(
+                        "{named}: it takes what `{target}` writes, and no step is called `{target}`"
+                    ));
                 }
             }
             earlier.push((step.name.as_str(), step.held.as_deref()));
         }
-        if wrong.is_empty() { Ok(()) } else { Err(Stop::recipe(wrong)) }
+        if wrong.is_empty() {
+            Ok(())
+        } else {
+            Err(Stop::recipe(wrong))
+        }
     }
 
     /// The workflow's template and root activity, **derived from the recipe
@@ -553,8 +604,16 @@ impl Recipe {
                 )
             })
             .collect();
-        let template = derived(&format!("recipe-workflow-template:{}:{}", self.workflow, structure.join(";")));
-        let activity = derived(&format!("recipe-workflow-activity:{}:{template}:{}", self.activity_title(), self.creation));
+        let template = derived(&format!(
+            "recipe-workflow-template:{}:{}",
+            self.workflow,
+            structure.join(";")
+        ));
+        let activity = derived(&format!(
+            "recipe-workflow-activity:{}:{template}:{}",
+            self.activity_title(),
+            self.creation
+        ));
         Workflow {
             template: Ref::new(template, "eml23.ActivityTemplate", self.workflow.clone()),
             activity: Ref::new(activity, "eml23.Activity", self.activity_title().to_string()),
@@ -603,12 +662,21 @@ impl Pick {
     /// A reference written as a setting: a table whose `etape` names the
     /// step. Any other table is left as it is — `Ok(None)`.
     fn of_value(value: &Value) -> Result<Option<Pick>, String> {
-        let Value::Object(map) = value else { return Ok(None) };
-        let Some(step) = map.get("etape") else { return Ok(None) };
-        let Value::String(step) = step else {
-            return Err(format!("`etape` is {step}, and it names a step by its name, in text"));
+        let Value::Object(map) = value else {
+            return Ok(None);
         };
-        if let Some(key) = map.keys().find(|key| !["etape", "type", "titre", "role"].contains(&key.as_str())) {
+        let Some(step) = map.get("etape") else {
+            return Ok(None);
+        };
+        let Value::String(step) = step else {
+            return Err(format!(
+                "`etape` is {step}, and it names a step by its name, in text"
+            ));
+        };
+        if let Some(key) = map
+            .keys()
+            .find(|key| !["etape", "type", "titre", "role"].contains(&key.as_str()))
+        {
             return Err(format!(
                 "`{key}` is no part of a reference to a step — `etape`, and to narrow it `type`, `titre`, `role`"
             ));
@@ -620,11 +688,18 @@ impl Pick {
                 Some(other) => Err(format!("`{key}` is {other}, and it narrows a reference in text")),
             }
         };
-        Ok(Some(Pick { step: step.clone(), qualified_type: text("type")?, title: text("titre")?, role: text("role")? }))
+        Ok(Some(Pick {
+            step: step.clone(),
+            qualified_type: text("type")?,
+            title: text("titre")?,
+            role: text("role")?,
+        }))
     }
 
     fn keeps(&self, object: &Object) -> bool {
-        self.qualified_type.as_deref().is_none_or(|wanted| same_type(wanted, &object.qualified_type))
+        self.qualified_type
+            .as_deref()
+            .is_none_or(|wanted| same_type(wanted, &object.qualified_type))
             && self.title.as_deref().is_none_or(|wanted| wanted == object.title)
             && self.role.as_deref().is_none_or(|wanted| wanted == object.role)
     }
@@ -666,7 +741,11 @@ fn same_type(wanted: &str, qualified: &str) -> bool {
     if wanted.contains('.') {
         return wanted.eq_ignore_ascii_case(qualified);
     }
-    let class = qualified.rsplit('.').next().unwrap_or(qualified).to_ascii_lowercase();
+    let class = qualified
+        .rsplit('.')
+        .next()
+        .unwrap_or(qualified)
+        .to_ascii_lowercase();
     let class = class.strip_prefix("obj_").map(str::to_string).unwrap_or(class);
     class == wanted.to_ascii_lowercase()
 }
@@ -677,8 +756,11 @@ fn listed(objects: &[Object]) -> String {
     if objects.is_empty() {
         return "nothing".to_string();
     }
-    let mut out: Vec<String> =
-        objects.iter().take(SHOWN).map(|one| format!("`{}` ({}, {})", one.title, one.qualified_type, one.role)).collect();
+    let mut out: Vec<String> = objects
+        .iter()
+        .take(SHOWN)
+        .map(|one| format!("`{}` ({}, {})", one.title, one.qualified_type, one.role))
+        .collect();
     if objects.len() > SHOWN {
         out.push(format!("and {} more", objects.len() - SHOWN));
     }
@@ -690,11 +772,14 @@ fn picked<'a>(pick: &Pick, written: &'a BTreeMap<String, Vec<Object>>) -> Result
     let objects = written.get(&pick.step).map(Vec::as_slice).unwrap_or_default();
     let kept: Vec<&Object> = objects.iter().filter(|one| pick.keeps(one)).collect();
     if kept.is_empty() {
-        return Err(format!("{} names nothing: that step wrote {}", pick.said(), listed(objects)));
+        return Err(format!(
+            "{} names nothing: that step wrote {}",
+            pick.said(),
+            listed(objects)
+        ));
     }
     Ok(kept)
 }
-
 
 /// A file of the recipe, as a source the caller's reader can read.
 fn file_source(base: &Path, file: &str) -> Where {
@@ -759,9 +844,11 @@ fn resolved(
     answered: &mut Vec<Object>,
 ) -> Result<Value, String> {
     match value {
-        Value::Array(items) => {
-            items.iter().map(|item| resolved(item, written, answered)).collect::<Result<Vec<_>, _>>().map(Value::Array)
-        }
+        Value::Array(items) => items
+            .iter()
+            .map(|item| resolved(item, written, answered))
+            .collect::<Result<Vec<_>, _>>()
+            .map(Value::Array),
         Value::Object(_) => match Pick::of_value(value)? {
             None => Ok(value.clone()),
             Some(pick) => {
@@ -797,7 +884,12 @@ fn play_step(
     workflow: &Workflow,
     written: &BTreeMap<String, Vec<Object>>,
 ) -> Result<Done, Vec<String>> {
-    let _step = tracing::info_span!("recipe.step", step = step.name.as_str(), operation = step.operation.as_str()).entered();
+    let _step = tracing::info_span!(
+        "recipe.step",
+        step = step.name.as_str(),
+        operation = step.operation.as_str()
+    )
+    .entered();
     let one = |why: String| vec![why];
     let operation = operations
         .get(&step.operation)
@@ -819,7 +911,11 @@ fn play_step(
             // The piece takes the slot's name; the collection keeps the
             // file's, which is what an operation reads a stage or a date from.
             let name = name_of(&source);
-            let piece = entry.slot.as_deref().map(|slot| numbering.next(slot)).unwrap_or_else(|| name.clone());
+            let piece = entry
+                .slot
+                .as_deref()
+                .map(|slot| numbering.next(slot))
+                .unwrap_or_else(|| name.clone());
             // A file for a slot that takes a **document** is carried as bytes
             // — the operation's declaration decides, never the file's name.
             if entries::takes_document(&operation.takes(), entry.slot.as_deref()) {
@@ -828,8 +924,15 @@ fn play_step(
                 continue;
             }
             let (text, declared) = reader.text(&source).map_err(one)?;
-            let read = entries::read_text(&name, &text, declared.as_deref(), template.as_ref(), file, &mut set_aside)
-                .map_err(|why| one(why.said(GIVE_TEMPLATE)))?;
+            let read = entries::read_text(
+                &name,
+                &text,
+                declared.as_deref(),
+                template.as_ref(),
+                file,
+                &mut set_aside,
+            )
+            .map_err(|why| one(why.said(GIVE_TEMPLATE)))?;
             bag = bag.with(piece, read);
         } else if let Some(pick) = Pick::of_entry(entry) {
             for object in picked(&pick, written).map_err(one)? {
@@ -850,7 +953,8 @@ fn play_step(
     let mut choices = Choices::new();
     for (key, value) in &step.set {
         let mut answered: Vec<Object> = Vec::new();
-        let value = resolved(value, written, &mut answered).map_err(|why| one(format!("`set.{key}`: {why}")))?;
+        let value =
+            resolved(value, written, &mut answered).map_err(|why| one(format!("`set.{key}`: {why}")))?;
         choices = choices.set(key, value);
         let mut named = Numbering::default();
         for object in answered {
@@ -865,17 +969,32 @@ fn play_step(
     }
     // **What a slot takes when left empty, from the package being built** —
     // `Otherwise::Every`, the function `--into` and the front end call.
-    let bag = crate::read::every(store, &operation.takes(), bag, energyml_geometry::Placement::Local)
-        .map_err(|why| one(why.to_string()))?;
+    let bag = crate::read::every(
+        store,
+        &operation.takes(),
+        bag,
+        energyml_geometry::Placement::Local,
+    )
+    .map_err(|why| one(why.to_string()))?;
 
     let mut plan = operations
         .plan(&step.operation, &bag, &choices, &Identity::derived(), when)
-        .map_err(|why| why.refusals().iter().map(|refusal| refusal.message.clone()).collect::<Vec<_>>())?;
+        .map_err(|why| {
+            why.refusals()
+                .iter()
+                .map(|refusal| refusal.message.clone())
+                .collect::<Vec<_>>()
+        })?;
     // The step's name in its activity's seed — see the module.
     plan.activity.seed = format!("{} — step {}", plan.activity.seed, step.name);
 
     let made = {
-        let _span = tracing::info_span!("recipe.apply", objects = plan.objects.len(), datasets = plan.datasets.len()).entered();
+        let _span = tracing::info_span!(
+            "recipe.apply",
+            objects = plan.objects.len(),
+            datasets = plan.datasets.len()
+        )
+        .entered();
         crate::apply::apply_under(&plan, store, when, mode == Mode::Write, Some(&workflow.activity))
     };
     if !made.refused.is_empty() {
@@ -942,8 +1061,10 @@ fn write_workflow(
         // l. 155–211). `Constraint` — free text — is the one place the schema
         // leaves for it, and it says so itself: *« it will be better to have a
         // formal description of the constraint »*.
-        let maker: &str =
-            operations.get(&step.operation).map(|operation| operation.recipe()).unwrap_or(step.operation.as_str());
+        let maker: &str = operations
+            .get(&step.operation)
+            .map(|operation| operation.recipe())
+            .unwrap_or(step.operation.as_str());
         let mut constraint = match energyml_domain::provenance::template_uuid(maker) {
             Ok(uuid) => format!("follows fabricant:{maker} ({uuid})"),
             Err(_) => format!("follows fabricant:{maker}"),
@@ -986,18 +1107,22 @@ fn write_workflow(
         .iter()
         .filter_map(|step| {
             let activity = step.activity.as_ref()?;
-            Some(eml::AbstractActivityParameter::DataObjectParameter(eml::DataObjectParameter {
-                title: step.step.clone(),
-                is_uncertain: false,
-                data_object: reference(activity),
-                ..Default::default()
-            }))
+            Some(eml::AbstractActivityParameter::DataObjectParameter(
+                eml::DataObjectParameter {
+                    title: step.step.clone(),
+                    is_uncertain: false,
+                    data_object: reference(activity),
+                    ..Default::default()
+                },
+            ))
         })
         .collect();
     if children.is_empty() {
         // `Activity.Parameter` is `1..∞`: an activity naming no step would not
         // be one, and `check` refuses a recipe where every step is held.
-        return Err(vec!["no step wrote an activity, so the workflow has nothing to name".to_string()]);
+        return Err(vec![
+            "no step wrote an activity, so the workflow has nothing to name".to_string(),
+        ]);
     }
     let activity = eml::Activity {
         uuid: workflow.activity.uuid.clone(),
@@ -1007,8 +1132,12 @@ fn write_workflow(
         parameter: children,
         ..Default::default()
     };
-    store.put(Box::new(template)).map_err(|why| vec![format!("its template: {why}")])?;
-    store.put(Box::new(activity)).map_err(|why| vec![format!("its activity: {why}")])?;
+    store
+        .put(Box::new(template))
+        .map_err(|why| vec![format!("its template: {why}")])?;
+    store
+        .put(Box::new(activity))
+        .map_err(|why| vec![format!("its activity: {why}")])?;
     Ok(())
 }
 
@@ -1026,9 +1155,17 @@ pub fn play(
     reader: &mut dyn Reader,
     mode: Mode,
 ) -> Result<Played, Stop> {
-    let _play = tracing::info_span!("recipe.play", recipe = recipe.title.as_str(), steps = recipe.steps.len()).entered();
+    let _play = tracing::info_span!(
+        "recipe.play",
+        recipe = recipe.title.as_str(),
+        steps = recipe.steps.len()
+    )
+    .entered();
     recipe.check(operations)?;
-    let when = When { creation: recipe.creation.clone(), originator: recipe.originator.clone() };
+    let when = When {
+        creation: recipe.creation.clone(),
+        originator: recipe.originator.clone(),
+    };
     let workflow = recipe.workflow();
     let mut done: Vec<Done> = Vec::new();
     let mut written: BTreeMap<String, Vec<Object>> = BTreeMap::new();
@@ -1037,7 +1174,9 @@ pub fn play(
             done.push(Done::held(step, why));
             continue;
         }
-        match play_step(step, recipe, base, operations, store, reader, mode, &when, &workflow, &written) {
+        match play_step(
+            step, recipe, base, operations, store, reader, mode, &when, &workflow, &written,
+        ) {
             Ok(one) => {
                 // **What a step wrote is what `apply` wrote**, not only the
                 // plan's objects: the template it added (`template`), the
@@ -1049,20 +1188,32 @@ pub fn play(
                 // out.
                 let mut objects = one.objects.clone();
                 if let Some(made) = &one.made {
-                    for uri in made.written.iter().filter(|uri| Some(*uri) != made.activity.as_ref()) {
+                    for uri in made
+                        .written
+                        .iter()
+                        .filter(|uri| Some(*uri) != made.activity.as_ref())
+                    {
                         // The uri is read by `EtpUri` (through `Ref::of_uri`) and
                         // compared **whole**: a second version written by the step
                         // is a second object, not one already seen.
-                        let Some(written) = Ref::of_uri(uri, "") else { continue };
+                        let Some(written) = Ref::of_uri(uri, "") else {
+                            continue;
+                        };
                         if objects.iter().any(|seen| seen.uri == written.uri()) {
                             continue;
                         }
-                        let role = if written.qualified_type.ends_with("ActivityTemplate") { "template" } else { "grouping" };
+                        let role = if written.qualified_type.ends_with("ActivityTemplate") {
+                            "template"
+                        } else {
+                            "grouping"
+                        };
                         let title = store
                             .get_object(uri)
                             .ok()
                             .and_then(|object| {
-                                energyml_core::json::write_value(object.as_reflect())["Citation"]["Title"].as_str().map(str::to_string)
+                                energyml_core::json::write_value(object.as_reflect())["Citation"]["Title"]
+                                    .as_str()
+                                    .map(str::to_string)
                             })
                             .unwrap_or_default();
                         objects.push(Object::of_reference(role, &Ref { title, ..written }));
@@ -1076,7 +1227,10 @@ pub fn play(
             }
             Err(refusals) => {
                 return Err(Stop {
-                    at: StoppedAt::Step { name: step.name.clone(), operation: step.operation.clone() },
+                    at: StoppedAt::Step {
+                        name: step.name.clone(),
+                        operation: step.operation.clone(),
+                    },
                     refusals,
                     done,
                 });
@@ -1087,9 +1241,16 @@ pub fn play(
     let workflow_written = write_workflow(recipe, &workflow, &done, operations, store);
     drop(workflow_span);
     if let Err(refusals) = workflow_written {
-        return Err(Stop { at: StoppedAt::Workflow, refusals, done });
+        return Err(Stop {
+            at: StoppedAt::Workflow,
+            refusals,
+            done,
+        });
     }
-    Ok(Played { steps: done, workflow })
+    Ok(Played {
+        steps: done,
+        workflow,
+    })
 }
 
 /// Play a recipe and save the package to `out` — the whole of
@@ -1105,7 +1266,10 @@ pub fn run(
     out: &Path,
     reader: &mut dyn Reader,
 ) -> Result<Played, Stop> {
-    let name = out.file_name().map(|name| name.to_string_lossy().to_string()).unwrap_or_else(|| out.display().to_string());
+    let name = out
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| out.display().to_string());
     // **The package's own date is the recipe's too.** `docProps/core.xml`
     // carries a `created`, and taken from the clock it was the one part two
     // runs of the same recipe wrote differently (measured: 412 parts of
@@ -1123,19 +1287,29 @@ pub fn run(
         });
     }
     let _run = tracing::info_span!("recipe.run", out = %out.display()).entered();
-    let mut store = crate::epc::open(None, &name, schemas)
-        .map_err(|why| Stop { at: StoppedAt::Package, refusals: vec![format!("making an empty package: {why}")], done: Vec::new() })?;
+    let mut store = crate::epc::open(None, &name, schemas).map_err(|why| Stop {
+        at: StoppedAt::Package,
+        refusals: vec![format!("making an empty package: {why}")],
+        done: Vec::new(),
+    })?;
     // **A bare name is in the current folder**, and the store must be told:
     // without a root, `--out package.epc` wrote the package and refused each
     // of its arrays (« `data.h5`: file not found »), two thousand lines of
     // refusals for a file that looks as if it came out — the trap that
     // `energyml-cli/src/create.rs` comments on, set here the same way.
-    let parent = out.parent().filter(|parent| !parent.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    let parent = out
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
     store.external_files_mut().set_root(parent);
     let played = play(recipe, base, operations, &mut store, reader, Mode::Write)?;
-    let options = energyml_storage::SaveOptions { created: Some(recipe.creation.clone()), ..Default::default() };
+    let options = energyml_storage::SaveOptions {
+        created: Some(recipe.creation.clone()),
+        ..Default::default()
+    };
     let saved = {
-        let _span = tracing::info_span!("recipe.save", path = %out.display(), steps = played.steps.len()).entered();
+        let _span =
+            tracing::info_span!("recipe.save", path = %out.display(), steps = played.steps.len()).entered();
         store.save_as(out, &options)
     };
     if let Err(why) = saved {
@@ -1157,7 +1331,11 @@ pub fn plan(
     schemas: Arc<energyml_core::registry::Registry>,
     reader: &mut dyn Reader,
 ) -> Result<Played, Stop> {
-    let mut store = crate::epc::open(None, &format!("{}.epc", recipe.title), schemas)
-        .map_err(|why| Stop { at: StoppedAt::Package, refusals: vec![format!("making an empty package: {why}")], done: Vec::new() })?;
+    let mut store =
+        crate::epc::open(None, &format!("{}.epc", recipe.title), schemas).map_err(|why| Stop {
+            at: StoppedAt::Package,
+            refusals: vec![format!("making an empty package: {why}")],
+            done: Vec::new(),
+        })?;
     play(recipe, base, operations, &mut store, reader, Mode::Plan)
 }

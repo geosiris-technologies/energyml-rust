@@ -52,7 +52,9 @@ pub enum HallError {
     Series(#[from] SeriesError),
     #[error("the static pressure is a finite number, not {given}")]
     BadStaticPressure { given: f64 },
-    #[error("sample {rank} has no finite pressure ({given}): every sample enters the integral, and a hole would be drawn as a value")]
+    #[error(
+        "sample {rank} has no finite pressure ({given}): every sample enters the integral, and a hole would be drawn as a value"
+    )]
     NoPressure { rank: usize, given: f64 },
 }
 
@@ -69,14 +71,23 @@ pub struct Hall {
 /// The Hall plot of a series, against `static_pressure`.
 pub fn hall(series: &Series<'_>, static_pressure: f64) -> Result<Hall, HallError> {
     if series.len() < 2 {
-        return Err(SeriesError::TooFewSamples { given: series.len(), needed: 2 }.into());
+        return Err(SeriesError::TooFewSamples {
+            given: series.len(),
+            needed: 2,
+        }
+        .into());
     }
     if !static_pressure.is_finite() {
-        return Err(HallError::BadStaticPressure { given: static_pressure });
+        return Err(HallError::BadStaticPressure {
+            given: static_pressure,
+        });
     }
     let (hours, rates, pressures) = (series.hours(), series.rates(), series.pressures());
     if let Some(at) = pressures.iter().position(|one| !one.is_finite()) {
-        return Err(HallError::NoPressure { rank: at + 1, given: pressures[at] });
+        return Err(HallError::NoPressure {
+            rank: at + 1,
+            given: pressures[at],
+        });
     }
     let mut volume = Vec::with_capacity(hours.len());
     let mut pressure_time = Vec::with_capacity(hours.len());
@@ -90,5 +101,8 @@ pub fn hall(series: &Series<'_>, static_pressure: f64) -> Result<Hall, HallError
         volume.push(v);
         pressure_time.push(w);
     }
-    Ok(Hall { volume, pressure_time })
+    Ok(Hall {
+        volume,
+        pressure_time,
+    })
 }

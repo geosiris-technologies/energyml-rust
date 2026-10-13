@@ -208,7 +208,11 @@ pub enum Topology {
     ///
     /// Every face is already wound so its right-hand normal points **out of
     /// its cell**, which is the one thing a caller cannot recover on its own.
-    Polyhedra { cell_face_counts: Vec<u32>, face_node_counts: Vec<u32>, face_nodes: Vec<u32> },
+    Polyhedra {
+        cell_face_counts: Vec<u32>,
+        face_node_counts: Vec<u32>,
+        face_nodes: Vec<u32>,
+    },
     /// Hexahedra: 8M indices in VTK's corner order, and the `Ni, Nj, Nk` they
     /// were built from.
     ///
@@ -217,7 +221,11 @@ pub enum Topology {
     /// marks undefined, so on a faulted or eroded grid an entry sits before the
     /// cell it belongs to — and anything that addresses a cell by the number
     /// the file uses (a connection set, for one) would be quietly wrong.
-    Hexahedra { cells: Vec<u32>, dimensions: [usize; 3], index: Vec<u32> },
+    Hexahedra {
+        cells: Vec<u32>,
+        dimensions: [usize; 3],
+        index: Vec<u32>,
+    },
     /// A regular lattice of points, `fastest` × `slowest`, row by row.
     Grid { fastest: usize, slowest: usize },
     /// Indexed segments: 2M indices, each pair one edge.
@@ -298,9 +306,7 @@ pub fn model_types(package: Option<&str>, top_level_only: bool) -> Vec<TypeSumma
         .filter(|info| package.is_none_or(|want| info.package.eq_ignore_ascii_case(want)))
         .map(summarise_type)
         .collect();
-    out.sort_by(|a, b| {
-        (&a.package, &a.version, &a.type_key).cmp(&(&b.package, &b.version, &b.type_key))
-    });
+    out.sort_by(|a, b| (&a.package, &a.version, &a.type_key).cmp(&(&b.package, &b.version, &b.type_key)));
     out
 }
 
@@ -409,7 +415,11 @@ pub fn template(qualified_type: &str, uuid: Option<&str>) -> Result<String, Stri
         return Err(format!(
             "`{qualified_type}` is abstract, so nothing can be an instance of it; \
 one of these can: {}",
-            if subtypes.is_empty() { "none in this build".to_string() } else { subtypes.join(", ") }
+            if subtypes.is_empty() {
+                "none in this build".to_string()
+            } else {
+                subtypes.join(", ")
+            }
         ));
     }
     let mut object = registry.create(qualified_type).map_err(|why| format!("{why}"))?;
@@ -432,7 +442,9 @@ fn type_name_of(ty: &energyml_core::reflect::FieldType) -> String {
         FieldType::Scalar(kind) => format!("{kind:?}").to_lowercase(),
         FieldType::Object(one) | FieldType::Enumeration(one) => {
             let info = one();
-            info.qualified_type.map(str::to_string).unwrap_or_else(|| info.name.to_string())
+            info.qualified_type
+                .map(str::to_string)
+                .unwrap_or_else(|| info.name.to_string())
         }
     }
 }
@@ -761,8 +773,8 @@ impl Package {
         // system's own sentence, in the operating system's own language, and
         // it says which file about nothing. A caller who passed three paths
         // would have no way to tell which one failed.
-        let mut store = EpcStore::open(path, registry)
-            .map_err(|why| format!("cannot open {}: {why}", path.display()))?;
+        let mut store =
+            EpcStore::open(path, registry).map_err(|why| format!("cannot open {}: {why}", path.display()))?;
         if let Some(beside) = path.parent() {
             store.external_files_mut().set_root(beside);
         }
@@ -897,7 +909,10 @@ impl Package {
             .resources()
             .into_iter()
             .map(|one| Summary {
-                title: headers.get(&one.uri).and_then(|(title, _)| title.clone()).unwrap_or_default(),
+                title: headers
+                    .get(&one.uri)
+                    .and_then(|(title, _)| title.clone())
+                    .unwrap_or_default(),
                 object_version: headers.get(&one.uri).and_then(|(_, version)| version.clone()),
                 uri: one.uri,
                 uuid: one.uuid,
@@ -939,8 +954,8 @@ impl Package {
     /// is derived from the type and the uuid the JSON carries, so a caller who
     /// changed either has written somewhere else.
     pub fn put(&mut self, json: &str) -> Result<String, String> {
-        let document = energyml_core::json::read_string(json, self.store.registry())
-            .map_err(|why| format!("{why}"))?;
+        let document =
+            energyml_core::json::read_string(json, self.store.registry()).map_err(|why| format!("{why}"))?;
         self.store.put(document.root).map_err(|why| format!("{why}"))
     }
 
@@ -961,24 +976,38 @@ impl Package {
             .store
             .arrays_of(object.as_reflect())
             .into_iter()
-            .map(|one| ArrayRef { file: one.file, path_in_file: one.path_in_file })
+            .map(|one| ArrayRef {
+                file: one.file,
+                path_in_file: one.path_in_file,
+            })
             .collect())
     }
 
     /// What an array weighs, without reading it.
     pub fn array_shape(&self, array: &ArrayRef) -> Result<Shape, String> {
-        let ArrayMetadata { dimensions, element_type } = self
+        let ArrayMetadata {
+            dimensions,
+            element_type,
+        } = self
             .store
             .array_metadata(&array.location())
             .map_err(|why| format!("{why}"))?;
-        Ok(Shape { dimensions, element_type })
+        Ok(Shape {
+            dimensions,
+            element_type,
+        })
     }
 
     /// Read an array, in the file's own type.
     pub fn read_array(&self, array: &ArrayRef) -> Result<(Shape, Block), String> {
-        let ArrayData { metadata, values } =
-            self.store.read_array(&array.location()).map_err(|why| format!("{why}"))?;
-        let shape = Shape { dimensions: metadata.dimensions, element_type: metadata.element_type };
+        let ArrayData { metadata, values } = self
+            .store
+            .read_array(&array.location())
+            .map_err(|why| format!("{why}"))?;
+        let shape = Shape {
+            dimensions: metadata.dimensions,
+            element_type: metadata.element_type,
+        };
         Ok((shape, Block::from(values)))
     }
 
@@ -989,12 +1018,7 @@ impl Package {
     /// than it carries writes without error in some formats and reads back
     /// silently with zeros at the end. The check is `EpcStore`'s and not this
     /// bridge's, so every writer gets it.
-    pub fn write_array(
-        &self,
-        array: &ArrayRef,
-        dimensions: &[i64],
-        block: Block,
-    ) -> Result<(), String> {
+    pub fn write_array(&self, array: &ArrayRef, dimensions: &[i64], block: Block) -> Result<(), String> {
         let data = ArrayData {
             metadata: ArrayMetadata {
                 dimensions: dimensions.to_vec(),
@@ -1002,7 +1026,9 @@ impl Package {
             },
             values: block.into_values(),
         };
-        self.store.write_array(&array.location(), &data).map_err(|why| format!("{why}"))
+        self.store
+            .write_array(&array.location(), &data)
+            .map_err(|why| format!("{why}"))
     }
 
     /// Read a slice of an array rather than all of it.
@@ -1031,7 +1057,10 @@ impl Package {
         };
         let ArrayData { metadata, values } =
             self.store.read_array(&location).map_err(|why| format!("{why}"))?;
-        let shape = Shape { dimensions: metadata.dimensions, element_type: metadata.element_type };
+        let shape = Shape {
+            dimensions: metadata.dimensions,
+            element_type: metadata.element_type,
+        };
         Ok((shape, Block::from(values)))
     }
 
@@ -1057,7 +1086,10 @@ impl Package {
                 // package does not hold it.
                 let head = self.store.header(&one.uri).ok();
                 Summary {
-                    title: head.as_ref().and_then(|head| head.title.clone()).unwrap_or_default(),
+                    title: head
+                        .as_ref()
+                        .and_then(|head| head.title.clone())
+                        .unwrap_or_default(),
                     object_version: version_of(head.and_then(|head| head.object_version)),
                     uri: one.uri,
                     uuid: one.uuid,
@@ -1078,8 +1110,8 @@ impl Package {
     pub fn geometry(&self, uri: &str, placement: &str) -> Result<Geometry, String> {
         let placed = Placement::parse(placement)?;
         let object = self.store.get_object(uri).map_err(|why| format!("{why}"))?;
-        let built = scene::object_of(object.as_reflect(), &self.store, uri)
-            .map_err(|why| format!("{why}"))?;
+        let built =
+            scene::object_of(object.as_reflect(), &self.store, uri).map_err(|why| format!("{why}"))?;
         let shape = built.geometry_in(placed).map_err(|why| format!("{why}"))?;
         Ok(Geometry {
             uuid: built.uuid.clone(),
@@ -1101,8 +1133,8 @@ impl Package {
     pub fn mesh(&self, uri: &str, placement: &str) -> Result<(Vec<f64>, Vec<u32>), String> {
         let placed = Placement::parse(placement)?;
         let object = self.store.get_object(uri).map_err(|why| format!("{why}"))?;
-        let built = scene::object_of(object.as_reflect(), &self.store, uri)
-            .map_err(|why| format!("{why}"))?;
+        let built =
+            scene::object_of(object.as_reflect(), &self.store, uri).map_err(|why| format!("{why}"))?;
         let (points, triangles) = built.mesh_in(placed).map_err(|why| format!("{why}"))?;
         Ok((
             points.iter().flat_map(|p| p.iter().copied()).collect(),
@@ -1185,11 +1217,19 @@ impl Package {
                 // written without a version to an object that declares one
                 // names it by the full uri the store knows it by, never by the
                 // reference's own spelling.
-                let named = energyml_core::identity::ObjectId::parse(&one.uri).ok().and_then(|(_, id)| id.object_version);
-                let held = self.store.resolve_reference(&one.uuid, Some(&one.qualified_type), named.as_deref()).ok();
+                let named = energyml_core::identity::ObjectId::parse(&one.uri)
+                    .ok()
+                    .and_then(|(_, id)| id.object_version);
+                let held = self
+                    .store
+                    .resolve_reference(&one.uuid, Some(&one.qualified_type), named.as_deref())
+                    .ok();
                 Link {
                     object_version: version_of(
-                        held.and_then(|found| self.store.header(&found.uri).ok().and_then(|h| h.object_version)).or(named),
+                        held.and_then(|found| {
+                            self.store.header(&found.uri).ok().and_then(|h| h.object_version)
+                        })
+                        .or(named),
                     ),
                     // The package's own title beats the hint the reference
                     // carries: a DOR's title is what the writer believed, and
@@ -1222,7 +1262,8 @@ impl Package {
             .clone();
         let (held, _) = self.store.read_objects(None);
         Ok(energyml_storage::graph::dependents(
-            held.iter().map(|(summary, object)| (summary, object.as_reflect())),
+            held.iter()
+                .map(|(summary, object)| (summary, object.as_reflect())),
             &uuid,
         )
         .into_iter()
@@ -1250,7 +1291,8 @@ impl Package {
     pub fn needs(&self, uris: &[String]) -> Result<(Vec<String>, Vec<String>), String> {
         let (held, _) = self.store.read_objects(None);
         let graph = energyml_storage::graph::build(
-            held.iter().map(|(summary, object)| (summary, object.as_reflect())),
+            held.iter()
+                .map(|(summary, object)| (summary, object.as_reflect())),
         );
         let closed = energyml_storage::graph::closure(&graph, uris);
         Ok((closed.needed, closed.missing))
@@ -1305,9 +1347,9 @@ impl Package {
         // Parsed before anything is read, so a spec with a typo in it fails
         // where the typo is rather than after a package has been walked.
         let spec = match metadata {
-            Some(text) => Some(
-                energyml_domain::metadata::Spec::from_json(text).map_err(|why| format!("{why}"))?,
-            ),
+            Some(text) => {
+                Some(energyml_domain::metadata::Spec::from_json(text).map_err(|why| format!("{why}"))?)
+            }
             None => None,
         };
 
@@ -1345,11 +1387,8 @@ impl Package {
             // **A shape that did not come back is a refusal, not a gap.** The
             // walk keeps what it could evaluate; handing back a document
             // missing an object somebody asked for by name would look complete.
-            let built = read
-                .objects
-                .iter()
-                .find(|one| &one.uri == uri)
-                .ok_or_else(|| match read.refused.iter().find(|line| line.contains(uri)) {
+            let built = read.objects.iter().find(|one| &one.uri == uri).ok_or_else(|| {
+                match read.refused.iter().find(|line| line.contains(uri)) {
                     Some(why) => why.to_string(),
                     None => format!(
                         "{uri} was not evaluated: {}",
@@ -1360,9 +1399,10 @@ impl Package {
                             .map(String::as_str)
                             .unwrap_or("it carries no geometry this build reads")
                     ),
-                })?;
-            let prepared = energyml_export::registry::prepare(built, &options)
-                .map_err(|why| format!("{uri}: {why}"))?;
+                }
+            })?;
+            let prepared =
+                energyml_export::registry::prepare(built, &options).map_err(|why| format!("{uri}: {why}"))?;
             if !exporter.handles_with(&prepared, &options) {
                 return Err(format!(
                     "`{format}` does not write {} ({})",
@@ -1391,12 +1431,7 @@ impl Package {
     /// and missing from the source, and how many datasets travelled. `arrays`
     /// is `copy` or `leave` — leaving them makes this package name the other
     /// one's data file, which is legal and rarely what anyone means.
-    pub fn copy_from(
-        &mut self,
-        source: &Package,
-        uris: &[String],
-        arrays: &str,
-    ) -> Result<Copied, String> {
+    pub fn copy_from(&mut self, source: &Package, uris: &[String], arrays: &str) -> Result<Copied, String> {
         let how = match arrays {
             "copy" => energyml_storage::extract::Arrays::Copy,
             "leave" => energyml_storage::extract::Arrays::Leave,
@@ -1431,7 +1466,14 @@ impl Package {
     pub fn check(&self, schema: bool, rules: bool) -> CheckReport {
         use energyml_domain::check;
 
-        let report = check::of_store(&self.store, &check::Options { schema, rules, extra_rules: Vec::new() });
+        let report = check::of_store(
+            &self.store,
+            &check::Options {
+                schema,
+                rules,
+                extra_rules: Vec::new(),
+            },
+        );
 
         CheckReport {
             errors: report.errors(),
@@ -1489,7 +1531,10 @@ impl Package {
 
     /// The dataspaces this store holds. An EPC is exactly one.
     pub fn dataspaces(&self) -> Vec<Dataspace> {
-        vec![self.store.dataspace()].into_iter().map(dataspace_of).collect()
+        vec![self.store.dataspace()]
+            .into_iter()
+            .map(dataspace_of)
+            .collect()
     }
 
     /// The citations of these objects, without reading the objects.
@@ -1510,7 +1555,11 @@ impl Package {
 
     /// The types this store can read — the generated model behind it.
     pub fn supported_types(&self) -> Vec<TypeSummary> {
-        self.store.supported_types().into_iter().map(summarise_type).collect()
+        self.store
+            .supported_types()
+            .into_iter()
+            .map(summarise_type)
+            .collect()
     }
 
     /// The parts of the package that are not objects: whatever was put beside
@@ -1521,8 +1570,7 @@ impl Package {
 
     /// One attachment's bytes.
     pub fn read_attachment(&self, part: &str) -> Result<Vec<u8>, String> {
-        energyml_storage::LocalPackage::read_attachment(&self.store, part)
-            .map_err(|why| format!("{why}"))
+        energyml_storage::LocalPackage::read_attachment(&self.store, part).map_err(|why| format!("{why}"))
     }
 
     /// The relationships recorded for a part.
@@ -1620,16 +1668,25 @@ fn patch_of(patch: &geom::Patch) -> Patch {
                     }
                     cell_face_counts.push(faces);
                 }
-                Topology::Polyhedra { cell_face_counts, face_node_counts, face_nodes }
+                Topology::Polyhedra {
+                    cell_face_counts,
+                    face_node_counts,
+                    face_nodes,
+                }
             }
-            geom::Topology::Hexahedra { cells, dimensions, index } => Topology::Hexahedra {
+            geom::Topology::Hexahedra {
+                cells,
+                dimensions,
+                index,
+            } => Topology::Hexahedra {
                 cells: cells.iter().flat_map(|c| c.iter().copied()).collect(),
                 dimensions: *dimensions,
                 index: index.clone(),
             },
-            geom::Topology::Grid { fastest, slowest } => {
-                Topology::Grid { fastest: *fastest, slowest: *slowest }
-            }
+            geom::Topology::Grid { fastest, slowest } => Topology::Grid {
+                fastest: *fastest,
+                slowest: *slowest,
+            },
             geom::Topology::Segments(all) => {
                 Topology::Segments(all.iter().flat_map(|s| s.iter().copied()).collect())
             }
@@ -1668,5 +1725,7 @@ fn header_of(one: energyml_storage::resource::ObjectHeader) -> Header {
 
 /// An `objectVersion` as the bridge shows it: `None` when it is absent or blank.
 fn version_of(version: Option<String>) -> Option<String> {
-    version.map(|version| version.trim().to_string()).filter(|version| !version.is_empty())
+    version
+        .map(|version| version.trim().to_string())
+        .filter(|version| !version.is_empty())
 }

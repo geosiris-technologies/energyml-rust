@@ -124,7 +124,9 @@ pub struct Tops {
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum TopsError {
     /// Fewer than two finite, increasing knots: no stretch of hole to follow.
-    #[error("the path states {given} usable knot(s) — a stretch of hole needs two finite measured depths, increasing")]
+    #[error(
+        "the path states {given} usable knot(s) — a stretch of hole needs two finite measured depths, increasing"
+    )]
     NoStretch {
         /// How many were usable.
         given: usize,
@@ -136,7 +138,9 @@ pub enum TopsError {
         given: f64,
     },
     /// More samples than a path is worth.
-    #[error("sampling {length} of hole every {step} asks for {wanted} evaluations where {most} is the most — give a larger step")]
+    #[error(
+        "sampling {length} of hole every {step} asks for {wanted} evaluations where {most} is the most — give a larger step"
+    )]
     TooManySamples {
         /// The length of hole.
         length: f64,
@@ -190,7 +194,12 @@ fn samples(knots: &[f64], step: f64) -> Result<Vec<f64>, TopsError> {
         wanted = wanted.saturating_add(((pair[1] - pair[0]) / step).ceil().max(1.0) as usize);
     }
     if wanted > MOST_SAMPLES {
-        return Err(TopsError::TooManySamples { length, step, wanted, most: MOST_SAMPLES });
+        return Err(TopsError::TooManySamples {
+            length,
+            step,
+            wanted,
+            most: MOST_SAMPLES,
+        });
     }
     let mut out = Vec::with_capacity(wanted);
     for pair in knots.windows(2) {
@@ -217,7 +226,13 @@ fn residual(path: &dyn Fn(f64) -> [f64; 3], surface: &Heights, md: f64) -> ([f64
 /// The root of `g` in `[a, b]`, where `g(a)` lies on `from`'s side and `g(b)`
 /// on the other: halved until the two ends are adjacent numbers. `None` when a
 /// midpoint has no single height.
-fn bisect(path: &dyn Fn(f64) -> [f64; 3], surface: &Heights, mut a: f64, mut b: f64, from: Side) -> Option<Crossing> {
+fn bisect(
+    path: &dyn Fn(f64) -> [f64; 3],
+    surface: &Heights,
+    mut a: f64,
+    mut b: f64,
+    from: Side,
+) -> Option<Crossing> {
     let mut best: Option<Crossing> = None;
     for _ in 0..2100 {
         let m = a + 0.5 * (b - a);
@@ -229,23 +244,53 @@ fn bisect(path: &dyn Fn(f64) -> [f64; 3], surface: &Heights, mut a: f64, mut b: 
             return None;
         }
         if g == 0.0 {
-            return Some(Crossing { md: m, at, from, residual: 0.0 });
+            return Some(Crossing {
+                md: m,
+                at,
+                from,
+                residual: 0.0,
+            });
         }
         if Side::of(g) == from {
             a = m;
         } else {
             b = m;
         }
-        best = Some(Crossing { md: m, at, from, residual: g });
+        best = Some(Crossing {
+            md: m,
+            at,
+            from,
+            residual: g,
+        });
     }
     // The two ends are adjacent: the one nearer the surface.
     let ends = [a, b].map(|md| residual(path, surface, md));
     let [(pa, ha, ga), (pb, hb, gb)] = ends;
     let pick = match (ha, hb) {
-        (Height::At(_), Height::At(_)) if ga.abs() <= gb.abs() => Some(Crossing { md: a, at: pa, from, residual: ga }),
-        (Height::At(_), Height::At(_)) => Some(Crossing { md: b, at: pb, from, residual: gb }),
-        (Height::At(_), _) => Some(Crossing { md: a, at: pa, from, residual: ga }),
-        (_, Height::At(_)) => Some(Crossing { md: b, at: pb, from, residual: gb }),
+        (Height::At(_), Height::At(_)) if ga.abs() <= gb.abs() => Some(Crossing {
+            md: a,
+            at: pa,
+            from,
+            residual: ga,
+        }),
+        (Height::At(_), Height::At(_)) => Some(Crossing {
+            md: b,
+            at: pb,
+            from,
+            residual: gb,
+        }),
+        (Height::At(_), _) => Some(Crossing {
+            md: a,
+            at: pa,
+            from,
+            residual: ga,
+        }),
+        (_, Height::At(_)) => Some(Crossing {
+            md: b,
+            at: pb,
+            from,
+            residual: gb,
+        }),
         _ => None,
     };
     pick.or(best)
@@ -257,7 +302,12 @@ fn bisect(path: &dyn Fn(f64) -> [f64; 3], surface: &Heights, mut a: f64, mut b: 
 /// depths it states (its stations) — the path is followed from the first to
 /// the last, never beyond: a well does not exist past its last station. A
 /// non-finite position counts as one with no height under it.
-pub fn tops(path: &dyn Fn(f64) -> [f64; 3], knots: &[f64], step: f64, surface: &Heights) -> Result<Tops, TopsError> {
+pub fn tops(
+    path: &dyn Fn(f64) -> [f64; 3],
+    knots: &[f64],
+    step: f64,
+    surface: &Heights,
+) -> Result<Tops, TopsError> {
     if !(step.is_finite() && step > 0.0) {
         return Err(TopsError::BadStep { given: step });
     }
@@ -282,7 +332,11 @@ pub fn tops(path: &dyn Fn(f64) -> [f64; 3], knots: &[f64], step: f64, surface: &
         Fold,
     }
 
-    let mut out = Tops { samples: mds.len(), step, ..Tops::default() };
+    let mut out = Tops {
+        samples: mds.len(),
+        step,
+        ..Tops::default()
+    };
     // The last sample with a height, off the surface: its depth and side.
     let mut last: Option<(f64, Side)> = None;
     // Where the path started lying exactly on the surface, since `last`.
@@ -320,15 +374,22 @@ pub fn tops(path: &dyn Fn(f64) -> [f64; 3], knots: &[f64], step: f64, surface: &
                         (Between::Nothing, Some(on)) => {
                             if from != side {
                                 let (at, _, _) = residual(path, surface, on);
-                                out.crossings.push(Crossing { md: on, at, from, residual: 0.0 });
+                                out.crossings.push(Crossing {
+                                    md: on,
+                                    at,
+                                    from,
+                                    residual: 0.0,
+                                });
                             } else {
                                 out.touches.push(on);
                             }
                         }
-                        (Between::Nothing, None) if from != side => match bisect(path, surface, from_md, md, from) {
-                            Some(crossing) => out.crossings.push(crossing),
-                            None => out.unresolved.push([from_md, md]),
-                        },
+                        (Between::Nothing, None) if from != side => {
+                            match bisect(path, surface, from_md, md, from) {
+                                Some(crossing) => out.crossings.push(crossing),
+                                None => out.unresolved.push([from_md, md]),
+                            }
+                        }
                         _ => {}
                     }
                 } else if let Some(on) = on_since {
@@ -370,7 +431,16 @@ mod tests {
     }
 
     fn heights<'a>(points: &'a [f64], triangles: &'a [u32]) -> Heights<'a> {
-        Heights::of(Surface { points, triangles, quads: &[] }, "horizon", "in a test").expect("faces")
+        Heights::of(
+            Surface {
+                points,
+                triangles,
+                quads: &[],
+            },
+            "horizon",
+            "in a test",
+        )
+        .expect("faces")
     }
 
     /// **A straight hole through a tilted plane lands where the algebra says.**
@@ -390,8 +460,16 @@ mod tests {
         assert_eq!(found.crossings.len(), 1, "{found:?}");
         let expected = 300.0 / (theta.cos() + 0.2 * theta.sin());
         let crossing = &found.crossings[0];
-        assert!((crossing.md - expected).abs() < 1e-9, "{} against {expected}", crossing.md);
-        assert_eq!(crossing.from, Side::Greater, "it comes from above in an elevation frame");
+        assert!(
+            (crossing.md - expected).abs() < 1e-9,
+            "{} against {expected}",
+            crossing.md
+        );
+        assert_eq!(
+            crossing.from,
+            Side::Greater,
+            "it comes from above in an elevation frame"
+        );
         assert!((crossing.at[2] - (-300.0 + 0.2 * crossing.at[0])).abs() < 1e-9);
     }
 
@@ -410,7 +488,11 @@ mod tests {
         let found = tops(&path, &[0.0, end], 10.0, &surface).expect("a path");
         assert_eq!(found.crossings.len(), 1);
         let expected = r * (300.0f64 / r).asin();
-        assert!((found.crossings[0].md - expected).abs() < 1e-9, "{} against {expected}", found.crossings[0].md);
+        assert!(
+            (found.crossings[0].md - expected).abs() < 1e-9,
+            "{} against {expected}",
+            found.crossings[0].md
+        );
     }
 
     /// **Down and back up is two crossings, in the order of the hole.**
@@ -470,7 +552,11 @@ mod tests {
         let found = tops(&path, &[0.0, 600.0], 10.0, &surface).expect("a path");
         assert!(found.crossings.is_empty(), "{found:?}");
         assert_eq!(found.gaps.len(), 1);
-        assert!(found.gaps[0][0] < 100.0 && found.gaps[0][1] >= 500.0, "{:?}", found.gaps);
+        assert!(
+            found.gaps[0][0] < 100.0 && found.gaps[0][1] >= 500.0,
+            "{:?}",
+            found.gaps
+        );
     }
 
     /// **Over a fold, the crossing is named and not decided.** Two
@@ -530,10 +616,22 @@ mod tests {
         let (points, triangles) = plane(10.0, 0.0, 0.0, 0.0);
         let surface = heights(&points, &triangles);
         let path = |s: f64| [0.0, 0.0, -s];
-        assert_eq!(tops(&path, &[0.0], 1.0, &surface), Err(TopsError::NoStretch { given: 1 }));
-        assert_eq!(tops(&path, &[0.0, f64::NAN], 1.0, &surface), Err(TopsError::NoStretch { given: 1 }));
-        assert_eq!(tops(&path, &[0.0, 10.0], 0.0, &surface), Err(TopsError::BadStep { given: 0.0 }));
-        assert!(matches!(tops(&path, &[0.0, 1e9], 1e-3, &surface), Err(TopsError::TooManySamples { .. })));
+        assert_eq!(
+            tops(&path, &[0.0], 1.0, &surface),
+            Err(TopsError::NoStretch { given: 1 })
+        );
+        assert_eq!(
+            tops(&path, &[0.0, f64::NAN], 1.0, &surface),
+            Err(TopsError::NoStretch { given: 1 })
+        );
+        assert_eq!(
+            tops(&path, &[0.0, 10.0], 0.0, &surface),
+            Err(TopsError::BadStep { given: 0.0 })
+        );
+        assert!(matches!(
+            tops(&path, &[0.0, 1e9], 1e-3, &surface),
+            Err(TopsError::TooManySamples { .. })
+        ));
     }
 
     #[test]
@@ -541,7 +639,12 @@ mod tests {
         let (points, triangles) = plane(50.0, 0.0, 0.3, 0.0);
         // Four sides of 100 twice, and the diagonal 141 twice: the median of
         // [100 × 4 (+ shared twice), 141 × 2] is 100 whatever the slope.
-        let spacing = plan_spacing(&Surface { points: &points, triangles: &triangles, quads: &[] }).unwrap();
+        let spacing = plan_spacing(&Surface {
+            points: &points,
+            triangles: &triangles,
+            quads: &[],
+        })
+        .unwrap();
         assert!((spacing - 100.0).abs() < 1e-12, "{spacing}");
     }
 }

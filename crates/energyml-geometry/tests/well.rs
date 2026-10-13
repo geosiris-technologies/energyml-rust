@@ -134,7 +134,9 @@ fn the_datum_gives_the_well_its_crs() {
     // No `LocalCrs` anywhere, yet the well is fully georeferenced through the
     // reference point — the CRS layer must see through it, or the well can
     // never be exported to GeoJSON.
-    let crs = energyml_domain::crs::of(&trajectory(), &Wellsite).unwrap().unwrap();
+    let crs = energyml_domain::crs::of(&trajectory(), &Wellsite)
+        .unwrap()
+        .unwrap();
     assert_eq!(crs.vertical, energyml_domain::CrsKind::Epsg(5714));
     assert_eq!(crs.vertical_direction, energyml_domain::VerticalDirection::Up);
     // The horizontal CRS object is not in the store: stated as unknown, not
@@ -196,18 +198,22 @@ fn a_frame_places_its_depths_on_the_well() {
 /// datum` had the correspondence; this is the ordinary case.
 #[test]
 fn a_frames_intervals_attach_onto_its_nodes() {
-    use energyml_eml_2_3::{AbstractFloatingPointArray, FloatingPointXmlArray, IndexableElement, IntegerXmlArray};
+    use energyml_eml_2_3::{
+        AbstractFloatingPointArray, FloatingPointXmlArray, IndexableElement, IntegerXmlArray,
+    };
     use energyml_geometry::scene::{self, AttributeScope};
     use energyml_resqml_2_2::{AbstractValueArray, DiscreteProperty};
 
     const FRAME: &str = "66666666-6666-6666-6666-666666666666";
     let frame = WellboreFrameRepresentation {
         uuid: FRAME.to_string(),
-        node_md: Some(AbstractFloatingPointArray::FloatingPointXmlArray(FloatingPointXmlArray {
-            count_per_value: 1,
-            values: vec![0.0, 8.6, 28.6, 52.3],
-            ..Default::default()
-        })),
+        node_md: Some(AbstractFloatingPointArray::FloatingPointXmlArray(
+            FloatingPointXmlArray {
+                count_per_value: 1,
+                values: vec![0.0, 8.6, 28.6, 52.3],
+                ..Default::default()
+            },
+        )),
         trajectory: dor(TRAJECTORY),
         ..Default::default()
     };
@@ -224,7 +230,12 @@ fn a_frames_intervals_attach_onto_its_nodes() {
         ..Default::default()
     };
 
-    let object = scene::object_of(&frame, &Wellsite, "eml:///resqml22.WellboreFrameRepresentation(66666666-6666-6666-6666-666666666666)").unwrap();
+    let object = scene::object_of(
+        &frame,
+        &Wellsite,
+        "eml:///resqml22.WellboreFrameRepresentation(66666666-6666-6666-6666-666666666666)",
+    )
+    .unwrap();
     let property = formation(IndexableElement::Intervals);
     let (found, notes) = scene::attributes_for(&object, &[&property], &Wellsite);
     assert_eq!(found.len(), 1, "attached, not refused: {notes:?}");
@@ -232,7 +243,10 @@ fn a_frames_intervals_attach_onto_its_nodes() {
     // Each node takes the interval it opens, the deepest the one it closes —
     // and every value came from the file: no mean anywhere.
     assert_eq!(found[0].values, vec![4.0, 7.0, 9.0, 9.0]);
-    assert!(notes.iter().any(|note| note.contains("moved onto")), "the correspondence is said: {notes:?}");
+    assert!(
+        notes.iter().any(|note| note.contains("moved onto")),
+        "the correspondence is said: {notes:?}"
+    );
 
     // A count that fits neither the intervals nor the nodes is still refused,
     // by its numbers.
@@ -253,11 +267,13 @@ fn frame_from(mds: Vec<f64>) -> WellboreFrameRepresentation {
     use energyml_eml_2_3::{AbstractFloatingPointArray, FloatingPointXmlArray};
     WellboreFrameRepresentation {
         uuid: "66666666-6666-6666-6666-666666666666".to_string(),
-        node_md: Some(AbstractFloatingPointArray::FloatingPointXmlArray(FloatingPointXmlArray {
-            count_per_value: 1,
-            values: mds,
-            ..Default::default()
-        })),
+        node_md: Some(AbstractFloatingPointArray::FloatingPointXmlArray(
+            FloatingPointXmlArray {
+                count_per_value: 1,
+                values: mds,
+                ..Default::default()
+            },
+        )),
         trajectory: dor(TRAJECTORY),
         ..Default::default()
     }
@@ -272,7 +288,10 @@ fn a_frames_head_portion_runs_from_the_datum_to_its_first_node() {
     let frame = frame_from(vec![10.0, 20.0, 30.0]);
     let found = well::head_portion(&frame, &Wellsite).unwrap();
     let points = found.expect("MD 10 is below the datum: there is a portion to draw");
-    assert_eq!(points, vec![[1000.0, 2000.0, 37.73], [1000.0, 2000.0, 37.73 - 10.0]]);
+    assert_eq!(
+        points,
+        vec![[1000.0, 2000.0, 37.73], [1000.0, 2000.0, 37.73 - 10.0]]
+    );
 }
 
 /// A frame that already starts at MD 0 has nothing missing: `None`, not a
@@ -295,7 +314,10 @@ fn an_unreadable_datum_is_refused_by_name() {
         }
     }
     impl energyml_domain::source::ArraySource for BrokenSite {
-        fn locate(&self, _object: &dyn energyml_core::value::Reflect) -> Vec<energyml_storage::ArrayLocation> {
+        fn locate(
+            &self,
+            _object: &dyn energyml_core::value::Reflect,
+        ) -> Vec<energyml_storage::ArrayLocation> {
             Vec::new()
         }
         fn metadata(
@@ -345,8 +367,16 @@ fn a_deviated_frames_head_portion_follows_the_trajectorys_shape() {
     };
 
     const DEVIATED: &str = "88888888-8888-8888-8888-888888888888";
-    let origin = Point3d { coordinate1: 1000.0, coordinate2: 2000.0, coordinate3: 37.73 };
-    let direction = Point3d { coordinate1: 10.0, coordinate2: 0.0, coordinate3: -100.0 };
+    let origin = Point3d {
+        coordinate1: 1000.0,
+        coordinate2: 2000.0,
+        coordinate3: 37.73,
+    };
+    let direction = Point3d {
+        coordinate1: 10.0,
+        coordinate2: 0.0,
+        coordinate3: -100.0,
+    };
 
     let deviated = WellboreTrajectoryRepresentation {
         uuid: DEVIATED.to_string(),
@@ -357,27 +387,35 @@ fn a_deviated_frames_head_portion_follows_the_trajectorys_shape() {
             datum: Some(dor(DATUM)),
             ..Default::default()
         },
-        geometry: Some(AbstractParametricLineGeometry::ParametricLineGeometry(ParametricLineGeometry {
-            local_crs: dor(VCRS),
-            control_point_parameters: Some(AbstractFloatingPointArray::FloatingPointXmlArray(
-                FloatingPointXmlArray { count_per_value: 1, values: vec![0.0, 100.0], ..Default::default() },
-            )),
-            control_points: Some(AbstractPoint3dArray::Point3dLatticeArray(Point3dLatticeArray {
-                all_dimensions_are_orthogonal: None,
-                origin,
-                dimension: vec![Point3dLatticeDimension {
-                    direction,
-                    spacing: Some(AbstractFloatingPointArray::FloatingPointXmlArray(FloatingPointXmlArray {
+        geometry: Some(AbstractParametricLineGeometry::ParametricLineGeometry(
+            ParametricLineGeometry {
+                local_crs: dor(VCRS),
+                control_point_parameters: Some(AbstractFloatingPointArray::FloatingPointXmlArray(
+                    FloatingPointXmlArray {
                         count_per_value: 1,
-                        values: vec![1.0],
+                        values: vec![0.0, 100.0],
                         ..Default::default()
-                    })),
-                }],
-            })),
-            knot_count: 2,
-            line_kind_index: 1,
-            ..Default::default()
-        })),
+                    },
+                )),
+                control_points: Some(AbstractPoint3dArray::Point3dLatticeArray(Point3dLatticeArray {
+                    all_dimensions_are_orthogonal: None,
+                    origin,
+                    dimension: vec![Point3dLatticeDimension {
+                        direction,
+                        spacing: Some(AbstractFloatingPointArray::FloatingPointXmlArray(
+                            FloatingPointXmlArray {
+                                count_per_value: 1,
+                                values: vec![1.0],
+                                ..Default::default()
+                            },
+                        )),
+                    }],
+                })),
+                knot_count: 2,
+                line_kind_index: 1,
+                ..Default::default()
+            },
+        )),
         ..Default::default()
     };
 
@@ -393,7 +431,10 @@ fn a_deviated_frames_head_portion_follows_the_trajectorys_shape() {
         }
     }
     impl energyml_domain::source::ArraySource for DeviatedSite {
-        fn locate(&self, _object: &dyn energyml_core::value::Reflect) -> Vec<energyml_storage::ArrayLocation> {
+        fn locate(
+            &self,
+            _object: &dyn energyml_core::value::Reflect,
+        ) -> Vec<energyml_storage::ArrayLocation> {
             Vec::new()
         }
         fn metadata(
@@ -419,11 +460,13 @@ fn a_deviated_frames_head_portion_follows_the_trajectorys_shape() {
 
     let frame = WellboreFrameRepresentation {
         uuid: "99999999-9999-9999-9999-999999999999".to_string(),
-        node_md: Some(AbstractFloatingPointArray::FloatingPointXmlArray(FloatingPointXmlArray {
-            count_per_value: 1,
-            values: vec![40.0, 60.0],
-            ..Default::default()
-        })),
+        node_md: Some(AbstractFloatingPointArray::FloatingPointXmlArray(
+            FloatingPointXmlArray {
+                count_per_value: 1,
+                values: vec![40.0, 60.0],
+                ..Default::default()
+            },
+        )),
         trajectory: dor(DEVIATED),
         ..Default::default()
     };
@@ -432,7 +475,11 @@ fn a_deviated_frames_head_portion_follows_the_trajectorys_shape() {
     let found = well::head_portion(&frame, &site).unwrap();
     let points = found.expect("MD 40 is well below MD 0: there is a portion to draw");
     assert_eq!(points.len(), 17, "one sample per HEAD_SAMPLES step");
-    assert_eq!(points[0], [1000.0, 2000.0, 37.73], "MD 0 is the origin control point exactly");
+    assert_eq!(
+        points[0],
+        [1000.0, 2000.0, 37.73],
+        "MD 0 is the origin control point exactly"
+    );
     // MD 20 (i = 8 of 16): t = 20 / 100 = 0.2 along the line.
     assert!((points[8][0] - 1002.0).abs() < 1e-9);
     assert!((points[8][2] - 17.73).abs() < 1e-9);

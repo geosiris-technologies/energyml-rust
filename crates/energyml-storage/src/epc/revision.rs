@@ -125,7 +125,11 @@ impl What {
     /// [`EpcStore::edit_at`]: crate::EpcStore::edit_at
     pub fn of_edit(path: &str) -> What {
         let in_citation = path == "Citation" || path.starts_with("Citation.");
-        let mut what = if in_citation { What::CITATION } else { What::BODY.union(What::LINKS_OUT) };
+        let mut what = if in_citation {
+            What::CITATION
+        } else {
+            What::BODY.union(What::LINKS_OUT)
+        };
         let last = path.rsplit('.').next().unwrap_or(path);
         if last.eq_ignore_ascii_case("uuid")
             || last.eq_ignore_ascii_case("uid")
@@ -161,8 +165,16 @@ impl std::fmt::Debug for What {
             (What::REMOVED, "REMOVED"),
             (What::IDENTITY, "IDENTITY"),
         ];
-        let set: Vec<&str> = names.iter().filter(|(flag, _)| self.contains(*flag)).map(|(_, name)| *name).collect();
-        if set.is_empty() { write!(f, "NONE") } else { write!(f, "{}", set.join(" | ")) }
+        let set: Vec<&str> = names
+            .iter()
+            .filter(|(flag, _)| self.contains(*flag))
+            .map(|(_, name)| *name)
+            .collect();
+        if set.is_empty() {
+            write!(f, "NONE")
+        } else {
+            write!(f, "{}", set.join(" | "))
+        }
     }
 }
 
@@ -228,10 +240,20 @@ pub enum Since {
 /// One line of the log.
 #[derive(Debug, Clone)]
 enum Entry {
-    Object { uuid: String, uri: Option<String>, what: What },
-    Datasets { file: String, paths: Vec<String> },
+    Object {
+        uuid: String,
+        uri: Option<String>,
+        what: What,
+    },
+    Datasets {
+        file: String,
+        paths: Vec<String>,
+    },
     Files,
-    Renamed { proxy: String, file: String },
+    Renamed {
+        proxy: String,
+        file: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -254,14 +276,24 @@ pub struct Revisions {
 
 impl Clone for Revisions {
     fn clone(&self) -> Self {
-        Self { inner: Mutex::new(self.lock().clone()), capacity: self.capacity }
+        Self {
+            inner: Mutex::new(self.lock().clone()),
+            capacity: self.capacity,
+        }
     }
 }
 
 impl Revisions {
     /// An empty log at revision 0, keeping at most `capacity` entries.
     pub fn new(capacity: usize) -> Self {
-        Self { inner: Mutex::new(Inner { current: 0, log: VecDeque::new(), floor: 0 }), capacity }
+        Self {
+            inner: Mutex::new(Inner {
+                current: 0,
+                log: VecDeque::new(),
+                floor: 0,
+            }),
+            capacity,
+        }
     }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, Inner> {
@@ -284,7 +316,13 @@ impl Revisions {
         // reader who saw the first of them is told about all of them — too wide,
         // never too narrow.
         if let Entry::Datasets { file, paths } = &entry
-            && let Some((last_revision, Entry::Datasets { file: last_file, paths: last_paths })) = inner.log.back_mut()
+            && let Some((
+                last_revision,
+                Entry::Datasets {
+                    file: last_file,
+                    paths: last_paths,
+                },
+            )) = inner.log.back_mut()
             && last_file == file
         {
             last_paths.extend(paths.iter().cloned());
@@ -314,7 +352,11 @@ impl Revisions {
     /// One object written, and what the gate knows of it. `uri` is the gate's
     /// spelling of the object, when it has one.
     pub fn touch_what(&self, uuid: &str, uri: Option<&str>, what: What) -> u64 {
-        self.push(Entry::Object { uuid: uuid.to_ascii_lowercase(), uri: uri.map(str::to_string), what })
+        self.push(Entry::Object {
+            uuid: uuid.to_ascii_lowercase(),
+            uri: uri.map(str::to_string),
+            what,
+        })
     }
 
     /// Datasets of `file` were written. An empty `paths` names the file as a
@@ -324,7 +366,10 @@ impl Revisions {
         if paths.is_empty() {
             paths.push(String::new());
         }
-        self.push(Entry::Datasets { file: file.to_string(), paths })
+        self.push(Entry::Datasets {
+            file: file.to_string(),
+            paths,
+        })
     }
 
     /// A part or a media relation moved.
@@ -334,7 +379,10 @@ impl Revisions {
 
     /// A proxy was given a data file name.
     pub fn note_renamed(&self, proxy: &str, file: &str) -> u64 {
-        self.push(Entry::Renamed { proxy: proxy.to_ascii_lowercase(), file: file.to_string() })
+        self.push(Entry::Renamed {
+            proxy: proxy.to_ascii_lowercase(),
+            file: file.to_string(),
+        })
     }
 
     /// Something changed that cannot be named per object — a raw part rewritten.
@@ -404,10 +452,19 @@ impl Revisions {
         if since > inner.current || since < inner.floor {
             return Since::Everything;
         }
-        let mut change = Change { from: since, to: inner.current, ..Default::default() };
+        let mut change = Change {
+            from: since,
+            to: inner.current,
+            ..Default::default()
+        };
         let mut objects: BTreeMap<String, (Option<String>, What)> = BTreeMap::new();
         let mut datasets: BTreeSet<DatasetId> = BTreeSet::new();
-        for entry in inner.log.iter().filter(|(revision, _)| *revision > since).map(|(_, entry)| entry) {
+        for entry in inner
+            .log
+            .iter()
+            .filter(|(revision, _)| *revision > since)
+            .map(|(_, entry)| entry)
+        {
             match entry {
                 Entry::Object { uuid, uri, what } => {
                     let held = objects.entry(uuid.clone()).or_insert((None, What::NONE));
@@ -418,14 +475,20 @@ impl Revisions {
                 }
                 Entry::Datasets { file, paths } => {
                     for path in paths {
-                        datasets.insert(DatasetId { file: file.clone(), path: path.clone() });
+                        datasets.insert(DatasetId {
+                            file: file.clone(),
+                            path: path.clone(),
+                        });
                     }
                 }
                 Entry::Files => change.files = true,
                 Entry::Renamed { proxy, file } => change.renamed.push((proxy.clone(), file.clone())),
             }
         }
-        change.objects = objects.into_iter().map(|(uuid, (uri, what))| ObjectChange { uuid, uri, what }).collect();
+        change.objects = objects
+            .into_iter()
+            .map(|(uuid, (uri, what))| ObjectChange { uuid, uri, what })
+            .collect();
         change.datasets = datasets.into_iter().collect();
         Since::Exact(change)
     }

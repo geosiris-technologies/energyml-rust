@@ -108,7 +108,11 @@ pub fn conformance(plan: &Plan, registry: &Registry) -> Vec<String> {
     let mut out = Vec::new();
     for object in &plan.objects {
         if let Ok(document) = energyml_core::json::read_string(&object.json.to_string(), registry) {
-            out.extend(invalid_lines(&object.title, &object.uuid, document.root.as_validate()));
+            out.extend(invalid_lines(
+                &object.title,
+                &object.uuid,
+                document.root.as_validate(),
+            ));
         }
     }
     out
@@ -117,7 +121,12 @@ pub fn conformance(plan: &Plan, registry: &Registry) -> Vec<String> {
 fn invalid_lines(what: &str, uuid: &str, object: &dyn energyml_core::validate::Validate) -> Vec<String> {
     energyml_core::validate::validate_with(object, &[])
         .errors()
-        .map(|issue| format!("{what} ({uuid}): {} at {}: {}", issue.code, issue.path, issue.message))
+        .map(|issue| {
+            format!(
+                "{what} ({uuid}): {} at {}: {}",
+                issue.code, issue.path, issue.message
+            )
+        })
         .collect()
 }
 
@@ -147,8 +156,20 @@ pub fn apply_with(plan: &Plan, store: &mut EpcStore, when: &When, arrays: bool) 
 /// Every other caller passes `None`, through [`apply`] and [`apply_with`], and
 /// writes exactly what it wrote before: the parent is the only thing this
 /// adds, and it adds it to the activity alone.
-pub fn apply_under(plan: &Plan, store: &mut EpcStore, when: &When, arrays: bool, parent: Option<&Ref>) -> Made {
-    let _span = tracing::info_span!("apply", objects = plan.objects.len(), datasets = plan.datasets.len(), arrays).entered();
+pub fn apply_under(
+    plan: &Plan,
+    store: &mut EpcStore,
+    when: &When,
+    arrays: bool,
+    parent: Option<&Ref>,
+) -> Made {
+    let _span = tracing::info_span!(
+        "apply",
+        objects = plan.objects.len(),
+        datasets = plan.datasets.len(),
+        arrays
+    )
+    .entered();
     let mut made = Made::default();
     // **What is missing for writing is refused here, and nowhere else.**
     //
@@ -165,7 +186,8 @@ pub fn apply_under(plan: &Plan, store: &mut EpcStore, when: &When, arrays: bool,
         return made;
     }
     if plan.is_empty() {
-        made.refused.push("the plan holds no object: nothing was written".to_string());
+        made.refused
+            .push("the plan holds no object: nothing was written".to_string());
         return made;
     }
     let registry = store.registry_arc();
@@ -185,7 +207,11 @@ pub fn apply_under(plan: &Plan, store: &mut EpcStore, when: &When, arrays: bool,
     //
     // And it is **before** the loop, because that is the only window in which
     // the question has an answer — afterwards, all the titles are there.
-    let writing: BTreeSet<&str> = plan.objects.iter().map(|one| one.qualified_type.as_str()).collect();
+    let writing: BTreeSet<&str> = plan
+        .objects
+        .iter()
+        .map(|one| one.qualified_type.as_str())
+        .collect();
     let looking: Vec<String> = store
         .resources()
         .into_iter()
@@ -265,14 +291,17 @@ pub fn apply_under(plan: &Plan, store: &mut EpcStore, when: &When, arrays: bool,
     // not one, an object or a part that is not there — and each refusal is
     // said here, never skipped.
     for media in &plan.media {
-        if let Err(e) = store.set_attachment(&media.path, media.bytes.clone(), Some(media.content_type.clone())) {
+        if let Err(e) =
+            store.set_attachment(&media.path, media.bytes.clone(), Some(media.content_type.clone()))
+        {
             made.refused.push(format!("{}: {e}", media.path));
             continue;
         }
         made.media.push(media.path.clone());
         for uuid in &media.related_to {
             if let Err(e) = store.relate_media(uuid, &media.path) {
-                made.refused.push(format!("{} as a media representation of {uuid}: {e}", media.path));
+                made.refused
+                    .push(format!("{} as a media representation of {uuid}: {e}", media.path));
             }
         }
     }
@@ -289,7 +318,14 @@ pub fn apply_under(plan: &Plan, store: &mut EpcStore, when: &When, arrays: bool,
     // existence — what `find_by_uuid` is for.
     if store.find_by_uuid(template_uuid).is_none() {
         match provenance::template(recipe) {
-            Ok(template) => put(store, &registry, template, "the canonical template", &mut made, false),
+            Ok(template) => put(
+                store,
+                &registry,
+                template,
+                "the canonical template",
+                &mut made,
+                false,
+            ),
             Err(why) => made.refused.push(why),
         }
     }
@@ -528,7 +564,9 @@ fn grouped_outputs(objects: &[crate::operation::NewObject]) -> Outputs<'_> {
 /// that holds none.
 fn homogeneous(objects: &[&NewObject]) -> bool {
     let Some(first) = objects.first() else { return true };
-    objects.iter().all(|one| one.qualified_type == first.qualified_type)
+    objects
+        .iter()
+        .all(|one| one.qualified_type == first.qualified_type)
 }
 
 fn put(
@@ -545,14 +583,26 @@ fn put(
             // has an answer: after `put`, the object is there in both cases. By the
             // identity of the object read — (uuid, type) —, not by its uuid: a uuid
             // held under another type is not what `put` replaces.
-            let already = energyml_core::identity::ObjectId::of_reflect(document.root.as_reflect()).is_some_and(|id| {
-                let qualified_type = id.qualified_type();
-                store.summaries_of(&id.uuid).iter().any(|held| held.qualified_type == qualified_type)
-            });
-            made.invalid.extend(invalid_lines(what, json["uuid"].as_str().unwrap_or("?"), document.root.as_validate()));
+            let already = energyml_core::identity::ObjectId::of_reflect(document.root.as_reflect())
+                .is_some_and(|id| {
+                    let qualified_type = id.qualified_type();
+                    store
+                        .summaries_of(&id.uuid)
+                        .iter()
+                        .any(|held| held.qualified_type == qualified_type)
+                });
+            made.invalid.extend(invalid_lines(
+                what,
+                json["uuid"].as_str().unwrap_or("?"),
+                document.root.as_validate(),
+            ));
             // Another version of an object the package holds stands **beside** it:
             // that is the one gate that adds a version, and nothing is replaced.
-            let written = if new_version { store.put_as_new_version(document.root) } else { store.put(document.root) };
+            let written = if new_version {
+                store.put_as_new_version(document.root)
+            } else {
+                store.put(document.root)
+            };
             match written {
                 Ok(uri) => {
                     if already && !new_version {

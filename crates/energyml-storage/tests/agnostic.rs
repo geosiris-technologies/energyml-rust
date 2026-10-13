@@ -84,7 +84,11 @@ uuid=\"{INTERP}\" schemaVersion=\"2.2\">\
     };
     vec![
         (
-            summary("resqml22.TectonicBoundaryFeature", FAULT, "TectonicBoundaryFeature"),
+            summary(
+                "resqml22.TectonicBoundaryFeature",
+                FAULT,
+                "TectonicBoundaryFeature",
+            ),
             feature,
         ),
         (
@@ -296,8 +300,8 @@ fn a_store_with_no_file_behind_it_satisfies_the_trait() {
     assert_eq!(store.store_kind(), "in-memory");
     let resources = block(store.resources()).expect("it lists");
     assert_eq!(resources.len(), 2);
-    let object = block(store.get_object(&uri("resqml22.FaultInterpretation", INTERP)))
-        .expect("it deserializes");
+    let object =
+        block(store.get_object(&uri("resqml22.FaultInterpretation", INTERP))).expect("it deserializes");
     assert_eq!(object.type_info().type_key, "FaultInterpretation");
 }
 
@@ -308,8 +312,7 @@ fn the_arrays_of_an_object_are_reachable_through_the_trait_alone() {
     // reader would have had to name `EpcStore` to get past it.
     let store = InMemory::new();
     let store: &(dyn EnergymlStorage + Sync) = &store;
-    let object =
-        block(store.get_object(&uri("resqml22.FaultInterpretation", INTERP))).expect("it reads");
+    let object = block(store.get_object(&uri("resqml22.FaultInterpretation", INTERP))).expect("it reads");
     // This interpretation holds no array; what is being tested is that the
     // question can be *asked* of the trait, not the answer.
     assert!(store.arrays_of(object.as_reflect()).is_empty());
@@ -379,8 +382,11 @@ fn the_two_paths_agree() {
             .map(|n| (n.uri.clone(), n.type_key.clone(), n.present))
             .collect();
         nodes.sort();
-        let mut edges: Vec<(String, String)> =
-            graph.edges.iter().map(|e| (e.from.clone(), e.to.clone())).collect();
+        let mut edges: Vec<(String, String)> = graph
+            .edges
+            .iter()
+            .map(|e| (e.from.clone(), e.to.clone()))
+            .collect();
         edges.sort();
         (nodes, edges)
     };
@@ -433,8 +439,7 @@ fn on_a_real_package_the_two_builders_agree() {
         let Ok(store) = energyml_storage::EpcStore::open(path, registry.clone()) else {
             continue;
         };
-        let through_the_trait =
-            block(EnergymlStorage::graph(&store, &[])).expect("the trait draws it");
+        let through_the_trait = block(EnergymlStorage::graph(&store, &[])).expect("the trait draws it");
 
         // The same thing, the way the CLI does it: read everything, walk it.
         let summaries = energyml_storage::EpcStore::resources(&store);
@@ -445,7 +450,8 @@ fn on_a_real_package_the_two_builders_agree() {
             }
         }
         let directly = energyml_storage::graph::build(
-            held.iter().map(|(summary, object)| (*summary, object.as_reflect())),
+            held.iter()
+                .map(|(summary, object)| (*summary, object.as_reflect())),
         );
 
         let mut a: Vec<(String, String, String)> = through_the_trait
@@ -472,8 +478,11 @@ fn on_a_real_package_the_two_builders_agree() {
             .iter()
             .map(|n| (n.uri.clone(), n.present))
             .collect();
-        let mut nodes_b: Vec<(String, bool)> =
-            directly.nodes.iter().map(|n| (n.uri.clone(), n.present)).collect();
+        let mut nodes_b: Vec<(String, bool)> = directly
+            .nodes
+            .iter()
+            .map(|n| (n.uri.clone(), n.present))
+            .collect();
         nodes_a.sort();
         nodes_b.sort();
         // Not identical by construction: `build` only knows the objects it was
@@ -536,8 +545,12 @@ fn the_reference_check_runs_on_an_inventory_the_caller_owns() {
 
     // And the other way: an inventory that does not hold the feature.
     let empty: std::collections::HashMap<String, &ObjectSummary> = std::collections::HashMap::new();
-    let dangling =
-        graph::check_references(interpretation, object.as_reflect(), &|uuid| empty.get(uuid).copied(), &|_| graph::Cached::Unread);
+    let dangling = graph::check_references(
+        interpretation,
+        object.as_reflect(),
+        &|uuid| empty.get(uuid).copied(),
+        &|_| graph::Cached::Unread,
+    );
     assert_eq!(dangling.len(), 1);
     assert!(dangling[0].is_error());
     assert_eq!(dangling[0].target_uuid, FAULT);

@@ -28,7 +28,12 @@ pub struct ProfileArgs {
     /// The track: a GeoJSON file (a LineString, a Feature or a collection whose
     /// first line is used) or the vertices inline, `x,y;x,y;…`. In the
     /// placement's unit.
-    #[arg(long, value_name = "FILE.geojson|x,y;x,y", allow_hyphen_values = true, required_unless_present = "from_svg")]
+    #[arg(
+        long,
+        value_name = "FILE.geojson|x,y;x,y",
+        allow_hyphen_values = true,
+        required_unless_present = "from_svg"
+    )]
     track: Option<String>,
     /// Width kept on the left of the track, read in the direction it was drawn.
     #[arg(long, value_name = "METRES", required_unless_present = "from_svg")]
@@ -130,7 +135,12 @@ pub struct ProfileArgs {
     /// default style is the solid grey a drawing always had. With a style of
     /// its own and `--strata-legend`, the legend says what it is. `--hide-unstratified`
     /// is `hidden`, and wins.
-    #[arg(long, value_name = "STYLE[:PARAM=VALUE,…]", requires = "svg", conflicts_with = "from_svg")]
+    #[arg(
+        long,
+        value_name = "STYLE[:PARAM=VALUE,…]",
+        requires = "svg",
+        conflicts_with = "from_svg"
+    )]
     unstratified: Option<String>,
     /// With `--svg`: a named marker on the objects of the section whose
     /// qualified type contains `type` (`A|B`: any) and whose title contains
@@ -138,7 +148,12 @@ pub struct ProfileArgs {
     /// `shape` is a RESQML node symbol or `contour`; `at` is `head`, `bottom` or
     /// `md` with `md=VALUE`; `size` is in pixels. Repeatable; listed in the
     /// legend of markers. A redraw (`--from-svg`) keeps what its own metadata says.
-    #[arg(long = "marker", value_name = "NAME:PARAM=VALUE,…", requires = "svg", conflicts_with = "from_svg")]
+    #[arg(
+        long = "marker",
+        value_name = "NAME:PARAM=VALUE,…",
+        requires = "svg",
+        conflicts_with = "from_svg"
+    )]
     markers: Vec<String>,
 }
 
@@ -185,7 +200,10 @@ pub fn run(args: ProfileArgs, modes: Modes) -> Result<()> {
         println!("{}", serde_json::to_string_pretty(&to_json(&answer))?);
         return Ok(());
     }
-    let system = answer.system.map(|c| format!("EPSG:{c}")).unwrap_or_else(|| "no EPSG code".into());
+    let system = answer
+        .system
+        .map(|c| format!("EPSG:{c}"))
+        .unwrap_or_else(|| "no EPSG code".into());
     println!(
         "track {:.1} long, left {} right {}; {} head(s) read, system {system}",
         answer.length, left, right, answer.heads
@@ -194,10 +212,18 @@ pub fn run(args: ProfileArgs, modes: Modes) -> Result<()> {
     for one in &answer.profile.kept {
         let signed = if one.side == Side::Left { one.d } else { -one.d };
         let side = if one.side == Side::Left { "left" } else { "right" };
-        println!("  {:<28} s {:>9.2}  d {:>8.2}  {side}", answer.title(&one.id), one.s, signed);
+        println!(
+            "  {:<28} s {:>9.2}  d {:>8.2}  {side}",
+            answer.title(&one.id),
+            one.s,
+            signed
+        );
     }
     println!("beyond an end (ignored): {}", answer.profile.beyond_an_end());
-    println!("too far on their side: {}", answer.profile.count(Reason::TooFarOnItsSide));
+    println!(
+        "too far on their side: {}",
+        answer.profile.count(Reason::TooFarOnItsSide)
+    );
     if answer.profile.count(Reason::NoPosition) > 0 {
         println!("no position: {}", answer.profile.count(Reason::NoPosition));
     }
@@ -214,15 +240,19 @@ pub fn run(args: ProfileArgs, modes: Modes) -> Result<()> {
 /// its default selection) is `energyml_section::read::package`, the
 /// calculation `compute_packages`, the drawing `draw` — and `redraw` both.
 fn draw_svg(stores: &[energyml_storage::EpcStore], args: &ProfileArgs) -> Result<()> {
+    use energyml_section::Opened;
     use energyml_section::model::{Asked, CrossWidths, Crosses, Inputs, SectionKey, Target, View};
     use energyml_section::read::{frame, package};
-    use energyml_section::Opened;
 
     let out = args.svg.as_ref().expect("`draw_svg` is called with `--svg`");
     if args.placement != "projected" {
         bail!("`--svg` draws in the projected system: leave `--placement` at `projected`");
     }
-    let listed = stores.iter().map(package::Listed::of).collect::<std::result::Result<Vec<_>, String>>().map_err(|e| anyhow!("{e}"))?;
+    let listed = stores
+        .iter()
+        .map(package::Listed::of)
+        .collect::<std::result::Result<Vec<_>, String>>()
+        .map_err(|e| anyhow!("{e}"))?;
     let mut opened: Vec<Opened<'_>> = stores
         .iter()
         .zip(&listed)
@@ -238,7 +268,11 @@ fn draw_svg(stores: &[energyml_storage::EpcStore], args: &ProfileArgs) -> Result
 
     let (svg, catalogue) = if let Some(from) = &args.from_svg {
         let text = std::fs::read_to_string(from).with_context(|| format!("reading {}", from.display()))?;
-        (energyml_section::redraw(&text, &mut opened, &backend).map_err(|e| anyhow!("{}: {e}", from.display()))?, None)
+        (
+            energyml_section::redraw(&text, &mut opened, &backend)
+                .map_err(|e| anyhow!("{}: {e}", from.display()))?,
+            None,
+        )
     } else {
         let (Some(track), Some(left), Some(right)) = (&args.track, args.left, args.right) else {
             bail!("give `--track`, `--left` and `--right`, or `--from-svg`");
@@ -252,8 +286,16 @@ fn draw_svg(stores: &[energyml_storage::EpcStore], args: &ProfileArgs) -> Result
             objects.push(Asked {
                 store: format!("s{}", at + 1),
                 revision: 0,
-                wells: if args.wells.is_empty() { wells } else { args.wells.iter().filter_map(held).collect() },
-                surfaces: if args.surfaces.is_empty() { surfaces } else { args.surfaces.iter().filter_map(held).collect() },
+                wells: if args.wells.is_empty() {
+                    wells
+                } else {
+                    args.wells.iter().filter_map(held).collect()
+                },
+                surfaces: if args.surfaces.is_empty() {
+                    surfaces
+                } else {
+                    args.surfaces.iter().filter_map(held).collect()
+                },
             });
         }
         for uri in args.wells.iter().chain(&args.surfaces) {
@@ -280,20 +322,46 @@ fn draw_svg(stores: &[energyml_storage::EpcStore], args: &ProfileArgs) -> Result
             let all: Vec<String> = asked.wells.iter().chain(&asked.surfaces).cloned().collect();
             frame::first_system(store, &all)
         });
-        let widths = CrossWidths { before: args.cross_length, after: args.cross_length, left: args.cross_width, right: args.cross_width };
+        let widths = CrossWidths {
+            before: args.cross_length,
+            after: args.cross_length,
+            left: args.cross_width,
+            right: args.cross_width,
+        };
         let crosses = match (args.cross_every, args.cross_count) {
-            (Some(spacing), _) => Crosses::Every { spacing, common: widths, own: Vec::new() },
-            (None, Some(count)) => Crosses::Count { count, common: widths, own: Vec::new() },
+            (Some(spacing), _) => Crosses::Every {
+                spacing,
+                common: widths,
+                own: Vec::new(),
+            },
+            (None, Some(count)) => Crosses::Count {
+                count,
+                common: widths,
+                own: Vec::new(),
+            },
             (None, None) => Crosses::None,
         };
-        let inputs = Inputs { trace: read_track(track)?, system, left, right, crosses, objects, time_factor: args.time_factor };
-        let catalogue = energyml_section::compute_packages(&inputs, &mut opened, &backend).map_err(|e| anyhow!("{e}"))?;
+        let inputs = Inputs {
+            trace: read_track(track)?,
+            system,
+            left,
+            right,
+            crosses,
+            objects,
+            time_factor: args.time_factor,
+        };
+        let catalogue =
+            energyml_section::compute_packages(&inputs, &mut opened, &backend).map_err(|e| anyhow!("{e}"))?;
 
         let target = match args.draw.as_str() {
-            "long" => Target::Section { key: SectionKey::Long },
+            "long" => Target::Section {
+                key: SectionKey::Long,
+            },
             "plan" => Target::Plan,
             other => match other.strip_prefix("cross:").and_then(|n| n.parse().ok()) {
-                Some(index) => Target::Section { key: SectionKey::Cross { index } },
+                Some(index) => Target::Section {
+                    key: SectionKey::Cross { index },
+                },
                 None => bail!("`--draw {other}`: one of long, plan, cross:N"),
             },
         };
@@ -308,7 +376,8 @@ fn draw_svg(stores: &[energyml_storage::EpcStore], args: &ProfileArgs) -> Result
         view.strata_ticks = args.strata_ticks;
         view.draw_unstratified = !args.hide_unstratified;
         if let Some(text) = &args.unstratified {
-            view.unstratified = energyml_section::style::parse(text).map_err(|why| anyhow!("`--unstratified {text}`: {why}"))?;
+            view.unstratified = energyml_section::style::parse(text)
+                .map_err(|why| anyhow!("`--unstratified {text}`: {why}"))?;
         }
         view.labels = match args.labels.as_str() {
             "full" => energyml_section::model::LabelMode::Full,
@@ -337,7 +406,11 @@ fn draw_svg(stores: &[energyml_storage::EpcStore], args: &ProfileArgs) -> Result
         println!("{}: drawn again from its metadata", out.display());
         return Ok(());
     };
-    let drawn = catalogue.objects.iter().filter(|row| matches!(row.outcome, energyml_section::model::Outcome::Drawn { .. })).count();
+    let drawn = catalogue
+        .objects
+        .iter()
+        .filter(|row| matches!(row.outcome, energyml_section::model::Outcome::Drawn { .. }))
+        .count();
     println!(
         "{}: {} of {} object(s) drawn, {} cross section(s), {} note(s)",
         out.display(),
@@ -387,7 +460,8 @@ fn read_track(spec: &str) -> Result<Vec<[f64; 2]>> {
     let path = PathBuf::from(spec);
     if path.is_file() {
         let text = std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
-        let json: Value = serde_json::from_str(&text).with_context(|| format!("{} is not JSON", path.display()))?;
+        let json: Value =
+            serde_json::from_str(&text).with_context(|| format!("{} is not JSON", path.display()))?;
         return track_of_geojson(&json);
     }
     track_of_inline(spec)
@@ -402,8 +476,12 @@ fn track_of_inline(spec: &str) -> Result<Vec<[f64; 2]>> {
                 .split_once(',')
                 .ok_or_else(|| anyhow!("vertex `{vertex}`: expected `x,y`"))?;
             Ok([
-                x.trim().parse().with_context(|| format!("vertex `{vertex}`: x"))?,
-                y.trim().parse().with_context(|| format!("vertex `{vertex}`: y"))?,
+                x.trim()
+                    .parse()
+                    .with_context(|| format!("vertex `{vertex}`: x"))?,
+                y.trim()
+                    .parse()
+                    .with_context(|| format!("vertex `{vertex}`: y"))?,
             ])
         })
         .collect()
@@ -445,7 +523,10 @@ mod tests {
 
     #[test]
     fn the_inline_track_is_pairs() {
-        assert_eq!(track_of_inline("0,0; 10,5.5").unwrap(), vec![[0.0, 0.0], [10.0, 5.5]]);
+        assert_eq!(
+            track_of_inline("0,0; 10,5.5").unwrap(),
+            vec![[0.0, 0.0], [10.0, 5.5]]
+        );
         assert!(track_of_inline("0,0;3").is_err());
     }
 
@@ -454,7 +535,10 @@ mod tests {
         let collection = json!({"type":"FeatureCollection","features":[
             {"type":"Feature","geometry":{"type":"Point","coordinates":[1,1]}},
             {"type":"Feature","geometry":{"type":"LineString","coordinates":[[0,0,5],[3,4]]}}]});
-        assert_eq!(track_of_geojson(&collection).unwrap(), vec![[0.0, 0.0], [3.0, 4.0]]);
+        assert_eq!(
+            track_of_geojson(&collection).unwrap(),
+            vec![[0.0, 0.0], [3.0, 4.0]]
+        );
         let polygon = json!({"type":"Polygon","coordinates":[]});
         assert!(track_of_geojson(&polygon).is_err());
     }

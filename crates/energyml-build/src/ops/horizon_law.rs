@@ -187,12 +187,21 @@ pub struct HorizonLawInputs {
 
 /// A count, as the activity records it.
 fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double { title: title.to_string(), value, uom: None }
+    Parameter::Double {
+        title: title.to_string(),
+        value,
+        uom: None,
+    }
 }
 
 /// The title the object behind a shape carries, or the shape's name.
 fn title_of(shape: &Shape) -> String {
-    shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.title.clone()).unwrap_or_else(|| shape.name.clone())
+    shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|r| r.title.clone())
+        .unwrap_or_else(|| shape.name.clone())
 }
 
 /// The counts of a grid shape — `[ni, nj]` — or why it is none a law is laid
@@ -212,10 +221,15 @@ fn grid_counts(geometry: &Geometry) -> Result<[usize; 2], String> {
     };
     let (ni, nj) = (*fastest, *slowest);
     if ni < 2 || nj < 2 {
-        return Err(format!("is a grid of {ni} × {nj} nodes: a lattice has at least 2 along each axis"));
+        return Err(format!(
+            "is a grid of {ni} × {nj} nodes: a lattice has at least 2 along each axis"
+        ));
     }
     if patch.points.len() != ni * nj {
-        return Err(format!("declares {ni} × {nj} nodes and holds {}", patch.points.len()));
+        return Err(format!(
+            "declares {ni} × {nj} nodes and holds {}",
+            patch.points.len()
+        ));
     }
     Ok([ni, nj])
 }
@@ -269,7 +283,12 @@ fn lattice_of(geometry: &Geometry) -> Result<LatticeRead, String> {
 fn law_words(law: &Law, unit: &str) -> String {
     match *law {
         Law::Parallel { thickness } => format!("{thickness} {unit}, the same everywhere"),
-        Law::Linear { thickness, anchor, azimuth, gradient } => format!(
+        Law::Linear {
+            thickness,
+            anchor,
+            azimuth,
+            gradient,
+        } => format!(
             "{thickness} {unit} at ({}, {}), changing by {gradient} {unit} per unit of horizontal distance toward {azimuth}° from grid north",
             anchor[0], anchor[1]
         ),
@@ -301,7 +320,9 @@ impl Operation for HorizonFromLaw {
                 slot.from = None;
             }
         }
-        let Some(known) = known_of(bag, "reference") else { return };
+        let Some(known) = known_of(bag, "reference") else {
+            return;
+        };
         // The reference's frame, whatever the cuts name: the law is laid in it.
         if let Some(crs) = &known.crs {
             slots.inferred("crs", crs.dor(), crs.clone());
@@ -328,9 +349,15 @@ impl Operation for HorizonFromLaw {
         Ok(())
     }
 
-    fn plan(&self, inputs: HorizonLawInputs, params: HorizonLawParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: HorizonLawInputs,
+        params: HorizonLawParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let HorizonLawInputs { reference, cuts } = inputs;
-        let (origin, spacing, counts) = lattice_of(&reference.geometry).map_err(|why| Refusal::on("reference", why))?;
+        let (origin, spacing, counts) =
+            lattice_of(&reference.geometry).map_err(|why| Refusal::on("reference", why))?;
 
         // -- the source, before anything is laid -------------------------------
         let source = params.source.trim().to_string();
@@ -350,7 +377,9 @@ impl Operation for HorizonFromLaw {
         {
             return Err(Refusal::on(
                 "reference",
-                format!("counts its heights in `{unit}`, a time: a thickness is a length — convert the reference to depth first"),
+                format!(
+                    "counts its heights in `{unit}`, a time: a thickness is a length — convert the reference to depth first"
+                ),
             ));
         }
         for cut in &cuts {
@@ -373,14 +402,22 @@ impl Operation for HorizonFromLaw {
             {
                 return Err(Refusal::new(
                     "units",
-                    format!("`reference` counts its heights in `{a}` and the cut `{}` in `{b}` — one unit, or no comparison", title_of(cut)),
+                    format!(
+                        "`reference` counts its heights in `{a}` and the cut `{}` in `{b}` — one unit, or no comparison",
+                        title_of(cut)
+                    ),
                 ));
             }
         }
         if let Some(frame) = frame {
             match (&params.written.frame.crs, params.written.frame.source_epsg) {
                 (Some(named), _) => {
-                    let uuid = named.0.get("Uuid").and_then(|v| v.as_str()).or_else(|| named.0.as_str()).unwrap_or_default();
+                    let uuid = named
+                        .0
+                        .get("Uuid")
+                        .and_then(|v| v.as_str())
+                        .or_else(|| named.0.as_str())
+                        .unwrap_or_default();
                     if !uuid.eq_ignore_ascii_case(&frame.uuid) {
                         return Err(Refusal::on(
                             "crs",
@@ -406,7 +443,9 @@ impl Operation for HorizonFromLaw {
 
         // -- the law, laid ---------------------------------------------------------
         let law = match &params.law {
-            LawParams::Parallel => Law::Parallel { thickness: params.thickness },
+            LawParams::Parallel => Law::Parallel {
+                thickness: params.thickness,
+            },
             LawParams::Linear(linear) => Law::Linear {
                 thickness: params.thickness,
                 anchor: [linear.anchor_x, linear.anchor_y],
@@ -425,14 +464,26 @@ impl Operation for HorizonFromLaw {
         let faces: Vec<support::Faces> = cuts.iter().map(|cut| support::Faces::of(&cut.geometry)).collect();
         let surfaces: Vec<analysis::Surface<'_>> = faces.iter().map(|one| one.surface()).collect();
         cx.stop_if_cancelled()?;
-        let laid = analysis::lay(&reference.geometry.patches[0].points, &law, side, up, &surfaces).map_err(|why| match &why {
-            analysis::LawError::Cut { .. } => Refusal::on("cuts", why.to_string()),
-            analysis::LawError::Negative { .. } => Refusal::on("gradient", why.to_string()),
-            analysis::LawError::NotFinite { .. } => Refusal::on("law", why.to_string()),
-            analysis::LawError::BadThickness { .. } | analysis::LawError::ZeroThickness => Refusal::on("thickness", why.to_string()),
-        })?;
+        let laid = analysis::lay(&reference.geometry.patches[0].points, &law, side, up, &surfaces).map_err(
+            |why| match &why {
+                analysis::LawError::Cut { .. } => Refusal::on("cuts", why.to_string()),
+                analysis::LawError::Negative { .. } => Refusal::on("gradient", why.to_string()),
+                analysis::LawError::NotFinite { .. } => Refusal::on("law", why.to_string()),
+                analysis::LawError::BadThickness { .. } | analysis::LawError::ZeroThickness => {
+                    Refusal::on("thickness", why.to_string())
+                }
+            },
+        )?;
         cx.stop_if_cancelled()?;
-        let analysis::Laid { z, holes, eroded, folded, beyond, set_aside, range } = laid;
+        let analysis::Laid {
+            z,
+            holes,
+            eroded,
+            folded,
+            beyond,
+            set_aside,
+            range,
+        } = laid;
         if !z.iter().any(|one| one.is_finite()) {
             // A grid of holes would read as a horizon with nothing to show —
             // the case that looks most like a success.
@@ -447,21 +498,35 @@ impl Operation for HorizonFromLaw {
 
         // -- the writing is `grid`'s -------------------------------------------------
         let reference_title = title_of(&reference);
-        let reference_key = known.and_then(|k| k.reference.as_ref()).map(|r| r.uuid.clone()).unwrap_or_else(|| reference.name.clone());
+        let reference_key = known
+            .and_then(|k| k.reference.as_ref())
+            .map(|r| r.uuid.clone())
+            .unwrap_or_else(|| reference.name.clone());
         let title = params.written.naming.title();
         let name = format!("horizon-from-law of {}", reference.name);
         let seed = format!("horizon-from-law:{reference_key}:{title}");
-        let lattice = Lattice { origin, spacing, counts, z };
+        let lattice = Lattice {
+            origin,
+            spacing,
+            counts,
+            z,
+        };
         let mut plan = super::grid::write(&name, &lattice, &params.written, &seed, cx)?;
 
         // What the grid says of itself: laid, not measured, and from what.
-        let unit_word = unit.clone().unwrap_or_else(|| "(the unit of the reference's heights)".to_string());
+        let unit_word = unit
+            .clone()
+            .unwrap_or_else(|| "(the unit of the reference's heights)".to_string());
         let side_word = params.side.word();
         let cut_titles: Vec<String> = cuts.iter().map(title_of).collect();
         let stated = law_words(&law, &unit_word);
         let description = format!(
             "Laid by a law, not measured: {stated}, {side_word} `{reference_title}`, measured vertically{}. Source of the thickness: {source}",
-            if cut_titles.is_empty() { String::new() } else { format!(", cut by `{}`", cut_titles.join("`, `")) }
+            if cut_titles.is_empty() {
+                String::new()
+            } else {
+                format!(", cut by `{}`", cut_titles.join("`, `"))
+            }
         );
         // `Citation/Description` holds 2000 characters (eml 2.3 `Citation`,
         // `DescriptionString`): refused rather than cut short, since a source
@@ -475,7 +540,11 @@ impl Operation for HorizonFromLaw {
                 ),
             ));
         }
-        if let Some(object) = plan.objects.iter_mut().find(|object| object.role == "representation") {
+        if let Some(object) = plan
+            .objects
+            .iter_mut()
+            .find(|object| object.role == "representation")
+        {
             object.json["Citation"]["Description"] = json!(description);
             // The reference-model rule on invented objects (ADR-0019): an
             // `ExtensionNameValue` `synthetic = true` and a sentence in `Citation/Description`
@@ -492,16 +561,29 @@ impl Operation for HorizonFromLaw {
         plan.activity.title = format!("horizon-from-law → {title}");
         // The thickness **with its unit**, which the registry could not know:
         // it is the reference's, read off its frame.
-        plan.activity.parameters.push(Parameter::Double { title: "thickness".to_string(), value: params.thickness, uom: unit.clone() });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "thickness".to_string(),
+            value: params.thickness,
+            uom: unit.clone(),
+        });
         plan.activity.parameters.push(double("holeCount", holes as f64));
-        plan.activity.parameters.push(double("erodedCount", eroded as f64));
-        plan.activity.parameters.push(double("foldedCount", folded as f64));
+        plan.activity
+            .parameters
+            .push(double("erodedCount", eroded as f64));
+        plan.activity
+            .parameters
+            .push(double("foldedCount", folded as f64));
         if !cuts.is_empty() {
-            plan.activity.parameters.push(double("beyondCutsCount", beyond as f64));
+            plan.activity
+                .parameters
+                .push(double("beyondCutsCount", beyond as f64));
         }
 
         let mut say = |key: &'static str, detail: String| plan.says.push(Note { key, detail });
-        say("law", format!("{stated}, {side_word} `{reference_title}` — source: {source}"));
+        say(
+            "law",
+            format!("{stated}, {side_word} `{reference_title}` — source: {source}"),
+        );
         say(
             "vertical-thickness",
             "the thickness is laid vertically, as an isochore: where the reference dips, the thickness across the beds is the vertical one times the cosine of the dip".to_string(),
@@ -511,24 +593,49 @@ impl Operation for HorizonFromLaw {
             "the horizon is laid, not measured: it carries `synthetic = true` and a description of its law and its source".to_string(),
         );
         if let (Law::Linear { .. }, Some([low, high])) = (&law, range) {
-            say("thickness-range", format!("the thickness laid runs from {low} to {high} {unit_word} over the nodes kept"));
+            say(
+                "thickness-range",
+                format!("the thickness laid runs from {low} to {high} {unit_word} over the nodes kept"),
+            );
         }
         if holes > 0 {
-            say("reference-holes", format!("{holes} node(s) of `{reference_title}` have no height: the law has nothing to stand on there — holes"));
+            say(
+                "reference-holes",
+                format!(
+                    "{holes} node(s) of `{reference_title}` have no height: the law has nothing to stand on there — holes"
+                ),
+            );
         }
         if eroded > 0 {
-            say("eroded", format!("{eroded} node(s) lie above a cut: eroded, written as holes — the horizon stops at the erosion surface, it does not follow it"));
+            say(
+                "eroded",
+                format!(
+                    "{eroded} node(s) lie above a cut: eroded, written as holes — the horizon stops at the erosion surface, it does not follow it"
+                ),
+            );
         }
         if folded > 0 {
-            say("folded", format!("{folded} node(s) lie under a folded cut, whose sheets disagree: which one erodes is not a numerical choice — holes"));
+            say(
+                "folded",
+                format!(
+                    "{folded} node(s) lie under a folded cut, whose sheets disagree: which one erodes is not a numerical choice — holes"
+                ),
+            );
         }
         if beyond > 0 {
-            say("beyond-cuts", format!("{beyond} node(s) have no cut over or under them: nothing erodes them there, and they are kept"));
+            say(
+                "beyond-cuts",
+                format!(
+                    "{beyond} node(s) have no cut over or under them: nothing erodes them there, and they are kept"
+                ),
+            );
         }
         if set_aside > 0 {
             say(
                 "set-aside",
-                format!("{set_aside} face(s) of the cuts set aside: a corner with no height (a hole of a cut), no area in plan, or a cell that is not convex"),
+                format!(
+                    "{set_aside} face(s) of the cuts set aside: a corner with no height (a hole of a cut), no area in plan, or a cell that is not convex"
+                ),
             );
         }
         Ok(plan)
@@ -539,18 +646,36 @@ impl Operation for HorizonFromLaw {
     /// be both.
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
-            Slot::required(name, Need::Number { uom: None, least: None, most: None }, about)
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
         };
         support::frame_reports(vec![
             count("nodeCount", "nodes written"),
             count("fastestAxisCount", "nodes along x"),
             count("slowestAxisCount", "nodes along y"),
-            count("holeCount", "nodes of the reference with no height — holes of the new horizon too"),
+            count(
+                "holeCount",
+                "nodes of the reference with no height — holes of the new horizon too",
+            ),
             count("erodedCount", "nodes a cut lies below — eroded, written as holes"),
-            count("foldedCount", "nodes under a folded cut — undecided, written as holes"),
+            count(
+                "foldedCount",
+                "nodes under a folded cut — undecided, written as holes",
+            ),
             Slot::optional(
                 "beyondCutsCount",
-                Need::Number { uom: None, least: None, most: None },
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
                 "nodes no cut lies over or under — nothing erodes them; with cuts only",
             ),
         ])

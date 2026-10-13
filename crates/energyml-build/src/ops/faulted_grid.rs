@@ -115,17 +115,31 @@ pub struct FaultedGridInputs {
 
 /// A count or a length, as the activity records it.
 fn double(title: &str, value: f64, uom: Option<&str>) -> Parameter {
-    Parameter::Double { title: title.to_string(), value, uom: uom.map(str::to_string) }
+    Parameter::Double {
+        title: title.to_string(),
+        value,
+        uom: uom.map(str::to_string),
+    }
 }
 
 /// What names a shape in a message: its object's title, or its name in the bag.
 fn name_of(shape: &Shape) -> String {
-    shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|one| one.title.clone()).unwrap_or_else(|| shape.name.clone())
+    shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|one| one.title.clone())
+        .unwrap_or_else(|| shape.name.clone())
 }
 
 /// The key a fault enters the seed by: its uuid, or its name in the bag.
 fn key_of(shape: &Shape) -> String {
-    shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|one| one.uuid.to_ascii_lowercase()).unwrap_or_else(|| shape.name.clone())
+    shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|one| one.uuid.to_ascii_lowercase())
+        .unwrap_or_else(|| shape.name.clone())
 }
 
 /// A triangulated surface: its nodes and its triangles.
@@ -137,7 +151,9 @@ fn surface_of(shape: &Shape) -> Option<Surface> {
     let mut points = Vec::new();
     let mut triangles = Vec::new();
     for patch in &shape.geometry.patches {
-        let Topology::Triangles(faces) = &patch.topology else { continue };
+        let Topology::Triangles(faces) = &patch.topology else {
+            continue;
+        };
         let base = points.len() as u32;
         points.extend(patch.points.iter().copied());
         triangles.extend(faces.iter().map(|f| [f[0] + base, f[1] + base, f[2] + base]));
@@ -185,14 +201,22 @@ impl Operation for FaultedIjkGrid {
             if surface_of(fault).is_none() {
                 return Err(Refusal::on(
                     "faults",
-                    format!("`{}` is not a triangulated surface — where a fault runs through the grid is read on its surface", name_of(fault)),
+                    format!(
+                        "`{}` is not a triangulated surface — where a fault runs through the grid is read on its surface",
+                        name_of(fault)
+                    ),
                 ));
             }
         }
         Ok(())
     }
 
-    fn plan(&self, inputs: FaultedGridInputs, params: FaultedGridParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: FaultedGridInputs,
+        params: FaultedGridParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let FaultedGridInputs { horizons, faults } = inputs;
         let count = faults.len();
         let names: Vec<String> = faults.iter().map(name_of).collect();
@@ -201,16 +225,28 @@ impl Operation for FaultedIjkGrid {
         if params.maximum_throw.len() != count {
             return Err(Refusal::on(
                 "maximumThrow",
-                format!("{} throw(s) for {count} fault(s) — one per fault, in the order of `faults`", params.maximum_throw.len()),
+                format!(
+                    "{} throw(s) for {count} fault(s) — one per fault, in the order of `faults`",
+                    params.maximum_throw.len()
+                ),
             ));
         }
         if params.throw.len() != count {
-            return Err(Refusal::on("throw", format!("{} kind(s) of throw for {count} fault(s) — one per fault, in the order of `faults`", params.throw.len())));
+            return Err(Refusal::on(
+                "throw",
+                format!(
+                    "{} kind(s) of throw for {count} fault(s) — one per fault, in the order of `faults`",
+                    params.throw.len()
+                ),
+            ));
         }
         if !params.dead_columns.is_empty() && params.dead_columns.len() != count {
             return Err(Refusal::on(
                 "deadColumns",
-                format!("{} count(s) for {count} fault(s) — one per fault, in the order of `faults`, or none", params.dead_columns.len()),
+                format!(
+                    "{} count(s) for {count} fault(s) — one per fault, in the order of `faults`, or none",
+                    params.dead_columns.len()
+                ),
             ));
         }
         let mut senses: Vec<Sense> = Vec::with_capacity(count);
@@ -229,7 +265,12 @@ impl Operation for FaultedIjkGrid {
                 }
             });
         }
-        let source = params.source.as_deref().map(str::trim).filter(|one| !one.is_empty()).map(str::to_string);
+        let source = params
+            .source
+            .as_deref()
+            .map(str::trim)
+            .filter(|one| !one.is_empty())
+            .map(str::to_string);
         if params.synthetic && source.is_none() {
             return Err(Refusal::on(
                 "source",
@@ -247,10 +288,15 @@ impl Operation for FaultedIjkGrid {
         }
 
         // -- one frame: the faults' is the horizons' -----------------------------------------
-        let horizon_frame = horizons.first().and_then(|shape| shape.known.as_ref()).and_then(|known| known.crs.clone());
+        let horizon_frame = horizons
+            .first()
+            .and_then(|shape| shape.known.as_ref())
+            .and_then(|known| known.crs.clone());
         for (fault, name) in faults.iter().zip(&names) {
-            if let (Some(own), Some(theirs)) = (&horizon_frame, fault.known.as_ref().and_then(|known| known.crs.as_ref()))
-                && !own.uuid.eq_ignore_ascii_case(&theirs.uuid)
+            if let (Some(own), Some(theirs)) = (
+                &horizon_frame,
+                fault.known.as_ref().and_then(|known| known.crs.as_ref()),
+            ) && !own.uuid.eq_ignore_ascii_case(&theirs.uuid)
             {
                 return Err(Refusal::on(
                     "faults",
@@ -280,7 +326,10 @@ impl Operation for FaultedIjkGrid {
         {
             return Err(Refusal::on(
                 "source",
-                format!("makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter", text.chars().count()),
+                format!(
+                    "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                    text.chars().count()
+                ),
             ));
         }
 
@@ -302,7 +351,10 @@ impl Operation for FaultedIjkGrid {
         );
 
         // -- the cut ------------------------------------------------------------------------------
-        let surfaces: Vec<Surface> = faults.iter().map(|fault| surface_of(fault).unwrap_or_default()).collect();
+        let surfaces: Vec<Surface> = faults
+            .iter()
+            .map(|fault| surface_of(fault).unwrap_or_default())
+            .collect();
         let profile = params.profile;
         let reach = params.reach;
         let maximum = params.maximum_throw.clone();
@@ -310,13 +362,18 @@ impl Operation for FaultedIjkGrid {
         let layers_asked = params.dead_layers.clone();
         let synthetic = params.synthetic;
         let fault_names = names.clone();
-        let cut = move |stacked: &energyml_analysis::ijk::Stacked, pillars: &[[f64; 2]], unit: Option<&str>| -> Result<Cut, Refusal> {
+        let cut = move |stacked: &energyml_analysis::ijk::Stacked,
+                        pillars: &[[f64; 2]],
+                        unit: Option<&str>|
+              -> Result<Cut, Refusal> {
             match unit {
                 Some("m") => {}
                 Some(other) => {
                     return Err(Refusal::on(
                         "maximumThrow",
-                        format!("the horizons count their heights in `{other}`, and a throw and a reach are given in metres — no conversion is made"),
+                        format!(
+                            "the horizons count their heights in `{other}`, and a throw and a reach are given in metres — no conversion is made"
+                        ),
                     ));
                 }
                 None => {
@@ -340,7 +397,11 @@ impl Operation for FaultedIjkGrid {
                     dead_columns: dead_per_fault.get(at).copied().unwrap_or(0),
                 })
                 .collect();
-            let settings = Settings { profile: profile.computed(), reach, dead_layers: &layers_asked };
+            let settings = Settings {
+                profile: profile.computed(),
+                reach,
+                dead_layers: &layers_asked,
+            };
             let faulted = ijk_faults::cut(stacked, pillars, &cut_faults, &settings).map_err(refusal)?;
 
             let mut says = Vec::new();
@@ -361,7 +422,10 @@ impl Operation for FaultedIjkGrid {
                     faulted.lines
                 ),
             });
-            says.push(Note { key: "law", detail: law.clone() });
+            says.push(Note {
+                key: "law",
+                detail: law.clone(),
+            });
             says.push(Note {
                 key: "staircase",
                 detail: "the pillars are vertical, so each fault runs through the grid as a vertical staircase along the column faces, placed by its trace at the middle of the heights it shares with the grid; its dip is not followed".to_string(),
@@ -400,10 +464,23 @@ impl Operation for FaultedIjkGrid {
                     detail: "the throw is invented: the grid carries `synthetic = true` and a description of its law and its source".to_string(),
                 });
             }
-            Ok(Cut { faulted, says, parameters })
+            Ok(Cut {
+                faulted,
+                says,
+                parameters,
+            })
         };
 
-        let mut plan = ijk_grid::between(horizons, params.grid, cx, Some(Faulting { recipe: "faulted-ijk-grid", seed, cut: Box::new(cut) }))?;
+        let mut plan = ijk_grid::between(
+            horizons,
+            params.grid,
+            cx,
+            Some(Faulting {
+                recipe: "faulted-ijk-grid",
+                seed,
+                cut: Box::new(cut),
+            }),
+        )?;
 
         // -- the mark of an invented throw -------------------------------------------------------
         if let Some(text) = description
@@ -427,8 +504,24 @@ impl Operation for FaultedIjkGrid {
     /// and the level each fault was traced at — one per fault, so a list.
     fn reports(&self) -> Vec<Slot> {
         let mut own = ijk_grid::grid_reports();
-        own.push(Slot::required("splitLineCount", Need::Number { uom: None, least: None, most: None }, "split coordinate lines — extra lines on the pillars a fault runs through"));
-        own.push(Slot::required("deadCellCount", Need::Number { uom: None, least: None, most: None }, "cells next to a fault removed — CellGeometryIsDefined false"));
+        own.push(Slot::required(
+            "splitLineCount",
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
+            "split coordinate lines — extra lines on the pillars a fault runs through",
+        ));
+        own.push(Slot::required(
+            "deadCellCount",
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
+            "cells next to a fault removed — CellGeometryIsDefined false",
+        ));
         own.push(Slot {
             most: None,
             ..Slot::required("traceLevel", Need::Number { uom: None, least: None, most: None }, "the height each fault is traced at, in the order of `faults` — the middle of the heights it shares with the grid")

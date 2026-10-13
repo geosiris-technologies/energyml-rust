@@ -50,17 +50,30 @@ fn one_line(shape: &Shape) -> Result<(Vec<[f64; 3]>, bool), Refusal> {
     let mut found: Option<(Vec<[f64; 3]>, bool)> = None;
     let mut global = 0usize;
     for patch in &shape.geometry.patches {
-        let Topology::Polylines(runs) = &patch.topology else { continue };
+        let Topology::Polylines(runs) = &patch.topology else {
+            continue;
+        };
         let mut start = 0usize;
         for (local, &run) in runs.iter().enumerate() {
             let run = run as usize;
             if found.is_some() {
                 return Err(Refusal::on(
                     "lines",
-                    format!("`{}` holds several polylines — give one per input, in order, rather than pairing them in an order nothing guarantees", shape.name),
+                    format!(
+                        "`{}` holds several polylines — give one per input, in order, rather than pairing them in an order nothing guarantees",
+                        shape.name
+                    ),
                 ));
             }
-            let points = patch.points.get(start..start + run).ok_or_else(|| Refusal::on("lines", format!("`{}`: the polylines add up to more nodes than the patch holds", shape.name)))?;
+            let points = patch.points.get(start..start + run).ok_or_else(|| {
+                Refusal::on(
+                    "lines",
+                    format!(
+                        "`{}`: the polylines add up to more nodes than the patch holds",
+                        shape.name
+                    ),
+                )
+            })?;
             let closed = said_closed(patch, local, shape.closed.as_deref(), global).unwrap_or(false);
             found = Some((points.to_vec(), closed));
             start += run;
@@ -102,7 +115,11 @@ impl Operation for Loft {
             .lines
             .iter()
             .zip(&read)
-            .map(|(shape, (points, closed))| LoftLine { name: &shape.name, points, closed: *closed })
+            .map(|(shape, (points, closed))| LoftLine {
+                name: &shape.name,
+                points,
+                closed: *closed,
+            })
             .collect();
         let made = loft(&lines).map_err(|why| Refusal::on("lines", why))?;
 
@@ -111,7 +128,11 @@ impl Operation for Loft {
             if turn > 0 {
                 says.push(Note {
                     key: "turned",
-                    detail: format!("the ring `{}` was turned by {turn} vertex(es) so that its start meets `{}`'s", lines[at + 1].name, lines[at].name),
+                    detail: format!(
+                        "the ring `{}` was turned by {turn} vertex(es) so that its start meets `{}`'s",
+                        lines[at + 1].name,
+                        lines[at].name
+                    ),
                 });
             }
         }
@@ -120,7 +141,13 @@ impl Operation for Loft {
             name: "loft".to_string(),
             geometry: Geometry {
                 kind: "loft",
-                patches: vec![Patch { index: 0, node_offset: 0, points: made.points, topology: Topology::Triangles(made.triangles), closed: Vec::new() }],
+                patches: vec![Patch {
+                    index: 0,
+                    node_offset: 0,
+                    points: made.points,
+                    topology: Topology::Triangles(made.triangles),
+                    closed: Vec::new(),
+                }],
             },
             closed: None,
             known: inputs.lines[0].known.clone(),
@@ -128,15 +155,32 @@ impl Operation for Loft {
         let title = params.written.naming.title();
         let names: Vec<&str> = lines.iter().map(|line| line.name).collect();
         let seed = format!("loft:{}:{title}", names.join("|"));
-        let mut plan = super::triangles::write(&TrianglesInputs { shape: vec![result] }, &params.written, &seed, cx)?;
+        let mut plan = super::triangles::write(
+            &TrianglesInputs { shape: vec![result] },
+            &params.written,
+            &seed,
+            cx,
+        )?;
         plan.activity.recipe = "loft";
         plan.activity.title = format!("loft → {title}");
-        plan.activity.parameters.push(Parameter::Double { title: "bandTriangles".to_string(), value: triangles as f64, uom: None });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "bandTriangles".to_string(),
+            value: triangles as f64,
+            uom: None,
+        });
         plan.says.extend(says);
         Ok(plan)
     }
 
     fn reports(&self) -> Vec<Slot> {
-        support::frame_reports(vec![Slot::required("bandTriangles", Need::Number { uom: None, least: None, most: None }, "triangles between the lines")])
+        support::frame_reports(vec![Slot::required(
+            "bandTriangles",
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
+            "triangles between the lines",
+        )])
     }
 }

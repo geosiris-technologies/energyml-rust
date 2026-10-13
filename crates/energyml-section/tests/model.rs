@@ -1,19 +1,25 @@
 //! The catalogue's format travels as JSON (ADR-0015): what goes
 //! out must come back unchanged, in the camelCase the front end reads.
 
-use energyml_section::model::{
-    Asked, CrossWidths, Crosses, Inputs, SectionKey, System, object_key,
-};
+use energyml_section::model::{Asked, CrossWidths, Crosses, Inputs, SectionKey, System, object_key};
 
 fn inputs() -> Inputs {
     Inputs {
         trace: vec![[0.0, 0.0], [100.0, 0.0], [100.0, 50.0]],
-        system: Some(System { epsg: 2154, unit: "m".to_string() }),
+        system: Some(System {
+            epsg: 2154,
+            unit: "m".to_string(),
+        }),
         left: 20.0,
         right: 35.0,
         crosses: Crosses::Every {
             spacing: 25.0,
-            common: CrossWidths { before: 40.0, after: 60.0, left: 5.0, right: 5.0 },
+            common: CrossWidths {
+                before: 40.0,
+                after: 60.0,
+                left: 5.0,
+                right: 5.0,
+            },
             own: Vec::new(),
         },
         objects: vec![Asked {

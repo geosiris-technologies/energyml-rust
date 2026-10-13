@@ -45,8 +45,8 @@ use energyml_core::value::OwnedValue;
 
 use crate::error::{Error, Result};
 
-use crate::array::locate;
 use crate::EpcStore;
+use crate::array::locate;
 
 /// What renaming a data file would touch, and what it refuses.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -136,15 +136,13 @@ pub fn plan(store: &EpcStore, from: &str, to: &str) -> Rename {
             .push(format!("`{to}` is the name the file already has"));
     }
     if from.trim().is_empty() {
-        out.refusals
-            .push("no file was named to rename".to_string());
+        out.refusals.push("no file was named to rename".to_string());
     }
 
     let (objects, unreadable) = store.read_objects(None);
     for name in unreadable {
-        out.refusals.push(format!(
-            "{name} — so this cannot tell whether it names `{from}`"
-        ));
+        out.refusals
+            .push(format!("{name} — so this cannot tell whether it names `{from}`"));
     }
 
     for (summary, object) in &objects {

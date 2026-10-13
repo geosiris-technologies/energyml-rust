@@ -26,9 +26,7 @@ use std::sync::Arc;
 use energyml_core::registry::{DynObject, Registry};
 use energyml_core::value::Reflect;
 use energyml_domain::source::{ArraySource, ObjectSource, Prefetched};
-use energyml_storage::array::{
-    ArrayData, ArrayLocation, ArrayMetadata, ArrayValues, NoProxies, locate_with,
-};
+use energyml_storage::array::{ArrayData, ArrayLocation, ArrayMetadata, ArrayValues, NoProxies, locate_with};
 use energyml_storage::error::{Diagnostic, Error, Result};
 use energyml_storage::resource::{Dataspace, ObjectHeader, ObjectSummary};
 use energyml_storage::storage::EnergymlStorage;
@@ -357,11 +355,10 @@ fn reading_into_a_buffer_refuses_a_type_that_does_not_match() {
 
     // A buffer of the wrong type does not take the bytes and pretend.
     let mut wrong = vec![0i32; 6];
-    let message =
-        match ArraySource::read_into(&cache, &locations[0], &mut ArrayBuffer::I32(&mut wrong)) {
-            Err(e) => e.to_string(),
-            Ok(_) => panic!("doubles must not be poured into a buffer of int32"),
-        };
+    let message = match ArraySource::read_into(&cache, &locations[0], &mut ArrayBuffer::I32(&mut wrong)) {
+        Err(e) => e.to_string(),
+        Ok(_) => panic!("doubles must not be poured into a buffer of int32"),
+    };
     assert!(
         message.contains("double") && message.contains("int32"),
         "the refusal names both types: {message}"
@@ -398,6 +395,12 @@ fn a_part_of_an_object_finds_its_arrays_in_the_prefetch() {
     let cache = block(Prefetched::fetch(&store, &roots, 1)).expect("a prefetch");
     let object = cache.object(REPRESENTATION).expect("it is cached");
     let points = part(object.as_reflect(), &["node_patch", "geometry", "points"]);
-    assert!(energyml_core::identity::uuid_of_reflect(points).is_none(), "a part, not an object");
-    assert_eq!(ArraySource::locate(&cache, points), cache.locations_of(REPRESENTATION));
+    assert!(
+        energyml_core::identity::uuid_of_reflect(points).is_none(),
+        "a part, not an object"
+    );
+    assert_eq!(
+        ArraySource::locate(&cache, points),
+        cache.locations_of(REPRESENTATION)
+    );
 }

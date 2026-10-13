@@ -74,16 +74,37 @@ fn a_sodium_chloride_water_falls_on_the_na_k_and_cl_corners() {
     // corner: the diamond's right corner, the sodium chloride facies.
     // To break: swap Na+K and Mg in the cation point, or the two terms of
     // the diamond's x — the corners stop matching.
-    let water = [("Na+", NA), ("K+", 0.0), ("Ca+2", 0.0), ("Mg+2", 0.0), ("Cl-", CL), ("SO4-2", 0.0), ("HCO3-", 0.0), ("CO3-2", 0.0)];
+    let water = [
+        ("Na+", NA),
+        ("K+", 0.0),
+        ("Ca+2", 0.0),
+        ("Mg+2", 0.0),
+        ("Cl-", CL),
+        ("SO4-2", 0.0),
+        ("HCO3-", 0.0),
+        ("CO3-2", 0.0),
+    ];
     let found = piper(&water, 1.0, &[]).unwrap();
-    assert!((found.cations[2] - 100.0).abs() < 1e-9 && found.cations[0] == 0.0 && found.cations[1] == 0.0, "{:?}", found.cations);
-    assert!((found.anions[0] - 100.0).abs() < 1e-9 && found.anions[1] == 0.0 && found.anions[2] == 0.0, "{:?}", found.anions);
+    assert!(
+        (found.cations[2] - 100.0).abs() < 1e-9 && found.cations[0] == 0.0 && found.cations[1] == 0.0,
+        "{:?}",
+        found.cations
+    );
+    assert!(
+        (found.anions[0] - 100.0).abs() < 1e-9 && found.anions[1] == 0.0 && found.anions[2] == 0.0,
+        "{:?}",
+        found.anions
+    );
     let c = corners();
     let points = found.points(GAP).unwrap();
     assert!(near(points.cation, c.na_k), "{:?}", points.cation);
     assert!(near(points.anion, c.cl), "{:?}", points.anion);
     let right = meet(c.na_k, c.up_right, c.cl, c.up_left);
-    assert!(near(points.diamond, right), "{:?} against {right:?}", points.diamond);
+    assert!(
+        near(points.diamond, right),
+        "{:?} against {right:?}",
+        points.diamond
+    );
 }
 
 #[test]
@@ -104,7 +125,11 @@ fn a_calcium_bicarbonate_water_falls_on_the_ca_and_hco3_corners() {
     assert!(near(points.cation, c.ca), "{:?}", points.cation);
     assert!(near(points.anion, c.hco3), "{:?}", points.anion);
     let left = meet(c.ca, c.up_right, c.hco3, c.up_left);
-    assert!(near(points.diamond, left), "{:?} against {left:?}", points.diamond);
+    assert!(
+        near(points.diamond, left),
+        "{:?} against {left:?}",
+        points.diamond
+    );
 }
 
 #[test]
@@ -126,24 +151,48 @@ fn the_frame_is_the_layout_the_module_states() {
 
 /// Lutetia's water (the reference model's recipe, step `echantillon-gth-1`) —
 /// values of a file, used for the arithmetic only: no carbonate is stated.
-const CHALK: [(&str, f64); 8] =
-    [("Ca+2", 150.0), ("Mg+2", 15.0), ("Na+", 25.0), ("K+", 4.0), ("Ba+2", 0.05), ("HCO3-", 330.0), ("SO4-2", 150.0), ("Cl-", 40.0)];
+const CHALK: [(&str, f64); 8] = [
+    ("Ca+2", 150.0),
+    ("Mg+2", 15.0),
+    ("Na+", 25.0),
+    ("K+", 4.0),
+    ("Ba+2", 0.05),
+    ("HCO3-", 330.0),
+    ("SO4-2", 150.0),
+    ("Cl-", 40.0),
+];
 
 #[test]
 fn each_ternary_adds_up_to_one_hundred_and_the_shares_are_those_of_the_milliequivalents() {
     let found = piper(&CHALK, 5.0, &["CO3-2"]).unwrap();
-    assert!((found.cations.iter().sum::<f64>() - 100.0).abs() < 1e-9, "{:?}", found.cations);
-    assert!((found.anions.iter().sum::<f64>() - 100.0).abs() < 1e-9, "{:?}", found.anions);
+    assert!(
+        (found.cations.iter().sum::<f64>() - 100.0).abs() < 1e-9,
+        "{:?}",
+        found.cations
+    );
+    assert!(
+        (found.anions.iter().sum::<f64>() - 100.0).abs() < 1e-9,
+        "{:?}",
+        found.anions
+    );
     // By hand: meq = mg/L ÷ M × |z|. Barium enters the balance, no axis.
     let (ca, mg, na_k) = (150.0 / CA * 2.0, 15.0 / MG * 2.0, 25.0 / NA + 4.0 / K);
     let total = ca + mg + na_k;
     for (found, expected) in found.cations.iter().zip([ca, mg, na_k]) {
-        assert!((found - 100.0 * expected / total).abs() < 1e-6, "{found} against {}", 100.0 * expected / total);
+        assert!(
+            (found - 100.0 * expected / total).abs() < 1e-6,
+            "{found} against {}",
+            100.0 * expected / total
+        );
     }
     let (cl, so4, hco3) = (40.0 / CL, 150.0 / SO4 * 2.0, 330.0 / HCO3);
     let total = cl + so4 + hco3;
     for (found, expected) in found.anions.iter().zip([cl, so4, hco3]) {
-        assert!((found - 100.0 * expected / total).abs() < 1e-6, "{found} against {}", 100.0 * expected / total);
+        assert!(
+            (found - 100.0 * expected / total).abs() < 1e-6,
+            "{found} against {}",
+            100.0 * expected / total
+        );
     }
 }
 
@@ -153,9 +202,16 @@ fn the_stiff_axes_are_na_k_cl_then_ca_hco3_then_mg_so4_in_milliequivalents() {
     let found = stiff(&CHALK, 5.0, &["CO3-2"]).unwrap();
     let labels: Vec<(&str, &str)> = found.axes.iter().map(|one| (one.cation, one.anion)).collect();
     assert_eq!(labels, [("Na+K", "Cl"), ("Ca", "HCO3+CO3"), ("Mg", "SO4")]);
-    let expected = [(25.0 / NA + 4.0 / K, 40.0 / CL), (150.0 / CA * 2.0, 330.0 / HCO3), (15.0 / MG * 2.0, 150.0 / SO4 * 2.0)];
+    let expected = [
+        (25.0 / NA + 4.0 / K, 40.0 / CL),
+        (150.0 / CA * 2.0, 330.0 / HCO3),
+        (15.0 / MG * 2.0, 150.0 / SO4 * 2.0),
+    ];
     for (axis, (cation, anion)) in found.axes.iter().zip(expected) {
-        assert!((axis.cation_meq - cation).abs() < 1e-6, "{axis:?} against {cation}");
+        assert!(
+            (axis.cation_meq - cation).abs() < 1e-6,
+            "{axis:?} against {cation}"
+        );
         assert!((axis.anion_meq - anion).abs() < 1e-6, "{axis:?} against {anion}");
     }
 }
@@ -164,40 +220,104 @@ fn the_stiff_axes_are_na_k_cl_then_ca_hco3_then_mg_so4_in_milliequivalents() {
 fn a_missing_ion_is_refused_never_drawn_as_zero() {
     // Lutetia states no carbonate: without the declaration, refused.
     // To break: let an absent ion count as 0 — both diagrams would draw.
-    assert_eq!(piper(&CHALK, 5.0, &[]), Err(WaterError::Missing { formulas: vec!["CO3-2"] }));
-    assert_eq!(stiff(&CHALK, 5.0, &[]), Err(WaterError::Missing { formulas: vec!["CO3-2"] }));
+    assert_eq!(
+        piper(&CHALK, 5.0, &[]),
+        Err(WaterError::Missing {
+            formulas: vec!["CO3-2"]
+        })
+    );
+    assert_eq!(
+        stiff(&CHALK, 5.0, &[]),
+        Err(WaterError::Missing {
+            formulas: vec!["CO3-2"]
+        })
+    );
     // No magnesium stated (the water is rebalanced without it).
-    let water = [("Ca+2", CA), ("Na+", NA), ("K+", 0.0), ("Cl-", CL), ("HCO3-", 2.0 * HCO3), ("SO4-2", 0.0)];
-    assert_eq!(piper(&water, 1.0, &[]), Err(WaterError::Missing { formulas: vec!["Mg+2", "CO3-2"] }));
+    let water = [
+        ("Ca+2", CA),
+        ("Na+", NA),
+        ("K+", 0.0),
+        ("Cl-", CL),
+        ("HCO3-", 2.0 * HCO3),
+        ("SO4-2", 0.0),
+    ];
+    assert_eq!(
+        piper(&water, 1.0, &[]),
+        Err(WaterError::Missing {
+            formulas: vec!["Mg+2", "CO3-2"]
+        })
+    );
     assert!(piper(&water, 1.0, &["Mg+2", "CO3-2"]).is_ok());
 }
 
 #[test]
 fn a_declaration_that_contradicts_the_analysis_is_refused() {
-    assert!(matches!(piper(&CHALK, 5.0, &["CO3-2", "K+"]), Err(WaterError::DeclaredAndStated { given: 4.0, .. })));
-    assert!(matches!(piper(&CHALK, 5.0, &["CO3-2", "Ba+2"]), Err(WaterError::NotAnAxisIon { .. })));
+    assert!(matches!(
+        piper(&CHALK, 5.0, &["CO3-2", "K+"]),
+        Err(WaterError::DeclaredAndStated { given: 4.0, .. })
+    ));
+    assert!(matches!(
+        piper(&CHALK, 5.0, &["CO3-2", "Ba+2"]),
+        Err(WaterError::NotAnAxisIon { .. })
+    ));
 }
 
 #[test]
 fn an_analysis_the_balance_refuses_draws_nothing() {
     // 3 meq/L of Na+ against 1 of Cl-: +50 %, beyond 5 %.
     // To break: skip the tolerance — the diagrams would draw a non-water.
-    let water = [("Na+", 3.0 * NA), ("K+", 0.0), ("Ca+2", 0.0), ("Mg+2", 0.0), ("Cl-", CL), ("SO4-2", 0.0), ("HCO3-", 0.0), ("CO3-2", 0.0)];
+    let water = [
+        ("Na+", 3.0 * NA),
+        ("K+", 0.0),
+        ("Ca+2", 0.0),
+        ("Mg+2", 0.0),
+        ("Cl-", CL),
+        ("SO4-2", 0.0),
+        ("HCO3-", 0.0),
+        ("CO3-2", 0.0),
+    ];
     match piper(&water, 5.0, &[]) {
-        Err(WaterError::Unbalanced { error, tolerance, .. }) => assert!((error - 50.0).abs() < 1e-9 && tolerance == 5.0),
+        Err(WaterError::Unbalanced { error, tolerance, .. }) => {
+            assert!((error - 50.0).abs() < 1e-9 && tolerance == 5.0)
+        }
         other => panic!("refused as unbalanced, not {other:?}"),
     }
-    assert!(piper(&water, 51.0, &[]).is_ok(), "within a tolerance the caller declared");
+    assert!(
+        piper(&water, 51.0, &[]).is_ok(),
+        "within a tolerance the caller declared"
+    );
     // What `ion_balance` refuses, the diagrams refuse with its reason.
-    assert!(matches!(piper(&[("NO3-2", 10.0), ("Na+", 5.0)], 5.0, &[]), Err(WaterError::Balance(BalanceError::Unknown { .. }))));
-    assert!(matches!(stiff(&[("Na+", -1.0), ("Cl-", 5.0)], 5.0, &[]), Err(WaterError::Balance(BalanceError::BadConcentration { .. }))));
-    assert!(matches!(major_ions(&CHALK, f64::NAN, &["CO3-2"]), Err(WaterError::BadTolerance { .. })));
+    assert!(matches!(
+        piper(&[("NO3-2", 10.0), ("Na+", 5.0)], 5.0, &[]),
+        Err(WaterError::Balance(BalanceError::Unknown { .. }))
+    ));
+    assert!(matches!(
+        stiff(&[("Na+", -1.0), ("Cl-", 5.0)], 5.0, &[]),
+        Err(WaterError::Balance(BalanceError::BadConcentration { .. }))
+    ));
+    assert!(matches!(
+        major_ions(&CHALK, f64::NAN, &["CO3-2"]),
+        Err(WaterError::BadTolerance { .. })
+    ));
 }
 
 #[test]
 fn a_ternary_of_nothing_is_refused() {
     // Barium alone carries the cations: balanced, but no Piper cation axis
     // holds anything.
-    let water = [("Ba+2", 137.33), ("Ca+2", 0.0), ("Mg+2", 0.0), ("Na+", 0.0), ("K+", 0.0), ("Cl-", 2.0 * CL), ("SO4-2", 0.0), ("HCO3-", 0.0), ("CO3-2", 0.0)];
-    assert_eq!(piper(&water, 1.0, &[]), Err(WaterError::EmptyTernary { which: "cation" }));
+    let water = [
+        ("Ba+2", 137.33),
+        ("Ca+2", 0.0),
+        ("Mg+2", 0.0),
+        ("Na+", 0.0),
+        ("K+", 0.0),
+        ("Cl-", 2.0 * CL),
+        ("SO4-2", 0.0),
+        ("HCO3-", 0.0),
+        ("CO3-2", 0.0),
+    ];
+    assert_eq!(
+        piper(&water, 1.0, &[]),
+        Err(WaterError::EmptyTernary { which: "cation" })
+    );
 }

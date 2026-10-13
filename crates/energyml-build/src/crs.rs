@@ -248,7 +248,12 @@ impl Local {
     /// The identity: what every created frame is unless somebody asks the
     /// `crs` operation for more.
     pub fn identity() -> Local {
-        Local { origin: [0.0, 0.0], azimuth: 0.0, axis: Axis::Elevation, origin_vertical: 0.0 }
+        Local {
+            origin: [0.0, 0.0],
+            azimuth: 0.0,
+            axis: Axis::Elevation,
+            origin_vertical: 0.0,
+        }
     }
 
     /// Whether this frame moves nothing.
@@ -347,7 +352,10 @@ impl Built {
     /// Every object, as objects to put in a store — horizontal, vertical, then
     /// the plane and the compound when there are.
     pub fn objects(self) -> Vec<Box<dyn energyml_core::registry::DynObject>> {
-        let mut out = vec![self.horizontal.boxed(), Box::new(self.vertical) as Box<dyn energyml_core::registry::DynObject>];
+        let mut out = vec![
+            self.horizontal.boxed(),
+            Box::new(self.vertical) as Box<dyn energyml_core::registry::DynObject>,
+        ];
         if let Some(local) = self.local {
             out.push(Box::new(local.plane));
             out.push(Box::new(local.compound));
@@ -364,13 +372,21 @@ impl Built {
                 "eml23.LocalEngineeringCompoundCrs",
                 &local.compound.citation.title,
             ),
-            None => reference_to(self.horizontal.uuid(), self.horizontal.qualified_type(), self.horizontal.title()),
+            None => reference_to(
+                self.horizontal.uuid(),
+                self.horizontal.qualified_type(),
+                self.horizontal.title(),
+            ),
         }
     }
 
     /// A reference to the vertical half — what a `ReferencePointInACrs` names.
     pub fn vertical_reference(&self) -> eml::DataObjectReference {
-        reference_to(&self.vertical.uuid, "eml23.VerticalCrs", &self.vertical.citation.title)
+        reference_to(
+            &self.vertical.uuid,
+            "eml23.VerticalCrs",
+            &self.vertical.citation.title,
+        )
     }
 
     /// Give the frame a geometry names its title — the compound, or the
@@ -397,7 +413,11 @@ impl Built {
     ///
     /// [`FRAME_ROLE`] is always the object a geometry names.
     pub fn new_objects(&self) -> Vec<NewObject> {
-        let horizontal_role = if self.local.is_some() { "projected-crs" } else { FRAME_ROLE };
+        let horizontal_role = if self.local.is_some() {
+            "projected-crs"
+        } else {
+            FRAME_ROLE
+        };
         let mut out = vec![
             NewObject {
                 uuid: self.horizontal.uuid().to_string(),
@@ -475,7 +495,11 @@ pub fn names(
                 let compound = compound_seed(&plane, vertical, local);
                 (derive(&plane), derive(&compound))
             });
-            Names { horizontal, vertical: vertical_uuid, local }
+            Names {
+                horizontal,
+                vertical: vertical_uuid,
+                local,
+            }
         }
         Identity::Given(_) => {
             let horizontal = identity.uuid("", *rank)?;
@@ -485,7 +509,11 @@ pub fn names(
             } else {
                 None
             };
-            Names { horizontal, vertical: vertical_uuid, local }
+            Names {
+                horizontal,
+                vertical: vertical_uuid,
+                local,
+            }
         }
     };
     *rank += if projected { 4 } else { 2 };
@@ -621,9 +649,7 @@ pub fn build(
                 eml::AbstractVerticalCrs::VerticalEpsgCrs(eml::VerticalEpsgCrs { epsg_code: *code })
             }
             Vertical::Unknown(why) => {
-                eml::AbstractVerticalCrs::VerticalUnknownCrs(eml::VerticalUnknownCrs {
-                    unknown: why.clone(),
-                })
+                eml::AbstractVerticalCrs::VerticalUnknownCrs(eml::VerticalUnknownCrs { unknown: why.clone() })
             }
         }),
         ..Default::default()
@@ -651,7 +677,10 @@ pub fn build(
                 uuid: plane_uuid.clone(),
                 schema_version: "2.3".to_string(),
                 citation: citation(&plane_title),
-                azimuth: eml::PlaneAngleMeasureExt { value: local.azimuth, uom: eml::PlaneAngleUomExt::Dega },
+                azimuth: eml::PlaneAngleMeasureExt {
+                    value: local.azimuth,
+                    uom: eml::PlaneAngleUomExt::Dega,
+                },
                 // Grid north: the only reference an azimuth can be written in
                 // without a convergence angle this crate does not have — and
                 // the only one `energyml_domain::crs` places a non-zero azimuth
@@ -675,15 +704,25 @@ pub fn build(
             };
             let compound_title = match (vertical, &local.axis) {
                 (Vertical::Epsg(code), Axis::Elevation) => format!("EPSG:{epsg} + EPSG:{code}"),
-                (Vertical::Epsg(code), axis) => format!("EPSG:{epsg} + EPSG:{code}, {} in {}", axis.word(), axis.uom()),
+                (Vertical::Epsg(code), axis) => {
+                    format!("EPSG:{epsg} + EPSG:{code}, {} in {}", axis.word(), axis.uom())
+                }
                 (Vertical::Unknown(_), Axis::Elevation) => format!("EPSG:{epsg} + unknown vertical"),
-                (Vertical::Unknown(_), axis) => format!("EPSG:{epsg} + unknown vertical, {} in {}", axis.word(), axis.uom()),
+                (Vertical::Unknown(_), axis) => format!(
+                    "EPSG:{epsg} + unknown vertical, {} in {}",
+                    axis.word(),
+                    axis.uom()
+                ),
             };
             let compound = eml::LocalEngineeringCompoundCrs {
                 uuid: compound_uuid.clone(),
                 schema_version: "2.3".to_string(),
                 citation: citation(&compound_title),
-                vertical_crs: reference_to(&vertical_crs.uuid, "eml23.VerticalCrs", &vertical_crs.citation.title),
+                vertical_crs: reference_to(
+                    &vertical_crs.uuid,
+                    "eml23.VerticalCrs",
+                    &vertical_crs.citation.title,
+                ),
                 origin_vertical_coordinate: local.origin_vertical,
                 vertical_axis: eml::VerticalAxis {
                     direction: match local.axis {
@@ -696,14 +735,22 @@ pub fn build(
                     uom: axis_uom,
                     is_time: local.axis.is_time(),
                 },
-                local_engineering2d_crs: reference_to(&plane.uuid, "eml23.LocalEngineering2dCrs", &plane.citation.title),
+                local_engineering2d_crs: reference_to(
+                    &plane.uuid,
+                    "eml23.LocalEngineering2dCrs",
+                    &plane.citation.title,
+                ),
                 ..Default::default()
             };
             Some(LocalFrame { plane, compound })
         }
     };
 
-    Ok(Built { horizontal, vertical: vertical_crs, local: local_frame })
+    Ok(Built {
+        horizontal,
+        vertical: vertical_crs,
+        local: local_frame,
+    })
 }
 
 /// The unit of the local vertical axis, as the schema spells it — or why not.
@@ -717,8 +764,9 @@ fn local_axis_uom(axis: &Axis) -> Result<eml::LengthAndTimeUomExt, String> {
                     "`timeUom` is `{unit}`, which is no time unit this build knows — a time axis counts in `ms` or `s`"
                 ));
             }
-            eml::LengthAndTimeUomExt::from_xml_text(unit)
-                .map_err(|why| format!("`timeUom` is `{unit}`, which `LengthAndTimeUomExt` does not spell: {why}"))
+            eml::LengthAndTimeUomExt::from_xml_text(unit).map_err(|why| {
+                format!("`timeUom` is `{unit}`, which `LengthAndTimeUomExt` does not spell: {why}")
+            })
         }
     }
 }
@@ -744,7 +792,10 @@ pub fn reference_to(uuid: &str, qualified_type: &str, title: &str) -> eml::DataO
 /// the package; `reference_to` stays for what this crate has just built, which
 /// declares none.
 pub fn reference_of(one: &crate::pieces::Ref) -> eml::DataObjectReference {
-    eml::DataObjectReference { object_version: one.object_version.clone(), ..reference_to(&one.uuid, &one.qualified_type, &one.title) }
+    eml::DataObjectReference {
+        object_version: one.object_version.clone(),
+        ..reference_to(&one.uuid, &one.qualified_type, &one.title)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -807,7 +858,9 @@ pub fn compatible_frames(candidates: &[crate::pieces::Known], projected: i64) ->
     let mut out: Vec<&crate::pieces::Known> = candidates
         .iter()
         .filter(|known| {
-            let Some(reference) = &known.reference else { return false };
+            let Some(reference) = &known.reference else {
+                return false;
+            };
             let Some(crs) = &known.placement else { return false };
             matches!(frame_kind(&reference.qualified_type), Ok(FrameKind::Compound))
                 && known.crs_epsg == Some(projected)
@@ -821,9 +874,18 @@ pub fn compatible_frames(candidates: &[crate::pieces::Known], projected: i64) ->
         })
         .collect();
     let down = |known: &crate::pieces::Known| {
-        known.placement.as_ref().is_some_and(|crs| crs.vertical_direction == VerticalDirection::Down)
+        known
+            .placement
+            .as_ref()
+            .is_some_and(|crs| crs.vertical_direction == VerticalDirection::Down)
     };
-    let title = |known: &crate::pieces::Known| known.reference.as_ref().map(|r| r.title.clone()).unwrap_or_default();
+    let title = |known: &crate::pieces::Known| {
+        known
+            .reference
+            .as_ref()
+            .map(|r| r.title.clone())
+            .unwrap_or_default()
+    };
     out.sort_by(|a, b| down(a).cmp(&down(b)).then_with(|| title(a).cmp(&title(b))));
     out
 }
@@ -836,7 +898,11 @@ pub fn compatible_frames(candidates: &[crate::pieces::Known], projected: i64) ->
 /// one with no vertical — each a perfectly readable half, which is exactly the
 /// sort of thing that looks like a complete answer.
 pub fn frame_kind(qualified_type: &str) -> Result<FrameKind, String> {
-    let class = qualified_type.rsplit('.').next().unwrap_or(qualified_type).to_ascii_lowercase();
+    let class = qualified_type
+        .rsplit('.')
+        .next()
+        .unwrap_or(qualified_type)
+        .to_ascii_lowercase();
     let class = class.strip_prefix("obj_").unwrap_or(&class);
     match class {
         "localengineeringcompoundcrs" => Ok(FrameKind::Compound),
@@ -927,17 +993,34 @@ mod tests {
             horizontal: "00000000-0000-4000-8000-00000000000a".to_string(),
             vertical: "00000000-0000-4000-8000-00000000000b".to_string(),
             local: local.then(|| {
-                ("00000000-0000-4000-8000-00000000000c".to_string(), "00000000-0000-4000-8000-00000000000d".to_string())
+                (
+                    "00000000-0000-4000-8000-00000000000c".to_string(),
+                    "00000000-0000-4000-8000-00000000000d".to_string(),
+                )
             }),
         }
     }
 
     fn built(vertical: &Vertical) -> Built {
-        build(&Target::Geographic(4326), vertical, &Local::identity(), &named(false), citation).expect("degrees")
+        build(
+            &Target::Geographic(4326),
+            vertical,
+            &Local::identity(),
+            &named(false),
+            citation,
+        )
+        .expect("degrees")
     }
 
     fn metres(local: &Local) -> Built {
-        build(&Target::Projected(2154), &Vertical::Epsg(5720), local, &named(true), citation).expect("metres")
+        build(
+            &Target::Projected(2154),
+            &Vertical::Epsg(5720),
+            local,
+            &named(true),
+            citation,
+        )
+        .expect("metres")
     }
 
     #[test]
@@ -978,7 +1061,10 @@ mod tests {
         assert_eq!(made.clone().objects().len(), 2);
         // And the frame's role is the one name a caller looks for.
         let objects = made.new_objects();
-        assert_eq!(objects.iter().map(|o| o.role.as_str()).collect::<Vec<_>>(), [FRAME_ROLE, "vertical-crs"]);
+        assert_eq!(
+            objects.iter().map(|o| o.role.as_str()).collect::<Vec<_>>(),
+            [FRAME_ROLE, "vertical-crs"]
+        );
     }
 
     #[test]
@@ -997,16 +1083,27 @@ mod tests {
         assert_eq!(local.compound.vertical_crs.uuid, made.vertical.uuid);
         assert_eq!(local.compound.vertical_crs.qualified_type, "eml23.VerticalCrs");
         assert_eq!(local.compound.local_engineering2d_crs.uuid, local.plane.uuid);
-        assert_eq!(local.compound.local_engineering2d_crs.qualified_type, "eml23.LocalEngineering2dCrs");
+        assert_eq!(
+            local.compound.local_engineering2d_crs.qualified_type,
+            "eml23.LocalEngineering2dCrs"
+        );
         // The plane **embeds** the projected system — CRS.xsd l. 504 types
         // `OriginProjectedCrs` as a `ProjectedCrs`, not a reference — and it
         // is the same object as the top-level one, uuid and code included.
-        let Horizontal::Projected(projected) = &made.horizontal else { panic!("metres") };
+        let Horizontal::Projected(projected) = &made.horizontal else {
+            panic!("metres")
+        };
         assert_eq!(local.plane.origin_projected_crs.uuid, projected.uuid);
-        assert_eq!(local.plane.origin_projected_crs.abstract_projected_crs, projected.abstract_projected_crs);
+        assert_eq!(
+            local.plane.origin_projected_crs.abstract_projected_crs,
+            projected.abstract_projected_crs
+        );
         // Four parts, in the order a plan writes them, `crs` the compound.
         let objects = made.new_objects();
-        let roles: Vec<(&str, &str)> = objects.iter().map(|o| (o.role.as_str(), o.qualified_type.as_str())).collect();
+        let roles: Vec<(&str, &str)> = objects
+            .iter()
+            .map(|o| (o.role.as_str(), o.qualified_type.as_str()))
+            .collect();
         assert_eq!(
             roles,
             [
@@ -1033,8 +1130,14 @@ mod tests {
         assert_eq!(local.plane.azimuth.value, 0.0);
         assert_eq!(local.plane.azimuth.uom, eml::PlaneAngleUomExt::Dega);
         assert_eq!(local.plane.azimuth_reference, eml::NorthReferenceKind::GridNorth);
-        assert_eq!(local.plane.horizontal_axes.direction1, eml::AxisDirectionKind::East);
-        assert_eq!(local.plane.horizontal_axes.direction2, eml::AxisDirectionKind::North);
+        assert_eq!(
+            local.plane.horizontal_axes.direction1,
+            eml::AxisDirectionKind::East
+        );
+        assert_eq!(
+            local.plane.horizontal_axes.direction2,
+            eml::AxisDirectionKind::North
+        );
         assert!(!local.plane.horizontal_axes.is_time);
         assert_eq!(local.compound.vertical_axis.direction, made.vertical.direction);
         assert_eq!(local.compound.vertical_axis.uom, eml::LengthAndTimeUomExt::M);
@@ -1048,20 +1151,41 @@ mod tests {
         // axis `down` in metres, and one `down` in milliseconds with `IsTime`.
         // The `VerticalCrs` stays up and a length — a top-level one cannot be a
         // time (CRS.xsd l. 677 types its uom `LengthUomExt`).
-        let depth = metres(&Local { axis: Axis::Depth, ..Local::identity() });
+        let depth = metres(&Local {
+            axis: Axis::Depth,
+            ..Local::identity()
+        });
         let axis = &depth.local.as_ref().unwrap().compound.vertical_axis;
-        assert_eq!((axis.direction.clone(), axis.uom.clone(), axis.is_time), (eml::VerticalDirection::Down, eml::LengthAndTimeUomExt::M, false));
+        assert_eq!(
+            (axis.direction.clone(), axis.uom.clone(), axis.is_time),
+            (eml::VerticalDirection::Down, eml::LengthAndTimeUomExt::M, false)
+        );
         assert_eq!(depth.vertical.direction, eml::VerticalDirection::Up);
 
-        let time = metres(&Local { axis: Axis::Time("ms".into()), ..Local::identity() });
+        let time = metres(&Local {
+            axis: Axis::Time("ms".into()),
+            ..Local::identity()
+        });
         let axis = &time.local.as_ref().unwrap().compound.vertical_axis;
-        assert_eq!((axis.direction.clone(), axis.uom.clone(), axis.is_time), (eml::VerticalDirection::Down, eml::LengthAndTimeUomExt::Ms, true));
-        assert_eq!(time.vertical.uom, eml::LengthUomExt::M, "the datum is still a length");
+        assert_eq!(
+            (axis.direction.clone(), axis.uom.clone(), axis.is_time),
+            (eml::VerticalDirection::Down, eml::LengthAndTimeUomExt::Ms, true)
+        );
+        assert_eq!(
+            time.vertical.uom,
+            eml::LengthUomExt::M,
+            "the datum is still a length"
+        );
     }
 
     #[test]
     fn an_origin_an_azimuth_and_a_vertical_origin_are_written_where_the_schema_puts_them() {
-        let made = metres(&Local { origin: [650_000.0, 6_860_000.0], azimuth: 30.0, axis: Axis::Depth, origin_vertical: 35.0 });
+        let made = metres(&Local {
+            origin: [650_000.0, 6_860_000.0],
+            azimuth: 30.0,
+            axis: Axis::Depth,
+            origin_vertical: 35.0,
+        });
         let local = made.local.as_ref().unwrap();
         assert_eq!(local.plane.origin_projected_coordinate1, 650_000.0);
         assert_eq!(local.plane.origin_projected_coordinate2, 6_860_000.0);
@@ -1078,19 +1202,34 @@ mod tests {
         let why = build(
             &Target::Geographic(4326),
             &Vertical::Epsg(5720),
-            &Local { azimuth: 30.0, ..Local::identity() },
+            &Local {
+                azimuth: 30.0,
+                ..Local::identity()
+            },
             &named(false),
             citation,
         )
         .expect_err("degrees have no local frame");
         assert!(why.contains("4326") && why.contains("504"), "{why}");
         // The identity over degrees is the named exception, not a refusal.
-        assert!(build(&Target::Geographic(4326), &Vertical::Epsg(5720), &Local::identity(), &named(false), citation).is_ok());
+        assert!(
+            build(
+                &Target::Geographic(4326),
+                &Vertical::Epsg(5720),
+                &Local::identity(),
+                &named(false),
+                citation
+            )
+            .is_ok()
+        );
 
         let why = build(
             &Target::Projected(2154),
             &Vertical::Epsg(5720),
-            &Local { axis: Axis::Time("m".into()), ..Local::identity() },
+            &Local {
+                axis: Axis::Time("m".into()),
+                ..Local::identity()
+            },
             &named(true),
             citation,
         )
@@ -1108,12 +1247,25 @@ mod tests {
         let derived = Identity::derived();
         let name = |local: &Local| {
             let mut rank = 0;
-            let out = names(&derived, &Target::Projected(2154), &Vertical::Epsg(5720), local, &mut rank).unwrap();
+            let out = names(
+                &derived,
+                &Target::Projected(2154),
+                &Vertical::Epsg(5720),
+                local,
+                &mut rank,
+            )
+            .unwrap();
             assert_eq!(rank, 4, "four objects over metres");
             out
         };
-        let depth = name(&Local { axis: Axis::Depth, ..Local::identity() });
-        let time = name(&Local { axis: Axis::Time("ms".into()), ..Local::identity() });
+        let depth = name(&Local {
+            axis: Axis::Depth,
+            ..Local::identity()
+        });
+        let time = name(&Local {
+            axis: Axis::Time("ms".into()),
+            ..Local::identity()
+        });
         assert_eq!(depth.horizontal, time.horizontal);
         assert_eq!(depth.vertical, time.vertical);
         let (depth_plane, depth_compound) = depth.local.clone().unwrap();
@@ -1122,14 +1274,28 @@ mod tests {
         assert_ne!(depth_compound, time_compound);
         // And the horizontal and vertical are the names they always had: a
         // package written before the compound names the same two systems.
-        assert_eq!((depth.horizontal.clone(), depth.vertical.clone()), crate::naming::crs(2154, "5720"));
+        assert_eq!(
+            (depth.horizontal.clone(), depth.vertical.clone()),
+            crate::naming::crs(2154, "5720")
+        );
         // An azimuth moves the plane, and the compound with it.
-        let turned = name(&Local { azimuth: 30.0, axis: Axis::Depth, ..Local::identity() });
+        let turned = name(&Local {
+            azimuth: 30.0,
+            axis: Axis::Depth,
+            ..Local::identity()
+        });
         assert_ne!(turned.local.as_ref().unwrap().0, depth_plane);
         assert_ne!(turned.local.as_ref().unwrap().1, depth_compound);
         // Degrees: two names, and the rank moves by two.
         let mut rank = 0;
-        let degrees = names(&derived, &Target::Geographic(4326), &Vertical::Epsg(5720), &Local::identity(), &mut rank).unwrap();
+        let degrees = names(
+            &derived,
+            &Target::Geographic(4326),
+            &Vertical::Epsg(5720),
+            &Local::identity(),
+            &mut rank,
+        )
+        .unwrap();
         assert!(degrees.local.is_none());
         assert_eq!(rank, 2);
     }
@@ -1151,7 +1317,14 @@ mod tests {
         // Over metres the compound is written on it all the same: the
         // `VerticalCrs` states its direction and unit (CRS.xsd l. 705), which
         // is what the compound's axis agrees with.
-        let metric = build(&Target::Projected(2154), &Vertical::default(), &Local::identity(), &named(true), citation).unwrap();
+        let metric = build(
+            &Target::Projected(2154),
+            &Vertical::default(),
+            &Local::identity(),
+            &named(true),
+            citation,
+        )
+        .unwrap();
         assert!(metric.local.is_some());
     }
 
@@ -1194,13 +1367,26 @@ mod tests {
         for one in FRAMES {
             assert!(frame_kind(one).is_ok(), "{one} is offered and refused");
         }
-        for half in ["eml23.VerticalCrs", "eml23.LocalEngineering2dCrs", "eml23.ReferencePointInACrs", "eml23.ReferencePointInALocalEngineeringCompoundCrs", "resqml22.HorizonInterpretation", ""] {
+        for half in [
+            "eml23.VerticalCrs",
+            "eml23.LocalEngineering2dCrs",
+            "eml23.ReferencePointInACrs",
+            "eml23.ReferencePointInALocalEngineeringCompoundCrs",
+            "resqml22.HorizonInterpretation",
+            "",
+        ] {
             let why = frame_kind(half).expect_err(half);
-            assert!(half.is_empty() || why.contains(half), "the refusal names what it got: {why}");
+            assert!(
+                half.is_empty() || why.contains(half),
+                "the refusal names what it got: {why}"
+            );
         }
         // By the bare class name: case, package and 2.0.1's `obj_` are spelling.
         assert_eq!(frame_kind("resqml20.obj_LocalDepth3dCrs"), Ok(FrameKind::Legacy));
-        assert_eq!(frame_kind("eml23.localengineeringcompoundcrs"), Ok(FrameKind::Compound));
+        assert_eq!(
+            frame_kind("eml23.localengineeringcompoundcrs"),
+            Ok(FrameKind::Compound)
+        );
     }
 }
 
@@ -1251,7 +1437,10 @@ pub fn place(
         let placed = backend
             .reproject(flat(point), from as u64, *to as u64)
             .map_err(|e| {
-                format!("[{}, {}] could not go from EPSG:{from} to EPSG:{to}: {e}", point.lon, point.lat)
+                format!(
+                    "[{}, {}] could not go from EPSG:{from} to EPSG:{to}: {e}",
+                    point.lon, point.lat
+                )
             })?;
         out.push(placed);
     }
@@ -1275,8 +1464,16 @@ mod projection {
 
     fn paris() -> Vec<Position> {
         vec![
-            Position { lon: 2.2953, lat: 48.875, z: Some(58.0) },
-            Position { lon: 2.4199, lat: 48.8662, z: Some(85.8) },
+            Position {
+                lon: 2.2953,
+                lat: 48.875,
+                z: Some(58.0),
+            },
+            Position {
+                lon: 2.4199,
+                lat: 48.8662,
+                z: Some(85.8),
+            },
         ]
     }
 
@@ -1385,9 +1582,19 @@ mod projection {
         let names = Names {
             horizontal: "00000000-0000-4000-8000-00000000000a".to_string(),
             vertical: "00000000-0000-4000-8000-00000000000b".to_string(),
-            local: Some(("00000000-0000-4000-8000-00000000000c".to_string(), "00000000-0000-4000-8000-00000000000d".to_string())),
+            local: Some((
+                "00000000-0000-4000-8000-00000000000c".to_string(),
+                "00000000-0000-4000-8000-00000000000d".to_string(),
+            )),
         };
-        let made = build(&Target::Projected(2154), &Vertical::Epsg(5720), &Local::identity(), &names, citation).unwrap();
+        let made = build(
+            &Target::Projected(2154),
+            &Vertical::Epsg(5720),
+            &Local::identity(),
+            &names,
+            citation,
+        )
+        .unwrap();
         let Horizontal::Projected(crs) = &made.horizontal else {
             panic!("asked for metres, got degrees")
         };
@@ -1395,6 +1602,9 @@ mod projection {
         assert_eq!(crs.axis_order, eml::AxisOrder2d::EastingNorthing);
         // The geometry names the compound now — the `ProjectedCrs` is inside it,
         // embedded in the plane, not beside it.
-        assert_eq!(made.reference().qualified_type, "eml23.LocalEngineeringCompoundCrs");
+        assert_eq!(
+            made.reference().qualified_type,
+            "eml23.LocalEngineeringCompoundCrs"
+        );
     }
 }

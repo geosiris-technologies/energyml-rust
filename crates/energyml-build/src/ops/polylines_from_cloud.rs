@@ -161,21 +161,29 @@ pub struct FakeInputs {
 fn cuts_of(cuts: &Cuts) -> fake::Cuts {
     match cuts {
         Cuts::Fixed(one) => fake::Cuts::Fixed(one.count.max(0) as u32),
-        Cuts::Random(range) => fake::Cuts::Random { min: range.cuts_min.max(0) as u32, max: range.cuts_max.max(0) as u32 },
+        Cuts::Random(range) => fake::Cuts::Random {
+            min: range.cuts_min.max(0) as u32,
+            max: range.cuts_max.max(0) as u32,
+        },
     }
 }
 
 fn length_of(length: &Length) -> fake::Length {
     match length {
         Length::Fixed(one) => fake::Length::Fixed(one.value),
-        Length::Random(range) => fake::Length::Random { min: range.length_min, max: range.length_max },
+        Length::Random(range) => fake::Length::Random {
+            min: range.length_min,
+            max: range.length_max,
+        },
     }
 }
 
 fn spacing_of(spacing: &Spacing) -> fake::Spacing {
     match spacing {
         Spacing::Regular => fake::Spacing::Regular,
-        Spacing::Fluctuating(one) => fake::Spacing::Fluctuating { fraction: one.fraction },
+        Spacing::Fluctuating(one) => fake::Spacing::Fluctuating {
+            fraction: one.fraction,
+        },
     }
 }
 
@@ -219,21 +227,43 @@ impl Operation for PolylinesFromCloud {
         // — the same reading `well-from-polyline` gives a fresh frame.
         let known = cx.known();
         let mut discarded_rank = 0usize;
-        let frame = support::frame_in(&known, &params.written.frame, cx.identity, cx.when, &mut discarded_rank)?;
+        let frame = support::frame_in(
+            &known,
+            &params.written.frame,
+            cx.identity,
+            cx.when,
+            &mut discarded_rank,
+        )?;
 
         // The heads, placed in that frame before anything is computed from
         // them (`support::shape_placed`).
         let mut heads: Vec<[f64; 3]> = Vec::new();
         for one in &inputs.shape {
-            let nodes: Vec<[f64; 3]> = one.geometry.patches.iter().flat_map(|p| p.points.iter().copied()).collect();
-            heads.extend(support::shape_placed(&one.name, &nodes, one.known.as_ref(), &frame)?);
+            let nodes: Vec<[f64; 3]> = one
+                .geometry
+                .patches
+                .iter()
+                .flat_map(|p| p.points.iter().copied())
+                .collect();
+            heads.extend(support::shape_placed(
+                &one.name,
+                &nodes,
+                one.known.as_ref(),
+                &frame,
+            )?);
         }
         if heads.is_empty() {
             return Err(Refusal::on("shape", "the input has no point at all"));
         }
         if frame.kind == Some(FrameKind::Geographic) {
             let (slot, what) = match params.written.frame.crs.as_ref() {
-                Some(_) => ("crs", format!("the frame `{}` named", frame.crs["Title"].as_str().unwrap_or_default())),
+                Some(_) => (
+                    "crs",
+                    format!(
+                        "the frame `{}` named",
+                        frame.crs["Title"].as_str().unwrap_or_default()
+                    ),
+                ),
                 None => ("project", "the frame created without `project`".to_string()),
             };
             return Err(Refusal::on(
@@ -243,7 +273,11 @@ impl Operation for PolylinesFromCloud {
                 ),
             ));
         }
-        let vertical_up = if frame.objects.is_empty() { known.first().and_then(|k| k.vertical_up) } else { Some(true) };
+        let vertical_up = if frame.objects.is_empty() {
+            known.first().and_then(|k| k.vertical_up)
+        } else {
+            Some(true)
+        };
         let Some(up) = vertical_up else {
             return Err(Refusal::on(
                 "crs",
@@ -252,8 +286,15 @@ impl Operation for PolylinesFromCloud {
         };
 
         let seed_value = params.seed.max(0) as u64;
-        let made = vertical_polylines(&heads, &cuts_of(&params.cuts), &length_of(&params.length), &spacing_of(&params.spacing), up, seed_value)
-            .map_err(|why| Refusal::new("refused", why.to_string()))?;
+        let made = vertical_polylines(
+            &heads,
+            &cuts_of(&params.cuts),
+            &length_of(&params.length),
+            &spacing_of(&params.spacing),
+            up,
+            seed_value,
+        )
+        .map_err(|why| Refusal::new("refused", why.to_string()))?;
 
         let mut points = Vec::new();
         let mut runs = Vec::new();
@@ -265,18 +306,34 @@ impl Operation for PolylinesFromCloud {
         let shape = Shape {
             name: format!("{title} — cloud"),
             known: None,
-            geometry: Geometry { kind: "polylines-from-cloud", patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Polylines(runs), closed: Vec::new() }] },
+            geometry: Geometry {
+                kind: "polylines-from-cloud",
+                patches: vec![Patch {
+                    index: 0,
+                    node_offset: 0,
+                    points,
+                    topology: Topology::Polylines(runs),
+                    closed: Vec::new(),
+                }],
+            },
             closed: None,
         };
         let seed = cx.seed(&title);
-        let lines = PolylinesInputs { shape: vec![shape], features: None };
+        let lines = PolylinesInputs {
+            shape: vec![shape],
+            features: None,
+        };
         // **Never closed**: a line that descends from a head never rings back
         // to it, forced rather than left to `closed`'s own "seen" detection.
         let mut plan = super::polylines::write(&lines, &params.written, Some(false), &seed, cx)?;
 
         plan.activity.recipe = "polylines-from-cloud";
         plan.activity.title = format!("polylines-from-cloud → {title}");
-        plan.activity.parameters.push(Parameter::Double { title: "headCount".to_string(), value: heads.len() as f64, uom: None });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "headCount".to_string(),
+            value: heads.len() as f64,
+            uom: None,
+        });
         // **Not `seed`**: it is already a parameter, and `Registry::plan`
         // records every settled one under its own title automatically — a
         // report of the same title would read as a disagreement of direction
@@ -297,8 +354,17 @@ impl Operation for PolylinesFromCloud {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        let mut slots = crate::operation::AnyOperation::reports(&crate::operation::Typed(super::polylines::Polylines));
-        slots.push(Slot::required("headCount", Need::Number { uom: None, least: None, most: None }, "cloud points turned into polylines"));
+        let mut slots =
+            crate::operation::AnyOperation::reports(&crate::operation::Typed(super::polylines::Polylines));
+        slots.push(Slot::required(
+            "headCount",
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
+            "cloud points turned into polylines",
+        ));
         slots
     }
 }

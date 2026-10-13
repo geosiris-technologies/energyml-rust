@@ -33,21 +33,40 @@ impl<'a> Listed<'a> {
     /// by its uri: drawing without it would draw the file's colours as absent.
     pub fn of(store: &'a EpcStore) -> Result<Self, String> {
         let mut graphics = Vec::new();
-        for one in store.resources().iter().filter(|one| one.qualified_type.ends_with("GraphicalInformationSet")) {
-            let object = store.get_object(&one.uri).map_err(|why| format!("the colour set `{}` does not read: {why}", one.uri))?;
-            graphics.push((one.uuid.to_ascii_lowercase(), GraphicalSet::read(object.as_reflect())));
+        for one in store
+            .resources()
+            .iter()
+            .filter(|one| one.qualified_type.ends_with("GraphicalInformationSet"))
+        {
+            let object = store
+                .get_object(&one.uri)
+                .map_err(|why| format!("the colour set `{}` does not read: {why}", one.uri))?;
+            graphics.push((
+                one.uuid.to_ascii_lowercase(),
+                GraphicalSet::read(object.as_reflect()),
+            ));
         }
         let index = Arc::new(PackageIndex::build(store, store.revision()));
         let held = Arc::clone(&index);
-        let frames_of: Box<FramesOf<'a>> = Box::new(move |wellbore: &str| frames_of_wellbore(store, &held, wellbore));
-        Ok(Self { graphics, index, frames_of })
+        let frames_of: Box<FramesOf<'a>> =
+            Box::new(move |wellbore: &str| frames_of_wellbore(store, &held, wellbore));
+        Ok(Self {
+            graphics,
+            index,
+            frames_of,
+        })
     }
 
     /// The context the calculation reads through — borrowed from this listing.
     /// The same the front end's session gives: its index, and a silent well painted
     /// from the frames of its wellbore.
     pub fn context(&self) -> PackageContext<'_> {
-        PackageContext { graphics: &self.graphics, frames_of: Some(&*self.frames_of), index: Some(&self.index), colour_of: None }
+        PackageContext {
+            graphics: &self.graphics,
+            frames_of: Some(&*self.frames_of),
+            index: Some(&self.index),
+            colour_of: None,
+        }
     }
 }
 
@@ -72,10 +91,15 @@ pub fn selection(store: &EpcStore) -> (Vec<String>, Vec<String>) {
     let wells = resources
         .iter()
         .filter(|one| {
-            one.qualified_type.ends_with("WellboreTrajectoryRepresentation") || one.qualified_type.ends_with("WellboreFrameRepresentation")
+            one.qualified_type.ends_with("WellboreTrajectoryRepresentation")
+                || one.qualified_type.ends_with("WellboreFrameRepresentation")
         })
         .map(|one| one.uri.clone())
         .collect();
-    let surfaces = resources.iter().filter(|one| is_cut_type(&one.qualified_type)).map(|one| one.uri.clone()).collect();
+    let surfaces = resources
+        .iter()
+        .filter(|one| is_cut_type(&one.qualified_type))
+        .map(|one| one.uri.clone())
+        .collect();
     (wells, surfaces)
 }

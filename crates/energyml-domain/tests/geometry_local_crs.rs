@@ -43,14 +43,16 @@ fn point_set(crs_type: &str) -> resqml22::PointSetRepresentation {
     resqml22::PointSetRepresentation {
         uuid: SHAPE.into(),
         schema_version: "2.2".into(),
-        node_patch_geometry: vec![resqml22::AnyPointGeometry::PointGeometry(resqml22::PointGeometry {
-            local_crs: eml23::DataObjectReference {
-                uuid: CRS.into(),
-                qualified_type: format!("eml23.{crs_type}"),
+        node_patch_geometry: vec![resqml22::AnyPointGeometry::PointGeometry(
+            resqml22::PointGeometry {
+                local_crs: eml23::DataObjectReference {
+                    uuid: CRS.into(),
+                    qualified_type: format!("eml23.{crs_type}"),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        })],
+        )],
         ..Default::default()
     }
 }
@@ -76,7 +78,11 @@ fn the_rule_is_shipped_and_looks_inside_the_representations() {
     // that only looked at top-level objects would judge nothing, forever.
     assert!(rule.nested, "{rule:?}");
     assert_eq!(rule.source, "AbstractGeometry");
-    assert!(rule.says.contains("§3.1"), "the rule cites where it comes from: {}", rule.says);
+    assert!(
+        rule.says.contains("§3.1"),
+        "the rule cites where it comes from: {}",
+        rule.says
+    );
 }
 
 /// A geometry on a `ProjectedCrs` is reported, with the path to the patch and
@@ -86,12 +92,18 @@ fn a_geometry_on_a_projected_crs_is_reported() {
     let shape = point_set("ProjectedCrs");
     let findings = judged(&shape);
     assert_eq!(findings.len(), 1, "{findings:?}");
-    assert_eq!(findings[0].uuid, SHAPE, "the finding is on the representation that holds the geometry");
+    assert_eq!(
+        findings[0].uuid, SHAPE,
+        "the finding is on the representation that holds the geometry"
+    );
     let Outcome::Violation { read } = &findings[0].outcome else {
         panic!("a violation, not {:?}", findings[0].outcome)
     };
     assert!(read.starts_with("NodePatchGeometry[0]: ProjectedCrs"), "{read}");
-    assert!(read.contains("horizontal half"), "the note on a projected system: {read}");
+    assert!(
+        read.contains("horizontal half"),
+        "the note on a projected system: {read}"
+    );
 }
 
 /// The negative control: the target the guide names draws nothing. Without it
@@ -140,7 +152,10 @@ fn a_geometry_in_degrees_is_the_named_exception() {
         panic!("a violation, not {:?}", findings[0].outcome)
     };
     assert!(read.contains("Geographic2dCrs"), "{read}");
-    assert!(read.contains("named exception"), "the exception is said, not silenced: {read}");
+    assert!(
+        read.contains("named exception"),
+        "the exception is said, not silenced: {read}"
+    );
 }
 
 fn summary(uuid: &str, qualified_type: &str) -> ObjectSummary {
@@ -159,7 +174,10 @@ struct Held(Vec<(String, Box<dyn DynObject>)>);
 
 impl ObjectSource for Held {
     fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
-        self.0.iter().find(|(id, _)| id == uuid).map(|(_, object)| object.clone_box())
+        self.0
+            .iter()
+            .find(|(id, _)| id == uuid)
+            .map(|(_, object)| object.clone_box())
     }
 }
 
@@ -176,9 +194,9 @@ fn check_counts_it_as_a_warning_not_an_error() {
     let projected = eml23::ProjectedCrs {
         uuid: CRS.into(),
         schema_version: "2.3".into(),
-        abstract_projected_crs: Some(eml23::AbstractProjectedCrs::ProjectedEpsgCrs(eml23::ProjectedEpsgCrs {
-            epsg_code: 2154,
-        })),
+        abstract_projected_crs: Some(eml23::AbstractProjectedCrs::ProjectedEpsgCrs(
+            eml23::ProjectedEpsgCrs { epsg_code: 2154 },
+        )),
         ..Default::default()
     };
     let summaries = [
@@ -186,8 +204,16 @@ fn check_counts_it_as_a_warning_not_an_error() {
         summary(CRS, "eml23.ProjectedCrs"),
     ];
     let objects = [
-        Part { summary: &summaries[0], object: &shape, relationships: &[] },
-        Part { summary: &summaries[1], object: &projected, relationships: &[] },
+        Part {
+            summary: &summaries[0],
+            object: &shape,
+            relationships: &[],
+        },
+        Part {
+            summary: &summaries[1],
+            object: &projected,
+            relationships: &[],
+        },
     ];
     let source = Held(vec![
         (SHAPE.to_string(), Box::new(shape.clone()) as Box<dyn DynObject>),
@@ -203,15 +229,42 @@ fn check_counts_it_as_a_warning_not_an_error() {
         known: Some(&known),
     };
 
-    let without = check::check(&package, &Options { schema: false, rules: false, extra_rules: Vec::new() });
-    let with = check::check(&package, &Options { schema: false, rules: true, extra_rules: Vec::new() });
+    let without = check::check(
+        &package,
+        &Options {
+            schema: false,
+            rules: false,
+            extra_rules: Vec::new(),
+        },
+    );
+    let with = check::check(
+        &package,
+        &Options {
+            schema: false,
+            rules: true,
+            extra_rules: Vec::new(),
+        },
+    );
 
     let reported: Vec<_> = with.rules.iter().filter(|finding| finding.rule == RULE).collect();
     assert_eq!(reported.len(), 1, "{:?}", with.rules);
-    assert!(reported[0].read.is_some(), "a violation, with what was read: {:?}", reported[0]);
+    assert!(
+        reported[0].read.is_some(),
+        "a violation, with what was read: {:?}",
+        reported[0]
+    );
 
-    assert_eq!(without.errors(), 0, "the fixture itself is sound: {:?}", without.references);
+    assert_eq!(
+        without.errors(),
+        0,
+        "the fixture itself is sound: {:?}",
+        without.references
+    );
     assert_eq!(with.errors(), 0, "the rule must not make the package unsound");
     assert!(with.is_sound());
-    assert_eq!(with.warnings(), without.warnings() + 1, "the rule's finding is one warning");
+    assert_eq!(
+        with.warnings(),
+        without.warnings() + 1,
+        "the rule's finding is one warning"
+    );
 }

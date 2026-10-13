@@ -145,8 +145,12 @@ pub enum CrossKind {
 fn target_word(target: &Target) -> String {
     match target {
         Target::Plan => "plan".to_string(),
-        Target::Section { key: SectionKey::Long } => "long".to_string(),
-        Target::Section { key: SectionKey::Cross { index } } => format!("cross:{index}"),
+        Target::Section {
+            key: SectionKey::Long,
+        } => "long".to_string(),
+        Target::Section {
+            key: SectionKey::Cross { index },
+        } => format!("cross:{index}"),
     }
 }
 
@@ -230,7 +234,8 @@ fn spelled(key: &str) -> String {
 fn drawn(metadata: &Metadata) -> Vec<(&'static str, Value)> {
     let inputs = &metadata.inputs;
     let view = &metadata.view;
-    let mut out: Vec<(&'static str, Value)> = vec![("left", json!(inputs.left)), ("right", json!(inputs.right))];
+    let mut out: Vec<(&'static str, Value)> =
+        vec![("left", json!(inputs.left)), ("right", json!(inputs.right))];
     let (kind, common, own) = match &inputs.crosses {
         Crosses::None => ("none", None, &[][..]),
         Crosses::Every { spacing, common, own } => {
@@ -253,7 +258,12 @@ fn drawn(metadata: &Metadata) -> Vec<(&'static str, Value)> {
     }
     let own: Vec<String> = own
         .iter()
-        .map(|o| format!("{}: {}, {}, {}, {}", o.index, o.widths.before, o.widths.after, o.widths.left, o.widths.right))
+        .map(|o| {
+            format!(
+                "{}: {}, {}, {}, {}",
+                o.index, o.widths.before, o.widths.after, o.widths.left, o.widths.right
+            )
+        })
         .collect();
     if !own.is_empty() {
         out.push(("crossOwn", json!(own)));
@@ -275,7 +285,10 @@ fn drawn(metadata: &Metadata) -> Vec<(&'static str, Value)> {
         out.extend([("portionStart", json!(start)), ("portionEnd", json!(end))]);
     }
     if let Some(window) = &view.window {
-        out.push(("window", json!([window.x[0], window.x[1], window.y[0], window.y[1]])));
+        out.push((
+            "window",
+            json!([window.x[0], window.x[1], window.y[0], window.y[1]]),
+        ));
     }
     let show = &view.show;
     let shown: Vec<&str> = [
@@ -295,7 +308,13 @@ fn drawn(metadata: &Metadata) -> Vec<(&'static str, Value)> {
         ("shown", shown.into_iter().map(str::to_string).collect()),
         ("hidden", view.hidden.iter().map(|k| spelled(k)).collect()),
         ("highlight", view.highlight.iter().map(|k| spelled(k)).collect()),
-        ("colours", view.colours.iter().map(|(k, c)| format!("{}={c}", spelled(k))).collect()),
+        (
+            "colours",
+            view.colours
+                .iter()
+                .map(|(k, c)| format!("{}={c}", spelled(k)))
+                .collect(),
+        ),
         (
             "fills",
             view.fills
@@ -323,7 +342,10 @@ fn drawn(metadata: &Metadata) -> Vec<(&'static str, Value)> {
 /// The word serde gives one of the view's enumerations — the same as in the
 /// SVG's metadata, so that a parameter reads as the drawing does.
 fn word<T: serde::Serialize>(value: &T) -> String {
-    serde_json::to_value(value).ok().and_then(|v| v.as_str().map(str::to_string)).unwrap_or_default()
+    serde_json::to_value(value)
+        .ok()
+        .and_then(|v| v.as_str().map(str::to_string))
+        .unwrap_or_default()
 }
 
 /// What the parameters say, slot by slot, in the shape [`drawn`] gives.
@@ -371,8 +393,10 @@ fn same(a: &Value, b: &Value) -> bool {
 
 /// The drawing's metadata, from its bytes.
 fn metadata_of(svg: &Document) -> Result<Metadata, Refusal> {
-    let text = std::str::from_utf8(&svg.bytes).map_err(|_| Refusal::on("svg", format!("`{}` is not UTF-8 text, and an SVG is", svg.file)))?;
-    energyml_section::svg::read_metadata(text).map_err(|why| Refusal::on("svg", format!("`{}`: {why}", svg.file)))
+    let text = std::str::from_utf8(&svg.bytes)
+        .map_err(|_| Refusal::on("svg", format!("`{}` is not UTF-8 text, and an SVG is", svg.file)))?;
+    energyml_section::svg::read_metadata(text)
+        .map_err(|why| Refusal::on("svg", format!("`{}`: {why}", svg.file)))
 }
 
 /// What a uri read from a drawing's metadata names among the objects held.
@@ -392,15 +416,27 @@ enum Named<'a> {
 /// names the entry that declares none when there are several, as the store's own
 /// resolution does (`EpcStore::resolve`), and is otherwise ambiguous.
 fn named_in<'a>(held: &[&'a Ref], uri: &str) -> Named<'a> {
-    let Ok(asked) = energyml_core::identifiers::EtpUri::parse(uri) else { return Named::None };
-    let Some(uuid) = asked.uuid.as_deref() else { return Named::None };
-    let mut same: Vec<&'a Ref> = held.iter().copied().filter(|one| one.uuid.eq_ignore_ascii_case(uuid)).collect();
+    let Ok(asked) = energyml_core::identifiers::EtpUri::parse(uri) else {
+        return Named::None;
+    };
+    let Some(uuid) = asked.uuid.as_deref() else {
+        return Named::None;
+    };
+    let mut same: Vec<&'a Ref> = held
+        .iter()
+        .copied()
+        .filter(|one| one.uuid.eq_ignore_ascii_case(uuid))
+        .collect();
     match asked.object_version.as_deref() {
         Some(version) => same.retain(|one| one.object_version.as_deref() == Some(version)),
         // Several and no version named: the one that declares none, when exactly
         // one does — and otherwise they all stay, and the uri is ambiguous.
         None if same.len() > 1 => {
-            let bare: Vec<&'a Ref> = same.iter().copied().filter(|one| one.object_version.is_none()).collect();
+            let bare: Vec<&'a Ref> = same
+                .iter()
+                .copied()
+                .filter(|one| one.object_version.is_none())
+                .collect();
             if bare.len() == 1 {
                 same = bare;
             }
@@ -465,7 +501,13 @@ fn png_size(bytes: &[u8]) -> Option<[u32; 2]> {
 /// else is refused, so a file is never attached under a type it is not.
 fn drawing_type(file: &Document) -> Result<&'static str, Refusal> {
     let neither = |why: &str| {
-        Refusal::on("drawings", format!("`{}` is neither a PNG (no signature) nor an SVG ({why}): only those two are drawings", file.file))
+        Refusal::on(
+            "drawings",
+            format!(
+                "`{}` is neither a PNG (no signature) nor an SVG ({why}): only those two are drawings",
+                file.file
+            ),
+        )
     };
     if png_size(&file.bytes).is_some() {
         return Ok("image/png");
@@ -475,14 +517,19 @@ fn drawing_type(file: &Document) -> Result<&'static str, Refusal> {
     };
     let mut rest = text.trim_start_matches('\u{feff}').trim_start();
     // The prolog of an XML document: declarations, comments, a doctype.
-    while let Some((open, close)) = [("<?", "?>"), ("<!--", "-->"), ("<!", ">")].into_iter().find(|(open, _)| rest.starts_with(open)) {
+    while let Some((open, close)) = [("<?", "?>"), ("<!--", "-->"), ("<!", ">")]
+        .into_iter()
+        .find(|(open, _)| rest.starts_with(open))
+    {
         match rest.find(close) {
             Some(at) => rest = rest[at + close.len()..].trim_start(),
             None => return Err(neither(&format!("`{open}` is never closed"))),
         }
     }
     match rest.strip_prefix("<svg") {
-        Some(after) if after.starts_with(|c: char| c.is_whitespace() || c == '>' || c == '/') => Ok("image/svg+xml"),
+        Some(after) if after.starts_with(|c: char| c.is_whitespace() || c == '>' || c == '/') => {
+            Ok("image/svg+xml")
+        }
         _ => Err(neither("it does not open as an SVG document")),
     }
 }
@@ -493,7 +540,11 @@ fn drawing_type(file: &Document) -> Result<&'static str, Refusal> {
 /// folder named like the section).
 fn part_of(stated: &Option<String>, title: &str, file: &Document) -> String {
     stated.clone().unwrap_or_else(|| {
-        format!("media/sections/{}/{}", folder_of(title), file.file.rsplit(['/', '\\']).next().unwrap_or(&file.file))
+        format!(
+            "media/sections/{}/{}",
+            folder_of(title),
+            file.file.rsplit(['/', '\\']).next().unwrap_or(&file.file)
+        )
     })
 }
 
@@ -503,10 +554,20 @@ fn folder_of(title: &str) -> String {
     let named: String = title
         .trim()
         .chars()
-        .map(|c| if c.is_alphanumeric() || matches!(c, '-' | '_' | '.') { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || matches!(c, '-' | '_' | '.') {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     let named = named.trim_matches(['_', '.']).to_string();
-    if named.is_empty() { "section".to_string() } else { named }
+    if named.is_empty() {
+        "section".to_string()
+    } else {
+        named
+    }
 }
 
 impl Operation for SectionView {
@@ -518,7 +579,12 @@ impl Operation for SectionView {
             name: "section-view",
             describe: "the line a section view was drawn along, as a section-line feature with its polylines, and the drawings — SVG and PNG — attached to it",
             category: Category::Create,
-            makes: &[FEATURE, INTERPRETATION, "resqml22.PolylineSetRepresentation", "eml23.Attachment"],
+            makes: &[
+                FEATURE,
+                INTERPRETATION,
+                "resqml22.PolylineSetRepresentation",
+                "eml23.Attachment",
+            ],
             recipe: "section-view",
             represents: Some((FEATURE, INTERPRETATION)),
         }
@@ -529,8 +595,18 @@ impl Operation for SectionView {
         // What the drawing was computed with, read off the drawing itself: the
         // form shows it, the registry records it, and `plan` holds an answer
         // that disagrees to it.
-        if let Some(Source::Document { name, content_type, bytes }) = bag.get("svg") {
-            let svg = Document { name: "svg".to_string(), file: name.clone(), declared: content_type.clone(), bytes: bytes.clone() };
+        if let Some(Source::Document {
+            name,
+            content_type,
+            bytes,
+        }) = bag.get("svg")
+        {
+            let svg = Document {
+                name: "svg".to_string(),
+                file: name.clone(),
+                declared: content_type.clone(),
+                bytes: bytes.clone(),
+            };
             if let Ok(metadata) = metadata_of(&svg) {
                 for (slot, value) in drawn(&metadata) {
                     slots.set(slot, value);
@@ -539,7 +615,12 @@ impl Operation for SectionView {
         }
     }
 
-    fn plan(&self, inputs: SectionViewInputs, params: SectionViewParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: SectionViewInputs,
+        params: SectionViewParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         // -- the drawing, read back, and what was said of it held to it
         let metadata = metadata_of(&inputs.svg)?;
         let states = drawn(&metadata);
@@ -550,21 +631,28 @@ impl Operation for SectionView {
                 Some((_, value)) => {
                     return Err(Refusal::on(
                         slot,
-                        format!("the drawing was made with {value}, and {told} is given: the activity would describe a run that did not happen — draw it again with {told}, or leave `{slot}` out"),
+                        format!(
+                            "the drawing was made with {value}, and {told} is given: the activity would describe a run that did not happen — draw it again with {told}, or leave `{slot}` out"
+                        ),
                     ));
                 }
                 None => {
                     return Err(Refusal::on(
                         slot,
-                        format!("the drawing says nothing of `{slot}`, and {told} is given — draw it again with it, or leave it out"),
+                        format!(
+                            "the drawing says nothing of `{slot}`, and {told} is given — draw it again with it, or leave it out"
+                        ),
                     ));
                 }
             }
         }
-        let (sections, _) =
-            energyml_section::crosses::traces(&metadata.inputs).map_err(|why| Refusal::on("svg", format!("`{}`: {why}", inputs.svg.file)))?;
+        let (sections, _) = energyml_section::crosses::traces(&metadata.inputs)
+            .map_err(|why| Refusal::on("svg", format!("`{}`: {why}", inputs.svg.file)))?;
         if !params.elevation.is_finite() {
-            return Err(Refusal::on("elevation", format!("{} is not a height", params.elevation)));
+            return Err(Refusal::on(
+                "elevation",
+                format!("{} is not a height", params.elevation),
+            ));
         }
 
         // -- the system the trace is in, said twice
@@ -602,7 +690,13 @@ impl Operation for SectionView {
             None => None,
             Some(file) => {
                 let Some([w, h]) = png_size(&file.bytes) else {
-                    return Err(Refusal::on("png", format!("`{}` is not a PNG — it does not start with the PNG signature", file.file)));
+                    return Err(Refusal::on(
+                        "png",
+                        format!(
+                            "`{}` is not a PNG — it does not start with the PNG signature",
+                            file.file
+                        ),
+                    ));
                 };
                 let (drawn, given) = (size[0] / size[1], f64::from(w) / f64::from(h));
                 // A pixel of rounding on either side, and no more.
@@ -610,7 +704,10 @@ impl Operation for SectionView {
                 if (given / drawn - 1.0).abs() > slack {
                     return Err(Refusal::on(
                         "png",
-                        format!("`{}` is {w}×{h} px, and the drawing is {}×{} px: not the same proportions, so not the same drawing", file.file, size[0], size[1]),
+                        format!(
+                            "`{}` is {w}×{h} px, and the drawing is {}×{} px: not the same proportions, so not the same drawing",
+                            file.file, size[0], size[1]
+                        ),
                     ));
                 }
                 Some((file.clone(), f64::from(w) / size[0]))
@@ -627,11 +724,17 @@ impl Operation for SectionView {
             if kind == "image/svg+xml" {
                 match metadata_of(file) {
                     Ok(other) => {
-                        let (theirs, ours) = (other.inputs.system.as_ref().map(|s| s.epsg as i64), metadata.inputs.system.as_ref().map(|s| s.epsg as i64));
+                        let (theirs, ours) = (
+                            other.inputs.system.as_ref().map(|s| s.epsg as i64),
+                            metadata.inputs.system.as_ref().map(|s| s.epsg as i64),
+                        );
                         if other.inputs.trace != metadata.inputs.trace || theirs != ours {
                             return Err(Refusal::on(
                                 "drawings",
-                                format!("`{}` states another trace than `{}`: it is the drawing of another section, and would be attached to this one's lines", file.file, inputs.svg.file),
+                                format!(
+                                    "`{}` states another trace than `{}`: it is the drawing of another section, and would be attached to this one's lines",
+                                    file.file, inputs.svg.file
+                                ),
                             ));
                         }
                     }
@@ -641,16 +744,25 @@ impl Operation for SectionView {
             further.push((file.clone(), part_of(&None, &title_of_section, file), kind));
         }
         {
-            let mut parts: Vec<(String, String)> = vec![(part_of(&params.svg_path, &title_of_section, &inputs.svg).to_lowercase(), inputs.svg.file.clone())];
+            let mut parts: Vec<(String, String)> = vec![(
+                part_of(&params.svg_path, &title_of_section, &inputs.svg).to_lowercase(),
+                inputs.svg.file.clone(),
+            )];
             if let Some(file) = &inputs.png {
-                parts.push((part_of(&params.png_path, &title_of_section, file).to_lowercase(), file.file.clone()));
+                parts.push((
+                    part_of(&params.png_path, &title_of_section, file).to_lowercase(),
+                    file.file.clone(),
+                ));
             }
             for (file, part, _) in &further {
                 // Part names are case-insensitive (EPC v1.0 §3.2, OPC).
                 if let Some((_, first)) = parts.iter().find(|(held, _)| *held == part.to_lowercase()) {
                     return Err(Refusal::on(
                         "drawings",
-                        format!("`{}` would be stored as `{part}`, the part `{first}` already takes: two files of the same name in a section's folder — rename one", file.file),
+                        format!(
+                            "`{}` would be stored as `{part}`, the part `{first}` already takes: two files of the same name in a section's folder — rename one",
+                            file.file
+                        ),
                     ));
                 }
                 parts.push((part.to_lowercase(), file.file.clone()));
@@ -659,8 +771,16 @@ impl Operation for SectionView {
 
         // -- the lines: the long section, then its cross sections
         let groups: Vec<Vec<&[[f64; 2]]>> = {
-            let long: Vec<&[[f64; 2]]> = sections.iter().filter(|s| s.key == SectionKey::Long).map(|s| s.trace.as_slice()).collect();
-            let crosses: Vec<&[[f64; 2]]> = sections.iter().filter(|s| s.key != SectionKey::Long).map(|s| s.trace.as_slice()).collect();
+            let long: Vec<&[[f64; 2]]> = sections
+                .iter()
+                .filter(|s| s.key == SectionKey::Long)
+                .map(|s| s.trace.as_slice())
+                .collect();
+            let crosses: Vec<&[[f64; 2]]> = sections
+                .iter()
+                .filter(|s| s.key != SectionKey::Long)
+                .map(|s| s.trace.as_slice())
+                .collect();
             [long, crosses].into_iter().filter(|g| !g.is_empty()).collect()
         };
         // **A height, written in the frame's own sense.** The trace is in
@@ -673,7 +793,12 @@ impl Operation for SectionView {
             let uuid = crs.0["Uuid"].as_str().or_else(|| crs.0.as_str())?;
             cx.known()
                 .into_iter()
-                .find(|known| known.crs.as_ref().is_some_and(|r| r.uuid.eq_ignore_ascii_case(uuid)))?
+                .find(|known| {
+                    known
+                        .crs
+                        .as_ref()
+                        .is_some_and(|r| r.uuid.eq_ignore_ascii_case(uuid))
+                })?
                 .placement
                 .clone()
         });
@@ -687,7 +812,10 @@ impl Operation for SectionView {
             .map(|(index, lines)| Patch {
                 index,
                 node_offset: 0,
-                points: lines.iter().flat_map(|line| line.iter().map(|[x, y]| placed(*x, *y))).collect(),
+                points: lines
+                    .iter()
+                    .flat_map(|line| line.iter().map(|[x, y]| placed(*x, *y)))
+                    .collect(),
                 topology: Topology::Polylines(lines.iter().map(|line| line.len() as u32).collect()),
                 closed: vec![false; lines.len()],
             })
@@ -707,12 +835,23 @@ impl Operation for SectionView {
         let frame = support::frame_in(&cx.known(), &written.frame, cx.identity, cx.when, &mut 0)?;
         let shape = Shape {
             name: inputs.svg.name.clone(),
-            geometry: support::geometry_placed(&inputs.svg.name, &Geometry { kind: "polylines", patches }, None, &frame)?,
+            geometry: support::geometry_placed(
+                &inputs.svg.name,
+                &Geometry {
+                    kind: "polylines",
+                    patches,
+                },
+                None,
+                &frame,
+            )?,
             closed: None,
             known: None,
         };
         let seed = cx.seed(&title);
-        let lines = PolylinesInputs { shape: vec![shape], features: None };
+        let lines = PolylinesInputs {
+            shape: vec![shape],
+            features: None,
+        };
         let mut plan = super::polylines::write(&lines, &written, Some(false), &seed, cx)?;
         let representation = plan
             .objects
@@ -726,17 +865,35 @@ impl Operation for SectionView {
         let mut parameters = std::mem::take(&mut plan.activity.parameters);
         // `what` names the attachment's title; `seed` is what it is, in the uuid
         // derived for it; `parameter` is the title of the activity's record.
-        let mut attach = |file: Document, part: String, kind: &str, what: &str, seed: &str, parameter: &str| -> Result<(), Refusal> {
+        let mut attach = |file: Document,
+                          part: String,
+                          kind: &str,
+                          what: &str,
+                          seed: &str,
+                          parameter: &str|
+         -> Result<(), Refusal> {
             // Given uuids are handed out in the plan's order: the attachment
             // takes the next one, not the first, which the lines have.
             let identity = match cx.identity {
                 Identity::Derived { .. } => cx.identity.clone(),
                 Identity::Given(_) => Identity::Given(vec![support::next_uuid(cx.identity, "", &mut rank)?]),
             };
-            let sub = Context { identity: &identity, ..*cx };
-            let target = ObjectIn { name: "target".to_string(), known: Known { reference: Some(representation.clone()), ..Known::default() } };
+            let sub = Context {
+                identity: &identity,
+                ..*cx
+            };
+            let target = ObjectIn {
+                name: "target".to_string(),
+                known: Known {
+                    reference: Some(representation.clone()),
+                    ..Known::default()
+                },
+            };
             let made = Attach.plan(
-                AttachInputs { target, file: Some(file) },
+                AttachInputs {
+                    target,
+                    file: Some(file),
+                },
                 AttachParams {
                     form: Some(Form::PartAddress),
                     address: None,
@@ -750,7 +907,10 @@ impl Operation for SectionView {
                 },
                 &sub,
             )?;
-            parameters.push(Parameter::Text { title: parameter.to_string(), value: part });
+            parameters.push(Parameter::Text {
+                title: parameter.to_string(),
+                value: part,
+            });
             // **A drawing drawn again replaces its attachment.** `attach` names
             // an attachment by its bytes too — a second file is a second
             // attachment —, and a redrawn section would then leave the first
@@ -762,7 +922,13 @@ impl Operation for SectionView {
             let mut objects = made.objects;
             let mut media = made.media;
             if let (Identity::Derived { .. }, Some(object)) = (cx.identity, objects.first_mut()) {
-                let uuid = cx.identity.uuid(&format!("section-view:attachment:{}:{seed}", representation.uuid.to_ascii_lowercase()), 0)?;
+                let uuid = cx.identity.uuid(
+                    &format!(
+                        "section-view:attachment:{}:{seed}",
+                        representation.uuid.to_ascii_lowercase()
+                    ),
+                    0,
+                )?;
                 object.json["uuid"] = serde_json::json!(uuid);
                 object.uuid = uuid.clone();
                 for part in &mut media {
@@ -776,7 +942,14 @@ impl Operation for SectionView {
         // Known to be an SVG — its metadata was just read from it — and a PNG
         // by its signature: the types are stated from the bytes, never the name.
         let svg_part = part_of(&params.svg_path, &title, &inputs.svg);
-        attach(inputs.svg.clone(), svg_part, "image/svg+xml", "SVG", "SVG", "svgPart")?;
+        attach(
+            inputs.svg.clone(),
+            svg_part,
+            "image/svg+xml",
+            "SVG",
+            "SVG",
+            "svgPart",
+        )?;
         let mut png_scale = None;
         if let Some((file, scale)) = png {
             let part = part_of(&params.png_path, &title, &file);
@@ -792,27 +965,48 @@ impl Operation for SectionView {
         }
         // The closure is done with `parameters`: what it left is the scale.
         if let Some(scale) = png_scale {
-            parameters.push(Parameter::Double { title: "pngScale".to_string(), value: scale, uom: None });
+            parameters.push(Parameter::Double {
+                title: "pngScale".to_string(),
+                value: scale,
+                uom: None,
+            });
         }
 
         // -- what the run was. The scalars are recorded by the registry, as
         // every settled choice; a list is one parameter per entry, written
         // here — each held to what a `StringParameter` holds.
-        parameters.push(Parameter::Double { title: "crossSectionCount".to_string(), value: crosses as f64, uom: None });
+        parameters.push(Parameter::Double {
+            title: "crossSectionCount".to_string(),
+            value: crosses as f64,
+            uom: None,
+        });
         for (slot, value) in &states {
             let Value::Array(entries) = value else { continue };
             for entry in entries {
                 let parameter = match entry {
-                    Value::Number(n) => Parameter::Double { title: slot.to_string(), value: n.as_f64().unwrap_or(f64::NAN), uom: None },
+                    Value::Number(n) => Parameter::Double {
+                        title: slot.to_string(),
+                        value: n.as_f64().unwrap_or(f64::NAN),
+                        uom: None,
+                    },
                     other => {
-                        let text = other.as_str().map(str::to_string).unwrap_or_else(|| other.to_string());
+                        let text = other
+                            .as_str()
+                            .map(str::to_string)
+                            .unwrap_or_else(|| other.to_string());
                         if text.chars().count() > STRING_PARAMETER {
                             return Err(Refusal::on(
                                 slot,
-                                format!("an entry of {} characters, and a string parameter holds {STRING_PARAMETER} (`Activities.xsd`)", text.chars().count()),
+                                format!(
+                                    "an entry of {} characters, and a string parameter holds {STRING_PARAMETER} (`Activities.xsd`)",
+                                    text.chars().count()
+                                ),
                             ));
                         }
-                        Parameter::Text { title: slot.to_string(), value: text }
+                        Parameter::Text {
+                            title: slot.to_string(),
+                            value: text,
+                        }
                     }
                 };
                 parameters.push(parameter);
@@ -821,7 +1015,11 @@ impl Operation for SectionView {
         // The objects the section was computed from are the run's inputs, by
         // reference — and one the package does not hold says the drawing was
         // made from another package, or before that object was written.
-        let held: Vec<&Ref> = inputs.objects.iter().filter_map(|one| one.known.reference.as_ref()).collect();
+        let held: Vec<&Ref> = inputs
+            .objects
+            .iter()
+            .filter_map(|one| one.known.reference.as_ref())
+            .collect();
         // Only this package's: a drawing over several packages names objects
         // this one does not hold, and that is not a refusal — it is said.
         let elsewhere: usize = metadata
@@ -837,26 +1035,38 @@ impl Operation for SectionView {
                 detail: format!("{elsewhere} object(s) the drawing was computed from are in other packages, and are not recorded as this run's inputs"),
             });
         }
-        let mine = metadata.inputs.objects.iter().filter(|asked| asked.store == params.store);
+        let mine = metadata
+            .inputs
+            .objects
+            .iter()
+            .filter(|asked| asked.store == params.store);
         for uri in mine.flat_map(|asked| asked.wells.iter().chain(&asked.surfaces)) {
             let found = match named_in(&held, uri) {
                 Named::One(found) => found,
                 Named::None => {
                     return Err(Refusal::on(
                         "objects",
-                        format!("the drawing was computed from `{uri}`, which this package does not hold — it was drawn from another package, or before that object was written"),
+                        format!(
+                            "the drawing was computed from `{uri}`, which this package does not hold — it was drawn from another package, or before that object was written"
+                        ),
                     ));
                 }
                 Named::Several(uris) => {
                     return Err(Refusal::on(
                         "objects",
-                        format!("the drawing was computed from `{uri}`, which names an object held in several versions — {} — name one with its version", uris.join(", ")),
+                        format!(
+                            "the drawing was computed from `{uri}`, which names an object held in several versions — {} — name one with its version",
+                            uris.join(", ")
+                        ),
                     ));
                 }
             };
             // The reference carries the version of the object it names, so that
             // the input of a versioned copy never names its original.
-            parameters.push(Parameter::Object { title: "input".to_string(), reference: found.dor() });
+            parameters.push(Parameter::Object {
+                title: "input".to_string(),
+                reference: found.dor(),
+            });
         }
         says.insert(
             0,
@@ -873,10 +1083,19 @@ impl Operation for SectionView {
         );
         if !inputs.drawings.is_empty() {
             let more = inputs.drawings.len();
-            let bare = if without_metadata > 0 { format!(", {without_metadata} of them an SVG that states no section view and is attached as it is") } else { String::new() };
+            let bare = if without_metadata > 0 {
+                format!(
+                    ", {without_metadata} of them an SVG that states no section view and is attached as it is"
+                )
+            } else {
+                String::new()
+            };
             says.push(Note {
                 key: "drawings",
-                detail: format!("{more} further drawing(s) attached to the lines under `media/sections/{}/`{bare}", folder_of(&title)),
+                detail: format!(
+                    "{more} further drawing(s) attached to the lines under `media/sections/{}/`{bare}",
+                    folder_of(&title)
+                ),
             });
         }
         says.extend(std::mem::take(&mut plan.says));
@@ -888,14 +1107,28 @@ impl Operation for SectionView {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        let mut slots = crate::operation::AnyOperation::reports(&crate::operation::Typed(super::polylines::Polylines));
-        let number = || Need::Number { uom: None, least: None, most: None };
+        let mut slots =
+            crate::operation::AnyOperation::reports(&crate::operation::Typed(super::polylines::Polylines));
+        let number = || Need::Number {
+            uom: None,
+            least: None,
+            most: None,
+        };
         slots.extend([
             Slot::required("svgPart", Need::Text, "the SVG's part name in the package"),
             Slot::optional("pngPart", Need::Text, "the PNG's part name in the package"),
-            Slot::many("drawingPart", Need::Text, "the part name of each further drawing, in the order given", 0),
+            Slot::many(
+                "drawingPart",
+                Need::Text,
+                "the part name of each further drawing, in the order given",
+                0,
+            ),
             Slot::optional("pngScale", number(), "the PNG's pixels per pixel of the drawing"),
-            Slot::required("crossSectionCount", number(), "the cross sections written, patch 1"),
+            Slot::required(
+                "crossSectionCount",
+                number(),
+                "the cross sections written, patch 1",
+            ),
         ]);
         slots
     }
@@ -930,7 +1163,13 @@ mod tests {
         // …and a version nobody holds, or an uuid nobody holds, nothing.
         let third = Ref::new(X, QT, "H3").with_version(Some("3".to_string()));
         assert_eq!(named(&both, &third.uri()), Err(0));
-        assert_eq!(named(&both, "eml:///resqml22.TriangulatedSetRepresentation(7e400000-0000-4000-8000-0000000000ff)"), Err(0));
+        assert_eq!(
+            named(
+                &both,
+                "eml:///resqml22.TriangulatedSetRepresentation(7e400000-0000-4000-8000-0000000000ff)"
+            ),
+            Err(0)
+        );
         assert_eq!(named(&both, "not a uri"), Err(0));
 
         // Two versions and none without: the short uri does not say which.

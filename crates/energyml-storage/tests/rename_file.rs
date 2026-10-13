@@ -23,8 +23,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use energyml_core::registry::Registry;
-use energyml_storage::rename::{self, FileMove};
 use energyml_storage::EpcStore;
+use energyml_storage::rename::{self, FileMove};
 
 fn registry() -> Arc<Registry> {
     Arc::new(energyml_schemas::all())
@@ -36,7 +36,8 @@ fn registry() -> Arc<Registry> {
 /// than versioned, and a test that renames a file in the fixtures takes it away
 /// from every other test in the workspace.
 fn workbench(case: &str, package: &str, data: &str) -> Option<(PathBuf, PathBuf)> {
-    let (Some(source_epc), Some(source_h5)) = (crate::fixtures::find(package), crate::fixtures::find(data)) else {
+    let (Some(source_epc), Some(source_h5)) = (crate::fixtures::find(package), crate::fixtures::find(data))
+    else {
         return None;
     };
     let dir = std::env::temp_dir().join(format!("energyml-rename-{case}"));
@@ -74,8 +75,7 @@ fn the_newer_form_names_its_file_in_a_field_of_every_array() {
     // eml 2.3: the name is in `ExternalDataArrayPart.Uri`, one per array, and
     // there is no proxy at all — so a rename that only touched the `.rels`
     // would touch nothing here.
-    let Some((epc, _)) = workbench("plan22", "testingPackageCpp22.epc", "testingPackageCpp22.h5")
-    else {
+    let Some((epc, _)) = workbench("plan22", "testingPackageCpp22.epc", "testingPackageCpp22.h5") else {
         eprintln!("skipped: the corpus is not present");
         return;
     };
@@ -125,8 +125,7 @@ fn the_older_form_names_its_file_in_a_relationship() {
 
 #[test]
 fn a_rename_is_refused_before_it_can_half_happen() {
-    let Some((epc, _)) = workbench("refusals", "testingPackageCpp22.epc", "testingPackageCpp22.h5")
-    else {
+    let Some((epc, _)) = workbench("refusals", "testingPackageCpp22.epc", "testingPackageCpp22.h5") else {
         eprintln!("skipped: the corpus is not present");
         return;
     };
@@ -151,7 +150,10 @@ fn a_rename_is_refused_before_it_can_half_happen() {
     let nothing = rename::plan(&store, "somebody_elses.h5", "renamed.h5");
     assert!(!nothing.is_allowed());
     assert!(
-        nothing.refusals.iter().any(|line| line.contains("somebody_elses.h5")),
+        nothing
+            .refusals
+            .iter()
+            .any(|line| line.contains("somebody_elses.h5")),
         "the refusal does not name the file that was asked for: {:?}",
         nothing.refusals
     );
@@ -160,8 +162,7 @@ fn a_rename_is_refused_before_it_can_half_happen() {
 
 #[test]
 fn applying_leaves_nothing_naming_the_old_file() {
-    let Some((epc, h5)) = workbench("apply22", "testingPackageCpp22.epc", "testingPackageCpp22.h5")
-    else {
+    let Some((epc, h5)) = workbench("apply22", "testingPackageCpp22.epc", "testingPackageCpp22.h5") else {
         eprintln!("skipped: the corpus is not present");
         return;
     };
@@ -185,9 +186,7 @@ fn applying_leaves_nothing_naming_the_old_file() {
         .map(|one| (one.proxy_uuid.unwrap_or_default(), one.field_path))
         .collect();
     assert!(
-        stray
-            .iter()
-            .all(|(proxy, _)| proxy == "testingPackageCpp22.h5"),
+        stray.iter().all(|(proxy, _)| proxy == "testingPackageCpp22.h5"),
         "something still names the file by its old name: {stray:?}"
     );
     // **Two, and they are the package's own fault.** Two 2.0.1 objects survive
@@ -198,13 +197,16 @@ fn applying_leaves_nothing_naming_the_old_file() {
     // uuid is really a file name is the kind of guess this workspace refuses.
     // They cost nothing: saved and reopened, the same pointers resolve to the
     // new file (`a_renamed_package_reads_without_having_to_look_around`).
-    assert_eq!(stray.len(), 2, "more than the two known malformed proxies: {stray:?}");
+    assert_eq!(
+        stray.len(),
+        2,
+        "more than the two known malformed proxies: {stray:?}"
+    );
 }
 
 #[test]
 fn the_relationships_follow_on_the_older_form() {
-    let Some((epc, h5)) = workbench("apply20", "testingPackageCpp.epc", "testingPackageCpp.h5")
-    else {
+    let Some((epc, h5)) = workbench("apply20", "testingPackageCpp.epc", "testingPackageCpp.h5") else {
         eprintln!("skipped: the corpus is not present");
         return;
     };
@@ -231,8 +233,7 @@ fn the_relationships_follow_on_the_older_form() {
 #[test]
 #[cfg(feature = "hdf5")]
 fn a_renamed_package_reads_without_having_to_look_around() {
-    let Some((epc, _)) = workbench("saved", "testingPackageCpp22.epc", "testingPackageCpp22.h5")
-    else {
+    let Some((epc, _)) = workbench("saved", "testingPackageCpp22.epc", "testingPackageCpp22.h5") else {
         eprintln!("skipped: the corpus is not present");
         return;
     };
@@ -294,5 +295,8 @@ fn a_renamed_package_reads_without_having_to_look_around() {
         .iter()
         .filter(|one| one.message.contains("is not a part of this package"))
         .count();
-    assert_eq!(fesapi, 2, "this package's two malformed proxies changed in number");
+    assert_eq!(
+        fesapi, 2,
+        "this package's two malformed proxies changed in number"
+    );
 }

@@ -60,7 +60,9 @@ use energyml_domain::provenance::Parameter;
 use energyml_domain::units::Dimension;
 use energyml_geometry::geometry::Topology;
 
-use crate::declare::{Choice, Inputs, ObjectRef, Params, PropertyKindRef, Shape, Suggestions, Title, known_of};
+use crate::declare::{
+    Choice, Inputs, ObjectRef, Params, PropertyKindRef, Shape, Suggestions, Title, known_of,
+};
 use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::{Known, Pieces};
 
@@ -147,7 +149,10 @@ impl What {
             }
         }
         if found == Some(What::Volume) && shape.geometry.patches.len() != 1 {
-            return Err(format!("holds {} patches of hexahedra, where an IJK grid has one", shape.geometry.patches.len()));
+            return Err(format!(
+                "holds {} patches of hexahedra, where an IJK grid has one",
+                shape.geometry.patches.len()
+            ));
         }
         found.ok_or_else(|| "has no patch".to_string())
     }
@@ -192,19 +197,29 @@ fn powered(unit: &str, power: u8) -> Option<String> {
 
 /// The title the reference of the shape gives it, or its role.
 fn title_of(shape: &Shape) -> String {
-    shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.title.clone()).unwrap_or_else(|| "shape".to_string())
+    shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|r| r.title.clone())
+        .unwrap_or_else(|| "shape".to_string())
 }
 
 /// The length unit of the coordinates — or why there is none to measure in.
 fn length_unit(known: Option<&Known>, three_d: bool, given: Option<&str>) -> Result<String, Refusal> {
     let placement = known.and_then(|k| k.placement.as_ref());
     let horizontal = placement.and_then(|p| p.horizontal_uom.clone());
-    let vertical = placement.and_then(|p| p.vertical_axis_uom().map(str::to_string)).or_else(|| known.and_then(|k| k.vertical_uom.clone()));
+    let vertical = placement
+        .and_then(|p| p.vertical_axis_uom().map(str::to_string))
+        .or_else(|| known.and_then(|k| k.vertical_uom.clone()));
 
     // Degrees: by the class of the frame, or by the unit it states.
-    let geographic = known
-        .and_then(|k| k.crs.as_ref())
-        .is_some_and(|crs| matches!(crate::crs::frame_kind(&crs.qualified_type), Ok(crate::crs::FrameKind::Geographic)));
+    let geographic = known.and_then(|k| k.crs.as_ref()).is_some_and(|crs| {
+        matches!(
+            crate::crs::frame_kind(&crs.qualified_type),
+            Ok(crate::crs::FrameKind::Geographic)
+        )
+    });
     let angular = horizontal.as_deref().and_then(Dimension::of) == Some(Dimension::PlaneAngle);
     if geographic || angular {
         return Err(Refusal::new(
@@ -213,7 +228,8 @@ fn length_unit(known: Option<&Known>, three_d: bool, given: Option<&str>) -> Res
         ));
     }
     if three_d {
-        let time = placement.is_some_and(|p| p.is_time()) || vertical.as_deref().and_then(Dimension::of) == Some(Dimension::Time);
+        let time = placement.is_some_and(|p| p.is_time())
+            || vertical.as_deref().and_then(Dimension::of) == Some(Dimension::Time);
         if time {
             return Err(Refusal::new(
                 "units",
@@ -228,17 +244,27 @@ fn length_unit(known: Option<&Known>, three_d: bool, given: Option<&str>) -> Res
         {
             return Err(Refusal::new(
                 "units",
-                format!("the frame counts x and y in `{h}` and z in `{v}`: a measure in three dimensions needs one unit on the three axes — convert one of them first, or ask for the plan measure"),
+                format!(
+                    "the frame counts x and y in `{h}` and z in `{v}`: a measure in three dimensions needs one unit on the three axes — convert one of them first, or ask for the plan measure"
+                ),
             ));
         }
     }
-    let stated: Vec<&String> = [horizontal.as_ref(), if three_d { vertical.as_ref() } else { None }].into_iter().flatten().collect();
+    let stated: Vec<&String> = [
+        horizontal.as_ref(),
+        if three_d { vertical.as_ref() } else { None },
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
     let unit = match (given, horizontal.as_ref()) {
         (Some(given), _) => {
             if let Some(disagrees) = stated.iter().find(|unit| unit.as_str() != given) {
                 return Err(Refusal::on(
                     "lengthUom",
-                    format!("is `{given}` and the frame counts its coordinates in `{disagrees}` — the measure would be read in the wrong unit"),
+                    format!(
+                        "is `{given}` and the frame counts its coordinates in `{disagrees}` — the measure would be read in the wrong unit"
+                    ),
                 ));
             }
             given.to_string()
@@ -255,7 +281,10 @@ fn length_unit(known: Option<&Known>, three_d: bool, given: Option<&str>) -> Res
         }
     };
     if Dimension::of(&unit) != Some(Dimension::Length) {
-        return Err(Refusal::on("lengthUom", format!("`{unit}` is not a length unit this build knows")));
+        return Err(Refusal::on(
+            "lengthUom",
+            format!("`{unit}` is not a length unit this build knows"),
+        ));
     }
     Ok(unit)
 }
@@ -276,14 +305,18 @@ impl Operation for Measure {
     }
 
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
-        let Some(known) = known_of(bag, "shape") else { return };
+        let Some(known) = known_of(bag, "shape") else {
+            return;
+        };
         if let Some(reference) = &known.reference {
             slots.inferred("representation", reference.dor(), reference.clone());
         }
     }
 
     fn check(&self, inputs: &MeasureInputs) -> Result<(), Refusal> {
-        What::of(&inputs.shape).map(|_| ()).map_err(|why| Refusal::on("shape", why))?;
+        What::of(&inputs.shape)
+            .map(|_| ())
+            .map_err(|why| Refusal::on("shape", why))?;
         if let Some(reference) = inputs.shape.known.as_ref().and_then(|k| k.reference.as_ref()) {
             let class = reference.qualified_type.rsplit('.').next().unwrap_or_default();
             if class.ends_with("WellboreTrajectoryRepresentation") {
@@ -306,7 +339,10 @@ impl Operation for Measure {
         let MeasureInputs { shape } = inputs;
         let what = What::of(&shape).map_err(|why| Refusal::on("shape", why))?;
         if what == What::Volume && params.measured == Measured::Plan {
-            return Err(Refusal::on("measured", "is `plan`, and a volume has no projection on the horizontal — ask for `along`"));
+            return Err(Refusal::on(
+                "measured",
+                "is `plan`, and a volume has no projection on the horizontal — ask for `along`",
+            ));
         }
         let three_d = what == What::Volume || params.measured == Measured::Along;
         let length = length_unit(shape.known.as_ref(), three_d, params.length_uom.as_deref())?;
@@ -321,14 +357,16 @@ impl Operation for Measure {
         let mut says: Vec<Note> = Vec::new();
         let (values, along, in_plan, undefined) = match what {
             What::Triangles | What::Cells => {
-                let (mut along, mut plan, mut unplaced, mut folded) = (Vec::new(), Vec::new(), 0usize, 0usize);
+                let (mut along, mut plan, mut unplaced, mut folded) =
+                    (Vec::new(), Vec::new(), 0usize, 0usize);
                 for patch in &shape.geometry.patches {
                     let found = match &patch.topology {
                         Topology::Triangles(list) => analysis::triangle_areas(&patch.points, list),
                         Topology::Quads(list) => analysis::quad_areas(&patch.points, list),
                         Topology::Grid { fastest, slowest } => {
                             // Row by row, the fast axis first; the ring goes round the cell.
-                            let mut quads = Vec::with_capacity(fastest.saturating_sub(1) * slowest.saturating_sub(1));
+                            let mut quads =
+                                Vec::with_capacity(fastest.saturating_sub(1) * slowest.saturating_sub(1));
                             let fast = *fastest as u32;
                             for row in 0..slowest.saturating_sub(1) as u32 {
                                 for column in 0..fast.saturating_sub(1) {
@@ -353,7 +391,12 @@ impl Operation for Measure {
                     });
                 }
                 if unplaced > 0 {
-                    says.push(Note { key: "unplaced", detail: format!("{unplaced} element(s) with a corner that is no finite point: NaN, not zero") });
+                    says.push(Note {
+                        key: "unplaced",
+                        detail: format!(
+                            "{unplaced} element(s) with a corner that is no finite point: NaN, not zero"
+                        ),
+                    });
                 }
                 if folded > 0 {
                     says.push(Note {
@@ -361,19 +404,31 @@ impl Operation for Measure {
                         detail: format!("{folded} cell(s) fold over themselves in plan — a bow-tie has no single plan area: NaN in plan"),
                     });
                 }
-                let chosen = if params.measured == Measured::Along { along.clone() } else { plan.clone() };
+                let chosen = if params.measured == Measured::Along {
+                    along.clone()
+                } else {
+                    plan.clone()
+                };
                 let undefined = chosen.iter().filter(|v| !v.is_finite()).count();
                 (chosen, Some(along), Some(plan), undefined)
             }
             What::Lines => {
-                let (mut along, mut plan, mut unplaced, mut unsaid, mut at) = (Vec::new(), Vec::new(), 0usize, 0usize, 0usize);
+                let (mut along, mut plan, mut unplaced, mut unsaid, mut at) =
+                    (Vec::new(), Vec::new(), 0usize, 0usize, 0usize);
                 for patch in &shape.geometry.patches {
-                    let Topology::Polylines(runs) = &patch.topology else { unreachable!("What::of admitted only lines here") };
+                    let Topology::Polylines(runs) = &patch.topology else {
+                        unreachable!("What::of admitted only lines here")
+                    };
                     // The closure the shape says, the one reading of it; a
                     // closure nobody said is open, and counted.
                     let closed: Vec<bool> = (0..runs.len())
                         .map(|local| {
-                            let said = super::polylines::said_closed(patch, local, shape.closed.as_deref(), at + local);
+                            let said = super::polylines::said_closed(
+                                patch,
+                                local,
+                                shape.closed.as_deref(),
+                                at + local,
+                            );
                             if said.is_none() {
                                 unsaid += 1;
                             }
@@ -381,7 +436,8 @@ impl Operation for Measure {
                         })
                         .collect();
                     at += runs.len();
-                    let found = analysis::polyline_lengths(&patch.points, runs, &closed).map_err(|e| Refusal::on("shape", e.to_string()))?;
+                    let found = analysis::polyline_lengths(&patch.points, runs, &closed)
+                        .map_err(|e| Refusal::on("shape", e.to_string()))?;
                     along.extend(found.along);
                     plan.extend(found.plan);
                     unplaced += found.unplaced;
@@ -393,16 +449,31 @@ impl Operation for Measure {
                     });
                 }
                 if unplaced > 0 {
-                    says.push(Note { key: "unplaced", detail: format!("{unplaced} line(s) with a node that is no finite point: NaN, not zero") });
+                    says.push(Note {
+                        key: "unplaced",
+                        detail: format!(
+                            "{unplaced} line(s) with a node that is no finite point: NaN, not zero"
+                        ),
+                    });
                 }
-                let chosen = if params.measured == Measured::Along { along.clone() } else { plan.clone() };
+                let chosen = if params.measured == Measured::Along {
+                    along.clone()
+                } else {
+                    plan.clone()
+                };
                 let undefined = chosen.iter().filter(|v| !v.is_finite()).count();
                 (chosen, Some(along), Some(plan), undefined)
             }
             What::Volume => {
                 let patch = &shape.geometry.patches[0];
-                let Topology::Hexahedra { cells, dimensions, .. } = &patch.topology else { unreachable!("What::of admitted only hexahedra here") };
-                let found = analysis::hexahedron_volumes(&patch.points, cells).map_err(|e| Refusal::on("shape", e.to_string()))?;
+                let Topology::Hexahedra {
+                    cells, dimensions, ..
+                } = &patch.topology
+                else {
+                    unreachable!("What::of admitted only hexahedra here")
+                };
+                let found = analysis::hexahedron_volumes(&patch.points, cells)
+                    .map_err(|e| Refusal::on("shape", e.to_string()))?;
                 cx.stop_if_cancelled()?;
                 // One value per cell **as the grid numbers them**: a cell the
                 // reader dropped — undefined, or with no located pillar — is a
@@ -410,17 +481,36 @@ impl Operation for Measure {
                 let count = dimensions[0] * dimensions[1] * dimensions[2];
                 let mut values = vec![f64::NAN; count];
                 for (at, volume) in found.values.iter().enumerate() {
-                    let number = patch.topology.cell_at(at).map(|n| n as usize).filter(|n| *n < count).ok_or_else(|| {
-                        Refusal::on("shape", format!("cell {at} has no number within the grid's {count} cells"))
-                    })?;
+                    let number = patch
+                        .topology
+                        .cell_at(at)
+                        .map(|n| n as usize)
+                        .filter(|n| *n < count)
+                        .ok_or_else(|| {
+                            Refusal::on(
+                                "shape",
+                                format!("cell {at} has no number within the grid's {count} cells"),
+                            )
+                        })?;
                     values[number] = *volume;
                 }
                 let absent = count - cells.len();
                 if absent > 0 {
-                    says.push(Note { key: "undefined-cells", detail: format!("{absent} of {count} cell(s) have no geometry in the grid: NaN, not zero") });
+                    says.push(Note {
+                        key: "undefined-cells",
+                        detail: format!(
+                            "{absent} of {count} cell(s) have no geometry in the grid: NaN, not zero"
+                        ),
+                    });
                 }
                 if found.unplaced > 0 {
-                    says.push(Note { key: "unplaced", detail: format!("{} cell(s) with a corner that is no finite point: NaN", found.unplaced) });
+                    says.push(Note {
+                        key: "unplaced",
+                        detail: format!(
+                            "{} cell(s) with a corner that is no finite point: NaN",
+                            found.unplaced
+                        ),
+                    });
                 }
                 if found.twisted > 0 {
                     says.push(Note {
@@ -429,7 +519,13 @@ impl Operation for Measure {
                     });
                 }
                 if found.flat > 0 {
-                    says.push(Note { key: "flat", detail: format!("{} cell(s) are collapsed — a pinch-out: a volume of zero, kept", found.flat) });
+                    says.push(Note {
+                        key: "flat",
+                        detail: format!(
+                            "{} cell(s) are collapsed — a pinch-out: a volume of zero, kept",
+                            found.flat
+                        ),
+                    });
                 }
                 says.push(Note {
                     key: "trilinear",
@@ -451,10 +547,18 @@ impl Operation for Measure {
             None => {
                 let wanted = what.word();
                 let found = energyml_domain::property_kind::with_default(|dictionary| {
-                    dictionary.by_title(wanted).first().map(|kind| (kind.uuid.clone(), kind.title.clone()))
+                    dictionary
+                        .by_title(wanted)
+                        .first()
+                        .map(|kind| (kind.uuid.clone(), kind.title.clone()))
                 });
                 let (uuid, title) = found.ok_or_else(|| {
-                    Refusal::on("propertyKind", format!("the dictionary in use holds no kind called `{wanted}`: name one of the package"))
+                    Refusal::on(
+                        "propertyKind",
+                        format!(
+                            "the dictionary in use holds no kind called `{wanted}`: name one of the package"
+                        ),
+                    )
                 })?;
                 json!({ "$type": "eml23.DataObjectReference", "Uuid": uuid, "QualifiedType": "eml23.PropertyKind", "Title": title })
             }
@@ -470,9 +574,20 @@ impl Operation for Measure {
         };
 
         let (total, _) = analysis::total(&values);
-        let over = if shape.known.is_some() { "shape (object)" } else { "shape" }.to_string();
+        let over = if shape.known.is_some() {
+            "shape (object)"
+        } else {
+            "shape"
+        }
+        .to_string();
         let name = format!("{label} of shape");
-        let field = crate::declare::Field { name: name.clone(), over, on: what.elements().to_string(), values: values.clone(), uom: Some(uom.clone()) };
+        let field = crate::declare::Field {
+            name: name.clone(),
+            over,
+            on: what.elements().to_string(),
+            values: values.clone(),
+            uom: Some(uom.clone()),
+        };
         let property = super::property::PropertyParams {
             representation: params.representation,
             property_kind: PropertyKindRef(kind),
@@ -480,7 +595,13 @@ impl Operation for Measure {
             title: Title(title.clone()),
             data_file: params.data_file,
         };
-        let mut plan = super::property::write(&field, shape.known.as_ref(), &property, &format!("{name}:{title}"), cx)?;
+        let mut plan = super::property::write(
+            &field,
+            shape.known.as_ref(),
+            &property,
+            &format!("{name}:{title}"),
+            cx,
+        )?;
         // Our count is exact — one value per element of the shape — so the
         // writer's note that it could not check it is not this plan's news.
         plan.says.retain(|note| note.key != "count-unchecked");
@@ -489,18 +610,49 @@ impl Operation for Measure {
         plan.activity.recipe = "measure";
         plan.activity.title = format!("measure → {title}");
         let parameters = &mut plan.activity.parameters;
-        parameters.push(Parameter::Text { title: "measure".to_string(), value: what.word().to_string() });
-        parameters.push(Parameter::Text { title: "measured".to_string(), value: params.measured.word().to_string() });
-        parameters.push(Parameter::Double { title: "total".to_string(), value: total, uom: Some(uom.clone()) });
+        parameters.push(Parameter::Text {
+            title: "measure".to_string(),
+            value: what.word().to_string(),
+        });
+        parameters.push(Parameter::Text {
+            title: "measured".to_string(),
+            value: params.measured.word().to_string(),
+        });
+        parameters.push(Parameter::Double {
+            title: "total".to_string(),
+            value: total,
+            uom: Some(uom.clone()),
+        });
         if let (Some(along), Some(plan_values)) = (&along, &in_plan) {
-            parameters.push(Parameter::Double { title: "totalAlong".to_string(), value: analysis::total(along).0, uom: Some(uom.clone()) });
-            parameters.push(Parameter::Double { title: "totalPlan".to_string(), value: analysis::total(plan_values).0, uom: Some(uom.clone()) });
+            parameters.push(Parameter::Double {
+                title: "totalAlong".to_string(),
+                value: analysis::total(along).0,
+                uom: Some(uom.clone()),
+            });
+            parameters.push(Parameter::Double {
+                title: "totalPlan".to_string(),
+                value: analysis::total(plan_values).0,
+                uom: Some(uom.clone()),
+            });
         }
-        parameters.push(Parameter::Double { title: "elementCount".to_string(), value: values.len() as f64, uom: None });
-        parameters.push(Parameter::Double { title: "undefinedCount".to_string(), value: undefined as f64, uom: None });
+        parameters.push(Parameter::Double {
+            title: "elementCount".to_string(),
+            value: values.len() as f64,
+            uom: None,
+        });
+        parameters.push(Parameter::Double {
+            title: "undefinedCount".to_string(),
+            value: undefined as f64,
+            uom: None,
+        });
         plan.says.push(Note {
             key: "total",
-            detail: format!("{} {label} over {} {}: {total} {uom}", what.word(), values.len() - undefined, what.elements()),
+            detail: format!(
+                "{} {label} over {} {}: {total} {uom}",
+                what.word(),
+                values.len() - undefined,
+                what.elements()
+            ),
         });
         Ok(plan)
     }
@@ -508,16 +660,32 @@ impl Operation for Measure {
     /// `measured` is an input, recorded under the parameter the projection
     /// already declares — a title cannot be both.
     fn reports(&self) -> Vec<Slot> {
-        let number = || Need::Number { uom: None, least: None, most: None };
+        let number = || Need::Number {
+            uom: None,
+            least: None,
+            most: None,
+        };
         vec![
             Slot::required("indexable", Need::Text, "the indexable element the values lie on"),
             Slot::required("valueCount", number(), "values written"),
-            Slot::required("measure", Need::Text, "what was measured — area, length or volume"),
+            Slot::required(
+                "measure",
+                Need::Text,
+                "what was measured — area, length or volume",
+            ),
             Slot::required("total", number(), "the sum of the values written, in their unit"),
-            Slot::optional("totalAlong", number(), "an area or a length: the total along the shape, in three dimensions"),
+            Slot::optional(
+                "totalAlong",
+                number(),
+                "an area or a length: the total along the shape, in three dimensions",
+            ),
             Slot::optional("totalPlan", number(), "an area or a length: the total in plan"),
             Slot::required("elementCount", number(), "elements measured"),
-            Slot::required("undefinedCount", number(), "elements with no measure, written as NaN"),
+            Slot::required(
+                "undefinedCount",
+                number(),
+                "elements with no measure, written as NaN",
+            ),
         ]
     }
 }

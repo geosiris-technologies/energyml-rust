@@ -32,8 +32,8 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use tracing::Dispatch;
-use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::MakeWriter;
+use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::reload;
 use tracing_subscriber::{EnvFilter, Layer, Registry};
@@ -116,7 +116,9 @@ pub struct LogHandle {
 
 impl fmt::Debug for LogHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("LogHandle").field("filter", &self.filter()).finish()
+        f.debug_struct("LogHandle")
+            .field("filter", &self.filter())
+            .finish()
     }
 }
 
@@ -132,7 +134,9 @@ impl LogHandle {
 
     /// The filter in force, as last given; `None` when nothing is installed.
     pub fn filter(&self) -> Option<String> {
-        self.inner.as_ref().map(|(_, s)| s.lock().map(|g| g.clone()).unwrap_or_default())
+        self.inner
+            .as_ref()
+            .map(|(_, s)| s.lock().map(|g| g.clone()).unwrap_or_default())
     }
 
     /// Change the level while the program runs: `"debug"`, `"off"`,
@@ -153,7 +157,11 @@ impl LogHandle {
 
 fn normalise(spec: &str) -> String {
     let s = spec.trim();
-    if s.is_empty() { "off".to_string() } else { s.to_string() }
+    if s.is_empty() {
+        "off".to_string()
+    } else {
+        s.to_string()
+    }
 }
 
 fn parse(spec: &str) -> Result<EnvFilter, Error> {
@@ -164,7 +172,8 @@ fn parse(spec: &str) -> Result<EnvFilter, Error> {
 /// neither says anything (blank counts as nothing).
 pub fn requested(spec: Option<&str>) -> Option<String> {
     let from = |s: &str| (!s.trim().is_empty()).then(|| s.trim().to_string());
-    spec.and_then(from).or_else(|| std::env::var(ENV_FILTER).ok().and_then(|v| from(&v)))
+    spec.and_then(from)
+        .or_else(|| std::env::var(ENV_FILTER).ok().and_then(|v| from(&v)))
 }
 
 /// Install logging **if it was asked for**, otherwise install nothing.
@@ -193,8 +202,7 @@ fn install(spec: &str, format: Option<Format>) -> Result<LogHandle, Error> {
         Some(f) => f,
         None => Format::from_env()?,
     };
-    let (dispatch, handle) =
-        dispatch(spec, format, std::io::stderr, std::io::stderr().is_terminal())?;
+    let (dispatch, handle) = dispatch(spec, format, std::io::stderr, std::io::stderr().is_terminal())?;
     tracing::dispatcher::set_global_default(dispatch).map_err(|_| Error::AlreadyInstalled)?;
     // The ETP crates speak `log`: carry their records into the subscriber. A
     // logger already installed is left alone — the face's own, by its choice.
@@ -207,12 +215,7 @@ fn install(spec: &str, format: Option<Format>) -> Result<LogHandle, Error> {
 /// What [`init`] uses, and what a test or an embedding program uses to hold a
 /// subscriber of its own (`tracing::dispatcher::with_default`) without
 /// touching the process-wide one.
-pub fn dispatch<W>(
-    spec: &str,
-    format: Format,
-    writer: W,
-    ansi: bool,
-) -> Result<(Dispatch, LogHandle), Error>
+pub fn dispatch<W>(spec: &str, format: Format, writer: W, ansi: bool) -> Result<(Dispatch, LogHandle), Error>
 where
     W: for<'w> MakeWriter<'w> + Send + Sync + 'static,
 {
@@ -232,6 +235,8 @@ where
             .boxed(),
     };
     let subscriber = tracing_subscriber::registry().with(filter).with(layer);
-    let handle = LogHandle { inner: Some((handle, Arc::new(Mutex::new(spec)))) };
+    let handle = LogHandle {
+        inner: Some((handle, Arc::new(Mutex::new(spec)))),
+    };
     Ok((Dispatch::new(subscriber), handle))
 }

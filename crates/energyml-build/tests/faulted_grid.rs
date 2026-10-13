@@ -56,15 +56,26 @@ const LEVELS: usize = CK + 1 + 1;
 const PILLARS: usize = NI * NJ;
 
 fn when() -> When {
-    When { creation: "2026-09-28T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-28T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 fn frame() -> Ref {
-    Ref::new("cccccccc-0000-4000-8000-000000000003", "eml23.LocalEngineeringCompoundCrs", "The boreholes frame")
+    Ref::new(
+        "cccccccc-0000-4000-8000-000000000003",
+        "eml23.LocalEngineeringCompoundCrs",
+        "The boreholes frame",
+    )
 }
 
 fn other_frame() -> Ref {
-    Ref::new("dddddddd-0000-4000-8000-000000000004", "eml23.LocalEngineeringCompoundCrs", "The other frame")
+    Ref::new(
+        "dddddddd-0000-4000-8000-000000000004",
+        "eml23.LocalEngineeringCompoundCrs",
+        "The other frame",
+    )
 }
 
 fn earth_model() -> Value {
@@ -94,7 +105,16 @@ fn horizons() -> Vec<(&'static str, Geometry)> {
         }
         Geometry {
             kind: "grid",
-            patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Grid { fastest: NI, slowest: NJ }, closed: Vec::new() }],
+            patches: vec![Patch {
+                index: 0,
+                node_offset: 0,
+                points,
+                topology: Topology::Grid {
+                    fastest: NI,
+                    slowest: NJ,
+                },
+                closed: Vec::new(),
+            }],
         }
     };
     vec![
@@ -164,7 +184,13 @@ fn fault_b() -> Geometry {
 fn plane(points: Vec<[f64; 3]>) -> Geometry {
     Geometry {
         kind: "triangles",
-        patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Triangles(vec![[0, 1, 2], [1, 3, 2]]), closed: Vec::new() }],
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology: Topology::Triangles(vec![[0, 1, 2], [1, 3, 2]]),
+            closed: Vec::new(),
+        }],
     }
 }
 
@@ -195,7 +221,11 @@ fn b_at(i: usize, j: usize) -> f64 {
 
 /// The name a piece takes in the bag: `horizons`, `horizons 2`, …
 fn slot_name(slot: &str, rank: usize) -> String {
-    if rank == 0 { slot.to_string() } else { format!("{slot} {}", rank + 1) }
+    if rank == 0 {
+        slot.to_string()
+    } else {
+        format!("{slot} {}", rank + 1)
+    }
 }
 
 fn known(uuid: String, qualified_type: &str, title: &str, frame: &Ref) -> Source {
@@ -213,15 +243,40 @@ fn bag_with(faults: &[(&str, Geometry)], fault_frame: &Ref) -> Pieces {
     let mut pieces = Pieces::empty();
     for (rank, (title, geometry)) in horizons().into_iter().enumerate() {
         pieces = pieces
-            .with(slot_name("horizons", rank), Source::Shape { geometry, closed: None })
-            .with(format!("{} (object)", slot_name("horizons", rank)), known(format!("1a2b3c4d-0000-4000-8000-{rank:012}"), "resqml22.Grid2dRepresentation", title, &frame()));
+            .with(
+                slot_name("horizons", rank),
+                Source::Shape {
+                    geometry,
+                    closed: None,
+                },
+            )
+            .with(
+                format!("{} (object)", slot_name("horizons", rank)),
+                known(
+                    format!("1a2b3c4d-0000-4000-8000-{rank:012}"),
+                    "resqml22.Grid2dRepresentation",
+                    title,
+                    &frame(),
+                ),
+            );
     }
     for (rank, (title, geometry)) in faults.iter().enumerate() {
         pieces = pieces
-            .with(slot_name("faults", rank), Source::Shape { geometry: geometry.clone(), closed: None })
+            .with(
+                slot_name("faults", rank),
+                Source::Shape {
+                    geometry: geometry.clone(),
+                    closed: None,
+                },
+            )
             .with(
                 format!("{} (object)", slot_name("faults", rank)),
-                known(format!("fa000000-0000-4000-8000-{rank:012}"), "resqml22.TriangulatedSetRepresentation", title, fault_frame),
+                known(
+                    format!("fa000000-0000-4000-8000-{rank:012}"),
+                    "resqml22.TriangulatedSetRepresentation",
+                    title,
+                    fault_frame,
+                ),
             );
     }
     pieces
@@ -252,7 +307,9 @@ fn unrepresented() -> Choices {
 }
 
 fn planned(pieces: &Pieces, choices: &Choices) -> Result<Plan, String> {
-    Registry::new().plan("faulted-ijk-grid", pieces, choices, &Identity::derived(), &when()).map_err(|why| why.message())
+    Registry::new()
+        .plan("faulted-ijk-grid", pieces, choices, &Identity::derived(), &when())
+        .map_err(|why| why.message())
 }
 
 fn the_grid(plan: &Plan) -> &Value {
@@ -260,7 +317,11 @@ fn the_grid(plan: &Plan) -> &Value {
 }
 
 fn dataset(plan: &Plan, path_end: &str) -> (Vec<i64>, Numbers) {
-    let found = plan.datasets.iter().find(|d| d.path.ends_with(path_end)).unwrap_or_else(|| panic!("no dataset {path_end}"));
+    let found = plan
+        .datasets
+        .iter()
+        .find(|d| d.path.ends_with(path_end))
+        .unwrap_or_else(|| panic!("no dataset {path_end}"));
     (found.dimensions.clone(), found.values.clone())
 }
 
@@ -312,7 +373,10 @@ fn splits(plan: &Plan) -> Vec<(usize, Vec<usize>)> {
         .iter()
         .zip(&cumulative)
         .map(|(pillar, end)| {
-            let row = columns[start..*end as usize].iter().map(|c| *c as usize).collect();
+            let row = columns[start..*end as usize]
+                .iter()
+                .map(|c| *c as usize)
+                .collect();
             start = *end as usize;
             (*pillar as usize, row)
         })
@@ -339,10 +403,15 @@ fn the_pillars_on_a_fault_split_and_the_moved_side_takes_the_split_line() {
     let mut expected: Vec<(usize, Vec<usize>)> = Vec::new();
     for j in 0..NJ {
         for i in 0..NI {
-            let around: Vec<(usize, usize)> = [(i.wrapping_sub(1), j.wrapping_sub(1)), (i, j.wrapping_sub(1)), (i.wrapping_sub(1), j), (i, j)]
-                .into_iter()
-                .filter(|(a, b)| *a < CI && *b < CJ)
-                .collect();
+            let around: Vec<(usize, usize)> = [
+                (i.wrapping_sub(1), j.wrapping_sub(1)),
+                (i, j.wrapping_sub(1)),
+                (i.wrapping_sub(1), j),
+                (i, j),
+            ]
+            .into_iter()
+            .filter(|(a, b)| *a < CI && *b < CJ)
+            .collect();
             let east = |a: usize| a >= 2;
             let north = |b: usize| b >= 2;
             // The groups: by side of A and side of B, where each throws.
@@ -369,8 +438,15 @@ fn the_pillars_on_a_fault_split_and_the_moved_side_takes_the_split_line() {
     let mut sorted = found.clone();
     sorted.sort();
     assert_eq!(sorted, expected);
-    assert_eq!(found.len(), 5 + 7 - 1 + 2, "A's five, B's seven, the crossing pillar counted once and given three");
-    assert!(found.windows(2).all(|pair| pair[0].0 <= pair[1].0), "split lines in pillar order");
+    assert_eq!(
+        found.len(),
+        5 + 7 - 1 + 2,
+        "A's five, B's seven, the crossing pillar counted once and given three"
+    );
+    assert!(
+        found.windows(2).all(|pair| pair[0].0 <= pair[1].0),
+        "split lines in pillar order"
+    );
     assert_eq!(found.iter().filter(|(p, _)| *p == pillar(2, 2)).count(), 3);
 
     let grid = the_grid(&plan);
@@ -378,7 +454,11 @@ fn the_pillars_on_a_fault_split_and_the_moved_side_takes_the_split_line() {
     assert_eq!(lines["Count"], json!(found.len()));
     assert_eq!(number(&plan, "splitLineCount"), found.len() as f64);
     let (dimensions, _) = dataset(&plan, "/points");
-    assert_eq!(dimensions, vec![LEVELS as i64, (PILLARS + found.len()) as i64, 3], "NKL × (pillars + splits) × 3, the lines flattened");
+    assert_eq!(
+        dimensions,
+        vec![LEVELS as i64, (PILLARS + found.len()) as i64, 3],
+        "NKL × (pillars + splits) × 3, the lines flattened"
+    );
 }
 
 /// **The split nodes are the throw below the pillar's own, on one side only.**
@@ -395,11 +475,20 @@ fn the_split_nodes_are_displaced_by_the_throw_on_one_side_only() {
     let lines = PILLARS + found.len();
     let points = floats(&plan, "/points");
     let z = |level: usize, line: usize| points[3 * (level * lines + line) + 2];
-    let xy = |level: usize, line: usize| [points[3 * (level * lines + line)], points[3 * (level * lines + line) + 1]];
+    let xy = |level: usize, line: usize| {
+        [
+            points[3 * (level * lines + line)],
+            points[3 * (level * lines + line) + 1],
+        ]
+    };
     for (split, (pillar, _)) in found.iter().enumerate() {
         let (i, j) = (pillar % NI, pillar / NI);
         for level in 0..LEVELS {
-            assert_eq!(xy(level, PILLARS + split), xy(level, *pillar), "a split line stands on its pillar");
+            assert_eq!(
+                xy(level, PILLARS + split),
+                xy(level, *pillar),
+                "a split line stands on its pillar"
+            );
         }
         if i != 2 || j == 2 {
             continue;
@@ -408,7 +497,10 @@ fn the_split_nodes_are_displaced_by_the_throw_on_one_side_only() {
         for level in 0..LEVELS {
             let own = z(level, *pillar);
             let moved = z(level, PILLARS + split);
-            assert!((own - (level_z(level, i) - b_own)).abs() < 1e-9, "pillar ({i}, {j}) level {level}: its own line is the footwall's, {own}");
+            assert!(
+                (own - (level_z(level, i) - b_own)).abs() < 1e-9,
+                "pillar ({i}, {j}) level {level}: its own line is the footwall's, {own}"
+            );
             assert!(
                 (moved - (own - a_at(i, j))).abs() < 1e-9,
                 "pillar ({i}, {j}) level {level}: the split line is {moved}, {} below the pillar's own where A throws {}",
@@ -421,12 +513,19 @@ fn the_split_nodes_are_displaced_by_the_throw_on_one_side_only() {
     for j in 0..2 {
         for i in 0..2 {
             for level in 0..LEVELS {
-                assert_eq!(z(level, j * NI + i), level_z(level, i), "west of A, south of B, nothing moves");
+                assert_eq!(
+                    z(level, j * NI + i),
+                    level_z(level, i),
+                    "west of A, south of B, nothing moves"
+                );
             }
         }
     }
     for level in 0..LEVELS {
-        assert!((z(level, 4) - (level_z(level, 4) - a_at(4, 0))).abs() < 1e-9, "east of A, the pillar (4, 0) is dragged down");
+        assert!(
+            (z(level, 4) - (level_z(level, 4) - a_at(4, 0))).abs() < 1e-9,
+            "east of A, the pillar (4, 0) is dragged down"
+        );
     }
 }
 
@@ -440,7 +539,11 @@ fn the_split_nodes_are_displaced_by_the_throw_on_one_side_only() {
 fn the_cells_next_to_a_fault_are_removed_as_asked_and_only_those() {
     let plan = planned(&bag(), &answers()).unwrap_or_else(|why| panic!("{why}"));
     let flags = integers(&plan, "/cellGeometryIsDefined");
-    assert_eq!(dataset(&plan, "/cellGeometryIsDefined").0, vec![CK as i64, CJ as i64, CI as i64], "k, j, i");
+    assert_eq!(
+        dataset(&plan, "/cellGeometryIsDefined").0,
+        vec![CK as i64, CJ as i64, CI as i64],
+        "k, j, i"
+    );
     let mut removed = Vec::new();
     for k in 0..CK {
         for j in 0..CJ {
@@ -457,7 +560,9 @@ fn the_cells_next_to_a_fault_are_removed_as_asked_and_only_those() {
     assert_eq!(removed.len(), 12);
     assert_eq!(number(&plan, "deadCellCount"), 12.0);
     // A removed cell is not drawn: the plan's own cells skip it.
-    let Topology::Hexahedra { cells, index, .. } = &plan.shapes[0].geometry.patches[0].topology else { panic!("not cells") };
+    let Topology::Hexahedra { cells, index, .. } = &plan.shapes[0].geometry.patches[0].topology else {
+        panic!("not cells")
+    };
     assert_eq!(cells.len(), CI * CJ * CK - 12);
     assert!(removed.iter().all(|cell| !index.contains(&(*cell as u32))));
 
@@ -470,7 +575,10 @@ fn the_cells_next_to_a_fault_are_removed_as_asked_and_only_those() {
     // None asked, none removed — and the flag array is the constant.
     let none = planned(&bag(), &answers().set("deadColumns", json!([]))).unwrap();
     assert_eq!(number(&none, "deadCellCount"), 0.0);
-    assert_eq!(the_grid(&none)["Geometry"]["CellGeometryIsDefined"]["$type"], json!("eml23.BooleanConstantArray"));
+    assert_eq!(
+        the_grid(&none)["Geometry"]["CellGeometryIsDefined"]["$type"],
+        json!("eml23.BooleanConstantArray")
+    );
 }
 
 // -- what the grid says of itself ------------------------------------------------------
@@ -482,12 +590,19 @@ fn the_cells_next_to_a_fault_are_removed_as_asked_and_only_those() {
 /// source. K down, vertical pillars, in the horizons' frame.
 #[test]
 fn the_grid_represents_the_model_and_says_its_throw_is_invented() {
-    let choices = answers().set("synthetic", true).set("source", "synthetic — a test");
+    let choices = answers()
+        .set("synthetic", true)
+        .set("source", "synthetic — a test");
     let plan = planned(&bag(), &choices).unwrap_or_else(|why| panic!("{why}"));
     let grid = the_grid(&plan);
     assert_eq!(grid["RepresentedObject"]["Uuid"], earth_model()["Uuid"]);
     assert_eq!(grid["ExtensionNameValue"][0]["Name"], json!("synthetic"));
-    assert!(grid["Citation"]["Description"].as_str().unwrap().contains("synthetic — a test"));
+    assert!(
+        grid["Citation"]["Description"]
+            .as_str()
+            .unwrap()
+            .contains("synthetic — a test")
+    );
     assert_eq!(grid["Geometry"]["KDirection"], json!("down"));
     assert_eq!(grid["Geometry"]["PillarShape"], json!("vertical"));
     assert_eq!(grid["Geometry"]["LocalCrs"]["Uuid"], json!(frame().uuid));
@@ -501,7 +616,11 @@ fn the_grid_represents_the_model_and_says_its_throw_is_invented() {
             _ => None,
         })
         .collect();
-    assert_eq!(levels, vec![level(), level()], "each fault traced at the middle of the heights it shares with the grid");
+    assert_eq!(
+        levels,
+        vec![level(), level()],
+        "each fault traced at the middle of the heights it shares with the grid"
+    );
 
     let why = planned(&bag(), &answers().set("synthetic", true)).unwrap_err();
     assert!(why.contains("`source`"), "{why}");
@@ -514,15 +633,26 @@ fn the_grid_represents_the_model_and_says_its_throw_is_invented() {
 fn a_faulted_grid_represents_something_or_is_refused() {
     let bare = unrepresented();
     let why = planned(&bag(), &bare).unwrap_err();
-    assert!(why.contains("`interpretation`") && why.contains("§7.3.2.2"), "{why}");
+    assert!(
+        why.contains("`interpretation`") && why.contains("§7.3.2.2"),
+        "{why}"
+    );
 
     let made = planned(
         &bag(),
-        &bare.set("featureType", "resqml22.Model").set("interpretationType", "resqml22.EarthModelInterpretation"),
+        &bare
+            .set("featureType", "resqml22.Model")
+            .set("interpretationType", "resqml22.EarthModelInterpretation"),
     )
     .unwrap_or_else(|why| panic!("{why}"));
-    let interpretation = made.of_role("interpretation").next().expect("an interpretation made");
-    assert_eq!(the_grid(&made)["RepresentedObject"]["Uuid"], json!(interpretation.uuid));
+    let interpretation = made
+        .of_role("interpretation")
+        .next()
+        .expect("an interpretation made");
+    assert_eq!(
+        the_grid(&made)["RepresentedObject"]["Uuid"],
+        json!(interpretation.uuid)
+    );
 }
 
 // -- identity -----------------------------------------------------------------------------
@@ -534,13 +664,24 @@ fn the_same_cut_names_the_same_grid() {
     let uuid = |plan: &Plan| plan.of_role("representation").next().unwrap().uuid.clone();
     let first = uuid(&planned(&bag(), &answers()).unwrap());
     assert_eq!(first, uuid(&planned(&bag(), &answers()).unwrap()));
-    assert_ne!(first, uuid(&planned(&bag(), &answers().set("maximumThrow", json!([12.0, 6.0]))).unwrap()), "another throw");
-    assert_ne!(first, uuid(&planned(&bag(), &answers().set("deadColumns", json!([1, 1]))).unwrap()), "other cells removed");
+    assert_ne!(
+        first,
+        uuid(&planned(&bag(), &answers().set("maximumThrow", json!([12.0, 6.0]))).unwrap()),
+        "another throw"
+    );
+    assert_ne!(
+        first,
+        uuid(&planned(&bag(), &answers().set("deadColumns", json!([1, 1]))).unwrap()),
+        "other cells removed"
+    );
     let plain = Registry::new()
         .plan(
             "ijk-grid-from-horizons",
             &bag_with(&[], &frame()),
-            &Choices::new().set("layers", json!([2, 0, 2])).set("axis", "elevation").set("title", "Faulted grid"),
+            &Choices::new()
+                .set("layers", json!([2, 0, 2]))
+                .set("axis", "elevation")
+                .set("title", "Faulted grid"),
             &Identity::derived(),
             &when(),
         )
@@ -557,7 +698,10 @@ fn the_same_cut_names_the_same_grid() {
 #[test]
 fn what_cannot_cut_the_grid_is_refused_by_name() {
     let why = planned(&bag(), &answers().set("maximumThrow", json!([10.0]))).unwrap_err();
-    assert!(why.contains("`maximumThrow`") && why.contains("1 throw(s) for 2 fault(s)"), "{why}");
+    assert!(
+        why.contains("`maximumThrow`") && why.contains("1 throw(s) for 2 fault(s)"),
+        "{why}"
+    );
     let why = planned(&bag(), &answers().set("deadColumns", json!([1]))).unwrap_err();
     assert!(why.contains("`deadColumns`"), "{why}");
     let why = planned(&bag(), &answers().set("throw", json!(["normal", "strike-slip"]))).unwrap_err();
@@ -571,7 +715,12 @@ fn what_cannot_cut_the_grid_is_refused_by_name() {
         [X0 + A_X, Y0 + A_FROM, FAULT_BOTTOM],
         [X0 + A_X, Y0 + A_TO, FAULT_BOTTOM],
     ]);
-    let one = || answers().set("maximumThrow", json!([A_THROW])).set("throw", json!(["normal"])).set("deadColumns", json!([]));
+    let one = || {
+        answers()
+            .set("maximumThrow", json!([A_THROW]))
+            .set("throw", json!(["normal"]))
+            .set("deadColumns", json!([]))
+    };
     let why = planned(&bag_with(&[("V", vertical)], &frame()), &one()).unwrap_err();
     assert!(why.contains("`V` is vertical"), "{why}");
 
@@ -590,9 +739,17 @@ fn what_cannot_cut_the_grid_is_refused_by_name() {
     // (−30) ends above the base of the upper one (−20). Refused, never drawn
     // inside out. The same fault normal is a thicker gap, and is written.
     let sealed = bag_with(&[("A", fault_a_from(-25.0, FAULT_BOTTOM))], &frame());
-    let reverse = one().set("throw", json!(["reverse"])).set("maximumThrow", json!([30.0])).set("reach", 1000.0);
+    let reverse = one()
+        .set("throw", json!(["reverse"]))
+        .set("maximumThrow", json!([30.0]))
+        .set("reach", 1000.0);
     let why = planned(&sealed, &reverse).unwrap_err();
-    assert!(why.contains("`throw`") && why.contains("turns the levels over") && why.contains("level 3 ends up above level 2"), "{why}");
+    assert!(
+        why.contains("`throw`")
+            && why.contains("turns the levels over")
+            && why.contains("level 3 ends up above level 2"),
+        "{why}"
+    );
     planned(&sealed, &reverse.set("throw", json!(["normal"]))).expect("a normal throw only thickens the gap");
 }
 
@@ -603,10 +760,17 @@ fn what_cannot_cut_the_grid_is_refused_by_name() {
 #[test]
 fn a_fault_sealed_inside_the_grid_leaves_the_levels_above_it() {
     let sealed = bag_with(&[("A", fault_a_from(-25.0, FAULT_BOTTOM))], &frame());
-    let choices = answers().set("maximumThrow", json!([A_THROW])).set("throw", json!(["normal"])).set("deadColumns", json!([]));
+    let choices = answers()
+        .set("maximumThrow", json!([A_THROW]))
+        .set("throw", json!(["normal"]))
+        .set("deadColumns", json!([]));
     let plan = planned(&sealed, &choices).unwrap_or_else(|why| panic!("{why}"));
     let found = splits(&plan);
-    assert_eq!(found.iter().map(|(p, _)| *p).collect::<Vec<_>>(), vec![2, 9, 16, 23, 30], "the five pillars at i = 2");
+    assert_eq!(
+        found.iter().map(|(p, _)| *p).collect::<Vec<_>>(),
+        vec![2, 9, 16, 23, 30],
+        "the five pillars at i = 2"
+    );
     let lines = PILLARS + found.len();
     let points = floats(&plan, "/points");
     let z = |level: usize, line: usize| points[3 * (level * lines + line) + 2];
@@ -615,9 +779,15 @@ fn a_fault_sealed_inside_the_grid_leaves_the_levels_above_it() {
         for level in 0..LEVELS {
             let (own, moved) = (z(level, *pillar), z(level, PILLARS + split));
             if level_z(level, 2) > -25.0 {
-                assert_eq!(moved, own, "pillar (2, {j}), level {level}: above the fault's top, nothing moves");
+                assert_eq!(
+                    moved, own,
+                    "pillar (2, {j}), level {level}: above the fault's top, nothing moves"
+                );
             } else {
-                assert!((own - moved - a_at(2, j)).abs() < 1e-9, "pillar (2, {j}), level {level}: {own} and {moved}");
+                assert!(
+                    (own - moved - a_at(2, j)).abs() < 1e-9,
+                    "pillar (2, {j}), level {level}: {own} and {moved}"
+                );
             }
         }
     }
@@ -642,10 +812,22 @@ fn the_reader_draws_the_split_nodes_and_not_the_removed_cells() {
     // No frame of the package: the frame is created, in metres, counting up.
     let mut pieces = Pieces::empty();
     for (rank, (_, geometry)) in horizons().into_iter().enumerate() {
-        pieces = pieces.with(slot_name("horizons", rank), Source::Shape { geometry, closed: None });
+        pieces = pieces.with(
+            slot_name("horizons", rank),
+            Source::Shape {
+                geometry,
+                closed: None,
+            },
+        );
     }
     for (rank, geometry) in [fault_a(), fault_b()].into_iter().enumerate() {
-        pieces = pieces.with(slot_name("faults", rank), Source::Shape { geometry, closed: None });
+        pieces = pieces.with(
+            slot_name("faults", rank),
+            Source::Shape {
+                geometry,
+                closed: None,
+            },
+        );
     }
     let choices = unrepresented()
         .set("featureType", "resqml22.Model")
@@ -665,9 +847,15 @@ fn the_reader_draws_the_split_nodes_and_not_the_removed_cells() {
     let mut store = energyml_build::epc::open(None, "grid.epc", registry.clone()).unwrap();
     store.external_files_mut().set_root(&dir);
     let made = energyml_build::apply::apply(&plan, &mut store, &when());
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+    assert!(
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
-    store.save_as(&out, &energyml_storage::SaveOptions::default()).unwrap();
+    store
+        .save_as(&out, &energyml_storage::SaveOptions::default())
+        .unwrap();
     let reread = energyml_storage::EpcStore::open(&out, registry).unwrap();
     let summary = reread.find_by_uuid(&uuid).cloned().unwrap();
     let object = reread.get_object(&summary.uri).unwrap();
@@ -678,26 +866,52 @@ fn the_reader_draws_the_split_nodes_and_not_the_removed_cells() {
         .find(|location| location.path_in_file.ends_with("/cellGeometryIsDefined"))
         .map(|location| reread.read_array(location).expect("the flags read").to_f64())
         .expect("a CellGeometryIsDefined dataset");
-    let built = energyml_geometry::scene::object_of(object.as_reflect(), &reread, &summary.uri).expect("the grid reads");
+    let built = energyml_geometry::scene::object_of(object.as_reflect(), &reread, &summary.uri)
+        .expect("the grid reads");
     let _ = std::fs::remove_dir_all(&dir);
 
     // -- what the XML declares, against what the reader placed -----------------------
     let count = |value: &Value| value.as_u64().unwrap_or_else(|| panic!("not a count: {value}")) as usize;
-    let (ni, nj, nk) = (count(&declared["Ni"]), count(&declared["Nj"]), count(&declared["Nk"]));
+    let (ni, nj, nk) = (
+        count(&declared["Ni"]),
+        count(&declared["Nj"]),
+        count(&declared["Nk"]),
+    );
     let gaps = count(&declared["KGaps"]["Count"]);
     let split = count(&declared["Geometry"]["ColumnLayerSplitCoordinateLines"]["Count"]);
     assert_eq!((ni, nj, nk, gaps), (CI, CJ, CK, 1));
-    let [patch] = built.geometry.patches.as_slice() else { panic!("one patch") };
-    assert_eq!(patch.points.len(), ((ni + 1) * (nj + 1) + split) * (nk + gaps + 1), "(pillars + split lines) × NKL nodes");
+    let [patch] = built.geometry.patches.as_slice() else {
+        panic!("one patch")
+    };
+    assert_eq!(
+        patch.points.len(),
+        ((ni + 1) * (nj + 1) + split) * (nk + gaps + 1),
+        "(pillars + split lines) × NKL nodes"
+    );
     assert_eq!(patch.points.len() * 3, planned_points.len());
-    let Topology::Hexahedra { cells, dimensions, index } = &patch.topology else { panic!("not cells: {:?}", patch.topology) };
+    let Topology::Hexahedra {
+        cells,
+        dimensions,
+        index,
+    } = &patch.topology
+    else {
+        panic!("not cells: {:?}", patch.topology)
+    };
     assert_eq!(*dimensions, [ni, nj, nk]);
     let undefined = flags.iter().filter(|flag| **flag == 0.0).count();
     assert_eq!(flags.len(), ni * nj * nk);
     assert_eq!(undefined, 12, "the twelve cells asked, in the file");
-    assert_eq!(cells.len(), ni * nj * nk - undefined, "every cell the file defines is drawn, and no other");
+    assert_eq!(
+        cells.len(),
+        ni * nj * nk - undefined,
+        "every cell the file defines is drawn, and no other"
+    );
     for (cell, flag) in flags.iter().enumerate() {
-        assert_eq!(index.contains(&(cell as u32)), *flag != 0.0, "cell {cell}: drawn if and only if its flag says it has a geometry");
+        assert_eq!(
+            index.contains(&(cell as u32)),
+            *flag != 0.0,
+            "cell {cell}: drawn if and only if its flag says it has a geometry"
+        );
     }
 
     // -- the corners on a split pillar ------------------------------------------------
@@ -705,7 +919,10 @@ fn the_reader_draws_the_split_nodes_and_not_the_removed_cells() {
     // wall. Each cell's corners at x = X0 + 50, y = Y0 are its corners on
     // that pillar — the reader's own winding aside.
     let at_pillar = |cell: usize| -> Vec<f64> {
-        let position = index.iter().position(|one| *one as usize == cell).expect("the cell is drawn");
+        let position = index
+            .iter()
+            .position(|one| *one as usize == cell)
+            .expect("the cell is drawn");
         let mut z: Vec<f64> = cells[position]
             .iter()
             .map(|n| patch.points[*n as usize])
@@ -718,9 +935,17 @@ fn the_reader_draws_the_split_nodes_and_not_the_removed_cells() {
     for k in 0..CK {
         let footwall = at_pillar(k * CJ * CI + 1);
         let hanging = at_pillar(k * CJ * CI + 2);
-        assert_eq!((footwall.len(), hanging.len()), (2, 2), "two corners of each cell on the pillar, layer {k}");
+        assert_eq!(
+            (footwall.len(), hanging.len()),
+            (2, 2),
+            "two corners of each cell on the pillar, layer {k}"
+        );
         for (f, h) in footwall.iter().zip(&hanging) {
-            assert!((f - h - a_at(2, 0)).abs() < 1e-6, "layer {k}: the hanging wall's corner {h} is A's throw {} below the footwall's {f}", a_at(2, 0));
+            assert!(
+                (f - h - a_at(2, 0)).abs() < 1e-6,
+                "layer {k}: the hanging wall's corner {h} is A's throw {} below the footwall's {f}",
+                a_at(2, 0)
+            );
         }
     }
 }

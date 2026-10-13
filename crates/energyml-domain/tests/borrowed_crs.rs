@@ -41,8 +41,7 @@ impl Store {
             geometry: Some(resqml20::IjkGridGeometry {
                 local_crs: eml20::DataObjectReference {
                     uuid: crs_uuid.to_string(),
-                    content_type: "application/x-resqml+xml;version=2.0;type=obj_LocalDepth3dCrs"
-                        .into(),
+                    content_type: "application/x-resqml+xml;version=2.0;type=obj_LocalDepth3dCrs".into(),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -85,8 +84,7 @@ fn connections(grids: &[&str]) -> resqml20::GridConnectionSetRepresentation {
             .iter()
             .map(|uuid| eml20::DataObjectReference {
                 uuid: (*uuid).to_string(),
-                content_type:
-                    "application/x-resqml+xml;version=2.0;type=obj_IjkGridRepresentation".into(),
+                content_type: "application/x-resqml+xml;version=2.0;type=obj_IjkGridRepresentation".into(),
                 ..Default::default()
             })
             .collect(),

@@ -48,13 +48,16 @@ pub fn run(args: GalaxyToolArgs) -> Result<ExitCode> {
         let mut written = 0;
         for operation in registry.iter() {
             let path = dir.join(format!("energyml_{}.xml", operation.name().replace('-', "_")));
-            std::fs::write(&path, tool_xml(operation, &options)).with_context(|| format!("writing {}", path.display()))?;
+            std::fs::write(&path, tool_xml(operation, &options))
+                .with_context(|| format!("writing {}", path.display()))?;
             written += 1;
         }
         println!("{written} tool(s) written to {}", dir.display());
         return Ok(ExitCode::SUCCESS);
     }
-    let Some(name) = args.operation else { bail!("name an operation, or give --all --dir DIR") };
+    let Some(name) = args.operation else {
+        bail!("name an operation, or give --all --dir DIR")
+    };
     let Some(operation) = registry.get(&name) else {
         bail!("no operation is called `{name}` — `energyml create --list` names them");
     };

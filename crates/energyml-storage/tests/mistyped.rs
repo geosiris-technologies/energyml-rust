@@ -68,7 +68,8 @@ fn package(name: &str, part: &str, declared_type: &str, root: &str) -> PathBuf {
     let options: zip::write::FileOptions<'_, ()> =
         zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
     zip.start_file("[Content_Types].xml", options).unwrap();
-    zip.write_all(content_types(part, declared_type).as_bytes()).unwrap();
+    zip.write_all(content_types(part, declared_type).as_bytes())
+        .unwrap();
     zip.start_file(part, options).unwrap();
     zip.write_all(object(root).as_bytes()).unwrap();
     zip.finish().expect("the package is written");

@@ -46,7 +46,10 @@ pub fn word_of(program: &str) -> Option<String> {
     if let Some((alias, _)) = ALIASES.iter().find(|(_, target)| *target == program) {
         return Some((*alias).to_string());
     }
-    program.strip_prefix(PREFIX).filter(|word| !word.is_empty()).map(str::to_string)
+    program
+        .strip_prefix(PREFIX)
+        .filter(|word| !word.is_empty())
+        .map(str::to_string)
 }
 
 /// The sentence that says how to get a program that is not installed.
@@ -80,7 +83,9 @@ fn is_runnable(path: &Path) -> bool {
 /// the directories of `path`, a `PATH`-style list.
 pub fn find_in(program: &str, path: &OsStr) -> Option<PathBuf> {
     let file = format!("{program}{}", std::env::consts::EXE_SUFFIX);
-    std::env::split_paths(path).map(|dir| dir.join(&file)).find(|candidate| is_runnable(candidate))
+    std::env::split_paths(path)
+        .map(|dir| dir.join(&file))
+        .find(|candidate| is_runnable(candidate))
 }
 
 /// [`find_in`] over this process's `PATH`.
@@ -227,7 +232,10 @@ mod tests {
         let first = dir_with("first", &["energyml-foo"]);
         let second = dir_with("second", &["energyml-foo", "energyml-bar"]);
         let path = path_of(&[&first, &second]);
-        assert_eq!(find_in("energyml-foo", &path), Some(first.join(format!("energyml-foo{}", std::env::consts::EXE_SUFFIX))));
+        assert_eq!(
+            find_in("energyml-foo", &path),
+            Some(first.join(format!("energyml-foo{}", std::env::consts::EXE_SUFFIX)))
+        );
         assert!(find_in("energyml-bar", &path).is_some());
         assert_eq!(find_in("energyml-baz", &path), None);
     }
@@ -242,8 +250,14 @@ mod tests {
     #[test]
     fn the_listing_gives_words_sorted_once_with_the_aliases() {
         let first = dir_with("list-a", &["energyml-zeta", "retp", "cargo", "energyml-alpha"]);
-        let second = dir_with("list-b", &["energyml-alpha", "energyml-translate", "energyml-etp"]);
-        let words: Vec<String> = list_in(&path_of(&[&first, &second])).into_iter().map(|(word, _)| word).collect();
+        let second = dir_with(
+            "list-b",
+            &["energyml-alpha", "energyml-translate", "energyml-etp"],
+        );
+        let words: Vec<String> = list_in(&path_of(&[&first, &second]))
+            .into_iter()
+            .map(|(word, _)| word)
+            .collect();
         // `energyml-etp` is not the program of `etp` (that is `retp`), so it is
         // not listed under it; `cargo` is not ours.
         assert_eq!(words, ["alpha", "etp", "translate", "zeta"]);

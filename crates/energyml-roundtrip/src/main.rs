@@ -451,9 +451,7 @@ fn read_by_root(
         .filter(|i| i.is_top_level && i.package == package && (i.xml_name == local || i.object_type == local))
         .collect();
     if candidates.is_empty() {
-        return Err(format!(
-            "no top-level type `{local}` in package `{package}`"
-        ));
+        return Err(format!("no top-level type `{local}` in package `{package}`"));
     }
     let declared = declared_version.map(version_parts);
     candidates.sort_by_key(|i| std::cmp::Reverse(version_rank(i, declared.as_deref())));
@@ -651,10 +649,7 @@ fn render_report(results: &[PartResult], max_findings: usize) -> String {
             ));
         }
         if result.diffs.len() > max_findings {
-            out.push_str(&format!(
-                "  - … and {} more\n",
-                result.diffs.len() - max_findings
-            ));
+            out.push_str(&format!("  - … and {} more\n", result.diffs.len() - max_findings));
         }
         for (diff, _) in result.accepted.iter().take(max_findings) {
             out.push_str(&format!(
@@ -748,7 +743,10 @@ mod tests {
     #[test]
     fn an_unknown_release_falls_back_to_the_newest_below_it() {
         let mut candidates = prodml_fluid_systems();
-        assert!(candidates.len() > 2, "the test needs three releases to tell a fallback from a maximum");
+        assert!(
+            candidates.len() > 2,
+            "the test needs three releases to tell a fallback from a maximum"
+        );
         let declared = version_parts("2.1");
         candidates.sort_by_key(|i| std::cmp::Reverse(version_rank(i, Some(&declared))));
         assert_eq!(candidates[0].version, "2.0");

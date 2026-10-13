@@ -76,7 +76,11 @@ fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
 }
 
 fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
 }
 
 fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
@@ -104,7 +108,9 @@ fn unit(a: [f64; 3]) -> Option<[f64; 3]> {
 /// What this module refuses, by name.
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum Error {
-    #[error("no plane could be fitted: {given} point(s), and a mean plane needs at least 3 that are not all on one line")]
+    #[error(
+        "no plane could be fitted: {given} point(s), and a mean plane needs at least 3 that are not all on one line"
+    )]
     NoPlane { given: usize },
     #[error(
         "{folded} of {total} face(s) are folded back under the mean plane — the surface is not a function of (u, v) there, so a single mean plane cannot resurface it"
@@ -131,7 +137,12 @@ impl Frame {
     /// what a horizontal mean plane collapses onto (see the module docs)
     /// and the `world` frame parameter's own basis.
     pub fn horizontal() -> Self {
-        Frame { centre: [0.0, 0.0, 0.0], u: [1.0, 0.0, 0.0], v: [0.0, 1.0, 0.0], w: [0.0, 0.0, 1.0] }
+        Frame {
+            centre: [0.0, 0.0, 0.0],
+            u: [1.0, 0.0, 0.0],
+            v: [0.0, 1.0, 0.0],
+            w: [0.0, 0.0, 1.0],
+        }
     }
 
     /// The mean-plane frame of `points` — [`crate::extend::fit_plane`],
@@ -163,7 +174,12 @@ impl Frame {
             let u = unit(cross_zn).expect("checked non-zero above");
             (u, cross(w, u))
         };
-        Ok(Frame { centre: fitted.centre, u, v, w })
+        Ok(Frame {
+            centre: fitted.centre,
+            u,
+            v,
+            w,
+        })
     }
 
     /// `p`, expressed as `(u, v, w)` about the frame's centre.
@@ -175,7 +191,13 @@ impl Frame {
     /// The inverse of [`Self::to_local`] — `p = c + Rᵀ (u, v, w)`. `R` is
     /// orthonormal by construction, so this is exact, no numerical inversion.
     pub fn to_world(&self, local: [f64; 3]) -> [f64; 3] {
-        add(self.centre, add(scale(self.u, local[0]), add(scale(self.v, local[1]), scale(self.w, local[2]))))
+        add(
+            self.centre,
+            add(
+                scale(self.u, local[0]),
+                add(scale(self.v, local[1]), scale(self.w, local[2])),
+            ),
+        )
     }
 }
 
@@ -188,7 +210,11 @@ pub fn folded_faces(points: &[[f64; 3]], triangles: &[[u32; 3]], frame: &Frame) 
     triangles
         .iter()
         .filter(|&&[a, b, c]| {
-            let (Some(&pa), Some(&pb), Some(&pc)) = (points.get(a as usize), points.get(b as usize), points.get(c as usize)) else {
+            let (Some(&pa), Some(&pb), Some(&pc)) = (
+                points.get(a as usize),
+                points.get(b as usize),
+                points.get(c as usize),
+            ) else {
                 return false;
             };
             if [pa, pb, pc].iter().flatten().any(|v| !v.is_finite()) {
@@ -204,7 +230,14 @@ pub fn folded_faces(points: &[[f64; 3]], triangles: &[[u32; 3]], frame: &Frame) 
 /// and the total otherwise.
 pub fn check_not_folded(points: &[[f64; 3]], triangles: &[[u32; 3]], frame: &Frame) -> Result<(), Error> {
     let folded = folded_faces(points, triangles, frame);
-    if folded > 0 { Err(Error::Folded { folded, total: triangles.len() }) } else { Ok(()) }
+    if folded > 0 {
+        Err(Error::Folded {
+            folded,
+            total: triangles.len(),
+        })
+    } else {
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -217,7 +250,11 @@ mod tests {
     /// not a claim about any real fault's shape.
     fn plane_points(normal: [f64; 3]) -> Vec<[f64; 3]> {
         let n = unit(normal).unwrap();
-        let helper = if n[2].abs() < 0.9 { [0.0, 0.0, 1.0] } else { [1.0, 0.0, 0.0] };
+        let helper = if n[2].abs() < 0.9 {
+            [0.0, 0.0, 1.0]
+        } else {
+            [1.0, 0.0, 0.0]
+        };
         let e1 = unit(cross(helper, n)).unwrap();
         let e2 = cross(n, e1);
         let mut points = Vec::new();
@@ -235,14 +272,23 @@ mod tests {
     /// `to_world`) and every non-horizontal case would diverge.
     #[test]
     fn round_trip_returns_the_original_point() {
-        for normal in [[0.0, 0.0, 1.0], [0.3, 0.0, 1.0], [0.0, 0.6, 1.0], [1.0, 1.0, 0.3], [-0.5, 0.8, 0.2]] {
+        for normal in [
+            [0.0, 0.0, 1.0],
+            [0.3, 0.0, 1.0],
+            [0.0, 0.6, 1.0],
+            [1.0, 1.0, 0.3],
+            [-0.5, 0.8, 0.2],
+        ] {
             let points = plane_points(normal);
             let frame = Frame::fit(&points).unwrap();
             for &p in &points {
                 let local = frame.to_local(p);
                 let back = frame.to_world(local);
                 for k in 0..3 {
-                    assert!((back[k] - p[k]).abs() < 1e-9, "normal {normal:?}: {back:?} != {p:?}");
+                    assert!(
+                        (back[k] - p[k]).abs() < 1e-9,
+                        "normal {normal:?}: {back:?} != {p:?}"
+                    );
                 }
             }
             // A point off the sample grid, to make sure the round trip is not
@@ -251,7 +297,10 @@ mod tests {
             let local = frame.to_local(off_grid);
             let back = frame.to_world(local);
             for k in 0..3 {
-                assert!((back[k] - off_grid[k]).abs() < 1e-9, "normal {normal:?}, off-grid point");
+                assert!(
+                    (back[k] - off_grid[k]).abs() < 1e-9,
+                    "normal {normal:?}, off-grid point"
+                );
             }
         }
     }
@@ -284,7 +333,12 @@ mod tests {
         let reversed: Vec<[f64; 3]> = points.iter().rev().copied().collect();
         let backward = Frame::fit(&reversed).unwrap();
         for k in 0..3 {
-            assert!((forward.w[k] - backward.w[k]).abs() < 1e-9, "{:?} != {:?}", forward.w, backward.w);
+            assert!(
+                (forward.w[k] - backward.w[k]).abs() < 1e-9,
+                "{:?} != {:?}",
+                forward.w,
+                backward.w
+            );
         }
     }
 
@@ -292,7 +346,10 @@ mod tests {
     /// `fit_plane` already returns as `None`.
     #[test]
     fn too_few_or_aligned_points_are_refused() {
-        assert_eq!(Frame::fit(&[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]), Err(Error::NoPlane { given: 2 }));
+        assert_eq!(
+            Frame::fit(&[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]),
+            Err(Error::NoPlane { given: 2 })
+        );
         // Three points, all on one line: no plane either.
         let aligned = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [2.0, 0.0, 0.0]];
         assert_eq!(Frame::fit(&aligned), Err(Error::NoPlane { given: 3 }));
@@ -314,7 +371,10 @@ mod tests {
         let frame = Frame::fit(&points).unwrap();
         let local: Vec<[f64; 3]> = points.iter().map(|&p| frame.to_local(p)).collect();
         for p in &local {
-            assert!(p[2].abs() < 1e-9, "a point of the fitted plane has zero local height: {p:?}");
+            assert!(
+                p[2].abs() < 1e-9,
+                "a point of the fitted plane has zero local height: {p:?}"
+            );
         }
         let samples: Vec<[f64; 2]> = local.iter().map(|p| [p[0], p[1]]).collect();
         let values: Vec<f64> = local.iter().map(|p| p[2]).collect();
@@ -325,7 +385,10 @@ mod tests {
                 hi[k] = hi[k].max(s[k]);
             }
         }
-        let domain = Domain { origin: [lo[0] - 1.0, lo[1] - 1.0], size: [hi[0] - lo[0] + 2.0, hi[1] - lo[1] + 2.0] };
+        let domain = Domain {
+            origin: [lo[0] - 1.0, lo[1] - 1.0],
+            size: [hi[0] - lo[0] + 2.0, hi[1] - lo[1] + 2.0],
+        };
         let mba = Mba::new([1, 1]).unwrap();
         let answer = mba.interpolate(&samples, &values, domain, 1.0, &samples).unwrap();
         for (at, &w) in answer.values.iter().enumerate() {
@@ -346,14 +409,22 @@ mod tests {
     #[test]
     fn a_folded_triangle_is_counted_against_the_mean_plane() {
         let frame = Frame::horizontal(); // w = [0, 0, 1]
-        let points = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, -1.0, 0.0]];
+        let points = [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, -1.0, 0.0],
+        ];
         // Triangle 0: (0, 1, 2) winds counter-clockwise seen from above —
         // normal [0, 0, 1], not folded.
         // Triangle 1: (0, 1, 3) winds clockwise seen from above — normal
         // [0, 0, -1], folded back under the mean plane.
         let triangles = [[0u32, 1, 2], [0, 1, 3]];
         assert_eq!(folded_faces(&points, &triangles, &frame), 1);
-        assert_eq!(check_not_folded(&points, &triangles, &frame), Err(Error::Folded { folded: 1, total: 2 }));
+        assert_eq!(
+            check_not_folded(&points, &triangles, &frame),
+            Err(Error::Folded { folded: 1, total: 2 })
+        );
         assert_eq!(check_not_folded(&points, &triangles[..1], &frame), Ok(()));
     }
 }

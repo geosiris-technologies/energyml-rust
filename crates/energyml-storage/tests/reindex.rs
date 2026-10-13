@@ -86,9 +86,11 @@ fn package(name: &str) -> PathBuf {
           </Types>",
     )
     .unwrap();
-    zip.start_file(format!("HorizonInterpretation_{INTERP}.xml"), options).unwrap();
+    zip.start_file(format!("HorizonInterpretation_{INTERP}.xml"), options)
+        .unwrap();
     zip.write_all(interpretation().as_bytes()).unwrap();
-    zip.start_file(format!("BoundaryFeature_{FEATURE}.xml"), options).unwrap();
+    zip.start_file(format!("BoundaryFeature_{FEATURE}.xml"), options)
+        .unwrap();
     zip.write_all(feature().as_bytes()).unwrap();
     zip.finish().expect("written");
     path

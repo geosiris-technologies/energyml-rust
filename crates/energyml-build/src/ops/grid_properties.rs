@@ -124,7 +124,9 @@ use energyml_domain::units;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 use crate::declare::{Field, Inputs, ObjectRef, Params, PropertyKindRef, Shape, Title};
-use crate::operation::{About, ActivityDraft, Category, Context, Identity, Need, Note, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Identity, Need, Note, Operation, Plan, Refusal, Slot,
+};
 use crate::pieces::{Known, Ref};
 
 use super::property::PropertyParams;
@@ -207,7 +209,10 @@ pub struct GridPropertiesInputs {
 /// The dimensions of an IJK grid's one patch of hexahedra, or why it is none.
 fn hexahedra_dims(geometry: &Geometry) -> Result<[usize; 3], String> {
     let [patch] = geometry.patches.as_slice() else {
-        return Err(format!("holds {} patch(es): an IJK grid is one patch of hexahedra", geometry.patches.len()));
+        return Err(format!(
+            "holds {} patch(es): an IJK grid is one patch of hexahedra",
+            geometry.patches.len()
+        ));
     };
     let Topology::Hexahedra { dimensions, .. } = &patch.topology else {
         return Err(
@@ -217,14 +222,21 @@ fn hexahedra_dims(geometry: &Geometry) -> Result<[usize; 3], String> {
     };
     let [ni, nj, nk] = *dimensions;
     if ni == 0 || nj == 0 || nk == 0 {
-        return Err(format!("declares {ni} x {nj} x {nk} cells: an IJK grid has at least one cell along each axis"));
+        return Err(format!(
+            "declares {ni} x {nj} x {nk} cells: an IJK grid has at least one cell along each axis"
+        ));
     }
     Ok([ni, nj, nk])
 }
 
 /// The title the object behind a shape carries, or the shape's name.
 fn title_of(shape: &Shape) -> String {
-    shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.title.clone()).unwrap_or_else(|| shape.name.clone())
+    shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|r| r.title.clone())
+        .unwrap_or_else(|| shape.name.clone())
 }
 
 /// The centre of the cell at `position` in `cells` — the mean of its eight corners.
@@ -246,10 +258,18 @@ fn cell_centre(patch: &Patch, position: usize) -> [f64; 3] {
 /// typed here, the dictionary is the authority for its own identifiers.
 fn kind_ref(title: &str) -> Result<(serde_json::Value, String), Refusal> {
     let found = energyml_domain::property_kind::with_default(|dictionary| {
-        dictionary.by_title(title).first().map(|kind| (kind.uuid.clone(), kind.title.clone()))
+        dictionary
+            .by_title(title)
+            .first()
+            .map(|kind| (kind.uuid.clone(), kind.title.clone()))
     });
     let (uuid, kind_title) = found.ok_or_else(|| {
-        Refusal::on("what", format!("the dictionary in use holds no kind called `{title}`: name a `propertyKind` of the package"))
+        Refusal::on(
+            "what",
+            format!(
+                "the dictionary in use holds no kind called `{title}`: name a `propertyKind` of the package"
+            ),
+        )
     })?;
     let dor = json!({ "$type": "eml23.DataObjectReference", "Uuid": uuid, "QualifiedType": "eml23.PropertyKind", "Title": kind_title });
     Ok((dor, uuid))
@@ -257,12 +277,20 @@ fn kind_ref(title: &str) -> Result<(serde_json::Value, String), Refusal> {
 
 /// Values as the seed carries them — exactly, NaN included.
 fn digest(values: &[f64]) -> String {
-    values.iter().map(|value| format!("{value:?}")).collect::<Vec<_>>().join(",")
+    values
+        .iter()
+        .map(|value| format!("{value:?}"))
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 /// A count, as the activity records it.
 fn count(title: &str, value: usize) -> Parameter {
-    Parameter::Double { title: title.to_string(), value: value as f64, uom: None }
+    Parameter::Double {
+        title: title.to_string(),
+        value: value as f64,
+        uom: None,
+    }
 }
 
 /// The law's settings, as `well-logs` states them, glued to
@@ -271,17 +299,35 @@ fn count(title: &str, value: usize) -> Parameter {
 /// file per operation.
 #[derive(Clone, Copy)]
 enum Told {
-    Temperature { at: f64, from: f64, gradient_km: f64 },
-    Hydrostatic { level: f64, density: f64, gravity: f64, at_table_bar: f64 },
+    Temperature {
+        at: f64,
+        from: f64,
+        gradient_km: f64,
+    },
+    Hydrostatic {
+        level: f64,
+        density: f64,
+        gravity: f64,
+        at_table_bar: f64,
+    },
 }
 
 impl Told {
     fn temperature(t: &TemperatureParams) -> Told {
-        Told::Temperature { at: t.reference_temperature, from: t.reference_depth, gradient_km: t.gradient }
+        Told::Temperature {
+            at: t.reference_temperature,
+            from: t.reference_depth,
+            gradient_km: t.gradient,
+        }
     }
 
     fn hydrostatic(h: &HydrostaticParams) -> Told {
-        Told::Hydrostatic { level: h.water_level, density: h.density, gravity: h.gravity, at_table_bar: h.table_pressure }
+        Told::Hydrostatic {
+            level: h.water_level,
+            density: h.density,
+            gravity: h.gravity,
+            at_table_bar: h.table_pressure,
+        }
     }
 
     /// The law under a cell whose ground stands at `ground` metres of
@@ -289,10 +335,26 @@ impl Told {
     /// the bar.
     fn law(&self, ground: f64, bar: f64) -> Law {
         match *self {
-            Told::Temperature { at, from, gradient_km } => Law::Geothermal { at, from, gradient: gradient_km / 1000.0 },
-            Told::Hydrostatic { level, density, gravity, at_table_bar } => {
-                Law::Hydrostatic { table: ground - level, density, gravity, at_table: at_table_bar * bar }
-            }
+            Told::Temperature {
+                at,
+                from,
+                gradient_km,
+            } => Law::Geothermal {
+                at,
+                from,
+                gradient: gradient_km / 1000.0,
+            },
+            Told::Hydrostatic {
+                level,
+                density,
+                gravity,
+                at_table_bar,
+            } => Law::Hydrostatic {
+                table: ground - level,
+                density,
+                gravity,
+                at_table: at_table_bar * bar,
+            },
         }
     }
 
@@ -329,8 +391,17 @@ impl Told {
     /// Its coefficients, exactly — what the seed carries.
     fn key(&self) -> String {
         match *self {
-            Told::Temperature { at, from, gradient_km } => format!("temperature:{at:?}:{from:?}:{gradient_km:?}"),
-            Told::Hydrostatic { level, density, gravity, at_table_bar } => {
+            Told::Temperature {
+                at,
+                from,
+                gradient_km,
+            } => format!("temperature:{at:?}:{from:?}:{gradient_km:?}"),
+            Told::Hydrostatic {
+                level,
+                density,
+                gravity,
+                at_table_bar,
+            } => {
                 format!("hydrostatic:{level:?}:{density:?}:{gravity:?}:{at_table_bar:?}")
             }
         }
@@ -339,10 +410,19 @@ impl Told {
     /// The law, in the words a description and a note use.
     fn words(&self) -> String {
         match *self {
-            Told::Temperature { at, from, gradient_km } => format!(
+            Told::Temperature {
+                at,
+                from,
+                gradient_km,
+            } => format!(
                 "a temperature of {at} degC at {from} m below the ground, changing by {gradient_km} degC per km of vertical depth below it"
             ),
-            Told::Hydrostatic { level, density, gravity, at_table_bar } => format!(
+            Told::Hydrostatic {
+                level,
+                density,
+                gravity,
+                at_table_bar,
+            } => format!(
                 "a hydrostatic pressure below a water table at {level} m of elevation: {at_table_bar} bar there, and {density} kg/m3 × {gravity} m/s2 per metre of water below it"
             ),
         }
@@ -365,9 +445,9 @@ fn slot_of(which: Coefficient) -> &'static str {
 /// A refusal of the analysis, under the slot its coefficient is told in.
 fn refusal_of(why: &LogError) -> Refusal {
     match why {
-        LogError::NotFinite { which, .. } | LogError::NotPositive { which, .. } | LogError::Negative { which, .. } => {
-            Refusal::on(slot_of(*which), why)
-        }
+        LogError::NotFinite { which, .. }
+        | LogError::NotPositive { which, .. }
+        | LogError::Negative { which, .. } => Refusal::on(slot_of(*which), why),
         LogError::BadDepth { .. } => Refusal::on("grid", why),
     }
 }
@@ -394,13 +474,21 @@ impl Operation for GridProperties {
         {
             return Err(Refusal::on(
                 "ground",
-                format!("`{}` has no face — the ground is read on triangles or a grid's cells, and points or lines have none", ground.name),
+                format!(
+                    "`{}` has no face — the ground is read on triangles or a grid's cells, and points or lines have none",
+                    ground.name
+                ),
             ));
         }
         Ok(())
     }
 
-    fn plan(&self, inputs: GridPropertiesInputs, params: GridPropertiesParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: GridPropertiesInputs,
+        params: GridPropertiesParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let GridPropertiesInputs { grid, ground } = inputs;
 
         let source = params.source.trim().to_string();
@@ -417,7 +505,10 @@ impl Operation for GridProperties {
         let grid_title = title_of(&grid);
         let known = grid.known.as_ref();
         let reference = known.and_then(|k| k.reference.as_ref()).ok_or_else(|| {
-            Refusal::on("grid", format!("`{grid_title}` names no object of the package for a property to hang on"))
+            Refusal::on(
+                "grid",
+                format!("`{grid_title}` names no object of the package for a property to hang on"),
+            )
         })?;
         let representation = reference.dor();
 
@@ -448,9 +539,19 @@ impl Operation for GridProperties {
                 &params.data_file,
                 cx,
             ),
-            WhatParams::Porosity(layer) => {
-                plan_layer(reference, &representation, &grid_title, total, per_layer, nk, "porosity", layer, &source, &params.data_file, cx)
-            }
+            WhatParams::Porosity(layer) => plan_layer(
+                reference,
+                &representation,
+                &grid_title,
+                total,
+                per_layer,
+                nk,
+                "porosity",
+                layer,
+                &source,
+                &params.data_file,
+                cx,
+            ),
             WhatParams::NetGross(layer) => plan_layer(
                 reference,
                 &representation,
@@ -464,19 +565,36 @@ impl Operation for GridProperties {
                 &params.data_file,
                 cx,
             ),
-            WhatParams::Permeability(perm) => {
-                plan_permeability(reference, &representation, &grid_title, total, per_layer, nk, perm, &source, &params.data_file, cx)
-            }
+            WhatParams::Permeability(perm) => plan_permeability(
+                reference,
+                &representation,
+                &grid_title,
+                total,
+                per_layer,
+                nk,
+                perm,
+                &source,
+                &params.data_file,
+                cx,
+            ),
         }
     }
 
     /// `what`'s settings and `source` are inputs, recorded under the
     /// parameters the projection already declares — a title cannot be both.
     fn reports(&self) -> Vec<Slot> {
-        let number = || Need::Number { uom: None, least: None, most: None };
+        let number = || Need::Number {
+            uom: None,
+            least: None,
+            most: None,
+        };
         vec![
             Slot::required("cellCount", number(), "cells the grid declares — Ni × Nj × Nk"),
-            Slot::optional("layerCount", number(), "K layers — for a porosity, a net-to-gross ratio or a permeability"),
+            Slot::optional(
+                "layerCount",
+                number(),
+                "K layers — for a porosity, a net-to-gross ratio or a permeability",
+            ),
             Slot::optional(
                 "undefinedCellCount",
                 number(),
@@ -537,7 +655,10 @@ fn plan_depth(
     })?;
     let ground_known = ground.known.as_ref();
     let ground_title = title_of(ground);
-    match (known.and_then(|k| k.crs.as_ref()), ground_known.and_then(|k| k.crs.as_ref())) {
+    match (
+        known.and_then(|k| k.crs.as_ref()),
+        ground_known.and_then(|k| k.crs.as_ref()),
+    ) {
         (Some(mine), Some(theirs)) if mine.uuid.eq_ignore_ascii_case(&theirs.uuid) => {}
         (Some(mine), Some(theirs)) => {
             return Err(Refusal::on(
@@ -551,12 +672,15 @@ fn plan_depth(
         _ => {
             return Err(Refusal::on(
                 "ground",
-                format!("`{ground_title}` or `{grid_title}` states no frame, so the ground cannot be compared with the grid's cells: give both from the package"),
+                format!(
+                    "`{ground_title}` or `{grid_title}` states no frame, so the ground cannot be compared with the grid's cells: give both from the package"
+                ),
             ));
         }
     }
     let faces = support::Faces::of(&ground.geometry);
-    let heights = Heights::of(faces.surface(), "ground", "under the grid's cells").map_err(|why| Refusal::on("ground", why))?;
+    let heights = Heights::of(faces.surface(), "ground", "under the grid's cells")
+        .map_err(|why| Refusal::on("ground", why))?;
 
     let bar = units::pascals(1.0, "bar").map_err(|why| Refusal::new("units", why.to_string()))?;
     told.law(0.0, bar).check().map_err(|why| refusal_of(&why))?;
@@ -603,7 +727,9 @@ fn plan_depth(
         let depth = ground_m - elevation_m;
         let law = told.law(ground_m, bar);
         let logged = analysis::lay(&law, std::slice::from_ref(&depth)).map_err(|why| match &why {
-            LogError::BadDepth { .. } => Refusal::on("grid", format!("cell {cell_index} of `{grid_title}`: {why}")),
+            LogError::BadDepth { .. } => {
+                Refusal::on("grid", format!("cell {cell_index} of `{grid_title}`: {why}"))
+            }
             other => refusal_of(other),
         })?;
         *value = logged.values[0];
@@ -630,13 +756,29 @@ fn plan_depth(
     // declares, never more, never fewer — `values` is built exactly `total`
     // long above, and this is what would catch a change that broke it.
     if values.len() != total {
-        return Err(Refusal::on("grid", format!("{total} cell(s) declared and {} value(s) computed — a value is laid on each cell", values.len())));
+        return Err(Refusal::on(
+            "grid",
+            format!(
+                "{total} cell(s) declared and {} value(s) computed — a value is laid on each cell",
+                values.len()
+            ),
+        ));
     }
 
-    let field =
-        Field { name: format!("{} of {grid_title}", told.kind()), over: grid.name.clone(), on: "cells".to_string(), values, uom: Some(told.uom().to_string()) };
+    let field = Field {
+        name: format!("{} of {grid_title}", told.kind()),
+        over: grid.name.clone(),
+        on: "cells".to_string(),
+        values,
+        uom: Some(told.uom().to_string()),
+    };
     let title = format!("{grid_title} — {}", told.kind());
-    let seed = format!("grid-properties:{}:{}:{kind_uuid}:{}", reference.uuid, told.key(), digest(&field.values));
+    let seed = format!(
+        "grid-properties:{}:{}:{kind_uuid}:{}",
+        reference.uuid,
+        told.key(),
+        digest(&field.values)
+    );
     let property = PropertyParams {
         representation: ObjectRef(representation.clone()),
         property_kind: PropertyKindRef(kind),
@@ -653,7 +795,10 @@ fn plan_depth(
     if description.chars().count() > 2000 {
         return Err(Refusal::on(
             "source",
-            format!("makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter", description.chars().count()),
+            format!(
+                "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                description.chars().count()
+            ),
         ));
     }
     for object in drawn.objects.iter_mut() {
@@ -697,13 +842,22 @@ fn plan_depth(
         });
     }
     if let Some([low, high]) = range {
-        notes.push(Note { key: "range", detail: format!("the values laid run from {low} to {high} {}", told.uom()) });
+        notes.push(Note {
+            key: "range",
+            detail: format!("the values laid run from {low} to {high} {}", told.uom()),
+        });
     }
     notes.append(&mut drawn.says);
 
-    let mut parameters = vec![Parameter::Object { title: "input".to_string(), reference: representation.clone() }];
+    let mut parameters = vec![Parameter::Object {
+        title: "input".to_string(),
+        reference: representation.clone(),
+    }];
     if let Some(g) = ground_known.and_then(|k| k.reference.as_ref()) {
-        parameters.push(Parameter::Object { title: "input".to_string(), reference: g.dor() });
+        parameters.push(Parameter::Object {
+            title: "input".to_string(),
+            reference: g.dor(),
+        });
     }
     parameters.push(count("cellCount", total));
     parameters.push(count("undefinedCellCount", undefined));
@@ -748,24 +902,48 @@ fn plan_layer(
     if layer.layers.len() != nk {
         return Err(Refusal::on(
             "layers",
-            format!("the grid has {nk} K layer(s) and {} value(s) were given — one per layer, top to bottom", layer.layers.len()),
+            format!(
+                "the grid has {nk} K layer(s) and {} value(s) were given — one per layer, top to bottom",
+                layer.layers.len()
+            ),
         ));
     }
     for (k, &v) in layer.layers.iter().enumerate() {
         if !(v.is_finite() && (0.0..=1.0).contains(&v)) {
-            return Err(Refusal::on("layers", format!("layer {k} (top to bottom): {v} is not a ratio between 0 and 1")));
+            return Err(Refusal::on(
+                "layers",
+                format!("layer {k} (top to bottom): {v} is not a ratio between 0 and 1"),
+            ));
         }
     }
     cx.stop_if_cancelled()?;
-    let values: Vec<f64> = (0..total).map(|cell_index| layer.layers[cell_index / per_layer]).collect();
+    let values: Vec<f64> = (0..total)
+        .map(|cell_index| layer.layers[cell_index / per_layer])
+        .collect();
     if values.len() != total {
-        return Err(Refusal::on("grid", format!("{total} cell(s) declared and {} value(s) computed — a value is laid on each cell", values.len())));
+        return Err(Refusal::on(
+            "grid",
+            format!(
+                "{total} cell(s) declared and {} value(s) computed — a value is laid on each cell",
+                values.len()
+            ),
+        ));
     }
 
     let (kind, kind_uuid) = kind_ref(kind_title)?;
-    let field = Field { name: format!("{kind_title} of {grid_title}"), over: reference.title.clone(), on: "cells".to_string(), values, uom: Some(layer.uom.clone()) };
+    let field = Field {
+        name: format!("{kind_title} of {grid_title}"),
+        over: reference.title.clone(),
+        on: "cells".to_string(),
+        values,
+        uom: Some(layer.uom.clone()),
+    };
     let title = format!("{grid_title} — {kind_title}");
-    let seed = format!("grid-properties:{}:{kind_title}:{kind_uuid}:{}", reference.uuid, digest(&field.values));
+    let seed = format!(
+        "grid-properties:{}:{kind_title}:{kind_uuid}:{}",
+        reference.uuid,
+        digest(&field.values)
+    );
     let property = PropertyParams {
         representation: ObjectRef(representation.clone()),
         property_kind: PropertyKindRef(kind),
@@ -775,12 +953,17 @@ fn plan_layer(
     };
     let mut drawn = super::property::write(&field, None, &property, &seed, cx)?;
 
-    let description =
-        format!("Laid by a value per K layer, not measured: {kind_title} — one value per layer, top to bottom: {:?} {}. Source: {source}", layer.layers, layer.uom);
+    let description = format!(
+        "Laid by a value per K layer, not measured: {kind_title} — one value per layer, top to bottom: {:?} {}. Source: {source}",
+        layer.layers, layer.uom
+    );
     if description.chars().count() > 2000 {
         return Err(Refusal::on(
             "source",
-            format!("makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter", description.chars().count()),
+            format!(
+                "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                description.chars().count()
+            ),
         ));
     }
     for object in drawn.objects.iter_mut() {
@@ -807,7 +990,10 @@ fn plan_layer(
     notes.append(&mut drawn.says);
 
     let parameters = vec![
-        Parameter::Object { title: "input".to_string(), reference: representation.clone() },
+        Parameter::Object {
+            title: "input".to_string(),
+            reference: representation.clone(),
+        },
         count("cellCount", total),
         count("layerCount", nk),
     ];
@@ -818,7 +1004,12 @@ fn plan_layer(
         objects: drawn.objects,
         datasets: drawn.datasets,
         shapes: Vec::new(),
-        activity: ActivityDraft { recipe: "grid-properties", title: format!("grid-properties → {kind_title} on {total} cell(s)"), seed, parameters },
+        activity: ActivityDraft {
+            recipe: "grid-properties",
+            title: format!("grid-properties → {kind_title} on {total} cell(s)"),
+            seed,
+            parameters,
+        },
         says: notes,
         dropped: Vec::new(),
     })
@@ -842,11 +1033,20 @@ fn plan_permeability(
 ) -> Result<Plan, Refusal> {
     for (name, values) in [("kx", &perm.kx), ("ky", &perm.ky), ("kz", &perm.kz)] {
         if values.len() != nk {
-            return Err(Refusal::on(name, format!("the grid has {nk} K layer(s) and {} value(s) were given — one per layer, top to bottom", values.len())));
+            return Err(Refusal::on(
+                name,
+                format!(
+                    "the grid has {nk} K layer(s) and {} value(s) were given — one per layer, top to bottom",
+                    values.len()
+                ),
+            ));
         }
         for (k, &v) in values.iter().enumerate() {
             if !(v.is_finite() && v >= 0.0) {
-                return Err(Refusal::on(name, format!("layer {k} (top to bottom): {v} is not a permeability (0 or more)")));
+                return Err(Refusal::on(
+                    name,
+                    format!("layer {k} (top to bottom): {v} is not a permeability (0 or more)"),
+                ));
             }
         }
     }
@@ -857,12 +1057,25 @@ fn plan_permeability(
     let mut datasets = Vec::new();
     let mut says = Vec::new();
 
-    for (written, (component, facet, values)) in
-        [("kx", "I", &perm.kx), ("ky", "J", &perm.ky), ("kz", "K", &perm.kz)].into_iter().enumerate()
+    for (written, (component, facet, values)) in [
+        ("kx", "I", &perm.kx),
+        ("ky", "J", &perm.ky),
+        ("kz", "K", &perm.kz),
+    ]
+    .into_iter()
+    .enumerate()
     {
-        let per_cell: Vec<f64> = (0..total).map(|cell_index| values[cell_index / per_layer]).collect();
+        let per_cell: Vec<f64> = (0..total)
+            .map(|cell_index| values[cell_index / per_layer])
+            .collect();
         if per_cell.len() != total {
-            return Err(Refusal::on("grid", format!("{total} cell(s) declared and {} value(s) computed — a value is laid on each cell", per_cell.len())));
+            return Err(Refusal::on(
+                "grid",
+                format!(
+                    "{total} cell(s) declared and {} value(s) computed — a value is laid on each cell",
+                    per_cell.len()
+                ),
+            ));
         }
         let field = Field {
             name: format!("{component} of {grid_title}"),
@@ -872,7 +1085,11 @@ fn plan_permeability(
             uom: Some(perm.uom.clone()),
         };
         let title = format!("{grid_title} — permeability ({component})");
-        let seed = format!("grid-properties:{}:permeability:{component}:{kind_uuid}:{}", reference.uuid, digest(&field.values));
+        let seed = format!(
+            "grid-properties:{}:permeability:{component}:{kind_uuid}:{}",
+            reference.uuid,
+            digest(&field.values)
+        );
         let property = PropertyParams {
             representation: ObjectRef(representation.clone()),
             property_kind: PropertyKindRef(kind.clone()),
@@ -888,7 +1105,13 @@ fn plan_permeability(
             Identity::Given(_) => Identity::Given(vec![cx.identity.uuid("", written)?]),
             derived => derived.clone(),
         };
-        let one = Context { identity: &identity, when: cx.when, purpose: cx.purpose, feedback: cx.feedback, bag: cx.bag };
+        let one = Context {
+            identity: &identity,
+            when: cx.when,
+            purpose: cx.purpose,
+            feedback: cx.feedback,
+            bag: cx.bag,
+        };
         let mut drawn = super::property::write(&field, None, &property, &seed, &one)?;
 
         let description = format!(
@@ -898,14 +1121,18 @@ fn plan_permeability(
         if description.chars().count() > 2000 {
             return Err(Refusal::on(
                 "source",
-                format!("makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter", description.chars().count()),
+                format!(
+                    "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                    description.chars().count()
+                ),
             ));
         }
         for object in drawn.objects.iter_mut() {
             object.json["Citation"]["Description"] = json!(description);
             // One direction per property — see the module's *A tensor
             // property this build does not write*.
-            object.json["Facet"] = json!([{ "$type": "eml23.PropertyKindFacet", "Facet": facet, "Kind": "direction" }]);
+            object.json["Facet"] =
+                json!([{ "$type": "eml23.PropertyKindFacet", "Facet": facet, "Kind": "direction" }]);
             object.json["ExtensionNameValue"] = json!([{
                 "$type": "eml23.ExtensionNameValue",
                 "Name": "synthetic",
@@ -936,7 +1163,10 @@ fn plan_permeability(
     notes.append(&mut says);
 
     let parameters = vec![
-        Parameter::Object { title: "input".to_string(), reference: representation.clone() },
+        Parameter::Object {
+            title: "input".to_string(),
+            reference: representation.clone(),
+        },
         count("cellCount", total),
         count("layerCount", nk),
     ];

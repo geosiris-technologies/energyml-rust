@@ -17,7 +17,10 @@ fn head(id: &str, x: f64, y: f64) -> Head {
 }
 
 fn kept<'a>(p: &'a Profile, id: &str) -> &'a Kept {
-    p.kept.iter().find(|k| k.id == id).unwrap_or_else(|| panic!("{id} should be kept: {p:?}"))
+    p.kept
+        .iter()
+        .find(|k| k.id == id)
+        .unwrap_or_else(|| panic!("{id} should be kept: {p:?}"))
 }
 
 fn reason(p: &Profile, id: &str) -> Option<Reason> {
@@ -53,7 +56,8 @@ fn brute_distance(track: &[[f64; 2]], p: [f64; 2]) -> f64 {
         .map(|w| {
             let (a, b) = (w[0], w[1]);
             let ab = [b[0] - a[0], b[1] - a[1]];
-            let t = (((p[0] - a[0]) * ab[0] + (p[1] - a[1]) * ab[1]) / (ab[0] * ab[0] + ab[1] * ab[1])).clamp(0.0, 1.0);
+            let t = (((p[0] - a[0]) * ab[0] + (p[1] - a[1]) * ab[1]) / (ab[0] * ab[0] + ab[1] * ab[1]))
+                .clamp(0.0, 1.0);
             (p[0] - a[0] - t * ab[0]).hypot(p[1] - a[1] - t * ab[1])
         })
         .fold(f64::INFINITY, f64::min)
@@ -84,8 +88,15 @@ fn a_straight_track_keeps_by_the_width_of_each_side() {
     assert_eq!(s.side, Side::Right);
     assert!(close(s.s, 50.0) && close(s.d, 4.0));
     assert_eq!(reason(&p, "far-south"), Some(Reason::TooFarOnItsSide));
-    assert_eq!(reason(&p, "limit"), Some(Reason::TooFarOnItsSide), "exactly on the limit is not under it");
-    assert!(p.kept.iter().all(|k| k.id != "remote") && reason(&p, "remote").is_none(), "far wells are not listed");
+    assert_eq!(
+        reason(&p, "limit"),
+        Some(Reason::TooFarOnItsSide),
+        "exactly on the limit is not under it"
+    );
+    assert!(
+        p.kept.iter().all(|k| k.id != "remote") && reason(&p, "remote").is_none(),
+        "far wells are not listed"
+    );
     assert!(close(c.length(), 100.0));
 }
 
@@ -98,7 +109,12 @@ fn a_straight_track_keeps_by_the_width_of_each_side() {
 #[test]
 fn a_head_beyond_an_end_is_ignored_and_counted() {
     let track = [[0.0, 0.0], [100.0, 0.0]];
-    let heads = [head("before", -3.0, 2.0), head("after", 104.0, -1.0), head("lost", -3.0, -6.0), head("on", 10.0, 1.0)];
+    let heads = [
+        head("before", -3.0, 2.0),
+        head("after", 104.0, -1.0),
+        head("lost", -3.0, -6.0),
+        head("on", 10.0, 1.0),
+    ];
     let p = Corridor::new(&track, 10.0, 5.0).unwrap().project(&heads);
     assert_eq!(p.kept.len(), 1);
     assert_eq!(p.kept[0].id, "on");
@@ -138,12 +154,21 @@ fn an_l_has_its_outer_wedge_on_the_vertex_and_its_inner_turn_on_the_nearest_segm
     let o = kept(&p, "outer");
     assert_eq!((o.side, o.foot), (Side::Right, [100.0, 0.0]));
     assert!(close(o.s, 100.0) && close(o.d, 200.0_f64.sqrt()), "{o:?}");
-    assert!(p.kept.iter().all(|k| k.id != "outer-far") && reason(&p, "outer-far").is_none(), "over the reach: not listed");
+    assert!(
+        p.kept.iter().all(|k| k.id != "outer-far") && reason(&p, "outer-far").is_none(),
+        "over the reach: not listed"
+    );
     let a = kept(&p, "inner-a");
-    assert!(close(a.s, 95.0) && close(a.d, 3.0) && a.side == Side::Left, "{a:?}");
+    assert!(
+        close(a.s, 95.0) && close(a.d, 3.0) && a.side == Side::Left,
+        "{a:?}"
+    );
     assert_eq!(a.foot, [95.0, 0.0]);
     let b = kept(&p, "inner-b");
-    assert!(close(b.s, 108.0) && close(b.d, 3.0) && b.side == Side::Left, "{b:?}");
+    assert!(
+        close(b.s, 108.0) && close(b.d, 3.0) && b.side == Side::Left,
+        "{b:?}"
+    );
     assert_eq!(b.foot, [100.0, 8.0]);
     assert_eq!(reason(&p, "past-end"), Some(Reason::BeyondAnEnd));
     assert_eq!(p.beyond_an_end(), 1);
@@ -159,11 +184,22 @@ fn an_l_has_its_outer_wedge_on_the_vertex_and_its_inner_turn_on_the_nearest_segm
 #[test]
 fn a_nearer_vertex_does_not_hide_the_nearest_segment() {
     let track = [[0.0, 0.0], [1000.0, 0.0], [520.0, 100.0], [520.0, 500.0]];
-    let nearest_vertex = track.iter().map(|v| (v[0] - 500.0_f64).hypot(v[1] - 30.0)).fold(f64::INFINITY, f64::min);
-    assert!(nearest_vertex > 50.0, "the fixture must trap the nearest-vertex shortcut");
-    let p = Corridor::new(&track, 50.0, 50.0).unwrap().project(&[head("w", 500.0, 30.0)]);
+    let nearest_vertex = track
+        .iter()
+        .map(|v| (v[0] - 500.0_f64).hypot(v[1] - 30.0))
+        .fold(f64::INFINITY, f64::min);
+    assert!(
+        nearest_vertex > 50.0,
+        "the fixture must trap the nearest-vertex shortcut"
+    );
+    let p = Corridor::new(&track, 50.0, 50.0)
+        .unwrap()
+        .project(&[head("w", 500.0, 30.0)]);
     let k = kept(&p, "w");
-    assert!(close(k.d, 30.0) && close(k.s, 500.0) && k.side == Side::Left, "{k:?}");
+    assert!(
+        close(k.d, 30.0) && close(k.s, 500.0) && k.side == Side::Left,
+        "{k:?}"
+    );
 }
 
 /// The band keeps exactly what the criterion keeps, on lattices of heads over
@@ -186,8 +222,16 @@ fn the_band_contains_every_kept_head_and_no_set_aside_one() {
     let tracks: [(&str, Vec<[f64; 2]>, bool); 4] = [
         ("straight", vec![[0.0, 0.0], [100.0, 0.0]], true),
         ("L", vec![[0.0, 0.0], [100.0, 0.0], [100.0, 100.0]], true),
-        ("S", vec![[0.0, 0.0], [100.0, 0.0], [100.0, 3.0], [200.0, 3.0]], true),
-        ("hairpin", vec![[0.0, 0.0], [100.0, 0.0], [100.0, 30.0], [0.0, 30.0]], false),
+        (
+            "S",
+            vec![[0.0, 0.0], [100.0, 0.0], [100.0, 3.0], [200.0, 3.0]],
+            true,
+        ),
+        (
+            "hairpin",
+            vec![[0.0, 0.0], [100.0, 0.0], [100.0, 30.0], [0.0, 30.0]],
+            false,
+        ),
     ];
     for (left, right) in [(20.0, 20.0), (10.0, 25.0)] {
         for (name, track, simple) in &tracks {
@@ -215,19 +259,28 @@ fn the_band_contains_every_kept_head_and_no_set_aside_one() {
                             assert!(close(k.d, brute), "{name}: {h:?} {k:?} brute {brute}");
                         }
                         if k.d < w - 0.05 {
-                            assert!(is_inside, "{name} {left}/{right}: kept {h:?} {k:?} outside the band");
+                            assert!(
+                                is_inside,
+                                "{name} {left}/{right}: kept {h:?} {k:?} outside the band"
+                            );
                         }
                         if is_inside {
                             n_in += 1;
                         }
                     }
                     None => {
-                        assert!(!is_inside, "{name} {left}/{right}: {h:?} is inside the band but not kept");
+                        assert!(
+                            !is_inside,
+                            "{name} {left}/{right}: {h:?} is inside the band but not kept"
+                        );
                         n_out += 1;
                     }
                 }
             }
-            assert!(n_in > 20 && n_out > 20, "{name}: {n_in} in, {n_out} out — a loop over nothing proves nothing");
+            assert!(
+                n_in > 20 && n_out > 20,
+                "{name}: {n_in} in, {n_out} out — a loop over nothing proves nothing"
+            );
         }
     }
 }
@@ -254,7 +307,11 @@ fn the_band_of_an_l_is_rounded_outside_cut_inside_and_straight_at_its_ends() {
         .sum::<f64>()
         / 2.0;
     assert!(area > 0.0, "counter-clockwise");
-    assert!(band.iter().any(|p| (p[0] - 90.0).abs() < 1e-9 && (p[1] - 10.0).abs() < 1e-9), "the inner crossing");
+    assert!(
+        band.iter()
+            .any(|p| (p[0] - 90.0).abs() < 1e-9 && (p[1] - 10.0).abs() < 1e-9),
+        "the inner crossing"
+    );
     assert!(inside(&band, [112.0, -12.0]));
     assert!(!inside(&band, [-1.0, 0.0]) && !inside(&band, [101.0, 101.0]));
     assert!(inside(&band, [0.5, 0.0]) && inside(&band, [0.5, -19.0]) && inside(&band, [0.5, 9.0]));
@@ -269,14 +326,27 @@ fn the_band_of_an_l_is_rounded_outside_cut_inside_and_straight_at_its_ends() {
 /// To break: let a zero-length segment through — its direction is `0/0`.
 #[test]
 fn a_degenerate_track_is_refused_by_its_name() {
-    assert_eq!(project(&[[0.0, 0.0]], 5.0, 5.0, &[], STEP).unwrap_err(), ProfileError::TooFewVertices { found: 1 });
-    assert_eq!(project(&[], 5.0, 5.0, &[], STEP).unwrap_err(), ProfileError::TooFewVertices { found: 0 });
+    assert_eq!(
+        project(&[[0.0, 0.0]], 5.0, 5.0, &[], STEP).unwrap_err(),
+        ProfileError::TooFewVertices { found: 1 }
+    );
+    assert_eq!(
+        project(&[], 5.0, 5.0, &[], STEP).unwrap_err(),
+        ProfileError::TooFewVertices { found: 0 }
+    );
     assert_eq!(
         project(&[[0.0, 0.0], [0.0, 0.0]], 5.0, 5.0, &[], STEP).unwrap_err(),
         ProfileError::ZeroLengthSegment { index: 0 }
     );
     assert_eq!(
-        project(&[[0.0, 0.0], [1.0, 0.0], [1.0, 0.0], [2.0, 0.0]], 5.0, 5.0, &[], STEP).unwrap_err(),
+        project(
+            &[[0.0, 0.0], [1.0, 0.0], [1.0, 0.0], [2.0, 0.0]],
+            5.0,
+            5.0,
+            &[],
+            STEP
+        )
+        .unwrap_err(),
         ProfileError::ZeroLengthSegment { index: 1 }
     );
     assert_eq!(
@@ -284,10 +354,25 @@ fn a_degenerate_track_is_refused_by_its_name() {
         ProfileError::NonFiniteVertex { index: 1 }
     );
     let line = [[0.0, 0.0], [10.0, 0.0]];
-    assert!(matches!(project(&line, -1.0, 5.0, &[], STEP), Err(ProfileError::BadWidth { side: Side::Left, .. })));
-    assert!(matches!(project(&line, 5.0, f64::NAN, &[], STEP), Err(ProfileError::BadWidth { side: Side::Right, .. })));
-    assert_eq!(project(&line, 0.0, 0.0, &[], STEP).unwrap_err(), ProfileError::NoWidth);
-    assert_eq!(project(&line, 5.0, 5.0, &[], 0.0).unwrap_err(), ProfileError::BadArcStep(0.0));
+    assert!(matches!(
+        project(&line, -1.0, 5.0, &[], STEP),
+        Err(ProfileError::BadWidth { side: Side::Left, .. })
+    ));
+    assert!(matches!(
+        project(&line, 5.0, f64::NAN, &[], STEP),
+        Err(ProfileError::BadWidth {
+            side: Side::Right,
+            ..
+        })
+    ));
+    assert_eq!(
+        project(&line, 0.0, 0.0, &[], STEP).unwrap_err(),
+        ProfileError::NoWidth
+    );
+    assert_eq!(
+        project(&line, 5.0, 5.0, &[], 0.0).unwrap_err(),
+        ProfileError::BadArcStep(0.0)
+    );
 }
 
 /// A head without a position is set aside with its own reason, never placed at
@@ -298,7 +383,12 @@ fn a_degenerate_track_is_refused_by_its_name() {
 #[test]
 fn a_head_without_a_position_is_set_aside_and_a_zero_side_keeps_nothing() {
     let line = [[0.0, 0.0], [10.0, 0.0]];
-    let heads = [head("nan", f64::NAN, 1.0), head("left", 5.0, 1.0), head("right", 5.0, -1.0), head("axis", 5.0, 0.0)];
+    let heads = [
+        head("nan", f64::NAN, 1.0),
+        head("left", 5.0, 1.0),
+        head("right", 5.0, -1.0),
+        head("axis", 5.0, 0.0),
+    ];
     let section = project(&line, 0.0, 3.0, &heads, STEP).unwrap();
     let p = &section.profile;
     assert_eq!(reason(p, "nan"), Some(Reason::NoPosition));
@@ -323,7 +413,11 @@ fn a_head_without_a_position_is_set_aside_and_a_zero_side_keeps_nothing() {
 #[test]
 fn a_kept_well_carries_the_direction_of_the_track_where_it_was_kept() {
     let track = [[0.0, 0.0], [100.0, 0.0], [100.0, 100.0]];
-    let heads = [head("middle", 50.0, 4.0), head("inner-b", 97.0, 8.0), head("outer", 110.0, -10.0)];
+    let heads = [
+        head("middle", 50.0, 4.0),
+        head("inner-b", 97.0, 8.0),
+        head("outer", 110.0, -10.0),
+    ];
     let p = Corridor::new(&track, 10.0, 20.0).unwrap().project(&heads);
     let unit = |k: &Kept| (k.direction[0].hypot(k.direction[1]) - 1.0).abs() < 1e-12;
 
@@ -335,6 +429,9 @@ fn a_kept_well_carries_the_direction_of_the_track_where_it_was_kept() {
     let o = kept(&p, "outer");
     assert_eq!(o.foot, [100.0, 0.0], "the fixture is on the vertex");
     let half = std::f64::consts::FRAC_1_SQRT_2;
-    assert!(close(o.direction[0], half) && close(o.direction[1], half), "{o:?}");
+    assert!(
+        close(o.direction[0], half) && close(o.direction[1], half),
+        "{o:?}"
+    );
     assert!(p.kept.iter().all(unit));
 }

@@ -32,8 +32,8 @@ pub mod core_props;
 pub mod header;
 pub mod media;
 pub mod overlay;
-pub mod revision;
 pub mod package;
+pub mod revision;
 pub mod write;
 
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -58,8 +58,8 @@ use crate::resource::{Dataspace, ObjectHeader, ObjectSummary, Relationship};
 use crate::storage::{EnergymlStorage, LocalPackage};
 
 use overlay::{Change, Overlay, SavePolicy};
-use revision::What;
 use package::{Package, ReadSeek};
+use revision::What;
 
 /// A part of the package that holds no readable object, and why.
 ///
@@ -256,7 +256,10 @@ fn uuid_of_slot(slot: &str) -> &str {
 /// empty one is no version — the element is optional, and an empty one says the
 /// same as none.
 fn normal_version(version: Option<&str>) -> Option<String> {
-    version.map(str::trim).filter(|v| !v.is_empty()).map(str::to_string)
+    version
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .map(str::to_string)
 }
 
 /// An EPC file, open for reading.
@@ -630,7 +633,8 @@ impl EpcStore {
         qualified_type: Option<&str>,
         object_version: Option<&str>,
     ) -> Result<&ObjectSummary> {
-        self.locate_triple(uuid, qualified_type, object_version, true).map(|live| live.summary)
+        self.locate_triple(uuid, qualified_type, object_version, true)
+            .map(|live| live.summary)
     }
 
     /// **The one lookup.** The entry named by (uuid, qualified type, `objectVersion`),
@@ -647,7 +651,8 @@ impl EpcStore {
         qualified_type: Option<&str>,
         object_version: Option<&str>,
     ) -> Result<&ObjectSummary> {
-        self.locate_triple(uuid, qualified_type, object_version, false).map(|live| live.summary)
+        self.locate_triple(uuid, qualified_type, object_version, false)
+            .map(|live| live.summary)
     }
 
     /// [`EpcStore::lookup`] with only a uuid: the one entry that carries it, or
@@ -703,7 +708,10 @@ impl EpcStore {
     /// none. What a derived view of the package asks when a uuid is journaled and
     /// it must know whether the uuid still names a single object.
     pub fn summaries_of(&self, uuid: &str) -> Vec<ObjectSummary> {
-        self.live_of(&uuid.to_ascii_lowercase()).into_iter().map(|one| one.summary.clone()).collect()
+        self.live_of(&uuid.to_ascii_lowercase())
+            .into_iter()
+            .map(|one| one.summary.clone())
+            .collect()
     }
 
     /// Every entry of one uuid — the archive's and this session's — minus what
@@ -790,7 +798,9 @@ impl EpcStore {
         // The type narrows when it matches something; when it matches nothing it
         // is a release apart, and the uuid alone decides.
         if let Some(qualified_type) = qualified_type
-            && live.iter().any(|one| one.summary.qualified_type == qualified_type)
+            && live
+                .iter()
+                .any(|one| one.summary.qualified_type == qualified_type)
         {
             live.retain(|one| one.summary.qualified_type == qualified_type);
         }
@@ -812,10 +822,16 @@ impl EpcStore {
         // resolve a reference through `ObjectSource::object(uuid)`, and a
         // reference to the original of a versioned copy must not stop resolving
         // because the copy arrived. Two types under one uuid stay ambiguous.
-        let one_type = live.iter().all(|one| one.summary.qualified_type == live[0].summary.qualified_type);
+        let one_type = live
+            .iter()
+            .all(|one| one.summary.qualified_type == live[0].summary.qualified_type);
         if (qualified_type.is_some() || one_type) && version.is_none() {
-            let bare: Vec<usize> =
-                live.iter().enumerate().filter(|(_, one)| one.version.is_none()).map(|(at, _)| at).collect();
+            let bare: Vec<usize> = live
+                .iter()
+                .enumerate()
+                .filter(|(_, one)| one.version.is_none())
+                .map(|(at, _)| at)
+                .collect();
             if let [only] = bare[..] {
                 return Ok(live.remove(only));
             }
@@ -840,7 +856,10 @@ impl EpcStore {
 
     /// The object this session created, by slot.
     fn made_by_slot(&self, slot: &str) -> Option<&Made> {
-        self.made.get(uuid_of_slot(slot))?.iter().find(|made| made.slot == slot)
+        self.made
+            .get(uuid_of_slot(slot))?
+            .iter()
+            .find(|made| made.slot == slot)
     }
 
     /// Spell the uri of every live entry of a uuid, again: **with its version
@@ -867,10 +886,18 @@ impl EpcStore {
                 at,
                 entry.slot.clone(),
                 entry.summary.qualified_type.clone(),
-                self.current_version(&entry.slot, entry.object_version.as_deref()).map(str::to_string),
+                self.current_version(&entry.slot, entry.object_version.as_deref())
+                    .map(str::to_string),
             ));
         }
-        for (at, made) in self.made.get(&key).map(Vec::as_slice).unwrap_or_default().iter().enumerate() {
+        for (at, made) in self
+            .made
+            .get(&key)
+            .map(Vec::as_slice)
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+        {
             if !matches!(self.overlay.get(&made.slot), Some(Change::Put(_))) {
                 continue;
             }
@@ -879,7 +906,8 @@ impl EpcStore {
                 at,
                 made.slot.clone(),
                 made.summary.qualified_type.clone(),
-                self.current_version(&made.slot, made.object_version.as_deref()).map(str::to_string),
+                self.current_version(&made.slot, made.object_version.as_deref())
+                    .map(str::to_string),
             ));
         }
         let mut moved = Vec::new();
@@ -1011,66 +1039,66 @@ impl EpcStore {
 
         let mut first: Option<Error> = None;
         for mode in passes {
-        for (rank, candidate) in attempts.iter().enumerate() {
-            // Dispatched on the **candidate**, not on its content type. A
-            // development drop shares that string with the release it precedes
-            // — `resqml 2.2_dev3` declares `version="2.2"` — so a lookup by
-            // content type hands every candidate of such a pair the same type,
-            // and this walk would read the same thing each time while looking
-            // like it had tried both.
-            let outcome = self
-                .registry
-                .read_xml_as_named(candidate, &bytes, *mode)
-                .or_else(|first| {
-                    // A type the registry cannot address by name: fall back to
-                    // the string, which is what every release pair used before
-                    // drops existed.
-                    match candidate.content_type {
-                        Some(ct) => self.registry.read_xml_as(ct, &bytes, *mode),
-                        None => self
-                            .registry
-                            .read_xml_as(&entry.summary.content_type, &bytes, *mode)
-                            .map_err(|_| first),
-                    }
-                });
-            match outcome {
-                Ok((object, departures)) => {
-                    if rank > 0 {
-                        self.record(Diagnostic::warning(
-                            &part,
-                            format!(
-                                "would not read as `{}`; read as `{}` instead — the document's \
+            for (rank, candidate) in attempts.iter().enumerate() {
+                // Dispatched on the **candidate**, not on its content type. A
+                // development drop shares that string with the release it precedes
+                // — `resqml 2.2_dev3` declares `version="2.2"` — so a lookup by
+                // content type hands every candidate of such a pair the same type,
+                // and this walk would read the same thing each time while looking
+                // like it had tried both.
+                let outcome = self
+                    .registry
+                    .read_xml_as_named(candidate, &bytes, *mode)
+                    .or_else(|first| {
+                        // A type the registry cannot address by name: fall back to
+                        // the string, which is what every release pair used before
+                        // drops existed.
+                        match candidate.content_type {
+                            Some(ct) => self.registry.read_xml_as(ct, &bytes, *mode),
+                            None => self
+                                .registry
+                                .read_xml_as(&entry.summary.content_type, &bytes, *mode)
+                                .map_err(|_| first),
+                        }
+                    });
+                match outcome {
+                    Ok((object, departures)) => {
+                        if rank > 0 {
+                            self.record(Diagnostic::warning(
+                                &part,
+                                format!(
+                                    "would not read as `{}`; read as `{}` instead — the document's \
                                  namespace names the package and not the version",
-                                attempts[0].qualified_type.unwrap_or(attempts[0].name),
-                                candidate.qualified_type.unwrap_or(candidate.name)
-                            ),
-                        ));
+                                    attempts[0].qualified_type.unwrap_or(attempts[0].name),
+                                    candidate.qualified_type.unwrap_or(candidate.name)
+                                ),
+                            ));
+                        }
+                        // Vocal, as everywhere else here: the object now holds
+                        // values nobody wrote, and a caller that saves it would put
+                        // them on disk. The two kinds are kept apart — an absent
+                        // element is a producer forgetting, a value that could not
+                        // be read is a producer writing something wrong, and the
+                        // second is the worse news.
+                        for item in departures.defaulted {
+                            self.record(Diagnostic::warning(&part, item.to_string()));
+                        }
+                        for item in departures.repaired {
+                            self.record(Diagnostic::warning(&part, item.to_string()));
+                        }
+                        return Ok(object);
                     }
-                    // Vocal, as everywhere else here: the object now holds
-                    // values nobody wrote, and a caller that saves it would put
-                    // them on disk. The two kinds are kept apart — an absent
-                    // element is a producer forgetting, a value that could not
-                    // be read is a producer writing something wrong, and the
-                    // second is the worse news.
-                    for item in departures.defaulted {
-                        self.record(Diagnostic::warning(&part, item.to_string()));
-                    }
-                    for item in departures.repaired {
-                        self.record(Diagnostic::warning(&part, item.to_string()));
-                    }
-                    return Ok(object);
-                }
-                Err(e) => {
-                    // The error worth reporting is the one from the strict
-                    // pass over the document's own version: it names what is
-                    // actually wrong, where a later pass would report the
-                    // second-best guess failing for a second-best reason.
-                    if first.is_none() {
-                        first = Some(e.into());
+                    Err(e) => {
+                        // The error worth reporting is the one from the strict
+                        // pass over the document's own version: it names what is
+                        // actually wrong, where a later pass would report the
+                        // second-best guess failing for a second-best reason.
+                        if first.is_none() {
+                            first = Some(e.into());
+                        }
                     }
                 }
             }
-        }
         }
         // Every candidate refused it in every pass. The first error is the one
         // to report: it is the version the document itself pointed at, read
@@ -1237,7 +1265,9 @@ impl EpcStore {
                     }
                     object.uuid = uuid_of_slot(&object.uuid).to_string();
                 }
-                change.objects.sort_by(|a, b| (&a.uuid, &a.uri).cmp(&(&b.uuid, &b.uri)));
+                change
+                    .objects
+                    .sort_by(|a, b| (&a.uuid, &a.uri).cmp(&(&b.uuid, &b.uri)));
                 revision::Since::Exact(change)
             }
             everything => everything,
@@ -1273,9 +1303,16 @@ impl EpcStore {
         let held = self
             .by_uuid
             .get(uuid_of_slot(slot))
-            .and_then(|list| list.iter().map(|&at| &self.entries[at]).find(|entry| entry.slot == slot))
+            .and_then(|list| {
+                list.iter()
+                    .map(|&at| &self.entries[at])
+                    .find(|entry| entry.slot == slot)
+            })
             .map(|entry| (&entry.summary, entry.object_version.as_deref()))
-            .or_else(|| self.made_by_slot(slot).map(|made| (&made.summary, made.object_version.as_deref())));
+            .or_else(|| {
+                self.made_by_slot(slot)
+                    .map(|made| (&made.summary, made.object_version.as_deref()))
+            });
         if let Some(Change::Put(object)) = self.overlay.get(slot) {
             let stated = self.summary_of(object.as_reflect())?;
             let stated_version = normal_version(identity::object_version_of_reflect(object.as_reflect()));
@@ -1304,7 +1341,10 @@ impl EpcStore {
     /// because the gate is where the *before* is at hand. With `only`, just that
     /// object's pending edit (it is about to be edited again).
     fn settle_edits(&self, only: Option<&str>) {
-        let mut pending = self.pending_edits.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut pending = self
+            .pending_edits
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         if pending.is_empty() {
             return;
         }
@@ -1317,7 +1357,9 @@ impl EpcStore {
             if let Some(Change::Put(object)) = self.overlay.get(&edit.slot)
                 && reference_list(object.as_reflect()) == edit.references
             {
-                self.overlay.journal().narrow(edit.revision, &edit.slot, What::LINKS_OUT);
+                self.overlay
+                    .journal()
+                    .narrow(edit.revision, &edit.slot, What::LINKS_OUT);
             }
         }
         *pending = kept;
@@ -1346,7 +1388,11 @@ impl EpcStore {
         // A map, not `entries.iter().find` per part: on a package of 16 250
         // parts that was a quarter of a billion comparisons, 2.3 s a call
         // (the scene's loading had become endless).
-        let objects: HashMap<&str, &PartEntry> = self.entries.iter().map(|e| (e.summary.locator.as_str(), e)).collect();
+        let objects: HashMap<&str, &PartEntry> = self
+            .entries
+            .iter()
+            .map(|e| (e.summary.locator.as_str(), e))
+            .collect();
 
         for name in self.package.entries() {
             if name.ends_with('/') {
@@ -1423,12 +1469,7 @@ impl EpcStore {
     ///
     /// Which object the file is about is a relationship, not a content type:
     /// [`EpcStore::relate_media`].
-    pub fn set_attachment(
-        &mut self,
-        part: &str,
-        bytes: Vec<u8>,
-        content_type: Option<String>,
-    ) -> Result<()> {
+    pub fn set_attachment(&mut self, part: &str, bytes: Vec<u8>, content_type: Option<String>) -> Result<()> {
         let part = part.trim_start_matches('/').to_string();
         if part.is_empty() || part.ends_with('/') {
             return Err(Error::Package("an attachment needs a part name".to_string()));
@@ -1452,7 +1493,9 @@ impl EpcStore {
         // Then what OPC and EPC say of any part name and any content type —
         // each rule with its section in `media`.
         let part = media::check_part_name(&part)?;
-        let content_type = content_type.map(|declared| media::check_media_type(&declared)).transpose()?;
+        let content_type = content_type
+            .map(|declared| media::check_media_type(&declared))
+            .transpose()?;
         if let Some(other) = self
             .package
             .entries()
@@ -1530,7 +1573,10 @@ impl EpcStore {
     /// [`EpcStore::remove_attachment`], which takes its relations with it.
     pub fn unrelate_media(&mut self, object: &str, part: &str) -> Result<bool> {
         let (uuid, part) = self.media_ends(object, part)?;
-        let was = self.media_links().iter().any(|link| link.part == part && link.uuid == uuid);
+        let was = self
+            .media_links()
+            .iter()
+            .any(|link| link.part == part && link.uuid == uuid);
         self.overlay.set_media_link(&part, &uuid, false);
         Ok(was)
     }
@@ -1569,8 +1615,11 @@ impl EpcStore {
     fn archive_media(&self) -> &Vec<(String, String)> {
         self.archive_media.get_or_init(|| {
             let mut links: BTreeSet<(String, String)> = BTreeSet::new();
-            let objects: HashMap<&str, &str> =
-                self.entries.iter().map(|e| (e.summary.locator.as_str(), e.summary.uuid.as_str())).collect();
+            let objects: HashMap<&str, &str> = self
+                .entries
+                .iter()
+                .map(|e| (e.summary.locator.as_str(), e.summary.uuid.as_str()))
+                .collect();
             for entry in &self.entries {
                 let Ok(relationships) = self.relationships_recorded(&entry.summary.locator) else {
                     continue;
@@ -1610,7 +1659,12 @@ impl EpcStore {
     /// The media parts related to one object, by part name.
     pub fn media_of(&self, object: &str) -> Result<Vec<String>> {
         let uuid = uuid_in_uri(object)?.to_ascii_lowercase();
-        Ok(self.media_links().into_iter().filter(|link| link.uuid == uuid).map(|link| link.part).collect())
+        Ok(self
+            .media_links()
+            .into_iter()
+            .filter(|link| link.uuid == uuid)
+            .map(|link| link.part)
+            .collect())
     }
 
     /// The two ends of a media relation, checked: the object's lowercased uuid
@@ -1805,14 +1859,19 @@ impl EpcStore {
         // entries sharing a uuid, the one that is this object — its type and
         // version — rather than the first.
         let stated = identity::key_of_reflect(object).map(|key| {
-            (key.uuid.to_ascii_lowercase(), key.qualified_type(), normal_version(key.object_version))
+            (
+                key.uuid.to_ascii_lowercase(),
+                key.qualified_type(),
+                normal_version(key.object_version),
+            )
         });
         let source = stated.and_then(|(uuid, qualified_type, version)| {
             let list = self.by_uuid.get(&uuid)?;
             let own = list.iter().map(|&at| &self.entries[at]).find(|entry| {
                 entry.summary.qualified_type == qualified_type && entry.object_version == version
             });
-            own.or_else(|| list.first().map(|&at| &self.entries[at])).map(|entry| entry.summary.locator.clone())
+            own.or_else(|| list.first().map(|&at| &self.entries[at]))
+                .map(|entry| entry.summary.locator.clone())
         });
         let resolver = |proxy_uuid: &str| self.external_target_for(proxy_uuid, source.as_deref());
         crate::array::locate_with(object, &resolver)
@@ -1854,7 +1913,9 @@ impl EpcStore {
     /// order where the file holds the other makes every value read wrong while
     /// the document stays valid.
     pub fn array_byte_order(&self, location: &ArrayLocation) -> Result<Option<ByteOrder>> {
-        self.attempt(location, |backend, file| backend.byte_order(file, &location.path_in_file))
+        self.attempt(location, |backend, file| {
+            backend.byte_order(file, &location.path_in_file)
+        })
     }
 
     /// An array, or the slice the location names — `GetDataArrays` and
@@ -1887,9 +1948,7 @@ impl EpcStore {
         // written — one metadata call, remembered, next to a read of a million
         // points.
         let (backend, file) = match self.array_backend(location) {
-            Ok((backend, file)) if backend.metadata(&file, &location.path_in_file).is_ok() => {
-                (backend, file)
-            }
+            Ok((backend, file)) if backend.metadata(&file, &location.path_in_file).is_ok() => (backend, file),
             _ => self.search_array_file(location)?,
         };
         backend.read_into(
@@ -1960,9 +2019,14 @@ impl EpcStore {
     /// backend that can ([`crate::ArrayBackend::write_many`]). One result per
     /// item, in order; the shape of each is checked as
     /// [`EpcStore::write_array_to`] checks it.
-    pub fn write_arrays_to(&self, file_name: &str, items: &[(&str, &crate::array::ArrayData)]) -> Vec<Result<()>> {
+    pub fn write_arrays_to(
+        &self,
+        file_name: &str,
+        items: &[(&str, &crate::array::ArrayData)],
+    ) -> Vec<Result<()>> {
         // One span per file, with the number of datasets — never one per array.
-        let _span = tracing::info_span!("epc.write_arrays", file = file_name, datasets = items.len()).entered();
+        let _span =
+            tracing::info_span!("epc.write_arrays", file = file_name, datasets = items.len()).entered();
         let checked: Vec<Result<()>> = items
             .iter()
             .map(|(path_in_file, data)| {
@@ -1970,7 +2034,10 @@ impl EpcStore {
                 if promised as usize != data.values.len() {
                     return Err(Error::ExternalData {
                         location: format!("{file_name}:{path_in_file}"),
-                        reason: ExternalDataReason::ShapeDisagrees { promised, held: data.values.len() },
+                        reason: ExternalDataReason::ShapeDisagrees {
+                            promised,
+                            held: data.values.len(),
+                        },
                     });
                 }
                 Ok(())
@@ -1987,13 +2054,20 @@ impl EpcStore {
                 })
                 .collect()
         };
-        let probe = ArrayLocation { file: file_name.to_string(), mime: None, ..Default::default() };
+        let probe = ArrayLocation {
+            file: file_name.to_string(),
+            mime: None,
+            ..Default::default()
+        };
         let backend = match self.backends.find(&probe, std::path::Path::new(file_name)) {
             Ok(backend) => backend,
             Err(why) => return refuse_all(why.to_string()),
         };
         if !backend.writes() {
-            return refuse_all(format!("the `{}` backend reads but does not write", backend.name()));
+            return refuse_all(format!(
+                "the `{}` backend reads but does not write",
+                backend.name()
+            ));
         }
         let path = match self.external.destination_for(file_name) {
             Ok(path) => path,
@@ -2001,14 +2075,29 @@ impl EpcStore {
         };
         // Only the items whose shape agrees go to the backend; the others keep
         // their refusal, in place.
-        let good: Vec<(&str, &crate::array::ArrayData)> =
-            items.iter().zip(&checked).filter(|(_, ok)| ok.is_ok()).map(|(item, _)| *item).collect();
+        let good: Vec<(&str, &crate::array::ArrayData)> = items
+            .iter()
+            .zip(&checked)
+            .filter(|(_, ok)| ok.is_ok())
+            .map(|(item, _)| *item)
+            .collect();
         // Journaled whatever the backend answers: a write that failed half way
         // may have changed some of the datasets, and a journal that says less
         // than the file holds leaves a cache serving numbers that are gone.
-        self.overlay.journal().note_datasets(file_name, good.iter().map(|(path_in_file, _)| *path_in_file));
+        self.overlay
+            .journal()
+            .note_datasets(file_name, good.iter().map(|(path_in_file, _)| *path_in_file));
         let mut written = backend.write_many(&path, &good).into_iter();
-        checked.into_iter().map(|ok| if ok.is_ok() { written.next().unwrap_or(Ok(())) } else { ok }).collect()
+        checked
+            .into_iter()
+            .map(|ok| {
+                if ok.is_ok() {
+                    written.next().unwrap_or(Ok(()))
+                } else {
+                    ok
+                }
+            })
+            .collect()
     }
 
     /// Write an array to a named external file, creating it if needed.
@@ -2064,7 +2153,9 @@ impl EpcStore {
         let path = self.external.destination_for(file_name)?;
         // Journaled whatever the backend answers, for the reason given in
         // `write_arrays_to`.
-        self.overlay.journal().note_datasets(file_name, std::iter::once(path_in_file));
+        self.overlay
+            .journal()
+            .note_datasets(file_name, std::iter::once(path_in_file));
         backend.write(&path, path_in_file, data)
     }
 
@@ -2261,7 +2352,12 @@ impl EpcStore {
             ),
         };
         self.record(Diagnostic::warning(&location.field_path, detail.clone()));
-        Err(missing_or_unsupported(location, &self.backends, no_backend, Some(&detail)))
+        Err(missing_or_unsupported(
+            location,
+            &self.backends,
+            no_backend,
+            Some(&detail),
+        ))
     }
 
     /// Where an array's numbers actually are, and why there.
@@ -2554,7 +2650,9 @@ impl EpcStore {
             .iter()
             .filter(|entry| {
                 !(entry.summary.qualified_type.contains("EpcExternalPartReference")
-                    || entry.info.is_some_and(|i| i.type_key == "EpcExternalPartReference"))
+                    || entry
+                        .info
+                        .is_some_and(|i| i.type_key == "EpcExternalPartReference"))
             })
             .filter_map(|entry| {
                 let uuid = entry.summary.uuid.to_ascii_lowercase();
@@ -2618,7 +2716,8 @@ impl EpcStore {
         // A proxy that now names another file resolves its arrays elsewhere:
         // whoever read them through the old name has to be told.
         self.overlay.journal().note_renamed(proxy_uuid, &file_name);
-        self.declared_files.insert(proxy_uuid.to_ascii_lowercase(), file_name);
+        self.declared_files
+            .insert(proxy_uuid.to_ascii_lowercase(), file_name);
     }
 
     /// The external files this session declared, as opposed to found.
@@ -2696,7 +2795,11 @@ impl EpcStore {
             .ok_or_else(|| Error::Package("an empty objectVersion names no version".to_string()))?;
         let (slot, uuid, qualified_type) = {
             let live = self.locate(uri)?;
-            (live.slot.to_string(), live.summary.uuid.to_ascii_lowercase(), live.summary.qualified_type.clone())
+            (
+                live.slot.to_string(),
+                live.summary.uuid.to_ascii_lowercase(),
+                live.summary.qualified_type.clone(),
+            )
         };
         let namesakes: Vec<(Option<String>, String)> = self
             .live_of(&uuid)
@@ -2704,7 +2807,10 @@ impl EpcStore {
             .filter(|one| one.summary.qualified_type == qualified_type && one.slot != slot)
             .map(|one| (one.version.map(str::to_string), one.summary.uri.clone()))
             .collect();
-        if let Some((_, held)) = namesakes.iter().find(|(held, _)| held.as_deref() == Some(version.as_str())) {
+        if let Some((_, held)) = namesakes
+            .iter()
+            .find(|(held, _)| held.as_deref() == Some(version.as_str()))
+        {
             return Err(Error::Package(format!(
                 "`{held}` already carries the objectVersion `{version}`: two entries of one identity are one object"
             )));
@@ -2716,7 +2822,12 @@ impl EpcStore {
             .or_else(|_| energyml_core::path::set(object, "Citation.VersionString", value()))
             .map_err(|why| Error::Package(format!("`{uri}` has no place for an objectVersion: {why}")))?;
         self.settle_versions();
-        Ok(self.live_of(&uuid).into_iter().find(|one| one.slot == slot).map(|one| one.summary.uri.clone()).unwrap_or_default())
+        Ok(self
+            .live_of(&uuid)
+            .into_iter()
+            .find(|one| one.slot == slot)
+            .map(|one| one.summary.uri.clone())
+            .unwrap_or_default())
     }
 
     /// The version an entry was recorded with, `None` when the slot is unknown.
@@ -2752,15 +2863,23 @@ impl EpcStore {
         }
         let mut drifted: Vec<(String, String, Option<String>)> = Vec::new();
         for slot in std::mem::take(&mut self.unsettled) {
-            let Some(Change::Put(object)) = self.overlay.get(&slot) else { continue };
+            let Some(Change::Put(object)) = self.overlay.get(&slot) else {
+                continue;
+            };
             let now = normal_version(identity::object_version_of_reflect(object.as_reflect()));
-            if self.recorded_version(&slot).is_some_and(|recorded| recorded != now) {
+            if self
+                .recorded_version(&slot)
+                .is_some_and(|recorded| recorded != now)
+            {
                 drifted.push((uuid_of_slot(&slot).to_string(), slot.clone(), now));
             }
         }
         for (uuid, slot, now) in drifted {
-            let before: Vec<(String, String)> =
-                self.live_of(&uuid).iter().map(|one| (one.slot.to_string(), one.summary.uri.clone())).collect();
+            let before: Vec<(String, String)> = self
+                .live_of(&uuid)
+                .iter()
+                .map(|one| (one.slot.to_string(), one.summary.uri.clone()))
+                .collect();
             self.set_entry_version(&uuid, &slot, now);
             self.moved_uris(&uuid, &slot, &before);
         }
@@ -2792,12 +2911,19 @@ impl EpcStore {
             .ok_or_else(|| Error::NotFound(uri.to_string()))?;
         if let Some(references) = before {
             let revision = self.overlay.revision();
-            let mut pending = self.pending_edits.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+            let mut pending = self
+                .pending_edits
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             if pending.len() >= PENDING_EDITS {
                 // The oldest keeps the wider answer, which is the safe one.
                 pending.remove(0);
             }
-            pending.push(PendingEdit { revision, slot: slot.clone(), references });
+            pending.push(PendingEdit {
+                revision,
+                slot: slot.clone(),
+                references,
+            });
         }
         let object = self
             .overlay
@@ -2876,7 +3002,13 @@ impl EpcStore {
             .live_of(&key)
             .into_iter()
             .filter(|one| one.summary.qualified_type == summary.qualified_type)
-            .map(|one| (one.slot.to_string(), one.version.map(str::to_string), one.summary.uri.clone()))
+            .map(|one| {
+                (
+                    one.slot.to_string(),
+                    one.version.map(str::to_string),
+                    one.summary.uri.clone(),
+                )
+            })
             .collect();
 
         // Which slot this object takes, and whether it replaces something there.
@@ -2886,16 +3018,26 @@ impl EpcStore {
                     "`{}` is already held{}: a put replaces it, a new version is another \
                      `objectVersion`",
                     versioned(version.as_deref()),
-                    if version.is_none() { " (it declares no objectVersion)" } else { "" }
+                    if version.is_none() {
+                        " (it declares no objectVersion)"
+                    } else {
+                        ""
+                    }
                 )));
             }
-            (self.slot_for_new(&key, &summary.qualified_type, version.as_deref()), false)
+            (
+                self.slot_for_new(&key, &summary.qualified_type, version.as_deref()),
+                false,
+            )
         } else if let Some((slot, _, _)) = same_type.iter().find(|(_, held, _)| *held == version) {
             (slot.clone(), true)
         } else if let [(slot, _, _)] = &same_type[..] {
             (slot.clone(), true)
         } else if same_type.is_empty() {
-            (self.slot_for_new(&key, &summary.qualified_type, version.as_deref()), false)
+            (
+                self.slot_for_new(&key, &summary.qualified_type, version.as_deref()),
+                false,
+            )
         } else {
             return Err(Error::Ambiguous {
                 uri: versioned(version.as_deref()),
@@ -2903,8 +3045,11 @@ impl EpcStore {
             });
         };
 
-        let before: Vec<(String, String)> =
-            self.live_of(&key).iter().map(|one| (one.slot.to_string(), one.summary.uri.clone())).collect();
+        let before: Vec<(String, String)> = self
+            .live_of(&key)
+            .iter()
+            .map(|one| (one.slot.to_string(), one.summary.uri.clone()))
+            .collect();
 
         // Whether this replaces an object or adds one decides what the journal
         // says: the broad answer for a replacement (a reader that held the old
@@ -2928,13 +3073,18 @@ impl EpcStore {
         // an existing part goes through here too, and `entries` answers for it.
         if !self.is_archive_slot(&slot) {
             let list = self.made.entry(key.clone()).or_default();
-            let made = Made { slot: slot.clone(), summary: summary.clone(), object_version: version.clone() };
+            let made = Made {
+                slot: slot.clone(),
+                summary: summary.clone(),
+                object_version: version.clone(),
+            };
             match list.iter_mut().find(|held| held.slot == slot) {
                 Some(held) => *held = made,
                 None => list.push(made),
             }
         }
-        self.overlay.set_what(&slot, Some(&summary.uri), Change::Put(object), what);
+        self.overlay
+            .set_what(&slot, Some(&summary.uri), Change::Put(object), what);
         self.moved_uris(&key, &slot, &before);
         let uri = self
             .live_of(&key)
@@ -2954,9 +3104,16 @@ impl EpcStore {
     /// rule that leaves every package without namesakes with the keys it always
     /// had — and a composite slot if one does.
     fn slot_for_new(&self, uuid: &str, qualified_type: &str, version: Option<&str>) -> String {
-        if let Some(entry) = self.by_uuid.get(uuid).into_iter().flatten().map(|&at| &self.entries[at]).find(|entry| {
-            entry.summary.qualified_type == qualified_type && entry.object_version.as_deref() == version
-        }) {
+        if let Some(entry) = self
+            .by_uuid
+            .get(uuid)
+            .into_iter()
+            .flatten()
+            .map(|&at| &self.entries[at])
+            .find(|entry| {
+                entry.summary.qualified_type == qualified_type && entry.object_version.as_deref() == version
+            })
+        {
             return entry.slot.clone();
         }
         let taken = self
@@ -2965,8 +3122,17 @@ impl EpcStore {
             .into_iter()
             .flatten()
             .any(|&at| self.entries[at].slot == uuid)
-            || self.made.get(uuid).into_iter().flatten().any(|made| made.slot == uuid);
-        if taken { slot_key(uuid, qualified_type, version) } else { uuid.to_string() }
+            || self
+                .made
+                .get(uuid)
+                .into_iter()
+                .flatten()
+                .any(|made| made.slot == uuid);
+        if taken {
+            slot_key(uuid, qualified_type, version)
+        } else {
+            uuid.to_string()
+        }
     }
 
     /// An entry that states another `objectVersion` than it was born with.
@@ -2980,7 +3146,11 @@ impl EpcStore {
             .find(|&at| self.entries[at].slot == slot)
         {
             self.entries[entry].object_version = version;
-        } else if let Some(made) = self.made.get_mut(uuid).and_then(|list| list.iter_mut().find(|made| made.slot == slot)) {
+        } else if let Some(made) = self
+            .made
+            .get_mut(uuid)
+            .and_then(|list| list.iter_mut().find(|made| made.slot == slot))
+        {
             made.object_version = version;
         }
     }
@@ -2994,21 +3164,27 @@ impl EpcStore {
     /// the way it handles an identity change, and the journal has to say it.
     fn moved_uris(&mut self, uuid: &str, own: &str, before: &[(String, String)]) {
         self.reconcile_uris(uuid);
-        let after: Vec<(String, String)> =
-            self.live_of(uuid).iter().map(|one| (one.slot.to_string(), one.summary.uri.clone())).collect();
+        let after: Vec<(String, String)> = self
+            .live_of(uuid)
+            .iter()
+            .map(|one| (one.slot.to_string(), one.summary.uri.clone()))
+            .collect();
         for (slot, uri) in &after {
             if slot == own {
                 continue;
             }
             if before.iter().any(|(held, was)| held == slot && was != uri) {
-                self.overlay.journal().touch_what(slot, Some(uri), What::BROAD | What::IDENTITY);
+                self.overlay
+                    .journal()
+                    .touch_what(slot, Some(uri), What::BROAD | What::IDENTITY);
             }
         }
         // The entry itself, when its own uri moved too (a version edited in
         // place, or an entry coming back beside a namesake): an identity event.
-        if let (Some((_, was)), Some((_, now))) =
-            (before.iter().find(|(slot, _)| slot == own), after.iter().find(|(slot, _)| slot == own))
-            && was != now
+        if let (Some((_, was)), Some((_, now))) = (
+            before.iter().find(|(slot, _)| slot == own),
+            after.iter().find(|(slot, _)| slot == own),
+        ) && was != now
         {
             self.overlay.journal().touch_what(own, Some(now), What::IDENTITY);
         }
@@ -3039,12 +3215,16 @@ impl EpcStore {
             Err(other) => return Err(other),
         };
         let uuid = uuid_of_slot(&slot).to_string();
-        let before: Vec<(String, String)> =
-            self.live_of(&uuid).iter().map(|one| (one.slot.to_string(), one.summary.uri.clone())).collect();
+        let before: Vec<(String, String)> = self
+            .live_of(&uuid)
+            .iter()
+            .map(|one| (one.slot.to_string(), one.summary.uri.clone()))
+            .collect();
         if let Some(list) = self.made.get_mut(&uuid) {
             list.retain(|made| made.slot != slot);
         }
-        self.overlay.set_what(&slot, Some(uri), Change::Removed, What::REMOVED);
+        self.overlay
+            .set_what(&slot, Some(uri), Change::Removed, What::REMOVED);
         self.moved_uris(&uuid, &slot, &before);
         self.after_change()
     }
@@ -3098,11 +3278,20 @@ impl EpcStore {
         // What the layer held decides which entries are live, so the uris of the
         // uuids it touched are spelled again once it is gone: a version added in
         // the transaction no longer makes its namesake's uri a long one.
-        let touched: BTreeSet<String> =
-            self.overlay.changed().iter().map(|(slot, _)| uuid_of_slot(slot).to_string()).collect();
+        let touched: BTreeSet<String> = self
+            .overlay
+            .changed()
+            .iter()
+            .map(|(slot, _)| uuid_of_slot(slot).to_string())
+            .collect();
         // What the layer below holds again may state another version than an
         // entry recorded during the transaction: settle every slot it held.
-        let held: Vec<String> = self.overlay.changed().iter().map(|(slot, _)| (*slot).clone()).collect();
+        let held: Vec<String> = self
+            .overlay
+            .changed()
+            .iter()
+            .map(|(slot, _)| (*slot).clone())
+            .collect();
         self.unsettled.extend(held);
         self.overlay.rollback_transaction()?;
         for uuid in touched {
@@ -3190,7 +3379,11 @@ impl EpcStore {
             .collect();
 
         let mut package = write::Package::new(
-            objects.iter().map(|object| object.as_ref()).chain(added).collect(),
+            objects
+                .iter()
+                .map(|object| object.as_ref())
+                .chain(added)
+                .collect(),
             self.core_properties_for(options),
         );
         package.layout = options.layout;
@@ -3394,8 +3587,7 @@ impl EpcStore {
         let mut read = Vec::new();
         let mut unreadable = Vec::new();
         for summary in self.resources() {
-            if of_type.is_some_and(|want| !crate::resource::type_matches(&summary.qualified_type, want))
-            {
+            if of_type.is_some_and(|want| !crate::resource::type_matches(&summary.qualified_type, want)) {
                 continue;
             }
             match self.get_object(&summary.uri) {
@@ -3437,7 +3629,9 @@ impl EpcStore {
 
     /// Resolve a URI, or a bare uuid, to an inventory entry.
     fn entry(&self, uri: &str) -> Result<&PartEntry> {
-        self.locate(uri)?.archive.ok_or_else(|| Error::NotFound(uri.to_string()))
+        self.locate(uri)?
+            .archive
+            .ok_or_else(|| Error::NotFound(uri.to_string()))
     }
 
     /// The file a location names, resolving the proxy if it has not been.
@@ -3569,9 +3763,17 @@ impl EpcStore {
             // another entry, and every part is kept. Only a part that repeats the
             // whole identity is dropped, and said: two parts of one identity
             // cannot both be the object.
-            if let Some(previous) = self.by_uuid.get(&key).into_iter().flatten().map(|&at| &self.entries[at]).find(|held| {
-                held.summary.qualified_type == entry.summary.qualified_type && held.object_version == entry.object_version
-            }) {
+            if let Some(previous) = self
+                .by_uuid
+                .get(&key)
+                .into_iter()
+                .flatten()
+                .map(|&at| &self.entries[at])
+                .find(|held| {
+                    held.summary.qualified_type == entry.summary.qualified_type
+                        && held.object_version == entry.object_version
+                })
+            {
                 self.record(Diagnostic::warning(
                     part.clone(),
                     format!(
@@ -3585,7 +3787,11 @@ impl EpcStore {
             // The first entry of a uuid is keyed by the uuid itself, as every
             // key was before versions existed; its namesakes by a composite.
             entry.slot = if self.by_uuid.contains_key(&key) {
-                slot_key(&key, &entry.summary.qualified_type, entry.object_version.as_deref())
+                slot_key(
+                    &key,
+                    &entry.summary.qualified_type,
+                    entry.object_version.as_deref(),
+                )
             } else {
                 key.clone()
             };
@@ -3598,7 +3804,9 @@ impl EpcStore {
         let versioned: Vec<String> = self
             .by_uuid
             .iter()
-            .filter(|(_, list)| list.len() > 1 || list.iter().any(|&at| self.entries[at].object_version.is_some()))
+            .filter(|(_, list)| {
+                list.len() > 1 || list.iter().any(|&at| self.entries[at].object_version.is_some())
+            })
             .map(|(uuid, _)| uuid.clone())
             .collect();
         for uuid in versioned {
@@ -3704,8 +3912,16 @@ impl EpcStore {
                 && let Some((package, why)) = self.absent_declaration(peeked_header)
                 && package.eq_ignore_ascii_case(parts.domain)
             {
-                let release = peeked_header.schema_version.as_deref().map(naming::release_of).unwrap_or_default();
-                qualified_type = format!("{package}{}.{}", naming::compact_version(release), parts.object_type);
+                let release = peeked_header
+                    .schema_version
+                    .as_deref()
+                    .map(naming::release_of)
+                    .unwrap_or_default();
+                qualified_type = format!(
+                    "{package}{}.{}",
+                    naming::compact_version(release),
+                    parts.object_type
+                );
                 content_type = format!(
                     "application/x-{package}+xml;version={release};type={}",
                     parts.object_type
@@ -3852,14 +4068,25 @@ impl EpcStore {
         // best of them would be another release of the package, read with
         // whatever fields the two share.
         if let Some((package, why)) = self.absent_declaration(&peeked) {
-            let release = peeked.schema_version.as_deref().map(naming::release_of).unwrap_or_default();
-            let qualified_type = format!("{package}{}.{}", naming::compact_version(release), peeked.root_name);
+            let release = peeked
+                .schema_version
+                .as_deref()
+                .map(naming::release_of)
+                .unwrap_or_default();
+            let qualified_type = format!(
+                "{package}{}.{}",
+                naming::compact_version(release),
+                peeked.root_name
+            );
             self.record(Diagnostic::warning(
                 part,
                 format!("`{qualified_type}` cannot be read: {why}; the part is listed but not read"),
             ));
             let content_type = declared.clone().unwrap_or_else(|| {
-                format!("application/x-{package}+xml;version={release};type={}", peeked.root_name)
+                format!(
+                    "application/x-{package}+xml;version={release};type={}",
+                    peeked.root_name
+                )
             });
             return Some(PartEntry {
                 summary: ObjectSummary {
@@ -4050,9 +4277,7 @@ impl EpcStore {
                     let by_wire = naming::release_of(info.schema_version);
                     if naming::version_eq(by_wire, version) || naming::version_eq(by_dir, version) {
                         0
-                    } else if version_compatible(by_dir, version)
-                        || version_compatible(by_wire, version)
-                    {
+                    } else if version_compatible(by_dir, version) || version_compatible(by_wire, version) {
                         1
                     } else if obj_prefixed && naming::has_obj_prefix(info.object_type) {
                         // The declared version helped nobody — the `obj_`
@@ -4102,8 +4327,7 @@ impl EpcStore {
                 .then_with(|| b.version.cmp(a.version))
         });
         let confident = candidates.len() <= 1
-            || (declared.is_some()
-                && candidates.first().map(|i| (rank(i), drop_rank(i))) == Some((0, 0)));
+            || (declared.is_some() && candidates.first().map(|i| (rank(i), drop_rank(i))) == Some((0, 0)));
         (candidates, confident)
     }
 
@@ -4116,8 +4340,13 @@ impl EpcStore {
     fn absent_declaration(&self, peeked: &header::PeekedHeader) -> Option<(String, String)> {
         let uri = peeked.namespace.as_deref()?;
         let declared = peeked.schema_version.as_deref()?;
-        let package = energyml_core::ns::well_known_namespaces().iter().find(|known| known.uri == uri)?.prefix;
-        self.registry.absent(package, declared).map(|why| (package.to_string(), why.to_string()))
+        let package = energyml_core::ns::well_known_namespaces()
+            .iter()
+            .find(|known| known.uri == uri)?
+            .prefix;
+        self.registry
+            .absent(package, declared)
+            .map(|why| (package.to_string(), why.to_string()))
     }
 
     /// The best candidate alone, for the callers that only need a name.
@@ -4288,7 +4517,9 @@ impl LocalPackage for EpcStore {
         // longer exists. And a part this session removed is gone for the
         // reader too — the archive still holds its bytes until the save.
         if self.overlay.raw(part).is_none() && self.overlay.is_dropped(part) {
-            return Err(Error::Package(format!("no part `{part}` in the package: it was removed")));
+            return Err(Error::Package(format!(
+                "no part `{part}` in the package: it was removed"
+            )));
         }
         self.raw_part(part)
     }
@@ -4358,7 +4589,10 @@ fn missing_or_unsupported(
         Some(detail) => format!("{} — {detail}", location.field_path),
         None => location.field_path.clone(),
     };
-    Error::ExternalData { location, reason: ExternalDataReason::FileMissing }
+    Error::ExternalData {
+        location,
+        reason: ExternalDataReason::FileMissing,
+    }
 }
 
 /// Parts that describe the package rather than belong to it.
@@ -4402,7 +4636,11 @@ fn address_of(uri: &str) -> Result<Address> {
     }
     let trimmed = uri.trim();
     if identifiers::is_uuid(trimmed) {
-        return Ok(Address { uuid: trimmed.to_ascii_lowercase(), qualified_type: None, version: None });
+        return Ok(Address {
+            uuid: trimmed.to_ascii_lowercase(),
+            qualified_type: None,
+            version: None,
+        });
     }
     Err(Error::BadUri {
         uri: uri.to_string(),

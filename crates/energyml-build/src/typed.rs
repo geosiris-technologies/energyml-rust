@@ -22,7 +22,9 @@
 //! [`AnyOperation`]: crate::operation::AnyOperation
 
 use crate::declare::{Inputs, Params, Suggestions};
-use crate::operation::{AnyOperation, Category, Choices, Error, Fitness, Identity, Output, Plan, Purpose, Refusal, Slot, When};
+use crate::operation::{
+    AnyOperation, Category, Choices, Error, Fitness, Identity, Output, Plan, Purpose, Refusal, Slot, When,
+};
 use crate::pieces::Pieces;
 
 /// Who an operation is — what a listing, a form title and an activity read.
@@ -98,13 +100,20 @@ impl<'a> Context<'a> {
     /// The name of the first piece the caller gave — what a derived name
     /// (`outline of …`) is built on, so that it names what it always named.
     pub fn first(&self) -> String {
-        self.bag.iter().next().map(|(name, _)| name.to_string()).unwrap_or_default()
+        self.bag
+            .iter()
+            .next()
+            .map(|(name, _)| name.to_string())
+            .unwrap_or_default()
     }
 
     /// A refusal if the caller asked to stop — for a long loop to call.
     pub fn stop_if_cancelled(&self) -> Result<(), Refusal> {
         if self.feedback.cancelled() {
-            Err(Refusal::new("cancelled", "the computation was stopped before it finished"))
+            Err(Refusal::new(
+                "cancelled",
+                "the computation was stopped before it finished",
+            ))
         } else {
             Ok(())
         }
@@ -205,7 +214,10 @@ impl<T: Operation> AnyOperation for Typed<T> {
     fn fitness(&self, pieces: &Pieces) -> Fitness {
         match self.bound(pieces) {
             Ok(_) => Fitness::Fit,
-            Err(refusal) => Fitness::Unfit(Refusal { key: "unfit", ..refusal }),
+            Err(refusal) => Fitness::Unfit(Refusal {
+                key: "unfit",
+                ..refusal
+            }),
         }
     }
 
@@ -234,8 +246,20 @@ impl<T: Operation> AnyOperation for Typed<T> {
         self.0.gives()
     }
 
-    fn plan(&self, pieces: &Pieces, choices: &Choices, identity: &Identity, when: &When) -> Result<Plan, Error> {
-        let cx = Context { identity, when, purpose: Purpose::Writing, feedback: &Silent, bag: pieces };
+    fn plan(
+        &self,
+        pieces: &Pieces,
+        choices: &Choices,
+        identity: &Identity,
+        when: &When,
+    ) -> Result<Plan, Error> {
+        let cx = Context {
+            identity,
+            when,
+            purpose: Purpose::Writing,
+            feedback: &Silent,
+            bag: pieces,
+        };
         self.plan_with(pieces, choices, &cx)
     }
 

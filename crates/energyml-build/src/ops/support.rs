@@ -39,15 +39,15 @@
 //!   already follows). Until 24/09 any reference was taken, and a geometry
 //!   could name a `VerticalCrs` as its `LocalCrs`.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use energyml_domain::provenance::Parameter;
 
 use crate::crs::{FrameKind, Local, Target, Vertical};
 use crate::geojson::{Feature, Position};
 use crate::operation::{Error, Identity, Made, Need, NewObject, Note, Refusal, Slot, When};
-use energyml_geometry::geometry::{Geometry, Patch, Topology};
 use crate::pieces::{Known, Pieces, Source};
+use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 /// **A shape's faces, as the analysis takes them** — its patches concatenated in
 /// their own order, each one's indices moved by the nodes before it, so value
@@ -68,7 +68,11 @@ pub(crate) struct Faces {
 
 impl Faces {
     pub(crate) fn of(geometry: &Geometry) -> Faces {
-        let mut out = Faces { points: Vec::new(), triangles: Vec::new(), quads: Vec::new() };
+        let mut out = Faces {
+            points: Vec::new(),
+            triangles: Vec::new(),
+            quads: Vec::new(),
+        };
         for patch in &geometry.patches {
             let base = (out.points.len() / 3) as u32;
             out.points.extend(patch.points.iter().flatten().copied());
@@ -100,7 +104,11 @@ impl Faces {
     }
 
     pub(crate) fn surface(&self) -> energyml_analysis::heights::Surface<'_> {
-        energyml_analysis::heights::Surface { points: &self.points, triangles: &self.triangles, quads: &self.quads }
+        energyml_analysis::heights::Surface {
+            points: &self.points,
+            triangles: &self.triangles,
+            quads: &self.quads,
+        }
     }
 }
 
@@ -178,7 +186,11 @@ pub fn common_slots(pieces: &Pieces, represents: Option<(&'static str, &'static 
     };
     let mut suggestions = Suggestions::new(&mut slots);
     super::written::suggest_written(pieces, represents, &mut suggestions);
-    debug_assert!(suggestions.missed().is_empty(), "shared slots missing: {:?}", suggestions.missed());
+    debug_assert!(
+        suggestions.missed().is_empty(),
+        "shared slots missing: {:?}",
+        suggestions.missed()
+    );
     slots
 }
 
@@ -236,16 +248,25 @@ pub fn represented_in(
             )
             .into());
         }
-        return Ok(Represented { reference: Some(value.clone()), objects: Vec::new() });
+        return Ok(Represented {
+            reference: Some(value.clone()),
+            objects: Vec::new(),
+        });
     }
     let pair = match imposed {
         Some((feature, interpreted)) => Some((feature.to_string(), interpreted.to_string())),
         None => new_feature.and_then(|chosen| {
-            chosen.feature_type.as_ref().map(|feature| (feature.0.clone(), chosen.interpretation_type.0.clone()))
+            chosen
+                .feature_type
+                .as_ref()
+                .map(|feature| (feature.0.clone(), chosen.interpretation_type.0.clone()))
         }),
     };
     let Some((feature_type, interpretation_type)) = pair else {
-        return Ok(Represented { reference: None, objects: Vec::new() });
+        return Ok(Represented {
+            reference: None,
+            objects: Vec::new(),
+        });
     };
 
     let feature_uuid = next_uuid(identity, &format!("feature:{seed}"), rank)?;
@@ -267,7 +288,9 @@ pub fn represented_in(
     // plan says so when a kind was requested for a type that has none.
     let wants_kind = feature_type.ends_with("CulturalFeature");
     if wants_kind {
-        let kind = new_feature.and_then(|chosen| chosen.feature_kind.as_deref()).unwrap_or("model frontier");
+        let kind = new_feature
+            .and_then(|chosen| chosen.feature_kind.as_deref())
+            .unwrap_or("model frontier");
         feature["CulturalFeatureKind"] = json!(kind);
     }
 
@@ -353,7 +376,12 @@ pub fn frame_in(
                 known.dor()
             }
             other => {
-                return Err(Refusal::about("value", "crs", format!("`crs`: expected a DataObjectReference or a uuid, got {other}")).into());
+                return Err(Refusal::about(
+                    "value",
+                    "crs",
+                    format!("`crs`: expected a DataObjectReference or a uuid, got {other}"),
+                )
+                .into());
             }
         };
         // **What it is decides what it may carry**, and the release too: these
@@ -374,11 +402,17 @@ pub fn frame_in(
         let kind = crate::crs::frame_kind(&qualified);
         let mut says = Vec::new();
         let blocked = match &kind {
-            Err(why) => Some(Error::from(Refusal::about("value", "crs", format!("`crs` names no whole system: {why}")))),
+            Err(why) => Some(Error::from(Refusal::about(
+                "value",
+                "crs",
+                format!("`crs` names no whole system: {why}"),
+            ))),
             Ok(FrameKind::Legacy) => Some(Error::from(Refusal::about(
                 "value",
                 "crs",
-                format!("`crs` is `{qualified}`, a RESQML 2.0.1 system, and this operation writes 2.2 objects: choose an eml 2.3 CRS, or translate the package first"),
+                format!(
+                    "`crs` is `{qualified}`, a RESQML 2.0.1 system, and this operation writes 2.2 objects: choose an eml 2.3 CRS, or translate the package first"
+                ),
             ))),
             Ok(FrameKind::Projected) => {
                 // Decision (c) of 24/09: accepted, and said. The BRGM's own
@@ -402,10 +436,18 @@ pub fn frame_in(
         let uuid = crs["Uuid"].as_str().unwrap_or_default().to_string();
         let vertical = known
             .iter()
-            .filter(|known| known.crs.as_ref().is_some_and(|c| c.uuid.eq_ignore_ascii_case(&uuid)))
+            .filter(|known| {
+                known
+                    .crs
+                    .as_ref()
+                    .is_some_and(|c| c.uuid.eq_ignore_ascii_case(&uuid))
+            })
             .find_map(|known| known.vertical_crs.as_ref().map(|r| r.dor()));
         return Ok(Frame {
-            parameters: vec![Parameter::Object { title: "input".to_string(), reference: crs.clone() }],
+            parameters: vec![Parameter::Object {
+                title: "input".to_string(),
+                reference: crs.clone(),
+            }],
             crs,
             objects: Vec::new(),
             place: None,
@@ -478,12 +520,14 @@ pub fn frame_in(
     // An origin, an azimuth or another axis is the `crs` operation's to ask.
     let local = Local::identity();
     let names = crate::crs::names(identity, &target, &vertical, &local, rank)?;
-    let built = crate::crs::build(&target, &vertical, &local, &names, |title| energyml_eml_2_3::Citation {
-        title: title.to_string(),
-        originator: when.originator.clone(),
-        creation: when.creation.clone(),
-        format: energyml_core::CITATION_FORMAT.to_string(),
-        ..Default::default()
+    let built = crate::crs::build(&target, &vertical, &local, &names, |title| {
+        energyml_eml_2_3::Citation {
+            title: title.to_string(),
+            originator: when.originator.clone(),
+            creation: when.creation.clone(),
+            format: energyml_core::CITATION_FORMAT.to_string(),
+            ..Default::default()
+        }
     })
     .map_err(Error::new)?;
     let reference = built.reference();
@@ -504,9 +548,20 @@ pub fn frame_in(
         kind: Some(kind),
         says,
         parameters: vec![
-            Parameter::Double { title: "sourceEpsg".to_string(), value: source_epsg as f64, uom: None },
-            Parameter::Double { title: "crsEpsg".to_string(), value: target.epsg() as f64, uom: None },
-            Parameter::Text { title: "verticalCrs".to_string(), value: vertical_key },
+            Parameter::Double {
+                title: "sourceEpsg".to_string(),
+                value: source_epsg as f64,
+                uom: None,
+            },
+            Parameter::Double {
+                title: "crsEpsg".to_string(),
+                value: target.epsg() as f64,
+                uom: None,
+            },
+            Parameter::Text {
+                title: "verticalCrs".to_string(),
+                value: vertical_key,
+            },
         ],
         place: Some((target, source_epsg)),
     })
@@ -548,7 +603,12 @@ pub fn placed(positions: &[Position], frame: &Frame) -> Result<Vec<[f64; 3]>, Er
 /// target other than the source. `sourceEpsg` and `project` naming the same
 /// code (what `wellheads` asks, its collars already in the wells' own
 /// system) moves nothing, and a shape of the package passes as it always did.
-pub fn shape_placed(name: &str, points: &[[f64; 3]], known: Option<&Known>, frame: &Frame) -> Result<Vec<[f64; 3]>, Error> {
+pub fn shape_placed(
+    name: &str,
+    points: &[[f64; 3]],
+    known: Option<&Known>,
+    frame: &Frame,
+) -> Result<Vec<[f64; 3]>, Error> {
     let Some((target, from)) = &frame.place else {
         return Ok(points.to_vec());
     };
@@ -567,14 +627,26 @@ pub fn shape_placed(name: &str, points: &[[f64; 3]], known: Option<&Known>, fram
         )
         .into());
     }
-    let positions: Vec<Position> = points.iter().map(|p| Position { lon: p[0], lat: p[1], z: Some(p[2]) }).collect();
+    let positions: Vec<Position> = points
+        .iter()
+        .map(|p| Position {
+            lon: p[0],
+            lat: p[1],
+            z: Some(p[2]),
+        })
+        .collect();
     crate::crs::place(&positions, target, *from).map_err(Error::new)
 }
 
 /// A shape's geometry, in the frame being written — [`shape_placed`] patch
 /// by patch, the topology untouched: a reprojection moves nodes, it neither
 /// adds nor removes one, so every index still points where it pointed.
-pub fn geometry_placed(name: &str, geometry: &Geometry, known: Option<&Known>, frame: &Frame) -> Result<Geometry, Error> {
+pub fn geometry_placed(
+    name: &str,
+    geometry: &Geometry,
+    known: Option<&Known>,
+    frame: &Frame,
+) -> Result<Geometry, Error> {
     let mut placed = geometry.clone();
     if frame.place.is_some() {
         for patch in &mut placed.patches {
@@ -629,7 +701,11 @@ pub fn positions_of(features: &[Feature]) -> Vec<Position> {
 
 /// The name of the first input, for a seed.
 pub fn seed_of(pieces: &Pieces, title: &str) -> String {
-    let first = pieces.iter().next().map(|(name, _)| name.to_string()).unwrap_or_default();
+    let first = pieces
+        .iter()
+        .next()
+        .map(|(name, _)| name.to_string())
+        .unwrap_or_default();
     format!("{first}:{title}")
 }
 
@@ -638,8 +714,16 @@ pub fn seed_of(pieces: &Pieces, title: &str) -> String {
 /// frame was created here — absent when one of the package was named.
 pub fn frame_reports(mut own: Vec<Slot>) -> Vec<Slot> {
     let mut out = vec![
-        Slot::optional("crsEpsg", Need::Epsg, "the EPSG code the points were written in, when the CRS was created here"),
-        Slot::optional("verticalCrs", Need::Text, "the vertical system written, or unknown — when the CRS was created here"),
+        Slot::optional(
+            "crsEpsg",
+            Need::Epsg,
+            "the EPSG code the points were written in, when the CRS was created here",
+        ),
+        Slot::optional(
+            "verticalCrs",
+            Need::Text,
+            "the vertical system written, or unknown — when the CRS was created here",
+        ),
     ];
     out.append(&mut own);
     out
@@ -689,7 +773,16 @@ pub fn made_root(title: &str, uuid: &str, geometry: Geometry) -> Made {
 
 /// A shape of a single patch, what an operation almost always computes.
 pub fn one_patch(kind: &'static str, points: Vec<[f64; 3]>, topology: Topology) -> Geometry {
-    Geometry { kind, patches: vec![Patch { index: 0, node_offset: 0, points, topology, closed: Vec::new() }] }
+    Geometry {
+        kind,
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology,
+            closed: Vec::new(),
+        }],
+    }
 }
 
 /// The points of a shape, flat — what a `Dataset` writes.
@@ -698,5 +791,9 @@ pub fn one_patch(kind: &'static str, points: Vec<[f64; 3]>, topology: Topology) 
 /// would be in the plan twice, and a plan of a million points would pay
 /// twice. The shape is the source, the array is a view of it.
 pub fn flat_points(geometry: &Geometry) -> Vec<f64> {
-    geometry.patches.iter().flat_map(|p| p.points.iter().flatten().copied()).collect()
+    geometry
+        .patches
+        .iter()
+        .flat_map(|p| p.points.iter().flatten().copied())
+        .collect()
 }

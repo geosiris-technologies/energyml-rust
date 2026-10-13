@@ -70,12 +70,17 @@ fn file_kind(kind: &str) -> Option<(&'static str, &'static str)> {
 
 /// A Galaxy parameter name: letters, digits and `_` only.
 fn ident(name: &str) -> String {
-    name.chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '_' }).collect()
+    name.chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .collect()
 }
 
 /// XML text, escaped.
 fn esc(text: &str) -> String {
-    text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 /// A scalar default for a parameter, from the slot's suggestion on an empty bag.
@@ -127,7 +132,11 @@ pub fn tool_xml(operation: &dyn AnyOperation, options: &ToolOptions) -> String {
             } else {
                 ""
             };
-            let types = if takes.types.is_empty() { String::new() } else { format!(" ({})", takes.types.join(", ")) };
+            let types = if takes.types.is_empty() {
+                String::new()
+            } else {
+                format!(" ({})", takes.types.join(", "))
+            };
             let _ = writeln!(
                 inputs,
                 r#"        <param name="{param}" type="text" value="" optional="true" label="{} — URIs" help="{}{}: URIs of the input package, comma-separated.{every}" />"#,
@@ -146,7 +155,10 @@ pub fn tool_xml(operation: &dyn AnyOperation, options: &ToolOptions) -> String {
                 n = slot.name
             );
         } else {
-            left_out.push(format!("`{}` ({}): a piece a front end builds, not a file a workflow passes", slot.name, takes.kind));
+            left_out.push(format!(
+                "`{}` ({}): a piece a front end builds, not a file a workflow passes",
+                slot.name, takes.kind
+            ));
         }
     }
     if takes_tables {
@@ -194,10 +206,20 @@ pub fn tool_xml(operation: &dyn AnyOperation, options: &ToolOptions) -> String {
                 value.as_deref() == Some("true"),
             ),
             Need::Choice(choices) => {
-                let mut select = format!(r#"<param name="{param}" type="select" optional="{optional}" label="{label}" help="{help}">"#);
+                let mut select = format!(
+                    r#"<param name="{param}" type="select" optional="{optional}" label="{label}" help="{help}">"#
+                );
                 for choice in *choices {
-                    let selected = if value.as_deref() == Some(*choice) { r#" selected="true""# } else { "" };
-                    let _ = write!(select, r#"<option value="{c}"{selected}>{c}</option>"#, c = esc(choice));
+                    let selected = if value.as_deref() == Some(*choice) {
+                        r#" selected="true""#
+                    } else {
+                        ""
+                    };
+                    let _ = write!(
+                        select,
+                        r#"<option value="{c}"{selected}>{c}</option>"#,
+                        c = esc(choice)
+                    );
                 }
                 select.push_str("</param>");
                 select
@@ -219,7 +241,11 @@ pub fn tool_xml(operation: &dyn AnyOperation, options: &ToolOptions) -> String {
             // spells "None": a guard on emptiness alone passed `--set
             // language=None`. Unset, the
             // operation's own default applies.
-            let _ = write!(command, "#if str(${param}).strip() not in ('', 'None')\n --set '{}=${param}'\n#end if\n", slot.name);
+            let _ = write!(
+                command,
+                "#if str(${param}).strip() not in ('', 'None')\n --set '{}=${param}'\n#end if\n",
+                slot.name
+            );
         }
     }
 
@@ -257,14 +283,24 @@ pub fn tool_xml(operation: &dyn AnyOperation, options: &ToolOptions) -> String {
     let mut role_help = String::new();
     for output in &gives {
         let role = ident(output.role);
-        let _ = writeln!(command, " --role-out '{}=$uris_{role}'", output.role.replace('\'', ""));
+        let _ = writeln!(
+            command,
+            " --role-out '{}=$uris_{role}'",
+            output.role.replace('\'', "")
+        );
         let _ = writeln!(
             outputs,
             r#"        <data name="uris_{role}" format="txt" label="[Output] URIs of {} — {}" />"#,
             esc(output.role),
             esc(output.describe),
         );
-        let _ = writeln!(role_help, "- `{}`: {} ({})", output.role, output.describe, output.types.join(", "));
+        let _ = writeln!(
+            role_help,
+            "- `{}`: {} ({})",
+            output.role,
+            output.describe,
+            output.types.join(", ")
+        );
     }
     let roles = if gives.is_empty() {
         "\n\n**Outputs**: the `manifest` (JSON) lists every object the run wrote, by role. This operation does not declare its roles in advance, so it has no per-role URI output; read them from the manifest.".to_string()

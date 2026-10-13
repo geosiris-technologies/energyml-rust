@@ -19,7 +19,10 @@ const SURFACE: &str = "7d000000-0000-4000-8000-000000000001";
 const TYPE: &str = "resqml22.BoundaryFeature";
 
 fn when() -> When {
-    When { creation: "2026-10-05T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-10-05T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 /// A surface's feature: no `objectVersion` — what every writer of this crate
@@ -38,7 +41,12 @@ fn bag(json: Option<Value>) -> Pieces {
     Pieces::empty().with(
         "object",
         Source::Object(Known {
-            reference: Some(Ref { uuid: SURFACE.into(), qualified_type: TYPE.into(), title: "H3 — top of the Ypresian".into(), object_version: None }),
+            reference: Some(Ref {
+                uuid: SURFACE.into(),
+                qualified_type: TYPE.into(),
+                title: "H3 — top of the Ypresian".into(),
+                object_version: None,
+            }),
             json,
             ..Default::default()
         }),
@@ -47,7 +55,13 @@ fn bag(json: Option<Value>) -> Pieces {
 
 fn planned(pieces: &Pieces, version: &str) -> Result<Plan, String> {
     Registry::new()
-        .plan("new-version", pieces, &Choices::new().set("version", version), &Identity::derived(), &when())
+        .plan(
+            "new-version",
+            pieces,
+            &Choices::new().set("version", version),
+            &Identity::derived(),
+            &when(),
+        )
         .map_err(|why| why.to_string())
 }
 
@@ -62,14 +76,29 @@ fn the_plan_keeps_the_identity_and_changes_the_version_only() {
     let copy = &plan.objects[0];
     assert_eq!(copy.uuid, SURFACE, "the same uuid");
     assert_eq!(copy.qualified_type, TYPE, "the same type");
-    assert_eq!(copy.role, NEW_VERSION_ROLE, "written through the gate that adds a version");
+    assert_eq!(
+        copy.role, NEW_VERSION_ROLE,
+        "written through the gate that adds a version"
+    );
     assert_eq!(copy.title, "H3 — top of the Ypresian", "the same title");
     assert_eq!(copy.json["objectVersion"], json!("2"));
     assert_eq!(copy.json["Citation"]["Title"], json!("H3 — top of the Ypresian"));
-    assert_eq!(copy.json["Citation"]["Creation"], json!("2026-01-01T00:00:00Z"), "made then");
+    assert_eq!(
+        copy.json["Citation"]["Creation"],
+        json!("2026-01-01T00:00:00Z"),
+        "made then"
+    );
     assert_eq!(copy.json["Citation"]["LastUpdate"], json!("2026-10-05T00:00:00Z"));
-    assert_eq!(copy.json["IsWellKnown"], json!(false), "the content is the object's");
-    let said = plan.says.iter().find(|note| note.key == "new-version").expect("a note");
+    assert_eq!(
+        copy.json["IsWellKnown"],
+        json!(false),
+        "the content is the object's"
+    );
+    let said = plan
+        .says
+        .iter()
+        .find(|note| note.key == "new-version")
+        .expect("a note");
     assert!(said.detail.contains("keeps the short uri"), "{}", said.detail);
 }
 
@@ -82,7 +111,12 @@ fn a_resqml_2_0_1_object_gets_its_version_in_the_citation() {
     let pieces = Pieces::empty().with(
         "object",
         Source::Object(Known {
-            reference: Some(Ref { uuid: SURFACE.into(), qualified_type: "resqml20.obj_BoundaryFeature".into(), title: "H3".into(), object_version: None }),
+            reference: Some(Ref {
+                uuid: SURFACE.into(),
+                qualified_type: "resqml20.obj_BoundaryFeature".into(),
+                title: "H3".into(),
+                object_version: None,
+            }),
             json: Some(old),
             ..Default::default()
         }),
@@ -111,7 +145,9 @@ fn applied_the_original_keeps_the_short_uri_and_the_copy_takes_the_versioned_one
     let registry = Arc::new(energyml_schemas::all());
     let mut store = energyml_build::epc::open(None, "versions.epc", registry.clone()).expect("a new package");
     // The original, put as any writer of this crate puts it.
-    let original = energyml_core::json::read_string(&surface().to_string(), &registry).expect("reads").root;
+    let original = energyml_core::json::read_string(&surface().to_string(), &registry)
+        .expect("reads")
+        .root;
     let short = store.put(original).expect("put");
     assert_eq!(short, format!("eml:///{TYPE}({SURFACE})"));
 
@@ -121,7 +157,11 @@ fn applied_the_original_keeps_the_short_uri_and_the_copy_takes_the_versioned_one
     assert!(made.invalid.is_empty(), "{:?}", made.invalid);
     let versioned = format!("eml:///{TYPE}(uuid={SURFACE},version='2')");
     assert!(made.written.contains(&versioned), "{:?}", made.written);
-    assert!(!made.replaced.contains(&versioned), "nothing was replaced: {:?}", made.replaced);
+    assert!(
+        !made.replaced.contains(&versioned),
+        "nothing was replaced: {:?}",
+        made.replaced
+    );
 
     // The rule, on the package the operation wrote.
     let held: Vec<String> = store
@@ -131,20 +171,37 @@ fn applied_the_original_keeps_the_short_uri_and_the_copy_takes_the_versioned_one
         .map(|one| one.uri)
         .collect();
     assert_eq!(held.len(), 2, "{held:?}");
-    assert!(held.contains(&short), "the original keeps the short uri: {held:?}");
+    assert!(
+        held.contains(&short),
+        "the original keeps the short uri: {held:?}"
+    );
     assert!(held.contains(&versioned), "{held:?}");
     assert_eq!(store.resolve(&short).unwrap().uri, short);
     assert_eq!(store.resolve(&versioned).unwrap().uri, versioned);
     let copy = store.get_object(&versioned).expect("reads");
-    assert_eq!(energyml_core::identity::object_version_of_reflect(copy.as_reflect()), Some("2"));
+    assert_eq!(
+        energyml_core::identity::object_version_of_reflect(copy.as_reflect()),
+        Some("2")
+    );
     let first = store.get_object(&short).expect("reads");
-    assert_eq!(energyml_core::identity::object_version_of_reflect(first.as_reflect()), None);
+    assert_eq!(
+        energyml_core::identity::object_version_of_reflect(first.as_reflect()),
+        None
+    );
 
     // Again: the exact identity is refused, by name, and nothing is written.
     let again = apply(&plan, &mut store, &when());
-    assert!(again.refused.iter().any(|why| why.contains("already held")), "{:?}", again.refused);
+    assert!(
+        again.refused.iter().any(|why| why.contains("already held")),
+        "{:?}",
+        again.refused
+    );
     assert_eq!(
-        store.resources().into_iter().filter(|one| one.qualified_type == TYPE).count(),
+        store
+            .resources()
+            .into_iter()
+            .filter(|one| one.qualified_type == TYPE)
+            .count(),
         2,
         "the package still holds the two"
     );

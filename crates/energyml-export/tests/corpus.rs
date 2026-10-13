@@ -497,7 +497,7 @@ fn object_with_an_offset_crs() -> energyml_geometry::SceneObject {
                 points: vec![[10.0, 20.0, 0.0]],
                 topology: Topology::Points,
                 closed: Vec::new(),
-}],
+            }],
         },
         crs: Some(Crs {
             uuid: "crs".into(),
@@ -510,7 +510,7 @@ fn object_with_an_offset_crs() -> energyml_geometry::SceneObject {
             vertical_quantity: VerticalQuantity::Length,
             horizontal_uom: None,
             vertical_uom: None,
-        time_uom: None,
+            time_uom: None,
             projected: CrsKind::Epsg(23031),
             vertical: CrsKind::Absent,
         }),
@@ -549,7 +549,11 @@ fn geojson_places_the_points_once_and_not_twice() {
     assert_eq!(seen.len(), 1, "{seen:?}");
     // Placed once: 500000 + 10. Placed twice it would be 1000010, and the
     // feature would land in the Sahara rather than the Mediterranean.
-    assert_eq!(seen[0], [500_010.0, 4_650_020.0, 0.0], "the CRS was applied twice");
+    assert_eq!(
+        seen[0],
+        [500_010.0, 4_650_020.0, 0.0],
+        "the CRS was applied twice"
+    );
 }
 
 #[test]
@@ -632,10 +636,8 @@ fn the_corpus_goes_out_as_geojson_through_the_real_backend() {
             // 0–750 m in EPSG:23031 — which really is off the coast of Africa,
             // because these packages carry no georeferencing at all — so a
             // range check would prove nothing. The round trip does.
-            let back = energyml_domain::reproject::Reprojector::reproject_all(
-                &backend, &out, 4326, source,
-            )
-            .unwrap();
+            let back =
+                energyml_domain::reproject::Reprojector::reproject_all(&backend, &out, 4326, source).unwrap();
             for (before, after) in placed.iter().zip(&back) {
                 if !(before[0].is_finite() && before[1].is_finite()) {
                     continue; // sentinel coordinates cannot round-trip meaningfully
@@ -700,10 +702,7 @@ fn native_mode_labels_the_file_with_the_shared_epsg() {
         .unwrap();
     let text = String::from_utf8(buffer).unwrap();
     // The legacy 2008 member RFC 7946 removed — QGIS and GDAL honour it.
-    assert!(
-        text.contains("urn:ogc:def:crs:EPSG::23031"),
-        "{text}"
-    );
+    assert!(text.contains("urn:ogc:def:crs:EPSG::23031"), "{text}");
     // And the coordinates are the *placed* ones, not reprojected: the CRS
     // offsets applied, no geodesy involved.
     assert!(text.contains("500010"), "{text}");

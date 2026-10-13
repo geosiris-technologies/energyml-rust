@@ -52,7 +52,10 @@ pub fn run(args: SeriesArgs, modes: Modes) -> Result<()> {
         }
     }
     report_unreadable(&unreadable, &modes, 5);
-    let objects: Vec<(&str, &dyn Reflect)> = held.iter().map(|(uuid, object)| (uuid.as_str(), object.as_reflect())).collect();
+    let objects: Vec<(&str, &dyn Reflect)> = held
+        .iter()
+        .map(|(uuid, object)| (uuid.as_str(), object.as_reflect()))
+        .collect();
 
     let readout = match series::read(&args.uuid, &objects, &store) {
         Ok(readout) => readout,
@@ -80,7 +83,10 @@ pub fn run(args: SeriesArgs, modes: Modes) -> Result<()> {
         let mut value = readout.to_json();
         if args.decimate.is_some() {
             value["decimated"] = serde_json::Value::Array(
-                decimated.iter().map(|(uuid, done)| serde_json::json!({ "series": uuid, "decimated": done.to_json() })).collect(),
+                decimated
+                    .iter()
+                    .map(|(uuid, done)| serde_json::json!({ "series": uuid, "decimated": done.to_json() }))
+                    .collect(),
             );
         }
         println!("{}", serde_json::to_string_pretty(&value)?);
@@ -101,14 +107,26 @@ pub fn run(args: SeriesArgs, modes: Modes) -> Result<()> {
             match &series.content {
                 Content::Samples(samples) => print_series("samples", samples, args.rows),
                 Content::Static { value, quality } => {
-                    println!("  static value {}  ({})", first_value(value), quality_word(quality));
+                    println!(
+                        "  static value {}  ({})",
+                        first_value(value),
+                        quality_word(quality)
+                    );
                 }
                 Content::Empty => println!("  no sample"),
             }
         }
         Readout::FlowTest(measured) => {
             for one in measured {
-                println!("{} / {}{}", one.group, one.role, one.remark.as_deref().map(|remark| format!("  — {remark}")).unwrap_or_default());
+                println!(
+                    "{} / {}{}",
+                    one.group,
+                    one.role,
+                    one.remark
+                        .as_deref()
+                        .map(|remark| format!("  — {remark}"))
+                        .unwrap_or_default()
+                );
                 print_series("channel set", &one.series, args.rows);
             }
         }
@@ -120,10 +138,19 @@ pub fn run(args: SeriesArgs, modes: Modes) -> Result<()> {
                     period.start,
                     period.duration,
                     period.duration_uom,
-                    period.status.as_deref().map(|status| format!("  {status}")).unwrap_or_default()
+                    period
+                        .status
+                        .as_deref()
+                        .map(|status| format!("  {status}"))
+                        .unwrap_or_default()
                 );
                 for product in &period.products {
-                    match (product.rate, &product.rate_uom, product.quantity, &product.quantity_uom) {
+                    match (
+                        product.rate,
+                        &product.rate_uom,
+                        product.quantity,
+                        &product.quantity_uom,
+                    ) {
                         (Some(rate), Some(rate_uom), Some(quantity), Some(quantity_uom)) => println!(
                             "    {}  {rate} {rate_uom} → {quantity} {quantity_uom}",
                             product.product
@@ -144,7 +171,10 @@ pub fn run(args: SeriesArgs, modes: Modes) -> Result<()> {
             done.gaps.len()
         );
         for gap in &done.gaps {
-            println!("  gap {} → {}  {} sample(s) {}", gap.from, gap.to, gap.samples, gap.quality);
+            println!(
+                "  gap {} → {}  {} sample(s) {}",
+                gap.from, gap.to, gap.samples, gap.quality
+            );
         }
     }
     Ok(())
@@ -153,7 +183,11 @@ pub fn run(args: SeriesArgs, modes: Modes) -> Result<()> {
 fn print_series(what: &str, series: &Series, rows: usize) {
     let index = &series.index;
     let span = match (index.values.first(), index.values.last()) {
-        (Some(first), Some(last)) => format!(", {} → {}", shown_index(index.kind, *first), shown_index(index.kind, *last)),
+        (Some(first), Some(last)) => format!(
+            ", {} → {}",
+            shown_index(index.kind, *first),
+            shown_index(index.kind, *last)
+        ),
         _ => String::new(),
     };
     println!("{what} {}  {}", series.uuid, series.title);
@@ -166,11 +200,20 @@ fn print_series(what: &str, series: &Series, rows: usize) {
         index.values.len()
     );
     for secondary in &series.secondary {
-        println!("  secondary index {} ({}, {})", secondary.mnemonic, secondary.kind.wire(), secondary.uom.as_deref().unwrap_or("no unit"));
+        println!(
+            "  secondary index {} ({}, {})",
+            secondary.mnemonic,
+            secondary.kind.wire(),
+            secondary.uom.as_deref().unwrap_or("no unit")
+        );
     }
     for channel in &series.channels {
         let tally = channel.tally();
-        let flagged: Vec<String> = tally.flagged.iter().map(|(label, count)| format!("{count} {label}")).collect();
+        let flagged: Vec<String> = tally
+            .flagged
+            .iter()
+            .map(|(label, count)| format!("{count} {label}"))
+            .collect();
         let range = match (tally.min, tally.max) {
             (Some(min), Some(max)) => format!(", {min} → {max}"),
             _ => String::new(),
@@ -179,15 +222,27 @@ fn print_series(what: &str, series: &Series, rows: usize) {
             "  channel {}  {}  {}: {} good, {} absent{}{range}",
             channel.mnemonic,
             channel.uom.as_deref().unwrap_or("no unit"),
-            channel.data_kind.as_deref().or(channel.measure_class.as_deref()).unwrap_or("-"),
+            channel
+                .data_kind
+                .as_deref()
+                .or(channel.measure_class.as_deref())
+                .unwrap_or("-"),
             tally.good,
             tally.absent,
-            if flagged.is_empty() { String::new() } else { format!(", {}", flagged.join(", ")) }
+            if flagged.is_empty() {
+                String::new()
+            } else {
+                format!(", {}", flagged.join(", "))
+            }
         );
     }
     for at in 0..rows.min(series.len()) {
         let cells: Vec<String> = series.channels.iter().map(|channel| cell(channel, at)).collect();
-        println!("    {}  {}", shown_index(index.kind, index.values[at]), cells.join("  "));
+        println!(
+            "    {}  {}",
+            shown_index(index.kind, index.values[at]),
+            cells.join("  ")
+        );
     }
     if series.len() > rows {
         println!("    … {} more row(s)", series.len() - rows);
@@ -195,7 +250,11 @@ fn print_series(what: &str, series: &Series, rows: usize) {
 }
 
 fn shown_index(kind: IndexKind, value: f64) -> String {
-    if kind == IndexKind::DateTime && value.fract() == 0.0 { w3cdtf(value as i64) } else { value.to_string() }
+    if kind == IndexKind::DateTime && value.fract() == 0.0 {
+        w3cdtf(value as i64)
+    } else {
+        value.to_string()
+    }
 }
 
 fn cell(channel: &energyml_domain::series::Channel, at: usize) -> String {

@@ -60,14 +60,26 @@ pub fn write(
     cx: &Context<'_>,
 ) -> Result<Plan, Refusal> {
     if count1 < 2 || count2 < 2 {
-        return Err(Refusal::on("count1", format!("`{name}`: a grid needs at least 2 nodes along each axis — {count1} × {count2} given")));
+        return Err(Refusal::on(
+            "count1",
+            format!("`{name}`: a grid needs at least 2 nodes along each axis — {count1} × {count2} given"),
+        ));
     }
     if !(step1.is_finite() && step1 > 0.0 && step2.is_finite() && step2 > 0.0) {
-        return Err(Refusal::on("step1", format!("`{name}`: the steps must be positive — [{step1}, {step2}] given")));
+        return Err(Refusal::on(
+            "step1",
+            format!("`{name}`: the steps must be positive — [{step1}, {step2}] given"),
+        ));
     }
     let nodes = count1 * count2;
     if z.len() != nodes {
-        return Err(Refusal::on("shape", format!("`{name}`: {count1} × {count2} nodes take {nodes} height(s) and {} were given", z.len())));
+        return Err(Refusal::on(
+            "shape",
+            format!(
+                "`{name}`: {count1} × {count2} nodes take {nodes} height(s) and {} were given",
+                z.len()
+            ),
+        ));
     }
 
     let title = written.naming.title();
@@ -183,7 +195,10 @@ pub fn write(
                 index: 0,
                 node_offset: 0,
                 points,
-                topology: energyml_geometry::geometry::Topology::Grid { fastest: count1, slowest: count2 },
+                topology: energyml_geometry::geometry::Topology::Grid {
+                    fastest: count1,
+                    slowest: count2,
+                },
                 closed: Vec::new(),
             }],
         },
@@ -191,7 +206,10 @@ pub fn write(
 
     let holes = z.iter().filter(|v| !v.is_finite()).count();
     let mut says = if holes > 0 {
-        vec![Note { key: "holes", detail: format!("{holes} of {nodes} node(s) have no height and are written as NaN") }]
+        vec![Note {
+            key: "holes",
+            detail: format!("{holes} of {nodes} node(s) have no height and are written as NaN"),
+        }]
     } else {
         Vec::new()
     };
@@ -199,21 +217,52 @@ pub fn write(
 
     let mut objects = frame.objects;
     objects.extend(represented.objects);
-    objects.push(NewObject { uuid, qualified_type: "resqml22.Grid2dRepresentation".to_string(), role: "representation".to_string(), title: title.clone(), json: object });
+    objects.push(NewObject {
+        uuid,
+        qualified_type: "resqml22.Grid2dRepresentation".to_string(),
+        role: "representation".to_string(),
+        title: title.clone(),
+        json: object,
+    });
     let mut parameters = frame.parameters;
-    parameters.push(Parameter::Double { title: "nodeCount".to_string(), value: nodes as f64, uom: None });
-    parameters.push(Parameter::Double { title: "fastestAxisCount".to_string(), value: count1 as f64, uom: None });
-    parameters.push(Parameter::Double { title: "slowestAxisCount".to_string(), value: count2 as f64, uom: None });
+    parameters.push(Parameter::Double {
+        title: "nodeCount".to_string(),
+        value: nodes as f64,
+        uom: None,
+    });
+    parameters.push(Parameter::Double {
+        title: "fastestAxisCount".to_string(),
+        value: count1 as f64,
+        uom: None,
+    });
+    parameters.push(Parameter::Double {
+        title: "slowestAxisCount".to_string(),
+        value: count2 as f64,
+        uom: None,
+    });
     if let Some(orthogonal) = orthogonal {
-        parameters.push(Parameter::Text { title: "allDimensionsAreOrthogonal".to_string(), value: orthogonal.to_string() });
+        parameters.push(Parameter::Text {
+            title: "allDimensionsAreOrthogonal".to_string(),
+            value: orthogonal.to_string(),
+        });
     }
     Ok(Plan {
         media: Vec::new(),
         blocked: frame.blocked.clone(),
         objects,
-        datasets: vec![Dataset { file, path, dimensions: vec![count2 as i64, count1 as i64], values: Numbers::F64(z.to_vec()) }],
+        datasets: vec![Dataset {
+            file,
+            path,
+            dimensions: vec![count2 as i64, count1 as i64],
+            values: Numbers::F64(z.to_vec()),
+        }],
         shapes: vec![shape],
-        activity: crate::operation::ActivityDraft { recipe: "interpolate", title: format!("interpolate → {title}"), seed, parameters },
+        activity: crate::operation::ActivityDraft {
+            recipe: "interpolate",
+            title: format!("interpolate → {title}"),
+            seed,
+            parameters,
+        },
         says,
         dropped: Vec::new(),
     })

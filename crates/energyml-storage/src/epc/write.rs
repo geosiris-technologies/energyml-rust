@@ -242,7 +242,9 @@ impl<'a> Plan<'a> {
         let mut namesakes: BTreeMap<(String, String), usize> = BTreeMap::new();
         for object in &package.objects {
             if let Some(key) = identity::key_of_reflect(object.as_reflect()) {
-                *namesakes.entry((key.uuid.to_ascii_lowercase(), key.qualified_type())).or_default() += 1;
+                *namesakes
+                    .entry((key.uuid.to_ascii_lowercase(), key.qualified_type()))
+                    .or_default() += 1;
             }
         }
         for object in &package.objects {
@@ -253,7 +255,10 @@ impl<'a> Plan<'a> {
                     reflect.type_info().name
                 ))
             })?;
-            let version = key.object_version.map(str::trim).filter(|version| !version.is_empty());
+            let version = key
+                .object_version
+                .map(str::trim)
+                .filter(|version| !version.is_empty());
             let held_more_than_once = namesakes
                 .get(&(key.uuid.to_ascii_lowercase(), key.qualified_type()))
                 .is_some_and(|count| *count > 1);
@@ -262,7 +267,10 @@ impl<'a> Plan<'a> {
                 part = in_folder(&part, &format!("version_{}", encode_segment(version)));
             }
             if taken.contains(&part) {
-                part = in_folder(&part, &format!("namespace_{}{}", key.domain, key.version.compact()));
+                part = in_folder(
+                    &part,
+                    &format!("namespace_{}{}", key.domain, key.version.compact()),
+                );
             }
             if !taken.insert(part.clone()) {
                 return Err(Error::Package(format!(
@@ -271,11 +279,14 @@ impl<'a> Plan<'a> {
                     key.etp_uri(None)
                 )));
             }
-            by_uuid.entry(key.uuid.to_ascii_lowercase()).or_default().push(Placed {
-                part: part.clone(),
-                qualified_type: key.qualified_type(),
-                version: version.map(str::to_string),
-            });
+            by_uuid
+                .entry(key.uuid.to_ascii_lowercase())
+                .or_default()
+                .push(Placed {
+                    part: part.clone(),
+                    qualified_type: key.qualified_type(),
+                    version: version.map(str::to_string),
+                });
             if reflect.type_info().type_key == "EpcExternalPartReference" {
                 proxy_uuids.insert(key.uuid.to_ascii_lowercase());
             }
@@ -288,13 +299,15 @@ impl<'a> Plan<'a> {
         // copy never displaces it.
         for (part, object) in &plan.objects {
             for nested in identity::nested_objects(object.as_reflect()) {
-                by_uuid.entry(nested.key.uuid.to_ascii_lowercase()).or_insert_with(|| {
-                    vec![Placed {
-                        part: part.clone(),
-                        qualified_type: nested.key.qualified_type(),
-                        version: nested.key.object_version.map(str::to_string),
-                    }]
-                });
+                by_uuid
+                    .entry(nested.key.uuid.to_ascii_lowercase())
+                    .or_insert_with(|| {
+                        vec![Placed {
+                            part: part.clone(),
+                            qualified_type: nested.key.qualified_type(),
+                            version: nested.key.object_version.map(str::to_string),
+                        }]
+                    });
             }
         }
 
@@ -318,7 +331,10 @@ impl<'a> Plan<'a> {
                 let targets = pick(
                     candidates,
                     &edge.target.qualified_type(),
-                    edge.target.object_version.map(str::trim).filter(|version| !version.is_empty()),
+                    edge.target
+                        .object_version
+                        .map(str::trim)
+                        .filter(|version| !version.is_empty()),
                 );
                 if targets.is_empty() {
                     // A dangling reference is not a relationship: there is no
@@ -355,7 +371,12 @@ impl<'a> Plan<'a> {
                     if !seen.insert((target_part.clone(), forward)) {
                         continue;
                     }
-                    plan.add(part, forward, target_part, &id_tag(&by_uuid, &target_uuid, target_part));
+                    plan.add(
+                        part,
+                        forward,
+                        target_part,
+                        &id_tag(&by_uuid, &target_uuid, target_part),
+                    );
                     plan.add(target_part, backward, part, &id_tag(&by_uuid, &source_uuid, part));
                 }
             }
@@ -438,7 +459,11 @@ impl<'a> Plan<'a> {
         let mut linked: BTreeSet<(&str, &str)> = BTreeSet::new();
         for link in &package.media_links {
             let uuid = link.uuid.to_ascii_lowercase();
-            let Some(object_part) = by_uuid.get(&uuid).and_then(|held| held.first()).map(|held| &held.part) else {
+            let Some(object_part) = by_uuid
+                .get(&uuid)
+                .and_then(|held| held.first())
+                .map(|held| &held.part)
+            else {
                 diagnostics.push(Diagnostic::warning(
                     link.part.clone(),
                     format!(
@@ -554,7 +579,8 @@ fn render_relationships(relationships: &[Rel]) -> String {
     // a set rather than a scan of the list: a CRS named by sixty thousand
     // objects has a `.rels` of sixty thousand entries, and the scan was 70 %
     // of what saving a SIGEOL import cost (28/09). Same answer, same bytes.
-    let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::with_capacity(relationships.len());
+    let mut seen: std::collections::HashSet<&str> =
+        std::collections::HashSet::with_capacity(relationships.len());
     for (index, rel) in relationships.iter().enumerate() {
         let kind = if rel.kind.is_empty() {
             CORE_RELATIONSHIP.to_string()
@@ -611,7 +637,13 @@ fn relative_target(from_part: &str, to_part: &str) -> String {
 fn media_id(part: &str) -> String {
     let body: String = part
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     format!("_media_{body}")
 }

@@ -27,7 +27,12 @@ fn the_extension_is_built_under_energyml_rust() {
         .lines()
         .find(|line| line.trim_start().starts_with("module-name"))
         .expect("pyproject states a module-name");
-    let value = line.split('=').nth(1).expect("module-name has a value").trim().trim_matches('"');
+    let value = line
+        .split('=')
+        .nth(1)
+        .expect("module-name has a value")
+        .trim()
+        .trim_matches('"');
     assert!(
         value.starts_with("energyml.rust."),
         "the extension must be built under `energyml.rust.`, not `{value}`"
@@ -67,6 +72,9 @@ fn every_python_file_of_this_crate_lives_under_energyml_rust() {
     // folder is a namespace package when this bridge is alone and an ordinary
     // sub-folder when one of the other distributions has laid its own down —
     // both work, and nothing of anyone else's is overwritten.
-    assert!(wrong.is_empty(), "these would land outside `energyml/rust/`: {wrong:?}");
+    assert!(
+        wrong.is_empty(),
+        "these would land outside `energyml/rust/`: {wrong:?}"
+    );
     assert!(seen >= 2, "the python source tree is not empty: {seen} file(s)");
 }

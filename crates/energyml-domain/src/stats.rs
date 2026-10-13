@@ -89,7 +89,10 @@ impl Histogram {
     /// The half-open interval a bin covers — closed at the top for the last one.
     pub fn edges(&self, bin: usize) -> (f64, f64) {
         let width = self.width();
-        (self.from + width * bin as f64, self.from + width * (bin + 1) as f64)
+        (
+            self.from + width * bin as f64,
+            self.from + width * (bin + 1) as f64,
+        )
     }
 }
 
@@ -157,13 +160,7 @@ impl Summary {
     pub fn of(values: &Values, bins: usize) -> Summary {
         match values {
             Values::Floating(v) => numeric(Family::Floating, v.iter().copied(), v.len(), bins, false),
-            Values::Integer(v) => numeric(
-                Family::Integer,
-                v.iter().map(|n| *n as f64),
-                v.len(),
-                bins,
-                true,
-            ),
+            Values::Integer(v) => numeric(Family::Integer, v.iter().map(|n| *n as f64), v.len(), bins, true),
             Values::Boolean(v) => booleans(v),
             Values::Text(v) => strings(v),
         }
@@ -329,8 +326,16 @@ fn booleans(values: &[bool]) -> Summary {
         // something different from ten thousand values of which none is false,
         // and a legend that omits the empty half hides which of the two it is.
         categories: vec![
-            Category { label: "false".into(), value: Some(0.0), count: no },
-            Category { label: "true".into(), value: Some(1.0), count: yes },
+            Category {
+                label: "false".into(),
+                value: Some(0.0),
+                count: no,
+            },
+            Category {
+                label: "true".into(),
+                value: Some(1.0),
+                count: yes,
+            },
         ],
         distinct: Some(usize::from(no > 0) + usize::from(yes > 0)),
         other: 0,

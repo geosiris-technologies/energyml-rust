@@ -145,7 +145,12 @@ impl Operation for Wellheads {
         Ok(())
     }
 
-    fn plan(&self, inputs: WellheadsInputs, params: WellheadsParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: WellheadsInputs,
+        params: WellheadsParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         // **What does not say where it is collared is named, never counted.**
         // A silent borehole removed in silence would make a DEM with holes a DEM
         // that looks complete — and that is the result that most looks like a
@@ -178,7 +183,10 @@ impl Operation for Wellheads {
         // have no common frame, and putting their collars in the same cloud
         // would place them wrong — with no number looking abnormal.
         let mut frames = inputs.wells.iter().filter_map(|well| {
-            well.known.as_ref().and_then(|known| known.crs.as_ref()).map(|crs| (crs.uuid.as_str(), crs.title.as_str()))
+            well.known
+                .as_ref()
+                .and_then(|known| known.crs.as_ref())
+                .map(|crs| (crs.uuid.as_str(), crs.title.as_str()))
         });
         if let Some((first, first_title)) = frames.next()
             && let Some((_, other_title)) = frames.find(|(uuid, _)| *uuid != first)
@@ -212,7 +220,10 @@ impl Operation for Wellheads {
                     "crs",
                     format!(
                         "the collars are read placed — projected x and y, an elevation — and the wells' frame `{}` states no projected EPSG code, so they have no system to be written in: give `sourceEpsg` (the projected system they are in)",
-                        first.and_then(|known| known.crs.as_ref()).map(|crs| crs.title.as_str()).unwrap_or("?")
+                        first
+                            .and_then(|known| known.crs.as_ref())
+                            .map(|crs| crs.title.as_str())
+                            .unwrap_or("?")
                     ),
                 ));
             };
@@ -254,7 +265,14 @@ impl Operation for Wellheads {
             // that is what the refusal above has just established.
             known: inputs.wells.first().and_then(|well| well.known.clone()),
         };
-        let mut plan = Pointset.plan(PointsetInputs { shape: vec![semis], features: None }, PointsetParams { written }, cx)?;
+        let mut plan = Pointset.plan(
+            PointsetInputs {
+                shape: vec![semis],
+                features: None,
+            },
+            PointsetParams { written },
+            cx,
+        )?;
         plan.says.extend(says);
         Ok(plan)
     }

@@ -218,7 +218,6 @@ impl Unit {
     }
 }
 
-
 /// The stage a SIGEOL export was asked about, read off its file name.
 ///
 /// `GeologicUnit_Priabonien_pretty.json` → `Priabonien`. The suffixes the
@@ -281,8 +280,14 @@ pub fn unit_of(properties: &Value) -> Option<Unit> {
         .get("lithostratigraphy");
     let history = properties.get("geologicHistory").and_then(|h| h.get(0));
 
-    let name = litho.and_then(|l| l.get("@title")).and_then(Value::as_str).map(str::to_string);
-    let href = litho.and_then(|l| l.get("@href")).and_then(Value::as_str).map(str::to_string);
+    let name = litho
+        .and_then(|l| l.get("@title"))
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    let href = litho
+        .and_then(|l| l.get("@href"))
+        .and_then(Value::as_str)
+        .map(str::to_string);
 
     // The two ends, read under the names the producer uses and **kept apart from
     // what those names claim**: `older_field` is the field called `olderNamedAge`,
@@ -326,17 +331,34 @@ pub fn unit_of(properties: &Value) -> Option<Unit> {
         ),
     };
 
-    Some(Unit { name, href, young, old, ordered, because })
+    Some(Unit {
+        name,
+        href,
+        young,
+        old,
+        ordered,
+        because,
+    })
 }
 
 fn age(history: Option<&Value>, named: &str, bound: &str) -> Age {
     let Some(history) = history else {
-        return Age { name: None, href: None, ma: None };
+        return Age {
+            name: None,
+            href: None,
+            ma: None,
+        };
     };
     let named = history.get(named);
     Age {
-        name: named.and_then(|n| n.get("@title")).and_then(Value::as_str).map(str::to_string),
-        href: named.and_then(|n| n.get("@href")).and_then(Value::as_str).map(str::to_string),
+        name: named
+            .and_then(|n| n.get("@title"))
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        href: named
+            .and_then(|n| n.get("@href"))
+            .and_then(Value::as_str)
+            .map(str::to_string),
         ma: history
             .get("numericAge")
             .and_then(|n| n.get("NumericAgeRange"))
@@ -401,8 +423,7 @@ mod tests {
         // The counter-proof, and the reason the decision is on the numbers: a
         // file whose `olderNamedAge` really is the older age must still yield
         // the same young end. Reading the labels would flip here and only here.
-        let unit = unit_of(&properties("X", ("Bartonien", 41.2), ("Priabonien", 33.9)))
-            .expect("a unit");
+        let unit = unit_of(&properties("X", ("Bartonien", 41.2), ("Priabonien", 33.9))).expect("a unit");
         assert_eq!(unit.young.name.as_deref(), Some("Priabonien"));
         assert_eq!(unit.old.name.as_deref(), Some("Bartonien"));
         assert_eq!(unit.side_for("Priabonien"), Some(Side::Top));
@@ -414,8 +435,12 @@ mod tests {
         // ends match the queried stage; the young one is tried first, so one
         // surface comes out rather than two sharing a point cloud. Written down
         // in the module doc because it is a decision, not an accident of order.
-        let unit = unit_of(&properties("Calcaire grossier", ("Lutétien", 41.2), ("Lutétien", 47.8)))
-            .expect("a unit");
+        let unit = unit_of(&properties(
+            "Calcaire grossier",
+            ("Lutétien", 41.2),
+            ("Lutétien", 47.8),
+        ))
+        .expect("a unit");
         assert_eq!(unit.side_for("Lutétien"), Some(Side::Top));
         assert_eq!(unit.side_for("Bartonien"), None);
     }
@@ -440,7 +465,10 @@ mod tests {
             stage_of_file_name("C:/data/x/GeologicUnit_Lutétien_pretty.json").as_deref(),
             Some("Lutétien")
         );
-        assert_eq!(stage_of_file_name("GeologicUnit_Yprésien.json").as_deref(), Some("Yprésien"));
+        assert_eq!(
+            stage_of_file_name("GeologicUnit_Yprésien.json").as_deref(),
+            Some("Yprésien")
+        );
         // Not the convention: nothing rather than the first word of a name that
         // means something else. This is a default, and a wrong default here
         // labels every surface in the package.
@@ -454,11 +482,20 @@ mod tests {
             stage_of_file_name("C:/data/x/GeologicUnit_Lutétien_youngerNamedAge_ZONE_2.json").as_deref(),
             Some("Lutétien")
         );
-        assert_eq!(stage_of_file_name("GeologicUnit_Priabonien_ZONE_2.json").as_deref(), Some("Priabonien"));
+        assert_eq!(
+            stage_of_file_name("GeologicUnit_Priabonien_ZONE_2.json").as_deref(),
+            Some("Priabonien")
+        );
         // Only what the producer writes is peeled: an underscore inside a name
         // stays, and `_ZONE_` without a number is not a zone.
-        assert_eq!(stage_of_file_name("GeologicUnit_Haut_Lutétien_ZONE_2.json").as_deref(), Some("Haut_Lutétien"));
-        assert_eq!(stage_of_file_name("GeologicUnit_A_ZONE_x.json").as_deref(), Some("A_ZONE_x"));
+        assert_eq!(
+            stage_of_file_name("GeologicUnit_Haut_Lutétien_ZONE_2.json").as_deref(),
+            Some("Haut_Lutétien")
+        );
+        assert_eq!(
+            stage_of_file_name("GeologicUnit_A_ZONE_x.json").as_deref(),
+            Some("A_ZONE_x")
+        );
         assert_eq!(stage_of_file_name("GeologicUnit__ZONE_2.json"), None);
         assert_eq!(stage_of_file_name("horizons.geojson"), None);
         assert_eq!(stage_of_file_name("GeologicUnit_.json"), None);
@@ -484,8 +521,8 @@ mod tests {
     #[test]
     fn two_bounds_of_the_same_age_order_nothing() {
         let mut props = properties("X", ("A", 41.2), ("B", 41.2));
-        props["geologicHistory"][0]["numericAge"]["NumericAgeRange"]["youngerBoundDate"]
-            ["Quantity"]["value"] = json!(41.2);
+        props["geologicHistory"][0]["numericAge"]["NumericAgeRange"]["youngerBoundDate"]["Quantity"]["value"] =
+            json!(41.2);
         let unit = unit_of(&props).expect("a unit");
         assert_eq!(unit.side_for("A"), None);
         assert!(unit.because.contains("same age"), "{}", unit.because);
@@ -494,7 +531,10 @@ mod tests {
     #[test]
     fn the_referential_uuid_is_taken_from_the_url_and_validated() {
         let unit = unit_of(&properties("X", ("A", 1.0), ("B", 2.0))).expect("a unit");
-        assert_eq!(unit.referential_uuid(), Some("006fd552-1f63-47b3-bae9-e528f169083c"));
+        assert_eq!(
+            unit.referential_uuid(),
+            Some("006fd552-1f63-47b3-bae9-e528f169083c")
+        );
 
         // A referential that changes its URLs gives nothing rather than a
         // fragment that merely looks like an identifier.

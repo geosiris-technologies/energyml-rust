@@ -128,7 +128,10 @@ pub fn profile_request(points: &[(f64, f64)], resource: &str, sampling: u32) -> 
     Ok(Request {
         url,
         accept: "application/json".to_string(),
-        about: format!("elevation profile over {} point(s) from `{resource}`", points.len()),
+        about: format!(
+            "elevation profile over {} point(s) from `{resource}`",
+            points.len()
+        ),
     })
 }
 
@@ -149,8 +152,16 @@ fn check(points: &[(f64, f64)], least: usize) -> Result<()> {
 }
 
 fn coordinates(points: &[(f64, f64)]) -> (String, String) {
-    let lon = points.iter().map(|(lon, _)| lon.to_string()).collect::<Vec<_>>().join("|");
-    let lat = points.iter().map(|(_, lat)| lat.to_string()).collect::<Vec<_>>().join("|");
+    let lon = points
+        .iter()
+        .map(|(lon, _)| lon.to_string())
+        .collect::<Vec<_>>()
+        .join("|");
+    let lat = points
+        .iter()
+        .map(|(_, lat)| lat.to_string())
+        .collect::<Vec<_>>()
+        .join("|");
     (lon, lat)
 }
 
@@ -187,12 +198,15 @@ pub fn read_elevations(answer: Answer) -> Result<Vec<Elevation>> {
         return Err(Error::Server { status, code, says });
     }
 
-    let elevations = value.get("elevations").and_then(|v| v.as_array()).ok_or_else(|| {
-        Error::Unreadable(format!(
-            "this answer names no `elevations`: {}",
-            text.chars().take(200).collect::<String>()
-        ))
-    })?;
+    let elevations = value
+        .get("elevations")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| {
+            Error::Unreadable(format!(
+                "this answer names no `elevations`: {}",
+                text.chars().take(200).collect::<String>()
+            ))
+        })?;
 
     elevations.iter().map(read_one).collect()
 }

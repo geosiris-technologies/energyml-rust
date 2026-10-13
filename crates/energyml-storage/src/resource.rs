@@ -90,7 +90,12 @@ impl ObjectHeader {
     /// the object declares a non-blank `objectVersion` — what a column that
     /// already has its own type column shows. The same rule as [`Self::label`].
     pub fn titled(&self) -> String {
-        match self.object_version.as_deref().map(str::trim).filter(|version| !version.is_empty()) {
+        match self
+            .object_version
+            .as_deref()
+            .map(str::trim)
+            .filter(|version| !version.is_empty())
+        {
             Some(version) => format!("{} (version {version})", self.display_name()),
             None => self.display_name().to_string(),
         }
@@ -101,7 +106,10 @@ impl ObjectHeader {
     /// [`energyml_core::identity::ObjectId::label`], the one spelling every
     /// face uses. The qualified type alone when it cannot be parsed.
     pub fn label(&self) -> String {
-        match energyml_core::identity::ObjectId::from_qualified_type(&self.summary.qualified_type, &self.summary.uuid) {
+        match energyml_core::identity::ObjectId::from_qualified_type(
+            &self.summary.qualified_type,
+            &self.summary.uuid,
+        ) {
             Ok(mut id) => {
                 id.object_version = self.object_version.clone();
                 id.label(self.title.as_deref())
@@ -191,7 +199,10 @@ mod tests {
     #[test]
     fn a_view_shows_the_version_when_the_object_declares_one() {
         let versioned = header(Some("Top Brent"), Some("2"));
-        assert_eq!(versioned.label(), "resqml22.BoundaryFeature — Top Brent (version 2)");
+        assert_eq!(
+            versioned.label(),
+            "resqml22.BoundaryFeature — Top Brent (version 2)"
+        );
         assert_eq!(versioned.titled(), "Top Brent (version 2)");
     }
 
@@ -204,6 +215,9 @@ mod tests {
         }
         // No title: the uuid stands in, and the version still shows.
         let untitled = header(None, Some("1"));
-        assert_eq!(untitled.titled(), "7f000000-0000-4000-8000-000000000001 (version 1)");
+        assert_eq!(
+            untitled.titled(),
+            "7f000000-0000-4000-8000-000000000001 (version 1)"
+        );
     }
 }

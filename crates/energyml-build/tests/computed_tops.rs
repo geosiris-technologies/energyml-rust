@@ -24,15 +24,26 @@ const X0: f64 = 651_000.0;
 const Y0: f64 = 6_861_000.0;
 
 fn when() -> When {
-    When { creation: "2026-09-25T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-25T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 fn frame() -> Ref {
-    Ref::new("aaaaaaaa-0000-4000-8000-00000000000f", "eml23.LocalEngineeringCompoundCrs", "Lutetia — test frame")
+    Ref::new(
+        "aaaaaaaa-0000-4000-8000-00000000000f",
+        "eml23.LocalEngineeringCompoundCrs",
+        "Lutetia — test frame",
+    )
 }
 
 fn trajectory() -> Ref {
-    Ref::new("bbbbbbbb-0000-4000-8000-000000000001", "resqml22.WellboreTrajectoryRepresentation", "GTH-test")
+    Ref::new(
+        "bbbbbbbb-0000-4000-8000-000000000001",
+        "resqml22.WellboreTrajectoryRepresentation",
+        "GTH-test",
+    )
 }
 
 /// A well whose line is `path`, drawn at its stations, in `frame` — an
@@ -47,7 +58,13 @@ fn well(path: Path, frame: Ref) -> Vec<(String, Source)> {
             Source::Shape {
                 geometry: Geometry {
                     kind: "trajectory",
-                    patches: vec![Patch { index: 0, node_offset: 0, points: stations, topology: Topology::Polylines(vec![count]), closed: Vec::new() }],
+                    patches: vec![Patch {
+                        index: 0,
+                        node_offset: 0,
+                        points: stations,
+                        topology: Topology::Polylines(vec![count]),
+                        closed: Vec::new(),
+                    }],
                 },
                 closed: None,
             },
@@ -59,12 +76,20 @@ fn well(path: Path, frame: Ref) -> Vec<(String, Source)> {
                 crs: Some(frame),
                 vertical_up: Some(true),
                 vertical_uom: Some("m".into()),
-                interpretation: Some(Ref::new("bbbbbbbb-0000-4000-8000-000000000002", "resqml22.WellboreInterpretation", "GTH-test")),
+                interpretation: Some(Ref::new(
+                    "bbbbbbbb-0000-4000-8000-000000000002",
+                    "resqml22.WellboreInterpretation",
+                    "GTH-test",
+                )),
                 path: Some(KnownPath {
                     trajectory: trajectory(),
                     path: Ok(path),
                     md_uom: Some("m".into()),
-                    datum: Some(Ref::new("bbbbbbbb-0000-4000-8000-000000000003", "eml23.ReferencePointInALocalEngineeringCompoundCrs", "GTH-test datum")),
+                    datum: Some(Ref::new(
+                        "bbbbbbbb-0000-4000-8000-000000000003",
+                        "eml23.ReferencePointInALocalEngineeringCompoundCrs",
+                        "GTH-test datum",
+                    )),
                 }),
                 ..Default::default()
             }),
@@ -85,7 +110,16 @@ fn grid(x0: f64, y0: f64, n: usize, spacing: f64, f: impl Fn(f64, f64) -> f64) -
     }
     Geometry {
         kind: "grid",
-        patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Grid { fastest: n, slowest: n }, closed: Vec::new() }],
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology: Topology::Grid {
+                fastest: n,
+                slowest: n,
+            },
+            closed: Vec::new(),
+        }],
     }
 }
 
@@ -93,12 +127,26 @@ fn grid(x0: f64, y0: f64, n: usize, spacing: f64, f: impl Fn(f64, f64) -> f64) -
 /// representation, its horizon interpretation, its frame.
 fn horizon(slot: &str, rank: usize, title: &str, geometry: Geometry, frame: Ref) -> Vec<(String, Source)> {
     vec![
-        (slot.to_string(), Source::Shape { geometry, closed: None }),
+        (
+            slot.to_string(),
+            Source::Shape {
+                geometry,
+                closed: None,
+            },
+        ),
         (
             format!("{slot} (object)"),
             Source::Object(Known {
-                reference: Some(Ref::new(format!("cccccccc-0000-4000-8000-00000000000{rank}"), "resqml22.Grid2dRepresentation", title)),
-                interpretation: Some(Ref::new(format!("dddddddd-0000-4000-8000-00000000000{rank}"), "resqml22.HorizonInterpretation", title)),
+                reference: Some(Ref::new(
+                    format!("cccccccc-0000-4000-8000-00000000000{rank}"),
+                    "resqml22.Grid2dRepresentation",
+                    title,
+                )),
+                interpretation: Some(Ref::new(
+                    format!("dddddddd-0000-4000-8000-00000000000{rank}"),
+                    "resqml22.HorizonInterpretation",
+                    title,
+                )),
                 crs: Some(frame),
                 vertical_up: Some(true),
                 vertical_uom: Some("m".into()),
@@ -116,7 +164,11 @@ fn bag(well: Vec<(String, Source)>, horizons: Vec<(&str, Geometry, Ref)>) -> Pie
         pieces = pieces.with(name, source);
     }
     for (rank, (title, geometry, frame)) in horizons.into_iter().enumerate() {
-        let slot = if rank == 0 { "horizons".to_string() } else { format!("horizons {}", rank + 1) };
+        let slot = if rank == 0 {
+            "horizons".to_string()
+        } else {
+            format!("horizons {}", rank + 1)
+        };
         for (name, source) in horizon(&slot, rank + 1, title, geometry, frame) {
             pieces = pieces.with(name, source);
         }
@@ -125,7 +177,9 @@ fn bag(well: Vec<(String, Source)>, horizons: Vec<(&str, Geometry, Ref)>) -> Pie
 }
 
 fn planned(pieces: &Pieces, choices: Choices) -> Result<Plan, String> {
-    Registry::new().plan("computed-tops", pieces, &choices, &Identity::derived(), &when()).map_err(|why| why.to_string())
+    Registry::new()
+        .plan("computed-tops", pieces, &choices, &Identity::derived(), &when())
+        .map_err(|why| why.to_string())
 }
 
 fn markers(plan: &Plan) -> Vec<&NewObject> {
@@ -133,23 +187,39 @@ fn markers(plan: &Plan) -> Vec<&NewObject> {
 }
 
 fn md_of(marker: &NewObject) -> f64 {
-    marker.json["Md"]["MeasuredDepth"]["_"].as_f64().unwrap_or_else(|| panic!("a depth: {}", marker.json["Md"]))
+    marker.json["Md"]["MeasuredDepth"]["_"]
+        .as_f64()
+        .unwrap_or_else(|| panic!("a depth: {}", marker.json["Md"]))
 }
 
 fn recorded(plan: &Plan, name: &str) -> Option<f64> {
-    plan.activity.parameters.iter().find_map(|parameter| match parameter {
-        Parameter::Double { title, value, .. } if title == name => Some(*value),
-        _ => None,
-    })
+    plan.activity
+        .parameters
+        .iter()
+        .find_map(|parameter| match parameter {
+            Parameter::Double { title, value, .. } if title == name => Some(*value),
+            _ => None,
+        })
 }
 
 fn said<'a>(plan: &'a Plan, key: &str) -> Vec<&'a str> {
-    plan.says.iter().filter(|note| note.key == key).map(|note| note.detail.as_str()).collect()
+    plan.says
+        .iter()
+        .filter(|note| note.key == key)
+        .map(|note| note.detail.as_str())
+        .collect()
 }
 
 /// A straight hole, as a linear line through its stations.
 fn straight(stations: &[([f64; 3], f64)]) -> Path {
-    Path::new(1, stations.iter().map(|s| s.0).collect(), stations.iter().map(|s| s.1).collect(), None, Vertical::Up).expect("a line")
+    Path::new(
+        1,
+        stations.iter().map(|s| s.0).collect(),
+        stations.iter().map(|s| s.1).collect(),
+        None,
+        Vertical::Up,
+    )
+    .expect("a line")
 }
 
 /// **A deviated hole through a tilted plane: a marker at the depth the algebra
@@ -164,9 +234,18 @@ fn straight(stations: &[([f64; 3], f64)]) -> Path {
 fn a_deviated_hole_gets_its_marker_at_the_algebras_depth() {
     let head = [X0 + 100.0, Y0 + 100.0, 40.0];
     let end = 1000.0;
-    let path = straight(&[(head, 0.0), ([head[0] + 0.6 * end, head[1], head[2] - 0.8 * end], end)]);
-    let plane = grid(X0 - 1000.0, Y0 - 1000.0, 5, 1000.0, |x, _| -300.0 + 0.1 * (x - X0));
-    let plan = planned(&bag(well(path, frame()), vec![("H3 — toit", plane, frame())]), Choices::new()).expect("a plan");
+    let path = straight(&[
+        (head, 0.0),
+        ([head[0] + 0.6 * end, head[1], head[2] - 0.8 * end], end),
+    ]);
+    let plane = grid(X0 - 1000.0, Y0 - 1000.0, 5, 1000.0, |x, _| {
+        -300.0 + 0.1 * (x - X0)
+    });
+    let plan = planned(
+        &bag(well(path, frame()), vec![("H3 — toit", plane, frame())]),
+        Choices::new(),
+    )
+    .expect("a plan");
 
     let found = markers(&plan);
     assert_eq!(found.len(), 1);
@@ -175,7 +254,11 @@ fn a_deviated_hole_gets_its_marker_at_the_algebras_depth() {
     assert!((md - expected).abs() < 1e-9, "{md} against {expected}");
     assert_eq!(found[0].qualified_type, "witsml21.WellboreMarker");
     assert_eq!(found[0].json["Md"]["MeasuredDepth"]["uom"], json!("m"));
-    assert_eq!(found[0].json["Md"]["Datum"]["Uuid"], json!("bbbbbbbb-0000-4000-8000-000000000003"), "counted from the trajectory's datum");
+    assert_eq!(
+        found[0].json["Md"]["Datum"]["Uuid"],
+        json!("bbbbbbbb-0000-4000-8000-000000000003"),
+        "counted from the trajectory's datum"
+    );
     assert_eq!(found[0].json["WellboreMarkerKind"], json!("stratigraphic"));
     assert_eq!(found[0].json["Citation"]["Title"], json!("H3 — toit — GTH-test"));
 
@@ -184,16 +267,26 @@ fn a_deviated_hole_gets_its_marker_at_the_algebras_depth() {
     let boundaries = set.json["IntervalBoundaries"].as_array().expect("boundaries");
     assert_eq!(boundaries.len(), 1);
     assert_eq!(boundaries[0]["Marker"]["Uuid"], json!(found[0].uuid));
-    assert_eq!(boundaries[0]["Interpretation"]["Uuid"], json!("dddddddd-0000-4000-8000-000000000001"), "the horizon's interpretation");
+    assert_eq!(
+        boundaries[0]["Interpretation"]["Uuid"],
+        json!("dddddddd-0000-4000-8000-000000000001"),
+        "the horizon's interpretation"
+    );
     assert_eq!(boundaries[0]["GeologicBoundaryKind"], json!("horizon"));
     // N boundaries, N + 1 intervals — TRG v2.2 §12.15 p. 312.
     assert_eq!(set.json["MarkerInterval"].as_array().map(Vec::len), Some(2));
-    assert_eq!(set.json["RepresentedObject"]["Uuid"], json!("bbbbbbbb-0000-4000-8000-000000000002"));
+    assert_eq!(
+        set.json["RepresentedObject"]["Uuid"],
+        json!("bbbbbbbb-0000-4000-8000-000000000002")
+    );
 
     // The position said and drawn is the hole at that depth, on the plane.
     let drawn = plan.shapes[0].geometry.patches[0].points[0];
     let on_line = [head[0] + 0.6 * md, head[1], head[2] - 0.8 * md];
-    assert!((0..3).all(|k| (drawn[k] - on_line[k]).abs() < 1e-6), "{drawn:?} against {on_line:?}");
+    assert!(
+        (0..3).all(|k| (drawn[k] - on_line[k]).abs() < 1e-6),
+        "{drawn:?} against {on_line:?}"
+    );
     assert!((drawn[2] - (-300.0 + 0.1 * (drawn[0] - X0))).abs() < 1e-6);
     assert_eq!(plan.shapes[0].object.as_deref(), Some(set.uuid.as_str()));
     assert_eq!(recorded(&plan, "markerCount"), Some(1.0));
@@ -224,7 +317,11 @@ fn a_curved_hole_is_followed_between_its_stations() {
     .expect("an arc");
     let d = 250.0;
     let level = grid(X0 - 1000.0, Y0 - 1000.0, 3, 1500.0, |_, _| head[2] - d);
-    let plan = planned(&bag(well(path, frame()), vec![("H2", level, frame())]), Choices::new()).expect("a plan");
+    let plan = planned(
+        &bag(well(path, frame()), vec![("H2", level, frame())]),
+        Choices::new(),
+    )
+    .expect("a plan");
     let md = md_of(markers(&plan)[0]);
     let expected = r * (d / r).asin();
     assert!((md - expected).abs() < 1e-6, "{md} against {expected}");
@@ -253,15 +350,30 @@ fn each_markers_position_lies_on_its_horizon() {
     let r = 600.0;
     let head = [X0 + 300.0, Y0 + 400.0, 40.0];
     let end = r * std::f64::consts::FRAC_PI_2;
-    let arc = |s: f64| [head[0] + r * (1.0 - (s / r).cos()), head[1], head[2] - r * (s / r).sin()];
-    let path = Path::new(5, vec![arc(0.0), arc(end)], vec![0.0, end], Some(vec![[0.0, 0.0, -1.0], [1.0, 0.0, 0.0]]), Vertical::Up)
-        .expect("an arc");
+    let arc = |s: f64| {
+        [
+            head[0] + r * (1.0 - (s / r).cos()),
+            head[1],
+            head[2] - r * (s / r).sin(),
+        ]
+    };
+    let path = Path::new(
+        5,
+        vec![arc(0.0), arc(end)],
+        vec![0.0, end],
+        Some(vec![[0.0, 0.0, -1.0], [1.0, 0.0, 0.0]]),
+        Vertical::Up,
+    )
+    .expect("an arc");
     let f = |x: f64, y: f64| -200.0 + 0.05 * (x - X0) - 0.02 * (y - Y0) + 1e-5 * (x - X0) * (y - Y0);
     let g = |x: f64, y: f64| -420.0 + 0.03 * (x - X0) + 0.01 * (y - Y0);
     let plan = planned(
         &bag(
             well(path, frame()),
-            vec![("H1", grid(X0, Y0, 21, 100.0, f), frame()), ("H2", grid(X0, Y0, 11, 200.0, g), frame())],
+            vec![
+                ("H1", grid(X0, Y0, 21, 100.0, f), frame()),
+                ("H2", grid(X0, Y0, 11, 200.0, g), frame()),
+            ],
         ),
         Choices::new(),
     )
@@ -273,7 +385,11 @@ fn each_markers_position_lies_on_its_horizon() {
         let md = md_of(marker);
         let p = arc(md);
         let off = (p[2] - height(p[0], p[1])).abs();
-        assert!(off < 1e-6, "`{}` at MD {md}: {off} m off its horizon", marker.title);
+        assert!(
+            off < 1e-6,
+            "`{}` at MD {md}: {off} m off its horizon",
+            marker.title
+        );
         checked += 1;
     }
     assert_eq!(checked, 2);
@@ -289,19 +405,39 @@ fn each_markers_position_lies_on_its_horizon() {
 #[test]
 fn a_hole_that_turns_back_crosses_twice_and_says_so() {
     let head = [X0 + 10.0, Y0 + 10.0, 0.0];
-    let path = straight(&[(head, 0.0), ([head[0] + 300.0, head[1], -400.0], 500.0), ([head[0] + 600.0, head[1], 0.0], 1000.0)]);
+    let path = straight(&[
+        (head, 0.0),
+        ([head[0] + 300.0, head[1], -400.0], 500.0),
+        ([head[0] + 600.0, head[1], 0.0], 1000.0),
+    ]);
     let level = grid(X0 - 500.0, Y0 - 500.0, 3, 1000.0, |_, _| -150.0);
-    let plan = planned(&bag(well(path, frame()), vec![("H4", level, frame())]), Choices::new()).expect("a plan");
+    let plan = planned(
+        &bag(well(path, frame()), vec![("H4", level, frame())]),
+        Choices::new(),
+    )
+    .expect("a plan");
     let found = markers(&plan);
     assert_eq!(found.len(), 2);
     assert!((md_of(found[0]) - 187.5).abs() < 1e-9 && (md_of(found[1]) - 812.5).abs() < 1e-9);
-    assert_eq!(found[0].json["Citation"]["Title"], json!("H4 — GTH-test (1 of 2)"));
-    assert_eq!(found[1].json["Citation"]["Title"], json!("H4 — GTH-test (2 of 2)"));
+    assert_eq!(
+        found[0].json["Citation"]["Title"],
+        json!("H4 — GTH-test (1 of 2)")
+    );
+    assert_eq!(
+        found[1].json["Citation"]["Title"],
+        json!("H4 — GTH-test (2 of 2)")
+    );
     let again = said(&plan, "crossed-again");
     assert_eq!(again.len(), 1);
-    assert!(again[0].contains("2 times") && again[0].contains("187.500") && again[0].contains("812.500"), "{again:?}");
+    assert!(
+        again[0].contains("2 times") && again[0].contains("187.500") && again[0].contains("812.500"),
+        "{again:?}"
+    );
     let crossings = said(&plan, "crossing");
-    assert!(crossings[0].contains("from above") && crossings[1].contains("from below"), "{crossings:?}");
+    assert!(
+        crossings[0].contains("from above") && crossings[1].contains("from below"),
+        "{crossings:?}"
+    );
     let set = plan.of_role("interval-set").next().unwrap();
     assert_eq!(set.json["IntervalBoundaries"].as_array().map(Vec::len), Some(2));
     assert_eq!(set.json["MarkerInterval"].as_array().map(Vec::len), Some(3));
@@ -318,7 +454,14 @@ fn a_horizon_never_reached_gives_no_marker_and_is_named() {
     let deep = grid(X0 - 1000.0, Y0 - 1000.0, 3, 1500.0, |_, _| -1000.0);
     let beside = grid(X0 + 50_000.0, Y0, 3, 100.0, |_, _| -100.0);
     let plan = planned(
-        &bag(well(path, frame()), vec![("H1", shallow, frame()), ("H9", deep, frame()), ("far away", beside, frame())]),
+        &bag(
+            well(path, frame()),
+            vec![
+                ("H1", shallow, frame()),
+                ("H9", deep, frame()),
+                ("far away", beside, frame()),
+            ],
+        ),
         Choices::new(),
     )
     .expect("a plan");
@@ -327,8 +470,18 @@ fn a_horizon_never_reached_gives_no_marker_and_is_named() {
     assert_eq!(plan.dropped[0].count, 2);
     assert_eq!(recorded(&plan, "notReachedCount"), Some(2.0));
     let named = said(&plan, "not-reached");
-    assert!(named.iter().any(|n| n.contains("`H9`") && n.contains("stays above") && n.contains("240.000")), "{named:?}");
-    assert!(named.iter().any(|n| n.contains("`far away`") && n.contains("beside")), "{named:?}");
+    assert!(
+        named
+            .iter()
+            .any(|n| n.contains("`H9`") && n.contains("stays above") && n.contains("240.000")),
+        "{named:?}"
+    );
+    assert!(
+        named
+            .iter()
+            .any(|n| n.contains("`far away`") && n.contains("beside")),
+        "{named:?}"
+    );
 }
 
 /// **No crossing at all is a refusal naming each horizon** — a plan with
@@ -338,8 +491,15 @@ fn no_crossing_at_all_is_refused_naming_each_horizon() {
     let head = [X0 + 100.0, Y0 + 100.0, 40.0];
     let path = straight(&[(head, 0.0), ([head[0], head[1], head[2] - 500.0], 500.0)]);
     let deep = grid(X0 - 1000.0, Y0 - 1000.0, 3, 1500.0, |_, _| -2000.0);
-    let why = planned(&bag(well(path, frame()), vec![("H9", deep, frame())]), Choices::new()).expect_err("nothing to write");
-    assert!(why.contains("crosses none") && why.contains("`H9`") && why.contains("stays above"), "{why}");
+    let why = planned(
+        &bag(well(path, frame()), vec![("H9", deep, frame())]),
+        Choices::new(),
+    )
+    .expect_err("nothing to write");
+    assert!(
+        why.contains("crosses none") && why.contains("`H9`") && why.contains("stays above"),
+        "{why}"
+    );
 }
 
 /// **A horizon in another frame is refused, naming both.**
@@ -347,10 +507,21 @@ fn no_crossing_at_all_is_refused_naming_each_horizon() {
 fn a_horizon_in_another_frame_is_refused_naming_both() {
     let head = [X0 + 100.0, Y0 + 100.0, 40.0];
     let path = straight(&[(head, 0.0), ([head[0], head[1], head[2] - 500.0], 500.0)]);
-    let other = Ref::new("aaaaaaaa-0000-4000-8000-0000000000ee", "eml23.LocalEngineeringCompoundCrs", "Another frame");
+    let other = Ref::new(
+        "aaaaaaaa-0000-4000-8000-0000000000ee",
+        "eml23.LocalEngineeringCompoundCrs",
+        "Another frame",
+    );
     let level = grid(X0 - 1000.0, Y0 - 1000.0, 3, 1500.0, |_, _| -100.0);
-    let why = planned(&bag(well(path, frame()), vec![("H2", level, other)]), Choices::new()).expect_err("two frames");
-    assert!(why.contains("Another frame") && why.contains("Lutetia — test frame") && why.contains("`H2`"), "{why}");
+    let why = planned(
+        &bag(well(path, frame()), vec![("H2", level, other)]),
+        Choices::new(),
+    )
+    .expect_err("two frames");
+    assert!(
+        why.contains("Another frame") && why.contains("Lutetia — test frame") && why.contains("`H2`"),
+        "{why}"
+    );
 }
 
 /// **A well drawn elsewhere than its line puts it is refused**: the shape read
@@ -379,11 +550,19 @@ fn a_well_without_a_line_is_refused_by_name() {
     let path = straight(&[(head, 0.0), ([head[0], head[1], head[2] - 500.0], 500.0)]);
     let mut pieces = well(path, frame());
     if let Source::Object(known) = &mut pieces[1].1 {
-        known.path.as_mut().unwrap().path = Err("`GTH-test`: a wellbore trajectory with no `Geometry`".to_string());
+        known.path.as_mut().unwrap().path =
+            Err("`GTH-test`: a wellbore trajectory with no `Geometry`".to_string());
     }
     let level = || grid(X0 - 1000.0, Y0 - 1000.0, 3, 1500.0, |_, _| -100.0);
-    let why = planned(&bag(pieces.clone(), vec![("H2", level(), frame())]), Choices::new()).expect_err("no line");
-    assert!(why.contains("cannot be followed") && why.contains("no `Geometry`"), "{why}");
+    let why = planned(
+        &bag(pieces.clone(), vec![("H2", level(), frame())]),
+        Choices::new(),
+    )
+    .expect_err("no line");
+    assert!(
+        why.contains("cannot be followed") && why.contains("no `Geometry`"),
+        "{why}"
+    );
 
     if let Source::Object(known) = &mut pieces[1].1 {
         known.path = None;
@@ -399,9 +578,21 @@ fn a_moved_horizon_is_a_second_marker() {
     let path = || straight(&[(head, 0.0), ([head[0], head[1], head[2] - 500.0], 500.0)]);
     let at = |z: f64| grid(X0 - 1000.0, Y0 - 1000.0, 3, 1500.0, move |_, _| z);
     let uuid = |plan: &Plan| markers(plan)[0].uuid.clone();
-    let first = planned(&bag(well(path(), frame()), vec![("H2", at(-100.0), frame())]), Choices::new()).unwrap();
-    let again = planned(&bag(well(path(), frame()), vec![("H2", at(-100.0), frame())]), Choices::new()).unwrap();
-    let moved = planned(&bag(well(path(), frame()), vec![("H2", at(-110.0), frame())]), Choices::new()).unwrap();
+    let first = planned(
+        &bag(well(path(), frame()), vec![("H2", at(-100.0), frame())]),
+        Choices::new(),
+    )
+    .unwrap();
+    let again = planned(
+        &bag(well(path(), frame()), vec![("H2", at(-100.0), frame())]),
+        Choices::new(),
+    )
+    .unwrap();
+    let moved = planned(
+        &bag(well(path(), frame()), vec![("H2", at(-110.0), frame())]),
+        Choices::new(),
+    )
+    .unwrap();
     assert_eq!(uuid(&first), uuid(&again));
     assert_ne!(uuid(&first), uuid(&moved));
 }
@@ -409,7 +600,10 @@ fn a_moved_horizon_is_a_second_marker() {
 /// What the HDF5 end-to-end reads of an object of the saved package.
 #[cfg(feature = "hdf5")]
 fn json_of(store: &energyml_storage::EpcStore, uuid: &str) -> serde_json::Value {
-    let summary = store.find_by_uuid(uuid).cloned().unwrap_or_else(|| panic!("{uuid} in the package"));
+    let summary = store
+        .find_by_uuid(uuid)
+        .cloned()
+        .unwrap_or_else(|| panic!("{uuid} in the package"));
     let object = store.get_object(&summary.uri).unwrap();
     energyml_core::json::write_value(object.as_reflect())
 }
@@ -443,9 +637,21 @@ fn markers_are_applied_saved_and_read_back_on_their_horizon() {
         .set("headY", Y0 + 200.0)
         .set("ground", 50.0)
         .set("sections", json!(["hold to 100", "build 3 60 90", "hold 400"]));
-    let well_plan = Registry::new().plan("well-from-plan", &Pieces::empty(), &choices, &Identity::derived(), &when()).expect("the well");
+    let well_plan = Registry::new()
+        .plan(
+            "well-from-plan",
+            &Pieces::empty(),
+            &choices,
+            &Identity::derived(),
+            &when(),
+        )
+        .expect("the well");
     let made = energyml_build::apply::apply(&well_plan, &mut store, &when());
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+    assert!(
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
     let trajectory_uuid = well_plan.of_role("trajectory").next().unwrap().uuid.clone();
     let crs = well_plan.of_role("crs").next().expect("the frame").clone();
@@ -453,7 +659,12 @@ fn markers_are_applied_saved_and_read_back_on_their_horizon() {
 
     // The horizon: a tilted plane, two triangles over the well, in its frame.
     let plane = |x: f64| -150.0 + 0.1 * (x - X0);
-    let corners = [[X0 - 2000.0, Y0 - 2000.0], [X0 + 4000.0, Y0 - 2000.0], [X0 + 4000.0, Y0 + 4000.0], [X0 - 2000.0, Y0 + 4000.0]];
+    let corners = [
+        [X0 - 2000.0, Y0 - 2000.0],
+        [X0 + 4000.0, Y0 - 2000.0],
+        [X0 + 4000.0, Y0 + 4000.0],
+        [X0 - 2000.0, Y0 + 4000.0],
+    ];
     let points: Vec<[f64; 3]> = corners.iter().map(|c| [c[0], c[1], plane(c[0])]).collect();
     let surface = Pieces::empty()
         .with(
@@ -461,55 +672,111 @@ fn markers_are_applied_saved_and_read_back_on_their_horizon() {
             Source::Shape {
                 geometry: Geometry {
                     kind: "triangles",
-                    patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Triangles(vec![[0, 1, 2], [0, 2, 3]]), closed: Vec::new() }],
+                    patches: vec![Patch {
+                        index: 0,
+                        node_offset: 0,
+                        points,
+                        topology: Topology::Triangles(vec![[0, 1, 2], [0, 2, 3]]),
+                        closed: Vec::new(),
+                    }],
                 },
                 closed: None,
             },
         )
-        .with("shape (object)", Source::Object(Known { crs: Some(crs.clone()), vertical_up: Some(true), vertical_uom: Some("m".into()), ..Default::default() }));
+        .with(
+            "shape (object)",
+            Source::Object(Known {
+                crs: Some(crs.clone()),
+                vertical_up: Some(true),
+                vertical_uom: Some("m".into()),
+                ..Default::default()
+            }),
+        );
     let choices = Choices::new()
         .set("crs", crs.dor())
         .set("title", "H5 — top of the Lutétien")
         .set("featureType", "resqml22.BoundaryFeature")
         .set("interpretationType", "resqml22.HorizonInterpretation");
-    let horizon_plan = Registry::new().plan("triangles", &surface, &choices, &Identity::derived(), &when()).expect("the horizon");
+    let horizon_plan = Registry::new()
+        .plan("triangles", &surface, &choices, &Identity::derived(), &when())
+        .expect("the horizon");
     let made = energyml_build::apply::apply(&horizon_plan, &mut store, &when());
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+    assert!(
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
-    let horizon_uuid = horizon_plan.of_role("representation").next().unwrap().uuid.clone();
+    let horizon_uuid = horizon_plan
+        .of_role("representation")
+        .next()
+        .unwrap()
+        .uuid
+        .clone();
 
     // The bag, as the front end and the CLI build it.
     let mut pieces = Pieces::empty();
-    for (name, source) in energyml_build::read::in_slot("well", energyml_build::read::pieces_of_object(&store, &trajectory_uuid).unwrap())
-        .into_iter()
-        .chain(energyml_build::read::in_slot("horizons", energyml_build::read::pieces_of_object(&store, &horizon_uuid).unwrap()))
-    {
+    for (name, source) in energyml_build::read::in_slot(
+        "well",
+        energyml_build::read::pieces_of_object(&store, &trajectory_uuid).unwrap(),
+    )
+    .into_iter()
+    .chain(energyml_build::read::in_slot(
+        "horizons",
+        energyml_build::read::pieces_of_object(&store, &horizon_uuid).unwrap(),
+    )) {
         pieces = pieces.with(name, source);
     }
-    let tops = Registry::new().plan("computed-tops", &pieces, &Choices::new(), &Identity::derived(), &when()).expect("the tops");
+    let tops = Registry::new()
+        .plan(
+            "computed-tops",
+            &pieces,
+            &Choices::new(),
+            &Identity::derived(),
+            &when(),
+        )
+        .expect("the tops");
     let made = energyml_build::apply::apply(&tops, &mut store, &when());
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+    assert!(
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
-    store.save_as(&out, &energyml_storage::SaveOptions::default()).unwrap();
+    store
+        .save_as(&out, &energyml_storage::SaveOptions::default())
+        .unwrap();
 
     let reread = energyml_storage::EpcStore::open(&out, registry).unwrap();
     let summary = reread.find_by_uuid(&trajectory_uuid).cloned().unwrap();
     let object = reread.get_object(&summary.uri).unwrap();
-    let path = energyml_geometry::well::path_of(object.as_reflect(), &reread).expect("the trajectory's line reads back");
+    let path = energyml_geometry::well::path_of(object.as_reflect(), &reread)
+        .expect("the trajectory's line reads back");
 
     let set_uuid = tops.of_role("interval-set").next().unwrap().uuid.clone();
     let set = json_of(&reread, &set_uuid);
     let boundaries = set["IntervalBoundaries"].as_array().expect("boundaries").clone();
     assert!(!boundaries.is_empty());
-    let interpretation = horizon_plan.of_role("interpretation").next().expect("the horizon's interpretation").uuid.clone();
+    let interpretation = horizon_plan
+        .of_role("interpretation")
+        .next()
+        .expect("the horizon's interpretation")
+        .uuid
+        .clone();
     let mut checked = 0;
     for boundary in &boundaries {
         assert_eq!(boundary["Interpretation"]["Uuid"], json!(interpretation));
         let marker_uuid = boundary["Marker"]["Uuid"].as_str().expect("a marker").to_string();
         let marker = json_of(&reread, &marker_uuid);
         let md = marker["Md"]["MeasuredDepth"]["_"].as_f64().expect("a depth");
-        let datum = marker["Md"]["Datum"]["Uuid"].as_str().expect("a datum").to_string();
-        assert!(reread.find_by_uuid(&datum).is_some(), "the datum {datum} is in the package");
+        let datum = marker["Md"]["Datum"]["Uuid"]
+            .as_str()
+            .expect("a datum")
+            .to_string();
+        assert!(
+            reread.find_by_uuid(&datum).is_some(),
+            "the datum {datum} is in the package"
+        );
         let p = path.at(md);
         let off = (p[2] - plane(p[0])).abs();
         // The tolerance of `each_markers_position_lies_on_its_horizon`: the
@@ -517,7 +784,10 @@ fn markers_are_applied_saved_and_read_back_on_their_horizon() {
         assert!(off < 1e-6, "MD {md}: {off} m off the plane");
         checked += 1;
     }
-    assert_eq!(set["MarkerInterval"].as_array().map(Vec::len), Some(boundaries.len() + 1));
+    assert_eq!(
+        set["MarkerInterval"].as_array().map(Vec::len),
+        Some(boundaries.len() + 1)
+    );
     let _ = std::fs::remove_dir_all(&dir);
     assert!(checked >= 1);
 }

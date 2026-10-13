@@ -32,7 +32,9 @@ fn corpus(name: &str) -> Option<PathBuf> {
 
 #[test]
 fn a_package_opens_and_returns_its_catalogue() {
-    let Some(path) = corpus("testingPackageCpp.epc") else { return };
+    let Some(path) = corpus("testingPackageCpp.epc") else {
+        return;
+    };
     let package = Package::open(&path).expect("the package opens");
     let objects = package.objects();
     assert!(!objects.is_empty(), "a package of the corpus holds objects");
@@ -43,19 +45,28 @@ fn a_package_opens_and_returns_its_catalogue() {
     for one in &objects {
         assert!(one.uri.starts_with("eml:///"), "an ETP uri: {}", one.uri);
         assert!(!one.uuid.is_empty(), "{} has no uuid", one.uri);
-        assert!(one.qualified_type.contains('.'), "a qualified type: {}", one.qualified_type);
+        assert!(
+            one.qualified_type.contains('.'),
+            "a qualified type: {}",
+            one.qualified_type
+        );
     }
 
     // And the uuid finds its uri back: that is what lets a caller work with the
     // identifiers it reads in its other tools.
     let first = &objects[0];
-    assert_eq!(package.uri_of(&first.uuid).expect("one entry").as_deref(), Some(first.uri.as_str()));
+    assert_eq!(
+        package.uri_of(&first.uuid).expect("one entry").as_deref(),
+        Some(first.uri.as_str())
+    );
     assert_eq!(package.uri_of("00000000-0000-4000-8000-000000000000"), Ok(None));
 }
 
 #[test]
 fn an_object_comes_back_as_json_and_carries_its_type() {
-    let Some(path) = corpus("testingPackageCpp.epc") else { return };
+    let Some(path) = corpus("testingPackageCpp.epc") else {
+        return;
+    };
     let package = Package::open(&path).expect("the package opens");
     let first = package.objects().into_iter().next().expect("at least one object");
     let text = package.get(&first.uri).expect("the object reads");
@@ -70,7 +81,9 @@ fn an_object_comes_back_as_json_and_carries_its_type() {
 
 #[test]
 fn an_object_read_and_put_back_keeps_its_uri() {
-    let Some(path) = corpus("testingPackageCpp.epc") else { return };
+    let Some(path) = corpus("testingPackageCpp.epc") else {
+        return;
+    };
     let mut package = Package::open(&path).expect("the package opens");
     let first = package.objects().into_iter().next().expect("at least one object");
     let text = package.get(&first.uri).expect("the object reads");
@@ -85,7 +98,9 @@ fn an_object_read_and_put_back_keeps_its_uri() {
 
 #[test]
 fn the_arrays_of_an_object_are_named_before_they_are_read() {
-    let Some(path) = corpus("testingPackageCpp.epc") else { return };
+    let Some(path) = corpus("testingPackageCpp.epc") else {
+        return;
+    };
     let package = Package::open(&path).expect("the package opens");
 
     // **Naming is not reading**, and that is what lets a multi-gigabyte package
@@ -104,7 +119,11 @@ fn the_arrays_of_an_object_are_named_before_they_are_read() {
     };
 
     for array in &arrays {
-        assert!(!array.file.is_empty(), "{} names an array with no file", object.uri);
+        assert!(
+            !array.file.is_empty(),
+            "{} names an array with no file",
+            object.uri
+        );
         assert!(
             array.path_in_file.starts_with('/'),
             "a path inside the file: {}",
@@ -135,8 +154,15 @@ fn the_arrays_of_an_object_are_named_before_they_are_read() {
             let shape = package.array_shape(&arrays[0]).expect("the shape is asked for");
             assert!(!shape.dimensions.is_empty(), "a shape has at least one dimension");
             let promised: i64 = shape.dimensions.iter().product();
-            assert_eq!(read.dimensions, shape.dimensions, "the announced shape is the one read");
-            assert_eq!(block.len() as i64, promised, "as many numbers as the shape promises");
+            assert_eq!(
+                read.dimensions, shape.dimensions,
+                "the announced shape is the one read"
+            );
+            assert_eq!(
+                block.len() as i64,
+                promised,
+                "as many numbers as the shape promises"
+            );
             assert_eq!(read.element_type, shape.element_type);
         }
         Err(why) => assert!(!why.is_empty(), "a refusal carries a sentence"),
@@ -192,12 +218,17 @@ fn a_pinned_name_writes_and_reads_the_file_it_was_pinned_to() {
         .write_array(&array, &[2, 2], Block::F64(values.clone()))
         .expect("the array writes");
 
-    assert!(actual.exists(), "the bytes are in the file the name was pinned to");
+    assert!(
+        actual.exists(),
+        "the bytes are in the file the name was pinned to"
+    );
     assert!(
         !dir.path().join("logical.h5").exists(),
         "and no file is created under the logical name"
     );
-    let (shape, block) = package.read_array(&array).expect("and reads back through the pin");
+    let (shape, block) = package
+        .read_array(&array)
+        .expect("and reads back through the pin");
     assert_eq!(shape.dimensions, vec![2, 2]);
     assert_eq!(block, Block::F64(values));
 
@@ -209,7 +240,11 @@ fn a_pinned_name_writes_and_reads_the_file_it_was_pinned_to() {
         .write_array(&array, &[2, 2], Block::F64(vec![9.0, 9.0, 9.0, 9.0]))
         .expect("overwrites in the copy");
     let (_, in_copy) = package.read_array(&array).expect("reads the copy");
-    assert_eq!(in_copy, Block::F64(vec![9.0; 4]), "the second pin is the one in force");
+    assert_eq!(
+        in_copy,
+        Block::F64(vec![9.0; 4]),
+        "the second pin is the one in force"
+    );
     package.pin_data_file("logical.h5", &actual);
     let (_, in_first) = package.read_array(&array).expect("reads the first again");
     assert_eq!(
@@ -247,24 +282,62 @@ fn find_answers_what_the_filter_over_objects_answers() {
         }
         package.put(&object.to_string()).expect("the object is put");
     };
-    put(&mut package, "eml23.DataobjectCollection", "6a3ba3a0-6d4e-4a3b-9f10-1111aaaa0001", "first", None);
-    put(&mut package, "eml23.DataobjectCollection", "6a3ba3a0-6d4e-4a3b-9f10-1111aaaa0002", "second", Some("v2"));
-    put(&mut package, "eml23.ActivityTemplate", "6a3ba3a0-6d4e-4a3b-9f10-1111aaaa0003", "first template", None);
+    put(
+        &mut package,
+        "eml23.DataobjectCollection",
+        "6a3ba3a0-6d4e-4a3b-9f10-1111aaaa0001",
+        "first",
+        None,
+    );
+    put(
+        &mut package,
+        "eml23.DataobjectCollection",
+        "6a3ba3a0-6d4e-4a3b-9f10-1111aaaa0002",
+        "second",
+        Some("v2"),
+    );
+    put(
+        &mut package,
+        "eml23.ActivityTemplate",
+        "6a3ba3a0-6d4e-4a3b-9f10-1111aaaa0003",
+        "first template",
+        None,
+    );
 
     let all = package.objects();
-    let by_type: Vec<_> = all.iter().filter(|one| one.qualified_type == "eml23.DataobjectCollection").collect();
+    let by_type: Vec<_> = all
+        .iter()
+        .filter(|one| one.qualified_type == "eml23.DataobjectCollection")
+        .collect();
     let found = package.find(Some("eml23.DataobjectCollection"), None);
     assert_eq!(found.len(), 2, "both collections, and not the template");
     for one in &found {
-        let same = by_type.iter().find(|row| row.uri == one.uri).expect("a row of objects()");
+        let same = by_type
+            .iter()
+            .find(|row| row.uri == one.uri)
+            .expect("a row of objects()");
         assert_eq!(one.uuid, same.uuid);
     }
-    let second = found.iter().find(|one| one.uuid.ends_with("0002")).expect("the second collection");
-    assert_eq!(second.title, "second", "the title comes from the citation, for an object put in this session too");
-    assert_eq!(second.object_version.as_deref(), Some("v2"), "and so does the version");
+    let second = found
+        .iter()
+        .find(|one| one.uuid.ends_with("0002"))
+        .expect("the second collection");
+    assert_eq!(
+        second.title, "second",
+        "the title comes from the citation, for an object put in this session too"
+    );
+    assert_eq!(
+        second.object_version.as_deref(),
+        Some("v2"),
+        "and so does the version"
+    );
 
     let titled = package.find(None, Some("first"));
-    assert_eq!(titled.len(), 2, "the title filter runs on what the type kept — here everything: {titled:?}");
+    assert_eq!(
+        titled.len(),
+        2,
+        "the title filter runs on what the type kept — here everything: {titled:?}"
+    );
     let both = package.find(Some("ActivityTemplate"), Some("first"));
     assert_eq!(both.len(), 1, "type and title together");
     assert!(package.find(Some("Grid2dRepresentation"), None).is_empty());
@@ -272,7 +345,9 @@ fn find_answers_what_the_filter_over_objects_answers() {
 
 #[test]
 fn a_shape_that_lies_is_refused_naming_both_counts() {
-    let Some(path) = corpus("testingPackageCpp.epc") else { return };
+    let Some(path) = corpus("testingPackageCpp.epc") else {
+        return;
+    };
     let dir = tempfile::tempdir().expect("a directory for this test");
     std::fs::copy(&path, dir.path().join("p.epc")).expect("the copy");
     let package = Package::open(dir.path().join("p.epc")).expect("the package");
@@ -295,7 +370,9 @@ fn a_shape_that_lies_is_refused_naming_both_counts() {
 
 #[test]
 fn a_package_written_elsewhere_reads_back_with_the_same_objects() {
-    let Some(path) = corpus("testingPackageCpp.epc") else { return };
+    let Some(path) = corpus("testingPackageCpp.epc") else {
+        return;
+    };
     let dir = tempfile::tempdir().expect("a directory for this test");
     let package = Package::open(&path).expect("the package opens");
     let before: Vec<String> = package.objects().into_iter().map(|one| one.uri).collect();
@@ -320,5 +397,8 @@ fn a_path_that_does_not_exist_refuses_by_naming_it() {
         Ok(_) => panic!("a file that does not exist opened"),
         Err(why) => why,
     };
-    assert!(why.contains("there-is-no-file-here.epc"), "the refusal names the path: {why}");
+    assert!(
+        why.contains("there-is-no-file-here.epc"),
+        "the refusal names the path: {why}"
+    );
 }

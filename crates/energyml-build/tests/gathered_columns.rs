@@ -28,7 +28,10 @@ const STRA_KIND: &str = "22222222-2222-4222-8222-222222222222";
 const LITHO_KIND: &str = "33333333-3333-4333-8333-333333333333";
 
 fn when() -> When {
-    When { creation: "2026-10-01T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-10-01T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 fn column(name: &str, uuid: &str, value_type: &str) -> Value {
@@ -60,7 +63,11 @@ F2,10,0.3,e5,calcaire,revu\n\
 F2,30,0.4,,,\n";
 
 fn frame(bag: Pieces, at: usize, title: &str, mds: &[f64]) -> Pieces {
-    let name = if at == 0 { "frames".to_string() } else { format!("frames {}", at + 1) };
+    let name = if at == 0 {
+        "frames".to_string()
+    } else {
+        format!("frames {}", at + 1)
+    };
     let geometry = Geometry {
         kind: "resqml22.WellboreFrameRepresentation",
         patches: vec![Patch {
@@ -71,10 +78,21 @@ fn frame(bag: Pieces, at: usize, title: &str, mds: &[f64]) -> Pieces {
             closed: Vec::new(),
         }],
     };
-    bag.with(name.clone(), Source::Shape { geometry, closed: None }).with(
+    bag.with(
+        name.clone(),
+        Source::Shape {
+            geometry,
+            closed: None,
+        },
+    )
+    .with(
         format!("{name} (object)"),
         Source::Object(Known {
-            reference: Some(Ref::new(format!("uuid-{title}"), "resqml22.WellboreFrameRepresentation", title)),
+            reference: Some(Ref::new(
+                format!("uuid-{title}"),
+                "resqml22.WellboreFrameRepresentation",
+                title,
+            )),
             node_mds: Some(mds.to_vec()),
             ..Known::default()
         }),
@@ -87,7 +105,14 @@ fn read(text: &str) -> Table {
 
 fn bag() -> Pieces {
     let template = osdu::from_json(&template()).expect("a template");
-    let pieces = Pieces::empty().with("table", Source::Table { name: "essai.csv".into(), table: read(FILE), template });
+    let pieces = Pieces::empty().with(
+        "table",
+        Source::Table {
+            name: "essai.csv".into(),
+            table: read(FILE),
+            template,
+        },
+    );
     let pieces = frame(pieces, 0, "F1 — frame", &[10.0, 20.0, 30.0]);
     frame(pieces, 1, "F2 — frame", &[10.0, 30.0])
 }
@@ -98,7 +123,13 @@ fn plan(answers: Value) -> Plan {
         choices = choices.set(name, value.clone());
     }
     Registry::new()
-        .plan("properties-from-table", &bag(), &choices, &Identity::derived(), &when())
+        .plan(
+            "properties-from-table",
+            &bag(),
+            &choices,
+            &Identity::derived(),
+            &when(),
+        )
         .unwrap_or_else(|why| panic!("a plan: {why}"))
 }
 
@@ -115,7 +146,13 @@ fn object<'a>(made: &'a Plan, title: &str) -> &'a NewObject {
 
 fn codes(made: &Plan, title: &str) -> Vec<i64> {
     let path = format!("/resqml22/{}/values", object(made, title).uuid);
-    match &made.datasets.iter().find(|set| set.path == path).expect("its array").values {
+    match &made
+        .datasets
+        .iter()
+        .find(|set| set.path == path)
+        .expect("its array")
+        .values
+    {
         Numbers::I64(values) => values.clone(),
         other => panic!("integers, not {other:?}"),
     }
@@ -123,8 +160,14 @@ fn codes(made: &Plan, title: &str) -> Vec<i64> {
 
 /// The table a pointing property names, found by the uuid it carries.
 fn table_of<'a>(made: &'a Plan, pointer: &str) -> &'a NewObject {
-    let uuid = object(made, pointer).json["CategoryLookup"]["Uuid"].as_str().expect("a lookup").to_string();
-    made.objects.iter().find(|o| o.uuid == uuid).unwrap_or_else(|| panic!("no table `{uuid}` — the lookup dangles"))
+    let uuid = object(made, pointer).json["CategoryLookup"]["Uuid"]
+        .as_str()
+        .expect("a lookup")
+        .to_string();
+    made.objects
+        .iter()
+        .find(|o| o.uuid == uuid)
+        .unwrap_or_else(|| panic!("no table `{uuid}` — the lookup dangles"))
 }
 
 /// A table's column, by title: its kind uuid and its values.
@@ -135,8 +178,16 @@ fn table_column(table: &NewObject, title: &str) -> (String, Vec<String>) {
         .iter()
         .find(|c| c["Title"] == title)
         .unwrap_or_else(|| panic!("no column `{title}` in `{}`", table.title));
-    let values = column["Values"]["Values"].as_array().expect("values").iter().map(|v| v.as_str().unwrap().to_string()).collect();
-    (column["PropertyKind"]["Uuid"].as_str().unwrap().to_string(), values)
+    let values = column["Values"]["Values"]
+        .as_array()
+        .expect("values")
+        .iter()
+        .map(|v| v.as_str().unwrap().to_string())
+        .collect();
+    (
+        column["PropertyKind"]["Uuid"].as_str().unwrap().to_string(),
+        values,
+    )
 }
 
 /// To break: change the default — every package written before, Lutetia included,
@@ -147,9 +198,16 @@ fn separate_stays_the_default_and_writes_what_it_wrote() {
     for title in ["F1 — STRA", "F1 — LITHO", "F2 — STRA", "F2 — LITHO"] {
         assert_eq!(object(&made, title).qualified_type, "resqml22.DiscreteProperty");
     }
-    assert!(!titles(&made).iter().any(|t| t.contains("text columns")), "{:?}", titles(&made));
+    assert!(
+        !titles(&made).iter().any(|t| t.contains("text columns")),
+        "{:?}",
+        titles(&made)
+    );
     assert!(!made.says.iter().any(|n| n.key == "gathered"));
-    assert!(!titles(&made).iter().any(|t| t.contains("NOTE")), "an undeclared column is left out by default");
+    assert!(
+        !titles(&made).iter().any(|t| t.contains("NOTE")),
+        "an undeclared column is left out by default"
+    );
 }
 
 /// What the file states at a node: `STRA` and `LITHO`, or nothing.
@@ -178,7 +236,11 @@ fn every_node_decodes_to_the_cells_the_file_states() {
                     None => assert_eq!(*rank, -9999, "{mode}: {well} node {node} states nothing, a null"),
                     Some((s, l)) => {
                         let at = usize::try_from(*rank).expect("a rank, not a null");
-                        assert_eq!((stra[at].as_str(), litho[at].as_str()), (*s, *l), "{mode}: {well} node {node}");
+                        assert_eq!(
+                            (stra[at].as_str(), litho[at].as_str()),
+                            (*s, *l),
+                            "{mode}: {well} node {node}"
+                        );
                     }
                 }
             }
@@ -190,12 +252,19 @@ fn every_node_decodes_to_the_cells_the_file_states() {
 #[test]
 fn a_shared_table_holds_each_combination_once_for_the_whole_run() {
     let made = plan(json!({ "textColumns": "shared-table" }));
-    let tables: Vec<&NewObject> = made.objects.iter().filter(|o| o.qualified_type == "eml23.ColumnBasedTable").collect();
+    let tables: Vec<&NewObject> = made
+        .objects
+        .iter()
+        .filter(|o| o.qualified_type == "eml23.ColumnBasedTable")
+        .collect();
     assert_eq!(tables.len(), 1, "one table for the run: {:?}", titles(&made));
     // `e5/calcaire` is met in F1 and in F2: one row, the same rank in both.
     let (_, stra) = table_column(tables[0], "STRA");
     assert_eq!(stra, ["e6", "e5"], "two distinct combinations, in the order met");
-    assert_eq!(codes(&made, "F1 — text columns")[2], codes(&made, "F2 — text columns")[0]);
+    assert_eq!(
+        codes(&made, "F1 — text columns")[2],
+        codes(&made, "F2 — text columns")[0]
+    );
     // No placeholder is left behind: the lookup names the table.
     assert_eq!(table_of(&made, "F1 — text columns").uuid, tables[0].uuid);
 }
@@ -218,8 +287,17 @@ fn a_table_per_well_belongs_to_its_frame() {
 #[test]
 fn numbers_stay_continuous_and_text_leaves_its_own_properties() {
     let made = plan(json!({ "textColumns": "shared-table" }));
-    assert_eq!(object(&made, "F1 — PHI").qualified_type, "resqml22.ContinuousProperty");
-    assert!(!titles(&made).iter().any(|t| t == "F1 — STRA" || t == "F1 — LITHO"), "{:?}", titles(&made));
+    assert_eq!(
+        object(&made, "F1 — PHI").qualified_type,
+        "resqml22.ContinuousProperty"
+    );
+    assert!(
+        !titles(&made)
+            .iter()
+            .any(|t| t == "F1 — STRA" || t == "F1 — LITHO"),
+        "{:?}",
+        titles(&made)
+    );
     assert!(made.says.iter().any(|n| n.key == "gathered"));
 }
 
@@ -233,7 +311,10 @@ fn each_column_keeps_its_kind_and_the_pointer_is_a_multi_use_property() {
     assert_eq!(table_column(table, "LITHO").0, LITHO_KIND);
     let pointer = object(&made, "F1 — text columns");
     // `multi use property`, concrete in the dictionary — its meaning is the table.
-    assert_eq!(pointer.json["PropertyKind"]["Uuid"], "47a4319d-c8a4-45dc-8600-f96d4b289138");
+    assert_eq!(
+        pointer.json["PropertyKind"]["Uuid"],
+        "47a4319d-c8a4-45dc-8600-f96d4b289138"
+    );
     assert_eq!(pointer.json["IndexableElement"], "nodes");
 }
 
@@ -246,12 +327,21 @@ fn everything_carries_the_undeclared_columns_in_a_table_of_their_own() {
         let pointer = "F1 — columns not in the template";
         let table = table_of(&made, pointer);
         let (kind, notes) = table_column(table, "NOTE");
-        assert_eq!(kind, "73f28137-03ef-45b4-8e85-31869c7d36fd", "{mode}: the dictionary's `unknown`");
+        assert_eq!(
+            kind, "73f28137-03ef-45b4-8e85-31869c7d36fd",
+            "{mode}: the dictionary's `unknown`"
+        );
         let ranks = codes(&made, pointer);
         // F1 says `vu` at 10 m, nothing at 20 m, an empty cell at 30 m.
         assert_eq!(notes[usize::try_from(ranks[0]).unwrap()], "vu", "{mode}");
         assert_eq!(&ranks[1..], [-9999, -9999], "{mode}: no value, no row");
-        assert!(table_of(&made, "F1 — text columns").json["Column"].as_array().unwrap().iter().all(|c| c["Title"] != "NOTE"));
+        assert!(
+            table_of(&made, "F1 — text columns").json["Column"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|c| c["Title"] != "NOTE")
+        );
         assert!(made.says.iter().any(|n| n.key == "columns-carried"), "{mode}");
     }
     // Without it the column is not written at all.
@@ -263,7 +353,15 @@ fn everything_carries_the_undeclared_columns_in_a_table_of_their_own() {
 #[test]
 fn everything_works_with_separate_text_columns_too() {
     let made = plan(json!({ "everything": true }));
-    assert_eq!(object(&made, "F1 — STRA").qualified_type, "resqml22.DiscreteProperty", "declared text stays separate");
+    assert_eq!(
+        object(&made, "F1 — STRA").qualified_type,
+        "resqml22.DiscreteProperty",
+        "declared text stays separate"
+    );
     let table = table_of(&made, "F1 — columns not in the template");
-    assert_eq!(table_column(table, "NOTE").1, ["vu", "revu"], "one table for the run: separate is not per well");
+    assert_eq!(
+        table_column(table, "NOTE").1,
+        ["vu", "revu"],
+        "one table for the run: separate is not per well"
+    );
 }

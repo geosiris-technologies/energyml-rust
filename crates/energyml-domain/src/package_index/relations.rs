@@ -113,7 +113,9 @@ impl Relations {
         let mut parents: Vec<(u8, NodeId)> = out
             .iter()
             .filter_map(|&(target, path)| {
-                let at = PARENT_FIELDS.iter().position(|field| *field == strings.get(path))?;
+                let at = PARENT_FIELDS
+                    .iter()
+                    .position(|field| *field == strings.get(path))?;
                 Some((at as u8, target))
             })
             .collect();
@@ -178,7 +180,12 @@ impl Relations {
             };
             let mut listed = members.get(&index).cloned().unwrap_or_default();
             listed.sort_unstable();
-            rows.push(Row { index, collection, repeated_of, members: listed.into_boxed_slice() });
+            rows.push(Row {
+                index,
+                collection,
+                repeated_of,
+                members: listed.into_boxed_slice(),
+            });
         }
         // A membership in an association that names **no** collection is still a
         // membership edge in the document; the walk says "not a membership".
@@ -189,13 +196,21 @@ impl Relations {
                 continue;
             }
             for &(j, member) in listed {
-                let held = Held { holder: id, association: *index, position: j };
+                let held = Held {
+                    holder: id,
+                    association: *index,
+                    position: j,
+                };
                 insert_sorted(self.held.entry(member).or_default(), held);
             }
         }
         for row in &rows {
             for &(j, member) in row.members.iter() {
-                let held = Held { holder: id, association: row.index, position: j };
+                let held = Held {
+                    holder: id,
+                    association: row.index,
+                    position: j,
+                };
                 insert_sorted(self.held.entry(member).or_default(), held);
             }
         }
@@ -345,17 +360,33 @@ impl PackageIndex {
     /// in that list, the parent's node)`, in that order. The node carries the
     /// parent's uri, which is what the walks go on by.
     pub fn parent_rows(&self, address: &str) -> Vec<(usize, &IndexNode)> {
-        let Some(id) = self.lay(address) else { return Vec::new() };
-        let rows = self.relations.parents.get(&id).map(|rows| &**rows).unwrap_or_default();
+        let Some(id) = self.lay(address) else {
+            return Vec::new();
+        };
+        let rows = self
+            .relations
+            .parents
+            .get(&id)
+            .map(|rows| &**rows)
+            .unwrap_or_default();
         self.row_read(rows.len());
-        rows.iter().map(|&(at, target)| (at as usize, &self.nodes[target as usize])).collect()
+        rows.iter()
+            .map(|&(at, target)| (at as usize, &self.nodes[target as usize]))
+            .collect()
     }
 
     /// The associations of a `CollectionsToDataobjectsAssociationSet`, in
     /// association order, with §8.3 decided.
     pub fn associations_of(&self, holder: &str) -> Vec<AssociationRow<'_>> {
-        let Some(id) = self.lay(holder) else { return Vec::new() };
-        let rows = self.relations.sets.get(&id).map(|rows| &**rows).unwrap_or_default();
+        let Some(id) = self.lay(holder) else {
+            return Vec::new();
+        };
+        let rows = self
+            .relations
+            .sets
+            .get(&id)
+            .map(|rows| &**rows)
+            .unwrap_or_default();
         self.row_read(rows.len());
         rows.iter()
             .map(|row| AssociationRow {
@@ -371,17 +402,28 @@ impl PackageIndex {
     /// the collection that association names. The way *from* a collection *to*
     /// what it holds (`memberships_of` is the way back).
     pub fn members_of_association(&self, holder: &str, association: u64) -> Vec<&IndexNode> {
-        let Some(id) = self.lay(holder) else { return Vec::new() };
-        let Some(rows) = self.relations.sets.get(&id) else { return Vec::new() };
-        let Some(row) = rows.iter().find(|row| row.index == association) else { return Vec::new() };
+        let Some(id) = self.lay(holder) else {
+            return Vec::new();
+        };
+        let Some(rows) = self.relations.sets.get(&id) else {
+            return Vec::new();
+        };
+        let Some(row) = rows.iter().find(|row| row.index == association) else {
+            return Vec::new();
+        };
         self.row_read(row.members.len());
-        row.members.iter().map(|&(_, member)| &self.nodes[member as usize]).collect()
+        row.members
+            .iter()
+            .map(|&(_, member)| &self.nodes[member as usize])
+            .collect()
     }
 
     /// The associations (set, index) that name this object as their
     /// **collection** — the sets that hold it.
     pub fn collection_named_by(&self, collection: &str) -> Vec<(&IndexNode, u64)> {
-        let Some(wanted) = self.lay(collection) else { return Vec::new() };
+        let Some(wanted) = self.lay(collection) else {
+            return Vec::new();
+        };
         let mut out: Vec<(NodeId, u64)> = Vec::new();
         for (&holder, rows) in &self.relations.sets {
             for row in rows.iter().filter(|row| row.collection == wanted) {
@@ -390,14 +432,23 @@ impl PackageIndex {
         }
         self.row_read(out.len());
         out.sort_by(|a, b| (&self.nodes[a.0 as usize].uri, a.1).cmp(&(&self.nodes[b.0 as usize].uri, b.1)));
-        out.into_iter().map(|(holder, index)| (&self.nodes[holder as usize], index)).collect()
+        out.into_iter()
+            .map(|(holder, index)| (&self.nodes[holder as usize], index))
+            .collect()
     }
 
     /// The collections an object is a member of, one hop: the set and the
     /// association that list it, by `(holder, association, position)`.
     pub fn memberships_of(&self, uuid: &str) -> Vec<Membership<'_>> {
-        let Some(id) = self.lay(uuid) else { return Vec::new() };
-        let rows = self.relations.held.get(&id).map(Vec::as_slice).unwrap_or_default();
+        let Some(id) = self.lay(uuid) else {
+            return Vec::new();
+        };
+        let rows = self
+            .relations
+            .held
+            .get(&id)
+            .map(Vec::as_slice)
+            .unwrap_or_default();
         self.row_read(rows.len());
         rows.iter()
             .map(|held| Membership {
@@ -412,19 +463,32 @@ impl PackageIndex {
     /// Whether this object is a `DataobjectCollection` of `Kind` `project` — the
     /// model's own collection, which the walk does not follow.
     pub fn is_project(&self, uuid: &str) -> bool {
-        self.lay(uuid).is_some_and(|id| self.relations.projects.contains(&id))
+        self.lay(uuid)
+            .is_some_and(|id| self.relations.projects.contains(&id))
     }
 
     /// The `Model`s and `EarthModelInterpretation`s that reference this object.
     pub fn models_referencing(&self, uuid: &str) -> Vec<ModelRef<'_>> {
-        let Some(id) = self.lay(uuid) else { return Vec::new() };
-        let rows = self.relations.modelled.get(&id).map(Vec::as_slice).unwrap_or_default();
+        let Some(id) = self.lay(uuid) else {
+            return Vec::new();
+        };
+        let rows = self
+            .relations
+            .modelled
+            .get(&id)
+            .map(Vec::as_slice)
+            .unwrap_or_default();
         self.row_read(rows.len());
         rows.iter()
             .filter(|&&(source, _)| self.nodes[source as usize].state == NodeState::Present)
             .map(|&(source, path)| {
                 let node = &self.nodes[source as usize];
-                ModelRef { uuid: &node.uuid, uri: &node.uri, type_key: &node.type_key, path: self.strings.get(path) }
+                ModelRef {
+                    uuid: &node.uuid,
+                    uri: &node.uri,
+                    type_key: &node.type_key,
+                    path: self.strings.get(path),
+                }
             })
             .collect()
     }
@@ -456,27 +520,46 @@ impl PackageIndex {
     /// who carries a graphical information, and what kind. Empty: nothing in the
     /// package decorates it.
     pub fn graphical_entries_of(&self, uuid: &str) -> Vec<GraphicalRow<'_>> {
-        let Some(id) = self.lay(uuid) else { return Vec::new() };
-        let rows = self.relations.decorated.get(&id).map(Vec::as_slice).unwrap_or_default();
+        let Some(id) = self.lay(uuid) else {
+            return Vec::new();
+        };
+        let rows = self
+            .relations
+            .decorated
+            .get(&id)
+            .map(Vec::as_slice)
+            .unwrap_or_default();
         self.row_read(rows.len());
         rows.iter()
             .filter_map(|&(set, entry)| {
                 let kind = self.relations.graphical_sets.get(&set)?.get(entry)?;
-                Some(GraphicalRow { set: &self.nodes[set as usize].uuid, entry, kind })
+                Some(GraphicalRow {
+                    set: &self.nodes[set as usize].uuid,
+                    entry,
+                    kind,
+                })
             })
             .collect()
     }
 
     /// Whether any entry of any set targets this object.
     pub fn is_graphically_decorated(&self, uuid: &str) -> bool {
-        self.lay(uuid).is_some_and(|id| self.relations.decorated.contains_key(&id))
+        self.lay(uuid)
+            .is_some_and(|id| self.relations.decorated.contains_key(&id))
     }
 
     /// The `eml23.Attachment` objects that name this object by `ObjectReference`,
     /// lowercase uuids, sorted, without duplicates.
     pub fn attachments_naming(&self, uuid: &str) -> Vec<String> {
-        let Some(id) = self.lay(uuid) else { return Vec::new() };
-        let rows = self.relations.attached.get(&id).map(Vec::as_slice).unwrap_or_default();
+        let Some(id) = self.lay(uuid) else {
+            return Vec::new();
+        };
+        let rows = self
+            .relations
+            .attached
+            .get(&id)
+            .map(Vec::as_slice)
+            .unwrap_or_default();
         self.row_read(rows.len());
         let mut out: Vec<String> = rows
             .iter()
@@ -492,8 +575,15 @@ impl PackageIndex {
     /// when a package holds one attachment in two versions. Sorted, without
     /// duplicates.
     pub fn attachment_uris_naming(&self, uuid: &str) -> Vec<String> {
-        let Some(id) = self.lay(uuid) else { return Vec::new() };
-        let rows = self.relations.attached.get(&id).map(Vec::as_slice).unwrap_or_default();
+        let Some(id) = self.lay(uuid) else {
+            return Vec::new();
+        };
+        let rows = self
+            .relations
+            .attached
+            .get(&id)
+            .map(Vec::as_slice)
+            .unwrap_or_default();
         self.row_read(rows.len());
         let mut out: Vec<String> = rows
             .iter()
@@ -507,7 +597,12 @@ impl PackageIndex {
 
     /// Whether an `Attachment` names this object.
     pub fn has_attachment_naming(&self, uuid: &str) -> bool {
-        self.lay(uuid).is_some_and(|id| self.relations.attached.get(&id).is_some_and(|rows| !rows.is_empty()))
+        self.lay(uuid).is_some_and(|id| {
+            self.relations
+                .attached
+                .get(&id)
+                .is_some_and(|rows| !rows.is_empty())
+        })
     }
 
     /// How many rows the relation tables hold.

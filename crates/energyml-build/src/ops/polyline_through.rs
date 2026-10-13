@@ -69,13 +69,30 @@ impl Operation for PolylineThrough {
     fn check(&self, inputs: &PolylineThroughInputs) -> Result<(), Refusal> {
         let nodes: usize = inputs.shape.iter().map(|one| one.geometry.point_count()).sum();
         if nodes < 2 {
-            return Err(Refusal::on("shape", format!("{nodes} node(s) in the input — a line goes through two at least")));
+            return Err(Refusal::on(
+                "shape",
+                format!("{nodes} node(s) in the input — a line goes through two at least"),
+            ));
         }
         Ok(())
     }
 
-    fn plan(&self, inputs: PolylineThroughInputs, params: PolylineThroughParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
-        let points: Vec<[f64; 3]> = inputs.shape.iter().flat_map(|one| one.geometry.patches.iter().flat_map(|patch| patch.points.iter().copied())).collect();
+    fn plan(
+        &self,
+        inputs: PolylineThroughInputs,
+        params: PolylineThroughParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
+        let points: Vec<[f64; 3]> = inputs
+            .shape
+            .iter()
+            .flat_map(|one| {
+                one.geometry
+                    .patches
+                    .iter()
+                    .flat_map(|patch| patch.points.iter().copied())
+            })
+            .collect();
         let count = points.len();
         let names: Vec<&str> = inputs.shape.iter().map(|one| one.name.as_str()).collect();
         let known = inputs.shape.first().and_then(|one| one.known.clone());
@@ -83,25 +100,55 @@ impl Operation for PolylineThrough {
             name: names.join(" + "),
             geometry: Geometry {
                 kind: "polyline-through",
-                patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Polylines(vec![count as u32]), closed: Vec::new() }],
+                patches: vec![Patch {
+                    index: 0,
+                    node_offset: 0,
+                    points,
+                    topology: Topology::Polylines(vec![count as u32]),
+                    closed: Vec::new(),
+                }],
             },
             closed: Some(vec![params.closed]),
             known,
         };
         let title = params.written.naming.title();
         let seed = format!("polyline-through:{}:{title}", names.join("+"));
-        let mut plan = polylines::write(&PolylinesInputs { shape: vec![line], features: None }, &params.written, Some(params.closed), &seed, cx)?;
+        let mut plan = polylines::write(
+            &PolylinesInputs {
+                shape: vec![line],
+                features: None,
+            },
+            &params.written,
+            Some(params.closed),
+            &seed,
+            cx,
+        )?;
         plan.activity.recipe = "polyline-through";
         plan.activity.title = format!("polyline-through → {title}");
-        plan.activity.parameters.push(Parameter::Double { title: "throughNodes".to_string(), value: count as f64, uom: None });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "throughNodes".to_string(),
+            value: count as f64,
+            uom: None,
+        });
         plan.says.push(Note {
             key: "through",
-            detail: format!("one {} line through {count} node(s), in the order given", if params.closed { "closed" } else { "open" }),
+            detail: format!(
+                "one {} line through {count} node(s), in the order given",
+                if params.closed { "closed" } else { "open" }
+            ),
         });
         Ok(plan)
     }
 
     fn reports(&self) -> Vec<Slot> {
-        support::frame_reports(vec![Slot::required("throughNodes", Need::Number { uom: None, least: None, most: None }, "nodes the line goes through")])
+        support::frame_reports(vec![Slot::required(
+            "throughNodes",
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
+            "nodes the line goes through",
+        )])
     }
 }

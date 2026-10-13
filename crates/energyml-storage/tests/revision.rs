@@ -34,7 +34,11 @@ fn uuids_compare_without_case() {
     let mut revisions = Revisions::new(8);
     revisions.touch("ABCDEF");
     revisions.touch("abcdef");
-    assert_eq!(revisions.changed_since(0), set(&["abcdef"]), "one object, named once");
+    assert_eq!(
+        revisions.changed_since(0),
+        set(&["abcdef"]),
+        "one object, named once"
+    );
 }
 
 #[test]
@@ -52,8 +56,16 @@ fn overflow_answers_everything_for_a_reader_older_than_the_log() {
     revisions.touch("a"); // 1
     revisions.touch("b"); // 2
     revisions.touch("c"); // 3: "a" is forgotten
-    assert_eq!(revisions.changed_since(0), Changed::Everything, "it missed a, which is gone");
-    assert_eq!(revisions.changed_since(1), set(&["b", "c"]), "it saw a, so the rest is known");
+    assert_eq!(
+        revisions.changed_since(0),
+        Changed::Everything,
+        "it missed a, which is gone"
+    );
+    assert_eq!(
+        revisions.changed_since(1),
+        set(&["b", "c"]),
+        "it saw a, so the rest is known"
+    );
     assert_eq!(revisions.changed_since(2), set(&["c"]));
     assert_eq!(revisions.changed_since(3), Changed::Nothing);
 }
@@ -74,7 +86,11 @@ fn touch_all_after_since_means_everything() {
     revisions.touch("b"); // 3
     assert_eq!(revisions.current(), 3);
     assert_eq!(revisions.changed_since(0), Changed::Everything);
-    assert_eq!(revisions.changed_since(1), Changed::Everything, "touch_all came after it");
+    assert_eq!(
+        revisions.changed_since(1),
+        Changed::Everything,
+        "touch_all came after it"
+    );
 }
 
 #[test]
@@ -98,7 +114,11 @@ fn touch_all_alone_is_not_nothing() {
 fn a_revision_from_the_future_is_everything() {
     let mut revisions = Revisions::new(8);
     revisions.touch("a");
-    assert_eq!(revisions.changed_since(99), Changed::Everything, "a reader of another store");
+    assert_eq!(
+        revisions.changed_since(99),
+        Changed::Everything,
+        "a reader of another store"
+    );
 }
 
 // =========================================================================
@@ -149,7 +169,8 @@ mod wiring {
         // was reading it — "not a zip: Could not find EOCD" in CI.
         static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let call = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let dir = std::env::temp_dir().join(format!("energyml-revision-{name}-{}-{call}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("energyml-revision-{name}-{}-{call}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("a temporary folder");
         let path = dir.join(format!("{name}.epc"));
@@ -168,7 +189,8 @@ mod wiring {
         )
         .unwrap();
         for uuid in uuids {
-            zip.start_file(format!("BoundaryFeature_{uuid}.xml"), options).unwrap();
+            zip.start_file(format!("BoundaryFeature_{uuid}.xml"), options)
+                .unwrap();
             zip.write_all(feature(uuid).as_bytes()).unwrap();
         }
         zip.finish().expect("written");

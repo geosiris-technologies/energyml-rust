@@ -28,7 +28,7 @@ fn object(qualified_type: &str, topology: Topology, points: Vec<[f64; 3]>) -> Sc
                 points,
                 topology,
                 closed: Vec::new(),
-}],
+            }],
         },
         crs: None,
         interpretation: None,
@@ -81,10 +81,7 @@ fn a_substring_matches_both_releases_of_a_type() {
         rules.shape_for("resqml20.obj_Grid2dRepresentation"),
         Shape::Points
     );
-    assert_eq!(
-        rules.shape_for("resqml22.Grid2dRepresentation"),
-        Shape::Points
-    );
+    assert_eq!(rules.shape_for("resqml22.Grid2dRepresentation"), Shape::Points);
     assert_eq!(
         rules.shape_for("resqml22.TriangulatedSetRepresentation"),
         Shape::Auto,
@@ -111,10 +108,7 @@ fn the_first_matching_rule_wins_so_an_exception_can_precede_a_default() {
         .unwrap()
         .parse_rule("*=points")
         .unwrap();
-    assert_eq!(
-        rules.shape_for("resqml22.Grid2dRepresentation"),
-        Shape::Surface
-    );
+    assert_eq!(rules.shape_for("resqml22.Grid2dRepresentation"), Shape::Surface);
     assert_eq!(
         rules.shape_for("resqml22.TriangulatedSetRepresentation"),
         Shape::Points
@@ -131,10 +125,7 @@ fn a_star_before_a_specific_rule_shadows_it_and_that_is_the_callers_choice() {
         .unwrap()
         .parse_rule("Grid2d=surface")
         .unwrap();
-    assert_eq!(
-        rules.shape_for("resqml22.Grid2dRepresentation"),
-        Shape::Points
-    );
+    assert_eq!(rules.shape_for("resqml22.Grid2dRepresentation"), Shape::Points);
 }
 
 #[test]
@@ -248,7 +239,10 @@ fn a_typo_in_a_rule_is_refused_with_the_alternatives() {
     // to find out that `surface` was spelled `srufaec`.
     let error = Shapes::new().parse_rule("Grid2d=srufaec").unwrap_err();
     assert!(error.contains("srufaec"), "{error}");
-    assert!(error.contains("surface"), "the alternatives must be listed: {error}");
+    assert!(
+        error.contains("surface"),
+        "the alternatives must be listed: {error}"
+    );
 
     let error = Shapes::new().parse_rule("Grid2d").unwrap_err();
     assert!(error.contains("PATTERN=SHAPE"), "{error}");
@@ -281,9 +275,14 @@ fn no_rules_at_all_means_every_object_in_its_natural_shape() {
 /// a hull from a box.
 fn an_l_shape() -> SceneObject {
     let coords = [
-        (0.0, 0.0), (1.0, 0.0), (2.0, 0.0),
-        (0.0, 1.0), (1.0, 1.0), (2.0, 1.0),
-        (0.0, 2.0), (1.0, 2.0),
+        (0.0, 0.0),
+        (1.0, 0.0),
+        (2.0, 0.0),
+        (0.0, 1.0),
+        (1.0, 1.0),
+        (2.0, 1.0),
+        (0.0, 2.0),
+        (1.0, 2.0),
     ];
     object(
         "resqml22.PointSetRepresentation",
@@ -373,10 +372,7 @@ fn a_summary_of_a_whole_object_is_one_hull_and_not_one_per_patch() {
         panic!("expected one polygon");
     };
     assert_eq!(rings.len(), 1);
-    let far = hull.patches[0]
-        .points
-        .iter()
-        .any(|p| p[0] > 9.0 && p[1] > 9.0);
+    let far = hull.patches[0].points.iter().any(|p| p[0] > 9.0 && p[1] > 9.0);
     assert!(far, "the second patch must be inside the outline too");
 }
 
@@ -457,9 +453,7 @@ fn geojson_names_the_singular_types_for_a_summary() {
 fn every_feature_carries_a_bounding_box() {
     // Optional in RFC 7946 and in OSDU's schema, written anyway: it is what
     // lets a viewer or an index decide whether to open a ten-megabyte file.
-    let options = Options::new()
-        .with_native_crs()
-        .with_placement(Placement::Local);
+    let options = Options::new().with_native_crs().with_placement(Placement::Local);
     let exporters = Exporters::builtin();
     let mut buffer = Vec::new();
     exporters
@@ -513,12 +507,7 @@ fn a_shared_edge_is_stored_once() {
     let two = object(
         "resqml22.TriangulatedSetRepresentation",
         Topology::Triangles(vec![[0, 1, 2], [1, 3, 2]]),
-        vec![
-            [0.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [1.0, 1.0, 0.0],
-        ],
+        vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]],
     );
     let drawn = two.as_shape(Shape::Lines).expect("edges");
     let Topology::Segments(edges) = &drawn.geometry.patches[0].topology else {
@@ -597,8 +586,7 @@ fn obj_writes_a_wireframe_as_l_statements() {
     // called for.
     let exporters = Exporters::builtin();
     let exporter = exporters.get("obj").expect("obj exists");
-    let options =
-        Options::new().with_shapes(Shapes::new().parse_rule("Grid2d=lines").unwrap());
+    let options = Options::new().with_shapes(Shapes::new().parse_rule("Grid2d=lines").unwrap());
     let mut out = Vec::new();
     exporter
         .write(&a_grid(), &mut out, &options)

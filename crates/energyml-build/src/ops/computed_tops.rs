@@ -84,10 +84,10 @@ use energyml_resqml_2_2 as resqml;
 use energyml_witsml_2_1 as witsml;
 
 use crate::declare::{Inputs, Params, Shape, Title};
+use crate::operation::Need;
 use crate::operation::{
     About, ActivityDraft, Category, Context, Dropped, Made, NewObject, Note, Operation, Plan, Refusal, Slot,
 };
-use crate::operation::Need;
 use crate::pieces::{Known, KnownPath};
 
 use super::support;
@@ -170,8 +170,17 @@ fn boundary_of(known: Option<&Known>) -> (resqml::GeologicBoundaryKind, Option<e
 /// The drawn nodes of the well against its line: equal when both were read in
 /// one frame. A frame's nodes are its `NodeMd` on the line, a trajectory's its
 /// knots.
-fn drawn_elsewhere(well: &Shape, known: &Known, path: &energyml_geometry::parametric::Path) -> Option<(usize, f64)> {
-    let nodes: Vec<[f64; 3]> = well.geometry.patches.iter().flat_map(|patch| patch.points.iter().copied()).collect();
+fn drawn_elsewhere(
+    well: &Shape,
+    known: &Known,
+    path: &energyml_geometry::parametric::Path,
+) -> Option<(usize, f64)> {
+    let nodes: Vec<[f64; 3]> = well
+        .geometry
+        .patches
+        .iter()
+        .flat_map(|patch| patch.points.iter().copied())
+        .collect();
     let mds: Vec<f64> = match (&known.node_mds, path.knots()) {
         (Some(mds), _) => mds.clone(),
         (None, Some(knots)) => knots.to_vec(),
@@ -223,8 +232,17 @@ impl Operation for ComputedTops {
     }
 
     fn check(&self, inputs: &ComputedTopsInputs) -> Result<(), Refusal> {
-        if inputs.well.geometry.patches.iter().all(|patch| patch.points.is_empty()) {
-            return Err(Refusal::on("well", format!("`{}` places no node", inputs.well.name)));
+        if inputs
+            .well
+            .geometry
+            .patches
+            .iter()
+            .all(|patch| patch.points.is_empty())
+        {
+            return Err(Refusal::on(
+                "well",
+                format!("`{}` places no node", inputs.well.name),
+            ));
         }
         for horizon in &inputs.horizons {
             if !support::Faces::of(&horizon.geometry).any() {
@@ -240,7 +258,12 @@ impl Operation for ComputedTops {
         Ok(())
     }
 
-    fn plan(&self, inputs: ComputedTopsInputs, params: ComputedTopsParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: ComputedTopsInputs,
+        params: ComputedTopsParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let ComputedTopsInputs { well, horizons } = inputs;
         let well_title = title_of(&well);
 
@@ -251,12 +274,27 @@ impl Operation for ComputedTops {
                 format!("`{well_title}` is no object of the package: the tops are measured depths along a trajectory, and a shape of the scene has none"),
             )
         })?;
-        let KnownPath { trajectory, path, md_uom, datum } = known.path.as_ref().ok_or_else(|| {
-            Refusal::on("well", format!("`{well_title}` is neither a wellbore trajectory nor a frame: there is no hole to follow"))
+        let KnownPath {
+            trajectory,
+            path,
+            md_uom,
+            datum,
+        } = known.path.as_ref().ok_or_else(|| {
+            Refusal::on(
+                "well",
+                format!(
+                    "`{well_title}` is neither a wellbore trajectory nor a frame: there is no hole to follow"
+                ),
+            )
         })?;
-        let path = path.as_ref().map_err(|why| Refusal::on("well", format!("its line cannot be followed — {why}")))?;
+        let path = path
+            .as_ref()
+            .map_err(|why| Refusal::on("well", format!("its line cannot be followed — {why}")))?;
         let knots = path.knots().ok_or_else(|| {
-            Refusal::on("well", format!("`{}` states no measured depth at its stations", trajectory.title))
+            Refusal::on(
+                "well",
+                format!("`{}` states no measured depth at its stations", trajectory.title),
+            )
         })?;
         let md_uom = md_uom.clone().ok_or_else(|| {
             Refusal::on(
@@ -265,10 +303,21 @@ impl Operation for ComputedTops {
             )
         })?;
         energyml_domain::units::metres(1.0, &md_uom).map_err(|why| {
-            Refusal::on("well", format!("`{}` counts its measured depths in `{md_uom}`, which is no length: {why}", trajectory.title))
+            Refusal::on(
+                "well",
+                format!(
+                    "`{}` counts its measured depths in `{md_uom}`, which is no length: {why}",
+                    trajectory.title
+                ),
+            )
         })?;
-        let uom = <eml::LengthUomExt as energyml_core::xml::XmlText>::from_xml_text(&md_uom)
-            .map_err(|why| Refusal::on("well", format!("`{md_uom}` is no length unit a marker can write: {why}")))?;
+        let uom =
+            <eml::LengthUomExt as energyml_core::xml::XmlText>::from_xml_text(&md_uom).map_err(|why| {
+                Refusal::on(
+                    "well",
+                    format!("`{md_uom}` is no length unit a marker can write: {why}"),
+                )
+            })?;
         if let Some((rank, gap)) = drawn_elsewhere(&well, known, path) {
             return Err(Refusal::on(
                 "well",
@@ -306,7 +355,10 @@ impl Operation for ComputedTops {
             {
                 return Err(Refusal::on(
                     "horizons",
-                    format!("`{}` counts its heights in `{b}` and the well `{well_title}` in `{a}` — one unit, or no crossing", title_of(horizon)),
+                    format!(
+                        "`{}` counts its heights in `{b}` and the well `{well_title}` in `{a}` — one unit, or no crossing",
+                        title_of(horizon)
+                    ),
                 ));
             }
         }
@@ -326,11 +378,18 @@ impl Operation for ComputedTops {
         let step = match params.step {
             Some(given) => given,
             None => {
-                let finest = faces.iter().filter_map(|f| analysis::plan_spacing(&f.surface())).fold(f64::INFINITY, f64::min);
+                let finest = faces
+                    .iter()
+                    .filter_map(|f| analysis::plan_spacing(&f.surface()))
+                    .fold(f64::INFINITY, f64::min);
                 // Never more samples than the analysis takes: a long hole
                 // over a fine grid gets the step the ceiling allows, and says so.
                 let floor = length / (analysis::MOST_SAMPLES as f64 / 2.0);
-                let half = if finest.is_finite() { finest / 2.0 } else { length / 1000.0 };
+                let half = if finest.is_finite() {
+                    finest / 2.0
+                } else {
+                    length / 1000.0
+                };
                 if half < floor {
                     says.push(Note {
                         key: "step-floored",
@@ -347,7 +406,8 @@ impl Operation for ComputedTops {
         for (horizon, faces) in horizons.iter().zip(&faces) {
             let heights = Heights::of(faces.surface(), "horizon", "under each sample of the hole")
                 .map_err(|why| Refusal::on("horizons", format!("`{}`: {why}", title_of(horizon))))?;
-            let found = analysis::tops(&path_at, knots, step, &heights).map_err(|why| Refusal::on("step", why))?;
+            let found =
+                analysis::tops(&path_at, knots, step, &heights).map_err(|why| Refusal::on("step", why))?;
             outcomes.push(found);
             cx.stop_if_cancelled()?;
         }
@@ -360,18 +420,33 @@ impl Operation for ComputedTops {
             let title = title_of(horizon);
             let count = found.crossings.len();
             for (rank, crossing) in found.crossings.iter().enumerate() {
-                all.push(Found { horizon: index, shape: horizon, crossing: crossing.clone(), nth: (rank + 1, count) });
+                all.push(Found {
+                    horizon: index,
+                    shape: horizon,
+                    crossing: crossing.clone(),
+                    nth: (rank + 1, count),
+                });
             }
             if count > 1 {
                 says.push(Note {
                     key: "crossed-again",
                     detail: format!(
                         "`{title}` is crossed {count} times, at MD {} {md_uom}: a marker each",
-                        found.crossings.iter().map(|c| format!("{:.3}", c.md)).collect::<Vec<_>>().join(", ")
+                        found
+                            .crossings
+                            .iter()
+                            .map(|c| format!("{:.3}", c.md))
+                            .collect::<Vec<_>>()
+                            .join(", ")
                     ),
                 });
             }
-            let spans = |list: &[[f64; 2]]| list.iter().map(|s| format!("{:.3}–{:.3}", s[0], s[1])).collect::<Vec<_>>().join(", ");
+            let spans = |list: &[[f64; 2]]| {
+                list.iter()
+                    .map(|s| format!("{:.3}–{:.3}", s[0], s[1]))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            };
             if !found.folded.is_empty() {
                 folded += found.folded.len();
                 says.push(Note {
@@ -415,9 +490,14 @@ impl Operation for ComputedTops {
             if count == 0 {
                 let why = match (found.side, found.closest) {
                     (Some(side), Some(closest)) => {
-                        format!("stays {} it along the whole hole — {closest:.3} at the closest", side_word(side, up))
+                        format!(
+                            "stays {} it along the whole hole — {closest:.3} at the closest",
+                            side_word(side, up)
+                        )
                     }
-                    _ if found.over == 0 && found.over_fold == 0 => "passes beside it: no station of the hole lies over it".to_string(),
+                    _ if found.over == 0 && found.over_fold == 0 => {
+                        "passes beside it: no station of the hole lies over it".to_string()
+                    }
                     _ if found.over == 0 => "lies over a fold of it only".to_string(),
                     _ => "never goes through a face of it".to_string(),
                 };
@@ -427,14 +507,25 @@ impl Operation for ComputedTops {
         if all.is_empty() {
             return Err(Refusal::new(
                 "no-crossing",
-                format!("`{well_title}` crosses none of the horizons — {}", not_reached.join("; ")),
+                format!(
+                    "`{well_title}` crosses none of the horizons — {}",
+                    not_reached.join("; ")
+                ),
             ));
         }
         for why in &not_reached {
-            says.push(Note { key: "not-reached", detail: why.clone() });
+            says.push(Note {
+                key: "not-reached",
+                detail: why.clone(),
+            });
         }
         // The order of the hole; two horizons at one depth keep the order given.
-        all.sort_by(|a, b| a.crossing.md.total_cmp(&b.crossing.md).then(a.horizon.cmp(&b.horizon)));
+        all.sort_by(|a, b| {
+            a.crossing
+                .md
+                .total_cmp(&b.crossing.md)
+                .then(a.horizon.cmp(&b.horizon))
+        });
 
         // -- the objects -------------------------------------------------------------
         let citation = |title: &str, description: String| eml::Citation {
@@ -467,7 +558,11 @@ impl Operation for ComputedTops {
             };
             // What the marker is: the hole, the horizon, the depth. A moved
             // horizon is a second marker, never the first rewritten.
-            let seed = format!("computed-tops:marker:{}:{horizon_key}:{:?}", trajectory.uuid, super::support::seed_mm(found.crossing.md));
+            let seed = format!(
+                "computed-tops:marker:{}:{horizon_key}:{:?}",
+                trajectory.uuid,
+                super::support::seed_mm(found.crossing.md)
+            );
             let uuid = cx.identity.uuid(&seed, rank)?;
             let side = side_word(found.crossing.from, up);
             let description = format!(
@@ -480,7 +575,10 @@ impl Operation for ComputedTops {
                 schema_version: "2.1".to_string(),
                 citation: citation(&title, description),
                 md: eml::MeasuredDepth {
-                    measured_depth: eml::LengthMeasureExt { value: found.crossing.md, uom: uom.clone() },
+                    measured_depth: eml::LengthMeasureExt {
+                        value: found.crossing.md,
+                        uom: uom.clone(),
+                    },
                     datum: datum_ref.clone(),
                 },
                 wellbore_marker_kind: Some(witsml::WellboreMarkerKindExt::Stratigraphic),
@@ -494,12 +592,14 @@ impl Operation for ComputedTops {
                 json: energyml_core::json::write_value(&marker),
             });
             let (kind, interpretation) = boundary_of(found.shape.known.as_ref());
-            boundaries.push(resqml::AnyMarkerBoundary::MarkerBoundary(resqml::MarkerBoundary {
-                geologic_boundary_kind: kind,
-                interpretation,
-                marker: Some(crate::crs::reference_to(&uuid, "witsml21.WellboreMarker", &title)),
-                ..Default::default()
-            }));
+            boundaries.push(resqml::AnyMarkerBoundary::MarkerBoundary(
+                resqml::MarkerBoundary {
+                    geologic_boundary_kind: kind,
+                    interpretation,
+                    marker: Some(crate::crs::reference_to(&uuid, "witsml21.WellboreMarker", &title)),
+                    ..Default::default()
+                },
+            ));
             says.push(Note {
                 key: "crossing",
                 detail: format!(
@@ -532,10 +632,7 @@ impl Operation for ComputedTops {
         };
         let seed = format!("computed-tops:set:{}:{}", trajectory.uuid, marker_uuids.join(","));
         let set_uuid = cx.identity.uuid(&seed, all.len())?;
-        let represented = known
-            .interpretation
-            .as_ref()
-            .map(crate::crs::reference_of);
+        let represented = known.interpretation.as_ref().map(crate::crs::reference_of);
         let set = resqml::WellboreIntervalSet {
             uuid: set_uuid.clone(),
             schema_version: "2.2".to_string(),
@@ -569,9 +666,16 @@ impl Operation for ComputedTops {
         let dropped = if not_reached.is_empty() {
             Vec::new()
         } else {
-            vec![Dropped { count: not_reached.len(), why: "horizon(s) the well does not cross — no marker".to_string() }]
+            vec![Dropped {
+                count: not_reached.len(),
+                why: "horizon(s) the well does not cross — no marker".to_string(),
+            }]
         };
-        let count = |title: &str, value: usize| Parameter::Double { title: title.to_string(), value: value as f64, uom: None };
+        let count = |title: &str, value: usize| Parameter::Double {
+            title: title.to_string(),
+            value: value as f64,
+            uom: None,
+        };
         Ok(Plan {
             objects,
             datasets: Vec::new(),
@@ -581,7 +685,11 @@ impl Operation for ComputedTops {
                 title: format!("computed-tops → {set_title}"),
                 seed,
                 parameters: vec![
-                    Parameter::Double { title: "stepUsed".to_string(), value: step, uom: Some(md_uom.clone()) },
+                    Parameter::Double {
+                        title: "stepUsed".to_string(),
+                        value: step,
+                        uom: Some(md_uom.clone()),
+                    },
                     count("markerCount", all.len()),
                     count("notReachedCount", not_reached.len()),
                     count("foldedCount", folded),
@@ -597,7 +705,13 @@ impl Operation for ComputedTops {
                 title: set_title,
                 geometry: Geometry {
                     kind: "computed-tops",
-                    patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Points, closed: Vec::new() }],
+                    patches: vec![Patch {
+                        index: 0,
+                        node_offset: 0,
+                        points,
+                        topology: Topology::Points,
+                        closed: Vec::new(),
+                    }],
                 },
                 object: Some(set_uuid),
             }],
@@ -607,15 +721,32 @@ impl Operation for ComputedTops {
 
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
-            Slot::required(name, Need::Number { uom: None, least: None, most: None }, about)
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
         };
         vec![
-            count("stepUsed", "the sampling step along the hole, in the unit of its measured depths"),
+            count(
+                "stepUsed",
+                "the sampling step along the hole, in the unit of its measured depths",
+            ),
             count("markerCount", "markers written — one per crossing"),
             count("notReachedCount", "horizons the well does not cross"),
             count("foldedCount", "changes of side over a fold, not decided"),
-            count("gapCount", "changes of side where the surface is not, or has no single height"),
-            count("touchCount", "places where the hole meets a horizon without crossing it"),
+            count(
+                "gapCount",
+                "changes of side where the surface is not, or has no single height",
+            ),
+            count(
+                "touchCount",
+                "places where the hole meets a horizon without crossing it",
+            ),
         ]
     }
 }

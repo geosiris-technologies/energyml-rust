@@ -42,7 +42,13 @@ fn well(title: &str, head: [f64; 3], path: Vec<[f64; 3]>, md: Option<Vec<f64>>) 
 }
 
 fn interval(from: f64, to: f64, unit: &str) -> Interval {
-    Interval { from, to, colour: None, unit: unit.to_string(), unit_uri: None }
+    Interval {
+        from,
+        to,
+        colour: None,
+        unit: unit.to_string(),
+        unit_uri: None,
+    }
 }
 
 fn surface(cuts: Vec<SurfaceCut>, age: Option<[f64; 2]>) -> SurfaceRead {
@@ -60,7 +66,12 @@ fn surface(cuts: Vec<SurfaceCut>, age: Option<[f64; 2]>) -> SurfaceRead {
 #[test]
 fn a_well_whose_head_is_not_a_number_is_refused_by_name() {
     // To make it fail: let a non-finite head through → the head is written as `null`.
-    let w = well("No elevation", [50.0, 1.0, NAN], vec![[50.0, 1.0, NAN], [50.0, 1.0, NAN]], None);
+    let w = well(
+        "No elevation",
+        [50.0, 1.0, NAN],
+        vec![[50.0, 1.0, NAN], [50.0, 1.0, NAN]],
+        None,
+    );
     let refused = finite_well(w).expect_err("a head that is not a number cannot be placed");
     assert_eq!(refused.object.title, "No elevation");
     assert!(refused.reason.contains("`No elevation`"), "{}", refused.reason);
@@ -74,11 +85,19 @@ fn a_node_that_is_not_a_number_is_dropped_with_its_md_and_said() {
     let w = well(
         "W1",
         [50.0, 1.0, 0.0],
-        vec![[50.0, 1.0, 0.0], [50.0, 1.0, NAN], [50.0, 1.0, -20.0], [50.0, 1.0, -30.0]],
+        vec![
+            [50.0, 1.0, 0.0],
+            [50.0, 1.0, NAN],
+            [50.0, 1.0, -20.0],
+            [50.0, 1.0, -30.0],
+        ],
         Some(vec![0.0, 10.0, 20.0, 30.0]),
     );
     let (kept, note) = finite_well(w).expect("three nodes are left");
-    assert_eq!(kept.path, vec![[50.0, 1.0, 0.0], [50.0, 1.0, -20.0], [50.0, 1.0, -30.0]]);
+    assert_eq!(
+        kept.path,
+        vec![[50.0, 1.0, 0.0], [50.0, 1.0, -20.0], [50.0, 1.0, -30.0]]
+    );
     assert_eq!(kept.md, Some(vec![0.0, 20.0, 30.0]));
     let note = note.expect("a dropped node is said");
     assert_eq!(note.code, NOT_A_NUMBER);
@@ -120,10 +139,22 @@ fn a_well_left_with_fewer_than_two_nodes_is_refused() {
 fn an_interval_without_a_top_or_base_is_not_drawn_and_the_well_stays() {
     // To make it fail: keep the interval → `from: null`; or refuse the well on its
     // account → a borehole disappears for a unit with no depth.
-    let mut w = well("W4", [50.0, 1.0, 0.0], vec![[50.0, 1.0, 0.0], [50.0, 1.0, -30.0]], Some(vec![0.0, 30.0]));
-    w.intervals = vec![interval(0.0, 10.0, "A"), interval(NAN, 20.0, "B"), interval(20.0, NAN, "C")];
+    let mut w = well(
+        "W4",
+        [50.0, 1.0, 0.0],
+        vec![[50.0, 1.0, 0.0], [50.0, 1.0, -30.0]],
+        Some(vec![0.0, 30.0]),
+    );
+    w.intervals = vec![
+        interval(0.0, 10.0, "A"),
+        interval(NAN, 20.0, "B"),
+        interval(20.0, NAN, "C"),
+    ];
     let (kept, note) = finite_well(w).expect("the well is drawn");
-    assert_eq!(kept.intervals.iter().map(|i| i.unit.as_str()).collect::<Vec<_>>(), vec!["A"]);
+    assert_eq!(
+        kept.intervals.iter().map(|i| i.unit.as_str()).collect::<Vec<_>>(),
+        vec!["A"]
+    );
     assert!(note.expect("said").said.contains("2 of its 3 intervals"));
 }
 
@@ -131,7 +162,12 @@ fn an_interval_without_a_top_or_base_is_not_drawn_and_the_well_stays() {
 fn a_well_with_nothing_wrong_comes_back_as_it_was_and_says_nothing() {
     // The negative control: a pass that rewrote a clean well, or noted it,
     // would make every package noisy.
-    let mut w = well("W5", [50.0, 1.0, 0.0], vec![[50.0, 1.0, 0.0], [50.0, 1.0, -30.0]], Some(vec![0.0, 30.0]));
+    let mut w = well(
+        "W5",
+        [50.0, 1.0, 0.0],
+        vec![[50.0, 1.0, 0.0], [50.0, 1.0, -30.0]],
+        Some(vec![0.0, 30.0]),
+    );
     w.intervals = vec![interval(0.0, 30.0, "A")];
     let (kept, note) = finite_well(w.clone()).expect("clean");
     assert_eq!(kept, w);
@@ -146,7 +182,15 @@ fn a_cut_is_broken_where_a_point_is_not_a_number_never_joined_across() {
         section: SectionKey::Long,
         shape: CutShape::Trace {
             spans: vec![
-                vec![[0.0, 0.0], [1.0, -1.0], [2.0, NAN], [3.0, -3.0], [4.0, -4.0], [NAN, -5.0], [6.0, -6.0]],
+                vec![
+                    [0.0, 0.0],
+                    [1.0, -1.0],
+                    [2.0, NAN],
+                    [3.0, -3.0],
+                    [4.0, -4.0],
+                    [NAN, -5.0],
+                    [6.0, -6.0],
+                ],
                 vec![[10.0, 0.0], [11.0, 0.0]],
             ],
         },
@@ -155,7 +199,9 @@ fn a_cut_is_broken_where_a_point_is_not_a_number_never_joined_across() {
     };
     let mut s = surface(vec![cut], None);
     finite_surface(&mut s);
-    let CutShape::Trace { spans } = &s.cuts[0].shape else { panic!("a trace stays a trace") };
+    let CutShape::Trace { spans } = &s.cuts[0].shape else {
+        panic!("a trace stays a trace")
+    };
     assert_eq!(
         spans,
         &vec![
@@ -165,7 +211,11 @@ fn a_cut_is_broken_where_a_point_is_not_a_number_never_joined_across() {
         ]
     );
     assert_eq!(s.cuts[0].notes.len(), 1);
-    assert!(s.cuts[0].notes[0].starts_with("2 point(s)"), "{}", s.cuts[0].notes[0]);
+    assert!(
+        s.cuts[0].notes[0].starts_with("2 point(s)"),
+        "{}",
+        s.cuts[0].notes[0]
+    );
 }
 
 #[test]
@@ -185,11 +235,20 @@ fn an_envelope_drops_a_fill_holding_a_hole_and_keeps_the_others() {
     };
     let mut s = surface(vec![cut], None);
     finite_surface(&mut s);
-    let CutShape::Envelope { top, bottom, fills, .. } = &s.cuts[0].shape else { panic!("an envelope stays one") };
+    let CutShape::Envelope {
+        top, bottom, fills, ..
+    } = &s.cuts[0].shape
+    else {
+        panic!("an envelope stays one")
+    };
     assert_eq!(top.len(), 1);
     assert_eq!(bottom, &vec![vec![[2.0, -1.0], [3.0, -1.0]]]);
     assert_eq!(fills, &vec![ring]);
-    assert!(s.cuts[0].notes[0].starts_with("2 point(s)"), "{}", s.cuts[0].notes[0]);
+    assert!(
+        s.cuts[0].notes[0].starts_with("2 point(s)"),
+        "{}",
+        s.cuts[0].notes[0]
+    );
 }
 
 #[test]
@@ -216,7 +275,9 @@ fn a_contribution_passed_through_finite_reads_back() {
     let mut s = surface(
         vec![SurfaceCut {
             section: SectionKey::Long,
-            shape: CutShape::Trace { spans: vec![vec![[0.0, 0.0], [1.0, NAN], [2.0, -2.0], [3.0, -3.0]]] },
+            shape: CutShape::Trace {
+                spans: vec![vec![[0.0, 0.0], [1.0, NAN], [2.0, -2.0], [3.0, -3.0]]],
+            },
             notes: Vec::new(),
             sources: Vec::new(),
         }],
@@ -224,10 +285,18 @@ fn a_contribution_passed_through_finite_reads_back() {
     );
 
     // The bug, reproduced: the message a user read, word for word.
-    let broken = Contribution { store: "s1".into(), wells: vec![raw.clone()], surfaces: vec![s.clone()], ..Contribution::default() };
+    let broken = Contribution {
+        store: "s1".into(),
+        wells: vec![raw.clone()],
+        surfaces: vec![s.clone()],
+        ..Contribution::default()
+    };
     let json = serde_json::to_string(&broken).expect("serde_json writes NaN as null");
     let why = serde_json::from_str::<Contribution>(&json).expect_err("null is not an f64");
-    assert!(why.to_string().contains("invalid type: null, expected f64"), "{why}");
+    assert!(
+        why.to_string().contains("invalid type: null, expected f64"),
+        "{why}"
+    );
 
     let (kept, note) = finite_well(raw).expect("two nodes are left");
     finite_surface(&mut s);
@@ -265,10 +334,23 @@ fn a_kept_well_is_drawn_and_its_note_reaches_the_catalogue() {
         objects: Vec::new(),
         time_factor: None,
     };
-    let c = Contribution { store: "s1".into(), wells: vec![kept], notes: note.into_iter().collect(), ..Contribution::default() };
+    let c = Contribution {
+        store: "s1".into(),
+        wells: vec![kept],
+        notes: note.into_iter().collect(),
+        ..Contribution::default()
+    };
     let cat = assemble(&inputs, &[c]).expect("assembles");
     let rows: Vec<_> = cat.objects.iter().filter(|r| r.object.title == "W7").collect();
     assert_eq!(rows.len(), 1, "{rows:?}");
-    assert!(matches!(rows[0].outcome, Outcome::Drawn { .. }), "{:?}", rows[0].outcome);
-    assert!(cat.notes.iter().any(|n| n.code == NOT_A_NUMBER && n.objects.iter().any(|o| o.title == "W7")));
+    assert!(
+        matches!(rows[0].outcome, Outcome::Drawn { .. }),
+        "{:?}",
+        rows[0].outcome
+    );
+    assert!(
+        cat.notes
+            .iter()
+            .any(|n| n.code == NOT_A_NUMBER && n.objects.iter().any(|o| o.title == "W7"))
+    );
 }

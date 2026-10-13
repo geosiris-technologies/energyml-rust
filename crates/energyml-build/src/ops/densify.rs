@@ -119,11 +119,19 @@ impl Operation for Densify {
     }
 
     fn check(&self, inputs: &DensifyInputs) -> Result<(), Refusal> {
-        let lines = inputs.shape.geometry.patches.iter().any(|patch| matches!(patch.topology, Topology::Polylines(_)));
+        let lines = inputs
+            .shape
+            .geometry
+            .patches
+            .iter()
+            .any(|patch| matches!(patch.topology, Topology::Polylines(_)));
         if lines {
             Ok(())
         } else {
-            Err(Refusal::on("shape", "it holds no polyline — a surface's nodes are remeshed, not densified"))
+            Err(Refusal::on(
+                "shape",
+                "it holds no polyline — a surface's nodes are remeshed, not densified",
+            ))
         }
     }
 
@@ -131,12 +139,25 @@ impl Operation for Densify {
         let shape = inputs.shape;
         let placement = match &params.method {
             Method::Count(count) => {
-                let n = usize::try_from(count.count).ok().filter(|n| *n > 0).ok_or_else(|| {
-                    Refusal::about("value", "count", format!("`count` is {} — at least one point is added, or it is a copy", count.count))
-                })?;
+                let n = usize::try_from(count.count)
+                    .ok()
+                    .filter(|n| *n > 0)
+                    .ok_or_else(|| {
+                        Refusal::about(
+                            "value",
+                            "count",
+                            format!(
+                                "`count` is {} — at least one point is added, or it is a copy",
+                                count.count
+                            ),
+                        )
+                    })?;
                 Placement::Count(n)
             }
-            Method::Spacing(spacing) => Placement::Spacing { every: spacing.every, tolerance: spacing.tolerance },
+            Method::Spacing(spacing) => Placement::Spacing {
+                every: spacing.every,
+                tolerance: spacing.tolerance,
+            },
         };
         let along = match params.measure {
             Measure::Space => Along::Space,
@@ -148,7 +169,9 @@ impl Operation for Densify {
         let mut at = 0usize;
         let mut patches = Vec::new();
         for patch in &shape.geometry.patches {
-            let Topology::Polylines(runs) = &patch.topology else { continue };
+            let Topology::Polylines(runs) = &patch.topology else {
+                continue;
+            };
             let mut points = Vec::new();
             let mut counts = Vec::new();
             let mut start = 0usize;
@@ -188,22 +211,49 @@ impl Operation for Densify {
         }
         let result = Shape {
             name: shape.name.clone(),
-            geometry: Geometry { kind: "densify", patches },
+            geometry: Geometry {
+                kind: "densify",
+                patches,
+            },
             closed: shape.closed.clone(),
             known: shape.known.clone(),
         };
 
         let title = params.written.naming.title();
         let seed = format!("densify:{}:{title}", shape.name);
-        let mut plan = super::polylines::write(&PolylinesInputs { shape: vec![result], features: None }, &params.written, None, &seed, cx)?;
+        let mut plan = super::polylines::write(
+            &PolylinesInputs {
+                shape: vec![result],
+                features: None,
+            },
+            &params.written,
+            None,
+            &seed,
+            cx,
+        )?;
         plan.activity.recipe = "densify";
         plan.activity.title = format!("densify → {title}");
-        plan.activity.parameters.push(Parameter::Double { title: "addedNodes".to_string(), value: added as f64, uom: None });
-        plan.says.push(Note { key: "added", detail: format!("{added} node(s) added on {lines} polyline(s); every vertex kept") });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "addedNodes".to_string(),
+            value: added as f64,
+            uom: None,
+        });
+        plan.says.push(Note {
+            key: "added",
+            detail: format!("{added} node(s) added on {lines} polyline(s); every vertex kept"),
+        });
         Ok(plan)
     }
 
     fn reports(&self) -> Vec<Slot> {
-        support::frame_reports(vec![Slot::required("addedNodes", Need::Number { uom: None, least: None, most: None }, "nodes added")])
+        support::frame_reports(vec![Slot::required(
+            "addedNodes",
+            Need::Number {
+                uom: None,
+                least: None,
+                most: None,
+            },
+            "nodes added",
+        )])
     }
 }

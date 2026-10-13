@@ -114,7 +114,9 @@ pub fn private_corpus() -> Vec<PathBuf> {
             if path.is_dir() {
                 stack.push(path);
             } else if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("epc"))
-                && !PUBLIC_EPCS.iter().any(|n| path.file_name().is_some_and(|f| f == *n))
+                && !PUBLIC_EPCS
+                    .iter()
+                    .any(|n| path.file_name().is_some_and(|f| f == *n))
             {
                 found.push(path);
             }

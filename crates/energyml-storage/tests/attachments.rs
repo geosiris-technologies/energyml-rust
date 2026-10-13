@@ -36,8 +36,12 @@ fn round_trip(store: &EpcStore) -> EpcStore {
     store
         .write_to(&mut out, &SaveOptions::default())
         .expect("the package writes");
-    EpcStore::from_reader(Box::new(Cursor::new(out.into_inner())), "rewritten.epc", registry())
-        .expect("and reads back")
+    EpcStore::from_reader(
+        Box::new(Cursor::new(out.into_inner())),
+        "rewritten.epc",
+        registry(),
+    )
+    .expect("and reads back")
 }
 
 const NOTE: &[u8] = b"%PDF-1.4\n% not really a pdf, but it is bytes\n";
@@ -99,7 +103,10 @@ fn a_file_taken_out_stops_being_listed_and_is_not_written() {
         "`{victim}` is still listed after being removed"
     );
     let listed = store.parts();
-    let entry = listed.iter().find(|p| p.part == victim).expect("still shown, as dropped");
+    let entry = listed
+        .iter()
+        .find(|p| p.part == victim)
+        .expect("still shown, as dropped");
     assert!(entry.dropped, "a removed part is not marked as such");
 
     let reopened = round_trip(&store);
@@ -122,7 +129,12 @@ fn what_may_not_be_written_over_is_refused_by_name() {
 
     // An object's part: a save writes those from the object, so bytes put there
     // would be discarded at the exact moment they were supposed to take effect.
-    let object = store.resources().first().expect("a package with objects").locator.clone();
+    let object = store
+        .resources()
+        .first()
+        .expect("a package with objects")
+        .locator
+        .clone();
     let refusal = store
         .set_attachment(&object, NOTE.to_vec(), None)
         .expect_err("an object's part was accepted as an attachment");
@@ -174,7 +186,10 @@ fn the_listing_is_about_the_package_and_not_about_the_archive() {
     // legible. An `Object` count of zero would mean the listing is showing a
     // zip and not a package.
     let objects = listed.iter().filter(|p| p.kind == PartKind::Object).count();
-    let rels = listed.iter().filter(|p| p.kind == PartKind::Relationships).count();
+    let rels = listed
+        .iter()
+        .filter(|p| p.kind == PartKind::Relationships)
+        .count();
     assert!(objects > 100, "{objects} object part(s)");
     assert!(rels > 0, "no `.rels` in the listing");
     assert!(

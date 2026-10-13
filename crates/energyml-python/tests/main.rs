@@ -10,10 +10,10 @@
 //! keeps a binary of its own, as a `[[test]]` in `Cargo.toml`.
 
 mod check;
-mod fixtures;
 mod copy;
 mod examples;
 mod export;
+mod fixtures;
 mod geometry;
 mod graph;
 mod model;

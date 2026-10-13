@@ -74,7 +74,12 @@ pub use crate::read::{FramesOf, PackageContext as WellContext};
 // whole identity on purpose: boxing it would change every construction site
 // for no gain anyone could measure.
 #[allow(clippy::result_large_err)]
-pub fn read_well(source: &dyn ValueSource, store: &str, uri: &str, scene: &Scene<'_>) -> Result<WellRead, Refused> {
+pub fn read_well(
+    source: &dyn ValueSource,
+    store: &str,
+    uri: &str,
+    scene: &Scene<'_>,
+) -> Result<WellRead, Refused> {
     read_well_with(source, store, uri, scene, &WellContext::default())
 }
 
@@ -88,12 +93,22 @@ pub fn read_well_with(
     context: &WellContext<'_>,
 ) -> Result<WellRead, Refused> {
     let located = locate(source, store, uri)?;
-    let Located { held, object, name, kind, .. } = &located;
+    let Located {
+        held,
+        object,
+        name,
+        kind,
+        ..
+    } = &located;
     let (object, name, kind) = (object.clone(), name.as_str(), *kind);
-    let refuse = |object: &ObjectId, reason: String| Refused { object: object.clone(), reason };
+    let refuse = |object: &ObjectId, reason: String| Refused {
+        object: object.clone(),
+        reason,
+    };
     let root = held.as_reflect();
     let trajectory = located.trajectory();
-    let head = well::head_of(trajectory, source).map_err(|why| refuse(&object, format!("`{name}`: {why}")))?;
+    let head =
+        well::head_of(trajectory, source).map_err(|why| refuse(&object, format!("`{name}`: {why}")))?;
 
     // The nodes the 3D draws, placed in the projected system of the object.
     let drawn = scene::object_of(root, source, uri)
@@ -129,10 +144,22 @@ pub fn read_well_with(
         }
     };
 
-    let (intervals, strata, borrowed) = strata_of(root, name, source, md.as_deref(), no_md.as_deref(), context);
+    let (intervals, strata, borrowed) =
+        strata_of(root, name, source, md.as_deref(), no_md.as_deref(), context);
     let wellbore = wellbore_of(root, trajectory, source);
 
-    Ok(WellRead { object, kind, wellbore, head, path, md, intervals, strata, borrowed, head_only: false })
+    Ok(WellRead {
+        object,
+        kind,
+        wellbore,
+        head,
+        path,
+        md,
+        intervals,
+        strata,
+        borrowed,
+        head_only: false,
+    })
 }
 
 /// A well's object, found: what its identity says and the trajectory it is
@@ -164,7 +191,10 @@ fn locate(source: &dyn ValueSource, store: &str, uri: &str) -> Result<Located, R
         title: String::new(),
         qualified_type: String::new(),
     };
-    let refuse = |object: &ObjectId, reason: String| Refused { object: object.clone(), reason };
+    let refuse = |object: &ObjectId, reason: String| Refused {
+        object: object.clone(),
+        reason,
+    };
 
     let held = source
         // By the uri the section was given: two versions of an object share a uuid.
@@ -172,10 +202,16 @@ fn locate(source: &dyn ValueSource, store: &str, uri: &str) -> Result<Located, R
         .map_err(|why| refuse(&object, format!("`{uri}` could not be read: {why}")))?;
     let root = held.as_reflect();
     let info = root.type_info();
-    object.uuid = identity::uuid_of_reflect(root).unwrap_or_default().to_ascii_lowercase();
+    object.uuid = identity::uuid_of_reflect(root)
+        .unwrap_or_default()
+        .to_ascii_lowercase();
     object.title = identity::title_of_reflect(root).unwrap_or_default().to_string();
     object.qualified_type = energyml_core::json::qualified_type_of(info);
-    let name = if object.title.is_empty() { uri.to_string() } else { object.title.clone() };
+    let name = if object.title.is_empty() {
+        uri.to_string()
+    } else {
+        object.title.clone()
+    };
 
     let kind = match info.type_key {
         FRAME => WellKind::Frame,
@@ -198,7 +234,13 @@ fn locate(source: &dyn ValueSource, store: &str, uri: &str) -> Result<Located, R
                 .map_err(|why| refuse(&object, format!("`{name}` is a wellbore frame {why}")))?,
         ),
     };
-    Ok(Located { held, object, name, kind, frame_trajectory })
+    Ok(Located {
+        held,
+        object,
+        name,
+        kind,
+        frame_trajectory,
+    })
 }
 
 /// What a well is, and where it is collared, **without reading any array**: the
@@ -242,9 +284,17 @@ impl HeadRead {
 /// the caller reads the well in full, whose refusal is the one the catalogue
 /// says (the order of the checks differs here).
 #[allow(clippy::result_large_err)]
-pub fn read_head(source: &dyn ValueSource, store: &str, uri: &str, scene: &Scene<'_>) -> Result<HeadRead, Refused> {
+pub fn read_head(
+    source: &dyn ValueSource,
+    store: &str,
+    uri: &str,
+    scene: &Scene<'_>,
+) -> Result<HeadRead, Refused> {
     let located = locate(source, store, uri)?;
-    let refuse = |reason: String| Refused { object: located.object.clone(), reason: format!("`{}`: {reason}", located.name) };
+    let refuse = |reason: String| Refused {
+        object: located.object.clone(),
+        reason: format!("`{}`: {reason}", located.name),
+    };
     let root = located.held.as_reflect();
     let trajectory = located.trajectory();
     let head = well::head_of(trajectory, source).map_err(|why| refuse(why.to_string()))?;
@@ -252,7 +302,12 @@ pub fn read_head(source: &dyn ValueSource, store: &str, uri: &str, scene: &Scene
     let mut points = [head];
     to_scene(&mut points, &frame, scene).map_err(refuse)?;
     let wellbore = wellbore_of(root, trajectory, source);
-    Ok(HeadRead { object: located.object, kind: located.kind, wellbore, head: points[0] })
+    Ok(HeadRead {
+        object: located.object,
+        kind: located.kind,
+        wellbore,
+        head: points[0],
+    })
 }
 
 /// The trajectory a frame hangs on, or what is wrong with it — a sentence that
@@ -261,9 +316,12 @@ fn trajectory_of_frame(frame: &dyn Reflect, source: &dyn ValueSource) -> Result<
     let Some(FieldValue::Object(reference)) = frame.field("Trajectory") else {
         return Err("that names no trajectory".to_string());
     };
-    let uri = identity::uri_of_reflect(reference).ok_or_else(|| "whose trajectory reference carries no uuid".to_string())?;
+    let uri = identity::uri_of_reflect(reference)
+        .ok_or_else(|| "whose trajectory reference carries no uuid".to_string())?;
     // Followed by the reference: the version it names is the trajectory read.
-    source.object_of(reference).ok_or_else(|| format!("whose trajectory {uri} is not in this package"))
+    source
+        .object_of(reference)
+        .ok_or_else(|| format!("whose trajectory {uri} is not in this package"))
 }
 
 /// The intervals of a well, or why it has none.
@@ -276,7 +334,10 @@ fn strata_of(
     context: &WellContext<'_>,
 ) -> (Vec<Interval>, Option<String>, bool) {
     let frames_of = |wellbore: &str| context.frames_of.map(|asked| asked(wellbore)).unwrap_or_default();
-    let known = Known { graphics: context.graphics, units: &[] };
+    let known = Known {
+        graphics: context.graphics,
+        units: &[],
+    };
     let painting = match strata_by_md::of_representation(root, &frames_of, None, source, &known) {
         Ok(painting) => painting,
         Err(refusal) => {
@@ -300,7 +361,13 @@ fn strata_of(
     // there is nothing to say.
     if matches!(painting, Painting::Carried(_)) && md.is_none() {
         let why = no_md.unwrap_or("its nodes have no measured depth");
-        return (Vec::new(), Some(format!("`{name}` is painted from its wellbore's frames by MD, and {why}")), borrowed);
+        return (
+            Vec::new(),
+            Some(format!(
+                "`{name}` is painted from its wellbore's frames by MD, and {why}"
+            )),
+            borrowed,
+        );
     }
     let intervals = match painting.intervals(md.unwrap_or(&[]), &[]) {
         Ok(intervals) => intervals,
@@ -314,7 +381,10 @@ fn strata_of(
         let why = if notes.is_empty() {
             format!("`{name}`: no stratigraphic unit holds any of its intervals")
         } else {
-            format!("`{name}`: no stratigraphic unit holds any of its intervals — {}", notes.join("; "))
+            format!(
+                "`{name}`: no stratigraphic unit holds any of its intervals — {}",
+                notes.join("; ")
+            )
         };
         return (Vec::new(), Some(why), borrowed);
     }
@@ -338,7 +408,11 @@ fn strata_of(
 /// `#rrggbb`, or `#rrggbbaa` when the colour is not opaque.
 fn hex(colour: Rgba) -> String {
     let [r, g, b, a] = colour.to_bytes();
-    if a == 255 { format!("#{r:02x}{g:02x}{b:02x}") } else { format!("#{r:02x}{g:02x}{b:02x}{a:02x}") }
+    if a == 255 {
+        format!("#{r:02x}{g:02x}{b:02x}")
+    } else {
+        format!("#{r:02x}{g:02x}{b:02x}{a:02x}")
+    }
 }
 
 /// What makes a frame and its trajectory one wellbore.
@@ -356,31 +430,40 @@ fn wellbore_of(root: &dyn Reflect, trajectory: &dyn Reflect, source: &dyn ValueS
     const REPRESENTED: [&str; 2] = ["RepresentedObject", "RepresentedInterpretation"];
     fn named(object: &dyn Reflect) -> Option<&dyn Reflect> {
         REPRESENTED.iter().find_map(|field| match object.field(field)? {
-            FieldValue::Object(reference) if identity::uuid_of_reflect(reference).is_some_and(|uuid| !uuid.is_empty()) => {
+            FieldValue::Object(reference)
+                if identity::uuid_of_reflect(reference).is_some_and(|uuid| !uuid.is_empty()) =>
+            {
                 Some(reference)
             }
             _ => None,
         })
     }
-    let chain = [named(trajectory), named(root)].into_iter().flatten().find_map(|reference| {
-        let represented = identity::uuid_of_reflect(reference)?.to_ascii_lowercase();
-        let object = source.object_of(reference)?;
-        let reflect = object.as_reflect();
-        if reflect.type_info().package == "witsml" {
-            // A representation of a WITSML wellbore: that is the wellbore.
-            return Some(represented);
-        }
-        // A wellbore interpretation: its feature, when it is one.
-        let Some(FieldValue::Object(reference)) = reflect.field("InterpretedFeature") else {
-            return None;
-        };
-        let feature = identity::uuid_of_reflect(reference).filter(|uuid| !uuid.is_empty())?.to_ascii_lowercase();
-        match source.object_of(reference) {
-            Some(found) if found.as_reflect().type_info().type_key != "WellboreFeature" => None,
-            _ => Some(feature),
-        }
-    });
+    let chain = [named(trajectory), named(root)]
+        .into_iter()
+        .flatten()
+        .find_map(|reference| {
+            let represented = identity::uuid_of_reflect(reference)?.to_ascii_lowercase();
+            let object = source.object_of(reference)?;
+            let reflect = object.as_reflect();
+            if reflect.type_info().package == "witsml" {
+                // A representation of a WITSML wellbore: that is the wellbore.
+                return Some(represented);
+            }
+            // A wellbore interpretation: its feature, when it is one.
+            let Some(FieldValue::Object(reference)) = reflect.field("InterpretedFeature") else {
+                return None;
+            };
+            let feature = identity::uuid_of_reflect(reference)
+                .filter(|uuid| !uuid.is_empty())?
+                .to_ascii_lowercase();
+            match source.object_of(reference) {
+                Some(found) if found.as_reflect().type_info().type_key != "WellboreFeature" => None,
+                _ => Some(feature),
+            }
+        });
     chain.or_else(|| {
-        identity::uuid_of_reflect(trajectory).filter(|uuid| !uuid.is_empty()).map(str::to_ascii_lowercase)
+        identity::uuid_of_reflect(trajectory)
+            .filter(|uuid| !uuid.is_empty())
+            .map(str::to_ascii_lowercase)
     })
 }

@@ -36,16 +36,31 @@ const EAST: f64 = 651_000.0;
 const NORTH: f64 = 6_861_000.0;
 
 fn when() -> When {
-    When { creation: "2026-10-03T00:00:00Z".to_string(), originator: "tests/section_view.rs".to_string() }
+    When {
+        creation: "2026-10-03T00:00:00Z".to_string(),
+        originator: "tests/section_view.rs".to_string(),
+    }
 }
 
 fn inputs() -> Inputs {
     Inputs {
         trace: vec![[EAST, NORTH], [EAST + 1000.0, NORTH]],
-        system: Some(System { epsg: 2154, unit: "m".to_string() }),
+        system: Some(System {
+            epsg: 2154,
+            unit: "m".to_string(),
+        }),
         left: 100.0,
         right: 100.0,
-        crosses: Crosses::Count { count: 3, common: CrossWidths { before: 150.0, after: 50.0, left: 20.0, right: 20.0 }, own: Vec::new() },
+        crosses: Crosses::Count {
+            count: 3,
+            common: CrossWidths {
+                before: 150.0,
+                after: 50.0,
+                left: 20.0,
+                right: 20.0,
+            },
+            own: Vec::new(),
+        },
         objects: Vec::new(),
         time_factor: None,
     }
@@ -53,8 +68,17 @@ fn inputs() -> Inputs {
 
 /// The section drawn by the section view itself — its metadata included.
 fn drawing(inputs: &Inputs) -> String {
-    let catalogue = energyml_section::compute(inputs, |_, _| unreachable!("nothing is asked")).expect("the inputs are valid");
-    energyml_section::draw(&catalogue, &View::new(Target::Section { key: SectionKey::Long }, [800.0, 400.0]))
+    let catalogue = energyml_section::compute(inputs, |_, _| unreachable!("nothing is asked"))
+        .expect("the inputs are valid");
+    energyml_section::draw(
+        &catalogue,
+        &View::new(
+            Target::Section {
+                key: SectionKey::Long,
+            },
+            [800.0, 400.0],
+        ),
+    )
 }
 
 /// The first 24 bytes of a PNG of `w` × `h` — all the operation reads of one.
@@ -70,10 +94,21 @@ fn png(w: u32, h: u32) -> Vec<u8> {
 fn bag(svg: &str, raster: Option<Vec<u8>>) -> Pieces {
     let mut pieces = Pieces::empty().with(
         "svg",
-        Source::Document { name: "long.svg".to_string(), content_type: None, bytes: svg.as_bytes().to_vec() },
+        Source::Document {
+            name: "long.svg".to_string(),
+            content_type: None,
+            bytes: svg.as_bytes().to_vec(),
+        },
     );
     if let Some(bytes) = raster {
-        pieces = pieces.with("png", Source::Document { name: "long.png".to_string(), content_type: None, bytes });
+        pieces = pieces.with(
+            "png",
+            Source::Document {
+                name: "long.png".to_string(),
+                content_type: None,
+                bytes,
+            },
+        );
     }
     pieces
 }
@@ -90,7 +125,13 @@ fn choices() -> Choices {
 fn plan(pieces: &Pieces, choices: Choices) -> Result<Plan, Vec<(Option<String>, String)>> {
     Registry::new()
         .plan("section-view", pieces, &choices, &Identity::derived(), &when())
-        .map_err(|error| error.refusals().iter().map(|one| (one.slot.clone(), one.message.clone())).collect())
+        .map_err(|error| {
+            error
+                .refusals()
+                .iter()
+                .map(|one| (one.slot.clone(), one.message.clone()))
+                .collect()
+        })
 }
 
 fn said(refusals: &[(Option<String>, String)], slot: &str) -> String {
@@ -102,7 +143,11 @@ fn said(refusals: &[(Option<String>, String)], slot: &str) -> String {
 }
 
 fn object<'a>(plan: &'a Plan, qualified: &str) -> Vec<&'a Value> {
-    plan.objects.iter().filter(|o| o.qualified_type == qualified).map(|o| &o.json).collect()
+    plan.objects
+        .iter()
+        .filter(|o| o.qualified_type == qualified)
+        .map(|o| &o.json)
+        .collect()
 }
 
 /// The nodes of each patch, as the plan writes them into the external file.
@@ -118,14 +163,21 @@ fn patches(plan: &Plan) -> Vec<Vec<[f64; 3]>> {
 
 #[test]
 fn the_lines_written_are_the_lines_the_drawing_states() {
-    let plan = plan(&bag(&drawing(&inputs()), Some(png(1200, 600))), choices()).unwrap_or_else(|e| panic!("{e:?}"));
+    let plan =
+        plan(&bag(&drawing(&inputs()), Some(png(1200, 600))), choices()).unwrap_or_else(|e| panic!("{e:?}"));
 
     // The feature is a section line, interpreted, and the lines represent it.
-    let [feature] = object(&plan, "resqml22.CulturalFeature")[..] else { panic!("one feature") };
+    let [feature] = object(&plan, "resqml22.CulturalFeature")[..] else {
+        panic!("one feature")
+    };
     assert_eq!(feature["CulturalFeatureKind"], "energyml-rust:section line");
-    let [interpretation] = object(&plan, "resqml22.GenericFeatureInterpretation")[..] else { panic!("one interpretation") };
+    let [interpretation] = object(&plan, "resqml22.GenericFeatureInterpretation")[..] else {
+        panic!("one interpretation")
+    };
     assert_eq!(interpretation["InterpretedFeature"]["Uuid"], feature["uuid"]);
-    let [lines] = object(&plan, "resqml22.PolylineSetRepresentation")[..] else { panic!("one polyline set") };
+    let [lines] = object(&plan, "resqml22.PolylineSetRepresentation")[..] else {
+        panic!("one polyline set")
+    };
     assert_eq!(lines["RepresentedObject"]["Uuid"], interpretation["uuid"]);
 
     // Patch 0: the trace this test typed, at the elevation asked.
@@ -133,7 +185,9 @@ fn the_lines_written_are_the_lines_the_drawing_states() {
     assert_eq!(nodes.len(), 2, "the long section and its cross sections");
     assert_eq!(nodes[0], vec![[EAST, NORTH, 35.0], [EAST + 1000.0, NORTH, 35.0]]);
     // Patch 1: three cross sections, at the ends and the middle, north to south.
-    let runs = lines["LinePatch"][1]["NodeCountPerPolyline"]["Values"].as_array().unwrap();
+    let runs = lines["LinePatch"][1]["NodeCountPerPolyline"]["Values"]
+        .as_array()
+        .unwrap();
     assert_eq!(runs.len(), 3);
     let mut at = 0usize;
     for (k, run) in runs.iter().enumerate() {
@@ -141,7 +195,10 @@ fn the_lines_written_are_the_lines_the_drawing_states() {
         let (first, last) = (nodes[1][at], nodes[1][at + run - 1]);
         let x = EAST + 500.0 * k as f64;
         for (got, want) in [(first, [x, NORTH + 150.0, 35.0]), (last, [x, NORTH - 50.0, 35.0])] {
-            assert!(got.iter().zip(want).all(|(a, b)| (a - b).abs() < 1e-6), "cross section {k}: {got:?}, expected {want:?}");
+            assert!(
+                got.iter().zip(want).all(|(a, b)| (a - b).abs() < 1e-6),
+                "cross section {k}: {got:?}, expected {want:?}"
+            );
         }
         at += run;
     }
@@ -165,13 +222,29 @@ fn the_lines_written_are_the_lines_the_drawing_states() {
         ("height", json!(400.0)),
         ("labels", json!("full")),
     ] {
-        assert_eq!(recorded.iter().filter(|(t, _)| t == title).map(|(_, v)| v.clone()).collect::<Vec<_>>(), vec![value], "`{title}`");
+        assert_eq!(
+            recorded
+                .iter()
+                .filter(|(t, _)| t == title)
+                .map(|(_, v)| v.clone())
+                .collect::<Vec<_>>(),
+            vec![value],
+            "`{title}`"
+        );
     }
     // A list is one parameter per entry: what `View::new` shows by default.
-    let shown: Vec<Value> = recorded.iter().filter(|(t, _)| t == "shown").map(|(_, v)| v.clone()).collect();
+    let shown: Vec<Value> = recorded
+        .iter()
+        .filter(|(t, _)| t == "shown")
+        .map(|(_, v)| v.clone())
+        .collect();
     assert!(shown.contains(&json!("names")) && shown.len() > 1, "{shown:?}");
     // And no parameter is longer than a `StringParameter` holds (`Activities.xsd`).
-    assert!(recorded.iter().all(|(_, v)| v.as_str().is_none_or(|s| s.chars().count() <= 2000)));
+    assert!(
+        recorded
+            .iter()
+            .all(|(_, v)| v.as_str().is_none_or(|s| s.chars().count() <= 2000))
+    );
 }
 
 /// Every parameter of the activity, as (title, value) — a reference as its uuid.
@@ -191,12 +264,19 @@ fn recorded(plan: &Plan) -> Vec<(String, Value)> {
 #[test]
 fn a_setting_that_disagrees_with_the_drawing_is_refused_on_its_slot() {
     let svg = drawing(&inputs());
-    let why = said(&plan(&bag(&svg, None), choices().set("left", 250.0)).expect_err("accepted"), "left");
+    let why = said(
+        &plan(&bag(&svg, None), choices().set("left", 250.0)).expect_err("accepted"),
+        "left",
+    );
     assert!(why.contains("250") && why.contains("100"), "{why}");
-    let why = said(&plan(&bag(&svg, None), choices().set("timeFactor", 2.0)).expect_err("accepted"), "timeFactor");
+    let why = said(
+        &plan(&bag(&svg, None), choices().set("timeFactor", 2.0)).expect_err("accepted"),
+        "timeFactor",
+    );
     assert!(why.contains("says nothing"), "{why}");
     // The drawing's own value, said again, is the drawing.
-    plan(&bag(&svg, None), choices().set("left", 100).set("crossCount", 3)).unwrap_or_else(|e| panic!("{e:?}"));
+    plan(&bag(&svg, None), choices().set("left", 100).set("crossCount", 3))
+        .unwrap_or_else(|e| panic!("{e:?}"));
 }
 
 /// The objects the section was computed from are the activity's inputs, by
@@ -213,30 +293,64 @@ fn the_objects_the_drawing_was_computed_from_are_its_inputs() {
         wells: vec![format!("eml:///resqml22.WellboreFrameRepresentation({A})")],
         surfaces: vec![format!("eml:///resqml22.Grid2dRepresentation({B})")],
     }];
-    let catalogue = energyml_section::compute(&asked, |_, _| Default::default()).expect("the inputs are valid");
-    let svg = energyml_section::draw(&catalogue, &View::new(Target::Section { key: SectionKey::Long }, [800.0, 400.0]));
+    let catalogue =
+        energyml_section::compute(&asked, |_, _| Default::default()).expect("the inputs are valid");
+    let svg = energyml_section::draw(
+        &catalogue,
+        &View::new(
+            Target::Section {
+                key: SectionKey::Long,
+            },
+            [800.0, 400.0],
+        ),
+    );
     let held = |uuid: &str, kind: &str, title: &str| {
-        Source::Object(Known { reference: Some(Ref::new(uuid, kind, title)), ..Default::default() })
+        Source::Object(Known {
+            reference: Some(Ref::new(uuid, kind, title)),
+            ..Default::default()
+        })
     };
     let pieces = bag(&svg, None)
-        .with("objects", held(A, "resqml22.WellboreFrameRepresentation", "GTH-1 — frame"))
-        .with("objects 2", held(B, "resqml22.Grid2dRepresentation", "H3 — top of the Ypresian"))
-        .with("objects 3", held("5f2c0000-0000-4000-8000-000000000000", "resqml22.Grid2dRepresentation", "not asked"));
+        .with(
+            "objects",
+            held(A, "resqml22.WellboreFrameRepresentation", "GTH-1 — frame"),
+        )
+        .with(
+            "objects 2",
+            held(B, "resqml22.Grid2dRepresentation", "H3 — top of the Ypresian"),
+        )
+        .with(
+            "objects 3",
+            held(
+                "5f2c0000-0000-4000-8000-000000000000",
+                "resqml22.Grid2dRepresentation",
+                "not asked",
+            ),
+        );
     let plan = plan(&pieces, choices()).unwrap_or_else(|e| panic!("{e:?}"));
     let references: Vec<Value> = plan
         .activity
         .parameters
         .iter()
         .filter_map(|p| match p {
-            energyml_domain::provenance::Parameter::Object { title, reference } if title == "input" => Some(reference.clone()),
+            energyml_domain::provenance::Parameter::Object { title, reference } if title == "input" => {
+                Some(reference.clone())
+            }
             _ => None,
         })
         .collect();
-    assert_eq!(references.len(), 2, "the two asked, not the third: {references:?}");
+    assert_eq!(
+        references.len(),
+        2,
+        "the two asked, not the third: {references:?}"
+    );
     assert_eq!(references[0]["Title"], "GTH-1 — frame");
     assert_eq!(references[1]["Uuid"], B);
 
-    let partial = bag(&svg, None).with("objects", held(A, "resqml22.WellboreFrameRepresentation", "GTH-1 — frame"));
+    let partial = bag(&svg, None).with(
+        "objects",
+        held(A, "resqml22.WellboreFrameRepresentation", "GTH-1 — frame"),
+    );
     let why = said(&plan_of(&partial), "objects");
     assert!(why.contains(B), "{why}");
 }
@@ -263,11 +377,27 @@ fn another_packages_objects_are_said_and_not_asked_of_this_one() {
             surfaces: vec![format!("eml:///resqml22.Grid2dRepresentation({B})")],
         },
     ];
-    let catalogue = energyml_section::compute(&asked, |_, _| Default::default()).expect("the inputs are valid");
-    let svg = energyml_section::draw(&catalogue, &View::new(Target::Section { key: SectionKey::Long }, [800.0, 400.0]));
+    let catalogue =
+        energyml_section::compute(&asked, |_, _| Default::default()).expect("the inputs are valid");
+    let svg = energyml_section::draw(
+        &catalogue,
+        &View::new(
+            Target::Section {
+                key: SectionKey::Long,
+            },
+            [800.0, 400.0],
+        ),
+    );
     let first = bag(&svg, None).with(
         "objects",
-        Source::Object(Known { reference: Some(Ref::new(A, "resqml22.WellboreFrameRepresentation", "GTH-1 — frame")), ..Default::default() }),
+        Source::Object(Known {
+            reference: Some(Ref::new(
+                A,
+                "resqml22.WellboreFrameRepresentation",
+                "GTH-1 — frame",
+            )),
+            ..Default::default()
+        }),
     );
 
     let plan = plan(&first, choices()).unwrap_or_else(|e| panic!("{e:?}"));
@@ -276,13 +406,19 @@ fn another_packages_objects_are_said_and_not_asked_of_this_one() {
         .parameters
         .iter()
         .filter_map(|p| match p {
-            energyml_domain::provenance::Parameter::Object { title, reference } if title == "input" => Some(reference),
+            energyml_domain::provenance::Parameter::Object { title, reference } if title == "input" => {
+                Some(reference)
+            }
             _ => None,
         })
         .collect();
     assert_eq!(inputs.len(), 1, "{inputs:?}");
     assert_eq!(inputs[0]["Uuid"], A);
-    let note = plan.says.iter().find(|n| n.key == "other-packages").expect("the other package is said");
+    let note = plan
+        .says
+        .iter()
+        .find(|n| n.key == "other-packages")
+        .expect("the other package is said");
     assert!(note.detail.starts_with("1 object"), "{}", note.detail);
 
     // Stored in the second package, it is the second's objects that are asked.
@@ -295,10 +431,17 @@ fn another_packages_objects_are_said_and_not_asked_of_this_one() {
 /// second pair beside the first.
 #[test]
 fn a_section_stored_again_replaces_its_drawings() {
-    let once = plan(&bag(&drawing(&inputs()), Some(png(1200, 600))), choices()).unwrap_or_else(|e| panic!("{e:?}"));
+    let once =
+        plan(&bag(&drawing(&inputs()), Some(png(1200, 600))), choices()).unwrap_or_else(|e| panic!("{e:?}"));
     let wider = energyml_section::draw(
-        &energyml_section::compute(&inputs(), |_, _| unreachable!("nothing is asked")).expect("the inputs are valid"),
-        &View::new(Target::Section { key: SectionKey::Long }, [1000.0, 500.0]),
+        &energyml_section::compute(&inputs(), |_, _| unreachable!("nothing is asked"))
+            .expect("the inputs are valid"),
+        &View::new(
+            Target::Section {
+                key: SectionKey::Long,
+            },
+            [1000.0, 500.0],
+        ),
     );
     let again = plan(&bag(&wider, Some(png(1000, 500))), choices()).unwrap_or_else(|e| panic!("{e:?}"));
     assert_ne!(once.media[0].bytes, again.media[0].bytes, "the test redraws");
@@ -308,7 +451,12 @@ fn a_section_stored_again_replaces_its_drawings() {
             .objects
             .iter()
             .filter(|o| o.qualified_type == "eml23.Attachment")
-            .map(|o| (o.uuid.clone(), o.json["ContentUri"].as_str().unwrap_or_default().to_string()))
+            .map(|o| {
+                (
+                    o.uuid.clone(),
+                    o.json["ContentUri"].as_str().unwrap_or_default().to_string(),
+                )
+            })
             .collect();
         found.sort();
         found
@@ -327,11 +475,22 @@ fn a_section_stored_again_replaces_its_drawings() {
     }
 
     // Applied one after the other, the lines still carry two drawings.
-    let lines = once.objects.iter().find(|o| o.qualified_type == "resqml22.PolylineSetRepresentation").unwrap().uuid.clone();
-    let mut store = energyml_build::epc::open(None, "section.epc", Arc::new(energyml_schemas::all())).expect("an empty package");
+    let lines = once
+        .objects
+        .iter()
+        .find(|o| o.qualified_type == "resqml22.PolylineSetRepresentation")
+        .unwrap()
+        .uuid
+        .clone();
+    let mut store = energyml_build::epc::open(None, "section.epc", Arc::new(energyml_schemas::all()))
+        .expect("an empty package");
     for plan in [&once, &again] {
         let made = energyml_build::apply::apply_with(plan, &mut store, &when(), false);
-        assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+        assert!(
+            made.invalid.is_empty(),
+            "objects written against their schema: {:#?}",
+            made.invalid
+        );
         assert!(made.refused.is_empty(), "{:?}", made.refused);
     }
     let index = PackageIndex::build(&store, store.revision());
@@ -349,12 +508,22 @@ fn plan_of(pieces: &Pieces) -> Vec<(Option<String>, String)> {
 
 #[test]
 fn the_images_are_parts_attached_to_the_lines_and_results_of_the_activity() {
-    let plan = plan(&bag(&drawing(&inputs()), Some(png(1200, 600))), choices()).unwrap_or_else(|e| panic!("{e:?}"));
-    let lines = plan.objects.iter().find(|o| o.qualified_type == "resqml22.PolylineSetRepresentation").unwrap();
+    let plan =
+        plan(&bag(&drawing(&inputs()), Some(png(1200, 600))), choices()).unwrap_or_else(|e| panic!("{e:?}"));
+    let lines = plan
+        .objects
+        .iter()
+        .find(|o| o.qualified_type == "resqml22.PolylineSetRepresentation")
+        .unwrap();
 
-    let mut store = energyml_build::epc::open(None, "section.epc", Arc::new(energyml_schemas::all())).expect("an empty package");
+    let mut store = energyml_build::epc::open(None, "section.epc", Arc::new(energyml_schemas::all()))
+        .expect("an empty package");
     let made = energyml_build::apply::apply_with(&plan, &mut store, &when(), false);
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+    assert!(
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
 
     // What the reader of the domain finds on the lines.
@@ -366,8 +535,20 @@ fn the_images_are_parts_attached_to_the_lines_and_results_of_the_activity() {
         .inspect(|piece| assert_eq!(piece.form, Form::PartAddress, "{piece:?}"))
         // The lines' own — attached to the feature, they would be inherited
         // through the interpretation, and listed all the same.
-        .inspect(|piece| assert_eq!((piece.provenance.kind, piece.provenance.carrier.as_str()), ("self", lines.uuid.as_str()), "{piece:?}"))
-        .map(|piece| (piece.location.clone(), piece.media_type.clone(), piece.category.clone()))
+        .inspect(|piece| {
+            assert_eq!(
+                (piece.provenance.kind, piece.provenance.carrier.as_str()),
+                ("self", lines.uuid.as_str()),
+                "{piece:?}"
+            )
+        })
+        .map(|piece| {
+            (
+                piece.location.clone(),
+                piece.media_type.clone(),
+                piece.category.clone(),
+            )
+        })
         .collect();
     found.sort_by(|a, b| format!("{:?}", a.0).cmp(&format!("{:?}", b.0)));
     assert_eq!(
@@ -375,14 +556,27 @@ fn the_images_are_parts_attached_to_the_lines_and_results_of_the_activity() {
         vec![
             // A folder named after the section — `Section A–A'`, what a part
             // name may hold of it.
-            (Location::Part("media/sections/Section_A_A/long.png".into()), Some("image/png".into()), Some("SectionView".into())),
-            (Location::Part("media/sections/Section_A_A/long.svg".into()), Some("image/svg+xml".into()), Some("SectionView".into())),
+            (
+                Location::Part("media/sections/Section_A_A/long.png".into()),
+                Some("image/png".into()),
+                Some("SectionView".into())
+            ),
+            (
+                Location::Part("media/sections/Section_A_A/long.svg".into()),
+                Some("image/svg+xml".into()),
+                Some("SectionView".into())
+            ),
         ]
     );
 
     // The activity names each attachment among its outputs.
     let activity = made.activity.as_ref().expect("an activity is written");
-    let read = energyml_core::json::write_value(store.get_object(activity).expect("the activity reads").as_reflect());
+    let read = energyml_core::json::write_value(
+        store
+            .get_object(activity)
+            .expect("the activity reads")
+            .as_reflect(),
+    );
     let outputs: Vec<&str> = read["Parameter"]
         .as_array()
         .unwrap()
@@ -390,14 +584,26 @@ fn the_images_are_parts_attached_to_the_lines_and_results_of_the_activity() {
         .filter(|p| p["Title"] == "output")
         .filter_map(|p| p["DataObject"]["Uuid"].as_str())
         .collect();
-    for attachment in plan.objects.iter().filter(|o| o.qualified_type == "eml23.Attachment") {
-        assert!(outputs.contains(&attachment.uuid.as_str()), "{} is not an output: {outputs:?}", attachment.title);
+    for attachment in plan
+        .objects
+        .iter()
+        .filter(|o| o.qualified_type == "eml23.Attachment")
+    {
+        assert!(
+            outputs.contains(&attachment.uuid.as_str()),
+            "{} is not an output: {outputs:?}",
+            attachment.title
+        );
     }
 }
 
 #[test]
 fn a_system_the_drawing_does_not_state_is_refused_with_both() {
-    let refusals = plan(&bag(&drawing(&inputs()), None), choices().set("sourceEpsg", 27572).set("project", 2154)).expect_err("accepted");
+    let refusals = plan(
+        &bag(&drawing(&inputs()), None),
+        choices().set("sourceEpsg", 27572).set("project", 2154),
+    )
+    .expect_err("accepted");
     let why = said(&refusals, "sourceEpsg");
     assert!(why.contains("EPSG:2154") && why.contains("EPSG:27572"), "{why}");
 }
@@ -409,7 +615,8 @@ fn a_png_of_another_drawing_or_no_png_at_all_is_refused() {
     let refusals = plan(&bag(&svg, Some(png(800, 800))), choices()).expect_err("accepted");
     assert!(said(&refusals, "png").contains("800×800"));
     // A JPEG named `.png` is not a PNG.
-    let refusals = plan(&bag(&svg, Some(b"\xff\xd8\xff\xe0 a jpeg".to_vec())), choices()).expect_err("accepted");
+    let refusals =
+        plan(&bag(&svg, Some(b"\xff\xd8\xff\xe0 a jpeg".to_vec())), choices()).expect_err("accepted");
     assert!(said(&refusals, "png").contains("not a PNG"));
     // One pixel of rounding is the same drawing.
     plan(&bag(&svg, Some(png(1201, 600))), choices()).unwrap_or_else(|e| panic!("{e:?}"));
@@ -417,9 +624,17 @@ fn a_png_of_another_drawing_or_no_png_at_all_is_refused() {
 
 #[test]
 fn an_image_that_is_not_a_section_view_is_refused_by_name() {
-    let refusals = plan(&bag("<svg xmlns=\"http://www.w3.org/2000/svg\"/>", None), choices()).expect_err("accepted");
+    let refusals = plan(
+        &bag("<svg xmlns=\"http://www.w3.org/2000/svg\"/>", None),
+        choices(),
+    )
+    .expect_err("accepted");
     assert!(said(&refusals, "svg").contains("no section-view metadata"));
-    let refusals = plan(&bag(&drawing(&inputs()), None), choices().set("elevation", f64::NAN)).expect_err("accepted");
+    let refusals = plan(
+        &bag(&drawing(&inputs()), None),
+        choices().set("elevation", f64::NAN),
+    )
+    .expect_err("accepted");
     assert!(!refusals.is_empty());
 }
 
@@ -433,7 +648,11 @@ fn frame(uuid: &str, kind: &str, down: bool) -> Known {
         y_offset: 0.0,
         z_offset: 0.0,
         areal_rotation: 0.0,
-        vertical_direction: if down { VerticalDirection::Down } else { VerticalDirection::Up },
+        vertical_direction: if down {
+            VerticalDirection::Down
+        } else {
+            VerticalDirection::Up
+        },
         vertical_quantity: VerticalQuantity::Length,
         horizontal_uom: Some("m".into()),
         vertical_uom: Some("m".into()),
@@ -474,7 +693,16 @@ fn a_frame_of_the_package_is_compatible_when_it_is_what_would_be_created() {
     let mut other = frame("h-other", COMPOUND, false);
     other.crs_epsg = Some(27572);
 
-    let all = [down.clone(), moved, turned, timed, feet, projected, other, up.clone()];
+    let all = [
+        down.clone(),
+        moved,
+        turned,
+        timed,
+        feet,
+        projected,
+        other,
+        up.clone(),
+    ];
     let found: Vec<&str> = energyml_build::crs::compatible_frames(&all, 2154)
         .iter()
         .map(|k| k.reference.as_ref().unwrap().uuid.as_str())
@@ -487,15 +715,29 @@ fn a_frame_of_the_package_is_compatible_when_it_is_what_would_be_created() {
 /// its depth — the lines are at 35 m above the datum either way.
 #[test]
 fn under_a_frame_counting_down_the_elevation_is_written_as_its_depth() {
-    let depth = frame("0b4f0000-0000-4000-8000-000000000001", "eml23.LocalEngineeringCompoundCrs", true);
+    let depth = frame(
+        "0b4f0000-0000-4000-8000-000000000001",
+        "eml23.LocalEngineeringCompoundCrs",
+        true,
+    );
     let dor = depth.crs.as_ref().unwrap().dor();
-    let choices = Choices::new().set("crs", dor).set("elevation", 35.0).set("title", "Section A–A'");
+    let choices = Choices::new()
+        .set("crs", dor)
+        .set("elevation", 35.0)
+        .set("title", "Section A–A'");
     let pieces = bag(&drawing(&inputs()), None).with("crs", Source::Object(depth));
     let plan = plan(&pieces, choices).unwrap_or_else(|e| panic!("{e:?}"));
     let nodes = patches(&plan);
-    assert_eq!(nodes[0], vec![[EAST, NORTH, -35.0], [EAST + 1000.0, NORTH, -35.0]]);
+    assert_eq!(
+        nodes[0],
+        vec![[EAST, NORTH, -35.0], [EAST + 1000.0, NORTH, -35.0]]
+    );
     // And no frame is created: the plan writes none of the four.
-    assert!(plan.objects.iter().all(|o| !o.qualified_type.ends_with("Crs")), "{:?}", plan.objects.iter().map(|o| &o.qualified_type).collect::<Vec<_>>());
+    assert!(
+        plan.objects.iter().all(|o| !o.qualified_type.ends_with("Crs")),
+        "{:?}",
+        plan.objects.iter().map(|o| &o.qualified_type).collect::<Vec<_>>()
+    );
 }
 
 // -- further drawings -------------------------------------------------------
@@ -504,7 +746,8 @@ fn under_a_frame_counting_down_the_elevation_is_written_as_its_depth() {
 /// A section is exported as several files — its cross sections, its plan view —
 /// and each is attached to the lines the way the first is.
 fn view_of(inputs: &Inputs, target: Target) -> String {
-    let catalogue = energyml_section::compute(inputs, |_, _| unreachable!("nothing is asked")).expect("the inputs are valid");
+    let catalogue = energyml_section::compute(inputs, |_, _| unreachable!("nothing is asked"))
+        .expect("the inputs are valid");
     energyml_section::draw(&catalogue, &View::new(target, [800.0, 400.0]))
 }
 
@@ -513,15 +756,35 @@ fn view_of(inputs: &Inputs, target: Target) -> String {
 fn bag_with_drawings(files: &[(&str, Vec<u8>)]) -> Pieces {
     let mut pieces = bag(&drawing(&inputs()), Some(png(1200, 600)));
     for (rank, (name, bytes)) in files.iter().enumerate() {
-        let slot = if rank == 0 { "drawings".to_string() } else { format!("drawings {}", rank + 1) };
-        pieces = pieces.with(&slot, Source::Document { name: name.to_string(), content_type: None, bytes: bytes.clone() });
+        let slot = if rank == 0 {
+            "drawings".to_string()
+        } else {
+            format!("drawings {}", rank + 1)
+        };
+        pieces = pieces.with(
+            &slot,
+            Source::Document {
+                name: name.to_string(),
+                content_type: None,
+                bytes: bytes.clone(),
+            },
+        );
     }
     pieces
 }
 
 fn three_more() -> Vec<(&'static str, Vec<u8>)> {
     vec![
-        ("cross-1.svg", view_of(&inputs(), Target::Section { key: SectionKey::Cross { index: 0 } }).into_bytes()),
+        (
+            "cross-1.svg",
+            view_of(
+                &inputs(),
+                Target::Section {
+                    key: SectionKey::Cross { index: 0 },
+                },
+            )
+            .into_bytes(),
+        ),
         ("plan.svg", view_of(&inputs(), Target::Plan).into_bytes()),
         ("plan.png", png(1200, 600)),
     ]
@@ -544,11 +807,17 @@ fn attached(store: &energyml_storage::EpcStore, lines: &str) -> Vec<(String, Opt
 }
 
 fn lines_of(plan: &Plan) -> String {
-    plan.objects.iter().find(|o| o.qualified_type == "resqml22.PolylineSetRepresentation").unwrap().uuid.clone()
+    plan.objects
+        .iter()
+        .find(|o| o.qualified_type == "resqml22.PolylineSetRepresentation")
+        .unwrap()
+        .uuid
+        .clone()
 }
 
 fn empty_store() -> energyml_storage::EpcStore {
-    energyml_build::epc::open(None, "section.epc", Arc::new(energyml_schemas::all())).expect("an empty package")
+    energyml_build::epc::open(None, "section.epc", Arc::new(energyml_schemas::all()))
+        .expect("an empty package")
 }
 
 #[test]
@@ -556,7 +825,11 @@ fn further_drawings_are_attached_to_the_lines_in_the_folder_of_the_section() {
     let plan = plan(&bag_with_drawings(&three_more()), choices()).unwrap_or_else(|e| panic!("{e:?}"));
     let mut store = empty_store();
     let made = energyml_build::apply::apply_with(&plan, &mut store, &when(), false);
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+    assert!(
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
 
     // Five drawings in all, every one in `media/sections/Section_A_A/`, its type
@@ -575,15 +848,44 @@ fn further_drawings_are_attached_to_the_lines_in_the_folder_of_the_section() {
     assert_eq!(attached(&store, &lines_of(&plan)), want);
 
     // The activity names a part per further drawing, in the order given.
-    let parts: Vec<Value> = recorded(&plan).into_iter().filter(|(t, _)| t == "drawingPart").map(|(_, v)| v).collect();
-    assert_eq!(parts, vec![json!(format!("{folder}/cross-1.svg")), json!(format!("{folder}/plan.svg")), json!(format!("{folder}/plan.png"))]);
+    let parts: Vec<Value> = recorded(&plan)
+        .into_iter()
+        .filter(|(t, _)| t == "drawingPart")
+        .map(|(_, v)| v)
+        .collect();
+    assert_eq!(
+        parts,
+        vec![
+            json!(format!("{folder}/cross-1.svg")),
+            json!(format!("{folder}/plan.svg")),
+            json!(format!("{folder}/plan.png"))
+        ]
+    );
     // And each attachment is an output of the run.
     let activity = made.activity.as_ref().expect("an activity is written");
-    let read = energyml_core::json::write_value(store.get_object(activity).expect("the activity reads").as_reflect());
-    let outputs: Vec<&str> =
-        read["Parameter"].as_array().unwrap().iter().filter(|p| p["Title"] == "output").filter_map(|p| p["DataObject"]["Uuid"].as_str()).collect();
-    for attachment in plan.objects.iter().filter(|o| o.qualified_type == "eml23.Attachment") {
-        assert!(outputs.contains(&attachment.uuid.as_str()), "{} is not an output", attachment.title);
+    let read = energyml_core::json::write_value(
+        store
+            .get_object(activity)
+            .expect("the activity reads")
+            .as_reflect(),
+    );
+    let outputs: Vec<&str> = read["Parameter"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|p| p["Title"] == "output")
+        .filter_map(|p| p["DataObject"]["Uuid"].as_str())
+        .collect();
+    for attachment in plan
+        .objects
+        .iter()
+        .filter(|o| o.qualified_type == "eml23.Attachment")
+    {
+        assert!(
+            outputs.contains(&attachment.uuid.as_str()),
+            "{} is not an output",
+            attachment.title
+        );
     }
 }
 
@@ -593,14 +895,26 @@ fn further_drawings_are_attached_to_the_lines_in_the_folder_of_the_section() {
 fn a_further_drawing_is_typed_by_its_bytes_and_never_its_name() {
     let svg = view_of(&inputs(), Target::Plan).into_bytes();
     let made = plan(&bag_with_drawings(&[("plan.png", svg)]), choices()).unwrap_or_else(|e| panic!("{e:?}"));
-    let part = made.media.iter().find(|m| m.path.ends_with("/plan.png")).expect("the part is written under the name it came with");
+    let part = made
+        .media
+        .iter()
+        .find(|m| m.path.ends_with("/plan.png"))
+        .expect("the part is written under the name it came with");
     assert_eq!(part.content_type, "image/svg+xml");
 
-    let refusals = plan(&bag_with_drawings(&[("plan.svg", b"\xff\xd8\xff\xe0 a jpeg".to_vec())]), choices()).expect_err("accepted");
+    let refusals = plan(
+        &bag_with_drawings(&[("plan.svg", b"\xff\xd8\xff\xe0 a jpeg".to_vec())]),
+        choices(),
+    )
+    .expect_err("accepted");
     let why = said(&refusals, "drawings");
     assert!(why.contains("plan.svg") && why.contains("neither a PNG"), "{why}");
     // A text that is not an SVG document is no drawing either.
-    let refusals = plan(&bag_with_drawings(&[("notes.svg", b"<html><svg/></html>".to_vec())]), choices()).expect_err("accepted");
+    let refusals = plan(
+        &bag_with_drawings(&[("notes.svg", b"<html><svg/></html>".to_vec())]),
+        choices(),
+    )
+    .expect_err("accepted");
     assert!(said(&refusals, "drawings").contains("notes.svg"));
 }
 
@@ -609,11 +923,16 @@ fn a_further_drawing_is_typed_by_its_bytes_and_never_its_name() {
 #[test]
 fn two_drawings_of_the_same_file_name_are_refused_by_name() {
     let plan_view = view_of(&inputs(), Target::Plan).into_bytes();
-    let refusals = plan(&bag_with_drawings(&[("plan.svg", plan_view.clone()), ("plan.svg", plan_view.clone())]), choices()).expect_err("accepted");
+    let refusals = plan(
+        &bag_with_drawings(&[("plan.svg", plan_view.clone()), ("plan.svg", plan_view.clone())]),
+        choices(),
+    )
+    .expect_err("accepted");
     let why = said(&refusals, "drawings");
     assert!(why.contains("plan.svg") && why.contains("same name"), "{why}");
     // The same name as the section's own SVG, from another folder of the machine.
-    let refusals = plan(&bag_with_drawings(&[("exports/long.svg", plan_view)]), choices()).expect_err("accepted");
+    let refusals =
+        plan(&bag_with_drawings(&[("exports/long.svg", plan_view)]), choices()).expect_err("accepted");
     assert!(said(&refusals, "drawings").contains("long.svg"));
 }
 
@@ -623,12 +942,20 @@ fn a_drawing_of_another_trace_is_refused() {
     let mut elsewhere = inputs();
     elsewhere.trace = vec![[EAST, NORTH + 5000.0], [EAST + 1000.0, NORTH + 5000.0]];
     let other = view_of(&elsewhere, Target::Plan).into_bytes();
-    let why = said(&plan(&bag_with_drawings(&[("plan.svg", other)]), choices()).expect_err("accepted"), "drawings");
+    let why = said(
+        &plan(&bag_with_drawings(&[("plan.svg", other)]), choices()).expect_err("accepted"),
+        "drawings",
+    );
     assert!(why.contains("another trace"), "{why}");
     // An SVG that states no section view is a picture, attached as it is — and said.
     let picture = b"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"/>".to_vec();
-    let made = plan(&bag_with_drawings(&[("legend.svg", picture)]), choices()).unwrap_or_else(|e| panic!("{e:?}"));
-    assert!(made.says.iter().any(|n| n.key == "drawings" && n.detail.contains("states no section view")));
+    let made =
+        plan(&bag_with_drawings(&[("legend.svg", picture)]), choices()).unwrap_or_else(|e| panic!("{e:?}"));
+    assert!(
+        made.says
+            .iter()
+            .any(|n| n.key == "drawings" && n.detail.contains("states no section view"))
+    );
 }
 
 /// Storing the section again — redrawn, so other bytes — writes the same
@@ -644,7 +971,12 @@ fn a_second_storing_replaces_every_drawing_it_attached() {
     assert_ne!(bytes(&first), bytes(&again), "the test redraws");
 
     let uuids = |plan: &Plan| {
-        let mut found: Vec<String> = plan.objects.iter().filter(|o| o.qualified_type == "eml23.Attachment").map(|o| o.uuid.clone()).collect();
+        let mut found: Vec<String> = plan
+            .objects
+            .iter()
+            .filter(|o| o.qualified_type == "eml23.Attachment")
+            .map(|o| o.uuid.clone())
+            .collect();
         found.sort();
         found
     };
@@ -654,7 +986,11 @@ fn a_second_storing_replaces_every_drawing_it_attached() {
     let mut store = empty_store();
     for plan in [&first, &again] {
         let made = energyml_build::apply::apply_with(plan, &mut store, &when(), false);
-        assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+        assert!(
+            made.invalid.is_empty(),
+            "objects written against their schema: {:#?}",
+            made.invalid
+        );
         assert!(made.refused.is_empty(), "{:?}", made.refused);
     }
     assert_eq!(attached(&store, &lines_of(&first)).len(), 5);
@@ -665,20 +1001,41 @@ fn a_second_storing_replaces_every_drawing_it_attached() {
 /// is the same one.
 #[test]
 fn without_further_drawings_the_plan_is_what_it_was() {
-    let alone = plan(&bag(&drawing(&inputs()), Some(png(1200, 600))), choices()).unwrap_or_else(|e| panic!("{e:?}"));
+    let alone =
+        plan(&bag(&drawing(&inputs()), Some(png(1200, 600))), choices()).unwrap_or_else(|e| panic!("{e:?}"));
     let with = plan(&bag_with_drawings(&three_more()), choices()).unwrap_or_else(|e| panic!("{e:?}"));
-    let identity = |plan: &Plan| -> Vec<(String, String)> { plan.objects.iter().map(|o| (o.qualified_type.clone(), o.uuid.clone())).collect() };
+    let identity = |plan: &Plan| -> Vec<(String, String)> {
+        plan.objects
+            .iter()
+            .map(|o| (o.qualified_type.clone(), o.uuid.clone()))
+            .collect()
+    };
     let (before, after) = (identity(&alone), identity(&with));
-    assert_eq!(before.len(), 9, "four frame objects, the feature, its interpretation, the lines, two attachments: {before:?}");
+    assert_eq!(
+        before.len(),
+        9,
+        "four frame objects, the feature, its interpretation, the lines, two attachments: {before:?}"
+    );
     assert_eq!(after[..before.len()], before[..]);
     assert_eq!(after.len(), before.len() + 3);
     // The identity is the rule the section's own files always had — the lines
     // and what the file is — and a further drawing's is the lines and its file's
     // name: this is what makes a second storing replace.
     let lines = lines_of(&alone);
-    let derived = |what: &str| Identity::derived().uuid(&format!("section-view:attachment:{}:{what}", lines.to_ascii_lowercase()), 0).unwrap();
+    let derived = |what: &str| {
+        Identity::derived()
+            .uuid(
+                &format!("section-view:attachment:{}:{what}", lines.to_ascii_lowercase()),
+                0,
+            )
+            .unwrap()
+    };
     let attachments = |plan: &Plan| -> Vec<(String, String)> {
-        plan.objects.iter().filter(|o| o.qualified_type == "eml23.Attachment").map(|o| (o.json["ContentUri"].as_str().unwrap().to_string(), o.uuid.clone())).collect()
+        plan.objects
+            .iter()
+            .filter(|o| o.qualified_type == "eml23.Attachment")
+            .map(|o| (o.json["ContentUri"].as_str().unwrap().to_string(), o.uuid.clone()))
+            .collect()
     };
     assert_eq!(
         attachments(&alone),
@@ -690,15 +1047,27 @@ fn without_further_drawings_the_plan_is_what_it_was() {
     assert_eq!(
         attachments(&with)[2..],
         [
-            ("media/sections/Section_A_A/cross-1.svg".to_string(), derived("file:cross-1.svg")),
-            ("media/sections/Section_A_A/plan.svg".to_string(), derived("file:plan.svg")),
-            ("media/sections/Section_A_A/plan.png".to_string(), derived("file:plan.png")),
+            (
+                "media/sections/Section_A_A/cross-1.svg".to_string(),
+                derived("file:cross-1.svg")
+            ),
+            (
+                "media/sections/Section_A_A/plan.svg".to_string(),
+                derived("file:plan.svg")
+            ),
+            (
+                "media/sections/Section_A_A/plan.png".to_string(),
+                derived("file:plan.png")
+            ),
         ]
     );
     // No `drawingPart` and no note without them.
     assert!(recorded(&alone).iter().all(|(t, _)| t != "drawingPart"));
     assert!(alone.says.iter().all(|n| n.key != "drawings"));
-    assert_eq!(recorded(&with).iter().filter(|(t, _)| t != "drawingPart").count(), recorded(&alone).len());
+    assert_eq!(
+        recorded(&with).iter().filter(|(t, _)| t != "drawingPart").count(),
+        recorded(&alone).len()
+    );
 }
 
 /// The need: it is enough to list the activities that point to the right
@@ -709,31 +1078,66 @@ fn without_further_drawings_the_plan_is_what_it_was() {
 /// the activity's title instead of its descriptor, or drop the template test.
 #[test]
 fn a_stored_section_is_listed_by_its_activitys_template_never_its_title() {
-    let section = plan(&bag(&drawing(&inputs()), Some(png(1200, 600))), choices()).unwrap_or_else(|e| panic!("{e:?}"));
+    let section =
+        plan(&bag(&drawing(&inputs()), Some(png(1200, 600))), choices()).unwrap_or_else(|e| panic!("{e:?}"));
     let mut other = Registry::new()
-        .plan("crs", &Pieces::default(), &Choices::default().set("epsg", 2154), &Identity::derived(), &when())
+        .plan(
+            "crs",
+            &Pieces::default(),
+            &Choices::default().set("epsg", 2154),
+            &Identity::derived(),
+            &when(),
+        )
         .unwrap_or_else(|e| panic!("{:?}", e.refusals()));
     other.activity.title = section.activity.title.clone();
     let mut store = empty_store();
     for plan in [&section, &other] {
         let made = energyml_build::apply::apply_with(plan, &mut store, &when(), false);
-        assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+        assert!(
+            made.invalid.is_empty(),
+            "objects written against their schema: {:#?}",
+            made.invalid
+        );
         assert!(made.refused.is_empty(), "{:?}", made.refused);
     }
-    let activities = store.resources().into_iter().filter(|one| one.qualified_type.ends_with("Activity")).count();
+    let activities = store
+        .resources()
+        .into_iter()
+        .filter(|one| one.qualified_type.ends_with("Activity"))
+        .count();
     assert_eq!(activities, 2, "both operations wrote their activity");
 
     let listed = energyml_build::read::stored_sections(&store);
     assert_eq!(listed.len(), 1, "{listed:?}");
-    let lines = store.find_by_uuid(&lines_of(&section)).expect("the lines are written").uri.clone();
+    let lines = store
+        .find_by_uuid(&lines_of(&section))
+        .expect("the lines are written")
+        .uri
+        .clone();
     assert_eq!(listed[0].polyline.as_deref(), Some(lines.as_str()));
     assert_eq!(listed[0].name.as_deref(), Some("Section A–A'"));
     assert_eq!(listed[0].title, section.activity.title);
     // The drawing to reopen is the part the activity names, and it reads by
     // that name alone — no index of the package.
-    assert_eq!(listed[0].drawings, vec![section.media.iter().find(|m| m.path.ends_with(".svg")).unwrap().path.clone()]);
+    assert_eq!(
+        listed[0].drawings,
+        vec![
+            section
+                .media
+                .iter()
+                .find(|m| m.path.ends_with(".svg"))
+                .unwrap()
+                .path
+                .clone()
+        ]
+    );
     let key = format!("part:{}", listed[0].drawings[0]);
     let read = attachments::attachment_bytes(&store, &key).unwrap_or_else(|e| panic!("{key}: {e}"));
-    let attachments::Fetched::Bytes { bytes, .. } = read else { panic!("{key} is held in the package") };
-    assert!(String::from_utf8_lossy(&bytes).contains("<svg"), "{key} is the drawing");
+    let attachments::Fetched::Bytes { bytes, .. } = read else {
+        panic!("{key} is held in the package")
+    };
+    assert!(
+        String::from_utf8_lossy(&bytes).contains("<svg"),
+        "{key} is the drawing"
+    );
 }

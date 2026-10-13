@@ -27,7 +27,7 @@
 //! will refuse. That is [`Constraint`], and it decides whether the front end greys the
 //! control out or opens it.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// What a slot accepts of an axis — a package, a version — in three states.
 ///
@@ -112,7 +112,12 @@ pub struct TypeChoice {
 impl TypeChoice {
     /// A type choice, filtered on this word, with no package constraint.
     pub fn filtered(filter: &'static str) -> Self {
-        Self { filter, package: Constraint::Any, version: Constraint::Any, concrete_only: true }
+        Self {
+            filter,
+            package: Constraint::Any,
+            version: Constraint::Any,
+            concrete_only: true,
+        }
     }
 
     /// The same, bound to this package and this version — fixed.
@@ -193,8 +198,16 @@ pub fn matching<'a>(
         .iter()
         .filter(|one| !(choice.concrete_only && one.is_abstract))
         .filter(|one| wanted.is_empty() || one.name.to_ascii_lowercase().contains(&wanted))
-        .filter(|one| in_package.as_ref().is_none_or(|want| one.package.eq_ignore_ascii_case(want)))
-        .filter(|one| in_version.as_ref().is_none_or(|want| one.version.eq_ignore_ascii_case(want)))
+        .filter(|one| {
+            in_package
+                .as_ref()
+                .is_none_or(|want| one.package.eq_ignore_ascii_case(want))
+        })
+        .filter(|one| {
+            in_version
+                .as_ref()
+                .is_none_or(|want| one.version.eq_ignore_ascii_case(want))
+        })
         .collect()
 }
 
@@ -245,13 +258,49 @@ mod tests {
 
     fn build() -> Vec<Candidate> {
         vec![
-            one("resqml22.BoundaryFeature", "BoundaryFeature", "resqml", "2.2", false),
-            one("resqml22.CulturalFeature", "CulturalFeature", "resqml", "2.2", false),
-            one("resqml22.AbstractFeature", "AbstractFeature", "resqml", "2.2", true),
-            one("resqml22.HorizonInterpretation", "HorizonInterpretation", "resqml", "2.2", false),
-            one("resqml20.obj_TectonicBoundaryFeature", "TectonicBoundaryFeature", "resqml", "2.0.1", false),
+            one(
+                "resqml22.BoundaryFeature",
+                "BoundaryFeature",
+                "resqml",
+                "2.2",
+                false,
+            ),
+            one(
+                "resqml22.CulturalFeature",
+                "CulturalFeature",
+                "resqml",
+                "2.2",
+                false,
+            ),
+            one(
+                "resqml22.AbstractFeature",
+                "AbstractFeature",
+                "resqml",
+                "2.2",
+                true,
+            ),
+            one(
+                "resqml22.HorizonInterpretation",
+                "HorizonInterpretation",
+                "resqml",
+                "2.2",
+                false,
+            ),
+            one(
+                "resqml20.obj_TectonicBoundaryFeature",
+                "TectonicBoundaryFeature",
+                "resqml",
+                "2.0.1",
+                false,
+            ),
             one("witsml21.Well", "Well", "witsml", "2.1", false),
-            one("witsml21.WellboreCompletion", "WellboreCompletion", "witsml", "2.1", false),
+            one(
+                "witsml21.WellboreCompletion",
+                "WellboreCompletion",
+                "witsml",
+                "2.1",
+                false,
+            ),
         ]
     }
 
@@ -273,7 +322,11 @@ mod tests {
         // `AbstractFeature` carries the word and the version; it is not writable.
         // To make it fail: let `is_abstract` through.
         let choice = TypeChoice::filtered("feature").only_in(&["resqml"], &["2.2"]);
-        assert!(!named(matching(&build(), &choice, None, None, None)).iter().any(|one| one.contains("Abstract")));
+        assert!(
+            !named(matching(&build(), &choice, None, None, None))
+                .iter()
+                .any(|one| one.contains("Abstract"))
+        );
     }
 
     #[test]
@@ -302,13 +355,22 @@ mod tests {
     fn a_proposed_package_can_be_changed() {
         // Otherwise the input is enabled: `Prefer` opens the control, and
         // what is typed there wins.
-        let choice = TypeChoice { filter: "", package: Constraint::Prefer(&["resqml"]), version: Constraint::Any, concrete_only: true };
+        let choice = TypeChoice {
+            filter: "",
+            package: Constraint::Prefer(&["resqml"]),
+            version: Constraint::Any,
+            concrete_only: true,
+        };
         assert_eq!(
             named(matching(&build(), &choice, None, Some("witsml"), None)),
             vec!["witsml21.Well", "witsml21.WellboreCompletion"]
         );
         // And with nothing asked, the proposed value applies.
-        assert!(named(matching(&build(), &choice, None, None, None)).iter().all(|one| one.starts_with("resqml")));
+        assert!(
+            named(matching(&build(), &choice, None, None, None))
+                .iter()
+                .all(|one| one.starts_with("resqml"))
+        );
     }
 
     #[test]
@@ -318,7 +380,19 @@ mod tests {
         assert!(why.contains("witsml21.Well") && why.contains("resqml"), "{why}");
         let why = refuses(&choice, &one("resqml20.x", "x", "resqml", "2.0.1", false)).expect("refused");
         assert!(why.contains("2.0.1") && why.contains("2.2"), "{why}");
-        assert_eq!(refuses(&choice, &one("resqml22.BoundaryFeature", "BoundaryFeature", "resqml", "2.2", false)), None);
+        assert_eq!(
+            refuses(
+                &choice,
+                &one(
+                    "resqml22.BoundaryFeature",
+                    "BoundaryFeature",
+                    "resqml",
+                    "2.2",
+                    false
+                )
+            ),
+            None
+        );
     }
 
     #[test]

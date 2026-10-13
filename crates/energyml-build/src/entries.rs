@@ -42,7 +42,8 @@ pub trait Reader {
     /// refused there, by that reader's own words. A reader that can do better
     /// — a disk, a network — says so by implementing this.
     fn bytes(&mut self, source: &Where) -> Result<(Vec<u8>, Option<String>), String> {
-        self.text(source).map(|(text, declared)| (text.into_bytes(), declared))
+        self.text(source)
+            .map(|(text, declared)| (text.into_bytes(), declared))
     }
 
     /// The package at that path, opened **once** however many of its objects
@@ -93,7 +94,10 @@ impl From<String> for Unread {
 pub fn slot_of(input: &str) -> (Option<&str>, &str) {
     match input.split_once('=') {
         Some((slot, rest))
-            if !slot.is_empty() && slot.chars().all(|c| c.is_alphanumeric() || matches!(c, ' ' | '-' | '_')) =>
+            if !slot.is_empty()
+                && slot
+                    .chars()
+                    .all(|c| c.is_alphanumeric() || matches!(c, ' ' | '-' | '_')) =>
         {
             (Some(slot), rest)
         }
@@ -116,7 +120,11 @@ impl Numbering {
     pub fn next(&mut self, slot: &str) -> String {
         let count = self.seen.entry(slot.to_string()).or_default();
         *count += 1;
-        if *count == 1 { slot.to_string() } else { format!("{slot} {count}") }
+        if *count == 1 {
+            slot.to_string()
+        } else {
+            format!("{slot} {count}")
+        }
     }
 }
 
@@ -131,7 +139,13 @@ pub fn reads_as_table(name: &str, declared: Option<&str>) -> bool {
     if lower.ends_with(".csv") || lower.ends_with(".tsv") {
         return true;
     }
-    let kind = declared.unwrap_or_default().split(';').next().unwrap_or_default().trim().to_ascii_lowercase();
+    let kind = declared
+        .unwrap_or_default()
+        .split(';')
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase();
     matches!(kind.as_str(), "text/csv" | "text/tab-separated-values")
 }
 
@@ -154,8 +168,17 @@ pub fn reads_as_geojson(name: &str, declared: Option<&str>) -> bool {
         return true;
     }
     // The parameters after `;` are the charset and friends, never the type.
-    let kind = declared.unwrap_or_default().split(';').next().unwrap_or_default().trim().to_ascii_lowercase();
-    matches!(kind.as_str(), "application/geo+json" | "application/json" | "text/json")
+    let kind = declared
+        .unwrap_or_default()
+        .split(';')
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase();
+    matches!(
+        kind.as_str(),
+        "application/geo+json" | "application/json" | "text/json"
+    )
 }
 
 /// A table template, read through the caller's reader.
@@ -188,19 +211,33 @@ pub fn read_text(
     // house rule of `mesh.rs` applies: the name decides, never the bytes.
     if reads_as_table(name, declared) {
         let Some(template) = template else {
-            return Err(Unread::NoTemplate { source: label.to_string() });
+            return Err(Unread::NoTemplate {
+                source: label.to_string(),
+            });
         };
         let dialect = template.dialect.unwrap_or_else(|| Dialect::sniff(text));
-        let span = tracing::info_span!("table.parse", file = name, bytes = text.len(), rows = tracing::field::Empty).entered();
+        let span = tracing::info_span!(
+            "table.parse",
+            file = name,
+            bytes = text.len(),
+            rows = tracing::field::Empty
+        )
+        .entered();
         let table = tabular::read(name, text, dialect).map_err(|why| format!("{label}: {why}"))?;
         span.record("rows", table.len());
         drop(span);
-        return Ok(Source::Table { name: name.to_string(), table, template: template.clone() });
+        return Ok(Source::Table {
+            name: name.to_string(),
+            table,
+            template: template.clone(),
+        });
     }
     if !reads_as_geojson(name, declared) {
         return Err(Unread::Said(format!(
             "{label}: only a GeoJSON can be read here for now — meshes and the objects of a package come next\n                   (it is named `{name}`{}, and a GeoJSON is named `.geojson` or `.json`, or served as `application/geo+json`)",
-            declared.map(|kind| format!(", served as `{kind}`")).unwrap_or_default(),
+            declared
+                .map(|kind| format!(", served as `{kind}`"))
+                .unwrap_or_default(),
         )));
     }
     let collection = {
@@ -210,7 +247,10 @@ pub fn read_text(
     for why in &collection.refused {
         set_aside.push(format!("{name}: {why}"));
     }
-    Ok(Source::Features { name: name.to_string(), features: collection.features })
+    Ok(Source::Features {
+        name: name.to_string(),
+        features: collection.features,
+    })
 }
 
 /// A file as a **document** piece: its bytes, untouched, and the content type
@@ -220,7 +260,11 @@ pub fn read_text(
 /// that reads one. It is the operation's declaration that asks for a document
 /// ([`takes_document`]), and only then is a file read this way.
 pub fn read_document(name: &str, bytes: Vec<u8>, declared: Option<&str>) -> Source {
-    Source::Document { name: name.to_string(), content_type: declared.map(str::to_string), bytes }
+    Source::Document {
+        name: name.to_string(),
+        content_type: declared.map(str::to_string),
+        bytes,
+    }
 }
 
 /// Whether a file given to `slot` — or to no slot — is to be read as a
@@ -237,7 +281,9 @@ pub fn takes_document(takes: &[crate::operation::Slot], slot: Option<&str>) -> b
         _ => None,
     };
     match slot {
-        Some(slot) => takes.iter().any(|one| one.name == slot && kind_of(one) == Some("document")),
+        Some(slot) => takes
+            .iter()
+            .any(|one| one.name == slot && kind_of(one) == Some("document")),
         None => {
             let kinds: Vec<&str> = takes.iter().filter_map(kind_of).collect();
             kinds.contains(&"document") && !kinds.iter().any(|kind| matches!(*kind, "table" | "features"))
@@ -250,7 +296,11 @@ pub fn takes_document(takes: &[crate::operation::Slot], slot: Option<&str>) -> b
 /// the naming for a slot. `key` is the object's uri — what the caller holds —;
 /// a bare uuid (the `model.epc#<uuid>` of the command line) is accepted at this
 /// door and refused, with its candidates, when the package holds it twice.
-pub fn object_pieces(store: &EpcStore, key: &str, slot: Option<&str>) -> Result<Vec<(String, Source)>, String> {
+pub fn object_pieces(
+    store: &EpcStore,
+    key: &str,
+    slot: Option<&str>,
+) -> Result<Vec<(String, Source)>, String> {
     let read = crate::read::pieces_of_object(store, key)?;
     Ok(match slot {
         Some(slot) => crate::read::in_slot(slot, read),
@@ -322,7 +372,14 @@ pub fn pieces_for(
             continue;
         }
         let (text, declared) = reader.text(&source)?;
-        let read = read_text(&name, &text, declared.as_deref(), template, source.as_str(), set_aside)?;
+        let read = read_text(
+            &name,
+            &text,
+            declared.as_deref(),
+            template,
+            source.as_str(),
+            set_aside,
+        )?;
         pieces = pieces.with(piece, read);
     }
     Ok(pieces)

@@ -53,15 +53,28 @@ fn held(objects: Vec<Box<dyn DynObject>>) -> Prefetched {
 }
 
 fn dor(uuid: &str, qualified_type: &str, title: &str) -> eml23::DataObjectReference {
-    eml23::DataObjectReference { uuid: uuid.to_string(), qualified_type: qualified_type.to_string(), title: title.to_string(), ..Default::default() }
+    eml23::DataObjectReference {
+        uuid: uuid.to_string(),
+        qualified_type: qualified_type.to_string(),
+        title: title.to_string(),
+        ..Default::default()
+    }
 }
 
 fn citation(title: &str) -> eml23::Citation {
-    eml23::Citation { title: title.to_string(), ..Default::default() }
+    eml23::Citation {
+        title: title.to_string(),
+        ..Default::default()
+    }
 }
 
 fn integers(values: &[i64]) -> eml23::IntegerXmlArray {
-    eml23::IntegerXmlArray { count_per_value: 1, null_value: -1, values: values.to_vec(), ..Default::default() }
+    eml23::IntegerXmlArray {
+        count_per_value: 1,
+        null_value: -1,
+        values: values.to_vec(),
+        ..Default::default()
+    }
 }
 
 /// A frame at MD 0, 10, 20, 30 — three intervals, four nodes.
@@ -70,11 +83,13 @@ fn frame() -> resqml22::WellboreFrameRepresentation {
         uuid: FRAME.to_string(),
         citation: citation("F1 — frame"),
         node_count: 4,
-        node_md: Some(eml23::AbstractFloatingPointArray::FloatingPointXmlArray(eml23::FloatingPointXmlArray {
-            count_per_value: 1,
-            values: vec![0.0, 10.0, 20.0, 30.0],
-            ..Default::default()
-        })),
+        node_md: Some(eml23::AbstractFloatingPointArray::FloatingPointXmlArray(
+            eml23::FloatingPointXmlArray {
+                count_per_value: 1,
+                values: vec![0.0, 10.0, 20.0, 30.0],
+                ..Default::default()
+            },
+        )),
         trajectory: dor(TRAJECTORY, "resqml22.WellboreTrajectoryRepresentation", "F1"),
         ..Default::default()
     }
@@ -100,7 +115,9 @@ fn table() -> eml23::ColumnBasedTable {
         key_column: vec![eml23::Column {
             title: Some("STRA".to_string()),
             value_count_per_row: 1,
-            values: Some(eml23::AbstractValueArray::IntegerXmlArray(integers(&[10, 20, 35]))),
+            values: Some(eml23::AbstractValueArray::IntegerXmlArray(integers(&[
+                10, 20, 35,
+            ]))),
             ..Default::default()
         }],
         ..Default::default()
@@ -121,7 +138,9 @@ fn strata_property() -> resqml22::DiscreteProperty {
         indexable_element: eml23::IndexableElement::Intervals,
         value_count_per_indexable_element: vec![1],
         supporting_representation: dor(FRAME, "resqml22.WellboreFrameRepresentation", "F1 — frame"),
-        values_for_patch: vec![resqml22::AbstractValueArray::IntegerXmlArray(integers(&[20, 10, 35]))],
+        values_for_patch: vec![resqml22::AbstractValueArray::IntegerXmlArray(integers(&[
+            20, 10, 35,
+        ]))],
         category_lookup: Some(dor(TABLE, "eml23.ColumnBasedTable", "STRA")),
         ..Default::default()
     }
@@ -131,7 +150,12 @@ fn strata_property() -> resqml22::DiscreteProperty {
 /// (the default) must resolve to, rather than the property's own
 /// title, which repeats the well.
 fn pressure_kind() -> eml23::PropertyKind {
-    eml23::PropertyKind { uuid: PRESSURE_KIND.to_string(), schema_version: "2.3".to_string(), citation: citation("Pressure"), ..Default::default() }
+    eml23::PropertyKind {
+        uuid: PRESSURE_KIND.to_string(),
+        schema_version: "2.3".to_string(),
+        citation: citation("Pressure"),
+        ..Default::default()
+    }
 }
 
 /// A discrete property with no `CategoryLookup`: one value per interval,
@@ -144,11 +168,13 @@ fn pressure_property() -> resqml22::DiscreteProperty {
         value_count_per_indexable_element: vec![1],
         property_kind: dor(PRESSURE_KIND, "eml23.PropertyKind", "a stale cached title"),
         supporting_representation: dor(FRAME, "resqml22.WellboreFrameRepresentation", "F1 — frame"),
-        values_for_patch: vec![resqml22::AbstractValueArray::FloatingPointXmlArray(eml23::FloatingPointXmlArray {
-            count_per_value: 1,
-            values: vec![10.0, 20.0, 30.0],
-            ..Default::default()
-        })],
+        values_for_patch: vec![resqml22::AbstractValueArray::FloatingPointXmlArray(
+            eml23::FloatingPointXmlArray {
+                count_per_value: 1,
+                values: vec![10.0, 20.0, 30.0],
+                ..Default::default()
+            },
+        )],
         ..Default::default()
     }
 }
@@ -162,20 +188,32 @@ fn node_property() -> resqml22::DiscreteProperty {
         indexable_element: eml23::IndexableElement::Nodes,
         value_count_per_indexable_element: vec![1],
         supporting_representation: dor(FRAME, "resqml22.WellboreFrameRepresentation", "F1 — frame"),
-        values_for_patch: vec![resqml22::AbstractValueArray::FloatingPointXmlArray(eml23::FloatingPointXmlArray {
-            count_per_value: 1,
-            values: vec![1.0, 2.0, 3.0, 4.0],
-            ..Default::default()
-        })],
+        values_for_patch: vec![resqml22::AbstractValueArray::FloatingPointXmlArray(
+            eml23::FloatingPointXmlArray {
+                count_per_value: 1,
+                values: vec![1.0, 2.0, 3.0, 4.0],
+                ..Default::default()
+            },
+        )],
         ..Default::default()
     }
 }
 
 fn summary(uuid: &str, qualified_type: &str) -> ObjectSummary {
-    ObjectSummary { uri: uuid.to_string(), uuid: uuid.to_string(), qualified_type: qualified_type.to_string(), content_type: String::new(), locator: String::new() }
+    ObjectSummary {
+        uri: uuid.to_string(),
+        uuid: uuid.to_string(),
+        qualified_type: qualified_type.to_string(),
+        content_type: String::new(),
+        locator: String::new(),
+    }
 }
 
-fn package() -> (resqml22::WellboreFrameRepresentation, Prefetched, Vec<ObjectSummary>) {
+fn package() -> (
+    resqml22::WellboreFrameRepresentation,
+    Prefetched,
+    Vec<ObjectSummary>,
+) {
     let source = held(vec![
         boxed(table()),
         boxed(strata_property()),
@@ -196,10 +234,17 @@ fn track_labelled(board: &energyml_sheet::layout::Board, header: &str) -> Vec<Op
         if let Track::Intervals(track) = track
             && track.header == header
         {
-            return track.intervals.iter().map(|interval| interval.text.clone()).collect();
+            return track
+                .intervals
+                .iter()
+                .map(|interval| interval.text.clone())
+                .collect();
         }
     }
-    panic!("no track headed `{header}` among {:?}", board.tracks.iter().map(track_header).collect::<Vec<_>>());
+    panic!(
+        "no track headed `{header}` among {:?}",
+        board.tracks.iter().map(track_header).collect::<Vec<_>>()
+    );
 }
 
 fn track_header(track: &Track) -> &str {
@@ -224,7 +269,14 @@ fn a_category_property_is_labelled_through_its_lookup_table() {
     let read = read::board_of_frame(&frame, &resources, &source, &options).expect("the frame reads");
 
     let labels = track_labelled(&read.board, "STRA");
-    assert_eq!(labels, vec![Some("Bartonian".to_string()), Some("Lutetian".to_string()), Some("Priabonian".to_string())]);
+    assert_eq!(
+        labels,
+        vec![
+            Some("Bartonian".to_string()),
+            Some("Lutetian".to_string()),
+            Some("Priabonian".to_string())
+        ]
+    );
 }
 
 /// A property column's header is its `PropertyKind`'s title by default
@@ -242,7 +294,14 @@ fn a_propertys_column_is_headed_by_its_property_kind_title_by_default() {
     let read = read::board_of_frame(&frame, &resources, &source, &options).expect("the frame reads");
 
     let values = track_labelled(&read.board, "Pressure");
-    assert_eq!(values, vec![Some("10".to_string()), Some("20".to_string()), Some("30".to_string())]);
+    assert_eq!(
+        values,
+        vec![
+            Some("10".to_string()),
+            Some("20".to_string()),
+            Some("30".to_string())
+        ]
+    );
 }
 
 /// A per-node property creates no section — it is counted in the board's
@@ -260,17 +319,27 @@ fn a_per_node_property_creates_no_track_and_is_counted() {
     let read = read::board_of_frame(&frame, &resources, &source, &options).expect("the frame reads");
 
     assert!(
-        read.board.tracks.iter().all(|track| track_header(track) != "F1 — a per-node log"),
+        read.board
+            .tracks
+            .iter()
+            .all(|track| track_header(track) != "F1 — a per-node log"),
         "a per-node property must not become a track: {:?}",
         read.board.tracks.iter().map(track_header).collect::<Vec<_>>()
     );
     assert!(
-        read.notes.iter().any(|note| note.contains('1') && note.contains("node")),
+        read.notes
+            .iter()
+            .any(|note| note.contains('1') && note.contains("node")),
         "the one node property must be counted in the notes: {:?}",
         read.notes
     );
     // Exactly three tracks: MD, STRA, Pressure — the node property adds none.
-    assert_eq!(read.board.tracks.len(), 3, "{:?}", read.board.tracks.iter().map(track_header).collect::<Vec<_>>());
+    assert_eq!(
+        read.board.tracks.len(),
+        3,
+        "{:?}",
+        read.board.tracks.iter().map(track_header).collect::<Vec<_>>()
+    );
 }
 
 /// The laid-out sections follow the frame's own `[md_top, md_base]` bounds —
@@ -287,10 +356,19 @@ fn sections_follow_the_intervals_bounds() {
     let options = Options::new("MD (m)");
     let read = read::board_of_frame(&frame, &resources, &source, &options).expect("the frame reads");
 
-    let params = Params { proportion: "to-scale".to_string(), height: HeightGoal::Total(300.0), page_width_mm: 200.0, text_size_pt: 8.0 };
+    let params = Params {
+        proportion: "to-scale".to_string(),
+        height: HeightGoal::Total(300.0),
+        page_width_mm: 200.0,
+        text_size_pt: 8.0,
+    };
     let layout = energyml_sheet::layout::compute(&read.board, &params).expect("a valid board");
 
-    let bounds: Vec<(f64, f64)> = layout.sections.iter().map(|section| (section.md_top, section.md_base)).collect();
+    let bounds: Vec<(f64, f64)> = layout
+        .sections
+        .iter()
+        .map(|section| (section.md_top, section.md_base))
+        .collect();
     assert_eq!(bounds, vec![(0.0, 10.0), (10.0, 20.0), (20.0, 30.0)]);
 }
 
@@ -315,11 +393,16 @@ fn the_md_track_carries_the_callers_header() {
 #[test]
 fn track_selection_orders_and_filters_the_property_tracks() {
     let (frame, source, resources) = package();
-    let options = Options::new("MD (m)").with_tracks(TrackSelection::Only(vec![PRESSURE_PROPERTY.to_string()]));
+    let options =
+        Options::new("MD (m)").with_tracks(TrackSelection::Only(vec![PRESSURE_PROPERTY.to_string()]));
     let read = read::board_of_frame(&frame, &resources, &source, &options).expect("the frame reads");
 
     let headers: Vec<&str> = read.board.tracks.iter().map(track_header).collect();
-    assert_eq!(headers, vec!["MD (m)", "Pressure"], "only the requested property track is drawn: {headers:?}");
+    assert_eq!(
+        headers,
+        vec!["MD (m)", "Pressure"],
+        "only the requested property track is drawn: {headers:?}"
+    );
 }
 
 /// **Two columns never share a header.** Two properties of one kind would
@@ -336,17 +419,36 @@ fn two_properties_of_one_kind_are_headed_by_their_own_titles() {
     let mut second = pressure_property();
     second.uuid = "c0000000-0000-4000-8000-000000000006".to_string();
     second.citation = citation("F1 — pressure, yearly — 2023");
-    let mut objects: Vec<Box<dyn DynObject>> =
-        vec![boxed(table()), boxed(strata_property()), boxed(pressure_kind()), boxed(pressure_property()), boxed(node_property())];
+    let mut objects: Vec<Box<dyn DynObject>> = vec![
+        boxed(table()),
+        boxed(strata_property()),
+        boxed(pressure_kind()),
+        boxed(pressure_property()),
+        boxed(node_property()),
+    ];
     objects.push(boxed(second));
     let source = held(objects);
-    resources.push(summary("c0000000-0000-4000-8000-000000000006", "resqml22.DiscreteProperty"));
+    resources.push(summary(
+        "c0000000-0000-4000-8000-000000000006",
+        "resqml22.DiscreteProperty",
+    ));
 
-    let read = read::board_of_frame(&frame, &resources, &source, &Options::new("MD (m)")).expect("the frame reads");
+    let read =
+        read::board_of_frame(&frame, &resources, &source, &Options::new("MD (m)")).expect("the frame reads");
     let headers: Vec<&str> = read.board.tracks.iter().map(track_header).collect();
-    assert!(!headers.contains(&"Pressure"), "a shared kind is no header: {headers:?}");
-    assert!(headers.contains(&"pressure, yearly — 2022") && headers.contains(&"pressure, yearly — 2023"), "{headers:?}");
-    assert!(read.notes.iter().any(|note| note.contains("Pressure")), "the change of header is said: {:?}", read.notes);
+    assert!(
+        !headers.contains(&"Pressure"),
+        "a shared kind is no header: {headers:?}"
+    );
+    assert!(
+        headers.contains(&"pressure, yearly — 2022") && headers.contains(&"pressure, yearly — 2023"),
+        "{headers:?}"
+    );
+    assert!(
+        read.notes.iter().any(|note| note.contains("Pressure")),
+        "the change of header is said: {:?}",
+        read.notes
+    );
 }
 
 /// What a property title keeps once the frame's words are gone — cut on a
@@ -354,9 +456,15 @@ fn two_properties_of_one_kind_are_headed_by_their_own_titles() {
 #[test]
 fn a_title_loses_only_the_whole_words_it_shares_with_its_frame() {
     use read::beyond_shared;
-    assert_eq!(beyond_shared("BSS000NSYT — source_etage", "BSS000NSYT — frame"), "source_etage");
+    assert_eq!(
+        beyond_shared("BSS000NSYT — source_etage", "BSS000NSYT — frame"),
+        "source_etage"
+    );
     // `f` is shared with `frame`, but half a word is not a word.
-    assert_eq!(beyond_shared("BSS000NSYT — formation", "BSS000NSYT — frame"), "formation");
+    assert_eq!(
+        beyond_shared("BSS000NSYT — formation", "BSS000NSYT — frame"),
+        "formation"
+    );
     // The frame's title a prefix of the property's.
     assert_eq!(beyond_shared("GTH-1 porosity", "GTH-1"), "porosity");
     // Nothing shared, or nothing left: the title, whole.
@@ -376,7 +484,13 @@ fn a_title_loses_only_the_whole_words_it_shares_with_its_frame() {
 /// version 2 then lands on the sheet of version 1.
 #[test]
 fn a_property_on_another_version_of_the_frame_is_not_on_this_sheet() {
-    let headers = |board: &energyml_sheet::layout::Board| board.tracks.iter().map(|track| track_header(track).to_string()).collect::<Vec<_>>();
+    let headers = |board: &energyml_sheet::layout::Board| {
+        board
+            .tracks
+            .iter()
+            .map(|track| track_header(track).to_string())
+            .collect::<Vec<_>>()
+    };
     let mut frame = frame();
     frame.object_version = Some("1".to_string());
     let options = Options::new("MD (m)");
@@ -390,7 +504,15 @@ fn a_property_on_another_version_of_the_frame_is_not_on_this_sheet() {
     };
 
     let on_one = named("1");
-    assert!(headers(&on_one.board).contains(&"Pressure".to_string()), "{:?}", headers(&on_one.board));
+    assert!(
+        headers(&on_one.board).contains(&"Pressure".to_string()),
+        "{:?}",
+        headers(&on_one.board)
+    );
     let on_two = named("2");
-    assert!(!headers(&on_two.board).contains(&"Pressure".to_string()), "{:?}", headers(&on_two.board));
+    assert!(
+        !headers(&on_two.board).contains(&"Pressure".to_string()),
+        "{:?}",
+        headers(&on_two.board)
+    );
 }

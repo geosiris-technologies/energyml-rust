@@ -53,13 +53,23 @@ pub struct ErasedSurface {
 
 /// A cloud without the nodes `gone` flags.
 pub fn erase_from_cloud(points: &[[f64; 3]], gone: &[bool]) -> Vec<[f64; 3]> {
-    points.iter().enumerate().filter(|(at, _)| !gone.get(*at).copied().unwrap_or(false)).map(|(_, p)| *p).collect()
+    points
+        .iter()
+        .enumerate()
+        .filter(|(at, _)| !gone.get(*at).copied().unwrap_or(false))
+        .map(|(_, p)| *p)
+        .collect()
 }
 
 /// Polylines without the nodes `gone` flags — `runs` their node counts,
 /// `closed` their closure (missing entries: open).
 pub fn erase_from_lines(points: &[[f64; 3]], runs: &[u32], closed: &[bool], gone: &[bool]) -> ErasedLines {
-    let mut out = ErasedLines { points: Vec::new(), runs: Vec::new(), closed: Vec::new(), dropped: 0 };
+    let mut out = ErasedLines {
+        points: Vec::new(),
+        runs: Vec::new(),
+        closed: Vec::new(),
+        dropped: 0,
+    };
     let is_gone = |at: usize| gone.get(at).copied().unwrap_or(false);
     let push = |piece: &mut Vec<usize>, out: &mut ErasedLines| {
         match piece.len() {
@@ -119,7 +129,11 @@ pub fn erase_from_lines(points: &[[f64; 3]], runs: &[u32], closed: &[bool], gone
 /// A triangulated surface without the nodes `gone` flags.
 pub fn erase_from_surface(points: &[[f64; 3]], triangles: &[[u32; 3]], gone: &[bool]) -> ErasedSurface {
     let is_gone = |at: u32| gone.get(at as usize).copied().unwrap_or(false);
-    let kept: Vec<[u32; 3]> = triangles.iter().filter(|t| !t.iter().any(|&v| is_gone(v))).copied().collect();
+    let kept: Vec<[u32; 3]> = triangles
+        .iter()
+        .filter(|t| !t.iter().any(|&v| is_gone(v)))
+        .copied()
+        .collect();
     let removed = triangles.len() - kept.len();
     let mut used = vec![false; points.len()];
     for t in &kept {
@@ -139,7 +153,12 @@ pub fn erase_from_surface(points: &[[f64; 3]], triangles: &[[u32; 3]], gone: &[b
         }
     }
     let triangles = kept.iter().map(|t| t.map(|v| rank[v as usize])).collect();
-    ErasedSurface { points: out_points, triangles, removed, orphans }
+    ErasedSurface {
+        points: out_points,
+        triangles,
+        removed,
+        orphans,
+    }
 }
 
 /// Twice the signed area of a triangle in plan.
@@ -155,9 +174,14 @@ pub fn flipped(before: &[[f64; 3]], after: &[[f64; 3]], triangles: &[[u32; 3]]) 
         .iter()
         .filter(|t| {
             let [a, b, c] = t.map(|v| v as usize);
-            let (Some(&a0), Some(&b0), Some(&c0), Some(&a1), Some(&b1), Some(&c1)) =
-                (before.get(a), before.get(b), before.get(c), after.get(a), after.get(b), after.get(c))
-            else {
+            let (Some(&a0), Some(&b0), Some(&c0), Some(&a1), Some(&b1), Some(&c1)) = (
+                before.get(a),
+                before.get(b),
+                before.get(c),
+                after.get(a),
+                after.get(b),
+                after.get(c),
+            ) else {
                 return false;
             };
             let (s0, s1) = (signed_area(a0, b0, c0), signed_area(a1, b1, c1));
@@ -177,7 +201,10 @@ mod tests {
     #[test]
     fn a_cloud_loses_the_points() {
         let points = [[0.0; 3], [1.0, 0.0, 0.0], [2.0, 0.0, 0.0]];
-        assert_eq!(erase_from_cloud(&points, &flags(3, &[1])), vec![[0.0; 3], [2.0, 0.0, 0.0]]);
+        assert_eq!(
+            erase_from_cloud(&points, &flags(3, &[1])),
+            vec![[0.0; 3], [2.0, 0.0, 0.0]]
+        );
     }
 
     #[test]
@@ -197,7 +224,10 @@ mod tests {
         let made = erase_from_lines(&points, &[5], &[true], &flags(5, &[1]));
         assert_eq!(made.runs, vec![4]);
         assert_eq!(made.closed, vec![false]);
-        assert_eq!(made.points.iter().map(|p| p[0] as usize).collect::<Vec<_>>(), vec![2, 3, 4, 0]);
+        assert_eq!(
+            made.points.iter().map(|p| p[0] as usize).collect::<Vec<_>>(),
+            vec![2, 3, 4, 0]
+        );
     }
 
     #[test]
@@ -214,7 +244,13 @@ mod tests {
     fn a_surface_loses_the_triangles_and_compacts_its_orphans() {
         // A fan of four triangles round a centre 4; taking out corner 0 takes
         // the two triangles that name it — and no node is left unnamed.
-        let points = [[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [2.0, 2.0, 0.0], [0.0, 2.0, 0.0], [1.0, 1.0, 0.0]];
+        let points = [
+            [0.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0],
+            [2.0, 2.0, 0.0],
+            [0.0, 2.0, 0.0],
+            [1.0, 1.0, 0.0],
+        ];
         let triangles = [[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]];
         let made = erase_from_surface(&points, &triangles, &flags(5, &[0]));
         assert_eq!((made.removed, made.orphans), (2, 0));
@@ -229,7 +265,10 @@ mod tests {
         let points = [[0.0, 0.0, 0.0], [9.0, 9.0, 9.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
         let made = erase_from_surface(&points, &[[0, 2, 3], [1, 2, 3]], &flags(4, &[1]));
         assert_eq!(made.triangles, vec![[0, 1, 2]]);
-        assert_eq!(made.points, vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]);
+        assert_eq!(
+            made.points,
+            vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+        );
     }
 
     #[test]

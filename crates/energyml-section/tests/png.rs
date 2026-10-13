@@ -11,7 +11,15 @@ fn svg() -> String {
         Item::Well(well("A", 150.0, 12.0, Side::Left)),
         Item::Trace(trace("H", vec![vec![[0.0, -100.0], [1000.0, -100.0]]])),
     ]);
-    energyml_section::draw(&cat, &View::new(Target::Section { key: SectionKey::Long }, [600.0, 300.0]))
+    energyml_section::draw(
+        &cat,
+        &View::new(
+            Target::Section {
+                key: SectionKey::Long,
+            },
+            [600.0, 300.0],
+        ),
+    )
 }
 
 #[cfg(feature = "png")]

@@ -33,15 +33,24 @@ fn frame(version: &str, title: &str) -> Box<dyn DynObject> {
          <eml:Format>test</eml:Format></eml:Citation>\
          </resqml:WellboreFrameRepresentation>"
     );
-    energyml_schemas::all().read_xml_as(CT, xml.as_bytes(), ReadMode::Tolerant).expect("readable").0
+    energyml_schemas::all()
+        .read_xml_as(CT, xml.as_bytes(), ReadMode::Tolerant)
+        .expect("readable")
+        .0
 }
 
 fn two_frames() -> EpcStore {
     let empty = energyml_storage::extract::empty_package(Some(0)).expect("an empty package");
-    let mut store =
-        EpcStore::from_reader(Box::new(Cursor::new(empty)), "frames.epc", Arc::new(energyml_schemas::all())).expect("opens");
+    let mut store = EpcStore::from_reader(
+        Box::new(Cursor::new(empty)),
+        "frames.epc",
+        Arc::new(energyml_schemas::all()),
+    )
+    .expect("opens");
     store.put(frame("1", "F, first")).expect("the first");
-    store.put_as_new_version(frame("2", "F, second")).expect("the second");
+    store
+        .put_as_new_version(frame("2", "F, second"))
+        .expect("the second");
     store
 }
 
@@ -51,13 +60,32 @@ fn a_title_selects_the_version_that_carries_it() {
     assert_eq!(store.resources().len(), 2, "one uuid, two entries");
 
     let second = energyml_geometry::wells::of_store(&store.resources(), &store, &["F, second".to_string()]);
-    assert_eq!(second.notes.len(), 1, "exactly the second goes on: {:?}", second.notes);
-    assert!(second.notes[0].contains("version='2'"), "and the note names it by its uri: {:?}", second.notes);
+    assert_eq!(
+        second.notes.len(),
+        1,
+        "exactly the second goes on: {:?}",
+        second.notes
+    );
+    assert!(
+        second.notes[0].contains("version='2'"),
+        "and the note names it by its uri: {:?}",
+        second.notes
+    );
 
     let first = energyml_geometry::wells::of_store(&store.resources(), &store, &["F, first".to_string()]);
-    assert_eq!(first.notes.len(), 1, "exactly the first goes on: {:?}", first.notes);
+    assert_eq!(
+        first.notes.len(),
+        1,
+        "exactly the first goes on: {:?}",
+        first.notes
+    );
     assert!(first.notes[0].contains("version='1'"), "{:?}", first.notes);
 
     let both = energyml_geometry::wells::of_store(&store.resources(), &store, &[]);
-    assert_eq!(both.notes.len(), 2, "no filter: both entries are read, each as itself: {:?}", both.notes);
+    assert_eq!(
+        both.notes.len(),
+        2,
+        "no filter: both entries are read, each as itself: {:?}",
+        both.notes
+    );
 }

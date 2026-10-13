@@ -162,10 +162,15 @@ fn a_type_written_under_an_ancestors_element_names_one_it_descends_from() {
     let registry = energyml_schemas::all();
     let mut seen = 0;
     for info in registry.types() {
-        let Some(element) = info.root_element else { continue };
+        let Some(element) = info.root_element else {
+            continue;
+        };
         seen += 1;
         let name = info.qualified_type.unwrap_or(info.name);
-        assert!(info.is_top_level && info.content_type.is_some(), "{name} is a part with an identity of its own");
+        assert!(
+            info.is_top_level && info.content_type.is_some(),
+            "{name} is a part with an identity of its own"
+        );
         let mut at = info.base.map(|base| base());
         let found = loop {
             let Some(ancestor) = at else { break None };
@@ -179,7 +184,10 @@ fn a_type_written_under_an_ancestors_element_names_one_it_descends_from() {
     }
     // The one case that forced the rule must be among them — without it this
     // loop passes on an empty registry.
-    let injection = registry.by_qualified_type("prodml23.InjectionFlowTest").expect("registered").info;
+    let injection = registry
+        .by_qualified_type("prodml23.InjectionFlowTest")
+        .expect("registered")
+        .info;
     assert_eq!(injection.root_element, Some("FlowTestActivity"));
     assert!(seen >= 1);
 }

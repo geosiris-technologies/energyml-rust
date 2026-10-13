@@ -15,15 +15,25 @@ fn key(n: &str) -> String {
 /// there: east for 600 m, then north for 400.
 fn bent() -> Catalogue {
     let mut cat = catalogue(vec![
-        Item::Trace(trace("H", vec![vec![[0.0, -100.0], [600.0, -100.0], [1000.0, -100.0]]])),
-        Item::Trace(trace("L", vec![vec![[0.0, -300.0], [600.0, -300.0], [1000.0, -300.0]]])),
+        Item::Trace(trace(
+            "H",
+            vec![vec![[0.0, -100.0], [600.0, -100.0], [1000.0, -100.0]]],
+        )),
+        Item::Trace(trace(
+            "L",
+            vec![vec![[0.0, -300.0], [600.0, -300.0], [1000.0, -300.0]]],
+        )),
     ]);
     cat.long.trace = vec![[0.0, 0.0], [600.0, 0.0], [600.0, 400.0]];
     cat
 }
 
 fn fill_down(n: &str) -> FillChoice {
-    FillChoice { key: key(n), up: false, down: true }
+    FillChoice {
+        key: key(n),
+        up: false,
+        down: true,
+    }
 }
 
 #[test]
@@ -52,13 +62,22 @@ fn a_vertex_of_the_drawing_is_a_vertex_of_the_panel_on_the_trace() {
     let made = panels(&cat, &v);
     assert_eq!(made.len(), 1);
     let panel = &made[0];
-    assert_eq!((panel.section, panel.key.as_str()), (SectionKey::Long, key("H").as_str()));
+    assert_eq!(
+        (panel.section, panel.key.as_str()),
+        (SectionKey::Long, key("H").as_str())
+    );
     let vertices: Vec<[f64; 3]> = panel.polygons.iter().flatten().copied().collect();
-    assert_eq!(vertices.len(), drawn.len(), "the same vertices, none added or lost");
+    assert_eq!(
+        vertices.len(),
+        drawn.len(),
+        "the same vertices, none added or lost"
+    );
     for [s, z] in drawn {
         let [x, y] = point_at(&cat.long.trace, s);
         assert!(
-            vertices.iter().any(|p| (p[0] - x).abs() < 1e-6 && (p[1] - y).abs() < 1e-6 && (p[2] - z).abs() < 1e-6),
+            vertices
+                .iter()
+                .any(|p| (p[0] - x).abs() < 1e-6 && (p[1] - y).abs() < 1e-6 && (p[2] - z).abs() < 1e-6),
             "(s = {s}, z = {z}) should be ({x}, {y}, {z}) in the panel: {vertices:?}"
         );
     }
@@ -102,14 +121,46 @@ fn the_colour_is_the_drawings_the_scene_first() {
 fn the_panels_follow_the_same_rule_as_the_drawing() {
     use crate::layout::surface;
     let cat = catalogue(vec![
-        surface("H", TraceRole::Horizon, Some("fh"), vec![vec![[0.0, -100.0], [1000.0, -100.0]]]),
-        surface("H2", TraceRole::Horizon, Some("fh"), vec![vec![[0.0, -100.01], [1000.0, -100.01]]]),
-        surface("F", TraceRole::Fault, Some("ff"), vec![vec![[200.0, -50.0], [600.0, -350.0]]]),
-        surface("A", TraceRole::Horizon, Some("fa"), vec![vec![[0.0, -200.0], [600.0, -200.0]]]),
-        surface("B", TraceRole::Horizon, Some("fb"), vec![vec![[0.0, -300.0], [1000.0, -300.0]]]),
+        surface(
+            "H",
+            TraceRole::Horizon,
+            Some("fh"),
+            vec![vec![[0.0, -100.0], [1000.0, -100.0]]],
+        ),
+        surface(
+            "H2",
+            TraceRole::Horizon,
+            Some("fh"),
+            vec![vec![[0.0, -100.01], [1000.0, -100.01]]],
+        ),
+        surface(
+            "F",
+            TraceRole::Fault,
+            Some("ff"),
+            vec![vec![[200.0, -50.0], [600.0, -350.0]]],
+        ),
+        surface(
+            "A",
+            TraceRole::Horizon,
+            Some("fa"),
+            vec![vec![[0.0, -200.0], [600.0, -200.0]]],
+        ),
+        surface(
+            "B",
+            TraceRole::Horizon,
+            Some("fb"),
+            vec![vec![[0.0, -300.0], [1000.0, -300.0]]],
+        ),
     ]);
     let mut v = view();
-    v.fills = vec![fill_down("H"), FillChoice { key: key("F"), up: true, down: true }];
+    v.fills = vec![
+        fill_down("H"),
+        FillChoice {
+            key: key("F"),
+            up: true,
+            down: true,
+        },
+    ];
     let made = panels(&cat, &v);
     assert_eq!(made.len(), 1, "the fault has no panel: {made:?}");
     let panel = &made[0];
@@ -120,7 +171,13 @@ fn the_panels_follow_the_same_rule_as_the_drawing() {
     floors.sort_by(f64::total_cmp);
     assert_eq!(floors, vec![-300.0, -200.0], "{:?}", panel.sz);
     // And they are the drawing's polygons, vertex for vertex.
-    let drawn: usize = layout(&cat, &v).layer("fills").unwrap().objects.iter().map(|o| o.shapes.len()).sum();
+    let drawn: usize = layout(&cat, &v)
+        .layer("fills")
+        .unwrap()
+        .objects
+        .iter()
+        .map(|o| o.shapes.len())
+        .sum();
     assert_eq!(drawn, panel.sz.len());
 }
 
@@ -142,4 +199,3 @@ fn a_panel_carries_its_polygons_in_the_sections_own_s_z() {
         }
     }
 }
-

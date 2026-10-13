@@ -42,12 +42,17 @@ fn dor(uuid: &str, qualified_type: &str) -> eml23::DataObjectReference {
 }
 
 fn citation(title: &str) -> eml23::Citation {
-    eml23::Citation { title: title.to_string(), ..Default::default() }
+    eml23::Citation {
+        title: title.to_string(),
+        ..Default::default()
+    }
 }
 
 fn store() -> EpcStore {
     EpcStore::from_reader(
-        Box::new(Cursor::new(energyml_storage::extract::empty_package(None).expect("an empty package"))),
+        Box::new(Cursor::new(
+            energyml_storage::extract::empty_package(None).expect("an empty package"),
+        )),
         "attachments.epc",
         Arc::new(energyml_schemas::all()),
     )
@@ -95,7 +100,10 @@ fn attach(store: &mut EpcStore, n: u32, target: u32, qualified_type: &str, spec:
             file_type: spec.kind.map(str::to_string),
             category: spec.category.map(str::to_string),
             md: spec.md.map(|value| eml23::MeasuredDepth {
-                measured_depth: eml23::LengthMeasureExt { value, uom: eml23::LengthUomExt::M },
+                measured_depth: eml23::LengthMeasureExt {
+                    value,
+                    uom: eml23::LengthUomExt::M,
+                },
                 datum: None,
             }),
             ..Default::default()
@@ -134,11 +142,18 @@ fn base64_gives_the_rfc_4648_vectors() {
 fn base64_reads_what_the_schema_allows_and_refuses_the_rest() {
     let every: Vec<u8> = (0u8..=255).collect();
     let coded = encode_base64(&every);
-    let wrapped: String = coded.as_bytes().chunks(76).map(|line| format!("{}\r\n", std::str::from_utf8(line).unwrap())).collect();
+    let wrapped: String = coded
+        .as_bytes()
+        .chunks(76)
+        .map(|line| format!("{}\r\n", std::str::from_utf8(line).unwrap()))
+        .collect();
     assert_eq!(decode_base64(&wrapped).unwrap(), every);
     assert!(decode_base64("Zm9v!").is_err(), "`!` is not base 64");
     assert!(decode_base64("Zm9").is_err(), "a short group needs its padding");
-    assert!(decode_base64("Zg==Zg==").is_err(), "a character after the padding");
+    assert!(
+        decode_base64("Zg==Zg==").is_err(),
+        "a character after the padding"
+    );
     assert!(decode_base64("Z").is_err(), "one sextet holds no byte");
 }
 
@@ -149,30 +164,60 @@ fn base64_reads_what_the_schema_allows_and_refuses_the_rest() {
 fn four_forms() -> (EpcStore, PackageIndex) {
     let mut store = store();
     feature(&mut store, 1);
-    store.set_attachment("media/fiche.pdf", b"%PDF-1.4 fiche".to_vec(), Some("application/pdf".into())).unwrap();
+    store
+        .set_attachment(
+            "media/fiche.pdf",
+            b"%PDF-1.4 fiche".to_vec(),
+            Some("application/pdf".into()),
+        )
+        .unwrap();
     store.relate_media(&u(1), "media/fiche.pdf").unwrap();
-    store.set_attachment("media/symbols/piezometre.png", PNG.to_vec(), Some("image/png".into())).unwrap();
+    store
+        .set_attachment(
+            "media/symbols/piezometre.png",
+            PNG.to_vec(),
+            Some("image/png".into()),
+        )
+        .unwrap();
     let ty = "resqml22.WellboreFeature";
     attach(
         &mut store,
         10,
         1,
         ty,
-        Spec { content: PNG.to_vec(), name: Some("tete.png"), kind: Some("image/png"), category: Some("HeadImage"), md: Some(0.0), ..Default::default() },
+        Spec {
+            content: PNG.to_vec(),
+            name: Some("tete.png"),
+            kind: Some("image/png"),
+            category: Some("HeadImage"),
+            md: Some(0.0),
+            ..Default::default()
+        },
     );
     attach(
         &mut store,
         11,
         1,
         ty,
-        Spec { uri: Some("media/symbols/piezometre.png"), name: Some("symbole.png"), kind: Some("image/png"), category: Some("Symbol"), ..Default::default() },
+        Spec {
+            uri: Some("media/symbols/piezometre.png"),
+            name: Some("symbole.png"),
+            kind: Some("image/png"),
+            category: Some("Symbol"),
+            ..Default::default()
+        },
     );
     attach(
         &mut store,
         12,
         1,
         ty,
-        Spec { uri: Some("https://example.org/fiches/p1.pdf"), name: Some("p1.pdf"), kind: Some("application/pdf"), ..Default::default() },
+        Spec {
+            uri: Some("https://example.org/fiches/p1.pdf"),
+            name: Some("p1.pdf"),
+            kind: Some("application/pdf"),
+            ..Default::default()
+        },
     );
     let index = indexed(&store);
     (store, index)
@@ -183,34 +228,70 @@ fn piece<'a>(listing: &'a attachments::Listing, key: &str) -> &'a attachments::P
         .pieces
         .iter()
         .find(|piece| piece.key == key)
-        .unwrap_or_else(|| panic!("`{key}` not listed: {:?}", listing.pieces.iter().map(|p| &p.key).collect::<Vec<_>>()))
+        .unwrap_or_else(|| {
+            panic!(
+                "`{key}` not listed: {:?}",
+                listing.pieces.iter().map(|p| &p.key).collect::<Vec<_>>()
+            )
+        })
 }
 
 /// The piece an `Attachment` object makes: its key is the object's **uri**
 /// (the version it names), so it is found by the uuid the piece reports.
 fn piece_of<'a>(listing: &'a attachments::Listing, uuid: &str) -> &'a attachments::Piece {
-    let found = listing.pieces.iter().find(|piece| piece.attachment.as_deref().is_some_and(|held| held.eq_ignore_ascii_case(uuid)));
-    found.unwrap_or_else(|| panic!("`{uuid}` not listed: {:?}", listing.pieces.iter().map(|p| &p.key).collect::<Vec<_>>()))
+    let found = listing.pieces.iter().find(|piece| {
+        piece
+            .attachment
+            .as_deref()
+            .is_some_and(|held| held.eq_ignore_ascii_case(uuid))
+    });
+    found.unwrap_or_else(|| {
+        panic!(
+            "`{uuid}` not listed: {:?}",
+            listing.pieces.iter().map(|p| &p.key).collect::<Vec<_>>()
+        )
+    })
 }
 
 #[test]
 fn each_form_is_found_by_its_own_door_with_what_the_object_states() {
     let (store, index) = four_forms();
-    let [listing] = attachments_of(&store, &index, &[u(1)]).try_into().expect("one object asked, one listing");
+    let [listing] = attachments_of(&store, &index, &[u(1)])
+        .try_into()
+        .expect("one object asked, one listing");
     assert_eq!(listing.pieces.len(), 4, "{:#?}", listing.pieces);
-    assert!(listing.pieces.iter().all(|piece| piece.provenance.kind == "self" && piece.problems.is_empty()), "{:#?}", listing.pieces);
+    assert!(
+        listing
+            .pieces
+            .iter()
+            .all(|piece| piece.provenance.kind == "self" && piece.problems.is_empty()),
+        "{:#?}",
+        listing.pieces
+    );
 
     // A — a part tied by destinationMedia: no MD, no category, the part's own type and size.
     let a = piece(&listing, "part:media/fiche.pdf");
-    assert_eq!((a.form, a.size, a.media_type.as_deref()), (Form::Part, Some(14), Some("application/pdf")));
+    assert_eq!(
+        (a.form, a.size, a.media_type.as_deref()),
+        (Form::Part, Some(14), Some("application/pdf"))
+    );
     assert_eq!(a.location, Location::Part("media/fiche.pdf".into()));
     assert!(a.md.is_none() && a.category.is_none() && a.attachment.is_none());
 
     // B — the bytes are in the XML; Md = 0 is the head of the hole (the datum).
     let b = piece_of(&listing, &u(10));
-    assert_eq!((b.form, b.location.clone(), b.size), (Form::Inline, Location::Inline, Some(PNG.len() as u64)));
-    assert_eq!(b.md.as_ref().map(|md| (md.value, md.uom.as_str())), Some((0.0, "m")));
-    assert_eq!((b.category.as_deref(), b.file_name.as_deref()), (Some("HeadImage"), Some("tete.png")));
+    assert_eq!(
+        (b.form, b.location.clone(), b.size),
+        (Form::Inline, Location::Inline, Some(PNG.len() as u64))
+    );
+    assert_eq!(
+        b.md.as_ref().map(|md| (md.value, md.uom.as_str())),
+        Some((0.0, "m"))
+    );
+    assert_eq!(
+        (b.category.as_deref(), b.file_name.as_deref()),
+        (Some("HeadImage"), Some("tete.png"))
+    );
 
     // C — `Content` empty and the address a part of the package: the address is followed.
     let c = piece_of(&listing, &u(11));
@@ -220,25 +301,45 @@ fn each_form_is_found_by_its_own_door_with_what_the_object_states() {
     // D — an external address, never followed, so no size.
     let d = piece_of(&listing, &u(12));
     assert_eq!((d.form, d.size), (Form::External, None));
-    assert_eq!(d.location, Location::Address("https://example.org/fiches/p1.pdf".into()));
+    assert_eq!(
+        d.location,
+        Location::Address("https://example.org/fiches/p1.pdf".into())
+    );
 }
 
 #[test]
 fn bytes_are_read_when_asked_and_an_external_address_is_handed_back_not_followed() {
     let (store, _) = four_forms();
     let bytes = |key: &str| match attachment_bytes(&store, key).unwrap_or_else(|why| panic!("{why}")) {
-        Fetched::Bytes { bytes, media_type, file_name } => (bytes, media_type, file_name),
+        Fetched::Bytes {
+            bytes,
+            media_type,
+            file_name,
+        } => (bytes, media_type, file_name),
         other => panic!("bytes expected, got {other:?}"),
     };
     assert_eq!(bytes("part:media/fiche.pdf").0, b"%PDF-1.4 fiche");
     let (inline, kind, name) = bytes(&format!("object:{}", u(10)));
-    assert_eq!((inline, kind.as_deref(), name.as_deref()), (PNG.to_vec(), Some("image/png"), Some("tete.png")));
-    assert_eq!(bytes(&format!("object:{}", u(11))).0, PNG, "C reads the part its address names");
+    assert_eq!(
+        (inline, kind.as_deref(), name.as_deref()),
+        (PNG.to_vec(), Some("image/png"), Some("tete.png"))
+    );
+    assert_eq!(
+        bytes(&format!("object:{}", u(11))).0,
+        PNG,
+        "C reads the part its address names"
+    );
     assert_eq!(
         attachment_bytes(&store, &format!("object:{}", u(12))).unwrap(),
-        Fetched::External { url: "https://example.org/fiches/p1.pdf".into(), media_type: Some("application/pdf".into()) }
+        Fetched::External {
+            url: "https://example.org/fiches/p1.pdf".into(),
+            media_type: Some("application/pdf".into())
+        }
     );
-    assert!(attachment_bytes(&store, "nonsense").is_err(), "a key of neither kind is refused by its shape");
+    assert!(
+        attachment_bytes(&store, "nonsense").is_err(),
+        "a key of neither kind is refused by its shape"
+    );
 }
 
 // -- what does not go ------------------------------------------------------------
@@ -250,13 +351,53 @@ fn bytes_are_read_when_asked_and_an_external_address_is_handed_back_not_followed
 fn what_does_not_go_is_said_never_silently_listed() {
     let mut store = store();
     feature(&mut store, 1);
-    store.set_attachment("media/a.png", b"AAAA".to_vec(), Some("image/png".into())).unwrap();
+    store
+        .set_attachment("media/a.png", b"AAAA".to_vec(), Some("image/png".into()))
+        .unwrap();
     let ty = "resqml22.WellboreFeature";
     attach(&mut store, 20, 1, ty, Spec::default()); // nothing at all
-    attach(&mut store, 21, 1, ty, Spec { uri: Some("media/absent.png"), ..Default::default() }); // a part nobody holds
-    attach(&mut store, 22, 1, ty, Spec { content: b"BBBB".to_vec(), uri: Some("media/a.png"), ..Default::default() }); // two sources, two files
-    attach(&mut store, 23, 1, ty, Spec { content: b"AAAA".to_vec(), uri: Some("media/a.png"), ..Default::default() }); // two sources, one file
-    attach(&mut store, 24, 1, ty, Spec { uri: Some("ftp://example.org/x.png"), ..Default::default() }); // a scheme nobody reads
+    attach(
+        &mut store,
+        21,
+        1,
+        ty,
+        Spec {
+            uri: Some("media/absent.png"),
+            ..Default::default()
+        },
+    ); // a part nobody holds
+    attach(
+        &mut store,
+        22,
+        1,
+        ty,
+        Spec {
+            content: b"BBBB".to_vec(),
+            uri: Some("media/a.png"),
+            ..Default::default()
+        },
+    ); // two sources, two files
+    attach(
+        &mut store,
+        23,
+        1,
+        ty,
+        Spec {
+            content: b"AAAA".to_vec(),
+            uri: Some("media/a.png"),
+            ..Default::default()
+        },
+    ); // two sources, one file
+    attach(
+        &mut store,
+        24,
+        1,
+        ty,
+        Spec {
+            uri: Some("ftp://example.org/x.png"),
+            ..Default::default()
+        },
+    ); // a scheme nobody reads
     let index = indexed(&store);
     let [listing] = attachments_of(&store, &index, &[u(1)]).try_into().unwrap();
     let problems = |n: u32| piece_of(&listing, &u(n)).problems.join(" | ");
@@ -265,15 +406,33 @@ fn what_does_not_go_is_said_never_silently_listed() {
     assert_eq!(piece_of(&listing, &u(20)).size, Some(0));
     assert!(problems(21).contains("media/absent.png"), "{}", problems(21));
     assert!(problems(22).contains("two different files"), "{}", problems(22));
-    assert_eq!(piece_of(&listing, &u(22)).form, Form::Inline, "the content is the authority");
-    assert!(problems(23).is_empty(), "the same bytes twice are no disagreement: {}", problems(23));
+    assert_eq!(
+        piece_of(&listing, &u(22)).form,
+        Form::Inline,
+        "the content is the authority"
+    );
+    assert!(
+        problems(23).is_empty(),
+        "the same bytes twice are no disagreement: {}",
+        problems(23)
+    );
     assert!(problems(24).contains("ftp"), "{}", problems(24));
 
-    assert!(attachment_bytes(&store, &format!("object:{}", u(20))).is_err(), "nothing to read");
-    assert!(attachment_bytes(&store, &format!("object:{}", u(21))).is_err(), "the part is absent");
-    assert!(attachment_bytes(&store, &format!("object:{}", u(24))).is_err(), "the scheme is not read");
+    assert!(
+        attachment_bytes(&store, &format!("object:{}", u(20))).is_err(),
+        "nothing to read"
+    );
+    assert!(
+        attachment_bytes(&store, &format!("object:{}", u(21))).is_err(),
+        "the part is absent"
+    );
+    assert!(
+        attachment_bytes(&store, &format!("object:{}", u(24))).is_err(),
+        "the scheme is not read"
+    );
     assert_eq!(
-        attachment_bytes(&store, &format!("object:{}", u(22))).map(|f| matches!(f, Fetched::Bytes { bytes, .. } if bytes == b"BBBB")),
+        attachment_bytes(&store, &format!("object:{}", u(22)))
+            .map(|f| matches!(f, Fetched::Bytes { bytes, .. } if bytes == b"BBBB")),
         Ok(true),
         "the content wins"
     );
@@ -309,15 +468,34 @@ fn an_inherited_piece_says_where_it_came_from_and_an_own_piece_hides_it() {
             ..Default::default()
         },
     );
-    attach(&mut store, 30, 3, "resqml22.WellboreFeature", Spec { content: PNG.to_vec(), name: Some("feature.png"), ..Default::default() });
+    attach(
+        &mut store,
+        30,
+        3,
+        "resqml22.WellboreFeature",
+        Spec {
+            content: PNG.to_vec(),
+            name: Some("feature.png"),
+            ..Default::default()
+        },
+    );
     let by_parent = {
         let index = indexed(&store);
         attachments_of(&store, &index, &[u(1)]).remove(0)
     };
-    let [from_parent] = by_parent.pieces.as_slice() else { panic!("{by_parent:#?}") };
+    let [from_parent] = by_parent.pieces.as_slice() else {
+        panic!("{by_parent:#?}")
+    };
     assert_eq!(from_parent.provenance.kind, "parent");
     assert_eq!(from_parent.provenance.carrier, u(3));
-    assert!(from_parent.provenance.says().starts_with("inherited from the parent"), "{}", from_parent.provenance.says());
+    assert!(
+        from_parent
+            .provenance
+            .says()
+            .starts_with("inherited from the parent"),
+        "{}",
+        from_parent.provenance.says()
+    );
 
     // A folder holding the trajectory, and a symbol on the folder: rank 2 comes
     // before the parents (ADR-0009).
@@ -345,26 +523,72 @@ fn an_inherited_piece_says_where_it_came_from_and_an_own_piece_hides_it() {
             ..Default::default()
         },
     );
-    attach(&mut store, 31, 4, "eml23.DataobjectCollection", Spec { content: b"SYMBOL".to_vec(), name: Some("symbole.png"), category: Some("Symbol"), ..Default::default() });
+    attach(
+        &mut store,
+        31,
+        4,
+        "eml23.DataobjectCollection",
+        Spec {
+            content: b"SYMBOL".to_vec(),
+            name: Some("symbole.png"),
+            category: Some("Symbol"),
+            ..Default::default()
+        },
+    );
     let index = indexed(&store);
     let listing = attachments_of(&store, &index, &[u(1)]).remove(0);
-    let [from_collection] = listing.pieces.as_slice() else { panic!("{listing:#?}") };
-    assert_eq!((from_collection.provenance.kind, from_collection.provenance.carrier.as_str()), ("collection", u(4).as_str()));
-    assert_eq!(from_collection.provenance.says(), "inherited from the collection Piézomètres");
+    let [from_collection] = listing.pieces.as_slice() else {
+        panic!("{listing:#?}")
+    };
+    assert_eq!(
+        (
+            from_collection.provenance.kind,
+            from_collection.provenance.carrier.as_str()
+        ),
+        ("collection", u(4).as_str())
+    );
+    assert_eq!(
+        from_collection.provenance.says(),
+        "inherited from the collection Piézomètres"
+    );
     assert_eq!(from_collection.category.as_deref(), Some("Symbol"));
 
     // An own piece: the object lists its own and nothing inherited.
-    attach(&mut store, 32, 1, "resqml22.WellboreTrajectoryRepresentation", Spec { content: b"OWN".to_vec(), ..Default::default() });
+    attach(
+        &mut store,
+        32,
+        1,
+        "resqml22.WellboreTrajectoryRepresentation",
+        Spec {
+            content: b"OWN".to_vec(),
+            ..Default::default()
+        },
+    );
     let index = indexed(&store);
     let listing = attachments_of(&store, &index, &[u(1)]).remove(0);
-    let [own] = listing.pieces.as_slice() else { panic!("{listing:#?}") };
-    assert_eq!((own.provenance.kind, own.attachment.as_deref()), ("self", Some(u(32).as_str())));
+    let [own] = listing.pieces.as_slice() else {
+        panic!("{listing:#?}")
+    };
+    assert_eq!(
+        (own.provenance.kind, own.attachment.as_deref()),
+        ("self", Some(u(32).as_str()))
+    );
 
     // The batch says what the unit says: three objects, three answers, in order.
     let batch = attachments_of(&store, &index, &[u(3), u(2), u(1)]);
-    assert_eq!(batch.iter().map(|l| l.pieces.len()).collect::<Vec<_>>(), [1, 1, 1]);
-    assert_eq!(batch.iter().map(|l| l.uuid.clone()).collect::<Vec<_>>(), [u(3), u(2), u(1)]);
-    assert_eq!(batch[1].pieces[0].provenance.carrier, u(3), "the interpretation inherits the feature's piece");
+    assert_eq!(
+        batch.iter().map(|l| l.pieces.len()).collect::<Vec<_>>(),
+        [1, 1, 1]
+    );
+    assert_eq!(
+        batch.iter().map(|l| l.uuid.clone()).collect::<Vec<_>>(),
+        [u(3), u(2), u(1)]
+    );
+    assert_eq!(
+        batch[1].pieces[0].provenance.carrier,
+        u(3),
+        "the interpretation inherits the feature's piece"
+    );
 }
 
 /// An object nobody attaches anything to has an empty listing — not an error,

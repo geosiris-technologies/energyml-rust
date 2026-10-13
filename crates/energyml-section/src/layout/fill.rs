@@ -90,7 +90,11 @@ fn z_at(span: &[[f64; 2]], s: f64) -> Option<f64> {
         let (a, b) = (pair[0], pair[1]);
         if s >= a[0] && s <= b[0] {
             let ds = b[0] - a[0];
-            return Some(if ds.abs() < f64::EPSILON { a[1] } else { a[1] + (b[1] - a[1]) * (s - a[0]) / ds });
+            return Some(if ds.abs() < f64::EPSILON {
+                a[1]
+            } else {
+                a[1] + (b[1] - a[1]) * (s - a[0]) / ds
+            });
         }
     }
     None
@@ -108,7 +112,8 @@ pub fn between(upper: &[Span], lower: &[Span]) -> Vec<Vec<[f64; 2]>> {
     let mut out = Vec::new();
     for up in upper {
         for low in lower {
-            let (Some(u0), Some(ul), Some(l0), Some(ll)) = (up.first(), up.last(), low.first(), low.last()) else {
+            let (Some(u0), Some(ul), Some(l0), Some(ll)) = (up.first(), up.last(), low.first(), low.last())
+            else {
                 continue;
             };
             let from = u0[0].max(l0[0]);
@@ -116,15 +121,21 @@ pub fn between(upper: &[Span], lower: &[Span]) -> Vec<Vec<[f64; 2]>> {
             if !matches!(to.partial_cmp(&from), Some(std::cmp::Ordering::Greater)) {
                 continue;
             }
-            let mut steps: Vec<f64> =
-                up.iter().chain(low.iter()).map(|p| p[0]).filter(|s| *s >= from && *s <= to).collect();
+            let mut steps: Vec<f64> = up
+                .iter()
+                .chain(low.iter())
+                .map(|p| p[0])
+                .filter(|s| *s >= from && *s <= to)
+                .collect();
             steps.push(from);
             steps.push(to);
             steps.sort_by(f64::total_cmp);
             steps.dedup_by(|a, b| (*a - *b).abs() <= f64::EPSILON * a.abs().max(1.0));
             // (s, z upper, z lower)
-            let samples: Vec<(f64, f64, f64)> =
-                steps.into_iter().filter_map(|s| Some((s, z_at(up, s)?, z_at(low, s)?))).collect();
+            let samples: Vec<(f64, f64, f64)> = steps
+                .into_iter()
+                .filter_map(|s| Some((s, z_at(up, s)?, z_at(low, s)?)))
+                .collect();
             runs(&samples, &mut out);
         }
     }
@@ -213,8 +224,11 @@ pub fn polygons(mine: &Line<'_>, all: &[Line<'_>], up: bool) -> Vec<Vec<[f64; 2]
     if mine.item.role == TraceRole::Fault {
         return Vec::new();
     }
-    let others: Vec<(String, Vec<Span>)> =
-        all.iter().filter(|o| is_candidate(mine, o)).map(|o| (o.key.to_string(), o.spans.to_vec())).collect();
+    let others: Vec<(String, Vec<Span>)> = all
+        .iter()
+        .filter(|o| is_candidate(mine, o))
+        .map(|o| (o.key.to_string(), o.spans.to_vec()))
+        .collect();
     nearest(mine.spans, &others, up)
 }
 
@@ -258,7 +272,11 @@ fn sample(span: &[[f64; 2]], steps: &[f64]) -> Vec<Option<f64>> {
             }
             let (a, b) = (span[j], span[j + 1]);
             let ds = b[0] - a[0];
-            Some(if ds.abs() < f64::EPSILON { a[1] } else { a[1] + (b[1] - a[1]) * (s - a[0]) / ds })
+            Some(if ds.abs() < f64::EPSILON {
+                a[1]
+            } else {
+                a[1] + (b[1] - a[1]) * (s - a[0]) / ds
+            })
         })
         .collect()
 }
@@ -287,14 +305,18 @@ fn envelope(m: &[[f64; 2]], others: &[(String, Vec<Span>)], up: bool) -> Vec<Spa
     steps.dedup_by(|a, b| (*a - *b).abs() <= f64::EPSILON * a.abs().max(1.0));
 
     let zm = sample(m, &steps);
-    let samples: Vec<Vec<Vec<Option<f64>>>> =
-        others.iter().map(|(_, spans)| spans.iter().map(|sp| sample(sp, &steps)).collect()).collect();
+    let samples: Vec<Vec<Vec<Option<f64>>>> = others
+        .iter()
+        .map(|(_, spans)| spans.iter().map(|sp| sample(sp, &steps)).collect())
+        .collect();
 
     // (candidate, start, end) of each stretch where one candidate is the nearest.
     let mut pieces: Vec<(usize, [f64; 2], [f64; 2])> = Vec::new();
     for i in 0..steps.len() - 1 {
         let (a, b) = (steps[i], steps[i + 1]);
-        let (Some(ma), Some(mb)) = (zm[i], zm[i + 1]) else { continue };
+        let (Some(ma), Some(mb)) = (zm[i], zm[i + 1]) else {
+            continue;
+        };
         // The candidates on the wanted side at one end at least, whole over [a, b].
         let mut alive: Vec<(usize, f64, f64)> = Vec::new();
         for (ci, per_span) in samples.iter().enumerate() {
@@ -324,7 +346,15 @@ fn envelope(m: &[[f64; 2]], others: &[(String, Vec<Span>)], up: bool) -> Vec<Spa
             }
         }
         ts.sort_by(f64::total_cmp);
-        let at = |t: f64| if t <= 0.0 { a } else if t >= 1.0 { b } else { a + (b - a) * t };
+        let at = |t: f64| {
+            if t <= 0.0 {
+                a
+            } else if t >= 1.0 {
+                b
+            } else {
+                a + (b - a) * t
+            }
+        };
         for w in ts.windows(2) {
             let (t0, t1) = (w[0], w[1]);
             if t1 - t0 <= 1e-12 {
@@ -342,7 +372,10 @@ fn envelope(m: &[[f64; 2]], others: &[(String, Vec<Span>)], up: bool) -> Vec<Spa
                 }
             }
             let Some((ci, _)) = best else { continue };
-            let (_, za, zb) = *alive.iter().find(|(c, _, _)| *c == ci).expect("chosen from alive");
+            let (_, za, zb) = *alive
+                .iter()
+                .find(|(c, _, _)| *c == ci)
+                .expect("chosen from alive");
             let z = |t: f64| za + (zb - za) * t;
             pieces.push((ci, [at(t0), z(t0)], [at(t1), z(t1)]));
         }
@@ -354,7 +387,9 @@ fn envelope(m: &[[f64; 2]], others: &[(String, Vec<Span>)], up: bool) -> Vec<Spa
         match runs.last_mut() {
             Some((c, span))
                 if *c == ci
-                    && span.last().is_some_and(|e| e[0] == p[0] && (e[1] - p[1]).abs() <= 1e-9 * (1.0 + p[1].abs())) =>
+                    && span.last().is_some_and(|e| {
+                        e[0] == p[0] && (e[1] - p[1]).abs() <= 1e-9 * (1.0 + p[1].abs())
+                    }) =>
             {
                 span.push(q);
             }

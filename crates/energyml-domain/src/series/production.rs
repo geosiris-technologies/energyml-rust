@@ -100,37 +100,57 @@ pub fn reads(object: &dyn Reflect) -> bool {
 /// Read every period.
 pub fn read(object: &dyn Reflect) -> Result<Vec<Period>, Refused> {
     if !reads(object) {
-        return Err(Refused::NotThisReader { expected: "a PRODML WellProductionParameters", found: object.type_info().type_key.to_string() });
+        return Err(Refused::NotThisReader {
+            expected: "a PRODML WellProductionParameters",
+            found: object.type_info().type_key.to_string(),
+        });
     }
     let mut out = Vec::new();
     for (rank, period) in objects(object, "ProductionPeriod").into_iter().enumerate() {
         let name = format!("period {}", rank + 1);
-        let start = text(period, "StartTime").ok_or_else(|| Refused::Missing { what: format!("the StartTime of {name}") })?;
-        let start_seconds =
-            instant::unix_seconds(&start).map_err(|why| Refused::Instant { at: name.clone(), text: start.clone(), why })?;
-        let duration_object =
-            objects(period, "Duration").into_iter().next().ok_or_else(|| Refused::Missing { what: format!("the Duration of {name}") })?;
-        let duration = number_of(duration_object, "value").ok_or_else(|| Refused::Missing { what: format!("the Duration of {name}") })?;
-        let duration_uom = text(duration_object, "uom").unwrap_or_default();
-        let duration_seconds = crate::units::seconds(duration, &duration_uom).map_err(|why| Refused::Unit {
-            what: format!("the duration of {name}"),
-            uom: duration_uom.clone(),
-            why: why.to_string(),
+        let start = text(period, "StartTime").ok_or_else(|| Refused::Missing {
+            what: format!("the StartTime of {name}"),
         })?;
+        let start_seconds = instant::unix_seconds(&start).map_err(|why| Refused::Instant {
+            at: name.clone(),
+            text: start.clone(),
+            why,
+        })?;
+        let duration_object =
+            objects(period, "Duration")
+                .into_iter()
+                .next()
+                .ok_or_else(|| Refused::Missing {
+                    what: format!("the Duration of {name}"),
+                })?;
+        let duration = number_of(duration_object, "value").ok_or_else(|| Refused::Missing {
+            what: format!("the Duration of {name}"),
+        })?;
+        let duration_uom = text(duration_object, "uom").unwrap_or_default();
+        let duration_seconds =
+            crate::units::seconds(duration, &duration_uom).map_err(|why| Refused::Unit {
+                what: format!("the duration of {name}"),
+                uom: duration_uom.clone(),
+                why: why.to_string(),
+            })?;
 
         let mut products = Vec::new();
         for rate in objects(period, "ProductRate") {
             let product = text(rate, "ProductFluidKind").unwrap_or_default();
             // `VolumeFlowRate` is a `FlowRateValue` whose `FlowRate` carries
             // the measure; `MassFlowRate` is the measure itself.
-            let volume = objects(rate, "VolumeFlowRate").into_iter().next().and_then(|value| objects(value, "FlowRate").into_iter().next());
+            let volume = objects(rate, "VolumeFlowRate")
+                .into_iter()
+                .next()
+                .and_then(|value| objects(value, "FlowRate").into_iter().next());
             let mass = objects(rate, "MassFlowRate").into_iter().next();
             let mut any = false;
             for (basis, measure) in [("volume", volume), ("mass", mass)] {
                 let Some(measure) = measure else { continue };
                 any = true;
-                let value = number_of(measure, "value")
-                    .ok_or_else(|| Refused::Missing { what: format!("the {basis} rate of `{product}` in {name}") })?;
+                let value = number_of(measure, "value").ok_or_else(|| Refused::Missing {
+                    what: format!("the {basis} rate of `{product}` in {name}"),
+                })?;
                 let uom = text(measure, "uom").unwrap_or_default();
                 let what = format!("the {basis} rate of `{product}` in {name}");
                 let (numerator, denominator) = uom.rsplit_once('/').ok_or_else(|| Refused::Unit {
@@ -144,7 +164,11 @@ pub fn read(object: &dyn Reflect) -> Result<Vec<Period>, Refused> {
                     why: format!("`{denominator}` is not a time this build converts — {why}"),
                 })?;
                 if numerator.trim().is_empty() {
-                    return Err(Refused::Unit { what, uom, why: "the rate names no quantity before its `/`".into() });
+                    return Err(Refused::Unit {
+                        what,
+                        uom,
+                        why: "the rate names no quantity before its `/`".into(),
+                    });
                 }
                 products.push(Product {
                     product: product.clone(),
@@ -156,7 +180,14 @@ pub fn read(object: &dyn Reflect) -> Result<Vec<Period>, Refused> {
                 });
             }
             if !any {
-                products.push(Product { product, basis: None, rate: None, rate_uom: None, quantity: None, quantity_uom: None });
+                products.push(Product {
+                    product,
+                    basis: None,
+                    rate: None,
+                    rate_uom: None,
+                    quantity: None,
+                    quantity_uom: None,
+                });
             }
         }
         out.push(Period {

@@ -85,7 +85,12 @@ pub enum LawError {
     #[error(
         "the law gives a negative thickness at {count} node(s) — {value} at ({x}, {y}) first: the horizon would cross its reference; bound the law (a smaller gradient, another anchor), or cut the horizon where it thins out"
     )]
-    Negative { count: usize, x: f64, y: f64, value: f64 },
+    Negative {
+        count: usize,
+        x: f64,
+        y: f64,
+        value: f64,
+    },
     #[error("cut {at}: {why}")]
     Cut { at: usize, why: crate::Error },
 }
@@ -147,11 +152,21 @@ impl Law {
                     return Err(LawError::ZeroThickness);
                 }
             }
-            Law::Linear { thickness, anchor, azimuth, gradient } => {
+            Law::Linear {
+                thickness,
+                anchor,
+                azimuth,
+                gradient,
+            } => {
                 if !thickness.is_finite() || thickness < 0.0 {
                     return Err(LawError::BadThickness { given: thickness });
                 }
-                for (what, given) in [("gradient", gradient), ("azimuth", azimuth), ("anchor x", anchor[0]), ("anchor y", anchor[1])] {
+                for (what, given) in [
+                    ("gradient", gradient),
+                    ("azimuth", azimuth),
+                    ("anchor x", anchor[0]),
+                    ("anchor y", anchor[1]),
+                ] {
                     if !given.is_finite() {
                         return Err(LawError::NotFinite { what, given });
                     }
@@ -170,7 +185,12 @@ impl Law {
     pub fn thickness_at(&self, x: f64, y: f64) -> f64 {
         match *self {
             Law::Parallel { thickness } => thickness,
-            Law::Linear { thickness, anchor, azimuth, gradient } => {
+            Law::Linear {
+                thickness,
+                anchor,
+                azimuth,
+                gradient,
+            } => {
                 // The distance along the azimuth: north is +y, east is +x,
                 // the angle turning clockwise from north.
                 let (sin, cos) = sin_cos_degrees(azimuth);
@@ -234,19 +254,36 @@ pub struct Laid {
 ///
 /// `nodes` are the reference's `[x, y, z]`; `cuts` are in the same frame —
 /// the caller checks that, since only it knows the frames.
-pub fn lay(nodes: &[[f64; 3]], law: &Law, side: Side, up: Up, cuts: &[Surface<'_>]) -> Result<Laid, LawError> {
+pub fn lay(
+    nodes: &[[f64; 3]],
+    law: &Law,
+    side: Side,
+    up: Up,
+    cuts: &[Surface<'_>],
+) -> Result<Laid, LawError> {
     law.check()?;
     let heights = cuts
         .iter()
         .enumerate()
-        .map(|(at, cut)| Heights::of(*cut, "cut", "under each node of the horizon").map_err(|why| LawError::Cut { at, why }))
+        .map(|(at, cut)| {
+            Heights::of(*cut, "cut", "under each node of the horizon")
+                .map_err(|why| LawError::Cut { at, why })
+        })
         .collect::<Result<Vec<_>, _>>()?;
     let set_aside: usize = heights.iter().map(Heights::set_aside).sum();
 
     // The offset on the third coordinate: toward the side, in the frame's
     // sense — below is down, and down is −z in elevation, +z in depth.
     let toward = side.sign() * up.sign();
-    let mut laid = Laid { z: Vec::with_capacity(nodes.len()), holes: 0, eroded: 0, folded: 0, beyond: 0, set_aside, range: None };
+    let mut laid = Laid {
+        z: Vec::with_capacity(nodes.len()),
+        holes: 0,
+        eroded: 0,
+        folded: 0,
+        beyond: 0,
+        set_aside,
+        range: None,
+    };
     let mut negative: Option<(usize, [f64; 3])> = None;
     for &[x, y, z] in nodes {
         if !(x.is_finite() && y.is_finite() && z.is_finite()) {
@@ -328,11 +365,18 @@ mod tests {
     /// `z(x)`.
     fn plate(x0: f64, x1: f64, z: impl Fn(f64) -> f64) -> (Vec<f64>, Vec<u32>) {
         let corners = [[x0, -10.0], [x1, -10.0], [x1, 110.0], [x0, 110.0]];
-        (corners.iter().flat_map(|&[x, y]| [x, y, z(x)]).collect(), vec![0, 1, 2, 0, 2, 3])
+        (
+            corners.iter().flat_map(|&[x, y]| [x, y, z(x)]).collect(),
+            vec![0, 1, 2, 0, 2, 3],
+        )
     }
 
     fn surface<'a>(points: &'a [f64], triangles: &'a [u32]) -> Surface<'a> {
-        Surface { points, triangles, quads: &[] }
+        Surface {
+            points,
+            triangles,
+            quads: &[],
+        }
     }
 
     /// **Below is down in the frame's sense**: `z − t` in elevation, `z + t`
@@ -341,11 +385,20 @@ mod tests {
     #[test]
     fn a_parallel_horizon_is_the_thickness_away_toward_its_side_in_the_frames_sense() {
         let law = Law::Parallel { thickness: 7.5 };
-        let cases = [(Side::Below, Up::PlusZ, 92.5), (Side::Below, Up::MinusZ, 107.5), (Side::Above, Up::PlusZ, 107.5), (Side::Above, Up::MinusZ, 92.5)];
+        let cases = [
+            (Side::Below, Up::PlusZ, 92.5),
+            (Side::Below, Up::MinusZ, 107.5),
+            (Side::Above, Up::PlusZ, 107.5),
+            (Side::Above, Up::MinusZ, 92.5),
+        ];
         for (side, up, expected) in cases {
             let laid = lay(&lattice(100.0), &law, side, up, &[]).unwrap();
             assert_eq!(laid.z.len(), 9);
-            assert!(laid.z.iter().all(|z| (z - expected).abs() < 1e-12), "{side:?} {up:?}: {:?}", laid.z);
+            assert!(
+                laid.z.iter().all(|z| (z - expected).abs() < 1e-12),
+                "{side:?} {up:?}: {:?}",
+                laid.z
+            );
             assert_eq!((laid.holes, laid.eroded, laid.folded, laid.beyond), (0, 0, 0, 0));
             assert_eq!(laid.range, Some([7.5, 7.5]));
         }
@@ -358,7 +411,14 @@ mod tests {
         let mut nodes = lattice(10.0);
         nodes[4][2] = f64::NAN;
         nodes[8][0] = f64::NAN;
-        let laid = lay(&nodes, &Law::Parallel { thickness: 1.0 }, Side::Below, Up::PlusZ, &[]).unwrap();
+        let laid = lay(
+            &nodes,
+            &Law::Parallel { thickness: 1.0 },
+            Side::Below,
+            Up::PlusZ,
+            &[],
+        )
+        .unwrap();
         assert_eq!(laid.holes, 2);
         assert!(laid.z[4].is_nan() && laid.z[8].is_nan());
         assert_eq!(laid.z.iter().filter(|z| z.is_finite()).count(), 7);
@@ -368,16 +428,29 @@ mod tests {
     /// gradient along the azimuth — east here, so along x only.
     #[test]
     fn a_linear_law_changes_along_its_azimuth_only() {
-        let law = Law::Linear { thickness: 10.0, anchor: [0.0, 0.0], azimuth: 90.0, gradient: 0.1 };
+        let law = Law::Linear {
+            thickness: 10.0,
+            anchor: [0.0, 0.0],
+            azimuth: 90.0,
+            gradient: 0.1,
+        };
         let laid = lay(&lattice(0.0), &law, Side::Below, Up::PlusZ, &[]).unwrap();
         for (node, z) in lattice(0.0).iter().zip(&laid.z) {
             let expected = -(10.0 + 0.1 * node[0]);
             assert!((z - expected).abs() < 1e-9, "at {node:?}: {z} for {expected}");
         }
-        assert_eq!(laid.range.map(|[a, b]| [a.round(), b.round()]), Some([10.0, 20.0]));
+        assert_eq!(
+            laid.range.map(|[a, b]| [a.round(), b.round()]),
+            Some([10.0, 20.0])
+        );
 
         // North: along y only.
-        let north = Law::Linear { thickness: 10.0, anchor: [0.0, 0.0], azimuth: 0.0, gradient: 0.1 };
+        let north = Law::Linear {
+            thickness: 10.0,
+            anchor: [0.0, 0.0],
+            azimuth: 0.0,
+            gradient: 0.1,
+        };
         let laid = lay(&lattice(0.0), &north, Side::Below, Up::PlusZ, &[]).unwrap();
         for (node, z) in lattice(0.0).iter().zip(&laid.z) {
             assert!((z + 10.0 + 0.1 * node[1]).abs() < 1e-9, "at {node:?}: {z}");
@@ -389,7 +462,12 @@ mod tests {
     #[test]
     fn a_thickness_that_turns_negative_is_refused_with_its_count() {
         // 5 at x = 0, 0 at x = 50, −5 at x = 100: the column x = 100 crosses.
-        let law = Law::Linear { thickness: 5.0, anchor: [0.0, 0.0], azimuth: 90.0, gradient: -0.1 };
+        let law = Law::Linear {
+            thickness: 5.0,
+            anchor: [0.0, 0.0],
+            azimuth: 90.0,
+            gradient: -0.1,
+        };
         match lay(&lattice(0.0), &law, Side::Below, Up::PlusZ, &[]) {
             Err(LawError::Negative { count, x, value, .. }) => {
                 assert_eq!(count, 3);
@@ -406,15 +484,39 @@ mod tests {
         let nodes = lattice(0.0);
         let refused = |law: Law| lay(&nodes, &law, Side::Below, Up::PlusZ, &[]).unwrap_err();
         assert_eq!(refused(Law::Parallel { thickness: 0.0 }), LawError::ZeroThickness);
-        assert_eq!(refused(Law::Parallel { thickness: -1.0 }), LawError::BadThickness { given: -1.0 });
-        assert!(matches!(refused(Law::Parallel { thickness: f64::NAN }), LawError::BadThickness { .. }));
+        assert_eq!(
+            refused(Law::Parallel { thickness: -1.0 }),
+            LawError::BadThickness { given: -1.0 }
+        );
         assert!(matches!(
-            refused(Law::Linear { thickness: 1.0, anchor: [0.0, f64::INFINITY], azimuth: 0.0, gradient: 0.0 }),
+            refused(Law::Parallel { thickness: f64::NAN }),
+            LawError::BadThickness { .. }
+        ));
+        assert!(matches!(
+            refused(Law::Linear {
+                thickness: 1.0,
+                anchor: [0.0, f64::INFINITY],
+                azimuth: 0.0,
+                gradient: 0.0
+            }),
             LawError::NotFinite { what: "anchor y", .. }
         ));
-        assert_eq!(refused(Law::Linear { thickness: 0.0, anchor: [0.0, 0.0], azimuth: 0.0, gradient: 0.0 }), LawError::ZeroThickness);
+        assert_eq!(
+            refused(Law::Linear {
+                thickness: 0.0,
+                anchor: [0.0, 0.0],
+                azimuth: 0.0,
+                gradient: 0.0
+            }),
+            LawError::ZeroThickness
+        );
         // A wedge that is zero at its anchor and thickens away from it is a law.
-        let wedge = Law::Linear { thickness: 0.0, anchor: [0.0, 0.0], azimuth: 90.0, gradient: 0.1 };
+        let wedge = Law::Linear {
+            thickness: 0.0,
+            anchor: [0.0, 0.0],
+            azimuth: 90.0,
+            gradient: 0.1,
+        };
         assert!(lay(&nodes, &wedge, Side::Below, Up::PlusZ, &[]).is_ok());
     }
 
@@ -428,27 +530,51 @@ mod tests {
         // (kept, below it); the column x = 100 lies beyond it.
         let (points, triangles) = plate(-10.0, 60.0, |x| -13.0 + x / 10.0);
         let cut = surface(&points, &triangles);
-        let laid = lay(&lattice(0.0), &Law::Parallel { thickness: 10.0 }, Side::Below, Up::PlusZ, &[cut]).unwrap();
+        let laid = lay(
+            &lattice(0.0),
+            &Law::Parallel { thickness: 10.0 },
+            Side::Below,
+            Up::PlusZ,
+            &[cut],
+        )
+        .unwrap();
         for (node, z) in lattice(0.0).iter().zip(&laid.z) {
             let x = node[0];
             if x <= 60.0 {
                 let under = -13.0 + x / 10.0;
-                assert!(z.is_nan() || *z <= under, "at x = {x}: {z} above the cut at {under}");
+                assert!(
+                    z.is_nan() || *z <= under,
+                    "at x = {x}: {z} above the cut at {under}"
+                );
             }
         }
         assert_eq!((laid.eroded, laid.beyond, laid.folded), (3, 3, 0), "{laid:?}");
-        assert!(laid.z[0].is_nan() && laid.z[1] == -10.0 && laid.z[2] == -10.0, "{:?}", laid.z);
+        assert!(
+            laid.z[0].is_nan() && laid.z[1] == -10.0 && laid.z[2] == -10.0,
+            "{:?}",
+            laid.z
+        );
 
         // In depth, the same picture: the horizon at 0 + 10 = 10, the cut at
         // 13 − x/10 — deeper than the horizon at x = 0, so it erodes it there.
         let (points, triangles) = plate(-10.0, 60.0, |x| 13.0 - x / 10.0);
         let cut = surface(&points, &triangles);
-        let laid = lay(&lattice(0.0), &Law::Parallel { thickness: 10.0 }, Side::Below, Up::MinusZ, &[cut]).unwrap();
+        let laid = lay(
+            &lattice(0.0),
+            &Law::Parallel { thickness: 10.0 },
+            Side::Below,
+            Up::MinusZ,
+            &[cut],
+        )
+        .unwrap();
         for (node, z) in lattice(0.0).iter().zip(&laid.z) {
             let x = node[0];
             if x <= 60.0 {
                 let under = 13.0 - x / 10.0;
-                assert!(z.is_nan() || *z >= under, "at x = {x}: {z} above the cut at depth {under}");
+                assert!(
+                    z.is_nan() || *z >= under,
+                    "at x = {x}: {z} above the cut at depth {under}"
+                );
             }
         }
         assert_eq!((laid.eroded, laid.beyond), (3, 3), "{laid:?}");
@@ -465,7 +591,14 @@ mod tests {
         ];
         let triangles = vec![0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7];
         let cut = surface(&points, &triangles);
-        let laid = lay(&lattice(0.0), &Law::Parallel { thickness: 1.0 }, Side::Below, Up::PlusZ, &[cut]).unwrap();
+        let laid = lay(
+            &lattice(0.0),
+            &Law::Parallel { thickness: 1.0 },
+            Side::Below,
+            Up::PlusZ,
+            &[cut],
+        )
+        .unwrap();
         assert_eq!((laid.folded, laid.eroded), (9, 0));
         assert!(laid.z.iter().all(|z| z.is_nan()));
     }
@@ -475,7 +608,14 @@ mod tests {
     fn a_cut_with_no_face_is_refused_by_its_rank() {
         let points = vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0];
         let cut = surface(&points, &[]);
-        let why = lay(&lattice(0.0), &Law::Parallel { thickness: 1.0 }, Side::Below, Up::PlusZ, &[cut]).unwrap_err();
+        let why = lay(
+            &lattice(0.0),
+            &Law::Parallel { thickness: 1.0 },
+            Side::Below,
+            Up::PlusZ,
+            &[cut],
+        )
+        .unwrap_err();
         assert!(matches!(why, LawError::Cut { at: 0, .. }), "{why:?}");
     }
 }

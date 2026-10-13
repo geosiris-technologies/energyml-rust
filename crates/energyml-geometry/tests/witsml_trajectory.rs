@@ -41,7 +41,11 @@ const TRAJECTORY: &str = "40000000-0000-4000-8000-000000000006";
 const R: f64 = 572.957_795_130_823_2;
 
 fn dor(uuid: &str, qualified_type: &str) -> eml::DataObjectReference {
-    eml::DataObjectReference { uuid: uuid.into(), qualified_type: qualified_type.into(), ..Default::default() }
+    eml::DataObjectReference {
+        uuid: uuid.into(),
+        qualified_type: qualified_type.into(),
+        ..Default::default()
+    }
 }
 
 /// Objects by uuid, handed out as a store would.
@@ -64,10 +68,16 @@ impl ArraySource for Site {
     fn locate(&self, _object: &dyn Reflect) -> Vec<energyml_storage::ArrayLocation> {
         Vec::new()
     }
-    fn metadata(&self, location: &energyml_storage::ArrayLocation) -> energyml_domain::Result<energyml_storage::ArrayMetadata> {
+    fn metadata(
+        &self,
+        location: &energyml_storage::ArrayLocation,
+    ) -> energyml_domain::Result<energyml_storage::ArrayMetadata> {
         Err(energyml_domain::Error::Missing(location.field_path.clone()))
     }
-    fn read(&self, location: &energyml_storage::ArrayLocation) -> energyml_domain::Result<energyml_storage::ArrayData> {
+    fn read(
+        &self,
+        location: &energyml_storage::ArrayLocation,
+    ) -> energyml_domain::Result<energyml_storage::ArrayData> {
         Err(energyml_domain::Error::Missing(location.field_path.clone()))
     }
     fn read_into(
@@ -84,7 +94,10 @@ impl ArraySource for Site {
 fn site() -> Site {
     let plane = eml::LocalEngineering2dCrs {
         uuid: PLANE.into(),
-        azimuth: eml::PlaneAngleMeasureExt { value: 30.0, uom: eml::PlaneAngleUomExt::Dega },
+        azimuth: eml::PlaneAngleMeasureExt {
+            value: 30.0,
+            uom: eml::PlaneAngleUomExt::Dega,
+        },
         azimuth_reference: eml::NorthReferenceKind::GridNorth,
         origin_projected_coordinate1: 1000.0,
         origin_projected_coordinate2: 2000.0,
@@ -95,7 +108,9 @@ fn site() -> Site {
             is_time: false,
         },
         origin_projected_crs: eml::ProjectedCrs {
-            abstract_projected_crs: Some(eml::AbstractProjectedCrs::ProjectedEpsgCrs(eml::ProjectedEpsgCrs { epsg_code: 2154 })),
+            abstract_projected_crs: Some(eml::AbstractProjectedCrs::ProjectedEpsgCrs(
+                eml::ProjectedEpsgCrs { epsg_code: 2154 },
+            )),
             ..Default::default()
         },
         ..Default::default()
@@ -104,20 +119,29 @@ fn site() -> Site {
         uuid: VERTICAL.into(),
         direction: eml::VerticalDirection::Up,
         uom: eml::LengthUomExt::M,
-        abstract_vertical_crs: Some(eml::AbstractVerticalCrs::VerticalEpsgCrs(eml::VerticalEpsgCrs { epsg_code: 5720 })),
+        abstract_vertical_crs: Some(eml::AbstractVerticalCrs::VerticalEpsgCrs(eml::VerticalEpsgCrs {
+            epsg_code: 5720,
+        })),
         ..Default::default()
     };
     let compound = eml::LocalEngineeringCompoundCrs {
         uuid: COMPOUND.into(),
         vertical_crs: dor(VERTICAL, "eml23.VerticalCrs"),
         origin_vertical_coordinate: 35.0,
-        vertical_axis: eml::VerticalAxis { direction: eml::VerticalDirection::Down, uom: eml::LengthAndTimeUomExt::M, is_time: false },
+        vertical_axis: eml::VerticalAxis {
+            direction: eml::VerticalDirection::Down,
+            uom: eml::LengthAndTimeUomExt::M,
+            is_time: false,
+        },
         local_engineering2d_crs: dor(PLANE, "eml23.LocalEngineering2dCrs"),
         ..Default::default()
     };
     let collar = |uuid: &str| eml::ReferencePointInALocalEngineeringCompoundCrs {
         uuid: uuid.into(),
-        horizontal_coordinates: Some(eml::HorizontalCoordinates { coordinate1: 10.0, coordinate2: 0.0 }),
+        horizontal_coordinates: Some(eml::HorizontalCoordinates {
+            coordinate1: 10.0,
+            coordinate2: 0.0,
+        }),
         vertical_coordinate: Some(5.0),
         crs: dor(COMPOUND, "eml23.LocalEngineeringCompoundCrs"),
         ..Default::default()
@@ -139,11 +163,20 @@ fn collar() -> [f64; 3] {
 }
 
 fn degrees(value: f64) -> eml::PlaneAngleMeasure {
-    eml::PlaneAngleMeasure { value, uom: eml::PlaneAngleUom::Dega }
+    eml::PlaneAngleMeasure {
+        value,
+        uom: eml::PlaneAngleUom::Dega,
+    }
 }
 
 fn md(value: f64) -> eml::MeasuredDepth {
-    eml::MeasuredDepth { measured_depth: eml::LengthMeasureExt { value, uom: eml::LengthUomExt::M }, datum: None }
+    eml::MeasuredDepth {
+        measured_depth: eml::LengthMeasureExt {
+            value,
+            uom: eml::LengthUomExt::M,
+        },
+        datum: None,
+    }
 }
 
 /// A station: its MD, and its inclination and azimuth when it states them.
@@ -187,15 +220,22 @@ fn close(found: [f64; 3], expected: [f64; 3], tolerance: f64) -> bool {
 }
 
 fn points(trajectory: &witsml::Trajectory) -> Vec<[f64; 3]> {
-    let found = geometry::of(trajectory, &site()).unwrap_or_else(|why| panic!("the trajectory is drawn: {why}"));
+    let found =
+        geometry::of(trajectory, &site()).unwrap_or_else(|why| panic!("the trajectory is drawn: {why}"));
     assert_eq!(found.patches.len(), 1);
     let patch = &found.patches[0];
-    assert!(matches!(&patch.topology, Topology::Polylines(runs) if runs == &vec![3]), "one line, a node per station");
+    assert!(
+        matches!(&patch.topology, Topology::Polylines(runs) if runs == &vec![3]),
+        "one line, a node per station"
+    );
     patch.points.clone()
 }
 
 fn refusal(trajectory: &witsml::Trajectory) -> String {
-    geometry::of(trajectory, &site()).map(|_| ()).expect_err("refused").to_string()
+    geometry::of(trajectory, &site())
+        .map(|_| ())
+        .expect_err("refused")
+        .to_string()
 }
 
 // ---------------------------------------------------------------------------
@@ -208,9 +248,22 @@ fn a_grid_north_survey_turns_from_the_projected_north() {
     // swapped, the depth added to the elevation rather than taken from it.
     let [x, y, z] = collar();
     let found = points(&trajectory(Some(eml::NorthReferenceKind::GridNorth)));
-    assert!(close(found[0], [x, y, z], 1e-9), "the first station is the datum: {:?}", found[0]);
-    assert!(close(found[1], [x, y, z - 100.0], 1e-9), "vertical to MD 100: {:?}", found[1]);
-    assert!(close(found[2], [x + R, y, z - 100.0 - R], 1e-6), "{:?}, expected {:?}", found[2], [x + R, y, z - 100.0 - R]);
+    assert!(
+        close(found[0], [x, y, z], 1e-9),
+        "the first station is the datum: {:?}",
+        found[0]
+    );
+    assert!(
+        close(found[1], [x, y, z - 100.0], 1e-9),
+        "vertical to MD 100: {:?}",
+        found[1]
+    );
+    assert!(
+        close(found[2], [x + R, y, z - 100.0 - R], 1e-6),
+        "{:?}, expected {:?}",
+        found[2],
+        [x + R, y, z - 100.0 - R]
+    );
 }
 
 /// Plant north: the compound's second axis, turned 30° clockwise from grid
@@ -223,7 +276,11 @@ fn a_plant_north_survey_turns_with_its_compound() {
     let (sin, cos) = 30f64.to_radians().sin_cos();
     let found = points(&trajectory(Some(eml::NorthReferenceKind::PlantNorth)));
     let expected = [x + R * cos, y - R * sin, z - 100.0 - R];
-    assert!(close(found[2], expected, 1e-6), "{:?}, expected {expected:?}", found[2]);
+    assert!(
+        close(found[2], expected, 1e-6),
+        "{:?}, expected {expected:?}",
+        found[2]
+    );
 }
 
 /// Placed once: the CRS the trajectory is given through its
@@ -231,7 +288,9 @@ fn a_plant_north_survey_turns_with_its_compound() {
 #[test]
 fn the_crs_of_a_witsml_trajectory_does_not_place_it_a_second_time() {
     let trajectory = trajectory(Some(eml::NorthReferenceKind::GridNorth));
-    let crs = energyml_domain::crs::of(&trajectory, &site()).expect("no error").expect("a CRS through the datum");
+    let crs = energyml_domain::crs::of(&trajectory, &site())
+        .expect("no error")
+        .expect("a CRS through the datum");
     assert_eq!(crs.projected.epsg(), Some(2154));
     assert_eq!(crs.vertical.epsg(), Some(5720));
     for point in points(&trajectory) {
@@ -255,8 +314,16 @@ fn a_vertical_survey_needs_no_north_and_its_feet_are_feet() {
     vertical.trajectory_station = vec![station(0.0, Some(0.0), None), station(100.0, Some(0.0), None)];
     vertical.trajectory_station[1].md.measured_depth.uom = eml::LengthUomExt::Ft;
     let [x, y, z] = collar();
-    let found = geometry::of(&vertical, &site()).expect("a vertical well needs no AziRef").patches[0].points.clone();
-    assert!(close(found[1], [x, y, z - 30.48], 1e-9), "100 ft is 30.48 m: {:?}", found[1]);
+    let found = geometry::of(&vertical, &site())
+        .expect("a vertical well needs no AziRef")
+        .patches[0]
+        .points
+        .clone();
+    assert!(
+        close(found[1], [x, y, z - 30.48], 1e-9),
+        "100 ft is 30.48 m: {:?}",
+        found[1]
+    );
 }
 
 /// An angle in radians is an angle.
@@ -278,7 +345,10 @@ fn a_survey_that_does_not_say_which_north_is_refused() {
     let message = refusal(&trajectory(None));
     assert!(message.contains("AziRef"), "{message}");
     let message = refusal(&trajectory(Some(eml::NorthReferenceKind::TrueNorth)));
-    assert!(message.contains("convergence") && message.contains("true north"), "{message}");
+    assert!(
+        message.contains("convergence") && message.contains("true north"),
+        "{message}"
+    );
     let message = refusal(&trajectory(Some(eml::NorthReferenceKind::MagneticNorth)));
     assert!(message.contains("magnetic north"), "{message}");
 }
@@ -294,7 +364,8 @@ fn a_survey_with_no_datum_is_refused_never_drawn_from_the_origin() {
     let mut missing = trajectory(Some(eml::NorthReferenceKind::GridNorth));
     let absent = "40000000-0000-4000-8000-0000000000ff";
     missing.default_md_datum = Some(dor(absent, "eml23.ReferencePointInALocalEngineeringCompoundCrs"));
-    missing.md_interval.as_mut().unwrap().datum = Some(dor(absent, "eml23.ReferencePointInALocalEngineeringCompoundCrs"));
+    missing.md_interval.as_mut().unwrap().datum =
+        Some(dor(absent, "eml23.ReferencePointInALocalEngineeringCompoundCrs"));
     let message = refusal(&missing);
     assert!(message.contains(absent), "{message}");
 }
@@ -304,13 +375,15 @@ fn a_survey_whose_datums_disagree_is_refused() {
     // The stations count from one point, the interval (which gives the CRS)
     // names another.
     let mut two = trajectory(Some(eml::NorthReferenceKind::GridNorth));
-    two.md_interval.as_mut().unwrap().datum = Some(dor(OTHER, "eml23.ReferencePointInALocalEngineeringCompoundCrs"));
+    two.md_interval.as_mut().unwrap().datum =
+        Some(dor(OTHER, "eml23.ReferencePointInALocalEngineeringCompoundCrs"));
     let message = refusal(&two);
     assert!(message.contains("MdInterval.Datum"), "{message}");
 
     // One station counts from another datum than the rest.
     let mut split = trajectory(Some(eml::NorthReferenceKind::GridNorth));
-    split.trajectory_station[2].md.datum = Some(dor(OTHER, "eml23.ReferencePointInALocalEngineeringCompoundCrs"));
+    split.trajectory_station[2].md.datum =
+        Some(dor(OTHER, "eml23.ReferencePointInALocalEngineeringCompoundCrs"));
     let message = refusal(&split);
     assert!(message.contains("two datums"), "{message}");
 }
@@ -347,13 +420,19 @@ fn a_station_the_survey_cannot_read_is_refused_by_name() {
     let mut blind = trajectory(Some(eml::NorthReferenceKind::GridNorth));
     blind.trajectory_station[2].azi = None;
     let message = refusal(&blind);
-    assert!(message.contains("station 3") && message.contains("no azimuth"), "{message}");
+    assert!(
+        message.contains("station 3") && message.contains("no azimuth"),
+        "{message}"
+    );
 
     // No inclination at all.
     let mut flat = trajectory(Some(eml::NorthReferenceKind::GridNorth));
     flat.trajectory_station[1].incl = None;
     let message = refusal(&flat);
-    assert!(message.contains("station 2") && message.contains("no inclination"), "{message}");
+    assert!(
+        message.contains("station 2") && message.contains("no inclination"),
+        "{message}"
+    );
 
     // Depths out of order are not sorted into a survey.
     let mut shuffled = trajectory(Some(eml::NorthReferenceKind::GridNorth));
@@ -363,7 +442,10 @@ fn a_station_the_survey_cannot_read_is_refused_by_name() {
 
     // An angle in a unit this build cannot convert is not read as degrees.
     let mut centesimal = trajectory(Some(eml::NorthReferenceKind::GridNorth));
-    centesimal.trajectory_station[2].incl = Some(eml::PlaneAngleMeasure { value: 90.0, uom: eml::PlaneAngleUom::Ccgr });
+    centesimal.trajectory_station[2].incl = Some(eml::PlaneAngleMeasure {
+        value: 90.0,
+        uom: eml::PlaneAngleUom::Ccgr,
+    });
     let message = refusal(&centesimal);
     assert!(message.contains("ccgr"), "{message}");
 
@@ -387,11 +469,17 @@ fn a_witsml_2_0_trajectory_is_refused_by_name() {
     use energyml_witsml_2_0 as w20;
     let old = w20::Trajectory {
         uuid: TRAJECTORY.into(),
-        trajectory_station: vec![w20::TrajectoryStation::default(), w20::TrajectoryStation::default()],
+        trajectory_station: vec![
+            w20::TrajectoryStation::default(),
+            w20::TrajectoryStation::default(),
+        ],
         ..Default::default()
     };
     assert!(geometry::is_supported(&old));
-    let message = geometry::of(&old, &site()).map(|_| ()).expect_err("no datum").to_string();
+    let message = geometry::of(&old, &site())
+        .map(|_| ())
+        .expect_err("no datum")
+        .to_string();
     assert!(message.contains("name no datum"), "{message}");
 }
 
@@ -407,21 +495,27 @@ fn projected_site(order: eml::AxisOrder2d, uom: Option<eml::LengthUomExt>) -> Si
         uuid: PROJECTED.into(),
         axis_order: order,
         uom,
-        abstract_projected_crs: Some(eml::AbstractProjectedCrs::ProjectedEpsgCrs(eml::ProjectedEpsgCrs { epsg_code: 2154 })),
+        abstract_projected_crs: Some(eml::AbstractProjectedCrs::ProjectedEpsgCrs(
+            eml::ProjectedEpsgCrs { epsg_code: 2154 },
+        )),
         ..Default::default()
     };
     let point = eml::ReferencePointInACrs {
         uuid: POINT.into(),
-        horizontal_coordinates: Some(eml::AbstractHorizontalCoordinates::ProjectedCoordinates(eml::ProjectedCoordinates {
-            coordinate1: 500_000.0,
-            coordinate2: 6_000_000.0,
-            crs: dor(PROJECTED, "eml23.ProjectedCrs"),
-        })),
+        horizontal_coordinates: Some(eml::AbstractHorizontalCoordinates::ProjectedCoordinates(
+            eml::ProjectedCoordinates {
+                coordinate1: 500_000.0,
+                coordinate2: 6_000_000.0,
+                crs: dor(PROJECTED, "eml23.ProjectedCrs"),
+            },
+        )),
         vertical_coordinate: Some(30.0),
         vertical_crs: Some(dor(VERTICAL, "eml23.VerticalCrs")),
         ..Default::default()
     };
-    site().with(PROJECTED, Box::new(projected)).with(POINT, Box::new(point))
+    site()
+        .with(PROJECTED, Box::new(projected))
+        .with(POINT, Box::new(point))
 }
 
 fn from_point(north: eml::NorthReferenceKind) -> witsml::Trajectory {
@@ -437,23 +531,40 @@ fn from_point(north: eml::NorthReferenceKind) -> witsml::Trajectory {
 #[test]
 fn a_grid_north_survey_from_a_projected_point_is_drawn_in_that_system() {
     let site = projected_site(eml::AxisOrder2d::EastingNorthing, Some(eml::LengthUomExt::M));
-    let found = geometry::of(&from_point(eml::NorthReferenceKind::GridNorth), &site).expect("drawn").patches[0].points.clone();
+    let found = geometry::of(&from_point(eml::NorthReferenceKind::GridNorth), &site)
+        .expect("drawn")
+        .patches[0]
+        .points
+        .clone();
     let expected = [500_000.0 + R, 6_000_000.0, 30.0 - 100.0 - R];
-    assert!(close(found[2], expected, 1e-6), "{:?}, expected {expected:?}", found[2]);
+    assert!(
+        close(found[2], expected, 1e-6),
+        "{:?}, expected {expected:?}",
+        found[2]
+    );
 }
 
 #[test]
 fn a_projected_point_that_does_not_state_its_axes_or_unit_is_refused() {
     let unitless = projected_site(eml::AxisOrder2d::EastingNorthing, None);
-    let message = geometry::of(&from_point(eml::NorthReferenceKind::GridNorth), &unitless).map(|_| ()).expect_err("no unit").to_string();
+    let message = geometry::of(&from_point(eml::NorthReferenceKind::GridNorth), &unitless)
+        .map(|_| ())
+        .expect_err("no unit")
+        .to_string();
     assert!(message.contains("states no unit"), "{message}");
 
     let swapped = projected_site(eml::AxisOrder2d::NorthingEasting, Some(eml::LengthUomExt::M));
-    let message = geometry::of(&from_point(eml::NorthReferenceKind::GridNorth), &swapped).map(|_| ()).expect_err("northing first").to_string();
+    let message = geometry::of(&from_point(eml::NorthReferenceKind::GridNorth), &swapped)
+        .map(|_| ())
+        .expect_err("northing first")
+        .to_string();
     assert!(message.contains("northing easting"), "{message}");
 
     // Plant north names a plant, and a point in a projected CRS has none.
     let site = projected_site(eml::AxisOrder2d::EastingNorthing, Some(eml::LengthUomExt::M));
-    let message = geometry::of(&from_point(eml::NorthReferenceKind::PlantNorth), &site).map(|_| ()).expect_err("no plant").to_string();
+    let message = geometry::of(&from_point(eml::NorthReferenceKind::PlantNorth), &site)
+        .map(|_| ())
+        .expect_err("no plant")
+        .to_string();
     assert!(message.contains("no local engineering compound"), "{message}");
 }

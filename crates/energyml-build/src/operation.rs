@@ -144,22 +144,42 @@ pub struct Takes {
 impl Takes {
     /// A shape, with no expected topology.
     pub const fn shape() -> Self {
-        Self { kind: "shape", topology: None, types: &[], palette: false }
+        Self {
+            kind: "shape",
+            topology: None,
+            types: &[],
+            palette: false,
+        }
     }
 
     /// A shape whose topology is expected — `triangles`, `polylines`, `points`.
     pub const fn shaped(topology: &'static str) -> Self {
-        Self { kind: "shape", topology: Some(topology), types: &[], palette: false }
+        Self {
+            kind: "shape",
+            topology: Some(topology),
+            types: &[],
+            palette: false,
+        }
     }
 
     /// A piece of another kind: `features`, `lattice`, `field`, `ramp`.
     pub const fn piece(kind: &'static str) -> Self {
-        Self { kind, topology: None, types: &[], palette: false }
+        Self {
+            kind,
+            topology: None,
+            types: &[],
+            palette: false,
+        }
     }
 
     /// An object of the package, of which these types are proposed.
     pub const fn object(types: &'static [&'static str]) -> Self {
-        Self { kind: "object", topology: None, types, palette: false }
+        Self {
+            kind: "object",
+            topology: None,
+            types,
+            palette: false,
+        }
     }
 
     /// Whether an object of this qualified type is one this slot proposes —
@@ -171,7 +191,11 @@ impl Takes {
     /// takes are the same objects.
     pub fn accepts(&self, qualified_type: &str) -> bool {
         fn bare(qualified: &str) -> String {
-            let class = qualified.rsplit('.').next().unwrap_or(qualified).to_ascii_lowercase();
+            let class = qualified
+                .rsplit('.')
+                .next()
+                .unwrap_or(qualified)
+                .to_ascii_lowercase();
             class.strip_prefix("obj_").map(str::to_string).unwrap_or(class)
         }
         self.types.is_empty() || self.types.iter().any(|one| bare(one) == bare(qualified_type))
@@ -206,7 +230,11 @@ impl Need {
         let bad = |what: &str| Err(format!("expected {what}, got {value}"));
         match self {
             Need::Object { .. } | Need::PropertyKind | Need::Crs | Need::Interpretation => {
-                if value.is_string() || value.is_object() { Ok(()) } else { bad("an object reference (a uuid, or a DataObjectReference)") }
+                if value.is_string() || value.is_object() {
+                    Ok(())
+                } else {
+                    bad("an object reference (a uuid, or a DataObjectReference)")
+                }
             }
             Need::Number { least, most, .. } => match value.as_f64() {
                 Some(v) if least.is_none_or(|l| v >= l) && most.is_none_or(|m| v <= m) => Ok(()),
@@ -222,7 +250,13 @@ impl Need {
                 Some(v) => Err(format!("{v} is outside [{}, {}]", bound(*least), bound(*most))),
                 None => bad("a whole number"),
             },
-            Need::Text | Need::Title => if value.is_string() { Ok(()) } else { bad("text") },
+            Need::Text | Need::Title => {
+                if value.is_string() {
+                    Ok(())
+                } else {
+                    bad("text")
+                }
+            }
             Need::Vocabulary(name) => match value.as_str() {
                 Some(text) if !text.trim().is_empty() => Ok(()),
                 _ => bad(&format!("a term of `{name}` — its label, its code or its id")),
@@ -237,10 +271,18 @@ impl Need {
             // caller's to check, because only the caller has the registry.
             Need::Type(_) => match value.as_str() {
                 Some(text) if text.contains('.') && !text.starts_with('.') && !text.ends_with('.') => Ok(()),
-                Some(_) => bad("a qualified type, `package` and `Type` around a dot (resqml22.BoundaryFeature)"),
+                Some(_) => {
+                    bad("a qualified type, `package` and `Type` around a dot (resqml22.BoundaryFeature)")
+                }
                 None => bad("a qualified type"),
             },
-            Need::Flag => if value.is_boolean() { Ok(()) } else { bad("true or false") },
+            Need::Flag => {
+                if value.is_boolean() {
+                    Ok(())
+                } else {
+                    bad("true or false")
+                }
+            }
             Need::Choice(allowed) => match value.as_str() {
                 Some(s) if allowed.contains(&s) => Ok(()),
                 _ => bad(&format!("one of {}", allowed.join(", "))),
@@ -261,8 +303,12 @@ impl Need {
             // operation takes (`crate::crs::FRAMES`).
             Need::Crs => serde_json::json!({ "kind": "crs", "types": crate::crs::FRAMES }),
             Need::Interpretation => serde_json::json!({ "kind": "interpretation" }),
-            Need::Number { uom, least, most } => serde_json::json!({ "kind": "number", "uom": uom, "least": least, "most": most }),
-            Need::Integer { least, most } => serde_json::json!({ "kind": "integer", "least": least, "most": most }),
+            Need::Number { uom, least, most } => {
+                serde_json::json!({ "kind": "number", "uom": uom, "least": least, "most": most })
+            }
+            Need::Integer { least, most } => {
+                serde_json::json!({ "kind": "integer", "least": least, "most": most })
+            }
             Need::Text => serde_json::json!({ "kind": "text" }),
             Need::Flag => serde_json::json!({ "kind": "flag" }),
             Need::Choice(allowed) => serde_json::json!({ "kind": "choice", "choices": allowed }),
@@ -442,7 +488,13 @@ impl Applies {
             Applies::With(names) => format!("`{}` has a value", names.join("`, `")),
             Applies::Without(names) => format!("`{}` was not given", names.join("`, `")),
             Applies::When { slot, is } => {
-                format!("`{slot}` is {}", is.iter().map(|one| format!("`{one}`")).collect::<Vec<_>>().join(" or "))
+                format!(
+                    "`{slot}` is {}",
+                    is.iter()
+                        .map(|one| format!("`{one}`"))
+                        .collect::<Vec<_>>()
+                        .join(" or ")
+                )
             }
             Applies::Any(all) => all.iter().map(Applies::said).collect::<Vec<_>>().join(", or "),
         }
@@ -455,7 +507,9 @@ impl Applies {
             Applies::With(names) => serde_json::json!({ "kind": "with", "names": names }),
             Applies::Without(names) => serde_json::json!({ "kind": "without", "names": names }),
             Applies::When { slot, is } => serde_json::json!({ "kind": "when", "slot": slot, "is": is }),
-            Applies::Any(all) => serde_json::json!({ "kind": "any", "of": all.iter().map(Applies::json).collect::<Vec<_>>() }),
+            Applies::Any(all) => {
+                serde_json::json!({ "kind": "any", "of": all.iter().map(Applies::json).collect::<Vec<_>>() })
+            }
         }
     }
 
@@ -618,7 +672,10 @@ impl Slot {
 
     /// A slot that may be left empty.
     pub fn optional(name: &'static str, need: Need, about: &'static str) -> Self {
-        Self { least: 0, ..Self::required(name, need, about) }
+        Self {
+            least: 0,
+            ..Self::required(name, need, about)
+        }
     }
 
     /// A slot that takes **several** values, `least` at fewest and no ceiling.
@@ -626,7 +683,11 @@ impl Slot {
     /// The answer is then a JSON **array**, always — see [`Slot::takes_many`].
     /// Its order is **not** data unless [`Slot::in_order`] says so.
     pub fn many(name: &'static str, need: Need, about: &'static str, least: u32) -> Self {
-        Self { least, most: None, ..Self::required(name, need, about) }
+        Self {
+            least,
+            most: None,
+            ..Self::required(name, need, about)
+        }
     }
 
     /// The same slot, its values' **order** being part of the answer.
@@ -635,7 +696,11 @@ impl Slot {
     /// and letting it be set would put a flag in the template that a form would
     /// then have to decide how to ignore.
     pub fn in_order(mut self) -> Self {
-        debug_assert!(self.takes_many(), "`{}` takes one value: it has no order", self.name);
+        debug_assert!(
+            self.takes_many(),
+            "`{}` takes one value: it has no order",
+            self.name
+        );
         self.ordered = self.takes_many();
         self
     }
@@ -703,7 +768,10 @@ impl Slot {
 
     /// The same slot, acting only when `slot` settles to one of `is`.
     pub fn only_when(mut self, slot: &'static str, is: &[&'static str]) -> Self {
-        self.applies = Applies::When { slot, is: is.to_vec() };
+        self.applies = Applies::When {
+            slot,
+            is: is.to_vec(),
+        };
         self
     }
 
@@ -854,7 +922,10 @@ impl Choices {
         // *Will that slot have a value?* — answered, or holding a suggestion
         // that settling is about to apply.
         let effective = |name: &str| {
-            answered(name) || slots.iter().any(|slot| slot.name == name && slot.suggested.is_some())
+            answered(name)
+                || slots
+                    .iter()
+                    .any(|slot| slot.name == name && slot.suggested.is_some())
         };
         // A `When` reads its controller **as settled**, so the controller must
         // come first — otherwise the answer would depend on an order nobody
@@ -865,7 +936,10 @@ impl Choices {
                     return Err(Refusal::about(
                         "declaration",
                         slot.name,
-                        format!("`{}` acts on the value of `{controller}`, which is not declared before it", slot.name),
+                        format!(
+                            "`{}` acts on the value of `{controller}`, which is not declared before it",
+                            slot.name
+                        ),
                     )
                     .into());
                 }
@@ -882,9 +956,16 @@ impl Choices {
                     let message = match &slot.applies {
                         Applies::With(_) => format!("`{}` needs `{against}`, which has no value", slot.name),
                         Applies::When { .. } | Applies::Any(_) => {
-                            format!("`{}` acts only when {} — it is not here", slot.name, slot.applies.said())
+                            format!(
+                                "`{}` acts only when {} — it is not here",
+                                slot.name,
+                                slot.applies.said()
+                            )
                         }
-                        _ => format!("`{}` cannot be given beside `{against}`: they are alternatives", slot.name),
+                        _ => format!(
+                            "`{}` cannot be given beside `{against}`: they are alternatives",
+                            slot.name
+                        ),
                     };
                     wrong.push(Refusal::about("inapplicable", slot.name, message));
                 }
@@ -895,21 +976,35 @@ impl Choices {
                 Some(value) if slot.takes_many() => wrong.extend(check_many(slot, value)),
                 Some(value) => {
                     if let Err(why) = slot.need.accepts(value) {
-                        wrong.push(Refusal::about("value", slot.name, format!("`{}`: {why}", slot.name)));
+                        wrong.push(Refusal::about(
+                            "value",
+                            slot.name,
+                            format!("`{}`: {why}", slot.name),
+                        ));
                     }
                 }
                 None => match &slot.suggested {
                     Some(value) => {
                         out.0.insert(slot.name.to_string(), value.clone());
                     }
-                    None if slot.is_required() && (purpose == Purpose::Writing || slot.group == "operation") => {
-                        wrong.push(Refusal::about("required", slot.name, format!("`{}` is required: {}", slot.name, slot.about)));
+                    None if slot.is_required()
+                        && (purpose == Purpose::Writing || slot.group == "operation") =>
+                    {
+                        wrong.push(Refusal::about(
+                            "required",
+                            slot.name,
+                            format!("`{}` is required: {}", slot.name, slot.about),
+                        ));
                     }
                     None => {}
                 },
             }
         }
-        if wrong.is_empty() { Ok(out) } else { Err(Error::several(wrong)) }
+        if wrong.is_empty() {
+            Ok(out)
+        } else {
+            Err(Error::several(wrong))
+        }
     }
 }
 
@@ -944,7 +1039,11 @@ fn check_many(slot: &Slot, value: &Value) -> Vec<Refusal> {
         return vec![Refusal::about(
             "shape",
             slot.name,
-            format!("`{}` takes several values, so its answer is a list — `[…]`, not a lone {}", slot.name, kind_of(value)),
+            format!(
+                "`{}` takes several values, so its answer is a list — `[…]`, not a lone {}",
+                slot.name,
+                kind_of(value)
+            ),
         )];
     };
     let count = items.len() as u32;
@@ -952,12 +1051,19 @@ fn check_many(slot: &Slot, value: &Value) -> Vec<Refusal> {
         return vec![Refusal::about(
             "count",
             slot.name,
-            format!("`{}` needs at least {} value(s) and has {count}: {}", slot.name, slot.least, slot.about),
+            format!(
+                "`{}` needs at least {} value(s) and has {count}: {}",
+                slot.name, slot.least, slot.about
+            ),
         )];
     }
     if let Some(most) = slot.most {
         if count > most {
-            return vec![Refusal::about("count", slot.name, format!("`{}` takes at most {most} value(s) and has {count}", slot.name))];
+            return vec![Refusal::about(
+                "count",
+                slot.name,
+                format!("`{}` takes at most {most} value(s) and has {count}", slot.name),
+            )];
         }
     }
     // Each one, and **every** one: stopping at the first would make correcting a
@@ -1022,7 +1128,12 @@ impl NewObject {
     /// `Citation.VersionString` (eml 2.0) — as the reader of the package reads
     /// it; blank is none.
     pub fn object_version(&self) -> Option<String> {
-        let text = |value: &Value| value.as_str().map(|one| one.trim().to_string()).filter(|one| !one.is_empty());
+        let text = |value: &Value| {
+            value
+                .as_str()
+                .map(|one| one.trim().to_string())
+                .filter(|one| !one.is_empty())
+        };
         text(&self.json["objectVersion"]).or_else(|| text(&self.json["Citation"]["VersionString"]))
     }
 
@@ -1039,7 +1150,8 @@ impl NewObject {
 
     /// The reference to it, the version it declares included.
     pub fn reference(&self) -> crate::pieces::Ref {
-        crate::pieces::Ref::new(self.uuid.clone(), self.qualified_type.clone(), self.title.clone()).with_version(self.object_version())
+        crate::pieces::Ref::new(self.uuid.clone(), self.qualified_type.clone(), self.title.clone())
+            .with_version(self.object_version())
     }
 }
 
@@ -1294,7 +1406,9 @@ pub enum Identity {
 impl Identity {
     /// The built-in derivation.
     pub fn derived() -> Self {
-        Identity::Derived { namespace: crate::naming::NAMESPACE }
+        Identity::Derived {
+            namespace: crate::naming::NAMESPACE,
+        }
     }
 
     /// The uuid of rank `rank` in the plan, seeded by `name` — the derivation
@@ -1302,10 +1416,13 @@ impl Identity {
     pub fn uuid(&self, name: &str, rank: usize) -> Result<String, Error> {
         match self {
             Identity::Derived { namespace } => Ok(Uuid::new_v5(namespace, name.as_bytes()).to_string()),
-            Identity::Given(list) => list
-                .get(rank)
-                .cloned()
-                .ok_or_else(|| Error::new(format!("the plan needs at least {} uuid(s) and {} were given", rank + 1, list.len()))),
+            Identity::Given(list) => list.get(rank).cloned().ok_or_else(|| {
+                Error::new(format!(
+                    "the plan needs at least {} uuid(s) and {} were given",
+                    rank + 1,
+                    list.len()
+                ))
+            }),
         }
     }
 }
@@ -1340,7 +1457,9 @@ pub struct Error {
 impl Error {
     /// A refusal about no slot in particular.
     pub fn new(message: impl Into<String>) -> Self {
-        Error { refusals: vec![Refusal::new("refused", message)] }
+        Error {
+            refusals: vec![Refusal::new("refused", message)],
+        }
     }
 
     /// Several refusals, found together.
@@ -1356,7 +1475,11 @@ impl Error {
 
     /// The refusals as one sentence — what a terminal prints.
     pub fn message(&self) -> String {
-        self.refusals.iter().map(|one| one.message.as_str()).collect::<Vec<_>>().join("; ")
+        self.refusals
+            .iter()
+            .map(|one| one.message.as_str())
+            .collect::<Vec<_>>()
+            .join("; ")
     }
 }
 
@@ -1385,17 +1508,29 @@ pub struct Refusal {
 impl Refusal {
     /// A refusal under a key.
     pub fn new(key: &'static str, message: impl Into<String>) -> Self {
-        Refusal { key, slot: None, message: message.into() }
+        Refusal {
+            key,
+            slot: None,
+            message: message.into(),
+        }
     }
 
     /// A refusal about one slot, its name leading the message.
     pub fn on(slot: &str, why: impl fmt::Display) -> Self {
-        Refusal { key: "slot", slot: Some(slot.to_string()), message: format!("`{slot}`: {why}") }
+        Refusal {
+            key: "slot",
+            slot: Some(slot.to_string()),
+            message: format!("`{slot}`: {why}"),
+        }
     }
 
     /// A refusal about one slot, under a key, its message as written.
     pub fn about(key: &'static str, slot: &str, message: impl Into<String>) -> Self {
-        Refusal { key, slot: Some(slot.to_string()), message: message.into() }
+        Refusal {
+            key,
+            slot: Some(slot.to_string()),
+            message: message.into(),
+        }
     }
 
     /// `{ key, slot, message }` — the one wire form, which the front end and any
@@ -1417,13 +1552,19 @@ impl std::error::Error for Refusal {}
 /// single refusal can hold.
 impl From<Error> for Refusal {
     fn from(mut error: Error) -> Self {
-        if error.refusals.len() == 1 { error.refusals.remove(0) } else { Refusal::new("refused", error.message()) }
+        if error.refusals.len() == 1 {
+            error.refusals.remove(0)
+        } else {
+            Refusal::new("refused", error.message())
+        }
     }
 }
 
 impl From<Refusal> for Error {
     fn from(refusal: Refusal) -> Self {
-        Error { refusals: vec![refusal] }
+        Error {
+            refusals: vec![refusal],
+        }
     }
 }
 
@@ -1520,7 +1661,13 @@ pub trait AnyOperation: Send + Sync {
         Vec::new()
     }
     /// The plan. `choices` have been [settled](Choices::settle) already.
-    fn plan(&self, pieces: &Pieces, choices: &Choices, identity: &Identity, when: &When) -> Result<Plan, Error>;
+    fn plan(
+        &self,
+        pieces: &Pieces,
+        choices: &Choices,
+        identity: &Identity,
+        when: &When,
+    ) -> Result<Plan, Error>;
 
     /// The plan, with its whole [`Context`] — the purpose and the feedback
     /// beside the identity and the instant. What the registry calls; an
@@ -1659,12 +1806,16 @@ impl Default for Registry {
 impl Registry {
     /// The built-in operations.
     pub fn new() -> Self {
-        Self { operations: crate::ops::builtin() }
+        Self {
+            operations: crate::ops::builtin(),
+        }
     }
 
     /// No operation at all — for a caller that brings its own.
     pub fn bare() -> Self {
-        Self { operations: Vec::new() }
+        Self {
+            operations: Vec::new(),
+        }
     }
 
     /// Add one, ahead of the built-ins.
@@ -1686,7 +1837,11 @@ impl Registry {
     /// reason and what it would ask.
     pub fn offers(&self, pieces: &Pieces) -> Vec<Offer<'_>> {
         self.iter()
-            .map(|operation| Offer { operation, fitness: operation.fitness(pieces), needs: operation.needs(pieces) })
+            .map(|operation| Offer {
+                operation,
+                fitness: operation.fitness(pieces),
+                needs: operation.needs(pieces),
+            })
             .collect()
     }
 
@@ -1713,13 +1868,25 @@ impl Registry {
         when: &When,
         purpose: Purpose,
     ) -> Result<Plan, Error> {
-        let cx = Context { identity, when, purpose, feedback: &Silent, bag: pieces };
+        let cx = Context {
+            identity,
+            when,
+            purpose,
+            feedback: &Silent,
+            bag: pieces,
+        };
         self.plan_in(name, pieces, choices, &cx)
     }
 
     /// Plan in a whole [`Context`] — a caller that listens for progress, or
     /// may ask the computation to stop.
-    pub fn plan_in(&self, name: &str, pieces: &Pieces, choices: &Choices, cx: &Context<'_>) -> Result<Plan, Error> {
+    pub fn plan_in(
+        &self,
+        name: &str,
+        pieces: &Pieces,
+        choices: &Choices,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Error> {
         // One span per operation run: the log says which one is slow, and how
         // many objects and arrays it came to. Never an event per element.
         let span = tracing::info_span!(
@@ -1729,9 +1896,15 @@ impl Registry {
             datasets = tracing::field::Empty
         );
         let _entered = span.enter();
-        let operation = self.get(name).ok_or_else(|| Error::new(format!("no operation named `{name}`")))?;
+        let operation = self
+            .get(name)
+            .ok_or_else(|| Error::new(format!("no operation named `{name}`")))?;
         if let Fitness::Unfit(why) = operation.fitness(pieces) {
-            return Err(Refusal { message: format!("`{name}` is not fit for this input: {}", why.message), ..why }.into());
+            return Err(Refusal {
+                message: format!("`{name}` is not fit for this input: {}", why.message),
+                ..why
+            }
+            .into());
         }
         let slots = operation.needs(pieces);
         let given = crate::declare::given_inputs(pieces, &operation.takes());
@@ -1770,7 +1943,9 @@ impl Registry {
 fn record_choices(plan: &mut Plan, slots: &[Slot], settled: &Choices) {
     use energyml_domain::provenance::Parameter;
     for slot in slots {
-        let Some(value) = settled.get(slot.name) else { continue };
+        let Some(value) = settled.get(slot.name) else {
+            continue;
+        };
         if plan.activity.parameters.iter().any(|p| title_of(p) == slot.name) {
             continue;
         }
@@ -1781,7 +1956,10 @@ fn record_choices(plan: &mut Plan, slots: &[Slot], settled: &Choices) {
                 if !value.is_object() {
                     continue;
                 }
-                Parameter::Object { title: slot.name.to_string(), reference: value.clone() }
+                Parameter::Object {
+                    title: slot.name.to_string(),
+                    reference: value.clone(),
+                }
             }
             // **An input is not a parameter.** The activity records its
             // inputs as such, through `apply`; adding it here would make it a
@@ -1797,19 +1975,32 @@ fn record_choices(plan: &mut Plan, slots: &[Slot], settled: &Choices) {
                 None => continue,
             },
             Need::Epsg | Need::Integer { .. } => match value.as_f64() {
-                Some(number) => Parameter::Double { title: slot.name.to_string(), value: number, uom: None },
+                Some(number) => Parameter::Double {
+                    title: slot.name.to_string(),
+                    value: number,
+                    uom: None,
+                },
                 None => continue,
             },
             // eml 2.3 has no boolean parameter — the template's `Constraint`
             // says which two words, and this writes one of them.
             Need::Flag => Parameter::Text {
                 title: slot.name.to_string(),
-                value: if value.as_bool() == Some(true) { "true".to_string() } else { "false".to_string() },
+                value: if value.as_bool() == Some(true) {
+                    "true".to_string()
+                } else {
+                    "false".to_string()
+                },
             },
-            Need::Text | Need::Title | Need::Choice(_) | Need::Type(_) | Need::Vocabulary(_) => match value.as_str() {
-                Some(text) => Parameter::Text { title: slot.name.to_string(), value: text.to_string() },
-                None => continue,
-            },
+            Need::Text | Need::Title | Need::Choice(_) | Need::Type(_) | Need::Vocabulary(_) => {
+                match value.as_str() {
+                    Some(text) => Parameter::Text {
+                        title: slot.name.to_string(),
+                        value: text.to_string(),
+                    },
+                    None => continue,
+                }
+            }
         };
         plan.activity.parameters.push(parameter);
     }
@@ -1819,6 +2010,8 @@ fn record_choices(plan: &mut Plan, slots: &[Slot], settled: &Choices) {
 fn title_of(parameter: &energyml_domain::provenance::Parameter) -> &str {
     use energyml_domain::provenance::Parameter;
     match parameter {
-        Parameter::Double { title, .. } | Parameter::Text { title, .. } | Parameter::Object { title, .. } => title,
+        Parameter::Double { title, .. } | Parameter::Text { title, .. } | Parameter::Object { title, .. } => {
+            title
+        }
     }
 }

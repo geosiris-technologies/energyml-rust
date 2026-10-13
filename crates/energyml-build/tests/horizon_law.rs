@@ -28,18 +28,29 @@ use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
 fn when() -> When {
-    When { creation: "2026-09-24T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-24T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 const REFERENCE: &str = "6b0e4c2a-1f3d-4e5a-9b7c-8d9e0f1a2b3c";
 const CUT: &str = "7c1f5d3b-2a4e-4f6b-8c8d-9e0f1a2b3c4d";
 
 fn frame() -> Ref {
-    Ref::new("cccccccc-0000-4000-8000-000000000003", "eml23.LocalEngineeringCompoundCrs", "The frame")
+    Ref::new(
+        "cccccccc-0000-4000-8000-000000000003",
+        "eml23.LocalEngineeringCompoundCrs",
+        "The frame",
+    )
 }
 
 fn other_frame() -> Ref {
-    Ref::new("dddddddd-0000-4000-8000-000000000004", "eml23.LocalEngineeringCompoundCrs", "The other frame")
+    Ref::new(
+        "dddddddd-0000-4000-8000-000000000004",
+        "eml23.LocalEngineeringCompoundCrs",
+        "The other frame",
+    )
 }
 
 /// The positions of the reference: a 5 × 4 lattice from (1000, 2000), 25
@@ -60,7 +71,16 @@ fn lattice(z: impl Fn(f64, f64) -> f64) -> Geometry {
     let points = positions().into_iter().map(|[x, y]| [x, y, z(x, y)]).collect();
     Geometry {
         kind: "grid",
-        patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Grid { fastest: 5, slowest: 4 }, closed: Vec::new() }],
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology: Topology::Grid {
+                fastest: 5,
+                slowest: 4,
+            },
+            closed: Vec::new(),
+        }],
     }
 }
 
@@ -72,7 +92,11 @@ fn known(uuid: &str, title: &str, frame: &Ref, uom: &str, up: bool) -> Source {
         crs: Some(frame.clone()),
         vertical_uom: Some(uom.into()),
         vertical_up: Some(up),
-        interpretation: Some(Ref::new("eeeeeeee-0000-4000-8000-000000000005", "resqml22.HorizonInterpretation", "H6")),
+        interpretation: Some(Ref::new(
+            "eeeeeeee-0000-4000-8000-000000000005",
+            "resqml22.HorizonInterpretation",
+            "H6",
+        )),
         node_count: Some(20),
         ..Default::default()
     })
@@ -81,8 +105,17 @@ fn known(uuid: &str, title: &str, frame: &Ref, uom: &str, up: bool) -> Source {
 /// The reference alone, at `z(x, y)`, in an elevation (`up`) or depth frame.
 fn reference(z: impl Fn(f64, f64) -> f64, up: bool) -> Pieces {
     Pieces::empty()
-        .with("reference", Source::Shape { geometry: lattice(z), closed: None })
-        .with("reference (object)", known(REFERENCE, "H6 — top of the Chalk", &frame(), "m", up))
+        .with(
+            "reference",
+            Source::Shape {
+                geometry: lattice(z),
+                closed: None,
+            },
+        )
+        .with(
+            "reference (object)",
+            known(REFERENCE, "H6 — top of the Chalk", &frame(), "m", up),
+        )
 }
 
 /// A triangulated plate over `[x0, x1] × [1990, 2130]` at `z(x)`.
@@ -103,8 +136,17 @@ fn plate(x0: f64, x1: f64, z: impl Fn(f64) -> f64) -> Geometry {
 /// The bag with one cut, in the reference's frame.
 fn with_cut(pieces: Pieces, cut: Geometry, up: bool) -> Pieces {
     pieces
-        .with("cuts", Source::Shape { geometry: cut, closed: None })
-        .with("cuts (object)", known(CUT, "H1 — base of the alluvium", &frame(), "m", up))
+        .with(
+            "cuts",
+            Source::Shape {
+                geometry: cut,
+                closed: None,
+            },
+        )
+        .with(
+            "cuts (object)",
+            known(CUT, "H1 — base of the alluvium", &frame(), "m", up),
+        )
 }
 
 /// H7, 95 below its reference — the answers every test starts from.
@@ -117,7 +159,9 @@ fn answers() -> Choices {
 }
 
 fn planned(pieces: &Pieces, choices: &Choices) -> Result<Plan, String> {
-    Registry::new().plan("horizon-from-law", pieces, choices, &Identity::derived(), &when()).map_err(|why| why.message())
+    Registry::new()
+        .plan("horizon-from-law", pieces, choices, &Identity::derived(), &when())
+        .map_err(|why| why.message())
 }
 
 fn heights(plan: &Plan) -> Vec<f64> {
@@ -132,7 +176,9 @@ fn recorded(plan: &Plan, title: &str) -> Option<Parameter> {
         .parameters
         .iter()
         .find(|one| match one {
-            Parameter::Double { title: t, .. } | Parameter::Text { title: t, .. } | Parameter::Object { title: t, .. } => t == title,
+            Parameter::Double { title: t, .. }
+            | Parameter::Text { title: t, .. }
+            | Parameter::Object { title: t, .. } => t == title,
         })
         .cloned()
 }
@@ -169,14 +215,23 @@ fn dipping(x: f64, y: f64) -> f64 {
 /// counts, the slow axis first.
 #[test]
 fn a_parallel_horizon_is_at_the_thickness_towards_its_side_in_the_sense_of_the_frame() {
-    let cases = [(true, "below", -95.0, "elevation"), (false, "below", 95.0, "depth"), (true, "above", 95.0, "elevation"), (false, "above", -95.0, "depth")];
+    let cases = [
+        (true, "below", -95.0, "elevation"),
+        (false, "below", 95.0, "depth"),
+        (true, "above", 95.0, "elevation"),
+        (false, "above", -95.0, "depth"),
+    ];
     for (up, side, offset, axis) in cases {
-        let plan = planned(&reference(dipping, up), &answers().set("side", side)).unwrap_or_else(|why| panic!("{why}"));
+        let plan = planned(&reference(dipping, up), &answers().set("side", side))
+            .unwrap_or_else(|why| panic!("{why}"));
         let laid = heights(&plan);
         assert_eq!(laid.len(), 20, "one height per node of the reference");
         for ([x, y], z) in positions().into_iter().zip(&laid) {
             let expected = dipping(x, y) + offset;
-            assert!((z - expected).abs() < 1e-9, "{side} in {axis}, at ({x}, {y}): {z} where {expected}");
+            assert!(
+                (z - expected).abs() < 1e-9,
+                "{side} in {axis}, at ({x}, {y}): {z} where {expected}"
+            );
         }
         assert_eq!(text(&plan, "axis"), axis, "the sense comes from the frame");
     }
@@ -196,7 +251,12 @@ fn a_parallel_horizon_is_at_the_thickness_towards_its_side_in_the_sense_of_the_f
     assert_eq!(lattice["Dimension"][1]["Spacing"]["Count"], json!(4));
     // In the reference's frame, and no other object: nothing was created.
     assert_eq!(grid["Geometry"]["LocalCrs"]["Uuid"], json!(frame().uuid));
-    assert_eq!(plan.objects.len(), 1, "{:?}", plan.objects.iter().map(|o| &o.qualified_type).collect::<Vec<_>>());
+    assert_eq!(
+        plan.objects.len(),
+        1,
+        "{:?}",
+        plan.objects.iter().map(|o| &o.qualified_type).collect::<Vec<_>>()
+    );
     assert_eq!(plan.shapes.len(), 1, "the grid computed travels with the plan");
 }
 
@@ -224,7 +284,13 @@ fn a_linear_law_changes_along_its_azimuth_only() {
 /// never filled from its neighbours.
 #[test]
 fn a_hole_in_the_reference_stays_a_hole_and_is_counted() {
-    let holed = |x: f64, y: f64| if (x == 1025.0 && y == 2040.0) || (x == 1100.0 && y == 2120.0) { f64::NAN } else { dipping(x, y) };
+    let holed = |x: f64, y: f64| {
+        if (x == 1025.0 && y == 2040.0) || (x == 1100.0 && y == 2120.0) {
+            f64::NAN
+        } else {
+            dipping(x, y)
+        }
+    };
     let plan = planned(&reference(holed, true), &answers()).unwrap_or_else(|why| panic!("{why}"));
     let laid = heights(&plan);
     for ([x, y], z) in positions().into_iter().zip(&laid) {
@@ -232,7 +298,11 @@ fn a_hole_in_the_reference_stays_a_hole_and_is_counted() {
     }
     assert_eq!(laid.iter().filter(|z| z.is_nan()).count(), 2);
     assert_eq!(number(&plan, "holeCount"), 2.0);
-    assert!(says(&plan, "reference-holes") && says(&plan, "holes"), "{:?}", plan.says);
+    assert!(
+        says(&plan, "reference-holes") && says(&plan, "holes"),
+        "{:?}",
+        plan.says
+    );
 }
 
 // -- the truncation --------------------------------------------------------
@@ -252,7 +322,11 @@ fn a_cut_never_lets_the_horizon_pass_above_it() {
     let mut kept_under = 0;
     for ([x, y], z) in positions().into_iter().zip(&laid) {
         if x <= 1060.0 {
-            assert!(z.is_nan() || *z <= cut(x), "at ({x}, {y}): {z} above the cut at {}", cut(x));
+            assert!(
+                z.is_nan() || *z <= cut(x),
+                "at ({x}, {y}): {z} above the cut at {}",
+                cut(x)
+            );
             if z.is_finite() {
                 kept_under += 1;
             }
@@ -260,10 +334,17 @@ fn a_cut_never_lets_the_horizon_pass_above_it() {
             assert_eq!(*z, -10.0, "beyond the cut at ({x}, {y})");
         }
     }
-    assert_eq!(kept_under, 4, "the column under the cut keeps its heights: {laid:?}");
+    assert_eq!(
+        kept_under, 4,
+        "the column under the cut keeps its heights: {laid:?}"
+    );
     assert_eq!(number(&plan, "erodedCount"), 8.0);
     assert_eq!(number(&plan, "beyondCutsCount"), 8.0);
-    assert!(says(&plan, "eroded") && says(&plan, "beyond-cuts"), "{:?}", plan.says);
+    assert!(
+        says(&plan, "eroded") && says(&plan, "beyond-cuts"),
+        "{:?}",
+        plan.says
+    );
 
     // In depth, the same picture: the horizon at 0 + 10 = 10, the cut at
     // 13 − (x − 1000)/10 — deeper than the horizon at x = 1000, so above it
@@ -273,7 +354,11 @@ fn a_cut_never_lets_the_horizon_pass_above_it() {
     let plan = planned(&pieces, &answers().set("thickness", 10.0)).unwrap_or_else(|why| panic!("{why}"));
     for ([x, y], z) in positions().into_iter().zip(heights(&plan)) {
         if x <= 1060.0 {
-            assert!(z.is_nan() || z >= cut(x), "at ({x}, {y}): {z} shallower than the cut at depth {}", cut(x));
+            assert!(
+                z.is_nan() || z >= cut(x),
+                "at ({x}, {y}): {z} shallower than the cut at depth {}",
+                cut(x)
+            );
         }
     }
     assert_eq!(number(&plan, "erodedCount"), 8.0);
@@ -293,7 +378,16 @@ fn a_grid_cuts_like_a_surface() {
     }
     let ground = Geometry {
         kind: "grid",
-        patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Grid { fastest: 3, slowest: 2 }, closed: Vec::new() }],
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology: Topology::Grid {
+                fastest: 3,
+                slowest: 2,
+            },
+            closed: Vec::new(),
+        }],
     };
     let pieces = with_cut(reference(|_, _| 0.0, true), ground, true);
     let plan = planned(&pieces, &answers().set("thickness", 10.0)).unwrap_or_else(|why| panic!("{why}"));
@@ -317,9 +411,19 @@ fn the_horizon_says_it_is_laid_and_cites_its_source() {
     assert_eq!(grid["ExtensionNameValue"][0]["Value"]["_"], json!("true"));
     let description = grid["Citation"]["Description"].as_str().expect("a description");
     assert!(description.contains("not measured"), "{description}");
-    assert!(description.contains("the test's own value"), "the source: {description}");
-    assert!(description.contains("H6 — top of the Chalk"), "the reference: {description}");
-    assert!(says(&plan, "synthetic") && says(&plan, "law") && says(&plan, "vertical-thickness"), "{:?}", plan.says);
+    assert!(
+        description.contains("the test's own value"),
+        "the source: {description}"
+    );
+    assert!(
+        description.contains("H6 — top of the Chalk"),
+        "the reference: {description}"
+    );
+    assert!(
+        says(&plan, "synthetic") && says(&plan, "law") && says(&plan, "vertical-thickness"),
+        "{:?}",
+        plan.says
+    );
     match recorded(&plan, "thickness") {
         Some(Parameter::Double { value, uom, .. }) => {
             assert_eq!(value, 95.0);
@@ -335,13 +439,32 @@ fn the_horizon_says_it_is_laid_and_cites_its_source() {
 #[test]
 fn the_reference_lends_its_frame_not_its_interpretation() {
     let registry = Registry::new();
-    let needs = registry.get("horizon-from-law").expect("registered").needs(&reference(dipping, false));
-    let slot = |name: &str| needs.iter().find(|one| one.name == name).unwrap_or_else(|| panic!("no slot `{name}`"));
-    assert_eq!(slot("crs").suggested.as_ref().and_then(|v| v["Uuid"].as_str()), Some(frame().uuid.as_str()));
+    let needs = registry
+        .get("horizon-from-law")
+        .expect("registered")
+        .needs(&reference(dipping, false));
+    let slot = |name: &str| {
+        needs
+            .iter()
+            .find(|one| one.name == name)
+            .unwrap_or_else(|| panic!("no slot `{name}`"))
+    };
+    assert_eq!(
+        slot("crs").suggested.as_ref().and_then(|v| v["Uuid"].as_str()),
+        Some(frame().uuid.as_str())
+    );
     assert_eq!(slot("axis").suggested, Some(json!("depth")));
-    assert_eq!(slot("interpretation").suggested, None, "H6's interpretation offered to H7");
+    assert_eq!(
+        slot("interpretation").suggested,
+        None,
+        "H6's interpretation offered to H7"
+    );
     assert_eq!(slot("title").suggested, None, "H6's title offered to H7");
-    assert_eq!(slot("side").suggested, None, "which side is the geology: nobody's default");
+    assert_eq!(
+        slot("side").suggested,
+        None,
+        "which side is the geology: nobody's default"
+    );
 }
 
 /// **Same inputs, same objects** — and another horizon, another object.
@@ -349,7 +472,12 @@ fn the_reference_lends_its_frame_not_its_interpretation() {
 fn same_inputs_same_uuid_and_another_title_another_object() {
     let once = planned(&reference(dipping, true), &answers()).unwrap();
     let twice = planned(&reference(dipping, true), &answers()).unwrap();
-    let uuids = |plan: &Plan| plan.objects.iter().map(|one| one.uuid.clone()).collect::<Vec<_>>();
+    let uuids = |plan: &Plan| {
+        plan.objects
+            .iter()
+            .map(|one| one.uuid.clone())
+            .collect::<Vec<_>>()
+    };
     assert_eq!(uuids(&once), uuids(&twice));
     let other = planned(&reference(dipping, true), &answers().set("title", "H7 bis")).unwrap();
     assert_ne!(uuids(&once), uuids(&other));
@@ -366,26 +494,50 @@ fn a_reference_that_is_not_a_grid_is_refused_at_the_offer() {
         patches: vec![Patch {
             index: 0,
             node_offset: 0,
-            points: vec![[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [0.0, 10.0, 0.0], [10.0, 10.0, 0.0]],
+            points: vec![
+                [0.0, 0.0, 0.0],
+                [10.0, 0.0, 0.0],
+                [0.0, 10.0, 0.0],
+                [10.0, 10.0, 0.0],
+            ],
             topology: Topology::Points,
             closed: Vec::new(),
         }],
     };
-    let pieces = Pieces::empty().with("reference", Source::Shape { geometry: cloud, closed: None });
+    let pieces = Pieces::empty().with(
+        "reference",
+        Source::Shape {
+            geometry: cloud,
+            closed: None,
+        },
+    );
     match Registry::new().get("horizon-from-law").unwrap().fitness(&pieces) {
         Fitness::Unfit(why) => {
-            assert!(why.message.contains("`reference`") && why.message.contains("interpolate"), "{}", why.message)
+            assert!(
+                why.message.contains("`reference`") && why.message.contains("interpolate"),
+                "{}",
+                why.message
+            )
         }
         Fitness::Fit => panic!("a cloud was taken for a lattice"),
     }
     // And the lattice itself: fit.
-    assert_eq!(Registry::new().get("horizon-from-law").unwrap().fitness(&reference(dipping, true)), Fitness::Fit);
+    assert_eq!(
+        Registry::new()
+            .get("horizon-from-law")
+            .unwrap()
+            .fitness(&reference(dipping, true)),
+        Fitness::Fit
+    );
 }
 
 /// **No thickness without a source**, absent or blank.
 #[test]
 fn a_thickness_without_a_source_is_refused() {
-    let absent = Choices::new().set("thickness", 95.0).set("side", "below").set("title", "H7");
+    let absent = Choices::new()
+        .set("thickness", 95.0)
+        .set("side", "below")
+        .set("title", "H7");
     let why = planned(&reference(dipping, true), &absent).unwrap_err();
     assert!(why.contains("`source` is required"), "{why}");
     let why = planned(&reference(dipping, true), &answers().set("source", "   ")).unwrap_err();
@@ -397,26 +549,54 @@ fn a_thickness_without_a_source_is_refused() {
 #[test]
 fn a_single_frame_that_of_the_reference() {
     let elsewhere = reference(|_, _| 0.0, true)
-        .with("cuts", Source::Shape { geometry: plate(990.0, 1060.0, |_| -20.0), closed: None })
+        .with(
+            "cuts",
+            Source::Shape {
+                geometry: plate(990.0, 1060.0, |_| -20.0),
+                closed: None,
+            },
+        )
         .with("cuts (object)", known(CUT, "H1", &other_frame(), "m", true));
     let why = planned(&elsewhere, &answers()).unwrap_err();
-    assert!(why.contains("The other frame") && why.contains("two origins"), "{why}");
+    assert!(
+        why.contains("The other frame") && why.contains("two origins"),
+        "{why}"
+    );
 
     let in_feet = reference(|_, _| 0.0, true)
-        .with("cuts", Source::Shape { geometry: plate(990.0, 1060.0, |_| -20.0), closed: None })
+        .with(
+            "cuts",
+            Source::Shape {
+                geometry: plate(990.0, 1060.0, |_| -20.0),
+                closed: None,
+            },
+        )
         .with("cuts (object)", known(CUT, "H1", &frame(), "ft", true));
     let why = planned(&in_feet, &answers()).unwrap_err();
     assert!(why.contains("`ft`"), "{why}");
 
-    let why = planned(&reference(dipping, true), &answers().set("crs", other_frame().dor())).unwrap_err();
+    let why = planned(
+        &reference(dipping, true),
+        &answers().set("crs", other_frame().dor()),
+    )
+    .unwrap_err();
     assert!(why.contains("`crs`") && why.contains("The frame"), "{why}");
 
     let why = planned(&reference(dipping, true), &answers().set("sourceEpsg", 2154)).unwrap_err();
     assert!(why.contains("`sourceEpsg`"), "{why}");
 
     let in_time = Pieces::empty()
-        .with("reference", Source::Shape { geometry: lattice(dipping), closed: None })
-        .with("reference (object)", known(REFERENCE, "H6 en temps", &frame(), "ms", false));
+        .with(
+            "reference",
+            Source::Shape {
+                geometry: lattice(dipping),
+                closed: None,
+            },
+        )
+        .with(
+            "reference (object)",
+            known(REFERENCE, "H6 en temps", &frame(), "ms", false),
+        );
     let why = planned(&in_time, &answers()).unwrap_err();
     assert!(why.contains("`ms`") && why.contains("length"), "{why}");
 }
@@ -427,7 +607,10 @@ fn a_single_frame_that_of_the_reference() {
 #[test]
 fn what_is_not_a_law_is_not_laid() {
     let why = planned(&reference(dipping, true), &answers().set("thickness", 0.0)).unwrap_err();
-    assert!(why.contains("`thickness`") && why.contains("under another name"), "{why}");
+    assert!(
+        why.contains("`thickness`") && why.contains("under another name"),
+        "{why}"
+    );
 
     let why = planned(&reference(dipping, true), &answers().set("thickness", -5.0)).unwrap_err();
     assert!(why.contains("`thickness`"), "{why}");
@@ -447,13 +630,29 @@ fn what_is_not_a_law_is_not_laid() {
     let mut moved = lattice(dipping);
     moved.patches[0].points[7][0] += 3.0;
     let pieces = Pieces::empty()
-        .with("reference", Source::Shape { geometry: moved, closed: None })
+        .with(
+            "reference",
+            Source::Shape {
+                geometry: moved,
+                closed: None,
+            },
+        )
         .with("reference (object)", known(REFERENCE, "H6", &frame(), "m", true));
     let why = planned(&pieces, &answers()).unwrap_err();
-    assert!(why.contains("`reference`") && why.contains("node (2, 1)"), "{why}");
+    assert!(
+        why.contains("`reference`") && why.contains("node (2, 1)"),
+        "{why}"
+    );
 
     // A cut below the whole horizon erodes it all.
-    let everywhere = with_cut(reference(|_, _| 0.0, true), plate(990.0, 1110.0, |_| -500.0), true);
+    let everywhere = with_cut(
+        reference(|_, _| 0.0, true),
+        plate(990.0, 1110.0, |_| -500.0),
+        true,
+    );
     let why = planned(&everywhere, &answers()).unwrap_err();
-    assert!(why.contains("no node of the horizon is left") && why.contains("20 eroded"), "{why}");
+    assert!(
+        why.contains("no node of the horizon is left") && why.contains("20 eroded"),
+        "{why}"
+    );
 }

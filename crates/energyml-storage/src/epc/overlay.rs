@@ -292,7 +292,12 @@ impl Overlay {
 
     /// The same, for a gate that knows what it is about to change (`uri` is its
     /// spelling of the object, kept in the journal for a reader that wants it).
-    pub fn get_mut_what(&mut self, uuid: &str, uri: Option<&str>, what: What) -> Option<&mut Box<dyn DynObject>> {
+    pub fn get_mut_what(
+        &mut self,
+        uuid: &str,
+        uri: Option<&str>,
+        what: What,
+    ) -> Option<&mut Box<dyn DynObject>> {
         let key = uuid.to_ascii_lowercase();
         let map = match &mut self.transaction {
             Some(transaction) => transaction,

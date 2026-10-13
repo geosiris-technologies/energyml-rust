@@ -38,15 +38,26 @@ const NI: usize = 5;
 const NJ: usize = 4;
 
 fn when() -> When {
-    When { creation: "2026-09-24T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-24T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 fn frame() -> Ref {
-    Ref::new("cccccccc-0000-4000-8000-000000000003", "eml23.LocalEngineeringCompoundCrs", "The boreholes frame")
+    Ref::new(
+        "cccccccc-0000-4000-8000-000000000003",
+        "eml23.LocalEngineeringCompoundCrs",
+        "The boreholes frame",
+    )
 }
 
 fn other_frame() -> Ref {
-    Ref::new("dddddddd-0000-4000-8000-000000000004", "eml23.LocalEngineeringCompoundCrs", "The other frame")
+    Ref::new(
+        "dddddddd-0000-4000-8000-000000000004",
+        "eml23.LocalEngineeringCompoundCrs",
+        "The other frame",
+    )
 }
 
 /// The lattice: 5 × 4 nodes, 25 along x and **40** along y — two spacings, so
@@ -66,7 +77,16 @@ fn grid(z: impl Fn(f64, f64) -> f64) -> Geometry {
     let points = positions().into_iter().map(|[x, y]| [x, y, z(x, y)]).collect();
     Geometry {
         kind: "grid",
-        patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Grid { fastest: NI, slowest: NJ }, closed: Vec::new() }],
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology: Topology::Grid {
+                fastest: NI,
+                slowest: NJ,
+            },
+            closed: Vec::new(),
+        }],
     }
 }
 
@@ -93,26 +113,50 @@ fn h3(x: f64, y: f64) -> f64 {
 fn o401() -> Vec<(&'static str, Geometry)> {
     vec![
         ("H3 — top of the Ypresian", grid(h3)),
-        ("H4 — top of the Sparnacian", grid(|x, y| h3(x, y) - 15.0 - 0.02 * (x - X0))),
-        ("H5 — top of the Selandian", grid(|x, y| h3(x, y) - 30.0 - 0.02 * (x - X0))),
-        ("H6 — top of the Chalk", grid(|x, y| h3(x, y) - 45.0 - 0.01 * (y - Y0))),
-        ("H7 — top of the Santonian", grid(|x, y| h3(x, y) - 140.0 - 0.01 * (y - Y0))),
+        (
+            "H4 — top of the Sparnacian",
+            grid(|x, y| h3(x, y) - 15.0 - 0.02 * (x - X0)),
+        ),
+        (
+            "H5 — top of the Selandian",
+            grid(|x, y| h3(x, y) - 30.0 - 0.02 * (x - X0)),
+        ),
+        (
+            "H6 — top of the Chalk",
+            grid(|x, y| h3(x, y) - 45.0 - 0.01 * (y - Y0)),
+        ),
+        (
+            "H7 — top of the Santonian",
+            grid(|x, y| h3(x, y) - 140.0 - 0.01 * (y - Y0)),
+        ),
     ]
 }
 
 /// The name a horizon takes in the bag: `horizons`, `horizons 2`, …
 fn slot_name(rank: usize) -> String {
-    if rank == 0 { "horizons".to_string() } else { format!("horizons {}", rank + 1) }
+    if rank == 0 {
+        "horizons".to_string()
+    } else {
+        format!("horizons {}", rank + 1)
+    }
 }
 
 /// What the caller knows of a horizon of the package.
 fn known(rank: usize, title: &str, frame: &Ref, uom: &str, up: bool) -> Source {
     Source::Object(Known {
-        reference: Some(Ref::new(format!("1a2b3c4d-0000-4000-8000-{rank:012}"), "resqml22.Grid2dRepresentation", title)),
+        reference: Some(Ref::new(
+            format!("1a2b3c4d-0000-4000-8000-{rank:012}"),
+            "resqml22.Grid2dRepresentation",
+            title,
+        )),
         crs: Some(frame.clone()),
         vertical_uom: Some(uom.into()),
         vertical_up: Some(up),
-        interpretation: Some(Ref::new(format!("eeeeeeee-0000-4000-8000-{rank:012}"), "resqml22.HorizonInterpretation", title)),
+        interpretation: Some(Ref::new(
+            format!("eeeeeeee-0000-4000-8000-{rank:012}"),
+            "resqml22.HorizonInterpretation",
+            title,
+        )),
         node_count: Some(NI * NJ),
         ..Default::default()
     })
@@ -123,8 +167,17 @@ fn bag_in(horizons: &[(&str, Geometry)], frame: &Ref, up: bool) -> Pieces {
     let mut pieces = Pieces::empty();
     for (rank, (title, geometry)) in horizons.iter().enumerate() {
         pieces = pieces
-            .with(slot_name(rank), Source::Shape { geometry: geometry.clone(), closed: None })
-            .with(format!("{} (object)", slot_name(rank)), known(rank, title, frame, "m", up));
+            .with(
+                slot_name(rank),
+                Source::Shape {
+                    geometry: geometry.clone(),
+                    closed: None,
+                },
+            )
+            .with(
+                format!("{} (object)", slot_name(rank)),
+                known(rank, title, frame, "m", up),
+            );
     }
     pieces
 }
@@ -135,11 +188,22 @@ fn bag(horizons: &[(&str, Geometry)]) -> Pieces {
 
 /// The Chalk grid's layering: H3–H4 two layers, H4–H5 one, H5–H6 a gap, H6–H7 seven.
 fn answers() -> Choices {
-    Choices::new().set("layers", json!([2, 1, 0, 7])).set("axis", "elevation").set("title", "Ypresian–Chalk grid")
+    Choices::new()
+        .set("layers", json!([2, 1, 0, 7]))
+        .set("axis", "elevation")
+        .set("title", "Ypresian–Chalk grid")
 }
 
 fn planned(pieces: &Pieces, choices: &Choices) -> Result<Plan, String> {
-    Registry::new().plan("ijk-grid-from-horizons", pieces, choices, &Identity::derived(), &when()).map_err(|why| why.message())
+    Registry::new()
+        .plan(
+            "ijk-grid-from-horizons",
+            pieces,
+            choices,
+            &Identity::derived(),
+            &when(),
+        )
+        .map_err(|why| why.message())
 }
 
 fn the_grid(plan: &Plan) -> &Value {
@@ -147,25 +211,46 @@ fn the_grid(plan: &Plan) -> &Value {
 }
 
 fn uuid_of(plan: &Plan) -> String {
-    plan.of_role("representation").next().expect("the grid").uuid.clone()
+    plan.of_role("representation")
+        .next()
+        .expect("the grid")
+        .uuid
+        .clone()
 }
 
 fn floats(plan: &Plan, path_end: &str) -> Vec<f64> {
-    match &plan.datasets.iter().find(|d| d.path.ends_with(path_end)).unwrap_or_else(|| panic!("no dataset {path_end}")).values {
+    match &plan
+        .datasets
+        .iter()
+        .find(|d| d.path.ends_with(path_end))
+        .unwrap_or_else(|| panic!("no dataset {path_end}"))
+        .values
+    {
         Numbers::F64(values) => values.clone(),
         Numbers::I64(_) => panic!("{path_end} is not floating point"),
     }
 }
 
 fn integers(plan: &Plan, path_end: &str) -> Vec<i64> {
-    match &plan.datasets.iter().find(|d| d.path.ends_with(path_end)).unwrap_or_else(|| panic!("no dataset {path_end}")).values {
+    match &plan
+        .datasets
+        .iter()
+        .find(|d| d.path.ends_with(path_end))
+        .unwrap_or_else(|| panic!("no dataset {path_end}"))
+        .values
+    {
         Numbers::I64(values) => values.clone(),
         Numbers::F64(_) => panic!("{path_end} is not whole"),
     }
 }
 
 fn dimensions(plan: &Plan, path_end: &str) -> Vec<i64> {
-    plan.datasets.iter().find(|d| d.path.ends_with(path_end)).unwrap_or_else(|| panic!("no dataset {path_end}")).dimensions.clone()
+    plan.datasets
+        .iter()
+        .find(|d| d.path.ends_with(path_end))
+        .unwrap_or_else(|| panic!("no dataset {path_end}"))
+        .dimensions
+        .clone()
 }
 
 fn number(plan: &Plan, title: &str) -> f64 {
@@ -200,18 +285,47 @@ fn the_counts_come_from_the_horizons_and_the_layers() {
     let plan = planned(&bag(&o401()), &answers()).unwrap_or_else(|why| panic!("{why}"));
     let grid = the_grid(&plan);
     assert_eq!(grid["$type"], json!("resqml22.IjkGridRepresentation"));
-    assert_eq!((grid["Ni"].clone(), grid["Nj"].clone(), grid["Nk"].clone()), (json!(4), json!(3), json!(10)));
+    assert_eq!(
+        (grid["Ni"].clone(), grid["Nj"].clone(), grid["Nk"].clone()),
+        (json!(4), json!(3), json!(10))
+    );
     assert_eq!(grid["KGaps"]["Count"], json!(1));
     // `Nk − 1` flags, the gap after the third layer — the last of H4–H5.
-    let flags: Vec<bool> = grid["KGaps"]["GapAfterLayer"]["Values"].as_array().unwrap().iter().map(|v| v.as_bool().unwrap()).collect();
-    assert_eq!(flags, vec![false, false, true, false, false, false, false, false, false]);
-    assert_eq!(dimensions(&plan, "/points"), vec![12, 4, 5, 3], "levels, then j, then i, then xyz");
+    let flags: Vec<bool> = grid["KGaps"]["GapAfterLayer"]["Values"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_bool().unwrap())
+        .collect();
+    assert_eq!(
+        flags,
+        vec![false, false, true, false, false, false, false, false, false]
+    );
+    assert_eq!(
+        dimensions(&plan, "/points"),
+        vec![12, 4, 5, 3],
+        "levels, then j, then i, then xyz"
+    );
     assert_eq!(floats(&plan, "/points").len(), 12 * 20 * 3);
-    assert_eq!(grid["Geometry"]["Points"]["Coordinates"]["ExternalDataArrayPart"][0]["Count"], json!([12, 4, 5, 3]));
-    assert_eq!((number(&plan, "ni"), number(&plan, "nj"), number(&plan, "nk"), number(&plan, "gapCount")), (4.0, 3.0, 10.0, 1.0));
+    assert_eq!(
+        grid["Geometry"]["Points"]["Coordinates"]["ExternalDataArrayPart"][0]["Count"],
+        json!([12, 4, 5, 3])
+    );
+    assert_eq!(
+        (
+            number(&plan, "ni"),
+            number(&plan, "nj"),
+            number(&plan, "nk"),
+            number(&plan, "gapCount")
+        ),
+        (4.0, 3.0, 10.0, 1.0)
+    );
     // No gap, no `KGaps`.
     let plain = planned(&bag(&o401()), &answers().set("layers", json!([2, 1, 3, 7]))).unwrap();
-    assert!(the_grid(&plain).get("KGaps").is_none(), "a grid with no gap declares none");
+    assert!(
+        the_grid(&plain).get("KGaps").is_none(),
+        "a grid with no gap declares none"
+    );
     assert_eq!(dimensions(&plain, "/points")[0], 14);
 }
 
@@ -233,14 +347,24 @@ fn each_horizon_is_a_level_and_the_levels_between_are_linear() {
         for i in 0..NI {
             for (h, &level) in levels.iter().enumerate() {
                 let at = node(&points, [5, 4], level, i, j);
-                assert_eq!(at, [X0 + DX * i as f64, Y0 + DY * j as f64, z(h, i, j)], "horizon {h} at ({i}, {j})");
+                assert_eq!(
+                    at,
+                    [X0 + DX * i as f64, Y0 + DY * j as f64, z(h, i, j)],
+                    "horizon {h} at ({i}, {j})"
+                );
             }
             let middle = node(&points, [5, 4], 1, i, j)[2];
-            assert!((middle - (z(0, i, j) + z(1, i, j)) / 2.0).abs() < 1e-9, "halfway between H3 and H4 at ({i}, {j})");
+            assert!(
+                (middle - (z(0, i, j) + z(1, i, j)) / 2.0).abs() < 1e-9,
+                "halfway between H3 and H4 at ({i}, {j})"
+            );
             for l in 1..7 {
                 let expected = z(3, i, j) + (z(4, i, j) - z(3, i, j)) * l as f64 / 7.0;
                 let got = node(&points, [5, 4], 4 + l, i, j)[2];
-                assert!((got - expected).abs() < 1e-9, "layer boundary {l} of the Chalk at ({i}, {j}): {got} where {expected}");
+                assert!(
+                    (got - expected).abs() < 1e-9,
+                    "layer boundary {l} of the Chalk at ({i}, {j}): {got} where {expected}"
+                );
             }
         }
     }
@@ -259,28 +383,52 @@ fn a_hole_leaves_undefined_the_cells_it_bounds_and_no_other() {
     horizons[1].1 = holed(horizons[1].1.clone(), 2, 1);
     let plan = planned(&bag(&horizons), &answers()).unwrap_or_else(|why| panic!("{why}"));
     let grid = the_grid(&plan);
-    assert_eq!(grid["Geometry"]["CellGeometryIsDefined"]["$type"], json!("eml23.BooleanExternalArray"));
-    assert_eq!(dimensions(&plan, "/cellGeometryIsDefined"), vec![10, 3, 4], "k, j, i");
+    assert_eq!(
+        grid["Geometry"]["CellGeometryIsDefined"]["$type"],
+        json!("eml23.BooleanExternalArray")
+    );
+    assert_eq!(
+        dimensions(&plan, "/cellGeometryIsDefined"),
+        vec![10, 3, 4],
+        "k, j, i"
+    );
     let flags = integers(&plan, "/cellGeometryIsDefined");
     for k in 0..10 {
         for j in 0..3 {
             for i in 0..4 {
                 let touches = k < 3 && (1..=2).contains(&i) && (0..=1).contains(&j);
-                assert_eq!(flags[(k * 3 + j) * 4 + i], i64::from(!touches), "cell ({i}, {j}, {k})");
+                assert_eq!(
+                    flags[(k * 3 + j) * 4 + i],
+                    i64::from(!touches),
+                    "cell ({i}, {j}, {k})"
+                );
             }
         }
     }
     // Every pillar keeps a defined cell below the hole: a constant, all true.
-    assert_eq!(grid["Geometry"]["PillarGeometryIsDefined"]["$type"], json!("eml23.BooleanConstantArray"));
+    assert_eq!(
+        grid["Geometry"]["PillarGeometryIsDefined"]["$type"],
+        json!("eml23.BooleanConstantArray")
+    );
     let points = floats(&plan, "/points");
     assert!(node(&points, [5, 4], 2, 2, 1)[2].is_nan(), "H4's node is missing");
-    assert!(node(&points, [5, 4], 1, 2, 1)[2].is_nan(), "and the level interpolated from it");
+    assert!(
+        node(&points, [5, 4], 1, 2, 1)[2].is_nan(),
+        "and the level interpolated from it"
+    );
     assert!(node(&points, [5, 4], 3, 2, 1)[2].is_finite(), "H5 is there");
-    assert_eq!((number(&plan, "holeCount"), number(&plan, "undefinedCellCount")), (1.0, 12.0));
+    assert_eq!(
+        (number(&plan, "holeCount"), number(&plan, "undefinedCellCount")),
+        (1.0, 12.0)
+    );
     assert!(says(&plan, "holes") && says(&plan, "undefined-cells") && says(&plan, "no-activity"));
     let shape = &plan.shapes[0].geometry.patches[0];
     match &shape.topology {
-        Topology::Hexahedra { cells, dimensions, index } => {
+        Topology::Hexahedra {
+            cells,
+            dimensions,
+            index,
+        } => {
             assert_eq!(*dimensions, [4, 3, 10]);
             assert_eq!(cells.len(), 120 - 12);
             assert_eq!(index.len(), 108, "the RESQML index of each kept cell");
@@ -293,7 +441,10 @@ fn a_hole_leaves_undefined_the_cells_it_bounds_and_no_other() {
 /// no height on any horizon takes out its column, and its pillar.
 #[test]
 fn a_pillar_with_no_defined_cell_is_said_undefined() {
-    let horizons: Vec<(&str, Geometry)> = o401().into_iter().map(|(title, g)| (title, holed(g, 0, 0))).collect();
+    let horizons: Vec<(&str, Geometry)> = o401()
+        .into_iter()
+        .map(|(title, g)| (title, holed(g, 0, 0)))
+        .collect();
     let plan = planned(&bag(&horizons), &answers()).unwrap();
     assert_eq!(dimensions(&plan, "/pillarGeometryIsDefined"), vec![4, 5]);
     let pillars = integers(&plan, "/pillarGeometryIsDefined");
@@ -311,7 +462,10 @@ fn a_pillar_with_no_defined_cell_is_said_undefined() {
 /// nothing to show.
 #[test]
 fn a_grid_with_no_defined_cell_is_refused() {
-    let horizons: Vec<(&str, Geometry)> = o401().into_iter().map(|(title, _)| (title, grid(|_, _| f64::NAN))).collect();
+    let horizons: Vec<(&str, Geometry)> = o401()
+        .into_iter()
+        .map(|(title, _)| (title, grid(|_, _| f64::NAN)))
+        .collect();
     let why = planned(&bag(&horizons), &answers()).unwrap_err();
     assert!(why.contains("nothing would be drawn"), "{why}");
 }
@@ -329,21 +483,38 @@ fn a_crossing_is_refused_by_default_and_pinched_on_request() {
     horizons[2].1 = moved(horizons[2].1.clone(), 3, 2, h4 + 1.0);
     let why = planned(&bag(&horizons), &answers()).unwrap_err();
     assert!(why.contains("`crossing`") && why.contains("pinch"), "{why}");
-    assert!(why.contains(&format!("({}, {})", X0 + 3.0 * DX, Y0 + 2.0 * DY)), "the refusal names where: {why}");
-    assert!(why.contains("H5 — top of the Selandian") && why.contains("H4 — top of the Sparnacian"), "{why}");
+    assert!(
+        why.contains(&format!("({}, {})", X0 + 3.0 * DX, Y0 + 2.0 * DY)),
+        "the refusal names where: {why}"
+    );
+    assert!(
+        why.contains("H5 — top of the Selandian") && why.contains("H4 — top of the Sparnacian"),
+        "{why}"
+    );
 
-    let plan = planned(&bag(&horizons), &answers().set("crossing", "pinch")).unwrap_or_else(|why| panic!("{why}"));
+    let plan =
+        planned(&bag(&horizons), &answers().set("crossing", "pinch")).unwrap_or_else(|why| panic!("{why}"));
     let points = floats(&plan, "/points");
     assert_eq!(node(&points, [5, 4], 3, 3, 2)[2], h4, "H5 brought up to H4");
     assert_eq!(node(&points, [5, 4], 2, 3, 2)[2], h4, "H4 itself stays");
     let before = planned(&bag(&o401()), &answers()).unwrap();
     let untouched = floats(&before, "/points");
-    let changed: Vec<usize> = (0..points.len()).filter(|&at| points[at] != untouched[at]).collect();
-    assert_eq!(changed, vec![3 * ((3 * 4 + 2) * 5 + 3) + 2], "only H5's node at (3, 2) moves");
+    let changed: Vec<usize> = (0..points.len())
+        .filter(|&at| points[at] != untouched[at])
+        .collect();
+    assert_eq!(
+        changed,
+        vec![3 * ((3 * 4 + 2) * 5 + 3) + 2],
+        "only H5's node at (3, 2) moves"
+    );
     assert_eq!(number(&plan, "crossedCount"), 1.0);
     assert!(number(&plan, "zeroThicknessCount") >= 1.0);
     assert!(says(&plan, "pinched-crossings") && says(&plan, "zero-thickness"));
-    assert_eq!(number(&plan, "undefinedCellCount"), 0.0, "a pinched cell is flat, and defined");
+    assert_eq!(
+        number(&plan, "undefinedCellCount"),
+        0.0,
+        "a pinched cell is flat, and defined"
+    );
 }
 
 /// **Above is read off the axis**: the same numbers are in order as
@@ -352,10 +523,15 @@ fn a_crossing_is_refused_by_default_and_pinched_on_request() {
 /// crossing — compared against the last horizon that has a height.
 #[test]
 fn the_axis_decides_what_above_means() {
-    let unanswered = Choices::new().set("layers", json!([2, 1, 0, 7])).set("title", "Ypresian–Chalk grid");
+    let unanswered = Choices::new()
+        .set("layers", json!([2, 1, 0, 7]))
+        .set("title", "Ypresian–Chalk grid");
     planned(&bag_in(&o401(), &frame(), true), &unanswered).expect("elevations, top to bottom");
     let why = planned(&bag_in(&o401(), &frame(), false), &unanswered).unwrap_err();
-    assert!(why.contains("`crossing`"), "read as depths, H3 is above nothing: {why}");
+    assert!(
+        why.contains("`crossing`"),
+        "read as depths, H3 is above nothing: {why}"
+    );
     let why = planned(&bag(&o401()), &answers().set("axis", "depth")).unwrap_err();
     assert!(why.contains("`crossing`"), "{why}");
 
@@ -364,7 +540,10 @@ fn the_axis_decides_what_above_means() {
     let h3_there = h3(X0 + DX, Y0 + DY);
     horizons[2].1 = moved(horizons[2].1.clone(), 1, 1, h3_there + 2.0);
     let why = planned(&bag(&horizons), &answers()).unwrap_err();
-    assert!(why.contains("H5 — top of the Selandian") && why.contains("H3 — top of the Ypresian"), "over the hole in H4: {why}");
+    assert!(
+        why.contains("H5 — top of the Selandian") && why.contains("H3 — top of the Ypresian"),
+        "over the hole in H4: {why}"
+    );
 }
 
 // -- what the grid says of itself ------------------------------------------------
@@ -382,9 +561,18 @@ fn the_grid_says_its_direction_its_pillars_and_its_handedness() {
     assert_eq!(geometry["PillarShape"], json!("vertical"));
     assert_eq!(geometry["GridIsRighthanded"], json!(false));
     assert_eq!(geometry["LocalCrs"]["Uuid"], json!(frame().uuid));
-    assert_eq!(geometry["CellGeometryIsDefined"]["$type"], json!("eml23.BooleanConstantArray"), "every cell defined");
+    assert_eq!(
+        geometry["CellGeometryIsDefined"]["$type"],
+        json!("eml23.BooleanConstantArray"),
+        "every cell defined"
+    );
     assert_eq!(geometry["CellGeometryIsDefined"]["Count"], json!(120));
-    assert_eq!(plan.objects.len(), 1, "{:?}", plan.objects.iter().map(|o| &o.qualified_type).collect::<Vec<_>>());
+    assert_eq!(
+        plan.objects.len(),
+        1,
+        "{:?}",
+        plan.objects.iter().map(|o| &o.qualified_type).collect::<Vec<_>>()
+    );
     assert_eq!(plan.datasets.len(), 1, "no flag array when every flag is true");
 
     // The same stack as depths: top to bottom is now increasing z.
@@ -397,7 +585,8 @@ fn the_grid_says_its_direction_its_pillars_and_its_handedness() {
             (title, g)
         })
         .collect();
-    let plan = planned(&bag_in(&depths, &frame(), false), &answers().set("axis", "depth")).unwrap_or_else(|why| panic!("{why}"));
+    let plan = planned(&bag_in(&depths, &frame(), false), &answers().set("axis", "depth"))
+        .unwrap_or_else(|why| panic!("{why}"));
     assert_eq!(the_grid(&plan)["Geometry"]["GridIsRighthanded"], json!(true));
     assert_eq!(the_grid(&plan)["Geometry"]["KDirection"], json!("down"));
 }
@@ -407,13 +596,21 @@ fn the_grid_says_its_direction_its_pillars_and_its_handedness() {
 #[test]
 fn a_coarser_lattice_takes_every_other_node() {
     let horizons = o401();
-    let plan = planned(&bag(&horizons), &answers().set("coarsening", 2)).unwrap_or_else(|why| panic!("{why}"));
+    let plan =
+        planned(&bag(&horizons), &answers().set("coarsening", 2)).unwrap_or_else(|why| panic!("{why}"));
     let grid = the_grid(&plan);
     assert_eq!((grid["Ni"].clone(), grid["Nj"].clone()), (json!(2), json!(1)));
     assert_eq!(dimensions(&plan, "/points"), vec![12, 2, 3, 3]);
     let points = floats(&plan, "/points");
     // Pillar (1, 1) stands on lattice node (2, 2).
-    assert_eq!(node(&points, [3, 2], 0, 1, 1), [X0 + 2.0 * DX, Y0 + 2.0 * DY, horizons[0].1.patches[0].points[2 * NI + 2][2]]);
+    assert_eq!(
+        node(&points, [3, 2], 0, 1, 1),
+        [
+            X0 + 2.0 * DX,
+            Y0 + 2.0 * DY,
+            horizons[0].1.patches[0].points[2 * NI + 2][2]
+        ]
+    );
     assert!(says(&plan, "trimmed"), "{:?}", plan.says);
 }
 
@@ -428,9 +625,21 @@ fn a_coarser_lattice_takes_every_other_node() {
 fn the_same_inputs_name_the_same_grid() {
     let first = uuid_of(&planned(&bag(&o401()), &answers()).unwrap());
     assert_eq!(first, uuid_of(&planned(&bag(&o401()), &answers()).unwrap()));
-    assert_ne!(first, uuid_of(&planned(&bag(&o401()), &answers().set("layers", json!([2, 1, 0, 6]))).unwrap()), "another layering");
-    assert_ne!(first, uuid_of(&planned(&bag(&o401()), &answers().set("coarsening", 2)).unwrap()), "other pillars");
-    assert_ne!(first, uuid_of(&planned(&bag(&o401()), &answers().set("title", "Another grid")).unwrap()), "another title");
+    assert_ne!(
+        first,
+        uuid_of(&planned(&bag(&o401()), &answers().set("layers", json!([2, 1, 0, 6]))).unwrap()),
+        "another layering"
+    );
+    assert_ne!(
+        first,
+        uuid_of(&planned(&bag(&o401()), &answers().set("coarsening", 2)).unwrap()),
+        "other pillars"
+    );
+    assert_ne!(
+        first,
+        uuid_of(&planned(&bag(&o401()), &answers().set("title", "Another grid")).unwrap()),
+        "another title"
+    );
     let lowered: Vec<(&str, Geometry)> = o401()
         .into_iter()
         .map(|(title, mut g)| {
@@ -440,7 +649,11 @@ fn the_same_inputs_name_the_same_grid() {
             (title, g)
         })
         .collect();
-    assert_eq!(first, uuid_of(&planned(&bag(&lowered), &answers()).unwrap()), "the same horizons re-gridded");
+    assert_eq!(
+        first,
+        uuid_of(&planned(&bag(&lowered), &answers()).unwrap()),
+        "the same horizons re-gridded"
+    );
 }
 
 // -- suggestions ---------------------------------------------------------------------
@@ -454,12 +667,26 @@ fn the_frame_is_suggested_and_the_horizons_name_is_not() {
     let registry = Registry::new();
     let operation = registry.get("ijk-grid-from-horizons").expect("in the registry");
     let needs = operation.needs(&bag(&o401()));
-    let suggested = |name: &str| needs.iter().find(|slot| slot.name == name).unwrap_or_else(|| panic!("no slot {name}")).suggested.clone();
-    assert_eq!(suggested("crs").and_then(|v| v.get("Uuid").cloned()), Some(json!(frame().uuid)));
+    let suggested = |name: &str| {
+        needs
+            .iter()
+            .find(|slot| slot.name == name)
+            .unwrap_or_else(|| panic!("no slot {name}"))
+            .suggested
+            .clone()
+    };
+    assert_eq!(
+        suggested("crs").and_then(|v| v.get("Uuid").cloned()),
+        Some(json!(frame().uuid))
+    );
     assert_eq!(suggested("axis"), Some(json!("elevation")));
     assert_eq!(suggested("title"), None);
     assert_eq!(suggested("interpretation"), None);
-    assert_eq!(suggested("crossing"), Some(json!("refuse")), "refusing is the default");
+    assert_eq!(
+        suggested("crossing"),
+        Some(json!("refuse")),
+        "refusing is the default"
+    );
 }
 
 // -- refusals -----------------------------------------------------------------------
@@ -478,7 +705,12 @@ fn what_cannot_be_a_grid_is_refused_by_name() {
         p[0] += 5.0;
     }
     let why = planned(&bag(&shifted), &answers()).unwrap_err();
-    assert!(why.contains("H5 — top of the Selandian") && why.contains("H3 — top of the Ypresian") && why.contains("same one"), "{why}");
+    assert!(
+        why.contains("H5 — top of the Selandian")
+            && why.contains("H3 — top of the Ypresian")
+            && why.contains("same one"),
+        "{why}"
+    );
 
     let mut small = o401();
     small[4].1 = Geometry {
@@ -487,7 +719,10 @@ fn what_cannot_be_a_grid_is_refused_by_name() {
             index: 0,
             node_offset: 0,
             points: small[4].1.patches[0].points[..15].to_vec(),
-            topology: Topology::Grid { fastest: NI, slowest: 3 },
+            topology: Topology::Grid {
+                fastest: NI,
+                slowest: 3,
+            },
             closed: Vec::new(),
         }],
     };
@@ -536,24 +771,48 @@ fn the_grid_is_in_the_frame_of_its_horizons_or_refused() {
     for (rank, (title, geometry)) in o401().iter().enumerate() {
         let theirs = if rank == 3 { other_frame() } else { frame() };
         pieces = pieces
-            .with(slot_name(rank), Source::Shape { geometry: geometry.clone(), closed: None })
-            .with(format!("{} (object)", slot_name(rank)), known(rank, title, &theirs, "m", true));
+            .with(
+                slot_name(rank),
+                Source::Shape {
+                    geometry: geometry.clone(),
+                    closed: None,
+                },
+            )
+            .with(
+                format!("{} (object)", slot_name(rank)),
+                known(rank, title, &theirs, "m", true),
+            );
     }
     let why = planned(&pieces, &answers()).unwrap_err();
-    assert!(why.contains("two frames") && why.contains("The other frame"), "{why}");
+    assert!(
+        why.contains("two frames") && why.contains("The other frame"),
+        "{why}"
+    );
 
     let mut pieces = Pieces::empty();
     for (rank, (title, geometry)) in o401().iter().enumerate() {
         let uom = if rank == 4 { "ft" } else { "m" };
         pieces = pieces
-            .with(slot_name(rank), Source::Shape { geometry: geometry.clone(), closed: None })
-            .with(format!("{} (object)", slot_name(rank)), known(rank, title, &frame(), uom, true));
+            .with(
+                slot_name(rank),
+                Source::Shape {
+                    geometry: geometry.clone(),
+                    closed: None,
+                },
+            )
+            .with(
+                format!("{} (object)", slot_name(rank)),
+                known(rank, title, &frame(), uom, true),
+            );
     }
     let why = planned(&pieces, &answers()).unwrap_err();
     assert!(why.contains("one unit"), "{why}");
 
     let why = planned(&bag(&o401()), &answers().set("crs", other_frame().dor())).unwrap_err();
-    assert!(why.contains("`crs`") && why.contains("The boreholes frame"), "{why}");
+    assert!(
+        why.contains("`crs`") && why.contains("The boreholes frame"),
+        "{why}"
+    );
     let why = planned(&bag(&o401()), &answers().set("sourceEpsg", 2154)).unwrap_err();
     assert!(why.contains("`sourceEpsg`"), "{why}");
 }
@@ -580,9 +839,18 @@ fn the_geometry_reader_reads_the_nodes_and_the_cells_planned() {
     horizons[1].1 = holed(horizons[1].1.clone(), 2, 1);
     let mut pieces = Pieces::empty();
     for (rank, (_, geometry)) in horizons.iter().enumerate() {
-        pieces = pieces.with(slot_name(rank), Source::Shape { geometry: geometry.clone(), closed: None });
+        pieces = pieces.with(
+            slot_name(rank),
+            Source::Shape {
+                geometry: geometry.clone(),
+                closed: None,
+            },
+        );
     }
-    let choices = answers().set("sourceEpsg", 2154).set("project", 2154).set("vertical", 5720);
+    let choices = answers()
+        .set("sourceEpsg", 2154)
+        .set("project", 2154)
+        .set("vertical", 5720);
     let plan = planned(&pieces, &choices).unwrap_or_else(|why| panic!("{why}"));
     let planned_points = floats(&plan, "/points");
     let uuid = uuid_of(&plan);
@@ -599,17 +867,30 @@ fn the_geometry_reader_reads_the_nodes_and_the_cells_planned() {
     let mut store = energyml_build::epc::open(None, "grid.epc", registry.clone()).unwrap();
     store.external_files_mut().set_root(&dir);
     let made = energyml_build::apply::apply(&plan, &mut store, &when());
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+    assert!(
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
-    store.save_as(&out, &energyml_storage::SaveOptions::default()).unwrap();
+    store
+        .save_as(&out, &energyml_storage::SaveOptions::default())
+        .unwrap();
     let reread = energyml_storage::EpcStore::open(&out, registry).unwrap();
     let summary = reread.find_by_uuid(&uuid).cloned().unwrap();
     let object = reread.get_object(&summary.uri).unwrap();
-    let built = energyml_geometry::scene::object_of(object.as_reflect(), &reread, &summary.uri).expect("the grid reads");
+    let built = energyml_geometry::scene::object_of(object.as_reflect(), &reread, &summary.uri)
+        .expect("the grid reads");
     let _ = std::fs::remove_dir_all(&dir);
 
-    let [patch] = built.geometry.patches.as_slice() else { panic!("one patch") };
-    assert_eq!(patch.points.len() * 3, planned_points.len(), "one point per node, levels × pillars");
+    let [patch] = built.geometry.patches.as_slice() else {
+        panic!("one patch")
+    };
+    assert_eq!(
+        patch.points.len() * 3,
+        planned_points.len(),
+        "one point per node, levels × pillars"
+    );
     for (at, point) in patch.points.iter().enumerate() {
         for (axis, &read) in point.iter().enumerate() {
             let planned = planned_points[3 * at + axis];
@@ -619,10 +900,24 @@ fn the_geometry_reader_reads_the_nodes_and_the_cells_planned() {
             );
         }
     }
-    let Topology::Hexahedra { cells, dimensions, index } = &patch.topology else { panic!("not cells: {:?}", patch.topology) };
+    let Topology::Hexahedra {
+        cells,
+        dimensions,
+        index,
+    } = &patch.topology
+    else {
+        panic!("not cells: {:?}", patch.topology)
+    };
     assert_eq!(*dimensions, [4, 3, 10]);
-    assert_eq!(cells.len(), 108, "the twelve cells around the hole in H4 are dropped, and only those");
-    assert_eq!(*index, planned_index, "the same cells kept, by their RESQML index");
+    assert_eq!(
+        cells.len(),
+        108,
+        "the twelve cells around the hole in H4 are dropped, and only those"
+    );
+    assert_eq!(
+        *index, planned_index,
+        "the same cells kept, by their RESQML index"
+    );
     let centroid = |cell: &[u32; 8], points: &dyn Fn(usize) -> [f64; 3]| -> [f64; 3] {
         let mut sum = [0.0; 3];
         for &n in cell {
@@ -633,9 +928,18 @@ fn the_geometry_reader_reads_the_nodes_and_the_cells_planned() {
         sum
     };
     let read_at = |n: usize| patch.points[n];
-    let planned_at = |n: usize| [planned_points[3 * n], planned_points[3 * n + 1], planned_points[3 * n + 2]];
+    let planned_at = |n: usize| {
+        [
+            planned_points[3 * n],
+            planned_points[3 * n + 1],
+            planned_points[3 * n + 2],
+        ]
+    };
     for (read_cell, planned_cell) in cells.iter().zip(&planned_cells) {
         let (a, b) = (centroid(read_cell, &read_at), centroid(planned_cell, &planned_at));
-        assert!((0..3).all(|axis| (a[axis] - b[axis]).abs() < 1e-6), "a cell read at {a:?}, planned at {b:?}");
+        assert!(
+            (0..3).all(|axis| (a[axis] - b[axis]).abs() < 1e-6),
+            "a cell read at {a:?}, planned at {b:?}"
+        );
     }
 }

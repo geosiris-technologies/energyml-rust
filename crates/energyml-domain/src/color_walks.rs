@@ -45,9 +45,9 @@ use std::collections::{HashMap, HashSet};
 use crate::color::{Carried, Cascade, Decision, GraphicalSet, Level, Scope};
 use crate::color_inherit::level_of;
 use crate::inherit::{Resolution, Step, Tie, WalkState, Walked, Walker, identity_of};
-use energyml_core::identity;
 use crate::package_index::PackageIndex;
 use crate::source::ObjectSource;
+use energyml_core::identity;
 
 // ---------------------------------------------------------------------------
 // What a geometry draws
@@ -66,7 +66,10 @@ pub struct Drawn {
     pub edges_follow_faces: bool,
 }
 
-const NO_TARGET: Drawn = Drawn { scopes: &[], edges_follow_faces: false };
+const NO_TARGET: Drawn = Drawn {
+    scopes: &[],
+    edges_follow_faces: false,
+};
 
 /// **The one table**: representation kind → the targets its geometry draws.
 ///
@@ -86,18 +89,26 @@ const NO_TARGET: Drawn = Drawn { scopes: &[], edges_follow_faces: false };
 pub fn drawn_by(type_key: &str) -> Drawn {
     let name = type_key.strip_prefix("obj_").unwrap_or(type_key);
     match name {
-        "PointSetRepresentation" => Drawn { scopes: &[Scope::Nodes], edges_follow_faces: false },
+        "PointSetRepresentation" => Drawn {
+            scopes: &[Scope::Nodes],
+            edges_follow_faces: false,
+        },
         "PolylineRepresentation"
         | "PolylineSetRepresentation"
         | "WellboreTrajectoryRepresentation"
         | "WellboreFrameRepresentation"
-        | "Trajectory" => Drawn { scopes: &[Scope::Nodes, Scope::Edges], edges_follow_faces: false },
-        "TriangulatedSetRepresentation" | "Grid2dRepresentation" | "PlaneSetRepresentation" => {
-            Drawn { scopes: &[Scope::Nodes, Scope::Faces], edges_follow_faces: true }
-        }
-        "IjkGridRepresentation" | "UnstructuredGridRepresentation" => {
-            Drawn { scopes: &[Scope::Nodes, Scope::Faces, Scope::Volumes], edges_follow_faces: true }
-        }
+        | "Trajectory" => Drawn {
+            scopes: &[Scope::Nodes, Scope::Edges],
+            edges_follow_faces: false,
+        },
+        "TriangulatedSetRepresentation" | "Grid2dRepresentation" | "PlaneSetRepresentation" => Drawn {
+            scopes: &[Scope::Nodes, Scope::Faces],
+            edges_follow_faces: true,
+        },
+        "IjkGridRepresentation" | "UnstructuredGridRepresentation" => Drawn {
+            scopes: &[Scope::Nodes, Scope::Faces, Scope::Volumes],
+            edges_follow_faces: true,
+        },
         _ => NO_TARGET,
     }
 }
@@ -240,7 +251,11 @@ impl ColourWalk {
                         self.skipped.insert(key, why.clone());
                     }
                 }
-                self.tiers.push(ReadTier { rank: tier.rank, notes: tier.notes, members });
+                self.tiers.push(ReadTier {
+                    rank: tier.rank,
+                    notes: tier.notes,
+                    members,
+                });
             }
             None => {
                 self.done = true;
@@ -253,31 +268,50 @@ impl ColourWalk {
     /// target itself, else — for any target but the whole object — those that
     /// give the whole object. The flag says which.
     fn pick(tier: &ReadTier, scope: Scope) -> Option<(bool, Vec<&Member>)> {
-        let exact: Vec<&Member> = tier.members.iter().filter(|m| m.carried.exact(scope).is_some()).collect();
+        let exact: Vec<&Member> = tier
+            .members
+            .iter()
+            .filter(|m| m.carried.exact(scope).is_some())
+            .collect();
         if !exact.is_empty() {
             return Some((true, exact));
         }
         if scope == Scope::WholeObject {
             return None;
         }
-        let whole: Vec<&Member> =
-            tier.members.iter().filter(|m| m.carried.exact(Scope::WholeObject).is_some()).collect();
+        let whole: Vec<&Member> = tier
+            .members
+            .iter()
+            .filter(|m| m.carried.exact(Scope::WholeObject).is_some())
+            .collect();
         (!whole.is_empty()).then_some((false, whole))
     }
 
     fn decision_of(index: &PackageIndex, member: &Member, scope: Scope, exact: bool) -> Decision {
         let source = if exact { scope } else { Scope::WholeObject };
-        let mut decision = member.carried.exact(source).cloned().expect("a picked member carries what it was picked for");
+        let mut decision = member
+            .carried
+            .exact(source)
+            .cloned()
+            .expect("a picked member carries what it was picked for");
         decision.level = level_of(index, false, &member.uri, &member.path);
         if !exact {
-            decision
-                .notes
-                .push(format!("nothing for {scope} on {}; used what it says for the whole object", member.uuid));
+            decision.notes.push(format!(
+                "nothing for {scope} on {}; used what it says for the whole object",
+                member.uuid
+            ));
         }
         decision
     }
 
-    fn found(&self, index: &PackageIndex, scope: Scope, tier: usize, exact: bool, hits: &[&Member]) -> Scoped {
+    fn found(
+        &self,
+        index: &PackageIndex,
+        scope: Scope,
+        tier: usize,
+        exact: bool,
+        hits: &[&Member],
+    ) -> Scoped {
         let read = &self.tiers[tier];
         let winner = hits[0];
         let value = Self::decision_of(index, winner, scope, exact);
@@ -293,8 +327,12 @@ impl ColourWalk {
         // What was skipped on the way: the objects the answer went through
         // that carried nothing because their entries were for another viewer.
         let mut notes = read.notes.clone();
-        let on_the_way = std::iter::once(winner.uri.clone())
-            .chain(winner.path.iter().flat_map(|step| [step.from_uri.clone(), step.to_uri.clone()]));
+        let on_the_way = std::iter::once(winner.uri.clone()).chain(
+            winner
+                .path
+                .iter()
+                .flat_map(|step| [step.from_uri.clone(), step.to_uri.clone()]),
+        );
         for identity in on_the_way {
             if let Some(why) = self.skipped.get(&identity.to_ascii_lowercase()) {
                 for note in why {
@@ -313,7 +351,16 @@ impl ColourWalk {
             ties,
             notes: notes.clone(),
         };
-        Scoped { scope, walked: Walked { notes, resolution: Some(resolution) }, exact, merged_into: None, merged_note: None }
+        Scoped {
+            scope,
+            walked: Walked {
+                notes,
+                resolution: Some(resolution),
+            },
+            exact,
+            merged_into: None,
+            merged_note: None,
+        }
     }
 
     /// What the tiers **already read** answer for `scope`, going no further.
@@ -349,7 +396,10 @@ impl ColourWalk {
             if self.done {
                 let scoped = Scoped {
                     scope,
-                    walked: Walked { resolution: None, notes: self.final_notes.clone() },
+                    walked: Walked {
+                        resolution: None,
+                        notes: self.final_notes.clone(),
+                    },
                     exact: true,
                     merged_into: None,
                     merged_note: None,
@@ -456,7 +506,9 @@ impl ColourCache {
         let mut doomed: HashSet<String> = HashSet::new();
         for address in addresses {
             let (uuid, version) = identity::parse_address(address);
-            let Some(identities) = self.named.get(&uuid) else { continue };
+            let Some(identities) = self.named.get(&uuid) else {
+                continue;
+            };
             for identity_key in identities {
                 let (_, touched_version) = identity::parse_address(identity_key);
                 let agrees = identity::versions_agree(
@@ -528,12 +580,19 @@ impl ColourCache {
             reads.set(reads.get() + 1);
             let carried = cascade.default_information_all(identity, Level::Representation);
             if !carried.skipped.is_empty() {
-                skips.borrow_mut().insert(identity.to_ascii_lowercase(), carried.skipped.clone());
+                skips
+                    .borrow_mut()
+                    .insert(identity.to_ascii_lowercase(), carried.skipped.clone());
             }
             carried.any().then_some(carried)
         };
         let walker = Walker::new(index, objects, &has);
-        let env = Env { walker: &walker, skips: &skips, index, inherit: cascade.inherit };
+        let env = Env {
+            walker: &walker,
+            skips: &skips,
+            index,
+            inherit: cascade.inherit,
+        };
 
         let mut out = Vec::with_capacity(asks.len());
         for ask in asks {
@@ -548,13 +607,23 @@ impl ColourCache {
             }
             let walk = self.walks.get_mut(&key).expect("just inserted");
             let before = walk.tiers.len();
-            let answers: Vec<Scoped> = ask.scopes.iter().map(|scope| walk.answer(&env, &mut self.stats, *scope)).collect();
+            let answers: Vec<Scoped> = ask
+                .scopes
+                .iter()
+                .map(|scope| walk.answer(&env, &mut self.stats, *scope))
+                .collect();
             if fresh || walk.tiers.len() != before {
                 let touched: Vec<String> = walk.state.touched().iter().cloned().collect();
                 for touched_identity in touched {
                     let (uuid, _) = identity::parse_address(&touched_identity);
-                    self.named.entry(uuid).or_default().insert(touched_identity.clone());
-                    self.touching.entry(touched_identity).or_default().insert(key.clone());
+                    self.named
+                        .entry(uuid)
+                        .or_default()
+                        .insert(touched_identity.clone());
+                    self.touching
+                        .entry(touched_identity)
+                        .or_default()
+                        .insert(key.clone());
                 }
             }
             out.push(answers);

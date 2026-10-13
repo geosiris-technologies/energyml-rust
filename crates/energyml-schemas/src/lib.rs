@@ -89,8 +89,9 @@
 mod versions;
 
 pub use versions::{
-    compiled_features, known_version, known_version_of_content_type, known_version_of_qualified_type, missing_feature,
-    missing_feature_of_content_type, missing_feature_of_qualified_type, refusal, KnownVersion, MissingFeature, KNOWN_VERSIONS,
+    KNOWN_VERSIONS, KnownVersion, MissingFeature, compiled_features, known_version,
+    known_version_of_content_type, known_version_of_qualified_type, missing_feature,
+    missing_feature_of_content_type, missing_feature_of_qualified_type, refusal,
 };
 
 use energyml_core::naming;

@@ -21,7 +21,10 @@ use energyml_build::tabular::{self, Dialect};
 const DATUM: &str = "eml23.ReferencePointInALocalEngineeringCompoundCrs";
 
 fn when() -> When {
-    When { creation: "2026-09-22T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-22T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 /// A template entry.
@@ -53,7 +56,14 @@ fn bag(text: &str, template: &Value) -> Pieces {
 fn bag_named(name: &str, text: &str, template: &Value) -> Pieces {
     let table = tabular::read(name, text, Dialect::sniff(text)).expect("a table");
     let template = osdu::from_json(template).expect("a template");
-    Pieces::empty().with("table", Source::Table { name: name.into(), table, template })
+    Pieces::empty().with(
+        "table",
+        Source::Table {
+            name: name.into(),
+            table,
+            template,
+        },
+    )
 }
 
 /// The uuid of the object of a given type, when there is only one.
@@ -71,7 +81,13 @@ fn plan(pieces: &Pieces, answers: Value) -> Result<energyml_build::operation::Pl
         choices = choices.set(name, value.clone());
     }
     Registry::new()
-        .plan("wells-from-table", pieces, &choices, &Identity::derived(), &when())
+        .plan(
+            "wells-from-table",
+            pieces,
+            &choices,
+            &Identity::derived(),
+            &when(),
+        )
         .map_err(|why| why.to_string())
 }
 
@@ -88,7 +104,10 @@ fn every_role_uuid_is_in_the_shipped_dictionary() {
             .map(|role| role.uuid)
             .collect()
     });
-    assert!(missing.is_empty(), "roles name uuids absent from the dictionary: {missing:?}");
+    assert!(
+        missing.is_empty(),
+        "roles name uuids absent from the dictionary: {missing:?}"
+    );
 }
 
 #[test]
@@ -122,7 +141,13 @@ fn one_hole_writes_the_five_objects_resqml_wants() {
     ] {
         assert!(kinds.contains(&wanted), "{wanted} manque : {kinds:?}");
     }
-    assert!(made.says.iter().any(|n| n.key == "wells" && n.detail.contains('1')), "{:?}", made.says);
+    assert!(
+        made.says
+            .iter()
+            .any(|n| n.key == "wells" && n.detail.contains('1')),
+        "{:?}",
+        made.says
+    );
 }
 
 #[test]
@@ -132,7 +157,11 @@ fn the_rows_of_one_name_make_one_hole() {
     // lignes.
     let text = "SONDAGE,X,Y,Z_MNT,PROF\nF1,1,2,10,0\nF2,3,4,20,0\nF1,1,2,10,5\nF2,3,4,20,7\n";
     let made = plan(&bag(text, &roles()), json!({ "sourceEpsg": 2154 })).expect("a plan");
-    let features = made.objects.iter().filter(|o| o.qualified_type == "resqml22.WellboreFeature").count();
+    let features = made
+        .objects
+        .iter()
+        .filter(|o| o.qualified_type == "resqml22.WellboreFeature")
+        .count();
     assert_eq!(features, 2);
 }
 
@@ -188,8 +217,16 @@ F2,9,9,100,3
         .iter()
         .find(|n| n.key == "unmeasured-top")
         .unwrap_or_else(|| panic!("no note: {:?}", made.says));
-    assert!(note.detail.contains("F1 (31.5 m)"), "the longest, named: {}", note.detail);
-    assert!(note.detail.starts_with("2 "), "both boreholes are counted: {}", note.detail);
+    assert!(
+        note.detail.contains("F1 (31.5 m)"),
+        "the longest, named: {}",
+        note.detail
+    );
+    assert!(
+        note.detail.starts_with("2 "),
+        "both boreholes are counted: {}",
+        note.detail
+    );
 
     // **The negative check.** A file that itself states its measurement at the ground
     // has nothing unexplained, and a note that appeared there would be a note that
@@ -219,17 +256,28 @@ fn a_run_of_many_wells_writes_its_collection() {
     // No check could see it: the only one that applies without HDF5
     // (`operations.rs`, `crs`) writes **two** objects, so stays under the threshold.
     // That is what this test adds — eight boreholes, a full role, no array.
-    let mut text = String::from("SONDAGE,X,Y,Z_MNT,PROF
-");
+    let mut text = String::from(
+        "SONDAGE,X,Y,Z_MNT,PROF
+",
+    );
     for well in 0..8 {
         for depth in [0, 10] {
-            text.push_str(&format!("F{well},650000,6800000,120,{depth}
-"));
+            text.push_str(&format!(
+                "F{well},650000,6800000,120,{depth}
+"
+            ));
         }
     }
     let made = plan(&bag(&text, &roles()), json!({ "sourceEpsg": 2154 })).expect("a plan");
-    let wells = made.objects.iter().filter(|o| o.qualified_type == "resqml22.WellboreFeature").count();
-    assert_eq!(wells, 8, "eight boreholes, hence a role above the grouping threshold");
+    let wells = made
+        .objects
+        .iter()
+        .filter(|o| o.qualified_type == "resqml22.WellboreFeature")
+        .count();
+    assert_eq!(
+        wells, 8,
+        "eight boreholes, hence a role above the grouping threshold"
+    );
 
     let schemas = std::sync::Arc::new(energyml_schemas::all());
     let mut store = energyml_build::epc::open(None, "wells.epc", schemas).expect("a new package");
@@ -239,7 +287,10 @@ fn a_run_of_many_wells_writes_its_collection() {
     let written = energyml_build::apply::apply_with(&made, &mut store, &when(), false);
     assert!(written.refused.is_empty(), "{:?}", written.refused);
     assert!(
-        written.written.iter().any(|one| one.contains("DataobjectCollection")),
+        written
+            .written
+            .iter()
+            .any(|one| one.contains("DataobjectCollection")),
         "the run must write its collection: {:?}",
         written.written
     );
@@ -269,12 +320,18 @@ F2,650100,6800100,131
 
     let kinds: Vec<&str> = made.objects.iter().map(|o| o.qualified_type.as_str()).collect();
     assert_eq!(
-        kinds.iter().filter(|k| ***k == *"resqml22.WellboreFeature").count(),
+        kinds
+            .iter()
+            .filter(|k| ***k == *"resqml22.WellboreFeature")
+            .count(),
         2,
         "the two heads make two boreholes: {kinds:?}"
     );
     assert_eq!(
-        kinds.iter().filter(|k| k.contains("Trajectory") || k.contains("Frame")).count(),
+        kinds
+            .iter()
+            .filter(|k| k.contains("Trajectory") || k.contains("Frame"))
+            .count(),
         0,
         "nothing of the path: {kinds:?}"
     );
@@ -287,7 +344,11 @@ F2,650100,6800100,131
         .filter(|o| o.qualified_type == DATUM)
         .filter_map(|o| o.json["VerticalCoordinate"].as_f64())
         .collect();
-    assert_eq!(datums, [120.0, 131.0], "the two grounds, in the order of the file");
+    assert_eq!(
+        datums,
+        [120.0, 131.0],
+        "the two grounds, in the order of the file"
+    );
 }
 
 #[test]
@@ -331,7 +392,10 @@ fn a_declared_column_the_file_does_not_carry_names_both_lists() {
     let text = "SONDAGE,X,Y,ALTITUDE,PROF\nF1,1,2,10,0\n";
     let why = plan(&bag(text, &roles()), json!({ "sourceEpsg": 2154 })).expect_err("refuses");
     assert!(why.contains("Z_MNT"), "{why}");
-    assert!(why.contains("ALTITUDE"), "the refusal also names what the file carries: {why}");
+    assert!(
+        why.contains("ALTITUDE"),
+        "the refusal also names what the file carries: {why}"
+    );
 }
 
 #[test]
@@ -358,7 +422,12 @@ F1,2.3,48.9,120,25
     let why = energyml_build::ops::wells_from_table::WellsFromTable
         .plan(
             energyml_build::ops::wells_from_table::TableInputs {
-                table: vec![TableIn { name: "table".into(), file: "essai.csv".into(), table, template }],
+                table: vec![TableIn {
+                    name: "table".into(),
+                    file: "essai.csv".into(),
+                    table,
+                    template,
+                }],
                 wells: Vec::new(),
             },
             energyml_build::ops::wells_from_table::TableParams {
@@ -400,8 +469,16 @@ F1,2.3,48.9,120,25
         .parameters
         .iter()
         .any(|p| format!("{p:?}").contains("project"));
-    assert!(projected, "the suggestion is recorded: {:?}", made.activity.parameters);
-    assert!(made.objects.iter().any(|o| o.qualified_type == "resqml22.WellboreFeature"));
+    assert!(
+        projected,
+        "the suggestion is recorded: {:?}",
+        made.activity.parameters
+    );
+    assert!(
+        made.objects
+            .iter()
+            .any(|o| o.qualified_type == "resqml22.WellboreFeature")
+    );
 }
 
 #[test]
@@ -409,10 +486,17 @@ fn the_file_can_state_its_own_projection_code() {
     // A constant is read in a column **or** imposed as a setting. Here
     // it is the column, and no `sourceEpsg` is given.
     let mut template = roles();
-    template.as_array_mut().unwrap().push(column("EPSG", "d48ef4e7-f82e-4e91-bda2-685146223a85"));
+    template
+        .as_array_mut()
+        .unwrap()
+        .push(column("EPSG", "d48ef4e7-f82e-4e91-bda2-685146223a85"));
     let text = "SONDAGE,X,Y,Z_MNT,PROF,EPSG\nF1,650000,6800000,120,0,2154\nF1,650000,6800000,120,25,2154\n";
     let made = plan(&bag(text, &template), json!({})).expect("a plan");
-    assert!(made.objects.iter().any(|o| o.qualified_type == "resqml22.WellboreFeature"));
+    assert!(
+        made.objects
+            .iter()
+            .any(|o| o.qualified_type == "resqml22.WellboreFeature")
+    );
 }
 
 #[test]
@@ -420,7 +504,10 @@ fn two_projection_codes_in_one_file_are_refused() {
     // The boreholes of a file share a frame: placing them together in
     // either would place some of them wrong.
     let mut template = roles();
-    template.as_array_mut().unwrap().push(column("EPSG", "d48ef4e7-f82e-4e91-bda2-685146223a85"));
+    template
+        .as_array_mut()
+        .unwrap()
+        .push(column("EPSG", "d48ef4e7-f82e-4e91-bda2-685146223a85"));
     let text = "SONDAGE,X,Y,Z_MNT,PROF,EPSG\nF1,1,2,10,0,2154\nF2,3,4,20,0,3949\n";
     let why = plan(&bag(text, &template), json!({})).expect_err("refuses");
     assert!(why.contains("2154") && why.contains("3949"), "{why}");
@@ -474,7 +561,11 @@ F1,650000,6800000,120,26.16
         "resqml22.WellboreFrameRepresentation",
         DATUM,
     ] {
-        assert_eq!(only(&first, kind), only(&second, kind), "{kind}: two identities for one borehole");
+        assert_eq!(
+            only(&first, kind),
+            only(&second, kind),
+            "{kind}: two identities for one borehole"
+        );
     }
 }
 
@@ -508,8 +599,15 @@ F1,650000,6800000,120,26.16
     assert_eq!(interpretation, only(&second, "resqml22.WellboreInterpretation"));
 
     // The trajectory and the frame, for their part, are a second object.
-    for kind in ["resqml22.WellboreTrajectoryRepresentation", "resqml22.WellboreFrameRepresentation"] {
-        assert_ne!(only(&first, kind), only(&second, kind), "{kind}: the correction overwrote the earlier object");
+    for kind in [
+        "resqml22.WellboreTrajectoryRepresentation",
+        "resqml22.WellboreFrameRepresentation",
+    ] {
+        assert_ne!(
+            only(&first, kind),
+            only(&second, kind),
+            "{kind}: the correction overwrote the earlier object"
+        );
     }
 
     // And the second trajectory hangs on **the same** interpretation, otherwise it
@@ -519,7 +617,10 @@ F1,650000,6800000,120,26.16
         .iter()
         .find(|o| o.qualified_type == "resqml22.WellboreTrajectoryRepresentation")
         .expect("a trajectory");
-    assert_eq!(trajectory.json["RepresentedObject"]["Uuid"].as_str(), Some(interpretation.as_str()));
+    assert_eq!(
+        trajectory.json["RepresentedObject"]["Uuid"].as_str(),
+        Some(interpretation.as_str())
+    );
 
     // **And no version label is set.** Measured: writing
     // one put 15 warnings on a package that had none — a
@@ -527,7 +628,11 @@ F1,650000,6800000,120,26.16
     // writes it — and ETP servers only take the uuid as key. It is
     // the uuid that tells apart, and it comes from the content.
     assert!(trajectory.json["objectVersion"].is_null(), "{}", trajectory.json);
-    assert!(trajectory.json["ObjectVersionReason"].is_null(), "{}", trajectory.json);
+    assert!(
+        trajectory.json["ObjectVersionReason"].is_null(),
+        "{}",
+        trajectory.json
+    );
 }
 
 #[test]
@@ -560,15 +665,30 @@ F1,650000,6800000,120,26.16
     // optional — making it depend on it would remove it from `cargo test
     // --workspace`, which is where it must turn red.
     let made = energyml_build::apply::apply_with(&first, &mut store, &when(), false);
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+    assert!(
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
-    assert!(made.versioned.is_empty(), "nothing was there: {:?}", made.versioned);
+    assert!(
+        made.versioned.is_empty(),
+        "nothing was there: {:?}",
+        made.versioned
+    );
 
     let made = energyml_build::apply::apply_with(&second, &mut store, &when(), false);
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+    assert!(
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
     let versioned = made.versioned.join(" | ");
-    assert!(versioned.contains("trajectory"), "the trajectory is not named: {versioned}");
+    assert!(
+        versioned.contains("trajectory"),
+        "the trajectory is not named: {versioned}"
+    );
     assert!(versioned.contains("frame"), "the frame is not named: {versioned}");
     assert!(
         !versioned.contains("interpretation"),
@@ -636,11 +756,18 @@ fn bag_with(text: &str, before: &energyml_build::operation::Plan, head: [f64; 3]
 
 /// The same bag, the frame of the package being in **another frame** — the compound
 /// of another producer (the BRGM writes its own), or none that the package states.
-fn bag_in_frame(text: &str, before: &energyml_build::operation::Plan, frame: Option<energyml_build::pieces::Ref>) -> Pieces {
+fn bag_in_frame(
+    text: &str,
+    before: &energyml_build::operation::Plan,
+    frame: Option<energyml_build::pieces::Ref>,
+) -> Pieces {
     let mut pieces = Pieces::empty();
     for (name, source) in bag_with(text, before, [650000.0, 6800000.0, 120.0], &[2.25, 26.16]).iter() {
         let source = match source {
-            Source::Object(known) if name == "wells" => Source::Object(energyml_build::pieces::Known { crs: frame.clone(), ..known.clone() }),
+            Source::Object(known) if name == "wells" => Source::Object(energyml_build::pieces::Known {
+                crs: frame.clone(),
+                ..known.clone()
+            }),
             other => other.clone(),
         };
         pieces = pieces.with(name.to_string(), source);
@@ -672,8 +799,16 @@ F1,650000,6800000,120,12.0
     let (_store, before) = written(first);
 
     // The frame of this run, the same as the package's: rewritten in it.
-    let same = plan(&bag_with(more, &before, [650000.0, 6800000.0, 120.0], &[2.25, 26.16]), json!({ "sourceEpsg": 2154, "enrich": true })).expect("a plan");
-    let ours = before.objects.iter().find(|o| o.qualified_type == "eml23.LocalEngineeringCompoundCrs").expect("the frame of the first run");
+    let same = plan(
+        &bag_with(more, &before, [650000.0, 6800000.0, 120.0], &[2.25, 26.16]),
+        json!({ "sourceEpsg": 2154, "enrich": true }),
+    )
+    .expect("a plan");
+    let ours = before
+        .objects
+        .iter()
+        .find(|o| o.qualified_type == "eml23.LocalEngineeringCompoundCrs")
+        .expect("the frame of the first run");
     let trajectory = same
         .objects
         .iter()
@@ -682,18 +817,41 @@ F1,650000,6800000,120,12.0
     assert_eq!(trajectory.json["Geometry"]["LocalCrs"]["Uuid"], json!(ours.uuid));
 
     // The compound of another producer: set aside, and named.
-    let theirs = energyml_build::pieces::Ref::new("abababab-0000-4000-8000-00000000000b", "eml23.LocalEngineeringCompoundCrs", "Their frame");
-    let why = plan(&bag_in_frame(more, &before, Some(theirs)), json!({ "sourceEpsg": 2154, "enrich": true })).expect_err("nothing left to write");
-    assert!(why.contains("F1") && why.contains("Their frame") && why.contains("enrich"), "{why}");
+    let theirs = energyml_build::pieces::Ref::new(
+        "abababab-0000-4000-8000-00000000000b",
+        "eml23.LocalEngineeringCompoundCrs",
+        "Their frame",
+    );
+    let why = plan(
+        &bag_in_frame(more, &before, Some(theirs)),
+        json!({ "sourceEpsg": 2154, "enrich": true }),
+    )
+    .expect_err("nothing left to write");
+    assert!(
+        why.contains("F1") && why.contains("Their frame") && why.contains("enrich"),
+        "{why}"
+    );
 
     // A frame that the package does not state: set aside, and named.
-    let why = plan(&bag_in_frame(more, &before, None), json!({ "sourceEpsg": 2154, "enrich": true })).expect_err("nothing left to write");
+    let why = plan(
+        &bag_in_frame(more, &before, None),
+        json!({ "sourceEpsg": 2154, "enrich": true }),
+    )
+    .expect_err("nothing left to write");
     assert!(why.contains("F1") && why.contains("frame"), "{why}");
 
     // And without `enrich`, nothing is rewritten: a second path, in the frame
     // of this run, beside theirs — the way the refusal points to.
     let beside = plan(
-        &bag_in_frame(more, &before, Some(energyml_build::pieces::Ref::new("abababab-0000-4000-8000-00000000000b", "eml23.LocalEngineeringCompoundCrs", "Their frame"))),
+        &bag_in_frame(
+            more,
+            &before,
+            Some(energyml_build::pieces::Ref::new(
+                "abababab-0000-4000-8000-00000000000b",
+                "eml23.LocalEngineeringCompoundCrs",
+                "Their frame",
+            )),
+        ),
         json!({ "sourceEpsg": 2154 }),
     )
     .expect("a second trajectory");
@@ -723,14 +881,32 @@ F1,650000,6800000,120,26.16
 ";
     let (_store, before) = written(first);
 
-    let again = plan(&bag_with(more, &before, [650000.0, 6800000.0, 120.0], &[2.25, 26.16]), json!({ "sourceEpsg": 2154 })).expect("a plan");
+    let again = plan(
+        &bag_with(more, &before, [650000.0, 6800000.0, 120.0], &[2.25, 26.16]),
+        json!({ "sourceEpsg": 2154 }),
+    )
+    .expect("a plan");
     let kinds: Vec<&str> = again.objects.iter().map(|o| o.qualified_type.as_str()).collect();
-    for absent in ["resqml22.WellboreFeature", "resqml22.WellboreInterpretation", DATUM] {
-        assert!(!kinds.contains(&absent), "{absent} was rewritten although the borehole is recognised: {kinds:?}");
+    for absent in [
+        "resqml22.WellboreFeature",
+        "resqml22.WellboreInterpretation",
+        DATUM,
+    ] {
+        assert!(
+            !kinds.contains(&absent),
+            "{absent} was rewritten although the borehole is recognised: {kinds:?}"
+        );
     }
     // A second path, beside the first, on the same interpretation.
-    assert!(kinds.contains(&"resqml22.WellboreTrajectoryRepresentation"), "{kinds:?}");
-    assert!(again.says.iter().any(|n| n.key == "continued"), "{:?}", again.says);
+    assert!(
+        kinds.contains(&"resqml22.WellboreTrajectoryRepresentation"),
+        "{kinds:?}"
+    );
+    assert!(
+        again.says.iter().any(|n| n.key == "continued"),
+        "{:?}",
+        again.says
+    );
 }
 
 #[test]
@@ -745,7 +921,11 @@ F1,650000,6800000,120,26.16
 ";
     let (_store, before) = written(text);
 
-    let again = plan(&bag_with(text, &before, [650000.0, 6800000.0, 120.0], &[2.25, 26.16]), json!({ "sourceEpsg": 2154 })).expect("a plan");
+    let again = plan(
+        &bag_with(text, &before, [650000.0, 6800000.0, 120.0], &[2.25, 26.16]),
+        json!({ "sourceEpsg": 2154 }),
+    )
+    .expect("a plan");
     // **No object of the borehole** — the plan keeps its frame, which it creates
     // at the level of the run and not of the hole; it is the borehole that does not move.
     let wells: Vec<&str> = again
@@ -755,7 +935,11 @@ F1,650000,6800000,120,26.16
         .filter(|kind| kind.contains("Wellbore") || *kind == DATUM)
         .collect();
     assert!(wells.is_empty(), "nothing had changed: {wells:?}");
-    assert!(again.says.iter().any(|n| n.key == "unchanged"), "{:?}", again.says);
+    assert!(
+        again.says.iter().any(|n| n.key == "unchanged"),
+        "{:?}",
+        again.says
+    );
 }
 
 #[test]
@@ -787,10 +971,21 @@ F1,650000,6800000,120,12.0
         .iter()
         .find(|o| o.qualified_type == "resqml22.WellboreFrameRepresentation")
         .expect("a frame");
-    assert_eq!(frame.uuid, held[0], "enriching rewrites the frame of the package, it does not make a second one");
-    assert_eq!(frame.json["NodeCount"].as_u64(), Some(3), "the union of the depths: 2.25 — 12 — 26.16");
+    assert_eq!(
+        frame.uuid, held[0],
+        "enriching rewrites the frame of the package, it does not make a second one"
+    );
+    assert_eq!(
+        frame.json["NodeCount"].as_u64(),
+        Some(3),
+        "the union of the depths: 2.25 — 12 — 26.16"
+    );
 
-    let note = again.says.iter().find(|n| n.key == "merged").unwrap_or_else(|| panic!("{:?}", again.says));
+    let note = again
+        .says
+        .iter()
+        .find(|n| n.key == "merged")
+        .unwrap_or_else(|| panic!("{:?}", again.says));
     assert!(note.detail.contains("renumbered"), "{}", note.detail);
 
     // **And without the option, the frame of the package is not touched**: it is what
@@ -819,13 +1014,21 @@ F1,650000,6800000,118.5,26.16
 ";
     let (_store, before) = written(first);
 
-    let again = plan(&bag_with(moved, &before, [650000.0, 6800000.0, 120.0], &[2.25, 26.16]), json!({ "sourceEpsg": 2154 })).expect("a plan");
+    let again = plan(
+        &bag_with(moved, &before, [650000.0, 6800000.0, 120.0], &[2.25, 26.16]),
+        json!({ "sourceEpsg": 2154 }),
+    )
+    .expect("a plan");
     let kinds: Vec<&str> = again.objects.iter().map(|o| o.qualified_type.as_str()).collect();
     // A second reference point, because it is another one.
     assert!(kinds.contains(&DATUM), "{kinds:?}");
     // But still the same borehole: neither a feature nor an interpretation more.
     assert!(!kinds.contains(&"resqml22.WellboreInterpretation"), "{kinds:?}");
-    assert!(again.says.iter().any(|n| n.key == "ground-moved"), "{:?}", again.says);
+    assert!(
+        again.says.iter().any(|n| n.key == "ground-moved"),
+        "{:?}",
+        again.says
+    );
 }
 
 #[test]
@@ -860,9 +1063,16 @@ F1,650500,6800000,120,26.16
         "resqml22.WellboreFrameRepresentation",
         DATUM,
     ] {
-        assert!(kinds.contains(&wanted), "{wanted} is missing — the borehole was taken for the package's: {kinds:?}");
+        assert!(
+            kinds.contains(&wanted),
+            "{wanted} is missing — the borehole was taken for the package's: {kinds:?}"
+        );
     }
-    assert!(!again.says.iter().any(|n| n.key == "continued"), "{:?}", again.says);
+    assert!(
+        !again.says.iter().any(|n| n.key == "continued"),
+        "{:?}",
+        again.says
+    );
 }
 
 #[cfg(feature = "hdf5")]
@@ -892,10 +1102,19 @@ F1,650000,6800000,120,26.16
     store.external_files_mut().set_root(&dir);
     let done = energyml_build::apply::apply(&made, &mut store, &when());
     assert!(done.refused.is_empty(), "{:?}", done.refused);
-    store.save_as(&out, &energyml_storage::SaveOptions::default()).unwrap();
+    store
+        .save_as(&out, &energyml_storage::SaveOptions::default())
+        .unwrap();
 
     let reread = energyml_storage::EpcStore::open(&out, schemas).unwrap();
-    let of = |kind: &str| made.objects.iter().find(|one| one.qualified_type == kind).expect(kind).uuid.clone();
+    let of = |kind: &str| {
+        made.objects
+            .iter()
+            .find(|one| one.qualified_type == kind)
+            .expect(kind)
+            .uuid
+            .clone()
+    };
     let frame = of("resqml22.WellboreFrameRepresentation");
     let known = energyml_build::read::pieces_of_object(&reread, &frame)
         .expect("the frame's pieces")
@@ -920,8 +1139,14 @@ F1,650000,6800000,120,26.16
         stripped.trajectory.is_none() && stripped.wellhead.is_none(),
         "`known_of_object` has stopped taking the CRS branch for a frame — if that is intended, this check is to be turned around"
     );
-    assert_eq!(known.trajectory.as_ref().map(|one| one.uuid.as_str()), Some(of("resqml22.WellboreTrajectoryRepresentation").as_str()));
-    assert_eq!(known.datum.as_ref().map(|one| one.uuid.as_str()), Some(of(DATUM).as_str()));
+    assert_eq!(
+        known.trajectory.as_ref().map(|one| one.uuid.as_str()),
+        Some(of("resqml22.WellboreTrajectoryRepresentation").as_str())
+    );
+    assert_eq!(
+        known.datum.as_ref().map(|one| one.uuid.as_str()),
+        Some(of(DATUM).as_str())
+    );
     // And the head comes from the datum, never from the geometry: the first node is
     // at 2.25 m, the ground at 120.
     assert_eq!(known.wellhead, Some([650000.0, 6800000.0, 120.0]));
@@ -967,7 +1192,10 @@ F1,650000,6800000,120,26.16
         .with(
             "wells",
             Source::Shape {
-                geometry: energyml_geometry::Geometry { kind: "wellbore", patches: Vec::new() },
+                geometry: energyml_geometry::Geometry {
+                    kind: "wellbore",
+                    patches: Vec::new(),
+                },
                 closed: None,
             },
         )
@@ -976,7 +1204,11 @@ F1,650000,6800000,120,26.16
     // It binds, and the borehole is recognised: it is the proof that the companion was
     // taken. Without the binding, the plan would refuse *"`wells` is shape"*.
     let again = plan(&pieces, json!({ "sourceEpsg": 2154 })).expect("a plan");
-    assert!(again.says.iter().any(|n| n.key == "unchanged"), "{:?}", again.says);
+    assert!(
+        again.says.iter().any(|n| n.key == "unchanged"),
+        "{:?}",
+        again.says
+    );
 }
 
 // -- the boreholes of the package, by default ------------------------------
@@ -1006,11 +1238,19 @@ fn what_is_no_frame_is_refused_by_its_type() {
     // turn red: remove the type check from `Standing::of`.
     let pieces = bag(ONE_WELL, &roles()).with(
         "wells",
-        known_as("resqml22.WellboreTrajectoryRepresentation", "F1 — trajectory", Some([650000.0, 6800000.0, 120.0]), None),
+        known_as(
+            "resqml22.WellboreTrajectoryRepresentation",
+            "F1 — trajectory",
+            Some([650000.0, 6800000.0, 120.0]),
+            None,
+        ),
     );
     let refused = plan(&pieces, json!({ "sourceEpsg": 2154 })).expect_err("a trajectory is no frame");
     assert!(refused.contains("no wellbore frame"), "{refused}");
-    assert!(refused.contains("resqml22.WellboreTrajectoryRepresentation"), "the type is named: {refused}");
+    assert!(
+        refused.contains("resqml22.WellboreTrajectoryRepresentation"),
+        "the type is named: {refused}"
+    );
     // And the message reads in one piece: a lost continuation left twenty
     // spaces in the middle of the sentence.
     assert!(!refused.contains("   "), "{refused}");
@@ -1021,11 +1261,15 @@ fn a_mute_frame_no_row_names_does_not_block_the_import() {
     // Since `wells` takes all the frames of the package, a frame of another
     // producer, with no datum, must not block the import of a borehole
     // that has nothing to do with it.
-    let pieces = bag(ONE_WELL, &roles())
-        .with("wells", known_as("resqml22.WellboreFrameRepresentation", "F9 — frame", None, None));
+    let pieces = bag(ONE_WELL, &roles()).with(
+        "wells",
+        known_as("resqml22.WellboreFrameRepresentation", "F9 — frame", None, None),
+    );
     let made = plan(&pieces, json!({ "sourceEpsg": 2154 })).expect("F9 does not concern F1");
     assert!(
-        made.objects.iter().any(|one| one.qualified_type == "resqml22.WellboreFeature" && one.title == "F1"),
+        made.objects
+            .iter()
+            .any(|one| one.qualified_type == "resqml22.WellboreFeature" && one.title == "F1"),
         "F1 is written"
     );
 }
@@ -1035,8 +1279,15 @@ fn a_mute_frame_a_row_names_is_refused_by_that_name() {
     // The other half, and it is for it that the refusal existed: F1 may
     // already be there, and without its head we cannot know. Writing it
     // believing to create would be a duplicate.
-    let pieces = bag(ONE_WELL, &roles())
-        .with("wells", known_as("resqml22.WellboreFrameRepresentation", "F1 — frame", None, Some(&[2.25])));
+    let pieces = bag(ONE_WELL, &roles()).with(
+        "wells",
+        known_as(
+            "resqml22.WellboreFrameRepresentation",
+            "F1 — frame",
+            None,
+            Some(&[2.25]),
+        ),
+    );
     let refused = plan(&pieces, json!({ "sourceEpsg": 2154 })).expect_err("F1 cannot be matched");
     assert!(refused.contains("`F1 — frame`"), "the frame is named: {refused}");
     assert!(!refused.contains("   "), "{refused}");
@@ -1050,18 +1301,34 @@ fn an_empty_every_slot_does_not_make_an_operation_unfit() {
     // none, and that is said.
     let registry = Registry::new();
     let operation = registry.get("properties-from-table").expect("registered");
-    let frames = operation.takes().into_iter().find(|one| one.name == "frames").expect("a frames slot");
+    let frames = operation
+        .takes()
+        .into_iter()
+        .find(|one| one.name == "frames")
+        .expect("a frames slot");
     assert_eq!(frames.otherwise, energyml_build::operation::Otherwise::Every);
 
     let only_table = bag(ONE_WELL, &roles());
     assert!(
-        matches!(operation.fitness(&only_table), energyml_build::operation::Fitness::Fit),
+        matches!(
+            operation.fitness(&only_table),
+            energyml_build::operation::Fitness::Fit
+        ),
         "unfit on an empty `every` slot"
     );
     let refused = registry
-        .plan("properties-from-table", &only_table, &Choices::new(), &Identity::derived(), &when())
+        .plan(
+            "properties-from-table",
+            &only_table,
+            &Choices::new(),
+            &Identity::derived(),
+            &when(),
+        )
         .expect_err("no frame, neither given nor in the package");
-    assert!(refused.to_string().contains("the package gives none"), "{refused}");
+    assert!(
+        refused.to_string().contains("the package gives none"),
+        "{refused}"
+    );
 }
 
 #[test]
@@ -1071,10 +1338,22 @@ fn a_frame_that_cannot_be_read_fails_the_default_rather_than_hide() {
     // must not pass for a package without boreholes: each hole would then be written
     // a second time.
     let (store, _) = written(ONE_WELL);
-    let takes = Registry::new().get("wells-from-table").expect("registered").takes();
-    let refused = energyml_build::read::every(&store, &takes, bag(ONE_WELL, &roles()), energyml_geometry::Placement::Local)
-        .expect_err("the frame cannot be read");
-    assert_eq!(refused.slot.as_deref(), Some("wells"), "filed under its slot: {refused}");
+    let takes = Registry::new()
+        .get("wells-from-table")
+        .expect("registered")
+        .takes();
+    let refused = energyml_build::read::every(
+        &store,
+        &takes,
+        bag(ONE_WELL, &roles()),
+        energyml_geometry::Placement::Local,
+    )
+    .expect_err("the frame cannot be read");
+    assert_eq!(
+        refused.slot.as_deref(),
+        Some("wells"),
+        "filed under its slot: {refused}"
+    );
 }
 
 #[cfg(feature = "hdf5")]
@@ -1100,31 +1379,61 @@ F2,650100,6800100,131,9.0
     store.external_files_mut().set_root(&dir);
     let done = energyml_build::apply::apply(&made, &mut store, &when());
     assert!(done.refused.is_empty(), "{:?}", done.refused);
-    store.save_as(&out, &energyml_storage::SaveOptions::default()).unwrap();
+    store
+        .save_as(&out, &energyml_storage::SaveOptions::default())
+        .unwrap();
     let reread = energyml_storage::EpcStore::open(&out, schemas).unwrap();
 
-    let takes = Registry::new().get("wells-from-table").expect("registered").takes();
-    let filled = energyml_build::read::every(&reread, &takes, bag(text, &roles()), energyml_geometry::Placement::Local)
-        .expect("the frames read");
+    let takes = Registry::new()
+        .get("wells-from-table")
+        .expect("registered")
+        .takes();
+    let filled = energyml_build::read::every(
+        &reread,
+        &takes,
+        bag(text, &roles()),
+        energyml_geometry::Placement::Local,
+    )
+    .expect("the frames read");
     // **Numbered**: two pieces named alike both took the
     // first companion, and the CLI saw the same borehole 120 times.
-    let names: Vec<&str> = filled.iter().map(|(name, _)| name).filter(|name| name.starts_with("wells")).collect();
+    let names: Vec<&str> = filled
+        .iter()
+        .map(|(name, _)| name)
+        .filter(|name| name.starts_with("wells"))
+        .collect();
     assert_eq!(names, ["wells", "wells (object)", "wells 2", "wells 2 (object)"]);
 
     let again = plan(&filled, json!({ "sourceEpsg": 2154 })).expect("a plan");
-    let unchanged = again.says.iter().find(|n| n.key == "unchanged").expect("the two wells are recognised");
-    assert!(unchanged.detail.contains("F1") && unchanged.detail.contains("F2"), "{}", unchanged.detail);
+    let unchanged = again
+        .says
+        .iter()
+        .find(|n| n.key == "unchanged")
+        .expect("the two wells are recognised");
+    assert!(
+        unchanged.detail.contains("F1") && unchanged.detail.contains("F2"),
+        "{}",
+        unchanged.detail
+    );
 
     // And a given piece wins: the default is not added to a choice.
     let given = bag(text, &roles()).with(
         "wells",
-        known_as("resqml22.WellboreFrameRepresentation", "F9 — frame", Some([0.0, 0.0, 0.0]), Some(&[1.0])),
+        known_as(
+            "resqml22.WellboreFrameRepresentation",
+            "F9 — frame",
+            Some([0.0, 0.0, 0.0]),
+            Some(&[1.0]),
+        ),
     );
-    let kept = energyml_build::read::every(&reread, &takes, given, energyml_geometry::Placement::Local).unwrap();
-    assert_eq!(kept.iter().filter(|(name, _)| name.starts_with("wells")).count(), 1);
+    let kept =
+        energyml_build::read::every(&reread, &takes, given, energyml_geometry::Placement::Local).unwrap();
+    assert_eq!(
+        kept.iter().filter(|(name, _)| name.starts_with("wells")).count(),
+        1
+    );
     let _ = std::fs::remove_dir_all(&dir);
 }
-
 
 // -- passes: `[top, MD]` ------------------------------------------------------
 
@@ -1139,8 +1448,14 @@ fn passes() -> Value {
 
 /// The depths of the nodes of the written frame.
 fn node_depths(made: &energyml_build::operation::Plan) -> Vec<f64> {
-    let nodes = made.datasets.iter().find(|set| set.path.ends_with("nodeMd")).expect("the frame's node depths");
-    let energyml_build::operation::Numbers::F64(values) = &nodes.values else { panic!("the depths are doubles") };
+    let nodes = made
+        .datasets
+        .iter()
+        .find(|set| set.path.ends_with("nodeMd"))
+        .expect("the frame's node depths");
+    let energyml_build::operation::Numbers::F64(values) = &nodes.values else {
+        panic!("the depths are doubles")
+    };
     values.clone()
 }
 
@@ -1160,7 +1475,11 @@ F1,0,0,100,2.25,3
 F1,0,0,100,3,5.25
 ";
     let made = plan(&bag(text, &passes()), json!({ "sourceEpsg": 2154 })).expect("a plan");
-    assert_eq!(node_depths(&made), vec![0.0, 2.25, 3.0, 5.25], "one node per limit, shared between two contiguous passes");
+    assert_eq!(
+        node_depths(&made),
+        vec![0.0, 2.25, 3.0, 5.25],
+        "one node per limit, shared between two contiguous passes"
+    );
     assert!(
         !made.says.iter().any(|n| n.key == "unmeasured-top"),
         "the file says where the first pass begins: {:?}",
@@ -1203,5 +1522,8 @@ fn a_pass_whose_top_is_not_above_its_base_is_refused() {
 F1,0,0,100,3,2
 ";
     let why = plan(&bag(text, &passes()), json!({ "sourceEpsg": 2154 })).expect_err("a refusal");
-    assert!(why.contains("line 1 ") && why.contains("top lies above its base"), "{why}");
+    assert!(
+        why.contains("line 1 ") && why.contains("top lies above its base"),
+        "{why}"
+    );
 }

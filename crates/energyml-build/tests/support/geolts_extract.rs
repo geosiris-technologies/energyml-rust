@@ -41,6 +41,7 @@ static CHART: Once = Once::new();
 
 /// The extract, as the chart every operation of this binary reads.
 pub fn extract() {
-    CHART.call_once(|| geolts::set_default(Chart::from_csv(CONCEPTS, Some(BOUNDS)).expect("the extract reads")));
+    CHART.call_once(|| {
+        geolts::set_default(Chart::from_csv(CONCEPTS, Some(BOUNDS)).expect("the extract reads"))
+    });
 }
-

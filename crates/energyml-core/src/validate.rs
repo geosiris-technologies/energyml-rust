@@ -269,7 +269,10 @@ impl<'r> ValidationCtx<'r> {
             if !same {
                 self.error(
                     "fixed",
-                    format!("the schema fixes this value to `{fixed}`, found `{}`", scalar_text(value)),
+                    format!(
+                        "the schema fixes this value to `{fixed}`, found `{}`",
+                        scalar_text(value)
+                    ),
                 );
             }
         }

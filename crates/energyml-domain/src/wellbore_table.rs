@@ -204,9 +204,13 @@ pub fn of_frame(
     properties: &[&dyn Reflect],
     arrays: &dyn ArraySource,
 ) -> Result<WellTable> {
-    let titled = energyml_core::identity::title_of_reflect(frame).unwrap_or("wellbore").to_string();
+    let titled = energyml_core::identity::title_of_reflect(frame)
+        .unwrap_or("wellbore")
+        .to_string();
     let well = stem(&titled).to_string();
-    let uuid = energyml_core::identity::uuid_of_reflect(frame).unwrap_or_default().to_string();
+    let uuid = energyml_core::identity::uuid_of_reflect(frame)
+        .unwrap_or_default()
+        .to_string();
     let mut notes = Vec::new();
 
     // The depth first: it is the axis, and it fixes the number of rows. Without
@@ -228,9 +232,9 @@ pub fn of_frame(
     // the table takes the shape of the file it comes from — a top, a base, a
     // value — and that is what makes the CSV identical to the source one.
     let by_passes = mds.len() >= 2
-        && properties
-            .iter()
-            .any(|object| property::read(*object).is_ok_and(|read| read.indexable == IndexableElement::Intervals));
+        && properties.iter().any(|object| {
+            property::read(*object).is_ok_and(|read| read.indexable == IndexableElement::Intervals)
+        });
     let (rows, wanted, mut columns) = if by_passes {
         let rows = mds.len() - 1;
         let top = Column {
@@ -269,7 +273,13 @@ pub fn of_frame(
             Err(why) => notes.push(why),
         }
     }
-    Ok(WellTable { well, uuid, columns, rows, notes })
+    Ok(WellTable {
+        well,
+        uuid,
+        columns,
+        rows,
+        notes,
+    })
 }
 
 /// A property, read into columns — or the reason it was not read.
@@ -297,7 +307,11 @@ fn one_property(
         return Err(format!(
             "`{title}` hangs on {} while this table has one row per {}, so it has no row here",
             read.indexable.as_str(),
-            if wanted == IndexableElement::Intervals { "interval" } else { "node" }
+            if wanted == IndexableElement::Intervals {
+                "interval"
+            } else {
+                "node"
+            }
         ));
     }
     let Some(patch) = read.patches.first() else {
@@ -308,7 +322,11 @@ fn one_property(
         return Err(format!(
             "`{title}` holds {} value(s) where the frame has {rows} {} — reading it here would shift every one",
             values.len(),
-            if wanted == IndexableElement::Intervals { "interval(s)" } else { "node(s)" }
+            if wanted == IndexableElement::Intervals {
+                "interval(s)"
+            } else {
+                "node(s)"
+            }
         ));
     }
 
@@ -333,14 +351,20 @@ fn one_property(
     // the code and the label when the table groups both.
     let table_columns: Vec<usize> = labels
         .as_ref()
-        .map(|table| (0..table.titles.len()).filter(|one| !table.key_columns.contains(one)).collect())
+        .map(|table| {
+            (0..table.titles.len())
+                .filter(|one| !table.key_columns.contains(one))
+                .collect()
+        })
         .unwrap_or_default();
     if let (Some(table), true) = (&labels, table_columns.len() > 1) {
         return Ok(table_columns
             .iter()
             .enumerate()
             .map(|(rank, &at_column)| Column {
-                title: table.titles[at_column].clone().unwrap_or_else(|| format!("{column} {}", rank + 1)),
+                title: table.titles[at_column]
+                    .clone()
+                    .unwrap_or_else(|| format!("{column} {}", rank + 1)),
                 uom: None,
                 // The property's kind goes to the **first** column, the code:
                 // it is what the property measures. The following ones give its
@@ -408,7 +432,9 @@ fn label_at(table: &Lookup, values: &Values, at: usize) -> Option<String> {
         Values::Floating(v) => *v.get(at)? as usize,
         _ => return None,
     };
-    let column = (0..table.titles.len()).rev().find(|one| !table.key_columns.contains(one))?;
+    let column = (0..table.titles.len())
+        .rev()
+        .find(|one| !table.key_columns.contains(one))?;
     match table.rows.cell(code, column)? {
         Cell::Text(text) => Some(text),
         Cell::Number(number) => Some(trim(number)),
@@ -514,7 +540,11 @@ pub fn merge(tables: &[WellTable]) -> Merged {
             rows.push(row);
         }
     }
-    Merged { headers, rows, conflicts }
+    Merged {
+        headers,
+        rows,
+        conflicts,
+    }
 }
 
 /// The CSV of a merged table.
@@ -534,10 +564,21 @@ pub fn to_csv(merged: &Merged, separator: char) -> String {
     };
     let mut out = String::new();
     let titles: Vec<Option<String>> = merged.headers.iter().map(|one| Some(one.clone())).collect();
-    out.push_str(&titles.iter().map(quote).collect::<Vec<_>>().join(&separator.to_string()));
+    out.push_str(
+        &titles
+            .iter()
+            .map(quote)
+            .collect::<Vec<_>>()
+            .join(&separator.to_string()),
+    );
     out.push('\n');
     for row in &merged.rows {
-        out.push_str(&row.iter().map(quote).collect::<Vec<_>>().join(&separator.to_string()));
+        out.push_str(
+            &row.iter()
+                .map(quote)
+                .collect::<Vec<_>>()
+                .join(&separator.to_string()),
+        );
         out.push('\n');
     }
     out

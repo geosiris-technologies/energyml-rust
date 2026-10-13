@@ -28,7 +28,9 @@
 
 use std::fmt::Write as _;
 
-use crate::layout::{Anchor, Attr, LaidInterval, LaidObject, Layout, MARKERS_LAYER, Rect, STRATA_LAYER, Shape};
+use crate::layout::{
+    Anchor, Attr, LaidInterval, LaidObject, Layout, MARKERS_LAYER, Rect, STRATA_LAYER, Shape,
+};
 
 /// The script an SVG carries when `View::zoom_script` is on (it has to work
 /// outside a front end, when the user opens the SVG in a browser). Plain ES2015 in `zoom.js`; it reads the root's
@@ -77,9 +79,15 @@ pub fn write(layout: &Layout) -> String {
     let (f, win, scale) = (layout.frame, layout.window, layout.scale);
     // Inkscape's namespace, declared only when a group uses it: a drawing
     // without the strata legend is the bytes it always was.
-    let has_strata =
-        layout.layers.iter().any(|l| (l.name == STRATA_LAYER || l.name == MARKERS_LAYER) && !l.objects.is_empty());
-    let inkscape = if has_strata { " xmlns:inkscape=\"http://www.inkscape.org/namespaces/inkscape\"" } else { "" };
+    let has_strata = layout
+        .layers
+        .iter()
+        .any(|l| (l.name == STRATA_LAYER || l.name == MARKERS_LAYER) && !l.objects.is_empty());
+    let inkscape = if has_strata {
+        " xmlns:inkscape=\"http://www.inkscape.org/namespaces/inkscape\""
+    } else {
+        ""
+    };
     let _ = writeln!(
         out,
         "<svg xmlns=\"http://www.w3.org/2000/svg\"{} width=\"{}\" height=\"{}\" viewBox=\"0 0 {} {}\" \
@@ -117,7 +125,13 @@ pub fn write(layout: &Layout) -> String {
         fmt(f.h),
         hatch_pattern(layout)
     );
-    let _ = writeln!(out, "<rect x=\"0\" y=\"0\" width=\"{}\" height=\"{}\" fill=\"{}\"/>", fmt(w), fmt(h), escape(&layout.background));
+    let _ = writeln!(
+        out,
+        "<rect x=\"0\" y=\"0\" width=\"{}\" height=\"{}\" fill=\"{}\"/>",
+        fmt(w),
+        fmt(h),
+        escape(&layout.background)
+    );
     let zoomable = layout.metadata.view.zoom_script;
     write_axes(&mut out, layout, zoomable);
 
@@ -143,7 +157,11 @@ pub fn write(layout: &Layout) -> String {
             out.push_str("</g></g>\n");
             in_plot = false;
         }
-        let clip = if layer.clipped && !zoomable { " clip-path=\"url(#plot)\"" } else { "" };
+        let clip = if layer.clipped && !zoomable {
+            " clip-path=\"url(#plot)\""
+        } else {
+            ""
+        };
         if layer.name == STRATA_LAYER {
             // One group, outside the zoomed plot, that an editor can move whole:
             // an Inkscape layer with a name and an id of its own.
@@ -219,7 +237,9 @@ fn write_metadata(out: &mut String, layout: &Layout) {
 pub enum MetadataError {
     /// No `<section-view>` element: this SVG was not written by [`write`], or
     /// an editor dropped its `<metadata>`.
-    #[error("no section-view metadata in this SVG — it was not written by the section view, or its <metadata> was removed")]
+    #[error(
+        "no section-view metadata in this SVG — it was not written by the section view, or its <metadata> was removed"
+    )]
     Missing,
     /// Written by another format of the metadata.
     #[error("the metadata is format {found}, and this build reads format {known}")]
@@ -255,7 +275,10 @@ pub fn read_metadata(svg: &str) -> Result<crate::layout::Metadata, MetadataError
 
     let format = attribute(attributes, "format").unwrap_or_default();
     if format != crate::model::FORMAT.to_string() {
-        return Err(MetadataError::Format { found: format, known: crate::model::FORMAT });
+        return Err(MetadataError::Format {
+            found: format,
+            known: crate::model::FORMAT,
+        });
     }
     let json = unescape(body).map_err(MetadataError::Unreadable)?;
     serde_json::from_str(&json).map_err(|why| MetadataError::Unreadable(why.to_string()))
@@ -276,7 +299,9 @@ fn unescape(text: &str) -> Result<String, String> {
     while let Some(at) = rest.find('&') {
         out.push_str(&rest[..at]);
         let after = &rest[at + 1..];
-        let end = after.find(';').ok_or_else(|| format!("an `&` with no `;` at `{}`", &rest[at..rest.len().min(at + 12)]))?;
+        let end = after
+            .find(';')
+            .ok_or_else(|| format!("an `&` with no `;` at `{}`", &rest[at..rest.len().min(at + 12)]))?;
         let name = &after[..end];
         let ch = match name {
             "amp" => '&',
@@ -292,7 +317,8 @@ fn unescape(text: &str) -> Result<String, String> {
                 } else {
                     None
                 };
-                code.and_then(char::from_u32).ok_or_else(|| format!("`&{name};` is not an entity XML 1.0 knows"))?
+                code.and_then(char::from_u32)
+                    .ok_or_else(|| format!("`&{name};` is not an entity XML 1.0 knows"))?
             }
         };
         out.push(ch);
@@ -311,7 +337,11 @@ fn write_axes(out: &mut String, layout: &Layout, zoom: bool) {
     // are one group each, which the script moves and hides instead.
     let moved = layout.x_axis.ticks.iter().any(|t| t.sublabel.is_some());
     if zoom {
-        let _ = writeln!(out, "<g data-ticks=\"x\"{}>", if moved { " data-ticks-mode=\"move\"" } else { "" });
+        let _ = writeln!(
+            out,
+            "<g data-ticks=\"x\"{}>",
+            if moved { " data-ticks-mode=\"move\"" } else { "" }
+        );
     }
     for t in &layout.x_axis.ticks {
         if t.at < x - 0.5 || t.at > x + w + 0.5 {
@@ -327,7 +357,13 @@ fn write_axes(out: &mut String, layout: &Layout, zoom: bool) {
             fmt(y + h),
             a = fmt(t.at)
         );
-        let _ = writeln!(out, "<text x=\"{}\" y=\"{}\" text-anchor=\"middle\">{}</text>", fmt(t.at), fmt(y + h + 14.0), escape(&t.label));
+        let _ = writeln!(
+            out,
+            "<text x=\"{}\" y=\"{}\" text-anchor=\"middle\">{}</text>",
+            fmt(t.at),
+            fmt(y + h + 14.0),
+            escape(&t.label)
+        );
         if let Some(sub) = &t.sublabel {
             let _ = writeln!(
                 out,
@@ -338,14 +374,18 @@ fn write_axes(out: &mut String, layout: &Layout, zoom: bool) {
             );
         }
         if zoom && moved {
-            out.push_str("</g>
-");
+            out.push_str(
+                "</g>
+",
+            );
         }
     }
     if zoom {
-        out.push_str("</g>
+        out.push_str(
+            "</g>
 <g data-ticks=\"y\">
-");
+",
+        );
     }
     for t in &layout.y_axis.ticks {
         if t.at < y - 0.5 || t.at > y + h + 0.5 {
@@ -358,17 +398,31 @@ fn write_axes(out: &mut String, layout: &Layout, zoom: bool) {
             fmt(x + w),
             b = fmt(t.at)
         );
-        let _ = writeln!(out, "<text x=\"{}\" y=\"{}\" text-anchor=\"end\">{}</text>", fmt(x - 5.0), fmt(t.at + 4.0), escape(&t.label));
+        let _ = writeln!(
+            out,
+            "<text x=\"{}\" y=\"{}\" text-anchor=\"end\">{}</text>",
+            fmt(x - 5.0),
+            fmt(t.at + 4.0),
+            escape(&t.label)
+        );
     }
     if zoom {
-        out.push_str("</g>
-");
+        out.push_str(
+            "</g>
+",
+        );
     }
     let _ = writeln!(
         out,
         "<text data-role=\"x-title\" x=\"{}\" y=\"{}\" text-anchor=\"middle\">{}</text>",
         fmt(x + w / 2.0),
-        fmt(y + h + if layout.x_axis.ticks.iter().any(|t| t.sublabel.is_some()) { 38.0 } else { 30.0 }),
+        fmt(y
+            + h
+            + if layout.x_axis.ticks.iter().any(|t| t.sublabel.is_some()) {
+                38.0
+            } else {
+                30.0
+            }),
         escape(&layout.x_axis.title)
     );
     let _ = writeln!(
@@ -397,12 +451,22 @@ fn write_axes(out: &mut String, layout: &Layout, zoom: bool) {
 /// (a texture, not a stroke — only strokes keep their pixels).
 fn hatch_pattern(layout: &Layout) -> String {
     let reference = crate::layout::hatch_ref();
-    let used = layout.layers.iter().flat_map(|l| &l.objects).flat_map(|o| &o.shapes).any(|s| match s {
-        Shape::Polyline { stroke, .. } => *stroke == reference,
-        Shape::Polygon { fill, .. } => *fill == reference,
-        _ => false,
-    });
-    let crate::model::UnstratifiedStyle::Hatched { colour, spacing, angle } = layout.metadata.view.unstratified_style() else {
+    let used = layout
+        .layers
+        .iter()
+        .flat_map(|l| &l.objects)
+        .flat_map(|o| &o.shapes)
+        .any(|s| match s {
+            Shape::Polyline { stroke, .. } => *stroke == reference,
+            Shape::Polygon { fill, .. } => *fill == reference,
+            _ => false,
+        });
+    let crate::model::UnstratifiedStyle::Hatched {
+        colour,
+        spacing,
+        angle,
+    } = layout.metadata.view.unstratified_style()
+    else {
         return String::new();
     };
     if !used {
@@ -428,17 +492,30 @@ fn write_object(out: &mut String, o: &LaidObject, zoom: Zoom) {
         Attr::Key(key) => {
             let _ = write!(out, " data-key=\"{}\"", escape(&key.replace('\0', "\u{2400}")));
             if let Some((store, uri)) = key.split_once('\0') {
-                let _ = write!(out, " data-store=\"{}\" data-uri=\"{}\"", escape(store), escape(uri));
+                let _ = write!(
+                    out,
+                    " data-store=\"{}\" data-uri=\"{}\"",
+                    escape(store),
+                    escape(uri)
+                );
             }
         }
         Attr::Section(s) => {
             let _ = write!(out, " data-section=\"{}\"", escape(s));
         }
         Attr::FillOf(key) => {
-            let _ = write!(out, " data-fill-of=\"{}\"", escape(&key.replace('\0', "\u{2400}")));
+            let _ = write!(
+                out,
+                " data-fill-of=\"{}\"",
+                escape(&key.replace('\0', "\u{2400}"))
+            );
         }
         Attr::LabelOf(key) => {
-            let _ = write!(out, " data-label-of=\"{}\"", escape(&key.replace('\0', "\u{2400}")));
+            let _ = write!(
+                out,
+                " data-label-of=\"{}\"",
+                escape(&key.replace('\0', "\u{2400}"))
+            );
         }
         Attr::Decor(name) => {
             let _ = write!(out, " data-decor=\"{}\"", escape(name));
@@ -448,12 +525,22 @@ fn write_object(out: &mut String, o: &LaidObject, zoom: Zoom) {
             if let Some(key) = key {
                 let _ = write!(out, " data-key=\"{}\"", escape(&key.replace('\0', "\u{2400}")));
                 if let Some((store, uri)) = key.split_once('\0') {
-                    let _ = write!(out, " data-store=\"{}\" data-uri=\"{}\"", escape(store), escape(uri));
+                    let _ = write!(
+                        out,
+                        " data-store=\"{}\" data-uri=\"{}\"",
+                        escape(store),
+                        escape(uri)
+                    );
                 }
             }
         }
         Attr::UnitEntry(name, uri, stores) => {
-            let _ = write!(out, " data-decor=\"{}\" data-unit-uri=\"{}\"", escape(name), escape(uri));
+            let _ = write!(
+                out,
+                " data-decor=\"{}\" data-unit-uri=\"{}\"",
+                escape(name),
+                escape(uri)
+            );
             // The packages whose wells show the unit in this colour, by the
             // front end's store ids — which never hold a space.
             if !stores.is_empty() {
@@ -509,7 +596,11 @@ fn write_object(out: &mut String, o: &LaidObject, zoom: Zoom) {
 fn write_interval(out: &mut String, iv: &LaidInterval, zoom: Zoom) {
     // The unit's full uri, when the interval names one: what the front end finds the
     // unit by — its legend entry, its colour — and never its title.
-    let uri = iv.unit_uri.as_deref().map(|uri| format!(" data-unit-uri=\"{}\"", escape(uri))).unwrap_or_default();
+    let uri = iv
+        .unit_uri
+        .as_deref()
+        .map(|uri| format!(" data-unit-uri=\"{}\"", escape(uri)))
+        .unwrap_or_default();
     let _ = writeln!(
         out,
         "<g data-unit=\"{}\"{} data-md-from=\"{}\" data-md-to=\"{}\"><polyline points=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{}\"{}/></g>",
@@ -529,7 +620,11 @@ fn write_interval(out: &mut String, iv: &LaidInterval, zoom: Zoom) {
 /// was drawn however far the plot is magnified, so a zoom pulls objects apart
 /// instead of fattening them.
 fn non_scaling(zoom: Zoom) -> &'static str {
-    if zoom.on() { " vector-effect=\"non-scaling-stroke\"" } else { "" }
+    if zoom.on() {
+        " vector-effect=\"non-scaling-stroke\""
+    } else {
+        ""
+    }
 }
 
 /// What the script needs to keep a dot or a text at its pixel size: the point it
@@ -538,12 +633,21 @@ fn non_scaling(zoom: Zoom) -> &'static str {
 /// shrinks as the group grows: a zero-length round-capped line would draw the
 /// same dot, but the front end and its tests know circles.
 fn fixed(zoom: Zoom, at: [f64; 2]) -> String {
-    if zoom == Zoom::Plot { format!(" data-zoom-fixed=\"{} {}\"", fmt(at[0]), fmt(at[1])) } else { String::new() }
+    if zoom == Zoom::Plot {
+        format!(" data-zoom-fixed=\"{} {}\"", fmt(at[0]), fmt(at[1]))
+    } else {
+        String::new()
+    }
 }
 
 fn write_shape(out: &mut String, shape: &Shape, zoom: Zoom) {
     match shape {
-        Shape::Polyline { points: p, stroke, width, dash } => {
+        Shape::Polyline {
+            points: p,
+            stroke,
+            width,
+            dash,
+        } => {
             if p.len() < 2 {
                 return;
             }
@@ -557,7 +661,13 @@ fn write_shape(out: &mut String, shape: &Shape, zoom: Zoom) {
                 if *dash { " stroke-dasharray=\"4 3\"" } else { "" }
             );
         }
-        Shape::Dashed { points: p, stroke, width, dash, gap } => {
+        Shape::Dashed {
+            points: p,
+            stroke,
+            width,
+            dash,
+            gap,
+        } => {
             if p.len() < 2 {
                 return;
             }
@@ -572,13 +682,30 @@ fn write_shape(out: &mut String, shape: &Shape, zoom: Zoom) {
                 non_scaling(zoom)
             );
         }
-        Shape::Polygon { points: p, fill, opacity, stroke, dash } => {
+        Shape::Polygon {
+            points: p,
+            fill,
+            opacity,
+            stroke,
+            dash,
+        } => {
             if p.len() < 3 {
                 return;
             }
-            let _ = write!(out, "<polygon points=\"{}\" fill=\"{}\" fill-opacity=\"{}\"", points(p), escape(fill), fmt(*opacity));
+            let _ = write!(
+                out,
+                "<polygon points=\"{}\" fill=\"{}\" fill-opacity=\"{}\"",
+                points(p),
+                escape(fill),
+                fmt(*opacity)
+            );
             if let Some(s) = stroke {
-                let _ = write!(out, " stroke=\"{}\" stroke-width=\"1\"{}", escape(s), non_scaling(zoom));
+                let _ = write!(
+                    out,
+                    " stroke=\"{}\" stroke-width=\"1\"{}",
+                    escape(s),
+                    non_scaling(zoom)
+                );
                 if *dash {
                     out.push_str(" stroke-dasharray=\"4 3\"");
                 }
@@ -596,8 +723,20 @@ fn write_shape(out: &mut String, shape: &Shape, zoom: Zoom) {
                 fixed(zoom, *c)
             );
         }
-        Shape::Symbol { at, kind, size, fill, stroke } => write_symbol(out, *at, kind, *size, fill, stroke, zoom),
-        Shape::Text { at, text, anchor, size, fill } => {
+        Shape::Symbol {
+            at,
+            kind,
+            size,
+            fill,
+            stroke,
+        } => write_symbol(out, *at, kind, *size, fill, stroke, zoom),
+        Shape::Text {
+            at,
+            text,
+            anchor,
+            size,
+            fill,
+        } => {
             let anchor = match anchor {
                 Anchor::Start => "start",
                 Anchor::Middle => "middle",
@@ -631,18 +770,34 @@ fn write_symbol(out: &mut String, at: [f64; 2], kind: &str, size: f64, fill: &st
         for (i, p) in pts.iter().enumerate() {
             // A closed outline is one run of segments; an open one is pairs (a stroke each).
             let start = if closed { i == 0 } else { i % 2 == 0 };
-            let _ = write!(d, "{}{},{}", if start { "M" } else { "L" }, fmt(x + p[0] * r), fmt(y + p[1] * r));
+            let _ = write!(
+                d,
+                "{}{},{}",
+                if start { "M" } else { "L" },
+                fmt(x + p[0] * r),
+                fmt(y + p[1] * r)
+            );
         }
         if closed {
             d.push('Z');
         }
         format!("<path d=\"{d}\"")
     };
-    let circle = |radius: f64| format!("<circle cx=\"{}\" cy=\"{}\" r=\"{}\"", fmt(x), fmt(y), fmt(radius));
+    let circle = |radius: f64| {
+        format!(
+            "<circle cx=\"{}\" cy=\"{}\" r=\"{}\"",
+            fmt(x),
+            fmt(y),
+            fmt(radius)
+        )
+    };
     let body = match kind {
         "circle" | "sphere" => circle(r),
         "point" => circle((r / 2.0).max(1.5)),
-        "cube" => path(&[[-0.85, -0.85], [0.85, -0.85], [0.85, 0.85], [-0.85, 0.85]], true),
+        "cube" => path(
+            &[[-0.85, -0.85], [0.85, -0.85], [0.85, 0.85], [-0.85, 0.85]],
+            true,
+        ),
         "diamond" => path(&[[0.0, -1.0], [0.8, 0.0], [0.0, 1.0], [-0.8, 0.0]], true),
         "pyramid" => path(&[[0.0, -1.0], [1.0, 0.85], [-1.0, 0.85]], true),
         "tetrahedron" => path(&[[-1.0, -0.85], [1.0, -0.85], [0.0, 1.0]], true),
@@ -695,7 +850,11 @@ fn fmt(v: f64) -> String {
     }
     let t = format!("{v:.2}");
     let t = t.trim_end_matches('0').trim_end_matches('.');
-    if t == "-0" || t.is_empty() { "0".to_string() } else { t.to_string() }
+    if t == "-0" || t.is_empty() {
+        "0".to_string()
+    } else {
+        t.to_string()
+    }
 }
 
 /// Text made safe for XML content and attribute values: the five characters

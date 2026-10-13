@@ -43,7 +43,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Arc;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::Args;
 
 use energyml_build::entries::{self, Reader};
@@ -149,7 +149,13 @@ pub fn run(args: CreateArgs) -> Result<ExitCode> {
         bail!("`--manifest` lists what a run wrote: add `--out <file.epc>` (a `--plan` writes nothing)");
     }
     if let Some(recipe) = args.recipe.as_deref() {
-        return from_recipe(recipe, &args.without, args.out.as_deref(), args.plan, args.manifest.as_deref());
+        return from_recipe(
+            recipe,
+            &args.without,
+            args.out.as_deref(),
+            args.plan,
+            args.manifest.as_deref(),
+        );
     }
     if args.json {
         // The declaration is assembled by the library (`describe`), the front end's
@@ -157,8 +163,9 @@ pub fn run(args: CreateArgs) -> Result<ExitCode> {
         let registry = Registry::new();
         let out = match args.operation.as_deref() {
             None => energyml_build::describe::declarations(&registry),
-            Some(name) => energyml_build::describe::declaration_of(&registry, name)
-                .ok_or_else(|| anyhow::anyhow!("no operation is named `{name}` — `energyml create --list` names them"))?,
+            Some(name) => energyml_build::describe::declaration_of(&registry, name).ok_or_else(|| {
+                anyhow::anyhow!("no operation is named `{name}` — `energyml create --list` names them")
+            })?,
         };
         println!("{}", serde_json::to_string_pretty(&out)?);
         return Ok(ExitCode::SUCCESS);
@@ -168,13 +175,19 @@ pub fn run(args: CreateArgs) -> Result<ExitCode> {
     let template = match args.template.as_deref() {
         None => None,
         Some(path) => Some(
-            entries::template(&mut disk, &FromWhere::File(path.display().to_string())).map_err(anyhow::Error::msg)?,
+            entries::template(&mut disk, &FromWhere::File(path.display().to_string()))
+                .map_err(anyhow::Error::msg)?,
         ),
     };
     let registry = Registry::new();
     // What the operation takes decides whether a file is read as bytes: a slot
     // that takes a document gets them, never a guess from the file's name.
-    let takes = args.operation.as_deref().and_then(|name| registry.get(name)).map(|op| op.takes()).unwrap_or_default();
+    let takes = args
+        .operation
+        .as_deref()
+        .and_then(|name| registry.get(name))
+        .map(|op| op.takes())
+        .unwrap_or_default();
     let mut set_aside: Vec<String> = Vec::new();
     let read = entries::pieces_for(&args.from, template.as_ref(), &mut disk, &mut set_aside, &takes);
     for why in &set_aside {
@@ -184,12 +197,20 @@ pub fn run(args: CreateArgs) -> Result<ExitCode> {
     // **What a slot takes when left empty, from the package written into** —
     // `Otherwise::Every`, the same function the front end calls. Without `--into`
     // there is no package to take from, and an empty slot stays empty.
-    let pieces = match (args.into.as_deref(), args.operation.as_deref().and_then(|name| registry.get(name))) {
+    let pieces = match (
+        args.into.as_deref(),
+        args.operation.as_deref().and_then(|name| registry.get(name)),
+    ) {
         (Some(into), Some(operation)) if !args.list => {
             let store = energyml_storage::EpcStore::open(into, std::sync::Arc::new(super::registry::all()))
                 .with_context(|| format!("opening {}", into.display()))?;
-            energyml_build::read::every(&store, &operation.takes(), pieces, energyml_geometry::Placement::Local)
-                .map_err(|why| anyhow::anyhow!("{}: {why}", into.display()))?
+            energyml_build::read::every(
+                &store,
+                &operation.takes(),
+                pieces,
+                energyml_geometry::Placement::Local,
+            )
+            .map_err(|why| anyhow::anyhow!("{}: {why}", into.display()))?
         }
         _ => pieces,
     };
@@ -207,12 +228,19 @@ pub fn run(args: CreateArgs) -> Result<ExitCode> {
         let value: serde_json::Value = match serde_json::from_str(value) {
             // A list, for a slot that takes several values: `--set 'units=["Cretaceous","Jurassic"]'`.
             // Without it no such slot could be answered from the command line.
-            Ok(json @ (serde_json::Value::Number(_) | serde_json::Value::Bool(_) | serde_json::Value::Array(_))) => json,
+            Ok(
+                json @ (serde_json::Value::Number(_)
+                | serde_json::Value::Bool(_)
+                | serde_json::Value::Array(_)),
+            ) => json,
             _ => serde_json::Value::String(value.to_string()),
         };
         choices = choices.set(name, value);
     }
-    let when = When { creation: args.now.clone().unwrap_or_else(super::import::now), originator: args.originator.clone() };
+    let when = When {
+        creation: args.now.clone().unwrap_or_else(super::import::now),
+        originator: args.originator.clone(),
+    };
     let plan = match registry.plan(operation, &pieces, &choices, &Identity::derived(), &when) {
         Ok(plan) => plan,
         Err(why) => bail!("{why}"),
@@ -231,15 +259,19 @@ pub fn run(args: CreateArgs) -> Result<ExitCode> {
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| out.display().to_string());
     let registry_of_schemas = std::sync::Arc::new(super::registry::all());
-    let mut store = epc::open(args.into.as_deref(), &name, registry_of_schemas).with_context(|| match &args.into {
-        Some(path) => format!("opening {}", path.display()),
-        None => "making an empty package".to_string(),
-    })?;
+    let mut store =
+        epc::open(args.into.as_deref(), &name, registry_of_schemas).with_context(|| match &args.into {
+            Some(path) => format!("opening {}", path.display()),
+            None => "making an empty package".to_string(),
+        })?;
     // **A bare name is in the current folder**, and the store has to be told:
     // without a root, `--out package.epc` wrote the package and refused each of
     // its arrays (`data.h5`: file not found), two thousand lines of refusals
     // for a file that looks as if it came out fine.
-    let parent = out.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(std::path::Path::new("."));
+    let parent = out
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(std::path::Path::new("."));
     store.external_files_mut().set_root(parent);
     let made = apply::apply(&plan, &mut store, &when);
     store
@@ -249,12 +281,23 @@ pub fn run(args: CreateArgs) -> Result<ExitCode> {
     println!("\n{} object(s) written to {}", made.written.len(), out.display());
     print_made(&made);
     if let Some(path) = args.manifest.as_deref() {
-        let op = registry.get(operation).expect("the plan was made by this operation");
+        let op = registry
+            .get(operation)
+            .expect("the plan was made by this operation");
         let step = energyml_build::manifest::step(operation, op, &plan, &made);
-        let manifest = energyml_build::manifest::Manifest::new(name.clone(), energyml_build::manifest::data_files(&plan), None, vec![step]);
+        let manifest = energyml_build::manifest::Manifest::new(
+            name.clone(),
+            energyml_build::manifest::data_files(&plan),
+            None,
+            vec![step],
+        );
         write_manifest(path, &manifest)?;
     }
-    Ok(if made.written.is_empty() { ExitCode::from(1) } else { ExitCode::SUCCESS })
+    Ok(if made.written.is_empty() {
+        ExitCode::from(1)
+    } else {
+        ExitCode::SUCCESS
+    })
 }
 
 /// What an `apply` did beyond its count: what it replaced, what it wrote
@@ -269,7 +312,10 @@ fn print_made(made: &apply::Made) {
     // shape, and that is the news wanted before finding it out in the
     // package.
     if !made.replaced.is_empty() {
-        println!("  {} of them replaced an object the package already had", made.replaced.len());
+        println!(
+            "  {} of them replaced an object the package already had",
+            made.replaced.len()
+        );
     }
     // **And what was written *beside* another is said too.** Since identity
     // comes from the content, different content adds an object instead of overwriting
@@ -310,9 +356,9 @@ struct Disk {
 impl Reader for Disk {
     fn text(&mut self, source: &FromWhere) -> std::result::Result<(String, Option<String>), String> {
         match source {
-            FromWhere::File(path) => {
-                std::fs::read_to_string(path).map(|text| (text, None)).map_err(|why| format!("reading {path}: {why}"))
-            }
+            FromWhere::File(path) => std::fs::read_to_string(path)
+                .map(|text| (text, None))
+                .map_err(|why| format!("reading {path}: {why}")),
             // The whole chain, as `main` prints an error: `fetching …: why`.
             FromWhere::Url(url) => fetch(url).map_err(|why| format!("{why:#}")),
         }
@@ -322,8 +368,12 @@ impl Reader for Disk {
     /// through [`Reader::text`]: what is fetched here is a GeoJSON or a table.
     fn bytes(&mut self, source: &FromWhere) -> std::result::Result<(Vec<u8>, Option<String>), String> {
         match source {
-            FromWhere::File(path) => std::fs::read(path).map(|bytes| (bytes, None)).map_err(|why| format!("reading {path}: {why}")),
-            FromWhere::Url(_) => self.text(source).map(|(text, declared)| (text.into_bytes(), declared)),
+            FromWhere::File(path) => std::fs::read(path)
+                .map(|bytes| (bytes, None))
+                .map_err(|why| format!("reading {path}: {why}")),
+            FromWhere::Url(_) => self
+                .text(source)
+                .map(|(text, declared)| (text.into_bytes(), declared)),
         }
     }
 
@@ -362,7 +412,10 @@ const MOST_FETCHED: u64 = 512 * 1024 * 1024;
 /// through.
 fn fetch(url: &str) -> Result<(String, Option<String>)> {
     let mut response = ureq::get(url)
-        .header("Accept", "application/geo+json, application/json;q=0.9, */*;q=0.1")
+        .header(
+            "Accept",
+            "application/geo+json, application/json;q=0.9, */*;q=0.1",
+        )
         .call()
         .with_context(|| format!("fetching {url}"))?;
     let status = response.status().as_u16();
@@ -380,14 +433,24 @@ fn fetch(url: &str) -> Result<(String, Option<String>)> {
         .limit(MOST_FETCHED)
         .read_to_string()
         .with_context(|| {
-            format!("reading the answer from {url} (at most {} MB is held in memory)", MOST_FETCHED / (1024 * 1024))
+            format!(
+                "reading the answer from {url} (at most {} MB is held in memory)",
+                MOST_FETCHED / (1024 * 1024)
+            )
         })?;
     Ok((text, declared))
 }
 
 /// Every operation, fit or not, with its reason and what it would ask.
 fn list(registry: &Registry, pieces: &Pieces) {
-    println!("Input: {}\n", if pieces.is_empty() { "nothing".to_string() } else { pieces.kinds() });
+    println!(
+        "Input: {}\n",
+        if pieces.is_empty() {
+            "nothing".to_string()
+        } else {
+            pieces.kinds()
+        }
+    );
     for offer in registry.offers(pieces) {
         let operation = offer.operation;
         match &offer.fitness {
@@ -399,13 +462,21 @@ fn list(registry: &Registry, pieces: &Pieces) {
         // every frame of `--into` is the news, not a detail.
         for slot in operation.takes() {
             let empty = match (&slot.otherwise, &slot.need) {
-                (Otherwise::Every, energyml_build::operation::Need::Input(takes)) if !takes.types.is_empty() => {
+                (Otherwise::Every, energyml_build::operation::Need::Input(takes))
+                    if !takes.types.is_empty() =>
+                {
                     format!("  [empty: every {} of --into]", takes.types.join(" or "))
                 }
                 (Otherwise::Every, _) => "  [empty: every object of --into]".to_string(),
                 _ => String::new(),
             };
-            println!("    --from {}=…  ({}..{}){empty}  {}", slot.name, slot.least, slot.most.map(|m| m.to_string()).unwrap_or("∞".into()), slot.about);
+            println!(
+                "    --from {}=…  ({}..{}){empty}  {}",
+                slot.name,
+                slot.least,
+                slot.most.map(|m| m.to_string()).unwrap_or("∞".into()),
+                slot.about
+            );
         }
         for slot in &offer.needs {
             println!("    {}", describe_slot(slot));
@@ -431,19 +502,29 @@ fn set_condition(applies: &Applies) -> String {
 /// condition, because `--list` is read to learn what an operation takes and a
 /// missing line reads as *not supported*.
 fn describe_slot(slot: &Slot) -> String {
-    let required = if slot.is_required() { "required" } else { "optional" };
+    let required = if slot.is_required() {
+        "required"
+    } else {
+        "optional"
+    };
     let suggested = match &slot.suggested {
         Some(value) => format!(", suggested {value}"),
         None => String::new(),
     };
     let named = |names: &[&str], join: &str| {
-        names.iter().map(|name| format!("--set {name}")).collect::<Vec<_>>().join(join)
+        names
+            .iter()
+            .map(|name| format!("--set {name}"))
+            .collect::<Vec<_>>()
+            .join(join)
     };
     let applies = match &slot.applies {
         Applies::Always => String::new(),
         Applies::With(names) => format!(", with {}", named(names, " and ")),
         Applies::Without(names) => format!(", not with {}", named(names, " or ")),
-        conditional @ (Applies::When { .. } | Applies::Any(_)) => format!(", only with {}", set_condition(conditional)),
+        conditional @ (Applies::When { .. } | Applies::Any(_)) => {
+            format!(", only with {}", set_condition(conditional))
+        }
     };
     // A type parameter says what it lists and what it pins: a name typed at a
     // shell has no dropdown to discover it from.
@@ -451,7 +532,9 @@ fn describe_slot(slot: &Slot) -> String {
         energyml_build::operation::Need::Type(choice) => {
             let axis = |c: &energyml_build::types::Constraint, what: &str| match c {
                 energyml_build::types::Constraint::Any => String::new(),
-                energyml_build::types::Constraint::Prefer(list) => format!(", {what} {} by default", list.join("/")),
+                energyml_build::types::Constraint::Prefer(list) => {
+                    format!(", {what} {} by default", list.join("/"))
+                }
                 energyml_build::types::Constraint::Only(list) => format!(", {what} {} only", list.join("/")),
             };
             format!(
@@ -464,7 +547,9 @@ fn describe_slot(slot: &Slot) -> String {
         _ => String::new(),
     };
     let otherwise = match &slot.otherwise {
-        Otherwise::Creates { types } if !types.is_empty() => format!("  [empty: creates {}]", types.join(" + ")),
+        Otherwise::Creates { types } if !types.is_empty() => {
+            format!("  [empty: creates {}]", types.join(" + "))
+        }
         _ => String::new(),
     };
     format!(
@@ -479,13 +564,24 @@ fn print_plan(operation: &str, plan: &Plan) {
     println!("== {operation} — {} ==\n", plan.activity.title);
     println!("{:<16} {:<44} {:<36}  title", "role", "type", "uuid");
     for object in &plan.objects {
-        println!("{:<16} {:<44} {:<36}  {}", object.role, object.qualified_type, object.uuid, super::import::truncate(&object.title, 60));
+        println!(
+            "{:<16} {:<44} {:<36}  {}",
+            object.role,
+            object.qualified_type,
+            object.uuid,
+            super::import::truncate(&object.title, 60)
+        );
     }
     if !plan.datasets.is_empty() {
         println!();
         for dataset in &plan.datasets {
             let shape: Vec<String> = dataset.dimensions.iter().map(|d| d.to_string()).collect();
-            println!("array  {}:{}  [{}]", dataset.file, dataset.path, shape.join(" × "));
+            println!(
+                "array  {}:{}  [{}]",
+                dataset.file,
+                dataset.path,
+                shape.join(" × ")
+            );
         }
     }
     for dropped in &plan.dropped {
@@ -496,20 +592,34 @@ fn print_plan(operation: &str, plan: &Plan) {
     for note in &plan.says {
         println!("  [{}] {}", note.key, note.detail);
     }
-    println!("\n{} object(s), {} array(s)", plan.objects.len(), plan.datasets.len());
+    println!(
+        "\n{} object(s), {} array(s)",
+        plan.objects.len(),
+        plan.datasets.len()
+    );
 }
-
 
 /// `--recipe`: read the recipe, play it through `energyml_build::recipe`, print
 /// what each step did. Nothing else — the steps, their inputs, the workflow and
 /// the refusals are the library's.
-fn from_recipe(path: &Path, without: &[String], out: Option<&Path>, plan_only: bool, manifest: Option<&Path>) -> Result<ExitCode> {
+fn from_recipe(
+    path: &Path,
+    without: &[String],
+    out: Option<&Path>,
+    plan_only: bool,
+    manifest: Option<&Path>,
+) -> Result<ExitCode> {
     let text = std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
     let read = recipe::Recipe::parse(&text).map_err(|stop| anyhow::anyhow!("{}: {stop}", path.display()))?;
     let groups: Vec<&str> = without.iter().map(String::as_str).collect();
-    let read = read.without(&groups).map_err(|why| anyhow::anyhow!("{}: {why}", path.display()))?;
+    let read = read
+        .without(&groups)
+        .map_err(|why| anyhow::anyhow!("{}: {why}", path.display()))?;
     // The recipe's files are relative to its own folder, wherever it is run from.
-    let base = path.parent().filter(|parent| !parent.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    let base = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
     let operations = Registry::new();
     let schemas = Arc::new(super::registry::all());
     let mut disk = Disk::default();
@@ -517,7 +627,9 @@ fn from_recipe(path: &Path, without: &[String], out: Option<&Path>, plan_only: b
         (Some(_), true) => bail!("`--plan` writes nothing and `--out` writes a package: choose one"),
         (None, true) => recipe::plan(&read, base, &operations, schemas, &mut disk),
         (Some(out), false) => recipe::run(&read, base, &operations, schemas, out, &mut disk),
-        (None, false) => bail!("`--recipe` makes a package: add `--out <file.epc>`, or `--plan` to say what it would make"),
+        (None, false) => {
+            bail!("`--recipe` makes a package: add `--out <file.epc>`, or `--plan` to say what it would make")
+        }
     };
     match played {
         Ok(played) => {
@@ -534,7 +646,10 @@ fn from_recipe(path: &Path, without: &[String], out: Option<&Path>, plan_only: b
             );
             println!("{} step(s) played, {held} held", played.steps.len() - held);
             if let (Some(target), Some(out)) = (manifest, out) {
-                let epc = out.file_name().map(|name| name.to_string_lossy().to_string()).unwrap_or_else(|| out.display().to_string());
+                let epc = out
+                    .file_name()
+                    .map(|name| name.to_string_lossy().to_string())
+                    .unwrap_or_else(|| out.display().to_string());
                 write_manifest(target, &played.manifest(&epc, &read.title))?;
             }
             match out {
@@ -549,7 +664,10 @@ fn from_recipe(path: &Path, without: &[String], out: Option<&Path>, plan_only: b
             for done in &stop.done {
                 print_step(done);
             }
-            Err(anyhow::anyhow!("{}: {stop} — nothing was written", path.display()))
+            Err(anyhow::anyhow!(
+                "{}: {stop} — nothing was written",
+                path.display()
+            ))
         }
     }
 }
@@ -557,7 +675,11 @@ fn from_recipe(path: &Path, without: &[String], out: Option<&Path>, plan_only: b
 /// One step of a recipe, as `print_plan` prints an operation's plan — and
 /// what applying it did.
 fn print_step(done: &recipe::Done) {
-    let serves = if done.serves.is_empty() { String::new() } else { format!("  [serves {}]", done.serves.join(", ")) };
+    let serves = if done.serves.is_empty() {
+        String::new()
+    } else {
+        format!("  [serves {}]", done.serves.join(", "))
+    };
     println!("\n== {} — {}{serves} ==", done.step, done.operation);
     if let Some(why) = &done.held {
         println!("  [held] {why}");

@@ -180,14 +180,14 @@ fn a_contact_is_read_inside_the_rank_and_names_no_top() {
         let between = rank.between(&a, &b);
         assert_eq!(between.len(), 1, "{path:?}: one contact between the two units");
         let contact = between[0];
-        assert!(!contact.verb.is_empty(), "{path:?}: the verb is returned verbatim");
+        assert!(
+            !contact.verb.is_empty(),
+            "{path:?}: the verb is returned verbatim"
+        );
         // `PartOf` names the horizon in this package; the XSD says nothing about
         // it, so it is returned with its type rather than renamed "surface".
         let part_of = contact.part_of.as_ref().expect("the contact declares a PartOf");
-        assert!(
-            !part_of.title.is_empty(),
-            "{path:?}: the PartOf target is named"
-        );
+        assert!(!part_of.title.is_empty(), "{path:?}: the PartOf target is named");
         assert!(
             part_of.kind.contains("Horizon"),
             "{path:?}: PartOf points at a horizon here, and its type says so - {}",

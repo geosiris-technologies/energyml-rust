@@ -138,7 +138,8 @@ pub(crate) fn traces_of(geometry: &energyml_geometry::geometry::Geometry) -> Tra
             }
             Topology::Segments(segments) => {
                 for [a, b] in segments {
-                    if let (Some(p), Some(q)) = (patch.points.get(*a as usize), patch.points.get(*b as usize)) {
+                    if let (Some(p), Some(q)) = (patch.points.get(*a as usize), patch.points.get(*b as usize))
+                    {
                         out.push(vec![*p, *q]);
                     }
                 }
@@ -162,14 +163,21 @@ pub(crate) fn traces_of(geometry: &energyml_geometry::geometry::Geometry) -> Tra
 /// of another horizon. What is set aside is counted, and setting everything aside is
 /// a refusal — never a silence that would look like *no fault here*.
 pub(crate) fn faults_on(faults: Traces, zs: impl Iterator<Item = f64>) -> Result<(Traces, usize), String> {
-    let (lo, hi) = zs.filter(|z| z.is_finite()).fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), z| (lo.min(z), hi.max(z)));
+    let (lo, hi) = zs
+        .filter(|z| z.is_finite())
+        .fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), z| {
+            (lo.min(z), hi.max(z))
+        });
     if !(lo.is_finite() && hi.is_finite()) || faults.is_empty() {
         return Ok((faults, 0));
     }
     let margin = ((hi - lo) * 0.1).max(1e-9);
     let (lo, hi) = (lo - margin, hi + margin);
     let total = faults.len();
-    let kept: Vec<Vec<[f64; 3]>> = faults.into_iter().filter(|line| line.iter().any(|p| p[2] >= lo && p[2] <= hi)).collect();
+    let kept: Vec<Vec<[f64; 3]>> = faults
+        .into_iter()
+        .filter(|line| line.iter().any(|p| p[2] >= lo && p[2] <= hi))
+        .collect();
     if kept.is_empty() {
         return Err(format!(
             "none of the {total} fault trace(s) lies at this horizon's depth ({lo:.3} to {hi:.3}): they are other horizons' traces — run `intersect` for this one, or give its own trace"
@@ -181,7 +189,11 @@ pub(crate) fn faults_on(faults: Traces, zs: impl Iterator<Item = f64>) -> Result
 
 /// The cloud alone: what is not a fault — the binding has already separated them.
 fn cloud_of(inputs: &TriangulateInputs) -> Vec<[f64; 3]> {
-    inputs.shape.iter().flat_map(|one| one.geometry.patches.iter().flat_map(|p| p.points.iter().copied())).collect()
+    inputs
+        .shape
+        .iter()
+        .flat_map(|one| one.geometry.patches.iter().flat_map(|p| p.points.iter().copied()))
+        .collect()
 }
 
 impl Operation for Triangulate {
@@ -205,8 +217,12 @@ impl Operation for Triangulate {
 
     fn check(&self, inputs: &TriangulateInputs) -> Result<(), Refusal> {
         let points: usize = inputs.shape.iter().map(|one| one.geometry.point_count()).sum();
-        let triangulated =
-            inputs.shape.iter().any(|one| one.geometry.patches.iter().any(|p| matches!(p.topology, Topology::Triangles(_))));
+        let triangulated = inputs.shape.iter().any(|one| {
+            one.geometry
+                .patches
+                .iter()
+                .any(|p| matches!(p.topology, Topology::Triangles(_)))
+        });
         if triangulated {
             // Name the other operation, because a refusal that does not say where
             // to go reads as *this cannot be done*.
@@ -216,25 +232,55 @@ impl Operation for Triangulate {
             ));
         }
         if points < 3 {
-            return Err(Refusal::on("shape", format!("a triangulation needs at least 3 points; the shape holds {points}")));
+            return Err(Refusal::on(
+                "shape",
+                format!("a triangulation needs at least 3 points; the shape holds {points}"),
+            ));
         }
         Ok(())
     }
 
-    fn plan(&self, inputs: TriangulateInputs, params: TriangulateParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: TriangulateInputs,
+        params: TriangulateParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         run(inputs, params, &cx.first(), cx)
     }
 
     fn reports(&self) -> Vec<Slot> {
-        let mut slots = crate::operation::AnyOperation::reports(&crate::operation::Typed(super::triangles::Triangles));
+        let mut slots =
+            crate::operation::AnyOperation::reports(&crate::operation::Typed(super::triangles::Triangles));
         slots.push(Slot::required(
             "how",
             Need::Choice(&["delaunay-xy", "constrained-delaunay-xy"]),
             "how the triangles were decided",
         ));
-        slots.push(Slot::optional("faultCount", Need::Integer { least: Some(0), most: None }, "how many fault traces constrained the triangulation"));
-        slots.push(Slot::optional("nodesAdded", Need::Integer { least: Some(0), most: None }, "how many nodes the traces and their crossings added to the cloud"));
-        slots.push(Slot::optional("nodesBuffered", Need::Integer { least: Some(0), most: None }, "how many cloud points were set aside for lying within `faultBuffer` of a trace"));
+        slots.push(Slot::optional(
+            "faultCount",
+            Need::Integer {
+                least: Some(0),
+                most: None,
+            },
+            "how many fault traces constrained the triangulation",
+        ));
+        slots.push(Slot::optional(
+            "nodesAdded",
+            Need::Integer {
+                least: Some(0),
+                most: None,
+            },
+            "how many nodes the traces and their crossings added to the cloud",
+        ));
+        slots.push(Slot::optional(
+            "nodesBuffered",
+            Need::Integer {
+                least: Some(0),
+                most: None,
+            },
+            "how many cloud points were set aside for lying within `faultBuffer` of a trace",
+        ));
         slots
     }
 }
@@ -243,13 +289,22 @@ impl Operation for Triangulate {
 /// what `remesh` calls with the nodes of a surface. `source` names the cloud in
 /// the derived name (`triangulation of …`) the identities hang from, so each
 /// caller keeps the one it always had.
-pub fn run(inputs: TriangulateInputs, params: TriangulateParams, source: &str, cx: &Context<'_>) -> Result<Plan, Refusal> {
+pub fn run(
+    inputs: TriangulateInputs,
+    params: TriangulateParams,
+    source: &str,
+    cx: &Context<'_>,
+) -> Result<Plan, Refusal> {
     // All the points of all the shapes, in the order they arrive.
     // One Delaunay rather than one per shape: triangulating two clouds
     // separately and then writing them in one object would leave between them a
     // hole that nothing names.
     let mut cloud = cloud_of(&inputs);
-    let traces: Traces = inputs.faults.iter().flat_map(|fault| traces_of(&fault.geometry)).collect();
+    let traces: Traces = inputs
+        .faults
+        .iter()
+        .flat_map(|fault| traces_of(&fault.geometry))
+        .collect();
     let (mut faults, other_horizons) =
         faults_on(traces, cloud.iter().map(|p| p[2])).map_err(|why| Refusal::on("faults", why))?;
     let mut buffered = 0usize;
@@ -263,7 +318,10 @@ pub fn run(inputs: TriangulateInputs, params: TriangulateParams, source: &str, c
         }
         if let Some(buffer) = params.fault_buffer {
             if !(buffer.is_finite() && buffer >= 0.0) {
-                return Err(Refusal::on("faultBuffer", format!("must be a finite length >= 0, not {buffer}")));
+                return Err(Refusal::on(
+                    "faultBuffer",
+                    format!("must be a finite length >= 0, not {buffer}"),
+                ));
             }
             let before = cloud.len();
             cloud.retain(|p| plan_distance([p[0], p[1]], &faults) > buffer);
@@ -290,7 +348,13 @@ pub fn run(inputs: TriangulateInputs, params: TriangulateParams, source: &str, c
         name: name.clone(),
         geometry: Geometry {
             kind: "triangulate",
-            patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Triangles(triangles.clone()), closed: Vec::new() }],
+            patches: vec![Patch {
+                index: 0,
+                node_offset: 0,
+                points,
+                topology: Topology::Triangles(triangles.clone()),
+                closed: Vec::new(),
+            }],
         },
         closed: None,
         known: None,
@@ -304,10 +368,25 @@ pub fn run(inputs: TriangulateInputs, params: TriangulateParams, source: &str, c
 
     plan.activity.recipe = "triangulate";
     plan.activity.title = format!("triangulate → {title}");
-    plan.activity.parameters.push(Parameter::Text { title: "how".to_string(), value: how.to_string() });
-    plan.activity.parameters.push(Parameter::Double { title: "faultCount".to_string(), value: faults.len() as f64, uom: None });
-    plan.activity.parameters.push(Parameter::Double { title: "nodesAdded".to_string(), value: added as f64, uom: None });
-    plan.activity.parameters.push(Parameter::Double { title: "nodesBuffered".to_string(), value: buffered as f64, uom: None });
+    plan.activity.parameters.push(Parameter::Text {
+        title: "how".to_string(),
+        value: how.to_string(),
+    });
+    plan.activity.parameters.push(Parameter::Double {
+        title: "faultCount".to_string(),
+        value: faults.len() as f64,
+        uom: None,
+    });
+    plan.activity.parameters.push(Parameter::Double {
+        title: "nodesAdded".to_string(),
+        value: added as f64,
+        uom: None,
+    });
+    plan.activity.parameters.push(Parameter::Double {
+        title: "nodesBuffered".to_string(),
+        value: buffered as f64,
+        uom: None,
+    });
     if other_horizons > 0 {
         plan.says.push(Note {
             key: "faults-elsewhere",
@@ -336,7 +415,12 @@ pub fn run(inputs: TriangulateInputs, params: TriangulateParams, source: &str, c
     // points at the same (x, y) are a single vertex for the Delaunay; the second
     // stays in the object written and is named by no triangle. Keeping quiet about it
     // would make a cloud with duplicates a surface that looks complete.
-    let used = triangles.iter().flatten().copied().collect::<std::collections::BTreeSet<_>>().len();
+    let used = triangles
+        .iter()
+        .flatten()
+        .copied()
+        .collect::<std::collections::BTreeSet<_>>()
+        .len();
     if used < nodes {
         plan.says.push(Note {
             key: "nodes-unused",

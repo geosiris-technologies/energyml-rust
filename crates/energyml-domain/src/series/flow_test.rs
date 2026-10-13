@@ -37,7 +37,10 @@ use serde_json::{Value, json};
 
 use energyml_core::value::{FieldValue, Reflect};
 
-use super::{Channel, Direction, Index, IndexKind, Quality, Refused, Series, channel_set, monotone, objects, reference_of, text};
+use super::{
+    Channel, Direction, Index, IndexKind, Quality, Refused, Series, channel_set, monotone, objects,
+    reference_of, text,
+};
 use crate::source::ArraySource;
 
 /// The groups of `FlowTestMeasurementSet` that hold channel data, in the
@@ -77,7 +80,10 @@ impl Measured {
 /// Whether this reads the object — any flow test activity, by the field
 /// holding its measurements.
 pub fn reads(object: &dyn Reflect) -> bool {
-    object.type_info().field_ignore_case("IntervalMeasurementSet").is_some()
+    object
+        .type_info()
+        .field_ignore_case("IntervalMeasurementSet")
+        .is_some()
 }
 
 /// Every channel a flow test's measurements point at, each a series against
@@ -87,9 +93,16 @@ pub fn reads(object: &dyn Reflect) -> bool {
 /// nested in a `Log` is found through it; `source` lends a set that is a part
 /// of its own and not among them, and the dataset a set's rows are in when
 /// they are in one ([`channel_set::read_with`]).
-pub fn read(test: &dyn Reflect, objects_given: &[(&str, &dyn Reflect)], source: &dyn ArraySource) -> Result<Vec<Measured>, Refused> {
+pub fn read(
+    test: &dyn Reflect,
+    objects_given: &[(&str, &dyn Reflect)],
+    source: &dyn ArraySource,
+) -> Result<Vec<Measured>, Refused> {
     if !reads(test) {
-        return Err(Refused::NotThisReader { expected: "a PRODML flow test activity", found: test.type_info().type_key.to_string() });
+        return Err(Refused::NotThisReader {
+            expected: "a PRODML flow test activity",
+            found: test.type_info().type_key.to_string(),
+        });
     }
     // Each set is read once, whichever items name it.
     let mut read_sets: Vec<(String, Series)> = Vec::new();
@@ -101,17 +114,25 @@ pub fn read(test: &dyn Reflect, objects_given: &[(&str, &dyn Reflect)], source: 
                 let set_reflect = objects(item, "ChannelSet").into_iter().next();
                 let set_ref = set_reflect
                     .and_then(reference_of)
-                    .ok_or_else(|| Refused::Missing { what: format!("the ChannelSet of a {group} item") })?;
+                    .ok_or_else(|| Refused::Missing {
+                        what: format!("the ChannelSet of a {group} item"),
+                    })?;
                 let time_ref = objects(item, "TimeChannel")
                     .into_iter()
                     .next()
                     .and_then(reference_of)
-                    .ok_or_else(|| Refused::Missing { what: format!("the TimeChannel of a {group} item") })?;
+                    .ok_or_else(|| Refused::Missing {
+                        what: format!("the TimeChannel of a {group} item"),
+                    })?;
                 // Each set is remembered by the uri its reference names, so two
                 // versions of one channel set are two sets.
-                let set_key =
-                    set_reflect.and_then(energyml_core::identity::uri_of_reflect).unwrap_or_else(|| set_ref.0.clone());
-                let set = match read_sets.iter().find(|(key, _)| key.eq_ignore_ascii_case(&set_key)) {
+                let set_key = set_reflect
+                    .and_then(energyml_core::identity::uri_of_reflect)
+                    .unwrap_or_else(|| set_ref.0.clone());
+                let set = match read_sets
+                    .iter()
+                    .find(|(key, _)| key.eq_ignore_ascii_case(&set_key))
+                {
                     Some((_, series)) => series.clone(),
                     None => {
                         let series = set_of(&set_ref, set_reflect, objects_given, source)?;
@@ -169,7 +190,10 @@ fn set_of(
     objects_given: &[(&str, &dyn Reflect)],
     source: &dyn ArraySource,
 ) -> Result<Series, Refused> {
-    let not_found = || Refused::ChannelSetNotFound { uuid: set_ref.0.clone(), title: set_ref.1.clone() };
+    let not_found = || Refused::ChannelSetNotFound {
+        uuid: set_ref.0.clone(),
+        title: set_ref.1.clone(),
+    };
     let among = match reference {
         Some(reference) => super::resolve_reference(reference, objects_given),
         None => super::resolve(&set_ref.0, objects_given),
@@ -185,7 +209,9 @@ fn set_of(
         None => source.object(&set_ref.0),
     };
     match lent {
-        Some(found) if channel_set::reads(found.as_reflect()) => channel_set::read_with(found.as_reflect(), source),
+        Some(found) if channel_set::reads(found.as_reflect()) => {
+            channel_set::read_with(found.as_reflect(), source)
+        }
         _ => Err(not_found()),
     }
 }
@@ -194,7 +220,12 @@ fn set_of(
 fn channel_in<'a>(set: &'a Series, reference: &(String, String), role: &str) -> Result<&'a Channel, Refused> {
     set.channels
         .iter()
-        .find(|channel| channel.uuid.as_deref().is_some_and(|uuid| uuid.eq_ignore_ascii_case(&reference.0)))
+        .find(|channel| {
+            channel
+                .uuid
+                .as_deref()
+                .is_some_and(|uuid| uuid.eq_ignore_ascii_case(&reference.0))
+        })
         .ok_or_else(|| Refused::ChannelNotInSet {
             role: role.to_string(),
             channel: reference.0.clone(),
@@ -209,10 +240,22 @@ fn time_index(channel: &Channel) -> Result<Index, Refused> {
     let kind = match kind.as_str() {
         "date time" => IndexKind::DateTime,
         "elapsed time" => IndexKind::ElapsedTime,
-        _ => return Err(Refused::TimeChannelKind { channel: channel.mnemonic.clone(), kind }),
+        _ => {
+            return Err(Refused::TimeChannelKind {
+                channel: channel.mnemonic.clone(),
+                kind,
+            });
+        }
     };
-    if let Some(at) = channel.quality.iter().position(|quality| *quality != Quality::Good) {
-        return Err(Refused::NullIndex { row: at + 1, index: channel.mnemonic.clone() });
+    if let Some(at) = channel
+        .quality
+        .iter()
+        .position(|quality| *quality != Quality::Good)
+    {
+        return Err(Refused::NullIndex {
+            row: at + 1,
+            index: channel.mnemonic.clone(),
+        });
     }
     let values = channel.numbers().unwrap_or_default();
     let index = Index {

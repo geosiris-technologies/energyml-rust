@@ -76,7 +76,15 @@ pub fn render(mut root: clap::Command) -> String {
         out,
         "Built with the features: {}. How each command is used, with examples, is in [`cli.md`](cli.md); this page is \
          every option of every command, as `--help` prints it.",
-        if features.is_empty() { "none".to_string() } else { features.iter().map(|f| format!("`{f}`")).collect::<Vec<_>>().join(", ") }
+        if features.is_empty() {
+            "none".to_string()
+        } else {
+            features
+                .iter()
+                .map(|f| format!("`{f}`"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        }
     );
     let _ = writeln!(out);
 
@@ -87,7 +95,12 @@ pub fn render(mut root: clap::Command) -> String {
     let _ = writeln!(out);
     let mut about = |cmd: &clap::Command, path: &str| {
         let line = cmd.get_about().map(|text| text.to_string()).unwrap_or_default();
-        let _ = writeln!(out, "- [`energyml {path}`](#{}) — {}", anchor(path), line.lines().next().unwrap_or(""));
+        let _ = writeln!(
+            out,
+            "- [`energyml {path}`](#{}) — {}",
+            anchor(path),
+            line.lines().next().unwrap_or("")
+        );
     };
     walk(&root, &mut Vec::new(), &mut about);
     let _ = writeln!(out);
@@ -95,7 +108,11 @@ pub fn render(mut root: clap::Command) -> String {
     // The global options once, from the root's own help.
     let _ = writeln!(out, "## `energyml`");
     let _ = writeln!(out);
-    let _ = writeln!(out, "```text\n{}\n```", root.render_long_help().to_string().trim_end());
+    let _ = writeln!(
+        out,
+        "```text\n{}\n```",
+        root.render_long_help().to_string().trim_end()
+    );
     let _ = writeln!(out);
 
     for (path, help) in sections {
@@ -147,7 +164,9 @@ fn anchor(path: &str) -> String {
 pub fn run<C: CommandFactory>(args: CliReferenceArgs) -> Result<std::process::ExitCode> {
     let wanted = render(C::command());
     if args.check {
-        let held = std::fs::read_to_string(&args.out).unwrap_or_default().replace("\r\n", "\n");
+        let held = std::fs::read_to_string(&args.out)
+            .unwrap_or_default()
+            .replace("\r\n", "\n");
         if held == wanted {
             println!("{} is up to date", args.out.display());
             return Ok(std::process::ExitCode::SUCCESS);
@@ -187,10 +206,19 @@ mod tests {
         }
         assert!(names.len() > 20, "the CLI has its commands: {names:?}");
         for name in &names {
-            assert!(text.contains(&format!("## `energyml {name}`")), "`{name}` has its section");
+            assert!(
+                text.contains(&format!("## `energyml {name}`")),
+                "`{name}` has its section"
+            );
         }
-        assert!(!text.contains("## `energyml translate`"), "the private command is never written");
-        assert!(!text.contains("## `energyml cli-reference`"), "a hidden command is not written");
+        assert!(
+            !text.contains("## `energyml translate`"),
+            "the private command is never written"
+        );
+        assert!(
+            !text.contains("## `energyml cli-reference`"),
+            "a hidden command is not written"
+        );
         assert_eq!(text, render(crate::Cli::command()), "the same bytes twice");
     }
 }

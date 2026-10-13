@@ -56,7 +56,11 @@ type Rgba = [f64; 4];
 /// One span of a cut, already laid in pixels, and the source of each of its
 /// points: the pieces to draw, or why the paint does not fit — said by name,
 /// and the span is then drawn in the object's flat colour.
-pub fn trace_pieces(span_px: &[[f64; 2]], sources: &[CutSource], paint: &Paint) -> Result<Vec<Piece>, String> {
+pub fn trace_pieces(
+    span_px: &[[f64; 2]],
+    sources: &[CutSource],
+    paint: &Paint,
+) -> Result<Vec<Piece>, String> {
     if sources.len() != span_px.len() {
         return Err(format!(
             "the cut has {} point(s) and {} source(s): the paint cannot be laid on it",
@@ -116,14 +120,21 @@ fn push(pieces: &mut Vec<Piece>, points: Vec<[f64; 2]>, colour: Rgba) {
         last.points.extend(points.into_iter().skip(1));
         return;
     }
-    pieces.push(Piece { points, colour: hex, opacity });
+    pieces.push(Piece {
+        points,
+        colour: hex,
+        opacity,
+    });
 }
 
 /// The colour of one point of the cut — `None` where the paint has no value
 /// (a node of alpha 0 the point leans on).
 fn point_colour(at: usize, source: &CutSource, paint: &Paint) -> Result<Option<Rgba>, String> {
     if !source.t.is_finite() || !(-1e-9..=1.0 + 1e-9).contains(&source.t) {
-        return Err(format!("point {at}: t = {} is not a place on its edge (0 to 1)", source.t));
+        return Err(format!(
+            "point {at}: t = {} is not a place on its edge (0 to 1)",
+            source.t
+        ));
     }
     let t = source.t.clamp(0.0, 1.0);
     let node = |number: u32| -> Result<Rgba, String> {
@@ -161,7 +172,9 @@ fn mix(a: Rgba, b: Rgba, t: f64) -> Rgba {
 
 /// `#rrggbbaa` (or `#rrggbb`, opaque).
 fn parse(text: &str) -> Result<Rgba, String> {
-    let digits = text.strip_prefix('#').ok_or_else(|| format!("`{text}` is not `#rrggbbaa`"))?;
+    let digits = text
+        .strip_prefix('#')
+        .ok_or_else(|| format!("`{text}` is not `#rrggbbaa`"))?;
     if !(digits.len() == 8 || digits.len() == 6) || !digits.is_ascii() {
         return Err(format!("`{text}` is not `#rrggbbaa`"));
     }
@@ -174,5 +187,10 @@ fn parse(text: &str) -> Result<Rgba, String> {
 /// `#rrggbb`, lower case, rounded.
 fn hex_of(colour: Rgba) -> String {
     let byte = |value: f64| value.round().clamp(0.0, 255.0) as u8;
-    format!("#{:02x}{:02x}{:02x}", byte(colour[0]), byte(colour[1]), byte(colour[2]))
+    format!(
+        "#{:02x}{:02x}{:02x}",
+        byte(colour[0]),
+        byte(colour[1]),
+        byte(colour[2])
+    )
 }

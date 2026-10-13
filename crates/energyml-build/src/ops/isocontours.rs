@@ -52,11 +52,15 @@ use energyml_analysis::isocontour;
 use energyml_domain::color::{self, Decorated, Scaling};
 use energyml_domain::provenance::Parameter;
 use energyml_eml_2_3 as eml;
-use serde_json::json;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
+use serde_json::json;
 
-use crate::declare::{Field as FieldIn, Inputs, ObjectIn, Params, PropertyKindRef, Ramp, Shape, Suggestions, Title};
-use crate::operation::{About, Category, Context, Need, NewObject, Note, Operation, Plan, Purpose, Refusal, Slot};
+use crate::declare::{
+    Field as FieldIn, Inputs, ObjectIn, Params, PropertyKindRef, Ramp, Shape, Suggestions, Title,
+};
+use crate::operation::{
+    About, Category, Context, Need, NewObject, Note, Operation, Plan, Purpose, Refusal, Slot,
+};
 use crate::pieces::{Known, Pieces};
 
 use super::polylines::PolylinesInputs;
@@ -140,7 +144,9 @@ fn field_of(inputs: &IsocontoursInputs) -> Option<Field> {
     let mut z: Vec<f64> = Vec::new();
     let mut base = 0u32;
     for patch in &inputs.shape.geometry.patches {
-        let Topology::Triangles(faces) = &patch.topology else { continue };
+        let Topology::Triangles(faces) = &patch.topology else {
+            continue;
+        };
         for point in &patch.points {
             points.extend_from_slice(point);
             z.push(point[2]);
@@ -159,7 +165,13 @@ fn field_of(inputs: &IsocontoursInputs) -> Option<Field> {
     let field = inputs.field.as_ref().map(|field| field.values.clone());
     let from_field = field.is_some();
     let values = field.unwrap_or(z);
-    Some(Field { name: inputs.shape.name.clone(), points, triangles, values, from_field })
+    Some(Field {
+        name: inputs.shape.name.clone(),
+        points,
+        triangles,
+        values,
+        from_field,
+    })
 }
 
 impl Operation for Isocontours {
@@ -198,7 +210,13 @@ impl Operation for Isocontours {
         if let Some(field) = &inputs.field
             && field.over != inputs.shape.name
         {
-            return Err(Refusal::on("field", format!("lies over `{}`, and the surface is `{}`", field.over, inputs.shape.name)));
+            return Err(Refusal::on(
+                "field",
+                format!(
+                    "lies over `{}`, and the surface is `{}`",
+                    field.over, inputs.shape.name
+                ),
+            ));
         }
         // The contour is drawn across faces, from values read at
         // their nodes — `field_of` reads `field.values` straight as one
@@ -222,13 +240,22 @@ impl Operation for Isocontours {
         Ok(())
     }
 
-    fn plan(&self, inputs: IsocontoursInputs, params: IsocontoursParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
-        let found = field_of(&inputs).ok_or_else(|| Refusal::on("shape", "no triangulated shape to contour"))?;
+    fn plan(
+        &self,
+        inputs: IsocontoursInputs,
+        params: IsocontoursParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
+        let found =
+            field_of(&inputs).ok_or_else(|| Refusal::on("shape", "no triangulated shape to contour"))?;
         let count = params.count;
         let Some((low, high)) = isocontour::range(&found.values) else {
             return Err(Refusal::on(
                 "shape",
-                format!("every node of `{}` is undefined; there is no range to contour", found.name),
+                format!(
+                    "every node of `{}` is undefined; there is no range to contour",
+                    found.name
+                ),
             ));
         };
         let levels = isocontour::levels(low, high, count as usize).map_err(|e| Refusal::on("count", e))?;
@@ -238,7 +265,10 @@ impl Operation for Isocontours {
             // are equal. An empty plan would read as a computation that failed.
             return Err(Refusal::on(
                 "shape",
-                format!("`{}` is flat at {low}: there is no interval to cut, so no contour to draw", found.name),
+                format!(
+                    "`{}` is flat at {low}: there is no interval to cut, so no contour to draw",
+                    found.name
+                ),
             ));
         }
 
@@ -297,8 +327,12 @@ impl Operation for Isocontours {
             ));
         }
         let title = params.written.naming.title();
-        let polylines = PolylinesInputs { shape: vec![shape], features: None };
-        let mut plan = super::polylines::write(&polylines, &params.written, None, &format!("{name}:{title}"), cx)?;
+        let polylines = PolylinesInputs {
+            shape: vec![shape],
+            features: None,
+        };
+        let mut plan =
+            super::polylines::write(&polylines, &params.written, None, &format!("{name}:{title}"), cx)?;
         if !params.lines {
             // **The lines are computed, not written**: the shape stays — it is
             // what a scene draws and keeps — and nothing of the polyline set's
@@ -318,9 +352,21 @@ impl Operation for Isocontours {
 
         plan.activity.recipe = "isocontours";
         plan.activity.title = format!("isocontours → {title}");
-        plan.activity.parameters.push(Parameter::Double { title: "count".to_string(), value: count, uom: None });
-        plan.activity.parameters.push(Parameter::Double { title: "levelCount".to_string(), value: levels.len() as f64, uom: None });
-        plan.activity.parameters.push(Parameter::Double { title: "low".to_string(), value: levels[0], uom: None });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "count".to_string(),
+            value: count,
+            uom: None,
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "levelCount".to_string(),
+            value: levels.len() as f64,
+            uom: None,
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "low".to_string(),
+            value: levels[0],
+            uom: None,
+        });
         plan.activity.parameters.push(Parameter::Double {
             title: "high".to_string(),
             value: levels[levels.len() - 1],
@@ -328,7 +374,12 @@ impl Operation for Isocontours {
         });
         plan.activity.parameters.push(Parameter::Text {
             title: "contoured".to_string(),
-            value: if found.from_field { "a field of the bag" } else { "the elevation" }.to_string(),
+            value: if found.from_field {
+                "a field of the bag"
+            } else {
+                "the elevation"
+            }
+            .to_string(),
         });
         // **The levels actually cut, one parameter each.**
         //
@@ -338,14 +389,22 @@ impl Operation for Isocontours {
         // legend and a band map read them as numbers; eml 2.3
         // explicitly allows several values under one name.
         for level in &levels {
-            plan.activity.parameters.push(Parameter::Double { title: "level".to_string(), value: *level, uom: None });
+            plan.activity.parameters.push(Parameter::Double {
+                title: "level".to_string(),
+                value: *level,
+                uom: None,
+            });
         }
         // And the same list in a sentence, for whoever reads the quote. Rendered from
         // the **same** vector, on the line next to it: two renderings of a value
         // computed once cannot diverge.
         plan.says.push(Note {
             key: "levels",
-            detail: levels.iter().map(|l| format!("{l}")).collect::<Vec<_>>().join(", "),
+            detail: levels
+                .iter()
+                .map(|l| format!("{l}"))
+                .collect::<Vec<_>>()
+                .join(", "),
         });
         if skipped > 0 {
             // A triangle no level crosses cleanly — an undefined
@@ -361,9 +420,18 @@ impl Operation for Isocontours {
 
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
-            Slot::required(name, Need::Number { uom: None, least: None, most: None }, about)
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
         };
-        let mut slots = crate::operation::AnyOperation::reports(&crate::operation::Typed(super::polylines::Polylines));
+        let mut slots =
+            crate::operation::AnyOperation::reports(&crate::operation::Typed(super::polylines::Polylines));
         // **Not `count`**: it is already declared as an input, and `template.rs`
         // compares by title — the same name on both sides reads as a
         // disagreement of direction. What an input is worth is already in
@@ -372,7 +440,11 @@ impl Operation for Isocontours {
         slots.push(
             Slot::many(
                 "level",
-                Need::Number { uom: None, least: None, most: None },
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
                 "each level actually cut",
                 1,
             )
@@ -422,12 +494,23 @@ fn kind_of(found: &Field, known: Option<&Known>, uom: &str) -> Result<(serde_jso
         }
     };
     let found = energyml_domain::property_kind::with_default(|dictionary| {
-        dictionary.by_title(title).first().map(|kind| (kind.uuid.clone(), kind.title.clone()))
+        dictionary
+            .by_title(title)
+            .first()
+            .map(|kind| (kind.uuid.clone(), kind.title.clone()))
     });
     let (uuid, named) = found.ok_or_else(|| {
-        Refusal::on("propertyKind", format!("the dictionary in use holds no kind called `{title}`: name a `propertyKind` of the package"))
+        Refusal::on(
+            "propertyKind",
+            format!(
+                "the dictionary in use holds no kind called `{title}`: name a `propertyKind` of the package"
+            ),
+        )
     })?;
-    Ok((json!({ "$type": "eml23.DataObjectReference", "Uuid": uuid, "QualifiedType": "eml23.PropertyKind", "Title": named }), title.to_string()))
+    Ok((
+        json!({ "$type": "eml23.DataObjectReference", "Uuid": uuid, "QualifiedType": "eml23.PropertyKind", "Title": named }),
+        title.to_string(),
+    ))
 }
 
 /// The colour of band `rank` of `count`, read on the ramp **at the same place
@@ -437,7 +520,11 @@ fn kind_of(found: &Field, known: Option<&Known>, uom: &str) -> Result<(serde_jso
 fn band_colour(ramp: &Ramp, rank: usize, count: usize) -> energyml_domain::color::Hsv {
     let low = ramp.levels[0];
     let high = ramp.levels[ramp.levels.len() - 1];
-    let t = if count <= 1 { 0.0 } else { rank as f64 / (count - 1) as f64 };
+    let t = if count <= 1 {
+        0.0
+    } else {
+        rank as f64 / (count - 1) as f64
+    };
     let at = low + t * (high - low);
     let index = ramp.levels.iter().rposition(|level| *level <= at).unwrap_or(0);
     ramp.colours[index].clone()
@@ -468,12 +555,19 @@ fn bands(
         ));
     };
     let colours = inputs.colours.as_ref().ok_or_else(|| {
-        Refusal::on("colours", "the bands need their colours: a ramp, the caller's palette sampled — none is shipped here")
+        Refusal::on(
+            "colours",
+            "the bands need their colours: a ramp, the caller's palette sampled — none is shipped here",
+        )
     })?;
     if colours.levels.is_empty() || colours.colours.len() != colours.levels.len() {
         return Err(Refusal::on(
             "colours",
-            format!("{} level(s) and {} colour(s): a ramp has one colour per level", colours.levels.len(), colours.colours.len()),
+            format!(
+                "{} level(s) and {} colour(s): a ramp has one colour per level",
+                colours.levels.len(),
+                colours.colours.len()
+            ),
         ));
     }
 
@@ -482,8 +576,19 @@ fn bands(
         .uom
         .clone()
         .or_else(|| inputs.field.as_ref().and_then(|field| field.uom.clone()))
-        .or_else(|| if found.from_field { None } else { known.and_then(|known| known.vertical_uom.clone()) })
-        .ok_or_else(|| Refusal::on("uom", "nothing says the unit of the contoured values: name a `uom`"))?;
+        .or_else(|| {
+            if found.from_field {
+                None
+            } else {
+                known.and_then(|known| known.vertical_uom.clone())
+            }
+        })
+        .ok_or_else(|| {
+            Refusal::on(
+                "uom",
+                "nothing says the unit of the contoured values: name a `uom`",
+            )
+        })?;
     let (kind, what) = match &banded.property_kind {
         Some(given) => {
             let title = given.0["Title"].as_str().unwrap_or("values").to_string();
@@ -519,7 +624,11 @@ fn bands(
         &format!("isocontours-bands:{seed}"),
         cx,
     )?;
-    let property = written.objects.first().cloned().ok_or_else(|| Refusal::new("refused", "the property writer wrote nothing"))?;
+    let property = written
+        .objects
+        .first()
+        .cloned()
+        .ok_or_else(|| Refusal::new("refused", "the property writer wrote nothing"))?;
 
     // The colour map: **the whole range of the values**, cut at the levels. A
     // band starts at the lowest value when it is below the first level — the
@@ -535,18 +644,40 @@ fn bands(
     // on a range's own ends (a pyramid's top), it made the last colour a band
     // of no width — the one the legend never showed.
     starts.extend(levels.iter().copied().filter(|level| *level < high));
-    let band_colours: Vec<_> = (0..starts.len()).map(|rank| band_colour(colours, rank, starts.len())).collect();
-    let map = super::colormap::write(&starts, &band_colours, Some(high), &format!("{title} — bands"), &seed, cx)?;
+    let band_colours: Vec<_> = (0..starts.len())
+        .map(|rank| band_colour(colours, rank, starts.len()))
+        .collect();
+    let map = super::colormap::write(
+        &starts,
+        &band_colours,
+        Some(high),
+        &format!("{title} — bands"),
+        &seed,
+        cx,
+    )?;
 
     // The entry joining them, in the package's set — or a new one.
-    let targets = [Decorated { uuid: property.uuid.clone(), qualified_type: property.qualified_type.clone(), title: property.title.clone() }];
-    let drawn_through = Decorated { uuid: map.uuid.clone(), qualified_type: map.qualified_type.clone(), title: map.title.clone() };
+    let targets = [Decorated {
+        uuid: property.uuid.clone(),
+        qualified_type: property.qualified_type.clone(),
+        title: property.title.clone(),
+    }];
+    let drawn_through = Decorated {
+        uuid: map.uuid.clone(),
+        qualified_type: map.qualified_type.clone(),
+        title: map.title.clone(),
+    };
     let sets: Vec<&ObjectIn> = inputs
         .colour_set
         .iter()
         // The one object slot also receives what no slot names — a CRS picked
         // in the form: passed over, not refused.
-        .filter(|one| one.known.reference.as_ref().is_some_and(|r| r.qualified_type.ends_with("GraphicalInformationSet")))
+        .filter(|one| {
+            one.known
+                .reference
+                .as_ref()
+                .is_some_and(|r| r.qualified_type.ends_with("GraphicalInformationSet"))
+        })
         .collect();
     let set = match sets.as_slice() {
         [] => new_set(&targets, &drawn_through, &seed, cx)?,
@@ -573,7 +704,11 @@ fn bands(
             found.values.len(),
             surface.title,
             starts.len(),
-            if sets.is_empty() { "in a new set" } else { "added to" },
+            if sets.is_empty() {
+                "in a new set"
+            } else {
+                "added to"
+            },
             set.title
         ),
     });
@@ -586,7 +721,12 @@ fn bands(
 }
 
 /// A `GraphicalInformationSet` holding the one entry — the package had none.
-fn new_set(targets: &[Decorated], map: &Decorated, seed: &str, cx: &Context<'_>) -> Result<NewObject, Refusal> {
+fn new_set(
+    targets: &[Decorated],
+    map: &Decorated,
+    seed: &str,
+    cx: &Context<'_>,
+) -> Result<NewObject, Refusal> {
     let mut rank = 0usize;
     let uuid = super::support::next_uuid(cx.identity, &format!("isocontours-colours:{seed}"), &mut rank)?;
     let title = "Graphical Information Set".to_string();
@@ -617,16 +757,32 @@ fn new_set(targets: &[Decorated], map: &Decorated, seed: &str, cx: &Context<'_>)
 /// the writer the front end's colour gesture calls: what it refuses (an object
 /// already drawn through another map in this set) is refused here too.
 fn into_set(set: &ObjectIn, targets: &[Decorated], map: &Decorated) -> Result<NewObject, Refusal> {
-    let reference = set.known.reference.as_ref().ok_or_else(|| Refusal::on("colourSet", "the set has no reference"))?;
+    let reference = set
+        .known
+        .reference
+        .as_ref()
+        .ok_or_else(|| Refusal::on("colourSet", "the set has no reference"))?;
     let json = set.known.json.as_ref().ok_or_else(|| {
-        Refusal::on("colourSet", format!("`{}` came without its content, so no entry can be added to it", reference.title))
+        Refusal::on(
+            "colourSet",
+            format!(
+                "`{}` came without its content, so no entry can be added to it",
+                reference.title
+            ),
+        )
     })?;
     let mut types = energyml_core::registry::Registry::new();
     energyml_eml_2_3::register(&mut types);
     let mut read = energyml_core::json::read_value(json, &types)
         .map_err(|why| Refusal::on("colourSet", format!("`{}` does not read: {why}", reference.title)))?;
-    color::set_colour_map(read.root.as_reflect_mut(), targets, map, &Scaling::default(), None)
-        .map_err(|why| Refusal::on("colourSet", format!("`{}`: {why}", reference.title)))?;
+    color::set_colour_map(
+        read.root.as_reflect_mut(),
+        targets,
+        map,
+        &Scaling::default(),
+        None,
+    )
+    .map_err(|why| Refusal::on("colourSet", format!("`{}`: {why}", reference.title)))?;
     Ok(NewObject {
         uuid: reference.uuid.clone(),
         qualified_type: reference.qualified_type.clone(),
@@ -635,4 +791,3 @@ fn into_set(set: &ObjectIn, targets: &[Decorated], map: &Decorated) -> Result<Ne
         json: energyml_core::json::write_value(read.root.as_reflect()),
     })
 }
-

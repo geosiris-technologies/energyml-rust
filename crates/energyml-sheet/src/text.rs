@@ -170,7 +170,10 @@ fn split_word(word: &str, max_width_pt: f64, size_pt: f64, hard_cuts: &mut usize
             // Not the word's last fragment: prefer breaking right after the
             // last separator inside this run, so the separator stays with
             // the fragment that precedes it.
-            match (start + 1..end).rev().find(|&i| BREAK_AFTER.contains(&chars[i - 1])) {
+            match (start + 1..end)
+                .rev()
+                .find(|&i| BREAK_AFTER.contains(&chars[i - 1]))
+            {
                 Some(sep_at) => cut = sep_at,
                 None => *hard_cuts += 1,
             }
@@ -231,7 +234,10 @@ mod tests {
         let max_width_pt = string_width_pt(&word[..8], size_pt);
         let wrapped = wrap(word, max_width_pt, size_pt);
         assert!(wrapped.lines.len() > 1);
-        assert!(wrapped.hard_cuts > 0, "no separator exists in this word; the cut must be counted");
+        assert!(
+            wrapped.hard_cuts > 0,
+            "no separator exists in this word; the cut must be counted"
+        );
     }
 
     #[test]
@@ -249,7 +255,11 @@ mod tests {
         let text = "the quick brown fox jumps over the lazy dog and then some more words follow";
         let size_pt = 9.0;
         let narrow = wrap(text, string_width_pt("the quick", size_pt), size_pt);
-        let wide = wrap(text, string_width_pt("the quick brown fox jumps over", size_pt), size_pt);
+        let wide = wrap(
+            text,
+            string_width_pt("the quick brown fox jumps over", size_pt),
+            size_pt,
+        );
         assert!(wide.lines.len() <= narrow.lines.len());
     }
 }

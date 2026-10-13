@@ -75,13 +75,13 @@ pub mod epc;
 pub mod error;
 pub mod extract;
 pub mod graph;
+#[cfg(feature = "hdf5")]
+pub mod hdf5;
 /// Bringing part of another package into the open one: a quote, then the writing.
 pub mod import;
 /// Changing what a part declares itself to be, without parsing what it holds.
 pub mod relabel;
 pub mod rename;
-#[cfg(feature = "hdf5")]
-pub mod hdf5;
 pub mod resource;
 pub mod storage;
 

@@ -47,20 +47,42 @@ fn a_well_that_lacks_a_column_gets_empty_cells_and_never_a_shifted_row() {
     // **The point that carries the merge.** F2 has no `PHI`; if its absence
     // shifted the row, F2's `STRA` would land under the `PHI` header — a
     // perfectly well-formed CSV half of whose columns lie.
-    let one = well("F1", &["10", "20"], vec![
-        column("PHI", Some("v/v"), Some("k-phi"), &[Some("0.2"), Some("0.3")]),
-        column("STRA", None, Some("k-stra"), &[Some("argile"), Some("sable")]),
-    ]);
-    let two = well("F2", &["5"], vec![column("STRA", None, Some("k-stra"), &[Some("marne")])]);
+    let one = well(
+        "F1",
+        &["10", "20"],
+        vec![
+            column("PHI", Some("v/v"), Some("k-phi"), &[Some("0.2"), Some("0.3")]),
+            column("STRA", None, Some("k-stra"), &[Some("argile"), Some("sable")]),
+        ],
+    );
+    let two = well(
+        "F2",
+        &["5"],
+        vec![column("STRA", None, Some("k-stra"), &[Some("marne")])],
+    );
 
     let merged = wellbore_table::merge(&[one, two]);
-    assert_eq!(merged.headers, ["well", "MD", "PHI", "STRA"], "the union, in order of appearance");
+    assert_eq!(
+        merged.headers,
+        ["well", "MD", "PHI", "STRA"],
+        "the union, in order of appearance"
+    );
     assert!(merged.conflicts.is_empty(), "{:?}", merged.conflicts);
     assert_eq!(
         merged.rows,
         vec![
-            vec![Some("F1".into()), Some("10".into()), Some("0.2".into()), Some("argile".into())],
-            vec![Some("F1".into()), Some("20".into()), Some("0.3".into()), Some("sable".into())],
+            vec![
+                Some("F1".into()),
+                Some("10".into()),
+                Some("0.2".into()),
+                Some("argile".into())
+            ],
+            vec![
+                Some("F1".into()),
+                Some("20".into()),
+                Some("0.3".into()),
+                Some("sable".into())
+            ],
             // F2 has no `PHI`: the cell is **empty**, and `marne` stays under
             // `STRA`.
             vec![Some("F2".into()), Some("5".into()), None, Some("marne".into())],
@@ -74,8 +96,16 @@ fn two_wells_whose_category_tables_differ_still_merge() {
     // F2 codes it as 1; once resolved, the two columns say the same thing and
     // stick together. Exporting the raw codes would have made one figure two
     // materials.
-    let one = well("F1", &["10"], vec![column("STRA", None, Some("k"), &[Some("argile")])]);
-    let two = well("F2", &["10"], vec![column("STRA", None, Some("k"), &[Some("argile")])]);
+    let one = well(
+        "F1",
+        &["10"],
+        vec![column("STRA", None, Some("k"), &[Some("argile")])],
+    );
+    let two = well(
+        "F2",
+        &["10"],
+        vec![column("STRA", None, Some("k"), &[Some("argile")])],
+    );
     let merged = wellbore_table::merge(&[one, two]);
     assert!(merged.conflicts.is_empty());
     assert_eq!(merged.rows.len(), 2);
@@ -88,12 +118,24 @@ fn two_measurements_under_one_heading_are_named_and_not_merged() {
     // Millidarcies from one borehole and square metres from another in one
     // column give a file that nothing downstream can detect. It is said, and the
     // caller decides — split the files, or write anyway.
-    let one = well("F1", &["10"], vec![column("PERM", Some("mD"), Some("k-perm"), &[Some("1")])]);
-    let two = well("F2", &["10"], vec![column("PERM", Some("m2"), Some("k-perm"), &[Some("2")])]);
+    let one = well(
+        "F1",
+        &["10"],
+        vec![column("PERM", Some("mD"), Some("k-perm"), &[Some("1")])],
+    );
+    let two = well(
+        "F2",
+        &["10"],
+        vec![column("PERM", Some("m2"), Some("k-perm"), &[Some("2")])],
+    );
     let merged = wellbore_table::merge(&[one, two]);
     assert_eq!(
         merged.conflicts,
-        [Conflict::Uom { column: "PERM".into(), first: Some("mD".into()), other: Some("m2".into()) }]
+        [Conflict::Uom {
+            column: "PERM".into(),
+            first: Some("mD".into()),
+            other: Some("m2".into())
+        }]
     );
     assert!(merged.conflicts[0].says().contains("mD") && merged.conflicts[0].says().contains("m2"));
 
@@ -103,7 +145,11 @@ fn two_measurements_under_one_heading_are_named_and_not_merged() {
     let b = well("F2", &["10"], vec![column("X", None, Some("k-b"), &[Some("2")])]);
     let clash = wellbore_table::merge(&[a, b]);
     assert_eq!(clash.conflicts.len(), 1);
-    assert!(matches!(clash.conflicts[0], Conflict::Kind { .. }), "{:?}", clash.conflicts);
+    assert!(
+        matches!(clash.conflicts[0], Conflict::Kind { .. }),
+        "{:?}",
+        clash.conflicts
+    );
 }
 
 #[test]
@@ -111,12 +157,16 @@ fn a_label_that_carries_the_separator_is_quoted() {
     // RFC 4180, and it is not theoretical: a lithology is written
     // "argile, sableuse". Without quoting, the line splits in two — and the
     // file remains perfectly well formed.
-    let one = well("F1", &["10", "20"], vec![column(
-        "STRA",
-        None,
-        None,
-        &[Some("argile, sableuse"), Some("marne \"dure\"")],
-    )]);
+    let one = well(
+        "F1",
+        &["10", "20"],
+        vec![column(
+            "STRA",
+            None,
+            None,
+            &[Some("argile, sableuse"), Some("marne \"dure\"")],
+        )],
+    );
     let csv = wellbore_table::to_csv(&wellbore_table::merge(&[one]), ',');
     let lines: Vec<&str> = csv.lines().collect();
     assert_eq!(lines[0], "well,MD,STRA");
@@ -126,7 +176,11 @@ fn a_label_that_carries_the_separator_is_quoted() {
 
     // And with a semicolon, the comma no longer needs quoting: what gets quoted
     // is what **separates in this file**.
-    let two = well("F1", &["10"], vec![column("STRA", None, None, &[Some("argile, sableuse")])]);
+    let two = well(
+        "F1",
+        &["10"],
+        vec![column("STRA", None, None, &[Some("argile, sableuse")])],
+    );
     let other = wellbore_table::to_csv(&wellbore_table::merge(&[two]), ';');
     assert_eq!(other.lines().nth(1).unwrap(), "F1;10;argile, sableuse");
 }
@@ -157,7 +211,9 @@ fn tabulate(paths: Vec<PathBuf>) {
     let mut seen = 0usize;
     for path in paths {
         let registry = std::sync::Arc::new(energyml_schemas::all());
-        let Ok(store) = energyml_storage::EpcStore::open(&path, registry) else { continue };
+        let Ok(store) = energyml_storage::EpcStore::open(&path, registry) else {
+            continue;
+        };
         let summaries = store.resources();
         // Every property parsed **once per package**, then filtered per frame.
         // Parsed per frame, `h+g_PaleoGTM` (443 frames, ~960 properties) cost
@@ -172,7 +228,9 @@ fn tabulate(paths: Vec<PathBuf>) {
             if !summary.qualified_type.contains("WellboreFrameRepresentation") {
                 continue;
             }
-            let Ok(frame) = store.get_object(&summary.uri) else { continue };
+            let Ok(frame) = store.get_object(&summary.uri) else {
+                continue;
+            };
             let borrowed: Vec<&dyn energyml_core::value::Reflect> = properties
                 .iter()
                 .map(|one| one.as_reflect())
@@ -201,13 +259,17 @@ fn tabulate(paths: Vec<PathBuf>) {
                     );
                     for at in 1..table.rows {
                         assert_eq!(
-                            top.values[at], base.values[at - 1],
+                            top.values[at],
+                            base.values[at - 1],
                             "{}: pass {at} does not begin where the previous one ends",
                             table.well
                         );
                     }
                 }
-                ref other => panic!("{}: the depth is the axis, so the first column — not {other:?}", table.well),
+                ref other => panic!(
+                    "{}: the depth is the axis, so the first column — not {other:?}",
+                    table.well
+                ),
             }
             for column in &table.columns {
                 assert_eq!(

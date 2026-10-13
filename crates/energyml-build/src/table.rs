@@ -59,25 +59,43 @@ pub struct Kind {
 }
 
 /// `code` — an identifier without a unit. The key column's kind.
-pub const CODE: Kind = Kind { uuid: "5f78f66a-ed1b-4827-a868-beb989febb31", title: "code" };
+pub const CODE: Kind = Kind {
+    uuid: "5f78f66a-ed1b-4827-a868-beb989febb31",
+    title: "code",
+};
 /// `formation name` — the lithostratigraphic unit. Used by the BRGM pipeline for
 /// exactly this.
-pub const FORMATION_NAME: Kind =
-    Kind { uuid: "48a02f88-8cfe-44e5-acb3-45038443d8f7", title: "formation name" };
+pub const FORMATION_NAME: Kind = Kind {
+    uuid: "48a02f88-8cfe-44e5-acb3-45038443d8f7",
+    title: "formation name",
+};
 /// `name` — the stage.
-pub const NAME: Kind = Kind { uuid: "0eb70eac-c3d2-4448-b617-10260c4abee3", title: "name" };
+pub const NAME: Kind = Kind {
+    uuid: "0eb70eac-c3d2-4448-b617-10260c4abee3",
+    title: "name",
+};
 /// `geologic age` — the bounds, in millions of years.
-pub const GEOLOGIC_AGE: Kind =
-    Kind { uuid: "e185ec6b-27c2-4086-8e1f-48810130b2f0", title: "geologic age" };
+pub const GEOLOGIC_AGE: Kind = Kind {
+    uuid: "e185ec6b-27c2-4086-8e1f-48810130b2f0",
+    title: "geologic age",
+};
 /// `count` — how many source features fed a row.
-pub const COUNT: Kind = Kind { uuid: "ee1efc57-1990-4c63-af90-974f186d1644", title: "count" };
+pub const COUNT: Kind = Kind {
+    uuid: "ee1efc57-1990-4c63-af90-974f186d1644",
+    title: "count",
+};
 /// `description` — the referential URL, and anything else that is prose.
-pub const DESCRIPTION: Kind =
-    Kind { uuid: "89230474-eb6e-417f-8fce-f2f00ee6fafb", title: "description" };
+pub const DESCRIPTION: Kind = Kind {
+    uuid: "89230474-eb6e-417f-8fce-f2f00ee6fafb",
+    title: "description",
+};
 /// `unknown` — what the dictionary has no word for. The BRGM pipeline uses it
 /// for its own code column, so it is not a last resort so much as the honest
 /// answer.
-pub const UNKNOWN: Kind = Kind { uuid: "73f28137-03ef-45b4-8e85-31869c7d36fd", title: "unknown" };
+pub const UNKNOWN: Kind = Kind {
+    uuid: "73f28137-03ef-45b4-8e85-31869c7d36fd",
+    title: "unknown",
+};
 
 impl Kind {
     fn reference(&self) -> eml::DataObjectReference {
@@ -144,7 +162,11 @@ pub fn build(uuid: &str, rows: &[Row], citation: eml::Citation) -> eml::ColumnBa
         value_count_per_row: 1,
         property_kind: kind.reference(),
         values: Some(eml::AbstractValueArray::FloatingPointXmlArray(
-            eml::FloatingPointXmlArray { count_per_value: 1, values, ..Default::default() },
+            eml::FloatingPointXmlArray {
+                count_per_value: 1,
+                values,
+                ..Default::default()
+            },
         )),
         ..Default::default()
     };
@@ -158,12 +180,28 @@ pub fn build(uuid: &str, rows: &[Row], citation: eml::Citation) -> eml::ColumnBa
         // mislabelled every facies of `h+g_PaleoGTM`.
         key_column: vec![integers("index", &CODE, rows.iter().map(|r| r.key).collect())],
         column: vec![
-            text("unité", &FORMATION_NAME, rows.iter().map(|r| r.unit.clone()).collect()),
-            text("référentiel", &DESCRIPTION, rows.iter().map(|r| r.referential.clone()).collect()),
+            text(
+                "unité",
+                &FORMATION_NAME,
+                rows.iter().map(|r| r.unit.clone()).collect(),
+            ),
+            text(
+                "référentiel",
+                &DESCRIPTION,
+                rows.iter().map(|r| r.referential.clone()).collect(),
+            ),
             text("étage", &NAME, rows.iter().map(|r| r.stage.clone()).collect()),
             text("côté", &UNKNOWN, rows.iter().map(|r| r.side.clone()).collect()),
-            reals("âge sommet (Ma)", &GEOLOGIC_AGE, rows.iter().map(|r| r.young_ma).collect()),
-            reals("âge base (Ma)", &GEOLOGIC_AGE, rows.iter().map(|r| r.old_ma).collect()),
+            reals(
+                "âge sommet (Ma)",
+                &GEOLOGIC_AGE,
+                rows.iter().map(|r| r.young_ma).collect(),
+            ),
+            reals(
+                "âge base (Ma)",
+                &GEOLOGIC_AGE,
+                rows.iter().map(|r| r.old_ma).collect(),
+            ),
             // What deduplication removed, per row rather than only in the
             // activity: a package read on its own must be able to say that
             // 1 285 places came from 10 354 borehole passes.
@@ -199,7 +237,11 @@ pub fn property(
         // `CategoricalProperty` + `StringTableLookup` pair.
         category_lookup: Some(table.clone()),
         values_for_patch: vec![resqml::AbstractValueArray::IntegerConstantArray(
-            eml::IntegerConstantArray { value: key, count: points as i64, ..Default::default() },
+            eml::IntegerConstantArray {
+                value: key,
+                count: points as i64,
+                ..Default::default()
+            },
         )],
         ..Default::default()
     }
@@ -245,7 +287,11 @@ mod tests {
     }
 
     fn table() -> eml::ColumnBasedTable {
-        build("00000000-0000-4000-8000-0000000000t1", &rows(), citation("imported units"))
+        build(
+            "00000000-0000-4000-8000-0000000000t1",
+            &rows(),
+            citation("imported units"),
+        )
     }
 
     #[test]
@@ -330,8 +376,7 @@ mod tests {
             },
             citation("unit"),
         );
-        let resqml::AbstractValueArray::IntegerConstantArray(values) = &made.values_for_patch[0]
-        else {
+        let resqml::AbstractValueArray::IntegerConstantArray(values) = &made.values_for_patch[0] else {
             panic!("expected a constant array")
         };
         // The **key**, not the row index: row 2 of `rows()` has key 2, and a
@@ -349,8 +394,14 @@ mod tests {
             "p",
             1,
             10,
-            &eml::DataObjectReference { uuid: "rep".into(), ..Default::default() },
-            &eml::DataObjectReference { uuid: "tab".into(), ..Default::default() },
+            &eml::DataObjectReference {
+                uuid: "rep".into(),
+                ..Default::default()
+            },
+            &eml::DataObjectReference {
+                uuid: "tab".into(),
+                ..Default::default()
+            },
             citation("x"),
         );
         assert_eq!(made.supporting_representation.uuid, "rep");

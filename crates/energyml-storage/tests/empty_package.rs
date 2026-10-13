@@ -55,7 +55,11 @@ fn the_core_properties_say_the_three_things_they_must() {
     let bytes = store.core_properties().expect("the core properties are there");
     let core = energyml_storage::epc::core_props::CoreProperties::parse(&bytes);
     assert!(!core.creator.is_empty(), "the creator is empty");
-    assert!(core.created.ends_with('Z'), "the date is not W3CDTF UTC: {}", core.created);
+    assert!(
+        core.created.ends_with('Z'),
+        "the date is not W3CDTF UTC: {}",
+        core.created
+    );
     assert_eq!(core.version, energyml_storage::epc::core_props::EPC_VERSION);
 }
 
@@ -66,9 +70,12 @@ fn the_relationship_the_specification_requires_points_at_them() {
     // anyway here, which is exactly the kind of gap that only shows
     // with another tool.
     let store = fresh();
-    let rels = String::from_utf8(store.raw_part("_rels/.rels").expect("the package rels"))
-        .expect("it is text");
-    assert!(rels.contains(energyml_storage::epc::core_props::CORE_RELATIONSHIP), "{rels}");
+    let rels =
+        String::from_utf8(store.raw_part("_rels/.rels").expect("the package rels")).expect("it is text");
+    assert!(
+        rels.contains(energyml_storage::epc::core_props::CORE_RELATIONSHIP),
+        "{rels}"
+    );
     assert!(rels.contains("docProps/core.xml"), "{rels}");
 }
 
@@ -92,7 +99,11 @@ fn this_crate_has_exactly_one_clock_and_callers_choose_it() {
     let root = std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/src"));
     let mut files = Vec::new();
     collect(root, &mut files);
-    assert!(files.len() > 5, "the collection found nothing: {}", root.display());
+    assert!(
+        files.len() > 5,
+        "the collection found nothing: {}",
+        root.display()
+    );
 
     let mut readers = Vec::new();
     for file in &files {

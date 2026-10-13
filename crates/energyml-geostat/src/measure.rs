@@ -104,7 +104,11 @@ fn sub(a: Point, b: Point) -> Point {
 }
 
 fn cross(a: Point, b: Point) -> Point {
-    [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
 }
 
 fn dot(a: Point, b: Point) -> f64 {
@@ -120,17 +124,32 @@ fn finite(p: &Point) -> bool {
 }
 
 /// The nodes an element names, or the refusal naming the one out of range.
-fn corners<const N: usize>(points: &[Point], indices: &[u32; N], what: &'static str, element: usize) -> Result<[Point; N], Error> {
+fn corners<const N: usize>(
+    points: &[Point],
+    indices: &[u32; N],
+    what: &'static str,
+    element: usize,
+) -> Result<[Point; N], Error> {
     let mut out = [[0.0; 3]; N];
     for (slot, &at) in indices.iter().enumerate() {
-        out[slot] = *points.get(at as usize).ok_or(Error::ElementOutOfRange { what, element, at: at as usize, nodes: points.len() })?;
+        out[slot] = *points.get(at as usize).ok_or(Error::ElementOutOfRange {
+            what,
+            element,
+            at: at as usize,
+            nodes: points.len(),
+        })?;
     }
     Ok(out)
 }
 
 /// The area of each triangle, along it and in plan.
 pub fn triangle_areas(points: &[Point], triangles: &[[u32; 3]]) -> Result<Areas, Error> {
-    let mut out = Areas { along: Vec::with_capacity(triangles.len()), plan: Vec::with_capacity(triangles.len()), unplaced: 0, folded: 0 };
+    let mut out = Areas {
+        along: Vec::with_capacity(triangles.len()),
+        plan: Vec::with_capacity(triangles.len()),
+        unplaced: 0,
+        folded: 0,
+    };
     for (element, triangle) in triangles.iter().enumerate() {
         let [a, b, c] = corners(points, triangle, "triangle", element)?;
         if ![a, b, c].iter().all(finite) {
@@ -160,7 +179,12 @@ const GAUSS_2: [f64; 2] = [0.211_324_865_405_187_1, 0.788_675_134_594_812_9];
 /// The area of each quadrilateral — the bilinear patch through `a, b, c, d`,
 /// **in ring order** — along it and in plan.
 pub fn quad_areas(points: &[Point], quads: &[[u32; 4]]) -> Result<Areas, Error> {
-    let mut out = Areas { along: Vec::with_capacity(quads.len()), plan: Vec::with_capacity(quads.len()), unplaced: 0, folded: 0 };
+    let mut out = Areas {
+        along: Vec::with_capacity(quads.len()),
+        plan: Vec::with_capacity(quads.len()),
+        unplaced: 0,
+        folded: 0,
+    };
     for (element, quad) in quads.iter().enumerate() {
         let [a, b, c, d] = corners(points, quad, "cell", element)?;
         if ![a, b, c, d].iter().all(finite) {
@@ -200,10 +224,12 @@ pub fn quad_areas(points: &[Point], quads: &[[u32; 4]]) -> Result<Areas, Error> 
             // The shoelace area of the ring, which is the exact integral of
             // that Jacobian.
             let ring = [a, b, c, d];
-            let twice: f64 = (0..4).map(|k| {
-                let (p, q) = (ring[k], ring[(k + 1) % 4]);
-                p[0] * q[1] - q[0] * p[1]
-            }).sum();
+            let twice: f64 = (0..4)
+                .map(|k| {
+                    let (p, q) = (ring[k], ring[(k + 1) % 4]);
+                    p[0] * q[1] - q[0] * p[1]
+                })
+                .sum();
             out.plan.push(0.5 * twice.abs());
         }
     }
@@ -216,9 +242,16 @@ pub fn quad_areas(points: &[Point], quads: &[[u32; 4]]) -> Result<Areas, Error> 
 pub fn polyline_lengths(points: &[Point], runs: &[u32], closed: &[bool]) -> Result<Lengths, Error> {
     let total: usize = runs.iter().map(|&run| run as usize).sum();
     if total > points.len() {
-        return Err(Error::RunsPastEnd { total, nodes: points.len() });
+        return Err(Error::RunsPastEnd {
+            total,
+            nodes: points.len(),
+        });
     }
-    let mut out = Lengths { along: Vec::with_capacity(runs.len()), plan: Vec::with_capacity(runs.len()), unplaced: 0 };
+    let mut out = Lengths {
+        along: Vec::with_capacity(runs.len()),
+        plan: Vec::with_capacity(runs.len()),
+        unplaced: 0,
+    };
     let mut start = 0usize;
     for (line, &run) in runs.iter().enumerate() {
         let nodes = &points[start..start + run as usize];
@@ -233,8 +266,14 @@ pub fn polyline_lengths(points: &[Point], runs: &[u32], closed: &[bool]) -> Resu
         if closed.get(line).copied().unwrap_or(false) && nodes.len() > 2 {
             segments.push((nodes[nodes.len() - 1], nodes[0]));
         }
-        out.along.push(segments.iter().map(|(p, q)| norm(sub(*q, *p))).sum());
-        out.plan.push(segments.iter().map(|(p, q)| (q[0] - p[0]).hypot(q[1] - p[1])).sum());
+        out.along
+            .push(segments.iter().map(|(p, q)| norm(sub(*q, *p))).sum());
+        out.plan.push(
+            segments
+                .iter()
+                .map(|(p, q)| (q[0] - p[0]).hypot(q[1] - p[1]))
+                .sum(),
+        );
     }
     Ok(out)
 }
@@ -243,7 +282,12 @@ pub fn polyline_lengths(points: &[Point], runs: &[u32], closed: &[bool]) -> Resu
 /// ring `0, 1, 2, 3`, then the top ring `4, 5, 6, 7` above it, corner for
 /// corner.
 pub fn hexahedron_volumes(points: &[Point], cells: &[[u32; 8]]) -> Result<Volumes, Error> {
-    let mut out = Volumes { values: Vec::with_capacity(cells.len()), unplaced: 0, twisted: 0, flat: 0 };
+    let mut out = Volumes {
+        values: Vec::with_capacity(cells.len()),
+        unplaced: 0,
+        twisted: 0,
+        flat: 0,
+    };
     for (element, cell) in cells.iter().enumerate() {
         let p = corners(points, cell, "cell", element)?;
         if !p.iter().all(finite) {
@@ -257,7 +301,10 @@ pub fn hexahedron_volumes(points: &[Point], cells: &[[u32; 8]]) -> Result<Volume
         if scale == 0.0 || signed.abs() <= 1e-12 * scale {
             // Every Gauss point degenerate, or a cancellation that leaves
             // nothing: collapsed if nothing is inverted, twisted otherwise.
-            if determinants.iter().all(|j| j.abs() <= 1e-9 * scale.max(f64::MIN_POSITIVE)) {
+            if determinants
+                .iter()
+                .all(|j| j.abs() <= 1e-9 * scale.max(f64::MIN_POSITIVE))
+            {
                 out.values.push(0.0);
                 out.flat += 1;
             } else {
@@ -321,7 +368,13 @@ fn trilinear_determinants(p: &[Point; 8]) -> [f64; 8] {
 /// The sum of the finite values, and how many were not — the total a caller
 /// reports beside the per-element values.
 pub fn total(values: &[f64]) -> (f64, usize) {
-    values.iter().fold((0.0, 0), |(sum, set_aside), v| if v.is_finite() { (sum + v, set_aside) } else { (sum, set_aside + 1) })
+    values.iter().fold((0.0, 0), |(sum, set_aside), v| {
+        if v.is_finite() {
+            (sum + v, set_aside)
+        } else {
+            (sum, set_aside + 1)
+        }
+    })
 }
 
 #[cfg(test)]
@@ -403,7 +456,15 @@ mod tests {
     #[test]
     fn an_element_naming_a_missing_node_is_refused_by_name() {
         let refused = triangle_areas(&[[0.0; 3]; 2], &[[0, 1, 2]]).unwrap_err();
-        assert_eq!(refused, Error::ElementOutOfRange { what: "triangle", element: 0, at: 2, nodes: 2 });
+        assert_eq!(
+            refused,
+            Error::ElementOutOfRange {
+                what: "triangle",
+                element: 0,
+                at: 2,
+                nodes: 2
+            }
+        );
     }
 
     #[test]

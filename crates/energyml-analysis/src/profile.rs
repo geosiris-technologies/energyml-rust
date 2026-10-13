@@ -267,8 +267,14 @@ impl Corridor {
         };
         for i in 0..n {
             let (a, b) = (me.points[i], me.points[i + 1]);
-            let (x0, x1) = (me.cell_of(a[0].min(b[0]) - reach, 0), me.cell_of(a[0].max(b[0]) + reach, 0));
-            let (y0, y1) = (me.cell_of(a[1].min(b[1]) - reach, 1), me.cell_of(a[1].max(b[1]) + reach, 1));
+            let (x0, x1) = (
+                me.cell_of(a[0].min(b[0]) - reach, 0),
+                me.cell_of(a[0].max(b[0]) + reach, 0),
+            );
+            let (y0, y1) = (
+                me.cell_of(a[1].min(b[1]) - reach, 1),
+                me.cell_of(a[1].max(b[1]) + reach, 1),
+            );
             let cells = (x1 - x0 + 1) as u64 * (y1 - y0 + 1) as u64;
             if cells > MAX_CELLS_PER_SEGMENT {
                 return Err(ProfileError::GridTooLarge { index: i, cells });
@@ -311,19 +317,37 @@ impl Corridor {
     /// Projects the heads: kept ones with `s`, `d`, side and foot; the ones set
     /// aside near the track, with the reason.
     pub fn project(&self, heads: &[Head]) -> Profile {
-        let mut profile = Profile { kept: Vec::new(), rejected: Vec::new() };
+        let mut profile = Profile {
+            kept: Vec::new(),
+            rejected: Vec::new(),
+        };
         for head in heads {
             if !head.xy[0].is_finite() || !head.xy[1].is_finite() {
-                profile.rejected.push(Rejected { id: head.id.clone(), reason: Reason::NoPosition });
+                profile.rejected.push(Rejected {
+                    id: head.id.clone(),
+                    reason: Reason::NoPosition,
+                });
                 continue;
             }
             match self.classify(head.xy) {
-                Verdict::Kept { s, d, side, foot, direction } => {
-                    profile.kept.push(Kept { id: head.id.clone(), s, d, side, foot, direction })
-                }
-                Verdict::Rejected(reason) => {
-                    profile.rejected.push(Rejected { id: head.id.clone(), reason })
-                }
+                Verdict::Kept {
+                    s,
+                    d,
+                    side,
+                    foot,
+                    direction,
+                } => profile.kept.push(Kept {
+                    id: head.id.clone(),
+                    s,
+                    d,
+                    side,
+                    foot,
+                    direction,
+                }),
+                Verdict::Rejected(reason) => profile.rejected.push(Rejected {
+                    id: head.id.clone(),
+                    reason,
+                }),
                 Verdict::Far => {}
             }
         }
@@ -365,7 +389,11 @@ impl Corridor {
             if j == i + 1 && ti > 1.0 && tj < 0.0 {
                 let v = self.points[j];
                 let tangent = add(self.dirs[i], self.dirs[j]);
-                let reference = if norm(tangent) > 1e-12 { tangent } else { self.dirs[i] };
+                let reference = if norm(tangent) > 1e-12 {
+                    tangent
+                } else {
+                    self.dirs[i]
+                };
                 candidates.push(Candidate {
                     d: norm(sub(p, v)),
                     s: self.cum[j],
@@ -382,7 +410,13 @@ impl Corridor {
             }
         }
         if let Some(c) = best {
-            return Verdict::Kept { s: c.s, d: c.d, side: c.side, foot: c.foot, direction: c.direction };
+            return Verdict::Kept {
+                s: c.s,
+                d: c.d,
+                side: c.side,
+                foot: c.foot,
+                direction: c.direction,
+            };
         }
         if candidates.iter().any(|c| c.d <= self.reach) {
             return Verdict::Rejected(Reason::TooFarOnItsSide);
@@ -420,7 +454,9 @@ impl Corridor {
         ring.extend(right);
         // Left forward then right backward runs clockwise; the sign of the
         // area says so instead of assuming it.
-        let area: f64 = (0..ring.len()).map(|i| cross(ring[i], ring[(i + 1) % ring.len()])).sum();
+        let area: f64 = (0..ring.len())
+            .map(|i| cross(ring[i], ring[(i + 1) % ring.len()]))
+            .sum();
         if area < 0.0 {
             ring.reverse();
         }
@@ -441,7 +477,11 @@ impl Corridor {
             let (end0, start1) = (add(v, scale(normal(k - 1), w)), add(v, scale(normal(k), w)));
             if reversal || sign * cr < 0.0 {
                 // Outer turn: the arc around the vertex, at radius w.
-                let phi = if reversal { -sign * std::f64::consts::PI } else { cr.atan2(dt) };
+                let phi = if reversal {
+                    -sign * std::f64::consts::PI
+                } else {
+                    cr.atan2(dt)
+                };
                 let n0 = normal(k - 1);
                 let a0 = n0[1].atan2(n0[0]);
                 let steps = (phi.abs() / arc_step).ceil().max(1.0) as usize;
@@ -484,7 +524,13 @@ struct Candidate {
 }
 
 enum Verdict {
-    Kept { s: f64, d: f64, side: Side, foot: V, direction: V },
+    Kept {
+        s: f64,
+        d: f64,
+        side: Side,
+        foot: V,
+        direction: V,
+    },
     Rejected(Reason),
     /// Not within reach of the track: not listed.
     Far,
@@ -511,5 +557,9 @@ pub fn project(
 ) -> Result<Section, ProfileError> {
     let corridor = Corridor::new(track, left, right)?;
     let band = corridor.band(arc_step)?;
-    Ok(Section { profile: corridor.project(heads), band, length: corridor.length() })
+    Ok(Section {
+        profile: corridor.project(heads),
+        band,
+        length: corridor.length(),
+    })
 }

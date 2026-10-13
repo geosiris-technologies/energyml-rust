@@ -147,8 +147,7 @@ fn triple_points(triple: &dyn Reflect, at: &str) -> Result<[Point; 3]> {
 }
 
 fn coordinate(point: &dyn Reflect, field: &str, at: &str, index: usize) -> Result<f64> {
-    scalar_f64(point, field)
-        .ok_or_else(|| Error::malformed(at, format!("point {index} states no `{field}`")))
+    scalar_f64(point, field).ok_or_else(|| Error::malformed(at, format!("point {index} states no `{field}`")))
 }
 
 /// The first of these fields that holds anything — the respelling rule.

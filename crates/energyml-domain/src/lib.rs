@@ -83,34 +83,34 @@ pub mod geolts_rank;
 pub mod inherit;
 pub mod integrity;
 pub mod metadata;
-/// Recording that an operation happened: the canonical activity templates, and
-/// the activity built from one. See the module for why it is here rather than
-/// in the JavaScript face.
-pub mod provenance;
 /// What the module keeps of a package: links and property sheets, never the
 /// objects (ADR-0010).
 pub mod package_index;
 pub mod property;
 pub mod property_kind;
+/// Recording that an operation happened: the canonical activity templates, and
+/// the activity built from one. See the module for why it is here rather than
+/// in the JavaScript face.
+pub mod provenance;
 pub mod reproject;
 pub mod rules;
 pub mod select;
 pub mod series;
 pub mod source;
 pub mod stats;
+/// A wellbore's stratigraphy carried by measured depth onto its other
+/// representations — the frames that state no unit, and the trajectories.
+pub mod strata_by_md;
 pub mod stratigraphy;
 pub mod table;
-pub mod wellbore_table;
+pub mod units;
+pub mod values;
+pub mod water_analysis;
 /// Which stratigraphic unit each interval of a wellbore frame belongs to, and
 /// the colour the file gives it — what a well is coloured by, section by
 /// section.
 pub mod well_strata;
-/// A wellbore's stratigraphy carried by measured depth onto its other
-/// representations — the frames that state no unit, and the trajectories.
-pub mod strata_by_md;
-pub mod units;
-pub mod values;
-pub mod water_analysis;
+pub mod wellbore_table;
 
 pub use crs::{Crs, CrsKind, VerticalDirection, VerticalQuantity};
 pub use error::{Error, Result};

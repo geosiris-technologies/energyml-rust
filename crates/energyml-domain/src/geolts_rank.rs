@@ -119,7 +119,9 @@ pub fn relation(chart: &Chart, division: u32, unit: u32) -> Relation {
     match (span(chart, division), span(chart, unit)) {
         // Older than the unit's old end, or younger than its young end — a
         // shared bound is a touch, not an overlap.
-        (Some((old, young)), Some((unit_old, unit_young))) if young >= unit_old || old <= unit_young => Relation::Outside,
+        (Some((old, young)), Some((unit_old, unit_young))) if young >= unit_old || old <= unit_young => {
+            Relation::Outside
+        }
         (Some(_), Some(_)) => Relation::Overlaps,
         _ => Relation::Undated,
     }
@@ -138,14 +140,23 @@ pub fn at_level(chart: &Chart, id: u32, level: u8) -> Vec<u32> {
     candidates
         .iter()
         .copied()
-        .filter(|one| !candidates.iter().any(|other| other != one && above(chart, *one).contains(other)))
+        .filter(|one| {
+            !candidates
+                .iter()
+                .any(|other| other != one && above(chart, *one).contains(other))
+        })
         .collect()
 }
 
 /// The levels the chart has divisions of, coarsest first — `0`, no level, left
 /// out.
 pub fn levels(chart: &Chart) -> Vec<u8> {
-    let mut out: Vec<u8> = chart.concepts().iter().map(|one| one.level).filter(|level| *level > 0).collect();
+    let mut out: Vec<u8> = chart
+        .concepts()
+        .iter()
+        .map(|one| one.level)
+        .filter(|level| *level > 0)
+        .collect();
     out.sort_unstable();
     out.dedup();
     out

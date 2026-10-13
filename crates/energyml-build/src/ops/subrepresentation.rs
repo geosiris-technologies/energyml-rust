@@ -66,7 +66,10 @@ use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Patch, Topology};
 
 use crate::declare::{Choice, Inputs, Params, Shape};
-use crate::operation::{About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Note, Numbers, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Note, Numbers, Operation, Plan,
+    Refusal, Slot,
+};
 
 use super::support;
 use super::written::{NamingParams, RepresentedParams};
@@ -141,13 +144,20 @@ pub struct SubrepresentationParams {
 #[derive(Debug, Inputs)]
 pub struct SubrepresentationInputs {
     /// the supporting representation — an object of the package, whose elements are chosen
-    #[input(types = "resqml22.IjkGridRepresentation, resqml22.TriangulatedSetRepresentation, resqml22.Grid2dRepresentation, resqml22.PointSetRepresentation, resqml22.PolylineSetRepresentation")]
+    #[input(
+        types = "resqml22.IjkGridRepresentation, resqml22.TriangulatedSetRepresentation, resqml22.Grid2dRepresentation, resqml22.PointSetRepresentation, resqml22.PolylineSetRepresentation"
+    )]
     pub support: Shape,
 }
 
 /// The title the object behind a shape carries, or the shape's name.
 fn title_of(shape: &Shape) -> String {
-    shape.known.as_ref().and_then(|known| known.reference.as_ref()).map(|r| r.title.clone()).unwrap_or_else(|| shape.name.clone())
+    shape
+        .known
+        .as_ref()
+        .and_then(|known| known.reference.as_ref())
+        .map(|r| r.title.clone())
+        .unwrap_or_else(|| shape.name.clone())
 }
 
 /// The one IJK patch of a support — its cells, `[ni, nj, nk]`, the RESQML
@@ -157,10 +167,24 @@ type IjkPatch<'a> = (&'a [[u32; 8]], [usize; 3], &'a [u32], &'a [[f64; 3]]);
 /// The [`IjkPatch`] of a support, or why it has none.
 fn ijk_of(shape: &Shape) -> Result<IjkPatch<'_>, Refusal> {
     match shape.geometry.patches.as_slice() {
-        [Patch { topology: Topology::Hexahedra { cells, dimensions, index }, points, .. }] => {
-            Ok((cells, *dimensions, index, points))
-        }
-        [Patch { topology: Topology::Polyhedra(_), .. }] => Err(Refusal::on(
+        [
+            Patch {
+                topology:
+                    Topology::Hexahedra {
+                        cells,
+                        dimensions,
+                        index,
+                    },
+                points,
+                ..
+            },
+        ] => Ok((cells, *dimensions, index, points)),
+        [
+            Patch {
+                topology: Topology::Polyhedra(_),
+                ..
+            },
+        ] => Err(Refusal::on(
             "support",
             format!(
                 "`{}` is an unstructured grid: its cells are not selected here yet — nothing in this build draws a sub-representation of them",
@@ -169,7 +193,10 @@ fn ijk_of(shape: &Shape) -> Result<IjkPatch<'_>, Refusal> {
         )),
         _ => Err(Refusal::on(
             "support",
-            format!("`{}` holds no IJK grid, and cells are chosen in one", title_of(shape)),
+            format!(
+                "`{}` holds no IJK grid, and cells are chosen in one",
+                title_of(shape)
+            ),
         )),
     }
 }
@@ -223,7 +250,12 @@ impl Operation for Subrepresentation {
     }
 
     fn check(&self, inputs: &SubrepresentationInputs) -> Result<(), Refusal> {
-        match inputs.support.known.as_ref().and_then(|known| known.reference.as_ref()) {
+        match inputs
+            .support
+            .known
+            .as_ref()
+            .and_then(|known| known.reference.as_ref())
+        {
             Some(_) => Ok(()),
             None => Err(Refusal::on(
                 "support",
@@ -235,7 +267,12 @@ impl Operation for Subrepresentation {
         }
     }
 
-    fn plan(&self, inputs: SubrepresentationInputs, params: SubrepresentationParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: SubrepresentationInputs,
+        params: SubrepresentationParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         self.check(&inputs)?;
         let SubrepresentationInputs { support: shape } = inputs;
         let Some(reference) = shape.known.as_ref().and_then(|known| known.reference.clone()) else {
@@ -252,21 +289,44 @@ impl Operation for Subrepresentation {
                 let (_, dimensions, _, _) = ijk_of(&shape)?;
                 let range = |first: Option<usize>, last: Option<usize>, axis: usize| match (first, last) {
                     (None, None) => None,
-                    (first, last) => Some([first.unwrap_or(0), last.unwrap_or(dimensions[axis].saturating_sub(1))]),
+                    (first, last) => Some([
+                        first.unwrap_or(0),
+                        last.unwrap_or(dimensions[axis].saturating_sub(1)),
+                    ]),
                 };
-                let ranges = [range(ijk.i_first, ijk.i_last, 0), range(ijk.j_first, ijk.j_last, 1), range(ijk.k_first, ijk.k_last, 2)];
+                let ranges = [
+                    range(ijk.i_first, ijk.i_last, 0),
+                    range(ijk.j_first, ijk.j_last, 1),
+                    range(ijk.k_first, ijk.k_last, 2),
+                ];
                 let indices = cells::ijk_box(dimensions, ranges).map_err(|why| {
                     let slot = match &why {
-                        cells::CellsError::Reversed { axis, .. } | cells::CellsError::Beyond { axis, .. } => format!("{axis}Last"),
+                        cells::CellsError::Reversed { axis, .. } | cells::CellsError::Beyond { axis, .. } => {
+                            format!("{axis}Last")
+                        }
                         _ => "select".to_string(),
                     };
-                    Refusal::on(&slot, format!("{why} — `{}` is {} × {} × {} cells", title_of(&shape), dimensions[0], dimensions[1], dimensions[2]))
+                    Refusal::on(
+                        &slot,
+                        format!(
+                            "{why} — `{}` is {} × {} × {} cells",
+                            title_of(&shape),
+                            dimensions[0],
+                            dimensions[1],
+                            dimensions[2]
+                        ),
+                    )
                 })?;
                 let said = |axis: usize, r: Option<[usize; 2]>| match r {
                     Some([a, b]) => format!("{} {a}–{b}", ['I', 'J', 'K'][axis]),
                     None => format!("every {}", ['I', 'J', 'K'][axis]),
                 };
-                let rule = format!("the IJK box {}, {}, {}", said(0, ranges[0]), said(1, ranges[1]), said(2, ranges[2]));
+                let rule = format!(
+                    "the IJK box {}, {}, {}",
+                    said(0, ranges[0]),
+                    said(1, ranges[1]),
+                    said(2, ranges[2])
+                );
                 (Element::Cells, indices, rule)
             }
         };
@@ -276,7 +336,10 @@ impl Operation for Subrepresentation {
             Element::Triangles => {
                 let count = triangles_of(&shape).len();
                 if count == 0 {
-                    return Err(Refusal::on("element", format!("`{}` has no triangle to choose", title_of(&shape))));
+                    return Err(Refusal::on(
+                        "element",
+                        format!("`{}` has no triangle to choose", title_of(&shape)),
+                    ));
                 }
                 (count, "triangles")
             }
@@ -318,8 +381,17 @@ impl Operation for Subrepresentation {
         let mut undefined = 0usize;
         let geometry = match element {
             Element::Nodes => {
-                let points: Vec<[f64; 3]> = shape.geometry.patches.iter().flat_map(|patch| patch.points.iter().copied()).collect();
-                support::one_patch("SubRepresentation", indices.iter().map(|one| points[*one as usize]).collect(), Topology::Points)
+                let points: Vec<[f64; 3]> = shape
+                    .geometry
+                    .patches
+                    .iter()
+                    .flat_map(|patch| patch.points.iter().copied())
+                    .collect();
+                support::one_patch(
+                    "SubRepresentation",
+                    indices.iter().map(|one| points[*one as usize]).collect(),
+                    Topology::Points,
+                )
             }
             Element::Triangles => {
                 let all = triangles_of(&shape);
@@ -351,7 +423,15 @@ impl Operation for Subrepresentation {
                     kept.push(std::array::from_fn(|corner| base + corner as u32));
                 }
                 let count = kept.len();
-                support::one_patch("SubRepresentation", kept_points, Topology::Hexahedra { cells: kept, dimensions: [count, 1, 1], index: Vec::new() })
+                support::one_patch(
+                    "SubRepresentation",
+                    kept_points,
+                    Topology::Hexahedra {
+                        cells: kept,
+                        dimensions: [count, 1, 1],
+                        index: Vec::new(),
+                    },
+                )
             }
         };
 
@@ -361,11 +441,24 @@ impl Operation for Subrepresentation {
         let seed = format!(
             "subrepresentation:{}:{name}:{}:{title}",
             reference.uuid.to_ascii_lowercase(),
-            indices.iter().map(|one| one.to_string()).collect::<Vec<_>>().join(",")
+            indices
+                .iter()
+                .map(|one| one.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
         );
         let mut rank = 0usize;
         let uuid = support::next_uuid(cx.identity, &seed, &mut rank)?;
-        let represented = support::represented_in(&params.represented, None, None, cx.identity, cx.when, &seed, &title, &mut rank)?;
+        let represented = support::represented_in(
+            &params.represented,
+            None,
+            None,
+            cx.identity,
+            cx.when,
+            &seed,
+            &title,
+            &mut rank,
+        )?;
         let path = format!("/resqml22/{uuid}/indices");
         let dimensions = vec![indices.len() as i64];
         let mut object = json!({
@@ -430,10 +523,25 @@ impl Operation for Subrepresentation {
                 title: format!("subrepresentation → {title}"),
                 seed,
                 parameters: vec![
-                    Parameter::Text { title: "indexableElement".to_string(), value: name.to_string() },
-                    Parameter::Double { title: "elementCount".to_string(), value: indices.len() as f64, uom: None },
-                    Parameter::Double { title: "supportCount".to_string(), value: available as f64, uom: None },
-                    Parameter::Double { title: "undefinedCellCount".to_string(), value: undefined as f64, uom: None },
+                    Parameter::Text {
+                        title: "indexableElement".to_string(),
+                        value: name.to_string(),
+                    },
+                    Parameter::Double {
+                        title: "elementCount".to_string(),
+                        value: indices.len() as f64,
+                        uom: None,
+                    },
+                    Parameter::Double {
+                        title: "supportCount".to_string(),
+                        value: available as f64,
+                        uom: None,
+                    },
+                    Parameter::Double {
+                        title: "undefinedCellCount".to_string(),
+                        value: undefined as f64,
+                        uom: None,
+                    },
                 ],
             },
             says,
@@ -443,12 +551,29 @@ impl Operation for Subrepresentation {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        let count = |name: &'static str, about: &'static str| Slot::required(name, Need::Number { uom: None, least: None, most: None }, about);
+        let count = |name: &'static str, about: &'static str| {
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
         vec![
-            Slot::required("indexableElement", Need::Text, "the element the indices index — nodes, triangles, cells"),
+            Slot::required(
+                "indexableElement",
+                Need::Text,
+                "the element the indices index — nodes, triangles, cells",
+            ),
             count("elementCount", "the elements chosen"),
             count("supportCount", "the elements of that kind the support has"),
-            count("undefinedCellCount", "chosen cells the support leaves without geometry"),
+            count(
+                "undefinedCellCount",
+                "chosen cells the support leaves without geometry",
+            ),
         ]
     }
 }

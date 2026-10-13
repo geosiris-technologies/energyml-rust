@@ -16,7 +16,10 @@ use energyml_build::operation::{Choices, Identity, Registry, When};
 use energyml_build::pieces::{Pieces, Source};
 
 fn when() -> When {
-    When { creation: "2026-09-18T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-18T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 /// One borehole, in the shape of the real extract.
@@ -61,10 +64,25 @@ fn export() -> String {
                   {{"name":{{"@title":"parameter_id_forage"}},"value":"3ca79312-f3fa-4959-bae0-311c7a5c7359"}},
                   {{"name":{{"@title":"parameter_id_bss"}},"value":"BSS000LKCG"}},
                   {{"name":{{"@title":"parameter_indice_bss"}},"value":"01536X0058"}}]}}}}]}}"#,
-        interval("6872447", 0.0, 0.5, "BSS000LKCG_38325d6d-f932-4164-82dc-c1fbfebf7563"),
-        interval("6872444", 0.5, 6.4, "BSS000LKCG_29d030fc-45f2-4841-924d-7929992a2f16"),
+        interval(
+            "6872447",
+            0.0,
+            0.5,
+            "BSS000LKCG_38325d6d-f932-4164-82dc-c1fbfebf7563"
+        ),
+        interval(
+            "6872444",
+            0.5,
+            6.4,
+            "BSS000LKCG_29d030fc-45f2-4841-924d-7929992a2f16"
+        ),
         interval("6872446", 0.5, 6.4, "BSS000LKCG_GLU000AEKQ"),
-        interval("6872451", 6.4, 9.7, "BSS000LKCG_3888e211-0e34-4758-967c-2d15b223b988"),
+        interval(
+            "6872451",
+            6.4,
+            9.7,
+            "BSS000LKCG_3888e211-0e34-4758-967c-2d15b223b988"
+        ),
     )
 }
 
@@ -77,19 +95,34 @@ fn pieces_of(text: &str) -> Pieces {
     assert!(read.refused.is_empty(), "{:?}", read.refused);
     Pieces::empty().with(
         "features",
-        Source::Features { name: "Borehole_indent.json".into(), features: read.features },
+        Source::Features {
+            name: "Borehole_indent.json".into(),
+            features: read.features,
+        },
     )
 }
 
 fn planned(choices: Choices) -> energyml_build::operation::Plan {
     Registry::new()
-        .plan("sigeol-boreholes", &pieces_of(&export()), &choices, &Identity::derived(), &when())
+        .plan(
+            "sigeol-boreholes",
+            &pieces_of(&export()),
+            &choices,
+            &Identity::derived(),
+            &when(),
+        )
         .expect("planned")
 }
 
-fn object<'a>(plan: &'a energyml_build::operation::Plan, role: &str) -> &'a energyml_build::operation::NewObject {
+fn object<'a>(
+    plan: &'a energyml_build::operation::Plan,
+    role: &str,
+) -> &'a energyml_build::operation::NewObject {
     plan.objects.iter().find(|o| o.role == role).unwrap_or_else(|| {
-        panic!("no `{role}` in {:?}", plan.objects.iter().map(|o| o.role.as_str()).collect::<Vec<_>>())
+        panic!(
+            "no `{role}` in {:?}",
+            plan.objects.iter().map(|o| o.role.as_str()).collect::<Vec<_>>()
+        )
     })
 }
 
@@ -162,7 +195,10 @@ fn a_borehole_import_into_degrees_is_refused_by_name() {
     // `crs` was the `ProjectedCrs` until 24/09, a geometry naming a half
     // against RESQML TRG 2.2 §3.1 p. 22.
     assert_eq!(object(&plan, "projected-crs").json["$type"], "eml23.ProjectedCrs");
-    assert_eq!(object(&plan, "crs").json["$type"], "eml23.LocalEngineeringCompoundCrs");
+    assert_eq!(
+        object(&plan, "crs").json["$type"],
+        "eml23.LocalEngineeringCompoundCrs"
+    );
 }
 
 #[test]
@@ -184,12 +220,22 @@ fn without_setting_anything_the_import_comes_out_in_metres_by_the_utm_zone_of_th
     // The projected half by its role since 24/09 — `crs` is the compound the
     // holes name, over it.
     let crs = object(&plan, "projected-crs");
-    assert_eq!(crs.json["$type"], "eml23.ProjectedCrs", "metric without anything being set");
+    assert_eq!(
+        crs.json["$type"], "eml23.ProjectedCrs",
+        "metric without anything being set"
+    );
     assert_eq!(crs.json["AbstractProjectedCrs"]["EpsgCode"], 32_631);
-    assert_eq!(object(&plan, "crs").json["$type"], "eml23.LocalEngineeringCompoundCrs");
+    assert_eq!(
+        object(&plan, "crs").json["$type"],
+        "eml23.LocalEngineeringCompoundCrs"
+    );
     // And the coordinates written are indeed metres, not degrees: it is
     // the fact on which everything else depends.
-    let control = plan.datasets.iter().find(|d| d.path.ends_with("/controlPoints")).expect("the points");
+    let control = plan
+        .datasets
+        .iter()
+        .find(|d| d.path.ends_with("/controlPoints"))
+        .expect("the points");
     let energyml_build::operation::Numbers::F64(values) = &control.values else {
         panic!("not floats")
     };
@@ -212,12 +258,21 @@ fn when_every_hole_is_set_aside_the_refusal_names_why_and_how_many() {
     // comes from the file.
     let bare = export().replace("\"logElement\"", "\"logElementAbsent\"");
     let why = Registry::new()
-        .plan("sigeol-boreholes", &pieces_of(&bare), &Choices::new().set("project", 2154), &Identity::derived(), &when())
+        .plan(
+            "sigeol-boreholes",
+            &pieces_of(&bare),
+            &Choices::new().set("project", 2154),
+            &Identity::derived(),
+            &when(),
+        )
         .expect_err("no hole can be written without a depth");
     let said = why.to_string();
     assert!(said.contains("set aside"), "{said}");
     assert!(said.contains("1 \u{d7} "), "the count of each reason: {said}");
-    assert!(said.contains("logElement"), "the reason names the field it looked for: {said}");
+    assert!(
+        said.contains("logElement"),
+        "the reason names the field it looked for: {said}"
+    );
     // And it no longer points to a plan that does not exist.
     assert!(!said.contains("the plan says"), "{said}");
 }
@@ -231,7 +286,13 @@ fn a_hole_set_aside_is_named_not_only_counted() {
     // (`the_uuid_written_is_the_producers_own_and_the_title_its_bss_code`).
     let unknown_ground = export().replace("\"elevation\":38.5", "\"elevationAbsent\":38.5");
     let why = Registry::new()
-        .plan("sigeol-boreholes", &pieces_of(&unknown_ground), &Choices::new().set("project", 2154), &Identity::derived(), &when())
+        .plan(
+            "sigeol-boreholes",
+            &pieces_of(&unknown_ground),
+            &Choices::new().set("project", 2154),
+            &Identity::derived(),
+            &when(),
+        )
         .expect_err("a hole whose ground is unknown cannot be written");
     let said = why.to_string();
     assert!(said.contains("referenceLocation.elevation"), "the reason: {said}");
@@ -249,15 +310,31 @@ fn one_borehole_makes_the_five_objects_and_the_pair_of_systems() {
     // hole would be one nobody asked for.
     assert_eq!(
         roles,
-        vec!["projected-crs", "vertical-crs", "local-2d-crs", "crs", "feature", "interpretation", "datum", "trajectory", "frame"]
+        vec![
+            "projected-crs",
+            "vertical-crs",
+            "local-2d-crs",
+            "crs",
+            "feature",
+            "interpretation",
+            "datum",
+            "trajectory",
+            "frame"
+        ]
     );
     // The datum sits in the compound (decision (b) of 24/09, common TRG v2.3
     // §13.25 p. 371), and the trajectory names the same compound.
     let frame = object(&plan, "crs");
     let datum = object(&plan, "datum");
-    assert_eq!(datum.qualified_type, "eml23.ReferencePointInALocalEngineeringCompoundCrs");
+    assert_eq!(
+        datum.qualified_type,
+        "eml23.ReferencePointInALocalEngineeringCompoundCrs"
+    );
     assert_eq!(datum.json["Crs"]["Uuid"], frame.uuid.as_str());
-    assert_eq!(object(&plan, "trajectory").json["Geometry"]["LocalCrs"]["Uuid"], frame.uuid.as_str());
+    assert_eq!(
+        object(&plan, "trajectory").json["Geometry"]["LocalCrs"]["Uuid"],
+        frame.uuid.as_str()
+    );
     // Three arrays: the control points, their parameters, the frame's node MDs.
     assert_eq!(plan.datasets.len(), 3);
     assert!(plan.dropped.is_empty(), "{:?}", plan.dropped);
@@ -287,7 +364,10 @@ fn a_second_run_of_the_same_file_writes_the_same_package() {
     let first = planned(Choices::new().set("project", 2154));
     let second = planned(Choices::new().set("project", 2154));
     let names = |plan: &energyml_build::operation::Plan| {
-        plan.objects.iter().map(|o| (o.role.clone(), o.uuid.clone())).collect::<Vec<_>>()
+        plan.objects
+            .iter()
+            .map(|o| (o.role.clone(), o.uuid.clone()))
+            .collect::<Vec<_>>()
     };
     assert_eq!(names(&first), names(&second));
 }
@@ -305,9 +385,16 @@ fn the_dates_go_where_the_producer_put_them() {
     }
     // The widening is said, not done quietly: a date that gained a time of day
     // nobody stated is a precision the file does not have.
-    assert!(plan.says.iter().any(|note| note.key == "dates-widened"), "{:?}", plan.says);
+    assert!(
+        plan.says.iter().any(|note| note.key == "dates-widened"),
+        "{:?}",
+        plan.says
+    );
     // No `purpose` on this hole, so the file's own description stands.
-    assert_eq!(object(&plan, "feature").json["Citation"]["Description"], "EPOS Borehole");
+    assert_eq!(
+        object(&plan, "feature").json["Citation"]["Description"],
+        "EPOS Borehole"
+    );
 }
 
 #[test]
@@ -322,7 +409,13 @@ fn a_purpose_becomes_the_description_and_pushes_the_blurb_out() {
         r#""purpose":[{"purpose":[{"@title":"EXPLOITATION/GEOTHERMIE/BASSE-ENERGIE","@href":"https://data.geoscience.fr/ncl/FunMaMa/11"}]}],"dateOfDrilling""#,
     );
     let plan = Registry::new()
-        .plan("sigeol-boreholes", &pieces_of(&text), &Choices::new().set("project", 2154), &Identity::derived(), &when())
+        .plan(
+            "sigeol-boreholes",
+            &pieces_of(&text),
+            &Choices::new().set("project", 2154),
+            &Identity::derived(),
+            &when(),
+        )
         .expect("planned");
     assert_eq!(
         object(&plan, "feature").json["Citation"]["Description"],
@@ -336,10 +429,23 @@ fn a_hole_with_no_drilling_date_falls_back_on_the_run_and_is_counted() {
     // package claim they were drilled the day it was written.
     let text = export().replace(r#""dateOfDrilling":{"endPosition":"1965-11-20Z"},"#, "");
     let plan = Registry::new()
-        .plan("sigeol-boreholes", &pieces_of(&text), &Choices::new().set("project", 2154), &Identity::derived(), &when())
+        .plan(
+            "sigeol-boreholes",
+            &pieces_of(&text),
+            &Choices::new().set("project", 2154),
+            &Identity::derived(),
+            &when(),
+        )
         .expect("planned");
-    assert_eq!(object(&plan, "feature").json["Citation"]["Creation"], "2026-09-18T00:00:00Z");
-    let note = plan.says.iter().find(|n| n.key == "no-drilling-date").expect("counted");
+    assert_eq!(
+        object(&plan, "feature").json["Citation"]["Creation"],
+        "2026-09-18T00:00:00Z"
+    );
+    let note = plan
+        .says
+        .iter()
+        .find(|n| n.key == "no-drilling-date")
+        .expect("counted");
     assert!(note.detail.contains('1'), "{}", note.detail);
 }
 
@@ -362,7 +468,10 @@ fn a_repeated_depth_range_makes_one_frame_node_and_not_two() {
     }
     // And the trajectory's control points are those same depths: the file
     // states nothing between them, so a knot between them would be invented.
-    assert_eq!(frame.json["NodeCount"], object(&plan, "trajectory").json["Geometry"]["KnotCount"]);
+    assert_eq!(
+        frame.json["NodeCount"],
+        object(&plan, "trajectory").json["Geometry"]["KnotCount"]
+    );
 }
 
 #[test]
@@ -386,14 +495,21 @@ fn the_head_is_the_wellhead_and_the_elevation_is_the_ground() {
     // confronted with the producer elsewhere — by an inverse written from the
     // EPSG formulas, not by a number copied here.
     let (head_x, head_y) = (values[0], values[1]);
-    assert!(head_x > 100_000.0, "projected, hence in metres and not in degrees: {head_x}");
+    assert!(
+        head_x > 100_000.0,
+        "projected, hence in metres and not in degrees: {head_x}"
+    );
     #[allow(clippy::needless_range_loop)]
     for knot in 0..4 {
         assert_eq!(values[knot * 3], head_x, "every knot is under the head");
         assert_eq!(values[knot * 3 + 1], head_y);
     }
     assert_eq!(&values[2..3], &[38.5], "the first knot is at the ground");
-    assert_eq!(values[11], 38.5 - 9.7, "the last is the deepest measured depth below it");
+    assert_eq!(
+        values[11],
+        38.5 - 9.7,
+        "the last is the deepest measured depth below it"
+    );
 
     // The datum sits at the head, at the ground, and says what it is.
     let datum = object(&plan, "datum");
@@ -419,7 +535,11 @@ fn a_vertical_hole_collared_above_the_zero_is_a_linear_spline_and_its_parameters
     // shows in the canvas.
     let plan = planned(Choices::new().set("project", 2154));
     assert_eq!(object(&plan, "trajectory").json["Geometry"]["LineKindIndex"], 1);
-    assert!(plan.says.iter().any(|note| note.key == "vertical-datum-offset"), "{:?}", plan.says);
+    assert!(
+        plan.says.iter().any(|note| note.key == "vertical-datum-offset"),
+        "{:?}",
+        plan.says
+    );
 
     // **The parameters are the measured depths**, which is what the frame's
     // `NodeMd` indexes into — the same numbers as `MdInterval`, below.
@@ -444,13 +564,19 @@ fn the_trajectory_states_its_md_interval_in_the_files_own_unit() {
     // Read from the intervals, never defaulted: a hole in feet read as metres
     // is a hole three times too short, and it opens cleanly.
     assert_eq!(interval["Uom"], "m");
-    assert!(interval["Datum"]["Uuid"].is_string(), "the interval names the datum it is measured from");
+    assert!(
+        interval["Datum"]["Uuid"].is_string(),
+        "the interval names the datum it is measured from"
+    );
 }
 
 #[test]
 fn the_producers_identifiers_survive_as_aliases_with_their_authority() {
     let plan = planned(Choices::new().set("project", 2154));
-    let aliases = object(&plan, "feature").json["Aliases"].as_array().expect("aliases").clone();
+    let aliases = object(&plan, "feature").json["Aliases"]
+        .as_array()
+        .expect("aliases")
+        .clone();
     let by_identifier = |wanted: &str| -> Value {
         aliases
             .iter()
@@ -460,7 +586,10 @@ fn the_producers_identifiers_survive_as_aliases_with_their_authority() {
     };
     // An alias without its authority resolves to nothing: `BSS000LKCG` means
     // one thing in the BRGM's register and nothing anywhere else.
-    assert_eq!(by_identifier("BSS000LKCG")["IdentifierKind"], "regulatory identifier");
+    assert_eq!(
+        by_identifier("BSS000LKCG")["IdentifierKind"],
+        "regulatory identifier"
+    );
     assert_eq!(by_identifier("BSS000LKCG")["authority"], "BRGM/BSS");
     assert_eq!(by_identifier("01536X0058")["IdentifierKind"], "industry code");
     assert_eq!(
@@ -478,9 +607,14 @@ fn the_producers_identifiers_survive_as_aliases_with_their_authority() {
 #[test]
 fn what_the_export_measures_about_the_hole_is_kept_with_its_unit() {
     let plan = planned(Choices::new().set("project", 2154));
-    let extensions = object(&plan, "feature").json["ExtensionNameValue"].as_array().expect("extensions");
+    let extensions = object(&plan, "feature").json["ExtensionNameValue"]
+        .as_array()
+        .expect("extensions");
     let named = |wanted: &str| {
-        extensions.iter().find(|e| e["Name"] == wanted).unwrap_or_else(|| panic!("no `{wanted}`"))
+        extensions
+            .iter()
+            .find(|e| e["Name"] == wanted)
+            .unwrap_or_else(|| panic!("no `{wanted}`"))
     };
     assert_eq!(named("boreholeLength")["Value"]["_"], "15");
     // The unit travels with the number. A length with no unit is a number.
@@ -509,7 +643,11 @@ fn the_interpretation_says_the_hole_was_drilled_and_points_at_its_feature() {
     assert_eq!(object(&plan, "feature").json["IsWellKnown"], true);
     // Both representations represent the interpretation, not the feature.
     for role in ["trajectory", "frame"] {
-        assert_eq!(object(&plan, role).json["RepresentedObject"]["Uuid"], interpretation.uuid, "{role}");
+        assert_eq!(
+            object(&plan, role).json["RepresentedObject"]["Uuid"],
+            interpretation.uuid,
+            "{role}"
+        );
     }
 }
 
@@ -519,11 +657,25 @@ fn reprojecting_moves_the_head_and_leaves_the_depths_alone() {
     // horizontal system; the head does. A reprojection that changed the MDs
     // would be the bug this separates.
     let plan = planned(Choices::new().set("project", serde_json::json!(2154)));
-    let control = plan.datasets.iter().find(|d| d.path.ends_with("/controlPoints")).expect("points");
-    let energyml_build::operation::Numbers::F64(values) = &control.values else { panic!("not floats") };
+    let control = plan
+        .datasets
+        .iter()
+        .find(|d| d.path.ends_with("/controlPoints"))
+        .expect("points");
+    let energyml_build::operation::Numbers::F64(values) = &control.values else {
+        panic!("not floats")
+    };
     // Paris in metres, not degrees — the diagnosis is the number itself.
-    assert!(values[0] > 600_000.0 && values[0] < 700_000.0, "x = {}", values[0]);
-    assert!(values[1] > 6_800_000.0 && values[1] < 6_900_000.0, "y = {}", values[1]);
+    assert!(
+        values[0] > 600_000.0 && values[0] < 700_000.0,
+        "x = {}",
+        values[0]
+    );
+    assert!(
+        values[1] > 6_800_000.0 && values[1] < 6_900_000.0,
+        "y = {}",
+        values[1]
+    );
     assert_eq!(object(&plan, "trajectory").json["MdInterval"]["MdMax"], 9.7);
     assert_eq!(plan.objects[0].qualified_type, "eml23.ProjectedCrs");
     // Placed under the identity compound, so the numbers above are Lambert-93
@@ -531,7 +683,10 @@ fn reprojecting_moves_the_head_and_leaves_the_depths_alone() {
     let frame = object(&plan, "crs");
     assert_eq!(frame.json["$type"], "eml23.LocalEngineeringCompoundCrs");
     assert_eq!(frame.json["OriginVerticalCoordinate"], 0.0);
-    assert_eq!(object(&plan, "local-2d-crs").json["OriginProjectedCoordinate1"], 0.0);
+    assert_eq!(
+        object(&plan, "local-2d-crs").json["OriginProjectedCoordinate1"],
+        0.0
+    );
 }
 
 // -- what is refused, and by name ---------------------------------------------
@@ -542,7 +697,13 @@ fn a_collection_with_no_borehole_is_refused_naming_what_it_held() {
         {"type":"Feature","id":"x","geometry":{"type":"Point","coordinates":[2.0,48.0]},
          "properties":{"@featureType":"GeologicUnit"}}]}"#;
     let why = Registry::new()
-        .plan("sigeol-boreholes", &pieces_of(text), &Choices::new().set("project", 2154), &Identity::derived(), &when())
+        .plan(
+            "sigeol-boreholes",
+            &pieces_of(text),
+            &Choices::new().set("project", 2154),
+            &Identity::derived(),
+            &when(),
+        )
         .expect_err("refused");
     assert!(format!("{why}").contains("Borehole"), "{why}");
 }
@@ -553,7 +714,13 @@ fn a_hole_with_no_ground_is_set_aside_by_name_and_the_others_go_on() {
     // a Paris-basin hole at sea level, and the package would open cleanly.
     let text = export().replace(r#""elevation":38.5"#, r#""elevation":null"#);
     let why = Registry::new()
-        .plan("sigeol-boreholes", &pieces_of(&text), &Choices::new().set("project", 2154), &Identity::derived(), &when())
+        .plan(
+            "sigeol-boreholes",
+            &pieces_of(&text),
+            &Choices::new().set("project", 2154),
+            &Identity::derived(),
+            &when(),
+        )
         .expect_err("nothing left to write");
     assert!(format!("{why}").contains("set aside"), "{why}");
 }
@@ -566,9 +733,18 @@ fn a_hole_whose_depths_are_not_in_metres_is_set_aside_rather_than_converted() {
     // that decision.
     let text = export().replace(r#""@uom":"m""#, r#""@uom":"ft""#);
     // The replacement must have bitten, or the test would pass on the original.
-    assert!(text.contains(r#""@uom":"ft""#) && !text.contains(r#""@uom":"m""#), "the fixture was not altered");
+    assert!(
+        text.contains(r#""@uom":"ft""#) && !text.contains(r#""@uom":"m""#),
+        "the fixture was not altered"
+    );
     let why = Registry::new()
-        .plan("sigeol-boreholes", &pieces_of(&text), &Choices::new().set("project", 2154), &Identity::derived(), &when())
+        .plan(
+            "sigeol-boreholes",
+            &pieces_of(&text),
+            &Choices::new().set("project", 2154),
+            &Identity::derived(),
+            &when(),
+        )
         .expect_err("nothing left to write");
     assert!(format!("{why}").contains("set aside"), "{why}");
 }
@@ -611,7 +787,11 @@ fn every_object_reads_back_into_its_generated_type() {
     let schemas = Arc::new(energyml_schemas::all());
     let mut store = energyml_build::epc::open(None, "boreholes.epc", schemas).expect("a new package");
     let made = energyml_build::apply::apply_with(&plan, &mut store, &when(), false);
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+    assert!(
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
     // The seven objects, the activity template and the activity.
     assert_eq!(made.written.len(), plan.objects.len() + 2, "{:?}", made.written);
@@ -624,7 +804,9 @@ fn every_object_reads_back_into_its_generated_type() {
         .uri
         .clone();
     let written = energyml_core::json::write_value(store.edit(&uri).expect("it parses"));
-    let aliases = written["Aliases"].as_array().expect("aliases survived the round trip");
+    let aliases = written["Aliases"]
+        .as_array()
+        .expect("aliases survived the round trip");
     assert_eq!(aliases.len(), 3, "{aliases:?}");
     assert_eq!(written["Citation"]["Creation"], "1965-11-20T00:00:00Z");
     assert_eq!(written["Citation"]["LastUpdate"], "2026-09-18T00:00:00Z");

@@ -165,7 +165,10 @@ fn feature(entry: &Value, at: usize) -> Result<Feature, String> {
         "Point" => (Shape::Points, vec![vec![position(coordinates, &name)?]]),
         // One part per position, never one part holding many: two boreholes are
         // two places, and a single part would let a caller join them into a line.
-        "MultiPoint" => (Shape::Points, each(coordinates, &name, |p, n| Ok(vec![position(p, n)?]))?),
+        "MultiPoint" => (
+            Shape::Points,
+            each(coordinates, &name, |p, n| Ok(vec![position(p, n)?]))?,
+        ),
         "LineString" => (Shape::Lines, vec![line(coordinates, &name)?]),
         "MultiLineString" => (Shape::Lines, each(coordinates, &name, line)?),
         // The outer ring only. A hole is a fact about the shape that nothing
@@ -237,7 +240,11 @@ fn position(value: &Value, name: &str) -> Result<Position, String> {
              definition (RFC 7946), and these look like projected metres"
         ));
     }
-    Ok(Position { lon, lat, z: number(2).filter(|v| v.is_finite()) })
+    Ok(Position {
+        lon,
+        lat,
+        z: number(2).filter(|v| v.is_finite()),
+    })
 }
 
 #[cfg(test)]
@@ -508,7 +515,11 @@ impl<'de, 'a, S: FnMut(Feature) -> Flow> serde::de::Visitor<'de> for Document<'a
                     // The legacy member. Read as a whole — it is three fields —
                     // and judged at once.
                     let value: Value = map.next_value()?;
-                    if let Some(name) = value.get("properties").and_then(|p| p.get("name")).and_then(Value::as_str) {
+                    if let Some(name) = value
+                        .get("properties")
+                        .and_then(|p| p.get("name"))
+                        .and_then(Value::as_str)
+                    {
                         let plain = name.rsplit(':').next().unwrap_or(name);
                         if !matches!(plain, "CRS84" | "4326" | "84") {
                             return Err(M::Error::custom(format!(
@@ -516,7 +527,8 @@ impl<'de, 'a, S: FnMut(Feature) -> Flow> serde::de::Visitor<'de> for Document<'a
                                  definition (RFC 7946), and this reader will not guess a \
                                  transformation; reproject the file first{}",
                                 match seen_features {
-                                    true => " — and it says so **after** its features, which \
+                                    true =>
+                                        " — and it says so **after** its features, which \
                                              were already handed over: throw them away",
                                     false => "",
                                 }
@@ -528,7 +540,11 @@ impl<'de, 'a, S: FnMut(Feature) -> Flow> serde::de::Visitor<'de> for Document<'a
                     // `type` may legally come after `features`, so it is checked
                     // once at the end rather than demanded here.
                     seen_features = true;
-                    let seq = Features { wanted: self.wanted, sink: &mut self.sink, out: &mut out };
+                    let seq = Features {
+                        wanted: self.wanted,
+                        sink: &mut self.sink,
+                        out: &mut out,
+                    };
                     map.next_value_seed(seq)?;
                 }
                 "numberMatched" => out.matched = map.next_value::<Value>()?.as_u64(),
@@ -621,7 +637,9 @@ fn project(feature: &mut Feature, keep: Keep<'_>) {
         Keep::All => {}
         Keep::None => feature.properties = Value::Null,
         Keep::Only(names) => {
-            let Some(object) = feature.properties.as_object() else { return };
+            let Some(object) = feature.properties.as_object() else {
+                return;
+            };
             let kept: serde_json::Map<String, Value> = names
                 .iter()
                 .filter_map(|name| object.get(*name).map(|v| ((*name).to_string(), v.clone())))

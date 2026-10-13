@@ -43,11 +43,18 @@ pub fn declaration(operation: &dyn AnyOperation, pieces: &Pieces) -> Value {
 
 /// One operation by name, on the empty bag — `None` when no operation has it.
 pub fn declaration_of(registry: &Registry, name: &str) -> Option<Value> {
-    registry.get(name).map(|operation| declaration(operation, &Pieces::default()))
+    registry
+        .get(name)
+        .map(|operation| declaration(operation, &Pieces::default()))
 }
 
 /// Every operation, on the empty bag, in the registry's order.
 pub fn declarations(registry: &Registry) -> Value {
     let empty = Pieces::default();
-    Value::Array(registry.iter().map(|operation| declaration(operation, &empty)).collect())
+    Value::Array(
+        registry
+            .iter()
+            .map(|operation| declaration(operation, &empty))
+            .collect(),
+    )
 }

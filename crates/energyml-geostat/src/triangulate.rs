@@ -30,7 +30,10 @@
 //! TODO(reference): verify — Delaunay triangulation is delegated to the `spade` crate; cite the underlying references (as documented by that crate) once checked.
 
 use spade::handles::FixedVertexHandle;
-use spade::{ConstrainedDelaunayTriangulation, DelaunayTriangulation, HasPosition, HierarchyHintGenerator, Point2, Triangulation};
+use spade::{
+    ConstrainedDelaunayTriangulation, DelaunayTriangulation, HasPosition, HierarchyHintGenerator, Point2,
+    Triangulation,
+};
 
 /// **Where an insertion starts looking** — a hierarchy of coarser
 /// triangulations, so that locating a point costs `log n`.
@@ -53,7 +56,8 @@ type Hint = HierarchyHintGenerator<f64>;
 pub fn triangulate_xy(points: &[f64]) -> Result<Vec<u32>, String> {
     let count = check_triples(points)?;
 
-    let mut triangulation: DelaunayTriangulation<Point2<f64>, (), (), (), Hint> = DelaunayTriangulation::new();
+    let mut triangulation: DelaunayTriangulation<Point2<f64>, (), (), (), Hint> =
+        DelaunayTriangulation::new();
     // Each triangulation vertex's original index. A duplicate (same x, y)
     // returns the handle of a vertex already there: nothing to push.
     let mut original: Vec<u32> = Vec::with_capacity(count);
@@ -74,9 +78,7 @@ pub fn triangulate_xy(points: &[f64]) -> Result<Vec<u32>, String> {
         }
     }
     if triangles.is_empty() {
-        return Err(format!(
-            "the {count} points are collinear — no triangle exists"
-        ));
+        return Err(format!("the {count} points are collinear — no triangle exists"));
     }
     Ok(triangles)
 }
@@ -127,20 +129,30 @@ pub fn triangulate_xy_constrained(points: &[f64], faults: &[Vec<[f64; 3]>]) -> R
     let count = check_triples(points)?;
     for (at, line) in faults.iter().enumerate() {
         if line.len() < 2 {
-            return Err(format!("fault {at} has {} position(s), a trace needs two", line.len()));
+            return Err(format!(
+                "fault {at} has {} position(s), a trace needs two",
+                line.len()
+            ));
         }
         if let Some(bad) = line.iter().find(|p| !p.iter().all(|c| c.is_finite())) {
-            return Err(format!("fault {at} has a non-finite coordinate ({}, {}, {})", bad[0], bad[1], bad[2]));
+            return Err(format!(
+                "fault {at} has a non-finite coordinate ({}, {}, {})",
+                bad[0], bad[1], bad[2]
+            ));
         }
     }
 
-    let mut cdt: ConstrainedDelaunayTriangulation<Vertex, (), (), (), Hint> = ConstrainedDelaunayTriangulation::new();
+    let mut cdt: ConstrainedDelaunayTriangulation<Vertex, (), (), (), Hint> =
+        ConstrainedDelaunayTriangulation::new();
     let mut duplicates = 0usize;
     for at in 0..count {
         let (x, y, z) = (points[at * 3], points[at * 3 + 1], points[at * 3 + 2]);
         let before = cdt.num_vertices();
-        cdt.insert(Vertex { at: Point2::new(x, y), z })
-            .map_err(|_| format!("point {at} has a non-finite coordinate ({x}, {y})"))?;
+        cdt.insert(Vertex {
+            at: Point2::new(x, y),
+            z,
+        })
+        .map_err(|_| format!("point {at} has a non-finite coordinate ({x}, {y})"))?;
         if cdt.num_vertices() == before {
             duplicates += 1;
         }
@@ -177,14 +189,24 @@ pub fn triangulate_xy_constrained(points: &[f64], faults: &[Vec<[f64; 3]>]) -> R
                 let dx = b[0] - a[0];
                 let dy = b[1] - a[1];
                 let along = dx * dx + dy * dy;
-                let t = if along > 0.0 { ((at.x - a[0]) * dx + (at.y - a[1]) * dy) / along } else { 0.0 };
-                Vertex { at, z: a[2] + t.clamp(0.0, 1.0) * (b[2] - a[2]) }
+                let t = if along > 0.0 {
+                    ((at.x - a[0]) * dx + (at.y - a[1]) * dy) / along
+                } else {
+                    0.0
+                };
+                Vertex {
+                    at,
+                    z: a[2] + t.clamp(0.0, 1.0) * (b[2] - a[2]),
+                }
             });
             constraints += made.len();
         }
     }
 
-    let out: Vec<[f64; 3]> = cdt.vertices().map(|v| [v.position().x, v.position().y, v.data().z]).collect();
+    let out: Vec<[f64; 3]> = cdt
+        .vertices()
+        .map(|v| [v.position().x, v.position().y, v.data().z])
+        .collect();
     let mut triangles = Vec::with_capacity(cdt.num_inner_faces() * 3);
     for face in cdt.inner_faces() {
         for vertex in face.vertices() {
@@ -195,7 +217,13 @@ pub fn triangulate_xy_constrained(points: &[f64], faults: &[Vec<[f64; 3]>]) -> R
         return Err(format!("the {count} points are collinear — no triangle exists"));
     }
     let added = out.len() - cloud;
-    Ok(Triangulated { points: out, triangles, added, duplicates, constraints })
+    Ok(Triangulated {
+        points: out,
+        triangles,
+        added,
+        duplicates,
+        constraints,
+    })
 }
 
 /// The point count, or the two refusals every entry point shares.
@@ -205,7 +233,9 @@ fn check_triples(points: &[f64]) -> Result<usize, String> {
     }
     let count = points.len() / 3;
     if count < 3 {
-        return Err(format!("{count} point(s) — at least three are needed for a triangle"));
+        return Err(format!(
+            "{count} point(s) — at least three are needed for a triangle"
+        ));
     }
     Ok(count)
 }
@@ -216,12 +246,16 @@ mod tests {
 
     /// A square with a sample at each corner and one in the middle.
     fn square() -> Vec<f64> {
-        vec![0.0, 0.0, 10.0, 10.0, 0.0, 20.0, 10.0, 10.0, 30.0, 0.0, 10.0, 40.0, 5.0, 5.0, 25.0]
+        vec![
+            0.0, 0.0, 10.0, 10.0, 0.0, 20.0, 10.0, 10.0, 30.0, 0.0, 10.0, 40.0, 5.0, 5.0, 25.0,
+        ]
     }
 
     /// Whether some triangle edge crosses the open segment `a`–`b`.
     fn an_edge_crosses(made: &Triangulated, a: [f64; 2], b: [f64; 2]) -> bool {
-        let orient = |p: [f64; 2], q: [f64; 2], r: [f64; 2]| (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+        let orient = |p: [f64; 2], q: [f64; 2], r: [f64; 2]| {
+            (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+        };
         let strict = |p: [f64; 2], q: [f64; 2]| {
             let o1 = orient(a, b, p);
             let o2 = orient(a, b, q);
@@ -230,7 +264,10 @@ mod tests {
             o1 * o2 < 0.0 && o3 * o4 < 0.0
         };
         made.triangles.chunks_exact(3).any(|t| {
-            let p = |i: u32| { let v = made.points[i as usize]; [v[0], v[1]] };
+            let p = |i: u32| {
+                let v = made.points[i as usize];
+                [v[0], v[1]]
+            };
             strict(p(t[0]), p(t[1])) || strict(p(t[1]), p(t[2])) || strict(p(t[2]), p(t[0]))
         })
     }
@@ -252,10 +289,17 @@ mod tests {
         // A fault from the bottom edge to the top, off-centre, carrying z.
         let fault = vec![vec![[3.0, -1.0, 0.0], [3.0, 11.0, 0.0]]];
         let made = triangulate_xy_constrained(&square(), &fault).unwrap();
-        assert!(!an_edge_crosses(&made, [3.0, -1.0], [3.0, 11.0]), "an edge crosses the fault");
+        assert!(
+            !an_edge_crosses(&made, [3.0, -1.0], [3.0, 11.0]),
+            "an edge crosses the fault"
+        );
         // The two trace vertices were added, with the trace's own z.
         assert_eq!(made.added, 2);
-        assert!(made.points.iter().any(|p| p[0] == 3.0 && p[1] == -1.0 && p[2] == 0.0));
+        assert!(
+            made.points
+                .iter()
+                .any(|p| p[0] == 3.0 && p[1] == -1.0 && p[2] == 0.0)
+        );
         assert!(made.constraints >= 1);
         // And the plain triangulation, on the same cloud, does cross it —
         // otherwise this test would prove nothing.
@@ -286,7 +330,11 @@ mod tests {
         let made = triangulate_xy_constrained(&cloud, &faults).unwrap();
         // 4 trace vertices + 1 crossing.
         assert_eq!(made.added, 5);
-        let at = made.points.iter().find(|p| (p[0] - 5.0).abs() < 1e-9 && (p[1] - 5.0).abs() < 1e-9).expect("the crossing");
+        let at = made
+            .points
+            .iter()
+            .find(|p| (p[0] - 5.0).abs() < 1e-9 && (p[1] - 5.0).abs() < 1e-9)
+            .expect("the crossing");
         // Along the second trace, (5, 5) is halfway from z = 0 to z = 12.
         assert!((at[2] - 6.0).abs() < 1e-9, "z {}", at[2]);
     }
@@ -295,7 +343,8 @@ mod tests {
     fn a_short_or_nan_fault_is_refused_by_name() {
         let why = triangulate_xy_constrained(&square(), &[vec![[1.0, 1.0, 1.0]]]).unwrap_err();
         assert!(why.contains("fault 0"), "{why}");
-        let why = triangulate_xy_constrained(&square(), &[vec![[0.0, 0.0, 0.0], [f64::NAN, 1.0, 0.0]]]).unwrap_err();
+        let why = triangulate_xy_constrained(&square(), &[vec![[0.0, 0.0, 0.0], [f64::NAN, 1.0, 0.0]]])
+            .unwrap_err();
         assert!(why.contains("non-finite"), "{why}");
     }
 

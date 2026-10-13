@@ -70,7 +70,10 @@ pub trait FileSource: ObjectSource {
 
 impl FileSource for EpcStore {
     fn media_links(&self) -> Vec<(String, String)> {
-        EpcStore::media_links(self).into_iter().map(|link| (link.uuid, link.part)).collect()
+        EpcStore::media_links(self)
+            .into_iter()
+            .map(|link| (link.uuid, link.part))
+            .collect()
     }
 
     fn files(&self) -> Vec<(String, Option<u64>, Option<String>)> {
@@ -279,7 +282,11 @@ pub enum Fetched {
 
 /// The pieces attached to each of `uuids`, in order — a batch, so that what
 /// belongs to the package is read once.
-pub fn attachments_of<S: AsRef<str>>(store: &dyn FileSource, index: &PackageIndex, uuids: &[S]) -> Vec<Listing> {
+pub fn attachments_of<S: AsRef<str>>(
+    store: &dyn FileSource,
+    index: &PackageIndex,
+    uuids: &[S],
+) -> Vec<Listing> {
     attachments_of_with(&Files::read(store), store, index, uuids)
 }
 
@@ -295,7 +302,10 @@ pub fn attachments_of_with<S: AsRef<str>>(
     let reader = Reader::new(store, files, index);
     let has = |uuid: &str| reader.carries(uuid).then_some(());
     let walker = Walker::new(index, store.objects(), &has);
-    uuids.iter().map(|asked| list_one(&reader, &walker, index, asked.as_ref()).0).collect()
+    uuids
+        .iter()
+        .map(|asked| list_one(&reader, &walker, index, asked.as_ref()).0)
+        .collect()
 }
 
 /// One object's listing, and **every object it was read from** (lowercase
@@ -314,7 +324,14 @@ fn list_one(
     if !own.is_empty() {
         let mut read: HashSet<String> = index.attachments_naming(&uuid).into_iter().collect();
         read.insert(uuid.clone());
-        return (Listing { uuid, pieces: own, notes: Vec::new() }, read);
+        return (
+            Listing {
+                uuid,
+                pieces: own,
+                notes: Vec::new(),
+            },
+            read,
+        );
     }
     let (walked, mut read) = walker.resolve_traced(&uuid);
     read.insert(uuid.clone());
@@ -339,7 +356,14 @@ fn list_one(
         read.insert(carrier.clone());
         pieces = reader.pieces_of(&carrier, &provenance);
     }
-    (Listing { uuid, pieces, notes: walked.notes }, read)
+    (
+        Listing {
+            uuid,
+            pieces,
+            notes: walked.notes,
+        },
+        read,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -431,7 +455,9 @@ impl Cache {
             }
         }
         for start in &doomed {
-            let Some((_, read)) = self.held.remove(start) else { continue };
+            let Some((_, read)) = self.held.remove(start) else {
+                continue;
+            };
             self.stats.listings_dropped += 1;
             for uuid in read {
                 if let Some(starts) = self.touching.get_mut(&uuid) {
@@ -462,7 +488,12 @@ impl Cache {
             self.files = Some((files_stamp, Files::read(store)));
             self.stats.files_read += 1;
         }
-        let Cache { files, held, touching, stats } = self;
+        let Cache {
+            files,
+            held,
+            touching,
+            stats,
+        } = self;
         let (_, files) = files.as_ref().expect("the files were just read");
         let missing: Vec<String> = {
             let mut seen: HashSet<String> = HashSet::new();
@@ -496,32 +527,60 @@ impl Cache {
 pub fn attachment_bytes(store: &dyn FileSource, key: &str) -> Result<Fetched, String> {
     if let Some(part) = key.strip_prefix("part:") {
         let bytes = store.read_part(part).map_err(|why| format!("`{part}`: {why}"))?;
-        let media_type = store.files().into_iter().find(|(name, _, _)| name == part).and_then(|(_, _, kind)| kind);
+        let media_type = store
+            .files()
+            .into_iter()
+            .find(|(name, _, _)| name == part)
+            .and_then(|(_, _, kind)| kind);
         let file_name = part.rsplit('/').next().map(str::to_string);
-        return Ok(Fetched::Bytes { bytes, media_type, file_name });
+        return Ok(Fetched::Bytes {
+            bytes,
+            media_type,
+            file_name,
+        });
     }
     let Some(uuid) = key.strip_prefix("object:") else {
-        return Err(format!("`{key}` is not a piece key: expected `part:<name>` or `object:<uri>`"));
+        return Err(format!(
+            "`{key}` is not a piece key: expected `part:<name>` or `object:<uri>`"
+        ));
     };
     // The uri names the version; a bare uuid (an older key) reads as before.
-    let object = store.object_at(uuid).ok_or_else(|| format!("the package holds no attachment `{uuid}`"))?;
+    let object = store
+        .object_at(uuid)
+        .ok_or_else(|| format!("the package holds no attachment `{uuid}`"))?;
     let raw = RawAttachment::of(object.as_reflect());
     if !raw.content.trim().is_empty() {
-        let bytes = decode_base64(&raw.content).map_err(|why| format!("`Content` of `{uuid}` is not base 64: {why}"))?;
-        return Ok(Fetched::Bytes { bytes, media_type: raw.file_type, file_name: raw.file_name });
+        let bytes = decode_base64(&raw.content)
+            .map_err(|why| format!("`Content` of `{uuid}` is not base 64: {why}"))?;
+        return Ok(Fetched::Bytes {
+            bytes,
+            media_type: raw.file_type,
+            file_name: raw.file_name,
+        });
     }
     match raw.content_uri.as_deref().map(classify) {
-        Some(Address::External(url)) => Ok(Fetched::External { url, media_type: raw.file_type }),
+        Some(Address::External(url)) => Ok(Fetched::External {
+            url,
+            media_type: raw.file_type,
+        }),
         Some(Address::Part(part)) => {
-            let bytes = store
-                .read_part(&part)
-                .map_err(|_| format!("`ContentUri` of `{uuid}` names the part `{part}`, and the package holds no such part"))?;
-            Ok(Fetched::Bytes { bytes, media_type: raw.file_type, file_name: raw.file_name })
+            let bytes = store.read_part(&part).map_err(|_| {
+                format!(
+                    "`ContentUri` of `{uuid}` names the part `{part}`, and the package holds no such part"
+                )
+            })?;
+            Ok(Fetched::Bytes {
+                bytes,
+                media_type: raw.file_type,
+                file_name: raw.file_name,
+            })
         }
         Some(Address::Unsupported(scheme)) => Err(format!(
             "`ContentUri` of `{uuid}` has the scheme `{scheme}`: only http and https addresses are read, and by a front end, on request"
         )),
-        None => Err(format!("`{uuid}` has no content and no `ContentUri`: an attachment with nothing in it")),
+        None => Err(format!(
+            "`{uuid}` has no content and no `ContentUri`: an attachment with nothing in it"
+        )),
     }
 }
 
@@ -530,11 +589,18 @@ pub fn attachment_bytes(store: &dyn FileSource, key: &str) -> Result<Fetched, St
 // ---------------------------------------------------------------------------
 
 fn title_of(index: &PackageIndex, uuid: &str) -> Option<String> {
-    index.node(uuid).and_then(|node| node.title.as_ref().map(|title| title.to_string()))
+    index
+        .node(uuid)
+        .and_then(|node| node.title.as_ref().map(|title| title.to_string()))
 }
 
 fn self_provenance(index: &PackageIndex, uuid: &str) -> Provenance {
-    Provenance { kind: "self", carrier: uuid.to_string(), carrier_title: title_of(index, uuid), path: Vec::new() }
+    Provenance {
+        kind: "self",
+        carrier: uuid.to_string(),
+        carrier_title: title_of(index, uuid),
+        path: Vec::new(),
+    }
 }
 
 /// `collection` when any step is a membership — the carrier is then the member
@@ -578,7 +644,11 @@ impl Files {
         for (uuid, part) in store.media_links() {
             parts_of.entry(uuid).or_default().push(part);
         }
-        let parts = store.files().into_iter().map(|(part, size, kind)| (part, (size, kind))).collect();
+        let parts = store
+            .files()
+            .into_iter()
+            .map(|(part, size, kind)| (part, (size, kind)))
+            .collect();
         Files { parts_of, parts }
     }
 }
@@ -670,21 +740,35 @@ impl<'a> Reader<'a> {
                         _ => {}
                     }
                 }
-                (Form::Inline, Location::Inline, inline.as_ref().map(|bytes| bytes.len() as u64))
+                (
+                    Form::Inline,
+                    Location::Inline,
+                    inline.as_ref().map(|bytes| bytes.len() as u64),
+                )
             }
             (Some(Address::Part(part)), false) => {
                 let held = self.files.parts.get(part);
                 if held.is_none() {
-                    problems.push(format!("`ContentUri` names the part `{part}` and the package holds no such part"));
+                    problems.push(format!(
+                        "`ContentUri` names the part `{part}` and the package holds no such part"
+                    ));
                 }
-                (Form::PartAddress, Location::Part(part.clone()), held.and_then(|(size, _)| *size))
+                (
+                    Form::PartAddress,
+                    Location::Part(part.clone()),
+                    held.and_then(|(size, _)| *size),
+                )
             }
             (Some(Address::External(url)), false) => (Form::External, Location::Address(url.clone()), None),
             (Some(Address::Unsupported(scheme)), false) => {
                 problems.push(format!(
                     "`ContentUri` has the scheme `{scheme}`: only http and https addresses are read, and on request"
                 ));
-                (Form::External, Location::Address(raw.content_uri.clone().unwrap_or_default()), None)
+                (
+                    Form::External,
+                    Location::Address(raw.content_uri.clone().unwrap_or_default()),
+                    None,
+                )
             }
             (None, false) => {
                 problems.push("attachment with no content and no `ContentUri`: an empty file".to_string());
@@ -733,10 +817,12 @@ impl RawAttachment {
         let md = match object.field("Md") {
             Some(FieldValue::Object(md)) => match md.field("MeasuredDepth") {
                 Some(FieldValue::Object(measure)) => {
-                    let value = ["Value", "value"].iter().find_map(|name| match measure.field(name) {
-                        Some(FieldValue::Scalar(scalar)) => scalar.as_f64(),
-                        _ => None,
-                    });
+                    let value = ["Value", "value"]
+                        .iter()
+                        .find_map(|name| match measure.field(name) {
+                            Some(FieldValue::Scalar(scalar)) => scalar.as_f64(),
+                            _ => None,
+                        });
                     let uom = ["uom", "Uom"].iter().find_map(|name| match measure.field(name) {
                         Some(FieldValue::Scalar(scalar)) => Some(scalar.to_string()),
                         _ => None,
@@ -779,7 +865,9 @@ fn classify(uri: &str) -> Address {
         let scheme = &uri[..colon];
         if scheme.len() >= 2
             && scheme.chars().next().is_some_and(|c| c.is_ascii_alphabetic())
-            && scheme.chars().all(|c| c.is_ascii_alphanumeric() || "+.-".contains(c))
+            && scheme
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || "+.-".contains(c))
         {
             return Address::Unsupported(scheme.to_string());
         }
@@ -805,8 +893,16 @@ pub fn encode_base64(bytes: &[u8]) -> String {
             | u32::from(*chunk.get(2).unwrap_or(&0));
         out.push(ALPHABET[(n >> 18) as usize & 63] as char);
         out.push(ALPHABET[(n >> 12) as usize & 63] as char);
-        out.push(if chunk.len() > 1 { ALPHABET[(n >> 6) as usize & 63] as char } else { '=' });
-        out.push(if chunk.len() > 2 { ALPHABET[n as usize & 63] as char } else { '=' });
+        out.push(if chunk.len() > 1 {
+            ALPHABET[(n >> 6) as usize & 63] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            ALPHABET[n as usize & 63] as char
+        } else {
+            '='
+        });
     }
     out
 }
@@ -839,7 +935,10 @@ pub fn decode_base64(text: &str) -> Result<Vec<u8>, String> {
     }
     let mut out = Vec::with_capacity(sextets.len() * 3 / 4);
     for group in sextets.chunks(4) {
-        let n = group.iter().enumerate().fold(0u32, |n, (at, v)| n | (u32::from(*v) << (18 - 6 * at)));
+        let n = group
+            .iter()
+            .enumerate()
+            .fold(0u32, |n, (at, v)| n | (u32::from(*v) << (18 - 6 * at)));
         out.push((n >> 16) as u8);
         if group.len() > 2 {
             out.push((n >> 8) as u8);

@@ -31,7 +31,10 @@ const FEATURE: &str = "3c9d1e2f-4a5b-4c6d-8e7f-9a0b1c2d3e4f";
 const README: &[u8] = b"# Lutetia\n\nWhat is real, what is invented.\n";
 
 fn when() -> When {
-    When { creation: "2026-09-25T00:00:00Z".to_string(), originator: "tests/media_parts.rs".to_string() }
+    When {
+        creation: "2026-09-25T00:00:00Z".to_string(),
+        originator: "tests/media_parts.rs".to_string(),
+    }
 }
 
 /// A PDF header and every byte value: not text, in any encoding.
@@ -48,7 +51,8 @@ fn feature_ref() -> Ref {
 /// A package holding the feature the file will show.
 fn store() -> EpcStore {
     let registry = Arc::new(energyml_schemas::all());
-    let mut store = energyml_build::epc::open(None, "media.epc", Arc::clone(&registry)).expect("an empty package");
+    let mut store =
+        energyml_build::epc::open(None, "media.epc", Arc::clone(&registry)).expect("an empty package");
     let feature = json!({
         "$type": "resqml22.BoundaryFeature",
         "uuid": FEATURE,
@@ -56,7 +60,8 @@ fn store() -> EpcStore {
         "Citation": { "$type": "eml23.Citation", "Title": "the feature shown", "Originator": "tests", "Creation": "2026-09-25T00:00:00Z" },
         "IsWellKnown": false,
     });
-    let document = energyml_core::json::read_string(&feature.to_string(), &registry).expect("the feature reads");
+    let document =
+        energyml_core::json::read_string(&feature.to_string(), &registry).expect("the feature reads");
     store.put(document.root).expect("it goes in");
     store
 }
@@ -65,16 +70,32 @@ fn bag(bytes: &[u8], declared: Option<&str>) -> Pieces {
     Pieces::empty()
         .with(
             "file",
-            Source::Document { name: "README.md".to_string(), content_type: declared.map(str::to_string), bytes: bytes.to_vec() },
+            Source::Document {
+                name: "README.md".to_string(),
+                content_type: declared.map(str::to_string),
+                bytes: bytes.to_vec(),
+            },
         )
-        .with("shows", Source::Object(Known { reference: Some(feature_ref()), ..Default::default() }))
+        .with(
+            "shows",
+            Source::Object(Known {
+                reference: Some(feature_ref()),
+                ..Default::default()
+            }),
+        )
 }
 
 fn saved_and_reopened(store: &EpcStore) -> EpcStore {
     let mut out = Cursor::new(Vec::new());
-    store.write_to(&mut out, &SaveOptions::default()).expect("the package writes");
-    EpcStore::from_reader(Box::new(Cursor::new(out.into_inner())), "again.epc", Arc::new(energyml_schemas::all()))
-        .expect("it reads back")
+    store
+        .write_to(&mut out, &SaveOptions::default())
+        .expect("the package writes");
+    EpcStore::from_reader(
+        Box::new(Cursor::new(out.into_inner())),
+        "again.epc",
+        Arc::new(energyml_schemas::all()),
+    )
+    .expect("it reads back")
 }
 
 /// The archive's own bytes for a part, as text.
@@ -87,13 +108,19 @@ fn assert_related(store: &EpcStore, media: &str) {
     let object = store.find_by_uuid(FEATURE).expect("the feature").locator.clone();
     let forward = raw(store, &format!("_rels/{object}.rels"));
     assert!(
-        forward.lines().any(|line| line.contains(&format!("Type=\"{BASE}destinationMedia\"")) && line.contains(&format!("Target=\"{media}\""))),
+        forward
+            .lines()
+            .any(|line| line.contains(&format!("Type=\"{BASE}destinationMedia\""))
+                && line.contains(&format!("Target=\"{media}\""))),
         "{forward}"
     );
     let (folder, file) = media.rsplit_once('/').expect("in a folder");
     let backward = raw(store, &format!("{folder}/_rels/{file}.rels"));
     assert!(
-        backward.lines().any(|line| line.contains(&format!("Type=\"{BASE}sourceMedia\"")) && line.contains(&format!("Target=\"../{object}\""))),
+        backward
+            .lines()
+            .any(|line| line.contains(&format!("Type=\"{BASE}sourceMedia\""))
+                && line.contains(&format!("Target=\"../{object}\""))),
         "{backward}"
     );
 }
@@ -101,12 +128,26 @@ fn assert_related(store: &EpcStore, media: &str) {
 #[test]
 fn a_plan_carries_the_file_its_type_and_what_it_shows_and_no_object() {
     let plan = Registry::new()
-        .plan("media", &bag(README, None), &Choices::new().set("contentType", "text/markdown"), &Identity::derived(), &when())
+        .plan(
+            "media",
+            &bag(README, None),
+            &Choices::new().set("contentType", "text/markdown"),
+            &Identity::derived(),
+            &when(),
+        )
         .unwrap_or_else(|e| panic!("{e}"));
     assert!(plan.objects.is_empty(), "a file is not an object");
-    assert!(!plan.is_empty(), "a plan that carries a file has something to write");
-    let [media] = plan.media.as_slice() else { panic!("one file, got {:?}", plan.media) };
-    assert_eq!(media.path, "media/README.md", "the part is named after the file, under `media/` (EPC §3.2)");
+    assert!(
+        !plan.is_empty(),
+        "a plan that carries a file has something to write"
+    );
+    let [media] = plan.media.as_slice() else {
+        panic!("one file, got {:?}", plan.media)
+    };
+    assert_eq!(
+        media.path, "media/README.md",
+        "the part is named after the file, under `media/` (EPC §3.2)"
+    );
     assert_eq!(media.content_type, "text/markdown");
     assert_eq!(media.bytes, README);
     assert_eq!(media.related_to, [FEATURE]);
@@ -128,16 +169,36 @@ fn what_would_be_guessed_or_forbidden_is_refused_on_its_slot() {
     };
     // A file from a disk declares no type, and its name is not one.
     let none = refused(&bag(README, None), Choices::new());
-    assert!(none.iter().any(|(slot, why)| slot.as_deref() == Some("contentType") && why.contains("never guessed")), "{none:?}");
+    assert!(
+        none.iter()
+            .any(|(slot, why)| slot.as_deref() == Some("contentType") && why.contains("never guessed")),
+        "{none:?}"
+    );
     // Not a media type.
     let bad = refused(&bag(README, None), Choices::new().set("contentType", "markdown"));
-    assert!(bad.iter().any(|(slot, _)| slot.as_deref() == Some("contentType")), "{bad:?}");
+    assert!(
+        bad.iter().any(|(slot, _)| slot.as_deref() == Some("contentType")),
+        "{bad:?}"
+    );
     // A name the package keeps for itself (EPC §2.2.2 p. 9).
-    let rels = refused(&bag(README, Some("text/markdown")), Choices::new().set("path", "media/_rels/x.md"));
-    assert!(rels.iter().any(|(slot, why)| slot.as_deref() == Some("path") && why.contains("_rels")), "{rels:?}");
+    let rels = refused(
+        &bag(README, Some("text/markdown")),
+        Choices::new().set("path", "media/_rels/x.md"),
+    );
+    assert!(
+        rels.iter()
+            .any(|(slot, why)| slot.as_deref() == Some("path") && why.contains("_rels")),
+        "{rels:?}"
+    );
     // What the server declared is taken when nothing is said.
     let declared = registry
-        .plan("media", &bag(README, Some("text/markdown")), &Choices::new(), &Identity::derived(), &when())
+        .plan(
+            "media",
+            &bag(README, Some("text/markdown")),
+            &Choices::new(),
+            &Identity::derived(),
+            &when(),
+        )
         .unwrap_or_else(|e| panic!("{e}"));
     assert_eq!(declared.media[0].content_type, "text/markdown");
 }
@@ -149,26 +210,42 @@ fn apply_writes_the_part_and_both_relations_and_a_save_keeps_them() {
         .plan(
             "media",
             &bag(&pdf(), None),
-            &Choices::new().set("contentType", "application/pdf").set("path", "media/fiche-GTH-1.pdf"),
+            &Choices::new()
+                .set("contentType", "application/pdf")
+                .set("path", "media/fiche-GTH-1.pdf"),
             &Identity::derived(),
             &when(),
         )
         .unwrap_or_else(|e| panic!("{e}"));
     let made = energyml_build::apply::apply(&plan, &mut store, &when());
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
+    assert!(
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
     assert_eq!(made.media, ["media/fiche-GTH-1.pdf"]);
     assert!(made.activity.is_some(), "the file's activity is written");
 
     let again = saved_and_reopened(&store);
-    assert_eq!(again.read_attachment("media/fiche-GTH-1.pdf").expect("the part"), pdf(), "the bytes, exactly");
+    assert_eq!(
+        again.read_attachment("media/fiche-GTH-1.pdf").expect("the part"),
+        pdf(),
+        "the bytes, exactly"
+    );
     let index = raw(&again, "[Content_Types].xml");
     assert!(
-        index.lines().any(|line| line.contains("PartName=\"/media/fiche-GTH-1.pdf\"") && line.contains("ContentType=\"application/pdf\"")),
+        index
+            .lines()
+            .any(|line| line.contains("PartName=\"/media/fiche-GTH-1.pdf\"")
+                && line.contains("ContentType=\"application/pdf\"")),
         "{index}"
     );
     assert_related(&again, "media/fiche-GTH-1.pdf");
-    assert_eq!(again.media_of(FEATURE).expect("a uuid"), ["media/fiche-GTH-1.pdf"]);
+    assert_eq!(
+        again.media_of(FEATURE).expect("a uuid"),
+        ["media/fiche-GTH-1.pdf"]
+    );
 }
 
 #[test]
@@ -177,11 +254,25 @@ fn a_part_the_store_refuses_is_named_by_apply_never_skipped() {
     // relation cannot, and `apply` says so.
     let mut store = energyml_build::epc::open(None, "empty.epc", Arc::new(energyml_schemas::all())).unwrap();
     let plan = Registry::new()
-        .plan("media", &bag(README, Some("text/markdown")), &Choices::new(), &Identity::derived(), &when())
+        .plan(
+            "media",
+            &bag(README, Some("text/markdown")),
+            &Choices::new(),
+            &Identity::derived(),
+            &when(),
+        )
         .unwrap();
     let made = energyml_build::apply::apply(&plan, &mut store, &when());
-    assert!(made.invalid.is_empty(), "objects written against their schema: {:#?}", made.invalid);
-    assert!(made.refused.iter().any(|why| why.contains(FEATURE)), "{:?}", made.refused);
+    assert!(
+        made.invalid.is_empty(),
+        "objects written against their schema: {:#?}",
+        made.invalid
+    );
+    assert!(
+        made.refused.iter().any(|why| why.contains(FEATURE)),
+        "{:?}",
+        made.refused
+    );
 }
 
 /// A recipe's files, from memory. `text` for what is text; `bytes` for all.
@@ -190,7 +281,9 @@ struct Files;
 impl Reader for Files {
     fn text(&mut self, source: &Where) -> Result<(String, Option<String>), String> {
         let (bytes, declared) = self.bytes(source)?;
-        String::from_utf8(bytes).map(|text| (text, declared)).map_err(|_| format!("{} is not text", source.as_str()))
+        String::from_utf8(bytes)
+            .map(|text| (text, declared))
+            .map_err(|_| format!("{} is not text", source.as_str()))
     }
     fn bytes(&mut self, source: &Where) -> Result<(Vec<u8>, Option<String>), String> {
         let path = source.as_str().replace('\\', "/");
@@ -240,8 +333,15 @@ entrees = [ { creneau = "file", fichier = "media/fiche-GTH-1.pdf" } ]
 fn a_recipe_step_carries_a_file_as_bytes_and_relates_it() {
     let recipe = Recipe::parse(RECIPE).expect("the recipe reads");
     let mut store = energyml_build::epc::open(None, "recipe.epc", Arc::new(energyml_schemas::all())).unwrap();
-    let played = recipe::play(&recipe, Path::new("."), &Registry::new(), &mut store, &mut Files, Mode::Write)
-        .unwrap_or_else(|stop| panic!("{stop}"));
+    let played = recipe::play(
+        &recipe,
+        Path::new("."),
+        &Registry::new(),
+        &mut store,
+        &mut Files,
+        Mode::Write,
+    )
+    .unwrap_or_else(|stop| panic!("{stop}"));
     assert_eq!(played.steps.len(), 3);
 
     let compound = store
@@ -251,11 +351,26 @@ fn a_recipe_step_carries_a_file_as_bytes_and_relates_it() {
         .expect("the first step wrote a compound");
     let again = saved_and_reopened(&store);
     assert_eq!(again.read_attachment("media/README.md").unwrap(), README);
-    assert_eq!(again.read_attachment("media/fiche-GTH-1.pdf").unwrap(), pdf(), "a binary file crossed the recipe intact");
+    assert_eq!(
+        again.read_attachment("media/fiche-GTH-1.pdf").unwrap(),
+        pdf(),
+        "a binary file crossed the recipe intact"
+    );
     assert_eq!(again.media_of(&compound.uuid).unwrap(), ["media/README.md"]);
     // The PDF shows nothing, and is still a typed part of the package.
-    assert!(again.media_links().iter().all(|link| link.part != "media/fiche-GTH-1.pdf"));
+    assert!(
+        again
+            .media_links()
+            .iter()
+            .all(|link| link.part != "media/fiche-GTH-1.pdf")
+    );
     let index = raw(&again, "[Content_Types].xml");
-    assert!(index.contains("PartName=\"/media/fiche-GTH-1.pdf\" ContentType=\"application/pdf\""), "{index}");
-    assert!(index.contains("PartName=\"/media/README.md\" ContentType=\"text/markdown\""), "{index}");
+    assert!(
+        index.contains("PartName=\"/media/fiche-GTH-1.pdf\" ContentType=\"application/pdf\""),
+        "{index}"
+    );
+    assert!(
+        index.contains("PartName=\"/media/README.md\" ContentType=\"text/markdown\""),
+        "{index}"
+    );
 }

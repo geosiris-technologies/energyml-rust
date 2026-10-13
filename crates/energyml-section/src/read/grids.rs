@@ -83,7 +83,10 @@ impl Grid {
     /// The cells of a patch read by `energyml_geometry` and placed in the
     /// scene. A patch that is not made of hexahedra is refused by name.
     pub fn from_patch(patch: &Patch) -> Result<Grid, String> {
-        let Topology::Hexahedra { cells, dimensions, .. } = &patch.topology else {
+        let Topology::Hexahedra {
+            cells, dimensions, ..
+        } = &patch.topology
+        else {
             return Err("the grid did not read as hexahedra".to_string());
         };
         let [ni, nj, nk] = *dimensions;
@@ -95,7 +98,9 @@ impl Grid {
         for (position, corners) in cells.iter().enumerate() {
             // The cell's number in the file, never its position: a grid with a
             // hole has dropped cells, and a position is then not a cell.
-            let Some(number) = patch.topology.cell_at(position) else { continue };
+            let Some(number) = patch.topology.cell_at(position) else {
+                continue;
+            };
             let number = number as usize;
             let (layer, column) = (number / per_layer, number % per_layer);
             let at: Vec<[f64; 3]> = corners.iter().map(|c| patch.points[*c as usize]).collect();
@@ -104,7 +109,12 @@ impl Grid {
             }
             let mut bbox = [f64::INFINITY, f64::INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY];
             for p in &at {
-                bbox = [bbox[0].min(p[0]), bbox[1].min(p[1]), bbox[2].max(p[0]), bbox[3].max(p[1])];
+                bbox = [
+                    bbox[0].min(p[0]),
+                    bbox[1].min(p[1]),
+                    bbox[2].max(p[0]),
+                    bbox[3].max(p[1]),
+                ];
             }
             out.push(Cell {
                 corners: *corners,
@@ -117,7 +127,10 @@ impl Grid {
         if out.is_empty() {
             return Err("the grid has no defined cell".to_string());
         }
-        Ok(Grid { points: patch.points.clone(), cells: out })
+        Ok(Grid {
+            points: patch.points.clone(),
+            cells: out,
+        })
     }
 
     /// The grid cut along every section; a section it does not meet has no entry.
@@ -127,7 +140,10 @@ impl Grid {
 
     fn cut_along(&self, section: &SectionTrace) -> Option<SurfaceCut> {
         let trace = &section.trace;
-        let length: f64 = trace.windows(2).map(|p| (p[1][0] - p[0][0]).hypot(p[1][1] - p[0][1])).sum();
+        let length: f64 = trace
+            .windows(2)
+            .map(|p| (p[1][0] - p[0][0]).hypot(p[1][1] - p[0][1]))
+            .sum();
         // What "the same place" is: a millimetre in a kilometre, as a pair of
         // neighbouring cells computes the same point on their shared edge in
         // two orders.
@@ -148,7 +164,10 @@ impl Grid {
         if cut_cells.is_empty() {
             return None;
         }
-        let z_max = cut_cells.iter().flat_map(|c| c.top.iter().chain(&c.bottom)).fold(1.0f64, |m, p| m.max(p[1].abs()));
+        let z_max = cut_cells
+            .iter()
+            .flat_map(|c| c.top.iter().chain(&c.bottom))
+            .fold(1.0f64, |m, p| m.max(p[1].abs()));
         let tol_z = 1e-6 * z_max;
 
         // Columns, as the section meets them: a column the trace leaves and
@@ -170,7 +189,10 @@ impl Grid {
                 } else {
                     reach = reach.max(to);
                 }
-                stretches.last_mut().expect("a stretch was just pushed").push(done);
+                stretches
+                    .last_mut()
+                    .expect("a stretch was just pushed")
+                    .push(done);
             }
             for stretch in stretches {
                 pieces.push(Piece::of(stretch, tol_z));
@@ -187,7 +209,10 @@ impl Grid {
         let mut runs: Vec<Run> = Vec::new();
         for piece in &pieces {
             for run in &piece.runs {
-                let joined = open.get(&run.key).copied().filter(|at| runs[*at].meets(run, tol_s, tol_z));
+                let joined = open
+                    .get(&run.key)
+                    .copied()
+                    .filter(|at| runs[*at].meets(run, tol_s, tol_z));
                 match joined {
                     Some(at) => runs[at].extend(run),
                     None => {
@@ -205,7 +230,8 @@ impl Grid {
             }
         }
 
-        let worth = |spans: Vec<Vec<P>>| -> Vec<Vec<P>> { spans.into_iter().filter(|s| s.len() >= 2).collect() };
+        let worth =
+            |spans: Vec<Vec<P>>| -> Vec<Vec<P>> { spans.into_iter().filter(|s| s.len() >= 2).collect() };
         let mut notes = Vec::new();
         if clipped > 0 {
             notes.push(format!(
@@ -215,7 +241,12 @@ impl Grid {
         }
         Some(SurfaceCut {
             section: section.key,
-            shape: CutShape::Envelope { top: worth(top), bottom: worth(bottom), fills, faults },
+            shape: CutShape::Envelope {
+                top: worth(top),
+                bottom: worth(bottom),
+                fills,
+                faults,
+            },
             notes,
             sources: Vec::new(),
         })
@@ -263,9 +294,17 @@ struct CellCut {
 
 impl CellCut {
     fn s_range(&self) -> (f64, f64) {
-        let ends = [self.top.first(), self.top.last(), self.bottom.first(), self.bottom.last()];
+        let ends = [
+            self.top.first(),
+            self.top.last(),
+            self.bottom.first(),
+            self.bottom.last(),
+        ];
         let s = ends.iter().flatten().map(|p| p[0]);
-        (s.clone().fold(f64::INFINITY, f64::min), s.fold(f64::NEG_INFINITY, f64::max))
+        (
+            s.clone().fold(f64::INFINITY, f64::min),
+            s.fold(f64::NEG_INFINITY, f64::max),
+        )
     }
 }
 
@@ -298,13 +337,21 @@ impl Piece {
                 run.lower = cell.bottom.clone();
                 run.key = (run.key.0.min(cell.layer), run.key.1.max(cell.layer));
             } else {
-                runs.push(Run { key: (cell.layer, cell.layer), upper: cell.top.clone(), lower: cell.bottom.clone() });
+                runs.push(Run {
+                    key: (cell.layer, cell.layer),
+                    upper: cell.top.clone(),
+                    lower: cell.bottom.clone(),
+                });
             }
             last = Some(cell);
         }
         let highest = cells.first().expect("a stretch has a cell");
         let lowest = cells.last().expect("a stretch has a cell");
-        Piece { top: highest.top.clone(), bottom: lowest.bottom.clone(), runs }
+        Piece {
+            top: highest.top.clone(),
+            bottom: lowest.bottom.clone(),
+            runs,
+        }
     }
 }
 
@@ -337,7 +384,8 @@ impl Run {
 /// `s` — and `false` where they do not overlap at all, or where they are apart
 /// (a K gap).
 fn touches(above: &[P], below: &[P], tol_z: f64) -> bool {
-    let (Some(a0), Some(a1), Some(b0), Some(b1)) = (above.first(), above.last(), below.first(), below.last()) else {
+    let (Some(a0), Some(a1), Some(b0), Some(b1)) = (above.first(), above.last(), below.first(), below.last())
+    else {
         return false;
     };
     let (from, to) = (a0[0].max(b0[0]), a1[0].min(b1[0]));
@@ -359,7 +407,11 @@ fn z_at(chain: &[P], s: f64) -> Option<f64> {
     for pair in chain.windows(2) {
         if s >= pair[0][0] && s <= pair[1][0] {
             let width = pair[1][0] - pair[0][0];
-            let t = if width <= f64::EPSILON { 0.0 } else { (s - pair[0][0]) / width };
+            let t = if width <= f64::EPSILON {
+                0.0
+            } else {
+                (s - pair[0][0]) / width
+            };
             return Some(pair[0][1] + (pair[1][1] - pair[0][1]) * t);
         }
     }

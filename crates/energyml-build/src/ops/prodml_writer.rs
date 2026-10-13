@@ -40,12 +40,21 @@ impl<'a> Writer<'a> {
                 "is empty: every value this operation writes is invented, and an invented value states where it comes from",
             ));
         }
-        Ok(Writer { identity: cx.identity, when: cx.when, operation, source: source.to_string(), rank: 0, objects: Vec::new() })
+        Ok(Writer {
+            identity: cx.identity,
+            when: cx.when,
+            operation,
+            source: source.to_string(),
+            rank: 0,
+            objects: Vec::new(),
+        })
     }
 
     /// The uuid of the next object, from what it is.
     pub fn uuid(&mut self, seed: &str) -> Result<String, Refusal> {
-        let uuid = self.identity.uuid(&format!("{}:{seed}", self.operation), self.rank)?;
+        let uuid = self
+            .identity
+            .uuid(&format!("{}:{seed}", self.operation), self.rank)?;
         self.rank += 1;
         Ok(uuid)
     }
@@ -59,7 +68,9 @@ impl<'a> Writer<'a> {
         if length > 2000 {
             return Err(Refusal::on(
                 "source",
-                format!("makes a description of {length} characters, and a Citation/Description holds 2000 — cite the document shorter"),
+                format!(
+                    "makes a description of {length} characters, and a Citation/Description holds 2000 — cite the document shorter"
+                ),
             ));
         }
         Ok(eml::Citation {
@@ -78,7 +89,14 @@ impl<'a> Writer<'a> {
     }
 
     /// One object more, written as its generated type encodes itself.
-    pub fn push(&mut self, uuid: &str, qualified_type: &str, role: &str, title: &str, object: &dyn energyml_core::value::Reflect) {
+    pub fn push(
+        &mut self,
+        uuid: &str,
+        qualified_type: &str,
+        role: &str,
+        title: &str,
+        object: &dyn energyml_core::value::Reflect,
+    ) {
         self.objects.push(NewObject {
             uuid: uuid.to_string(),
             qualified_type: qualified_type.to_string(),
@@ -90,7 +108,15 @@ impl<'a> Writer<'a> {
 
     /// The seed of the activity: every object this run wrote.
     pub fn activity_seed(&self) -> String {
-        format!("{}:{}", self.operation, self.objects.iter().map(|one| one.uuid.as_str()).collect::<Vec<_>>().join(","))
+        format!(
+            "{}:{}",
+            self.operation,
+            self.objects
+                .iter()
+                .map(|one| one.uuid.as_str())
+                .collect::<Vec<_>>()
+                .join(",")
+        )
     }
 }
 
@@ -102,7 +128,9 @@ pub(crate) fn instant(slot: &str, text: &str) -> Result<(String, i64), Refusal> 
         Some(seconds) => Ok((text.to_string(), seconds)),
         None => Err(Refusal::on(
             slot,
-            format!("`{text}` is not a UTC date-time as `2025-06-02T00:00:00Z`: it is refused rather than read some other way"),
+            format!(
+                "`{text}` is not a UTC date-time as `2025-06-02T00:00:00Z`: it is refused rather than read some other way"
+            ),
         )),
     }
 }

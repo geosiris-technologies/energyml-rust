@@ -41,8 +41,7 @@ fn registry() -> Arc<Registry> {
 }
 
 const NEIGHBOUR: &str = "2b5223fb-d5f0-5d9e-bfe1-58ea384cacd6";
-const NEIGHBOUR_PART: &str =
-    "TriangulatedSetRepresentation_2b5223fb-d5f0-5d9e-bfe1-58ea384cacd6.xml";
+const NEIGHBOUR_PART: &str = "TriangulatedSetRepresentation_2b5223fb-d5f0-5d9e-bfe1-58ea384cacd6.xml";
 
 /// A `TriangulatedSetRepresentation` that reads: the repair target.
 ///
@@ -147,7 +146,10 @@ fn a_reference_takes_the_revision_its_target_carries() {
     let registry = registry();
     let read = |xml: &str| {
         registry
-            .read_xml("application/x-resqml+xml;version=2.2;type=TriangulatedSetRepresentation", xml.as_bytes())
+            .read_xml(
+                "application/x-resqml+xml;version=2.2;type=TriangulatedSetRepresentation",
+                xml.as_bytes(),
+            )
             .expect("the object reads")
     };
     let summary = energyml_storage::ObjectSummary {
@@ -172,10 +174,14 @@ fn a_reference_takes_the_revision_its_target_carries() {
     let mut object = read(&healthy());
     let found = repair_references(&summary, object.as_reflect_mut(), &|_| Some(target(Some("0"))));
     assert_eq!(found.len(), 1, "{found:?}");
-    assert!(matches!(
-        &found[0].outcome,
-        RepairOutcome::Done { now_version: Some(version), .. } if version == "0"
-    ), "{:?}", found[0].outcome);
+    assert!(
+        matches!(
+            &found[0].outcome,
+            RepairOutcome::Done { now_version: Some(version), .. } if version == "0"
+        ),
+        "{:?}",
+        found[0].outcome
+    );
     assert_eq!(version_of(object.as_reflect()).as_deref(), Some("0"));
     assert!(found[0].to_string().contains("version → `0`"), "{}", found[0]);
 
@@ -364,7 +370,9 @@ fn bytes_that_do_not_parse_can_still_be_written() {
     assert!(store.staged_part_parses(PART).is_err(), "and it says so");
 
     let out = path.with_file_name("forced.epc");
-    store.save_as(&out, &SaveOptions::default()).expect("it saves anyway");
+    store
+        .save_as(&out, &SaveOptions::default())
+        .expect("it saves anyway");
 
     let reopened = EpcStore::open(&out, registry()).expect("the package opens");
     assert_eq!(

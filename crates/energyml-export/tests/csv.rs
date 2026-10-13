@@ -7,9 +7,7 @@
 //! without complaining.
 
 use energyml_export::{Exporters, Options};
-use energyml_geometry::{
-    Attribute, AttributeScope, Geometry, Patch, SceneObject, Topology,
-};
+use energyml_geometry::{Attribute, AttributeScope, Geometry, Patch, SceneObject, Topology};
 
 fn a_well() -> SceneObject {
     SceneObject {
@@ -25,7 +23,7 @@ fn a_well() -> SceneObject {
                 points: vec![[0.0, 0.0, 10.0], [1.0, 0.0, 20.0], [2.0, 0.0, 30.0]],
                 topology: Topology::Polylines(vec![3]),
                 closed: Vec::new(),
-}],
+            }],
         },
         crs: None,
         interpretation: None,
@@ -125,10 +123,7 @@ fn a_group_shares_one_header() {
     let text = String::from_utf8(out).expect("utf-8");
     // One header only: the well is a column, not a block — that is what makes
     // a group export pasteable as it stands into a spreadsheet.
-    assert_eq!(
-        text.lines().filter(|line| line.starts_with("object,")).count(),
-        1
-    );
+    assert_eq!(text.lines().filter(|line| line.starts_with("object,")).count(), 1);
     assert!(text.contains("Another,u-2"));
 }
 

@@ -22,13 +22,20 @@ use energyml_build::operation::{Choices, Identity, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
 
 fn when() -> When {
-    When { creation: "2026-09-25T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-25T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 /// A representation of the package, by its type and title.
 fn member(rank: usize, qualified_type: &str, title: &str) -> Source {
     Source::Object(Known {
-        reference: Some(Ref::new(format!("5e7a0000-0000-4000-8000-{rank:012}"), qualified_type, title)),
+        reference: Some(Ref::new(
+            format!("5e7a0000-0000-4000-8000-{rank:012}"),
+            qualified_type,
+            title,
+        )),
         ..Default::default()
     })
 }
@@ -37,7 +44,11 @@ fn member(rank: usize, qualified_type: &str, title: &str) -> Source {
 fn bag(members: &[Source]) -> Pieces {
     let mut pieces = Pieces::empty();
     for (rank, one) in members.iter().enumerate() {
-        let name = if rank == 0 { "representations".to_string() } else { format!("representations {}", rank + 1) };
+        let name = if rank == 0 {
+            "representations".to_string()
+        } else {
+            format!("representations {}", rank + 1)
+        };
         pieces = pieces.with(name, one.clone());
     }
     pieces
@@ -47,13 +58,25 @@ fn chalk_grids() -> Vec<Source> {
     vec![
         member(1, "resqml22.IjkGridRepresentation", "Ypresian–Chalk grid"),
         member(2, "resqml22.IjkGridRepresentation", "GTH-1 refined window"),
-        member(3, "resqml22.TruncatedIjkGridRepresentation", "Calcaire grossier truncated"),
+        member(
+            3,
+            "resqml22.TruncatedIjkGridRepresentation",
+            "Calcaire grossier truncated",
+        ),
         member(4, "resqml22.UnstructuredGridRepresentation", "GTH-2 drain"),
     ]
 }
 
 fn planned(pieces: &Pieces, choices: &Choices) -> Result<Plan, String> {
-    Registry::new().plan("representation-set", pieces, choices, &Identity::derived(), &when()).map_err(|why| why.message())
+    Registry::new()
+        .plan(
+            "representation-set",
+            pieces,
+            choices,
+            &Identity::derived(),
+            &when(),
+        )
+        .map_err(|why| why.message())
 }
 
 fn the_set(plan: &Plan) -> &serde_json::Value {
@@ -70,26 +93,67 @@ fn is_homogeneous_is_what_the_members_are() {
     let set = the_set(&plan);
     assert_eq!(set["$type"], "resqml22.RepresentationSetRepresentation");
     assert_eq!(set["IsHomogeneous"], json!(false));
-    let written: Vec<&str> = set["Representation"].as_array().unwrap().iter().map(|dor| dor["Title"].as_str().unwrap()).collect();
-    assert_eq!(written, vec!["Ypresian–Chalk grid", "GTH-1 refined window", "Calcaire grossier truncated", "GTH-2 drain"]);
+    let written: Vec<&str> = set["Representation"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|dor| dor["Title"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        written,
+        vec![
+            "Ypresian–Chalk grid",
+            "GTH-1 refined window",
+            "Calcaire grossier truncated",
+            "GTH-2 drain"
+        ]
+    );
 
     let plan = planned(&bag(&chalk_grids()[..2]), &choices).unwrap_or_else(|why| panic!("{why}"));
     assert_eq!(the_set(&plan)["IsHomogeneous"], json!(true));
     // 2.0.1's `obj_` is the same class: still one kind.
-    let mixed = vec![member(1, "resqml22.IjkGridRepresentation", "a"), member(2, "resqml20.obj_IjkGridRepresentation", "b")];
-    assert_eq!(the_set(&planned(&bag(&mixed), &choices).unwrap())["IsHomogeneous"], json!(true));
+    let mixed = vec![
+        member(1, "resqml22.IjkGridRepresentation", "a"),
+        member(2, "resqml20.obj_IjkGridRepresentation", "b"),
+    ];
+    assert_eq!(
+        the_set(&planned(&bag(&mixed), &choices).unwrap())["IsHomogeneous"],
+        json!(true)
+    );
 }
 
 /// **A stated answer is checked, either way**, and refused with what the
 /// members are.
 #[test]
 fn a_stated_homogeneity_that_disagrees_is_refused_either_way() {
-    let why = planned(&bag(&chalk_grids()), &Choices::new().set("title", "Chalk grids").set("homogeneous", true)).unwrap_err();
-    assert!(why.contains("`homogeneous`") && why.contains("resqml22.UnstructuredGridRepresentation"), "{why}");
-    let why = planned(&bag(&chalk_grids()[..2]), &Choices::new().set("title", "Two grids").set("homogeneous", false)).unwrap_err();
-    assert!(why.contains("`homogeneous`") && why.contains("resqml22.IjkGridRepresentation"), "{why}");
+    let why = planned(
+        &bag(&chalk_grids()),
+        &Choices::new()
+            .set("title", "Chalk grids")
+            .set("homogeneous", true),
+    )
+    .unwrap_err();
+    assert!(
+        why.contains("`homogeneous`") && why.contains("resqml22.UnstructuredGridRepresentation"),
+        "{why}"
+    );
+    let why = planned(
+        &bag(&chalk_grids()[..2]),
+        &Choices::new().set("title", "Two grids").set("homogeneous", false),
+    )
+    .unwrap_err();
+    assert!(
+        why.contains("`homogeneous`") && why.contains("resqml22.IjkGridRepresentation"),
+        "{why}"
+    );
     // Agreeing is no refusal.
-    assert!(planned(&bag(&chalk_grids()[..2]), &Choices::new().set("title", "Two grids").set("homogeneous", true)).is_ok());
+    assert!(
+        planned(
+            &bag(&chalk_grids()[..2]),
+            &Choices::new().set("title", "Two grids").set("homogeneous", true)
+        )
+        .is_ok()
+    );
 }
 
 /// **A place is an index**: a member given twice would hold two, refused
@@ -97,14 +161,24 @@ fn a_stated_homogeneity_that_disagrees_is_refused_either_way() {
 #[test]
 fn a_member_twice_or_no_representation_is_refused_by_name() {
     let mut twice = chalk_grids();
-    twice.push(member(2, "resqml22.IjkGridRepresentation", "GTH-1 refined window"));
+    twice.push(member(
+        2,
+        "resqml22.IjkGridRepresentation",
+        "GTH-1 refined window",
+    ));
     let why = planned(&bag(&twice), &Choices::new().set("title", "Chalk grids")).unwrap_err();
-    assert!(why.contains("GTH-1 refined window") && why.contains("places 2 and 5"), "{why}");
+    assert!(
+        why.contains("GTH-1 refined window") && why.contains("places 2 and 5"),
+        "{why}"
+    );
 
     let mut odd = chalk_grids();
     odd.insert(1, member(9, "resqml22.HorizonInterpretation", "H6"));
     let why = planned(&bag(&odd), &Choices::new().set("title", "Chalk grids")).unwrap_err();
-    assert!(why.contains("`H6`") && why.contains("resqml22.HorizonInterpretation"), "{why}");
+    assert!(
+        why.contains("`H6`") && why.contains("resqml22.HorizonInterpretation"),
+        "{why}"
+    );
 }
 
 /// **The same bag is the same set**, and another order another set: the order
@@ -112,7 +186,9 @@ fn a_member_twice_or_no_representation_is_refused_by_name() {
 #[test]
 fn the_same_bag_is_the_same_set_and_another_order_another() {
     let choices = Choices::new().set("title", "Chalk grids");
-    let uuid = |members: &[Source], choices: &Choices| the_set(&planned(&bag(members), choices).unwrap())["uuid"].clone();
+    let uuid = |members: &[Source], choices: &Choices| {
+        the_set(&planned(&bag(members), choices).unwrap())["uuid"].clone()
+    };
     let first = uuid(&chalk_grids(), &choices);
     assert_eq!(first, uuid(&chalk_grids(), &choices));
     let mut reversed = chalk_grids();
@@ -128,7 +204,17 @@ fn what_the_set_represents_is_what_is_named() {
     let plan = planned(&bag(&chalk_grids()), &Choices::new().set("title", "Chalk grids")).unwrap();
     assert!(the_set(&plan).get("RepresentedObject").is_none());
     assert_eq!(plan.objects.len(), 1);
-    let model = Ref::new("e0de1000-0000-4000-8000-000000000001", "resqml22.EarthModelInterpretation", "Lutetia");
-    let plan = planned(&bag(&chalk_grids()), &Choices::new().set("title", "Chalk grids").set("interpretation", model.dor())).unwrap();
+    let model = Ref::new(
+        "e0de1000-0000-4000-8000-000000000001",
+        "resqml22.EarthModelInterpretation",
+        "Lutetia",
+    );
+    let plan = planned(
+        &bag(&chalk_grids()),
+        &Choices::new()
+            .set("title", "Chalk grids")
+            .set("interpretation", model.dor()),
+    )
+    .unwrap();
     assert_eq!(the_set(&plan)["RepresentedObject"]["Uuid"], json!(model.uuid));
 }

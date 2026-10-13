@@ -46,8 +46,9 @@ def slug(heading: str) -> str:
     return text.replace(" ", "-")
 
 
-def strip_code(lines: list[str]) -> list[tuple[int, str]]:
-    """The (line number, text) pairs outside fenced code, inline code blanked out."""
+def strip_code(lines: list[str], blank_inline: bool = True) -> list[tuple[int, str]]:
+    """The (line number, text) pairs outside fenced code, inline code blanked out unless
+    `blank_inline` is false (a heading's anchor is made from its inline code too)."""
     out: list[tuple[int, str]] = []
     fence: str | None = None
     for no, line in enumerate(lines, 1):
@@ -61,7 +62,7 @@ def strip_code(lines: list[str]) -> list[tuple[int, str]]:
             continue
         if fence is not None:
             continue
-        out.append((no, re.sub(r"`[^`]*`", lambda mm: " " * len(mm.group(0)), line)))
+        out.append((no, re.sub(r"`[^`]*`", lambda mm: " " * len(mm.group(0)), line) if blank_inline else line))
     return out
 
 
@@ -73,7 +74,7 @@ def anchors(path: Path) -> set[str]:
         return _anchor_cache[path]
     seen: dict[str, int] = {}
     found: set[str] = set()
-    for _, line in strip_code(path.read_text(encoding="utf-8").splitlines()):
+    for _, line in strip_code(path.read_text(encoding="utf-8").splitlines(), blank_inline=False):
         m = HEADING.match(line)
         if not m:
             continue

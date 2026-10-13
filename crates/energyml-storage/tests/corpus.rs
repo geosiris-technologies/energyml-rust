@@ -154,9 +154,10 @@ fn the_three_levels_agree() {
             // `get_object` already records it.
             if !key.qualified_type().eq_ignore_ascii_case(&summary.qualified_type) {
                 let read_as = key.qualified_type();
-                let said = store.diagnostics().into_iter().any(|d| {
-                    d.message.contains(&summary.qualified_type) && d.message.contains(&read_as)
-                });
+                let said = store
+                    .diagnostics()
+                    .into_iter()
+                    .any(|d| d.message.contains(&summary.qualified_type) && d.message.contains(&read_as));
                 assert!(
                     said,
                     "{}: the index says `{}` and the object says `{read_as}` for {}, and the store said nothing",
@@ -1125,11 +1126,8 @@ fn a_rewrite_keeps_the_references_hidden_in_unmodelled_xml() {
             continue;
         }
 
-        let out = std::env::temp_dir().join(format!(
-            "energyml-anyxml-{}-{}.epc",
-            std::process::id(),
-            checked
-        ));
+        let out =
+            std::env::temp_dir().join(format!("energyml-anyxml-{}-{}.epc", std::process::id(), checked));
         store
             .save_as(&out, &energyml_storage::SaveOptions::default())
             .expect("it saves");
@@ -1190,11 +1188,20 @@ fn the_graph_labels_its_nodes_and_admits_what_is_missing() {
 
         // Every edge lands on a node — the property a viewer relies on and the
         // one that breaks it silently when it does not hold.
-        let uris: std::collections::HashSet<&str> =
-            graph.nodes.iter().map(|n| n.uri.as_str()).collect();
+        let uris: std::collections::HashSet<&str> = graph.nodes.iter().map(|n| n.uri.as_str()).collect();
         for edge in &graph.edges {
-            assert!(uris.contains(edge.from.as_str()), "{}: {} is not a node", path.display(), edge.from);
-            assert!(uris.contains(edge.to.as_str()), "{}: {} is not a node", path.display(), edge.to);
+            assert!(
+                uris.contains(edge.from.as_str()),
+                "{}: {} is not a node",
+                path.display(),
+                edge.from
+            );
+            assert!(
+                uris.contains(edge.to.as_str()),
+                "{}: {} is not a node",
+                path.display(),
+                edge.to
+            );
         }
 
         // Labels: a node standing for an object the package holds knows its
@@ -1231,10 +1238,7 @@ fn the_graph_labels_its_nodes_and_admits_what_is_missing() {
         // Both renderings parse as themselves.
         let json = graph.to_json();
         assert!(json.starts_with('{') && json.contains("\"concept\""));
-        assert_eq!(
-            json.matches("\"externallyDefined\":").count(),
-            graph.nodes.len()
-        );
+        assert_eq!(json.matches("\"externallyDefined\":").count(), graph.nodes.len());
         assert_eq!(json.matches("\"uri\":").count(), graph.nodes.len());
         let dot = graph.to_dot();
         assert!(dot.starts_with("digraph energyml {") && dot.trim_end().ends_with('}'));
@@ -1272,9 +1276,8 @@ fn an_object_created_in_this_session_is_addressable_by_every_accessor() {
         return;
     }
     let registry = registry();
-    let mut store =
-        EpcStore::open(files.first().expect("at least one package"), registry.clone())
-            .expect("the package opens");
+    let mut store = EpcStore::open(files.first().expect("at least one package"), registry.clone())
+        .expect("the package opens");
 
     // Any concrete top-level type this build can make, taken from the registry
     // rather than named — the point is the store, not the type.
@@ -1396,6 +1399,9 @@ fn an_object_keeps_the_external_file_it_named() {
 
     // The corollary that bites: this passed over an empty set until a package
     // in the corpus was found to use the relationship at all.
-    assert!(checked > 0, "no package in the corpus carries an `externalResource`");
+    assert!(
+        checked > 0,
+        "no package in the corpus carries an `externalResource`"
+    );
     eprintln!("{checked} package(s) kept every `externalResource` they carried");
 }

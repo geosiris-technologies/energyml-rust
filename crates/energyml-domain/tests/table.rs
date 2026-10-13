@@ -54,7 +54,11 @@ fn tables() -> Vec<(PathBuf, EpcStore, String)> {
             .map(|summary| summary.uri.clone())
             .collect();
         for uri in found {
-            out.push((path.clone(), EpcStore::open(&path, registry.clone()).unwrap(), uri));
+            out.push((
+                path.clone(),
+                EpcStore::open(&path, registry.clone()).unwrap(),
+                uri,
+            ));
         }
         let _ = store;
     }
@@ -245,10 +249,18 @@ fn a_property_reaches_its_lookup_and_the_integers_gain_a_meaning() {
                 continue;
             };
             let target = store.get_object(lookup_uuid).unwrap_or_else(|e| {
-                panic!("{}: {} points at a lookup that is not here: {e}", path.display(), read.uuid)
+                panic!(
+                    "{}: {} points at a lookup that is not here: {e}",
+                    path.display(),
+                    read.uuid
+                )
             });
             let lookup = Lookup::read(target.as_reflect(), &store).unwrap_or_else(|e| {
-                panic!("{}: the lookup of {} did not read: {e}", path.display(), read.uuid)
+                panic!(
+                    "{}: the lookup of {} did not read: {e}",
+                    path.display(),
+                    read.uuid
+                )
             });
             // Every value of the property should be a key of the table — that
             // is what a category lookup is for. Not asserted, because a

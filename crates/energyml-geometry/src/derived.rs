@@ -307,9 +307,10 @@ impl Selection {
         let start = scalar_i64(lattice, "StartValue").unwrap_or(0);
 
         let offsets = match lattice.field("Offset") {
-            Some(FieldValue::List(items)) => {
-                items.iter().filter_map(|item| item.as_object()).collect::<Vec<_>>()
-            }
+            Some(FieldValue::List(items)) => items
+                .iter()
+                .filter_map(|item| item.as_object())
+                .collect::<Vec<_>>(),
             Some(FieldValue::Object(one)) => vec![one],
             _ => Vec::new(),
         };
@@ -322,7 +323,10 @@ impl Selection {
             let value = scalar_i64(offset, "Value").unwrap_or(1);
             let count = scalar_i64(offset, "Count").unwrap_or(0);
             if count < 0 {
-                return Err(Error::malformed(at, format!("an offset repeated {count} time(s)")));
+                return Err(Error::malformed(
+                    at,
+                    format!("an offset repeated {count} time(s)"),
+                ));
             }
             steps.push(Step {
                 value,
@@ -357,8 +361,7 @@ impl Selection {
 fn shape_of(support: &dyn Reflect) -> Option<Vec<usize>> {
     let holders = [Some(support), field_object(support, "Grid2dPatch")];
     for holder in holders.into_iter().flatten() {
-        let axis =
-            |name: &str| scalar_i64(holder, name).filter(|n| *n > 0).map(|n| n as usize);
+        let axis = |name: &str| scalar_i64(holder, name).filter(|n| *n > 0).map(|n| n as usize);
         match (axis("SlowestAxisCount"), axis("FastestAxisCount")) {
             (Some(slowest), Some(fastest)) => return Some(vec![slowest, fastest]),
             // A grid that names only one axis is a single row of nodes.
@@ -377,4 +380,3 @@ fn field_object<'a>(object: &'a dyn Reflect, field: &str) -> Option<&'a dyn Refl
         _ => None,
     }
 }
-

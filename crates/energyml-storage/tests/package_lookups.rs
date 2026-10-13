@@ -27,9 +27,13 @@ fn rels(count: usize, dup: usize) -> String {
          <Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
     );
     for i in 0..count {
-        xml.push_str(&format!("<Relationship Id=\"r{i}\" Type=\"{REL}\" Target=\"p{i}.xml\"/>"));
+        xml.push_str(&format!(
+            "<Relationship Id=\"r{i}\" Type=\"{REL}\" Target=\"p{i}.xml\"/>"
+        ));
     }
-    xml.push_str(&format!("<Relationship Id=\"r{dup}\" Type=\"{REL}\" Target=\"again.xml\"/>"));
+    xml.push_str(&format!(
+        "<Relationship Id=\"r{dup}\" Type=\"{REL}\" Target=\"again.xml\"/>"
+    ));
     xml.push_str("</Relationships>");
     xml
 }
@@ -39,10 +43,17 @@ fn the_duplicate_id_is_named_once_and_the_order_is_the_documents() {
     let (found, said, _) = parse_relationships_counting(rels(50, 7).as_bytes(), "_rels/a.xml.rels");
     assert_eq!(found.len(), 51);
     for (i, relationship) in found.iter().take(50).enumerate() {
-        assert_eq!(relationship.id, format!("r{i}"), "the order of the document is kept");
+        assert_eq!(
+            relationship.id,
+            format!("r{i}"),
+            "the order of the document is kept"
+        );
     }
     assert_eq!(found[50].id, "r7");
-    let duplicates: Vec<_> = said.iter().filter(|d| d.message.contains("more than once")).collect();
+    let duplicates: Vec<_> = said
+        .iter()
+        .filter(|d| d.message.contains("more than once"))
+        .collect();
     assert_eq!(duplicates.len(), 1, "one duplicate, one note: {said:?}");
     assert!(duplicates[0].message.contains("r7"), "{}", duplicates[0].message);
     assert_eq!(duplicates[0].part, "_rels/a.xml.rels");
@@ -53,10 +64,20 @@ fn the_duplicate_check_makes_one_lookup_per_relationship() {
     // The quadratic scan would compare 0 + 1 + … + n−1 pairs: ~50 million for
     // 10 000. One lookup each is n + 1, whatever n is.
     for count in [100usize, 1_000, 10_000] {
-        let (found, said, probes) = parse_relationships_counting(rels(count, count / 2).as_bytes(), "_rels/b.rels");
+        let (found, said, probes) =
+            parse_relationships_counting(rels(count, count / 2).as_bytes(), "_rels/b.rels");
         assert_eq!(found.len(), count + 1);
-        assert_eq!(probes, (count + 1) as u64, "{count} relationships, {probes} lookups");
-        assert_eq!(said.iter().filter(|d| d.message.contains("more than once")).count(), 1);
+        assert_eq!(
+            probes,
+            (count + 1) as u64,
+            "{count} relationships, {probes} lookups"
+        );
+        assert_eq!(
+            said.iter()
+                .filter(|d| d.message.contains("more than once"))
+                .count(),
+            1
+        );
     }
 }
 
@@ -69,7 +90,10 @@ fn a_relationship_without_an_id_is_not_looked_up() {
     let (found, said, probes) = parse_relationships_counting(xml.as_bytes(), "_rels/c.rels");
     assert_eq!(found.len(), 2);
     assert_eq!(probes, 0);
-    assert!(said.iter().all(|d| !d.message.contains("more than once")), "{said:?}");
+    assert!(
+        said.iter().all(|d| !d.message.contains("more than once")),
+        "{said:?}"
+    );
 }
 
 /// A package of `parts` media files and a root `.rels` of the same size with a

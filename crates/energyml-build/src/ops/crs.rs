@@ -167,7 +167,11 @@ impl Operation for Crs {
             }),
             _ => {}
         }
-        let target = if params.projected { Target::Projected(epsg) } else { Target::Geographic(epsg) };
+        let target = if params.projected {
+            Target::Projected(epsg)
+        } else {
+            Target::Geographic(epsg)
+        };
         let vertical = match params.vertical {
             Some(code) => Vertical::Epsg(code.0),
             None => Vertical::Unknown("no vertical datum was given".to_string()),
@@ -192,10 +196,20 @@ impl Operation for Crs {
             // Every refusal of `build` is about what this operation was told —
             // a number, the time unit, a local frame over degrees — and it
             // names the setting in backticks when it is one.
-            let slot = ["timeUom", "originEasting", "originNorthing", "azimuth", "originVertical"]
-                .into_iter()
-                .find(|name| why.contains(&format!("`{name}`")))
-                .unwrap_or(if matches!(target, Target::Geographic(_)) { "projected" } else { "axis" });
+            let slot = [
+                "timeUom",
+                "originEasting",
+                "originNorthing",
+                "azimuth",
+                "originVertical",
+            ]
+            .into_iter()
+            .find(|name| why.contains(&format!("`{name}`")))
+            .unwrap_or(if matches!(target, Target::Geographic(_)) {
+                "projected"
+            } else {
+                "axis"
+            });
             Refusal::on(slot, why)
         })?;
         if let Some(title) = params.title {
@@ -223,8 +237,15 @@ impl Operation for Crs {
                 // apart — the frame's uuid carries all of it.
                 seed: format!("{epsg}:{vertical_key}:{}", frame.uuid),
                 parameters: vec![
-                    Parameter::Double { title: "epsg".to_string(), value: epsg as f64, uom: None },
-                    Parameter::Text { title: "vertical".to_string(), value: vertical_key },
+                    Parameter::Double {
+                        title: "epsg".to_string(),
+                        value: epsg as f64,
+                        uom: None,
+                    },
+                    Parameter::Text {
+                        title: "vertical".to_string(),
+                        value: vertical_key,
+                    },
                 ],
             },
             says,

@@ -19,7 +19,10 @@ struct Lender(Vec<(String, Box<dyn DynObject>)>);
 
 impl ObjectSource for Lender {
     fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>> {
-        self.0.iter().find(|(held, _)| held == uuid).map(|(_, one)| one.clone_box())
+        self.0
+            .iter()
+            .find(|(held, _)| held == uuid)
+            .map(|(_, one)| one.clone_box())
     }
 }
 
@@ -42,7 +45,12 @@ fn dor20(content_type: &str, uuid: &str) -> eml20::DataObjectReference {
 }
 
 fn dor23(qualified: &str, uuid: &str) -> eml23::DataObjectReference {
-    eml23::DataObjectReference { uuid: uuid.into(), qualified_type: qualified.into(), title: "t".into(), ..Default::default() }
+    eml23::DataObjectReference {
+        uuid: uuid.into(),
+        qualified_type: qualified.into(),
+        title: "t".into(),
+        ..Default::default()
+    }
 }
 
 // --- BRT1 ------------------------------------------------------------------
@@ -57,13 +65,24 @@ fn fault(uuid: &str, target: &str) -> resqml20::FaultInterpretation {
 
 #[test]
 fn brt1_is_shipped_and_speaks_for_2_0_1_only() {
-    let bad = fault("00000000-0000-0000-0000-000000000002", "obj_GeneticBoundaryFeature");
-    let good = fault("00000000-0000-0000-0000-000000000001", "obj_TectonicBoundaryFeature");
+    let bad = fault(
+        "00000000-0000-0000-0000-000000000002",
+        "obj_GeneticBoundaryFeature",
+    );
+    let good = fault(
+        "00000000-0000-0000-0000-000000000001",
+        "obj_TectonicBoundaryFeature",
+    );
     let found = judge(&[("bad", &bad), ("good", &good)], &Lender(Vec::new()));
     let brt1 = of(&found, "trg/brt1-");
     assert_eq!(brt1.len(), 1, "{found:?}");
     assert_eq!(brt1[0].uuid, "bad");
-    assert_eq!(brt1[0].outcome, Outcome::Violation { read: "GeneticBoundaryFeature".into() });
+    assert_eq!(
+        brt1[0].outcome,
+        Outcome::Violation {
+            read: "GeneticBoundaryFeature".into()
+        }
+    );
 
     // A 2.2 fault aims at a `BoundaryFeature`; BRT1 has nothing to say about it.
     let fault22 = resqml22::FaultInterpretation {
@@ -97,8 +116,17 @@ fn brt2_an_earth_model_interprets_an_organization_of_kind_earth_model() {
     let wrong = judge(&[("m", &model)], &lender(resqml20::OrganizationKind::Structural));
     let wrong = of(&wrong, "trg/brt2-");
     assert_eq!(wrong.len(), 1);
-    assert_eq!(wrong[0].outcome, Outcome::Violation { read: "structural".into() });
-    assert!(judge(&[("m", &model)], &lender(resqml20::OrganizationKind::EarthModel)).iter().all(|f| !f.rule.starts_with("trg/brt2-")));
+    assert_eq!(
+        wrong[0].outcome,
+        Outcome::Violation {
+            read: "structural".into()
+        }
+    );
+    assert!(
+        judge(&[("m", &model)], &lender(resqml20::OrganizationKind::EarthModel))
+            .iter()
+            .all(|f| !f.rule.starts_with("trg/brt2-"))
+    );
 }
 
 // --- BRT4, BRT5 in 2.0.1 -----------------------------------------------------
@@ -108,14 +136,27 @@ const INTERPRETATION: &str = "00000000-0000-0000-0000-0000000000a2";
 const LATTICE: &str = "00000000-0000-0000-0000-0000000000a3";
 
 fn spacing20(count: u64) -> Option<resqml20::AbstractDoubleArray> {
-    Some(resqml20::AbstractDoubleArray::DoubleConstantArray(resqml20::DoubleConstantArray { value: 1.0, count }))
+    Some(resqml20::AbstractDoubleArray::DoubleConstantArray(
+        resqml20::DoubleConstantArray { value: 1.0, count },
+    ))
 }
 
-fn grid20(slowest: u64, fastest: u64, slow_spacing: u64, fast_spacing: u64) -> resqml20::Grid2dRepresentation {
+fn grid20(
+    slowest: u64,
+    fastest: u64,
+    slow_spacing: u64,
+    fast_spacing: u64,
+) -> resqml20::Grid2dRepresentation {
     let lattice = resqml20::Point3dLatticeArray {
         offset: vec![
-            resqml20::Point3dOffset { spacing: spacing20(slow_spacing), ..Default::default() },
-            resqml20::Point3dOffset { spacing: spacing20(fast_spacing), ..Default::default() },
+            resqml20::Point3dOffset {
+                spacing: spacing20(slow_spacing),
+                ..Default::default()
+            },
+            resqml20::Point3dOffset {
+                spacing: spacing20(fast_spacing),
+                ..Default::default()
+            },
         ],
         ..Default::default()
     };
@@ -168,7 +209,10 @@ fn brt4_the_spacings_of_a_seismic_grid_count_one_fewer_than_its_axes() {
     let found = judge(&[(GRID, &bad)], &seismic_lender(4, 3));
     let brt4 = of(&found, "trg/brt4-");
     assert_eq!(brt4.len(), 1, "{found:?}");
-    assert!(matches!(&brt4[0].outcome, Outcome::Violation { read } if read.contains('5') && read.contains('3')), "{brt4:?}");
+    assert!(
+        matches!(&brt4[0].outcome, Outcome::Violation { read } if read.contains('5') && read.contains('3')),
+        "{brt4:?}"
+    );
 }
 
 /// The 2016 BRT5: the grid does not exceed the lattice.
@@ -187,35 +231,49 @@ fn brt5_a_seismic_grid_fits_inside_its_lattice() {
 #[test]
 fn brt4_and_brt5_are_silent_on_a_grid_that_is_not_seismic() {
     let grid = grid20(3, 4, 99, 99);
-    let lender = Lender(vec![
-        (
-            INTERPRETATION.to_string(),
-            Box::new(resqml20::GenericFeatureInterpretation {
-                uuid: INTERPRETATION.into(),
-                interpreted_feature: dor20("obj_GeneticBoundaryFeature", LATTICE),
-                ..Default::default()
-            }) as Box<dyn DynObject>,
-        ),
-    ]);
+    let lender = Lender(vec![(
+        INTERPRETATION.to_string(),
+        Box::new(resqml20::GenericFeatureInterpretation {
+            uuid: INTERPRETATION.into(),
+            interpreted_feature: dor20("obj_GeneticBoundaryFeature", LATTICE),
+            ..Default::default()
+        }) as Box<dyn DynObject>,
+    )]);
     let found = judge(&[(GRID, &grid)], &lender);
-    assert!(of(&found, "trg/brt4-").is_empty() && of(&found, "trg/brt5-").is_empty(), "{found:?}");
+    assert!(
+        of(&found, "trg/brt4-").is_empty() && of(&found, "trg/brt5-").is_empty(),
+        "{found:?}"
+    );
 }
 
 // --- BRT4, BRT5 in 2.2 -------------------------------------------------------
 
 fn spacing22(count: i64) -> Option<eml23::AbstractFloatingPointArray> {
-    Some(eml23::AbstractFloatingPointArray::FloatingPointConstantArray(eml23::FloatingPointConstantArray {
-        value: 1.0,
-        count,
-        ..Default::default()
-    }))
+    Some(eml23::AbstractFloatingPointArray::FloatingPointConstantArray(
+        eml23::FloatingPointConstantArray {
+            value: 1.0,
+            count,
+            ..Default::default()
+        },
+    ))
 }
 
-fn grid22(slowest: i64, fastest: i64, slow_spacing: i64, fast_spacing: i64) -> resqml22::Grid2dRepresentation {
+fn grid22(
+    slowest: i64,
+    fastest: i64,
+    slow_spacing: i64,
+    fast_spacing: i64,
+) -> resqml22::Grid2dRepresentation {
     let lattice = resqml22::Point3dLatticeArray {
         dimension: vec![
-            resqml22::Point3dLatticeDimension { spacing: spacing22(slow_spacing), ..Default::default() },
-            resqml22::Point3dLatticeDimension { spacing: spacing22(fast_spacing), ..Default::default() },
+            resqml22::Point3dLatticeDimension {
+                spacing: spacing22(slow_spacing),
+                ..Default::default()
+            },
+            resqml22::Point3dLatticeDimension {
+                spacing: spacing22(fast_spacing),
+                ..Default::default()
+            },
         ],
         ..Default::default()
     };
@@ -235,7 +293,11 @@ fn grid22(slowest: i64, fastest: i64, slow_spacing: i64, fast_spacing: i64) -> r
 fn labels(count: i64) -> Option<eml23::IntegerLatticeArray> {
     Some(eml23::IntegerLatticeArray {
         start_value: 1,
-        offset: vec![eml23::IntegerConstantArray { value: 1, count, ..Default::default() }],
+        offset: vec![eml23::IntegerConstantArray {
+            value: 1,
+            count,
+            ..Default::default()
+        }],
         ..Default::default()
     })
 }
@@ -322,5 +384,8 @@ fn every_source_and_target_of_the_shipped_rules_is_a_concept_the_schemas_define(
         }
     }
     assert!(known.len() > 500, "the registry lists the concepts");
-    assert!(missing.is_empty(), "a typo makes a rule that never applies: {missing:?}");
+    assert!(
+        missing.is_empty(),
+        "a typo makes a rule that never applies: {missing:?}"
+    );
 }

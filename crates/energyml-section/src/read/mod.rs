@@ -124,7 +124,14 @@ pub fn contribution(
     scene: &Scene<'_>,
     well_context: &PackageContext<'_>,
 ) -> Contribution {
-    contribution_cached(source, asked, sections, scene, well_context, &mut PackageCache::new())
+    contribution_cached(
+        source,
+        asked,
+        sections,
+        scene,
+        well_context,
+        &mut PackageCache::new(),
+    )
 }
 
 /// [`contribution`], answered from what `cache` kept of this package where it
@@ -141,7 +148,15 @@ pub fn contribution_cached(
     well_context: &PackageContext<'_>,
     cache: &mut PackageCache,
 ) -> Contribution {
-    contribution_bounded(source, asked, sections, scene, well_context, cache, Bound::Corridor)
+    contribution_bounded(
+        source,
+        asked,
+        sections,
+        scene,
+        well_context,
+        cache,
+        Bound::Corridor,
+    )
 }
 
 /// Which wells of a selection are read.
@@ -167,11 +182,19 @@ pub fn contribution_bounded(
     bound: Bound,
 ) -> Contribution {
     cache.hold_for(&asked.store, asked.revision, scene);
-    let mut out = Contribution { store: asked.store.clone(), ..Contribution::default() };
+    let mut out = Contribution {
+        store: asked.store.clone(),
+        ..Contribution::default()
+    };
     let read_in_full = |cache: &mut PackageCache, uri: &str, out: &mut Contribution| {
         // Nothing that is not finite leaves here (`finite`): a `NaN` becomes a
         // `null` in JSON, and the catalogue refused every package for it.
-        match cache.well(uri, || wells::read_well_with(source, &asked.store, uri, scene, well_context)).and_then(finite::finite_well) {
+        match cache
+            .well(uri, || {
+                wells::read_well_with(source, &asked.store, uri, scene, well_context)
+            })
+            .and_then(finite::finite_well)
+        {
             Ok((well, note)) => {
                 out.wells.push(well);
                 out.notes.extend(note);
@@ -218,7 +241,10 @@ pub fn contribution_bounded(
                 match slot {
                     Some((at, head))
                         if !near.contains(at)
-                            && !head.wellbore.as_deref().is_some_and(|wellbore| near_wellbores.contains(wellbore)) =>
+                            && !head
+                                .wellbore
+                                .as_deref()
+                                .is_some_and(|wellbore| near_wellbores.contains(wellbore)) =>
                     {
                         out.wells.push(head.stub());
                     }
@@ -236,11 +262,16 @@ pub fn contribution_bounded(
         let read = cache.surface(uri, sections, || {
             let set = colours
                 .get_or_insert_with(|| {
-                    (well_context.colour_of.is_none() && !well_context.graphics.is_empty())
-                        .then(|| GraphicalSet::merged(well_context.graphics.iter().map(|(_, set)| set.clone())))
+                    (well_context.colour_of.is_none() && !well_context.graphics.is_empty()).then(|| {
+                        GraphicalSet::merged(well_context.graphics.iter().map(|(_, set)| set.clone()))
+                    })
                 })
                 .as_ref();
-            let colouring = surfaces::Colouring { set, index: well_context.index, resolver: well_context.colour_of };
+            let colouring = surfaces::Colouring {
+                set,
+                index: well_context.index,
+                resolver: well_context.colour_of,
+            };
             surfaces::prepare_surface(source, &asked.store, uri, scene, colouring)
         });
         match read {

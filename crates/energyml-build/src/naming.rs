@@ -135,8 +135,14 @@ mod tests {
     fn the_same_input_names_the_same_object_every_time() {
         // The whole point: a second import writes a package that can be diffed
         // against the first.
-        assert_eq!(feature("006fd552-1f63-47b3-bae9-e528f169083c"), feature("006fd552-1f63-47b3-bae9-e528f169083c"));
-        assert_eq!(point_set("u", "Lutétien", "Top"), point_set("u", "Lutétien", "Top"));
+        assert_eq!(
+            feature("006fd552-1f63-47b3-bae9-e528f169083c"),
+            feature("006fd552-1f63-47b3-bae9-e528f169083c")
+        );
+        assert_eq!(
+            point_set("u", "Lutétien", "Top"),
+            point_set("u", "Lutétien", "Top")
+        );
     }
 
     #[test]
@@ -154,9 +160,18 @@ mod tests {
         // Same unit, other stage, and other side: three different objects. A
         // key that dropped any of the three would merge two point sets into one
         // and lose half the points without a word.
-        assert_ne!(point_set("u", "Lutétien", "Top"), point_set("u", "Bartonien", "Top"));
-        assert_ne!(point_set("u", "Lutétien", "Top"), point_set("u", "Lutétien", "Bottom"));
-        assert_ne!(point_set("u", "Lutétien", "Top"), point_set("v", "Lutétien", "Top"));
+        assert_ne!(
+            point_set("u", "Lutétien", "Top"),
+            point_set("u", "Bartonien", "Top")
+        );
+        assert_ne!(
+            point_set("u", "Lutétien", "Top"),
+            point_set("u", "Lutétien", "Bottom")
+        );
+        assert_ne!(
+            point_set("u", "Lutétien", "Top"),
+            point_set("v", "Lutétien", "Top")
+        );
     }
 
     #[test]
@@ -176,17 +191,37 @@ mod tests {
     fn an_activity_is_one_event_and_two_runs_are_two() {
         // The one identity meant to differ. Derived rather than drawn, so a run
         // replayed with the same stated time reproduces the package exactly.
-        let a = activity("GeologicUnit_Priabonien.json", "Priabonien", "2026-09-07T10:00:00Z");
-        let b = activity("GeologicUnit_Priabonien.json", "Priabonien", "2026-09-07T11:00:00Z");
+        let a = activity(
+            "GeologicUnit_Priabonien.json",
+            "Priabonien",
+            "2026-09-07T10:00:00Z",
+        );
+        let b = activity(
+            "GeologicUnit_Priabonien.json",
+            "Priabonien",
+            "2026-09-07T11:00:00Z",
+        );
         assert_ne!(a, b);
-        assert_eq!(a, activity("GeologicUnit_Priabonien.json", "Priabonien", "2026-09-07T10:00:00Z"));
+        assert_eq!(
+            a,
+            activity(
+                "GeologicUnit_Priabonien.json",
+                "Priabonien",
+                "2026-09-07T10:00:00Z"
+            )
+        );
     }
 
     #[test]
     fn every_derived_name_is_a_well_formed_v5_uuid() {
         // The schema pins the shape with a pattern; a name that came out
         // malformed would fail at write time, far from here.
-        for made in [feature("x"), interpretation("x"), table("x"), point_set("x", "y", "Top")] {
+        for made in [
+            feature("x"),
+            interpretation("x"),
+            table("x"),
+            point_set("x", "y", "Top"),
+        ] {
             let parsed = Uuid::parse_str(&made).expect("a uuid");
             assert_eq!(parsed.get_version_num(), 5, "{made}");
         }

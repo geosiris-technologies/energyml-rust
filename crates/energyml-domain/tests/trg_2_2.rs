@@ -85,8 +85,17 @@ fn a_2_2_category_lookup_on_a_column_based_table_is_kept() {
 fn a_2_2_category_lookup_on_anything_else_is_reported() {
     // The case the rule never saw: it was written on `CategoricalProperty`.
     let findings = judged(&discrete(Some("resqml22.HorizonInterpretation")));
-    assert_eq!(ids(&findings), ["trg/discrete-property-category-lookup"], "{findings:?}");
-    assert_eq!(findings[0].outcome, Outcome::Violation { read: "HorizonInterpretation".into() });
+    assert_eq!(
+        ids(&findings),
+        ["trg/discrete-property-category-lookup"],
+        "{findings:?}"
+    );
+    assert_eq!(
+        findings[0].outcome,
+        Outcome::Violation {
+            read: "HorizonInterpretation".into()
+        }
+    );
 }
 
 #[test]
@@ -120,11 +129,18 @@ fn a_2_2_sub_representation_on_a_representation_is_kept() {
 #[test]
 fn a_2_2_sub_representation_patch_on_an_interpretation_is_reported() {
     let findings = judged(&sub_representation("resqml22.HorizonInterpretation"));
-    assert_eq!(ids(&findings), ["trg/subrepresentation-patch-support"], "{findings:?}");
+    assert_eq!(
+        ids(&findings),
+        ["trg/subrepresentation-patch-support"],
+        "{findings:?}"
+    );
     let Outcome::Violation { read } = &findings[0].outcome else {
         panic!("a violation, not {:?}", findings[0].outcome)
     };
-    assert_eq!(read, "SubRepresentationPatch[0]: HorizonInterpretation", "the path to the patch leads");
+    assert_eq!(
+        read, "SubRepresentationPatch[0]: HorizonInterpretation",
+        "the path to the patch leads"
+    );
 }
 
 // --- A WITSML wellbore as what a well representation represents -------------
@@ -154,7 +170,9 @@ fn a_wellbore_trajectory_may_represent_a_witsml_wellbore() {
     };
     let findings = judged(&trajectory);
     assert!(
-        !findings.iter().any(|finding| finding.rule.ends_with("-represents")),
+        !findings
+            .iter()
+            .any(|finding| finding.rule.ends_with("-represents")),
         "{findings:?}"
     );
 }
@@ -191,7 +209,12 @@ fn any_other_representation_may_not_represent_a_witsml_wellbore() {
     };
     let findings = judged(&surface);
     assert_eq!(ids(&findings), ["trg/representation-represents"], "{findings:?}");
-    assert_eq!(findings[0].outcome, Outcome::Violation { read: "Wellbore".into() });
+    assert_eq!(
+        findings[0].outcome,
+        Outcome::Violation {
+            read: "Wellbore".into()
+        }
+    );
 }
 
 #[test]

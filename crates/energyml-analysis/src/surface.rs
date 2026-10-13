@@ -193,7 +193,11 @@ pub fn lattice_slope(points: &[f64], fastest: usize, slowest: usize, up: Up) -> 
     }
     let nodes = points.len() / 3;
     if nodes != fastest * slowest {
-        return Err(Error::NotALattice { nodes, fastest, slowest });
+        return Err(Error::NotALattice {
+            nodes,
+            fastest,
+            slowest,
+        });
     }
     let sign = up.sign();
     let at = |i: usize, j: usize| {
@@ -231,7 +235,11 @@ pub fn lattice_slope(points: &[f64], fastest: usize, slowest: usize, up: Up) -> 
             }
             let u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
             let v = [d[0] - c[0], d[1] - c[1], d[2] - c[2]];
-            let mut n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+            let mut n = [
+                u[1] * v[2] - u[2] * v[1],
+                u[2] * v[0] - u[0] * v[2],
+                u[0] * v[1] - u[1] * v[0],
+            ];
             let length = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
             if length <= 0.0 || !length.is_finite() {
                 unreached += 1;
@@ -252,7 +260,14 @@ pub fn lattice_slope(points: &[f64], fastest: usize, slowest: usize, up: Up) -> 
             azimuth[index] = bearing(n[0], n[1]);
         }
     }
-    Ok(Slope { dip, azimuth, flat, sheer, set_aside: 0, unreached })
+    Ok(Slope {
+        dip,
+        azimuth,
+        flat,
+        sheer,
+        set_aside: 0,
+        unreached,
+    })
 }
 
 /// Mean, Gaussian and principal curvatures at every interior node.
@@ -614,7 +629,10 @@ mod tests {
             assert_eq!(read.unreached, 0);
             for (d, a) in read.dip.iter().zip(&read.azimuth) {
                 assert!((d - dip).abs() < 1e-9, "turned {turn}: dip {d} for {dip}");
-                assert!((a - bearing_expected).abs() < 1e-9, "turned {turn}: azimuth {a} for {bearing_expected}");
+                assert!(
+                    (a - bearing_expected).abs() < 1e-9,
+                    "turned {turn}: azimuth {a} for {bearing_expected}"
+                );
             }
             // Depths of the same surface: the same slope.
             let depths: Vec<f64> = points.chunks(3).flat_map(|p| [p[0], p[1], -p[2]]).collect();
@@ -630,7 +648,10 @@ mod tests {
                 }
             }
             let other = slope(&points, &triangles, Up::PlusZ).expect("triangles");
-            assert!((other.dip[7] - read.dip[7]).abs() < 1e-9 && (other.azimuth[7] - read.azimuth[7]).abs() < 1e-9);
+            assert!(
+                (other.dip[7] - read.dip[7]).abs() < 1e-9
+                    && (other.azimuth[7] - read.azimuth[7]).abs() < 1e-9
+            );
         }
         // A hole: the node itself and the ones whose differences reach it.
         let mut points = Vec::new();
@@ -645,7 +666,10 @@ mod tests {
         assert_eq!(read.unreached, 5, "the hole and its four neighbours");
         assert!(read.dip[2 * fast + 1].is_nan() && read.dip[2 * fast + 2].is_nan());
         assert!(read.dip[0].is_finite());
-        assert!(matches!(lattice_slope(&points, 4, 5, Up::PlusZ), Err(Error::NotALattice { .. })));
+        assert!(matches!(
+            lattice_slope(&points, 4, 5, Up::PlusZ),
+            Err(Error::NotALattice { .. })
+        ));
     }
 
     use super::*;
@@ -659,12 +683,7 @@ mod tests {
     /// `wrap_u` closes the grid in the first parameter, which is what turns a
     /// strip into a tube: without it every node of the seam is a boundary node
     /// and the interior a test looks at is not the interior it thinks.
-    fn patch(
-        nu: usize,
-        nv: usize,
-        wrap_u: bool,
-        f: impl Fn(f64, f64) -> [f64; 3],
-    ) -> (Vec<f64>, Vec<u32>) {
+    fn patch(nu: usize, nv: usize, wrap_u: bool, f: impl Fn(f64, f64) -> [f64; 3]) -> (Vec<f64>, Vec<u32>) {
         let columns = if wrap_u { nu } else { nu + 1 };
         let mut points = Vec::with_capacity(columns * (nv + 1) * 3);
         for row in 0..=nv {
@@ -867,7 +886,12 @@ mod tests {
                 .collect()
         };
         let (top, bottom) = (cap(true), cap(false));
-        assert!(top.len() > 10 && bottom.len() > 10, "{} and {}", top.len(), bottom.len());
+        assert!(
+            top.len() > 10 && bottom.len() > 10,
+            "{} and {}",
+            top.len(),
+            bottom.len()
+        );
         assert!(top.iter().all(|one| *one > 0.0), "the upper cap is not a dome");
         assert!(bottom.iter().all(|one| *one < 0.0), "the lower cap is not a bowl");
     }
@@ -882,7 +906,10 @@ mod tests {
         let (points, triangles) = cylinder(r, 6.0, 60, 30);
         let made = curvature(&points, &triangles, Up::PlusZ).expect("a cylinder");
         for one in answered(&made.gaussian) {
-            assert!(one.abs() < 0.02, "gaussian {one} on a cylinder, where 0 is expected");
+            assert!(
+                one.abs() < 0.02,
+                "gaussian {one} on a cylinder, where 0 is expected"
+            );
         }
         for one in answered(&made.mean) {
             assert!(close(one.abs(), 0.5 / r, 0.05), "|mean| {}", one.abs());
@@ -920,14 +947,20 @@ mod tests {
                 up.gaussian[at],
                 down.gaussian[at]
             );
-            assert!(close(up.mean[at], -down.mean[at], 1e-9), "mean did not turn around");
+            assert!(
+                close(up.mean[at], -down.mean[at], 1e-9),
+                "mean did not turn around"
+            );
             if up.mean[at].abs() > 1e-6 {
                 signed += 1;
             }
         }
         // Without this the assertion above would be satisfied by a mean
         // curvature that is zero everywhere — a test that cannot fail.
-        assert!(compared > 500 && signed > 500, "{compared} compared, {signed} signed");
+        assert!(
+            compared > 500 && signed > 500,
+            "{compared} compared, {signed} signed"
+        );
     }
 
     // -- What is set aside, and what is refused ---------------------------

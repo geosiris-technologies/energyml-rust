@@ -154,8 +154,8 @@ use serde_json::{Value, json};
 
 use crate::declare::{ChartTerm, Inputs, ObjectIn, Params, Shape, Suggestions};
 use crate::operation::{
-    About, ActivityDraft, Category, Context, Dataset, Dropped, Need, NewObject, Note, Numbers, Operation, Output, Plan,
-    Refusal, Slot,
+    About, ActivityDraft, Category, Context, Dataset, Dropped, Need, NewObject, Note, Numbers, Operation,
+    Output, Plan, Refusal, Slot,
 };
 use crate::pieces::{KnownProperty, Pieces, Ref};
 
@@ -315,7 +315,11 @@ struct Found {
 
 impl Found {
     fn of(unit: &Ref) -> Found {
-        Found { unit: unit.clone(), points: Vec::new(), origins: Vec::new() }
+        Found {
+            unit: unit.clone(),
+            points: Vec::new(),
+            origins: Vec::new(),
+        }
     }
 }
 
@@ -420,18 +424,31 @@ impl Operation for ContactsFromFrames {
         support::frame_reports(vec![
             Slot::optional(
                 "pointSetCount",
-                Need::Number { uom: None, least: None, most: None },
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
                 "point sets written, two per unit at most",
             ),
             Slot::optional(
                 "propertyCount",
-                Need::Number { uom: None, least: None, most: None },
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
                 "properties copied onto the point sets from the wellbores' own",
             ),
         ])
     }
 
-    fn plan(&self, inputs: ContactsInputs, params: ContactsParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: ContactsInputs,
+        params: ContactsParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         if inputs.frames.is_empty() {
             return Err(Refusal::on(
                 "frames",
@@ -457,13 +474,21 @@ impl Operation for ContactsFromFrames {
                 unmapped += 1;
                 continue;
             };
-            let title = known.reference.as_ref().map(|r| r.title.clone()).unwrap_or_else(|| one.name.clone());
+            let title = known
+                .reference
+                .as_ref()
+                .map(|r| r.title.clone())
+                .unwrap_or_else(|| one.name.clone());
             let Some(units) = known.interval_units.as_ref() else {
                 unmapped += 1;
                 continue;
             };
-            let nodes: Vec<[f64; 3]> =
-                one.geometry.patches.iter().flat_map(|patch| patch.points.iter().copied()).collect();
+            let nodes: Vec<[f64; 3]> = one
+                .geometry
+                .patches
+                .iter()
+                .flat_map(|patch| patch.points.iter().copied())
+                .collect();
             if nodes.len() != units.len() + 1 {
                 return Err(Refusal::on(
                     "frames",
@@ -494,7 +519,8 @@ impl Operation for ContactsFromFrames {
                         continue;
                     };
                     let mut end = at + 1;
-                    while end < units.len() && units[end].as_ref().is_some_and(|next| next.uuid == unit.uuid) {
+                    while end < units.len() && units[end].as_ref().is_some_and(|next| next.uuid == unit.uuid)
+                    {
                         end += 1;
                     }
                     // What lies outside the division read is its neighbour: it
@@ -517,14 +543,26 @@ impl Operation for ContactsFromFrames {
                     // and the unit's own interval at each: the first that begins
                     // at its top, the last that ends at its base.
                     if at > 0 && units[at - 1].is_some() {
-                        let top = found.entry((unit.uuid.clone(), Side::Top)).or_insert_with(|| Found::of(unit));
+                        let top = found
+                            .entry((unit.uuid.clone(), Side::Top))
+                            .or_insert_with(|| Found::of(unit));
                         top.points.push(nodes[at]);
-                        top.origins.push(Origin { frame: from, node: at, interval: at });
+                        top.origins.push(Origin {
+                            frame: from,
+                            node: at,
+                            interval: at,
+                        });
                     }
                     if end < units.len() && units[end].is_some() {
-                        let base = found.entry((unit.uuid.clone(), Side::Base)).or_insert_with(|| Found::of(unit));
+                        let base = found
+                            .entry((unit.uuid.clone(), Side::Base))
+                            .or_insert_with(|| Found::of(unit));
                         base.points.push(nodes[end]);
-                        base.origins.push(Origin { frame: from, node: end, interval: end - 1 });
+                        base.origins.push(Origin {
+                            frame: from,
+                            node: end,
+                            interval: end - 1,
+                        });
                     }
                     at = end;
                 }
@@ -565,8 +603,11 @@ impl Operation for ContactsFromFrames {
             // `reading_seed` is empty when named — the seeds of before — and
             // says the rank otherwise: the base of a stage and the base of the
             // passes named after it are two objects.
-            let feature_uuid =
-                support::next_uuid(cx.identity, &format!("contact-feature:{unit_uuid}:{}{reading_seed}", side.word()), &mut rank)?;
+            let feature_uuid = support::next_uuid(
+                cx.identity,
+                &format!("contact-feature:{unit_uuid}:{}{reading_seed}", side.word()),
+                &mut rank,
+            )?;
             let interpretation_uuid = support::next_uuid(
                 cx.identity,
                 &format!("contact-interpretation:{unit_uuid}:{}{reading_seed}", side.word()),
@@ -594,10 +635,17 @@ impl Operation for ContactsFromFrames {
             };
             // The points of this side, in the order of the frames — the same
             // content, the same object.
-            let digest = points.iter().map(|p| format!("{:?},{:?},{:?}", p[0], p[1], p[2])).collect::<Vec<_>>().join(";");
+            let digest = points
+                .iter()
+                .map(|p| format!("{:?},{:?},{:?}", p[0], p[1], p[2]))
+                .collect::<Vec<_>>()
+                .join(";");
             let set_uuid = support::next_uuid(
                 cx.identity,
-                &format!("contact-points:{unit_uuid}:{}{reading_seed}:{digest}", side.word()),
+                &format!(
+                    "contact-points:{unit_uuid}:{}{reading_seed}:{digest}",
+                    side.word()
+                ),
                 &mut rank,
             )?;
             let path = format!("/resqml22/{set_uuid}/points");
@@ -614,7 +662,11 @@ impl Operation for ContactsFromFrames {
                 "QualifiedType": "resqml22.HorizonInterpretation",
                 "Title": title,
             });
-            written.push(Written { key: (unit_uuid.clone(), *side), uuid: set_uuid.clone(), title: title.clone() });
+            written.push(Written {
+                key: (unit_uuid.clone(), *side),
+                uuid: set_uuid.clone(),
+                title: title.clone(),
+            });
             objects.push(NewObject {
                 uuid: feature_uuid,
                 qualified_type: "resqml22.BoundaryFeature".to_string(),
@@ -639,7 +691,11 @@ impl Operation for ContactsFromFrames {
             let shape = support::made_root(
                 &title,
                 &set_uuid,
-                support::one_patch("pointset", points.clone(), energyml_geometry::geometry::Topology::Points),
+                support::one_patch(
+                    "pointset",
+                    points.clone(),
+                    energyml_geometry::geometry::Topology::Points,
+                ),
             );
             datasets.push(Dataset {
                 file: params.data_file.clone(),
@@ -655,9 +711,18 @@ impl Operation for ContactsFromFrames {
         // **After every point set**, so that the ranks the point sets draw
         // from a given list of uuids are the ones they drew before copies
         // existed.
-        let copy_span = tracing::info_span!("contacts.copy_properties", enabled = params.copy_properties).entered();
+        let copy_span =
+            tracing::info_span!("contacts.copy_properties", enabled = params.copy_properties).entered();
         let copied = if params.copy_properties {
-            copy(&inputs.properties, &used, &found, &written, &params, cx, &mut rank)?
+            copy(
+                &inputs.properties,
+                &used,
+                &found,
+                &written,
+                &params,
+                cx,
+                &mut rank,
+            )?
         } else {
             Copied::off(&inputs.properties, &used)
         };
@@ -696,8 +761,16 @@ impl Operation for ContactsFromFrames {
         // stands, degrees — and nothing when it is a compound.
         says.extend(frame.says);
         let mut parameters = frame.parameters;
-        parameters.push(Parameter::Double { title: "pointSetCount".to_string(), value: sets as f64, uom: None });
-        parameters.push(Parameter::Double { title: "propertyCount".to_string(), value: copied.written as f64, uom: None });
+        parameters.push(Parameter::Double {
+            title: "pointSetCount".to_string(),
+            value: sets as f64,
+            uom: None,
+        });
+        parameters.push(Parameter::Double {
+            title: "propertyCount".to_string(),
+            value: copied.written as f64,
+            uom: None,
+        });
         Ok(Plan {
             media: Vec::new(),
             blocked: frame.blocked.clone(),
@@ -737,13 +810,21 @@ impl Copied {
     fn off(properties: &[ObjectIn], used: &[Used]) -> Copied {
         let left = properties
             .iter()
-            .filter(|one| one.known.property.as_ref().and_then(|facts| frame_of(facts, used)).is_some())
+            .filter(|one| {
+                one.known
+                    .property
+                    .as_ref()
+                    .and_then(|facts| frame_of(facts, used))
+                    .is_some()
+            })
             .count();
         let mut out = Copied::default();
         if left > 0 {
             out.says.push(Note {
                 key: "properties-off",
-                detail: format!("{left} propert(ies) hang on these frames and were not copied: `copyProperties` is off"),
+                detail: format!(
+                    "{left} propert(ies) hang on these frames and were not copied: `copyProperties` is off"
+                ),
             });
         }
         out
@@ -836,16 +917,30 @@ impl<'a> Measure<'a> {
     /// One more wellbore's property under this key — or the reason the key
     /// cannot hold it, which then stands for the whole key: a measure copied
     /// for some wells and refused for others would read as wells without it.
-    fn add(&mut self, at: usize, frame: &Used, title: &'a str, facts: &'a KnownProperty, judged: Judged<'a>, null: i64) {
+    fn add(
+        &mut self,
+        at: usize,
+        frame: &Used,
+        title: &'a str,
+        facts: &'a KnownProperty,
+        judged: Judged<'a>,
+        null: i64,
+    ) {
         self.sources.push(format!("`{title}`"));
         if self.conflict.is_some() {
             return;
         }
         let name = self.name.clone();
         let lower = |reference: Option<&Ref>| reference.map(|one| one.uuid.to_ascii_lowercase());
-        let table = |reference: Option<&Ref>| reference.map(|one| format!("`{}`", one.title)).unwrap_or_else(|| "none".to_string());
+        let table = |reference: Option<&Ref>| {
+            reference
+                .map(|one| format!("`{}`", one.title))
+                .unwrap_or_else(|| "none".to_string())
+        };
         self.conflict = if judged.discrete != self.discrete {
-            Some(format!("`{name}` is continuous for one wellbore and discrete for another — one name, two measurements"))
+            Some(format!(
+                "`{name}` is continuous for one wellbore and discrete for another — one name, two measurements"
+            ))
         } else if facts.uom.as_deref() != self.uom {
             Some(format!(
                 "`{name}` is in {} for one wellbore and in {} for another — a property holds one unit, and converting would choose it for somebody",
@@ -890,7 +985,10 @@ impl Aside {
     fn into_dropped(self) -> Vec<Dropped> {
         self.0
             .into_iter()
-            .map(|(cause, names)| Dropped { count: names.len(), why: format!("{}: not copied — {cause}", listed(&names)) })
+            .map(|(cause, names)| Dropped {
+                count: names.len(),
+                why: format!("{}: not copied — {cause}", listed(&names)),
+            })
             .collect()
     }
 }
@@ -898,7 +996,11 @@ impl Aside {
 /// A few names and how many more: a list of two hundred is not read.
 fn listed(names: &[String]) -> String {
     let shown = names.iter().take(3).cloned().collect::<Vec<_>>().join(", ");
-    if names.len() > 3 { format!("{shown} and {} more", names.len() - 3) } else { shown }
+    if names.len() > 3 {
+        format!("{shown} and {} more", names.len() - 3)
+    } else {
+        shown
+    }
 }
 
 /// The class of a qualified type — `DiscreteProperty` of `resqml22.DiscreteProperty`.
@@ -910,7 +1012,8 @@ fn class_of(qualified_type: &str) -> &str {
 /// hangs on.
 fn frame_of(facts: &KnownProperty, used: &[Used]) -> Option<usize> {
     let uuid = facts.supporting.as_ref()?.uuid.to_ascii_lowercase();
-    used.iter().position(|frame| frame.uuid.as_deref() == Some(uuid.as_str()))
+    used.iter()
+        .position(|frame| frame.uuid.as_deref() == Some(uuid.as_str()))
 }
 
 /// What a property measures, without the wellbore that carries it.
@@ -949,16 +1052,34 @@ fn judge<'a>(reference: &Ref, facts: &'a KnownProperty, nodes: usize) -> Result<
         "BooleanProperty" => {
             return Err("a flag has no null, so a point whose wellbore lacks it could only be written true or false — a value nobody stated".to_string());
         }
-        "CommentProperty" => return Err("a comment is text, and this operation copies values, continuous and discrete".to_string()),
-        "PointsProperty" => return Err("it holds positions, not values, and a point set's nodes are already its positions".to_string()),
-        other => return Err(format!("a `{other}` is not copied: this operation copies continuous and discrete properties")),
+        "CommentProperty" => {
+            return Err(
+                "a comment is text, and this operation copies values, continuous and discrete".to_string(),
+            );
+        }
+        "PointsProperty" => {
+            return Err(
+                "it holds positions, not values, and a point set's nodes are already its positions"
+                    .to_string(),
+            );
+        }
+        other => {
+            return Err(format!(
+                "a `{other}` is not copied: this operation copies continuous and discrete properties"
+            ));
+        }
     };
-    let values = facts.values.as_ref().map_err(|why| format!("its values did not read — {why}"))?;
+    let values = facts
+        .values
+        .as_ref()
+        .map_err(|why| format!("its values did not read — {why}"))?;
     if facts.timed {
         return Err("it is indexed in time — one value per node and per step, and which step a contact is at is stated nowhere".to_string());
     }
     if facts.realizations {
-        return Err("it holds several realizations, and which one a contact takes is stated nowhere".to_string());
+        return Err(
+            "it holds several realizations, and which one a contact takes is stated nowhere".to_string(),
+        );
     }
     let per_element: u64 = facts.value_count.iter().product();
     if per_element > 1 {
@@ -969,7 +1090,11 @@ fn judge<'a>(reference: &Ref, facts: &'a KnownProperty, nodes: usize) -> Result<
     let rows = match facts.indexable.as_str() {
         "nodes" => nodes,
         "intervals" => nodes.saturating_sub(1),
-        other => return Err(format!("its values hang on `{other}`, which is neither a node nor an interval of the frame")),
+        other => {
+            return Err(format!(
+                "its values hang on `{other}`, which is neither a node nor an interval of the frame"
+            ));
+        }
     };
     let Some(kind) = facts.kind.as_ref() else {
         return Err("it names no property kind by reference, and a RESQML 2.2 property must".to_string());
@@ -977,7 +1102,10 @@ fn judge<'a>(reference: &Ref, facts: &'a KnownProperty, nodes: usize) -> Result<
     // `Uom` is required on a 2.2 continuous property, and an enumeration: a
     // copy written without one would read back as the schema's first unit.
     if !discrete && facts.uom.as_deref().is_none_or(str::is_empty) {
-        return Err("it states no unit, and a copy without one would read back in the schema's first unit".to_string());
+        return Err(
+            "it states no unit, and a copy without one would read back in the schema's first unit"
+                .to_string(),
+        );
     }
     if values.len() != rows {
         return Err(format!(
@@ -988,15 +1116,29 @@ fn judge<'a>(reference: &Ref, facts: &'a KnownProperty, nodes: usize) -> Result<
     }
     let null = facts.null_value;
     let cells = match (discrete, values) {
-        (true, Values::Integer(codes)) => Cells::Code(codes.iter().map(|code| (Some(*code) != null).then_some(*code)).collect()),
+        (true, Values::Integer(codes)) => Cells::Code(
+            codes
+                .iter()
+                .map(|code| (Some(*code) != null).then_some(*code))
+                .collect(),
+        ),
         (true, _) => return Err("it is discrete and its values are not integers".to_string()),
-        (false, Values::Floating(reals)) => Cells::Real(reals.iter().map(|one| (!one.is_nan()).then_some(*one)).collect()),
-        (false, Values::Integer(whole)) => {
-            Cells::Real(whole.iter().map(|one| (Some(*one) != null).then_some(*one as f64)).collect())
+        (false, Values::Floating(reals)) => {
+            Cells::Real(reals.iter().map(|one| (!one.is_nan()).then_some(*one)).collect())
         }
+        (false, Values::Integer(whole)) => Cells::Real(
+            whole
+                .iter()
+                .map(|one| (Some(*one) != null).then_some(*one as f64))
+                .collect(),
+        ),
         (false, _) => return Err("it is continuous and its values are not numbers".to_string()),
     };
-    Ok(Judged { kind, discrete, cells })
+    Ok(Judged {
+        kind,
+        discrete,
+        cells,
+    })
 }
 
 /// The wells' properties, copied onto the point sets.
@@ -1019,7 +1161,9 @@ fn copy(
     let mut elsewhere = 0usize;
     let mut measures: BTreeMap<Key, Measure<'_>> = BTreeMap::new();
     for input in properties {
-        let Some(reference) = input.known.reference.as_ref() else { continue };
+        let Some(reference) = input.known.reference.as_ref() else {
+            continue;
+        };
         let Some(facts) = input.known.property.as_ref() else {
             // **Not every object in this slot is a property.** The binder
             // hands it every object piece no slot is named after, and the front end
@@ -1027,7 +1171,10 @@ fn copy(
             // an answer, not a property this run failed to copy. A *property*
             // the boundary could not describe is another matter, and named.
             if class_of(&reference.qualified_type).ends_with("Property") {
-                aside.add("it was not described as a property at the boundary", &reference.title);
+                aside.add(
+                    "it was not described as a property at the boundary",
+                    &reference.title,
+                );
             }
             continue;
         };
@@ -1047,14 +1194,24 @@ fn copy(
             kind: judged.kind.uuid.to_ascii_lowercase(),
             measure: measure_of(&reference.title, &frame.well),
             element: facts.indexable.clone(),
-            facets: facts.facets.iter().map(Value::to_string).collect::<Vec<_>>().join(";"),
+            facets: facts
+                .facets
+                .iter()
+                .map(Value::to_string)
+                .collect::<Vec<_>>()
+                .join(";"),
         };
-        let measure = measures.entry(key).or_insert_with_key(|key| Measure::new(key, &judged, facts));
+        let measure = measures
+            .entry(key)
+            .or_insert_with_key(|key| Measure::new(key, &judged, facts));
         measure.add(at, frame, &reference.title, facts, judged, params.null_value);
     }
     for measure in measures.values() {
         if let Some(why) = &measure.conflict {
-            out.dropped.push(Dropped { count: measure.sources.len(), why: format!("{}: not copied — {why}", listed(&measure.sources)) });
+            out.dropped.push(Dropped {
+                count: measure.sources.len(),
+                why: format!("{}: not copied — {why}", listed(&measure.sources)),
+            });
         }
     }
     out.dropped.extend(aside.into_dropped());
@@ -1073,7 +1230,11 @@ fn copy(
                         lacking += 1;
                         return None;
                     };
-                    let row = if measure.intervals { origin.interval } else { origin.node };
+                    let row = if measure.intervals {
+                        origin.interval
+                    } else {
+                        origin.node
+                    };
                     let cell = cells.at(row);
                     if cell.is_none() {
                         null += 1;
@@ -1094,7 +1255,10 @@ fn copy(
         }
     }
 
-    let kept = measures.values().filter(|measure| measure.conflict.is_none()).count();
+    let kept = measures
+        .values()
+        .filter(|measure| measure.conflict.is_none())
+        .count();
     out.says.push(Note {
         key: "properties",
         detail: format!(
@@ -1116,7 +1280,9 @@ fn copy(
     if empty > 0 {
         out.says.push(Note {
             key: "properties-empty",
-            detail: format!("{empty} propert(ies) left off a point set where every value would have been null"),
+            detail: format!(
+                "{empty} propert(ies) left off a point set where every value would have been null"
+            ),
         });
     }
     let refused: usize = out.dropped.iter().map(|one| one.count).sum();
@@ -1129,7 +1295,9 @@ fn copy(
     if elsewhere > 0 {
         out.says.push(Note {
             key: "properties-elsewhere",
-            detail: format!("{elsewhere} propert(ies) hang on no frame this run extracted from, and were passed over"),
+            detail: format!(
+                "{elsewhere} propert(ies) hang on no frame this run extracted from, and were passed over"
+            ),
         });
     }
     Ok(out)
@@ -1177,14 +1345,23 @@ fn write_one(
         // last bit are two contents; a NaN is an absence and is written as one.
         let digest = reals
             .iter()
-            .map(|value| if value.is_nan() { "·".to_string() } else { format!("{value:?}") })
+            .map(|value| {
+                if value.is_nan() {
+                    "·".to_string()
+                } else {
+                    format!("{value:?}")
+                }
+            })
             .collect::<Vec<_>>()
             .join(",");
         (Numbers::F64(reals), digest)
     };
     let uuid = support::next_uuid(
         cx.identity,
-        &format!("contact-property:{}:{}|{}|{}|{}:{digest}", set.uuid, key.kind, key.measure, key.element, key.facets),
+        &format!(
+            "contact-property:{}:{}|{}|{}|{}:{digest}",
+            set.uuid, key.kind, key.measure, key.element, key.facets
+        ),
         rank,
     )?;
     let count = values.len();
@@ -1245,8 +1422,19 @@ fn write_one(
         object["Facet"] = Value::Array(measure.facets.to_vec());
     }
     Ok((
-        NewObject { uuid, qualified_type: qualified_type.to_string(), role: role.to_string(), title, json: object },
-        Dataset { file: params.data_file.clone(), path, dimensions: vec![count as i64], values },
+        NewObject {
+            uuid,
+            qualified_type: qualified_type.to_string(),
+            role: role.to_string(),
+            title,
+            json: object,
+        },
+        Dataset {
+            file: params.data_file.clone(),
+            path,
+            dimensions: vec![count as i64],
+            values,
+        },
     ))
 }
 
@@ -1291,7 +1479,8 @@ impl Named {
         Named {
             says: vec![Note {
                 key: "well-origin-off",
-                detail: "`wellOrigin` is off: no point set names the well each of its points came from".to_string(),
+                detail: "`wellOrigin` is off: no point set names the well each of its points came from"
+                    .to_string(),
             }],
             ..Default::default()
         }
@@ -1382,9 +1571,17 @@ fn name_wells(
         let Some(one) = found.get(&set.key) else { continue };
         // Every origin names a frame, and every frame has a code: unlike a
         // copied measurement, this is never null.
-        let codes: Vec<i64> = one.origins.iter().map(|origin| well_codes[origin.frame]).collect();
+        let codes: Vec<i64> = one
+            .origins
+            .iter()
+            .map(|origin| well_codes[origin.frame])
+            .collect();
         let digest = codes.iter().map(i64::to_string).collect::<Vec<_>>().join(",");
-        let uuid = support::next_uuid(cx.identity, &format!("contacts-well-origin:{}:{digest}", set.uuid), rank)?;
+        let uuid = support::next_uuid(
+            cx.identity,
+            &format!("contacts-well-origin:{}:{digest}", set.uuid),
+            rank,
+        )?;
         let count = codes.len();
         let path = format!("/resqml22/{uuid}/values");
         let array = support::external(&params.data_file, &path, &[count as i64]);
@@ -1421,7 +1618,12 @@ fn name_wells(
             title: property_title,
             json: object,
         });
-        datasets.push(Dataset { file: params.data_file.clone(), path, dimensions: vec![count as i64], values: Numbers::I64(codes) });
+        datasets.push(Dataset {
+            file: params.data_file.clone(),
+            path,
+            dimensions: vec![count as i64],
+            values: Numbers::I64(codes),
+        });
         properties += 1;
     }
 

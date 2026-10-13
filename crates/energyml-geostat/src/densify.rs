@@ -87,7 +87,11 @@ fn catmull_rom(p0: [f64; 3], p1: [f64; 3], p2: [f64; 3], p3: [f64; 3], t: f64) -
     let u = t1 + (t2 - t1) * t;
     let mix = |a: [f64; 3], b: [f64; 3], ta: f64, tb: f64| {
         let w = (u - ta) / (tb - ta);
-        [a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w, a[2] + (b[2] - a[2]) * w]
+        [
+            a[0] + (b[0] - a[0]) * w,
+            a[1] + (b[1] - a[1]) * w,
+            a[2] + (b[2] - a[2]) * w,
+        ]
     };
     let a1 = mix(p0, p1, t0, t1);
     let a2 = mix(p1, p2, t1, t2);
@@ -103,7 +107,13 @@ fn catmull_rom(p0: [f64; 3], p1: [f64; 3], p2: [f64; 3], p3: [f64; 3], t: f64) -
 /// Refused by name: a count of zero (nothing to add is a copy, not a
 /// densification), a spacing that is not a positive number, a negative
 /// tolerance. A line of fewer than two vertices comes back as it is.
-pub fn densify(line: &[[f64; 3]], closed: bool, placement: Placement, along: Along, smooth: bool) -> Result<Densified, String> {
+pub fn densify(
+    line: &[[f64; 3]],
+    closed: bool,
+    placement: Placement,
+    along: Along,
+    smooth: bool,
+) -> Result<Densified, String> {
     match placement {
         Placement::Count(0) => return Err("the count must be at least 1 — adding none is a copy".to_string()),
         Placement::Spacing { every, tolerance } => {
@@ -111,14 +121,19 @@ pub fn densify(line: &[[f64; 3]], closed: bool, placement: Placement, along: Alo
                 return Err(format!("the spacing must be a finite number > 0, not {every}"));
             }
             if !(tolerance.is_finite() && tolerance >= 0.0) {
-                return Err(format!("the tolerance must be a finite number ≥ 0, not {tolerance}"));
+                return Err(format!(
+                    "the tolerance must be a finite number ≥ 0, not {tolerance}"
+                ));
             }
         }
         Placement::Count(_) => {}
     }
     let n = line.len();
     if n < 2 {
-        return Ok(Densified { points: line.to_vec(), added: 0 });
+        return Ok(Densified {
+            points: line.to_vec(),
+            added: 0,
+        });
     }
     // The segments, the closing one included for a ring.
     let segments = if closed { n } else { n - 1 };
@@ -132,7 +147,10 @@ pub fn densify(line: &[[f64; 3]], closed: bool, placement: Placement, along: Alo
     }
     starts.push(total);
     if total <= 0.0 {
-        return Ok(Densified { points: line.to_vec(), added: 0 });
+        return Ok(Densified {
+            points: line.to_vec(),
+            added: 0,
+        });
     }
     // The abscissas of the points to add, in order.
     let mut wanted: Vec<f64> = Vec::new();
@@ -188,7 +206,11 @@ pub fn densify(line: &[[f64; 3]], closed: bool, placement: Placement, along: Alo
             let p = if smooth {
                 catmull_rom(neighbour(i as isize - 1), a, b, neighbour(i as isize + 2), t)
             } else {
-                [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
+                [
+                    a[0] + (b[0] - a[0]) * t,
+                    a[1] + (b[1] - a[1]) * t,
+                    a[2] + (b[2] - a[2]) * t,
+                ]
             };
             points.push(p);
             added += 1;
@@ -235,11 +257,31 @@ mod tests {
         // The example of the notes: a vertex at 4.80, stations every 5 with a
         // tolerance of 0.25 — no station at 5, one at 10.
         let line = [[0.0, 0.0, 0.0], [4.8, 0.0, 0.0], [12.0, 0.0, 0.0]];
-        let out = densify(&line, false, Placement::Spacing { every: 5.0, tolerance: 0.25 }, Along::Space, false).unwrap();
+        let out = densify(
+            &line,
+            false,
+            Placement::Spacing {
+                every: 5.0,
+                tolerance: 0.25,
+            },
+            Along::Space,
+            false,
+        )
+        .unwrap();
         let xs: Vec<f64> = out.points.iter().map(|p| p[0]).collect();
         assert_eq!(xs, vec![0.0, 4.8, 10.0, 12.0]);
         // Without the tolerance, the station at 5 is added.
-        let loose = densify(&line, false, Placement::Spacing { every: 5.0, tolerance: 0.0 }, Along::Space, false).unwrap();
+        let loose = densify(
+            &line,
+            false,
+            Placement::Spacing {
+                every: 5.0,
+                tolerance: 0.0,
+            },
+            Along::Space,
+            false,
+        )
+        .unwrap();
         assert_eq!(loose.added, 2);
     }
 
@@ -247,10 +289,30 @@ mod tests {
     fn in_plan_a_steep_line_gets_the_plan_stations() {
         // Plan length 10, 3D length much more: every 5 in plan gives one station.
         let line = [[0.0, 0.0, 0.0], [10.0, 0.0, 100.0]];
-        let plan = densify(&line, false, Placement::Spacing { every: 5.0, tolerance: 0.0 }, Along::Plan, false).unwrap();
+        let plan = densify(
+            &line,
+            false,
+            Placement::Spacing {
+                every: 5.0,
+                tolerance: 0.0,
+            },
+            Along::Plan,
+            false,
+        )
+        .unwrap();
         assert_eq!(plan.added, 1);
         assert!(close(plan.points[1], [5.0, 0.0, 50.0]));
-        let space = densify(&line, false, Placement::Spacing { every: 5.0, tolerance: 0.0 }, Along::Space, false).unwrap();
+        let space = densify(
+            &line,
+            false,
+            Placement::Spacing {
+                every: 5.0,
+                tolerance: 0.0,
+            },
+            Along::Space,
+            false,
+        )
+        .unwrap();
         assert!(space.added > 10);
     }
 
@@ -264,7 +326,10 @@ mod tests {
         // …at 0.8, 1.6, 2.4, 3.2: the last one on the closing edge.
         assert_eq!(out.added, 4);
         assert!(close(*out.points.last().unwrap(), [0.0, 0.8, 0.0]));
-        assert!(!close(*out.points.last().unwrap(), square[0]), "the first vertex is not repeated");
+        assert!(
+            !close(*out.points.last().unwrap(), square[0]),
+            "the first vertex is not repeated"
+        );
     }
 
     #[test]
@@ -273,20 +338,60 @@ mod tests {
         let straight = densify(&line, false, Placement::Count(5), Along::Space, false).unwrap();
         let curved = densify(&line, false, Placement::Count(5), Along::Space, true).unwrap();
         assert_eq!(straight.points.len(), curved.points.len());
-        let moved = straight.points.iter().zip(&curved.points).filter(|(a, b)| !close(**a, **b)).count();
+        let moved = straight
+            .points
+            .iter()
+            .zip(&curved.points)
+            .filter(|(a, b)| !close(**a, **b))
+            .count();
         assert!(moved > 0, "a curve, not the segments");
         for vertex in line {
-            assert!(curved.points.iter().any(|p| close(*p, vertex)), "{vertex:?} stays on the curve");
+            assert!(
+                curved.points.iter().any(|p| close(*p, vertex)),
+                "{vertex:?} stays on the curve"
+            );
         }
         // Centripetal: no overshoot past the vertices' band in y.
-        assert!(curved.points.iter().all(|p| p[1] > -0.2 && p[1] < 1.2), "{:?}", curved.points);
+        assert!(
+            curved.points.iter().all(|p| p[1] > -0.2 && p[1] < 1.2),
+            "{:?}",
+            curved.points
+        );
     }
 
     #[test]
     fn refused_by_name() {
         let line = [[0.0; 3], [1.0, 0.0, 0.0]];
-        assert!(densify(&line, false, Placement::Count(0), Along::Space, false).unwrap_err().contains("at least 1"));
-        assert!(densify(&line, false, Placement::Spacing { every: 0.0, tolerance: 0.0 }, Along::Space, false).is_err());
-        assert!(densify(&line, false, Placement::Spacing { every: 1.0, tolerance: -1.0 }, Along::Space, false).is_err());
+        assert!(
+            densify(&line, false, Placement::Count(0), Along::Space, false)
+                .unwrap_err()
+                .contains("at least 1")
+        );
+        assert!(
+            densify(
+                &line,
+                false,
+                Placement::Spacing {
+                    every: 0.0,
+                    tolerance: 0.0
+                },
+                Along::Space,
+                false
+            )
+            .is_err()
+        );
+        assert!(
+            densify(
+                &line,
+                false,
+                Placement::Spacing {
+                    every: 1.0,
+                    tolerance: -1.0
+                },
+                Along::Space,
+                false
+            )
+            .is_err()
+        );
     }
 }

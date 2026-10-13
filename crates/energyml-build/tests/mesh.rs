@@ -52,7 +52,11 @@ fn segments(geometry: &energyml_geometry::geometry::Geometry) -> Vec<u32> {
 
 /// The number of nodes — the patches share the same points.
 fn nodes(geometry: &energyml_geometry::geometry::Geometry) -> usize {
-    geometry.patches.first().map(|patch| patch.points.len()).unwrap_or(0)
+    geometry
+        .patches
+        .first()
+        .map(|patch| patch.points.len())
+        .unwrap_or(0)
 }
 
 // -- OBJ ---------------------------------------------------------------------
@@ -90,9 +94,12 @@ fn the_second_patch_is_offset_by_the_count_of_the_first() {
     assert_eq!(read.patches[1].node_offset, read.patches[0].points.len());
 
     // And a file of a single nature has only one patch, at zero.
-    let lines = mesh::read_obj("v 0 0 0
+    let lines = mesh::read_obj(
+        "v 0 0 0
 v 1 0 0
-l 1 2").expect("un OBJ");
+l 1 2",
+    )
+    .expect("un OBJ");
     assert_eq!(lines.patches.len(), 1);
     assert_eq!(lines.patches[0].node_offset, 0);
 }
@@ -201,9 +208,21 @@ fn readable_formats_can_be_asked_for() {
     // Each says its extensions and what it reads: a format without a description
     // would put a bare line in a picker.
     for format in mesh::FORMATS {
-        assert!(!format.extensions.is_empty(), "`{}` does not say its extensions", format.name);
-        assert!(!format.describe.is_empty(), "`{}` does not say what it reads", format.name);
-        assert!(format.extensions.iter().all(|e| e.starts_with('.')), "`{}`: the dot included", format.name);
+        assert!(
+            !format.extensions.is_empty(),
+            "`{}` does not say its extensions",
+            format.name
+        );
+        assert!(
+            !format.describe.is_empty(),
+            "`{}` does not say what it reads",
+            format.name
+        );
+        assert!(
+            format.extensions.iter().all(|e| e.starts_with('.')),
+            "`{}`: the dot included",
+            format.name
+        );
     }
 }
 
@@ -220,7 +239,10 @@ fn the_format_is_read_from_the_file_name_case_insensitively() {
     // And `read` refuses naming both ends: the file, and what is known
     // to be readable — a refusal that only said “no” would send one searching at random.
     let why = mesh::read("piece.stl", "solid x").expect_err("refused");
-    assert!(why.contains("piece.stl") && why.contains("obj") && why.contains("geojson"), "{why}");
+    assert!(
+        why.contains("piece.stl") && why.contains("obj") && why.contains("geojson"),
+        "{why}"
+    );
 }
 
 #[test]
@@ -244,7 +266,11 @@ fn a_csv_is_a_scatter_and_its_separator_is_measured() {
     // the spreadsheet. Assuming the comma would return a single column and a refusal
     // *“this is not a number”* that helps nobody. The separator retained is
     // the one that splits the most — measured on the line.
-    for text in ["x,y,z\n1,2,3\n4,5,6", "x;y;z\n1;2;3\n4;5;6", "x\ty\tz\n1\t2\t3\n4\t5\t6"] {
+    for text in [
+        "x,y,z\n1,2,3\n4,5,6",
+        "x;y;z\n1;2;3\n4;5;6",
+        "x\ty\tz\n1\t2\t3\n4\t5\t6",
+    ] {
         let made = mesh::read("semis.csv", text).expect("un semis");
         assert_eq!(nodes(&made), 2, "with `{}`", text.lines().next().unwrap_or(""));
         assert_eq!(made.patches[0].points[1], [4.0, 5.0, 6.0]);
@@ -279,7 +305,10 @@ fn a_csv_without_z_is_refused_until_the_height_is_given() {
     let made = mesh::read_given(
         "semis.csv",
         "x,y\n10,20",
-        &mesh::Given { height: Some(-15.0), ..Default::default() },
+        &mesh::Given {
+            height: Some(-15.0),
+            ..Default::default()
+        },
     )
     .expect("un semis");
     assert_eq!(made.patches[0].points[0], [10.0, 20.0, -15.0]);
@@ -296,7 +325,10 @@ fn degrees_in_a_csv_are_refused_naming_the_format_that_reads_them() {
     // `check` without saying anything. Refusing it costs a file to rewrite; reading it
     // costs a search of several hours.
     let why = mesh::read("semis.csv", "lon,lat,z\n2.32,48.97,38").expect_err("degrees");
-    assert!(why.contains("GeoJSON"), "it names the format that can read them: {why}");
+    assert!(
+        why.contains("GeoJSON"),
+        "it names the format that can read them: {why}"
+    );
 }
 
 #[test]
@@ -310,7 +342,11 @@ fn a_geojson_is_carried_in_metres_and_the_zone_is_proposed() {
     let made = mesh::read("trace.geojson", text).expect("a trace");
     assert_eq!(nodes(&made), 2);
     // Metres, not degrees: it is the fact on which everything else depends.
-    assert!(made.patches[0].points[0][0] > 100_000.0, "{:?}", made.patches[0].points[0]);
+    assert!(
+        made.patches[0].points[0][0] > 100_000.0,
+        "{:?}",
+        made.patches[0].points[0]
+    );
     // And the two positions are joined: a trace is a line.
     assert_eq!(segments(&made), vec![0, 1]);
 }
@@ -322,13 +358,15 @@ fn a_flat_geojson_is_refused_rather_than_laying_nans() {
     // box that meets it — an empty scene, and nothing to say so.
     let text = r#"{"type":"FeatureCollection","features":[
         {"type":"Feature","geometry":{"type":"Point","coordinates":[2.32,48.97]},"properties":{}}]}"#;
-    let why = mesh::read_or_ask("plat.geojson", text, &mesh::Given::default())
-        .expect_err("no elevation");
+    let why = mesh::read_or_ask("plat.geojson", text, &mesh::Given::default()).expect_err("no elevation");
     assert_eq!(why.missing, vec![mesh::Ask::Height]);
     let made = mesh::read_given(
         "plat.geojson",
         text,
-        &mesh::Given { height: Some(42.0), projection: None },
+        &mesh::Given {
+            height: Some(42.0),
+            projection: None,
+        },
     )
     .expect("un point");
     assert_eq!(made.patches[0].points[0][2], 42.0);
@@ -347,7 +385,10 @@ fn a_file_that_carries_everything_asks_for_nothing() {
     let text = r#"{"type":"FeatureCollection","features":[
         {"type":"Feature","geometry":{"type":"Point","coordinates":[2.2953,48.875,58]},"properties":{}}]}"#;
     let made = mesh::read_or_ask("unites.geojson", text, &mesh::Given::default()).expect("lisible");
-    assert_eq!(made.patches[0].points[0][2], 58.0, "its own elevation, not an elevation asked for");
+    assert_eq!(
+        made.patches[0].points[0][2], 58.0,
+        "its own elevation, not an elevation asked for"
+    );
     // And the format still declares that it *may* ask for both: it is
     // the distinction between what a format sometimes demands and what is missing
     // here that is the whole subject.
@@ -386,17 +427,31 @@ fn a_geojson_says_in_which_system_it_laid_its_degrees() {
     let proposed = mesh::read_placed("trace.geojson", text, &mesh::Given::default()).expect("a trace");
     assert_eq!(
         proposed.placed,
-        Some(mesh::Placed { epsg: 32631, proposed: true, degrees: false }),
+        Some(mesh::Placed {
+            epsg: 32631,
+            proposed: true,
+            degrees: false
+        }),
     );
 
     // The code of the scene: **said as an answer**.
     let given = mesh::read_placed(
         "trace.geojson",
         text,
-        &mesh::Given { height: None, projection: Some(2154) },
+        &mesh::Given {
+            height: None,
+            projection: Some(2154),
+        },
     )
     .expect("a trace");
-    assert_eq!(given.placed, Some(mesh::Placed { epsg: 2154, proposed: false, degrees: false }));
+    assert_eq!(
+        given.placed,
+        Some(mesh::Placed {
+            epsg: 2154,
+            proposed: false,
+            degrees: false
+        })
+    );
 
     // And the gap that made the artefact disappear: the same positions, more
     // than a thousand kilometres apart depending on the system chosen.
@@ -413,10 +468,20 @@ fn a_geojson_says_in_which_system_it_laid_its_degrees() {
     let kept = mesh::read_placed(
         "trace.geojson",
         text,
-        &mesh::Given { height: None, projection: Some(4326) },
+        &mesh::Given {
+            height: None,
+            projection: Some(4326),
+        },
     )
     .expect("a trace");
-    assert_eq!(kept.placed, Some(mesh::Placed { epsg: 4326, proposed: false, degrees: true }));
+    assert_eq!(
+        kept.placed,
+        Some(mesh::Placed {
+            epsg: 4326,
+            proposed: false,
+            degrees: true
+        })
+    );
     assert_eq!(kept.geometry.patches[0].points[0], [2.32, 48.97, 10.0]);
 
     // A format without degrees says nothing: nothing was decided in its place.
@@ -520,11 +585,22 @@ fn assert_cube_faces(read: &energyml_geometry::geometry::Geometry) {
     for t in tri.chunks(3) {
         let [a, b, c] = [pts[t[0] as usize], pts[t[1] as usize], pts[t[2] as usize]];
         let flat = (0..3).any(|axis| a[axis] == b[axis] && b[axis] == c[axis]);
-        assert!(flat, "triangle {t:?} leaves its face: a hexahedron is not a polygon");
+        assert!(
+            flat,
+            "triangle {t:?} leaves its face: a hexahedron is not a polygon"
+        );
         let u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
         let v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
-        let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
-        let centre = [(a[0] + b[0] + c[0]) / 3. - 0.5, (a[1] + b[1] + c[1]) / 3. - 0.5, (a[2] + b[2] + c[2]) / 3. - 0.5];
+        let n = [
+            u[1] * v[2] - u[2] * v[1],
+            u[2] * v[0] - u[0] * v[2],
+            u[0] * v[1] - u[1] * v[0],
+        ];
+        let centre = [
+            (a[0] + b[0] + c[0]) / 3. - 0.5,
+            (a[1] + b[1] + c[1]) / 3. - 0.5,
+            (a[2] + b[2] + c[2]) / 3. - 0.5,
+        ];
         let outward: f64 = (0..3).map(|k| n[k] * centre[k]).sum();
         assert!(outward > 0.0, "triangle {t:?} faces inward");
     }

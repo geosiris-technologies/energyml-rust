@@ -81,7 +81,6 @@
 
 use std::f64::consts::PI;
 
-
 type Vector = [f64; 3];
 
 fn sub(a: Vector, b: Vector) -> Vector {
@@ -110,7 +109,11 @@ pub fn dogleg(t1: [f64; 3], t2: [f64; 3]) -> f64 {
 /// its series `1 + β² / 12` below a microradian, where the quotient loses its
 /// digits.
 pub fn ratio_factor(beta: f64) -> f64 {
-    if beta.abs() < 1e-6 { 1.0 + beta * beta / 12.0 } else { 2.0 / beta * (beta / 2.0).tan() }
+    if beta.abs() < 1e-6 {
+        1.0 + beta * beta / 12.0
+    } else {
+        2.0 / beta * (beta / 2.0).tan()
+    }
 }
 
 /// Below this, the sine of an inclination makes the hole **vertical**: a
@@ -168,7 +171,9 @@ pub enum StationsError {
         /// What was given.
         given: f64,
     },
-    #[error("station {station}: MD {md} does not come after MD {previous} — the stations of a survey run down the hole, in order")]
+    #[error(
+        "station {station}: MD {md} does not come after MD {previous} — the stations of a survey run down the hole, in order"
+    )]
     /// A measured depth that does not come after the previous one.
     NotIncreasing {
         /// The station, from 1.
@@ -194,7 +199,9 @@ pub enum StationsError {
         /// Its inclination, in degrees.
         inclination: f64,
     },
-    #[error("station {station}: an inclination is in [0°, 180°] — 0 down, 90 horizontal, 180 up — not {given}°")]
+    #[error(
+        "station {station}: an inclination is in [0°, 180°] — 0 down, 90 horizontal, 180 up — not {given}°"
+    )]
     /// An inclination outside [0°, 180°].
     BadInclination {
         /// The station, from 1.
@@ -222,20 +229,36 @@ pub enum StationsError {
 
 /// The unit direction of one station — checked, north, east, down.
 fn direction_of(station: usize, measured: &Measured) -> Result<[f64; 3], StationsError> {
-    let inclination = measured.inclination.ok_or(StationsError::NoInclination { station })?;
+    let inclination = measured
+        .inclination
+        .ok_or(StationsError::NoInclination { station })?;
     if !inclination.is_finite() {
-        return Err(StationsError::NotANumber { station, what: "inclination", given: inclination });
+        return Err(StationsError::NotANumber {
+            station,
+            what: "inclination",
+            given: inclination,
+        });
     }
     if !(0.0..=180.0).contains(&inclination) {
-        return Err(StationsError::BadInclination { station, given: inclination });
+        return Err(StationsError::BadInclination {
+            station,
+            given: inclination,
+        });
     }
     match measured.azimuth {
         Some(azimuth) => {
             if !azimuth.is_finite() {
-                return Err(StationsError::NotANumber { station, what: "azimuth", given: azimuth });
+                return Err(StationsError::NotANumber {
+                    station,
+                    what: "azimuth",
+                    given: azimuth,
+                });
             }
             if !(0.0..=360.0).contains(&azimuth) {
-                return Err(StationsError::BadAzimuth { station, given: azimuth });
+                return Err(StationsError::BadAzimuth {
+                    station,
+                    given: azimuth,
+                });
             }
             Ok(direction(inclination, azimuth))
         }
@@ -250,17 +273,27 @@ fn direction_of(station: usize, measured: &Measured) -> Result<[f64; 3], Station
 /// Every station placed from the first, by the minimum curvature method.
 pub fn positions(stations: &[Measured]) -> Result<Vec<Located>, StationsError> {
     if stations.len() < 2 {
-        return Err(StationsError::TooFewStations { given: stations.len() });
+        return Err(StationsError::TooFewStations {
+            given: stations.len(),
+        });
     }
     // -- every station checked before any is placed ----------------------------
     let mut directions = Vec::with_capacity(stations.len());
     for (at, measured) in stations.iter().enumerate() {
         let station = at + 1;
         if !measured.md.is_finite() {
-            return Err(StationsError::NotANumber { station, what: "measured depth", given: measured.md });
+            return Err(StationsError::NotANumber {
+                station,
+                what: "measured depth",
+                given: measured.md,
+            });
         }
         if at > 0 && measured.md <= stations[at - 1].md {
-            return Err(StationsError::NotIncreasing { station, md: measured.md, previous: stations[at - 1].md });
+            return Err(StationsError::NotIncreasing {
+                station,
+                md: measured.md,
+                previous: stations[at - 1].md,
+            });
         }
         directions.push(direction_of(station, measured)?);
     }
@@ -268,7 +301,12 @@ pub fn positions(stations: &[Measured]) -> Result<Vec<Located>, StationsError> {
     // -- the chords, one per interval ------------------------------------------
     let mut out = Vec::with_capacity(stations.len());
     let mut at = [0.0f64; 3];
-    out.push(Located { md: stations[0].md, north: 0.0, east: 0.0, tvd: 0.0 });
+    out.push(Located {
+        md: stations[0].md,
+        north: 0.0,
+        east: 0.0,
+        tvd: 0.0,
+    });
     for k in 1..stations.len() {
         let (t1, t2) = (directions[k - 1], directions[k]);
         let beta = dogleg(t1, t2);
@@ -279,7 +317,12 @@ pub fn positions(stations: &[Measured]) -> Result<Vec<Located>, StationsError> {
         for axis in 0..3 {
             at[axis] += scale * (t1[axis] + t2[axis]);
         }
-        out.push(Located { md: stations[k].md, north: at[0], east: at[1], tvd: at[2] });
+        out.push(Located {
+            md: stations[k].md,
+            north: at[0],
+            east: at[1],
+            tvd: at[2],
+        });
     }
     Ok(out)
 }
@@ -293,19 +336,31 @@ mod tests {
     }
 
     fn station(md: f64, inclination: f64, azimuth: f64) -> Measured {
-        Measured { md, inclination: Some(inclination), azimuth: Some(azimuth) }
+        Measured {
+            md,
+            inclination: Some(inclination),
+            azimuth: Some(azimuth),
+        }
     }
 
     #[test]
     fn a_vertical_hole_is_as_deep_as_it_is_long() {
         // To break: a vertical station read with a made-up azimuth that is not
         // ignored, or a ratio factor that is not 1 on a straight interval.
-        let stations: Vec<Measured> =
-            (0..=10).map(|k| Measured { md: 10.0 * k as f64, inclination: Some(0.0), azimuth: None }).collect();
+        let stations: Vec<Measured> = (0..=10)
+            .map(|k| Measured {
+                md: 10.0 * k as f64,
+                inclination: Some(0.0),
+                azimuth: None,
+            })
+            .collect();
         let placed = positions(&stations).unwrap();
         for (one, measured) in placed.iter().zip(&stations) {
             assert_eq!((one.north, one.east), (0.0, 0.0), "{one:?}");
-            assert!(near(one.tvd, measured.md, 1e-12), "TVD = MD on a vertical hole: {one:?}");
+            assert!(
+                near(one.tvd, measured.md, 1e-12),
+                "TVD = MD on a vertical hole: {one:?}"
+            );
         }
     }
 
@@ -330,13 +385,18 @@ mod tests {
         // (the circle's own equation, not the survey formula). At θ = 30°,
         // MD 300: R (1 − cos 30°) = 76.7617893, R sin 30° = 286.4788976.
         let r = 30.0 / 3f64.to_radians();
-        let stations: Vec<Measured> = (0..=30).map(|k| station(30.0 * k as f64, 3.0 * k as f64, 90.0)).collect();
+        let stations: Vec<Measured> = (0..=30)
+            .map(|k| station(30.0 * k as f64, 3.0 * k as f64, 90.0))
+            .collect();
         let placed = positions(&stations).unwrap();
         for one in &placed {
             let theta = (one.md / r).min(std::f64::consts::FRAC_PI_2);
             assert!(near(one.east, r * (1.0 - theta.cos()), 1e-9), "{one:?}");
             assert!(near(one.tvd, r * theta.sin(), 1e-9), "{one:?}");
-            assert!(near(one.north, 0.0, 1e-9), "an azimuth of 90 is east, not north: {one:?}");
+            assert!(
+                near(one.north, 0.0, 1e-9),
+                "an azimuth of 90 is east, not north: {one:?}"
+            );
         }
         let at_300 = placed[10];
         assert_eq!(at_300.md, 300.0);
@@ -347,41 +407,87 @@ mod tests {
     #[test]
     fn azimuth_runs_clockwise_from_north() {
         // Horizontal holds at 0, 90, 180 and 270: north, east, south, west.
-        for (azimuth, north, east) in [(0.0, 1.0, 0.0), (90.0, 0.0, 1.0), (180.0, -1.0, 0.0), (270.0, 0.0, -1.0)] {
+        for (azimuth, north, east) in [
+            (0.0, 1.0, 0.0),
+            (90.0, 0.0, 1.0),
+            (180.0, -1.0, 0.0),
+            (270.0, 0.0, -1.0),
+        ] {
             let placed = positions(&[station(0.0, 90.0, azimuth), station(10.0, 90.0, azimuth)]).unwrap();
             let end = placed[1];
-            assert!(near(end.north, 10.0 * north, 1e-12) && near(end.east, 10.0 * east, 1e-12), "{azimuth}: {end:?}");
+            assert!(
+                near(end.north, 10.0 * north, 1e-12) && near(end.east, 10.0 * east, 1e-12),
+                "{azimuth}: {end:?}"
+            );
             assert!(near(end.tvd, 0.0, 1e-12), "{end:?}");
         }
     }
 
     #[test]
     fn what_is_not_a_survey_is_refused_by_name() {
-        let vertical = |md| Measured { md, inclination: Some(0.0), azimuth: None };
-        assert_eq!(positions(&[vertical(0.0)]), Err(StationsError::TooFewStations { given: 1 }));
+        let vertical = |md| Measured {
+            md,
+            inclination: Some(0.0),
+            azimuth: None,
+        };
         assert_eq!(
-            positions(&[vertical(0.0), vertical(10.0), vertical(10.0)]),
-            Err(StationsError::NotIncreasing { station: 3, md: 10.0, previous: 10.0 })
+            positions(&[vertical(0.0)]),
+            Err(StationsError::TooFewStations { given: 1 })
         );
         assert_eq!(
-            positions(&[vertical(0.0), Measured { md: 10.0, inclination: None, azimuth: Some(0.0) }]),
+            positions(&[vertical(0.0), vertical(10.0), vertical(10.0)]),
+            Err(StationsError::NotIncreasing {
+                station: 3,
+                md: 10.0,
+                previous: 10.0
+            })
+        );
+        assert_eq!(
+            positions(&[
+                vertical(0.0),
+                Measured {
+                    md: 10.0,
+                    inclination: None,
+                    azimuth: Some(0.0)
+                }
+            ]),
             Err(StationsError::NoInclination { station: 2 })
         );
         assert_eq!(
-            positions(&[vertical(0.0), Measured { md: 10.0, inclination: Some(5.0), azimuth: None }]),
-            Err(StationsError::NoAzimuth { station: 2, inclination: 5.0 })
+            positions(&[
+                vertical(0.0),
+                Measured {
+                    md: 10.0,
+                    inclination: Some(5.0),
+                    azimuth: None
+                }
+            ]),
+            Err(StationsError::NoAzimuth {
+                station: 2,
+                inclination: 5.0
+            })
         );
         assert_eq!(
             positions(&[vertical(0.0), station(10.0, 190.0, 0.0)]),
-            Err(StationsError::BadInclination { station: 2, given: 190.0 })
+            Err(StationsError::BadInclination {
+                station: 2,
+                given: 190.0
+            })
         );
         assert_eq!(
             positions(&[vertical(0.0), station(10.0, 10.0, -5.0)]),
-            Err(StationsError::BadAzimuth { station: 2, given: -5.0 })
+            Err(StationsError::BadAzimuth {
+                station: 2,
+                given: -5.0
+            })
         );
         assert!(matches!(
             positions(&[vertical(0.0), vertical(f64::NAN)]),
-            Err(StationsError::NotANumber { station: 2, what: "measured depth", .. })
+            Err(StationsError::NotANumber {
+                station: 2,
+                what: "measured depth",
+                ..
+            })
         ));
         assert_eq!(
             positions(&[station(0.0, 90.0, 0.0), station(10.0, 90.0, 180.0)]),
@@ -389,7 +495,15 @@ mod tests {
         );
         // Straight up is vertical too, and needs no azimuth: a quarter turn
         // from horizontal toward north to straight up goes north and rises.
-        let up = positions(&[station(0.0, 90.0, 0.0), Measured { md: 10.0, inclination: Some(180.0), azimuth: None }]).unwrap();
+        let up = positions(&[
+            station(0.0, 90.0, 0.0),
+            Measured {
+                md: 10.0,
+                inclination: Some(180.0),
+                azimuth: None,
+            },
+        ])
+        .unwrap();
         assert!(up[1].tvd < 0.0 && up[1].north > 0.0, "{:?}", up[1]);
     }
 }

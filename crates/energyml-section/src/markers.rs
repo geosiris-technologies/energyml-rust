@@ -41,8 +41,19 @@ pub const PLACES: [&str; 3] = ["head", "bottom", "md"];
 
 /// The shapes the drawer knows how to write — the one list the drawing and
 /// [`DeclaredShape::drawn`] both read.
-const DRAWN: [&str; 11] =
-    ["circle", "cross", "cube", "diamond", "plus", "point", "pyramid", "sphere", "star", "tetrahedron", CONTOUR];
+const DRAWN: [&str; 11] = [
+    "circle",
+    "cross",
+    "cube",
+    "diamond",
+    "plus",
+    "point",
+    "pyramid",
+    "sphere",
+    "star",
+    "tetrahedron",
+    CONTOUR,
+];
 
 /// Whether the drawer knows this shape: a value the model lists that is not here
 /// is declared and refused by its name.
@@ -89,10 +100,22 @@ pub struct DeclaredPlace {
 /// releases write them, and [`CONTOUR`] last.
 pub fn declared(registry: &Registry) -> (Vec<DeclaredShape>, Vec<DeclaredPlace>) {
     let mut shapes: Vec<DeclaredShape> = Vec::new();
-    for info in registry.types().filter(|t| t.kind == TypeKind::Struct && t.name == SYMBOL_OWNER) {
-        let Some(field) = info.field(SYMBOL_FIELD) else { continue };
-        let Some(enumeration) = field.ty.type_info() else { continue };
-        let qualified = format!("{}{}.{}", info.package, naming::compact_version(naming::release_of(enumeration.version)), enumeration.name);
+    for info in registry
+        .types()
+        .filter(|t| t.kind == TypeKind::Struct && t.name == SYMBOL_OWNER)
+    {
+        let Some(field) = info.field(SYMBOL_FIELD) else {
+            continue;
+        };
+        let Some(enumeration) = field.ty.type_info() else {
+            continue;
+        };
+        let qualified = format!(
+            "{}{}.{}",
+            info.package,
+            naming::compact_version(naming::release_of(enumeration.version)),
+            enumeration.name
+        );
         for variant in field.ty.allowed_values().iter().filter(|v| !v.is_other) {
             let pair = (qualified.clone(), variant.value.to_string());
             match shapes.iter_mut().find(|s| s.id == variant.value) {
@@ -128,9 +151,18 @@ fn shape(id: &str, format: Vec<(String, String)>) -> DeclaredShape {
         "Contour (a wide line under the object)".to_string()
     } else {
         let mut chars = id.chars();
-        chars.next().map(|first| first.to_uppercase().chain(chars).collect()).unwrap_or_default()
+        chars
+            .next()
+            .map(|first| first.to_uppercase().chain(chars).collect())
+            .unwrap_or_default()
     };
-    DeclaredShape { id: id.to_string(), label, label_key: format!("sectionView.markers.shape.{id}"), format, drawn: is_drawn(id) }
+    DeclaredShape {
+        id: id.to_string(),
+        label,
+        label_key: format!("sectionView.markers.shape.{id}"),
+        format,
+        drawn: is_drawn(id),
+    }
 }
 
 /// The size of a symbol when nothing says otherwise, pixels.
@@ -158,29 +190,53 @@ pub fn from_spec(
     use crate::model::{Marker, MarkerPlace, ObjectRow, Outcome};
     use energyml_storage::resource::{title_matches, type_matches};
 
-    let (name, rest) = text.split_once(':').ok_or_else(|| format!("`{text}`: expected NAME:shape=…,colour=…,at=…"))?;
+    let (name, rest) = text
+        .split_once(':')
+        .ok_or_else(|| format!("`{text}`: expected NAME:shape=…,colour=…,at=…"))?;
     let name = name.trim();
     if name.is_empty() {
         return Err(format!("`{text}`: a marker needs a name, the legend shows it"));
     }
-    let (mut shape, mut colour, mut at, mut md, mut size, mut types, mut title) = (None, None, None, None, None, None, None);
+    let (mut shape, mut colour, mut at, mut md, mut size, mut types, mut title) =
+        (None, None, None, None, None, None, None);
     for pair in rest.split(',').map(str::trim).filter(|p| !p.is_empty()) {
-        let (key, value) = pair.split_once('=').ok_or_else(|| format!("`{pair}`: expected name=value"))?;
+        let (key, value) = pair
+            .split_once('=')
+            .ok_or_else(|| format!("`{pair}`: expected name=value"))?;
         let value = value.trim().to_string();
         match key.trim() {
             "shape" => shape = Some(value),
             "colour" | "color" => colour = Some(value),
             "at" => at = Some(value),
-            "md" => md = Some(value.parse::<f64>().map_err(|_| format!("`md={value}` is not a number"))?),
-            "size" => size = Some(value.parse::<f64>().map_err(|_| format!("`size={value}` is not a number"))?),
+            "md" => {
+                md = Some(
+                    value
+                        .parse::<f64>()
+                        .map_err(|_| format!("`md={value}` is not a number"))?,
+                )
+            }
+            "size" => {
+                size = Some(
+                    value
+                        .parse::<f64>()
+                        .map_err(|_| format!("`size={value}` is not a number"))?,
+                )
+            }
             "type" => types = Some(value),
             "title" => title = Some(value),
-            other => return Err(format!("a marker has no parameter `{other}`: it has [shape, colour, at, md, size, type, title]")),
+            other => {
+                return Err(format!(
+                    "a marker has no parameter `{other}`: it has [shape, colour, at, md, size, type, title]"
+                ));
+            }
         }
     }
     let shape = shape.ok_or("a marker needs `shape=`")?;
     if !is_drawn(&shape) {
-        return Err(format!("shape `{shape}` is not one this build draws: one of {}", DRAWN.join(", ")));
+        return Err(format!(
+            "shape `{shape}` is not one this build draws: one of {}",
+            DRAWN.join(", ")
+        ));
     }
     let colour = colour.ok_or("a marker needs `colour=` (#rrggbb or #rrggbbaa)")?;
     let hex = colour.strip_prefix('#').unwrap_or("");
@@ -219,13 +275,26 @@ pub fn from_spec(
         .iter()
         .filter(|row| shown(row))
         .filter(|row| {
-            types.as_deref().is_none_or(|types| types.split('|').any(|one| type_matches(&row.object.qualified_type, one.trim())))
-                && title.as_deref().is_none_or(|title| title_matches(&row.object.title, title))
+            types.as_deref().is_none_or(|types| {
+                types
+                    .split('|')
+                    .any(|one| type_matches(&row.object.qualified_type, one.trim()))
+            }) && title
+                .as_deref()
+                .is_none_or(|title| title_matches(&row.object.title, title))
         })
         .map(|row| row.object.key())
         .collect();
     if keys.is_empty() {
         return Err(format!("marker `{name}` matches no object of the section"));
     }
-    Ok(Marker { name: name.to_string(), shape, colour, at, keys, size_px, hidden: false })
+    Ok(Marker {
+        name: name.to_string(),
+        shape,
+        colour,
+        at,
+        keys,
+        size_px,
+        hidden: false,
+    })
 }

@@ -106,8 +106,8 @@ pub fn run(args: ImportArgs) -> Result<ExitCode> {
         ),
     };
 
-    let text = std::fs::read_to_string(&args.file)
-        .with_context(|| format!("reading {}", args.file.display()))?;
+    let text =
+        std::fs::read_to_string(&args.file).with_context(|| format!("reading {}", args.file.display()))?;
     let collection = match geojson::read(&text) {
         Ok(collection) => collection,
         Err(why) => bail!("{}: {why}", args.file.display()),
@@ -162,11 +162,10 @@ pub fn run(args: ImportArgs) -> Result<ExitCode> {
     };
 
     let registry = std::sync::Arc::new(super::registry::all());
-    let mut store = epc::open(args.into.as_deref(), &name, registry)
-        .with_context(|| match &args.into {
-            Some(path) => format!("opening {}", path.display()),
-            None => "making an empty package".to_string(),
-        })?;
+    let mut store = epc::open(args.into.as_deref(), &name, registry).with_context(|| match &args.into {
+        Some(path) => format!("opening {}", path.display()),
+        None => "making an empty package".to_string(),
+    })?;
     // The arrays go beside the package, which is where a reader will look.
     if let Some(parent) = out.parent().filter(|p| !p.as_os_str().is_empty()) {
         store.external_files_mut().set_root(parent);
@@ -194,7 +193,11 @@ pub fn run(args: ImportArgs) -> Result<ExitCode> {
         .save_as(&out, &energyml_storage::SaveOptions::default())
         .with_context(|| format!("writing {}", out.display()))?;
 
-    println!("\n{} object(s) written to {}", report.written.len(), out.display());
+    println!(
+        "\n{} object(s) written to {}",
+        report.written.len(),
+        out.display()
+    );
     for why in &report.notes {
         println!("  [note] {why}");
     }
@@ -226,11 +229,7 @@ pub fn run(args: ImportArgs) -> Result<ExitCode> {
             repaired.len()
         );
         for diagnostic in repaired.iter().take(10) {
-            eprintln!(
-                "    {} {}",
-                diagnostic.part,
-                diagnostic.message
-            );
+            eprintln!("    {} {}", diagnostic.part, diagnostic.message);
         }
         if repaired.len() > 10 {
             eprintln!("    … and {} more", repaired.len() - 10);

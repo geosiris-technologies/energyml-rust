@@ -30,7 +30,9 @@ use crate::pieces::{Known, Ref, Source};
 fn summary_for(store: &EpcStore, key: &str) -> Result<ObjectSummary, String> {
     match store.resolve(key) {
         Ok(summary) => Ok(summary.clone()),
-        Err(energyml_storage::Error::NotFound(_)) => Err(format!("no object of the package has the uuid {key}")),
+        Err(energyml_storage::Error::NotFound(_)) => {
+            Err(format!("no object of the package has the uuid {key}"))
+        }
         Err(other) => Err(other.to_string()),
     }
 }
@@ -41,17 +43,26 @@ fn summary_for(store: &EpcStore, key: &str) -> Result<ObjectSummary, String> {
 /// versions is read as the version the reference means. A reference that names
 /// no type is looked up by what it does name, and an uuid that leaves several
 /// candidates answers `None` — the checker says why, this reader does not guess.
-fn followed<'a>(store: &'a EpcStore, reference: &dyn energyml_core::value::Reflect) -> Option<&'a ObjectSummary> {
+fn followed<'a>(
+    store: &'a EpcStore,
+    reference: &dyn energyml_core::value::Reflect,
+) -> Option<&'a ObjectSummary> {
     match energyml_core::identity::ObjectId::of_reflect(reference) {
-        Some(id) => store.resolve_reference(&id.uuid, Some(&id.qualified_type()), id.object_version.as_deref()).ok(),
-        None => store.lookup_uuid(energyml_core::identity::uuid_of_reflect(reference)?).ok(),
+        Some(id) => store
+            .resolve_reference(&id.uuid, Some(&id.qualified_type()), id.object_version.as_deref())
+            .ok(),
+        None => store
+            .lookup_uuid(energyml_core::identity::uuid_of_reflect(reference)?)
+            .ok(),
     }
 }
 
 /// The entry a [`Ref`] names — [`followed`] for what a piece already holds.
 fn summary_of_ref<'a>(store: &'a EpcStore, one: &Ref) -> Option<&'a ObjectSummary> {
     let qualified_type = Some(one.qualified_type.as_str()).filter(|text| !text.is_empty());
-    store.resolve_reference(&one.uuid, qualified_type, one.object_version.as_deref()).ok()
+    store
+        .resolve_reference(&one.uuid, qualified_type, one.object_version.as_deref())
+        .ok()
 }
 
 /// What `holder` says of the object `uuid`: the reference it holds to it —
@@ -61,13 +72,20 @@ fn reference_held(holder: &dyn energyml_core::value::Reflect, uuid: &str) -> Opt
     energyml_core::identity::collect_refs(holder)
         .into_iter()
         .find(|edge| edge.target.uuid.eq_ignore_ascii_case(uuid))
-        .map(|edge| Ref::new(edge.target.uuid, edge.target.qualified_type(), "").with_version(edge.target.object_version.map(str::to_string)))
+        .map(|edge| {
+            Ref::new(edge.target.uuid, edge.target.qualified_type(), "")
+                .with_version(edge.target.object_version.map(str::to_string))
+        })
 }
 
 /// The entry `holder` names by `uuid`: by the reference it holds to it when it
 /// holds one, by the uuid alone — [`EpcStore::lookup_uuid`], which refuses a
 /// uuid that names several — when it holds none.
-fn held<'a>(store: &'a EpcStore, holder: &dyn energyml_core::value::Reflect, uuid: &str) -> Option<&'a ObjectSummary> {
+fn held<'a>(
+    store: &'a EpcStore,
+    holder: &dyn energyml_core::value::Reflect,
+    uuid: &str,
+) -> Option<&'a ObjectSummary> {
     match reference_held(holder, uuid) {
         Some(reference) => summary_of_ref(store, &reference),
         None => store.lookup_uuid(uuid).ok(),
@@ -112,8 +130,10 @@ pub fn pieces_of_object_in(
     placement: energyml_geometry::Placement,
 ) -> Result<Vec<(String, Source)>, String> {
     let summary = summary_for(store, key)?;
-    let object = store.get_object(&summary.uri).map_err(|e| format!("reading {}: {e}", summary.uri))?;
-    let built =energyml_geometry::scene::object_of(object.as_reflect(), store, &summary.uri)
+    let object = store
+        .get_object(&summary.uri)
+        .map_err(|e| format!("reading {}: {e}", summary.uri))?;
+    let built = energyml_geometry::scene::object_of(object.as_reflect(), store, &summary.uri)
         .map_err(|e| format!("{}: no geometry could be read — {e}", summary.uri))?;
 
     let crs = built.crs.as_ref().and_then(|crs| {
@@ -127,8 +147,12 @@ pub fn pieces_of_object_in(
             .map(|found| Ref::of_summary(found, titled(store, found)))
     });
     let interpretation = built.interpretation.as_ref().map(|related| {
-        Ref::new(related.uuid.clone(), related.qualified_type.clone(), related.title.clone())
-            .with_version(reference_held(object.as_reflect(), &related.uuid).and_then(|held| held.object_version))
+        Ref::new(
+            related.uuid.clone(),
+            related.qualified_type.clone(),
+            related.title.clone(),
+        )
+        .with_version(reference_held(object.as_reflect(), &related.uuid).and_then(|held| held.object_version))
     });
     // The trajectory and the datum of a frame: what is needed to **continue**
     // a well rather than write a copy of it.
@@ -146,9 +170,17 @@ pub fn pieces_of_object_in(
     });
     let placed = !matches!(placement, energyml_geometry::Placement::Local);
     let vertical_up = built.crs.as_ref().map(|crs| {
-        placed || matches!(crs.vertical_direction, energyml_domain::crs::VerticalDirection::Up)
+        placed
+            || matches!(
+                crs.vertical_direction,
+                energyml_domain::crs::VerticalDirection::Up
+            )
     });
-    let name = if built.title.is_empty() { summary.uuid.clone() } else { built.title.clone() };
+    let name = if built.title.is_empty() {
+        summary.uuid.clone()
+    } else {
+        built.title.clone()
+    };
     let node_count = Some(built.geometry.point_count());
     // **What the file says of closure travels with the shape.** The reader
     // reads it (`ClosedPolylines`); without this line, copying a closed
@@ -156,9 +188,16 @@ pub fn pieces_of_object_in(
     // have to *guess* it from the coincidence of the two ends — which it can
     // do and notes, but which has no place when the file states it. `None`
     // when no patch says anything.
-    let closed: Vec<bool> = built.geometry.patches.iter().flat_map(|patch| patch.closed.clone()).collect();
+    let closed: Vec<bool> = built
+        .geometry
+        .patches
+        .iter()
+        .flat_map(|patch| patch.closed.clone())
+        .collect();
     let closed = if closed.is_empty() { None } else { Some(closed) };
-    let geometry = built.geometry_in(placement).map_err(|e| format!("{}: {e}", summary.uri))?;
+    let geometry = built
+        .geometry_in(placement)
+        .map_err(|e| format!("{}: {e}", summary.uri))?;
     Ok(vec![
         (name.clone(), Source::Shape { geometry, closed }),
         (
@@ -169,8 +208,16 @@ pub fn pieces_of_object_in(
                 // has already told the four cases apart — a code, a local
                 // authority, an explicit *unknown*, nothing at all — so this is
                 // a copy and not a second reading of the same fact.
-                crs_epsg: built.crs.as_ref().and_then(|crs| crs.projected.epsg()).map(|code| code as i64),
-                vertical_epsg: built.crs.as_ref().and_then(|crs| crs.vertical.epsg()).map(|code| code as i64),
+                crs_epsg: built
+                    .crs
+                    .as_ref()
+                    .and_then(|crs| crs.projected.epsg())
+                    .map(|code| code as i64),
+                vertical_epsg: built
+                    .crs
+                    .as_ref()
+                    .and_then(|crs| crs.vertical.epsg())
+                    .map(|code| code as i64),
                 crs,
                 interpretation,
                 vertical_uom: built.crs.as_ref().and_then(|crs| crs.vertical_uom.clone()),
@@ -248,7 +295,9 @@ pub fn every(
     let mut bag = bag;
     let _span = tracing::info_span!("read.every", slots = slots.len()).entered();
     for slot in slots {
-        let (Otherwise::Every, Need::Input(takes)) = (&slot.otherwise, &slot.need) else { continue };
+        let (Otherwise::Every, Need::Input(takes)) = (&slot.otherwise, &slot.need) else {
+            continue;
+        };
         let named = |name: &str| {
             name == slot.name
                 || name
@@ -260,9 +309,17 @@ pub fn every(
             continue;
         }
         let mut rank = 0usize;
-        for summary in store.resources().into_iter().filter(|one| takes.accepts(&one.qualified_type)) {
+        for summary in store
+            .resources()
+            .into_iter()
+            .filter(|one| takes.accepts(&one.qualified_type))
+        {
             rank += 1;
-            let name = if rank == 1 { slot.name.to_string() } else { format!("{} {rank}", slot.name) };
+            let name = if rank == 1 {
+                slot.name.to_string()
+            } else {
+                format!("{} {rank}", slot.name)
+            };
             // The line is drawn on the **type**, as the front end draws it: a
             // representation that does not read is a failure, an object that
             // is none has nothing to fail.
@@ -278,7 +335,8 @@ pub fn every(
                     return Err(Refusal::on(slot.name, why));
                 }
                 Err(_) => {
-                    let known = known_of_object_reached(store, &summary.uri, Reach::Every).map_err(|why| Refusal::on(slot.name, why))?;
+                    let known = known_of_object_reached(store, &summary.uri, Reach::Every)
+                        .map_err(|why| Refusal::on(slot.name, why))?;
                     vec![(name, Source::Object(known))]
                 }
             };
@@ -297,10 +355,18 @@ pub fn compatible_frames(store: &EpcStore, projected: i64) -> Vec<Known> {
     let candidates: Vec<Known> = store
         .resources()
         .into_iter()
-        .filter(|one| matches!(crate::crs::frame_kind(&one.qualified_type), Ok(crate::crs::FrameKind::Compound)))
+        .filter(|one| {
+            matches!(
+                crate::crs::frame_kind(&one.qualified_type),
+                Ok(crate::crs::FrameKind::Compound)
+            )
+        })
         .filter_map(|one| known_of_object(store, &one.uri).ok())
         .collect();
-    crate::crs::compatible_frames(&candidates, projected).into_iter().cloned().collect()
+    crate::crs::compatible_frames(&candidates, projected)
+        .into_iter()
+        .cloned()
+        .collect()
 }
 
 /// What is known of an object **without** asking it for a geometry.
@@ -364,7 +430,9 @@ fn known_of_object_reached(store: &EpcStore, key: &str, reach: Reach) -> Result<
 /// [`known_of_object`], all but [`Known::json`].
 fn known_of_object_but_whole(store: &EpcStore, key: &str, reach: Reach) -> Result<Known, String> {
     let summary = summary_for(store, key)?;
-    let object = store.get_object(&summary.uri).map_err(|e| format!("reading {}: {e}", summary.uri))?;
+    let object = store
+        .get_object(&summary.uri)
+        .map_err(|e| format!("reading {}: {e}", summary.uri))?;
     let title = energyml_core::identity::title_of_reflect(object.as_reflect())
         .unwrap_or(&summary.uri)
         .to_string();
@@ -375,20 +443,38 @@ fn known_of_object_but_whole(store: &EpcStore, key: &str, reach: Reach) -> Resul
     // then answer for it — a property taken for a coordinate system, which
     // `suggest_written` would offer as the frame of what is written.
     if is_property(&summary.qualified_type) {
-        return Ok(Known { property: Some(property_of(store, object.as_reflect(), reach)), reference, ..Known::default() });
+        return Ok(Known {
+            property: Some(property_of(store, object.as_reflect(), reach)),
+            reference,
+            ..Known::default()
+        });
     }
 
     // **A unit or a column: the stratigraphy around it.** The whole of it,
     // because what a unit contains is stated by the finer ranks of its column
     // and by the models already made of it — none of which it names.
     if is_stratigraphy(&summary.qualified_type) {
-        return Ok(Known { stratigraphy: Some(stratigraphy_of(store)), reference, ..Known::default() });
+        return Ok(Known {
+            stratigraphy: Some(stratigraphy_of(store)),
+            reference,
+            ..Known::default()
+        });
     }
 
     // **A time series: its instants**, in their order — what a property laid
     // through it names by place (`Known::instants`).
-    if summary.qualified_type.rsplit('.').next().map(|class| class.trim_start_matches("obj_")) == Some("TimeSeries") {
-        return Ok(Known { instants: instants_of(object.as_reflect()), reference, ..Known::default() });
+    if summary
+        .qualified_type
+        .rsplit('.')
+        .next()
+        .map(|class| class.trim_start_matches("obj_"))
+        == Some("TimeSeries")
+    {
+        return Ok(Known {
+            instants: instants_of(object.as_reflect()),
+            reference,
+            ..Known::default()
+        });
     }
 
     if let Ok(crs) = energyml_domain::crs::read_with(object.as_reflect(), store) {
@@ -398,7 +484,10 @@ fn known_of_object_but_whole(store: &EpcStore, key: &str, reach: Reach) -> Resul
             crs_epsg: crs.projected.epsg().map(|code| code as i64),
             vertical_epsg: crs.vertical.epsg().map(|code| code as i64),
             vertical_uom: crs.vertical_uom.clone(),
-            vertical_up: Some(matches!(crs.vertical_direction, energyml_domain::crs::VerticalDirection::Up)),
+            vertical_up: Some(matches!(
+                crs.vertical_direction,
+                energyml_domain::crs::VerticalDirection::Up
+            )),
             vertical_crs,
             placement: Some(crs.clone()),
             reference,
@@ -413,8 +502,14 @@ fn known_of_object_but_whole(store: &EpcStore, key: &str, reach: Reach) -> Resul
                 Source::Object(known) => Some(known),
                 _ => None,
             })
-            .unwrap_or(Known { reference, ..Known::default() })),
-        Err(_) => Ok(Known { reference, ..Known::default() }),
+            .unwrap_or(Known {
+                reference,
+                ..Known::default()
+            })),
+        Err(_) => Ok(Known {
+            reference,
+            ..Known::default()
+        }),
     }
 }
 
@@ -449,7 +544,9 @@ fn instants_of(reflect: &dyn energyml_core::value::Reflect) -> Option<Vec<String
 /// order that was guessed.
 fn categories_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) -> Option<Vec<String>> {
     let read = energyml_domain::table::Lookup::read(reflect, store).ok()?;
-    let column = (0..read.titles.len()).rev().find(|one| !read.key_columns.contains(one))?;
+    let column = (0..read.titles.len())
+        .rev()
+        .find(|one| !read.key_columns.contains(one))?;
     (0..read.rows.rows)
         .map(|row| match read.rows.cell(row, column)? {
             energyml_domain::table::Cell::Text(text) => Some(text),
@@ -465,7 +562,11 @@ fn categories_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) 
 /// A stratigraphic unit or a stratigraphic column, in any release.
 fn is_stratigraphy(qualified_type: &str) -> bool {
     matches!(
-        qualified_type.rsplit('.').next().unwrap_or(qualified_type).trim_start_matches("obj_"),
+        qualified_type
+            .rsplit('.')
+            .next()
+            .unwrap_or(qualified_type)
+            .trim_start_matches("obj_"),
         "StratigraphicUnitInterpretation" | "StratigraphicColumn"
     )
 }
@@ -484,7 +585,11 @@ fn stratigraphy_of(store: &EpcStore) -> energyml_domain::stratigraphy::Columns {
         .resources()
         .iter()
         .filter(|summary| {
-            let name = summary.qualified_type.rsplit('.').next().unwrap_or(&summary.qualified_type);
+            let name = summary
+                .qualified_type
+                .rsplit('.')
+                .next()
+                .unwrap_or(&summary.qualified_type);
             READ.contains(&name.trim_start_matches("obj_"))
         })
         .filter_map(|summary| store.get_object(&summary.uri).ok())
@@ -493,7 +598,11 @@ fn stratigraphy_of(store: &EpcStore) -> energyml_domain::stratigraphy::Columns {
 }
 
 fn is_property(qualified_type: &str) -> bool {
-    qualified_type.rsplit('.').next().unwrap_or(qualified_type).ends_with("Property")
+    qualified_type
+        .rsplit('.')
+        .next()
+        .unwrap_or(qualified_type)
+        .ends_with("Property")
 }
 
 /// What a property states, for an operation that carries it elsewhere — see
@@ -521,7 +630,11 @@ fn is_property(qualified_type: &str) -> bool {
 /// recipe (the grid series of Lutetia named this rule as their second
 /// blocker). Which elements the values lie on stays each operation's to judge:
 /// they match a property on its supporting uuid, never on a count.
-fn property_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect, reach: Reach) -> crate::pieces::KnownProperty {
+fn property_of(
+    store: &EpcStore,
+    reflect: &dyn energyml_core::value::Reflect,
+    reach: Reach,
+) -> crate::pieces::KnownProperty {
     use energyml_core::value::{FieldValue, Scalar};
 
     let read = match energyml_domain::property::read(reflect) {
@@ -546,30 +659,46 @@ fn property_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect, re
     // The reference the property writes, when it writes one: a 2.0.1 standard
     // kind is a name of the vocabulary, and a name is no object to point at.
     let kind = match &read.kind {
-        Some(energyml_domain::property::PropertyKindRef::Object { .. }) => reference_at(reflect, "PropertyKind"),
+        Some(energyml_domain::property::PropertyKindRef::Object { .. }) => {
+            reference_at(reflect, "PropertyKind")
+        }
         _ => None,
     };
     let lookup = reference_at(reflect, "CategoryLookup").or_else(|| reference_at(reflect, "Lookup"));
     // The null an integer array declares. Read off the array itself: RESQML
     // 2.2 puts it there (`eml23.IntegerExternalArray.NullValue`), and a
     // `DiscreteProperty` has no field of its own for it.
-    let null_value = read.patches.first().and_then(|patch| match patch.array.field("NullValue")?.as_scalar()? {
-        Scalar::Int(value) => Some(value),
-        Scalar::UInt(value) => i64::try_from(value).ok(),
-        _ => None,
-    });
+    let null_value =
+        read.patches
+            .first()
+            .and_then(|patch| match patch.array.field("NullValue")?.as_scalar()? {
+                Scalar::Int(value) => Some(value),
+                Scalar::UInt(value) => i64::try_from(value).ok(),
+                _ => None,
+            });
     // The qualifiers, word for word, in the encoding a copy is written in.
     let facets = match reflect.field("Facet") {
-        Some(FieldValue::List(items)) => items.iter().filter_map(FieldValue::as_object).map(energyml_core::json::write_value).collect(),
+        Some(FieldValue::List(items)) => items
+            .iter()
+            .filter_map(FieldValue::as_object)
+            .map(energyml_core::json::write_value)
+            .collect(),
         Some(FieldValue::Object(one)) => vec![energyml_core::json::write_value(one)],
         _ => Vec::new(),
     };
     let values = match supporting.as_ref().and_then(|one| summary_of_ref(store, one)) {
-        None => Err("its supporting representation is not in the package, so nothing says what its values hang on".to_string()),
-        Some(found) if reach == Reach::Every && !found.qualified_type.ends_with("WellboreFrameRepresentation") => Err(format!(
-            "its values are not read when every property of the package is taken: it hangs on a `{}`, and only a wellbore frame's are — a log's length, where another representation's can be millions; name it to have them read",
-            found.qualified_type
-        )),
+        None => Err(
+            "its supporting representation is not in the package, so nothing says what its values hang on"
+                .to_string(),
+        ),
+        Some(found)
+            if reach == Reach::Every && !found.qualified_type.ends_with("WellboreFrameRepresentation") =>
+        {
+            Err(format!(
+                "its values are not read when every property of the package is taken: it hangs on a `{}`, and only a wellbore frame's are — a log's length, where another representation's can be millions; name it to have them read",
+                found.qualified_type
+            ))
+        }
         Some(found) => match read.patches.as_slice() {
             [one] => one.read(store).map_err(|why| why.to_string()),
             many => Err(format!(
@@ -598,7 +727,9 @@ fn property_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect, re
 /// title, and the version it names. `None` when the field is absent or names no
 /// uuid.
 fn reference_at(reflect: &dyn energyml_core::value::Reflect, field: &str) -> Option<Ref> {
-    let energyml_core::value::FieldValue::Object(reference) = reflect.field(field)? else { return None };
+    let energyml_core::value::FieldValue::Object(reference) = reflect.field(field)? else {
+        return None;
+    };
     let uuid = energyml_core::identity::uuid_of_reflect(reference)?.to_string();
     let text = |name: &str| {
         reference
@@ -611,7 +742,10 @@ fn reference_at(reflect: &dyn energyml_core::value::Reflect, field: &str) -> Opt
     // (`ObjectId::of_reflect`): a 2.0 reference names its type by a
     // `ContentType`, which the field `QualifiedType` alone would miss.
     let id = energyml_core::identity::ObjectId::of_reflect(reference);
-    let qualified_type = id.as_ref().map(|id| id.qualified_type()).unwrap_or_else(|| text("QualifiedType"));
+    let qualified_type = id
+        .as_ref()
+        .map(|id| id.qualified_type())
+        .unwrap_or_else(|| text("QualifiedType"));
     Some(Ref::new(uuid, qualified_type, text("Title")).with_version(id.and_then(|id| id.object_version)))
 }
 
@@ -625,7 +759,10 @@ fn reference_at(reflect: &dyn energyml_core::value::Reflect, field: &str) -> Opt
 /// takes the unit the one correspondence that names it gives. Two that name two
 /// different units for one interval are not decided between: the answer is
 /// `None` for the whole frame, and the operation that needs it says why.
-fn interval_units_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) -> Option<Vec<Option<Ref>>> {
+fn interval_units_of(
+    store: &EpcStore,
+    reflect: &dyn energyml_core::value::Reflect,
+) -> Option<Vec<Option<Ref>>> {
     use energyml_core::value::FieldValue;
     let maps = match reflect.field("IntervalStratigraphicUnits")? {
         FieldValue::List(items) => items,
@@ -635,7 +772,9 @@ fn interval_units_of(store: &EpcStore, reflect: &dyn energyml_core::value::Refle
     let mut out: Option<Vec<Option<Ref>>> = None;
     for map in maps {
         let FieldValue::Object(map) = map else { continue };
-        let FieldValue::Object(reference) = map.field("StratigraphicOrganizationInterpretation")? else { continue };
+        let FieldValue::Object(reference) = map.field("StratigraphicOrganizationInterpretation")? else {
+            continue;
+        };
         let found = followed(store, reference)?;
         let rank = store.get_object(&found.uri).ok()?;
         // The rank's units, in the order an index counts in.
@@ -652,22 +791,30 @@ fn interval_units_of(store: &EpcStore, reflect: &dyn energyml_core::value::Refle
                             .unwrap_or_default();
                         // The version the rank states for the unit: two versions of a
                         // unit are two units of the column.
-                        let version = energyml_core::identity::ObjectId::of_reflect(unit).and_then(|id| id.object_version);
-                        Some(Ref::new(uuid, "resqml22.StratigraphicUnitInterpretation", title).with_version(version))
+                        let version = energyml_core::identity::ObjectId::of_reflect(unit)
+                            .and_then(|id| id.object_version);
+                        Some(
+                            Ref::new(uuid, "resqml22.StratigraphicUnitInterpretation", title)
+                                .with_version(version),
+                        )
                     }
                     _ => None,
                 })
                 .collect(),
             _ => Vec::new(),
         };
-        let FieldValue::Object(jagged) = map.field("UnitIndices")? else { continue };
+        let FieldValue::Object(jagged) = map.field("UnitIndices")? else {
+            continue;
+        };
         let (Some(FieldValue::Object(elements)), Some(FieldValue::Object(lengths))) =
             (jagged.field("Elements"), jagged.field("CumulativeLength"))
         else {
             continue;
         };
-        let elements = energyml_geometry::values::read_integers(elements, store, "UnitIndices/Elements").ok()?;
-        let lengths = energyml_geometry::values::read_integers(lengths, store, "UnitIndices/CumulativeLength").ok()?;
+        let elements =
+            energyml_geometry::values::read_integers(elements, store, "UnitIndices/Elements").ok()?;
+        let lengths =
+            energyml_geometry::values::read_integers(lengths, store, "UnitIndices/CumulativeLength").ok()?;
         let mut start = 0usize;
         let mut these: Vec<Option<Ref>> = Vec::with_capacity(lengths.len());
         for end in &lengths {
@@ -714,7 +861,9 @@ fn node_mds_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) ->
     // The field, read by reflection: `field_object` of `energyml-geometry` is
     // private, and opening it to a caller would widen a surface for one need.
     // Two lines here say the same thing.
-    let energyml_core::value::FieldValue::Object(node_md) = reflect.field("NodeMd")? else { return None };
+    let energyml_core::value::FieldValue::Object(node_md) = reflect.field("NodeMd")? else {
+        return None;
+    };
     energyml_geometry::values::read_doubles(node_md, store, "NodeMd").ok()
 }
 
@@ -752,14 +901,18 @@ fn wellhead_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) ->
         reflect: &dyn energyml_core::value::Reflect,
         field: &str,
     ) -> Option<Box<dyn energyml_core::registry::DynObject>> {
-        let energyml_core::value::FieldValue::Object(reference) = reflect.field(field)? else { return None };
+        let energyml_core::value::FieldValue::Object(reference) = reflect.field(field)? else {
+            return None;
+        };
         let found = followed(store, reference)?;
         store.get_object(&found.uri).ok()
     }
 
     // The point itself.
-    if let (Some(z), Some(horizontal)) = (number(reflect, "VerticalCoordinate"), reflect.field("HorizontalCoordinates"))
-        && let energyml_core::value::FieldValue::Object(coordinates) = horizontal
+    if let (Some(z), Some(horizontal)) = (
+        number(reflect, "VerticalCoordinate"),
+        reflect.field("HorizontalCoordinates"),
+    ) && let energyml_core::value::FieldValue::Object(coordinates) = horizontal
     {
         let x = number(coordinates, "Coordinate1")?;
         let y = number(coordinates, "Coordinate2")?;
@@ -793,15 +946,19 @@ fn path_of(
     reflect: &dyn energyml_core::value::Reflect,
 ) -> Option<crate::pieces::KnownPath> {
     use energyml_core::value::FieldValue;
-    let class = summary.qualified_type.rsplit('.').next().unwrap_or("").trim_start_matches("obj_");
+    let class = summary
+        .qualified_type
+        .rsplit('.')
+        .next()
+        .unwrap_or("")
+        .trim_start_matches("obj_");
     let (trajectory, object) = match class {
-        "WellboreTrajectoryRepresentation" => {
-            (Ref::of_summary(summary, titled(store, summary)), None)
-        }
+        "WellboreTrajectoryRepresentation" => (Ref::of_summary(summary, titled(store, summary)), None),
         "WellboreFrameRepresentation" | "SeismicWellboreFrameRepresentation" => {
             let (trajectory, _) = well_refs_of(store, reflect);
             let trajectory = trajectory?;
-            let object = summary_of_ref(store, &trajectory).and_then(|found| store.get_object(&found.uri).ok());
+            let object =
+                summary_of_ref(store, &trajectory).and_then(|found| store.get_object(&found.uri).ok());
             (trajectory, object)
         }
         _ => return None,
@@ -811,7 +968,10 @@ fn path_of(
         None if class == "WellboreTrajectoryRepresentation" => reflect,
         None => {
             return Some(crate::pieces::KnownPath {
-                path: Err(format!("the trajectory `{}` the frame names is not in the package", trajectory.title)),
+                path: Err(format!(
+                    "the trajectory `{}` the frame names is not in the package",
+                    trajectory.title
+                )),
                 trajectory,
                 md_uom: None,
                 datum: None,
@@ -833,8 +993,14 @@ fn path_of(
         }
         _ => None,
     });
-    let path = energyml_geometry::well::path_of(reflect, store).map_err(|why| format!("`{}`: {why}", trajectory.title));
-    Some(crate::pieces::KnownPath { trajectory, path, md_uom, datum })
+    let path = energyml_geometry::well::path_of(reflect, store)
+        .map_err(|why| format!("`{}`: {why}", trajectory.title));
+    Some(crate::pieces::KnownPath {
+        trajectory,
+        path,
+        md_uom,
+        datum,
+    })
 }
 
 /// The trajectory and the datum a frame names — their **references**, not
@@ -850,7 +1016,9 @@ fn path_of(
 /// names no trajectory*.
 fn well_refs_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) -> (Option<Ref>, Option<Ref>) {
     fn ref_at(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect, field: &str) -> Option<Ref> {
-        let energyml_core::value::FieldValue::Object(reference) = reflect.field(field)? else { return None };
+        let energyml_core::value::FieldValue::Object(reference) = reflect.field(field)? else {
+            return None;
+        };
         let found = followed(store, reference)?;
         // The title is the one the **reference** carries: it is what a reader
         // sees, and the store's summary has none. Without it, the uri makes a
@@ -863,7 +1031,9 @@ fn well_refs_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) -
         Some(Ref::of_summary(found, title))
     }
 
-    let Some(trajectory) = ref_at(store, reflect, "Trajectory") else { return (None, None) };
+    let Some(trajectory) = ref_at(store, reflect, "Trajectory") else {
+        return (None, None);
+    };
     let datum = summary_of_ref(store, &trajectory)
         .cloned()
         .and_then(|summary| store.get_object(&summary.uri).ok())
@@ -884,7 +1054,10 @@ fn well_refs_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) -
 /// datum under a compound. A `ProjectedCrs` names none, and `None` says so.
 fn vertical_half(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) -> Option<Ref> {
     /// The reference a field holds.
-    fn named<'a>(reflect: &'a dyn energyml_core::value::Reflect, field: &str) -> Option<&'a dyn energyml_core::value::Reflect> {
+    fn named<'a>(
+        reflect: &'a dyn energyml_core::value::Reflect,
+        field: &str,
+    ) -> Option<&'a dyn energyml_core::value::Reflect> {
         match reflect.field(field)? {
             energyml_core::value::FieldValue::Object(reference) => Some(reference),
             _ => None,
@@ -954,22 +1127,37 @@ pub fn stored_sections(store: &EpcStore) -> Vec<StoredSection> {
         local.strip_prefix("obj_").unwrap_or(local) == "Activity"
     };
     let field = |value: &serde_json::Value, name: &str| -> Option<serde_json::Value> {
-        value.as_object()?.iter().find(|(key, _)| key.eq_ignore_ascii_case(name)).map(|(_, v)| v.clone())
+        value
+            .as_object()?
+            .iter()
+            .find(|(key, _)| key.eq_ignore_ascii_case(name))
+            .map(|(_, v)| v.clone())
     };
     let text = |value: Option<serde_json::Value>| value.and_then(|v| v.as_str().map(str::to_string));
     let mut out = Vec::new();
-    for summary in store.resources().into_iter().filter(|one| is_activity(&one.qualified_type)) {
-        let Ok(object) = store.get_object(&summary.uri) else { continue };
+    for summary in store
+        .resources()
+        .into_iter()
+        .filter(|one| is_activity(&one.qualified_type))
+    {
+        let Ok(object) = store.get_object(&summary.uri) else {
+            continue;
+        };
         let json = energyml_core::json::write_value(object.as_reflect());
         let descriptor = field(&json, "ActivityDescriptor").and_then(|d| text(field(&d, "Uuid")));
         if !descriptor.is_some_and(|uuid| uuid.eq_ignore_ascii_case(template)) {
             continue;
         }
-        let title = field(&json, "Citation").and_then(|c| text(field(&c, "Title"))).unwrap_or_default();
-        let parameters = field(&json, "Parameter").and_then(|p| p.as_array().cloned()).unwrap_or_default();
+        let title = field(&json, "Citation")
+            .and_then(|c| text(field(&c, "Title")))
+            .unwrap_or_default();
+        let parameters = field(&json, "Parameter")
+            .and_then(|p| p.as_array().cloned())
+            .unwrap_or_default();
         let wrote = parameters.iter().find_map(|p| {
             let reference = field(p, "DataObject")?;
-            let kind = text(field(&reference, "QualifiedType")).or_else(|| text(field(&reference, "ContentType")))?;
+            let kind = text(field(&reference, "QualifiedType"))
+                .or_else(|| text(field(&reference, "ContentType")))?;
             let named_output = text(field(p, "Title")).is_some_and(|t| t == "output");
             (named_output && kind.contains("PolylineSetRepresentation")).then_some(reference)
         });
@@ -981,11 +1169,18 @@ pub fn stored_sections(store: &EpcStore) -> Vec<StoredSection> {
             let uuid = text(field(r, "Uuid"))?;
             let declared = text(field(r, "QualifiedType")).or_else(|| {
                 let content = text(field(r, "ContentType"))?;
-                energyml_core::identity::ObjectId::from_content_type(&content, &uuid).ok().map(|id| id.qualified_type())
+                energyml_core::identity::ObjectId::from_content_type(&content, &uuid)
+                    .ok()
+                    .map(|id| id.qualified_type())
             });
             let version = text(field(r, "ObjectVersion")).or_else(|| text(field(r, "VersionString")));
-            let version = version.map(|one| one.trim().to_string()).filter(|one| !one.is_empty());
-            store.resolve_reference(&uuid, declared.as_deref(), version.as_deref()).ok().map(|one| one.uri.clone())
+            let version = version
+                .map(|one| one.trim().to_string())
+                .filter(|one| !one.is_empty());
+            store
+                .resolve_reference(&uuid, declared.as_deref(), version.as_deref())
+                .ok()
+                .map(|one| one.uri.clone())
         });
         let parts = |named: &str| {
             parameters
@@ -996,7 +1191,13 @@ pub fn stored_sections(store: &EpcStore) -> Vec<StoredSection> {
         };
         let mut drawings = parts("svgPart");
         drawings.extend(parts("drawingPart"));
-        out.push(StoredSection { activity: summary.uri, title, name, polyline, drawings });
+        out.push(StoredSection {
+            activity: summary.uri,
+            title,
+            name,
+            polyline,
+            drawings,
+        });
     }
     out.sort_by_key(|one| one.name.as_deref().unwrap_or(&one.title).to_lowercase());
     out

@@ -101,9 +101,7 @@ impl Selector {
             Selector::All | Selector::Type(_) | Selector::Uuids(_) => false,
             Selector::Field { .. } => true,
             Selector::Not(inner) => inner.reads_objects(),
-            Selector::AllOf(terms) | Selector::AnyOf(terms) => {
-                terms.iter().any(Selector::reads_objects)
-            }
+            Selector::AllOf(terms) | Selector::AnyOf(terms) => terms.iter().any(Selector::reads_objects),
         }
     }
 }
@@ -122,11 +120,7 @@ fn type_matches(qualified: &str, wanted: &str) -> bool {
     naming::type_eq_loose(local, asked)
 }
 
-fn matches(
-    selector: &Selector,
-    candidate: &Candidate<'_>,
-    source: &dyn ObjectSource,
-) -> bool {
+fn matches(selector: &Selector, candidate: &Candidate<'_>, source: &dyn ObjectSource) -> bool {
     match selector {
         Selector::All => true,
         Selector::Type(wanted) => type_matches(candidate.qualified_type, wanted),
@@ -192,9 +186,21 @@ mod tests {
 
     fn candidates() -> Vec<Candidate<'static>> {
         vec![
-            Candidate { id: "a", uuid: "a", qualified_type: "resqml22.Grid2dRepresentation" },
-            Candidate { id: "b", uuid: "b", qualified_type: "resqml20.obj_Grid2dRepresentation" },
-            Candidate { id: "c", uuid: "c", qualified_type: "resqml22.PolylineSetRepresentation" },
+            Candidate {
+                id: "a",
+                uuid: "a",
+                qualified_type: "resqml22.Grid2dRepresentation",
+            },
+            Candidate {
+                id: "b",
+                uuid: "b",
+                qualified_type: "resqml20.obj_Grid2dRepresentation",
+            },
+            Candidate {
+                id: "c",
+                uuid: "c",
+                qualified_type: "resqml22.PolylineSetRepresentation",
+            },
         ]
     }
 
@@ -208,10 +214,17 @@ mod tests {
         // The same concept, spelled three ways by two releases. A selector that
         // matched the string would name one of the two grids and leave the
         // other out of every rule anybody writes.
-        let found = select(&Selector::Type("Grid2dRepresentation".into()), &candidates(), &NoObjects);
+        let found = select(
+            &Selector::Type("Grid2dRepresentation".into()),
+            &candidates(),
+            &NoObjects,
+        );
         assert_eq!(found, ["a", "b"]);
-        let with_prefix =
-            select(&Selector::Type("resqml20.obj_Grid2dRepresentation".into()), &candidates(), &NoObjects);
+        let with_prefix = select(
+            &Selector::Type("resqml20.obj_Grid2dRepresentation".into()),
+            &candidates(),
+            &NoObjects,
+        );
         assert_eq!(with_prefix, ["a", "b"]);
     }
 
@@ -243,18 +256,29 @@ mod tests {
         // Worth pinning rather than discovering: a rule builder that starts
         // with no terms selects the whole package under one reading and none of
         // it under the other, and both are defensible until one is written down.
-        assert_eq!(select(&Selector::AllOf(vec![]), &candidates(), &NoObjects).len(), 3);
-        assert_eq!(select(&Selector::AnyOf(vec![]), &candidates(), &NoObjects).len(), 0);
+        assert_eq!(
+            select(&Selector::AllOf(vec![]), &candidates(), &NoObjects).len(),
+            3
+        );
+        assert_eq!(
+            select(&Selector::AnyOf(vec![]), &candidates(), &NoObjects).len(),
+            0
+        );
     }
 
     #[test]
     fn a_field_term_says_it_will_read() {
         assert!(!Selector::Type("x".into()).reads_objects());
-        assert!(Selector::AllOf(vec![
-            Selector::Type("x".into()),
-            Selector::Field { path: "Citation.Originator".into(), equals: "Geosiris".into() },
-        ])
-        .reads_objects());
+        assert!(
+            Selector::AllOf(vec![
+                Selector::Type("x".into()),
+                Selector::Field {
+                    path: "Citation.Originator".into(),
+                    equals: "Geosiris".into()
+                },
+            ])
+            .reads_objects()
+        );
     }
 
     #[test]
@@ -262,7 +286,10 @@ mod tests {
         // And does not fail: a store that cannot hand over an object answers
         // for what it has. Making this an error would let one unreadable part
         // take down every rule in the package.
-        let term = Selector::Field { path: "Citation.Title".into(), equals: "x".into() };
+        let term = Selector::Field {
+            path: "Citation.Title".into(),
+            equals: "x".into(),
+        };
         assert!(select(&term, &candidates(), &NoObjects).is_empty());
     }
 }

@@ -24,7 +24,13 @@ use energyml_storage::ObjectSummary;
 use crate::inherit::{Built, Package, chain, citation, dor, u};
 
 fn hsv(hue: f64) -> Hsv {
-    Hsv { hue, saturation: 1.0, value: 1.0, alpha: 1.0, title: None }
+    Hsv {
+        hue,
+        saturation: 1.0,
+        value: 1.0,
+        alpha: 1.0,
+        title: None,
+    }
 }
 
 /// The paint a colour named by `hue` gives.
@@ -87,7 +93,12 @@ fn ask(cache: &mut ColourCache, built: &Built, set: &GraphicalSet, n: u32, scope
     let cascade = Cascade::new(set);
     let uuid = u(n);
     cache
-        .resolve(&cascade, &built.index, &built.source, &[Ask { uri: &uuid, scopes }])
+        .resolve(
+            &cascade,
+            &built.index,
+            &built.source,
+            &[Ask { uri: &uuid, scopes }],
+        )
         .remove(0)
 }
 
@@ -111,10 +122,18 @@ fn level(scoped: &Scoped) -> Option<Level> {
 /// To break it: put `Scope::Faces` in the polylines' row — the test goes red.
 #[test]
 fn a_polyline_never_asks_for_faces_or_volumes() {
-    for kind in ["PolylineRepresentation", "PolylineSetRepresentation", "WellboreTrajectoryRepresentation", "obj_Trajectory"] {
+    for kind in [
+        "PolylineRepresentation",
+        "PolylineSetRepresentation",
+        "WellboreTrajectoryRepresentation",
+        "obj_Trajectory",
+    ] {
         let drawn = drawn_by(kind);
         assert_eq!(drawn.scopes, &[Scope::Nodes, Scope::Edges], "{kind}");
-        assert!(!drawn.edges_follow_faces, "{kind}: a polyline's edges are its own");
+        assert!(
+            !drawn.edges_follow_faces,
+            "{kind}: a polyline's edges are its own"
+        );
     }
     let surface = drawn_by("TriangulatedSetRepresentation");
     assert_eq!(surface.scopes, &[Scope::Nodes, Scope::Faces]);
@@ -141,9 +160,18 @@ fn a_faces_only_colour_on_a_collection_paints_the_faces_of_a_member_not_its_node
     let built = package.built();
     let set = painted(&[(10, &[(Scope::Faces, 30.0)])]);
 
-    let answers = ask(&mut ColourCache::new(), &built, &set, 1, &[Scope::Nodes, Scope::Faces]);
+    let answers = ask(
+        &mut ColourCache::new(),
+        &built,
+        &set,
+        1,
+        &[Scope::Nodes, Scope::Faces],
+    );
     let (nodes, faces) = (&answers[0], &answers[1]);
-    assert!(nodes.walked.resolution.is_none(), "nothing says anything about the nodes: {nodes:?}");
+    assert!(
+        nodes.walked.resolution.is_none(),
+        "nothing says anything about the nodes: {nodes:?}"
+    );
     assert_eq!(carrier(faces), Some(u(10)));
     assert_eq!(rank(faces), Some(2));
     assert_eq!(level(faces), Some(Level::Collection));
@@ -161,7 +189,13 @@ fn a_nodes_only_colour_on_the_object_paints_its_nodes_and_not_its_faces() {
     let built = package.built();
     let set = painted(&[(1, &[(Scope::Nodes, 200.0)])]);
 
-    let answers = ask(&mut ColourCache::new(), &built, &set, 1, &[Scope::Nodes, Scope::Faces]);
+    let answers = ask(
+        &mut ColourCache::new(),
+        &built,
+        &set,
+        1,
+        &[Scope::Nodes, Scope::Faces],
+    );
     assert_eq!(carrier(&answers[0]), Some(u(1)));
     assert_eq!(rank(&answers[0]), Some(1));
     assert_eq!(answers[0].decision().map(|d| d.paint.clone()), Some(paint(200.0)));
@@ -182,13 +216,23 @@ fn the_whole_object_falls_back_for_a_target_and_the_closest_tier_wins() {
     let built = package.built();
     let set = painted(&[(1, &[(Scope::WholeObject, 100.0)]), (10, &[(Scope::Faces, 30.0)])]);
 
-    let answers = ask(&mut ColourCache::new(), &built, &set, 1, &[Scope::Nodes, Scope::Faces]);
+    let answers = ask(
+        &mut ColourCache::new(),
+        &built,
+        &set,
+        1,
+        &[Scope::Nodes, Scope::Faces],
+    );
     for one in &answers {
         assert_eq!(carrier(one), Some(u(1)), "{:?}", one.scope);
         assert_eq!(one.decision().map(|d| d.paint.clone()), Some(paint(100.0)));
         assert!(!one.exact, "the whole object stands for {:?}", one.scope);
         assert!(
-            one.decision().unwrap().notes.iter().any(|n| n.contains("used what it says for the whole object")),
+            one.decision()
+                .unwrap()
+                .notes
+                .iter()
+                .any(|n| n.contains("used what it says for the whole object")),
             "the fallback is said"
         );
     }
@@ -204,9 +248,23 @@ fn within_a_tier_the_exact_target_comes_before_the_whole_object() {
     let built = package.built();
     let set = painted(&[(1, &[(Scope::WholeObject, 100.0), (Scope::Faces, 10.0)])]);
 
-    let answers = ask(&mut ColourCache::new(), &built, &set, 1, &[Scope::Nodes, Scope::Faces]);
-    assert_eq!(answers[0].decision().map(|d| d.paint.clone()), Some(paint(100.0)), "nodes: the whole object");
-    assert_eq!(answers[1].decision().map(|d| d.paint.clone()), Some(paint(10.0)), "faces: their own");
+    let answers = ask(
+        &mut ColourCache::new(),
+        &built,
+        &set,
+        1,
+        &[Scope::Nodes, Scope::Faces],
+    );
+    assert_eq!(
+        answers[0].decision().map(|d| d.paint.clone()),
+        Some(paint(100.0)),
+        "nodes: the whole object"
+    );
+    assert_eq!(
+        answers[1].decision().map(|d| d.paint.clone()),
+        Some(paint(10.0)),
+        "faces: their own"
+    );
     assert!(answers[1].exact && !answers[0].exact);
 }
 
@@ -220,7 +278,13 @@ fn the_whole_object_is_never_answered_by_another_target() {
     surface(&mut package, 1, None);
     let built = package.built();
     let set = painted(&[(1, &[(Scope::Faces, 10.0)])]);
-    let answers = ask(&mut ColourCache::new(), &built, &set, 1, &[Scope::WholeObject, Scope::Faces]);
+    let answers = ask(
+        &mut ColourCache::new(),
+        &built,
+        &set,
+        1,
+        &[Scope::WholeObject, Scope::Faces],
+    );
     assert!(answers[0].walked.resolution.is_none());
     assert!(answers[1].walked.resolution.is_some());
 }
@@ -249,11 +313,18 @@ fn a_walk_is_resumed_not_redone() {
     let faces = ask(&mut deep, &built, &set, 4, &[Scope::Faces]);
     assert_eq!(carrier(&faces[0]), Some(u(3)));
     let after_faces = deep.stats();
-    assert_eq!(after_faces.tiers_read, 3, "the object, its interpretation, its feature");
+    assert_eq!(
+        after_faces.tiers_read, 3,
+        "the object, its interpretation, its feature"
+    );
     // …and the nodes, found on the interpretation, are **already there**.
     let nodes = ask(&mut deep, &built, &set, 4, &[Scope::Nodes]);
     assert_eq!(carrier(&nodes[0]), Some(u(2)));
-    assert_eq!(deep.stats(), after_faces, "nothing was read for the second target");
+    assert_eq!(
+        deep.stats(),
+        after_faces,
+        "nothing was read for the second target"
+    );
 
     // Nodes first: the walk stops at the interpretation…
     let mut shallow = ColourCache::new();
@@ -265,7 +336,11 @@ fn a_walk_is_resumed_not_redone() {
     assert_eq!(carrier(&faces[0]), Some(u(3)));
     let after_both = shallow.stats();
     assert_eq!(after_both.tiers_read, 3);
-    assert_eq!(after_both.objects_read, after_nodes.objects_read + 1, "only the feature was read");
+    assert_eq!(
+        after_both.objects_read,
+        after_nodes.objects_read + 1,
+        "only the feature was read"
+    );
     assert_eq!(after_both.walks_begun, 1, "one walk, resumed");
 
     // The control: the same two questions with no memory read the first tiers twice.
@@ -273,10 +348,20 @@ fn a_walk_is_resumed_not_redone() {
     ask(&mut forgetful, &built, &set, 4, &[Scope::Nodes]);
     forgetful.clear();
     ask(&mut forgetful, &built, &set, 4, &[Scope::Faces]);
-    assert!(forgetful.stats().tiers_read > after_both.tiers_read, "{:?}", forgetful.stats());
+    assert!(
+        forgetful.stats().tiers_read > after_both.tiers_read,
+        "{:?}",
+        forgetful.stats()
+    );
 
     // Same answers whichever order they are asked in.
-    let both = ask(&mut ColourCache::new(), &built, &set, 4, &[Scope::Nodes, Scope::Faces]);
+    let both = ask(
+        &mut ColourCache::new(),
+        &built,
+        &set,
+        4,
+        &[Scope::Nodes, Scope::Faces],
+    );
     assert_eq!(both[0], nodes[0]);
     assert_eq!(both[1], faces[0]);
 }
@@ -295,18 +380,40 @@ fn a_polyline_stops_where_its_targets_are_answered() {
     let set = painted(&[(1, &[(Scope::WholeObject, 100.0)]), (3, &[(Scope::Faces, 30.0)])]);
 
     let cascade = Cascade::new(&set);
-    let one = Request { representation: &u(1), property: None, kind_chain: &[], element: Scope::WholeObject };
+    let one = Request {
+        representation: &u(1),
+        property: None,
+        kind_chain: &[],
+        element: Scope::WholeObject,
+    };
     let mut polyline = ColourCache::new();
-    let ladders = cascade.ladders_cached(&mut polyline, &built.index, &built.source, &[one]).expect("reads");
+    let ladders = cascade
+        .ladders_cached(&mut polyline, &built.index, &built.source, &[one])
+        .expect("reads");
     let scopes: Vec<Scope> = ladders[0].targets.iter().map(|t| t.scope).collect();
     assert_eq!(scopes, vec![Scope::Nodes, Scope::Edges], "no faces, no volumes");
-    assert_eq!(polyline.stats().tiers_read, 1, "answered on the object itself: nothing above it was read");
+    assert_eq!(
+        polyline.stats().tiers_read,
+        1,
+        "answered on the object itself: nothing above it was read"
+    );
 
-    let two = Request { representation: &u(4), property: None, kind_chain: &[], element: Scope::WholeObject };
+    let two = Request {
+        representation: &u(4),
+        property: None,
+        kind_chain: &[],
+        element: Scope::WholeObject,
+    };
     let mut skin = ColourCache::new();
-    let ladders = cascade.ladders_cached(&mut skin, &built.index, &built.source, &[two]).expect("reads");
+    let ladders = cascade
+        .ladders_cached(&mut skin, &built.index, &built.source, &[two])
+        .expect("reads");
     let scopes: Vec<Scope> = ladders[0].targets.iter().map(|t| t.scope).collect();
-    assert_eq!(scopes, vec![Scope::Nodes, Scope::Faces, Scope::Edges], "the edges follow the faces");
+    assert_eq!(
+        scopes,
+        vec![Scope::Nodes, Scope::Faces, Scope::Edges],
+        "the edges follow the faces"
+    );
     assert!(skin.stats().tiers_read >= 3, "the faces went up to the feature");
 }
 
@@ -322,20 +429,49 @@ fn the_edges_of_a_surface_take_the_faces_colour_and_say_so() {
     let built = package.built();
     let set = painted(&[(1, &[(Scope::Faces, 10.0), (Scope::Edges, 250.0)])]);
     let cascade = Cascade::new(&set);
-    let request = Request { representation: &u(1), property: None, kind_chain: &[], element: Scope::WholeObject };
-    let ladders = cascade.ladders(&built.index, &built.source, &[request]).expect("reads");
-    let edges = ladders[0].targets.iter().find(|t| t.scope == Scope::Edges).expect("the edges are answered");
+    let request = Request {
+        representation: &u(1),
+        property: None,
+        kind_chain: &[],
+        element: Scope::WholeObject,
+    };
+    let ladders = cascade
+        .ladders(&built.index, &built.source, &[request])
+        .expect("reads");
+    let edges = ladders[0]
+        .targets
+        .iter()
+        .find(|t| t.scope == Scope::Edges)
+        .expect("the edges are answered");
     assert_eq!(edges.merged_into, Some(Scope::Faces));
-    assert_eq!(edges.decision().map(|d| d.paint.clone()), Some(paint(10.0)), "the faces' colour, not 250");
-    let note = edges.merged_note.as_deref().expect("the file's own edge colour is said");
+    assert_eq!(
+        edges.decision().map(|d| d.paint.clone()),
+        Some(paint(10.0)),
+        "the faces' colour, not 250"
+    );
+    let note = edges
+        .merged_note
+        .as_deref()
+        .expect("the file's own edge colour is said");
     assert!(note.contains(&u(1)) && note.contains("edges"), "{note}");
 
     // Nothing to say when the file gives them nothing of their own.
     let quiet = painted(&[(1, &[(Scope::Faces, 10.0)])]);
     let cascade = Cascade::new(&quiet);
-    let request = Request { representation: &u(1), property: None, kind_chain: &[], element: Scope::WholeObject };
-    let ladders = cascade.ladders(&built.index, &built.source, &[request]).expect("reads");
-    let edges = ladders[0].targets.iter().find(|t| t.scope == Scope::Edges).unwrap();
+    let request = Request {
+        representation: &u(1),
+        property: None,
+        kind_chain: &[],
+        element: Scope::WholeObject,
+    };
+    let ladders = cascade
+        .ladders(&built.index, &built.source, &[request])
+        .expect("reads");
+    let edges = ladders[0]
+        .targets
+        .iter()
+        .find(|t| t.scope == Scope::Edges)
+        .unwrap();
     assert!(edges.merged_note.is_none());
 }
 
@@ -350,13 +486,25 @@ fn the_batch_says_what_one_object_says_per_target() {
     let cascade = Cascade::new(&set);
     let scopes = [Scope::Nodes, Scope::Edges, Scope::Faces, Scope::Volumes];
     let (a, b) = (u(1), u(4));
-    let asks = [Ask { uri: &a, scopes: &scopes }, Ask { uri: &b, scopes: &scopes }];
+    let asks = [
+        Ask {
+            uri: &a,
+            scopes: &scopes,
+        },
+        Ask {
+            uri: &b,
+            scopes: &scopes,
+        },
+    ];
     let batch = ColourCache::new().resolve(&cascade, &built.index, &built.source, &asks);
     for (n, from_batch) in [(1u32, &batch[0]), (4, &batch[1])] {
         let alone = ask(&mut ColourCache::new(), &built, &set, n, &scopes);
         assert_eq!(&alone, from_batch, "object {n}");
     }
-    assert!(batch[0].iter().any(|one| one.decision().is_some()), "the comparison proves something");
+    assert!(
+        batch[0].iter().any(|one| one.decision().is_some()),
+        "the comparison proves something"
+    );
 }
 
 // -- invalidation --------------------------------------------------------------
@@ -370,7 +518,10 @@ fn linked() -> Package {
     surface(&mut package, 5, None);
     surface(&mut package, 6, None);
     package.folder(10).folder(11).folder(12);
-    package.set(20, &[(10, &[1, 2])]).set(21, &[(11, &[5])]).set(22, &[(12, &[10])]);
+    package
+        .set(20, &[(10, &[1, 2])])
+        .set(21, &[(11, &[5])])
+        .set(22, &[(12, &[10])]);
     package
 }
 
@@ -403,14 +554,21 @@ fn changing_a_collections_colour_drops_only_the_walks_that_went_through_it() {
     let dropped = cache.disturb(&changed);
     assert_eq!(dropped, 2, "the members of 10, which is in 12");
     assert!(!cache.holds(&u(1)) && !cache.holds(&u(2)));
-    assert!(cache.holds(&u(5)) && cache.holds(&u(6)), "unrelated walks are exact still");
+    assert!(
+        cache.holds(&u(5)) && cache.holds(&u(6)),
+        "unrelated walks are exact still"
+    );
 
     // Everything asked again: two walks are made again, not four.
     let begun = cache.stats().walks_begun;
     resolve_all(&mut cache, &built, &after);
     assert_eq!(cache.stats().walks_begun, begun + 2, "{:?}", cache.stats());
     let one = ask(&mut cache, &built, &after, 1, &[Scope::Faces]);
-    assert_eq!(one[0].decision().map(|d| d.paint.clone()), Some(paint(100.0)), "the new colour");
+    assert_eq!(
+        one[0].decision().map(|d| d.paint.clone()),
+        Some(paint(100.0)),
+        "the new colour"
+    );
     let five = ask(&mut cache, &built, &after, 5, &[Scope::Faces]);
     assert_eq!(five[0].decision().map(|d| d.paint.clone()), Some(paint(200.0)));
 }
@@ -430,20 +588,36 @@ fn a_collection_that_gains_a_member_disturbs_only_that_member() {
     // The set 21 of `after` also holds 6.
     after.objects.retain(|(summary, _)| summary.uuid != u(21));
     after.set(21, &[(11, &[5, 6])]);
-    let summaries: HashMap<String, ObjectSummary> =
-        after.objects.iter().map(|(summary, _)| (summary.uuid.to_ascii_lowercase(), summary.clone())).collect();
+    let summaries: HashMap<String, ObjectSummary> = after
+        .objects
+        .iter()
+        .map(|(summary, _)| (summary.uuid.to_ascii_lowercase(), summary.clone()))
+        .collect();
 
     let mut built = before.built();
     let after = after.built();
     let set = painted(&[(11, &[(Scope::Faces, 200.0)])]);
     let mut cache = ColourCache::new();
     resolve_all(&mut cache, &built, &set);
-    assert!(ask(&mut cache, &built, &set, 6, &[Scope::Faces])[0].walked.resolution.is_none());
+    assert!(
+        ask(&mut cache, &built, &set, 6, &[Scope::Faces])[0]
+            .walked
+            .resolution
+            .is_none()
+    );
 
-    let disturbed = built.index.update_with(&after.source, &|uuid| summaries.get(uuid).cloned(), &[u(21)], 2);
+    let disturbed = built
+        .index
+        .update_with(&after.source, &|uuid| summaries.get(uuid).cloned(), &[u(21)], 2);
     assert!(disturbed.contains(&u(6)), "the new member: {disturbed:?}");
-    assert!(!disturbed.contains(&u(5)), "the other member did not change: {disturbed:?}");
-    assert!(!disturbed.contains(&u(11)), "nor did the collection: {disturbed:?}");
+    assert!(
+        !disturbed.contains(&u(5)),
+        "the other member did not change: {disturbed:?}"
+    );
+    assert!(
+        !disturbed.contains(&u(11)),
+        "nor did the collection: {disturbed:?}"
+    );
     cache.disturb(&disturbed);
     assert!(!cache.holds(&u(6)));
     for n in [1, 2, 5] {
@@ -465,12 +639,20 @@ fn a_collection_that_gains_a_member_disturbs_only_that_member() {
 fn the_positions_of_the_entries_are_part_of_what_changed() {
     let before = painted(&[(1, &[(Scope::Faces, 10.0)]), (2, &[(Scope::Faces, 20.0)])]);
     // Same two entries, a new one in front: every position moved.
-    let mut after = painted(&[(9, &[(Scope::Faces, 90.0)]), (1, &[(Scope::Faces, 10.0)]), (2, &[(Scope::Faces, 20.0)])]);
+    let mut after = painted(&[
+        (9, &[(Scope::Faces, 90.0)]),
+        (1, &[(Scope::Faces, 10.0)]),
+        (2, &[(Scope::Faces, 20.0)]),
+    ]);
     assert_eq!(changed_targets(&before, &after), vec![u(1), u(2), u(9)]);
     // Same set: nothing moved.
     after = before.clone();
     assert!(changed_targets(&before, &after).is_empty());
     // One entry appended: only its targets.
-    let appended = painted(&[(1, &[(Scope::Faces, 10.0)]), (2, &[(Scope::Faces, 20.0)]), (7, &[(Scope::Nodes, 1.0)])]);
+    let appended = painted(&[
+        (1, &[(Scope::Faces, 10.0)]),
+        (2, &[(Scope::Faces, 20.0)]),
+        (7, &[(Scope::Nodes, 1.0)]),
+    ]);
     assert_eq!(changed_targets(&before, &appended), vec![u(7)]);
 }

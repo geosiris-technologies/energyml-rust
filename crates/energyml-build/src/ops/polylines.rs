@@ -26,7 +26,10 @@ use energyml_geometry::geometry::Topology;
 
 use crate::declare::{Features, Inputs, Params, Shape as ShapeIn, Suggestions};
 use crate::geojson::Shape;
-use crate::operation::{About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Note, Numbers, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Dataset, Need, NewObject, Note, Numbers, Operation, Plan,
+    Refusal, Slot,
+};
 use crate::pieces::Pieces;
 use energyml_geometry::geometry::Patch;
 
@@ -88,17 +91,32 @@ struct Line {
 /// `local` is the polyline's rank in its patch, `global` its rank in the shape.
 /// Public to the operations that read polylines before writing them
 /// (`densify`), so that there is one reading of it.
-pub(crate) fn said_closed(patch: &Patch, local: usize, shape: Option<&[bool]>, global: usize) -> Option<bool> {
-    patch.closed.get(local).copied().or_else(|| shape.and_then(|c| c.get(global).copied()))
+pub(crate) fn said_closed(
+    patch: &Patch,
+    local: usize,
+    shape: Option<&[bool]>,
+    global: usize,
+) -> Option<bool> {
+    patch
+        .closed
+        .get(local)
+        .copied()
+        .or_else(|| shape.and_then(|c| c.get(global).copied()))
 }
 
-fn lines_of(inputs: &PolylinesInputs, frame: &support::Frame, force_closed: Option<bool>) -> Result<Vec<Vec<Line>>, Refusal> {
+fn lines_of(
+    inputs: &PolylinesInputs,
+    frame: &support::Frame,
+    force_closed: Option<bool>,
+) -> Result<Vec<Vec<Line>>, Refusal> {
     let mut out = Vec::new();
     for shape in &inputs.shape {
         let (name, geometry, closed) = (&shape.name, &shape.geometry, shape.closed.as_deref());
         let mut at = 0usize;
         for patch in &geometry.patches {
-            let Topology::Polylines(runs) = &patch.topology else { continue };
+            let Topology::Polylines(runs) = &patch.topology else {
+                continue;
+            };
             let mut group = Vec::new();
             let mut start = 0usize;
             for &run in runs {
@@ -198,21 +216,36 @@ impl Operation for Polylines {
         if runs + parts > 0 {
             Ok(())
         } else if !inputs.shape.is_empty() {
-            Err(Refusal::on("shape", "the shape has no polyline — its topology is points, triangles or cells"))
+            Err(Refusal::on(
+                "shape",
+                "the shape has no polyline — its topology is points, triangles or cells",
+            ))
         } else if inputs.features.is_some() {
-            Err(Refusal::on("features", "the feature collection holds only points — a polyline needs lines or areas"))
+            Err(Refusal::on(
+                "features",
+                "the feature collection holds only points — a polyline needs lines or areas",
+            ))
         } else {
-            Err(Refusal::new("refused", "it takes a shape or a feature collection; the input holds neither"))
+            Err(Refusal::new(
+                "refused",
+                "it takes a shape or a feature collection; the input holds neither",
+            ))
         }
     }
 
-    fn plan(&self, mut inputs: PolylinesInputs, params: PolylinesParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        mut inputs: PolylinesInputs,
+        params: PolylinesParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         // The shapes given are placed here, not in `write`: `write` is also
         // called with lines an operation computed (`outline`, `isocontours`,
         // `intersect`), already in the frame, which nothing may move again.
         let frame = support::frame_in(&cx.known(), &params.written.frame, cx.identity, cx.when, &mut 0)?;
         for shape in &mut inputs.shape {
-            shape.geometry = support::geometry_placed(&shape.name, &shape.geometry, shape.known.as_ref(), &frame)?;
+            shape.geometry =
+                support::geometry_placed(&shape.name, &shape.geometry, shape.known.as_ref(), &frame)?;
         }
         let seed = cx.seed(&params.written.naming.title());
         write(&inputs, &params.written, params.closed, &seed, cx)
@@ -220,7 +253,15 @@ impl Operation for Polylines {
 
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
-            Slot::required(name, Need::Number { uom: None, least: None, most: None }, about)
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
         };
         support::frame_reports(vec![
             count("polylineCount", "polylines written"),
@@ -252,12 +293,21 @@ pub fn write(
     }
     for (at, line) in groups.iter().flatten().enumerate() {
         if line.points.len() < 2 {
-            return Err(Refusal::new("refused", format!("polyline {at} has {} node(s); a polyline needs at least 2", line.points.len())));
+            return Err(Refusal::new(
+                "refused",
+                format!(
+                    "polyline {at} has {} node(s); a polyline needs at least 2",
+                    line.points.len()
+                ),
+            ));
         }
         if line.closed && line.points.len() < 3 {
             return Err(Refusal::new(
                 "refused",
-                format!("polyline {at} is closed with {} nodes — two would fold the ring onto its own edge", line.points.len()),
+                format!(
+                    "polyline {at} is closed with {} nodes — two would fold the ring onto its own edge",
+                    line.points.len()
+                ),
             ));
         }
     }
@@ -359,15 +409,30 @@ pub fn write(
     let shape = support::made_root(
         &title,
         &uuid,
-        energyml_geometry::geometry::Geometry { kind: "polylines", patches: made },
+        energyml_geometry::geometry::Geometry {
+            kind: "polylines",
+            patches: made,
+        },
     );
     let nodes: usize = lines.iter().map(|l| l.points.len()).sum();
     // What the frame must say of itself, after what the lines said.
     says.extend(frame.says);
     let mut parameters = frame.parameters;
-    parameters.push(Parameter::Double { title: "polylineCount".to_string(), value: lines.len() as f64, uom: None });
-    parameters.push(Parameter::Double { title: "pointCount".to_string(), value: nodes as f64, uom: None });
-    parameters.push(Parameter::Double { title: "closedCount".to_string(), value: lines.iter().filter(|l| l.closed).count() as f64, uom: None });
+    parameters.push(Parameter::Double {
+        title: "polylineCount".to_string(),
+        value: lines.len() as f64,
+        uom: None,
+    });
+    parameters.push(Parameter::Double {
+        title: "pointCount".to_string(),
+        value: nodes as f64,
+        uom: None,
+    });
+    parameters.push(Parameter::Double {
+        title: "closedCount".to_string(),
+        value: lines.iter().filter(|l| l.closed).count() as f64,
+        uom: None,
+    });
     Ok(Plan {
         media: Vec::new(),
         // What the frame signalled travels up to here: the geometry is
@@ -376,7 +441,12 @@ pub fn write(
         objects,
         datasets,
         shapes: vec![shape],
-        activity: ActivityDraft { recipe: "polylines", title: format!("polylines → {title}"), seed, parameters },
+        activity: ActivityDraft {
+            recipe: "polylines",
+            title: format!("polylines → {title}"),
+            seed,
+            parameters,
+        },
         says,
         dropped: Vec::new(),
     })

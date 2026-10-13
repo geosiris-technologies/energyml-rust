@@ -95,17 +95,27 @@ pub struct TerrainInputs {
 }
 
 fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double { title: title.to_string(), value, uom: None }
+    Parameter::Double {
+        title: title.to_string(),
+        value,
+        uom: None,
+    }
 }
 
 fn text(title: &str, value: &str) -> Parameter {
-    Parameter::Text { title: title.to_string(), value: value.to_string() }
+    Parameter::Text {
+        title: title.to_string(),
+        value: value.to_string(),
+    }
 }
 
 /// A source field that says nothing is refused by its name.
 fn given(slot: &str, value: &str, what: &str) -> Result<(), Refusal> {
     if value.trim().is_empty() {
-        return Err(Refusal::on(slot, format!("is empty: {what} is written with the terrain and cannot be left unsaid")));
+        return Err(Refusal::on(
+            slot,
+            format!("is empty: {what} is written with the terrain and cannot be left unsaid"),
+        ));
     }
     Ok(())
 }
@@ -146,15 +156,30 @@ impl Operation for Terrain {
     }
 
     fn plan(&self, inputs: TerrainInputs, params: TerrainParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
-        let TerrainParams { source, service, layer, licence, attribution, fetched, mut written } = params;
+        let TerrainParams {
+            source,
+            service,
+            layer,
+            licence,
+            attribution,
+            fetched,
+            mut written,
+        } = params;
         given("source", &source, "where the elevations come from")?;
         given("service", &service, "the service that was asked")?;
         given("layer", &layer, "the layer that was asked")?;
         given("licence", &licence, "the licence the data is under")?;
-        given("attribution", &attribution, "the attribution the licence asks for")?;
+        given(
+            "attribution",
+            &attribution,
+            "the attribution the licence asks for",
+        )?;
         given("fetched", &fetched, "when the data was fetched")?;
         if !looks_like_iso(&fetched) {
-            return Err(Refusal::on("fetched", format!("`{fetched}` is no ISO 8601 date or instant (2026-10-01 or 2026-10-01T12:00:00Z)")));
+            return Err(Refusal::on(
+                "fetched",
+                format!("`{fetched}` is no ISO 8601 date or instant (2026-10-01 or 2026-10-01T12:00:00Z)"),
+            ));
         }
 
         let name = &inputs.lattice.name;
@@ -163,7 +188,9 @@ impl Operation for Terrain {
         if ni < 2 || nj < 2 {
             return Err(Refusal::on(
                 "lattice",
-                format!("`{name}` is {ni} × {nj} nodes: a terrain is a surface and needs at least 2 nodes along each axis"),
+                format!(
+                    "`{name}` is {ni} × {nj} nodes: a terrain is a surface and needs at least 2 nodes along each axis"
+                ),
             ));
         }
         // Left to `grid::write` when the heights do not match the counts: its
@@ -171,7 +198,10 @@ impl Operation for Terrain {
         if !lattice.z.is_empty() && lattice.z.iter().all(|z| !z.is_finite()) {
             return Err(Refusal::on(
                 "lattice",
-                format!("all {} node(s) of `{name}` have no height: a DEM with no value is not a surface — the source covers nothing of the area asked", lattice.z.len()),
+                format!(
+                    "all {} node(s) of `{name}` have no height: a DEM with no value is not a surface — the source covers nothing of the area asked",
+                    lattice.z.len()
+                ),
             ));
         }
         cx.stop_if_cancelled()?;
@@ -189,15 +219,23 @@ impl Operation for Terrain {
         let seed = format!("terrain:{source}:{layer}:{x0}:{y0}:{dx}:{dy}:{ni}x{nj}:{title}");
         let mut plan = super::grid::write(name, lattice, &written, &seed, cx)?;
 
-        let description = format!("Terrain from `{source}` ({service}), layer `{layer}`. Licence: {licence}. Attribution: {attribution}. Fetched {fetched}.");
+        let description = format!(
+            "Terrain from `{source}` ({service}), layer `{layer}`. Licence: {licence}. Attribution: {attribution}. Fetched {fetched}."
+        );
         let length = description.chars().count();
         if length > 2000 {
             return Err(Refusal::on(
                 "licence",
-                format!("source, service, layer, licence and attribution make a description of {length} characters, and a Citation/Description holds 2000 — say them shorter"),
+                format!(
+                    "source, service, layer, licence and attribution make a description of {length} characters, and a Citation/Description holds 2000 — say them shorter"
+                ),
             ));
         }
-        if let Some(object) = plan.objects.iter_mut().rfind(|one| one.qualified_type == "resqml22.Grid2dRepresentation") {
+        if let Some(object) = plan
+            .objects
+            .iter_mut()
+            .rfind(|one| one.qualified_type == "resqml22.Grid2dRepresentation")
+        {
             object.json["Citation"]["Description"] = Value::String(description);
         }
 
@@ -230,13 +268,25 @@ impl Operation for Terrain {
         );
         plan.says.push(Note {
             key: "lattice",
-            detail: format!("{ni} by {nj} nodes from ({x0}, {y0}) every ({dx}, {dy}), written as fetched — not resampled"),
+            detail: format!(
+                "{ni} by {nj} nodes from ({x0}, {y0}) every ({dx}, {dy}), written as fetched — not resampled"
+            ),
         });
         Ok(plan)
     }
 
     fn reports(&self) -> Vec<Slot> {
-        let count = |name: &'static str, about: &'static str| Slot::required(name, Need::Number { uom: None, least: None, most: None }, about);
+        let count = |name: &'static str, about: &'static str| {
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
         support::frame_reports(vec![
             count("nodeCount", "nodes written"),
             count("fastestAxisCount", "nodes along x"),

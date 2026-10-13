@@ -93,7 +93,8 @@ impl Reading {
         if rank.is_none() && unit.is_none() {
             return Ok(Reading::Named);
         }
-        geolts::with_default(|chart| AtRank::of(chart, rank, unit, language)).map(|at| Reading::AtRank(Box::new(at)))
+        geolts::with_default(|chart| AtRank::of(chart, rank, unit, language))
+            .map(|at| Reading::AtRank(Box::new(at)))
     }
 
     /// The sequences of units one frame is read as, **each as long as
@@ -187,22 +188,35 @@ struct Tally {
 impl AtRank {
     /// A reading of `chart` at `rank` — of `unit` alone when one is named, at
     /// its own rank when `rank` is left out.
-    pub fn of(chart: &Chart, rank: Option<usize>, unit: Option<&ChartTerm>, language: Language) -> Result<AtRank, Refusal> {
+    pub fn of(
+        chart: &Chart,
+        rank: Option<usize>,
+        unit: Option<&ChartTerm>,
+        language: Language,
+    ) -> Result<AtRank, Refusal> {
         let slot = if unit.is_some() { "unit" } else { "rank" };
         if chart.is_empty() {
             return Err(Refusal::on(
                 slot,
-                format!("{} holds no division — this build has no BRGM chart to read the frames against", chart.label()),
+                format!(
+                    "{} holds no division — this build has no BRGM chart to read the frames against",
+                    chart.label()
+                ),
             ));
         }
-        let asked: Option<&Concept> =
-            unit.map(|term| chart.resolve(&term.0).map_err(|why| Refusal::on("unit", why))).transpose()?;
+        let asked: Option<&Concept> = unit
+            .map(|term| chart.resolve(&term.0).map_err(|why| Refusal::on("unit", why)))
+            .transpose()?;
         if let Some(one) = asked
             && one.level == 0
         {
             return Err(Refusal::on(
                 "unit",
-                format!("`{}` ({}) states no level in the chart, so it is at no rank of a column", one.label, one.uri()),
+                format!(
+                    "`{}` ({}) states no level in the chart, so it is at no rank of a column",
+                    one.label,
+                    one.uri()
+                ),
             ));
         }
         let level = match (rank, asked) {
@@ -238,10 +252,17 @@ impl AtRank {
             }
             (None, Some(one)) => one.level,
             (None, None) => {
-                return Err(Refusal::on("rank", "a reading at a rank of the chart needs `rank`, `unit`, or both"));
+                return Err(Refusal::on(
+                    "rank",
+                    "a reading at a rank of the chart needs `rank`, `unit`, or both",
+                ));
             }
         };
-        let by_uuid = chart.concepts().iter().map(|one| (interpretation_uuid(one), one.id)).collect();
+        let by_uuid = chart
+            .concepts()
+            .iter()
+            .map(|one| (interpretation_uuid(one), one.id))
+            .collect();
         Ok(AtRank {
             chart: chart.clone(),
             rank: usize::from(level) - 1,
@@ -265,12 +286,18 @@ impl AtRank {
 
     /// The label of a division, for a note.
     fn label(&self, id: u32) -> String {
-        self.chart.get(id).map(|one| one.label.clone()).unwrap_or_else(|| format!("GeolTs {id}"))
+        self.chart
+            .get(id)
+            .map(|one| one.label.clone())
+            .unwrap_or_else(|| format!("GeolTs {id}"))
     }
 
     /// The title of a division read, for a note.
     fn title(&self, id: u32) -> String {
-        self.chart.get(id).map(|one| title_of(one, self.language)).unwrap_or_else(|| format!("GeolTs {id}"))
+        self.chart
+            .get(id)
+            .map(|one| title_of(one, self.language))
+            .unwrap_or_else(|| format!("GeolTs {id}"))
     }
 
     /// One frame's sequences — see [`Reading::sequences`].
@@ -316,7 +343,11 @@ impl AtRank {
         let mut out: Vec<Vec<Option<Ref>>> = Vec::with_capacity(read.len());
         for unit in read {
             let inside = self.unit_ref(unit);
-            let outside = Ref::new(format!("{OUTSIDE}{}", inside.uuid), "", format!("outside {}", inside.title));
+            let outside = Ref::new(
+                format!("{OUTSIDE}{}", inside.uuid),
+                "",
+                format!("outside {}", inside.title),
+            );
             let mut reached = false;
             let mut sequence: Vec<Option<Ref>> = Vec::with_capacity(divisions.len());
             for division in &divisions {
@@ -332,7 +363,13 @@ impl AtRank {
                     Relation::Outside => sequence.push(Some(outside.clone())),
                     other => {
                         let label = self.label(*division);
-                        *self.tally.unknown.entry((unit, other)).or_default().entry(label).or_default() += 1;
+                        *self
+                            .tally
+                            .unknown
+                            .entry((unit, other))
+                            .or_default()
+                            .entry(label)
+                            .or_default() += 1;
                         sequence.push(None);
                     }
                 }
@@ -352,7 +389,11 @@ impl AtRank {
     fn whom(&self) -> String {
         match self.unit {
             Some(unit) => format!("`{}`", self.title(unit)),
-            None => format!("any division of rank {} ({})", self.rank, geolts::level_name(self.level)),
+            None => format!(
+                "any division of rank {} ({})",
+                self.rank,
+                geolts::level_name(self.level)
+            ),
         }
     }
 
@@ -407,7 +448,11 @@ impl AtRank {
                     format!(
                         "against `{}`, {} — {}",
                         self.title(*unit),
-                        labels.iter().map(|(label, count)| format!("{label} × {count}")).collect::<Vec<_>>().join(", "),
+                        labels
+                            .iter()
+                            .map(|(label, count)| format!("{label} × {count}"))
+                            .collect::<Vec<_>>()
+                            .join(", "),
                         relation.reason()
                     )
                 })
@@ -465,7 +510,11 @@ impl AtRank {
 /// *« which anyone can recompute without this tool »*. The tests read it off
 /// a column that operation writes, never off this function.
 fn interpretation_uuid(one: &Concept) -> String {
-    Uuid::new_v5(&Uuid::NAMESPACE_URL, format!("{}#interpretation", one.uri()).as_bytes()).to_string()
+    Uuid::new_v5(
+        &Uuid::NAMESPACE_URL,
+        format!("{}#interpretation", one.uri()).as_bytes(),
+    )
+    .to_string()
 }
 
 /// A division read, titled with its level — `Lutétien (stage)`, or
@@ -487,12 +536,24 @@ fn ranks_of(chart: &Chart) -> String {
 /// A few names and how many more — a list of two hundred is not read (the
 /// rule `contacts-from-frames` lists its set-aside properties by).
 fn few(names: &[String]) -> String {
-    let shown = names.iter().take(5).map(|one| format!("`{one}`")).collect::<Vec<_>>().join(", ");
-    if names.len() > 5 { format!("{shown} and {} more", names.len() - 5) } else { shown }
+    let shown = names
+        .iter()
+        .take(5)
+        .map(|one| format!("`{one}`"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    if names.len() > 5 {
+        format!("{shown} and {} more", names.len() - 5)
+    } else {
+        shown
+    }
 }
 
 /// Names and their counts — `` `Remblais` × 3 ``.
 fn counted(names: &BTreeMap<String, usize>) -> String {
-    let all: Vec<String> = names.iter().map(|(name, count)| format!("{name} × {count}")).collect();
+    let all: Vec<String> = names
+        .iter()
+        .map(|(name, count)| format!("{name} × {count}"))
+        .collect();
     few(&all)
 }

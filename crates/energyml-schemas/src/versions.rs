@@ -49,18 +49,102 @@ pub struct KnownVersion {
 /// Every version, **compiled in or not**. The one list the refusal reads, held
 /// against `crates/generated/` and against `Cargo.toml` by `tests/features.rs`.
 pub const KNOWN_VERSIONS: &[KnownVersion] = &[
-    KnownVersion { package: "eml", version: "2.0", compact: &["20"], feature: "eml20", crate_name: "energyml-eml-2-0", requires: &[] },
-    KnownVersion { package: "eml", version: "2.1", compact: &["21"], feature: "eml21", crate_name: "energyml-eml-2-1", requires: &[] },
-    KnownVersion { package: "eml", version: "2.2", compact: &["22"], feature: "eml22", crate_name: "energyml-eml-2-2", requires: &[] },
-    KnownVersion { package: "eml", version: "2.3", compact: &["23"], feature: "eml23", crate_name: "energyml-eml-2-3", requires: &[] },
-    KnownVersion { package: "resqml", version: "2.0.1", compact: &["20", "201"], feature: "resqml20", crate_name: "energyml-resqml-2-0-1", requires: &["eml20"] },
-    KnownVersion { package: "resqml", version: "2.2", compact: &["22"], feature: "resqml22", crate_name: "energyml-resqml-2-2", requires: &["eml23"] },
-    KnownVersion { package: "resqml", version: "2.2_dev3", compact: &["22"], feature: "resqml22dev3", crate_name: "energyml-resqml-2-2-dev3", requires: &["eml22"] },
-    KnownVersion { package: "witsml", version: "2.0", compact: &["20"], feature: "witsml20", crate_name: "energyml-witsml-2-0", requires: &["eml21"] },
-    KnownVersion { package: "witsml", version: "2.1", compact: &["21"], feature: "witsml21", crate_name: "energyml-witsml-2-1", requires: &["eml23"] },
-    KnownVersion { package: "prodml", version: "2.0", compact: &["20"], feature: "prodml20", crate_name: "energyml-prodml-2-0", requires: &["eml21"] },
-    KnownVersion { package: "prodml", version: "2.2", compact: &["22"], feature: "prodml22", crate_name: "energyml-prodml-2-2", requires: &["eml23"] },
-    KnownVersion { package: "prodml", version: "2.3", compact: &["23"], feature: "prodml23", crate_name: "energyml-prodml-2-3", requires: &["eml23"] },
+    KnownVersion {
+        package: "eml",
+        version: "2.0",
+        compact: &["20"],
+        feature: "eml20",
+        crate_name: "energyml-eml-2-0",
+        requires: &[],
+    },
+    KnownVersion {
+        package: "eml",
+        version: "2.1",
+        compact: &["21"],
+        feature: "eml21",
+        crate_name: "energyml-eml-2-1",
+        requires: &[],
+    },
+    KnownVersion {
+        package: "eml",
+        version: "2.2",
+        compact: &["22"],
+        feature: "eml22",
+        crate_name: "energyml-eml-2-2",
+        requires: &[],
+    },
+    KnownVersion {
+        package: "eml",
+        version: "2.3",
+        compact: &["23"],
+        feature: "eml23",
+        crate_name: "energyml-eml-2-3",
+        requires: &[],
+    },
+    KnownVersion {
+        package: "resqml",
+        version: "2.0.1",
+        compact: &["20", "201"],
+        feature: "resqml20",
+        crate_name: "energyml-resqml-2-0-1",
+        requires: &["eml20"],
+    },
+    KnownVersion {
+        package: "resqml",
+        version: "2.2",
+        compact: &["22"],
+        feature: "resqml22",
+        crate_name: "energyml-resqml-2-2",
+        requires: &["eml23"],
+    },
+    KnownVersion {
+        package: "resqml",
+        version: "2.2_dev3",
+        compact: &["22"],
+        feature: "resqml22dev3",
+        crate_name: "energyml-resqml-2-2-dev3",
+        requires: &["eml22"],
+    },
+    KnownVersion {
+        package: "witsml",
+        version: "2.0",
+        compact: &["20"],
+        feature: "witsml20",
+        crate_name: "energyml-witsml-2-0",
+        requires: &["eml21"],
+    },
+    KnownVersion {
+        package: "witsml",
+        version: "2.1",
+        compact: &["21"],
+        feature: "witsml21",
+        crate_name: "energyml-witsml-2-1",
+        requires: &["eml23"],
+    },
+    KnownVersion {
+        package: "prodml",
+        version: "2.0",
+        compact: &["20"],
+        feature: "prodml20",
+        crate_name: "energyml-prodml-2-0",
+        requires: &["eml21"],
+    },
+    KnownVersion {
+        package: "prodml",
+        version: "2.2",
+        compact: &["22"],
+        feature: "prodml22",
+        crate_name: "energyml-prodml-2-2",
+        requires: &["eml23"],
+    },
+    KnownVersion {
+        package: "prodml",
+        version: "2.3",
+        compact: &["23"],
+        feature: "prodml23",
+        crate_name: "energyml-prodml-2-3",
+        requires: &["eml23"],
+    },
 ];
 
 impl KnownVersion {
@@ -149,9 +233,11 @@ pub fn known_version(package: &str, version: &str) -> Option<&'static KnownVersi
 /// cannot name a development drop, so `resqml22.` is the release.
 pub fn known_version_of_qualified_type(qualified_type: &str) -> Option<&'static KnownVersion> {
     let parts = parse_qualified_type(qualified_type).ok()?;
-    KNOWN_VERSIONS
-        .iter()
-        .find(|known| known.package.eq_ignore_ascii_case(parts.domain) && naming::split_prerelease(known.version).1.is_none() && known.compact.contains(&parts.version))
+    KNOWN_VERSIONS.iter().find(|known| {
+        known.package.eq_ignore_ascii_case(parts.domain)
+            && naming::split_prerelease(known.version).1.is_none()
+            && known.compact.contains(&parts.version)
+    })
 }
 
 /// The row a content type names:
@@ -213,7 +299,10 @@ pub fn missing_feature(package: &str, version: &str) -> Option<MissingFeature> {
 
 /// [`missing_feature`] for a qualified type (`resqml22.Model`).
 pub fn missing_feature_of_qualified_type(qualified_type: &str) -> Option<MissingFeature> {
-    refusal(known_version_of_qualified_type(qualified_type), &compiled_features())
+    refusal(
+        known_version_of_qualified_type(qualified_type),
+        &compiled_features(),
+    )
 }
 
 /// [`missing_feature`] for a content type

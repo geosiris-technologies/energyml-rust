@@ -47,7 +47,8 @@ use serde_json::{Value, json};
 
 use crate::declare::{Epsg, Inputs, ObjectIn, Params, Suggestions, TableIn};
 use crate::operation::{
-    About, ActivityDraft, Category, Context, Dropped, Identity, NewObject, Note, Operation, Output, Plan, Refusal,
+    About, ActivityDraft, Category, Context, Dropped, Identity, NewObject, Note, Operation, Output, Plan,
+    Refusal,
 };
 use crate::osdu::Column;
 use crate::pieces::Pieces;
@@ -72,24 +73,55 @@ pub struct Role {
 /// Checked against the shipped dictionary by `tests/wells_from_table.rs`: a
 /// uuid that was not in it would make this array a wish list.
 pub const ROLES: &[Role] = &[
-    Role { uuid: "348c9a4d-e3e4-4beb-8456-f07a46660de1", title: "well name", role: "wellName" },
-    Role { uuid: "620cec71-5ce3-4ea5-9120-833756b427d7", title: "x coordinate", role: "x" },
-    Role { uuid: "cfcfdb04-02c1-4262-b66b-459b0aab3e8e", title: "y coordinate", role: "y" },
-    Role { uuid: "8508cef4-0ade-454a-9ea4-e00d5905e677", title: "elevation", role: "ground" },
-    Role { uuid: "c48c65d4-9680-4d10-903c-a1b2e30f66b5", title: "measured depth", role: "measuredDepth" },
+    Role {
+        uuid: "348c9a4d-e3e4-4beb-8456-f07a46660de1",
+        title: "well name",
+        role: "wellName",
+    },
+    Role {
+        uuid: "620cec71-5ce3-4ea5-9120-833756b427d7",
+        title: "x coordinate",
+        role: "x",
+    },
+    Role {
+        uuid: "cfcfdb04-02c1-4262-b66b-459b0aab3e8e",
+        title: "y coordinate",
+        role: "y",
+    },
+    Role {
+        uuid: "8508cef4-0ade-454a-9ea4-e00d5905e677",
+        title: "elevation",
+        role: "ground",
+    },
+    Role {
+        uuid: "c48c65d4-9680-4d10-903c-a1b2e30f66b5",
+        title: "measured depth",
+        role: "measuredDepth",
+    },
     // **The top of a pass**. Declared,
     // a row is an interval `[top, MD]` and not a measurement at an MD:
     // the frame receives one node per limit and the properties are laid on its
     // intervals. This is what makes the tops and bases of units exact —
     // the file says where a pass begins, and keeping only the end forced
     // guessing.
-    Role { uuid: "cb1166d9-3874-4267-abea-1cd97e4bf448", title: "top depth", role: "topDepth" },
-    Role { uuid: "d48ef4e7-f82e-4e91-bda2-685146223a85", title: "projection code", role: "sourceEpsg" },
+    Role {
+        uuid: "cb1166d9-3874-4267-abea-1cd97e4bf448",
+        title: "top depth",
+        role: "topDepth",
+    },
+    Role {
+        uuid: "d48ef4e7-f82e-4e91-bda2-685146223a85",
+        title: "projection code",
+        role: "sourceEpsg",
+    },
 ];
 
 /// The role carrying this word.
 pub(crate) fn role(word: &str) -> &'static Role {
-    ROLES.iter().find(|r| r.role == word).expect("a role named in this module")
+    ROLES
+        .iter()
+        .find(|r| r.role == word)
+        .expect("a role named in this module")
 }
 
 /// The operation.
@@ -173,7 +205,10 @@ pub struct TableInputs {
     /// writes a second object — the only safe answer when one cannot see what
     /// is there, since replacing would lose the depths one does not know
     /// about.
-    #[input(types = "resqml22.WellboreFrameRepresentation, resqml20.obj_WellboreFrameRepresentation", every)]
+    #[input(
+        types = "resqml22.WellboreFrameRepresentation, resqml20.obj_WellboreFrameRepresentation",
+        every
+    )]
     pub wells: Vec<ObjectIn>,
 }
 
@@ -230,11 +265,22 @@ impl<'a> Standing<'a> {
         let mut strangers = Vec::new();
         for well in wells {
             let known = &well.known;
-            if let Some(other) = known.reference.as_ref().filter(|one| !frame.accepts(&one.qualified_type)) {
-                strangers.push(format!("`{}` is `{}` ({})", well.name, other.qualified_type, other.title));
+            if let Some(other) = known
+                .reference
+                .as_ref()
+                .filter(|one| !frame.accepts(&one.qualified_type))
+            {
+                strangers.push(format!(
+                    "`{}` is `{}` ({})",
+                    well.name, other.qualified_type, other.title
+                ));
                 continue;
             }
-            match (known.reference.as_ref(), known.wellhead, known.node_mds.as_deref()) {
+            match (
+                known.reference.as_ref(),
+                known.wellhead,
+                known.node_mds.as_deref(),
+            ) {
                 (Some(frame), Some(head), Some(mds)) if !mds.is_empty() => held.push(Held {
                     frame,
                     interpretation: known.interpretation.as_ref(),
@@ -286,9 +332,17 @@ impl<'a> Standing<'a> {
                     .is_some_and(|rest| !rest.chars().next().is_some_and(char::is_alphanumeric))
         };
 
-        let mut found: Vec<&Held<'a>> = self.held.iter().filter(|one| one.frame.title == well && near(one)).collect();
+        let mut found: Vec<&Held<'a>> = self
+            .held
+            .iter()
+            .filter(|one| one.frame.title == well && near(one))
+            .collect();
         if found.is_empty() {
-            found = self.held.iter().filter(|one| titled(&one.frame.title) && near(one)).collect();
+            found = self
+                .held
+                .iter()
+                .filter(|one| titled(&one.frame.title) && near(one))
+                .collect();
         }
         match found.len() {
             // **Nothing readable bears this name — but a mute frame may
@@ -309,7 +363,11 @@ impl<'a> Standing<'a> {
                 format!(
                     "`{well}` matches {} of the given wells by title and wellhead ({}), so which one it continues cannot be decided: give the one it is",
                     found.len(),
-                    found.iter().map(|one| one.frame.title.as_str()).collect::<Vec<_>>().join(", ")
+                    found
+                        .iter()
+                        .map(|one| one.frame.title.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 ),
             )),
         }
@@ -374,7 +432,10 @@ impl SetAside {
     }
 
     pub(crate) fn into_dropped(self) -> Vec<Dropped> {
-        self.0.into_iter().map(|(why, count)| Dropped { count, why }).collect()
+        self.0
+            .into_iter()
+            .map(|(why, count)| Dropped { count, why })
+            .collect()
     }
 }
 
@@ -512,14 +573,18 @@ impl Operation for WellsFromTable {
     /// validates and which nothing draws. A suggestion, never a default — a
     /// reprojection moves every coordinate.
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
-        let Some((_, _, table, template)) = bag.tables().next() else { return };
+        let Some((_, _, table, template)) = bag.tables().next() else {
+            return;
+        };
         let (Ok(Some(x)), Ok(Some(y))) = (
             template.for_kind(role("x").uuid),
             template.for_kind(role("y").uuid),
         ) else {
             return;
         };
-        let (Some(ix), Some(iy)) = (table.column(&x.name), table.column(&y.name)) else { return };
+        let (Some(ix), Some(iy)) = (table.column(&x.name), table.column(&y.name)) else {
+            return;
+        };
         let first = table.rows.iter().find_map(|row| {
             let lon = table.dialect.number(row.get(ix)?)?;
             let lat = table.dialect.number(row.get(iy)?)?;
@@ -558,7 +623,8 @@ impl Operation for WellsFromTable {
     }
 
     fn plan(&self, inputs: TableInputs, params: TableParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
-        self.plan_ending(inputs, params, cx, &|_| None).map(|(plan, _)| plan)
+        self.plan_ending(inputs, params, cx, &|_| None)
+            .map(|(plan, _)| plan)
     }
 }
 
@@ -639,9 +705,9 @@ impl WellsFromTable {
         // does its work. A code that this build does not know is treated as
         // geographic: *I do not know* must lead to the refusal that asks, not
         // to a silent projection.
-        let project = params.project.or_else(|| {
-            (crate::crs::is_geographic(source_epsg.0) == Some(false)).then_some(source_epsg)
-        });
+        let project = params
+            .project
+            .or_else(|| (crate::crs::is_geographic(source_epsg.0) == Some(false)).then_some(source_epsg));
         let mut frame = support::frame_in(
             &[],
             &FrameParams {
@@ -655,7 +721,10 @@ impl WellsFromTable {
             &mut rank,
         )?;
         let (target, from) = frame.place.clone().ok_or_else(|| {
-            Refusal::new("sourceEpsg", "the frame was not created here: `wells-from-table` places the file's own coordinates")
+            Refusal::new(
+                "sourceEpsg",
+                "the frame was not created here: `wells-from-table` places the file's own coordinates",
+            )
         })?;
         // A borehole **is** a vertical extent: writing it in a system in
         // degrees makes it between a hundred and ten thousand times too long, in a package
@@ -689,7 +758,12 @@ impl WellsFromTable {
             Standing::of(&inputs.wells)?
         };
 
-        let build = tracing::info_span!("wells.build", tables = inputs.table.len(), wells = tracing::field::Empty).entered();
+        let build = tracing::info_span!(
+            "wells.build",
+            tables = inputs.table.len(),
+            wells = tracing::field::Empty
+        )
+        .entered();
         for input in &inputs.table {
             let table = &input.table;
             let template = &input.template;
@@ -751,8 +825,14 @@ impl WellsFromTable {
             ));
         }
 
-        says.push(Note { key: "wells", detail: format!("{} wellbore(s) from {} row(s)", tally.wells, tally.rows) });
-        says.push(Note { key: "nodes", detail: format!("{} frame node(s)", tally.nodes) });
+        says.push(Note {
+            key: "wells",
+            detail: format!("{} wellbore(s) from {} row(s)", tally.wells, tally.rows),
+        });
+        says.push(Note {
+            key: "nodes",
+            detail: format!("{} frame node(s)", tally.nodes),
+        });
         if !tally.unmeasured.is_empty() {
             // The longest first, and named: a count alone would say
             // *how many* without saying *which*, and it is the borehole that will
@@ -786,11 +866,17 @@ impl WellsFromTable {
         }
         for input in &inputs.table {
             for note in &input.template.notes {
-                says.push(Note { key: "template", detail: note.clone() });
+                says.push(Note {
+                    key: "template",
+                    detail: note.clone(),
+                });
             }
         }
         for (key, details) in from_writer {
-            says.push(Note { key, detail: gathered(&details) });
+            says.push(Note {
+                key,
+                detail: gathered(&details),
+            });
         }
 
         let source = inputs.table.first().map(|t| t.file.clone()).unwrap_or_default();
@@ -886,7 +972,9 @@ impl Columns {
 fn missing_roles(template: &crate::osdu::Template, _deep: bool) -> Result<(), Refusal> {
     for word in ["wellName", "x", "y", "ground"] {
         let role = role(word);
-        let found = template.for_kind(role.uuid).map_err(|why| Refusal::on(word, why))?;
+        let found = template
+            .for_kind(role.uuid)
+            .map_err(|why| Refusal::on(word, why))?;
         if found.is_none() {
             return Err(Refusal::on(
                 word,
@@ -922,7 +1010,13 @@ pub(crate) fn group(table: &Table, name_at: usize, aside: &mut SetAside) -> Vec<
         let key = title.to_string();
         if !holes.contains_key(&key) {
             order.push(key.clone());
-            holes.insert(key.clone(), Hole { title: key.clone(), rows: Vec::new() });
+            holes.insert(
+                key.clone(),
+                Hole {
+                    title: key.clone(),
+                    rows: Vec::new(),
+                },
+            );
         }
         holes.get_mut(&key).expect("just inserted").rows.push(rank);
     }
@@ -1002,7 +1096,11 @@ fn one_hole(
     let unmeasured = mds.first().copied().filter(|first| *first > 0.0);
 
     let placed = crate::crs::place(
-        &[crate::geojson::Position { lon: head_x, lat: head_y, z: Some(ground_cell) }],
+        &[crate::geojson::Position {
+            lon: head_x,
+            lat: head_y,
+            z: Some(ground_cell),
+        }],
         target,
         from,
     )?;
@@ -1011,7 +1109,9 @@ fn one_hole(
     // **The borehole of the package that is this one**: title and head, the rule
     // of identity matching. Nothing is read here — `standing` carries what the slot
     // `wells` gave, resolved at the edge.
-    let matched = standing.find(&title, [x, y], params.head_tolerance).map_err(|why| why.to_string())?;
+    let matched = standing
+        .find(&title, [x, y], params.head_tolerance)
+        .map_err(|why| why.to_string())?;
 
     // **The ground is a value, not an identity.** Two files that place the
     // same head at two altitudes do not describe two boreholes: they
@@ -1024,7 +1124,11 @@ fn one_hole(
     // **The union of depths**, when enriching. Otherwise those of the file.
     let held_mds = continuing.map(|held| held.mds).unwrap_or(&[]);
     let all = union(held_mds, &mds, params.head_tolerance);
-    let mds = if params.enrich && continuing.is_some() { all.clone() } else { mds };
+    let mds = if params.enrich && continuing.is_some() {
+        all.clone()
+    } else {
+        mds
+    };
 
     // **Nothing to do is an answer.** A recognised borehole all of whose
     // depths are already there needs no object: writing a second one,
@@ -1056,9 +1160,10 @@ fn one_hole(
     // going through `Trajectory`. The `None` is therefore the branch that the invariant
     // closes, kept rather than an `unwrap` — a panic here would cost a whole
     // run for a malformed frame.
-    let keeping = continuing
-        .filter(|_| params.enrich)
-        .and_then(|held| held.trajectory.map(|trajectory| (trajectory.uuid.as_str(), held.frame.uuid.as_str())));
+    let keeping = continuing.filter(|_| params.enrich).and_then(|held| {
+        held.trajectory
+            .map(|trajectory| (trajectory.uuid.as_str(), held.frame.uuid.as_str()))
+    });
 
     let line: Vec<[f64; 3]> = mds.iter().map(|md| [x, y, ground - md]).collect();
     // **Identity comes from what the object is, not from the file**.
@@ -1087,8 +1192,13 @@ fn one_hole(
     let placed_at = format!("{title}|{},{},{}", mm(x), mm(y), mm(ground));
     // The trajectory carries **the head, the ground and the depths**: a corrected ground
     // moves every node, so it is another path even with equal MDs.
-    let along =
-        format!("{placed_at}|{}", mds.iter().map(|md| format!("{:?}", mm(*md))).collect::<Vec<_>>().join(","));
+    let along = format!(
+        "{placed_at}|{}",
+        mds.iter()
+            .map(|md| format!("{:?}", mm(*md)))
+            .collect::<Vec<_>>()
+            .join(",")
+    );
     // What the frame carries beyond that, in its identity: see `plan_ending`.
     let along = match &more {
         Some(extra) => format!("{along}|{extra}"),
@@ -1188,7 +1298,14 @@ fn one_hole(
     // that every borehole dataset has — a file of heads, a file of measurements —
     // and what the first lacks is precisely the path.
     if mds.is_empty() {
-        return Ok(Made { objects, datasets: Vec::new(), says: Vec::new(), nodes: 0, unmeasured: None, frame: None });
+        return Ok(Made {
+            objects,
+            datasets: Vec::new(),
+            says: Vec::new(),
+            nodes: 0,
+            unmeasured: None,
+            frame: None,
+        });
     }
 
     // **A rewritten trajectory does not change frame silently** (an audit
@@ -1260,7 +1377,12 @@ fn one_hole(
         .objects
         .iter()
         .find(|one| one.qualified_type == "resqml22.WellboreFrameRepresentation")
-        .map(|one| (crate::pieces::Ref::new(one.uuid.clone(), one.qualified_type.clone(), one.title.clone()), mds.clone()));
+        .map(|one| {
+            (
+                crate::pieces::Ref::new(one.uuid.clone(), one.qualified_type.clone(), one.title.clone()),
+                mds.clone(),
+            )
+        });
     objects.extend(written.objects);
     let mut says = written.says;
 
@@ -1296,7 +1418,14 @@ fn one_hole(
         });
     }
 
-    Ok(Made { objects, datasets: written.datasets, says, nodes, unmeasured, frame: ends })
+    Ok(Made {
+        objects,
+        datasets: written.datasets,
+        says,
+        nodes,
+        unmeasured,
+        frame: ends,
+    })
 }
 
 /// A value that must be the same on all the rows of a borehole.
@@ -1304,16 +1433,12 @@ fn one_hole(
 /// An empty cell is an **absence**, not a contradiction: real files
 /// do not always repeat the head. Only two *different* values
 /// refusent.
-fn one_number(
-    table: &Table,
-    rows: &[usize],
-    column: usize,
-    what: &str,
-    title: &str,
-) -> Result<f64, String> {
+fn one_number(table: &Table, rows: &[usize], column: usize, what: &str, title: &str) -> Result<f64, String> {
     let mut found: Option<(f64, usize)> = None;
     for rank in rows {
-        let Some(cell) = table.rows[*rank].get(column) else { continue };
+        let Some(cell) = table.rows[*rank].get(column) else {
+            continue;
+        };
         if cell.trim().is_empty() {
             continue;
         }
@@ -1337,7 +1462,9 @@ fn one_number(
             _ => {}
         }
     }
-    found.map(|(v, _)| v).ok_or_else(|| format!("`{title}`: no row states its {what}"))
+    found
+        .map(|(v, _)| v)
+        .ok_or_else(|| format!("`{title}`: no row states its {what}"))
 }
 
 /// The depths of a borehole: sorted, and without duplicates.
@@ -1353,7 +1480,9 @@ fn one_number(
 fn depths(table: &Table, rows: &[usize], column: usize, title: &str) -> Result<Vec<f64>, String> {
     let mut found: Vec<(f64, usize)> = Vec::new();
     for rank in rows {
-        let Some(cell) = table.rows[*rank].get(column) else { continue };
+        let Some(cell) = table.rows[*rank].get(column) else {
+            continue;
+        };
         if cell.trim().is_empty() {
             continue;
         }
@@ -1425,17 +1554,26 @@ pub(crate) fn intervals(
     title: &str,
 ) -> Result<Vec<(f64, f64, usize)>, String> {
     let number = |rank: usize, column: usize, what: &str| -> Result<Option<f64>, String> {
-        let Some(cell) = table.rows[rank].get(column) else { return Ok(None) };
+        let Some(cell) = table.rows[rank].get(column) else {
+            return Ok(None);
+        };
         if cell.trim().is_empty() {
             return Ok(None);
         }
         table.dialect.number(cell).map(Some).ok_or_else(|| {
-            format!("`{title}`: line {} has `{}` where the {what} is wanted, which is not a number", rank + 1, cell.trim())
+            format!(
+                "`{title}`: line {} has `{}` where the {what} is wanted, which is not a number",
+                rank + 1,
+                cell.trim()
+            )
         })
     };
     let mut found: Vec<(f64, f64, usize)> = Vec::new();
     for rank in rows {
-        let (from, to) = (number(*rank, top, "top depth")?, number(*rank, base, "measured depth")?);
+        let (from, to) = (
+            number(*rank, top, "top depth")?,
+            number(*rank, base, "measured depth")?,
+        );
         let (Some(from), Some(to)) = (from, to) else {
             // A half-stated pass cannot be placed: neither its start nor its end
             // can be guessed from its neighbours.
@@ -1497,10 +1635,15 @@ pub(crate) fn limits(passes: &[(f64, f64, usize)]) -> Vec<f64> {
 /// would be placing them wrong.
 fn constant_epsg(table: &Table, template: &crate::osdu::Template) -> Result<Option<u32>, Refusal> {
     let role = role("sourceEpsg");
-    let Some(column) = template.for_kind(role.uuid).map_err(|why| Refusal::on("sourceEpsg", why))? else {
+    let Some(column) = template
+        .for_kind(role.uuid)
+        .map_err(|why| Refusal::on("sourceEpsg", why))?
+    else {
         return Ok(None);
     };
-    let Some(at) = table.column(&column.name) else { return Ok(None) };
+    let Some(at) = table.column(&column.name) else {
+        return Ok(None);
+    };
     let mut found: Option<(u32, usize)> = None;
     for (rank, row) in table.rows.iter().enumerate() {
         let Some(cell) = row.get(at) else { continue };
@@ -1511,7 +1654,10 @@ fn constant_epsg(table: &Table, template: &crate::osdu::Template) -> Result<Opti
         let Ok(code) = cell.parse::<u32>() else {
             return Err(Refusal::on(
                 "sourceEpsg",
-                format!("line {} has `{cell}` in the projection code column, which is not an EPSG code", rank + 1),
+                format!(
+                    "line {} has `{cell}` in the projection code column, which is not an EPSG code",
+                    rank + 1
+                ),
             ));
         };
         match found {
@@ -1544,7 +1690,10 @@ pub(crate) fn column_at(
     word: &str,
 ) -> Result<Option<usize>, Refusal> {
     let role = role(word);
-    let Some(column) = template.for_kind(role.uuid).map_err(|why| Refusal::on(word, why))? else {
+    let Some(column) = template
+        .for_kind(role.uuid)
+        .map_err(|why| Refusal::on(word, why))?
+    else {
         return Ok(None);
     };
     match table.column(&column.name) {

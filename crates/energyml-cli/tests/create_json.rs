@@ -9,7 +9,11 @@ use std::process::Command;
 use serde_json::Value;
 
 fn run(args: &[&str]) -> std::process::Output {
-    Command::new(env!("CARGO_BIN_EXE_energyml")).arg("create").args(args).output().expect("runs")
+    Command::new(env!("CARGO_BIN_EXE_energyml"))
+        .arg("create")
+        .args(args)
+        .output()
+        .expect("runs")
 }
 
 #[test]
@@ -19,13 +23,23 @@ fn list_json_prints_one_parsable_array_with_the_gives() {
     // Stdout is the document and nothing else: a script parses it whole.
     let all: Value = serde_json::from_slice(&out.stdout).expect("stdout is JSON");
     let all = all.as_array().expect("an array");
-    let contacts = all.iter().find(|one| one["name"] == "contacts-from-frames").expect("contacts-from-frames is listed");
+    let contacts = all
+        .iter()
+        .find(|one| one["name"] == "contacts-from-frames")
+        .expect("contacts-from-frames is listed");
     let gives = contacts["gives"].as_array().expect("gives");
-    assert!(gives.iter().any(|o| o["role"] == "representation" && o["types"][0] == "resqml22.PointSetRepresentation"));
+    assert!(
+        gives
+            .iter()
+            .any(|o| o["role"] == "representation" && o["types"][0] == "resqml22.PointSetRepresentation")
+    );
     assert!(contacts["takes"].as_array().is_some_and(|t| !t.is_empty()));
     assert!(contacts["needs"].is_array());
     // An operation that declares nothing yet is still listed, with an empty list.
-    assert!(all.iter().any(|one| one["gives"].as_array().is_some_and(|g| g.is_empty())));
+    assert!(
+        all.iter()
+            .any(|one| one["gives"].as_array().is_some_and(|g| g.is_empty()))
+    );
 }
 
 #[test]

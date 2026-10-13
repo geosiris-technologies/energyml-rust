@@ -57,7 +57,10 @@ fn dor(uuid: &str, qualified_type: &str) -> eml23::DataObjectReference {
 fn plane(azimuth_degrees: f64, origin: [f64; 2]) -> eml23::LocalEngineering2dCrs {
     eml23::LocalEngineering2dCrs {
         uuid: PLANE.into(),
-        azimuth: eml23::PlaneAngleMeasureExt { value: azimuth_degrees, uom: eml23::PlaneAngleUomExt::Dega },
+        azimuth: eml23::PlaneAngleMeasureExt {
+            value: azimuth_degrees,
+            uom: eml23::PlaneAngleUomExt::Dega,
+        },
         azimuth_reference: eml23::NorthReferenceKind::GridNorth,
         origin_projected_coordinate1: origin[0],
         origin_projected_coordinate2: origin[1],
@@ -68,9 +71,9 @@ fn plane(azimuth_degrees: f64, origin: [f64; 2]) -> eml23::LocalEngineering2dCrs
             is_time: false,
         },
         origin_projected_crs: eml23::ProjectedCrs {
-            abstract_projected_crs: Some(eml23::AbstractProjectedCrs::ProjectedEpsgCrs(eml23::ProjectedEpsgCrs {
-                epsg_code: 2154,
-            })),
+            abstract_projected_crs: Some(eml23::AbstractProjectedCrs::ProjectedEpsgCrs(
+                eml23::ProjectedEpsgCrs { epsg_code: 2154 },
+            )),
             ..Default::default()
         },
         ..Default::default()
@@ -83,15 +86,23 @@ fn datum(direction: eml23::VerticalDirection, uom: eml23::LengthUomExt) -> eml23
         uuid: DATUM.into(),
         direction,
         uom,
-        abstract_vertical_crs: Some(eml23::AbstractVerticalCrs::VerticalEpsgCrs(eml23::VerticalEpsgCrs {
-            epsg_code: 5720,
-        })),
+        abstract_vertical_crs: Some(eml23::AbstractVerticalCrs::VerticalEpsgCrs(
+            eml23::VerticalEpsgCrs { epsg_code: 5720 },
+        )),
         ..Default::default()
     }
 }
 
-fn axis(direction: eml23::VerticalDirection, uom: eml23::LengthAndTimeUomExt, is_time: bool) -> eml23::VerticalAxis {
-    eml23::VerticalAxis { direction, uom, is_time }
+fn axis(
+    direction: eml23::VerticalDirection,
+    uom: eml23::LengthAndTimeUomExt,
+    is_time: bool,
+) -> eml23::VerticalAxis {
+    eml23::VerticalAxis {
+        direction,
+        uom,
+        is_time,
+    }
 }
 
 fn compound(origin: f64, axis: eml23::VerticalAxis) -> eml23::LocalEngineeringCompoundCrs {
@@ -132,23 +143,42 @@ fn system(
 fn the_axis_counts_depths_and_the_origin_is_a_height_on_the_datum() {
     let (system, store) = system(
         35.0,
-        axis(eml23::VerticalDirection::Down, eml23::LengthAndTimeUomExt::M, false),
+        axis(
+            eml23::VerticalDirection::Down,
+            eml23::LengthAndTimeUomExt::M,
+            false,
+        ),
         datum(eml23::VerticalDirection::Up, eml23::LengthUomExt::M),
         plane(0.0, [0.0, 0.0]),
     );
     let read = crs::read_with(&system, &store).expect("the compound reads");
 
-    assert_eq!(read.vertical_direction, VerticalDirection::Down, "the axis governs the local z");
-    assert_eq!(read.vertical, CrsKind::Epsg(5720), "the datum gives the vertical system");
+    assert_eq!(
+        read.vertical_direction,
+        VerticalDirection::Down,
+        "the axis governs the local z"
+    );
+    assert_eq!(
+        read.vertical,
+        CrsKind::Epsg(5720),
+        "the datum gives the vertical system"
+    );
     assert_eq!(read.projected, CrsKind::Epsg(2154));
     for depth in [0.0, 10.0, 35.0, 120.0] {
-        assert_eq!(read.to_projected([0.0, 0.0, depth])[2], 35.0 - depth, "local depth {depth}");
+        assert_eq!(
+            read.to_projected([0.0, 0.0, depth])[2],
+            35.0 - depth,
+            "local depth {depth}"
+        );
     }
     // And the way back, which is what a writer stores through this system.
     let local = [12.5, -3.0, 40.0];
     let back = read.from_projected(read.to_projected(local));
     for axis in 0..3 {
-        assert!((back[axis] - local[axis]).abs() < 1e-9, "{local:?} came back {back:?}");
+        assert!(
+            (back[axis] - local[axis]).abs() < 1e-9,
+            "{local:?} came back {back:?}"
+        );
     }
 }
 
@@ -159,13 +189,21 @@ fn the_axis_counts_depths_and_the_origin_is_a_height_on_the_datum() {
 fn an_axis_and_a_datum_counting_the_same_way_keep_the_origin_as_written() {
     let (depths, store) = system(
         35.0,
-        axis(eml23::VerticalDirection::Down, eml23::LengthAndTimeUomExt::M, false),
+        axis(
+            eml23::VerticalDirection::Down,
+            eml23::LengthAndTimeUomExt::M,
+            false,
+        ),
         datum(eml23::VerticalDirection::Down, eml23::LengthUomExt::M),
         plane(0.0, [0.0, 0.0]),
     );
     let read = crs::read_with(&depths, &store).expect("the compound reads");
     assert_eq!(read.z_offset, 35.0);
-    assert_eq!(read.to_projected([0.0, 0.0, 10.0])[2], -45.0, "35 m below the zero, then 10 m deeper");
+    assert_eq!(
+        read.to_projected([0.0, 0.0, 10.0])[2],
+        -45.0,
+        "35 m below the zero, then 10 m deeper"
+    );
 
     let (heights, store) = system(
         35.0,
@@ -187,7 +225,11 @@ fn an_axis_and_a_datum_counting_the_same_way_keep_the_origin_as_written() {
 fn the_axis_unit_is_the_unit_of_z_and_the_origin_is_converted_into_it() {
     let (system, store) = system(
         10.0,
-        axis(eml23::VerticalDirection::Up, eml23::LengthAndTimeUomExt::Ft, false),
+        axis(
+            eml23::VerticalDirection::Up,
+            eml23::LengthAndTimeUomExt::Ft,
+            false,
+        ),
         datum(eml23::VerticalDirection::Up, eml23::LengthUomExt::M),
         plane(0.0, [0.0, 0.0]),
     );
@@ -207,7 +249,11 @@ fn the_axis_unit_is_the_unit_of_z_and_the_origin_is_converted_into_it() {
 fn a_time_axis_is_a_time_system_whatever_its_datum_is() {
     let (system, store) = system(
         15.0,
-        axis(eml23::VerticalDirection::Down, eml23::LengthAndTimeUomExt::Ms, true),
+        axis(
+            eml23::VerticalDirection::Down,
+            eml23::LengthAndTimeUomExt::Ms,
+            true,
+        ),
         datum(eml23::VerticalDirection::Up, eml23::LengthUomExt::M),
         plane(0.0, [0.0, 0.0]),
     );
@@ -228,7 +274,11 @@ fn horizontal_axes_in_time_do_not_make_z_a_time() {
     horizontal.horizontal_axes.is_time = true;
     let (system, store) = system(
         0.0,
-        axis(eml23::VerticalDirection::Down, eml23::LengthAndTimeUomExt::M, false),
+        axis(
+            eml23::VerticalDirection::Down,
+            eml23::LengthAndTimeUomExt::M,
+            false,
+        ),
         datum(eml23::VerticalDirection::Down, eml23::LengthUomExt::M),
         horizontal,
     );
@@ -241,10 +291,15 @@ fn horizontal_axes_in_time_do_not_make_z_a_time() {
 /// the error this test once caught. A zero origin needs no sense.
 #[test]
 fn an_origin_whose_datum_is_missing_is_refused_and_a_zero_one_is_not() {
-    let local = axis(eml23::VerticalDirection::Down, eml23::LengthAndTimeUomExt::M, false);
+    let local = axis(
+        eml23::VerticalDirection::Down,
+        eml23::LengthAndTimeUomExt::M,
+        false,
+    );
     let without_datum = Store(vec![Box::new(plane(0.0, [0.0, 0.0])) as Box<dyn DynObject>]);
 
-    let error = crs::read_with(&compound(35.0, local.clone()), &without_datum).expect_err("35 of what sense?");
+    let error =
+        crs::read_with(&compound(35.0, local.clone()), &without_datum).expect_err("35 of what sense?");
     assert!(error.to_string().contains("OriginVerticalCoordinate"), "{error}");
 
     let read = crs::read_with(&compound(0.0, local), &without_datum).expect("a zero origin reads");
@@ -320,10 +375,16 @@ fn an_azimuth_from_true_north_is_refused() {
 // ---------------------------------------------------------------------------
 // 1b — the datum written in a compound
 
-fn point_in(uuid_of_system: &str, qualified_type: &str) -> eml23::ReferencePointInALocalEngineeringCompoundCrs {
+fn point_in(
+    uuid_of_system: &str,
+    qualified_type: &str,
+) -> eml23::ReferencePointInALocalEngineeringCompoundCrs {
     eml23::ReferencePointInALocalEngineeringCompoundCrs {
         uuid: POINT.into(),
-        horizontal_coordinates: Some(eml23::HorizontalCoordinates { coordinate1: 10.0, coordinate2: 0.0 }),
+        horizontal_coordinates: Some(eml23::HorizontalCoordinates {
+            coordinate1: 10.0,
+            coordinate2: 0.0,
+        }),
         vertical_coordinate: Some(5.0),
         crs: dor(uuid_of_system, qualified_type),
         ..Default::default()
@@ -355,7 +416,11 @@ fn trajectory() -> energyml_resqml_2_2::WellboreTrajectoryRepresentation {
 fn a_well_anchored_in_a_compound_takes_its_identity_not_its_offsets() {
     let (_, store) = system(
         35.0,
-        axis(eml23::VerticalDirection::Down, eml23::LengthAndTimeUomExt::M, false),
+        axis(
+            eml23::VerticalDirection::Down,
+            eml23::LengthAndTimeUomExt::M,
+            false,
+        ),
         datum(eml23::VerticalDirection::Up, eml23::LengthUomExt::M),
         plane(30.0, [1000.0, 2000.0]),
     );
@@ -370,12 +435,21 @@ fn a_well_anchored_in_a_compound_takes_its_identity_not_its_offsets() {
             .collect(),
     );
 
-    let read = crs::of(&trajectory(), &store).expect("no error").expect("a CRS, through the datum");
+    let read = crs::of(&trajectory(), &store)
+        .expect("no error")
+        .expect("a CRS, through the datum");
     assert_eq!(read.kind, crs::DATUM_IN_COMPOUND);
     assert_eq!(read.projected, CrsKind::Epsg(2154));
     assert_eq!(read.vertical, CrsKind::Epsg(5720));
-    assert_eq!(read.vertical_direction, VerticalDirection::Up, "the geometry layer emits elevations");
-    assert!(read.is_identity(), "the compound's placement is not applied twice: {read:?}");
+    assert_eq!(
+        read.vertical_direction,
+        VerticalDirection::Up,
+        "the geometry layer emits elevations"
+    );
+    assert!(
+        read.is_identity(),
+        "the compound's placement is not applied twice: {read:?}"
+    );
 }
 
 /// The point itself: `compound_of_datum` hands back the compound, and its
@@ -386,7 +460,11 @@ fn a_well_anchored_in_a_compound_takes_its_identity_not_its_offsets() {
 fn a_point_in_a_compound_is_placed_through_it() {
     let (_, store) = system(
         35.0,
-        axis(eml23::VerticalDirection::Down, eml23::LengthAndTimeUomExt::M, false),
+        axis(
+            eml23::VerticalDirection::Down,
+            eml23::LengthAndTimeUomExt::M,
+            false,
+        ),
         datum(eml23::VerticalDirection::Up, eml23::LengthUomExt::M),
         plane(30.0, [1000.0, 2000.0]),
     );
@@ -401,8 +479,15 @@ fn a_point_in_a_compound_is_placed_through_it() {
     assert_eq!(placed[2], 30.0);
 
     // Any other object is not this function's business, and says so by `None`.
-    let not_one = eml23::ReferencePointInACrs { uuid: POINT.into(), ..Default::default() };
-    assert!(crs::compound_of_datum(&not_one, &store).expect("no error").is_none());
+    let not_one = eml23::ReferencePointInACrs {
+        uuid: POINT.into(),
+        ..Default::default()
+    };
+    assert!(
+        crs::compound_of_datum(&not_one, &store)
+            .expect("no error")
+            .is_none()
+    );
 }
 
 /// The guide gives `Crs` to a `LocalEngineeringCompoundCrs`; a point whose
@@ -412,9 +497,9 @@ fn a_point_in_a_compound_is_placed_through_it() {
 fn a_point_whose_crs_is_not_a_compound_is_refused() {
     let projected = eml23::ProjectedCrs {
         uuid: COMPOUND.into(),
-        abstract_projected_crs: Some(eml23::AbstractProjectedCrs::ProjectedEpsgCrs(eml23::ProjectedEpsgCrs {
-            epsg_code: 2154,
-        })),
+        abstract_projected_crs: Some(eml23::AbstractProjectedCrs::ProjectedEpsgCrs(
+            eml23::ProjectedEpsgCrs { epsg_code: 2154 },
+        )),
         ..Default::default()
     };
     let store = Store(vec![Box::new(projected) as Box<dyn DynObject>]);
@@ -429,7 +514,11 @@ fn a_point_whose_crs_is_not_a_compound_is_refused() {
 fn a_well_anchored_in_a_time_compound_is_refused() {
     let (_, store) = system(
         0.0,
-        axis(eml23::VerticalDirection::Down, eml23::LengthAndTimeUomExt::Ms, true),
+        axis(
+            eml23::VerticalDirection::Down,
+            eml23::LengthAndTimeUomExt::Ms,
+            true,
+        ),
         datum(eml23::VerticalDirection::Down, eml23::LengthUomExt::M),
         plane(0.0, [0.0, 0.0]),
     );

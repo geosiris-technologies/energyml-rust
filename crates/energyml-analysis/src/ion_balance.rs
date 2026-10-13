@@ -50,26 +50,86 @@ pub struct Ion {
 /// The ions this module can balance.
 pub const IONS: &[Ion] = &[
     // Cations.
-    Ion { formula: "Ca+2", molar_mass: 40.078, charge: 2 },
-    Ion { formula: "Mg+2", molar_mass: 24.305, charge: 2 },
-    Ion { formula: "Na+", molar_mass: 22.990, charge: 1 },
-    Ion { formula: "K+", molar_mass: 39.098, charge: 1 },
-    Ion { formula: "Li+", molar_mass: 6.94, charge: 1 },
+    Ion {
+        formula: "Ca+2",
+        molar_mass: 40.078,
+        charge: 2,
+    },
+    Ion {
+        formula: "Mg+2",
+        molar_mass: 24.305,
+        charge: 2,
+    },
+    Ion {
+        formula: "Na+",
+        molar_mass: 22.990,
+        charge: 1,
+    },
+    Ion {
+        formula: "K+",
+        molar_mass: 39.098,
+        charge: 1,
+    },
+    Ion {
+        formula: "Li+",
+        molar_mass: 6.94,
+        charge: 1,
+    },
     // N + 4 H.
-    Ion { formula: "NH4+", molar_mass: 18.039, charge: 1 },
-    Ion { formula: "Fe+2", molar_mass: 55.845, charge: 2 },
-    Ion { formula: "Sr+2", molar_mass: 87.62, charge: 2 },
-    Ion { formula: "Ba+2", molar_mass: 137.33, charge: 2 },
+    Ion {
+        formula: "NH4+",
+        molar_mass: 18.039,
+        charge: 1,
+    },
+    Ion {
+        formula: "Fe+2",
+        molar_mass: 55.845,
+        charge: 2,
+    },
+    Ion {
+        formula: "Sr+2",
+        molar_mass: 87.62,
+        charge: 2,
+    },
+    Ion {
+        formula: "Ba+2",
+        molar_mass: 137.33,
+        charge: 2,
+    },
     // Anions.
     // H + C + 3 O.
-    Ion { formula: "HCO3-", molar_mass: 61.016, charge: -1 },
+    Ion {
+        formula: "HCO3-",
+        molar_mass: 61.016,
+        charge: -1,
+    },
     // C + 3 O.
-    Ion { formula: "CO3-2", molar_mass: 60.008, charge: -2 },
+    Ion {
+        formula: "CO3-2",
+        molar_mass: 60.008,
+        charge: -2,
+    },
     // S + 4 O.
-    Ion { formula: "SO4-2", molar_mass: 96.056, charge: -2 },
-    Ion { formula: "Cl-", molar_mass: 35.45, charge: -1 },
-    Ion { formula: "F-", molar_mass: 18.998, charge: -1 },
-    Ion { formula: "Br-", molar_mass: 79.904, charge: -1 },
+    Ion {
+        formula: "SO4-2",
+        molar_mass: 96.056,
+        charge: -2,
+    },
+    Ion {
+        formula: "Cl-",
+        molar_mass: 35.45,
+        charge: -1,
+    },
+    Ion {
+        formula: "F-",
+        molar_mass: 18.998,
+        charge: -1,
+    },
+    Ion {
+        formula: "Br-",
+        molar_mass: 79.904,
+        charge: -1,
+    },
 ];
 
 /// The ion of a formula, written exactly as in [`IONS`].
@@ -103,9 +163,13 @@ pub enum BalanceError {
     BadConcentration { formula: String, given: f64 },
     #[error("`{formula}` is given twice: an analysis states each ion once")]
     Twice { formula: String },
-    #[error("no cation carries a charge: a water with anions alone is not neutral, and the balance would divide nothing")]
+    #[error(
+        "no cation carries a charge: a water with anions alone is not neutral, and the balance would divide nothing"
+    )]
     NoCation,
-    #[error("no anion carries a charge: a water with cations alone is not neutral, and the balance would divide nothing")]
+    #[error(
+        "no anion carries a charge: a water with cations alone is not neutral, and the balance would divide nothing"
+    )]
     NoAnion,
 }
 
@@ -121,10 +185,15 @@ pub fn balance(analysis: &[(&str, f64)]) -> Result<Balance, BalanceError> {
             });
         };
         if !(mg_per_l.is_finite() && *mg_per_l >= 0.0) {
-            return Err(BalanceError::BadConcentration { formula: (*formula).to_string(), given: *mg_per_l });
+            return Err(BalanceError::BadConcentration {
+                formula: (*formula).to_string(),
+                given: *mg_per_l,
+            });
         }
         if seen.contains(formula) {
-            return Err(BalanceError::Twice { formula: (*formula).to_string() });
+            return Err(BalanceError::Twice {
+                formula: (*formula).to_string(),
+            });
         }
         seen.push(formula);
         let charges = milliequivalents(known, *mg_per_l);
@@ -140,7 +209,11 @@ pub fn balance(analysis: &[(&str, f64)]) -> Result<Balance, BalanceError> {
     if anions <= 0.0 {
         return Err(BalanceError::NoAnion);
     }
-    Ok(Balance { cations, anions, error: 100.0 * (cations - anions) / (cations + anions) })
+    Ok(Balance {
+        cations,
+        anions,
+        error: 100.0 * (cations - anions) / (cations + anions),
+    })
 }
 
 /// The molar mass of calcium carbonate, g/mol — Ca + C + 3 O from the weights
@@ -225,10 +298,22 @@ mod tests {
 
     #[test]
     fn what_cannot_be_balanced_is_refused_by_name() {
-        assert!(matches!(balance(&[("NO3-2", 10.0), ("Na+", 5.0)]), Err(BalanceError::Unknown { .. })));
-        assert!(matches!(balance(&[("Na+", -1.0), ("Cl-", 5.0)]), Err(BalanceError::BadConcentration { .. })));
-        assert!(matches!(balance(&[("Na+", f64::NAN), ("Cl-", 5.0)]), Err(BalanceError::BadConcentration { .. })));
-        assert!(matches!(balance(&[("Na+", 1.0), ("Na+", 1.0), ("Cl-", 5.0)]), Err(BalanceError::Twice { .. })));
+        assert!(matches!(
+            balance(&[("NO3-2", 10.0), ("Na+", 5.0)]),
+            Err(BalanceError::Unknown { .. })
+        ));
+        assert!(matches!(
+            balance(&[("Na+", -1.0), ("Cl-", 5.0)]),
+            Err(BalanceError::BadConcentration { .. })
+        ));
+        assert!(matches!(
+            balance(&[("Na+", f64::NAN), ("Cl-", 5.0)]),
+            Err(BalanceError::BadConcentration { .. })
+        ));
+        assert!(matches!(
+            balance(&[("Na+", 1.0), ("Na+", 1.0), ("Cl-", 5.0)]),
+            Err(BalanceError::Twice { .. })
+        ));
         assert_eq!(balance(&[("Cl-", 5.0)]), Err(BalanceError::NoCation));
         assert_eq!(balance(&[("Na+", 5.0), ("Cl-", 0.0)]), Err(BalanceError::NoAnion));
     }

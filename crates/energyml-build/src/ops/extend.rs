@@ -196,12 +196,20 @@ fn kind_of(shape: &Shape) -> Result<Kind, Refusal> {
     if patches.is_empty() {
         return refuse("it has no patch".to_string());
     }
-    let lines = patches.iter().filter(|p| matches!(p.topology, Topology::Polylines(_))).count();
-    let surfaces = patches.iter().filter(|p| matches!(p.topology, Topology::Triangles(_))).count();
+    let lines = patches
+        .iter()
+        .filter(|p| matches!(p.topology, Topology::Polylines(_)))
+        .count();
+    let surfaces = patches
+        .iter()
+        .filter(|p| matches!(p.topology, Topology::Triangles(_)))
+        .count();
     if lines == patches.len() {
         let mut at = 0usize;
         for patch in patches {
-            let Topology::Polylines(runs) = &patch.topology else { continue };
+            let Topology::Polylines(runs) = &patch.topology else {
+                continue;
+            };
             for local in 0..runs.len() {
                 if said_closed(patch, local, shape.closed.as_deref(), at).unwrap_or(false) {
                     return refuse(format!(
@@ -226,10 +234,16 @@ fn kind_of(shape: &Shape) -> Result<Kind, Refusal> {
     }
     match &patches[0].topology {
         Topology::Points => refuse(
-            "it is a point cloud, which has no border of its own — `triangulate` it, then extend the surface".to_string(),
+            "it is a point cloud, which has no border of its own — `triangulate` it, then extend the surface"
+                .to_string(),
         ),
-        Topology::Grid { .. } => refuse("it is a 2D grid — a lattice grows by rows and columns, not by rings, and that is not written".to_string()),
-        _ => refuse("it holds neither polylines nor triangles — only those have a border to extend".to_string()),
+        Topology::Grid { .. } => refuse(
+            "it is a 2D grid — a lattice grows by rows and columns, not by rings, and that is not written"
+                .to_string(),
+        ),
+        _ => refuse(
+            "it holds neither polylines nor triangles — only those have a border to extend".to_string(),
+        ),
     }
 }
 
@@ -242,7 +256,10 @@ impl Operation for Extend {
             name: "extend",
             describe: "polylines prolonged at their ends, or a triangulated surface grown past its border — along a direction read on a band of the border; the original nodes kept bit for bit, the invented ones marked apart",
             category: Category::Geometry,
-            makes: &["resqml22.PolylineSetRepresentation", "resqml22.TriangulatedSetRepresentation"],
+            makes: &[
+                "resqml22.PolylineSetRepresentation",
+                "resqml22.TriangulatedSetRepresentation",
+            ],
             recipe: "extend",
             represents: None,
         }
@@ -266,7 +283,13 @@ impl Operation for Extend {
         let band = linear.band;
         let (reach, distance_slot) = match &params.toward {
             Toward::Around(around) => (Reach::Around(around.distance), "distance"),
-            Toward::Ends(ends) => (Reach::Ends { start: ends.start, end: ends.end }, "end"),
+            Toward::Ends(ends) => (
+                Reach::Ends {
+                    start: ends.start,
+                    end: ends.end,
+                },
+                "end",
+            ),
             Toward::Dip(dip) => (
                 Reach::Dip(Dip {
                     up: dip.up,
@@ -280,9 +303,17 @@ impl Operation for Extend {
             ),
         };
         let refuse = |why: ExtendError| match &why {
-            ExtendError::Setting { which: Setting::Band, .. } => Refusal::about("value", "band", why.to_string()),
-            ExtendError::Setting { which: Setting::Distance, .. } => Refusal::about("value", distance_slot, why.to_string()),
-            ExtendError::Setting { which: Setting::Toward, .. } => Refusal::about("value", "toward", why.to_string()),
+            ExtendError::Setting {
+                which: Setting::Band, ..
+            } => Refusal::about("value", "band", why.to_string()),
+            ExtendError::Setting {
+                which: Setting::Distance,
+                ..
+            } => Refusal::about("value", distance_slot, why.to_string()),
+            ExtendError::Setting {
+                which: Setting::Toward,
+                ..
+            } => Refusal::about("value", "toward", why.to_string()),
             ExtendError::Shape(_) => Refusal::on("shape", why),
         };
 
@@ -295,18 +326,21 @@ impl Operation for Extend {
                 let mut ranges = Vec::new();
                 let mut at = 0usize;
                 for patch in &shape.geometry.patches {
-                    let Topology::Polylines(runs) = &patch.topology else { continue };
+                    let Topology::Polylines(runs) = &patch.topology else {
+                        continue;
+                    };
                     let mut points = Vec::new();
                     let mut counts = Vec::new();
                     let mut start = 0usize;
                     for &run in runs {
                         let run = run as usize;
-                        let line = patch
-                            .points
-                            .get(start..start + run)
-                            .ok_or_else(|| Refusal::on("shape", "the polylines add up to more nodes than the patch holds"))?;
+                        let line = patch.points.get(start..start + run).ok_or_else(|| {
+                            Refusal::on("shape", "the polylines add up to more nodes than the patch holds")
+                        })?;
                         let made = extend_line(line, &reach, band).map_err(|why| match why {
-                            ExtendError::Shape(text) => Refusal::on("shape", format!("polyline {at}: {text}")),
+                            ExtendError::Shape(text) => {
+                                Refusal::on("shape", format!("polyline {at}: {text}"))
+                            }
                             other => refuse(other),
                         })?;
                         invented.extend_from_slice(&made.points[..made.before]);
@@ -315,16 +349,30 @@ impl Operation for Extend {
                         original += run;
                         added += made.before + made.after;
                         outliers += made.outliers;
-                        longest = [&made.start, &made.end].into_iter().flatten().map(|e| e.distance).fold(longest, f64::max);
+                        longest = [&made.start, &made.end]
+                            .into_iter()
+                            .flatten()
+                            .map(|e| e.distance)
+                            .fold(longest, f64::max);
                         counts.push(made.points.len() as u32);
                         points.extend(made.points);
                         start += run;
                         at += 1;
                     }
-                    patches.push(Patch { index: patch.index, node_offset: 0, points, topology: Topology::Polylines(counts), closed: patch.closed.clone() });
+                    patches.push(Patch {
+                        index: patch.index,
+                        node_offset: 0,
+                        points,
+                        topology: Topology::Polylines(counts),
+                        closed: patch.closed.clone(),
+                    });
                 }
                 if added == 0 {
-                    return Err(Refusal::about("value", distance_slot, "every distance is zero — there is nothing to extend"));
+                    return Err(Refusal::about(
+                        "value",
+                        distance_slot,
+                        "every distance is zero — there is nothing to extend",
+                    ));
                 }
                 says.push(Note {
                     key: "invented",
@@ -338,11 +386,23 @@ impl Operation for Extend {
                     patch.node_offset = offset;
                     offset += patch.points.len();
                 }
-                (Geometry { kind: "extend", patches }, invented, original, added, outliers, longest)
+                (
+                    Geometry {
+                        kind: "extend",
+                        patches,
+                    },
+                    invented,
+                    original,
+                    added,
+                    outliers,
+                    longest,
+                )
             }
             Kind::Surface => {
                 let patch = &shape.geometry.patches[0];
-                let Topology::Triangles(triangles) = &patch.topology else { unreachable!("checked") };
+                let Topology::Triangles(triangles) = &patch.topology else {
+                    unreachable!("checked")
+                };
                 let made = extend_surface(&patch.points, triangles, &reach, band).map_err(refuse)?;
                 let original = made.original_nodes;
                 let added = made.points.len() - original;
@@ -358,10 +418,22 @@ impl Operation for Extend {
                     ),
                 });
                 if let Reach::Dip(_) = reach {
-                    says.push(Note { key: "dip", detail: format!("up, down and sides read in the mean plane, which dips {:.2}°", made.dip) });
+                    says.push(Note {
+                        key: "dip",
+                        detail: format!(
+                            "up, down and sides read in the mean plane, which dips {:.2}°",
+                            made.dip
+                        ),
+                    });
                 }
                 if made.holes > 0 {
-                    says.push(Note { key: "holes", detail: format!("{} hole(s) left as they are — only the outer border is extended", made.holes) });
+                    says.push(Note {
+                        key: "holes",
+                        detail: format!(
+                            "{} hole(s) left as they are — only the outer border is extended",
+                            made.holes
+                        ),
+                    });
                 }
                 let invented = made.points[original..].to_vec();
                 let geometry = Geometry {
@@ -386,25 +458,59 @@ impl Operation for Extend {
         if longest > FAR * band {
             says.push(Note {
                 key: "far",
-                detail: format!("extended up to {longest}, {:.1} times the band of {band} the direction was read over", longest / band),
+                detail: format!(
+                    "extended up to {longest}, {:.1} times the band of {band} the direction was read over",
+                    longest / band
+                ),
             });
         }
 
         let written_kind = matches!(kind, Kind::Lines);
-        let result = Shape { name: shape.name.clone(), geometry: result, closed: shape.closed.clone(), known: shape.known.clone() };
+        let result = Shape {
+            name: shape.name.clone(),
+            geometry: result,
+            closed: shape.closed.clone(),
+            known: shape.known.clone(),
+        };
         let title = params.written.naming.title();
         let seed = format!("extend:{}:{title}", shape.name);
         let mut plan = if written_kind {
-            super::polylines::write(&PolylinesInputs { shape: vec![result], features: None }, &params.written, None, &seed, cx)?
+            super::polylines::write(
+                &PolylinesInputs {
+                    shape: vec![result],
+                    features: None,
+                },
+                &params.written,
+                None,
+                &seed,
+                cx,
+            )?
         } else {
-            super::triangles::write(&TrianglesInputs { shape: vec![result] }, &params.written, &seed, cx)?
+            super::triangles::write(
+                &TrianglesInputs { shape: vec![result] },
+                &params.written,
+                &seed,
+                cx,
+            )?
         };
         plan.activity.recipe = "extend";
         plan.activity.title = format!("extend → {title}");
         plan.activity.parameters.extend([
-            Parameter::Double { title: "originalNodes".to_string(), value: original as f64, uom: None },
-            Parameter::Double { title: "addedNodes".to_string(), value: added as f64, uom: None },
-            Parameter::Double { title: "outlierNodes".to_string(), value: outliers as f64, uom: None },
+            Parameter::Double {
+                title: "originalNodes".to_string(),
+                value: original as f64,
+                uom: None,
+            },
+            Parameter::Double {
+                title: "addedNodes".to_string(),
+                value: added as f64,
+                uom: None,
+            },
+            Parameter::Double {
+                title: "outlierNodes".to_string(),
+                value: outliers as f64,
+                uom: None,
+            },
         ]);
         plan.says.extend(says);
         // The invented nodes, a child of the result: the scene shows them
@@ -416,7 +522,13 @@ impl Operation for Extend {
                 title: format!("{} — invented nodes", root.title),
                 geometry: Geometry {
                     kind: "extend",
-                    patches: vec![Patch { index: 0, node_offset: 0, points: invented, topology: Topology::Points, closed: Vec::new() }],
+                    patches: vec![Patch {
+                        index: 0,
+                        node_offset: 0,
+                        points: invented,
+                        topology: Topology::Points,
+                        closed: Vec::new(),
+                    }],
                 },
                 object: None,
             });
@@ -425,7 +537,17 @@ impl Operation for Extend {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        let count = |name: &'static str, about: &'static str| Slot::required(name, Need::Number { uom: None, least: None, most: None }, about);
+        let count = |name: &'static str, about: &'static str| {
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
         support::frame_reports(vec![
             count("originalNodes", "nodes of the input, kept bit for bit"),
             count("addedNodes", "nodes invented past the border"),

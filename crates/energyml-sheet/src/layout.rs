@@ -290,7 +290,11 @@ impl ProportionMode for ToScale {
 
     fn positions(&self, sections: &[SectionSpan], target_mm: f64) -> ModeResult {
         let total_thickness: f64 = sections.iter().map(|s| s.thickness_m).sum();
-        let mm_per_m = if total_thickness > 0.0 { target_mm / total_thickness } else { 0.0 };
+        let mm_per_m = if total_thickness > 0.0 {
+            target_mm / total_thickness
+        } else {
+            0.0
+        };
         let mut y = Vec::with_capacity(sections.len() + 1);
         y.push(0.0);
         let mut acc = 0.0;
@@ -298,7 +302,12 @@ impl ProportionMode for ToScale {
             acc += s.thickness_m * mm_per_m;
             y.push(acc);
         }
-        ModeResult { y_mm: y, total_mm: acc, grown: false, notes: Vec::new() }
+        ModeResult {
+            y_mm: y,
+            total_mm: acc,
+            grown: false,
+            notes: Vec::new(),
+        }
     }
 }
 
@@ -329,7 +338,12 @@ impl ProportionMode for Readable {
     fn positions(&self, sections: &[SectionSpan], target_mm: f64) -> ModeResult {
         let n = sections.len();
         if n == 0 {
-            return ModeResult { y_mm: vec![0.0], total_mm: 0.0, grown: false, notes: Vec::new() };
+            return ModeResult {
+                y_mm: vec![0.0],
+                total_mm: 0.0,
+                grown: false,
+                notes: Vec::new(),
+            };
         }
         let total_min: f64 = sections.iter().map(|s| s.min_mm).sum();
         let mut notes = Vec::new();
@@ -384,8 +398,12 @@ impl ProportionMode for Readable {
                 }
             }
 
-            let active_thickness: f64 =
-                sections.iter().enumerate().filter(|(i, _)| !frozen[*i]).map(|(_, s)| s.thickness_m).sum();
+            let active_thickness: f64 = sections
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| !frozen[*i])
+                .map(|(_, s)| s.thickness_m)
+                .sum();
             let active_count = frozen.iter().filter(|f| !**f).count();
             for (i, s) in sections.iter().enumerate() {
                 if frozen[i] {
@@ -406,7 +424,12 @@ impl ProportionMode for Readable {
             acc += h;
             y.push(acc);
         }
-        ModeResult { y_mm: y, total_mm: acc, grown, notes }
+        ModeResult {
+            y_mm: y,
+            total_mm: acc,
+            grown,
+            notes,
+        }
     }
 }
 
@@ -428,7 +451,10 @@ impl ModeRegistry {
 
     /// The mode of this id, if one is registered.
     pub fn find(&self, id: &str) -> Option<&dyn ProportionMode> {
-        self.0.iter().find(|mode| mode.id() == id).map(|mode| mode.as_ref())
+        self.0
+            .iter()
+            .find(|mode| mode.id() == id)
+            .map(|mode| mode.as_ref())
     }
 }
 
@@ -495,7 +521,13 @@ impl TrackRender for Fill {
         "fill"
     }
 
-    fn apply(&self, interval: &Interval, _style: crate::text::Style, _max_width_pt: f64, cell: &mut LaidCell) {
+    fn apply(
+        &self,
+        interval: &Interval,
+        _style: crate::text::Style,
+        _max_width_pt: f64,
+        cell: &mut LaidCell,
+    ) {
         if let Some(colour) = interval.colour {
             cell.colour = Some(colour);
         }
@@ -541,7 +573,10 @@ impl TrackRegistry {
 
     /// The render of this id, if one is registered.
     pub fn find(&self, id: &str) -> Option<&dyn TrackRender> {
-        self.0.iter().find(|render| render.id() == id).map(|render| render.as_ref())
+        self.0
+            .iter()
+            .find(|render| render.id() == id)
+            .map(|render| render.as_ref())
     }
 }
 
@@ -735,7 +770,11 @@ pub fn compute_with(
         }
     }
 
-    let mode = modes.find(&params.proportion).ok_or_else(|| Refusal::UnknownMode { id: params.proportion.clone() })?;
+    let mode = modes
+        .find(&params.proportion)
+        .ok_or_else(|| Refusal::UnknownMode {
+            id: params.proportion.clone(),
+        })?;
 
     // Only interval tracks cut the sheet — a track by node (the MD
     // column is exactly that: one value per node, not per interval) creates
@@ -758,7 +797,14 @@ pub fn compute_with(
 
     let mut notes: Vec<String> = Vec::new();
     let has_md_track = board.tracks.iter().any(|track| matches!(track, Track::Md(_)));
-    let mut min_mm = vec![if has_md_track { cell_min_height_mm(1, params.text_size_pt) } else { 0.0 }; section_bounds.len()];
+    let mut min_mm = vec![
+        if has_md_track {
+            cell_min_height_mm(1, params.text_size_pt)
+        } else {
+            0.0
+        };
+        section_bounds.len()
+    ];
 
     // One pass per interval track: the cells it draws, and its contribution
     // to each section's minimum height.
@@ -768,16 +814,18 @@ pub fn compute_with(
             track_cells.push(None);
             continue;
         };
-        let max_width_pt = interval_track.max_chars as f64 * crate::text::average_char_width_pt(params.text_size_pt);
-        let style = crate::text::Style { size_pt: params.text_size_pt };
+        let max_width_pt =
+            interval_track.max_chars as f64 * crate::text::average_char_width_pt(params.text_size_pt);
+        let style = crate::text::Style {
+            size_pt: params.text_size_pt,
+        };
         let mut cells = Vec::with_capacity(section_bounds.len());
         let mut blanks = 0usize;
         for (index, (top, base)) in section_bounds.iter().enumerate() {
             let mut cell = LaidCell::default();
-            let covering = interval_track
-                .intervals
-                .iter()
-                .find(|interval| interval.md_top <= *top + MD_EPSILON && interval.md_base >= *base - MD_EPSILON);
+            let covering = interval_track.intervals.iter().find(|interval| {
+                interval.md_top <= *top + MD_EPSILON && interval.md_base >= *base - MD_EPSILON
+            });
             if let Some(interval) = covering {
                 cell.uri = interval.uri.clone();
                 cell.row = interval.row.clone();
@@ -819,7 +867,10 @@ pub fn compute_with(
     let spans: Vec<SectionSpan> = section_bounds
         .iter()
         .zip(&min_mm)
-        .map(|((top, base), min)| SectionSpan { thickness_m: base - top, min_mm: *min })
+        .map(|((top, base), min)| SectionSpan {
+            thickness_m: base - top,
+            min_mm: *min,
+        })
         .collect();
     let result = mode.positions(&spans, target_mm);
     notes.extend(result.notes);
@@ -829,13 +880,23 @@ pub fn compute_with(
     for (index, (top, base)) in section_bounds.iter().enumerate() {
         let y_top = result.y_mm[index];
         let y_base = result.y_mm[index + 1];
-        sections.push(LaidSection { md_top: *top, md_base: *base, y_top_mm: y_top, y_base_mm: y_base, min_mm: spans[index].min_mm });
+        sections.push(LaidSection {
+            md_top: *top,
+            md_base: *base,
+            y_top_mm: y_top,
+            y_base_mm: y_base,
+            min_mm: spans[index].min_mm,
+        });
 
         // The second fallback: a section whose imposed height (only
         // possible in a mode that ignores the minimum, i.e. `ToScale`) is
         // shorter than its content is truncated, with the cut counted.
         let available = y_base - y_top;
-        let max_lines = if line_height > 0.0 { (available / line_height).floor().max(0.0) as usize } else { 0 };
+        let max_lines = if line_height > 0.0 {
+            (available / line_height).floor().max(0.0) as usize
+        } else {
+            0
+        };
         for cells in track_cells.iter_mut().flatten() {
             if let Some(text) = cells[index].text.as_mut()
                 && text.lines.len() > max_lines
@@ -863,7 +924,11 @@ pub fn compute_with(
         .enumerate()
         .map(|(index, md)| MdTick {
             md: *md,
-            y_mm: result.y_mm.get(index).copied().unwrap_or_else(|| result.y_mm.last().copied().unwrap_or(0.0)),
+            y_mm: result
+                .y_mm
+                .get(index)
+                .copied()
+                .unwrap_or_else(|| result.y_mm.last().copied().unwrap_or(0.0)),
             label: format_md(*md),
         })
         .collect();
@@ -872,12 +937,15 @@ pub fn compute_with(
     for (track, cells) in board.tracks.iter().zip(track_cells) {
         match track {
             Track::Md(md_track) => {
-                laid_tracks.push(LaidTrack::Md { header: md_track.header.clone(), ticks: ticks.clone() });
+                laid_tracks.push(LaidTrack::Md {
+                    header: md_track.header.clone(),
+                    ticks: ticks.clone(),
+                });
             }
             Track::Intervals(interval_track) => {
                 let header_lines = if interval_track.renders.iter().any(|render| render == "text") {
-                    let max_width_pt =
-                        interval_track.max_chars as f64 * crate::text::average_char_width_pt(params.text_size_pt);
+                    let max_width_pt = interval_track.max_chars as f64
+                        * crate::text::average_char_width_pt(params.text_size_pt);
                     crate::text::wrap(&interval_track.header, max_width_pt, params.text_size_pt).lines
                 } else {
                     vec![interval_track.header.clone()]
@@ -907,7 +975,11 @@ pub fn compute_with(
 
     let ruler = if mode.deformed() {
         let first_md = bounds.first().copied().unwrap_or(0.0);
-        let mm_per_m = if total_thickness_m > 0.0 { result.total_mm / total_thickness_m } else { 0.0 };
+        let mm_per_m = if total_thickness_m > 0.0 {
+            result.total_mm / total_thickness_m
+        } else {
+            0.0
+        };
         Some(Ruler {
             y_true_mm: bounds.iter().map(|md| (md - first_md) * mm_per_m).collect(),
             total_mm: result.total_mm,
@@ -920,7 +992,11 @@ pub fn compute_with(
         "{} — axis: {}{}",
         mode.id(),
         mode.axis_label(),
-        if result.grown { "; the sheet was grown to fit its minimum heights" } else { "" }
+        if result.grown {
+            "; the sheet was grown to fit its minimum heights"
+        } else {
+            ""
+        }
     );
 
     Ok(Layout {

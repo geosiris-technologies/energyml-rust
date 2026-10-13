@@ -63,25 +63,31 @@ fn rank() -> resqml22::StratigraphicColumnRankInterpretation {
         schema_version: "2.2".into(),
         citation: citation("the rank"),
         stratigraphic_units: vec![reference(UNIT, "1"), reference(UNIT, "2"), reference(OTHER, "1")],
-        contact_interpretation: vec![resqml22::AbstractContactInterpretationPart::BinaryContactInterpretationPart(
-            resqml22::BinaryContactInterpretationPart {
-                part_of: Some(eml23::DataObjectReference {
-                    uuid: u(HORIZON),
-                    qualified_type: "resqml22.HorizonInterpretation".to_string(),
-                    title: "a horizon".to_string(),
-                    ..Default::default()
-                }),
-                subject: element(UNIT, "1", Some(resqml22::ContactMode::Unconformable)),
-                direct_object: element(OTHER, "1", None),
-                verb: Default::default(),
-            },
-        )],
+        contact_interpretation: vec![
+            resqml22::AbstractContactInterpretationPart::BinaryContactInterpretationPart(
+                resqml22::BinaryContactInterpretationPart {
+                    part_of: Some(eml23::DataObjectReference {
+                        uuid: u(HORIZON),
+                        qualified_type: "resqml22.HorizonInterpretation".to_string(),
+                        title: "a horizon".to_string(),
+                        ..Default::default()
+                    }),
+                    subject: element(UNIT, "1", Some(resqml22::ContactMode::Unconformable)),
+                    direct_object: element(OTHER, "1", None),
+                    verb: Default::default(),
+                },
+            ),
+        ],
         ..Default::default()
     }
 }
 
 fn columns() -> stratigraphy::Columns {
-    let (v1, v2, other) = (unit(UNIT, "1", "unit, first version"), unit(UNIT, "2", "unit, second version"), unit(OTHER, "1", "other"));
+    let (v1, v2, other) = (
+        unit(UNIT, "1", "unit, first version"),
+        unit(UNIT, "2", "unit, second version"),
+        unit(OTHER, "1", "other"),
+    );
     let rank = rank();
     let objects: Vec<&dyn Reflect> = vec![&v1, &v2, &other, &rank];
     stratigraphy::columns(objects.into_iter())
@@ -96,8 +102,15 @@ fn uri(version: &str, uuid: u32) -> String {
 #[test]
 fn a_reference_is_the_object_at_the_version_it_names() {
     let all = columns();
-    let rank = all.loose_ranks.first().expect("the rank is listed by no column, and returned apart");
-    let seen: Vec<(String, String)> = rank.units.iter().map(|one| (one.unit.title.clone(), one.unit.uri.clone())).collect();
+    let rank = all
+        .loose_ranks
+        .first()
+        .expect("the rank is listed by no column, and returned apart");
+    let seen: Vec<(String, String)> = rank
+        .units
+        .iter()
+        .map(|one| (one.unit.title.clone(), one.unit.uri.clone()))
+        .collect();
     assert_eq!(
         seen,
         vec![
@@ -108,7 +121,10 @@ fn a_reference_is_the_object_at_the_version_it_names() {
         "two versions of one uuid are two units, with two titles and two uris"
     );
     assert!(rank.units.iter().all(|one| one.resolved), "the three are held");
-    assert_eq!(rank.units[0].unit.uuid, rank.units[1].unit.uuid, "one uuid, two uris");
+    assert_eq!(
+        rank.units[0].unit.uuid, rank.units[1].unit.uuid,
+        "one uuid, two uris"
+    );
 }
 
 /// The side the file says is not conformable is **the version it names**.
@@ -118,8 +134,16 @@ fn an_unconformable_side_is_the_uri_of_its_unit() {
     let rank = &all.loose_ranks[0];
     let contact = rank.contacts.first().expect("the contact is read");
     assert_eq!(contact.subject.uri, uri("1", UNIT));
-    let sides: Vec<&str> = contact.unconformable.iter().map(|side| side.unit.as_str()).collect();
-    assert_eq!(sides, vec![uri("1", UNIT)], "version 1 is the unconformable one (the one NOT held last), version 2 is not named");
+    let sides: Vec<&str> = contact
+        .unconformable
+        .iter()
+        .map(|side| side.unit.as_str())
+        .collect();
+    assert_eq!(
+        sides,
+        vec![uri("1", UNIT)],
+        "version 1 is the unconformable one (the one NOT held last), version 2 is not named"
+    );
 }
 
 /// A uuid held **once** answers whatever version a reference spells, as the
@@ -137,5 +161,9 @@ fn a_wrong_version_of_a_uuid_held_once_still_names_the_held_object() {
     // lookup does the same ("a wrong version is not a wrong type"), and the
     // checker reports the mismatch.
     assert_eq!(units[0].uri, uri("1", UNIT));
-    assert_eq!(units[1].uri, uri("1", OTHER), "the held object's own identity, not what the reference spells");
+    assert_eq!(
+        units[1].uri,
+        uri("1", OTHER),
+        "the held object's own identity, not what the reference spells"
+    );
 }

@@ -7,8 +7,9 @@ Everything — code, comments, messages, documentation — is written in **Engli
 ## The rules that matter
 
 1. **`crates/generated/` is never edited by hand.** It is written by an internal Geosiris generator from the Energistics schemas, and a CI check rejects any change to it that does not come from the regeneration bot. If you find a defect in generated code, **open an issue** describing it; do not send a pull request for it.
-2. **Never run `cargo fmt --all`.** rustfmt would rewrite the generated crates. Format the hand-written crates one by one:
-   `cargo fmt -p energyml-storage` (and so on, per crate name). Check formatting the same way: `cargo fmt -p <crate> -- --check`.
+2. **Never run `cargo fmt --all`.** rustfmt would rewrite the generated crates. Format with
+   `bash scripts/fmt.sh`, which runs rustfmt on every hand-written crate by name; `bash scripts/fmt.sh --check`
+   is what CI runs. The hand-written crates are rustfmt-clean: format before you push.
 3. **One test binary per crate.** Tests live in `tests/main.rs` with one `mod` line per test file; a new test file that is not declared there does not run. A test that must own process state keeps its own `[[test]]`.
 4. **A test must be able to fail.** Before you push a new check, ask what you would have to break to make it fail; if the answer is "nothing", break something on purpose to find out. A check that passes on an empty set proves nothing.
 5. **Refuse by name rather than guess.** Where the specification is ambiguous the library returns a named refusal, not a plausible answer. A missing capability (for example HDF5 not compiled in) is an error that names the missing feature, never an empty result.

@@ -86,7 +86,10 @@ impl Law {
     /// producer pumps. The decline is the producer's: the loop carries the
     /// same water.
     pub fn scaled(&self, share: f64) -> Law {
-        Law { rate: self.rate * share, decline: self.decline }
+        Law {
+            rate: self.rate * share,
+            decline: self.decline,
+        }
     }
 
     /// The decline per hour.
@@ -138,14 +141,20 @@ impl Period {
 /// increasing order: `n` instants make `n − 1` periods.
 pub fn periods(law: &Law, instants: &[f64]) -> Result<Vec<Period>, LawError> {
     if instants.len() < 2 {
-        return Err(LawError::TooFewInstants { given: instants.len() });
+        return Err(LawError::TooFewInstants {
+            given: instants.len(),
+        });
     }
     for (at, hours) in instants.iter().enumerate() {
         if !hours.is_finite() {
             return Err(LawError::NotFinite { rank: at + 1 });
         }
         if at > 0 && *hours <= instants[at - 1] {
-            return Err(LawError::NotIncreasing { rank: at + 1, hours: *hours, before: instants[at - 1] });
+            return Err(LawError::NotIncreasing {
+                rank: at + 1,
+                hours: *hours,
+                before: instants[at - 1],
+            });
         }
     }
     Ok(instants
@@ -153,7 +162,12 @@ pub fn periods(law: &Law, instants: &[f64]) -> Result<Vec<Period>, LawError> {
         .map(|pair| {
             let (from, to) = (pair[0], pair[1]);
             let volume = law.volume(from, to);
-            Period { from, to, volume, mean_rate: volume / (to - from) }
+            Period {
+                from,
+                to,
+                volume,
+                mean_rate: volume / (to - from),
+            }
         })
         .collect())
 }
@@ -186,7 +200,13 @@ pub fn summary(values: &[f64]) -> Option<Summary> {
     let minimum = kept.iter().copied().fold(f64::INFINITY, f64::min);
     let maximum = kept.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     let mean = kept.iter().sum::<f64>() / kept.len() as f64;
-    Some(Summary { count: kept.len(), set_aside: values.len() - kept.len(), minimum, maximum, mean })
+    Some(Summary {
+        count: kept.len(),
+        set_aside: values.len() - kept.len(),
+        minimum,
+        maximum,
+        mean,
+    })
 }
 
 #[cfg(test)]
@@ -196,7 +216,9 @@ mod tests {
     /// The hours of the twelve months of 2025, from the calendar — not from
     /// any date parser: 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 days.
     fn months_of_2025() -> Vec<f64> {
-        let days = [31.0, 28.0, 31.0, 30.0, 31.0, 30.0, 31.0, 31.0, 30.0, 31.0, 30.0, 31.0];
+        let days = [
+            31.0, 28.0, 31.0, 30.0, 31.0, 30.0, 31.0, 31.0, 30.0, 31.0, 30.0, 31.0,
+        ];
         let mut instants: Vec<f64> = vec![0.0];
         for one in days {
             let last = *instants.last().unwrap();
@@ -275,11 +297,19 @@ mod tests {
     fn an_injector_scaled_by_one_returns_what_the_producer_pumps() {
         let producer = Law::new(40.0, 0.1).unwrap();
         let injector = producer.scaled(1.0);
-        for (p, i) in periods(&producer, &months_of_2025()).unwrap().iter().zip(periods(&injector, &months_of_2025()).unwrap()) {
+        for (p, i) in periods(&producer, &months_of_2025())
+            .unwrap()
+            .iter()
+            .zip(periods(&injector, &months_of_2025()).unwrap())
+        {
             assert_eq!(p.volume, i.volume);
         }
         let half = producer.scaled(0.5);
-        assert!(close(half.volume(0.0, 744.0), producer.volume(0.0, 744.0) / 2.0, 1e-14));
+        assert!(close(
+            half.volume(0.0, 744.0),
+            producer.volume(0.0, 744.0) / 2.0,
+            1e-14
+        ));
     }
 
     #[test]
@@ -289,9 +319,16 @@ mod tests {
         assert_eq!(periods(&law, &[]), Err(LawError::TooFewInstants { given: 0 }));
         assert_eq!(
             periods(&law, &[0.0, 744.0, 744.0]),
-            Err(LawError::NotIncreasing { rank: 3, hours: 744.0, before: 744.0 })
+            Err(LawError::NotIncreasing {
+                rank: 3,
+                hours: 744.0,
+                before: 744.0
+            })
         );
-        assert_eq!(periods(&law, &[0.0, f64::NAN]), Err(LawError::NotFinite { rank: 2 }));
+        assert_eq!(
+            periods(&law, &[0.0, f64::NAN]),
+            Err(LawError::NotFinite { rank: 2 })
+        );
         // And two instants are one period — the least a report can hold.
         assert_eq!(periods(&law, &[0.0, 24.0]).unwrap().len(), 1);
     }

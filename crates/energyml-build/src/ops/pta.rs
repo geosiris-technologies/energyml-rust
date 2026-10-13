@@ -102,7 +102,9 @@ pub struct PtaParams {
 #[derive(Debug, Inputs)]
 pub struct PtaInputs {
     /// the flow test analysed — its `FlowTestActivity`, given once
-    #[input(types = "prodml23.InjectionFlowTest, prodml23.DrillStemTest, prodml23.ProductionTransientTest, prodml23.ProductionFlowTest, prodml23.InterwellTest, prodml23.VerticalInterferenceTest, prodml23.WaterLevelTest, prodml23.FormationTesterStation")]
+    #[input(
+        types = "prodml23.InjectionFlowTest, prodml23.DrillStemTest, prodml23.ProductionTransientTest, prodml23.ProductionFlowTest, prodml23.InterwellTest, prodml23.VerticalInterferenceTest, prodml23.WaterLevelTest, prodml23.FormationTesterStation"
+    )]
     pub test: ObjectIn,
     /// the permeability distributed on a grid — a property of the grid's cells; the model is then the numerical one
     #[input(types = "resqml22.ContinuousProperty")]
@@ -114,21 +116,27 @@ pub struct PtaInputs {
 
 /// The reference an object of the bag carries, or a refusal naming its slot.
 fn reference(slot: &str, input: &ObjectIn) -> Result<Ref, Refusal> {
-    input
-        .known
-        .reference
-        .clone()
-        .ok_or_else(|| Refusal::on(slot, format!("`{}` was given without a reference to write", input.name)))
+    input.known.reference.clone().ok_or_else(|| {
+        Refusal::on(
+            slot,
+            format!("`{}` was given without a reference to write", input.name),
+        )
+    })
 }
 
 /// A finite number, or a refusal naming the slot.
 fn finite(slot: &str, value: f64, what: &str) -> Result<f64, Refusal> {
-    if value.is_finite() { Ok(value) } else { Err(Refusal::on(slot, format!("{value} is not {what}"))) }
+    if value.is_finite() {
+        Ok(value)
+    } else {
+        Err(Refusal::on(slot, format!("{value} is not {what}")))
+    }
 }
 
 /// A unit code as the schema spells it, or a refusal.
 fn unit<T: XmlText>(code: &str) -> Result<T, Refusal> {
-    T::from_xml_text(code).map_err(|why| Refusal::new("refused", format!("`{code}` is no unit this build writes: {why}")))
+    T::from_xml_text(code)
+        .map_err(|why| Refusal::new("refused", format!("`{code}` is no unit this build writes: {why}")))
 }
 
 impl Operation for PressureTransientAnalysis {
@@ -147,9 +155,18 @@ impl Operation for PressureTransientAnalysis {
     }
 
     fn check(&self, inputs: &PtaInputs) -> Result<(), Refusal> {
-        match inputs.test.known.reference.as_ref().map(|one| class_of(&one.qualified_type)) {
+        match inputs
+            .test
+            .known
+            .reference
+            .as_ref()
+            .map(|one| class_of(&one.qualified_type))
+        {
             Some(class) if FLOW_TESTS.contains(&class) => Ok(()),
-            _ => Err(Refusal::on("test", "the object given is no PRODML flow test: an analysis is of one")),
+            _ => Err(Refusal::on(
+                "test",
+                "the object given is no PRODML flow test: an analysis is of one",
+            )),
         }
     }
 
@@ -160,10 +177,19 @@ impl Operation for PressureTransientAnalysis {
         let test = reference("test", &inputs.test)?;
         let period = params.test_period.trim();
         if period.is_empty() {
-            return Err(Refusal::on("testPeriod", "is empty: an analysis names the period of the test it analyses"));
+            return Err(Refusal::on(
+                "testPeriod",
+                "is empty: an analysis names the period of the test it analyses",
+            ));
         }
         let phase = prodml::FluidPhaseKind::from_xml_text(params.phase.trim()).map_err(|_| {
-            Refusal::on("phase", format!("`{}` is none of the PRODML fluid phase kinds (single phase water, single phase oil, …)", params.phase.trim()))
+            Refusal::on(
+                "phase",
+                format!(
+                    "`{}` is none of the PRODML fluid phase kinds (single phase water, single phase oil, …)",
+                    params.phase.trim()
+                ),
+            )
         })?;
 
         let k = finite("permeability", params.permeability, "a permeability")?;
@@ -171,14 +197,28 @@ impl Operation for PressureTransientAnalysis {
         let phi = finite("porosity", params.porosity, "a porosity")?;
         let pi = finite("initialPressure", params.initial_pressure, "a pressure")?;
         if k <= 0.0 || h <= 0.0 {
-            return Err(Refusal::on(if k <= 0.0 { "permeability" } else { "thickness" }, "is 0: a layer that holds or passes nothing has no transient to analyse"));
+            return Err(Refusal::on(
+                if k <= 0.0 { "permeability" } else { "thickness" },
+                "is 0: a layer that holds or passes nothing has no transient to analyse",
+            ));
         }
         if !(phi > 0.0 && phi <= 1.0) {
-            return Err(Refusal::on("porosity", format!("{phi} is no fraction of a volume in (0, 1]")));
+            return Err(Refusal::on(
+                "porosity",
+                format!("{phi} is no fraction of a volume in (0, 1]"),
+            ));
         }
 
-        let permeability_array = inputs.permeability_array.as_ref().map(|one| reference("permeabilityArray", one)).transpose()?;
-        let porosity_array = inputs.porosity_array.as_ref().map(|one| reference("porosityArray", one)).transpose()?;
+        let permeability_array = inputs
+            .permeability_array
+            .as_ref()
+            .map(|one| reference("permeabilityArray", one))
+            .transpose()?;
+        let porosity_array = inputs
+            .porosity_array
+            .as_ref()
+            .map(|one| reference("porosityArray", one))
+            .transpose()?;
         let numerical = permeability_array.is_some() || porosity_array.is_some();
 
         // -- the constants, which both models require --------------------------------------
@@ -190,51 +230,72 @@ impl Operation for PressureTransientAnalysis {
         let permeability = prodml::HorizontalRadialPermeability {
             uid: "k".to_string(),
             abbreviation: "K".to_string(),
-            permeability: eml::PermeabilityRockMeasureExt { value: k, uom: unit("mD")? },
+            permeability: eml::PermeabilityRockMeasureExt {
+                value: k,
+                uom: unit("mD")?,
+            },
             ..Default::default()
         };
         let thickness = prodml::TotalThickness {
             uid: "h".to_string(),
             abbreviation: "h".to_string(),
-            length: eml::LengthMeasure { value: h, uom: unit("m")? },
+            length: eml::LengthMeasure {
+                value: h,
+                uom: unit("m")?,
+            },
             ..Default::default()
         };
         let kh = prodml::PermeabilityThicknessProduct {
             uid: "kh".to_string(),
             abbreviation: "k.h".to_string(),
-            permeability_length: eml::PermeabilityLengthMeasureExt { value: k * h, uom: unit("mD.m")? },
+            permeability_length: eml::PermeabilityLengthMeasureExt {
+                value: k * h,
+                uom: unit("mD.m")?,
+            },
             ..Default::default()
         };
         let porosity = prodml::Porosity {
             uid: "phi".to_string(),
             abbreviation: "Phi".to_string(),
-            volume_per_volume: eml::VolumePerVolumeMeasure { value: phi, uom: unit("Euc")? },
+            volume_per_volume: eml::VolumePerVolumeMeasure {
+                value: phi,
+                uom: unit("Euc")?,
+            },
             ..Default::default()
         };
         let initial = prodml::InitialPressure {
             uid: "pi".to_string(),
             abbreviation: "Pi".to_string(),
-            pressure: eml::PressureMeasure { value: pi, uom: unit("bar")? },
+            pressure: eml::PressureMeasure {
+                value: pi,
+                uom: unit("bar")?,
+            },
             ..Default::default()
         };
 
         let reservoir = if numerical {
-            let grid_ref = |one: &Option<Ref>| one.as_ref().map(|one| prodml::ResqmlModelRef { resqml_model_ref: crate::crs::reference_of(one) });
-            prodml::ReservoirBaseModel::NumericalHomogeneousReservoirModel(prodml::NumericalHomogeneousReservoirModel {
-                horizontal_radial_permeability: permeability,
-                total_thickness: thickness,
-                permeability_thickness_product: kh,
-                porosity,
-                initial_pressure: initial,
-                distributed_parameters_sub_model: prodml::DistributedParametersSubModel {
-                    is_permeability_gridded: permeability_array.is_some(),
-                    permeability_array_ref_id: grid_ref(&permeability_array),
-                    is_porosity_gridded: porosity_array.is_some(),
-                    porosity_array_ref_id: grid_ref(&porosity_array),
+            let grid_ref = |one: &Option<Ref>| {
+                one.as_ref().map(|one| prodml::ResqmlModelRef {
+                    resqml_model_ref: crate::crs::reference_of(one),
+                })
+            };
+            prodml::ReservoirBaseModel::NumericalHomogeneousReservoirModel(
+                prodml::NumericalHomogeneousReservoirModel {
+                    horizontal_radial_permeability: permeability,
+                    total_thickness: thickness,
+                    permeability_thickness_product: kh,
+                    porosity,
+                    initial_pressure: initial,
+                    distributed_parameters_sub_model: prodml::DistributedParametersSubModel {
+                        is_permeability_gridded: permeability_array.is_some(),
+                        permeability_array_ref_id: grid_ref(&permeability_array),
+                        is_porosity_gridded: porosity_array.is_some(),
+                        porosity_array_ref_id: grid_ref(&porosity_array),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            })
+            )
         } else {
             prodml::ReservoirBaseModel::HomogeneousModel(prodml::HomogeneousModel {
                 horizontal_radial_permeability: permeability,
@@ -247,9 +308,18 @@ impl Operation for PressureTransientAnalysis {
         };
 
         // -- the analysis ---------------------------------------------------------------------
-        let uuid = writer.uuid(&format!("pta:{}:{period}:{title}", test.uuid.to_ascii_lowercase()))?;
+        let uuid = writer.uuid(&format!(
+            "pta:{}:{period}:{title}",
+            test.uuid.to_ascii_lowercase()
+        ))?;
         let analysis = prodml::PressureTransientAnalysis {
-            citation: writer.citation(&title, &format!("an invented pressure transient analysis of `{}`, one homogeneous layer", test.title))?,
+            citation: writer.citation(
+                &title,
+                &format!(
+                    "an invented pressure transient analysis of `{}`, one homogeneous layer",
+                    test.title
+                ),
+            )?,
             extension_name_value: vec![writer.synthetic("an invented pressure transient analysis")],
             uuid: uuid.clone(),
             schema_version: "2.3".to_string(),
@@ -262,19 +332,29 @@ impl Operation for PressureTransientAnalysis {
                 ..Default::default()
             }],
             fluid_phase_analysis_kind: phase,
-            pressure_non_linear_transform_kind: prodml::PressureNonLinearTransformKind::PressureUnMinusTransformed,
+            pressure_non_linear_transform_kind:
+                prodml::PressureNonLinearTransformKind::PressureUnMinusTransformed,
             time_non_linear_transform_kind: prodml::TimeNonLinearTransformKind::TimeUnMinusTransformed,
             is_numerical_analysis: Some(numerical),
             flow_test_activity: crate::crs::reference_of(&test),
             ..Default::default()
         };
-        writer.push(&uuid, "prodml23.PressureTransientAnalysis", "analysis", &title, &analysis);
+        writer.push(
+            &uuid,
+            "prodml23.PressureTransientAnalysis",
+            "analysis",
+            &title,
+            &analysis,
+        );
 
         // -- what is said ---------------------------------------------------------------------
-        let gridded: Vec<String> = [("permeability", &permeability_array), ("porosity", &porosity_array)]
-            .into_iter()
-            .filter_map(|(what, one)| one.as_ref().map(|one| format!("{what} → `{}`", one.title)))
-            .collect();
+        let gridded: Vec<String> = [
+            ("permeability", &permeability_array),
+            ("porosity", &porosity_array),
+        ]
+        .into_iter()
+        .filter_map(|(what, one)| one.as_ref().map(|one| format!("{what} → `{}`", one.title)))
+        .collect();
         let mut says = vec![Note {
             key: "model",
             detail: if numerical {
@@ -286,7 +366,10 @@ impl Operation for PressureTransientAnalysis {
                 "HomogeneousModel: no grid property given, so the constants are the model".to_string()
             },
         }];
-        says.push(Note { key: "kh", detail: format!("k·h = {k} mD × {h} m = {} mD.m", k * h) });
+        says.push(Note {
+            key: "kh",
+            detail: format!("k·h = {k} mD × {h} m = {} mD.m", k * h),
+        });
         says.push(Note {
             key: "test-period",
             detail: format!(
@@ -296,12 +379,19 @@ impl Operation for PressureTransientAnalysis {
         });
         says.push(Note {
             key: "synthetic",
-            detail: "the analysis is invented: `synthetic = true` and the source in Citation/Description".to_string(),
+            detail: "the analysis is invented: `synthetic = true` and the source in Citation/Description"
+                .to_string(),
         });
 
-        let mut parameters = vec![Parameter::Object { title: "input".to_string(), reference: test.dor() }];
+        let mut parameters = vec![Parameter::Object {
+            title: "input".to_string(),
+            reference: test.dor(),
+        }];
         for one in permeability_array.iter().chain(porosity_array.iter()) {
-            parameters.push(Parameter::Object { title: "input".to_string(), reference: one.dor() });
+            parameters.push(Parameter::Object {
+                title: "input".to_string(),
+                reference: one.dor(),
+            });
         }
         Ok(Plan {
             media: Vec::new(),

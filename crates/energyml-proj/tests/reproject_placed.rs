@@ -15,7 +15,7 @@
 //! same place, which is the property a scene with a "keep the system while
 //! the scene is non-empty" rule depends on.
 
-use energyml_domain::reproject::{reproject_placed, System, Wgs84};
+use energyml_domain::reproject::{System, Wgs84, reproject_placed};
 use energyml_proj::Proj4;
 
 /// A point in the area both packages describe (from the bug report:

@@ -134,7 +134,11 @@ pub mod native {
             // to do, downloading 512 MB before saying it was too much.
             let (_, body) = response.into_parts();
             let reader = body.into_with_config().limit(self.most).reader();
-            Ok(Answer { status, content_type, body: Box::new(reader) })
+            Ok(Answer {
+                status,
+                content_type,
+                body: Box::new(reader),
+            })
         }
     }
 }

@@ -9,9 +9,7 @@
 //! that installs a process-wide default (a `set_default`, a global allocator)
 //! keeps a binary of its own, as a `[[test]]` in `Cargo.toml`.
 
-mod derived_colour;
 mod attachments;
-mod fixtures;
 mod borrowed_crs;
 mod brt;
 mod channel_data_in_hdf5;
@@ -22,6 +20,8 @@ mod color_scopes;
 mod color_versions;
 mod compound_crs;
 mod corpus;
+mod derived_colour;
+mod fixtures;
 mod geolts;
 mod geometry_local_crs;
 mod identity_guard;
@@ -31,10 +31,10 @@ mod metadata_nulls;
 mod package_index;
 mod package_index_versions;
 mod prefetch;
-mod reference_follow;
 mod property;
 mod property_counts_in_check;
 mod property_kind;
+mod reference_follow;
 mod relations;
 mod rules;
 mod schema_in_check;

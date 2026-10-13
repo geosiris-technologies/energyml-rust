@@ -59,7 +59,10 @@ fn a_shape_promising_more_than_it_holds_is_refused_naming_both_counts() {
     assert!(said.contains("16"), "the promised count: {said}");
     assert!(said.contains('3'), "and the one held: {said}");
     // The message must not send anyone looking for a backend.
-    assert!(!said.contains("feature"), "this is not a missing capability: {said}");
+    assert!(
+        !said.contains("feature"),
+        "this is not a missing capability: {said}"
+    );
 }
 
 #[test]

@@ -21,8 +21,8 @@
 //! - what `transform` refuses to write, for the same reason: a grid's cells, a
 //!   volume, mixed patches.
 
-use energyml_analysis::project::{Onto, project};
 use energyml_analysis::Heights;
+use energyml_analysis::project::{Onto, project};
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch};
 
@@ -82,7 +82,11 @@ pub struct ProjectInputs {
 }
 
 fn double(title: &str, value: f64) -> Parameter {
-    Parameter::Double { title: title.to_string(), value, uom: None }
+    Parameter::Double {
+        title: title.to_string(),
+        value,
+        uom: None,
+    }
 }
 
 impl Operation for Project {
@@ -109,13 +113,20 @@ impl Operation for Project {
     }
 
     fn check(&self, inputs: &ProjectInputs) -> Result<(), Refusal> {
-        kind_of(&inputs.shape.geometry).map(|_| ()).map_err(|why| Refusal::on("shape", why))
+        kind_of(&inputs.shape.geometry)
+            .map(|_| ())
+            .map_err(|why| Refusal::on("shape", why))
     }
 
     fn plan(&self, inputs: ProjectInputs, params: ProjectParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
         let shape = inputs.shape;
         let kind = kind_of(&shape.geometry).map_err(|why| Refusal::on("shape", why))?;
-        let points: Vec<[f64; 3]> = shape.geometry.patches.iter().flat_map(|patch| patch.points.iter().copied()).collect();
+        let points: Vec<[f64; 3]> = shape
+            .geometry
+            .patches
+            .iter()
+            .flat_map(|patch| patch.points.iter().copied())
+            .collect();
         let total = points.len();
         let chosen: Option<Vec<bool>> = if params.nodes.is_empty() {
             None
@@ -136,10 +147,16 @@ impl Operation for Project {
 
         let faces = match (&params.onto, &inputs.surface) {
             (OntoParams::Surface, None) => {
-                return Err(Refusal::on("surface", "projecting onto a surface needs one — or `onto: level`, with a z"));
+                return Err(Refusal::on(
+                    "surface",
+                    "projecting onto a surface needs one — or `onto: level`, with a z",
+                ));
             }
             (OntoParams::Level(_), Some(_)) => {
-                return Err(Refusal::on("surface", "a level and a surface are alternatives: leave the surface out, or project onto it"));
+                return Err(Refusal::on(
+                    "surface",
+                    "a level and a surface are alternatives: leave the surface out, or project onto it",
+                ));
             }
             (OntoParams::Surface, Some(surface)) => {
                 // One frame, one unit: a height read in one and written in the
@@ -151,7 +168,10 @@ impl Operation for Project {
                 {
                     return Err(Refusal::new(
                         "frames",
-                        format!("`shape` is in `{}` and `surface` in `{}` — bring them into one frame first", a.title, b.title),
+                        format!(
+                            "`shape` is in `{}` and `surface` in `{}` — bring them into one frame first",
+                            a.title, b.title
+                        ),
                     ));
                 }
                 if let (Some(a), Some(b)) = (
@@ -159,7 +179,10 @@ impl Operation for Project {
                     surface.known.as_ref().and_then(|k| k.vertical_uom.as_deref()),
                 ) && a != b
                 {
-                    return Err(Refusal::new("units", format!("`shape` counts its heights in `{a}` and `surface` in `{b}`")));
+                    return Err(Refusal::new(
+                        "units",
+                        format!("`shape` counts its heights in `{a}` and `surface` in `{b}`"),
+                    ));
                 }
                 Some(support::Faces::of(&surface.geometry))
             }
@@ -193,21 +216,51 @@ impl Operation for Project {
                 closed: patch.closed.clone(),
             })
             .collect();
-        let result = Shape { name: shape.name.clone(), geometry: Geometry { kind: "project", patches }, closed: shape.closed.clone(), known: shape.known.clone() };
+        let result = Shape {
+            name: shape.name.clone(),
+            geometry: Geometry {
+                kind: "project",
+                patches,
+            },
+            closed: shape.closed.clone(),
+            known: shape.known.clone(),
+        };
 
         let mut says = Vec::new();
-        let turned = if kind == Kind::Triangles { flipped_in(&shape.geometry, &result.geometry) } else { 0 };
+        let turned = if kind == Kind::Triangles {
+            flipped_in(&shape.geometry, &result.geometry)
+        } else {
+            0
+        };
         if turned > 0 {
-            says.push(Note { key: "flipped", detail: format!("{turned} triangle(s) turned over in plan — a fold, kept as it is") });
+            says.push(Note {
+                key: "flipped",
+                detail: format!("{turned} triangle(s) turned over in plan — a fold, kept as it is"),
+            });
         }
         if made.outside > 0 {
-            says.push(Note { key: "outside", detail: format!("{} node(s) with no face above or below — left where they were", made.outside) });
+            says.push(Note {
+                key: "outside",
+                detail: format!(
+                    "{} node(s) with no face above or below — left where they were",
+                    made.outside
+                ),
+            });
         }
         if made.folded > 0 {
-            says.push(Note { key: "folded", detail: format!("{} node(s) over a fold of the surface — left where they were", made.folded) });
+            says.push(Note {
+                key: "folded",
+                detail: format!(
+                    "{} node(s) over a fold of the surface — left where they were",
+                    made.folded
+                ),
+            });
         }
         if made.unplaced > 0 {
-            says.push(Note { key: "unplaced", detail: format!("{} node(s) with no finite position — left", made.unplaced) });
+            says.push(Note {
+                key: "unplaced",
+                detail: format!("{} node(s) with no finite position — left", made.unplaced),
+            });
         }
 
         let title = params.written.naming.title();
@@ -221,19 +274,42 @@ impl Operation for Project {
             double("foldedNodes", made.folded as f64),
         ]);
         if kind == Kind::Triangles {
-            plan.activity.parameters.push(double("flippedTriangles", turned as f64));
+            plan.activity
+                .parameters
+                .push(double("flippedTriangles", turned as f64));
         }
         plan.says.extend(says);
         Ok(plan)
     }
 
     fn reports(&self) -> Vec<Slot> {
-        let count = |name: &'static str, about: &'static str| Slot::required(name, Need::Number { uom: None, least: None, most: None }, about);
+        let count = |name: &'static str, about: &'static str| {
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
+        };
         support::frame_reports(vec![
             count("projectedNodes", "nodes projected"),
-            count("outsideNodes", "nodes with no face above or below — left where they were"),
+            count(
+                "outsideNodes",
+                "nodes with no face above or below — left where they were",
+            ),
             count("foldedNodes", "nodes over a fold — left where they were"),
-            Slot::optional("flippedTriangles", Need::Number { uom: None, least: None, most: None }, "triangles turned over in plan by the projection — a surface only"),
+            Slot::optional(
+                "flippedTriangles",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "triangles turned over in plan by the projection — a surface only",
+            ),
         ])
     }
 }

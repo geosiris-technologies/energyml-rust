@@ -204,7 +204,11 @@ impl fmt::Display for CellsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CellsError::Reversed { axis, range } => {
-                write!(f, "the {axis} range starts at {} and ends at {}: first, then last", range[0], range[1])
+                write!(
+                    f,
+                    "the {axis} range starts at {} and ends at {}: first, then last",
+                    range[0], range[1]
+                )
             }
             CellsError::Beyond { axis, last, count } => write!(
                 f,
@@ -212,10 +216,17 @@ impl fmt::Display for CellsError {
                 count.saturating_sub(1)
             ),
             CellsError::Mismatched { nodes, mds } => {
-                write!(f, "{nodes} node(s) and {mds} measured depth(s): one depth per node")
+                write!(
+                    f,
+                    "{nodes} node(s) and {mds} measured depth(s): one depth per node"
+                )
             }
-            CellsError::TooShort(nodes) => write!(f, "a path of {nodes} node(s) crosses nothing: two at least"),
-            CellsError::NotFinite { node } => write!(f, "node {node} of the path has no position or no depth"),
+            CellsError::TooShort(nodes) => {
+                write!(f, "a path of {nodes} node(s) crosses nothing: two at least")
+            }
+            CellsError::NotFinite { node } => {
+                write!(f, "node {node} of the path has no position or no depth")
+            }
             CellsError::NotIncreasing { node, md, before } => write!(
                 f,
                 "the measured depth of node {node} is {md}, after {before}: depths increase along a hole"
@@ -258,10 +269,17 @@ pub fn ijk_box(dimensions: [usize; 3], ranges: [Option<[usize; 2]>; 3]) -> Resul
             None => [0, count.saturating_sub(1)],
             Some([first, last]) => {
                 if first > last {
-                    return Err(CellsError::Reversed { axis: name, range: [*first, *last] });
+                    return Err(CellsError::Reversed {
+                        axis: name,
+                        range: [*first, *last],
+                    });
                 }
                 if *last >= count {
-                    return Err(CellsError::Beyond { axis: name, last: *last, count });
+                    return Err(CellsError::Beyond {
+                        axis: name,
+                        last: *last,
+                        count,
+                    });
                 }
                 [*first, *last]
             }
@@ -316,15 +334,26 @@ fn column(grid: usize, cell: &Hexahedron) -> Result<Column, CellsError> {
     let c = &cell.corners;
     for n in 0..4 {
         if (c[n][0] - c[n + 4][0]).abs() > PLAN_TOLERANCE || (c[n][1] - c[n + 4][1]).abs() > PLAN_TOLERANCE {
-            return Err(CellsError::Leaning { grid, cell: cell.index });
+            return Err(CellsError::Leaning {
+                grid,
+                cell: cell.index,
+            });
         }
     }
-    let ring = [[c[0][0], c[0][1]], [c[1][0], c[1][1]], [c[2][0], c[2][1]], [c[3][0], c[3][1]]];
+    let ring = [
+        [c[0][0], c[0][1]],
+        [c[1][0], c[1][1]],
+        [c[2][0], c[2][1]],
+        [c[3][0], c[3][1]],
+    ];
     // A parallelogram: its diagonals share their middle.
     if (ring[0][0] + ring[2][0] - ring[1][0] - ring[3][0]).abs() > PLAN_TOLERANCE
         || (ring[0][1] + ring[2][1] - ring[1][1] - ring[3][1]).abs() > PLAN_TOLERANCE
     {
-        return Err(CellsError::NotParallelogram { grid, cell: cell.index });
+        return Err(CellsError::NotParallelogram {
+            grid,
+            cell: cell.index,
+        });
     }
     let axes = [
         [ring[1][0] - ring[0][0], ring[1][1] - ring[0][1]],
@@ -342,7 +371,10 @@ fn column(grid: usize, cell: &Hexahedron) -> Result<Column, CellsError> {
         origin: ring[0],
         axes,
         ring,
-        heights: [[c[0][2], c[1][2], c[2][2], c[3][2]], [c[4][2], c[5][2], c[6][2], c[7][2]]],
+        heights: [
+            [c[0][2], c[1][2], c[2][2], c[3][2]],
+            [c[4][2], c[5][2], c[6][2], c[7][2]],
+        ],
         reach,
     })
 }
@@ -388,8 +420,14 @@ fn inside(cell: &Column, a: Point, b: Point) -> Vec<(f64, f64, [Edge; 2])> {
     let d = [b[0] - a[0], b[1] - a[1]];
     let turn = {
         let area = cross(
-            [cell.ring[1][0] - cell.ring[0][0], cell.ring[1][1] - cell.ring[0][1]],
-            [cell.ring[3][0] - cell.ring[0][0], cell.ring[3][1] - cell.ring[0][1]],
+            [
+                cell.ring[1][0] - cell.ring[0][0],
+                cell.ring[1][1] - cell.ring[0][1],
+            ],
+            [
+                cell.ring[3][0] - cell.ring[0][0],
+                cell.ring[3][1] - cell.ring[0][1],
+            ],
         );
         if area >= 0.0 { 1.0 } else { -1.0 }
     };
@@ -473,7 +511,12 @@ fn inside(cell: &Column, a: Point, b: Point) -> Vec<(f64, f64, [Edge; 2])> {
         let middle = 0.5 * (s + e);
         if value(g[0], middle) * value(g[1], middle) < 0.0 {
             // The edge each end sits on: the best-ranked cut at that position.
-            let at = |t: f64| cuts.iter().find(|cut| cut.0 == t).map(|cut| cut.1).unwrap_or(Edge::Node);
+            let at = |t: f64| {
+                cuts.iter()
+                    .find(|cut| cut.0 == t)
+                    .map(|cut| cut.1)
+                    .unwrap_or(Edge::Node)
+            };
             out.push((s, e, [at(s), at(e)]));
         }
     }
@@ -488,7 +531,11 @@ pub fn positions(points: &[Point], mds: &[f64], at: &[f64]) -> Vec<Option<Point>
             let segment = mds.windows(2).position(|w| w[0] <= *md && *md <= w[1])?;
             let t = (md - mds[segment]) / (mds[segment + 1] - mds[segment]);
             let (a, b) = (points[segment], points[segment + 1]);
-            Some([a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]), a[2] + t * (b[2] - a[2])])
+            Some([
+                a[0] + t * (b[0] - a[0]),
+                a[1] + t * (b[1] - a[1]),
+                a[2] + t * (b[2] - a[2]),
+            ])
         })
         .collect()
 }
@@ -499,7 +546,10 @@ pub fn positions(points: &[Point], mds: &[f64], at: &[f64]) -> Vec<Option<Point>
 /// are taken in the order given.
 pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, CellsError> {
     if points.len() != mds.len() {
-        return Err(CellsError::Mismatched { nodes: points.len(), mds: mds.len() });
+        return Err(CellsError::Mismatched {
+            nodes: points.len(),
+            mds: mds.len(),
+        });
     }
     if points.len() < 2 {
         return Err(CellsError::TooShort(points.len()));
@@ -509,7 +559,11 @@ pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, C
             return Err(CellsError::NotFinite { node });
         }
         if node > 0 && *md <= mds[node - 1] {
-            return Err(CellsError::NotIncreasing { node, md: *md, before: mds[node - 1] });
+            return Err(CellsError::NotIncreasing {
+                node,
+                md: *md,
+                before: mds[node - 1],
+            });
         }
     }
     let span = mds[mds.len() - 1] - mds[0];
@@ -528,7 +582,11 @@ pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, C
     // -- each grid on its own ----------------------------------------------------
     let mut held: Vec<Vec<Piece>> = Vec::with_capacity(grids.len());
     for (rank, grid) in grids.iter().enumerate() {
-        let columns: Vec<Column> = grid.cells.iter().map(|cell| column(rank, cell)).collect::<Result<_, _>>()?;
+        let columns: Vec<Column> = grid
+            .cells
+            .iter()
+            .map(|cell| column(rank, cell))
+            .collect::<Result<_, _>>()?;
         let mut pieces: Vec<Piece> = Vec::new();
         for node in 0..points.len() - 1 {
             let (a, b) = (points[node], points[node + 1]);
@@ -540,7 +598,11 @@ pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, C
                     continue;
                 }
                 for (s, e, ends) in inside(cell, a, b) {
-                    pieces.push(Piece { cell: cell.index, md: [ma + s * (mb - ma), ma + e * (mb - ma)], ends });
+                    pieces.push(Piece {
+                        cell: cell.index,
+                        md: [ma + s * (mb - ma), ma + e * (mb - ma)],
+                        ends,
+                    });
                 }
             }
         }
@@ -581,14 +643,24 @@ pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, C
         let (s, e) = (pair[0], pair[1]);
         let middle = 0.5 * (s + e);
         let owner = held.iter().enumerate().find_map(|(rank, pieces)| {
-            pieces.iter().find(|piece| piece.md[0] <= middle && middle <= piece.md[1]).map(|piece| (rank, piece))
+            pieces
+                .iter()
+                .find(|piece| piece.md[0] <= middle && middle <= piece.md[1])
+                .map(|piece| (rank, piece))
         });
         let one = owner.map(|(rank, piece)| {
             let face = |edge: Edge, at: f64, here: f64| match edge {
                 Edge::Face(face) if (at - here).abs() <= md_tolerance => Some(face),
                 _ => None,
             };
-            Held { grid: rank, cell: piece.cell, faces: [face(piece.ends[0], piece.md[0], s), face(piece.ends[1], piece.md[1], e)] }
+            Held {
+                grid: rank,
+                cell: piece.cell,
+                faces: [
+                    face(piece.ends[0], piece.md[0], s),
+                    face(piece.ends[1], piece.md[1], e),
+                ],
+            }
         });
         match (spans.last_mut(), one) {
             (Some((range, Some(last))), Some(now)) if last.grid == now.grid && last.cell == now.cell => {
@@ -610,7 +682,11 @@ pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, C
     }
     let mut node_md = vec![spans[0].0[0]];
     node_md.extend(spans.iter().map(|(range, _)| range[1]));
-    Ok(Blocked { node_md, intervals: spans.into_iter().map(|(_, one)| one).collect(), chord_excess })
+    Ok(Blocked {
+        node_md,
+        intervals: spans.into_iter().map(|(_, one)| one).collect(),
+        chord_excess,
+    })
 }
 
 #[cfg(test)]
@@ -643,7 +719,10 @@ mod tests {
                         corners[n] = [x(*a), y(*b), z(0)];
                         corners[n + 4] = [x(*a), y(*b), z(1)];
                     }
-                    cells.push(Hexahedron { index: (i + ni * (j + nj * k)) as u64, corners });
+                    cells.push(Hexahedron {
+                        index: (i + ni * (j + nj * k)) as u64,
+                        corners,
+                    });
                 }
             }
         }
@@ -665,13 +744,18 @@ mod tests {
         let s = mds.windows(2).position(|w| w[0] <= md && md <= w[1]).unwrap();
         let t = (md - mds[s]) / (mds[s + 1] - mds[s]);
         let (a, b) = (points[s], points[s + 1]);
-        [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]), a[2] + t * (b[2] - a[2])]
+        [
+            a[0] + t * (b[0] - a[0]),
+            a[1] + t * (b[1] - a[1]),
+            a[2] + t * (b[2] - a[2]),
+        ]
     }
 
     fn chord_mds(points: &[Point], start: f64) -> Vec<f64> {
         let mut out = vec![start];
         for w in points.windows(2) {
-            let d = ((w[1][0] - w[0][0]).powi(2) + (w[1][1] - w[0][1]).powi(2) + (w[1][2] - w[0][2]).powi(2)).sqrt();
+            let d = ((w[1][0] - w[0][0]).powi(2) + (w[1][1] - w[0][1]).powi(2) + (w[1][2] - w[0][2]).powi(2))
+                .sqrt();
             out.push(out.last().unwrap() + d);
         }
         out
@@ -707,7 +791,12 @@ mod tests {
     fn a_slanted_hole_is_held_by_the_cells_arithmetic_finds() {
         let (origin, size, counts) = ([0.0, 0.0], [10.0, 10.0, 4.0], [4, 3, 5]);
         let grid = boxes(origin, size, counts);
-        let points = [[3.0, 2.5, 6.0], [7.0, 4.0, -3.0], [24.0, 17.0, -12.0], [38.5, 26.0, -25.0]];
+        let points = [
+            [3.0, 2.5, 6.0],
+            [7.0, 4.0, -3.0],
+            [24.0, 17.0, -12.0],
+            [38.5, 26.0, -25.0],
+        ];
         let mds = chord_mds(&points, 50.0);
         let blocked = block(&points, &mds, &[grid]).unwrap();
         assert!(blocked.cell_count() >= 6, "{blocked:?}");
@@ -720,7 +809,10 @@ mod tests {
         for step in 0..=100 {
             let md = mds[0] + (mds[3] - mds[0]) * step as f64 / 100.0;
             if let Some(cell) = by_arithmetic(origin, size, counts, at_md(&points, &mds, md)) {
-                assert!(named.contains(&cell), "cell {cell} at MD {md} is crossed and not named");
+                assert!(
+                    named.contains(&cell),
+                    "cell {cell} at MD {md} is crossed and not named"
+                );
             }
         }
         // Each exit face is the entry face of the next cell, seen from it:
@@ -747,8 +839,16 @@ mod tests {
         let points = [[5.0, 5.0, -5.0], [15.0, 5.0, -5.0]];
         let blocked = block(&points, &[0.0, 10.0], &[grid]).unwrap();
         assert_eq!(blocked.node_md, vec![0.0, 5.0, 10.0]);
-        assert_eq!(blocked.intervals[0].unwrap().faces, [None, Some(3)], "out through I+");
-        assert_eq!(blocked.intervals[1].unwrap().faces, [Some(5), None], "in through I−, ends inside");
+        assert_eq!(
+            blocked.intervals[0].unwrap().faces,
+            [None, Some(3)],
+            "out through I+"
+        );
+        assert_eq!(
+            blocked.intervals[1].unwrap().faces,
+            [Some(5), None],
+            "in through I−, ends inside"
+        );
     }
 
     #[test]
@@ -780,7 +880,11 @@ mod tests {
         assert_eq!(blocked.intervals[0].unwrap().grid, 0);
         assert_eq!(blocked.intervals[0].unwrap().faces, [None, Some(3)]);
         assert_eq!(blocked.intervals[1].unwrap().grid, 1);
-        assert_eq!(blocked.intervals[1].unwrap().faces, [None, None], "not entered through a face of the parent");
+        assert_eq!(
+            blocked.intervals[1].unwrap().faces,
+            [None, None],
+            "not entered through a face of the parent"
+        );
     }
 
     #[test]
@@ -799,37 +903,86 @@ mod tests {
         let chord = 201.0f64.sqrt();
         let blocked = block(&points, &[0.0, chord], &[grid]).unwrap();
         let t = (5.0f64.sqrt() - 1.0) / 2.0;
-        assert!((blocked.node_md[0] - t * chord).abs() < 1e-9, "{:?}", blocked.node_md);
-        assert_eq!(blocked.intervals[0].unwrap().faces[0], Some(0), "in through the top");
+        assert!(
+            (blocked.node_md[0] - t * chord).abs() < 1e-9,
+            "{:?}",
+            blocked.node_md
+        );
+        assert_eq!(
+            blocked.intervals[0].unwrap().faces[0],
+            Some(0),
+            "in through the top"
+        );
     }
 
     #[test]
     fn what_is_refused_is_named() {
         let grid = boxes([0.0, 0.0], [10.0, 10.0, 10.0], [2, 1, 1]);
         let flat = [[5.0, 5.0, -5.0], [15.0, 5.0, -5.0]];
-        assert_eq!(block(&flat, &[0.0], std::slice::from_ref(&grid)), Err(CellsError::Mismatched { nodes: 2, mds: 1 }));
-        assert_eq!(block(&flat, &[3.0, 3.0], std::slice::from_ref(&grid)), Err(CellsError::NotIncreasing { node: 1, md: 3.0, before: 3.0 }));
-        assert!(matches!(block(&flat, &[0.0, 9.0], std::slice::from_ref(&grid)), Err(CellsError::ShorterThanChord { node: 0, .. })));
+        assert_eq!(
+            block(&flat, &[0.0], std::slice::from_ref(&grid)),
+            Err(CellsError::Mismatched { nodes: 2, mds: 1 })
+        );
+        assert_eq!(
+            block(&flat, &[3.0, 3.0], std::slice::from_ref(&grid)),
+            Err(CellsError::NotIncreasing {
+                node: 1,
+                md: 3.0,
+                before: 3.0
+            })
+        );
+        assert!(matches!(
+            block(&flat, &[0.0, 9.0], std::slice::from_ref(&grid)),
+            Err(CellsError::ShorterThanChord { node: 0, .. })
+        ));
         // Along the face the two cells share: x = 10.
         let along = [[10.0, 5.0, -2.0], [10.0, 5.0, -8.0]];
-        assert!(matches!(block(&along, &[0.0, 6.0], std::slice::from_ref(&grid)), Err(CellsError::Shared { grid: 0, .. })));
+        assert!(matches!(
+            block(&along, &[0.0, 6.0], std::slice::from_ref(&grid)),
+            Err(CellsError::Shared { grid: 0, .. })
+        ));
         let away = [[50.0, 5.0, -2.0], [60.0, 5.0, -8.0]];
-        assert_eq!(block(&away, &[0.0, 20.0], std::slice::from_ref(&grid)), Err(CellsError::NoCell));
+        assert_eq!(
+            block(&away, &[0.0, 20.0], std::slice::from_ref(&grid)),
+            Err(CellsError::NoCell)
+        );
         let mut leaning = grid.clone();
         leaning.cells[1].corners[5][0] += 1.0;
-        assert_eq!(block(&flat, &[0.0, 10.0], &[leaning]), Err(CellsError::Leaning { grid: 0, cell: 1 }));
+        assert_eq!(
+            block(&flat, &[0.0, 10.0], &[leaning]),
+            Err(CellsError::Leaning { grid: 0, cell: 1 })
+        );
         let mut kite = grid;
         for n in [2, 6] {
             kite.cells[0].corners[n][0] += 2.0;
         }
-        assert_eq!(block(&flat, &[0.0, 10.0], &[kite]), Err(CellsError::NotParallelogram { grid: 0, cell: 0 }));
+        assert_eq!(
+            block(&flat, &[0.0, 10.0], &[kite]),
+            Err(CellsError::NotParallelogram { grid: 0, cell: 0 })
+        );
     }
 
     #[test]
     fn a_box_is_its_cells_in_resqml_order() {
-        assert_eq!(ijk_box([3, 2, 2], [Some([1, 2]), None, Some([1, 1])]).unwrap(), vec![7, 8, 10, 11]);
+        assert_eq!(
+            ijk_box([3, 2, 2], [Some([1, 2]), None, Some([1, 1])]).unwrap(),
+            vec![7, 8, 10, 11]
+        );
         assert_eq!(ijk_box([3, 2, 2], [None, None, None]).unwrap().len(), 12);
-        assert_eq!(ijk_box([3, 2, 2], [Some([2, 1]), None, None]), Err(CellsError::Reversed { axis: 'i', range: [2, 1] }));
-        assert_eq!(ijk_box([3, 2, 2], [None, None, Some([0, 2])]), Err(CellsError::Beyond { axis: 'k', last: 2, count: 2 }));
+        assert_eq!(
+            ijk_box([3, 2, 2], [Some([2, 1]), None, None]),
+            Err(CellsError::Reversed {
+                axis: 'i',
+                range: [2, 1]
+            })
+        );
+        assert_eq!(
+            ijk_box([3, 2, 2], [None, None, Some([0, 2])]),
+            Err(CellsError::Beyond {
+                axis: 'k',
+                last: 2,
+                count: 2
+            })
+        );
     }
 }

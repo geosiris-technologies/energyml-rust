@@ -57,7 +57,13 @@ pub struct Idw {
 impl Idw {
     /// Shepard's method with exponent `power`, no radius, all samples.
     pub fn new(power: f64) -> Self {
-        Idw { power, radius: None, neighbours: None, exact_within: 1e-12, barriers: None }
+        Idw {
+            power,
+            radius: None,
+            neighbours: None,
+            exact_within: 1e-12,
+            barriers: None,
+        }
     }
 
     /// Restrict to samples within `radius` of the query.
@@ -95,7 +101,10 @@ impl Idw {
         queries: &[[f64; N]],
     ) -> Result<IdwAnswer, Error> {
         if samples.len() != values.len() {
-            return Err(Error::MismatchedLengths { count: samples.len(), values: values.len() });
+            return Err(Error::MismatchedLengths {
+                count: samples.len(),
+                values: values.len(),
+            });
         }
         if !(self.power.is_finite() && self.power > 0.0) {
             return Err(Error::BadPower { given: self.power });
@@ -115,14 +124,15 @@ impl Idw {
             .iter()
             .zip(values)
             .enumerate()
-            .filter(|(_, (point, value))| {
-                value.is_finite() && point.iter().all(|c| c.is_finite())
-            })
+            .filter(|(_, (point, value))| value.is_finite() && point.iter().all(|c| c.is_finite()))
             .map(|(at, (point, value))| (at, *point, *value))
             .collect();
         let set_aside = samples.len() - usable.len();
         if usable.is_empty() {
-            return Err(Error::NoSample { given: samples.len(), set_aside });
+            return Err(Error::NoSample {
+                given: samples.len(),
+                set_aside,
+            });
         }
 
         let radius2 = self.radius.map(|r| r * r);
@@ -141,11 +151,7 @@ impl Idw {
             near.clear();
             let mut exact: Option<f64> = None;
             for (at, (_, point, value)) in usable.iter().enumerate() {
-                let d2: f64 = point
-                    .iter()
-                    .zip(query)
-                    .map(|(a, b)| (a - b) * (a - b))
-                    .sum();
+                let d2: f64 = point.iter().zip(query).map(|(a, b)| (a - b) * (a - b)).sum();
                 if d2 <= exact2 {
                     exact = Some(*value);
                     break;
@@ -164,7 +170,9 @@ impl Idw {
                 // which is the rule. The test is on the first two coordinates
                 // — a fault is a trace in plan view — so a 3D call is cut by
                 // its map-view shadow.
-                Some(faults) => keep_visible(&mut near, self.neighbours, |at| faults.blocks(plan(&usable[at].1), plan(query))),
+                Some(faults) => keep_visible(&mut near, self.neighbours, |at| {
+                    faults.blocks(plan(&usable[at].1), plan(query))
+                }),
                 None => {
                     if let Some(k) = self.neighbours {
                         if near.len() > k {
@@ -189,13 +197,20 @@ impl Idw {
             }
             out.push(weighted / total);
         }
-        Ok(IdwAnswer { values: out, set_aside, unreached })
+        Ok(IdwAnswer {
+            values: out,
+            set_aside,
+            unreached,
+        })
     }
 }
 
 /// The plan-view position of a sample: what a fault trace cuts.
 pub(crate) fn plan<const N: usize>(point: &[f64; N]) -> [f64; 2] {
-    [point.first().copied().unwrap_or(f64::NAN), point.get(1).copied().unwrap_or(f64::NAN)]
+    [
+        point.first().copied().unwrap_or(f64::NAN),
+        point.get(1).copied().unwrap_or(f64::NAN),
+    ]
 }
 
 /// What an interpolation answers — the values, and the two counts that
@@ -241,8 +256,9 @@ mod tests {
         // an implementation that can is not IDW.
         let samples = [[0.0, 0.0], [4.0, 0.0], [2.0, 3.0], [1.0, 1.0]];
         let values = [0.0, 10.0, 5.0, 2.0];
-        let queries: Vec<[f64; 2]> =
-            (0..50).map(|at| [(at as f64) / 10.0, ((at * 7) % 30) as f64 / 10.0]).collect();
+        let queries: Vec<[f64; 2]> = (0..50)
+            .map(|at| [(at as f64) / 10.0, ((at * 7) % 30) as f64 / 10.0])
+            .collect();
         let answer = Idw::new(2.0).interpolate(&samples, &values, &queries).unwrap();
         for value in &answer.values {
             assert!((0.0..=10.0).contains(value), "{value} left [0, 10]");
@@ -264,25 +280,40 @@ mod tests {
         let samples = [[0.0, 0.0], [3.0, 0.0]];
         let values = [0.0, 1.0];
         let query = [[1.0, 0.0]]; // twice as close to the first sample
-        let soft = Idw::new(1.0).interpolate(&samples, &values, &query).unwrap().values[0];
-        let hard = Idw::new(4.0).interpolate(&samples, &values, &query).unwrap().values[0];
-        assert!(hard < soft, "power 4 ({hard}) should sit closer to 0.0 than power 1 ({soft})");
+        let soft = Idw::new(1.0)
+            .interpolate(&samples, &values, &query)
+            .unwrap()
+            .values[0];
+        let hard = Idw::new(4.0)
+            .interpolate(&samples, &values, &query)
+            .unwrap()
+            .values[0];
+        assert!(
+            hard < soft,
+            "power 4 ({hard}) should sit closer to 0.0 than power 1 ({soft})"
+        );
     }
 
     #[test]
     fn a_nan_sample_is_set_aside_and_counted_never_averaged() {
         let samples = [[0.0, 0.0], [2.0, 0.0], [1.0, 5.0]];
         let values = [1.0, 3.0, f64::NAN];
-        let answer =
-            Idw::new(2.0).interpolate(&samples, &values, &[[1.0, 0.0]]).unwrap();
+        let answer = Idw::new(2.0)
+            .interpolate(&samples, &values, &[[1.0, 0.0]])
+            .unwrap();
         assert_eq!(answer.set_aside, 1);
-        assert!((answer.values[0] - 2.0).abs() < 1e-12, "the NaN must not poison the mean");
+        assert!(
+            (answer.values[0] - 2.0).abs() < 1e-12,
+            "the NaN must not poison the mean"
+        );
     }
 
     #[test]
     fn a_nan_coordinate_sets_its_sample_aside_too() {
         let samples = [[0.0, 0.0], [f64::NAN, 0.0]];
-        let answer = Idw::new(2.0).interpolate(&samples, &[1.0, 9.0], &[[5.0, 0.0]]).unwrap();
+        let answer = Idw::new(2.0)
+            .interpolate(&samples, &[1.0, 9.0], &[[5.0, 0.0]])
+            .unwrap();
         assert_eq!(answer.set_aside, 1);
         assert!((answer.values[0] - 1.0).abs() < 1e-12);
     }
@@ -295,10 +326,20 @@ mod tests {
         let samples = [[0.0, 0.0], [6.0, 0.0]];
         let values = [1.0, 100.0];
         let query = [[4.9, 0.0]];
-        let seen = Idw::new(2.0).interpolate(&samples, &values, &query).unwrap().values[0];
-        let cut = Idw::new(2.0).with_barriers(fault).interpolate(&samples, &values, &query).unwrap().values[0];
+        let seen = Idw::new(2.0)
+            .interpolate(&samples, &values, &query)
+            .unwrap()
+            .values[0];
+        let cut = Idw::new(2.0)
+            .with_barriers(fault)
+            .interpolate(&samples, &values, &query)
+            .unwrap()
+            .values[0];
         assert!(seen > 50.0, "without the fault the near sample dominates: {seen}");
-        assert!((cut - 1.0).abs() < 1e-12, "with the fault only the visible sample answers: {cut}");
+        assert!(
+            (cut - 1.0).abs() < 1e-12,
+            "with the fault only the visible sample answers: {cut}"
+        );
     }
 
     /// Every sample behind a fault: out of reach, said as such — `NaN` and
@@ -339,8 +380,9 @@ mod tests {
     #[test]
     fn three_dimensions_work_the_same_way() {
         let samples = [[0.0, 0.0, 0.0], [2.0, 0.0, 0.0]];
-        let answer =
-            Idw::new(2.0).interpolate(&samples, &[1.0, 3.0], &[[1.0, 0.0, 0.0]]).unwrap();
+        let answer = Idw::new(2.0)
+            .interpolate(&samples, &[1.0, 3.0], &[[1.0, 0.0, 0.0]])
+            .unwrap();
         assert!((answer.values[0] - 2.0).abs() < 1e-12);
     }
 
@@ -365,11 +407,17 @@ mod tests {
         );
         assert_eq!(
             Idw::new(2.0).interpolate(&s, &[f64::NAN], &[[0.0, 0.0]]),
-            Err(Error::NoSample { given: 1, set_aside: 1 })
+            Err(Error::NoSample {
+                given: 1,
+                set_aside: 1
+            })
         );
         assert_eq!(
             Idw::new(2.0).interpolate::<2>(&[], &[], &[[0.0, 0.0]]),
-            Err(Error::NoSample { given: 0, set_aside: 0 })
+            Err(Error::NoSample {
+                given: 0,
+                set_aside: 0
+            })
         );
     }
 }

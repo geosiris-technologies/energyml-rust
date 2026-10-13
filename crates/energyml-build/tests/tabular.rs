@@ -16,7 +16,10 @@ fn a_quoted_field_holds_its_separator() {
     let text = "a,b,c\n1,\"x, y\",3\n";
     let table = tabular::read("t.csv", text, Dialect::default()).expect("reads");
     assert_eq!(table.headers, ["a", "b", "c"]);
-    assert_eq!(table.rows, vec![vec!["1".to_string(), "x, y".to_string(), "3".to_string()]]);
+    assert_eq!(
+        table.rows,
+        vec![vec!["1".to_string(), "x, y".to_string(), "3".to_string()]]
+    );
 }
 
 #[test]
@@ -91,7 +94,10 @@ fn an_unclosed_quote_is_refused_by_where_it_opened() {
 
 #[test]
 fn guards_and_comments_are_skipped_and_still_counted() {
-    let dialect = Dialect { skip: 2, ..Dialect::default() };
+    let dialect = Dialect {
+        skip: 2,
+        ..Dialect::default()
+    };
     let text = "garde 1\ngarde 2\n# un commentaire\na,b\n1,2\n";
     let table = tabular::read("t.csv", text, dialect).expect("reads");
     assert_eq!(table.headers, ["a", "b"]);
@@ -102,7 +108,10 @@ fn guards_and_comments_are_skipped_and_still_counted() {
 fn without_a_header_the_position_is_the_name() {
     // `ColumnNamesInFirstRow: false`: only the rank is left to match on,
     // so the columns are named by it.
-    let dialect = Dialect { header: false, ..Dialect::default() };
+    let dialect = Dialect {
+        header: false,
+        ..Dialect::default()
+    };
     let table = tabular::read("t.csv", "1,2,3\n4,5,6\n", dialect).expect("reads");
     assert_eq!(table.headers, ["0", "1", "2"]);
     assert_eq!(table.rows.len(), 2);

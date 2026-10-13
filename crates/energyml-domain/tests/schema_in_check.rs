@@ -42,7 +42,11 @@ fn summary(uuid: &str, ty: &str) -> ObjectSummary {
 fn judge(objects: Vec<(ObjectSummary, Box<dyn DynObject>)>) -> check::Report {
     let parts: Vec<Part<'_>> = objects
         .iter()
-        .map(|(summary, object)| Part { summary, object: object.as_ref(), relationships: &[] })
+        .map(|(summary, object)| Part {
+            summary,
+            object: object.as_ref(),
+            relationships: &[],
+        })
         .collect();
     let summaries: Vec<ObjectSummary> = objects.iter().map(|(s, _)| s.clone()).collect();
     let registry = energyml_schemas::all();
@@ -73,15 +77,21 @@ fn feature(kind: resqml22::CulturalFeatureKindExt) -> (ObjectSummary, Box<dyn Dy
 /// of `check` must carry the finding, as an **error**.
 #[test]
 fn check_reports_an_open_enumeration_value_without_the_colon() {
-    let bad = judge(vec![feature(resqml22::CulturalFeatureKindExt::Other("section line".into()))]);
+    let bad = judge(vec![feature(resqml22::CulturalFeatureKindExt::Other(
+        "section line".into(),
+    ))]);
     assert!(
-        bad.schema.iter().any(|i| i.code == "pattern" && i.severity == Severity::Error && i.path.contains("CulturalFeatureKind")),
+        bad.schema.iter().any(|i| i.code == "pattern"
+            && i.severity == Severity::Error
+            && i.path.contains("CulturalFeatureKind")),
         "{:?}",
         bad.schema
     );
     assert!(bad.errors() >= 1);
 
-    let ok = judge(vec![feature(resqml22::CulturalFeatureKindExt::Other("energyml-rust:section line".into()))]);
+    let ok = judge(vec![feature(resqml22::CulturalFeatureKindExt::Other(
+        "energyml-rust:section line".into(),
+    ))]);
     assert!(ok.schema.is_empty(), "{:?}", ok.schema);
 }
 
@@ -91,21 +101,36 @@ fn check_reports_an_open_enumeration_value_without_the_colon() {
 #[test]
 fn check_reports_a_datetime_that_is_not_one() {
     let (s, _) = feature(resqml22::CulturalFeatureKindExt::Fieldblock);
-    let mut f = resqml22::CulturalFeature { uuid: UUID_A.into(), citation: citation(), ..Default::default() };
+    let mut f = resqml22::CulturalFeature {
+        uuid: UUID_A.into(),
+        citation: citation(),
+        ..Default::default()
+    };
     f.citation.creation = "2024-13-45T99:99:99Z".into();
     let report = judge(vec![(s, Box::new(f))]);
-    assert!(report.schema.iter().any(|i| i.code == "lexical-dateTime"), "{:?}", report.schema);
+    assert!(
+        report.schema.iter().any(|i| i.code == "lexical-dateTime"),
+        "{:?}",
+        report.schema
+    );
 }
 
 /// prodml 2.3 PtaParameters.xsd l. 121: `Abbreviation` is `fixed="Pbar"` on
 /// `AveragePressure`.
 #[test]
 fn a_fixed_value_is_enforced() {
-    let mut p = prodml23::AveragePressure { abbreviation: "Pbar".into(), ..Default::default() };
+    let mut p = prodml23::AveragePressure {
+        abbreviation: "Pbar".into(),
+        ..Default::default()
+    };
     assert!(!p.validate().errors().any(|i| i.code == "fixed"));
     p.abbreviation = "Zzz".into();
     let r = p.validate();
-    assert!(r.errors().any(|i| i.code == "fixed" && i.path == "Abbreviation"), "{:?}", r.issues);
+    assert!(
+        r.errors().any(|i| i.code == "fixed" && i.path == "Abbreviation"),
+        "{:?}",
+        r.issues
+    );
 }
 
 /// Identifier Specification v5.0 §2.3.3: `QualifiedType` is `resqml22.Foo`. A
@@ -125,9 +150,15 @@ fn check_reports_a_reference_to_a_type_nobody_defines() {
         },
         ..Default::default()
     };
-    let report = judge(vec![(summary(UUID_A, "resqml22.GenericFeatureInterpretation"), Box::new(object))]);
+    let report = judge(vec![(
+        summary(UUID_A, "resqml22.GenericFeatureInterpretation"),
+        Box::new(object),
+    )]);
     assert!(
-        report.references.iter().any(|r| r.kind == RefIssueKind::UnknownType),
+        report
+            .references
+            .iter()
+            .any(|r| r.kind == RefIssueKind::UnknownType),
         "{:?}",
         report.references
     );
@@ -145,7 +176,12 @@ fn check_reports_a_reference_to_a_type_nobody_defines() {
             ..Default::default()
         }),
     )]);
-    assert!(!known.references.iter().any(|r| r.kind == RefIssueKind::UnknownType));
+    assert!(
+        !known
+            .references
+            .iter()
+            .any(|r| r.kind == RefIssueKind::UnknownType)
+    );
 }
 
 /// eml 2.3 Abstract.xsd l. 393–399: `Citation.Format` *"Must be human and
@@ -155,16 +191,42 @@ fn check_reports_a_reference_to_a_type_nobody_defines() {
 /// schema passes an empty one: `check` warns, citing the documentation.
 #[test]
 fn an_empty_citation_format_is_a_warning_the_schema_alone_would_miss() {
-    let mut empty = resqml22::CulturalFeature { uuid: UUID_A.into(), citation: citation(), ..Default::default() };
+    let mut empty = resqml22::CulturalFeature {
+        uuid: UUID_A.into(),
+        citation: citation(),
+        ..Default::default()
+    };
     empty.citation.format = "  ".into();
-    let report = judge(vec![(summary(UUID_A, "resqml22.CulturalFeature"), Box::new(empty))]);
-    let found: Vec<_> = report.schema.iter().filter(|i| i.code == "citation-format-empty").collect();
+    let report = judge(vec![(
+        summary(UUID_A, "resqml22.CulturalFeature"),
+        Box::new(empty),
+    )]);
+    let found: Vec<_> = report
+        .schema
+        .iter()
+        .filter(|i| i.code == "citation-format-empty")
+        .collect();
     assert_eq!(found.len(), 1, "{:?}", report.schema);
     assert_eq!(found[0].severity, Severity::Warning);
     assert_eq!(found[0].path, "Citation.Format");
-    assert_eq!(report.errors(), 0, "the schema admits it: a warning, not an error");
+    assert_eq!(
+        report.errors(),
+        0,
+        "the schema admits it: a warning, not an error"
+    );
 
-    let named = resqml22::CulturalFeature { uuid: UUID_A.into(), citation: citation(), ..Default::default() };
-    let report = judge(vec![(summary(UUID_A, "resqml22.CulturalFeature"), Box::new(named))]);
-    assert!(!report.schema.iter().any(|i| i.code == "citation-format-empty"), "{:?}", report.schema);
+    let named = resqml22::CulturalFeature {
+        uuid: UUID_A.into(),
+        citation: citation(),
+        ..Default::default()
+    };
+    let report = judge(vec![(
+        summary(UUID_A, "resqml22.CulturalFeature"),
+        Box::new(named),
+    )]);
+    assert!(
+        !report.schema.iter().any(|i| i.code == "citation-format-empty"),
+        "{:?}",
+        report.schema
+    );
 }

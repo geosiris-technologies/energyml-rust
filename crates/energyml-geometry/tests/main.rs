@@ -12,13 +12,13 @@
 mod build;
 mod connection;
 mod corpus;
-mod fixtures;
-mod cut_sources;
 mod cut_many;
+mod cut_sources;
 mod declared;
 mod defined;
 mod derived;
 mod drawable;
+mod fixtures;
 mod heads;
 mod package_scene;
 mod plane;

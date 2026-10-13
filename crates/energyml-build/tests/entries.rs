@@ -32,7 +32,10 @@ struct Held {
 
 impl Held {
     fn with(mut self, source: &str, text: &str, declared: Option<&str>) -> Self {
-        self.texts.insert(source.to_string(), (text.to_string(), declared.map(str::to_string)));
+        self.texts.insert(
+            source.to_string(),
+            (text.to_string(), declared.map(str::to_string)),
+        );
         self
     }
 }
@@ -40,7 +43,10 @@ impl Held {
 impl Reader for Held {
     fn text(&mut self, source: &Where) -> Result<(String, Option<String>), String> {
         self.asked.push(format!("{source:?}"));
-        self.texts.get(source.as_str()).cloned().ok_or_else(|| format!("reading {}: not held", source.as_str()))
+        self.texts
+            .get(source.as_str())
+            .cloned()
+            .ok_or_else(|| format!("reading {}: not held", source.as_str()))
     }
 
     fn package(&mut self, path: &str) -> Result<&EpcStore, String> {
@@ -59,9 +65,15 @@ const ONE_POINT: &str = r#"{"type":"FeatureCollection","features":[{"type":"Feat
 fn a_slot_is_words_before_an_equals_sign_and_a_path_is_not_one() {
     use entries::slot_of;
     assert_eq!(slot_of("top=model.epc#abc"), (Some("top"), "model.epc#abc"));
-    assert_eq!(slot_of("surfaces 2=model.epc#abc"), (Some("surfaces 2"), "model.epc#abc"));
+    assert_eq!(
+        slot_of("surfaces 2=model.epc#abc"),
+        (Some("surfaces 2"), "model.epc#abc")
+    );
     assert_eq!(slot_of("model.epc#abc"), (None, "model.epc#abc"));
-    assert_eq!(slot_of(r"C:\data\a=b\model.epc#abc"), (None, r"C:\data\a=b\model.epc#abc"));
+    assert_eq!(
+        slot_of(r"C:\data\a=b\model.epc#abc"),
+        (None, r"C:\data\a=b\model.epc#abc")
+    );
     assert_eq!(slot_of("=model.epc"), (None, "=model.epc"));
 }
 
@@ -84,11 +96,17 @@ fn a_table_and_a_geojson_are_told_apart_by_name_then_by_declared_type() {
     assert!(entries::reads_as_table("passes.csv", None));
     assert!(entries::reads_as_table("PASSES.TSV", None));
     assert!(!entries::reads_as_table("gabarit.json", None));
-    assert!(entries::reads_as_table("download", Some("text/csv; charset=utf-8")));
+    assert!(entries::reads_as_table(
+        "download",
+        Some("text/csv; charset=utf-8")
+    ));
 
     assert!(entries::reads_as_geojson("forages.geojson", None));
     assert!(entries::reads_as_geojson("forages.json", None));
-    assert!(entries::reads_as_geojson("features", Some("application/geo+json; charset=utf-8")));
+    assert!(entries::reads_as_geojson(
+        "features",
+        Some("application/geo+json; charset=utf-8")
+    ));
     assert!(!entries::reads_as_geojson("passes.csv", None));
     assert!(!entries::reads_as_geojson("features", None));
 }
@@ -98,10 +116,15 @@ fn a_table_and_a_geojson_are_told_apart_by_name_then_by_declared_type() {
 /// which is what an operation reads a stage from.
 #[test]
 fn a_geojson_is_a_collection_named_after_its_file_and_its_piece_after_the_slot() {
-    let mut held = Held::default().with("data/forages.geojson", ONE_POINT, None).with("autres.geojson", ONE_POINT, None);
+    let mut held = Held::default()
+        .with("data/forages.geojson", ONE_POINT, None)
+        .with("autres.geojson", ONE_POINT, None);
     let mut set_aside = Vec::new();
     let pieces = entries::pieces_of(
-        &["features=data/forages.geojson".to_string(), "autres.geojson".to_string()],
+        &[
+            "features=data/forages.geojson".to_string(),
+            "autres.geojson".to_string(),
+        ],
         None,
         &mut held,
         &mut set_aside,
@@ -109,7 +132,9 @@ fn a_geojson_is_a_collection_named_after_its_file_and_its_piece_after_the_slot()
     .expect("both read");
     let names: Vec<&str> = pieces.iter().map(|(name, _)| name).collect();
     assert_eq!(names, ["features", "autres.geojson"]);
-    let Some(Source::Features { name, features }) = pieces.get("features") else { panic!("a collection") };
+    let Some(Source::Features { name, features }) = pieces.get("features") else {
+        panic!("a collection")
+    };
     assert_eq!(name, "forages.geojson");
     assert_eq!(features.len(), 1);
     assert!(set_aside.is_empty(), "{set_aside:?}");
@@ -123,19 +148,35 @@ fn an_address_with_a_fragment_is_fetched_and_never_opened_as_a_package() {
     let url = "https://a.example/x.json#part";
     let mut held = Held::default().with(url, ONE_POINT, Some("application/geo+json"));
     let mut set_aside = Vec::new();
-    let pieces = entries::pieces_of(&[url.to_string()], None, &mut held, &mut set_aside).expect("read from the address");
-    assert!(held.packages.is_empty(), "a package was opened: {:?}", held.packages);
+    let pieces = entries::pieces_of(&[url.to_string()], None, &mut held, &mut set_aside)
+        .expect("read from the address");
+    assert!(
+        held.packages.is_empty(),
+        "a package was opened: {:?}",
+        held.packages
+    );
     assert_eq!(held.asked, [format!("{:?}", Where::Url(url.to_string()))]);
     // Named after the **file** the address names, fragment dropped.
-    assert_eq!(pieces.iter().map(|(name, _)| name).collect::<Vec<_>>(), ["x.json"]);
+    assert_eq!(
+        pieces.iter().map(|(name, _)| name).collect::<Vec<_>>(),
+        ["x.json"]
+    );
 
     // And a path with a `#` **is** an object of a package: the reader is asked
     // for the package, and its refusal comes back as it was said.
     let mut held = Held::default();
-    let why = entries::pieces_of(&["top=model.epc#abc".to_string()], None, &mut held, &mut set_aside)
-        .expect_err("no package here");
+    let why = entries::pieces_of(
+        &["top=model.epc#abc".to_string()],
+        None,
+        &mut held,
+        &mut set_aside,
+    )
+    .expect_err("no package here");
     assert_eq!(held.packages, ["model.epc"]);
-    assert_eq!(why, Unread::Said("opening model.epc: no package here".to_string()));
+    assert_eq!(
+        why,
+        Unread::Said("opening model.epc: no package here".to_string())
+    );
 }
 
 /// **The command's refusal, word for word.** A table without a template names
@@ -145,8 +186,14 @@ fn an_address_with_a_fragment_is_fetched_and_never_opened_as_a_package() {
 fn a_table_without_a_template_is_refused_naming_how_to_give_one() {
     let mut held = Held::default().with("passes.csv", "PROF;NOM\n1;a\n", None);
     let mut set_aside = Vec::new();
-    let why = entries::pieces_of(&["passes.csv".to_string()], None, &mut held, &mut set_aside).expect_err("no template");
-    assert_eq!(why, Unread::NoTemplate { source: "passes.csv".to_string() });
+    let why = entries::pieces_of(&["passes.csv".to_string()], None, &mut held, &mut set_aside)
+        .expect_err("no template");
+    assert_eq!(
+        why,
+        Unread::NoTemplate {
+            source: "passes.csv".to_string()
+        }
+    );
     assert_eq!(
         why.said("`--template <file.json>`"),
         "passes.csv: a table needs `--template <file.json>` — an OSDU ColumnBasedTableTemplate, a File.TabularData, or the bare list of column definitions. What a column means is read from it, never guessed from its heading"
@@ -166,11 +213,24 @@ fn a_table_with_its_template_is_a_table() {
     let mut held = Held::default()
         .with("gabarit.json", &template.to_string(), None)
         .with("passes.csv", "PROF;NOM\n1;a\n2;b\n", None);
-    let read = entries::template(&mut held, &Where::File("gabarit.json".to_string())).expect("a bare list is a template");
+    let read = entries::template(&mut held, &Where::File("gabarit.json".to_string()))
+        .expect("a bare list is a template");
     let mut set_aside = Vec::new();
-    let pieces =
-        entries::pieces_of(&["table=passes.csv".to_string()], Some(&read), &mut held, &mut set_aside).expect("read");
-    let Some(Source::Table { name, table, template }) = pieces.get("table") else { panic!("a table") };
+    let pieces = entries::pieces_of(
+        &["table=passes.csv".to_string()],
+        Some(&read),
+        &mut held,
+        &mut set_aside,
+    )
+    .expect("read");
+    let Some(Source::Table {
+        name,
+        table,
+        template,
+    }) = pieces.get("table")
+    else {
+        panic!("a table")
+    };
     assert_eq!(name, "passes.csv");
     assert_eq!(table.headers, ["PROF", "NOM"]);
     assert_eq!(table.rows.len(), 2);
@@ -183,10 +243,19 @@ fn a_table_with_its_template_is_a_table() {
 fn a_file_of_another_kind_is_refused_naming_what_is_read() {
     let mut held = Held::default().with("notes.txt", "hello", Some("text/plain"));
     let mut set_aside = Vec::new();
-    let why = entries::pieces_of(&["notes.txt".to_string()], None, &mut held, &mut set_aside).expect_err("refused");
-    let Unread::Said(said) = &why else { panic!("said in full: {why:?}") };
-    assert!(said.starts_with("notes.txt: only a GeoJSON can be read here for now"), "{said}");
-    assert!(said.contains("(it is named `notes.txt`, served as `text/plain`"), "{said}");
+    let why =
+        entries::pieces_of(&["notes.txt".to_string()], None, &mut held, &mut set_aside).expect_err("refused");
+    let Unread::Said(said) = &why else {
+        panic!("said in full: {why:?}")
+    };
+    assert!(
+        said.starts_with("notes.txt: only a GeoJSON can be read here for now"),
+        "{said}"
+    );
+    assert!(
+        said.contains("(it is named `notes.txt`, served as `text/plain`"),
+        "{said}"
+    );
 }
 
 /// A feature that does not read is set aside **by name**, and the rest still
@@ -199,8 +268,11 @@ fn a_feature_that_does_not_read_is_set_aside_by_name() {
     ]}"#;
     let mut held = Held::default().with("mixed.geojson", mixed, None);
     let mut set_aside = Vec::new();
-    let pieces = entries::pieces_of(&["mixed.geojson".to_string()], None, &mut held, &mut set_aside).expect("half reads");
-    let Some(Source::Features { features, .. }) = pieces.get("mixed.geojson") else { panic!("a collection") };
+    let pieces = entries::pieces_of(&["mixed.geojson".to_string()], None, &mut held, &mut set_aside)
+        .expect("half reads");
+    let Some(Source::Features { features, .. }) = pieces.get("mixed.geojson") else {
+        panic!("a collection")
+    };
     assert_eq!(features.len(), 1);
     assert_eq!(set_aside.len(), 1, "{set_aside:?}");
     assert!(set_aside[0].starts_with("mixed.geojson: "), "{set_aside:?}");

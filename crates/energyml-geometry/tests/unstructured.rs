@@ -21,9 +21,9 @@ use energyml_domain::source::{ArraySource, ObjectSource};
 use energyml_eml_2_0::{DataObjectReference, Hdf5Dataset};
 use energyml_geometry::{Topology, geometry};
 use energyml_resqml_2_0_1::{
-    AbstractBooleanArray, AbstractIntegerArray, AbstractPoint3dArray, AbstractValueArray,
-    BooleanHdf5Array, CellShape, IntegerHdf5Array, Point3dHdf5Array, ResqmlJaggedArray,
-    UnstructuredGridGeometry, UnstructuredGridRepresentation,
+    AbstractBooleanArray, AbstractIntegerArray, AbstractPoint3dArray, AbstractValueArray, BooleanHdf5Array,
+    CellShape, IntegerHdf5Array, Point3dHdf5Array, ResqmlJaggedArray, UnstructuredGridGeometry,
+    UnstructuredGridRepresentation,
 };
 use energyml_storage::array::{ArrayBuffer, ArrayData, ArrayLocation, ArrayMetadata, ArrayValues};
 
@@ -154,11 +154,9 @@ impl Cube {
                 face_count: self.face_count,
                 nodes_per_face: jagged("/NodesPerFace/elements", "/NodesPerFace/cumulativeLength"),
                 faces_per_cell: jagged("/FacesPerCell/elements", "/FacesPerCell/cumulativeLength"),
-                cell_face_is_right_handed: Some(AbstractBooleanArray::BooleanHdf5Array(
-                    BooleanHdf5Array {
-                        values: dataset("/CellFaceIsRightHanded"),
-                    },
-                )),
+                cell_face_is_right_handed: Some(AbstractBooleanArray::BooleanHdf5Array(BooleanHdf5Array {
+                    values: dataset("/CellFaceIsRightHanded"),
+                })),
                 ..Default::default()
             }),
             ..Default::default()

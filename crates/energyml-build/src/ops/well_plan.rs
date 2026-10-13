@@ -81,7 +81,7 @@
 //! - API Bulletin D20, *Directional Drilling Survey Calculation Methods and Terminology*, 1985; and Sawaryn & Thorogood, *A Compendium of Directional Calculations Based on the Minimum Curvature Method* (SPE 84246, SPE Drilling & Completion 20(1), 2005), as cited in `energyml-analysis` (`well_plan`, `survey`).
 //!   TODO(reference): verify — these citations are carried over from `energyml-analysis`, whose own copy of them is pending verification.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use energyml_analysis::heights::{Height, Heights};
 use energyml_analysis::well_plan::{self, PlanError, Section, Station, Tie, Turn};
@@ -92,7 +92,8 @@ use crate::crs::FrameKind;
 use crate::declare::{Inputs, Params, Scalar, Shape as ShapeIn, Suggestions};
 use crate::geojson::Position;
 use crate::operation::{
-    About, ActivityDraft, Category, Context, Error, Identity, Need, NewObject, Note, Operation, Plan, Refusal, Slot, When,
+    About, ActivityDraft, Category, Context, Error, Identity, Need, NewObject, Note, Operation, Plan,
+    Refusal, Slot, When,
 };
 use crate::pieces::{Known, Pieces, Ref};
 
@@ -104,7 +105,8 @@ use super::written::WrittenImposed;
 pub struct WellFromPlan;
 
 /// The forms a section is written in, for a refusal.
-const FORMS: &str = "`hold <length>`, `hold to <md>`, or `build|drop|curve <rate °/30 m> <inclination °> <azimuth °>`";
+const FORMS: &str =
+    "`hold <length>`, `hold to <md>`, or `build|drop|curve <rate °/30 m> <inclination °> <azimuth °>`";
 
 /// A parent is straight between two nodes when the chord joining them is as
 /// long as the hole between them, to this fraction. A 10 m stretch turning
@@ -147,9 +149,13 @@ impl PlanSection {
         };
         let section = match *words.as_slice() {
             [verb, to, md] if verb.eq_ignore_ascii_case("hold") && to.eq_ignore_ascii_case("to") => {
-                Section::HoldTo { md: number(md, "the measured depth")? }
+                Section::HoldTo {
+                    md: number(md, "the measured depth")?,
+                }
             }
-            [verb, length] if verb.eq_ignore_ascii_case("hold") => Section::Hold { length: number(length, "the length")? },
+            [verb, length] if verb.eq_ignore_ascii_case("hold") => Section::Hold {
+                length: number(length, "the length")?,
+            },
             [verb, rate, inclination, azimuth] => {
                 let turn = match verb.to_ascii_lowercase().as_str() {
                     "build" => Turn::Build,
@@ -166,7 +172,10 @@ impl PlanSection {
             }
             _ => return Err(format!("`{text}` is none of {FORMS}")),
         };
-        Ok(PlanSection { text: words.join(" "), section })
+        Ok(PlanSection {
+            text: words.join(" "),
+            section,
+        })
     }
 }
 
@@ -258,18 +267,35 @@ fn parent_of(shape: &ShapeIn) -> Result<Parent<'_>, String> {
     let known = shape.known.as_ref().ok_or_else(|| {
         format!("`{name}` comes with nothing known of it: a sidetrack leaves a wellbore frame of the package, whose measured depths, trajectory and datum it continues")
     })?;
-    let points: Vec<[f64; 3]> = shape.geometry.patches.iter().flat_map(|patch| patch.points.iter().copied()).collect();
+    let points: Vec<[f64; 3]> = shape
+        .geometry
+        .patches
+        .iter()
+        .flat_map(|patch| patch.points.iter().copied())
+        .collect();
     let mds = known.node_mds.as_deref().ok_or_else(|| {
         format!("`{name}` states no measured depth for its nodes — it is no wellbore frame, or this build cannot read its arrays")
     })?;
     if mds.len() != points.len() {
-        return Err(format!("`{name}` has {} node(s) and {} measured depth(s): each node is where its depth is", points.len(), mds.len()));
+        return Err(format!(
+            "`{name}` has {} node(s) and {} measured depth(s): each node is where its depth is",
+            points.len(),
+            mds.len()
+        ));
     }
     if mds.len() < 2 {
-        return Err(format!("`{name}` has {} node(s): a direction is read between two", mds.len()));
+        return Err(format!(
+            "`{name}` has {} node(s): a direction is read between two",
+            mds.len()
+        ));
     }
     if let Some(at) = mds.windows(2).position(|pair| pair[1] <= pair[0]) {
-        return Err(format!("the measured depths of `{name}` do not increase at node {}: {} then {}", at + 1, mds[at], mds[at + 1]));
+        return Err(format!(
+            "the measured depths of `{name}` do not increase at node {}: {} then {}",
+            at + 1,
+            mds[at],
+            mds[at + 1]
+        ));
     }
     let trajectory = known.trajectory.as_ref().ok_or_else(|| {
         format!("`{name}` names no trajectory: a sidetrack's `ParentIntersection` names the parent trajectory (RESQML 2.2 Wells.xsd, 1..1)")
@@ -277,7 +303,14 @@ fn parent_of(shape: &ShapeIn) -> Result<Parent<'_>, String> {
     let datum = known.datum.as_ref().ok_or_else(|| {
         format!("`{name}` names no datum through its trajectory: a sidetrack's measured depths are counted from its parent's")
     })?;
-    Ok(Parent { name, points, mds, trajectory, datum, crs: known.crs.as_ref() })
+    Ok(Parent {
+        name,
+        points,
+        mds,
+        trajectory,
+        datum,
+        crs: known.crs.as_ref(),
+    })
 }
 
 /// Where a sidetrack leaves its parent.
@@ -295,10 +328,17 @@ struct Kickoff {
 fn kickoff(parent: &Parent<'_>, md: f64, up: bool) -> Result<Kickoff, String> {
     let (first, last) = (parent.mds[0], parent.mds[parent.mds.len() - 1]);
     if !(first..=last).contains(&md) {
-        return Err(format!("MD {md} is not on `{}`, whose nodes run from MD {first} to MD {last}", parent.name));
+        return Err(format!(
+            "MD {md} is not on `{}`, whose nodes run from MD {first} to MD {last}",
+            parent.name
+        ));
     }
     // The stretch below the kick-off — the last one when it is the last node.
-    let i = parent.mds.windows(2).position(|pair| md < pair[1]).unwrap_or(parent.mds.len() - 2);
+    let i = parent
+        .mds
+        .windows(2)
+        .position(|pair| md < pair[1])
+        .unwrap_or(parent.mds.len() - 2);
     let (m0, m1) = (parent.mds[i], parent.mds[i + 1]);
     let (p0, p1) = (parent.points[i], parent.points[i + 1]);
     let d = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
@@ -316,12 +356,25 @@ fn kickoff(parent: &Parent<'_>, md: f64, up: bool) -> Result<Kickoff, String> {
     // up, +z in one that counts down.
     let down = if up { -d[2] / chord } else { d[2] / chord };
     let (inclination, azimuth) = well_plan::angles([d[1] / chord, d[0] / chord, down], 0.0);
-    Ok(Kickoff { at, tie: Tie { md, inclination, azimuth }, between: (m0, m1) })
+    Ok(Kickoff {
+        at,
+        tie: Tie {
+            md,
+            inclination,
+            azimuth,
+        },
+        between: (m0, m1),
+    })
 }
 
 /// The ground under `at`, read on `surface` — refused when the surface is in
 /// another frame, or counts another unit, or has nothing under `at`.
-fn ground_under(surface: &ShapeIn, at: [f64; 2], frame_uuid: &str, frame_title: &str) -> Result<f64, Refusal> {
+fn ground_under(
+    surface: &ShapeIn,
+    at: [f64; 2],
+    frame_uuid: &str,
+    frame_title: &str,
+) -> Result<f64, Refusal> {
     // One frame, one unit — the rule of `project`.
     if let Some(crs) = surface.known.as_ref().and_then(|known| known.crs.as_ref())
         && !crs.uuid.eq_ignore_ascii_case(frame_uuid)
@@ -334,22 +387,38 @@ fn ground_under(surface: &ShapeIn, at: [f64; 2], frame_uuid: &str, frame_title: 
             ),
         ));
     }
-    if let Some(uom) = surface.known.as_ref().and_then(|known| known.vertical_uom.as_deref())
+    if let Some(uom) = surface
+        .known
+        .as_ref()
+        .and_then(|known| known.vertical_uom.as_deref())
         && uom != "m"
     {
-        return Err(Refusal::on("surface", format!("`{}` counts its heights in `{uom}`, and a plan is in metres", surface.name)));
+        return Err(Refusal::on(
+            "surface",
+            format!(
+                "`{}` counts its heights in `{uom}`, and a plan is in metres",
+                surface.name
+            ),
+        ));
     }
     let faces = support::Faces::of(&surface.geometry);
-    let heights = Heights::of(faces.surface(), "surface", "under the wellhead").map_err(|why| Refusal::on("surface", why))?;
+    let heights = Heights::of(faces.surface(), "surface", "under the wellhead")
+        .map_err(|why| Refusal::on("surface", why))?;
     match heights.height(at[0], at[1]) {
         Height::At(z) => Ok(z),
         Height::Outside => Err(Refusal::on(
             "surface",
-            format!("the head ({}, {}) is outside `{}`: no face lies under it — give `ground`, or a surface that covers the head", at[0], at[1], surface.name),
+            format!(
+                "the head ({}, {}) is outside `{}`: no face lies under it — give `ground`, or a surface that covers the head",
+                at[0], at[1], surface.name
+            ),
         )),
         Height::Folded => Err(Refusal::on(
             "surface",
-            format!("`{}` folds under the head ({}, {}): several faces disagree on its height there — give `ground`", surface.name, at[0], at[1]),
+            format!(
+                "`{}` folds under the head ({}, {}): several faces disagree on its height there — give `ground`",
+                surface.name, at[0], at[1]
+            ),
         )),
     }
 }
@@ -361,7 +430,13 @@ fn ground_under(surface: &ShapeIn, at: [f64; 2], frame_uuid: &str, frame_title: 
 /// A copy, and named as one: `well.rs` keeps them inline, and extracting a
 /// `well::pair_in` that both call is the change that removes this. A third
 /// writer would not be justified (`crates/energyml-build/ARCHITECTURE.md`).
-fn pair(title: &str, seed: &str, when: &When, identity: &Identity, rank: &mut usize) -> Result<(Value, Vec<NewObject>), Error> {
+fn pair(
+    title: &str,
+    seed: &str,
+    when: &When,
+    identity: &Identity,
+    rank: &mut usize,
+) -> Result<(Value, Vec<NewObject>), Error> {
     let feature_uuid = support::next_uuid(identity, &format!("well-feature:{seed}"), rank)?;
     let feature_title = format!("{title} — feature");
     let feature = NewObject {
@@ -460,7 +535,10 @@ impl Operation for WellFromPlan {
         {
             return Err(Refusal::on(
                 "surface",
-                format!("`{}` has no face — the ground is read on triangles or a grid's cells, and points or lines have none", surface.name),
+                format!(
+                    "`{}` has no face — the ground is read on triangles or a grid's cells, and points or lines have none",
+                    surface.name
+                ),
             ));
         }
         if let Some(parent) = &inputs.parent {
@@ -469,7 +547,12 @@ impl Operation for WellFromPlan {
         Ok(())
     }
 
-    fn plan(&self, inputs: WellPlanInputs, params: WellPlanParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: WellPlanInputs,
+        params: WellPlanParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let written = &params.written;
         let title = written.naming.title();
         let identity = cx.identity;
@@ -484,32 +567,57 @@ impl Operation for WellFromPlan {
         };
         match (&parent, params.kickoff_md) {
             (Some(one), None) => {
-                return Err(Refusal::on("kickoffMd", format!("a sidetrack leaves `{}` at a measured depth: give it", one.name)));
+                return Err(Refusal::on(
+                    "kickoffMd",
+                    format!("a sidetrack leaves `{}` at a measured depth: give it", one.name),
+                ));
             }
             (None, Some(_)) => {
-                return Err(Refusal::on("kickoffMd", "a kick-off, and no parent to kick off from: give the wellbore frame this sidetrack leaves as `parent`"));
+                return Err(Refusal::on(
+                    "kickoffMd",
+                    "a kick-off, and no parent to kick off from: give the wellbore frame this sidetrack leaves as `parent`",
+                ));
             }
             _ => {}
         }
         if parent.is_some() {
             if params.head_x.is_some() || params.head_y.is_some() {
                 let slot = if params.head_x.is_some() { "headX" } else { "headY" };
-                return Err(Refusal::on(slot, "a sidetrack starts on its parent, and its head is its parent's: leave the head out"));
+                return Err(Refusal::on(
+                    slot,
+                    "a sidetrack starts on its parent, and its head is its parent's: leave the head out",
+                ));
             }
             if params.datum_height != 0.0 {
-                return Err(Refusal::on("datumHeight", "a sidetrack measures from its parent's datum, and creates none: leave its height out"));
+                return Err(Refusal::on(
+                    "datumHeight",
+                    "a sidetrack measures from its parent's datum, and creates none: leave its height out",
+                ));
             }
         } else if params.datum_height > 0.0 && params.datum_kind == DatumKind::GroundLevel {
             return Err(Refusal::on(
                 "datumKind",
-                format!("a ground-level datum is at the ground, and this one is {} m above it — say what it is: a kelly bushing, a derrick floor", params.datum_height),
+                format!(
+                    "a ground-level datum is at the ground, and this one is {} m above it — say what it is: a kelly bushing, a derrick floor",
+                    params.datum_height
+                ),
             ));
         }
         if params.ground.is_some() && inputs.surface.is_some() {
-            return Err(Refusal::on("ground", "`ground` and `surface` are two answers to the same question: give one"));
+            return Err(Refusal::on(
+                "ground",
+                "`ground` and `surface` are two answers to the same question: give one",
+            ));
         }
-        if parent.is_some() && params.max_depth.is_none() && (params.ground.is_some() || inputs.surface.is_some()) {
-            let slot = if params.ground.is_some() { "ground" } else { "surface" };
+        if parent.is_some()
+            && params.max_depth.is_none()
+            && (params.ground.is_some() || inputs.surface.is_some())
+        {
+            let slot = if params.ground.is_some() {
+                "ground"
+            } else {
+                "surface"
+            };
             return Err(Refusal::on(
                 slot,
                 "a sidetrack's datum is its parent's, so the ground serves only `maxDepth`, which is not given — an answer that changes nothing is a misreading somewhere",
@@ -534,14 +642,22 @@ impl Operation for WellFromPlan {
             ));
         }
         let frame_uuid = frame.crs["Uuid"].as_str().unwrap_or_default().to_string();
-        let in_frame = |one: &&Known| one.crs.as_ref().is_some_and(|crs| crs.uuid.eq_ignore_ascii_case(&frame_uuid));
+        let in_frame = |one: &&Known| {
+            one.crs
+                .as_ref()
+                .is_some_and(|crs| crs.uuid.eq_ignore_ascii_case(&frame_uuid))
+        };
         let created = !frame.objects.is_empty();
         // A frame created here counts up: `crs::build` writes every vertical
         // system as an elevation, and the identity compound follows it.
         let up = if created {
             Some(true)
         } else {
-            known.iter().copied().filter(in_frame).find_map(|one| one.vertical_up)
+            known
+                .iter()
+                .copied()
+                .filter(in_frame)
+                .find_map(|one| one.vertical_up)
         };
         let Some(up) = up else {
             return Err(match written.frame.crs {
@@ -551,17 +667,25 @@ impl Operation for WellFromPlan {
                 ),
                 Some(_) => Refusal::on(
                     "crs",
-                    format!("the frame `{frame_title}` does not say which way its vertical axis points, and which way down is decides every station's z: it cannot be guessed"),
+                    format!(
+                        "the frame `{frame_title}` does not say which way its vertical axis points, and which way down is decides every station's z: it cannot be guessed"
+                    ),
                 ),
             });
         };
         if !created
-            && let Some(uom) = known.iter().copied().filter(in_frame).find_map(|one| one.vertical_uom.as_deref())
+            && let Some(uom) = known
+                .iter()
+                .copied()
+                .filter(in_frame)
+                .find_map(|one| one.vertical_uom.as_deref())
             && uom != "m"
         {
             return Err(Refusal::on(
                 "crs",
-                format!("the frame `{frame_title}` counts its vertical axis in `{uom}`, and a plan is in metres — lengths in m, rates in °/30 m"),
+                format!(
+                    "the frame `{frame_title}` counts its vertical axis in `{uom}`, and a plan is in metres — lengths in m, rates in °/30 m"
+                ),
             ));
         }
         if let Some(one) = &parent
@@ -570,7 +694,10 @@ impl Operation for WellFromPlan {
         {
             return Err(Refusal::on(
                 "parent",
-                format!("`{}` is in `{}` and the sidetrack in `{frame_title}`: a sidetrack starts where its parent is, in its parent's frame", one.name, crs.title),
+                format!(
+                    "`{}` is in `{}` and the sidetrack in `{frame_title}`: a sidetrack starts where its parent is, in its parent's frame",
+                    one.name, crs.title
+                ),
             ));
         }
 
@@ -580,14 +707,24 @@ impl Operation for WellFromPlan {
             (None, Some(x), Some(y)) => Some(match &frame.place {
                 // Given in the system of `sourceEpsg`, placed into the frame.
                 Some(_) => {
-                    let placed = support::placed(&[Position { lon: x, lat: y, z: Some(0.0) }], &frame)?;
+                    let placed = support::placed(
+                        &[Position {
+                            lon: x,
+                            lat: y,
+                            z: Some(0.0),
+                        }],
+                        &frame,
+                    )?;
                     [placed[0][0], placed[0][1]]
                 }
                 None => [x, y],
             }),
             (None, x, _) => {
                 let slot = if x.is_none() { "headX" } else { "headY" };
-                return Err(Refusal::on(slot, "a new well stands somewhere: give its head, `headX` and `headY`"));
+                return Err(Refusal::on(
+                    slot,
+                    "a new well stands somewhere: give its head, `headX` and `headY`",
+                ));
             }
         };
         let mut ground_read: Option<(f64, String)> = None;
@@ -608,7 +745,9 @@ impl Operation for WellFromPlan {
                             ));
                         }
                     },
-                    (None, None) => return Err(Refusal::on("headX", "a new well stands somewhere: give its head")),
+                    (None, None) => {
+                        return Err(Refusal::on("headX", "a new well stands somewhere: give its head"));
+                    }
                 };
                 let z = ground_under(surface, at, &frame_uuid, &frame_title)?;
                 ground_read = Some((z, surface.name.clone()));
@@ -626,7 +765,11 @@ impl Operation for WellFromPlan {
                         "a new well's measured depths start at its datum, above its ground: give `ground`, or a `surface` to read it on under the head",
                     ));
                 };
-                let datum_z = if up { ground + params.datum_height } else { ground - params.datum_height };
+                let datum_z = if up {
+                    ground + params.datum_height
+                } else {
+                    ground - params.datum_height
+                };
                 (Tie::vertical(), [xy[0], xy[1], datum_z], None)
             }
             (Some(one), _) => {
@@ -641,14 +784,24 @@ impl Operation for WellFromPlan {
         let sections: Vec<Section> = params.sections.iter().map(|one| one.section).collect();
         let planned = well_plan::plan(tie, &sections, params.step).map_err(|why| match why.section() {
             Some(number) => {
-                let text = params.sections.get(number - 1).map(|one| one.text.as_str()).unwrap_or_default();
+                let text = params
+                    .sections
+                    .get(number - 1)
+                    .map(|one| one.text.as_str())
+                    .unwrap_or_default();
                 Refusal::on("sections", format!("{why} — `{text}`"))
             }
-            None if matches!(why, PlanError::BadStep { .. } | PlanError::TooManyStations { .. }) => Refusal::on("step", why),
+            None if matches!(why, PlanError::BadStep { .. } | PlanError::TooManyStations { .. }) => {
+                Refusal::on("step", why)
+            }
             None => Refusal::on("sections", why),
         })?;
         let place = |station: &Station| -> [f64; 3] {
-            let z = if up { origin[2] - station.tvd } else { origin[2] + station.tvd };
+            let z = if up {
+                origin[2] - station.tvd
+            } else {
+                origin[2] + station.tvd
+            };
             [origin[0] + station.east, origin[1] + station.north, z]
         };
         let line: Vec<[f64; 3]> = planned.stations.iter().map(place).collect();
@@ -668,14 +821,26 @@ impl Operation for WellFromPlan {
 
         // -- the depth limit: checked, never bent to ------------------------
         let below = |z: f64, ground: f64| if up { ground - z } else { z - ground };
-        let depth_max = ground.map(|g| line.iter().map(|p| below(p[2], g)).fold(f64::NEG_INFINITY, f64::max));
+        let depth_max = ground.map(|g| {
+            line.iter()
+                .map(|p| below(p[2], g))
+                .fold(f64::NEG_INFINITY, f64::max)
+        });
         let mut says = Vec::new();
         if let Some(most) = params.max_depth {
             let Some(g) = ground else {
-                return Err(Refusal::on("maxDepth", "is measured from the ground at the head: give `ground`, or a `surface` to read it on"));
+                return Err(Refusal::on(
+                    "maxDepth",
+                    "is measured from the ground at the head: give `ground`, or a `surface` to read it on",
+                ));
             };
             let slack = 1e-9 * most.max(1.0);
-            if let Some((station, point)) = planned.stations.iter().zip(&line).find(|(_, p)| below(p[2], g) > most + slack) {
+            if let Some((station, point)) = planned
+                .stations
+                .iter()
+                .zip(&line)
+                .find(|(_, p)| below(p[2], g) > most + slack)
+            {
                 return Err(Refusal::on(
                     "maxDepth",
                     format!(
@@ -696,7 +861,12 @@ impl Operation for WellFromPlan {
 
         // -- identity: the well by its name, the datum by its place, the
         // trajectory and the frame by their depths --------------------------
-        let plan_text = params.sections.iter().map(|one| one.text.as_str()).collect::<Vec<_>>().join("|");
+        let plan_text = params
+            .sections
+            .iter()
+            .map(|one| one.text.as_str())
+            .collect::<Vec<_>>()
+            .join("|");
         let parent_seed = match (&parent, &kicked) {
             (Some(one), Some(found)) => format!("{}@{:?}", one.trajectory.uuid, found.tie.md),
             _ => String::new(),
@@ -705,8 +875,14 @@ impl Operation for WellFromPlan {
         // the head is read on a DTM, so its last bit is the platform's.
         let placed = origin.map(super::support::seed_mm);
         let pair_seed = format!("well-from-plan:{title}");
-        let datum_seed = format!("well-from-plan:{title}:{frame_uuid}:{placed:?}:{}", params.datum_kind.word());
-        let line_seed = format!("well-from-plan:{title}:{frame_uuid}:{placed:?}:{plan_text}:{:?}:{parent_seed}", params.step);
+        let datum_seed = format!(
+            "well-from-plan:{title}:{frame_uuid}:{placed:?}:{}",
+            params.datum_kind.word()
+        );
+        let line_seed = format!(
+            "well-from-plan:{title}:{frame_uuid}:{placed:?}:{plan_text}:{:?}:{parent_seed}",
+            params.step
+        );
 
         // -- the datum: made at the head, or the parent's -------------------
         let cite = |name: &str| support::citation(when, name);
@@ -728,11 +904,17 @@ impl Operation for WellFromPlan {
         )?;
 
         // -- the feature and its interpretation, when none is named ---------
-        let (interpretation, pair_objects) = match written.represented.interpretation.as_ref().map(|one| &one.0) {
-            Some(value) if value.is_object() && value["Uuid"].is_string() => (value.clone(), Vec::new()),
-            Some(other) => return Err(Refusal::on("interpretation", format!("expected a DataObjectReference, got {other}"))),
-            None => pair(&title, &pair_seed, when, identity, &mut rank)?,
-        };
+        let (interpretation, pair_objects) =
+            match written.represented.interpretation.as_ref().map(|one| &one.0) {
+                Some(value) if value.is_object() && value["Uuid"].is_string() => (value.clone(), Vec::new()),
+                Some(other) => {
+                    return Err(Refusal::on(
+                        "interpretation",
+                        format!("expected a DataObjectReference, got {other}"),
+                    ));
+                }
+                None => pair(&title, &pair_seed, when, identity, &mut rank)?,
+            };
         let pair_made = !pair_objects.is_empty();
 
         // -- the trajectory and the frame, by the shared writer -------------
@@ -770,7 +952,11 @@ impl Operation for WellFromPlan {
             // TRG 2.2 §12.16). `ParentMd` is left out: the child's depths are
             // the parent's, and "If not specified, then these two MD's are
             // implied to be identical".
-            for object in drawn.objects.iter_mut().filter(|object| object.role == "trajectory") {
+            for object in drawn
+                .objects
+                .iter_mut()
+                .filter(|object| object.role == "trajectory")
+            {
                 object.json["ParentIntersection"] = json!({
                     "$type": "resqml22.WellboreTrajectoryParentIntersection",
                     "KickoffMd": found.tie.md,
@@ -778,7 +964,11 @@ impl Operation for WellFromPlan {
                 });
             }
         }
-        let trajectory_uuid = drawn.objects.iter().find(|object| object.role == "trajectory").map(|object| object.uuid.clone());
+        let trajectory_uuid = drawn
+            .objects
+            .iter()
+            .find(|object| object.role == "trajectory")
+            .map(|object| object.uuid.clone());
 
         // -- what is said ------------------------------------------------------
         says.insert(
@@ -811,12 +1001,19 @@ impl Operation for WellFromPlan {
             });
         }
         if let Some((z, surface)) = &ground_read {
-            says.push(Note { key: "ground-read", detail: format!("the ground under the head, {z}, read on `{surface}`") });
+            says.push(Note {
+                key: "ground-read",
+                detail: format!("the ground under the head, {z}, read on `{surface}`"),
+            });
         }
         if parent.is_none() && params.datum_height > 0.0 {
             says.push(Note {
                 key: "datum-above-ground",
-                detail: format!("the datum, a {}, is {} m above the ground: the measured depths start there", params.datum_kind.word(), params.datum_height),
+                detail: format!(
+                    "the datum, a {}, is {} m above the ground: the measured depths start there",
+                    params.datum_kind.word(),
+                    params.datum_height
+                ),
             });
         }
         if let (Some(one), Some(found)) = (&parent, &kicked) {
@@ -838,18 +1035,48 @@ impl Operation for WellFromPlan {
 
         // -- the activity ---------------------------------------------------
         let departure = last.north.hypot(last.east);
-        let support::Frame { objects: frame_objects, parameters: mut frame_parameters, says: frame_says, blocked, .. } = frame;
+        let support::Frame {
+            objects: frame_objects,
+            parameters: mut frame_parameters,
+            says: frame_says,
+            blocked,
+            ..
+        } = frame;
         frame_parameters.extend([
-            Parameter::Double { title: "lineKind".to_string(), value: drawn.kind_index as f64, uom: None },
-            Parameter::Double { title: "stationCount".to_string(), value: line.len() as f64, uom: None },
-            Parameter::Double { title: "mdMax".to_string(), value: last.md, uom: Some("m".to_string()) },
-            Parameter::Double { title: "departure".to_string(), value: departure, uom: Some("m".to_string()) },
+            Parameter::Double {
+                title: "lineKind".to_string(),
+                value: drawn.kind_index as f64,
+                uom: None,
+            },
+            Parameter::Double {
+                title: "stationCount".to_string(),
+                value: line.len() as f64,
+                uom: None,
+            },
+            Parameter::Double {
+                title: "mdMax".to_string(),
+                value: last.md,
+                uom: Some("m".to_string()),
+            },
+            Parameter::Double {
+                title: "departure".to_string(),
+                value: departure,
+                uom: Some("m".to_string()),
+            },
         ]);
         if let Some(depth) = depth_max {
-            frame_parameters.push(Parameter::Double { title: "depthMax".to_string(), value: depth, uom: Some("m".to_string()) });
+            frame_parameters.push(Parameter::Double {
+                title: "depthMax".to_string(),
+                value: depth,
+                uom: Some("m".to_string()),
+            });
         }
         if let Some((z, _)) = &ground_read {
-            frame_parameters.push(Parameter::Double { title: "groundRead".to_string(), value: *z, uom: Some("m".to_string()) });
+            frame_parameters.push(Parameter::Double {
+                title: "groundRead".to_string(),
+                value: *z,
+                uom: Some("m".to_string()),
+            });
         }
         // What the frame must say of itself, after what the well said.
         says.extend(frame_says);
@@ -866,7 +1093,11 @@ impl Operation for WellFromPlan {
         let shapes = match &trajectory_uuid {
             Some(uuid) => {
                 let count = line.len() as u32;
-                vec![support::made_root(&title, uuid, support::one_patch("polyline", line, Topology::Polylines(vec![count])))]
+                vec![support::made_root(
+                    &title,
+                    uuid,
+                    support::one_patch("polyline", line, Topology::Polylines(vec![count])),
+                )]
             }
             None => Vec::new(),
         };
@@ -890,14 +1121,38 @@ impl Operation for WellFromPlan {
     }
 
     fn reports(&self) -> Vec<Slot> {
-        let number = || Need::Number { uom: None, least: None, most: None };
+        let number = || Need::Number {
+            uom: None,
+            least: None,
+            most: None,
+        };
         support::frame_reports(vec![
-            Slot::required("lineKind", number(), "the RESQML line kind written: 0 vertical, 1 linear through the stations"),
-            Slot::required("stationCount", number(), "stations — the trajectory's knots and the frame's nodes"),
+            Slot::required(
+                "lineKind",
+                number(),
+                "the RESQML line kind written: 0 vertical, 1 linear through the stations",
+            ),
+            Slot::required(
+                "stationCount",
+                number(),
+                "stations — the trajectory's knots and the frame's nodes",
+            ),
             Slot::required("mdMax", number(), "the deepest measured depth"),
-            Slot::required("departure", number(), "the horizontal distance from where the plan starts to its last station"),
-            Slot::optional("depthMax", number(), "the greatest vertical depth below the ground at the head, when the ground is known"),
-            Slot::optional("groundRead", number(), "the ground under the head, when it was read on `surface`"),
+            Slot::required(
+                "departure",
+                number(),
+                "the horizontal distance from where the plan starts to its last station",
+            ),
+            Slot::optional(
+                "depthMax",
+                number(),
+                "the greatest vertical depth below the ground at the head, when the ground is known",
+            ),
+            Slot::optional(
+                "groundRead",
+                number(),
+                "the ground under the head, when it was read on `surface`",
+            ),
         ])
     }
 }

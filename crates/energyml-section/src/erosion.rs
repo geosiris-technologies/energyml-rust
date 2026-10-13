@@ -90,8 +90,11 @@ impl Portion {
 /// younger passes below the older, left to right. Traces with no age, faults,
 /// and pairs the ages do not order give nothing.
 pub fn detect(section: SectionKey, traces: &[&TraceItem]) -> Vec<Portion> {
-    let dated: Vec<(&TraceItem, [f64; 2])> =
-        traces.iter().filter(|t| t.role == TraceRole::Horizon).filter_map(|t| t.age.map(|age| (*t, age))).collect();
+    let dated: Vec<(&TraceItem, [f64; 2])> = traces
+        .iter()
+        .filter(|t| t.role == TraceRole::Horizon)
+        .filter_map(|t| t.age.map(|age| (*t, age)))
+        .collect();
     let mut out = Vec::new();
     for (i, (a, a_age)) in dated.iter().enumerate() {
         for (b, b_age) in dated.iter().skip(i + 1) {
@@ -160,7 +163,11 @@ fn z_at(spans: &[Vec<[f64; 2]>], s: f64) -> Option<f64> {
         }
         span.windows(2).find(|w| s >= w[0][0] && s <= w[1][0]).map(|w| {
             let run = w[1][0] - w[0][0];
-            if run <= 0.0 { w[0][1] } else { w[0][1] + (w[1][1] - w[0][1]) * (s - w[0][0]) / run }
+            if run <= 0.0 {
+                w[0][1]
+            } else {
+                w[0][1] + (w[1][1] - w[0][1]) * (s - w[0][0]) / run
+            }
         })
     })
 }
@@ -169,7 +176,13 @@ fn z_at(spans: &[Vec<[f64; 2]>], s: f64) -> Option<f64> {
 /// `z_lower < z_upper` by more than the tolerance. Between two breakpoints (a
 /// vertex of either) the difference is linear, so its sign change is exact.
 fn below(upper: &[Vec<[f64; 2]>], lower: &[Vec<[f64; 2]>]) -> Vec<(f64, f64)> {
-    let mut at: Vec<f64> = upper.iter().chain(lower).flatten().map(|p| p[0]).filter(|s| s.is_finite()).collect();
+    let mut at: Vec<f64> = upper
+        .iter()
+        .chain(lower)
+        .flatten()
+        .map(|p| p[0])
+        .filter(|s| s.is_finite())
+        .collect();
     at.sort_by(f64::total_cmp);
     at.dedup();
     let mut found: Vec<(f64, f64)> = Vec::new();
@@ -178,9 +191,14 @@ fn below(upper: &[Vec<[f64; 2]>], lower: &[Vec<[f64; 2]>]) -> Vec<(f64, f64)> {
         let mid = 0.5 * (a + b);
         // Both lines must run across the whole segment: probe the middle too,
         // so a gap between two spans is not bridged.
-        let (Some(ua), Some(ub), Some(la), Some(lb), Some(_), Some(_)) =
-            (z_at(upper, a), z_at(upper, b), z_at(lower, a), z_at(lower, b), z_at(upper, mid), z_at(lower, mid))
-        else {
+        let (Some(ua), Some(ub), Some(la), Some(lb), Some(_), Some(_)) = (
+            z_at(upper, a),
+            z_at(upper, b),
+            z_at(lower, a),
+            z_at(lower, b),
+            z_at(upper, mid),
+            z_at(lower, mid),
+        ) else {
             continue;
         };
         let (fa, fb) = (la - ua, lb - ub);

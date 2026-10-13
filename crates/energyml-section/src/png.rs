@@ -58,7 +58,10 @@ const FAMILY: &str = "Liberation Sans";
 pub fn render(svg: &str, scale: f32) -> Result<Vec<u8>, PngError> {
     use resvg::{tiny_skia, usvg};
 
-    let mut options = usvg::Options { font_family: FAMILY.to_string(), ..usvg::Options::default() };
+    let mut options = usvg::Options {
+        font_family: FAMILY.to_string(),
+        ..usvg::Options::default()
+    };
     {
         let fonts = options.fontdb_mut();
         fonts.load_font_data(FONT.to_vec());
@@ -68,12 +71,20 @@ pub fn render(svg: &str, scale: f32) -> Result<Vec<u8>, PngError> {
         fonts.set_sans_serif_family(FAMILY);
     }
     let tree = usvg::Tree::from_str(svg, &options).map_err(|e| PngError::Svg(e.to_string()))?;
-    let scale = if scale.is_finite() && scale > 0.0 { scale } else { 1.0 };
+    let scale = if scale.is_finite() && scale > 0.0 {
+        scale
+    } else {
+        1.0
+    };
     let size = tree.size();
     let width = (size.width() * scale).ceil() as u32;
     let height = (size.height() * scale).ceil() as u32;
     let mut pixmap = tiny_skia::Pixmap::new(width, height).ok_or(PngError::Size(width, height))?;
-    resvg::render(&tree, tiny_skia::Transform::from_scale(scale, scale), &mut pixmap.as_mut());
+    resvg::render(
+        &tree,
+        tiny_skia::Transform::from_scale(scale, scale),
+        &mut pixmap.as_mut(),
+    );
     pixmap.encode_png().map_err(|e| PngError::Encode(e.to_string()))
 }
 

@@ -105,11 +105,7 @@ fn a_second_read_of_one_file_costs_no_open() {
     for _ in 0..20 {
         assert_eq!(read_one(&path), 1.0);
     }
-    assert_eq!(
-        real_opens() - before,
-        1,
-        "twenty reads of one file, one open"
-    );
+    assert_eq!(real_opens() - before, 1, "twenty reads of one file, one open");
 }
 
 /// A file written behind the cache's back is re-opened, not served stale.
@@ -221,9 +217,7 @@ fn the_store_reads_through_the_cache() {
     let backend = Hdf5Backend;
     let before = real_opens();
     for _ in 0..10 {
-        let metadata = backend
-            .metadata(&path, "/values")
-            .expect("the shape reads");
+        let metadata = backend.metadata(&path, "/values").expect("the shape reads");
         assert_eq!(metadata.dimensions, vec![1]);
         let _ = location(&path);
     }

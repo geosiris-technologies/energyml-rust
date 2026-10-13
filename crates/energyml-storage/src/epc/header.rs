@@ -145,7 +145,8 @@ pub fn peek_reader<R: std::io::BufRead>(source: R) -> PeekedHeader {
                         // A type naming itself — `LocalDepth3dCrs` typed
                         // `obj_LocalDepth3dCrs`, as some producers write — is
                         // no substitution: the element stays the name.
-                        let fold = |name: &str| name.strip_prefix("obj_").unwrap_or(name).to_ascii_lowercase();
+                        let fold =
+                            |name: &str| name.strip_prefix("obj_").unwrap_or(name).to_ascii_lowercase();
                         if !named.is_empty() && fold(&named) != fold(&out.root_name) {
                             out.root_element = Some(std::mem::replace(&mut out.root_name, named));
                         }

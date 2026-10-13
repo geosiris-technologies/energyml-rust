@@ -515,10 +515,18 @@ fn the_same_arrays_make_the_same_file() {
         let file = dir.join(name);
         let backend = Hdf5Backend;
         backend
-            .write(&file, "/resqml22/uuid-a/points", &data(vec![2, 3], ArrayValues::F64(vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0])))
+            .write(
+                &file,
+                "/resqml22/uuid-a/points",
+                &data(vec![2, 3], ArrayValues::F64(vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0])),
+            )
             .expect("written");
         backend
-            .write(&file, "/resqml22/uuid-b/indices", &data(vec![3], ArrayValues::I32(vec![0, 1, 2])))
+            .write(
+                &file,
+                "/resqml22/uuid-b/indices",
+                &data(vec![3], ArrayValues::I32(vec![0, 1, 2])),
+            )
             .expect("written");
         std::fs::read(&file).expect("read back")
     };
@@ -527,9 +535,11 @@ fn the_same_arrays_make_the_same_file() {
     let second = write("second.h5");
     assert_eq!(first.len(), second.len());
     let differing = first.iter().zip(&second).filter(|(a, b)| a != b).count();
-    assert_eq!(differing, 0, "{differing} byte(s) differ between two writes of the same arrays");
+    assert_eq!(
+        differing, 0,
+        "{differing} byte(s) differ between two writes of the same arrays"
+    );
 }
-
 
 /// **Many arrays in one opening read back as one at a time would write them**
 /// (`ArrayBackend::write_many`, 28/09). One opening and one flush per dataset
@@ -561,11 +571,21 @@ fn many_arrays_in_one_opening_read_back_as_one_at_a_time_would() {
         backend.write(&single, path, data).expect("written alone");
     }
     for (path, written) in &items {
-        let from_batch = backend.read(&batched, path, &[], &[]).expect("the batch holds it");
-        let from_single = backend.read(&single, path, &[], &[]).expect("the single write holds it");
+        let from_batch = backend
+            .read(&batched, path, &[], &[])
+            .expect("the batch holds it");
+        let from_single = backend
+            .read(&single, path, &[], &[])
+            .expect("the single write holds it");
         assert_eq!(from_batch.values, written.values, "{path}: the batch's values");
-        assert_eq!(from_batch.values, from_single.values, "{path}: the two writers disagree");
-        assert_eq!(from_batch.metadata.dimensions, written.metadata.dimensions, "{path}: the shape");
+        assert_eq!(
+            from_batch.values, from_single.values,
+            "{path}: the two writers disagree"
+        );
+        assert_eq!(
+            from_batch.metadata.dimensions, written.metadata.dimensions,
+            "{path}: the shape"
+        );
     }
 }
 
@@ -590,12 +610,21 @@ fn a_refused_array_does_not_sink_the_others() {
     let also = data(vec![1], ArrayValues::I64(vec![42]));
     let results = store.write_arrays_to("model.h5", &[("/a", &good), ("/b", &wrong), ("/c", &also)]);
     assert!(results[0].is_ok() && results[2].is_ok(), "{results:?}");
-    let refused = results[1].as_ref().expect_err("the shape promises three values and holds two");
-    assert!(refused.to_string().contains("/b"), "the refusal names its array: {refused}");
+    let refused = results[1]
+        .as_ref()
+        .expect_err("the shape promises three values and holds two");
+    assert!(
+        refused.to_string().contains("/b"),
+        "the refusal names its array: {refused}"
+    );
 
     for (path, written) in [("/a", &good), ("/c", &also)] {
         let read = store
-            .read_array(&ArrayLocation { file: "model.h5".into(), path_in_file: path.into(), ..Default::default() })
+            .read_array(&ArrayLocation {
+                file: "model.h5".into(),
+                path_in_file: path.into(),
+                ..Default::default()
+            })
             .expect("written despite the refusal beside it");
         assert_eq!(read.values, written.values);
     }

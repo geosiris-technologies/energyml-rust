@@ -49,7 +49,7 @@
 //! ships: `energyml-geometry/src/parametric.rs` and `well.rs` are the
 //! triangulation, in `tests/well.rs`.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::Topology;
@@ -57,7 +57,10 @@ use energyml_geometry::geometry::Topology;
 use crate::crs::FrameKind;
 use crate::declare::{Choice, Features, Inputs, ObjectRef, Params, Shape as ShapeIn, Suggestions};
 use crate::geojson::{Position, Shape};
-use crate::operation::{About, ActivityDraft, Category, Context, Dataset, Error, Identity, Need, NewObject, Note, Numbers, Operation, Plan, Refusal, Slot};
+use crate::operation::{
+    About, ActivityDraft, Category, Context, Dataset, Error, Identity, Need, NewObject, Note, Numbers,
+    Operation, Plan, Refusal, Slot,
+};
 use crate::pieces::{Known, Pieces};
 
 use super::support;
@@ -73,7 +76,11 @@ pub(crate) enum Found {
     /// A line of a shape — with the shape's name and what is known of where
     /// it came from, since that decides where its numbers are
     /// (`support::shape_placed`).
-    Placed { points: Vec<[f64; 3]>, name: String, known: Option<Box<Known>> },
+    Placed {
+        points: Vec<[f64; 3]>,
+        name: String,
+        known: Option<Box<Known>>,
+    },
     Foreign(Vec<Position>),
 }
 
@@ -90,7 +97,9 @@ impl Found {
     /// The line, in the frame being written.
     pub(crate) fn placed_in(&self, frame: &support::Frame) -> Result<Vec<[f64; 3]>, Error> {
         match self {
-            Found::Placed { points, name, known } => support::shape_placed(name, points, known.as_deref(), frame),
+            Found::Placed { points, name, known } => {
+                support::shape_placed(name, points, known.as_deref(), frame)
+            }
             Found::Foreign(positions) => support::placed(positions, frame),
         }
     }
@@ -212,9 +221,11 @@ pub(crate) fn polylines_of(trace: Option<&ShapeIn>, features: Option<&Features>)
                         start += run;
                     }
                 }
-                Topology::Points if patch.points.len() >= 2 => {
-                    found.push(Found::Placed { points: patch.points.clone(), name: shape.name.clone(), known: shape.known.clone().map(Box::new) })
-                }
+                Topology::Points if patch.points.len() >= 2 => found.push(Found::Placed {
+                    points: patch.points.clone(),
+                    name: shape.name.clone(),
+                    known: shape.known.clone().map(Box::new),
+                }),
                 _ => {}
             }
         }
@@ -236,10 +247,15 @@ pub(crate) fn polylines_of(trace: Option<&ShapeIn>, features: Option<&Features>)
 pub(crate) fn valid_polyline(line: &Found) -> Result<(), String> {
     let (count, finite) = match line {
         Found::Placed { points, .. } => (points.len(), points.iter().flatten().all(|v| v.is_finite())),
-        Found::Foreign(positions) => (positions.len(), positions.iter().all(|p| p.z.is_some_and(f64::is_finite))),
+        Found::Foreign(positions) => (
+            positions.len(),
+            positions.iter().all(|p| p.z.is_some_and(f64::is_finite)),
+        ),
     };
     if count < 2 {
-        return Err(format!("a wellbore needs at least 2 points; the polyline has {count}"));
+        return Err(format!(
+            "a wellbore needs at least 2 points; the polyline has {count}"
+        ));
     }
     if !finite {
         return Err("the polyline has a point with no position, or no elevation".to_string());
@@ -304,13 +320,17 @@ fn measured_depths(points: &[[f64; 3]], ground: f64) -> Vec<f64> {
 /// map right and the 3D view empty of anything one could recognise.
 fn vertical_agrees(mds: &[f64], points: &[[f64; 3]], up: bool, length: f64) -> bool {
     let slack = 1e-6 * length.max(1.0);
-    mds.iter().zip(points).all(|(md, p)| ((if up { -md } else { *md }) - p[2]).abs() <= slack)
+    mds.iter()
+        .zip(points)
+        .all(|(md, p)| ((if up { -md } else { *md }) - p[2]).abs() <= slack)
 }
 
 /// Every point over the first, within a millionth of the length.
 fn is_vertical(points: &[[f64; 3]], length: f64) -> bool {
     let slack = 1e-6 * length.max(1.0);
-    points.iter().all(|p| (p[0] - points[0][0]).abs() <= slack && (p[1] - points[0][1]).abs() <= slack)
+    points
+        .iter()
+        .all(|p| (p[0] - points[0][0]).abs() <= slack && (p[1] - points[0][1]).abs() <= slack)
 }
 
 /// Catmull-Rom tangents, unit, one-sided at the ends.
@@ -321,7 +341,11 @@ fn tangents(points: &[[f64; 3]]) -> Vec<[f64; 3]> {
             let (a, b) = (points[i.saturating_sub(1)], points[(i + 1).min(n - 1)]);
             let d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
             let len = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
-            if len > 0.0 { [d[0] / len, d[1] / len, d[2] / len] } else { [0.0, 0.0, 1.0] }
+            if len > 0.0 {
+                [d[0] / len, d[1] / len, d[2] / len]
+            } else {
+                [0.0, 0.0, 1.0]
+            }
         })
         .collect()
 }
@@ -393,10 +417,16 @@ pub struct Datum<'a> {
 /// reference like it takes its interpretation. Folding it into `write` moved it
 /// after the feature in `well-from-polyline`'s plan, which a refactor meant to
 /// change nothing had no business doing.
-pub fn datum_in(datum: &Datum<'_>, identity: &Identity, rank: &mut usize) -> Result<(Value, Vec<NewObject>), Error> {
+pub fn datum_in(
+    datum: &Datum<'_>,
+    identity: &Identity,
+    rank: &mut usize,
+) -> Result<(Value, Vec<NewObject>), Error> {
     match datum.named {
         Some(value) if value.is_object() && value["Uuid"].is_string() => Ok((value.clone(), Vec::new())),
-        Some(other) => Err(Refusal::on("datum", format!("expected a DataObjectReference, got {other}")).into()),
+        Some(other) => {
+            Err(Refusal::on("datum", format!("expected a DataObjectReference, got {other}")).into())
+        }
         None => {
             // **The frame decides the form** (decision (b) of 24/09). What the
             // trajectory's `LocalCrs` is, the datum is in: a position in a
@@ -649,39 +679,45 @@ pub fn write(well: &Wellbore<'_>, identity: &Identity, rank: &mut usize) -> Resu
     // `acd2cdcf`'s parameters run 0…1000 and its frames sample 0, 200 … 1000
     // of the same well. Writing anything else there puts every frame node
     // somewhere the trajectory does not pass.
-    let (kind_index, tangents_written): (i64, Option<Vec<[f64; 3]>>) =
-        match (vertical, well.vertical_up, well.shape.word()) {
-            (false, _, _) if let Some(given) = well.tangents => {
-                says.push(Note {
+    let (kind_index, tangents_written): (i64, Option<Vec<[f64; 3]>>) = match (
+        vertical,
+        well.vertical_up,
+        well.shape.word(),
+    ) {
+        (false, _, _) if let Some(given) = well.tangents => {
+            says.push(Note {
                     key: "minimum-curvature",
                     detail: "written as RESQML's minimum-curvature line (LineKindIndex 5): the circular arcs through the given stations, their tangents written".to_string(),
                 });
-                (5, Some(given.to_vec()))
-            }
-            (true, Some(up), _) if vertical_agrees(&mds, line, up, length) => {
-                says.push(Note { key: "vertical", detail: "the polyline is vertical and its measured depths are the CRS's depths: written as RESQML's vertical line".to_string() });
-                (0, None)
-            }
-            (true, Some(_), _) => {
-                says.push(Note {
+            (5, Some(given.to_vec()))
+        }
+        (true, Some(up), _) if vertical_agrees(&mds, line, up, length) => {
+            says.push(Note { key: "vertical", detail: "the polyline is vertical and its measured depths are the CRS's depths: written as RESQML's vertical line".to_string() });
+            (0, None)
+        }
+        (true, Some(_), _) => {
+            says.push(Note {
                     key: "vertical-datum-offset",
                     detail: "the polyline is vertical but its measured depths are not the vertical CRS's depths — the ground is not at the system's zero — so it is written as a linear spline through its points, whose parameter is the measured depth".to_string(),
                 });
-                (1, None)
-            }
-            (true, None, _) => {
-                says.push(Note { key: "vertical-unknown-direction", detail: "the polyline is vertical but the frame's direction is unknown: written as a linear spline through its points".to_string() });
-                (1, None)
-            }
-            (false, _, "natural-cubic") => (2, None),
-            (false, _, "tangential-cubic") => (3, Some(tangents(line))),
-            (false, _, _) => (1, None),
-        };
+            (1, None)
+        }
+        (true, None, _) => {
+            says.push(Note { key: "vertical-unknown-direction", detail: "the polyline is vertical but the frame's direction is unknown: written as a linear spline through its points".to_string() });
+            (1, None)
+        }
+        (false, _, "natural-cubic") => (2, None),
+        (false, _, "tangential-cubic") => (3, Some(tangents(line))),
+        (false, _, _) => (1, None),
+    };
     let parameters_written = mds.clone();
 
     // -- the trajectory ---------------------------------------------------
     let derived_trajectory = support::next_uuid(identity, &format!("well-trajectory:{}", well.seed), rank)?;
-    let trajectory_uuid = well.keep.map(|(one, _)| one.to_string()).unwrap_or(derived_trajectory);
+    let trajectory_uuid = well
+        .keep
+        .map(|(one, _)| one.to_string())
+        .unwrap_or(derived_trajectory);
     let trajectory_title = format!("{title} — trajectory");
     let control_path = format!("/resqml22/{trajectory_uuid}/controlPoints");
     let parameters_path = format!("/resqml22/{trajectory_uuid}/controlPointParameters");
@@ -693,12 +729,27 @@ pub fn write(well: &Wellbore<'_>, identity: &Identity, rank: &mut usize) -> Resu
         "ControlPoints": points_array(file, &control_path, line.len()),
         "ControlPointParameters": floats(file, &parameters_path, line.len()),
     });
-    datasets.push(Dataset { file: file.to_string(), path: control_path, dimensions: vec![line.len() as i64, 3], values: Numbers::F64(line.iter().flatten().copied().collect()) });
-    datasets.push(Dataset { file: file.to_string(), path: parameters_path, dimensions: vec![line.len() as i64], values: Numbers::F64(parameters_written) });
+    datasets.push(Dataset {
+        file: file.to_string(),
+        path: control_path,
+        dimensions: vec![line.len() as i64, 3],
+        values: Numbers::F64(line.iter().flatten().copied().collect()),
+    });
+    datasets.push(Dataset {
+        file: file.to_string(),
+        path: parameters_path,
+        dimensions: vec![line.len() as i64],
+        values: Numbers::F64(parameters_written),
+    });
     if let Some(tangents) = tangents_written {
         let path = format!("/resqml22/{trajectory_uuid}/tangentVectors");
         geometry["TangentVectors"] = points_array(file, &path, tangents.len());
-        datasets.push(Dataset { file: file.to_string(), path, dimensions: vec![tangents.len() as i64, 3], values: Numbers::F64(tangents.into_iter().flatten().collect()) });
+        datasets.push(Dataset {
+            file: file.to_string(),
+            path,
+            dimensions: vec![tangents.len() as i64, 3],
+            values: Numbers::F64(tangents.into_iter().flatten().collect()),
+        });
     }
     objects.push(NewObject {
         uuid: trajectory_uuid.clone(),
@@ -750,9 +801,21 @@ pub fn write(well: &Wellbore<'_>, identity: &Identity, rank: &mut usize) -> Resu
             "NodeMd": floats(file, &node_path, nodes.len()),
         }),
     });
-    datasets.push(Dataset { file: file.to_string(), path: node_path, dimensions: vec![nodes.len() as i64], values: Numbers::F64(nodes.clone()) });
+    datasets.push(Dataset {
+        file: file.to_string(),
+        path: node_path,
+        dimensions: vec![nodes.len() as i64],
+        values: Numbers::F64(nodes.clone()),
+    });
 
-    Ok(Written { objects, datasets, says, mds, kind_index, nodes: nodes.len() })
+    Ok(Written {
+        objects,
+        datasets,
+        says,
+        mds,
+        kind_index,
+        nodes: nodes.len(),
+    })
 }
 
 impl Operation for WellFromPolyline {
@@ -787,13 +850,21 @@ impl Operation for WellFromPolyline {
             slots.set("mdUom", serde_json::json!(unit));
         }
         // The topmost Z, to help: the highest elevation, or the smallest depth.
-        if let Ok(line) = WellInputs::bind(bag).map_err(|_| ()).and_then(|inputs| polyline_of(&inputs).map_err(|_| ())) {
-            slots.set("ground", serde_json::json!(topmost(&line.zs(), known.and_then(|k| k.vertical_up))));
+        if let Ok(line) = WellInputs::bind(bag)
+            .map_err(|_| ())
+            .and_then(|inputs| polyline_of(&inputs).map_err(|_| ()))
+        {
+            slots.set(
+                "ground",
+                serde_json::json!(topmost(&line.zs(), known.and_then(|k| k.vertical_up))),
+            );
         }
     }
 
     fn check(&self, inputs: &WellInputs) -> Result<(), Refusal> {
-        polyline_of(inputs).map(|_| ()).map_err(|why| Refusal::on("trace", why))
+        polyline_of(inputs)
+            .map(|_| ())
+            .map_err(|why| Refusal::on("trace", why))
     }
 
     fn plan(&self, inputs: WellInputs, params: WellParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
@@ -814,7 +885,13 @@ impl Operation for WellFromPolyline {
         // is wide, in a package `check` validates.
         if frame.kind == Some(FrameKind::Geographic) {
             let (slot, what) = match written.frame.crs.as_ref() {
-                Some(_) => ("crs", format!("the frame `{}` named", frame.crs["Title"].as_str().unwrap_or_default())),
+                Some(_) => (
+                    "crs",
+                    format!(
+                        "the frame `{}` named",
+                        frame.crs["Title"].as_str().unwrap_or_default()
+                    ),
+                ),
                 None => ("project", "the frame created without `project`".to_string()),
             };
             return Err(Refusal::on(
@@ -826,7 +903,11 @@ impl Operation for WellFromPolyline {
         }
         let line: Vec<[f64; 3]> = found.placed_in(&frame)?;
         let known: Option<&Known> = cx.known().into_iter().next();
-        let vertical_up = if frame.objects.is_empty() { known.and_then(|k| k.vertical_up) } else { Some(true) };
+        let vertical_up = if frame.objects.is_empty() {
+            known.and_then(|k| k.vertical_up)
+        } else {
+            Some(true)
+        };
         let ground = params.ground;
         let uom = params.md_uom.clone();
         let shape = params.shape;
@@ -860,7 +941,12 @@ impl Operation for WellFromPolyline {
         // -- the feature and its interpretation, when none is named ---------
         let interpretation: Value = match written.represented.interpretation.as_ref().map(|one| &one.0) {
             Some(value) if value.is_object() && value["Uuid"].is_string() => value.clone(),
-            Some(other) => return Err(Refusal::on("interpretation", format!("expected a DataObjectReference, got {other}"))),
+            Some(other) => {
+                return Err(Refusal::on(
+                    "interpretation",
+                    format!("expected a DataObjectReference, got {other}"),
+                ));
+            }
             None => {
                 let feature_uuid = support::next_uuid(identity, &format!("well-feature:{seed}"), &mut rank)?;
                 let feature_title = format!("{title} — feature");
@@ -940,15 +1026,38 @@ impl Operation for WellFromPolyline {
         says.extend(written_well.says);
 
         parameters.extend([
-            Parameter::Double { title: "ground".to_string(), value: ground, uom: Some(uom.clone()) },
+            Parameter::Double {
+                title: "ground".to_string(),
+                value: ground,
+                uom: Some(uom.clone()),
+            },
             Parameter::Text {
                 title: "shape".to_string(),
-                value: TrajectoryShape::WORDS.get(kind_index.max(1) as usize - 1).unwrap_or(&"linear").to_string(),
+                value: TrajectoryShape::WORDS
+                    .get(kind_index.max(1) as usize - 1)
+                    .unwrap_or(&"linear")
+                    .to_string(),
             },
-            Parameter::Double { title: "lineKind".to_string(), value: kind_index as f64, uom: None },
-            Parameter::Double { title: "controlPointCount".to_string(), value: line.len() as f64, uom: None },
-            Parameter::Double { title: "frameNodeCount".to_string(), value: nodes_count as f64, uom: None },
-            Parameter::Double { title: "mdMax".to_string(), value: mds[mds.len() - 1], uom: Some(uom) },
+            Parameter::Double {
+                title: "lineKind".to_string(),
+                value: kind_index as f64,
+                uom: None,
+            },
+            Parameter::Double {
+                title: "controlPointCount".to_string(),
+                value: line.len() as f64,
+                uom: None,
+            },
+            Parameter::Double {
+                title: "frameNodeCount".to_string(),
+                value: nodes_count as f64,
+                uom: None,
+            },
+            Parameter::Double {
+                title: "mdMax".to_string(),
+                value: mds[mds.len() - 1],
+                uom: Some(uom),
+            },
         ]);
         // What the frame must say of itself — a `ProjectedCrs` taken as it
         // stands — after what the well said.
@@ -963,14 +1072,19 @@ impl Operation for WellFromPolyline {
             blocked: frame.blocked,
             objects,
             datasets,
-                // **No shape, and for a reason of correctness.** What is written
-                // is a *parametric line*: its control points are its
-                // trajectory only when it is linear. Returning the control
-                // polyline would give, for a cubic, a shape that the re-reading
-                // of the object will contradict — two readers in agreement on nodes and
-                // in disagreement on the curve that joins them.
+            // **No shape, and for a reason of correctness.** What is written
+            // is a *parametric line*: its control points are its
+            // trajectory only when it is linear. Returning the control
+            // polyline would give, for a cubic, a shape that the re-reading
+            // of the object will contradict — two readers in agreement on nodes and
+            // in disagreement on the curve that joins them.
             shapes: Vec::new(),
-            activity: ActivityDraft { recipe: "well-from-polyline", title: format!("well-from-polyline → {title}"), seed, parameters },
+            activity: ActivityDraft {
+                recipe: "well-from-polyline",
+                title: format!("well-from-polyline → {title}"),
+                seed,
+                parameters,
+            },
             says,
             dropped: Vec::new(),
         })
@@ -978,10 +1092,21 @@ impl Operation for WellFromPolyline {
 
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
-            Slot::required(name, Need::Number { uom: None, least: None, most: None }, about)
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
         };
         support::frame_reports(vec![
-            count("lineKind", "the RESQML line kind written: 0 vertical, 1 linear, 2 natural cubic, 3 tangential cubic"),
+            count(
+                "lineKind",
+                "the RESQML line kind written: 0 vertical, 1 linear, 2 natural cubic, 3 tangential cubic",
+            ),
             count("controlPointCount", "control points"),
             count("frameNodeCount", "frame nodes"),
             count("mdMax", "the deepest measured depth"),

@@ -22,7 +22,9 @@ fn package(name: &str) -> Option<Package> {
 
 #[test]
 fn a_report_says_which_sections_ran() {
-    let Some(package) = package("testingPackageCpp22.epc") else { return };
+    let Some(package) = package("testingPackageCpp22.epc") else {
+        return;
+    };
 
     // **Not checked is not the same as clean**, and it is the one thing a
     // caller cannot work out from an empty list. A report that only said
@@ -36,14 +38,19 @@ fn a_report_says_which_sections_ran() {
     let neither = package.check(false, false);
     assert!(!neither.schema_checked, "and this one was not");
     assert!(!neither.rules_checked);
-    assert!(neither.schema.is_empty(), "nothing was checked, so nothing was found");
+    assert!(
+        neither.schema.is_empty(),
+        "nothing was checked, so nothing was found"
+    );
     assert!(neither.rules.is_empty());
     assert_eq!(neither.rule_count, 0, "no rule was evaluated");
 }
 
 #[test]
 fn the_accounting_puts_each_section_on_the_right_side() {
-    let Some(package) = package("testingPackageCpp22.epc") else { return };
+    let Some(package) = package("testingPackageCpp22.epc") else {
+        return;
+    };
     let report = package.check(true, true);
 
     // **What would break if a section moved sides.** An unreadable part is a
@@ -82,7 +89,9 @@ fn the_accounting_puts_each_section_on_the_right_side() {
 
 #[test]
 fn every_dangling_reference_the_report_finds_is_one_the_objects_show() {
-    let Some(package) = package("testingPackageCpp22.epc") else { return };
+    let Some(package) = package("testingPackageCpp22.epc") else {
+        return;
+    };
     let report = package.check(false, false);
 
     // **The confrontation.** The report's references come from
@@ -95,7 +104,9 @@ fn every_dangling_reference_the_report_finds_is_one_the_objects_show() {
         if *catalogue || !*is_error {
             continue;
         }
-        let Ok(links) = package.references(source) else { continue };
+        let Ok(links) = package.references(source) else {
+            continue;
+        };
         let found = links.iter().find(|link| link.uuid.eq_ignore_ascii_case(target));
         if let Some(link) = found {
             assert!(
@@ -110,7 +121,9 @@ fn every_dangling_reference_the_report_finds_is_one_the_objects_show() {
 
 #[test]
 fn the_catalogue_references_are_not_counted_as_faults() {
-    let Some(package) = package("testingPackageCpp22.epc") else { return };
+    let Some(package) = package("testingPackageCpp22.epc") else {
+        return;
+    };
     let report = package.check(false, false);
 
     // The mistake this repository has already made: four references to
@@ -151,7 +164,11 @@ fn a_package_created_here_is_sound_the_moment_it_exists() {
     // fixed on the side that creates.
     let package = Package::create("nothing.epc").expect("an empty package");
     let report = package.check(true, true);
-    assert_eq!(report.errors, 0, "a new package blames itself for nothing: {:?}", report.diagnostics);
+    assert_eq!(
+        report.errors, 0,
+        "a new package blames itself for nothing: {:?}",
+        report.diagnostics
+    );
     assert!(report.diagnostics.is_empty(), "{:?}", report.diagnostics);
     assert!(report.schema.is_empty(), "nothing in it to be wrong about");
     assert!(report.references.is_empty());

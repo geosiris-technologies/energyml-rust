@@ -2,12 +2,15 @@
 //! (ADR-0015).
 
 use energyml_section::crosses::{locate, meet, traces};
-use energyml_section::model::{
-    CrossOwn, CrossWidths, Crosses, Inputs, Note, SectionKey, SectionTrace,
-};
+use energyml_section::model::{CrossOwn, CrossWidths, Crosses, Inputs, Note, SectionKey, SectionTrace};
 
 fn widths(before: f64, after: f64) -> CrossWidths {
-    CrossWidths { before, after, left: 4.0, right: 6.0 }
+    CrossWidths {
+        before,
+        after,
+        left: 4.0,
+        right: 6.0,
+    }
 }
 
 fn inputs(trace: Vec<[f64; 2]>, crosses: Crosses) -> Inputs {
@@ -52,7 +55,11 @@ fn without_crosses_there_is_the_long_section_alone() {
 fn every_places_the_multiples_and_the_end() {
     let (t, notes) = run(&inputs(
         straight(),
-        Crosses::Every { spacing: 25.0, common: widths(40.0, 60.0), own: Vec::new() },
+        Crosses::Every {
+            spacing: 25.0,
+            common: widths(40.0, 60.0),
+            own: Vec::new(),
+        },
     ));
     let at: Vec<f64> = t[1..].iter().map(|c| c.crossing.unwrap()[0]).collect();
     assert_eq!(at, vec![0.0, 25.0, 50.0, 75.0, 100.0]);
@@ -67,7 +74,11 @@ fn the_last_multiple_within_half_a_step_of_the_end_is_dropped() {
     // 0, 30, 60, 90 and the end at 100: 90 is 10 from the end, under 15.
     let (t, _) = run(&inputs(
         straight(),
-        Crosses::Every { spacing: 30.0, common: widths(10.0, 10.0), own: Vec::new() },
+        Crosses::Every {
+            spacing: 30.0,
+            common: widths(10.0, 10.0),
+            own: Vec::new(),
+        },
     ));
     let at: Vec<f64> = t[1..].iter().map(|c| c.crossing.unwrap()[0]).collect();
     assert_eq!(at, vec![0.0, 30.0, 60.0, 100.0]);
@@ -75,9 +86,16 @@ fn the_last_multiple_within_half_a_step_of_the_end_is_dropped() {
 
 #[test]
 fn count_spreads_evenly_ends_included_and_one_stands_in_the_middle() {
-    let c = |count| Crosses::Count { count, common: widths(10.0, 10.0), own: Vec::new() };
+    let c = |count| Crosses::Count {
+        count,
+        common: widths(10.0, 10.0),
+        own: Vec::new(),
+    };
     let at = |count| -> Vec<f64> {
-        run(&inputs(straight(), c(count))).0[1..].iter().map(|c| c.crossing.unwrap()[0]).collect()
+        run(&inputs(straight(), c(count))).0[1..]
+            .iter()
+            .map(|c| c.crossing.unwrap()[0])
+            .collect()
     };
     assert_eq!(at(1), vec![50.0]);
     assert_eq!(at(3), vec![0.0, 50.0, 100.0]);
@@ -88,13 +106,25 @@ fn count_spreads_evenly_ends_included_and_one_stands_in_the_middle() {
 fn a_cross_is_perpendicular_runs_before_to_after_and_keeps_its_lengths() {
     let (t, _) = run(&inputs(
         straight(),
-        Crosses::Every { spacing: 50.0, common: widths(40.0, 60.0), own: Vec::new() },
+        Crosses::Every {
+            spacing: 50.0,
+            common: widths(40.0, 60.0),
+            own: Vec::new(),
+        },
     ));
     let c = &t[2]; // s = 50
     // `before` is on the left of the trace read along it (+y here), `after` on the right.
     assert_eq!(c.trace.len(), 2);
-    assert!(near(c.trace[0][0], 50.0) && near(c.trace[0][1], 40.0), "{:?}", c.trace);
-    assert!(near(c.trace[1][0], 50.0) && near(c.trace[1][1], -60.0), "{:?}", c.trace);
+    assert!(
+        near(c.trace[0][0], 50.0) && near(c.trace[0][1], 40.0),
+        "{:?}",
+        c.trace
+    );
+    assert!(
+        near(c.trace[1][0], 50.0) && near(c.trace[1][1], -60.0),
+        "{:?}",
+        c.trace
+    );
     // Where it crosses the long section: its abscissa on the long one, then on itself.
     let [on_long, on_self] = c.crossing.unwrap();
     assert!(near(on_long, 50.0) && near(on_self, 40.0));
@@ -106,11 +136,20 @@ fn a_cross_is_perpendicular_runs_before_to_after_and_keeps_its_lengths() {
 fn own_overrides_one_cross_by_its_index() {
     let own = CrossOwn {
         index: 1,
-        widths: CrossWidths { before: 5.0, after: 7.0, left: 1.0, right: 2.0 },
+        widths: CrossWidths {
+            before: 5.0,
+            after: 7.0,
+            left: 1.0,
+            right: 2.0,
+        },
     };
     let (t, notes) = run(&inputs(
         straight(),
-        Crosses::Count { count: 3, common: widths(40.0, 40.0), own: vec![own] },
+        Crosses::Count {
+            count: 3,
+            common: widths(40.0, 40.0),
+            own: vec![own],
+        },
     ));
     let len = |c: &SectionTrace| (c.trace[1][1] - c.trace[0][1]).abs();
     assert!(near(len(&t[1]), 80.0));
@@ -124,10 +163,17 @@ fn own_overrides_one_cross_by_its_index() {
 
 #[test]
 fn an_own_beyond_the_last_cross_is_said() {
-    let own = CrossOwn { index: 9, widths: widths(1.0, 1.0) };
+    let own = CrossOwn {
+        index: 9,
+        widths: widths(1.0, 1.0),
+    };
     let (t, notes) = run(&inputs(
         straight(),
-        Crosses::Count { count: 3, common: widths(40.0, 40.0), own: vec![own] },
+        Crosses::Count {
+            count: 3,
+            common: widths(40.0, 40.0),
+            own: vec![own],
+        },
     ));
     assert_eq!(t.len(), 4);
     assert_eq!(notes.len(), 1);
@@ -139,20 +185,36 @@ fn at_a_vertex_the_cross_follows_the_bisector() {
     // Right-angle turn at (100, 0); the cross at s = 100 stands on the vertex.
     let (t, _) = run(&inputs(
         bend(),
-        Crosses::Every { spacing: 50.0, common: widths(10.0, 10.0), own: Vec::new() },
+        Crosses::Every {
+            spacing: 50.0,
+            common: widths(10.0, 10.0),
+            own: Vec::new(),
+        },
     ));
     let c = &t[3];
     assert!(near(c.crossing.unwrap()[0], 100.0));
     // The bisector runs along (1, 1) / sqrt 2, its normal along (-1, 1) / sqrt 2:
     // the cross goes from (100, 0) + 10 n to (100, 0) - 10 n.
     let r = 10.0 / 2f64.sqrt();
-    assert!(near(c.trace[0][0], 100.0 - r) && near(c.trace[0][1], r), "{:?}", c.trace);
-    assert!(near(c.trace[1][0], 100.0 + r) && near(c.trace[1][1], -r), "{:?}", c.trace);
+    assert!(
+        near(c.trace[0][0], 100.0 - r) && near(c.trace[0][1], r),
+        "{:?}",
+        c.trace
+    );
+    assert!(
+        near(c.trace[1][0], 100.0 + r) && near(c.trace[1][1], -r),
+        "{:?}",
+        c.trace
+    );
     // Away from a vertex it is the segment's own direction: s = 150 is on the
     // second segment (going +y), where the cross is horizontal.
     let c = &t[4];
     assert!(near(c.trace[0][1], 50.0) && near(c.trace[1][1], 50.0));
-    assert!(near(c.trace[0][0], 90.0) && near(c.trace[1][0], 110.0), "{:?}", c.trace);
+    assert!(
+        near(c.trace[0][0], 90.0) && near(c.trace[1][0], 110.0),
+        "{:?}",
+        c.trace
+    );
 }
 
 #[test]
@@ -171,7 +233,11 @@ fn a_tight_bend_is_noted_and_never_refused() {
     // Same turn, long crosses: 50 and 100 run through each other on the inside.
     let (t, notes) = run(&inputs(
         bend(),
-        Crosses::Every { spacing: 50.0, common: widths(80.0, 80.0), own: Vec::new() },
+        Crosses::Every {
+            spacing: 50.0,
+            common: widths(80.0, 80.0),
+            own: Vec::new(),
+        },
     ));
     assert_eq!(t.len(), 6, "every cross is computed all the same");
     let pair = |a: u32, b: u32| {
@@ -185,7 +251,11 @@ fn a_tight_bend_is_noted_and_never_refused() {
     // The same turn with short crosses: nothing to say.
     let (_, notes) = run(&inputs(
         bend(),
-        Crosses::Every { spacing: 50.0, common: widths(10.0, 10.0), own: Vec::new() },
+        Crosses::Every {
+            spacing: 50.0,
+            common: widths(10.0, 10.0),
+            own: Vec::new(),
+        },
     ));
     assert!(notes.is_empty(), "{notes:?}");
 }
@@ -197,7 +267,11 @@ fn colinear_crosses_that_overlap_are_noted_too() {
     let trace = vec![[0.0, 0.0], [100.0, 0.0], [0.0, 0.0]];
     let (_, notes) = run(&inputs(
         trace,
-        Crosses::Every { spacing: 50.0, common: widths(10.0, 10.0), own: Vec::new() },
+        Crosses::Every {
+            spacing: 50.0,
+            common: widths(10.0, 10.0),
+            own: Vec::new(),
+        },
     ));
     assert!(
         notes.iter().any(|n| n.code == "crossesCross"
@@ -221,7 +295,11 @@ fn bad_inputs_are_refused_by_name() {
     // A spacing that would make a million crosses.
     let i = inputs(
         straight(),
-        Crosses::Every { spacing: 1e-6, common: widths(1.0, 1.0), own: Vec::new() },
+        Crosses::Every {
+            spacing: 1e-6,
+            common: widths(1.0, 1.0),
+            own: Vec::new(),
+        },
     );
     assert!(traces(&i).unwrap_err().to_string().contains("limit"));
 }

@@ -49,10 +49,30 @@ const BARTONIAN: &str = "b0000000-0000-4000-8000-000000000002";
 const LUTETIAN: &str = "b0000000-0000-4000-8000-000000000003";
 const SET: &str = "d0000000-0000-4000-8000-000000000001";
 
-const RED: Rgba = Rgba { r: 1.0, g: 0.0, b: 0.0, a: 1.0 };
-const BLUE: Rgba = Rgba { r: 0.0, g: 0.0, b: 1.0, a: 1.0 };
-const GREEN: Rgba = Rgba { r: 0.0, g: 1.0, b: 0.0, a: 1.0 };
-const GONE: Rgba = Rgba { r: 0.0, g: 0.0, b: 0.0, a: 0.0 };
+const RED: Rgba = Rgba {
+    r: 1.0,
+    g: 0.0,
+    b: 0.0,
+    a: 1.0,
+};
+const BLUE: Rgba = Rgba {
+    r: 0.0,
+    g: 0.0,
+    b: 1.0,
+    a: 1.0,
+};
+const GREEN: Rgba = Rgba {
+    r: 0.0,
+    g: 1.0,
+    b: 0.0,
+    a: 1.0,
+};
+const GONE: Rgba = Rgba {
+    r: 0.0,
+    g: 0.0,
+    b: 0.0,
+    a: 0.0,
+};
 
 // -- building blocks ---------------------------------------------------------
 
@@ -78,7 +98,10 @@ fn dor(uuid: &str, qualified_type: &str, title: &str) -> eml23::DataObjectRefere
 }
 
 fn citation(title: &str) -> eml23::Citation {
-    eml23::Citation { title: title.to_string(), ..Default::default() }
+    eml23::Citation {
+        title: title.to_string(),
+        ..Default::default()
+    }
 }
 
 fn doubles(values: &[f64]) -> eml23::AbstractFloatingPointArray {
@@ -90,7 +113,12 @@ fn doubles(values: &[f64]) -> eml23::AbstractFloatingPointArray {
 }
 
 fn integers(values: &[i64]) -> eml23::IntegerXmlArray {
-    eml23::IntegerXmlArray { count_per_value: 1, null_value: -1, values: values.to_vec(), ..Default::default() }
+    eml23::IntegerXmlArray {
+        count_per_value: 1,
+        null_value: -1,
+        values: values.to_vec(),
+        ..Default::default()
+    }
 }
 
 /// How a trajectory counts its MDs.
@@ -100,7 +128,11 @@ struct Counted {
     domain: Option<resqml22::MdDomain>,
 }
 
-const METRES: Counted = Counted { datum: DATUM, uom: eml23::LengthUomExt::M, domain: Some(resqml22::MdDomain::Driller) };
+const METRES: Counted = Counted {
+    datum: DATUM,
+    uom: eml23::LengthUomExt::M,
+    domain: Some(resqml22::MdDomain::Driller),
+};
 
 /// A 2.2 trajectory of `wellbore`, with no geometry: MD 0 to 40.
 fn trajectory(uuid: &str, wellbore: &str, counted: Counted) -> resqml22::WellboreTrajectoryRepresentation {
@@ -134,7 +166,11 @@ fn frame(
         represented_object: Some(dor(wellbore, "resqml22.WellboreInterpretation", "wellbore")),
         node_count: mds.len() as i64,
         node_md: Some(doubles(mds)),
-        trajectory: dor(trajectory, "resqml22.WellboreTrajectoryRepresentation", "trajectory"),
+        trajectory: dor(
+            trajectory,
+            "resqml22.WellboreTrajectoryRepresentation",
+            "trajectory",
+        ),
         interval_stratigraphic_units: maps,
         ..Default::default()
     }
@@ -148,7 +184,11 @@ fn mapping(indices: &[i64]) -> resqml22::IntervalStratigraphicUnits {
             elements: Some(eml23::AbstractValueArray::IntegerXmlArray(integers(indices))),
             cumulative_length: Some(eml23::AbstractIntegerArray::IntegerXmlArray(integers(&ends))),
         },
-        stratigraphic_organization_interpretation: dor(RANK, "resqml22.StratigraphicColumnRankInterpretation", "rank"),
+        stratigraphic_organization_interpretation: dor(
+            RANK,
+            "resqml22.StratigraphicColumnRankInterpretation",
+            "rank",
+        ),
     }
 }
 
@@ -209,7 +249,13 @@ fn base() -> Vec<Box<dyn DynObject>> {
         unit(BARTONIAN, "Bartonian"),
         unit(LUTETIAN, "Lutetian"),
         Box::new(trajectory(T1, WELLBORE, METRES)),
-        Box::new(frame(S, WELLBORE, T1, &[0.0, 10.0, 25.0, 40.0], vec![mapping(&[0, 1, 2])])),
+        Box::new(frame(
+            S,
+            WELLBORE,
+            T1,
+            &[0.0, 10.0, 25.0, 40.0],
+            vec![mapping(&[0, 1, 2])],
+        )),
     ]
 }
 
@@ -240,7 +286,10 @@ fn paint_counted(objects: Vec<Box<dyn DynObject>>, target: &str) -> (Result<Pain
         &frames_of,
         None,
         &source,
-        &Known { graphics: &sets, units: &[] },
+        &Known {
+            graphics: &sets,
+            units: &[],
+        },
     );
     (painting, asked.get())
 }
@@ -273,18 +322,44 @@ fn a_silent_frame_is_painted_by_its_wellbores_intervals_at_its_own_mds() {
     const N: &str = "50000000-0000-4000-8000-000000000002";
     let mut objects = base();
     objects.push(Box::new(trajectory(T2, WELLBORE, METRES)));
-    objects.push(Box::new(frame(N, WELLBORE, T2, &[-5.0, 0.0, 5.0, 10.0, 24.9, 25.0, 40.0, 50.0], vec![])));
+    objects.push(Box::new(frame(
+        N,
+        WELLBORE,
+        T2,
+        &[-5.0, 0.0, 5.0, 10.0, 24.9, 25.0, 40.0, 50.0],
+        vec![],
+    )));
 
     let Painting::Carried(carried) = paint(objects, N).expect("the silent frame is painted") else {
         panic!("a frame that states no unit is not its own painting");
     };
-    assert_eq!(colours(&Painting::Carried(carried.clone())), [NONE, R, R, B, B, G, G, NONE]);
-    assert_eq!(carried.outside(), 2, "above 0 and below 40, nothing: {:?}", carried.nodes);
+    assert_eq!(
+        colours(&Painting::Carried(carried.clone())),
+        [NONE, R, R, B, B, G, G, NONE]
+    );
+    assert_eq!(
+        carried.outside(),
+        2,
+        "above 0 and below 40, nothing: {:?}",
+        carried.nodes
+    );
     assert_eq!(carried.nodes[0], Node::Outside);
     assert_eq!(carried.from, [S.to_string()]);
-    assert!(carried.notes.iter().any(|note| note.contains("2 of 8 node(s) lie outside")), "{:?}", carried.notes);
+    assert!(
+        carried
+            .notes
+            .iter()
+            .any(|note| note.contains("2 of 8 node(s) lie outside")),
+        "{:?}",
+        carried.notes
+    );
     // The legend's units are the stating frame's, in its rank's order.
-    let titles: Vec<&str> = carried.strata.units.iter().map(|unit| unit.title.as_str()).collect();
+    let titles: Vec<&str> = carried
+        .strata
+        .units
+        .iter()
+        .map(|unit| unit.title.as_str())
+        .collect();
     assert_eq!(titles, ["Priabonian", "Bartonian", "Lutetian"]);
 }
 
@@ -320,11 +395,17 @@ fn a_line_without_parameters_has_no_md_to_look_up() {
     let mut objects = base();
     let mut with_line = trajectory(T3, WELLBORE, METRES);
     with_line.geometry = Some(resqml22::AbstractParametricLineGeometry::ParametricLineGeometry(
-        resqml22::ParametricLineGeometry { knot_count: 3, ..Default::default() },
+        resqml22::ParametricLineGeometry {
+            knot_count: 3,
+            ..Default::default()
+        },
     ));
     objects.push(Box::new(with_line));
     let refused = paint(objects, T3).expect_err("no parameter is no MD");
-    assert!(refused.to_string().contains("ControlPointParameters"), "{refused}");
+    assert!(
+        refused.to_string().contains("ControlPointParameters"),
+        "{refused}"
+    );
 }
 
 /// A frame that states its own units is its own painting — the carried rule
@@ -364,15 +445,35 @@ fn the_wellbores_frames_are_asked_for_only_when_needed() {
 fn the_limit_rule_is_the_frames_own_node_rule() {
     let source = held(base());
     let sets = graphics();
-    let known = Known { graphics: &sets, units: &[] };
+    let known = Known {
+        graphics: &sets,
+        units: &[],
+    };
     let s = source.object(S).expect("held");
-    let strata = well_strata::of_frame(s.as_reflect(), &Wanted::IntervalUnits { rank: None }, &source, &known)
-        .expect("read");
+    let strata = well_strata::of_frame(
+        s.as_reflect(),
+        &Wanted::IntervalUnits { rank: None },
+        &source,
+        &known,
+    )
+    .expect("read");
     let reference = strata_by_md::md_reference(s.as_reflect(), &source).expect("its trajectory");
     let mds: Vec<f64> = vec![0.0, 10.0, 25.0, 40.0];
-    let carried = strata_by_md::carry("x", "x", &mds, &reference, &[Stated { strata: &strata, reference: &reference }])
-        .expect("carried");
-    assert_eq!(hex(&carried.node_colours_with(GONE, &[])), hex(&strata.node_colours(GONE)));
+    let carried = strata_by_md::carry(
+        "x",
+        "x",
+        &mds,
+        &reference,
+        &[Stated {
+            strata: &strata,
+            reference: &reference,
+        }],
+    )
+    .expect("carried");
+    assert_eq!(
+        hex(&carried.node_colours_with(GONE, &[])),
+        hex(&strata.node_colours(GONE))
+    );
 }
 
 // -- comparability -------------------------------------------------------------
@@ -385,7 +486,11 @@ fn another_datum_is_refused_by_name() {
     objects.push(Box::new(trajectory(
         T2,
         WELLBORE,
-        Counted { datum: OTHER_DATUM, uom: eml23::LengthUomExt::M, domain: Some(resqml22::MdDomain::Driller) },
+        Counted {
+            datum: OTHER_DATUM,
+            uom: eml23::LengthUomExt::M,
+            domain: Some(resqml22::MdDomain::Driller),
+        },
     )));
     let refused = paint(objects, T2).expect_err("two datums");
     assert!(matches!(refused, Refusal::Incomparable { .. }), "{refused:?}");
@@ -413,7 +518,11 @@ fn another_md_domain_is_refused() {
     objects.push(Box::new(trajectory(
         T2,
         WELLBORE,
-        Counted { datum: DATUM, uom: eml23::LengthUomExt::M, domain: Some(resqml22::MdDomain::Logger) },
+        Counted {
+            datum: DATUM,
+            uom: eml23::LengthUomExt::M,
+            domain: Some(resqml22::MdDomain::Logger),
+        },
     )));
     let refused = paint(objects, T2).expect_err("two domains");
     assert!(refused.to_string().contains("logger"), "{refused}");
@@ -430,7 +539,11 @@ fn feet_are_converted_not_read_as_metres() {
     objects.push(Box::new(trajectory(
         T2,
         WELLBORE,
-        Counted { datum: DATUM, uom: eml23::LengthUomExt::Ft, domain: Some(resqml22::MdDomain::Driller) },
+        Counted {
+            datum: DATUM,
+            uom: eml23::LengthUomExt::Ft,
+            domain: Some(resqml22::MdDomain::Driller),
+        },
     )));
     objects.push(Box::new(frame(N, WELLBORE, T2, &[0.0, 50.0, 100.0], vec![])));
     let painting = paint(objects, N).expect("feet convert");
@@ -441,18 +554,36 @@ fn feet_are_converted_not_read_as_metres() {
 /// nothing more.
 #[test]
 fn comparable_reads_the_three_things_and_the_trajectory() {
-    let reference = |trajectory: &str, datum: Option<&str>, uom: Option<&str>, domain: Option<&str>| MdReference {
-        trajectory: trajectory.to_string(),
-        datum: datum.map(str::to_string),
-        uom: uom.map(str::to_string),
-        domain: domain.map(str::to_string),
-    };
+    let reference =
+        |trajectory: &str, datum: Option<&str>, uom: Option<&str>, domain: Option<&str>| MdReference {
+            trajectory: trajectory.to_string(),
+            datum: datum.map(str::to_string),
+            uom: uom.map(str::to_string),
+            domain: domain.map(str::to_string),
+        };
     let a = reference("t1", Some("d"), Some("m"), Some("driller"));
-    assert_eq!(strata_by_md::comparable(&a, &reference("t2", Some("d"), Some("m"), Some("driller"))), Ok(1.0));
-    assert_eq!(strata_by_md::comparable(&reference("t1", None, None, None), &reference("t1", None, None, None)), Ok(1.0));
-    assert!(strata_by_md::comparable(&a, &reference("t2", Some("d"), Some("m"), None)).is_err(), "a domain stated once");
-    assert!(strata_by_md::comparable(&a, &reference("t2", Some("d"), None, Some("driller"))).is_err(), "no unit");
-    assert!(strata_by_md::comparable(&a, &reference("t2", Some("d"), Some("parsec?"), Some("driller"))).is_err());
+    assert_eq!(
+        strata_by_md::comparable(&a, &reference("t2", Some("d"), Some("m"), Some("driller"))),
+        Ok(1.0)
+    );
+    assert_eq!(
+        strata_by_md::comparable(
+            &reference("t1", None, None, None),
+            &reference("t1", None, None, None)
+        ),
+        Ok(1.0)
+    );
+    assert!(
+        strata_by_md::comparable(&a, &reference("t2", Some("d"), Some("m"), None)).is_err(),
+        "a domain stated once"
+    );
+    assert!(
+        strata_by_md::comparable(&a, &reference("t2", Some("d"), None, Some("driller"))).is_err(),
+        "no unit"
+    );
+    assert!(
+        strata_by_md::comparable(&a, &reference("t2", Some("d"), Some("parsec?"), Some("driller"))).is_err()
+    );
 }
 
 // -- which frames speak ----------------------------------------------------------
@@ -468,7 +599,13 @@ fn two_frames_that_disagree_are_said_and_not_arbitrated() {
     objects.push(Box::new(trajectory(T2, WELLBORE, METRES)));
     // Priabonian 0–10 (agrees), Lutetian 10–25 (disagrees with Bartonian),
     // nothing said 25–40 (a null index: silence, not a contradiction).
-    objects.push(Box::new(frame(S2, WELLBORE, T1, &[0.0, 10.0, 25.0, 40.0], vec![mapping(&[0, 2, -1])])));
+    objects.push(Box::new(frame(
+        S2,
+        WELLBORE,
+        T1,
+        &[0.0, 10.0, 25.0, 40.0],
+        vec![mapping(&[0, 2, -1])],
+    )));
 
     let Painting::Carried(carried) = paint(objects, T2).expect("painted where they agree") else {
         panic!("a trajectory is always carried");
@@ -488,14 +625,24 @@ fn two_frames_that_disagree_are_said_and_not_arbitrated() {
         },
     ));
     objects.push(Box::new(with_line));
-    objects.push(Box::new(frame(S2, WELLBORE, T1, &[0.0, 10.0, 25.0, 40.0], vec![mapping(&[0, 2, -1])])));
+    objects.push(Box::new(frame(
+        S2,
+        WELLBORE,
+        T1,
+        &[0.0, 10.0, 25.0, 40.0],
+        vec![mapping(&[0, 2, -1])],
+    )));
     let Painting::Carried(carried) = paint(objects, T2).expect("painted where they agree") else {
         panic!("a trajectory is always carried");
     };
     assert_eq!(carried.nodes[1], Node::Disagreement);
     assert_eq!(colours(&Painting::Carried(carried.clone())), [R, NONE, G]);
     assert_eq!(carried.disagreements(), 1);
-    let note = carried.notes.iter().find(|note| note.contains("two different units")).expect("said");
+    let note = carried
+        .notes
+        .iter()
+        .find(|note| note.contains("two different units"))
+        .expect("said");
     assert!(note.contains("Bartonian") && note.contains("Lutetian"), "{note}");
 }
 
@@ -520,7 +667,13 @@ fn a_defective_frame_of_the_wellbore_is_not_hidden() {
     let mut objects = base();
     objects.push(Box::new(trajectory(T2, WELLBORE, METRES)));
     // Index 7 in a rank of three.
-    objects.push(Box::new(frame(S2, WELLBORE, T1, &[0.0, 10.0, 25.0, 40.0], vec![mapping(&[0, 7, 2])])));
+    objects.push(Box::new(frame(
+        S2,
+        WELLBORE,
+        T1,
+        &[0.0, 10.0, 25.0, 40.0],
+        vec![mapping(&[0, 7, 2])],
+    )));
     let refused = paint(objects, T2).expect_err("the defect is said");
     assert!(matches!(refused, Refusal::Defect { .. }), "{refused:?}");
 }
@@ -570,7 +723,9 @@ fn looked_up(intervals: &[strata_by_md::Interval], md: f64, closed_last: bool) -
     });
     match found {
         // `GONE` is what the painting draws for a node without a colour.
-        Some((_, one)) => one.colour.map_or(NONE.to_string(), |colour| hex(&colour.to_bytes())[0].clone()),
+        Some((_, one)) => one
+            .colour
+            .map_or(NONE.to_string(), |colour| hex(&colour.to_bytes())[0].clone()),
         None => NONE.to_string(),
     }
 }
@@ -590,8 +745,15 @@ fn at_the_nodes_own_mds_the_intervals_give_the_nodes_colours() {
     let mds = [0.0, 10.0, 25.0, 40.0];
     let intervals = own.intervals(&mds, &[]).expect("intervals");
     assert_eq!(
-        intervals.iter().map(|one| (one.from, one.to, one.unit.as_str())).collect::<Vec<_>>(),
-        [(0.0, 10.0, "Priabonian"), (10.0, 25.0, "Bartonian"), (25.0, 40.0, "Lutetian")]
+        intervals
+            .iter()
+            .map(|one| (one.from, one.to, one.unit.as_str()))
+            .collect::<Vec<_>>(),
+        [
+            (0.0, 10.0, "Priabonian"),
+            (10.0, 25.0, "Bartonian"),
+            (25.0, 40.0, "Lutetian")
+        ]
     );
     let from_intervals: Vec<String> = mds.iter().map(|md| looked_up(&intervals, *md, true)).collect();
     assert_eq!(from_intervals, colours(&own));
@@ -602,7 +764,10 @@ fn at_the_nodes_own_mds_the_intervals_give_the_nodes_colours() {
         .iter()
         .map(|one| {
             one.unit_uri.as_deref().map(|uri| {
-                (energyml_core::identity::parse_address(uri).0, uri.contains("StratigraphicUnitInterpretation"))
+                (
+                    energyml_core::identity::parse_address(uri).0,
+                    uri.contains("StratigraphicUnitInterpretation"),
+                )
             })
         })
         .collect();
@@ -630,8 +795,16 @@ fn at_the_nodes_own_mds_the_intervals_give_the_nodes_colours() {
     // Until 03/10 this said `(25, 50)`: the unit of node 40 stretched to node
     // 50, which the line above says is outside every interval.
     assert_eq!(
-        intervals.iter().map(|one| (one.from, one.to, one.unit.as_str())).collect::<Vec<_>>(),
-        [(0.0, 10.0, "Priabonian"), (10.0, 25.0, "Bartonian"), (25.0, 40.0, "Lutetian"), (40.0, 40.0, "Lutetian")]
+        intervals
+            .iter()
+            .map(|one| (one.from, one.to, one.unit.as_str()))
+            .collect::<Vec<_>>(),
+        [
+            (0.0, 10.0, "Priabonian"),
+            (10.0, 25.0, "Bartonian"),
+            (25.0, 40.0, "Lutetian"),
+            (40.0, 40.0, "Lutetian")
+        ]
     );
 
     // A trajectory with no geometry: its two bounds, the deepest node a
@@ -660,8 +833,15 @@ fn a_carried_painting_draws_what_the_frames_state_and_nothing_below() {
     let carried = paint(objects, N).expect("carried");
     let intervals = carried.intervals(&nodes, &[]).expect("intervals");
     assert_eq!(
-        intervals.iter().map(|one| (one.from, one.to, one.unit.as_str())).collect::<Vec<_>>(),
-        [(5.0, 10.0, "Priabonian"), (10.0, 25.0, "Bartonian"), (25.0, 40.0, "Lutetian")]
+        intervals
+            .iter()
+            .map(|one| (one.from, one.to, one.unit.as_str()))
+            .collect::<Vec<_>>(),
+        [
+            (5.0, 10.0, "Priabonian"),
+            (10.0, 25.0, "Bartonian"),
+            (25.0, 40.0, "Lutetian")
+        ]
     );
     // And the nodes still find what `node_colours_with` gives them.
     let from_intervals: Vec<String> = nodes.iter().map(|md| looked_up(&intervals, *md, false)).collect();
@@ -692,7 +872,10 @@ fn a_unit_without_a_colour_is_none_or_the_callers_palette() {
     let palette = [RED, BLUE];
     let drawn = painting.intervals(&mds, &palette).expect("intervals");
     assert_eq!(
-        drawn.iter().map(|one| one.colour.map(|c| c.to_hex())).collect::<Vec<_>>(),
+        drawn
+            .iter()
+            .map(|one| one.colour.map(|c| c.to_hex()))
+            .collect::<Vec<_>>(),
         [Some(R.to_string()), Some(B.to_string()), Some(R.to_string())]
     );
     // And the nodes, with that palette, are painted the same.
@@ -710,6 +893,11 @@ fn intervals_refuse_a_count_of_mds_that_is_not_the_nodes() {
     objects.push(Box::new(trajectory(T2, WELLBORE, METRES)));
     objects.push(Box::new(frame(N, WELLBORE, T2, &[0.0, 10.0, 30.0], vec![])));
     let carried = paint(objects, N).expect("carried");
-    let refused = carried.intervals(&[0.0, 10.0], &[]).expect_err("two MDs for three nodes");
-    assert!(refused.contains("3 node(s)") && refused.contains("2 measured depth(s)"), "{refused}");
+    let refused = carried
+        .intervals(&[0.0, 10.0], &[])
+        .expect_err("two MDs for three nodes");
+    assert!(
+        refused.contains("3 node(s)") && refused.contains("2 measured depth(s)"),
+        "{refused}"
+    );
 }

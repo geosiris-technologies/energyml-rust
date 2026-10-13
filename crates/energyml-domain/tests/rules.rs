@@ -35,9 +35,7 @@ const RULES: &str = r#"[
 
 fn reference(content_type: &str, uuid: &str) -> energyml_eml_2_0::DataObjectReference {
     energyml_eml_2_0::DataObjectReference {
-        content_type: format!(
-            "application/x-resqml+xml;version=2.0;type={content_type}"
-        ),
+        content_type: format!("application/x-resqml+xml;version=2.0;type={content_type}"),
         title: "cible".into(),
         uuid: uuid.into(),
         ..Default::default()
@@ -58,8 +56,7 @@ fn a_reference_written_with_version_2_0_1_still_yields_a_key() {
     // the spelling the real corpus uses too - and identification must read
     // it as `2.0`.
     let reference = energyml_eml_2_0::DataObjectReference {
-        content_type: "application/x-resqml+xml;version=2.0.1;type=obj_GeneticBoundaryFeature"
-            .into(),
+        content_type: "application/x-resqml+xml;version=2.0.1;type=obj_GeneticBoundaryFeature".into(),
         title: "Horizon1".into(),
         uuid: "b8fefcff-3e58-488e-95e9-67a973b7aaec".into(),
         ..Default::default()
@@ -72,8 +69,14 @@ fn a_reference_written_with_version_2_0_1_still_yields_a_key() {
 #[test]
 fn brt1_a_fault_must_interpret_a_tectonic_boundary() {
     let rules = rules::parse(RULES).expect("the set parses");
-    let good = fault("00000000-0000-0000-0000-000000000001", "obj_TectonicBoundaryFeature");
-    let bad = fault("00000000-0000-0000-0000-000000000002", "obj_GeneticBoundaryFeature");
+    let good = fault(
+        "00000000-0000-0000-0000-000000000001",
+        "obj_TectonicBoundaryFeature",
+    );
+    let bad = fault(
+        "00000000-0000-0000-0000-000000000002",
+        "obj_GeneticBoundaryFeature",
+    );
     let objects: Vec<(&str, &dyn energyml_core::value::Reflect)> = vec![
         ("00000000-0000-0000-0000-000000000001", &good),
         ("00000000-0000-0000-0000-000000000002", &bad),
@@ -85,7 +88,9 @@ fn brt1_a_fault_must_interpret_a_tectonic_boundary() {
     assert_eq!(findings[0].uuid, "00000000-0000-0000-0000-000000000002");
     assert_eq!(
         findings[0].outcome,
-        Outcome::Violation { read: "GeneticBoundaryFeature".into() }
+        Outcome::Violation {
+            read: "GeneticBoundaryFeature".into()
+        }
     );
 }
 
@@ -94,37 +99,49 @@ fn brt2_reads_the_target_through_the_lender() {
     let rules = rules::parse(RULES).expect("the set parses");
     let model = resqml20::EarthModelInterpretation {
         uuid: "00000000-0000-0000-0000-000000000003".into(),
-        interpreted_feature: reference(
-            "obj_OrganizationFeature",
-            "00000000-0000-0000-0000-00000000fea2",
-        ),
+        interpreted_feature: reference("obj_OrganizationFeature", "00000000-0000-0000-0000-00000000fea2"),
         ..Default::default()
     };
     let objects: Vec<(&str, &dyn energyml_core::value::Reflect)> =
         vec![("00000000-0000-0000-0000-000000000003", &model)];
 
     // The target with the wrong kind: a violation, the value read shown.
-    let wrong = rules::run(&rules, objects.clone().into_iter(), &Lender(|uuid| {
-        assert_eq!(uuid, "00000000-0000-0000-0000-00000000fea2");
-        let feature = resqml20::OrganizationFeature {
-            uuid: uuid.into(),
-            organization_kind: resqml20::OrganizationKind::Structural,
-            ..Default::default()
-        };
-        Some(Box::new(feature) as Box<dyn DynObject>)
-    }), None);
+    let wrong = rules::run(
+        &rules,
+        objects.clone().into_iter(),
+        &Lender(|uuid| {
+            assert_eq!(uuid, "00000000-0000-0000-0000-00000000fea2");
+            let feature = resqml20::OrganizationFeature {
+                uuid: uuid.into(),
+                organization_kind: resqml20::OrganizationKind::Structural,
+                ..Default::default()
+            };
+            Some(Box::new(feature) as Box<dyn DynObject>)
+        }),
+        None,
+    );
     assert_eq!(wrong.len(), 1, "{wrong:?}");
-    assert_eq!(wrong[0].outcome, Outcome::Violation { read: "structural".into() });
+    assert_eq!(
+        wrong[0].outcome,
+        Outcome::Violation {
+            read: "structural".into()
+        }
+    );
 
     // The right target: silence.
-    let right = rules::run(&rules, objects.clone().into_iter(), &Lender(|uuid| {
-        let feature = resqml20::OrganizationFeature {
-            uuid: uuid.into(),
-            organization_kind: resqml20::OrganizationKind::EarthModel,
-            ..Default::default()
-        };
-        Some(Box::new(feature) as Box<dyn DynObject>)
-    }), None);
+    let right = rules::run(
+        &rules,
+        objects.clone().into_iter(),
+        &Lender(|uuid| {
+            let feature = resqml20::OrganizationFeature {
+                uuid: uuid.into(),
+                organization_kind: resqml20::OrganizationKind::EarthModel,
+                ..Default::default()
+            };
+            Some(Box::new(feature) as Box<dyn DynObject>)
+        }),
+        None,
+    );
     assert_eq!(right, vec![], "{right:?}");
 
     // The target outside the package: uncheckable, never a silent pass.
@@ -144,12 +161,18 @@ fn a_wrong_path_is_unverifiable_never_a_silent_pass() {
         }]"#,
     )
     .expect("parses");
-    let object = fault("00000000-0000-0000-0000-000000000004", "obj_TectonicBoundaryFeature");
+    let object = fault(
+        "00000000-0000-0000-0000-000000000004",
+        "obj_TectonicBoundaryFeature",
+    );
     let objects: Vec<(&str, &dyn energyml_core::value::Reflect)> =
         vec![("00000000-0000-0000-0000-000000000004", &object)];
     let findings = rules::run(&rules, objects.into_iter(), &Lender(|_| None), None);
     assert_eq!(findings.len(), 1);
-    assert!(matches!(&findings[0].outcome, Outcome::Unverifiable { .. }), "{findings:?}");
+    assert!(
+        matches!(&findings[0].outcome, Outcome::Unverifiable { .. }),
+        "{findings:?}"
+    );
 }
 
 #[test]
@@ -165,7 +188,10 @@ fn a_when_that_does_not_hold_is_silent() {
     )
     .expect("parses");
     // Domain is "time": the rule is inapplicable - silent.
-    let mut object = fault("00000000-0000-0000-0000-000000000005", "obj_GeneticBoundaryFeature");
+    let mut object = fault(
+        "00000000-0000-0000-0000-000000000005",
+        "obj_GeneticBoundaryFeature",
+    );
     object.domain = resqml20::Domain::Time;
     let objects: Vec<(&str, &dyn energyml_core::value::Reflect)> =
         vec![("00000000-0000-0000-0000-000000000005", &object)];
@@ -198,8 +224,7 @@ fn a_compare_judges_numbers_with_product_and_offset() {
         fastest_axis_count: 5,
         ..Default::default()
     };
-    let objects: Vec<(&str, &dyn energyml_core::value::Reflect)> =
-        vec![("good", &good), ("bad", &bad)];
+    let objects: Vec<(&str, &dyn energyml_core::value::Reflect)> = vec![("good", &good), ("bad", &bad)];
     let findings = rules::run(&rules, objects.into_iter(), &Lender(|_| None), None);
 
     // The right patch: 3 = 4 - 1 and 3 <= 16 - silence. The wrong one breaks
@@ -214,7 +239,10 @@ fn a_compare_judges_numbers_with_product_and_offset() {
         other => panic!("expected a violation, got {other:?}"),
     }
     let cap = findings.iter().find(|f| f.rule == "cap").expect("cap violated");
-    assert!(matches!(&cap.outcome, Outcome::Violation { read } if read.contains("25")), "{cap:?}");
+    assert!(
+        matches!(&cap.outcome, Outcome::Violation { read } if read.contains("25")),
+        "{cap:?}"
+    );
 }
 
 #[test]
@@ -224,7 +252,11 @@ fn a_compare_that_cannot_read_is_unverifiable_never_a_silent_pass() {
              "check": { "compare": "SlowestAxisCuont", "op": "=", "to": "FastestAxisCount" } }]"#,
     )
     .expect("parses");
-    let patch = resqml20::Grid2dPatch { slowest_axis_count: 3, fastest_axis_count: 4, ..Default::default() };
+    let patch = resqml20::Grid2dPatch {
+        slowest_axis_count: 3,
+        fastest_axis_count: 4,
+        ..Default::default()
+    };
     let objects: Vec<(&str, &dyn energyml_core::value::Reflect)> = vec![("p", &patch)];
     let findings = rules::run(&rules, objects.into_iter(), &Lender(|_| None), None);
     assert_eq!(findings.len(), 1);
@@ -246,9 +278,15 @@ fn a_when_targets_condition_gates_like_the_2016_implies() {
         }]"#,
     )
     .expect("parses");
-    let mut tectonic = fault("00000000-0000-0000-0000-000000000006", "obj_TectonicBoundaryFeature");
+    let mut tectonic = fault(
+        "00000000-0000-0000-0000-000000000006",
+        "obj_TectonicBoundaryFeature",
+    );
     tectonic.domain = resqml20::Domain::Time;
-    let mut genetic = fault("00000000-0000-0000-0000-000000000007", "obj_GeneticBoundaryFeature");
+    let mut genetic = fault(
+        "00000000-0000-0000-0000-000000000007",
+        "obj_GeneticBoundaryFeature",
+    );
     genetic.domain = resqml20::Domain::Time;
     let objects: Vec<(&str, &dyn energyml_core::value::Reflect)> = vec![
         ("00000000-0000-0000-0000-000000000006", &tectonic),
@@ -309,11 +347,19 @@ fn brt3_the_domain_propagates_to_the_listed_neighbours() {
 
     // A fault in time inside an organisation in depth: a violation, and the
     // report names **the index** of the faulty neighbour and both values.
-    let caught = rules::run(&rules, objects.clone().into_iter(), &Lender(lender(resqml20::Domain::Time)), None);
+    let caught = rules::run(
+        &rules,
+        objects.clone().into_iter(),
+        &Lender(lender(resqml20::Domain::Time)),
+        None,
+    );
     assert_eq!(caught.len(), 1, "{caught:?}");
     match &caught[0].outcome {
         Outcome::Violation { read } => {
-            assert!(read.contains("Faults[1]") && read.contains("time") && read.contains("depth"), "{read}");
+            assert!(
+                read.contains("Faults[1]") && read.contains("time") && read.contains("depth"),
+                "{read}"
+            );
             assert!(!read.contains("Faults[0]"), "{read}");
         }
         other => panic!("expected a violation, got {other:?}"),
@@ -321,7 +367,12 @@ fn brt3_the_domain_propagates_to_the_listed_neighbours() {
 
     // Everyone in depth: silence - and the empty lists (the horizons)
     // fabricate nothing, a forAll over nothing is true.
-    let sane = rules::run(&rules, objects.clone().into_iter(), &Lender(lender(resqml20::Domain::Depth)), None);
+    let sane = rules::run(
+        &rules,
+        objects.clone().into_iter(),
+        &Lender(lender(resqml20::Domain::Depth)),
+        None,
+    );
     assert_eq!(sane, vec![], "{sane:?}");
 
     // A neighbour outside the package: uncheckable, never a silent pass.
@@ -362,7 +413,10 @@ fn trg_a_representation_represents_an_interpretation_or_a_technical_feature() {
     let rules = rules::trg();
     let interpretation = representing("00000000-0000-0000-0000-000000000011", "HorizonInterpretation");
     let technical = representing("00000000-0000-0000-0000-000000000012", "SeismicLatticeFeature");
-    let neither = representing("00000000-0000-0000-0000-000000000013", "TriangulatedSetRepresentation");
+    let neither = representing(
+        "00000000-0000-0000-0000-000000000013",
+        "TriangulatedSetRepresentation",
+    );
     let objects: Vec<(&str, &dyn energyml_core::value::Reflect)> = vec![
         ("00000000-0000-0000-0000-000000000011", &interpretation),
         ("00000000-0000-0000-0000-000000000012", &technical),
@@ -386,7 +440,9 @@ fn trg_a_representation_represents_an_interpretation_or_a_technical_feature() {
     assert_eq!(findings[0].uuid, "00000000-0000-0000-0000-000000000013");
     assert_eq!(
         findings[0].outcome,
-        Outcome::Violation { read: "TriangulatedSetRepresentation".into() }
+        Outcome::Violation {
+            read: "TriangulatedSetRepresentation".into()
+        }
     );
 }
 
@@ -431,7 +487,10 @@ fn a_release_specific_rule_does_not_judge_the_other_release() {
     // that does not allow it, is still a violation.
     let old = resqml20::TriangulatedSetRepresentation {
         uuid: "00000000-0000-0000-0000-000000000032".to_string(),
-        represented_interpretation: Some(reference("obj_SeismicLatticeFeature", "00000000-0000-0000-0000-0000000000ff")),
+        represented_interpretation: Some(reference(
+            "obj_SeismicLatticeFeature",
+            "00000000-0000-0000-0000-0000000000ff",
+        )),
         ..Default::default()
     };
     let objects: Vec<(&str, &dyn energyml_core::value::Reflect)> =
@@ -459,7 +518,10 @@ fn trg_a_boundary_interpretation_interprets_a_boundary_feature() {
     let rules = rules::trg();
     let known = energyml_schemas::all();
 
-    let good = fault("00000000-0000-0000-0000-000000000041", "obj_TectonicBoundaryFeature");
+    let good = fault(
+        "00000000-0000-0000-0000-000000000041",
+        "obj_TectonicBoundaryFeature",
+    );
     let bad = fault("00000000-0000-0000-0000-000000000042", "obj_WellboreFeature");
     let objects: Vec<(&str, &dyn energyml_core::value::Reflect)> = vec![
         ("00000000-0000-0000-0000-000000000041", &good),
@@ -474,7 +536,9 @@ fn trg_a_boundary_interpretation_interprets_a_boundary_feature() {
     assert_eq!(findings[0].uuid, "00000000-0000-0000-0000-000000000042");
     assert_eq!(
         findings[0].outcome,
-        Outcome::Violation { read: "WellboreFeature".into() }
+        Outcome::Violation {
+            read: "WellboreFeature".into()
+        }
     );
 }
 
@@ -520,7 +584,12 @@ fn trg_an_earth_model_interprets_a_model() {
 
     assert_eq!(findings.len(), 1, "{findings:?}");
     assert_eq!(findings[0].uuid, "00000000-0000-0000-0000-000000000052");
-    assert_eq!(findings[0].outcome, Outcome::Violation { read: "BoundaryFeature".into() });
+    assert_eq!(
+        findings[0].outcome,
+        Outcome::Violation {
+            read: "BoundaryFeature".into()
+        }
+    );
 }
 
 /// A trajectory runs forward, and *"always less than"* is not *"at most"*.
@@ -638,14 +707,16 @@ fn e09_a_contact_whose_subject_is_a_representation_is_found_once() {
     fn organisation(uuid: &str, subject: &str) -> resqml22::StructuralOrganizationInterpretation {
         resqml22::StructuralOrganizationInterpretation {
             uuid: uuid.to_string(),
-            contact_interpretation: vec![resqml22::AbstractContactInterpretationPart::BinaryContactInterpretationPart(
-                resqml22::BinaryContactInterpretationPart {
-                    subject: element(subject, "00000000-0000-0000-0000-0000000009a1"),
-                    direct_object: element("FaultInterpretation", "00000000-0000-0000-0000-0000000009a2"),
-                    verb: resqml22::ContactVerb::Stops,
-                    ..Default::default()
-                },
-            )],
+            contact_interpretation: vec![
+                resqml22::AbstractContactInterpretationPart::BinaryContactInterpretationPart(
+                    resqml22::BinaryContactInterpretationPart {
+                        subject: element(subject, "00000000-0000-0000-0000-0000000009a1"),
+                        direct_object: element("FaultInterpretation", "00000000-0000-0000-0000-0000000009a2"),
+                        verb: resqml22::ContactVerb::Stops,
+                        ..Default::default()
+                    },
+                ),
+            ],
             ..Default::default()
         }
     }
@@ -653,7 +724,10 @@ fn e09_a_contact_whose_subject_is_a_representation_is_found_once() {
     let rules = rules::trg();
     let known = energyml_schemas::all();
     let good = organisation("00000000-0000-0000-0000-000000000901", "HorizonInterpretation");
-    let bad = organisation("00000000-0000-0000-0000-000000000902", "TriangulatedSetRepresentation");
+    let bad = organisation(
+        "00000000-0000-0000-0000-000000000902",
+        "TriangulatedSetRepresentation",
+    );
     let objects: Vec<(&str, &dyn energyml_core::value::Reflect)> = vec![
         ("00000000-0000-0000-0000-000000000901", &good),
         ("00000000-0000-0000-0000-000000000902", &bad),
@@ -716,21 +790,31 @@ fn trg_a_contact_reached_through_a_frontier_interpretation_is_a_named_warning() 
             ..Default::default()
         }
     }
-    fn organisation(uuid: &str, subject_type: &str, subject_uuid: &str) -> resqml22::StructuralOrganizationInterpretation {
+    fn organisation(
+        uuid: &str,
+        subject_type: &str,
+        subject_uuid: &str,
+    ) -> resqml22::StructuralOrganizationInterpretation {
         resqml22::StructuralOrganizationInterpretation {
             uuid: uuid.to_string(),
-            contact_interpretation: vec![resqml22::AbstractContactInterpretationPart::BinaryContactInterpretationPart(
-                resqml22::BinaryContactInterpretationPart {
-                    subject: element(subject_type, subject_uuid),
-                    direct_object: element("FaultInterpretation", "00000000-0000-0000-0000-0000000009b2"),
-                    verb: resqml22::ContactVerb::Stops,
-                    ..Default::default()
-                },
-            )],
+            contact_interpretation: vec![
+                resqml22::AbstractContactInterpretationPart::BinaryContactInterpretationPart(
+                    resqml22::BinaryContactInterpretationPart {
+                        subject: element(subject_type, subject_uuid),
+                        direct_object: element("FaultInterpretation", "00000000-0000-0000-0000-0000000009b2"),
+                        verb: resqml22::ContactVerb::Stops,
+                        ..Default::default()
+                    },
+                ),
+            ],
             ..Default::default()
         }
     }
-    fn only_rule(store: &dyn ObjectSource, object: &dyn energyml_core::value::Reflect, known: &energyml_core::registry::Registry) -> Vec<rules::Finding> {
+    fn only_rule(
+        store: &dyn ObjectSource,
+        object: &dyn energyml_core::value::Reflect,
+        known: &energyml_core::registry::Registry,
+    ) -> Vec<rules::Finding> {
         let objects: Vec<(&str, &dyn energyml_core::value::Reflect)> = vec![("subject-of-this-test", object)];
         rules::run(&rules::trg(), objects.into_iter(), store, Some(known))
             .into_iter()
@@ -746,7 +830,11 @@ fn trg_a_contact_reached_through_a_frontier_interpretation_is_a_named_warning() 
     // `through` clause from `trg/contact-element-is-geological` in
     // `rules.rs` and this comes back an error with the old sentence.
     let generic_uuid = "00000000-0000-0000-0000-0000000009c1";
-    let frontier_via_interpretation = organisation("00000000-0000-0000-0000-000000000921", "GenericFeatureInterpretation", generic_uuid);
+    let frontier_via_interpretation = organisation(
+        "00000000-0000-0000-0000-000000000921",
+        "GenericFeatureInterpretation",
+        generic_uuid,
+    );
     let lender = Lender(|uuid: &str| {
         assert_eq!(uuid, generic_uuid, "only the interpretation should be resolved");
         Some(Box::new(resqml22::GenericFeatureInterpretation {
@@ -758,9 +846,23 @@ fn trg_a_contact_reached_through_a_frontier_interpretation_is_a_named_warning() 
     let findings = only_rule(&lender, &frontier_via_interpretation, &known);
     assert_eq!(findings.len(), 1, "{findings:?}");
     assert_eq!(findings[0].gravity, Gravity::Warning, "{findings:?}");
-    assert!(matches!(&findings[0].outcome, Outcome::Violation { .. }), "{findings:?}");
-    assert_ne!(findings[0].says, rules::trg().into_iter().find(|r| r.id == "trg/contact-element-is-geological").unwrap().says);
-    assert!(findings[0].says.contains("through its interpretation"), "{}", findings[0].says);
+    assert!(
+        matches!(&findings[0].outcome, Outcome::Violation { .. }),
+        "{findings:?}"
+    );
+    assert_ne!(
+        findings[0].says,
+        rules::trg()
+            .into_iter()
+            .find(|r| r.id == "trg/contact-element-is-geological")
+            .unwrap()
+            .says
+    );
+    assert!(
+        findings[0].says.contains("through its interpretation"),
+        "{}",
+        findings[0].says
+    );
 
     // (b) the same shape, but the interpretation interprets something else
     // entirely — a seismic line, not a frontier. `through` must not turn
@@ -768,7 +870,11 @@ fn trg_a_contact_reached_through_a_frontier_interpretation_is_a_named_warning() 
     // the rule's own wording. Breaking it: widen `through.targets` to accept
     // anything and this stays a warning instead of reddening.
     let generic_uuid_b = "00000000-0000-0000-0000-0000000009d1";
-    let via_something_else = organisation("00000000-0000-0000-0000-000000000922", "GenericFeatureInterpretation", generic_uuid_b);
+    let via_something_else = organisation(
+        "00000000-0000-0000-0000-000000000922",
+        "GenericFeatureInterpretation",
+        generic_uuid_b,
+    );
     let lender_b = Lender(|uuid: &str| {
         assert_eq!(uuid, generic_uuid_b);
         Some(Box::new(resqml22::GenericFeatureInterpretation {
@@ -822,13 +928,24 @@ fn trg_a_contact_reached_through_a_frontier_interpretation_is_a_named_warning() 
 #[test]
 fn a_rule_declares_its_weight_and_an_unknown_one_is_refused() {
     let one = |severity: &str| {
-        format!(r#"[{{ "id": "x/y", "source": "FaultInterpretation", {severity} "check": {{ "path": "InterpretedFeature", "targets": "TectonicBoundaryFeature" }}, "says": "s" }}]"#)
+        format!(
+            r#"[{{ "id": "x/y", "source": "FaultInterpretation", {severity} "check": {{ "path": "InterpretedFeature", "targets": "TectonicBoundaryFeature" }}, "says": "s" }}]"#
+        )
     };
     assert_eq!(rules::parse(&one("")).unwrap()[0].gravity, Gravity::Warning);
-    assert_eq!(rules::parse(&one(r#""severity": "warning","#)).unwrap()[0].gravity, Gravity::Warning);
-    assert_eq!(rules::parse(&one(r#""severity": "error","#)).unwrap()[0].gravity, Gravity::Error);
+    assert_eq!(
+        rules::parse(&one(r#""severity": "warning","#)).unwrap()[0].gravity,
+        Gravity::Warning
+    );
+    assert_eq!(
+        rules::parse(&one(r#""severity": "error","#)).unwrap()[0].gravity,
+        Gravity::Error
+    );
     let refused = rules::parse(&one(r#""severity": "fatal","#)).unwrap_err();
-    assert!(refused.contains("x/y") && refused.contains("severity"), "{refused}");
+    assert!(
+        refused.contains("x/y") && refused.contains("severity"),
+        "{refused}"
+    );
 }
 
 /// The weights decided in the review of the synthetic reference model (ADR-0018):
@@ -844,13 +961,30 @@ fn the_weights_of_27_09_are_those_the_checks_and_rules_declare() {
         "trg/wellbore-interpretation-set-holds-wellbores",
     ];
     for check in energyml_domain::integrity::checks() {
-        let expected = if errors.contains(&check.id) { Gravity::Error } else { Gravity::Warning };
+        let expected = if errors.contains(&check.id) {
+            Gravity::Error
+        } else {
+            Gravity::Warning
+        };
         assert_eq!(check.gravity, expected, "{}", check.id);
     }
     for id in errors.iter().chain(&["house/time-series-asset-resolves"]) {
-        assert!(energyml_domain::integrity::checks().iter().any(|check| check.id == *id), "{id} is a check");
+        assert!(
+            energyml_domain::integrity::checks()
+                .iter()
+                .any(|check| check.id == *id),
+            "{id} is a check"
+        );
     }
-    let contact = rules::trg().into_iter().find(|rule| rule.id == "trg/contact-element-is-geological").expect("the contact rule exists");
+    let contact = rules::trg()
+        .into_iter()
+        .find(|rule| rule.id == "trg/contact-element-is-geological")
+        .expect("the contact rule exists");
     assert_eq!(contact.gravity, Gravity::Error);
-    assert!(rules::trg().iter().filter(|rule| rule.id != contact.id).all(|rule| rule.gravity == Gravity::Warning));
+    assert!(
+        rules::trg()
+            .iter()
+            .filter(|rule| rule.id != contact.id)
+            .all(|rule| rule.gravity == Gravity::Warning)
+    );
 }

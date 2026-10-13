@@ -54,8 +54,14 @@ pub fn frame_of(source: &dyn ValueSource, representation: &dyn Reflect) -> Resul
     let Some(crs) = energyml_domain::crs::of(representation, source).map_err(|why| format!("{why}"))? else {
         return Ok(ObjectFrame::default());
     };
-    let system = DomainSystem::of(&crs).ok().map(|found| System { epsg: found.epsg, unit: found.unit });
-    Ok(ObjectFrame { system, time: crs.is_time() })
+    let system = DomainSystem::of(&crs).ok().map(|found| System {
+        epsg: found.epsg,
+        unit: found.unit,
+    });
+    Ok(ObjectFrame {
+        system,
+        time: crs.is_time(),
+    })
 }
 
 /// Bring placed points into the scene: reproject `[x, y]` when the object's
@@ -100,10 +106,21 @@ pub fn to_scene(points: &mut [[f64; 3]], frame: &ObjectFrame, scene: &Scene<'_>)
         }
         (Some(own), Some(target)) => {
             if own != target {
-                let from = DomainSystem { epsg: own.epsg, unit: own.unit.clone() };
-                let to = DomainSystem { epsg: target.epsg, unit: target.unit.clone() };
-                let moved = reproject::reproject_placed(points, &from, &to, scene.reprojector)
-                    .map_err(|why| format!("reprojecting from EPSG:{} to EPSG:{}: {why}", own.epsg, target.epsg))?;
+                let from = DomainSystem {
+                    epsg: own.epsg,
+                    unit: own.unit.clone(),
+                };
+                let to = DomainSystem {
+                    epsg: target.epsg,
+                    unit: target.unit.clone(),
+                };
+                let moved =
+                    reproject::reproject_placed(points, &from, &to, scene.reprojector).map_err(|why| {
+                        format!(
+                            "reprojecting from EPSG:{} to EPSG:{}: {why}",
+                            own.epsg, target.epsg
+                        )
+                    })?;
                 points.copy_from_slice(&moved);
             }
         }

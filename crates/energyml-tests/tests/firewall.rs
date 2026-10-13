@@ -65,7 +65,9 @@ fn violations(workspace: &BTreeMap<String, Vec<(String, String)>>) -> Vec<String
             let to = repo_of(dep);
             let rule = match (from, to) {
                 (Repo::Library, Repo::Private) => Some("a library crate depends on a private crate"),
-                (Repo::Library, Repo::Etp) => Some("the library depends on the ETP repository, which depends on the library"),
+                (Repo::Library, Repo::Etp) => {
+                    Some("the library depends on the ETP repository, which depends on the library")
+                }
                 (Repo::Etp, Repo::Private) => Some("an ETP crate depends on a private crate"),
                 _ => None,
             };
@@ -73,7 +75,9 @@ fn violations(workspace: &BTreeMap<String, Vec<(String, String)>>) -> Vec<String
                 found.push(format!("{name} -> {dep} ({kind}): {rule}"));
             }
             if name == NEUTRAL && dep.starts_with("energyml-") {
-                found.push(format!("{name} -> {dep} ({kind}): the neutral crate depends on an energyml crate"));
+                found.push(format!(
+                    "{name} -> {dep} ({kind}): the neutral crate depends on an energyml crate"
+                ));
             }
         }
     }
@@ -89,7 +93,11 @@ fn workspace() -> BTreeMap<String, Vec<(String, String)>> {
         .current_dir(root)
         .output()
         .expect("cargo metadata runs");
-    assert!(output.status.success(), "cargo metadata failed: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "cargo metadata failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let meta: serde_json::Value = serde_json::from_slice(&output.stdout).expect("cargo metadata is JSON");
     let mut workspace = BTreeMap::new();
     for package in meta["packages"].as_array().expect("packages") {
@@ -101,7 +109,11 @@ fn workspace() -> BTreeMap<String, Vec<(String, String)>> {
             .map(|d| {
                 let dep = d["name"].as_str().expect("dependency name").to_string();
                 let kind = d["kind"].as_str().unwrap_or("normal");
-                let optional = if d["optional"].as_bool() == Some(true) { ", optional" } else { "" };
+                let optional = if d["optional"].as_bool() == Some(true) {
+                    ", optional"
+                } else {
+                    ""
+                };
                 (dep, format!("{kind}{optional}"))
             })
             .collect();
@@ -113,7 +125,13 @@ fn workspace() -> BTreeMap<String, Vec<(String, String)>> {
 #[test]
 fn the_checker_names_each_broken_rule() {
     let ws: BTreeMap<String, Vec<(String, String)>> = [
-        ("energyml-cli", vec![("energyml-translate", "normal, optional"), ("retp-client", "normal")]),
+        (
+            "energyml-cli",
+            vec![
+                ("energyml-translate", "normal, optional"),
+                ("retp-client", "normal"),
+            ],
+        ),
         ("energyml-etp-store", vec![("energyml-wasm", "dev")]),
         ("energyml-geostat", vec![("energyml-core", "normal")]),
         ("energyml-translate", vec![("energyml-core", "normal")]),
@@ -123,20 +141,50 @@ fn the_checker_names_each_broken_rule() {
         ("energyml-core", vec![]),
     ]
     .into_iter()
-    .map(|(n, d)| (n.to_string(), d.into_iter().map(|(a, b)| (a.to_string(), b.to_string())).collect()))
+    .map(|(n, d)| {
+        (
+            n.to_string(),
+            d.into_iter()
+                .map(|(a, b)| (a.to_string(), b.to_string()))
+                .collect(),
+        )
+    })
     .collect();
     let found = violations(&ws);
     assert_eq!(found.len(), 4, "{found:#?}");
     // A private crate that is not a member of the tree is still a private crate.
     let mut lone = BTreeMap::new();
-    lone.insert("energyml-cli".to_string(), vec![("energyml-translate-cli".to_string(), "normal".to_string())]);
-    assert_eq!(violations(&lone).len(), 1, "a dependency on a private crate outside the workspace went unseen");
-    assert!(found.iter().any(|v| v.starts_with("energyml-cli -> energyml-translate")));
+    lone.insert(
+        "energyml-cli".to_string(),
+        vec![("energyml-translate-cli".to_string(), "normal".to_string())],
+    );
+    assert_eq!(
+        violations(&lone).len(),
+        1,
+        "a dependency on a private crate outside the workspace went unseen"
+    );
+    assert!(
+        found
+            .iter()
+            .any(|v| v.starts_with("energyml-cli -> energyml-translate"))
+    );
     assert!(found.iter().any(|v| v.starts_with("energyml-cli -> retp-client")));
-    assert!(found.iter().any(|v| v.starts_with("energyml-etp-store -> energyml-wasm")));
-    assert!(found.iter().any(|v| v.starts_with("energyml-geostat -> energyml-core")));
+    assert!(
+        found
+            .iter()
+            .any(|v| v.starts_with("energyml-etp-store -> energyml-wasm"))
+    );
+    assert!(
+        found
+            .iter()
+            .any(|v| v.starts_with("energyml-geostat -> energyml-core"))
+    );
     // Private crates may depend on anything public, and that is not reported.
-    assert!(!found.iter().any(|v| v.starts_with("energyml-wasm") || v.starts_with("energyml-translate")));
+    assert!(
+        !found
+            .iter()
+            .any(|v| v.starts_with("energyml-wasm") || v.starts_with("energyml-translate"))
+    );
 }
 
 #[test]
@@ -146,8 +194,15 @@ fn no_public_crate_depends_on_what_it_cannot_publish_with() {
     // same test runs in the monorepo and in the public `energyml-rust` tree, so it
     // asks only for crates that both hold.
     for expected in ["energyml-core", "energyml-cli", "energyml-storage", NEUTRAL] {
-        assert!(ws.contains_key(expected), "`{expected}` is not a workspace member — the check would prove nothing");
+        assert!(
+            ws.contains_key(expected),
+            "`{expected}` is not a workspace member — the check would prove nothing"
+        );
     }
     let found = violations(&ws);
-    assert!(found.is_empty(), "dependencies that would break the repository split:\n{}", found.join("\n"));
+    assert!(
+        found.is_empty(),
+        "dependencies that would break the repository split:\n{}",
+        found.join("\n")
+    );
 }

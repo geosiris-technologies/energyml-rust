@@ -91,11 +91,16 @@ static CHART: Once = Once::new();
 
 /// The extract, as the chart every operation of this binary reads.
 fn extract() {
-    CHART.call_once(|| geolts::set_default(Chart::from_csv(CONCEPTS, Some(BOUNDS)).expect("the extract reads")));
+    CHART.call_once(|| {
+        geolts::set_default(Chart::from_csv(CONCEPTS, Some(BOUNDS)).expect("the extract reads"))
+    });
 }
 
 fn when() -> When {
-    When { creation: "2026-09-24T00:00:00Z".into(), originator: "test".into() }
+    When {
+        creation: "2026-09-24T00:00:00Z".into(),
+        originator: "test".into(),
+    }
 }
 
 fn plan(operation: &str, pieces: &Pieces, answers: Value) -> Result<Plan, String> {
@@ -104,7 +109,9 @@ fn plan(operation: &str, pieces: &Pieces, answers: Value) -> Result<Plan, String
     for (name, value) in answers.as_object().expect("an object") {
         choices = choices.set(name, value.clone());
     }
-    Registry::new().plan(operation, pieces, &choices, &Identity::derived(), &when()).map_err(|why| why.to_string())
+    Registry::new()
+        .plan(operation, pieces, &choices, &Identity::derived(), &when())
+        .map_err(|why| why.to_string())
 }
 
 fn contacts(pieces: &Pieces, answers: Value) -> Result<Plan, String> {
@@ -125,7 +132,12 @@ fn column() -> BTreeMap<String, Ref> {
     made.objects
         .iter()
         .filter(|one| one.qualified_type == UNIT)
-        .map(|one| (one.title.clone(), Ref::new(one.uuid.clone(), one.qualified_type.clone(), one.title.clone())))
+        .map(|one| {
+            (
+                one.title.clone(),
+                Ref::new(one.uuid.clone(), one.qualified_type.clone(), one.title.clone()),
+            )
+        })
         .collect()
 }
 
@@ -134,7 +146,14 @@ fn units(labels: &[&str]) -> Vec<Option<Ref>> {
     let column = column();
     labels
         .iter()
-        .map(|label| Some(column.get(*label).cloned().unwrap_or_else(|| panic!("`{label}` is not in the column of the extract"))))
+        .map(|label| {
+            Some(
+                column
+                    .get(*label)
+                    .cloned()
+                    .unwrap_or_else(|| panic!("`{label}` is not in the column of the extract")),
+            )
+        })
         .collect()
 }
 
@@ -152,16 +171,37 @@ fn node(at: usize, k: usize) -> [f64; 3] {
 
 /// A frame whose intervals' units are these, top down.
 fn frame(bag: Pieces, at: usize, title: &str, units: &[Option<Ref>]) -> Pieces {
-    let name = if at == 0 { "frames".to_string() } else { format!("frames {}", at + 1) };
+    let name = if at == 0 {
+        "frames".to_string()
+    } else {
+        format!("frames {}", at + 1)
+    };
     let points: Vec<[f64; 3]> = (0..=units.len()).map(|k| node(at, k)).collect();
     let geometry = Geometry {
         kind: "resqml22.WellboreFrameRepresentation",
-        patches: vec![Patch { index: 0, node_offset: 0, points, topology: Topology::Points, closed: Vec::new() }],
+        patches: vec![Patch {
+            index: 0,
+            node_offset: 0,
+            points,
+            topology: Topology::Points,
+            closed: Vec::new(),
+        }],
     };
-    bag.with(name.clone(), Source::Shape { geometry, closed: None }).with(
+    bag.with(
+        name.clone(),
+        Source::Shape {
+            geometry,
+            closed: None,
+        },
+    )
+    .with(
         format!("{name} (object)"),
         Source::Object(Known {
-            reference: Some(Ref::new(format!("uuid-{title}"), "resqml22.WellboreFrameRepresentation", title)),
+            reference: Some(Ref::new(
+                format!("uuid-{title}"),
+                "resqml22.WellboreFrameRepresentation",
+                title,
+            )),
             crs: Some(Ref::new(CRS, "eml23.ProjectedCrs", "EPSG:2154")),
             interval_units: Some(units.to_vec()),
             ..Known::default()
@@ -173,9 +213,17 @@ fn frame(bag: Pieces, at: usize, title: &str, units: &[Option<Ref>]) -> Pieces {
 /// `properties-from-table` titles them.
 fn phi(frame: &str, values: &[f64]) -> Known {
     Known {
-        reference: Some(Ref::new(format!("uuid-{frame}-PHI"), "resqml22.ContinuousProperty", format!("{frame} — PHI"))),
+        reference: Some(Ref::new(
+            format!("uuid-{frame}-PHI"),
+            "resqml22.ContinuousProperty",
+            format!("{frame} — PHI"),
+        )),
         property: Some(KnownProperty {
-            supporting: Some(Ref::new(format!("uuid-{frame}"), "resqml22.WellboreFrameRepresentation", frame)),
+            supporting: Some(Ref::new(
+                format!("uuid-{frame}"),
+                "resqml22.WellboreFrameRepresentation",
+                frame,
+            )),
             indexable: "intervals".to_string(),
             value_count: vec![1],
             timed: false,
@@ -199,7 +247,9 @@ fn points_of(made: &Plan, title: &str) -> Option<Vec<[f64; 3]>> {
         .find(|one| one.qualified_type == "resqml22.PointSetRepresentation" && one.title == title)?;
     let path = format!("/resqml22/{}/points", set.uuid);
     let dataset = made.datasets.iter().find(|one| one.path == path)?;
-    let Numbers::F64(values) = &dataset.values else { return None };
+    let Numbers::F64(values) = &dataset.values else {
+        return None;
+    };
     Some(values.chunks(3).map(|p| [p[0], p[1], p[2]]).collect())
 }
 
@@ -217,14 +267,24 @@ fn sets(made: &Plan) -> Vec<String> {
 
 /// Every point of every point set.
 fn all_points(made: &Plan) -> Vec<[f64; 3]> {
-    sets(made).iter().filter_map(|title| points_of(made, title)).flatten().collect()
+    sets(made)
+        .iter()
+        .filter_map(|title| points_of(made, title))
+        .flatten()
+        .collect()
 }
 
 /// A copy's values, by its title.
 fn copied(made: &Plan, title: &str) -> Option<Numbers> {
-    let object = made.objects.iter().find(|one| one.title == title && one.qualified_type.ends_with("Property"))?;
+    let object = made
+        .objects
+        .iter()
+        .find(|one| one.title == title && one.qualified_type.ends_with("Property"))?;
     let path = format!("/resqml22/{}/values", object.uuid);
-    made.datasets.iter().find(|one| one.path == path).map(|one| one.values.clone())
+    made.datasets
+        .iter()
+        .find(|one| one.path == path)
+        .map(|one| one.values.clone())
 }
 
 /// What the plan says under a key.
@@ -233,12 +293,20 @@ fn note(made: &Plan, key: &str) -> String {
         .iter()
         .find(|one| one.key == key)
         .map(|one| one.detail.clone())
-        .unwrap_or_else(|| panic!("no `{key}` said: {:?}", made.says.iter().map(|one| one.key).collect::<Vec<_>>()))
+        .unwrap_or_else(|| {
+            panic!(
+                "no `{key}` said: {:?}",
+                made.says.iter().map(|one| one.key).collect::<Vec<_>>()
+            )
+        })
 }
 
 /// The uuid of an object of a type, by its title.
 fn uuid_of(made: &Plan, qualified_type: &str, title: &str) -> Option<String> {
-    made.objects.iter().find(|one| one.qualified_type == qualified_type && one.title == title).map(|one| one.uuid.clone())
+    made.objects
+        .iter()
+        .find(|one| one.qualified_type == qualified_type && one.title == title)
+        .map(|one| one.uuid.clone())
 }
 
 // -- the operation, at a rank --------------------------------------------------
@@ -248,17 +316,31 @@ fn at_its_rank_the_lutetian_has_one_top_and_one_base_never_its_inner_limit() {
     // Bartonien over Lutétien supérieur over Lutétien moyen over Yprésien: the
     // Lutetian is intervals 1 and 2, between nodes 1 and 3; node 2 is the
     // limit between two of its substages.
-    let pieces = frame(Pieces::empty(), 0, "F1", &units(&["Bartonien", "Lutétien supérieur", "Lutétien moyen", "Yprésien"]));
+    let pieces = frame(
+        Pieces::empty(),
+        0,
+        "F1",
+        &units(&["Bartonien", "Lutétien supérieur", "Lutétien moyen", "Yprésien"]),
+    );
     let made = contacts(&pieces, json!({ "rank": 6, "unit": "Lutétien" })).expect("a plan");
 
     assert_eq!(points_of(&made, "Lutétien (stage) — top"), Some(vec![node(0, 1)]));
-    assert_eq!(points_of(&made, "Lutétien (stage) — base"), Some(vec![node(0, 3)]));
+    assert_eq!(
+        points_of(&made, "Lutétien (stage) — base"),
+        Some(vec![node(0, 3)])
+    );
     // The unit asked for and nothing else: what lies outside it is its
     // neighbour, which makes its contacts and has none of its own.
-    assert_eq!(sets(&made), vec!["Lutétien (stage) — base", "Lutétien (stage) — top"]);
+    assert_eq!(
+        sets(&made),
+        vec!["Lutétien (stage) — base", "Lutétien (stage) — top"]
+    );
     // **Never the inner limit**, in any point set.
     let inner = node(0, 2);
-    assert!(all_points(&made).iter().all(|point| *point != inner), "the Upper/Middle Lutetian limit is no contact of the stage");
+    assert!(
+        all_points(&made).iter().all(|point| *point != inner),
+        "the Upper/Middle Lutetian limit is no contact of the stage"
+    );
 
     // The same frame read unit by unit gives the inner limit — the finding
     // this reading exists to leave out, and what this test would see if the
@@ -269,7 +351,12 @@ fn at_its_rank_the_lutetian_has_one_top_and_one_base_never_its_inner_limit() {
 
 #[test]
 fn at_a_rank_an_interval_property_is_read_on_the_side_of_the_division() {
-    let pieces = frame(Pieces::empty(), 0, "F1", &units(&["Bartonien", "Lutétien supérieur", "Lutétien moyen", "Yprésien"]));
+    let pieces = frame(
+        Pieces::empty(),
+        0,
+        "F1",
+        &units(&["Bartonien", "Lutétien supérieur", "Lutétien moyen", "Yprésien"]),
+    );
     let pieces = pieces.with("properties", Source::Object(phi("F1", &[0.1, 0.2, 0.3, 0.4])));
     let made = contacts(&pieces, json!({ "unit": "Lutétien" })).expect("a plan");
 
@@ -278,22 +365,41 @@ fn at_a_rank_an_interval_property_is_read_on_the_side_of_the_division() {
     // node's rank, the base would take the Ypresian's 0.4; read by the
     // substage, the top of the stage and the base of the Upper Lutetian would
     // be two different nodes.
-    assert_eq!(copied(&made, "Lutétien (stage) — top — PHI"), Some(Numbers::F64(vec![0.2])));
-    assert_eq!(copied(&made, "Lutétien (stage) — base — PHI"), Some(Numbers::F64(vec![0.3])));
+    assert_eq!(
+        copied(&made, "Lutétien (stage) — top — PHI"),
+        Some(Numbers::F64(vec![0.2]))
+    );
+    assert_eq!(
+        copied(&made, "Lutétien (stage) — base — PHI"),
+        Some(Numbers::F64(vec![0.3]))
+    );
 }
 
 #[test]
 fn a_frame_without_the_unit_gives_no_point_and_is_counted() {
-    let pieces = frame(Pieces::empty(), 0, "F1", &units(&["Bartonien", "Lutétien supérieur", "Lutétien moyen", "Yprésien"]));
+    let pieces = frame(
+        Pieces::empty(),
+        0,
+        "F1",
+        &units(&["Bartonien", "Lutétien supérieur", "Lutétien moyen", "Yprésien"]),
+    );
     // F2 never reaches the Lutetian.
     let pieces = frame(pieces, 1, "F2", &units(&["Holocène", "Cuisien", "Sparnacien"]));
     // F3 reaches it under the Holocene and ends in the Middle Eocene — a
     // coarser division that holds it: part of that pass may be Lutetian, so
     // no base can be read there.
-    let pieces = frame(pieces, 2, "F3", &units(&["Holocène", "Lutétien supérieur", "Eocène moyen"]));
+    let pieces = frame(
+        pieces,
+        2,
+        "F3",
+        &units(&["Holocène", "Lutétien supérieur", "Eocène moyen"]),
+    );
     let made = contacts(&pieces, json!({ "unit": "1255" })).expect("a plan");
 
-    assert_eq!(points_of(&made, "Lutétien (stage) — top"), Some(vec![node(0, 1), node(2, 1)]));
+    assert_eq!(
+        points_of(&made, "Lutétien (stage) — top"),
+        Some(vec![node(0, 1), node(2, 1)])
+    );
     assert_eq!(
         points_of(&made, "Lutétien (stage) — base"),
         Some(vec![node(0, 3)]),
@@ -301,13 +407,24 @@ fn a_frame_without_the_unit_gives_no_point_and_is_counted() {
     );
     // F2 gives nothing, anywhere.
     let [x, y] = head(1);
-    assert!(all_points(&made).iter().all(|point| point[0] != x || point[1] != y), "F2 has no Lutetian");
+    assert!(
+        all_points(&made)
+            .iter()
+            .all(|point| point[0] != x || point[1] != y),
+        "F2 has no Lutetian"
+    );
 
     // Counted, and named.
     let absent = note(&made, "rank-absent");
-    assert!(absent.starts_with("1 frame(s)") && absent.contains("`F2`"), "{absent}");
+    assert!(
+        absent.starts_with("1 frame(s)") && absent.contains("`F2`"),
+        "{absent}"
+    );
     let unknown = note(&made, "rank-unknown");
-    assert!(unknown.contains("Eocène moyen × 1") && unknown.contains("holds it"), "{unknown}");
+    assert!(
+        unknown.contains("Eocène moyen × 1") && unknown.contains("holds it"),
+        "{unknown}"
+    );
     let reached = note(&made, "rank-units");
     assert!(reached.contains("`Lutétien (stage)` in 2"), "{reached}");
 }
@@ -317,24 +434,46 @@ fn a_division_that_comes_back_in_one_hole_is_refused_by_name() {
     // Named, three different divisions and no refusal; at the stage, the
     // Lutetian twice in one hole — two tops, and which one is *the* top is a
     // geologist's call.
-    let pieces = frame(Pieces::empty(), 0, "F1", &units(&["Lutétien supérieur", "Yprésien", "Lutétien inférieur"]));
+    let pieces = frame(
+        Pieces::empty(),
+        0,
+        "F1",
+        &units(&["Lutétien supérieur", "Yprésien", "Lutétien inférieur"]),
+    );
     assert!(contacts(&pieces, json!({})).is_ok(), "named, three divisions");
     let why = contacts(&pieces, json!({ "unit": "Lutétien" })).expect_err("the Lutetian twice in one hole");
-    assert!(why.contains("`F1`") && why.contains("`Lutétien (stage)`") && why.contains("twice"), "{why}");
+    assert!(
+        why.contains("`F1`") && why.contains("`Lutétien (stage)`") && why.contains("twice"),
+        "{why}"
+    );
 }
 
 #[test]
 fn a_rank_or_a_unit_the_chart_does_not_have_is_refused_by_name() {
-    let pieces = frame(Pieces::empty(), 0, "F1", &units(&["Bartonien", "Lutétien", "Yprésien"]));
+    let pieces = frame(
+        Pieces::empty(),
+        0,
+        "F1",
+        &units(&["Bartonien", "Lutétien", "Yprésien"]),
+    );
     // The extract has no supereonothem, so no rank 0 — and the refusal lists
     // the ranks it has.
     let why = contacts(&pieces, json!({ "rank": 0 })).expect_err("no division at rank 0");
-    assert!(why.contains("`rank`") && why.contains("rank 0") && why.contains("6 stage"), "{why}");
+    assert!(
+        why.contains("`rank`") && why.contains("rank 0") && why.contains("6 stage"),
+        "{why}"
+    );
     // Past the chart's last level: refused by the slot, before the plan.
-    assert!(contacts(&pieces, json!({ "rank": 12 })).is_err(), "rank 12 is past level 10");
+    assert!(
+        contacts(&pieces, json!({ "rank": 12 })).is_err(),
+        "rank 12 is past level 10"
+    );
     // A unit of another rank than the one given.
     let why = contacts(&pieces, json!({ "rank": 6, "unit": "Lutétien supérieur" })).expect_err("a substage");
-    assert!(why.contains("`unit`") && why.contains("substage") && why.contains("rank 7"), "{why}");
+    assert!(
+        why.contains("`unit`") && why.contains("substage") && why.contains("rank 7"),
+        "{why}"
+    );
     // A unit the chart does not know.
     let why = contacts(&pieces, json!({ "unit": "Crétacé" })).expect_err("unknown to the extract");
     assert!(why.contains("Crétacé"), "{why}");
@@ -344,27 +483,51 @@ fn a_rank_or_a_unit_the_chart_does_not_have_is_refused_by_name() {
 fn no_contact_of_the_unit_is_refused_by_its_name() {
     // The Lutetian from the top of the log to its bottom: named, two passes
     // and a limit between them; at the stage, no limit at all.
-    let pieces = frame(Pieces::empty(), 0, "F1", &units(&["Lutétien supérieur", "Lutétien"]));
-    assert!(contacts(&pieces, json!({})).is_ok(), "named, the limit between two passes");
+    let pieces = frame(
+        Pieces::empty(),
+        0,
+        "F1",
+        &units(&["Lutétien supérieur", "Lutétien"]),
+    );
+    assert!(
+        contacts(&pieces, json!({})).is_ok(),
+        "named, the limit between two passes"
+    );
     let why = contacts(&pieces, json!({ "unit": "Lutétien" })).expect_err("no limit of the Lutetian");
     assert!(
-        why.contains("`unit`") && why.contains("`Lutétien (stage)`") && why.contains("1 have an interval inside it"),
+        why.contains("`unit`")
+            && why.contains("`Lutétien (stage)`")
+            && why.contains("1 have an interval inside it"),
         "{why}"
     );
 }
 
 #[test]
 fn uuids_are_stable_and_the_stage_is_not_the_pass_named_after_it() {
-    let pieces = frame(Pieces::empty(), 0, "F1", &units(&["Bartonien", "Lutétien", "Yprésien"]));
+    let pieces = frame(
+        Pieces::empty(),
+        0,
+        "F1",
+        &units(&["Bartonien", "Lutétien", "Yprésien"]),
+    );
     let once = contacts(&pieces, json!({ "unit": "Lutétien" })).expect("a plan");
     let again = contacts(&pieces, json!({ "unit": "Lutétien" })).expect("a plan");
-    let all = |made: &Plan| made.objects.iter().map(|one| (one.title.clone(), one.uuid.clone())).collect::<BTreeSet<_>>();
+    let all = |made: &Plan| {
+        made.objects
+            .iter()
+            .map(|one| (one.title.clone(), one.uuid.clone()))
+            .collect::<BTreeSet<_>>()
+    };
     assert_eq!(all(&once), all(&again), "two runs, the same objects");
 
     // A rank alone reads the Lutetian the same way, and writes the same
     // objects for it.
     let whole = contacts(&pieces, json!({ "rank": 6 })).expect("a plan");
-    for kind in ["resqml22.BoundaryFeature", "resqml22.HorizonInterpretation", "resqml22.PointSetRepresentation"] {
+    for kind in [
+        "resqml22.BoundaryFeature",
+        "resqml22.HorizonInterpretation",
+        "resqml22.PointSetRepresentation",
+    ] {
         for title in ["Lutétien (stage) — top", "Lutétien (stage) — base"] {
             let one = uuid_of(&once, kind, title);
             assert!(one.is_some(), "{kind} `{title}` is written");
@@ -376,7 +539,10 @@ fn uuids_are_stable_and_the_stage_is_not_the_pass_named_after_it() {
     // they are other objects: the base of a stage and the base of a pass
     // named after it are two findings, even where they coincide.
     let named = contacts(&pieces, json!({})).expect("a plan");
-    assert_eq!(points_of(&named, "Lutétien — base"), points_of(&once, "Lutétien (stage) — base"));
+    assert_eq!(
+        points_of(&named, "Lutétien — base"),
+        points_of(&once, "Lutétien (stage) — base")
+    );
     let features = |made: &Plan| {
         made.objects
             .iter()
@@ -384,24 +550,50 @@ fn uuids_are_stable_and_the_stage_is_not_the_pass_named_after_it() {
             .map(|one| one.uuid.clone())
             .collect::<BTreeSet<_>>()
     };
-    assert!(features(&named).is_disjoint(&features(&once)), "the stage's features are not the passes'");
+    assert!(
+        features(&named).is_disjoint(&features(&once)),
+        "the stage's features are not the passes'"
+    );
 }
 
 #[test]
 fn the_base_of_the_quaternary_is_found_through_its_series_and_subseries() {
     // H1 of Lutetia: remblais dated Holocene and alluvium dated Upper
     // Pleistocene — a series and a sub-series — on the Lutetian.
-    let pieces = frame(Pieces::empty(), 0, "F1", &units(&["Holocène", "Pléistocène supérieur", "Lutétien supérieur", "Lutétien"]));
+    let pieces = frame(
+        Pieces::empty(),
+        0,
+        "F1",
+        &units(&[
+            "Holocène",
+            "Pléistocène supérieur",
+            "Lutétien supérieur",
+            "Lutétien",
+        ]),
+    );
     let made = contacts(&pieces, json!({ "unit": "Quaternaire" })).expect("a plan");
-    assert_eq!(points_of(&made, "Quaternaire (system) — base"), Some(vec![node(0, 2)]));
-    assert_eq!(points_of(&made, "Quaternaire (system) — top"), None, "the top of a log is no contact");
+    assert_eq!(
+        points_of(&made, "Quaternaire (system) — base"),
+        Some(vec![node(0, 2)])
+    );
+    assert_eq!(
+        points_of(&made, "Quaternaire (system) — top"),
+        None,
+        "the top of a log is no contact"
+    );
 
     // At the system rank alone: the Quaternary's base is the Paleogene's
     // top, and nothing between the Holocene and the Upper Pleistocene, nor
     // inside the Lutetian.
     let whole = contacts(&pieces, json!({ "rank": 3 })).expect("a plan");
-    assert_eq!(sets(&whole), vec!["Paléogène (system) — top", "Quaternaire (system) — base"]);
-    assert_eq!(points_of(&whole, "Paléogène (system) — top"), Some(vec![node(0, 2)]));
+    assert_eq!(
+        sets(&whole),
+        vec!["Paléogène (system) — top", "Quaternaire (system) — base"]
+    );
+    assert_eq!(
+        points_of(&whole, "Paléogène (system) — top"),
+        Some(vec![node(0, 2)])
+    );
 }
 
 #[test]
@@ -413,19 +605,36 @@ fn a_rank_alone_reads_every_division_of_it_and_a_regional_stage_as_its_reference
         Pieces::empty(),
         0,
         "F1",
-        &units(&["Bartonien", "Lutétien supérieur", "Lutétien moyen", "Cuisien", "Sparnacien"]),
+        &units(&[
+            "Bartonien",
+            "Lutétien supérieur",
+            "Lutétien moyen",
+            "Cuisien",
+            "Sparnacien",
+        ]),
     );
     let made = contacts(&pieces, json!({ "rank": 6 })).expect("a plan");
     assert_eq!(
         sets(&made),
-        vec!["Bartonien (stage) — base", "Lutétien (stage) — base", "Lutétien (stage) — top", "Yprésien (stage) — top"]
+        vec![
+            "Bartonien (stage) — base",
+            "Lutétien (stage) — base",
+            "Lutétien (stage) — top",
+            "Yprésien (stage) — top"
+        ]
     );
-    assert_eq!(points_of(&made, "Lutétien (stage) — base"), Some(vec![node(0, 3)]));
+    assert_eq!(
+        points_of(&made, "Lutétien (stage) — base"),
+        Some(vec![node(0, 3)])
+    );
     assert_eq!(points_of(&made, "Yprésien (stage) — top"), Some(vec![node(0, 3)]));
     // Neither the Lutetian's inner limit (node 2) nor the Cuisien's base on
     // the Sparnacien (node 4): both are inside one stage.
     for inner in [node(0, 2), node(0, 4)] {
-        assert!(all_points(&made).iter().all(|point| *point != inner), "{inner:?} is inside a stage");
+        assert!(
+            all_points(&made).iter().all(|point| *point != inner),
+            "{inner:?} is inside a stage"
+        );
     }
 }
 
@@ -435,13 +644,27 @@ fn a_unit_the_chart_does_not_place_is_read_as_none_and_named_even_under_a_chart_
     // chart** but without its uuid: a title is not an identity, so it is no
     // Bartonian, and the Lutetian has no top under it.
     let mut named = units(&["Bartonien", "Lutétien", "Yprésien"]);
-    named[0] = Some(Ref::new("0f0f0f0f-0000-4000-8000-000000000001", UNIT, "Bartonien"));
+    named[0] = Some(Ref::new(
+        "0f0f0f0f-0000-4000-8000-000000000001",
+        UNIT,
+        "Bartonien",
+    ));
     let pieces = frame(Pieces::empty(), 0, "F1", &named);
     let made = contacts(&pieces, json!({ "unit": "Lutétien" })).expect("a plan");
-    assert_eq!(points_of(&made, "Lutétien (stage) — top"), None, "no contact with what the chart cannot place");
-    assert_eq!(points_of(&made, "Lutétien (stage) — base"), Some(vec![node(0, 2)]));
+    assert_eq!(
+        points_of(&made, "Lutétien (stage) — top"),
+        None,
+        "no contact with what the chart cannot place"
+    );
+    assert_eq!(
+        points_of(&made, "Lutétien (stage) — base"),
+        Some(vec![node(0, 2)])
+    );
     let foreign = note(&made, "rank-foreign");
-    assert!(foreign.starts_with("1 interval(s)") && foreign.contains("Bartonien × 1"), "{foreign}");
+    assert!(
+        foreign.starts_with("1 interval(s)") && foreign.contains("Bartonien × 1"),
+        "{foreign}"
+    );
 }
 
 // -- the chart's answer, `energyml_domain::geolts_rank` ------------------------
@@ -452,9 +675,21 @@ fn the_chart_says_inside_by_its_hierarchy_and_outside_by_its_ages() {
     geolts::with_default(|chart| {
         use geolts_rank::{at_level, relation, span};
 
-        assert_eq!(relation(chart, 1258, 1255), Relation::Inside, "the Upper Lutetian is in the Lutetian");
-        assert_eq!(relation(chart, 1326, 1289), Relation::Inside, "the Holocene is in the Quaternary");
-        assert_eq!(relation(chart, 1316, 1289), Relation::Inside, "the Upper Pleistocene, two levels down");
+        assert_eq!(
+            relation(chart, 1258, 1255),
+            Relation::Inside,
+            "the Upper Lutetian is in the Lutetian"
+        );
+        assert_eq!(
+            relation(chart, 1326, 1289),
+            Relation::Inside,
+            "the Holocene is in the Quaternary"
+        );
+        assert_eq!(
+            relation(chart, 1316, 1289),
+            Relation::Inside,
+            "the Upper Pleistocene, two levels down"
+        );
         // Touching spans are outside each other: the Cuisien ends at 47.8 Ma,
         // where the Lutetian begins; the Bartonian begins where it ends.
         assert_eq!(relation(chart, 2174, 1255), Relation::Outside);
@@ -463,16 +698,32 @@ fn the_chart_says_inside_by_its_hierarchy_and_outside_by_its_ages() {
         // the Lutetian's, and it is still outside the Quaternary.
         assert_eq!(span(chart, 1258), Some((47.8, 41.2)));
         assert_eq!(relation(chart, 1258, 1289), Relation::Outside);
-        assert_eq!(relation(chart, 1254, 1255), Relation::Holds, "the Middle Eocene holds the Lutetian");
+        assert_eq!(
+            relation(chart, 1254, 1255),
+            Relation::Holds,
+            "the Middle Eocene holds the Lutetian"
+        );
         // **Outside is the ages' answer, never the tree's**: the Ludien sits
         // beside the Priabonien under the Upper Eocene, and spans the same
         // 37.8–33.9 Ma. A tree-only reading would say outside, and draw a
         // contact between two names for one time.
         assert_eq!(relation(chart, 2183, 1263), Relation::Overlaps);
 
-        assert_eq!(at_level(chart, 2174, 7), vec![1251], "the Cuisien is the Ypresian at the stage");
+        assert_eq!(
+            at_level(chart, 2174, 7),
+            vec![1251],
+            "the Cuisien is the Ypresian at the stage"
+        );
         assert_eq!(at_level(chart, 2173, 7), vec![1251], "and so is the Sparnacien");
-        assert_eq!(at_level(chart, 1254, 7), Vec::<u32>::new(), "the Middle Eocene has no stage");
-        assert_eq!(at_level(chart, 1326, 4), vec![1289], "the Holocene is the Quaternary at the system");
+        assert_eq!(
+            at_level(chart, 1254, 7),
+            Vec::<u32>::new(),
+            "the Middle Eocene has no stage"
+        );
+        assert_eq!(
+            at_level(chart, 1326, 4),
+            vec![1289],
+            "the Holocene is the Quaternary at the system"
+        );
     });
 }

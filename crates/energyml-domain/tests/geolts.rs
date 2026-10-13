@@ -70,7 +70,11 @@ fn a_branch_is_the_concept_and_everything_below_it() {
     for id in [1259, 1262, 1263, 2183] {
         assert!(branch.contains(&id), "{id} is under the Eocene: {branch:?}");
     }
-    assert_eq!(chart.descendants(1262).len(), 3, "the Upper Eocene, the Priabonien and the Ludien");
+    assert_eq!(
+        chart.descendants(1262).len(),
+        3,
+        "the Upper Eocene, the Priabonien and the Ludien"
+    );
 }
 
 #[test]
@@ -78,7 +82,12 @@ fn a_column_lists_youngest_first() {
     // RESQML's `age` criterion: *"from youngest to oldest period"* (TRG 2.2
     // §6.34). The Priabonien (37.8–33.9) sits above the Bartonien (41.2–37.8).
     let chart = chart();
-    let order: Vec<u32> = chart.by_age(&[1259, 1263]).expect("both dated").iter().map(|one| one.id).collect();
+    let order: Vec<u32> = chart
+        .by_age(&[1259, 1263])
+        .expect("both dated")
+        .iter()
+        .map(|one| one.id)
+        .collect();
     assert_eq!(order, vec![1263, 1259]);
 }
 
@@ -94,11 +103,26 @@ fn a_code_needs_its_label_to_name_one_concept() {
     // Measured on a partner borehole corpus: `STRA` = `e7`, `Nom_STRA` = `Priabonien`.
     // The code alone names three concepts here (four in the whole chart).
     let chart = chart();
-    assert_eq!(chart.find("e7", "Priabonien").expect("one").map(|one| one.id), Some(1263));
-    assert_eq!(chart.find("E7", "priabonian").expect("one").map(|one| one.id), Some(1263), "case and English");
+    assert_eq!(
+        chart.find("e7", "Priabonien").expect("one").map(|one| one.id),
+        Some(1263)
+    );
+    assert_eq!(
+        chart.find("E7", "priabonian").expect("one").map(|one| one.id),
+        Some(1263),
+        "case and English"
+    );
     // A pair the chart does not know is a local unit, not an error.
-    assert_eq!(chart.find("n.d.", "No data").expect("no match is an answer"), None);
-    assert!(chart.resolve("e7").expect_err("ambiguous").contains("give the id"));
+    assert_eq!(
+        chart.find("n.d.", "No data").expect("no match is an answer"),
+        None
+    );
+    assert!(
+        chart
+            .resolve("e7")
+            .expect_err("ambiguous")
+            .contains("give the id")
+    );
     assert_eq!(chart.resolve("Ludien").expect("unique").id, 2183);
     assert_eq!(chart.resolve("GeolTs/1259").expect("by id").id, 1259);
 }
@@ -107,5 +131,8 @@ fn a_code_needs_its_label_to_name_one_concept() {
 fn a_reference_division_is_told_from_a_regional_one() {
     let chart = chart();
     assert!(chart.get(1263).expect("Priabonien").is_reference());
-    assert!(!chart.get(2183).expect("Ludien").is_reference(), "regional: Bassin de Paris");
+    assert!(
+        !chart.get(2183).expect("Ludien").is_reference(),
+        "regional: Bassin de Paris"
+    );
 }

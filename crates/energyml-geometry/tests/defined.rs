@@ -174,7 +174,9 @@ fn a_hexahedron_touching_an_undefined_pillar_goes_with_it() {
 
     let c = g.defined_only().expect("there is a node to drop");
     match &c.geometry.patches[0].topology {
-        Topology::Hexahedra { cells, dimensions, .. } => {
+        Topology::Hexahedra {
+            cells, dimensions, ..
+        } => {
             assert_eq!(cells.len(), 1);
             assert_eq!(cells[0], [0, 1, 2, 3, 4, 5, 6, 7]);
             // Kept as it was: it says what the cells were *built from*, and
@@ -260,7 +262,11 @@ fn a_dropped_cell_takes_its_number_with_it() {
     };
 
     assert_eq!(topology.cell_at(0), Some(0));
-    assert_eq!(topology.cell_at(1), Some(2), "the second survivor is the file's cell 2");
+    assert_eq!(
+        topology.cell_at(1),
+        Some(2),
+        "the second survivor is the file's cell 2"
+    );
     assert_eq!(topology.cell_at(2), None, "there is no third cell");
 
     assert_eq!(topology.position_of(0), Some(0));

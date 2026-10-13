@@ -70,7 +70,9 @@ fn rings_of(shape: &Shape, tolerance: f64) -> Result<Rings, Refusal> {
     let mut dropped = 0usize;
     let mut triangulated = false;
     for patch in &shape.geometry.patches {
-        let Topology::Triangles(triangles) = &patch.topology else { continue };
+        let Topology::Triangles(triangles) = &patch.topology else {
+            continue;
+        };
         if triangles.is_empty() {
             continue;
         }
@@ -84,10 +86,19 @@ fn rings_of(shape: &Shape, tolerance: f64) -> Result<Rings, Refusal> {
         }
     }
     if triangulated {
-        return Ok(Rings { rings, how: "boundary", dropped });
+        return Ok(Rings {
+            rings,
+            how: "boundary",
+            dropped,
+        });
     }
     // Nothing triangulated: the hull of every point there is, in plan view.
-    let points: Vec<[f64; 3]> = shape.geometry.patches.iter().flat_map(|p| p.points.iter().copied()).collect();
+    let points: Vec<[f64; 3]> = shape
+        .geometry
+        .patches
+        .iter()
+        .flat_map(|p| p.points.iter().copied())
+        .collect();
     let hull = analysis::hull_xy(&points).map_err(|e| Refusal::on("shape", e))?;
     let kept = analysis::simplify(&points, &hull, tolerance);
     Ok(Rings {
@@ -119,7 +130,10 @@ impl Operation for Outline {
     fn check(&self, inputs: &OutlineInputs) -> Result<(), Refusal> {
         let points = inputs.shape.geometry.point_count();
         if points < 3 {
-            return Err(Refusal::on("shape", format!("an outline needs at least 3 points; the shape holds {points}")));
+            return Err(Refusal::on(
+                "shape",
+                format!("an outline needs at least 3 points; the shape holds {points}"),
+            ));
         }
         Ok(())
     }
@@ -127,7 +141,10 @@ impl Operation for Outline {
     fn plan(&self, inputs: OutlineInputs, params: OutlineParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
         let found = rings_of(&inputs.shape, params.tolerance)?;
         if found.rings.is_empty() {
-            return Err(Refusal::on("shape", "the surface is closed: it has no boundary to outline"));
+            return Err(Refusal::on(
+                "shape",
+                "the surface is closed: it has no boundary to outline",
+            ));
         }
         // The rings as one shape, every line closed — and said so, so that the
         // polyline writer neither detects nor notes anything.
@@ -149,15 +166,32 @@ impl Operation for Outline {
             known: None,
         };
         let title = params.written.naming.title();
-        let lines = PolylinesInputs { shape: vec![rings], features: None };
-        let mut plan = super::polylines::write(&lines, &params.written, None, &format!("{name}:{title}"), cx)?;
+        let lines = PolylinesInputs {
+            shape: vec![rings],
+            features: None,
+        };
+        let mut plan =
+            super::polylines::write(&lines, &params.written, None, &format!("{name}:{title}"), cx)?;
 
         plan.activity.recipe = "outline";
         plan.activity.title = format!("outline → {title}");
-        plan.activity.parameters.retain(|p| !matches!(p, Parameter::Double { title, .. } if title == "closedCount"));
-        plan.activity.parameters.push(Parameter::Text { title: "how".to_string(), value: found.how.to_string() });
-        plan.activity.parameters.push(Parameter::Double { title: "tolerance".to_string(), value: params.tolerance, uom: None });
-        plan.activity.parameters.push(Parameter::Double { title: "nodesDropped".to_string(), value: found.dropped as f64, uom: None });
+        plan.activity
+            .parameters
+            .retain(|p| !matches!(p, Parameter::Double { title, .. } if title == "closedCount"));
+        plan.activity.parameters.push(Parameter::Text {
+            title: "how".to_string(),
+            value: found.how.to_string(),
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "tolerance".to_string(),
+            value: params.tolerance,
+            uom: None,
+        });
+        plan.activity.parameters.push(Parameter::Double {
+            title: "nodesDropped".to_string(),
+            value: found.dropped as f64,
+            uom: None,
+        });
         plan.says.push(Note {
             key: found.how,
             detail: match found.how {
@@ -170,12 +204,24 @@ impl Operation for Outline {
 
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
-            Slot::required(name, Need::Number { uom: None, least: None, most: None }, about)
+            Slot::required(
+                name,
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                about,
+            )
         };
         support::frame_reports(vec![
             count("polylineCount", "rings written"),
             count("pointCount", "nodes written"),
-            Slot::required("how", Need::Choice(&["boundary", "hull"]), "the exact boundary, or the convex hull"),
+            Slot::required(
+                "how",
+                Need::Choice(&["boundary", "hull"]),
+                "the exact boundary, or the convex hull",
+            ),
             count("nodesDropped", "collinear nodes dropped"),
         ])
     }

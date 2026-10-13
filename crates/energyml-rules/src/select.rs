@@ -5,7 +5,10 @@
 //! included, and the document is flat enough that a writer is shorter than a
 //! dependency.
 
-use crate::{Anchor, AnchorKind, Localised, Rule, Status, Text, all, locales, text_in, theme_title, themes, RULESET_VERSION};
+use crate::{
+    Anchor, AnchorKind, Localised, RULESET_VERSION, Rule, Status, Text, all, locales, text_in, theme_title,
+    themes,
+};
 
 /// Which rules to keep. Every field that is set must match.
 #[derive(Clone, Debug, Default)]
@@ -25,9 +28,17 @@ pub struct Filter<'a> {
 /// `diagnostic:…`. The key may itself hold a colon (`view:create.op:crs`): only
 /// the first one separates.
 pub fn parse_anchor(text: &str) -> Result<(AnchorKind, &str), String> {
-    let (kind, key) = text.split_once(':').ok_or_else(|| format!("`{text}` is not `kind:key` (kinds: type, view, finding, operation, diagnostic)"))?;
-    let kind = AnchorKind::parse(kind).ok_or_else(|| format!("`{kind}` is not an anchor kind (type, view, finding, operation, diagnostic)"))?;
-    if key.is_empty() { Err(format!("`{text}` has an empty key")) } else { Ok((kind, key)) }
+    let (kind, key) = text.split_once(':').ok_or_else(|| {
+        format!("`{text}` is not `kind:key` (kinds: type, view, finding, operation, diagnostic)")
+    })?;
+    let kind = AnchorKind::parse(kind).ok_or_else(|| {
+        format!("`{kind}` is not an anchor kind (type, view, finding, operation, diagnostic)")
+    })?;
+    if key.is_empty() {
+        Err(format!("`{text}` has an empty key"))
+    } else {
+        Ok((kind, key))
+    }
 }
 
 /// Reads a status word.
@@ -45,7 +56,11 @@ pub fn select(filter: &Filter<'_>) -> Vec<&'static Rule> {
         .filter(|r| filter.theme.is_none_or(|t| r.theme == t))
         .filter(|r| filter.id.is_none_or(|i| r.id == i || r.aliases.contains(&i)))
         .filter(|r| filter.status.is_none_or(|s| r.status == s))
-        .filter(|r| filter.anchor.is_none_or(|(kind, key)| r.at.iter().any(|a: &Anchor| a.kind == kind && a.key == key)))
+        .filter(|r| {
+            filter
+                .anchor
+                .is_none_or(|(kind, key)| r.at.iter().any(|a: &Anchor| a.kind == kind && a.key == key))
+        })
         .collect()
 }
 
@@ -115,12 +130,33 @@ pub fn to_json(rules: &[&Rule]) -> String {
         o.push_str("{\"id\":");
         esc(t.id, o);
         o.push_str(",\"title\":");
-        texts(t.title, langs.iter().map(|l| (*l, Some(theme_title(t, l)).filter(|x| x.lang == *l).map(|x| x.value))), o);
+        texts(
+            t.title,
+            langs.iter().map(|l| {
+                (
+                    *l,
+                    Some(theme_title(t, l)).filter(|x| x.lang == *l).map(|x| x.value),
+                )
+            }),
+            o,
+        );
         o.push('}');
     });
     out.push_str(",\"rules\":");
     list(rules, &mut out, |r, o| {
-        let tr = |pick: fn(&Localised) -> Text| langs.iter().map(move |l| (*l, Some(pick(&text_in(r, l))).filter(|x| x.lang == *l).map(|x| x.value))).collect::<Vec<_>>();
+        let tr = |pick: fn(&Localised) -> Text| {
+            langs
+                .iter()
+                .map(move |l| {
+                    (
+                        *l,
+                        Some(pick(&text_in(r, l)))
+                            .filter(|x| x.lang == *l)
+                            .map(|x| x.value),
+                    )
+                })
+                .collect::<Vec<_>>()
+        };
         o.push_str("{\"id\":");
         esc(r.id, o);
         o.push_str(",\"theme\":");

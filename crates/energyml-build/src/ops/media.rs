@@ -41,9 +41,11 @@ use energyml_domain::provenance::Parameter;
 use energyml_storage::epc::media::{check_media_type, check_part_name};
 
 use crate::declare::{Input, InputParam, Inputs, ObjectIn, Params, Piece};
-use crate::operation::{About, ActivityDraft, Category, Media as Part, Need, Note, Operation, Plan, Refusal, Slot};
-use crate::pieces::Source;
 use crate::operation::Context;
+use crate::operation::{
+    About, ActivityDraft, Category, Media as Part, Need, Note, Operation, Plan, Refusal, Slot,
+};
+use crate::pieces::Source;
 
 /// The operation.
 pub struct Media;
@@ -65,13 +67,21 @@ impl Input for Document {
     const KIND: &'static str = "document";
     fn from_piece(piece: &Piece<'_>) -> Result<Self, String> {
         match piece.source {
-            Source::Document { name, content_type, bytes } => Ok(Document {
+            Source::Document {
+                name,
+                content_type,
+                bytes,
+            } => Ok(Document {
                 name: piece.name.to_string(),
                 file: name.clone(),
                 declared: content_type.clone(),
                 bytes: bytes.clone(),
             }),
-            other => Err(format!("`{}` is {}, and a file to carry is wanted", piece.name, other.kind())),
+            other => Err(format!(
+                "`{}` is {}, and a file to carry is wanted",
+                piece.name,
+                other.kind()
+            )),
         }
     }
 }
@@ -126,18 +136,35 @@ impl Operation for Media {
         vec![
             Slot::required("part", Need::Text, "the part name the file was given"),
             Slot::required("mediaType", Need::Text, "the content type written for it"),
-            Slot::required("byteCount", Need::Number { uom: None, least: None, most: None }, "its size"),
+            Slot::required(
+                "byteCount",
+                Need::Number {
+                    uom: None,
+                    least: None,
+                    most: None,
+                },
+                "its size",
+            ),
         ]
     }
 
     fn plan(&self, inputs: MediaInputs, params: MediaParams, _cx: &Context<'_>) -> Result<Plan, Refusal> {
         let file = inputs.file;
-        let path = match params.path.as_deref().map(str::trim).filter(|path| !path.is_empty()) {
+        let path = match params
+            .path
+            .as_deref()
+            .map(str::trim)
+            .filter(|path| !path.is_empty())
+        {
             Some(path) => path.to_string(),
             None => format!("media/{}", file.file),
         };
         let path = check_part_name(&path).map_err(|why| Refusal::on("path", why.to_string()))?;
-        let stated = params.content_type.as_deref().map(str::trim).filter(|kind| !kind.is_empty());
+        let stated = params
+            .content_type
+            .as_deref()
+            .map(str::trim)
+            .filter(|kind| !kind.is_empty());
         let Some(content_type) = stated.or(file.declared.as_deref()) else {
             return Err(Refusal::on(
                 "contentType",
@@ -148,7 +175,8 @@ impl Operation for Media {
                 ),
             ));
         };
-        let content_type = check_media_type(content_type).map_err(|why| Refusal::on("contentType", why.to_string()))?;
+        let content_type =
+            check_media_type(content_type).map_err(|why| Refusal::on("contentType", why.to_string()))?;
 
         let mut seen: BTreeSet<String> = BTreeSet::new();
         let mut related: Vec<String> = Vec::new();
@@ -156,14 +184,20 @@ impl Operation for Media {
         let mut again = 0usize;
         for object in &inputs.shows {
             let Some(reference) = object.known.reference.as_ref() else {
-                return Err(Refusal::on("shows", format!("`{}` was given without a reference to relate", object.name)));
+                return Err(Refusal::on(
+                    "shows",
+                    format!("`{}` was given without a reference to relate", object.name),
+                ));
             };
             if !seen.insert(reference.uuid.to_ascii_lowercase()) {
                 again += 1;
                 continue;
             }
             related.push(reference.uuid.to_ascii_lowercase());
-            shown.push(Parameter::Object { title: "input".to_string(), reference: reference.dor() });
+            shown.push(Parameter::Object {
+                title: "input".to_string(),
+                reference: reference.dor(),
+            });
         }
 
         let mut says = vec![Note {
@@ -179,17 +213,33 @@ impl Operation for Media {
         } else {
             says.push(Note {
                 key: "shows",
-                detail: format!("destinationMedia from {} object(s), sourceMedia back", related.len()),
+                detail: format!(
+                    "destinationMedia from {} object(s), sourceMedia back",
+                    related.len()
+                ),
             });
         }
         if again > 0 {
-            says.push(Note { key: "twice", detail: format!("{again} object(s) given more than once, related once") });
+            says.push(Note {
+                key: "twice",
+                detail: format!("{again} object(s) given more than once, related once"),
+            });
         }
 
         let mut parameters = vec![
-            Parameter::Text { title: "part".to_string(), value: path.clone() },
-            Parameter::Text { title: "mediaType".to_string(), value: content_type.clone() },
-            Parameter::Double { title: "byteCount".to_string(), value: file.bytes.len() as f64, uom: None },
+            Parameter::Text {
+                title: "part".to_string(),
+                value: path.clone(),
+            },
+            Parameter::Text {
+                title: "mediaType".to_string(),
+                value: content_type.clone(),
+            },
+            Parameter::Double {
+                title: "byteCount".to_string(),
+                value: file.bytes.len() as f64,
+                uom: None,
+            },
         ];
         parameters.extend(shown);
 
@@ -197,7 +247,12 @@ impl Operation for Media {
             blocked: None,
             objects: Vec::new(),
             datasets: Vec::new(),
-            media: vec![Part { path: path.clone(), content_type, bytes: file.bytes, related_to: related.clone() }],
+            media: vec![Part {
+                path: path.clone(),
+                content_type,
+                bytes: file.bytes,
+                related_to: related.clone(),
+            }],
             activity: ActivityDraft {
                 recipe: "media",
                 title: format!("media → {path}"),

@@ -161,7 +161,10 @@ fn the_two_versions_of_the_same_property_agree() {
 #[test]
 fn a_patch_index_is_read_where_it_is_written_and_implied_where_it_is_not() {
     let files = corpus();
-    if skip_if_empty(&files, "a_patch_index_is_read_where_it_is_written_and_implied_where_it_is_not") {
+    if skip_if_empty(
+        &files,
+        "a_patch_index_is_read_where_it_is_written_and_implied_where_it_is_not",
+    ) {
         return;
     }
     let registry = registry();
@@ -183,7 +186,10 @@ fn a_patch_index_is_read_where_it_is_written_and_implied_where_it_is_not() {
     }
     // Both forms are in the corpus, so both branches are actually exercised —
     // a test that only ever sees one of them proves nothing about the other.
-    assert!(explicit > 0, "no 2.0.1 property carries a RepresentationPatchIndex");
+    assert!(
+        explicit > 0,
+        "no 2.0.1 property carries a RepresentationPatchIndex"
+    );
     assert!(positional > 0, "no 2.2 property attaches by position");
 }
 
@@ -214,14 +220,20 @@ fn the_kind_is_read_in_both_of_its_shapes() {
             }
         }
     }
-    assert!(standard > 0, "the 2.0.1 `StandardPropertyKind` form is never exercised");
+    assert!(
+        standard > 0,
+        "the 2.0.1 `StandardPropertyKind` form is never exercised"
+    );
     assert!(referenced > 0, "the referenced form is never exercised");
 }
 
 #[test]
 fn the_element_count_is_computed_where_it_is_known_and_refused_where_it_is_not() {
     let files = corpus();
-    if skip_if_empty(&files, "the_element_count_is_computed_where_it_is_known_and_refused_where_it_is_not") {
+    if skip_if_empty(
+        &files,
+        "the_element_count_is_computed_where_it_is_known_and_refused_where_it_is_not",
+    ) {
         return;
     }
     let registry = registry();
@@ -254,7 +266,10 @@ fn the_element_count_is_computed_where_it_is_known_and_refused_where_it_is_not()
             }
         }
     }
-    assert!(known > 0, "no element count could be computed anywhere in the corpus");
+    assert!(
+        known > 0,
+        "no element count could be computed anywhere in the corpus"
+    );
 }
 
 #[test]
@@ -289,7 +304,11 @@ fn a_grid_2d_counts_its_nodes_the_same_way_in_both_versions() {
     seen.sort();
     for pair in seen.windows(2) {
         if pair[0].0 == pair[1].0 {
-            assert_eq!(pair[0].1, pair[1].1, "{}: two versions disagree on the node count", pair[0].0);
+            assert_eq!(
+                pair[0].1, pair[1].1,
+                "{}: two versions disagree on the node count",
+                pair[0].0
+            );
         }
     }
     assert!(!seen.is_empty(), "no Grid2dRepresentation in the corpus");
@@ -356,7 +375,10 @@ fn the_index_finds_the_properties_of_a_representation_without_any_rels() {
     // rather than from the package's own bookkeeping. If this test passes on
     // that file, the index does not secretly depend on the relationships.
     let files = corpus();
-    if skip_if_empty(&files, "the_index_finds_the_properties_of_a_representation_without_any_rels") {
+    if skip_if_empty(
+        &files,
+        "the_index_finds_the_properties_of_a_representation_without_any_rels",
+    ) {
         return;
     }
     let registry = registry();
@@ -468,14 +490,21 @@ fn a_connection_set_counts_its_pairs_on_the_faces_and_refuses_the_cells() {
     };
 
     assert_eq!(
-        property::element_count(&set as &dyn energyml_core::value::Reflect, IndexableElement::Faces).ok(),
+        property::element_count(
+            &set as &dyn energyml_core::value::Reflect,
+            IndexableElement::Faces
+        )
+        .ok(),
         Some(12),
         "the guide's own number: one value per cell pair"
     );
 
-    let refused = property::element_count(&set as &dyn energyml_core::value::Reflect, IndexableElement::Cells)
-        .unwrap_err()
-        .to_string();
+    let refused = property::element_count(
+        &set as &dyn energyml_core::value::Reflect,
+        IndexableElement::Cells,
+    )
+    .unwrap_err()
+    .to_string();
     assert!(refused.contains("cells"), "{refused}");
     assert!(
         refused.contains("GridConnectionSetRepresentation"),
@@ -511,7 +540,8 @@ fn a_k_gap_lengthens_the_intervals_and_their_edges_but_not_the_layers() {
         ..Default::default()
     };
     let count = |grid: &IjkGridRepresentation, element| {
-        property::element_count(grid as &dyn energyml_core::value::Reflect, element).expect("the pair is known")
+        property::element_count(grid as &dyn energyml_core::value::Reflect, element)
+            .expect("the pair is known")
     };
 
     // Without a gap the two readings coincide, which is why a fixture with no
@@ -520,7 +550,10 @@ fn a_k_gap_lengthens_the_intervals_and_their_edges_but_not_the_layers() {
     assert_eq!(count(&grid, Intervals), 5);
     assert_eq!(count(&grid, IntervalEdges), 6);
 
-    grid.k_gaps = Some(KGaps { count: Some(2), ..Default::default() });
+    grid.k_gaps = Some(KGaps {
+        count: Some(2),
+        ..Default::default()
+    });
 
     assert_eq!(count(&grid, Layers), 5, "a gap is not a layer");
     assert_eq!(count(&grid, Intervals), 7, "NK + GapCount");
@@ -556,7 +589,10 @@ fn the_per_cell_counts_are_local_and_the_column_edges_are_not() {
         nk: 5,
         ..Default::default()
     };
-    let count = |element| property::element_count(&grid as &dyn energyml_core::value::Reflect, element).expect("the pair is known");
+    let count = |element| {
+        property::element_count(&grid as &dyn energyml_core::value::Reflect, element)
+            .expect("the pair is known")
+    };
 
     assert_eq!(count(Cells), 60);
     assert_eq!(count(FacesPerCell), 6 * 60);
@@ -619,7 +655,10 @@ fn the_split_column_edges_are_found_wherever_the_release_hid_them() {
         nj: 3,
         nk: 5,
         geometry: Some(energyml_resqml_2_2::IjkGridGeometry {
-            split_column_edges: Some(energyml_resqml_2_2::SplitColumnEdges { count: 7, ..Default::default() }),
+            split_column_edges: Some(energyml_resqml_2_2::SplitColumnEdges {
+                count: 7,
+                ..Default::default()
+            }),
             ..Default::default()
         }),
         ..Default::default()
@@ -661,7 +700,11 @@ fn a_truncated_grid_counts_its_second_patch_of_cells() {
         truncation_cell_count: 9,
         ..Default::default()
     };
-    assert_eq!(count(&grid), 69, "the parent range keeps its indices and the patch is appended");
+    assert_eq!(
+        count(&grid),
+        69,
+        "the parent range keeps its indices and the patch is appended"
+    );
 }
 
 /// An areal gap adds pillars, and therefore coordinate lines, and therefore nodes.
@@ -689,7 +732,8 @@ fn an_areal_gap_adds_pillars_and_lines_but_not_cells() {
         ..Default::default()
     };
     let count = |grid: &IjkGridRepresentation, element| {
-        property::element_count(grid as &dyn energyml_core::value::Reflect, element).expect("the pair is known")
+        property::element_count(grid as &dyn energyml_core::value::Reflect, element)
+            .expect("the pair is known")
     };
 
     assert_eq!(count(&grid, Pillars), 20);
@@ -706,7 +750,11 @@ fn an_areal_gap_adds_pillars_and_lines_but_not_cells() {
 
     assert_eq!(count(&grid, Pillars), 27, "NIL x NJL + SplitPillarCount");
     assert_eq!(count(&grid, CoordinateLines), 27, "the lines follow the pillars");
-    assert_eq!(count(&grid, Nodes), 27 * 6, "one node per line per layer boundary");
+    assert_eq!(
+        count(&grid, Nodes),
+        27 * 6,
+        "one node per line per layer boundary"
+    );
     // And the half the guide is equally explicit about: the gap changes nothing
     // for the cells or the columns.
     assert_eq!(count(&grid, Cells), 60);

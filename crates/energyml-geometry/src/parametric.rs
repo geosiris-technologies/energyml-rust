@@ -1041,7 +1041,10 @@ impl Path {
     ) -> Result<Path> {
         let at = "a parametric line given as values";
         let Some(kind) = Kind::of(kind) else {
-            return Err(Error::unsupported("an unknown kind of parametric line", format!("{at}, kind {kind}")));
+            return Err(Error::unsupported(
+                "an unknown kind of parametric line",
+                format!("{at}, kind {kind}"),
+            ));
         };
         if control.is_empty() {
             return Err(Error::malformed(at, "no control point"));
@@ -1049,7 +1052,11 @@ impl Path {
         if parameters.len() != control.len() {
             return Err(Error::malformed(
                 at,
-                format!("{} parameter(s) for {} control point(s)", parameters.len(), control.len()),
+                format!(
+                    "{} parameter(s) for {} control point(s)",
+                    parameters.len(),
+                    control.len()
+                ),
             ));
         }
         if let Some(tangents) = &tangents
@@ -1057,10 +1064,20 @@ impl Path {
         {
             return Err(Error::malformed(
                 at,
-                format!("{} tangent(s) for {} control point(s)", tangents.len(), control.len()),
+                format!(
+                    "{} tangent(s) for {} control point(s)",
+                    tangents.len(),
+                    control.len()
+                ),
             ));
         }
-        Ok(Path(Line::new(kind, control, Some(parameters), tangents, vertical)))
+        Ok(Path(Line::new(
+            kind,
+            control,
+            Some(parameters),
+            tangents,
+            vertical,
+        )))
     }
 
     /// The point at `parameter` — past either end, the first or last interval
@@ -1300,7 +1317,6 @@ fn pillar_shape(support: &dyn Reflect) -> Option<Vec<usize>> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1467,8 +1483,16 @@ mod tests {
             vec![[0.0, 0.0, 0.0], [100.0, 0.0, 1000.0]],
             Some(vec![0.0, 1000.0]),
         );
-        assert!(close(line.at(5000.0), [500.0, 0.0, 5000.0]), "{:?}", line.at(5000.0));
-        assert!(close(line.at(-5000.0), [-500.0, 0.0, -5000.0]), "{:?}", line.at(-5000.0));
+        assert!(
+            close(line.at(5000.0), [500.0, 0.0, 5000.0]),
+            "{:?}",
+            line.at(5000.0)
+        );
+        assert!(
+            close(line.at(-5000.0), [-500.0, 0.0, -5000.0]),
+            "{:?}",
+            line.at(-5000.0)
+        );
     }
 
     /// Three control points, and the extension follows the interval it leaves
@@ -1481,7 +1505,11 @@ mod tests {
             Some(vec![0.0, 100.0, 200.0]),
         );
         assert!(close(line.at(300.0), [200.0, 0.0, 300.0]), "{:?}", line.at(300.0));
-        assert!(close(line.at(-100.0), [0.0, 0.0, -100.0]), "{:?}", line.at(-100.0));
+        assert!(
+            close(line.at(-100.0), [0.0, 0.0, -100.0]),
+            "{:?}",
+            line.at(-100.0)
+        );
     }
 
     #[test]

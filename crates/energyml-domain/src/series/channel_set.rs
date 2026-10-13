@@ -91,8 +91,8 @@ use serde_json::Value;
 use energyml_core::value::Reflect;
 
 use super::{
-    Channel, Direction, Index, IndexKind, Quality, Refused, Series, identity_of, instant, monotone, objects, reference,
-    text,
+    Channel, Direction, Index, IndexKind, Quality, Refused, Series, identity_of, instant, monotone, objects,
+    reference, text,
 };
 use crate::property::PropertyKindRef;
 use crate::source::{ArraySource, NoObjects};
@@ -108,7 +108,8 @@ pub fn reads(object: &dyn Reflect) -> bool {
 
 /// Whether this reads the object as a log — a container of channel sets.
 pub fn reads_log(object: &dyn Reflect) -> bool {
-    object.type_info().type_key.ends_with("Log") && object.type_info().field_ignore_case("ChannelSet").is_some()
+    object.type_info().type_key.ends_with("Log")
+        && object.type_info().field_ignore_case("ChannelSet").is_some()
 }
 
 /// Every channel set of a log, each read — the first refusal names its set.
@@ -122,11 +123,19 @@ pub fn read_log(log: &dyn Reflect) -> Result<Vec<Series>, Refused> {
 /// Every channel set of a log, each read, the datasets through `arrays`.
 pub fn read_log_with(log: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Vec<Series>, Refused> {
     if !reads_log(log) {
-        return Err(Refused::NotThisReader { expected: "a WITSML Log", found: log.type_info().type_key.to_string() });
+        return Err(Refused::NotThisReader {
+            expected: "a WITSML Log",
+            found: log.type_info().type_key.to_string(),
+        });
     }
     objects(log, "ChannelSet")
         .into_iter()
-        .map(|set| read_with(set, arrays).map_err(|why| Refused::InSet { set: identity_of(set).0, why: Box::new(why) }))
+        .map(|set| {
+            read_with(set, arrays).map_err(|why| Refused::InSet {
+                set: identity_of(set).0,
+                why: Box::new(why),
+            })
+        })
         .collect()
 }
 
@@ -143,7 +152,9 @@ enum Decode {
 impl Decode {
     fn of(kind: &str) -> Option<Decode> {
         match kind {
-            "double" | "float" | "measured depth" | "true vertical depth" | "elapsed time" => Some(Decode::Number),
+            "double" | "float" | "measured depth" | "true vertical depth" | "elapsed time" => {
+                Some(Decode::Number)
+            }
             "int" | "long" | "bytes" => Some(Decode::Integer),
             "boolean" => Some(Decode::Boolean),
             "string" => Some(Decode::Text),
@@ -175,11 +186,18 @@ struct Declared {
 /// One `ChannelIndex`, read — or refused.
 fn declared(index: &dyn Reflect, rank: usize) -> Result<Declared, Refused> {
     let mnemonic = text(index, "Mnemonic").unwrap_or_else(|| format!("index {}", rank + 1));
-    let written = text(index, "IndexKind").ok_or_else(|| Refused::Missing { what: format!("the kind of the index `{mnemonic}`") })?;
+    let written = text(index, "IndexKind").ok_or_else(|| Refused::Missing {
+        what: format!("the kind of the index `{mnemonic}`"),
+    })?;
     let kind = match IndexKind::from_wire(&written) {
         Some(kind) => kind,
         None if written == "pass indexed depth" => return Err(Refused::PassIndexedDepth { what: mnemonic }),
-        None => return Err(Refused::IndexNotTimeOrDepth { index: mnemonic, kind: written }),
+        None => {
+            return Err(Refused::IndexNotTimeOrDepth {
+                index: mnemonic,
+                kind: written,
+            });
+        }
     };
     // Absent, the schema's own default reading: the element is 1..1, and a
     // file that omits it is `Validate`'s business, not a reason to refuse rows.
@@ -188,8 +206,18 @@ fn declared(index: &dyn Reflect, rank: usize) -> Result<Declared, Refused> {
         Some("decreasing") => Direction::Decreasing,
         _ => Direction::Unordered,
     };
-    let uom = if kind == IndexKind::DateTime { Some("s".to_string()) } else { text(index, "Uom") };
-    Ok(Declared { kind, mnemonic, uom, direction, datum: reference(index, "Datum").map(|(uuid, _)| uuid) })
+    let uom = if kind == IndexKind::DateTime {
+        Some("s".to_string())
+    } else {
+        text(index, "Uom")
+    };
+    Ok(Declared {
+        kind,
+        mnemonic,
+        uom,
+        direction,
+        datum: reference(index, "Datum").map(|(uuid, _)| uuid),
+    })
 }
 
 /// A channel as listed, before its values are read.
@@ -228,7 +256,10 @@ pub fn read(set: &dyn Reflect) -> Result<Series, Refused> {
 /// one reading of a set, both forms through the same row loop.
 pub fn read_with(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Series, Refused> {
     if !reads(set) {
-        return Err(Refused::NotThisReader { expected: "a WITSML ChannelSet", found: set.type_info().type_key.to_string() });
+        return Err(Refused::NotThisReader {
+            expected: "a WITSML ChannelSet",
+            found: set.type_info().type_key.to_string(),
+        });
     }
     let (uuid, title) = identity_of(set);
 
@@ -247,15 +278,23 @@ pub fn read_with(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Series, 
     };
 
     // -- the indexes ---------------------------------------------------------------
-    let indexes: Vec<Declared> =
-        objects(set, "Index").into_iter().enumerate().map(|(rank, index)| declared(index, rank)).collect::<Result<_, _>>()?;
+    let indexes: Vec<Declared> = objects(set, "Index")
+        .into_iter()
+        .enumerate()
+        .map(|(rank, index)| declared(index, rank))
+        .collect::<Result<_, _>>()?;
     let Some(primary) = indexes.first() else {
         return Err(Refused::NoIndex);
     };
     if primary.direction == Direction::Unordered {
-        return Err(Refused::UnorderedIndex { index: primary.mnemonic.clone() });
+        return Err(Refused::UnorderedIndex {
+            index: primary.mnemonic.clone(),
+        });
     }
-    if let Some(other) = indexes.iter().find(|one| one.kind.family() != primary.kind.family()) {
+    if let Some(other) = indexes
+        .iter()
+        .find(|one| one.kind.family() != primary.kind.family())
+    {
         return Err(Refused::IndexFamilyMix {
             primary: primary.mnemonic.clone(),
             primary_family: primary.kind.family().word(),
@@ -268,28 +307,50 @@ pub fn read_with(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Series, 
     let mut listed: Vec<Listed> = Vec::new();
     for (rank, channel) in objects(set, "Channel").into_iter().enumerate() {
         let mnemonic = text(channel, "Mnemonic").unwrap_or_else(|| format!("channel {}", rank + 1));
-        let data_kind = text(channel, "DataKind").ok_or_else(|| Refused::Missing { what: format!("the data kind of `{mnemonic}`") })?;
+        let data_kind = text(channel, "DataKind").ok_or_else(|| Refused::Missing {
+            what: format!("the data kind of `{mnemonic}`"),
+        })?;
         let decode = match Decode::of(&data_kind) {
             Some(decode) => decode,
-            None if data_kind == "pass indexed depth" => return Err(Refused::PassIndexedDepth { what: mnemonic }),
-            None => return Err(Refused::UnknownDataKind { channel: mnemonic, kind: data_kind }),
+            None if data_kind == "pass indexed depth" => {
+                return Err(Refused::PassIndexedDepth { what: mnemonic });
+            }
+            None => {
+                return Err(Refused::UnknownDataKind {
+                    channel: mnemonic,
+                    kind: data_kind,
+                });
+            }
         };
         if let Some(own) = objects(channel, "Index").into_iter().next() {
             let own = declared(own, 0)?;
-            let contradiction = |what: &'static str, expected: String, found: String| Refused::ChannelIndexContradicts {
-                channel: mnemonic.clone(),
-                what,
-                expected,
-                found,
-            };
+            let contradiction =
+                |what: &'static str, expected: String, found: String| Refused::ChannelIndexContradicts {
+                    channel: mnemonic.clone(),
+                    what,
+                    expected,
+                    found,
+                };
             if own.kind != primary.kind {
-                return Err(contradiction("the kind", primary.kind.wire().into(), own.kind.wire().into()));
+                return Err(contradiction(
+                    "the kind",
+                    primary.kind.wire().into(),
+                    own.kind.wire().into(),
+                ));
             }
             if own.uom != primary.uom {
-                return Err(contradiction("the unit", primary.uom.clone().unwrap_or_default(), own.uom.unwrap_or_default()));
+                return Err(contradiction(
+                    "the unit",
+                    primary.uom.clone().unwrap_or_default(),
+                    own.uom.unwrap_or_default(),
+                ));
             }
             if own.direction != primary.direction {
-                return Err(contradiction("the direction", primary.direction.wire().into(), own.direction.wire().into()));
+                return Err(contradiction(
+                    "the direction",
+                    primary.direction.wire().into(),
+                    own.direction.wire().into(),
+                ));
             }
             if let (Some(set_datum), Some(own_datum)) = (&primary.datum, &own.datum)
                 && !set_datum.eq_ignore_ascii_case(own_datum)
@@ -298,14 +359,18 @@ pub fn read_with(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Series, 
             }
         }
         listed.push(Listed {
-            uuid: energyml_core::identity::uuid_of_reflect(channel).map(str::to_string).filter(|one| !one.is_empty()),
+            uuid: energyml_core::identity::uuid_of_reflect(channel)
+                .map(str::to_string)
+                .filter(|one| !one.is_empty()),
             mnemonic,
             uom: text(channel, "Uom"),
             data_kind,
             decode,
-            property_kind: reference(channel, "ChannelPropertyKind").map(|(uuid, title)| PropertyKindRef::Object {
-                uuid,
-                title: Some(title).filter(|one| !one.is_empty()),
+            property_kind: reference(channel, "ChannelPropertyKind").map(|(uuid, title)| {
+                PropertyKindRef::Object {
+                    uuid,
+                    title: Some(title).filter(|one| !one.is_empty()),
+                }
             }),
         });
     }
@@ -313,9 +378,13 @@ pub fn read_with(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Series, 
     // -- the rows --------------------------------------------------------------------
     let rows: Vec<Value> = match rows_at {
         Rows::Inline(blob) => {
-            let parsed: Value = serde_json::from_str(&blob).map_err(|why| Refused::NotRows { why: format!("not JSON: {why}") })?;
+            let parsed: Value = serde_json::from_str(&blob).map_err(|why| Refused::NotRows {
+                why: format!("not JSON: {why}"),
+            })?;
             let Value::Array(rows) = parsed else {
-                return Err(Refused::NotRows { why: "the JSON is not an array".into() });
+                return Err(Refused::NotRows {
+                    why: "the JSON is not an array".into(),
+                });
             };
             rows
         }
@@ -323,12 +392,17 @@ pub fn read_with(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Series, 
     };
     let width = indexes.len() + listed.len();
     let mut index_values: Vec<Vec<f64>> = vec![Vec::with_capacity(rows.len()); indexes.len()];
-    let mut columns: Vec<Column> = listed.iter().map(|one| Column::new(one.decode, rows.len())).collect();
+    let mut columns: Vec<Column> = listed
+        .iter()
+        .map(|one| Column::new(one.decode, rows.len()))
+        .collect();
 
     for (at, row) in rows.iter().enumerate() {
         let number = at + 1;
         let Value::Array(cells) = row else {
-            return Err(Refused::NotRows { why: format!("row {number} is not an array") });
+            return Err(Refused::NotRows {
+                why: format!("row {number} is not an array"),
+            });
         };
         if cells.len() != width {
             return Err(Refused::RowLength {
@@ -341,14 +415,26 @@ pub fn read_with(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Series, 
         }
         for (rank, index) in indexes.iter().enumerate() {
             let cell = &cells[rank];
-            let decode = if index.kind == IndexKind::DateTime { Decode::Instant } else { Decode::Number };
+            let decode = if index.kind == IndexKind::DateTime {
+                Decode::Instant
+            } else {
+                Decode::Number
+            };
             let value = match read_number(cell, decode, number, &index.mnemonic)? {
                 Some(value) => value,
-                None if rank == 0 => return Err(Refused::NullIndex { row: number, index: index.mnemonic.clone() }),
+                None if rank == 0 => {
+                    return Err(Refused::NullIndex {
+                        row: number,
+                        index: index.mnemonic.clone(),
+                    });
+                }
                 None => f64::NAN,
             };
             if rank == 0 && !value.is_finite() {
-                return Err(Refused::NullIndex { row: number, index: index.mnemonic.clone() });
+                return Err(Refused::NullIndex {
+                    row: number,
+                    index: index.mnemonic.clone(),
+                });
             }
             index_values[rank].push(value);
         }
@@ -378,7 +464,11 @@ pub fn read_with(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Series, 
         .map(|(one, column)| Channel {
             uuid: one.uuid,
             mnemonic: one.mnemonic,
-            uom: if one.decode == Decode::Instant { Some("s".into()) } else { one.uom },
+            uom: if one.decode == Decode::Instant {
+                Some("s".into())
+            } else {
+                one.uom
+            },
             data_kind: Some(one.data_kind),
             property_kind: one.property_kind,
             measure_class: None,
@@ -386,7 +476,13 @@ pub fn read_with(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Series, 
             quality: column.quality,
         })
         .collect();
-    Ok(Series { uuid, title, index, secondary: built, channels })
+    Ok(Series {
+        uuid,
+        title,
+        index,
+        secondary: built,
+        channels,
+    })
 }
 
 /// The rows of a dataset, as the cells the inline JSON would parse to — so
@@ -401,23 +497,43 @@ fn dataset_rows(
 ) -> Result<Vec<Value>, Refused> {
     // Kinds first: nothing is read for a column no number can hold.
     if let Some(index) = indexes.iter().find(|index| index.kind == IndexKind::DateTime) {
-        return Err(Refused::DatasetColumnKind { column: index.mnemonic.clone(), kind: IndexKind::DateTime.wire().to_string() });
+        return Err(Refused::DatasetColumnKind {
+            column: index.mnemonic.clone(),
+            kind: IndexKind::DateTime.wire().to_string(),
+        });
     }
-    if let Some(channel) = listed.iter().find(|one| !matches!(one.decode, Decode::Number | Decode::Integer)) {
-        return Err(Refused::DatasetColumnKind { column: channel.mnemonic.clone(), kind: channel.data_kind.clone() });
+    if let Some(channel) = listed
+        .iter()
+        .find(|one| !matches!(one.decode, Decode::Number | Decode::Integer))
+    {
+        return Err(Refused::DatasetColumnKind {
+            column: channel.mnemonic.clone(),
+            kind: channel.data_kind.clone(),
+        });
     }
 
     let location = arrays
         .locate(data)
         .into_iter()
         .find(|one| one.path_in_file == path)
-        .ok_or_else(|| Refused::DatasetNotLocated { file: file.clone(), path: path.clone() })?;
+        .ok_or_else(|| Refused::DatasetNotLocated {
+            file: file.clone(),
+            path: path.clone(),
+        })?;
     let read = arrays.read(&location).map_err(|why| match &why {
         crate::Error::Storage(energyml_storage::Error::ExternalData {
             reason: energyml_storage::ExternalDataReason::FeatureNotEnabled { feature, .. },
             ..
-        }) => Refused::DatasetNeedsFeature { file: file.clone(), path: path.clone(), feature: feature.to_string() },
-        _ => Refused::DatasetNotRead { file: file.clone(), path: path.clone(), why: why.to_string() },
+        }) => Refused::DatasetNeedsFeature {
+            file: file.clone(),
+            path: path.clone(),
+            feature: feature.to_string(),
+        },
+        _ => Refused::DatasetNotRead {
+            file: file.clone(),
+            path: path.clone(),
+            why: why.to_string(),
+        },
     })?;
 
     let width = indexes.len() + listed.len();
@@ -428,9 +544,18 @@ fn dataset_rows(
         && dimensions[0] >= 0
         && cells.len() as i64 == dimensions[0] * dimensions[1];
     if !fits {
-        return Err(Refused::DatasetShape { path, dimensions, expected: width, indexes: indexes.len(), channels: listed.len() });
+        return Err(Refused::DatasetShape {
+            path,
+            dimensions,
+            expected: width,
+            indexes: indexes.len(),
+            channels: listed.len(),
+        });
     }
-    Ok(cells.chunks(width).map(|row| Value::Array(row.to_vec())).collect())
+    Ok(cells
+        .chunks(width)
+        .map(|row| Value::Array(row.to_vec()))
+        .collect())
 }
 
 /// A dataset's values as the JSON cells of an inline row: `NaN` is `null`,
@@ -465,7 +590,12 @@ fn cells_of(values: &energyml_storage::ArrayValues) -> Vec<Value> {
 
 /// A number, an instant or nothing — or a refusal naming the cell.
 fn read_number(cell: &Value, decode: Decode, row: usize, column: &str) -> Result<Option<f64>, Refused> {
-    let wrong = |found: String| Refused::ValueKind { row, column: column.to_string(), expected: decode.expects(), found };
+    let wrong = |found: String| Refused::ValueKind {
+        row,
+        column: column.to_string(),
+        expected: decode.expects(),
+        found,
+    };
     match (cell, decode) {
         (Value::Null, _) => Ok(None),
         (Value::Number(number), Decode::Number) => Ok(number.as_f64()),
@@ -475,9 +605,15 @@ fn read_number(cell: &Value, decode: Decode, row: usize, column: &str) -> Result
             "-Infinity" => Ok(Some(f64::NEG_INFINITY)),
             _ => Err(wrong(format!("the string `{spelled}`"))),
         },
-        (Value::String(written), Decode::Instant) => instant::unix_seconds(written)
-            .map(Some)
-            .map_err(|why| Refused::Instant { at: format!("row {row}, `{column}`"), text: written.clone(), why }),
+        (Value::String(written), Decode::Instant) => {
+            instant::unix_seconds(written)
+                .map(Some)
+                .map_err(|why| Refused::Instant {
+                    at: format!("row {row}, `{column}`"),
+                    text: written.clone(),
+                    why,
+                })
+        }
         (other, _) => Err(wrong(kind_of(other))),
     }
 }
@@ -508,20 +644,34 @@ impl Column {
             Decode::Boolean => Values::Boolean(Vec::with_capacity(rows)),
             Decode::Text => Values::Text(Vec::with_capacity(rows)),
         };
-        Column { decode, values, quality: Vec::with_capacity(rows) }
+        Column {
+            decode,
+            values,
+            quality: Vec::with_capacity(rows),
+        }
     }
 
     fn push(&mut self, cell: &Value, row: usize, column: &str) -> Result<(), Refused> {
         let decode = self.decode;
-        let wrong = |found: String| Refused::ValueKind { row, column: column.to_string(), expected: decode.expects(), found };
+        let wrong = |found: String| Refused::ValueKind {
+            row,
+            column: column.to_string(),
+            expected: decode.expects(),
+            found,
+        };
         match (&mut self.values, cell) {
             (Values::Floating(values), _) => {
                 let value = read_number(cell, decode, row, column)?;
                 let (value, quality) = match value {
                     None => (f64::NAN, Quality::Absent),
-                    Some(value) if value.is_infinite() => {
-                        (value, Quality::Flagged(if value > 0.0 { "+Infinity".into() } else { "-Infinity".into() }))
-                    }
+                    Some(value) if value.is_infinite() => (
+                        value,
+                        Quality::Flagged(if value > 0.0 {
+                            "+Infinity".into()
+                        } else {
+                            "-Infinity".into()
+                        }),
+                    ),
                     Some(value) => (value, Quality::Good),
                 };
                 values.push(value);
@@ -533,7 +683,10 @@ impl Column {
             }
             (Values::Integer(values), Value::Number(number)) => {
                 let whole = number.as_i64().or_else(|| {
-                    number.as_f64().filter(|value| value.fract() == 0.0 && value.abs() < 9.0e15).map(|value| value as i64)
+                    number
+                        .as_f64()
+                        .filter(|value| value.fract() == 0.0 && value.abs() < 9.0e15)
+                        .map(|value| value as i64)
                 });
                 let Some(whole) = whole else {
                     return Err(wrong(format!("the number {number}")));

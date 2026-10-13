@@ -27,7 +27,10 @@ fn source() -> Option<Package> {
 #[test]
 fn a_surface_arrives_with_what_it_needs_and_the_rest_is_said() {
     let Some(from) = source() else { return };
-    let Some(surface) = from.find(Some("TriangulatedSetRepresentation"), None).into_iter().next()
+    let Some(surface) = from
+        .find(Some("TriangulatedSetRepresentation"), None)
+        .into_iter()
+        .next()
     else {
         eprintln!("skipped: no triangulated set in this package");
         return;
@@ -46,8 +49,15 @@ fn a_surface_arrives_with_what_it_needs_and_the_rest_is_said() {
     // representation with no interpretation and no CRS — an object that opens
     // and means nothing.
     assert!(done.objects.contains(&surface.uri), "what was asked for is there");
-    assert!(!done.added.is_empty(), "and its closure came along: {:?}", done.added);
-    assert!(!done.added.contains(&surface.uri), "what was asked for is not *added*");
+    assert!(
+        !done.added.is_empty(),
+        "and its closure came along: {:?}",
+        done.added
+    );
+    assert!(
+        !done.added.contains(&surface.uri),
+        "what was asked for is not *added*"
+    );
     assert_eq!(
         done.objects.len(),
         done.added.len() + 1,
@@ -57,14 +67,20 @@ fn a_surface_arrives_with_what_it_needs_and_the_rest_is_said() {
 
     let arrived: Vec<String> = into.objects().into_iter().map(|one| one.uri).collect();
     for uri in &done.objects {
-        assert!(arrived.contains(uri), "{uri} was reported copied and is not in the package");
+        assert!(
+            arrived.contains(uri),
+            "{uri} was reported copied and is not in the package"
+        );
     }
 }
 
 #[test]
 fn what_arrives_is_closed_and_a_second_reader_says_so() {
     let Some(from) = source() else { return };
-    let Some(surface) = from.find(Some("TriangulatedSetRepresentation"), None).into_iter().next()
+    let Some(surface) = from
+        .find(Some("TriangulatedSetRepresentation"), None)
+        .into_iter()
+        .next()
     else {
         return;
     };
@@ -99,7 +115,10 @@ fn what_arrives_is_closed_and_a_second_reader_says_so() {
 #[test]
 fn the_numbers_that_arrive_are_the_numbers_that_left() {
     let Some(from) = source() else { return };
-    let Some(surface) = from.find(Some("TriangulatedSetRepresentation"), None).into_iter().next()
+    let Some(surface) = from
+        .find(Some("TriangulatedSetRepresentation"), None)
+        .into_iter()
+        .next()
     else {
         return;
     };
@@ -142,7 +161,9 @@ fn an_unknown_array_handling_is_refused_with_the_two_that_exist() {
 fn copying_nothing_copies_nothing() {
     let Some(from) = source() else { return };
     let mut into = Package::create("copy.epc").expect("an empty package");
-    let done = into.copy_from(&from, &[], "copy").expect("an empty ask is not an error");
+    let done = into
+        .copy_from(&from, &[], "copy")
+        .expect("an empty ask is not an error");
     assert!(done.objects.is_empty(), "nothing asked for, nothing copied");
     assert!(into.objects().is_empty(), "and the package stayed empty");
 }

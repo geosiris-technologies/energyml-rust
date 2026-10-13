@@ -79,7 +79,8 @@ pub struct DtsInstallation;
 const NOT_A_WELL: &str = "a fiber is mapped onto a wellbore (FiberOpticalPath.xsd, `FiberFacilityWell.Wellbore` 1..1): give the wellbore";
 
 /// Why a fiber wants a wellbore, after *« is a `…`, and »*.
-const NOT_A_HOLE: &str = "a fiber is mapped onto a wellbore: a WITSML `Wellbore`, or the RESQML `WellboreFeature` of the hole";
+const NOT_A_HOLE: &str =
+    "a fiber is mapped onto a wellbore: a WITSML `Wellbore`, or the RESQML `WellboreFeature` of the hole";
 
 // ---------------------------------------------------------------- the declaration
 
@@ -118,7 +119,12 @@ impl Operation for DtsInstallation {
             name: "dts-installation",
             describe: "a DTS fiber down a wellbore — its optical path mapped onto the hole, the instrument box, the installed system pairing them, the header of a survey — every value stated and sourced",
             category: Category::Synthetic,
-            makes: &["prodml23.DtsInstrumentBox", "prodml23.FiberOpticalPath", "prodml23.DtsInstalledSystem", "prodml23.DtsMeasurement"],
+            makes: &[
+                "prodml23.DtsInstrumentBox",
+                "prodml23.FiberOpticalPath",
+                "prodml23.DtsInstalledSystem",
+                "prodml23.DtsMeasurement",
+            ],
             recipe: "dts-installation",
             represents: None,
         }
@@ -136,7 +142,12 @@ impl Operation for DtsInstallation {
         })
     }
 
-    fn plan(&self, inputs: DtsInstallationInputs, params: DtsInstallationParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
+    fn plan(
+        &self,
+        inputs: DtsInstallationInputs,
+        params: DtsInstallationParams,
+        cx: &Context<'_>,
+    ) -> Result<Plan, Refusal> {
         let title = titled("title", &params.title)?;
         let mut writer = Writer::new(cx, "dts-installation", &params.source)?;
         let (installed_text, installed) = instant("installedFrom", &params.installed_from)?;
@@ -144,16 +155,24 @@ impl Operation for DtsInstallation {
         if measured < installed {
             return Err(Refusal::on(
                 "measuredAt",
-                format!("`{measured_text}` comes before the installation, `{installed_text}`: a fiber measures once it is in the hole"),
+                format!(
+                    "`{measured_text}` comes before the installation, `{installed_text}`: a fiber measures once it is in the hole"
+                ),
             ));
         }
         let length = params.fiber_length;
         if !(length.is_finite() && length > 0.0) {
-            return Err(Refusal::on("fiberLength", format!("{length} m is not the length of a fiber: a finite number > 0")));
+            return Err(Refusal::on(
+                "fiberLength",
+                format!("{length} m is not the length of a fiber: a finite number > 0"),
+            ));
         }
         let hole = wellbore_because("wellbore", &inputs.wellbore, NOT_A_WELL, NOT_A_HOLE)?.clone();
         let dor = |known: &Ref| crate::crs::reference_of(known);
-        let metres = |value: f64| eml::LengthMeasure { value, uom: eml::LengthUom::M };
+        let metres = |value: f64| eml::LengthMeasure {
+            value,
+            uom: eml::LengthUom::M,
+        };
 
         // -- the uuids first: the system names the path and the box ----------------------
         let base = format!("{}:{installed_text}:{length}", hole.uuid.to_ascii_lowercase());
@@ -167,22 +186,40 @@ impl Operation for DtsInstallation {
         let measurement_title = format!("{title} — survey {measured_text}");
         let box_ref = Ref::new(box_uuid.clone(), "prodml23.DtsInstrumentBox", box_title.clone());
         let path_ref = Ref::new(path_uuid.clone(), "prodml23.FiberOpticalPath", path_title.clone());
-        let system_ref = Ref::new(system_uuid.clone(), "prodml23.DtsInstalledSystem", system_title.clone());
+        let system_ref = Ref::new(
+            system_uuid.clone(),
+            "prodml23.DtsInstalledSystem",
+            system_title.clone(),
+        );
 
         // The box: an instrument named after the installation, nothing else stated.
         let instrument_box = prodml::DtsInstrumentBox {
             uuid: box_uuid.clone(),
             schema_version: "2.3".to_string(),
-            citation: writer.citation(&box_title, &format!("the instrument box at the end of the invented fiber of `{}`", hole.title))?,
+            citation: writer.citation(
+                &box_title,
+                &format!(
+                    "the instrument box at the end of the invented fiber of `{}`",
+                    hole.title
+                ),
+            )?,
             extension_name_value: vec![writer.synthetic("the instrument box of an invented fiber")],
             instrument: prodml::AnyInstrument::Instrument(prodml::Instrument {
                 name: format!("{title} — instrument"),
-                comment: Some("synthetic — no make, model or calibration is stated: none is written".to_string()),
+                comment: Some(
+                    "synthetic — no make, model or calibration is stated: none is written".to_string(),
+                ),
                 ..Default::default()
             }),
             ..Default::default()
         };
-        writer.push(&box_uuid, "prodml23.DtsInstrumentBox", "instrument-box", &box_title, &instrument_box);
+        writer.push(
+            &box_uuid,
+            "prodml23.DtsInstrumentBox",
+            "instrument-box",
+            &box_title,
+            &instrument_box,
+        );
 
         // The optical path: one segment, a terminator, a mapping.
         let path = prodml::FiberOpticalPath {
@@ -227,13 +264,25 @@ impl Operation for DtsInstallation {
             }],
             ..Default::default()
         };
-        writer.push(&path_uuid, "prodml23.FiberOpticalPath", "optical-path", &path_title, &path);
+        writer.push(
+            &path_uuid,
+            "prodml23.FiberOpticalPath",
+            "optical-path",
+            &path_title,
+            &path,
+        );
 
         // The installed system.
         let system = prodml::DtsInstalledSystem {
             uuid: system_uuid.clone(),
             schema_version: "2.3".to_string(),
-            citation: writer.citation(&system_title, &format!("the invented fiber of `{}` paired with its instrument box from {installed_text}", hole.title))?,
+            citation: writer.citation(
+                &system_title,
+                &format!(
+                    "the invented fiber of `{}` paired with its instrument box from {installed_text}",
+                    hole.title
+                ),
+            )?,
             extension_name_value: vec![writer.synthetic("the installed system of an invented fiber")],
             date_min: installed_text.clone(),
             optical_path_length: Some(metres(length)),
@@ -241,7 +290,13 @@ impl Operation for DtsInstallation {
             instrument_box: dor(&box_ref),
             ..Default::default()
         };
-        writer.push(&system_uuid, "prodml23.DtsInstalledSystem", "installed-system", &system_title, &system);
+        writer.push(
+            &system_uuid,
+            "prodml23.DtsInstalledSystem",
+            "installed-system",
+            &system_title,
+            &system,
+        );
 
         // The header of a survey.
         let measurement = prodml::DtsMeasurement {
@@ -249,7 +304,10 @@ impl Operation for DtsInstallation {
             schema_version: "2.3".to_string(),
             citation: writer.citation(
                 &measurement_title,
-                &format!("the header of an invented survey of `{}` at {measured_text}; its traces are not written", hole.title),
+                &format!(
+                    "the header of an invented survey of `{}` at {measured_text}; its traces are not written",
+                    hole.title
+                ),
             )?,
             extension_name_value: vec![writer.synthetic("the header of an invented DTS survey")],
             bad_set_flag: false,
@@ -258,14 +316,23 @@ impl Operation for DtsInstallation {
             installed_system: dor(&system_ref),
             measurement_configuration: prodml::OpticalPathConfiguration::SingleMinusEnded,
             facility_identifier: prodml::FacilityIdentifier {
-                name: eml::NameStruct { value: hole.title.clone(), ..Default::default() },
+                name: eml::NameStruct {
+                    value: hole.title.clone(),
+                    ..Default::default()
+                },
                 kind: Some(prodml::ReportingFacility::Wellbore.as_xml_str().to_string()),
                 uid: "facility-1".to_string(),
                 ..Default::default()
             },
             ..Default::default()
         };
-        writer.push(&measurement_uuid, "prodml23.DtsMeasurement", "measurement", &measurement_title, &measurement);
+        writer.push(
+            &measurement_uuid,
+            "prodml23.DtsMeasurement",
+            "measurement",
+            &measurement_title,
+            &measurement,
+        );
 
         let says = vec![
             Note {
@@ -290,8 +357,15 @@ impl Operation for DtsInstallation {
             },
         ];
         let parameters = vec![
-            Parameter::Double { title: "opticalPathLength".to_string(), value: length, uom: Some("m".to_string()) },
-            Parameter::Object { title: "input".to_string(), reference: hole.dor() },
+            Parameter::Double {
+                title: "opticalPathLength".to_string(),
+                value: length,
+                uom: Some("m".to_string()),
+            },
+            Parameter::Object {
+                title: "input".to_string(),
+                reference: hole.dor(),
+            },
         ];
         Ok(Plan {
             media: Vec::new(),
@@ -314,7 +388,11 @@ impl Operation for DtsInstallation {
     fn reports(&self) -> Vec<Slot> {
         vec![Slot::required(
             "opticalPathLength",
-            Need::Number { uom: Some("m"), least: None, most: None },
+            Need::Number {
+                uom: Some("m"),
+                least: None,
+                most: None,
+            },
             "the length of the optical path the installed system states",
         )]
     }

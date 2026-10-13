@@ -83,14 +83,19 @@ fn what_is_not_asked_for_is_not_kept() {
     let mut none = Vec::new();
     geojson::read_streaming(
         text.as_bytes(),
-        &Wanted { properties: Keep::None },
+        &Wanted {
+            properties: Keep::None,
+        },
         |one| {
             none.push(one);
             Flow::Continue
         },
     )
     .expect("a collection");
-    assert!(none.iter().all(|one| one.properties.is_null()), "properties were kept");
+    assert!(
+        none.iter().all(|one| one.properties.is_null()),
+        "properties were kept"
+    );
     // And the shape is still there: a preview needs
     // the extents, not the properties.
     assert_eq!(none.len(), 2);
@@ -100,7 +105,9 @@ fn what_is_not_asked_for_is_not_kept() {
     let mut only = Vec::new();
     geojson::read_streaming(
         text.as_bytes(),
-        &Wanted { properties: Keep::Only(&wanted) },
+        &Wanted {
+            properties: Keep::Only(&wanted),
+        },
         |one| {
             only.push(one);
             Flow::Continue
@@ -112,7 +119,13 @@ fn what_is_not_asked_for_is_not_kept() {
     assert_eq!(first.get("nom").and_then(|v| v.as_str()), Some("forage un"));
     // A key absent from an entity is not an error: a collection where half
     // the entities carry a field is ordinary.
-    assert!(only[1].properties.as_object().expect("an object").contains_key("nom"));
+    assert!(
+        only[1]
+            .properties
+            .as_object()
+            .expect("an object")
+            .contains_key("nom")
+    );
 }
 
 #[test]
@@ -127,7 +140,12 @@ fn a_sink_that_has_had_enough_stops_the_reading() {
     })
     .expect("a collection");
 
-    assert_eq!(seen.len(), 1, "the sink said stop and got {} features", seen.len());
+    assert_eq!(
+        seen.len(),
+        1,
+        "the sink said stop and got {} features",
+        seen.len()
+    );
     assert!(summary.stopped);
     assert_eq!(summary.read, 1);
 }
@@ -163,7 +181,11 @@ fn a_collection_that_is_not_in_wgs84_is_refused_wherever_it_says_so() {
     assert!(!why.0.contains("already handed over"), "{why}");
 
     // And WGS 84 said in one way or the other passes.
-    for name in ["urn:ogc:def:crs:EPSG::4326", "EPSG:4326", "urn:ogc:def:crs:OGC:1.3:CRS84"] {
+    for name in [
+        "urn:ogc:def:crs:EPSG::4326",
+        "EPSG:4326",
+        "urn:ogc:def:crs:OGC:1.3:CRS84",
+    ] {
         geojson::read_streaming(collection(Some(name)).as_bytes(), &Wanted::default(), |_| {
             Flow::Continue
         })
@@ -174,7 +196,10 @@ fn a_collection_that_is_not_in_wgs84_is_refused_wherever_it_says_so() {
 #[test]
 fn a_document_that_is_not_a_collection_is_refused_by_name() {
     for (text, expected) in [
-        (r#"{"type":"Feature","features":[]}"#, "not a GeoJSON FeatureCollection"),
+        (
+            r#"{"type":"Feature","features":[]}"#,
+            "not a GeoJSON FeatureCollection",
+        ),
         (r#"{"type":"FeatureCollection"}"#, "no `features` array"),
         (r#"{"features":[]}"#, "states no `type`"),
         ("pas du json", "not JSON"),
