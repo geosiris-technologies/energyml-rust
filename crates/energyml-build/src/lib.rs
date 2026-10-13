@@ -1,5 +1,5 @@
-//! Create EnergyML objects — from geometry, from a foreign file, from other
-//! objects — through one door.
+//! Create EnergyML objects - from geometry, from a foreign file, from other
+//! objects - through one door.
 //!
 //! By design (ADR-0017), **an operation is a pure function from a
 //! bag of inputs ([`pieces::Pieces`]) to a plan of objects
@@ -9,8 +9,8 @@
 //! asks into its canonical `ActivityTemplate`, so the form and the record are
 //! one declaration.
 //!
-//! The crate grew out of the GeoSciML GeologicUnit import (tested with SIGEOL exports), which was already this shape — a
-//! plan, then a write, with derived uuids — and which is now its first
+//! The crate grew out of the GeoSciML GeologicUnit import (tested with SIGEOL exports), which was already this shape - a
+//! plan, then a write, with derived uuids - and which is now its first
 //! operation ([`ops::sigeol`]). The modules below the operations are its
 //! pieces, kept apart for the reason they always were:
 //!
@@ -18,7 +18,7 @@
 //!
 //! - [`geojson`] parses the **format**, RFC 7946 and nothing else. It knows no
 //!   geology and no RESQML;
-//! - [`sigeol`] reads the **vocabulary** — GeoSciML, tested with SIGEOL exports — and
+//! - [`sigeol`] reads the **vocabulary** - GeoSciML, tested with SIGEOL exports - and
 //!   answers what a feature is about. It knows no RESQML either;
 //! - the building and the writing come next, and they are the only parts that
 //!   know a package exists.

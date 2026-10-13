@@ -2,7 +2,7 @@
 //!
 //! Everything that can be wrong in this crate is here: the encoding of a filter,
 //! the axis order of an area, the reading of a server refusal, the listing of a
-//! quote. The round trip itself is behind a trait and only serves to make it —
+//! quote. The round trip itself is behind a trait and only serves to make it -
 //! which is precisely the boundary this crate exists to draw.
 //!
 //! The fixtures are **real** answers, taken from `data.geoscience.fr`: an
@@ -13,7 +13,7 @@ use energyml_providers::query::{Area, Page, Query, Term};
 use energyml_providers::transport::{Answer, Request, Transport};
 use energyml_providers::{Error, Provider, Providers};
 
-/// A transport that returns what it was given — the repository's fake, the
+/// A transport that returns what it was given - the repository's fake, the
 /// shape the ETP client already uses.
 struct Canned {
     status: u16,
@@ -78,7 +78,7 @@ fn a_query_becomes_the_url_the_service_expects() {
     // **The axis order is the one this service imposes in CQL**, and it is the
     // thing that cannot be guessed: compared against the service, this order
     // returns 16,984 entities and the other **zero**, with nothing complaining.
-    // Yet the same service wants `lat, lon` in a `bbox` — hence a field of the
+    // Yet the same service wants `lat, lon` in a `bbox` - hence a field of the
     // provider, and not a rule.
     let decoded = percent_decode(&request.url);
     assert!(
@@ -169,7 +169,7 @@ fn what_the_service_does_not_offer_is_refused_before_any_request() {
 #[test]
 fn a_refusal_of_the_server_is_read_and_repeated() {
     // The service's real answer to a filter on an attribute it does not expose
-    // — **XML, with a 400, although JSON was asked for**.
+    // - **XML, with a 400, although JSON was asked for**.
     let body = r#"<?xml version="1.0" encoding="UTF-8"?><ows:ExceptionReport xmlns:ows="http://www.opengis.net/ows/1.1" version="2.0.0">
   <ows:Exception exceptionCode="NoApplicableCode">
     <ows:ExceptionText>java.lang.IllegalArgumentException: Attribute &quot;identifier&quot; not found in type</ows:ExceptionText>
@@ -194,7 +194,7 @@ fn a_refusal_of_the_server_is_read_and_repeated() {
         Error::Server { status, code, says } => {
             assert_eq!(status, 400);
             assert_eq!(code.as_deref(), Some("NoApplicableCode"));
-            // **The server's text, as is** — XML entities resolved, because a
+            // **The server's text, as is** - XML entities resolved, because a
             // refusal that says `&quot;` is a refusal one rereads twice.
             assert!(says.contains(r#"Attribute "identifier" not found"#), "{says}");
         }
@@ -205,7 +205,7 @@ fn a_refusal_of_the_server_is_read_and_repeated() {
 #[test]
 fn a_quote_is_read_off_the_answer() {
     // The real answer to a `resultType=hits`: the count is an attribute, and
-    // `numberReturned` is zero — that is the whole point.
+    // `numberReturned` is zero - that is the whole point.
     let body = r#"<?xml version="1.0" encoding="UTF-8"?><wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0" numberMatched="16984" numberReturned="0" timeStamp="2026-09-20T01:00:00Z"/>"#;
     let provider = brgm();
     let answer = Canned {
@@ -267,7 +267,7 @@ fn the_registry_lists_what_this_build_can_ask() {
     let names: Vec<&str> = providers.all().map(|one| one.name()).collect();
     assert!(names.contains(&"brgm-bss"), "{names:?}");
 
-    // `expect_err` would demand a `Debug` on `&dyn Provider` — which a trait
+    // `expect_err` would demand a `Debug` on `&dyn Provider` - which a trait
     // object does not have, and which we will not require of every provider for
     // a test message.
     match providers.get("unknown") {
@@ -310,7 +310,7 @@ fn an_area_gives_its_bounds_for_a_service_that_only_takes_a_box() {
     assert!((north - 48.97213).abs() < 1e-9);
 }
 
-/// Percent-decode — to read a URL in a test message.
+/// Percent-decode - to read a URL in a test message.
 fn percent_decode(url: &str) -> String {
     let bytes = url.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
@@ -445,7 +445,7 @@ fn an_added_provider_reaches_the_catalogue_without_touching_anything() {
     assert_eq!(catalogue.providers[0].name, "elsewhere");
     assert!(catalogue.providers.iter().any(|one| one.name == "brgm-bss"));
 
-    // And its declaration travels whole — it is what becomes the form.
+    // And its declaration travels whole - it is what becomes the form.
     let added = &catalogue.providers[0];
     assert_eq!(added.collections.len(), 1);
     assert_eq!(added.collections[0].filters[0].suggest.as_deref(), Some("grey"));
@@ -481,7 +481,7 @@ fn a_request_from_the_front_end_comes_back_unchanged() {
     let back: Query = serde_json::from_str(&json).expect("and readable");
     assert_eq!(back, query);
 
-    // A minimal request from the front end — just the collection — reads back:
+    // A minimal request from the front end - just the collection - reads back:
     // without `default`, a missing field would be a read refusal where it is a
     // perfectly ordinary absence.
     let bare: Query = serde_json::from_str(r#"{"collection":"boreholes"}"#).expect("readable");

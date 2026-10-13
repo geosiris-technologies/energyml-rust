@@ -5,8 +5,8 @@
 //! nothing here would have anything to exercise.
 //!
 //! Why round-tripping is the test and not a nicety: an HDF5 file that is subtly
-//! wrong — right values under a transposed shape, an integer written where a
-//! double was meant, a uuid attribute of the wrong string type — opens
+//! wrong - right values under a transposed shape, an integer written where a
+//! double was meant, a uuid attribute of the wrong string type - opens
 //! perfectly well in every tool that does not look closely. Comparing what came
 //! back with what went in is the only check that catches those.
 
@@ -153,7 +153,7 @@ fn writing_twice_replaces_rather_than_appends() {
             &data(vec![3], ArrayValues::F64(vec![1.0, 2.0, 3.0])),
         )
         .unwrap();
-    // A different length, which HDF5 cannot do in place — the dataset has to be
+    // A different length, which HDF5 cannot do in place - the dataset has to be
     // unlinked and remade, and getting that wrong leaves the old one behind.
     backend
         .write(&file, "/values", &data(vec![2], ArrayValues::I32(vec![7, 8])))
@@ -265,7 +265,7 @@ fn a_destination_is_known_before_the_file_exists() {
     assert!(files.resolve("new.h5").is_err());
     assert_eq!(files.destination_for("new.h5").unwrap(), dir.join("new.h5"));
 
-    // Once written, the two agree — which is what makes a file written through
+    // Once written, the two agree - which is what makes a file written through
     // one findable through the other.
     Hdf5Backend
         .write(
@@ -289,7 +289,7 @@ fn a_destination_is_known_before_the_file_exists() {
 fn a_store_writes_an_array_and_reads_its_own_file_back() {
     let dir = folder("store");
     // The smallest possible package: no objects, just somewhere to put arrays.
-    // The point is the plumbing — backend choice, destination, round trip —
+    // The point is the plumbing - backend choice, destination, round trip -
     // not the EnergyML on top.
     let mut backends = Backends::none();
     backends.push(Box::new(Hdf5Backend));
@@ -308,7 +308,7 @@ fn a_store_writes_an_array_and_reads_its_own_file_back() {
         .write_array_to("model.h5", "/resqml20/uuid/points", &written)
         .expect("the store writes");
 
-    // And reads it back through the ordinary read path — the same one an
+    // And reads it back through the ordinary read path - the same one an
     // application uses, resolving the same name.
     let location = ArrayLocation {
         file: "model.h5".into(),
@@ -399,8 +399,8 @@ fn corpus_registry() -> Arc<Registry> {
 /// Every array of the corpus, written out again and compared value by value.
 ///
 /// The strongest test available for a writer: the input is not something this
-/// crate invented, it is what two independent implementations actually produce
-/// — 429 datasets across ten element types, shapes from a single scalar to a
+/// crate invented, it is what two independent implementations actually produce -
+/// 429 datasets across ten element types, shapes from a single scalar to a
 /// 50×100 grid. A writer that handles the cases someone thought to make up is
 /// not the same as one that handles the cases that exist.
 #[test]
@@ -440,7 +440,7 @@ fn every_array_of_the_corpus_can_be_written_back() {
                 target
                     .write_array_to(&file, &location.path_in_file, &original)
                     .unwrap_or_else(|e| {
-                        panic!("{}: writing {} — {e}", package.display(), location.path_in_file)
+                        panic!("{}: writing {} - {e}", package.display(), location.path_in_file)
                     });
 
                 let echo = energyml_storage::array::ArrayLocation {
@@ -450,7 +450,7 @@ fn every_array_of_the_corpus_can_be_written_back() {
                 };
                 let read = target
                     .read_array(&echo)
-                    .unwrap_or_else(|e| panic!("{}: reading back — {e}", location.path_in_file));
+                    .unwrap_or_else(|e| panic!("{}: reading back - {e}", location.path_in_file));
 
                 // Compared **bit for bit**, not with `==`. Two reasons, and the
                 // corpus supplies both: `NaN != NaN`, so a float comparison
@@ -506,7 +506,7 @@ fn every_array_of_the_corpus_can_be_written_back() {
 /// to, and the time is in seconds: two runs a second apart differed in 946
 /// bytes on Lutetia (28/09) and in nothing else. The front end's example is
 /// versioned and checked by replaying its recipe, which only works if a replay
-/// gives the same bytes. The pause is what makes this test able to fail — two
+/// gives the same bytes. The pause is what makes this test able to fail - two
 /// writes within the same second would agree on the clock too.
 #[test]
 fn the_same_arrays_make_the_same_file() {
@@ -543,7 +543,7 @@ fn the_same_arrays_make_the_same_file() {
 
 /// **Many arrays in one opening read back as one at a time would write them**
 /// (`ArrayBackend::write_many`, 28/09). One opening and one flush per dataset
-/// was 95 % of what writing a SIGEOL import took; the batch opens once — and
+/// was 95 % of what writing a SIGEOL import took; the batch opens once - and
 /// must not change a single value, a shape or a type on the way.
 #[test]
 fn many_arrays_in_one_opening_read_back_as_one_at_a_time_would() {

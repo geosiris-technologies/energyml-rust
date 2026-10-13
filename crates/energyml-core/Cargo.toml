@@ -6,7 +6,7 @@ edition.workspace = true
 rust-version.workspace = true
 # Spelled out rather than inherited: wasm-pack parses the manifests of a
 # WebAssembly front end's path dependencies before running wasm-opt, and
-# does not resolve workspace inheritance — `license.workspace = true` reaches
+# does not resolve workspace inheritance - `license.workspace = true` reaches
 # it as a table where it wants a string, and the wasm build dies *after*
 # writing the module, leaving a usable artefact and an unread exit code.
 license = "Apache-2.0"
@@ -22,8 +22,8 @@ include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
 quick-xml = "0.41"
 serde = { version = "1.0", features = ["derive"] }
 # `float_roundtrip` is not optional in spirit: without it serde_json's fast
-# float parser is off by one ULP on some 17-digit doubles — `248.49637958325286`
-# reads back as `248.4963795832529` — so a JSON round trip silently moves
+# float parser is off by one ULP on some 17-digit doubles - `248.49637958325286`
+# reads back as `248.4963795832529` - so a JSON round trip silently moves
 # coordinates. Found on `s_bend.epc`.
 serde_json = { version = "1.0", features = ["float_roundtrip"], optional = true }
 thiserror = "2.0"

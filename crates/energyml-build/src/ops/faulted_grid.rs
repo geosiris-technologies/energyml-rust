@@ -1,10 +1,10 @@
-//! `faulted-ijk-grid` — an `IjkGridRepresentation` between ordered horizon
+//! `faulted-ijk-grid` - an `IjkGridRepresentation` between ordered horizon
 //! grids, **cut by faults**: split coordinate lines where a fault runs between
 //! two columns, the hanging wall moved by a stated throw, and the cells nearest
 //! a fault removed on request.
 //!
 //! The need: the IJK grids of the reference model are too regular, and at
-//! least one should be "cut" by the faults — perhaps a new one, displaced a
+//! least one should be "cut" by the faults - perhaps a new one, displaced a
 //! little downwards on one side, with cells removed near one or two faults. It
 //! is also what the reference model's main grid asked for from the start:
 //! 21 columns duplicated along one fault (`ColumnLayerSplitCoordinateLines`).
@@ -14,7 +14,7 @@
 //! The grid between the horizons is `ijk-grid-from-horizons`'s, and this
 //! operation does not write a second one: it takes the same horizons and the
 //! same settings (`#[param(flatten)]`), hands `super::ijk_grid::between` a
-//! cut, and that function writes the object — an operation that writes the same
+//! cut, and that function writes the object - an operation that writes the same
 //! object as another delegates to it (ADR-0017). The cut
 //! itself is `energyml_analysis::ijk_faults`, which holds the rules and their
 //! pages: where a fault runs (its trace at the middle of the grid's heights, a
@@ -23,7 +23,7 @@
 //! torn horizons say the same throw), which pillars split and which
 //! columns take each line.
 //!
-//! # What the grid represents — never nothing
+//! # What the grid represents - never nothing
 //!
 //! A grid is a representation of the model: *« Software G mainly uses the 3D
 //! grid representation, which represents Peter's earth model interpretation »*
@@ -32,14 +32,14 @@
 //! feature »* (RESQML TRG 2.2 §8.1 `AbstractRepresentation` p. 234). The schema
 //! lets `RepresentedObject` be absent; this operation does not: `interpretation`
 //! names one (the reference model's `EarthModelInterpretation`), or `featureType` and
-//! `interpretationType` make the pair — otherwise the grid is refused by name.
+//! `interpretationType` make the pair - otherwise the grid is refused by name.
 //! Five representations of the reference model once represented nothing; this one is not a sixth.
 //!
 //! # A synthetic throw says so
 //!
 //! With `synthetic`, a `source` is required, and the grid carries `synthetic =
 //! true` and the law with its source in `Citation/Description`
-//! (the reference-model rules on invented objects, ADR-0019) — the throws of the reference model are invented.
+//! (the reference-model rules on invented objects, ADR-0019) - the throws of the reference model are invented.
 //!
 //! # Identity
 //!
@@ -51,7 +51,7 @@
 //! # References
 //!
 //! - The throw law along a fault trace is a synthetic law stated in `energyml-analysis`, which cites no published source for it.
-//!   TODO(reference): verify — no publication is cited; if the law follows one, add it (authors, year, title, venue, DOI) once checked.
+//!   TODO(reference): verify - no publication is cited; if the law follows one, add it (authors, year, title, venue, DOI) once checked.
 
 use serde_json::json;
 
@@ -78,37 +78,37 @@ pub struct FaultedGridParams {
     /// The grid between the horizons: its layers, its pillars, its frame.
     #[param(flatten)]
     pub grid: IjkGridParams,
-    /// the largest throw of each fault, in metres, in the order of `faults` — reached on the fault where the profile is one
+    /// the largest throw of each fault, in metres, in the order of `faults` - reached on the fault where the profile is one
     #[param(least = 1, min = 0.0, uom = "m")]
     pub maximum_throw: Vec<f64>,
-    /// how each fault moved, in the order of `faults` — normal lowers its hanging wall, reverse or thrust raises it
+    /// how each fault moved, in the order of `faults` - normal lowers its hanging wall, reverse or thrust raises it
     #[param(least = 1)]
     pub throw: Vec<Throw>,
-    /// how the throw varies along each trace — zero at both ends, the maximum in the middle
+    /// how the throw varies along each trace - zero at both ends, the maximum in the middle
     ///
     /// No default: a law of throw is a statement about the fault.
     pub profile: Profile,
-    /// how far from the trace, in plan, the hanging wall is dragged — the offset falls linearly from the throw on the fault to zero at this distance, in metres
+    /// how far from the trace, in plan, the hanging wall is dragged - the offset falls linearly from the throw on the fault to zero at this distance, in metres
     #[param(min = 0.0, uom = "m")]
     pub reach: f64,
-    /// how many columns of each fault's hanging wall, counted from the fault, lose their cells, in the order of `faults` — 0 keeps them; left out, none do
+    /// how many columns of each fault's hanging wall, counted from the fault, lose their cells, in the order of `faults` - 0 keeps them; left out, none do
     pub dead_columns: Vec<usize>,
-    /// the layers, from 0 at the top, in which those columns lose their cells — left out, every layer
+    /// the layers, from 0 at the top, in which those columns lose their cells - left out, every layer
     pub dead_layers: Vec<usize>,
     /// the throw is invented: the grid carries `synthetic = true` and its source
     #[param(default = false, optional)]
     pub synthetic: bool,
-    /// where the throw comes from — a document with its page, or why an invented one is plausible; required for a synthetic one
+    /// where the throw comes from - a document with its page, or why an invented one is plausible; required for a synthetic one
     pub source: Option<String>,
 }
 
 /// What `faulted-ijk-grid` takes.
 #[derive(Debug, Inputs)]
 pub struct FaultedGridInputs {
-    /// the horizons the grid lies between, **top to bottom** — 2D grids on one lattice, one per input
+    /// the horizons the grid lies between, **top to bottom** - 2D grids on one lattice, one per input
     #[input(topology = "grid", least = 2, ordered)]
     pub horizons: Vec<Shape>,
-    /// the fault surfaces that cut it, triangulated — in the order `maximumThrow`, `throw` and `deadColumns` follow
+    /// the fault surfaces that cut it, triangulated - in the order `maximumThrow`, `throw` and `deadColumns` follow
     #[input(topology = "triangles", least = 1, ordered)]
     pub faults: Vec<Shape>,
 }
@@ -146,7 +146,7 @@ fn key_of(shape: &Shape) -> String {
 type Surface = (Vec<[f64; 3]>, Vec<[u32; 3]>);
 
 /// A shape's triangles, every patch's indices shifted to the whole shape's
-/// nodes — or `None` when it holds none. F1 is in two patches.
+/// nodes - or `None` when it holds none. F1 is in two patches.
 fn surface_of(shape: &Shape) -> Option<Surface> {
     let mut points = Vec::new();
     let mut triangles = Vec::new();
@@ -182,7 +182,7 @@ impl Operation for FaultedIjkGrid {
     fn about(&self) -> About {
         About {
             name: "faulted-ijk-grid",
-            describe: "an IJK grid between horizon grids given top to bottom, cut by fault surfaces — split pillars where a fault runs between two columns, the hanging wall moved by a stated throw, the cells next to a fault removed on request",
+            describe: "an IJK grid between horizon grids given top to bottom, cut by fault surfaces - split pillars where a fault runs between two columns, the hanging wall moved by a stated throw, the cells next to a fault removed on request",
             category: Category::Geometry,
             makes: &["resqml22.IjkGridRepresentation"],
             recipe: "faulted-ijk-grid",
@@ -202,7 +202,7 @@ impl Operation for FaultedIjkGrid {
                 return Err(Refusal::on(
                     "faults",
                     format!(
-                        "`{}` is not a triangulated surface — where a fault runs through the grid is read on its surface",
+                        "`{}` is not a triangulated surface - where a fault runs through the grid is read on its surface",
                         name_of(fault)
                     ),
                 ));
@@ -226,7 +226,7 @@ impl Operation for FaultedIjkGrid {
             return Err(Refusal::on(
                 "maximumThrow",
                 format!(
-                    "{} throw(s) for {count} fault(s) — one per fault, in the order of `faults`",
+                    "{} throw(s) for {count} fault(s) - one per fault, in the order of `faults`",
                     params.maximum_throw.len()
                 ),
             ));
@@ -235,7 +235,7 @@ impl Operation for FaultedIjkGrid {
             return Err(Refusal::on(
                 "throw",
                 format!(
-                    "{} kind(s) of throw for {count} fault(s) — one per fault, in the order of `faults`",
+                    "{} kind(s) of throw for {count} fault(s) - one per fault, in the order of `faults`",
                     params.throw.len()
                 ),
             ));
@@ -244,7 +244,7 @@ impl Operation for FaultedIjkGrid {
             return Err(Refusal::on(
                 "deadColumns",
                 format!(
-                    "{} count(s) for {count} fault(s) — one per fault, in the order of `faults`, or none",
+                    "{} count(s) for {count} fault(s) - one per fault, in the order of `faults`, or none",
                     params.dead_columns.len()
                 ),
             ));
@@ -258,7 +258,7 @@ impl Operation for FaultedIjkGrid {
                     return Err(Refusal::on(
                         "throw",
                         format!(
-                            "`{name}` is given as {}: that play states no vertical sense, and which way its hanging wall goes is what the grid is cut by — give normal, reverse or thrust",
+                            "`{name}` is given as {}: that play states no vertical sense, and which way its hanging wall goes is what the grid is cut by - give normal, reverse or thrust",
                             other.word()
                         ),
                     ));
@@ -274,7 +274,7 @@ impl Operation for FaultedIjkGrid {
         if params.synthetic && source.is_none() {
             return Err(Refusal::on(
                 "source",
-                "a synthetic throw says where its numbers come from — a document with its page, or why they are plausible (reference-model rule: no constant without a source)",
+                "a synthetic throw says where its numbers come from - a document with its page, or why they are plausible (reference-model rule: no constant without a source)",
             ));
         }
 
@@ -283,7 +283,7 @@ impl Operation for FaultedIjkGrid {
         if written.represented.interpretation.is_none() && written.new_feature.feature_type.is_none() {
             return Err(Refusal::on(
                 "interpretation",
-                "a faulted grid represents the model it discretises — *« the 3D grid representation, which represents Peter's earth model interpretation »* (RESQML Technical Usage Guide 2.2, §7.3.2.2 p. 104): name the interpretation (an `EarthModelInterpretation`), or choose `featureType` and `interpretationType` to create the pair",
+                "a faulted grid represents the model it discretises - *« the 3D grid representation, which represents Peter's earth model interpretation »* (RESQML Technical Usage Guide 2.2, §7.3.2.2 p. 104): name the interpretation (an `EarthModelInterpretation`), or choose `featureType` and `interpretationType` to create the pair",
             ));
         }
 
@@ -301,7 +301,7 @@ impl Operation for FaultedIjkGrid {
                 return Err(Refusal::on(
                     "faults",
                     format!(
-                        "`{name}` is in `{}` and the horizons in `{}` — a fault read across two frames is read across two origins",
+                        "`{name}` is in `{}` and the horizons in `{}` - a fault read across two frames is read across two origins",
                         theirs.title, own.title
                     ),
                 ));
@@ -327,7 +327,7 @@ impl Operation for FaultedIjkGrid {
             return Err(Refusal::on(
                 "source",
                 format!(
-                    "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                    "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
                     text.chars().count()
                 ),
             ));
@@ -372,7 +372,7 @@ impl Operation for FaultedIjkGrid {
                     return Err(Refusal::on(
                         "maximumThrow",
                         format!(
-                            "the horizons count their heights in `{other}`, and a throw and a reach are given in metres — no conversion is made"
+                            "the horizons count their heights in `{other}`, and a throw and a reach are given in metres - no conversion is made"
                         ),
                     ));
                 }
@@ -412,7 +412,7 @@ impl Operation for FaultedIjkGrid {
             says.push(Note {
                 key: "split-lines",
                 detail: format!(
-                    "{} split coordinate line(s) on {} pillar(s): the columns a fault puts on the moved side take them, the others keep the pillar's own line (RESQML TRG 2.2 §5.17 p. 111) — {} coordinate lines in all",
+                    "{} split coordinate line(s) on {} pillar(s): the columns a fault puts on the moved side take them, the others keep the pillar's own line (RESQML TRG 2.2 §5.17 p. 111) - {} coordinate lines in all",
                     faulted.split_pillars.len(),
                     {
                         let mut on = faulted.split_pillars.clone();
@@ -453,7 +453,7 @@ impl Operation for FaultedIjkGrid {
                 says.push(Note {
                     key: "removed-cells",
                     detail: format!(
-                        "{} cell(s) next to the faults removed, as asked: `CellGeometryIsDefined` false (RESQML TRG 2.2 §5.1 p. 94) — their nodes kept, the flag is what a reader obeys",
+                        "{} cell(s) next to the faults removed, as asked: `CellGeometryIsDefined` false (RESQML TRG 2.2 §5.1 p. 94) - their nodes kept, the flag is what a reader obeys",
                         faulted.dead.len()
                     ),
                 });
@@ -501,7 +501,7 @@ impl Operation for FaultedIjkGrid {
     }
 
     /// The grid's counts, then the cut's: the split lines, the removed cells,
-    /// and the level each fault was traced at — one per fault, so a list.
+    /// and the level each fault was traced at - one per fault, so a list.
     fn reports(&self) -> Vec<Slot> {
         let mut own = ijk_grid::grid_reports();
         own.push(Slot::required(
@@ -511,7 +511,7 @@ impl Operation for FaultedIjkGrid {
                 least: None,
                 most: None,
             },
-            "split coordinate lines — extra lines on the pillars a fault runs through",
+            "split coordinate lines - extra lines on the pillars a fault runs through",
         ));
         own.push(Slot::required(
             "deadCellCount",
@@ -520,11 +520,11 @@ impl Operation for FaultedIjkGrid {
                 least: None,
                 most: None,
             },
-            "cells next to a fault removed — CellGeometryIsDefined false",
+            "cells next to a fault removed - CellGeometryIsDefined false",
         ));
         own.push(Slot {
             most: None,
-            ..Slot::required("traceLevel", Need::Number { uom: None, least: None, most: None }, "the height each fault is traced at, in the order of `faults` — the middle of the heights it shares with the grid")
+            ..Slot::required("traceLevel", Need::Number { uom: None, least: None, most: None }, "the height each fault is traced at, in the order of `faults` - the middle of the heights it shares with the grid")
         });
         support::frame_reports(own)
     }

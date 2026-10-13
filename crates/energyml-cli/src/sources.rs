@@ -1,9 +1,9 @@
-//! `energyml sources` and `energyml fetch` — query a public API.
+//! `energyml sources` and `energyml fetch` - query a public API.
 //!
 //! **No decision here.** This module parses arguments and prints: what a
 //! provider offers, what a request would cost, what a harvest returned. The
 //! encoding of a request, the reading of a response and the refusals are in
-//! `energyml-providers` — a web front end and the Python bridge get exactly the
+//! `energyml-providers` - a web front end and the Python bridge get exactly the
 //! same ones.
 
 use std::io::Write;
@@ -17,21 +17,21 @@ use energyml_providers::query::{Area, Page, Query, Term};
 use energyml_providers::transport::{Native, Transport};
 use energyml_providers::{Kind, Providers};
 
-/// `energyml sources` — what this build can query.
+/// `energyml sources` - what this build can query.
 #[derive(Parser)]
 pub struct SourcesArgs {
     /// A provider, to see its collections and their filters.
     pub provider: Option<String>,
 }
 
-/// `energyml fetch` — the quote, then the harvest.
+/// `energyml fetch` - the quote, then the harvest.
 #[derive(Parser)]
 pub struct FetchArgs {
     /// The provider, as `energyml sources` names it.
     pub provider: String,
     /// The collection.
     pub collection: String,
-    /// An area, as GeoJSON — **the file the map view exports**.
+    /// An area, as GeoJSON - **the file the map view exports**.
     ///
     /// The first polygon of the document is taken; its coordinates are
     /// WGS 84 degrees, as RFC 7946 requires, and it is the provider that
@@ -44,7 +44,7 @@ pub struct FetchArgs {
     /// Harvest, and write the response **as it is** to this file.
     ///
     /// Without it nothing is written: the command says what it would cost, which
-    /// is the repository's shape — `create --plan`, `extract --dry-run`, `rename`
+    /// is the repository's shape - `create --plan`, `extract --dry-run`, `rename`
     /// without `--apply`.
     ///
     /// **One page per file**, numbered, as soon as there are several: each
@@ -59,7 +59,7 @@ pub struct FetchArgs {
     /// commas. Without it, everything is kept.
     #[arg(long, value_name = "NAME,NAME")]
     pub only: Option<String>,
-    /// Keep no property — what a preview asks for.
+    /// Keep no property - what a preview asks for.
     #[arg(long, conflicts_with = "only")]
     pub shapes_only: bool,
     /// How many entities per page.
@@ -84,7 +84,7 @@ pub fn sources(args: SourcesArgs) -> Result<()> {
 
     let provider = providers.get(&name).map_err(|why| anyhow::anyhow!("{why}"))?;
     let about = provider.about();
-    println!("{}  —  {}", provider.name(), provider.describe());
+    println!("{}  -  {}", provider.name(), provider.describe());
     println!("  {}", about.endpoint);
     println!("  {}", about.attribution);
     match &about.licence {
@@ -171,7 +171,7 @@ pub fn fetch(args: FetchArgs) -> Result<()> {
         .map_err(|why| anyhow::anyhow!("{why}"))?;
     let pages = matched.div_ceil(args.page as u64);
     println!(
-        "{matched} entity(ies), {pages} page(s) of {} — quote in {:.2}s",
+        "{matched} entity(ies), {pages} page(s) of {} - quote in {:.2}s",
         args.page,
         started.elapsed().as_secs_f64()
     );
@@ -185,7 +185,7 @@ pub fn fetch(args: FetchArgs) -> Result<()> {
     }
 
     if args.out.is_none() && !args.read {
-        println!("\nnothing was harvested — `--out FILE` to write, `--read` to read without writing");
+        println!("\nnothing was harvested - `--out FILE` to write, `--read` to read without writing");
         return Ok(());
     }
 
@@ -226,7 +226,7 @@ pub fn fetch(args: FetchArgs) -> Result<()> {
         let before = read;
         match &args.out {
             // **Writing is copying the stream**, without reading it: it is the
-            // cheapest path and the only lossless one — a round trip through our
+            // cheapest path and the only lossless one - a round trip through our
             // reader would lose what our `Feature` does not model, such as
             // the inner rings of a polygon.
             Some(path) => {
@@ -294,14 +294,14 @@ pub fn fetch(args: FetchArgs) -> Result<()> {
                 println!("written {}", path.display());
             }
             println!(
-                "{} file(s), {:.1} MB in {elapsed:.2}s — first byte at {:.2}s",
+                "{} file(s), {:.1} MB in {elapsed:.2}s - first byte at {:.2}s",
                 written.len(),
                 bytes as f64 / (1024.0 * 1024.0),
                 first_byte.unwrap_or_default().as_secs_f64()
             );
         }
         None => println!(
-            "{read} entity(ies) read{} in {elapsed:.2}s — first byte at {:.2}s",
+            "{read} entity(ies) read{} in {elapsed:.2}s - first byte at {:.2}s",
             match refused {
                 0 => String::new(),
                 n => format!(", {n} refused"),

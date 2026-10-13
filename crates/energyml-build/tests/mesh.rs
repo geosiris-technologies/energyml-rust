@@ -1,4 +1,4 @@
-//! Reading a foreign mesh — and reading it **as the former front-end parsers read it**.
+//! Reading a foreign mesh - and reading it **as the former front-end parsers read it**.
 //!
 //! # What this file holds
 //!
@@ -11,14 +11,14 @@
 //! The fixtures are those of the front end's own tests, copied word for
 //! word, and the expectations are those that front end already checked. Two readers
 //! of one format that are not confronted end up accepting
-//! different things without anything saying so — it is the rule of the repository, and
+//! different things without anything saying so - it is the rule of the repository, and
 //! this is the only moment when the two exist at the same time to uphold it.
 //!
 //! # What would have to break to make it turn red
 //!
 //! A fan from the wrong corner, a forgotten base 1, a negative index
 //! taken for a large number, an `l` chain read as a single edge. Each
-//! returns a *plausible* shape — which is why the counts are not enough and
+//! returns a *plausible* shape - which is why the counts are not enough and
 //! the indices themselves are pinned.
 
 use energyml_build::mesh;
@@ -50,7 +50,7 @@ fn segments(geometry: &energyml_geometry::geometry::Geometry) -> Vec<u32> {
         .collect()
 }
 
-/// The number of nodes — the patches share the same points.
+/// The number of nodes - the patches share the same points.
 fn nodes(geometry: &energyml_geometry::geometry::Geometry) -> usize {
     geometry
         .patches
@@ -78,7 +78,7 @@ fn vertices_faces_and_lines_are_one_based_as_the_format_counts() {
 /// `Patch::node_offset` is defined as *the running sum of the point counts of
 /// the preceding patches*, and an OBJ that declares faces **and**
 /// `l` is the only place in the repository where two patches carry the same points.
-/// Zero seemed right there — they are the same points — and made everything
+/// Zero seemed right there - they are the same points - and made everything
 /// that indexes *the nodes of the representation* designate those of the first patch
 /// believing to name those of the second.
 ///
@@ -113,7 +113,7 @@ fn a_polygon_is_triangulated_as_a_fan() {
 #[test]
 fn the_three_spellings_of_indices_and_negative_indices() {
     // `7/2`, `7//3`: only the first field is the vertex. `-1`: the last
-    // declared vertex — the definition of the format, not a tolerance.
+    // declared vertex - the definition of the format, not a tolerance.
     let read = mesh::read_obj("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1/5 2//7 -1").expect("un OBJ");
     assert_eq!(triangles(&read), vec![0, 1, 2]);
 }
@@ -129,7 +129,7 @@ fn an_index_outside_the_buffer_is_refused_naming_the_line() {
 
 #[test]
 fn a_file_without_a_vertex_is_refused_not_returned_empty() {
-    // An empty artefact in the scene is invisible and unreachable — the worst
+    // An empty artefact in the scene is invisible and unreachable - the worst
     // of both states.
     let why = mesh::read_obj("# rien\nusemtl acier").expect_err("refused");
     assert!(why.contains("no vertex"), "{why}");
@@ -197,7 +197,7 @@ fn what_is_not_a_legacy_vtk_is_refused_from_the_first_line() {
 
 /// **What this module reads is asked for, not spelled elsewhere.**
 ///
-/// A caller — the front end, the CLI — asks for the list rather than writing its
+/// A caller - the front end, the CLI - asks for the list rather than writing its
 /// own extensions. A format added appears in its file picker
 /// without a line changing, which is the rule of the repository for everything that
 /// grows.
@@ -237,7 +237,7 @@ fn the_format_is_read_from_the_file_name_case_insensitively() {
     assert_eq!(mesh::format_of("forme.vtp").map(|f| f.name), Some("vtp"));
 
     // And `read` refuses naming both ends: the file, and what is known
-    // to be readable — a refusal that only said “no” would send one searching at random.
+    // to be readable - a refusal that only said “no” would send one searching at random.
     let why = mesh::read("piece.stl", "solid x").expect_err("refused");
     assert!(
         why.contains("piece.stl") && why.contains("obj") && why.contains("geojson"),
@@ -250,14 +250,14 @@ fn read_chooses_the_reader_by_name() {
     assert!(mesh::read("carre.obj", SQUARE).is_ok());
     let poly = format!("{HEADER}DATASET POLYDATA\nPOINTS 1 double\n0 0 0\n");
     assert!(mesh::read("coupe.vtk", &poly).is_ok());
-    // The name decides, so an OBJ named `.vtk` is refused by the VTK reader —
+    // The name decides, so an OBJ named `.vtk` is refused by the VTK reader -
     // and that is good news: sniffing the content would be a second way
     // of deciding the format.
     assert!(mesh::read("menteur.vtk", SQUARE).is_err());
 }
 
 // ---------------------------------------------------------------------------
-// CSV, GeoJSON and VTK XML — added on 19/09, because these four formats were
+// CSV, GeoJSON and VTK XML - added on 19/09, because these four formats were
 // already **exported** without being able to read them back. The asymmetry was not a choice.
 
 #[test]
@@ -265,7 +265,7 @@ fn a_csv_is_a_scatter_and_its_separator_is_measured() {
     // A CSV has no standard: comma, semicolon or tab depending on
     // the spreadsheet. Assuming the comma would return a single column and a refusal
     // *“this is not a number”* that helps nobody. The separator retained is
-    // the one that splits the most — measured on the line.
+    // the one that splits the most - measured on the line.
     for text in [
         "x,y,z\n1,2,3\n4,5,6",
         "x;y;z\n1;2;3\n4;5;6",
@@ -283,7 +283,7 @@ fn columns_are_named_if_they_are_and_counted_otherwise() {
     // that says `z,x,y` says so for a reason.
     let named = mesh::read("semis.csv", "z,x,y\n30,10,20").expect("un semis");
     assert_eq!(named.patches[0].points[0], [10.0, 20.0, 30.0]);
-    // Without a header, the position — the only order that an unnamed scatter can
+    // Without a header, the position - the only order that an unnamed scatter can
     // have, and the one that any export without a title writes.
     let bare = mesh::read("semis.csv", "10,20,30").expect("un semis");
     assert_eq!(bare.patches[0].points[0], [10.0, 20.0, 30.0]);
@@ -301,7 +301,7 @@ fn a_csv_without_z_is_refused_until_the_height_is_given() {
     let why = mesh::read_or_ask("semis.csv", "x,y\n10,20", &mesh::Given::default())
         .expect_err("the elevation is missing");
     assert_eq!(why.missing, vec![mesh::Ask::Height]);
-    // Given, it is laid — and it is the same reading, not a second one.
+    // Given, it is laid - and it is the same reading, not a second one.
     let made = mesh::read_given(
         "semis.csv",
         "x,y\n10,20",
@@ -321,7 +321,7 @@ fn a_csv_without_z_is_refused_until_the_height_is_given() {
 #[test]
 fn degrees_in_a_csv_are_refused_naming_the_format_that_reads_them() {
     // A `lon,lat` scatter read as metres lands beside the model and a thousand
-    // times too small — the exact defect of the SIGEOL import of 19/09, which passes
+    // times too small - the exact defect of the SIGEOL import of 19/09, which passes
     // `check` without saying anything. Refusing it costs a file to rewrite; reading it
     // costs a search of several hours.
     let why = mesh::read("semis.csv", "lon,lat,z\n2.32,48.97,38").expect_err("degrees");
@@ -333,7 +333,7 @@ fn degrees_in_a_csv_are_refused_naming_the_format_that_reads_them() {
 
 #[test]
 fn a_geojson_is_carried_in_metres_and_the_zone_is_proposed() {
-    // RFC 7946 fixes the system — WGS 84, in degrees — and a scene is in metres.
+    // RFC 7946 fixes the system - WGS 84, in degrees - and a scene is in metres.
     // The EPSG code is not guessed for all that: it is **proposed** from the
     // longitude of the data, as `sigeol-boreholes` does.
     let text = r#"{"type":"FeatureCollection","features":[
@@ -355,7 +355,7 @@ fn a_geojson_is_carried_in_metres_and_the_zone_is_proposed() {
 fn a_flat_geojson_is_refused_rather_than_laying_nans() {
     // RFC 7946 makes the altitude **optional**, so it is the ordinary case. A
     // `NaN` is not visible: it draws nothing and poisons every bounding
-    // box that meets it — an empty scene, and nothing to say so.
+    // box that meets it - an empty scene, and nothing to say so.
     let text = r#"{"type":"FeatureCollection","features":[
         {"type":"Feature","geometry":{"type":"Point","coordinates":[2.32,48.97]},"properties":{}}]}"#;
     let why = mesh::read_or_ask("plat.geojson", text, &mesh::Given::default()).expect_err("no elevation");
@@ -375,7 +375,7 @@ fn a_flat_geojson_is_refused_rather_than_laying_nans() {
 #[test]
 fn a_file_that_carries_everything_asks_for_nothing() {
     // **The feedback of 19/09**: *“they ask for an epsg and a Z whereas
-    // I think they are inside”*. That was right — the BRGM exports
+    // I think they are inside”*. That was right - the BRGM exports
     // write `[2.2953, 48.875, 58]`, third ordinate included, and the UTM zone
     // is deduced from their longitude.
     //
@@ -397,7 +397,7 @@ fn a_file_that_carries_everything_asks_for_nothing() {
 }
 
 /// **A reading says in which system it laid the degrees, and who
-/// decided it** — the defect of the note of 24/09 (*“the geojson import won't
+/// decided it** - the defect of the note of 24/09 (*“the geojson import won't
 /// show me anything in the scene unless I give by hand the epsg to
 /// reproject to”*).
 ///
@@ -408,9 +408,9 @@ fn a_file_that_carries_everything_asks_for_nothing() {
 /// # Where the expectations come from
 ///
 /// From the definition of the systems, not from a file: UTM zone 31 covers
-/// 0° E–6° E (EPSG:32631), and at 49° N the UTM ordinate (counted from
+/// 0° E-6° E (EPSG:32631), and at 49° N the UTM ordinate (counted from
 /// the equator) and that of Lambert-93 (false northing of 6,600,000 m at 46.5° N,
-/// EPSG:2154) differ by some 1,450 km — hence the threshold of a thousand.
+/// EPSG:2154) differ by some 1,450 km - hence the threshold of a thousand.
 ///
 /// # What would have to break to make it turn red
 ///
@@ -508,7 +508,7 @@ fn a_refusal_that_no_answer_would_lift_asks_for_nothing() {
 
 #[test]
 fn an_ascii_vtp_returns_its_triangles_and_its_lines() {
-    // What our own exporter writes — `DataArray`s in ascii — so this
+    // What our own exporter writes - `DataArray`s in ascii - so this
     // check is also that of the full round trip: what comes out must go back in.
     let text = r#"<?xml version="1.0"?>
 <VTKFile type="PolyData"><PolyData><Piece NumberOfPoints="4">
@@ -534,7 +534,7 @@ fn an_ascii_vtp_returns_its_triangles_and_its_lines() {
 fn offsets_are_cell_ends_not_lengths() {
     // **The trap of the format**, and it gives a plausible and wrong mesh: cell
     // `i` goes from `offsets[i-1]` to `offsets[i]`. Read as lengths,
-    // the first cells are right and the following ones slide — which
+    // the first cells are right and the following ones slide - which
     // no assertion on a number of points would see.
     let text = r#"<VTKFile type="UnstructuredGrid"><UnstructuredGrid><Piece>
  <Points><DataArray format="ascii">0 0 0  1 0 0  0 1 0  1 1 0  2 0 0  2 1 0</DataArray></Points>
@@ -544,7 +544,7 @@ fn offsets_are_cell_ends_not_lengths() {
  </Cells>
 </Piece></UnstructuredGrid></VTKFile>"#;
     let made = mesh::read("grille.vtu", text).expect("a grid");
-    // Two triangles, the second on 3,4,5 — and not on 3,4,5 shifted.
+    // Two triangles, the second on 3,4,5 - and not on 3,4,5 shifted.
     assert_eq!(triangles(&made), vec![0, 1, 2, 3, 4, 5]);
 }
 
@@ -691,7 +691,7 @@ fn an_unknown_cell_type_in_a_vtu_is_refused_naming_it() {
 #[test]
 fn a_triangle_strip_is_not_a_fan() {
     // VTK file formats, "Triangle strips": strip `0 1 2 3` is the triangles
-    // (0,1,2) and (2,1,3) — every other one reversed — not a fan from point 0.
+    // (0,1,2) and (2,1,3) - every other one reversed - not a fan from point 0.
     let text = r#"<VTKFile type="PolyData"><PolyData><Piece>
  <Points><DataArray format="ascii">0 0 0  1 0 0  0 1 0  1 1 0</DataArray></Points>
  <Strips>
@@ -706,7 +706,7 @@ fn a_triangle_strip_is_not_a_fan() {
 #[test]
 fn a_binary_xml_vtk_is_refused_naming_its_encoding() {
     // `binary` and `appended` exist and we write neither. Reading them
-    // needs base64, zlib and the offset of the blocks — three things that would be done
+    // needs base64, zlib and the offset of the blocks - three things that would be done
     // by halves. A refusal that names the encoding says what to do; a reader that
     // returned an empty mesh would say that the file is.
     let text = r#"<VTKFile type="PolyData"><PolyData><Piece>

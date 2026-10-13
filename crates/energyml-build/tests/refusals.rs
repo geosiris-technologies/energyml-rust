@@ -1,4 +1,4 @@
-//! Refusals travel **structured** — a key, the slot, the message — from
+//! Refusals travel **structured** - a key, the slot, the message - from
 //! `settle` and from `fitness` to the caller (ADR 0017).
 //! §5.7 and §7).
 //!
@@ -46,8 +46,8 @@ fn pairs(refusals: &[Refusal]) -> Vec<(&str, Option<&str>)> {
         .collect()
 }
 
-/// **Every** wrong field, each under its own slot and key — in the order the
-/// form declares them — and the sentence is exactly their messages.
+/// **Every** wrong field, each under its own slot and key - in the order the
+/// form declares them - and the sentence is exactly their messages.
 #[test]
 fn each_faulty_field_files_its_refusal_under_its_slot() {
     let slots = Registry::new().get("interpolate").unwrap().needs(&cloud());
@@ -132,8 +132,8 @@ fn an_unfit_bag_names_its_input_slot() {
     assert!(refused.message().contains("`thickness` is not fit"), "{refused}");
 }
 
-/// A refusal raised **inside** `plan` — a spacing that would make too many
-/// nodes — reaches the caller under its slot too: the operation says which
+/// A refusal raised **inside** `plan` - a spacing that would make too many
+/// nodes - reaches the caller under its slot too: the operation says which
 /// field, and the registry keeps it.
 #[test]
 fn a_refusal_of_the_computation_keeps_its_field() {

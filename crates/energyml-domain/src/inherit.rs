@@ -1,8 +1,8 @@
-//! What an object inherits — a colour, a symbol, any information it does not
+//! What an object inherits - a colour, a symbol, any information it does not
 //! carry itself: **the order, and the path it was found by**.
 //!
 //! Design: ADR-0009. The walk knows nothing about colours: it takes *"does this object
-//! carry I?"* as a function and answers with a `Resolution` — the value, the
+//! carry I?"* as a function and answers with a `Resolution` - the value, the
 //! rank it was found at, the object that carries it, **the steps from the
 //! object to it**, the candidates that lost a tie, and what was skipped.
 //!
@@ -16,21 +16,21 @@
 //! | 4 | on the collections that reference those parents, nested (4 bis) |
 //! | 5 | the parents of the parents, with the same rules |
 //! | 6 | on the model that references the object or one of its parents |
-//! | — | **not followed, but noted**: the model's collections, any `project` collection |
+//! | - | **not followed, but noted**: the model's collections, any `project` collection |
 //!
 //! A **property** is a shorter case (searching for the property kind is accepted): the
-//! property, its `PropertyKind`, the kind's parents — a collection at every
-//! step — and **nothing beyond**: `Walker::resolve_property`.
+//! property, its `PropertyKind`, the kind's parents - a collection at every
+//! step - and **nothing beyond**: `Walker::resolve_property`.
 //!
 //! Within a rank, **the shortest path wins**; at equal length, **the first in
 //! document order** (document order is the accepted tie-break), and the others are kept
-//! in `Resolution::ties`. Rank 5 is read stage by stage — each stage up is
-//! the parents, then their collections — so a collection of a grandparent does
+//! in `Resolution::ties`. Rank 5 is read stage by stage - each stage up is
+//! the parents, then their collections - so a collection of a grandparent does
 //! not race a great-grandparent.
 //!
 //! # Where the memberships and the parents are read
 //!
-//! Only from the **relation tables** the package index lays while it builds —
+//! Only from the **relation tables** the package index lays while it builds -
 //! ADR-0010: these relations are built at graph-construction time, not by
 //! traversing the whole graph afterwards.
 //! The walk used to filter the whole of an object's edges
@@ -50,7 +50,7 @@
 //!   **in** the collection of the association of the same `i`. A collection
 //!   referenced elsewhere (a parent it names, say) is not a membership;
 //! - **parents**: the edges whose path is `RepresentedObject`,
-//!   `RepresentedInterpretation` or `InterpretedFeature` — the three fields of
+//!   `RepresentedInterpretation` or `InterpretedFeature` - the three fields of
 //!   `color::parent_of`, which is private there and read from the object; the
 //!   confrontation of the two is in `tests/inherit.rs`;
 //! - **the model**: a node whose type is `Model` or `EarthModelInterpretation`
@@ -62,22 +62,22 @@
 //!
 //! The index keeps each node's references sorted by target, not in the order
 //! they were written. *Document order* is therefore read from what the **path**
-//! says — the `[i]` and `[j]` of an association, the field's rank among the three
-//! parent fields — and, past that, the uuid. Two collections named in two
+//! says - the `[i]` and `[j]` of an association, the field's rank among the three
+//! parent fields - and, past that, the uuid. Two collections named in two
 //! different association sets tie on position and fall to the holder's uuid.
 //!
 //! # The rules of the specification that apply
 //!
 //! common TRG 2.3 §8.3: the same collection named in two associations of one
-//! set counts once — the first; §8.5: an object listed twice in an association
+//! set counts once - the first; §8.5: an object listed twice in an association
 //! counts once. Both are counted in the notes. A collection that holds itself,
 //! near or far, is a **cycle, named**: the walk does not follow the edge that
 //! closes it.
 //!
 //! # The cost
 //!
-//! A `Walker` memoises what is per package — the memberships of a node, the
-//! `Kind` of a collection, the answer of the predicate per object — so a
+//! A `Walker` memoises what is per package - the memberships of a node, the
+//! `Kind` of a collection, the answer of the predicate per object - so a
 //! population (`Walker::resolve_all`) pays once for a collection shared by two
 //! thousand wells: what is per package is paid once per package.
 
@@ -126,10 +126,10 @@ impl Via {
 /// One link of the path from the object to the object that answered.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Step {
-    /// Uuid the step leaves — for a face that shows one; the walk goes by
+    /// Uuid the step leaves - for a face that shows one; the walk goes by
     /// [`Step::from_uri`].
     pub from: String,
-    /// Uuid the step reaches — see [`Step::to_uri`].
+    /// Uuid the step reaches - see [`Step::to_uri`].
     pub to: String,
     /// Uri (the full identity) of the object the step leaves.
     pub from_uri: String,
@@ -142,7 +142,7 @@ pub struct Step {
     /// `SingleCollectionAssociation[2].Dataobject[5]`, `InterpretedFeature`…
     pub field: String,
     /// For a collection step, the uuid of the association set that writes the
-    /// membership — the object that carries `field`.
+    /// membership - the object that carries `field`.
     pub held_by: Option<String>,
     /// The same, by uri.
     pub held_by_uri: Option<String>,
@@ -170,7 +170,7 @@ pub struct Resolution<I> {
     pub rank: u8,
     /// Uuid of the object that carries it.
     pub carrier: String,
-    /// Its uri — the identity the walk went by.
+    /// Its uri - the identity the walk went by.
     pub carrier_uri: String,
     /// From the object to the carrier. Empty at rank 1.
     pub path: Vec<Step>,
@@ -190,7 +190,7 @@ impl<I> Resolution<I> {
 }
 
 /// The answer of a walk: the resolution when there is one, and the notes
-/// either way — an absence is explained, not silent.
+/// either way - an absence is explained, not silent.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Walked<I> {
     /// `None`: nothing in the order carries the information.
@@ -210,7 +210,7 @@ pub struct KindChain {
 }
 
 /// The kind chain of a property: the sheet's kind, resolved by
-/// [`property_kind::Resolver`](crate::property_kind::Resolver) — which the
+/// [`property_kind::Resolver`](crate::property_kind::Resolver) - which the
 /// colour cascade uses too, so the two chains are the same one.
 pub fn kind_chain(index: &PackageIndex, objects: &dyn ObjectSource, property_uuid: &str) -> KindChain {
     let Some(reference) = index.sheet(property_uuid).and_then(|sheet| sheet.kind_ref()) else {
@@ -247,7 +247,7 @@ type StepKey = (u64, u64, String);
 
 #[derive(Clone)]
 struct Hop {
-    /// Uuid of the object reached, and its uri — **the identity the walk goes by**.
+    /// Uuid of the object reached, and its uri - **the identity the walk goes by**.
     to: String,
     to_uri: String,
     via: Via,
@@ -358,7 +358,7 @@ pub(crate) fn parse_association(path: &str) -> Option<(u64, Part)> {
     (close + 1 == tail.len()).then_some((i, Part::Member(j)))
 }
 
-/// The first two integers a path carries — its position in the document.
+/// The first two integers a path carries - its position in the document.
 fn numbers(path: &str) -> (u64, u64) {
     let mut found = Vec::new();
     let mut digits = String::new();
@@ -448,7 +448,7 @@ pub struct WalkState {
 }
 
 impl WalkState {
-    /// The beginning of the walk of `start` — an **identity**: the uri of the
+    /// The beginning of the walk of `start` - an **identity**: the uri of the
     /// object ([`Walker::identity`] makes one of any address). `with_model`:
     /// whether rank 6 is part of it (an object: yes; a property: no, §2.2).
     pub fn new(start: &str, with_model: bool) -> WalkState {
@@ -481,8 +481,8 @@ impl WalkState {
 
     /// **Every object the walk looked at**, by lowercase identity (the uri): the ones it
     /// reached, whose collections and parents it read, and the models it
-    /// considered. A change to one of these — or to an object that now
-    /// references one — can change what the walk finds beyond where it stopped,
+    /// considered. A change to one of these - or to an object that now
+    /// references one - can change what the walk finds beyond where it stopped,
     /// or what it found; a change to anything else cannot. This is what a
     /// cache of walks is invalidated by.
     pub fn touched(&self) -> &HashSet<String> {
@@ -501,7 +501,7 @@ impl WalkState {
 /// are remembered.
 ///
 /// **A walk goes by identity, and the identity is the uri.** The start is an
-/// address — a uri, or a bare uuid at the entry — that [`Walker::identity`]
+/// address - a uri, or a bare uuid at the entry - that [`Walker::identity`]
 /// turns into the uri of the node the index holds for it; every step after it
 /// is a node of the index, reached by its uri. Two versions of one object are
 /// two objects to the walk (ADR-0003: internally, full uris only).
@@ -515,8 +515,8 @@ pub struct Walker<'a, I> {
 }
 
 /// **The identity a walk of this address goes by**: the uri of the node the
-/// index holds for it — the address itself when it is a uri it names, the
-/// uuid's default node for a bare uuid — or the address, trimmed, when the
+/// index holds for it - the address itself when it is a uri it names, the
+/// uuid's default node for a bare uuid - or the address, trimmed, when the
 /// package holds no such node (an object known elsewhere can still carry
 /// information). The one place a bare uuid becomes an identity.
 pub fn identity_of(index: &PackageIndex, address: &str) -> String {
@@ -528,7 +528,7 @@ pub fn identity_of(index: &PackageIndex, address: &str) -> String {
 
 impl<'a, I: Clone> Walker<'a, I> {
     /// A walker over `index`. `has` answers *"does this object carry I?"* for an
-    /// identity — **the uri** of the object, or the address itself for one the
+    /// identity - **the uri** of the object, or the address itself for one the
     /// index does not hold; it is called **once** per object, whatever the
     /// number of walks.
     ///
@@ -551,7 +551,7 @@ impl<'a, I: Clone> Walker<'a, I> {
         }
     }
 
-    /// The identity a walk of `address` goes by — see [`identity_of`].
+    /// The identity a walk of `address` goes by - see [`identity_of`].
     pub fn identity(&self, address: &str) -> String {
         identity_of(self.index, address)
     }
@@ -580,7 +580,7 @@ impl<'a, I: Clone> Walker<'a, I> {
 
     /// What a property inherits: itself, its kind, the kind's parents, a
     /// collection at each step, and nothing beyond (§2.2). `kinds` is the kind,
-    /// then its parents — [`kind_chain`] reads it.
+    /// then its parents - [`kind_chain`] reads it.
     pub fn resolve_property(&self, property: &str, kinds: &[String]) -> Walked<I> {
         let kinds: Vec<String> = kinds.iter().map(|kind| self.identity(kind)).collect();
         self.run(&self.identity(property), &Climb::Kinds(&kinds), false)
@@ -793,14 +793,14 @@ impl<'a, I: Clone> Walker<'a, I> {
         }
     }
 
-    /// The next [`Tier`] of the walk of an object — **the walk, resumable**.
+    /// The next [`Tier`] of the walk of an object - **the walk, resumable**.
     ///
     /// The order of the module is a sequence of tiers that does not depend on
     /// what is looked for: the object (rank 1), the collections that hold it,
     /// level by level (2, 2 bis), its parents (3), theirs (4, 4 bis), and so on
     /// up (5), the model (6). What depends on the question is where the walk
-    /// *stops*. A caller that asks for several things of one object — the five
-    /// targets of a colour — keeps the state and the tiers it has read, looks
+    /// *stops*. A caller that asks for several things of one object - the five
+    /// targets of a colour - keeps the state and the tiers it has read, looks
     /// each question up in them, and calls this again **only** for the
     /// questions still unanswered: the tiers already read are not walked twice
     /// (ADR-0009).
@@ -911,7 +911,7 @@ impl<'a, I: Clone> Walker<'a, I> {
         }
     }
 
-    /// The memoised answer of the predicate for one object — what a caller
+    /// The memoised answer of the predicate for one object - what a caller
     /// that drives [`Walker::advance`] reads for each candidate of a tier, by
     /// its **uri** ([`Candidate::uri`]).
     pub fn carried_of(&self, identity: &str) -> Option<I> {
@@ -981,7 +981,7 @@ impl<'a, I: Clone> Walker<'a, I> {
             for candidate in next {
                 st.touched.insert(lower(&candidate.uri));
                 if self.is_project(&candidate.uri) {
-                    // §2.1: a project is the model's collection — not followed, said.
+                    // §2.1: a project is the model's collection - not followed, said.
                     if self.carried(&candidate.uri).is_some() {
                         push_note(
                             &mut st.notes,
@@ -1118,7 +1118,7 @@ impl<'a, I: Clone> Walker<'a, I> {
         ordered
     }
 
-    /// Rank 7, left aside on purpose (§2.1): said when it would have answered —
+    /// Rank 7, left aside on purpose (§2.1): said when it would have answered -
     /// at the end of the walk, so that it is said only of a walk that found
     /// nothing else.
     fn model_collections_not_followed(&self, st: &mut WalkState) {

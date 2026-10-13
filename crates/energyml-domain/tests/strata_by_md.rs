@@ -1,10 +1,10 @@
-//! A wellbore's stratigraphy carried by MD onto its other representations —
+//! A wellbore's stratigraphy carried by MD onto its other representations -
 //! `energyml_domain::strata_by_md`.
 //!
 //! Every object is built in memory after the specification, not after a
 //! package: RESQML TRG 2.2 §5.34 (p. 130) for `IntervalStratigraphicUnits`,
-//! §12.13 (p. 310) for a frame's `NodeMd` — *"MD values and UOM must be
-//! consistent with the trajectory representation"* —, §12.8 (p. 304) for
+//! §12.13 (p. 310) for a frame's `NodeMd` - *"MD values and UOM must be
+//! consistent with the trajectory representation"* -, §12.8 (p. 304) for
 //! `MdDomain`, §12.14 (p. 311) for a wellbore interpretation *"relative to one
 //! particular well trajectory"*; Energistics common TRG 2.3 §6.48 (p. 134) for
 //! *"All coordinates with the same datum (and same UOM) can be considered to
@@ -13,13 +13,13 @@
 //!
 //! # What it would take to make each one fail
 //!
-//! - moving a limit to the other side — the node at MD 10 below is on the
+//! - moving a limit to the other side - the node at MD 10 below is on the
 //!   limit between two units of different colours, and the one at MD 40 on the
 //!   deepest limit;
-//! - giving a node outside every interval its neighbour's unit — the nodes
+//! - giving a node outside every interval its neighbour's unit - the nodes
 //!   above 0 and below 40 must come back transparent;
 //! - comparing MDs from another datum, another MD domain, or in feet as if in
-//!   metres — each has its own test, and the feet one has nodes that land in
+//!   metres - each has its own test, and the feet one has nodes that land in
 //!   different units once converted;
 //! - picking one of two frames that disagree;
 //! - joining representations by their feature rather than their
@@ -138,7 +138,7 @@ const METRES: Counted = Counted {
 fn trajectory(uuid: &str, wellbore: &str, counted: Counted) -> resqml22::WellboreTrajectoryRepresentation {
     resqml22::WellboreTrajectoryRepresentation {
         uuid: uuid.to_string(),
-        citation: citation(&format!("{uuid} — trajectory")),
+        citation: citation(&format!("{uuid} - trajectory")),
         represented_object: Some(dor(wellbore, "resqml22.WellboreInterpretation", "wellbore")),
         md_interval: eml23::MdInterval {
             md_min: 0.0,
@@ -162,7 +162,7 @@ fn frame(
 ) -> resqml22::WellboreFrameRepresentation {
     resqml22::WellboreFrameRepresentation {
         uuid: uuid.to_string(),
-        citation: citation(&format!("{uuid} — frame")),
+        citation: citation(&format!("{uuid} - frame")),
         represented_object: Some(dor(wellbore, "resqml22.WellboreInterpretation", "wellbore")),
         node_count: mds.len() as i64,
         node_md: Some(doubles(mds)),
@@ -237,7 +237,7 @@ fn graphics() -> Vec<(String, GraphicalSet)> {
 }
 
 /// The package every test starts from: the rank, its three units, and the
-/// stating frame `S` on trajectory `T1` — Priabonian from MD 0 to 10,
+/// stating frame `S` on trajectory `T1` - Priabonian from MD 0 to 10,
 /// Bartonian from 10 to 25, Lutetian from 25 to 40.
 const T1: &str = "70000000-0000-4000-8000-000000000001";
 const S: &str = "50000000-0000-4000-8000-000000000001";
@@ -269,7 +269,7 @@ fn paint_counted(objects: Vec<Box<dyn DynObject>>, target: &str) -> (Result<Pain
     let source = held(objects);
     let sets = graphics();
     let asked = std::cell::Cell::new(0);
-    // The package's frames, as a caller that does not index them gives them —
+    // The package's frames, as a caller that does not index them gives them -
     // every one, of whichever wellbore: telling them apart is the library's job.
     let frames_of = |_wellbore: &str| -> Vec<Box<dyn DynObject>> {
         asked.set(asked.get() + 1);
@@ -387,7 +387,7 @@ fn a_trajectory_is_painted_at_its_knots_or_its_bounds() {
     assert_eq!(colours(&at_bounds), [R, G]);
 }
 
-/// A line with no parameters has knots 0, 1, 2 … — no MD. Refused by name,
+/// A line with no parameters has knots 0, 1, 2 … - no MD. Refused by name,
 /// not painted at those numbers.
 #[test]
 fn a_line_without_parameters_has_no_md_to_look_up() {
@@ -408,7 +408,7 @@ fn a_line_without_parameters_has_no_md_to_look_up() {
     );
 }
 
-/// A frame that states its own units is its own painting — the carried rule
+/// A frame that states its own units is its own painting - the carried rule
 /// never overrides what a frame says for itself.
 #[test]
 fn a_stating_frame_is_its_own_painting() {
@@ -417,7 +417,7 @@ fn a_stating_frame_is_its_own_painting() {
     assert_eq!(colours(&painting), [R, B, G, G]);
 }
 
-/// The wellbore's frames are asked for **only when they are needed** — never
+/// The wellbore's frames are asked for **only when they are needed** - never
 /// for a frame that states its own units, once for one that does not. Building
 /// the list first was 1,15 s a well on a package of 2 697 stating frames
 /// (01/10), every second of it spent on a list nobody read.
@@ -478,7 +478,7 @@ fn the_limit_rule_is_the_frames_own_node_rule() {
 
 // -- comparability -------------------------------------------------------------
 
-/// Another datum: refused, naming both — never shifted.
+/// Another datum: refused, naming both - never shifted.
 #[test]
 fn another_datum_is_refused_by_name() {
     const T2: &str = "70000000-0000-4000-8000-000000000002";
@@ -529,7 +529,7 @@ fn another_md_domain_is_refused() {
 }
 
 /// MDs in feet against intervals in metres: converted, which is arithmetic.
-/// 0 ft is Priabonian, 50 ft (15.24 m) Bartonian, 100 ft (30.48 m) Lutetian —
+/// 0 ft is Priabonian, 50 ft (15.24 m) Bartonian, 100 ft (30.48 m) Lutetian -
 /// read as metres, 50 and 100 would both be outside.
 #[test]
 fn feet_are_converted_not_read_as_metres() {
@@ -589,7 +589,7 @@ fn comparable_reads_the_three_things_and_the_trajectory() {
 // -- which frames speak ----------------------------------------------------------
 
 /// Two frames of one wellbore naming two units at one MD: the node is left
-/// uncoloured and counted, and the notes name both — neither is chosen. Where
+/// uncoloured and counted, and the notes name both - neither is chosen. Where
 /// they agree, and where one names nothing (a null index), it is painted.
 #[test]
 fn two_frames_that_disagree_are_said_and_not_arbitrated() {
@@ -597,8 +597,8 @@ fn two_frames_that_disagree_are_said_and_not_arbitrated() {
     const S2: &str = "50000000-0000-4000-8000-000000000003";
     let mut objects = base();
     objects.push(Box::new(trajectory(T2, WELLBORE, METRES)));
-    // Priabonian 0–10 (agrees), Lutetian 10–25 (disagrees with Bartonian),
-    // nothing said 25–40 (a null index: silence, not a contradiction).
+    // Priabonian 0-10 (agrees), Lutetian 10-25 (disagrees with Bartonian),
+    // nothing said 25-40 (a null index: silence, not a contradiction).
     objects.push(Box::new(frame(
         S2,
         WELLBORE,
@@ -610,7 +610,7 @@ fn two_frames_that_disagree_are_said_and_not_arbitrated() {
     let Painting::Carried(carried) = paint(objects, T2).expect("painted where they agree") else {
         panic!("a trajectory is always carried");
     };
-    // MD 0 and 40 — the trajectory's two points.
+    // MD 0 and 40 - the trajectory's two points.
     assert_eq!(colours(&Painting::Carried(carried.clone())), [R, G]);
     assert_eq!(carried.disagreements(), 0);
 
@@ -646,7 +646,7 @@ fn two_frames_that_disagree_are_said_and_not_arbitrated() {
     assert!(note.contains("Bartonian") && note.contains("Lutetian"), "{note}");
 }
 
-/// Another wellbore's frame says nothing about this one — even through the
+/// Another wellbore's frame says nothing about this one - even through the
 /// same datum. Nothing states this wellbore's units: an absence, named.
 #[test]
 fn another_wellbores_frame_is_not_used() {
@@ -658,7 +658,7 @@ fn another_wellbores_frame_is_not_used() {
     assert!(refused.to_string().contains(OTHER_WELLBORE), "{refused}");
 }
 
-/// A frame of the wellbore whose units cannot be read is a defect, said — not
+/// A frame of the wellbore whose units cannot be read is a defect, said - not
 /// skipped into a picture painted by the others.
 #[test]
 fn a_defective_frame_of_the_wellbore_is_not_hidden() {
@@ -678,7 +678,7 @@ fn a_defective_frame_of_the_wellbore_is_not_hidden() {
     assert!(matches!(refused, Refusal::Defect { .. }), "{refused:?}");
 }
 
-/// A frame of the wellbore that states no unit is not asked — here it has no
+/// A frame of the wellbore that states no unit is not asked - here it has no
 /// `NodeMd` at all, which `of_frame` would refuse as a shape it cannot read,
 /// and that refusal must not stop the frame that does state units from
 /// painting the trajectory.
@@ -710,7 +710,7 @@ fn what_has_no_md_keeps_its_refusal() {
 
 // -- the intervals along the MD ---------------------------------------------------
 
-/// The colour a looked-up MD takes in `intervals`, as `colours` spells it — the
+/// The colour a looked-up MD takes in `intervals`, as `colours` spells it - the
 /// rule of a node: the interval it opens, `[from, to)`; the deepest limit
 /// belongs to the last interval of a frame's own sections (`closed_last`), and
 /// a zero-length interval `[md, md]` holds its own MD. Nothing: [`NONE`].
@@ -731,13 +731,13 @@ fn looked_up(intervals: &[strata_by_md::Interval], md: f64, closed_last: bool) -
 }
 
 /// Triangulation: at the nodes' own MDs, the intervals give back the colours
-/// `node_colours_with` paints the nodes with — for a frame that states its own
+/// `node_colours_with` paints the nodes with - for a frame that states its own
 /// units (limits included: 10 and 25 open the interval below, 40 closes the
 /// last), and for a silent frame carried by MD (nodes outside every interval
 /// are a gap, 0 and 50 included).
 ///
 /// To break it: make the limit belong to the interval it closes
-/// (`from < md && md <= to`) — MD 10 and 25 change colour.
+/// (`from < md && md <= to`) - MD 10 and 25 change colour.
 #[test]
 fn at_the_nodes_own_mds_the_intervals_give_the_nodes_colours() {
     // A frame stating its own units.
@@ -758,7 +758,7 @@ fn at_the_nodes_own_mds_the_intervals_give_the_nodes_colours() {
     let from_intervals: Vec<String> = mds.iter().map(|md| looked_up(&intervals, *md, true)).collect();
     assert_eq!(from_intervals, colours(&own));
     assert_eq!(from_intervals, [R, B, G, G]);
-    // Each interval names its unit by **uri** — what a reader finds the unit by,
+    // Each interval names its unit by **uri** - what a reader finds the unit by,
     // instead of guessing from its title and its colour (05/10, I7).
     let units: Vec<Option<(String, bool)>> = intervals
         .iter()
@@ -789,7 +789,7 @@ fn at_the_nodes_own_mds_the_intervals_give_the_nodes_colours() {
     let from_intervals: Vec<String> = nodes.iter().map(|md| looked_up(&intervals, *md, false)).collect();
     assert_eq!(from_intervals, colours(&carried));
     assert_eq!(from_intervals, [NONE, R, R, B, B, G, G, NONE]);
-    // The intervals are the ones the frame states, cut to the nodes' reach —
+    // The intervals are the ones the frame states, cut to the nodes' reach -
     // the Lutetian ends at 40, where the frame ends it, and node 40, on the
     // closed base of the last interval, holds its colour in a zero-length one.
     // Until 03/10 this said `(25, 50)`: the unit of node 40 stretched to node
@@ -818,10 +818,10 @@ fn at_the_nodes_own_mds_the_intervals_give_the_nodes_colours() {
 
 /// A carried painting draws **the rock its frames state**, wherever its nodes
 /// fall: two nodes far apart see every interval the frame states between them,
-/// and nothing below the frame's last base — Lutetia's case (03/10), a frame
+/// and nothing below the frame's last base - Lutetia's case (03/10), a frame
 /// prolonged to 200 m painted from one that stops at its last described unit.
 ///
-/// To break it: stretch a node's unit to the next node — the Lutetian runs to 70.
+/// To break it: stretch a node's unit to the next node - the Lutetian runs to 70.
 #[test]
 fn a_carried_painting_draws_what_the_frames_state_and_nothing_below() {
     const T2: &str = "70000000-0000-4000-8000-000000000002";
@@ -850,7 +850,7 @@ fn a_carried_painting_draws_what_the_frames_state_and_nothing_below() {
 }
 
 /// A unit the file does not colour has no colour in the interval (`None`: the
-/// section view draws the well's own, never a transparent one) — or the
+/// section view draws the well's own, never a transparent one) - or the
 /// caller's palette, as `node_colours_with` does with the same `fallback`.
 #[test]
 fn a_unit_without_a_colour_is_none_or_the_callers_palette() {

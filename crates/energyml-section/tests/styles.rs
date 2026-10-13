@@ -5,7 +5,7 @@
 //! What a style draws is confronted with the unstratified spans **computed here
 //! from the catalogue's intervals** (a second reading, by sampling, not the
 //! layout's walk), laid on the well's path and turned into pixels by the SVG's own
-//! `data-frame` / `data-window` / `data-scale` — the map the front end's overlay reads
+//! `data-frame` / `data-window` / `data-scale` - the map the front end's overlay reads
 //! a pointer through.
 
 use crate::layout::{catalogue, id, view};
@@ -55,7 +55,7 @@ fn well_of<'a>(cat: &'a Catalogue, name: &str) -> &'a WellItem {
     w
 }
 
-/// The spans of MD no interval covers, between the first and last MD — computed
+/// The spans of MD no interval covers, between the first and last MD - computed
 /// by **sampling**, not by the layout's walk: every MD at a 0.01 step is
 /// covered or not, and runs of the uncovered are the spans.
 fn uncovered(w: &WellItem) -> Vec<(f64, f64)> {
@@ -117,8 +117,8 @@ fn to_px(root: &El, p: [f64; 2]) -> [f64; 2] {
     ]
 }
 
-/// The polylines of a well's group that lie under no interval group — the line
-/// the style draws — with their attributes.
+/// The polylines of a well's group that lie under no interval group - the line
+/// the style draws - with their attributes.
 fn loose(els: &[El], name: &str) -> Vec<El> {
     let key = id(name, "WellboreFrameRepresentation")
         .key()
@@ -576,7 +576,7 @@ fn the_declared_list_is_held_against_the_enum_so_the_two_cannot_drift() {
     let declared = style::declared();
     // The first is the default's: the front end starts from what the library draws.
     assert_eq!(declared[0].default_style().unwrap(), UnstratifiedStyle::default());
-    // One suggested for a new view of the front end — hatched — and
+    // One suggested for a new view of the front end - hatched - and
     // never the library's own default, which stays what the CLI draws.
     let suggested: Vec<&str> = declared
         .iter()

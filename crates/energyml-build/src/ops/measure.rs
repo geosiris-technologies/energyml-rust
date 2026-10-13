@@ -1,4 +1,4 @@
-//! `measure` — the area of a surface, the length of polylines, the volume of an
+//! `measure` - the area of a surface, the length of polylines, the volume of an
 //! IJK grid: one value per element, written as a continuous property, and the
 //! totals in the activity.
 //!
@@ -17,11 +17,11 @@
 //! | an IJK grid's hexahedra | volume | `cells` | `volume` |
 //!
 //! The reference model names `bulk volume`; the Energistics 2.3 dictionary holds no kind
-//! of that title, and `volume` — *“a measure of the space occupied by a
-//! body”* — is the one it has. A kind the dictionary does not hold would be a
+//! of that title, and `volume` - *“a measure of the space occupied by a
+//! body”* - is the one it has. A kind the dictionary does not hold would be a
 //! reference no store resolves.
 //!
-//! A shape mixing two kinds of element — triangles beside grid cells — is
+//! A shape mixing two kinds of element - triangles beside grid cells - is
 //! refused: a property holds one value per element of **one** kind. So is an
 //! unstructured grid (its faces are fanned by the reader, which is exact only
 //! for planar faces), and a trajectory: its length is the measured-depth span
@@ -43,13 +43,13 @@
 //!   equator and none at the pole: an area in square degrees is no area. Bring
 //!   the shape into a projected frame first;
 //! - **a measure in three dimensions needs one unit on the three axes**: a
-//!   horizontal in metres and a vertical in feet is refused, naming both — the
+//!   horizontal in metres and a vertical in feet is refused, naming both - the
 //!   sum of the two squared would add apples to oranges. The same for a time
 //!   vertical: a length along a surface in metres and milliseconds is not a
 //!   length. The plan measure reads the horizontal only, and is left alone;
 //! - **when the frame does not say**, `lengthUom` is asked for; given, it must
 //!   agree with what the frame says. The unit written is the square or the
-//!   cube of it — `m2`, `ft3` — from a table of the spellings the Energistics
+//!   cube of it - `m2`, `ft3` - from a table of the spellings the Energistics
 //!   unit dictionary uses; a unit outside it is refused by name rather than
 //!   spelled by guess.
 
@@ -81,19 +81,19 @@ pub enum Measured {
 /// What `measure` is told.
 #[derive(Debug, Params)]
 pub struct MeasureParams {
-    /// along the shape itself (in three dimensions) or its projection on the horizontal — a volume is always along
+    /// along the shape itself (in three dimensions) or its projection on the horizontal - a volume is always along
     #[param(default = Measured::Along)]
     pub measured: Measured,
-    /// the representation the values are laid on — the shape's
+    /// the representation the values are laid on - the shape's
     pub representation: ObjectRef,
-    /// the length unit of the coordinates; left out, the frame's — given, it must agree with it
+    /// the length unit of the coordinates; left out, the frame's - given, it must agree with it
     pub length_uom: Option<String>,
-    /// what is measured; left out, the kind of the standard dictionary — area, length or volume
+    /// what is measured; left out, the kind of the standard dictionary - area, length or volume
     pub property_kind: Option<PropertyKindRef>,
     /// the property's title; left out, the shape's and the measure's
     ///
     /// Not suggested: a suggestion is settled before `plan`, so it could not
-    /// follow `measured` — see `surface-map`.
+    /// follow `measured` - see `surface-map`.
     pub title: Option<Title>,
     /// the external file the values go into
     #[param(default = String::from("data.h5"))]
@@ -103,7 +103,7 @@ pub struct MeasureParams {
 /// What `measure` takes.
 #[derive(Debug, Inputs)]
 pub struct MeasureInputs {
-    /// the shape measured — a surface (triangles or grid cells), polylines, or an IJK grid
+    /// the shape measured - a surface (triangles or grid cells), polylines, or an IJK grid
     ///
     /// `triangles` ranks the form's list; polylines and hexahedra are measured
     /// too, and [`Operation::check`] is what decides.
@@ -131,7 +131,7 @@ impl What {
                 Topology::Hexahedra { .. } => What::Volume,
                 Topology::Points => return Err("holds points, and a point measures nothing".to_string()),
                 Topology::Polyhedra(_) => {
-                    return Err("is an unstructured grid: its faces of any shape are fanned by the reader, exact only when planar — its volume is not measured here yet".to_string());
+                    return Err("is an unstructured grid: its faces of any shape are fanned by the reader, exact only when planar - its volume is not measured here yet".to_string());
                 }
                 Topology::Polygons(_) | Topology::Segments(_) => {
                     return Err("holds rings or loose edges, neither a surface, a line nor a volume a property can lie on".to_string());
@@ -184,7 +184,7 @@ impl What {
 }
 
 /// The spelling of a length unit squared or cubed, as the Energistics unit
-/// dictionary writes it — only the ones this table knows; anything else is
+/// dictionary writes it - only the ones this table knows; anything else is
 /// refused rather than spelled by pattern.
 fn powered(unit: &str, power: u8) -> Option<String> {
     const KNOWN: &[&str] = &["m", "km", "cm", "mm", "ft", "in"];
@@ -205,7 +205,7 @@ fn title_of(shape: &Shape) -> String {
         .unwrap_or_else(|| "shape".to_string())
 }
 
-/// The length unit of the coordinates — or why there is none to measure in.
+/// The length unit of the coordinates - or why there is none to measure in.
 fn length_unit(known: Option<&Known>, three_d: bool, given: Option<&str>) -> Result<String, Refusal> {
     let placement = known.and_then(|k| k.placement.as_ref());
     let horizontal = placement.and_then(|p| p.horizontal_uom.clone());
@@ -224,7 +224,7 @@ fn length_unit(known: Option<&Known>, three_d: bool, given: Option<&str>) -> Res
     if geographic || angular {
         return Err(Refusal::new(
             "degrees",
-            "the frame is in degrees: a degree of longitude is 111 km at the equator and nothing at the pole, so a length or an area in degrees measures nothing — bring the shape into a projected frame first (`change-frame`)",
+            "the frame is in degrees: a degree of longitude is 111 km at the equator and nothing at the pole, so a length or an area in degrees measures nothing - bring the shape into a projected frame first (`change-frame`)",
         ));
     }
     if three_d {
@@ -234,7 +234,7 @@ fn length_unit(known: Option<&Known>, three_d: bool, given: Option<&str>) -> Res
             return Err(Refusal::new(
                 "units",
                 format!(
-                    "the heights are times (`{}`): a measure along the shape would add metres and seconds — ask for the plan measure, or convert to depth first",
+                    "the heights are times (`{}`): a measure along the shape would add metres and seconds - ask for the plan measure, or convert to depth first",
                     vertical.as_deref().unwrap_or("time")
                 ),
             ));
@@ -245,7 +245,7 @@ fn length_unit(known: Option<&Known>, three_d: bool, given: Option<&str>) -> Res
             return Err(Refusal::new(
                 "units",
                 format!(
-                    "the frame counts x and y in `{h}` and z in `{v}`: a measure in three dimensions needs one unit on the three axes — convert one of them first, or ask for the plan measure"
+                    "the frame counts x and y in `{h}` and z in `{v}`: a measure in three dimensions needs one unit on the three axes - convert one of them first, or ask for the plan measure"
                 ),
             ));
         }
@@ -263,7 +263,7 @@ fn length_unit(known: Option<&Known>, three_d: bool, given: Option<&str>) -> Res
                 return Err(Refusal::on(
                     "lengthUom",
                     format!(
-                        "is `{given}` and the frame counts its coordinates in `{disagrees}` — the measure would be read in the wrong unit"
+                        "is `{given}` and the frame counts its coordinates in `{disagrees}` - the measure would be read in the wrong unit"
                     ),
                 ));
             }
@@ -274,8 +274,8 @@ fn length_unit(known: Option<&Known>, three_d: bool, given: Option<&str>) -> Res
             return Err(Refusal::on(
                 "lengthUom",
                 match vertical {
-                    Some(v) => format!("is required: the frame states its vertical unit (`{v}`) and not its horizontal one — name the length unit of the coordinates"),
-                    None => "is required: the frame does not say the unit of its coordinates — name it, a measure without one is a number".to_string(),
+                    Some(v) => format!("is required: the frame states its vertical unit (`{v}`) and not its horizontal one - name the length unit of the coordinates"),
+                    None => "is required: the frame does not say the unit of its coordinates - name it, a measure without one is a number".to_string(),
                 },
             ));
         }
@@ -296,7 +296,7 @@ impl Operation for Measure {
     fn about(&self) -> About {
         About {
             name: "measure",
-            describe: "the area of a surface, the length of polylines or the volume of an IJK grid — one value per element as a continuous property, the totals in the activity",
+            describe: "the area of a surface, the length of polylines or the volume of an IJK grid - one value per element as a continuous property, the totals in the activity",
             category: Category::Analysis,
             makes: &["resqml22.ContinuousProperty"],
             recipe: "measure",
@@ -328,7 +328,7 @@ impl Operation for Measure {
             if class == "PolylineRepresentation" {
                 return Err(Refusal::on(
                     "shape",
-                    "is a single `PolylineRepresentation`, which has no `lines` element to hold one length per line — write it as a polyline set first",
+                    "is a single `PolylineRepresentation`, which has no `lines` element to hold one length per line - write it as a polyline set first",
                 ));
             }
         }
@@ -341,7 +341,7 @@ impl Operation for Measure {
         if what == What::Volume && params.measured == Measured::Plan {
             return Err(Refusal::on(
                 "measured",
-                "is `plan`, and a volume has no projection on the horizontal — ask for `along`",
+                "is `plan`, and a volume has no projection on the horizontal - ask for `along`",
             ));
         }
         let three_d = what == What::Volume || params.measured == Measured::Along;
@@ -349,7 +349,7 @@ impl Operation for Measure {
         let uom = powered(&length, what.power()).ok_or_else(|| {
             Refusal::on(
                 "lengthUom",
-                format!("`{length}` has no {} spelling this build knows (m, km, cm, mm, ft, in) — convert the coordinates first", if what.power() == 2 { "squared" } else { "cubed" }),
+                format!("`{length}` has no {} spelling this build knows (m, km, cm, mm, ft, in) - convert the coordinates first", if what.power() == 2 { "squared" } else { "cubed" }),
             )
         })?;
 
@@ -387,7 +387,7 @@ impl Operation for Measure {
                 if what == What::Cells {
                     says.push(Note {
                         key: "bilinear",
-                        detail: "a grid cell is the bilinear patch through its corners, never cut by a diagonal: its plan area is exact, its area along it integrated by a 4 × 4 Gauss–Legendre rule".to_string(),
+                        detail: "a grid cell is the bilinear patch through its corners, never cut by a diagonal: its plan area is exact, its area along it integrated by a 4 × 4 Gauss-Legendre rule".to_string(),
                     });
                 }
                 if unplaced > 0 {
@@ -401,7 +401,7 @@ impl Operation for Measure {
                 if folded > 0 {
                     says.push(Note {
                         key: "folded",
-                        detail: format!("{folded} cell(s) fold over themselves in plan — a bow-tie has no single plan area: NaN in plan"),
+                        detail: format!("{folded} cell(s) fold over themselves in plan - a bow-tie has no single plan area: NaN in plan"),
                     });
                 }
                 let chosen = if params.measured == Measured::Along {
@@ -476,7 +476,7 @@ impl Operation for Measure {
                     .map_err(|e| Refusal::on("shape", e.to_string()))?;
                 cx.stop_if_cancelled()?;
                 // One value per cell **as the grid numbers them**: a cell the
-                // reader dropped — undefined, or with no located pillar — is a
+                // reader dropped - undefined, or with no located pillar - is a
                 // NaN at its own number, never a shift of every later cell.
                 let count = dimensions[0] * dimensions[1] * dimensions[2];
                 let mut values = vec![f64::NAN; count];
@@ -515,14 +515,14 @@ impl Operation for Measure {
                 if found.twisted > 0 {
                     says.push(Note {
                         key: "twisted",
-                        detail: format!("{} cell(s) turn inside out within themselves — their volume would subtract the overlap: NaN", found.twisted),
+                        detail: format!("{} cell(s) turn inside out within themselves - their volume would subtract the overlap: NaN", found.twisted),
                     });
                 }
                 if found.flat > 0 {
                     says.push(Note {
                         key: "flat",
                         detail: format!(
-                            "{} cell(s) are collapsed — a pinch-out: a volume of zero, kept",
+                            "{} cell(s) are collapsed - a pinch-out: a volume of zero, kept",
                             found.flat
                         ),
                     });
@@ -570,7 +570,7 @@ impl Operation for Measure {
         };
         let title = match params.title {
             Some(given) => given.0,
-            None => format!("{} — {label}", title_of(&shape)),
+            None => format!("{} - {label}", title_of(&shape)),
         };
 
         let (total, _) = analysis::total(&values);
@@ -602,7 +602,7 @@ impl Operation for Measure {
             &format!("{name}:{title}"),
             cx,
         )?;
-        // Our count is exact — one value per element of the shape — so the
+        // Our count is exact - one value per element of the shape - so the
         // writer's note that it could not check it is not this plan's news.
         plan.says.retain(|note| note.key != "count-unchecked");
         plan.says.extend(says);
@@ -658,7 +658,7 @@ impl Operation for Measure {
     }
 
     /// `measured` is an input, recorded under the parameter the projection
-    /// already declares — a title cannot be both.
+    /// already declares - a title cannot be both.
     fn reports(&self) -> Vec<Slot> {
         let number = || Need::Number {
             uom: None,
@@ -671,7 +671,7 @@ impl Operation for Measure {
             Slot::required(
                 "measure",
                 Need::Text,
-                "what was measured — area, length or volume",
+                "what was measured - area, length or volume",
             ),
             Slot::required("total", number(), "the sum of the values written, in their unit"),
             Slot::optional(

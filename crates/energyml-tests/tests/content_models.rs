@@ -1,6 +1,6 @@
 //! Two XSD constructs the generator used to drop on the floor.
 //!
-//! Found by the audit of 01/08/2026, in the same function — `read_particles`
+//! Found by the audit of 01/08/2026, in the same function - `read_particles`
 //! looked at elements and groups and nothing else, so a container's own
 //! cardinality and a type's `mixed` flag never reached the IR.
 
@@ -11,7 +11,7 @@ use energyml_witsml_2_0 as witsml;
 /// An optional `<xs:sequence>` makes everything inside it optional.
 ///
 /// `TorqueStatistics` wraps its content in `<xs:sequence minOccurs="0">`, and
-/// `Average` is `minOccurs="1"` **inside** it — required *if the group is
+/// `Average` is `minOccurs="1"` **inside** it - required *if the group is
 /// there*. Reading the container's cardinality as 1 made `Average` a required
 /// Rust field, so this perfectly valid document failed with
 /// `MissingRequired`. The only place found where the strict reader refused
@@ -46,7 +46,7 @@ xmlns:eml=\"http://www.energistics.org/energyml/data/commonv2\">\
 ///
 /// A phone number is written `<Phone type="voice">+33 1 23 45 67 89</Phone>`.
 /// Without the `mixed` flag the generated struct had the three attributes and
-/// no text field at all — the number itself was read as nothing and written
+/// no text field at all - the number itself was read as nothing and written
 /// back as an empty element, keeping only its type.
 #[test]
 fn a_mixed_type_keeps_its_text() {

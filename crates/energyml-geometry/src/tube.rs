@@ -3,7 +3,7 @@
 //!
 //! A line has no thickness, so a wellbore a kilometre long is one pixel wide at
 //! any distance that shows the model. Giving it a radius is the difference
-//! between a scene somebody can read and a scribble — and it is a *rendering*
+//! between a scene somebody can read and a scribble - and it is a *rendering*
 //! choice, which is why the radius and the number of sides are parameters and
 //! not constants.
 //!
@@ -11,7 +11,7 @@
 //!
 //! Surveyed before writing: `spade` (Delaunay, and constrained Delaunay) and
 //! `poisson_reconstruction` are the right answers for building a **surface from
-//! scattered points**, and both are pure Rust and wasm-clean — they are what to
+//! scattered points**, and both are pure Rust and wasm-clean - they are what to
 //! reach for when gridding arrives. But a swept circle is sixty lines of
 //! arithmetic, and the crates that offer one arrive attached to a renderer or a
 //! CAD kernel. More to the point, the geometry has to agree with what the
@@ -22,7 +22,7 @@
 //!
 //! This sweeps **the polyline as it stands**. It does not smooth it, and that
 //! is deliberate: by the time points reach here they are already the evaluated
-//! curve — `parametric.rs` evaluates a minimum-curvature well path rather than
+//! curve - `parametric.rs` evaluates a minimum-curvature well path rather than
 //! straightening it, precisely so that nothing downstream has to guess. Laying a
 //! second interpolation over that would draw a path through positions the file
 //! does not state, which is the mistake the parametric reader exists to avoid.
@@ -30,7 +30,7 @@
 //! # Frames, and the twist that would otherwise appear
 //!
 //! A circle swept along a curve needs a frame at each station, and the naive
-//! choice — a fixed "up" crossed with the tangent — spins the tube where the
+//! choice - a fixed "up" crossed with the tangent - spins the tube where the
 //! path turns through vertical, which is every deviated well. So the frame is
 //! **transported**: the first is built once, and each following one is the
 //! previous rotated by the smallest rotation taking one tangent to the next.
@@ -49,7 +49,7 @@ pub struct Tube {
     /// renderer takes, and converting silently at one end of a pair of
     /// interfaces is how a well comes out twice too fat.
     pub radius: f64,
-    /// How many faces go round — the arity of the cross-section.
+    /// How many faces go round - the arity of the cross-section.
     ///
     /// Three is a triangular prism and reads as a mistake; past about sixteen
     /// nothing on screen changes and every vertex is paid for. Eight is what the
@@ -142,7 +142,7 @@ fn any_perpendicular(t: Point) -> Point {
 /// Rotate `v` by the smallest rotation taking `from` to `to`.
 ///
 /// Rodrigues, with the two degenerate cases handled: parallel tangents rotate
-/// by nothing, and opposite ones — a path that doubles back on itself — have no
+/// by nothing, and opposite ones - a path that doubles back on itself - have no
 /// smallest rotation at all, so the frame is rebuilt rather than spun through
 /// an arbitrary half turn.
 fn transport(v: Point, from: Point, to: Point) -> Point {
@@ -167,7 +167,7 @@ fn transport(v: Point, from: Point, to: Point) -> Point {
 /// The stations a run really has: consecutive duplicates dropped.
 ///
 /// A repeated position has no direction, and a zero-length segment makes every
-/// frame after it undefined. Dropping them is not tidying — it is the
+/// frame after it undefined. Dropping them is not tidying - it is the
 /// difference between a tube and a `NaN`.
 fn distinct(points: &[Point]) -> Vec<Point> {
     let mut out: Vec<Point> = Vec::with_capacity(points.len());
@@ -191,7 +191,7 @@ pub struct Swept {
     pub points: Vec<Point>,
     /// Triples into `points`.
     pub triangles: Vec<[u32; 3]>,
-    /// For each vertex, the index of the station it rings — **in the run that
+    /// For each vertex, the index of the station it rings - **in the run that
     /// was given**.
     ///
     /// What makes a coloured tube possible: a property has one value per
@@ -280,7 +280,7 @@ pub fn sweep(points: &[Point], tube: &Tube) -> Result<Swept> {
             // The order is the one the test measures, not the one that reads
             // naturally: going round the ring rotates from the normal toward
             // the binormal, and pairing that with the tangent the obvious way
-            // gives a tube that is inside out — a hole, drawn confidently.
+            // gives a tube that is inside out - a hole, drawn confidently.
             triangles.push([here + side, next + after, next + side]);
             triangles.push([here + side, here + after, next + after]);
         }
@@ -293,13 +293,13 @@ pub fn sweep(points: &[Point], tube: &Tube) -> Result<Swept> {
     })
 }
 
-/// A whole object's lines, swept — geometry and attributes together.
+/// A whole object's lines, swept - geometry and attributes together.
 ///
 /// The attributes are the reason this is not just `sweep` in a loop. A property
 /// has one value per **station**, and the tube has `sides` vertices per station:
 /// each ring takes its station's value, so a coloured well stays coloured. A
 /// per-cell property has one value per *run*, and every vertex of that run takes
-/// it. Dropping them instead — which is what asking for a shape usually does —
+/// it. Dropping them instead - which is what asking for a shape usually does -
 /// would turn every tube into one flat colour without saying so.
 ///
 /// The lines are replaced, not added to: a tube **is** the rendering of those
@@ -311,7 +311,7 @@ pub fn sweep_object(object: &crate::scene::SceneObject, tube: &Tube) -> Result<c
     let mut patches: Vec<Patch> = Vec::new();
     let mut node_offset = 0usize;
     // For every vertex of the result, which node and which cell of the original
-    // it came from — the two things an attribute is indexed by.
+    // it came from - the two things an attribute is indexed by.
     let mut from_node: Vec<usize> = Vec::new();
     let mut from_cell: Vec<usize> = Vec::new();
     let mut cells_before = 0usize;
@@ -432,7 +432,7 @@ pub fn sweep_object(object: &crate::scene::SceneObject, tube: &Tube) -> Result<c
     })
 }
 
-/// [`Topology::cell_count`] — the one definition, since the drawable's cell
+/// [`Topology::cell_count`] - the one definition, since the drawable's cell
 /// table joined the two other callers; the wrapper stays for this module's
 /// call sites.
 fn patch_cell_count(topology: &crate::geometry::Topology) -> usize {
@@ -528,7 +528,7 @@ mod tests {
     fn a_turning_path_does_not_twist() {
         // A quarter turn: the frame is transported, so consecutive rings stay
         // aligned. Measured as the angle between the same side's offset from
-        // one ring to the next — a spinning frame shows up as a jump.
+        // one ring to the next - a spinning frame shows up as a jump.
         let path: Vec<Point> = (0..=16)
             .map(|i| {
                 let a = std::f64::consts::FRAC_PI_2 * i as f64 / 16.0;

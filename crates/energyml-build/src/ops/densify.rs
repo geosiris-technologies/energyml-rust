@@ -1,9 +1,9 @@
-//! `densify` — a polyline with **every vertex kept** and points added between
+//! `densify` - a polyline with **every vertex kept** and points added between
 //! them (the scene-editing design, densification).
 //!
 //! The computation is `energyml_analysis::densify`; this is the seam: the
 //! shape's polylines read, one by one, and the result written by the writer of
-//! polyline sets — the same object the input came as.
+//! polyline sets - the same object the input came as.
 //!
 //! Not `resample`, which keeps only the ends and cuts the corners. The two
 //! names are the difference, and the activity records which one ran.
@@ -12,13 +12,13 @@
 //!
 //! A shape that holds no polyline is **unfit**, by name (`check`):
 //! densifying a surface's nodes is remeshing, a different operation. A closure
-//! nobody stated is **open** — adding points on an edge the file does not draw
+//! nobody stated is **open** - adding points on an edge the file does not draw
 //! would invent a ring.
 //!
 //! # References
 //!
 //! - Centripetal Catmull-Rom (Yuksel, Schaefer and Keyser, 2011), as named in `energyml-geostat` (`densify`).
-//!   TODO(reference): verify — the citation is given without title, venue or DOI; complete and check it.
+//!   TODO(reference): verify - the citation is given without title, venue or DOI; complete and check it.
 
 use energyml_analysis::{Along, Placement, densify};
 use energyml_domain::provenance::Parameter;
@@ -44,15 +44,15 @@ pub struct DensifyParams {
     /// the added points lie on a curve through the vertices (a centripetal Catmull-Rom) rather than on the segments
     #[param(default = false, optional)]
     pub smooth: bool,
-    /// how lengths are measured — in 3D, or in plan (x and y alone, as for a fault trace two horizons share)
+    /// how lengths are measured - in 3D, or in plan (x and y alone, as for a fault trace two horizons share)
     #[param(default = Measure::Space)]
     pub measure: Measure,
-    /// The frame, what is represented, the naming — for the writer of the result.
+    /// The frame, what is represented, the naming - for the writer of the result.
     #[param(flatten)]
     pub written: Written,
 }
 
-/// how the added points are placed — a number of them over the whole length, or a station every so often
+/// how the added points are placed - a number of them over the whole length, or a station every so often
 #[derive(Debug, Params)]
 #[params(tag = "method")]
 pub enum Method {
@@ -66,7 +66,7 @@ pub enum Method {
 /// By count.
 #[derive(Debug, Params)]
 pub struct CountParams {
-    /// count: how many points each polyline gets, spread over its whole length — its vertices stay, so the intervals are not equal
+    /// count: how many points each polyline gets, spread over its whole length - its vertices stay, so the intervals are not equal
     #[param(default = 1_i64, min = 1)]
     pub count: i64,
 }
@@ -77,7 +77,7 @@ pub struct SpacingParams {
     /// spacing: a station every this much, counted from the start of the line, in the units of the frame
     #[param(min = 0)]
     pub every: f64,
-    /// spacing: a station this close to a vertex is not added — no point at 5 m when there is one at 4.80 m with 0.25
+    /// spacing: a station this close to a vertex is not added - no point at 5 m when there is one at 4.80 m with 0.25
     #[param(default = 0.0, optional, min = 0)]
     pub tolerance: f64,
 }
@@ -106,7 +106,7 @@ impl Operation for Densify {
     fn about(&self) -> About {
         About {
             name: "densify",
-            describe: "polylines with every vertex kept and points added between them — by count or every so often, on the segments or on a curve through the vertices",
+            describe: "polylines with every vertex kept and points added between them - by count or every so often, on the segments or on a curve through the vertices",
             category: Category::Geometry,
             makes: &["resqml22.PolylineSetRepresentation"],
             recipe: "densify",
@@ -130,7 +130,7 @@ impl Operation for Densify {
         } else {
             Err(Refusal::on(
                 "shape",
-                "it holds no polyline — a surface's nodes are remeshed, not densified",
+                "it holds no polyline - a surface's nodes are remeshed, not densified",
             ))
         }
     }
@@ -147,7 +147,7 @@ impl Operation for Densify {
                             "value",
                             "count",
                             format!(
-                                "`count` is {} — at least one point is added, or it is a copy",
+                                "`count` is {} - at least one point is added, or it is a copy",
                                 count.count
                             ),
                         )

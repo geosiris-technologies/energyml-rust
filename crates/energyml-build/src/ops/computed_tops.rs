@@ -1,11 +1,11 @@
-//! `computed-tops` — where a well crosses one or several horizons: the
+//! `computed-tops` - where a well crosses one or several horizons: the
 //! measured depth and the position of each crossing, written as markers.
 //!
 //! Intersect a trajectory with a set of horizons, giving a
-//! `WellboreMarkerFrameRepresentation` — the everyday geological operation. The computation is
+//! `WellboreMarkerFrameRepresentation` - the everyday geological operation. The computation is
 //! [`energyml_analysis::tops`]; the well is evaluated by
-//! `energyml_geometry::well::path_of` — the reader that draws it, minimum
-//! curvature included — and each horizon read by [`energyml_analysis::heights`].
+//! `energyml_geometry::well::path_of` - the reader that draws it, minimum
+//! curvature included - and each horizon read by [`energyml_analysis::heights`].
 //! Neither is written a second time here.
 //!
 //! # What is written, and why not a marker frame
@@ -19,7 +19,7 @@
 //! interpretations of markers »* (RESQML v2.2 Release Notes, p. 6). The original
 //! name for the output is the 2.0.1 one; what 2.2 says is:
 //!
-//! - **one WITSML 2.1 `WellboreMarker` per crossing**, a root object — its `Md`
+//! - **one WITSML 2.1 `WellboreMarker` per crossing**, a root object - its `Md`
 //!   the depth of the crossing, counted from the trajectory's datum in the
 //!   trajectory's unit, its `WellboreMarkerKind` `stratigraphic` (*« A high
 //!   level classification of what this marker represents: stratigraphic
@@ -29,19 +29,19 @@
 //!   (the reference model requires a boundary's `Marker` to be an
 //!   object);
 //! - **one RESQML 2.2 `WellboreIntervalSet`** whose `IntervalBoundaries` are the
-//!   crossings in the order of the hole — *« An array of (0..*) MarkerBoundary
+//!   crossings in the order of the hole - *« An array of (0..*) MarkerBoundary
 //!   […] defining the intervals, an array of N boundaries, will create N+1
-//!   intervals »* (RESQML TRG v2.2 §12.15 p. 312) — each a `MarkerBoundary`
+//!   intervals »* (RESQML TRG v2.2 §12.15 p. 312) - each a `MarkerBoundary`
 //!   whose `Interpretation` is the horizon's (*« 0..1 To:
 //!   BoundaryFeatureInterpretation »*, §12.6 p. 302), its `GeologicBoundaryKind`
 //!   `horizon` (a fault's interpretation gives `fault`, §12.5 p. 301), and its
 //!   `Marker` the WITSML marker. The **N+1 `MarkerInterval`s are empty**: which
 //!   unit lies between two horizons is nothing a crossing says. A boundary has
-//!   no depth of its own — it has no MD on the boundary: the depth comes from the
+//!   no depth of its own - it has no MD on the boundary: the depth comes from the
 //!   marker.
 //!
-//! The **position** of a crossing is the path at its measured depth — what any
-//! reader gets back from the marker's `Md` and the trajectory — so it is said
+//! The **position** of a crossing is the path at its measured depth - what any
+//! reader gets back from the marker's `Md` and the trajectory - so it is said
 //! in the plan and drawn as a point cloud, and not stored a second time. A
 //! `Tvd` would need a vertical datum decision this operation has no reason to
 //! make.
@@ -51,11 +51,11 @@
 //! - **a horizon crossed twice gives two markers**, both said: a well that goes
 //!   down through a horizon and back up through it meets it twice;
 //! - **a horizon never reached gives none**, counted in `Plan::dropped` and
-//!   named with what the well did instead — stayed above or below it (and how
+//!   named with what the well did instead - stayed above or below it (and how
 //!   close it came), or passed beside it;
 //! - **a crossing over a fold, or where the surface is not** (a hole, its edge)
 //!   is no marker: over a fold several faces have a height and which one the
-//!   well meets is not a numerical choice — a ray caster's job —, and
+//!   well meets is not a numerical choice - a ray caster's job -, and
 //!   across a hole it met no face at all. Both are named with their span of
 //!   depth;
 //! - **no crossing at all is a refusal**: a plan with nothing to write reads
@@ -66,7 +66,7 @@
 //! The line is evaluated in the local numbers of the trajectory's CRS, the way
 //! a plan that writes reads every shape. A horizon whose CRS is another one is
 //! **refused naming both**, and so is a well whose drawn nodes are not where
-//! its line puts them — a shape read placed (a plan for the scene) against a
+//! its line puts them - a shape read placed (a plan for the scene) against a
 //! line read local, the frame mismatch the placement layer would otherwise
 //! hide.
 //!
@@ -101,7 +101,7 @@ pub struct ComputedTopsParams {
     /// the sampling step along the hole, in the unit of its measured depths; left out, half the median edge, in plan, of the finest horizon
     ///
     /// Two crossings closer than one step along the hole cancel and are
-    /// missed — the one limit of the method (`energyml_analysis::tops`). Half
+    /// missed - the one limit of the method (`energyml_analysis::tops`). Half
     /// an edge samples every face the hole passes over at least twice: a path
     /// moves at most one unit in plan per unit of measured depth.
     #[param(min = 0.0)]
@@ -113,10 +113,10 @@ pub struct ComputedTopsParams {
 /// What `computed-tops` takes.
 #[derive(Debug, Inputs)]
 pub struct ComputedTopsInputs {
-    /// the well — a trajectory of the package, or a frame, whose trajectory is then followed
+    /// the well - a trajectory of the package, or a frame, whose trajectory is then followed
     #[input(types = "resqml22.WellboreTrajectoryRepresentation, resqml22.WellboreFrameRepresentation")]
     pub well: Shape,
-    /// the horizons — triangulated surfaces or 2D grids, in the well's frame
+    /// the horizons - triangulated surfaces or 2D grids, in the well's frame
     ///
     /// `triangles` ranks the form's list; the cells of a grid are read too,
     /// bilinearly, by `energyml_analysis::heights`.
@@ -135,7 +135,7 @@ fn title_of(shape: &Shape) -> String {
         .unwrap_or_else(|| shape.name.clone())
 }
 
-/// Which side, in words — the frame's vertical sense decides *above*.
+/// Which side, in words - the frame's vertical sense decides *above*.
 fn side_word(side: Side, up: Option<bool>) -> &'static str {
     match (side, up) {
         (Side::Greater, Some(true)) | (Side::Less, Some(false)) => "above",
@@ -219,7 +219,7 @@ impl Operation for ComputedTops {
     fn about(&self) -> About {
         About {
             name: "computed-tops",
-            describe: "where a well crosses one or several horizons — the measured depth and position of each crossing, written as WITSML wellbore markers gathered by a RESQML wellbore interval set",
+            describe: "where a well crosses one or several horizons - the measured depth and position of each crossing, written as WITSML wellbore markers gathered by a RESQML wellbore interval set",
             category: Category::Wells,
             makes: &["witsml21.WellboreMarker", "resqml22.WellboreIntervalSet"],
             recipe: "computed-tops",
@@ -249,7 +249,7 @@ impl Operation for ComputedTops {
                 return Err(Refusal::on(
                     "horizons",
                     format!(
-                        "`{}` has no face — a crossing is read under the hole on triangles or a grid's cells, and points or lines have none",
+                        "`{}` has no face - a crossing is read under the hole on triangles or a grid's cells, and points or lines have none",
                         horizon.name
                     ),
                 ));
@@ -289,7 +289,7 @@ impl Operation for ComputedTops {
         })?;
         let path = path
             .as_ref()
-            .map_err(|why| Refusal::on("well", format!("its line cannot be followed — {why}")))?;
+            .map_err(|why| Refusal::on("well", format!("its line cannot be followed - {why}")))?;
         let knots = path.knots().ok_or_else(|| {
             Refusal::on(
                 "well",
@@ -322,7 +322,7 @@ impl Operation for ComputedTops {
             return Err(Refusal::on(
                 "well",
                 format!(
-                    "`{well_title}` is drawn {gap:.3} away from where its line puts node {rank}: the shape was read in another frame than the line (placed for the scene, where the line is local to its CRS) — plan for writing, or bring the two into one frame"
+                    "`{well_title}` is drawn {gap:.3} away from where its line puts node {rank}: the shape was read in another frame than the line (placed for the scene, where the line is local to its CRS) - plan for writing, or bring the two into one frame"
                 ),
             ));
         }
@@ -339,7 +339,7 @@ impl Operation for ComputedTops {
                     return Err(Refusal::on(
                         "horizons",
                         format!(
-                            "`{}` is in `{}` and the well `{well_title}` in `{}`: a height read in one frame under a position of the other is a difference of two origins — bring them into one frame first",
+                            "`{}` is in `{}` and the well `{well_title}` in `{}`: a height read in one frame under a position of the other is a difference of two origins - bring them into one frame first",
                             title_of(horizon),
                             b.title,
                             a.title
@@ -356,7 +356,7 @@ impl Operation for ComputedTops {
                 return Err(Refusal::on(
                     "horizons",
                     format!(
-                        "`{}` counts its heights in `{b}` and the well `{well_title}` in `{a}` — one unit, or no crossing",
+                        "`{}` counts its heights in `{b}` and the well `{well_title}` in `{a}` - one unit, or no crossing",
                         title_of(horizon)
                     ),
                 ));
@@ -366,7 +366,7 @@ impl Operation for ComputedTops {
             says.push(Note {
                 key: "frame-unchecked",
                 detail: format!(
-                    "the frame of {} against the well's could not be checked — one of the two names no CRS; they are taken to be in one frame",
+                    "the frame of {} against the well's could not be checked - one of the two names no CRS; they are taken to be in one frame",
                     unchecked.iter().map(|t| format!("`{t}`")).collect::<Vec<_>>().join(", ")
                 ),
             });
@@ -443,7 +443,7 @@ impl Operation for ComputedTops {
             }
             let spans = |list: &[[f64; 2]]| {
                 list.iter()
-                    .map(|s| format!("{:.3}–{:.3}", s[0], s[1]))
+                    .map(|s| format!("{:.3}-{:.3}", s[0], s[1]))
                     .collect::<Vec<_>>()
                     .join(", ")
             };
@@ -452,7 +452,7 @@ impl Operation for ComputedTops {
                 says.push(Note {
                     key: "folded",
                     detail: format!(
-                        "`{title}`: the hole changes side over a fold of it (MD {} {md_uom}) — several faces lie there, which one it meets is not a numerical choice: no marker",
+                        "`{title}`: the hole changes side over a fold of it (MD {} {md_uom}) - several faces lie there, which one it meets is not a numerical choice: no marker",
                         spans(&found.folded)
                     ),
                 });
@@ -462,7 +462,7 @@ impl Operation for ComputedTops {
                 says.push(Note {
                     key: "through-a-gap",
                     detail: format!(
-                        "`{title}`: the hole changes side where the surface is not — off its edge or over a hole (MD {} {md_uom}): no face was crossed, no marker",
+                        "`{title}`: the hole changes side where the surface is not - off its edge or over a hole (MD {} {md_uom}): no face was crossed, no marker",
                         spans(&found.gaps)
                     ),
                 });
@@ -482,7 +482,7 @@ impl Operation for ComputedTops {
                 says.push(Note {
                     key: "touches",
                     detail: format!(
-                        "`{title}`: the hole meets it at MD {} {md_uom} and leaves on the side it came from — no crossing",
+                        "`{title}`: the hole meets it at MD {} {md_uom} and leaves on the side it came from - no crossing",
                         found.touches.iter().map(|md| format!("{md:.3}")).collect::<Vec<_>>().join(", ")
                     ),
                 });
@@ -491,7 +491,7 @@ impl Operation for ComputedTops {
                 let why = match (found.side, found.closest) {
                     (Some(side), Some(closest)) => {
                         format!(
-                            "stays {} it along the whole hole — {closest:.3} at the closest",
+                            "stays {} it along the whole hole - {closest:.3} at the closest",
                             side_word(side, up)
                         )
                     }
@@ -508,7 +508,7 @@ impl Operation for ComputedTops {
             return Err(Refusal::new(
                 "no-crossing",
                 format!(
-                    "`{well_title}` crosses none of the horizons — {}",
+                    "`{well_title}` crosses none of the horizons - {}",
                     not_reached.join("; ")
                 ),
             ));
@@ -552,9 +552,9 @@ impl Operation for ComputedTops {
                 .unwrap_or_else(|| horizon_title.clone());
             let (nth, count) = found.nth;
             let title = if count > 1 {
-                format!("{horizon_title} — {well_title} ({nth} of {count})")
+                format!("{horizon_title} - {well_title} ({nth} of {count})")
             } else {
-                format!("{horizon_title} — {well_title}")
+                format!("{horizon_title} - {well_title}")
             };
             // What the marker is: the hole, the horizon, the depth. A moved
             // horizon is a second marker, never the first rewritten.
@@ -603,7 +603,7 @@ impl Operation for ComputedTops {
             says.push(Note {
                 key: "crossing",
                 detail: format!(
-                    "`{horizon_title}` at MD {:.3} {md_uom}, {} — coming from {side} it",
+                    "`{horizon_title}` at MD {:.3} {md_uom}, {} - coming from {side} it",
                     found.crossing.md,
                     at(found.crossing.at)
                 ),
@@ -620,7 +620,7 @@ impl Operation for ComputedTops {
             says.push(Note {
                 key: "no-interpretation",
                 detail: format!(
-                    "{}: no boundary interpretation to reference — the boundary says `horizon` and names none",
+                    "{}: no boundary interpretation to reference - the boundary says `horizon` and names none",
                     uninterpreted.iter().map(|t| format!("`{t}`")).collect::<Vec<_>>().join(", ")
                 ),
             });
@@ -628,7 +628,7 @@ impl Operation for ComputedTops {
 
         let set_title = match params.title {
             Some(given) if !given.0.trim().is_empty() => given.0.trim().to_string(),
-            _ => format!("{well_title} — computed tops"),
+            _ => format!("{well_title} - computed tops"),
         };
         let seed = format!("computed-tops:set:{}:{}", trajectory.uuid, marker_uuids.join(","));
         let set_uuid = cx.identity.uuid(&seed, all.len())?;
@@ -668,7 +668,7 @@ impl Operation for ComputedTops {
         } else {
             vec![Dropped {
                 count: not_reached.len(),
-                why: "horizon(s) the well does not cross — no marker".to_string(),
+                why: "horizon(s) the well does not cross - no marker".to_string(),
             }]
         };
         let count = |title: &str, value: usize| Parameter::Double {
@@ -736,7 +736,7 @@ impl Operation for ComputedTops {
                 "stepUsed",
                 "the sampling step along the hole, in the unit of its measured depths",
             ),
-            count("markerCount", "markers written — one per crossing"),
+            count("markerCount", "markers written - one per crossing"),
             count("notReachedCount", "horizons the well does not cross"),
             count("foldedCount", "changes of side over a fold, not decided"),
             count(

@@ -1,4 +1,4 @@
-//! `prodml-doublet` — the PRODML 2.3 side of a geothermal doublet: the facility
+//! `prodml-doublet` - the PRODML 2.3 side of a geothermal doublet: the facility
 //! its loop runs through, a reporting entity per wellbore, the producer's and
 //! the injector's rates period by period, their head series at a fixed step
 //! with a daily statistic, and the fluid they carry.
@@ -6,13 +6,13 @@
 //! Step 11 of the synthetic model Lutetia: the
 //! doublet GTH-1 (producer) and GTH-2 (injector), GTH-3 observing. What
 //! the reference-model description lists is written **where it can be written honestly**, the objects it
-//! calls essential first — `ReportingEntity` and `Facility`,
+//! calls essential first - `ReportingEntity` and `Facility`,
 //! `FluidSystem`, the volumes (SPVR), `TimeSeriesData` (the *Must* items):
 //!
 //! | object | what it says |
 //! |---|---|
 //! | `Facility` | the heat exchanger, `processing facility` |
-//! | `ReportingEntity` ×2–3 | one per wellbore, kind `wellbore`, `AssociatedObject` → the wellbore |
+//! | `ReportingEntity` ×2-3 | one per wellbore, kind `wellbore`, `AssociatedObject` → the wellbore |
 //! | `WellProductionParameters` ×2 | producer and injector, a `ProductionWellPeriod` per period, `ReportingEntity` 1..1 |
 //! | `TimeSeriesData` ×3 | the producer's head pressure and temperature, the injector's rate |
 //! | `TimeSeriesStatistic` | the injector's rate over the series' first day |
@@ -24,7 +24,7 @@
 //! `Kind` is `wellbore` and its `AssociatedObject` references *“a subsurface
 //! entity such as well, wellbore […] which can be described with a specific
 //! Energistics object”* (ReportingEntity.xsd, the documentation of the field).
-//! The slots take a WITSML `Wellbore` — the reference model's choice — or the RESQML
+//! The slots take a WITSML `Wellbore` - the reference model's choice - or the RESQML
 //! `WellboreFeature` of the same hole; a `Well` is refused by its name (the
 //! flow of GTH-3 and of its sidetrack is not one number), and so is an
 //! interpretation, which is an opinion of a hole and not the hole. The
@@ -35,7 +35,7 @@
 //! # n instants make n − 1 periods
 //!
 //! A `ProductionWellPeriod` runs from one instant to the next: its `StartTime`
-//! is the first, its `Duration` the hours to the second — the arithmetic that
+//! is the first, its `Duration` the hours to the second - the arithmetic that
 //! gives n − 1 periods for n instants (13 dates give 12 values: the only
 //! arithmetic that makes sense; not yet confirmed), and the plan says it. The monthly
 //! series has 13 instants, so each rate report holds 12 periods.
@@ -43,7 +43,7 @@
 //! **No PRODML field references a `TimeSeries`**: `ProductionWellPeriod` has a
 //! start and a duration, `TimeSeriesData` its own `dTim` (the
 //! monthly series serves both, by the dates). The series is therefore
-//! an input for the provenance — the activity names it — and its instants
+//! an input for the provenance - the activity names it - and its instants
 //! are **stated** to the run (`times`): a plan does not read the package, and
 //! nothing at the boundary resolves the instants of a series. The plan says so
 //! (`instants-stated`); a caller that states other dates than the series has
@@ -53,14 +53,14 @@
 //!
 //! The law is `energyml_analysis::flow_law`: a rate in m3/h at the first
 //! instant and an exponential decline per year (0: constant). Each period
-//! states its **mean** rate — the law integrated over the period, divided by
-//! its hours — so that rate × duration gives back the volume, and a declining
+//! states its **mean** rate - the law integrated over the period, divided by
+//! its hours - so that rate × duration gives back the volume, and a declining
 //! well is not overstated by the rate at the start of the month. The volumes
 //! themselves are reported in the activity (`producedVolume`,
 //! `injectedVolume`, m3): the reference model writes the monthly volumes as the rates of
 //! `WellProductionParameters`, not as an `AssetProductionVolumes`.
 //!
-//! The injector returns `reinjected` of what the producer pumps — 1 by
+//! The injector returns `reinjected` of what the producer pumps - 1 by
 //! default: the doublet is **a loop**, producer → exchanger →
 //! reinjector. Its periods say `active --
 //! injecting`, the producer's `active -- producing` (`WellStatus`, the one
@@ -70,7 +70,7 @@
 //!
 //! `TimeSeriesData` names its well **only by its keys** (TimeSeriesData.xsd:
 //! `Key` is text, no reference). The convention is the reference model's, sourced:
-//! an `asset identifier` that is an Energistics URI —
+//! an `asset identifier` that is an Energistics URI -
 //! `eml://lutetia.geosiris.com/well(GTH-1)/wellbore(01)/wellhead`, Identifier
 //! Specification v4.0 §6.3 p. 14, *“path-part = component-type [ "("
 //! identifier ")" ]”*. The caller writes the pattern with `{wellbore}` where
@@ -86,14 +86,14 @@
 //!
 //! - `qualifier` is **`simulated`**, not `measured`: the values are invented
 //!   (an invented value says so), and `simulated` is the other half
-//!   of the PRODML example itself — *“measured versus simulated”* (Product
+//!   of the PRODML example itself - *“measured versus simulated”* (Product
 //!   Volume, Network Model & Time Series Usage Guide, §2.3 p. 9);
 //! - `product` is written for the **rate** only: *“It is generally
 //!   meaningless for things like temperature or pressure”* (same guide, p.
 //!   10).
 //!
 //! The pressure and the temperature are the values stated, constant over the
-//! window — no variation is invented. A `frozen` gap, when asked, repeats the
+//! window - no variation is invented. A `frozen` gap, when asked, repeats the
 //! last reading before it with `status="frozen"`: *“a status of frozen, which
 //! indicates the sensor has been reading the same value for a specific period
 //! of time”* (same guide, §8.2 p. 32).
@@ -102,7 +102,7 @@
 //!
 //! The statistic is one `TimeSeriesStatistic`, a daily one: the injector's rate
 //! over the first day of the window, `[start, start + 1 day)`, frozen samples
-//! set aside and counted — a frozen reading is not a measurement of that
+//! set aside and counted - a frozen reading is not a measurement of that
 //! minute. The schema types `Minimum`, `Maximum` and `Mean` as
 //! `DimensionlessMeasure` and puts the unit in the statistic's `Uom`
 //! (*“Element "unit" defines the unit of measure of this value”*); they are
@@ -113,7 +113,7 @@
 //!
 //! The rules on invented objects (ADR-0019): `ExtensionNameValue` `synthetic = true` and a sentence
 //! in `Citation/Description` on every object invented, and no constant
-//! without a source — `source` is required, and a blank one is refused.
+//! without a source - `source` is required, and a blank one is refused.
 //!
 //! # Identity
 //!
@@ -128,7 +128,7 @@
 //! - the sample chain, the water analysis and the fluid
 //!   characterisation: `fluid-sample` (`fluid_sample.rs`);
 //! - DTS: `dts-installation`; `ProductFlowModel`:
-//!   `product-flow-model` — each its own operation, sharing this file's
+//!   `product-flow-model` - each its own operation, sharing this file's
 //!   helpers through `prodml_writer.rs`;
 //! - the injectivity test and its PTA: an `InjectionFlowTest`
 //!   has no global element in FlowTestActivity.xsd v2.3 (only
@@ -140,7 +140,7 @@
 //! # References
 //!
 //! - The flow law is a synthetic law stated in `energyml-analysis`, which cites no published source for it.
-//!   TODO(reference): verify — no publication is cited; if the law follows one, add it (authors, year, title, venue, DOI) once checked.
+//!   TODO(reference): verify - no publication is cited; if the law follows one, add it (authors, year, title, venue, DOI) once checked.
 
 use std::ops::Range;
 
@@ -162,11 +162,11 @@ pub struct ProdmlDoublet;
 /// A day, in seconds.
 const DAY: i64 = 86_400;
 
-/// Minutes in a day — what a step must divide.
+/// Minutes in a day - what a step must divide.
 const MINUTES_PER_DAY: usize = 1_440;
 
 /// A head series nobody meant to ask for. Its samples are written **inline**,
-/// in the XML of the object — `TimeSeriesData` has no array to point at — and
+/// in the XML of the object - `TimeSeriesData` has no array to point at - and
 /// a hundred thousand of them is already a few megabytes per series.
 const MOST_SAMPLES: usize = 100_000;
 
@@ -174,11 +174,11 @@ const MOST_SAMPLES: usize = 100_000;
 const HOLE: &str = "{wellbore}";
 
 /// Why the fluid system says `unknown` and a gas-oil ratio of zero.
-const FLUID_REMARK: &str = "ReservoirFluidKind is `unknown`: its list holds six hydrocarbon fluids and `unknown`, and fresh aquifer water is none of them. SolutionGOR is written 0: negligible for this water, declared as such rather than left NaN — not a measurement.";
+const FLUID_REMARK: &str = "ReservoirFluidKind is `unknown`: its list holds six hydrocarbon fluids and `unknown`, and fresh aquifer water is none of them. SolutionGOR is written 0: negligible for this water, declared as such rather than left NaN - not a measurement.";
 
 // ---------------------------------------------------------------- the declaration
 
-/// The reference conditions eml 2.3 names (`ReferenceCondition`) — less
+/// The reference conditions eml 2.3 names (`ReferenceCondition`) - less
 /// `ambient`, which states neither a temperature nor a pressure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
 pub enum Standard {
@@ -231,22 +231,22 @@ impl Standard {
 /// What `prodml-doublet` is told.
 #[derive(Debug, Params)]
 pub struct ProdmlDoubletParams {
-    /// the title of the surface facility the doublet's loop runs through — its heat exchanger
+    /// the title of the surface facility the doublet's loop runs through - its heat exchanger
     pub facility: String,
-    /// the title of the fluid system — the water the doublet pumps
+    /// the title of the fluid system - the water the doublet pumps
     pub fluid: String,
-    /// where the law and the head values come from — a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
+    /// where the law and the head values come from - a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
     pub source: String,
-    /// the instants that bound the periods, as the series given lists them: increasing UTC date-times as 2025-01-01T00:00:00Z — n instants make n − 1 periods
+    /// the instants that bound the periods, as the series given lists them: increasing UTC date-times as 2025-01-01T00:00:00Z - n instants make n − 1 periods
     #[param(least = 2)]
     pub times: Vec<String>,
     /// the producer's flow rate at the first instant, in m3/h
     #[param(uom = "m3/h", min = 0.0)]
     pub rate: f64,
-    /// the rate's exponential decline, a fraction per year of 365.25 days — 0 for a constant rate
+    /// the rate's exponential decline, a fraction per year of 365.25 days - 0 for a constant rate
     #[param(default = 0.0, optional, min = 0.0)]
     pub decline: f64,
-    /// the share of the pumped water the injector returns to the aquifer — 1 for a doublet, whose loop returns what it pumps
+    /// the share of the pumped water the injector returns to the aquifer - 1 for a doublet, whose loop returns what it pumps
     #[param(default = 1.0, optional, min = 0.0, max = 1.0)]
     pub reinjected: f64,
     /// the reference conditions the rates and the fluid system are stated at
@@ -254,20 +254,20 @@ pub struct ProdmlDoubletParams {
     /// the water temperature at the producer's head, in degC
     #[param(uom = "degC")]
     pub producer_head_temperature: f64,
-    /// the water temperature at the injector's head, in degC — left out, none is written
+    /// the water temperature at the injector's head, in degC - left out, none is written
     #[param(uom = "degC")]
     pub injector_head_temperature: Option<f64>,
     /// the pressure at the producer's head, in bar
     #[param(uom = "bar", min = 0.0)]
     pub producer_head_pressure: f64,
-    /// the asset identifier of a head series: an Energistics URI with {wellbore} where the wellbore's title goes — eml://authority/well({wellbore})/wellbore(01)/wellhead
+    /// the asset identifier of a head series: an Energistics URI with {wellbore} where the wellbore's title goes - eml://authority/well({wellbore})/wellbore(01)/wellhead
     pub asset_identifier: String,
     /// the first sample of the head series, a UTC date-time as 2025-06-02T00:00:00Z
     pub samples_from: String,
     /// how many whole days the head series cover
     #[param(min = 1)]
     pub sample_days: usize,
-    /// the time between two samples of a head series, in minutes — a divisor of a day
+    /// the time between two samples of a head series, in minutes - a divisor of a day
     #[param(min = 1)]
     pub sample_step: usize,
     /// A head series whose sensor froze for a while.
@@ -275,7 +275,7 @@ pub struct ProdmlDoubletParams {
     pub frozen: Frozen,
 }
 
-/// which head series had its sensor frozen for a while — none, or the one named
+/// which head series had its sensor frozen for a while - none, or the one named
 #[derive(Debug, Params)]
 #[params(tag = "frozen")]
 pub enum Frozen {
@@ -303,16 +303,16 @@ pub struct FrozenWindow {
 /// What `prodml-doublet` takes.
 #[derive(Debug, Inputs)]
 pub struct ProdmlDoubletInputs {
-    /// the producing wellbore of the doublet — a WITSML `Wellbore`, or the RESQML `WellboreFeature` of the hole
+    /// the producing wellbore of the doublet - a WITSML `Wellbore`, or the RESQML `WellboreFeature` of the hole
     #[input(types = "witsml21.Wellbore, resqml22.WellboreFeature")]
     pub producer: ObjectIn,
-    /// the injecting wellbore of the doublet — a WITSML `Wellbore`, or the RESQML `WellboreFeature` of the hole
+    /// the injecting wellbore of the doublet - a WITSML `Wellbore`, or the RESQML `WellboreFeature` of the hole
     #[input(types = "witsml21.Wellbore, resqml22.WellboreFeature")]
     pub injector: ObjectIn,
-    /// the time series whose instants bound the periods — named in the activity, its instants stated in `times`
+    /// the time series whose instants bound the periods - named in the activity, its instants stated in `times`
     #[input(types = "eml23.TimeSeries")]
     pub series: ObjectIn,
-    /// an observing wellbore — a reporting entity, which neither produces nor injects
+    /// an observing wellbore - a reporting entity, which neither produces nor injects
     #[input(types = "witsml21.Wellbore, resqml22.WellboreFeature")]
     pub observation: Option<ObjectIn>,
     /// the rock-fluid organisation the fluid system belongs to
@@ -322,7 +322,7 @@ pub struct ProdmlDoubletInputs {
 
 // ---------------------------------------------------------------- the inputs
 
-/// The class of a qualified type — `Wellbore` of `witsml21.Wellbore`.
+/// The class of a qualified type - `Wellbore` of `witsml21.Wellbore`.
 pub(crate) fn class_of(qualified_type: &str) -> &str {
     qualified_type.rsplit('.').next().unwrap_or(qualified_type)
 }
@@ -342,13 +342,13 @@ fn wellbore<'a>(slot: &str, input: &'a ObjectIn) -> Result<&'a Ref, Refusal> {
     wellbore_because(
         slot,
         input,
-        "a doublet reports per wellbore: a well and its sidetrack do not flow as one — give the wellbore",
+        "a doublet reports per wellbore: a well and its sidetrack do not flow as one - give the wellbore",
         "a reporting entity of a doublet is a wellbore: a WITSML `Wellbore`, or the RESQML `WellboreFeature` of the hole",
     )
 }
 
-/// A wellbore — a WITSML `Wellbore` or the RESQML `WellboreFeature` of the
-/// hole — or why the object given is none: `not_a_well` follows *“is a
+/// A wellbore - a WITSML `Wellbore` or the RESQML `WellboreFeature` of the
+/// hole - or why the object given is none: `not_a_well` follows *“is a
 /// `Well`, and”*, `other` follows *“is a `…`, and”*. Shared by the PRODML
 /// operations, each saying why it wants a hole.
 pub(crate) fn wellbore_because<'a>(
@@ -367,7 +367,7 @@ pub(crate) fn wellbore_because<'a>(
         "WellboreInterpretation" => Err(Refusal::on(
             slot,
             format!(
-                "`{}` is a `WellboreInterpretation` — an opinion of a hole, not the hole: give the WITSML `Wellbore`, or the `WellboreFeature` it interprets",
+                "`{}` is a `WellboreInterpretation` - an opinion of a hole, not the hole: give the WITSML `Wellbore`, or the `WellboreFeature` it interprets",
                 known.title
             ),
         )),
@@ -405,7 +405,7 @@ pub(crate) fn same(one: &Ref, other: &Ref) -> bool {
 // ---------------------------------------------------------------- the asset identifier
 
 /// A title as the identifier of an Energistics URI: RFC 3986 unreserved
-/// characters as they are, every other byte `%XX` — *“identifier = 1*(
+/// characters as they are, every other byte `%XX` - *“identifier = 1*(
 /// unreserved / pct-encoded )”* (Identifier Specification v4.0 §6.3, p. 14).
 fn identifier(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
@@ -419,7 +419,7 @@ fn identifier(text: &str) -> String {
     out
 }
 
-/// Whether `text` is an identifier of that grammar — one character at least.
+/// Whether `text` is an identifier of that grammar - one character at least.
 fn is_identifier(text: &str) -> bool {
     let bytes = text.as_bytes();
     if bytes.is_empty() {
@@ -443,9 +443,9 @@ fn is_identifier(text: &str) -> bool {
     true
 }
 
-/// What is wrong with `uri` as an Energistics URI — `eml:`, an optional
+/// What is wrong with `uri` as an Energistics URI - `eml:`, an optional
 /// `//authority`, then `/`-separated path parts `component-type [ "("
-/// identifier ")" ]` (Identifier Specification v4.0 §6.1–§6.3, p. 13–15).
+/// identifier ")" ]` (Identifier Specification v4.0 §6.1-§6.3, p. 13-15).
 fn uri_fault(uri: &str) -> Option<String> {
     if !uri
         .get(..4)
@@ -466,7 +466,7 @@ fn uri_fault(uri: &str) -> Option<String> {
     };
     for part in path.split('/') {
         if part.is_empty() {
-            return Some("a path part is empty — two `/` in a row, or one at the end".to_string());
+            return Some("a path part is empty - two `/` in a row, or one at the end".to_string());
         }
         let (kind, inner) = match part.find('(') {
             None => (part, None),
@@ -499,7 +499,7 @@ fn asset(pattern: &str, title: &str) -> Result<String, Refusal> {
         return Err(Refusal::on(
             "assetIdentifier",
             format!(
-                "`{pattern}` names no wellbore: write `{HOLE}` where the wellbore's title goes — without it, every head series would name one asset"
+                "`{pattern}` names no wellbore: write `{HOLE}` where the wellbore's title goes - without it, every head series would name one asset"
             ),
         ));
     }
@@ -523,7 +523,7 @@ enum Direction {
 }
 
 impl Direction {
-    /// `production` or `injection` — the words of PRODML's `ReportingFlow`.
+    /// `production` or `injection` - the words of PRODML's `ReportingFlow`.
     fn word(self) -> &'static str {
         match self {
             Direction::Producing => prodml::ReportingFlow::Production.as_xml_str(),
@@ -560,7 +560,7 @@ pub(crate) fn synthetic_by(operation: &str, what: &str) -> eml::ExtensionNameVal
             value: "true".to_string(),
             uom: None,
         },
-        description: Some(format!("{what} — written by `{operation}`, not measured")),
+        description: Some(format!("{what} - written by `{operation}`, not measured")),
         ..Default::default()
     }
 }
@@ -592,7 +592,7 @@ fn samples(at: &[i64], values: &[f64], frozen: Option<&Range<usize>>) -> Vec<pro
         .collect()
 }
 
-/// The samples a frozen window covers — or why it covers none that can be
+/// The samples a frozen window covers - or why it covers none that can be
 /// frozen.
 fn frozen_range(window: &FrozenWindow, from: i64, end: i64, at: &[i64]) -> Result<Range<usize>, Refusal> {
     let text = window.frozen_from.trim();
@@ -711,7 +711,7 @@ impl Operation for ProdmlDoublet {
     fn about(&self) -> About {
         About {
             name: "prodml-doublet",
-            describe: "the PRODML side of a geothermal doublet — its facility, a reporting entity per wellbore, the rates period by period, the head series with a daily statistic, the fluid it pumps — from a stated, sourced law",
+            describe: "the PRODML side of a geothermal doublet - its facility, a reporting entity per wellbore, the rates period by period, the head series with a daily statistic, the fluid it pumps - from a stated, sourced law",
             category: Category::Synthetic,
             makes: &[
                 "prodml23.Facility",
@@ -726,8 +726,8 @@ impl Operation for ProdmlDoublet {
         }
     }
 
-    /// The kind of each object given — a wellbore, a series, an
-    /// organisation — which no declaration of a slot's kind can say. That the
+    /// The kind of each object given - a wellbore, a series, an
+    /// organisation - which no declaration of a slot's kind can say. That the
     /// producer and the injector are two holes is the plan's to refuse: an
     /// offer is judged on what each input *is*.
     fn check(&self, inputs: &ProdmlDoubletInputs) -> Result<(), Refusal> {
@@ -943,7 +943,7 @@ impl Operation for ProdmlDoublet {
         let mut heads = vec![
             Series {
                 head: Head::Pressure,
-                title: format!("{} — wellhead pressure", producer.title),
+                title: format!("{} - wellhead pressure", producer.title),
                 what: "wellhead pressure",
                 hole: &producer,
                 keys: head_keys(&producer_asset, Direction::Producing),
@@ -953,7 +953,7 @@ impl Operation for ProdmlDoublet {
             },
             Series {
                 head: Head::Temperature,
-                title: format!("{} — wellhead temperature", producer.title),
+                title: format!("{} - wellhead temperature", producer.title),
                 what: "wellhead temperature",
                 hole: &producer,
                 keys: head_keys(&producer_asset, Direction::Producing),
@@ -963,7 +963,7 @@ impl Operation for ProdmlDoublet {
             },
             Series {
                 head: Head::Rate,
-                title: format!("{} — injection rate", injector.title),
+                title: format!("{} - injection rate", injector.title),
                 what: "injection rate",
                 hole: &injector,
                 keys: rate_keys.clone(),
@@ -1016,13 +1016,13 @@ impl Operation for ProdmlDoublet {
             Ok(uuid)
         };
         let described = |what: &str| -> Result<String, Refusal> {
-            let text = format!("Synthetic — {what}. Source: {source}");
+            let text = format!("Synthetic - {what}. Source: {source}");
             let length = text.chars().count();
             if length > 2000 {
                 return Err(Refusal::on(
                     "source",
                     format!(
-                        "makes a description of {length} characters, and a Citation/Description holds 2000 — cite the document shorter"
+                        "makes a description of {length} characters, and a Citation/Description holds 2000 - cite the document shorter"
                     ),
                 ));
             }
@@ -1068,7 +1068,7 @@ impl Operation for ProdmlDoublet {
             json: energyml_core::json::write_value(&facility),
         });
 
-        // A reporting entity per wellbore — producer, injector, and the
+        // A reporting entity per wellbore - producer, injector, and the
         // observing one when given.
         let mut entities: Vec<Ref> = Vec::new();
         for hole in [&producer, &injector].into_iter().chain(observation.iter()) {
@@ -1101,7 +1101,7 @@ impl Operation for ProdmlDoublet {
             entities.push(Ref::new(uuid, "prodml23.ReportingEntity", hole.title.clone()));
         }
 
-        // The rates period by period — producer, then injector.
+        // The rates period by period - producer, then injector.
         let joined: Vec<&str> = stated.iter().map(|(text, _)| text.as_str()).collect();
         let joined = joined.join(",");
         let reports: [Report<'_>; 2] = [
@@ -1134,9 +1134,9 @@ impl Operation for ProdmlDoublet {
                     .unwrap_or_default()
             );
             let uuid = uuid_of(&seed)?;
-            let title = format!("{} — {word}", hole.title);
+            let title = format!("{} - {word}", hole.title);
             let what = format!(
-                "the {word} rates of `{}` period by period, from {} — each the law integrated over its period and divided by its hours",
+                "the {word} rates of `{}` period by period, from {} - each the law integrated over its period and divided by its hours",
                 hole.title,
                 law_words(law, &first_text)
             );
@@ -1149,7 +1149,7 @@ impl Operation for ProdmlDoublet {
                 // `WellProductionParameters.StartDate` and `.EndDate` are `xs:date`
                 // (prodml 2.3 SimpleProductVolume.xsd, `WellProductionParameters`),
                 // not `eml:TimeStamp`: the instant's date, not the instant. Found
-                // 04/10/2026 by the validation of what `apply` writes — a
+                // 04/10/2026 by the validation of what `apply` writes - a
                 // `2025-01-01T00:00:00Z` there is not a date.
                 start_date: Some(date_of(&first_text)),
                 end_date: Some(date_of(&last_text)),
@@ -1280,7 +1280,7 @@ impl Operation for ProdmlDoublet {
         // The daily statistic of the injector's rate.
         let (rate_uuid, rate_title) = rate_series.unwrap_or_default();
         let day_end = from + DAY;
-        let statistic_title = format!("{rate_title} — daily statistic");
+        let statistic_title = format!("{rate_title} - daily statistic");
         let statistic_uuid = uuid_of(&format!("prodml-doublet:statistic:{rate_uuid}:{}", w3cdtf(from)))?;
         let statistic = prodml::TimeSeriesStatistic {
             uuid: statistic_uuid.clone(),
@@ -1346,7 +1346,7 @@ impl Operation for ProdmlDoublet {
             citation: citation(
                 &fluid_title,
                 described(
-                    "the water an invented doublet pumps, classified as the reference model decides — its gas-oil ratio stated negligible, not measured",
+                    "the water an invented doublet pumps, classified as the reference model decides - its gas-oil ratio stated negligible, not measured",
                 )?,
             ),
             extension_name_value: vec![synthetic("the fluid system of an invented doublet")],
@@ -1382,14 +1382,14 @@ impl Operation for ProdmlDoublet {
             Note {
                 key: "instants-stated",
                 detail: format!(
-                    "the periods count on the instants stated to this run; `{}` is named in the activity and its own instants are not read — a plan does not read the package, and no PRODML field references a time series: the link is by dates",
+                    "the periods count on the instants stated to this run; `{}` is named in the activity and its own instants are not read - a plan does not read the package, and no PRODML field references a time series: the link is by dates",
                     series.title
                 ),
             },
             Note {
                 key: "volumes",
                 detail: format!(
-                    "`{}` pumps {produced_volume} m3 and `{}` returns {injected_volume} m3 over the periods; each period states its mean rate in m3/h — the law integrated over it, divided by its hours — so rate × duration gives the volume back",
+                    "`{}` pumps {produced_volume} m3 and `{}` returns {injected_volume} m3 over the periods; each period states its mean rate in m3/h - the law integrated over it, divided by its hours - so rate × duration gives the volume back",
                     producer.title, injector.title
                 ),
             },
@@ -1404,7 +1404,7 @@ impl Operation for ProdmlDoublet {
             Note {
                 key: "asset-identifier",
                 detail: format!(
-                    "the head series name their wellbores by `{producer_asset}` and `{injector_asset}` — the titles of the wellbores given, so each names an object of the package"
+                    "the head series name their wellbores by `{producer_asset}` and `{injector_asset}` - the titles of the wellbores given, so each names an object of the package"
                 ),
             },
             Note {
@@ -1489,7 +1489,7 @@ impl Operation for ProdmlDoublet {
                 uom: None,
             },
         ];
-        // The objects taken, as inputs — the series among them: no PRODML
+        // The objects taken, as inputs - the series among them: no PRODML
         // field can reference it, and this is where the run says which one
         // its periods follow.
         for input in [&producer, &injector]
@@ -1533,12 +1533,12 @@ impl Operation for ProdmlDoublet {
             Slot::required(
                 "periodCount",
                 number(None),
-                "periods written for the producer and for the injector — one fewer than the instants",
+                "periods written for the producer and for the injector - one fewer than the instants",
             ),
             Slot::required(
                 "producedVolume",
                 number(Some("m3")),
-                "what the producer pumps over the periods — its rate integrated",
+                "what the producer pumps over the periods - its rate integrated",
             ),
             Slot::required(
                 "injectedVolume",
@@ -1582,7 +1582,7 @@ mod tests {
             uri_fault("eml://lutetia.geosiris.com/well(GTH-1)/wellbore(01)/wellhead"),
             None
         );
-        // Identifier Specification v4.0 §6.3.1 p. 14, verbatim — a component
+        // Identifier Specification v4.0 §6.3.1 p. 14, verbatim - a component
         // type may hold a space.
         assert_eq!(
             uri_fault("eml://prodml.mycompany.com/well(123456)/wellbore(01)/bottomhole/pressure meter"),

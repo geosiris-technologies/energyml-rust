@@ -5,7 +5,7 @@
 //!
 //! The flip side: every name exported here is a name the schemas cannot use.
 //! The glob sits next to `use crate::*`, so a collision shadows the schema type
-//! and the generated crate stops compiling — `IdentityKind`, which resqml
+//! and the generated crate stops compiling - `IdentityKind`, which resqml
 //! declares as an enumeration, is why that sentence is here. Before adding a
 //! name, check it against the ~2500 generated type names.
 

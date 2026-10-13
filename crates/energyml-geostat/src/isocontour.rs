@@ -1,6 +1,6 @@
 //! Iso-contours of a scalar over a triangulated surface.
 //!
-//! The lines where a property takes a chosen value — a depth contour on a
+//! The lines where a property takes a chosen value - a depth contour on a
 //! horizon, a pressure contour on a map. Given per-node values and the
 //! triangles that join those nodes, each level comes back as a set of segments
 //! in the surface's own coordinates, ready to draw or to promote to a
@@ -11,17 +11,17 @@
 //! The input is already a triangulation, so there is no grid to march over and
 //! no ambiguous saddle to resolve: inside one triangle a linear field crosses a
 //! level along exactly one straight segment, or not at all. That is the whole
-//! algorithm, and it is why this file has no lookup table — the sixteen-case
+//! algorithm, and it is why this file has no lookup table - the sixteen-case
 //! table of marching squares exists to disambiguate a *quad*, which a triangle
 //! cannot be.
 //!
 //! The segments come back **unordered and unjoined**, and [`chain`] joins them
-//! when a caller needs lines rather than pieces — which is what promoting a
+//! when a caller needs lines rather than pieces - which is what promoting a
 //! contour to a `PolylineSetRepresentation` needs, and what makes a drawing
 //! one strip instead of a thousand loose segments. It is a separate step
 //! because it has its own cases (a contour that closes, one that runs off the
 //! edge of the surface, two that meet at a saddle) and because matching ends
-//! by coordinate does not work — see [`At`].
+//! by coordinate does not work - see [`At`].
 //!
 //! # Where this came from
 //!
@@ -32,7 +32,7 @@
 //! a level counts as above it. The rest is written from the algorithm rather
 //! than translated.
 //!
-//! TODO(reference): verify — marching triangles is named without a citation; add a reference once checked.
+//! TODO(reference): verify - marching triangles is named without a citation; add a reference once checked.
 
 use crate::Error;
 
@@ -40,24 +40,24 @@ use crate::Error;
 ///
 /// # Why an end carries this at all
 ///
-/// Two triangles sharing an edge cut it at the same place — and **sometimes
+/// Two triangles sharing an edge cut it at the same place - and **sometimes
 /// not at the same bits**. The interpolation runs from whichever corner is
 /// alone on its side of the level, and the two faces pick the *same* corner
 /// unless their third corners fall on opposite sides. When they do, the two
 /// compute `from + t * (into - from)` from opposite ends and land a few ULPs
-/// apart, so a chain matching ends by coordinate breaks there — a gap nobody
+/// apart, so a chain matching ends by coordinate breaks there - a gap nobody
 /// could see in the picture and nobody could explain from the data.
 ///
 /// **How often is a question that had to be measured, and the first two
 /// answers were wrong.** A plane gives zero drift; so does a cone. Both were
 /// used in a first version of the counter-proof, and both passed while
-/// proving nothing. On a rough field it is about 12% of shared ends — see
+/// proving nothing. On a rough field it is about 12% of shared ends - see
 /// `tests::matching_ends_by_coordinate_fragments_a_contour_that_at_keeps_whole`,
 /// which fails on a mesh too smooth to show it.
 ///
 /// So the identity of an end is the **mesh feature it lies on**, in integers:
 /// the edge between two nodes, or a node itself when the level passes exactly
-/// through one. Both cases are needed — an end at a node is reached from
+/// through one. Both cases are needed - an end at a node is reached from
 /// several different edges, and keying it by any of them would break the chain
 /// just as surely.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -74,7 +74,7 @@ pub enum At {
 pub struct Segment {
     pub a: [f64; 3],
     pub b: [f64; 3],
-    /// Where `a` sits on the mesh — see [`At`].
+    /// Where `a` sits on the mesh - see [`At`].
     pub on_a: At,
     /// Where `b` sits.
     pub on_b: At,
@@ -98,7 +98,7 @@ pub struct Contour {
 ///
 /// `count` is a number of intervals, so `levels(0.0, 100.0, 4)` spaces them
 /// 25 apart. What comes back is every multiple of that spacing lying inside
-/// `[min, max]` — which is not necessarily `count` values, and deliberately
+/// `[min, max]` - which is not necessarily `count` values, and deliberately
 /// so.
 ///
 /// # Why zero
@@ -106,12 +106,12 @@ pub struct Contour {
 /// Contours land on round numbers a person can read off a legend, and the
 /// roundest is zero: sea level on a depth map, no displacement on a strain
 /// map, the neutral line on anything signed. Spacing them from `min` instead
-/// would put the lines at 3.7, 28.7, 53.7 … — arithmetically even, and
+/// would put the lines at 3.7, 28.7, 53.7 … - arithmetically even, and
 /// unreadable. Carried over from `kelper-lit`, whose own comment says the
 /// values *"always pass through zero even if 0 is not part of the iso
 /// values"*.
 ///
-/// Empty when `min >= max` — a flat field has no contour to draw, which is an
+/// Empty when `min >= max` - a flat field has no contour to draw, which is an
 /// answer and not a failure.
 pub fn levels(min: f64, max: f64, count: usize) -> Result<Vec<f64>, Error> {
     if count == 0 {
@@ -163,7 +163,7 @@ pub fn levels_spaced(min: f64, max: f64, spacing: f64) -> Result<Vec<f64>, Error
 /// The contour of one level over a triangulated surface.
 ///
 /// `points` is `[x, y, z, …]`, `triangles` three node indices per face, and
-/// `values` one number per node — the property being contoured, which is very
+/// `values` one number per node - the property being contoured, which is very
 /// often the elevation itself.
 pub fn contour(points: &[f64], triangles: &[u32], values: &[f64], level: f64) -> Result<Contour, Error> {
     check(points, triangles, values)?;
@@ -178,7 +178,7 @@ pub fn contour(points: &[f64], triangles: &[u32], values: &[f64], level: f64) ->
 
     let mut segments = Vec::new();
     let mut skipped = 0usize;
-    for face in triangles.chunks_exact(3) {
+    for face in triangles.as_chunks::<3>().0 {
         let corners = [face[0], face[1], face[2]];
         let v = [
             values[corners[0] as usize],
@@ -193,9 +193,9 @@ pub fn contour(points: &[f64], triangles: &[u32], values: &[f64], level: f64) ->
         // **`>=`, so a value sitting exactly on the level counts as above it.**
         // What it buys is an **edge** lying on the level: `>=` puts its two
         // ends above and traces it, `>` puts the whole triangle below and
-        // loses the line. A single vertex on the level is reached either way —
+        // loses the line. A single vertex on the level is reached either way -
         // the interpolation lands on it with `t = 0` or `t = 1` whichever side
-        // it is put — so that case is not the reason, and a test written
+        // it is put - so that case is not the reason, and a test written
         // around it could not fail. See
         // `tests::an_edge_lying_on_the_level_is_traced_and_not_lost`.
         let above = [v[0] >= level, v[1] >= level, v[2] >= level];
@@ -223,7 +223,7 @@ pub fn contour(points: &[f64], triangles: &[u32], values: &[f64], level: f64) ->
                 from[2] + t * (into[2] - from[2]),
             ];
             // A cut at `t = 0` or `t = 1` is not on the edge, it **is** a node
-            // — and it has to be named as one, because the same node is
+            // - and it has to be named as one, because the same node is
             // reached from every edge that meets it. See [`At`].
             let (low, high) = (corners[lone].min(corners[to]), corners[lone].max(corners[to]));
             let at = match t {
@@ -237,7 +237,7 @@ pub fn contour(points: &[f64], triangles: &[u32], values: &[f64], level: f64) ->
         // Both ends on the same mesh feature is the level *grazing one
         // vertex*: a point, not a line. A renderer handed it draws nothing
         // while a promotion writes a polyline of two identical nodes, so it is
-        // dropped — a contour touching a surface at a single point has no line
+        // dropped - a contour touching a surface at a single point has no line
         // there. Tested on the identity rather than on the coordinates, which
         // is the same reason [`At`] exists.
         if on_a != on_b {
@@ -269,7 +269,7 @@ pub fn contours(
 #[derive(Clone, PartialEq, Debug)]
 pub struct Polyline {
     /// The vertices in order. A closed line does **not** repeat its first
-    /// point at the end — `closed` says so instead, because a repeated node is
+    /// point at the end - `closed` says so instead, because a repeated node is
     /// a thing a `PolylineSetRepresentation` states with `ClosedPolylines`,
     /// not with a duplicate coordinate.
     pub points: Vec<[f64; 3]>,
@@ -283,7 +283,7 @@ pub struct Polyline {
 ///
 /// # How ends are matched
 ///
-/// On [`At`], never on coordinates — see that type for why comparing the
+/// On [`At`], never on coordinates - see that type for why comparing the
 /// numbers leaves the contour in pieces. Every end therefore matches exactly
 /// or not at all, and there is no tolerance to tune.
 ///
@@ -292,7 +292,7 @@ pub struct Polyline {
 /// Three or more segments can meet at one place: a saddle, where two branches
 /// of the same level cross. There is no way to tell from the geometry alone
 /// which branch continues into which, and the choice changes nothing about
-/// the picture — so a walk arriving at a junction leaves by whichever segment
+/// the picture - so a walk arriving at a junction leaves by whichever segment
 /// is still unused. **Every segment ends up in exactly one polyline**, which
 /// is the property that matters and the one the tests pin.
 ///
@@ -332,7 +332,7 @@ pub fn chain(segments: &[Segment]) -> Vec<Polyline> {
                     here = far;
                 }
                 None => {
-                    // Closed when the walk came back to where it started —
+                    // Closed when the walk came back to where it started -
                     // and the repeated point is dropped, `closed` saying it
                     // instead.
                     let closed = far == from && points.len() > 2;
@@ -387,7 +387,7 @@ fn other_end(segment: &Segment, where_: At) -> At {
 
 /// The smallest and largest value present, ignoring `NaN`.
 ///
-/// `None` when every value is `NaN` — the one case where there is no range to
+/// `None` when every value is `NaN` - the one case where there is no range to
 /// contour, as opposed to a range of zero width.
 pub fn range(values: &[f64]) -> Option<(f64, f64)> {
     let mut found: Option<(f64, f64)> = None;
@@ -430,8 +430,8 @@ fn check(points: &[f64], triangles: &[u32], values: &[f64]) -> Result<(), Error>
 mod tests {
     use super::*;
 
-    /// A unit square as two triangles — nodes 0,1,2,3 at (0,0), (1,0), (0,1),
-    /// (1,1) — with the elevation of each corner given, so a test can shape
+    /// A unit square as two triangles - nodes 0,1,2,3 at (0,0), (1,0), (0,1),
+    /// (1,1) - with the elevation of each corner given, so a test can shape
     /// the field it wants to contour.
     fn square(z: [f64; 4]) -> (Vec<f64>, Vec<u32>) {
         let points = vec![
@@ -445,7 +445,7 @@ mod tests {
 
     /// The elevation of every node, which is what these tests contour.
     fn elevations(points: &[f64]) -> Vec<f64> {
-        points.chunks_exact(3).map(|p| p[2]).collect()
+        points.as_chunks::<3>().0.iter().map(|p| p[2]).collect()
     }
 
     #[test]
@@ -476,7 +476,7 @@ mod tests {
     }
 
     /// **The property is measured on the output, not compared with a segment
-    /// worked out by hand** — which would only say the two agree.
+    /// worked out by hand** - which would only say the two agree.
     #[test]
     fn every_point_of_a_contour_carries_the_level_it_traces() {
         let (points, triangles) = square([0.0, 10.0, 10.0, 20.0]);
@@ -499,7 +499,7 @@ mod tests {
     #[test]
     fn a_plane_gives_a_straight_contour_of_the_length_geometry_says() {
         // z = 10x over the unit square: the level 5 runs along x = 0.5, from
-        // (0.5, 0) to (0.5, 1) — length 1.
+        // (0.5, 0) to (0.5, 1) - length 1.
         let (points, triangles) = square([0.0, 10.0, 0.0, 10.0]);
         let values = elevations(&points);
         let found = contour(&points, &triangles, &values, 5.0).expect("no refusal");
@@ -553,7 +553,7 @@ mod tests {
     /// Written after a first attempt that could not fail: a *single* vertex on
     /// the level is reached either way, because the interpolation lands on it
     /// with `t = 0` or `t = 1` whichever side the classification puts it. The
-    /// two spellings only part company when a whole edge sits on the level —
+    /// two spellings only part company when a whole edge sits on the level -
     /// `>=` puts its two ends above and traces the edge, `>` puts the whole
     /// triangle below and loses it. Mutating the operator makes this test go
     /// red, which is the check the first one failed.
@@ -632,14 +632,14 @@ mod tests {
     ///
     /// At integer coordinates the two faces sharing an edge interpolate to
     /// bit-identical points, so a mesh built on them cannot show what [`At`]
-    /// is for — which is how the first version of
+    /// is for - which is how the first version of
     /// `the_same_ends_do_not_agree_bit_for_bit` came to fail. Measured over
     /// 200 000 random edges, the two directions disagree in the last bits
     /// about 77% of the time; at integer coordinates, never.
     const STEP: f64 = 1.37;
 
     /// A grid of `side` by `side` quads, each cut into two triangles, with the
-    /// elevation of every node given by `f(x, y)` — in real coordinates, not
+    /// elevation of every node given by `f(x, y)` - in real coordinates, not
     /// in row and column.
     ///
     /// Big enough that a contour crosses many triangles, which is the whole
@@ -670,7 +670,7 @@ mod tests {
     /// **The test the whole of [`At`] exists for.**
     ///
     /// A plane over a ten-by-ten grid: the level 5.5 crosses twenty triangles,
-    /// and every interior cut is computed twice — once from each of the two
+    /// and every interior cut is computed twice - once from each of the two
     /// faces sharing that edge, starting from opposite corners. Matching ends
     /// by coordinate leaves the line in twenty pieces; matching on the mesh
     /// feature gives one.
@@ -722,7 +722,7 @@ mod tests {
     ///
     /// The drift only happens when the *third* corners of the two triangles
     /// fall on opposite sides of the level, and on a smooth field they rarely
-    /// do — two earlier versions of the test below used a plane and then a
+    /// do - two earlier versions of the test below used a plane and then a
     /// cone, and both found **zero** drift, which is what sent this hunting
     /// for a mesh that shows the effect instead of a mesh that assumes it.
     /// Here it is about 12% of shared ends.
@@ -746,7 +746,7 @@ mod tests {
         assert!(found.segments.len() > 50, "too small to say anything");
 
         // How many ends stay loose under each way of matching. An end is loose
-        // when nothing else lands on it — which is what breaks a chain.
+        // when nothing else lands on it - which is what breaks a chain.
         let mut by_mesh: HashMap<At, usize> = HashMap::new();
         let mut by_bits: HashMap<[u64; 3], usize> = HashMap::new();
         for one in &found.segments {
@@ -768,7 +768,7 @@ mod tests {
         );
     }
 
-    /// Every segment lands in exactly one line — on the mesh that is hardest
+    /// Every segment lands in exactly one line - on the mesh that is hardest
     /// for the chaining, where a tenth of the ends do not agree bit for bit.
     #[test]
     fn every_segment_lands_in_exactly_one_line() {

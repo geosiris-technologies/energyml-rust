@@ -2,12 +2,12 @@
 //!
 //! # The two levels, and why both need covering
 //!
-//! **Below**: a pointer at external data — `Hdf5Dataset` in RESQML 2.0.1
+//! **Below**: a pointer at external data - `Hdf5Dataset` in RESQML 2.0.1
 //! (`PathInHdfFile` + a proxy reference), `ExternalDataArrayPart` in 2.2
 //! (`PathInExternalFile` + a URI). The storage layer already resolves both and
 //! reads them into typed values; nothing here repeats that.
 //!
-//! **Here**: the level above, where the schema says an array may be external —
+//! **Here**: the level above, where the schema says an array may be external -
 //! *or* constant, *or* a lattice, *or* a range, *or* written inline in the XML,
 //! *or* derived from another array. Twenty-odd concrete types across two
 //! versions, and only about a third of them touch a file at all:
@@ -16,14 +16,14 @@
 //! |---|---|
 //! | `*ExternalArray` / `*Hdf5Array` | in the external file |
 //! | `*ConstantArray` | one value and a count |
-//! | `*LatticeArray` | a start and a set of steps — **computed** |
+//! | `*LatticeArray` | a start and a set of steps - **computed** |
 //! | `IntegerRangeArray` (2.0.1 only) | a start and a count |
 //! | `*XmlArray` (2.2 only) | inline in the document |
 //! | `BooleanArrayFromIndexArray` | from an integer array of indices |
 //! | `IntegerArrayFromBooleanMaskArray` | from a boolean mask |
 //!
 //! A reader that only knows the external forms loses every constant and every
-//! lattice, and loses them as **empty arrays** — which is indistinguishable
+//! lattice, and loses them as **empty arrays** - which is indistinguishable
 //! from a property that genuinely has no values. The corpus makes the point:
 //! 30 `BooleanConstantArray` and 16 lattices against the file-backed ones.
 //!
@@ -31,10 +31,10 @@
 //!
 //! [`read`] answers "give me the values" and returns them in the family the
 //! schema declares. That is what most callers want, and it costs a widening
-//! pass — an `int32` dataset comes back as `Vec<i64>`.
+//! pass - an `int32` dataset comes back as `Vec<i64>`.
 //!
-//! When the widening is the expensive part — a vertex buffer, a property array
-//! about to be uploaded to a GPU — [`read_native`] returns the values exactly
+//! When the widening is the expensive part - a vertex buffer, a property array
+//! about to be uploaded to a GPU - [`read_native`] returns the values exactly
 //! as they came out of the file, and [`read_into`] fills a buffer the caller
 //! already owns without allocating at all. Both return `None` for a form that
 //! has no file behind it, because there is nothing to optimise about a constant
@@ -173,7 +173,7 @@ pub fn family(array: &dyn Reflect) -> Option<Family> {
         return Some(Family::Text);
     }
     // Coordinate arrays. `Point3dHdf5Array` and `Point2dExternalArray` are
-    // ordinary floating-point data with a shape convention on top — the
+    // ordinary floating-point data with a shape convention on top - the
     // grouping into points belongs to whoever asked, not here. The forms that
     // *compute* their points (lattice, parametric, z-value) are geometry's
     // business and are not value arrays at all, so they fall through.
@@ -201,9 +201,9 @@ pub struct Located {
     pub path: String,
     /// The concrete form, verbatim: `DoubleConstantArray`, `IntegerHdf5Array`.
     pub form: &'static str,
-    /// Which family the values belong to — what a viewer formats by.
+    /// Which family the values belong to - what a viewer formats by.
     pub family: Family,
-    /// Whether its values live in a file — see [`is_external`].
+    /// Whether its values live in a file - see [`is_external`].
     pub external: bool,
 }
 
@@ -212,7 +212,7 @@ pub struct Located {
 /// # Why this is not the same question as "where are the files"
 ///
 /// `EpcStore::arrays_of` answers *where do the bytes live*, and it finds only
-/// the file-backed forms — which is right for what it is for. But an array is a
+/// the file-backed forms - which is right for what it is for. But an array is a
 /// thing in its own right whether or not it touches a file: a
 /// `ContinuousProperty` whose values are a `DoubleConstantArray` has values, has
 /// a count, and has nothing external at all. A viewer built on the file walk
@@ -225,8 +225,8 @@ pub struct Located {
 ///
 /// # It does not descend into one
 ///
-/// An array's insides — its `Count`, its `HdfProxy`, the integer array a mask
-/// is built from — are its own business, and listing them beside it would offer
+/// An array's insides - its `Count`, its `HdfProxy`, the integer array a mask
+/// is built from - are its own business, and listing them beside it would offer
 /// a person the parts of an answer as though they were answers.
 pub fn locate(object: &dyn Reflect) -> Vec<Located> {
     let mut out = Vec::new();
@@ -280,7 +280,7 @@ fn locate_value(value: &FieldValue<'_>, path: String, out: &mut Vec<Located>, de
 
 /// The values of any value array.
 ///
-/// Works for every form — external, constant, lattice, range, inline, derived.
+/// Works for every form - external, constant, lattice, range, inline, derived.
 /// A form this build does not evaluate is an error naming it, never an empty
 /// vector.
 pub fn read(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Values> {
@@ -319,8 +319,8 @@ pub fn read(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<V
         });
     }
 
-    // Start plus steps. Each dimension multiplies what is already there — that
-    // is what makes a lattice a lattice — and the one being added is innermost,
+    // Start plus steps. Each dimension multiplies what is already there - that
+    // is what makes a lattice a lattice - and the one being added is innermost,
     // matching the slowest-first order the point lattices use. The two describe
     // the same grid from different ends, and disagreeing would put values on
     // the wrong nodes.
@@ -401,7 +401,7 @@ pub fn read(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<V
 
 /// The values exactly as they came out of the file, without widening.
 ///
-/// `None` for a form whose values are computed rather than stored — there is
+/// `None` for a form whose values are computed rather than stored - there is
 /// nothing to read natively about a constant array.
 ///
 /// The point of this over [`read`]: an `int32` property of ten million values
@@ -417,7 +417,7 @@ pub fn read_native(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> R
 /// Decode straight into a buffer the caller already owns.
 ///
 /// **The zero-allocation path.** `None` when the array is not file-backed, and
-/// when the array has more than one part — a concatenation has to be assembled
+/// when the array has more than one part - a concatenation has to be assembled
 /// somewhere, and doing it silently into a caller's buffer would hide the copy
 /// this method exists to avoid.
 pub fn read_into(
@@ -465,7 +465,7 @@ pub fn count(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<
 
 /// A jagged array: rows of differing length, flattened with a cumulative index.
 ///
-/// `ResqmlJaggedArray` in 2.0.1, `JaggedArray` in eml 2.3 — the same two fields
+/// `ResqmlJaggedArray` in 2.0.1, `JaggedArray` in eml 2.3 - the same two fields
 /// under two names. The corpus holds 17 of them.
 pub fn jagged(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Vec<Values>> {
     let Some(elements) = field_object(array, "Elements") else {
@@ -507,7 +507,7 @@ pub fn jagged(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result
 /// an `ExternalDataArray` holds **a list of** `ExternalDataArrayPart`, each a
 /// hyperslab of some file, together forming one logical array. Every array in
 /// the reference corpus has exactly one part, so the joining path is
-/// exercised by construction rather than by the corpus — worth knowing when
+/// exercised by construction rather than by the corpus - worth knowing when
 /// reading a file that uses the feature the schema was changed to allow.
 fn native(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Option<ArrayData>> {
     let parts = source.locate(array);
@@ -559,7 +559,7 @@ fn append(into: &mut ArrayValues, from: ArrayValues) {
 
 /// Bring a file's numbers into the family the schema declares.
 ///
-/// HDF5 has no boolean type — RESQML writes them as bytes — so a boolean array
+/// HDF5 has no boolean type - RESQML writes them as bytes - so a boolean array
 /// read from a file arrives as integers and is compared against zero here.
 fn widen(values: ArrayValues, family: Family) -> Values {
     match family {

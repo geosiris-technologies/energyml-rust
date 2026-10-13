@@ -13,14 +13,14 @@
 //!
 //! It was the obvious answer and it does not exist here: `CategoricalProperty`
 //! and `StringTableLookup` are RESQML 2.0.1 types, absent from 2.2. What 2.2
-//! offers instead is `DiscreteProperty.CategoryLookup` — a reference to an
-//! `eml23.ColumnBasedTable` — which is exactly the join, and the mistake was
+//! offers instead is `DiscreteProperty.CategoryLookup` - a reference to an
+//! `eml23.ColumnBasedTable` - which is exactly the join, and the mistake was
 //! caught before it was written.
 //!
 //! # A constant array, and not ten thousand copies of one number
 //!
 //! Every point of one set is in the same row, so its property is constant. EML
-//! 2.3 has `IntegerConstantArray` — a value and a count — so the file says *this
+//! 2.3 has `IntegerConstantArray` - a value and a count - so the file says *this
 //! is constant* in nine bytes, touches no HDF5, and a reader that expands it
 //! gets one index per node. The alternative, writing 1 285 identical integers
 //! into a data file, would have been the same fact told expensively and less
@@ -31,14 +31,14 @@
 //! `ColumnBasedTable` has `KeyColumn` beside `Column`, and it is what makes the
 //! table a lookup: a stored value is matched against the key, **not counted from
 //! the top**. Reading it as a position is a bug this workspace has already paid
-//! for — every facies of `h+g_PaleoGTM` came out labelled with its neighbour's
+//! for - every facies of `h+g_PaleoGTM` came out labelled with its neighbour's
 //! name, because that file numbers its keys from 1. So this writes an explicit
 //! key column and the property carries the *key*, never the index.
 //!
 //! # The property kinds are the standard's own
 //!
 //! Every `Column` requires a `PropertyKind` reference. They are taken from the
-//! Energistics dictionary — and four of them are the very ones the BRGM
+//! Energistics dictionary - and four of them are the very ones the BRGM
 //! pipeline's own `ColumnBasedTable` references, so a consumer resolves ours the
 //! way it already resolves theirs.
 
@@ -58,38 +58,38 @@ pub struct Kind {
     pub title: &'static str,
 }
 
-/// `code` — an identifier without a unit. The key column's kind.
+/// `code` - an identifier without a unit. The key column's kind.
 pub const CODE: Kind = Kind {
     uuid: "5f78f66a-ed1b-4827-a868-beb989febb31",
     title: "code",
 };
-/// `formation name` — the lithostratigraphic unit. Used by the BRGM pipeline for
+/// `formation name` - the lithostratigraphic unit. Used by the BRGM pipeline for
 /// exactly this.
 pub const FORMATION_NAME: Kind = Kind {
     uuid: "48a02f88-8cfe-44e5-acb3-45038443d8f7",
     title: "formation name",
 };
-/// `name` — the stage.
+/// `name` - the stage.
 pub const NAME: Kind = Kind {
     uuid: "0eb70eac-c3d2-4448-b617-10260c4abee3",
     title: "name",
 };
-/// `geologic age` — the bounds, in millions of years.
+/// `geologic age` - the bounds, in millions of years.
 pub const GEOLOGIC_AGE: Kind = Kind {
     uuid: "e185ec6b-27c2-4086-8e1f-48810130b2f0",
     title: "geologic age",
 };
-/// `count` — how many source features fed a row.
+/// `count` - how many source features fed a row.
 pub const COUNT: Kind = Kind {
     uuid: "ee1efc57-1990-4c63-af90-974f186d1644",
     title: "count",
 };
-/// `description` — the referential URL, and anything else that is prose.
+/// `description` - the referential URL, and anything else that is prose.
 pub const DESCRIPTION: Kind = Kind {
     uuid: "89230474-eb6e-417f-8fce-f2f00ee6fafb",
     title: "description",
 };
-/// `unknown` — what the dictionary has no word for. The BRGM pipeline uses it
+/// `unknown` - what the dictionary has no word for. The BRGM pipeline uses it
 /// for its own code column, so it is not a last resort so much as the honest
 /// answer.
 pub const UNKNOWN: Kind = Kind {
@@ -131,7 +131,7 @@ pub struct Row {
 
 /// Build the table from the rows, in the order given.
 ///
-/// The caller has already made the rows distinct — that is what *avoiding
+/// The caller has already made the rows distinct - that is what *avoiding
 /// duplicate entries* means, and it cannot be done here: this module does not
 /// know which two groups are the same thing.
 pub fn build(uuid: &str, rows: &[Row], citation: eml::Citation) -> eml::ColumnBasedTable {
@@ -298,7 +298,7 @@ mod tests {
     fn the_table_has_a_key_column_and_it_is_not_the_row_position() {
         // What makes it a lookup. Without it a consumer counts from the top,
         // which is the reading that mislabelled every facies of `h+g_PaleoGTM`
-        // because that file numbers its keys from 1 — as this one does.
+        // because that file numbers its keys from 1 - as this one does.
         let made = table();
         assert_eq!(made.key_column.len(), 1);
         let Some(eml::AbstractValueArray::IntegerXmlArray(keys)) = &made.key_column[0].values else {
@@ -313,7 +313,7 @@ mod tests {
     #[test]
     fn every_column_names_a_kind_of_the_official_dictionary() {
         // A kind that is not in the dictionary is a dangling reference no store
-        // can resolve — the very fault the graph now tells apart from a real
+        // can resolve - the very fault the graph now tells apart from a real
         // absence. Four of these are the ones the BRGM pipeline's own table
         // references, so a consumer resolves ours the way it resolves theirs.
         let made = table();

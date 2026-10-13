@@ -1,26 +1,26 @@
-//! `outline` — the contour of a shape, as closed polylines.
+//! `outline` - the contour of a shape, as closed polylines.
 //!
 //! The edges of the starting surface are not marked: the need is a polyline,
 //! with collinear points simplified,
-//! that makes the contour of the object. Decided: an operation of its own —
-//! this one — **and** an option of the contouring that composes with it.
+//! that makes the contour of the object. Decided: an operation of its own -
+//! this one - **and** an option of the contouring that composes with it.
 //!
 //! What comes out is what [`energyml_analysis::outline`] computes, and the
 //! plan says which of its two answers it got: the **boundary** of a
 //! triangulated surface, exact, one loop per rim and per hole; or the
-//! **convex hull** in plan view of anything else — a point cloud, a set of
-//! polylines — which is not a boundary and is named as what it is.
+//! **convex hull** in plan view of anything else - a point cloud, a set of
+//! polylines - which is not a boundary and is named as what it is.
 //!
 //! The writing is [`super::polylines`]'s: an outline is a polyline set whose
 //! every line is closed, and a second writer of the same object would be a
 //! second place for the same mistakes. Typed since step 8 of
 //! ADR 0017: the rings go to
-//! [`super::polylines::write`] as they are — no bag derived to carry them.
+//! [`super::polylines::write`] as they are - no bag derived to carry them.
 //!
 //! # References
 //!
 //! - Andrew's monotone chain, as named in `energyml-geostat` (`outline`).
-//!   TODO(reference): verify — Andrew's monotone chain is named without a full citation; add the original reference once checked.
+//!   TODO(reference): verify - Andrew's monotone chain is named without a full citation; add the original reference once checked.
 
 use energyml_analysis::outline as analysis;
 use energyml_domain::provenance::Parameter;
@@ -40,7 +40,7 @@ pub struct Outline;
 /// What `outline` is told.
 #[derive(Debug, Params)]
 pub struct OutlineParams {
-    /// The frame, what is represented, the naming — for the polyline writer.
+    /// The frame, what is represented, the naming - for the polyline writer.
     #[param(flatten)]
     pub written: Written,
     /// a node within this distance of the chord between its neighbours is dropped; 0 keeps all but the exactly collinear
@@ -115,7 +115,7 @@ impl Operation for Outline {
     fn about(&self) -> About {
         About {
             name: "outline",
-            describe: "the contour of a shape as closed polylines — the exact boundary of a triangulated surface, or the convex hull in plan view of anything else",
+            describe: "the contour of a shape as closed polylines - the exact boundary of a triangulated surface, or the convex hull in plan view of anything else",
             category: Category::Geometry,
             makes: &["resqml22.PolylineSetRepresentation"],
             recipe: "outline",
@@ -146,7 +146,7 @@ impl Operation for Outline {
                 "the surface is closed: it has no boundary to outline",
             ));
         }
-        // The rings as one shape, every line closed — and said so, so that the
+        // The rings as one shape, every line closed - and said so, so that the
         // polyline writer neither detects nor notes anything.
         let name = format!("outline of {}", cx.first());
         let runs: Vec<u32> = found.rings.iter().map(|r| r.len() as u32).collect();
@@ -196,7 +196,7 @@ impl Operation for Outline {
             key: found.how,
             detail: match found.how {
                 "boundary" => format!("{} boundary loop(s) of the triangulated surface, {} collinear node(s) dropped", found.rings.len(), found.dropped),
-                _ => format!("the convex hull in plan view — the input is not a surface, so this is its envelope and not its boundary; {} node(s) dropped", found.dropped),
+                _ => format!("the convex hull in plan view - the input is not a surface, so this is its envelope and not its boundary; {} node(s) dropped", found.dropped),
             },
         });
         Ok(plan)

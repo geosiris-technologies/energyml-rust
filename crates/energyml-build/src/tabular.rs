@@ -1,4 +1,4 @@
-//! Reading a tabular file — a format, not a vocabulary.
+//! Reading a tabular file - a format, not a vocabulary.
 //!
 //! The counterpart of [`crate::geojson`] for tables: it returns rows of
 //! cells and **knows nothing** of what they mean. What the columns
@@ -11,7 +11,7 @@
 //! what this repository reproaches itself for. But they are not the same files: a
 //! cloud of coordinates without a mandatory header on one side, a table with named
 //! headers on the other. The sharing is therefore done at the **lexer** and not at
-//! the vocabulary — the separation that `geojson.rs` (the format) and `sigeol.rs` (the
+//! the vocabulary - the separation that `geojson.rs` (the format) and `sigeol.rs` (the
 //! vocabulary) already keep.
 //!
 //! And the lexer of `mesh.rs` does not fit, which is measured rather than
@@ -21,8 +21,8 @@
 //! ```text
 //! "48° 54' 50.51""N, 2° 24' 15.30""E"
 //! ```
-//!
-//! — a quoted field containing a comma **and** doubled quotes. A correct reader
+//! -
+//! a quoted field containing a comma **and** doubled quotes. A correct reader
 //! sees 72 fields there, naive splitting sees 73: everything that follows is
 //! shifted by one, on every row, without anything signalling it. Over twenty
 //! files, 946 rows carry a comma in a field.
@@ -42,18 +42,18 @@ use crate::mesh::Refused;
 /// How the file is read.
 ///
 /// What OSDU's `dataset/File.TabularData.1.0.0` can say, plus the three
-/// things it does not say — quotes, the decimal separator and
+/// things it does not say - quotes, the decimal separator and
 /// the encoding (checked: zero occurrences in the schema). Those are
 /// settings, proposed by [`Dialect::sniff`] and replaceable.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Dialect {
-    /// The field separator — `ColumnSeparator`.
+    /// The field separator - `ColumnSeparator`.
     pub separator: char,
-    /// The start of a row to skip — `CommentIndicator`.
+    /// The start of a row to skip - `CommentIndicator`.
     pub comment: Option<char>,
-    /// How many guard rows before the data — `NumberOfRowsToSkip`.
+    /// How many guard rows before the data - `NumberOfRowsToSkip`.
     pub skip: usize,
-    /// The first row carries the names — `ColumnNamesInFirstRow`.
+    /// The first row carries the names - `ColumnNamesInFirstRow`.
     pub header: bool,
     /// The decimal separator. **Not in the OSDU schema**, and yet a French
     /// CSV writes `1,5`.
@@ -85,7 +85,7 @@ impl Dialect {
     ///
     /// The count is made **outside quotes**: a row whose only quoted field
     /// carries three commas must not suggest a comma-separated file. And the
-    /// decimal separator follows from it — a semicolon-separated file writes its
+    /// decimal separator follows from it - a semicolon-separated file writes its
     /// numbers with a comma, which is the French convention and the only
     /// combination that is not ambiguous.
     pub fn sniff(text: &str) -> Dialect {
@@ -125,7 +125,7 @@ impl Dialect {
     }
 }
 
-/// The first row that carries something — neither guard nor comment.
+/// The first row that carries something - neither guard nor comment.
 fn first_line(text: &str, dialect: &Dialect) -> Option<String> {
     let mut seen = 0usize;
     for row in text.lines() {
@@ -162,7 +162,7 @@ fn outside_quotes(line: &str, sep: char) -> usize {
 /// A table read: column names and rows of cells.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Table {
-    /// Where it comes from — a file name.
+    /// Where it comes from - a file name.
     pub name: String,
     /// The column names, in the file's order.
     pub headers: Vec<String>,
@@ -187,7 +187,7 @@ impl Table {
         self.rows.len()
     }
 
-    /// A table with no row — which is not an error here, but a datum
+    /// A table with no row - which is not an error here, but a datum
     /// for the caller.
     pub fn is_empty(&self) -> bool {
         self.rows.is_empty()
@@ -199,7 +199,7 @@ impl Table {
 /// # What is refused, and why by the line
 ///
 /// A file of fifty thousand rows is corrected by its line, not by
-/// "invalid" — the rule `mesh.rs` has already paid for. So every refusal carries
+/// "invalid" - the rule `mesh.rs` has already paid for. So every refusal carries
 /// **the file's line number**, the one a text editor displays, and
 /// not the rank among the rows kept.
 pub fn read(name: &str, text: &str, dialect: Dialect) -> Result<Table, Refused> {
@@ -227,7 +227,7 @@ pub fn read(name: &str, text: &str, dialect: Dialect) -> Result<Table, Refused> 
     let duplicates: Vec<String> = duplicated(&headers);
     if !duplicates.is_empty() {
         return Err(Refused::flat(format!(
-            "{name}: line {header_at} names the same column more than once ({}) — a mapping keys on the column name, \
+            "{name}: line {header_at} names the same column more than once ({}) - a mapping keys on the column name, \
              so two columns of one name cannot be told apart",
             duplicates.join(", ")
         )));
@@ -249,7 +249,7 @@ fn finish(
     for (at, cells) in rows {
         if cells.len() != width {
             return Err(Refused::flat(format!(
-                "{name}: line {at} has {} field(s) where the header (line {header_at}) names {width} — \
+                "{name}: line {at} has {} field(s) where the header (line {header_at}) names {width} - \
                  a row that does not line up with its header would put every value after the gap under the wrong column",
                 cells.len()
             )));
@@ -361,7 +361,7 @@ fn split(text: &str, dialect: Dialect) -> Result<Vec<(usize, Vec<String>)>, Refu
     }
     if quoted {
         return Err(Refused::flat(format!(
-            "the file ends inside a quoted field opened at line {started} — a closing quote is missing, \
+            "the file ends inside a quoted field opened at line {started} - a closing quote is missing, \
              and everything after it was read as one cell"
         )));
     }

@@ -42,7 +42,7 @@ use crate::resource::{Dataspace, ObjectHeader, ObjectSummary};
 #[cfg(target_arch = "wasm32")]
 pub use async_trait::async_trait as storage_async_trait;
 
-/// Reading side of a data store — an EPC file today, an ETP dataspace later.
+/// Reading side of a data store - an EPC file today, an ETP dataspace later.
 ///
 /// Only reading: writing arrives with the next pass, and putting it here before
 /// the reading half is proven on real files would be designing in the dark.
@@ -56,13 +56,13 @@ pub trait EnergymlStorage {
     /// What this store is called, for diagnostics.
     fn store_kind(&self) -> &'static str;
 
-    /// The dataspaces this store holds — ETP protocol 24, `GetDataspaces`.
+    /// The dataspaces this store holds - ETP protocol 24, `GetDataspaces`.
     ///
     /// An EPC returns exactly one: a file *is* a dataspace. That is what lets
     /// code walking a remote store walk a file unchanged.
     async fn dataspaces(&self) -> Result<Vec<Dataspace>>;
 
-    /// Every object in the store, identity only — ETP protocol 3,
+    /// Every object in the store, identity only - ETP protocol 3,
     /// `GetResources`.
     ///
     /// Cheap by construction: for an EPC this reads `[Content_Types].xml` and
@@ -77,13 +77,13 @@ pub trait EnergymlStorage {
     /// One result per requested URI, in the same order.
     async fn headers(&self, uris: &[String]) -> Vec<Result<ObjectHeader>>;
 
-    /// The objects themselves — ETP protocol 4, `GetDataObjects`.
+    /// The objects themselves - ETP protocol 4, `GetDataObjects`.
     ///
     /// One result per requested URI, in the same order. An unreadable object
     /// does not fail the others.
     async fn get_objects(&self, uris: &[String]) -> Vec<Result<Box<dyn DynObject>>>;
 
-    /// The types this store can produce — ETP protocol 25, `GetSupportedTypes`.
+    /// The types this store can produce - ETP protocol 25, `GetSupportedTypes`.
     ///
     /// For an EPC, whatever the registry it was given knows about.
     async fn supported_types(&self) -> Vec<&'static TypeInfo>;
@@ -94,25 +94,25 @@ pub trait EnergymlStorage {
     /// The missing half of [`EnergymlStorage::read_array`]: without it a caller
     /// holding `dyn EnergymlStorage` could read an array it had been handed the
     /// location of, but could not *find* the arrays of an object it had just
-    /// deserialized — so every layer that walks an object's data had to name
+    /// deserialized - so every layer that walks an object's data had to name
     /// the concrete store, which is exactly what this trait exists to avoid.
     ///
     /// A list rather than one: eml 2.3 lets a single logical array be spread
     /// over several `ExternalDataArrayPart`s.
     ///
     /// Synchronous, and deliberately: locating is reflection over an object the
-    /// caller already holds, plus a lookup in the store's own index — the EPC
+    /// caller already holds, plus a lookup in the store's own index - the EPC
     /// resolves an `EpcExternalPartReference` from its inventory, and an ETP
     /// client resolves the same DOR from the resources it has already
     /// discovered. Neither needs to go back to the wire, and making this
     /// `async` would have coloured every geometry reader for nothing.
     fn arrays_of(&self, object: &dyn energyml_core::value::Reflect) -> Vec<ArrayLocation>;
 
-    /// Shape and element type of an array, without reading it — ETP protocol 9,
+    /// Shape and element type of an array, without reading it - ETP protocol 9,
     /// `GetDataArrayMetadata`.
     async fn array_metadata(&self, location: &ArrayLocation) -> Result<ArrayMetadata>;
 
-    /// An array, or the slice named by the location — ETP protocol 9,
+    /// An array, or the slice named by the location - ETP protocol 9,
     /// `GetDataArrays` and `GetDataSubarrays`.
     ///
     /// The slice lives in the location itself because that is where the newer
@@ -126,7 +126,7 @@ pub trait EnergymlStorage {
     /// usually produces a few. See [`crate::error::Diagnostic`].
     ///
     /// Returned by value, not borrowed, because a store that reads lazily
-    /// discovers departures **after** it was opened — the fallback taken when
+    /// discovers departures **after** it was opened - the fallback taken when
     /// an HDF5 proxy is missing is found the first time an array is located,
     /// not when the archive was indexed. A borrowed slice would have forced
     /// those to be dropped or the whole package to be read eagerly.
@@ -134,7 +134,7 @@ pub trait EnergymlStorage {
 
     /// One object, for the cases where asking for one is what the caller means.
     ///
-    /// A convenience over [`EnergymlStorage::get_objects`] — the singular may
+    /// A convenience over [`EnergymlStorage::get_objects`] - the singular may
     /// exist above the plural, never beneath it.
     async fn get_object(&self, uri: &str) -> Result<Box<dyn DynObject>> {
         let mut results = self.get_objects(std::slice::from_ref(&uri.to_string())).await;
@@ -151,7 +151,7 @@ pub trait EnergymlStorage {
             .unwrap_or_else(|| Err(crate::error::Error::NotFound(uri.to_string())))
     }
 
-    /// Who references whom — ETP protocol 3, `GetResources` with
+    /// Who references whom - ETP protocol 3, `GetResources` with
     /// `includeEdges`, whose reply is `GetResourcesEdgesResponse`.
     ///
     /// An empty `uris` means the whole store.
@@ -163,7 +163,7 @@ pub trait EnergymlStorage {
     ///
     /// It is the wrong thing over a WebSocket. ETP answers this question
     /// natively, from the server's own index, without a single object crossing
-    /// the wire — so an ETP client overrides this with the one message, and
+    /// the wire - so an ETP client overrides this with the one message, and
     /// every caller above (including [`EnergymlStorage::graph`]) becomes
     /// cheaper without changing a line.
     ///
@@ -178,7 +178,7 @@ pub trait EnergymlStorage {
     /// The reference graph of the store, ready to draw.
     ///
     /// Nodes from [`EnergymlStorage::resources`] and
-    /// [`EnergymlStorage::headers`], edges from [`EnergymlStorage::edges`] —
+    /// [`EnergymlStorage::headers`], edges from [`EnergymlStorage::edges`] -
     /// so a store that answers the last one natively draws its graph without
     /// ever deserializing an object.
     ///
@@ -228,7 +228,7 @@ pub trait EnergymlStorage {
         let objects = self.get_objects(&of_wanted).await;
         // Only the ones that read. An object this store cannot deserialize
         // contributes no edges, and saying so with an error would lose the
-        // graph of everything else — the same partiality the plural reads have.
+        // graph of everything else - the same partiality the plural reads have.
         let held: Vec<(ObjectSummary, Box<dyn DynObject>)> = wanted
             .into_iter()
             .zip(objects)
@@ -243,7 +243,7 @@ pub trait EnergymlStorage {
 
 /// Capabilities that belong to a package on a disk, and to nothing else.
 ///
-/// Adding a PDF to a package makes sense; adding one to a dataspace does not —
+/// Adding a PDF to a package makes sense; adding one to a dataspace does not -
 /// ETP transports data objects, not arbitrary files. So these operations do not
 /// sit on [`EnergymlStorage`]: an application that uses them is local, and the
 /// compiler says so at compile time rather than the store saying so at run

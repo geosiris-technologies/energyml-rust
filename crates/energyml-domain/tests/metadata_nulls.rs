@@ -4,7 +4,7 @@
 //! of them was the reading:
 //!
 //! 1. A key that resolved to nothing simply **vanished** from the output. In a
-//!    GeoJSON `FeatureCollection` — read as a table — a column that disappears
+//!    GeoJSON `FeatureCollection` - read as a table - a column that disappears
 //!    on the rows where it is empty is a different table.
 //! 2. Five of the six keys resolved to nothing on a resqml 2.2 package because
 //!    the paths were written with the 2.0.1 spelling. Including the one the
@@ -51,7 +51,7 @@ fn a_key_that_found_nothing_keeps_its_place() {
     assert!(entries[1].1.is_none(), "absent, and said so rather than dropped");
     assert_eq!(entries[2], ("nonsense", None));
 
-    // `pairs` is the other question — what is there — and formats with no null
+    // `pairs` is the other question - what is there - and formats with no null
     // to write still use it.
     assert_eq!(found.pairs(), vec![("title", "Top Brent")]);
     assert_eq!(found.misses(), ["author", "nonsense"]);

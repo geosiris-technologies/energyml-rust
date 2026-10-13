@@ -1,4 +1,4 @@
-//! **What an operation declares, as one JSON document** — the wire form of
+//! **What an operation declares, as one JSON document** - the wire form of
 //! `AnyOperation`, assembled here once so that the front end, the command line and
 //! any script read the same keys.
 //!
@@ -10,7 +10,7 @@
 //! The keys: `name`, `describe`, `makes`, `recipe`, `category`, `also`
 //! ([`AnyOperation::json`]), then `needs` (what it asks, on a bag), `takes`
 //! (the inputs it declares), `reports` (what its activity records that is
-//! neither a choice nor an output) and `gives` (what it writes, by role —
+//! neither a choice nor an output) and `gives` (what it writes, by role -
 //! [`Output`](crate::operation::Output)). Every slot is `Slot::json()`.
 //!
 //! A pure declaration is the one on the **empty bag**: `needs` must answer
@@ -41,7 +41,7 @@ pub fn declaration(operation: &dyn AnyOperation, pieces: &Pieces) -> Value {
     declaration_with(operation, &operation.needs(pieces))
 }
 
-/// One operation by name, on the empty bag — `None` when no operation has it.
+/// One operation by name, on the empty bag - `None` when no operation has it.
 pub fn declaration_of(registry: &Registry, name: &str) -> Option<Value> {
     registry
         .get(name)

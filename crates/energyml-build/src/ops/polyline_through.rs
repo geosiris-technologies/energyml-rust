@@ -1,14 +1,14 @@
-//! `polyline-through` — one polyline through the nodes of its inputs, in their
+//! `polyline-through` - one polyline through the nodes of its inputs, in their
 //! order.
 //!
 //! The need: after selecting several points, create a polyline
-//! from the selection — and
+//! from the selection - and
 //! the answer chosen the same day: the nodes **in the order of the list**, one
 //! line, open unless asked. A selection of nodes reaches an operation as a
 //! cloud of them ([`Source::only_nodes`](crate::pieces::Source::only_nodes)),
 //! so this takes any shape and reads its nodes in their numbering: the nodes
 //! pointed, in the order they were pointed; a whole shape, in its own order.
-//! Several shapes are joined one after the other, in the order of the slot —
+//! Several shapes are joined one after the other, in the order of the slot -
 //! which is why the slot is `ordered`.
 //!
 //! The writing is `polylines::write`'s: a line of one node, a ring of two, are
@@ -42,7 +42,7 @@ pub struct PolylineThroughParams {
 /// What `polyline-through` takes.
 #[derive(Debug, Inputs)]
 pub struct PolylineThroughInputs {
-    /// the shapes whose nodes the line goes through — in this order, each in its own
+    /// the shapes whose nodes the line goes through - in this order, each in its own
     #[input(least = 1, ordered)]
     pub shape: Vec<Shape>,
 }
@@ -54,7 +54,7 @@ impl Operation for PolylineThrough {
     fn about(&self) -> About {
         About {
             name: "polyline-through",
-            describe: "one polyline through the nodes of the input, in their order — the nodes pointed in the scene, or every node of a shape; open, or closed",
+            describe: "one polyline through the nodes of the input, in their order - the nodes pointed in the scene, or every node of a shape; open, or closed",
             category: Category::Create,
             makes: &["resqml22.PolylineSetRepresentation"],
             recipe: "polyline-through",
@@ -71,7 +71,7 @@ impl Operation for PolylineThrough {
         if nodes < 2 {
             return Err(Refusal::on(
                 "shape",
-                format!("{nodes} node(s) in the input — a line goes through two at least"),
+                format!("{nodes} node(s) in the input - a line goes through two at least"),
             ));
         }
         Ok(())

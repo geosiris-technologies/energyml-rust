@@ -1,4 +1,4 @@
-//! `cross-section` — a filled section, and the first operation with two roles.
+//! `cross-section` - a filled section, and the first operation with two roles.
 //!
 //! # What this file holds
 //!
@@ -11,9 +11,9 @@
 //!
 //! # What would have to break to make it turn red
 //!
-//! Reading the roles by their topology rather than by their slot name — a
+//! Reading the roles by their topology rather than by their slot name - a
 //! trace and a surface cut are two polylines, and nothing distinguishes them
-//! except the name. Taking the surfaces in another order than that of the bag —
+//! except the name. Taking the surfaces in another order than that of the bag -
 //! an inverted section looks abnormal to nobody. Keeping quiet about an empty panel,
 //! or about a crossing, which are the two pieces of news a section brings.
 
@@ -138,7 +138,7 @@ fn without_a_named_trace_the_operation_refuses_saying_so() {
 ///
 /// A bag where the trace is named and where a **second polyline** is filed
 /// elsewhere. Read by name, the section follows the trace and returns material; read
-/// by topology, it is the last polyline found that wins — this one
+/// by topology, it is the last polyline found that wins - this one
 /// passes a hundred metres from the plates, and the section returns nothing.
 ///
 /// This is the useful form of the check: the two readings **agree** on an
@@ -225,8 +225,8 @@ fn three_surfaces_make_two_panels_under_a_root() {
     assert!(panels.iter().all(|made| made.object.is_none()));
 
     // **And the root draws nothing.** Leaving it the merged geometry
-    // would draw each panel twice — once through it, once through its
-    // child — and two surfaces exactly superimposed fight pixel by
+    // would draw each panel twice - once through it, once through its
+    // child - and two surfaces exactly superimposed fight pixel by
     // pixel with nothing saying why. It is a **group** root.
     assert!(
         roots[0].geometry.patches.is_empty(),
@@ -251,7 +251,7 @@ fn three_surfaces_make_two_panels_under_a_root() {
 ///
 /// Two ramps that go down, the high one given first: nothing to report. The
 /// same in the other direction: each piece is *inverted*, and the plan says so
-/// rather than straightening it. Straightening would be deciding in someone's place —
+/// rather than straightening it. Straightening would be deciding in someone's place -
 /// and it is exactly the case that the interpretation workshop must pose.
 #[test]
 fn the_given_order_decides_top_and_bottom_and_an_inversion_is_said() {
@@ -282,7 +282,7 @@ fn the_given_order_decides_top_and_bottom_and_an_inversion_is_said() {
     assert!(said.detail.contains("below"), "{}", said.detail);
 }
 
-/// **An empty panel is an answer, not a failure** — and it is counted.
+/// **An empty panel is an answer, not a failure** - and it is counted.
 ///
 /// Two surfaces that meet nowhere along the trace make no
 /// material. Keeping quiet would make a section with holes a section that looks
@@ -320,7 +320,7 @@ fn a_panel_without_material_is_counted_and_the_others_stay() {
     );
 }
 
-/// No material anywhere: then it is a refusal — an empty plan would read
+/// No material anywhere: then it is a refusal - an empty plan would read
 /// as a computation that succeeded and found nothing to say.
 #[test]
 fn no_panel_at_all_is_a_refusal_that_counts_the_pairs() {

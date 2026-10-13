@@ -3,19 +3,19 @@
 //! This is what the split is for: a pyo3 binding only runs after `maturin
 //! develop`, so nothing living in `bindings.rs` is reachable by `cargo test`.
 //! Everything that can be wrong is therefore in `session`, and this file is
-//! what proves it — were it to reach nothing, the split would be decorative.
+//! what proves it - were it to reach nothing, the split would be decorative.
 //!
 //! # On real packages
 //!
 //! The reference packages are fetched (`scripts/fetch-fixtures.py`), not versioned (`fixtures.rs`).
-//! When they are absent outside CI every check **says so and skips** — a red test on a fresh
+//! When they are absent outside CI every check **says so and skips** - a red test on a fresh
 //! clone stops meaning anything. It is the shape
 //! `energyml-build/tests/package.rs` already has.
 
 use std::path::PathBuf;
 
 // The library is called `energyml_rust`, after the distribution; it is
-// `[lib] name`, and **not** what Python imports — maturin names the extension
+// `[lib] name`, and **not** what Python imports - maturin names the extension
 // from `module-name` in `pyproject.toml`, and a caller writes
 // `from energyml.rust.epc import Epc`.
 //
@@ -25,7 +25,7 @@ use std::path::PathBuf;
 // rebuilt in the same invocation.
 use energyml_rust::session::{ArrayRef, Block, Package};
 
-/// A package from the corpus, or `None` — and it says which one is missing.
+/// A package from the corpus, or `None` - and it says which one is missing.
 fn corpus(name: &str) -> Option<PathBuf> {
     crate::fixtures::find_or_skip(name)
 }
@@ -74,7 +74,7 @@ fn an_object_comes_back_as_json_and_carries_its_type() {
 
     // **The `$type` is what makes this JSON re-readable.** Without it, `put`
     // would not know which class to build, and a round trip would lose the
-    // object in silence — it would leave as an anonymous dictionary.
+    // object in silence - it would leave as an anonymous dictionary.
     assert_eq!(value["$type"].as_str(), Some(first.qualified_type.as_str()));
     assert_eq!(value["uuid"].as_str(), Some(first.uuid.as_str()));
 }
@@ -89,7 +89,7 @@ fn an_object_read_and_put_back_keeps_its_uri() {
     let text = package.get(&first.uri).expect("the object reads");
 
     // The full round trip through the Python door: JSON text in, uri out. What
-    // would have to break is the reading of the type or of the uuid — and the
+    // would have to break is the reading of the type or of the uuid - and the
     // uri would change with it, so the object would go and sit somewhere else
     // without saying anything.
     let written = package.put(&text).expect("the object is put back");
@@ -131,7 +131,7 @@ fn the_arrays_of_an_object_are_named_before_they_are_read() {
         );
     }
 
-    // **Naming works without a backend, reading does not** — so reading has two
+    // **Naming works without a backend, reading does not** - so reading has two
     // legitimate outcomes, and the point is that neither of them is an empty
     // array: an absence and a blunder are not the same news, and a build with
     // no HDF5 that answered with no numbers would read as a package that holds
@@ -139,7 +139,7 @@ fn the_arrays_of_an_object_are_named_before_they_are_read() {
     //
     // **Which outcome runs is not this crate's feature to decide**, and saying
     // it with `#[cfg(feature = "hdf5")]` was wrong in the only way that
-    // matters — it describes a build that is not the one running. Features
+    // matters - it describes a build that is not the one running. Features
     // unify across a `cargo test --workspace`, and another crate asks for
     // `energyml-storage/hdf5` unconditionally, so the store this test links
     // against **has** a backend while this crate's own flag is off. The guard
@@ -255,7 +255,7 @@ fn a_pinned_name_writes_and_reads_the_file_it_was_pinned_to() {
 }
 
 // `find` filters on the type before reading any header, so it must agree with
-// the filter a caller would write over `objects()` — the cheaper path is not
+// the filter a caller would write over `objects()` - the cheaper path is not
 // allowed to answer something else. Built from nothing: two types, two titles,
 // one object version.
 #[test]
@@ -336,7 +336,7 @@ fn find_answers_what_the_filter_over_objects_answers() {
     assert_eq!(
         titled.len(),
         2,
-        "the title filter runs on what the type kept — here everything: {titled:?}"
+        "the title filter runs on what the type kept - here everything: {titled:?}"
     );
     let both = package.find(Some("ActivityTemplate"), Some("first"));
     assert_eq!(both.len(), 1, "type and title together");
@@ -354,7 +354,7 @@ fn a_shape_that_lies_is_refused_naming_both_counts() {
 
     // **The check that prevents a silent re-read.** A shape promising more
     // numbers than there are writes without error in some formats and reads
-    // back with zeros at the end — plausible values that nothing flags. The
+    // back with zeros at the end - plausible values that nothing flags. The
     // refusal names both counts, because it is their difference that says what
     // to fix.
     let array = ArrayRef {

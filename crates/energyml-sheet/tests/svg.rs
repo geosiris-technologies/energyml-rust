@@ -1,4 +1,4 @@
-//! Sheet design: *"the SVG is read back"* — read back by a
+//! Sheet design: *"the SVG is read back"* - read back by a
 //! parser that is not this crate's own code (the triangulation rule, ADR-0011), so a mistake in `energyml_sheet::svg::write`'s
 //! escaping or tag balancing is caught by a reader with no stake in the
 //! answer. `quick-xml` is already in the workspace's `Cargo.lock`
@@ -22,7 +22,7 @@ fn interval(top: f64, base: f64, text: Option<&str>, colour: Option<Rgba>) -> In
 
 /// A small but representative board: an MD column, a filled-and-labelled
 /// stratigraphy column with an untruncated and a blank interval, and a
-/// text-only column that needs wrapping — enough to exercise every branch
+/// text-only column that needs wrapping - enough to exercise every branch
 /// `svg::write` has (a fill, a wrapped multi-line text, a blank cell, MD
 /// ticks, the header row).
 fn sample_board() -> Board {
@@ -63,7 +63,7 @@ fn sample_board() -> Board {
     }
 }
 
-/// Parse `svg` with `quick-xml`, panicking on the first error — that is the
+/// Parse `svg` with `quick-xml`, panicking on the first error - that is the
 /// test. Returns the number of `<g id="…">` elements seen with `id="header"`
 /// and with `id="body"`, and whether every tag was balanced.
 fn check_well_formed(svg: &str) -> (usize, usize) {
@@ -138,7 +138,7 @@ fn ampersands_and_angle_brackets_in_user_text_are_escaped() {
     let layout = compute(&board, &params).expect("a valid board");
     let svg = energyml_sheet::svg::write(&layout);
 
-    // The well-formedness check alone already proves the escaping worked —
+    // The well-formedness check alone already proves the escaping worked -
     // an unescaped `<` or `&` would desynchronise the parser above. This
     // second assertion is the more direct one: the raw, unescaped text must
     // not appear verbatim in the markup.
@@ -174,7 +174,7 @@ fn every_cell_carries_its_md_bounds_and_a_blank_one_says_so() {
     );
 }
 
-/// The root `<svg>`'s attribute `name`, as a number — `width="210.000mm"`
+/// The root `<svg>`'s attribute `name`, as a number - `width="210.000mm"`
 /// reads 210.
 fn root_number(svg: &str, name: &str) -> f64 {
     let at = svg.find("<svg ").expect("a root element");
@@ -187,9 +187,9 @@ fn root_number(svg: &str, name: &str) -> f64 {
 
 /// **The font size is written in millimetres, the unit of the `viewBox`.**
 ///
-/// `font-size="8pt"` under a millimetre `viewBox` is 10.7 mm tall — an SVG
+/// `font-size="8pt"` under a millimetre `viewBox` is 10.7 mm tall - an SVG
 /// turns `pt` into user units as if one were a CSS pixel, then scales like
-/// everything else — four times the room the layout reserved (the first
+/// everything else - four times the room the layout reserved (the first
 /// sheet drawn from Lutetia). To break it: write `…pt` again.
 #[test]
 fn the_font_size_is_in_the_viewbox_unit() {
@@ -244,7 +244,7 @@ fn a_row_wider_than_the_page_widens_it() {
 
 /// **Every header line sits inside the header the layout reserved.**
 ///
-/// The column headers were written one line too low — below the header's
+/// The column headers were written one line too low - below the header's
 /// height, over the body's first row (the first sheet drawn from Lutetia).
 /// To break it: start the column headers one line lower again.
 #[test]

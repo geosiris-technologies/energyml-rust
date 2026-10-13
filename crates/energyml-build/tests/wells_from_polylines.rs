@@ -1,4 +1,4 @@
-//! `wells-from-polylines` — a wellbore per polyline of a set, delegating
+//! `wells-from-polylines` - a wellbore per polyline of a set, delegating
 //! to `super::well::write` exactly as `well-from-polyline` does for one.
 
 use std::collections::HashSet;
@@ -22,7 +22,7 @@ fn frame() -> Ref {
     )
 }
 
-/// A set of polylines, each named `trace`, `trace 2`, … — the numbering
+/// A set of polylines, each named `trace`, `trace 2`, … - the numbering
 /// convention a multi-valued slot reads (`crates/energyml-build/tests/operations.rs`,
 /// *named as the front end names them*).
 fn set(lines: Vec<Vec<[f64; 3]>>, vertical_up: Option<bool>) -> Pieces {
@@ -82,7 +82,7 @@ fn a_set_of_polylines_is_offered_to_the_operation() {
 
 /// **The test that counts: each polyline makes its own well, and the
 /// titles tell them apart.** Two traces well apart geographically,
-/// made into two complete sets of objects — not one, not a mixture.
+/// made into two complete sets of objects - not one, not a mixture.
 #[test]
 fn each_polyline_becomes_a_well_titled_apart() {
     let lines = vec![
@@ -103,8 +103,8 @@ fn each_polyline_becomes_a_well_titled_apart() {
     let features: Vec<_> = plan.objects.iter().filter(|o| o.role == "feature").collect();
     assert_eq!(features.len(), 2, "one feature per polyline");
     let titles: HashSet<&str> = features.iter().map(|o| o.title.as_str()).collect();
-    assert!(titles.contains("Fake wells — well 1 — feature"), "{titles:?}");
-    assert!(titles.contains("Fake wells — well 2 — feature"), "{titles:?}");
+    assert!(titles.contains("Fake wells - well 1 - feature"), "{titles:?}");
+    assert!(titles.contains("Fake wells - well 2 - feature"), "{titles:?}");
 
     let trajectories: Vec<_> = plan
         .objects
@@ -118,7 +118,7 @@ fn each_polyline_becomes_a_well_titled_apart() {
         .map(|t| t.json["RepresentedObject"]["Uuid"].as_str().unwrap())
         .collect();
     assert_eq!(interpretations.len(), 2, "each well has its own interpretation");
-    // And the interpretations are distinct from the features too — four wellbore-ish objects, four uuids, in the right shape.
+    // And the interpretations are distinct from the features too - four wellbore-ish objects, four uuids, in the right shape.
     let interp_objects: Vec<_> = plan
         .objects
         .iter()
@@ -126,7 +126,7 @@ fn each_polyline_becomes_a_well_titled_apart() {
         .collect();
     assert_eq!(interp_objects.len(), 2);
 
-    // The heads are placed exactly where each polyline started — no averaging
+    // The heads are placed exactly where each polyline started - no averaging
     // across the set, no swap between the two wells.
     let control_points: Vec<_> = plan
         .datasets
@@ -147,7 +147,7 @@ fn each_polyline_becomes_a_well_titled_apart() {
     );
 }
 
-/// A single polyline still works, titled `<title> — well 1` — the derivation
+/// A single polyline still works, titled `<title> - well 1` - the derivation
 /// is unconditional, so a set of one behaves exactly like a set of many.
 #[test]
 fn a_single_trace_gives_a_single_numbered_well() {
@@ -162,10 +162,10 @@ fn a_single_trace_gives_a_single_numbered_well() {
         )
         .unwrap();
     let feature = plan.objects.iter().find(|o| o.role == "feature").unwrap();
-    assert_eq!(feature.title, "Solo — well 1 — feature");
+    assert_eq!(feature.title, "Solo - well 1 - feature");
 }
 
-/// A frame in degrees is refused — same argument as `well-from-polyline`.
+/// A frame in degrees is refused - same argument as `well-from-polyline`.
 #[test]
 fn a_frame_in_degrees_is_refused() {
     let mut pieces = Pieces::empty();

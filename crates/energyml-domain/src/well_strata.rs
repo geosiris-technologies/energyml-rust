@@ -17,8 +17,8 @@
 //! [`crate::stratigraphy::columns`] is the reader the column view already uses,
 //! and a second reading of a rank's order would be a second answer to one
 //! question. A table is read by [`crate::table::Lookup`], and a code is matched
-//! against the key the way the front end's `rowLabel` matches it — the value parsed
-//! as a number, the first row that holds it — so that a legend and a section
+//! against the key the way the front end's `rowLabel` matches it - the value parsed
+//! as a number, the first row that holds it - so that a legend and a section
 //! cannot name two different rows for one code.
 //!
 //! RESQML 2.0.1 spells the frame's field `IntervalStratigraphiUnits` (the
@@ -30,20 +30,20 @@
 //! # A unit's colour, and what is not one
 //!
 //! The same cascade the column view asks for (a front end's colour lookup on a unit):
-//! the unit's own `DefaultGraphicalInformation`, then the feature it interprets
-//! — so a unit is the same colour in both views. Only a **constant** colour is a
+//! the unit's own `DefaultGraphicalInformation`, then the feature it interprets -
+//! so a unit is the same colour in both views. Only a **constant** colour is a
 //! unit's colour: a colour map decorating a unit says how to paint a property of
 //! it, and a band has no value to look up in it.
 //!
 //! A category property may carry a map of its own (a `ColorInformation` on the
 //! property or its kind); that is the author's word about those codes and it is
 //! sampled first. Otherwise a table row is linked to a unit of the package **by
-//! its title**, when exactly one unit carries it — and `Unit::by_title` says
+//! its title**, when exactly one unit carries it - and `Unit::by_title` says
 //! so, because a title is not an identity (the rule `property_kind` keeps).
 //!
 //! A unit the file does not colour has **no** colour here, never one made up:
 //! the caller paints it with its colour for absent values, or with a palette
-//! **it** hands in (`Strata::drawn`) — and either way the answer says the
+//! **it** hands in (`Strata::drawn`) - and either way the answer says the
 //! colour is not the file's (`Drawn::Fallback`), so a legend can too.
 //!
 //! # Several `GraphicalInformationSet`s
@@ -51,10 +51,10 @@
 //! A package may hold several, and the GeolTs import writes the chart's colours
 //! in **a set of its own** (`energyml-build`, `ops/stratigraphy.rs`), next to
 //! whatever set the package's own colours live in. Reading only the first set
-//! found would lose every unit colour whenever the other one lists first — a
+//! found would lose every unit colour whenever the other one lists first - a
 //! well drawn transparent with nothing to say why. Nothing in the standard
-//! ranks one set above another (ADR-0009), so the sets are **read as one** — `GraphicalSet::merged`,
-//! then one cascade, the reading every other face uses — and the rule is the
+//! ranks one set above another (ADR-0009), so the sets are **read as one** - `GraphicalSet::merged`,
+//! then one cascade, the reading every other face uses - and the rule is the
 //! one ADR-0009 proposes: the **most specific** level answers (the unit before its
 //! feature), and at one level the later statement. A colour is decided by one
 //! rule (ADR-0009). Previously each set was asked apart and two sets giving two colours left
@@ -68,7 +68,7 @@
 //! apart: a frame that maps no interval is an ordinary frame
 //! (`Refusal::Absent`); an index past its rank is a file that contradicts
 //! itself (`Refusal::Defect`); two ranks naming two units for one interval is
-//! a choice the file leaves open (`Refusal::Ambiguous`) — nothing in the TRG
+//! a choice the file leaves open (`Refusal::Ambiguous`) - nothing in the TRG
 //! ranks one rank above another, so the caller names the rank it wants.
 //!
 //! # WITSML
@@ -92,7 +92,7 @@ use crate::stratigraphy;
 use crate::table::{Cell, Lookup};
 use crate::values::{self, Values};
 
-/// The spellings of the frame's mapping — RESQML 2.0.1 drops a `c`.
+/// The spellings of the frame's mapping - RESQML 2.0.1 drops a `c`.
 const MAPPINGS: &[&str] = &["IntervalStratigraphicUnits", "IntervalStratigraphiUnits"];
 /// The spellings of what a mapping indexes into.
 const ORGANISATION: &[&str] = &[
@@ -101,17 +101,17 @@ const ORGANISATION: &[&str] = &[
 ];
 /// The indices: a jagged array in 2.2, one integer per interval in 2.0.1.
 const UNIT_INDICES: &str = "UnitIndices";
-/// The measured depth of each node — one spelling in every release.
+/// The measured depth of each node - one spelling in every release.
 const NODE_MD: &str = "NodeMd";
 /// What joins the cells of a table row into a unit's name: the separator the
 /// front end's `rowLabel` writes, so a row reads the same in a legend and a column.
-const JOIN: &str = " — ";
+const JOIN: &str = " - ";
 
 // ---------------------------------------------------------------------------
 // What comes back
 // ---------------------------------------------------------------------------
 
-/// Why a frame's stratigraphy cannot be read — and **which kind of news** it is.
+/// Why a frame's stratigraphy cannot be read - and **which kind of news** it is.
 ///
 /// Each variant is repaired somewhere else: an absence by choosing another
 /// frame or another source, a defect in the file, an ambiguity by asking for
@@ -143,8 +143,8 @@ pub enum Refusal {
         /// The two things, and how to choose.
         why: String,
     },
-    /// Two measured depths that are not counted the same way — another datum,
-    /// another MD domain, a unit that does not convert — so looking one up
+    /// Two measured depths that are not counted the same way - another datum,
+    /// another MD domain, a unit that does not convert - so looking one up
     /// against the other would be a guess (`crate::strata_by_md`).
     #[error("{what}: {why}")]
     Incomparable {
@@ -161,7 +161,7 @@ pub enum Refusal {
         /// Why it is not read.
         why: String,
     },
-    /// Reading a value array, a property or a table failed — in the reader's
+    /// Reading a value array, a property or a table failed - in the reader's
     /// own words.
     #[error(transparent)]
     Read(#[from] crate::Error),
@@ -221,22 +221,22 @@ pub enum Source {
     },
 }
 
-/// A unit a section can belong to — one entry of a legend.
+/// A unit a section can belong to - one entry of a legend.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Unit {
     /// The number a legend keys this unit on.
     ///
-    /// For a category, the value the property stores for it — the key, or the
-    /// row where the table names no key column — which is what the front end's
+    /// For a category, the value the property stores for it - the key, or the
+    /// row where the table names no key column - which is what the front end's
     /// category legend keys on too. For interval units, the unit's rank in
     /// [`Strata::units`]: two ranks both count from zero, so their own indices
     /// would collide in one legend.
     pub code: f64,
-    /// The `StratigraphicUnitInterpretation`, lowercased — always for interval
+    /// The `StratigraphicUnitInterpretation`, lowercased - always for interval
     /// units, only through a title match for a category.
     pub uuid: Option<String>,
     /// **Its uri**, the identity: set for an interval unit (the uri the rank's
-    /// reference names, [`stratigraphy::Named::uri`] — the version included),
+    /// reference names, [`stratigraphy::Named::uri`] - the version included),
     /// `None` for a category, which is only ever matched by title. What a
     /// legend keys a unit by when the package holds two versions of it.
     pub uri: Option<String>,
@@ -258,13 +258,13 @@ pub struct Unit {
 /// One interval of the frame, from a node to the next.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Section {
-    /// The MD of the node that opens it — the frame's order, which is top
+    /// The MD of the node that opens it - the frame's order, which is top
     /// down in every file this was written against, but is not re-sorted.
     pub top: f64,
     /// The MD of the node that closes it.
     pub base: f64,
     /// Its unit, as a position in [`Strata::units`]. `None` when the file
-    /// names none here (a null value, a negative index, a `NaN`) — or several
+    /// names none here (a null value, a negative index, a `NaN`) - or several
     /// at once, which [`Section::several`] lists.
     pub unit: Option<usize>,
     /// The units named **together** for this interval, which the jagged
@@ -273,7 +273,7 @@ pub struct Section {
     pub several: Vec<usize>,
 }
 
-/// Where the colour a unit is drawn with comes from — [`Strata::drawn`].
+/// Where the colour a unit is drawn with comes from - [`Strata::drawn`].
 ///
 /// Three answers kept apart because they are three different pieces of news: a
 /// legend that showed a palette colour as the file's would be the front end
@@ -297,7 +297,7 @@ impl Drawn {
         }
     }
 
-    /// `file`, `fallback` — or `None` — as a face spells it.
+    /// `file`, `fallback` - or `None` - as a face spells it.
     pub fn from(&self) -> Option<&'static str> {
         match self {
             Drawn::File(_) => Some("file"),
@@ -316,7 +316,7 @@ pub struct Strata {
     pub title: String,
     /// Where the units were read from.
     pub source: Source,
-    /// Every unit a section could name, in the source's order — the rank's
+    /// Every unit a section could name, in the source's order - the rank's
     /// order for interval units (every unit of the rank, so that one legend
     /// holds for every frame mapped through it), the table's for a category.
     pub units: Vec<Unit>,
@@ -335,13 +335,13 @@ impl Strata {
             .and_then(|unit| unit.colour)
     }
 
-    /// One colour per **node** of the frame, as RGBA bytes — what a tube or a
+    /// One colour per **node** of the frame, as RGBA bytes - what a tube or a
     /// line is painted with, in the order of the frame's `NodeMd`.
     ///
     /// # The rule, and it is ours
     ///
     /// A frame has one node more than it has sections. Each node takes the
-    /// section it **opens**, and the deepest the section it **closes** — the
+    /// section it **opens**, and the deepest the section it **closes** - the
     /// correspondence `energyml_geometry::scene` states for a property on
     /// `intervals from datum`, kept identical so that a well coloured by its
     /// units and one coloured by a property meet a node the same way. Nothing
@@ -353,7 +353,7 @@ impl Strata {
     /// A tube is coloured at its rings and blends between them, so a contact
     /// shows as a blend across the section above it: the colour is exact at
     /// the frame's nodes and nowhere else. Crisp contacts need a ring on each
-    /// side of a contact — a different sweep, not a different colouring.
+    /// side of a contact - a different sweep, not a different colouring.
     ///
     /// `missing` is what a section with no unit takes, and a unit the file
     /// gives no colour: the caller's colour for absent values.
@@ -364,8 +364,8 @@ impl Strata {
     /// [`Strata::node_colours`], a unit the file does not colour taking its
     /// colour from the caller's `fallback` palette ([`Strata::drawn`]).
     ///
-    /// `missing` is then only what a section with **no unit** takes — a null
-    /// index, or several units at once — and a unit when `fallback` is empty.
+    /// `missing` is then only what a section with **no unit** takes - a null
+    /// index, or several units at once - and a unit when `fallback` is empty.
     pub fn node_colours_with(&self, missing: Rgba, fallback: &[Rgba]) -> Vec<u8> {
         let Some(last) = self.sections.len().checked_sub(1) else {
             return Vec::new();
@@ -389,13 +389,13 @@ impl Strata {
     ///
     /// # The rule, and it is ours
     ///
-    /// The *k*-th unit the file does not colour — counted in
-    /// [`Strata::units`]' order, which is the rank's — takes
+    /// The *k*-th unit the file does not colour - counted in
+    /// [`Strata::units`]' order, which is the rank's - takes
     /// `fallback[k % fallback.len()]`. Counted among the **uncoloured** units
     /// rather than all of them, so a palette of twelve covers twelve units the
     /// file left out however many it did colour; and in the rank's order rather
     /// than the sections', so every frame mapped through one rank gives a unit
-    /// the same colour — one legend holds for all of them. More uncoloured
+    /// the same colour - one legend holds for all of them. More uncoloured
     /// units than colours cycles the palette: [`Strata::fallback_cycled`] says
     /// so, since two units then share a colour.
     ///
@@ -417,14 +417,14 @@ impl Strata {
             .collect()
     }
 
-    /// Whether [`Strata::drawn`] had to reuse a colour of `fallback` — more
+    /// Whether [`Strata::drawn`] had to reuse a colour of `fallback` - more
     /// units the file does not colour than the palette has colours.
     pub fn fallback_cycled(&self, fallback: &[Rgba]) -> bool {
         !fallback.is_empty()
             && self.units.iter().filter(|unit| unit.colour.is_none()).count() > fallback.len()
     }
 
-    /// The units a section names and the file gives no colour — what a legend
+    /// The units a section names and the file gives no colour - what a legend
     /// must say is not the file's.
     pub fn uncoloured(&self) -> Vec<&Unit> {
         let named: BTreeSet<usize> = self.sections.iter().filter_map(|section| section.unit).collect();
@@ -442,7 +442,7 @@ impl Strata {
 
 /// Where to read a frame's stratigraphy from.
 pub enum Wanted<'a> {
-    /// The frame's own `IntervalStratigraphicUnits` — every mapping merged, or
+    /// The frame's own `IntervalStratigraphicUnits` - every mapping merged, or
     /// only the one through this rank (a uuid, any case).
     IntervalUnits {
         /// The rank to keep, when the caller chose one.
@@ -463,11 +463,11 @@ pub enum Wanted<'a> {
 /// colouring a thousand wells must be able to pay that once.
 #[derive(Default)]
 pub struct Known<'a> {
-    /// Every `GraphicalInformationSet` of the package, read, with its uuid —
+    /// Every `GraphicalInformationSet` of the package, read, with its uuid -
     /// all of them, in the package's order (see the module's *Several sets*).
     /// Empty: the package states no colour, which is an answer.
     pub graphics: &'a [(String, GraphicalSet)],
-    /// The package's `StratigraphicUnitInterpretation`s as `(uuid, title)` —
+    /// The package's `StratigraphicUnitInterpretation`s as `(uuid, title)` -
     /// what a category row is matched against. Unused for interval units.
     pub units: &'a [(String, String)],
 }
@@ -475,7 +475,7 @@ pub struct Known<'a> {
 /// `&dyn ArraySource` seen as an [`ObjectSource`].
 ///
 /// Spelled out rather than upcast: trait upcasting is stable from Rust 1.86,
-/// and the workspace declares 1.85 — the reason `DynObject::into_reflect`
+/// and the workspace declares 1.85 - the reason `DynObject::into_reflect`
 /// exists too.
 struct Objects<'a>(&'a dyn ArraySource);
 
@@ -551,7 +551,7 @@ pub fn of_frame(
         return Err(Refusal::absent(
             title,
             format!(
-                "has {} node(s), hence no interval — a section runs from one node to the next",
+                "has {} node(s), hence no interval - a section runs from one node to the next",
                 mds.len()
             ),
         ));
@@ -612,7 +612,7 @@ pub fn of_frame(
         .collect();
     if !uncoloured.is_empty() {
         strata.notes.push(format!(
-            "{} unit(s) the file gives no colour — drawn with a colour the caller chooses (its palette, or \
+            "{} unit(s) the file gives no colour - drawn with a colour the caller chooses (its palette, or \
              its colour for absent values), never one the file states: {}",
             uncoloured.len(),
             uncoloured.join(", ")
@@ -621,7 +621,7 @@ pub fn of_frame(
     Ok(strata)
 }
 
-/// Whether a frame carries any `IntervalStratigraphicUnits` — read on the
+/// Whether a frame carries any `IntervalStratigraphicUnits` - read on the
 /// document alone, no array opened: what tells a frame that states units from
 /// one that does not before its `NodeMd` is read (`crate::strata_by_md`, which
 /// must not be stopped by an unreadable array of a frame that says nothing).
@@ -640,7 +640,7 @@ fn interval(title: &str, mds: &[f64], at: usize) -> String {
     )
 }
 
-/// The frame's `IntervalStratigraphicUnits`, merged — or only the rank asked.
+/// The frame's `IntervalStratigraphicUnits`, merged - or only the rank asked.
 fn interval_units(
     frame: &dyn Reflect,
     title: &str,
@@ -699,7 +699,7 @@ fn interval_units(
             return Err(Refusal::defect(
                 what,
                 format!(
-                    "gives {} run(s) of unit indices for the frame's {intervals} interval(s) — TRG 2.2 §5.34: \
+                    "gives {} run(s) of unit indices for the frame's {intervals} interval(s) - TRG 2.2 §5.34: \
                      \"BUSINESS RULE: Array length must equal the number of intervals\"",
                     runs.len()
                 ),
@@ -795,7 +795,7 @@ fn interval_units(
             return Err(Refusal::ambiguous(
                 interval(title, mds, at),
                 format!(
-                    "is given {} by {} different ranks, and nothing in the file says which to draw — \
+                    "is given {} by {} different ranks, and nothing in the file says which to draw - \
                      ask for one rank",
                     names.join(" and "),
                     mappings.len()
@@ -819,7 +819,7 @@ fn interval_units(
 ///
 /// Read twice, and on purpose: once for the uuids of its units, then with those
 /// units held, so that each title is the object's own and a unit reported
-/// missing really is missing — `stratigraphy` prefers what the target says
+/// missing really is missing - `stratigraphy` prefers what the target says
 /// about itself over what a reference cached, and says which units it could
 /// not find.
 fn read_rank(
@@ -837,7 +837,7 @@ fn read_rank(
         return Err(Refusal::absent(
             format!("rank {rank_uuid}"),
             format!(
-                "is what `{title}`'s IntervalStratigraphicUnits index into, and the package does not hold it — \
+                "is what `{title}`'s IntervalStratigraphicUnits index into, and the package does not hold it - \
                  what each index means is unknown"
             ),
         ));
@@ -883,9 +883,9 @@ fn read_rank(
 
 /// The unit indices of each interval, nulls left out.
 ///
-/// 2.2 writes them as a jagged array — *"Since a single interval may
+/// 2.2 writes them as a jagged array - *"Since a single interval may
 /// corresponds to several units, the mapping is done using a jagged array"*
-/// (TRG 2.2 §5.34) — and 2.0.1 as one integer per interval. Told apart by the
+/// (TRG 2.2 §5.34) - and 2.0.1 as one integer per interval. Told apart by the
 /// jagged array's own two fields, never by the version.
 ///
 /// A negative index names nothing: the 2.0.1 annotation writes *"use null
@@ -911,7 +911,7 @@ fn unit_runs(indices: &dyn Reflect, source: &dyn ArraySource, what: &str) -> Res
                 return Err(Refusal::defect(
                     what,
                     format!(
-                        "CumulativeLength {at} is {end}, outside {start}..={} — a cumulative length never \
+                        "CumulativeLength {at} is {end}, outside {start}..={} - a cumulative length never \
                          decreases and never passes the elements it counts",
                         elements.len()
                     ),
@@ -942,7 +942,7 @@ fn null_value(array: &dyn Reflect) -> Option<i64> {
 }
 
 /// An integer array as the file states it: `None` where it holds its declared
-/// `NullValue` — or a `NaN`, for a producer that stored indices as floats.
+/// `NullValue` - or a `NaN`, for a producer that stored indices as floats.
 fn integers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Vec<Option<i64>>, Refusal> {
     let null = null_value(array);
     match values::read(array, source, at)? {
@@ -970,7 +970,7 @@ fn integers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<V
 }
 
 /// A numeric array as the file states it: `None` for its declared
-/// `NullValue` and for a `NaN` — how the corpus writes *no value here*.
+/// `NullValue` and for a `NaN` - how the corpus writes *no value here*.
 fn numbers(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<Vec<Option<f64>>, Refusal> {
     let null = null_value(array);
     match values::read(array, source, at)? {
@@ -1041,7 +1041,7 @@ fn category(
         return Err(Refusal::absent(
             format!("table {table_uuid}"),
             format!(
-                "is the CategoryLookup of `{name}`, and the package does not hold it — what each code means is unknown"
+                "is the CategoryLookup of `{name}`, and the package does not hold it - what each code means is unknown"
             ),
         ));
     };
@@ -1051,14 +1051,14 @@ fn category(
         return Err(Refusal::unsupported(
             format!("table {table_uuid}"),
             format!(
-                "is keyed on {} columns, and `{name}` stores one value per interval — which key that value \
+                "is keyed on {} columns, and `{name}` stores one value per interval - which key that value \
                  is cannot be read",
                 lookup.key_columns.len()
             ),
         ));
     }
 
-    // **The key, not the position** — common TRG 2.3 §9.1. A table keyed
+    // **The key, not the position** - common TRG 2.3 §9.1. A table keyed
     // `1..n`, which is what real files write, gives every row a key one above
     // its position; reading the position named every facies of `h+g_PaleoGTM`
     // with its neighbour's name. The key is parsed as a number, the way the
@@ -1124,7 +1124,7 @@ fn category(
         return Err(Refusal::defect(
             what,
             format!(
-                "holds {} value(s) where `{title}` has {intervals} interval(s) — reading it here would shift \
+                "holds {} value(s) where `{title}` has {intervals} interval(s) - reading it here would shift \
                  every section",
                 values.len()
             ),
@@ -1160,8 +1160,8 @@ fn category(
         named.push(vec![row]);
     }
 
-    // The colours: the property's own map first — the author's word about
-    // these codes — then the unit a row was matched to.
+    // The colours: the property's own map first - the author's word about
+    // these codes - then the unit a row was matched to.
     let objects = Objects(source);
     let merged = merged_graphics(known);
     let cascade = Cascade::new(&merged);
@@ -1191,12 +1191,12 @@ fn category(
     })
 }
 
-/// The unit of the package whose title a table row carries — when exactly one
+/// The unit of the package whose title a table row carries - when exactly one
 /// does.
 ///
 /// Matched on each non-key cell and on the joined label, trimmed, case kept: a
-/// row `e6 — Bartonian` names the unit titled `Bartonian` as well as one
-/// titled `e6 — Bartonian`. Two units with one title are **not** chosen
+/// row `e6 - Bartonian` names the unit titled `Bartonian` as well as one
+/// titled `e6 - Bartonian`. Two units with one title are **not** chosen
 /// between: the row keeps its label and the ambiguity is noted.
 fn unit_titled(
     cells: &[String],
@@ -1227,15 +1227,15 @@ fn unit_titled(
     }
 }
 
-/// The package's sets read as one — **the one reading of several sets**
+/// The package's sets read as one - **the one reading of several sets**
 /// ([`GraphicalSet::merged`]), made once per read and asked of one [`Cascade`].
 fn merged_graphics(known: &Known<'_>) -> GraphicalSet {
     GraphicalSet::merged(known.graphics.iter().map(|(_, set)| set.clone()))
 }
 
 /// The colour a unit is drawn with: its own `DefaultGraphicalInformation`,
-/// then its feature's — the column view's cascade, so a unit is the same colour
-/// in both — asked of the package's sets **read as one**.
+/// then its feature's - the column view's cascade, so a unit is the same colour
+/// in both - asked of the package's sets **read as one**.
 ///
 /// One cascade over [`GraphicalSet::merged`], the reading every other face uses
 /// (the front end's colour column and path, the export, the command line): the most
@@ -1291,7 +1291,7 @@ fn unit_colour(
             {
                 notes.push(format!(
                     "unit {uuid} is given {} by set {set_uuid} and {taken} by a later statement, at the same level \
-                     of the cascade — the later statement is taken: {taken}",
+                     of the cascade - the later statement is taken: {taken}",
                     own_rgba.to_hex()
                 ));
                 break;
@@ -1301,7 +1301,7 @@ fn unit_colour(
     (Some(rgba), Some(decision.found_on))
 }
 
-/// The colour map a category property carries — on itself or on its kind —
+/// The colour map a category property carries - on itself or on its kind -
 /// with its scaling and the object that carried it.
 ///
 /// Only those two levels: the cascade goes on to the frame, its interpretation
@@ -1359,7 +1359,7 @@ fn property_map(
                         && other.uuid != map.uuid
                     {
                         notes.push(format!(
-                            "property {} is drawn through map {} by set {set_uuid} and map {} by a later statement — \
+                            "property {} is drawn through map {} by set {set_uuid} and map {} by a later statement - \
                              the later statement is taken: {}",
                             read.uuid, other.uuid, map.uuid, map.uuid
                         ));
@@ -1389,7 +1389,7 @@ fn cell_text(cell: &Cell) -> String {
     }
 }
 
-/// A number without useless zeros — `10`, not `10.0`.
+/// A number without useless zeros - `10`, not `10.0`.
 fn number(value: f64) -> String {
     if value == value.trunc() && value.abs() < 1e15 {
         format!("{}", value as i64)

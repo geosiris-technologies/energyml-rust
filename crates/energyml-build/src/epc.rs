@@ -1,15 +1,15 @@
 //! The package: open one or make one, put the objects in, write the numbers.
 //!
 //! The only module of this crate that knows a store exists. Everything it
-//! writes has been decided already — [`crate::assemble`] grouped and
-//! deduplicated, [`crate::build`] and [`crate::table`] made the objects — so
+//! writes has been decided already - [`crate::assemble`] grouped and
+//! deduplicated, [`crate::build`] and [`crate::table`] made the objects - so
 //! what is left here is plumbing, and plumbing is where an honest error message
 //! matters more than a clever one.
 //!
 //! # An EPC in, or a new one
 //!
 //! The rule: **take an EPC when one is given, create one when none is.**
-//! Adding to an existing package is the ordinary case — a pipeline's own
+//! Adding to an existing package is the ordinary case - a pipeline's own
 //! packages already hold the stages these units belong to,
 //! and importing into them keeps one model rather than making a second.
 //!
@@ -17,13 +17,13 @@
 //!
 //! References are written before their targets exist in the archive but never
 //! before their targets exist *in memory*, and the `.rels` are regenerated from
-//! the objects at save time — so the order below is about what a **reader** of a
+//! the objects at save time - so the order below is about what a **reader** of a
 //! half-written package would see, not about correctness. It still matters: a
 //! failure part-way through leaves a package on disk, and one whose CRS is there
 //! and whose points are not is easier to understand than the reverse.
 //!
-//! 1. the CRS objects — nothing points at them yet;
-//! 2. the table — likewise;
+//! 1. the CRS objects - nothing points at them yet;
+//! 2. the table - likewise;
 //! 3. per group: the feature, its interpretation, its point set, its property;
 //! 4. the coordinates, into the external file;
 //! 5. the canonical `ActivityTemplate`, unless the package already holds it;
@@ -50,7 +50,7 @@ pub struct Options {
     /// What the coordinates are written in: the degrees as they stand, or metres
     /// under a projected system.
     ///
-    /// Degrees are lossless and unusable in a 3D view — the horizontal extent is
+    /// Degrees are lossless and unusable in a 3D view - the horizontal extent is
     /// in degrees and the vertical in metres, and nothing in the file lets a
     /// reader reconcile them. Projecting moves the numbers, so the target is the
     /// caller's and never guessed. See [`crate::crs`].
@@ -59,11 +59,11 @@ pub struct Options {
     /// definition (RFC 7946); the field exists so a caller reading something
     /// else can say so rather than have this module assume.
     pub source_epsg: i64,
-    /// `YYYY-MM-DDThh:mm:ssZ` — the run's own instant.
+    /// `YYYY-MM-DDThh:mm:ssZ` - the run's own instant.
     ///
     /// **From the caller**: a clock is an input, and a build that reads one
-    /// cannot be replayed. Everything derived from it — the citations, the
-    /// activity's uuid — is then reproducible.
+    /// cannot be replayed. Everything derived from it - the citations, the
+    /// activity's uuid - is then reproducible.
     pub creation: String,
     /// Who is writing. Goes into every `Citation`.
     pub originator: String,
@@ -99,12 +99,12 @@ pub struct Report {
     pub features: usize,
     /// What the plan did not take, each with its reason.
     pub skipped: Vec<String>,
-    /// What could not be written and why — **never a count on its own**.
+    /// What could not be written and why - **never a count on its own**.
     pub refused: Vec<String>,
-    /// What the plan says of what it wrote, which is **not** a failure — the
+    /// What the plan says of what it wrote, which is **not** a failure - the
     /// named exception of degrees (`frame-degrees`) is one. Kept apart
     /// from `refused`, which a caller reads as a failure: `energyml import`
-    /// fails on a refusal, and an import in degrees — the default — is not one.
+    /// fails on a refusal, and an import in degrees - the default - is not one.
     pub notes: Vec<String>,
 }
 

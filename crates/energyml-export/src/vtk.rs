@@ -13,8 +13,8 @@
 //! surfaces and lines; `UnstructuredGrid` is the general container, and the one
 //! to grow into for volumes.
 //!
-//! Each XML flavour takes a **file-format version** — VTK's own `version`
-//! attribute, not the VTK library's. `0.1` is what VTK 5–8 wrote, `1.0` is the
+//! Each XML flavour takes a **file-format version** - VTK's own `version`
+//! attribute, not the VTK library's. `0.1` is what VTK 5-8 wrote, `1.0` is the
 //! long-standing default, `2.2` adds 64-bit headers. A reader older than the
 //! version it is handed refuses the file, so the default here is `1.0`: the one
 //! nothing refuses.
@@ -33,7 +33,7 @@
 //!   half a format.
 //!
 //! Neither encoding has been round-tripped through ParaView in this
-//! repository — there is none here to run — so they follow the documented
+//! repository - there is none here to run - so they follow the documented
 //! format rather than an observed one. Worth checking against a real reader
 //! before relying on the machine-readable half.
 //!
@@ -94,7 +94,7 @@ impl VtkExporter {
     /// Set the file-format version written into the header.
     ///
     /// `"0.1"`, `"1.0"` or `"2.2"` for the XML flavours; `"2.0"`, `"3.0"` or
-    /// `"5.1"` for the legacy one. Nothing else about the output changes — this
+    /// `"5.1"` for the legacy one. Nothing else about the output changes - this
     /// is what the file *claims to be*, and claiming a version a reader does
     /// not know makes it refuse the file.
     pub fn with_version(mut self, version: &'static str) -> Self {
@@ -152,11 +152,11 @@ impl Exporter for VtkExporter {
             ));
         }
         // Reshaped as the caller's rules ask, then stripped of the nodes that
-        // have no position — one funnel, one order, for every format. A `nan`
+        // have no position - one funnel, one order, for every format. A `nan`
         // coordinate lands a point at the origin in some VTK readers and stops
         // the file loading in others; property values follow their elements.
         // See `registry::prepare`. (Coordinates only: a `nan` in a *property*
-        // array is deliberate and stays — VTK reads it as the no-data it is.)
+        // array is deliberate and stays - VTK reads it as the no-data it is.)
         let object = crate::registry::prepare(object, options)?;
         let object = object.as_ref();
 
@@ -172,7 +172,7 @@ impl Exporter for VtkExporter {
 
     // One object per file, deliberately. VTK's legacy format holds one dataset,
     // and the XML ones hold one piece per file unless you write a `.pvd`
-    // collection — which is a different file referencing these. Concatenating
+    // collection - which is a different file referencing these. Concatenating
     // would produce something no reader accepts, so this refuses instead.
     fn write_all(&self, objects: &[SceneObject], out: &mut dyn Write, options: &Options<'_>) -> Result<()> {
         let writable: Vec<&SceneObject> = objects.iter().filter(|o| self.handles(o)).collect();
@@ -182,7 +182,7 @@ impl Exporter for VtkExporter {
             n => Err(Error::unsuitable(
                 "vtk",
                 format!(
-                    "{n} objects in one file — a VTK file holds one dataset; \
+                    "{n} objects in one file - a VTK file holds one dataset; \
                      write to a directory to get one file each"
                 ),
             )),
@@ -213,7 +213,7 @@ struct Cells {
     /// Cells of arbitrary faces: one entry per cell, one inner list per face,
     /// each already wound so its normal points **out** of that cell.
     ///
-    /// VTK calls this `VTK_POLYHEDRON` and encodes it unlike every other cell —
+    /// VTK calls this `VTK_POLYHEDRON` and encodes it unlike every other cell -
     /// see [`write_unstructured_cells`], where it costs two extra arrays.
     polyhedra: Vec<Vec<Vec<u32>>>,
 }
@@ -281,7 +281,7 @@ fn cells_of(object: &SceneObject) -> Cells {
             }
             // Already wound by `energyml_geometry::shape`, which measures the
             // signed area rather than assuming a convention the file does not
-            // state — the reason a grid can be drawn as cells at all.
+            // state - the reason a grid can be drawn as cells at all.
             Topology::Quads(quadrilaterals) => {
                 quads.extend(quadrilaterals.iter().map(|quad| {
                     let mut shifted = *quad;
@@ -355,7 +355,7 @@ impl VtkExporter {
         writeln!(out, "ASCII")?;
         // A legacy file states one dataset kind up front, and `POLYDATA` has no
         // volume cells at all. A grid therefore has to be written as an
-        // unstructured grid — the same points, a different envelope.
+        // unstructured grid - the same points, a different envelope.
         let volumetric = !cells.hexahedra.is_empty() || !cells.polyhedra.is_empty();
         writeln!(
             out,
@@ -395,7 +395,7 @@ impl VtkExporter {
                 writeln!(out, "8 {}", corners.join(" "))?;
             }
             // A polyhedron's line is `n` then the face stream, where `n` is
-            // how many integers follow — not how many points, which is what
+            // how many integers follow - not how many points, which is what
             // every other cell type puts there.
             for cell in &cells.polyhedra {
                 let mut stream = vec![cell.len().to_string()];
@@ -491,7 +491,7 @@ impl VtkExporter {
 
         // The property values. `POINT_DATA`/`CELL_DATA` each open a section
         // that everything after belongs to, so each is written once with all
-        // its arrays — writing the header twice makes VTK read the second set
+        // its arrays - writing the header twice makes VTK read the second set
         // as replacing the first.
         let cell_count = cells.count();
         for (scope, count) in [
@@ -621,7 +621,7 @@ impl VtkExporter {
                     cells.vertices.len(),
                     cells.lines.len(),
                     // PolyData has no volume cells, so a grid contributes its
-                    // faces instead — six per hexahedron, and however many an
+                    // faces instead - six per hexahedron, and however many an
                     // unstructured cell happens to have.
                     cells.triangles.len()
                         + cells.quads.len()
@@ -681,7 +681,7 @@ impl VtkExporter {
 /// `<PointData>` and `<CellData>` blocks, one array each.
 ///
 /// `Scalars="…"` on the block names the array a viewer colours by when it
-/// opens the file — without it ParaView shows the geometry in a flat colour
+/// opens the file - without it ParaView shows the geometry in a flat colour
 /// and the values have to be found by hand.
 fn write_attributes(object: &SceneObject, cells: &Cells, out: &mut dyn Write) -> Result<()> {
     for (scope, tag) in [
@@ -754,7 +754,7 @@ fn write_points(points: &[[f64; 3]], out: &mut dyn Write) -> Result<()> {
 /// How many integers a legacy `VTK_POLYHEDRON` face stream occupies.
 ///
 /// `numFaces`, then per face its point count and its points. This is the number
-/// the legacy format wants as the cell's leading value — for every *other* cell
+/// the legacy format wants as the cell's leading value - for every *other* cell
 /// type that leading value is the point count, which is why it is computed by a
 /// named function rather than inline.
 fn legacy_polyhedron_len(cell: &[Vec<u32>]) -> usize {

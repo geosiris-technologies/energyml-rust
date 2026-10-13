@@ -1,4 +1,4 @@
-//! **A flow rate over time, and what it delivers between two instants** — the
+//! **A flow rate over time, and what it delivers between two instants** - the
 //! synthetic production law of Lutetia's geothermal doublet
 //! (`prodml-doublet`: the rates of the producer and the injector period by period,
 //! and the injector's rate sampled at the minute).
@@ -9,21 +9,21 @@
 //!
 //! # The law
 //!
-//! A rate `q0` at the anchor — hour 0 — and an exponential decline `D`, a
+//! A rate `q0` at the anchor - hour 0 - and an exponential decline `D`, a
 //! fraction per year: `q(t) = q0 · exp(−D · t / Y)`, `t` in hours since the
 //! anchor, `Y` the Julian year of 8 766 hours (365.25 days). `D = 0` is a
 //! constant rate. The year is a convention, and it is said: a decline *per
 //! year* read over months of 28 to 31 days is only exact against one stated
 //! length.
 //!
-//! The unit of the rate is the caller's — `m3/h` for the doublet — and a
+//! The unit of the rate is the caller's - `m3/h` for the doublet - and a
 //! volume is in the matching volume unit: a rate times hours.
 //!
 //! # A period's volume is the rate integrated over it
 //!
 //! `V = ∫ q dt` from `a` to `b`, in closed form: `q0 · (b − a)` for a constant
-//! rate, `q0 / k · e^(−k·a) · (1 − e^(−k·(b − a)))` with `k = D / Y` otherwise
-//! — written with `exp_m1`, so that a small decline does not lose its digits
+//! rate, `q0 / k · e^(−k·a) · (1 − e^(−k·(b − a)))` with `k = D / Y` otherwise -
+//! written with `exp_m1`, so that a small decline does not lose its digits
 //! in the difference of two exponentials close to one.
 //!
 //! The rate a period reports is its **mean**, `V / (b − a)`. That is what keeps
@@ -36,11 +36,11 @@
 //! A period runs from one instant to the next. Under `UseInterval`, do 13 dates give 12 values? The recommended answer is
 //! yes, the only arithmetic that makes sense; it is not yet confirmed. Fewer than two
 //! instants make no period and are refused rather than answered with nothing;
-//! instants that do not increase are refused by their rank — an empty or a
+//! instants that do not increase are refused by their rank - an empty or a
 //! reversed period would carry a volume of zero or less, which reads exactly
 //! like a well that stopped.
 
-/// Hours in the Julian year, 365.25 days — the year a decline is counted per.
+/// Hours in the Julian year, 365.25 days - the year a decline is counted per.
 pub const HOURS_PER_YEAR: f64 = 8_766.0;
 
 /// What a law or a list of instants cannot be, by name. Ranks count from 1.
@@ -48,7 +48,7 @@ pub const HOURS_PER_YEAR: f64 = 8_766.0;
 pub enum LawError {
     #[error("a rate is a finite number > 0, not {given}")]
     BadRate { given: f64 },
-    #[error("a decline is a finite fraction per year ≥ 0, not {given} — a rate that grows is no decline")]
+    #[error("a decline is a finite fraction per year ≥ 0, not {given} - a rate that grows is no decline")]
     BadDecline { given: f64 },
     #[error("{given} instant(s): a period runs from one instant to the next, so two are needed at least")]
     TooFewInstants { given: usize },
@@ -63,9 +63,9 @@ pub enum LawError {
 /// A rate at the anchor, and its exponential decline.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Law {
-    /// The rate at hour 0, in the caller's unit — `m3/h`.
+    /// The rate at hour 0, in the caller's unit - `m3/h`.
     pub rate: f64,
-    /// The decline, a fraction per year of [`HOURS_PER_YEAR`] hours — 0 for a
+    /// The decline, a fraction per year of [`HOURS_PER_YEAR`] hours - 0 for a
     /// constant rate.
     pub decline: f64,
 }
@@ -82,7 +82,7 @@ impl Law {
         Ok(Law { rate, decline })
     }
 
-    /// The same law times `share` — what an injector returns of what a
+    /// The same law times `share` - what an injector returns of what a
     /// producer pumps. The decline is the producer's: the loop carries the
     /// same water.
     pub fn scaled(&self, share: f64) -> Law {
@@ -102,7 +102,7 @@ impl Law {
         self.rate * (-self.per_hour() * hours).exp()
     }
 
-    /// What the law delivers from `from` to `to`, hours since the anchor —
+    /// What the law delivers from `from` to `to`, hours since the anchor -
     /// the rate integrated, in closed form.
     pub fn volume(&self, from: f64, to: f64) -> f64 {
         let k = self.per_hour();
@@ -124,9 +124,9 @@ pub struct Period {
     pub from: f64,
     /// Its end, hours since the anchor.
     pub to: f64,
-    /// What the law delivers over it — the rate integrated.
+    /// What the law delivers over it - the rate integrated.
     pub volume: f64,
-    /// Its mean rate, `volume / (to − from)` — what a report states for it.
+    /// Its mean rate, `volume / (to − from)` - what a report states for it.
     pub mean_rate: f64,
 }
 
@@ -137,7 +137,7 @@ impl Period {
     }
 }
 
-/// The periods between consecutive instants — hours since the anchor, in
+/// The periods between consecutive instants - hours since the anchor, in
 /// increasing order: `n` instants make `n − 1` periods.
 pub fn periods(law: &Law, instants: &[f64]) -> Result<Vec<Period>, LawError> {
     if instants.len() < 2 {
@@ -172,13 +172,13 @@ pub fn periods(law: &Law, instants: &[f64]) -> Result<Vec<Period>, LawError> {
         .collect())
 }
 
-/// The least, the greatest and the mean of a series' values — what a daily
+/// The least, the greatest and the mean of a series' values - what a daily
 /// statistic states.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Summary {
     /// The values taken.
     pub count: usize,
-    /// The values set aside because they were not finite — counted, never
+    /// The values set aside because they were not finite - counted, never
     /// averaged.
     pub set_aside: usize,
     /// The least.
@@ -189,7 +189,7 @@ pub struct Summary {
     pub mean: f64,
 }
 
-/// The summary of `values` — `None` when no finite value is left: a statistic
+/// The summary of `values` - `None` when no finite value is left: a statistic
 /// of nothing is no statistic, and a mean of zero values would be a `NaN`
 /// written as a number.
 pub fn summary(values: &[f64]) -> Option<Summary> {
@@ -213,7 +213,7 @@ pub fn summary(values: &[f64]) -> Option<Summary> {
 mod tests {
     use super::*;
 
-    /// The hours of the twelve months of 2025, from the calendar — not from
+    /// The hours of the twelve months of 2025, from the calendar - not from
     /// any date parser: 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 days.
     fn months_of_2025() -> Vec<f64> {
         let days = [
@@ -227,7 +227,7 @@ mod tests {
         instants
     }
 
-    /// Composite Simpson over `n` (even) intervals — a quadrature that knows
+    /// Composite Simpson over `n` (even) intervals - a quadrature that knows
     /// nothing of the closed form it checks.
     fn simpson(f: impl Fn(f64) -> f64, a: f64, b: f64, n: usize) -> f64 {
         let h = (b - a) / n as f64;
@@ -329,7 +329,7 @@ mod tests {
             periods(&law, &[0.0, f64::NAN]),
             Err(LawError::NotFinite { rank: 2 })
         );
-        // And two instants are one period — the least a report can hold.
+        // And two instants are one period - the least a report can hold.
         assert_eq!(periods(&law, &[0.0, 24.0]).unwrap().len(), 1);
     }
 

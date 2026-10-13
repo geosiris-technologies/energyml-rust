@@ -1,9 +1,9 @@
 //! **Which steps of a step-rate injection test have settled, and the
-//! injectivity index they give** — the diagnostic of a
+//! injectivity index they give** - the diagnostic of a
 //! PRODML/WITSML business view, under the criterion its review sets first.
 //!
 //! Nothing here reads a package or knows WITSML: the inputs are three slices of
-//! one length — instants, rates, pressures — so what can be wrong in the
+//! one length - instants, rates, pressures - so what can be wrong in the
 //! arithmetic is tested without a file, and whatever reads a `ChannelSet` hands
 //! its columns over.
 //!
@@ -12,14 +12,14 @@
 //! Instants are **hours** since any origin. A rate is in the caller's unit of
 //! a volume per hour (`m3/h` for Lutetia), a pressure in the caller's unit
 //! (`bar`). The tolerance on `dp/dt` is then in pressure units per hour, and
-//! the injectivity index in rate units per pressure unit — `m3/h/bar`. This
+//! the injectivity index in rate units per pressure unit - `m3/h/bar`. This
 //! module converts nothing: the caller passes one unit per column and names it.
 //!
 //! # A step is a run of one rate
 //!
 //! Consecutive samples of **exactly** the same rate make a step; the rank of a
 //! step counts from 1. A measured rate that jitters around its set point makes
-//! one-sample steps, each refused as too short — grouping by a tolerance on the
+//! one-sample steps, each refused as too short - grouping by a tolerance on the
 //! rate is a decision nobody has taken yet, and taking it here silently would
 //! decide which samples a step owns.
 //!
@@ -32,7 +32,7 @@
 //! pressure relaxes exponentially and is built to settle, would make every real
 //! test look like it. A step that has no settled window is refused **by its
 //! rank** ([`StepRateError::NotSettled`], [`StepRateError::TooShort`],
-//! [`StepRateError::NanInWindow`]) — never read at its last sample as if it
+//! [`StepRateError::NanInWindow`]) - never read at its last sample as if it
 //! had settled.
 //!
 //! The pressure a settled step reports is its **last** sample: the window
@@ -41,11 +41,11 @@
 //! *Systematic Design and Analysis of Step-Rate Tests to Determine Formation
 //! Parting Pressure*, SPE 16798).
 //!
-//! TODO(reference): verify — cited from memory; no copy was available (title, authors, SPE number unchecked). The mean of the window would weight its earlier, less settled
+//! TODO(reference): verify - cited from memory; no copy was available (title, authors, SPE number unchecked). The mean of the window would weight its earlier, less settled
 //! samples.
 //!
 //! A pressure `NaN` outside every window is a hole in the record and changes
-//! nothing; inside a window it refuses that step — a window with a hole cannot
+//! nothing; inside a window it refuses that step - a window with a hole cannot
 //! be called settled.
 //!
 //! # The index is the inverse slope of Δp against q
@@ -53,7 +53,7 @@
 //! With `Δp = p_settled − p_static`, steady radial flow makes Δp proportional to
 //! the rate: `Δp = q / II`. The index is read as `1 / slope` of the
 //! least-squares line of Δp against q over the settled steps, and the fit is
-//! returned whole — slope, intercept, residuals, R² — so the front end draws the
+//! returned whole - slope, intercept, residuals, R² - so the front end draws the
 //! line it was read from. The regression, and not `q / Δp` step by step,
 //! because an error on the static pressure shifts every Δp by the same amount:
 //! the intercept absorbs it and the slope does not see it, where each ratio
@@ -63,7 +63,7 @@
 //! the line, the well is not the linear injector the index assumes (a fracture
 //! opening, a turbulent skin).
 //!
-//! Two settled steps are the least a line needs — and two points always lie on
+//! Two settled steps are the least a line needs - and two points always lie on
 //! their line, so an R² of 1 from two steps is no evidence;
 //! [`Fit::residuals`] says how many points there are. `InjectionFlowTest` has
 //! no field for an index: the index is computed and shown, never compared
@@ -105,8 +105,8 @@ pub enum SeriesError {
 }
 
 impl<'a> Series<'a> {
-    /// The series, or why not. A `NaN` pressure is accepted here — a hole in
-    /// the record — and judged by whoever reads it.
+    /// The series, or why not. A `NaN` pressure is accepted here - a hole in
+    /// the record - and judged by whoever reads it.
     pub fn new(hours: &'a [f64], rates: &'a [f64], pressures: &'a [f64]) -> Result<Series<'a>, SeriesError> {
         if hours.len() != rates.len() || hours.len() != pressures.len() {
             return Err(SeriesError::MismatchedLengths {
@@ -158,7 +158,7 @@ impl<'a> Series<'a> {
         self.rates
     }
 
-    /// The pressures, one per instant — `NaN` where the record has a hole.
+    /// The pressures, one per instant - `NaN` where the record has a hole.
     pub fn pressures(&self) -> &'a [f64] {
         self.pressures
     }
@@ -175,10 +175,10 @@ impl<'a> Series<'a> {
 }
 
 /// When a step counts as settled: its last `window` samples move slower than
-/// `tolerance`. Both declared by the caller — there is no default.
+/// `tolerance`. Both declared by the caller - there is no default.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Settle {
-    /// `k`, how many of a step's last samples must be still — at least 2, one
+    /// `k`, how many of a step's last samples must be still - at least 2, one
     /// sample having no rate of change.
     pub window: usize,
     /// `ε`, the bound on `|dp/dt|`, in pressure units per hour.
@@ -190,7 +190,7 @@ pub struct Settle {
 pub enum StepRateError {
     #[error(transparent)]
     Series(#[from] SeriesError),
-    #[error("a settled window is at least 2 samples — one sample has no rate of change; {given} declared")]
+    #[error("a settled window is at least 2 samples - one sample has no rate of change; {given} declared")]
     BadWindow { given: usize },
     #[error("the bound on |dp/dt| is a finite number > 0, not {given}")]
     BadTolerance { given: f64 },
@@ -207,7 +207,7 @@ pub enum StepRateError {
         window: usize,
     },
     #[error(
-        "step {rank}: sample {sample} of its window has no finite pressure (NaN or infinite) — a window with a hole cannot be called settled"
+        "step {rank}: sample {sample} of its window has no finite pressure (NaN or infinite) - a window with a hole cannot be called settled"
     )]
     NanInWindow { rank: usize, sample: usize },
     #[error(
@@ -221,7 +221,7 @@ pub enum StepRateError {
     },
 
     // -- the index -----------------------------------------------------------
-    #[error("{settled} settled step(s) where a line needs 2 — steps set aside: {set_aside:?}")]
+    #[error("{settled} settled step(s) where a line needs 2 - steps set aside: {set_aside:?}")]
     TooFewSettled { settled: usize, set_aside: Vec<usize> },
     #[error("every settled step is at the rate {rate}: points at one rate have no slope")]
     OneRate { rate: f64 },
@@ -255,7 +255,7 @@ pub struct Settled {
     pub pressure: f64,
     /// The instant of that sample, hours.
     pub hours: f64,
-    /// The largest `|dp/dt|` of its window, pressure units per hour — below
+    /// The largest `|dp/dt|` of its window, pressure units per hour - below
     /// the tolerance declared.
     pub steepest: f64,
 }
@@ -334,14 +334,14 @@ pub fn steps(series: &Series<'_>, settle: &Settle) -> Result<Vec<Step>, StepRate
 /// A least-squares line `y = intercept + slope · x`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fit {
-    /// Its slope — pressure units per rate unit for Δp against q.
+    /// Its slope - pressure units per rate unit for Δp against q.
     pub slope: f64,
     /// Its value at `x = 0`.
     pub intercept: f64,
-    /// `y − (intercept + slope · x)` for each point, in their order — as many
+    /// `y − (intercept + slope · x)` for each point, in their order - as many
     /// as the points the line was fitted to.
     pub residuals: Vec<f64>,
-    /// `1 − Σ residual² / Σ (y − ȳ)²` — 1 by construction through two points.
+    /// `1 − Σ residual² / Σ (y − ȳ)²` - 1 by construction through two points.
     pub r_squared: f64,
 }
 
@@ -361,14 +361,14 @@ pub struct Point {
 pub struct Ratio {
     /// The step's rank.
     pub rank: usize,
-    /// Its rate over its pressure rise — rate units per pressure unit.
+    /// Its rate over its pressure rise - rate units per pressure unit.
     pub index: f64,
 }
 
 /// The injectivity index of a test, and what it was read from.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Injectivity {
-    /// `1 / slope` of Δp against q — rate units per pressure unit (`m3/h/bar`).
+    /// `1 / slope` of Δp against q - rate units per pressure unit (`m3/h/bar`).
     pub index: f64,
     /// The line of Δp against q.
     pub fit: Fit,
@@ -377,7 +377,7 @@ pub struct Injectivity {
     /// The steps that did not settle, each refused by its rank.
     pub set_aside: Vec<StepRateError>,
     /// `q / Δp` of each settled step, or why it has none (a rate of zero, no
-    /// pressure rise) — to compare with the index, never used for it.
+    /// pressure rise) - to compare with the index, never used for it.
     pub ratios: Vec<Result<Ratio, StepRateError>>,
 }
 
@@ -459,7 +459,7 @@ fn rank_of(why: &StepRateError) -> Option<usize> {
 }
 
 /// The least-squares line through `(x, y)`, or `None` when every `x` is the
-/// same — a vertical cloud has no slope. At least two points, finite.
+/// same - a vertical cloud has no slope. At least two points, finite.
 pub(crate) fn least_squares(x: &[f64], y: &[f64]) -> Option<Fit> {
     let n = x.len() as f64;
     let (mean_x, mean_y) = (x.iter().sum::<f64>() / n, y.iter().sum::<f64>() / n);
@@ -478,7 +478,7 @@ pub(crate) fn least_squares(x: &[f64], y: &[f64]) -> Option<Fit> {
     let ss_res: f64 = residuals.iter().map(|one| one * one).sum();
     let ss_tot: f64 = y.iter().map(|one| (one - mean_y).powi(2)).sum();
     // Every y equal: a flat line fits exactly; its slope is 0 and the caller
-    // refuses it — R² is then 1 by the same convention as two points.
+    // refuses it - R² is then 1 by the same convention as two points.
     let r_squared = if ss_tot == 0.0 { 1.0 } else { 1.0 - ss_res / ss_tot };
     Some(Fit {
         slope,

@@ -1,6 +1,6 @@
 //! The registry this tool uses: every schema version the workspace generates.
 //!
-//! One line, because the list itself lives in `energyml-schemas` — see that
+//! One line, because the list itself lives in `energyml-schemas` - see that
 //! crate for what a new Energistics release actually costs and for the test
 //! that fails when the list goes stale.
 //!

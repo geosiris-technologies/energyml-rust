@@ -57,7 +57,7 @@ Issues = "https://github.com/geosiris-technologies/energyml-rust/issues"
 # And there is **no** `python/energyml/__init__.py`, on purpose: without it the
 # folder is a namespace package (PEP 420) when this bridge is alone, and an
 # ordinary subfolder when another `energyml.*` distribution has placed its own.
-# Both work, and nothing overwrites anything — whereas the existing
+# Both work, and nothing overwrites anything - whereas the existing
 # distributions already overwrite that file between themselves.
 python-source = "python"
 module-name = "energyml.rust._core"
@@ -66,5 +66,5 @@ module-name = "energyml.rust._core"
 # release has to build.
 # `python` turns on the binding **and** the HDF5 backend; off by default, they
 # cost the rest of the workspace nothing (see the crate's `Cargo.toml`). Without
-# this line, maturin would build an empty module — and not say so.
+# this line, maturin would build an empty module - and not say so.
 features = ["python", "pyo3/extension-module"]

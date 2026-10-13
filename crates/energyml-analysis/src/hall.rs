@@ -1,27 +1,27 @@
-//! **The Hall plot of an injection** — the cumulative pressure rise over time
+//! **The Hall plot of an injection** - the cumulative pressure rise over time
 //! against the cumulative volume injected, whose slope changing says the well
 //! is plugging (steeper) or fracturing (flatter)
 //! (a PRODML/WITSML business view).
 //!
-//! # Source — a textbook method, not an Energistics one
+//! # Source - a textbook method, not an Energistics one
 //!
 //! Hall, H.N. (1963), *How to Analyze Waterflood Injection Well Performance*,
 //! World Oil. No page is given.
 //!
-//! TODO(reference): verify — cited from memory; no copy was available (publication details and page unchecked). The PRODML Technical Usage Guide v2.3 does not name the
+//! TODO(reference): verify - cited from memory; no copy was available (publication details and page unchecked). The PRODML Technical Usage Guide v2.3 does not name the
 //! method (a full-text search finds no occurrence), and nothing in an `InjectionFlowTest` declares a Hall slope to
 //! compare with.
 //!
 //! The argument, in the form this module relies on: under steady radial flow
 //! the pressure rise is proportional to the rate, `Δp = q / II`, so
-//! `∫ Δp dt = (1 / II) · ∫ q dt` — plotted one against the other, a line whose
+//! `∫ Δp dt = (1 / II) · ∫ q dt` - plotted one against the other, a line whose
 //! slope is the inverse of the injectivity index. The same `1 / II` that
 //! [`crate::step_rate::injectivity`] reads from the settled steps, which is
 //! what a test can confront the two with.
 //!
 //! # What is integrated, and how
 //!
-//! `Δp = p − p_static` at each sample, `p_static` declared by the caller —
+//! `Δp = p − p_static` at each sample, `p_static` declared by the caller -
 //! Hall's reservoir pressure. Both integrals are cumulated from the first
 //! sample by the **trapezoid rule**: between samples `i − 1` and `i`,
 //! `(f(i − 1) + f(i)) / 2 · (t(i) − t(i − 1))`. For a rate held in steps and
@@ -33,14 +33,14 @@
 //! # Units
 //!
 //! Instants in **hours**, as in [`crate::step_rate`]. The volume is in the
-//! rate's unit times hours — `m3` for a rate in `m3/h` — and the pressure-time
-//! in the pressure's unit times hours — `bar·h`. Hall's own axes were in field
+//! rate's unit times hours - `m3` for a rate in `m3/h` - and the pressure-time
+//! in the pressure's unit times hours - `bar·h`. Hall's own axes were in field
 //! units and days; the unit changes the scale of the line, never its shape.
 //!
 //! # Refusals
 //!
-//! Every sample enters an integral, so a `NaN` pressure is refused by its rank
-//! — integrating across a hole would draw a line the record does not hold.
+//! Every sample enters an integral, so a `NaN` pressure is refused by its rank -
+//! integrating across a hole would draw a line the record does not hold.
 //! Fewer than two samples make no interval.
 
 use crate::step_rate::{Series, SeriesError};
@@ -62,9 +62,9 @@ pub enum HallError {
 /// the first.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Hall {
-    /// `∫ q dt` — the x axis, rate units × hours (`m3`).
+    /// `∫ q dt` - the x axis, rate units × hours (`m3`).
     pub volume: Vec<f64>,
-    /// `∫ (p − p_static) dt` — the y axis, pressure units × hours (`bar·h`).
+    /// `∫ (p − p_static) dt` - the y axis, pressure units × hours (`bar·h`).
     pub pressure_time: Vec<f64>,
 }
 

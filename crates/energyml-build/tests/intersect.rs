@@ -1,4 +1,4 @@
-//! `intersect` — the trace of a fault surface on each horizon.
+//! `intersect` - the trace of a fault surface on each horizon.
 //!
 //! # What would have to break to make it turn red
 //!
@@ -84,7 +84,7 @@ fn the_two_roles_are_read_by_name_and_their_gaps_are_named() {
     }
     // The fault is **the** fault, not one more horizon: a bag where the wall
     // is filed under `surfaces` and a plate under `fault` cuts the plate by
-    // the wall — and therefore returns something other than the reverse.
+    // the wall - and therefore returns something other than the reverse.
     let ok = Pieces::empty().with("fault", wall()).with("surfaces", plate(3.0));
     assert_eq!(op.fitness(&ok), Fitness::Fit);
     let takes = op.takes();
@@ -130,7 +130,7 @@ fn three_horizons_make_three_patches_and_three_children() {
         1
     );
 
-    // **And one `LinePatch` per horizon in that object** — the assertion that
+    // **And one `LinePatch` per horizon in that object** - the assertion that
     // was missing. Without it, this test passed while `polylines` flattened
     // the five traces into a single patch, and the plan, the tree and the doc
     // said *one patch per horizon*.
@@ -151,7 +151,7 @@ fn three_horizons_make_three_patches_and_three_children() {
             panic!("floats")
         };
         assert!(
-            values.chunks_exact(3).all(|p| (p[2] - z).abs() < 1e-9),
+            values.as_chunks::<3>().0.iter().all(|p| (p[2] - z).abs() < 1e-9),
             "the patch of z = {z} carries its own nodes"
         );
     }

@@ -127,7 +127,7 @@ pub fn total_length(trace: &[V]) -> f64 {
 }
 
 /// The multiples of `spacing` up to the end of a trace of length `total`, and
-/// the end — the last multiple dropped when it is within half a step of it.
+/// the end - the last multiple dropped when it is within half a step of it.
 fn every(total: f64, spacing: f64) -> Result<Vec<f64>, InputsError> {
     let n = (total / spacing).ceil();
     if n > MAX_CROSSES as f64 {
@@ -160,7 +160,7 @@ fn spread(total: f64, count: u32) -> Vec<f64> {
 }
 
 /// The point at abscissa `s`, and the unit direction there: the segment's, or
-/// at a vertex the **bisector** — the normalised sum of the two segments'
+/// at a vertex the **bisector** - the normalised sum of the two segments'
 /// directions (the incoming one when the trace turns back on itself and the
 /// sum is nothing).
 pub fn locate(trace: &[V], s: f64) -> (V, V) {

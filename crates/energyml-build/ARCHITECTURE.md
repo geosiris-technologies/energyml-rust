@@ -1,4 +1,4 @@
-# energyml-build — architecture
+# energyml-build - architecture
 
 Related decisions: [ADR 0017](../../docs/adr/0017-operation-is-a-pure-function.md) (an operation is a pure function; only `apply` writes), [ADR 0018](../../docs/adr/0018-synthetic-reference-model.md) (the synthetic reference model, played by a recipe), [ADR 0003](../../docs/adr/0003-identity-full-uri-one-door.md), [ADR 0005](../../docs/adr/0005-refuse-rather-than-draw.md), [ADR 0006](../../docs/adr/0006-registries-rather-than-match.md), [ADR 0011](../../docs/adr/0011-tests-follow-the-specification.md), [ADR 0012](../../docs/adr/0012-no-face-carries-logic.md), [ADR 0014](../../docs/adr/0014-horizons-units-attachments-constraints.md), [ADR 0016](../../docs/adr/0016-one-crate-one-test-binary.md).
 

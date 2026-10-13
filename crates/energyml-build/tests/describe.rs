@@ -1,9 +1,9 @@
 //! What an operation declares, as the one JSON document the front end, the command
 //! line and a workflow server read (`energyml_build::describe`, 07/10/2026).
 //!
-//! The values asserted below are the ones the **declaration code** states — the
+//! The values asserted below are the ones the **declaration code** states - the
 //! `#[param(default = …)]` lines of `ops/wells_and_properties.rs` and the
-//! `Output` lists of the six chain operations — not what a run printed.
+//! `Output` lists of the six chain operations - not what a run printed.
 
 use energyml_build::describe;
 use energyml_build::operation::Registry;

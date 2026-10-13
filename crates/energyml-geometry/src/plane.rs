@@ -1,4 +1,4 @@
-//! `PlaneSetRepresentation` — a set of planes, and the one that has no extent.
+//! `PlaneSetRepresentation` - a set of planes, and the one that has no extent.
 //!
 //! # What the file states, and what it does not
 //!
@@ -7,13 +7,13 @@
 //! and the difference is the whole of this module:
 //!
 //! - **`TiltedPlaneGeometry`** carries `Plane`, one or more `ThreePoint3d`, and
-//!   a `ThreePoint3d` is three `Point3d` — nine numbers that are *locations in
+//!   a `ThreePoint3d` is three `Point3d` - nine numbers that are *locations in
 //!   the file*. The triangle through them is not an interpretation of the
 //!   plane, it is three points the file states and the face they span. Nothing
 //!   is invented, so it is drawn;
 //! - **`HorizontalPlaneGeometry`** carries `Coordinate`: one number, a depth.
 //!   A plane at that depth is infinite, and the file says nothing about how far
-//!   it goes. That is [`Error::Unbounded`], not a gap in this build — no
+//!   it goes. That is [`Error::Unbounded`], not a gap in this build - no
 //!   release will add an extent, because the extent is not a fact about the
 //!   model. It is a decision about the picture, and it belongs to whoever
 //!   draws. A viewer has the honest answer already: its own plane artefact,
@@ -23,7 +23,7 @@
 //!
 //! The schema allows `Plane` to repeat (`min = 1`, unbounded) while the
 //! documentation says *"the geometry of a tilted (or potentially not tilted)
-//! plane from three points"* — singular. So a file with two triples under one
+//! plane from three points"* - singular. So a file with two triples under one
 //! geometry can be read two ways: two planes, or one plane stated twice.
 //!
 //! **The ambiguity does not have to be resolved to draw honestly**, which is
@@ -31,7 +31,7 @@
 //! points the file states: if they are two planes, both are shown; if they are
 //! one plane over-determined, both samples of it are shown. No vertex is
 //! invented in either case. What would need the ambiguity settled is anything
-//! that *computes* on the plane — an intersection, a normal for the set — and
+//! that *computes* on the plane - an intersection, a normal for the set - and
 //! nothing here does.
 //!
 //! # No CRS conversion here
@@ -150,7 +150,7 @@ fn coordinate(point: &dyn Reflect, field: &str, at: &str, index: usize) -> Resul
     scalar_f64(point, field).ok_or_else(|| Error::malformed(at, format!("point {index} states no `{field}`")))
 }
 
-/// The first of these fields that holds anything — the respelling rule.
+/// The first of these fields that holds anything - the respelling rule.
 fn first_list<'a>(object: &'a dyn Reflect, fields: &[&str]) -> Vec<&'a dyn Reflect> {
     for field in fields {
         let found = crate::geometry::field_list(object, field);

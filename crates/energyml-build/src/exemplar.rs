@@ -1,8 +1,8 @@
-//! *Like that one* — fill a form from an object already written.
+//! *Like that one* - fill a form from an object already written.
 //!
 //! The need: there is sometimes a lot of information to fill in. Could we offer
 //! to copy some information from an object similar to those about to be
-//! produced? For example "extract the information from another well" — and the
+//! produced? For example "extract the information from another well" - and the
 //! interface would show, under the imported values, "copied from \[TITLE]", with
 //! the uuid in a tooltip.
 //!
@@ -12,13 +12,13 @@
 //! lives on an object of the same kind** ([`Slot::reads`], reflective field
 //! paths tried in order); this module reads them and returns what it
 //! found. An operation therefore gains *copy from a similar object* by
-//! naming paths, never by writing code — and a slot that declares
+//! naming paths, never by writing code - and a slot that declares
 //! none is not copyable, which the form says by not offering it.
 //!
 //! # It takes JSON, so it stays pure
 //!
 //! The caller owns the storage and fetches the object; this module sees
-//! only a value. This is the crate's rule — `plan()` reads nothing — applied one
+//! only a value. This is the crate's rule - `plan()` reads nothing - applied one
 //! step earlier, and it is what makes the whole testable without a package.
 //!
 //! # What it does not copy
@@ -27,7 +27,7 @@
 //! *its trajectory*: a path that designated an external array would return a
 //! file description, which the form would put in a number field.
 //! A value read is retained only if it has the **shape** the slot expects
-//! ([`Need::accepts`]) — the same check as `settle`, done here so that nothing
+//! ([`Need::accepts`]) - the same check as `settle`, done here so that nothing
 //! unreadable reaches the form.
 
 use serde_json::Value;
@@ -49,7 +49,7 @@ pub struct Copied {
 /// Walk down a path `A/B/0/C` in a value.
 ///
 /// A wholly numeric segment indexes an array; everything else is an object
-/// key. `None` as soon as a link is missing — an object that does not carry the
+/// key. `None` as soon as a link is missing - an object that does not carry the
 /// field is not an error, it is an object with nothing to lend.
 fn at<'a>(value: &'a Value, path: &str) -> Option<&'a Value> {
     let mut here = value;
@@ -104,9 +104,9 @@ pub fn prefill(slots: &[Slot], object: &Value) -> Vec<Copied> {
 
 /// The value read, brought to the slot's shape when the conversion loses nothing.
 ///
-/// Two cases and only two: a number asked for, read as text — eml measures
+/// Two cases and only two: a number asked for, read as text - eml measures
 /// carry their number in `#text` or as a string depending on the
-/// encoder — and a **measure** (`{ value, uom }`), of which a number slot
+/// encoder - and a **measure** (`{ value, uom }`), of which a number slot
 /// wants the value and a text slot the unit. Everything else passes as it is:
 /// guessing more would be guessing.
 fn coerce(need: &Need, found: &Value) -> Value {
@@ -130,8 +130,8 @@ fn coerce(need: &Need, found: &Value) -> Value {
             other => other.clone(),
         },
         // **An integer read back from a measure comes back as a float.** eml 2.3 has no
-        // integer parameter for an EPSG code — `parameter_kind` says
-        // `double` — so an activity writes `2154.0`, and `Need::Epsg::accepts`
+        // integer parameter for an EPSG code - `parameter_kind` says
+        // `double` - so an activity writes `2154.0`, and `Need::Epsg::accepts`
         // asks for an `as_i64()`, which returns `None` on a float. Refusing it
         // would lose a value the file states exactly; rounding it would
         // lose one the file does not state. Hence: a **whole** float
@@ -163,11 +163,11 @@ fn coerce(need: &Need, found: &Value) -> Value {
 ///
 /// An object lends what it *is*; an activity lends what it was **told**.
 /// The simplification tolerance that was chosen is nowhere in the
-/// polyline it produced — only the run knows. It is also the provenance loop
+/// polyline it produced - only the run knows. It is also the provenance loop
 /// closed: the package explains how it was made, and that
 /// explanation can be replayed.
 ///
-/// The parameter titles **are** the slot names — `Registry::plan`
+/// The parameter titles **are** the slot names - `Registry::plan`
 /// writes each settled choice under its own, and the template declares them all. What
 /// matches no slot of *this* operation is silently ignored:
 /// replaying the activity of another recipe is a legitimate gesture of which only
@@ -210,7 +210,7 @@ pub fn from_activity(slots: &[Slot], activity: &Value) -> Vec<Copied> {
 }
 
 /// The values taken, as a form reads them: the slot, the value, the
-/// path, and **from where** — the model object, for the line *"copied from X"* and
+/// path, and **from where** - the model object, for the line *"copied from X"* and
 /// its uuid in a tooltip.
 pub fn json(copied: &[Copied], from: &Ref) -> Value {
     serde_json::json!({
@@ -264,7 +264,7 @@ mod tests {
         let names: Vec<&str> = copied.iter().map(|one| one.slot.as_str()).collect();
         // `mdUom` by its first path, `datum` by the reference, `shape` by
         // the closed choice. `ground` is not there: the datum is a reference,
-        // not the object, so its elevation is not in this file — it is *not
+        // not the object, so its elevation is not in this file - it is *not
         // found*, and not zero.
         assert_eq!(names, vec!["mdUom", "datum", "shape"]);
         assert_eq!(copied[0].value, serde_json::json!("ft"));
@@ -288,7 +288,7 @@ mod tests {
     #[test]
     fn a_value_of_the_wrong_shape_does_not_pass() {
         // `shape` is a closed choice: a value outside the list does not fill
-        // the field — the same check as `settle`, done earlier.
+        // the field - the same check as `settle`, done earlier.
         let mut object = a_wellbore();
         object["Shape"] = serde_json::json!("hyperbolic");
         let copied = prefill(&slots(), &object);
@@ -369,7 +369,7 @@ mod tests {
         let copied = from_activity(&slots, &an_activity());
         assert!(copied.iter().all(|one| one.slot != "output"));
         // `unknown` **is** taken: it matches a slot. What is ignored
-        // is what no slot names — the check is here, the other way round.
+        // is what no slot names - the check is here, the other way round.
         assert!(copied.iter().any(|one| one.slot == "unknown"));
     }
 
@@ -397,7 +397,7 @@ mod tests {
     #[test]
     fn an_object_that_carries_nothing_lends_nothing() {
         // And that is the ordinary case: an object of another kind is pointed at. An
-        // empty result, never an error — nothing failed.
+        // empty result, never an error - nothing failed.
         assert!(prefill(&slots(), &serde_json::json!({ "Citation": { "Title": "x" } })).is_empty());
     }
 }

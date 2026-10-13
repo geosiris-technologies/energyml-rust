@@ -1,9 +1,9 @@
-//! **The heights of a surface under a plan position** — a vertical line
+//! **The heights of a surface under a plan position** - a vertical line
 //! dropped on it, read exactly: a triangle is linear, a quadrilateral bilinear,
 //! and nothing else is assumed.
 //!
 //! Moved out of `thickness` when `project` needed the same question
-//! answered — *what is the height of this surface under this (x, y)?* — and a
+//! answered - *what is the height of this surface under this (x, y)?* - and a
 //! second answer to it would have been a second place for the edges, the
 //! folds and the degenerate faces to be read differently.
 //!
@@ -12,17 +12,17 @@
 //! - **at** a height;
 //! - **outside**: no face lies under the position. Extrapolating past the edge
 //!   would put a height where nobody picked a surface;
-//! - **folded**: several faces lie under it and disagree — a reverse fault, an
+//! - **folded**: several faces lie under it and disagree - a reverse fault, an
 //!   overturned fold. Which one is *the* surface there is a geological
 //!   decision, not a numerical one.
 //!
-//! Faces that cannot be interpolated — a corner that is not a finite point, no
+//! Faces that cannot be interpolated - a corner that is not a finite point, no
 //! area in plan (a vertical face says nothing about *one* height), a
-//! quadrilateral that is not convex in plan — are **set aside** and counted.
+//! quadrilateral that is not convex in plan - are **set aside** and counted.
 
 use crate::Error;
 
-/// A surface as flat arrays: `[x, y, z, …]`, and its faces as node indices —
+/// A surface as flat arrays: `[x, y, z, …]`, and its faces as node indices -
 /// triangles by three, quadrilaterals by four, in ring order.
 ///
 /// Both, because a 2D grid's cells are quadrilaterals and halving them would
@@ -35,11 +35,11 @@ pub struct Surface<'a> {
     pub quads: &'a [u32],
 }
 
-/// How far outside a face, in its own coordinates, still counts as on it —
+/// How far outside a face, in its own coordinates, still counts as on it -
 /// what lets a node on an edge shared by two faces be found by either.
 const ON_EDGE: f64 = 1e-9;
 
-/// The height under a plan position — see the module documentation.
+/// The height under a plan position - see the module documentation.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Height {
     /// No face lies under it.
@@ -57,7 +57,7 @@ pub struct Heights<'a> {
 }
 
 impl<'a> Heights<'a> {
-    /// The surface indexed — refused when its arrays are malformed, or when it
+    /// The surface indexed - refused when its arrays are malformed, or when it
     /// has no face to read a height from; `which` names the surface and `how`
     /// what its heights were wanted for, in that refusal.
     pub fn of(surface: Surface<'a>, which: &'static str, how: &'static str) -> Result<Heights<'a>, Error> {
@@ -146,7 +146,7 @@ struct Index {
     min: [f64; 2],
     size: [f64; 2],
     counts: [usize; 2],
-    /// The largest span of the base on any axis, at least one — what the
+    /// The largest span of the base on any axis, at least one - what the
     /// agreement between two faces is measured against.
     scale: f64,
     set_aside: usize,
@@ -158,7 +158,7 @@ impl Index {
         let finite = |corners: &[usize]| corners.iter().all(|&i| point(i).iter().all(|c| c.is_finite()));
         let mut faces = Vec::new();
         let mut set_aside = 0usize;
-        for t in base.triangles.chunks_exact(3) {
+        for t in base.triangles.as_chunks::<3>().0.iter().map(|c| c.as_slice()) {
             let corners = [t[0] as usize, t[1] as usize, t[2] as usize];
             let [a, b, c] = corners.map(point);
             if finite(&corners) && cross(a, b, c) != 0.0 {
@@ -167,7 +167,7 @@ impl Index {
                 set_aside += 1;
             }
         }
-        for q in base.quads.chunks_exact(4) {
+        for q in base.quads.as_chunks::<4>().0.iter().map(|c| c.as_slice()) {
             let corners = [q[0] as usize, q[1] as usize, q[2] as usize, q[3] as usize];
             let [a, b, c, d] = corners.map(point);
             // Convex in plan, turning one way: the bilinear map is then one to
@@ -277,7 +277,7 @@ impl Index {
     }
 }
 
-/// The plan-view cross product of `b − a` and `c − a` — twice the signed area.
+/// The plan-view cross product of `b − a` and `c − a` - twice the signed area.
 fn cross(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> f64 {
     (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
 }
@@ -292,15 +292,15 @@ fn in_triangle([a, b, c]: [[f64; 3]; 3], x: f64, y: f64) -> Option<f64> {
     (la >= -ON_EDGE && lb >= -ON_EDGE && lc >= -ON_EDGE).then(|| la * a[2] + lb * b[2] + lc * c[2])
 }
 
-/// The height of the quadrilateral at `(x, y)` — bilinear in its own `(u, v)`
-/// — if it lies over that position.
+/// The height of the quadrilateral at `(x, y)` - bilinear in its own `(u, v)` -
+/// if it lies over that position.
 ///
 /// The inverse of the bilinear map by Newton from the cell's centre. For a
 /// convex cell the map is one to one and the iteration settles in a few
 /// steps; one that does not settle is not claimed as a hit.
 ///
-/// **Relative to the cell's first corner.** In map coordinates — a northing of
-/// 6.86e6 m — the rounding of the map alone is ~1e-9 m, a step that never
+/// **Relative to the cell's first corner.** In map coordinates - a northing of
+/// 6.86e6 m - the rounding of the map alone is ~1e-9 m, a step that never
 /// settles under 1e-13 of a cell, and every position read as outside
 /// (`a_cell_far_from_the_origin_answers_its_height`). Moved to the corner, the
 /// cell's own size is what the rounding is measured against.
@@ -346,7 +346,7 @@ mod tests {
     /// **A cell read at the coordinates a real grid has.** Every test of this
     /// module ran near the origin, where the inverse of a cell's bilinear map
     /// settles to 1e-13 of a cell. In Lambert-93 a northing is 6.86e6 m, and
-    /// the rounding of the map alone is ~1e-9 m — a step of ~1e-11 of a 25 m
+    /// the rounding of the map alone is ~1e-9 m - a step of ~1e-11 of a 25 m
     /// cell that never goes under the threshold: every position of the grid
     /// read as *outside*. Found when `well-from-plan` read the
     /// ground of Lutetia under a head squarely

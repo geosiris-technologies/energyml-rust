@@ -57,8 +57,8 @@ brings `eml20`. The `energyml` facade turns nothing on by itself;
 turns on the four versions it writes (RESQML 2.2, EML 2.3, WITSML 2.1,
 PRODML 2.3).
 
-Whatever the spelling in a document — `2.0`, `2.0.1`, `resqml20.` or
-`resqml201.` — RESQML 2.0.1 is read by the one `resqml20` feature; the trailing
+Whatever the spelling in a document - `2.0`, `2.0.1`, `resqml20.` or
+`resqml201.` - RESQML 2.0.1 is read by the one `resqml20` feature; the trailing
 `1` is not needed. A version that is not compiled is a **named refusal**, never
 a half read: `energyml::schemas::missing_feature("resqml", "2.2")` says "RESQML
 2.2 is not compiled in: enable the `resqml22` feature of energyml-schemas (or of

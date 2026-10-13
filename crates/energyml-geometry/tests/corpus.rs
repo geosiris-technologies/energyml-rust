@@ -2,7 +2,7 @@
 //!
 //! Skips when the reference packages are absent outside CI (`fixtures.rs`), like every other corpus test here. The
 //! arrays live in HDF5, so most of this needs `--features hdf5`; what does not
-//! need it is the part that matters most — a lattice carries no data, and its
+//! need it is the part that matters most - a lattice carries no data, and its
 //! points must come out of a build with no backend at all.
 
 use std::path::PathBuf;
@@ -19,7 +19,7 @@ use energyml_storage::EpcStore;
 /// Every schema version the workspace generates.
 ///
 /// One line rather than a hand-kept subset: a list written out here goes stale
-/// the day a release is added, and nothing would notice — the suite would keep
+/// the day a release is added, and nothing would notice - the suite would keep
 /// passing while quietly never covering the new version. `energyml-schemas`
 /// holds the one list, and its own test fails when it disagrees with
 /// `codegen.toml`.
@@ -30,7 +30,7 @@ use energyml_storage::EpcStore;
 /// lost are the same picture and opposite news.
 ///
 /// Read from the patches rather than through `property::element_count`, which
-/// **refuses** a computed zero on purpose (05/09) — the right answer for a
+/// **refuses** a computed zero on purpose (05/09) - the right answer for a
 /// property looking for elements to hang on, the wrong tool for asking a
 /// document what it says. Here zero is the thing being looked for.
 #[cfg(feature = "hdf5")]
@@ -57,7 +57,7 @@ fn declares_nothing(object: &dyn energyml_core::value::Reflect) -> bool {
 /// than computed.
 ///
 /// The one distinction the non-finite guard needs. Everything else in this crate
-/// evaluates — a lattice, a spline, a pillar — and an evaluation yielding nothing
+/// evaluates - a lattice, a spline, a pillar - and an evaluation yielding nothing
 /// but `NaN` is arithmetic gone wrong. A sub-representation does no arithmetic:
 /// it names indices into a support and hands back what is there, so an
 /// all-non-finite patch is the support's no-data area, carried faithfully.
@@ -98,7 +98,7 @@ fn every_supported_representation_yields_points() {
     let mut malformed = 0usize;
 
     // A package whose `.h5` companion is not in the corpus is not a failure of
-    // this crate — it is a gap in the corpus. Counted and printed, so a pass is
+    // this crate - it is a gap in the corpus. Counted and printed, so a pass is
     // never mistaken for coverage. Same rule as the storage corpus test.
     let is_absent = |e: &energyml_geometry::Error| e.is_missing_file();
 
@@ -116,9 +116,9 @@ fn every_supported_representation_yields_points() {
                     // The assertion that matters most, and the one that was
                     // missing: a *successful* evaluation yielding nothing is
                     // indistinguishable from a working reader with nothing to
-                    // draw. It hid a whole RESQML 2.2 spelling — point sets
+                    // draw. It hid a whole RESQML 2.2 spelling - point sets
                     // whose geometry hangs on `NodePatchGeometry` rather than
-                    // under a `NodePatch` — behind a passing test.
+                    // under a `NodePatch` - behind a passing test.
                     assert!(
                         !geometry.patches.is_empty(),
                         "{}: {} ({}) evaluated to no patch at all",
@@ -131,7 +131,7 @@ fn every_supported_representation_yields_points() {
                         // sub-representation declares how many elements it
                         // picks, and nothing forbids zero: `h+g_PaleoGTM` has
                         // `17a1ed5e`, titled "SnS_adjust2000_bad_points", whose
-                        // patch states `Count: 0` — an empty set of bad points,
+                        // patch states `Count: 0` - an empty set of bad points,
                         // which is a sensible thing for a producer to write and
                         // for us to carry. Demanding a point here called that a
                         // failure of ours.
@@ -162,10 +162,10 @@ fn every_supported_representation_yields_points() {
                             assert_eq!(fastest * slowest, patch.points.len());
                         }
                         // A NaN or an infinity here is either an evaluation
-                        // bug — a lattice read wrong, a division by zero — or
+                        // bug - a lattice read wrong, a division by zero - or
                         // **data**: SISMAGE and Gocad write non-finite values
                         // as "no surface here" sentinels, and `ALWYN-RESQML`
-                        // carries datasets that are 80–99 % sentinel. The two
+                        // carries datasets that are 80-99 % sentinel. The two
                         // are told apart by volume: a bug makes *everything*
                         // non-finite (a bad lattice direction poisons every
                         // point), a sentinel leaves the footprint intact. So
@@ -184,7 +184,7 @@ fn every_supported_representation_yields_points() {
                             // points; it computes none. So an all-non-finite
                             // patch there says the selection fell inside the
                             // support's no-data area, which is a fact about the
-                            // file and not arithmetic — `h+g_PaleoGTM` has one
+                            // file and not arithmetic - `h+g_PaleoGTM` has one
                             // (`08d9c2d4`, "SnS_faults_proximity", 7 481 nodes)
                             // over a `Grid2d` whose z array the file itself
                             // opens with `NaN, NaN, NaN, …` and which is 89 %
@@ -192,7 +192,7 @@ fn every_supported_representation_yields_points() {
                             // where there was a producer's choice.
                             assert!(
                                 finite > 0 || selects_rather_than_computes(&summary.qualified_type),
-                                "{}: {} — every point of the patch is non-finite, \
+                                "{}: {} - every point of the patch is non-finite, \
                                  which is an evaluation bug, not a data sentinel",
                                 path.display(),
                                 summary.uuid
@@ -223,7 +223,7 @@ fn every_supported_representation_yields_points() {
                 }
                 Err(e) if is_absent(&e) => absent += 1,
                 // A named refusal of a defective real file is the library
-                // doing its job — Volve ships an 891-byte
+                // doing its job - Volve ships an 891-byte
                 // TriangulatedSetRepresentation with no patch at all. What
                 // stays a failure is anything unnamed, and any malformed
                 // refusal from the fesapi packages, which are conformant.
@@ -233,7 +233,7 @@ fn every_supported_representation_yields_points() {
                 // It needed an arm of its own: the variant was added with the
                 // plane reader and this test panics on anything it does not
                 // name, so registering a reader that legitimately refuses part
-                // of its input turned three corpus tests red — under `hdf5`
+                // of its input turned three corpus tests red - under `hdf5`
                 // only, which is why it went unseen.
                 Err(energyml_geometry::Error::Unbounded { form, .. }) => {
                     *refused.entry(form.to_string()).or_default() += 1;
@@ -248,7 +248,7 @@ fn every_supported_representation_yields_points() {
                         path.display()
                     );
                 }
-                Err(e) => panic!("{}: {} — {e}", path.display(), summary.uuid),
+                Err(e) => panic!("{}: {} - {e}", path.display(), summary.uuid),
             }
         }
     }
@@ -258,7 +258,7 @@ fn every_supported_representation_yields_points() {
         eprintln!("{malformed} representation(s) refused as malformed, by name");
     }
     if non_finite > 0 {
-        eprintln!("{non_finite} non-finite point(s) — sentinel values carried by the source data");
+        eprintln!("{non_finite} non-finite point(s) - sentinel values carried by the source data");
     }
     if !refused.is_empty() {
         eprintln!("not evaluated yet: {refused:?}");
@@ -267,14 +267,14 @@ fn every_supported_representation_yields_points() {
         eprintln!("{absent} skipped: their package's `.h5` companion is not in testdata/");
     }
     assert!(total_points > 0, "not a single point came out of the corpus");
-    assert!(done.len() >= 3, "only {done:?} — the corpus has more than that");
+    assert!(done.len() >= 3, "only {done:?} - the corpus has more than that");
 }
 
 #[test]
 fn a_lattice_needs_no_backend_at_all() {
     // The point of the whole module: a `Point3dLatticeArray` carries an origin
     // and directions, and its points are computed. A build with no HDF5
-    // backend must still produce them — and a reader that only knew HDF5 would
+    // backend must still produce them - and a reader that only knew HDF5 would
     // return nothing here, which looks exactly like a working program.
     let files = corpus();
     if skip(&files, "a_lattice_needs_no_backend_at_all") {
@@ -340,7 +340,7 @@ fn find_lattice(object: &dyn energyml_core::value::Reflect) -> Option<&dyn energ
 #[test]
 fn a_grid_comes_out_the_way_round_it_says_it_is() {
     // A transposed lattice has exactly the right number of points, every one of
-    // them finite, and every count agreeing — and draws the surface sideways.
+    // them finite, and every count agreeing - and draws the surface sideways.
     // Nothing else in this file would notice, so this checks the one thing that
     // tells the two apart: the declared `FastestAxisCount` is how many points
     // go by before the step changes.
@@ -372,10 +372,10 @@ fn a_grid_comes_out_the_way_round_it_says_it_is() {
                     continue;
                 }
                 // The comparison runs on x and y only: real z-value grids
-                // carry NaN as a "no surface here" sentinel (79–99 % of some
+                // carry NaN as a "no surface here" sentinel (79-99 % of some
                 // ALWYN and Volve datasets), and NaN breaks any step
-                // comparison that includes it. The lattice's regularity —
-                // what a transposition would disturb — lives entirely in the
+                // comparison that includes it. The lattice's regularity -
+                // what a transposition would disturb - lives entirely in the
                 // horizontal plane.
                 let flat = |p: [f64; 3]| [p[0], p[1], 0.0];
                 let step = sub(flat(patch.points[1]), flat(patch.points[0]));
@@ -392,7 +392,7 @@ fn a_grid_comes_out_the_way_round_it_says_it_is() {
                     run,
                     fastest,
                     "{}: {} is {fastest} × {slowest} but the step changes after \
-                     {run} point(s) — the lattice came out transposed",
+                     {run} point(s) - the lattice came out transposed",
                     path.display(),
                     summary.uuid
                 );
@@ -421,15 +421,15 @@ fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
 /// about arithmetic rather than about the lattice.
 ///
 /// It came up on `h+g_PaleoGTM.epc`, whose copy of
-/// grid `8d3c3099` states an axis 19 629 173 km long — the file is broken, as an
+/// grid `8d3c3099` states an axis 19 629 173 km long - the file is broken, as an
 /// independent triangulation showed. But the fix is here and is
 /// not about that file: a test that cannot survive large coordinates is a test
 /// that will go red again on the next legitimately large model, and it would be
 /// red for a reason that has nothing to do with what it is checking.
 ///
 /// The absolute floor keeps it working around zero, where a relative tolerance
-/// means nothing. A transposition is not a rounding difference — it changes the
-/// step to another vector entirely — so nothing this exists to catch escapes.
+/// means nothing. A transposition is not a rounding difference - it changes the
+/// step to another vector entirely - so nothing this exists to catch escapes.
 fn same(a: [f64; 3], b: [f64; 3]) -> bool {
     a.iter()
         .zip(b)
@@ -458,7 +458,7 @@ fn a_representation_knows_where_it_is() {
                 continue;
             }
             let Some(crs) = crs::of(object.as_reflect(), &store)
-                .unwrap_or_else(|e| panic!("{}: {} — {e}", path.display(), summary.uuid))
+                .unwrap_or_else(|e| panic!("{}: {} - {e}", path.display(), summary.uuid))
             else {
                 continue;
             };
@@ -511,7 +511,7 @@ fn a_representation_knows_where_it_is() {
                     time_systems += 1;
                 }
                 Err(e) => panic!(
-                    "{}: {} states a unit this build cannot convert — {e}",
+                    "{}: {} states a unit this build cannot convert - {e}",
                     path.display(),
                     summary.uuid
                 ),
@@ -535,7 +535,7 @@ fn a_representation_knows_where_it_is() {
 ///
 /// The reference package holds a 2×1×1 grid with one fault: pillars 1 and 4 are
 /// split, and column 1 uses the split lines instead. The two cells are
-/// therefore **not** joined across the middle — there is a 50 m throw.
+/// therefore **not** joined across the middle - there is a 50 m throw.
 ///
 /// This is the assertion that matters, because ignoring split coordinate lines
 /// does not fail. It produces a grid that draws, with the cells on one side of
@@ -586,7 +586,7 @@ fn a_fault_keeps_the_two_cells_apart() {
                     let first = z[0];
                     assert!(
                         z.iter().all(|value| (value - first).abs() < 1e-6),
-                        "{name}: cell {index} face {face} is sheared: {z:?} — \
+                        "{name}: cell {index} face {face} is sheared: {z:?} - \
                          the split coordinate lines were not applied"
                     );
                 }
@@ -671,14 +671,14 @@ fn every_cell_is_wound_the_way_vtk_wants() {
                     //
                     // Checked as the sign of the cell's volume, which is what
                     // that rule amounts to and stays defined where the rule's
-                    // own arithmetic does not — see `ijk::oriented` for the
+                    // own arithmetic does not - see `ijk::oriented` for the
                     // corpus cell that broke the arithmetic.
                     //
                     // **What this does and does not prove.** The sum below is
                     // the same quantity the reader decides on, spelt as 24
                     // tetrahedra from the cell's centre rather than as an
                     // integral over its six faces. So it does not check the
-                    // criterion — the ground truth for that is a cube whose
+                    // criterion - the ground truth for that is a cube whose
                     // right order is known in advance, and it lives in
                     // `ijk::tests`. What it checks is that every path which
                     // builds hexahedra actually orients them, on every grid the
@@ -711,6 +711,10 @@ fn every_cell_is_wound_the_way_vtk_wants() {
                         [3, 0, 4, 7],
                     ];
                     let mut volume = 0.0;
+                    // The size of the cell, to judge the sign against: a flat (degenerate) cell has
+                    // a volume of zero up to rounding, whose sign differs from one platform to the
+                    // next (s_bend.epc: -2.7e-14 on Linux); an inside-out cell is far below it.
+                    let mut magnitude = 0.0;
                     for face in FACES {
                         let mut middle = [0.0f64; 3];
                         for corner in face {
@@ -734,11 +738,13 @@ fn every_cell_is_wound_the_way_vtk_wants() {
                                 u[2] * v[0] - u[0] * v[2],
                                 u[0] * v[1] - u[1] * v[0],
                             ];
-                            volume += (0..3).map(|i| normal[i] * w[i]).sum::<f64>() / 6.0;
+                            let tetrahedron = (0..3).map(|i| normal[i] * w[i]).sum::<f64>() / 6.0;
+                            volume += tetrahedron;
+                            magnitude += tetrahedron.abs();
                         }
                     }
                     assert!(
-                        volume >= 0.0,
+                        volume >= -1e-9 * magnitude,
                         "{}: a cell is inside out (volume = {volume})",
                         path.display()
                     );
@@ -754,22 +760,22 @@ fn every_cell_is_wound_the_way_vtk_wants() {
 
 /// An unstructured grid's faces all point out of their own cells.
 ///
-/// The corpus grid is fesapi's `9283cd33`, *"One tetrahedron + prism grid"* —
+/// The corpus grid is fesapi's `9283cd33`, *"One tetrahedron + prism grid"* -
 /// two cells of different shapes sharing a face, which is exactly the case that
 /// makes an unstructured grid unlike an IJK one.
 ///
 /// Two things are checked, and the second is the one that matters.
 ///
 /// The counts are arithmetic this test knows: 7 nodes, 8 faces, 2 cells, and
-/// **9** cell-face pairs — one more than the face count, because face 0 belongs
+/// **9** cell-face pairs - one more than the face count, because face 0 belongs
 /// to both cells. A reader that took `CellFaceIsRightHanded` as one flag per
 /// face rather than per pair would need 8 and be refused.
 ///
 /// Then every face is **measured**: its right-hand normal against the vector
 /// from the cell's centroid to the face's. Outward means a positive dot
-/// product, for all 9 pairs. That is an independent check of the whole chain —
+/// product, for all 9 pairs. That is an independent check of the whole chain -
 /// the jagged arrays, the per-pair flag, and the reversal `faces_outward`
-/// applies — because it re-derives from the coordinates what the flags claim.
+/// applies - because it re-derives from the coordinates what the flags claim.
 ///
 /// It is done in the **projected** frame, and that is not a detail. This CRS is
 /// `ZIncreasingDownward`, so the stored numbers form a left-handed frame and
@@ -812,7 +818,7 @@ fn every_unstructured_face_points_out_of_its_cell() {
         assert_eq!(
             cells.slot_count(),
             9,
-            "{}: 9 cell-face pairs for 8 faces — face 0 is shared",
+            "{}: 9 cell-face pairs for 8 faces - face 0 is shared",
             path.display()
         );
 
@@ -869,7 +875,7 @@ fn centroid(points: impl Iterator<Item = [f64; 3]>) -> [f64; 3] {
     sum.map(|total| total / count.max(1.0))
 }
 
-/// The normal of a ring of points, by Newell's method — right for a face that
+/// The normal of a ring of points, by Newell's method - right for a face that
 /// is not quite planar, which a real cell face never is.
 #[cfg(feature = "hdf5")]
 fn newell(ring: &[[f64; 3]]) -> [f64; 3] {
@@ -886,13 +892,13 @@ fn newell(ring: &[[f64; 3]]) -> [f64; 3] {
 
 /// A local grid is its parent's window, subdivided.
 ///
-/// The corpus's one local grid — fesapi's `2aec1720`, titled *LGR* — refines a
+/// The corpus's one local grid - fesapi's `2aec1720`, titled *LGR* - refines a
 /// single cell of *"two faulted sugar cubes"* into 2 × 1 × 3. Until 01/08 it
 /// was refused by name for having no `Geometry`, which was true and useless: a
 /// local grid never has one, and its points are arithmetic on the parent's.
 ///
 /// Checked against numbers this test knows without asking the library. The
-/// parent cell is the box x ∈ [0, 375], y ∈ [0, 150], z ∈ [300, 500] — pillars
+/// parent cell is the box x ∈ [0, 375], y ∈ [0, 150], z ∈ [300, 500] - pillars
 /// 0, 1, 3, 4 of the parent, none of which its two split lines touch. Cut 2 × 1
 /// × 3 with no weights, the child's nodes can only be at x ∈ {0, 187.5, 375},
 /// y ∈ {0, 150} and z ∈ {300, 366⅔, 433⅓, 500}.
@@ -946,7 +952,7 @@ fn a_local_grid_subdivides_its_parents_window() {
             }
         }
 
-        // The parent grid must be untouched by the child having been read —
+        // The parent grid must be untouched by the child having been read -
         // the window read is a slice of its array, not a mutation of it.
         let parent = store
             .resources()
@@ -985,13 +991,13 @@ fn a_local_grid_subdivides_its_parents_window() {
 /// The pairing that has to hold for a log to be readable: a
 /// `WellboreFrameRepresentation` says "at measured depth 400", and the point
 /// it comes out at has to be the point the well path passes through at 400.
-/// Until 01/08 this could not be checked at all — a frame whose trajectory
+/// Until 01/08 this could not be checked at all - a frame whose trajectory
 /// carried a `Geometry` was refused by name, so the six frames in the corpus
 /// produced nothing.
 ///
 /// Checked against arithmetic rather than against the same code path: fesapi's
 /// `acd2cdcf` is a vertical line at x = 275, y = 75 whose parameters run
-/// 0…1000, so every node of every frame on it is `(275, 75, md)` — a number
+/// 0…1000, so every node of every frame on it is `(275, 75, md)` - a number
 /// this test knows without asking the library.
 #[test]
 #[cfg(feature = "hdf5")]
@@ -1034,7 +1040,7 @@ fn a_frame_lands_on_the_line_its_trajectory_draws() {
                 );
                 assert!(
                     (0.0..=1000.0).contains(&point[2]),
-                    "{}: {} put a node at depth {} — the line runs 0 to 1000",
+                    "{}: {} put a node at depth {} - the line runs 0 to 1000",
                     path.display(),
                     summary.uuid,
                     point[2]
@@ -1052,8 +1058,8 @@ fn a_frame_lands_on_the_line_its_trajectory_draws() {
 
 /// Parametric geometry: points that live on lines.
 ///
-/// Two families depended on this one form — the IJK grids whose pillars are
-/// parametric, and every wellbore trajectory — so the test checks both come
+/// Two families depended on this one form - the IJK grids whose pillars are
+/// parametric, and every wellbore trajectory - so the test checks both come
 /// out, and that what is refused is refused *by name* rather than by silence.
 #[test]
 #[cfg(feature = "hdf5")]
@@ -1068,7 +1074,7 @@ fn parametric_geometry_yields_points_on_its_lines() {
     let mut refused: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
 
     // The grid that made the kind table worth getting right: six pillars
-    // declared 1, 4, 0, 0, 0, 0 — a linear spline, a Z linear cubic and four
+    // declared 1, 4, 0, 0, 0, 0 - a linear spline, a Z linear cubic and four
     // vertical lines. It shipped in three of the corpus's packages and was
     // refused by all of them until the splines were evaluated.
     const CURVED: &str = "3ce91933-4f6f-4f35-b0ac-4ba4672f0a87";
@@ -1114,7 +1120,7 @@ fn parametric_geometry_yields_points_on_its_lines() {
                         // non-finite values occur in real files as "absent"
                         // sentinels (2 of 510 points in ALWYN 9bca359d), so the
                         // guard is against a patch that is *entirely*
-                        // non-finite — the shape of an evaluation bug.
+                        // non-finite - the shape of an evaluation bug.
                         let finite = patch
                             .points
                             .iter()
@@ -1142,7 +1148,7 @@ fn parametric_geometry_yields_points_on_its_lines() {
                     }
                     if summary.qualified_type.contains("WellboreFrame") {
                         // A frame is where the logs hang. Its nodes are its
-                        // measured depths placed on the trajectory — which,
+                        // measured depths placed on the trajectory - which,
                         // when the trajectory has a parametric line of its
                         // own, needs that line evaluated.
                         assert!(
@@ -1170,7 +1176,7 @@ fn parametric_geometry_yields_points_on_its_lines() {
                     // are conformant, so a malformed refusal there stays fatal.
                     eprintln!("  malformed, refused by name: {}", summary.uuid);
                 }
-                Err(e) => panic!("{}: {} — {e}", path.display(), summary.uuid),
+                Err(e) => panic!("{}: {} - {e}", path.display(), summary.uuid),
             }
         }
     }
@@ -1190,7 +1196,7 @@ fn parametric_geometry_yields_points_on_its_lines() {
         frames > 0,
         "the corpus has frames on a trajectory that carries a parametric line; none came out"
     );
-    // Until 01/08 this asserted the opposite — that a spline was *refused* by
+    // Until 01/08 this asserted the opposite - that a spline was *refused* by
     // name. Now that the four kinds are evaluated, the thing worth pinning is
     // that no line kind is left behind, and that the grid which actually uses
     // a curved one comes out rather than merely not being mentioned.
@@ -1208,7 +1214,7 @@ fn parametric_geometry_yields_points_on_its_lines() {
 #[test]
 fn a_property_is_attached_only_where_it_lines_up() {
     // The rule the whole attribute path exists for: values go on the elements
-    // they belong to, or they do not go at all. The corpus is the test — it
+    // they belong to, or they do not go at all. The corpus is the test - it
     // contains a per-cell property that fits (`cellIndex` on a 2-cell grid),
     // one that does not (a time series storing every step in one dataset), and
     // one that hangs on the representation as a whole.
@@ -1276,7 +1282,7 @@ fn the_node_count_of_an_ijk_grid_agrees_with_the_points_it_actually_has() {
     // either: `energyml_domain::property::element_count` derives it from
     // `Ni × Nj × Nk` plus the declared split coordinate lines, while the
     // geometry reader gets it by reading the points. A grid with a fault has
-    // **more** nodes than `(ni+1)(nj+1)(nk+1)` — one extra line per split —
+    // **more** nodes than `(ni+1)(nj+1)(nk+1)` - one extra line per split -
     // and this is where a formula that ignores splits shows up.
     use energyml_domain::property::{IndexableElement, element_count};
 
@@ -1337,14 +1343,14 @@ fn the_node_count_of_an_ijk_grid_agrees_with_the_points_it_actually_has() {
     }
     if checked == 0 {
         eprintln!(
-            "skipped: {found} IJK grid(s) found and none evaluated — this build has no array \
+            "skipped: {found} IJK grid(s) found and none evaluated - this build has no array \
              backend (`--features hdf5`), so there are no points to compare the count with"
         );
         return;
     }
     assert!(
         with_faults > 0,
-        "no grid in the corpus has a split coordinate line — the formula that ignores them would \
+        "no grid in the corpus has a split coordinate line - the formula that ignores them would \
          pass this test unchanged"
     );
     eprintln!("{checked} IJK grid(s) cross-checked, {with_faults} of them with split coordinate lines");
@@ -1355,13 +1361,13 @@ fn the_node_count_of_an_ijk_grid_agrees_with_the_points_it_actually_has() {
 /// The invariant a faulted **parametric** grid broke, and the one that says
 /// whether the two halves of the geometry agree. `PillarShape = vertical` means
 /// every coordinate line is a straight vertical line, so the two ends of a
-/// cell's vertical edge — corner `c` and corner `c + 4` — are the *same
+/// cell's vertical edge - corner `c` and corner `c + 4` - are the *same
 /// coordinate line at two levels* and must share x and y exactly.
 ///
 /// Both halves of this were tested already, and separately: a fault test on the
 /// grid with explicit points, a parametric test on grids with no faults. The
-/// combination — a fault *and* parametric points, which is `37c45c00`, four
-/// faulted sugar cubes — was covered by neither, and it was the one that was
+/// combination - a fault *and* parametric points, which is `37c45c00`, four
+/// faulted sugar cubes - was covered by neither, and it was the one that was
 /// wrong. A grid with 6 pillars and 2 split lines has 8 coordinate lines and 6
 /// parametric lines; the evaluation used 6 for both, so every level after the
 /// first took its x and y from the wrong pillar. The point count was right, the
@@ -1429,7 +1435,7 @@ fn a_vertical_pillar_stays_over_itself() {
                         assert!(
                             (top[0] - bottom[0]).abs() < 1e-6 && (top[1] - bottom[1]).abs() < 1e-6,
                             "{}: {} cell {index} edge {corner} runs from ({}, {}) to ({}, {}) \
-                             on a grid whose pillars are declared vertical — the two ends are on \
+                             on a grid whose pillars are declared vertical - the two ends are on \
                              different coordinate lines",
                             path.display(),
                             summary.uuid,
@@ -1447,7 +1453,7 @@ fn a_vertical_pillar_stays_over_itself() {
     assert!(grids > 0, "no grid in the corpus declares vertical pillars");
     assert!(
         faulted > 0,
-        "no faulted grid among them — the reading that ignores split coordinate lines would \
+        "no faulted grid among them - the reading that ignores split coordinate lines would \
          pass this test unchanged"
     );
     eprintln!("{grids} vertical-pillar grid patch(es) checked, {faulted} of them faulted");
@@ -1492,7 +1498,7 @@ fn a_two_dimensional_point_array_is_read_two_at_a_time() {
                 points,
                 declared / 2,
                 "{}: {} declares {declared} coordinate(s) in a 2D array and yielded {points} \
-                 point(s) — a 2D array read three at a time loses a third of them and moves \
+                 point(s) - a 2D array read three at a time loses a third of them and moves \
                  the rest",
                 path.display(),
                 summary.uuid
@@ -1514,7 +1520,7 @@ fn a_two_dimensional_point_array_is_read_two_at_a_time() {
 
     assert!(
         checked > 0,
-        "no 2D point array in the corpus — this test proves nothing"
+        "no 2D point array in the corpus - this test proves nothing"
     );
     eprintln!("{checked} representation(s) with a 2D point array");
 }
@@ -1550,7 +1556,7 @@ fn find_2d(object: &dyn energyml_core::value::Reflect) -> Option<&dyn energyml_c
 /// A borrowed lattice lands on its support's own nodes.
 ///
 /// `Point3dFromRepresentationLatticeArray` names a regular selection of another
-/// representation's nodes, and the selection reads two ways — a step along an
+/// representation's nodes, and the selection reads two ways - a step along an
 /// axis of the support, or a step in the support's flat node order. Both are in
 /// range on every file in the corpus and both produce the declared number of
 /// points, so nothing about the *count* separates them. Only the positions do.
@@ -1558,11 +1564,11 @@ fn find_2d(object: &dyn energyml_core::value::Reflect) -> Option<&dyn energyml_c
 /// The corpus's two producers both encode the simplest possible selection:
 /// start at 0, step 1 along every axis, over a support of exactly the derived
 /// representation's shape. That selection can only mean **every node of the
-/// support, once** — so the check is independent of how this crate indexes: the
+/// support, once** - so the check is independent of how this crate indexes: the
 /// derived points must be the support's points, as a set, with nothing repeated
 /// and nothing left out.
 ///
-/// Read the other way, ALWYN's 987 387 slots land on 2 011 distinct positions —
+/// Read the other way, ALWYN's 987 387 slots land on 2 011 distinct positions -
 /// a thin diagonal band with the horizon's depths stacked on it. That fails
 /// here at the first assertion, which is the point.
 #[test]
@@ -1596,7 +1602,7 @@ fn a_borrowed_lattice_lands_on_its_supports_nodes() {
             let identity = start == 0 && !offsets.is_empty() && offsets.iter().all(|(value, _)| *value == 1);
             if !identity {
                 eprintln!(
-                    "{}: {} selects with start {start} and steps {:?} — not the identity case \
+                    "{}: {} selects with start {start} and steps {:?} - not the identity case \
                      this test can judge without re-deriving the indices",
                     path.display(),
                     summary.uuid,
@@ -1621,7 +1627,7 @@ fn a_borrowed_lattice_lands_on_its_supports_nodes() {
             let selected: usize = offsets.iter().map(|(_, count)| *count as usize + 1).product();
             if selected != support_points.len() {
                 eprintln!(
-                    "{}: {} selects {selected} of the support's {} node(s) — a real subset, \
+                    "{}: {} selects {selected} of the support's {} node(s) - a real subset, \
                      which this test does not judge",
                     path.display(),
                     summary.uuid,
@@ -1661,7 +1667,7 @@ fn a_borrowed_lattice_lands_on_its_supports_nodes() {
             assert_eq!(
                 taken.len(),
                 derived.len(),
-                "{}: {} borrowed {} point(s) that land on only {} distinct position(s) — \
+                "{}: {} borrowed {} point(s) that land on only {} distinct position(s) - \
                  the selection is being read as a step in the flat node order, and the \
                  representation is a band rather than a map",
                 path.display(),
@@ -1778,13 +1784,13 @@ fn reference_uuid(object: &dyn energyml_core::value::Reflect, field: &str) -> Op
 /// A borrowed line lattice is the support's own lines.
 ///
 /// No file in the corpus carries a `ParametricLineFromRepresentationLatticeArray`,
-/// so the subject is built here — but the **expectation is not**. It comes from
+/// so the subject is built here - but the **expectation is not**. It comes from
 /// the IJK grid `37c45c00`, whose parametric geometry the corpus validates every
 /// time this suite runs.
 ///
 /// The construction: take the grid's own parameters, and evaluate them twice.
 /// Once against the grid's own `ParametricLineArray`, and once against a
-/// borrowing that selects all six of those same lines out of the grid — start
+/// borrowing that selects all six of those same lines out of the grid - start
 /// 0, step 1 along each axis of a `(Nj+1) × (Ni+1)` pillar lattice, which is
 /// what the standard says a line index means for a column-layer grid. The two
 /// arrays differ in **nothing but how they name their lines**, so if the
@@ -1815,7 +1821,7 @@ fn a_borrowed_line_lattice_is_the_supports_own_lines() {
     let store = EpcStore::open(&path, registry()).expect("the package opens");
 
     // The grid's own arrays, transcribed from the part. Ni = 2, Nj = 1, so the
-    // pillar lattice is 2 × 3 — six lines — and the parameters are 24: three
+    // pillar lattice is 2 × 3 - six lines - and the parameters are 24: three
     // levels over eight coordinate lines, six pillars and two splits.
     let part = |name: &str, count: i64| ExternalDataArray {
         external_data_array_part: vec![ExternalDataArrayPart {
@@ -1864,7 +1870,7 @@ fn a_borrowed_line_lattice_is_the_supports_own_lines() {
 
     // The same parameters, over lines borrowed from the grid: every pillar,
     // once, in pillar order. `(Nj + 1) × (Ni + 1)` = 2 × 3, so the counts are
-    // 1 and 2 — one increment along the slow axis, two along the fast.
+    // 1 and 2 - one increment along the slow axis, two along the fast.
     let borrowed = Point3dParametricArray {
         parameters: parameters(),
         parametric_lines: Some(
@@ -1918,7 +1924,7 @@ fn a_borrowed_line_lattice_is_the_supports_own_lines() {
     );
 }
 
-/// The number of patch elements the document itself declares — the independent
+/// The number of patch elements the document itself declares - the independent
 /// source the reader is confronted with, per the cross-audit rule: at least
 /// one side of every check must not be code this workspace wrote about the
 /// same question.
@@ -1941,9 +1947,9 @@ fn every_declared_patch_is_read_and_none_is_lost_on_the_way_out() {
     // Asked, in so many words, by a review: that an export
     // carries **every** patch of a set representation, not just the first.
     // Two confrontations. The patch count is checked against the number of
-    // patch elements the XML declares — not against the reader's own idea of
-    // itself. And the drawable — what the view uploads and what OBJ and VTK
-    // write — must hold the sum of the patches' points, missing only the
+    // patch elements the XML declares - not against the reader's own idea of
+    // itself. And the drawable - what the view uploads and what OBJ and VTK
+    // write - must hold the sum of the patches' points, missing only the
     // non-finite ones it counts in `dropped`: a patch read and then lost in
     // the merge would pass every per-patch assertion above it.
     let files = corpus();
@@ -1997,7 +2003,7 @@ fn every_declared_patch_is_read_and_none_is_lost_on_the_way_out() {
             );
         }
     }
-    // A test that never met a multi-patch representation proved nothing — the
+    // A test that never met a multi-patch representation proved nothing - the
     // first attempt at two checks in the cross-audit suite passed over empty
     // sets, and this clause is what that lesson looks like here.
     assert!(
@@ -2157,7 +2163,7 @@ fn a_panel_between_two_real_surfaces_stays_on_its_trace() {
     }
 }
 
-/// One line borrowed from another representation — the singular of the lattice.
+/// One line borrowed from another representation - the singular of the lattice.
 ///
 /// `ParametricLineFromRepresentationGeometry` was refused by name until now, and
 /// no package here has one, so this is written against the standard and checked
@@ -2167,7 +2173,7 @@ fn a_panel_between_two_real_surfaces_stays_on_its_trace() {
 /// looks like a well.
 ///
 /// The trajectory carries it as its `Geometry`, which is where the singular form
-/// actually appears — the plural lives in a `Point3dParametricArray`.
+/// actually appears - the plural lives in a `Point3dParametricArray`.
 #[test]
 #[cfg(feature = "hdf5")]
 fn a_borrowed_single_line_is_the_supports_own_line() {
@@ -2283,9 +2289,9 @@ fn a_borrowed_single_line_is_the_supports_own_line() {
 /// disagree.
 ///
 /// **The shape of the assertion comes from the spec, the numbers from the
-/// files.** RESQML states a node count as *the* number of nodes — a
-/// `TrianglePatch`'s `NodeCount`, a `NodePatch`'s `Count`, a lattice's two axes
-/// — so a reader placing **more** nodes than the document declares has read
+/// files.** RESQML states a node count as *the* number of nodes - a
+/// `TrianglePatch`'s `NodeCount`, a `NodePatch`'s `Count`, a lattice's two axes -
+/// so a reader placing **more** nodes than the document declares has read
 /// something the document does not describe. The other direction is ordinary
 /// and named: a lattice states its whole grid and the reader trims the row and
 /// column one writer sizes in points instead of intervals (see `grid_2d`), so
@@ -2346,7 +2352,7 @@ fn no_reader_places_more_nodes_than_its_document_states() {
     }
     assert!(
         exact > 0,
-        "no representation of the corpus placed exactly what it states — either \
+        "no representation of the corpus placed exactly what it states - either \
          `declared_nodes` answers nothing, or it answers about something else"
     );
     eprintln!("{exact} representation(s) placed exactly the count they state");

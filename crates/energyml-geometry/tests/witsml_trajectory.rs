@@ -1,11 +1,11 @@
-//! A WITSML 2.1 `Trajectory`, drawn from its stations — `src/stations.rs`.
+//! A WITSML 2.1 `Trajectory`, drawn from its stations - `src/stations.rs`.
 //!
 //! **The form of the assertions comes from the standards**, cited where used:
 //!
 //! - an inclination is *« measured from vertical »*, an azimuth is *« Corrected
-//!   to wells azimuth reference »* and turns clockwise from north — *« 0.00 and
+//!   to wells azimuth reference »* and turns clockwise from north - *« 0.00 and
 //!   360.00 represent North, 90.00 is East »* (WITSML TRG 2.1 §16.10
-//!   p. 356–358);
+//!   p. 356-358);
 //! - which north is `AziRef`, *« optional because of legacy data »* (§16.7
 //!   p. 352); plant north is *« a direction in a local engineering coordinate
 //!   reference system »* (eml 2.3 `NorthReferenceKind`);
@@ -16,8 +16,8 @@
 //!   Sawaryn & Thorogood, SPE 84246, 2005).
 //!
 //! **The numbers are worked by hand here**: a hold of 100 m, then one arc of
-//! 90° over 900 m of hole — a circle of radius R = 180/π × 900/90 =
-//! 572.9577951 m — from a collar in a compound turned 30° clockwise about
+//! 90° over 900 m of hole - a circle of radius R = 180/π × 900/90 =
+//! 572.9577951 m - from a collar in a compound turned 30° clockwise about
 //! (1000, 2000), 10 m along its x axis and 5 m under an origin 35 m above an
 //! upward datum: the collar is at (1000 + 10 cos 30°, 2000 − 10 sin 30°, 30).
 
@@ -267,7 +267,7 @@ fn a_grid_north_survey_turns_from_the_projected_north() {
 }
 
 /// Plant north: the compound's second axis, turned 30° clockwise from grid
-/// north — so azimuth 90 is its first axis, (cos 30°, −sin 30°) on the map.
+/// north - so azimuth 90 is its first axis, (cos 30°, −sin 30°) on the map.
 #[test]
 fn a_plant_north_survey_turns_with_its_compound() {
     // To break: plant north read as grid north (the grid-north answer, 30°
@@ -416,7 +416,7 @@ fn a_survey_computed_by_another_method_is_refused() {
 
 #[test]
 fn a_station_the_survey_cannot_read_is_refused_by_name() {
-    // Inclined with no azimuth — `energyml_geometry::min_curvature` names it.
+    // Inclined with no azimuth - `energyml_geometry::min_curvature` names it.
     let mut blind = trajectory(Some(eml::NorthReferenceKind::GridNorth));
     blind.trajectory_station[2].azi = None;
     let message = refusal(&blind);

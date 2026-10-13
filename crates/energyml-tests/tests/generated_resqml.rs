@@ -272,7 +272,7 @@ fn nestable_marks_the_objects_that_may_also_be_children() {
     );
 
     // A colour map is a top-level object too, and `GraphicalInformation`
-    // declares it as a child — both are true at once.
+    // declares it as a child - both are true at once.
     let map = <resqml::ContinuousColorMap as EnergymlType>::type_info();
     assert!(map.is_top_level, "ContinuousColorMap is its own EPC part");
     assert!(
@@ -331,7 +331,7 @@ fn inline_arrays_read_as_numbers_not_as_a_string() {
 #[test]
 fn a_subtype_substituted_on_a_concrete_element_is_not_lost() {
     // `TrianglePatch.Geometry` is declared as `resqml:PointGeometry`, which is
-    // concrete — and three grid geometries extend it. A document may therefore
+    // concrete - and three grid geometries extend it. A document may therefore
     // write `xsi:type="resqml:IjkGridGeometry"` there. Reading that as a plain
     // `PointGeometry` dropped everything the subtype adds, without a word.
     let patch = resqml::TrianglePatch {

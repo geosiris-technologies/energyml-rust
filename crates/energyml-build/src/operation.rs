@@ -3,9 +3,9 @@
 //! In one sentence: **a creation is a pure
 //! function from [`Pieces`] to a [`Plan`], and applying the plan is the only
 //! step that touches storage.** This module holds the trait and the three
-//! values around it — what an operation still needs to be told ([`Slot`]),
+//! values around it - what an operation still needs to be told ([`Slot`]),
 //! what it decided ([`Plan`]), and how the objects it makes are named
-//! ([`Identity`]) — plus the registry that answers *what can I create with
+//! ([`Identity`]) - plus the registry that answers *what can I create with
 //! this?*
 //!
 //! # Purity is held by the signature
@@ -16,8 +16,8 @@
 //!
 //! # A refusal is named, never a boolean
 //!
-//! [`AnyOperation::fitness`] returns *why not* — *a set of polylines is not
-//! written as a triangulated surface* — for the reason `Exporter::handles`
+//! [`AnyOperation::fitness`] returns *why not* - *a set of polylines is not
+//! written as a triangulated surface* - for the reason `Exporter::handles`
 //! already gives: somebody who wrote a rule deserves to know why it does not
 //! apply. And [`Registry::offers`] lists the unfit operations **with their
 //! reason** rather than dropping them, because *absent* reads as *not written
@@ -31,7 +31,7 @@ use uuid::Uuid;
 
 use crate::pieces::{Pieces, Ref};
 
-/// What a slot asks for — rendered as a command-line option, an interactive
+/// What a slot asks for - rendered as a command-line option, an interactive
 /// question or a form field, so that a new operation writes a line in neither.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Need {
@@ -40,7 +40,7 @@ pub enum Need {
         /// `resqml22.TriangulatedSetRepresentation`, …
         types: &'static [&'static str],
     },
-    /// A property kind — a well-known one or one of the package.
+    /// A property kind - a well-known one or one of the package.
     PropertyKind,
     /// A local CRS of the package.
     Crs,
@@ -74,25 +74,25 @@ pub enum Need {
     ///
     /// The type list shows the objects that extend `AbstractObject`, with a
     /// default filter that the user can change, and the operation says whether the
-    /// package and the version are its own defaults or a rule — which is what
+    /// package and the version are its own defaults or a rule - which is what
     /// decides whether the front end greys the control.
     ///
     /// The **list** is not here: it comes from the schema registry, which the
     /// caller owns. [`crate::types`] holds the sorting, which can be wrong.
     Type(crate::types::TypeChoice),
-    /// A title for the objects made — one per plan, the rest derived by role.
+    /// A title for the objects made - one per plan, the rest derived by role.
     Title,
-    /// **A term of a named vocabulary**, picked from its tree — `geolts`, the
+    /// **A term of a named vocabulary**, picked from its tree - `geolts`, the
     /// BRGM chronostratigraphic chart. The answer is text a person can
     /// type (a label, a code, an id); the **tree** is the caller's to draw,
     /// asked of the library by the vocabulary's name, so the front end renders it
     /// without knowing what the chart is. What a term names is checked by the
-    /// operation, which holds the vocabulary — here, only the shape.
+    /// operation, which holds the vocabulary - here, only the shape.
     Vocabulary(&'static str),
     /// **An input of the scene**: what the operation works on.
     ///
     /// This is the declaration that was missing. An operation said what it
-    /// **asks** and what it **reports**, and it **judged** a bag — but it did not say
+    /// **asks** and what it **reports**, and it **judged** a bag - but it did not say
     /// what it *takes*, and `fitness` is a verdict given after the fact on a bag
     /// already made: it cannot be used to ask. Measured consequence:
     /// `crs`, the only operation fit for an empty bag, was unreachable
@@ -111,7 +111,7 @@ pub enum Need {
 /// naming the same thing would end up no longer naming the same thing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Takes {
-    /// The kind of piece — `shape`, `features`, `lattice`, `field`, `ramp`.
+    /// The kind of piece - `shape`, `features`, `lattice`, `field`, `ramp`.
     pub kind: &'static str,
     /// The expected topology of a shape, when there is one.
     ///
@@ -124,7 +124,7 @@ pub struct Takes {
     ///
     /// **A filter, not a rule**, exactly like `topology`: it tells a
     /// form what to propose first, and the refusal stays with the operation, which
-    /// alone sees what the object really carries. Empty means *any* —
+    /// alone sees what the object really carries. Empty means *any* -
     /// the front end's selector rule, applied here.
     ///
     /// Added with `ObjectIn`: without it, a slot that expects a
@@ -132,7 +132,7 @@ pub struct Takes {
     /// is a list in which nothing can be found.
     pub types: &'static [&'static str],
     /// **A ramp read as a palette**: sampled over its own range, its levels
-    /// saying *where along the scale* and nothing about the values — so a form
+    /// saying *where along the scale* and nothing about the values - so a form
     /// may offer its palettes for it (`isocontours`' colours).
     ///
     /// Declared, never deduced from the kind: `colormap` takes a ramp too, and
@@ -152,7 +152,7 @@ impl Takes {
         }
     }
 
-    /// A shape whose topology is expected — `triangles`, `polylines`, `points`.
+    /// A shape whose topology is expected - `triangles`, `polylines`, `points`.
     pub const fn shaped(topology: &'static str) -> Self {
         Self {
             kind: "shape",
@@ -182,7 +182,7 @@ impl Takes {
         }
     }
 
-    /// Whether an object of this qualified type is one this slot proposes —
+    /// Whether an object of this qualified type is one this slot proposes -
     /// `true` for any when it names none.
     ///
     /// **On the bare class name**, ignoring case, the package prefix and the
@@ -213,14 +213,14 @@ impl Need {
             Need::Type(_) => "string",
             Need::Number { .. } | Need::Epsg => "double",
             Need::Integer { .. } => "integer",
-            // EML 2.3 has no boolean kind — `dataObject`, `double`, `integer`,
-            // `string`, `timestamp`, `subActivity` — so a flag is a string, and
+            // EML 2.3 has no boolean kind - `dataObject`, `double`, `integer`,
+            // `string`, `timestamp`, `subActivity` - so a flag is a string, and
             // the template's `Constraint` says which two.
             Need::Text | Need::Choice(_) | Need::Title | Need::Flag | Need::Vocabulary(_) => "string",
             // An input **is not a template parameter**: the activity
             // already records its inputs as such, and declaring them twice
             // would make the same thing an input and a setting. The
-            // projection does not see them — `takes()` is separate from `needs()`.
+            // projection does not see them - `takes()` is separate from `needs()`.
             Need::Input(_) => "dataObject",
         }
     }
@@ -259,7 +259,7 @@ impl Need {
             }
             Need::Vocabulary(name) => match value.as_str() {
                 Some(text) if !text.trim().is_empty() => Ok(()),
-                _ => bad(&format!("a term of `{name}` — its label, its code or its id")),
+                _ => bad(&format!("a term of `{name}` - its label, its code or its id")),
             },
             // The **name of a piece of the bag**. What it designates is the
             // caller's business, since only it holds the scene; here the shape is checked.
@@ -267,7 +267,7 @@ impl Need {
                 Some(text) if !text.is_empty() => Ok(()),
                 _ => bad("the name of an input"),
             },
-            // Its shape only — that it names a type this build knows is the
+            // Its shape only - that it names a type this build knows is the
             // caller's to check, because only the caller has the registry.
             Need::Type(_) => match value.as_str() {
                 Some(text) if text.contains('.') && !text.starts_with('.') && !text.ends_with('.') => Ok(()),
@@ -298,7 +298,7 @@ impl Need {
         match self {
             Need::Object { types } => serde_json::json!({ "kind": "object", "types": types }),
             Need::PropertyKind => serde_json::json!({ "kind": "propertyKind" }),
-            // The systems a geometry may name, **whole** — one list with what
+            // The systems a geometry may name, **whole** - one list with what
             // `support::frame_in` accepts, so the form offers what the
             // operation takes (`crate::crs::FRAMES`).
             Need::Crs => serde_json::json!({ "kind": "crs", "types": crate::crs::FRAMES }),
@@ -344,7 +344,7 @@ fn bound<T: fmt::Display>(bound: Option<T>) -> String {
 /// # Why this is not `needs(pieces, choices)`
 ///
 /// Two slots of the same operation are often **alternatives**: `crs` names a
-/// system of the package, `sourceEpsg` builds one — answering either makes the
+/// system of the package, `sourceEpsg` builds one - answering either makes the
 /// other meaningless, and a form that shows both says nothing about it. The
 /// obvious fix, letting `needs` see the answers, breaks the other reader:
 /// [`AnyOperation::needs`] must answer on the **empty** bag because that is what
@@ -357,12 +357,12 @@ fn bound<T: fmt::Display>(bound: Option<T>) -> String {
 ///
 /// # The two halves read two different things, and the asymmetry is the point
 ///
-/// `With` asks *will that slot have a value?* — answered **or** suggested. A
+/// `With` asks *will that slot have a value?* - answered **or** suggested. A
 /// caller who sets `project` alone and lets `sourceEpsg` take its suggested
 /// 4326 is doing something perfectly ordinary, and a test written before this
 /// existed says so.
 ///
-/// `Without` asks *did somebody decide the other way?* — answered **only**. A
+/// `Without` asks *did somebody decide the other way?* - answered **only**. A
 /// suggestion is not a decision, and letting one veto its alternative would
 /// hide the other half of the frame before anybody had chosen. It would also be
 /// circular: settling fills suggestions, which would change what applies, which
@@ -370,19 +370,19 @@ fn bound<T: fmt::Display>(bound: Option<T>) -> String {
 ///
 /// A form is stricter, and legitimately so: everything it holds in a field is a
 /// value, a pre-filled field included, so picking a CRS hides the EPSG codes
-/// at once — which is exactly what was asked for. The two agree in practice
+/// at once - which is exactly what was asked for. The two agree in practice
 /// because a form sends what it holds.
 ///
 /// # The third case: *only for that value of that slot*
 ///
 /// `When` is what a **method** needs: `kernel` means something to `rbf` and nothing to `idw`. Before it,
-/// the only way to say so was the help text, and it cost twice — a form showed
+/// the only way to say so was the help text, and it cost twice - a form showed
 /// every sub-parameter of every method, and **an IDW run recorded `kernel:
 /// thin-plate`** in its activity, because a slot with a suggestion that always
 /// applies is always settled, and whatever is settled is recorded.
 ///
-/// It reads the controlling slot's **settled** value — answered, else
-/// suggested — and it reads it **after** that slot was itself settled, in
+/// It reads the controlling slot's **settled** value - answered, else
+/// suggested - and it reads it **after** that slot was itself settled, in
 /// declaration order. That is what makes the conditions nest: a sub-slot of a
 /// method that does not apply finds its controller removed, and goes with it.
 /// So a controller must be declared before what it controls, and
@@ -392,7 +392,7 @@ fn bound<T: fmt::Display>(bound: Option<T>) -> String {
 ///
 /// `Any` is the pivot of `transform`: a rotation turns about it and a scale is
 /// taken from it, and a translation alone never reads it. Without `Any` the
-/// pivot would always apply, always be settled — so a pure translation would
+/// pivot would always apply, always be settled - so a pure translation would
 /// record `pivot: centre` in its activity, the defect `When` was made for, by
 /// another road. Each branch is a `When`; its controllers, like any `When`'s,
 /// are declared before the slot.
@@ -406,7 +406,7 @@ pub enum Applies {
     Without(&'static [&'static str]),
     /// Only when that slot's settled value is one of those.
     When {
-        /// The controlling slot — declared before this one.
+        /// The controlling slot - declared before this one.
         slot: &'static str,
         /// The values under which this slot acts.
         is: Vec<&'static str>,
@@ -416,11 +416,11 @@ pub enum Applies {
 }
 
 impl Applies {
-    /// Whether the slot applies — see the notes on the predicates above.
+    /// Whether the slot applies - see the notes on the predicates above.
     ///
     /// `answered` is the caller's own answer, `effective` whether a slot will
     /// have a value (answered or suggested), `settled` the value a slot has
-    /// **once settled** — `None` when it was removed or left empty.
+    /// **once settled** - `None` when it was removed or left empty.
     pub fn now(
         &self,
         answered: impl Fn(&str) -> bool,
@@ -430,7 +430,7 @@ impl Applies {
         self.holds(&answered, &effective, &settled)
     }
 
-    /// [`Applies::now`], through references — `Any` recurses, and a generic
+    /// [`Applies::now`], through references - `Any` recurses, and a generic
     /// recursion would instantiate itself without end.
     fn holds(
         &self,
@@ -471,7 +471,7 @@ impl Applies {
         }
     }
 
-    /// The slots whose **settled value** this reads — each must be declared
+    /// The slots whose **settled value** this reads - each must be declared
     /// before the slot it conditions.
     pub fn controllers(&self) -> Vec<&'static str> {
         match self {
@@ -481,7 +481,7 @@ impl Applies {
         }
     }
 
-    /// The condition in words — `` `rotate` is `axis`, or `scale` is `uniform` or `axes` ``.
+    /// The condition in words - `` `rotate` is `axis`, or `scale` is `uniform` or `axes` ``.
     pub fn said(&self) -> String {
         match self {
             Applies::Always => "always".to_string(),
@@ -500,7 +500,7 @@ impl Applies {
         }
     }
 
-    /// On the wire, for a form — the front end reads it.
+    /// On the wire, for a form - the front end reads it.
     pub fn json(&self) -> Value {
         match self {
             Applies::Always => serde_json::json!({ "kind": "always" }),
@@ -513,7 +513,7 @@ impl Applies {
         }
     }
 
-    /// Whether this slot acts only under a condition — what makes it
+    /// Whether this slot acts only under a condition - what makes it
     /// `MinOccurs 0` in a template, whatever it requires when it does act.
     pub fn is_conditional(&self) -> bool {
         !matches!(self, Applies::Always)
@@ -524,7 +524,7 @@ impl Applies {
 ///
 /// The form asks for the interpretation; could it also offer to create it,
 /// with its feature, and link them correctly? The operation
-/// already did — leaving `interpretation` out of `well-from-polyline` writes the
+/// already did - leaving `interpretation` out of `well-from-polyline` writes the
 /// feature, the interpretation and the links. **Nobody could know**: the slot
 /// was merely *optional*, and an optional field reads *you may do without*, not
 /// *I make it for you*.
@@ -532,7 +532,7 @@ impl Applies {
 pub enum Otherwise {
     /// The field is simply absent from what is written.
     Nothing,
-    /// The suggestion applies — what `suggested` already says.
+    /// The suggestion applies - what `suggested` already says.
     Default,
     /// Those objects are created here, and linked.
     Creates {
@@ -543,7 +543,7 @@ pub enum Otherwise {
         types: Vec<&'static str>,
     },
     /// An **input** slot left empty takes every object of the target package
-    /// whose type is one of the slot's `types` — see [`crate::read::every`].
+    /// whose type is one of the slot's `types` - see [`crate::read::every`].
     ///
     /// The use case, about the wells of `wells-from-table`: there is no reason
     /// to select the wells when they are in the current storage. All the wells
@@ -555,10 +555,10 @@ pub enum Otherwise {
     Every,
 }
 
-/// Where a proposed value came from — one rendering, four sources.
+/// Where a proposed value came from - one rendering, four sources.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Provenance {
-    /// Read off one of the inputs — the CRS of the contoured representation.
+    /// Read off one of the inputs - the CRS of the contoured representation.
     Input(Ref),
     /// Copied from an object the person pointed at as a model.
     Exemplar(Ref),
@@ -593,10 +593,10 @@ impl Provenance {
     }
 }
 
-/// What an operation still needs to be told — and what it already proposes.
+/// What an operation still needs to be told - and what it already proposes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Slot {
-    /// The parameter's name — also the `ParameterTemplate` title.
+    /// The parameter's name - also the `ParameterTemplate` title.
     pub name: &'static str,
     /// What kind of answer.
     pub need: Need,
@@ -613,7 +613,7 @@ pub struct Slot {
     /// set of boxes somebody ticks.
     ///
     /// It is declared rather than guessed because of what a front end's ordering code says of
-    /// the one case that already exists — the surfaces of a section, top to
+    /// the one case that already exists - the surfaces of a section, top to
     /// bottom:
     ///
     /// > *This is the most dangerous datum of the whole section. Get it the
@@ -629,22 +629,22 @@ pub struct Slot {
     pub suggested: Option<Value>,
     /// Where the suggestion came from, when there is one.
     pub from: Option<Provenance>,
-    /// When this slot can act at all — see [`Applies`].
+    /// When this slot can act at all - see [`Applies`].
     pub applies: Applies,
-    /// What leaving it empty produces — see [`Otherwise`].
+    /// What leaving it empty produces - see [`Otherwise`].
     pub otherwise: Otherwise,
     /// Which block of a form it belongs in: `frame`, `represents`, `operation`,
     /// `naming`. A dozen fields laid flat is a common complaint; four short
     /// blocks is the same dozen, read.
     pub group: &'static str,
     /// Where this value lives on an object of the same sort, in reflective
-    /// field paths tried in order — what makes *copy it from that other
+    /// field paths tried in order - what makes *copy it from that other
     /// wellbore* possible without a line of code per operation.
     ///
     /// Empty means **not copyable**, and a form must then not offer it: a
     /// control that cannot act is not shown.
     pub reads: &'static [&'static str],
-    /// A setting most runs leave alone — folded away in a form, like QGIS's
+    /// A setting most runs leave alone - folded away in a form, like QGIS's
     /// `FlagAdvanced`. Seventeen fields for `interpolate` is the complaint;
     /// `epsilon` and `nugget` are what nobody sets first.
     pub advanced: bool,
@@ -680,7 +680,7 @@ impl Slot {
 
     /// A slot that takes **several** values, `least` at fewest and no ceiling.
     ///
-    /// The answer is then a JSON **array**, always — see [`Slot::takes_many`].
+    /// The answer is then a JSON **array**, always - see [`Slot::takes_many`].
     /// Its order is **not** data unless [`Slot::in_order`] says so.
     pub fn many(name: &'static str, need: Need, about: &'static str, least: u32) -> Self {
         Self {
@@ -714,7 +714,7 @@ impl Slot {
     /// Whether this slot's answer is a list rather than a single value.
     ///
     /// **Exactly one** value is the single-value case; everything else is a
-    /// list, including `0..1` — because *may be absent* and *may hold one* are
+    /// list, including `0..1` - because *may be absent* and *may hold one* are
     /// the same shape, and `Slot::optional` has always meant the first.
     ///
     /// The rule has to be this crisp because it decides a *wire format*: the
@@ -781,7 +781,7 @@ impl Slot {
         self
     }
 
-    /// Whether it can act — see [`Applies::now`] for the three readings.
+    /// Whether it can act - see [`Applies::now`] for the three readings.
     pub fn applies_now(
         &self,
         answered: impl Fn(&str) -> bool,
@@ -806,8 +806,8 @@ impl Slot {
             "required": self.is_required(),
             "least": self.least,
             "most": self.most,
-            // Said rather than rederived on the front end side. The rule — *anything
-            // that is not exactly one is a list* — decides a wire format, and
+            // Said rather than rederived on the front end side. The rule - *anything
+            // that is not exactly one is a list* - decides a wire format, and
             // two readers of a wire format is exactly what this repository
             // pays for every time it lets them exist.
             "takesMany": self.takes_many(),
@@ -875,7 +875,7 @@ impl Choices {
         self.0.iter().map(|(k, v)| (k.as_str(), v))
     }
 
-    /// Whether the caller answered that slot — the test [`Applies`] is read
+    /// Whether the caller answered that slot - the test [`Applies`] is read
     /// against, and it is the caller's own answers, never the suggestions.
     fn answered(&self, name: &str) -> bool {
         self.0.get(name).is_some_and(|value| !value.is_null())
@@ -886,7 +886,7 @@ impl Choices {
     /// answer of the wrong shape, is refused by name **before any work**.
     ///
     /// **A slot that cannot act is neither required nor filled**, and one that
-    /// was answered anyway is refused *naming both ends* — `project` given
+    /// was answered anyway is refused *naming both ends* - `project` given
     /// beside a `crs` of the package is a contradiction, and dropping it in
     /// silence would reproject into a system nobody asked for. A form hides
     /// those fields, so only a caller writing choices by hand can reach this.
@@ -896,8 +896,8 @@ impl Choices {
 
     /// The same, for a plan asked for its **geometry only**.
     ///
-    /// A slot that only the writing needs — everything outside the
-    /// `operation` group: the frame, what is represented, the naming — may
+    /// A slot that only the writing needs - everything outside the
+    /// `operation` group: the frame, what is represented, the naming - may
     /// then stay empty: its suggestion is still applied when it has one, and
     /// its absence is not a refusal. What the *computation* needs is required
     /// as before, because a tolerance nobody gave is not a geometry anybody
@@ -906,7 +906,7 @@ impl Choices {
         self.settle_given(slots, purpose, &[])
     }
 
-    /// The same, knowing which **input** slots the bag fills —
+    /// The same, knowing which **input** slots the bag fills -
     /// [`crate::declare::given_inputs`], which [`Registry::plan_in`] passes.
     ///
     /// A condition may name an input: `spacing` of `interpolate` acts only
@@ -919,7 +919,7 @@ impl Choices {
         let mut out = self.clone();
         let mut wrong: Vec<Refusal> = Vec::new();
         let answered = |name: &str| self.answered(name) || given.contains(&name);
-        // *Will that slot have a value?* — answered, or holding a suggestion
+        // *Will that slot have a value?* - answered, or holding a suggestion
         // that settling is about to apply.
         let effective = |name: &str| {
             answered(name)
@@ -928,7 +928,7 @@ impl Choices {
                     .any(|slot| slot.name == name && slot.suggested.is_some())
         };
         // A `When` reads its controller **as settled**, so the controller must
-        // come first — otherwise the answer would depend on an order nobody
+        // come first - otherwise the answer would depend on an order nobody
         // can see. Refused as a declaration fault, not a caller's.
         for (at, slot) in slots.iter().enumerate() {
             for controller in slot.applies.controllers() {
@@ -957,7 +957,7 @@ impl Choices {
                         Applies::With(_) => format!("`{}` needs `{against}`, which has no value", slot.name),
                         Applies::When { .. } | Applies::Any(_) => {
                             format!(
-                                "`{}` acts only when {} — it is not here",
+                                "`{}` acts only when {} - it is not here",
                                 slot.name,
                                 slot.applies.said()
                             )
@@ -1012,7 +1012,7 @@ impl Choices {
 ///
 /// An operation produces an artefact first, and the front end keeps it
 /// without writing anything. Yet the form asked, for that gesture, everything
-/// the **writing** needs — a frame, a title, a data file — and the module
+/// the **writing** needs - a frame, a title, a data file - and the module
 /// refused a plan without them. The two halves of a plan were
 /// already there; this is the switch that lets a caller ask for one.
 ///
@@ -1022,7 +1022,7 @@ impl Choices {
 /// them apart, which is the point.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Purpose {
-    /// The shapes, to keep in a scene — nothing will be written from this plan.
+    /// The shapes, to keep in a scene - nothing will be written from this plan.
     Geometry,
     /// The objects, to apply.
     Writing,
@@ -1032,7 +1032,7 @@ pub enum Purpose {
 ///
 /// In that order on purpose. A caller who sent a bare value has made a *shape*
 /// mistake, and telling them "0 values, at least 1 needed" would send them
-/// looking for a missing answer they did in fact give — the refusal names what
+/// looking for a missing answer they did in fact give - the refusal names what
 /// arrived and what was expected instead.
 fn check_many(slot: &Slot, value: &Value) -> Vec<Refusal> {
     let Some(items) = value.as_array() else {
@@ -1040,7 +1040,7 @@ fn check_many(slot: &Slot, value: &Value) -> Vec<Refusal> {
             "shape",
             slot.name,
             format!(
-                "`{}` takes several values, so its answer is a list — `[…]`, not a lone {}",
+                "`{}` takes several values, so its answer is a list - `[…]`, not a lone {}",
                 slot.name,
                 kind_of(value)
             ),
@@ -1093,7 +1093,7 @@ fn kind_of(value: &Value) -> &'static str {
 pub enum Fitness {
     /// Yes.
     Fit,
-    /// No, and here is why — named at both ends, and under the input slot
+    /// No, and here is why - named at both ends, and under the input slot
     /// it is about when it is about one.
     Unfit(Refusal),
 }
@@ -1108,24 +1108,24 @@ impl Fitness {
 /// One object the plan will write.
 #[derive(Debug, Clone, PartialEq)]
 pub struct NewObject {
-    /// Already assigned — which is what lets another object of the same plan
+    /// Already assigned - which is what lets another object of the same plan
     /// reference this one before anything exists.
     pub uuid: String,
     /// `resqml22.PointSetRepresentation`.
     pub qualified_type: String,
-    /// What this object is *for* in the plan — `representation`, `crs`,
-    /// `trajectory` — for a reader of the plan and for the activity.
+    /// What this object is *for* in the plan - `representation`, `crs`,
+    /// `trajectory` - for a reader of the plan and for the activity.
     pub role: String,
     /// Its title, as written in its citation.
     pub title: String,
-    /// The object, in the workspace's JSON encoding — what `put_json` takes.
+    /// The object, in the workspace's JSON encoding - what `put_json` takes.
     pub json: Value,
 }
 
 impl NewObject {
-    /// The `objectVersion` the object declares, read where its release keeps it
-    /// — `objectVersion` on the root (eml 2.1 and later) or
-    /// `Citation.VersionString` (eml 2.0) — as the reader of the package reads
+    /// The `objectVersion` the object declares, read where its release keeps it -
+    /// `objectVersion` on the root (eml 2.1 and later) or
+    /// `Citation.VersionString` (eml 2.0) - as the reader of the package reads
     /// it; blank is none.
     pub fn object_version(&self) -> Option<String> {
         let text = |value: &Value| {
@@ -1138,7 +1138,7 @@ impl NewObject {
     }
 
     /// **Its address once written**: the full uri, version included when it
-    /// declares one — what the store will answer for it
+    /// declares one - what the store will answer for it
     /// ([`energyml_core::identity::ObjectKey::etp_uri`]). A plan names an object
     /// by this, never by its uuid: a plan may write a second version beside the
     /// first ([`NEW_VERSION_ROLE`]), and both have the one uuid.
@@ -1159,11 +1159,11 @@ impl NewObject {
 /// the package holds: same uuid, same type, another `objectVersion`.
 ///
 /// `apply` writes it through `EpcStore::put_as_new_version`, the one gate that
-/// adds a version — an ordinary `put` replaces, so that a version is never made
+/// adds a version - an ordinary `put` replaces, so that a version is never made
 /// by accident. Carried by the role rather
 /// than by a field of its own because the role is what says, to a reader of the
 /// plan and to the activity, *what this object is for in the plan*: here, to
-/// stand beside another. If the exact identity — uuid, type and version — is
+/// stand beside another. If the exact identity - uuid, type and version - is
 /// already in the package the gate refuses, and `apply` reports it by name.
 pub const NEW_VERSION_ROLE: &str = "new-version";
 
@@ -1191,7 +1191,7 @@ impl Numbers {
     }
 }
 
-/// An array the plan will write — the values, not a file.
+/// An array the plan will write - the values, not a file.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Dataset {
     /// The external file, relative to the package.
@@ -1204,36 +1204,36 @@ pub struct Dataset {
     pub values: Numbers,
 }
 
-/// A file the plan puts **in the package**, beside its objects — a part that
+/// A file the plan puts **in the package**, beside its objects - a part that
 /// is not an object: a README, a PDF, an export.
 ///
 /// Energistics Packaging Conventions v1.0: such files
 /// are foreseen, "As a guideline … stored in a folder named `media`" (§3.2
-/// pp. 11–12); `[Content_Types].xml` types each part (§2.2.1 p. 9); and the
+/// pp. 11-12); `[Content_Types].xml` types each part (§2.2.1 p. 9); and the
 /// object a file shows is tied to it by a relationship, `destinationMedia` from
-/// the object and `sourceMedia` back (§3.4.2 pp. 15–16) — never by the content
+/// the object and `sourceMedia` back (§3.4.2 pp. 15-16) - never by the content
 /// type, which says *what* the part is and not *which object* it is about.
 ///
 /// [`crate::apply`] writes it **after** the objects, so that an object of the
 /// same plan can be related to it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Media {
-    /// The part name — `media/README.md`.
+    /// The part name - `media/README.md`.
     pub path: String,
-    /// Its content type — `text/markdown`. Stated, never guessed.
+    /// Its content type - `text/markdown`. Stated, never guessed.
     pub content_type: String,
     /// The bytes, exactly.
     pub bytes: Vec<u8>,
-    /// The uuids of the objects it is a media representation of — in the
+    /// The uuids of the objects it is a media representation of - in the
     /// package already, or written by the same plan.
     pub related_to: Vec<String>,
 }
 
-/// What an operation has **computed** — a node of the artefact tree.
+/// What an operation has **computed** - a node of the artefact tree.
 ///
 /// This is the "computed" half of a plan, made explicit: *an operation first
 /// produces an artefact, which will be promoted into objects*. The "writing"
-/// half — the objects, their uuids, their CRS — stays beside it, and can be
+/// half - the objects, their uuids, their CRS - stays beside it, and can be
 /// blocked without this one being so.
 ///
 /// # Why it is **carried** and not derived
@@ -1248,19 +1248,19 @@ pub struct Media {
 ///
 /// The points are **not** here *and* in the `Dataset`: operations
 /// build the shape, then draw the dataset's values from it
-/// (`support::flat_points`). The reverse — keeping both side by side — would make a plan of a
+/// (`support::flat_points`). The reverse - keeping both side by side - would make a plan of a
 /// million points carry them twice, and above all would open the door to
 /// their diverging.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Made {
-    /// Its identity **in the plan** — `0`, `1`. A rank, not a uuid: the uuid
+    /// Its identity **in the plan** - `0`, `1`. A rank, not a uuid: the uuid
     /// belongs to the object, which exists only at writing.
     pub id: String,
     /// The node this one is a part of, `None` for a root.
     ///
     /// An operation produces a tree, not a list: a fence
     /// will return its master section and its panels under a root. All thirteen
-    /// operations today return roots, and that is the honest answer —
+    /// operations today return roots, and that is the honest answer -
     /// none has sub-parts.
     pub parent: Option<String>,
     /// What is read on the scene's line.
@@ -1274,7 +1274,7 @@ pub struct Made {
     pub object: Option<String>,
 }
 
-/// Something the plan wants said — a key and its detail, for a report.
+/// Something the plan wants said - a key and its detail, for a report.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Note {
     /// A stable word: `closed-detected`, `reprojected`.
@@ -1292,7 +1292,7 @@ pub struct Dropped {
     pub why: String,
 }
 
-/// What the activity will record, beyond its outputs — those come from the
+/// What the activity will record, beyond its outputs - those come from the
 /// objects written.
 #[derive(Debug, Clone)]
 pub struct ActivityDraft {
@@ -1300,7 +1300,7 @@ pub struct ActivityDraft {
     pub recipe: &'static str,
     /// The activity's title.
     pub title: String,
-    /// What names this run — a source file and a stage, an input uuid — so that
+    /// What names this run - a source file and a stage, an input uuid - so that
     /// the activity's uuid is derived from it and the instant, never drawn.
     pub seed: String,
     /// The parameters: the choices that mattered, and what was measured.
@@ -1308,14 +1308,14 @@ pub struct ActivityDraft {
 }
 
 /// What an operation decided: several objects, coherent, with their identities
-/// already known — and nothing done.
+/// already known - and nothing done.
 #[derive(Debug, Clone)]
 pub struct Plan {
     /// The objects, in the order they should be written.
     pub objects: Vec<NewObject>,
     /// The arrays.
     pub datasets: Vec<Dataset>,
-    /// The files put in the package beside the objects — see [`Media`]. Empty
+    /// The files put in the package beside the objects - see [`Media`]. Empty
     /// for every operation but `media`, and a plan without any writes exactly
     /// what it wrote before this field existed.
     pub media: Vec<Media>,
@@ -1325,7 +1325,7 @@ pub struct Plan {
     pub says: Vec<Note>,
     /// What was set aside.
     pub dropped: Vec<Dropped>,
-    /// **What the operation has computed**, as a tree of artefacts — see [`Made`].
+    /// **What the operation has computed**, as a tree of artefacts - see [`Made`].
     ///
     /// Empty means *this operation computes no geometry*, which is
     /// true of `crs`, `property` and `colormap`. A plan that writes a
@@ -1336,7 +1336,7 @@ pub struct Plan {
     ///
     /// This is the second half of a plan: computing a geometry requires no CRS,
     /// writing the object that carries it does. An operation that has computed but
-    /// will not be able to write **succeeds** by saying so, instead of failing —
+    /// will not be able to write **succeeds** by saying so, instead of failing -
     /// otherwise it refuses to compute for a reason that concerns only writing,
     /// which is the defect once reported on `outline` and a real dataset.
     ///
@@ -1344,7 +1344,7 @@ pub struct Plan {
     /// look at and to keep in the scene, [`crate::apply::apply`] will refuse it.
     ///
     /// **It is not the same thing as an empty plan**, and confusing them would cost
-    /// the same mistake as `undefinedNodes: 0` — *nothing to write* and *nothing could
+    /// the same mistake as `undefinedNodes: 0` - *nothing to write* and *nothing could
     /// be written* are two pieces of news.
     pub blocked: Option<Error>,
 }
@@ -1355,19 +1355,19 @@ impl Plan {
         self.objects.iter().filter(move |o| o.role == role)
     }
 
-    /// Nothing to write — no object and no file.
+    /// Nothing to write - no object and no file.
     pub fn is_empty(&self) -> bool {
         self.objects.is_empty() && self.media.is_empty()
     }
 
-    /// What the plan will do, for somebody to read before it is applied — the
+    /// What the plan will do, for somebody to read before it is applied - the
     /// objects, what was said and set aside, the arrays' shapes. The arrays'
     /// **values** are not here: they travel as buffers, or not at all.
     pub fn summary_json(&self) -> Value {
         serde_json::json!({
             "title": self.activity.title,
             "recipe": self.activity.recipe,
-            // `uri` is the key — the full identity, version included; `uuid` and
+            // `uri` is the key - the full identity, version included; `uuid` and
             // `objectVersion` are its parts, kept for the readers written before it.
             "objects": self.objects.iter().map(|o| serde_json::json!({
                 "role": o.role, "type": o.qualified_type, "uri": o.uri(), "uuid": o.uuid, "objectVersion": o.object_version(), "title": o.title,
@@ -1375,7 +1375,7 @@ impl Plan {
             "datasets": self.datasets.iter().map(|d| serde_json::json!({
                 "file": d.file, "path": d.path, "dimensions": d.dimensions, "count": d.values.len(),
             })).collect::<Vec<_>>(),
-            // The files' **bytes** are not here either — their size is.
+            // The files' **bytes** are not here either - their size is.
             "media": self.media.iter().map(|m| serde_json::json!({
                 "path": m.path, "contentType": m.content_type, "bytes": m.bytes.len(), "relatedTo": m.related_to,
             })).collect::<Vec<_>>(),
@@ -1389,16 +1389,16 @@ impl Plan {
 /// How the objects a plan makes are named.
 #[derive(Debug, Clone)]
 pub enum Identity {
-    /// uuid v5 of `(namespace, operation, input identity, role)` — the choice
+    /// uuid v5 of `(namespace, operation, input identity, role)` - the choice
     /// a version translation and the SIGEOL import made, for the same reason: two
     /// runs of the same file write the same package, so a diff says whether the
     /// data moved or only its names did.
     Derived {
-        /// The namespace to hang from — [`crate::naming::NAMESPACE`] for the
+        /// The namespace to hang from - [`crate::naming::NAMESPACE`] for the
         /// built-ins.
         namespace: Uuid,
     },
-    /// uuids supplied by the caller, in the order the plan asks for them — the
+    /// uuids supplied by the caller, in the order the plan asks for them - the
     /// front end, which draws them from `crypto`.
     Given(Vec<String>),
 }
@@ -1411,7 +1411,7 @@ impl Identity {
         }
     }
 
-    /// The uuid of rank `rank` in the plan, seeded by `name` — the derivation
+    /// The uuid of rank `rank` in the plan, seeded by `name` - the derivation
     /// ignores the rank, the given list ignores the name.
     pub fn uuid(&self, name: &str, rank: usize) -> Result<String, Error> {
         match self {
@@ -1427,7 +1427,7 @@ impl Identity {
     }
 }
 
-/// When the plan is made — an input, so that two equal runs write equal
+/// When the plan is made - an input, so that two equal runs write equal
 /// packages, byte for byte.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct When {
@@ -1437,16 +1437,16 @@ pub struct When {
     pub originator: String,
 }
 
-/// The typed side of an operation — see [`crate::typed`].
+/// The typed side of an operation - see [`crate::typed`].
 pub use crate::typed::{About, Context, Feedback, Operation, Silent, Typed, typed};
 
-/// Why an operation could not plan — **one refusal or several**, each with
+/// Why an operation could not plan - **one refusal or several**, each with
 /// its key and the slot it is about.
 ///
 /// `settle` finds every wrong answer of a form at once, and a caller who could
 /// only read them as one sentence joined by `;` could not put each under its
 /// field. The sentence is
-/// still there — [`Error::message`], and `Display` — for the CLI, which prints.
+/// still there - [`Error::message`], and `Display` - for the CLI, which prints.
 ///
 /// Never empty: an error that refuses nothing would read as a success.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1473,7 +1473,7 @@ impl Error {
         &self.refusals
     }
 
-    /// The refusals as one sentence — what a terminal prints.
+    /// The refusals as one sentence - what a terminal prints.
     pub fn message(&self) -> String {
         self.refusals
             .iter()
@@ -1492,7 +1492,7 @@ impl Error {
 /// against one calls code written against the other with a `?`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Refusal {
-    /// A stable word — what a front end translates. `slot` for a refusal an
+    /// A stable word - what a front end translates. `slot` for a refusal an
     /// operation raised about one of its slots; from `settle`, `required`,
     /// `value`, `count`, `shape` (a bare value where a list is wanted),
     /// `inapplicable` (an answer to a slot that cannot act here) and
@@ -1533,7 +1533,7 @@ impl Refusal {
         }
     }
 
-    /// `{ key, slot, message }` — the one wire form, which the front end and any
+    /// `{ key, slot, message }` - the one wire form, which the front end and any
     /// other caller read; `slot` is `null` when the refusal is about none.
     pub fn json(&self) -> Value {
         serde_json::json!({ "key": self.key, "slot": self.slot, "message": self.message })
@@ -1576,18 +1576,18 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-/// **One kind of object an operation writes, by its role** — what
+/// **One kind of object an operation writes, by its role** - what
 /// [`AnyOperation::gives`] declares, the other side of [`AnyOperation::takes`].
 ///
 /// Chaining operations in a workflow requires that operations expose the objects they created. The role is the
-/// one `NewObject::role` carries in a plan — `apply` groups by it into the run's
+/// one `NewObject::role` carries in a plan - `apply` groups by it into the run's
 /// collections, the run manifest lists by it, a Galaxy tool gets one output per
 /// role, and the next step names it. So a role a plan writes and the declaration
 /// does not name is a defect of the operation, held by a test.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Output {
-    /// `representation`, `frame`, `category-lookup` — `NewObject::role`.
+    /// `representation`, `frame`, `category-lookup` - `NewObject::role`.
     pub role: &'static str,
     /// The qualified types written under it (`resqml22.PointSetRepresentation`).
     pub types: &'static [&'static str],
@@ -1599,7 +1599,7 @@ pub struct Output {
     pub describe: &'static str,
 }
 
-/// A way of creating objects — **the erased interface** the registry, the
+/// A way of creating objects - **the erased interface** the registry, the
 /// front end's module and the CLI execute.
 ///
 /// An operation written against typed parameters and inputs implements
@@ -1612,18 +1612,18 @@ pub trait AnyOperation: Send + Sync {
     fn describe(&self) -> &'static str;
     /// The qualified types it makes.
     fn makes(&self) -> &'static [&'static str];
-    /// The canonical activity template it records under — a key of
+    /// The canonical activity template it records under - a key of
     /// `rc/activityTemplates.json`.
     fn recipe(&self) -> &'static str;
     /// Can it work on this bag? A named refusal, and an empty bag is a
-    /// legitimate input — `crs` takes nothing.
+    /// legitimate input - `crs` takes nothing.
     fn fitness(&self, pieces: &Pieces) -> Fitness;
     /// What it still needs to be told, with what it proposes. Must answer on
-    /// **any** bag, the empty one included — that is what the template is
+    /// **any** bag, the empty one included - that is what the template is
     /// projected from; suggestions are simply absent then.
     fn needs(&self, pieces: &Pieces) -> Vec<Slot>;
 
-    /// **What the operation takes** — its inputs, declared.
+    /// **What the operation takes** - its inputs, declared.
     ///
     /// Empty by default, and that is an answer: `crs` takes nothing. Each
     /// slot carries its cardinality and its order like any `Slot`,
@@ -1631,7 +1631,7 @@ pub trait AnyOperation: Send + Sync {
     /// ordered without a form having to guess.
     ///
     /// **Without an argument, unlike [`AnyOperation::needs`]**: what an
-    /// operation takes does not depend on what it has already been given — that is where
+    /// operation takes does not depend on what it has already been given - that is where
     /// the form is rendered from, before any choice. A slot that
     /// would only appear afterwards is what [`Applies`] covers, and that is
     /// declared rather than guessed.
@@ -1639,7 +1639,7 @@ pub trait AnyOperation: Send + Sync {
         Vec::new()
     }
     /// The feature and the interpretation this operation writes when none is
-    /// named — `(feature type, interpretation type)`, or `None` when it never
+    /// named - `(feature type, interpretation type)`, or `None` when it never
     /// makes them.
     ///
     /// Declared here and **built** in `ops::support`, on purpose: a form needs
@@ -1649,12 +1649,12 @@ pub trait AnyOperation: Send + Sync {
     fn represents(&self) -> Option<(&'static str, &'static str)> {
         None
     }
-    /// What the activity records that is neither a choice nor an output — a
+    /// What the activity records that is neither a choice nor an output - a
     /// count measured while planning. Empty by default.
     fn reports(&self) -> Vec<Slot> {
         Vec::new()
     }
-    /// **What it writes, by role** — see [`Output`]. Empty by default, which
+    /// **What it writes, by role** - see [`Output`]. Empty by default, which
     /// means *not declared yet*, never *writes nothing*: a caller that chains
     /// steps falls back to the roles the plan carries.
     fn gives(&self) -> Vec<Output> {
@@ -1669,22 +1669,22 @@ pub trait AnyOperation: Send + Sync {
         when: &When,
     ) -> Result<Plan, Error>;
 
-    /// The plan, with its whole [`Context`] — the purpose and the feedback
+    /// The plan, with its whole [`Context`] - the purpose and the feedback
     /// beside the identity and the instant. What the registry calls; an
     /// operation that does not read the context need not say anything.
     fn plan_with(&self, pieces: &Pieces, choices: &Choices, cx: &Context<'_>) -> Result<Plan, Error> {
         self.plan(pieces, choices, cx.identity, cx.when)
     }
 
-    /// Where a listing ranges it — see [`Category`]. Every built-in answers;
+    /// Where a listing ranges it - see [`Category`]. Every built-in answers;
     /// the default is for an operation brought by a caller.
     fn category(&self) -> Category {
         Category::Other
     }
 
-    /// **The other categories it is also listed under** — none by default.
+    /// **The other categories it is also listed under** - none by default.
     ///
-    /// Some operations belong in several categories — for example the one that
+    /// Some operations belong in several categories - for example the one that
     /// extracts wellhead points to create a point set is filed under "write" but
     /// could also be under "Wells". Declared here
     /// rather than guessed by the front end from what the operation takes: a slot of
@@ -1707,7 +1707,7 @@ pub trait AnyOperation: Send + Sync {
     }
 }
 
-/// Where an operation is ranged in a listing — the groups of QGIS Processing,
+/// Where an operation is ranged in a listing - the groups of QGIS Processing,
 /// the paths of GDAL's `gdal raster …`.
 /// Nineteen operations in one list was the complaint.
 ///
@@ -1719,7 +1719,7 @@ pub enum Category {
     Create,
     /// A frame of reference.
     Frame,
-    /// A new geometry decided from the input — a triangulation, a grid, a line.
+    /// A new geometry decided from the input - a triangulation, a grid, a line.
     Geometry,
     /// What is measured on a shape and written as a property.
     Analysis,
@@ -1731,12 +1731,12 @@ pub enum Category {
     Wells,
     /// A foreign vocabulary brought in.
     Import,
-    /// **Values no input carries, invented to build a synthetic model** — a
+    /// **Values no input carries, invented to build a synthetic model** - a
     /// horizon laid by a thickness law, logs by a gradient, a doublet's rates,
     /// a water sample, a fiber, an injection test. Every object such an
     /// operation writes is marked `synthetic = true`.
     ///
-    /// A category of their own, and **only** this one — no `also` into a
+    /// A category of their own, and **only** this one - no `also` into a
     /// general category: these operations belong in the general list only when they
     /// allow geometric operations useful to other, more generic use cases; otherwise
     /// they get a category of their own. The test is what the operation
@@ -1811,7 +1811,7 @@ impl Registry {
         }
     }
 
-    /// No operation at all — for a caller that brings its own.
+    /// No operation at all - for a caller that brings its own.
     pub fn bare() -> Self {
         Self {
             operations: Vec::new(),
@@ -1833,7 +1833,7 @@ impl Registry {
         self.iter().find(|o| o.name() == name)
     }
 
-    /// *What can I create with this?* — every operation, fit or not, with its
+    /// *What can I create with this?* - every operation, fit or not, with its
     /// reason and what it would ask.
     pub fn offers(&self, pieces: &Pieces) -> Vec<Offer<'_>> {
         self.iter()
@@ -1858,7 +1858,7 @@ impl Registry {
         self.plan_for(name, pieces, choices, identity, when, Purpose::Writing)
     }
 
-    /// Plan for a **purpose** — the geometry alone, or the writing.
+    /// Plan for a **purpose** - the geometry alone, or the writing.
     pub fn plan_for(
         &self,
         name: &str,
@@ -1878,7 +1878,7 @@ impl Registry {
         self.plan_in(name, pieces, choices, &cx)
     }
 
-    /// Plan in a whole [`Context`] — a caller that listens for progress, or
+    /// Plan in a whole [`Context`] - a caller that listens for progress, or
     /// may ask the computation to stop.
     pub fn plan_in(
         &self,
@@ -1927,7 +1927,7 @@ impl Registry {
 /// record its inputs is not a provenance, it is a receipt.
 ///
 /// Doing it here rather than in `plan` also keeps the operations pure of the
-/// question: the registry is the one place that holds the *settled* choices —
+/// question: the registry is the one place that holds the *settled* choices -
 /// the answers **and** the suggestions that stood in for what was left out,
 /// which is exactly what a second run would have to be given to come out the
 /// same.
@@ -1935,7 +1935,7 @@ impl Registry {
 /// # What it does not overwrite
 ///
 /// A parameter the operation already wrote under the same title stays. It knows
-/// things this pass cannot — the uom of a measure, an object's full reference —
+/// things this pass cannot - the uom of a measure, an object's full reference -
 /// and two parameters of one title would be an activity saying a thing twice.
 ///
 /// Titles are slot names, so they are all titles the template declares; this
@@ -1982,7 +1982,7 @@ fn record_choices(plan: &mut Plan, slots: &[Slot], settled: &Choices) {
                 },
                 None => continue,
             },
-            // eml 2.3 has no boolean parameter — the template's `Constraint`
+            // eml 2.3 has no boolean parameter - the template's `Constraint`
             // says which two words, and this writes one of them.
             Need::Flag => Parameter::Text {
                 title: slot.name.to_string(),

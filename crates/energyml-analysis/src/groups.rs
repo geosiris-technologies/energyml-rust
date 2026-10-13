@@ -1,4 +1,4 @@
-//! Values split by a key — per zone, per stratigraphic unit.
+//! Values split by a key - per zone, per stratigraphic unit.
 //!
 //! `energyml-domain` already has the statistics; what is missing is the
 //! splitting. This is the splitting and nothing more. The statistics of each group are
@@ -11,11 +11,11 @@
 //!   must be the same length; a shorter one would pair every value after the
 //!   first gap with its neighbour's zone and still produce a table. Refused,
 //!   with both counts.
-//! - **An element with no key is in no group** — a null zone code, an interval
-//!   the frame leaves without a unit — and is counted, never folded into a
+//! - **An element with no key is in no group** - a null zone code, an interval
+//!   the frame leaves without a unit - and is counted, never folded into a
 //!   group of its own that would read as a zone.
 //! - **A null value stays in its group, as a `NaN`**: the summary counts it
-//!   apart and never averages it, and the count is part of the answer — a zone
+//!   apart and never averages it, and the count is part of the answer - a zone
 //!   with ten values and nine nulls is not a zone with one value.
 //! - **Groups come in key order**, so the same data makes the same table.
 
@@ -37,7 +37,7 @@ pub struct Group<K> {
 pub struct Grouped<K> {
     /// The groups, in key order.
     pub groups: Vec<Group<K>>,
-    /// Elements with no key — in no group.
+    /// Elements with no key - in no group.
     pub ungrouped: usize,
 }
 

@@ -1,4 +1,4 @@
-//! `energyml rules` — the rules this library holds.
+//! `energyml rules` - the rules this library holds.
 //!
 //! **No decision here.** The registry, the filters and the JSON are in
 //! `energyml-rules`; this module parses arguments and prints.
@@ -7,7 +7,7 @@ use anyhow::{Result, bail};
 use clap::Parser;
 use energyml_rules::select::{Filter, parse_anchor, parse_status, select, to_json};
 
-/// `energyml rules` — list the rules.
+/// `energyml rules` - list the rules.
 #[derive(Parser)]
 pub struct RulesArgs {
     /// The house rules: what this library decides where the specification is
@@ -20,7 +20,7 @@ pub struct RulesArgs {
     /// One rule, in full: text, reason, references.
     #[arg(long)]
     pub id: Option<String>,
-    /// The rules that show at a place, as `kind:key` — `type:Attachment`,
+    /// The rules that show at a place, as `kind:key` - `type:Attachment`,
     /// `type:Attachment.Md`, `view:object.colour-stack`, `finding:<id>`,
     /// `operation:attach`.
     #[arg(long)]

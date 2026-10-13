@@ -5,7 +5,7 @@
 //! Reported on 04/09 as *IJK grids with edges shooting off towards the origin*
 //! in the 3D view, on `h+g_PaleoGTM.epc`. The reading was never the problem: a
 //! viewer draws the faces from `drawable()` and, until this was written, the
-//! wireframe from `as_shape(Lines).drawable()` — and **those two do not share a
+//! wireframe from `as_shape(Lines).drawable()` - and **those two do not share a
 //! point list**.
 //!
 //! They diverge for one reason, and it is a rule this crate applies on purpose:
@@ -18,7 +18,7 @@
 //!
 //! On PaleoGTM that was 37 772 points against the mesh's 36 363, and 156 099
 //! wireframe indices addressing vertices that did not exist. WebGL does not
-//! report that — it reads whatever the buffer holds — so the edges simply landed
+//! report that - it reads whatever the buffer holds - so the edges simply landed
 //! somewhere, which is the failure this workspace likes least: a wrong picture
 //! with no message.
 //!
@@ -93,7 +93,7 @@ fn two_cells(keep_second: bool) -> Geometry {
 #[test]
 fn every_edge_addresses_a_vertex_the_mesh_has() {
     // The whole point, in one assertion. An index past the end is not an error
-    // any viewer reports — WebGL reads what is there — so it has to be caught
+    // any viewer reports - WebGL reads what is there - so it has to be caught
     // here or not at all.
     for keep in [true, false] {
         let g = two_cells(keep);
@@ -114,7 +114,7 @@ fn every_edge_addresses_a_vertex_the_mesh_has() {
 fn dropping_a_cell_drops_the_nodes_only_it_named_from_both() {
     // The case the two roads disagreed on. With the second cell gone, four of
     // the twelve nodes are named by nothing: `drawable()` holes and drops them,
-    // and the wireframe has to lose them too — otherwise its indices are the
+    // and the wireframe has to lose them too - otherwise its indices are the
     // *old* numbering and every one of them is wrong by four.
     let whole = two_cells(true);
     let cut = two_cells(false);
@@ -155,8 +155,8 @@ fn a_grid_with_nothing_undefined_is_unchanged() {
     // **As sets**, and that is not laziness: `reshape` de-duplicates the edges
     // through a hash set, so the order it hands them back in is not stable from
     // one run to the next. Comparing the lists would give a test that fails on
-    // a Tuesday. Nothing downstream depends on the order — an edge list is
-    // drawn, not read — so the set is the whole claim.
+    // a Tuesday. Nothing downstream depends on the order - an edge list is
+    // drawn, not read - so the set is the whole claim.
     let g = two_cells(true);
     let edges = |list: Vec<[u32; 2]>| -> std::collections::BTreeSet<(u32, u32)> {
         list.into_iter()

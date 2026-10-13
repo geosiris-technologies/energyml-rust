@@ -9,23 +9,23 @@
 //! by the paint's [`Blend`]:
 //!
 //! - **`Smooth`** (a continuous property): the two nodes' colours, mixed at
-//!   `t` — component by component, alpha included — and, between two
+//!   `t` - component by component, alpha included - and, between two
 //!   consecutive points of the cut, the colour runs from one to the other: the
 //!   segment is split into sub-pieces, as a front end does along a well.
-//! - **`Net`** (a discrete property — strata, facies): a colour is a category,
+//! - **`Net`** (a discrete property - strata, facies): a colour is a category,
 //!   and mixing two categories makes a third that nobody measured. The point
 //!   takes the colour of the **nearer node of its edge** (`t < ½` is `a`, `t ≥
 //!   ½` is `b`: a point halfway belongs to the node the edge ends on). On a
 //!   segment whose two ends read the same colour, that colour holds; where they
 //!   differ, the nearest-node regions of the triangle meet somewhere between
-//!   the two points, which the cut does not say — so the segment is cut at its
+//!   the two points, which the cut does not say - so the segment is cut at its
 //!   **middle**, each half in its end's colour. Symmetric (a span read from
 //!   either end paints the same), and the one place the colour changes lies
 //!   between the two points that disagree, never beyond them.
 //!
 //! # Gaps
 //!
-//! Alpha 0 on a node is *no value there* — a gap, never a colour. A point whose
+//! Alpha 0 on a node is *no value there* - a gap, never a colour. A point whose
 //! edge carries a node of alpha 0 **with a weight** (the node `t = 0` leaves out
 //! `b`, and `t = 1` leaves out `a`) has no colour; a segment with such a point
 //! at either end is not drawn. The gap is the segment, never a line drawn
@@ -35,7 +35,7 @@
 //!
 //! By name, and then the span is drawn in the object's flat colour: a source
 //! naming a node the paint does not hold (the paint and the cut do not number
-//! the same nodes — `read::surfaces::Prepared::nodes`), sources that are not
+//! the same nodes - `read::surfaces::Prepared::nodes`), sources that are not
 //! one per point, a colour that does not read, a `t` that is not on its edge.
 
 use crate::model::{Blend, CutSource, Paint};
@@ -49,12 +49,12 @@ const MAX_STEPS: usize = 16;
 /// A colour change under this per channel (out of 255) is not seen: one step.
 const STEP: f64 = 12.0;
 
-/// A colour as four channels in 0..=255 — a float, so a mix is not rounded
+/// A colour as four channels in 0..=255 - a float, so a mix is not rounded
 /// twice.
 type Rgba = [f64; 4];
 
 /// One span of a cut, already laid in pixels, and the source of each of its
-/// points: the pieces to draw, or why the paint does not fit — said by name,
+/// points: the pieces to draw, or why the paint does not fit - said by name,
 /// and the span is then drawn in the object's flat colour.
 pub fn trace_pieces(
     span_px: &[[f64; 2]],
@@ -127,7 +127,7 @@ fn push(pieces: &mut Vec<Piece>, points: Vec<[f64; 2]>, colour: Rgba) {
     });
 }
 
-/// The colour of one point of the cut — `None` where the paint has no value
+/// The colour of one point of the cut - `None` where the paint has no value
 /// (a node of alpha 0 the point leans on).
 fn point_colour(at: usize, source: &CutSource, paint: &Paint) -> Result<Option<Rgba>, String> {
     if !source.t.is_finite() || !(-1e-9..=1.0 + 1e-9).contains(&source.t) {
@@ -140,7 +140,7 @@ fn point_colour(at: usize, source: &CutSource, paint: &Paint) -> Result<Option<R
     let node = |number: u32| -> Result<Rgba, String> {
         let text = paint.nodes.get(number as usize).ok_or_else(|| {
             format!(
-                "point {at}: its edge names node {number}, and the paint holds {} node(s) — the paint and the cut do not number the same nodes",
+                "point {at}: its edge names node {number}, and the paint holds {} node(s) - the paint and the cut do not number the same nodes",
                 paint.nodes.len()
             )
         })?;

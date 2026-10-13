@@ -1,6 +1,6 @@
 //! What a package keeps of itself, layer by layer.
 //!
-//! A face — the front end's session, the command line, Python — holds one
+//! A face - the front end's session, the command line, Python - holds one
 //! [`Cache`] per open store. Every layer is optional and lazy: [`Cache::off`]
 //! keeps nothing, and a function that can use a cache takes one rather than
 //! existing twice, so the fast answer and the slow one are the same code
@@ -19,7 +19,7 @@
 //!
 //! A layer that is off is not a second code path: the same function runs, over
 //! a slot that is thrown away when the call returns. A question to
-//! [`Cache::off`] therefore builds the index it needs and drops it — slower,
+//! [`Cache::off`] therefore builds the index it needs and drops it - slower,
 //! never different. `tests/` holds the proof: every answer, cache on and cache
 //! off, side by side.
 //!
@@ -87,7 +87,7 @@ impl Layers {
         }
     }
 
-    /// Every layer there is — what a long-lived session wants.
+    /// Every layer there is - what a long-lived session wants.
     pub const fn all() -> Self {
         Self {
             index: true,
@@ -122,7 +122,7 @@ impl Layers {
     }
 }
 
-/// What a [`Cache`] holds right now — a count, so that a test can say "nothing"
+/// What a [`Cache`] holds right now - a count, so that a test can say "nothing"
 /// without a clock.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Held {
@@ -144,7 +144,7 @@ impl Held {
 /// What a package keeps of itself: one per open store, with the layers it was
 /// made with.
 ///
-/// Methods take `&self` — a face's methods do, and wasm is single-threaded —
+/// Methods take `&self` - a face's methods do, and wasm is single-threaded -
 /// and no borrow is held across a call that could come back in: a question
 /// asked while another is being answered finds the slot held and answers from
 /// one of its own, as [`IndexSlot::with`] does.
@@ -188,7 +188,7 @@ impl Cache {
 
     // -- the index ----------------------------------------------------------
 
-    /// Run `f` on an index that is exact for `store` — **the invalidation rule
+    /// Run `f` on an index that is exact for `store` - **the invalidation rule
     /// of ADR-0010** (see [`index`]). With the index layer off, the index is
     /// built for this call and dropped after it.
     pub fn with_index<R>(&self, store: &EpcStore, f: impl FnOnce(&PackageIndex) -> R) -> R {
@@ -210,7 +210,7 @@ impl Cache {
         }
     }
 
-    /// The slot holding the index — for a face's negative controls (`tamper`,
+    /// The slot holding the index - for a face's negative controls (`tamper`,
     /// `revision`, `take_disturbed`). It exists whatever the layers; only
     /// [`Cache::with_index`] decides whether it is used.
     #[doc(hidden)]
@@ -218,7 +218,7 @@ impl Cache {
         &self.index
     }
 
-    /// Say that the store is **not the whole package** — see
+    /// Say that the store is **not the whole package** - see
     /// [`IndexSlot::set_partial`].
     pub fn set_partial(&self, partial: bool) {
         self.index.set_partial(partial);
@@ -258,7 +258,7 @@ impl Cache {
         })
     }
 
-    /// What the listing cache did so far — listings built and dropped, files
+    /// What the listing cache did so far - listings built and dropped, files
     /// read. **Work, not time.**
     pub fn attachment_stats(&self) -> CacheStats {
         self.listings

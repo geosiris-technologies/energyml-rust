@@ -8,7 +8,7 @@
 //! and the difference is not stylistic.
 //!
 //! A part written against `resqml 2.2_dev3` but declaring `schemaVersion="2.2"`
-//! is read as the released 2.2 — and the release *succeeds*, because unknown
+//! is read as the released 2.2 - and the release *succeeds*, because unknown
 //! children are skipped rather than rejected. So the object comes back missing
 //! whatever the drop has and the release does not (a `ContactPatch` loses its
 //! `Count`, which the drop makes required and the release has no field for),
@@ -18,7 +18,7 @@
 //!
 //! So nothing here parses the document. The root element's tag is located, one
 //! attribute inside it is rewritten, and **every other byte of the part is left
-//! exactly as it was** — including the parts of the tag this code did not come
+//! exactly as it was** - including the parts of the tag this code did not come
 //! for: attribute order, quoting style, whitespace, namespace declarations.
 //!
 //! # What the specification says, and where this goes past it
@@ -30,8 +30,8 @@
 //! > version is the first 2 digits of an ML version. EXAMPLES: For WITSML v2.0
 //! > the schema version is 20; for RESQML v2.0.1 the schema version is 20.*
 //!
-//! Two things follow. Producers do not obey it — the corpus is full of `2.0`
-//! and `2.2`, with the separator — which is why this crate compares versions
+//! Two things follow. Producers do not obey it - the corpus is full of `2.0`
+//! and `2.2`, with the separator - which is why this crate compares versions
 //! through [`energyml_core::naming::version_eq`] rather than by equality. And
 //! **the specification provides no way at all to name a development drop
 //! here.** `2.2_dev3` is not a schema version in the sense that sentence
@@ -57,21 +57,21 @@ use quick_xml::events::Event;
 ///
 /// Staging bytes is what protects the content: nothing is deserialised, so
 /// nothing can be dropped. But a part staged that way has no *object*, and the
-/// `.rels` are built from an object's `DataObjectReference`s — so a single save
+/// `.rels` are built from an object's `DataObjectReference`s - so a single save
 /// writes parts that are byte-perfect and an index that is **gone**. Measured on
 /// a 1 344-object package: 1 335 `.rels` down to 2.
 ///
 /// The second pass reopens what the first wrote. That package now declares the
 /// version its parts really are, so its objects read as the right release and
-/// their references parse — which is what the writer builds the index from. Same
+/// their references parse - which is what the writer builds the index from. Same
 /// package, measured: **1 345** `.rels`, *more* than the original, because
 /// reading it correctly finds links the producer's own index omitted.
 ///
 /// # Why this is here rather than in the caller
 ///
 /// Because it is knowledge about the storage layer, not about a command line.
-/// Anything that stages bytes and saves — a repair tool, the front end, an ETP
-/// client later — walks into the same trap, and a binary that knows something
+/// Anything that stages bytes and saves - a repair tool, the front end, an ETP
+/// client later - walks into the same trap, and a binary that knows something
 /// the library does not is a bug in the layering.
 ///
 /// # Errors
@@ -116,7 +116,7 @@ pub fn save_reindexed(
 ///
 /// The doc of [`save_reindexed`] names the front end as one of the callers that
 /// walks into the trap; this is what it calls. A browser has no filesystem, so
-/// the intermediate is a `Vec<u8>` — but the reason for two passes is
+/// the intermediate is a `Vec<u8>` - but the reason for two passes is
 /// unchanged: the first writes byte-perfect parts and an index built from
 /// objects that read as the wrong release, and the second reopens what the
 /// first wrote, now declaring what it really is.
@@ -124,7 +124,7 @@ pub fn save_reindexed(
 /// # Errors
 ///
 /// When the second pass fails, **the first pass's bytes come back with the
-/// error** — they are the byte-perfect package, missing only its index, and
+/// error** - they are the byte-perfect package, missing only its index, and
 /// throwing them away would leave the caller with nothing.
 pub fn save_reindexed_bytes(
     store: &crate::EpcStore,
@@ -170,7 +170,7 @@ pub fn save_reindexed_bytes(
 /// What relabelling a whole package would touch.
 ///
 /// **Surveying and applying are two calls**, because the answer to *what would
-/// this do* has to be available before anything is written — a front end shows it,
+/// this do* has to be available before anything is written - a front end shows it,
 /// a command line prints it, and both need the refusal below without having
 /// modified a store.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -192,14 +192,14 @@ impl Survey {
     /// Why this cannot be applied, when it cannot.
     ///
     /// One case, and it is the one that matters: **a package holding two
-    /// releases**. An EPC may legitimately mix them (EPC §3.2) — the reference
-    /// package does — and writing `2.2_dev3` onto a 2.0.1 part makes it readable
+    /// releases**. An EPC may legitimately mix them (EPC §3.2) - the reference
+    /// package does - and writing `2.2_dev3` onto a 2.0.1 part makes it readable
     /// as neither, with nothing downstream to report it. Refusing by name beats
     /// picking one.
     pub fn refusal(&self) -> Option<String> {
         (self.versions.len() > 1).then(|| {
             format!(
-                "this package holds `{}` parts on {} releases ({}) — an EPC may mix them \
+                "this package holds `{}` parts on {} releases ({}) - an EPC may mix them \
                  (EPC §3.2), so say which release to relabel",
                 self.package,
                 self.versions.len(),
@@ -268,7 +268,7 @@ pub fn survey(store: &crate::EpcStore, package: &str, from: Option<&str>) -> Sur
 
 /// Rewrite the declaration of every part the survey names.
 ///
-/// Stages bytes; **nothing reaches a file** until the caller saves — with
+/// Stages bytes; **nothing reaches a file** until the caller saves - with
 /// [`save_reindexed`], which is the only save that keeps the staged bytes and
 /// still rebuilds the index.
 pub fn apply(store: &mut crate::EpcStore, survey: &Survey, version: &str) -> Outcome {
@@ -333,7 +333,7 @@ impl Relabel {
 ///
 /// A version carrying `"`, `'`, `<` or `&` is **refused rather than escaped**.
 /// Escaping would put a value in the file that reads back as something else,
-/// and no real schema version contains any of them — so the string is far more
+/// and no real schema version contains any of them - so the string is far more
 /// likely to be a mistake than an intention.
 pub fn set_schema_version(xml: &[u8], version: &str) -> Result<(Vec<u8>, Relabel)> {
     if version.trim().is_empty() {
@@ -423,8 +423,8 @@ fn name_end(tag: &[u8]) -> usize {
 /// The byte range of the `schemaVersion` **value** inside a tag, quotes
 /// excluded.
 ///
-/// Matched as a whole attribute name — preceded by whitespace and followed by
-/// `=` — so an attribute merely *ending* in it, or an element named after it,
+/// Matched as a whole attribute name - preceded by whitespace and followed by
+/// `=` - so an attribute merely *ending* in it, or an element named after it,
 /// is not mistaken for the one being looked for.
 fn find_attribute(tag: &[u8]) -> Option<std::ops::Range<usize>> {
     let mut at = name_end(tag);

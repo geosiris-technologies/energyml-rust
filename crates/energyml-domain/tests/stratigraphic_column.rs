@@ -75,7 +75,7 @@ fn the_two_versions_draw_the_same_column() {
                         format!("#{:?} [{}] {}", rank.number, rank.criteria, units.join(" / "))
                     })
                     .collect();
-                format!("{} — {}", column.column.title, ranks.join(" | "))
+                format!("{} - {}", column.column.title, ranks.join(" | "))
             })
             .collect();
         out.sort();
@@ -229,7 +229,7 @@ fn ranks_share_units_which_is_what_lets_them_be_aligned() {
         let shared: Vec<_> = fine.iter().filter(|uuid| coarse.contains(uuid)).collect();
         assert!(
             !shared.is_empty(),
-            "{path:?}: the two ranks share at least one unit — without a shared \
+            "{path:?}: the two ranks share at least one unit - without a shared \
              anchor, an alignment would be guesswork"
         );
         assert!(fine.len() > coarse.len(), "{path:?}: rank 1 refines rank 0");

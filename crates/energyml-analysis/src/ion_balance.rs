@@ -1,4 +1,4 @@
-//! **Whether a water analysis is electrically neutral** — the check a stated
+//! **Whether a water analysis is electrically neutral** - the check a stated
 //! analysis of dissolved ions has to pass before it is written, for the water
 //! of Lutetia's chalk aquifer (fresh water, calcium bicarbonate, possible sulfates from Lutetian gypsum,
 //! mineralisation of the order of g/L).
@@ -11,7 +11,7 @@
 //!
 //! A water is electrically neutral: the charges its cations carry equal the
 //! charges its anions carry. A list of concentrations that does not balance is
-//! not a water — it is a typing error, or an ion forgotten, and nothing in the
+//! not a water - it is a typing error, or an ion forgotten, and nothing in the
 //! written analysis would say so. The balance is the one property every
 //! analysis must have whatever its origin, so it is the one this module
 //! checks; it says nothing of whether the water is *this* aquifer's.
@@ -19,7 +19,7 @@
 //! The balance error is the conventional
 //! `100 · (Σ cations − Σ anions) / (Σ cations + Σ anions)`, each sum in
 //! milliequivalents per litre (`meq/L = mg/L ÷ molar mass × |charge|`). What
-//! error is acceptable is the caller's to state — this module computes, it
+//! error is acceptable is the caller's to state - this module computes, it
 //! does not judge.
 //!
 //! # The ions, and where their numbers come from
@@ -39,7 +39,7 @@
 /// One ion: its formula as written, its molar mass in g/mol, its charge.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Ion {
-    /// `Ca+2`, `HCO3-` — the formula, its charge after the sign.
+    /// `Ca+2`, `HCO3-` - the formula, its charge after the sign.
     pub formula: &'static str,
     /// g/mol, from the standard atomic weights listed in the module doc.
     pub molar_mass: f64,
@@ -149,7 +149,7 @@ pub struct Balance {
     pub cations: f64,
     /// Σ anions, meq/L.
     pub anions: f64,
-    /// `100 · (cations − anions) / (cations + anions)`, in percent — positive
+    /// `100 · (cations − anions) / (cations + anions)`, in percent - positive
     /// when the cations carry more.
     pub error: f64,
 }
@@ -157,7 +157,7 @@ pub struct Balance {
 /// What an analysis cannot be, by name.
 #[derive(Debug, Clone, thiserror::Error, PartialEq)]
 pub enum BalanceError {
-    #[error("`{formula}` is no ion this balance knows — one of {known}")]
+    #[error("`{formula}` is no ion this balance knows - one of {known}")]
     Unknown { formula: String, known: String },
     #[error("`{formula}` has a concentration of {given} mg/L: a concentration is a finite number ≥ 0")]
     BadConcentration { formula: String, given: f64 },
@@ -173,7 +173,7 @@ pub enum BalanceError {
     NoAnion,
 }
 
-/// The balance of an analysis — formulas and concentrations in mg/L.
+/// The balance of an analysis - formulas and concentrations in mg/L.
 pub fn balance(analysis: &[(&str, f64)]) -> Result<Balance, BalanceError> {
     let mut seen: Vec<&str> = Vec::with_capacity(analysis.len());
     let (mut cations, mut anions) = (0.0, 0.0);
@@ -216,18 +216,18 @@ pub fn balance(analysis: &[(&str, f64)]) -> Result<Balance, BalanceError> {
     })
 }
 
-/// The molar mass of calcium carbonate, g/mol — Ca + C + 3 O from the weights
+/// The molar mass of calcium carbonate, g/mol - Ca + C + 3 O from the weights
 /// of the module doc.
 pub const CACO3_MOLAR_MASS: f64 = 100.086;
 
 /// The total hardness, in mg/L **as CaCO3**: the calcium and the magnesium
 /// stated, as milliequivalents per litre, times the equivalent mass of CaCO3
-/// (half its molar mass, two charges). The conventional definition — *the sum
+/// (half its molar mass, two charges). The conventional definition - *the sum
 /// of the calcium and magnesium concentrations, both expressed as calcium
 /// carbonate* (APHA *Standard Methods*, 2340 B). `None` when neither ion is stated: a hardness of
 /// zero would be a measurement nobody made.
 ///
-/// TODO(reference): verify — cited from memory; no copy was available.
+/// TODO(reference): verify - cited from memory; no copy was available.
 pub fn total_hardness(analysis: &[(&str, f64)]) -> Option<f64> {
     let mut charges = None;
     for (formula, mg_per_l) in analysis {
@@ -240,7 +240,7 @@ pub fn total_hardness(analysis: &[(&str, f64)]) -> Option<f64> {
     charges.map(|meq| meq * CACO3_MOLAR_MASS / 2.0)
 }
 
-/// The sum of the concentrations stated, mg/L — what the ions listed add up
+/// The sum of the concentrations stated, mg/L - what the ions listed add up
 /// to, which is not a total dissolved solids (that one is weighed after
 /// evaporation, and bicarbonate does not survive it whole).
 pub fn sum_of_ions(analysis: &[(&str, f64)]) -> f64 {
@@ -267,7 +267,7 @@ mod tests {
     #[test]
     fn a_salt_dissolved_alone_balances_exactly() {
         // One mole of NaCl per litre: 22 990 mg/L of Na+ and 35 450 mg/L of
-        // Cl-, one equivalent each — the balance is zero by construction, and
+        // Cl-, one equivalent each - the balance is zero by construction, and
         // any error in a molar mass or a charge shows here.
         let found = balance(&[("Na+", 22_990.0), ("Cl-", 35_450.0)]).unwrap();
         assert!((found.cations - 1000.0).abs() < 1e-9, "{found:?}");

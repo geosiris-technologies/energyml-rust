@@ -1,7 +1,7 @@
-//! A recipe played in memory — `energyml_build::recipe`,
+//! A recipe played in memory - `energyml_build::recipe`,
 //! the reference model's recipe.
 //!
-//! No HDF5: the recipes here are made of steps that write no array — `crs`,
+//! No HDF5: the recipes here are made of steps that write no array - `crs`,
 //! and an operation declared **in this file** that names what an earlier step
 //! wrote. A test operation in the shipped registry would be an entry the front end
 //! offers somebody (`tests/cardinality.rs` says why); here it is registered
@@ -11,16 +11,16 @@
 //!
 //! `Activity.Parent` 0..1, *“An optional parent activity, when the activity is
 //! a sub-activity”* (common TRG 2.3 §3.3 p. 42; `Activities.xsd` l. 76); a
-//! parameter of kind `subActivity` in the template (l. 24–33); the parent
+//! parameter of kind `subActivity` in the template (l. 24-33); the parent
 //! naming each child by a `DataObjectParameter` whose `Title` *“must have an
-//! equivalent in the activity descriptor parameters”* (l. 38–40).
+//! equivalent in the activity descriptor parameters”* (l. 38-40).
 //!
 //! # What would make them fail
 //!
 //! A clock or a random draw anywhere in the identities (two runs differ); a
 //! step's name out of its activity's seed (two `crs` steps of one seed write
 //! one activity); `Parent` written under a key the reader does not know (it
-//! is dropped without a word — which is why the activities are read **back
+//! is dropped without a word - which is why the activities are read **back
 //! from the package**); a refusal that skips its step instead of stopping; a
 //! malformed recipe that plans its first steps before being refused.
 
@@ -43,7 +43,7 @@ use energyml_storage::EpcStore;
 /// given. It writes one `BoundaryFeature`, so that the plan is not empty, and
 /// says in a note which object pieces reached it.
 ///
-/// It records under `crs`'s canonical template — the only way to write an
+/// It records under `crs`'s canonical template - the only way to write an
 /// activity without a line in `rc/activityTemplates.json`, which would ship.
 struct NamesAFrame;
 
@@ -52,7 +52,7 @@ impl AnyOperation for NamesAFrame {
         "names-a-frame"
     }
     fn describe(&self) -> &'static str {
-        "names an object an earlier step wrote — a test operation"
+        "names an object an earlier step wrote - a test operation"
     }
     fn makes(&self) -> &'static [&'static str] {
         &["resqml22.BoundaryFeature"]
@@ -84,7 +84,7 @@ impl AnyOperation for NamesAFrame {
     ) -> Result<Plan, Error> {
         let title = choices.text("title").unwrap_or("untitled").to_string();
         let uuid = identity.uuid(&format!("names-a-frame:{title}"), 0)?;
-        // The object pieces it was given — the inputs, not the companions.
+        // The object pieces it was given - the inputs, not the companions.
         let inputs: Vec<String> = pieces
             .iter()
             .filter(|(name, _)| !name.ends_with(" (object)"))
@@ -151,7 +151,7 @@ fn empty_store() -> EpcStore {
 }
 
 /// Three steps: two frames of one seed, then a step that names the vertical
-/// system the first one wrote — by the step's name, never by a uuid — and
+/// system the first one wrote - by the step's name, never by a uuid - and
 /// takes all its objects as inputs.
 const THREE_STEPS: &str = r#"
 titre = "Mini"
@@ -193,7 +193,7 @@ fn played(text: &str) -> (recipe::Played, EpcStore) {
     (played, store)
 }
 
-/// An object of the package, as the workspace's JSON writes it — read **back**.
+/// An object of the package, as the workspace's JSON writes it - read **back**.
 fn read_back(store: &EpcStore, uuid: &str) -> Value {
     let summary = store
         .find_by_uuid(uuid)
@@ -240,7 +240,7 @@ fn the_objects_each_step_writes_are_in_the_package() {
         first.objects
     );
     assert_eq!(first.serves, ["O_001", "O_002"]);
-    // The second `crs` step writes the same systems — replaced, and said.
+    // The second `crs` step writes the same systems - replaced, and said.
     let again = played.steps[1].made.as_ref().expect("applied");
     assert!(
         !again.replaced.is_empty(),
@@ -271,7 +271,7 @@ fn a_step_names_what_an_earlier_step_wrote_by_its_name() {
     assert_eq!(frame["DataObject"]["QualifiedType"], "eml23.VerticalCrs");
 
     // Every object of `reperes`, each a piece of its own, `seen` then `seen 2`
-    // — **then what `apply` wrote beside them, its activity last**: the
+    // - **then what `apply` wrote beside them, its activity last**: the
     // template it added, and the activity. A step wrote them too, and a project
     // collection holds them.
     let note = naming
@@ -326,8 +326,8 @@ fn a_step_names_what_an_earlier_step_wrote_by_its_name() {
     );
 }
 
-/// **Two runs, one package.** Every uuid — the objects', the activities', the
-/// workflow's — comes out the same: nothing is drawn, the instant is stated.
+/// **Two runs, one package.** Every uuid - the objects', the activities', the
+/// workflow's - comes out the same: nothing is drawn, the instant is stated.
 #[test]
 fn two_runs_of_one_recipe_write_the_same_uuids() {
     let uuids = |store: &EpcStore| {
@@ -345,7 +345,7 @@ fn two_runs_of_one_recipe_write_the_same_uuids() {
 }
 
 /// **Each operation's activity carries `Parent` → the workflow's**, read back
-/// from the package — and the two `crs` steps, one seed, are two activities.
+/// from the package - and the two `crs` steps, one seed, are two activities.
 #[test]
 fn every_operation_activity_has_the_workflow_as_its_parent() {
     let (played, store) = played(THREE_STEPS);
@@ -377,7 +377,7 @@ fn every_operation_activity_has_the_workflow_as_its_parent() {
 
 /// The root names its children, and its template says what each one is: one
 /// `subActivity` parameter per step, the operation's canonical template in
-/// `Constraint` — the only place `Activities.xsd` leaves for it.
+/// `Constraint` - the only place `Activities.xsd` leaves for it.
 #[test]
 fn the_workflow_template_has_a_sub_activity_per_step_and_the_root_names_each_child() {
     let (played, store) = played(THREE_STEPS);
@@ -429,7 +429,7 @@ fn the_workflow_template_has_a_sub_activity_per_step_and_the_root_names_each_chi
     }
 }
 
-/// **A refusal stops the run, naming the step** — and nothing after it runs.
+/// **A refusal stops the run, naming the step** - and nothing after it runs.
 #[test]
 fn a_step_that_refuses_stops_the_run_and_names_the_step() {
     let text = r#"
@@ -541,7 +541,7 @@ nom = "plus-tard"
 operation = "crs"
 set = { epsg = 2154 }
 "#;
-    let recipe = Recipe::parse(text).expect("it reads — it does not hold together");
+    let recipe = Recipe::parse(text).expect("it reads - it does not hold together");
     let mut store = empty_store();
     let before = store.resources().len();
     let stop = recipe::play(
@@ -573,7 +573,7 @@ set = { epsg = 2154 }
     }
 }
 
-/// A key the recipe does not know is refused by its name — `entree` for
+/// A key the recipe does not know is refused by its name - `entree` for
 /// `entrees` would otherwise be a step with no input, which reads like one
 /// that needs none.
 #[test]
@@ -594,7 +594,7 @@ entree = [ { fichier = "x.geojson" } ]
 }
 
 /// A held step is checked, reported with its reason, declared in the template
-/// as optional — and not played.
+/// as optional - and not played.
 #[test]
 fn a_held_step_is_reported_and_declared_optional_but_not_played() {
     let text = r#"
@@ -688,8 +688,8 @@ set = { frame = { etape = "reperes" }, title = "x" }
 
 /// **A variant is the recipe without a group**, never a second recipe.
 /// The need: a second one to open lutetia but without the objects in
-/// error. The left-out steps are held — said, reported, not
-/// played — and a step kept that takes what a left-out one writes is refused
+/// error. The left-out steps are held - said, reported, not
+/// played - and a step kept that takes what a left-out one writes is refused
 /// by name, as for any held step.
 #[test]
 fn a_variant_leaves_a_group_out_and_says_so() {

@@ -1,8 +1,8 @@
 //! From a read collection to the whole set of objects a package will hold.
 //!
-//! Everything that can be *wrong* about an import lives here — which features
+//! Everything that can be *wrong* about an import lives here - which features
 //! fall in which group, which places are the same place, which row of the table
-//! a point set is — and none of it needs a store. The module that opens a
+//! a point set is - and none of it needs a store. The module that opens a
 //! package and writes an `.h5` comes after and has no decisions left to take.
 //!
 //! # Deduplication, and the number that must survive it
@@ -12,7 +12,7 @@
 //! of them on one point with identical properties. Importing them as they stand
 //! would put the same coordinates in a package eighty-eight times.
 //!
-//! So places are made distinct — a deliberate choice — and **the count
+//! So places are made distinct - a deliberate choice - and **the count
 //! before deduplication is carried out with them**, into the table's `passes`
 //! column and into the activity. A package showing only the second number looks
 //! like a far thinner survey than the ground actually holds, and nothing in it
@@ -25,8 +25,8 @@
 //!
 //! - a tolerance is a decision about how far apart two boreholes have to be to
 //!   be two boreholes, and nothing in this file supports one. The SIGEOL
-//!   coordinates are already rounded to four decimal degrees by the producer —
-//!   about 7 m — so the grouping they imply is the producer's, not ours;
+//!   coordinates are already rounded to four decimal degrees by the producer -
+//!   about 7 m - so the grouping they imply is the producer's, not ours;
 //! - `NaN != NaN`, and a coordinate that is not a number is a coordinate this
 //!   import has no business quietly merging. Comparing the bits makes two `NaN`s
 //!   equal, which is what `hdf5_write` does for the same reason.
@@ -74,8 +74,8 @@ pub struct Plan {
     pub unordered: usize,
     /// Features carrying no position at all.
     pub unplaced: usize,
-    /// Features that are **the same feature** as one already read — same `id`,
-    /// same places — which is what a unit stated in two exports is: the
+    /// Features that are **the same feature** as one already read - same `id`,
+    /// same places - which is what a unit stated in two exports is: the
     /// Lutétien unit whose two ages are both the Lutétien is in the
     /// `olderNamedAge` file *and* in the `youngerNamedAge` file, one pass of one
     /// borehole twice (measured on a real pair of exports: all 8 311 features of
@@ -124,7 +124,7 @@ impl Plan {
 
 /// Group a collection's features against one queried stage.
 ///
-/// `stage` is what decides top from bottom, and it is **not in the file** — see
+/// `stage` is what decides top from bottom, and it is **not in the file** - see
 /// [`crate::sigeol`]. A caller with none has no sides to give.
 pub fn plan(collection: &Collection, stage: &str) -> Plan {
     // Keyed and ordered, so the groups come out the same way twice. A `HashMap`
@@ -211,7 +211,7 @@ fn same_place(a: &Position, b: &Position) -> bool {
 ///
 /// Keys start at **1** rather than 0. Not decoration: the key column exists so a
 /// property is matched against a key rather than counted from the top, and a
-/// table keyed `0..n-1` makes the two indistinguishable — which is exactly how
+/// table keyed `0..n-1` makes the two indistinguishable - which is exactly how
 /// a real table once mislabelled every facies.
 pub fn rows(plan: &Plan) -> Vec<crate::table::Row> {
     plan.groups
@@ -223,7 +223,7 @@ pub fn rows(plan: &Plan) -> Vec<crate::table::Row> {
             referential: group.unit.href.clone().unwrap_or_default(),
             stage: group.stage.clone(),
             side: group.side.label().to_string(),
-            // Written even when absent — a group only exists when its bounds
+            // Written even when absent - a group only exists when its bounds
             // ordered, so these are always there; `0.0` would be a value nobody
             // wrote, and the shape says so if that ever changes.
             young_ma: group.unit.young.ma.unwrap_or_default(),
@@ -291,7 +291,7 @@ mod tests {
     #[test]
     fn a_unit_and_a_side_make_a_group_and_the_order_does_not_move() {
         // Two units, one stage. Ordered by key so two runs of one file write the
-        // same package — a package whose object order changed between runs is a
+        // same package - a package whose object order changed between runs is a
         // diff nobody can read.
         let a = feature("aaa", 2.29, 48.87, 58.0, ("Bartonien", 37.8), ("Lutétien", 47.8));
         let b = feature("bbb", 2.40, 48.90, 50.0, ("Bartonien", 37.8), ("Bartonien", 41.2));

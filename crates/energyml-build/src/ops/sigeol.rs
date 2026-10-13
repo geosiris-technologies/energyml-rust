@@ -1,10 +1,10 @@
-//! `sigeol-units` — the BRGM SIGEOL export, as the first operation.
+//! `sigeol-units` - the BRGM SIGEOL export, as the first operation.
 //!
 //! This is the import that existed before the trait, reformulated on it and
 //! not rewritten: `assemble` groups, `build` and `table` make the objects,
 //! `crs` places the points, exactly as before. (The corpus tests that said
 //! nothing moved, `tests/sigeol_corpus.rs`, read the exports where they sit
-//! outside the repository and were removed on 29/09 — no test reads a file
+//! outside the repository and were removed on 29/09 - no test reads a file
 //! outside the project.) What the trait adds
 //! is the door: the same operation is reachable by `energyml create`, by the
 //! front end and by a third-party application, and it says what it needs before
@@ -19,9 +19,9 @@
 //! |---|---|---|
 //! | a `Point` per feature | yes | the feature is set aside and counted |
 //! | the unit's name | yes | set aside and counted |
-//! | the referential URL | no | the uuid is derived from the title — worse, and said |
+//! | the referential URL | no | the uuid is derived from the title - worse, and said |
 //! | two **numeric** ages | to settle the side | no side is settled: the feature enters no surface |
-//! | the queried **stage** | yes | refused — it decides top from base, and no GeoJSON states it |
+//! | the queried **stage** | yes | refused - it decides top from base, and no GeoJSON states it |
 //! | the CRS of the numbers | yes | 4326 by definition (RFC 7946) |
 //! | a target CRS in metres | no | degrees are written as they stand, and a scene draws a needle |
 //!
@@ -45,9 +45,9 @@ pub struct SigeolUnits;
 /// What `sigeol-units` is told.
 #[derive(Debug, Params)]
 pub struct SigeolParams {
-    /// the stage the export was asked about — what decides top from base
+    /// the stage the export was asked about - what decides top from base
     pub stage: String,
-    /// the EPSG code the file's coordinates are in — 4326 by definition
+    /// the EPSG code the file's coordinates are in - 4326 by definition
     #[param(default = Epsg(4326))]
     pub source_epsg: Epsg,
     /// reproject into this EPSG system, in metres; left out, the degrees are written as they stand
@@ -59,7 +59,7 @@ pub struct SigeolParams {
     pub data_file: String,
 }
 
-/// What `sigeol-units` takes: the SIGEOL export — **several** collections
+/// What `sigeol-units` takes: the SIGEOL export - **several** collections
 /// merged, as the plan always did.
 #[derive(Debug, Inputs)]
 pub struct SigeolInputs {
@@ -99,7 +99,7 @@ impl Operation for SigeolUnits {
     }
 
     /// **The content, not the kind**: a feature collection binds, and only a
-    /// GeoSciML vocabulary inside it makes it an export this reads — the one
+    /// GeoSciML vocabulary inside it makes it an export this reads - the one
     /// named exception of `tests/operations.rs`.
     fn check(&self, inputs: &SigeolInputs) -> Result<(), Refusal> {
         let mut features = 0usize;
@@ -140,7 +140,7 @@ impl Operation for SigeolUnits {
             collection.features.extend(one.features.iter().cloned());
         }
         let source_epsg = params.source_epsg.0;
-        // **A code of degrees is no projection** — the refusal `support::frame_in`
+        // **A code of degrees is no projection** - the refusal `support::frame_in`
         // makes of the same slot, for the same reason: `project: 4326` wrote a
         // `ProjectedCrs` whose numbers are degrees read as metres.
         if let Some(code) = params.project.map(|code| code.0)
@@ -149,7 +149,7 @@ impl Operation for SigeolUnits {
             return Err(Refusal::on(
                 "project",
                 format!(
-                    "`project` is EPSG:{code}, which measures degrees: a projection is into metres — name a projected system (EPSG:2154 for mainland France), or leave `project` out to keep the degrees"
+                    "`project` is EPSG:{code}, which measures degrees: a projection is into metres - name a projected system (EPSG:2154 for mainland France), or leave `project` out to keep the degrees"
                 ),
             ));
         }
@@ -172,7 +172,7 @@ impl Operation for SigeolUnits {
         };
         let assembled = assemble::plan(&collection, &params.stage);
         // **No group: say the stage asked for, and those the file carries.**
-        // The earlier refusal — *“the plan holds no group”* — left the value
+        // The earlier refusal - *“the plan holds no group”* - left the value
         // to type to be guessed; `top` and then `lutetien` were tried, where
         // the file writes `Lutétien`. The comparison does not fold accents
         // (`Unit::side_for`), so the names are given as written.
@@ -252,7 +252,7 @@ impl Operation for SigeolUnits {
     }
 }
 
-/// The plan of an assembled import — pure, and what `epc::write` applies.
+/// The plan of an assembled import - pure, and what `epc::write` applies.
 ///
 /// The same objects, in the same order, as the writer built before the trait
 /// existed: the frame's CRS objects (two in degrees; four over metres, the
@@ -278,7 +278,7 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
     }
 
     // **The frame of `support::frame_in`, by the same two functions**: the
-    // identity compound over metres, the `Geographic2dCrs` over degrees — the
+    // identity compound over metres, the `Geographic2dCrs` over degrees - the
     // default here, and the named exception (a) of 24/09, said below. The
     // horizontal and vertical keep the uuids they always had; the plane and
     // the compound, over metres, are two objects more.
@@ -299,7 +299,7 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
         says.push(Note {
             key: "frame-degrees",
             detail: format!(
-                "the point sets name `{}`, a Geographic2dCrs: their coordinates are degrees, and EML 2.3 has no compound over degrees (LocalEngineering2dCrs.OriginProjectedCrs is a ProjectedCrs, CRS.xsd l. 504) — so the vertical system is referenced by nothing. Give a projected target to write metres under a compound",
+                "the point sets name `{}`, a Geographic2dCrs: their coordinates are degrees, and EML 2.3 has no compound over degrees (LocalEngineering2dCrs.OriginProjectedCrs is a ProjectedCrs, CRS.xsd l. 504) - so the vertical system is referenced by nothing. Give a projected target to write metres under a compound",
                 crs_reference.title
             ),
         });
@@ -311,7 +311,7 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
     let table = crate::table::build(
         &table_uuid,
         &rows,
-        options.citation(&format!("{} — imported units", options.stage)),
+        options.citation(&format!("{} - imported units", options.stage)),
     );
     let table_reference =
         crate::crs::reference_to(&table.uuid, "eml23.ColumnBasedTable", &table.citation.title);
@@ -359,7 +359,7 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
             group.points.len(),
             &representation,
             &table_reference,
-            options.citation(&format!("{title} — unit")),
+            options.citation(&format!("{title} - unit")),
         );
 
         let placed = match crate::crs::place(&group.points, &options.target, options.source_epsg) {
@@ -432,7 +432,7 @@ pub fn plan_of(assembled: &assemble::Plan, options: &epc::Options) -> Result<Pla
         shapes: Vec::new(),
         activity: ActivityDraft {
             recipe: "import-geojson",
-            title: format!("{} — {}", options.source, options.stage),
+            title: format!("{} - {}", options.source, options.stage),
             seed: format!("{}:{}", options.source, options.stage),
             parameters: vec![
                 text("source", options.source.clone()),

@@ -11,11 +11,11 @@ use syn::{GenericArgument, PathArguments, Type};
 /// How a field's item type is wrapped.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Wrapper {
-    /// `T` — exactly one.
+    /// `T` - exactly one.
     Plain,
-    /// `Option<T>` — zero or one.
+    /// `Option<T>` - zero or one.
     Optional,
-    /// `Vec<T>` — zero or more.
+    /// `Vec<T>` - zero or more.
     Repeated,
 }
 

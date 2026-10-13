@@ -1,7 +1,7 @@
 //! What one package gives the calculation (ADR-0015).
 //!
 //! The only stage that touches a store. Everything leaves here **in the scene's
-//! system** — reprojected when the object's own differs — and a
+//! system** - reprojected when the object's own differs - and a
 //! surface in time leaves carried onto the depth axis by the scene's time
 //! factor, so [`crate::assemble`] needs no source.
 //!
@@ -37,40 +37,40 @@ use crate::model::{Asked, Contribution, SectionTrace, System};
 pub type FramesOf<'a> = dyn Fn(&str) -> Vec<Box<dyn DynObject>> + 'a;
 
 /// The colour the file gives an object, by its **full uri** (version included
-/// when it declares one — two versions are two objects), as a face that has
-/// already resolved it answers — `None` when the file gives none.
+/// when it declares one - two versions are two objects), as a face that has
+/// already resolved it answers - `None` when the file gives none.
 pub type ColourOf<'a> = dyn Fn(&str) -> Option<String> + 'a;
 
-/// What the package says that a [`ValueSource`] cannot be asked for — each
+/// What the package says that a [`ValueSource`] cannot be asked for - each
 /// needs a listing of the package, which only the face holding it can make.
 #[derive(Default)]
 pub struct PackageContext<'a> {
-    /// The package's `GraphicalInformationSet`s, read, each with its uuid —
+    /// The package's `GraphicalInformationSet`s, read, each with its uuid -
     /// where the colour of a stratigraphic unit and of a surface come from.
     /// Empty: nothing has a colour from the file.
     pub graphics: &'a [(String, GraphicalSet)],
-    /// The frames that may represent a wellbore (a lowercase uuid) —
+    /// The frames that may represent a wellbore (a lowercase uuid) -
     /// `strata_by_md::of_representation`'s `frames_of`, asked only for an
     /// object that states no unit itself. `None`: a silent object is not
     /// painted from its sisters.
     pub frames_of: Option<&'a FramesOf<'a>>,
-    /// The package's index — with it, a surface's colour follows the whole
+    /// The package's index - with it, a surface's colour follows the whole
     /// inheritance order (collections, models), the one the 3D viewer's ladder
     /// walks (`color_inherit`). `None`: the representation, its interpretation
     /// and its feature only.
     pub index: Option<&'a PackageIndex>,
-    /// The face's own resolver of the file's colours, when it has one in cache —
+    /// The face's own resolver of the file's colours, when it has one in cache -
     /// the front end holds every drawn object's ladder already (the front end can pass
     /// its resolver to the calculation so that the search is not redone). Given, it is asked **instead of** the
     /// cascade: no set is merged, no walk is made. It answers the **file's**
-    /// colour (the ladder's), never a colour chosen for the scene — those travel
+    /// colour (the ladder's), never a colour chosen for the scene - those travel
     /// in the view (`View::colours`).
     pub colour_of: Option<&'a ColourOf<'a>>,
 }
 
 /// What reading needs to know of the scene, beyond the sections.
 pub struct Scene<'a> {
-    /// The scene's system — what every point is reprojected into. `None`: a
+    /// The scene's system - what every point is reprojected into. `None`: a
     /// scene with none; an object that states one is then refused by name.
     pub system: Option<&'a System>,
     /// The scene's time scale (`model::Inputs::time_factor`).
@@ -79,14 +79,14 @@ pub struct Scene<'a> {
     pub reprojector: &'a dyn Reprojector,
 }
 
-/// How much a section's windows are grown beyond its widest side, as a share —
+/// How much a section's windows are grown beyond its widest side, as a share -
 /// the slack that keeps rounding from dropping a head that sits exactly on the
 /// corridor's edge. Zero would be exact on paper and wrong on a float.
 pub const CORRIDOR_SLACK: f64 = 1e-9;
 
 /// The windows a head must fall in to be read: for every segment of every
 /// section, its bounding box grown by the section's widest side (plus
-/// [`CORRIDOR_SLACK`]) — a superset of the region `Corridor::project` keeps,
+/// [`CORRIDOR_SLACK`]) - a superset of the region `Corridor::project` keeps,
 /// refuses for a reason, or is within reach of: a head that classifies is
 /// within `max(left, right)` of a segment or of an end. `None` when there is
 /// no section to bound by.
@@ -113,8 +113,8 @@ pub fn corridor_windows(sections: &[SectionTrace]) -> Option<Vec<Rect>> {
 /// One object that fails never fails the call: it becomes a
 /// [`crate::model::Refused`].
 ///
-/// `well_context` is what a `ValueSource` cannot be asked for — the package's colour
-/// sets and the frames of a wellbore, both needing a listing of the package —
+/// `well_context` is what a `ValueSource` cannot be asked for - the package's colour
+/// sets and the frames of a wellbore, both needing a listing of the package -
 /// which the face that holds the package supplies (`read::wells`). Its default
 /// gives units no colour and does not paint a silent frame from its sisters.
 pub fn contribution(
@@ -135,7 +135,7 @@ pub fn contribution(
 }
 
 /// [`contribution`], answered from what `cache` kept of this package where it
-/// is still exact (`cache` explains when) — the one implementation: the
+/// is still exact (`cache` explains when) - the one implementation: the
 /// uncached call is this one with a cache thrown away.
 // The closures return a refusal, which carries the object's whole identity on
 // purpose (as `read_surface` says).
@@ -166,7 +166,7 @@ pub enum Bound {
     /// are told by their head, read from no array, and `assemble` refuses them
     /// as too far exactly as it would have after a full read.
     Corridor,
-    /// Every asked well, in full — what the corridor's answer is checked against.
+    /// Every asked well, in full - what the corridor's answer is checked against.
     Everything,
 }
 
@@ -230,7 +230,7 @@ pub fn contribution_bounded(
             // merging far away). The catalogue's drawn part is
             // the same; the rows of far wells lose their `Merged`, and a far
             // well whose full read would have failed (or noted a dropped node)
-            // now says "farther than" instead — both accepted.
+            // now says "farther than" instead - both accepted.
             let near_wellbores: HashSet<&str> = slots
                 .iter()
                 .flatten()
@@ -253,7 +253,7 @@ pub fn contribution_bounded(
             }
         }
     }
-    // Every set of the package, merged once for all its surfaces — the one
+    // Every set of the package, merged once for all its surfaces - the one
     // reading of several (`GraphicalSet::merged`, as a front end's graphical-set reader).
     // Not when the face resolves colours itself: nothing would read the sets;
     // and only when a surface is read at all.

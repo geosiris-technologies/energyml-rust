@@ -1,4 +1,4 @@
-//! A surface **between polylines** — the loft:
+//! A surface **between polylines** - the loft:
 //! two lines for the idea as it was put, more for a fault surface from
 //! successive sticks, which is the same band repeated between neighbours.
 //!
@@ -6,7 +6,7 @@
 //!
 //! Each line is measured by its **normalised arc length**, 0 to 1 along it,
 //! and the stitch advances on the line whose next vertex comes first in that
-//! measure — the classic tiling between contours (Christiansen and Sederberg,
+//! measure - the classic tiling between contours (Christiansen and Sederberg,
 //! 1978). Every triangle has two corners on one line and one on the other, and
 //! **every vertex of both lines is kept**: nothing is resampled, the rule of
 //! `fence::panel`. The optimum (Fuchs, Kedem and Uselton, 1977) costs a
@@ -18,17 +18,17 @@
 //! disagree in direction.
 //!
 //! - **two open lines running opposite ways** give a twisted band that looks
-//!   like a surface. The direction is read at the ends — the start of one
-//!   nearer the end of the other than its start — and it is **refused, naming
+//!   like a surface. The direction is read at the ends - the start of one
+//!   nearer the end of the other than its start - and it is **refused, naming
 //!   both**, with the remedy: reversing one is a gesture that exists. Turning
 //!   one in silence would decide for somebody;
 //! - **a closed line and an open one**: there is no correspondence;
-//! - **two rings**: the start must be chosen too — the second ring is turned
+//! - **two rings**: the start must be chosen too - the second ring is turned
 //!   so that the two starts are nearest, and the result **says** by how many
 //!   vertices. Two rings wound opposite ways in plan are refused like two
 //!   opposite lines.
 //!
-//! TODO(reference): verify — the citations of Christiansen and Sederberg (1978) and Fuchs, Kedem and Uselton (1977) are given without title, venue or DOI; complete and check them.
+//! TODO(reference): verify - the citations of Christiansen and Sederberg (1978) and Fuchs, Kedem and Uselton (1977) are given without title, venue or DOI; complete and check them.
 
 /// One line of the loft: its vertices, whether it closes, and its name for a refusal.
 #[derive(Clone, Copy, Debug)]
@@ -44,7 +44,7 @@ pub struct Lofted {
     pub points: Vec<[f64; 3]>,
     pub triangles: Vec<[u32; 3]>,
     /// For each ring after the first: how many vertices it was turned by to
-    /// bring its start next to the previous one's — `0` for open lines.
+    /// bring its start next to the previous one's - `0` for open lines.
     pub turned: Vec<usize>,
 }
 
@@ -52,7 +52,7 @@ fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
     ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2) + (b[2] - a[2]).powi(2)).sqrt()
 }
 
-/// The normalised arc length of each vertex — and of the return to the first,
+/// The normalised arc length of each vertex - and of the return to the first,
 /// for a ring. `None` for a line of no length.
 fn abscissas(points: &[[f64; 3]], closed: bool) -> Option<Vec<f64>> {
     let n = points.len();
@@ -116,7 +116,7 @@ fn stitch(
     }
 }
 
-/// The loft of `lines`, in their order — see the module documentation for what
+/// The loft of `lines`, in their order - see the module documentation for what
 /// is refused, and why.
 pub fn loft(lines: &[LoftLine]) -> Result<Lofted, String> {
     if lines.len() < 2 {
@@ -129,7 +129,7 @@ pub fn loft(lines: &[LoftLine]) -> Result<Lofted, String> {
         let least = if line.closed { 3 } else { 2 };
         if line.points.len() < least {
             return Err(format!(
-                "`{}` has {} node(s) — a{} line needs at least {least}",
+                "`{}` has {} node(s) - a{} line needs at least {least}",
                 line.name,
                 line.points.len(),
                 if line.closed { " closed" } else { "n open" }
@@ -144,7 +144,7 @@ pub fn loft(lines: &[LoftLine]) -> Result<Lofted, String> {
             (*other, first)
         };
         return Err(format!(
-            "`{}` is closed and `{}` is open — there is no correspondence between a ring and a line",
+            "`{}` is closed and `{}` is open - there is no correspondence between a ring and a line",
             closed.name, open.name
         ));
     }
@@ -152,7 +152,7 @@ pub fn loft(lines: &[LoftLine]) -> Result<Lofted, String> {
     let mut points: Vec<[f64; 3]> = Vec::new();
     let mut triangles = Vec::new();
     let mut turned = Vec::new();
-    // Each line as it is used — a ring possibly turned.
+    // Each line as it is used - a ring possibly turned.
     let mut previous: Vec<[f64; 3]> = first.points.to_vec();
     points.extend(&previous);
     let mut previous_offset = 0u32;
@@ -163,7 +163,7 @@ pub fn loft(lines: &[LoftLine]) -> Result<Lofted, String> {
             let (wa, wb) = (winding(&previous), winding(&next));
             if wa * wb < 0.0 {
                 return Err(format!(
-                    "`{}` and `{}` turn opposite ways — the band between them would be twisted; reverse one of them",
+                    "`{}` and `{}` turn opposite ways - the band between them would be twisted; reverse one of them",
                     a.name, b.name
                 ));
             }
@@ -185,7 +185,7 @@ pub fn loft(lines: &[LoftLine]) -> Result<Lofted, String> {
             let (sb, eb) = (next[0], next[next.len() - 1]);
             if distance(sa, eb) + distance(ea, sb) < distance(sa, sb) + distance(ea, eb) {
                 return Err(format!(
-                    "`{}` and `{}` run opposite ways — the band between them would be twisted; reverse one of them",
+                    "`{}` and `{}` run opposite ways - the band between them would be twisted; reverse one of them",
                     a.name, b.name
                 ));
             }

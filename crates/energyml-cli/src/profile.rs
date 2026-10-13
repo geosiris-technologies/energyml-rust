@@ -1,4 +1,4 @@
-//! `energyml profile` — the wells that fall in the band around a drawn track.
+//! `energyml profile` - the wells that fall in the band around a drawn track.
 //!
 //! Argument parsing and display only: the heads, the distances, the sides and
 //! the band are `energyml_analysis::wells_profile`'s, so this command and the
@@ -18,7 +18,7 @@ use crate::{Modes, open};
 /// `energyml profile` arguments.
 #[derive(Parser)]
 pub struct ProfileArgs {
-    /// The EPC file — the section's first package, `s1`.
+    /// The EPC file - the section's first package, `s1`.
     file: PathBuf,
     /// With `--svg`: another package, `s2`, `s3`… in the order given. Its wells
     /// and surfaces are cut along the same sections and drawn in the same
@@ -43,14 +43,14 @@ pub struct ProfileArgs {
     right: Option<f64>,
     /// Draw again the section view this SVG holds, from what its metadata says
     /// it was made of, over the packages given (`FILE` is `s1`, `--also` the
-    /// next) — into `--svg`, and `--png`. On the same packages, the same bytes.
+    /// next) - into `--svg`, and `--png`. On the same packages, the same bytes.
     #[arg(long, value_name = "FILE.svg", requires = "svg")]
     from_svg: Option<PathBuf>,
     /// The coordinates of the track: `projected` (the CRS as it stands),
     /// `metres` (its horizontal unit taken to metres) or `local`.
     #[arg(long, default_value = "projected")]
     placement: String,
-    /// Which wells, by uri or uuid. Left out, every trajectory of the package —
+    /// Which wells, by uri or uuid. Left out, every trajectory of the package -
     /// with `--svg`, every trajectory and frame of every package; given, each
     /// goes to the package that holds it.
     #[arg(long = "well", value_name = "URI|UUID")]
@@ -61,7 +61,7 @@ pub struct ProfileArgs {
     /// Print the answer as JSON, with the band.
     #[arg(long)]
     json: bool,
-    /// Draw the section view as SVG into this file — wells and surfaces, the
+    /// Draw the section view as SVG into this file - wells and surfaces, the
     /// same drawing the front end shows.
     #[arg(long, value_name = "FILE.svg")]
     svg: Option<PathBuf>,
@@ -82,7 +82,7 @@ pub struct ProfileArgs {
     /// With `--svg`: a cross section's corridor on each side, for its wells.
     #[arg(long, value_name = "METRES", default_value_t = 50.0)]
     cross_width: f64,
-    /// With `--svg`: what to draw — `long`, `plan`, or `cross:N`.
+    /// With `--svg`: what to draw - `long`, `plan`, or `cross:N`.
     #[arg(long, default_value = "long")]
     draw: String,
     /// With `--svg`: the drawing's size in pixels, `WIDTHxHEIGHT`.
@@ -98,7 +98,7 @@ pub struct ProfileArgs {
     /// With `--png`: how many pixels per pixel of the SVG (2: sharp on a phone).
     #[arg(long, default_value_t = 2.0)]
     png_scale: f32,
-    /// With `--svg`: how objects are named — `full` (their titles) or `codes`
+    /// With `--svg`: how objects are named - `full` (their titles) or `codes`
     /// (`W0`, `H1`, `F2`… and a legend beside the drawing).
     #[arg(long, default_value = "full")]
     labels: String,
@@ -129,7 +129,7 @@ pub struct ProfileArgs {
     #[arg(long, requires = "svg", conflicts_with = "from_svg")]
     hide_unstratified: bool,
     /// With `--svg`: how the portions of a well with no strata information are
-    /// drawn (wells coloured by strata) — `solid`, `dashed`, `hatched` or
+    /// drawn (wells coloured by strata) - `solid`, `dashed`, `hatched` or
     /// `hidden`, with parameters, e.g. `dashed:colour=#999999,dash=6,gap=4` or
     /// `hatched:spacing=5,angle=45`. A parameter left out takes its default; the
     /// default style is the solid grey a drawing always had. With a style of
@@ -144,7 +144,7 @@ pub struct ProfileArgs {
     unstratified: Option<String>,
     /// With `--svg`: a named marker on the objects of the section whose
     /// qualified type contains `type` (`A|B`: any) and whose title contains
-    /// `title`, case ignored — `NAME:shape=diamond,colour=#1565c0,at=bottom,type=WellboreTrajectory,title=BSS`.
+    /// `title`, case ignored - `NAME:shape=diamond,colour=#1565c0,at=bottom,type=WellboreTrajectory,title=BSS`.
     /// `shape` is a RESQML node symbol or `contour`; `at` is `head`, `bottom` or
     /// `md` with `md=VALUE`; `size` is in pixels. Repeatable; listed in the
     /// legend of markers. A redraw (`--from-svg`) keeps what its own metadata says.
@@ -233,12 +233,12 @@ pub fn run(args: ProfileArgs, modes: Modes) -> Result<()> {
     Ok(())
 }
 
-/// `--svg`: the section view of these packages along the track, drawn — or,
+/// `--svg`: the section view of these packages along the track, drawn - or,
 /// with `--from-svg`, a drawing made again from its own metadata.
 ///
 /// Parsing and writing only: what a package gives (its colour sets, its index,
 /// its default selection) is `energyml_section::read::package`, the
-/// calculation `compute_packages`, the drawing `draw` — and `redraw` both.
+/// calculation `compute_packages`, the drawing `draw` - and `redraw` both.
 fn draw_svg(stores: &[energyml_storage::EpcStore], args: &ProfileArgs) -> Result<()> {
     use energyml_section::Opened;
     use energyml_section::model::{Asked, CrossWidths, Crosses, Inputs, SectionKey, Target, View};

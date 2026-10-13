@@ -3,7 +3,7 @@
 //! # Why this is a seam and not an implementation
 //!
 //! Reprojecting between EPSG systems needs a geodesy library: the projection
-//! formulae, the ellipsoid parameters, and — for anything crossing datums —
+//! formulae, the ellipsoid parameters, and - for anything crossing datums -
 //! the transformation grids. That is a large, versioned, licensed body of data.
 //! Two facts decide the shape:
 //!
@@ -16,7 +16,7 @@
 //!   still looks entirely reasonable.
 //!
 //! So this crate defines the trait and implements nothing. The layers above go
-//! through [`Reprojector`] without caring what is behind it — the same
+//! through [`Reprojector`] without caring what is behind it - the same
 //! arrangement as `ArrayBackend` for HDF5, where the capability is optional and
 //! its absence is *stated* rather than silently producing unmoved coordinates.
 //!
@@ -29,10 +29,10 @@
 //! **Do not trust the bundled EPSG table for anything that crosses a datum.**
 //! proj4rs 0.1.10 pins `crs-definitions` **0.4.0**, and that release carries no
 //! Helmert parameters. Of nine systems checked, 0.4.0 documents `+towgs84` for
-//! exactly one — EPSG:32631, which is already on WGS 84 and needs no shift.
+//! exactly one - EPSG:32631, which is already on WGS 84 and needs no shift.
 //! 0.5.0 carries them for all nine.
 //!
-//! Measured on EPSG:23031 (ED50 / UTM 31N — the system every package in the
+//! Measured on EPSG:23031 (ED50 / UTM 31N - the system every package in the
 //! reference corpus uses), at `500000 E, 4650000 N`:
 //!
 //! | source definition | longitude | latitude |
@@ -40,13 +40,13 @@
 //! | the 0.4.0 string (so also `from_epsg_code`) | 3.00000000 | 42.00127347 |
 //! | with `+towgs84=-87,-98,-121,0,0,0,0` | 2.99887374 | 42.00020043 |
 //!
-//! **151 m apart** — 93 m east, 119 m north.
+//! **151 m apart** - 93 m east, 119 m north.
 //!
 //! `Proj::from_epsg_code` itself is fine: it calls `crs_definitions::from_code`
 //! and hands the string straight to `from_proj_string`, losing nothing. It is
 //! only as good as the table behind it. So supply the proj4 definition
-//! yourself — from `crs-definitions` 0.5+, from a current EPSG database, or
-//! hard-coded for the systems of your site — and **check for `+towgs84` or
+//! yourself - from `crs-definitions` 0.5+, from a current EPSG database, or
+//! hard-coded for the systems of your site - and **check for `+towgs84` or
 //! `+datum=` before converting**.
 //!
 //! One more instance of the failure this whole workspace is arranged against:
@@ -78,7 +78,7 @@ use crate::units;
 pub struct Wgs84;
 
 impl Wgs84 {
-    /// Geographic WGS 84 — longitude and latitude in degrees.
+    /// Geographic WGS 84 - longitude and latitude in degrees.
     pub const EPSG: u64 = 4326;
     /// Web Mercator, what tile servers actually draw in.
     pub const WEB_MERCATOR: u64 = 3857;
@@ -91,7 +91,7 @@ impl Wgs84 {
 pub trait Reprojector {
     /// Convert a point from one EPSG system to another.
     ///
-    /// Input and output are in each system's own axis order and units — the
+    /// Input and output are in each system's own axis order and units - the
     /// caller is expected to have normalised the local placement first, with
     /// [`Crs::to_metres`].
     fn reproject(&self, point: Point, from: u64, to: u64) -> Result<Point>;
@@ -112,7 +112,7 @@ pub trait Reprojector {
 /// Place a point in a target EPSG system, all the way from local coordinates.
 ///
 /// Local placement and unit normalisation happen here; the datum work is the
-/// backend's. Errors — rather than returning the point unmoved — when the CRS
+/// backend's. Errors - rather than returning the point unmoved - when the CRS
 /// names no EPSG code, because "I could not convert this" and "this needed no
 /// conversion" must not look the same to the caller.
 pub fn to_epsg(crs: &Crs, point: Point, target: u64, backend: &dyn Reprojector) -> Result<Point> {
@@ -134,7 +134,7 @@ pub fn to_epsg(crs: &Crs, point: Point, target: u64, backend: &dyn Reprojector) 
 ///
 /// The pivot [`reproject_placed`] moves points between: not a [`Crs`], which
 /// also carries a local placement (offset, rotation, vertical direction) that
-/// a scene has already applied by the time it draws — see the module doc on
+/// a scene has already applied by the time it draws - see the module doc on
 /// [`reproject_placed`] for why applying that placement a second time is
 /// exactly the bug this type exists to make impossible to write by accident.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -142,7 +142,7 @@ pub struct System {
     /// The EPSG code of the horizontal system.
     pub epsg: u64,
     /// The unit horizontal coordinates in this system are written in, as
-    /// [`units`] spells it — `"m"` when nothing says otherwise, the schema's
+    /// [`units`] spells it - `"m"` when nothing says otherwise, the schema's
     /// own default and not a guess.
     pub unit: String,
 }
@@ -150,7 +150,7 @@ pub struct System {
 impl System {
     /// The horizontal system a CRS places its coordinates in.
     ///
-    /// Refuses by name — the same refusal [`to_epsg`] makes — when the CRS
+    /// Refuses by name - the same refusal [`to_epsg`] makes - when the CRS
     /// states no EPSG code: a system with no code cannot be a *target* either,
     /// and guessing one would misplace whatever gets reprojected into it.
     pub fn of(crs: &Crs) -> Result<Self> {
@@ -169,14 +169,14 @@ impl System {
 
 /// Move already-**placed** points from one horizontal system to another.
 ///
-/// # Placed, not local — and why that is the whole point of a separate function
+/// # Placed, not local - and why that is the whole point of a separate function
 ///
 /// The input is a point as a scene already draws it: a representation's local
 /// coordinates, run through [`Crs::to_projected`] (offset, rotation, the
-/// vertical flip) and normalised to metres — exactly what [`to_epsg`] returns.
+/// vertical flip) and normalised to metres - exactly what [`to_epsg`] returns.
 /// Calling this on a *local* point instead would skip that placement, which is
-/// invisible on a CRS whose origin is (0, 0) and axis is up — every corpus
-/// package — and wrong on a real one, with every coordinate still looking
+/// invisible on a CRS whose origin is (0, 0) and axis is up - every corpus
+/// package - and wrong on a real one, with every coordinate still looking
 /// plausible. [`to_epsg`] is the function that starts from a local point;
 /// this one starts from where that one, or a file's own written coordinates,
 /// already leaves off.
@@ -184,9 +184,9 @@ impl System {
 /// # The three steps, always in this order
 ///
 /// `from`'s unit to metres, [`Reprojector::reproject_all`] between the two
-/// EPSG codes (skipped entirely when they agree — a scene with one CRS never
+/// EPSG codes (skipped entirely when they agree - a scene with one CRS never
 /// pays for a backend it does not need), metres to `to`'s unit. Getting the
-/// order backwards — reprojecting feet as if they were metres — succeeds and
+/// order backwards - reprojecting feet as if they were metres - succeeds and
 /// is wrong by the unit ratio, the same trap a WebAssembly front end's `from_wgs84`
 /// documents for the mirror direction.
 ///
@@ -197,11 +197,11 @@ impl System {
 ///
 /// # What is refused, and how
 ///
-/// Same EPSG code *and* same unit is the identity — returned without calling
+/// Same EPSG code *and* same unit is the identity - returned without calling
 /// `backend` at all, so a scene whose objects share one system never depends
 /// on a geodesy backend being configured. Otherwise: an unknown unit on either
-/// side is `Error::UnknownUnit`, named; anything `backend` refuses — no datum
-/// stated, a correction grid it does not carry — comes back exactly as that
+/// side is `Error::UnknownUnit`, named; anything `backend` refuses - no datum
+/// stated, a correction grid it does not carry - comes back exactly as that
 /// backend names it, not wrapped into something vaguer.
 pub fn reproject_placed(
     points: &[Point],
@@ -303,7 +303,7 @@ mod tests {
     }
 
     /// Doubles the horizontal coordinates and refuses to be called on the
-    /// same system — the identity short-circuit must never reach it.
+    /// same system - the identity short-circuit must never reach it.
     struct Doubling;
     impl Reprojector for Doubling {
         fn reproject(&self, point: Point, from: u64, to: u64) -> Result<Point> {
@@ -318,9 +318,9 @@ mod tests {
     #[test]
     fn the_unit_conversion_runs_before_and_after_the_backend() {
         // 1 ft on both sides of a backend that doubles metres: 1 ft = 0.3048 m,
-        // doubled to 0.6096 m, back to 2 ft. Getting the order wrong — handing
+        // doubled to 0.6096 m, back to 2 ft. Getting the order wrong - handing
         // the backend a number of feet labelled as metres, or converting the
-        // backend's metres with the *source* unit — would give a different,
+        // backend's metres with the *source* unit - would give a different,
         // still plausible-looking, wrong number.
         let from = System {
             epsg: 1,

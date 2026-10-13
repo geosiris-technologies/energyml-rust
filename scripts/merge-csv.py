@@ -9,23 +9,23 @@ them) and the same operation must be tryable on the whole batch.
 # What this script refuses to do
 
 - **paste different headers.** Two files whose columns are not the same, in the
-  same order, give a CSV in which half the rows are shifted — perfectly
+  same order, give a CSV in which half the rows are shifted - perfectly
   well-formed text that nothing downstream can detect. It stops, naming the
   first file that differs **and** what differs: a column too many, one too few,
   an order changed;
 - **guess the separator line by line.** It is decided once, on the header of the
-  first file, outside quotes — the rule of the Rust reader
+  first file, outside quotes - the rule of the Rust reader
   (`crates/energyml-build/src/tabular.rs`), so that this script and the reader
   never read the same file differently;
 - **rewrite cells.** Rows are copied **as they are**, quotes included.
   Reformatting them would pass them through a decode and a re-encode, hence
-  through our conventions rather than the producer's — and the corpus carries
+  through our conventions rather than the producer's - and the corpus carries
   `"48° 54' 50.51""N, 2° 24' 15.30""E"`, which an approximate round trip would
   break silently.
 
 # What it says
 
-The number of files, of rows, and the files **empty of data** — a file that has
+The number of files, of rows, and the files **empty of data** - a file that has
 only a header is news, not a detail: it will produce no borehole, and someone
 will look for it in the package.
 """
@@ -67,7 +67,7 @@ def header_of(text: str, separator: str) -> list[str]:
 
 
 def differs(reference: list[str], other: list[str]) -> str | None:
-    """What separates two headers, in one sentence — or `None`."""
+    """What separates two headers, in one sentence - or `None`."""
     if reference == other:
         return None
     if len(reference) != len(other):
@@ -75,12 +75,12 @@ def differs(reference: list[str], other: list[str]) -> str | None:
     missing = [name for name in reference if name not in other]
     extra = [name for name in other if name not in reference]
     if missing or extra:
-        return f"missing: {missing or '—'}; extra: {extra or '—'}"
+        return f"missing: {missing or '-'}; extra: {extra or '-'}"
     return "the same columns, in another order"
 
 
 def read(path: Path) -> str:
-    """The text, as UTF-8 then as cp1252 — Windows exports are common."""
+    """The text, as UTF-8 then as cp1252 - Windows exports are common."""
     raw = path.read_bytes()
     for encoding in ("utf-8-sig", "utf-8", "cp1252"):
         try:
@@ -93,7 +93,7 @@ def read(path: Path) -> str:
 def main() -> int:
     # **The Windows console is not UTF-8**, and this script prints accented file
     # names: without this line it dies on its own report, after having written
-    # the file — the worst moment, since everything worked and the trace says
+    # the file - the worst moment, since everything worked and the trace says
     # otherwise.
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
@@ -105,7 +105,7 @@ def main() -> int:
     parser.add_argument(
         "--allow-different-headers",
         action="store_true",
-        help="paste anyway — the rows will be shifted, and it says so",
+        help="paste anyway - the rows will be shifted, and it says so",
     )
     args = parser.parse_args()
 

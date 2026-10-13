@@ -6,7 +6,7 @@ edition.workspace = true
 rust-version.workspace = true
 # Spelled out rather than inherited: wasm-pack parses the manifests of a
 # WebAssembly front end's path dependencies before running wasm-opt, and
-# does not resolve workspace inheritance — `license.workspace = true` reaches
+# does not resolve workspace inheritance - `license.workspace = true` reaches
 # it as a table where it wants a string, and the wasm build dies *after*
 # writing the module, leaving a usable artefact and an unread exit code.
 license = "Apache-2.0"
@@ -21,7 +21,7 @@ include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
 [dependencies]
 energyml-domain = { path = "../energyml-domain", version = "0.1.0" }
 
-# Pure Rust, no C, builds for wasm32-unknown-unknown — the reason this crate
+# Pure Rust, no C, builds for wasm32-unknown-unknown - the reason this crate
 # exists at all rather than binding PROJ like pyproj does. Default features off:
 # they only add the EPSG table (`crs-definitions` **0.4.0**, which carries no
 # datum shifts) and a logging hook. The table is this crate's business, and it
@@ -31,7 +31,7 @@ proj4rs = { version = "0.1.10", default-features = false }
 # The EPSG code → proj4 string table, at **0.5.0** and not the 0.4.0 proj4rs
 # pins. That version difference is the whole reason a model used to land 151 m
 # from where it belongs; see the crate docs. `wkt` off drops 4.8 MB of strings
-# nothing here reads — it matters for a wasm bundle.
+# nothing here reads - it matters for a wasm bundle.
 crs-definitions = { version = "0.5.0", default-features = false, features = [
     "proj4",
 ] }

@@ -1,4 +1,4 @@
-//! Choosing rules and writing them out — what a face (the command line today,
+//! Choosing rules and writing them out - what a face (the command line today,
 //! wasm and Python later) needs so that none of them holds logic of its own.
 //!
 //! The JSON is written by hand: this crate has no runtime dependency, wasm
@@ -23,7 +23,7 @@ pub struct Filter<'a> {
     pub status: Option<Status>,
 }
 
-/// Reads `kind:key` — `type:Attachment`, `type:Attachment.Md`,
+/// Reads `kind:key` - `type:Attachment`, `type:Attachment.Md`,
 /// `view:object.colour-stack`, `finding:house/…`, `operation:attach`,
 /// `diagnostic:…`. The key may itself hold a colon (`view:create.op:crs`): only
 /// the first one separates.
@@ -99,7 +99,7 @@ fn list<T>(items: &[T], out: &mut String, mut one: impl FnMut(&T, &mut String)) 
 }
 
 /// A text object: the words of every language that has them. English is
-/// always there; another language appears **only when it is translated** — the
+/// always there; another language appears **only when it is translated** - the
 /// absence is the information.
 fn texts(english: &str, other: impl Iterator<Item = (&'static str, Option<&'static str>)>, out: &mut String) {
     out.push_str("{\"en\":");

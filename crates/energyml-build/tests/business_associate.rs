@@ -1,16 +1,16 @@
 //! `business-associate`: one `eml23.BusinessAssociate`, by its name, its roles
-//! and its aliases — never its contact details.
+//! and its aliases - never its contact details.
 //!
 //! The form of each assertion comes from the schema (eml 2.3,
 //! BusinessAssociate.xsd, as generated in `energyml-eml-2-3`): `Name` is the
 //! one required element, bounded at 256 characters; `Role` is 0..∞
-//! `NameStruct` (≤ 64, with an optional `authority`) — *“A business associate
+//! `NameStruct` (≤ 64, with an optional `authority`) - *“A business associate
 //! generally has one role but the role may be called different things in
 //! different naming systems”*; `OrganizationKind` is a closed list;
 //! `AuthorityCode` is *“The code used when this business associate is used as
 //! an authority attribute”* (≤ 64); an `ObjectAlias` requires both its
 //! `Identifier` (≤ 64) and its `authority`. The names, roles and aliases are
-//! the test's own — no real organisation is described here.
+//! the test's own - no real organisation is described here.
 
 use energyml_build::operation::{Choices, Identity, Plan, Registry, When};
 use energyml_build::pieces::Pieces;
@@ -57,8 +57,8 @@ fn full() -> Choices {
         .set("description", "A logging company invented for this test.")
 }
 
-/// The plan's one object, read back through the registry — the road `apply`
-/// takes — into the generated type, so that an element written under a wrong
+/// The plan's one object, read back through the registry - the road `apply`
+/// takes - into the generated type, so that an element written under a wrong
 /// name is lost here, not in a package.
 fn read_back(plan: &Plan) -> energyml_eml_2_3::BusinessAssociate {
     assert_eq!(plan.objects.len(), 1, "one associate");
@@ -190,7 +190,7 @@ fn the_same_name_is_the_same_associate() {
 fn a_name_is_required_and_bounded() {
     assert_eq!(refused_on(Choices::new()), "title");
     assert_eq!(refused_on(Choices::new().set("title", "   ")), "title");
-    // `Name` holds 256 characters: the 256th is written, the 257th refused —
+    // `Name` holds 256 characters: the 256th is written, the 257th refused -
     // counted in characters, not bytes (é is two bytes).
     let at_limit = "é".repeat(256);
     assert_eq!(
@@ -201,8 +201,8 @@ fn a_name_is_required_and_bounded() {
 }
 
 /// The bounds the operation refuses at are the ones the schema's facets hold:
-/// what it writes at the limit passes the generated validator — a reader
-/// written from the XSD, not by this operation — and one character more is
+/// what it writes at the limit passes the generated validator - a reader
+/// written from the XSD, not by this operation - and one character more is
 /// what both refuse.
 #[test]
 fn what_is_written_at_the_limits_passes_the_schema_facets() {

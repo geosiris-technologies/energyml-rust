@@ -1,5 +1,5 @@
 //! `energyml_analysis::ijk_faults` without a file: which pillars a fault
-//! splits, which side goes down, which cells go — on a 4 × 4 grid small enough
+//! splits, which side goes down, which cells go - on a 4 × 4 grid small enough
 //! to state every answer. The end-to-end confrontation with the reader is
 //! `crates/energyml-build/tests/faulted_grid.rs`.
 

@@ -1,8 +1,8 @@
 //! Writing an EPC package.
 //!
 //! **Saving is not editing an archive; it is rebuilding one.** An EPC carries
-//! several parts that *describe* the others — `[Content_Types].xml`, every
-//! `.rels`, `docProps/core.xml` — and a described state that no longer holds is
+//! several parts that *describe* the others - `[Content_Types].xml`, every
+//! `.rels`, `docProps/core.xml` - and a described state that no longer holds is
 //! worse than no description at all. Patching them is how a package ends up
 //! declaring an object it no longer contains, or an object twice, which is
 //! exactly what the reference package published with fesapi does.
@@ -52,14 +52,14 @@ const RELATIONSHIP_BASE: &str = "http://schemas.energistics.org/package/2012/rel
 /// Content type of a `.rels` part, fixed by OPC.
 const RELS_CONTENT_TYPE: &str = "application/vnd.openxmlformats-package.relationships+xml";
 
-/// A non-EnergyML part carried along: a PDF, an image, a CSV — or an HDF5 file
+/// A non-EnergyML part carried along: a PDF, an image, a CSV - or an HDF5 file
 /// stored inside the package.
 pub struct Attachment {
     /// Part name, `media/report.pdf` by convention (§3.6 imposes nothing).
     pub part: String,
     /// Declared content type. Guessed from the extension when absent.
     pub content_type: Option<String>,
-    /// The bytes, copied verbatim — the only thing that is.
+    /// The bytes, copied verbatim - the only thing that is.
     pub bytes: Vec<u8>,
 }
 
@@ -89,8 +89,8 @@ pub struct Package<'a> {
     ///
     /// The specification puts the file name in the proxy's `.rels` and nowhere
     /// else. Real packages disagree: `testingPackageCpp22.epc` puts an
-    /// `externalResource` straight on **every object that holds an array** —
-    /// 51 of them — and this reader has always honoured it (route 3 of
+    /// `externalResource` straight on **every object that holds an array** -
+    /// 51 of them - and this reader has always honoured it (route 3 of
     /// `external_file_for`).
     ///
     /// The writer had no counterpart, so a rewrite dropped all 51. The package
@@ -104,11 +104,11 @@ pub struct Package<'a> {
     /// losing one.
     pub object_external_files: BTreeMap<String, String>,
     /// Parts kept exactly as they were, for what the specification does not
-    /// describe — fesapi's `docProps/extendedCore.xml`, for instance. We never
+    /// describe - fesapi's `docProps/extendedCore.xml`, for instance. We never
     /// invent one; we do not throw one away either.
     pub verbatim: Vec<Attachment>,
     /// Which attachment is a media representation of which object (EPC §3.4.2
-    /// pp. 15–16) — written `destinationMedia` in the object's `.rels` and
+    /// pp. 15-16) - written `destinationMedia` in the object's `.rels` and
     /// `sourceMedia` in the part's (see [`super::media`]).
     ///
     /// A link to an object or a part the package does not hold is not written,
@@ -135,7 +135,7 @@ impl<'a> Package<'a> {
 /// Write a package, reporting what could not be represented.
 ///
 /// The diagnostics are not decoration: a reference to an object that is not in
-/// the package cannot become a relationship — there is no part to point at —
+/// the package cannot become a relationship - there is no part to point at -
 /// and the caller has to be told rather than left with a quietly thinner
 /// `.rels` than the one it had.
 pub fn write_package<W: Write + Seek>(
@@ -218,7 +218,7 @@ impl<'a> Plan<'a> {
             overrides: BTreeMap::new(),
         };
 
-        // 1 — where each object goes, and how the index will type it.
+        // 1 - where each object goes, and how the index will type it.
         //
         // **An object is (uuid, qualified type, objectVersion)**, so a uuid may
         // be held several times: under two versions, or under two releases. The
@@ -230,10 +230,10 @@ impl<'a> Plan<'a> {
         // "namespace_id" »*). So:
         //
         // - an object that shares its (uuid, type) with another **and declares a
-        //   version** goes under `version_<id>/` — the one that declares none
+        //   version** goes under `version_<id>/` - the one that declares none
         //   keeps the plain name, as a package without namesakes always had;
         // - an object whose name is still taken (the same uuid in two releases
-        //   that name their types alike — `witsml20.Well` and `witsml21.Well`)
+        //   that name their types alike - `witsml20.Well` and `witsml21.Well`)
         //   goes under `namespace_<domain><version>/`;
         // - a name taken after both is a refusal, never an overwrite.
         let mut by_uuid: BTreeMap<String, Vec<Placed>> = BTreeMap::new();
@@ -293,8 +293,8 @@ impl<'a> Plan<'a> {
             plan.overrides.insert(format!("/{part}"), key.content_type());
             plan.objects.push((part, *object));
         }
-        // A data object nested in one of them — a WITSML `Channel` inside its
-        // `ChannelSet` — is reached through the part that holds it
+        // A data object nested in one of them - a WITSML `Channel` inside its
+        // `ChannelSet` - is reached through the part that holds it
         // (`identity::nested_objects`). A part of its own wins: the nested
         // copy never displaces it.
         for (part, object) in &plan.objects {
@@ -315,7 +315,7 @@ impl<'a> Plan<'a> {
         // filling the map beside it, so it works from a copy.
         let placed = plan.objects.clone();
 
-        // 2 — the relationships, both ways (§3.4.1).
+        // 2 - the relationships, both ways (§3.4.1).
         for (part, object) in &placed {
             let source_uuid = identity::uuid_of_reflect(object.as_reflect())
                 .unwrap_or_default()
@@ -351,7 +351,7 @@ impl<'a> Plan<'a> {
                 }
                 // A reference that names no version of an object held in several
                 // relates to **each** of them: a `.rels` is an index of the graph
-                // (§3.4.1), and the graph draws that edge to every candidate —
+                // (§3.4.1), and the graph draws that edge to every candidate -
                 // too wide costs a link, too narrow a package that cannot be
                 // walked.
                 for target in targets {
@@ -382,7 +382,7 @@ impl<'a> Plan<'a> {
             }
         }
 
-        // 3 — each proxy names its file, in its `.rels` and nowhere else (§3.2.3).
+        // 3 - each proxy names its file, in its `.rels` and nowhere else (§3.2.3).
         for (part, object) in &placed {
             let uuid = identity::uuid_of_reflect(object.as_reflect())
                 .unwrap_or_default()
@@ -410,7 +410,7 @@ impl<'a> Plan<'a> {
             }
         }
 
-        // 3b — and the ones the *objects* carried themselves. Not in §3.2.3,
+        // 3b - and the ones the *objects* carried themselves. Not in §3.2.3,
         // but written by real producers and honoured by this reader, so
         // dropping them on a rewrite loses information the package had.
         for (part, object) in &placed {
@@ -434,7 +434,7 @@ impl<'a> Plan<'a> {
                 });
         }
 
-        // 4 — the package-level relationship to the core properties (§3.5.2).
+        // 4 - the package-level relationship to the core properties (§3.5.2).
         plan.relationships
             .entry("_rels/.rels".to_string())
             .or_default()
@@ -447,8 +447,8 @@ impl<'a> Plan<'a> {
         plan.overrides
             .insert(format!("/{CORE_PART}"), CORE_CONTENT_TYPE.to_string());
 
-        // 4b — the media parts and the objects they show, both ways (§3.4.2
-        // pp. 15–16). Optional for a non-XML part (§3.4.1 p. 15), written
+        // 4b - the media parts and the objects they show, both ways (§3.4.2
+        // pp. 15-16). Optional for a non-XML part (§3.4.1 p. 15), written
         // anyway: a link one way cannot be walked back.
         let carried: BTreeSet<&str> = package
             .attachments
@@ -507,7 +507,7 @@ impl<'a> Plan<'a> {
                 });
         }
 
-        // 5 — the parts that are not EnergyML.
+        // 5 - the parts that are not EnergyML.
         for attachment in package.attachments.iter().chain(&package.verbatim) {
             match &attachment.content_type {
                 Some(content_type) => {
@@ -541,7 +541,7 @@ impl<'a> Plan<'a> {
             .push(Rel {
                 // "It must start with a letter or an underscore (not a digit). It
                 // is acceptable for the ID to always start with an underscore."
-                // (§3.4.1) — a uuid starts with a digit often enough that the
+                // (§3.4.1) - a uuid starts with a digit often enough that the
                 // underscore is not optional in practice.
                 id: format!("_{target_uuid}"),
                 kind,
@@ -575,7 +575,7 @@ impl<'a> Plan<'a> {
 fn render_relationships(relationships: &[Rel]) -> String {
     let mut out = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n");
     out.push_str("<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n");
-    // The ids of the relationships **before** this one, as they were stated —
+    // The ids of the relationships **before** this one, as they were stated -
     // a set rather than a scan of the list: a CRS named by sixty thousand
     // objects has a `.rels` of sixty thousand entries, and the scan was 70 %
     // of what saving a SIGEOL import cost (28/09). Same answer, same bytes.
@@ -692,11 +692,11 @@ struct Placed {
     version: Option<String>,
 }
 
-/// The objects a reference names, among those of its uuid — none when it is
+/// The objects a reference names, among those of its uuid - none when it is
 /// dangling. The rules of `EpcStore::resolve_reference`, over the objects about
 /// to be written: the type narrows when it matches something (*a wrong version
-/// is not a wrong type*), the version when the reference carries one — a version
-/// no object carries still names the one candidate there is — and a reference
+/// is not a wrong type*), the version when the reference carries one - a version
+/// no object carries still names the one candidate there is - and a reference
 /// that names no version takes the object that declares none if exactly one
 /// does, **else all of them**.
 fn pick<'a>(candidates: &'a [Placed], qualified_type: &str, version: Option<&str>) -> Vec<&'a Placed> {
@@ -721,7 +721,7 @@ fn pick<'a>(candidates: &'a [Placed], qualified_type: &str, version: Option<&str
     held
 }
 
-/// The part of a relationship's `Id` that names its target — the uuid, with the
+/// The part of a relationship's `Id` that names its target - the uuid, with the
 /// target's rank among the objects of that uuid when there are several: an `Id`
 /// is unique within a `.rels` (§3.4.1), and two targets of one uuid would
 /// otherwise share it.

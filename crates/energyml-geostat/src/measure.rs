@@ -2,12 +2,12 @@
 //!
 //! What a shape *measures*, per element: the area of each triangle or grid
 //! cell, the length of each polyline, the volume of each cell of an IJK grid.
-//! The totals are the caller's sum of these — [`total`] — so that a total and
+//! The totals are the caller's sum of these - [`total`] - so that a total and
 //! the per-element values can never disagree on what they mean.
 //!
 //! # Two areas and two lengths, both said
 //!
-//! A surface has an area **along itself** — in three dimensions — and an area
+//! A surface has an area **along itself** - in three dimensions - and an area
 //! **in plan**, its projection on the horizontal. They are different facts: a
 //! fault plane dipping at 60° has twice the area along it that it covers on a
 //! map, and a vertical one covers none. Every function here returns both, and
@@ -16,7 +16,7 @@
 //!
 //! # A grid cell is bilinear, never cut in two
 //!
-//! A cell of a 2D grid is the bilinear patch through its four corners — the
+//! A cell of a 2D grid is the bilinear patch through its four corners - the
 //! reading `thickness` and `project` already make of it. Cutting it into two
 //! triangles would give an area that depends on a diagonal the file never
 //! chose. So:
@@ -24,11 +24,11 @@
 //! - **in plan the area is exact**: the plan projection of a bilinear patch
 //!   is a bilinear map of the plane, whose Jacobian is linear in each
 //!   parameter, so its integral is the shoelace area of the four corners. A
-//!   cell whose projection **folds** — the Jacobian changes sign between two
-//!   corners, a bow-tie in plan — has no single plan area: `NaN`, counted;
-//! - **along the surface the area is integrated numerically** — the norm of
-//!   the Jacobian is a square root, with no closed form for a warped patch —
-//!   by a 4 × 4 Gauss–Legendre rule. Exact for a planar cell (the integrand is
+//!   cell whose projection **folds** - the Jacobian changes sign between two
+//!   corners, a bow-tie in plan - has no single plan area: `NaN`, counted;
+//! - **along the surface the area is integrated numerically** - the norm of
+//!   the Jacobian is a square root, with no closed form for a warped patch -
+//!   by a 4 × 4 Gauss-Legendre rule. Exact for a planar cell (the integrand is
 //!   then bilinear), and within 1e-9 relative on the warped patches the tests
 //!   measure against an independent integration.
 //!
@@ -36,23 +36,23 @@
 //!
 //! An IJK cell is the trilinear map of the unit cube through its eight
 //! corners. The determinant of its Jacobian has degree at most two in each
-//! parameter, so the 2 × 2 × 2 Gauss–Legendre rule, exact up to degree three,
-//! gives its volume **exactly** — non-planar faces included, which a
+//! parameter, so the 2 × 2 × 2 Gauss-Legendre rule, exact up to degree three,
+//! gives its volume **exactly** - non-planar faces included, which a
 //! decomposition into tetrahedra would get wrong by a choice of diagonals.
 //!
 //! The sign of the determinant depends on the handedness of the corner order
 //! and of the frame (a depth axis mirrors it), neither of which a volume
 //! should depend on: the magnitude is kept. What is refused is a cell whose
-//! determinant **changes sign inside it** — a twisted cell, whose integral
-//! subtracts the overlap from the rest: `NaN`, counted. A collapsed cell — a
-//! pinch-out, zero thickness — has a volume of zero, which is an answer, and
+//! determinant **changes sign inside it** - a twisted cell, whose integral
+//! subtracts the overlap from the rest: `NaN`, counted. A collapsed cell - a
+//! pinch-out, zero thickness - has a volume of zero, which is an answer, and
 //! is counted apart so that a grid of flat cells does not pass for a grid of
 //! small ones.
 //!
 //! # What is not a number is not measured
 //!
 //! A corner that is not a finite point makes its element `NaN`, counted as
-//! `unplaced` — never a zero, which would read as an element that measures
+//! `unplaced` - never a zero, which would read as an element that measures
 //! nothing.
 
 use crate::Error;
@@ -94,7 +94,7 @@ pub struct Volumes {
     pub unplaced: usize,
     /// Cells whose Jacobian changes sign inside them: `NaN`.
     pub twisted: usize,
-    /// Cells of zero volume — collapsed, a pinch-out. Kept at zero, and
+    /// Cells of zero volume - collapsed, a pinch-out. Kept at zero, and
     /// counted.
     pub flat: usize,
 }
@@ -165,7 +165,7 @@ pub fn triangle_areas(points: &[Point], triangles: &[[u32; 3]]) -> Result<Areas,
     Ok(out)
 }
 
-/// The Gauss–Legendre rule of four points on `[0, 1]`: abscissae and weights.
+/// The Gauss-Legendre rule of four points on `[0, 1]`: abscissae and weights.
 const GAUSS_4: [(f64, f64); 4] = [
     (0.069_431_844_202_973_71, 0.173_927_422_568_726_93),
     (0.330_009_478_207_571_87, 0.326_072_577_431_273_07),
@@ -176,8 +176,8 @@ const GAUSS_4: [(f64, f64); 4] = [
 /// The two-point rule on `[0, 1]`: `(1 ∓ 1/√3) / 2`, each weighing a half.
 const GAUSS_2: [f64; 2] = [0.211_324_865_405_187_1, 0.788_675_134_594_812_9];
 
-/// The area of each quadrilateral — the bilinear patch through `a, b, c, d`,
-/// **in ring order** — along it and in plan.
+/// The area of each quadrilateral - the bilinear patch through `a, b, c, d`,
+/// **in ring order** - along it and in plan.
 pub fn quad_areas(points: &[Point], quads: &[[u32; 4]]) -> Result<Areas, Error> {
     let mut out = Areas {
         along: Vec::with_capacity(quads.len()),
@@ -236,8 +236,8 @@ pub fn quad_areas(points: &[Point], quads: &[[u32; 4]]) -> Result<Areas, Error> 
     Ok(out)
 }
 
-/// The length of each polyline — `runs` consecutive nodes each, the closing
-/// segment added where `closed` says so (a missing entry is open) — along it
+/// The length of each polyline - `runs` consecutive nodes each, the closing
+/// segment added where `closed` says so (a missing entry is open) - along it
 /// and in plan.
 pub fn polyline_lengths(points: &[Point], runs: &[u32], closed: &[bool]) -> Result<Lengths, Error> {
     let total: usize = runs.iter().map(|&run| run as usize).sum();
@@ -278,7 +278,7 @@ pub fn polyline_lengths(points: &[Point], runs: &[u32], closed: &[bool]) -> Resu
     Ok(out)
 }
 
-/// The volume of each hexahedron — eight corners in VTK order: the bottom
+/// The volume of each hexahedron - eight corners in VTK order: the bottom
 /// ring `0, 1, 2, 3`, then the top ring `4, 5, 6, 7` above it, corner for
 /// corner.
 pub fn hexahedron_volumes(points: &[Point], cells: &[[u32; 8]]) -> Result<Volumes, Error> {
@@ -365,7 +365,7 @@ fn trilinear_determinants(p: &[Point; 8]) -> [f64; 8] {
     out
 }
 
-/// The sum of the finite values, and how many were not — the total a caller
+/// The sum of the finite values, and how many were not - the total a caller
 /// reports beside the per-element values.
 pub fn total(values: &[f64]) -> (f64, usize) {
     values.iter().fold((0.0, 0), |(sum, set_aside), v| {

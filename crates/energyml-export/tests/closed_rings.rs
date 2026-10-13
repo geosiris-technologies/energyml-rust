@@ -7,7 +7,7 @@
 //! GeoJSON looked like a polygon but was not closed, so an open line was drawn.
 //!
 //! The other half matters as much: an **open** run and a run the file says
-//! **nothing** about stay open — drawing the closing edge there would invent a
+//! **nothing** about stay open - drawing the closing edge there would invent a
 //! ring.
 
 use energyml_domain::crs::{Crs, CrsKind, VerticalDirection, VerticalQuantity};
@@ -72,7 +72,7 @@ fn written(format: &str, object: &SceneObject) -> String {
     String::from_utf8(out).expect("utf-8")
 }
 
-/// The lines of the GeoJSON's MultiLineString, as (x, y) pairs — read by a
+/// The lines of the GeoJSON's MultiLineString, as (x, y) pairs - read by a
 /// real parser, not by looking for brackets.
 fn geojson_lines(object: &SceneObject) -> Vec<Vec<(f64, f64)>> {
     let json: serde_json::Value = serde_json::from_str(&written("geojson", object)).expect("valid JSON");

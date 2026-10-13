@@ -1,10 +1,10 @@
 // Reads and judges the rule files. **Included, never compiled as a module**:
 // `build.rs` includes it to turn `rules/` into statics, and `tests/` includes
-// it to judge fabricated files — so what the build enforces and what the tests
+// it to judge fabricated files - so what the build enforces and what the tests
 // try to break are the same code, not two readings.
 //
 // Nothing here reads a file: it takes text. Every guard answers with an
-// `Error` that names the file, the rule and what is wrong — a refusal by name.
+// `Error` that names the file, the rule and what is wrong - a refusal by name.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -224,7 +224,7 @@ pub struct Theme {
     pub title: String,
 }
 
-/// What a translation may carry: id and the three texts, nothing else — a
+/// What a translation may carry: id and the three texts, nothing else - a
 /// translation has no right to change a reference, an anchor or a status.
 #[derive(Clone, Debug)]
 pub struct Translation {
@@ -536,7 +536,7 @@ fn translation(lang: &str, file: &str, t: &toml::Table) -> Result<Translation, E
             file,
             &id,
             extra,
-            "a translation carries id, title, text and why — nothing else",
+            "a translation carries id, title, text and why - nothing else",
         ));
     }
     Ok(Translation {

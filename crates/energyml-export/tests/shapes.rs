@@ -2,7 +2,7 @@
 //!
 //! Three things have to hold for this to be usable rather than clever:
 //!
-//! 1. the **order** of the rules is the caller's, and the first match wins —
+//! 1. the **order** of the rules is the caller's, and the first match wins -
 //!    otherwise a general rule and an exception cannot be written on one line;
 //! 2. a rule that **cannot be honoured** fails by name, rather than quietly
 //!    falling back to something else and teaching the caller it worked;
@@ -101,7 +101,7 @@ fn matching_ignores_case() {
 #[test]
 fn the_first_matching_rule_wins_so_an_exception_can_precede_a_default() {
     // This is the ordering that makes "grids as polygons, everything else as
-    // nodes" one line. Reverse it and the `*` swallows the grid rule — which is
+    // nodes" one line. Reverse it and the `*` swallows the grid rule - which is
     // exactly why the order has to be the caller's and not sorted here.
     let rules = Shapes::new()
         .parse_rule("Grid2d=surface")
@@ -132,7 +132,7 @@ fn a_star_before_a_specific_rule_shadows_it_and_that_is_the_callers_choice() {
 fn a_rule_that_cannot_be_honoured_fails_and_names_the_object() {
     // The case the report asked for by name: a set of polylines is not a
     // surface. A line is not a boundary unless it closes, and RESQML states
-    // closure in a separate boolean array this build does not read — so filling
+    // closure in a separate boolean array this build does not read - so filling
     // one would draw a surface nobody described.
     let options = Options::new()
         .with_native_crs()
@@ -343,7 +343,7 @@ fn a_centroid_is_one_point_and_it_is_the_mean() {
     assert_eq!(summary.point_count(), 1);
     assert!(matches!(summary.patches[0].topology, Topology::Points));
     // x: 0+1+2+0+1+2+0+1 = 7 over 8 nodes; y: 0+0+0+1+1+1+2+2 = 7 over 8.
-    // Both 0.875, and both **off-centre** — which is the point worth pinning:
+    // Both 0.875, and both **off-centre** - which is the point worth pinning:
     // the mean of the nodes is pulled by where the sampling is dense, and it is
     // not the centroid of the area. Documented on `Shape::Centroid`.
     let mean = summary.patches[0].points[0];
@@ -404,7 +404,7 @@ fn a_summary_drops_the_properties_because_it_has_nowhere_to_put_them() {
 #[test]
 fn an_outline_of_a_line_of_points_is_not_a_polygon() {
     // Three collinear nodes bound no area. A degenerate ring would validate,
-    // draw as nothing, and quietly claim to be a footprint — so the points
+    // draw as nothing, and quietly claim to be a footprint - so the points
     // themselves are the honest answer, and the geometry type says so.
     let flat = object(
         "resqml22.PointSetRepresentation",
@@ -464,7 +464,7 @@ fn every_feature_carries_a_bounding_box() {
     let text = String::from_utf8(buffer).unwrap();
     let value: serde_json::Value = serde_json::from_str(&text).unwrap();
     let bbox = value["features"][0]["bbox"].as_array().expect("a bbox");
-    // RFC 7946 §5: the axes interleave — west, south, low, east, north, high —
+    // RFC 7946 §5: the axes interleave - west, south, low, east, north, high -
     // and not the two corners one after the other.
     assert_eq!(bbox.len(), 6);
     assert_eq!(bbox[0].as_f64(), Some(0.0));

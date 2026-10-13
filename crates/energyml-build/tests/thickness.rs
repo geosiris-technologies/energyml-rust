@@ -1,4 +1,4 @@
-//! `thickness` — the isochore and the isopach between two horizons, as a
+//! `thickness` - the isochore and the isopach between two horizons, as a
 //! property on the top.
 //!
 //! # What would have to break to make it turn red
@@ -42,7 +42,7 @@ fn plate(z: impl Fn(f64, f64) -> f64) -> Geometry {
 }
 
 /// A regular 5 × 5 top over the plate, edge to edge, on `z(x, y)`,
-/// triangulated — so that either can be the other's base.
+/// triangulated - so that either can be the other's base.
 fn top_grid(z: impl Fn(f64, f64) -> f64) -> Geometry {
     let mut points = Vec::new();
     for j in 0..5 {
@@ -121,7 +121,7 @@ fn choices(what: &str) -> Choices {
 
 /// **The isochore of two parallel horizons in depth**: 20 at every node of
 /// the top, on the top, under the dictionary's `true vertical thickness`, in
-/// the frame's unit — and the vertical convention suggested from the frame.
+/// the frame's unit - and the vertical convention suggested from the frame.
 #[test]
 fn the_isochore_is_the_vertical_gap_laid_on_the_top() {
     let plan = Registry::new()
@@ -137,7 +137,7 @@ fn the_isochore_is_the_vertical_gap_laid_on_the_top() {
     assert_eq!(
         values.len(),
         25,
-        "one value per node of the top — not of the base"
+        "one value per node of the top - not of the base"
     );
     assert!(values.iter().all(|v| (v - 20.0).abs() < 1e-9), "{values:?}");
     let object = &plan.objects[0].json;
@@ -148,7 +148,7 @@ fn the_isochore_is_the_vertical_gap_laid_on_the_top() {
         json!("193d165b-bfec-4d11-b093-21e0bdc77433")
     );
     assert_eq!(object["Uom"], json!("m"));
-    assert_eq!(plan.objects[0].title, "Toit — Mur isochore");
+    assert_eq!(plan.objects[0].title, "Toit - Mur isochore");
 }
 
 /// **The roles are the names.** The same two surfaces with the names swapped
@@ -182,7 +182,7 @@ fn roles_are_read_by_name_and_a_reversed_bag_still_crosses() {
     assert!(values.iter().all(|v| (v + 20.0).abs() < 1e-9), "{values:?}");
     assert!(plan.says.iter().any(|n| n.key == "crossed"), "{:?}", plan.says);
 
-    // Without a `base`, unfit — and the reason names the role.
+    // Without a `base`, unfit - and the reason names the role.
     let alone = Pieces::empty().with(
         "top",
         Source::Shape {
@@ -197,7 +197,7 @@ fn roles_are_read_by_name_and_a_reversed_bag_still_crosses() {
 }
 
 /// **The isopach** is the isochore times the cosine of the dip, under the
-/// dictionary's `true stratigraphic thickness` — and the plan says it used
+/// dictionary's `true stratigraphic thickness` - and the plan says it used
 /// the parallel-beds formula.
 #[test]
 fn the_isopach_is_the_isochore_times_the_cosine_of_the_dip_and_says_so() {
@@ -371,7 +371,7 @@ fn a_grid_base_is_read_and_an_overflowing_top_is_counted() {
     assert!(plan.says.iter().any(|n| n.key == "outside"));
 }
 
-/// **A grid read as a lattice has faces too** — its cells, bilinear. Both
+/// **A grid read as a lattice has faces too** - its cells, bilinear. Both
 /// `thickness` and `project` called a `Grid2dRepresentation` read as
 /// `Topology::Grid` *a surface without a face*, while the scene drew it; found
 /// on 14/09 by confronting the front end's projected picking with `project`.

@@ -19,15 +19,15 @@ pub enum Error {
          derived from"
     )]
     Shape {
-        /// What the object is, in words — "a set of polylines".
+        /// What the object is, in words - "a set of polylines".
         topology: &'static str,
-        /// What was asked of it — "a surface".
+        /// What was asked of it - "a surface".
         wanted: &'static str,
     },
 
     /// A form of array this crate does not evaluate yet.
     ///
-    /// **Named, never silent.** The alternative — returning no points — looks
+    /// **Named, never silent.** The alternative - returning no points - looks
     /// exactly like a working program with an empty file, and that is the
     /// failure mode this crate exists to avoid.
     #[error("`{form}` is not evaluated yet ({at})")]
@@ -45,7 +45,7 @@ pub enum Error {
     /// form yet, so waiting is a strategy. This means the file **never says**
     /// how far the shape goes: a `HorizontalPlaneGeometry` is one number, a
     /// depth, and a plane is infinite. No release will add the extent, because
-    /// it is not a fact about the model — it is a decision about the picture,
+    /// it is not a fact about the model - it is a decision about the picture,
     /// and it belongs to whoever is drawing.
     ///
     /// So the refusal names what is missing rather than pretending to a gap,
@@ -58,7 +58,7 @@ pub enum Error {
         form: &'static str,
         /// Where it was met, as a dotted path.
         at: String,
-        /// What the file *does* state — the half that is there.
+        /// What the file *does* state - the half that is there.
         states: &'static str,
     },
 
@@ -92,7 +92,7 @@ impl Error {
     /// Whether this is "the external file is not there".
     ///
     /// A package whose `.h5` companion was not shipped is a gap in what the
-    /// caller was given, not a defect in the model — and a viewer says so
+    /// caller was given, not a defect in the model - and a viewer says so
     /// differently from "this build cannot evaluate that form".
     pub fn is_missing_file(&self) -> bool {
         match self {
@@ -110,7 +110,7 @@ impl Error {
     /// Separate from [`Error::Unsupported`] on purpose, and the distinction is
     /// the whole message: that one means *this build does not do it yet*, and
     /// invites a future version. This one means *the file does not say enough
-    /// for anyone to do it* — a set of polylines is not a surface in any build.
+    /// for anyone to do it* - a set of polylines is not a surface in any build.
     pub fn shape(topology: &'static str, wanted: &'static str) -> Self {
         Self::Shape { topology, wanted }
     }

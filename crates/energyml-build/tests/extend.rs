@@ -1,4 +1,4 @@
-//! `extend` — a polyline
+//! `extend` - a polyline
 //! prolonged at its ends, a triangulated surface grown past its border. The
 //! arithmetic is tested in `energyml_analysis::extend`; this holds the seam,
 //! and confronts what comes out with the extrapolation **recomputed here**
@@ -42,8 +42,8 @@ fn shape(points: Vec<[f64; 3]>, topology: Topology, closed: Option<Vec<bool>>) -
     )
 }
 
-/// A `side × side` grid on the plane `z = y` — a fault dipping 45° to the
-/// south, its up-dip direction `(0, 1, 1)/√2` — two triangles per cell.
+/// A `side × side` grid on the plane `z = y` - a fault dipping 45° to the
+/// south, its up-dip direction `(0, 1, 1)/√2` - two triangles per cell.
 fn fault(side: usize) -> (Vec<[f64; 3]>, Vec<[u32; 3]>) {
     let mut points = Vec::new();
     for j in 0..side {
@@ -91,7 +91,7 @@ fn bits(points: &[[f64; 3]]) -> Vec<[u64; 3]> {
 /// down, eight on the sides. The original nodes and triangles come back bit for
 /// bit and first; every invented node is on the fault's plane; the middle of the
 /// top edge rises by exactly ten metres, the bottom sinks by five, a side goes
-/// eight metres along the strike — each recomputed from the plane, not read
+/// eight metres along the strike - each recomputed from the plane, not read
 /// back from the module.
 #[test]
 fn a_fault_extends_10_m_up_5_down_8_on_the_sides() {
@@ -136,7 +136,7 @@ fn a_fault_extends_10_m_up_5_down_8_on_the_sides() {
         );
     }
     // The tip of a border node's extension: the farthest invented node on the
-    // ray from it — found here by geometry, the ray recomputed from the plane.
+    // ray from it - found here by geometry, the ray recomputed from the plane.
     let tip = |node: usize, direction: [f64; 3]| -> f64 {
         let p = points[node];
         patch.points[n..]
@@ -211,7 +211,7 @@ fn a_fault_extends_10_m_up_5_down_8_on_the_sides() {
 
 /// **The band is what keeps a misplaced node from steering** (a test
 /// written in advance): a border node lifted off the plane. Its extension
-/// starts from it — it is not moved — and runs parallel to the plane read over
+/// starts from it - it is not moved - and runs parallel to the plane read over
 /// the band; the direction the last edge gives would climb out of it.
 #[test]
 fn a_badly_placed_edge_node_does_not_twist_the_extension() {
@@ -313,7 +313,7 @@ fn a_straight_polyline_extends_straight_at_each_end() {
     );
 }
 
-/// A fault stick in the dip frame: its top goes up, its bottom down — read in
+/// A fault stick in the dip frame: its top goes up, its bottom down - read in
 /// the frame's sense, not the shape's. In depth, up is toward smaller z.
 #[test]
 fn a_fault_stick_goes_up_and_down_in_the_sense_of_the_frame() {

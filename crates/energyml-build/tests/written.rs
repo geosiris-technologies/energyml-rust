@@ -1,4 +1,4 @@
-//! The shared blocks of every writer, declared as types (`ops/written.rs`) —
+//! The shared blocks of every writer, declared as types (`ops/written.rs`) -
 //! and `common_slots`, which is now those slots with the bag's suggestions.
 //!
 //! # What would have to break to make it turn red
@@ -53,7 +53,7 @@ fn the_blocks_return_the_earlier_slots_in_the_earlier_order() {
     );
     assert_eq!(of("project").applies, Applies::With(&["sourceEpsg"]));
     // **This slot declared a type that the crate never writes**, and this test
-    // pinned it word for word — so it defended it. Measured on 21/09 by
+    // pinned it word for word - so it defended it. Measured on 21/09 by
     // counting the types of an import of 936 boreholes: an `eml23.ProjectedCrs`,
     // an `eml23.VerticalCrs`, and not a single compound; the trajectory points at
     // the first. The `LocalEngineeringCompoundCrs` existed only in a
@@ -64,9 +64,9 @@ fn the_blocks_return_the_earlier_slots_in_the_earlier_order() {
     // keeps the promise is elsewhere, against a **plan**:
     // `operations.rs::what_a_slot_declares_it_creates_is_what_the_plan_writes`.
     // Pinning a declaration against itself says nothing of what is written
-    // — it is what let this one through.
+    // - it is what let this one through.
     //
-    // **And the compound comes back, first, on 24/09** — because it is written
+    // **And the compound comes back, first, on 24/09** - because it is written
     // now, with its `LocalEngineering2dCrs`: it is what a geometry
     // names (RESQML TRG 2.2 §3.1 p. 22). The list that did not name it was
     // right about what was written, and what was written was wrong.
@@ -95,7 +95,7 @@ fn the_blocks_return_the_earlier_slots_in_the_earlier_order() {
 }
 
 /// **An operation that imposes what it represents says that the empty
-/// interpretation is created** — and the inputs' suggestions land on the typed
+/// interpretation is created** - and the inputs' suggestions land on the typed
 /// slots, with where they came from.
 #[test]
 fn the_bag_suggests_and_the_imposition_is_said() {

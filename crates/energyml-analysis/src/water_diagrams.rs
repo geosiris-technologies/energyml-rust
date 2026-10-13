@@ -1,13 +1,13 @@
-//! **Piper and Stiff diagrams of a water analysis** — where a water falls
+//! **Piper and Stiff diagrams of a water analysis** - where a water falls
 //! among the facies, and its fingerprint
 //! (a PRODML/WITSML business view).
 //!
 //! Nothing here reads a package or knows PRODML: the input is the analysis as
-//! [`crate::ion_balance`] takes it — formulas and concentrations in mg/L — and
+//! [`crate::ion_balance`] takes it - formulas and concentrations in mg/L - and
 //! the milliequivalents come from **its** table of molar masses and charges,
 //! never from a second one.
 //!
-//! # Sources — textbook methods, not Energistics ones
+//! # Sources - textbook methods, not Energistics ones
 //!
 //! - Piper, A.M. (1944), *A graphic procedure in the geochemical
 //!   interpretation of water-analyses*, Transactions, American Geophysical
@@ -15,18 +15,18 @@
 //! - Stiff, H.A. Jr. (1951), *The interpretation of chemical water analysis by
 //!   means of patterns*, Journal of Petroleum Technology 3;
 //! - Hem, J.D. (1985), *Study and Interpretation of the Chemical
-//!   Characteristics of Natural Water*, USGS Water-Supply Paper 2254 — for the
+//!   Characteristics of Natural Water*, USGS Water-Supply Paper 2254 - for the
 //!   three-axis form of the Stiff pattern.
 //!
 //! All three are cited from memory: no page is given. The PRODML Technical Usage
 //! Guide v2.3 names none of them.
 //!
-//! TODO(reference): verify — all three citations (Piper 1944, Stiff 1951, Hem 1985) were written from memory and not checked against the sources.
+//! TODO(reference): verify - all three citations (Piper 1944, Stiff 1951, Hem 1985) were written from memory and not checked against the sources.
 //!
 //! # What is refused, and why it is refused before anything is drawn
 //!
-//! - **An analysis `ion_balance` refuses** — an unknown formula, a negative
-//!   concentration, an ion given twice — is refused with its reason
+//! - **An analysis `ion_balance` refuses** - an unknown formula, a negative
+//!   concentration, an ion given twice - is refused with its reason
 //!   ([`WaterError::Balance`]).
 //! - **An analysis that does not balance** within the tolerance the caller
 //!   declares, in percent ([`WaterError::Unbalanced`]). A facies drawn from a
@@ -34,8 +34,8 @@
 //! - **An ion an axis needs and the analysis does not state**
 //!   ([`WaterError::Missing`]). An absent ion is never drawn as zero: a zero
 //!   is a measurement (below detection, say), an absence is nobody having
-//!   measured. The caller who knows an ion is negligible — carbonate in a
-//!   water below pH 8.3 is the usual case — **declares** it absent, and the
+//!   measured. The caller who knows an ion is negligible - carbonate in a
+//!   water below pH 8.3 is the usual case - **declares** it absent, and the
 //!   result carries the declaration ([`MajorIons::declared_absent`]) so the
 //!   front end can say it. Declaring an ion that is also stated, or one no axis
 //!   reads, is refused: one of the two statements is wrong.
@@ -45,18 +45,18 @@
 //! Both diagrams read the same eight ions, grouped as Piper grouped them:
 //! cations `Ca+2`, `Mg+2`, `Na+` with `K+`; anions `Cl-`, `SO4-2`, `HCO3-`
 //! with `CO3-2`. The other ions an analysis states (barium, iron, strontium…)
-//! enter the balance but no axis — a Piper percentage is a share of the
+//! enter the balance but no axis - a Piper percentage is a share of the
 //! plotted ions, not of every charge in the water.
 //!
 //! **Piper.** Each ternary is the share, in percent of milliequivalents, of
 //! its three axes. The layout is the one Piper's figure is reproduced in
 //! (TODO(reference): verify, cited from memory): two equilateral triangles of side 1 on one base line,
-//! `gap` apart — cations on the left, `Ca` bottom-left, `Na+K` bottom-right,
+//! `gap` apart - cations on the left, `Ca` bottom-left, `Na+K` bottom-right,
 //! `Mg` at the apex; anions on the right, `HCO3+CO3` bottom-left, `Cl`
-//! bottom-right, `SO4` at the apex — and the diamond above between them. A
+//! bottom-right, `SO4` at the apex - and the diamond above between them. A
 //! water's point in the diamond is where the line of constant `Na+K` through
-//! its cation point (parallel to the `Ca`–`Mg` side) meets the line of
-//! constant `HCO3+CO3` through its anion point (parallel to the `Cl`–`SO4`
+//! its cation point (parallel to the `Ca`-`Mg` side) meets the line of
+//! constant `HCO3+CO3` through its anion point (parallel to the `Cl`-`SO4`
 //! side). With `√3/2` written `h`, fractions (not percentages) and the anion
 //! triangle shifted by `1 + gap`:
 //!
@@ -72,7 +72,7 @@
 //!
 //! **Stiff.** Three horizontal axes, milliequivalents per litre, cations to
 //! the left and anions to the right, top to bottom: `Na+K` | `Cl`, `Ca` |
-//! `HCO3+CO3`, `Mg` | `SO4` — the three-axis form Hem draws. Stiff's own
+//! `HCO3+CO3`, `Mg` | `SO4` - the three-axis form Hem draws. Stiff's own
 //! pattern had a fourth axis for iron and carbonate (TODO(reference): verify, cited from memory);
 //! iron is seldom stated, and folding carbonate with bicarbonate keeps both
 //! diagrams reading the same ions.
@@ -82,7 +82,7 @@ use crate::ion_balance::{self, Balance, BalanceError};
 /// One axis: its label and the ions it adds up.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Axis {
-    /// `Na+K`, `HCO3+CO3` — how a diagram labels it.
+    /// `Na+K`, `HCO3+CO3` - how a diagram labels it.
     pub label: &'static str,
     /// The formulas it adds, as [`crate::ion_balance::IONS`] writes them.
     pub formulas: &'static [&'static str],
@@ -128,7 +128,7 @@ pub enum WaterError {
     #[error("the balance tolerance is a finite percentage ≥ 0, not {given}")]
     BadTolerance { given: f64 },
     #[error(
-        "the analysis does not balance: {cations:.3} meq/L of cations against {anions:.3} meq/L of anions, an error of {error:.2} % beyond the {tolerance} % declared — a facies drawn from it could be a typing error's"
+        "the analysis does not balance: {cations:.3} meq/L of cations against {anions:.3} meq/L of anions, an error of {error:.2} % beyond the {tolerance} % declared - a facies drawn from it could be a typing error's"
     )]
     Unbalanced {
         cations: f64,
@@ -137,12 +137,12 @@ pub enum WaterError {
         tolerance: f64,
     },
     #[error(
-        "{formulas:?} not stated, and an axis needs each: an absent ion is never drawn as zero — state it (0 when measured below detection) or declare it absent"
+        "{formulas:?} not stated, and an axis needs each: an absent ion is never drawn as zero - state it (0 when measured below detection) or declare it absent"
     )]
     Missing { formulas: Vec<&'static str> },
     #[error("`{formula}` is declared absent and stated at {given} mg/L: one of the two is wrong")]
     DeclaredAndStated { formula: String, given: f64 },
-    #[error("`{formula}` is declared absent, but no axis reads it — the axes read {known}")]
+    #[error("`{formula}` is declared absent, but no axis reads it - the axes read {known}")]
     NotAnAxisIon { formula: String, known: String },
     #[error("the {which} axes add up to 0 meq/L: no share of nothing to plot")]
     EmptyTernary { which: &'static str },
@@ -157,7 +157,7 @@ pub struct Equivalent {
     pub formula: String,
     /// Its concentration as stated, mg/L.
     pub mg_per_l: f64,
-    /// `mg/L ÷ molar mass × |charge|`, meq/L — from [`crate::ion_balance`].
+    /// `mg/L ÷ molar mass × |charge|`, meq/L - from [`crate::ion_balance`].
     pub meq_per_l: f64,
 }
 
@@ -167,9 +167,9 @@ pub struct Equivalent {
 pub struct MajorIons {
     /// Its balance, from [`crate::ion_balance::balance`].
     pub balance: Balance,
-    /// Every ion stated, in the order stated — the axis ions and the others.
+    /// Every ion stated, in the order stated - the axis ions and the others.
     pub stated: Vec<Equivalent>,
-    /// The axis ions the caller declared absent — counted as 0 by that
+    /// The axis ions the caller declared absent - counted as 0 by that
     /// declaration, and to be shown with the diagram.
     pub declared_absent: Vec<&'static str>,
     /// meq/L of [`CATION_AXES`], in their order.
@@ -186,7 +186,7 @@ fn axis_formulas() -> impl Iterator<Item = &'static str> {
         .flat_map(|axis| axis.formulas.iter().copied())
 }
 
-/// The analysis checked for the diagrams — `tolerance` the largest balance
+/// The analysis checked for the diagrams - `tolerance` the largest balance
 /// error accepted, in percent; `declared_absent` the axis ions the caller
 /// states were not measured and are negligible.
 pub fn major_ions(
@@ -265,9 +265,9 @@ pub fn major_ions(
 /// from.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Piper {
-    /// % of `Ca`, `Mg`, `Na+K` — [`CATION_AXES`]' order; they add up to 100.
+    /// % of `Ca`, `Mg`, `Na+K` - [`CATION_AXES`]' order; they add up to 100.
     pub cations: [f64; 3],
-    /// % of `Cl`, `SO4`, `HCO3+CO3` — [`ANION_AXES`]' order; they add up to 100.
+    /// % of `Cl`, `SO4`, `HCO3+CO3` - [`ANION_AXES`]' order; they add up to 100.
     pub anions: [f64; 3],
     /// What the percentages were computed from.
     pub ions: MajorIons,
@@ -284,7 +284,7 @@ pub struct PiperPoints {
     pub diamond: [f64; 2],
 }
 
-/// The outline of the diagram, for the front end to draw — the same layout as
+/// The outline of the diagram, for the front end to draw - the same layout as
 /// [`Piper::points`].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PiperFrame {
@@ -353,7 +353,7 @@ fn shares(meq: [f64; 3], which: &'static str) -> Result<[f64; 3], WaterError> {
     Ok(meq.map(|one| 100.0 * one / total))
 }
 
-/// The Piper diagram of an analysis — see [`major_ions`] for `tolerance` and
+/// The Piper diagram of an analysis - see [`major_ions`] for `tolerance` and
 /// `declared_absent`.
 pub fn piper(
     analysis: &[(&str, f64)],
@@ -392,7 +392,7 @@ pub struct Stiff {
     pub ions: MajorIons,
 }
 
-/// The Stiff pattern of an analysis — see [`major_ions`] for `tolerance` and
+/// The Stiff pattern of an analysis - see [`major_ions`] for `tolerance` and
 /// `declared_absent`.
 pub fn stiff(
     analysis: &[(&str, f64)],

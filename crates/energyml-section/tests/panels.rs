@@ -1,4 +1,4 @@
-//! The 3D panels are the drawing's fills put back on the trace (ADR-0015) — hand-built catalogues, no package is read.
+//! The 3D panels are the drawing's fills put back on the trace (ADR-0015) - hand-built catalogues, no package is read.
 
 use energyml_geometry::fence::point_at;
 use energyml_section::layout::{Shape, layout};

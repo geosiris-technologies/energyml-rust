@@ -1,8 +1,8 @@
-//! `cross-section` — a filled section: a trace, surfaces, panels.
+//! `cross-section` - a filled section: a trace, surfaces, panels.
 //!
 //! This is **the first operation with several inputs of different roles**,
 //! and that is why it comes now: cardinality and order are wired through, and
-//! nothing exercised them — a declaration nobody uses is a declaration nobody
+//! nothing exercised them - a declaration nobody uses is a declaration nobody
 //! knows works.
 //!
 //! # Why this name, and not `fence`
@@ -11,26 +11,26 @@
 //! **section** is a vertical cut along **one** trace, and a **fence**
 //! is *several* sections that cross each other. What the plan called `fence`
 //! is therefore a section, and calling it anything else would leave the name of
-//! the composite for the part — two different things under one name in the
+//! the composite for the part - two different things under one name in the
 //! code is, six months later, a function nobody knows what it takes.
 //!
 //! The front end does have a `fence` recipe, which is the same thing under the old name;
 //! it stays as long as its constructor is not removed, and the two activity
-//! templates coexist — a template uuid never changes.
+//! templates coexist - a template uuid never changes.
 //!
 //! # The two roles, and why they cannot be guessed
 //!
 //! A trace and surfaces are **two shapes**, and nothing in their geometry
 //! says which is which: a polyline laid flat is a plausible trace
 //! and just as plausible a surface cut. They are therefore two named
-//! slots, and the bag carries them by name — which is possible because a piece's
+//! slots, and the bag carries them by name - which is possible because a piece's
 //! name is the name of the slot that received it.
 //!
 //! # The order is data, and it is declared
 //!
 //! `surfaces` is `in_order`: the material is put between each consecutive
 //! pair, from top to bottom. Getting it the wrong way round **and an inverted
-//! section looks abnormal to no one** — this is the argument the front end's
+//! section looks abnormal to no one** - this is the argument the front end's
 //! drawing code already carries, and the reason the order is declared instead of
 //! being guessed from a mean elevation: two
 //! surfaces that cross have no order in elevation, and that is exactly
@@ -38,8 +38,8 @@
 //!
 //! # What it does not do itself
 //!
-//! The computation is [`energyml_geometry::fence`] — the curves, the panels, the
-//! crossings, the wedges — and the writing is that of [`super::triangles`].
+//! The computation is [`energyml_geometry::fence`] - the curves, the panels, the
+//! crossings, the wedges - and the writing is that of [`super::triangles`].
 //! A second writer of the same object would be a second place for the same
 //! mistakes.
 //!
@@ -51,7 +51,7 @@
 //! representation, a patch per piece of panel. Both gaps have the same
 //! cause: no writer of `RepresentationSetRepresentation` exists in this
 //! crate, and without the group, ten scattered objects do not say they are one
-//! section — that would be worse than what is written here. What the scene asked for
+//! section - that would be worse than what is written here. What the scene asked for
 //! is delivered: **the artefact tree does have a node per panel**,
 //! which is the granularity one clicks on.
 //!
@@ -78,26 +78,26 @@ pub struct CrossSection;
 /// What `cross-section` is told: the shared block of the triangle writer.
 #[derive(Debug, Params)]
 pub struct CrossSectionParams {
-    /// The frame, what is represented, the naming — for the triangle writer.
+    /// The frame, what is represented, the naming - for the triangle writer.
     #[param(flatten)]
     pub written: Written,
 }
 
-/// What `cross-section` takes — **two roles, read by the slot's name**: a
+/// What `cross-section` takes - **two roles, read by the slot's name**: a
 /// polyline in `surfaces` is the caller's mistake, not a spare trace.
 #[derive(Debug, Inputs)]
 pub struct CrossSectionInputs {
     /// the line the section follows, in plan view
     #[input(topology = "polylines")]
     pub trace: Shape,
-    /// the surfaces the section fills between — at least two, **from top to bottom**
+    /// the surfaces the section fills between - at least two, **from top to bottom**
     #[input(topology = "triangles", least = 2, ordered)]
     pub surfaces: Vec<Shape>,
 }
 
 /// A surface as the section reads it: its piece name, and its mesh.
 struct Surface<'a> {
-    /// The name of the slot that received it — it is what names the panel.
+    /// The name of the slot that received it - it is what names the panel.
     name: &'a str,
     points: Vec<[f64; 3]>,
     triangles: Vec<[u32; 3]>,
@@ -110,7 +110,7 @@ struct Section<'a> {
     surfaces: Vec<Surface<'a>>,
 }
 
-/// What the two bound roles say — or the refusal that names what is wrong.
+/// What the two bound roles say - or the refusal that names what is wrong.
 fn section_of(inputs: &CrossSectionInputs) -> Result<Section<'_>, Refusal> {
     let trace: Vec<[f64; 2]> = inputs
         .trace
@@ -122,7 +122,7 @@ fn section_of(inputs: &CrossSectionInputs) -> Result<Section<'_>, Refusal> {
     if trace.len() < 2 {
         return Err(Refusal::on(
             "trace",
-            format!("needs at least two positions — it holds {}", trace.len()),
+            format!("needs at least two positions - it holds {}", trace.len()),
         ));
     }
     let mut surfaces = Vec::new();
@@ -151,7 +151,7 @@ fn section_of(inputs: &CrossSectionInputs) -> Result<Section<'_>, Refusal> {
             return Err(Refusal::on(
                 "surfaces",
                 format!(
-                    "`{}` is not triangulated — `triangulate` makes a surface from a cloud",
+                    "`{}` is not triangulated - `triangulate` makes a surface from a cloud",
                     one.name
                 ),
             ));
@@ -261,7 +261,7 @@ impl Operation for CrossSection {
             return Err(Refusal::on(
                 "surfaces",
                 format!(
-                    "no panel holds any material along this trace — {} pair(s) of surfaces, all empty",
+                    "no panel holds any material along this trace - {} pair(s) of surfaces, all empty",
                     curves.len().saturating_sub(1)
                 ),
             ));
@@ -342,7 +342,7 @@ impl Operation for CrossSection {
                     least: Some(0),
                     most: None,
                 },
-                "how many pieces run the other way round — the order given disagrees with the geometry there",
+                "how many pieces run the other way round - the order given disagrees with the geometry there",
             ),
         ])
     }
@@ -352,14 +352,14 @@ impl Operation for CrossSection {
 ///
 /// **The root draws nothing**, and that is the point. It carries the uuid of
 /// the written object, its children carry the material; leaving it the merged
-/// geometry that `triangles` made would draw each panel **twice**
-/// — once by the root, once by its child — and two exactly
+/// geometry that `triangles` made would draw each panel **twice** -
+/// once by the root, once by its child - and two exactly
 /// superimposed surfaces fight pixel by pixel with nothing saying
 /// why.
 ///
 /// It is also what the scene-tree design already states: hiding the cross
 /// sections without hiding the node would leave a lit line that draws
-/// nothing — a group root is a line that draws nothing, by construction.
+/// nothing - a group root is a line that draws nothing, by construction.
 fn tree_of(written: &[Made], panels: &[(String, Geometry)]) -> Vec<Made> {
     let Some(first) = written.first() else {
         return Vec::new();

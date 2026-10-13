@@ -1,4 +1,4 @@
-//! `crosses::traces` — the long section, then its cross sections
+//! `crosses::traces` - the long section, then its cross sections
 //! (ADR-0015).
 
 use energyml_section::crosses::{locate, meet, traces};

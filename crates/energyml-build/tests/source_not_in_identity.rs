@@ -3,8 +3,8 @@
 //!
 //! Two runs with the same inputs and two different `source` texts must write
 //! the same objects under the same uuids (and the same activity seed), while the
-//! `Citation/Description` they write differs. Rewording a citation — or
-//! translating it — must not rename anything: it did once, when the
+//! `Citation/Description` they write differs. Rewording a citation - or
+//! translating it - must not rename anything: it did once, when the
 //! `extend-boreholes` seed carried the text (13/10/2026, translating the
 //! `source = "…"` of the reference recipe made the extended frames vanish
 //! under their old uuids).
@@ -21,7 +21,7 @@
 //! Add `self.source` to the format of `Writer::uuid` or of
 //! `Writer::activity_seed` in `ops/prodml_writer.rs` and
 //! `a_prodml_writer_keeps_its_uuids_when_the_source_changes` turns red.
-//! Both also turn red if the description stopped carrying the source — the
+//! Both also turn red if the description stopped carrying the source - the
 //! `differs` assertions are what keep them from passing on an empty comparison.
 
 use serde_json::{Value, json};
@@ -57,7 +57,7 @@ fn descriptions(plan: &Plan) -> Vec<String> {
         .collect()
 }
 
-/// Same uuids, different words — the two halves of the rule, each guarding
+/// Same uuids, different words - the two halves of the rule, each guarding
 /// the other against an empty comparison.
 fn assert_same_identity_other_words(first: &Plan, second: &Plan, what: &str) {
     assert!(!first.objects.is_empty(), "{what}: the plan writes objects");
@@ -97,7 +97,7 @@ fn vertical_frame(title: &str, mds: &[f64]) -> Pieces {
         reference: Some(Ref::new(
             "aaaaaaaa-0000-4000-8000-000000000001",
             "resqml22.WellboreFrameRepresentation",
-            format!("{title} — frame"),
+            format!("{title} - frame"),
         )),
         crs: Some(Ref::new(
             "eeeeeeee-0000-4000-8000-000000000005",
@@ -110,17 +110,17 @@ fn vertical_frame(title: &str, mds: &[f64]) -> Pieces {
         trajectory: Some(Ref::new(
             "bbbbbbbb-0000-4000-8000-000000000002",
             "resqml22.WellboreTrajectoryRepresentation",
-            format!("{title} — trajectory"),
+            format!("{title} - trajectory"),
         )),
         datum: Some(Ref::new(
             "cccccccc-0000-4000-8000-000000000003",
             "eml23.ReferencePointInALocalEngineeringCompoundCrs",
-            format!("{title} — datum"),
+            format!("{title} - datum"),
         )),
         interpretation: Some(Ref::new(
             "dddddddd-0000-4000-8000-000000000004",
             "resqml22.WellboreInterpretation",
-            format!("{title} — interpretation"),
+            format!("{title} - interpretation"),
         )),
         wellhead: Some([X, Y, GROUND]),
         ..Known::default()
@@ -176,13 +176,13 @@ fn analysed(source: &str) -> Plan {
         reference: Some(Ref::new(
             TEST,
             "prodml23.InjectionFlowTest",
-            "GTH-2 — injection test",
+            "GTH-2 - injection test",
         )),
         ..Default::default()
     };
     let pieces = Pieces::empty().with("test", Source::Object(known));
     let choices = Choices::new()
-        .set("title", "GTH-2 — injection test analysis")
+        .set("title", "GTH-2 - injection test analysis")
         .set("source", Value::from(source))
         .set("testPeriod", "step-rate")
         .set("permeability", 5.0)
@@ -202,7 +202,7 @@ fn analysed(source: &str) -> Plan {
 
 #[test]
 fn a_prodml_writer_keeps_its_uuids_when_the_source_changes() {
-    let first = analysed("synthetic — a first wording of the source");
-    let second = analysed("synthétique — une autre formulation de la source");
+    let first = analysed("synthetic - a first wording of the source");
+    let second = analysed("synthétique - une autre formulation de la source");
     assert_same_identity_other_words(&first, &second, "pressure-transient-analysis");
 }

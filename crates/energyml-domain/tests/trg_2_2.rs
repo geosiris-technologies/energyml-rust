@@ -121,7 +121,7 @@ fn sub_representation(support: &str) -> resqml22::SubRepresentation {
 
 #[test]
 fn a_2_2_sub_representation_on_a_representation_is_kept() {
-    // Nothing at all — the uncheckable on the object is what the review found.
+    // Nothing at all - the uncheckable on the object is what the review found.
     let findings = judged(&sub_representation("resqml22.TriangulatedSetRepresentation"));
     assert!(findings.is_empty(), "{findings:?}");
 }

@@ -1,9 +1,9 @@
-//! Radial basis function interpolation — the smooth surface through
+//! Radial basis function interpolation - the smooth surface through
 //! scattered data, where kriging is the statistical one.
 //!
 //! `s(x) = Σ λᵢ φ(|x − xᵢ|) + p(x)`: one coefficient per sample plus a
 //! low-degree polynomial, solved as one dense system. The polynomial is
-//! not decoration — it is what makes the system solvable at all for the
+//! not decoration - it is what makes the system solvable at all for the
 //! kernels that are only **conditionally** positive definite, and its
 //! degree is a property of the kernel, not a knob:
 //!
@@ -14,35 +14,35 @@
 //! | linear | r | constant (order-1 CPD) |
 //! | gaussian | e^(−(εr)²) | none (positive definite) |
 //!
-//! Getting that column count wrong does not fail — it produces a smooth,
+//! Getting that column count wrong does not fail - it produces a smooth,
 //! plausible, wrong surface, which is why the degree is decided by
 //! [`Kernel`] and not exposed. One consequence is named in the errors: the
 //! thin-plate's affine term needs samples that span the space, so **all
-//! samples on one line** (in 2D) make the system singular — the refusal
+//! samples on one line** (in 2D) make the system singular - the refusal
 //! says so rather than leaving `SingularSystem` to be puzzled out.
 //!
 //! Same contract as the crate's other interpolators: exact at samples, a
 //! `NaN` sample set aside and counted, coincident samples refused with
 //! both indices, factor once and back-substitute per query.
 //!
-//! TODO(reference): verify — radial basis function interpolation with conditionally positive definite kernels follows the standard literature; no publication is cited in this code. Add a reference once checked.
+//! TODO(reference): verify - radial basis function interpolation with conditionally positive definite kernels follows the standard literature; no publication is cited in this code. Add a reference once checked.
 
 use crate::Error;
 use crate::solve::Lu;
 
-/// The radial kernel — which smoothness the surface buys.
+/// The radial kernel - which smoothness the surface buys.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Kernel {
     /// The classic surface interpolator: minimises bending energy. No
     /// shape parameter to tune, which is a feature.
     ThinPlate,
-    /// `√(r² + ε²)` — `epsilon` sets how rounded the surface is near the
+    /// `√(r² + ε²)` - `epsilon` sets how rounded the surface is near the
     /// samples; the data's typical spacing is a reasonable value.
     Multiquadric { epsilon: f64 },
-    /// `r` — a cone at each sample: continuous, not smooth, never
+    /// `r` - a cone at each sample: continuous, not smooth, never
     /// overshoots wildly.
     Linear,
-    /// `e^(−(εr)²)` — very smooth and very local; ill-conditioned when
+    /// `e^(−(εr)²)` - very smooth and very local; ill-conditioned when
     /// `epsilon` is small relative to the spacing.
     Gaussian { epsilon: f64 },
 }
@@ -91,7 +91,7 @@ impl Kernel {
 #[derive(Debug, Clone)]
 pub struct Rbf {
     pub kernel: Kernel,
-    /// A query closer than this to a sample *is* that sample — same rule
+    /// A query closer than this to a sample *is* that sample - same rule
     /// and same default as [`crate::Idw`].
     pub exact_within: f64,
 }
@@ -246,7 +246,7 @@ mod tests {
     #[test]
     fn kernels_with_a_polynomial_reproduce_what_the_polynomial_spans() {
         // Thin-plate carries an affine term: an affine field comes back
-        // exactly, everywhere — the λ's solve to zero and the polynomial
+        // exactly, everywhere - the λ's solve to zero and the polynomial
         // does the whole job. Constant-term kernels do the same for a
         // constant field.
         let samples = [[0.0, 0.0], [4.0, 0.0], [2.0, 3.0], [1.0, 1.0]];

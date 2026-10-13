@@ -4,11 +4,11 @@
 //! reader can get wrong while looking perfectly healthy:
 //!
 //! 1. **the same property read from the 2.0.1 and the 2.2 package must come
-//!    out identical** — the two reference packages hold the same objects under
+//!    out identical** - the two reference packages hold the same objects under
 //!    the same uuids, written to different schemas, which makes them a
 //!    differential test nobody had to write;
 //! 2. **the patch attachment**, which is by explicit index in 2.0.1 and by
-//!    position in 2.2 — the one place a naive generic reader breaks silently;
+//!    position in 2.2 - the one place a naive generic reader breaks silently;
 //! 3. **the counts**, cross-checked against the shape the HDF5 file actually
 //!    holds where the `hdf5` feature is on.
 //!
@@ -24,7 +24,7 @@ use energyml_storage::EpcStore;
 /// Every schema version the workspace generates.
 ///
 /// One line rather than a hand-kept subset: a list written out here goes stale
-/// the day a release is added, and nothing would notice — the suite would keep
+/// the day a release is added, and nothing would notice - the suite would keep
 /// passing while quietly never covering the new version. `energyml-schemas`
 /// holds the one list, and its own test fails when it disagrees with
 /// `codegen.toml`.
@@ -134,7 +134,7 @@ fn the_two_versions_of_the_same_property_agree() {
         assert_eq!(a.title, b.title, "{uuid}: title");
         // Not compared for equality, and the reason is a corpus fact worth
         // writing down: the two packages are *not* a perfect mirror. fesapi's
-        // `6b6656bb` — titled "Fake Property" — hangs on a
+        // `6b6656bb` - titled "Fake Property" - hangs on a
         // `PointSetRepresentation` in the 2.0.1 package and on an
         // `IjkGridRepresentation` in the 2.2 one. Asserting equality here
         // would pin a producer's inconsistency as if it were our contract.
@@ -184,7 +184,7 @@ fn a_patch_index_is_read_where_it_is_written_and_implied_where_it_is_not() {
             }
         }
     }
-    // Both forms are in the corpus, so both branches are actually exercised —
+    // Both forms are in the corpus, so both branches are actually exercised -
     // a test that only ever sees one of them proves nothing about the other.
     assert!(
         explicit > 0,
@@ -319,7 +319,7 @@ fn a_grid_2d_counts_its_nodes_the_same_way_in_both_versions() {
 fn the_values_come_out_and_their_shape_is_stated() {
     // The end of the chain: the numbers themselves, and the count the document
     // implies stated beside the count the file holds. Where they disagree the
-    // disagreement is *reported*, not hidden and not fatal — the reference
+    // disagreement is *reported*, not hidden and not fatal - the reference
     // package has a real one (a 5000-node grid carrying 5000 values while
     // declaring 2 per node), and refusing it would make the file unusable
     // rather than repairable.
@@ -370,8 +370,8 @@ fn the_values_come_out_and_their_shape_is_stated() {
 
 #[test]
 fn the_index_finds_the_properties_of_a_representation_without_any_rels() {
-    // `80wells` carries no `.rels` at all — 202 objects, not one relationship
-    // part — which is exactly why the index is built from what the objects say
+    // `80wells` carries no `.rels` at all - 202 objects, not one relationship
+    // part - which is exactly why the index is built from what the objects say
     // rather than from the package's own bookkeeping. If this test passes on
     // that file, the index does not secretly depend on the relationships.
     let files = corpus();
@@ -476,7 +476,7 @@ fn the_index_separates_the_time_steps_of_one_representation() {
 ///
 /// The trap is the other pair: a connection names **two** cells, so answering
 /// the connection count for `cells` would line a per-cell array up against half
-/// the elements it belongs to — the right length for the wrong elements, which
+/// the elements it belongs to - the right length for the wrong elements, which
 /// no downstream check would catch.
 #[test]
 fn a_connection_set_counts_its_pairs_on_the_faces_and_refuses_the_cells() {
@@ -523,7 +523,7 @@ fn a_connection_set_counts_its_pairs_on_the_faces_and_refuses_the_cells() {
 /// `KGaps` repeats both.
 ///
 /// What this has to catch is the reading that treats a gap as invisible. Before
-/// this, `interval edges` answered `NK + 1` — right for the unbroken grid a
+/// this, `interval edges` answered `NK + 1` - right for the unbroken grid a
 /// synthetic fixture would have, wrong for exactly the grids a gap exists to
 /// describe, and inconsistent with the node count computed a few lines below it
 /// from the same NKL.
@@ -571,8 +571,8 @@ fn a_k_gap_lengthens_the_intervals_and_their_edges_but_not_the_layers() {
 /// The counts that are local to a cell, and the one that is not.
 ///
 /// Table 7 and §9.12.3.1 agree on both halves. The local ones are fixed by the
-/// cell's own shape — *"for an IJK grid, there are 6 'faces per cell': 0=top,
-/// 1=bottom, 2-5 are side faces"* — so no faulting can change them. The column
+/// cell's own shape - *"for an IJK grid, there are 6 'faces per cell': 0=top,
+/// 1=bottom, 2-5 are side faces"* - so no faulting can change them. The column
 /// edges are the opposite kind, and the guide singles them out as *"the only
 /// indexable element where the commonality in indexing … is not obvious"*:
 /// *"first follows the I column edges (NIL x NJ) and then the J column edges
@@ -608,7 +608,7 @@ fn the_per_cell_counts_are_local_and_the_column_edges_are_not() {
 /// releases.
 ///
 /// Table 7 gives the IJK column edges as `NIL x NJ + NI x NJL +
-/// SplitColumnEdgeCount`, so the split term is not a refinement — it is part of
+/// SplitColumnEdgeCount`, so the split term is not a refinement - it is part of
 /// the count, and a grid with a fault is precisely the grid someone indexes
 /// properties on. `SplitColumnEdges` is spelled the same in both releases but
 /// does not hang in the same place: 2.2 puts it on the grid geometry, 2.0.1
@@ -674,7 +674,7 @@ fn the_split_column_edges_are_found_wherever_the_release_hid_them() {
 ///
 /// Table 7: *"cells … NI x NJ x NK (+) TruncationCellCount"*, where the guide's
 /// `(+)` means *"this portion of the cell or node data is stored as a separate
-/// patch"*. Answering `NI x NJ x NK` alone — which is what this did — is the
+/// patch"*. Answering `NI x NJ x NK` alone - which is what this did - is the
 /// parent range with the second patch dropped, so every property indexed on the
 /// cells of a truncated grid was measured against a short ruler.
 ///
@@ -713,7 +713,7 @@ fn a_truncated_grid_counts_its_second_patch_of_cells() {
 /// not: *"This option does not modify the indexing of the cells or columns, but
 /// it **does increase the number of pillars and coordinate lines**."* Both
 /// halves are asserted, because getting only the first right is the plausible
-/// half-fix — and a cell count that moved would be far more visible than a node
+/// half-fix - and a cell count that moved would be far more visible than a node
 /// count that is quietly short.
 ///
 /// What made this worth a second look: Table 7 gives `pillars` and `coordinate

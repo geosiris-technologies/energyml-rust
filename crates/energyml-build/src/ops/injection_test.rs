@@ -1,4 +1,4 @@
-//! `injection-test` — a step-rate injection test down a wellbore: the WITSML
+//! `injection-test` - a step-rate injection test down a wellbore: the WITSML
 //! log that holds its measurements, the PRODML test that points at them, and
 //! the collection of well tests that lists it.
 //!
@@ -8,17 +8,17 @@
 //! |---|---|
 //! | `witsml21.Log` + nested `ChannelSet` | the test's channels, indexed in date time: `TIME`, the injection rate, the bottom-hole pressure and temperature |
 //! | `prodml23.InjectionFlowTest` | the test: where, when, and which channels hold its rate, its pressure and its other data |
-//! | `prodml23.ProductionWellTests` | the collection of well tests: `FlowTestActivity` 1..n (SimpleProductVolume.xsd l. 519–522) |
+//! | `prodml23.ProductionWellTests` | the collection of well tests: `FlowTestActivity` 1..n (SimpleProductVolume.xsd l. 519-522) |
 //!
 //! # The measurements are in a WITSML channel set
 //!
 //! The reference model first called for a PRODML `ChannelSet`. The PRODML Technical Usage Guide
 //! v2.3 says otherwise, §13.6 p. 118: *« Channel is a WITSML object; Channels
 //! are collected into Channel Sets and the Channel Set is where the actual
-//! values are stored »* — PRODML's own `ChannelSet` has nothing but a
+//! values are stored »* - PRODML's own `ChannelSet` has nothing but a
 //! *« data blob in JSON form »* whose form nobody gives. Decision: the
-//! guide wins. The log is written as `witsml-logs` writes one — a `Log`, its
-//! `ChannelSet` and its `Channel`s in **one** part, values inline — and
+//! guide wins. The log is written as `witsml-logs` writes one - a `Log`, its
+//! `ChannelSet` and its `Channel`s in **one** part, values inline - and
 //! the test references the nested channel set and channels by uuid; a
 //! reference to a nested data object resolves to the part that holds it
 //! (`identity::nested_objects`, same decision).
@@ -26,14 +26,14 @@
 //! # `TimeChannel` is a channel of dates
 //!
 //! `AbstractFlowTestData.TimeChannel` is *« The Channel containing the Time
-//! data »* (FlowTestActivity.xsd l. 100–103). In WITSML 2.1 the time of a
+//! data »* (FlowTestActivity.xsd l. 100-103). In WITSML 2.1 the time of a
 //! channel set is its **index**, not a channel. Decision: a channel
-//! `TIME` whose values are the instants — `DataKind` `date time`, kind
+//! `TIME` whose values are the instants - `DataKind` `date time`, kind
 //! `absolute time` (*« A time value which is intended to fix an event in
 //! time, such as […] a date »*, the standard dictionary), unit `s`: a unit of
 //! its kind's quantity class `time`, as WITSML TRG v2.1 §7.1 p. 141 asks of
 //! every channel (*« The Uom MUST be compatible with the QuantityClass of the
-//! PropertyKind »*). The index is `date time` in `s` for the same reason —
+//! PropertyKind »*). The index is `date time` in `s` for the same reason -
 //! *« one of the units allowed for the specified IndexKind »*, §7.5 p. 150.
 //! A row of `Data` is then the index, then one value per channel in the order
 //! they are listed: `["2025-06-02T00:00:00Z", "2025-06-02T00:00:00Z", q, p, T]`.
@@ -42,8 +42,8 @@
 //!
 //! Decision: the values are *synthetic and sourced*. A step-rate test: `steps` rates,
 //! each held `stepHours`, sampled every `sampleMinutes`. The pressure answers
-//! each rate through the injectivity index — `p = static + q / II` once
-//! settled — approached exponentially with `responseMinutes` from where the
+//! each rate through the injectivity index - `p = static + q / II` once
+//! settled - approached exponentially with `responseMinutes` from where the
 //! previous step left it. The temperature leaves the reservoir's towards the
 //! injected water's with `coolingHours`. Every object carries
 //! `synthetic = true` and the `source` in `Citation/Description`
@@ -69,7 +69,7 @@ use crate::pieces::Ref;
 /// The operation.
 pub struct InjectionTest;
 
-/// The uid of the test's one period — the whole step-rate schedule. An
+/// The uid of the test's one period - the whole step-rate schedule. An
 /// analysis names it (`PressureTransientAnalysis.PrincipalTestPeriodRef`,
 /// `pressure-transient-analysis`), so it is fixed rather than left out: a
 /// `TestPeriod` with no uid cannot be named.
@@ -78,9 +78,9 @@ pub const TEST_PERIOD: &str = "step-rate";
 /// What `injection-test` is told.
 #[derive(Debug, Params)]
 pub struct InjectionTestParams {
-    /// the title of the test — the log, its channels and the collection are named after it
+    /// the title of the test - the log, its channels and the collection are named after it
     pub title: String,
-    /// where the laws and their values come from — a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
+    /// where the laws and their values come from - a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
     pub source: String,
     /// when the injection starts, a UTC date-time as 2025-06-02T00:00:00Z
     pub start: String,
@@ -90,7 +90,7 @@ pub struct InjectionTestParams {
     /// how long each step is held, in hours
     #[param(uom = "h", min = 0.0)]
     pub step_hours: f64,
-    /// the time between two samples, in minutes — a divisor of a step
+    /// the time between two samples, in minutes - a divisor of a step
     #[param(min = 1)]
     pub sample_minutes: usize,
     /// the bottom-hole pressure before the injection starts, in bar
@@ -99,7 +99,7 @@ pub struct InjectionTestParams {
     /// the injectivity index, in m3/h per bar: a settled step raises the pressure by its rate over this
     #[param(min = 0.0)]
     pub injectivity: f64,
-    /// how fast the pressure settles on a step, in minutes — 0 for at once
+    /// how fast the pressure settles on a step, in minutes - 0 for at once
     #[param(default = 0.0, optional, min = 0.0)]
     pub response_minutes: f64,
     /// the bottom-hole temperature before the injection starts, in degC
@@ -108,17 +108,17 @@ pub struct InjectionTestParams {
     /// the temperature of the injected water, in degC
     #[param(uom = "degC")]
     pub injection_temperature: f64,
-    /// how fast the bottom of the hole cools towards the injected water, in hours — 0 for at once
+    /// how fast the bottom of the hole cools towards the injected water, in hours - 0 for at once
     #[param(default = 0.0, optional, min = 0.0)]
     pub cooling_hours: f64,
-    /// the reference conditions of the collection of well tests — `StandardConditions` is 1..1 on it
+    /// the reference conditions of the collection of well tests - `StandardConditions` is 1..1 on it
     pub standard_conditions: Standard,
-    /// the nominal period of the collection of well tests — day, week, month, year, month to date, year to date, life to date, total cumulative
+    /// the nominal period of the collection of well tests - day, week, month, year, month to date, year to date, life to date, total cumulative
     pub nominal_period: String,
-    /// how the test was conducted — its WellTestMethod
+    /// how the test was conducted - its WellTestMethod
     #[param(default = String::from("step rate"), optional)]
     pub method: String,
-    /// the BusinessAssociate a Channel must name — WITSML 2.1 requires it; a law-derived value has no company that logged it, so name the one responsible for the law
+    /// the BusinessAssociate a Channel must name - WITSML 2.1 requires it; a law-derived value has no company that logged it, so name the one responsible for the law
     #[param(need = Need::Object { types: &["eml23.BusinessAssociate"] })]
     pub logging_company: ObjectRef,
 }
@@ -126,7 +126,7 @@ pub struct InjectionTestParams {
 /// What `injection-test` takes.
 #[derive(Debug, Inputs)]
 pub struct InjectionTestInputs {
-    /// the wellbore injected into — a WITSML `Wellbore`: its log is WITSML
+    /// the wellbore injected into - a WITSML `Wellbore`: its log is WITSML
     #[input(types = "witsml21.Wellbore")]
     pub wellbore: ObjectIn,
 }
@@ -178,7 +178,7 @@ impl Operation for InjectionTest {
     fn about(&self) -> About {
         About {
             name: "injection-test",
-            describe: "a step-rate injection test down a wellbore — its WITSML log in date time, the PRODML test pointing at the log's channels, the collection of well tests — every value stated by a law and sourced",
+            describe: "a step-rate injection test down a wellbore - its WITSML log in date time, the PRODML test pointing at the log's channels, the collection of well tests - every value stated by a law and sourced",
             category: Category::Synthetic,
             makes: &[
                 "witsml21.Log",
@@ -435,7 +435,7 @@ impl Operation for InjectionTest {
             .collect();
         let data = serde_json::to_string(&Value::Array(rows))
             .map_err(|why| Refusal::new("refused", format!("the channel data did not encode: {why}")))?;
-        let set_title = format!("{title} — channels");
+        let set_title = format!("{title} - channels");
         let channel_set = witsml::ChannelSet {
             citation: writer.citation(
                 &set_title,
@@ -457,7 +457,7 @@ impl Operation for InjectionTest {
             wellbore: Some(hole_dor.clone()),
             ..Default::default()
         };
-        let log_title = format!("{title} — Log");
+        let log_title = format!("{title} - Log");
         let log = witsml::Log {
             citation: writer.citation(
                 &log_title,
@@ -556,7 +556,7 @@ impl Operation for InjectionTest {
         );
 
         // -- the collection ---------------------------------------------
-        let tests_title = format!("{title} — well tests");
+        let tests_title = format!("{title} - well tests");
         let tests = prodml::ProductionWellTests {
             citation: writer.citation(
                 &tests_title,

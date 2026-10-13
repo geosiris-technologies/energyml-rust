@@ -1,11 +1,11 @@
-//! `isocontours`, the lines and the bands — two ticks, at least one.
+//! `isocontours`, the lines and the bands - two ticks, at least one.
 //!
 //! The need: two ticks, one to know whether to create the
 //! polylines in the model, and the other to know whether to create the property. At
 //! least one of the two must be ticked. The bands are the contoured
 //! values as a `ContinuousProperty` on the surface, a `ContinuousColorMap` of
 //! flat bands starting at each level, and the `ColorInformation` entry joining
-//! them in a `GraphicalInformationSet` — the package's own, or a new one.
+//! them in a `GraphicalInformationSet` - the package's own, or a new one.
 //!
 //! The objects are built here, never read from a file: what is asserted is the
 //! form the writers give, and the values are the pyramid's.
@@ -159,7 +159,7 @@ fn the_lines_alone_are_what_the_operation_always_wrote() {
     );
 }
 
-/// The bands alone: no polyline set, and the three objects — the property on
+/// The bands alone: no polyline set, and the three objects - the property on
 /// the surface with the pyramid's heights, the banded map, a new set holding
 /// the entry that joins them. And **no title asked**: the lines' naming applies
 /// only when the lines are written.
@@ -180,7 +180,7 @@ fn the_bands_alone_write_the_property_its_map_and_the_entry() {
     );
     assert!(
         !written.shapes.is_empty(),
-        "the lines are still computed — a scene keeps them"
+        "the lines are still computed - a scene keeps them"
     );
     assert!(
         written.shapes.iter().all(|made| made.object.is_none()),
@@ -242,8 +242,8 @@ fn the_bands_run_the_ramp_from_bottom_to_top() {
     assert_eq!(hue(entries.len() - 1), 240.0, "the last band, the ramp's top");
 }
 
-/// The package's one set gets the entry, **under its own uuid** — `apply`
-/// replaces — and keeps what it held.
+/// The package's one set gets the entry, **under its own uuid** - `apply`
+/// replaces - and keeps what it held.
 #[test]
 fn the_package_s_set_is_rewritten_with_the_entry_added() {
     let set_uuid = "cccccccc-0000-4000-8000-000000000003";
@@ -263,7 +263,7 @@ fn the_package_s_set_is_rewritten_with_the_entry_added() {
 }
 
 /// Two sets: the standard does not say which decides a colour, so choosing
-/// one would decide on somebody's data — refused, naming both.
+/// one would decide on somebody's data - refused, naming both.
 #[test]
 fn two_sets_are_refused_until_one_is_named() {
     let bag = with_colours(surface(Some(true)))
@@ -328,7 +328,7 @@ fn the_bands_without_colours_are_refused_by_name() {
 }
 
 /// A plan asked for its geometry writes nothing: the bands, objects only, are
-/// neither computed nor refused — keeping the lines in a scene needs no palette.
+/// neither computed nor refused - keeping the lines in a scene needs no palette.
 #[test]
 fn a_plan_for_the_geometry_asks_nothing_of_the_bands() {
     let written = Registry::new()
@@ -345,7 +345,7 @@ fn a_plan_for_the_geometry_asks_nothing_of_the_bands() {
     assert!(of_type(&written, "resqml22.ContinuousProperty").is_empty());
 }
 
-/// The naming of the lines applies under `lines`, the bands' under `bands` —
+/// The naming of the lines applies under `lines`, the bands' under `bands` -
 /// declared, so the front end and the CLI hide the same fields.
 #[test]
 fn each_group_of_settings_applies_under_its_tick() {
@@ -382,8 +382,8 @@ fn each_group_of_settings_applies_under_its_tick() {
     assert!(!under_lines.now(|_| true, |_| true, |_| Some(serde_json::Value::Bool(false))));
 }
 
-/// `isocontours` declares its colours a **palette** — a ramp read over its own
-/// range — and `colormap` does not: there a ramp's levels are the values, and
+/// `isocontours` declares its colours a **palette** - a ramp read over its own
+/// range - and `colormap` does not: there a ramp's levels are the values, and
 /// a form offering a palette would write a map over 0..1 that draws nothing
 /// right.
 #[test]
@@ -406,7 +406,7 @@ fn a_ramp_is_a_palette_only_where_the_operation_says_so() {
 
 /// **Every band has a width**, the last one and the one below the first level
 /// included: the map runs from the lowest value to the highest. The report:
-/// 28/09: the coloured band did not show the last colour — the last
+/// 28/09: the coloured band did not show the last colour - the last
 /// band was a single stop, painted on every value above the last level and
 /// shown by no legend.
 #[test]

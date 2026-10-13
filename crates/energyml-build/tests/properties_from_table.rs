@@ -1,4 +1,4 @@
-//! `properties-from-table` — the columns of a CSV laid on frames.
+//! `properties-from-table` - the columns of a CSV laid on frames.
 //!
 //! The shape of the assertions comes from the specification of positional
 //! arrays; the values are written here.
@@ -32,7 +32,7 @@ fn column(name: &str, uuid: &str, value_type: &str) -> Value {
     })
 }
 
-/// Two roles — the name and the MD — and two measurement columns.
+/// Two roles - the name and the MD - and two measurement columns.
 fn template() -> Value {
     json!([
         column("SONDAGE", "348c9a4d-e3e4-4beb-8456-f07a46660de1", "string"),
@@ -142,18 +142,18 @@ fn a_value_lands_on_the_node_that_states_its_depth() {
     // against nodes at 10, 20, 30, 40, 50.
     //
     // An implementation that simply wrote the values of the file would return
-    // `[1, 3, 5]` — three cells for five nodes. RESQML does not complain: the
+    // `[1, 3, 5]` - three cells for five nodes. RESQML does not complain: the
     // reader takes the value *i* for the node *i*, so 3 lands at 20 m and 5
     // at 30 m, and nothing on screen shows it. This is the silent shift that
     // the positional-array rule describes, and it is exactly what this assertion forbids.
     let text = "SONDAGE,PROF,PHI,STRA\nF1,10,1,a\nF1,30,3,b\nF1,50,5,c\n";
     let made = plan(
-        &bag(text, &[("F1 — frame", &[10.0, 20.0, 30.0, 40.0, 50.0])]),
+        &bag(text, &[("F1 - frame", &[10.0, 20.0, 30.0, 40.0, 50.0])]),
         json!({}),
     )
     .expect("a plan");
 
-    let Numbers::F64(phi) = values_of(&made, "F1 — PHI") else {
+    let Numbers::F64(phi) = values_of(&made, "F1 - PHI") else {
         panic!("doubles")
     };
     assert_eq!(phi.len(), 5, "as many values as the frame has nodes");
@@ -182,16 +182,16 @@ fn text_becomes_a_discrete_property_with_a_stated_null() {
     // A text column has no natural null: RESQML makes it declared, and
     // `0` would be a value that nobody measured.
     let text = "SONDAGE,PROF,PHI,STRA\nF1,10,1,argile\nF1,30,3,sable\n";
-    let made = plan(&bag(text, &[("F1 — frame", &[10.0, 20.0, 30.0])]), json!({})).expect("a plan");
+    let made = plan(&bag(text, &[("F1 - frame", &[10.0, 20.0, 30.0])]), json!({})).expect("a plan");
 
     let object = made
         .objects
         .iter()
-        .find(|o| o.title == "F1 — STRA")
+        .find(|o| o.title == "F1 - STRA")
         .expect("the text column");
     assert_eq!(object.qualified_type, "resqml22.DiscreteProperty");
     // **The null is on the array, not on the object**: measured in the generated
-    // type, `resqml22.DiscreteProperty` has no `NullValue` field — it is
+    // type, `resqml22.DiscreteProperty` has no `NullValue` field - it is
     // `eml23.IntegerExternalArray` that carries it, as for triangles.
     assert_eq!(
         object.json["ValuesForPatch"][0]["NullValue"],
@@ -200,7 +200,7 @@ fn text_becomes_a_discrete_property_with_a_stated_null() {
         object.json
     );
 
-    let Numbers::I64(stra) = values_of(&made, "F1 — STRA") else {
+    let Numbers::I64(stra) = values_of(&made, "F1 - STRA") else {
         panic!("integers")
     };
     // The codes follow the order of the file, never the alphabet: an alphabetical
@@ -214,7 +214,7 @@ fn one_code_means_one_thing_across_the_whole_run() {
     // **Found while answering a question, on 22/09**, and it is a
     // defect of correctness and not a gap: the first attempt assigned the
     // codes *per borehole*. Measured on the BRGM corpus, code 0 of `STRA`
-    // designated five things — `e7` for 75 boreholes, `e6` for 35, then `n.d.`,
+    // designated five things - `e7` for 75 boreholes, `e6` for 35, then `n.d.`,
     // `Q`, `e5`. Two boreholes of the same package were not comparable, and the
     // day a `StringTableLookup` gives their meaning, it would say only one.
     //
@@ -229,14 +229,14 @@ F2,20,4,argile
     let made = plan(
         &bag(
             text,
-            &[("F1 — frame", &[10.0, 20.0]), ("F2 — frame", &[10.0, 20.0])],
+            &[("F1 - frame", &[10.0, 20.0]), ("F2 - frame", &[10.0, 20.0])],
         ),
         json!({}),
     )
     .expect("a plan");
 
     let (Numbers::I64(one), Numbers::I64(two)) =
-        (values_of(&made, "F1 — STRA"), values_of(&made, "F2 — STRA"))
+        (values_of(&made, "F1 - STRA"), values_of(&made, "F2 - STRA"))
     else {
         panic!("integers")
     };
@@ -247,23 +247,23 @@ F2,20,4,argile
 #[test]
 fn a_code_names_the_table_that_gives_it_meaning() {
     // **A code only has meaning against its table.** RESQML 2.2 says so through
-    // `CategoryLookup` — a `DataObjectReference` that the XSD does not type. What
+    // `CategoryLookup` - a `DataObjectReference` that the XSD does not type. What
     // it designates is read from the only producer one can consult:
     // `csv-to-energyml` puts an `eml23.ColumnBasedTable` there for its 480
     // properties, and its table carries the distinct values as rows.
     //
-    // Without this link, an integer in a file means nothing — and it is
+    // Without this link, an integer in a file means nothing - and it is
     // **worse** than an absence, because an integer looks like a measurement.
     let text = "SONDAGE,PROF,PHI,STRA
 F1,10,1,argile
 F1,20,2,sable
 ";
-    let made = plan(&bag(text, &[("F1 — frame", &[10.0, 20.0])]), json!({})).expect("a plan");
+    let made = plan(&bag(text, &[("F1 - frame", &[10.0, 20.0])]), json!({})).expect("a plan");
 
     let property = made
         .objects
         .iter()
-        .find(|o| o.title == "F1 — STRA")
+        .find(|o| o.title == "F1 - STRA")
         .expect("the discrete one");
     let lookup = property.json["CategoryLookup"]["Uuid"]
         .as_str()
@@ -288,7 +288,7 @@ F1,20,2,sable
     );
     assert_eq!(table.json["Column"][0]["Title"], json!("STRA"));
 
-    let Numbers::I64(stra) = values_of(&made, "F1 — STRA") else {
+    let Numbers::I64(stra) = values_of(&made, "F1 - STRA") else {
         panic!("integers")
     };
     assert_eq!(stra, [0, 1], "and the codes are indeed those ranks");
@@ -299,17 +299,17 @@ fn a_table_given_as_an_input_is_continued_and_keeps_its_uuid() {
     // **The first use of the widened slot**: an entry that has no
     // geometry. The observation: operations taking geometric objects
     // are a special case of the operations we want to
-    // define — and `declare.rs` only knew how to bind those.
+    // define - and `declare.rs` only knew how to bind those.
     //
     // Measured on 22/09 on two batches of the BRGM corpus: without that, the second pass
     // writes its own table and code 0 designates `e7` for some, `e6` for the
     // others. Here the given table already carries `argile` at rank 0, and the
-    // file starts with `sable` — a new counter would give it 0.
+    // file starts with `sable` - a new counter would give it 0.
     let text = "SONDAGE,PROF,PHI,STRA
 F1,10,1,sable
 F1,20,2,craie
 ";
-    let pieces = bag(text, &[("F1 — frame", &[10.0, 20.0])]).with(
+    let pieces = bag(text, &[("F1 - frame", &[10.0, 20.0])]).with(
         "lookups",
         Source::Object(Known {
             reference: Some(Ref::new("table-existante", "eml23.ColumnBasedTable", "STRA")),
@@ -319,7 +319,7 @@ F1,20,2,craie
     );
     let made = plan(&pieces, json!({})).expect("a plan");
 
-    let Numbers::I64(stra) = values_of(&made, "F1 — STRA") else {
+    let Numbers::I64(stra) = values_of(&made, "F1 - STRA") else {
         panic!("integers")
     };
     // `sable` keeps the rank 1 it had, and `craie` is added at 2.
@@ -331,7 +331,7 @@ F1,20,2,craie
     let property = made
         .objects
         .iter()
-        .find(|o| o.title == "F1 — STRA")
+        .find(|o| o.title == "F1 - STRA")
         .expect("the discrete one");
     assert_eq!(property.json["CategoryLookup"]["Uuid"], json!("table-existante"));
     let table = made
@@ -361,7 +361,7 @@ fn the_same_values_are_the_same_object_and_different_values_are_a_second_one() {
     // the values are identical there is nothing to do.
     //
     // It falls out of a single decision: identity comes from the **content**, not from the
-    // file. The measurement of 23/09 that made it necessary — the same CSV under another
+    // file. The measurement of 23/09 that made it necessary - the same CSV under another
     // name took three boreholes to six.
     let nodes: &[f64] = &[10.0, 20.0];
     let one = "SONDAGE,PROF,PHI,STRA
@@ -390,13 +390,13 @@ F1,20,2,sable
                 },
             ),
             0,
-            "F1 — frame",
+            "F1 - frame",
             nodes,
         );
         let made = plan(&pieces, json!({})).expect("a plan");
         made.objects
             .iter()
-            .find(|o| o.title == "F1 — PHI")
+            .find(|o| o.title == "F1 - PHI")
             .expect("the continued one")
             .uuid
             .clone()
@@ -421,7 +421,7 @@ F1,20,2,sable
 fn two_versions_carry_no_object_version_at_all() {
     // **Measured on 23/09, and it is what made the label be removed**:
     // writing `objectVersion` put 15 warnings on a package of three
-    // boreholes that had none — `energyml check` flags every reference
+    // boreholes that had none - `energyml check` flags every reference
     // to a versioned object that does not say *which* version, and nothing here
     // writes them. And on the wire side: ETP servers only take the uuid as key.
     //
@@ -430,11 +430,11 @@ fn two_versions_carry_no_object_version_at_all() {
     let text = "SONDAGE,PROF,PHI,STRA
 F1,10,1,argile
 ";
-    let made = plan(&bag(text, &[("F1 — frame", &[10.0])]), json!({})).expect("a plan");
+    let made = plan(&bag(text, &[("F1 - frame", &[10.0])]), json!({})).expect("a plan");
     let property = made
         .objects
         .iter()
-        .find(|o| o.title == "F1 — PHI")
+        .find(|o| o.title == "F1 - PHI")
         .expect("the continued one");
     assert!(property.json["objectVersion"].is_null(), "{}", property.json);
     assert!(
@@ -442,7 +442,7 @@ F1,10,1,argile
         "{}",
         property.json
     );
-    assert_eq!(property.title, "F1 — PHI", "the title carries no version");
+    assert_eq!(property.title, "F1 - PHI", "the title carries no version");
 }
 
 #[test]
@@ -450,7 +450,7 @@ fn a_row_the_frame_has_no_node_for_is_counted_and_not_moved() {
     // Moving a value to the nearest node would be inventing. It is
     // set aside **and counted**, and the remedy is named.
     let text = "SONDAGE,PROF,PHI,STRA\nF1,10,1,a\nF1,15,9,z\n";
-    let made = plan(&bag(text, &[("F1 — frame", &[10.0, 20.0])]), json!({})).expect("a plan");
+    let made = plan(&bag(text, &[("F1 - frame", &[10.0, 20.0])]), json!({})).expect("a plan");
     let note = made
         .says
         .iter()
@@ -462,7 +462,7 @@ fn a_row_the_frame_has_no_node_for_is_counted_and_not_moved() {
         note.detail
     );
 
-    let Numbers::F64(phi) = values_of(&made, "F1 — PHI") else {
+    let Numbers::F64(phi) = values_of(&made, "F1 - PHI") else {
         panic!("doubles")
     };
     assert_eq!(phi.len(), 2, "the frame did not move");
@@ -474,7 +474,7 @@ fn a_row_the_frame_has_no_node_for_is_counted_and_not_moved() {
 fn subdividing_adds_the_files_depths_and_says_how_many() {
     let text = "SONDAGE,PROF,PHI,STRA\nF1,10,1,a\nF1,15,9,z\n";
     let made = plan(
-        &bag(text, &[("F1 — frame", &[10.0, 20.0])]),
+        &bag(text, &[("F1 - frame", &[10.0, 20.0])]),
         json!({ "subdivide": true }),
     )
     .expect("a plan");
@@ -485,10 +485,10 @@ fn subdividing_adds_the_files_depths_and_says_how_many() {
         .expect("the count of MDs added");
     assert!(note.detail.starts_with("1 "), "{}", note.detail);
 
-    let Numbers::F64(phi) = values_of(&made, "F1 — PHI") else {
+    let Numbers::F64(phi) = values_of(&made, "F1 - PHI") else {
         panic!("doubles")
     };
-    // Three nodes: 10, 15 (added), 20 — and the value at 15 is **in its place**,
+    // Three nodes: 10, 15 (added), 20 - and the value at 15 is **in its place**,
     // not at the end.
     assert_eq!(phi.len(), 3);
     assert_eq!(phi[0], 1.0);
@@ -501,14 +501,14 @@ fn two_rows_of_one_depth_are_refused_by_their_lines() {
     // Three possible readings and the file names none: we
     // refuse, naming the borehole, the depth and the two rows.
     let text = "SONDAGE,PROF,PHI,STRA\nF1,10,1,a\nF1,10,2,b\n";
-    let why = plan(&bag(text, &[("F1 — frame", &[10.0])]), json!({})).expect_err("refused");
+    let why = plan(&bag(text, &[("F1 - frame", &[10.0])]), json!({})).expect_err("refused");
     assert!(why.contains("F1") && why.contains("10"), "{why}");
 }
 
 #[test]
 fn a_well_the_package_does_not_have_is_named_rather_than_left_out() {
     let text = "SONDAGE,PROF,PHI,STRA\nF1,10,1,a\nAILLEURS,10,2,b\n";
-    let made = plan(&bag(text, &[("F1 — frame", &[10.0])]), json!({})).expect("a plan");
+    let made = plan(&bag(text, &[("F1 - frame", &[10.0])]), json!({})).expect("a plan");
     let note = made
         .says
         .iter()
@@ -526,9 +526,9 @@ fn the_rows_are_sorted_by_depth_and_the_values_follow_them() {
     let jumbled = "SONDAGE,PROF,PHI,STRA\nF1,30,3,c\nF1,10,1,a\nF1,20,2,b\n";
     let sorted = "SONDAGE,PROF,PHI,STRA\nF1,10,1,a\nF1,20,2,b\nF1,30,3,c\n";
     let nodes: &[f64] = &[10.0, 20.0, 30.0];
-    let one = plan(&bag(jumbled, &[("F1 — frame", nodes)]), json!({})).expect("a plan");
-    let two = plan(&bag(sorted, &[("F1 — frame", nodes)]), json!({})).expect("a plan");
-    let (Numbers::F64(a), Numbers::F64(b)) = (values_of(&one, "F1 — PHI"), values_of(&two, "F1 — PHI"))
+    let one = plan(&bag(jumbled, &[("F1 - frame", nodes)]), json!({})).expect("a plan");
+    let two = plan(&bag(sorted, &[("F1 - frame", nodes)]), json!({})).expect("a plan");
+    let (Numbers::F64(a), Numbers::F64(b)) = (values_of(&one, "F1 - PHI"), values_of(&two, "F1 - PHI"))
     else {
         panic!("doubles")
     };
@@ -575,7 +575,7 @@ fn a_frame_that_states_no_depths_is_refused_by_name() {
                 reference: Some(Ref::new(
                     "u",
                     "resqml22.WellboreFrameRepresentation",
-                    "F1 — frame",
+                    "F1 - frame",
                 )),
                 ..Known::default()
             }),
@@ -604,7 +604,7 @@ fn a_table_of_heads_is_refused_towards_the_operation_that_takes_it() {
             },
         ),
         0,
-        "F1 — frame",
+        "F1 - frame",
         &[10.0],
     );
     let why = plan(&pieces, json!({})).expect_err("refused");
@@ -660,7 +660,7 @@ fn indexable_of(made: &energyml_build::operation::Plan, title: &str) -> String {
 fn a_pass_lands_on_the_interval_between_its_top_and_its_base() {
     // **The check that carries the passes.** The value of a pass holds *from here to
     // there*: three passes, four nodes, **three** values on the intervals.
-    // Laid on the nodes, they would be four — the last invented — or
+    // Laid on the nodes, they would be four - the last invented - or
     // shifted by one rank, and nothing would show it.
     let text = "SONDAGE,DEB,PROF,PHI,STRA
 F1,0,2.25,0.1,e7
@@ -668,16 +668,16 @@ F1,2.25,3,0.2,e7
 F1,3,5.25,0.3,e6
 ";
     let made = plan(&passes_bag(text, &[("F1", &[0.0, 2.25, 3.0, 5.25])]), json!({})).expect("a plan");
-    let Numbers::F64(values) = values_of(&made, "F1 — PHI") else {
+    let Numbers::F64(values) = values_of(&made, "F1 - PHI") else {
         panic!("doubles")
     };
     assert_eq!(values, vec![0.1, 0.2, 0.3]);
-    assert_eq!(indexable_of(&made, "F1 — PHI"), "intervals");
-    let Numbers::I64(codes) = values_of(&made, "F1 — STRA") else {
+    assert_eq!(indexable_of(&made, "F1 - PHI"), "intervals");
+    let Numbers::I64(codes) = values_of(&made, "F1 - STRA") else {
         panic!("integers")
     };
     assert_eq!(codes, vec![0, 0, 1], "e7, e7, e6");
-    assert_eq!(indexable_of(&made, "F1 — STRA"), "intervals");
+    assert_eq!(indexable_of(&made, "F1 - STRA"), "intervals");
 }
 
 #[test]
@@ -693,7 +693,7 @@ F1,3,4,0.7
         json!({}),
     )
     .expect("a plan");
-    let Numbers::F64(values) = values_of(&made, "F1 — PHI") else {
+    let Numbers::F64(values) = values_of(&made, "F1 - PHI") else {
         panic!("doubles")
     };
     assert_eq!(values.len(), 4, "one per interval: {values:?}");
@@ -722,7 +722,7 @@ F1,1.5,2,0.7
         json!({ "subdivide": true }),
     )
     .expect("a plan");
-    let Numbers::F64(values) = values_of(&cut, "F1 — PHI") else {
+    let Numbers::F64(values) = values_of(&cut, "F1 - PHI") else {
         panic!("doubles")
     };
     // Nodes 0, 1, 1.5, 2: the first pass covers [0, 1] and [1, 1.5].

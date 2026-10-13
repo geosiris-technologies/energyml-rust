@@ -1,8 +1,8 @@
-//! Projecting nodes **vertically** — onto a surface, or onto a level
+//! Projecting nodes **vertically** - onto a surface, or onto a level
 //!
 //!
 //! The z replaced, x and y kept: what a geologist calls projecting a point onto
-//! a horizon. The projection along the normal — to the nearest point — is
+//! a horizon. The projection along the normal - to the nearest point - is
 //! another operation, not to be confused with this one, and not now.
 //!
 //! # A node with nothing under it, and a fold
@@ -10,19 +10,19 @@
 //! Read by [`Heights`], the same reading `thickness` makes, so that *outside*
 //! and *folded* mean the same thing in both:
 //!
-//! - **outside** — no face above or below the node. It is **left where it was
+//! - **outside** - no face above or below the node. It is **left where it was
 //!   and counted** (a decision taken as proposed): removed, a line would have a hole
 //!   and a surface a missing node its triangles still name; left without a
 //!   word, it would look projected;
-//! - **folded** — several faces over the node disagree: which one is *the*
+//! - **folded** - several faces over the node disagree: which one is *the*
 //!   surface there is a geological decision. Left, and counted, the same way;
-//! - **unplaced** — a node with no finite position. Left, and counted.
+//! - **unplaced** - a node with no finite position. Left, and counted.
 
 use crate::heights::{Height, Heights};
 
 /// What the nodes are projected onto.
 pub enum Onto<'a> {
-    /// A surface — its height under each node.
+    /// A surface - its height under each node.
     Surface(&'a Heights<'a>),
     /// A level: every node at this z.
     Level(f64),
@@ -35,15 +35,15 @@ pub struct Projected {
     pub points: Vec<[f64; 3]>,
     /// Nodes moved onto the surface or the level.
     pub projected: usize,
-    /// Nodes with no face above or below — left.
+    /// Nodes with no face above or below - left.
     pub outside: usize,
-    /// Nodes over a fold — left.
+    /// Nodes over a fold - left.
     pub folded: usize,
-    /// Nodes with no finite position — left.
+    /// Nodes with no finite position - left.
     pub unplaced: usize,
 }
 
-/// The nodes projected — every one, or those `chosen`.
+/// The nodes projected - every one, or those `chosen`.
 pub fn project(points: &[[f64; 3]], chosen: Option<&[bool]>, onto: &Onto) -> Projected {
     let mut out = Projected {
         points: points.to_vec(),
@@ -151,7 +151,7 @@ mod tests {
         assert_eq!((made.projected, made.unplaced), (1, 1));
     }
 
-    /// Two faces over the same place at two heights: a fold — left, counted.
+    /// Two faces over the same place at two heights: a fold - left, counted.
     #[test]
     fn a_fold_is_left_and_counted() {
         let points = vec![

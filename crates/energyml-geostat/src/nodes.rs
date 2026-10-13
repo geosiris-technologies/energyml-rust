@@ -1,4 +1,4 @@
-//! What an edit of **nodes** does to a shape — erasing them, and the triangles a
+//! What an edit of **nodes** does to a shape - erasing them, and the triangles a
 //! move turns over.
 //!
 //! # Erasing, by nature of geometry
@@ -7,11 +7,11 @@
 //!
 //! - a **cloud** loses the points; nothing else names them;
 //! - a **polyline** is **cut** at each node taken out: one line becomes
-//!   several. A piece left with a single node is no longer a line — it goes,
+//!   several. A piece left with a single node is no longer a line - it goes,
 //!   **counted**. A ring cut once is an open line, from just after the gap
 //!   round to just before it;
 //! - a **triangulated surface** loses every triangle that names a node taken
-//!   out, and the nodes no triangle names any more are compacted away — the
+//!   out, and the nodes no triangle names any more are compacted away - the
 //!   hole has the shape of its triangles, jagged, as `trim` already makes and
 //!   assumes. They are counted too.
 //!
@@ -20,7 +20,7 @@
 //!
 //! # Turned over
 //!
-//! Moving or projecting some nodes of a surface can turn a triangle over — one
+//! Moving or projecting some nodes of a surface can turn a triangle over - one
 //! corner passing, in plan, to the other side of its opposite edge. Nothing
 //! forbids it, and a folded surface is a legitimate result; [`flipped`] counts
 //! them, so that the operation **says** it rather than refuses.
@@ -32,7 +32,7 @@ pub struct ErasedLines {
     pub points: Vec<[f64; 3]>,
     /// The node count of each line.
     pub runs: Vec<u32>,
-    /// Whether each line closes — only an uncut ring still does.
+    /// Whether each line closes - only an uncut ring still does.
     pub closed: Vec<bool>,
     /// Pieces left with a single node, dropped.
     pub dropped: usize,
@@ -47,7 +47,7 @@ pub struct ErasedSurface {
     pub triangles: Vec<[u32; 3]>,
     /// Triangles that named a node taken out.
     pub removed: usize,
-    /// Nodes kept by the choice but named by no triangle any more — compacted away.
+    /// Nodes kept by the choice but named by no triangle any more - compacted away.
     pub orphans: usize,
 }
 
@@ -61,7 +61,7 @@ pub fn erase_from_cloud(points: &[[f64; 3]], gone: &[bool]) -> Vec<[f64; 3]> {
         .collect()
 }
 
-/// Polylines without the nodes `gone` flags — `runs` their node counts,
+/// Polylines without the nodes `gone` flags - `runs` their node counts,
 /// `closed` their closure (missing entries: open).
 pub fn erase_from_lines(points: &[[f64; 3]], runs: &[u32], closed: &[bool], gone: &[bool]) -> ErasedLines {
     let mut out = ErasedLines {
@@ -167,7 +167,7 @@ fn signed_area(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> f64 {
 }
 
 /// How many triangles a move turned over in plan: their signed area changed
-/// sign. A triangle with no area in plan, before or after — a vertical face —
+/// sign. A triangle with no area in plan, before or after - a vertical face -
 /// is not counted: it had no side to turn over from.
 pub fn flipped(before: &[[f64; 3]], after: &[[f64; 3]], triangles: &[[u32; 3]]) -> usize {
     triangles
@@ -219,7 +219,7 @@ mod tests {
 
     #[test]
     fn a_ring_cut_once_is_one_open_line_round_the_gap() {
-        // A ring 0 1 2 3 4 without 1: one open line 2 3 4 0 — crossing its start.
+        // A ring 0 1 2 3 4 without 1: one open line 2 3 4 0 - crossing its start.
         let points: Vec<[f64; 3]> = (0..5).map(|i| [i as f64, 0.0, 0.0]).collect();
         let made = erase_from_lines(&points, &[5], &[true], &flags(5, &[1]));
         assert_eq!(made.runs, vec![4]);
@@ -243,7 +243,7 @@ mod tests {
     #[test]
     fn a_surface_loses_the_triangles_and_compacts_its_orphans() {
         // A fan of four triangles round a centre 4; taking out corner 0 takes
-        // the two triangles that name it — and no node is left unnamed.
+        // the two triangles that name it - and no node is left unnamed.
         let points = [
             [0.0, 0.0, 0.0],
             [2.0, 0.0, 0.0],

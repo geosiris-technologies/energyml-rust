@@ -1,4 +1,4 @@
-//! `densify` — polylines with every vertex kept and points added between them
+//! `densify` - polylines with every vertex kept and points added between them
 //!. The arithmetic is tested in
 //! `energyml_analysis::densify`; this holds the seam.
 //!

@@ -1,11 +1,11 @@
-//! `docProps/core.xml` — the part that says who made the package and when.
+//! `docProps/core.xml` - the part that says who made the package and when.
 //!
 //! OPC treats the core properties as optional. **EPC does not**: §3.5.1 of the
 //! packaging conventions says, in as many words, "Contrary to the OPC standard,
 //! the Core Properties part is mandatory in an EPC file." So a package written
 //! here always has one, created if the source had none.
 //!
-//! §3.5.3 fixes the contents, and the list is closed — "All other core
+//! §3.5.3 fixes the contents, and the list is closed - "All other core
 //! properties specified in OPC are assumed NOT to be given":
 //!
 //! | Field | | |
@@ -75,7 +75,7 @@ impl CoreProperties {
         // Not `trim_text(true)`: since quick-xml 0.41 an entity is its own
         // event, so `Geosiris &amp; co` arrives in three pieces. Trimming each
         // one and taking the last would keep `co`. The run is accumulated and
-        // trimmed once — the same mistake the XML reader made before the corpus
+        // trimmed once - the same mistake the XML reader made before the corpus
         // caught it.
         reader.config_mut().trim_text(false);
         let mut buf = Vec::new();
@@ -213,11 +213,11 @@ pub fn w3cdtf(unix_seconds: i64) -> String {
     )
 }
 
-/// A W3CDTF date-time in UTC — `2026-09-24T00:00:00Z` — to Unix seconds: the
+/// A W3CDTF date-time in UTC - `2026-09-24T00:00:00Z` - to Unix seconds: the
 /// inverse of [`w3cdtf`], for a caller that states the instant a package is
 /// made (a recipe, so that two runs write the same `docProps/core.xml`).
 ///
-/// Only the form [`w3cdtf`] writes is read — a `Z` offset, whole seconds;
+/// Only the form [`w3cdtf`] writes is read - a `Z` offset, whole seconds;
 /// anything else is `None`, never a guessed zone.
 pub fn unix_seconds(w3cdtf: &str) -> Option<i64> {
     let text = w3cdtf.trim().strip_suffix('Z')?;
@@ -236,7 +236,7 @@ pub fn unix_seconds(w3cdtf: &str) -> Option<i64> {
     Some(days_from_civil(year, month, day) * 86_400 + hour * 3600 + minute * 60 + second)
 }
 
-/// A civil date to days since 1970-01-01 — the inverse of
+/// A civil date to days since 1970-01-01 - the inverse of
 /// [`civil_from_days`], Hinnant's algorithm.
 fn days_from_civil(year: i64, month: i64, day: i64) -> i64 {
     let y = if month <= 2 { year - 1 } else { year };
@@ -268,7 +268,7 @@ mod tests {
 
     #[test]
     fn a_date_time_read_back_is_the_one_written() {
-        // Two independent sources: the formatter, and the date itself — the
+        // Two independent sources: the formatter, and the date itself - the
         // Unix epoch and a leap day are the cases a sign or an era slip breaks.
         assert_eq!(unix_seconds("1970-01-01T00:00:00Z"), Some(0));
         assert_eq!(unix_seconds("2024-02-29T12:30:45Z"), Some(1_709_209_845));

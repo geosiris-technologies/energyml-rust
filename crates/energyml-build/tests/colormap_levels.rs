@@ -1,4 +1,4 @@
-//! `colormap` told its bands in words — `levels` and `colours` — for a caller
+//! `colormap` told its bands in words - `levels` and `colours` - for a caller
 //! with no ramp to hand: a recipe. The need (06/10/2026), to test that a painting
 //! follows its colour map: a map on the dip of Lutetia's DTM, written by the
 //! recipe. One or the other: a ramp **and** levels, or neither, is refused by

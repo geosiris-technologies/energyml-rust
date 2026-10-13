@@ -1,4 +1,4 @@
-//! Multilevel B-spline Approximation (MBA) — Lee, Wolberg, Shin, *"Scattered
+//! Multilevel B-spline Approximation (MBA) - Lee, Wolberg, Shin, *"Scattered
 //! Data Interpolation with Multilevel B-Splines"*, IEEE Transactions on
 //! Visualization and Computer Graphics, vol. 3, n° 3, 1997, p. 228-244
 //! (DOI 10.1109/2945.620490). This is the §3/§6.1 core of the method, written
@@ -8,7 +8,7 @@
 //! The use case is extending a mesh while keeping the general character of the
 //! surface even where there are few points.
 //!
-//! TODO(reference): verify — the citation above (journal, pages, DOI) and the
+//! TODO(reference): verify - the citation above (journal, pages, DOI) and the
 //! section/page numbers quoted below were not re-checked against the paper;
 //! the Boehm 1985 and Lyche & Mørken mentions are unverified too.
 //!
@@ -17,31 +17,31 @@
 //! Two facts, cited in the paper:
 //!
 //! - **the coarsest level is fitted on every sample at once**, on a grid the
-//!   paper recommends making *"as coarse as possible"* (§4.1, p. 233) — that
+//!   paper recommends making *"as coarse as possible"* (§4.1, p. 233) - that
 //!   grid's reach covers the whole domain, so it carries the overall shape
 //!   even where a finer grid would have nothing;
-//! - **a control point with no sample in its neighbourhood gets zero** — but
+//! - **a control point with no sample in its neighbourhood gets zero** - but
 //!   zero *correction* relative to the level below (§1.2, p. 231: *"we assign
 //!   zero to fij to make function f tend to zero in its neighborhood"*). The
 //!   sum of levels therefore keeps the coarse shape in sparse regions, because
 //!   the finer levels have nothing to correct there.
 //!
-//! # The trend removed first — the paper's own linear initialisation
+//! # The trend removed first - the paper's own linear initialisation
 //!
 //! Left alone, BA *"tend\[s] to zero away from the data"*: a control point no
 //! sample reaches is set to zero (p. 231), so the coarsest level itself sinks
 //! toward 0 in a margin, and a constant of 42 came back as 37 there (the first
 //! run of this module's tests). The paper answers it in §7.3
 //! (p. 241-242): subtract a least-squares **plane** first, approximate the
-//! residuals, add the plane back — *"the function values are no longer zero
+//! residuals, add the plane back - *"the function values are no longer zero
 //! away from data"*. That is what keeping the general character of the
 //! surface requires, so it is the default ([`Trend::Plane`]); [`Trend::None`]
 //! keeps the bare algorithm. A constant and a plane are then reproduced
-//! **exactly**, everywhere in the domain — their residuals are zero, so every
+//! **exactly**, everywhere in the domain - their residuals are zero, so every
 //! level is zero. Samples that are all aligned (or a single one) define no
 //! plane: the trend is then their **mean**, and [`MbaAnswer::trend`] says so.
 //!
-//! # The algorithm implemented here — *basic* MBA, not the refined one
+//! # The algorithm implemented here - *basic* MBA, not the refined one
 //!
 //! **Provisional (open question: refined vs basic MBA):** the paper's
 //! optimisation of §4.2 collapses the `h + 1` per-level grids into one, at the
@@ -49,10 +49,10 @@
 //! Lyche & Mørken, specialised to a dyadic cubic doubling). The mask's coefficients
 //! could not be verified against the OCR'd article, and coding an unverified
 //! mask was advised against. **This module
-//! sums the `h + 1` levels directly at every evaluation instead** — the
+//! sums the `h + 1` levels directly at every evaluation instead** - the
 //! *basic* algorithm of §4.1, still `O(hp + mn)` in construction time (§1.3),
-//! only `O(h)` rather than `O(1)` per evaluated point. The alternative —
-//! implementing the refinement mask — would give `O(1)` evaluation at the cost
+//! only `O(h)` rather than `O(1)` per evaluated point. The alternative -
+//! implementing the refinement mask - would give `O(1)` evaluation at the cost
 //! of coding a subdivision mask nobody here has verified against a primary
 //! source (Boehm 1985); until that verification is done, summing is the
 //! conservative choice.
@@ -63,21 +63,21 @@
 //!
 //! - **a degenerate domain** (a non-finite or non-positive size, a coarsest
 //!   control grid of 0 cells on an axis, a non-finite or non-positive finest
-//!   spacing) is refused by name — there is no rectangle to approximate on;
+//!   spacing) is refused by name - there is no rectangle to approximate on;
 //! - **a `NaN` sample position or value is set aside and counted**, never
-//!   averaged — the same contract as [`crate::idw::Idw`]. If nothing usable
+//!   averaged - the same contract as [`crate::idw::Idw`]. If nothing usable
 //!   remains, the call is refused (`Error::NoSample`) rather than silently
 //!   answering `NaN` everywhere;
 //! - **a sample or a query outside the domain is refused, naming it and its
-//!   position** — this is the one point where MBA departs from IDW/kriging's
+//!   position** - this is the one point where MBA departs from IDW/kriging's
 //!   "unreached is `NaN`" convention, and on purpose: a B-spline is simply not
-//!   *defined* outside the rectangle it was built on (§1.1, §1.4 — MBA does not extrapolate beyond a boundary laid down in
+//!   *defined* outside the rectangle it was built on (§1.1, §1.4 - MBA does not extrapolate beyond a boundary laid down in
 //!   advance); clamping or extrapolating there would be exactly the "draw
 //!   rather than refuse" the house rules forbid. A caller that wants "far away, so `NaN`" (as
 //!   `estimate`'s domain-union policy needs) filters its queries
 //!   against [`Domain::contains`] *before* calling [`Mba::interpolate`], so
 //!   the core never has to guess what "too far" should mean;
-//! - **points that are all coincident or collinear are *not* refused** — the
+//! - **points that are all coincident or collinear are *not* refused** - the
 //!   method is explicit about this, and the reason is structural
 //!   rather than a leniency: unlike a Delaunay triangulation, the least-squares
 //!   grid fit of §1.2 does not invert a matrix that degenerates on aligned
@@ -90,26 +90,26 @@
 //!
 //! `coarsest` (the coarsest control grid, `Mba::new`) and `max_levels` (the
 //! cap on how many times the grid may double, `Mba::with_max_levels`) are both
-//! stated by the caller. Neither is derived from the sample count or density —
-//! the house rule against a threshold calibrated on a dataset — and
+//! stated by the caller. Neither is derived from the sample count or density -
+//! the house rule against a threshold calibrated on a dataset - and
 //! `DEFAULT_MAX_LEVELS` is a fixed safety valve against runaway memory, not an
 //! algorithmic recommendation.
 
 /// A grid nobody meant to ask for: past this many doublings of `coarsest`,
-/// `interpolate` refuses by name rather than building it — raise the cap
+/// `interpolate` refuses by name rather than building it - raise the cap
 /// explicitly (`Mba::with_max_levels`) if it is really wanted. A fixed
 /// implementation ceiling, not a threshold read off any dataset.
 const DEFAULT_MAX_LEVELS: usize = 12;
 
-/// What this module refuses, by name — see the module doc, *What is refused*.
+/// What this module refuses, by name - see the module doc, *What is refused*.
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum Error {
-    #[error("{count} sample position(s) for {values} value(s) — one value per sample")]
+    #[error("{count} sample position(s) for {values} value(s) - one value per sample")]
     MismatchedLengths { count: usize, values: usize },
     #[error("the coarsest control grid must be at least 1 cell on each axis, not {coarsest:?}")]
     DegenerateCoarsest { coarsest: [usize; 2] },
     #[error(
-        "the domain must be a finite rectangle with a positive size on each axis — origin {origin:?}, size {size:?}"
+        "the domain must be a finite rectangle with a positive size on each axis - origin {origin:?}, size {size:?}"
     )]
     DegenerateDomain { origin: [f64; 2], size: [f64; 2] },
     #[error("the finest spacing must be a finite number > 0, not {given}")]
@@ -117,7 +117,7 @@ pub enum Error {
     #[error("no usable sample: {given} given, {set_aside} set aside for a NaN position or value")]
     NoSample { given: usize, set_aside: usize },
     #[error(
-        "sample {at} at ({x}, {y}) lies outside the domain — origin {origin:?}, size {size:?}: MBA does not extrapolate past a domain it was not given (Lee/Wolberg/Shin 1997, §3.1, p. 229)"
+        "sample {at} at ({x}, {y}) lies outside the domain - origin {origin:?}, size {size:?}: MBA does not extrapolate past a domain it was not given (Lee/Wolberg/Shin 1997, §3.1, p. 229)"
     )]
     SampleOutsideDomain {
         at: usize,
@@ -127,7 +127,7 @@ pub enum Error {
         size: [f64; 2],
     },
     #[error(
-        "query {at} at ({x}, {y}) lies outside the domain — origin {origin:?}, size {size:?}: MBA does not extrapolate past a domain it was not given (Lee/Wolberg/Shin 1997, §3.1, p. 229); filter it out (`Domain::contains`) before calling if you want it left as NaN instead of refused"
+        "query {at} at ({x}, {y}) lies outside the domain - origin {origin:?}, size {size:?}: MBA does not extrapolate past a domain it was not given (Lee/Wolberg/Shin 1997, §3.1, p. 229); filter it out (`Domain::contains`) before calling if you want it left as NaN instead of refused"
     )]
     QueryOutsideDomain {
         at: usize,
@@ -153,12 +153,12 @@ pub enum Error {
     GridTooLarge { control_points: usize },
 }
 
-/// A hard technical ceiling on the finest control grid — a defensive bound
+/// A hard technical ceiling on the finest control grid - a defensive bound
 /// against `usize`/memory blow-ups, not a modelling decision. 20,000 × 20,000
 /// control points is 3.2 GB of `f64` for one level alone.
 const MOST_CONTROL_POINTS: usize = 400_000_000;
 
-/// The rectangle `Ω` MBA is fitted and evaluated on — eq. (1), p. 229: *"the
+/// The rectangle `Ω` MBA is fitted and evaluated on - eq. (1), p. 229: *"the
 /// domain Ω = {(x, y) : 0 ≤ x < m, 0 ≤ y < n}"*, here in real coordinates
 /// rather than the article's grid-cell units. `origin` is `Ω`'s low corner;
 /// `size` is `[width, height]`, both positive.
@@ -171,7 +171,7 @@ pub struct Domain {
 }
 
 impl Domain {
-    /// A tolerance for the domain boundary — a query or sample landing within
+    /// A tolerance for the domain boundary - a query or sample landing within
     /// this of an edge is treated as on the boundary rather than outside it,
     /// which floating point arithmetic on a lattice's own nodes will do
     /// routinely (`interpolate`'s `Fitted` extent computes `Ω` from the same
@@ -183,9 +183,9 @@ impl Domain {
 
     /// Whether `at` lies inside `Ω`, boundary included within `Self::tolerance`.
     ///
-    /// A caller that wants "outside is `NaN`" rather than "outside is refused"
-    /// — `estimate`'s domain-union policy, `crates/energyml-build/src/ops/interpolate_mba.rs`
-    /// — filters its queries with this before calling [`Mba::interpolate`].
+    /// A caller that wants "outside is `NaN`" rather than "outside is refused" -
+    /// `estimate`'s domain-union policy, `crates/energyml-build/src/ops/interpolate_mba.rs` -
+    /// filters its queries with this before calling [`Mba::interpolate`].
     pub fn contains(&self, at: [f64; 2]) -> bool {
         let tol = self.tolerance();
         (0..2).all(|axis| {
@@ -228,7 +228,7 @@ fn basis(t: f64) -> [f64; 4] {
 /// The right edge (`px == m` exactly, which a query landing on the domain's
 /// own far boundary will hit) has no cell to its right: it is folded onto the
 /// last cell's far end (`⌊x⌋ = m - 1`, `s = 1.0`) rather than refused, which is
-/// the standard closed-interval convention for a half-open grid — `Ω` itself
+/// the standard closed-interval convention for a half-open grid - `Ω` itself
 /// is checked as closed (`Domain::contains`), so a point this function would
 /// refuse never reaches it.
 fn locate(px: f64, m: usize) -> (i64, f64) {
@@ -265,8 +265,8 @@ impl Level {
         self.m + 3
     }
 
-    /// The 16 control points a sample or query at `(px, py)` — already scaled
-    /// to this level's cells — touches, as `(storage index, weight)` pairs.
+    /// The 16 control points a sample or query at `(px, py)` - already scaled
+    /// to this level's cells - touches, as `(storage index, weight)` pairs.
     fn stencil(&self, px: f64, py: f64) -> [(usize, f64); 16] {
         let (i, s) = locate(px, self.m);
         let (j, t) = locate(py, self.n);
@@ -286,7 +286,7 @@ impl Level {
         out
     }
 
-    /// `f_k(x, y)` — eq. (1), p. 229 — the value this level's spline gives at
+    /// `f_k(x, y)` - eq. (1), p. 229 - the value this level's spline gives at
     /// `(px, py)`.
     fn eval(&self, px: f64, py: f64) -> f64 {
         self.stencil(px, py)
@@ -296,7 +296,7 @@ impl Level {
     }
 
     /// The BA algorithm, p. 231: fit this level's control grid to
-    /// `(samples, residuals)` by accumulation — eq. (3) folded into eq. (5), no
+    /// `(samples, residuals)` by accumulation - eq. (3) folded into eq. (5), no
     /// linear system. `samples` and `residuals` are already the usable ones,
     /// scaled by the caller into this level's cell units.
     fn fit(m: usize, n: usize, samples_px_py: &[(f64, f64)], residuals: &[f64]) -> Self {
@@ -304,19 +304,19 @@ impl Level {
         let mut denominator = vec![0.0; level.control.len()];
         for (&(px, py), &z) in samples_px_py.iter().zip(residuals) {
             let stencil = level.stencil(px, py);
-            // Σ_{a,b} w_ab² over this sample's own 16 weights — eq. (3)'s
+            // Σ_{a,b} w_ab² over this sample's own 16 weights - eq. (3)'s
             // denominator, computed once per sample and reused for its 16
             // contributions.
             let sum_sq: f64 = stencil.iter().map(|&(_, w)| w * w).sum();
             if sum_sq <= 0.0 {
-                // Cannot happen for a finite (s, t) in [0, 1]² — the basis
-                // functions are never all zero at once — but a guard beats a
+                // Cannot happen for a finite (s, t) in [0, 1]² - the basis
+                // functions are never all zero at once - but a guard beats a
                 // division by zero if a future change ever makes it possible.
                 continue;
             }
             for &(at, w) in &stencil {
                 // eq. (5): f_ij = Σ_c w_c² f_c / Σ_c w_c², where f_c (eq. (3))
-                // is w_kl · z_c / sum_sq for *this* control point — so the
+                // is w_kl · z_c / sum_sq for *this* control point - so the
                 // numerator's contribution is w_kl³ · z_c / sum_sq and the
                 // denominator's is w_kl².
                 level.control[at] += w * w * w * z / sum_sq;
@@ -325,14 +325,14 @@ impl Level {
         }
         for (value, den) in level.control.iter_mut().zip(&denominator) {
             // p. 231: "we assign zero to fij" when no sample's neighbourhood
-            // reaches it — not a fallback, the paper's own rule (§1.2).
+            // reaches it - not a fallback, the paper's own rule (§1.2).
             *value = if *den > 0.0 { *value / den } else { 0.0 };
         }
         level
     }
 }
 
-/// Multilevel B-spline Approximation, Lee/Wolberg/Shin 1997 — the *basic*
+/// Multilevel B-spline Approximation, Lee/Wolberg/Shin 1997 - the *basic*
 /// algorithm (module doc): `h + 1` levels, each fitted to the residual its
 /// predecessor left, summed at every evaluation.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -343,23 +343,23 @@ pub struct Mba {
 }
 
 /// What is taken out of the samples before the levels are fitted, and put
-/// back at every evaluation — module doc, *The trend removed first*.
+/// back at every evaluation - module doc, *The trend removed first*.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Trend {
     /// Nothing: the bare BA/MBA, which tends to zero away from the data.
     None,
-    /// A least-squares plane `z = a + b·x + c·y` — the paper's linear
+    /// A least-squares plane `z = a + b·x + c·y` - the paper's linear
     /// initialisation (§7.3, p. 241-242). The default.
     Plane,
 }
 
-/// The trend actually removed — `Plane` may fall back to a constant when the
+/// The trend actually removed - `Plane` may fall back to a constant when the
 /// samples define no plane.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TrendUsed {
     /// None was removed.
     None,
-    /// The samples' mean — asked for a plane, they were aligned or alone.
+    /// The samples' mean - asked for a plane, they were aligned or alone.
     Constant(f64),
     /// `z = a + b·x + c·y`, in the domain's own coordinates.
     Plane {
@@ -404,7 +404,7 @@ impl TrendUsed {
             syz += dy * dz;
         }
         let det = sxx * syy - sxy * sxy;
-        // Aligned (or a single) sample: the 2×2 system is singular — no plane.
+        // Aligned (or a single) sample: the 2×2 system is singular - no plane.
         // Relative, so that it does not depend on the unit of the coordinates.
         if !(det.is_finite() && det > 1e-12 * sxx.max(syy).powi(2) && det > 0.0) {
             return TrendUsed::Constant(mz);
@@ -420,7 +420,7 @@ impl TrendUsed {
 }
 
 impl Mba {
-    /// A coarsest control grid of `coarsest[0]` × `coarsest[1]` cells — the
+    /// A coarsest control grid of `coarsest[0]` × `coarsest[1]` cells - the
     /// paper's `m0`, `n0` (§4.1, p. 233), stated by the caller and never
     /// derived from a dataset. Refuses a coarsest grid of 0 cells on either
     /// axis.
@@ -443,7 +443,7 @@ impl Mba {
         self
     }
 
-    /// What is removed before the levels are fitted — [`Trend::Plane`] unless
+    /// What is removed before the levels are fitted - [`Trend::Plane`] unless
     /// told otherwise (module doc, *The trend removed first*).
     #[must_use]
     pub fn with_trend(mut self, trend: Trend) -> Self {
@@ -456,7 +456,7 @@ impl Mba {
     /// `max_levels` is reached, refused by name), and evaluate at every
     /// `queries`.
     ///
-    /// One value per query, in the queries' order. Refuses — never guesses —
+    /// One value per query, in the queries' order. Refuses - never guesses -
     /// on a degenerate domain, too few usable samples, or a sample or query
     /// outside `domain` (module doc, *What is refused*).
     pub fn interpolate(
@@ -480,7 +480,7 @@ impl Mba {
             });
         }
 
-        // The NaN set-aside — a sample with a non-finite position or value
+        // The NaN set-aside - a sample with a non-finite position or value
         // takes no part, and is counted (the house rule, already `Idw`'s).
         let usable: Vec<([f64; 2], f64)> = samples
             .iter()
@@ -495,7 +495,7 @@ impl Mba {
                 set_aside,
             });
         }
-        // Every *usable* sample must be inside `Ω` — a sample the caller
+        // Every *usable* sample must be inside `Ω` - a sample the caller
         // meant to set aside (NaN) never reaches this check, but one that is
         // simply outside the rectangle is refused by name rather than
         // evaluated with a stencil clamped to the boundary, which would be a
@@ -524,7 +524,7 @@ impl Mba {
         }
 
         // How many doublings of `coarsest` bring a cell down to
-        // `finest_spacing` or below, on the axis that needs the most —
+        // `finest_spacing` or below, on the axis that needs the most -
         // ⌈log2(size / (coarsest · finest_spacing))⌉, floored at 0 (the
         // coarsest grid may already be fine enough).
         let needed_axis = |axis: usize| {
@@ -554,7 +554,7 @@ impl Mba {
             });
         }
 
-        // Scale a real (x, y) to level k's cell units — px in [0, m_k].
+        // Scale a real (x, y) to level k's cell units - px in [0, m_k].
         let scale = |p: [f64; 2], m: usize, n: usize| -> (f64, f64) {
             (
                 (p[0] - domain.origin[0]) / domain.size[0] * m as f64,
@@ -570,7 +570,7 @@ impl Mba {
             let (m, n) = (self.coarsest[0] << k, self.coarsest[1] << k);
             let scaled: Vec<(f64, f64)> = positions.iter().map(|&p| scale(p, m, n)).collect();
             let level = Level::fit(m, n, &scaled, &residuals);
-            // Δ_{k+1} z_c = Δ_k z_c - f_k(x_c, y_c) — the residual this level
+            // Δ_{k+1} z_c = Δ_k z_c - f_k(x_c, y_c) - the residual this level
             // leaves for the next one (§4.1, p. 232-233).
             for (residual, &(px, py)) in residuals.iter_mut().zip(&scaled) {
                 *residual -= level.eval(px, py);
@@ -608,23 +608,23 @@ impl Mba {
     }
 }
 
-/// What an MBA fit-and-evaluate answers — the values, and what the fit
+/// What an MBA fit-and-evaluate answers - the values, and what the fit
 /// actually settled on (never a number nobody stated, `interpolate.rs`'s own
 /// rule).
 #[derive(Debug, Clone, PartialEq)]
 pub struct MbaAnswer {
     /// One value per query, in the queries' order.
     pub values: Vec<f64>,
-    /// Samples set aside for a `NaN` position or value — never averaged.
+    /// Samples set aside for a `NaN` position or value - never averaged.
     pub set_aside: usize,
-    /// `h + 1` — the coarsest level plus every refinement actually built.
+    /// `h + 1` - the coarsest level plus every refinement actually built.
     pub levels: usize,
     /// The finest control grid's cell counts, `[m_h, n_h]`.
     pub finest: [usize; 2],
-    /// The finest grid's *actual* cell size — rarely exactly the
+    /// The finest grid's *actual* cell size - rarely exactly the
     /// `finest_spacing` asked for, since the grid only ever doubles.
     pub finest_spacing: [f64; 2],
-    /// The trend removed before the levels were fitted — a plane asked for
+    /// The trend removed before the levels were fitted - a plane asked for
     /// comes back a constant when the samples defined none.
     pub trend: TrendUsed,
 }
@@ -639,7 +639,7 @@ mod tests {
 
     /// **Exact interpolation when `d ≥ 4`** (§5.1, p. 235-236): samples spaced by at least 4 finest cells come back
     /// exactly at their own positions. To break: flip the sign of `w_kl²`
-    /// in the denominator of eq. (5) — the value at the vertex would no longer
+    /// in the denominator of eq. (5) - the value at the vertex would no longer
     /// be exactly `z_c`.
     #[test]
     fn samples_spaced_past_4_cells_are_reproduced_exactly() {
@@ -656,7 +656,7 @@ mod tests {
     }
 
     /// **A constant field is reproduced exactly**, including outside the extent
-    /// of the points — same test as `idw.rs`'s
+    /// of the points - same test as `idw.rs`'s
     /// `a_constant_field_is_reproduced_exactly`, but here the property comes
     /// from the polynomial reproduction of cubic B-splines (degree ≤ 3), not
     /// from a weighted mean. To break: remove the coarsest level (keep only
@@ -675,7 +675,7 @@ mod tests {
         }
     }
 
-    /// **A plane (degree 1) is reproduced exactly, at every resolution** — a
+    /// **A plane (degree 1) is reproduced exactly, at every resolution** - a
     /// direct consequence of the polynomial reproduction of uniform cubic
     /// B-splines (de Boor, *A Practical Guide to Splines*).
     /// Two different control grids (`coarsest` = [1,1] and [2,3]) give the
@@ -737,9 +737,9 @@ mod tests {
     }
 
     /// **A textbook case**: `f2(x, y) = tanh(9(y-x)+1)/9`,
-    /// Lee/Wolberg/Shin 1997 §7.2 p. 241 — read cleanly from the OCR, unlike
-    /// the refinement mask. Not the article's own RMS (implementation choices
-    /// — `h`, the grid — are not specified there), only an order of
+    /// Lee/Wolberg/Shin 1997 §7.2 p. 241 - read cleanly from the OCR, unlike
+    /// the refinement mask. Not the article's own RMS (implementation choices -
+    /// `h`, the grid - are not specified there), only an order of
     /// magnitude on a smooth, well-sampled function.
     #[test]
     fn the_articles_f2_is_approximated_to_the_right_order_of_magnitude() {
@@ -845,7 +845,7 @@ mod tests {
     /// **Not affine-invariant** (§8, Conclusion, p. 243): rotating the same
     /// scatter by 45° inside a domain that always encloses it gives a
     /// *different* result at the centre. This test **must** fail to be
-    /// invariant — if it found the two surfaces equal, it would have
+    /// invariant - if it found the two surfaces equal, it would have
     /// implemented something other than MBA (a method invariant under
     /// isometries, like IDW or RBF).
     #[test]
@@ -880,7 +880,7 @@ mod tests {
         );
     }
 
-    /// A query exactly on the domain's own far edge — the boundary
+    /// A query exactly on the domain's own far edge - the boundary
     /// `locate` folds onto the last cell rather than refusing (module doc,
     /// `locate`). To break: remove the folding in `locate` and this test
     /// goes red through a panic (index out of bounds) rather than through a
@@ -902,11 +902,11 @@ mod tests {
     }
 
     /// **Without the trend, the bare algorithm sinks toward zero away from
-    /// the data** — the paper's own words (§7.3, p. 241-242) and the reason
+    /// the data** - the paper's own words (§7.3, p. 241-242) and the reason
     /// [`Trend::Plane`] is the default. Samples of 42 in a corner of a wide
     /// domain: far from them, the bare fit is well below 42, the default one
     /// is 42. To break: make `Trend::None` the default, or drop the trend from
-    /// the evaluation — one of the two halves fails.
+    /// the evaluation - one of the two halves fails.
     #[test]
     fn without_the_trend_the_fit_sinks_away_from_the_data() {
         let samples: Vec<[f64; 2]> = (0..4)
@@ -926,7 +926,7 @@ mod tests {
             .unwrap();
         assert!(
             bare.values[0] < 41.0,
-            "the bare fit far from the data: {} — it should have sunk",
+            "the bare fit far from the data: {} - it should have sunk",
             bare.values[0]
         );
         assert!(
@@ -938,7 +938,7 @@ mod tests {
     }
 
     /// **Aligned samples define no plane: the trend is their mean, and the
-    /// answer says so.** To break: fit the plane regardless — the 2×2 system is
+    /// answer says so.** To break: fit the plane regardless - the 2×2 system is
     /// singular and the slopes come back infinite or NaN.
     #[test]
     fn aligned_samples_fall_back_to_their_mean_and_say_so() {

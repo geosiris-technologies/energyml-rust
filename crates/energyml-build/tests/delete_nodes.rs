@@ -1,4 +1,4 @@
-//! `delete-nodes` — some nodes of a shape taken out
+//! `delete-nodes` - some nodes of a shape taken out
 //!. The cutting is tested in
 //! `energyml_analysis::nodes`; this holds the seam.
 //!

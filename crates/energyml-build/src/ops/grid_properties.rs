@@ -1,22 +1,22 @@
-//! `grid-properties` — a pressure or a temperature by a sourced law of each
+//! `grid-properties` - a pressure or a temperature by a sourced law of each
 //! cell's own vertical depth below the ground, or a porosity, a net-to-gross
-//! ratio or a permeability uniform within each K layer — laid on the cells of
+//! ratio or a permeability uniform within each K layer - laid on the cells of
 //! an `IjkGridRepresentation`.
 //!
 //! This is the grid-properties step of the reference model's build plan,
 //! next to `ijk-grid-from-horizons`, which writes the main grid and carries no
 //! property of its own. Four properties are named for the grid:
 //!
-//! > a `ContinuousProperty` porosity (cells) — `porosity`
+//! > a `ContinuousProperty` porosity (cells) - `porosity`
 //! >
-//! > a `ContinuousProperty` permeability — `absolute permeability`;
+//! > a `ContinuousProperty` permeability - `absolute permeability`;
 //! > `ValueCountPerIndexableElement` \[3], `LabelPerComponent` kx ky kz, `Facet`
 //! > direction
 //! >
-//! > a `ContinuousProperty` NTG — `net gross thickness ratio`
+//! > a `ContinuousProperty` NTG - `net gross thickness ratio`
 //!
 //! and the time-series step (`property-time-series`) names the fifth: a
-//! pressure on the cells of the main grid, which `grid-properties` lays —
+//! pressure on the cells of the main grid, which `grid-properties` lays -
 //! a pressure and a temperature by the same sourced
 //! law of depth `well-logs` lays on wellbore frames, here laid on the grid's
 //! cells instead of a frame's nodes.
@@ -25,7 +25,7 @@
 //!
 //! The house rule: a computation lives in `energyml-analysis`, never in an
 //! operation (ADR-0017). That module already holds the law a temperature or a
-//! hydrostatic pressure follows with depth — the one `well-logs` uses — and
+//! hydrostatic pressure follows with depth - the one `well-logs` uses - and
 //! this operation reuses it rather than writing a second one: the physics of
 //! a geothermal gradient or a column of water does not change because the
 //! indexable element is a cell instead of a node. Only the reading of *the
@@ -34,7 +34,7 @@
 //!
 //! # A cell's own depth, in the RESQML order
 //!
-//! The grid arrives as `energyml-geometry` reads it — a grid is never reprojected —
+//! The grid arrives as `energyml-geometry` reads it - a grid is never reprojected -
 //! one patch, `Topology::Hexahedra {
 //! cells, dimensions: [ni, nj, nk], index }`, `i` fastest then `j` then `k`
 //! (the geometry crate's rules, and the reader's own comment:
@@ -43,17 +43,17 @@
 //!
 //! - **its position in `cells`** is found by [`Topology::position_of`], the
 //!   one translation from a RESQML cell number to where it sits in a
-//!   (possibly compacted) list — never re-derived here, since a second
+//!   (possibly compacted) list - never re-derived here, since a second
 //!   reading of `index` could disagree with the reader's;
 //! - **absent** (`position_of` returns `None`): the cell has no defined
-//!   geometry — an undefined pillar, TRG 2.2 §5.1 p. 94 — so it has no centre
+//!   geometry - an undefined pillar, TRG 2.2 §5.1 p. 94 - so it has no centre
 //!   and no depth to read. Written as `NaN` and counted (`undefined-cells`),
 //!   never invented;
-//! - **present**: its centre is the mean of its eight corners — a cheap and
+//! - **present**: its centre is the mean of its eight corners - a cheap and
 //!   honest reading for a law that only wants *how deep*, not the cell's true
 //!   shape.
 //!
-//! Pressure and temperature need a **ground** — `ground`, a surface read
+//! Pressure and temperature need a **ground** - `ground`, a surface read
 //! exactly as `well-logs` reads it (`support::Faces`, `energyml_analysis::heights`)
 //! under each cell centre's `(x, y)`, in the grid's own frame. A cell outside
 //! it, or under a fold, is refused by its number rather than silently
@@ -65,7 +65,7 @@
 //! Porosity, net-to-gross and permeability are **uniform within a K layer**:
 //! the same number on every cell of it, top to bottom. A RESQML cell index is
 //! `i + ni·(j + nj·k)` (the reader's own order, see above), so `k` is `cell /
-//! (ni·nj)` — arithmetic on the index, nothing computed from a corner point.
+//! (ni·nj)` - arithmetic on the index, nothing computed from a corner point.
 //! **Every** cell gets a value this way, defined geometry or not: a porosity
 //! is a fact about the layer, and a corner the reader could not place does
 //! not change what rock a cell belongs to.
@@ -79,18 +79,18 @@
 //!
 //! - **the writer is `property::write`** (a `ContinuousProperty` is always written
 //!   through `property::write`), and it
-//!   hardcodes `ValueCountPerIndexableElement: [1]` — a second, tensor-shaped
+//!   hardcodes `ValueCountPerIndexableElement: [1]` - a second, tensor-shaped
 //!   writer would be exactly the second writer that rule forbids, and this
 //!   file may not edit `property.rs`;
 //! - **`Facet` is one value per property**, and RESQML's own list
-//!   (`eml23.Facet`) has no member naming *all three* of I, J and K at once —
+//!   (`eml23.Facet`) has no member naming *all three* of I, J and K at once -
 //!   only one direction at a time. Writing a single `Facet` on a
 //!   three-component property would be a guess the schema cannot even state
 //!   correctly, and *refuse rather than guess* is the rule this crate lives
 //!   by.
 //!
 //! So permeability is written as **three scalar properties**, one per
-//! direction — kx with `Facet` `I`, ky with `J`, kz with `K` — all of the same
+//! direction - kx with `Facet` `I`, ky with `J`, kz with `K` - all of the same
 //! kind (`absolute permeability`), each one `property::write`'s ordinary
 //! case. Each names its direction unambiguously, which the reference model's single
 //! tensor property, read strictly, cannot. Turning this into the one property
@@ -100,9 +100,9 @@
 //!
 //! No constant without a source: a plausible value is declared
 //! synthetic (reference-model rule, ADR-0019): `source` is required and a blank
-//! one refused, for every case — a K-layer value is exactly as invented as a
-//! law of depth. And the rule on invented objects — `ExtensionNameValue` `synthetic = true` and a
-//! sentence in `Citation/Description` — is written on every property.
+//! one refused, for every case - a K-layer value is exactly as invented as a
+//! law of depth. And the rule on invented objects - `ExtensionNameValue` `synthetic = true` and a
+//! sentence in `Citation/Description` - is written on every property.
 //!
 //! # What is not suggested, and why
 //!
@@ -113,7 +113,7 @@
 //! # References
 //!
 //! - The hydrostatic and geothermal laws of `energyml-analysis` (`well_logs`).
-//!   TODO(reference): verify — the geothermal gradient and the hydrostatic law carry no published source (the requirement itself says the source is still to be found).
+//!   TODO(reference): verify - the geothermal gradient and the hydrostatic law carry no published source (the requirement itself says the source is still to be found).
 
 use serde_json::json;
 
@@ -142,14 +142,14 @@ pub struct GridPropertiesParams {
     /// what is laid on the grid's cells.
     #[param(flatten)]
     pub what: WhatParams,
-    /// where the law or the values come from — a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
+    /// where the law or the values come from - a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
     pub source: String,
     /// the HDF5 file the value arrays go into
     #[param(default = String::from("data.h5"), group = "naming")]
     pub data_file: String,
 }
 
-/// what is laid on the grid's cells — a temperature or a hydrostatic pressure by a sourced law of each cell's own vertical depth below the ground, or a porosity, a net-to-gross ratio or a permeability uniform within each K layer
+/// what is laid on the grid's cells - a temperature or a hydrostatic pressure by a sourced law of each cell's own vertical depth below the ground, or a porosity, a net-to-gross ratio or a permeability uniform within each K layer
 ///
 /// **No default**: which quantity is the question, and a default would
 /// answer it for whoever did not.
@@ -165,21 +165,21 @@ pub enum WhatParams {
     /// A net-to-gross thickness ratio, the same value on every cell of a K layer, top to bottom.
     #[case(name = "ntg")]
     NetGross(LayerParams),
-    /// An absolute permeability — kx, ky, kz — the same three values on every cell of a K layer, top to bottom.
+    /// An absolute permeability - kx, ky, kz - the same three values on every cell of a K layer, top to bottom.
     Permeability(PermeabilityParams),
 }
 
 /// A value stated once per K layer of the grid, top to bottom.
 #[derive(Debug, Params)]
 pub struct LayerParams {
-    /// one value per K layer, top to bottom — the same value on every cell of that layer
+    /// one value per K layer, top to bottom - the same value on every cell of that layer
     #[param(least = 1, ordered)]
     pub layers: Vec<f64>,
-    /// the unit of the values — an Energistics uom code, `Euc` for none
+    /// the unit of the values - an Energistics uom code, `Euc` for none
     pub uom: String,
 }
 
-/// What a permeability is told — kx, ky, kz, one value per K layer each.
+/// What a permeability is told - kx, ky, kz, one value per K layer each.
 #[derive(Debug, Params)]
 pub struct PermeabilityParams {
     /// kx: one value per K layer, top to bottom
@@ -191,7 +191,7 @@ pub struct PermeabilityParams {
     /// kz: one value per K layer, top to bottom
     #[param(least = 1, ordered)]
     pub kz: Vec<f64>,
-    /// the unit of the values — an Energistics uom code, `mD` for millidarcy
+    /// the unit of the values - an Energistics uom code, `mD` for millidarcy
     pub uom: String,
 }
 
@@ -201,7 +201,7 @@ pub struct GridPropertiesInputs {
     /// the IJK grid whose cells receive the property
     #[input(types = "resqml22.IjkGridRepresentation", topology = "hexahedra")]
     pub grid: Shape,
-    /// the ground — a surface's triangles or a grid's cells, in the grid's own frame; its height under each cell centre's (x, y) is where the depth is counted from — pressure and temperature only
+    /// the ground - a surface's triangles or a grid's cells, in the grid's own frame; its height under each cell centre's (x, y) is where the depth is counted from - pressure and temperature only
     #[input(topology = "triangles")]
     pub ground: Option<Shape>,
 }
@@ -216,7 +216,7 @@ fn hexahedra_dims(geometry: &Geometry) -> Result<[usize; 3], String> {
     };
     let Topology::Hexahedra { dimensions, .. } = &patch.topology else {
         return Err(
-            "is no IJK grid: a property on grid cells is laid on an `IjkGridRepresentation`, read as hexahedra — make one with `ijk-grid-from-horizons` first"
+            "is no IJK grid: a property on grid cells is laid on an `IjkGridRepresentation`, read as hexahedra - make one with `ijk-grid-from-horizons` first"
                 .to_string(),
         );
     };
@@ -239,7 +239,7 @@ fn title_of(shape: &Shape) -> String {
         .unwrap_or_else(|| shape.name.clone())
 }
 
-/// The centre of the cell at `position` in `cells` — the mean of its eight corners.
+/// The centre of the cell at `position` in `cells` - the mean of its eight corners.
 fn cell_centre(patch: &Patch, position: usize) -> [f64; 3] {
     let Topology::Hexahedra { cells, .. } = &patch.topology else {
         unreachable!("checked by hexahedra_dims before any position is read")
@@ -254,7 +254,7 @@ fn cell_centre(patch: &Patch, position: usize) -> [f64; 3] {
     centre
 }
 
-/// The property kind of the standard dictionary, by its title — never a uuid
+/// The property kind of the standard dictionary, by its title - never a uuid
 /// typed here, the dictionary is the authority for its own identifiers.
 fn kind_ref(title: &str) -> Result<(serde_json::Value, String), Refusal> {
     let found = energyml_domain::property_kind::with_default(|dictionary| {
@@ -275,7 +275,7 @@ fn kind_ref(title: &str) -> Result<(serde_json::Value, String), Refusal> {
     Ok((dor, uuid))
 }
 
-/// Values as the seed carries them — exactly, NaN included.
+/// Values as the seed carries them - exactly, NaN included.
 fn digest(values: &[f64]) -> String {
     values
         .iter()
@@ -294,7 +294,7 @@ fn count(title: &str, value: usize) -> Parameter {
 }
 
 /// The law's settings, as `well-logs` states them, glued to
-/// `energyml_analysis::well_logs::Law` — copied rather than shared, since
+/// `energyml_analysis::well_logs::Law` - copied rather than shared, since
 /// `well_logs`'s own `Told` is private to that file and this crate writes one
 /// file per operation.
 #[derive(Clone, Copy)]
@@ -331,7 +331,7 @@ impl Told {
     }
 
     /// The law under a cell whose ground stands at `ground` metres of
-    /// elevation, in the SI units the analysis counts in — `bar` pascals to
+    /// elevation, in the SI units the analysis counts in - `bar` pascals to
     /// the bar.
     fn law(&self, ground: f64, bar: f64) -> Law {
         match *self {
@@ -388,7 +388,7 @@ impl Told {
         }
     }
 
-    /// Its coefficients, exactly — what the seed carries.
+    /// Its coefficients, exactly - what the seed carries.
     fn key(&self) -> String {
         match *self {
             Told::Temperature {
@@ -459,7 +459,7 @@ impl Operation for GridProperties {
     fn about(&self) -> About {
         About {
             name: "grid-properties",
-            describe: "a pressure or a temperature by a sourced law of each cell's own vertical depth below the ground, or a porosity, a net-to-gross ratio or a permeability uniform within each K layer — laid on the cells of an IJK grid, marked synthetic",
+            describe: "a pressure or a temperature by a sourced law of each cell's own vertical depth below the ground, or a porosity, a net-to-gross ratio or a permeability uniform within each K layer - laid on the cells of an IJK grid, marked synthetic",
             category: Category::Synthetic,
             makes: &["resqml22.ContinuousProperty"],
             recipe: "grid-properties",
@@ -475,7 +475,7 @@ impl Operation for GridProperties {
             return Err(Refusal::on(
                 "ground",
                 format!(
-                    "`{}` has no face — the ground is read on triangles or a grid's cells, and points or lines have none",
+                    "`{}` has no face - the ground is read on triangles or a grid's cells, and points or lines have none",
                     ground.name
                 ),
             ));
@@ -495,7 +495,7 @@ impl Operation for GridProperties {
         if source.is_empty() {
             return Err(Refusal::on(
                 "source",
-                "is empty: a law or a set of values is sourced — a document with its page or paragraph, or a plausible value said to be one (reference-model rule: no constant without a source)",
+                "is empty: a law or a set of values is sourced - a document with its page or paragraph, or a plausible value said to be one (reference-model rule: no constant without a source)",
             ));
         }
 
@@ -581,7 +581,7 @@ impl Operation for GridProperties {
     }
 
     /// `what`'s settings and `source` are inputs, recorded under the
-    /// parameters the projection already declares — a title cannot be both.
+    /// parameters the projection already declares - a title cannot be both.
     fn reports(&self) -> Vec<Slot> {
         let number = || Need::Number {
             uom: None,
@@ -589,21 +589,21 @@ impl Operation for GridProperties {
             most: None,
         };
         vec![
-            Slot::required("cellCount", number(), "cells the grid declares — Ni × Nj × Nk"),
+            Slot::required("cellCount", number(), "cells the grid declares - Ni × Nj × Nk"),
             Slot::optional(
                 "layerCount",
                 number(),
-                "K layers — for a porosity, a net-to-gross ratio or a permeability",
+                "K layers - for a porosity, a net-to-gross ratio or a permeability",
             ),
             Slot::optional(
                 "undefinedCellCount",
                 number(),
-                "cells with no defined geometry — no depth to read, written as NaN; pressure and temperature only",
+                "cells with no defined geometry - no depth to read, written as NaN; pressure and temperature only",
             ),
             Slot::optional(
                 "aboveGroundCount",
                 number(),
-                "cell centres above the ground — no law of the subsurface holds there, written as NaN; pressure and temperature only",
+                "cell centres above the ground - no law of the subsurface holds there, written as NaN; pressure and temperature only",
             ),
             Slot::optional(
                 "shallowCount",
@@ -634,14 +634,14 @@ fn plan_depth(
         Refusal::on(
             "grid",
             format!(
-                "`{grid_title}` does not say which way its vertical axis points — a depth below the ground is read on it, and up and down cannot be guessed"
+                "`{grid_title}` does not say which way its vertical axis points - a depth below the ground is read on it, and up and down cannot be guessed"
             ),
         )
     })?;
     let vertical_uom = known.and_then(|k| k.vertical_uom.as_deref()).ok_or_else(|| {
         Refusal::on(
             "grid",
-            format!("`{grid_title}` does not say in which unit its vertical axis counts — a depth in feet read as metres is 3.28 times too deep"),
+            format!("`{grid_title}` does not say in which unit its vertical axis counts - a depth in feet read as metres is 3.28 times too deep"),
         )
     })?;
     let metres = units::metres(1.0, vertical_uom)
@@ -664,7 +664,7 @@ fn plan_depth(
             return Err(Refusal::on(
                 "ground",
                 format!(
-                    "`{ground_title}` is in `{}` and `{grid_title}` in `{}` — a height read in one frame and compared in another is a height from somewhere else",
+                    "`{ground_title}` is in `{}` and `{grid_title}` in `{}` - a height read in one frame and compared in another is a height from somewhere else",
                     theirs.title, mine.title
                 ),
             ));
@@ -753,13 +753,13 @@ fn plan_depth(
     }
 
     // **The one count a pure plan can verify**: a value on each cell the grid
-    // declares, never more, never fewer — `values` is built exactly `total`
+    // declares, never more, never fewer - `values` is built exactly `total`
     // long above, and this is what would catch a change that broke it.
     if values.len() != total {
         return Err(Refusal::on(
             "grid",
             format!(
-                "{total} cell(s) declared and {} value(s) computed — a value is laid on each cell",
+                "{total} cell(s) declared and {} value(s) computed - a value is laid on each cell",
                 values.len()
             ),
         ));
@@ -772,7 +772,7 @@ fn plan_depth(
         values,
         uom: Some(told.uom().to_string()),
     };
-    let title = format!("{grid_title} — {}", told.kind());
+    let title = format!("{grid_title} - {}", told.kind());
     let seed = format!(
         "grid-properties:{}:{}:{kind_uuid}:{}",
         reference.uuid,
@@ -796,7 +796,7 @@ fn plan_depth(
         return Err(Refusal::on(
             "source",
             format!(
-                "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
                 description.chars().count()
             ),
         ));
@@ -813,7 +813,7 @@ fn plan_depth(
     }
 
     let mut notes = vec![
-        Note { key: "law", detail: format!("{} — source: {source}", told.words()) },
+        Note { key: "law", detail: format!("{} - source: {source}", told.words()) },
         Note {
             key: "vertical-depth",
             detail: "the law is read at the vertical depth below the ground under each cell's own centre, in the grid's own frame".to_string(),
@@ -884,7 +884,7 @@ fn plan_depth(
 }
 
 /// A porosity or a net-to-gross ratio, the same value on every cell of a K
-/// layer, top to bottom — no geometry read at all.
+/// layer, top to bottom - no geometry read at all.
 #[allow(clippy::too_many_arguments)]
 fn plan_layer(
     reference: &Ref,
@@ -903,7 +903,7 @@ fn plan_layer(
         return Err(Refusal::on(
             "layers",
             format!(
-                "the grid has {nk} K layer(s) and {} value(s) were given — one per layer, top to bottom",
+                "the grid has {nk} K layer(s) and {} value(s) were given - one per layer, top to bottom",
                 layer.layers.len()
             ),
         ));
@@ -924,7 +924,7 @@ fn plan_layer(
         return Err(Refusal::on(
             "grid",
             format!(
-                "{total} cell(s) declared and {} value(s) computed — a value is laid on each cell",
+                "{total} cell(s) declared and {} value(s) computed - a value is laid on each cell",
                 values.len()
             ),
         ));
@@ -938,7 +938,7 @@ fn plan_layer(
         values,
         uom: Some(layer.uom.clone()),
     };
-    let title = format!("{grid_title} — {kind_title}");
+    let title = format!("{grid_title} - {kind_title}");
     let seed = format!(
         "grid-properties:{}:{kind_title}:{kind_uuid}:{}",
         reference.uuid,
@@ -954,14 +954,14 @@ fn plan_layer(
     let mut drawn = super::property::write(&field, None, &property, &seed, cx)?;
 
     let description = format!(
-        "Laid by a value per K layer, not measured: {kind_title} — one value per layer, top to bottom: {:?} {}. Source: {source}",
+        "Laid by a value per K layer, not measured: {kind_title} - one value per layer, top to bottom: {:?} {}. Source: {source}",
         layer.layers, layer.uom
     );
     if description.chars().count() > 2000 {
         return Err(Refusal::on(
             "source",
             format!(
-                "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
                 description.chars().count()
             ),
         ));
@@ -977,7 +977,7 @@ fn plan_layer(
     }
 
     let mut notes = vec![
-        Note { key: "layers", detail: format!("one value per K layer, top to bottom, the same on every cell of it — source: {source}") },
+        Note { key: "layers", detail: format!("one value per K layer, top to bottom, the same on every cell of it - source: {source}") },
         Note {
             key: "synthetic",
             detail: "the property is laid, not measured: it carries `synthetic = true` and a description of its values and their source".to_string(),
@@ -1015,7 +1015,7 @@ fn plan_layer(
     })
 }
 
-/// An absolute permeability — kx, ky, kz — written as three scalar
+/// An absolute permeability - kx, ky, kz - written as three scalar
 /// properties, one per direction (see the module doc: *A tensor property this
 /// build does not write*).
 #[allow(clippy::too_many_arguments)]
@@ -1036,7 +1036,7 @@ fn plan_permeability(
             return Err(Refusal::on(
                 name,
                 format!(
-                    "the grid has {nk} K layer(s) and {} value(s) were given — one per layer, top to bottom",
+                    "the grid has {nk} K layer(s) and {} value(s) were given - one per layer, top to bottom",
                     values.len()
                 ),
             ));
@@ -1072,7 +1072,7 @@ fn plan_permeability(
             return Err(Refusal::on(
                 "grid",
                 format!(
-                    "{total} cell(s) declared and {} value(s) computed — a value is laid on each cell",
+                    "{total} cell(s) declared and {} value(s) computed - a value is laid on each cell",
                     per_cell.len()
                 ),
             ));
@@ -1084,7 +1084,7 @@ fn plan_permeability(
             values: per_cell,
             uom: Some(perm.uom.clone()),
         };
-        let title = format!("{grid_title} — permeability ({component})");
+        let title = format!("{grid_title} - permeability ({component})");
         let seed = format!(
             "grid-properties:{}:permeability:{component}:{kind_uuid}:{}",
             reference.uuid,
@@ -1097,7 +1097,7 @@ fn plan_permeability(
             title: Title(title.clone()),
             data_file: data_file.to_string(),
         };
-        // **One uuid each, in the plan's order** — the same trick `well-logs`
+        // **One uuid each, in the plan's order** - the same trick `well-logs`
         // uses for several properties in one run: under a given list, the
         // rank picks the one this property gets; a derived identity differs
         // by its seed already, and is passed through as it is.
@@ -1115,21 +1115,21 @@ fn plan_permeability(
         let mut drawn = super::property::write(&field, None, &property, &seed, &one)?;
 
         let description = format!(
-            "Laid by a value per K layer, not measured: absolute permeability, direction {component} — one value per layer, top to bottom: {values:?} {}. Source: {source}",
+            "Laid by a value per K layer, not measured: absolute permeability, direction {component} - one value per layer, top to bottom: {values:?} {}. Source: {source}",
             perm.uom
         );
         if description.chars().count() > 2000 {
             return Err(Refusal::on(
                 "source",
                 format!(
-                    "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                    "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
                     description.chars().count()
                 ),
             ));
         }
         for object in drawn.objects.iter_mut() {
             object.json["Citation"]["Description"] = json!(description);
-            // One direction per property — see the module's *A tensor
+            // One direction per property - see the module's *A tensor
             // property this build does not write*.
             object.json["Facet"] =
                 json!([{ "$type": "eml23.PropertyKindFacet", "Facet": facet, "Kind": "direction" }]);
@@ -1146,10 +1146,10 @@ fn plan_permeability(
     }
 
     let mut notes = vec![
-        Note { key: "layers", detail: format!("one value per K layer, top to bottom, the same on every cell of it — source: {source}") },
+        Note { key: "layers", detail: format!("one value per K layer, top to bottom, the same on every cell of it - source: {source}") },
         Note {
             key: "components",
-            detail: "kx, ky, kz are written as three scalar properties of the same kind (`absolute permeability`), one direction each (`Facet` I, J, K): a single `Facet` cannot name three directions on one property, and this build's writer (`property::write`) is scalar-only — see the module doc".to_string(),
+            detail: "kx, ky, kz are written as three scalar properties of the same kind (`absolute permeability`), one direction each (`Facet` I, J, K): a single `Facet` cannot name three directions on one property, and this build's writer (`property::write`) is scalar-only - see the module doc".to_string(),
         },
         Note {
             key: "synthetic",

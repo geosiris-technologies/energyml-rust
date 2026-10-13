@@ -13,7 +13,7 @@ use energyml_build::pieces::{Pieces, Source};
 use energyml_build::tabular::{self, Dialect};
 
 /// The type of the datum a run writes: a reference point **in the compound**
-/// the run's frame is — decision (b) of 24/09, common TRG v2.3 §13.25, p. 371.
+/// the run's frame is - decision (b) of 24/09, common TRG v2.3 §13.25, p. 371.
 /// It was `eml23.ReferencePointInACrs` until then, pointing its
 /// `ProjectedCoordinates` at a `ProjectedCrs` the trajectories also named; the
 /// trajectories name the compound now (RESQML TRG 2.2 §3.1 p. 22), and the
@@ -52,7 +52,7 @@ fn bag(text: &str, template: &Value) -> Pieces {
     bag_named("essai.csv", text, template)
 }
 
-/// The same, under a chosen file name — what the identity rule requires not to see.
+/// The same, under a chosen file name - what the identity rule requires not to see.
 fn bag_named(name: &str, text: &str, template: &Value) -> Pieces {
     let table = tabular::read(name, text, Dialect::sniff(text)).expect("a table");
     let template = osdu::from_json(template).expect("a template");
@@ -95,7 +95,7 @@ fn plan(pieces: &Pieces, answers: Value) -> Result<energyml_build::operation::Pl
 fn every_role_uuid_is_in_the_shipped_dictionary() {
     // **Without this check, `ROLES` would be a wish list.** The operation reads
     // the roles by uuid; a uuid that is in no dictionary would never be
-    // matched, and nothing would say so — the template would simply look
+    // matched, and nothing would say so - the template would simply look
     // as if it declared no role.
     let missing: Vec<&str> = energyml_domain::property_kind::with_default(|dictionary| {
         energyml_build::ops::wells_from_table::ROLES
@@ -153,7 +153,7 @@ fn one_hole_writes_the_five_objects_resqml_wants() {
 #[test]
 fn the_rows_of_one_name_make_one_hole() {
     // The grouping is by **name**, and it is what makes a flat CSV a
-    // set of boreholes. Two names, two boreholes — whatever the order of the
+    // set of boreholes. Two names, two boreholes - whatever the order of the
     // lignes.
     let text = "SONDAGE,X,Y,Z_MNT,PROF\nF1,1,2,10,0\nF2,3,4,20,0\nF1,1,2,10,5\nF2,3,4,20,7\n";
     let made = plan(&bag(text, &roles()), json!({ "sourceEpsg": 2154 })).expect("a plan");
@@ -248,14 +248,14 @@ fn a_run_of_many_wells_writes_its_collection() {
     // **The collection of a run did not exist, and nothing said so.**
     // `apply` groups a role from eight objects (`MANY`) and writes a
     // `DataobjectCollection`; it carried the **name of the type** in
-    // `HomogeneousDatatype`, which `Collection.xsd` declares `xs:boolean` —
+    // `HomogeneousDatatype`, which `Collection.xsd` declares `xs:boolean` -
     // *"Boolean flag. If true all data objects in the collection are of the
     // same Energistics data type"*. The object therefore could not be read back, `apply`
     // refused it, and the activity of the run named nothing.
     //
     // No check could see it: the only one that applies without HDF5
     // (`operations.rs`, `crs`) writes **two** objects, so stays under the threshold.
-    // That is what this test adds — eight boreholes, a full role, no array.
+    // That is what this test adds - eight boreholes, a full role, no array.
     let mut text = String::from(
         "SONDAGE,X,Y,Z_MNT,PROF
 ",
@@ -283,7 +283,7 @@ fn a_run_of_many_wells_writes_its_collection() {
     let mut store = energyml_build::epc::open(None, "wells.epc", schemas).expect("a new package");
     // Without the arrays: what is checked is the writing of the **objects**, and
     // requiring them would make this check an HDF5 target that `--all-targets` does not
-    // compile — hence a check that would not run.
+    // compile - hence a check that would not run.
     let written = energyml_build::apply::apply_with(&made, &mut store, &when(), false);
     assert!(written.refused.is_empty(), "{:?}", written.refused);
     assert!(
@@ -304,7 +304,7 @@ fn a_table_of_heads_writes_no_trajectory_at_all() {
     // A table of heads says where a borehole is collared and nothing of its path.
     // The node at MD 0 that was made up for it was doubly wrong: it stated
     // a depth absent from the file, and it was of no use since
-    // `well::write` then refuses a one-point line — so that path
+    // `well::write` then refuses a one-point line - so that path
     // produced **no** object.
     let heads = json!([
         column("SONDAGE", "348c9a4d-e3e4-4beb-8456-f07a46660de1"),
@@ -337,7 +337,7 @@ F2,650100,6800100,131
     );
     assert!(made.datasets.is_empty(), "no array: {:?}", made.datasets.len());
 
-    // And the ground is there, in the datum — it is what will carry the DEM cloud.
+    // And the ground is there, in the datum - it is what will carry the DEM cloud.
     let datums: Vec<f64> = made
         .objects
         .iter()
@@ -404,7 +404,7 @@ fn a_geographic_target_is_refused_because_a_hole_is_a_vertical_extent() {
     // in degrees, each borehole comes out between a hundred and ten thousand times too long,
     // in a package that `check` validates and that nothing draws.
     //
-    // **Called directly, and it is the only place from which this is reachable** —
+    // **Called directly, and it is the only place from which this is reachable** -
     // the same arrangement as `sigeol-boreholes`. Through the registry, `suggest`
     // proposes a UTM zone drawn from the longitude and `settle` sets it before
     // `plan` runs, so the refusal never falls. What it guards is the
@@ -458,7 +458,7 @@ fn a_geographic_file_is_proposed_a_metric_target() {
     // The other half, and it is the one that counts in use: through the registry, a
     // table in degrees receives a **suggested** UTM zone, drawn from the longitude
     // and not from a country. Visible and replaceable, never a default that applies
-    // by itself — a reprojection moves every coordinate.
+    // by itself - a reprojection moves every coordinate.
     let text = "SONDAGE,X,Y,Z_MNT,PROF
 F1,2.3,48.9,120,0
 F1,2.3,48.9,120,25
@@ -542,7 +542,7 @@ fn a_column_the_template_ignores_is_counted_and_not_refused() {
 fn the_same_hole_under_two_file_names_is_the_same_objects() {
     // **Measured on 23/09, and it is what made this rule necessary**: the name of the
     // file was in the seed, so the same export under another name
-    // took three boreholes to six — each doubled under two
+    // took three boreholes to six - each doubled under two
     // identities, and nothing said so. A producer that dates its exports
     // (`wells-2026-09.csv`, then `wells-2026-10.csv`) triggered that every time.
     // livraison.
@@ -623,9 +623,9 @@ F1,650000,6800000,120,26.16
     );
 
     // **And no version label is set.** Measured: writing
-    // one put 15 warnings on a package that had none — a
+    // one put 15 warnings on a package that had none - a
     // reference to a versioned object must say *which* version, and nothing here
-    // writes it — and ETP servers only take the uuid as key. It is
+    // writes it - and ETP servers only take the uuid as key. It is
     // the uuid that tells apart, and it comes from the content.
     assert!(trajectory.json["objectVersion"].is_null(), "{}", trajectory.json);
     assert!(
@@ -662,7 +662,7 @@ F1,650000,6800000,120,26.16
     let schemas = std::sync::Arc::new(energyml_schemas::all());
     let mut store = energyml_build::epc::open(None, "wells.epc", schemas).expect("a new package");
     // Without the arrays: this test is about identity, and the HDF5 backend is
-    // optional — making it depend on it would remove it from `cargo test
+    // optional - making it depend on it would remove it from `cargo test
     // --workspace`, which is where it must turn red.
     let made = energyml_build::apply::apply_with(&first, &mut store, &when(), false);
     assert!(
@@ -701,7 +701,7 @@ F1,650000,6800000,120,26.16
 // Recognising a borehole, and what "enriching" costs
 // ---------------------------------------------------------------------------
 
-/// The package of a first batch, and the frames it holds — what the slot
+/// The package of a first batch, and the frames it holds - what the slot
 /// `wells` would receive from a caller.
 fn written(text: &str) -> (energyml_storage::EpcStore, energyml_build::operation::Plan) {
     let made = plan(&bag(text, &roles()), json!({ "sourceEpsg": 2154 })).expect("a plan");
@@ -728,7 +728,7 @@ fn bag_with(text: &str, before: &energyml_build::operation::Plan, head: [f64; 3]
             .find(|one| one.qualified_type == kind)
             .map(|one| Ref::new(one.uuid.clone(), one.qualified_type.clone(), one.title.clone()))
     };
-    // **The uuids are those the package really carries** — taken from the plan that
+    // **The uuids are those the package really carries** - taken from the plan that
     // has just been written, not invented. What this bag replaces is the *reading*
     // of the frame, which needs the HDF5 backend: `known_of_object` on an
     // unreadable frame answers *nothing known*, and that is the right answer. The
@@ -739,7 +739,7 @@ fn bag_with(text: &str, before: &energyml_build::operation::Plan, head: [f64; 3]
         interpretation: of("resqml22.WellboreInterpretation"),
         trajectory: of("resqml22.WellboreTrajectoryRepresentation"),
         datum: of(DATUM),
-        // The frame of its geometry, the one the first batch wrote — what
+        // The frame of its geometry, the one the first batch wrote - what
         // a rewritten trajectory keeps.
         // §2.4).
         crs: of("eml23.LocalEngineeringCompoundCrs"),
@@ -748,13 +748,13 @@ fn bag_with(text: &str, before: &energyml_build::operation::Plan, head: [f64; 3]
         node_mds: Some(mds.to_vec()),
         ..Known::default()
     };
-    // **An object piece, and it is its own companion** — the convention
+    // **An object piece, and it is its own companion** - the convention
     // of `declare::paired`. No shape is needed: nothing of the matching rule
     // looks at the geometry of a frame.
     bag(text, &roles()).with("wells", Source::Object(known))
 }
 
-/// The same bag, the frame of the package being in **another frame** — the compound
+/// The same bag, the frame of the package being in **another frame** - the compound
 /// of another producer (the BRGM writes its own), or none that the package states.
 fn bag_in_frame(
     text: &str,
@@ -780,8 +780,8 @@ fn bag_in_frame(
 /// in its own compound, changed frame without any
 /// line saying so.
 ///
-/// Keeping it is not possible — the numbers of this run are placed, and the
-/// placement of the borehole's frame does not reach a pure operation — so three
+/// Keeping it is not possible - the numbers of this run are placed, and the
+/// placement of the borehole's frame does not reach a pure operation - so three
 /// cases, and each turns red on its own: the same frame as this run, the trajectory is
 /// rewritten in it; another frame, or a frame that the package does not state, the
 /// borehole is set aside **by name** rather than rewritten elsewhere. To make it
@@ -841,7 +841,7 @@ F1,650000,6800000,120,12.0
     assert!(why.contains("F1") && why.contains("frame"), "{why}");
 
     // And without `enrich`, nothing is rewritten: a second path, in the frame
-    // of this run, beside theirs — the way the refusal points to.
+    // of this run, beside theirs - the way the refusal points to.
     let beside = plan(
         &bag_in_frame(
             more,
@@ -912,7 +912,7 @@ F1,650000,6800000,120,26.16
 #[test]
 fn a_well_whose_depths_are_all_there_already_writes_nothing() {
     // If the values are identical there is nothing to do. The check is
-    // exact: one more object, even identical, would make the package grow without adding anything to it — and two
+    // exact: one more object, even identical, would make the package grow without adding anything to it - and two
     // paths with the same title for the same thing are
     // precisely what the identity rule avoids.
     let text = "SONDAGE,X,Y,Z_MNT,PROF
@@ -926,7 +926,7 @@ F1,650000,6800000,120,26.16
         json!({ "sourceEpsg": 2154 }),
     )
     .expect("a plan");
-    // **No object of the borehole** — the plan keeps its frame, which it creates
+    // **No object of the borehole** - the plan keeps its frame, which it creates
     // at the level of the run and not of the hole; it is the borehole that does not move.
     let wells: Vec<&str> = again
         .objects
@@ -978,7 +978,7 @@ F1,650000,6800000,120,12.0
     assert_eq!(
         frame.json["NodeCount"].as_u64(),
         Some(3),
-        "the union of the depths: 2.25 — 12 — 26.16"
+        "the union of the depths: 2.25 - 12 - 26.16"
     );
 
     let note = again
@@ -1036,7 +1036,7 @@ fn two_holes_of_the_same_name_at_two_places_are_two_wells() {
     // **The other half of the rule**, and without it the matching would be done on
     // the title alone. Two campaigns both name `SP1`; they are two
     // holes, five hundred metres from each other, and confusing them would lay the
-    // log of the second along the trajectory of the first — a valid package
+    // log of the second along the trajectory of the first - a valid package
     // in which nothing on screen would say that the measurements changed borehole.
     let here = "SONDAGE,X,Y,Z_MNT,PROF
 F1,650000,6800000,120,2.25
@@ -1065,7 +1065,7 @@ F1,650500,6800000,120,26.16
     ] {
         assert!(
             kinds.contains(&wanted),
-            "{wanted} is missing — the borehole was taken for the package's: {kinds:?}"
+            "{wanted} is missing - the borehole was taken for the package's: {kinds:?}"
         );
     }
     assert!(
@@ -1085,7 +1085,7 @@ fn a_written_frame_names_its_trajectory_and_its_datum_when_it_is_read_back() {
     // package that is really read back.
     //
     // Without these two references, continuing a borehole would write a derived datum
-    // that nothing else in the package names — and the package would then say
+    // that nothing else in the package names - and the package would then say
     // two different things about *counted from what* the MDs are counted.
     let text = "SONDAGE,X,Y,Z_MNT,PROF
 F1,650000,6800000,120,2.25
@@ -1127,17 +1127,17 @@ F1,650000,6800000,120,26.16
 
     // **`known_of_object` is not that path, and checking it is the point.**
     // Its first branch asks *does this object read as a coordinate
-    // system?* — and `crs::read_with` says yes of a frame, which names a
+    // system?* - and `crs::read_with` says yes of a frame, which names a
     // `LocalCrs` in its geometry. It then returns a `Known` where everything else
     // is absent. This is not what the matching rule borrows (the bag goes through
     // `pieces_of_object`), but a caller who relied on it would believe that a
-    // frame says nothing of itself — hence this check, which **pins the difference**
+    // frame says nothing of itself - hence this check, which **pins the difference**
     // rather than letting it be discovered elsewhere.
     // (a known open point).
     let stripped = energyml_build::read::known_of_object(&reread, &frame).expect("what is known");
     assert!(
         stripped.trajectory.is_none() && stripped.wellhead.is_none(),
-        "`known_of_object` has stopped taking the CRS branch for a frame — if that is intended, this check is to be turned around"
+        "`known_of_object` has stopped taking the CRS branch for a frame - if that is intended, this check is to be turned around"
     );
     assert_eq!(
         known.trajectory.as_ref().map(|one| one.uuid.as_str()),
@@ -1156,14 +1156,14 @@ F1,650000,6800000,120,26.16
 #[test]
 fn a_representation_given_to_an_object_slot_binds_through_its_companion() {
     // **The path of the CLI and of the front end**, and nothing else exercised it.
-    // `read::in_slot` of a representation writes **two** pieces — the shape
+    // `read::in_slot` of a representation writes **two** pieces - the shape
     // under the name of the slot, and `"<slot> (object)"` for what is
     // known of it. An object slot wants the companion; refusing on the nature of
     // the first made `wells` unreachable from a package, since a
     // frame *is* a representation.
     //
     // The bag is built as `read::in_slot` builds it, by hand, because
-    // reading a real frame needs the HDF5 backend — and what is tested here
+    // reading a real frame needs the HDF5 backend - and what is tested here
     // is the **binding**, not the reading.
     use energyml_build::pieces::{Known, Ref};
 
@@ -1233,14 +1233,14 @@ F1,650000,6800000,120,26.16
 #[test]
 fn what_is_no_frame_is_refused_by_its_type() {
     // One day, the scene's list gave the trajectories with the frames,
-    // and the refusal said *"state no wellhead or no node depths"* — true, and
+    // and the refusal said *"state no wellhead or no node depths"* - true, and
     // mute on the one thing to correct. What one breaks to make it
     // turn red: remove the type check from `Standing::of`.
     let pieces = bag(ONE_WELL, &roles()).with(
         "wells",
         known_as(
             "resqml22.WellboreTrajectoryRepresentation",
-            "F1 — trajectory",
+            "F1 - trajectory",
             Some([650000.0, 6800000.0, 120.0]),
             None,
         ),
@@ -1263,7 +1263,7 @@ fn a_mute_frame_no_row_names_does_not_block_the_import() {
     // that has nothing to do with it.
     let pieces = bag(ONE_WELL, &roles()).with(
         "wells",
-        known_as("resqml22.WellboreFrameRepresentation", "F9 — frame", None, None),
+        known_as("resqml22.WellboreFrameRepresentation", "F9 - frame", None, None),
     );
     let made = plan(&pieces, json!({ "sourceEpsg": 2154 })).expect("F9 does not concern F1");
     assert!(
@@ -1283,13 +1283,13 @@ fn a_mute_frame_a_row_names_is_refused_by_that_name() {
         "wells",
         known_as(
             "resqml22.WellboreFrameRepresentation",
-            "F1 — frame",
+            "F1 - frame",
             None,
             Some(&[2.25]),
         ),
     );
     let refused = plan(&pieces, json!({ "sourceEpsg": 2154 })).expect_err("F1 cannot be matched");
-    assert!(refused.contains("`F1 — frame`"), "the frame is named: {refused}");
+    assert!(refused.contains("`F1 - frame`"), "the frame is named: {refused}");
     assert!(!refused.contains("   "), "{refused}");
 }
 
@@ -1334,7 +1334,7 @@ fn an_empty_every_slot_does_not_make_an_operation_unfit() {
 #[test]
 fn a_frame_that_cannot_be_read_fails_the_default_rather_than_hide() {
     // **An absence and a stupidity are not the same news.** A package
-    // whose MDs cannot be read — here, the arrays were not written —
+    // whose MDs cannot be read - here, the arrays were not written -
     // must not pass for a package without boreholes: each hole would then be written
     // a second time.
     let (store, _) = written(ONE_WELL);
@@ -1362,7 +1362,7 @@ fn every_frame_of_the_package_is_taken_when_none_is_given() {
     // A decision: all the boreholes of the current stage should be used by default
     // to enrich them.
     // Replaying the same file without designating anything must therefore recognise the
-    // two boreholes — not write two others.
+    // two boreholes - not write two others.
     let text = "SONDAGE,X,Y,Z_MNT,PROF
 F1,650000,6800000,120,2.25
 F1,650000,6800000,120,26.16
@@ -1421,7 +1421,7 @@ F2,650100,6800100,131,9.0
         "wells",
         known_as(
             "resqml22.WellboreFrameRepresentation",
-            "F9 — frame",
+            "F9 - frame",
             Some([0.0, 0.0, 0.0]),
             Some(&[1.0]),
         ),
@@ -1464,11 +1464,11 @@ fn passes_give_the_frame_one_node_per_limit() {
     // **The top of a pass is a fact of the file**, and it is what makes
     // the limit between two units exact: the `PROF` of the last pass of the
     // one above is the `DEB` of the first of the one below. Keeping only `PROF`
-    // placed the contact at the end of the following pass — 1.75 m too low on
+    // placed the contact at the end of the following pass - 1.75 m too low on
     // the first borehole of that file, with nothing to say so.
     //
     // The zero comes here **from the file** (`DEB` = 0), not from an added node: the
-    // rule of 22/09 holds — nothing is made up at the ground.
+    // rule of 22/09 holds - nothing is made up at the ground.
     let text = "SONDAGE,X,Y,Z_MNT,DEB,PROF
 F1,0,0,100,0,2.25
 F1,0,0,100,2.25,3
@@ -1487,7 +1487,7 @@ F1,0,0,100,3,5.25
     );
 
     // **The negative check**: the same file without the declared top keeps the
-    // earlier frame — otherwise this test would pass on a template that is ignored.
+    // earlier frame - otherwise this test would pass on a template that is ignored.
     let without = plan(&bag(text, &roles()), json!({ "sourceEpsg": 2154 })).expect("a plan");
     assert_eq!(node_depths(&without), vec![2.25, 3.0, 5.25]);
 }

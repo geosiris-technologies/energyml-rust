@@ -10,7 +10,7 @@
 //!   values. eml 2.3 has a *pair* of `AxisDirectionKind`, about thirty values
 //!   including `display-up` and `column-positive`. 2.3 → 2.0.1 loses
 //!   information; a round-trippable pivot would have to invent it.
-//! - **Time versus depth.** 2.0.1 makes it the *type* — `LocalTime3dCrs` and
+//! - **Time versus depth.** 2.0.1 makes it the *type* - `LocalTime3dCrs` and
 //!   `LocalDepth3dCrs` are different objects. eml 2.3 makes it a *flag*,
 //!   `VerticalAxis.IsTime`, on one type.
 //!
@@ -25,11 +25,11 @@
 //! | horizontal offsets | `XOffset`, `YOffset` | `OriginProjectedCoordinate1/2`, on the **2d CRS** |
 //! | vertical offset | `ZOffset`, along the local axis | `OriginVerticalCoordinate`, on the compound, **in the base vertical CRS** |
 //! | rotation | `ArealRotation`, clockwise from the projected Y axis | `Azimuth` + `AzimuthReference`, clockwise from north |
-//! | z downward | `ZIncreasingDownward: bool` | `VerticalAxis.Direction: up`/`down` — not the `VerticalCrs`'s |
+//! | z downward | `ZIncreasingDownward: bool` | `VerticalAxis.Direction: up`/`down` - not the `VerticalCrs`'s |
 //! | projected system | inline choice | **two references away** |
 //! | vertical system | inline choice | a referenced top-level object |
 //! | horizontal unit | `ProjectedUom` | `HorizontalAxes.Uom` |
-//! | vertical unit | `VerticalUom` | `VerticalAxis.Uom` — the `VerticalCrs`'s `uom` is the datum's |
+//! | vertical unit | `VerticalUom` | `VerticalAxis.Uom` - the `VerticalCrs`'s `uom` is the datum's |
 //!
 //! # The local axis and the datum are two statements (24/09/2026)
 //!
@@ -38,15 +38,15 @@
 //! `VerticalAxis` (common TRG 2.3 §12.34 p. 338: `Direction`, `Uom`, `IsTime`)
 //! is the local axis: it governs the direction, the unit and the time flag of
 //! every stored z. The referenced `VerticalCrs` (§12.35 p. 339) is the
-//! **datum** — the zero, and the direction and unit that zero is counted in.
+//! **datum** - the zero, and the direction and unit that zero is counted in.
 //! `OriginVerticalCoordinate` is written in the second, not the first: *"Vertical
 //! coordinate of the origin of the local engineering CRS in the base vertical
-//! CRS (consequently in the uom of the base vertical CRS)"* (CRS.xsd l. 517–520;
+//! CRS (consequently in the uom of the base vertical CRS)"* (CRS.xsd l. 517-520;
 //! common TRG 2.3 §12.20 p. 322).
 //!
 //! Until 24/09 this reader let the `VerticalCrs` overwrite the axis's direction
 //! and unit, and applied the origin along the local axis. Nothing in the corpus
-//! could see it — in every 2.2 package measured the two directions agree — and
+//! could see it - in every 2.2 package measured the two directions agree - and
 //! Lutetia's depth compound (axis `down`, NGF-IGN69 `up`, origin 35 m) would
 //! have been read `up`, with an elevation of −(35 + z) where the file says
 //! 35 − z (found on the synthetic reference model, ADR-0018).
@@ -58,7 +58,7 @@
 //!
 //! The structural difference that matters most: 2.0.1 is **one self-contained
 //! object**, eml 2.3 is **three objects joined by references**. That is why
-//! reading takes a [`ObjectSource`] rather than being a pure function — and
+//! reading takes a [`ObjectSource`] rather than being a pure function - and
 //! why an ETP dataspace will work here exactly as an EPC file does.
 //!
 //! Reading is by *shape*, not by version: whichever fields are present win. A
@@ -77,7 +77,7 @@ use crate::units;
 /// Which system a projected or vertical component names.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum CrsKind {
-    /// An EPSG code — the only form this crate can act on.
+    /// An EPSG code - the only form this crate can act on.
     Epsg(u64),
     /// A definition inline in GML. Present in eml 2.0/2.1/2.2, dropped in 2.3.
     Gml,
@@ -104,9 +104,9 @@ impl CrsKind {
 /// Which way the vertical axis counts.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum VerticalDirection {
-    /// Increasing values go down — depths. RESQML's `ZIncreasingDownward`.
+    /// Increasing values go down - depths. RESQML's `ZIncreasingDownward`.
     Down,
-    /// Increasing values go up — elevations.
+    /// Increasing values go up - elevations.
     Up,
 }
 
@@ -132,19 +132,19 @@ pub struct Crs {
     pub x_offset: f64,
     /// Offset along the second projected axis.
     pub y_offset: f64,
-    /// Offset of the local origin along the **local** vertical axis — counted
+    /// Offset of the local origin along the **local** vertical axis - counted
     /// the way [`vertical_direction`](Crs::vertical_direction) counts, in
-    /// [`vertical_uom`](Crs::vertical_uom) — from the zero of the vertical
+    /// [`vertical_uom`](Crs::vertical_uom) - from the zero of the vertical
     /// datum.
     ///
     /// RESQML 2.0.1's `ZOffset` is exactly that. eml 2.3's
     /// `OriginVerticalCoordinate` is not: it is written in the base vertical
-    /// CRS, its direction and its unit, and [`read_with`] converts it — see
+    /// CRS, its direction and its unit, and [`read_with`] converts it - see
     /// the module doc.
     pub z_offset: f64,
 
     /// Rotation of the local axes, **anticlockwise from the first projected
-    /// axis, in radians** — this view's own convention, which neither release
+    /// axis, in radians** - this view's own convention, which neither release
     /// writes.
     ///
     /// Both releases state a **clockwise** angle measured from the projected Y
@@ -166,16 +166,16 @@ pub struct Crs {
     /// The unit horizontal coordinates are written in, as the file spells it.
     ///
     /// `None` when the CRS does not say. **Not** an invitation to assume
-    /// metres — see [`Crs::to_metres`].
+    /// metres - see [`Crs::to_metres`].
     pub horizontal_uom: Option<String>,
     /// The unit the third coordinate is written in.
     ///
-    /// On an eml 2.3 length system, `VerticalAxis.Uom` — the unit the stored z
-    /// is in — and never the `VerticalCrs`'s `uom`, which is its datum's.
+    /// On an eml 2.3 length system, `VerticalAxis.Uom` - the unit the stored z
+    /// is in - and never the `VerticalCrs`'s `uom`, which is its datum's.
     ///
     /// On a **time** system this is not the time unit: RESQML 2.0.1's
-    /// `LocalTime3dCrs` carries `VerticalUom` for the vertical *reference* —
-    /// the `ZOffset`, a length — and states the axis unit separately in
+    /// `LocalTime3dCrs` carries `VerticalUom` for the vertical *reference* -
+    /// the `ZOffset`, a length - and states the axis unit separately in
     /// `TimeUom`. Ask [`Crs::vertical_axis_uom`] rather than this field.
     pub vertical_uom: Option<String>,
     /// The unit of the time axis, when the system has one.
@@ -201,8 +201,8 @@ impl Crs {
     /// eml 2.3 promoted the parts of a coordinate system to top-level objects:
     /// a package contains `LocalEngineering2dCrs` and `VerticalCrs` objects
     /// alongside the `LocalEngineeringCompoundCrs` that joins them. Reading a
-    /// part succeeds and gives a perfectly valid half — horizontal placement
-    /// with no vertical, or the reverse — which is exactly the sort of thing
+    /// part succeeds and gives a perfectly valid half - horizontal placement
+    /// with no vertical, or the reverse - which is exactly the sort of thing
     /// that looks like a complete answer.
     ///
     /// A caller iterating over every CRS-shaped object in a package wants this;
@@ -226,19 +226,19 @@ impl Crs {
     /// Place a local point in the projected system.
     ///
     /// Rotation, then offset, and the vertical flip when the CRS counts
-    /// downward — so the result is an elevation whichever way the file was
+    /// downward - so the result is an elevation whichever way the file was
     /// written. Units are **not** touched: the result is in the CRS's own
     /// units, which [`to_metres`](Crs::to_metres) normalises.
     ///
     /// # The third coordinate
     ///
     /// `z_offset + z` is where the point sits counted along the local axis
-    /// from the datum's zero — both terms count the same way, because
+    /// from the datum's zero - both terms count the same way, because
     /// [`read_with`] has put the eml 2.3 origin into the axis's sense. Flipping
     /// a downward count gives the **elevation above the vertical datum**, the
-    /// one convention every caller draws in. With Lutetia's depth compound —
+    /// one convention every caller draws in. With Lutetia's depth compound -
     /// axis `down`, NGF-IGN69 counting `up`, `OriginVerticalCoordinate` 35
-    /// (CRS.xsd l. 517–520: *"in the base vertical CRS"*) — the offset along
+    /// (CRS.xsd l. 517-520: *"in the base vertical CRS"*) - the offset along
     /// the axis is −35 and a local depth z lands at 35 − z.
     ///
     /// This is the local placement only. Going from here to another EPSG
@@ -261,14 +261,14 @@ impl Crs {
     ///
     /// What a point must go through before being **stored** in an object that
     /// references this CRS: RESQML geometry is written in the local frame, and
-    /// every reader — this workspace's included — applies the placement on the
+    /// every reader - this workspace's included - applies the placement on the
     /// way out. Storing already-placed coordinates applies the offsets, the
-    /// rotation and the vertical flip a second time at every read — invisible
+    /// rotation and the vertical flip a second time at every read - invisible
     /// on a CRS whose origin is (0, 0) and axis is Up, which is every corpus
     /// package, and wrong on a real one. The round trip
     /// `from_projected(to_projected(p)) == p` is pinned by a test with all
     /// three of an offset, a rotation and a Down axis, because that identity
-    /// is the whole reason this function exists — and again on a compound
+    /// is the whole reason this function exists - and again on a compound
     /// whose axis and datum count in opposite directions, the case the
     /// conversion of `OriginVerticalCoordinate` in [`read_with`] is about.
     pub fn from_projected(&self, point: Point) -> Point {
@@ -291,7 +291,7 @@ impl Crs {
     /// coordinate still looking plausible.
     ///
     /// Errors rather than assuming when a unit is outside the table. A CRS
-    /// that states no unit at all is taken at its word and left alone — that
+    /// that states no unit at all is taken at its word and left alone - that
     /// is the schema's own default, not a guess.
     pub fn to_metres(&self, point: Point) -> Result<Point> {
         if self.vertical_quantity == VerticalQuantity::Time {
@@ -316,8 +316,8 @@ impl Crs {
     ///
     /// The one that has to be asked, because the two releases put it in
     /// different fields and getting it wrong is a factor of a thousand: ALWYN's
-    /// seismic model is a 2.0.1 `LocalTime3dCrs` whose `VerticalUom` reads `m`
-    /// — perfectly correct, it describes the `ZOffset` — while the axis itself
+    /// seismic model is a 2.0.1 `LocalTime3dCrs` whose `VerticalUom` reads `m` -
+    /// perfectly correct, it describes the `ZOffset` - while the axis itself
     /// is in `TimeUom`. Reading `vertical_uom` on a time system and handing it
     /// to a time conversion is how a millisecond becomes a metre.
     pub fn vertical_axis_uom(&self) -> Option<&str> {
@@ -335,7 +335,7 @@ impl Crs {
     ///
     /// A time-domain surface has no depth, and nothing in the file gives it one:
     /// the conversion needs a velocity model the package does not carry, and
-    /// RESQML deliberately puts the time *kind* — two-way against one-way —
+    /// RESQML deliberately puts the time *kind* - two-way against one-way -
     /// outside the CRS (TRG §12.9 leaves it to the acquisition activity). So
     /// [`Crs::to_metres`] refuses, which is right.
     ///
@@ -344,7 +344,7 @@ impl Crs {
     /// number, so a seismic horizon at 2 713 **milliseconds** goes into a scene
     /// as z = −2 713 and lands among depth objects at −2 713 **metres**. Nothing
     /// errors, and the two are within about ten percent of each other for real
-    /// velocities — which is exactly the range in which a wrong picture is
+    /// velocities - which is exactly the range in which a wrong picture is
     /// indistinguishable from a right one.
     ///
     /// A caller drawing several objects together therefore has to know which
@@ -380,7 +380,7 @@ fn of_within(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> Result
         }
         // A **local grid** names no CRS because it holds no geometry: its
         // points are its parent's, subdivided, so its system is the parent's
-        // and nowhere else. Without this hop such a grid comes out "no CRS" —
+        // and nowhere else. Without this hop such a grid comes out "no CRS" -
         // a refinement floating free of the model it refines, exported with no
         // way to place or reproject it.
         if let Some(crs) = from_parent_window(object, source, 0)? {
@@ -390,7 +390,7 @@ fn of_within(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> Result
         //
         // **A list of lenders, not only one**, since 08/09/2026. A
         // `GridConnectionSetRepresentation` names its grids in `Grid`, which is
-        // a *list* of references — so the previous `FieldValue::Object` match
+        // a *list* of references - so the previous `FieldValue::Object` match
         // could never see it, and Volve's connection set of 601 560 points came
         // out `[no CRS]`, drawn where the file never put it. It looked like a
         // reading bug in the connection set: it was one hop short in the
@@ -405,7 +405,7 @@ fn of_within(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> Result
             };
             // **Every lender must agree, or nothing is claimed.** Two grids in
             // two systems are two systems, and taking the first would be *a
-            // guess wearing a number* — the phrase this file already uses, two
+            // guess wearing a number* - the phrase this file already uses, two
             // paragraphs down, about a 2.2 sub-representation drawing from
             // several supports. The same reasoning, the same answer.
             let mut agreed: Option<Crs> = None;
@@ -435,12 +435,12 @@ fn of_within(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> Result
         // 1 → `AbstractRepresentation`), so the object-level field above never
         // sees them. The same rule as `Grid`: every patch's support must agree,
         // or nothing is borrowed. Found on the synthetic reference model: "Productive
-        // reservoir — Chalk", a sub-representation of the Ypresian–Chalk grid,
+        // reservoir - Chalk", a sub-representation of the Ypresian-Chalk grid,
         // had no system, and the scene refused it.
         if let Some(crs) = patch_supports_agree(object, source, hop)? {
             return Ok(Some(crs));
         }
-        // No CRS reference anywhere — the shape of a RESQML 2.2 well: a
+        // No CRS reference anywhere - the shape of a RESQML 2.2 well: a
         // trajectory whose only spatial anchor is the `ReferencePointInACrs`
         // its `MdInterval.Datum` names. Georeferenced through the datum.
         return from_well_datum(object, source, 0);
@@ -452,7 +452,7 @@ fn of_within(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> Result
 }
 
 /// The system every `SubRepresentationPatch.SupportingRepresentation` agrees
-/// on, or `None` — no patch, no readable support, or two supports in two
+/// on, or `None` - no patch, no readable support, or two supports in two
 /// systems (a guess wearing a number, as for `Grid`).
 fn patch_supports_agree(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> Result<Option<Crs>> {
     let patches: Vec<&dyn Reflect> = match object.field("SubRepresentationPatch") {
@@ -480,7 +480,7 @@ fn patch_supports_agree(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8
     Ok(agreed)
 }
 
-/// The fields by which a representation **borrows another's geometry** — and
+/// The fields by which a representation **borrows another's geometry** - and
 /// therefore the system that geometry is expressed in.
 ///
 /// # Why this is a list and not two `if`s
@@ -493,7 +493,7 @@ fn patch_supports_agree(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8
 /// They are here together because they failed together, and the failure is
 /// worth the paragraph. The geometry reader follows one of these references to
 /// compute its points; the CRS lookup used to follow none of them. Two walks
-/// over the same model answering "where is this" independently — and when they
+/// over the same model answering "where is this" independently - and when they
 /// disagreed nothing said so, because *having no CRS is legal*. A frame whose
 /// nodes sat in a `ZIncreasingDownward` system was reported as having no
 /// system, so [`Crs::to_projected`] never ran on it: the trajectory's depths
@@ -512,15 +512,15 @@ fn patch_supports_agree(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8
 /// is why it is right. Three statements settle it, and none of them is a
 /// reading between lines:
 ///
-/// - **§3.1** — *"`AbstractGeometry.LocalCrs` → `LocalEngineeringCompoundCrs`.
+/// - **§3.1** - *"`AbstractGeometry.LocalCrs` → `LocalEngineeringCompoundCrs`.
 ///   The base class for all geometric values, which is always associated with a
 ///   representation."* The system lives on the **geometry**, not on the
 ///   representation.
-/// - **§12.17** — `WellboreTrajectoryRepresentation.Geometry 0..1 →
+/// - **§12.17** - `WellboreTrajectoryRepresentation.Geometry 0..1 →
 ///   AbstractParametricLineGeometry`, which specialises `AbstractGeometry`. So
 ///   a trajectory that has a shape states its system there, and one that has
-///   none states it nowhere — the two branches `crate::well` reads.
-/// - **§12.13** — `WellboreFrameRepresentation` declares `NodeCount`, `NodeMd`,
+///   none states it nowhere - the two branches `crate::well` reads.
+/// - **§12.13** - `WellboreFrameRepresentation` declares `NodeCount`, `NodeMd`,
 ///   `WitsmlLog` and the `Trajectory` association, and **no geometry and no
 ///   CRS of any kind**, under the *BUSINESS RULE: MD values and UOM must be
 ///   consistent with the trajectory representation*.
@@ -528,17 +528,17 @@ fn patch_supports_agree(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8
 /// A frame's node positions are therefore not stored anywhere: they are the
 /// trajectory's parametric line evaluated at the frame's own measured depths.
 /// Inheriting the trajectory's system is not a heuristic that happens to fit
-/// the files — it is the only reading the model allows. Checked against the
+/// the files - it is the only reading the model allows. Checked against the
 /// generated schema as a second source: neither the 2.0.1 nor the 2.2
 /// `WellboreFrameRepresentation` has a single CRS-shaped field.
 ///
 /// `SubRepresentation` is the same argument (§8.9): *"an ordered list of
-/// indexable elements … of an existing representation"* — indices into someone
+/// indexable elements … of an existing representation"* - indices into someone
 /// else's nodes, so someone else's system.
 ///
 /// # Two limits, both deliberate
 ///
-/// `Grid` is a **list** — a connection set may join several grids — and it is
+/// `Grid` is a **list** - a connection set may join several grids - and it is
 /// honoured only when every grid it names agrees on the system. See the loop.
 ///
 /// RESQML 2.2 puts `SupportingRepresentation` on the **patch** (§8.10: *"one
@@ -546,13 +546,13 @@ fn patch_supports_agree(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8
 /// representation"*, and patches may name different ones), so a 2.2
 /// sub-representation can draw from several supports. Since 02/10/2026 it
 /// borrows by the same rule as `Grid` (`patch_supports_agree`): all the
-/// patches' supports in one system, or nothing — never the first patch's,
+/// patches' supports in one system, or nothing - never the first patch's,
 /// which would be a guess wearing a number. RESQML 2.0.1 carries it on the
 /// object and is covered by this list.
 ///
 /// A `SeismicWellboreFrameRepresentation` never reaches here: §12.9 gives it
 /// its own `LocalTime3dCrs`, which [`reference()`] finds by name, so it takes the
-/// direct path. That is what the standard asks for — its vertical axis is a
+/// direct path. That is what the standard asks for - its vertical axis is a
 /// time and the trajectory's is a depth. (Nothing draws one today: the geometry
 /// readers are keyed on `WellboreFrameRepresentation` alone.)
 pub const BORROWED_GEOMETRY_FIELDS: &[&str] = &["Trajectory", "SupportingRepresentation", "Grid"];
@@ -571,8 +571,8 @@ pub const PARENT_GRID_FIELDS: &[&str] = &[
 
 /// The CRS a local grid inherits from the grid it refines.
 ///
-/// The hop count bounds two things at once: a legal chain of local grids —
-/// RESQML allows a local grid of a local grid — and an illegal cycle, which
+/// The hop count bounds two things at once: a legal chain of local grids -
+/// RESQML allows a local grid of a local grid - and an illegal cycle, which
 /// nothing in a file forbids two grids from forming by naming each other.
 fn from_parent_window(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> Result<Option<Crs>> {
     if hop > 4 {
@@ -603,30 +603,30 @@ fn from_parent_window(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) 
 }
 
 /// The objects a measured depth is counted from, under every name the releases
-/// give them — the one list, which `energyml-geometry::well` reads too.
+/// give them - the one list, which `energyml-geometry::well` reads too.
 ///
-/// - `MdDatum` — RESQML 2.0.1 and the 2.2 development drops: a `Location` in a
+/// - `MdDatum` - RESQML 2.0.1 and the 2.2 development drops: a `Location` in a
 ///   whole local CRS;
-/// - `ReferencePointInACrs` — eml 2.3, a projected and a vertical half named
+/// - `ReferencePointInACrs` - eml 2.3, a projected and a vertical half named
 ///   separately (common TRG 2.3 §13.24 p. 370);
-/// - `ReferencePointInALocalEngineeringCompoundCrs` — eml 2.3, local
+/// - `ReferencePointInALocalEngineeringCompoundCrs` - eml 2.3, local
 ///   coordinates of the compound its `Crs` names (§13.25 p. 371). The form
 ///   an external translation tool writes for a translated `obj_MdDatum`, and the form
 ///   chosen for a datum under a compound.
 pub const DATUM_TYPES: &[&str] = &["ReferencePointInACrs", DATUM_IN_COMPOUND, "MdDatum"];
 
 /// The reference point written in the local coordinates of a
-/// `LocalEngineeringCompoundCrs` — common TRG 2.3 §13.25 p. 371.
+/// `LocalEngineeringCompoundCrs` - common TRG 2.3 §13.25 p. 371.
 pub const DATUM_IN_COMPOUND: &str = "ReferencePointInALocalEngineeringCompoundCrs";
 
 /// The compound a `ReferencePointInALocalEngineeringCompoundCrs` is written
-/// in, read whole — `Ok(None)` for any other object.
+/// in, read whole - `Ok(None)` for any other object.
 ///
 /// # Why its coordinates are placed through it
 ///
-/// The guide types the association — *"From:
+/// The guide types the association - *"From:
 /// ReferencePointInALocalEngineeringCompoundCrs.Crs To:
-/// LocalEngineeringCompoundCrs"* (common TRG 2.3 §13.25 p. 371) — so the
+/// LocalEngineeringCompoundCrs"* (common TRG 2.3 §13.25 p. 371) - so the
 /// point's `HorizontalCoordinates` and `VerticalCoordinate` are **local**
 /// coordinates of that compound, like any geometry that names it: counted
 /// along its axes, from its origin, in its units. Where the point is on the
@@ -670,7 +670,7 @@ pub fn compound_of_datum(datum: &dyn Reflect, source: &dyn ObjectSource) -> Resu
 ///
 /// A `ReferencePointInACrs` names a projected CRS for its horizontal
 /// coordinates and a vertical CRS for its elevation. The geometry layer
-/// evaluates such wells into **absolute projected coordinates, z-up** — so the
+/// evaluates such wells into **absolute projected coordinates, z-up** - so the
 /// `Crs` built here carries no offset, no rotation, no unit scale: only the
 /// EPSG identity that makes the points exportable and reprojectable.
 ///
@@ -708,7 +708,7 @@ fn from_well_datum(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> 
         return Err(Error::Missing(format!("the datum {}", uri_or_uuid(datum_named))));
     };
     let datum = datum.as_reflect();
-    // `MdDatum` in 2.0.1 and the drops, two reference points in 2.2 — one
+    // `MdDatum` in 2.0.1 and the drops, two reference points in 2.2 - one
     // concept under three names.
     if !DATUM_TYPES.contains(&datum.type_info().type_key) {
         return Ok(None);
@@ -796,8 +796,8 @@ fn from_well_datum(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8) -> 
 /// The EPSG identity of the CRS a datum field points at.
 ///
 /// The field is either the DOR itself (`VerticalCrs`) or a coordinates block
-/// holding one (`HorizontalCoordinates.Crs`). The referenced object — an
-/// eml 2.3 `ProjectedCrs` or `VerticalCrs` — carries its code inside its
+/// holding one (`HorizontalCoordinates.Crs`). The referenced object - an
+/// eml 2.3 `ProjectedCrs` or `VerticalCrs` - carries its code inside its
 /// `AbstractProjectedCrs`/`AbstractVerticalCrs` choice, which is what
 /// [`kind_of`] already knows how to read; a shallow walk finds the right
 /// field without hard-coding its name per version.
@@ -840,17 +840,17 @@ pub fn read(crs: &dyn Reflect) -> Result<Crs> {
 /// # The rotation: one sense in both releases, and not this view's
 ///
 /// This view turns anticlockwise from the first projected axis, and neither
-/// release does. RESQML 2.0.1: *"ArealRotation — The rotation of the local Y
+/// release does. RESQML 2.0.1: *"ArealRotation - The rotation of the local Y
 /// axis relative to the projected Y axis. A positive value indicates a
 /// clockwise rotation from the projected Y axis"* (RESQML TRG 2.0.1 §2.1
-/// p. 10). eml 2.3's `LocalEngineering2dCrs.Azimuth` is not documented at all —
-/// neither the schema nor common TRG 2.3 §12.19 p. 321 says which way it turns
-/// — so it is read as the family reads an azimuth: from the projected north,
+/// p. 10). eml 2.3's `LocalEngineering2dCrs.Azimuth` is not documented at all -
+/// neither the schema nor common TRG 2.3 §12.19 p. 321 says which way it turns -
+/// so it is read as the family reads an azimuth: from the projected north,
 /// *"with a positive value indicating a clockwise rotation as seen from above"*
 /// (RESQML TRG 2.0.1 §7.5.7 p. 140, the survey azimuths), which is also the
 /// reading under which an external translation tool carries `ArealRotation` into
-/// `Azimuth` unchanged. Writing the local y axis both ways —
-/// `(−sin θ, cos θ)` here against `(sin A, cos A)` there — gives `θ = −A`, for
+/// `Azimuth` unchanged. Writing the local y axis both ways -
+/// `(−sin θ, cos θ)` here against `(sin A, cos A)` there - gives `θ = −A`, for
 /// both.
 ///
 /// Until 24/09/2026 the 2.0.1 angle was taken as it stands, anticlockwise: a
@@ -861,7 +861,7 @@ pub fn read(crs: &dyn Reflect) -> Result<Crs> {
 /// Anything but grid north needs a convergence angle this crate does not have,
 /// so a non-zero azimuth measured from something else is **refused** rather
 /// than placed wrongly. A zero azimuth is the same in every reference, and zero
-/// is what every file in the corpus uses — so these conversions are held by
+/// is what every file in the corpus uses - so these conversions are held by
 /// unit tests built from the citations, never by a file.
 ///
 /// # The vertical: the axis governs, the datum places
@@ -869,7 +869,7 @@ pub fn read(crs: &dyn Reflect) -> Result<Crs> {
 /// On an eml 2.3 compound, `VerticalAxis` sets the direction, the unit and the
 /// time flag of the local z; the referenced `VerticalCrs` sets the datum's EPSG
 /// identity, and its own direction and unit are only used to bring
-/// `OriginVerticalCoordinate` — written *"in the base vertical CRS"* — into
+/// `OriginVerticalCoordinate` - written *"in the base vertical CRS"* - into
 /// the axis's sense and unit (`origin_along_axis`). See the module doc.
 pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
     let mut out = Crs {
@@ -877,7 +877,7 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
         kind: crs.type_info().name,
         x_offset: scalar_f64(crs, "XOffset").unwrap_or(0.0),
         y_offset: scalar_f64(crs, "YOffset").unwrap_or(0.0),
-        // RESQML 2.0.1's `ZOffset`, along the local axis — its schema makes that
+        // RESQML 2.0.1's `ZOffset`, along the local axis - its schema makes that
         // axis count the way the vertical CRS does. eml 2.3's origin is not
         // along the axis, and is converted once both halves are read, below.
         z_offset: scalar_f64(crs, "ZOffset").unwrap_or(0.0),
@@ -900,7 +900,7 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
         vertical: kind_of(crs, "VerticalCrs"),
     };
 
-    // The object may *be* a vertical system rather than merely name one — a
+    // The object may *be* a vertical system rather than merely name one - a
     // standalone eml 2.3 `VerticalCrs` is a top-level object in its own right.
     if let Some(direction) = direction_of(crs) {
         out.vertical_direction = direction;
@@ -912,7 +912,7 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
         }
     }
     // And the same for the projected half, which had no such line until
-    // 12/08 — so a geometry whose `LocalCrs` names an eml 2.3 `ProjectedCrs`
+    // 12/08 - so a geometry whose `LocalCrs` names an eml 2.3 `ProjectedCrs`
     // **directly**, rather than the compound that usually wraps it, came back
     // saying "no EPSG code" over a file whose next two lines read
     // `<AbstractProjectedCrs xsi:type="ProjectedEpsgCrs"><EpsgCode>3949`.
@@ -920,7 +920,7 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
     // Nothing in the corpus pointed at one, and the schema does not forbid it:
     // `AbstractGeometry.LocalCrs` is a `DataObjectReference`, which declares no
     // target type at all. A `ProjectedCrs` read on its own is a perfectly
-    // ordinary answer — origin at (0, 0), no rotation, one EPSG code — and
+    // ordinary answer - origin at (0, 0), no rotation, one EPSG code - and
     // refusing it lost the only thing the file was unambiguous about.
     if out.projected == CrsKind::Absent {
         let itself = kind_of(crs, "AbstractProjectedCrs");
@@ -934,17 +934,17 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
     // <EpsgCode>4326`, and which came back saying *no EPSG code*.
     //
     // `energyml-build` writes them: a GeoJSON is WGS 84 by definition, and the
-    // decision of 07/09 is to keep the degrees rather than transform them — a
+    // decision of 07/09 is to keep the degrees rather than transform them - a
     // transformation being where coordinates quietly move. EML 2.3 offers no
     // top-level geographic compound, so the geometry names the
     // `Geographic2dCrs` directly, exactly as an eml 2.3 geometry may name a
     // `ProjectedCrs` directly. Before this, `energyml export --format geojson`
-    // refused those packages — *the CRS they name gives no EPSG code* — over a
+    // refused those packages - *the CRS they name gives no EPSG code* - over a
     // file that was unambiguous.
     //
     // **The hazard, and it is the reason `horizontal_uom` is left alone.** A
     // geographic system's horizontal unit is the **degree**, not the metre, and
-    // a `Geographic2dCrs` carries no `HorizontalAxes` to say so — so the unit
+    // a `Geographic2dCrs` carries no `HorizontalAxes` to say so - so the unit
     // stays `None`, which reads as *unstated* rather than as *metres*. A caller
     // that defaulted an absent unit to metres would scale a Paris-basin model
     // by 111 320; one that reads `None` as *unknown* is right. This is why the
@@ -982,7 +982,7 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
     {
         // The origin, in the projected system: the 2.3 schema documents
         // neither element, and they are read as the 2.0.1 offsets they
-        // replaced — *"The X location of the origin of the local areal axes
+        // replaced - *"The X location of the origin of the local areal axes
         // relative to the projected CRS origin. […] The value MUST represent
         // the first axis of the coordinate system. The unit of measure is
         // defined by the unit of measure for the projected 2D CRS"* (RESQML TRG
@@ -1000,7 +1000,7 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
             out.areal_rotation = azimuth_as_rotation(plane)?;
         }
         // `HorizontalAxes.IsTime` is about x and y, and is not read into the
-        // vertical quantity — the `VerticalAxis` alone says whether z is a
+        // vertical quantity - the `VerticalAxis` alone says whether z is a
         // time. It did until 24/09, so a compound whose horizontal axes said
         // `true` read as a time system whatever its vertical axis said. A
         // horizontal axis in time would carry a time `Uom`, which
@@ -1019,7 +1019,7 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
         }
     }
 
-    // eml 2.3: the vertical half, a referenced top-level object — the datum.
+    // eml 2.3: the vertical half, a referenced top-level object - the datum.
     let owned = linked(crs, "VerticalCrs", source);
     let (mut datum_direction, mut datum_uom): (Option<VerticalDirection>, Option<String>) = (None, None);
     if let Some(vertical) = owned.as_ref().map(|object| object.as_reflect()) {
@@ -1031,7 +1031,7 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
         datum_uom = measure::unit_of(vertical);
         match axis {
             // No axis above it: the object names a vertical system without
-            // being a compound — a `ReferencePointInACrs` — and that system is
+            // being a compound - a `ReferencePointInACrs` - and that system is
             // then the only statement of which way its z counts.
             None => {
                 if let Some(direction) = datum_direction {
@@ -1067,7 +1067,7 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
 ///
 /// The schema writes it elsewhere: *"Vertical coordinate of the origin of the
 /// local engineering CRS in the base vertical CRS (consequently in the uom of
-/// the base vertical CRS)"* (CRS.xsd l. 517–520; common TRG 2.3 §12.20 p. 322).
+/// the base vertical CRS)"* (CRS.xsd l. 517-520; common TRG 2.3 §12.20 p. 322).
 /// So the number is negated when the axis and the datum count in opposite
 /// directions, and converted from the datum's unit to the axis's. An origin 35
 /// m above an NGF datum that counts up, under an axis that counts depths, is
@@ -1081,7 +1081,7 @@ pub fn read_with(crs: &dyn Reflect, source: &dyn ObjectSource) -> Result<Crs> {
 ///   sense and passes;
 /// - **a time axis** keeps the origin as written. It is a length in the datum
 ///   and the axis counts time, and nothing here holds the velocity that joins
-///   them — the disagreement a translation tool names. The number
+///   them - the disagreement a translation tool names. The number
 ///   stays in `vertical_uom`, which on a time system is the datum's length;
 ///   [`Crs::to_metres`] refuses a time system anyway, and [`Crs::is_time`]
 ///   tells a caller not to mix it with depths.
@@ -1127,7 +1127,7 @@ pub fn reference(object: &dyn Reflect) -> Option<String> {
     reference_in(object).and_then(|named| identity::uuid_of_reflect(named).map(str::to_string))
 }
 
-/// The **uri** of the CRS an object names, at any depth — the version the
+/// The **uri** of the CRS an object names, at any depth - the version the
 /// reference declares included, which is what [`ObjectSource::object_at`] reads.
 pub fn reference_uri(object: &dyn Reflect) -> Option<String> {
     reference_in(object).and_then(identity::uri_of_reflect)
@@ -1207,7 +1207,7 @@ fn direction_of(object: &dyn Reflect) -> Option<VerticalDirection> {
 
 /// A field that is a reference, resolved through the store.
 ///
-/// `None` when absent, uuid-less, or naming something the store lacks — the
+/// `None` when absent, uuid-less, or naming something the store lacks - the
 /// caller falls back to reading it inline.
 fn linked(
     owner: &dyn Reflect,
@@ -1226,7 +1226,7 @@ fn linked(
 
 /// RESQML 2.0.1's `ArealRotation`, as the anticlockwise-from-east rotation
 /// used here: its negation, the angle being clockwise from the projected Y
-/// axis (RESQML TRG 2.0.1 §2.1 p. 10) — see [`read_with`].
+/// axis (RESQML TRG 2.0.1 §2.1 p. 10) - see [`read_with`].
 fn areal_rotation(crs: &dyn Reflect) -> Result<f64> {
     let rotation = angle(crs, "ArealRotation")?;
     // Zero stays zero rather than becoming −0, which prints as a rotation.
@@ -1254,8 +1254,8 @@ fn azimuth_as_rotation(plane: &dyn Reflect) -> Result<f64> {
 
 /// Which branch a projected or vertical component took.
 ///
-/// The choice element is named after the branch in every version —
-/// `ProjectedEpsgCrs`, `VerticalUnknownCrs` — except eml 2.0, which spells the
+/// The choice element is named after the branch in every version -
+/// `ProjectedEpsgCrs`, `VerticalUnknownCrs` - except eml 2.0, which spells the
 /// EPSG one `ProjectedCrsEpsgCode` / `VerticalCrsEpsgCode`. Both are matched.
 fn kind_of(crs: &dyn Reflect, field: &str) -> CrsKind {
     let Some(FieldValue::Object(child)) = crs.field(field) else {
@@ -1432,13 +1432,13 @@ mod tests {
     ///
     /// The case `energyml-build` writes: a GeoJSON is WGS 84 by definition, the
     /// decision of 07/09/2026 is to keep the degrees rather than transform them,
-    /// and EML 2.3 offers no top-level geographic compound to wrap the pair — so
+    /// and EML 2.3 offers no top-level geographic compound to wrap the pair - so
     /// the geometry names the `Geographic2dCrs` directly.
     ///
     /// Measured before the fix, on a package this workspace had just written:
     /// `energyml geometry` said `[Absent, unstated]` and
-    /// `energyml export --format geojson` refused both representations —
-    /// *the CRS they name gives no EPSG code* — over a file whose next two lines
+    /// `energyml export --format geojson` refused both representations -
+    /// *the CRS they name gives no EPSG code* - over a file whose next two lines
     /// read `EpsgCode 4326`. Afterwards the same package exports 1 291 positions
     /// that match the source's, place for place.
     #[test]

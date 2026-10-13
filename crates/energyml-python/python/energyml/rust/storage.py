@@ -8,7 +8,7 @@
 
     count(Epc.open("model.epc"))
 
-In Rust this is `EnergymlStorage`, the trait every store implements — and the
+In Rust this is `EnergymlStorage`, the trait every store implements - and the
 workspace's design decision ADR-0002 explains why it was drawn around
 **ETP's requests** rather than around a zip file: an abstraction shaped by a
 file has to be retorted the day a network transport arrives, while one shaped
@@ -22,7 +22,7 @@ nothing written against `Storage` will change.
 Three things the trait's shape imposes, and they are why the methods look the
 way they do:
 
-- **addressing is by uri**, never by path — `eml:///resqml22.Foo(uuid)`;
+- **addressing is by uri**, never by path - `eml:///resqml22.Foo(uuid)`;
 - **the plural operations are the real ones**: `headers` and `get_objects` take
   lists, because ETP asks for a hundred objects in one message and an interface
   that could only ask for one would condemn the network store to be slow;
@@ -78,7 +78,7 @@ class Storage(abc.ABC):
 
     @abc.abstractmethod
     def supported_types(self) -> list:
-        """The types this store can read — the generated model behind it."""
+        """The types this store can read - the generated model behind it."""
 
     @abc.abstractmethod
     def arrays(self, uri: str) -> list:
@@ -94,7 +94,7 @@ class Storage(abc.ABC):
 
     @abc.abstractmethod
     def read_array_part(self, array, start: list, count: list):
-        """A slice of an array — what ETP calls a subarray."""
+        """A slice of an array - what ETP calls a subarray."""
 
     @abc.abstractmethod
     def write_array(self, array, values, dimensions=None) -> None:
@@ -120,7 +120,7 @@ class Storage(abc.ABC):
 Storage.register(Epc)
 
 # And the statement is checked rather than trusted: a method named above and
-# missing below would be a promise this module makes and `Epc` does not keep —
+# missing below would be a promise this module makes and `Epc` does not keep -
 # a documentation bug that only shows when somebody calls it. Here it is an
 # ImportError, at once, naming the method.
 _missing = sorted(name for name in Storage.__abstractmethods__ if not hasattr(Epc, name))

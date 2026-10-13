@@ -1,9 +1,9 @@
-//! A node with no position must not reach a file — and neither must the cells
+//! A node with no position must not reach a file - and neither must the cells
 //! around it.
 //!
 //! The report that started this: *"when a z value is null, the cell is
 //! supposed not to be represented because it is absent"*. It is right in effect, and the
-//! sharpest way to say why is not aesthetic — it is that **`NaN` is not a JSON
+//! sharpest way to say why is not aesthetic - it is that **`NaN` is not a JSON
 //! value**. RFC 7946 is JSON before it is GeoJSON, so one null Z among 34 232
 //! made a 10 MB `.geojson` fail `JSON.parse` outright. OBJ has no syntax for a
 //! missing coordinate either, and VTK's readers put `nan` at the origin or
@@ -21,7 +21,7 @@
 use energyml_export::{Exporters, Options, Shapes};
 use energyml_geometry::{Geometry, Patch, Placement, SceneObject, Topology};
 
-/// A four-by-four lattice — nine cells — with one node undefined, and no CRS.
+/// A four-by-four lattice - nine cells - with one node undefined, and no CRS.
 ///
 /// Four by four and not three by three, because the middle node of a 3 × 3
 /// belongs to *every* one of its four cells: the correct answer there is an
@@ -201,7 +201,7 @@ fn a_property_keeps_the_values_of_the_points_that_remain() {
 
 #[test]
 fn a_grid_with_no_hole_keeps_every_cell() {
-    // The rule must cost nothing to the packages that have no nulls — and, more
+    // The rule must cost nothing to the packages that have no nulls - and, more
     // importantly, must not quietly change what they produce.
     let mut object = grid_with_a_hole();
     object.geometry.patches[0].points[5] = [1.0, 1.0, 0.0];

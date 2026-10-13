@@ -425,7 +425,7 @@ fn trg_a_representation_represents_an_interpretation_or_a_technical_feature() {
     // The registry is what makes `subtypes` work: a type's ancestry is static,
     // so `HorizonInterpretation` is known to descend from
     // `AbstractFeatureInterpretation` without opening anything. Without it every
-    // one of the three comes back *unverifiable* — which is honest, and useless.
+    // one of the three comes back *unverifiable* - which is honest, and useless.
     let known = energyml_schemas::all();
     let findings: Vec<_> = rules::run(&rules, objects.into_iter(), &Lender(|_| None), Some(&known))
         .into_iter()
@@ -449,12 +449,12 @@ fn trg_a_representation_represents_an_interpretation_or_a_technical_feature() {
 /// The two releases disagree, so each rule speaks for one spelling only.
 ///
 /// **The trap this exists for.** `metadata` treats `RepresentedInterpretation`
-/// and `RepresentedObject` as one field on purpose — a path is written once and
+/// and `RepresentedObject` as one field on purpose - a path is written once and
 /// run against every release. But here the releases do not merely respell, they
 /// *disagree*: RESQML 2.2 says the target is *"either an interpretation or a
 /// technical feature"*, and 2.0.1 has no such clause. Read through the synonym,
 /// the 2.0.1 rule therefore judged 2.2 packages and reported as a violation
-/// exactly what 2.2 added — a false alarm on a conforming file, which is worse
+/// exactly what 2.2 added - a false alarm on a conforming file, which is worse
 /// than a missing check because someone will go and "fix" the file.
 ///
 /// `exact` is the escape hatch, and this test is what holds it: the 2.2 object
@@ -505,7 +505,7 @@ fn a_release_specific_rule_does_not_judge_the_other_release() {
 /// The schema's own words, on `BoundaryFeatureInterpretation` in both releases:
 /// *"The data-object reference (of type \"interprets\") must reference only a
 /// boundary feature."* It is a tightening of the shipped
-/// `trg/interpretation-interprets-feature`, which only asks for *a* feature —
+/// `trg/interpretation-interprets-feature`, which only asks for *a* feature -
 /// so a horizon interpreting a wellbore passed until now.
 ///
 /// The releases differ in shape and the rule does not have to: 2.0.1 derives
@@ -596,13 +596,13 @@ fn trg_an_earth_model_interprets_a_model() {
 ///
 /// RESQML 2.0.1 states it on both fields: *"BUSINESS RULE: Start MD is always
 /// less than the Finish MD."* Writing that as `<=` would let the degenerate
-/// trajectory through — start and finish equal, no length at all — which is
+/// trajectory through - start and finish equal, no length at all - which is
 /// exactly the file someone would be hunting for. So the vocabulary gained `<`
 /// rather than the rule being softened to fit it.
 ///
-/// 2.2 says it in another place and in the same terms — the annotation on
+/// 2.2 says it in another place and in the same terms - the annotation on
 /// `MdInterval` reads *"BUSINESS RULE: The MdMin must be less than the MdMax
-/// within the MdInterval"* — so both rules are strict, each citing its own
+/// within the MdInterval"* - so both rules are strict, each citing its own
 /// release.
 #[test]
 fn trg_a_trajectory_starts_before_it_finishes() {
@@ -650,7 +650,7 @@ fn trg_a_trajectory_starts_before_it_finishes() {
 ///
 /// The same trap as the represented object: `StartMd` names nothing on a 2.2
 /// trajectory, so without `exact` the rule would report *uncheckable* on every
-/// 2.2 well in every package — noise that reads as a broken validator.
+/// 2.2 well in every package - noise that reads as a broken validator.
 #[test]
 fn a_2_2_trajectory_is_judged_on_its_md_interval_and_nothing_else() {
     let rules = rules::trg();
@@ -684,13 +684,13 @@ fn a_2_2_trajectory_is_judged_on_its_md_interval_and_nothing_else() {
 /// RESQML TRG 2.2 §6.9 p. 173, on `ContactElement`: *"BUSINESS RULE: The
 /// content type of the corresponding data-object reference must be a
 /// geological feature-interpretation or a frontier feature."* A contact part is
-/// never an object of its own — it sits in an organisation's
-/// `ContactInterpretation` list — so the rule is `nested`, and the finding is
+/// never an object of its own - it sits in an organisation's
+/// `ContactInterpretation` list - so the rule is `nested`, and the finding is
 /// the organisation's, with the path to the part at the head of what was read.
 ///
 /// The twin relates a horizon and a fault, which is what a contact is for; the
 /// broken one puts a triangulated surface where the horizon was, and is found
-/// exactly once — its `DirectObject` is right, so only one of the two checks
+/// exactly once - its `DirectObject` is right, so only one of the two checks
 /// speaks.
 #[test]
 fn e09_a_contact_whose_subject_is_a_representation_is_found_once() {
@@ -763,13 +763,13 @@ fn e09_a_contact_whose_subject_is_a_representation_is_found_once() {
 /// §6.9 p. 173 states.
 ///
 /// Four objects, fabricated (never `testdata/`, per the house rule): (a) the
-/// frontier reached through its interpretation — a warning, never an error;
+/// frontier reached through its interpretation - a warning, never an error;
 /// (b) the same shape but the interpretation is of something else entirely (a
-/// seismic line) — still an error, `through` must not blanket-accept every
+/// seismic line) - still an error, `through` must not blanket-accept every
 /// `GenericFeatureInterpretation`; (c) the `CulturalFeature` named directly,
-/// with no interpretation in between — nothing at all, and a lender that
+/// with no interpretation in between - nothing at all, and a lender that
 /// panics on any call proves no resolution was even attempted; (d) a
-/// representation, as before `through` existed — still an error.
+/// representation, as before `through` existed - still an error.
 #[test]
 fn trg_a_contact_reached_through_a_frontier_interpretation_is_a_named_warning() {
     use energyml_resqml_2_2 as resqml22;
@@ -826,7 +826,7 @@ fn trg_a_contact_reached_through_a_frontier_interpretation_is_a_named_warning() 
 
     // (a) fesapi's own shape: Subject -> GenericFeatureInterpretation ->
     // InterpretedFeature -> CulturalFeature. A warning, and it carries the
-    // new wording — never the rule's own `says`. Breaking it: delete the
+    // new wording - never the rule's own `says`. Breaking it: delete the
     // `through` clause from `trg/contact-element-is-geological` in
     // `rules.rs` and this comes back an error with the old sentence.
     let generic_uuid = "00000000-0000-0000-0000-0000000009c1";
@@ -865,7 +865,7 @@ fn trg_a_contact_reached_through_a_frontier_interpretation_is_a_named_warning() 
     );
 
     // (b) the same shape, but the interpretation interprets something else
-    // entirely — a seismic line, not a frontier. `through` must not turn
+    // entirely - a seismic line, not a frontier. `through` must not turn
     // every `GenericFeatureInterpretation` into a pass: still an error, with
     // the rule's own wording. Breaking it: widen `through.targets` to accept
     // anything and this stays a warning instead of reddening.
@@ -891,7 +891,7 @@ fn trg_a_contact_reached_through_a_frontier_interpretation_is_a_named_warning() 
         "{findings:?}"
     );
 
-    // (c) the `CulturalFeature` named directly — exactly what the letter of
+    // (c) the `CulturalFeature` named directly - exactly what the letter of
     // the guide asks for. Nothing at all, and the lender panics on any call:
     // a direct match must not even try to resolve anything. Breaking it:
     // drop `CulturalFeature` from the main `targets` list and this rougit as
@@ -905,7 +905,7 @@ fn trg_a_contact_reached_through_a_frontier_interpretation_is_a_named_warning() 
     let findings = only_rule(&panics_if_resolved, &straight_to_the_frontier, &known);
     assert_eq!(findings, vec![], "{findings:?}");
 
-    // (d) a representation, as before `through` existed — still an error,
+    // (d) a representation, as before `through` existed - still an error,
     // unsoftened: `through` only reaches through an *interpretation*, and a
     // representation is not one.
     let a_representation = organisation(
@@ -923,7 +923,7 @@ fn trg_a_contact_reached_through_a_frontier_interpretation_is_a_named_warning() 
 }
 
 /// A rule's weight is declared with it: `"severity"` absent is a warning,
-/// `"error"` an error, and any other word a refusal by name — a typo must not
+/// `"error"` an error, and any other word a refusal by name - a typo must not
 /// quietly demote an error to a warning.
 #[test]
 fn a_rule_declares_its_weight_and_an_unknown_one_is_refused() {

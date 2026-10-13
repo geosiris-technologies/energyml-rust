@@ -1,4 +1,4 @@
-//! `estimate` — MBA's cloud target: the z of a cloud the caller supplies,
+//! `estimate` - MBA's cloud target: the z of a cloud the caller supplies,
 //! without producing a regular grid. This is the cloud-target half of the MBA
 //! design, answering the need to supply a set of
 //! points and ask for an estimate of each one's Z, so as not to
@@ -7,34 +7,34 @@
 //! # Why this is its own operation, and not a fourth thing `interpolate` writes
 //!
 //! `interpolate` only ever writes a `resqml22.Grid2dRepresentation`
-//! (`about().makes`) — teaching it a second output type under the same name
+//! (`about().makes`) - teaching it a second output type under the same name
 //! would make the registry's `makes()` contract, checked before a run
 //! starts, lie about what a given run will produce. Nothing
 //! in the core changes (`energyml_analysis::mba::Mba::interpolate` already
-//! takes an arbitrary `queries: &[[f64; 2]]`, regular or not) — only the
+//! takes an arbitrary `queries: &[[f64; 2]]`, regular or not) - only the
 //! writer at the end differs, `pointset`'s rather than `grid`'s.
 //!
 //! **Scoped to MBA only, unlike the original proposal, which
 //! reuses `interpolate`'s full `Idw`/`Kriging`/`Rbf`/`Mba` union.** This
 //! file's `method` is `super::interpolate_mba::MbaParams`'s own settings
 //! (minus the extent, meaningless for a cloud target), not a choice of
-//! method — a deliberate reduction of scope for this task, not a reading of
+//! method - a deliberate reduction of scope for this task, not a reading of
 //! the specification: extending this operation to the other three methods is
 //! mechanical (they already answer `(at, values, queries) -> values` with
 //! no notion of a domain) but was left out to keep this file's own
-//! correctness — the frame handling, the domain-union rule, the ring
-//! semantics — checkable on its own.
+//! correctness - the frame handling, the domain-union rule, the ring
+//! semantics - checkable on its own.
 //!
-//! # The domain — the one rule specific to this target
+//! # The domain - the one rule specific to this target
 //!
 //! Unlike `interpolate`'s grid (where `Ω` is always the very lattice being
 //! written), nothing here fixes the output's extent: a query in `at` can sit
 //! anywhere, including past every sample. `Ω` is the bounding box of
-//! **samples ∪ queries**, widened by `margin` — never the samples alone,
+//! **samples ∪ queries**, widened by `margin` - never the samples alone,
 //! which would leave a distant query outside a domain MBA is not defined on.
-//! **Provisional (open question: rings on the query cloud):** `outer`/`inner`, when given, also filter `at`
-//! — a query outside the kept region is left `NaN` and counted, exactly the
-//! contract `interpolate` already keeps for a node no sample can reach —
+//! **Provisional (open question: rings on the query cloud):** `outer`/`inner`, when given, also filter `at` -
+//! a query outside the kept region is left `NaN` and counted, exactly the
+//! contract `interpolate` already keeps for a node no sample can reach -
 //! rather than only ever filtering the samples. The design poses this as
 //! an open question; this is the conservative reading (counted, never a
 //! silently-dropped point that a caller counting rows would not notice is
@@ -45,7 +45,7 @@
 //! Unlike `interpolate`'s grid, a point set has no schema tying its height
 //! to a vertical array over a lattice: `meanPlane` is written in full here.
 //! A query is read off in the mean plane's own `(u, v)`, evaluated, and
-//! rotated back — what is returned is a point of the surface, not a
+//! rotated back - what is returned is a point of the surface, not a
 //! height: the point this operation writes is generally **not**
 //! directly above or below the query's own `(x, y)`, because the inverse
 //! rotation moves it along the plane's own tilt. Refused, named, when
@@ -56,9 +56,9 @@
 //! # References
 //!
 //! - Lee, Wolberg, Shin, *"Scattered Data Interpolation with Multilevel B-Splines"*, IEEE Transactions on Visualization and Computer Graphics, vol. 3, n° 3, 1997, p. 228-244 (DOI 10.1109/2945.620490), as cited in `energyml-geostat` (`mba`).
-//!   TODO(reference): verify — the citation above (journal, pages, DOI) was not re-checked against the paper (see `energyml-geostat/src/mba.rs`).
+//!   TODO(reference): verify - the citation above (journal, pages, DOI) was not re-checked against the paper (see `energyml-geostat/src/mba.rs`).
 //! - Principal components (Hoppe, 1992) reweighted with Huber's weights, as named in `energyml-geostat` (`extend`, reused by `mba_frame`).
-//!   TODO(reference): verify — Hoppe (1992) and Huber's weights are named without a full citation, and the 1.4826 scale factor of the median absolute residual is unreferenced; add the references (authors, year, title, venue, DOI) once checked.
+//!   TODO(reference): verify - Hoppe (1992) and Huber's weights are named without a full citation, and the 1.4826 scale factor of the median absolute residual is unreferenced; add the references (authors, year, title, venue, DOI) once checked.
 
 use energyml_analysis::mba::{Domain, Mba};
 use energyml_analysis::mba_frame::Frame as MeanFrame;
@@ -78,22 +78,22 @@ pub struct Estimate;
 /// What `estimate` is told.
 #[derive(Debug, Params)]
 pub struct EstimateParams {
-    /// the finest cell size MBA refines its control grid to, in the units of the frame — the smaller, the closer the fit to the samples, at the cost of more levels
+    /// the finest cell size MBA refines its control grid to, in the units of the frame - the smaller, the closer the fit to the samples, at the cost of more levels
     #[param(min = 0.0)]
     pub spacing: f64,
     /// how far past the samples **and** the query cloud the fitted domain reaches, in the same units
     #[param(default = 0.0, optional, min = 0.0)]
     pub margin: f64,
-    /// advanced: the coarsest control grid's cell count along the first axis — left out, the paper's own rule, never the sample density
+    /// advanced: the coarsest control grid's cell count along the first axis - left out, the paper's own rule, never the sample density
     #[param(advanced, min = 1)]
     pub coarsest_i: Option<usize>,
     /// advanced: the coarsest control grid's cell count along the second axis
     #[param(advanced, min = 1)]
     pub coarsest_j: Option<usize>,
-    /// the reference frame MBA is fitted in — `world` or `meanPlane`; this operation carries `meanPlane` in full
+    /// the reference frame MBA is fitted in - `world` or `meanPlane`; this operation carries `meanPlane` in full
     #[param(flatten)]
     pub frame: MbaFrame,
-    /// The frame, what is represented, the naming — for the point set writer.
+    /// The frame, what is represented, the naming - for the point set writer.
     #[param(flatten)]
     pub written: Written,
 }
@@ -105,7 +105,7 @@ pub struct EstimateInputs {
     pub samples: Shape,
     /// the values, instead of the samples' elevation
     pub field: Option<Field>,
-    /// the cloud whose z is estimated — its own z, if it has one, is ignored and replaced
+    /// the cloud whose z is estimated - its own z, if it has one, is ignored and replaced
     #[input(topology = "points")]
     pub at: Shape,
     /// keeps only the samples inside this ring
@@ -116,13 +116,13 @@ pub struct EstimateInputs {
     pub inner: Vec<Shape>,
 }
 
-/// The plan-view `(x, y)` of a 3D point — what a ring filters on.
+/// The plan-view `(x, y)` of a 3D point - what a ring filters on.
 fn plan(p: [f64; 3]) -> [f64; 2] {
     [p[0], p[1]]
 }
 
 /// Keeps the ranks of `points` inside `outer` (when given) and outside every
-/// `inner` — the same rule `interpolate_mba::filter_by_rings` applies to
+/// `inner` - the same rule `interpolate_mba::filter_by_rings` applies to
 /// samples, restated on plain ranks so it can be reused for the query cloud
 /// too (provisional: open question on the query cloud).
 fn ring_keep(
@@ -189,7 +189,7 @@ impl Operation for Estimate {
     fn about(&self) -> About {
         About {
             name: "estimate",
-            describe: "MBA's z at a cloud of points you supply — no regular grid, unlike `interpolate`",
+            describe: "MBA's z at a cloud of points you supply - no regular grid, unlike `interpolate`",
             category: Category::Geometry,
             makes: &["resqml22.PointSetRepresentation"],
             recipe: "estimate",
@@ -250,7 +250,7 @@ impl Operation for Estimate {
             return Err(Refusal::about(
                 "value",
                 "frame",
-                "`meanPlane` fits a mean plane to the samples' own geometry; a `field` replacing their values leaves no surface to tilt into — leave `field` out, or use `world`",
+                "`meanPlane` fits a mean plane to the samples' own geometry; a `field` replacing their values leaves no surface to tilt into - leave `field` out, or use `world`",
             ));
         }
         let values: Vec<f64> = field_values.unwrap_or_else(|| samples_points.iter().map(|p| p[2]).collect());
@@ -276,7 +276,7 @@ impl Operation for Estimate {
         cx.stop_if_cancelled()?;
 
         // Rings, on samples and on the query cloud alike (module doc,
-        // provisional open question on the query cloud) — before anything is fitted or evaluated.
+        // provisional open question on the query cloud) - before anything is fitted or evaluated.
         let sample_keep = ring_keep(&samples_points, inputs.outer.as_ref(), &inputs.inner)?;
         let (fit_points, fit_values): (Vec<[f64; 3]>, Vec<f64>) = match &sample_keep {
             Some(keep) => keep.iter().map(|&at| (samples_points[at], values[at])).unzip(),
@@ -295,7 +295,7 @@ impl Operation for Estimate {
             None => std::collections::HashSet::new(),
         };
 
-        // The frame — world, or the mean plane fitted to the *kept* samples.
+        // The frame - world, or the mean plane fitted to the *kept* samples.
         let frame = match &params.frame {
             MbaFrame::World => None,
             MbaFrame::MeanPlane => {
@@ -312,7 +312,7 @@ impl Operation for Estimate {
                 [l[0], l[1]]
             })
             .collect();
-        // What is fitted: in the world frame, **the values** — the elevation,
+        // What is fitted: in the world frame, **the values** - the elevation,
         // or the field when one is given; in the mean-plane frame, the local
         // height above the plane (a field is refused there, above). The first
         // version fitted the local height in both cases, i.e. the elevation
@@ -375,9 +375,9 @@ impl Operation for Estimate {
             .map_err(|e| Refusal::on("spacing", e.to_string()))?;
 
         // Scatter back onto every query, in `at`'s own order: an excluded
-        // one keeps its own (x, y), height `NaN` — counted, never silently
+        // one keeps its own (x, y), height `NaN` - counted, never silently
         // absent. An evaluated one is rebuilt in world coordinates: in the
-        // mean-plane case this generally moves its (x, y) too — what is returned is a point
+        // mean-plane case this generally moves its (x, y) too - what is returned is a point
         // of the surface, not a height (module doc).
         let mut written_points = vec![[f64::NAN; 3]; at_points.len()];
         for (rank, &original) in evaluate_at.iter().enumerate() {

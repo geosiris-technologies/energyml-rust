@@ -1,4 +1,4 @@
-//! A selection of nodes as an input — `Source::only_nodes` — and the line
+//! A selection of nodes as an input - `Source::only_nodes` - and the line
 //! through them, `polyline-through`. The need:
 //! create a polyline from the selection […] or extract them as a point cloud.
 //!
@@ -32,7 +32,7 @@ fn plan(operation: &str, bag: &Pieces, choices: Choices) -> Result<Plan, energym
     )
 }
 
-/// A fan of four triangles (nodes 0–4), then a second patch of two nodes (5, 6).
+/// A fan of four triangles (nodes 0-4), then a second patch of two nodes (5, 6).
 fn surface() -> Source {
     let fan = Patch {
         index: 0,
@@ -74,7 +74,7 @@ fn points_of(source: &Source) -> Vec<[f64; 3]> {
     }
 }
 
-/// **The nodes named, in the order named, across the patches — and nothing of
+/// **The nodes named, in the order named, across the patches - and nothing of
 /// the topology.** Node 5 is the first of the second patch.
 #[test]
 fn a_selection_of_nodes_is_the_cloud_of_them_in_its_order() {

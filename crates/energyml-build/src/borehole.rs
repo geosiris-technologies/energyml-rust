@@ -1,16 +1,16 @@
 //! What a GeoSciML `Borehole` says, as SIGEOL exports write it.
 //!
 //! Reads the vocabulary and nothing else: no RESQML here, no store, no
-//! geometry — the sibling of [`crate::sigeol`], which does the same for a
+//! geometry - the sibling of [`crate::sigeol`], which does the same for a
 //! `GeologicUnit`. What it answers is *which borehole is this, where is its
-//! head, how deep does it go, and at which depths does it change* — and where
+//! head, how deep does it go, and at which depths does it change* - and where
 //! the file does not say, it says so rather than guessing.
 //!
 //! # The measured depths are rebuilt from the intervals, and the zero is added
 //!
 //! A SIGEOL borehole carries no list of measured depths. It carries a list of
-//! `logElement` — `BoreholeInterval`s, each with a `mappedIntervalBegin` and a
-//! `mappedIntervalEnd` — and those bounds **are** the depths at which anything
+//! `logElement` - `BoreholeInterval`s, each with a `mappedIntervalBegin` and a
+//! `mappedIntervalEnd` - and those bounds **are** the depths at which anything
 //! about the hole is stated. So the frame's nodes are the *distinct* bounds,
 //! sorted, and the trajectory's control points are the same.
 //!
@@ -20,7 +20,7 @@
 //!   intervals of the `Borehole_indent.json` test export are a repeat of a range
 //!   another `logElement` already covers, because one to three geologic units
 //!   are mapped onto one slice of hole. Depths are what this module reads, so
-//!   the repeats collapse — [`Borehole::mds`] is a set, not a list, and
+//!   the repeats collapse - [`Borehole::mds`] is a set, not a list, and
 //!   [`Borehole::intervals`] keeps every one of them for whoever wants the
 //!   geology;
 //! - **the shallowest bound may not be zero.** Measured depths are taken from
@@ -34,7 +34,7 @@
 //!
 //! # The head is the geometry, the ground is the reference location
 //!
-//! The feature's own `geometry` is a 2D `Point` — longitude and latitude, no
+//! The feature's own `geometry` is a 2D `Point` - longitude and latitude, no
 //! third ordinate. The elevation lives beside it, in
 //! `referenceLocation.properties.elevation`, on a nested `OriginPosition`
 //! feature. On all 1 000 boreholes the two `Point`s hold the same pair, so the
@@ -44,7 +44,7 @@
 //!
 //! # What the dates are, and what they are not
 //!
-//! `dateOfDrilling.endPosition` is `1965-11-20Z` — a **date**, in all 905 of
+//! `dateOfDrilling.endPosition` is `1965-11-20Z` - a **date**, in all 905 of
 //! the boreholes that carry one. EML's `Creation` is an `xsd:dateTime`, so the
 //! date is widened to midnight UTC and that widening is stated: it is a change
 //! of precision, not a reading.
@@ -56,13 +56,13 @@ use serde_json::Value;
 pub struct Quantity {
     /// The number.
     pub value: f64,
-    /// The unit, as the producer spells it — `m`.
+    /// The unit, as the producer spells it - `m`.
     pub uom: String,
 }
 
 /// One `logElement`: a slice of hole, and what the producer says is in it.
 ///
-/// The geologic unit is **an identifier and nothing else** — the export names
+/// The geologic unit is **an identifier and nothing else** - the export names
 /// no lithology, no material, no measured property. That is why this crate
 /// writes no property from it today, and why the reference is kept: the day a
 /// SIGEOL export carries a description, what it hangs from is already read.
@@ -76,9 +76,9 @@ pub struct Interval {
     pub end: f64,
     /// The unit both bounds are in.
     pub uom: String,
-    /// `specification.@href` — the `GeologicUnit` this slice is said to be.
+    /// `specification.@href` - the `GeologicUnit` this slice is said to be.
     pub unit: Option<String>,
-    /// `collectionIdentifier.value` — `BSS000LKCG_GLU000AEKQ`, the producer's
+    /// `collectionIdentifier.value` - `BSS000LKCG_GLU000AEKQ`, the producer's
     /// own key for *this unit in this hole*.
     pub collection: Option<String>,
 }
@@ -94,7 +94,7 @@ pub struct Mds {
     /// than the head.
     pub zero_added: bool,
     /// The depth ranges no interval covers, between the shallowest bound and
-    /// the deepest — the hole is described with holes in it, which is a fact
+    /// the deepest - the hole is described with holes in it, which is a fact
     /// about the file and not an error.
     pub gaps: Vec<(f64, f64)>,
 }
@@ -102,7 +102,7 @@ pub struct Mds {
 /// What one `Borehole` feature says about itself.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Borehole {
-    /// The feature's own `id` — `BSS000LKCG`.
+    /// The feature's own `id` - `BSS000LKCG`.
     pub id: Option<String>,
     /// `parameter_id_forage`, the producer's permanent uuid for the hole.
     pub producer_id: Option<String>,
@@ -110,11 +110,11 @@ pub struct Borehole {
     /// on all 1 000 boreholes of the export, and read separately anyway: two
     /// fields that agree today are two fields.
     pub bss: Option<String>,
-    /// `parameter_indice_bss` — `01536X0058`, the map-sheet index.
+    /// `parameter_indice_bss` - `01536X0058`, the map-sheet index.
     pub indice: Option<String>,
-    /// `identifier` — the `data.geoscience.fr` URL.
+    /// `identifier` - the `data.geoscience.fr` URL.
     pub identifier: Option<String>,
-    /// `description` — `EPOS Borehole` on every one of them.
+    /// `description` - `EPOS Borehole` on every one of them.
     pub description: Option<String>,
     /// `dateOfDrilling.endPosition`, **verbatim**: `1965-11-20Z`.
     pub drilled: Option<String>,
@@ -128,7 +128,7 @@ pub struct Borehole {
     pub drilled_interval: Option<(Quantity, Quantity)>,
     /// The head, from the feature's own `Point`: longitude, latitude.
     pub head: Option<(f64, f64)>,
-    /// `referenceLocation.properties.elevation` — the ground at the head.
+    /// `referenceLocation.properties.elevation` - the ground at the head.
     pub elevation: Option<f64>,
     /// The `logElement`s, every one of them, in the producer's order.
     pub intervals: Vec<Interval>,
@@ -136,7 +136,7 @@ pub struct Borehole {
 
 impl Borehole {
     /// The title a written object gets: the BSS code, the feature's id, or the
-    /// producer's uuid — in that order, and `None` when it has none of the
+    /// producer's uuid - in that order, and `None` when it has none of the
     /// three.
     pub fn title(&self) -> Option<String> {
         self.bss
@@ -148,7 +148,7 @@ impl Borehole {
     /// What names every object written for this hole.
     ///
     /// `parameter_id_forage` first, because it is a **permanent identifier the
-    /// producer owns** — the same argument [`crate::naming`] makes for a
+    /// producer owns** - the same argument [`crate::naming`] makes for a
     /// lithostratigraphic unit's referential uuid. The BSS code is the
     /// fallback, and `None` means nothing here can be named deterministically.
     pub fn key(&self) -> Option<String> {
@@ -191,7 +191,7 @@ impl Borehole {
             }
             if interval.end < interval.begin {
                 return Err(format!(
-                    "an interval runs upwards: {} to {} — the file states a depth range backwards",
+                    "an interval runs upwards: {} to {} - the file states a depth range backwards",
                     interval.begin, interval.end
                 ));
             }
@@ -223,7 +223,7 @@ impl Borehole {
         }
         if bounds.len() < 2 {
             return Err(format!(
-                "the intervals state one depth only ({}) — a frame needs two",
+                "the intervals state one depth only ({}) - a frame needs two",
                 bounds[0]
             ));
         }
@@ -261,7 +261,7 @@ impl Borehole {
         }
     }
 
-    /// `dateOfDrilling` as an EML `Creation` — midnight UTC on that day.
+    /// `dateOfDrilling` as an EML `Creation` - midnight UTC on that day.
     ///
     /// The export writes `1965-11-20Z`, a date; `Creation` is an
     /// `xsd:dateTime` whose pattern demands the `T`. Widening a date to
@@ -297,7 +297,7 @@ pub fn is_borehole(properties: &Value) -> bool {
 
 /// Read a `Borehole` feature's `properties` and its own `Point`.
 ///
-/// Returns `None` when the document says nothing this module recognises — not
+/// Returns `None` when the document says nothing this module recognises - not
 /// an error: a collection may legitimately hold features of another kind, and
 /// the caller decides whether that is a problem.
 pub fn borehole_of(id: Option<&str>, head: Option<(f64, f64)>, properties: &Value) -> Option<Borehole> {
@@ -443,7 +443,7 @@ mod tests {
     use serde_json::json;
 
     /// One borehole in the shape `Borehole_indent_extract_1_well.json` writes
-    /// it — the real one, trimmed to two intervals.
+    /// it - the real one, trimmed to two intervals.
     fn properties() -> Value {
         json!({
             "@featureType": "Borehole",
@@ -547,7 +547,7 @@ mod tests {
 
     #[test]
     fn a_depth_nothing_covers_is_reported_and_not_smoothed_over() {
-        // `BSS000NDQC` is the one hole of the export with gaps — three of them.
+        // `BSS000NDQC` is the one hole of the export with gaps - three of them.
         let mut props = properties();
         props["logElement"] = json!([interval("a", 0.0, 2.0, "k"), interval("b", 2.5, 4.0, "k")]);
         let mds = borehole_of(Some("x"), Some((0.0, 0.0)), &props)

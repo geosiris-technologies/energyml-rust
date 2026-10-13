@@ -1,19 +1,19 @@
 //! The template: what the columns of a table **mean**.
 //!
-//! The vocabulary, where [`crate::tabular`] is the format — the same separation
+//! The vocabulary, where [`crate::tabular`] is the format - the same separation
 //! as `geojson.rs` and `sigeol.rs`.
 //!
 //! # Three forms, one content
 //!
 //! This module reads indifferently:
 //!
-//! - a **bare list** of `AbstractReferencePropertyType` — simply a list of the
+//! - a **bare list** of `AbstractReferencePropertyType` - simply a list of the
 //!   columns of the template, which is what an earlier CSV-to-EnergyML tool
 //!   keeps in its `osdu_cols.json`;
 //! - a whole **`master-data--ColumnBasedTableTemplate`**, of which `data.Columns`
 //!   and `data.KeyColumns` are taken;
 //! - a **`dataset--File.TabularData`**, which also carries *how the file is
-//!   read* — separator, rows to skip, comment, and above all
+//!   read* - separator, rows to skip, comment, and above all
 //!   `AbsentValue` per column.
 //!
 //! The three reduce to the same thing: a list of columns, plus possibly a
@@ -27,12 +27,12 @@
 //! `{namespace}:reference-data--PropertyType:{uuid}:`, and **that uuid is the
 //! Energistics property kind's**. Checked on the ten constants of the earlier
 //! tool: ten out of ten resolve in the shipped dictionary, title for
-//! title. There are not two vocabularies — OSDU references Energistics's.
+//! title. There are not two vocabularies - OSDU references Energistics's.
 //!
 //! The title cannot serve as a key: 3 662 kinds for 3 661 titles,
 //! `spring stiffness` being carried by two kinds of the **same** quantity
 //! class. A key right 3 661 times out of 3 662 is a key that errs without
-//! warning. So `PropertyType.Name` is **displayed**, never compared — and
+//! warning. So `PropertyType.Name` is **displayed**, never compared - and
 //! when it disagrees with the dictionary, it is a note and not a refusal:
 //! a template may be older than the dictionary.
 
@@ -41,10 +41,10 @@ use serde_json::Value;
 use crate::mesh::Refused;
 use crate::tabular::Dialect;
 
-/// A declared column — an `AbstractReferencePropertyType:1.2.1`.
+/// A declared column - an `AbstractReferencePropertyType:1.2.1`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Column {
-    /// `ColumnName` — the key matching it to the file's header.
+    /// `ColumnName` - the key matching it to the file's header.
     ///
     /// The schema says it is optional and its own description says it is mandatory:
     /// *« For the ColumnBasedTableTemplate the data.Columns[].ColumnName is
@@ -57,15 +57,15 @@ pub struct Column {
     /// `None` when the template does not say what the column means: it is not
     /// an error, it is a column that will be ignored, and counted.
     pub kind: Option<String>,
-    /// `PropertyType.Name` — a label, for display and messages.
+    /// `PropertyType.Name` - a label, for display and messages.
     pub label: Option<String>,
-    /// `ValueType` — `string`, `number`, `integer` or `boolean`.
+    /// `ValueType` - `string`, `number`, `integer` or `boolean`.
     pub value_type: ValueType,
-    /// `ValueCount` — the size of a tuple, 1 by default.
+    /// `ValueCount` - the size of a tuple, 1 by default.
     pub count: usize,
     /// The unit, extracted from `UnitOfMeasureID`.
     pub uom: Option<String>,
-    /// The unit class, extracted from `UnitQuantityID` — a check, not a
+    /// The unit class, extracted from `UnitQuantityID` - a check, not a
     /// value.
     pub quantity: Option<String>,
     /// `FacetIDs`, in the order the schema wants them: `[FacetType, FacetRole]`.
@@ -75,14 +75,14 @@ pub struct Column {
     /// Carried by the column and not only by the template: a remark that does
     /// not name its line forces one to look for it, and a front end that would find
     /// it again by searching for the name **in the sentence** would be rereading our own
-    /// messages — which this repository refuses elsewhere (`Refused::missing` exists
+    /// messages - which this repository refuses elsewhere (`Refused::missing` exists
     /// for the same reason).
     pub notes: Vec<String>,
-    /// `AbsentValue` of `File.TabularData` — the value that means *nothing*.
+    /// `AbsentValue` of `File.TabularData` - the value that means *nothing*.
     ///
     /// **The schema's find**, and it is worth more than the separator: a
-    /// borehole file writes its absence with a sentinel — `-999.25` is
-    /// the convention for logs — and without knowing it, it is read as a
+    /// borehole file writes its absence with a sentinel - `-999.25` is
+    /// the convention for logs - and without knowing it, it is read as a
     /// measure. A depth of −999.25 m in a perfectly valid package.
     pub absent: Option<String>,
 }
@@ -127,12 +127,12 @@ impl ValueType {
 pub struct Template {
     /// The declared columns, in the template's order.
     pub columns: Vec<Column>,
-    /// The columns the template holds as keys — `KeyColumns[]`.
+    /// The columns the template holds as keys - `KeyColumns[]`.
     /// Their names; they are **also** in `columns`.
     pub keys: Vec<String>,
     /// What `File.TabularData` says of the reading, when it is one.
     pub dialect: Option<Dialect>,
-    /// What was noticed without refusing — a `Name` that disagrees, an
+    /// What was noticed without refusing - a `Name` that disagrees, an
     /// inconsistent declaration.
     pub notes: Vec<String>,
 }
@@ -204,7 +204,7 @@ pub fn from_json(root: &Value) -> Result<Template, Refused> {
 
     if columns.is_empty() {
         return Err(Refused::flat(
-            "this template declares no column at all — a `ColumnBasedTableTemplate` with an empty `Columns` \
+            "this template declares no column at all - a `ColumnBasedTableTemplate` with an empty `Columns` \
              is legal for OSDU and useless here"
                 .to_string(),
         ));
@@ -223,7 +223,7 @@ pub fn from_json(root: &Value) -> Result<Template, Refused> {
         .collect();
     if !twice.is_empty() {
         return Err(Refused::flat(format!(
-            "this template declares the same column more than once ({}) — the mapping keys on the column name",
+            "this template declares the same column more than once ({}) - the mapping keys on the column name",
             twice.join(", ")
         )));
     }
@@ -348,19 +348,19 @@ fn with_specifications(mut columns: Vec<Value>, data: &Value) -> Vec<Value> {
     columns
 }
 
-/// An entry of `AbstractReferencePropertyType` — **or the reduced form that this
+/// An entry of `AbstractReferencePropertyType` - **or the reduced form that this
 /// module writes itself**.
 ///
 /// *The reader accepts both, the writer produces only one*: the rule that
 /// this repository already applies to selectors and recipes. Here it is
-/// necessary and not merely prudent — a front end reads a template through
+/// necessary and not merely prudent - a front end reads a template through
 /// [`read`], shows it, modifies it and **sends it back**; if the way back were not
 /// read, the round trip that is required would be impossible.
 ///
 /// That was a defect once: `read_template` returned the reduced form and
 /// `parse_input` expected only OSDU, so adjusting its columns in the front end
 /// and then planning answered *« this is neither a list of column definitions
-/// nor… »* — on the template the front end had itself just written.
+/// nor… »* - on the template the front end had itself just written.
 fn column(entry: &Value, at: usize, notes: &mut Vec<String>) -> Result<Column, Refused> {
     if entry.get("ColumnName").is_none() && entry.get("name").is_some() {
         return compact_column(entry, at);
@@ -372,7 +372,7 @@ fn column(entry: &Value, at: usize, notes: &mut Vec<String>) -> Result<Column, R
         .filter(|s| !s.is_empty())
         .ok_or_else(|| {
             Refused::flat(format!(
-                "entry {at} of this template has no `ColumnName` — the schema calls it optional and its own \
+                "entry {at} of this template has no `ColumnName` - the schema calls it optional and its own \
                  description calls it mandatory, so nothing but this reader refuses it, and without it the \
                  entry matches no column of any file"
             ))
@@ -449,7 +449,7 @@ fn column(entry: &Value, at: usize, notes: &mut Vec<String>) -> Result<Column, R
 
 /// The reduced form: the fields as this module returns them.
 ///
-/// It **notes** nothing — a template's remarks are made at its first
+/// It **notes** nothing - a template's remarks are made at its first
 /// reading, and making them again at every round trip would repeat them at each keystroke.
 fn compact_column(entry: &Value, at: usize) -> Result<Column, Refused> {
     let name = entry
@@ -501,7 +501,7 @@ fn compact_column(entry: &Value, at: usize) -> Result<Column, Refused> {
 ///
 /// Searched **by its shape** and not by its position, because the namespace is
 /// free and the version suffix may be missing. **It is not an ETP
-/// uri** — an object's uri is read by `EtpUri::parse`, never here — hence this
+/// uri** - an object's uri is read by `EtpUri::parse`, never here - hence this
 /// name, which `recipe.rs` no longer shares.
 fn uuid_of_osdu_id(id: &str) -> Option<String> {
     id.split(':')
@@ -509,7 +509,7 @@ fn uuid_of_osdu_id(id: &str) -> Option<String> {
         .map(|found| found.to_ascii_lowercase())
 }
 
-/// The last non-empty part of an OSDU identifier — the name of a unit or
+/// The last non-empty part of an OSDU identifier - the name of a unit or
 /// of a class, which URL percent-encoding may have encoded.
 fn tail(id: &str) -> Option<String> {
     let last = id.split(':').rfind(|part| !part.trim().is_empty())?;

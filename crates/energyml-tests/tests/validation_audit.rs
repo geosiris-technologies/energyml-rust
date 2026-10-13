@@ -1,17 +1,17 @@
-//! Audit of the schema validation (04/10/2026) — what `Validate` says about a
+//! Audit of the schema validation (04/10/2026) - what `Validate` says about a
 //! document that breaks the XSD, one fault at a time.
 //!
 //! Trigger: `section-view` wrote `CulturalFeature.CulturalFeatureKind =
 //! "section line"` and nothing objected, although the type is an open
 //! enumeration (`resqml:CulturalFeatureKind` ∪ `eml:EnumExtensionPattern`,
 //! pattern `.*:.*`; `rc/energyml-xsd/resqml/v2.2/xsd_schemas/Features.xsd`
-//! l. 38–40).
+//! l. 38-40).
 //!
 //! **Every test here expects the fault to be detected.** They were red before
 //! the corrections of the same day (each hole was shown red, then fixed) and
 //! stay as the guard: a regression that lets a fault through turns one red.
 //!
-//! Citations are to the XSD under `rc/energyml-xsd/` — a reference, never read
+//! Citations are to the XSD under `rc/energyml-xsd/` - a reference, never read
 //! by a test.
 
 use energyml_core::validate::{Validate, ValidationReport};
@@ -60,8 +60,8 @@ fn control_eml_unit_of_measure_ext_refuses_text_without_colon() {
     assert!(has(&report, "pattern"), "{:?}", codes(&report));
 }
 
-/// XSD: Features.xsd l. 38–40 (`CulturalFeatureKindExt`), eml 2.3
-/// BaseTypes.xsd l. 41–45 (`EnumExtensionPattern`, `.*:.*`).
+/// XSD: Features.xsd l. 38-40 (`CulturalFeatureKindExt`), eml 2.3
+/// BaseTypes.xsd l. 41-45 (`EnumExtensionPattern`, `.*:.*`).
 #[test]
 fn control_a_named_variant_and_a_colon_value_pass() {
     let named = cultural_feature(resqml22::CulturalFeatureKindExt::ModelFrontier).validate();
@@ -73,7 +73,7 @@ fn control_a_named_variant_and_a_colon_value_pass() {
     assert!(!has(&colon, "pattern"), "{:?}", codes(&colon));
 }
 
-/// The case that triggered the audit. XSD: resqml 2.2 Features.xsd l. 38–40.
+/// The case that triggered the audit. XSD: resqml 2.2 Features.xsd l. 38-40.
 #[test]
 fn cultural_feature_kind_section_line() {
     let report = cultural_feature(resqml22::CulturalFeatureKindExt::Other("section line".into())).validate();
@@ -88,7 +88,7 @@ fn cultural_feature_kind_section_line() {
 /// widening member lives in another package (eml) loses its pattern in
 /// `ir.rs::lower_simple_types` (`own.simple_type(&member.local)`).
 /// XSD: resqml 2.2 Interpretations.xsd (ThrowKindExt, DepositionalFaciesKindExt…),
-/// Structural.xsd (LineRoleExt) — all `union memberTypes="resqml:X eml:EnumExtensionPattern"`.
+/// Structural.xsd (LineRoleExt) - all `union memberTypes="resqml:X eml:EnumExtensionPattern"`.
 #[test]
 fn other_resqml22_open_enumerations_accept_text_without_colon() {
     let mut silent = Vec::new();
@@ -153,13 +153,13 @@ fn closed_union_of_two_enumerations_refuses_any_other_string() {
 // Not a hole, checked: the over-long `Other` value. The union's pattern member,
 // `eml:EnumExtensionPattern`, derives from `AbstractString` with no maxLength
 // (eml 2.3 BaseTypes.xsd l. 41-45), so only the enumeration members carry the
-// UomEnum 32 / TypeEnum 64 limits — and those are the named variants.
+// UomEnum 32 / TypeEnum 64 limits - and those are the named variants.
 
 // ---------------------------------------------------------------------------
 // Patterns on plain fields
 // ---------------------------------------------------------------------------
 
-/// XSD: eml 2.3 BaseTypes.xsd `UuidString` — pattern 8-4-4-4-12 hex.
+/// XSD: eml 2.3 BaseTypes.xsd `UuidString` - pattern 8-4-4-4-12 hex.
 #[test]
 fn control_uuid_pattern() {
     let mut f = cultural_feature(resqml22::CulturalFeatureKindExt::Fieldblock);
@@ -167,7 +167,7 @@ fn control_uuid_pattern() {
     assert!(has(&f.validate(), "pattern"));
 }
 
-/// XSD: eml 2.3 `TimeStamp` — pattern `.+T.+[Z+\-].*` (Citation.Creation).
+/// XSD: eml 2.3 `TimeStamp` - pattern `.+T.+[Z+\-].*` (Citation.Creation).
 #[test]
 fn control_datetime_pattern() {
     let mut f = cultural_feature(resqml22::CulturalFeatureKindExt::Fieldblock);
@@ -193,7 +193,7 @@ fn datetime_lexical_validity() {
     assert!(!has(&f.validate(), "lexical-dateTime"), "a leap day is valid");
 }
 
-/// XSD: eml 2.3 BaseTypes.xsd l. 93–97 `QualifiedType`.
+/// XSD: eml 2.3 BaseTypes.xsd l. 93-97 `QualifiedType`.
 #[test]
 fn control_dor_qualified_type_pattern() {
     let dor = eml23::DataObjectReference {
@@ -337,7 +337,7 @@ fn every_fixed_declaration_is_carried() {
 // ---------------------------------------------------------------------------
 // The patterns themselves
 
-/// Every type the registry knows **and every type reachable from a field** —
+/// Every type the registry knows **and every type reachable from a field** -
 /// enumerations are not registered on their own, only named by the fields that
 /// use them, so listing `Registry::types` alone saw none of them.
 fn every_type(reg: &energyml_core::registry::Registry) -> Vec<&'static energyml_core::reflect::TypeInfo> {
@@ -360,7 +360,7 @@ fn every_type(reg: &energyml_core::registry::Registry) -> Vec<&'static energyml_
 
 /// A pattern the regex engine cannot compile used to make `pattern_matches`
 /// answer `true` for every value, in silence. Every pattern the generated
-/// crates carry — fields and open-enumeration extensions — must compile; and
+/// crates carry - fields and open-enumeration extensions - must compile; and
 /// the set must not be empty (a test that loops over nothing proves nothing).
 #[test]
 fn every_generated_pattern_compiles() {
@@ -419,7 +419,7 @@ fn every_open_enumeration_carries_its_extension_pattern() {
 
 /// `whiteSpace` and `totalDigits`/`fractionDigits`: 1 and 0 occurrences in the
 /// vendored XSD respectively, nothing to lose today (control by counting, not a
-/// test of behaviour — see the report).
+/// test of behaviour - see the report).
 #[test]
 fn control_facets_struct_is_exactly_the_documented_seven() {
     let f = energyml_core::reflect::Facets::NONE;

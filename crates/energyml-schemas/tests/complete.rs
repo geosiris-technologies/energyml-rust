@@ -5,7 +5,7 @@
 //! crate has to be handed to a `Registry` by somebody, and until 02/08 that
 //! somebody was written out twice in production and eighteen more times across
 //! the test suites. Nothing detected an omission: leaving a new crate out
-//! produced no compile error and no failing test — only a tool that quietly
+//! produced no compile error and no failing test - only a tool that quietly
 //! could not read the new version, and a suite that quietly never covered it.
 //!
 //! This is the test that makes "one registration line" true. One list, and a
@@ -54,7 +54,7 @@ fn pair_of_directory(name: &str) -> Option<Pair> {
     Some((package.to_string(), version))
 }
 
-/// The `(package, version)` pairs of the generated crates present on disk —
+/// The `(package, version)` pairs of the generated crates present on disk -
 /// the directories of `crates/generated/` that hold a `Cargo.toml` and are
 /// named after a schema version.
 ///
@@ -105,7 +105,7 @@ fn disagreements(on_disk: &[Pair], registered: &[Pair]) -> (Vec<Pair>, Vec<Pair>
 /// Both directions matter, and they fail for opposite reasons. A crate on disk
 /// missing from the registry is the new-release case: the crate exists,
 /// nothing hands it to anybody, and every tool in the workspace silently cannot
-/// read it. A registered version with no crate is the reverse — a registration
+/// read it. A registered version with no crate is the reverse - a registration
 /// kept alive after its crate was removed.
 #[test]
 fn every_generated_version_is_registered() {
@@ -135,7 +135,7 @@ fn every_generated_version_is_registered() {
     assert!(
         missing.is_empty(),
         "crates/generated/ holds {missing:?}, and `energyml_schemas::all` does not register them.
-         Add the dependency to crates/energyml-schemas/Cargo.toml and the `register` line to its `lib.rs` — that is the whole of what a new Energistics release costs."
+         Add the dependency to crates/energyml-schemas/Cargo.toml and the `register` line to its `lib.rs` - that is the whole of what a new Energistics release costs."
     );
     assert!(
         extra.is_empty(),
@@ -220,8 +220,8 @@ fn every_registered_version_carries_top_level_types() {
 
 /// The drop writes its **release** into content and qualified types.
 ///
-/// This is the end-to-end half of a rule spelled twice — `Package::schema_version`
-/// in the generator and `schema_version_of` in the derive — which cannot call
+/// This is the end-to-end half of a rule spelled twice - `Package::schema_version`
+/// in the generator and `schema_version_of` in the derive - which cannot call
 /// each other. Testing the two functions would test the copies; this tests what
 /// was actually generated, so a drift in either one fails here.
 ///
@@ -261,7 +261,7 @@ fn a_development_drop_puts_its_release_on_the_wire() {
     }
 }
 
-/// The **release** owns a qualified type its drop shares — *whatever order
+/// The **release** owns a qualified type its drop shares - *whatever order
 /// they were registered in*.
 ///
 /// `resqml22.TriangulatedSetRepresentation` names a type in both crates, and
@@ -272,7 +272,7 @@ fn a_development_drop_puts_its_release_on_the_wire() {
 /// **The order here is the whole test.** `energyml_schemas::all` registers the
 /// drop first, so under the plain "later registration wins" rule the release
 /// would take the key back by luck; a test over `all()` therefore passes with
-/// the rule in `Registry::register` deleted — measured, on the first attempt at
+/// the rule in `Registry::register` deleted - measured, on the first attempt at
 /// writing this. So the registry is built here by hand with the drop **last**,
 /// which is the order that actually asks the question.
 ///
@@ -294,7 +294,7 @@ fn a_drop_never_takes_the_qualified_type_of_its_release() {
             .unwrap_or_else(|| panic!("{name} resolves to nothing"));
         assert_eq!(
             entry.info.version, "2.2",
-            "{name} resolves to resqml {} — the drop was registered last and took the \
+            "{name} resolves to resqml {} - the drop was registered last and took the \
              key of the release it precedes",
             entry.info.version
         );
@@ -336,7 +336,7 @@ fn a_drop_is_still_addressable_by_its_own_version() {
 /// Before `may_create`, the front end's *new object* chooser offered every type
 /// carrying a qualified type, and a search for `model` listed
 /// `resqml22.Model` and `resqml22.EarthModelInterpretation` once for the
-/// release and once for the drop — under one name, since the drop writes the
+/// release and once for the drop - under one name, since the drop writes the
 /// release's prefix (`a_development_drop_puts_its_release_on_the_wire`).
 ///
 /// Each check stands on a set the test first proves non-empty, and they hold
@@ -359,7 +359,7 @@ fn a_development_drop_is_read_but_never_offered() {
     for info in &drop {
         assert!(
             !energyml_schemas::may_create(info),
-            "{} of {} {} is offered for creation — a development drop is registered to be read, \
+            "{} of {} {} is offered for creation - a development drop is registered to be read, \
              never to be written",
             info.name,
             info.package,
@@ -406,16 +406,16 @@ fn a_development_drop_is_read_but_never_offered() {
 /// The qualified type is the only thing a list passes on: the front end calls
 /// `create("resqml22.Model")`, and `Registry::create` resolves that through
 /// `by_qualified_type`. So a row whose key resolves to *another* type is a row
-/// that makes something other than what it shows — sixty of them while the
+/// that makes something other than what it shows - sixty of them while the
 /// drop was offered, each creating the release's type under the drop's row.
 ///
 /// It also makes the front end's row key sound. Two offered types sharing a
 /// qualified type cannot both resolve to themselves, so this is the same
-/// assertion as *no key twice* — and a key twice was the other half of what
+/// assertion as *no key twice* - and a key twice was the other half of what
 /// the front end showed: `resqml22.Model` three times and
 /// `resqml22.EarthModelInterpretation` four, for a list holding each twice. A
 /// keyed list in a front end patches every old row sharing a key into the one new row
-/// holding it, and the others stay in the front end, orphaned where they were — as
+/// holding it, and the others stay in the front end, orphaned where they were - as
 /// many as there had been re-renders with the pair on both sides.
 #[test]
 fn every_creatable_type_is_what_its_qualified_type_creates() {
@@ -455,7 +455,7 @@ fn every_creatable_type_is_what_its_qualified_type_creates() {
 /// still writes `version=2.0.1` in some references, which compacts to
 /// `resqml201`. Both spellings resolve to the same type, by qualified type
 /// and by content type. Breaks if only the schema-version spelling is
-/// registered — the second lookup was `None` on 04/09.
+/// registered - the second lookup was `None` on 04/09.
 #[cfg(feature = "resqml20")]
 #[test]
 fn a_release_version_spelling_resolves_like_its_schema_version_spelling() {

@@ -6,7 +6,7 @@
 //! (Interpretations.xsd l. 632; RESQML TRG 2.2 §6.19 p. 187), and the
 //! references it carries are `StratigraphicColumn` 0..1, `Structure`,
 //! `Fluid`, `StratigraphicOccurrences` and `WellboreInterpretationSet` 0..∞
-//! (Interpretations.xsd l. 637–641). The uuids and titles are the test's own.
+//! (Interpretations.xsd l. 637-641). The uuids and titles are the test's own.
 
 use energyml_build::operation::{Choices, Identity, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};

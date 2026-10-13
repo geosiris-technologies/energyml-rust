@@ -15,7 +15,7 @@ is not sorted, the one that comes back is, and comparing two lists rank by rank
 would say *everything is wrong* of a perfect round trip.
 
 It only compares the columns that the **template** names. The other 52 were
-never written into the package — the operation says so (`columns-ignored`) and
+never written into the package - the operation says so (`columns-ignored`) and
 it is not a loss to discover here.
 
 # What it tolerates, and why each tolerance is named
@@ -114,7 +114,7 @@ def main() -> int:
     # **The structural roles are not columns of the table**, and that is not a
     # loss: the head, the ground and the projection code go into the
     # `ReferencePointInACrs` and into the CRS, not into a property. They are
-    # recognised by the uuid of their property kind — the closed list that
+    # recognised by the uuid of their property kind - the closed list that
     # `wells-from-table` carries, and never by their name, which belongs to the
     # producer.
     structural_kinds = {
@@ -134,7 +134,7 @@ def main() -> int:
     roles = {args.well_column, args.md_column} | structural
     shared = [name for name in declared if name not in roles and name in before[0] and name in after[0]]
     missing = [name for name in declared if name not in roles and name in before[0] and name not in after[0]]
-    print(f"\ntemplate columns compared: {len(shared)} — {', '.join(shared)}")
+    print(f"\ntemplate columns compared: {len(shared)} - {', '.join(shared)}")
     if structural:
         print(f"structural roles, written in the datum and the CRS: {', '.join(sorted(structural))}")
     if missing:
@@ -165,7 +165,7 @@ def main() -> int:
             checked += 1
             if not same(row.get(name, ""), found.get(name, "")):
                 per_column[name] += 1
-                bad.append(f"{well} @ {md} — `{name}`: before {row.get(name)!r}, after {found.get(name)!r}")
+                bad.append(f"{well} @ {md} - `{name}`: before {row.get(name)!r}, after {found.get(name)!r}")
 
     print(f"\nrows paired by (borehole, MD): {len(before) - len(unpaired)}/{len(before)}")
     if unpaired:

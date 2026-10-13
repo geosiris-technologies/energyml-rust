@@ -1,32 +1,32 @@
-//! `energyml create` — one door onto every operation that makes objects.
+//! `energyml create` - one door onto every operation that makes objects.
 //!
 //! Three verbs, and the same shape as `import` and `translate`:
 //!
-//! - **`--list`** — *what can I create from this?* Every operation, fit or
+//! - **`--list`** - *what can I create from this?* Every operation, fit or
 //!   not **with its reason**, and what each would ask;
-//! - **`--plan`** — *what would it make?* The objects, their identities, the
+//! - **`--plan`** - *what would it make?* The objects, their identities, the
 //!   arrays, what was set aside. Writes nothing, opens no package;
-//! - **`--out`** — *do it.* Into `--into` when a package is given, into a new
+//! - **`--out`** - *do it.* Into `--into` when a package is given, into a new
 //!   one otherwise.
 //!
 //! Like every command in this binary, this one parses arguments and prints.
 //! What an operation needs, refuses and makes is decided in `energyml-build`,
-//! which has no idea a command line exists — a `Need` becomes an option here
+//! which has no idea a command line exists - a `Need` becomes an option here
 //! without the operation writing a line for it.
 //!
 //! # The choices come as `--set name=value`
 //!
 //! One generic option rather than one per parameter, because the parameters
 //! are the operation's to declare and `--list` prints them. A value is read as
-//! JSON when it is one — a number, `true`, `false` — and as text otherwise, so
+//! JSON when it is one - a number, `true`, `false` - and as text otherwise, so
 //! that `--set stage=Bartonien` needs no quotes and `--set epsg=2154` is a
 //! number.
 //!
 //! # What an input is, the library says
 //!
 //! Which `--from` is a table and which a GeoJSON, how `top=…` names a slot,
-//! how a slot given twice is numbered: `energyml_build::entries`, since 24/09
-//! — the recipe runner needs the same answers, and a second copy here would be
+//! how a slot given twice is numbered: `energyml_build::entries`, since 24/09 -
+//! the recipe runner needs the same answers, and a second copy here would be
 //! a second reader of one input. This file keeps the **bytes**: a file off the
 //! disk, an address off the network (`ureq`), a package opened once
 //! ([`Disk`]).
@@ -54,15 +54,15 @@ use energyml_build::source::Source as FromWhere;
 use energyml_build::{apply, epc};
 use energyml_storage::EpcStore;
 
-/// How the command line gives a table its template — what a refusal names.
+/// How the command line gives a table its template - what a refusal names.
 const GIVE_TEMPLATE: &str = "`--template <file.json>`";
 
 #[derive(Args, Debug)]
 pub struct CreateArgs {
-    /// The operation to run — `energyml create --list` names them.
+    /// The operation to run - `energyml create --list` names them.
     pub operation: Option<String>,
-    /// An input: a GeoJSON file, or an object of a package as `model.epc#<uuid>`
-    /// — its geometry, with the CRS and interpretation it already has. Left
+    /// An input: a GeoJSON file, or an object of a package as `model.epc#<uuid>` -
+    /// its geometry, with the CRS and interpretation it already has. Left
     /// out, the operation takes nothing.
     ///
     /// Prefixed by `<slot>=`, it goes into that slot of the operation:
@@ -75,7 +75,7 @@ pub struct CreateArgs {
     #[arg(long)]
     pub list: bool,
     /// With `--list`: print what the operations declare as JSON on stdout, and
-    /// nothing else — an array of every operation, or one object when an
+    /// nothing else - an array of every operation, or one object when an
     /// operation is named (`energyml create --list --json contacts-from-frames`).
     /// Each carries `name`, `describe`, `makes`, `recipe`, `category`, `also`,
     /// `needs` and `takes` (slots: need, default, choices, bounds, cardinality,
@@ -94,7 +94,7 @@ pub struct CreateArgs {
     #[arg(long, value_name = "FILE.epc")]
     pub out: Option<PathBuf>,
     /// Write the run manifest to this JSON file: what each step wrote, by role,
-    /// with the full uris and the collection of the role — what a workflow
+    /// with the full uris and the collection of the role - what a workflow
     /// chains on (`energyml-run-outputs/1`). Needs `--out`: a run that wrote
     /// nothing has no outputs to list.
     #[arg(long, value_name = "FILE.json")]
@@ -107,7 +107,7 @@ pub struct CreateArgs {
     /// column definitions.
     ///
     /// One template for every table given, which is what a set of files
-    /// exported by one producer has — the front end applies the first loaded one to
+    /// exported by one producer has - the front end applies the first loaded one to
     /// every CSV for the same reason. A table given without it is refused
     /// naming this flag: what a column means is not something to guess.
     #[arg(long, value_name = "FILE.json")]
@@ -115,12 +115,12 @@ pub struct CreateArgs {
     /// Who is writing, for every `Citation`.
     #[arg(long, default_value = "energyml-rust")]
     pub originator: String,
-    /// The instant to stamp, `YYYY-MM-DDThh:mm:ssZ`. Defaults to now — exposed
+    /// The instant to stamp, `YYYY-MM-DDThh:mm:ssZ`. Defaults to now - exposed
     /// because it is an input: two runs with the same stated time write the
     /// same package, byte for byte.
     #[arg(long)]
     pub now: Option<String>,
-    /// Play a recipe: every step, in order, into one package — `--out` to
+    /// Play a recipe: every step, in order, into one package - `--out` to
     /// write it, `--plan` to say what it would make. The recipe states its
     /// operations, inputs, instant and author, so it takes none of the other
     /// options.
@@ -131,13 +131,13 @@ pub struct CreateArgs {
     )]
     pub recipe: Option<PathBuf>,
     /// With `--recipe`: leave out the steps of this group (`groupe` in the
-    /// recipe) — `--without erreur` plays Lutetia without its `[ERROR]` model.
+    /// recipe) - `--without erreur` plays Lutetia without its `[ERROR]` model.
     /// Repeat for several.
     #[arg(long, value_name = "GROUP", requires = "recipe")]
     pub without: Vec<String>,
 }
 
-/// Write the manifest the library built — the face carries it, nothing more.
+/// Write the manifest the library built - the face carries it, nothing more.
 fn write_manifest(path: &Path, manifest: &energyml_build::manifest::Manifest) -> Result<()> {
     std::fs::write(path, manifest.to_json()).with_context(|| format!("writing {}", path.display()))?;
     println!("run manifest written to {}", path.display());
@@ -164,7 +164,7 @@ pub fn run(args: CreateArgs) -> Result<ExitCode> {
         let out = match args.operation.as_deref() {
             None => energyml_build::describe::declarations(&registry),
             Some(name) => energyml_build::describe::declaration_of(&registry, name).ok_or_else(|| {
-                anyhow::anyhow!("no operation is named `{name}` — `energyml create --list` names them")
+                anyhow::anyhow!("no operation is named `{name}` - `energyml create --list` names them")
             })?,
         };
         println!("{}", serde_json::to_string_pretty(&out)?);
@@ -194,7 +194,7 @@ pub fn run(args: CreateArgs) -> Result<ExitCode> {
         eprintln!("  [refused] {why}");
     }
     let pieces = read.map_err(|why| anyhow::Error::msg(why.said(GIVE_TEMPLATE)))?;
-    // **What a slot takes when left empty, from the package written into** —
+    // **What a slot takes when left empty, from the package written into** -
     // `Otherwise::Every`, the same function the front end calls. Without `--into`
     // there is no package to take from, and an empty slot stays empty.
     let pieces = match (
@@ -324,7 +324,7 @@ fn print_made(made: &apply::Made) {
     // the second is a second version.
     if !made.versioned.is_empty() {
         println!(
-            "  {} of them were written beside an object of the same title — a second version, not a replacement",
+            "  {} of them were written beside an object of the same title - a second version, not a replacement",
             made.versioned.len()
         );
         for title in made.versioned.iter().take(SHOWN) {
@@ -345,8 +345,8 @@ fn print_made(made: &apply::Made) {
 /// The command line's I/O: a file off the disk, an address off the network,
 /// a package opened once however many of its objects are given.
 ///
-/// **Only the bytes.** What they are — a table, a GeoJSON, an object of a
-/// package — is `energyml_build::entries`'s to decide, for this command and
+/// **Only the bytes.** What they are - a table, a GeoJSON, an object of a
+/// package - is `energyml_build::entries`'s to decide, for this command and
 /// for a recipe alike.
 #[derive(Default)]
 struct Disk {
@@ -364,7 +364,7 @@ impl Reader for Disk {
         }
     }
 
-    /// A file as it is on the disk — a PDF is not text. An address goes
+    /// A file as it is on the disk - a PDF is not text. An address goes
     /// through [`Reader::text`]: what is fetched here is a GeoJSON or a table.
     fn bytes(&mut self, source: &FromWhere) -> std::result::Result<(Vec<u8>, Option<String>), String> {
         match source {
@@ -392,8 +392,8 @@ impl Reader for Disk {
 /// How much of an answer this will hold in memory.
 ///
 /// **A guard against a wrong address, not a judgement about GeoJSON.** `ureq`
-/// defaults to 10 MB, which the SIGEOL exports pass on their own — the borehole
-/// collection is 82 MB — so the default would have made the feature unusable
+/// defaults to 10 MB, which the SIGEOL exports pass on their own - the borehole
+/// collection is 82 MB - so the default would have made the feature unusable
 /// for the very files it was asked for. What the cap is really for is the
 /// mistyped address that serves a video or a disk image: without one, that is a
 /// machine filling its memory instead of a refusal.
@@ -405,7 +405,7 @@ const MOST_FETCHED: u64 = 512 * 1024 * 1024;
 /// One GET, blocking, following redirects.
 ///
 /// `ureq` already refuses a 4xx or 5xx before any body is read, and the address
-/// is in the message — which is what matters: a server answering 404 with an
+/// is in the message - which is what matters: a server answering 404 with an
 /// HTML page would otherwise reach the GeoJSON reader and be refused as *this
 /// is not JSON*, true and useless, sending somebody to look at their file
 /// instead of at their address. The explicit check below covers what it lets
@@ -454,8 +454,8 @@ fn list(registry: &Registry, pieces: &Pieces) {
     for offer in registry.offers(pieces) {
         let operation = offer.operation;
         match &offer.fitness {
-            Fitness::Fit => println!("{}  — {}", operation.name(), operation.describe()),
-            Fitness::Unfit(why) => println!("{}  — refused: {why}", operation.name()),
+            Fitness::Fit => println!("{}  - {}", operation.name(), operation.describe()),
+            Fitness::Unfit(why) => println!("{}  - refused: {why}", operation.name()),
         }
         println!("    makes: {}", operation.makes().join(", "));
         // What it **takes**, before what it asks: a slot left empty that takes
@@ -485,7 +485,7 @@ fn list(registry: &Registry, pieces: &Pieces) {
     }
 }
 
-/// `--set method=idw|kriging`, or several of them joined by *or* — an `Any`.
+/// `--set method=idw|kriging`, or several of them joined by *or* - an `Any`.
 fn set_condition(applies: &Applies) -> String {
     match applies {
         Applies::When { slot, is } => format!("--set {slot}={}", is.join("|")),
@@ -495,7 +495,7 @@ fn set_condition(applies: &Applies) -> String {
 }
 
 /// One line per slot: how to set it, what it takes, and the three things it
-/// says about itself — when it applies, what its emptiness makes, what it can
+/// says about itself - when it applies, what its emptiness makes, what it can
 /// be copied from.
 ///
 /// The front end hides an inapplicable field; a listing **shows** it and says the
@@ -561,7 +561,7 @@ fn describe_slot(slot: &Slot) -> String {
 }
 
 fn print_plan(operation: &str, plan: &Plan) {
-    println!("== {operation} — {} ==\n", plan.activity.title);
+    println!("== {operation} - {} ==\n", plan.activity.title);
     println!("{:<16} {:<44} {:<36}  title", "role", "type", "uuid");
     for object in &plan.objects {
         println!(
@@ -600,7 +600,7 @@ fn print_plan(operation: &str, plan: &Plan) {
 }
 
 /// `--recipe`: read the recipe, play it through `energyml_build::recipe`, print
-/// what each step did. Nothing else — the steps, their inputs, the workflow and
+/// what each step did. Nothing else - the steps, their inputs, the workflow and
 /// the refusals are the library's.
 fn from_recipe(
     path: &Path,
@@ -638,7 +638,7 @@ fn from_recipe(
             }
             let held = played.steps.iter().filter(|done| done.held.is_some()).count();
             println!(
-                "\nworkflow `{}` ({}) — activity `{}` ({}), the Parent of every step's activity",
+                "\nworkflow `{}` ({}) - activity `{}` ({}), the Parent of every step's activity",
                 played.workflow.template.title,
                 played.workflow.template.uuid,
                 played.workflow.activity.title,
@@ -658,21 +658,21 @@ fn from_recipe(
             }
             Ok(ExitCode::SUCCESS)
         }
-        // What ran before the stop is printed, then the stop itself — by the
+        // What ran before the stop is printed, then the stop itself - by the
         // step's name, through `main`. Nothing was saved.
         Err(stop) => {
             for done in &stop.done {
                 print_step(done);
             }
             Err(anyhow::anyhow!(
-                "{}: {stop} — nothing was written",
+                "{}: {stop} - nothing was written",
                 path.display()
             ))
         }
     }
 }
 
-/// One step of a recipe, as `print_plan` prints an operation's plan — and
+/// One step of a recipe, as `print_plan` prints an operation's plan - and
 /// what applying it did.
 fn print_step(done: &recipe::Done) {
     let serves = if done.serves.is_empty() {
@@ -680,7 +680,7 @@ fn print_step(done: &recipe::Done) {
     } else {
         format!("  [serves {}]", done.serves.join(", "))
     };
-    println!("\n== {} — {}{serves} ==", done.step, done.operation);
+    println!("\n== {} - {}{serves} ==", done.step, done.operation);
     if let Some(why) = &done.held {
         println!("  [held] {why}");
         return;

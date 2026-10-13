@@ -6,13 +6,13 @@
 //! PRODML Technical Usage Guide v2.3 §13.6 p. 118: *"Channel is a WITSML
 //! object; Channels are collected into Channel Sets and the Channel Set is
 //! where the actual values are stored."* A flow test's
-//! `IntervalMeasurementSet` lists its data in three groups —
-//! `MeasuredFlowRate`, `MeasuredPressure`, `OtherData` — and each item names
+//! `IntervalMeasurementSet` lists its data in three groups -
+//! `MeasuredFlowRate`, `MeasuredPressure`, `OtherData` - and each item names
 //! a `ChannelSet`, a `TimeChannel` (*"The Channel containing the Time data"*,
-//! FlowTestActivity.xsd l. 100–103) and its own data channel (`FlowChannel`,
+//! FlowTestActivity.xsd l. 100-103) and its own data channel (`FlowChannel`,
 //! `PressureChannel`, `DataChannel`, and `PressureDerivativeChannel` when
-//! given). Every such field is found **by shape** — a reference whose element
-//! name ends in `Channel` — so a subtype that names its channel otherwise is
+//! given). Every such field is found **by shape** - a reference whose element
+//! name ends in `Channel` - so a subtype that names its channel otherwise is
 //! read the same way.
 //!
 //! # A reference to a nested set resolves to the part that holds it
@@ -22,7 +22,7 @@
 //! So the set is looked for among the objects given, as a part or nested in
 //! one ([`super::resolve`]), then in the source. Not found is
 //! [`Refused::ChannelSetNotFound`]; a channel the set does not list is
-//! [`Refused::ChannelNotInSet`] — never a series of nothing.
+//! [`Refused::ChannelNotInSet`] - never a series of nothing.
 //!
 //! # The time is the test's, not the set's
 //!
@@ -31,7 +31,7 @@
 //! writes them equal) and nothing requires it. A time channel holds a
 //! `date time` (read as Unix seconds) or an `elapsed time` (in its unit); any
 //! other kind is [`Refused::TimeChannelKind`], and it must be complete and
-//! strictly increasing — a time that goes back or is missing places no value.
+//! strictly increasing - a time that goes back or is missing places no value.
 
 use serde_json::{Value, json};
 
@@ -77,7 +77,7 @@ impl Measured {
     }
 }
 
-/// Whether this reads the object — any flow test activity, by the field
+/// Whether this reads the object - any flow test activity, by the field
 /// holding its measurements.
 pub fn reads(object: &dyn Reflect) -> bool {
     object
@@ -89,7 +89,7 @@ pub fn reads(object: &dyn Reflect) -> bool {
 /// Every channel a flow test's measurements point at, each a series against
 /// its time channel.
 ///
-/// `objects` is every object of the package with its uuid — a channel set
+/// `objects` is every object of the package with its uuid - a channel set
 /// nested in a `Log` is found through it; `source` lends a set that is a part
 /// of its own and not among them, and the dataset a set's rows are in when
 /// they are in one ([`channel_set::read_with`]).
@@ -165,7 +165,7 @@ pub fn read(
 }
 
 /// The references of an item whose field name ends in `Channel`, other than
-/// its `TimeChannel` and its `ChannelSet` — in schema order.
+/// its `TimeChannel` and its `ChannelSet` - in schema order.
 fn channel_fields(item: &dyn Reflect) -> Vec<(String, (String, String))> {
     let mut out = Vec::new();
     for field in item.type_info().fields {
@@ -234,7 +234,7 @@ fn channel_in<'a>(set: &'a Series, reference: &(String, String), role: &str) -> 
         })
 }
 
-/// A time channel as an index — complete, strictly increasing, and a time.
+/// A time channel as an index - complete, strictly increasing, and a time.
 fn time_index(channel: &Channel) -> Result<Index, Refused> {
     let kind = channel.data_kind.clone().unwrap_or_default();
     let kind = match kind.as_str() {

@@ -21,7 +21,7 @@
 //! # The second trap: one unit, two spellings
 //!
 //! The *same physical unit* is spelled differently depending on which enum the
-//! field happens to be typed with — in every version:
+//! field happens to be typed with - in every version:
 //!
 //! | unit | `LengthUom` | `VerticalCoordinateUom` |
 //! |---|---|---|
@@ -34,9 +34,9 @@
 //!
 //! # What is deliberately not here
 //!
-//! A complete unit system. The Energistics *Unit of Measure Dictionary* —
-//! which carries the dimension and conversion factor of all ~1540 unit strings
-//! — is **not vendored in this repository** (`rc/wellKnownData/` holds only the
+//! A complete unit system. The Energistics *Unit of Measure Dictionary* -
+//! which carries the dimension and conversion factor of all ~1540 unit strings -
+//! is **not vendored in this repository** (`rc/wellKnownData/` holds only the
 //! PropertyKind dictionary). It is published at
 //! <http://w3.energistics.org/uom/poscUnits22.xml>, and vendoring it is a
 //! codegen job like PropertyKind, not hand-written code.
@@ -88,7 +88,7 @@ impl Dimension {
 
 /// How many base units one of `unit` is worth.
 ///
-/// `None` when the unit is outside this table — which is not the same as
+/// `None` when the unit is outside this table - which is not the same as
 /// "unitless", and callers must not treat it as 1.
 pub fn factor(unit: &str) -> Option<f64> {
     TABLES
@@ -167,9 +167,9 @@ fn in_family(value: f64, unit: &str, expected: Dimension) -> Result<f64> {
 // The tables
 //
 // Only factors that are exact by definition, or standard to the last digit
-// quoted. Anything whose value depends on which authority you ask — the
+// quoted. Anything whose value depends on which authority you ask - the
 // historical chains and links, the survey feet of eight different countries,
-// the several definitions of a year — is left out on purpose, so that it
+// the several definitions of a year - is left out on purpose, so that it
 // errors instead of being silently wrong.
 // ---------------------------------------------------------------------------
 
@@ -207,7 +207,7 @@ const LENGTH: &[(&str, f64)] = &[
     ("mil", 2.54e-5),
     ("mi[naut]", 1852.0),
     // The US survey foot: 1200/3937 m exactly, and 2 ppm longer than `ft`.
-    // Both spellings are the same unit — see the module documentation.
+    // Both spellings are the same unit - see the module documentation.
     ("ft[US]", 1200.0 / 3937.0),
     ("ftUS", 1200.0 / 3937.0),
     ("in[US]", 1200.0 / 3937.0 / 12.0),
@@ -310,8 +310,8 @@ mod tests {
     #[test]
     fn both_spellings_of_the_us_foot_agree() {
         // `LengthUom` says `ft[US]`, `VerticalCoordinateUom` says `ftUS`, in
-        // every version. A table that knows only one silently rejects — or
-        // worse, mis-handles — half the files.
+        // every version. A table that knows only one silently rejects - or
+        // worse, mis-handles - half the files.
         let bracketed = convert(1.0, "ft[US]", "m").unwrap();
         let bare = convert(1.0, "ftUS", "m").unwrap();
         assert_eq!(bracketed, bare);

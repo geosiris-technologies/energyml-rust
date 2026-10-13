@@ -3,7 +3,7 @@
 //! There is no trait defined here any more. Resolving a uuid and reading an
 //! array are [`energyml_domain::ObjectSource`] and
 //! [`energyml_domain::ArraySource`], one layer down, because the CRS reader and
-//! the value-array reader need exactly the same two things — and two
+//! the value-array reader need exactly the same two things - and two
 //! definitions of "where the data comes from" is one too many for a store to
 //! implement.
 //!

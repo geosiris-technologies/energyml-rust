@@ -1,10 +1,10 @@
-//! A section view as a PNG — the SVG rendered in Rust (the font is
+//! A section view as a PNG - the SVG rendered in Rust (the font is
 //! embedded, and `resvg` is an optional dependency whose absence returns an
 //! error saying it has to be installed).
 //!
 //! # The same picture, not a second drawing
 //!
-//! The PNG is **the SVG of [`crate::draw`], rasterised** — never a layout drawn
+//! The PNG is **the SVG of [`crate::draw`], rasterised** - never a layout drawn
 //! again for pixels. Whatever the SVG says, the PNG shows; one drawer still
 //! (ADR-0015).
 //!
@@ -12,10 +12,10 @@
 //!
 //! Every label's width was measured against Liberation Sans 2.1.5
 //! (`energyml_sheet::text`), so the PNG is rendered with **that** font, embedded
-//! (`fonts/LiberationSans-Regular.ttf`, SIL Open Font License 1.1 — its text is
+//! (`fonts/LiberationSans-Regular.ttf`, SIL Open Font License 1.1 - its text is
 //! `fonts/LiberationSans-OFL.txt`, which has to travel with the font). No
 //! system font is read: a machine without Arial, a server without any font,
-//! draws the same picture — and a label never comes out wider than the room
+//! draws the same picture - and a label never comes out wider than the room
 //! the layout gave it.
 //!
 //! # Off by default
@@ -33,7 +33,7 @@ pub enum PngError {
          (rebuild with `--features png`, or the CLI with `--features png`)"
     )]
     NotBuilt,
-    /// The SVG did not parse — a defect of the writer, said as such.
+    /// The SVG did not parse - a defect of the writer, said as such.
     #[error("the section view's SVG did not parse: {0}")]
     Svg(String),
     /// A size of zero, or too large to allocate.

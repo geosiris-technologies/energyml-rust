@@ -1,12 +1,12 @@
 //! **`energyml check` resolves a reference by uuid, type and version, and
 //! names the candidates when none answers** (ADR-0003).
 //!
-//! `check::of_store` recognised a target by its uuid alone — *the first version
-//! wins* — so a reference to version 3 of an object held in versions 1 and 2 was
+//! `check::of_store` recognised a target by its uuid alone - *the first version
+//! wins* - so a reference to version 3 of an object held in versions 1 and 2 was
 //! compared with version 1. The expected message: 'uuid found but type or version should be one of the following: ' followed by the list of uris of objects that have the right uuid but not the right type or version number.
 //!
 //! The package is fabricated in memory. What would have to break: the first
-//! entry answering every reference again — the finding then lists one uri.
+//! entry answering every reference again - the finding then lists one uri.
 
 use std::io::Cursor;
 use std::sync::Arc;
@@ -43,7 +43,7 @@ fn feature(version: &str) -> Box<dyn DynObject> {
     )
 }
 
-/// A horizon naming `X` at version 3 — which the package does not hold.
+/// A horizon naming `X` at version 3 - which the package does not hold.
 fn horizon() -> Box<dyn DynObject> {
     read(
         CT_HORIZON,

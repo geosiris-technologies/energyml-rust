@@ -1,8 +1,8 @@
-//! `energyml select` — which objects of a package fall in a region drawn by rings.
+//! `energyml select` - which objects of a package fall in a region drawn by rings.
 //!
 //! Argument parsing and display only: the region, the three tests, the inversion
 //! and every refusal are `energyml_build::selection`'s, so this command and the
-//! front end answer the same thing. The output is a list of uuids or uris — what a
+//! front end answer the same thing. The output is a list of uuids or uris - what a
 //! script feeds the next operation (`--uuids`, `--from-list`).
 
 use std::collections::HashMap;
@@ -38,8 +38,8 @@ pub struct SelectArgs {
     #[arg(long, value_name = "FILE", conflicts_with = "uuids")]
     from_list: Option<PathBuf>,
     /// A ring a node must be inside one of (none given: everywhere). Either a
-    /// GeoJSON file — each Polygon's first ring counts as an outer ring of this
-    /// option and its holes as inner rings — or `PACKAGE.epc#UUID`, a closed
+    /// GeoJSON file - each Polygon's first ring counts as an outer ring of this
+    /// option and its holes as inner rings - or `PACKAGE.epc#UUID`, a closed
     /// polyline of a package, whose system is then the object's.
     #[arg(long = "outer", value_name = "FILE.geojson|PACKAGE.epc#UUID")]
     outer: Vec<String>,

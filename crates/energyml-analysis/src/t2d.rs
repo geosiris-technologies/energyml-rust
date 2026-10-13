@@ -1,4 +1,4 @@
-//! Analytic time-to-depth — the vertical change of variable a seismic
+//! Analytic time-to-depth - the vertical change of variable a seismic
 //! interpretation needs before it can meet a well.
 //!
 //! The law is `V(z) = V₀ + k·z`: instantaneous velocity growing linearly
@@ -15,16 +15,16 @@
 //!   formula doubles every depth with no symptom.
 //! - Depth counts **from the datum where t = 0**, positive downward, and
 //!   `V₀` is the velocity *at that datum*. A caller whose CRS puts z
-//!   elsewhere shifts before and after — this module does not guess.
+//!   elsewhere shifts before and after - this module does not guess.
 //!
 //! How this meets the model is an architecture decision: a **vertical transformation per object**, like
-//! the `Vertical` of geometry's `parametric.rs` — and never inside
+//! the `Vertical` of geometry's `parametric.rs` - and never inside
 //! `Crs::to_projected`, whose placement runs once over everything and
 //! would convert twice. The law lives here; wiring it to an object whose
 //! `verticalIsTime` says so is the caller's seam.
 //!
 //! A `NaN` time yields a `NaN` depth: an undefined node is data, not a
-//! malformed call, and it must come out as undefined — not as zero.
+//! malformed call, and it must come out as undefined - not as zero.
 
 use crate::Error;
 
@@ -32,7 +32,7 @@ use crate::Error;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LinearVelocity {
     /// The velocity at the datum (z = 0, t = 0), in length units per
-    /// second — the same length unit the depths come out in.
+    /// second - the same length unit the depths come out in.
     pub v0: f64,
     /// The gradient, in 1/second. 0 is constant velocity.
     pub k: f64,
@@ -73,7 +73,7 @@ impl LinearVelocity {
     /// One-way time to reach depth `z` below the datum.
     ///
     /// `NaN` where the law does not reach: with `k < 0` the velocity hits
-    /// zero at `z = −V₀/k` and no ray goes deeper — an undefined answer,
+    /// zero at `z = −V₀/k` and no ray goes deeper - an undefined answer,
     /// not a plausible number.
     pub fn owt_of_depth(&self, z: f64) -> f64 {
         if self.k == 0.0 {
@@ -92,7 +92,7 @@ impl LinearVelocity {
         2.0 * self.owt_of_depth(z)
     }
 
-    /// The array form of [`Self::depth_of_twt`] — one depth per time, a
+    /// The array form of [`Self::depth_of_twt`] - one depth per time, a
     /// `NaN` time staying a `NaN` depth.
     pub fn depths_of_twt(&self, twt: &[f64]) -> Vec<f64> {
         twt.iter().map(|&t| self.depth_of_twt(t)).collect()
@@ -140,7 +140,7 @@ mod tests {
             law.depth_of_twt(2.0) > 2000.0,
             "the ray accelerates below the datum"
         );
-        // And time-to-depth stays monotonic — a fold here would let one
+        // And time-to-depth stays monotonic - a fold here would let one
         // time mean two depths.
         let depths = law.depths_of_twt(&[0.5, 1.0, 1.5, 2.0]);
         assert!(depths.windows(2).all(|pair| pair[0] < pair[1]));

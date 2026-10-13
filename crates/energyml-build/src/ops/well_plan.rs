@@ -1,11 +1,11 @@
-//! `well-from-plan` — a wellbore from a drilling plan: straight holds and
+//! `well-from-plan` - a wellbore from a drilling plan: straight holds and
 //! circular arcs from a head, or from a parent's kick-off for a sidetrack; the
 //! stations surveyed by the minimum curvature method, the datum, a trajectory
 //! through the stations, a frame on it, and the feature and interpretation.
 //!
 //! Step 6 of the build plan of the synthetic model Lutetia:
 //! `well-from-plan` (a trajectory from a drilling plan: kick-off, build rate, hold, resumption, drain;
-//! lateral), the heads read on the ground surface — the geothermal doublet GTH-1…GTH-3
+//! lateral), the heads read on the ground surface - the geothermal doublet GTH-1…GTH-3
 //! and the planned lateral GTH-3 ST1.
 //!
 //! # What is decided here, and how honestly
@@ -16,20 +16,20 @@
 //!   an operation (`crates/energyml-build/ARCHITECTURE.md`);
 //! - **the measured depths written are the plan's, never recomputed**: they go
 //!   to the writer as `Wellbore::mds`, so a `hold to 120` is written `120`, and
-//!   the MDs along an arc are arc lengths — the chord between two stations is
+//!   the MDs along an arc are arc lengths - the chord between two stations is
 //!   shorter, and deriving the depths from it (`mds: None`) would write
 //!   depths the plan never said (a given MD is never recomputed);
 //! - **one writer**: the datum is `well::datum_in`, the trajectory and the frame
-//!   `well::write` — an operation that writes the same object as another
+//!   `well::write` - an operation that writes the same object as another
 //!   delegates to it. It writes RESQML's **minimum-curvature line** (`LineKindIndex`
 //!   5, which the reference-model description wants for GTH-1): the stations, their measured
 //!   depths as parameters, and each station's direction as its tangent
-//!   (`Wellbore::tangents`, 24/09 — before it, a linear spline through the
+//!   (`Wellbore::tangents`, 24/09 - before it, a linear spline through the
 //!   stations, whose chords strayed from the arcs). A vertical well keeps
 //!   RESQML's vertical reading, or a linear spline when its depths are not the
 //!   system's;
 //! - **the feature and interpretation are the ones `well-from-polyline`
-//!   writes** — `pair` is the same two objects, word for word, because
+//!   writes** - `pair` is the same two objects, word for word, because
 //!   `well.rs` keeps them inline and this file may not open it. A copy, named:
 //!   extracting `well::pair_in` from `WellFromPolyline::plan` removes it.
 //!   `IsDrilled` is false, and here that is the schema's own answer: *“For
@@ -38,11 +38,11 @@
 //! - **the vertical axis is read, never guessed**: a frame created here counts
 //!   up (every `VerticalCrs` `crs::build` writes is an elevation), a frame of
 //!   the package says it through what the bag knows of it; a frame that does
-//!   not say is refused — which way *down* is decides every station's z;
+//!   not say is refused - which way *down* is decides every station's z;
 //! - **a well in degrees is refused**, as `well-from-polyline` refuses it: its
 //!   depths are metres beside degrees;
 //! - **the head's ground is given or read**, never both: `ground`, or a
-//!   `surface` — a triangulated surface or a grid in the well's own frame —
+//!   `surface` - a triangulated surface or a grid in the well's own frame -
 //!   read under the head by `energyml_analysis::heights`, the one reading of a
 //!   height under a point (`project`, `thickness`). A surface in another frame
 //!   is refused by name, the rule `project` states: *a height read in one frame
@@ -56,7 +56,7 @@
 //!
 //! # A sidetrack
 //!
-//! Given a `parent` — a wellbore frame of the package — and `kickoffMd`, the
+//! Given a `parent` - a wellbore frame of the package - and `kickoffMd`, the
 //! plan starts on the parent: at the point its nodes place at that depth, in
 //! the direction it has there, and its measured depths **continue the
 //! parent's**, from the parent's datum (RESQML 2.2 `Wells.xsd`,
@@ -67,19 +67,19 @@
 //!
 //! - **a kick-off on a bend of the parent.** Its direction is read on the
 //!   chord between the two nodes around the kick-off, which is its direction
-//!   only when the parent is straight there — when the chord is as long as the
+//!   only when the parent is straight there - when the chord is as long as the
 //!   hole between the two nodes. A curved stretch is refused by name;
 //! - **a parent that says no datum or no trajectory**: the first is what the
 //!   depths are counted from, the second what `ParentIntersection` names.
 //!
-//! `ParentIntersection` is written onto the trajectory `well::write` returns —
+//! `ParentIntersection` is written onto the trajectory `well::write` returns -
 //! one field it does not know, set by name. `Wellbore` gaining a `parent` is
 //! the proper home, and it is named for whoever opens `well.rs`.
 //!
 //! # References
 //!
 //! - API Bulletin D20, *Directional Drilling Survey Calculation Methods and Terminology*, 1985; and Sawaryn & Thorogood, *A Compendium of Directional Calculations Based on the Minimum Curvature Method* (SPE 84246, SPE Drilling & Completion 20(1), 2005), as cited in `energyml-analysis` (`well_plan`, `survey`).
-//!   TODO(reference): verify — these citations are carried over from `energyml-analysis`, whose own copy of them is pending verification.
+//!   TODO(reference): verify - these citations are carried over from `energyml-analysis`, whose own copy of them is pending verification.
 
 use serde_json::{Value, json};
 
@@ -118,7 +118,7 @@ const STRAIGHT: f64 = 1e-6;
 /// `build 15 90 270`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlanSection {
-    /// The text, its words as given — what the activity records, and what a
+    /// The text, its words as given - what the activity records, and what a
     /// second run reads back.
     pub text: String,
     /// What it says.
@@ -126,18 +126,18 @@ pub struct PlanSection {
 }
 
 impl PlanSection {
-    /// A section from its text — the verb, then its numbers:
+    /// A section from its text - the verb, then its numbers:
     ///
     /// - `hold <length>`: straight on for that many metres of MD;
     /// - `hold to <md>`: straight on down to that MD, kept as written;
     /// - `build`, `drop` or `curve`, then `<rate> <inclination> <azimuth>`: one
     ///   arc at `rate` degrees per 30 m until the hole points at that
     ///   inclination (degrees from vertical down) and azimuth (degrees
-    ///   clockwise from the frame's +y axis — grid north in an identity
+    ///   clockwise from the frame's +y axis - grid north in an identity
     ///   compound). A build must raise the inclination and a drop lower it.
     ///
-    /// Only what reads is refused here; what reads and cannot be drilled — a
-    /// negative length, an inclination of 190° — is refused by the survey, by
+    /// Only what reads is refused here; what reads and cannot be drilled - a
+    /// negative length, an inclination of 190° - is refused by the survey, by
     /// the section's number.
     pub fn parse(text: &str) -> Result<PlanSection, String> {
         let words: Vec<&str> = text.split_whitespace().collect();
@@ -186,7 +186,7 @@ impl Scalar for PlanSection {
     fn from_json(value: &Value) -> Result<Self, String> {
         match value {
             Value::String(text) => PlanSection::parse(text),
-            other => Err(format!("expected a section as text — {FORMS} — got {other}")),
+            other => Err(format!("expected a section as text - {FORMS} - got {other}")),
         }
     }
     fn to_json(&self) -> Value {
@@ -196,7 +196,7 @@ impl Scalar for PlanSection {
 
 /// What `well-from-plan` is told.
 ///
-/// **Its own pair, not the shared one** — the block is [`WrittenImposed`], as
+/// **Its own pair, not the shared one** - the block is [`WrittenImposed`], as
 /// for `well-from-polyline`: an interpretation of a wellbore carries `Domain`
 /// and `IsDrilled`, which the shared writer does not write.
 #[derive(Debug, Params)]
@@ -204,13 +204,13 @@ pub struct WellPlanParams {
     /// The frame, the interpretation when named, the naming.
     #[param(flatten)]
     pub written: WrittenImposed,
-    /// the head's first coordinate — in the system of `sourceEpsg`, or in the frame `crs` (easting in an identity compound); left out for a sidetrack, whose head is its parent's
+    /// the head's first coordinate - in the system of `sourceEpsg`, or in the frame `crs` (easting in an identity compound); left out for a sidetrack, whose head is its parent's
     pub head_x: Option<f64>,
-    /// the head's second coordinate — northing in an identity compound; left out for a sidetrack
+    /// the head's second coordinate - northing in an identity compound; left out for a sidetrack
     pub head_y: Option<f64>,
     /// the vertical coordinate of the ground at the head, in the frame's axis; left out, it is read on `surface` under the head
     pub ground: Option<f64>,
-    /// how far above the ground the datum is, in metres — a kelly bushing's height, say; the measured depths start there
+    /// how far above the ground the datum is, in metres - a kelly bushing's height, say; the measured depths start there
     ///
     /// A sidetrack has none: its depths are its parent's, from the parent's
     /// datum.
@@ -226,10 +226,10 @@ pub struct WellPlanParams {
     /// the plan, section by section down the hole: `hold 40` (straight on for 40 m), `hold to 120` (straight on to MD 120), `build 15 90 270` (an arc at 15°/30 m to inclination 90° and azimuth 270°), `drop …` (the same, lowering the inclination), `curve …` (any turn); lengths in m, azimuths clockwise from the frame's north
     #[param(least = 1, ordered)]
     pub sections: Vec<PlanSection>,
-    /// a station every so many metres of measured depth, on its multiples — each section's end is a station too; the stations are the trajectory's knots and the frame's nodes
+    /// a station every so many metres of measured depth, on its multiples - each section's end is a station too; the stations are the trajectory's knots and the frame's nodes
     #[param(default = 10.0, optional, min = 0.0, uom = "m")]
     pub step: f64,
-    /// the deepest the hole may go, in metres of vertical depth below the ground at its head — checked at every station, never used to bend the plan
+    /// the deepest the hole may go, in metres of vertical depth below the ground at its head - checked at every station, never used to bend the plan
     #[param(min = 0.0, uom = "m")]
     pub max_depth: Option<f64>,
     /// with a parent: the measured depth on the parent where this sidetrack leaves it
@@ -237,14 +237,14 @@ pub struct WellPlanParams {
     pub kickoff_md: Option<f64>,
 }
 
-/// What `well-from-plan` takes — both optional: a new well from a head needs
+/// What `well-from-plan` takes - both optional: a new well from a head needs
 /// neither when `ground` is given.
 #[derive(Debug, Inputs)]
 pub struct WellPlanInputs {
-    /// the ground under the head — a surface's triangles or a grid's cells, in the well's frame; its height under the head is the ground
+    /// the ground under the head - a surface's triangles or a grid's cells, in the well's frame; its height under the head is the ground
     #[input(topology = "triangles")]
     pub surface: Option<ShapeIn>,
-    /// the wellbore frame a sidetrack leaves — its nodes, their measured depths, its trajectory and its datum
+    /// the wellbore frame a sidetrack leaves - its nodes, their measured depths, its trajectory and its datum
     #[input(topology = "polylines", types = "resqml22.WellboreFrameRepresentation")]
     pub parent: Option<ShapeIn>,
 }
@@ -274,7 +274,7 @@ fn parent_of(shape: &ShapeIn) -> Result<Parent<'_>, String> {
         .flat_map(|patch| patch.points.iter().copied())
         .collect();
     let mds = known.node_mds.as_deref().ok_or_else(|| {
-        format!("`{name}` states no measured depth for its nodes — it is no wellbore frame, or this build cannot read its arrays")
+        format!("`{name}` states no measured depth for its nodes - it is no wellbore frame, or this build cannot read its arrays")
     })?;
     if mds.len() != points.len() {
         return Err(format!(
@@ -323,8 +323,8 @@ struct Kickoff {
     between: (f64, f64),
 }
 
-/// Where a sidetrack leaves its parent, and which way the parent points there
-/// — read on the parent's nodes, and **only on a straight stretch**.
+/// Where a sidetrack leaves its parent, and which way the parent points there -
+/// read on the parent's nodes, and **only on a straight stretch**.
 fn kickoff(parent: &Parent<'_>, md: f64, up: bool) -> Result<Kickoff, String> {
     let (first, last) = (parent.mds[0], parent.mds[parent.mds.len() - 1]);
     if !(first..=last).contains(&md) {
@@ -333,7 +333,7 @@ fn kickoff(parent: &Parent<'_>, md: f64, up: bool) -> Result<Kickoff, String> {
             parent.name
         ));
     }
-    // The stretch below the kick-off — the last one when it is the last node.
+    // The stretch below the kick-off - the last one when it is the last node.
     let i = parent
         .mds
         .windows(2)
@@ -346,7 +346,7 @@ fn kickoff(parent: &Parent<'_>, md: f64, up: bool) -> Result<Kickoff, String> {
     let hole = m1 - m0;
     if !chord.is_finite() || (hole - chord).abs() > STRAIGHT * hole {
         return Err(format!(
-            "`{}` is not straight between its nodes at MD {m0} and MD {m1} — {chord} apart for {hole} of hole — so its direction at MD {md} is not known from its nodes: kick off on a straight stretch",
+            "`{}` is not straight between its nodes at MD {m0} and MD {m1} - {chord} apart for {hole} of hole - so its direction at MD {md} is not known from its nodes: kick off on a straight stretch",
             parent.name
         ));
     }
@@ -367,7 +367,7 @@ fn kickoff(parent: &Parent<'_>, md: f64, up: bool) -> Result<Kickoff, String> {
     })
 }
 
-/// The ground under `at`, read on `surface` — refused when the surface is in
+/// The ground under `at`, read on `surface` - refused when the surface is in
 /// another frame, or counts another unit, or has nothing under `at`.
 fn ground_under(
     surface: &ShapeIn,
@@ -375,14 +375,14 @@ fn ground_under(
     frame_uuid: &str,
     frame_title: &str,
 ) -> Result<f64, Refusal> {
-    // One frame, one unit — the rule of `project`.
+    // One frame, one unit - the rule of `project`.
     if let Some(crs) = surface.known.as_ref().and_then(|known| known.crs.as_ref())
         && !crs.uuid.eq_ignore_ascii_case(frame_uuid)
     {
         return Err(Refusal::on(
             "surface",
             format!(
-                "`{}` is in `{}` and the well in `{frame_title}` — a height read in one frame and written in another is a height from somewhere else: give a surface in the well's frame, or `ground`",
+                "`{}` is in `{}` and the well in `{frame_title}` - a height read in one frame and written in another is a height from somewhere else: give a surface in the well's frame, or `ground`",
                 surface.name, crs.title
             ),
         ));
@@ -409,21 +409,21 @@ fn ground_under(
         Height::Outside => Err(Refusal::on(
             "surface",
             format!(
-                "the head ({}, {}) is outside `{}`: no face lies under it — give `ground`, or a surface that covers the head",
+                "the head ({}, {}) is outside `{}`: no face lies under it - give `ground`, or a surface that covers the head",
                 at[0], at[1], surface.name
             ),
         )),
         Height::Folded => Err(Refusal::on(
             "surface",
             format!(
-                "`{}` folds under the head ({}, {}): several faces disagree on its height there — give `ground`",
+                "`{}` folds under the head ({}, {}): several faces disagree on its height there - give `ground`",
                 surface.name, at[0], at[1]
             ),
         )),
     }
 }
 
-/// The wellbore feature and its interpretation — **the two objects
+/// The wellbore feature and its interpretation - **the two objects
 /// `well-from-polyline` writes, word for word** (`ops/well.rs`, in
 /// `WellFromPolyline::plan`), under the same seeds' shape.
 ///
@@ -438,7 +438,7 @@ fn pair(
     rank: &mut usize,
 ) -> Result<(Value, Vec<NewObject>), Error> {
     let feature_uuid = support::next_uuid(identity, &format!("well-feature:{seed}"), rank)?;
-    let feature_title = format!("{title} — feature");
+    let feature_title = format!("{title} - feature");
     let feature = NewObject {
         uuid: feature_uuid.clone(),
         qualified_type: "resqml22.WellboreFeature".to_string(),
@@ -453,7 +453,7 @@ fn pair(
         }),
     };
     let uuid = support::next_uuid(identity, &format!("well-interpretation:{seed}"), rank)?;
-    let interpretation_title = format!("{title} — interpretation");
+    let interpretation_title = format!("{title} - interpretation");
     let interpretation = NewObject {
         uuid: uuid.clone(),
         qualified_type: "resqml22.WellboreInterpretation".to_string(),
@@ -493,7 +493,7 @@ impl Operation for WellFromPlan {
     fn about(&self) -> About {
         About {
             name: "well-from-plan",
-            describe: "a wellbore from a drilling plan — holds and minimum-curvature arcs from a head, or from a parent's kick-off: the stations, the datum, a trajectory through them, a frame on it — and the feature and interpretation when none is named",
+            describe: "a wellbore from a drilling plan - holds and minimum-curvature arcs from a head, or from a parent's kick-off: the stations, the datum, a trajectory through them, a frame on it - and the feature and interpretation when none is named",
             category: Category::Wells,
             makes: &[
                 "eml23.ReferencePointInALocalEngineeringCompoundCrs",
@@ -511,15 +511,15 @@ impl Operation for WellFromPlan {
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
         super::written::suggest_written(bag, self.about().represents, slots);
         // **A well is named by whoever plans it.** The shared suggestion takes
-        // the first named piece — here the ground surface, the parent's frame
-        // or the CRS just chosen — and a well titled `surface` or
+        // the first named piece - here the ground surface, the parent's frame
+        // or the CRS just chosen - and a well titled `surface` or
         // `EPSG:2154 + EPSG:5720` is a title nobody gave.
         if let Some(slot) = slots.slot_mut("title") {
             slot.suggested = None;
             slot.from = None;
         }
         // **Nor does a well take its inputs' interpretation.** The one the
-        // bag names is the ground surface's — a horizon's — or the parent's,
+        // bag names is the ground surface's - a horizon's - or the parent's,
         // and a lateral is a wellbore of its own
         // (see the reference model). Left empty, the slot creates the pair, as it says
         // (`a_well_makes_its_own_interpretation_never_the_grounds`).
@@ -536,7 +536,7 @@ impl Operation for WellFromPlan {
             return Err(Refusal::on(
                 "surface",
                 format!(
-                    "`{}` has no face — the ground is read on triangles or a grid's cells, and points or lines have none",
+                    "`{}` has no face - the ground is read on triangles or a grid's cells, and points or lines have none",
                     surface.name
                 ),
             ));
@@ -598,7 +598,7 @@ impl Operation for WellFromPlan {
             return Err(Refusal::on(
                 "datumKind",
                 format!(
-                    "a ground-level datum is at the ground, and this one is {} m above it — say what it is: a kelly bushing, a derrick floor",
+                    "a ground-level datum is at the ground, and this one is {} m above it - say what it is: a kelly bushing, a derrick floor",
                     params.datum_height
                 ),
             ));
@@ -620,7 +620,7 @@ impl Operation for WellFromPlan {
             };
             return Err(Refusal::on(
                 slot,
-                "a sidetrack's datum is its parent's, so the ground serves only `maxDepth`, which is not given — an answer that changes nothing is a misreading somewhere",
+                "a sidetrack's datum is its parent's, so the ground serves only `maxDepth`, which is not given - an answer that changes nothing is a misreading somewhere",
             ));
         }
 
@@ -637,7 +637,7 @@ impl Operation for WellFromPlan {
             return Err(Refusal::on(
                 slot,
                 format!(
-                    "a wellbore is a vertical extent, and {what} measures its horizontal axes in degrees while its depths are metres, which no reader can reconcile — name a projected system in `project` (EPSG:2154 for mainland France), or a LocalEngineeringCompoundCrs as `crs`"
+                    "a wellbore is a vertical extent, and {what} measures its horizontal axes in degrees while its depths are metres, which no reader can reconcile - name a projected system in `project` (EPSG:2154 for mainland France), or a LocalEngineeringCompoundCrs as `crs`"
                 ),
             ));
         }
@@ -663,7 +663,7 @@ impl Operation for WellFromPlan {
             return Err(match written.frame.crs {
                 None => Refusal::on(
                     "crs",
-                    "a planned well needs its frame before any station is placed — which way its vertical axis points decides every z: name a LocalEngineeringCompoundCrs as `crs`, or give `sourceEpsg` and `project`",
+                    "a planned well needs its frame before any station is placed - which way its vertical axis points decides every z: name a LocalEngineeringCompoundCrs as `crs`, or give `sourceEpsg` and `project`",
                 ),
                 Some(_) => Refusal::on(
                     "crs",
@@ -684,7 +684,7 @@ impl Operation for WellFromPlan {
             return Err(Refusal::on(
                 "crs",
                 format!(
-                    "the frame `{frame_title}` counts its vertical axis in `{uom}`, and a plan is in metres — lengths in m, rates in °/30 m"
+                    "the frame `{frame_title}` counts its vertical axis in `{uom}`, and a plan is in metres - lengths in m, rates in °/30 m"
                 ),
             ));
         }
@@ -739,7 +739,7 @@ impl Operation for WellFromPlan {
                             return Err(Refusal::on(
                                 "surface",
                                 format!(
-                                    "the head of `{}` is not among its nodes — its frame starts at MD {}, not at its datum — so the ground cannot be read under it: give `ground`",
+                                    "the head of `{}` is not among its nodes - its frame starts at MD {}, not at its datum - so the ground cannot be read under it: give `ground`",
                                     one.name, one.mds[0]
                                 ),
                             ));
@@ -789,7 +789,7 @@ impl Operation for WellFromPlan {
                     .get(number - 1)
                     .map(|one| one.text.as_str())
                     .unwrap_or_default();
-                Refusal::on("sections", format!("{why} — `{text}`"))
+                Refusal::on("sections", format!("{why} - `{text}`"))
             }
             None if matches!(why, PlanError::BadStep { .. } | PlanError::TooManyStations { .. }) => {
                 Refusal::on("step", why)
@@ -805,7 +805,7 @@ impl Operation for WellFromPlan {
             [origin[0] + station.east, origin[1] + station.north, z]
         };
         let line: Vec<[f64; 3]> = planned.stations.iter().map(place).collect();
-        // The direction at each station, in the frame's axes — the exact
+        // The direction at each station, in the frame's axes - the exact
         // tangents of the minimum-curvature arcs the stations lie on, which
         // the writer turns into RESQML's `LineKindIndex` 5.
         let tangents: Vec<[f64; 3]> = planned
@@ -844,7 +844,7 @@ impl Operation for WellFromPlan {
                 return Err(Refusal::on(
                     "maxDepth",
                     format!(
-                        "the plan reaches {} m below the ground at MD {} — deeper than the {most} m allowed; a plan is checked against the limit, never bent to it",
+                        "the plan reaches {} m below the ground at MD {} - deeper than the {most} m allowed; a plan is checked against the limit, never bent to it",
                         below(point[2], g),
                         station.md
                     ),
@@ -853,7 +853,7 @@ impl Operation for WellFromPlan {
             says.push(Note {
                 key: "max-depth",
                 detail: format!(
-                    "{} m below the ground at its deepest station, within the {most} m allowed — checked at the stations",
+                    "{} m below the ground at its deepest station, within the {most} m allowed - checked at the stations",
                     depth_max.unwrap_or_default()
                 ),
             });
@@ -928,7 +928,7 @@ impl Operation for WellFromPlan {
                 // **The plan's depths, never recomputed** from the chords.
                 mds: Some(&mds),
                 // Where the measured depths start: the datum of a new well.
-                // A sidetrack's start at its kick-off — the writer reads it
+                // A sidetrack's start at its kick-off - the writer reads it
                 // only to say whether the ground lies below the first point,
                 // which is no question for a line that starts down the hole.
                 ground: origin[2],
@@ -987,7 +987,7 @@ impl Operation for WellFromPlan {
         if drawn.kind_index == 1 {
             let strays = match planned.tightest {
                 Some(radius) => format!(
-                    " — on the tightest arc (radius {radius:.3} m) a chord between two stations {} m apart strays at most {:.4} m from it",
+                    " - on the tightest arc (radius {radius:.3} m) a chord between two stations {} m apart strays at most {:.4} m from it",
                     params.step,
                     well_plan::sag(radius, params.step)
                 ),
@@ -996,7 +996,7 @@ impl Operation for WellFromPlan {
             says.push(Note {
                 key: "linear-through-stations",
                 detail: format!(
-                    "the trajectory is a linear spline through the stations, its parameter the measured depth at each — the vertical reading the writer keeps for a straight hole{strays}"
+                    "the trajectory is a linear spline through the stations, its parameter the measured depth at each - the vertical reading the writer keeps for a straight hole{strays}"
                 ),
             });
         }
@@ -1104,7 +1104,7 @@ impl Operation for WellFromPlan {
 
         Ok(Plan {
             media: Vec::new(),
-            // What the frame blocked, the plan carries — a 2.0.1 system, a half.
+            // What the frame blocked, the plan carries - a 2.0.1 system, a half.
             blocked,
             objects,
             datasets: drawn.datasets,
@@ -1135,7 +1135,7 @@ impl Operation for WellFromPlan {
             Slot::required(
                 "stationCount",
                 number(),
-                "stations — the trajectory's knots and the frame's nodes",
+                "stations - the trajectory's knots and the frame's nodes",
             ),
             Slot::required("mdMax", number(), "the deepest measured depth"),
             Slot::required(

@@ -7,13 +7,13 @@
 //! ancestor: `TriangulatedSetRepresentation` reached
 //! `AbstractSurfaceRepresentation` and no higher, so that
 //! `is_a(AbstractRepresentation)` answered **false** for every surface in the
-//! model. Silently — which is the only way it could do harm: nothing fails, a
+//! model. Silently - which is the only way it could do harm: nothing fails, a
 //! business rule naming an abstract class merely covers a fraction of what it
 //! announces, and a version translator reads a truncated hierarchy.
 //!
 //! The assertions therefore come from the **specification** (the RESQML UML
-//! model: a triangulated representation *is* a representation), not from a file
-//! — the house rule. What the corpus would say does not enter here.
+//! model: a triangulated representation *is* a representation), not from a file -
+//! the house rule. What the corpus would say does not enter here.
 
 use energyml_core::value::Reflect;
 
@@ -64,8 +64,8 @@ fn a_concrete_representation_descends_from_the_abstract_one() {
 
 #[test]
 fn a_concrete_property_descends_from_the_abstract_one() {
-    // Two storeys of abstract above a concrete property —
-    // `AbstractValuesProperty`, then `AbstractProperty` — so the chain had to
+    // Two storeys of abstract above a concrete property -
+    // `AbstractValuesProperty`, then `AbstractProperty` - so the chain had to
     // step over two choices to reach the top.
     for object in [
         &energyml_resqml_2_0_1::ContinuousProperty::default() as &dyn Reflect,
@@ -100,7 +100,7 @@ fn an_interpretation_and_a_feature_reach_their_abstract_class() {
 #[test]
 fn every_top_level_type_reaches_the_object_class_of_its_package() {
     // The broad measure, the one that would have shouted: **every** top-level
-    // object of a release descends from its package's object class — that is
+    // object of a release descends from its package's object class - that is
     // the definition of a top-level object in the model. A type that does not
     // get there has its chain cut somewhere.
     let registry = energyml_schemas::all();
@@ -111,12 +111,12 @@ fn every_top_level_type_reaches_the_object_class_of_its_package() {
         // **one** known root rather than a single spelling.
         //
         // The list also states a **deliberate limit**: a base declared in the
-        // *depended-on* crate is not emitted (see `render_struct` — "only
+        // *depended-on* crate is not emitted (see `render_struct` - "only
         // reference a base that this crate actually defines"), so a chain stops
         // at its crate's edge. `AbstractCitedDataObject` (resqml) and
         // `AbstractActiveObject` / `AbstractMdGrowingObject` (witsml) are those
         // edges: their own base is `eml:AbstractObject`. What this test defends
-        // is the storey below — the **local** abstract classes, which were all
+        // is the storey below - the **local** abstract classes, which were all
         // being skipped.
         const ROOTS: &[&str] = &[
             "AbstractObject",
@@ -150,12 +150,12 @@ fn every_top_level_type_reaches_the_object_class_of_its_package() {
 /// A part written under an ancestor's element names an ancestor that has it.
 ///
 /// PRODML 2.3 gives `FlowTestActivity` a global element and none of its
-/// subtypes (FlowTestActivity.xsd l. 185–190: *"This object is abstract; you
+/// subtypes (FlowTestActivity.xsd l. 185-190: *"This object is abstract; you
 /// must choose one of the available types"*), so an injection test is
 /// `<prodml:FlowTestActivity xsi:type="prodml:InjectionFlowTest">`. For every
 /// type the generator marks so: it is a part with an identity of its own, and
 /// the element it names is a **same-package ancestor's**, which has an element
-/// of its own — a `root_element` naming anything else writes a root the schema
+/// of its own - a `root_element` naming anything else writes a root the schema
 /// does not declare.
 #[test]
 fn a_type_written_under_an_ancestors_element_names_one_it_descends_from() {
@@ -182,7 +182,7 @@ fn a_type_written_under_an_ancestors_element_names_one_it_descends_from() {
         let found = found.unwrap_or_else(|| panic!("{name}: `{element}` is no element of an ancestor"));
         assert_eq!(found.package, info.package, "{name}");
     }
-    // The one case that forced the rule must be among them — without it this
+    // The one case that forced the rule must be among them - without it this
     // loop passes on an empty registry.
     let injection = registry
         .by_qualified_type("prodml23.InjectionFlowTest")

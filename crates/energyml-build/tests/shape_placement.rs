@@ -4,7 +4,7 @@
 //! The defect of 29/09: `create pointset --from
 //! shape=… --set sourceEpsg=3949 --set project=2154` wrote CC49 numbers under
 //! a Lambert-93 label, a thousand kilometres from their place, and the package
-//! validated clean — only a feature collection went through `energyml-proj`.
+//! validated clean - only a feature collection went through `energyml-proj`.
 //!
 //! **The reference is the definition of the two systems, not this code.**
 //! EPSG:3949 (RGF93 / CC49) is a Lambert conformal conic with its origin at
@@ -12,8 +12,8 @@
 //! (RGF93 / Lambert-93) has its central meridian at 3° E and a false easting
 //! of 700 000 m, on the same datum (EPSG registry, the two projections'
 //! parameters). So the CC49 point (1 700 000, 8 200 000) is 3° E, 49° N, and
-//! in Lambert-93 its easting is **exactly 700 000 m** — the central meridian
-//! maps to the false easting — and its northing a little under 6.88 million
+//! in Lambert-93 its easting is **exactly 700 000 m** - the central meridian
+//! maps to the false easting - and its northing a little under 6.88 million
 //! (46.5° N maps to 6 600 000, and a degree of latitude is ~111 km). Written
 //! raw, as before the fix, the easting is 1 700 000: the test goes red by a
 //! million metres.
@@ -105,7 +105,7 @@ fn cc49_to_lambert93() -> Choices {
         .set("title", "points")
 }
 
-/// The first dataset's triplets — the coordinates the plan writes.
+/// The first dataset's triplets - the coordinates the plan writes.
 fn written(plan: &Plan) -> Vec<[f64; 3]> {
     let Numbers::F64(values) = &plan.datasets[0].values else {
         panic!("points are written as doubles")
@@ -182,7 +182,7 @@ fn a_polyline_set_from_a_file_is_placed_the_same_way() {
 #[test]
 fn a_shape_of_the_package_against_a_frame_created_from_source_epsg_is_refused_by_name() {
     // To break: reproject a shape whose numbers are in its own frame from a
-    // code they are not in — the same defect by another door.
+    // code they are not in - the same defect by another door.
     let registry = Registry::new();
     let why = registry
         .plan(
@@ -202,7 +202,7 @@ fn a_shape_of_the_package_against_a_frame_created_from_source_epsg_is_refused_by
 
 #[test]
 fn a_shape_against_a_frame_of_the_package_keeps_its_numbers() {
-    // To break: reproject when the frame is one of the package — its numbers
+    // To break: reproject when the frame is one of the package - its numbers
     // are taken as already in it, as they always were.
     let registry = Registry::new();
     let crs = Ref::new(

@@ -1,4 +1,4 @@
-//! Inverse-distance weighting — the first interpolator of the crate, and
+//! Inverse-distance weighting - the first interpolator of the crate, and
 //! deliberately the plain one (trivial to write, testable against analytic cases).
 //!
 //! Shepard's method: the value at a query point is the weighted mean of
@@ -8,23 +8,23 @@
 //! - **A query sitting on a sample returns that sample's value exactly.**
 //!   `1 / 0` is not a weight; the standard rule is that IDW is an *exact*
 //!   interpolator, and returning the sample beats returning `inf/inf`.
-//!   "On" means within [`Idw::exact_within`] — bitwise equality would make
+//!   "On" means within [`Idw::exact_within`] - bitwise equality would make
 //!   exactness depend on how the caller computed its coordinates.
-//! - **A `NaN` sample is set aside, never averaged** (the house rule) —
+//! - **A `NaN` sample is set aside, never averaged** (the house rule) -
 //!   one undefined corner must not erase a whole neighbourhood. How many
 //!   were set aside is in the answer.
 //! - **A query with no sample in reach yields `NaN`, not a refusal.** With
 //!   a search radius, "nothing near here" is a legitimate per-point
-//!   answer — the caller asked *where is the field defined*. Having no
+//!   answer - the caller asked *where is the field defined*. Having no
 //!   usable samples at all, by contrast, refuses up front: every query
 //!   would be `NaN` and the call was malformed, which is different news.
 //!
-//! The neighbour search is linear per query — O(samples × queries). That
+//! The neighbour search is linear per query - O(samples × queries). That
 //! is the honest cost for the corpus sizes this serves (hundreds of wells,
 //! thousands of grid nodes); a spatial index is worth adding when a
 //! measurement says so, not before.
 //!
-//! TODO(reference): verify — Shepard's method is named without a full citation in this code; add the original reference (authors, year, title, venue, DOI) once checked.
+//! TODO(reference): verify - Shepard's method is named without a full citation in this code; add the original reference (authors, year, title, venue, DOI) once checked.
 
 use crate::Error;
 use crate::barrier::{Barriers, keep_visible};
@@ -32,8 +32,8 @@ use crate::barrier::{Barriers, keep_visible};
 /// The parameters of an inverse-distance interpolation, dimension `N`.
 ///
 /// The type is the builder: `Idw::new(2.0)` then `with_radius` /
-/// `with_neighbours` as needed. `N` is the coordinate dimension — 2 for a
-/// map-view surface, 3 for a volume — fixed at compile time because mixing
+/// `with_neighbours` as needed. `N` is the coordinate dimension - 2 for a
+/// map-view surface, 3 for a volume - fixed at compile time because mixing
 /// dimensions in one call is a bug, not a feature.
 #[derive(Debug, Clone)]
 pub struct Idw {
@@ -48,7 +48,7 @@ pub struct Idw {
     /// A query closer than this to a sample *is* that sample. Defaults to
     /// 1e-12 in the units of the coordinates.
     pub exact_within: f64,
-    /// Faults the interpolation must not see across — a sample whose segment
+    /// Faults the interpolation must not see across - a sample whose segment
     /// to the query crosses one takes no part. `None` = no fault. Plan view
     /// only: the first two coordinates of a sample are what a trace cuts.
     pub barriers: Option<Barriers>,
@@ -140,7 +140,7 @@ impl Idw {
         let mut out = Vec::with_capacity(queries.len());
         let mut unreached = 0usize;
         // Weights on distance, not distance²: d^p = (d²)^(p/2). The default
-        // power is 2, whose weight is 1/d² — a division rather than a `powf`,
+        // power is 2, whose weight is 1/d² - a division rather than a `powf`,
         // and the speed report measured the difference at seven times the
         // whole interpolation.
         let half = -self.power / 2.0;
@@ -165,10 +165,10 @@ impl Idw {
                 continue;
             }
             match &self.barriers {
-                // Behind a fault: not a neighbour, whatever its distance —
+                // Behind a fault: not a neighbour, whatever its distance -
                 // tested after the radius, which is cheap, and before the cap,
                 // which is the rule. The test is on the first two coordinates
-                // — a fault is a trace in plan view — so a 3D call is cut by
+                // - a fault is a trace in plan view - so a 3D call is cut by
                 // its map-view shadow.
                 Some(faults) => keep_visible(&mut near, self.neighbours, |at| {
                     faults.blocks(plan(&usable[at].1), plan(query))
@@ -213,15 +213,15 @@ pub(crate) fn plan<const N: usize>(point: &[f64; N]) -> [f64; 2] {
     ]
 }
 
-/// What an interpolation answers — the values, and the two counts that
+/// What an interpolation answers - the values, and the two counts that
 /// keep the answer honest.
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdwAnswer {
     /// One value per query, in the queries' order. `NaN` = out of reach.
     pub values: Vec<f64>,
-    /// Samples set aside for a `NaN` value or coordinate — never averaged.
+    /// Samples set aside for a `NaN` value or coordinate - never averaged.
     pub set_aside: usize,
-    /// Queries no sample could reach (radius) — each is a `NaN` above.
+    /// Queries no sample could reach (radius) - each is a `NaN` above.
     pub unreached: usize,
 }
 
@@ -232,7 +232,7 @@ mod tests {
     #[test]
     fn a_constant_field_is_reproduced_exactly() {
         // Whatever the weights do, a weighted mean of the same number is
-        // that number — the first analytic case worth pinning.
+        // that number - the first analytic case worth pinning.
         let samples = [[0.0, 0.0], [10.0, 0.0], [3.0, 7.0]];
         let values = [4.5, 4.5, 4.5];
         let queries = [[1.0, 1.0], [-5.0, 2.0], [100.0, 100.0]];
@@ -252,7 +252,7 @@ mod tests {
 
     #[test]
     fn the_answer_stays_inside_the_data_bounds() {
-        // A weighted mean with positive weights cannot leave [min, max] —
+        // A weighted mean with positive weights cannot leave [min, max] -
         // an implementation that can is not IDW.
         let samples = [[0.0, 0.0], [4.0, 0.0], [2.0, 3.0], [1.0, 1.0]];
         let values = [0.0, 10.0, 5.0, 2.0];
@@ -342,7 +342,7 @@ mod tests {
         );
     }
 
-    /// Every sample behind a fault: out of reach, said as such — `NaN` and
+    /// Every sample behind a fault: out of reach, said as such - `NaN` and
     /// counted, exactly like a radius nobody reaches.
     #[test]
     fn a_query_walled_off_from_every_sample_is_unreached() {

@@ -1,5 +1,5 @@
-//! A division of the BRGM chart read **against a unit** — inside it, outside
-//! it, or neither — and **at a level**: the containment the register states,
+//! A division of the BRGM chart read **against a unit** - inside it, outside
+//! it, or neither - and **at a level**: the containment the register states,
 //! and the ages it gives.
 //!
 //! Asked for the synthetic reference model: grouping point clouds by title would
@@ -12,23 +12,23 @@
 //!
 //! # Three answers, and the one that is not an answer
 //!
-//! - **inside** — it is the unit, or the register places it under the unit:
+//! - **inside** - it is the unit, or the register places it under the unit:
 //!   its `skos:broader`, followed all the way up. **Every** `broader`, not only
 //!   the tree's parent ([`Chart::parent`], the deepest level above): the
 //!   Lutetian names both the Eocene and the Middle Eocene, and it is under both;
-//! - **outside** — its time and the unit's do not overlap. Decided by the
+//! - **outside** - its time and the unit's do not overlap. Decided by the
 //!   **ages**, never by the tree: the Ludien sits *beside* the Priabonien in the
-//!   tree, under the Upper Eocene, and spans the same 37.8–33.9 Ma — a regional
+//!   tree, under the Upper Eocene, and spans the same 37.8-33.9 Ma - a regional
 //!   synonym, not a neighbour, and a tree-only reading would draw a contact
 //!   between the two. Two spans that share a bound **touch**, and are outside
 //!   each other: the Cuisien ends at 47.8 Ma, where the Lutetian begins;
-//! - **neither**, said by its reason — a coarser division that **holds** the
+//! - **neither**, said by its reason - a coarser division that **holds** the
 //!   unit (the Middle Eocene for the Lutetian: part of it may be the unit), one
 //!   whose time **overlaps** the unit's without the register placing it inside,
 //!   one whose ages cannot be read (**undated**).
 //!
 //! A division without both ages takes the span of the nearest division above
-//! it that has them — a division lies within what holds it. The snapshot of
+//! it that has them - a division lies within what holds it. The snapshot of
 //! 24/09 needs it: the Upper Lutetian ends at a bound named `e1258`, which is
 //! no number and gives no age (`geolts_csv::bounds` skips it), so its span is
 //! read as the Lutetian's. Wider than its own, never narrower: *outside* stays
@@ -37,7 +37,7 @@
 //! # At a level
 //!
 //! [`at_level`] is the division of a level a division is read as: itself when
-//! it is of that level, else the one of that level above it — **the coarsest**
+//! it is of that level, else the one of that level above it - **the coarsest**
 //! when two are: the Cuisien, a regional stage the register places under the
 //! Ypresian, is the Ypresian at the stage level. Nothing when no division of
 //! that level holds it: the Eocene has no stage.
@@ -49,7 +49,7 @@ use crate::geolts::Chart;
 pub enum Relation {
     /// It is the unit, or the register places it under the unit.
     Inside,
-    /// Its time and the unit's do not overlap — it is older or younger.
+    /// Its time and the unit's do not overlap - it is older or younger.
     Outside,
     /// A coarser division that holds the unit: part of it may be the unit.
     Holds,
@@ -60,7 +60,7 @@ pub enum Relation {
 }
 
 impl Relation {
-    /// Whether the chart answers — inside or outside. A limit is a contact of
+    /// Whether the chart answers - inside or outside. A limit is a contact of
     /// the unit only between an interval inside it and one outside it.
     pub fn is_known(self) -> bool {
         matches!(self, Relation::Inside | Relation::Outside)
@@ -77,7 +77,7 @@ impl Relation {
     }
 }
 
-/// Every division above one, by `broader` followed all the way up — nearest
+/// Every division above one, by `broader` followed all the way up - nearest
 /// generation first, each once, the division itself never. A `broader` the
 /// chart does not hold is left out: nothing above it can be read.
 pub fn above(chart: &Chart, id: u32) -> Vec<u32> {
@@ -98,7 +98,7 @@ pub fn above(chart: &Chart, id: u32) -> Vec<u32> {
     out
 }
 
-/// The span of a division, `(old, young)` in Ma — its own when it states both
+/// The span of a division, `(old, young)` in Ma - its own when it states both
 /// ends, else the nearest dated division above it (see the module). `None`
 /// when nothing up its chain is dated.
 pub fn span(chart: &Chart, id: u32) -> Option<(f64, f64)> {
@@ -117,7 +117,7 @@ pub fn relation(chart: &Chart, division: u32, unit: u32) -> Relation {
         return Relation::Holds;
     }
     match (span(chart, division), span(chart, unit)) {
-        // Older than the unit's old end, or younger than its young end — a
+        // Older than the unit's old end, or younger than its young end - a
         // shared bound is a touch, not an overlap.
         (Some((old, young)), Some((unit_old, unit_young))) if young >= unit_old || old <= unit_young => {
             Relation::Outside
@@ -131,7 +131,7 @@ pub fn relation(chart: &Chart, division: u32, unit: u32) -> Relation {
 /// it is of that level and nothing of that level is above it, else the
 /// **coarsest** of that level above it. Empty when nothing of that level holds
 /// it; more than one when two of that level hold it and neither holds the
-/// other — which a caller refuses to choose between.
+/// other - which a caller refuses to choose between.
 pub fn at_level(chart: &Chart, id: u32, level: u8) -> Vec<u32> {
     let candidates: Vec<u32> = std::iter::once(id)
         .chain(above(chart, id))
@@ -148,7 +148,7 @@ pub fn at_level(chart: &Chart, id: u32, level: u8) -> Vec<u32> {
         .collect()
 }
 
-/// The levels the chart has divisions of, coarsest first — `0`, no level, left
+/// The levels the chart has divisions of, coarsest first - `0`, no level, left
 /// out.
 pub fn levels(chart: &Chart) -> Vec<u8> {
     let mut out: Vec<u8> = chart

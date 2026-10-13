@@ -1,4 +1,4 @@
-//! `change-frame` — a representation read in one frame of the package and
+//! `change-frame` - a representation read in one frame of the package and
 //! written in another: **the same nodes, in the same order, with the same
 //! topology**, their numbers changed so that each one lands where it was.
 //!
@@ -14,41 +14,41 @@
 //! # What changes, and through what
 //!
 //! A node is **placed** through the frame it is read in and **unplaced**
-//! through the frame it is written in — [`Crs::to_projected`], then
+//! through the frame it is written in - [`Crs::to_projected`], then
 //! [`Crs::from_projected`], the one placement formula of the workspace, over
 //! the frames `energyml_domain::crs::read_with` read:
 //!
 //! - **the horizontal part** goes through the projected system both frames sit
-//!   on — each frame's origin and azimuth (the reference model's local frames are turned 30°);
+//!   on - each frame's origin and azimuth (the reference model's local frames are turned 30°);
 //! - **elevation ↔ depth** is the vertical half of the same two calls: a sign,
 //!   the compound's `VerticalAxis.Direction`, and an origin,
-//!   `OriginVerticalCoordinate` — *« Vertical coordinate of the origin of the
-//!   local engineering CRS in the base vertical CRS »* (CRS.xsd l. 517–520;
-//!   common TRG 2.3 §12.20 p. 322) — both read, never guessed;
+//!   `OriginVerticalCoordinate` - *« Vertical coordinate of the origin of the
+//!   local engineering CRS in the base vertical CRS »* (CRS.xsd l. 517-520;
+//!   common TRG 2.3 §12.20 p. 322) - both read, never guessed;
 //! - **depth ↔ time is not a placement**. A time has no depth, and no frame
 //!   carries the velocity that joins them (RESQML leaves the time kind and the
-//!   velocity to the acquisition — `Crs::is_time`). So it takes a **stated
-//!   law**, `energyml_analysis::t2d::LinearVelocity` — `V(z) = v0 + k·z` — whose
+//!   velocity to the acquisition - `Crs::is_time`). So it takes a **stated
+//!   law**, `energyml_analysis::t2d::LinearVelocity` - `V(z) = v0 + k·z` - whose
 //!   datum, *« where t = 0 »*, is the time frame's own vertical origin: the
 //!   place its `OriginVerticalCoordinate` puts in the vertical system. The law
 //!   is the person's, with its **source** (the reference-model rule: no constant without a source, ADR-0019), and the
 //!   object written carries `synthetic = true` and the law in
 //!   `Citation/Description` (rule 4, as `horizon-from-law` does): a time
 //!   converted by a law is not a time measured. One-way or two-way is said, not
-//!   defaulted — the module doc of `t2d` says why.
+//!   defaulted - the module doc of `t2d` says why.
 //!
 //! A node above the time origin gets a negative time: the law is extended above
 //! the depth it is stated from, and the plan counts and says it. A node the law
 //! does not reach (`k < 0`: the velocity falls to zero) is written with no
-//! height, counted — never a plausible number.
+//! height, counted - never a plausible number.
 //!
 //! # Refused by name
 //!
-//! - **two projected systems**: moving between them is a reprojection — it bends
+//! - **two projected systems**: moving between them is a reprojection - it bends
 //!   a lattice and needs a geodesy library (`energyml-proj`); this is not it;
 //! - **two vertical datums**, or two horizontal units: an elevation above one
 //!   zero is not an elevation above another;
-//! - **an unknown vertical sense** — a frame that names no vertical system (a
+//! - **an unknown vertical sense** - a frame that names no vertical system (a
 //!   `ProjectedCrs` named directly), whose third ordinate nobody states;
 //! - **a time frame counting in a unit that is no time**, and a length frame
 //!   counting in one that is;
@@ -65,7 +65,7 @@
 //! does a move of the origin: the lattice's axes stay the frame's axes, only
 //! its origin moves. A frame **turned** from the grid's is refused for a grid:
 //! the lattice would run along turned directions, which a `Grid2dRepresentation`
-//! can say (`Point3dLatticeDimension.Direction`) and `grid` does not write —
+//! can say (`Point3dLatticeDimension.Direction`) and `grid` does not write -
 //! writing one is a decision, and turning the grid into points or triangles is
 //! another operation's. A cloud, polylines or triangles take any frame, node by
 //! node.
@@ -73,13 +73,13 @@
 //! # The writing is the writer's of the kind
 //!
 //! An operation that writes the same object as another delegates to it: a grid
-//! goes to [`super::grid::write`], anything else to `transform::write_as` —
+//! goes to [`super::grid::write`], anything else to `transform::write_as` -
 //! the kinds and refusals `transform` has.
 //!
 //! # The same interpretation, and why here it is right
 //!
 //! `horizon-from-law` refuses to suggest its reference's interpretation: the
-//! horizon it lays is **another** horizon. Here it is the **same** one — H6 in
+//! horizon it lays is **another** horizon. Here it is the **same** one - H6 in
 //! depth and H6 in time are two representations of one
 //! `HorizonInterpretation`, the idiom RESQML provides (one interpretation,
 //! several representations); the reference model registers both
@@ -91,14 +91,14 @@
 //! digest of its nodes, the two frames, the law, and the title. The same input
 //! gives the same object; another law gives another one beside it, never a
 //! rewrite (the identity comes from the content).
-//! `pointset` takes no seed of its own — it hangs its uuid on the first piece
-//! of the bag — so the writers are called over a bag whose first piece is named
+//! `pointset` takes no seed of its own - it hangs its uuid on the first piece
+//! of the bag - so the writers are called over a bag whose first piece is named
 //! by that content; nothing else of the bag changes.
 //!
 //! # What the frames must be known as
 //!
-//! A plan is pure, and a frame's placement — origin, azimuth, vertical axis
-//! and origin, units — is what this needs of both: `Known::placement`, read at
+//! A plan is pure, and a frame's placement - origin, azimuth, vertical axis
+//! and origin, units - is what this needs of both: `Known::placement`, read at
 //! the boundary by `energyml_domain::crs::read_with`, for the shape's frame
 //! and for the one `crs` names (which comes back into the bag as the companion
 //! `crs (object)`, as any answered object does). A shape read **placed**, for
@@ -108,7 +108,7 @@
 //! # References
 //!
 //! - The linear velocity law `V(z) = v0 + k·z` of `energyml-analysis` (`t2d`).
-//!   TODO(reference): verify — no publication is cited for the law; add one if it follows a published source.
+//!   TODO(reference): verify - no publication is cited for the law; add one if it follows a published source.
 
 use serde_json::{Value, json};
 
@@ -133,7 +133,7 @@ pub struct ChangeFrame;
 /// What `change-frame` is told.
 #[derive(Debug, Params)]
 pub struct ChangeFrameParams {
-    /// the frame to write in — a LocalEngineeringCompoundCrs of the package, on the projected and vertical systems of the frame the shape is in
+    /// the frame to write in - a LocalEngineeringCompoundCrs of the package, on the projected and vertical systems of the frame the shape is in
     ///
     /// **In the `operation` group, not `frame`**: here the target frame is what
     /// the computation needs, not only what the writing names, so a plan asked
@@ -145,7 +145,7 @@ pub struct ChangeFrameParams {
     /// time.
     #[param(flatten)]
     pub law: VelocityLaw,
-    /// What is represented — the shape's own interpretation, suggested.
+    /// What is represented - the shape's own interpretation, suggested.
     #[param(flatten)]
     pub represented: RepresentedParams,
     /// The title and the file.
@@ -153,11 +153,11 @@ pub struct ChangeFrameParams {
     pub naming: NamingParams,
 }
 
-/// the velocity law that joins depth and time — none when neither frame counts time, linear when one does
+/// the velocity law that joins depth and time - none when neither frame counts time, linear when one does
 #[derive(Debug, Params)]
 #[params(tag = "law")]
 pub enum VelocityLaw {
-    /// No law: both frames count lengths — elevation, depth, another origin.
+    /// No law: both frames count lengths - elevation, depth, another origin.
     #[case(default, name = "none")]
     Without,
     /// A velocity growing linearly with depth below the time frame's origin.
@@ -170,7 +170,7 @@ pub struct LinearLaw {
     /// linear: the velocity at the time frame's vertical origin, where t = 0, in metres per second
     #[param(uom = "m/s")]
     pub v0: f64,
-    /// linear: how fast the velocity grows with depth below that origin, per second — 0 is a constant velocity
+    /// linear: how fast the velocity grows with depth below that origin, per second - 0 is a constant velocity
     #[param(uom = "1/s")]
     pub k: f64,
     /// linear: whether the times are two-way (down and back, the seismic convention) or one-way
@@ -178,7 +178,7 @@ pub struct LinearLaw {
     /// No default: feeding a two-way time to a one-way formula doubles every
     /// depth with no symptom (`energyml_analysis::t2d`).
     pub travel_time: TravelTime,
-    /// linear: where the law comes from — a document with its page or paragraph; a law stated as plausible says so (synthetic, and why)
+    /// linear: where the law comes from - a document with its page or paragraph; a law stated as plausible says so (synthetic, and why)
     pub source: String,
 }
 
@@ -194,7 +194,7 @@ pub enum TravelTime {
 /// What `change-frame` takes.
 #[derive(Debug, Inputs)]
 pub struct ChangeFrameInputs {
-    /// the representation to write in another frame — a cloud, polylines, a triangulated surface or a 2D grid, with what is known of its frame
+    /// the representation to write in another frame - a cloud, polylines, a triangulated surface or a 2D grid, with what is known of its frame
     pub shape: Shape,
 }
 
@@ -251,7 +251,7 @@ fn form_of(geometry: &Geometry) -> Result<Form, String> {
 struct TimeAxis {
     /// Seconds per unit of the axis.
     seconds: f64,
-    /// The elevation of `t = 0` above the vertical datum, in metres — the
+    /// The elevation of `t = 0` above the vertical datum, in metres - the
     /// law's datum.
     origin: f64,
     /// `+1` when times grow downward, `−1` when they grow upward.
@@ -274,7 +274,7 @@ struct Side<'a> {
     counts: Counts,
 }
 
-/// What the third ordinate of `crs` counts, or why it cannot be read — the
+/// What the third ordinate of `crs` counts, or why it cannot be read - the
 /// refusal under `slot`, the side it is about.
 fn side<'a>(reference: &'a Ref, crs: &'a Crs, slot: &str) -> Result<Side<'a>, Refusal> {
     let title = &reference.title;
@@ -282,7 +282,7 @@ fn side<'a>(reference: &'a Ref, crs: &'a Crs, slot: &str) -> Result<Side<'a>, Re
         return Err(Refusal::on(
             slot,
             format!(
-                "`{title}` names no vertical system, so which way its third ordinate counts, and from where, is stated nowhere — a change of frame reads both: name a LocalEngineeringCompoundCrs"
+                "`{title}` names no vertical system, so which way its third ordinate counts, and from where, is stated nowhere - a change of frame reads both: name a LocalEngineeringCompoundCrs"
             ),
         ));
     }
@@ -303,7 +303,7 @@ fn side<'a>(reference: &'a Ref, crs: &'a Crs, slot: &str) -> Result<Side<'a>, Re
             ));
         }
         // `t = 0` is the frame's vertical origin: `to_projected` of a zero time
-        // is the origin's elevation, in the datum's length — no time enters.
+        // is the origin's elevation, in the datum's length - no time enters.
         let origin = crs.to_projected([0.0, 0.0, 0.0])[2];
         let origin = match crs.vertical_uom.as_deref() {
             Some(datum) if origin != 0.0 => units::metres(origin, datum).map_err(|why| {
@@ -379,7 +379,7 @@ fn same_system(a: &CrsKind, b: &CrsKind) -> bool {
 }
 
 /// The two frames sit on one projected system, in one horizontal unit, over
-/// one vertical datum — or the refusal that names the two.
+/// one vertical datum - or the refusal that names the two.
 fn same_ground(
     from: &Side<'_>,
     to: &Side<'_>,
@@ -393,7 +393,7 @@ fn same_ground(
             "frames",
             match (p, q) {
                 (CrsKind::Epsg(x), CrsKind::Epsg(y)) => format!(
-                    "`{a}` sits on EPSG:{x} and `{b}` on EPSG:{y}: moving between two projected systems is a reprojection, not a change of frame — it bends a lattice and needs a geodesy library (`energyml-proj`); write in a frame on EPSG:{x}"
+                    "`{a}` sits on EPSG:{x} and `{b}` on EPSG:{y}: moving between two projected systems is a reprojection, not a change of frame - it bends a lattice and needs a geodesy library (`energyml-proj`); write in a frame on EPSG:{x}"
                 ),
                 _ => format!(
                     "`{a}` sits on {} and `{b}` on {}: whether they are one projected system cannot be told, and a change of frame keeps the system",
@@ -415,7 +415,7 @@ fn same_ground(
     }
     let same_datum = match (&from.crs.vertical, &to.crs.vertical) {
         (CrsKind::Epsg(x), CrsKind::Epsg(y)) => x == y,
-        // A datum without a code — `VerticalUnknownCrs` — is the same datum
+        // A datum without a code - `VerticalUnknownCrs` - is the same datum
         // only as the same object.
         _ => matches!((from_datum, to_datum), (Some(x), Some(y)) if x.same_object(y)),
     };
@@ -423,7 +423,7 @@ fn same_ground(
         return Err(Refusal::new(
             "frames",
             format!(
-                "`{a}` counts heights from {} and `{b}` from {}: an elevation above one zero is not an elevation above the other — a change of vertical datum is a reprojection, not a change of frame",
+                "`{a}` counts heights from {} and `{b}` from {}: an elevation above one zero is not an elevation above the other - a change of vertical datum is a reprojection, not a change of frame",
                 system_words(&from.crs.vertical),
                 system_words(&to.crs.vertical)
             ),
@@ -435,7 +435,7 @@ fn same_ground(
 /// How the third ordinate goes from one frame to the other.
 #[derive(Debug, Clone, Copy)]
 enum Vertical {
-    /// Two lengths — elevation, depth, another origin: through the elevation
+    /// Two lengths - elevation, depth, another origin: through the elevation
     /// above the shared datum. Metres per unit, each side.
     Lengths { from: f64, to: f64 },
     /// Two times from one origin: a unit and a sense.
@@ -456,13 +456,13 @@ enum Vertical {
     },
 }
 
-/// The law as `t2d` takes it, or why it is none — its source first: a law
+/// The law as `t2d` takes it, or why it is none - its source first: a law
 /// nobody can trace is not stated.
 fn law_of(linear: &LinearLaw) -> Result<LinearVelocity, Refusal> {
     if linear.source.trim().is_empty() {
         return Err(Refusal::on(
             "source",
-            "is empty: a velocity law is sourced — a document with its page or paragraph, or a plausible law said to be one (reference-model rule: no constant without a source, ADR-0019)",
+            "is empty: a velocity law is sourced - a document with its page or paragraph, or a plausible law said to be one (reference-model rule: no constant without a source, ADR-0019)",
         ));
     }
     LinearVelocity::new(linear.v0, linear.k).map_err(|_| {
@@ -486,7 +486,7 @@ fn vertical_of(from: &Side<'_>, to: &Side<'_>, law: Option<&LinearLaw>) -> Resul
         (Counts::Length(_), Counts::Length(_), Some(_)) => Err(Refusal::on(
             "law",
             format!(
-                "neither `{a}` nor `{b}` counts time, so no law is used — and an activity recording one would say it was: leave `law` at none"
+                "neither `{a}` nor `{b}` counts time, so no law is used - and an activity recording one would say it was: leave `law` at none"
             ),
         )),
         (Counts::Time(x), Counts::Time(y), None) if (x.origin - y.origin).abs() <= 1e-9 => {
@@ -495,21 +495,21 @@ fn vertical_of(from: &Side<'_>, to: &Side<'_>, law: Option<&LinearLaw>) -> Resul
         (Counts::Time(x), Counts::Time(y), None) => Err(Refusal::new(
             "frames",
             format!(
-                "`{a}` counts time from {} m and `{b}` from {} m above the vertical datum: moving a time origin needs the velocities between the two — go through a depth frame, with a law each way",
+                "`{a}` counts time from {} m and `{b}` from {} m above the vertical datum: moving a time origin needs the velocities between the two - go through a depth frame, with a law each way",
                 x.origin, y.origin
             ),
         )),
         (Counts::Time(_), Counts::Time(_), Some(_)) => Err(Refusal::on(
             "law",
             format!(
-                "`{a}` and `{b}` both count time: a law is stated below one time origin, and none is needed between two times from one — leave `law` at none, or go through a depth frame"
+                "`{a}` and `{b}` both count time: a law is stated below one time origin, and none is needed between two times from one - leave `law` at none, or go through a depth frame"
             ),
         )),
         (Counts::Length(_), Counts::Time(_), None) | (Counts::Time(_), Counts::Length(_), None) => {
             Err(Refusal::on(
                 "law",
                 format!(
-                    "`{a}` and `{b}` are a length and a time: a time has no depth without a velocity, and no frame carries one — state the law (`law = linear`, with `v0`, `k`, `travelTime` and its `source`)"
+                    "`{a}` and `{b}` are a length and a time: a time has no depth without a velocity, and no frame carries one - state the law (`law = linear`, with `v0`, `k`, `travelTime` and its `source`)"
                 ),
             ))
         }
@@ -549,7 +549,7 @@ fn depth_at(law: &LinearVelocity, travel: TravelTime, seconds: f64) -> f64 {
 struct Tally {
     /// Nodes above the time origin: a negative time, or a negative time read.
     above: usize,
-    /// Nodes with a height the law does not reach — written with none.
+    /// Nodes with a height the law does not reach - written with none.
     unreached: usize,
 }
 
@@ -569,7 +569,7 @@ impl Change<'_> {
         let unplaced = |z: f64| self.to.from_projected([placed[0], placed[1], z]);
         match self.vertical {
             // The elevation above the shared datum, in metres, then in the
-            // target's unit — the sign and the origin are `from_projected`'s.
+            // target's unit - the sign and the origin are `from_projected`'s.
             Vertical::Lengths { from, to } => unplaced(placed[2] * from / to),
             Vertical::Times { from, to } => {
                 let seconds = from.sense * p[2] * from.seconds;
@@ -621,7 +621,7 @@ fn turn_between(from: &Crs, to: &Crs) -> f64 {
     turn.sin().atan2(turn.cos())
 }
 
-/// The lattice of the nodes as the target stores them — origin and spacing —
+/// The lattice of the nodes as the target stores them - origin and spacing -
 /// or the first node that is not where a lattice along +x then +y puts it.
 ///
 /// The reading `horizon-from-law` makes of its reference, on the nodes once
@@ -659,7 +659,7 @@ fn lattice_of(points: &[[f64; 3]], ni: usize, nj: usize) -> Result<([f64; 2], [f
     Ok(([origin[0], origin[1]], [dx, dy]))
 }
 
-/// The object a `crs` answer names — a `DataObjectReference` (its uuid, type and
+/// The object a `crs` answer names - a `DataObjectReference` (its uuid, type and
 /// `ObjectVersion`), a uri (read by `EtpUri`, the version it names included), or
 /// a bare uuid, which names no version.
 fn reference_of(value: &Value) -> Option<Ref> {
@@ -697,8 +697,8 @@ fn fnv(hash: &mut u64, bytes: [u8; 8]) {
     }
 }
 
-/// A digest of a shape's nodes — FNV-1a over each patch's count and every
-/// coordinate's bits — so that the identity follows the content, and stays the
+/// A digest of a shape's nodes - FNV-1a over each patch's count and every
+/// coordinate's bits - so that the identity follows the content, and stays the
 /// same from one build to the next (the standard library's hasher does not
 /// promise that).
 fn digest(geometry: &Geometry) -> u64 {
@@ -726,7 +726,7 @@ fn seeded(bag: &Pieces, key: &str) -> Pieces {
     out
 }
 
-/// A frame's third ordinate, in words — for a note.
+/// A frame's third ordinate, in words - for a note.
 fn axis_words(side: &Side<'_>) -> String {
     let unit = side.crs.vertical_axis_uom().unwrap_or("an unstated unit");
     match side.counts {
@@ -772,7 +772,7 @@ impl Operation for ChangeFrame {
     fn about(&self) -> About {
         About {
             name: "change-frame",
-            describe: "a representation written in another frame of the package — elevation and depth through the frames' vertical axes and origins, depth and time through a stated velocity law, the plane through each frame's origin and azimuth — same nodes, same order, same interpretation",
+            describe: "a representation written in another frame of the package - elevation and depth through the frames' vertical axes and origins, depth and time through a stated velocity law, the plane through each frame's origin and azimuth - same nodes, same order, same interpretation",
             category: Category::Frame,
             makes: &[
                 "resqml22.Grid2dRepresentation",
@@ -785,7 +785,7 @@ impl Operation for ChangeFrame {
         }
     }
 
-    /// The shape's interpretation and its title — the same horizon, see the
+    /// The shape's interpretation and its title - the same horizon, see the
     /// module. **Not** the frame: the one it is in is the one it cannot go to.
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
         let Some(known) = known_of(bag, "shape") else {
@@ -821,14 +821,14 @@ impl Operation for ChangeFrame {
         let from_ref = known.and_then(|k| k.crs.as_ref()).ok_or_else(|| {
             Refusal::on(
                 "shape",
-                "names no frame: a change of frame starts from the frame the numbers are in — give the shape with what is known of its object",
+                "names no frame: a change of frame starts from the frame the numbers are in - give the shape with what is known of its object",
             )
         })?;
         let from_crs = known.and_then(|k| k.placement.as_ref()).ok_or_else(|| {
             Refusal::on(
                 "shape",
                 format!(
-                    "is in `{}`, whose placement is not known — its origin, azimuth and vertical axis, which the caller resolves from the package; a shape read placed, for the scene, is local to no frame any more",
+                    "is in `{}`, whose placement is not known - its origin, azimuth and vertical axis, which the caller resolves from the package; a shape read placed, for the scene, is local to no frame any more",
                     from_ref.title
                 ),
             )
@@ -849,12 +849,12 @@ impl Operation for ChangeFrame {
             return Err(Refusal::on(
                 "crs",
                 format!(
-                    "names `{}`, the frame the shape is already in — nothing would change",
+                    "names `{}`, the frame the shape is already in - nothing would change",
                     from_ref.title
                 ),
             ));
         }
-        // The frame the answer names — by its version when the answer states
+        // The frame the answer names - by its version when the answer states
         // one; an answer that states none (a bare uuid, a short uri) takes the
         // frame that declares none first, then any.
         let framed = |exact: bool| {
@@ -874,7 +874,7 @@ impl Operation for ChangeFrame {
                 Refusal::on(
                     "crs",
                     format!(
-                        "names `{title}`, whose placement is not known — its origin, azimuth and vertical axis, which the caller resolves from the package for the frame it names"
+                        "names `{title}`, whose placement is not known - its origin, azimuth and vertical axis, which the caller resolves from the package for the frame it names"
                     ),
                 )
             })?;
@@ -898,7 +898,7 @@ impl Operation for ChangeFrame {
             return Err(Refusal::on(
                 "shape",
                 format!(
-                    "is a 2D grid, and `{}` is turned {}° from `{}`: the lattice would run along turned axes, which `grid` does not write (it writes along the frame's +x then +y) — write the grid in a frame of the same azimuth, or make points or triangles of it first",
+                    "is a 2D grid, and `{}` is turned {}° from `{}`: the lattice would run along turned axes, which `grid` does not write (it writes along the frame's +x then +y) - write the grid in a frame of the same azimuth, or make points or triangles of it first",
                     to_ref.title,
                     rounded(-turn.to_degrees()),
                     from_ref.title
@@ -976,7 +976,7 @@ impl Operation for ChangeFrame {
             },
             represented: params.represented.clone(),
             naming: params.naming.clone(),
-            // Nothing to create: the shape's interpretation, or none — what it
+            // Nothing to create: the shape's interpretation, or none - what it
             // represents does not change with its frame.
             new_feature: NewFeatureParams {
                 feature_type: None,
@@ -1026,7 +1026,7 @@ impl Operation for ChangeFrame {
             "the same horizontal placement, x and y unchanged".to_string()
         } else {
             format!(
-                "the local origin moves from ({}, {}) to ({}, {}) and the axes turn {}° clockwise — every node stays where it is, its numbers change",
+                "the local origin moves from ({}, {}) to ({}, {}) and the axes turn {}° clockwise - every node stays where it is, its numbers change",
                 from_crs.x_offset,
                 from_crs.y_offset,
                 to_crs.x_offset,
@@ -1081,7 +1081,7 @@ impl Operation for ChangeFrame {
                 return Err(Refusal::on(
                     "source",
                     format!(
-                        "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                        "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
                         description.chars().count()
                     ),
                 ));
@@ -1103,7 +1103,7 @@ impl Operation for ChangeFrame {
             }
             says.push(Note {
                 key: "law",
-                detail: format!("{stated_law} — source: {source}"),
+                detail: format!("{stated_law} - source: {source}"),
             });
             says.push(Note {
                 key: "synthetic",
@@ -1122,7 +1122,7 @@ impl Operation for ChangeFrame {
                 says.push(Note {
                     key: "unreached",
                     detail: format!(
-                        "{} node(s) lie deeper than the law reaches — its velocity falls to zero at {} m below the time origin: written with no height",
+                        "{} node(s) lie deeper than the law reaches - its velocity falls to zero at {} m below the time origin: written with no height",
                         tally.unreached,
                         -law.v0 / law.k
                     ),
@@ -1140,7 +1140,7 @@ impl Operation for ChangeFrame {
         Ok(plan)
     }
 
-    /// What was measured, and the counts the writer of each kind records —
+    /// What was measured, and the counts the writer of each kind records -
     /// each optional, since which appear depends on the kind and on the law.
     /// The inputs (`law`, `v0`, …) are recorded under their own titles.
     fn reports(&self) -> Vec<Slot> {
@@ -1167,11 +1167,11 @@ impl Operation for ChangeFrame {
             ),
             optional(
                 "aboveTimeOrigin",
-                "with a law: nodes above the time origin — negative times, the law extended above its datum",
+                "with a law: nodes above the time origin - negative times, the law extended above its datum",
             ),
             optional(
                 "unreachedNodes",
-                "with a law: nodes deeper than the law reaches — written with no height",
+                "with a law: nodes deeper than the law reaches - written with no height",
             ),
             optional("nodeCount", "a grid: nodes written"),
             optional("fastestAxisCount", "a grid: nodes along x"),

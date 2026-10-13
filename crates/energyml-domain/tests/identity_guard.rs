@@ -1,4 +1,4 @@
-//! The guard of the identity rule — internally, the full uri and nothing else
+//! The guard of the identity rule - internally, the full uri and nothing else
 //! (ADR-0003: one single entry point to define an identity for an object, in the
 //! web page as in Rust).
 //!
@@ -20,7 +20,7 @@
 //! | `fn uuid_of_uri(`, `fn uuid_in(`, `fn uuid_of_key(` | a second reading of an address | nowhere but the exception below |
 //!
 //! An exception is a **file and a reason**, and it must still be needed: an
-//! allowance no source matches any more fails the test too — otherwise the list
+//! allowance no source matches any more fails the test too - otherwise the list
 //! only ever grows. The comment lines and everything after `#[cfg(test)]` are not
 //! read (a unit test builds a uuid by hand on purpose).
 //!
@@ -28,7 +28,7 @@
 //! states is the project's, and the sources are versioned beside it.
 //!
 //! *What would break it*: write `store.find_by_uuid(uuid)` in
-//! `energyml-geometry/src/` — the test names the file and the line.
+//! `energyml-geometry/src/` - the test names the file and the line.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -209,7 +209,7 @@ fn no_internal_code_looks_an_object_up_by_a_bare_uuid_or_reads_an_address_by_han
             }
             for (at, line) in lines {
                 if line.contains(rule.needle) {
-                    violations.push(format!("{file}:{at}: `{}` — {}", rule.needle, rule.why));
+                    violations.push(format!("{file}:{at}: `{}` - {}", rule.needle, rule.why));
                 }
             }
         }
@@ -240,7 +240,7 @@ fn every_exception_is_still_needed() {
 
 /// The guard can fail: a source that breaks the rule is named. (The walk of the
 /// first test is by `sources()`; this one feeds the same rule a line it must
-/// refuse — and a line in an adapter it must let through.)
+/// refuse - and a line in an adapter it must let through.)
 #[test]
 fn the_rule_names_a_forbidden_call_and_lets_an_adapter_through() {
     let rule = &RULES[0];

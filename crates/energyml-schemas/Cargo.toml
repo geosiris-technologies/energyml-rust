@@ -6,7 +6,7 @@ edition.workspace = true
 rust-version.workspace = true
 # Spelled out rather than inherited: wasm-pack parses the manifests of a
 # WebAssembly front end's path dependencies before running wasm-opt, and
-# does not resolve workspace inheritance — `license.workspace = true` reaches
+# does not resolve workspace inheritance - `license.workspace = true` reaches
 # it as a table where it wants a string, and the wasm build dies *after*
 # writing the module, leaving a usable artefact and an unread exit code.
 license = "Apache-2.0"

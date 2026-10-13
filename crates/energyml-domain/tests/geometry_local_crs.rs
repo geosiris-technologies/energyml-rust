@@ -2,7 +2,7 @@
 //!
 //! The statement is the RESQML Technical Reference Guide 2.2's, §3.1
 //! `AbstractGeometry`, p. 22: *"From: AbstractGeometry.LocalCrs To:
-//! LocalEngineeringCompoundCrs"* — an association the XSD leaves untyped
+//! LocalEngineeringCompoundCrs"* - an association the XSD leaves untyped
 //! (`LocalCrs` is a bare `DataObjectReference`), so no schema validation ever
 //! caught a geometry naming half a system. RESQML 2.0.1's own target,
 //! `AbstractLocal3dCrs`, is `LocalDepth3dCrs` or `LocalTime3dCrs`, which the
@@ -12,8 +12,8 @@
 //! which geometries of the corpus break it is what the rule *reports*, not what
 //! it is judged by. And two house decisions (ADR-0018)
 //! fix two things the guide does not: the finding is a **warning**,
-//! never an error, and a geometry in degrees under a `Geographic2dCrs` — EML 2.3
-//! having no compound over a geographic system — is **named**, not silenced.
+//! never an error, and a geometry in degrees under a `Geographic2dCrs` - EML 2.3
+//! having no compound over a geographic system - is **named**, not silenced.
 
 use energyml_core::registry::DynObject;
 use energyml_core::value::Reflect;
@@ -139,7 +139,7 @@ fn a_2_0_1_geometry_on_a_local_depth_crs_is_not() {
 }
 
 /// Decision (a) of 24/09/2026: a geometry in degrees keeps its
-/// `Geographic2dCrs`. Still a finding — the guide's association is not met —
+/// `Geographic2dCrs`. Still a finding - the guide's association is not met -
 /// and the finding says it is the exception, and why: CRS.xsd types
 /// `LocalEngineering2dCrs.OriginProjectedCrs` as a `ProjectedCrs`, so no
 /// compound can sit over a geographic system.
@@ -183,7 +183,7 @@ impl ObjectSource for Held {
 
 /// The accounting: the finding is a **warning** of `check`, never an error.
 ///
-/// Judged by difference — the same package with and without the rules — so
+/// Judged by difference - the same package with and without the rules - so
 /// that the other sections (the `.rels` this fixture does not write, say)
 /// cannot move the count either way. The two ways this goes wrong both show:
 /// counted as an error, `errors()` stops being zero; not counted at all, the

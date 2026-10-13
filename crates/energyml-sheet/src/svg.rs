@@ -1,30 +1,30 @@
-//! Writing a [`crate::layout::Layout`] as SVG — the sheet's one point of
+//! Writing a [`crate::layout::Layout`] as SVG - the sheet's one point of
 //! output: a web page inserts these bytes unchanged,
 //! the CLI writes them unchanged, and a PNG or PDF export (not written
 //! yet) would read *this* string rather than the layout a second time.
 //!
 //! # Units, and what carries what
 //!
-//! The document is sized in millimetres — `width="…mm"` and a `viewBox`
+//! The document is sized in millimetres - `width="…mm"` and a `viewBox`
 //! whose numbers are the same magnitude, so one user unit is one
-//! millimetre — and every length this module computes (a column's width, a
+//! millimetre - and every length this module computes (a column's width, a
 //! section's height) is already in that unit, straight out of
 //! [`crate::layout`]. **The font size too**: it is written in user units,
 //! that is in millimetres (`text_size_pt × 25.4 / 72`), never as `…pt`. An
 //! SVG converts `pt` into user units as if one unit were one CSS pixel, *then*
-//! scales by the `viewBox` like everything else — so under a millimetre
+//! scales by the `viewBox` like everything else - so under a millimetre
 //! `viewBox`, `font-size="8pt"` came out 10.7 mm tall, four times the 2.8 mm
 //! the layout had reserved, and every label ran over its neighbour (the first
 //! sheet drawn from Lutetia). `tests/svg.rs` holds the conversion.
 //!
 //! # What is this module's own choice, not the specification's
 //!
-//! The **horizontal** layout — how wide each column is on the page — is not
+//! The **horizontal** layout - how wide each column is on the page - is not
 //! decided anywhere in the specification; only a *text* column's width is
 //! (`max_chars`). `column_widths_mm` is a heuristic: a text column
 //! is `max_chars` wide, a fill-only column and the MD column get a fixed
 //! share. The row is **stretched** to [`crate::layout::Layout::page_width_mm`]
-//! when it is narrower, and the page **widens** when it is wider — a column is
+//! when it is narrower, and the page **widens** when it is wider - a column is
 //! never squeezed below its natural width. The first version squeezed every
 //! row into 210 mm: a text column cut for 32 characters (≈ 48 mm) was drawn
 //! 16 mm wide, and every description ran over its neighbour (the first sheet
@@ -35,7 +35,7 @@
 //! # The two groups
 //!
 //! `<g id="header">` carries the title, the mode note (written on the
-//! sheet), and every column's own header — a sticky table header, so a page
+//! sheet), and every column's own header - a sticky table header, so a page
 //! that scrolls the body can leave it in place. `<g id="body">` carries
 //! everything positioned by MD: the section separators, the ruler when the
 //! mode is deformed, and every column's cells.
@@ -43,17 +43,17 @@
 //! # `data-*`
 //!
 //! Every cell carries `data-md-top` and `data-md-base` always, and
-//! `data-uri` / `data-row` when the interval it was drawn from named one —
+//! `data-uri` / `data-row` when the interval it was drawn from named one -
 //! the hooks a page's own script hangs a hover or a click on, so the SVG
 //! never needs one embedded in it.
 
 use crate::layout::{LaidCell, LaidTrack, Layout};
 use crate::text;
 
-/// The MD column's width, in characters — this module's own guess (see the
+/// The MD column's width, in characters - this module's own guess (see the
 /// module doc): nothing in the specification sizes it.
 const MD_COLUMN_CHARS: f64 = 10.0;
-/// A fill-only column's width, in millimetres — likewise a guess.
+/// A fill-only column's width, in millimetres - likewise a guess.
 const FILL_ONLY_COLUMN_MM: f64 = 15.0;
 /// No column is drawn narrower than this, whatever its render says.
 const MIN_COLUMN_MM: f64 = 8.0;
@@ -61,7 +61,7 @@ const MIN_COLUMN_MM: f64 = 8.0;
 const RULER_WIDTH_MM: f64 = 6.0;
 /// Left padding inside a cell, before its text starts.
 const CELL_PAD_MM: f64 = 1.0;
-/// Every stroked line's width, in millimetres — thin, on purpose: a paper
+/// Every stroked line's width, in millimetres - thin, on purpose: a paper
 /// sheet's rule lines are not the data.
 const STROKE_WIDTH_MM: f64 = 0.1;
 
@@ -84,7 +84,7 @@ pub fn write(layout: &Layout) -> String {
     };
 
     // `x[i]` is where track `i` starts; `x[tracks.len()]` is the row's own
-    // right edge. `x[0]` is the ruler's width, scaled — the ruler sits to
+    // right edge. `x[0]` is the ruler's width, scaled - the ruler sits to
     // the left of every track, in the margin the deformed modes ask for.
     let mut x: Vec<f64> = Vec::with_capacity(layout.tracks.len() + 1);
     x.push(ruler_natural * scale);
@@ -103,7 +103,7 @@ pub fn write(layout: &Layout) -> String {
         fmt(page_height_mm),
         fmt(page_width_mm),
         fmt(page_height_mm),
-        // In user units — millimetres — see the module doc.
+        // In user units - millimetres - see the module doc.
         fmt(layout.text_size_pt * crate::layout::PT_TO_MM),
     ));
     out.push_str(&format!(
@@ -119,14 +119,14 @@ pub fn write(layout: &Layout) -> String {
 }
 
 /// The page's width: the one asked for, or the row's natural width when that
-/// is wider — a column is never squeezed below the width its text was cut for
+/// is wider - a column is never squeezed below the width its text was cut for
 /// (module doc, *What is this module's own choice*).
 pub fn page_width_of(requested_mm: f64, natural_mm: f64) -> f64 {
     requested_mm.max(natural_mm)
 }
 
 /// This module's guess at each track's width, before the whole row is
-/// scaled to fit the page — see the module doc.
+/// scaled to fit the page - see the module doc.
 fn column_widths_mm(layout: &Layout) -> Vec<f64> {
     layout
         .tracks
@@ -153,7 +153,7 @@ fn column_widths_mm(layout: &Layout) -> Vec<f64> {
         .collect()
 }
 
-/// `<g id="header">` — the title, the mode note, and every column's own
+/// `<g id="header">` - the title, the mode note, and every column's own
 /// header, sticky-table-header fashion (module doc).
 fn write_header(out: &mut String, layout: &Layout, x: &[f64], line_height: f64) {
     out.push_str("<g id=\"header\">\n");
@@ -196,7 +196,7 @@ fn write_header(out: &mut String, layout: &Layout, x: &[f64], line_height: f64) 
     out.push_str("</g>\n");
 }
 
-/// `<g id="body">` — the section separators, the margin ruler, and every
+/// `<g id="body">` - the section separators, the margin ruler, and every
 /// column's cells, all positioned from the body's own top (the header sits
 /// above it, and this group is translated down past it).
 fn write_body(out: &mut String, layout: &Layout, x: &[f64], line_height: f64) {
@@ -205,7 +205,7 @@ fn write_body(out: &mut String, layout: &Layout, x: &[f64], line_height: f64) {
         fmt(layout.header_height_mm)
     ));
 
-    // Every section boundary, once — "at each MD... a black line" spans
+    // Every section boundary, once - "at each MD... a black line" spans
     // the whole row, not just the MD column (the original request, sheet
     // design).
     let mut boundary_ys: Vec<f64> = layout.sections.iter().map(|section| section.y_top_mm).collect();
@@ -231,7 +231,7 @@ fn write_body(out: &mut String, layout: &Layout, x: &[f64], line_height: f64) {
         ));
         // The oblique connectors: the true position at
         // the ruler's own left edge, the deformed one at the track row's
-        // left edge — one line per boundary the ruler and the row share.
+        // left edge - one line per boundary the ruler and the row share.
         for (y_true, y_deformed) in ruler.y_true_mm.iter().zip(&boundary_ys) {
             out.push_str(&format!(
                 "<line x1=\"0\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"#999999\" stroke-width=\"{}\"/>\n",
@@ -249,7 +249,7 @@ fn write_body(out: &mut String, layout: &Layout, x: &[f64], line_height: f64) {
         match track {
             LaidTrack::Md { ticks, .. } => {
                 for (tick_index, tick) in ticks.iter().enumerate() {
-                    // A label hangs below its line — except the last one, the
+                    // A label hangs below its line - except the last one, the
                     // well's base, whose line is the page's bottom edge: below
                     // it the label would be outside the picture.
                     let baseline = if tick_index + 1 == ticks.len() && tick_index > 0 {
@@ -316,7 +316,7 @@ fn write_cell(
         attributes.push_str(&format!(" data-row=\"{}\"", escape(row)));
     }
     if cell.blank {
-        // "An interval without a value is a stated blank" — said in the
+        // "An interval without a value is a stated blank" - said in the
         // markup, not just an absence a reader has to notice on their own.
         attributes.push_str(" data-blank=\"true\"");
     }

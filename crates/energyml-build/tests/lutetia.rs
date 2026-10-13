@@ -1,24 +1,24 @@
-//! Lutetia, played and judged — the final step of the reference model's build:
+//! Lutetia, played and judged - the final step of the reference model's build:
 //! a test of the repository makes it and judges it.
 //!
 //! The recipe is Lutetia's `recette.toml` and its versioned inputs; the
 //! package is made in a temporary folder, never kept. Three things are asserted,
 //! and none of them is a number measured on the package:
 //!
-//! - **`check` finds what the `[ERROR]` model plants, and nothing else** — no
+//! - **`check` finds what the `[ERROR]` model plants, and nothing else** - no
 //!   error, and exactly the nine warnings that the planted faults make but one
 //!   (the one that waits for a later fix), each on a member of the `[ERROR] Lutetia`
 //!   collection. The judge is `energyml_domain::check`, code apart from
 //!   the operations that wrote the package, reading it back from the saved
 //!   files. Every finding of this clean model is one of those nine;
-//! - **the wells' collection holds the wells, all of them and only them** — its
+//! - **the wells' collection holds the wells, all of them and only them** - its
 //!   association set's references against the package's own list of
 //!   `WellboreInterpretation` parts, two sources for one fact. *“the
 //!   DataobjectCollection must only contain WellboreInterpretation”* (RESQML
 //!   TRG 2.2 §6.19 p. 187) is the form; which wells, the recipe's;
 //! - **the project holds every object of the package** (the model's rule:
-//!   *“each own object is in it — an object outside the project is an oversight of the
-//!   generator”*) — except what is named: the project, its own association
+//!   *“each own object is in it - an object outside the project is an oversight of the
+//!   generator”*) - except what is named: the project, its own association
 //!   set and its own step's activity (written after it was planned), and the
 //!   workflow's root activity and template, written after the last step (the
 //!   known gap of the model). When the gap closes, this fails, and the
@@ -56,7 +56,7 @@ impl Reader for Disk {
             Where::Url(url) => Err(format!("{url}: this test reads no network")),
         }
     }
-    /// Bytes, for the files that are not text — the pictograms of `attach`
+    /// Bytes, for the files that are not text - the pictograms of `attach`
     ///. Without it the default goes
     /// through `text`, which refuses a PNG.
     fn bytes(&mut self, source: &Where) -> Result<(Vec<u8>, Option<String>), String> {
@@ -151,7 +151,7 @@ fn lutetia_is_played_clean_and_its_collections_hold_what_the_package_holds() {
         &report.counts,
     );
     // The eight faults weighed as errors:
-    // E-01/E-02, E-03, E-06, E-07, E-08 twice, E-09 — so `check` fails, as the error model
+    // E-01/E-02, E-03, E-06, E-07, E-08 twice, E-09 - so `check` fails, as the error model
     // expects of a package that plants them. Nothing else is an error.
     assert_eq!(report.errors(), 8, "{all:#?}");
     assert!(
@@ -245,8 +245,8 @@ fn lutetia_is_played_clean_and_its_collections_hold_what_the_package_holds() {
     }
 
     // The wells' collection, against the package's own wellbore interpretations
-    // — the clean ones: the `[ERROR]` well is planted outside it.
-    let wells = members_of(&store, &titled("Lutetia — model wells"));
+    // - the clean ones: the `[ERROR]` well is planted outside it.
+    let wells = members_of(&store, &titled("Lutetia - model wells"));
     let interpretations: BTreeSet<String> = resources
         .iter()
         .filter(|one| one.qualified_type == "resqml22.WellboreInterpretation" && !planted.contains(&one.uuid))
@@ -258,7 +258,7 @@ fn lutetia_is_played_clean_and_its_collections_hold_what_the_package_holds() {
     // The project, against every object of the package, the named gap apart.
     let project = titled("Lutetia");
     let members = members_of(&store, &project);
-    // A collection, its own association set and its own step's activity —
+    // A collection, its own association set and its own step's activity -
     // written after it was planned, it cannot name itself among what it gathers.
     let itself = |collection: &str| -> Vec<String> {
         let sets = resources
@@ -312,7 +312,7 @@ fn lutetia_is_played_clean_and_its_collections_hold_what_the_package_holds() {
     // The analysis names the period it analyses by uid (`PrincipalTestPeriodRef`),
     // and the recipe **tells** it: an object in the bag is a reference, not
     // its content (`ops/pta.rs`). The second source is the test itself, read
-    // back from the package — every period named must be one it holds.
+    // back from the package - every period named must be one it holds.
     let mut analyses = 0usize;
     for one in resources
         .iter()
@@ -357,7 +357,7 @@ fn lutetia_is_played_clean_and_its_collections_hold_what_the_package_holds() {
     // The head images are **parts of the zip**, not text in the XML
     // (a reported need: no image file was visible in the epc).
     // Three sources for one fact: the package's list of files, its media
-    // relations (Packaging Conventions v1.0 §3.4.2 pp. 15–16: the Attachment is
+    // relations (Packaging Conventions v1.0 §3.4.2 pp. 15-16: the Attachment is
     // related to its part by `destinationMedia`), and the reader of the domain
     // that follows an inherited attachment down to its bytes.
     const PNG_SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n"; // RFC 2083 §3.1
@@ -367,7 +367,7 @@ fn lutetia_is_played_clean_and_its_collections_hold_what_the_package_holds() {
     for (part, carrier) in [
         (
             "media/symbols/puits-vertical.png",
-            Some("Lutetia — vertical wells"),
+            Some("Lutetia - vertical wells"),
         ),
         ("media/symbols/doublet.png", None),
     ] {
@@ -435,8 +435,8 @@ fn lutetia_is_played_clean_and_its_collections_hold_what_the_package_holds() {
 /// recipe writes, this fails, and the message says which replay brings the
 /// example up to date ([`lutetia_package::refresh`]).
 ///
-/// How the two are compared — byte for byte on the platform that wrote the
-/// example, up to float noise on another — is [`confront`]'s.
+/// How the two are compared - byte for byte on the platform that wrote the
+/// example, up to float noise on another - is [`confront`]'s.
 #[test]
 fn the_example_the_page_opens_is_this_recipe_played() {
     let Some((recipe, base)) = recipe_and_base() else {
@@ -448,10 +448,10 @@ fn the_example_the_page_opens_is_this_recipe_played() {
     confront(&recipe, &base, &kept, "full");
 }
 
-/// **And the example without its errors** — a second one is needed to open lutetia
+/// **And the example without its errors** - a second one is needed to open lutetia
 /// without the objects in error. The same
 /// recipe played without the group `erreur` (`Recipe::without`), confronted the
-/// same way — and **clean**: no `[ERROR]` object, and `check` finds nothing,
+/// same way - and **clean**: no `[ERROR]` object, and `check` finds nothing,
 /// error or warning. Every finding of the full model is on an `[ERROR]` object
 /// (the test above), so a finding here is a fault of the clean model itself.
 #[test]
@@ -503,28 +503,28 @@ fn the_example_without_errors_is_the_recipe_without_its_error_model() {
 /// Two numbers agree up to the last bits of a float: a relative 1e-8, taken
 /// against 1 near zero. Measured on 28/09 between Windows and Linux (glibc)
 /// over the whole package: 1.5e-11 at worst in the XML, 1.2e-10 in the arrays.
-/// Two NaN agree — an absent value on both sides.
+/// Two NaN agree - an absent value on both sides.
 fn close(a: f64, b: f64) -> bool {
     (a.is_nan() && b.is_nan()) || (a - b).abs() <= 1e-8 * 1f64.max(a.abs()).max(b.abs())
 }
 
 /// **The same package, up to the last bits of a float.** Found on the CI's
 /// first run of this test (28/09): the reprojection of `passes-etages.csv`
-/// wrote `6861791.310959258` on Windows and `…259` on Linux — `sin`, `cos`,
+/// wrote `6861791.310959258` on Windows and `…259` on Linux - `sin`, `cos`,
 /// `exp` are the platform's C library, and two libraries may differ by an ulp.
 /// Byte for byte is then out of reach, and the uuids with it: an identity
 /// derived from a position follows its last bit, and so does every object that
 /// names it (2 144 parts of 2 491 differed, all by this).
 ///
-/// So an object is found by **what it is** — its type, its title and its
-/// *skeleton*, the text with every uuid and every number made a token — and the
+/// So an object is found by **what it is** - its type, its title and its
+/// *skeleton*, the text with every uuid and every number made a token - and the
 /// numbers of the two are compared with [`close`]. What differs in the
 /// skeleton, an object on one side only, a number beyond the noise: each is a
 /// finding, and none is forgiven. The one number set apart is an activity's
 /// `byteCount`, the size of a text file whose floats are written at their
 /// shortest: it follows the noise by construction.
 ///
-/// `.rels` and `[Content_Types].xml` are left out — both list parts by names
+/// `.rels` and `[Content_Types].xml` are left out - both list parts by names
 /// that carry uuids, so their order follows the same noise, and both are
 /// rebuilt from the objects compared here.
 struct FloatNoise {
@@ -670,7 +670,7 @@ fn between_tags<'a>(text: &'a str, open: &str, close: &str) -> Option<&'a str> {
     Some(&text[start..start + text[start..].find(close)?])
 }
 
-/// An activity's `byteCount` value made a word — see [`FloatNoise`].
+/// An activity's `byteCount` value made a word - see [`FloatNoise`].
 fn without_byte_count(text: &str) -> String {
     let Some(at) = text.find("<eml:Title>byteCount</eml:Title>") else {
         return text.to_string();
@@ -689,7 +689,7 @@ fn without_byte_count(text: &str) -> String {
 
 /// The text with every uuid made `U` and every number `#`, and the numbers in
 /// order. A number is digits, a fraction, an exponent, and a minus sign that no
-/// letter or digit precedes — so `2023-01-01` is three numbers on both sides,
+/// letter or digit precedes - so `2023-01-01` is three numbers on both sides,
 /// and `BSS000NVHN` keeps its letters.
 fn tokens(text: &str) -> (String, Vec<f64>) {
     let bytes = text.as_bytes();
@@ -739,8 +739,8 @@ fn tokens(text: &str) -> (String, Vec<f64>) {
     (skeleton, numbers)
 }
 
-/// The parts two packages disagree on — present on one side only, or with other
-/// bytes — the first ten, with the first differing line of each. "The EPC
+/// The parts two packages disagree on - present on one side only, or with other
+/// bytes - the first ten, with the first differing line of each. "The EPC
 /// differs" alone sent a CI failure to be reproduced on a second machine before
 /// anyone could say *where*.
 fn parts_that_differ(ours: &[u8], again: &[u8]) -> Vec<String> {
@@ -796,7 +796,7 @@ fn recipe_and_base() -> Option<(Recipe, std::path::PathBuf)> {
     Some((Recipe::parse(&text).unwrap_or_else(|stop| panic!("{stop}")), base))
 }
 
-/// **A versioned example against its recipe, played again** — what the front end
+/// **A versioned example against its recipe, played again** - what the front end
 /// opens is what the code writes (the epc and h5 of Lutetia are stored in the resources
 /// of a front end, kept up to date by the CI, and the front end only
 /// opens them). When the code changes
@@ -804,13 +804,13 @@ fn recipe_and_base() -> Option<(Recipe, std::path::PathBuf)> {
 /// ([`lutetia_package::refresh`]) brings both examples up to date.
 ///
 /// - the **EPC byte for byte** on the platform that wrote the example (the
-///   `written-on` stamp, [`lutetia_package::Stamp`]) — this workspace writes the
+///   `written-on` stamp, [`lutetia_package::Stamp`]) - this workspace writes the
 ///   same bytes twice on one machine;
 /// - **the same package up to float noise** on another ([`FloatNoise`]): the
 ///   platforms' math libraries differ by an ulp, and the CI runs Linux while
 ///   the examples are written on Windows. Believed otherwise until the CI's
 ///   first run, which disagreed on 2 144 parts;
-/// - the **`.h5` array by array** — shape, type and values of every array the
+/// - the **`.h5` array by array** - shape, type and values of every array the
 ///   package points at, read through the store from both sides, exactly or
 ///   within the same noise. Not its bytes: the file layout belongs to the HDF5
 ///   library, and the CI's (Ubuntu's) is not the one on a developer's machine.
@@ -827,7 +827,7 @@ fn confront(recipe: &Recipe, base: &Path, kept: &Path, label: &str) -> std::path
         .unwrap_or_else(|stop| panic!("{stop}"));
 
     let stale = format!(
-        "the versioned example is stale — {}",
+        "the versioned example is stale - {}",
         lutetia_package::refresh(kept)
     );
     let (again, ours) = (std::fs::read(&out).unwrap(), std::fs::read(kept).unwrap());
@@ -933,11 +933,11 @@ fn confront(recipe: &Recipe, base: &Path, kept: &Path, label: &str) -> std::path
     }
     // Not a count pinned: a package with no array would make every comparison
     // above pass on nothing.
-    assert!(compared > 0, "no array compared — this proves nothing");
+    assert!(compared > 0, "no array compared - this proves nothing");
     out
 }
 
-/// **The section drawing kept beside the model is the model's** — drawn again
+/// **The section drawing kept beside the model is the model's** - drawn again
 /// from what its own metadata says (`energyml_section::redraw`, the
 /// `--from-svg` of the section-view design), over the clean
 /// example the recipe draws it from, it comes back the same. When a step
@@ -946,7 +946,7 @@ fn confront(recipe: &Recipe, base: &Path, kept: &Path, label: &str) -> std::path
 /// gives the command that draws it again.
 ///
 /// Byte for byte on the platform that wrote the example; elsewhere the same
-/// text with every number within a hundredth of a pixel — the SVG prints two
+/// text with every number within a hundredth of a pixel - the SVG prints two
 /// decimals, so an ulp of another libm can move the last digit and no more.
 #[test]
 fn the_section_drawing_is_drawn_again_the_same_from_the_example() {
@@ -970,7 +970,7 @@ fn the_section_drawing_is_drawn_again_the_same_from_the_example() {
         .unwrap_or_else(|why| panic!("{why}"));
 
     let stale = format!(
-        "{}/donnees/profils/ is stale — draw it again (the README of that folder), then {}",
+        "{}/donnees/profils/ is stale - draw it again (the README of that folder), then {}",
         base.display(),
         lutetia_package::refresh(&base)
     );

@@ -3,7 +3,7 @@
 //! Contract: [`assemble`].
 //!
 //! Nothing is read here: a [`Contribution`] is pure data in the scene's system,
-//! and everything this does is arithmetic over it — projecting the heads on each
+//! and everything this does is arithmetic over it - projecting the heads on each
 //! section's [`Corridor`], placing every node of a well on the abscissa, folding
 //! the objects of one wellbore into one line, giving every object asked for a
 //! row that says what became of it.
@@ -23,7 +23,7 @@ use crate::model::{
 type V = [f64; 2];
 
 /// The angle between two points of a rounded outer turn of a band: 15 degrees,
-/// a sagitta of 0.9 % of the width — invisible at the scale of a drawing, and
+/// a sagitta of 0.9 % of the width - invisible at the scale of a drawing, and
 /// a dozen points for a right angle.
 pub const BAND_ARC_STEP: f64 = std::f64::consts::PI / 12.0;
 
@@ -314,9 +314,9 @@ struct Line<'a> {
 /// they carry as many, the first of equals. A well with no wellbore stands
 /// alone. Lines keep the order of their first member.
 ///
-/// *The most intervals*, not *the first frame*: a wellbore often has two frames
-/// — Lutetia gives each of its boreholes a frame for the geometry and one for
-/// the stratigraphy — and keeping the silent one drew wells grey beside a
+/// *The most intervals*, not *the first frame*: a wellbore often has two frames -
+/// Lutetia gives each of its boreholes a frame for the geometry and one for
+/// the stratigraphy - and keeping the silent one drew wells grey beside a
 /// sister that knew their units (03/10, the first export of Lutetia).
 fn fold_wells<'a>(all: &[&'a WellRead]) -> Vec<Line<'a>> {
     let mut lines: Vec<Line<'a>> = Vec::new();
@@ -361,7 +361,7 @@ fn fold_wells<'a>(all: &[&'a WellRead]) -> Vec<Line<'a>> {
 /// The count comes last since the faces paint a silent member from the frames
 /// of its wellbore (`PackageContext::frames_of`): a trajectory, or a frame
 /// prolonged below the described units, painted that way carries the stated
-/// frame's units on its own nodes — and counted first it won the line from the
+/// frame's units on its own nodes - and counted first it won the line from the
 /// frame it borrowed them from (03/10). A zero-length interval (a node's own
 /// colour, `strata_by_md::Painting::intervals`) is no rock, and not counted.
 fn rank(well: &WellRead) -> (bool, bool, bool, usize) {
@@ -387,7 +387,7 @@ fn reach(well: &WellRead) -> f64 {
 /// The member of a line whose path is drawn: the one that reaches deepest.
 ///
 /// The line's strata come from the member that knows the most units ([`rank`]);
-/// its **geometry** from the one that goes furthest — Lutetia's stratigraphic
+/// its **geometry** from the one that goes furthest - Lutetia's stratigraphic
 /// frame stops where the described units stop, its geometric frame runs to the
 /// bottom of the hole, and drawing the first cut every well short (03/10). The
 /// two share the wellbore, so their MD are the wellbore's: an interval is placed
@@ -406,7 +406,7 @@ fn well_item(line: &Line<'_>, kept: &Kept) -> WellItem {
     let geometry = geometry_of(line);
     let dir = kept.direction;
     // Every node is placed along the direction the projection kept, from the
-    // head's own abscissa — the head and the nodes stay in one rigid plane.
+    // head's own abscissa - the head and the nodes stay in one rigid plane.
     let path: Vec<V> = geometry
         .path
         .iter()
@@ -547,7 +547,7 @@ fn z_range_of(items: &[Item]) -> Option<[f64; 2]> {
 ///
 /// Both cuts are exact on the same piecewise-linear surface at the same point
 /// of the plane, so a real disagreement is a surface read differently, a grid
-/// face cut by two different triangles, or a hole on one side — a difference
+/// face cut by two different triangles, or a hole on one side - a difference
 /// of the drawing's own order, never of a rounding. 0.5 % of the extent is
 /// about a pixel on a 200-pixel-high frame: a gap smaller than that cannot be
 /// seen, and saying it would be noise; a larger one is visible in the drawing
@@ -556,7 +556,7 @@ fn z_range_of(items: &[Item]) -> Option<[f64; 2]> {
 pub const CROSSING_TOLERANCE_SHARE: f64 = 0.005;
 
 /// The tolerance when the two sections have no vertical extent worth a share
-/// (a flat horizon alone): 1 cm, in the scene's unit — the precision the
+/// (a flat horizon alone): 1 cm, in the scene's unit - the precision the
 /// coordinates of a package are given to.
 pub const CROSSING_TOLERANCE_FLOOR: f64 = 0.01;
 
@@ -571,7 +571,7 @@ const CROSSING_S_SLACK: f64 = 1e-6;
 type Elevations = Vec<(&'static str, Vec<f64>)>;
 
 /// The crossing notes: at every crossing of two sections, **a surface drawn on
-/// both gives the same elevation on both** — they pass through the same point
+/// both gives the same elevation on both** - they pass through the same point
 /// of the plane. When it does not, it is **said** (`crossingMismatch`), never
 /// corrected or hidden; when one section has nothing at the crossing where the
 /// other has the surface (a hole, an end), it is said too
@@ -583,7 +583,7 @@ type Elevations = Vec<(&'static str, Vec<f64>)>;
 /// breadth of `s` changes it by metres. A grid is compared by its top and its
 /// bottom, each by its own rule; where a column is split (a fault step) the
 /// elevations at the crossing are several, and the comparison is between the
-/// two sets — the worst nearest-pair.
+/// two sets - the worst nearest-pair.
 fn crossing_notes(sections: &[Section]) -> Vec<crate::model::Note> {
     let mut notes = Vec::new();
     for a in sections {

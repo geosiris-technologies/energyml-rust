@@ -3,20 +3,20 @@
 //! # Why this crate exists
 //!
 //! `energyml-storage` takes a [`Registry`] and never builds one. That is what
-//! makes "a new schema version costs no code change in the storage layer" true
-//! — the layer names no version, no crate and no package. Somebody still has to
+//! makes "a new schema version costs no code change in the storage layer" true -
+//! the layer names no version, no crate and no package. Somebody still has to
 //! *choose* which versions an application knows, and for the tools shipped here
 //! the answer is "all of them".
 //!
-//! That choice used to be written out twice in production — once in the CLI,
-//! once in the round-trip tool — and eighteen more times across the test
+//! That choice used to be written out twice in production - once in the CLI,
+//! once in the round-trip tool - and eighteen more times across the test
 //! suites, each an independently maintained subset. Nothing detected an
 //! omission: a new crate left out of one of those lists produced no compile
 //! error and no failing test, only a tool that quietly could not read the new
 //! version and a test suite that quietly never covered it.
 //!
 //! So the list lives here, once, and [`tests/complete.rs`] checks it against
-//! `codegen.toml` — the file that declares which versions the workspace
+//! `codegen.toml` - the file that declares which versions the workspace
 //! produces. Add a release, forget the line, and a test fails naming it.
 //!
 //! # What a new Energistics release actually costs
@@ -30,14 +30,14 @@
 //! Identification is entirely `TypeInfo`-driven: content types, qualified
 //! types, part names and the version resolution in `EpcStore` are computed from
 //! the registry rather than matched against a table. The geometry readers are
-//! keyed on `TypeInfo::type_key` — the *concept* name, identical across
-//! versions by construction — so a new release is read by the reader that
+//! keyed on `TypeInfo::type_key` - the *concept* name, identical across
+//! versions by construction - so a new release is read by the reader that
 //! already exists.
 //!
 //! What does cost something is a release that **respells the insides** of a
 //! type, and that has happened at every release so far. Those live in named
-//! constants next to the code that reads them — `NODE_PATCH`, `SPLIT_FIELDS`,
-//! `PARENT_GRID_FIELDS`, `INTERPRETS` — each a list of the spellings one
+//! constants next to the code that reads them - `NODE_PATCH`, `SPLIT_FIELDS`,
+//! `PARENT_GRID_FIELDS`, `INTERPRETS` - each a list of the spellings one
 //! concept has worn. A new spelling is one string added to one list.
 //!
 //! # Choosing versions: one Cargo feature per schema version
@@ -57,7 +57,7 @@
 //! | `all` | everything (the default) | |
 //!
 //! `default-features = false, features = ["resqml22"]` therefore gives RESQML
-//! 2.2 and EML 2.3 and nothing else — no 2.0.1, no WITSML.
+//! 2.2 and EML 2.3 and nothing else - no 2.0.1, no WITSML.
 //!
 //! **A version that is not compiled is a named refusal, never a half read.**
 //! [`all`] registers only what is compiled; [`KNOWN_VERSIONS`] lists every
@@ -77,7 +77,7 @@
 //!
 //! [`all`] registers every version, a development drop included, because a
 //! file written against the drop must still open. What a *new* object may be
-//! made of is a narrower list, and [`may_create`] is where it is drawn — once,
+//! made of is a narrower list, and [`may_create`] is where it is drawn - once,
 //! so that every face offering a type to create offers the same ones.
 //!
 //! [`Registry`]: energyml_core::registry::Registry
@@ -101,7 +101,7 @@ use energyml_core::registry::Registry;
 /// Every generated crate **compiled in**, registered.
 ///
 /// Which crates those are is the business of the Cargo features of this crate
-/// (one per schema version — see the crate documentation); with none on, the
+/// (one per schema version - see the crate documentation); with none on, the
 /// registry is empty. A version that is not compiled is not silently absent:
 /// [`missing_feature`] names the feature that would bring it.
 #[allow(unused_mut)]
@@ -158,7 +158,7 @@ pub fn declare_absent_versions(registry: &mut Registry, compiled: &[&str]) {
 /// itself.
 ///
 /// Derived rather than written down, so it cannot disagree with what `all`
-/// actually did — which is the whole point of the test that consumes it.
+/// actually did - which is the whole point of the test that consumes it.
 pub fn registered() -> Vec<(&'static str, &'static str)> {
     let registry = all();
     let mut pairs: Vec<(&'static str, &'static str)> = registry
@@ -172,8 +172,8 @@ pub fn registered() -> Vec<(&'static str, &'static str)> {
 
 /// Whether a **new** object may be created as this type.
 ///
-/// Two conditions, and a list offering types to create — the front end's *new
-/// object* chooser, an operation's type field — must apply both:
+/// Two conditions, and a list offering types to create - the front end's *new
+/// object* chooser, an operation's type field - must apply both:
 ///
 /// - **it names a part.** Only a top-level type has a qualified type; a nested
 ///   one exists inside a field, and offering it would offer something that
@@ -189,12 +189,12 @@ pub fn registered() -> Vec<(&'static str, &'static str)> {
 ///
 /// - the drop declares the release's own `version="2.2"`, so most of its
 ///   top-level types carry **the very qualified type** of a released one.
-///   Offered beside it, `resqml22.Model` was listed twice under one name — and
+///   Offered beside it, `resqml22.Model` was listed twice under one name - and
 ///   choosing either row made the *release's* type, because
 ///   [`Registry::create`] resolves by qualified type and a drop never owns a
 ///   key its release holds. A row that says one thing and does another;
-/// - the rest exist **only** in the drop — `resqml22.CategoricalProperty`,
-///   `resqml22.LocalDepth3dCrs`, `resqml22.MdDatum` — so there the key *is*
+/// - the rest exist **only** in the drop - `resqml22.CategoricalProperty`,
+///   `resqml22.LocalDepth3dCrs`, `resqml22.MdDatum` - so there the key *is*
 ///   the drop's, and creating one writes an object no released 2.2 reader
 ///   knows.
 ///

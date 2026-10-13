@@ -6,13 +6,13 @@
 //!
 //! `WaterAnalysis.WaterSampleComponent` 0..n (FluidAnalysis.xsd), each naming
 //! its ion by `Anion` (`AnionKind`) or `Cation` (`CationKind`) and giving it as
-//! `VolumeConcentration` — a `MassPerVolumeMeasure`. That is how
+//! `VolumeConcentration` - a `MassPerVolumeMeasure`. That is how
 //! `energyml-build`'s `fluid-sample` writes them (`fluid_sample.rs`,
 //! `component`), and read here **by shape**: the fields are looked up by name,
 //! never through a PRODML release's types.
 //!
 //! The formulas are kept as the file spells them. `AnionKind` and `CationKind`
-//! write `Ca+2`, `HCO3-`, `SO4-2` — the spelling `ion_balance::IONS` uses — so
+//! write `Ca+2`, `HCO3-`, `SO4-2` - the spelling `ion_balance::IONS` uses - so
 //! an ion the balance does not know (nitrate, spelled `NO3-2` by PRODML 2.3) is
 //! refused **there**, by its formula, with the reason `ion_balance` gives.
 //!
@@ -20,7 +20,7 @@
 //!
 //! - **No component.** An analysis stating no ion is not a water with nothing
 //!   dissolved in it, and a diagram of nothing would be drawn at a corner.
-//! - **A component that is not an ion** — an `OrganicAcid`, or a component
+//! - **A component that is not an ion** - an `OrganicAcid`, or a component
 //!   naming neither anion nor cation. An organic acid carries a charge the
 //!   balance does not count; leaving it out would unbalance an analysis that
 //!   balances, or balance one that does not.
@@ -35,7 +35,7 @@ use energyml_core::value::Reflect;
 
 use crate::series::{number_of, objects, text};
 
-/// The mass-per-volume units read, and what one of each is in mg/L — exact by
+/// The mass-per-volume units read, and what one of each is in mg/L - exact by
 /// definition of the prefixes (1 L = 10⁻³ m³).
 pub const TO_MG_PER_L: &[(&str, f64)] = &[("mg/L", 1.0), ("g/L", 1_000.0), ("g/m3", 1.0), ("kg/m3", 1_000.0)];
 
@@ -68,7 +68,7 @@ pub enum WaterRead {
         rank: usize,
     },
     /// A component with no mass-per-volume concentration.
-    #[error("component {rank} (`{formula}`) states no VolumeConcentration — {why}")]
+    #[error("component {rank} (`{formula}`) states no VolumeConcentration - {why}")]
     NoConcentration {
         /// Its rank.
         rank: usize,
@@ -93,7 +93,7 @@ pub enum WaterRead {
     },
 }
 
-/// Whether this reads the object — a water analysis, by the field holding its
+/// Whether this reads the object - a water analysis, by the field holding its
 /// components.
 pub fn reads(object: &dyn Reflect) -> bool {
     object

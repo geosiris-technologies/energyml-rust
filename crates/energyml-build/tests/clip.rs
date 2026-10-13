@@ -1,4 +1,4 @@
-//! `clip` — a shape cut by rings. What a hole does to each kind is
+//! `clip` - a shape cut by rings. What a hole does to each kind is
 //! `delete-nodes`' own (`tests/delete_nodes.rs`); this holds what the rings
 //! decide, checked by an even-odd loop written here and never by
 //! `energyml_geometry::clip`, which would have the function agree with itself.
@@ -22,7 +22,7 @@ fn when() -> When {
     }
 }
 
-/// Inside a polygon, by the even-odd rule — the check this file does not share
+/// Inside a polygon, by the even-odd rule - the check this file does not share
 /// with the implementation.
 fn inside(polygon: &[[f64; 2]], p: [f64; 2]) -> bool {
     let mut odd = false;
@@ -35,7 +35,7 @@ fn inside(polygon: &[[f64; 2]], p: [f64; 2]) -> bool {
     odd
 }
 
-/// The rings of every test — off-centre, corners at `.3` so that no node of
+/// The rings of every test - off-centre, corners at `.3` so that no node of
 /// the integer grids below lies on an edge, and the hole inside the outer one.
 const OUTER: [[f64; 2]; 4] = [[0.3, 0.3], [8.3, 1.3], [7.3, 8.3], [1.3, 6.3]];
 const INNER: [[f64; 2]; 3] = [[3.3, 3.3], [5.3, 3.3], [4.3, 5.3]];

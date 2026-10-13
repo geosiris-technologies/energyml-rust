@@ -5,7 +5,7 @@
 //! `EpcStore` remembers the `externalResource` of a part's `.rels` rather than
 //! re-reading it, because a proxy's own `.rels` carries one relationship **per
 //! object that references it**: on the Lyon package that part is 585 KB and
-//! 2687 relationships, and it was inflated and parsed once per array pointer —
+//! 2687 relationships, and it was inflated and parsed once per array pointer -
 //! 2694 times, 1.6 GB of XML, to find the single entry naming the file. Nor
 //! could an early-exiting parser have helped: in that file the
 //! `externalResource` is the **last** relationship of the part, at byte 598 349
@@ -13,14 +13,14 @@
 //!
 //! What a memo gets wrong is its **key**, and it got it wrong once already: the
 //! first attempt keyed on `(proxy uuid, asking part)`, which hits every time on
-//! the geometry path — where the asking array node has no uuid, so the key is
-//! constant — and never hits when the caller is an object, since then every one
+//! the geometry path - where the asking array node has no uuid, so the key is
+//! constant - and never hits when the caller is an object, since then every one
 //! of the 4484 objects makes a key of its own. The measurement said so at once:
 //! the frames went 12.2 s → 0.9 s while the array listing went 34.3 s → 36.1 s.
 //!
 //! So these tests use **three** proxies with three different answers, asked in
-//! an interleaved order. A memo keyed on anything but the part — or one handing
-//! back a neighbour's entry — gets a wrong file name here, not a slow one.
+//! an interleaved order. A memo keyed on anything but the part - or one handing
+//! back a neighbour's entry - gets a wrong file name here, not a slow one.
 //!
 //! Built in the test rather than taken from `testdata/`: a package with three
 //! proxies and a deliberately absent `externalResource` is not something to
@@ -35,7 +35,7 @@ use energyml_storage::EpcStore;
 
 const ALPHA: &str = "11111111-1111-4111-8111-111111111111";
 const BETA: &str = "22222222-2222-4222-8222-222222222222";
-/// The one with no `externalResource` at all — the answer that must stay `None`
+/// The one with no `externalResource` at all - the answer that must stay `None`
 /// however many times its neighbours have been asked.
 const MUTE: &str = "33333333-3333-4333-8333-333333333333";
 
@@ -65,7 +65,7 @@ uuid=\"{uuid}\" schemaVersion=\"2.2\">\
 }
 
 /// A proxy's `.rels`, shaped like a real one: a crowd of back-references, and
-/// the `externalResource` **last** — where the corpus puts it, and the position
+/// the `externalResource` **last** - where the corpus puts it, and the position
 /// that makes reading the whole part unavoidable.
 fn rels(file: Option<&str>) -> String {
     let mut xml = String::from(
@@ -164,7 +164,7 @@ fn three_proxies_keep_three_answers() {
 /// collide, so they are not passing on an empty set.
 ///
 /// `external_file_of` is asked for a uuid **no part carries**. It has to be
-/// `None` — and it is the same `None` the mute proxy gives, which is why the
+/// `None` - and it is the same `None` the mute proxy gives, which is why the
 /// test above pins the two apart by asking for both.
 #[test]
 fn a_proxy_the_package_does_not_hold_answers_nothing() {

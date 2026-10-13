@@ -16,15 +16,15 @@
 //!
 //! # What it keeps
 //!
-//! - **nodes** — uuid, uri, type, title, and whether the package holds the
+//! - **nodes** - uuid, uri, type, title, and whether the package holds the
 //!   object (§5.1);
-//! - **edges**, both directions, each carrying an *interned* path — a package of
+//! - **edges**, both directions, each carrying an *interned* path - a package of
 //!   319 244 references names a handful of distinct paths;
 //! - **one `PropertySheet` per property**: what [`property::read`] returns and
 //!   the front end's attribute entry needs, *without the object* (§5.1);
 //! - **the relation tables** the inheritance walks and the attachment listings
-//!   read — parents, associations and memberships, projects, models, graphical
-//!   entries, attachments — laid **in the same pass**, from the references just
+//!   read - parents, associations and memberships, projects, models, graphical
+//!   entries, attachments - laid **in the same pass**, from the references just
 //!   taken (`package_index/relations.rs`). The relations are built in addition at
 //!   graph-construction time, rather than by traversing the whole graph
 //!   afterwards.
@@ -32,13 +32,13 @@
 //! # The two promises
 //!
 //! 1. **`PackageIndex::graph` is `graph::build`'s graph, node for node and edge
-//!    for edge** — same nodes, same order, same edges, same JSON. The index is
+//!    for edge** - same nodes, same order, same edges, same JSON. The index is
 //!    built by the same walk (`identity::collect_refs`), with the same rules for
 //!    the nodes of objects the package does not hold (see `IndexBuilder`). It is
 //!    not checked by this module: `tests/package_index.rs` confronts the two on
 //!    every package of the corpus, and breaks the index on purpose to be sure the
 //!    confrontation can fail (a component must never be asked to check itself).
-//! 2. **`PackageIndex::properties_of` is `property::read`'s rule** — a property
+//! 2. **`PackageIndex::properties_of` is `property::read`'s rule** - a property
 //!    hangs on the representation its **own** `SupportingRepresentation` field
 //!    names, never on the `.rels` (a package may have none: `80wells` has none).
 //!    The candidates come from the incoming edges, and
@@ -54,8 +54,8 @@
 //!
 //! # Updating: object by object (§4)
 //!
-//! `PackageIndex::update` takes the uuids that changed — the store revision
-//! journal is where a caller gets them — and re-reads **those** objects
+//! `PackageIndex::update` takes the uuids that changed - the store revision
+//! journal is where a caller gets them - and re-reads **those** objects
 //! only. It is not a substitute for a rebuild in one respect, stated on the
 //! method: the *order* of nodes after an update is not the order a rebuild would
 //! give, so a caller that needs `graph::build`'s exact order rebuilds.
@@ -94,7 +94,7 @@ const SUPPORTING_REPRESENTATION: &str = "SupportingRepresentation";
 // ---------------------------------------------------------------------------
 
 /// Strings that repeat: paths, qualified types, units, kind names, lookup and
-/// support uuids. A path is an id; the other uses clone an `Arc<str>` — sixteen
+/// support uuids. A path is an id; the other uses clone an `Arc<str>` - sixteen
 /// bytes instead of a `String` per property.
 #[derive(Default)]
 struct Interner {
@@ -138,7 +138,7 @@ impl Interner {
 pub enum NodeState {
     /// The package holds the object and it was read: its links are in the index.
     Present,
-    /// Referenced by an object of the package, held by none — the node
+    /// Referenced by an object of the package, held by none - the node
     /// `graph::build` gives such a target (`present: false`). It exists **only**
     /// while something references it.
     Absent,
@@ -147,7 +147,7 @@ pub enum NodeState {
     Pending,
     /// In the inventory and unreadable. Transient: settled at the end of a pass
     /// into [`NodeState::Absent`] when something references it (what
-    /// a front end's graph builder did — it skipped the object, and the reference made a
+    /// a front end's graph builder did - it skipped the object, and the reference made a
     /// node of its own), or dropped when nothing does.
     Unreadable,
     /// A tombstone. Ids are positions, so a node that leaves keeps its slot.
@@ -167,7 +167,7 @@ pub struct IndexNode {
     pub qualified_type: Arc<str>,
     /// The concept without `obj_`: `TriangulatedSetRepresentation`.
     pub type_key: Arc<str>,
-    /// `Citation/Title` — of the object when present, cached by the first
+    /// `Citation/Title` - of the object when present, cached by the first
     /// reference when absent (as `graph::build` does).
     pub title: Option<Arc<str>>,
     /// Presence.
@@ -187,7 +187,7 @@ fn version_in_uri(uri: &str) -> Option<String> {
 }
 
 /// `graph::build`'s `type_key` for a summary: the concept of the qualified type,
-/// the whole string when it does not parse. Lines 1330–1332 of `graph.rs` say it
+/// the whole string when it does not parse. Lines 1330-1332 of `graph.rs` say it
 /// inline twice; it is three public calls, not a private rule.
 fn type_key_of(qualified_type: &str) -> String {
     identity::parse_qualified_type(qualified_type)
@@ -195,7 +195,7 @@ fn type_key_of(qualified_type: &str) -> String {
         .unwrap_or_else(|_| qualified_type.to_string())
 }
 
-/// The two facts the relation tables need from the object itself — read while
+/// The two facts the relation tables need from the object itself - read while
 /// the index holds it for its references, never in a pass of their own.
 fn relations_facts(node: &IndexNode, object: &dyn Reflect, strings: &mut Interner) -> relations::Facts {
     use energyml_core::any_xml::AnyXml;
@@ -247,7 +247,7 @@ fn relations_facts(node: &IndexNode, object: &dyn Reflect, strings: &mut Interne
 // Property sheets
 // ---------------------------------------------------------------------------
 
-/// The property kind as the document states it — [`PropertyKindRef`] with its
+/// The property kind as the document states it - [`PropertyKindRef`] with its
 /// strings shared.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SheetKind {
@@ -339,25 +339,25 @@ pub struct PackageIndex {
     sheets: HashMap<NodeId, PropertySheet>,
     /// Objects that could not be read: uuid and reason.
     unreadable: Vec<(String, String)>,
-    /// Properties that read but whose sheet could not be taken: uuid and reason
-    /// — `property::read` refused them (an indexable element this build does not
+    /// Properties that read but whose sheet could not be taken: uuid and reason -
+    /// `property::read` refused them (an indexable element this build does not
     /// know). Named rather than skipped, like `property::Index::build`'s refused.
     unsheeted: Vec<(String, String)>,
     /// Nodes whose absence/presence must be re-decided at the end of a pass or
     /// an update.
     to_settle: Vec<NodeId>,
-    /// What the inheritance walks read, laid in the same pass as the references
-    /// — see [`relations`].
+    /// What the inheritance walks read, laid in the same pass as the references -
+    /// see [`relations`].
     relations: relations::Relations,
     /// The data objects nested in a part, by lowercased uuid → the node of the
     /// part holding them: a WITSML `ChannelSet` in a `Log`, its `Channel`s.
     /// Filled when a part is absorbed, emptied when it is detached. A reference
-    /// to one of these is a link to its part in [`PackageIndex::graph`] — the
+    /// to one of these is a link to its part in [`PackageIndex::graph`] - the
     /// rule of `graph::build` (`graph::nested_index`), which the graph must
     /// match byte for byte. Reported on the synthetic reference model: the
     /// statistics kept showing "references to an absent object".
     nested: HashMap<Box<str>, NodeId>,
-    /// Lowercase uuid → every node of a uuid the store holds **more than once** —
+    /// Lowercase uuid → every node of a uuid the store holds **more than once** -
     /// under two `objectVersion`s, or two releases (an entry is (uuid, type,
     /// version), ADR-0010). Empty for every package without
     /// namesakes. `by_uuid` answers for such a uuid with **one** of them (the one
@@ -379,7 +379,7 @@ struct Work {
     rows: AtomicU64,
 }
 
-/// What the readers of an index did, counted — **work, not time**: what a test
+/// What the readers of an index did, counted - **work, not time**: what a test
 /// asserts to say a question no longer walks the package.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Traffic {
@@ -395,7 +395,7 @@ pub struct Traffic {
 impl PackageIndex {
     /// The index of a whole store, in one call.
     ///
-    /// `revision` is the store revision the index is valid for — the caller's,
+    /// `revision` is the store revision the index is valid for - the caller's,
     /// because this crate does not own the counter. Prefer
     /// [`IndexBuilder`] when the pass must not block.
     pub fn build(store: &EpcStore, revision: u64) -> Self {
@@ -425,7 +425,7 @@ impl PackageIndex {
         }
     }
 
-    /// What the readers did so far — see [`Traffic`].
+    /// What the readers did so far - see [`Traffic`].
     pub fn traffic(&self) -> Traffic {
         Traffic {
             nodes_scanned: self.work.nodes.load(Ordering::Relaxed),
@@ -506,13 +506,13 @@ impl PackageIndex {
         &self.nodes[id as usize].uri
     }
 
-    /// **The one door to a node**: by its address — the full uri (the identity,
+    /// **The one door to a node**: by its address - the full uri (the identity,
     /// version included), or a bare uuid, which is an adapter for a caller that
     /// has no better and answers the uuid's default node.
     ///
     /// A uri is read as it says: the node of that exact uri; failing that, the
     /// node of the uuid whose version contradicts nothing the uri names
-    /// ([`identity::version_fit`], the one rule) — the exact version first, then
+    /// ([`identity::version_fit`], the one rule) - the exact version first, then
     /// one that names none, then the uuid's default. A uri that **names a version
     /// the package's node of that uuid contradicts** is not that node: `None`.
     fn find(&self, address: &str) -> Option<NodeId> {
@@ -575,7 +575,7 @@ impl PackageIndex {
         matches!(node.state, NodeState::Present | NodeState::Absent).then_some(node)
     }
 
-    /// The identity (full uri) of the node an address names — what a walk keys
+    /// The identity (full uri) of the node an address names - what a walk keys
     /// by. `None` when the graph shows no such node.
     pub fn uri_of(&self, address: &str) -> Option<&str> {
         self.node(address).map(|node| &*node.uri)
@@ -611,7 +611,7 @@ impl PackageIndex {
     ///
     /// **`property::read`'s membership rule, not the `.rels`'**: the candidates
     /// are the incoming edges whose path ends with `SupportingRepresentation`,
-    /// the source of which has a sheet — only a property has one — and each is
+    /// the source of which has a sheet - only a property has one - and each is
     /// confirmed against the uuid the sheet itself records, so the answer
     /// cannot differ from scanning the properties and comparing
     /// `supporting_representation`. The representation need not be in the
@@ -640,7 +640,7 @@ impl PackageIndex {
         })
     }
 
-    /// Who references this uuid — `graph::dependents`, from the index.
+    /// Who references this uuid - `graph::dependents`, from the index.
     ///
     /// One [`Pointer`] per reference. Same set as `graph::dependents` over the
     /// same objects; the order is by source node, then by path id, where
@@ -663,7 +663,7 @@ impl PackageIndex {
         out
     }
 
-    /// What this uuid references — the cheap direction, from the index.
+    /// What this uuid references - the cheap direction, from the index.
     ///
     /// Unlike `graph::references`, which reads the object and builds the uri from
     /// the **reference's** declared type, the target here is **the node it
@@ -696,7 +696,7 @@ impl PackageIndex {
     /// The graph, as `graph::build` would draw it.
     ///
     /// **Nodes**: the objects the package holds, in inventory order, then the
-    /// objects only referenced, in the order the walk met them — the order
+    /// objects only referenced, in the order the walk met them - the order
     /// `build` pushes them in. **Edges**: sorted by `(from, to, path)` and
     /// deduplicated, `build`'s last two lines. The sort is done on ids first so
     /// that the 319 244 `Edge` strings are made once, in their final order.
@@ -727,7 +727,7 @@ impl PackageIndex {
         }
     }
 
-    /// What [`PackageIndex::graph`] says **around these objects** — so that a
+    /// What [`PackageIndex::graph`] says **around these objects** - so that a
     /// copy of the graph held elsewhere is brought up to date for an edit of a
     /// few objects instead of being read again whole.
     ///
@@ -738,17 +738,17 @@ impl PackageIndex {
     ///
     /// For each address (a uri, through `PackageIndex::find`):
     ///
-    /// - a node the graph shows: its node, and — when the package holds it —
+    /// - a node the graph shows: its node, and - when the package holds it -
     ///   its outgoing edges, with the nodes they reach;
     /// - an address that is no node of the graph, or that the index resolves
     ///   to a node of another uri: in `gone`.
     ///
-    /// **Every edge and node here is the one `graph()` draws** — the same
+    /// **Every edge and node here is the one `graph()` draws** - the same
     /// helpers build both, the nested parts and the dedup included. A copy
     /// applies it by dropping the edges that leave the asked addresses and the
     /// `sources`, dropping the `gone` nodes, setting the nodes and adding the
     /// edges. What it does **not** carry: the edges *into* an asked object from
-    /// an object not asked. They do not move when that object is written —
+    /// an object not asked. They do not move when that object is written -
     /// except for a node that was absent and is held now under **another uri**,
     /// which the caller detects by uuid and answers by reading the graph whole.
     pub fn graph_around(&self, addresses: &[String]) -> GraphAround {
@@ -856,7 +856,7 @@ impl PackageIndex {
             .collect()
     }
 
-    /// The graph as the JSON the front end receives — `Graph::to_json`, byte for byte.
+    /// The graph as the JSON the front end receives - `Graph::to_json`, byte for byte.
     pub fn graph_json(&self) -> String {
         self.graph().to_json()
     }
@@ -871,15 +871,15 @@ pub struct GraphAround {
     /// outgoing edges of the asked objects the package holds.
     pub graph: Graph,
     /// The uris of the asked objects whose outgoing edges `graph` carries in
-    /// full — a copy drops every edge leaving them before adding these.
+    /// full - a copy drops every edge leaving them before adding these.
     pub sources: Vec<String>,
     /// The asked addresses that are no node of the graph (or resolve to a node
-    /// of another uri) — a copy drops them.
+    /// of another uri) - a copy drops them.
     pub gone: Vec<String>,
 }
 
 impl GraphAround {
-    /// `{ "nodes", "edges", "sources", "gone" }` — the nodes and edges written
+    /// `{ "nodes", "edges", "sources", "gone" }` - the nodes and edges written
     /// by `Graph::to_json`, so a front end reads them with the reader it has.
     pub fn to_json(&self) -> String {
         let graph = self.graph.to_json();
@@ -912,7 +912,7 @@ impl PackageIndex {
     /// sheet are taken afresh. Dangling targets follow `graph::build`'s rule:
     ///
     /// - a target the package does not hold **exists as an absent node only
-    ///   while something references it** — when the last reference goes, the node
+    ///   while something references it** - when the last reference goes, the node
     ///   goes (a tombstone, so ids stay put);
     /// - an object that **leaves** the store but is still referenced does not
     ///   vanish: it becomes an absent node, typed and titled by the first
@@ -927,14 +927,14 @@ impl PackageIndex {
     /// a rebuild but not necessarily in its order. The test compares them sorted.
     /// When the journal overflows and answers *everything*, rebuild.
     ///
-    /// Returns **what the update disturbed** — see
+    /// Returns **what the update disturbed** - see
     /// [`PackageIndex::update_with`].
     ///
     /// **A uuid the store holds more than once** (another `objectVersion`,
-    /// another release — an entry is (uuid, type, version)) is not one node to
+    /// another release - an entry is (uuid, type, version)) is not one node to
     /// re-read: when a changed uuid is held more than once now, or was by the
     /// time the index was built, the index is **rebuilt** from the store, and
-    /// what it returns is every uuid of the package, before and after — wider
+    /// what it returns is every uuid of the package, before and after - wider
     /// than any update would say, never narrower. Packages without namesakes
     /// never take that path.
     pub fn update(&mut self, store: &EpcStore, changed: &[String], revision: u64) -> Vec<String> {
@@ -978,18 +978,18 @@ impl PackageIndex {
     /// # What it returns: the objects whose walks may have changed
     ///
     /// The lowercase uuids a **cache of what is derived from the links** must
-    /// drop — a walk of the inheritance order (`inherit`), a colour resolved by
-    /// it — sorted and without duplicates: each object that changed, and each
+    /// drop - a walk of the inheritance order (`inherit`), a colour resolved by
+    /// it - sorted and without duplicates: each object that changed, and each
     /// object that **gained or lost a reference from one that changed** (the
     /// symmetric difference of its references before and after, path included).
-    /// A walk reads an object's links in both directions — what it references
-    /// (its parents) and who references it (its collections, its model) — so a
+    /// A walk reads an object's links in both directions - what it references
+    /// (its parents) and who references it (its collections, its model) - so a
     /// walk that went through `Y` is affected by a new edge `X → Y` even though
     /// `Y` itself did not change.
     ///
     /// One refinement, because it is where the common case is: an association
     /// set (`CollectionsToDataobjectsAssociationSet`) that gains a member
-    /// disturbs **that member**, not the collection and not the other members —
+    /// disturbs **that member**, not the collection and not the other members -
     /// nothing a member's walk read changed. When an association's
     /// *collection* changes, every member of the set is disturbed: their
     /// membership changed, and so does which repeated collection counts
@@ -1125,7 +1125,7 @@ impl PackageIndex {
         targets.sort_unstable();
         targets.dedup();
         self.sheets.remove(&id);
-        // The rows this node laid in the relation tables go with its edges —
+        // The rows this node laid in the relation tables go with its edges -
         // the same place a re-read puts them back.
         self.relations.forget(id, &outgoing, &self.strings);
         targets
@@ -1162,7 +1162,7 @@ impl PackageIndex {
         let id = self.push_node(node);
         let key = summary.uuid.to_ascii_lowercase().into_boxed_str();
         match self.by_uuid.get(&key).copied() {
-            // **The store holds this uuid more than once** — another version, or
+            // **The store holds this uuid more than once** - another version, or
             // another release. Every entry is a node of its own; the uuid answers
             // with one of them: the one that declares no version (its uri is the
             // short one), else the first.
@@ -1182,7 +1182,7 @@ impl PackageIndex {
         id
     }
 
-    /// What to ask the source for a node's object: **its uri**, always — the
+    /// What to ask the source for a node's object: **its uri**, always - the
     /// full identity of this node, version included, whether or not the store
     /// holds the uuid twice (ADR-0003: internally, full uris only).
     fn handle_of(&self, id: NodeId) -> String {
@@ -1192,7 +1192,7 @@ impl PackageIndex {
     /// The nodes a reference names, among the nodes of a uuid held more than
     /// once: by type when the type matches something (*a wrong version is not a
     /// wrong type*), by version when the reference carries one, else the one that
-    /// declares none if exactly one does, **else all** — a link that is too wide
+    /// declares none if exactly one does, **else all** - a link that is too wide
     /// costs a copy, one that is too narrow breaks a package.
     fn targets_among(&self, held: &[NodeId], edge: &identity::RefEdge<'_>) -> Vec<NodeId> {
         let version_of = |id: NodeId| -> Option<String> { version_in_uri(&self.nodes[id as usize].uri) };
@@ -1270,7 +1270,7 @@ impl PackageIndex {
             }
             let key = edge.target.uuid.to_ascii_lowercase();
             // A uuid the store holds more than once: the reference names one of
-            // its entries by type and version — or, naming no version, all.
+            // its entries by type and version - or, naming no version, all.
             if let Some(held) = self.shared.get(key.as_str()) {
                 let targets = self.targets_among(held, &edge);
                 let path = self.strings.id(&edge.path);
@@ -1281,7 +1281,7 @@ impl PackageIndex {
                 Some(target) => target,
                 None => {
                     // Referenced and not in the package: a node saying so, made
-                    // from the reference — `graph::build`'s `or_insert_with`.
+                    // from the reference - `graph::build`'s `or_insert_with`.
                     let node = self.absent_node(&edge, ((id as u64) << 32) | n as u64);
                     let target = self.push_node(node);
                     self.by_uuid.insert(key.into_boxed_str(), target);
@@ -1299,7 +1299,7 @@ impl PackageIndex {
             self.inn[target as usize].push((id, path));
         }
         // The relations the walks read, from the references just taken and the
-        // two facts the object shows — no second read of it (§4.5).
+        // two facts the object shows - no second read of it (§4.5).
         let facts = relations_facts(&self.nodes[id as usize], object, &mut self.strings);
         self.relations
             .take(&self.nodes, &self.strings, id, &outgoing, facts);
@@ -1382,7 +1382,7 @@ impl PackageIndex {
     /// Decide what the nodes queued in `to_settle` are.
     ///
     /// A node that is referenced and not readable (or no longer held) is an
-    /// **absent node typed and titled by its first referrer** — the lowest id,
+    /// **absent node typed and titled by its first referrer** - the lowest id,
     /// which in a build is the first in inventory order, which is where
     /// `graph::build`'s walk meets it first. A node nothing references goes.
     fn settle(&mut self, source: &dyn ObjectSource) {
@@ -1500,7 +1500,7 @@ impl Progress {
 ///
 /// # Unreadable objects
 ///
-/// a front end's graph builder skipped an object it could not read, so it had no node —
+/// a front end's graph builder skipped an object it could not read, so it had no node -
 /// unless something referenced it, in which case the reference made one of its
 /// own (typed and titled as the reference says). The builder does the same: at
 /// the end of the pass, an unreadable object that is referenced becomes that

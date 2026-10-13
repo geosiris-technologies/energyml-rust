@@ -1,4 +1,4 @@
-//! `media` — a file put **in the package**, beside the objects, and related to
+//! `media` - a file put **in the package**, beside the objects, and related to
 //! the objects it shows.
 //!
 //! The packaging conventions allow it: the files go into the zip of the EPC and are
@@ -6,20 +6,20 @@
 //!
 //! The packaging conventions do allow the files
 //! (Energistics Packaging Conventions v1.0, §3.2
-//! pp. 11–12: "other files that contain additional, informal information …
+//! pp. 11-12: "other files that contain additional, informal information …
 //! As a guideline these files are stored in a folder named `media`"; §3.3
 //! p. 14: "An optional media folder may contain any type of media file--no
 //! restrictions"). **The content type is not what refers to them**, though: it
 //! types the part (§2.2.1 p. 9); the object a file is about is named by an OPC
 //! relationship, `destinationMedia` from the object and `sourceMedia` back
-//! (§3.4.2 pp. 15–16). This operation plans both halves; `energyml-storage`
+//! (§3.4.2 pp. 15-16). This operation plans both halves; `energyml-storage`
 //! writes them (`EpcStore::set_attachment`, `EpcStore::relate_media`).
 //!
 //! # What is decided here, and what is refused
 //!
 //! - **the file is carried as bytes**, never read: a PDF is not text, and what
 //!   an EPC holds is the file, not an interpretation of it;
-//! - **the content type is stated, never guessed** — by `contentType`, or by
+//! - **the content type is stated, never guessed** - by `contentType`, or by
 //!   the server the file came from. A file from a disk declares none, and its
 //!   name is not evidence (the registry rule: the types come from the exporter, not from a second table). Neither is refused by name;
 //!
@@ -50,12 +50,12 @@ use crate::pieces::Source;
 /// The operation.
 pub struct Media;
 
-/// A file, as bytes — the input a `media` step takes.
+/// A file, as bytes - the input a `media` step takes.
 #[derive(Debug, Clone)]
 pub struct Document {
-    /// Its name in the bag — the slot that received it.
+    /// Its name in the bag - the slot that received it.
     pub name: String,
-    /// The file it came from — `README.md`.
+    /// The file it came from - `README.md`.
     pub file: String,
     /// The content type its source declared, if any.
     pub declared: Option<String>,
@@ -102,9 +102,9 @@ impl InputParam for Document {
 /// What `media` is told.
 #[derive(Debug, Params)]
 pub struct MediaParams {
-    /// the part name in the package — left out, `media/` and the file's name (EPC §3.2: "a folder named media")
+    /// the part name in the package - left out, `media/` and the file's name (EPC §3.2: "a folder named media")
     pub path: Option<String>,
-    /// the file's content type, `text/markdown` or `application/pdf` — left out, what its source declared; never guessed from the name
+    /// the file's content type, `text/markdown` or `application/pdf` - left out, what its source declared; never guessed from the name
     pub content_type: Option<String>,
 }
 
@@ -113,7 +113,7 @@ pub struct MediaParams {
 pub struct MediaInputs {
     /// the file to put in the package, carried as bytes
     pub file: Document,
-    /// the objects the file is a media representation of — EPC's destinationMedia
+    /// the objects the file is a media representation of - EPC's destinationMedia
     pub shows: Vec<ObjectIn>,
 }
 
@@ -124,7 +124,7 @@ impl Operation for Media {
     fn about(&self) -> About {
         About {
             name: "media",
-            describe: "a file put in the package — a README, a PDF, an export — related to the objects it shows",
+            describe: "a file put in the package - a README, a PDF, an export - related to the objects it shows",
             category: Category::Create,
             makes: &[],
             recipe: "media",
@@ -169,7 +169,7 @@ impl Operation for Media {
             return Err(Refusal::on(
                 "contentType",
                 format!(
-                    "the content type of `{}` is stated nowhere — give `contentType`; a package types every part \
+                    "the content type of `{}` is stated nowhere - give `contentType`; a package types every part \
                      (EPC §2.2.1 p. 9), and a type is never guessed from a file's name",
                     file.file
                 ),

@@ -1,4 +1,4 @@
-//! `dts-installation` — a distributed temperature sensing fiber down a
+//! `dts-installation` - a distributed temperature sensing fiber down a
 //! wellbore: its optical path, the instrument box at its end, the installed
 //! system that pairs them, and the header of a measurement.
 //!
@@ -22,7 +22,7 @@
 //! intermediate object called DTS Installed System. This contains pointers
 //! (data object references) to the Optical Path and DTS Instrument Box data
 //! objects, which comprise the Installed System »*. A reference to nothing
-//! would dangle, so the box is written — with an instrument named after the
+//! would dangle, so the box is written - with an instrument named after the
 //! installation and nothing else stated of it.
 //!
 //! # One segment, the length of the fiber
@@ -32,7 +32,7 @@
 //! application or well design. If there is no interest in keeping track of
 //! splices and connectors, you can easily declare this optical path to consist
 //! of 1 fiber segment that happens to be the entire length of the optical path
-//! »*. That is what is written, ended by a terminator `termination at cable` —
+//! »*. That is what is written, ended by a terminator `termination at cable` -
 //! the single-ended case, *« where the optical path is single ended »* (same
 //! page): nothing states a turnaround.
 //!
@@ -46,14 +46,14 @@
 //! # A header, flagged empty
 //!
 //! `DtsMeasurement.MeasurementTrace` and `InterpretationLog` each reference a
-//! `ChannelSet` that holds the values; none is written here — the dense
+//! `ChannelSet` that holds the values; none is written here - the dense
 //! temperature profile of the well lives on its RESQML frame and in a WITSML
-//! `Log` whose channel set is nested — which a reference **can** name
+//! `Log` whose channel set is nested - which a reference **can** name
 //! (`identity::nested_objects`, as `injection-test` does), but whose
 //! traces are a depth profile, not the survey's. So the
-//! header is written with `EmptySetFlag` true — *« Set to 'true' when the
+//! header is written with `EmptySetFlag` true - *« Set to 'true' when the
 //! measurement set is empty (only the header is provided) »* (the schema's own
-//! documentation of the field) — and `BadSetFlag` false: nothing was measured
+//! documentation of the field) - and `BadSetFlag` false: nothing was measured
 //! badly, nothing was measured.
 //!
 //! # Every object is synthetic, and sourced; identity from content
@@ -87,15 +87,15 @@ const NOT_A_HOLE: &str =
 /// What `dts-installation` is told.
 #[derive(Debug, Params)]
 pub struct DtsInstallationParams {
-    /// the title of the installation — the path, the box, the system and the measurement are named after it
+    /// the title of the installation - the path, the box, the system and the measurement are named after it
     pub title: String,
-    /// where the values come from — a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
+    /// where the values come from - a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
     pub source: String,
     /// when the fiber was installed, a UTC date-time as 2025-01-01T00:00:00Z
     pub installed_from: String,
-    /// when the survey was taken, a UTC date-time — on or after the installation
+    /// when the survey was taken, a UTC date-time - on or after the installation
     pub measured_at: String,
-    /// the length of the fiber, in m — from the wellbore's datum down
+    /// the length of the fiber, in m - from the wellbore's datum down
     #[param(min = 0.0, uom = "m")]
     pub fiber_length: f64,
 }
@@ -103,7 +103,7 @@ pub struct DtsInstallationParams {
 /// What `dts-installation` takes.
 #[derive(Debug, Inputs)]
 pub struct DtsInstallationInputs {
-    /// the wellbore the fiber runs down — a WITSML `Wellbore`, or the RESQML `WellboreFeature` of the hole
+    /// the wellbore the fiber runs down - a WITSML `Wellbore`, or the RESQML `WellboreFeature` of the hole
     #[input(types = "witsml21.Wellbore, resqml22.WellboreFeature")]
     pub wellbore: ObjectIn,
 }
@@ -117,7 +117,7 @@ impl Operation for DtsInstallation {
     fn about(&self) -> About {
         About {
             name: "dts-installation",
-            describe: "a DTS fiber down a wellbore — its optical path mapped onto the hole, the instrument box, the installed system pairing them, the header of a survey — every value stated and sourced",
+            describe: "a DTS fiber down a wellbore - its optical path mapped onto the hole, the instrument box, the installed system pairing them, the header of a survey - every value stated and sourced",
             category: Category::Synthetic,
             makes: &[
                 "prodml23.DtsInstrumentBox",
@@ -133,7 +133,7 @@ impl Operation for DtsInstallation {
     /// Whether the object given is a hole. The offer's refusal names the slot
     /// and the kind wanted, never the object's title nor its type: with one
     /// object slot, **any** object of a package is bound here, and its title
-    /// is the producer's text — it may name a release, which would make an
+    /// is the producer's text - it may name a release, which would make an
     /// inaptitude read like a condition of writing (`no_unfitness_names_a_release`).
     /// The plan refuses the same object by its name.
     fn check(&self, inputs: &DtsInstallationInputs) -> Result<(), Refusal> {
@@ -180,10 +180,10 @@ impl Operation for DtsInstallation {
         let path_uuid = writer.uuid(&format!("optical-path:{base}"))?;
         let system_uuid = writer.uuid(&format!("installed-system:{base}"))?;
         let measurement_uuid = writer.uuid(&format!("measurement:{system_uuid}:{measured_text}"))?;
-        let box_title = format!("{title} — instrument box");
-        let path_title = format!("{title} — optical path");
-        let system_title = format!("{title} — installed system");
-        let measurement_title = format!("{title} — survey {measured_text}");
+        let box_title = format!("{title} - instrument box");
+        let path_title = format!("{title} - optical path");
+        let system_title = format!("{title} - installed system");
+        let measurement_title = format!("{title} - survey {measured_text}");
         let box_ref = Ref::new(box_uuid.clone(), "prodml23.DtsInstrumentBox", box_title.clone());
         let path_ref = Ref::new(path_uuid.clone(), "prodml23.FiberOpticalPath", path_title.clone());
         let system_ref = Ref::new(
@@ -205,9 +205,9 @@ impl Operation for DtsInstallation {
             )?,
             extension_name_value: vec![writer.synthetic("the instrument box of an invented fiber")],
             instrument: prodml::AnyInstrument::Instrument(prodml::Instrument {
-                name: format!("{title} — instrument"),
+                name: format!("{title} - instrument"),
                 comment: Some(
-                    "synthetic — no make, model or calibration is stated: none is written".to_string(),
+                    "synthetic - no make, model or calibration is stated: none is written".to_string(),
                 ),
                 ..Default::default()
             }),
@@ -247,7 +247,7 @@ impl Operation for DtsInstallation {
                 time_start: installed_text.clone(),
                 time_end: None,
                 uid: "mapping-1".to_string(),
-                comment: Some("synthetic — the fiber starts at the wellbore's datum: an optical distance is a measured depth".to_string()),
+                comment: Some("synthetic - the fiber starts at the wellbore's datum: an optical distance is a measured depth".to_string()),
                 fiber_facility_mapping_part: vec![prodml::FiberFacilityMappingPart {
                     optical_path_distance_start: metres(0.0),
                     optical_path_distance_end: metres(length),
@@ -341,11 +341,11 @@ impl Operation for DtsInstallation {
             },
             Note {
                 key: "one-segment",
-                detail: format!("the optical path is one segment of {length} m ended at the cable — single ended (§19.3 p. 154): no splice, connector or turnaround is stated"),
+                detail: format!("the optical path is one segment of {length} m ended at the cable - single ended (§19.3 p. 154): no splice, connector or turnaround is stated"),
             },
             Note {
                 key: "mapping",
-                detail: format!("the fiber is mapped onto `{}` from its datum: optical distance 0–{length} m is measured depth 0–{length} m", hole.title),
+                detail: format!("the fiber is mapped onto `{}` from its datum: optical distance 0-{length} m is measured depth 0-{length} m", hole.title),
             },
             Note {
                 key: "empty-survey",

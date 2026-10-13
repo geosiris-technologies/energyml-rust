@@ -5,7 +5,7 @@
 //! > **Building a request and reading an answer are pure. The round trip is
 //! > not.**
 //!
-//! What is pure can be tested without a network — and most of what can be wrong
+//! What is pure can be tested without a network - and most of what can be wrong
 //! is there: the encoding of a filter, the axis order of an area, the reading of
 //! a server refusal. The round trip is a [`Transport`], a trait, with a native
 //! implementation behind the `native` feature; in the browser it is the front end's
@@ -13,7 +13,7 @@
 //!
 //! # What a provider declares, and why the front end depends on it
 //!
-//! A [`Provider`] does not merely answer: it **declares** what it offers — its
+//! A [`Provider`] does not merely answer: it **declares** what it offers - its
 //! [`Collection`]s, and for each one the [`Filter`]s it accepts, with their
 //! type, their obligation and a suggested value. That is what lets the front end draw
 //! a form **without spelling a single field name**, exactly as it renders the
@@ -45,7 +45,7 @@ use energyml_build::geojson::{Feature, Flow, Summary, Wanted};
 /// A queryable service, and what it offers.
 ///
 /// A provider is **not a server**: it is a service *and* what it exposes. Two
-/// collections of the same host may not speak the same dialect — measured on
+/// collections of the same host may not speak the same dialect - measured on
 /// `data.geoscience.fr`, whose boreholes' `GeologicUnit` is not that of the 3D
 /// model.
 pub trait Provider {
@@ -78,7 +78,7 @@ pub trait Provider {
     /// Read a page, entity by entity. **Pure**, and streamed.
     ///
     /// The `sink` decides whether to continue or stop; nothing of the document
-    /// is held, neither the text nor a JSON tree — see `read_streaming`.
+    /// is held, neither the text nor a JSON tree - see `read_streaming`.
     fn read_page(
         &self,
         answer: Answer,
@@ -99,6 +99,6 @@ pub struct About {
     pub endpoint: String,
     /// Who publishes it, as it must be written on screen.
     pub attribution: String,
-    /// Its licence, when known — `None` does not mean "free".
+    /// Its licence, when known - `None` does not mean "free".
     pub licence: Option<String>,
 }

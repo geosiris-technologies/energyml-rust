@@ -1,13 +1,13 @@
 //! An import writes a package, and that package reads back.
 //!
 //! The other tests of the crate look at objects in memory; this one writes an
-//! EPC to disk and reopens it with the ordinary reader — the one the CLI
+//! EPC to disk and reopens it with the ordinary reader - the one the CLI
 //! and the front end use. It is the only check that can say that an object
 //! *leaves* the crate in a form that the rest of the workspace accepts.
 //!
 //! Without the `hdf5` feature, the coordinates cannot be written. The check
 //! **is not skipped for all that**: it then verifies that the refusal is named,
-//! which is precisely the guarantee that counts — a package that promises
+//! which is precisely the guarantee that counts - a package that promises
 //! coordinates absent from a file looks exactly like a complete package.
 
 use std::sync::Arc;
@@ -85,9 +85,9 @@ fn an_import_writes_a_package_that_the_ordinary_reader_reads_back() {
 
     let report = epc::write(&mut store, &plan, &options());
 
-    // **The objects, one per group plus the common ones.** Two CRS — EML 2.3
+    // **The objects, one per group plus the common ones.** Two CRS - EML 2.3
     // offers no top-level geographic compound, see `crate::crs`
-    // —, a table, and per group: feature, interpretation, point set,
+    // -, a table, and per group: feature, interpretation, point set,
     // property. Plus the canonical template and the activity. The count is written
     // here so that an object lost on the way shows, not to pin a value
     // of the file.
@@ -111,13 +111,13 @@ fn an_import_writes_a_package_that_the_ordinary_reader_reads_back() {
     // **Without `#[cfg(feature = "hdf5")]`, and that is the point.** The first version
     // branched on it and went red under `cargo test --workspace`: the `cfg`
     // guards on the feature of *this* crate, whereas the writing depends on that
-    // of `energyml-storage` — which another crate of the workspace enables through its test
+    // of `energyml-storage` - which another crate of the workspace enables through its test
     // dependency. Cargo unifies the features of a workspace, so “this crate has no
     // hdf5” does not mean “there is no backend”. A test that demanded
     // a refusal saw a successful writing.
     //
-    // The guarantee never concerned *that it refuses* — that is the
-    // build configuration — but *what it says when it
+    // The guarantee never concerned *that it refuses* - that is the
+    // build configuration - but *what it says when it
     // refuses*. That is what is written here, and it is true on both sides.
     for why in &report.refused {
         assert!(
@@ -127,14 +127,14 @@ fn an_import_writes_a_package_that_the_ordinary_reader_reads_back() {
     }
     // **And the exception of degrees is said, as a note and not a refusal**
     // (a deliberate decision of 24/09): `energyml import` fails on a refusal, and an
-    // import in degrees — the default — is not one.
+    // import in degrees - the default - is not one.
     assert!(
         report.notes.iter().any(|note| note.contains("Geographic2dCrs")),
         "the exception of degrees is not said: {:?}",
         report.notes
     );
 
-    // And the package reads back — through the ordinary reader, not through a back
+    // And the package reads back - through the ordinary reader, not through a back
     // door. A save regenerates `[Content_Types].xml`, the `.rels` and
     // `docProps/core.xml` from the objects, so this is also what verifies
     // that they hold together.
@@ -162,7 +162,7 @@ fn an_import_writes_a_package_that_the_ordinary_reader_reads_back() {
         // The template, **in** the package: the activity references it, and a
         // reference to an absent object is what `energyml check` found
         // on the first package produced. No in-memory test could
-        // see it — an activity that references a template is well formed.
+        // see it - an activity that references a template is well formed.
         "eml23.ActivityTemplate",
         "resqml22.RockVolumeFeature",
         "resqml22.StratigraphicUnitInterpretation",
@@ -225,7 +225,7 @@ fn a_square() -> energyml_build::pieces::Pieces {
 #[test]
 fn the_chosen_triplet_is_written_and_the_package_reads_it_back() {
     // **The feedback of 10/09**: the feature/interpretation pair was no longer
-    // a table in the code, it is chosen — *“the list of the objects that
+    // a table in the code, it is chosen - *“the list of the objects that
     // extend AbstractObject, filtered on feature”*. This test is what says
     // that this choice produces objects that the ordinary reader reads back, and not
     // only JSON that looks right.
@@ -266,7 +266,7 @@ fn the_chosen_triplet_is_written_and_the_package_reads_it_back() {
     );
 
     // And the package: written, then read back by the ordinary reader. It is the
-    // triangulation that the repository demands — two sources of the same fact, one of which
+    // triangulation that the repository demands - two sources of the same fact, one of which
     // is not the code that has just written.
     let registry = std::sync::Arc::new(energyml_schemas::all());
     let mut store = epc::open(None, "triplet.epc", registry.clone()).expect("a new package");

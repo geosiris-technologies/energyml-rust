@@ -9,8 +9,8 @@
 //! the `energyml-<word>` pattern: `etp` runs `retp`, `translate` runs
 //! `energyml-translate`.
 //!
-//! The lookup is pure — [`find_in`] and [`list_in`] take the `PATH` as an
-//! argument — so it is tested without spawning anything.
+//! The lookup is pure - [`find_in`] and [`list_in`] take the `PATH` as an
+//! argument - so it is tested without spawning anything.
 
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};

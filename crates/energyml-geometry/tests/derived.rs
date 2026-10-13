@@ -2,8 +2,8 @@
 //! not contain.
 //!
 //! Two families, and between them almost nothing to read from a real file. The
-//! reference packages hold **one** local grid — the easy case: one interval per
-//! axis, uniform children, the window starting at parent cell zero — and **no
+//! reference packages hold **one** local grid - the easy case: one interval per
+//! axis, uniform children, the window starting at parent cell zero - and **no
 //! sub-representation at all**. So a window at an offset, several intervals
 //! with a different ratio each, coarsening rather than refinement,
 //! `ChildCellWeights`, and every shape of `SubRepresentation` in either RESQML
@@ -58,8 +58,8 @@ fn expected(i: f64, j: f64, k: f64) -> [f64; 3] {
 /// The same formula sampled at the integers: the parent's own array.
 ///
 /// The oracle above is legitimate precisely because this lattice is
-/// **trilinear by construction** — each coordinate is a sum of terms linear in
-/// one index — so interpolating it and evaluating the formula must agree
+/// **trilinear by construction** - each coordinate is a sum of terms linear in
+/// one index - so interpolating it and evaluating the formula must agree
 /// exactly. That is what makes the assertions arithmetic rather than a second
 /// implementation of the same code.
 fn parent_points() -> Vec<f64> {
@@ -91,7 +91,7 @@ fn dataset(path: &str) -> Hdf5Dataset {
 /// The same formula over the four levels of a parent with a **K gap after
 /// layer 0**: layer 0 between levels 0 and 1, the void between 1 and 2, layer
 /// 1 between 2 and 3 (`NKL = NK + gapCount + 1`, the `KGaps` documentation).
-/// The formula's `k` is the level, so layer 1 sits at `k` 2..3 — and a reader
+/// The formula's `k` is the level, so layer 1 sits at `k` 2..3 - and a reader
 /// that forgot the gap would read it at 1..2, a different number everywhere.
 fn gapped_points() -> Vec<f64> {
     let mut values = Vec::new();
@@ -140,7 +140,7 @@ fn parent() -> IjkGridRepresentation {
 /// `(parent cells, child cells)` pair per interval.
 ///
 /// The counts go through HDF5 arrays rather than inline XML because RESQML
-/// 2.0.1 has no inline integer array — which is itself worth exercising, since
+/// 2.0.1 has no inline integer array - which is itself worth exercising, since
 /// it means every regrid in a real 2.0.1 file costs a read.
 struct Axis {
     start: u64,
@@ -220,7 +220,7 @@ fn child(dimensions: [u64; 3], axes: [Axis; 3], store: &mut Store) -> IjkGridRep
 /// coordinates and quietly cost the model; here the reads are observed.
 struct Store {
     datasets: HashMap<String, (Vec<f64>, Vec<i64>)>,
-    /// Values handed out of the **points** array only — the one that is big.
+    /// Values handed out of the **points** array only - the one that is big.
     points_read: Cell<usize>,
     /// Reads of the points array.
     point_reads: Cell<usize>,
@@ -360,7 +360,7 @@ fn select(whole: &[f64], shape: &[i64], start: &[i64], count: &[i64]) -> (Vec<f6
 
 /// The dataset an array names, under either version's spelling.
 ///
-/// eml 2.0 calls it `PathInHdfFile` and eml 2.3 `PathInExternalFile` — the same
+/// eml 2.0 calls it `PathInHdfFile` and eml 2.3 `PathInExternalFile` - the same
 /// difference the real storage layer absorbs, reproduced here so the 2.2 tests
 /// exercise the 2.2 spelling rather than a convenience.
 fn dataset_of(object: &dyn Reflect) -> Option<String> {
@@ -419,7 +419,7 @@ fn a_window_of_one_cell_is_cut_where_the_regrid_says() {
 }
 
 /// The window need not start at the origin, and `InitialIndexOnParentGrid` is
-/// 0-based **on the parent grid** — the one sentence the schema spends on it.
+/// 0-based **on the parent grid** - the one sentence the schema spends on it.
 #[test]
 fn the_window_starts_where_the_initial_index_says() {
     let mut store = Store::default();
@@ -483,7 +483,7 @@ fn each_interval_keeps_its_own_ratio() {
 }
 
 /// `ChildCellWeights` are "proportional to the relative sizes of child cells
-/// within each interval" and "need not be normalized" — so 1 : 3 puts the
+/// within each interval" and "need not be normalized" - so 1 : 3 puts the
 /// interior node a quarter of the way along, not half.
 #[test]
 fn child_cell_weights_make_the_children_unequal() {
@@ -505,7 +505,7 @@ fn child_cell_weights_make_the_children_unequal() {
 /// Only the window is read.
 ///
 /// The parent holds 3 levels × 15 lines × 3 = 135 values. A window of one cell
-/// on each axis needs 2 × 2 × 2 nodes, so 24 — taken in one hyperslab per row
+/// on each axis needs 2 × 2 × 2 nodes, so 24 - taken in one hyperslab per row
 /// of pillars, which is two reads. A regression to "evaluate the parent and
 /// keep a corner" shows up here as 135 and nowhere else.
 #[test]
@@ -537,7 +537,7 @@ fn a_local_grid_reads_only_its_window() {
     );
 }
 
-/// Below a K gap, the window starts at the top of its layer — a level, not
+/// Below a K gap, the window starts at the top of its layer - a level, not
 /// the layer's index. Layer 1 of the gapped parent is levels 2..3, so a child
 /// cutting it in two on K has its nodes at levels 2, 2.5 and 3; a reader that
 /// took the index for the level would put them at 1, 1.5 and 2, inside the
@@ -556,7 +556,7 @@ fn below_a_k_gap_the_window_starts_at_its_layers_top() {
     );
     let points = nodes(&grid, &store);
     assert_eq!(points.len(), 2 * 2 * 3);
-    // Node order: i fastest, then j, then k — two nodes per row, four per level.
+    // Node order: i fastest, then j, then k - two nodes per row, four per level.
     for (ck, j, i) in [
         (0usize, 0usize, 0usize),
         (0, 0, 1),
@@ -571,7 +571,7 @@ fn below_a_k_gap_the_window_starts_at_its_layers_top() {
 }
 
 /// Across a K gap the child node between the two layers would have two
-/// heights, so the window is refused and the gap named — the same refusal as
+/// heights, so the window is refused and the gap named - the same refusal as
 /// a window over a split coordinate line.
 #[test]
 fn a_window_across_a_k_gap_is_refused() {
@@ -709,7 +709,7 @@ fn sub_201(
 }
 
 /// RESQML 2.2: the element kind on the object, and a `SupportingRepresentation`
-/// on each patch — so one sub-representation can draw from several supports,
+/// on each patch - so one sub-representation can draw from several supports,
 /// which 2.0.1 cannot express at all.
 fn sub_22(
     element: energyml_eml_2_3::IndexableElement,
@@ -782,7 +782,7 @@ fn a_sub_representation_of_nodes_is_the_nodes_it_names() {
 /// Picking cells keeps only the points those cells use.
 ///
 /// Without the renumbering a sub-representation of two cells would carry all 45
-/// of the support's nodes — the opposite of what selecting them was for.
+/// of the support's nodes - the opposite of what selecting them was for.
 #[test]
 fn a_sub_representation_of_cells_carries_only_their_nodes() {
     let mut store = Store::default();
@@ -857,7 +857,7 @@ fn an_index_outside_the_support_is_refused() {
     );
 }
 
-/// Two `ElementIndices` on one patch is 2.0.1's way of listing *pairs* — faces
+/// Two `ElementIndices` on one patch is 2.0.1's way of listing *pairs* - faces
 /// of cells, nodes of faces. Which member carries the geometry is not something
 /// the file says, so it is refused rather than guessed.
 #[test]

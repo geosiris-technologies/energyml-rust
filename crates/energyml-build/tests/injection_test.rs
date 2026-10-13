@@ -1,13 +1,13 @@
-//! `injection-test` — Lutetia's injection test.
+//! `injection-test` - Lutetia's injection test.
 //!
 //! **The form of each assertion comes from the schemas, the guides and the
 //! decisions of 27/09; the values from the bag.** The test references its
 //! measurements in a WITSML channel set (PRODML Technical Usage Guide v2.3
 //! §13.6 p. 118), `TimeChannel` names a channel of dates (FlowTestActivity.xsd
-//! l. 100–103, a deliberate decision), and the collection lists the test
-//! (`FlowTestActivity` 1..n, SimpleProductVolume.xsd l. 519–522). The pressure
-//! is checked against the definition of an injectivity index — a settled rate
-//! over the pressure it adds — computed here, not read from the operation.
+//! l. 100-103, a deliberate decision), and the collection lists the test
+//! (`FlowTestActivity` 1..n, SimpleProductVolume.xsd l. 519-522). The pressure
+//! is checked against the definition of an injectivity index - a settled rate
+//! over the pressure it adds - computed here, not read from the operation.
 
 use serde_json::Value;
 
@@ -44,8 +44,8 @@ fn bag() -> Pieces {
 
 fn choices() -> Choices {
     Choices::new()
-        .set("title", "GTH-2 — injection test")
-        .set("source", "synthetic — a trial source; to be sourced")
+        .set("title", "GTH-2 - injection test")
+        .set("source", "synthetic - a trial source; to be sourced")
         .set("start", "2025-06-02T08:00:00Z")
         .set("steps", serde_json::json!(STEPS))
         .set("stepHours", 2.0)
@@ -225,7 +225,7 @@ fn time_is_a_channel_of_dates_and_the_index_is_date_time() {
 #[test]
 fn a_settled_step_adds_its_rate_over_the_injectivity_index() {
     // `responseMinutes` 0: each step settles at once, so every sample of step
-    // k after the first reads P0 + q_k / II — the definition of the index.
+    // k after the first reads P0 + q_k / II - the definition of the index.
     let plan = planned(&bag(), choices()).expect("a plan");
     let rows = rows(&channel_set(&plan));
     assert_eq!(
@@ -353,7 +353,7 @@ fn written_to_a_package_every_reference_resolves_and_the_test_is_rooted_as_the_s
         .map(|one| one.uuid.to_ascii_lowercase())
         .collect();
     // The wellbore and the company are not in this package: those two are
-    // named, and nothing else — the channel set and its channels resolve.
+    // named, and nothing else - the channel set and its channels resolve.
     let dangling: Vec<&energyml_storage::RefIssue> = report
         .references
         .iter()

@@ -5,7 +5,7 @@
 //! loses nothing on a round trip). The schema's own `pattern` on `TimeStamp`
 //! (`.+T.+[Z+\-].*`) is a loose approximation: `2024-13-45T99:99:99Z` matches
 //! it. A validator that reads the XSD (Xerces, the python tool) refuses it, so
-//! this module says what the built-in itself says — XML Schema Part 2
+//! this module says what the built-in itself says - XML Schema Part 2
 //! (Datatypes) §3.3.7 *dateTime*, §3.3.9 *date*, §3.3.8 *time*, §3.3.11
 //! *gYear*, §3.3.14 *gMonth*, §3.3.13 *gDay*, §3.3.6 *duration*, and the
 //! timezone of §E.1 (`hh` up to 14, and then `mm` is 00).

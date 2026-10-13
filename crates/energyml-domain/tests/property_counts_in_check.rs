@@ -195,7 +195,7 @@ fn a_whole_multiple_is_a_remark_not_an_error() {
 }
 
 /// Without something to count the values with, the section is **not run**, and
-/// says so — never a clean zero.
+/// says so - never a clean zero.
 #[test]
 fn with_no_array_source_the_counts_are_unchecked_not_fine() {
     let held = Held(vec![

@@ -1,4 +1,4 @@
-# energyml-python — architecture
+# energyml-python - architecture
 
 Related decisions: [ADR 0012](../../docs/adr/0012-no-face-carries-logic.md) (no face carries logic), [ADR 0003](../../docs/adr/0003-identity-full-uri-one-door.md), [ADR 0002](../../docs/adr/0002-storage-trait-follows-etp.md), [ADR 0016](../../docs/adr/0016-one-crate-one-test-binary.md).
 

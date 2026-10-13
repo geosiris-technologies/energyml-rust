@@ -7,7 +7,7 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish = false
-# One test binary, `tests/main.rs` — see its doc.
+# One test binary, `tests/main.rs` - see its doc.
 autotests = false
 
 [dev-dependencies]
@@ -28,17 +28,17 @@ energyml-storage = { path = "../energyml-storage", version = "0.1.0" }
 energyml-domain = { path = "../energyml-domain", version = "0.1.0" }
 energyml-geometry = { path = "../energyml-geometry", version = "0.1.0" }
 energyml-schemas = { path = "../energyml-schemas", version = "0.1.0", features = ["all"] }
-# The cross-audit derives packages from the corpus — one with elements removed,
-# one with a value corrupted — because a ladder whose three rungs are all empty
+# The cross-audit derives packages from the corpus - one with elements removed,
+# one with a value corrupted - because a ladder whose three rungs are all empty
 # proves nothing about the order of its rungs.
 zip = { version = "7", default-features = false, features = ["deflate"] }
 # `introspection.rs` reads a value into a field through the JSON door, which is
-# how an editor reaches it — the refusal being tested is one a front end provokes.
+# how an editor reaches it - the refusal being tested is one a front end provokes.
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 
 [features]
 default = []
-# Tests on the private real-file corpus under testdata/ — real-file campaign, private. Off by default.
+# Tests on the private real-file corpus under testdata/ - real-file campaign, private. Off by default.
 private-corpus = []
 # Read arrays from HDF5 files, which is where most of the corpus's numbers are.
 hdf5 = ["energyml-storage/hdf5", "energyml-geometry/hdf5", "energyml-domain/hdf5"]

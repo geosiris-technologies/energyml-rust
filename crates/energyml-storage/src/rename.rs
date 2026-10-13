@@ -9,15 +9,15 @@
 //! The name of an external file is written in **three** places that have to go
 //! on agreeing, and they are not the same kind of thing:
 //!
-//! 1. in every `ExternalDataArrayPart.Uri` (eml 2.3) — one field per array, and
+//! 1. in every `ExternalDataArrayPart.Uri` (eml 2.3) - one field per array, and
 //!    an object may carry several;
 //! 2. in the `.rels` of the part, for the older arrangement where the object
 //!    names an `EpcExternalPartReference` and the relationship carries the file
-//!    name (EPC §3.2.3) — and for the entries real producers write on ordinary
+//!    name (EPC §3.2.3) - and for the entries real producers write on ordinary
 //!    objects, which this crate honours;
 //! 3. on the disk.
 //!
-//! Forgetting one gives a package that opens and whose arrays cannot be found —
+//! Forgetting one gives a package that opens and whose arrays cannot be found -
 //! exactly the fault `energyml check` reports, made by the tool that is supposed
 //! to prevent it.
 //!
@@ -27,10 +27,10 @@
 //!
 //! # A quote first, then the writing
 //!
-//! The shape the workspace uses everywhere it changes more than one thing —
+//! The shape the workspace uses everywhere it changes more than one thing -
 //! `extract::plan` then `extract`, `Operation::plan` then `apply`. It is also
-//! the answer to the question the request itself asks — update automatically,
-//! or ask? — because a caller that can show **what will
+//! the answer to the question the request itself asks - update automatically,
+//! or ask? - because a caller that can show **what will
 //! change** does not have to choose between the two: it shows the quote and
 //! someone says yes.
 //!
@@ -57,7 +57,7 @@ pub struct Rename {
     pub to: String,
     /// The uris of the objects that name the file in a field of their own.
     pub objects: Vec<String>,
-    /// How many fields would be rewritten — an object may carry several.
+    /// How many fields would be rewritten - an object may carry several.
     pub fields: usize,
     /// How many `.rels` entries would be rewritten.
     pub relationships: usize,
@@ -87,7 +87,7 @@ impl Rename {
 /// somebody their file is missing when it is sitting in a browser tab.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FileMove {
-    /// The store holds its files somewhere this crate cannot reach — a browser,
+    /// The store holds its files somewhere this crate cannot reach - a browser,
     /// a test with an in-memory backend. Whoever owns the bytes renames them.
     NotOnDisk,
     /// Nothing was at the old name. Not an error: a package whose `.h5` never
@@ -142,7 +142,7 @@ pub fn plan(store: &EpcStore, from: &str, to: &str) -> Rename {
     let (objects, unreadable) = store.read_objects(None);
     for name in unreadable {
         out.refusals
-            .push(format!("{name} — so this cannot tell whether it names `{from}`"));
+            .push(format!("{name} - so this cannot tell whether it names `{from}`"));
     }
 
     for (summary, object) in &objects {
@@ -210,7 +210,7 @@ pub fn apply(store: &mut EpcStore, plan: &Rename) -> Result<Applied> {
         )));
     }
 
-    // 1 — the fields the objects carry themselves.
+    // 1 - the fields the objects carry themselves.
     let mut fields = 0;
     for uri in &plan.objects {
         let object = store.edit(uri)?;
@@ -224,14 +224,14 @@ pub fn apply(store: &mut EpcStore, plan: &Rename) -> Result<Applied> {
         for (at, value) in targets {
             let part = path::object_mut(&mut *object, &at)?;
             // `uri` for an eml 2.3 part, `file_uri` for a WITSML channel
-            // data in HDF5 — the extension `crate::array` locates.
+            // data in HDF5 - the extension `crate::array` locates.
             let field = crate::array::file_field(part.type_info().name);
             part.set_field(field, OwnedValue::Str(value))?;
             fields += 1;
         }
     }
 
-    // 2 — the names the relationships carry. Both populations, and they are
+    // 2 - the names the relationships carry. Both populations, and they are
     // disjoint: a proxy names its file in its own `.rels` (§3.2.3), an ordinary
     // object may carry one too, which this crate honours rather than drops.
     let mut relationships = 0;
@@ -258,7 +258,7 @@ pub fn apply(store: &mut EpcStore, plan: &Rename) -> Result<Applied> {
 /// Move the file itself, when this store has one to move.
 fn move_file(store: &mut EpcStore, plan: &Rename) -> Result<FileMove> {
     if store.external_files_ref().is_virtual() {
-        // A store whose files live somewhere this crate cannot reach — a
+        // A store whose files live somewhere this crate cannot reach - a
         // browser holding them in memory. The bytes are the caller's to rename;
         // what belongs here is the store's own bookkeeping, so that a read
         // under the **new** name finds the backend instead of being refused as
@@ -278,14 +278,14 @@ fn move_file(store: &mut EpcStore, plan: &Rename) -> Result<FileMove> {
     let destination = store.external_files_ref().destination_for(&plan.to)?;
     // **What this process holds open, it closes first.** An `.h5` is kept open
     // between reads (`hdf5::close_cached_files`), and on Windows an open handle
-    // makes a rename fail outright — so a package that had been read once could
+    // makes a rename fail outright - so a package that had been read once could
     // not be renamed, which is every package a person would want to rename.
     #[cfg(feature = "hdf5")]
     crate::hdf5::close_cached_files();
     std::fs::rename(&source, &destination).map_err(|why| {
         Error::Package(format!(
             "the package now names `{}`, but the file could not be moved from {} to {}: {why} \
-             — the package has not been saved, so nothing on disk is inconsistent yet",
+             - the package has not been saved, so nothing on disk is inconsistent yet",
             plan.to,
             source.display(),
             destination.display()
@@ -298,7 +298,7 @@ fn move_file(store: &mut EpcStore, plan: &Rename) -> Result<FileMove> {
 ///
 /// Exact, or the **last segment** of a path or URI: eml 2.3 says `Uri`, and
 /// producers write anything from `model.h5` to `./data/model.h5`. Comparing the
-/// whole string would miss the second; comparing loosely — ignoring case, say —
+/// whole string would miss the second; comparing loosely - ignoring case, say -
 /// would rename a file the package did not mean, and a zip entry is
 /// case-sensitive.
 fn names_file(declared: &str, wanted: &str) -> bool {

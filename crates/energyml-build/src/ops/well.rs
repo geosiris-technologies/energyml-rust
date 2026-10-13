@@ -1,10 +1,10 @@
-//! `well-from-polyline` — a wellbore from one polyline: its datum, its
+//! `well-from-polyline` - a wellbore from one polyline: its datum, its
 //! trajectory, its frame, and the feature and interpretation they hang off.
 //!
 //! The need (09/09, with the answers of 10/09): the ground
 //! position is asked for (the highest Z is displayed to help), the
 //! MDs are computed from that elevation, the trajectory takes the points as control
-//! points, simpler if it is vertical — the datum created at the
+//! points, simpler if it is vertical - the datum created at the
 //! first point or an existing one named, a linear spline by default, one frame
 //! node per control point with a spacing on option.
 //!
@@ -23,24 +23,24 @@
 //!   convention but the contract between the two objects;
 //! - **vertical is measured, not assumed, and it is not enough**: every point
 //!   over the first within a millionth of the length *and* the measured depths
-//!   equal to the CRS's depths — RESQML's kind 0 reads its parameter as a depth
+//!   equal to the CRS's depths - RESQML's kind 0 reads its parameter as a depth
 //!   through the CRS, which is the MD only when the datum is at the system's
 //!   zero. Either condition unmet, it stays a linear spline through the same
 //!   points, which places them identically, and the plan says why;
-//! - **the datum sits in the frame**: under a `LocalEngineeringCompoundCrs` —
-//!   every frame created here, and what a geometry should name — it is a
+//! - **the datum sits in the frame**: under a `LocalEngineeringCompoundCrs` -
+//!   every frame created here, and what a geometry should name - it is a
 //!   `ReferencePointInALocalEngineeringCompoundCrs` whose `Crs` is that
 //!   compound and whose coordinates are local, like the trajectory's (common
 //!   TRG v2.3 §13.25, p. 371; a deliberate decision of 24/09). The compound
 //!   reaches the vertical system itself, so nothing more is needed. Under a
 //!   `ProjectedCrs` named as it stands (decision (c)) it is a
-//!   `ReferencePointInACrs` — projected coordinates **in that `ProjectedCrs`**,
+//!   `ReferencePointInACrs` - projected coordinates **in that `ProjectedCrs`**,
 //!   and the frame's vertical CRS, which the reader of frames resolves to know
 //!   which way is down; a frame of the package brings it in
 //!   `Known::vertical_crs`, and without it the datum is refused by name rather
 //!   than written pointing at nothing. Until 24/09 the second form was written
 //!   under a compound too, its `ProjectedCoordinates.Crs` pointing at the
-//!   compound — a local position given for a projected one;
+//!   compound - a local position given for a projected one;
 //! - **degrees are refused**, as `sigeol-boreholes` and `wells-from-table`
 //!   refuse them: a wellbore is a vertical extent, and under a
 //!   `Geographic2dCrs` its depths are metres beside degrees.
@@ -73,7 +73,7 @@ use super::written::WrittenImposed;
 /// refusing more than one, and reads the same shape (`crates/energyml-build/ARCHITECTURE.md`:
 /// an operation that writes the same object as another delegates to it).
 pub(crate) enum Found {
-    /// A line of a shape — with the shape's name and what is known of where
+    /// A line of a shape - with the shape's name and what is known of where
     /// it came from, since that decides where its numbers are
     /// (`support::shape_placed`).
     Placed {
@@ -85,7 +85,7 @@ pub(crate) enum Found {
 }
 
 impl Found {
-    /// The third ordinates, for the ground's suggestion — a foreign line's
+    /// The third ordinates, for the ground's suggestion - a foreign line's
     /// elevations are metres whatever its horizontal system.
     pub(crate) fn zs(&self) -> Vec<f64> {
         match self {
@@ -119,7 +119,7 @@ pub enum TrajectoryShape {
     TangentialCubic,
 }
 
-/// What the created datum is — EML's reference point kinds.
+/// What the created datum is - EML's reference point kinds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
 pub enum DatumKind {
     /// The ground.
@@ -139,7 +139,7 @@ pub enum DatumKind {
 /// What `well-from-polyline` is told.
 ///
 /// **Its own pair, not the shared one**: an interpretation of a wellbore
-/// carries `Domain` and `IsDrilled`, which the shared writer does not write —
+/// carries `Domain` and `IsDrilled`, which the shared writer does not write -
 /// so the block is [`WrittenImposed`], and the feature and interpretation are
 /// made here when none is named.
 #[derive(Debug, Params)]
@@ -147,10 +147,10 @@ pub struct WellParams {
     /// The frame, the interpretation when named, the naming.
     #[param(flatten)]
     pub written: WrittenImposed,
-    /// the vertical coordinate of the ground at the wellhead, in the frame's units — the measured depths start there
+    /// the vertical coordinate of the ground at the wellhead, in the frame's units - the measured depths start there
     #[param(reads = ["MdDatum/VerticalCoordinate"])]
     pub ground: f64,
-    /// the unit of the measured depths — the frame's vertical unit
+    /// the unit of the measured depths - the frame's vertical unit
     ///
     /// Where it lives on an existing wellbore frame: what makes *copy the
     /// settings of that other well* work without a line here.
@@ -162,7 +162,7 @@ pub struct WellParams {
     /// one (`ReferencePointInALocalEngineeringCompoundCrs`, decision (b) of
     /// 24/09), in a `ProjectedCrs` and its vertical system when the frame is a
     /// `ProjectedCrs` named as it stands (`ReferencePointInACrs`). Both are
-    /// declared, the first first — it is what a frame created here makes.
+    /// declared, the first first - it is what a frame created here makes.
     #[param(
         group = "frame",
         creates = ["eml23.ReferencePointInALocalEngineeringCompoundCrs", "eml23.ReferencePointInACrs"],
@@ -184,7 +184,7 @@ pub struct WellParams {
     pub spacing: Option<f64>,
 }
 
-/// What `well-from-polyline` takes: **one** polyline — a shape of the scene or
+/// What `well-from-polyline` takes: **one** polyline - a shape of the scene or
 /// of the package, or a line of a feature collection.
 ///
 /// **`trace` and not `shape`**: this operation already has a setting named
@@ -200,7 +200,7 @@ pub struct WellInputs {
     pub features: Option<Features>,
 }
 
-/// Every polyline `trace` or `features` holds — a shape's patches, and the
+/// Every polyline `trace` or `features` holds - a shape's patches, and the
 /// collection's lines. Shared with `wells-from-polylines`, which writes one
 /// well per line instead of refusing more than one, and so takes a slice of
 /// shapes rather than `WellInputs`' single, optional one.
@@ -242,7 +242,7 @@ pub(crate) fn polylines_of(trace: Option<&ShapeIn>, features: Option<&Features>)
     found
 }
 
-/// A found polyline has enough points, all finite — the one check every
+/// A found polyline has enough points, all finite - the one check every
 /// caller makes, worded the same way either way.
 pub(crate) fn valid_polyline(line: &Found) -> Result<(), String> {
     let (count, finite) = match line {
@@ -267,13 +267,13 @@ pub(crate) fn valid_polyline(line: &Found) -> Result<(), String> {
 fn polyline_of(inputs: &WellInputs) -> Result<Found, String> {
     let mut found = polylines_of(inputs.trace.as_ref(), inputs.features.as_ref());
     match found.len() {
-        0 => Err("it takes one polyline — a shape with one, or a feature collection with one line; the input holds none".to_string()),
+        0 => Err("it takes one polyline - a shape with one, or a feature collection with one line; the input holds none".to_string()),
         1 => {
             let line = found.remove(0);
             valid_polyline(&line)?;
             Ok(line)
         }
-        n => Err(format!("it takes one polyline and the input holds {n} — one wellbore per polyline, run it once each")),
+        n => Err(format!("it takes one polyline and the input holds {n} - one wellbore per polyline, run it once each")),
     }
 }
 
@@ -304,19 +304,19 @@ fn measured_depths(points: &[[f64; 3]], ground: f64) -> Vec<f64> {
 }
 
 /// Whether RESQML's vertical line kind would place this line where its points
-/// are — which is a question about the *datum*, not about the shape.
+/// are - which is a question about the *datum*, not about the shape.
 ///
 /// Kind 0 does not interpolate: *"Parameter values are interpreted as depth =>
 /// (X,Y,Z), where the depth to Z conversion depends on the vertical CRS
 /// direction"* (TRG v2.2 §3.8). A trajectory's parameter is the **measured
 /// depth**, counted from the datum. The two are the same number only when the
-/// datum sits at the system's zero — and an MD datum is the ground, which is at
+/// datum sits at the system's zero - and an MD datum is the ground, which is at
 /// 39 m on a BRGM borehole and at −25 m offshore.
 ///
 /// Written as kind 0 anyway, a hole whose head is at 39.57 m has its frame node
 /// at MD 1.8 read back at z = −1.8: forty metres below where the trajectory
 /// passes, on a line the reader still draws correctly. Found on the SIGEOL
-/// import of 19/09 — a thousand wellbore frames placed at the wrong depth, the
+/// import of 19/09 - a thousand wellbore frames placed at the wrong depth, the
 /// map right and the 3D view empty of anything one could recognise.
 fn vertical_agrees(mds: &[f64], points: &[[f64; 3]], up: bool, length: f64) -> bool {
     let slack = 1e-6 * length.max(1.0);
@@ -385,15 +385,15 @@ fn points_array(file: &str, path: &str, count: usize) -> Value {
 
 /// What [`datum_in`] is told.
 pub struct Datum<'a> {
-    /// The datum the caller named, when one was named — nothing is made then.
+    /// The datum the caller named, when one was named - nothing is made then.
     pub named: Option<&'a Value>,
     /// The head: the first control point's horizontal coordinates.
     pub head: [f64; 2],
-    /// The ground there — where the measured depths start.
+    /// The ground there - where the measured depths start.
     pub ground: f64,
     /// What a created datum is.
     pub kind: DatumKind,
-    /// The frame it sits in — the `LocalCrs` the trajectory names. Its type
+    /// The frame it sits in - the `LocalCrs` the trajectory names. Its type
     /// decides the form of a created datum ([`datum_in`]).
     pub crs: &'a Value,
     /// The frame's vertical CRS, which a datum in a `ProjectedCrs` must
@@ -412,7 +412,7 @@ pub struct Datum<'a> {
 /// one created at the head, at the ground.
 ///
 /// **Apart from [`write()`], and deliberately.** A datum is a fact about the
-/// *frame* — where zero is — not about the curve; keeping it here lets a caller
+/// *frame* - where zero is - not about the curve; keeping it here lets a caller
 /// put it in its plan where it belongs, and lets the writer take it as a
 /// reference like it takes its interpretation. Folding it into `write` moved it
 /// after the feature in `well-from-polyline`'s plan, which a refactor meant to
@@ -433,7 +433,7 @@ pub fn datum_in(
             // compound is local, and the compound reaches the vertical system
             // itself; a position in a `ProjectedCrs` is projected, and needs
             // the vertical system beside it. A frame that is no whole system
-            // — a half, a 2.0.1 system, none at all — has already blocked the
+            // - a half, a 2.0.1 system, none at all - has already blocked the
             // plan (`support::frame_in`), and the datum is then written in it
             // as in a compound, never to be applied.
             let qualified = datum.crs["QualifiedType"].as_str().unwrap_or_default();
@@ -443,7 +443,7 @@ pub fn datum_in(
                     return Err(Refusal::on(
                         "datum",
                         format!(
-                            "the frame `{}` is a Geographic2dCrs, in degrees, and a datum's vertical coordinate is linear: no reader reconciles the two — write the wellbore under a projected system",
+                            "the frame `{}` is a Geographic2dCrs, in degrees, and a datum's vertical coordinate is linear: no reader reconciles the two - write the wellbore under a projected system",
                             datum.crs["Title"].as_str().unwrap_or_default()
                         ),
                     )
@@ -452,12 +452,12 @@ pub fn datum_in(
                 _ => false,
             };
             let uuid = support::next_uuid(identity, &format!("well-datum:{}", datum.seed), rank)?;
-            let title = format!("{} — datum", datum.title);
+            let title = format!("{} - datum", datum.title);
             let (qualified_type, json) = if in_projected {
                 let vertical = datum.vertical_crs.cloned().ok_or_else(|| {
                     Error::from(Refusal::new(
                         "datum",
-                        "a datum in a ProjectedCrs needs the frame's vertical CRS, which a reader resolves to know which way is down — the input does not carry it: name an existing `datum`, give the object's vertical CRS, or name the LocalEngineeringCompoundCrs that joins the two"
+                        "a datum in a ProjectedCrs needs the frame's vertical CRS, which a reader resolves to know which way is down - the input does not carry it: name an existing `datum`, give the object's vertical CRS, or name the LocalEngineeringCompoundCrs that joins the two"
                             .to_string(),
                     ))
                 })?;
@@ -470,7 +470,7 @@ pub fn datum_in(
                         "Citation": (datum.citation)(&title),
                         "Kind": datum.kind.word(),
                         "VerticalCoordinate": datum.ground,
-                        // Projected coordinates **in the `ProjectedCrs`** —
+                        // Projected coordinates **in the `ProjectedCrs`** -
                         // the only frame they can be given for, now that a
                         // compound takes the other form.
                         "HorizontalCoordinates": {
@@ -492,7 +492,7 @@ pub fn datum_in(
                         "Citation": (datum.citation)(&title),
                         "Kind": datum.kind.word(),
                         // Local coordinates, in the compound the trajectory is
-                        // in — the head is its first control point, and the
+                        // in - the head is its first control point, and the
                         // ground a z of the same axis (common TRG v2.3 §13.25,
                         // p. 371: *“a reference point which is defined in the
                         // context of a compound (2D horizontal + 1D vertical)
@@ -527,14 +527,14 @@ pub fn datum_in(
     }
 }
 
-/// One wellbore's **trajectory and frame** — the writer both operations go
+/// One wellbore's **trajectory and frame** - the writer both operations go
 /// through.
 ///
 /// Extracted from [`WellFromPolyline::plan`] on 18/09, when `sigeol-boreholes`
 /// needed the same two objects from a different vocabulary. The house rule
 /// (`crates/energyml-build/ARCHITECTURE.md`: an operation that writes the same object
 /// as another delegates to it): a second writer would be a second place for the
-/// same mistakes — the measured depths, the vertical detection, the parametric
+/// same mistakes - the measured depths, the vertical detection, the parametric
 /// line's kind.
 ///
 /// What is **not** here is the feature and its interpretation, nor the datum:
@@ -553,7 +553,7 @@ pub struct Wellbore<'a> {
     /// When given, they replace the derived uuids: it is *those* objects that are
     /// rewritten, and a derived uuid would name a copy that nothing else in the
     /// package references. The derivation is done all the same, so that the
-    /// rank advances — `Identity::Given` hands out its uuids in the order of the
+    /// rank advances - `Identity::Given` hands out its uuids in the order of the
     /// plan, and skipping one would shift all the following ones.
     pub keep: Option<(&'a str, &'a str)>,
     /// The trajectory's control points, in the frame.
@@ -562,7 +562,7 @@ pub struct Wellbore<'a> {
     /// them** rather than the line implying them.
     ///
     /// `None` is `well-from-polyline`'s case: a line was drawn, and its
-    /// measured depths are its own geometry — the drop from the ground, then
+    /// measured depths are its own geometry - the drop from the ground, then
     /// the chord lengths. `Some` is `sigeol-boreholes`', where the depths are
     /// what the file says and the line was built *from* them.
     ///
@@ -573,14 +573,14 @@ pub struct Wellbore<'a> {
     /// chord lengths. Writing that number would be this crate inventing a value
     /// by a detour and putting it where a producer's own is expected.
     pub mds: Option<&'a [f64]>,
-    /// The vertical coordinate of the ground at the head — where the measured
+    /// The vertical coordinate of the ground at the head - where the measured
     /// depths start.
     pub ground: f64,
     /// The unit of the measured depths.
     pub uom: &'a str,
     /// The curve through the control points.
     pub shape: TrajectoryShape,
-    /// The line's tangent at each control point, in the frame's axes — given
+    /// The line's tangent at each control point, in the frame's axes - given
     /// by a caller who knows them exactly (`well-from-plan`, whose stations
     /// lie on minimum-curvature arcs). The trajectory is then RESQML's
     /// minimum-curvature line (`LineKindIndex` 5 with its `TangentVectors`,
@@ -590,7 +590,7 @@ pub struct Wellbore<'a> {
     pub tangents: Option<&'a [[f64; 3]]>,
     /// A frame node every so many units of MD; `None` is one per control point.
     pub spacing: Option<f64>,
-    /// The datum the measured depths are counted from — made by [`datum_in`],
+    /// The datum the measured depths are counted from - made by [`datum_in`],
     /// or named by the caller. **Given, never made here**: the writer points
     /// at two objects, its datum and its interpretation, and creates neither.
     pub datum: &'a Value,
@@ -598,13 +598,13 @@ pub struct Wellbore<'a> {
     pub interpretation: &'a Value,
     /// The external file the arrays go into.
     pub file: &'a str,
-    /// Which way the frame's vertical axis points — `None` when unknown, and
+    /// Which way the frame's vertical axis points - `None` when unknown, and
     /// a vertical hole then stays a linear spline rather than being written as
     /// RESQML's vertical line with parameters nobody can orient.
     pub vertical_up: Option<bool>,
     /// The `LocalCrs` every geometry carries.
     pub crs: &'a Value,
-    /// The citation every object gets — passed rather than built, because a
+    /// The citation every object gets - passed rather than built, because a
     /// producer's own dates belong on the objects made from its file.
     pub citation: &'a dyn Fn(&str) -> Value,
 }
@@ -654,11 +654,11 @@ pub fn write(well: &Wellbore<'_>, identity: &Identity, rank: &mut usize) -> Resu
         match well.vertical_up {
             Some(true) if ground < line[0][2] => says.push(Note {
                 key: "ground-below",
-                detail: format!("the ground {ground} is below the first point {} — the measured depths start with that drop anyway", line[0][2]),
+                detail: format!("the ground {ground} is below the first point {} - the measured depths start with that drop anyway", line[0][2]),
             }),
             Some(false) if ground > line[0][2] => says.push(Note {
                 key: "ground-below",
-                detail: format!("the ground {ground} is deeper than the first point {} — the measured depths start with that drop anyway", line[0][2]),
+                detail: format!("the ground {ground} is deeper than the first point {} - the measured depths start with that drop anyway", line[0][2]),
             }),
             _ => {}
         }
@@ -674,7 +674,7 @@ pub fn write(well: &Wellbore<'_>, identity: &Identity, rank: &mut usize) -> Resu
     }
     let vertical = is_vertical(line, length);
     // **The parameter written is the measured depth, whatever the kind.** A
-    // trajectory's parametric line is read at the frame's `NodeMd` — `at(md)`
+    // trajectory's parametric line is read at the frame's `NodeMd` - `at(md)`
     // in `energyml-geometry/src/parametric.rs`, and the corpus agrees:
     // `acd2cdcf`'s parameters run 0…1000 and its frames sample 0, 200 … 1000
     // of the same well. Writing anything else there puts every frame node
@@ -684,7 +684,8 @@ pub fn write(well: &Wellbore<'_>, identity: &Identity, rank: &mut usize) -> Resu
         well.vertical_up,
         well.shape.word(),
     ) {
-        (false, _, _) if let Some(given) = well.tangents => {
+        (false, _, _) if well.tangents.is_some() => {
+            let given = well.tangents.expect("the arm's guard holds tangents");
             says.push(Note {
                     key: "minimum-curvature",
                     detail: "written as RESQML's minimum-curvature line (LineKindIndex 5): the circular arcs through the given stations, their tangents written".to_string(),
@@ -698,7 +699,7 @@ pub fn write(well: &Wellbore<'_>, identity: &Identity, rank: &mut usize) -> Resu
         (true, Some(_), _) => {
             says.push(Note {
                     key: "vertical-datum-offset",
-                    detail: "the polyline is vertical but its measured depths are not the vertical CRS's depths — the ground is not at the system's zero — so it is written as a linear spline through its points, whose parameter is the measured depth".to_string(),
+                    detail: "the polyline is vertical but its measured depths are not the vertical CRS's depths - the ground is not at the system's zero - so it is written as a linear spline through its points, whose parameter is the measured depth".to_string(),
                 });
             (1, None)
         }
@@ -718,7 +719,7 @@ pub fn write(well: &Wellbore<'_>, identity: &Identity, rank: &mut usize) -> Resu
         .keep
         .map(|(one, _)| one.to_string())
         .unwrap_or(derived_trajectory);
-    let trajectory_title = format!("{title} — trajectory");
+    let trajectory_title = format!("{title} - trajectory");
     let control_path = format!("/resqml22/{trajectory_uuid}/controlPoints");
     let parameters_path = format!("/resqml22/{trajectory_uuid}/controlPointParameters");
     let mut geometry = json!({
@@ -778,7 +779,7 @@ pub fn write(well: &Wellbore<'_>, identity: &Identity, rank: &mut usize) -> Resu
     let nodes = frame_mds(&mds, well.spacing);
     let derived_frame = support::next_uuid(identity, &format!("well-frame:{}", well.seed), rank)?;
     let frame_uuid = well.keep.map(|(_, one)| one.to_string()).unwrap_or(derived_frame);
-    let frame_title = format!("{title} — frame");
+    let frame_title = format!("{title} - frame");
     let node_path = format!("/resqml22/{frame_uuid}/nodeMd");
     objects.push(NewObject {
         uuid: frame_uuid.clone(),
@@ -825,7 +826,7 @@ impl Operation for WellFromPolyline {
     fn about(&self) -> About {
         About {
             name: "well-from-polyline",
-            describe: "a wellbore from one polyline: the datum at the ground, the measured depths, a trajectory through the points, a frame on it — and the feature and interpretation when none is named",
+            describe: "a wellbore from one polyline: the datum at the ground, the measured depths, a trajectory through the points, a frame on it - and the feature and interpretation when none is named",
             category: Category::Wells,
             makes: &[
                 "eml23.ReferencePointInALocalEngineeringCompoundCrs",
@@ -836,7 +837,7 @@ impl Operation for WellFromPolyline {
                 "resqml22.WellboreFrameRepresentation",
             ],
             recipe: "well-from-polyline",
-            // It writes the pair itself when no interpretation is named —
+            // It writes the pair itself when no interpretation is named -
             // declared so that the form can offer *create one* beside *choose
             // one*, before anything is planned.
             represents: Some(("resqml22.WellboreFeature", "resqml22.WellboreInterpretation")),
@@ -876,7 +877,7 @@ impl Operation for WellFromPolyline {
         let identity = cx.identity;
         let when = cx.when;
         let frame = support::frame_in(&cx.known(), &written.frame, identity, when, &mut rank)?;
-        // **A wellbore is a vertical extent, and degrees cannot hold one** —
+        // **A wellbore is a vertical extent, and degrees cannot hold one** -
         // the refusal `sigeol-boreholes` and `wells-from-table` already make
         // (the argument is written out in `sigeol_boreholes`), which this
         // operation lacked: its depths are metres, a
@@ -897,7 +898,7 @@ impl Operation for WellFromPolyline {
             return Err(Refusal::on(
                 slot,
                 format!(
-                    "a wellbore is a vertical extent, and {what} measures its horizontal axes in degrees while its depths are linear: every hole would be written between a hundred and ten thousand times longer than the model is wide, which no reader can reconcile — name a projected system in `project` (EPSG:2154 for mainland France), or a LocalEngineeringCompoundCrs as `crs`"
+                    "a wellbore is a vertical extent, and {what} measures its horizontal axes in degrees while its depths are linear: every hole would be written between a hundred and ten thousand times longer than the model is wide, which no reader can reconcile - name a projected system in `project` (EPSG:2154 for mainland France), or a LocalEngineeringCompoundCrs as `crs`"
                 ),
             ));
         }
@@ -949,7 +950,7 @@ impl Operation for WellFromPolyline {
             }
             None => {
                 let feature_uuid = support::next_uuid(identity, &format!("well-feature:{seed}"), &mut rank)?;
-                let feature_title = format!("{title} — feature");
+                let feature_title = format!("{title} - feature");
                 objects.push(NewObject {
                     uuid: feature_uuid.clone(),
                     qualified_type: "resqml22.WellboreFeature".to_string(),
@@ -964,7 +965,7 @@ impl Operation for WellFromPolyline {
                     }),
                 });
                 let uuid = support::next_uuid(identity, &format!("well-interpretation:{seed}"), &mut rank)?;
-                let interpretation_title = format!("{title} — interpretation");
+                let interpretation_title = format!("{title} - interpretation");
                 objects.push(NewObject {
                     uuid: uuid.clone(),
                     qualified_type: "resqml22.WellboreInterpretation".to_string(),
@@ -1059,15 +1060,15 @@ impl Operation for WellFromPolyline {
                 uom: Some(uom),
             },
         ]);
-        // What the frame must say of itself — a `ProjectedCrs` taken as it
-        // stands — after what the well said.
+        // What the frame must say of itself - a `ProjectedCrs` taken as it
+        // stands - after what the well said.
         says.extend(frame.says);
         Ok(Plan {
             media: Vec::new(),
             // **What the frame blocked, the plan carries.** This was `None`
             // whatever `frame_in` said, so a well under a RESQML 2.0.1 system
-            // was applied half of one release; and a half named as the frame —
-            // a `VerticalCrs` — would have been written as the trajectory's
+            // was applied half of one release; and a half named as the frame -
+            // a `VerticalCrs` - would have been written as the trajectory's
             // `LocalCrs`.
             blocked: frame.blocked,
             objects,
@@ -1076,7 +1077,7 @@ impl Operation for WellFromPolyline {
             // is a *parametric line*: its control points are its
             // trajectory only when it is linear. Returning the control
             // polyline would give, for a cubic, a shape that the re-reading
-            // of the object will contradict — two readers in agreement on nodes and
+            // of the object will contradict - two readers in agreement on nodes and
             // in disagreement on the curve that joins them.
             shapes: Vec::new(),
             activity: ActivityDraft {

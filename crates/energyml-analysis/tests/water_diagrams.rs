@@ -1,10 +1,10 @@
 //! Piper and Stiff diagrams.
 //!
 //! The textbook points: a water of one salt falls on the corners its ions
-//! name (Piper 1944 — a ternary share of 100 % is a corner by the definition
+//! name (Piper 1944 - a ternary share of 100 % is a corner by the definition
 //! of a ternary diagram). The corners are computed here from the layout the
-//! module doc states — two unit equilateral triangles `GAP` apart on one base
-//! line — not read from `Piper::frame`, which is checked against them.
+//! module doc states - two unit equilateral triangles `GAP` apart on one base
+//! line - not read from `Piper::frame`, which is checked against them.
 //!
 //! The milliequivalents are recomputed by hand from the IUPAC standard atomic
 //! weights (abridged, CIAAW 2021) written in this file: a second source for
@@ -31,7 +31,7 @@ fn near(a: [f64; 2], b: [f64; 2]) -> bool {
 }
 
 /// Where the line from `a` in direction `u` meets the line from `b` in
-/// direction `v` — to find the diamond's corners from the triangles'.
+/// direction `v` - to find the diamond's corners from the triangles'.
 fn meet(a: [f64; 2], u: [f64; 2], b: [f64; 2], v: [f64; 2]) -> [f64; 2] {
     // a + s·u = b + t·v, solved for s by Cramer's rule.
     let det = u[0] * (-v[1]) - (-v[0]) * u[1];
@@ -47,8 +47,8 @@ struct Corners {
     hco3: [f64; 2],
     cl: [f64; 2],
     so4: [f64; 2],
-    /// Lines of constant Na+K climb parallel to the Ca–Mg side; lines of
-    /// constant HCO3+CO3 parallel to the Cl–SO4 side.
+    /// Lines of constant Na+K climb parallel to the Ca-Mg side; lines of
+    /// constant HCO3+CO3 parallel to the Cl-SO4 side.
     up_right: [f64; 2],
     up_left: [f64; 2],
 }
@@ -69,11 +69,11 @@ fn corners() -> Corners {
 #[test]
 fn a_sodium_chloride_water_falls_on_the_na_k_and_cl_corners() {
     // One millimole of NaCl per litre; the other axis ions measured at 0.
-    // Diamond: Na+K = 100 % and HCO3+CO3 = 0 % — the line of Na+K = 100 %
+    // Diamond: Na+K = 100 % and HCO3+CO3 = 0 % - the line of Na+K = 100 %
     // from the Na+K corner meets the line of HCO3+CO3 = 0 % from the Cl
     // corner: the diamond's right corner, the sodium chloride facies.
     // To break: swap Na+K and Mg in the cation point, or the two terms of
-    // the diamond's x — the corners stop matching.
+    // the diamond's x - the corners stop matching.
     let water = [
         ("Na+", NA),
         ("K+", 0.0),
@@ -110,9 +110,9 @@ fn a_sodium_chloride_water_falls_on_the_na_k_and_cl_corners() {
 #[test]
 fn a_calcium_bicarbonate_water_falls_on_the_ca_and_hco3_corners() {
     // Ca(HCO3)2, one millimole: one Ca+2, two HCO3-. The other axis ions are
-    // declared absent — and the declaration is carried with the result.
-    // Diamond: Na+K = 0 %, HCO3+CO3 = 100 % — the line from the Ca corner
-    // along the Ca–Mg side meets the one from the HCO3 corner: the left
+    // declared absent - and the declaration is carried with the result.
+    // Diamond: Na+K = 0 %, HCO3+CO3 = 100 % - the line from the Ca corner
+    // along the Ca-Mg side meets the one from the HCO3 corner: the left
     // corner, the calcium bicarbonate facies.
     let water = [("Ca+2", CA), ("HCO3-", 2.0 * HCO3)];
     let absent = ["Mg+2", "Na+", "K+", "Cl-", "SO4-2", "CO3-2"];
@@ -149,7 +149,7 @@ fn the_frame_is_the_layout_the_module_states() {
     assert!(matches!(Piper::frame(-0.1), Err(WaterError::BadGap { .. })));
 }
 
-/// Lutetia's water (the reference model's recipe, step `echantillon-gth-1`) —
+/// Lutetia's water (the reference model's recipe, step `echantillon-gth-1`) -
 /// values of a file, used for the arithmetic only: no carbonate is stated.
 const CHALK: [(&str, f64); 8] = [
     ("Ca+2", 150.0),
@@ -219,7 +219,7 @@ fn the_stiff_axes_are_na_k_cl_then_ca_hco3_then_mg_so4_in_milliequivalents() {
 #[test]
 fn a_missing_ion_is_refused_never_drawn_as_zero() {
     // Lutetia states no carbonate: without the declaration, refused.
-    // To break: let an absent ion count as 0 — both diagrams would draw.
+    // To break: let an absent ion count as 0 - both diagrams would draw.
     assert_eq!(
         piper(&CHALK, 5.0, &[]),
         Err(WaterError::Missing {
@@ -265,7 +265,7 @@ fn a_declaration_that_contradicts_the_analysis_is_refused() {
 #[test]
 fn an_analysis_the_balance_refuses_draws_nothing() {
     // 3 meq/L of Na+ against 1 of Cl-: +50 %, beyond 5 %.
-    // To break: skip the tolerance — the diagrams would draw a non-water.
+    // To break: skip the tolerance - the diagrams would draw a non-water.
     let water = [
         ("Na+", 3.0 * NA),
         ("K+", 0.0),

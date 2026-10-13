@@ -1,49 +1,49 @@
-//! `well-logs` — properties laid on wellbore frames by a **sourced law** of the
+//! `well-logs` - properties laid on wellbore frames by a **sourced law** of the
 //! vertical depth below the ground: a temperature by a geothermal gradient, a
 //! hydrostatic pressure below a water table. One continuous property per frame,
 //! exactly one value per node.
 //!
 //! Step 5 of the build plan of Lutetia, the well logs:
 //! pressure, temperature, and the logs of one well from the
-//! lithology — the part of it a law can give, the two rows of the
+//! lithology - the part of it a law can give, the two rows of the
 //! base of the model, over the 10 BSS frames and the 3 of the doublet:
 //!
-//! > pressure, `pressure`, bar, nodes — hydrostatic below the top of
+//! > pressure, `pressure`, bar, nodes - hydrostatic below the top of
 //! > the water table (~1 bar per 10 m of water), marked synthetic
 //! >
-//! > temperature, `temperature`, degC, nodes — ~12–13 °C around 20 m, then
-//! > a gradient of a few °C per 100 m — an order of magnitude, to be sourced
+//! > temperature, `temperature`, degC, nodes - ~12-13 °C around 20 m, then
+//! > a gradient of a few °C per 100 m - an order of magnitude, to be sourced
 //!
 //! and the use case of hydrostatic pressure and temperature by gradient, several
-//! nodes per unit — the reason the frames are cut finer than their passes.
+//! nodes per unit - the reason the frames are cut finer than their passes.
 //!
 //! # What is not here, and why
 //!
 //! - **the logs of GTH-1 from the lithology** (porosity,
-//!   resistivity, gamma ray, density, sonic, neutron) — a law of depth alone
-//!   would invent them. They follow the stage and the lithology of each pass
-//!   — and the table that states them waits for a human review
+//!   resistivity, gamma ray, density, sonic, neutron) - a law of depth alone
+//!   would invent them. They follow the stage and the lithology of each pass -
+//!   and the table that states them waits for a human review
 //!   (the reference model's recipe, step `etages`, `attente`). They are an
 //!   operation of their own, once that table is read;
 //! - the salinity is a constant on a **local** kind that the
 //!   dictionary does not hold; the P10/P50/P90 pressures are facets;
-//!   the yearly and monthly pressures are indexed in time —
+//!   the yearly and monthly pressures are indexed in time -
 //!   step 9, `property-time-series`.
 //!
 //! # The depth is vertical, and below the ground
 //!
-//! Neither the measured depth — it runs along the hole, and a deviated hole is
-//! longer than it is deep — nor the depth below the datum, which the doublet
+//! Neither the measured depth - it runs along the hole, and a deviated hole is
+//! longer than it is deep - nor the depth below the datum, which the doublet
 //! puts on a rig 3 m above the ground. The ground is **given once**,
 //! one of two ways and never both:
 //!
 //! - `ground`, a surface in the frames' own frame, read **under each frame's
-//!   head** by `energyml_analysis::heights` — the reading `well-from-plan` made
+//!   head** by `energyml_analysis::heights` - the reading `well-from-plan` made
 //!   when it placed the doublet on the ground surface, so the same ground twice and never a
 //!   copied number. Under the head and not under each node: the reference model counts
 //!   the vertical depth below the ground at the head, and a deviated
 //!   hole under a slope would otherwise have its depths bent by the slope;
-//! - `datumHeight`, how far above the ground every frame's datum stands — 0 for
+//! - `datumHeight`, how far above the ground every frame's datum stands - 0 for
 //!   the ground-level datums of the BSS import (the BSS ground).
 //!
 //! The head is the frame's datum as the boundary placed it
@@ -54,8 +54,8 @@
 //!
 //! A node's height is read in its frame's own axis, through `Known::vertical_up`
 //! and `Known::vertical_uom`; a frame that states neither is refused by name.
-//! Its numbers are read **as placed ones** — right under an identity compound,
-//! which every frame this crate writes has — and the one check a pure plan can
+//! Its numbers are read **as placed ones** - right under an identity compound,
+//! which every frame this crate writes has - and the one check a pure plan can
 //! make of that is made: no node may lie farther from its datum than its
 //! measured depth (`energyml_analysis::well_logs::beyond_reach`). A frame whose
 //! local numbers are kilometres from its placed datum is refused; one offset by
@@ -65,8 +65,8 @@
 //!
 //! No constant without a source. A plausible value is declared
 //! synthetic: `source` is required and a blank
-//! one refused. And the fourth rule — `ExtensionNameValue` `synthetic = true` and a
-//! sentence in `Citation/Description` on every invented object — is written on
+//! one refused. And the fourth rule - `ExtensionNameValue` `synthetic = true` and a
+//! sentence in `Citation/Description` on every invented object - is written on
 //! every property, as `horizon-from-law` writes it on its grid: a value laid by
 //! a law is not a measurement.
 //!
@@ -74,9 +74,9 @@
 //!
 //! A property on a frame is a positional array
 //! (`crates/energyml-build/ARCHITECTURE.md`): **exactly as many values as the frame
-//! has nodes**, checked against its measured depths — the geometry and
-//! `NodeMd` are two arrays of the file. Where the law says nothing — above the
-//! ground, above its reference depth or the water table — the value is NaN,
+//! has nodes**, checked against its measured depths - the geometry and
+//! `NodeMd` are two arrays of the file. Where the law says nothing - above the
+//! ground, above its reference depth or the water table - the value is NaN,
 //! counted, and said. A frame with no node where the law holds gets no
 //! property and is set aside by name (`Plan::dropped`): what arrives by
 //! default arrives in number (`Otherwise::Every`), and a BSS hole shallower
@@ -86,7 +86,7 @@
 //!
 //! *An operation that writes the same object as another delegates to it*: each
 //! property goes to [`super::property::write`], typed. Its uuid comes from
-//! what it is — the frame, the law and its coefficients, the kind, **and the
+//! what it is - the frame, the law and its coefficients, the kind, **and the
 //! values** (create a second property if the values differ):
 //! the same run writes the same objects, a
 //! corrected coefficient or a moved ground writes a second property beside the
@@ -98,13 +98,13 @@
 //! Nothing. There is no `title` and no `interpretation` slot, so the shared
 //! block cannot hand the frame's to the property (the well that took the
 //! ground's interpretation, 24/09): each title is the wellbore's name and the
-//! measure — `GTH-1 — temperature`, the form `properties-from-table` writes and
+//! measure - `GTH-1 - temperature`, the form `properties-from-table` writes and
 //! `contacts-from-frames` reads back.
 //!
 //! # References
 //!
 //! - The hydrostatic and geothermal laws of `energyml-analysis` (`well_logs`).
-//!   TODO(reference): verify — the geothermal gradient and the hydrostatic law carry no published source (the requirement itself says the source is still to be found).
+//!   TODO(reference): verify - the geothermal gradient and the hydrostatic law carry no published source (the requirement itself says the source is still to be found).
 
 use serde_json::json;
 
@@ -131,15 +131,15 @@ pub struct WellLogsParams {
     /// The law, and its coefficients.
     #[param(flatten)]
     pub law: LawParams,
-    /// how far above the ground each frame's datum stands, in metres — 0 for a ground-level datum; left out, the ground is read on `ground` under each frame's head
+    /// how far above the ground each frame's datum stands, in metres - 0 for a ground-level datum; left out, the ground is read on `ground` under each frame's head
     ///
     /// One or the other, never both: two answers to where the ground is would
     /// be two grounds.
     #[param(min = 0.0, uom = "m")]
     pub datum_height: Option<f64>,
-    /// where the law and its coefficients come from — a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
+    /// where the law and its coefficients come from - a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
     pub source: String,
-    /// what is measured; left out, the kind of the standard dictionary the law gives — `temperature` or `pressure`
+    /// what is measured; left out, the kind of the standard dictionary the law gives - `temperature` or `pressure`
     ///
     /// Looked up by title, never written as a uuid here: the dictionary is the
     /// authority for its own identifiers.
@@ -149,7 +149,7 @@ pub struct WellLogsParams {
     pub data_file: String,
 }
 
-/// the law the values follow with the vertical depth below the ground — a temperature by a geothermal gradient, or a hydrostatic pressure below a water table
+/// the law the values follow with the vertical depth below the ground - a temperature by a geothermal gradient, or a hydrostatic pressure below a water table
 ///
 /// **No default**: which physics is the question, and a default would answer
 /// it for whoever did not.
@@ -168,13 +168,13 @@ pub struct TemperatureParams {
     /// temperature: the temperature at the reference depth, in degrees Celsius
     #[param(min = -273.15, uom = "degC")]
     pub reference_temperature: f64,
-    /// temperature: the depth below the ground where that temperature holds, in metres — nodes above it get no value
+    /// temperature: the depth below the ground where that temperature holds, in metres - nodes above it get no value
     ///
     /// Above it lies the zone of seasonal swings, which a gradient does not
     /// describe; its nodes are NaN, never extrapolated.
     #[param(default = 0.0, optional, min = 0.0, uom = "m")]
     pub reference_depth: f64,
-    /// temperature: the geothermal gradient, in degrees Celsius per kilometre of vertical depth — 30 is 3 °C per 100 m
+    /// temperature: the geothermal gradient, in degrees Celsius per kilometre of vertical depth - 30 is 3 °C per 100 m
     #[param(uom = "degC/km")]
     pub gradient: f64,
 }
@@ -182,7 +182,7 @@ pub struct TemperatureParams {
 /// What a hydrostatic law is told.
 #[derive(Debug, Params)]
 pub struct HydrostaticParams {
-    /// hydrostatic: the elevation of the water table, in metres above the vertical datum the frames count from — a horizontal plane; nodes above it get no value
+    /// hydrostatic: the elevation of the water table, in metres above the vertical datum the frames count from - a horizontal plane; nodes above it get no value
     ///
     /// An elevation and not a depth: the reference model draws the top of the water
     /// table as a horizontal plane, and a piezometric level is
@@ -190,15 +190,15 @@ pub struct HydrostaticParams {
     /// still bounds the law: the air above it is no subsurface.
     #[param(uom = "m")]
     pub water_level: f64,
-    /// hydrostatic: the density of the water, in kg/m3 — fresh water by default
+    /// hydrostatic: the density of the water, in kg/m3 - fresh water by default
     #[param(default = 1000.0, optional, min = 0.0, uom = "kg/m3")]
     pub density: f64,
-    /// hydrostatic: the acceleration of gravity, in m/s2 — the standard gravity by default
+    /// hydrostatic: the acceleration of gravity, in m/s2 - the standard gravity by default
     ///
     /// 9.80665 m/s², the value the 3rd CGPM (1901) defined.
     #[param(default = 9.80665, optional, min = 0.0, uom = "m/s2")]
     pub gravity: f64,
-    /// hydrostatic: the pressure at the water table, in bar — 0 writes a gauge pressure, the atmosphere's 1.01325 an absolute one
+    /// hydrostatic: the pressure at the water table, in bar - 0 writes a gauge pressure, the atmosphere's 1.01325 an absolute one
     #[param(default = 0.0, optional, uom = "bar")]
     pub table_pressure: f64,
 }
@@ -206,14 +206,14 @@ pub struct HydrostaticParams {
 /// What `well-logs` takes.
 #[derive(Debug, Inputs)]
 pub struct WellLogsInputs {
-    /// the wellbore frames the law is laid on — one property each, a value per node
+    /// the wellbore frames the law is laid on - one property each, a value per node
     ///
-    /// **Left empty, every frame of the package** — the declaration of
+    /// **Left empty, every frame of the package** - the declaration of
     /// `properties-from-table` and `contacts-from-frames`. A frame with no node
     /// where the law holds is set aside by name.
     #[input(least = 1, types = "resqml22.WellboreFrameRepresentation", every)]
     pub frames: Vec<Shape>,
-    /// the ground — a surface's triangles or a grid's cells, in the frames' own frame; its height under each frame's head is where the depths are counted from
+    /// the ground - a surface's triangles or a grid's cells, in the frames' own frame; its height under each frame's head is where the depths are counted from
     #[input(topology = "triangles")]
     pub ground: Option<Shape>,
 }
@@ -251,7 +251,7 @@ impl Told {
     }
 
     /// The law under a frame whose ground stands at `ground` metres of
-    /// elevation, in the SI units the analysis counts in — `bar` pascals to
+    /// elevation, in the SI units the analysis counts in - `bar` pascals to
     /// the bar.
     fn law(&self, ground: f64, bar: f64) -> Law {
         match *self {
@@ -311,7 +311,7 @@ impl Told {
         }
     }
 
-    /// Its coefficients, exactly — what the seed carries.
+    /// Its coefficients, exactly - what the seed carries.
     fn key(&self) -> String {
         match *self {
             Told::Temperature {
@@ -382,7 +382,7 @@ struct Hole<'a> {
     reference: &'a Ref,
     known: &'a Known,
     /// Its nodes, their third coordinate **an elevation** in the unit of its
-    /// vertical axis — `z` in a frame that counts up, `−z` in one that counts
+    /// vertical axis - `z` in a frame that counts up, `−z` in one that counts
     /// down.
     nodes: Vec<[f64; 3]>,
     mds: &'a [f64],
@@ -394,7 +394,7 @@ struct Hole<'a> {
     metres: f64,
 }
 
-/// What a frame must state for a law to be laid on it — or why it does not.
+/// What a frame must state for a law to be laid on it - or why it does not.
 fn hole_of(shape: &Shape) -> Result<Hole<'_>, String> {
     let name = shape.name.as_str();
     let known = shape.known.as_ref().ok_or_else(|| {
@@ -420,11 +420,11 @@ fn hole_of(shape: &Shape) -> Result<Hole<'_>, String> {
     }
     let up = known.vertical_up.ok_or_else(|| {
         format!(
-            "`{title}` does not say which way its vertical axis points — a depth below the ground is read on it, and up and down cannot be guessed"
+            "`{title}` does not say which way its vertical axis points - a depth below the ground is read on it, and up and down cannot be guessed"
         )
     })?;
     let uom = known.vertical_uom.as_deref().ok_or_else(|| {
-        format!("`{title}` does not say in which unit its vertical axis counts — a depth in feet read as metres is 3.28 times too deep")
+        format!("`{title}` does not say in which unit its vertical axis counts - a depth in feet read as metres is 3.28 times too deep")
     })?;
     let metres = units::metres(1.0, uom).map_err(|why| {
         format!(
@@ -432,7 +432,7 @@ fn hole_of(shape: &Shape) -> Result<Hole<'_>, String> {
         )
     })?;
     let mds = known.node_mds.as_deref().ok_or_else(|| {
-        format!("`{title}` states no measured depth for its nodes — it is no wellbore frame, or this build cannot read its arrays")
+        format!("`{title}` states no measured depth for its nodes - it is no wellbore frame, or this build cannot read its arrays")
     })?;
     if mds.len() != points.len() {
         return Err(format!(
@@ -442,7 +442,7 @@ fn hole_of(shape: &Shape) -> Result<Hole<'_>, String> {
         ));
     }
     let head = known.wellhead.ok_or_else(|| {
-        format!("`{title}` names no datum that places it — the depths are counted from the ground at its head, and its head is its datum")
+        format!("`{title}` names no datum that places it - the depths are counted from the ground at its head, and its head is its datum")
     })?;
     let nodes = points
         .iter()
@@ -472,7 +472,7 @@ fn title_of(shape: &Shape) -> String {
         .unwrap_or_else(|| shape.name.clone())
 }
 
-/// Values as the seed carries them — exactly, NaN included.
+/// Values as the seed carries them - exactly, NaN included.
 fn digest(values: &[f64]) -> String {
     values
         .iter()
@@ -497,7 +497,7 @@ impl Operation for WellLogs {
     fn about(&self) -> About {
         About {
             name: "well-logs",
-            describe: "a temperature by a geothermal gradient, or a hydrostatic pressure, laid on wellbore frames by a sourced law of the vertical depth below the ground — one property per frame, one value per node, marked synthetic",
+            describe: "a temperature by a geothermal gradient, or a hydrostatic pressure, laid on wellbore frames by a sourced law of the vertical depth below the ground - one property per frame, one value per node, marked synthetic",
             category: Category::Synthetic,
             makes: &["resqml22.ContinuousProperty"],
             recipe: "well-logs",
@@ -512,7 +512,7 @@ impl Operation for WellLogs {
             return Err(Refusal::on(
                 "ground",
                 format!(
-                    "`{}` has no face — the ground is read on triangles or a grid's cells, and points or lines have none",
+                    "`{}` has no face - the ground is read on triangles or a grid's cells, and points or lines have none",
                     ground.name
                 ),
             ));
@@ -541,7 +541,7 @@ impl Operation for WellLogs {
         if source.is_empty() {
             return Err(Refusal::on(
                 "source",
-                "is empty: a law is sourced — a document with its page or paragraph, or a plausible value said to be one",
+                "is empty: a law is sourced - a document with its page or paragraph, or a plausible value said to be one",
             ));
         }
 
@@ -628,7 +628,7 @@ impl Operation for WellLogs {
                 reference: hole.reference.dor(),
             });
 
-            // Where the datum and the depths put the nodes — the one check a
+            // Where the datum and the depths put the nodes - the one check a
             // pure plan can make that the numbers are placed ones.
             if let Some(far) = analysis::beyond_reach(hole.head, &hole.nodes, hole.mds) {
                 let datum = hole
@@ -640,7 +640,7 @@ impl Operation for WellLogs {
                 return Err(Refusal::on(
                     "frames",
                     format!(
-                        "`{}`: node {} (MD {}) lies {} from {datum} — no hole of that depth reaches so far, so its numbers are not where its datum puts them: a frame with an origin, an azimuth or a vertical origin of its own gives local numbers, and the depths here are read in placed ones",
+                        "`{}`: node {} (MD {}) lies {} from {datum} - no hole of that depth reaches so far, so its numbers are not where its datum puts them: a frame with an origin, an azimuth or a vertical origin of its own gives local numbers, and the depths here are read in placed ones",
                         hole.title, far.node, far.md, far.distance
                     ),
                 ));
@@ -656,7 +656,7 @@ impl Operation for WellLogs {
                             return Err(Refusal::on(
                                 "ground",
                                 format!(
-                                    "`{ground_title}` is in `{}` and `{}` in `{}` — a height read in one frame and compared in another is a height from somewhere else: give a ground in the frames' frame, or `datumHeight`",
+                                    "`{ground_title}` is in `{}` and `{}` in `{}` - a height read in one frame and compared in another is a height from somewhere else: give a ground in the frames' frame, or `datumHeight`",
                                     theirs.title, hole.title, mine.title
                                 ),
                             ));
@@ -678,7 +678,7 @@ impl Operation for WellLogs {
                             return Err(Refusal::on(
                                 "ground",
                                 format!(
-                                    "the head of `{}` ({x}, {y}) is outside `{ground_title}`: no face lies under it — give a ground that covers it, or `datumHeight`",
+                                    "the head of `{}` ({x}, {y}) is outside `{ground_title}`: no face lies under it - give a ground that covers it, or `datumHeight`",
                                     hole.title
                                 ),
                             ));
@@ -735,7 +735,7 @@ impl Operation for WellLogs {
                 dropped.push(Dropped {
                     count: 1,
                     why: format!(
-                        "`{}`: no node lies where the law holds — {} above the ground, {} above {}: no property written",
+                        "`{}`: no node lies where the law holds - {} above the ground, {} above {}: no property written",
                         hole.title,
                         logged.above_ground,
                         logged.shallow,
@@ -758,7 +758,7 @@ impl Operation for WellLogs {
 
             // -- the writing is `property`'s ---------------------------------
             let well = energyml_domain::wellbore_table::stem(&hole.title).to_string();
-            let title = format!("{well} — {}", told.kind());
+            let title = format!("{well} - {}", told.kind());
             let seed = format!(
                 "well-logs:{}:{}:{kind_uuid}:{}",
                 hole.reference.uuid,
@@ -780,7 +780,7 @@ impl Operation for WellLogs {
                 data_file: params.data_file.clone(),
             };
             // The writer checks the values against the nodes it is told of; the
-            // count it is told is the frame's, or its measured depths' — the
+            // count it is told is the frame's, or its measured depths' - the
             // geometry and `NodeMd` were found to agree above.
             let mut counted = hole.known.clone();
             if counted.node_count.is_none() {
@@ -814,7 +814,7 @@ impl Operation for WellLogs {
                 return Err(Refusal::on(
                     "source",
                     format!(
-                        "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                        "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
                         description.chars().count()
                     ),
                 ));
@@ -837,7 +837,7 @@ impl Operation for WellLogs {
 
         if written == 0 {
             // A plan of nothing but set-aside frames would read as a run that
-            // had nothing to do — the case that looks most like a success.
+            // had nothing to do - the case that looks most like a success.
             return Err(Refusal::on(
                 "frames",
                 format!(
@@ -853,10 +853,10 @@ impl Operation for WellLogs {
 
         // -- what is said ------------------------------------------------------------
         let mut notes = vec![
-            Note { key: "law", detail: format!("{} — source: {source}", told.words()) },
+            Note { key: "law", detail: format!("{} - source: {source}", told.words()) },
             Note {
                 key: "vertical-depth",
-                detail: "the law is read at the vertical depth below the ground at each frame's head — not the measured depth, which runs along the hole, and not the depth below the datum, which may stand above the ground".to_string(),
+                detail: "the law is read at the vertical depth below the ground at each frame's head - not the measured depth, which runs along the hole, and not the depth below the datum, which may stand above the ground".to_string(),
             },
         ];
         notes.append(&mut grounds);
@@ -866,13 +866,13 @@ impl Operation for WellLogs {
         });
         notes.push(Note {
             key: "placed",
-            detail: "the nodes are read in their frame's own numbers as placed ones — right under an identity compound; a frame whose numbers lie farther from its datum than its depths is refused, one offset by less is not seen".to_string(),
+            detail: "the nodes are read in their frame's own numbers as placed ones - right under an identity compound; a frame whose numbers lie farther from its datum than its depths is refused, one offset by less is not seen".to_string(),
         });
         if above_ground > 0 {
             notes.push(Note {
                 key: "above-ground",
                 detail: format!(
-                    "{above_ground} node(s) above the ground — a datum on a rig, the first metres of a hole measured from it: no law of the subsurface holds there, written as NaN"
+                    "{above_ground} node(s) above the ground - a datum on a rig, the first metres of a hole measured from it: no law of the subsurface holds there, written as NaN"
                 ),
             });
         }
@@ -880,7 +880,7 @@ impl Operation for WellLogs {
             notes.push(Note {
                 key: "shallow",
                 detail: format!(
-                    "{shallow} node(s) below the ground but above where the law starts — {}: written as NaN, not extrapolated",
+                    "{shallow} node(s) below the ground but above where the law starts - {}: written as NaN, not extrapolated",
                     told.start_words()
                 ),
             });
@@ -940,7 +940,7 @@ impl Operation for WellLogs {
     }
 
     /// The law's settings, `datumHeight` and `source` are inputs, recorded
-    /// under the parameters the projection already declares — a title cannot be
+    /// under the parameters the projection already declares - a title cannot be
     /// both.
     fn reports(&self) -> Vec<Slot> {
         let number = || Need::Number {
@@ -957,17 +957,17 @@ impl Operation for WellLogs {
             Slot::required(
                 "aboveGroundCount",
                 number(),
-                "nodes above the ground — a datum on a rig, the air: no value",
+                "nodes above the ground - a datum on a rig, the air: no value",
             ),
             Slot::required(
                 "shallowCount",
                 number(),
-                "nodes below the ground and above where the law starts — its reference depth, or the water table: no value",
+                "nodes below the ground and above where the law starts - its reference depth, or the water table: no value",
             ),
             Slot::many(
                 "groundRead",
                 number(),
-                "the ground under each frame's head, read on `ground`, in the frame's vertical axis — one per frame, in their order",
+                "the ground under each frame's head, read on `ground`, in the frame's vertical axis - one per frame, in their order",
                 0,
             ),
         ]

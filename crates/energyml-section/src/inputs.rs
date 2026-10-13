@@ -14,7 +14,7 @@ use crate::model::{CrossWidths, Crosses, Inputs};
 /// spacing of a millimetre on a trace of kilometres, not a limit anyone meets.
 pub const MAX_CROSSES: u64 = 10_000;
 
-/// Inputs that cannot make a catalogue — each refusal names what is wrong.
+/// Inputs that cannot make a catalogue - each refusal names what is wrong.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum InputsError {
     /// The trace is not a trace (fewer than two distinct points, a coordinate

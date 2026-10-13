@@ -1,6 +1,6 @@
 //! The IGN Géoplateforme altimetry, without a network.
 //!
-//! The fixtures are **real** answers, taken from `data.geopf.fr` — same rule as
+//! The fixtures are **real** answers, taken from `data.geopf.fr` - same rule as
 //! `tests/wfs.rs`: an invented refusal would be a refusal we know how to read.
 
 use energyml_providers::error::Error;
@@ -110,7 +110,7 @@ fn several_points_come_back_in_the_order_asked() {
 #[test]
 fn a_profile_answer_is_read_the_same_way_height_differences_ignored() {
     // The real `elevationLine.json` answer over three points: it also carries
-    // `height_differences`, which this module ignores — it returns points, not
+    // `height_differences`, which this module ignores - it returns points, not
     // a cumulated height difference.
     let body = r#"{"elevations": [
         {"lon": 2.33, "lat": 48.86, "z": 26.68, "acc": "Variable suivant la source de mesure"},
@@ -133,7 +133,7 @@ fn no_coverage_is_none_not_a_measured_depth() {
 
 #[test]
 fn a_server_refusal_is_json_here_unlike_the_wfs() {
-    // The real answer to an unknown resource: a `400`, in JSON — not the XML
+    // The real answer to an unknown resource: a `400`, in JSON - not the XML
     // `ows:ExceptionReport` of the BRGM WFS.
     let body =
         r#"{"error": {"code": "BAD_PARAMETER", "description": "'nope' is not an accepted resource."}}"#;
@@ -151,7 +151,7 @@ fn a_server_refusal_is_json_here_unlike_the_wfs() {
 #[test]
 fn a_mismatched_point_count_is_the_servers_own_refusal() {
     // The real answer when `lon` and `lat` do not have the same number of
-    // elements — a fault this module does not detect before sending, because
+    // elements - a fault this module does not detect before sending, because
     // `coordinates()` always builds them with the same length; this test
     // documents what the service would say if a caller bypassed
     // `elevation_request`.

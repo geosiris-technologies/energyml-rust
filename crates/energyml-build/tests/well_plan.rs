@@ -1,4 +1,4 @@
-//! `well-from-plan` — a wellbore from a drilling plan: what it places, what it
+//! `well-from-plan` - a wellbore from a drilling plan: what it places, what it
 //! writes, what it refuses.
 //!
 //! **The form of the assertions comes from the method and the schema**: the
@@ -32,8 +32,8 @@ fn planned(pieces: &Pieces, choices: Choices) -> Result<Plan, String> {
         .map_err(|why| why.to_string())
 }
 
-/// A frame created here — Lambert-93 over NGF-IGN69, the identity compound,
-/// which counts up — and a head given in it.
+/// A frame created here - Lambert-93 over NGF-IGN69, the identity compound,
+/// which counts up - and a head given in it.
 fn head() -> Choices {
     Choices::new()
         .set("sourceEpsg", 2154)
@@ -83,7 +83,7 @@ fn frame() -> Ref {
     Ref::new(
         "aaaaaaaa-0000-4000-8000-000000000001",
         "eml23.LocalEngineeringCompoundCrs",
-        "Lutetia — test frame",
+        "Lutetia - test frame",
     )
 }
 
@@ -244,7 +244,7 @@ fn a_build_reaches_the_declared_inclination_at_the_declared_depth() {
 fn the_depths_written_are_the_plans_never_the_chords() {
     // `hold to 43.7` and `hold to 250.3` are written as said, and along the arc
     // the depths are arc lengths. To break: hand the writer `mds: None`, and it
-    // measures the chords between stations — which fall short on an arc, so
+    // measures the chords between stations - which fall short on an arc, so
     // every depth after it comes out smaller.
     let plan = planned(
         &Pieces::empty(),
@@ -263,7 +263,7 @@ fn the_depths_written_are_the_plans_never_the_chords() {
         json!(250.3)
     );
 
-    // What the chords would have said — and that it is not the same is what
+    // What the chords would have said - and that it is not the same is what
     // lets this test fail.
     let points = floats(&plan, "/controlPoints");
     let stations: Vec<&[f64]> = points.chunks(3).collect();
@@ -461,7 +461,7 @@ fn the_ground_is_read_on_the_surface_under_the_head() {
 }
 
 /// **The ground's interpretation is not the well's.** The shared suggestion
-/// offers the interpretation of the one input that names one — here the
+/// offers the interpretation of the one input that names one - here the
 /// surface the ground is read on, a horizon's. Taken, the well's trajectory
 /// represented the ground (found on 24/09 playing Lutetia: GTH-1 wrote no
 /// feature, no interpretation, and pointed at `le sol`). A sidetrack's parent
@@ -549,7 +549,7 @@ fn the_depth_limit_is_checked_never_bent_to() {
 }
 
 /// GTH-3 as a parent: vertical at (100, 200) from its datum at 50, a node
-/// every 10 m down to MD 200 — or, `bent`, turning between MD 50 and 100.
+/// every 10 m down to MD 200 - or, `bent`, turning between MD 50 and 100.
 fn parent(bent: bool) -> Pieces {
     let (mds, points): (Vec<f64>, Vec<[f64; 3]>) = if bent {
         (
@@ -585,7 +585,7 @@ fn parent(bent: bool) -> Pieces {
                 reference: Some(Ref::new(
                     "cccccccc-0000-4000-8000-000000000003",
                     "resqml22.WellboreFrameRepresentation",
-                    "GTH-3 — frame",
+                    "GTH-3 - frame",
                 )),
                 crs: Some(frame()),
                 vertical_up: Some(true),
@@ -594,12 +594,12 @@ fn parent(bent: bool) -> Pieces {
                 trajectory: Some(Ref::new(
                     "dddddddd-0000-4000-8000-000000000004",
                     "resqml22.WellboreTrajectoryRepresentation",
-                    "GTH-3 — trajectory",
+                    "GTH-3 - trajectory",
                 )),
                 datum: Some(Ref::new(
                     "eeeeeeee-0000-4000-8000-000000000005",
                     "eml23.ReferencePointInALocalEngineeringCompoundCrs",
-                    "GTH-3 — datum",
+                    "GTH-3 - datum",
                 )),
                 ..Default::default()
             }),
@@ -775,10 +775,10 @@ fn a_planned_well_is_written_as_the_minimum_curvature_line_through_its_stations(
 }
 
 /// **Two readers of one arc agree between the stations.** A well planned
-/// every 30 m is written, saved and read back by `energyml-geometry` — its
+/// every 30 m is written, saved and read back by `energyml-geometry` - its
 /// frame's nodes moved to every metre, so the trajectory is evaluated
 /// **between** its stations, where the reader's circular-arc construction
-/// (`parametric.rs`) does the work — and set against the same plan laid out
+/// (`parametric.rs`) does the work - and set against the same plan laid out
 /// every metre by `energyml_analysis::well_plan` (the drilling formula, API
 /// Bulletin D20). Two implementations of minimum curvature, neither checking
 /// the other. On a 114.6 m radius a 30 m chord strays ~1 m from its arc: a

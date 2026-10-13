@@ -5,7 +5,7 @@
 //! other is the object. The audit of 01/08/2026 found the reader believing the
 //! index without ever looking: a package that typed a
 //! `TriangulatedSetRepresentation` as a `PointSetRepresentation` came out with
-//! an object of the wrong type, plausible and silent — the only place in the
+//! an object of the wrong type, plausible and silent - the only place in the
 //! whole reader where bad input produced a **wrong answer** rather than a named
 //! refusal.
 //!

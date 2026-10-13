@@ -1,4 +1,4 @@
-//! Faults in the two operations that take them — a barrier for
+//! Faults in the two operations that take them - a barrier for
 //! the interpolation, a constraint for the meshing.
 //!
 //! # What this file holds
@@ -6,7 +6,7 @@
 //! The need: the BRGM uses kriging with possible
 //! fault lines and other meshing parameters. The computation
 //! is held by the unit tests of `energyml-analysis`; this file holds the
-//! **seam** — that a trace filed under `faults` does reach the computation, by the
+//! **seam** - that a trace filed under `faults` does reach the computation, by the
 //! name of its slot, and that what comes out of it is said.
 //!
 //! # What would have to break to make it turn red
@@ -134,12 +134,12 @@ fn a_fault_filed_under_faults_cuts_the_interpolation() {
         let at = |z: &[f64]| z[5 * 7 + 2];
         assert!(
             at(&z_open) > 1.5,
-            "{method}: without a fault the 100 pulls upward — {}",
+            "{method}: without a fault the 100 pulls upward - {}",
             at(&z_open)
         );
         assert!(
             (at(&z_cut) - 1.0).abs() < 1e-6,
-            "{method}: with a fault the 100 is invisible — {}",
+            "{method}: with a fault the 100 is invisible - {}",
             at(&z_cut)
         );
         // And the number of fault segments is in the activity.
@@ -151,7 +151,7 @@ fn a_fault_filed_under_faults_cuts_the_interpolation() {
 }
 
 /// **`rbf` cannot honour a barrier**, and says so rather than
-/// ignoring it — a map that looks faulted and is not would be worse.
+/// ignoring it - a map that looks faulted and is not would be worse.
 #[test]
 fn rbf_with_a_fault_is_refused_by_name() {
     let op = operation("interpolate");
@@ -171,7 +171,7 @@ fn rbf_with_a_fault_is_refused_by_name() {
     );
 }
 
-/// Kriging gained the neighbourhood — radius, ceiling — and says so.
+/// Kriging gained the neighbourhood - radius, ceiling - and says so.
 #[test]
 fn kriging_takes_a_radius_and_a_ceiling() {
     let op = operation("interpolate");
@@ -211,7 +211,7 @@ fn kriging_takes_a_radius_and_a_ceiling() {
 #[test]
 fn a_fault_is_not_counted_among_the_samples() {
     let op = operation("interpolate");
-    // Only two points: unfit — and the fault does not make a third.
+    // Only two points: unfit - and the fault does not make a third.
     let two = Source::Shape {
         geometry: Geometry {
             kind: "cloud",
@@ -307,14 +307,14 @@ fn a_fault_is_not_one_more_cloud() {
 /// **A buffer sets aside, a step regularises**, and both are said.
 ///
 /// The point at 100, one metre from the fault, is set aside; the trace of length 12
-/// resampled at 4 gives 4 vertices (0, 4, 8, 12) — and as the two sides
+/// resampled at 4 gives 4 vertices (0, 4, 8, 12) - and as the two sides
 /// of the constraint share these vertices, they have the same number of edges on
 /// the fault by construction.
 #[test]
 fn the_buffer_sets_aside_close_points_and_the_step_regularises_the_trace() {
     let op = operation("triangulate");
     // Four corners far from the fault, and two noisy measurements stuck to it
-    // — those that one does not want to keep “because they were there”.
+    // - those that one does not want to keep “because they were there”.
     let noisy = Source::Shape {
         geometry: Geometry {
             kind: "cloud",
@@ -364,7 +364,7 @@ fn the_buffer_sets_aside_close_points_and_the_step_regularises_the_trace() {
     assert_eq!(on_trace.len(), 4, "{on_trace:?}");
 }
 
-/// Without a fault, the two settings do nothing — and do not complain.
+/// Without a fault, the two settings do nothing - and do not complain.
 #[test]
 fn without_a_fault_the_buffer_and_the_step_have_no_effect() {
     let op = operation("triangulate");
@@ -384,7 +384,7 @@ fn without_a_fault_the_buffer_and_the_step_have_no_effect() {
 
 /// **An object with one trace per horizon does not wall off that horizon with the
 /// others.** Two traces in one object, one at the depth of the cloud,
-/// the other a hundred metres lower and shifted in (x, y) — the lower one is
+/// the other a hundred metres lower and shifted in (x, y) - the lower one is
 /// set aside, said, and does not act.
 #[test]
 fn only_the_traces_at_the_depth_of_the_horizon_act() {

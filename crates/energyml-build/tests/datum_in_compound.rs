@@ -1,12 +1,12 @@
-//! What the boundary knows of a well whose datum is written in a compound —
+//! What the boundary knows of a well whose datum is written in a compound -
 //! `read::wellhead_of` and the search for the vertical half
 //!.
 //!
 //! `ReferencePointInALocalEngineeringCompoundCrs` (common TRG 2.3 §13.25
 //! p. 371) holds **local** coordinates of the compound its `Crs` names, and
 //! names no `VerticalCrs` of its own. Before 24/09 both readers here took it
-//! at face value: the collar came back raw — the compound's origin, azimuth
-//! and vertical sense all missing — and no vertical half was found, so
+//! at face value: the collar came back raw - the compound's origin, azimuth
+//! and vertical sense all missing - and no vertical half was found, so
 //! `well-from-polyline` refused to write a datum over a well of this shape.
 //!
 //! The system is built by hand, in an empty package; no array is read, so this
@@ -140,7 +140,7 @@ fn package() -> energyml_storage::EpcStore {
 }
 
 /// The collar is where the compound places it, and the vertical half is
-/// found through the compound — both read off the trajectory, the way a slot
+/// found through the compound - both read off the trajectory, the way a slot
 /// receives a well.
 #[test]
 fn a_well_anchored_in_a_compound_is_collared_where_the_compound_places_it() {
@@ -156,7 +156,7 @@ fn a_well_anchored_in_a_compound_is_collared_where_the_compound_places_it() {
 
     // Worked from the citations: x along the local axis turned 30° clockwise
     // from grid north, (cos 30°, −sin 30°); a local depth of 5 under an origin
-    // 35 m above the datum, CRS.xsd l. 517–520.
+    // 35 m above the datum, CRS.xsd l. 517-520.
     let (sin, cos) = 30f64.to_radians().sin_cos();
     let expected = [1000.0 + 10.0 * cos, 2000.0 - 10.0 * sin, 30.0];
     let head = known.wellhead.expect("the collar is stated");

@@ -1,9 +1,9 @@
-//! `prodml-doublet` — the PRODML 2.3 side of Lutetia's geothermal doublet
+//! `prodml-doublet` - the PRODML 2.3 side of Lutetia's geothermal doublet
 //!: what it writes, how
 //! the objects name their well and their series, and what it refuses.
 //!
 //! **The arithmetic is cross-checked against `energyml_analysis::flow_law`
-//! directly** (the crate's law, not the operation grading its own work) —
+//! directly** (the crate's law, not the operation grading its own work) -
 //! the triangulation `crates/energyml-build/ARCHITECTURE.md` asks for. Every JSON
 //! the plan writes is read back into its generated PRODML type before
 //! anything is asserted of it, the road `apply` takes.
@@ -45,7 +45,7 @@ fn bag() -> Pieces {
         .with("series", object(SERIES, "eml23.TimeSeries", "Monthly 2025"))
 }
 
-/// The monthly series: 13 monthly instants, 12 periods —
+/// The monthly series: 13 monthly instants, 12 periods -
 /// 13 dates give 12 values (confirmed).
 fn monthly_2025() -> Vec<&'static str> {
     vec![
@@ -65,7 +65,7 @@ fn monthly_2025() -> Vec<&'static str> {
     ]
 }
 
-/// The instants above, as hours since the first — what `flow_law::periods`
+/// The instants above, as hours since the first - what `flow_law::periods`
 /// takes, computed independently of the operation (it goes through
 /// `unix_seconds` too, but never through `prodml_doublet` itself).
 fn monthly_hours() -> Vec<f64> {
@@ -88,7 +88,7 @@ fn choices() -> Choices {
     Choices::new()
         .set("facility", "Lutetia heat exchanger")
         .set("fluid", "Chalk water")
-        .set("source", "synthetic — a trial source")
+        .set("source", "synthetic - a trial source")
         .set("times", json!(monthly_2025()))
         .set("rate", RATE)
         .set("decline", DECLINE)
@@ -122,7 +122,7 @@ fn titled<'a>(plan: &'a Plan, qualified: &str, title: &str) -> &'a energyml_buil
         })
 }
 
-/// The JSON of a plan's object, read back into its generated type — the road
+/// The JSON of a plan's object, read back into its generated type - the road
 /// `apply` takes. A field misspelt, a value of the wrong kind, and this panics.
 fn read<T: energyml_core::value::Reflect + Clone>(object: &energyml_build::operation::NewObject) -> T {
     let schemas = energyml_schemas::all();
@@ -166,18 +166,18 @@ fn thirteen_monthly_instants_make_twelve_periods_each_referencing_its_own_wellbo
     let producer_report: prodml::WellProductionParameters = read(titled(
         &plan,
         "prodml23.WellProductionParameters",
-        "GTH-1 — production",
+        "GTH-1 - production",
     ));
     let injector_report: prodml::WellProductionParameters = read(titled(
         &plan,
         "prodml23.WellProductionParameters",
-        "GTH-2 — injection",
+        "GTH-2 - injection",
     ));
 
     assert_eq!(
         producer_report.production_period.len(),
         12,
-        "13 instants make 12 periods — n instants make n − 1 periods"
+        "13 instants make 12 periods - n instants make n − 1 periods"
     );
     assert_eq!(injector_report.production_period.len(), 12);
 
@@ -194,7 +194,7 @@ fn thirteen_monthly_instants_make_twelve_periods_each_referencing_its_own_wellbo
         );
     }
 
-    // The instants themselves, in order — not reshuffled, not dropped.
+    // The instants themselves, in order - not reshuffled, not dropped.
     let starts: Vec<&str> = producer_report
         .production_period
         .iter()
@@ -205,13 +205,13 @@ fn thirteen_monthly_instants_make_twelve_periods_each_referencing_its_own_wellbo
 
 #[test]
 fn a_periods_mean_rate_times_its_duration_gives_back_the_laws_volume() {
-    // Cross-checked against `energyml_analysis::flow_law` directly — a second
+    // Cross-checked against `energyml_analysis::flow_law` directly - a second
     // source of the same fact, never the operation's own arithmetic re-read.
     let plan = planned(&bag(), choices()).expect("a plan");
     let producer_report: prodml::WellProductionParameters = read(titled(
         &plan,
         "prodml23.WellProductionParameters",
-        "GTH-1 — production",
+        "GTH-1 - production",
     ));
 
     let expected = flow_law::periods(&law(), &monthly_hours()).unwrap();
@@ -266,10 +266,10 @@ fn the_injector_returns_what_the_producer_pumps_by_default() {
     let injected = double_param(&plan, "injectedVolume");
     assert!(
         (produced - injected).abs() < 1e-6,
-        "reinjected defaults to 1 — the doublet's loop"
+        "reinjected defaults to 1 - the doublet's loop"
     );
 
-    // A partial return is a different, smaller volume — not the same law
+    // A partial return is a different, smaller volume - not the same law
     // written twice.
     let partial = planned(&bag(), choices().set("reinjected", 0.6)).expect("a plan");
     let injected_partial = double_param(&partial, "injectedVolume");
@@ -280,22 +280,22 @@ fn the_injector_returns_what_the_producer_pumps_by_default() {
 
 #[test]
 fn the_head_series_name_their_wellbores_by_the_reference_models_uri_convention() {
-    // The convention of the synthetic model — the asset identifier is a URI built
+    // The convention of the synthetic model - the asset identifier is a URI built
     // from the wellbore's own title, not a made-up asset name.
     let plan = planned(&bag(), choices()).expect("a plan");
 
     let pressure: prodml::TimeSeriesData = read(titled(
         &plan,
         "prodml23.TimeSeriesData",
-        "GTH-1 — wellhead pressure",
+        "GTH-1 - wellhead pressure",
     ));
     let temperature: prodml::TimeSeriesData = read(titled(
         &plan,
         "prodml23.TimeSeriesData",
-        "GTH-1 — wellhead temperature",
+        "GTH-1 - wellhead temperature",
     ));
     let rate: prodml::TimeSeriesData =
-        read(titled(&plan, "prodml23.TimeSeriesData", "GTH-2 — injection rate"));
+        read(titled(&plan, "prodml23.TimeSeriesData", "GTH-2 - injection rate"));
 
     let asset_of = |series: &prodml::TimeSeriesData| -> String {
         series
@@ -357,7 +357,7 @@ fn a_percent_encoded_title_still_names_the_right_wellbore() {
     let pressure: prodml::TimeSeriesData = read(titled(
         &plan,
         "prodml23.TimeSeriesData",
-        "GTH-3 ST1 — wellhead pressure",
+        "GTH-3 ST1 - wellhead pressure",
     ));
     let asset = pressure
         .key
@@ -389,7 +389,7 @@ fn the_fluid_system_references_the_rock_fluid_organisation_when_one_is_given() {
         prodml::ReservoirFluidKind::Unknown,
         "none of the six hydrocarbon kinds fits fresh water"
     );
-    assert_eq!(fluid.solution_gor.value, 0.0, "negligible, declared — not NaN");
+    assert_eq!(fluid.solution_gor.value, 0.0, "negligible, declared - not NaN");
     assert_eq!(
         fluid
             .rock_fluid_organization_interpretation
@@ -458,11 +458,11 @@ fn a_frozen_rate_window_repeats_the_last_reading_and_is_set_aside_from_the_daily
     .expect("a plan");
 
     let rate: prodml::TimeSeriesData =
-        read(titled(&plan, "prodml23.TimeSeriesData", "GTH-2 — injection rate"));
+        read(titled(&plan, "prodml23.TimeSeriesData", "GTH-2 - injection rate"));
     let injector_law = law(); // reinjected = 1.0 by default: the same law.
     // One law for the whole doublet, anchored on the first stated instant
     // (2025-01-01): the head samples of 2025-06-02 lie on the same curve, 152
-    // days on — the law is read in hours since the anchor, not since the
+    // days on - the law is read in hours since the anchor, not since the
     // window (the first version of this test read it from the window).
     let since_anchor = 152.0 * 24.0;
 
@@ -487,7 +487,7 @@ fn a_frozen_rate_window_repeats_the_last_reading_and_is_set_aside_from_the_daily
         );
     }
     // The rank just before and just after the gap are ordinary readings of
-    // the declining law — not held.
+    // the declining law - not held.
     let prodml::AbstractValue::DoubleValue(rank4) = &rate.data_value[4] else {
         panic!("a double sample")
     };
@@ -495,7 +495,7 @@ fn a_frozen_rate_window_repeats_the_last_reading_and_is_set_aside_from_the_daily
     assert!((rank4.double_value.value - injector_law.rate_at(since_anchor + 4.0)).abs() < 1e-9);
 
     // The daily statistic: the first day (ranks 0..24) with the two frozen
-    // ranks set aside — computed independently through `flow_law::summary`.
+    // ranks set aside - computed independently through `flow_law::summary`.
     let day: Vec<f64> = (0..24)
         .filter(|rank| !(2..4).contains(rank))
         .map(|rank| injector_law.rate_at(since_anchor + rank as f64))
@@ -505,7 +505,7 @@ fn a_frozen_rate_window_repeats_the_last_reading_and_is_set_aside_from_the_daily
     let statistic: prodml::TimeSeriesStatistic = read(titled(
         &plan,
         "prodml23.TimeSeriesStatistic",
-        "GTH-2 — injection rate — daily statistic",
+        "GTH-2 - injection rate - daily statistic",
     ));
     assert_eq!(statistic.uom, Some(energyml_eml_2_3::UnitOfMeasureExt::M3PerH));
     assert_eq!(

@@ -1,4 +1,4 @@
-//! The journal says **what** was written, not only which objects — part of the
+//! The journal says **what** was written, not only which objects - part of the
 //! package-cache design (ADR-0010). The requirements: every modification should
 //! say what it applies to so that the optimised cache structures know whom to
 //! send change/refresh request signals to and to what link depth, and the
@@ -6,8 +6,8 @@
 //! current one.
 //!
 //! One test per gate: the flags it journals, and the datasets. The rule they
-//! hold together is **too wide in one direction only** — a gate may say more
-//! than it knows, never less — so most assertions are equalities on the exact
+//! hold together is **too wide in one direction only** - a gate may say more
+//! than it knows, never less - so most assertions are equalities on the exact
 //! flags (a gate that says *more* is as wrong as one that says less, where the
 //! gate does know) and a few are containments (where it cannot).
 //!
@@ -52,7 +52,7 @@ fn feature(uuid: &str, title: &str) -> String {
     )
 }
 
-/// An interpretation that **references** a feature — the object whose
+/// An interpretation that **references** a feature - the object whose
 /// references an edit can move.
 fn interpretation(uuid: &str, feature_uuid: &str) -> String {
     format!(
@@ -144,7 +144,7 @@ fn since(store: &EpcStore, from: u64) -> Change {
     }
 }
 
-/// What the window says of one object — `None` when it does not name it.
+/// What the window says of one object - `None` when it does not name it.
 fn what_of(change: &Change, uuid: &str) -> Option<What> {
     change
         .objects
@@ -322,7 +322,7 @@ fn an_edit_that_may_move_the_identity_says_so_and_is_not_narrowed() {
     let before = store.revision();
     // A uuid edit may move the identity. (An `objectVersion` edit of an entry with
     // no namesake does not: it keeps its slot and its short uri, and says the
-    // citation — see `object_versions.rs`.)
+    // citation - see `object_versions.rs`.)
     store.edit_at(&uri, "uuid").expect("borrowed");
     let what = what_of(&since(&store, before), A).expect("named");
     assert!(
@@ -516,7 +516,7 @@ fn a_refused_write_before_the_file_is_reached_journals_nothing() {
     assert!(since(&store, before).is_empty());
 }
 
-/// The gate for whoever wrote arrays without this store — the front end, through
+/// The gate for whoever wrote arrays without this store - the front end, through
 /// h5wasm.
 #[test]
 fn arrays_written_says_what_a_face_wrote_itself() {
@@ -636,7 +636,7 @@ fn copying_objects_into_a_package_says_created_and_replaced() {
 }
 
 /// The front end's import: the plan is applied in memory (objects through `put`), the
-/// bytes follow — by `copy_datasets`/`carry_files` on a disk, by h5wasm in a
+/// bytes follow - by `copy_datasets`/`carry_files` on a disk, by h5wasm in a
 /// front end, which then says so through `arrays_written`.
 #[test]
 fn an_import_plan_says_created_and_replaced_and_a_carried_file_says_the_file() {

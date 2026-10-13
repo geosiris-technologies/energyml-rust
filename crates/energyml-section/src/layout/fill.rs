@@ -1,8 +1,8 @@
-//! Spans, clipped and filled between — pure functions over `(s, z)` polylines.
+//! Spans, clipped and filled between - pure functions over `(s, z)` polylines.
 //!
 //! ADR-0015: a fill goes from a trace to **its neighbour in that
-//! direction — chosen at each abscissa** ([`nearest`]: the nearest candidate
-//! strictly above or below, the polygon cut where it changes) — and where there
+//! direction - chosen at each abscissa** ([`nearest`]: the nearest candidate
+//! strictly above or below, the polygon cut where it changes) - and where there
 //! is none it fills nothing: no floor is invented (ADR-0015).
 //! What may be a neighbour is [`polygons`]' one rule: never a fault, never
 //! another version of the same horizon.
@@ -10,10 +10,10 @@
 //! `energyml_geometry::fence::panel` was the first candidate and does not fit:
 //! it answers with *triangulated patches in 3D* (a mesh for the scene), where a
 //! drawing needs the **outline** of each piece, in `(s, z)`. The rule it states
-//! is the one kept here — the union of both curves' abscissas, so every cut
+//! is the one kept here - the union of both curves' abscissas, so every cut
 //! point of both curves stays exact; a hole between two spans leaves a gap; a
 //! crossing splits the fill in two, at the crossing, instead of twisting
-//! through itself — and the tests below state it again on their own numbers.
+//! through itself - and the tests below state it again on their own numbers.
 
 use crate::model::{TraceItem, TraceRole};
 
@@ -41,7 +41,7 @@ pub fn clip_span(span: &[[f64; 2]], lo: f64, hi: f64) -> Option<Span> {
     (out.len() >= 2).then_some(out)
 }
 
-/// The point of segment `a`–`b` at abscissa `x` (`a` and `b` differ in x
+/// The point of segment `a`-`b` at abscissa `x` (`a` and `b` differ in x
 /// whenever this is called: a clip only interpolates across a boundary).
 fn lerp_x(a: [f64; 2], b: [f64; 2], x: f64) -> [f64; 2] {
     let dx = b[0] - a[0];
@@ -52,8 +52,8 @@ fn lerp_x(a: [f64; 2], b: [f64; 2], x: f64) -> [f64; 2] {
     [x, a[1] + (b[1] - a[1]) * t]
 }
 
-/// A polygon clipped to the strip `lo <= x <= hi` (Sutherland–Hodgman against
-/// two half-planes — the strip is convex, so the result is exact).
+/// A polygon clipped to the strip `lo <= x <= hi` (Sutherland-Hodgman against
+/// two half-planes - the strip is convex, so the result is exact).
 pub fn clip_polygon(poly: &[[f64; 2]], lo: f64, hi: f64) -> Vec<[f64; 2]> {
     let against = |input: Vec<[f64; 2]>, keep: &dyn Fn(f64) -> bool, edge: f64| -> Vec<[f64; 2]> {
         let mut out = Vec::new();
@@ -80,7 +80,7 @@ pub fn clip_polygon(poly: &[[f64; 2]], lo: f64, hi: f64) -> Vec<[f64; 2]> {
     if out.len() < 3 { Vec::new() } else { out }
 }
 
-/// A span's z at an abscissa — `None` outside it.
+/// A span's z at an abscissa - `None` outside it.
 fn z_at(span: &[[f64; 2]], s: f64) -> Option<f64> {
     let (first, last) = (span.first()?, span.last()?);
     if s < first[0] || s > last[0] {
@@ -100,14 +100,14 @@ fn z_at(span: &[[f64; 2]], s: f64) -> Option<f64> {
     None
 }
 
-/// The polygons between an `upper` curve and a `lower` one — one per run where
+/// The polygons between an `upper` curve and a `lower` one - one per run where
 /// `upper` really is above `lower`.
 ///
 /// * where either curve has no span, nothing: the two spans' overlap is all
 ///   there is, and a hole in one is a hole in the fill;
 /// * where the order inverts, the fill is cut at the crossing and the inverted
 ///   run is **not** filled (it would be the area between the curves with the
-///   wrong one on top — the neighbour in the other direction owns it).
+///   wrong one on top - the neighbour in the other direction owns it).
 pub fn between(upper: &[Span], lower: &[Span]) -> Vec<Vec<[f64; 2]>> {
     let mut out = Vec::new();
     for up in upper {
@@ -194,7 +194,7 @@ pub struct Line<'a> {
     pub spans: &'a [Span],
 }
 
-/// Whether `other` may be what `mine` fills **to** — the one rule, for the
+/// Whether `other` may be what `mine` fills **to** - the one rule, for the
 /// drawing and for the 3D panels alike:
 ///
 /// * never `mine` itself;
@@ -204,7 +204,7 @@ pub struct Line<'a> {
 /// * never another version of the same horizon: two surfaces whose
 ///   interpretations interpret **the same feature** are one horizon drawn twice
 ///   (a lattice and a mesh, a depth and a time version, a faulted and a smooth
-///   one — the latter have each their own interpretation, and share only the
+///   one - the latter have each their own interpretation, and share only the
 ///   feature). With no readable feature nothing is grouped: the title and the
 ///   geometry are never asked.
 fn is_candidate(mine: &Line<'_>, other: &Line<'_>) -> bool {
@@ -238,7 +238,7 @@ pub fn polygons(mine: &Line<'_>, all: &[Line<'_>], up: bool) -> Vec<Vec<[f64; 2]
 /// or below (down); where the nearest changes, or none exists, the polygon is
 /// cut. The breaks are the vertices of every curve and the crossings of any two
 /// of them, so between two breaks every curve is a straight line and the choice
-/// is exact — no sampling. Where no candidate lies on that side, nothing is
+/// is exact - no sampling. Where no candidate lies on that side, nothing is
 /// filled: no floor is invented. A candidate in several spans (a faulted
 /// horizon) is followed span by span, so the fill follows the throw.
 pub fn nearest(mine: &[Span], others: &[(String, Vec<Span>)], up: bool) -> Vec<Vec<[f64; 2]>> {
@@ -255,7 +255,7 @@ pub fn nearest(mine: &[Span], others: &[(String, Vec<Span>)], up: bool) -> Vec<V
     out
 }
 
-/// A span's z at each of the ascending `steps` — `None` outside it. One pass.
+/// A span's z at each of the ascending `steps` - `None` outside it. One pass.
 fn sample(span: &[[f64; 2]], steps: &[f64]) -> Vec<Option<f64>> {
     let (Some(first), Some(last)) = (span.first(), span.last()) else {
         return vec![None; steps.len()];
@@ -282,7 +282,7 @@ fn sample(span: &[[f64; 2]], steps: &[f64]) -> Vec<Option<f64>> {
 }
 
 /// The line the fill of one span goes to: the nearest candidate in each
-/// abscissa, as spans — one per run of the same candidate, so a change of
+/// abscissa, as spans - one per run of the same candidate, so a change of
 /// neighbour (or a throw of its own) starts a new span.
 fn envelope(m: &[[f64; 2]], others: &[(String, Vec<Span>)], up: bool) -> Vec<Span> {
     let (Some(first), Some(last)) = (m.first(), m.last()) else {

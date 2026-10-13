@@ -1,25 +1,25 @@
 //! Extending a polyline or a triangulated surface past its border.
 //!
 //! The use case: a fault surface stops too low, and the user wants to widen it
-//! by 10 m upward, 5 m downward and 8 m on the sides — with the direction read
+//! by 10 m upward, 5 m downward and 8 m on the sides - with the direction read
 //! as a mean tangent over a certain distance from the borders, so that one or
 //! two badly placed points at the border do not make the problem worse.
 //!
 //! An extension **invents** geometry. Everything here keeps what was given
-//! bit for bit — the input nodes come first and unchanged, the input triangles
-//! too — and only **adds**, so a caller can always say which nodes were
+//! bit for bit - the input nodes come first and unchanged, the input triangles
+//! too - and only **adds**, so a caller can always say which nodes were
 //! measured and which were made up: `original_nodes` is where the invented ones
 //! start.
 //!
 //! # The direction: a robust fit to a band of the border
 //!
-//! Not the last edge: a **band** of nodes near the border — the last `band`
-//! of a polyline's length, the nodes within `band` of a surface's border node
-//! — to which a line (a polyline) or a plane (a surface) is fitted. Principal
+//! Not the last edge: a **band** of nodes near the border - the last `band`
+//! of a polyline's length, the nodes within `band` of a surface's border node -
+//! to which a line (a polyline) or a plane (a surface) is fitted. Principal
 //! components (Hoppe, 1992), **reweighted** with Huber's weights (k = 1.345 σ,
 //! σ the median absolute residual × 1.4826) until the weights settle: a
 //! misplaced node near the border is weighted down instead of pulling the
-//! direction, and the nodes left beyond 2.5 σ are **counted** — a badly picked
+//! direction, and the nodes left beyond 2.5 σ are **counted** - a badly picked
 //! border is news in itself. The band's width is the setting that matters:
 //! too narrow, it reads the noise; too wide, it smooths a real curvature away.
 //!
@@ -31,7 +31,7 @@
 //!
 //! - **a polyline** goes on from its end node along the line fitted to its last
 //!   `band` of length, oriented outward, by the distance asked, in nodes spaced
-//!   at the band's mean segment length — the last one exactly at the distance;
+//!   at the band's mean segment length - the last one exactly at the distance;
 //! - **a surface** grows by rings. Each node of its outer border moves along
 //!   its **outward direction**: the bisector of its two border edges, taken in
 //!   the plane fitted to its band and turned away from the surface (Move's
@@ -39,40 +39,40 @@
 //!   `n` is the longest distance over the border's mean edge, rounded up. The
 //!   rings are stitched into bands of triangles wound like the triangle each
 //!   border edge came from, so the normals stay consistent. A node whose
-//!   distance is zero does not move, and its rings are the node itself — the
+//!   distance is zero does not move, and its rings are the node itself - the
 //!   triangles that would fold onto it are not written.
 //!
 //! # How far: around, by the ends, or in the dip frame
 //!
-//! - [`Reach::Around`] — one distance in every outward direction;
-//! - [`Reach::Ends`] — a polyline's `start` and `end`; a surface has neither;
-//! - [`Reach::Dip`] — *up*, *down* and *sides*. For a surface, the frame is its
+//! - [`Reach::Around`] - one distance in every outward direction;
+//! - [`Reach::Ends`] - a polyline's `start` and `end`; a surface has neither;
+//! - [`Reach::Dip`] - *up*, *down* and *sides*. For a surface, the frame is its
 //!   **mean plane** (a robust plane through every node): *up* is its line of
 //!   steepest slope, turned up; *sides* its horizontal. For a polyline it is
 //!   the vertical: an end pointing up takes *up*, a level end *sides*. Between
 //!   the axes the distance is a blend by the squares of the direction's
-//!   components — `sides·cos²θ + vertical·sin²θ` — continuous, so there is no
+//!   components - `sides·cos²θ + vertical·sin²θ` - continuous, so there is no
 //!   step at the corners (the ellipsoid of LoopStructural, without its
 //!   degeneracy when an answer is zero). *Up* and *down* are measured **along
 //!   the surface**, or as a **height**: then the height is turned into a length
-//!   through the dip of the steepest line — the mean plane's for a surface, the
-//!   end's own for a polyline — so ten metres up on a planar fault is ten metres
+//!   through the dip of the steepest line - the mean plane's for a surface, the
+//!   end's own for a polyline - so ten metres up on a planar fault is ten metres
 //!   of elevation at the top edge. On a surface flatter than `flat_below`,
 //!   up and down have no meaning: refused, naming the dip measured.
 //!
 //! # What is refused
 //!
 //! - a **closed** surface: it has no border;
-//! - a surface in **several pieces**: each has its own border — extended one at
+//! - a surface in **several pieces**: each has its own border - extended one at
 //!   a time. Holes are left as they are, and counted;
 //! - **fronts that cross**: a concave border whose extension would fold over
-//!   itself — an edge of the last ring pointing against the border edge it came
+//!   itself - an edge of the last ring pointing against the border edge it came
 //!   from. Only neighbouring fronts are compared; two arms of a U meeting far
 //!   apart are not seen;
 //! - a border that folds back on itself at a node (a spike), or turns over so
 //!   that its outward direction lies along the mean plane's normal.
 //!
-//! TODO(reference): verify — Hoppe (1992) and Huber's weights are named without a full citation, and the 1.4826 scale factor of the median absolute residual is unreferenced; add the references (authors, year, title, venue, DOI) once checked.
+//! TODO(reference): verify - Hoppe (1992) and Huber's weights are named without a full citation, and the 1.4826 scale factor of the median absolute residual is unreferenced; add the references (authors, year, title, venue, DOI) once checked.
 
 use std::collections::HashMap;
 
@@ -90,7 +90,7 @@ pub enum Reach {
     },
     /// The same distance in every outward direction.
     Around(f64),
-    /// Up, down and sides — see the module.
+    /// Up, down and sides - see the module.
     Dip(Dip),
 }
 
@@ -105,7 +105,7 @@ pub struct Dip {
     pub sides: f64,
     /// `up` and `down` are heights rather than lengths along the surface.
     pub height: bool,
-    /// Whether a larger z is higher — the frame says, nothing here guesses.
+    /// Whether a larger z is higher - the frame says, nothing here guesses.
     pub plus_z_is_up: bool,
     /// Below this dip, in degrees, a surface has no up and no down.
     pub flat_below: f64,
@@ -118,7 +118,7 @@ pub enum Setting {
     Band,
     /// A distance.
     Distance,
-    /// The frame the distances are read in — the dip frame on a flat surface.
+    /// The frame the distances are read in - the dip frame on a flat surface.
     Toward,
 }
 
@@ -187,7 +187,7 @@ fn unit(a: [f64; 3]) -> Option<[f64; 3]> {
 
 // ---------------------------------------------------------------- the robust fit
 
-/// The eigen-decomposition of a symmetric 3 × 3 matrix — cyclic Jacobi. The
+/// The eigen-decomposition of a symmetric 3 × 3 matrix - cyclic Jacobi. The
 /// values ascending, each with its unit vector.
 fn eigen(mut a: [[f64; 3]; 3]) -> [(f64, [f64; 3]); 3] {
     let mut v = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
@@ -250,7 +250,7 @@ enum Kind {
 pub struct Fitted {
     /// The weighted centre.
     pub centre: [f64; 3],
-    /// The line's direction, or the plane's normal — a unit vector, its sign
+    /// The line's direction, or the plane's normal - a unit vector, its sign
     /// arbitrary.
     pub axis: [f64; 3],
     /// The points the fit weighted down as outliers, as ranks into its input.
@@ -369,12 +369,12 @@ fn robust(points: &[[f64; 3]], kind: Kind) -> Option<Fitted> {
     })
 }
 
-/// The robust line through `points` — public for a test to confront.
+/// The robust line through `points` - public for a test to confront.
 pub fn fit_line(points: &[[f64; 3]]) -> Option<Fitted> {
     robust(points, Kind::Line)
 }
 
-/// The robust plane through `points` — public for a test to confront.
+/// The robust plane through `points` - public for a test to confront.
 pub fn fit_plane(points: &[[f64; 3]]) -> Option<Fitted> {
     robust(points, Kind::Plane)
 }
@@ -431,10 +431,10 @@ fn check_reach(reach: &Reach) -> Result<(), ExtendError> {
 /// The blend of the dip frame: `sides` along the horizontal, `vertical` along
 /// the steepest line, the squares of the components in between. `sin2` is the
 /// square of the component along the steepest line, `rise` the sine of that
-/// line's dip — what turns a height into a length.
+/// line's dip - what turns a height into a length.
 fn blend(dip: &Dip, upward: bool, sin2: f64, rise: f64) -> f64 {
     let vertical = if upward { dip.up } else { dip.down };
-    // A level direction takes none of the vertical answer — and a height over
+    // A level direction takes none of the vertical answer - and a height over
     // a level line would divide by zero before multiplying by it.
     let steep = if sin2 <= 0.0 {
         0.0
@@ -505,7 +505,7 @@ fn line_end(
     }
     let Some(fit) = fit_line(&taken) else {
         return Err(ExtendError::Shape(format!(
-            "the {} of the line has no length over its band — its last nodes are one point",
+            "the {} of the line has no length over its band - its last nodes are one point",
             if is_start { "start" } else { "end" }
         )));
     };
@@ -514,7 +514,7 @@ fn line_end(
     let along = dot(away, direction);
     if along.abs() <= 1e-12 * norm(away).max(length) {
         return Err(ExtendError::Shape(format!(
-            "the band at the {} of the line folds back on itself — no outward direction",
+            "the band at the {} of the line folds back on itself - no outward direction",
             if is_start { "start" } else { "end" }
         )));
     }
@@ -549,7 +549,7 @@ fn line_end(
         return Err(setting(
             Setting::Distance,
             format!(
-                "{distance} at a step of {step} would add {count} nodes to one end — more than {MOST_ADDED}"
+                "{distance} at a step of {step} would add {count} nodes to one end - more than {MOST_ADDED}"
             ),
         ));
     }
@@ -635,7 +635,7 @@ pub struct SurfaceExtension {
     pub rings: usize,
     /// Each node of the outer border, in its order.
     pub outward: Vec<Outward>,
-    /// Border loops left as they are — holes.
+    /// Border loops left as they are - holes.
     pub holes: usize,
     /// Nodes that some band's fit weighted down as outliers, each once.
     pub outliers: usize,
@@ -673,7 +673,7 @@ pub fn extend_surface(
     if let Reach::Ends { .. } = reach {
         return Err(setting(
             Setting::Toward,
-            "a surface has no start and no end — extend it `around`, or by `dip`",
+            "a surface has no start and no end - extend it `around`, or by `dip`",
         ));
     }
     let n = points.len();
@@ -685,7 +685,7 @@ pub fn extend_surface(
     let loops = boundary_loops(triangles).map_err(|e| ExtendError::Shape(e.to_string()))?;
     if loops.is_empty() {
         return Err(ExtendError::Shape(
-            "the surface is closed — it has no border to extend".to_string(),
+            "the surface is closed - it has no border to extend".to_string(),
         ));
     }
 
@@ -697,7 +697,7 @@ pub fn extend_surface(
     let named: Vec<usize> = (0..n).filter(|i| used[*i]).collect();
     let cloud: Vec<[f64; 3]> = named.iter().map(|i| points[*i]).collect();
     let mean = fit_plane(&cloud).ok_or_else(|| {
-        ExtendError::Shape("the surface's nodes are on one line — it has no plane".to_string())
+        ExtendError::Shape("the surface's nodes are on one line - it has no plane".to_string())
     })?;
     let normal = mean.axis;
     let dip = normal[2].abs().min(1.0).acos().to_degrees();
@@ -709,7 +709,7 @@ pub fn extend_surface(
                 return Err(setting(
                     Setting::Toward,
                     format!(
-                        "the surface's mean plane dips {dip:.3}° — under {}°, up and down have no meaning; extend it `around`",
+                        "the surface's mean plane dips {dip:.3}° - under {}°, up and down have no meaning; extend it `around`",
                         d.flat_below
                     ),
                 ));
@@ -750,7 +750,7 @@ pub fn extend_surface(
             .collect();
         if outer.len() != 1 {
             return Err(ExtendError::Shape(format!(
-                "the surface is in {} pieces, each with its own border — extend them one at a time",
+                "the surface is in {} pieces, each with its own border - extend them one at a time",
                 outer.len().max(2)
             )));
         }
@@ -790,7 +790,7 @@ pub fn extend_surface(
             .collect();
         let local: Vec<[f64; 3]> = chosen.iter().map(|j| points[*j]).collect();
         let fit = fit_plane(&local).ok_or_else(|| {
-            ExtendError::Shape(format!("near border node {i}, the band's nodes are on one line — no plane to extend along; widen `band`"))
+            ExtendError::Shape(format!("near border node {i}, the band's nodes are on one line - no plane to extend along; widen `band`"))
         })?;
         for r in &fit.outliers {
             outlier[chosen[*r]] = true;
@@ -803,7 +803,7 @@ pub fn extend_surface(
         let tangent = sub(bisector, scale(m, dot(bisector, m)));
         let Some(tangent) = unit(tangent).filter(|_| norm(tangent) > 1e-9) else {
             return Err(ExtendError::Shape(format!(
-                "the border folds back on itself at node {i} — it has no outward direction there"
+                "the border folds back on itself at node {i} - it has no outward direction there"
             )));
         };
         let mut direction = unit(cross(tangent, m)).expect("two unit vectors at right angles");
@@ -838,7 +838,7 @@ pub fn extend_surface(
     if longest <= 0.0 {
         return Err(setting(
             Setting::Distance,
-            "every distance is zero — there is nothing to extend",
+            "every distance is zero - there is nothing to extend",
         ));
     }
     let perimeter: f64 = (0..count)
@@ -851,7 +851,7 @@ pub fn extend_surface(
         return Err(setting(
             Setting::Distance,
             format!(
-                "{longest} at the border's mean edge of {step} is {rings} rings of {moving} nodes — more than {MOST_ADDED}"
+                "{longest} at the border's mean edge of {step} is {rings} rings of {moving} nodes - more than {MOST_ADDED}"
             ),
         ));
     }
@@ -865,7 +865,7 @@ pub fn extend_surface(
         let after = sub(last(b), last(a));
         if dot(before, after) <= 0.0 {
             return Err(ExtendError::Shape(format!(
-                "the fronts from border nodes {} and {} cross — the border is too concave there for that distance; shorten it",
+                "the fronts from border nodes {} and {} cross - the border is too concave there for that distance; shorten it",
                 a.node, b.node
             )));
         }

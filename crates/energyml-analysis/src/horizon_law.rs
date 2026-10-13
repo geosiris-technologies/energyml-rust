@@ -1,4 +1,4 @@
-//! **A horizon laid by a law** over a reference surface — how the synthetic
+//! **A horizon laid by a law** over a reference surface - how the synthetic
 //! model Lutetia states the horizons no borehole measures
 //! (`horizon-from-law`; two of them are declared synthetic).
 //!
@@ -7,16 +7,16 @@
 //! A **thickness** between the reference and the new horizon, and the side of
 //! the reference the new horizon lies on:
 //!
-//! - [`Law::Parallel`] — the same thickness everywhere: H7 under H6 at the
+//! - [`Law::Parallel`] - the same thickness everywhere: H7 under H6 at the
 //!   thickness of the Campanian, H2 over the base of the Lutetian at the
 //!   thickness of the Lutetian;
-//! - [`Law::Linear`] — a thickness stated at an anchor, changing by `gradient`
+//! - [`Law::Linear`] - a thickness stated at an anchor, changing by `gradient`
 //!   per unit of horizontal distance along `azimuth` (degrees clockwise from
 //!   grid north, the convention of the `crs` operation's azimuth): a wedge,
 //!   the way a formation thickens toward the centre of a basin.
 //!
-//! The thickness is laid **vertically** — an isochore, the measure the
-//! `thickness` operation writes as `true vertical thickness` — because a node
+//! The thickness is laid **vertically** - an isochore, the measure the
+//! `thickness` operation writes as `true vertical thickness` - because a node
 //! of a grid carries one height per (x, y). Where the reference dips, the
 //! thickness measured across the beds is the vertical one times the cosine of
 //! the dip: the parallel-beds formula of [`crate::thickness()`], read the other
@@ -29,12 +29,12 @@
 //! exist** there. The form is the usage guide's, which the synthetic model follows for its
 //! erosions (RESQML Technical
 //! Usage Guide 2.2, draft, §7.2.2.2, table 5 p. 84): *« Horizon 2 | older side
-//! | stops | Horizon 1 | both sides »* — the older horizon **stops** at the
+//! | stops | Horizon 1 | both sides »* - the older horizon **stops** at the
 //! erosion surface, it does not follow it.
 //!
 //! So an eroded node is a **hole**, never clamped onto the cut: a height taken
 //! from the cut would be the erosion surface drawn a second time under the
-//! older horizon's name — two picks of one surface, and one of them a lie.
+//! older horizon's name - two picks of one surface, and one of them a lie.
 //!
 //! "Never rises above" is checked **at the nodes** of the new horizon, which is
 //! what a grid states; between two nodes the two surfaces are each read their
@@ -42,17 +42,17 @@
 //!
 //! # What each node answers, and what is counted
 //!
-//! Every hole is a `NaN` **and a count** — the house rule: a hole that is not
+//! Every hole is a `NaN` **and a count** - the house rule: a hole that is not
 //! counted reads as a surface that is complete.
 //!
 //! - **laid**: the reference's height moved by the thickness, toward the side;
-//! - **hole**: the reference has no finite position or height there — a `NaN`
+//! - **hole**: the reference has no finite position or height there - a `NaN`
 //!   node of its grid. The law has nothing to stand on;
-//! - **eroded**: a cut lies below the laid height — a hole;
-//! - **folded**: a cut is folded over the node — several of its faces there
+//! - **eroded**: a cut lies below the laid height - a hole;
+//! - **folded**: a cut is folded over the node - several of its faces there
 //!   disagree. Which sheet erodes is a geological decision, not a numerical
-//!   one — a hole, counted apart from the eroded ones;
-//! - and one that **keeps** its height and is counted: **beyond** the cuts —
+//!   one - a hole, counted apart from the eroded ones;
+//! - and one that **keeps** its height and is counted: **beyond** the cuts -
 //!   no cut has a face over or under the node, so the erosion surface says
 //!   nothing there and nothing erodes. H1, the base of the alluvium, exists in
 //!   the valley only; a node outside it is not eroded by it.
@@ -60,9 +60,9 @@
 //! # Refused by name
 //!
 //! A thickness that is not a finite number, 0 or more; a parallel law at a
-//! thickness of 0 — the reference again, under another name; a linear law
+//! thickness of 0 - the reference again, under another name; a linear law
 //! whose thickness turns **negative** on some node (past a nanometre of
-//! rounding, `ROUNDING`) — the new horizon would
+//! rounding, `ROUNDING`) - the new horizon would
 //! cross its reference, on the wrong side of it, while looking like a horizon
 //! laid as asked. It is refused with the count and the first node, rather than
 //! clamped at zero: a pinch-out is a statement about the geology, and nobody
@@ -76,14 +76,14 @@ pub use crate::heights::Surface;
 /// What this module refuses, by name.
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum LawError {
-    #[error("the thickness must be a finite number, 0 or more — {given} given")]
+    #[error("the thickness must be a finite number, 0 or more - {given} given")]
     BadThickness { given: f64 },
     #[error("a thickness of 0 everywhere lays the reference again, under another name")]
     ZeroThickness,
-    #[error("the {what} of the law must be a finite number — {given} given")]
+    #[error("the {what} of the law must be a finite number - {given} given")]
     NotFinite { what: &'static str, given: f64 },
     #[error(
-        "the law gives a negative thickness at {count} node(s) — {value} at ({x}, {y}) first: the horizon would cross its reference; bound the law (a smaller gradient, another anchor), or cut the horizon where it thins out"
+        "the law gives a negative thickness at {count} node(s) - {value} at ({x}, {y}) first: the horizon would cross its reference; bound the law (a smaller gradient, another anchor), or cut the horizon where it thins out"
     )]
     Negative {
         count: usize,
@@ -98,14 +98,14 @@ pub enum LawError {
 /// Which side of the reference the new horizon lies on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Side {
-    /// Below it: older, deeper — H7 under H6.
+    /// Below it: older, deeper - H7 under H6.
     Below,
-    /// Above it: younger, shallower — H2 over the base of the Lutetian.
+    /// Above it: younger, shallower - H2 over the base of the Lutetian.
     Above,
 }
 
 impl Side {
-    /// `+1` for above, `−1` for below — times `Up::sign`, the sign of the
+    /// `+1` for above, `−1` for below - times `Up::sign`, the sign of the
     /// offset on the third coordinate.
     fn sign(self) -> f64 {
         match self {
@@ -135,13 +135,13 @@ pub enum Law {
         /// grid north (+y); east is 90.
         azimuth: f64,
         /// The change of thickness per unit of horizontal distance along
-        /// `azimuth` — positive thickens that way, negative thins.
+        /// `azimuth` - positive thickens that way, negative thins.
         gradient: f64,
     },
 }
 
 impl Law {
-    /// Whether the law can be laid at all — before a node is read.
+    /// Whether the law can be laid at all - before a node is read.
     pub fn check(&self) -> Result<(), LawError> {
         match *self {
             Law::Parallel { thickness } => {
@@ -203,7 +203,7 @@ impl Law {
 
 /// The sine and cosine of an angle in degrees, **exact at the four cardinal
 /// directions**: `cos(90°)` computed through radians is 6e-17, not 0, and a
-/// wedge running east would then thin by a rounding error along the north —
+/// wedge running east would then thin by a rounding error along the north -
 /// enough to make a zero thickness negative on the line through its anchor.
 fn sin_cos_degrees(degrees: f64) -> (f64, f64) {
     let turned = degrees.rem_euclid(360.0);
@@ -221,7 +221,7 @@ fn sin_cos_degrees(degrees: f64) -> (f64, f64) {
     }
 }
 
-/// How far below zero a thickness may fall and still be read as zero — a
+/// How far below zero a thickness may fall and still be read as zero - a
 /// rounding of the arithmetic, in the unit of the heights. A nanometre of any
 /// length unit is not a statement about the geology; anything more is.
 const ROUNDING: f64 = 1e-9;
@@ -234,16 +234,16 @@ pub struct Laid {
     pub z: Vec<f64>,
     /// Nodes of the reference with no finite position or height.
     pub holes: usize,
-    /// Nodes a cut lies below — eroded.
+    /// Nodes a cut lies below - eroded.
     pub eroded: usize,
-    /// Nodes under a folded cut — undecided.
+    /// Nodes under a folded cut - undecided.
     pub folded: usize,
-    /// Nodes no cut has a face over or under — kept; `0` without cuts.
+    /// Nodes no cut has a face over or under - kept; `0` without cuts.
     pub beyond: usize,
-    /// Faces of the cuts that cannot be read — a corner with no height (a
+    /// Faces of the cuts that cannot be read - a corner with no height (a
     /// hole of a cut's grid), no area in plan, a cell that is not convex.
     pub set_aside: usize,
-    /// The thinnest and the thickest thickness laid, over the nodes kept —
+    /// The thinnest and the thickest thickness laid, over the nodes kept -
     /// `None` when none is.
     pub range: Option<[f64; 2]>,
 }
@@ -252,7 +252,7 @@ pub struct Laid {
 /// `side`, the third coordinate read as `up` says, cut by every one of
 /// `cuts`.
 ///
-/// `nodes` are the reference's `[x, y, z]`; `cuts` are in the same frame —
+/// `nodes` are the reference's `[x, y, z]`; `cuts` are in the same frame -
 /// the caller checks that, since only it knows the frames.
 pub fn lay(
     nodes: &[[f64; 3]],
@@ -273,7 +273,7 @@ pub fn lay(
     let set_aside: usize = heights.iter().map(Heights::set_aside).sum();
 
     // The offset on the third coordinate: toward the side, in the frame's
-    // sense — below is down, and down is −z in elevation, +z in depth.
+    // sense - below is down, and down is −z in elevation, +z in depth.
     let toward = side.sign() * up.sign();
     let mut laid = Laid {
         z: Vec::with_capacity(nodes.len()),
@@ -311,7 +311,7 @@ pub fn lay(
                 Height::At(cut) => {
                     met = true;
                     // Above the cut, in the frame's sense: eroded. On it is
-                    // kept — the horizon reaches the erosion surface there.
+                    // kept - the horizon reaches the erosion surface there.
                     if up.sign() * (height - cut) > 0.0 {
                         eroded = true;
                     }
@@ -380,7 +380,7 @@ mod tests {
     }
 
     /// **Below is down in the frame's sense**: `z − t` in elevation, `z + t`
-    /// in depth — and above is the reverse. Reading the sense wrong would put
+    /// in depth - and above is the reverse. Reading the sense wrong would put
     /// H7 above H6 in a depth frame, every number plausible.
     #[test]
     fn a_parallel_horizon_is_the_thickness_away_toward_its_side_in_the_frames_sense() {
@@ -425,7 +425,7 @@ mod tests {
     }
 
     /// **A linear law** is its thickness at the anchor, and changes by the
-    /// gradient along the azimuth — east here, so along x only.
+    /// gradient along the azimuth - east here, so along x only.
     #[test]
     fn a_linear_law_changes_along_its_azimuth_only() {
         let law = Law::Linear {
@@ -556,7 +556,7 @@ mod tests {
         );
 
         // In depth, the same picture: the horizon at 0 + 10 = 10, the cut at
-        // 13 − x/10 — deeper than the horizon at x = 0, so it erodes it there.
+        // 13 − x/10 - deeper than the horizon at x = 0, so it erodes it there.
         let (points, triangles) = plate(-10.0, 60.0, |x| 13.0 - x / 10.0);
         let cut = surface(&points, &triangles);
         let laid = lay(

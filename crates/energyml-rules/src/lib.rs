@@ -3,7 +3,7 @@
 //!
 //! A **house rule** is a decision of this software that changes what a user
 //! sees, reads or is refused, and that no specification dictates word for word.
-//! This crate is the registry of them — a leaf with **no runtime dependency**
+//! This crate is the registry of them - a leaf with **no runtime dependency**
 //! (wasm included), so that the crates below `energyml-domain` can cite a rule
 //! by id and a face can list them all without a front end.
 //!
@@ -13,8 +13,8 @@
 //! and is always present; French (`rules/fr/*.toml`) is optional per rule and a
 //! rule without it answers in English **and says so** ([`Localised::fallback`]).
 //!
-//! References — a design document, a page and paragraph of a specification, a
-//! piece of code — are quoted strings. Nothing here opens a file at run time.
+//! References - a design document, a page and paragraph of a specification, a
+//! piece of code - are quoted strings. Nothing here opens a file at run time.
 //!
 //! Design: ADR-0005.
 
@@ -100,7 +100,7 @@ impl RefKind {
 /// The kind of an anchor: where a rule shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum AnchorKind {
-    /// A schema type, `typeKey` or `typeKey.field` — never a qualified name,
+    /// A schema type, `typeKey` or `typeKey.field` - never a qualified name,
     /// because a rule holds for every release that carries the type.
     Type,
     /// A view of a front end, from the closed list of `build/loader.rs`.
@@ -156,7 +156,7 @@ pub struct Ruling {
     pub by: &'static str,
     /// When, `YYYY-MM-DD`.
     pub on: &'static str,
-    /// The words, in the language they were said — a citation is not translated.
+    /// The words, in the language they were said - a citation is not translated.
     pub quote: Option<&'static str>,
 }
 
@@ -171,7 +171,7 @@ pub struct Ref {
     pub path: Option<&'static str>,
     /// The place inside: a section, a page, a symbol.
     pub at: Option<&'static str>,
-    /// What to know about the reference — for a rule saying the specification
+    /// What to know about the reference - for a rule saying the specification
     /// is silent, where we looked.
     pub note: Option<&'static str>,
 }
@@ -191,7 +191,7 @@ pub struct Rule {
     pub level: u8,
     /// The date of the decision.
     pub since: &'static str,
-    /// One line, English — a menu label.
+    /// One line, English - a menu label.
     pub title: &'static str,
     /// What the rule does, English.
     pub text: &'static str,
@@ -222,7 +222,7 @@ pub struct Theme {
     pub title: &'static str,
 }
 
-/// The texts of a rule or a theme in one language — and nothing else: a
+/// The texts of a rule or a theme in one language - and nothing else: a
 /// translation has no right to change a reference, an anchor or a status.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Translation {
@@ -260,7 +260,7 @@ pub fn in_theme(theme: &str) -> impl Iterator<Item = &'static Rule> + '_ {
     RULES.iter().filter(move |r| r.theme == theme)
 }
 
-/// The rules anchored at a place — *which rules hold here?* This is the
+/// The rules anchored at a place - *which rules hold here?* This is the
 /// reverse link the front end and the CLI call. The match is on the exact key.
 pub fn at<'a>(kind: AnchorKind, key: &'a str) -> impl Iterator<Item = &'static Rule> + 'a {
     RULES
@@ -268,7 +268,7 @@ pub fn at<'a>(kind: AnchorKind, key: &'a str) -> impl Iterator<Item = &'static R
         .filter(move |r| r.at.iter().any(|a| a.kind == kind && a.key == key))
 }
 
-/// The rules that replace `id` — read a `superseded` rule beside what
+/// The rules that replace `id` - read a `superseded` rule beside what
 /// supersedes it.
 pub fn superseded_by(id: &str) -> impl Iterator<Item = &'static Rule> + '_ {
     RULES.iter().filter(move |r| r.supersedes.contains(&id))

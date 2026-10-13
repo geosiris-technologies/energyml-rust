@@ -6,7 +6,7 @@ edition.workspace = true
 rust-version.workspace = true
 # Spelled out rather than inherited: wasm-pack parses the manifests of a
 # WebAssembly front end's path dependencies before running wasm-opt, and
-# does not resolve workspace inheritance — `license.workspace = true` reaches
+# does not resolve workspace inheritance - `license.workspace = true` reaches
 # it as a table where it wants a string, and the wasm build dies *after*
 # writing the module, leaving a usable artefact and an unread exit code.
 license = "Apache-2.0"
@@ -17,7 +17,7 @@ readme = "README.md"
 homepage = "https://www.geosiris.com"
 documentation = "https://docs.rs/energyml-domain"
 include = ["src/**", "data/**", "build.rs", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
-# One test binary, `tests/main.rs` — see its doc.
+# One test binary, `tests/main.rs` - see its doc.
 autotests = false
 
 [dependencies]
@@ -42,13 +42,13 @@ energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.
 energyml-witsml-2-1 = { path = "../generated/energyml-witsml-2-1", version = "0.1.0" }
 # `tests/series.rs` builds PRODML time series and flow tests by hand.
 energyml-prodml-2-3 = { path = "../generated/energyml-prodml-2-3", version = "0.1.0" }
-# Every schema version the workspace generates, in one line — see
+# Every schema version the workspace generates, in one line - see
 # `energyml-schemas` for why the list lives in exactly one place.
 energyml-schemas = { path = "../energyml-schemas", version = "0.1.0", features = ["all"] }
 
 [features]
 default = []
-# Tests on the private real-file corpus under testdata/ — real-file campaign, run privately. Off by default.
+# Tests on the private real-file corpus under testdata/ - real-file campaign, run privately. Off by default.
 private-corpus = []
 # Only the tests need it: the crate itself never touches a file directly.
 hdf5 = ["energyml-storage/hdf5"]

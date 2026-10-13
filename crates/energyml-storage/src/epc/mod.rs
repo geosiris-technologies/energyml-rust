@@ -3,7 +3,7 @@
 //! [`EpcStore`] carries **two call surfaces**, and that is deliberate
 //! (ADR-0002):
 //!
-//! - a complete **synchronous** inherent API — what an application that only
+//! - a complete **synchronous** inherent API - what an application that only
 //!   ever touches local files should use. It never writes `async`, never adds
 //!   an executor, and need not know [`EnergymlStorage`] exists;
 //! - an implementation of [`EnergymlStorage`], **asynchronous**, one line per
@@ -23,7 +23,7 @@
 //!
 //! # Tolerance
 //!
-//! Real packages break the specification — the reference package published with
+//! Real packages break the specification - the reference package published with
 //! fesapi breaks four rules at once. This reader accepts
 //! them and records every departure in [`EpcStore::diagnostics`]. Nothing is
 //! swallowed, nothing is fatal that need not be.
@@ -75,7 +75,7 @@ pub struct Unreadable {
     pub uri: Option<String>,
     /// Content type as `[Content_Types].xml` declares it, when it does.
     pub content_type: Option<String>,
-    /// How many bytes are there — zero being a diagnosis of its own.
+    /// How many bytes are there - zero being a diagnosis of its own.
     pub bytes: usize,
     /// What went wrong, in the words the reader used.
     pub reason: String,
@@ -92,7 +92,7 @@ pub struct SaveOptions {
     /// `created` is always rewritten, because it means the moment the package
     /// was made and this is that moment.
     pub creator: Option<String>,
-    /// `dcterms:created`, in W3CDTF. `None` means now — which is what the
+    /// `dcterms:created`, in W3CDTF. `None` means now - which is what the
     /// specification asks for, since the field is the *package* creation time.
     /// Setting it explicitly makes a build reproducible, which is what the
     /// tests do.
@@ -115,7 +115,7 @@ impl Default for SaveOptions {
 /// What one part of a package is, for a listing that shows the archive.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PartKind {
-    /// An EnergyML object — the only kind the rest of this library reads.
+    /// An EnergyML object - the only kind the rest of this library reads.
     Object,
     /// `[Content_Types].xml`, the index OPC requires. Regenerated on save.
     ContentTypes,
@@ -123,7 +123,7 @@ pub enum PartKind {
     Relationships,
     /// `docProps/core.xml`. Regenerated on save.
     CoreProperties,
-    /// Anything else under `docProps/` — a producer's extension, copied
+    /// Anything else under `docProps/` - a producer's extension, copied
     /// verbatim because this library neither writes it nor understands it.
     PackageExtension,
     /// A file carried along: a PDF, an image, a note. Copied verbatim.
@@ -136,7 +136,7 @@ pub enum PartKind {
 /// write, and they are separate because they are separate facts: a part can be
 /// `added` and not `staged` in no case, `staged` without being `added` (bytes
 /// repaired over an archive part), and `dropped` while still being in the
-/// archive — which is precisely the state a listing has to be able to show.
+/// archive - which is precisely the state a listing has to be able to show.
 #[derive(Clone, Debug)]
 pub struct PartListing {
     /// The part name, which is its address inside the package.
@@ -166,13 +166,13 @@ struct PartEntry {
     summary: ObjectSummary,
     /// The registered type, when the registry knows it. `None` means the
     /// package holds a version whose crate was not registered: the object is
-    /// still listed — a listing that hides rows is worse than one that shows a
-    /// row it cannot open — but reading it fails with [`Error::UnknownType`].
+    /// still listed - a listing that hides rows is worse than one that shows a
+    /// row it cannot open - but reading it fails with [`Error::UnknownType`].
     info: Option<&'static TypeInfo>,
     /// The other versions the root element could also be, best first.
     ///
     /// Empty when the identification was unambiguous. When it is not, a read
-    /// walks this list after `info` fails — see [`EpcStore::root_candidates`]
+    /// walks this list after `info` fails - see [`EpcStore::root_candidates`]
     /// for why one namespace covers every version of a package and
     /// `schemaVersion` cannot always settle it.
     alternatives: Vec<&'static TypeInfo>,
@@ -181,7 +181,7 @@ struct PartEntry {
     /// read returns. `None` for a version nobody declared, which keeps the
     /// substitution and the plain `UnknownType`.
     refusal: Option<String>,
-    /// The key the overlay and the journal know this entry by — see
+    /// The key the overlay and the journal know this entry by - see
     /// [`slot_key`]. Fixed when the entry is born and never recomputed: the
     /// uri of an entry can change (a second version of its uuid arrives), its
     /// slot cannot.
@@ -195,7 +195,7 @@ struct PartEntry {
 /// An object this session created that the archive never held.
 ///
 /// Kept beside the archive's entries so that a created object is addressable
-/// at once (see the `made` field) — and with the identity it has
+/// at once (see the `made` field) - and with the identity it has
 /// beside its namesakes: the slot, and the `objectVersion` that tells it from
 /// another object of the same uuid and type.
 struct Made {
@@ -214,7 +214,7 @@ struct Live<'a> {
     archive: Option<&'a PartEntry>,
 }
 
-/// What an address says, once parsed: a uuid, and — when the address is a URI —
+/// What an address says, once parsed: a uuid, and - when the address is a URI -
 /// the type and the version it names.
 struct Address {
     /// Lowercased.
@@ -225,12 +225,12 @@ struct Address {
 
 /// The identity key of an entry, the way the overlay and the journal spell it.
 ///
-/// **An entry is (uuid, qualified type, objectVersion)** — Identifier
+/// **An entry is (uuid, qualified type, objectVersion)** - Identifier
 /// Specification v5.0 §3.4.2 (p. 14) puts the version in the URI beside the
 /// uuid, and EPC v1.1 §3.6 (p. 17) lets a package hold a versioned object and
 /// say so in its path. The overlay and the journal were keyed by the uuid; they
 /// are now keyed by this, and **for the first entry of a uuid it is the uuid
-/// itself** — so every package that never had two entries of one uuid (all of
+/// itself** - so every package that never had two entries of one uuid (all of
 /// the corpus) keeps exactly the keys it had. A second entry gets a composite:
 /// the uuid, the lowercased type and the version in hex (the journal lowercases
 /// its keys, and a version is case-sensitive), joined by the unit separator, so
@@ -253,7 +253,7 @@ fn uuid_of_slot(slot: &str) -> &str {
 }
 
 /// An `objectVersion` as an identity: surrounding blanks do not count, and an
-/// empty one is no version — the element is optional, and an empty one says the
+/// empty one is no version - the element is optional, and an empty one says the
 /// same as none.
 fn normal_version(version: Option<&str>) -> Option<String> {
     version
@@ -295,7 +295,7 @@ pub struct EpcStore {
     /// # Why this is not a micro-optimisation
     ///
     /// An HDF5 proxy's own `.rels` holds one relationship **per object that
-    /// references it**, and exactly one `externalResource` — the file name. On
+    /// references it**, and exactly one `externalResource` - the file name. On
     /// the Lyon package (4484 objects, 2694 array pointers) that part is
     /// **585 KB and 2687 relationships**, and every array pointer inflated and
     /// parsed the whole of it to pick the one entry that names the file. 1.6 GB
@@ -309,7 +309,7 @@ pub struct EpcStore {
     ///
     /// **Nothing invalidates it, and that is a property rather than an
     /// oversight**: [`EpcStore::external_resource_in`] reads through
-    /// `self.package` — the archive — and never consults the overlay, so no
+    /// `self.package` - the archive - and never consults the overlay, so no
     /// edit, removal or staged part can change what it answers. A memo of a
     /// function that already ignores every mutation cannot go stale. The day
     /// that function learns to read staged bytes, this map has to be cleared
@@ -324,7 +324,7 @@ pub struct EpcStore {
     /// `(part, lowercased uuid)` for every `destinationMedia` of an object's
     /// `.rels`, and for every `sourceMedia` of a non-object part's `.rels`.
     ///
-    /// On a package of 16 250 parts, loading the scene had become endless — every `media_links` re-read and
+    /// On a package of 16 250 parts, loading the scene had become endless - every `media_links` re-read and
     /// re-parsed every part's `.rels` (3.4 s a call), and the head images asked
     /// once per object read. Same argument as `external_resources`: it reads
     /// through `self.package` only, so no edit can make it stale; the overlay's
@@ -341,21 +341,21 @@ pub struct EpcStore {
     /// [`EpcStore::resources`] already walked the overlay, so a created object
     /// appeared in an inventory. But [`EpcStore::resource`] and
     /// [`EpcStore::find_by_uuid`] both go through `by_uuid`, which is built from
-    /// the archive and never touched again — so the same object was **listed and
+    /// the archive and never touched again - so the same object was **listed and
     /// not addressable**. Anything asking *what is at this uri* got `NotFound`
     /// for something a caller had just created and could already read through
     /// [`EpcStore::get_object`].
     ///
     /// That is not a small inconsistency. Spelling a reference starts by asking
     /// for the holder's resource, so **no reference could be written from a
-    /// newly created object at all** — which is what made a workshop create
+    /// newly created object at all** - which is what made a workshop create
     /// eighteen objects and link none of them, reporting only that some links
     /// could not be written. And `find_by_uuid` is what a reference resolves
     /// through, so every reference *pointing at* a created object read as
     /// dangling.
     ///
     /// A map rather than a recomputation, because both accessors hand back a
-    /// borrow — and it never needs revisiting, since a uuid is immutable by
+    /// borrow - and it never needs revisiting, since a uuid is immutable by
     /// schema rule: written on `put`, dropped on `remove`. Keyed by the
     /// lowercased uuid, **one list per uuid**: a second version of an object
     /// created here is a second [`Made`], and its uri is the one
@@ -383,7 +383,7 @@ pub struct EpcStore {
     /// The archive's own `[Content_Types].xml` answers for the parts that were
     /// in it; a part added since has no entry there, and the writer would fall
     /// back to guessing from the extension. Guessing is a reasonable last
-    /// resort and a poor first one — a caller that *knows* it is handing over a
+    /// resort and a poor first one - a caller that *knows* it is handing over a
     /// PDF should not have that turned into `application/octet-stream` because
     /// the name ended in `.PDF`.
     attachment_types: std::collections::BTreeMap<String, String>,
@@ -395,7 +395,7 @@ pub struct EpcStore {
     /// when the journal is read, through `&self`.
     pending_edits: Mutex<Vec<PendingEdit>>,
     /// The slots whose object was lent out for an edit in place since the last
-    /// [`EpcStore::settle_versions`] — the only objects whose `objectVersion` can
+    /// [`EpcStore::settle_versions`] - the only objects whose `objectVersion` can
     /// have drifted from their entry's. Settling walks these and nothing else: it
     /// runs at the start of every `put`, and walking the whole layer there made
     /// writing *n* objects cost *n²* (2 699 BSS wells, 70 000 objects,
@@ -413,7 +413,7 @@ pub struct EpcStore {
 /// that said they may have moved. See [`EpcStore::edit_at`].
 struct PendingEdit {
     revision: u64,
-    /// The slot of the entry ([`slot_key`]) — its uuid for all but a second
+    /// The slot of the entry ([`slot_key`]) - its uuid for all but a second
     /// entry of one uuid.
     slot: String,
     references: Vec<(String, String)>,
@@ -422,7 +422,7 @@ struct PendingEdit {
 /// How many provisional edits are remembered; older ones keep the wider answer.
 const PENDING_EDITS: usize = 256;
 
-/// `(path, uuid)` of every reference an object makes — what the front end's
+/// `(path, uuid)` of every reference an object makes - what the front end's
 /// `referencesMoved` compares, read from the reference graph instead of from the
 /// text.
 fn reference_list(object: &dyn Reflect) -> Vec<(String, String)> {
@@ -456,7 +456,7 @@ impl EpcStore {
         Ok(store)
     }
 
-    /// Open an EPC from anything readable and seekable — bytes in memory, for
+    /// Open an EPC from anything readable and seekable - bytes in memory, for
     /// instance.
     ///
     /// A cloud service receives an EPC as the body of a response and has no
@@ -509,7 +509,7 @@ impl EpcStore {
         &self.registry
     }
 
-    /// The same registry, shareable — what opening a **second** store with the
+    /// The same registry, shareable - what opening a **second** store with the
     /// same schema knowledge needs, and what an extraction does.
     ///
     /// Handing out the `Arc` rather than making the caller build a registry
@@ -538,14 +538,14 @@ impl EpcStore {
 
     /// Every EnergyML object in the package, identity only.
     ///
-    /// Built once when the package was opened, from `[Content_Types].xml` and —
-    /// only for the parts that file gets wrong — the root element. Then merged
+    /// Built once when the package was opened, from `[Content_Types].xml` and -
+    /// only for the parts that file gets wrong - the root element. Then merged
     /// with the in-memory layer: what was removed is gone from this list, what
     /// was added is in it.
     ///
     /// **One row per entry**, an entry being (uuid, qualified type,
     /// `objectVersion`): the same uuid under two versions, or under two
-    /// releases, is two rows, each with the uri that names it alone — see
+    /// releases, is two rows, each with the uri that names it alone - see
     /// [`EpcStore::resolve`].
     pub fn resources(&self) -> Vec<ObjectSummary> {
         let mut out: Vec<ObjectSummary> = self
@@ -560,8 +560,8 @@ impl EpcStore {
             if self.is_archive_slot(slot) {
                 continue; // already listed, from the archive
             }
-            // The summary `put` gave it — its uri is reconciled with its
-            // namesakes — or, for a layer that never went through `put`, the
+            // The summary `put` gave it - its uri is reconciled with its
+            // namesakes - or, for a layer that never went through `put`, the
             // identity the object states.
             let summary = self
                 .made_by_slot(slot)
@@ -575,7 +575,7 @@ impl EpcStore {
     /// The identity an object added to the layer will have once written.
     ///
     /// The **short** uri: whether it must be spelled with a version depends on
-    /// the object's namesakes, which only the store knows —
+    /// the object's namesakes, which only the store knows -
     /// [`EpcStore::reconcile_uris`] settles it.
     fn summary_of(&self, object: &dyn Reflect) -> Option<ObjectSummary> {
         let key = identity::key_of_reflect(object)?;
@@ -591,7 +591,7 @@ impl EpcStore {
     /// The summary of one object.
     ///
     /// The archive's entries and the objects created in this session are one
-    /// namespace: an object created here is addressable the moment it exists —
+    /// namespace: an object created here is addressable the moment it exists -
     /// an accessor that said otherwise made it impossible to write a reference
     /// from one. A uri that names more than one object is refused,
     /// [`Error::Ambiguous`], with the uri of each candidate.
@@ -599,13 +599,13 @@ impl EpcStore {
         self.locate(uri).map(|live| live.summary)
     }
 
-    /// Which object an address names — [`EpcStore::resource`] under the name
+    /// Which object an address names - [`EpcStore::resource`] under the name
     /// the rules are written for. **Rule**: the short uri is accepted when there is
     /// no conflict (or when the object has no version), and the version is
     /// required when there is one. So:
     ///
     /// - a **versioned** uri (`(uuid=…,version='…')`, Identifier Specification
-    ///   v5.0 §3.4.2, p. 14) names exactly that entry, or nothing —
+    ///   v5.0 §3.4.2, p. 14) names exactly that entry, or nothing -
     ///   [`Error::NotFound`];
     /// - a **short** uri names the one entry of its (uuid, type); when there
     ///   are several, the one that declares no version, if exactly one does not
@@ -624,8 +624,8 @@ impl EpcStore {
     /// The object a **reference** names, resolved by (uuid, qualified type,
     /// `objectVersion` when the reference carries one) with the rules of
     /// [`EpcStore::resolve`]. A reference whose version no entry carries still
-    /// resolves when it has a single candidate — the checker reports the
-    /// mismatch (`ObjectVersionMismatch`) — and is [`Error::NotFound`] when
+    /// resolves when it has a single candidate - the checker reports the
+    /// mismatch (`ObjectVersionMismatch`) - and is [`Error::NotFound`] when
     /// several entries leave no way to say which was meant.
     pub fn resolve_reference(
         &self,
@@ -639,7 +639,7 @@ impl EpcStore {
 
     /// **The one lookup.** The entry named by (uuid, qualified type, `objectVersion`),
     /// each part optional but the uuid: the uuid first, then the type, then the
-    /// version — and the version only matters when more than one entry is left
+    /// version - and the version only matters when more than one entry is left
     /// (Identifier Specification v5.0 §3.4.2.1, p. 15). [`EpcStore::resolve`] (a
     /// URI) and [`EpcStore::lookup_uuid`] (a bare uuid) are this with the triple
     /// read from their argument; every resolution inside the store goes through
@@ -689,20 +689,20 @@ impl EpcStore {
     /// The object carrying this uuid, whatever its type.
     ///
     /// A uuid identifies an object across every version, so this is what a
-    /// reference resolves through — see [`crate::graph::check_references`]. With
-    /// several entries under one uuid it answers **one of them** — the one that
+    /// reference resolves through - see [`crate::graph::check_references`]. With
+    /// several entries under one uuid it answers **one of them** - the one that
     /// declares no `objectVersion` if there is one, otherwise the first in
-    /// archive order — which is enough for what it is used for, *is there such
+    /// archive order - which is enough for what it is used for, *is there such
     /// an object*. Whoever needs *which* asks [`EpcStore::resolve_reference`]
     /// or [`EpcStore::resolve`], which refuse to guess.
     pub fn find_by_uuid(&self, uuid: &str) -> Option<&ObjectSummary> {
         // A reference resolves through this. Without the layer, every
         // reference pointing at an object created in this session read as
-        // dangling — the package it was written into held it.
+        // dangling - the package it was written into held it.
         Self::primary(self.live_of(&uuid.to_ascii_lowercase())).map(|live| live.summary)
     }
 
-    /// Every object of the package that carries this uuid — one per entry: the
+    /// Every object of the package that carries this uuid - one per entry: the
     /// same uuid under two `objectVersion`s, or under two releases, is two
     /// summaries, each with the uri that names it alone. Empty when there is
     /// none. What a derived view of the package asks when a uuid is journaled and
@@ -714,7 +714,7 @@ impl EpcStore {
             .collect()
     }
 
-    /// Every entry of one uuid — the archive's and this session's — minus what
+    /// Every entry of one uuid - the archive's and this session's - minus what
     /// was removed. `uuid` is lowercased.
     fn live_of(&self, uuid: &str) -> Vec<Live<'_>> {
         let mut out = Vec::new();
@@ -747,7 +747,7 @@ impl EpcStore {
     }
 
     /// The `objectVersion` an entry has **now**: the object the layer holds when it
-    /// holds one — an edit of the version is visible to a lookup at once — else
+    /// holds one - an edit of the version is visible to a lookup at once - else
     /// what the entry was born with.
     fn current_version<'a>(&'a self, slot: &str, stored: Option<&'a str>) -> Option<&'a str> {
         match self.overlay.get(slot) {
@@ -780,7 +780,7 @@ impl EpcStore {
         )
     }
 
-    /// The one entry of `live` that an address (or a reference) names — or a
+    /// The one entry of `live` that an address (or a reference) names - or a
     /// **named** refusal. `reference` makes a version no entry carries resolve
     /// when there is a single candidate: a reference is a copy of what its
     /// target says, and a copy that is stale is a finding, not a dangling
@@ -815,8 +815,8 @@ impl EpcStore {
         if live.len() == 1 {
             return Ok(live.remove(0));
         }
-        // Several: a short uri still names the one that declares no version —
-        // the rule above — if exactly one does. A bare uuid names no type, but
+        // Several: a short uri still names the one that declares no version -
+        // the rule above - if exactly one does. A bare uuid names no type, but
         // when every candidate is of one type it says exactly what the short uri
         // of that type says, and gets the same answer: the readers of the domain
         // resolve a reference through `ObjectSource::object(uuid)`, and a
@@ -864,12 +864,12 @@ impl EpcStore {
 
     /// Spell the uri of every live entry of a uuid, again: **with its version
     /// whenever it declares one**, the short form only for an entry that
-    /// declares none — internally the uri always carries the version number when
+    /// declares none - internally the uri always carries the version number when
     /// there is one (ADR-0003). The short form stays
     /// accepted **as an address** ([`EpcStore::resolve`]), never emitted for a
     /// versioned entry. Called whenever the set of entries of a uuid
     /// changes: at open, after a put, after a removal. Returns, for each entry
-    /// whose uri moved, its slot and the uri it had — the caller says so in the
+    /// whose uri moved, its slot and the uri it had - the caller says so in the
     /// journal (an identity event, ADR-0010: *a second version
     /// changes the uri of the first*).
     fn reconcile_uris(&mut self, uuid: &str) -> Vec<(String, String)> {
@@ -946,7 +946,7 @@ impl EpcStore {
 
     /// The citation of one object.
     ///
-    /// From the object itself when the in-memory layer holds it — reading the
+    /// From the object itself when the in-memory layer holds it - reading the
     /// archive would return the citation as it was before the edit.
     pub fn header(&self, uri: &str) -> Result<ObjectHeader> {
         let slot = self.slot_of(uri)?;
@@ -1012,7 +1012,7 @@ impl EpcStore {
         // The version the identification settled on, then the ones it could not
         // rule out. One namespace covers every version of a package and
         // `schemaVersion` is optional in practice, so "which release is this"
-        // is sometimes a question only the parser can answer — and it answers
+        // is sometimes a question only the parser can answer - and it answers
         // it by failing on the wrong one. See `root_candidates`.
         let mut attempts = Vec::with_capacity(1 + entry.alternatives.len());
         attempts.push(info);
@@ -1027,7 +1027,7 @@ impl EpcStore {
         // longer refuse, and a part would come back as a plausible object of
         // the wrong release with only the fields the two share.
         //
-        // So: strict first, over the candidates best-first — that is the pass
+        // So: strict first, over the candidates best-first - that is the pass
         // that decides *which release this is*. Only when no candidate reads
         // strictly does the caller's own mode get a turn, and by then the
         // question is no longer which version but how much to put right.
@@ -1042,7 +1042,7 @@ impl EpcStore {
             for (rank, candidate) in attempts.iter().enumerate() {
                 // Dispatched on the **candidate**, not on its content type. A
                 // development drop shares that string with the release it precedes
-                // — `resqml 2.2_dev3` declares `version="2.2"` — so a lookup by
+                // - `resqml 2.2_dev3` declares `version="2.2"` - so a lookup by
                 // content type hands every candidate of such a pair the same type,
                 // and this walk would read the same thing each time while looking
                 // like it had tried both.
@@ -1067,7 +1067,7 @@ impl EpcStore {
                             self.record(Diagnostic::warning(
                                 &part,
                                 format!(
-                                    "would not read as `{}`; read as `{}` instead — the document's \
+                                    "would not read as `{}`; read as `{}` instead - the document's \
                                  namespace names the package and not the version",
                                     attempts[0].qualified_type.unwrap_or(attempts[0].name),
                                     candidate.qualified_type.unwrap_or(candidate.name)
@@ -1076,7 +1076,7 @@ impl EpcStore {
                         }
                         // Vocal, as everywhere else here: the object now holds
                         // values nobody wrote, and a caller that saves it would put
-                        // them on disk. The two kinds are kept apart — an absent
+                        // them on disk. The two kinds are kept apart - an absent
                         // element is a producer forgetting, a value that could not
                         // be read is a producer writing something wrong, and the
                         // second is the worse news.
@@ -1110,8 +1110,8 @@ impl EpcStore {
     /// them.
     ///
     /// Off by default, and it should stay off for anything that will be
-    /// written back: an absent required element comes back as its Rust default
-    /// — an empty string, a zero — which is not what the document said. Each
+    /// written back: an absent required element comes back as its Rust default -
+    /// an empty string, a zero - which is not what the document said. Each
     /// one becomes a `Diagnostic`, so [`diagnostics`][Self::diagnostics] tells
     /// exactly what was invented and in which part.
     ///
@@ -1126,7 +1126,7 @@ impl EpcStore {
     ///
     /// Off by default. An absent required element is filled with its Rust
     /// default and reported as a diagnostic, because refusing there costs a
-    /// caller every field the part *did* carry — see
+    /// caller every field the part *did* carry - see
     /// [`ReadMode`].
     ///
     /// Turn it on for the one job where the difference bites: **writing the
@@ -1155,7 +1155,7 @@ impl EpcStore {
         self.lenient
     }
 
-    /// The raw XML of one part, as stored — or as staged, once it has been.
+    /// The raw XML of one part, as stored - or as staged, once it has been.
     ///
     /// For a round-trip check, or for a caller that has its own parser.
     pub fn part_bytes(&self, uri: &str) -> Result<Vec<u8>> {
@@ -1168,7 +1168,7 @@ impl EpcStore {
     /// The addressing of last resort, and the reason it exists: a part whose
     /// root element cannot be read has no uuid, so no uri, so
     /// [`EpcStore::part_bytes`] cannot reach it. This can. What comes back is
-    /// what a save would write — the staged bytes when there are any, the
+    /// what a save would write - the staged bytes when there are any, the
     /// archive's otherwise.
     pub fn raw_part(&self, part: &str) -> Result<Vec<u8>> {
         if let Some(bytes) = self.overlay.raw(part) {
@@ -1184,7 +1184,7 @@ impl EpcStore {
     /// the writer serialise it back. That requires the part to parse, and the
     /// whole point here is that it does not.
     ///
-    /// So these bytes are not parsed, not validated and not rewritten — they go
+    /// So these bytes are not parsed, not validated and not rewritten - they go
     /// into the archive as they are. Two consequences worth stating, because
     /// neither is recoverable afterwards:
     ///
@@ -1214,14 +1214,14 @@ impl EpcStore {
         dropped
     }
 
-    /// The revision of the last object write — what a derived view of the
+    /// The revision of the last object write - what a derived view of the
     /// package (`energyml_domain::package_index`) compares with its own to know
     /// whether it is still exact (ADR-0010).
     pub fn revision(&self) -> u64 {
         self.overlay.revision()
     }
 
-    /// How many times the package's **files** changed — a part staged or
+    /// How many times the package's **files** changed - a part staged or
     /// dropped, a media relation made or undone, a transaction opened, merged or
     /// thrown away. Not an object write, so not in [`EpcStore::revision`]: a
     /// reader of what is attached to an object compares this stamp with its own
@@ -1231,7 +1231,7 @@ impl EpcStore {
     }
 
     /// Which objects were written after `since`: nothing, these uuids
-    /// (lower-cased), or everything — a reader re-reads accordingly.
+    /// (lower-cased), or everything - a reader re-reads accordingly.
     pub fn changed_since(&self, since: u64) -> revision::Changed {
         match self.overlay.changed_since(since) {
             // The journal names slots; a reader of this answer knows uuids, and
@@ -1243,7 +1243,7 @@ impl EpcStore {
         }
     }
 
-    /// What was written after `since`, and **what in each object** — the
+    /// What was written after `since`, and **what in each object** - the
     /// journal of ADR-0010: per object
     /// the citation, the body, the links, a creation, a removal, an identity
     /// change; the datasets written; whether parts or media moved; the data file
@@ -1274,8 +1274,8 @@ impl EpcStore {
         }
     }
 
-    /// Datasets of a data file were written **by someone other than this store**
-    /// — the front end through h5wasm, a tool that wrote the `.h5` itself — and the
+    /// Datasets of a data file were written **by someone other than this store** -
+    /// the front end through h5wasm, a tool that wrote the `.h5` itself - and the
     /// journal must say so, at the same place it says what happened to objects.
     /// The writes made through [`EpcStore::write_array_to`] and
     /// [`EpcStore::write_arrays_to`] are journaled by those gates; calling this
@@ -1289,7 +1289,7 @@ impl EpcStore {
         self.overlay.journal().note_datasets(file, paths.iter().copied())
     }
 
-    /// A data file was brought, replaced or created **as a whole** — an import
+    /// A data file was brought, replaced or created **as a whole** - an import
     /// that copies it, a creation that writes it. Its datasets are not listed:
     /// the journal says the file (an empty path).
     pub fn data_file_written(&self, file: &str) -> u64 {
@@ -1298,7 +1298,7 @@ impl EpcStore {
 
     /// The uri this store gives an object it holds or held, if it can tell.
     fn known_uri(&self, slot: &str) -> Option<String> {
-        // The entry the slot belongs to, as the store spells it now — which, for
+        // The entry the slot belongs to, as the store spells it now - which, for
         // an entry held beside a namesake, is the form with its version.
         let held = self
             .by_uuid
@@ -1318,7 +1318,7 @@ impl EpcStore {
             let stated_version = normal_version(identity::object_version_of_reflect(object.as_reflect()));
             // An object edited in place may state another identity than the one
             // the entry was born with (an edited uuid, **or an edited
-            // `objectVersion`** — an object is (uuid, type, version), and two
+            // `objectVersion`** - an object is (uuid, type, version), and two
             // versions of one uuid are two objects): its journal line then names
             // the identity it states.
             return match held {
@@ -1336,7 +1336,7 @@ impl EpcStore {
     }
 
     /// Take `LINKS_OUT` off the journal lines of in-place edits whose object
-    /// turns out to make the same references as before — the refinement the
+    /// turns out to make the same references as before - the refinement the
     /// design asks for (ADR-0010), done at the gate instead of at the index
     /// because the gate is where the *before* is at hand. With `only`, just that
     /// object's pending edit (it is about to be edited again).
@@ -1372,7 +1372,7 @@ impl EpcStore {
 
     // -- The package as a container of files ---------------------------------
 
-    /// Every part of the package, whatever it is — **the archive as a listing**.
+    /// Every part of the package, whatever it is - **the archive as a listing**.
     ///
     /// # Why the library and not the caller
     ///
@@ -1445,7 +1445,7 @@ impl EpcStore {
         out
     }
 
-    /// Put a file in the package — a PDF, an image, a note.
+    /// Put a file in the package - a PDF, an image, a note.
     ///
     /// # What it refuses, and why each refusal is not a nuisance
     ///
@@ -1454,11 +1454,11 @@ impl EpcStore {
     ///   overwritten without a word or would silently replace an object with
     ///   something that is not one. Repairing an object's bytes is
     ///   [`EpcStore::set_raw_part`], which says what it is doing.
-    /// - **The package's own infrastructure** — `[Content_Types].xml`, a
+    /// - **The package's own infrastructure** - `[Content_Types].xml`, a
     ///   `.rels`, `docProps/core.xml`. All three are *regenerated* by the writer
     ///   from the objects in memory, so bytes put there would be discarded
     ///   silently at the exact moment they were supposed to take effect.
-    /// - **A name OPC or EPC would not accept, or reserves** — see
+    /// - **A name OPC or EPC would not accept, or reserves** - see
     ///   [`media::check_part_name`], each rule with its section.
     /// - **A name that differs from another part's only by case.** OPC compares
     ///   part names without case, so the package would hold one part twice.
@@ -1490,7 +1490,7 @@ impl EpcStore {
                  be discarded"
             )));
         }
-        // Then what OPC and EPC say of any part name and any content type —
+        // Then what OPC and EPC say of any part name and any content type -
         // each rule with its section in `media`.
         let part = media::check_part_name(&part)?;
         let content_type = content_type
@@ -1553,12 +1553,12 @@ impl EpcStore {
         Ok(())
     }
 
-    /// Say that a part of the package is a media representation of an object —
-    /// EPC §3.4.2 (pp. 15–16): `destinationMedia` in the object's `.rels`,
+    /// Say that a part of the package is a media representation of an object -
+    /// EPC §3.4.2 (pp. 15-16): `destinationMedia` in the object's `.rels`,
     /// `sourceMedia` in the part's, both written on save (see [`media`]).
     ///
     /// `object` is an ETP uri or a bare uuid. Refused by name: an object the
-    /// package does not hold, and a part that is not one of its attachments —
+    /// package does not hold, and a part that is not one of its attachments -
     /// put the bytes in first ([`EpcStore::set_attachment`]); a relationship to
     /// an object's own part, or to nothing, is not a media representation.
     pub fn relate_media(&mut self, object: &str, part: &str) -> Result<()> {
@@ -1582,14 +1582,14 @@ impl EpcStore {
     }
 
     /// Every media relation a save would write: what the archive's `.rels`
-    /// said — `destinationMedia` from an object, `sourceMedia` from a part,
-    /// either one is the link — with this session's changes over it.
+    /// said - `destinationMedia` from an object, `sourceMedia` from a part,
+    /// either one is the link - with this session's changes over it.
     ///
     /// **Read back from the archive, so a rewrite keeps them.** The `.rels`
     /// are regenerated on save from what the store knows; before this, a media
     /// relation read in a package was lost at the next save (a gap found
     /// while building the synthetic reference model, ADR-0018). A part no longer in the package takes its
-    /// relations with it; an object removed does not — the writer names that
+    /// relations with it; an object removed does not - the writer names that
     /// relation rather than dropping it in silence.
     ///
     /// This reads the `.rels` of every object and every attachment: a cost
@@ -1691,7 +1691,7 @@ impl EpcStore {
     /// the repair worked, `Err` means it did not and says what is still wrong.
     ///
     /// Deliberately **not** called by [`EpcStore::set_raw_part`]. Staging bytes
-    /// that still do not parse is a legitimate step — a repair can take more
+    /// that still do not parse is a legitimate step - a repair can take more
     /// than one pass, and refusing to hold an intermediate state would make the
     /// tool useless for the files that need it most.
     pub fn staged_part_parses(&self, part: &str) -> Result<String> {
@@ -1704,7 +1704,7 @@ impl EpcStore {
     /// The one place that decides *which* type a repaired part is, so the check
     /// and the staging cannot disagree about it. The content type comes from
     /// the type found rather than from `[Content_Types].xml`: a part the index
-    /// never declared — the invisible case — has none to offer, and the root
+    /// never declared - the invisible case - has none to offer, and the root
     /// element is what identified it in the first place.
     fn staged_object(&self, part: &str) -> Result<(&'static TypeInfo, Box<dyn DynObject>)> {
         let bytes = self.raw_part(part)?;
@@ -1741,8 +1741,8 @@ impl EpcStore {
     /// The difference from [`EpcStore::set_raw_part`] is what happens on
     /// success, and it is the whole reason this exists: bytes that **parse**
     /// are not staged as bytes at all. They become an object in the ordinary
-    /// layer, so the writer serialises it like any other and — the part that
-    /// matters — **rebuilds its `.rels` from its own `DataObjectReference`s**.
+    /// layer, so the writer serialises it like any other and - the part that
+    /// matters - **rebuilds its `.rels` from its own `DataObjectReference`s**.
     /// A part repaired through `set_raw_part` alone comes out of the save with
     /// no relationships, because verbatim bytes have no references a writer can
     /// see.
@@ -1768,7 +1768,7 @@ impl EpcStore {
             }
         };
         // It parses, so it rejoins the normal world: the object layer, where
-        // the writer can see its references and rebuild its `.rels` — and where
+        // the writer can see its references and rebuild its `.rels` - and where
         // it is placed under the part name its type and uuid dictate, which for
         // a part the inventory had lost is not the name it arrived under.
         self.overlay.clear_raw(part);
@@ -1782,12 +1782,12 @@ impl EpcStore {
     /// The worklist of a repair. Two kinds are in it, and the second is the one
     /// that used to be invisible:
     ///
-    /// - a part the inventory knows, whose XML fails to parse — it has a uri;
+    /// - a part the inventory knows, whose XML fails to parse - it has a uri;
     /// - a part the inventory **dropped**, because the damage reached the root
     ///   element or the uuid and nothing could address it. It has no uri, only
     ///   a name, which is why [`EpcStore::raw_part`] takes one.
     ///
-    /// Attachments that were never meant to be objects — a PDF, an image — are
+    /// Attachments that were never meant to be objects - a PDF, an image - are
     /// not in it. The test is the extension and the declared content type: an
     /// `.xml` part of an EPC that is not package infrastructure was meant to be
     /// an object, and if it is not one, something is wrong with it.
@@ -1852,12 +1852,12 @@ impl EpcStore {
     /// Both spellings are handled: the eml 2.3 `ExternalDataArrayPart`, which
     /// carries the file name itself, and the older `Hdf5Dataset`, whose file
     /// name is supposed to live in the `.rels` of its
-    /// `EpcExternalPartReference`. "Supposed to" is doing work in that sentence
-    /// — see [`EpcStore::external_file_for`].
+    /// `EpcExternalPartReference`. "Supposed to" is doing work in that sentence -
+    /// see [`EpcStore::external_file_for`].
     pub fn arrays_of(&self, object: &dyn Reflect) -> Vec<ArrayLocation> {
         // The part this object sits in, whose `.rels` may name its file. Of two
-        // entries sharing a uuid, the one that is this object — its type and
-        // version — rather than the first.
+        // entries sharing a uuid, the one that is this object - its type and
+        // version - rather than the first.
         let stated = identity::key_of_reflect(object).map(|key| {
             (
                 key.uuid.to_ascii_lowercase(),
@@ -1877,7 +1877,7 @@ impl EpcStore {
         crate::array::locate_with(object, &resolver)
     }
 
-    /// Shape and element type of an array, without reading it — ETP protocol 9,
+    /// Shape and element type of an array, without reading it - ETP protocol 9,
     /// `GetDataArrayMetadata`.
     ///
     /// What a viewer asks before deciding whether it can afford the data.
@@ -1887,7 +1887,7 @@ impl EpcStore {
         })
     }
 
-    /// Whether **the file the location names** holds its dataset — that file
+    /// Whether **the file the location names** holds its dataset - that file
     /// alone.
     ///
     /// Not [`EpcStore::array_metadata`], whose search goes on to a companion
@@ -1897,7 +1897,7 @@ impl EpcStore {
     /// (`import`): the answer would come from another file, and the question
     /// would leave a diagnostic and a resolution behind in the package's own
     /// health report. Here nothing is searched, recorded or remembered, and
-    /// every failure — no such file, no backend — is `false`.
+    /// every failure - no such file, no backend - is `false`.
     pub fn holds_array(&self, location: &ArrayLocation) -> bool {
         self.array_backend(location)
             .is_ok_and(|(backend, file)| backend.metadata(&file, &location.path_in_file).is_ok())
@@ -1906,9 +1906,9 @@ impl EpcStore {
     /// Which end of a multi-byte number the file writes first.
     ///
     /// Asked apart from [`EpcStore::array_metadata`] because it answers a
-    /// different need: a viewer wants a shape and a type, and a **writer** —
+    /// different need: a viewer wants a shape and a type, and a **writer** -
     /// one declaring an EML 2.3 external array, whose storage type carries the
-    /// order — wants this. `None` when the backend cannot say or the width
+    /// order - wants this. `None` when the backend cannot say or the width
     /// makes the question meaningless; never a guess, because writing the usual
     /// order where the file holds the other makes every value read wrong while
     /// the document stays valid.
@@ -1918,7 +1918,7 @@ impl EpcStore {
         })
     }
 
-    /// An array, or the slice the location names — `GetDataArrays` and
+    /// An array, or the slice the location names - `GetDataArrays` and
     /// `GetDataSubarrays`.
     ///
     /// Fails with [`ExternalDataReason::FeatureNotEnabled`] when this build has
@@ -1945,7 +1945,7 @@ impl EpcStore {
         // buffer belongs to the caller, so a first attempt that failed halfway
         // may already have written into it, and retrying would lay a second
         // read over a partial one. The file is settled **before** anything is
-        // written — one metadata call, remembered, next to a read of a million
+        // written - one metadata call, remembered, next to a read of a million
         // points.
         let (backend, file) = match self.array_backend(location) {
             Ok((backend, file)) if backend.metadata(&file, &location.path_in_file).is_ok() => (backend, file),
@@ -1967,7 +1967,7 @@ impl EpcStore {
     /// the mistake this catches: reading somebody else's file because it
     /// happened to have the right name.
     ///
-    /// `Ok(())` when they agree **or when the file claims no uuid** — the
+    /// `Ok(())` when they agree **or when the file claims no uuid** - the
     /// newer EnergyML form has no proxy, so there is nothing to compare with.
     pub fn verify_external_file(&self, location: &ArrayLocation) -> Result<()> {
         let Some(expected) = &location.proxy_uuid else {
@@ -1977,7 +1977,7 @@ impl EpcStore {
             return Ok(()); // not a uuid at all; already reported when resolving
         }
         // Through the same two speeds as a read, so that what is verified is
-        // the file that would actually be read — checking the guess while
+        // the file that would actually be read - checking the guess while
         // reading the search's answer would be a cross-check of nothing.
         let (found, file) = self.attempt(location, |backend, file| {
             Ok((backend.file_uuid(file)?, file.to_path_buf()))
@@ -2005,7 +2005,7 @@ impl EpcStore {
     /// nothing else.
     ///
     /// Writing under a *new* pointer is [`EpcStore::write_array_to`], which
-    /// takes the file name directly — a location that resolves to nothing
+    /// takes the file name directly - a location that resolves to nothing
     /// cannot say where to put anything.
     pub fn write_array(&self, location: &ArrayLocation, data: &crate::array::ArrayData) -> Result<()> {
         let name = self.resolved_file(location).ok_or_else(|| Error::ExternalData {
@@ -2024,7 +2024,7 @@ impl EpcStore {
         file_name: &str,
         items: &[(&str, &crate::array::ArrayData)],
     ) -> Vec<Result<()>> {
-        // One span per file, with the number of datasets — never one per array.
+        // One span per file, with the number of datasets - never one per array.
         let _span =
             tracing::info_span!("epc.write_arrays", file = file_name, datasets = items.len()).entered();
         let checked: Vec<Result<()>> = items
@@ -2108,7 +2108,7 @@ impl EpcStore {
     ///
     /// This writes the *numbers*. The EnergyML object that points at them, and
     /// the `.rels` entry naming the file, are
-    /// [`EpcStore::register_external_file`] and a `put` of the object — see
+    /// [`EpcStore::register_external_file`] and a `put` of the object - see
     /// that method for why the two halves are separate.
     ///
     /// [`ExternalFiles::destination_for`]: crate::backend::ExternalFiles::destination_for
@@ -2121,8 +2121,8 @@ impl EpcStore {
         // **The shape and the values must agree**, and it is checked here
         // rather than left to each backend: a shape promising more numbers than
         // there are writes without error in some formats and reads back with
-        // zeros at the end. Every writer gets this — the command line, the
-        // build layer, the Python bridge — because it is the file that would be
+        // zeros at the end. Every writer gets this - the command line, the
+        // build layer, the Python bridge - because it is the file that would be
         // wrong, not one caller.
         let promised: i64 = data.metadata.dimensions.iter().product::<i64>().max(0);
         if promised as usize != data.values.len() {
@@ -2162,7 +2162,7 @@ impl EpcStore {
     /// Stamp an external file with the uuid of the proxy that owns it.
     ///
     /// EPC §3.2.3 requires it, and [`EpcStore::verify_external_file`] enforces
-    /// it on the way back in — so a file written without this is one this very
+    /// it on the way back in - so a file written without this is one this very
     /// crate refuses to trust.
     pub fn stamp_external_file(&self, file_name: &str, proxy_uuid: &str) -> Result<()> {
         let probe = ArrayLocation {
@@ -2185,7 +2185,7 @@ impl EpcStore {
     ///
     /// Optimistic on purpose: whatever the search settled on last time, or else
     /// the first candidate, handed back without opening anything. In the normal
-    /// case — the document names a file that exists and holds the dataset —
+    /// case - the document names a file that exists and holds the dataset -
     /// this is the whole resolution and it costs nothing.
     ///
     /// When the guess is wrong the read fails, and [`EpcStore::attempt`] runs
@@ -2205,7 +2205,7 @@ impl EpcStore {
         // Only among the places someone **stated**: what the caller pinned,
         // what the caller offered, what the document wrote. A companion or a
         // neighbour is a *recovery*, and handing one back unopened would be the
-        // silent-wrong-file mistake this whole design is arranged against (ADR-0005) —
+        // silent-wrong-file mistake this whole design is arranged against (ADR-0005) -
         // those go through the search, which asks before it answers.
         let candidates = self.external.candidates(&declared, self.path.as_deref());
         // Kept so that "nothing can read this format" does not come out as
@@ -2225,12 +2225,12 @@ impl EpcStore {
         Err(missing_or_unsupported(location, &self.backends, no_backend, None))
     }
 
-    /// Which file actually holds this array — by opening candidates and asking.
+    /// Which file actually holds this array - by opening candidates and asking.
     ///
     /// **The content decides, not the name.** The document's name is tried
     /// first because it is usually right, but a candidate that exists and does
     /// not hold the dataset steps aside for the next one rather than failing
-    /// the read — see [`ExternalFiles::candidates`] for the order and
+    /// the read - see [`ExternalFiles::candidates`] for the order and
     /// [`Origin`] for why each place is in it.
     ///
     /// That is what makes a renamed pair readable. Someone who renames
@@ -2240,8 +2240,8 @@ impl EpcStore {
     /// data that is present.
     ///
     /// Every departure from what the document named is recorded. Being
-    /// permissive is a trade — the name is also what stops a package reading
-    /// somebody else's file — and it is paid for by saying so, once per array
+    /// permissive is a trade - the name is also what stops a package reading
+    /// somebody else's file - and it is paid for by saying so, once per array
     /// pointer, with what was asked for and what was used instead.
     ///
     /// [`ExternalFiles::candidates`]: crate::backend::ExternalFiles::candidates
@@ -2296,13 +2296,13 @@ impl EpcStore {
                     match declared.is_empty() {
                         true => format!(
                             "no part, relationship or declaration names the file holding this \
-                             array; found `{}` — {} — which holds `{dataset}`",
+                             array; found `{}` - {} - which holds `{dataset}`",
                             candidate.path.display(),
                             candidate.origin.describe()
                         ),
                         false => format!(
                             "the array names `{declared}`, which does not hold `{dataset}`; \
-                             read from `{}` instead — {}",
+                             read from `{}` instead - {}",
                             candidate.path.display(),
                             candidate.origin.describe()
                         ),
@@ -2377,7 +2377,7 @@ impl EpcStore {
     /// pays for the permissiveness that rescues one whose names are not.
     ///
     /// The retry runs only when the search lands somewhere **different**, so a
-    /// genuine read error — a corrupt dataset, a shape that does not fit — is
+    /// genuine read error - a corrupt dataset, a shape that does not fit - is
     /// reported once and not attempted twice.
     fn attempt<T>(
         &self,
@@ -2421,7 +2421,7 @@ impl EpcStore {
     /// The external file the package's own name suggests: `model.epc` →
     /// `model.h5`, when that file exists.
     ///
-    /// The fallback of last resort for packages whose pointers are broken —
+    /// The fallback of last resort for packages whose pointers are broken -
     /// proxies with no file name (SKUA-GOCAD exports), URIs pointing at objects
     /// instead of files. It is never preferred to anything the package says,
     /// and using it is always recorded.
@@ -2443,7 +2443,7 @@ impl EpcStore {
         &mut self.external
     }
 
-    /// The same settings, read-only — where a named file would be found, and
+    /// The same settings, read-only - where a named file would be found, and
     /// whether this store has a disk at all.
     ///
     /// Not `external_files`, which answers a different question (the names the
@@ -2463,7 +2463,7 @@ impl EpcStore {
     /// The file an [`EpcExternalPartReference`] stands for, from its `.rels`.
     ///
     /// The specification is explicit (EPC §3.2.3): the file name and its MIME
-    /// type are read **in the relationship**, never in the object — an
+    /// type are read **in the relationship**, never in the object - an
     /// `EpcExternalPartReference` inside an EPC must carry null `Filename` and
     /// `MimeType` attributes.
     ///
@@ -2488,13 +2488,13 @@ impl EpcStore {
     /// `testingPackageCpp22.epc`: two RESQML 2.0.1 objects survive inside an
     /// otherwise 2.2 package, and the DOR that should name their
     /// `EpcExternalPartReference` carries **the HDF5 file name in its `UUID`
-    /// element** — `<eml:UUID>testingPackageCpp22.h5</eml:UUID>`. No part has
+    /// element** - `<eml:UUID>testingPackageCpp22.h5</eml:UUID>`. No part has
     /// that uuid, because it is not a uuid. A strict reader loses those two
     /// arrays; this one finds them and says how.
     ///
     /// In order:
     ///
-    /// 1. the `externalResource` of the proxy's own `.rels` — what EPC §3.2.3
+    /// 1. the `externalResource` of the proxy's own `.rels` - what EPC §3.2.3
     ///    prescribes, and what works for every conformant object;
     /// 2. the "uuid" taken **literally as a file name**, when it is not a uuid
     ///    at all and either the package declares an external file by that exact
@@ -2504,8 +2504,8 @@ impl EpcStore {
     /// 4. the only external file the package declares, if there is exactly one.
     ///    A guess, and stated as one: an EPC that names two HDF5 files gets no
     ///    answer here rather than a coin toss;
-    /// 5. when the package declares nothing at all, the **companion file** —
-    ///    `model.h5` beside `model.epc` — if it exists. The SKUA-GOCAD exports
+    /// 5. when the package declares nothing at all, the **companion file** -
+    ///    `model.h5` beside `model.epc` - if it exists. The SKUA-GOCAD exports
     ///    of the corpus need this: their proxies carry no file name anywhere.
     ///
     /// Steps 2 to 5 each record a diagnostic. None is silent.
@@ -2516,7 +2516,7 @@ impl EpcStore {
 
         if !identifiers::is_uuid(proxy_uuid) {
             // The fesapi trick: the file name written where a uuid belongs.
-            // Two ways to be sure enough to act on it — the package declares an
+            // Two ways to be sure enough to act on it - the package declares an
             // external file by that exact name, or (a package with no `.rels`
             // at all, which happens) a file by that name sits beside the
             // package on disk.
@@ -2563,7 +2563,7 @@ impl EpcStore {
                 Some(only.clone())
             }
             [] => {
-                // Nothing declared anywhere — the SKUA-GOCAD export shape:
+                // Nothing declared anywhere - the SKUA-GOCAD export shape:
                 // proxies whose `.rels` are absent or empty. The package's own
                 // name is the last thing left to try.
                 let companion = self.companion_name()?;
@@ -2583,7 +2583,7 @@ impl EpcStore {
     /// The `externalResource` target recorded for one part.
     ///
     /// Answered from `external_resources` after the first time, which is where
-    /// the argument for that map lives — a proxy's `.rels` is read once per
+    /// the argument for that map lives - a proxy's `.rels` is read once per
     /// package rather than once per array pointer.
     fn external_resource_in(&self, part: &str) -> Option<String> {
         if let Ok(memo) = self.external_resources.lock()
@@ -2643,7 +2643,7 @@ impl EpcStore {
     /// §3.2.3 does not describe. Read back from the archive rather than derived
     /// from the arrays: the point is to return what the package said, not to
     /// decide what it ought to have said. An object this session created has no
-    /// recorded `.rels` and so gets nothing, which is right — it never claimed
+    /// recorded `.rels` and so gets nothing, which is right - it never claimed
     /// one.
     pub fn object_external_file_map(&self) -> std::collections::BTreeMap<String, String> {
         self.entries
@@ -2704,12 +2704,12 @@ impl EpcStore {
     ///
     /// Needed for a proxy created in this session: `save` regenerates every
     /// `.rels` from what the store knows, and without this the new
-    /// `EpcExternalPartReference` is written out naming no file — a warning at
+    /// `EpcExternalPartReference` is written out naming no file - a warning at
     /// best, a package whose arrays cannot be found at worst.
     ///
     /// Deliberately separate from writing the numbers. The two halves fail
-    /// independently and for different reasons — a disk full against a package
-    /// that will not save — and pretending otherwise would leave a file on disk
+    /// independently and for different reasons - a disk full against a package
+    /// that will not save - and pretending otherwise would leave a file on disk
     /// that nothing points at, or a pointer to a file that was never written.
     pub fn register_external_file(&mut self, proxy_uuid: &str, file_name: impl Into<String>) {
         let file_name = file_name.into();
@@ -2752,7 +2752,7 @@ impl EpcStore {
     /// Borrow an object for editing, marking it modified.
     ///
     /// The normal way to change something. Rust does not report when a field is
-    /// written, so the mark is taken **when the borrow is taken** — the moment
+    /// written, so the mark is taken **when the borrow is taken** - the moment
     /// an application asks to edit is the moment it intends to. Simple, exact,
     /// and it is the call an editing interface makes anyway.
     ///
@@ -2764,11 +2764,11 @@ impl EpcStore {
     }
 
     /// [`EpcStore::edit`] for an edit of **one value, addressed by its dotted
-    /// path** — what a form or a front end's JSON edit does. The path is what lets
+    /// path** - what a form or a front end's JSON edit does. The path is what lets
     /// the journal say *what* changed ([`What::of_edit`]): a citation path is
     /// `CITATION`; any other is `BODY | LINKS_OUT`, and `LINKS_OUT` is taken off
     /// again when the object's references are found unmoved, the next time the
-    /// journal is read ([`EpcStore::changes_since`]) — the rule of the front end's
+    /// journal is read ([`EpcStore::changes_since`]) - the rule of the front end's
     /// `referencesMoved`, over the reference graph instead of the text.
     pub fn edit_at(&mut self, uri: &str, path: &str) -> Result<&mut dyn Reflect> {
         let mut what = What::of_edit(path);
@@ -2788,7 +2788,7 @@ impl EpcStore {
     /// Give an entry another `objectVersion`, through the layer. The entry keeps
     /// its slot; its uri, which carries the version, changes, and the journal
     /// says `IDENTITY`. Refused, by name, when a
-    /// namesake already carries that version — two entries of one identity are one
+    /// namesake already carries that version - two entries of one identity are one
     /// object. Returns the uri the entry is now known by.
     pub fn set_object_version(&mut self, uri: &str, version: &str) -> Result<String> {
         let version = normal_version(Some(version))
@@ -2848,7 +2848,7 @@ impl EpcStore {
     /// was born with. Run at the start of every gate that writes; a lookup does not
     /// wait for it (`current_version`), only the spelling of a uri does.
     /// Bring every entry's recorded version, and so its uri, up to what the
-    /// layer holds — after an edit through the borrow [`EpcStore::edit_at`] hands
+    /// layer holds - after an edit through the borrow [`EpcStore::edit_at`] hands
     /// out, which the store cannot watch while the caller holds it. Every writing
     /// gate does this first; a face that edits and then lists (the front end's
     /// `set` and `set_json`) calls it once its edit is done, so the inventory
@@ -2932,7 +2932,7 @@ impl EpcStore {
         Ok(object.as_reflect_mut())
     }
 
-    /// Add an object, or replace one wholesale — ETP protocol 4, `PutDataObjects`.
+    /// Add an object, or replace one wholesale - ETP protocol 4, `PutDataObjects`.
     ///
     /// Returns the URI it will be known by.
     ///
@@ -2941,12 +2941,12 @@ impl EpcStore {
     /// the object's (uuid, type):
     ///
     /// - there is none: the object is **new**;
-    /// - there is one: it is replaced — even when the object states another
+    /// - there is one: it is replaced - even when the object states another
     ///   `objectVersion` than the entry had (the entry takes it: that is an
     ///   edited version, an identity event in the journal, not a second object);
     /// - there are several (the package holds versions of it): the one of the
     ///   same version is replaced; an object naming a version none of them
-    ///   carries is refused, [`Error::Ambiguous`] — it could be any of them, and
+    ///   carries is refused, [`Error::Ambiguous`] - it could be any of them, and
     ///   this store does not guess. Adding a version is
     ///   [`EpcStore::put_as_new_version`], and nothing else.
     pub fn put(&mut self, object: Box<dyn DynObject>) -> Result<String> {
@@ -2954,18 +2954,18 @@ impl EpcStore {
     }
 
     /// Add an object **as a new version** of an object this package holds: the
-    /// same uuid and type under another `objectVersion` — a second entry, with
+    /// same uuid and type under another `objectVersion` - a second entry, with
     /// its own part when the package is written (EPC v1.1 §3.6, p. 17), its own
     /// uri, and a `CREATED` line in the journal.
     ///
     /// The gate exists so that a version is never made by accident: an ordinary
     /// [`EpcStore::put`] replaces. It is refused, by name, when the exact
-    /// identity — uuid, type *and* version, an absent version included — is
+    /// identity - uuid, type *and* version, an absent version included - is
     /// already there; replacing is what `put` is for.
     ///
     /// The uri of the entries moves with the new one: the short uri is accepted
     /// when there is no conflict (or when the object has no version), the version
-    /// is required when there is one — the entry that
+    /// is required when there is one - the entry that
     /// declares no version keeps the short uri, every versioned entry of the
     /// (uuid, type) takes the form with its version, and the journal says so for
     /// each entry whose uri changed.
@@ -2980,7 +2980,7 @@ impl EpcStore {
             .ok_or_else(|| Error::Package("this object carries no uuid, so it cannot be a part".into()))?;
         // **Present is not the same as usable.** The reader leaves an absent
         // attribute at its default, so an object with no identity arrives
-        // carrying an empty string rather than nothing at all — and an empty
+        // carrying an empty string rather than nothing at all - and an empty
         // string sails past the check above, then becomes the part
         // `eml:///resqml22.ColorMapDictionary()`, which is not an address.
         // Every later call that takes a uri then refuses it, far from here,
@@ -3096,13 +3096,13 @@ impl EpcStore {
         Ok(uri)
     }
 
-    /// The slot for an entry that is new to the package — or comes back to it.
+    /// The slot for an entry that is new to the package - or comes back to it.
     ///
     /// An entry the archive held, removed here and put again, takes its own slot
     /// back (ADR-0010: re-creating the same uuid after a removal
-    /// is the same slot); otherwise the uuid itself, if no entry holds it — the
+    /// is the same slot); otherwise the uuid itself, if no entry holds it - the
     /// rule that leaves every package without namesakes with the keys it always
-    /// had — and a composite slot if one does.
+    /// had - and a composite slot if one does.
     fn slot_for_new(&self, uuid: &str, qualified_type: &str, version: Option<&str>) -> String {
         if let Some(entry) = self
             .by_uuid
@@ -3190,7 +3190,7 @@ impl EpcStore {
         }
     }
 
-    /// Remove an object — ETP protocol 4, `DeleteDataObjects`.
+    /// Remove an object - ETP protocol 4, `DeleteDataObjects`.
     ///
     /// The parts that referenced it keep their references: this does **not**
     /// walk the package fixing them up, because deciding what a dangling
@@ -3258,7 +3258,7 @@ impl EpcStore {
 
     // -- Transactions ------------------------------------------------------
 
-    /// Start a transaction — ETP protocol 18.
+    /// Start a transaction - ETP protocol 18.
     ///
     /// One layer more on the in-memory stack, and nothing on disk. ETP v1.2
     /// forbids nesting, so a second call is an error.
@@ -3273,7 +3273,7 @@ impl EpcStore {
     }
 
     /// Throw the transaction away. It never reached the disk, so nothing there
-    /// has to be undone — which is the whole reason transactions are a layer.
+    /// has to be undone - which is the whole reason transactions are a layer.
     pub fn rollback_transaction(&mut self) -> Result<()> {
         // What the layer held decides which entries are live, so the uris of the
         // uuids it touched are spelled again once it is gone: a version added in
@@ -3310,7 +3310,7 @@ impl EpcStore {
     /// Write the package to any sink, and say what could not be represented.
     ///
     /// **Everything is materialised first.** Regenerating the relationships
-    /// means walking every object's DORs, so saving reads the whole package —
+    /// means walking every object's DORs, so saving reads the whole package -
     /// the lazy levels are a convenience for looking at a file, never a way to
     /// write half of one (`write.rs`).
     ///
@@ -3330,7 +3330,7 @@ impl EpcStore {
 
         for entry in &self.entries {
             // Removed in the layer: not written, and its bytes are not kept
-            // either — that is what removing means.
+            // either - that is what removing means.
             if matches!(self.overlay.get(&entry.slot), Some(Change::Removed)) {
                 continue;
             }
@@ -3351,7 +3351,7 @@ impl EpcStore {
                     diagnostics.push(Diagnostic::warning(
                         entry.summary.locator.clone(),
                         format!(
-                            "{e}; the part was copied unchanged, so nothing is lost — but its \
+                            "{e}; the part was copied unchanged, so nothing is lost - but its \
                              relationships could not be regenerated"
                         ),
                     ));
@@ -3421,7 +3421,7 @@ impl EpcStore {
         }
 
         // `docProps/` is the package's own metadata, so it is not an
-        // attachment — but everything there beyond `core.xml` is a producer's
+        // attachment - but everything there beyond `core.xml` is a producer's
         // extension that this library neither writes nor understands, and
         // dropping it on rewrite is a silent loss. fesapi's
         // `extendedCore.xml` is the real case, in both reference packages.
@@ -3562,7 +3562,7 @@ impl EpcStore {
     /// opened.
     ///
     /// Named for what it is since [`EpcStore::parts`] arrived beside it: this
-    /// one answers about the file, that one about the package — which stop being
+    /// one answers about the file, that one about the package - which stop being
     /// the same thing the moment anything is edited, added or removed.
     pub fn archive_entries(&self) -> &[String] {
         self.package.entries()
@@ -3572,8 +3572,8 @@ impl EpcStore {
     ///
     /// The loop four callers had written: read every resource, keep what
     /// deserializes, keep the name of what did not. **Unreadable is a list and
-    /// not a silence** — a question asked about *every* object that quietly
-    /// answered about some of them is the worst kind of wrong — and it is not
+    /// not a silence** - a question asked about *every* object that quietly
+    /// answered about some of them is the worst kind of wrong - and it is not
     /// an error either, because one bad part must not cost the answer.
     ///
     /// `of_type` filters on the qualified type before anything is parsed
@@ -3602,7 +3602,7 @@ impl EpcStore {
     ///
     /// An index, not the truth: what an object actually references comes from
     /// its DORs (`identity::collect_refs`). Useful to check one against the
-    /// other — a wrong `.rels` is worse than a missing one.
+    /// other - a wrong `.rels` is worse than a missing one.
     pub fn relationships(&self, part: &str) -> Result<Vec<Relationship>> {
         self.relationships_recorded(part)
     }
@@ -3650,7 +3650,7 @@ impl EpcStore {
     /// The two come from two different places, which is easy to miss. The file
     /// name is in the proxy's `.rels` (EPC §3.2.3 is explicit that a reader
     /// takes it from the relationship). The **MIME type is on the proxy
-    /// object** — a mandatory element in eml 2.0, whose own documentation says
+    /// object** - a mandatory element in eml 2.0, whose own documentation says
     /// `application/x-hdf5` is a *convention*. Dropping it, as this crate did
     /// at first, silently declares every external file in a 2.0.1 package to be
     /// HDF5, and a producer writing CSV has no way to say otherwise.
@@ -3714,7 +3714,7 @@ impl EpcStore {
     ///
     /// Two passes over each candidate, in this order:
     ///
-    /// 1. `[Content_Types].xml` is believed first — it is the index the
+    /// 1. `[Content_Types].xml` is believed first - it is the index the
     ///    specification defines, and it is right for the overwhelming majority
     ///    of parts.
     /// 2. When it is absent or names something the registry does not know, the
@@ -3731,8 +3731,8 @@ impl EpcStore {
             .collect();
 
         // A part shaped like an object but filed where the conventions put the
-        // package's own metadata. It is skipped — reading it would put an
-        // object in a place no writer will ever look for it again — but the
+        // package's own metadata. It is skipped - reading it would put an
+        // object in a place no writer will ever look for it again - but the
         // skip is said, because "it is in the file and the tool never mentioned
         // it" is the worst answer a repair tool can give.
         let misfiled: Vec<String> = self
@@ -3759,7 +3759,7 @@ impl EpcStore {
             };
             let key = entry.summary.uuid.to_ascii_lowercase();
             // **An entry is (uuid, qualified type, objectVersion)**, so the same
-            // uuid under another version — or under another release — is
+            // uuid under another version - or under another release - is
             // another entry, and every part is kept. Only a part that repeats the
             // whole identity is dropped, and said: two parts of one identity
             // cannot both be the object.
@@ -3777,7 +3777,7 @@ impl EpcStore {
                 self.record(Diagnostic::warning(
                     part.clone(),
                     format!(
-                        "{} already carried by `{}` — same uuid, same type, same objectVersion; \
+                        "{} already carried by `{}` - same uuid, same type, same objectVersion; \
                          the first part wins",
                         entry.summary.uri, previous.summary.locator
                     ),
@@ -3831,7 +3831,7 @@ impl EpcStore {
         // `[Content_Types].xml` that types a `TriangulatedSetRepresentation` as
         // a `PointSetRepresentation` was believed without a word, and the
         // object came out of the store as a plausible object of the wrong type
-        // — the one failure mode of this reader that produced a wrong answer
+        // - the one failure mode of this reader that produced a wrong answer
         // instead of a named refusal. The peek stops at the end of the
         // citation, so it costs a few hundred inflated bytes per part.
         let peeked = self
@@ -3840,7 +3840,7 @@ impl EpcStore {
             .ok()
             .filter(|p: &header::PeekedHeader| !p.root_name.is_empty());
 
-        // 1 — the index, when the document itself does not contradict it.
+        // 1 - the index, when the document itself does not contradict it.
         if let Some(content_type) = &declared
             && let Ok(parts) = identity::parse_content_type(content_type)
             && !self.root_contradicts(peeked.as_ref(), parts.object_type)
@@ -3851,7 +3851,7 @@ impl EpcStore {
                 naming::compact_version(parts.version),
                 parts.object_type
             );
-            // The root does not *contradict* the index — it names nothing this
+            // The root does not *contradict* the index - it names nothing this
             // build knows, so there is no rival type to prefer and the index
             // rightly stands. But it does not agree either, and the read that
             // follows will therefore recognise none of the document: what comes
@@ -3901,7 +3901,7 @@ impl EpcStore {
             // names an absent version.** `version=2.2` in the index and
             // `schemaVersion="2.0"` on the root contradict each other toward a
             // release this build left out; following the index would read a
-            // 2.0.1 document as 2.2 — a plausible object of the wrong release.
+            // 2.0.1 document as 2.2 - a plausible object of the wrong release.
             // The document is the part, so the part is refused by the absent
             // message. A document with no declaration, one naming a compiled
             // release, a development drop or a version nobody declared absent
@@ -3970,14 +3970,14 @@ impl EpcStore {
             // settle the version when the document names one.**
             //
             // `application/x-resqml+xml;version=2.2;type=X` is what the
-            // released 2.2 *and* `resqml 2.2_dev3` both write — the drop's
+            // released 2.2 *and* `resqml 2.2_dev3` both write - the drop's
             // schemas declare the release's own `version="2.2"`. The index
             // therefore resolves to the release whatever the part holds, and
             // the branch above never runs because the lookup *succeeded*.
             //
             // The document knows better: its `schemaVersion` is the only place
             // a drop can be named at all. So when it names one and the index
-            // answered with a release, the candidates decide instead — the same
+            // answered with a release, the candidates decide instead - the same
             // "the document beats the index" rule this reader already applies
             // to the *type*, extended to the version for the one case where the
             // index has no way to express what the document said.
@@ -3998,7 +3998,7 @@ impl EpcStore {
                         self.record(Diagnostic::note(
                             part,
                             format!(
-                                "declared `{}` in [Content_Types].xml, which names no development drop; its own schemaVersion says `{declared}`, so it is read as `{}` — the document is the only place a drop can be named",
+                                "declared `{}` in [Content_Types].xml, which names no development drop; its own schemaVersion says `{declared}`, so it is read as `{}` - the document is the only place a drop can be named",
                                 content_type,
                                 chosen.qualified_type.unwrap_or(chosen.name)
                             ),
@@ -4014,7 +4014,7 @@ impl EpcStore {
                 self.record(Diagnostic::warning(
                     part,
                     format!(
-                        "declared as `{qualified_type}` but carries no uuid — none in the part name, \
+                        "declared as `{qualified_type}` but carries no uuid - none in the part name, \
                          none on the root element; it cannot be addressed, so it is not listed"
                     ),
                 ));
@@ -4036,7 +4036,7 @@ impl EpcStore {
             });
         }
 
-        // 2 — the root element, when the index is absent, unusable, or wrong.
+        // 2 - the root element, when the index is absent, unusable, or wrong.
         //
         // Every way out of this branch is a part that will not appear in the
         // inventory, so every way out says why. An invisible part is worse than
@@ -4064,7 +4064,7 @@ impl EpcStore {
         };
         // **The document declares a version the registry knows and does not
         // hold: refuse it by name, before any candidate is offered.** Of the
-        // candidates `root_candidates` returns, none is this version — the
+        // candidates `root_candidates` returns, none is this version - the
         // best of them would be another release of the package, read with
         // whatever fields the two share.
         if let Some((package, why)) = self.absent_declaration(&peeked) {
@@ -4159,7 +4159,7 @@ impl EpcStore {
                         None => "no `schemaVersion`".to_string(),
                     },
                     match &peeked.namespace {
-                        Some(_) => " — one namespace covers every version of a package",
+                        Some(_) => " - one namespace covers every version of a package",
                         None => "",
                     },
                     candidates
@@ -4196,15 +4196,15 @@ impl EpcStore {
     ///
     /// Energistics gave **every version of a package the same namespace**:
     /// `resqmlv2` is RESQML 2.0.1 *and* RESQML 2.2, `witsmlv2` is WITSML 2.0
-    /// *and* 2.1. So the namespace answers "which package" — which is worth
+    /// *and* 2.1. So the namespace answers "which package" - which is worth
     /// something, since `Activity` exists in both `resqml20` and `eml23` with
-    /// different namespaces — and says nothing at all about the version.
+    /// different namespaces - and says nothing at all about the version.
     ///
     /// The version comes from `schemaVersion`, and that is where it gets thin:
     /// the attribute is optional in practice, producers write `2.0` where the
     /// release is 2.0.1, and a file may name a version this build does not
     /// have. Until 02/08 an unusable `schemaVersion` fell through to
-    /// `candidates.first()` — registry insertion order, silently. A part read
+    /// `candidates.first()` - registry insertion order, silently. A part read
     /// as the wrong version does not fail: it produces a plausible object with
     /// the fields the two versions share and nothing else, which is the one
     /// outcome this reader is built to avoid.
@@ -4213,16 +4213,16 @@ impl EpcStore {
     /// down the list until one parses. The order is:
     ///
     /// 1. same namespace as the document, when it declared one;
-    /// 2. `schemaVersion` matching exactly — on the release or on the schema's
+    /// 2. `schemaVersion` matching exactly - on the release or on the schema's
     ///    own two-digit form;
     /// 3. `schemaVersion` compatible by prefix, so `2.0` finds 2.0.1;
-    /// 4. the `obj_` prefix, which only the older releases write — a **positive**
+    /// 4. the `obj_` prefix, which only the older releases write - a **positive**
     ///    signal when present and no signal at all when absent, because
     ///    `ALWYN-RESQML.epc` is a 2.0.1 package whose roots do not carry it;
     /// 5. newest first, as a last resort that is at least deterministic.
     ///
     /// Returns the candidates and whether the first one was **identified**
-    /// rather than merely preferred — an exact `schemaVersion` match, or a
+    /// rather than merely preferred - an exact `schemaVersion` match, or a
     /// single candidate. The rest are insurance, and silent when the choice
     /// was confident: reporting an ambiguity that the document settled would
     /// bury the ones it did not.
@@ -4250,21 +4250,21 @@ impl EpcStore {
 
         // The declared version, trimmed to its digits: the 2016 Geosiris
         // editor wrote `Resqml V2.0`, and a spelling the comparison cannot
-        // read must not throw the *whole* declaration away — `V2.0` still
+        // read must not throw the *whole* declaration away - `V2.0` still
         // says 2.0. Found by the BRT acceptance packages: with the raw
         // string unusable, every candidate ranked equal, "newest first"
         // picked 2.2, and a 2.0.1 part read as a plausible 2.2 object whose
-        // reference was empty — the exact outcome this ladder exists to
+        // reference was empty - the exact outcome this ladder exists to
         // avoid.
         let declared = peeked.schema_version.as_deref();
         // Split into the release and the development drop, because those are
         // two different questions. `naming::release_of` also drops a leading
-        // label — the 2016 Geosiris editor wrote `Resqml V2.0`, and a spelling
+        // label - the 2016 Geosiris editor wrote `Resqml V2.0`, and a spelling
         // the comparison cannot read must not throw the *whole* declaration
         // away. Found by the BRT acceptance packages: with the raw string
         // unusable every candidate ranked equal, "newest first" picked 2.2,
         // and a 2.0.1 part read as a plausible 2.2 object whose reference was
-        // empty — the exact outcome this ladder exists to avoid.
+        // empty - the exact outcome this ladder exists to avoid.
         let declared_release = declared.map(naming::release_of);
         let declared_drop = declared.and_then(|v| naming::split_prerelease(v).1);
         let obj_prefixed = naming::has_obj_prefix(&peeked.root_name);
@@ -4280,7 +4280,7 @@ impl EpcStore {
                     } else if version_compatible(by_dir, version) || version_compatible(by_wire, version) {
                         1
                     } else if obj_prefixed && naming::has_obj_prefix(info.object_type) {
-                        // The declared version helped nobody — the `obj_`
+                        // The declared version helped nobody - the `obj_`
                         // prefix is still a positive signal, same as when
                         // no version was declared at all.
                         2
@@ -4298,7 +4298,7 @@ impl EpcStore {
         // outranks the release.**
         //
         // Energistics ships `resqml 2.2_dev3` beside `resqml 2.2`, and the drop
-        // declares the release's own `version="2.2"` — so on the wire the two
+        // declares the release's own `version="2.2"` - so on the wire the two
         // are indistinguishable and *both* rank 0 above. A document saying
         // `2.2` is overwhelmingly a released 2.2, so that is tried first and
         // the drop is the fallback the strict pass falls to; a document that
@@ -4364,9 +4364,9 @@ impl EpcStore {
     /// Whether the root element names a **different** type from the one the
     /// index declares, in a way this build can adjudicate.
     ///
-    /// Both spellings are one name — the reference package writes
+    /// Both spellings are one name - the reference package writes
     /// `obj_DiscreteProperty` in the document and `DiscreteProperty` in the
-    /// content type — and the comparison ignores case, because a difference of
+    /// content type - and the comparison ignores case, because a difference of
     /// case is a producer's habit rather than a claim about the type.
     ///
     /// A root element this build does not know is **not** a contradiction: the
@@ -4414,7 +4414,7 @@ impl Drop for EpcStore {
         if !self.closed && self.policy == SavePolicy::OnClose && self.overlay.is_dirty() {
             eprintln!(
                 "energyml-storage: `{}` was dropped with unsaved changes and the OnClose policy. \
-                 Drop cannot report a failed write, so nothing was written — call `close()`.",
+                 Drop cannot report a failed write, so nothing was written - call `close()`.",
                 self.name
             );
         }
@@ -4432,7 +4432,7 @@ impl ProxyResolver for EpcStore {
 /// The asynchronous face of the same store: one line per method.
 ///
 /// Nothing happens here that does not happen synchronously above. That is the
-/// point of option D — the wrappers are mechanical, so the two surfaces cannot
+/// point of option D - the wrappers are mechanical, so the two surfaces cannot
 /// drift apart.
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
@@ -4515,7 +4515,7 @@ impl LocalPackage for EpcStore {
         // the archive at all, and one that was replaced is not what the archive
         // holds. Reading the archive here would answer about a package that no
         // longer exists. And a part this session removed is gone for the
-        // reader too — the archive still holds its bytes until the save.
+        // reader too - the archive still holds its bytes until the save.
         if self.overlay.raw(part).is_none() && self.overlay.is_dropped(part) {
             return Err(Error::Package(format!(
                 "no part `{part}` in the package: it was removed"
@@ -4531,8 +4531,8 @@ impl LocalPackage for EpcStore {
 
 /// Whether a declared version is a prefix of a candidate's, or the reverse.
 ///
-/// `schemaVersion="2.0"` on a RESQML 2.0.1 object is the schema's own rule —
-/// *"the schema version is the first 2 digits of an ML version"* — so the two
+/// `schemaVersion="2.0"` on a RESQML 2.0.1 object is the schema's own rule -
+/// *"the schema version is the first 2 digits of an ML version"* - so the two
 /// have to meet, and they meet on the dotted components rather than on the
 /// string: `2.1` must not match `2.10`.
 fn version_compatible(candidate: &str, declared: &str) -> bool {
@@ -4551,7 +4551,7 @@ fn version_compatible(candidate: &str, declared: &str) -> bool {
     a.iter().zip(b.iter()).all(|(x, y)| x == y)
 }
 
-/// Absent data, or an absent capability — and never the first when it is the
+/// Absent data, or an absent capability - and never the first when it is the
 /// second.
 ///
 /// A build with no HDF5 cannot read the array whether or not the file is on the
@@ -4562,7 +4562,7 @@ fn version_compatible(candidate: &str, declared: &str) -> bool {
 /// list was empty so nothing was asked at all.
 ///
 /// `detail`, when given, is how hard [`EpcStore::search_array`] looked before
-/// giving up — folded into the `FileMissing` error's own display string so a
+/// giving up - folded into the `FileMissing` error's own display string so a
 /// caller that only prints the error, not the diagnostic log beside it, still
 /// gets more than *file not found*. The reason itself stays `FileMissing`:
 /// that is what a caller matches on to try another candidate or ask for the
@@ -4586,7 +4586,7 @@ fn missing_or_unsupported(
         };
     }
     let location = match detail {
-        Some(detail) => format!("{} — {detail}", location.field_path),
+        Some(detail) => format!("{} - {detail}", location.field_path),
         None => location.field_path.clone(),
     };
     Error::ExternalData {
@@ -4621,7 +4621,7 @@ fn uuid_in_part_name(part: &str) -> Option<String> {
     identifiers::is_uuid(candidate).then(|| candidate.to_string())
 }
 
-/// What an address names: the uuid, and — for a URI — the qualified type and the
+/// What an address names: the uuid, and - for a URI - the qualified type and the
 /// `objectVersion` it spells (Identifier Specification v5.0 §3.4.2, p. 14). A
 /// bare uuid names neither.
 fn address_of(uri: &str) -> Result<Address> {
@@ -4648,7 +4648,7 @@ fn address_of(uri: &str) -> Result<Address> {
     })
 }
 
-/// The uuid an address names — an ETP URI, or a bare uuid for the caller who
+/// The uuid an address names - an ETP URI, or a bare uuid for the caller who
 /// has one in hand.
 fn uuid_in_uri(uri: &str) -> Result<String> {
     if let Ok(parsed) = identifiers::EtpUri::parse(uri)
@@ -4679,7 +4679,7 @@ mod tests {
         // The distinction this exists for, and the hour it costs when it is
         // lost: a build with no HDF5 reported `file not found` for arrays whose
         // `.h5` was sitting beside the package, which sends the reader after
-        // the file, the paths and the `.rels` — everything except the build.
+        // the file, the paths and the `.rels` - everything except the build.
         let location = ArrayLocation {
             field_path: "NodeMd.Values.ExternalDataArrayPart[0]".into(),
             path_in_file: "/resqmlv2/x/node_md".into(),
@@ -4717,7 +4717,7 @@ mod tests {
 
         // A backend exists and every candidate was opened and did not hold the
         // dataset: that one really is a missing file, and must stay one. Only
-        // checkable in a build that has a backend — which is the point.
+        // checkable in a build that has a backend - which is the point.
         #[cfg(feature = "hdf5")]
         {
             let stocked = crate::backend::Backends::compiled_in();

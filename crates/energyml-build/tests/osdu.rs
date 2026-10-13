@@ -20,7 +20,7 @@ fn entry(name: &str, uuid: &str) -> serde_json::Value {
 
 #[test]
 fn a_bare_list_is_a_template() {
-    // *“or simply a list of the columns of this template”* — and the schema
+    // *“or simply a list of the columns of this template”* - and the schema
     // confirms it: `Columns[]` is a list of `AbstractReferencePropertyType`,
     // so the list alone loses nothing.
     let read =
@@ -64,7 +64,7 @@ fn key_columns_are_columns_too() {
 #[test]
 fn a_tabular_data_record_says_how_the_file_reads() {
     // Where the CBTT says what the columns mean, this one says how the
-    // file reads — and carries `AbsentValue`, the sentinel that would otherwise be read
+    // file reads - and carries `AbsentValue`, the sentinel that would otherwise be read
     // as a measurement.
     let record = json!({
         "data": {
@@ -211,8 +211,8 @@ fn a_date_declared_as_text_is_not_a_reason_to_shout() {
     // problem whereas they are just defined as in the resqml objects
     // as text. It is not necessarily a number.”*
     //
-    // The remark of the schema remains true — `UnitOfMeasureID` is reserved there for
-    // `number` — but it describes the **template**, not the file, and it blocks
+    // The remark of the schema remains true - `UnitOfMeasureID` is reserved there for
+    // `number` - but it describes the **template**, not the file, and it blocks
     // nothing: the template reads, the column keeps its unit. This check
     // pins both halves, because hardening one into a refusal would break a
     // template that works.
@@ -230,7 +230,7 @@ fn a_date_declared_as_text_is_not_a_reason_to_shout() {
         "and the remark is made, without refusing"
     );
     // **And it is carried by its column**, so that a front end can mark
-    // the row without searching for its name in the sentence — which would be rereading our
+    // the row without searching for its name in the sentence - which would be rereading our
     // own messages.
     assert_eq!(read.columns[0].notes.len(), 1, "the remark belongs to `DateFin`");
 }
@@ -238,7 +238,7 @@ fn a_date_declared_as_text_is_not_a_reason_to_shout() {
 #[test]
 fn a_columns_remark_survives_the_round_trip() {
     // Otherwise the row would be marked at the first load and would stop
-    // being so as soon as another column is set — the mark would blink without
+    // being so as soon as another column is set - the mark would blink without
     // anything having changed in the template.
     let read = osdu::from_json(&json!([{
         "ColumnName": "Z_MNT",

@@ -16,15 +16,15 @@
 //!
 //! # The pieces
 //!
-//! - `drawn_by` — **the one table** from the kind of representation to the
+//! - `drawn_by` - **the one table** from the kind of representation to the
 //!   targets its geometry draws. A polyline never asks for a face or a volume.
-//! - `ColourCache` — one `ColourWalk` per object: the tiers of the
+//! - `ColourCache` - one `ColourWalk` per object: the tiers of the
 //!   inheritance order already read ([`crate::inherit::Walker::advance`]), what
 //!   each carries **for all five targets**, the answer found for each target,
 //!   and the walk's state, so that it can go on. Asking a target an earlier
 //!   target's tier already answers reads nothing; asking one it does not goes on
 //!   from where the walk stopped, **only** for the targets still unanswered.
-//! - `ColourCache::disturb` — the invalidation: which walks to throw away
+//! - `ColourCache::disturb` - the invalidation: which walks to throw away
 //!   when objects change. Only those that went through one of them.
 //!
 //! # The fallback rule, per target
@@ -34,7 +34,7 @@
 //! order of ranks and distances is the one the design fixes for **any**
 //! information (§2: on a conflict, the shortest path wins); a colour for the faces is one more piece of information, so a
 //! whole-object colour on the object itself (rank 1) beats a faces colour on its
-//! collection (rank 2) — and the faces colour of a tier beats the whole-object
+//! collection (rank 2) - and the faces colour of a tier beats the whole-object
 //! colour of the **same** tier, because there the object has said which one is
 //! meant. Note that the fallback never crosses targets: nodes do not fall back
 //! on faces.
@@ -57,7 +57,7 @@ use energyml_core::identity;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Drawn {
     /// The targets worth asking: a polyline has nodes and edges, never faces.
-    /// Edges are **not** here for a surface — see [`Drawn::edges_follow_faces`].
+    /// Edges are **not** here for a surface - see [`Drawn::edges_follow_faces`].
     pub scopes: &'static [Scope],
     /// The edges are drawn **with the colour of the faces** (the wireframe of a
     /// surface or of a grid's skin): the front end's three.js scene merges them for
@@ -74,7 +74,7 @@ const NO_TARGET: Drawn = Drawn {
 /// **The one table**: representation kind → the targets its geometry draws.
 ///
 /// By the concept's name (`PolylineSetRepresentation`, with or without `obj_`),
-/// like `energyml_geometry`'s registry of readers, whose list this follows —
+/// like `energyml_geometry`'s registry of readers, whose list this follows -
 /// the geometry crate sits above this one, so the table is written here and a
 /// test in that crate holds the two lists together. A kind the table does not
 /// know draws no target of its own: it is asked for the whole object only, which
@@ -84,8 +84,8 @@ const NO_TARGET: Drawn = Drawn {
 /// |---|---|---|
 /// | point set | nodes | a cloud |
 /// | polyline, polyline set, trajectory, frame, WITSML trajectory | nodes, edges | a line and its vertices |
-/// | triangulated set, 2D grid, plane set | nodes, faces — edges follow the faces | a surface and its mesh |
-/// | IJK grid, unstructured grid | nodes, faces, volumes — edges follow the faces | a grid is drawn by its skin; the cells are its volumes |
+/// | triangulated set, 2D grid, plane set | nodes, faces - edges follow the faces | a surface and its mesh |
+/// | IJK grid, unstructured grid | nodes, faces, volumes - edges follow the faces | a grid is drawn by its skin; the cells are its volumes |
 pub fn drawn_by(type_key: &str) -> Drawn {
     let name = type_key.strip_prefix("obj_").unwrap_or(type_key);
     match name {
@@ -122,7 +122,7 @@ pub fn drawn_by(type_key: &str) -> Drawn {
 pub struct Scoped {
     /// The target asked.
     pub scope: Scope,
-    /// What the walk found for it, with its path, its ties and its notes — the
+    /// What the walk found for it, with its path, its ties and its notes - the
     /// same shape [`Cascade::inherited`] answers the whole object with. `None`
     /// for the resolution: neither the target nor the whole object is carried
     /// anywhere the order reaches.
@@ -134,7 +134,7 @@ pub struct Scoped {
     /// of the target named here ([`Drawn::edges_follow_faces`]).
     pub merged_into: Option<Scope>,
     /// When the file gave this target **another** colour than the one it is
-    /// drawn with, which one and where — said, never silently overridden.
+    /// drawn with, which one and where - said, never silently overridden.
     pub merged_note: Option<String>,
 }
 
@@ -148,7 +148,7 @@ impl Scoped {
 /// One object to resolve, and the targets to resolve it for.
 #[derive(Clone, Copy, Debug)]
 pub struct Ask<'a> {
-    /// The **uri** of the object — its full identity, the version it declares
+    /// The **uri** of the object - its full identity, the version it declares
     /// included: two versions of one object are two walks. A bare uuid is the
     /// library's entry adapter, turned into the uri of the index's node for it
     /// ([`crate::inherit::identity_of`]) before anything is keyed.
@@ -164,7 +164,7 @@ pub struct Stats {
     pub walks_begun: u64,
     /// Walks thrown away by [`ColourCache::disturb`] (or by a change of rules).
     pub walks_dropped: u64,
-    /// Tiers read from the order — one more step of a walk.
+    /// Tiers read from the order - one more step of a walk.
     pub tiers_read: u64,
     /// Objects whose graphical information was read (all five targets at once).
     pub objects_read: u64,
@@ -265,7 +265,7 @@ impl ColourWalk {
     }
 
     /// The members of one tier that answer for `scope`: those that give the
-    /// target itself, else — for any target but the whole object — those that
+    /// target itself, else - for any target but the whole object - those that
     /// give the whole object. The flag says which.
     fn pick(tier: &ReadTier, scope: Scope) -> Option<(bool, Vec<&Member>)> {
         let exact: Vec<&Member> = tier
@@ -377,7 +377,7 @@ impl ColourWalk {
     }
 
     /// The answer for `scope`: from the tiers already read when they hold it,
-    /// otherwise by reading further — and only as far as this target needs.
+    /// otherwise by reading further - and only as far as this target needs.
     fn answer(&mut self, env: &Env<'_>, stats: &mut Stats, scope: Scope) -> Scoped {
         let slot = scope.index();
         if let Some(known) = &self.answers[slot] {
@@ -427,7 +427,7 @@ impl Scoped {
 /// **What is cached** is a walk: the tiers of the inheritance order read for an
 /// object, with what each carries for the five targets, and where the walk
 /// stopped. **What it depends on** is every object the walk looked at
-/// ([`WalkState::touched`]) — and nothing else. A change to the package says
+/// ([`WalkState::touched`]) - and nothing else. A change to the package says
 /// which objects it touched ([`PackageIndex::update_with`] returns them;
 /// [`changed_targets`] names the ones whose graphical information moved), and
 /// [`ColourCache::disturb`] throws away the walks that looked at one of them:
@@ -469,7 +469,7 @@ impl ColourCache {
         self.walks.is_empty()
     }
 
-    /// Whether the walk of this object is held — `address` is its uri; a bare
+    /// Whether the walk of this object is held - `address` is its uri; a bare
     /// uuid (the adapter) asks for **any** version of it.
     pub fn holds(&self, address: &str) -> bool {
         let (uuid, version) = identity::parse_address(address);
@@ -491,7 +491,7 @@ impl ColourCache {
     /// Throw away **the walks that looked at one of these objects** and nothing
     /// else. Returns how many.
     ///
-    /// Each name is an address — a uri, which names that version of the object
+    /// Each name is an address - a uri, which names that version of the object
     /// and none other; a bare uuid or a short uri (what the index's updates
     /// still report) names **every version that does not contradict it**, which
     /// is wider than needed, never narrower.
@@ -499,8 +499,8 @@ impl ColourCache {
     /// *How the set is found*: the cache keeps, for each object a walk looked at,
     /// the walks that looked at it (`touching`), so this is a lookup per
     /// disturbed object, not a scan of the walks. What a walk looked at is
-    /// everything it reached, read the links of, or considered as a model — see
-    /// [`WalkState::touched`] — which includes the objects *above* the answer
+    /// everything it reached, read the links of, or considered as a model - see
+    /// [`WalkState::touched`] - which includes the objects *above* the answer
     /// (where it stopped is part of what it read) and not the ones beyond.
     pub fn disturb(&mut self, addresses: &[String]) -> usize {
         let mut doomed: HashSet<String> = HashSet::new();
@@ -597,7 +597,7 @@ impl ColourCache {
         let mut out = Vec::with_capacity(asks.len());
         for ask in asks {
             // The identity of the walk: the uri of the node the index holds for
-            // the address — the one place a bare uuid becomes one.
+            // the address - the one place a bare uuid becomes one.
             let identity = walker.identity(ask.uri);
             let key = identity.to_ascii_lowercase();
             let fresh = !self.walks.contains_key(&key);
@@ -632,7 +632,7 @@ impl ColourCache {
         out
     }
 
-    /// What the tiers **already read** for an object answer for a target — no
+    /// What the tiers **already read** for an object answer for a target - no
     /// walk is resumed. `None` when they do not hold an answer (or the object
     /// is not held): *"not known yet"*, which is not *"nothing"*.
     pub fn peek(&self, index: &PackageIndex, address: &str, scope: Scope) -> Option<Scoped> {
@@ -642,16 +642,16 @@ impl ColourCache {
 }
 
 /// The objects whose graphical information **differs** between two readings of
-/// the package's sets — the targets of every entry that is not the same at the
+/// the package's sets - the targets of every entry that is not the same at the
 /// same position, before or after, **as addresses** (the uris the entries name,
-/// the uuid for one that names no type), sorted — what
+/// the uuid for one that names no type), sorted - what
 /// [`ColourCache::disturb`] takes.
 ///
 /// Positions count, not only content: the sets are laid end to end
 /// ([`GraphicalSet::merged`]) and an entry's position is what
 /// `ActiveColorInformationIndex` and the front end's editor address, so a set that
 /// grows **shifts** every later entry, and a decision that carries the old
-/// position is stale — rightly disturbed.
+/// position is stale - rightly disturbed.
 pub fn changed_targets(old: &GraphicalSet, new: &GraphicalSet) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     for position in 0..old.entries.len().max(new.entries.len()) {

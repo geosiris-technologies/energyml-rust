@@ -2,8 +2,8 @@
 //!
 //! [`crate::inherit::Walker`] knows the order (the object, its collections, its
 //! parents, theirs, up the FIRP chain, then the model) and nothing about
-//! colours; this module gives it the question — *"does this object carry a
-//! default graphical information for the whole object?"* — and keeps what the
+//! colours; this module gives it the question - *"does this object carry a
+//! default graphical information for the whole object?"* - and keeps what the
 //! answer needs to be a colour: the `Decision` with its level, **and the path
 //! that found it**.
 //!
@@ -16,14 +16,14 @@
 //! edges, not on the objects.
 //!
 //! * a **representation** (or any object): itself, its collections, its
-//!   parents and theirs, the model — nothing found is `None`, and the caller
+//!   parents and theirs, the model - nothing found is `None`, and the caller
 //!   keeps the hue of the uuid;
 //! * a **property** (§2.2): the property, its kind, the kind's parents, a
-//!   collection at each step — and **nothing beyond**: no representation, no
+//!   collection at each step - and **nothing beyond**: no representation, no
 //!   model. Nothing found is the view's choice.
 //!
 //! The level of an answer is read from the **path**, not from the rank: the
-//! last step says whether the carrier is a collection, the model, or a parent —
+//! last step says whether the carrier is a collection, the model, or a parent -
 //! and a parent is told apart by the type the index holds for it, like
 //! `color::level_of_reference` does for a reference.
 
@@ -53,7 +53,7 @@ pub struct Ladder {
     pub walked: Walked<Decision>,
     /// **The colour per target** the object's geometry draws
     /// ([`crate::color_walks::drawn_by`]), each walked from the same walk as
-    /// `walked` — the cascade runs once per object, a target the walk had not
+    /// `walked` - the cascade runs once per object, a target the walk had not
     /// yet answered resumes it. Empty for a property and for an object whose
     /// kind draws no target of its own.
     ///
@@ -68,7 +68,7 @@ struct Probe<'c, 'a> {
     /// The first error a colour map reading gave: the predicate cannot return it.
     error: RefCell<Option<Error>>,
     /// Why an object that carries nothing carried nothing (a viewer kind that
-    /// is not ours…), by lowercase uuid — attached to the answers whose path
+    /// is not ours…), by lowercase uuid - attached to the answers whose path
     /// goes through it.
     skipped: RefCell<HashMap<String, Vec<String>>>,
 }
@@ -82,7 +82,7 @@ impl Probe<'_, '_> {
         }
     }
 
-    /// A `ColorInformation` on the object — what a property, its kind or a
+    /// A `ColorInformation` on the object - what a property, its kind or a
     /// collection of either carries.
     fn colour(&self, objects: &dyn ObjectSource, uuid: &str) -> Option<Decision> {
         let mut notes = Vec::new();
@@ -156,7 +156,7 @@ fn relevel(index: &PackageIndex, property: bool, resolution: &mut Resolution<Dec
 impl<'a> Cascade<'a> {
     /// What one object inherits, by the order of ADR-0009.
     ///
-    /// `Ok` with `resolution: None` is an answer — the walk found nothing and
+    /// `Ok` with `resolution: None` is an answer - the walk found nothing and
     /// says why in `notes`; the caller keeps the hue of the uuid.
     pub fn inherited(
         &self,
@@ -172,7 +172,7 @@ impl<'a> Cascade<'a> {
     /// collection that two thousand wells share is asked once
     /// (what is per package is paid once per package).
     ///
-    /// The whole object, through [`ColourCache`] — the one implementation of the
+    /// The whole object, through [`ColourCache`] - the one implementation of the
     /// walk of an object's colour; here the cache lives for the call.
     pub fn inherited_all<S: AsRef<str>>(
         &self,
@@ -195,7 +195,7 @@ impl<'a> Cascade<'a> {
 
     /// What a **property** inherits (§2.2): itself, its kind, the kind's
     /// parents, a collection at each step, and nothing beyond. `kinds` is the
-    /// kind then its parents, nearest first — `Request::kind_chain`.
+    /// kind then its parents, nearest first - `Request::kind_chain`.
     pub fn inherited_property(
         &self,
         index: &PackageIndex,
@@ -218,7 +218,7 @@ impl<'a> Cascade<'a> {
         Ok(walked)
     }
 
-    /// `inherit = false`: only what the object carries itself — and the walk's
+    /// `inherit = false`: only what the object carries itself - and the walk's
     /// notes say that nothing else was looked at.
     fn own_only(&self, identity: &str, has: impl Fn(&str) -> Option<Decision>) -> Walked<Decision> {
         match has(identity) {
@@ -274,13 +274,13 @@ impl<'a> Cascade<'a> {
         walked.notes = resolution.notes.clone();
     }
 
-    /// The ladder of each request — rungs to choose from, the order's pick, and
-    /// the path — **one walker for the batch**.
+    /// The ladder of each request - rungs to choose from, the order's pick, and
+    /// the path - **one walker for the batch**.
     ///
     /// A request with a `property` is walked as a property (§2.2) and its rungs
     /// are the property and its kinds; any other is walked as an object, and its
     /// rungs are the object and what it represents, as [`Cascade::chain`] lists
-    /// them, plus the collections and the model **on the path that answered** —
+    /// them, plus the collections and the model **on the path that answered** -
     /// each right after the rung it was reached from, so the order of the list
     /// is still the order the walk went.
     ///
@@ -302,7 +302,7 @@ impl<'a> Cascade<'a> {
     /// it): a polyline asks nodes and edges, never faces. The walk is resumed
     /// for a target the tiers already read do not answer, and for that target
     /// only. A surface's edges are not asked: they are drawn with its faces,
-    /// and `targets` says so — and says when the file gave them another colour,
+    /// and `targets` says so - and says when the file gave them another colour,
     /// if the walk had read it on the way.
     pub fn ladders_cached(
         &self,
@@ -454,7 +454,7 @@ impl<'a> Cascade<'a> {
 }
 
 /// The edges of a surface, which are drawn with its faces: the faces'
-/// answer, named for the edges — and, when the walk had already read another
+/// answer, named for the edges - and, when the walk had already read another
 /// colour for the edges, **which one**, so it is not silently overridden.
 fn merged_edges(cache: &ColourCache, index: &PackageIndex, address: &str, targets: &[Scoped]) -> Scoped {
     let uuid = uuid_of_identity(address);
@@ -474,7 +474,7 @@ fn merged_edges(cache: &ColourCache, index: &PackageIndex, address: &str, target
     };
     edges.scope = Scope::Edges;
     edges.merged_into = Some(Scope::Faces);
-    // What the file says for the edges, from the tiers the walk has read — a peek:
+    // What the file says for the edges, from the tiers the walk has read - a peek:
     // the walk is not resumed for a colour that is not drawn.
     if let Some(own) = cache.peek(index, address, Scope::Edges)
         && let Some(theirs) = own.decision()

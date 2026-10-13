@@ -1,4 +1,4 @@
-//! The **BRGM chronostratigraphic chart** — the register `GeolTs` published at
+//! The **BRGM chronostratigraphic chart** - the register `GeolTs` published at
 //! `https://data.geoscience.fr/ncl/GeolTs`, and the ages of its bounds
 //! (`GeolTsBound`).
 //!
@@ -11,10 +11,10 @@
 //! Each concept has a **perennial URI** (the Priabonien is `GeolTs/1263`), its
 //! place in the hierarchy (`skos:broader`), its level (stage, series…), the
 //! chart's colour and the ages of its two bounds. A stable uuid is derived from
-//! the URI by the writer — the same Priabonien in every package, with no table
+//! the URI by the writer - the same Priabonien in every package, with no table
 //! of correspondences to keep. And a code found in a borehole file is looked up
 //! here: measured on a partner borehole corpus, the five `STRA` codes are the
-//! register's `skos:notation` — once the label disambiguates, since `e7` alone
+//! register's `skos:notation` - once the label disambiguates, since `e7` alone
 //! names four concepts.
 //!
 //! # A snapshot, compacted at build time
@@ -24,7 +24,7 @@
 //! CC BY 4.0, BRGM), are compacted by `build.rs` like the property kind
 //! dictionary: the same scanner reads a fresh export at run time
 //! ([`Chart::from_csv`]), so the two cannot disagree. `build.rs` fails the build
-//! when either file is absent or unreadable — never an empty chart.
+//! when either file is absent or unreadable - never an empty chart.
 //!
 //! # What is decided here, and said
 //!
@@ -33,7 +33,7 @@
 //!   Eocene (series), and a tree has one parent. The others are kept;
 //! - **youngest first**, the order RESQML's `age` criterion states (*"from
 //!   youngest to oldest period"*, TRG 2.2 §6.34): by the young end, then the
-//!   old end. A concept without ages is not placed by a guess — see
+//!   old end. A concept without ages is not placed by a guess - see
 //!   [`Chart::by_age`].
 
 use std::collections::HashMap;
@@ -77,17 +77,17 @@ pub struct Concept {
     pub ends_ma: Option<f64>,
     /// `valid`, `retired`, `submitted`.
     pub status: String,
-    /// Where it applies — `Monde`, `Europe`, `Bassin de Paris`…
+    /// Where it applies - `Monde`, `Europe`, `Bassin de Paris`…
     pub spatial: String,
-    /// The reference it is taken from — `Gradstein et al. (2012)` —, or empty.
+    /// The reference it is taken from - `Gradstein et al. (2012)` -, or empty.
     pub source: String,
     /// The register's note on it, or empty.
     pub note: String,
     /// Its other names.
     pub alt_labels: Vec<String>,
-    /// Whether its base is defined by a GSSP — a point in a reference section.
+    /// Whether its base is defined by a GSSP - a point in a reference section.
     pub gssp: bool,
-    /// Whether its base is defined by a GSSA — an age.
+    /// Whether its base is defined by a GSSA - an age.
     pub gssa: bool,
 }
 
@@ -114,8 +114,8 @@ impl Concept {
         }
     }
 
-    /// Whether it is the chart's reference division — not a regional,
-    /// usual, obsolete or informal one — and still valid.
+    /// Whether it is the chart's reference division - not a regional,
+    /// usual, obsolete or informal one - and still valid.
     pub fn is_reference(&self) -> bool {
         self.nature == 1 && self.status == "valid"
     }
@@ -211,7 +211,7 @@ impl Chart {
         self.concepts.len()
     }
 
-    /// Whether it holds nothing — a chart handed to `Chart::of` with nothing in it.
+    /// Whether it holds nothing - a chart handed to `Chart::of` with nothing in it.
     pub fn is_empty(&self) -> bool {
         self.concepts.is_empty()
     }
@@ -295,7 +295,7 @@ impl Chart {
     ///
     /// The order is what a `StratigraphicColumnRankInterpretation` lists, and
     /// an order guessed for a unit whose ages the register does not state would
-    /// put it anywhere — with nothing in the column to say so.
+    /// put it anywhere - with nothing in the column to say so.
     pub fn by_age(&self, ids: &[u32]) -> Result<Vec<&Concept>, String> {
         let mut found: Vec<&Concept> = Vec::new();
         let mut undated: Vec<String> = Vec::new();
@@ -317,12 +317,12 @@ impl Chart {
         Ok(found)
     }
 
-    /// The concept a **code and its label** name — how a borehole file writes
+    /// The concept a **code and its label** name - how a borehole file writes
     /// a stratigraphy (`STRA` = `e7`, `Nom_STRA` = `Priabonien`).
     ///
     /// The code alone is ambiguous by construction (`e7` names four concepts),
     /// so the label decides; compared without case, in French or English.
-    /// `Ok(None)` is *the chart knows no such pair* — a local unit, or `n.d.`;
+    /// `Ok(None)` is *the chart knows no such pair* - a local unit, or `n.d.`;
     /// several matches are a refusal naming them.
     pub fn find(&self, code: &str, label: &str) -> Result<Option<&Concept>, String> {
         let code = code.trim();
@@ -337,7 +337,7 @@ impl Chart {
             [] => Ok(None),
             [one] => Ok(Some(one)),
             many => Err(format!(
-                "`{code}` `{label}` names {} concepts of the chart — {}",
+                "`{code}` `{label}` names {} concepts of the chart - {}",
                 many.len(),
                 many.iter().map(|one| one.uri()).collect::<Vec<_>>().join(", ")
             )),
@@ -370,11 +370,11 @@ impl Chart {
         };
         match found.as_slice() {
             [] => Err(format!(
-                "no concept of the chart is called `{text}` — give its label, its code or its id"
+                "no concept of the chart is called `{text}` - give its label, its code or its id"
             )),
             [one] => Ok(one),
             many => Err(format!(
-                "`{text}` names {} concepts — {}; give the id",
+                "`{text}` names {} concepts - {}; give the id",
                 many.len(),
                 many.iter()
                     .map(|one| format!("{} {} ({})", one.id, one.label, one.level_name()))
@@ -420,7 +420,7 @@ pub fn with_default<T>(f: impl FnOnce(&Chart) -> T) -> T {
     f(&guard)
 }
 
-/// Replace the chart in use — a fresh export, or a test's own extract.
+/// Replace the chart in use - a fresh export, or a test's own extract.
 pub fn set_default(chart: Chart) {
     let mut guard = slot()
         .write()

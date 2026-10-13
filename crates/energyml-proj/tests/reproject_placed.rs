@@ -1,17 +1,17 @@
 //! `energyml_domain::reproject::reproject_placed`, exercised over two real
-//! French systems — the pair from a bug report: a SIGEOL
+//! French systems - the pair from a bug report: a SIGEOL
 //! package in EPSG:2154 (RGF93 / Lambert-93) and another producer's package in
 //! EPSG:3949 (RGF93 / CC49), both meant to sit in the same corner of the
 //! Paris basin.
 //!
 //! Two things worth knowing about this pair before reading the numbers:
 //! neither system needs a datum shift to reach the other (both are RGF93 on
-//! GRS80, `+towgs84=0,0,0,0,0,0,0` — see `crs-definitions`), so nothing here
+//! GRS80, `+towgs84=0,0,0,0,0,0,0` - see `crs-definitions`), so nothing here
 //! exercises the datum-check this crate is otherwise built around; and both
 //! are already in metres, so the unit-conversion half of `reproject_placed`
 //! is the identity on every leg below. What this file pins is the other
 //! half: that going through the backend and back returns to the start, and
-//! that a direct hop agrees with going by way of WGS 84 — two roads to the
+//! that a direct hop agrees with going by way of WGS 84 - two roads to the
 //! same place, which is the property a scene with a "keep the system while
 //! the scene is non-empty" rule depends on.
 
@@ -19,7 +19,7 @@ use energyml_domain::reproject::{System, Wgs84, reproject_placed};
 use energyml_proj::Proj4;
 
 /// A point in the area both packages describe (from the bug report:
-/// SIGEOL lon 2.12–2.73 / lat 48.73–49.01), in Lambert-93 metres, with a
+/// SIGEOL lon 2.12-2.73 / lat 48.73-49.01), in Lambert-93 metres, with a
 /// depth that must survive every leg untouched.
 const LAMBERT_93: [f64; 3] = [650_000.0, 6_860_000.0, -123.4];
 
@@ -57,7 +57,7 @@ fn the_direct_hop_agrees_with_going_by_way_of_wgs_84() {
 
     let direct = reproject_placed(&[LAMBERT_93], &metres(), &cc49(), &backend).unwrap();
 
-    // WGS 84 is geographic, not projected — its horizontal coordinates are
+    // WGS 84 is geographic, not projected - its horizontal coordinates are
     // degrees, not a length `units::metres` can convert. Labelling it `"m"`
     // here keeps `reproject_placed`'s own unit step an identity on both legs
     // that touch it, so what is actually being compared is the backend's

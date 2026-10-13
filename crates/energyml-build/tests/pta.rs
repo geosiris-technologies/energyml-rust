@@ -1,10 +1,10 @@
-//! `pressure-transient-analysis` — a PTA of a flow test, one homogeneous layer,
+//! `pressure-transient-analysis` - a PTA of a flow test, one homogeneous layer,
 //! citing the grid properties that distribute its permeability and porosity
 //!.
 //!
 //! Every object is read back through `energyml_core::json::read_value` into
 //! the generated PRODML 2.3 type before anything is asserted: a field written
-//! under the wrong name, or a required one left out, fails there — not in an
+//! under the wrong name, or a required one left out, fails there - not in an
 //! assertion on a JSON the operation itself shaped.
 //!
 //! # What would have to break to make each test turn red
@@ -44,26 +44,26 @@ fn bag() -> Pieces {
     Pieces::empty()
         .with(
             "test",
-            object(TEST, "prodml23.InjectionFlowTest", "GTH-2 — injection test"),
+            object(TEST, "prodml23.InjectionFlowTest", "GTH-2 - injection test"),
         )
         .with(
             "permeabilityArray",
             object(
                 PERMEABILITY,
                 "resqml22.ContinuousProperty",
-                "grid — permeability (kx)",
+                "grid - permeability (kx)",
             ),
         )
         .with(
             "porosityArray",
-            object(POROSITY, "resqml22.ContinuousProperty", "grid — porosity"),
+            object(POROSITY, "resqml22.ContinuousProperty", "grid - porosity"),
         )
 }
 
 fn choices() -> Choices {
     Choices::new()
-        .set("title", "GTH-2 — injection test analysis")
-        .set("source", "synthetic — a trial source; to be sourced")
+        .set("title", "GTH-2 - injection test analysis")
+        .set("source", "synthetic - a trial source; to be sourced")
         .set("testPeriod", "step-rate")
         .set("permeability", 5.0)
         .set("thickness", 95.0)
@@ -159,7 +159,7 @@ fn a_grid_property_makes_the_model_numerical_and_is_cited() {
 fn without_a_grid_property_the_model_is_analytical() {
     let pieces = Pieces::empty().with(
         "test",
-        object(TEST, "prodml23.InjectionFlowTest", "GTH-2 — injection test"),
+        object(TEST, "prodml23.InjectionFlowTest", "GTH-2 - injection test"),
     );
     let plan = planned(&pieces, choices()).unwrap_or_else(|why| panic!("{why}"));
     let (_, analysis) = the_analysis(&plan);
@@ -174,7 +174,7 @@ fn without_a_grid_property_the_model_is_analytical() {
     assert_eq!(analysis.is_numerical_analysis, Some(false));
 }
 
-/// **The constants, with their units, and k·h their product** — both models
+/// **The constants, with their units, and k·h their product** - both models
 /// require them.
 #[test]
 fn the_constants_are_written_with_their_units() {
@@ -237,7 +237,7 @@ fn the_analysis_names_its_test_and_the_period() {
 fn an_object_that_is_no_flow_test_is_refused() {
     let pieces = Pieces::empty().with(
         "test",
-        object(TEST, "prodml23.ProductionWellTests", "GTH-2 — well tests"),
+        object(TEST, "prodml23.ProductionWellTests", "GTH-2 - well tests"),
     );
     let why = planned(&pieces, choices()).unwrap_err();
     assert!(

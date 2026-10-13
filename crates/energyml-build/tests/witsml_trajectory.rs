@@ -1,4 +1,4 @@
-//! **A WITSML trajectory read back where its RESQML well is** — the round trip
+//! **A WITSML trajectory read back where its RESQML well is** - the round trip
 //! `witsml-wells` → `energyml_geometry` over two independent code paths.
 //!
 //! The writer derives each station's inclination and azimuth from positions:
@@ -7,8 +7,8 @@
 //! the method run **forward**, from the datum the trajectory names and in the
 //! north its `AziRef` states (`energyml_geometry::stations`). Neither is asked
 //! to check itself: what they must both agree with is the third source, the
-//! holes drawn **by hand** here — straight lines and circles of radius
-//! `R = 30 / (15° in radians)`, an arc at 15°/30 m — placed by hand through the
+//! holes drawn **by hand** here - straight lines and circles of radius
+//! `R = 30 / (15° in radians)`, an arc at 15°/30 m - placed by hand through the
 //! compound (common TRG 2.3 §13.25 p. 371: a reference point in a compound is
 //! local to it).
 //!
@@ -17,8 +17,8 @@
 //! order of a Lambert-93 northing (6.86e6 m, whose last digit is ~1e-9 m)
 //! differenced and summed over thirty chords.
 //!
-//! Two frames: one where the compound **is** the projected system — the writer
-//! then says grid north — and one offset and turned 30°, where it says plant
+//! Two frames: one where the compound **is** the projected system - the writer
+//! then says grid north - and one offset and turned 30°, where it says plant
 //! north (*“a direction in a local engineering coordinate reference system”*,
 //! eml 2.3 `NorthReferenceKind`) and the reader must turn the hole with the
 //! compound.
@@ -34,7 +34,7 @@ const PLANE: &str = "0d0d0d0d-0000-4000-8000-000000000001";
 const VERTICAL: &str = "0d0d0d0d-0000-4000-8000-000000000002";
 const COMPOUND: &str = "0d0d0d0d-0000-4000-8000-000000000003";
 
-/// A micrometre — see the module.
+/// A micrometre - see the module.
 const TOLERANCE: f64 = 1e-6;
 
 /// The radius of an arc at 15°/30 m: 114.59 m.
@@ -73,7 +73,7 @@ impl Frame {
         }
     }
 
-    /// A point on the map, into the frame's local axes — **by hand**, so the
+    /// A point on the map, into the frame's local axes - **by hand**, so the
     /// holes are drawn on the map and stored locally. The local x axis is
     /// (cos A, −sin A) on the map and the local y axis (sin A, cos A), for an
     /// azimuth A turned clockwise from grid north; so a map offset (dx, dy)
@@ -103,7 +103,7 @@ struct Hole {
     interpretation: &'static str,
     datum: &'static str,
     head: [f64; 3],
-    /// Measured depth, and where the node is **on the map** — easting,
+    /// Measured depth, and where the node is **on the map** - easting,
     /// northing, elevation.
     nodes: Vec<(f64, [f64; 3])>,
 }
@@ -126,7 +126,7 @@ fn gth3() -> Hole {
 }
 
 /// GTH-3 ST1: leaves GTH-3 at MD 40, builds at 15°/30 m to 45° toward the
-/// **north-east** (azimuth 45) — 90 m of arc, to MD 130 — then holds to MD
+/// **north-east** (azimuth 45) - 90 m of arc, to MD 130 - then holds to MD
 /// 170. After a turn θ the hole is R (1 − cos θ) along the azimuth and
 /// R sin θ down of the kick-off.
 fn st1() -> Hole {
@@ -169,7 +169,7 @@ fn st1() -> Hole {
 }
 
 /// GTH-2: vertical to MD 30 from its datum at 47 m, an arc at 15°/30 m to the
-/// horizontal toward the **west** — 90° is 180 m of hole, to MD 210 — then a
+/// horizontal toward the **west** - 90° is 180 m of hole, to MD 210 - then a
 /// drain to MD 300.
 fn gth2() -> Hole {
     let head = [651_595.0, 6_861_145.0, 47.0];
@@ -289,7 +289,7 @@ fn package(frame: Frame, heads: &[&Hole]) -> EpcStore {
             .put(Box::new(eml::ReferencePointInALocalEngineeringCompoundCrs {
                 uuid: hole.datum.into(),
                 schema_version: "2.3".into(),
-                citation: citation(&format!("{} — datum", hole.name)),
+                citation: citation(&format!("{} - datum", hole.name)),
                 horizontal_coordinates: Some(eml::HorizontalCoordinates {
                     coordinate1: x,
                     coordinate2: y,
@@ -325,7 +325,7 @@ fn frame_of(hole: &Hole, frame: Frame) -> (Source, Known) {
         reference: Some(Ref::new(
             hole.frame,
             "resqml22.WellboreFrameRepresentation",
-            format!("{} — frame", hole.name),
+            format!("{} - frame", hole.name),
         )),
         crs: Some(Ref::new(
             COMPOUND,
@@ -337,7 +337,7 @@ fn frame_of(hole: &Hole, frame: Frame) -> (Source, Known) {
         interpretation: Some(Ref::new(
             hole.interpretation,
             "resqml22.WellboreInterpretation",
-            format!("{} — interpretation", hole.name),
+            format!("{} - interpretation", hole.name),
         )),
         vertical_uom: Some("m".into()),
         vertical_up: Some(frame.down_from.is_none()),
@@ -348,12 +348,12 @@ fn frame_of(hole: &Hole, frame: Frame) -> (Source, Known) {
         trajectory: Some(Ref::new(
             hole.trajectory,
             "resqml22.WellboreTrajectoryRepresentation",
-            format!("{} — trajectory", hole.name),
+            format!("{} - trajectory", hole.name),
         )),
         datum: Some(Ref::new(
             hole.datum,
             "eml23.ReferencePointInALocalEngineeringCompoundCrs",
-            format!("{} — datum", hole.name),
+            format!("{} - datum", hole.name),
         )),
         ..Default::default()
     };
@@ -392,8 +392,8 @@ fn planned(holes: &[Hole], frame: Frame) -> Plan {
         .unwrap_or_else(|why| panic!("witsml-wells plans: {why}"))
 }
 
-/// The plan's trajectory of that title, read back from its JSON — the road
-/// `apply` takes — and put in the package beside its datum.
+/// The plan's trajectory of that title, read back from its JSON - the road
+/// `apply` takes - and put in the package beside its datum.
 fn stored(plan: &Plan, store: &mut EpcStore, title: &str) -> witsml::Trajectory {
     let object: &NewObject = plan
         .objects
@@ -432,7 +432,7 @@ fn drawn(store: &EpcStore, trajectory: &witsml::Trajectory) -> Vec<[f64; 3]> {
 }
 
 /// The largest distance between what was drawn and the hand-made hole at the
-/// same measured depths — `expected` looked up by MD, which is the one thing
+/// same measured depths - `expected` looked up by MD, which is the one thing
 /// both sides state.
 fn worst(trajectory: &witsml::Trajectory, found: &[[f64; 3]], expected: &[(f64, [f64; 3])]) -> f64 {
     assert_eq!(
@@ -472,15 +472,15 @@ fn round_trip(frame: Frame, north: eml::NorthReferenceKind) {
     let plan = planned(&holes, frame);
     let mut store = package(frame, &[&holes[0], &holes[2]]);
     for (title, expected) in [
-        ("GTH-3 — trajectory", holes[0].nodes.clone()),
-        ("GTH-3 ST1 — trajectory", composite(&holes[0], &holes[1])),
-        ("GTH-2 — trajectory", holes[2].nodes.clone()),
+        ("GTH-3 - trajectory", holes[0].nodes.clone()),
+        ("GTH-3 ST1 - trajectory", composite(&holes[0], &holes[1])),
+        ("GTH-2 - trajectory", holes[2].nodes.clone()),
     ] {
         let trajectory = stored(&plan, &mut store, title);
         assert_eq!(
             trajectory.azi_ref,
             Some(north.clone()),
-            "{title}: the writer's north — the premise of this frame"
+            "{title}: the writer's north - the premise of this frame"
         );
         assert!(
             trajectory
@@ -488,7 +488,7 @@ fn round_trip(frame: Frame, north: eml::NorthReferenceKind) {
                 .iter()
                 .skip(1)
                 .any(|s| s.azi.is_some())
-                || title == "GTH-3 — trajectory",
+                || title == "GTH-3 - trajectory",
             "{title}: a deviated hole carries azimuths"
         );
         let found = drawn(&store, &trajectory);
@@ -503,7 +503,7 @@ fn round_trip(frame: Frame, north: eml::NorthReferenceKind) {
 fn stations_written_in_grid_north_land_back_on_the_resqml_hole() {
     // To break: the forward method with a wrong ratio factor, the azimuth's
     // east and north swapped, the datum not placed, TVD added rather than
-    // subtracted — each moves a deviated hole metres off.
+    // subtracted - each moves a deviated hole metres off.
     round_trip(Frame::identity(), eml::NorthReferenceKind::GridNorth);
 }
 
@@ -511,7 +511,7 @@ fn stations_written_in_grid_north_land_back_on_the_resqml_hole() {
 /// writer says plant north, and the reader must turn the hole with it.
 #[test]
 fn stations_written_in_plant_north_land_back_on_the_resqml_hole() {
-    // To break: plant north read as grid north — GTH-2's 185 m drain would
+    // To break: plant north read as grid north - GTH-2's 185 m drain would
     // swing 30° and end ~96 m away.
     round_trip(Frame::turned(), eml::NorthReferenceKind::PlantNorth);
 }

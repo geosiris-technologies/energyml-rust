@@ -1,4 +1,4 @@
-//! `graphical-information` — the colours a package chooses: one
+//! `graphical-information` - the colours a package chooses: one
 //! `eml23.GraphicalInformationSet` whose entries give objects a constant
 //! colour (`DefaultGraphicalInformation`) and draw properties through a colour
 //! map (`ColorInformation`).
@@ -13,14 +13,14 @@
 //! # One writer of an entry, and it is the domain's
 //!
 //! A `GraphicalInformationSet` is an EML 2.3 object whose entries are RESQML
-//! 2.2 classes — *« Currently, only RESQML v2.2 specifies detailed graphical
-//! information »* (common v2.3 `GraphicalInformation.xsd` l. 13) — so the
+//! 2.2 classes - *« Currently, only RESQML v2.2 specifies detailed graphical
+//! information »* (common v2.3 `GraphicalInformation.xsd` l. 13) - so the
 //! generated field is a subtree (`AnyXml`), and writing an entry means writing
 //! that subtree. `energyml_domain::color::constant_colour_entry` and
 //! `colour_map_entry` do exactly that, against the reader the rest of the
 //! workspace uses (`GraphicalSet::read`): this module calls them and writes no
 //! XML of its own. A second writer would be a second place for the same
-//! errors — an operation that writes the same object as another delegates to it (ADR-0017).
+//! errors - an operation that writes the same object as another delegates to it (ADR-0017).
 //!
 //! What that writer fixes is therefore fixed here too, and said in the plan:
 //! `ViewerKind` is `3d` and `IsVisible` true on every constant colour.
@@ -30,8 +30,8 @@
 //! - **a constant colour per object of `targets`**, one
 //!   `DefaultGraphicalInformation` each, in their order: *« Either for
 //!   Feature, Interp or representation, marker »* (RESQML TRG 2.2 §4.10
-//!   p. 61). The cascade is three of them with the same `HsvColor`
-//!   — the reference model's ×3 — and **one entry per object** is what
+//!   p. 61). The cascade is three of them with the same `HsvColor` -
+//!   the reference model's ×3 - and **one entry per object** is what
 //!   keeps each one recolourable alone: `energyml_domain::color::set_constant_colour`
 //!   refuses to recolour one object of a shared entry, rightly, since it would
 //!   take the colour from the others;
@@ -43,15 +43,15 @@
 //!   (the inheritance-resolution rules, ranks 2 and 4).
 //!   The writer is the same; what the standard leaves unsaid is what the
 //!   walk of `energyml_domain::color_inherit` decides;
-//! - **`shared`** writes one entry naming every object instead —
+//! - **`shared`** writes one entry naming every object instead -
 //!   `TargetObject` is `1..unbounded` in eml 2.3 (`GraphicalInformation.xsd`
-//!   l. 19) — and then takes one colour;
+//!   l. 19) - and then takes one colour;
 //! - **a colour map on the objects of `mapped`**, one `ColorInformation` each
 //!   (or one for all under `shared`), with its `MinMax`, its two required flags
 //!   and its optional `ValueVectorIndex` (`GraphicalInformationObject.xsd`
-//!   l. 257–288). *« Used for properties and property kinds and for geometry.
+//!   l. 257-288). *« Used for properties and property kinds and for geometry.
 //!   In the latter case, we need to point to the representation »* (TRG 2.2
-//!   §4.5 p. 56). The map is an object that **exists** — the writer's own rule
+//!   §4.5 p. 56). The map is an object that **exists** - the writer's own rule
 //!   (a rule of the colours design); `colormap` makes one.
 //!
 //! The constant colours come first, then the colour maps, each in the order
@@ -65,11 +65,11 @@
 //! one form is accepted, the one every colour picker gives and the one
 //! `Rgba::to_hex` prints. An HSV text is **not** accepted: through that writer
 //! it would go to RGB and back, and the four numbers written would not be the
-//! four typed — a neighbour colour, written without a word. The day the domain
+//! four typed - a neighbour colour, written without a word. The day the domain
 //! writes an `HsvColor` as given, a second form can join this slot.
 //!
 //! A colour that does not read is **refused by name**, every one of them at
-//! once — never replaced by a default colour, which would be a colour nobody
+//! once - never replaced by a default colour, which would be a colour nobody
 //! chose that looks exactly like one somebody did.
 //!
 //! # What is refused
@@ -78,26 +78,26 @@
 //!   and no map (a `ColorInformation` without a map names no colour);
 //! - an object of the wrong kind **on its slot**: a constant colour on
 //!   something that is no feature, interpretation, representation, marker or
-//!   collection (TRG 2.2 §4.10 p. 61, and the house's collection) — a property takes its colours through a map; a
+//!   collection (TRG 2.2 §4.10 p. 61, and the house's collection) - a property takes its colours through a map; a
 //!   colour map on something that is no property, property kind or
 //!   representation (§4.5 p. 56); a `colourMap` that is no
 //!   `ContinuousColorMap` or `DiscreteColorMap`, the schema's only two (TRG 2.2
 //!   §4.1 p. 51, `ColorInformation.ColorMap` → `AbstractColorMap`);
 //! - as many colours as neither one nor the objects; one object given twice
-//!   in two colours — two statements about one object in one set is a question
+//!   in two colours - two statements about one object in one set is a question
 //!   the set would leave to its reader (`set_constant_colour`'s own reason);
 //! - an element scope (`nodes`, `edges`, `faces`, `volumes`) on what is no
-//!   representation: indexable elements are a representation's — *« Each
+//!   representation: indexable elements are a representation's - *« Each
 //!   property is "attached" to the indexable elements of a representation »*
 //!   (TRG 2.2 §8 p. 232);
 //! - a setting of a map without a map; `minimum` without `maximum` or the
 //!   reverse (`MinMax` carries both, `GraphicalInformationObject.xsd`
-//!   l. 579–592); a range whose minimum is not below its maximum — an interval
+//!   l. 579-592); a range whose minimum is not below its maximum - an interval
 //!   of nothing, and `reverse` is how the colours go the other way; a
-//!   logarithmic mapping over a range that reaches zero or below — *« the log
-//!   of the property values »* (l. 269–273) has no value there; a
+//!   logarithmic mapping over a range that reaches zero or below - *« the log
+//!   of the property values »* (l. 269-273) has no value there; a
 //!   `valueVectorIndex` past the last component of a property that states its
-//!   count (`KnownProperty::value_count`) — *an index into the data*, never
+//!   count (`KnownProperty::value_count`) - *an index into the data*, never
 //!   into the map (`energyml_domain::color`, module documentation).
 //!
 //! # What is not written, and why
@@ -117,7 +117,7 @@
 //!
 //! # Identity
 //!
-//! The same content is the same uuid: the title and every entry — each
+//! The same content is the same uuid: the title and every entry - each
 //! object's uuid and its colour as `#rrggbbaa`, the scope, `shared`; the map,
 //! its objects, its range, its flags and its component. `#FF0000` and
 //! `#ff0000ff` are one colour, so one set. Another colour is another set, and
@@ -138,25 +138,25 @@ use crate::pieces::Pieces;
 /// The operation.
 pub struct GraphicalInformation;
 
-/// What of an object a constant colour covers — the concrete class of the
+/// What of an object a constant colour covers - the concrete class of the
 /// `IndexableElementInfo` (`GraphicalInformationObject.xsd` l. 401), one of the
 /// five `AbstractGraphicalInformationForIndexableElement` the schema has.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
 pub enum Covers {
-    /// The whole object — `GraphicalInformationForWholeObject`.
+    /// The whole object - `GraphicalInformationForWholeObject`.
     WholeObject,
-    /// Its nodes — `GraphicalInformationForNodes`.
+    /// Its nodes - `GraphicalInformationForNodes`.
     Nodes,
-    /// Its edges — `GraphicalInformationForEdges`.
+    /// Its edges - `GraphicalInformationForEdges`.
     Edges,
-    /// Its faces — `GraphicalInformationForFaces`.
+    /// Its faces - `GraphicalInformationForFaces`.
     Faces,
-    /// Its volumes — `GraphicalInformationForVolumes`.
+    /// Its volumes - `GraphicalInformationForVolumes`.
     Volumes,
 }
 
 impl Covers {
-    /// The domain's word for it — the one `constant_colour_entry` writes from.
+    /// The domain's word for it - the one `constant_colour_entry` writes from.
     fn scope(self) -> Scope {
         match self {
             Covers::WholeObject => Scope::WholeObject,
@@ -173,7 +173,7 @@ impl Covers {
 pub struct GraphicalInformationParams {
     /// the set's title
     pub title: Title,
-    /// the colours of `targets`, #rrggbb or #rrggbbaa — one for all of them, or one per object in their order
+    /// the colours of `targets`, #rrggbb or #rrggbbaa - one for all of them, or one per object in their order
     ///
     /// RGB because that is what the domain writer takes; see the module.
     #[param(ordered)]
@@ -181,12 +181,12 @@ pub struct GraphicalInformationParams {
     /// what of each object the colour covers: the whole object, or the nodes, edges, faces or volumes of a representation
     #[param(default = Covers::WholeObject, optional)]
     pub scope: Covers,
-    /// one entry naming every object, rather than one entry per object — one colour then
+    /// one entry naming every object, rather than one entry per object - one colour then
     #[param(default = false, optional)]
     pub shared: bool,
-    /// with a colour map: the property value drawn with the map's lowest colour — lower values too
+    /// with a colour map: the property value drawn with the map's lowest colour - lower values too
     pub minimum: Option<f64>,
-    /// with a colour map: the property value drawn with the map's highest colour — higher values too
+    /// with a colour map: the property value drawn with the map's highest colour - higher values too
     pub maximum: Option<f64>,
     /// with a colour map: place the logarithm of the values on it
     #[param(default = false, optional)]
@@ -202,7 +202,7 @@ pub struct GraphicalInformationParams {
 /// What `graphical-information` takes.
 #[derive(Debug, Inputs)]
 pub struct GraphicalInformationInputs {
-    /// the objects a constant colour goes on — features, interpretations, representations, markers, collections — in the order of `colours`
+    /// the objects a constant colour goes on - features, interpretations, representations, markers, collections - in the order of `colours`
     ///
     /// No type is proposed first: every feature, interpretation and
     /// representation of the package is a candidate, and the refusal of
@@ -217,7 +217,7 @@ pub struct GraphicalInformationInputs {
     pub mapped: Vec<ObjectIn>,
 }
 
-/// The two colour maps the schema has — the same two the `colourMap` slot
+/// The two colour maps the schema has - the same two the `colourMap` slot
 /// proposes first (TRG 2.2 §4.1 p. 51: `ColorInformation.ColorMap` →
 /// `AbstractColorMap`, whose concrete classes are these).
 const COLOUR_MAPS: &[&str] = &["resqml22.ContinuousColorMap", "resqml22.DiscreteColorMap"];
@@ -229,7 +229,7 @@ impl Operation for GraphicalInformation {
     fn about(&self) -> About {
         About {
             name: "graphical-information",
-            describe: "a graphical information set — a constant colour on features, interpretations and representations, and properties drawn through a colour map",
+            describe: "a graphical information set - a constant colour on features, interpretations and representations, and properties drawn through a colour map",
             category: Category::Properties,
             makes: &["eml23.GraphicalInformationSet"],
             recipe: "graphical-information",
@@ -247,7 +247,7 @@ impl Operation for GraphicalInformation {
             .and_then(|piece| piece.known)
             .and_then(|known| known.reference.as_ref());
         if let Some(reference) = first {
-            slots.set("title", json!(format!("{} — colours", reference.title)));
+            slots.set("title", json!(format!("{} - colours", reference.title)));
         }
     }
 
@@ -299,7 +299,7 @@ impl Operation for GraphicalInformation {
                         reference.title,
                         class_of(&reference.qualified_type),
                         if mappable(&reference.qualified_type) {
-                            " — a property takes its colours through a colour map, in `mapped`"
+                            " - a property takes its colours through a colour map, in `mapped`"
                         } else {
                             ""
                         }
@@ -317,7 +317,7 @@ impl Operation for GraphicalInformation {
                         reference.title,
                         class_of(&reference.qualified_type),
                         if decorable(&reference.qualified_type) {
-                            " — a constant colour on it goes in `targets`"
+                            " - a constant colour on it goes in `targets`"
                         } else {
                             ""
                         }
@@ -369,7 +369,7 @@ impl Operation for GraphicalInformation {
             return Err(Refusal::on(
                 "colours",
                 format!(
-                    "{} — a colour that does not read is refused, never replaced by another",
+                    "{} - a colour that does not read is refused, never replaced by another",
                     unread.join("; ")
                 ),
             ));
@@ -453,7 +453,7 @@ impl Operation for GraphicalInformation {
             return Err(Refusal::on(
                 "scope",
                 format!(
-                    "`{}` is a {}, which has no {scope} of its own: indexable elements are a representation's — `whole-object` colours it",
+                    "`{}` is a {}, which has no {scope} of its own: indexable elements are a representation's - `whole-object` colours it",
                     target.title,
                     class_of(&target.qualified_type)
                 ),
@@ -464,7 +464,7 @@ impl Operation for GraphicalInformation {
         let drawn = drawn_through(&inputs, &params, &mut says)?;
 
         // The entries: the constant colours, then the colour maps, each in the
-        // order given — the order of a set is part of its meaning.
+        // order given - the order of a set is part of its meaning.
         let mut entries: Vec<AnyXml> = Vec::new();
         if params.shared {
             if let Some((_, colour)) = coloured.first() {
@@ -639,7 +639,7 @@ struct Drawn {
     component: Option<u64>,
 }
 
-/// The colour map part, checked against the schema — `None` when no map is
+/// The colour map part, checked against the schema - `None` when no map is
 /// given, and then no setting of a map may be either.
 fn drawn_through(
     inputs: &GraphicalInformationInputs,
@@ -647,7 +647,7 @@ fn drawn_through(
     says: &mut Vec<Note>,
 ) -> Result<Option<Drawn>, Refusal> {
     let Some(map) = &inputs.colour_map else {
-        // A setting of a map with no map: named, not dropped — a range that
+        // A setting of a map with no map: named, not dropped - a range that
         // reads as applied and applies to nothing is the failure to avoid.
         let given = [
             ("minimum", params.minimum.is_some()),
@@ -667,7 +667,7 @@ fn drawn_through(
     let map = decorated("colourMap", map)?;
 
     // `MinMax` carries both bounds, and an interval is a minimum below a
-    // maximum (`GraphicalInformationObject.xsd` l. 579–592).
+    // maximum (`GraphicalInformationObject.xsd` l. 579-592).
     let min_max = match (params.minimum, params.maximum) {
         (None, None) => None,
         (Some(_), None) => {
@@ -693,7 +693,7 @@ fn drawn_through(
                 return Err(Refusal::on(
                     "maximum",
                     format!(
-                        "the range [{low}, {high}] holds nothing: a range's minimum is below its maximum — `reverse` is how the colours go the other way"
+                        "the range [{low}, {high}] holds nothing: a range's minimum is below its maximum - `reverse` is how the colours go the other way"
                     ),
                 ));
             }
@@ -701,7 +701,7 @@ fn drawn_through(
         }
     };
     // *« the log of the property values are taken into account »*
-    // (l. 269–273): a range that reaches zero holds values with no logarithm.
+    // (l. 269-273): a range that reaches zero holds values with no logarithm.
     if params.logarithmic
         && let Some((low, _)) = min_max
         && low <= 0.0
@@ -791,7 +791,7 @@ fn drawn_through(
 }
 
 /// The reference an input stands for, as the writer names an object: uuid,
-/// qualified type, title — or a refusal naming its slot.
+/// qualified type, title - or a refusal naming its slot.
 fn decorated(slot: &str, input: &ObjectIn) -> Result<Decorated, Refusal> {
     let Some(known) = input.known.reference.as_ref() else {
         return Err(Refusal::on(
@@ -811,7 +811,7 @@ fn same_uuid(a: &str, b: &str) -> bool {
     a.eq_ignore_ascii_case(b)
 }
 
-/// The class a qualified type names, as written — `ContinuousProperty`.
+/// The class a qualified type names, as written - `ContinuousProperty`.
 fn class_of(qualified_type: &str) -> &str {
     qualified_type.rsplit('.').next().unwrap_or(qualified_type)
 }
@@ -823,7 +823,7 @@ fn bare(qualified_type: &str) -> String {
     class.strip_prefix("obj_").map(str::to_string).unwrap_or(class)
 }
 
-/// Whether a representation — what has indexable elements.
+/// Whether a representation - what has indexable elements.
 fn is_representation(qualified_type: &str) -> bool {
     bare(qualified_type).ends_with("representation")
 }
@@ -850,7 +850,7 @@ fn mappable(qualified_type: &str) -> bool {
     class.ends_with("property") || class == "propertykind" || class.ends_with("representation")
 }
 
-/// A colour's text into an [`Rgba`] — `energyml_domain::color::Rgba::parse`,
+/// A colour's text into an [`Rgba`] - `energyml_domain::color::Rgba::parse`,
 /// the one reader, kept under this name for the callers of this module.
 pub fn parse_colour(text: &str) -> Result<Rgba, String> {
     Rgba::parse(text)

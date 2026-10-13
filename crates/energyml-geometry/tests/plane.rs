@@ -1,9 +1,9 @@
-//! `PlaneSetRepresentation` — the one that is drawn, and the one that is refused.
+//! `PlaneSetRepresentation` - the one that is drawn, and the one that is refused.
 //!
 //! **Nothing in the corpus holds one**, which is why it had no reader until
 //! 05/09. So the objects are built here, and the rule of this workspace applies
 //! in its strict form: *the shape of the assertions comes from the
-//! specification, the values from the file* — with no file, both come from the
+//! specification, the values from the file* - with no file, both come from the
 //! schema, and the schema is quoted where it decides something.
 //!
 //! Two facts are worth a test each, and they are the two ways this reader could
@@ -13,7 +13,7 @@
 //!   skipped. A picture that looks complete and is not is this crate's whole
 //!   subject;
 //! - the second triple's triangle indexed `0,1,2` like the first, which draws
-//!   the first plane twice and the second nowhere — with the right number of
+//!   the first plane twice and the second nowhere - with the right number of
 //!   points, the right number of triangles, and nothing to see.
 
 use energyml_core::registry::DynObject;
@@ -28,7 +28,7 @@ use energyml_storage::array::{ArrayBuffer, ArrayData, ArrayLocation, ArrayMetada
 
 /// A store with nothing in it.
 ///
-/// A plane set keeps its numbers in the XML — nine per triple — so a reader
+/// A plane set keeps its numbers in the XML - nine per triple - so a reader
 /// that reached for an array would fail here rather than quietly read one. That
 /// is the point of handing it an empty store rather than a working one.
 struct NoStore;
@@ -118,7 +118,7 @@ fn a_tilted_plane_is_the_triangle_its_three_points_span() {
 fn a_second_triple_is_indexed_from_its_own_points() {
     // **The mistake this guards is invisible in every count.** Indexing the
     // second triangle `0,1,2` like the first gives three points, two triangles
-    // and the right patch — and draws the first plane twice while the second
+    // and the right patch - and draws the first plane twice while the second
     // appears nowhere.
     let found =
         geometry::of(&set(vec![tilted(vec![triple(0.0), triple(100.0)])]), &NoStore).expect("it evaluates");
@@ -133,8 +133,8 @@ fn a_second_triple_is_indexed_from_its_own_points() {
 fn each_plane_of_the_set_is_a_patch_of_its_own() {
     // A set of three drawn as two is the shape of failure this crate exists to
     // refuse: it looks complete. The node offsets are checked too, because
-    // anything indexing *nodes of the representation* — a property, a
-    // sub-representation — counts from them.
+    // anything indexing *nodes of the representation* - a property, a
+    // sub-representation - counts from them.
     let found = geometry::of(
         &set(vec![
             tilted(vec![triple(0.0)]),
@@ -156,7 +156,7 @@ fn each_plane_of_the_set_is_a_patch_of_its_own() {
 #[test]
 fn a_horizontal_plane_is_refused_by_name_and_says_what_it_does_hold() {
     // It carries `Coordinate`: one number, a depth. A plane at a depth is
-    // infinite, and no release will add an extent — the extent is a decision
+    // infinite, and no release will add an extent - the extent is a decision
     // about the picture, not a fact about the model. Skipping it instead would
     // draw a set of two planes as one.
     let error = geometry::of(
@@ -199,7 +199,7 @@ fn a_triple_that_is_not_three_points_is_malformed() {
 #[test]
 fn a_set_with_no_plane_at_all_is_refused() {
     // `min = 1` in the schema, and an empty vector of patches is a successful
-    // call with nothing to draw — the one answer this crate never gives.
+    // call with nothing to draw - the one answer this crate never gives.
     let error = geometry::of(&set(Vec::new()), &NoStore).unwrap_err().to_string();
     assert!(error.contains("no plane at all"), "{error}");
 }

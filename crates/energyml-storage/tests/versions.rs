@@ -2,15 +2,15 @@
 //!
 //! Energistics gave every version of a package the same namespace:
 //! `resqmlv2` is RESQML 2.0.1 *and* RESQML 2.2, `witsmlv2` is WITSML 2.0 *and*
-//! 2.1. So the namespace answers "which package" — worth something, since
-//! `Activity` exists in both `resqml20` and `eml23` under different namespaces
-//! — and answers nothing about the release.
+//! 2.1. So the namespace answers "which package" - worth something, since
+//! `Activity` exists in both `resqml20` and `eml23` under different namespaces -
+//! and answers nothing about the release.
 //!
 //! The release comes from `schemaVersion`, and that is thin: the attribute is
 //! optional in practice, producers write `2.0` where the release is 2.0.1, and
 //! a file may name a version this build does not carry. Until 02/08 an unusable
 //! `schemaVersion` fell through to whichever candidate the registry happened to
-//! hold first — silently. Reading a part as the wrong version does not fail: it
+//! hold first - silently. Reading a part as the wrong version does not fail: it
 //! yields a plausible object carrying the fields the two releases share and
 //! nothing else, which is the one outcome this reader exists to prevent.
 //!
@@ -67,7 +67,7 @@ impl Doc {
         };
         // Required by *both* releases, so it is always there and never the
         // thing that tells them apart. Written with the reference spelling of
-        // each — eml 2.0 wants `ContentType`, eml 2.3 wants `QualifiedType` —
+        // each - eml 2.0 wants `ContentType`, eml 2.3 wants `QualifiedType` -
         // because a reader skips the element it does not know and would
         // otherwise fail for a reason this test is not about.
         let feature = "<resqml:InterpretedFeature>\
@@ -152,8 +152,8 @@ fn the_schema_version_picks_the_release() {
 /// `schemaVersion="2.0.1"` finds RESQML 2.0.1, whose own `schemaVersion` is
 /// `2.0`.
 ///
-/// The schema's rule — *"the schema version is the first 2 digits of an ML
-/// version"* — means the two forms have to meet, and they meet on the dotted
+/// The schema's rule - *"the schema version is the first 2 digits of an ML
+/// version"* - means the two forms have to meet, and they meet on the dotted
 /// components rather than on the string, so `2.1` must not match `2.10`.
 #[test]
 fn a_release_number_and_a_schema_version_meet() {
@@ -189,7 +189,7 @@ fn the_namespace_settles_the_package() {
 }
 
 /// With no `schemaVersion` at all, the `obj_` prefix is the only thing the
-/// document said about its age — and only the older releases write it.
+/// document said about its age - and only the older releases write it.
 ///
 /// A **positive** signal when present and no signal at all when absent:
 /// `ALWYN-RESQML.epc` is a RESQML 2.0.1 package whose roots do not carry it,
@@ -215,7 +215,7 @@ fn the_obj_prefix_is_a_signal_when_nothing_else_is() {
 ///
 /// RESQML 2.0.1 requires `Domain` on a `FaultInterpretation` and 2.2 does not,
 /// so this document cannot be what it claims to be. The identification still
-/// puts 2.0.1 first — believing the file is the right default — and the read
+/// puts 2.0.1 first - believing the file is the right default - and the read
 /// walks past it to the version that parses, saying so.
 #[test]
 fn a_version_that_will_not_parse_falls_through_to_one_that_will() {

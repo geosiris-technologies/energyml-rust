@@ -1,6 +1,6 @@
 //! Any `AbstractPoint3dArray`, resolved to coordinates.
 //!
-//! Six forms, and only two have the numbers in a file — see the table in the
+//! Six forms, and only two have the numbers in a file - see the table in the
 //! crate documentation. The others compute them: from a lattice, from a
 //! supporting surface's z, from lines, or from another representation's nodes
 //! entirely. Anything that reaches the end unhandled is refused **by name**:
@@ -32,7 +32,7 @@ pub type Point = [f64; 3];
 ///
 /// Required rather than optional on purpose. A default would be right for the
 /// depth systems and silently mirror every well and every pillar of an
-/// elevation system — which is exactly the defect this argument was added to
+/// elevation system - which is exactly the defect this argument was added to
 /// end, and it went unnoticed because each individual number looked reasonable.
 pub fn read(
     array: &dyn Reflect,
@@ -44,16 +44,16 @@ pub fn read(
 
     // **Two** doubles per point, and it has to be asked before the branch
     // below: `Point2dExternalArray` ends in `ExternalArray` like everything
-    // else, and read three at a time it does not fail — it produces two thirds
+    // else, and read three at a time it does not fail - it produces two thirds
     // as many points, each made of one point's x and y and the next one's x,
     // with the following point's y taken for a depth. Every coordinate is a
     // real number from the file, in the right units, in the right order. What
     // comes out is a scatter of plausible points that are not where anything
     // is.
     //
-    // The schema is explicit that this is a *2D* dataset — *"the 2 coordinates
+    // The schema is explicit that this is a *2D* dataset - *"the 2 coordinates
     // are stored sequentially in HDF5, i.e. a multi-dimensional array of points
-    // is stored as a 2 × … HDF5 array"* — and the corpus agrees: the geobody
+    // is stored as a 2 × … HDF5 array"* - and the corpus agrees: the geobody
     // boundary point set holds a (6, 2) dataset that was being read as 4 points.
     // z is 0: the array says nothing about depth, and 0 in the local system is
     // the only answer that does not invent one.
@@ -68,7 +68,12 @@ pub fn read(
                 ),
             ));
         }
-        return Ok(coordinates.chunks_exact(2).map(|c| [c[0], c[1], 0.0]).collect());
+        return Ok(coordinates
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|c| [c[0], c[1], 0.0])
+            .collect());
     }
 
     // The common case: three doubles per point in an external file.
@@ -83,11 +88,16 @@ pub fn read(
                 ),
             ));
         }
-        return Ok(coordinates.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect());
+        return Ok(coordinates
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .map(|c| [c[0], c[1], c[2]])
+            .collect());
     }
 
     // `Point3dFromRepresentationLatticeArray` also ends in `LatticeArray` and
-    // is a different thing entirely — nodes picked out of *another*
+    // is a different thing entirely - nodes picked out of *another*
     // representation. Letting it fall in here reported "a lattice with no
     // `Origin`", which blames the file for this module's mistake.
     if name.starts_with("Point3d") && name.ends_with("LatticeArray") && !name.contains("FromRepresentation") {
@@ -127,13 +137,13 @@ pub fn count(array: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Result<
         return Ok(values::count(array, source, at)? / per_point);
     }
     // The selection alone answers this, without resolving the support or
-    // reading a coordinate — which for a horizon over a million-node survey is
+    // reading a coordinate - which for a horizon over a million-node survey is
     // the difference between a number and a minute.
     if name == "Point3dFromRepresentationLatticeArray" {
         return crate::derived::count(array, at);
     }
     // The last resort: evaluate and count. Which way z counts cannot change
-    // how many points there are, so the reading passed here is immaterial —
+    // how many points there are, so the reading passed here is immaterial -
     // said out loud rather than left as a puzzle at the call site.
     Ok(read(array, source, at, Vertical::Down)?.len())
 }
@@ -150,7 +160,7 @@ pub fn count(array: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Result<
 /// # The order of the points
 ///
 /// The dimension list runs **slowest axis first**, and the points come out in
-/// the order the axes imply — the last one varying fastest, matching the
+/// the order the axes imply - the last one varying fastest, matching the
 /// `FastestAxisCount` × `SlowestAxisCount` declared next to it. Both versions
 /// in the corpus say so plainly: a 50 × 100 grid lists the 99-spacing dimension
 /// before the 49-spacing one. Getting this backwards costs nothing in the point
@@ -193,7 +203,7 @@ fn lattice_along(origin: Point, dimensions: &[&dyn Reflect], at: &str) -> Result
 
         // The schema's rule is `spacing × offset vector`, with no word about
         // normalisation, and fesapi writes it that way: a **unit** direction
-        // and metric spacings. SISMAGE writes something else — the direction is
+        // and metric spacings. SISMAGE writes something else - the direction is
         // the **whole axis extent** and the spacings are metres along it.
         // Applied literally, a 10.6 km axis steps 132 km at a time and the
         // surface lands nowhere, every coordinate looking like a coordinate.
@@ -202,7 +212,7 @@ fn lattice_along(origin: Point, dimensions: &[&dyn Reflect], at: &str) -> Result
         // SISMAGE form carries its own checksum: the summed spacings equal the
         // direction's length (2e-12 relative, measured on `ALWYN-RESQML.epc`
         // 8d3c3099). A conformant file cannot satisfy that identity by
-        // accident — its direction has length 1 while its spacings sum to the
+        // accident - its direction has length 1 while its spacings sum to the
         // axis extent in metres. A direction far from unit whose length equals
         // the summed spacings is the writer stating "metric spacings along a
         // direction", and is read as such.
@@ -216,7 +226,7 @@ fn lattice_along(origin: Point, dimensions: &[&dyn Reflect], at: &str) -> Result
             ];
         }
 
-        // Each dimension multiplies the set — that is what makes it a lattice —
+        // Each dimension multiplies the set - that is what makes it a lattice -
         // and the dimension being added becomes the innermost one, so the last
         // offset in the file ends up varying fastest.
         let outer = std::mem::take(&mut points);
@@ -236,8 +246,8 @@ fn lattice_along(origin: Point, dimensions: &[&dyn Reflect], at: &str) -> Result
 
 /// The spacings of one lattice dimension.
 ///
-/// `Spacing` is itself an `AbstractDoubleArray`, so it can be a constant array —
-/// which is how a regular grid says "n steps of the same size" — or a real
+/// `Spacing` is itself an `AbstractDoubleArray`, so it can be a constant array -
+/// which is how a regular grid says "n steps of the same size" - or a real
 /// array for an irregular one.
 fn spacings_of(offset: &dyn Reflect, at: &str) -> Result<Vec<f64>> {
     let Some(FieldValue::Object(spacing)) = offset.field("Spacing") else {
@@ -261,7 +271,7 @@ fn spacings_of(offset: &dyn Reflect, at: &str) -> Result<Vec<f64>> {
 
 /// `Point3dZValueArray`: x and y from a supporting geometry, z from an array.
 ///
-/// The supporting geometry is itself a point array — in practice a lattice —
+/// The supporting geometry is itself a point array - in practice a lattice -
 /// so this recurses, and a 2D grid whose z comes from HDF5 works without the
 /// caller knowing the shape of any of it.
 fn z_values(
@@ -287,8 +297,8 @@ fn z_values(
 
     // Which lattice axis is the outer one? fesapi and SISMAGE list the slowest
     // axis first; SKUA-GOCAD lists the **fastest** first. The z dataset is the
-    // ground truth — its own shape says which order the values were written
-    // in — and when it contradicts the lattice's order unambiguously (two
+    // ground truth - its own shape says which order the values were written
+    // in - and when it contradicts the lattice's order unambiguously (two
     // distinct axis lengths that match crosswise and not straight), the
     // support is transposed to the dataset's order **before** the z values
     // are laid on. Transposing afterwards would keep every z on the wrong
@@ -313,8 +323,8 @@ fn z_values(
 
     if z.len() != points.len() {
         // SKUA-GOCAD writes `Spacing.Count` as the number of **points** on the
-        // axis where the schema demands the number of intervals — "A lattice
-        // of N offset points is described by a spacing array of size N−1" —
+        // axis where the schema demands the number of intervals - "A lattice
+        // of N offset points is described by a spacing array of size N−1" -
         // so its lattices come out one point too large per axis, and the z
         // array, sized for the true grid, no longer fits. The mistake is
         // provable, not guessed: it holds exactly when the z count equals the
@@ -371,12 +381,12 @@ pub(crate) fn transpose(points: Vec<Point>, dims: &[usize]) -> Vec<Point> {
 /// The per-axis point counts a lattice array would evaluate to, outermost
 /// (slowest) first. `None` when the array is not a lattice.
 ///
-/// This is `spacings + 1` per dimension — the counts do not depend on the
+/// This is `spacings + 1` per dimension - the counts do not depend on the
 /// direction-vector convention, so no evaluation is needed to know them.
 pub(crate) fn lattice_dims(array: &dyn Reflect) -> Option<Vec<usize>> {
     let name = array.type_info().name;
-    // A borrowed lattice is laid out on a grid too — its selection has one axis
-    // per dimension, exactly like a stored one — and the caller's reason for
+    // A borrowed lattice is laid out on a grid too - its selection has one axis
+    // per dimension, exactly like a stored one - and the caller's reason for
     // asking is the same: to notice when the z dataset was written with the
     // axes the other way round. Leaving it out meant the transpose check was
     // silently off for every horizon picked on a survey, which is the shape

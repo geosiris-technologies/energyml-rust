@@ -1,4 +1,4 @@
-//! `energyml create --list --json` — what a script reads to learn what each
+//! `energyml create --list --json` - what a script reads to learn what each
 //! operation takes, asks and gives (07/10/2026, for the workflow server).
 //!
 //! The JSON is assembled by `energyml_build::describe`; this test is on the

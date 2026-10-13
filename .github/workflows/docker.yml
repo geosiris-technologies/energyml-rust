@@ -1,5 +1,5 @@
 # The public image ghcr.io/geosiris-technologies/energyml, built and pushed by
-# this repository's CI only — never from a workstation.
+# this repository's CI only - never from a workstation.
 #
 # - pull request: build for linux/amd64, smoke-test, push nothing;
 # - push to main: push the `edge` tag;
@@ -35,8 +35,12 @@ jobs:
         include:
           - platform: linux/amd64
             runner: ubuntu-latest
+            lto: fat
+          # The free arm64 runner lost the fat-LTO release build after 56 min (13/10/2026, no log
+          # left: out of memory); a thin LTO keeps the build within it.
           - platform: linux/arm64
-            runner: ubuntu-24.04-arm   # TODO(verify): label of the free arm64 runner for public repositories
+            runner: ubuntu-24.04-arm
+            lto: thin
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
@@ -68,6 +72,7 @@ jobs:
           build-args: |
             REVISION=${{ github.sha }}
             VERSION=${{ steps.v.outputs.version }}
+            RELEASE_LTO=${{ matrix.lto }}
           load: ${{ !(github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) && vars.IMAGE_PUBLISH == 'true') }}
           tags: ${{ !(github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) && vars.IMAGE_PUBLISH == 'true') && 'energyml:test' || '' }}
           outputs: ${{ (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) && vars.IMAGE_PUBLISH == 'true') && format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE) || '' }}

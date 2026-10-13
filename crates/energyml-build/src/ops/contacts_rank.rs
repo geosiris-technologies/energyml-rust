@@ -1,4 +1,4 @@
-//! Contacts **at a rank** of the BRGM chart — how `contacts-from-frames` reads
+//! Contacts **at a rank** of the BRGM chart - how `contacts-from-frames` reads
 //! its frames when it is told `rank`, `unit`, or both.
 //!
 //! The synthetic reference model could not get two of its horizons out of the frames:
@@ -24,24 +24,24 @@
 //! # How an interval is read
 //!
 //! - **its unit, to a division of the chart, by uuid**: the uuid a column of the
-//!   chart writes for the division's interpretation — v5 in the URL namespace
+//!   chart writes for the division's interpretation - v5 in the URL namespace
 //!   over `<URI>#interpretation` (`ops/stratigraphy.rs`, module doc), the one
 //!   `wells-and-properties-from-table` gives the units of its frames. A unit
 //!   that is no division of the chart is read as **no unit**, counted and named
-//!   (`rank-foreign`), never matched by its title — a title is not an identity;
+//!   (`rank-foreign`), never matched by its title - a title is not an identity;
 //! - **against a division of the rank**, by `energyml_domain::geolts_rank`:
-//!   *inside* it — the chart places its division under it —, *outside* it — the
-//!   chart's ages do not overlap —, or *neither*: a coarser division that holds
+//!   *inside* it - the chart places its division under it -, *outside* it - the
+//!   chart's ages do not overlap -, or *neither*: a coarser division that holds
 //!   it (the Middle Eocene for the Lutetian), a regional one whose time overlaps
 //!   (the Ludien beside the Priabonien), no age. *Neither* is read as no unit,
 //!   so **no contact is read across it**, and it is counted (`rank-unknown`);
 //! - **which divisions**: `unit` names one. A `rank` alone reads every division
 //!   of that rank the frames reach, a finer one being read as **the coarsest
-//!   division of that rank above it** — the Cuisien, a regional stage under the
+//!   division of that rank above it** - the Cuisien, a regional stage under the
 //!   Ypresian, is the Ypresian. One sequence per division read.
 //!
 //! What lies outside the division read is its **neighbour**: it makes the
-//! division's top and base contacts, and gets none of its own — outside the
+//! division's top and base contacts, and gets none of its own - outside the
 //! Lutetian is not a unit, and the Quaternary above and the Ypresian below are
 //! two different things it cannot stand for.
 //!
@@ -53,7 +53,7 @@
 //!
 //! # Identity, and a title that says the rank
 //!
-//! A unit read at a rank is titled `<label> (<level>)` — `Lutétien (stage)` —
+//! A unit read at a rank is titled `<label> (<level>)` - `Lutétien (stage)` -
 //! and its seeds end with `:rank-<n>` ([`Reading::seed`]): the base of the stage
 //! and the base of the passes named « Lutétien » are two findings, and two
 //! objects, even where their points coincide. Named, the seeds are those of
@@ -75,12 +75,12 @@ use crate::pieces::Ref;
 const UNIT: &str = "resqml22.StratigraphicUnitInterpretation";
 
 /// What an interval outside the division read stands as in a sequence: its
-/// neighbour. Never written, never referenced — see [`Reading::keeps`].
+/// neighbour. Never written, never referenced - see [`Reading::keeps`].
 const OUTSIDE: &str = "outside:";
 
 /// How the frames' intervals are read.
 pub enum Reading {
-    /// Unit by unit, as the frames name them — neither `rank` nor `unit`.
+    /// Unit by unit, as the frames name them - neither `rank` nor `unit`.
     Named,
     /// Against divisions of one rank of the BRGM chart.
     AtRank(Box<AtRank>),
@@ -88,7 +88,7 @@ pub enum Reading {
 
 impl Reading {
     /// The reading the settings ask for, against the chart in use
-    /// (`energyml_domain::geolts`) — or the refusal, on the setting at fault.
+    /// (`energyml_domain::geolts`) - or the refusal, on the setting at fault.
     pub fn of(rank: Option<usize>, unit: Option<&ChartTerm>, language: Language) -> Result<Reading, Refusal> {
         if rank.is_none() && unit.is_none() {
             return Ok(Reading::Named);
@@ -116,8 +116,8 @@ impl Reading {
         }
     }
 
-    /// What the seeds of a contact's feature, interpretation and point set —
-    /// and of the run's activity — end with: nothing when named, so the uuids
+    /// What the seeds of a contact's feature, interpretation and point set -
+    /// and of the run's activity - end with: nothing when named, so the uuids
     /// are those of before; `:rank-<n>` at a rank.
     pub fn seed(&self) -> String {
         match self {
@@ -126,7 +126,7 @@ impl Reading {
         }
     }
 
-    /// What the plan says of the reading — nothing when named.
+    /// What the plan says of the reading - nothing when named.
     pub fn says(&self) -> Vec<Note> {
         match self {
             Reading::Named => Vec::new(),
@@ -134,7 +134,7 @@ impl Reading {
         }
     }
 
-    /// The refusal when no contact was found — `None` when named, whose
+    /// The refusal when no contact was found - `None` when named, whose
     /// refusal is the operation's own.
     pub fn nothing(&self, frames: usize, unmapped: usize) -> Option<Refusal> {
         match self {
@@ -144,7 +144,7 @@ impl Reading {
     }
 }
 
-/// A reading at one rank of the chart — see the module.
+/// A reading at one rank of the chart - see the module.
 pub struct AtRank {
     /// The chart in use when the plan began, for the whole plan.
     chart: Chart,
@@ -158,7 +158,7 @@ pub struct AtRank {
     by_uuid: HashMap<String, u32>,
     /// What the frames read so far gave.
     tally: Tally,
-    /// The language a division read is titled in — the one the chart's units
+    /// The language a division read is titled in - the one the chart's units
     /// were written in (`stratigraphy-from-geolts`, `wells-and-properties-from-
     /// table`): a reference whose cached title is not its target's would be
     /// one more place for them to disagree, and the contacts are named after it.
@@ -172,7 +172,7 @@ struct Tally {
     frames: usize,
     /// By division read: the frames with an interval inside it.
     reached: BTreeMap<u32, usize>,
-    /// The frames with no interval inside any division read — the one `unit`
+    /// The frames with no interval inside any division read - the one `unit`
     /// names, or, a rank alone, any of that rank.
     absent: Vec<String>,
     /// Intervals neither inside nor outside a division read, by the division
@@ -180,13 +180,13 @@ struct Tally {
     unknown: BTreeMap<(u32, Relation), BTreeMap<String, usize>>,
     /// Intervals whose unit is no division of the chart, by the unit's title.
     foreign: BTreeMap<String, usize>,
-    /// Intervals under two divisions of the rank, neither holding the other —
-    /// a rank alone, which will not choose — by label.
+    /// Intervals under two divisions of the rank, neither holding the other -
+    /// a rank alone, which will not choose - by label.
     ambiguous: BTreeMap<String, usize>,
 }
 
 impl AtRank {
-    /// A reading of `chart` at `rank` — of `unit` alone when one is named, at
+    /// A reading of `chart` at `rank` - of `unit` alone when one is named, at
     /// its own rank when `rank` is left out.
     pub fn of(
         chart: &Chart,
@@ -199,7 +199,7 @@ impl AtRank {
             return Err(Refusal::on(
                 slot,
                 format!(
-                    "{} holds no division — this build has no BRGM chart to read the frames against",
+                    "{} holds no division - this build has no BRGM chart to read the frames against",
                     chart.label()
                 ),
             ));
@@ -229,7 +229,7 @@ impl AtRank {
                     return Err(Refusal::on(
                         "rank",
                         format!(
-                            "{} has no division at rank {rank} — a rank is the chart's level less one, and its ranks are {}",
+                            "{} has no division at rank {rank} - a rank is the chart's level less one, and its ranks are {}",
                             chart.label(),
                             ranks_of(chart)
                         ),
@@ -241,7 +241,7 @@ impl AtRank {
                     return Err(Refusal::on(
                         "unit",
                         format!(
-                            "`{}` is a {}, at rank {} — not a division of rank {rank}; left out, `rank` is the unit's own",
+                            "`{}` is a {}, at rank {} - not a division of rank {rank}; left out, `rank` is the unit's own",
                             one.label,
                             one.level_name(),
                             usize::from(one.level) - 1
@@ -275,7 +275,7 @@ impl AtRank {
     }
 
     /// The unit a division read stands as in a sequence: the uuid of its
-    /// interpretation — the one a column of the chart writes — and a title
+    /// interpretation - the one a column of the chart writes - and a title
     /// that says the level.
     fn unit_ref(&self, id: u32) -> Ref {
         match self.chart.get(id) {
@@ -300,7 +300,7 @@ impl AtRank {
             .unwrap_or_else(|| format!("GeolTs {id}"))
     }
 
-    /// One frame's sequences — see [`Reading::sequences`].
+    /// One frame's sequences - see [`Reading::sequences`].
     fn sequences(&mut self, named: &[Option<Ref>], frame: &str) -> Vec<Vec<Option<Ref>>> {
         self.tally.frames += 1;
         // Each interval's division, when its unit is one of the chart.
@@ -403,7 +403,7 @@ impl AtRank {
         let mut out = vec![Note {
             key: "rank",
             detail: format!(
-                "read at rank {} of the BRGM chart ({}), {} — each interval inside a division, outside it by the chart's ages, or neither, and a contact only between inside and outside; {}",
+                "read at rank {} of the BRGM chart ({}), {} - each interval inside a division, outside it by the chart's ages, or neither, and a contact only between inside and outside; {}",
                 self.rank,
                 geolts::level_name(self.level),
                 match self.unit {
@@ -446,7 +446,7 @@ impl AtRank {
                 .iter()
                 .map(|((unit, relation), labels)| {
                     format!(
-                        "against `{}`, {} — {}",
+                        "against `{}`, {} - {}",
                         self.title(*unit),
                         labels
                             .iter()
@@ -496,7 +496,7 @@ impl AtRank {
         Refusal::on(
             if self.unit.is_some() { "unit" } else { "rank" },
             format!(
-                "no top and no base of {} in the {frames} frame(s) given: {} have an interval inside it, {} have none, {unmapped} map no interval to a unit — a contact is a limit between an interval inside and one outside, and {unknown} interval(s) were read as neither",
+                "no top and no base of {} in the {frames} frame(s) given: {} have an interval inside it, {} have none, {unmapped} map no interval to a unit - a contact is a limit between an interval inside and one outside, and {unknown} interval(s) were read as neither",
                 self.whom(),
                 tally.frames - tally.absent.len(),
                 tally.absent.len()
@@ -506,7 +506,7 @@ impl AtRank {
 }
 
 /// The uuid a column of the chart gives a division's interpretation: v5 in
-/// the URL namespace over its URI and `#interpretation` — `ops/stratigraphy.rs`,
+/// the URL namespace over its URI and `#interpretation` - `ops/stratigraphy.rs`,
 /// *« which anyone can recompute without this tool »*. The tests read it off
 /// a column that operation writes, never off this function.
 fn interpretation_uuid(one: &Concept) -> String {
@@ -517,14 +517,14 @@ fn interpretation_uuid(one: &Concept) -> String {
     .to_string()
 }
 
-/// A division read, titled with its level — `Lutétien (stage)`, or
+/// A division read, titled with its level - `Lutétien (stage)`, or
 /// `Lutetian (stage)` in English: the chart's own label in either language
 /// (`Language::of`), never a translation of ours.
 fn title_of(one: &Concept, language: Language) -> String {
     format!("{} ({})", language.of(one), one.level_name())
 }
 
-/// The ranks a chart has, for a refusal — `3 system, 4 series, …`.
+/// The ranks a chart has, for a refusal - `3 system, 4 series, …`.
 fn ranks_of(chart: &Chart) -> String {
     geolts_rank::levels(chart)
         .iter()
@@ -533,7 +533,7 @@ fn ranks_of(chart: &Chart) -> String {
         .join(", ")
 }
 
-/// A few names and how many more — a list of two hundred is not read (the
+/// A few names and how many more - a list of two hundred is not read (the
 /// rule `contacts-from-frames` lists its set-aside properties by).
 fn few(names: &[String]) -> String {
     let shown = names
@@ -549,7 +549,7 @@ fn few(names: &[String]) -> String {
     }
 }
 
-/// Names and their counts — `` `Remblais` × 3 ``.
+/// Names and their counts - `` `Remblais` × 3 ``.
 fn counted(names: &BTreeMap<String, usize>) -> String {
     let all: Vec<String> = names
         .iter()

@@ -27,7 +27,7 @@ fn reason(p: &Profile, id: &str) -> Option<Reason> {
     p.rejected.iter().find(|r| r.id == id).map(|r| r.reason)
 }
 
-/// Nonzero winding number of `p` in `poly` (closed implicitly) — the rule the
+/// Nonzero winding number of `p` in `poly` (closed implicitly) - the rule the
 /// band is documented to be filled with.
 fn winding(poly: &[[f64; 2]], p: [f64; 2]) -> i32 {
     let mut w = 0;
@@ -67,7 +67,7 @@ fn brute_distance(track: &[[f64; 2]], p: [f64; 2]) -> f64 {
 /// the left, at 4 to the south on the right; 6 to the south is past the right
 /// width, and exactly 10 to the north is past the left width (`<`, not `<=`).
 /// To break: flip the sign of the cross product, write `<=`, or file the
-/// segments in their own cells only (the head at y = -4 lives in another row) —
+/// segments in their own cells only (the head at y = -4 lives in another row) -
 /// each one turns a line red.
 #[test]
 fn a_straight_track_keeps_by_the_width_of_each_side() {
@@ -177,7 +177,7 @@ fn an_l_has_its_outer_wedge_on_the_vertex_and_its_inner_turn_on_the_nearest_segm
 /// The nearest-vertex trap. The track runs 1000 east, then back west to (520, 100) and
 /// north to (520, 500); the head (500, 30) is halfway along the first segment,
 /// 30 from it, and 500 from both its ends. The nearest VERTEX is (520, 100), at
-/// hypot(20, 70) = 72.8 — over the width 50 — and none of its two segments is
+/// hypot(20, 70) = 72.8 - over the width 50 - and none of its two segments is
 /// the nearest one: "the nearest vertex first" drops the well without a word.
 /// The right answer: kept, `d` = 30, `s` = 500.
 /// To break: restrict the candidates to the segments of the nearest vertex.
@@ -279,7 +279,7 @@ fn the_band_contains_every_kept_head_and_no_set_aside_one() {
             }
             assert!(
                 n_in > 20 && n_out > 20,
-                "{name}: {n_in} in, {n_out} out — a loop over nothing proves nothing"
+                "{name}: {n_in} in, {n_out} out - a loop over nothing proves nothing"
             );
         }
     }
@@ -287,8 +287,8 @@ fn the_band_contains_every_kept_head_and_no_set_aside_one() {
 
 /// The band of the L (left 10, right 20, ring counter-clockwise, ends
 /// straight): its edge at the inner corner passes through the crossing of the
-/// two left offsets, (90, 10); the head (112, -12) of the outer wedge — 16.97
-/// from the vertex, under 20 — is inside it, which a chord from (100, -20) to
+/// two left offsets, (90, 10); the head (112, -12) of the outer wedge - 16.97
+/// from the vertex, under 20 - is inside it, which a chord from (100, -20) to
 /// (120, 0) would not give; and the straight ends do not reach past the track:
 /// (-1, 0) is outside. The area, by hand: two strips of 100 x 30 overlapping on
 /// the inner 10 x 10, plus the quarter disc of radius 20 at the outer corner:
@@ -323,7 +323,7 @@ fn the_band_of_an_l_is_rounded_outside_cut_inside_and_straight_at_its_ends() {
 /// The refusals of a degenerate track, by name: one vertex, none, two
 /// coincident vertices (the index says which segment), a vertex that is `NaN`;
 /// and the widths and the step.
-/// To break: let a zero-length segment through — its direction is `0/0`.
+/// To break: let a zero-length segment through - its direction is `0/0`.
 #[test]
 fn a_degenerate_track_is_refused_by_its_name() {
     assert_eq!(
@@ -399,12 +399,12 @@ fn a_head_without_a_position_is_set_aside_and_a_zero_side_keeps_nothing() {
     assert!(close(section.length, 10.0));
 }
 
-/// `Kept::direction` is the direction of the track where the well was kept —
+/// `Kept::direction` is the direction of the track where the well was kept -
 /// the segment the projection retained, and at the outer wedge of a turn the
 /// **mean** of the two segments' directions, normalised. On the L of the test above: east then north.
 ///
 /// - halfway along the first segment: (1, 0);
-/// - inside the turn, projected on the second segment: (0, 1) — not the
+/// - inside the turn, projected on the second segment: (0, 1) - not the
 ///   first's, though the head is nearer the vertex than the middle of either;
 /// - the outer wedge, on the vertex: (1, 1) / sqrt 2, unit length.
 ///

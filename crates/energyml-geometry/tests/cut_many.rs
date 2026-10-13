@@ -45,17 +45,17 @@ fn bits(cuts: &[Cut]) -> Vec<u64> {
         .collect()
 }
 
-/// Several traces — a bend, a crossing one, one beside the sheet, one with a
-/// repeated point (a segment of no length) — each equals `cut`'s answer.
+/// Several traces - a bend, a crossing one, one beside the sheet, one with a
+/// repeated point (a segment of no length) - each equals `cut`'s answer.
 ///
-/// To make it fail: in `cut_many`, forget the `offset` added to the profile —
+/// To make it fail: in `cut_many`, forget the `offset` added to the profile -
 /// the bent trace's second segment starts again at s = 0; or shrink the margin
 /// to 0 and put a trace exactly along a lattice line.
 #[test]
 fn cut_many_is_cut_trace_by_trace_to_the_bit() {
     let (mut points, mut triangles) = sheet(20);
     // A holed corner and an index past the points: `cut` drops both, so must the
-    // prefilter — without it the box of a NaN triangle would be NaN.
+    // prefilter - without it the box of a NaN triangle would be NaN.
     points[45][2] = f64::NAN;
     triangles.push([0, 1, 9999]);
     let traces: Vec<Vec<[f64; 2]>> = vec![
@@ -89,7 +89,7 @@ fn cut_many_is_cut_trace_by_trace_to_the_bit() {
 /// gave a cut was among those tested.
 ///
 /// To make it fail: make the prefilter keep every triangle (`continue` never
-/// taken) — `tested` equals `pairs`.
+/// taken) - `tested` equals `pairs`.
 #[test]
 fn the_box_prefilter_spares_the_pairs_a_short_trace_cannot_touch() {
     let (points, triangles) = sheet(40); // 3 200 triangles

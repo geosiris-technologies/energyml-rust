@@ -13,8 +13,8 @@
 // which is exactly the dependency this crate does not have.
 //
 // So this is a **narrow** scanner, and it says so: it reads the shape a
-// dictionary has — a flat list of `PropertyKind` elements with a citation, an
-// abstractness flag, a quantity class and a parent reference — and nothing
+// dictionary has - a flat list of `PropertyKind` elements with a citation, an
+// abstractness flag, a quantity class and a parent reference - and nothing
 // else. Element names are matched on their **local name**, so any namespace
 // prefix works, and the five predefined XML entities are decoded. A document
 // that is not a dictionary is refused by name rather than read as empty.
@@ -27,21 +27,21 @@
 pub struct RawKind {
     /// Uuid, from the attribute on the element.
     pub uuid: String,
-    /// `Citation.Title` — the name a person uses.
+    /// `Citation.Title` - the name a person uses.
     pub title: String,
     /// Uuid of the parent kind, when it has one.
     ///
     /// The root of the dictionary is its own parent, which is why walking the
     /// chain must stop on a repeat rather than trusting it to end.
     pub parent: Option<String>,
-    /// `QuantityClass` — the name of a class in the Energistics unit
+    /// `QuantityClass` - the name of a class in the Energistics unit
     /// dictionary. Purely informational when it matches nothing there.
     pub quantity_class: Option<String>,
     /// An abstract kind should only ever be a parent (common TRG §11.9: *"should be used only as the parent of a real property"*).
     pub is_abstract: bool,
     /// Set when the dictionary marks the kind as no longer to be used.
     pub deprecated: Option<String>,
-    /// `Citation.Description` — one sentence on what the kind means.
+    /// `Citation.Description` - one sentence on what the kind means.
     ///
     /// Carried because a chooser over 3 662 entries is unusable without it:
     /// `elevation` and `measured depth` are both lengths, and only the sentence
@@ -53,7 +53,7 @@ pub struct RawKind {
 
 /// Read every `PropertyKind` of a dictionary document.
 ///
-/// `Err` names what the document is instead of returning an empty list — a
+/// `Err` names what the document is instead of returning an empty list - a
 /// silent empty dictionary would turn every later resolution into "not found",
 /// which is the wrong diagnosis for "you loaded the wrong file".
 pub fn scan(xml: &str) -> Result<Vec<RawKind>, String> {
@@ -198,7 +198,7 @@ mod tests {
         assert_eq!(kinds[0].title, "property");
         assert!(kinds[0].is_abstract);
         assert_eq!(kinds[0].quantity_class.as_deref(), Some("unitless"));
-        // The root is its own parent — which is why the chain walk must stop
+        // The root is its own parent - which is why the chain walk must stop
         // on a repeat rather than on an absent parent.
         assert_eq!(kinds[0].parent.as_deref(), Some(&kinds[0].uuid[..]));
 

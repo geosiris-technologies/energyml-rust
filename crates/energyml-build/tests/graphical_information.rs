@@ -13,9 +13,9 @@
 //!   `IsVisible` (l. 180);
 //! - a `ColorInformation` *“Used for properties and property kinds and for
 //!   geometry”* (TRG 2.2 §4.5 p. 56) names its `ColorMap`, its `MinMax`, the
-//!   two required flags and the optional `ValueVectorIndex` (l. 257–288);
+//!   two required flags and the optional `ValueVectorIndex` (l. 257-288);
 //! - an `HsvColor` is the four numbers of the HSV model the XSD points to
-//!   (l. 547–578, *“See https://en.wikipedia.org/wiki/HSL_and_HSV”*): red is
+//!   (l. 547-578, *“See https://en.wikipedia.org/wiki/HSL_and_HSV”*): red is
 //!   hue 0, blue hue 240, both at full saturation and value.
 //!
 //! The uuids, titles and colours are the test's own.
@@ -23,7 +23,7 @@
 //! # The JSON of a plan is read back twice, by readers that share nothing
 //!
 //! The entries of an eml 2.3 set are **subtrees** (`AnyXml`): the classes live
-//! in RESQML, which eml cannot name. That is a known trap —
+//! in RESQML, which eml cannot name. That is a known trap -
 //! sixteen colours becoming sixteen
 //! empty elements without an error. So [`read_back`] takes the plan's JSON
 //! through the registry, the road `apply` takes, and reads each entry **twice**:
@@ -64,8 +64,8 @@ fn object(uuid: &str, qualified_type: &str, title: &str) -> Source {
     })
 }
 
-/// A property that states how many values each of its elements holds — what
-/// the boundary resolves (`read::known_of_object`) — and whose values this
+/// A property that states how many values each of its elements holds - what
+/// the boundary resolves (`read::known_of_object`) - and whose values this
 /// test does not read.
 fn property(uuid: &str, title: &str, per_element: Vec<u64>) -> Source {
     Source::Object(Known {
@@ -87,7 +87,7 @@ fn property(uuid: &str, title: &str, per_element: Vec<u64>) -> Source {
     })
 }
 
-/// The three levels of one horizon — what the colour rule paints alike
+/// The three levels of one horizon - what the colour rule paints alike
 ///.
 fn cascade() -> Pieces {
     Pieces::empty()
@@ -98,7 +98,7 @@ fn cascade() -> Pieces {
         )
         .with(
             "targets 3",
-            object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+            object(GRID, "resqml22.Grid2dRepresentation", "H3 - grid"),
         )
 }
 
@@ -126,12 +126,12 @@ fn planned(pieces: &Pieces, choices: Choices) -> Result<Plan, String> {
 
 fn titled(colours: Value) -> Choices {
     Choices::new()
-        .set("title", "Lutetia — colours")
+        .set("title", "Lutetia - colours")
         .set("colours", colours)
 }
 
 fn untitled() -> Choices {
-    Choices::new().set("title", "Lutetia — colours")
+    Choices::new().set("title", "Lutetia - colours")
 }
 
 /// The one object a plan writes: the set.
@@ -149,7 +149,7 @@ fn the_set(plan: &Plan) -> &NewObject {
     set
 }
 
-/// The set of a plan, read back — see the module.
+/// The set of a plan, read back - see the module.
 struct ReadBack {
     /// Each entry typed as the RESQML class its `xsi:type` names.
     typed: Vec<Box<dyn DynObject>>,
@@ -263,7 +263,7 @@ fn hex_of(colour: &resqml::HsvColor) -> String {
 /// Each colour on the object it names, and the JSON the plan writes.
 ///
 /// To break: pair the colours in another order, or give every object the
-/// first — the two objects then carry the wrong hue, read by both readers.
+/// first - the two objects then carry the wrong hue, read by both readers.
 #[test]
 fn each_colour_lands_on_the_object_it_names() {
     let pieces = Pieces::empty()
@@ -273,14 +273,14 @@ fn each_colour_lands_on_the_object_it_names() {
         )
         .with(
             "targets 2",
-            object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+            object(GRID, "resqml22.Grid2dRepresentation", "H3 - grid"),
         );
     let plan = planned(&pieces, titled(json!(["#ff0000", "#0000ff"]))).expect("planned");
 
     let set = &the_set(&plan).json;
     assert_eq!(set["$type"], json!("eml23.GraphicalInformationSet"), "{set}");
     assert_eq!(set["schemaVersion"], json!("2.3"), "{set}");
-    assert_eq!(set["Citation"]["Title"], json!("Lutetia — colours"), "{set}");
+    assert_eq!(set["Citation"]["Title"], json!("Lutetia - colours"), "{set}");
     let entries = set["GraphicalInformation"].as_array().expect("its entries");
     assert_eq!(entries.len(), 2, "{set}");
     for entry in entries {
@@ -325,7 +325,7 @@ fn each_colour_lands_on_the_object_it_names() {
 }
 
 /// The colour rule: the same `HsvColor` on the feature, the interpretation and the
-/// representation — **three** entries, each naming its
+/// representation - **three** entries, each naming its
 /// own object, so that each level is found alone by the cascade.
 ///
 /// To break: write one entry naming the three (the count and the targets go
@@ -391,7 +391,7 @@ fn shared_writes_one_entry_naming_every_object() {
     assert!(why.contains("`shared`"), "{why}");
 }
 
-/// A colour that does not read is refused **by name**, all of them at once —
+/// A colour that does not read is refused **by name**, all of them at once -
 /// never drawn as some default colour nobody chose.
 ///
 /// To break: a parser that falls back on grey, reads three digits, forgets the
@@ -401,7 +401,7 @@ fn shared_writes_one_entry_naming_every_object() {
 fn a_colour_that_does_not_read_is_refused_by_name_and_never_replaced() {
     let pieces = Pieces::empty().with(
         "targets",
-        object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+        object(GRID, "resqml22.Grid2dRepresentation", "H3 - grid"),
     );
     for bad in [
         "#12345g",
@@ -425,7 +425,7 @@ fn a_colour_that_does_not_read_is_refused_by_name_and_never_replaced() {
         .with("targets", object(FEATURE, "resqml22.BoundaryFeature", "H3"))
         .with(
             "targets 2",
-            object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+            object(GRID, "resqml22.Grid2dRepresentation", "H3 - grid"),
         );
     let Err(why) = planned(&two, titled(json!(["#12345g", "#zzzzzz"]))) else {
         panic!("two unreadable colours")
@@ -436,7 +436,7 @@ fn a_colour_that_does_not_read_is_refused_by_name_and_never_replaced() {
     );
 }
 
-/// One colour for all the objects, or one each — anything else is refused
+/// One colour for all the objects, or one each - anything else is refused
 /// with both counts.
 ///
 /// To break: pair what is there and drop the rest, or colour nothing.
@@ -450,7 +450,7 @@ fn a_colour_for_all_or_one_per_object_and_nothing_between() {
     assert!(why.contains("no object in `targets`"), "{why}");
 }
 
-/// One object twice: coloured once and said; in two colours, refused — two
+/// One object twice: coloured once and said; in two colours, refused - two
 /// statements about one object in one set is the ambiguity the domain's
 /// writer refuses to create (`set_constant_colour`).
 #[test]
@@ -458,11 +458,11 @@ fn an_object_given_twice_is_coloured_once_and_two_colours_for_it_are_refused() {
     let twice = Pieces::empty()
         .with(
             "targets",
-            object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+            object(GRID, "resqml22.Grid2dRepresentation", "H3 - grid"),
         )
         .with(
             "targets 2",
-            object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+            object(GRID, "resqml22.Grid2dRepresentation", "H3 - grid"),
         );
     let plan = planned(&twice, titled(json!(["#ff0000"]))).expect("planned");
     assert_eq!(read_back(&plan).typed.len(), 1);
@@ -494,13 +494,13 @@ fn the_same_content_is_the_same_set_and_another_colour_another() {
     assert_ne!(uuid(&one), uuid(&other), "another colour is another set");
     let fewer = Pieces::empty().with(
         "targets",
-        object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+        object(GRID, "resqml22.Grid2dRepresentation", "H3 - grid"),
     );
     let fewer = planned(&fewer, titled(json!(["#8b5a2b"]))).expect("planned");
     assert_ne!(uuid(&one), uuid(&fewer), "other objects, another set");
 }
 
-/// What was said is what the activity records, colour by colour — a list the
+/// What was said is what the activity records, colour by colour - a list the
 /// registry does not write.
 #[test]
 fn the_activity_records_every_colour_said() {
@@ -511,7 +511,7 @@ fn the_activity_records_every_colour_said() {
         )
         .with(
             "targets 2",
-            object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+            object(GRID, "resqml22.Grid2dRepresentation", "H3 - grid"),
         );
     let plan = planned(&pieces, titled(json!(["#ff0000", "#0000FF"]))).expect("planned");
     let said: Vec<&str> = plan
@@ -536,16 +536,16 @@ fn the_title_is_proposed_from_the_first_object() {
         .into_iter()
         .find(|slot| slot.name == "title")
         .expect("a title slot");
-    assert_eq!(title.suggested, Some(json!("H3 — colours")));
+    assert_eq!(title.suggested, Some(json!("H3 - colours")));
 }
 
 // -- colour maps --------------------------------------------------------------
 
 /// A property drawn through a map: the map named, the range and the flags as
-/// said (`GraphicalInformationObject.xsd` l. 257–288).
+/// said (`GraphicalInformationObject.xsd` l. 257-288).
 ///
 /// To break: drop `MinMax`, write the flags the other way, or name the wrong
-/// map — each read by both readers.
+/// map - each read by both readers.
 #[test]
 fn a_property_is_drawn_through_its_colour_map_with_the_range_and_flags_said() {
     let plan = planned(
@@ -588,8 +588,8 @@ fn a_property_is_drawn_through_its_colour_map_with_the_range_and_flags_said() {
 }
 
 /// The settings of a map, held to the schema: `MinMax` carries both bounds
-/// and is an interval (l. 579–592); *“the log of the property values”*
-/// (l. 269–273) has no value at zero; a setting of a map with no map is
+/// and is an interval (l. 579-592); *“the log of the property values”*
+/// (l. 269-273) has no value at zero; a setting of a map with no map is
 /// refused rather than dropped.
 #[test]
 fn the_settings_of_a_map_are_held_to_the_schema() {
@@ -632,7 +632,7 @@ fn the_settings_of_a_map_are_held_to_the_schema() {
 
     let no_map = Pieces::empty().with(
         "targets",
-        object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+        object(GRID, "resqml22.Grid2dRepresentation", "H3 - grid"),
     );
     refused(
         &no_map,
@@ -646,8 +646,8 @@ fn the_settings_of_a_map_are_held_to_the_schema() {
     );
 }
 
-/// `ValueVectorIndex` is an index into the **data** — the component of a
-/// vector property — never into the map (`energyml_domain::color`). One past
+/// `ValueVectorIndex` is an index into the **data** - the component of a
+/// vector property - never into the map (`energyml_domain::color`). One past
 /// the last component a property states is refused; where no count is stated,
 /// it is written and said unchecked.
 ///
@@ -695,7 +695,7 @@ fn a_component_past_the_last_one_a_property_holds_is_refused() {
 /// A constant colour is for a feature, an interpretation, a representation or
 /// a marker (TRG 2.2 §4.10 p. 61); a map draws a property, a property kind or
 /// a representation (§4.5 p. 56); a colour map is one of the schema's two
-/// (§4.1 p. 51); an element scope is a representation's — *“Each property is
+/// (§4.1 p. 51); an element scope is a representation's - *“Each property is
 /// "attached" to the indexable elements of a representation”* (§8 p. 232).
 #[test]
 fn an_object_of_the_wrong_kind_is_refused_on_its_slot() {
@@ -734,7 +734,7 @@ fn an_object_of_the_wrong_kind_is_refused_on_its_slot() {
     );
     let grid = Pieces::empty().with(
         "targets",
-        object(GRID, "resqml22.Grid2dRepresentation", "H3 — grid"),
+        object(GRID, "resqml22.Grid2dRepresentation", "H3 - grid"),
     );
     let plan = planned(&grid, titled(json!(["#ff0000"])).set("scope", "nodes")).expect("a grid has nodes");
     let read = read_back(&plan);
@@ -748,8 +748,8 @@ fn an_object_of_the_wrong_kind_is_refused_on_its_slot() {
     );
 }
 
-/// A collection takes a constant colour — the house's rank 2 and 4 read it for
-/// every object the collection holds — and
+/// A collection takes a constant colour - the house's rank 2 and 4 read it for
+/// every object the collection holds - and
 /// both readers find it on the collection. The standard's list stops at
 /// *“Feature, Interp or representation, marker”* (TRG 2.2 §4.10 p. 61), so
 /// what stays refused is checked beside it: a time series and a property.
@@ -761,7 +761,7 @@ fn a_collection_takes_a_constant_colour_and_both_readers_find_it() {
     const FOLDER: &str = "e19a8eb2-b3c5-47d7-82e3-5e6f70819293";
     let pieces = Pieces::empty().with(
         "targets",
-        object(FOLDER, "eml23.DataobjectCollection", "case 2 — collection"),
+        object(FOLDER, "eml23.DataobjectCollection", "case 2 - collection"),
     );
     let plan = planned(&pieces, titled(json!(["#f58231"]))).expect("a collection is a target");
 
@@ -798,7 +798,7 @@ fn a_collection_takes_a_constant_colour_and_both_readers_find_it() {
 }
 
 /// Nothing to colour is an inaptitude, and so is a map with nothing to draw or
-/// objects to draw with no map — while the cascade is fit, or this test could
+/// objects to draw with no map - while the cascade is fit, or this test could
 /// only ever say *unfit*.
 #[test]
 fn nothing_to_colour_is_unfit_and_a_map_goes_with_what_it_draws() {

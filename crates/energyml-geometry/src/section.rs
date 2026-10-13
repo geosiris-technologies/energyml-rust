@@ -1,23 +1,23 @@
-//! The vertical section along a trace — the geologist's profile.
+//! The vertical section along a trace - the geologist's profile.
 //!
 //! A polyline is drawn in plan view; each segment carries a vertical plane, and
 //! the intersection of that plane with a surface's triangles gives the curves
-//! the profile shows. The computation lives here — pure, no I/O — because it is
+//! the profile shows. The computation lives here - pure, no I/O - because it is
 //! **domain vocabulary**: a desktop
 //! interface will reuse it as it stands, and a test reaches it with no browser.
 //!
 //! # What comes out
 //!
-//! [`cut`] yields **segments** — the intersection of a plane and a triangle is
-//! one — each of them twice: in 3D and in (s, z), from the same intersections,
+//! [`cut`] yields **segments** - the intersection of a plane and a triangle is
+//! one - each of them twice: in 3D and in (s, z), from the same intersections,
 //! so the two views cannot contradict each other. [`chain`] then welds them
 //! into polylines, and the welding rule is precise ("never re-chain" was
 //! too strong a rule): two segments join only on an
 //! **exactly** shared end. Two neighbouring triangles compute their
-//! intersection point on the **same edge** with the same interpolation — the
-//! point is identical to the bit — whereas two sheets of a faulted surface
+//! intersection point on the **same edge** with the same interpolation - the
+//! point is identical to the bit - whereas two sheets of a faulted surface
 //! share no edge at all: they never weld, with no threshold deciding it. And a
-//! chain whose two ends meet is **closed** — which is what a `PolylineSetPatch`
+//! chain whose two ends meet is **closed** - which is what a `PolylineSetPatch`
 //! `ClosedPolylines` exists to say, and a ring (outer or inner) is only usable
 //! if it is stated closed.
 //!
@@ -25,7 +25,7 @@
 //!
 //! - **A segment is bounded to its slice.** A plane is infinite; the trace is
 //!   not. Every intersection is clipped to the `[0, length]` window of its
-//!   trace segment — without that, a short trace beside a large surface would
+//!   trace segment - without that, a short trace beside a large surface would
 //!   report the whole surface.
 //! - **A holed triangle does not lie.** A `NaN` corner drops the triangle: an
 //!   intersection computed through a NaN would produce NaN coordinates that
@@ -44,7 +44,7 @@ pub struct Cut {
 }
 
 /// Where one end of a [`Cut`] comes from: the edge of the surface it lies on,
-/// as `point a + t·(point b − point a)` — `a` and `b` are indices into the
+/// as `point a + t·(point b − point a)` - `a` and `b` are indices into the
 /// `points` the cut was given, exactly as the triangles name them.
 ///
 /// The arithmetic is the cut's own (`corners[a] + (corners[b] − corners[a])·t`),
@@ -59,7 +59,7 @@ pub struct CutEnd {
     pub t: f64,
     /// The end was **clipped** to the trace's window: it lies inside the
     /// triangle, between the two edge crossings, not on an edge. The edge and
-    /// `t` are then those of the nearer of the two crossings — an approximation
+    /// `t` are then those of the nearer of the two crossings - an approximation
     /// the flag owns up to, never a claim that the point is on that edge.
     pub clipped: bool,
 }
@@ -191,7 +191,7 @@ pub fn cut_sourced(points: &[[f64; 3]], triangles: &[[u32; 3]], trace: &[[f64; 2
     out
 }
 
-/// How much work [`cut_many`] did — counted, so a test can prove the box
+/// How much work [`cut_many`] did - counted, so a test can prove the box
 /// prefilter without a stopwatch.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct CutWork {
@@ -202,16 +202,16 @@ pub struct CutWork {
     pub tested: usize,
 }
 
-/// [`cut`] along **several** traces in one pass — the section view cuts a surface
+/// [`cut`] along **several** traces in one pass - the section view cuts a surface
 /// along its long section and every cross section (ADR-0015).
 ///
 /// Each answer is **the same `Vec<Cut>` that [`cut`] gives for that trace, to the
 /// bit**: the arithmetic is `cut`'s own, called segment by segment, and only the
 /// triangles it is given differ. Those are the ones whose (x, y) box touches the
 /// segment's box, widened by a margin that swallows rounding: a triangle whose
-/// box is clear of the segment cannot give a point on it — its intersection
+/// box is clear of the segment cannot give a point on it - its intersection
 /// with the plane lies inside the triangle's box, and what is kept of that is
-/// on the segment, so inside the segment's — which is what makes skipping it
+/// on the segment, so inside the segment's - which is what makes skipping it
 /// invisible. The boxes of the triangles are computed once for all the traces.
 pub fn cut_many<T: AsRef<[[f64; 2]]>>(
     points: &[[f64; 3]],
@@ -327,7 +327,7 @@ pub struct Chain {
     /// Same rule as [`Cut`], and for the same reason: both views come out of
     /// the same intersection, so they cannot contradict each other. A second
     /// function re-chaining the profiles separately would end up diverging from
-    /// the 3D chaining — and it is the chaining that carries the subtlety (the
+    /// the 3D chaining - and it is the chaining that carries the subtlety (the
     /// weld on an exactly shared end). `points[i]` and `profile[i]` are the
     /// same node.
     pub profile: Vec<[f64; 2]>,
@@ -338,7 +338,7 @@ pub struct Chain {
 /// Weld a cut's segments into polylines.
 ///
 /// Joined on an **exactly** shared end (the same point computed from the same
-/// edge — see the module); a node where three or more segments meet stops the
+/// edge - see the module); a node where three or more segments meet stops the
 /// chain, because choosing a branch would draw a path the cut does not state.
 pub fn chain(cuts: &[Cut]) -> Vec<Chain> {
     chain_walk(cuts, None)
@@ -354,8 +354,8 @@ pub struct SourcedChain {
     pub chain: Chain,
     /// One source per node: `sources[i]` is the source of `chain.points[i]`.
     ///
-    /// **A welded node keeps the source of the segment that was walked first**
-    /// — the one the chain already held when the next segment met it. Two
+    /// **A welded node keeps the source of the segment that was walked first** -
+    /// the one the chain already held when the next segment met it. Two
     /// triangles compute a shared edge's point alike, to the bit, but may name
     /// the edge's two nodes in opposite order (`a, b, t` against `b, a, 1 − t`):
     /// both describe the same point.
@@ -398,7 +398,7 @@ fn chain_walk(cuts: &[Cut], sources_of: Option<&[[CutEnd; 2]]>) -> Vec<(Chain, V
         let mut sources: Vec<CutEnd> = sources_of.map(|all| all[start].to_vec()).unwrap_or_default();
         // Extend from both ends, as long as the node has **degree two**: the
         // segment one came from, and one single continuation. The degree is
-        // measured over *all* segments, consumed ones included — a criterion
+        // measured over *all* segments, consumed ones included - a criterion
         // over the free ones alone would depend on the walking order, and a
         // three-way junction would be crossed as soon as two were consumed.
         for forward in [true, false] {
@@ -409,7 +409,7 @@ fn chain_walk(cuts: &[Cut], sources_of: Option<&[[CutEnd; 2]]>) -> Vec<(Chain, V
                     points[0]
                 };
                 let at_tip = by_end.get(&key(&tip)).map(Vec::as_slice).unwrap_or(&[]);
-                // Two ends in all, or nothing: a junction (≥ 3) is a stop —
+                // Two ends in all, or nothing: a junction (≥ 3) is a stop -
                 // choosing a branch would draw a path nobody stated.
                 if at_tip.len() != 2 {
                     break;
@@ -440,7 +440,7 @@ fn chain_walk(cuts: &[Cut], sources_of: Option<&[[CutEnd; 2]]>) -> Vec<(Chain, V
                 }
             }
         }
-        // Closed: the two ends are the same point. The node is not repeated —
+        // Closed: the two ends are the same point. The node is not repeated -
         // closure is stated, not stored (the same rule as promoting rings).
         let closed = points.len() > 2 && key(points.first().unwrap()) == key(points.last().unwrap());
         if closed {
@@ -572,7 +572,7 @@ mod tests {
             profile: [[0.0, 0.0]; 2],
         };
         // Three segments following each other, then one isolated across a gap:
-        // a chain of four nodes, and one of two — never welded together.
+        // a chain of four nodes, and one of two - never welded together.
         let cuts = vec![
             seg([0.0, 0.0, 0.0], [1.0, 0.0, 0.0]),
             seg([1.0, 0.0, 0.0], [2.0, 0.0, 1.0]),
@@ -611,7 +611,7 @@ mod tests {
             ends: [a, b],
             profile: [[0.0, 0.0]; 2],
         };
-        // Three segments share the same node: no chain crosses it — choosing a
+        // Three segments share the same node: no chain crosses it - choosing a
         // branch would draw a path nobody stated.
         let hub = [0.0, 0.0, 0.0];
         let cuts = vec![
@@ -626,7 +626,7 @@ mod tests {
     #[test]
     fn a_real_cut_chains_into_one_line_across_the_shared_edge() {
         // The square's two triangles share the edge (0,2): the cut computes the
-        // same point on both sides, to the bit — which is the welding
+        // same point on both sides, to the bit - which is the welding
         // criterion, checked on a real cut rather than on fabricated segments.
         let (points, triangles) = a_flat_square();
         let cuts = cut(&points, &triangles, &[[-5.0, 5.0], [15.0, 5.0]]);

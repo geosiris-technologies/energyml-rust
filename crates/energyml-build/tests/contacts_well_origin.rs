@@ -1,12 +1,12 @@
-//! `contacts-from-frames` — naming each point after the well it came from
+//! `contacts-from-frames` - naming each point after the well it came from
 //! (`wellOrigin`). The need, quoted in
 //! `src/ops/contacts.rs`: it should be possible to assign a
 //! discreteProperty that assigns, at each point, the name of the
 //! borehole of origin.
 //!
 //! The property is confronted against the frames' own titles, read from the
-//! points' coordinates by `frame_at` — an independent source, never anything
-//! the operation kept — the same discipline `tests/contacts.rs`'s
+//! points' coordinates by `frame_at` - an independent source, never anything
+//! the operation kept - the same discipline `tests/contacts.rs`'s
 //! `where_is`/`a_point_takes_what_its_wellbore_holds_at_that_node` already
 //! use for a copied measurement.
 
@@ -78,7 +78,7 @@ fn frame(bag: Pieces, at: usize, title: &str, units: Vec<Option<Ref>>) -> Pieces
 }
 
 /// Which frame a point came from, **from its coordinates alone**: frame `at`
-/// stands at x = 10·at (see `frame`) — nothing the operation kept.
+/// stands at x = 10·at (see `frame`) - nothing the operation kept.
 fn frame_at(point: &[f64]) -> usize {
     (point[0] / 10.0).round() as usize
 }
@@ -118,12 +118,12 @@ fn points_of(made: &Plan, title: &str) -> Vec<Vec<f64>> {
     values.chunks(3).map(<[f64]>::to_vec).collect()
 }
 
-/// The well each node of a point set's `wellOrigin` property names — read
+/// The well each node of a point set's `wellOrigin` property names - read
 /// exactly as a consumer would: the property's own codes, against the rows
 /// of the table its `CategoryLookup` names, never an index this test already
 /// knows.
 fn well_names_of(made: &Plan, set_title: &str) -> Vec<String> {
-    let property_title = format!("{set_title} — well");
+    let property_title = format!("{set_title} - well");
     let object = made
         .objects
         .iter()
@@ -168,18 +168,18 @@ fn well_names_of(made: &Plan, set_title: &str) -> Vec<String> {
 
 #[test]
 fn a_point_names_the_well_it_came_from() {
-    // F1: A, A, B — its contact is node 2. F2: A, B, B — node 1. Both give a
-    // point to `A — base` and to `B — top`.
+    // F1: A, A, B - its contact is node 2. F2: A, B, B - node 1. Both give a
+    // point to `A - base` and to `B - top`.
     let pieces = frame(Pieces::empty(), 0, "F1", vec![unit("A"), unit("A"), unit("B")]);
     let pieces = frame(pieces, 1, "F2", vec![unit("A"), unit("B"), unit("B")]);
     let made = plan(&pieces).expect("a plan");
 
-    for title in ["A — base", "B — top"] {
+    for title in ["A - base", "B - top"] {
         let points = points_of(&made, title);
         let names = well_names_of(&made, title);
         // As many values as the point set has points.
         assert_eq!(names.len(), points.len(), "{title}: one well name per point");
-        // Value i names the well point i came from — read from the point's
+        // Value i names the well point i came from - read from the point's
         // own coordinates, an independent source.
         for (point, name) in points.iter().zip(&names) {
             let expected = match frame_at(point) {
@@ -215,13 +215,13 @@ fn every_point_set_of_the_run_shares_one_table() {
     let properties: Vec<&serde_json::Value> = made
         .objects
         .iter()
-        .filter(|one| one.qualified_type == "resqml22.DiscreteProperty" && one.title.ends_with(" — well"))
+        .filter(|one| one.qualified_type == "resqml22.DiscreteProperty" && one.title.ends_with(" - well"))
         .map(|one| &one.json)
         .collect();
     assert_eq!(
         properties.len(),
         2,
-        "one property per point set — `A — base` and `B — top`"
+        "one property per point set - `A - base` and `B - top`"
     );
     for property in properties {
         assert_eq!(
@@ -244,7 +244,7 @@ fn well_origin_off_writes_no_property_and_no_table_but_keeps_the_point_sets() {
         "no table"
     );
     assert!(
-        off.objects.iter().all(|one| !one.title.ends_with(" — well")),
+        off.objects.iter().all(|one| !one.title.ends_with(" - well")),
         "no well-origin property"
     );
     let note = off

@@ -32,8 +32,8 @@ use energyml_storage::EpcStore;
 use energyml_storage::graph::{self, Graph};
 
 /// Beyond this many objects a package is skipped: the reference side of every
-/// confrontation keeps all the objects alive — the very thing the index exists
-/// not to do — and a debug build of a 77 000-object package does not fit.
+/// confrontation keeps all the objects alive - the very thing the index exists
+/// not to do - and a debug build of a 77 000-object package does not fit.
 const LARGEST: usize = 20_000;
 
 // ---------------------------------------------------------------------------
@@ -185,7 +185,7 @@ fn sheet_difference(
 }
 
 /// The property membership and the sheets of `index`, against scanning every
-/// property of `store` with `property::read` — the rule a front end's attribute listing
+/// property of `store` with `property::read` - the rule a front end's attribute listing
 /// applied, and the one `attributes_of_all` applied once per package.
 fn property_difference(store: &EpcStore, index: &PackageIndex) -> Option<String> {
     let mut expected: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
@@ -211,7 +211,7 @@ fn property_difference(store: &EpcStore, index: &PackageIndex) -> Option<String>
             return Some(format!("{}: no sheet in the index", summary.uri));
         };
         if let Some(why) = sheet_difference(sheet, &read, object.as_reflect()) {
-            return Some(format!("{}: sheet differs — {why}", summary.uri));
+            return Some(format!("{}: sheet differs - {why}", summary.uri));
         }
         if let Some(support) = &read.supporting_representation {
             expected
@@ -227,7 +227,7 @@ fn property_difference(store: &EpcStore, index: &PackageIndex) -> Option<String>
         ));
     }
 
-    // Every representation of the package, and every uuid a property names —
+    // Every representation of the package, and every uuid a property names -
     // absent ones included, for the index answers those too.
     let mut askable = representations;
     askable.extend(expected.keys().cloned());
@@ -290,7 +290,7 @@ fn dependents_difference(store: &EpcStore, index: &PackageIndex, sample: usize) 
 fn assert_index_is_right(label: &str, store: &EpcStore, index: &PackageIndex) {
     let expected = expected_graph(store);
     if let Some(why) = difference(&index.graph(), &expected) {
-        panic!("{label}: the index's graph is not graph::build's — {why}");
+        panic!("{label}: the index's graph is not graph::build's - {why}");
     }
     if let Some(why) = property_difference(store, index) {
         panic!("{label}: {why}");
@@ -365,15 +365,15 @@ fn a_pass_in_slices_of_seven_is_one_pass() {
         let sliced = builder.finish();
 
         if let Some(why) = difference(&sliced.graph(), &whole.graph()) {
-            panic!("{name}: slices differ from one pass — {why}");
+            panic!("{name}: slices differ from one pass - {why}");
         }
         assert_eq!(sheets_of(&sliced), sheets_of(&whole), "{name}");
         assert_eq!(sliced.edge_count(), whole.edge_count(), "{name}");
     }
 }
 
-/// An edit that changes what the index records — a title, which is on the node
-/// and, for a property, on its sheet — then `update` of that one uuid.
+/// An edit that changes what the index records - a title, which is on the node
+/// and, for a property, on its sheet - then `update` of that one uuid.
 #[test]
 fn an_update_after_an_edit_is_a_rebuild() {
     let mut edited = 0usize;
@@ -529,7 +529,7 @@ fn uri_of(store: &EpcStore, uuid: &str) -> String {
         .clone()
 }
 
-/// Two representations, four properties — one of them on a representation the
+/// Two representations, four properties - one of them on a representation the
 /// package does not hold.
 fn package() -> EpcStore {
     let mut store = empty_store();
@@ -550,16 +550,16 @@ fn uris(index: &PackageIndex, representation: &str) -> BTreeSet<String> {
 }
 
 /// What an update must be: the graph of a rebuild from scratch and of
-/// `graph::build` — nodes compared sorted — and the same sheets.
+/// `graph::build` - nodes compared sorted - and the same sheets.
 fn assert_update_is_a_rebuild(label: &str, store: &EpcStore, updated: &PackageIndex) {
     let rebuilt = PackageIndex::build(store, 0);
     if let Some(why) = difference(&canonical(&updated.graph()), &canonical(&rebuilt.graph())) {
-        panic!("{label}: the updated index is not the rebuilt one — {why}");
+        panic!("{label}: the updated index is not the rebuilt one - {why}");
     }
     // …and the rebuild is not judged by itself: graph::build, which shares no
     // code with the index, is the second witness.
     if let Some(why) = difference(&canonical(&updated.graph()), &canonical(&expected_graph(store))) {
-        panic!("{label}: the updated index is not graph::build's — {why}");
+        panic!("{label}: the updated index is not graph::build's - {why}");
     }
     assert_eq!(sheets_of(updated), sheets_of(&rebuilt), "{label}: sheets");
     if let Some(why) = property_difference(store, updated) {
@@ -642,7 +642,7 @@ fn an_update_follows_a_reference_that_moves_leaves_and_arrives() {
     );
 
     // 2. An object LEAVES while it is referenced: REP_A goes, P1 still names it.
-    // It does not vanish — it becomes the absent node a rebuild would draw.
+    // It does not vanish - it becomes the absent node a rebuild would draw.
     let uri_a = uri_of(&store, REP_A);
     store.remove(&uri_a).expect("it is removed");
     index.update(&store, &[REP_A.to_string()], 3);
@@ -757,7 +757,7 @@ fn the_synthetic_confrontations_can_fail() {
 
     // SABOTAGE 3: an update that is told nothing. After an edit that moves a
     // reference, an index not updated must be reported different from a rebuild
-    // — otherwise `assert_update_is_a_rebuild` could pass on an index that
+    // - otherwise `assert_update_is_a_rebuild` could pass on an index that
     // never changes.
     let mut store = package();
     let stale = PackageIndex::build(&store, 1);
@@ -775,7 +775,7 @@ fn the_synthetic_confrontations_can_fail() {
 
 /// What a copy of the graph asks after an edit of `changed` (uuids): the uris it
 /// held for them, the uris the store holds for them now, and the objects they
-/// pointed at — a front ender's request (`patchGraph`).
+/// pointed at - a front ender's request (`patchGraph`).
 fn asked_after(old: &Graph, store: &EpcStore, changed: &[&str]) -> Vec<String> {
     let mut asked: Vec<String> = Vec::new();
     for uuid in changed {
@@ -844,7 +844,7 @@ fn a_copy_patched_around_the_changed_objects_is_the_whole_graph() {
     let mut index = PackageIndex::build(&store, 1);
     let mut revision = 1;
     // Every move of `an_update_follows_a_reference_that_moves_leaves_and_arrives`,
-    // and a creation that links to a held object — the case of 08/10.
+    // and a creation that links to a held object - the case of 08/10.
     let mut step = |store: &mut EpcStore,
                     index: &mut PackageIndex,
                     label: &str,
@@ -862,7 +862,7 @@ fn a_copy_patched_around_the_changed_objects_is_the_whole_graph() {
         let around = index.graph_around(&asked);
         let copy = patched(&old, &around, &asked, false);
         if let Some(why) = difference(&sorted(&copy), &sorted(&index.graph())) {
-            panic!("{label}: the patched copy is not the graph — {why}");
+            panic!("{label}: the patched copy is not the graph - {why}");
         }
         (old, around, asked)
     };

@@ -1,4 +1,4 @@
-//! **A Galaxy tool, written from an operation's declaration** — the tool XML a
+//! **A Galaxy tool, written from an operation's declaration** - the tool XML a
 //! Galaxy server runs to call one operation through the `energyml` image.
 //!
 //! The tool XML is generated rather than written by hand, and it reuses the
@@ -17,13 +17,13 @@
 //! every tool has a `manifest` output (JSON, what the run wrote), and an
 //! operation that declares [`AnyOperation::gives`] gets one `uris_<role>` file
 //! per role (`-` becomes `_`), written by the runner from the manifest. An
-//! operation that declares nothing has the manifest only — its roles are not
-//! known in advance — and its help says so. `uris_out` and `uris_type` stay.
+//! operation that declares nothing has the manifest only - its roles are not
+//! known in advance - and its help says so. `uris_out` and `uris_type` stay.
 //!
 //! What a Galaxy tool cannot say is **left out and said** in the tool's help: a
 //! ramp, a field or a lattice are pieces a front end builds, not files a workflow
 //! passes. A slot that takes objects of the package becomes two optional
-//! inputs — URIs typed in, or a file of URIs written by an upstream step — and
+//! inputs - URIs typed in, or a file of URIs written by an upstream step - and
 //! one that takes every object when left empty says so.
 
 use std::fmt::Write as _;
@@ -34,7 +34,7 @@ use crate::pieces::Pieces;
 /// What the tool is bound to: the image it runs in and where the runner is.
 #[derive(Debug, Clone)]
 pub struct ToolOptions {
-    /// The container — the published `energyml` image.
+    /// The container - the published `energyml` image.
     pub image: String,
     /// The runner's path inside the image.
     pub runner: String,
@@ -52,10 +52,10 @@ impl Default for ToolOptions {
     }
 }
 
-/// The setting the runner fixes itself — the HDF5 it writes and copies out.
+/// The setting the runner fixes itself - the HDF5 it writes and copies out.
 const RUNNER_OWNS: &str = "dataFile";
 
-/// The file kind a piece of this sort is staged as — what the runner gives the
+/// The file kind a piece of this sort is staged as - what the runner gives the
 /// file as its extension, since Galaxy names every dataset `.dat`. `None`: not a
 /// file a workflow passes.
 fn file_kind(kind: &str) -> Option<(&'static str, &'static str)> {
@@ -103,7 +103,7 @@ pub fn tool_xml(operation: &dyn AnyOperation, options: &ToolOptions) -> String {
     let mut takes_tables = false;
     // The input package is required only when a slot **must** be given objects
     // of it: optional slots, and those that take every object when left empty,
-    // leave it optional — and without it the operation writes a new package.
+    // leave it optional - and without it the operation writes a new package.
     let mut needs_package = false;
 
     // What it takes: files, or objects of the input package.
@@ -139,14 +139,14 @@ pub fn tool_xml(operation: &dyn AnyOperation, options: &ToolOptions) -> String {
             };
             let _ = writeln!(
                 inputs,
-                r#"        <param name="{param}" type="text" value="" optional="true" label="{} — URIs" help="{}{}: URIs of the input package, comma-separated.{every}" />"#,
+                r#"        <param name="{param}" type="text" value="" optional="true" label="{} - URIs" help="{}{}: URIs of the input package, comma-separated.{every}" />"#,
                 esc(slot.name),
                 esc(slot.about),
                 esc(&types),
             );
             let _ = writeln!(
                 inputs,
-                r#"        <param name="{param}_uris" type="data" format="txt" optional="true" label="{} — URI file" help="A file of URIs, one per line — what an upstream step's URI output holds." />"#,
+                r#"        <param name="{param}_uris" type="data" format="txt" optional="true" label="{} - URI file" help="A file of URIs, one per line - what an upstream step's URI output holds." />"#,
                 esc(slot.name),
             );
             let _ = write!(
@@ -235,9 +235,9 @@ pub fn tool_xml(operation: &dyn AnyOperation, options: &ToolOptions) -> String {
         if matches!(slot.need, Need::Flag) {
             let _ = writeln!(command, " --set '{}=${param}'", slot.name);
         } else {
-            // **`None` is not a value.** An optional parameter left unset — a
+            // **`None` is not a value.** An optional parameter left unset - a
             // workflow saved before the parameter existed, a run through the API
-            // that does not give it — reaches Cheetah as `None`, which `str()`
+            // that does not give it - reaches Cheetah as `None`, which `str()`
             // spells "None": a guard on emptiness alone passed `--set
             // language=None`. Unset, the
             // operation's own default applies.
@@ -253,7 +253,7 @@ pub fn tool_xml(operation: &dyn AnyOperation, options: &ToolOptions) -> String {
     let package_optional = !needs_package;
     let _ = writeln!(
         inputs,
-        r#"        <param name="epc_in" type="data" format="epc" optional="{package_optional}" label="Input EPC" help="The package to add to — its objects are the inputs named by URI." />"#
+        r#"        <param name="epc_in" type="data" format="epc" optional="{package_optional}" label="Input EPC" help="The package to add to - its objects are the inputs named by URI." />"#
     );
     let _ = writeln!(
         inputs,
@@ -290,7 +290,7 @@ pub fn tool_xml(operation: &dyn AnyOperation, options: &ToolOptions) -> String {
         );
         let _ = writeln!(
             outputs,
-            r#"        <data name="uris_{role}" format="txt" label="[Output] URIs of {} — {}" />"#,
+            r#"        <data name="uris_{role}" format="txt" label="[Output] URIs of {} - {}" />"#,
             esc(output.role),
             esc(output.describe),
         );
@@ -316,7 +316,7 @@ pub fn tool_xml(operation: &dyn AnyOperation, options: &ToolOptions) -> String {
         format!("\n\n**Not offered here**: {}.", left_out.join("; "))
     };
     format!(
-        r#"<tool id="{id}" name="energyml — {name}" version="{version}" profile="21.05">
+        r#"<tool id="{id}" name="energyml - {name}" version="{version}" profile="21.05">
     <description>{describe}</description>
     <!-- Written by `energyml galaxy-tool {name}` from the operation's declaration; regenerate rather than edit. -->
     <requirements>
@@ -334,7 +334,7 @@ pub fn tool_xml(operation: &dyn AnyOperation, options: &ToolOptions) -> String {
 {outputs}        <data name="log" format="txt" label="[Output] Log of ${{tool.name}}" />
     </outputs>
     <help><![CDATA[
-**{name}** — {describe_raw}
+**{name}** - {describe_raw}
 
 Makes: {makes}.{left}{roles}
     ]]></help>

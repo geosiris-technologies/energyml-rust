@@ -40,7 +40,7 @@ fn smooth_runs_from_one_nodes_colour_to_the_next_through_their_mix() {
     // The whole span is covered, from x = 0 to x = 20, with no hole.
     assert_eq!(pieces.first().unwrap().points.first(), Some(&[0.0, 0.0]));
     assert_eq!(pieces.last().unwrap().points.last(), Some(&[20.0, 0.0]));
-    // The point halfway is the mix of red and green: (127.5, 127.5, 0) — the
+    // The point halfway is the mix of red and green: (127.5, 127.5, 0) - the
     // two sub-pieces meeting there wear colours on either side of it, red-ish
     // before, green-ish after, never one flat colour for the whole span.
     let colours: Vec<&str> = pieces.iter().map(|p| p.colour.as_str()).collect();
@@ -169,9 +169,9 @@ fn what_does_not_fit_is_refused_by_name() {
 // --- the sources the reader gives a cut -------------------------------------
 
 /// A square of two triangles, (0,0) to (10,10), on `z = x + 2y`: every node has
-/// its own height. The preparation's numbering is **not** the identity — the
+/// its own height. The preparation's numbering is **not** the identity - the
 /// representation's nodes 3, 4, 6, 7, node 5 having been a hole `drawable`
-/// compacted out — so a source that still named the kept points' own indices
+/// compacted out - so a source that still named the kept points' own indices
 /// would be wrong, and say so.
 fn prepared() -> Prepared {
     Prepared {
@@ -240,14 +240,14 @@ fn a_cut_says_where_each_of_its_points_lies_on_the_surface() {
     assert_eq!(spans[0].len(), 3);
     for (point, source) in spans[0].iter().zip(&cut.sources[0]) {
         // The span's point is (s, z); the source recomputes (x, y, z) from the
-        // nodes — in the **representation's** numbering — and s is the distance
+        // nodes - in the **representation's** numbering - and s is the distance
         // from the trace's start (-5, 3) along it.
         let [x, y, z] = place(source);
         assert!((y - 3.0).abs() < 1e-9, "the point is on the trace: {source:?}");
         assert!((x + 5.0 - point[0]).abs() < 1e-9, "s: {point:?} against x = {x}");
         assert!((z - point[1]).abs() < 1e-9, "z: {point:?} against {z}");
     }
-    // By hand: x = 0, 3, 10 — the middle one on the diagonal, nodes 3 and 6.
+    // By hand: x = 0, 3, 10 - the middle one on the diagonal, nodes 3 and 6.
     let middle = cut.sources[0][1];
     assert!([(3, 6), (6, 3)].contains(&(middle.a, middle.b)), "{middle:?}");
     assert!((place(&middle)[0] - 3.0).abs() < 1e-9);
@@ -290,7 +290,7 @@ fn read_of(spans: Vec<Vec<[f64; 2]>>, sources: Vec<Vec<CutSource>>) -> SurfaceRe
 #[test]
 fn breaking_a_cut_at_a_hole_takes_the_sources_of_the_points_that_go() {
     // Seven points; the fourth is not a number: two spans of three, each with
-    // its own sources — a source is its point's, so node numbers identify them.
+    // its own sources - a source is its point's, so node numbers identify them.
     let at = |n: u32| source(n, n + 100, 0.25);
     let span: Vec<[f64; 2]> = (0..7).map(|k| [k as f64, 1.0]).collect();
     let mut spans = vec![span.clone()];

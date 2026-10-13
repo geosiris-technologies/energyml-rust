@@ -2,8 +2,8 @@
 //! generated crates agree, and a version that is not compiled is refused by
 //! name.
 //!
-//! These tests hold under **any** feature set — `--no-default-features
-//! --features resqml20` as much as the default `all` — because what they read
+//! These tests hold under **any** feature set - `--no-default-features
+//! --features resqml20` as much as the default `all` - because what they read
 //! is the always-compiled table, the manifest text and the directory listing.
 //! The refusal is tested with the "compiled" set as a parameter, since a
 //! workspace build unifies every feature on and could never reach the path
@@ -140,7 +140,7 @@ fn every_row_names_a_feature_that_enables_its_crate_and_its_eml() {
 }
 
 /// What a row `requires` is what the generated crate's own manifest depends
-/// on — read from the manifest, which is not code written here.
+/// on - read from the manifest, which is not code written here.
 #[test]
 fn the_requirements_are_the_eml_crates_the_generated_manifests_depend_on() {
     for row in KNOWN_VERSIONS {
@@ -250,8 +250,8 @@ fn feature_of(row: Option<&'static KnownVersion>) -> &'static str {
     row.expect("a version this project ships").feature
 }
 
-/// `2.0`, `2.0.1`, `resqml20.X` and `resqml201.X` are one version — the 2.0.1
-/// crate — and the `1` is not needed for a read. Held at the table, which is
+/// `2.0`, `2.0.1`, `resqml20.X` and `resqml201.X` are one version - the 2.0.1
+/// crate - and the `1` is not needed for a read. Held at the table, which is
 /// what the refusal reads; the registry itself is held by `complete.rs`.
 #[test]
 fn every_spelling_of_resqml_2_0_1_is_the_resqml20_feature() {

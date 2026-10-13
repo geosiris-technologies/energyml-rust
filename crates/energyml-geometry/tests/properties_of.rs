@@ -2,7 +2,7 @@
 //! `attributes_for` would have kept from the whole package.
 //!
 //! Two roads to the same list: the index (`energyml_domain::property::Index`,
-//! built once), and each property read on its own and asked what it hangs on —
+//! built once), and each property read on its own and asked what it hangs on -
 //! the very test `attributes_for` applies before anything else. Same members,
 //! same order; so handing `attributes_for` the index's answer instead of every
 //! property changes what it attaches by nothing, and costs one read per

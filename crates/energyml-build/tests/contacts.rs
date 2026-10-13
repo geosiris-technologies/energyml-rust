@@ -1,4 +1,4 @@
-//! `contacts-from-frames` — the tops and the bases of the units the frames'
+//! `contacts-from-frames` - the tops and the bases of the units the frames'
 //! intervals name, and what the
 //! wells' properties hold there.
 //!
@@ -7,7 +7,7 @@
 //! The control that carries the properties is
 //! `a_point_takes_what_its_wellbore_holds_at_that_node`: it finds where each
 //! point came from **by its coordinates**, not by the rank the operation kept,
-//! and reads the copy back through the generic readers — two sources of one
+//! and reads the copy back through the generic readers - two sources of one
 //! fact, neither of them the bookkeeping under test.
 
 use serde_json::{Value, json};
@@ -18,7 +18,7 @@ use energyml_domain::property::IndexableElement;
 use energyml_domain::values::Values;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
-/// The frames' system — a real uuid, because a copy is read back through the
+/// The frames' system - a real uuid, because a copy is read back through the
 /// generated types here.
 const CRS: &str = "44444444-4444-4444-8444-444444444444";
 const PHI_KIND: &str = "11111111-1111-4111-8111-111111111111";
@@ -83,7 +83,7 @@ fn frame(bag: Pieces, at: usize, title: &str, units: Vec<Option<Ref>>) -> Pieces
     )
 }
 
-/// Which frame and which node a point is, **from its coordinates alone** —
+/// Which frame and which node a point is, **from its coordinates alone** -
 /// the construction of [`frame`], and nothing the operation kept.
 fn where_is(point: &[f64; 3]) -> (usize, usize) {
     ((point[0] / 10.0).round() as usize, (-point[2]).round() as usize)
@@ -121,30 +121,30 @@ fn points_of(made: &Plan, title: &str) -> Option<Vec<Vec<f64>>> {
 
 #[test]
 fn a_contact_is_the_node_between_two_units_and_nothing_else() {
-    // Frame 1: A, A, B — A's base and B's top at the third node (depth 2).
-    // Frame 2: nothing, A, B — no top for A: what lies above is no unit, so
+    // Frame 1: A, A, B - A's base and B's top at the third node (depth 2).
+    // Frame 2: nothing, A, B - no top for A: what lies above is no unit, so
     // the limit with it is no contact; A's base and B's top at depth 2.
     let pieces = frame(Pieces::empty(), 0, "F1", vec![unit("A"), unit("A"), unit("B")]);
     let pieces = frame(pieces, 1, "F2", vec![None, unit("A"), unit("B")]);
     let made = plan(&pieces).expect("a plan");
 
     assert_eq!(
-        points_of(&made, "A — base"),
+        points_of(&made, "A - base"),
         Some(vec![vec![0.0, 0.0, -2.0], vec![10.0, 0.0, -2.0]])
     );
     // **Two point sets, even with the same points**: the base of A and the
     // top of B part where erosion took something away.
     assert_eq!(
-        points_of(&made, "B — top"),
+        points_of(&made, "B - top"),
         Some(vec![vec![0.0, 0.0, -2.0], vec![10.0, 0.0, -2.0]])
     );
     assert_eq!(
-        points_of(&made, "A — top"),
+        points_of(&made, "A - top"),
         None,
         "the top of a log is not a contact, nor a limit with nothing"
     );
     assert_eq!(
-        points_of(&made, "B — base"),
+        points_of(&made, "B - base"),
         None,
         "the bottom of a log is not a contact"
     );
@@ -153,7 +153,7 @@ fn a_contact_is_the_node_between_two_units_and_nothing_else() {
     let set = made
         .objects
         .iter()
-        .find(|one| one.title == "B — top" && one.qualified_type.ends_with("PointSetRepresentation"))
+        .find(|one| one.title == "B - top" && one.qualified_type.ends_with("PointSetRepresentation"))
         .unwrap();
     assert_eq!(
         set.json["RepresentedObject"]["QualifiedType"],
@@ -193,7 +193,7 @@ fn frames_that_map_no_unit_are_refused_towards_the_import() {
 // -- what the wells' properties hold at a contact (24/09) --------------------
 
 /// A property of the frame titled `frame`, as the boundary resolves it
-/// (`read::known_of_object`): titled `<frame> — <measure>`, as
+/// (`read::known_of_object`): titled `<frame> - <measure>`, as
 /// `properties-from-table` titles them.
 fn property(frame: &str, measure: &str, class: &str, on: &str, values: Values) -> Known {
     let discrete = class == "DiscreteProperty";
@@ -201,7 +201,7 @@ fn property(frame: &str, measure: &str, class: &str, on: &str, values: Values) -
         reference: Some(Ref::new(
             format!("uuid-{frame}-{measure}-{on}"),
             format!("resqml22.{class}"),
-            format!("{frame} — {measure}"),
+            format!("{frame} - {measure}"),
         )),
         property: Some(KnownProperty {
             supporting: Some(Ref::new(
@@ -276,7 +276,7 @@ fn copied(made: &Plan, title: &str) -> Option<Numbers> {
         .map(|one| one.values.clone())
 }
 
-/// A copy, read back **by the generic readers** — never by the conventions it
+/// A copy, read back **by the generic readers** - never by the conventions it
 /// was written with: its JSON through `energyml_core::json`, the path `apply`
 /// takes; the property through `energyml_domain::property::read`; its array,
 /// and its point set's, where `energyml_storage::array::locate` finds them.
@@ -339,7 +339,7 @@ fn read_back(made: &Plan, title: &str) -> ReadBack {
 
 #[test]
 fn a_point_takes_what_its_wellbore_holds_at_that_node() {
-    // F1: A, A, B — its contact is node 2. F2: A, B, B — node 1.
+    // F1: A, A, B - its contact is node 2. F2: A, B, B - node 1.
     let pieces = frame(Pieces::empty(), 0, "F1", vec![unit("A"), unit("A"), unit("B")]);
     let pieces = frame(pieces, 1, "F2", vec![unit("A"), unit("B"), unit("B")]);
     let f1 = [0.10, 0.11, 0.12, 0.13];
@@ -350,21 +350,21 @@ fn a_point_takes_what_its_wellbore_holds_at_that_node() {
     // **The rank the contact was found at**, never a depth looked up again:
     // F1's node 2, F2's node 1, in the order of the frames.
     assert_eq!(
-        copied(&made, "A — base — PHI"),
+        copied(&made, "A - base - PHI"),
         Some(Numbers::F64(vec![0.12, 0.21]))
     );
     // A node has one value, whichever side of it a point set is.
     assert_eq!(
-        copied(&made, "B — top — PHI"),
+        copied(&made, "B - top - PHI"),
         Some(Numbers::F64(vec![0.12, 0.21]))
     );
 
     // **Two sources.** Where each point came from is found by where it is,
     // and the value expected there is the frame's own. Taking the neighbouring
     // rank, or mixing two frames up, would put a plausible porosity on every
-    // point — the numbers above would still be numbers.
+    // point - the numbers above would still be numbers.
     let frames: [&[f64]; 2] = [&f1, &f2];
-    for title in ["A — base — PHI", "B — top — PHI"] {
+    for title in ["A - base - PHI", "B - top - PHI"] {
         let back = read_back(&made, title);
         // On a point set a point **is** a node, whatever the source hung on.
         assert_eq!(back.indexable, IndexableElement::Nodes);
@@ -387,8 +387,8 @@ fn a_point_takes_what_its_wellbore_holds_at_that_node() {
 
 #[test]
 fn an_interval_property_is_read_on_the_units_own_side() {
-    // F1: A, A, B — node 2 is where interval 1 (A's last) ends and interval 2
-    // (B's first) begins. F2: A, B, B — node 1, between intervals 0 and 1.
+    // F1: A, A, B - node 2 is where interval 1 (A's last) ends and interval 2
+    // (B's first) begins. F2: A, B, B - node 1, between intervals 0 and 1.
     let pieces = frame(Pieces::empty(), 0, "F1", vec![unit("A"), unit("A"), unit("B")]);
     let pieces = frame(pieces, 1, "F2", vec![unit("A"), unit("B"), unit("B")]);
     let f1 = [0.1, 0.2, 0.3];
@@ -400,18 +400,18 @@ fn an_interval_property_is_read_on_the_units_own_side() {
     let made = plan(&pieces).expect("a plan");
 
     // **The base of A takes A's last interval, the top of B its first.** The
-    // same node, two values — what two point sets were written for. Reading
+    // same node, two values - what two point sets were written for. Reading
     // the node's rank as an interval would give the base of A B's value.
     assert_eq!(
-        copied(&made, "A — base — PHI"),
+        copied(&made, "A - base - PHI"),
         Some(Numbers::F64(vec![0.2, 0.5]))
     );
-    assert_eq!(copied(&made, "B — top — PHI"), Some(Numbers::F64(vec![0.3, 0.6])));
+    assert_eq!(copied(&made, "B - top - PHI"), Some(Numbers::F64(vec![0.3, 0.6])));
 
     // Two sources again, and the rule in intervals: node k is where interval
     // k − 1 ends and interval k begins.
     let frames: [&[f64]; 2] = [&f1, &f2];
-    for (title, below) in [("A — base — PHI", false), ("B — top — PHI", true)] {
+    for (title, below) in [("A - base - PHI", false), ("B - top - PHI", true)] {
         let back = read_back(&made, title);
         assert_eq!(
             back.indexable,
@@ -446,8 +446,8 @@ fn a_wellbore_without_the_property_gives_its_points_a_null() {
     let made = plan(&pieces).expect("a plan");
 
     // **Anticipated over every well**: the copy holds a value per point, F2's
-    // included — null, since F2 carries no PHI.
-    let Some(Numbers::F64(base)) = copied(&made, "A — base — PHI") else {
+    // included - null, since F2 carries no PHI.
+    let Some(Numbers::F64(base)) = copied(&made, "A - base - PHI") else {
         panic!("the copy: {:?}", made.says)
     };
     assert_eq!(base.len(), 3, "one value per point");
@@ -484,14 +484,14 @@ fn a_discrete_copy_names_the_same_table_and_states_the_runs_null() {
     let made = plan_with(&pieces, Choices::new().set("wellOrigin", false)).expect("a plan");
 
     assert_eq!(
-        copied(&made, "A — base — FACIES"),
+        copied(&made, "A - base - FACIES"),
         Some(Numbers::I64(vec![-9999, 4])),
         "a source's null becomes the run's"
     );
     let object = made
         .objects
         .iter()
-        .find(|one| one.title == "A — base — FACIES")
+        .find(|one| one.title == "A - base - FACIES")
         .expect("the copy");
     assert_eq!(object.qualified_type, "resqml22.DiscreteProperty");
     // **The same table, by reference**: a code is read against the very rows
@@ -514,14 +514,14 @@ fn a_discrete_copy_names_the_same_table_and_states_the_runs_null() {
     );
     // The generic reader agrees on the table.
     assert_eq!(
-        read_back(&made, "A — base — FACIES").lookup.as_deref(),
+        read_back(&made, "A - base - FACIES").lookup.as_deref(),
         Some(FACIES_TABLE)
     );
 
     // The null is a setting, and the one given is the one written.
     let other = plan_with(&pieces, Choices::new().set("nullValue", -5)).expect("a plan");
     assert_eq!(
-        copied(&other, "A — base — FACIES"),
+        copied(&other, "A - base - FACIES"),
         Some(Numbers::I64(vec![-5, 4]))
     );
 }
@@ -534,7 +534,7 @@ fn a_code_equal_to_the_declared_null_is_refused_by_name() {
     let pieces = with_properties(pieces, vec![facies("F1", &[3, 4, 4, 4])]);
     let made = plan_with(&pieces, Choices::new().set("nullValue", 4))
         .expect("a plan: the contacts do not depend on it");
-    assert_eq!(copied(&made, "A — base — FACIES"), None);
+    assert_eq!(copied(&made, "A - base - FACIES"), None);
     assert!(
         made.dropped.iter().any(|one| one.why.contains("nullValue")),
         "{:?}",
@@ -546,13 +546,13 @@ fn a_code_equal_to_the_declared_null_is_refused_by_name() {
 fn what_cannot_be_copied_is_set_aside_by_name() {
     let pieces = frame(Pieces::empty(), 0, "F1", vec![unit("A"), unit("A"), unit("B")]);
     let mut vector = phi("F1", "nodes", &[0.0; 12]);
-    vector.reference = Some(Ref::new("uuid-vector", "resqml22.ContinuousProperty", "F1 — DIP"));
+    vector.reference = Some(Ref::new("uuid-vector", "resqml22.ContinuousProperty", "F1 - DIP"));
     vector.property.as_mut().expect("a property").value_count = vec![3];
     let mut timed = phi("F1", "nodes", &[0.0; 4]);
     timed.reference = Some(Ref::new(
         "uuid-timed",
         "resqml22.ContinuousProperty",
-        "F1 — PRESSURE",
+        "F1 - PRESSURE",
     ));
     timed.property.as_mut().expect("a property").timed = true;
     let flag = property(
@@ -575,14 +575,14 @@ fn what_cannot_be_copied_is_set_aside_by_name() {
     );
     let made = plan(&pieces).expect("a plan: what cannot be copied does not stop the contacts");
 
-    assert!(copied(&made, "A — base — PHI").is_some(), "what can be copied is");
-    // **Named, with its reason** — a vector read as a scalar, a time series
+    assert!(copied(&made, "A - base - PHI").is_some(), "what can be copied is");
+    // **Named, with its reason** - a vector read as a scalar, a time series
     // read at one step, a flag given a value nobody stated would each look
     // exactly like a right copy.
     for (name, measure, cause) in [
-        ("F1 — DIP", "DIP", "component"),
-        ("F1 — PRESSURE", "PRESSURE", "time"),
-        ("F1 — OK", "OK", "null"),
+        ("F1 - DIP", "DIP", "component"),
+        ("F1 - PRESSURE", "PRESSURE", "time"),
+        ("F1 - OK", "OK", "null"),
     ] {
         assert!(
             made.dropped
@@ -620,7 +620,7 @@ fn two_units_for_one_measure_are_named_not_converted() {
 
     // One property holds one unit, and converting would choose it for
     // somebody.
-    assert_eq!(copied(&made, "A — base — PHI"), None);
+    assert_eq!(copied(&made, "A - base - PHI"), None);
     let refused = made
         .dropped
         .iter()
@@ -628,12 +628,12 @@ fn two_units_for_one_measure_are_named_not_converted() {
         .unwrap_or_else(|| panic!("the two units are named: {:?}", made.dropped));
     assert_eq!(refused.count, 2, "both sources are counted");
     assert!(
-        refused.why.contains("F1 — PHI") && refused.why.contains("F2 — PHI"),
+        refused.why.contains("F1 - PHI") && refused.why.contains("F2 - PHI"),
         "{}",
         refused.why
     );
     assert!(
-        points_of(&made, "A — base").is_some(),
+        points_of(&made, "A - base").is_some(),
         "the point sets are still written"
     );
 }
@@ -641,13 +641,13 @@ fn two_units_for_one_measure_are_named_not_converted() {
 #[test]
 fn a_wellbore_with_two_properties_of_one_measure_is_not_guessed() {
     // What two runs of `properties-from-table` leave behind when the values
-    // changed (§15): two `F1 — PHI` on one frame.
+    // changed (§15): two `F1 - PHI` on one frame.
     let pieces = frame(Pieces::empty(), 0, "F1", vec![unit("A"), unit("A"), unit("B")]);
     let mut second = phi("F1", "nodes", &[0.5, 0.5, 0.5, 0.5]);
     second.reference = Some(Ref::new(
         "uuid-F1-PHI-second",
         "resqml22.ContinuousProperty",
-        "F1 — PHI",
+        "F1 - PHI",
     ));
     let both = with_properties(
         pieces.clone(),
@@ -655,7 +655,7 @@ fn a_wellbore_with_two_properties_of_one_measure_is_not_guessed() {
     );
     let made = plan(&both).expect("a plan");
     assert_eq!(
-        copied(&made, "A — base — PHI"),
+        copied(&made, "A - base - PHI"),
         None,
         "which of the two is the well's cannot be guessed"
     );
@@ -670,7 +670,7 @@ fn a_wellbore_with_two_properties_of_one_measure_is_not_guessed() {
     // The remedy it names: the one given in `properties` is copied.
     let one = with_properties(pieces, vec![phi("F1", "nodes", &[0.1, 0.2, 0.3, 0.4])]);
     let made = plan(&one).expect("a plan");
-    assert_eq!(copied(&made, "A — base — PHI"), Some(Numbers::F64(vec![0.3])));
+    assert_eq!(copied(&made, "A - base - PHI"), Some(Numbers::F64(vec![0.3])));
 }
 
 #[test]
@@ -679,8 +679,8 @@ fn a_copy_that_would_be_all_null_is_not_written_and_is_counted() {
     let pieces = frame(Pieces::empty(), 0, "F1", vec![unit("A"), unit("A"), unit("B")]);
     let pieces = with_properties(pieces, vec![phi("F1", "nodes", &[0.1, 0.2, f64::NAN, 0.4])]);
     let made = plan(&pieces).expect("a plan");
-    assert_eq!(copied(&made, "A — base — PHI"), None);
-    assert_eq!(copied(&made, "B — top — PHI"), None);
+    assert_eq!(copied(&made, "A - base - PHI"), None);
+    assert_eq!(copied(&made, "B - top - PHI"), None);
     let note = made
         .says
         .iter()
@@ -750,7 +750,7 @@ fn a_crs_answered_in_the_form_is_not_taken_for_a_property() {
     );
     let made = plan(&pieces).expect("an answer is no refusal");
     assert!(made.dropped.is_empty(), "{:?}", made.dropped);
-    assert!(points_of(&made, "A — base").is_some());
+    assert!(points_of(&made, "A - base").is_some());
 }
 
 // -- the boundary: what a property of the package is known as ----------------
@@ -785,7 +785,7 @@ fn the_boundary_reads_a_named_property_and_only_a_frames_among_every_one() {
         .put(Box::new(resqml::WellboreFrameRepresentation {
             uuid: FRAME.to_string(),
             schema_version: "2.2".to_string(),
-            citation: citation("F1 — frame"),
+            citation: citation("F1 - frame"),
             node_count: 3,
             node_md: Some(eml::AbstractFloatingPointArray::FloatingPointXmlArray(
                 eml::FloatingPointXmlArray {
@@ -797,7 +797,7 @@ fn the_boundary_reads_a_named_property_and_only_a_frames_among_every_one() {
             trajectory: dor(
                 TRAJECTORY,
                 "resqml22.WellboreTrajectoryRepresentation",
-                "F1 — trajectory",
+                "F1 - trajectory",
             ),
             ..Default::default()
         }))
@@ -835,14 +835,14 @@ fn the_boundary_reads_a_named_property_and_only_a_frames_among_every_one() {
         .put(Box::new(codes(
             ON_FRAME,
             (FRAME, "resqml22.WellboreFrameRepresentation"),
-            "F1 — FACIES",
+            "F1 - FACIES",
         )))
         .expect("a part");
     store
         .put(Box::new(codes(
             ON_CLOUD,
             (CLOUD, "resqml22.PointSetRepresentation"),
-            "cloud — FACIES",
+            "cloud - FACIES",
         )))
         .expect("a part");
 
@@ -878,7 +878,7 @@ fn the_boundary_reads_a_named_property_and_only_a_frames_among_every_one() {
     assert_eq!(facts.values, Ok(Values::Integer(vec![4, -1, 7])));
 
     // **Named**, a property on anything has its values read: one property,
-    // chosen — a grid's, for `property-time-series` from a recipe (27/09).
+    // chosen - a grid's, for `property-time-series` from a recipe (27/09).
     let other = energyml_build::read::known_of_object(&store, ON_CLOUD).expect("what is known");
     let facts = other.property.expect("still described as a property");
     assert_eq!(

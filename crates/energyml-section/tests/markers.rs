@@ -100,7 +100,7 @@ fn the_shapes_are_read_from_the_registry_not_typed_in_the_library() {
             "{expected} is a NodeSymbol value and is not declared: {ids:?}"
         );
     }
-    // The pair a marker of that shape would write — the qualified type of the
+    // The pair a marker of that shape would write - the qualified type of the
     // enumeration the field is typed with, and the value.
     for wanted in ["star", "diamond"] {
         let shape = shapes.iter().find(|s| s.id == wanted).unwrap();
@@ -403,7 +403,7 @@ fn the_legend_is_what_is_drawn() {
 }
 
 /// A marker can be hidden without being deleted. A hidden marker
-/// stays in the view and draws nothing — no symbol, no legend entry, no note —
+/// stays in the view and draws nothing - no symbol, no legend entry, no note -
 /// and is the same bytes as no marker at all.
 ///
 /// To make it fail: drop the `hidden` filter in `marking::resolve`.
@@ -678,7 +678,7 @@ fn rows() -> Vec<ObjectRow> {
 }
 
 /// The command line's `--marker` (08/10): the type **and** the title choose,
-/// case ignored, through the storage's own filters — a frame of a BSS well and a
+/// case ignored, through the storage's own filters - a frame of a BSS well and a
 /// trajectory of another well are both left out, and so are a BSS trajectory the
 /// section refused and one drawn on another section only; one merged into a line
 /// the section draws is kept.
@@ -741,7 +741,7 @@ fn a_marker_in_words_takes_the_objects_its_type_and_title_name() {
     );
 }
 
-/// Every word that cannot become a marker is refused by its name — never a
+/// Every word that cannot become a marker is refused by its name - never a
 /// default shape, colour or place, and never a legend entry for nothing.
 #[test]
 fn a_marker_in_words_refuses_what_it_cannot_draw() {

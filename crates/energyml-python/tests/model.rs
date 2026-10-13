@@ -5,8 +5,8 @@
 //!
 //! There are no Python classes, and that is the decision: one class per type
 //! per release would be a second copy of `crates/generated/` to keep in step.
-//! What crosses instead is the **reflection** — which types exist, what fields
-//! they hold, what an enumeration accepts — and an empty object of a type,
+//! What crosses instead is the **reflection** - which types exist, what fields
+//! they hold, what an enumeration accepts - and an empty object of a type,
 //! ready to fill. These checks are about that being true and *usable*: a
 //! catalogue nobody can build an object from would be a listing, not an access.
 
@@ -18,7 +18,7 @@ fn the_catalogue_is_the_generated_model_itself() {
     let all = model_types(None, false);
 
     // Not pinned to a number: the point is that the catalogue is the Rust
-    // registry, so it grows with the workspace. What must hold is the shape —
+    // registry, so it grows with the workspace. What must hold is the shape -
     // every top-level type is nameable, and there are far more types than
     // top-level ones, because most of the model is nested.
     assert!(
@@ -170,7 +170,7 @@ fn a_uuid_can_be_given_to_the_template_instead_of_after_it() {
 #[test]
 fn an_abstract_type_cannot_be_made_and_says_what_can() {
     // The schema says it cannot be instantiated, so asking for one is a
-    // question about which subtype — and a refusal that did not list them
+    // question about which subtype - and a refusal that did not list them
     // would leave the caller grepping the XSD.
     let abstract_one = model_types(None, true).into_iter().find(|one| one.is_abstract);
     let Some(one) = abstract_one else {

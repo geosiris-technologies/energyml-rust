@@ -1,4 +1,4 @@
-//! `sigeol-boreholes` — the BRGM SIGEOL `Borehole` export, as wellbores.
+//! `sigeol-boreholes` - the BRGM SIGEOL `Borehole` export, as wellbores.
 //!
 //! The sibling of [`super::sigeol`], which reads the same producer's
 //! `GeologicUnit` export: one operation per vocabulary, both reading
@@ -9,8 +9,8 @@
 //!
 //! A `WellboreFeature`, its `WellboreInterpretation`, a
 //! `WellboreTrajectoryRepresentation` and a `WellboreFrameRepresentation`, plus
-//! the reference point the depths are measured from — a
-//! `ReferencePointInALocalEngineeringCompoundCrs`, in the compound — and the
+//! the reference point the depths are measured from - a
+//! `ReferencePointInALocalEngineeringCompoundCrs`, in the compound - and the
 //! frame's CRS objects once for the whole import: the projected and vertical
 //! systems and the identity compound joining them, which every geometry names
 //! (RESQML TRG 2.2 §3.1, p. 22). The datum comes from
@@ -23,12 +23,12 @@
 //!
 //! This is the one reversal with respect to `well-from-polyline`, and it is
 //! what makes the operation worth writing. A SIGEOL borehole has **no line**:
-//! it has a head — a 2D `Point` — an elevation beside it, and a list of
+//! it has a head - a 2D `Point` - an elevation beside it, and a list of
 //! intervals. So:
 //!
 //! 1. the measured depths are the intervals' distinct bounds, sorted, with a
 //!    zero prepended when the shallowest is deeper than the head
-//!    ([`crate::borehole::Borehole::mds`] — MDs rarely have a value for 0; zero is generally assumed to be the DEM surface);
+//!    ([`crate::borehole::Borehole::mds`] - MDs rarely have a value for 0; zero is generally assumed to be the DEM surface);
 //! 2. the head is placed into the frame **once**, carrying the elevation as its
 //!    third ordinate, so the reprojection sees the one position the file
 //!    states rather than a column of copies of it;
@@ -36,8 +36,8 @@
 //!
 //! And the depths are then **handed to the writer**, not left for it to
 //! rebuild. `well::write` derives them from its line when nobody states them,
-//! which is right for a line somebody drew; here it would be a round trip — a
-//! subtraction, then an accumulation of chord lengths — and **that round trip
+//! which is right for a line somebody drew; here it would be a round trip - a
+//! subtraction, then an accumulation of chord lengths - and **that round trip
 //! is not exact**. A hole whose file says `6.4` came back `6.399999999999999`,
 //! which is this crate inventing a value by a detour and putting it where a
 //! producer's own is expected. Found by the test that pins the node MDs
@@ -45,7 +45,7 @@
 //! *the form comes from the spec, the values come from the file*.
 //!
 //! What the writer **does** decide is the shape: it measures the verticality
-//! off the control points it is handed and writes RESQML's own vertical line —
+//! off the control points it is handed and writes RESQML's own vertical line -
 //! kind 0, parameters on the vertical CRS direction. Nothing here declares a
 //! hole vertical; one detector serves both operations, and what it says comes
 //! back in the plan's notes.
@@ -54,7 +54,7 @@
 //!
 //! [`crate::crs::build`] writes a `VerticalCrs` in metres, pointing up. A hole
 //! whose intervals are in feet would have its geometry built by subtracting
-//! feet from metres — a hole three times too short, in a package that opens
+//! feet from metres - a hole three times too short, in a package that opens
 //! cleanly. So a unit other than the metre sets the hole aside **by name**
 //! rather than being converted here: a conversion is a decision, and the one
 //! place it belongs is a reader of units, not an importer.
@@ -65,8 +65,8 @@
 //!
 //! | the file says | it is written as |
 //! |---|---|
-//! | `dateOfDrilling.endPosition` | `Citation/Creation` — *when the hole was drilled* |
-//! | the run's own instant | `Citation/LastUpdate` — when this package was made |
+//! | `dateOfDrilling.endPosition` | `Citation/Creation` - *when the hole was drilled* |
+//! | the run's own instant | `Citation/LastUpdate` - when this package was made |
 //! | `purpose` (15 of 1 000 holes) | `Citation/Description`, else the file's `description` |
 //! | `parameter_id_forage` | the `WellboreFeature`'s **uuid**, verbatim |
 //! | `parameter_id_bss` | `Citation/Title`, and an alias |
@@ -77,12 +77,12 @@
 //! properties from, since the intervals have no clear description of the
 //! type of material they contain, nor any measured borehole
 //! property. Each `logElement` carries an identifier and
-//! nothing else — no lithology, no measurement — so writing a property from it
+//! nothing else - no lithology, no measurement - so writing a property from it
 //! would put a column of numbers in the package standing for nothing. What is
 //! prepared for the day the export carries more is the **reading**:
 //! [`crate::borehole::Interval`] keeps every interval, its bounds, its
 //! `GeologicUnit` href and the producer's own key, and the frame's nodes are
-//! already the interval boundaries — so an interval property lands on the
+//! already the interval boundaries - so an interval property lands on the
 //! elements that exist, with no second pass over the depths.
 
 use std::collections::BTreeMap;
@@ -115,7 +115,7 @@ pub struct SigeolBoreholes;
 /// does not.
 #[derive(Debug, Params)]
 pub struct BoreholeParams {
-    /// the EPSG code the file's coordinates are in — 4326 by definition
+    /// the EPSG code the file's coordinates are in - 4326 by definition
     #[param(default = Epsg(4326))]
     pub source_epsg: Epsg,
     /// reproject into this EPSG system, in metres; left out, the degrees are written as they stand
@@ -127,7 +127,7 @@ pub struct BoreholeParams {
     pub data_file: String,
 }
 
-/// What `sigeol-boreholes` takes: the SIGEOL export — **several** collections
+/// What `sigeol-boreholes` takes: the SIGEOL export - **several** collections
 /// merged, as its sibling does.
 #[derive(Debug, Inputs)]
 pub struct BoreholeInputs {
@@ -147,7 +147,7 @@ struct Tally {
     with_gaps: usize,
 }
 
-/// The holes set aside, grouped by why — one line each, never a bare count,
+/// The holes set aside, grouped by why - one line each, never a bare count,
 /// and **naming the holes**: a borehole refused for having no elevation is a
 /// case the synthetic model shows on purpose,
 /// and a count of one does not say which of twenty-three it was.
@@ -172,8 +172,8 @@ impl SetAside {
             .map(|(why, (count, holes))| {
                 let why = match holes.len() {
                     0 => why,
-                    n if n <= NAMED => format!("{why} — {}", holes.join(", ")),
-                    n => format!("{why} — {} and {} more", holes[..NAMED].join(", "), n - NAMED),
+                    n if n <= NAMED => format!("{why} - {}", holes.join(", ")),
+                    n => format!("{why} - {} and {} more", holes[..NAMED].join(", "), n - NAMED),
                 };
                 Dropped { count, why }
             })
@@ -200,7 +200,7 @@ impl Operation for SigeolBoreholes {
                 "resqml22.WellboreFrameRepresentation",
             ],
             recipe: "sigeol-boreholes",
-            // It writes its own pair, carrying the producer's identifiers —
+            // It writes its own pair, carrying the producer's identifiers -
             // so there is nothing for the shared feature/interpretation slots
             // to offer, and nothing is imposed on a slot that does not exist.
             represents: None,
@@ -220,7 +220,7 @@ impl Operation for SigeolBoreholes {
     /// hundred and ten thousand times longer than the model is wide.
     ///
     /// It is a GeoJSON, so the EPSG codes should be known.
-    /// The **source** is, by the format — RFC 7946 fixes WGS 84. The
+    /// The **source** is, by the format - RFC 7946 fixes WGS 84. The
     /// **target** is a decision, and `utm_epsg_of` is the one proposal that
     /// follows from the numbers rather than from a country: a zone is a
     /// function of the longitude.
@@ -281,7 +281,7 @@ impl Operation for SigeolBoreholes {
         let mut rank = 0usize;
 
         // The frame, created here: a GeoJSON is in its own system, never the
-        // package's — the argument `support::frame_in` makes for every import.
+        // package's - the argument `support::frame_in` makes for every import.
         let frame = support::frame_in(
             &[],
             &FrameParams {
@@ -303,14 +303,14 @@ impl Operation for SigeolBoreholes {
         // **A borehole cannot be written into a geographic system, and the
         // reason is that a borehole *is* a vertical extent.**
         //
-        // `crate::crs` already names it — *"the horizontal unit is a degree
-        // while the vertical is a metre, which no reader can reconcile"* — and
+        // `crate::crs` already names it - *"the horizontal unit is a degree
+        // while the vertical is a metre, which no reader can reconcile"* - and
         // for most imports that is a note one can live with, because a surface
         // written in degrees is still a surface. Here every object is a line
         // whose only length is its depth: the holes of one BRGM export run 25 m
         // to 2 189 m deep across a field **0.25° wide**, so each one comes out
         // between a hundred and ten thousand times longer than the whole model
-        // is across. Nothing draws that, and nothing says so — `check` passes,
+        // is across. Nothing draws that, and nothing says so - `check` passes,
         // the measured depths read back exactly, the map places every wellhead
         // where the producer put it.
         //
@@ -325,11 +325,11 @@ impl Operation for SigeolBoreholes {
             return Err(Refusal::new(
                 "project",
                 format!(
-                    "a borehole is a vertical extent, and EPSG:{code} measures its horizontal axes in degrees while its depths are linear: every hole would be written between a hundred and ten thousand times longer than the model is wide, which no reader can reconcile — name a projected system in `project` (EPSG:2154 for mainland France)"
+                    "a borehole is a vertical extent, and EPSG:{code} measures its horizontal axes in degrees while its depths are linear: every hole would be written between a hundred and ten thousand times longer than the model is wide, which no reader can reconcile - name a projected system in `project` (EPSG:2154 for mainland France)"
                 ),
             ));
         }
-        // Created here, so metres pointing up — which is what lets a depth be
+        // Created here, so metres pointing up - which is what lets a depth be
         // subtracted from an elevation below.
         let vertical_up = Some(true);
 
@@ -467,7 +467,7 @@ impl Operation for SigeolBoreholes {
                 // uuid: it is a permanent identifier the producer owns, and a
                 // consumer holding the BRGM's own key finds the object by it.
                 // The same argument `naming.rs` makes for a unit's referential
-                // uuid, one step stronger — here the identifier already *is* a
+                // uuid, one step stronger - here the identifier already *is* a
                 // uuid, so nothing has to be derived from it.
                 let feature_uuid = match hole.producer_uuid() {
                     Some(uuid) => uuid.to_string(),
@@ -484,7 +484,7 @@ impl Operation for SigeolBoreholes {
                         "schemaVersion": "2.2",
                         "Citation": cite(&title),
                         // The BSS is a published national register, so a hole in
-                        // it *is* well known — the one place this can honestly
+                        // it *is* well known - the one place this can honestly
                         // say true where `support::represented_in` says false.
                         "IsWellKnown": true,
                         "Aliases": aliases(&hole),
@@ -495,7 +495,7 @@ impl Operation for SigeolBoreholes {
                 // -- its interpretation ---------------------------------------
                 let interpretation_uuid =
                     support::next_uuid(identity, &format!("well-interpretation:{key}"), &mut rank)?;
-                let interpretation_title = format!("{title} — interpretation");
+                let interpretation_title = format!("{title} - interpretation");
                 objects.push(NewObject {
                     uuid: interpretation_uuid.clone(),
                     qualified_type: "resqml22.WellboreInterpretation".to_string(),
@@ -550,13 +550,13 @@ impl Operation for SigeolBoreholes {
                         seed: &key,
                         line: &line,
                         // The file's own depths, not depths rebuilt from the
-                        // line that was built from them — see `Wellbore::mds`.
+                        // line that was built from them - see `Wellbore::mds`.
                         mds: Some(&mds.values),
                         ground,
                         uom: &mds.uom,
                         shape: TrajectoryShape::Linear,
                         tangents: None,
-                        // One frame node per control point — and the control
+                        // One frame node per control point - and the control
                         // points *are* the depths the file states. A spacing
                         // would put nodes where nothing was measured.
                         spacing: None,
@@ -592,11 +592,11 @@ impl Operation for SigeolBoreholes {
         if tally.boreholes == 0 {
             // **The refusal carries the reasons, because there is no plan to
             // carry them.** `dropped` is where a hole set aside is said, and a
-            // plan is exactly what is not returned here — so saying *"the plan
+            // plan is exactly what is not returned here - so saying *"the plan
             // says why"* pointed at nothing, and a caller learnt only that
             // something went wrong. Found on 19/09 against a plain WFS answer,
             // whose boreholes carry no interval at all.
-            // The same lines as `dropped`, holes named — one implementation.
+            // The same lines as `dropped`, holes named - one implementation.
             let why = aside
                 .into_dropped()
                 .iter()
@@ -605,7 +605,7 @@ impl Operation for SigeolBoreholes {
                 .join("; ");
             return Err(Refusal::on(
                 "features",
-                format!("no borehole could be written — every one was set aside: {why}"),
+                format!("no borehole could be written - every one was set aside: {why}"),
             ));
         }
         // Counted rather than said one by one: a note per hole would be a
@@ -675,7 +675,7 @@ impl Operation for SigeolBoreholes {
             // import returns thousands of objects, and the tree of artefacts that
             // matches them will be described by a later design. What is written
             // here is moreover a *parametric line*, whose control
-            // points are the trajectory only when it is linear —
+            // points are the trajectory only when it is linear -
             // the reason `well-from-polyline` already gives.
             shapes: Vec::new(),
             activity: ActivityDraft {
@@ -718,7 +718,7 @@ impl Operation for SigeolBoreholes {
 ///
 /// The need: put the purpose in the Citation.Description instead.
 /// The export's own `description` is `EPOS Borehole` on every one of the 1 000
-/// holes — the name of the collection, not of the hole — so it is the fallback
+/// holes - the name of the collection, not of the hole - so it is the fallback
 /// and never joined to a purpose: two sources in one sentence would read as one
 /// statement the producer never made.
 fn describe(hole: &Borehole) -> Option<String> {
@@ -732,7 +732,7 @@ fn describe(hole: &Borehole) -> Option<String> {
 ///
 /// Each carries its **authority**, which is what makes an alias resolvable:
 /// `BSS000LKCG` means one thing in the BRGM's register and nothing anywhere
-/// else. The kinds are EML's own closed list — a regulatory identifier for the
+/// else. The kinds are EML's own closed list - a regulatory identifier for the
 /// national code, an industry code for the map-sheet index, a unique identifier
 /// for the URL that dereferences.
 fn aliases(hole: &Borehole) -> Vec<Value> {

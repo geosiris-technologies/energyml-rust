@@ -1,4 +1,4 @@
-//! A unit's subtree — what a model made from it contains
+//! A unit's subtree - what a model made from it contains
 //! (the earth-models design).
 //!
 //! Built from columns written by hand, one rule per test. What the chart of the

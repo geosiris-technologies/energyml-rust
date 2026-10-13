@@ -15,7 +15,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     /// A unit outside the conversion table.
     ///
-    /// Not "unitless" and not the base unit — unknown. The `*UomExt` enums are
+    /// Not "unitless" and not the base unit - unknown. The `*UomExt` enums are
     /// open, so a producer can write anything.
     #[error("`{unit}` is not a unit this build converts (see energyml-domain::units)")]
     UnknownUnit {

@@ -2,7 +2,7 @@
 //!
 //! The bug these pin is not "the output looks odd". It is that a `Grid2d` with
 //! null Z values wrote `NaN` into a `.geojson`, and **`NaN` is not a JSON
-//! value** — one null among 34 000 positions made the whole file fail
+//! value** - one null among 34 000 positions made the whole file fail
 //! `JSON.parse`. So the rule is: a node that has no position is not a node, and
 //! nothing that indexes it survives either.
 //!
@@ -85,7 +85,7 @@ fn the_survivors_are_renumbered_and_not_merely_filtered() {
     // The failure this forbids is subtle and total: drop point 0 and leave the
     // indices alone, and every triangle now names its neighbour's corner. The
     // mesh still draws, with the right number of triangles, in roughly the
-    // right place — the worst kind of wrong.
+    // right place - the worst kind of wrong.
     let g = geometry(vec![patch(
         vec![
             [9.0, 9.0, f64::NAN],
@@ -135,7 +135,7 @@ fn a_lattice_with_a_hole_stops_calling_itself_a_lattice() {
 #[test]
 fn a_polyline_is_cut_at_the_hole_and_not_bridged_across_it() {
     // Joining the two survivors would draw a segment the file never described
-    // — and one that looks entirely plausible on screen, which is why it is
+    // - and one that looks entirely plausible on screen, which is why it is
     // worth a test of its own.
     let g = geometry(vec![patch(
         vec![
@@ -190,8 +190,8 @@ fn a_hexahedron_touching_an_undefined_pillar_goes_with_it() {
 
 #[test]
 fn a_second_patch_is_renumbered_after_the_first_one_shrank() {
-    // `node_offset` is what anything indexing *nodes of the representation* —
-    // a subrepresentation, a property — counts from. Leaving the original there
+    // `node_offset` is what anything indexing *nodes of the representation* -
+    // a subrepresentation, a property - counts from. Leaving the original there
     // after the preceding patch lost a node sends every one of them into the
     // wrong patch.
     let g = geometry(vec![
@@ -222,7 +222,7 @@ fn a_second_patch_is_renumbered_after_the_first_one_shrank() {
 #[test]
 fn the_point_map_says_which_survivors_are_which() {
     // This map is what carries a property's values across the compaction. Get
-    // it wrong and the survivors are coloured with their neighbours' numbers —
+    // it wrong and the survivors are coloured with their neighbours' numbers -
     // the failure that looks right.
     let g = geometry(vec![patch(
         vec![
@@ -243,8 +243,8 @@ fn the_point_map_says_which_survivors_are_which() {
 /// A cell the grid says is undefined takes its **number** out of the list too.
 ///
 /// The trap this guards is silent and it only appears on the grids that matter.
-/// `cells` is compacted — a cell whose flag marks it undefined, or whose pillars
-/// carry no location, is not pushed — so a position in it stops being the number
+/// `cells` is compacted - a cell whose flag marks it undefined, or whose pillars
+/// carry no location, is not pushed - so a position in it stops being the number
 /// RESQML calls the cell as soon as a grid has one hole. Anything addressing a
 /// cell **by the file's number** would then be right on an unbroken grid and
 /// wrong on exactly the faulted and eroded ones: PaleoGTM has 3 647 undefined

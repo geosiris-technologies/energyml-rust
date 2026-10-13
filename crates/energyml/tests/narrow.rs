@@ -15,7 +15,7 @@
 //! * `resqml20` alone: `2.0`, `2.0.1`, `resqml20.` and `resqml201.` are four
 //!   spellings of one release, and all four are read as the 2.0.1 crate;
 //! * `resqml22` alone: a 2.0.1 part is **refused**, by a message naming the
-//!   `resqml20` feature, and is not read as 2.2 — a half read that looks right.
+//!   `resqml20` feature, and is not read as 2.2 - a half read that looks right.
 //!
 //! What to break: in the first module, drop the `201` from `KnownVersion::compact`
 //! of the 2.0.1 row (`resqml201.` stops being read); in the second, remove the
@@ -170,7 +170,7 @@ mod resqml22_alone {
     use super::*;
 
     /// A 2.0.1 part is refused by a message naming `resqml20`, however it is
-    /// declared — and it is **not** returned as an object of the 2.2 crate, which
+    /// declared - and it is **not** returned as an object of the 2.2 crate, which
     /// would read it (its one extra required element is defaulted) and look right.
     #[test]
     fn a_2_0_1_part_is_refused_by_name_not_read_as_2_2() {

@@ -1,9 +1,9 @@
-//! `witsml-wells` — the WITSML 2.1 side of the wells a package holds in RESQML:
+//! `witsml-wells` - the WITSML 2.1 side of the wells a package holds in RESQML:
 //! a `Well` per head, a `Wellbore` per RESQML wellbore, a `Trajectory` per
 //! RESQML trajectory, its stations read off the RESQML frames.
 //!
 //! Step 10 of the build plan of the synthetic model Lutetia:
-//! `witsml-wells` (the door learns a third package) — a `Well` (one per head), a `Wellbore`
+//! `witsml-wells` (the door learns a third package) - a `Well` (one per head), a `Wellbore`
 //! (GTH-3 has two: ST1 with `ParentWellbore` …), a `Trajectory` +
 //! stations (a single `Definitive` one per hole, surface to bottom).
 //! No operation wrote a WITSML object before this one.
@@ -12,7 +12,7 @@
 //!
 //! **Wellbore frames**, as the package states them: each names its trajectory,
 //! the trajectory its datum (RESQML 2.2 `Wells.xsd`, `MdInterval.Datum`), and
-//! the frame the wellbore it represents — all resolved at the boundary into
+//! the frame the wellbore it represents - all resolved at the boundary into
 //! [`crate::pieces::Known`], so the plan reads no package. The frame's nodes
 //! are where its trajectory passes at its measured depths: for a trajectory of
 //! this crate, its stations.
@@ -30,16 +30,16 @@
 //! - **a sidetrack is found, never assumed.** *“No parent = starts from
 //!   top”* (WITSML TRG 2.1 §20.2 p. 502): a wellbore that shares its datum with
 //!   another and whose first node lies on the other's path **at the same
-//!   measured depth**, to `ON_PARENT`, leaves it there — which is what a
+//!   measured depth**, to `ON_PARENT`, leaves it there - which is what a
 //!   RESQML `ParentIntersection` states, and what `well-from-plan` writes (the
 //!   sidetrack's depths are its parent's, from its parent's datum). The bag
 //!   does not carry the trajectory's `ParentIntersection` itself; finding the
 //!   same fact in the geometry is a check of it, and a wellbore of a shared
-//!   datum that meets no other — or several — is refused by name. So are two
+//!   datum that meets no other - or several - is refused by name. So are two
 //!   wellbores starting from the top of one datum: that is two wells sharing a
 //!   datum, which nothing here decides;
 //! - **the stations are the frames' nodes, at the package's own measured
-//!   depths** — never recomputed (a given MD is never recomputed). A
+//!   depths** - never recomputed (a given MD is never recomputed). A
 //!   definitive trajectory *“must define the geometry of the whole wellbore
 //!   (surface to bottom)”* (TRG 2.1 §16.6 p. 350), so a sidetrack's runs
 //!   through its parent's stations above the kick-off, then its own: the
@@ -49,24 +49,24 @@
 //! - **inclination and azimuth are derived, not measured**:
 //!   `energyml_analysis::survey` inverts the minimum curvature method over the
 //!   stations, and checks that every interval **is** one arc from the
-//!   direction the hole has. A line that is not — straight segments meeting
-//!   at an angle — keeps its stations, positions and depths, and gets **no**
+//!   direction the hole has. A line that is not - straight segments meeting
+//!   at an angle - keeps its stations, positions and depths, and gets **no**
 //!   angle rather than a made-up one; the plan says which and why. Where the
 //!   hole is vertical, no azimuth is written: there is none;
 //! - **vertical depth and displacement are from the datum, where the datum is
-//!   a station** — MD 0 is the datum by definition of a measured depth. A
+//!   a station** - MD 0 is the datum by definition of a measured depth. A
 //!   trajectory whose first station is deeper does not say where the hole runs
-//!   above it: no TVD, no displacement, and not definitive — said;
+//!   above it: no TVD, no displacement, and not definitive - said;
 //! - **north is grid north where it is checked**: the frame's second axis is
-//!   read as north and its first as east — the axes every compound of this
-//!   crate has — and they are the projected system's own when the datum,
+//!   read as north and its first as east - the axes every compound of this
+//!   crate has - and they are the projected system's own when the datum,
 //!   placed in the projected system at the boundary (`Known::wellhead`), is
 //!   where the frame puts its MD 0 station. Otherwise the azimuths are
 //!   measured from the frame's own north, and `AziRef` says `plant north`:
 //!   *“a direction in a local engineering coordinate reference system”*
 //!   (eml 2.3 `NorthReferenceKind`);
-//! - **each station is located in the frame the RESQML geometry is in** — an
-//!   `EngineeringCompoundPosition` naming the same compound — so the two
+//! - **each station is located in the frame the RESQML geometry is in** - an
+//!   `EngineeringCompoundPosition` naming the same compound - so the two
 //!   standards place one hole with one set of numbers;
 //! - **what the wells are is said, not read**: `existence` writes eml's
 //!   `Existence` (and `MdPlanned` rather than `Md` for a planned hole). RESQML
@@ -75,7 +75,7 @@
 //!   an invented object must be marked;
 //! - **same content, same uuid**: the `Well` from its datum, the `Wellbore`
 //!   from its interpretation, the `Trajectory` from its RESQML trajectory
-//!   **and its stations** — a moved node is another trajectory, never the
+//!   **and its stations** - a moved node is another trajectory, never the
 //!   first one rewritten.
 //!
 //! # What is not written
@@ -85,7 +85,7 @@
 //!   `WellboreTrajectoryRepresentation.WitsmlTrajectory` (RESQML 2.2
 //!   `Wells.xsd`) are fields of RESQML objects already in the package. A plan
 //!   does not read an object whole, and rewriting one from what the bag knows
-//!   would lose what it holds — the BRGM aliases on a BSS feature, to begin
+//!   would lose what it holds - the BRGM aliases on a BSS feature, to begin
 //!   with. What the WITSML objects share with them is written: the datum
 //!   (`DefaultMdDatum`, the index's datum), the compound (each station's
 //!   location), the names;
@@ -100,7 +100,7 @@
 //! # References
 //!
 //! - API Bulletin D20, *Directional Drilling Survey Calculation Methods and Terminology*, 1985; and Sawaryn & Thorogood, *A Compendium of Directional Calculations Based on the Minimum Curvature Method* (SPE 84246, SPE Drilling & Completion 20(1), 2005), as cited in `energyml-analysis` (`well_plan`, `survey`).
-//!   TODO(reference): verify — these citations are carried over from `energyml-analysis`, whose own copy of them is pending verification.
+//!   TODO(reference): verify - these citations are carried over from `energyml-analysis`, whose own copy of them is pending verification.
 
 use energyml_analysis::survey::{self, Direction, Offset, Point};
 use energyml_domain::provenance::Parameter;
@@ -122,27 +122,27 @@ use super::support;
 pub struct WitsmlWells;
 
 /// How far, in metres, a sidetrack's first node may be from its parent's path
-/// at the same measured depth — a millimetre. The two are one point the
+/// at the same measured depth - a millimetre. The two are one point the
 /// package states twice, read back through two frames; a real kick-off off
 /// another's path is metres away, not a millimetre.
 const ON_PARENT: f64 = 1e-3;
 
 /// How far, in metres, the datum placed in the projected system may be from
-/// the frame's MD 0 station for the frame's axes to be the projected system's
-/// — a micrometre: a placement through an identity compound is exact.
+/// the frame's MD 0 station for the frame's axes to be the projected system's -
+/// a micrometre: a placement through an identity compound is exact.
 const SAME_AXES: f64 = 1e-6;
 
 /// How far, in metres, two frames of one trajectory may place one measured
-/// depth — a micrometre.
+/// depth - a micrometre.
 const SAME_NODE: f64 = 1e-6;
 
 /// What the schema allows in `Well/Country` and `Well/Basin` (`String64`).
 const SHORT_TEXT: usize = 64;
 
-/// What the wells are — eml 2.3's `ExistenceKind`, a closed list.
+/// What the wells are - eml 2.3's `ExistenceKind`, a closed list.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
 pub enum Existence {
-    /// *“a concrete, real implementation currently setup in the field”* — a
+    /// *“a concrete, real implementation currently setup in the field”* - a
     /// drilled hole.
     Actual,
     /// *“a planned implementation of an object under study and/or analysis,
@@ -169,7 +169,7 @@ impl Existence {
 /// What `witsml-wells` is told.
 #[derive(Debug, Params)]
 pub struct WitsmlWellsParams {
-    /// what the wells are — actual (drilled), planned, simulated or test: eml's Existence, written on every object made; left out, none is written
+    /// what the wells are - actual (drilled), planned, simulated or test: eml's Existence, written on every object made; left out, none is written
     ///
     /// **Said, not read**: RESQML states it on the interpretation
     /// (`WellboreInterpretation.IsDrilled`), which what is known of a frame
@@ -182,7 +182,7 @@ pub struct WitsmlWellsParams {
     /// in `Citation/Description` on every invented object.
     #[param(default = false, optional)]
     pub synthetic: bool,
-    /// the country the wells are in, written on each Well as given — never guessed from where they are
+    /// the country the wells are in, written on each Well as given - never guessed from where they are
     pub country: Option<String>,
     /// the basin the wells are in, written on each Well as given
     pub basin: Option<String>,
@@ -191,7 +191,7 @@ pub struct WitsmlWellsParams {
 /// What `witsml-wells` takes.
 #[derive(Debug, Inputs)]
 pub struct WitsmlWellsInputs {
-    /// the RESQML wellbore frames — each names its trajectory, its datum and the wellbore it represents
+    /// the RESQML wellbore frames - each names its trajectory, its datum and the wellbore it represents
     ///
     /// **Left empty, every frame of the package.** A sidetrack and its parent
     /// must come in the same run: which wellbore leaves which is read between
@@ -203,10 +203,10 @@ pub struct WitsmlWellsInputs {
         every
     )]
     pub frames: Vec<Shape>,
-    /// the ProjectedCrs the frames' compound is built on — given, each Well is located in it too
+    /// the ProjectedCrs the frames' compound is built on - given, each Well is located in it too
     #[input(types = "eml23.ProjectedCrs")]
     pub projected: Option<ObjectIn>,
-    /// the geologic unit the wellbores are drilled for — written as each Wellbore's TargetGeologicUnitInterpretation
+    /// the geologic unit the wellbores are drilled for - written as each Wellbore's TargetGeologicUnitInterpretation
     #[input(
         types = "resqml22.StratigraphicUnitInterpretation, resqml22.GeologicUnitInterpretation, resqml22.RockFluidUnitInterpretation"
     )]
@@ -223,7 +223,7 @@ struct Node {
 
 /// One frame, as the bag knows it.
 struct Read {
-    /// The frame's title — what a refusal names.
+    /// The frame's title - what a refusal names.
     name: String,
     interpretation: Ref,
     trajectory: Ref,
@@ -251,7 +251,7 @@ struct Kickoff {
     md: f64,
 }
 
-/// One RESQML wellbore — an interpretation.
+/// One RESQML wellbore - an interpretation.
 struct Bore {
     interpretation: Ref,
     name: String,
@@ -364,11 +364,11 @@ fn read_frame(one: &Shape) -> Result<Read, Refusal> {
     let refuse = |why: String| Refusal::on("frames", why);
     let Some(known) = known else {
         return Err(refuse(format!(
-            "`{name}` comes with nothing known of it: a wellbore is written from what the package says of a RESQML frame — its measured depths, its trajectory, its datum, the wellbore it represents"
+            "`{name}` comes with nothing known of it: a wellbore is written from what the package says of a RESQML frame - its measured depths, its trajectory, its datum, the wellbore it represents"
         )));
     };
     let mds = known.node_mds.as_deref().ok_or_else(|| {
-        refuse(format!("`{name}` states no measured depth for its nodes — it is no wellbore frame, or this build cannot read its arrays"))
+        refuse(format!("`{name}` states no measured depth for its nodes - it is no wellbore frame, or this build cannot read its arrays"))
     })?;
     let points: Vec<[f64; 3]> = one
         .geometry
@@ -417,7 +417,7 @@ fn read_frame(one: &Shape) -> Result<Read, Refusal> {
     })?;
     let datum = known.datum.clone().ok_or_else(|| {
         refuse(format!(
-            "`{name}` names no datum through its trajectory — a WITSML Well is the head its wellbores are measured from, and the datum is where the package says that head is (RESQML 2.2 Wells.xsd, `MdInterval.Datum`)"
+            "`{name}` names no datum through its trajectory - a WITSML Well is the head its wellbores are measured from, and the datum is where the package says that head is (RESQML 2.2 Wells.xsd, `MdInterval.Datum`)"
         ))
     })?;
     let crs = known.crs.clone().ok_or_else(|| {
@@ -428,7 +428,7 @@ fn read_frame(one: &Shape) -> Result<Read, Refusal> {
     let kind = match crate::crs::frame_kind(&crs.qualified_type) {
         Ok(FrameKind::Geographic) => {
             return Err(refuse(format!(
-                "`{name}` is in `{}`, which measures its horizontal axes in degrees while its depths are metres: no inclination is read across the two — a wellbore in degrees is refused, as `well-from-polyline` refuses it",
+                "`{name}` is in `{}`, which measures its horizontal axes in degrees while its depths are metres: no inclination is read across the two - a wellbore in degrees is refused, as `well-from-polyline` refuses it",
                 crs.title
             )));
         }
@@ -443,7 +443,7 @@ fn read_frame(one: &Shape) -> Result<Read, Refusal> {
     };
     let up = known.vertical_up.ok_or_else(|| {
         refuse(format!(
-            "`{name}` is in `{}`, which does not say which way its vertical axis points — which way down is decides every inclination: it cannot be guessed",
+            "`{name}` is in `{}`, which does not say which way its vertical axis points - which way down is decides every inclination: it cannot be guessed",
             crs.title
         ))
     })?;
@@ -487,7 +487,7 @@ fn merge(traj: &mut Traj, one: &Read) -> Result<(), Refusal> {
                 return Err(Refusal::on(
                     "frames",
                     format!(
-                        "two frames of `{}` place MD {} at two points, {at:?} and {:?} — one trajectory is at one place at one depth",
+                        "two frames of `{}` place MD {} at two points, {at:?} and {:?} - one trajectory is at one place at one depth",
                         traj.reference.title, node.md, node.at
                     ),
                 ));
@@ -549,7 +549,7 @@ fn gather(read: &[Read]) -> Result<Gathered, Refusal> {
                 return Err(Refusal::on(
                     "frames",
                     format!(
-                        "`{}` represents `{}`, which another frame measures from another datum — one wellbore is measured from one head",
+                        "`{}` represents `{}`, which another frame measures from another datum - one wellbore is measured from one head",
                         one.name, one.interpretation.title
                     ),
                 ));
@@ -610,7 +610,7 @@ fn start_of(bore: &Bore, trajs: &[Traj]) -> Node {
         })
 }
 
-/// Where a path of nodes is at `md` — between two of its nodes, on the
+/// Where a path of nodes is at `md` - between two of its nodes, on the
 /// straight line joining them, which is the RESQML linear spline through them.
 /// `None` above its first node (a path does not reach there) or below its
 /// last.
@@ -629,7 +629,7 @@ fn on_path(nodes: &[Node], md: f64) -> Option<[f64; 3]> {
     ])
 }
 
-/// Which wellbore of a head leaves which — see the module.
+/// Which wellbore of a head leaves which - see the module.
 fn sidetracks(heads: &[Head], bores: &mut [Bore], trajs: &[Traj]) -> Result<(), Refusal> {
     for head in heads {
         if head.bores.len() < 2 {
@@ -662,7 +662,7 @@ fn sidetracks(heads: &[Head], bores: &mut [Bore], trajs: &[Traj]) -> Result<(), 
                     return Err(Refusal::on(
                         "frames",
                         format!(
-                            "`{}` starts at MD {} on {} trajectories measured from its datum — {}: which one it leaves cannot be told",
+                            "`{}` starts at MD {} on {} trajectories measured from its datum - {}: which one it leaves cannot be told",
                             bores[b].name,
                             start.md,
                             many.len(),
@@ -682,7 +682,7 @@ fn sidetracks(heads: &[Head], bores: &mut [Bore], trajs: &[Traj]) -> Result<(), 
             return Err(Refusal::on(
                 "frames",
                 format!(
-                    "{} are measured from `{}` and none of them leaves another: a Well is one head, and a sidetrack starts on its parent — “No parent = starts from top” (WITSML TRG 2.1 §20.2 p. 502). Two holes from the top of one datum are two wells sharing a datum, which this operation does not decide",
+                    "{} are measured from `{}` and none of them leaves another: a Well is one head, and a sidetrack starts on its parent - “No parent = starts from top” (WITSML TRG 2.1 §20.2 p. 502). Two holes from the top of one datum are two wells sharing a datum, which this operation does not decide",
                     roots.join(" and "),
                     head.datum.title
                 ),
@@ -719,7 +719,7 @@ fn survey_of(nodes: &[Node], head: &Head) -> Surveyed {
         (FrameKind::Projected, _, _) => North::Grid,
         (_, Some(at), Some(w)) if (w[0] - nodes[at].at[0]).abs() <= SAME_AXES && (w[1] - nodes[at].at[1]).abs() <= SAME_AXES => North::Grid,
         (_, Some(at), Some(w)) => North::Plant(format!(
-            "its datum is at ({}, {}) in the projected system and at ({}, {}) in the frame's own axes — the frame is offset or turned from it",
+            "its datum is at ({}, {}) in the projected system and at ({}, {}) in the frame's own axes - the frame is offset or turned from it",
             w[0], w[1], nodes[at].at[0], nodes[at].at[1]
         )),
         (_, Some(_), None) => North::Plant("the package does not place its datum in the projected system".to_string()),
@@ -743,7 +743,7 @@ fn listed(names: &[String]) -> String {
 }
 
 /// The seed a WITSML `Wellbore`'s uuid is derived from: the RESQML wellbore
-/// interpretation it stands for. The one formula — `witsml-logs` references
+/// interpretation it stands for. The one formula - `witsml-logs` references
 /// the same Wellbore without writing it, and recomputes its uuid from here.
 pub(crate) fn wellbore_seed(interpretation_uuid: &str) -> String {
     format!(
@@ -759,7 +759,7 @@ impl Operation for WitsmlWells {
     fn about(&self) -> About {
         About {
             name: "witsml-wells",
-            describe: "the WITSML side of the RESQML wells: a Well per head, a Wellbore per RESQML wellbore — a sidetrack naming its parent — and a Trajectory per RESQML trajectory, its stations the frames' nodes with the inclination and azimuth they make",
+            describe: "the WITSML side of the RESQML wells: a Well per head, a Wellbore per RESQML wellbore - a sidetrack naming its parent - and a Trajectory per RESQML trajectory, its stations the frames' nodes with the inclination and azimuth they make",
             category: Category::Wells,
             makes: &["witsml21.Well", "witsml21.Wellbore", "witsml21.Trajectory"],
             recipe: "witsml-wells",
@@ -777,17 +777,17 @@ impl Operation for WitsmlWells {
             Slot::required(
                 "wellCount",
                 number(),
-                "Well objects written — one per datum the wellbores are measured from",
+                "Well objects written - one per datum the wellbores are measured from",
             ),
             Slot::required(
                 "wellboreCount",
                 number(),
-                "Wellbore objects written — one per RESQML wellbore interpretation",
+                "Wellbore objects written - one per RESQML wellbore interpretation",
             ),
             Slot::required(
                 "trajectoryCount",
                 number(),
-                "Trajectory objects written — one per RESQML trajectory",
+                "Trajectory objects written - one per RESQML trajectory",
             ),
             Slot::required(
                 "stationCount",
@@ -870,7 +870,7 @@ impl Operation for WitsmlWells {
                     ));
                 };
                 // “Pointer to a RESQML GeologicUnitInterpretation” (WITSML
-                // 2.1 Wellbore.xsd) — which a stratigraphic and a rock-fluid
+                // 2.1 Wellbore.xsd) - which a stratigraphic and a rock-fluid
                 // unit interpretation both are.
                 if !reference.qualified_type.ends_with("UnitInterpretation") {
                     return Err(Refusal::on(
@@ -904,7 +904,7 @@ impl Operation for WitsmlWells {
                     return Err(Refusal::on(
                         "projected",
                         format!(
-                            "`{}` is EPSG:{code}, and the wells measured from `{}` are in `{}`, over EPSG:{epsg} — a head placed in one system is not a position in another",
+                            "`{}` is EPSG:{code}, and the wells measured from `{}` are in `{}`, over EPSG:{epsg} - a head placed in one system is not a position in another",
                             reference.title, head.datum.title, head.crs.title
                         ),
                     ));
@@ -982,7 +982,7 @@ impl Operation for WitsmlWells {
             creation: cx.when.creation.clone(),
             format: energyml_core::CITATION_FORMAT.to_string(),
             description: params.synthetic.then(|| {
-                format!("Synthetic: the WITSML side of the RESQML wellbore `{of}`, which is invented — not a measured well.")
+                format!("Synthetic: the WITSML side of the RESQML wellbore `{of}`, which is invented - not a measured well.")
             }),
             ..Default::default()
         }
@@ -1015,7 +1015,7 @@ impl Operation for WitsmlWells {
             let well_title = root.name.clone();
             well_titles.push(well_title.clone());
 
-            // Where the head is: its datum, as a station, in the frame — and
+            // Where the head is: its datum, as a station, in the frame - and
             // in the projected system when one is given.
             let datum_node: Option<Node> = head
                 .bores
@@ -1048,7 +1048,7 @@ impl Operation for WitsmlWells {
                 extension_name_value: mark(),
                 uuid: well_uuid[h].clone(),
                 schema_version: "2.1".to_string(),
-                // STORE MANAGED — “populated by a store on read” — and
+                // STORE MANAGED - “populated by a store on read” - and
                 // still required. Nothing is being drilled or logged into a
                 // package sitting in a file: inactive, the alternative a
                 // version translation chooses for the same case.
@@ -1270,7 +1270,7 @@ impl Operation for WitsmlWells {
             says.push(Note {
                 key: "sidetrack",
                 detail: format!(
-                    "`{}` leaves `{}` at MD {}, where its first node lies on the parent's path: its Wellbore names its parent (ParentWellbore), and its Trajectory ties on at MD {} (ParentTrajectory, MdTieOn) and runs from the surface through the parent's stations above — a definitive trajectory is surface to bottom (WITSML TRG 2.1 §16.6 p. 350)",
+                    "`{}` leaves `{}` at MD {}, where its first node lies on the parent's path: its Wellbore names its parent (ParentWellbore), and its Trajectory ties on at MD {} (ParentTrajectory, MdTieOn) and runs from the surface through the parent's stations above - a definitive trajectory is surface to bottom (WITSML TRG 2.1 §16.6 p. 350)",
                     bore.name, bores[k.bore].name, k.md, k.md
                 ),
             });
@@ -1283,7 +1283,7 @@ impl Operation for WitsmlWells {
             says.push(Note {
                 key: "angles",
                 detail: format!(
-                    "inclination and azimuth are derived, not measured — the minimum curvature method inverted over the stations, every interval checked to be one arc: {}",
+                    "inclination and azimuth are derived, not measured - the minimum curvature method inverted over the stations, every interval checked to be one arc: {}",
                     listed(&derived)
                 ),
             });
@@ -1398,11 +1398,11 @@ impl Operation for WitsmlWells {
         }
         says.push(Note {
             key: "resqml-links",
-            detail: "the RESQML side of the link — WellboreFeature.WitsmlWellbore and WellboreTrajectoryRepresentation.WitsmlTrajectory (RESQML 2.2 Wells.xsd) — is on objects of the package this plan does not rewrite: a plan reads no object whole, and rewriting one from what is known of it would lose what it holds. The WITSML objects share the datum and the frame with them".to_string(),
+            detail: "the RESQML side of the link - WellboreFeature.WitsmlWellbore and WellboreTrajectoryRepresentation.WitsmlTrajectory (RESQML 2.2 Wells.xsd) - is on objects of the package this plan does not rewrite: a plan reads no object whole, and rewriting one from what is known of it would lose what it holds. The WITSML objects share the datum and the frame with them".to_string(),
         });
         says.push(Note {
             key: "left-out",
-            detail: "not written: markers, geology, logs and channel sets, wellbore geometry and completions, and a geographic location — nothing in a frame states them".to_string(),
+            detail: "not written: markers, geology, logs and channel sets, wellbore geometry and completions, and a geographic location - nothing in a frame states them".to_string(),
         });
 
         let seed = format!(

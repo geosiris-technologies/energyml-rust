@@ -134,7 +134,7 @@ fn a_fixed_value_is_enforced() {
 }
 
 /// Identifier Specification v5.0 §2.3.3: `QualifiedType` is `resqml22.Foo`. A
-/// pattern-conforming name that no schema defines is reported — as a warning,
+/// pattern-conforming name that no schema defines is reported - as a warning,
 /// because the pattern accepts any two-digit version.
 #[test]
 fn check_reports_a_reference_to_a_type_nobody_defines() {
@@ -184,7 +184,7 @@ fn check_reports_a_reference_to_a_type_nobody_defines() {
     );
 }
 
-/// eml 2.3 Abstract.xsd l. 393–399: `Citation.Format` *"Must be human and
+/// eml 2.3 Abstract.xsd l. 393-399: `Citation.Format` *"Must be human and
 /// machine readable and unambiguously identify the software by including the
 /// organization name, software application name and software version"*. The
 /// element is `minOccurs="1"` but `String2000` has no `minLength`, so the

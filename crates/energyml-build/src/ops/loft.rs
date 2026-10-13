@@ -1,17 +1,17 @@
-//! `loft` — a triangulated surface **between polylines**, in their order
+//! `loft` - a triangulated surface **between polylines**, in their order
 //! (the scene-editing design, lofting): two lines, or successive
 //! fault sticks.
 //!
 //! The computation is `energyml_analysis::loft`; this is the seam. Each input
 //! is **one** polyline: a piece that holds several is refused rather than
 //! paired i-th with i-th in an order nothing guarantees. The lines are taken in
-//! the order of the slot — which is declared (`ordered`), because a loft
+//! the order of the slot - which is declared (`ordered`), because a loft
 //! between sticks 1, 3, 2 is a different surface, and one that looks like one.
 //!
 //! # References
 //!
 //! - Christiansen and Sederberg (1978), the classic tiling between contours, and Fuchs, Kedem and Uselton (1977), the optimum, as named in `energyml-geostat` (`loft`).
-//!   TODO(reference): verify — both citations are given without title, venue or DOI; complete and check them.
+//!   TODO(reference): verify - both citations are given without title, venue or DOI; complete and check them.
 
 use energyml_analysis::loft::{LoftLine, loft};
 use energyml_domain::provenance::Parameter;
@@ -32,7 +32,7 @@ pub struct Loft;
 /// What `loft` is told.
 #[derive(Debug, Params)]
 pub struct LoftParams {
-    /// The frame, what is represented, the naming — for the writer of the result.
+    /// The frame, what is represented, the naming - for the writer of the result.
     #[param(flatten)]
     pub written: Written,
 }
@@ -40,12 +40,12 @@ pub struct LoftParams {
 /// What `loft` takes.
 #[derive(Debug, Inputs)]
 pub struct LoftInputs {
-    /// the polylines to join, one per input, **in order** — two, or successive fault sticks
+    /// the polylines to join, one per input, **in order** - two, or successive fault sticks
     #[input(topology = "polylines", least = 2, ordered)]
     pub lines: Vec<Shape>,
 }
 
-/// The one polyline of a shape, and whether it closes — or why it is not one.
+/// The one polyline of a shape, and whether it closes - or why it is not one.
 fn one_line(shape: &Shape) -> Result<(Vec<[f64; 3]>, bool), Refusal> {
     let mut found: Option<(Vec<[f64; 3]>, bool)> = None;
     let mut global = 0usize;
@@ -60,7 +60,7 @@ fn one_line(shape: &Shape) -> Result<(Vec<[f64; 3]>, bool), Refusal> {
                 return Err(Refusal::on(
                     "lines",
                     format!(
-                        "`{}` holds several polylines — give one per input, in order, rather than pairing them in an order nothing guarantees",
+                        "`{}` holds several polylines - give one per input, in order, rather than pairing them in an order nothing guarantees",
                         shape.name
                     ),
                 ));
@@ -90,7 +90,7 @@ impl Operation for Loft {
     fn about(&self) -> About {
         About {
             name: "loft",
-            describe: "a triangulated surface between polylines, in their order — every vertex kept, the band stitched along their lengths",
+            describe: "a triangulated surface between polylines, in their order - every vertex kept, the band stitched along their lengths",
             category: Category::Geometry,
             makes: &["resqml22.TriangulatedSetRepresentation"],
             recipe: "loft",

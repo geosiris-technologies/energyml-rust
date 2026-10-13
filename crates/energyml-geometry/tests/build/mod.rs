@@ -48,7 +48,7 @@ fn integers(path: &str) -> AbstractIntegerArray {
 
 /// Two cells along I, one along J and K: 3 × 2 pillars over 2 levels.
 ///
-/// `defined` is `CellGeometryIsDefined` when the grid states one — the flag that
+/// `defined` is `CellGeometryIsDefined` when the grid states one - the flag that
 /// makes the reader drop a cell, and therefore the flag that makes a position
 /// stop being the file's cell number.
 pub fn grid(defined: bool) -> Box<IjkGridRepresentation> {
@@ -76,7 +76,7 @@ pub fn grid(defined: bool) -> Box<IjkGridRepresentation> {
 
 /// A connection set over that grid.
 ///
-/// `faces` and `which` are the two arrays the schema makes optional — absent is
+/// `faces` and `which` are the two arrays the schema makes optional - absent is
 /// the ordinary case for a block-centred grid, and the reader draws something
 /// different for each.
 pub fn connections(
@@ -97,7 +97,7 @@ pub fn connections(
 
 /// Give a set the interpretations its connections belong to.
 ///
-/// `features` are the uuids named, in the file's order — the order the jagged
+/// `features` are the uuids named, in the file's order - the order the jagged
 /// array's indices index. Each gets a title built from its uuid so a test can
 /// tell one from another without a second lookup.
 pub fn interpreted(

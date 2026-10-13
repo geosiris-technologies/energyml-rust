@@ -1,4 +1,4 @@
-//! `textColumns` and `everything` — the text columns of a table gathered into a
+//! `textColumns` and `everything` - the text columns of a table gathered into a
 //! `ColumnBasedTable`, one discrete property per frame pointing at its rows.
 //!
 //! The need: the other properties, which are not
@@ -11,7 +11,7 @@
 //!
 //! The control that carries the feature is
 //! `every_node_decodes_to_the_cells_the_file_states`: a pointing property is a
-//! rank, and a rank off by one names the neighbouring row — a valid package that
+//! rank, and a rank off by one names the neighbouring row - a valid package that
 //! says the wrong thing. It decodes each node through the table the plan wrote
 //! and confronts the result with the file's own cells, never with what this
 //! module computed.
@@ -113,8 +113,8 @@ fn bag() -> Pieces {
             template,
         },
     );
-    let pieces = frame(pieces, 0, "F1 — frame", &[10.0, 20.0, 30.0]);
-    frame(pieces, 1, "F2 — frame", &[10.0, 30.0])
+    let pieces = frame(pieces, 0, "F1 - frame", &[10.0, 20.0, 30.0]);
+    frame(pieces, 1, "F2 - frame", &[10.0, 30.0])
 }
 
 fn plan(answers: Value) -> Plan {
@@ -167,7 +167,7 @@ fn table_of<'a>(made: &'a Plan, pointer: &str) -> &'a NewObject {
     made.objects
         .iter()
         .find(|o| o.uuid == uuid)
-        .unwrap_or_else(|| panic!("no table `{uuid}` — the lookup dangles"))
+        .unwrap_or_else(|| panic!("no table `{uuid}` - the lookup dangles"))
 }
 
 /// A table's column, by title: its kind uuid and its values.
@@ -190,12 +190,12 @@ fn table_column(table: &NewObject, title: &str) -> (String, Vec<String>) {
     )
 }
 
-/// To break: change the default — every package written before, Lutetia included,
+/// To break: change the default - every package written before, Lutetia included,
 /// would change objects.
 #[test]
 fn separate_stays_the_default_and_writes_what_it_wrote() {
     let made = plan(json!({}));
-    for title in ["F1 — STRA", "F1 — LITHO", "F2 — STRA", "F2 — LITHO"] {
+    for title in ["F1 - STRA", "F1 - LITHO", "F2 - STRA", "F2 - LITHO"] {
         assert_eq!(object(&made, title).qualified_type, "resqml22.DiscreteProperty");
     }
     assert!(
@@ -219,13 +219,13 @@ type Stated = Option<(&'static str, &'static str)>;
 fn every_node_decodes_to_the_cells_the_file_states() {
     for mode in ["shared-table", "table-per-well"] {
         let made = plan(json!({ "textColumns": mode }));
-        // What the file states, node by node — `None` where it states nothing.
+        // What the file states, node by node - `None` where it states nothing.
         let expected: [(&str, Vec<Stated>); 2] = [
             ("F1", vec![Some(("e6", "marne")), None, Some(("e5", "calcaire"))]),
             ("F2", vec![Some(("e5", "calcaire")), None]),
         ];
         for (well, nodes) in expected {
-            let pointer = format!("{well} — text columns");
+            let pointer = format!("{well} - text columns");
             let ranks = codes(&made, &pointer);
             assert_eq!(ranks.len(), nodes.len(), "{mode}: one value per node of {well}");
             let table = table_of(&made, &pointer);
@@ -262,24 +262,24 @@ fn a_shared_table_holds_each_combination_once_for_the_whole_run() {
     let (_, stra) = table_column(tables[0], "STRA");
     assert_eq!(stra, ["e6", "e5"], "two distinct combinations, in the order met");
     assert_eq!(
-        codes(&made, "F1 — text columns")[2],
-        codes(&made, "F2 — text columns")[0]
+        codes(&made, "F1 - text columns")[2],
+        codes(&made, "F2 - text columns")[0]
     );
     // No placeholder is left behind: the lookup names the table.
-    assert_eq!(table_of(&made, "F1 — text columns").uuid, tables[0].uuid);
+    assert_eq!(table_of(&made, "F1 - text columns").uuid, tables[0].uuid);
 }
 
 /// To break: share the table between boreholes in `table-per-well` mode.
 #[test]
 fn a_table_per_well_belongs_to_its_frame() {
     let made = plan(json!({ "textColumns": "table-per-well" }));
-    let one = table_of(&made, "F1 — text columns");
-    let two = table_of(&made, "F2 — text columns");
+    let one = table_of(&made, "F1 - text columns");
+    let two = table_of(&made, "F2 - text columns");
     assert_ne!(one.uuid, two.uuid);
     // A row per node that carries a value, in the frame's order.
     assert_eq!(table_column(one, "STRA").1, ["e6", "e5"]);
     assert_eq!(table_column(two, "STRA").1, ["e5"]);
-    assert_eq!(codes(&made, "F1 — text columns"), [0, -9999, 1]);
+    assert_eq!(codes(&made, "F1 - text columns"), [0, -9999, 1]);
 }
 
 /// To break: write the number column in the table, or leave a text column
@@ -288,13 +288,13 @@ fn a_table_per_well_belongs_to_its_frame() {
 fn numbers_stay_continuous_and_text_leaves_its_own_properties() {
     let made = plan(json!({ "textColumns": "shared-table" }));
     assert_eq!(
-        object(&made, "F1 — PHI").qualified_type,
+        object(&made, "F1 - PHI").qualified_type,
         "resqml22.ContinuousProperty"
     );
     assert!(
         !titles(&made)
             .iter()
-            .any(|t| t == "F1 — STRA" || t == "F1 — LITHO"),
+            .any(|t| t == "F1 - STRA" || t == "F1 - LITHO"),
         "{:?}",
         titles(&made)
     );
@@ -306,11 +306,11 @@ fn numbers_stay_continuous_and_text_leaves_its_own_properties() {
 #[test]
 fn each_column_keeps_its_kind_and_the_pointer_is_a_multi_use_property() {
     let made = plan(json!({ "textColumns": "shared-table" }));
-    let table = table_of(&made, "F1 — text columns");
+    let table = table_of(&made, "F1 - text columns");
     assert_eq!(table_column(table, "STRA").0, STRA_KIND);
     assert_eq!(table_column(table, "LITHO").0, LITHO_KIND);
-    let pointer = object(&made, "F1 — text columns");
-    // `multi use property`, concrete in the dictionary — its meaning is the table.
+    let pointer = object(&made, "F1 - text columns");
+    // `multi use property`, concrete in the dictionary - its meaning is the table.
     assert_eq!(
         pointer.json["PropertyKind"]["Uuid"],
         "47a4319d-c8a4-45dc-8600-f96d4b289138"
@@ -324,7 +324,7 @@ fn each_column_keeps_its_kind_and_the_pointer_is_a_multi_use_property() {
 fn everything_carries_the_undeclared_columns_in_a_table_of_their_own() {
     for mode in ["shared-table", "table-per-well"] {
         let made = plan(json!({ "textColumns": mode, "everything": true }));
-        let pointer = "F1 — columns not in the template";
+        let pointer = "F1 - columns not in the template";
         let table = table_of(&made, pointer);
         let (kind, notes) = table_column(table, "NOTE");
         assert_eq!(
@@ -336,7 +336,7 @@ fn everything_carries_the_undeclared_columns_in_a_table_of_their_own() {
         assert_eq!(notes[usize::try_from(ranks[0]).unwrap()], "vu", "{mode}");
         assert_eq!(&ranks[1..], [-9999, -9999], "{mode}: no value, no row");
         assert!(
-            table_of(&made, "F1 — text columns").json["Column"]
+            table_of(&made, "F1 - text columns").json["Column"]
                 .as_array()
                 .unwrap()
                 .iter()
@@ -354,11 +354,11 @@ fn everything_carries_the_undeclared_columns_in_a_table_of_their_own() {
 fn everything_works_with_separate_text_columns_too() {
     let made = plan(json!({ "everything": true }));
     assert_eq!(
-        object(&made, "F1 — STRA").qualified_type,
+        object(&made, "F1 - STRA").qualified_type,
         "resqml22.DiscreteProperty",
         "declared text stays separate"
     );
-    let table = table_of(&made, "F1 — columns not in the template");
+    let table = table_of(&made, "F1 - columns not in the template");
     assert_eq!(
         table_column(table, "NOTE").1,
         ["vu", "revu"],

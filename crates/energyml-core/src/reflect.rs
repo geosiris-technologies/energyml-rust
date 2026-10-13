@@ -47,7 +47,7 @@ pub enum Binding {
     Text,
     /// An `xsd:any` wildcard: every child element no other field claims.
     ///
-    /// The field has no XML name of its own — it *is* the leftovers — so it is
+    /// The field has no XML name of its own - it *is* the leftovers - so it is
     /// typed [`AnyXml`] and holds the unmatched children as source text.
     ///
     /// [`AnyXml`]: crate::any_xml::AnyXml
@@ -123,7 +123,7 @@ pub enum ScalarKind {
     Double,
     /// `xsd:string` and its restrictions.
     String,
-    /// `xsd:dateTime`, `xsd:date`, `xsd:time` — kept lexical.
+    /// `xsd:dateTime`, `xsd:date`, `xsd:time` - kept lexical.
     DateTime,
     /// `xsd:base64Binary` / `xsd:hexBinary`.
     Binary,
@@ -278,8 +278,8 @@ impl FieldInfo {
     /// An enumeration answers `type_info()` like everything else, so it used to
     /// come back here as the single class the field accepts. Every consumer then
     /// treated the slot as structured: a front end offered "create a `ThrowKindExt`",
-    /// wrote `{}` into `FaultThrow.Throw`, and the JSON reader — reaching a
-    /// declared type with no `$type` — asked [`Registry::create`] for
+    /// wrote `{}` into `FaultThrow.Throw`, and the JSON reader - reaching a
+    /// declared type with no `$type` - asked [`Registry::create`] for
     /// `resqml22.ThrowKindExt` and failed with
     ///
     /// > unknown type `resqml22.ThrowKindExt` (not registered)
@@ -288,7 +288,7 @@ impl FieldInfo {
     /// Enumerations are deliberately absent from the registry: they are written
     /// as their lexical value, never as an object, so nothing ever needs to
     /// *construct* one from a qualified type. [`TypeInfo::make`] being `Some`
-    /// does not contradict that — it builds the Rust value, and says nothing
+    /// does not contradict that - it builds the Rust value, and says nothing
     /// about whether the registry can find it by name.
     ///
     /// So the offer for an enumeration slot is its **values**
@@ -374,7 +374,7 @@ pub struct Roles {
 }
 
 impl Roles {
-    /// No role at all — what an ordinary nested type carries.
+    /// No role at all - what an ordinary nested type carries.
     ///
     /// A `const` rather than `Default::default()`, because every `TypeInfo` is
     /// a `static` initializer and those cannot call trait methods.
@@ -405,7 +405,7 @@ pub struct TypeInfo {
     pub xml_ns: Namespace,
     /// Package short name: `eml`, `resqml`, `witsml` or `prodml`.
     pub package: &'static str,
-    /// Package version, e.g. `2.2` — the URI alone cannot tell you this. This
+    /// Package version, e.g. `2.2` - the URI alone cannot tell you this. This
     /// is the *directory* version: RESQML 2.0.1 reports `2.0.1` here.
     pub version: &'static str,
     /// Version as identifiers write it, e.g. `2.0` for RESQML 2.0.1. Content
@@ -414,7 +414,7 @@ pub struct TypeInfo {
     /// Complex type name, **verbatim**: `obj_Activity` keeps its prefix.
     ///
     /// This is what goes into a content type, a qualified type and an EPC part
-    /// name. It differs from [`TypeInfo::xml_name`] — the *element* name —
+    /// name. It differs from [`TypeInfo::xml_name`] - the *element* name -
     /// exactly where RESQML 2.0.1 and common 2.0 prefix their top-level types.
     pub object_type: &'static str,
     /// Canonical grouping key: [`TypeInfo::object_type`] without `obj_`, case
@@ -427,12 +427,12 @@ pub struct TypeInfo {
     /// for top-level objects only.
     pub qualified_type: Option<&'static str>,
     /// The global element a part of this type is written under, when the
-    /// schema gives the type none of its own — `FlowTestActivity` for PRODML
+    /// schema gives the type none of its own - `FlowTestActivity` for PRODML
     /// 2.3's `InjectionFlowTest`, written
     /// `<prodml:FlowTestActivity xsi:type="prodml:InjectionFlowTest">`.
     /// `None` for every type that has an element. The part's identity stays
-    /// the type's own ([`TypeInfo::content_type`], [`TypeInfo::qualified_type`])
-    /// — see [`crate::registry::to_part`].
+    /// the type's own ([`TypeInfo::content_type`], [`TypeInfo::qualified_type`]) -
+    /// see [`crate::registry::to_part`].
     pub root_element: Option<&'static str>,
     /// `xsd:documentation` for the type.
     pub doc: &'static str,
@@ -447,7 +447,7 @@ pub struct TypeInfo {
     /// top-level object, instead of only as their own EPC part.
     ///
     /// A handful of WITSML, PRODML and RESQML 2.2 types derive from
-    /// `AbstractObject` — so they are legal EPC parts — and are on top of that
+    /// `AbstractObject` - so they are legal EPC parts - and are on top of that
     /// declared as children of another object. `witsml:Rig` and
     /// `witsml:Channel` are the usual examples. Listing the top-level objects
     /// of an EPC has to be able to include or exclude them without walking the
@@ -488,7 +488,7 @@ pub struct TypeInfo {
     /// The piece reflection was missing to be able to *build* rather than only
     /// read. [`Registry::create`] does this for a registered **top-level**
     /// object, from a table keyed by qualified type; nothing could construct a
-    /// nested one — a `Citation`, a `Point3dLatticeArray` — because a nested
+    /// nested one - a `Citation`, a `Point3dLatticeArray` - because a nested
     /// type is never in that table and has no qualified type to key it by.
     /// Anything walking the schema to instantiate it (a random-data generator,
     /// a "new object" form in a UI, a translator filling a target model)
@@ -506,7 +506,7 @@ impl TypeInfo {
     /// An empty instance of this type, or `None` when it has none to give.
     ///
     /// Concrete structs and enumerations always build; an abstract choice does
-    /// not, unless the schema names a default variant — an element with no
+    /// not, unless the schema names a default variant - an element with no
     /// `xsi:type` means the declared type, and that is the one thing a choice
     /// can be by itself. Callers that need an instance of an abstract type ask
     /// [`TypeInfo::concrete_subtypes`] first and build one of those.

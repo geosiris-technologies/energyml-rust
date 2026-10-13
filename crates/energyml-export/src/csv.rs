@@ -1,7 +1,7 @@
-//! Long CSV — one row per (object, element, property), in metres.
+//! Long CSV - one row per (object, element, property), in metres.
 //!
 //! The tabular export: what a geologist pastes into a
-//! spreadsheet or loads into pandas. **Long format, never wide** — one column
+//! spreadsheet or loads into pandas. **Long format, never wide** - one column
 //! per property would mean aligning the elements of properties that do not
 //! sample in the same places, hence choosing a common grid; refusing to align
 //! and writing long is the honest option, and pivoting is a spreadsheet's job.
@@ -21,8 +21,8 @@
 //!   that yields an empty file for a well with no log looks like a broken
 //!   export.
 //!
-//! A property's header is its title, its kind and its unit in separate columns
-//! — not `title (uom)` run together, which would force every consumer to
+//! A property's header is its title, its kind and its unit in separate columns -
+//! not `title (uom)` run together, which would force every consumer to
 //! re-parse what this writer already knew apart.
 
 use std::io::Write;
@@ -71,7 +71,7 @@ impl Exporter for CsvExporter {
     }
 
     fn write_all(&self, objects: &[SceneObject], out: &mut dyn Write, options: &Options<'_>) -> Result<()> {
-        // One header for the whole file — that is what makes a group export
+        // One header for the whole file - that is what makes a group export
         // pasteable as it stands: the well is a column, not a block.
         writeln!(out, "object,uuid,element,index,x,y,z,property,kind,uom,value")?;
         for object in objects {
@@ -93,7 +93,7 @@ impl Exporter for CsvExporter {
             };
 
             // The nodes: the position always, then one row per value attached
-            // to it — or a bare row when nothing is attached.
+            // to it - or a bare row when nothing is attached.
             for (index, point) in points.iter().enumerate() {
                 let mut wrote = false;
                 for attribute in of_scope(AttributeScope::Points) {
@@ -125,7 +125,7 @@ impl Exporter for CsvExporter {
                 }
             }
 
-            // The cells: no position — see the module — but every value, with
+            // The cells: no position - see the module - but every value, with
             // the index that places it back in the grid.
             for attribute in of_scope(AttributeScope::Cells) {
                 let stride = attribute.components as usize;

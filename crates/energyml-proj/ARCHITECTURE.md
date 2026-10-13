@@ -8,11 +8,11 @@ Related decisions: [ADR-0005](../../docs/adr/0005-refuse-rather-than-draw.md), [
 
 ## Rules
 
-**A definition that states no datum is refused, not applied** — applying it would be a silent datum shift, an error of tens of metres that looks like a coordinate. The same holds for a definition that asks for a correction grid: this backend has none.
+**A definition that states no datum is refused, not applied** - applying it would be a silent datum shift, an error of tens of metres that looks like a coordinate. The same holds for a definition that asks for a correction grid: this backend has none.
 
-**Z is returned intact** — a 3D Helmert transform would shift it by tens of metres, and a RESQML Z is not an ellipsoidal height. Only the horizontal position is reprojected.
+**Z is returned intact** - a 3D Helmert transform would shift it by tens of metres, and a RESQML Z is not an ellipsoidal height. Only the horizontal position is reprojected.
 
-**Agreement with PROJ, measured** — results are held to agree with PROJ 9.5.1 to the millimetre on a set of ten systems. Anything this backend cannot do equivalently is a refusal, not an approximation.
+**Agreement with PROJ, measured** - results are held to agree with PROJ 9.5.1 to the millimetre on a set of ten systems. Anything this backend cannot do equivalently is a refusal, not an approximation.
 
 ## Deliberately not here
 

@@ -1,4 +1,4 @@
-# energyml-geostat — architecture
+# energyml-geostat - architecture
 
 Related decisions: [ADR 0005](../../docs/adr/0005-refuse-rather-than-draw.md), [ADR 0011](../../docs/adr/0011-tests-follow-the-specification.md).
 

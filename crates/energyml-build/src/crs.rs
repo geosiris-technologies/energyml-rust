@@ -1,12 +1,12 @@
 //! The coordinate reference system a GeoJSON's numbers are already in.
 //!
-//! # Degrees, or metres — and why the choice had to exist
+//! # Degrees, or metres - and why the choice had to exist
 //!
 //! Keeping the degrees is lossless and, for the 3D view, unusable. Measured on
 //! a SIGEOL import: the horizontal extent is 0.124 **degree**
 //! and the vertical 41.8 **metres**, so a viewer plotting the three ordinates in
 //! one space draws a needle 335 times too tall. Physically that cloud is
-//! ~9 km × 3.5 km × 42 m — almost flat.
+//! ~9 km × 3.5 km × 42 m - almost flat.
 //!
 //! Nothing in the file can fix that on the reader's side: `Point3d` is three
 //! bare doubles, a `Geographic2dCrs` carries no `HorizontalAxes` to say
@@ -15,47 +15,47 @@
 //!
 //! Both remain: degrees for a package that must not move a coordinate,
 //! projection for one that must be looked at. Neither is a default hidden in a
-//! signature — [`Target`] makes the caller name it.
+//! signature - [`Target`] makes the caller name it.
 //!
 //! # No *silent* reprojection, and that is still the design
 //!
-//! RFC 7946 makes a GeoJSON WGS 84 by definition, so the EPSG code is **known**
-//! — 4326 — without anybody declaring it. The decision is to
+//! RFC 7946 makes a GeoJSON WGS 84 by definition, so the EPSG code is **known** -
+//! 4326 - without anybody declaring it. The decision is to
 //! write the data as it stands in that system and create the CRS objects the
 //! package lacks, rather than transform the numbers into the package's own.
 //!
 //! It is the better trade by some distance. A transformation is where
 //! coordinates quietly move: a datum shift applied twice, or with the wrong
 //! seven parameters, produces a file that opens everywhere and is a few hundred
-//! metres out. Writing degrees changes nothing, so nothing can be lost — and a
+//! metres out. Writing degrees changes nothing, so nothing can be lost - and a
 //! consumer that wants metres reprojects knowing what it started from.
 //!
 //! # What EML 2.3 lets us say, and what it does not
 //!
 //! `Geographic3dCrs` looks like the obvious answer and **cannot carry an EPSG
 //! code at all**: its definition in `CRS.xsd` is `<xs:extension
-//! base="eml:AbstractObject"><xs:sequence/></xs:extension>` — an object with no
+//! base="eml:AbstractObject"><xs:sequence/></xs:extension>` - an object with no
 //! content. Checked in the schema rather than assumed from the generated code,
 //! because an empty generated struct is exactly what a generator bug looks like.
 //! It is not one; the type is empty in the standard.
 //!
 //! So the halves are written as the schema offers them as *parts*:
 //!
-//! - a **`ProjectedCrs`** holding a `ProjectedEpsgCrs` — metres — or a
-//!   **`Geographic2dCrs`** holding a `GeodeticEpsgCrs` — degrees, the one that
+//! - a **`ProjectedCrs`** holding a `ProjectedEpsgCrs` - metres - or a
+//!   **`Geographic2dCrs`** holding a `GeodeticEpsgCrs` - degrees, the one that
 //!   carries 4326;
-//! - a **`VerticalCrs`** — the elevation, its direction and its unit;
+//! - a **`VerticalCrs`** - the elevation, its direction and its unit;
 //! - and, over metres, the **`LocalEngineering2dCrs`** and the
 //!   **`LocalEngineeringCompoundCrs`** that join them.
 //!
-//! # A geometry names a compound — and degrees are the one named exception
+//! # A geometry names a compound - and degrees are the one named exception
 //!
 //! RESQML's own guide types the reference the XSD leaves open:
 //! *« From: AbstractGeometry.LocalCrs — To: LocalEngineeringCompoundCrs »*
 //! (RESQML TRG v2.2, §3.1, p. 22; and §7.1, p. 222, for a property's
 //! `LocalCrs`). This module used to write the two halves and point
 //! every geometry at the **horizontal** one, which left the `VerticalCrs`
-//! referenced by nothing — the one statement there is about the third ordinate
+//! referenced by nothing - the one statement there is about the third ordinate
 //! hanging loose in the package. It now
 //! writes the compound, and [`Built::reference`] names it.
 //!
@@ -63,7 +63,7 @@
 //! operation writes moves: origin at 0/0 of the projected system, azimuth 0,
 //! a vertical axis counting the way the `VerticalCrs` does, in metres, not a
 //! time, with its origin at 0 of the vertical system. A number written under
-//! it *is* a Lambert-93 easting, a Lambert-93 northing and an NGF elevation —
+//! it *is* a Lambert-93 easting, a Lambert-93 northing and an NGF elevation -
 //! exactly what it was under the `ProjectedCrs` before. The `crs`
 //! operation is the one that asks for an origin, an azimuth,
 //! a depth or a time axis ([`Local`]).
@@ -71,25 +71,25 @@
 //! **Degrees have no compound**, and that is the schema's doing: a
 //! `LocalEngineering2dCrs` requires an `OriginProjectedCrs` whose type is
 //! `eml:ProjectedCrs` (`CRS.xsd` l. 504), and `GeographicCompoundCrs` is not a
-//! top-level data object — `CRS.xsd` declares an `<xs:element …
+//! top-level data object - `CRS.xsd` declares an `<xs:element …
 //! substitutionGroup="eml:AbstractDataObject">` for `Geographic2dCrs`,
 //! `VerticalCrs`, `ProjectedCrs`, `LocalEngineering2dCrs` and
 //! `LocalEngineeringCompoundCrs` (l. 456, 669, 538, 494, 509), and for no
 //! other. So a geometry in degrees keeps naming its `Geographic2dCrs`, and the
 //! `VerticalCrs` beside it is still referenced by nothing. The decision is
-//! **an exception, named** — every plan that writes one says so
+//! **an exception, named** - every plan that writes one says so
 //! in its notes (`frame-degrees`), rather than a refusal that would break
 //! `sigeol-units`, which keeps degrees by default.
 //!
 //! # A compound on an unknown vertical is still a compound
 //!
 //! When nobody states the vertical datum, the `VerticalCrs` carries a
-//! `VerticalUnknownCrs` — and it is still a `VerticalCrs` whose `Direction`
+//! `VerticalUnknownCrs` - and it is still a `VerticalCrs` whose `Direction`
 //! and `uom` are written: *"In this case, the uom and Direction need to be
 //! provided on the VerticalCrs class"* (`CRS.xsd`, `VerticalUnknownCrs`,
 //! l. 705). So the compound's `VerticalAxis` has something to agree with, and
 //! the compound is written the same. What is unknown is the **datum**, and it
-//! is said where it lives — in the `VerticalCrs` — not by withholding the frame
+//! is said where it lives - in the `VerticalCrs` - not by withholding the frame
 //! the geometry needs.
 //!
 //! Found by writing a package and reading it back (`tests/package.rs`); the
@@ -100,12 +100,12 @@
 //!
 //! RFC 7946 says the third ordinate is height above the WGS 84 ellipsoid. The
 //! BRGM exports carry ground altitude at a borehole head, which in France is
-//! NGF-IGN69 and not ellipsoidal — the two differ by some forty metres here.
+//! NGF-IGN69 and not ellipsoidal - the two differ by some forty metres here.
 //! **The file does not say which**, and the difference is exactly the kind that
 //! never surfaces: both are plausible numbers of metres.
 //!
 //! So the caller names it, and when it does not, this writes a
-//! **`VerticalUnknownCrs`** — a type the standard provides for saying precisely
+//! **`VerticalUnknownCrs`** - a type the standard provides for saying precisely
 //! this. Not a guess at 5714, not a silent ellipsoid, and not a refusal that
 //! would block an import over an ordinate most consumers will never use.
 
@@ -118,12 +118,12 @@ use crate::operation::{Error, Identity, NewObject};
 pub enum Target {
     /// The degrees as they stand, under a `Geographic2dCrs`.
     ///
-    /// Nothing moves, so nothing can be lost — and the horizontal unit is a
+    /// Nothing moves, so nothing can be lost - and the horizontal unit is a
     /// degree while the vertical is a metre, which no reader can reconcile.
     Geographic(i64),
     /// Metres, under a `ProjectedCrs`, reprojected from WGS 84.
     ///
-    /// A transformation, so it is where coordinates can quietly move — which is
+    /// A transformation, so it is where coordinates can quietly move - which is
     /// why the EPSG code is the caller's and never guessed, and why
     /// `energyml-proj` (agreeing with PROJ 9.5.1 to the millimetre) does the
     /// arithmetic rather than four lines written here.
@@ -142,7 +142,7 @@ impl Target {
 /// Which vertical system the elevations are in, when anybody knows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Vertical {
-    /// A named EPSG vertical system — `5720` for NGF-IGN69, `5714` for mean sea
+    /// A named EPSG vertical system - `5720` for NGF-IGN69, `5714` for mean sea
     /// level.
     Epsg(i64),
     /// Nobody said. Written as a `VerticalUnknownCrs` carrying the reason, so
@@ -173,20 +173,20 @@ impl Vertical {
 
 /// Which way the local vertical axis counts, and in what unit.
 ///
-/// The compound's `VerticalAxis` governs the local z — its sense, its unit and
-/// whether it is a time — while the `VerticalCrs` gives the datum (the reading
+/// The compound's `VerticalAxis` governs the local z - its sense, its unit and
+/// whether it is a time - while the `VerticalCrs` gives the datum (the reading
 /// rule the readers follow).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Axis {
-    /// The `VerticalCrs`'s own sense — **up**, since [`build`] writes every
-    /// `VerticalCrs` as an elevation — in metres. The default: the z an
+    /// The `VerticalCrs`'s own sense - **up**, since [`build`] writes every
+    /// `VerticalCrs` as an elevation - in metres. The default: the z an
     /// operation writes keeps the meaning it had under the `ProjectedCrs`.
     Elevation,
     /// Down, in metres: a depth below the local origin.
     Depth,
     /// Down, in a time unit (`ms`, `s`): a travel time, `IsTime` true. The
-    /// `VerticalCrs` stays a length — a top-level one cannot be anything else,
-    /// its `uom` is a `LengthUomExt` (`CRS.xsd` l. 677) — and says the datum
+    /// `VerticalCrs` stays a length - a top-level one cannot be anything else,
+    /// its `uom` is a `LengthUomExt` (`CRS.xsd` l. 677) - and says the datum
     /// the times are counted from.
     Time(String),
 }
@@ -215,32 +215,32 @@ impl Axis {
     }
 }
 
-/// The local engineering frame set on the projected system — what the
+/// The local engineering frame set on the projected system - what the
 /// `LocalEngineering2dCrs` and the `LocalEngineeringCompoundCrs` say.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Local {
-    /// Where the local origin sits in the projected system — easting, then
+    /// Where the local origin sits in the projected system - easting, then
     /// northing, in its metres (`OriginProjectedCoordinate1` and `…2`).
     pub origin: [f64; 2],
     /// The rotation of the local Y axis, **in degrees, clockwise from grid
-    /// north** — `Azimuth`, written with `AzimuthReference` = `grid north`.
+    /// north** - `Azimuth`, written with `AzimuthReference` = `grid north`.
     ///
     /// The eml 2.3 schema documents neither element. The sense is the one
-    /// RESQML 2.0.1 documents for the `ArealRotation` the azimuth replaced —
+    /// RESQML 2.0.1 documents for the `ArealRotation` the azimuth replaced -
     /// *"The rotation of the local Y axis relative to the projected Y axis. A
     /// positive value indicates a clockwise rotation from the projected Y
-    /// axis"* (RESQML 2.0.1 `Common.xsd`, `AbstractLocal3dCrs`, l. 136–145) —
+    /// axis"* (RESQML 2.0.1 `Common.xsd`, `AbstractLocal3dCrs`, l. 136-145) -
     /// and the projected Y axis of a projected system *is* grid north, the
     /// reading a version translation already writes
     /// and the one `energyml_domain::crs::read_with` inverts.
     pub azimuth: f64,
     /// Which way the local z counts, and in what.
     pub axis: Axis,
-    /// The vertical coordinate of the local origin **in the `VerticalCrs`** —
+    /// The vertical coordinate of the local origin **in the `VerticalCrs`** -
     /// its sense and its unit, not the local axis's: *"Vertical coordinate of
     /// the origin of the local engineering CRS in the base vertical CRS
     /// (consequently in the uom of the base vertical CRS)"* (`CRS.xsd`
-    /// l. 517–520).
+    /// l. 517-520).
     pub origin_vertical: f64,
 }
 
@@ -321,7 +321,7 @@ impl Horizontal {
 /// the vertical.
 #[derive(Debug, Clone)]
 pub struct LocalFrame {
-    /// Origin, azimuth, horizontal axes — and the projected system **embedded**
+    /// Origin, azimuth, horizontal axes - and the projected system **embedded**
     /// as its `OriginProjectedCrs` (`CRS.xsd` l. 504 types it `ProjectedCrs`,
     /// not a reference): the same object as the horizontal half, uuid
     /// included, so the package says one system and not two.
@@ -335,21 +335,21 @@ pub struct LocalFrame {
 pub struct Built {
     /// The horizontal half, carrying the EPSG code.
     pub horizontal: Horizontal,
-    /// The vertical half — referenced by the compound over metres, and by
+    /// The vertical half - referenced by the compound over metres, and by
     /// nothing in degrees (the named exception, see the module doc).
     pub vertical: eml::VerticalCrs,
-    /// The local 2D and the compound — `None` in degrees, where the schema
+    /// The local 2D and the compound - `None` in degrees, where the schema
     /// offers none.
     pub local: Option<LocalFrame>,
 }
 
-/// The role, in a plan, of the object a geometry names — the compound, or the
+/// The role, in a plan, of the object a geometry names - the compound, or the
 /// `Geographic2dCrs` in degrees. **Always this one**, whatever the target, so
 /// that a caller looking for *the frame* of a run finds it under one name.
 pub const FRAME_ROLE: &str = "crs";
 
 impl Built {
-    /// Every object, as objects to put in a store — horizontal, vertical, then
+    /// Every object, as objects to put in a store - horizontal, vertical, then
     /// the plane and the compound when there are.
     pub fn objects(self) -> Vec<Box<dyn energyml_core::registry::DynObject>> {
         let mut out = vec![
@@ -380,7 +380,7 @@ impl Built {
         }
     }
 
-    /// A reference to the vertical half — what a `ReferencePointInACrs` names.
+    /// A reference to the vertical half - what a `ReferencePointInACrs` names.
     pub fn vertical_reference(&self) -> eml::DataObjectReference {
         reference_to(
             &self.vertical.uuid,
@@ -389,7 +389,7 @@ impl Built {
         )
     }
 
-    /// Give the frame a geometry names its title — the compound, or the
+    /// Give the frame a geometry names its title - the compound, or the
     /// horizontal half in degrees. The other objects keep the titles that say
     /// what they are (`EPSG:2154`, `EPSG:5720`).
     pub fn retitle(&mut self, title: &str) {
@@ -400,8 +400,8 @@ impl Built {
         }
     }
 
-    /// The objects as a plan writes them, **in dependency order** — what is
-    /// referenced before what references it — each with its role:
+    /// The objects as a plan writes them, **in dependency order** - what is
+    /// referenced before what references it - each with its role:
     ///
     /// | object | role |
     /// |---|---|
@@ -461,19 +461,19 @@ pub struct Names {
     pub horizontal: String,
     /// The `VerticalCrs`.
     pub vertical: String,
-    /// The `LocalEngineering2dCrs` and the `LocalEngineeringCompoundCrs` —
+    /// The `LocalEngineering2dCrs` and the `LocalEngineeringCompoundCrs` -
     /// `None` in degrees, where there is none to name.
     pub local: Option<(String, String)>,
 }
 
 /// The uuids of a frame, **in the plan's order**, and `rank` moved past them.
 ///
-/// Derived, the horizontal and the vertical keep the names they always had —
-/// [`crate::naming::crs`], from their codes alone — so a package written before
+/// Derived, the horizontal and the vertical keep the names they always had -
+/// [`crate::naming::crs`], from their codes alone - so a package written before
 /// the compound existed names the same two systems. The plane and the compound
 /// are derived from **everything that tells them apart**: the plane from the
 /// projected code, its origin and its azimuth; the compound from the plane, the
-/// vertical system, the axis — its sense, unit and time flag — and the vertical
+/// vertical system, the axis - its sense, unit and time flag - and the vertical
 /// origin. Two runs of `crs` on one EPSG with two axes therefore share the
 /// projected, the vertical and the plane, and differ by the compound only.
 ///
@@ -520,14 +520,14 @@ pub fn names(
     Ok(names)
 }
 
-/// A uuid in the crate's namespace — the one [`crate::naming`] hangs every
+/// A uuid in the crate's namespace - the one [`crate::naming`] hangs every
 /// derived name from, so the two new names live beside the two old ones.
 fn derive(name: &str) -> String {
     uuid::Uuid::new_v5(&crate::naming::NAMESPACE, name.as_bytes()).to_string()
 }
 
 /// A number as a seed spells it: the shortest text that reads back to it, and
-/// `-0` folded into `0` — the two place a frame identically.
+/// `-0` folded into `0` - the two place a frame identically.
 fn seed_number(value: f64) -> String {
     format!("{}", value + 0.0)
 }
@@ -551,22 +551,22 @@ fn compound_seed(plane: &str, vertical: &Vertical, local: &Local) -> String {
     )
 }
 
-/// Build the objects for `target` horizontally, `vertical` elevations, and —
-/// over metres — the `local` frame joining them.
+/// Build the objects for `target` horizontally, `vertical` elevations, and -
+/// over metres - the `local` frame joining them.
 ///
 /// `names` are supplied rather than drawn: the whole import is reproducible, so
 /// running it twice on one file must name the same objects. See [`names`] and
 /// [`crate::naming`].
 ///
-/// `citation` is given each object's own title — `EPSG:2154`, `EPSG:5720`, the
-/// plane and the compound spelled from what they are — and [`Built::retitle`]
+/// `citation` is given each object's own title - `EPSG:2154`, `EPSG:5720`, the
+/// plane and the compound spelled from what they are - and [`Built::retitle`]
 /// renames the frame a geometry names when a caller has a name for it.
 ///
 /// # What is refused, and why here
 ///
 /// - a local frame that is not the identity **in degrees**: its origin would be
 ///   an easting in a system that has none (`CRS.xsd` l. 504);
-/// - a time axis whose unit is not a time, or not one the schema spells —
+/// - a time axis whose unit is not a time, or not one the schema spells -
 ///   `IsTime` over metres would be a travel time measured with a ruler;
 /// - a number that is not one.
 ///
@@ -592,7 +592,7 @@ pub fn build(
     }
     if matches!(target, Target::Geographic(_)) && !local.is_identity() {
         return Err(format!(
-            "EPSG:{epsg} measures degrees, and a local frame — an origin, an azimuth, a depth or time axis, a vertical origin — sits on a projected system: `LocalEngineering2dCrs.OriginProjectedCrs` is a `ProjectedCrs` (CRS.xsd l. 504), so there is no compound over degrees to carry it"
+            "EPSG:{epsg} measures degrees, and a local frame - an origin, an azimuth, a depth or time axis, a vertical origin - sits on a projected system: `LocalEngineering2dCrs.OriginProjectedCrs` is a `ProjectedCrs` (CRS.xsd l. 504), so there is no compound over degrees to carry it"
         ));
     }
     let axis_uom = local_axis_uom(&local.axis)?;
@@ -635,13 +635,13 @@ pub fn build(
             Vertical::Epsg(code) => format!("EPSG:{code}"),
             Vertical::Unknown(_) => "vertical, datum not stated".to_string(),
         }),
-        // Up, because a GeoJSON's third ordinate is an *elevation* — RFC 7946
+        // Up, because a GeoJSON's third ordinate is an *elevation* - RFC 7946
         // §3.1.1 says height, and the BRGM exports carry ground altitude. A
         // depth-positive axis here would put every point below the datum.
         direction: eml::VerticalDirection::Up,
         // Metres: the format states no unit and the one it implies is the
         // metre. A file in feet would be a file that broke RFC 7946, and it
-        // would break it silently — but nothing here can detect that, so the
+        // would break it silently - but nothing here can detect that, so the
         // assumption is written down rather than hidden.
         uom: eml::LengthUomExt::M,
         abstract_vertical_crs: Some(match vertical {
@@ -682,7 +682,7 @@ pub fn build(
                     uom: eml::PlaneAngleUomExt::Dega,
                 },
                 // Grid north: the only reference an azimuth can be written in
-                // without a convergence angle this crate does not have — and
+                // without a convergence angle this crate does not have - and
                 // the only one `energyml_domain::crs` places a non-zero azimuth
                 // in. The NGS definition, in `CommonEnumerations.xsd` l. 974:
                 // *"grid north - The direction of the north lines on a map
@@ -690,7 +690,7 @@ pub fn build(
                 azimuth_reference: eml::NorthReferenceKind::GridNorth,
                 origin_projected_coordinate1: local.origin[0],
                 origin_projected_coordinate2: local.origin[1],
-                // East then north, in metres — the projected system's own axes
+                // East then north, in metres - the projected system's own axes
                 // (`AxisOrder` easting northing above), which the local ones
                 // follow before the azimuth turns them.
                 horizontal_axes: eml::HorizontalAxes {
@@ -753,7 +753,7 @@ pub fn build(
     })
 }
 
-/// The unit of the local vertical axis, as the schema spells it — or why not.
+/// The unit of the local vertical axis, as the schema spells it - or why not.
 fn local_axis_uom(axis: &Axis) -> Result<eml::LengthAndTimeUomExt, String> {
     use energyml_core::xml::XmlText;
     match axis {
@@ -761,7 +761,7 @@ fn local_axis_uom(axis: &Axis) -> Result<eml::LengthAndTimeUomExt, String> {
         Axis::Time(unit) => {
             if energyml_domain::units::Dimension::of(unit) != Some(energyml_domain::units::Dimension::Time) {
                 return Err(format!(
-                    "`timeUom` is `{unit}`, which is no time unit this build knows — a time axis counts in `ms` or `s`"
+                    "`timeUom` is `{unit}`, which is no time unit this build knows - a time axis counts in `ms` or `s`"
                 ));
             }
             eml::LengthAndTimeUomExt::from_xml_text(unit).map_err(|why| {
@@ -786,7 +786,7 @@ pub fn reference_to(uuid: &str, qualified_type: &str, title: &str) -> eml::DataO
     }
 }
 
-/// A `DataObjectReference` to an object **named by a `Ref`** — the version it
+/// A `DataObjectReference` to an object **named by a `Ref`** - the version it
 /// declares included, so that a package holding the object in two versions is
 /// pointed at the one meant. The sibling of [`reference_to`] for what comes from
 /// the package; `reference_to` stays for what this crate has just built, which
@@ -802,7 +802,7 @@ pub fn reference_of(one: &crate::pieces::Ref) -> eml::DataObjectReference {
 // What a frame named in the package is
 // ---------------------------------------------------------------------------
 
-/// The systems a geometry may name as its `LocalCrs`, **whole** — what
+/// The systems a geometry may name as its `LocalCrs`, **whole** - what
 /// `Need::Crs` offers and what `support::frame_in` accepts without a refusal.
 ///
 /// **One list**, read by the operations, a front end's CRS field and its
@@ -810,11 +810,11 @@ pub fn reference_of(one: &crate::pieces::Ref) -> eml::DataObjectReference {
 /// operation takes. Each is classified by [`frame_kind`]:
 ///
 /// - the compound, what RESQML 2.2 associates (TRG §3.1, p. 22);
-/// - RESQML 2.0.1's two local 3D systems — whole in their release, and
+/// - RESQML 2.0.1's two local 3D systems - whole in their release, and
 ///   blocked for writing by the operations, which write 2.2;
-/// - a `ProjectedCrs` named directly — the BRGM's surfaces, our packages
-///   written by earlier versions — **accepted with a note**;
-/// - a `Geographic2dCrs` — degrees, the named exception, with its note.
+/// - a `ProjectedCrs` named directly - the BRGM's surfaces, our packages
+///   written by earlier versions - **accepted with a note**;
+/// - a `Geographic2dCrs` - degrees, the named exception, with its note.
 pub const FRAMES: &[&str] = &[
     "eml23.LocalEngineeringCompoundCrs",
     "eml23.ProjectedCrs",
@@ -826,14 +826,14 @@ pub const FRAMES: &[&str] = &[
 /// What kind of frame a named system is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FrameKind {
-    /// An eml 2.3 `LocalEngineeringCompoundCrs` — what a geometry names.
+    /// An eml 2.3 `LocalEngineeringCompoundCrs` - what a geometry names.
     Compound,
     /// A RESQML 2.0.1 `LocalDepth3dCrs` or `LocalTime3dCrs`: whole in its
     /// release, and of another release than the objects written here.
     Legacy,
-    /// A `ProjectedCrs` named directly — accepted with a note (decision c).
+    /// A `ProjectedCrs` named directly - accepted with a note (decision c).
     Projected,
-    /// A `Geographic2dCrs` — degrees, the named exception (decision a).
+    /// A `Geographic2dCrs` - degrees, the named exception (decision a).
     Geographic,
 }
 
@@ -846,10 +846,10 @@ pub enum FrameKind {
 /// vertical axis aside: a `LocalEngineeringCompoundCrs` naming that projected
 /// EPSG code, with no offset and no rotation (its numbers are the projected
 /// ones), a **length** axis (a time axis would read a height as a travel time)
-/// and metres on both axes. The vertical system is the caller's to match —
+/// and metres on both axes. The vertical system is the caller's to match -
 /// `vertical_epsg`, `None` when the file names none. A frame counting **down**
-/// is compatible — a height is written in it as its depth, by
-/// `energyml_domain::crs::Crs::from_projected` — and comes after one counting
+/// is compatible - a height is written in it as its depth, by
+/// `energyml_domain::crs::Crs::from_projected` - and comes after one counting
 /// up, which is what would have been created. Then by title, for a stable
 /// order.
 pub fn compatible_frames(candidates: &[crate::pieces::Known], projected: i64) -> Vec<&crate::pieces::Known> {
@@ -890,12 +890,12 @@ pub fn compatible_frames(candidates: &[crate::pieces::Known], projected: i64) ->
     out
 }
 
-/// What a named system is, or **why it is no frame** — by its class name,
+/// What a named system is, or **why it is no frame** - by its class name,
 /// ignoring the package prefix, the case and the `obj_` RESQML 2.0.1 spells.
 ///
 /// The refusal names the half it is and what to name instead: a `VerticalCrs`
 /// read on its own gives a frame with no horizontal, a `LocalEngineering2dCrs`
-/// one with no vertical — each a perfectly readable half, which is exactly the
+/// one with no vertical - each a perfectly readable half, which is exactly the
 /// sort of thing that looks like a complete answer.
 pub fn frame_kind(qualified_type: &str) -> Result<FrameKind, String> {
     let class = qualified_type
@@ -916,7 +916,7 @@ pub fn frame_kind(qualified_type: &str) -> Result<FrameKind, String> {
             "`{qualified_type}` is the horizontal half of a local system, with no vertical: name the `LocalEngineeringCompoundCrs` that joins it to a `VerticalCrs` (RESQML TRG 2.2 §3.1, p. 22)"
         )),
         _ if class.starts_with("referencepoint") => Err(format!(
-            "`{qualified_type}` is a reference point — where measured depths start — not a coordinate system: name the `LocalEngineeringCompoundCrs` it sits in"
+            "`{qualified_type}` is a reference point - where measured depths start - not a coordinate system: name the `LocalEngineeringCompoundCrs` it sits in"
         )),
         _ if qualified_type.is_empty() => {
             Err("the reference does not say what it names (no `QualifiedType`), so whether it is a whole system cannot be told".to_string())
@@ -940,8 +940,8 @@ pub fn frame_kind(qualified_type: &str) -> Result<FrameKind, String> {
 /// written into the package as its own EPSG code. Nothing is implied and
 /// nothing is hidden.
 ///
-/// So it is offered as a **suggestion** — a form pre-fills it, a person sees it
-/// and can replace it with their national system — never as a default that
+/// So it is offered as a **suggestion** - a form pre-fills it, a person sees it
+/// and can replace it with their national system - never as a default that
 /// applies itself. The source system of a GeoJSON is known, by the format; the
 /// target is a
 /// decision, and this is the one proposal that can be made from the numbers
@@ -951,7 +951,7 @@ pub fn frame_kind(qualified_type: &str) -> Result<FrameKind, String> {
 ///
 /// South-west Norway widens zone 32, and Svalbard uses four zones instead of
 /// seven. They are in the standard, they are two `if`s, and leaving them out
-/// would put a Norwegian well one zone off — still metric, still drawable, and
+/// would put a Norwegian well one zone off - still metric, still drawable, and
 /// not what any neighbouring dataset uses.
 pub fn utm_epsg_of(lon: f64, lat: f64) -> Option<i64> {
     if !lon.is_finite() || !lat.is_finite() || !(-90.0..=90.0).contains(&lat) {
@@ -1044,8 +1044,8 @@ mod tests {
 
     #[test]
     fn degrees_are_the_named_exception_and_name_their_geographic_half() {
-        // **This test used to say the opposite** — *a geometry names the
-        // horizontal half because there is no compound to name* — and it was
+        // **This test used to say the opposite** - *a geometry names the
+        // horizontal half because there is no compound to name* - and it was
         // right only in degrees. Over metres the compound exists and is what
         // RESQML associates (TRG 2.2 §3.1, p. 22), which the next test holds.
         //
@@ -1078,8 +1078,8 @@ mod tests {
         let reference = made.reference();
         assert_eq!(reference.qualified_type, "eml23.LocalEngineeringCompoundCrs");
         assert_eq!(reference.uuid, local.compound.uuid);
-        // The compound names both halves — the vertical directly, the
-        // horizontal through the plane — which is the whole point of it.
+        // The compound names both halves - the vertical directly, the
+        // horizontal through the plane - which is the whole point of it.
         assert_eq!(local.compound.vertical_crs.uuid, made.vertical.uuid);
         assert_eq!(local.compound.vertical_crs.qualified_type, "eml23.VerticalCrs");
         assert_eq!(local.compound.local_engineering2d_crs.uuid, local.plane.uuid);
@@ -1087,8 +1087,8 @@ mod tests {
             local.compound.local_engineering2d_crs.qualified_type,
             "eml23.LocalEngineering2dCrs"
         );
-        // The plane **embeds** the projected system — CRS.xsd l. 504 types
-        // `OriginProjectedCrs` as a `ProjectedCrs`, not a reference — and it
+        // The plane **embeds** the projected system - CRS.xsd l. 504 types
+        // `OriginProjectedCrs` as a `ProjectedCrs`, not a reference - and it
         // is the same object as the top-level one, uuid and code included.
         let Horizontal::Projected(projected) = &made.horizontal else {
             panic!("metres")
@@ -1119,7 +1119,7 @@ mod tests {
     fn the_default_compound_is_the_identity_so_nothing_written_moves() {
         // Origin 0/0, azimuth 0 from grid north, the axis in the vertical CRS's
         // own sense, metres, not a time, origin 0 in the vertical system. Under
-        // it an easting *is* an easting — the z an operation writes keeps the
+        // it an easting *is* an easting - the z an operation writes keeps the
         // meaning it had under the `ProjectedCrs`.
         // To break: a default axis `down`, which would turn every elevation an
         // operation writes into a depth.
@@ -1149,7 +1149,7 @@ mod tests {
     fn a_depth_and_a_time_axis_count_down_and_the_time_one_says_so() {
         // The same vertical system, an
         // axis `down` in metres, and one `down` in milliseconds with `IsTime`.
-        // The `VerticalCrs` stays up and a length — a top-level one cannot be a
+        // The `VerticalCrs` stays up and a length - a top-level one cannot be a
         // time (CRS.xsd l. 677 types its uom `LengthUomExt`).
         let depth = metres(&Local {
             axis: Axis::Depth,
@@ -1190,7 +1190,7 @@ mod tests {
         assert_eq!(local.plane.origin_projected_coordinate1, 650_000.0);
         assert_eq!(local.plane.origin_projected_coordinate2, 6_860_000.0);
         assert_eq!(local.plane.azimuth.value, 30.0);
-        // In the vertical CRS — its sense and unit (CRS.xsd l. 517–520) — so a
+        // In the vertical CRS - its sense and unit (CRS.xsd l. 517-520) - so a
         // +35 is 35 m above the datum even though the local axis counts down.
         assert_eq!(local.compound.origin_vertical_coordinate, 35.0);
     }
@@ -1239,7 +1239,7 @@ mod tests {
 
     #[test]
     fn two_axes_on_one_code_share_three_systems_and_differ_by_the_compound() {
-        // What a derived name is made of is what tells the object apart — and
+        // What a derived name is made of is what tells the object apart - and
         // nothing more: a depth frame and a time frame over Lambert-93 and
         // NGF-IGN69 are one projected, one vertical, one plane, two compounds.
         // To break: the axis left out of the compound's seed (the two collide),
@@ -1343,7 +1343,7 @@ mod tests {
         let b = metres(&Local::identity());
         assert_eq!(a.horizontal.uuid(), b.horizontal.uuid());
         assert_eq!(a.vertical.uuid, b.vertical.uuid);
-        // And they are distinct — one uuid for two objects would make a package
+        // And they are distinct - one uuid for two objects would make a package
         // that cannot address one of them.
         let uuids: std::collections::BTreeSet<String> = a.new_objects().into_iter().map(|o| o.uuid).collect();
         assert_eq!(uuids.len(), 4);
@@ -1351,19 +1351,19 @@ mod tests {
 
     #[test]
     fn a_retitled_frame_is_the_one_a_geometry_names() {
-        // A caller's title names *the frame* — what a form offers as `crs` — and
+        // A caller's title names *the frame* - what a form offers as `crs` - and
         // not the halves, which keep the titles that say what they are.
         let mut made = metres(&Local::identity());
-        made.retitle("Lutetia — profondeur");
-        assert_eq!(made.reference().title, "Lutetia — profondeur");
+        made.retitle("Lutetia - profondeur");
+        assert_eq!(made.reference().title, "Lutetia - profondeur");
         assert_eq!(made.horizontal.title(), "EPSG:2154");
         assert_eq!(made.vertical.citation.title, "EPSG:5720");
     }
 
     #[test]
     fn every_frame_the_list_offers_is_one_the_classifier_takes_and_no_half_is() {
-        // Two statements of one fact — the list a form offers and what an
-        // operation accepts — confronted, so that neither drifts alone.
+        // Two statements of one fact - the list a form offers and what an
+        // operation accepts - confronted, so that neither drifts alone.
         for one in FRAMES {
             assert!(frame_kind(one).is_ok(), "{one} is offered and refused");
         }
@@ -1407,7 +1407,7 @@ pub fn is_geographic(epsg: i64) -> Option<bool> {
 
 /// Turn the read positions into the coordinates the target wants.
 ///
-/// `Geographic` passes them through — the third ordinate included, untouched,
+/// `Geographic` passes them through - the third ordinate included, untouched,
 /// because a change of horizontal system is not a change of datum for the
 /// height and pretending otherwise would move every elevation.
 ///
@@ -1480,7 +1480,7 @@ mod projection {
     #[test]
     fn degrees_pass_through_without_moving_a_bit() {
         // The meaning of a geographic target: nothing is transformed, so nothing
-        // can be lost. Compared bit for bit — an identity reprojection that went
+        // can be lost. Compared bit for bit - an identity reprojection that went
         // through the computation again would return *almost* equal numbers, and
         // "almost" is what this branch exists to avoid.
         let placed = place(&paris(), &Target::Geographic(4326), 4326).expect("no refusal");
@@ -1492,7 +1492,7 @@ mod projection {
     #[test]
     fn projecting_gives_metres_and_the_altitude_does_not_move() {
         // Lambert-93 over Paris: easting around 650 km, northing around
-        // 6 860 km. The bounds are wide — what is checked is the order of
+        // 6 860 km. The bounds are wide - what is checked is the order of
         // magnitude and the **order of the axes**, not the value, which is the
         // business of `energyml-proj` and its own tests against PROJ.
         let placed = place(&paris(), &Target::Projected(2154), 4326).expect("no refusal");
@@ -1600,7 +1600,7 @@ mod projection {
         };
         assert_eq!(crs.uom, Some(eml::LengthUomExt::M));
         assert_eq!(crs.axis_order, eml::AxisOrder2d::EastingNorthing);
-        // The geometry names the compound now — the `ProjectedCrs` is inside it,
+        // The geometry names the compound now - the `ProjectedCrs` is inside it,
         // embedded in the plane, not beside it.
         assert_eq!(
             made.reference().qualified_type,

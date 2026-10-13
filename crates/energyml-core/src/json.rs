@@ -9,7 +9,7 @@
 //! | Rule | Why it is not optional |
 //! |---|---|
 //! | **every** non-primitive object carries `$type`, its qualified type | it is the only type information in the document; without it a reader must guess from the field name, and cannot read a substituted subtype at all |
-//! | enumerations are written as their bare lexical value | `"m"`, not `{"value": "m"}` — the same string XML writes |
+//! | enumerations are written as their bare lexical value | `"m"`, not `{"value": "m"}` - the same string XML writes |
 //! | absent values are omitted | a null carries no more meaning than an absent key, and doubles the size of a large document |
 //! | the text of a `simpleContent` type is the key `_` | it has no element name of its own to use |
 //! | `_data` may carry the object a reference points at | makes a document self-contained without a package around it |
@@ -27,7 +27,7 @@
 //!
 //! `$type` is not decoration: it is the **discriminant**. A field declared with
 //! an abstract type holds one of many concrete subtypes, and JSON has no
-//! `xsi:type` to fall back on. Serde's derive cannot supply it — it knows the
+//! `xsi:type` to fall back on. Serde's derive cannot supply it - it knows the
 //! Rust enum, not the EnergyML type, and its own answer (externally tagged,
 //! `{"Point3dExternalArray": {…}}`) is a shape no other implementation reads.
 //! Reflection sees the concrete subtype and its [`TypeInfo`], so the encoding is
@@ -39,12 +39,12 @@
 //! Two cases the guide does not cover, both marked here so nobody mistakes them
 //! for the standard:
 //!
-//! - **[`AnyXml`]** — a foreign subtree (a GML CRS definition) has no JSON form.
+//! - **[`AnyXml`]** - a foreign subtree (a GML CRS definition) has no JSON form.
 //!   It is written as `{"$type": "eml.AnyXml", "content": "<xml…>", …}` so that
 //!   the round trip keeps it, per the rule that what is not modelled is still
 //!   not dropped. `eml.AnyXml` is not a schema type and no other implementation
 //!   will know it.
-//! - **A duplicated element name** — WITSML objects declare their own
+//! - **A duplicated element name** - WITSML objects declare their own
 //!   `witsml:Citation` beside the inherited `eml:Citation`, which would be one
 //!   JSON key twice. The second occurrence is qualified with its prefix,
 //!   `"witsml:Citation"`. XML tells the two apart by namespace and needs no
@@ -54,7 +54,7 @@
 //! # What each direction needs
 //!
 //! Writing needs **nothing**: reflection carries the type of every object it
-//! walks. Reading needs a [`Registry`] holding every type the document names —
+//! walks. Reading needs a [`Registry`] holding every type the document names -
 //! nested ones included, since `$type` names them all and the reader builds
 //! each one by name. A generated crate's `register` covers that by
 //! construction.
@@ -81,7 +81,7 @@ pub const DATA_KEY: &str = "_data";
 /// The `$type` of any type, nested ones included: `eml20.Citation`,
 /// `resqml20.obj_Activity`.
 ///
-/// Built from the same three pieces as every other Energistics identifier —
+/// Built from the same three pieces as every other Energistics identifier -
 /// package, schema version compacted, and the complexType name **verbatim**, so
 /// RESQML 2.0.1 keeps its `obj_` prefix here as it does in a content type.
 pub fn qualified_type_of(info: &TypeInfo) -> String {
@@ -155,8 +155,8 @@ pub fn write_value(object: &dyn Reflect) -> Value {
 /// Encode an object, expanding references through `source` into `_data`.
 ///
 /// Each uuid is expanded **once** per document. Without that, a document with a
-/// reference cycle — an interpretation naming a representation that names the
-/// interpretation back — would never terminate.
+/// reference cycle - an interpretation naming a representation that names the
+/// interpretation back - would never terminate.
 pub fn write_value_with(object: &dyn Reflect, source: &dyn ObjectSource) -> Value {
     let mut expanded = BTreeSet::new();
     if let Some(uuid) = identity::uuid_of_reflect(object) {
@@ -251,7 +251,7 @@ fn write_scalar(scalar: Scalar<'_>) -> Value {
         Scalar::Double(v) => match Number::from_f64(v) {
             Some(number) => Value::Number(number),
             // JSON has no `NaN` and no infinity; `xsd:double` has all three,
-            // and the corpus uses them — `prodml22.FluidSystem` carries a NaN.
+            // and the corpus uses them - `prodml22.FluidSystem` carries a NaN.
             // Writing the XSD lexical form as a string keeps the value where
             // `null` would have dropped it and failed to read back. Ours, not
             // the style guide's: it has nothing to say about a value JSON
@@ -310,11 +310,11 @@ fn write_any_xml(any: &AnyXml, info: &TypeInfo) -> Value {
 ///
 /// The text of a `simpleContent` type is `_`; a name already used by an earlier
 /// field is qualified with its prefix. This is the only place the mapping is
-/// defined — the generated code carries no JSON names of its own any more.
+/// defined - the generated code carries no JSON names of its own any more.
 ///
 /// **Public, because a description must name the key the JSON uses.** The
 /// front end's editor, the type documentation and the Python bridge read
-/// `FieldInfo::json_name`, which the generator fills with the XML name — so the
+/// `FieldInfo::json_name`, which the generator fills with the XML name - so the
 /// text of every `*Measure`, `StringMeasure`… was described as `Value` and
 /// written as `_`, and the editor showed an empty field (the
 /// `Value` part looked unfilled while only `name` was). A
@@ -345,7 +345,7 @@ pub struct JsonDocument {
     pub root: Box<dyn DynObject>,
     /// Objects found under `_data`, in the order they were met.
     ///
-    /// Separate from the root because they are *other* objects — a document
+    /// Separate from the root because they are *other* objects - a document
     /// carrying them is a small package, and flattening them into the root
     /// would lose that.
     pub referenced: Vec<Box<dyn DynObject>>,
@@ -366,7 +366,7 @@ pub fn read_value(value: &Value, registry: &Registry) -> Result<JsonDocument> {
 }
 
 /// Build one object. `declared` is the type the field expects, used only when
-/// the document omits `$type` — tolerated because hand-written JSON does, and
+/// the document omits `$type` - tolerated because hand-written JSON does, and
 /// unambiguous whenever the declared type is concrete.
 fn read_object(
     value: &Value,
@@ -451,7 +451,7 @@ fn find_field(info: &TypeInfo, keys: &[String], key: &str) -> Option<usize> {
 ///
 /// The public door onto what the document reader already does per field, opened
 /// for one caller and one need: an editor that has to put a **whole object** in
-/// a field — a `Citation`, a `Point3dLatticeArray`, a `DataObjectReference` —
+/// a field - a `Citation`, a `Point3dLatticeArray`, a `DataObjectReference` -
 /// and until now could only put a string there.
 ///
 /// It takes the [`FieldInfo`] rather than a type name, and that is the point:
@@ -459,7 +459,7 @@ fn find_field(info: &TypeInfo, keys: &[String], key: &str) -> Option<usize> {
 /// abstract slot may hold, so a caller cannot pass a `Citation` where a
 /// `Point3d` belongs and have it quietly land.
 ///
-/// The returned objects are the ones a `_data` member carried — the Energistics
+/// The returned objects are the ones a `_data` member carried - the Energistics
 /// convention for shipping the target of a reference alongside it. A caller with
 /// nowhere to put them may drop them; a caller filling a store should not.
 #[cfg(feature = "json")]
@@ -494,7 +494,7 @@ fn read_field(
             if declared.is_some_and(|info| info.name == "AnyXml") {
                 // Unless what arrived is a **typed** object. A slot declared as
                 // a subtree can be handed one whenever the class is really
-                // known — `AbstractGraphicalInformation` is declared in EML and
+                // known - `AbstractGraphicalInformation` is declared in EML and
                 // specialised in RESQML, so the field is a subtree for reasons
                 // of crate layering, not of data. Without this branch such an
                 // object became an empty subtree, and silently: `read_any_xml`
@@ -511,7 +511,7 @@ fn read_field(
             }
             // An enumeration slot given an object. Refused *here*, by name,
             // because the next step asks the registry for the enumeration's
-            // qualified type — which is deliberately not registered — and
+            // qualified type - which is deliberately not registered - and
             // reports "unknown type `resqml22.ThrowKindExt` (not registered)":
             // a true sentence about a type that is not the problem, and one
             // that sends the reader looking for a missing crate. What is

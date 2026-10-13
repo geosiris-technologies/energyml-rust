@@ -1,9 +1,9 @@
-//! What an object inherits, and by which path — `energyml_domain::inherit`.
+//! What an object inherits, and by which path - `energyml_domain::inherit`.
 //!
 //! See ADR-0009. Every
-//! package is **built in memory** after the specifications — common TRG 2.3
+//! package is **built in memory** after the specifications - common TRG 2.3
 //! §8.3 and §8.5 for the collections, RESQML TRG 2.2 §2.7 and §6.19 for the
-//! feature / interpretation / representation chain and the earth model — and
+//! feature / interpretation / representation chain and the earth model - and
 //! never read from a file.
 //!
 //! The walk knows nothing about colours: the predicate here says *"this object
@@ -36,7 +36,7 @@ pub(crate) fn u(n: u32) -> String {
     format!("00000000-0000-4000-8000-{n:012x}")
 }
 
-/// The uuid inside the identity (the uri) a walk hands its predicate — through the
+/// The uuid inside the identity (the uri) a walk hands its predicate - through the
 /// library's one reading of an address.
 pub(crate) fn uuid_of(identity: &str) -> String {
     energyml_core::identity::parse_address(identity).0
@@ -139,7 +139,7 @@ impl Package {
         self
     }
 
-    /// An earth model interpretation of `model`, naming `wells` — the one
+    /// An earth model interpretation of `model`, naming `wells` - the one
     /// object that points the interpretations (a `Model` points nothing).
     pub(crate) fn earth_model(&mut self, uuid: u32, model: u32, wells: &[u32]) -> &mut Self {
         let id = u(uuid);
@@ -295,7 +295,7 @@ pub(crate) fn chain() -> Package {
 
 /// Rank 1: what the object carries beats everything above it.
 ///
-/// To break it: test the collections before the object — the collection (which
+/// To break it: test the collections before the object - the collection (which
 /// also carries something) would win.
 #[test]
 fn the_object_itself_comes_first() {
@@ -322,7 +322,7 @@ fn the_object_itself_comes_first() {
 /// interpretation. The path is one `collection` step and names the association
 /// that wrote it.
 ///
-/// To break it: put the parents before the collections — the interpretation would win.
+/// To break it: put the parents before the collections - the interpretation would win.
 #[test]
 fn a_collection_of_the_object_beats_its_interpretation() {
     let mut package = chain();
@@ -341,7 +341,7 @@ fn a_collection_of_the_object_beats_its_interpretation() {
     assert_eq!(step.held_by.as_deref(), Some(u(20).as_str()));
 }
 
-/// Rank 2 bis: a collection of a collection is one step further — and still
+/// Rank 2 bis: a collection of a collection is one step further - and still
 /// before the parents.
 ///
 /// To break it: do not descend into collections of collections (None at the
@@ -422,7 +422,7 @@ fn nested_collections_of_the_parent_are_followed() {
 
 // -- rank 5 --------------------------------------------------------------------
 
-/// Rank 5: the walk goes up — the feature, then its collections, and a
+/// Rank 5: the walk goes up - the feature, then its collections, and a
 /// collection of the **feature** is one stage above the interpretation's.
 ///
 /// To break it: stop at the interpretation, or mix up the stages (a
@@ -459,7 +459,7 @@ pub(crate) fn with_model() -> Package {
     package
 }
 
-/// Rank 6: the model that references the object's parent answers last — after
+/// Rank 6: the model that references the object's parent answers last - after
 /// the feature.
 ///
 /// To break it: put the model before the climb (the feature and the model both
@@ -473,7 +473,7 @@ fn the_model_comes_after_the_whole_chain() {
 }
 
 /// Rank 6 itself: the earth model that names the interpretation, and the
-/// `Model` it interprets one step beyond — the nearer first, the other not a
+/// `Model` it interprets one step beyond - the nearer first, the other not a
 /// tie (it is further).
 ///
 /// To break it: do not read the parents' **incoming** references (the model
@@ -497,7 +497,7 @@ fn the_model_that_references_a_parent_is_reached() {
 
 // -- rank 7 and the project ----------------------------------------------------
 
-/// A `project` collection is **not followed**, and the walk says so — whatever
+/// A `project` collection is **not followed**, and the walk says so - whatever
 /// the information on it. The control is the same package with a `folder`,
 /// which is followed.
 ///
@@ -592,7 +592,7 @@ fn a_tie_takes_the_first_in_the_document_and_keeps_the_others() {
 }
 
 /// The shortest path wins over the document order: a collection reached in one
-/// step beats one reached in two, though it is written later — and the loser
+/// step beats one reached in two, though it is written later - and the loser
 /// is **not** a tie (it is further).
 ///
 /// To break it: break ties by the order before the distance.
@@ -662,7 +662,7 @@ fn a_cycle_of_collections_is_named_and_the_walk_ends() {
 }
 
 /// An object listed twice in one association counts once (common TRG 2.3
-/// §8.5) — one carrier, no tie with itself — and the doubling is said.
+/// §8.5) - one carrier, no tie with itself - and the doubling is said.
 ///
 /// To break it: do not deduplicate (`ties` would contain the collection).
 #[test]
@@ -685,8 +685,8 @@ fn an_object_listed_twice_counts_once() {
     );
 }
 
-/// A collection named in two associations of one set counts once — the first
-/// (§8.3) — and the second association's members are **not** members: the
+/// A collection named in two associations of one set counts once - the first
+/// (§8.3) - and the second association's members are **not** members: the
 /// repeat is ignored, said.
 ///
 /// To break it: take all the associations (object 1 would be in the
@@ -709,9 +709,9 @@ fn a_collection_named_twice_in_a_set_counts_once() {
     assert_eq!(hit(&walked).value, "collection");
 }
 
-/// A reference to a collection that is not a membership — the collection
+/// A reference to a collection that is not a membership - the collection
 /// naming an object as its own parent, here the association set pointing a
-/// collection in `Collection` only — makes no member.
+/// collection in `Collection` only - makes no member.
 ///
 /// To break it: read every incoming edge of a set as a membership.
 #[test]
@@ -727,11 +727,11 @@ fn only_the_paired_paths_are_memberships() {
 /// The `Collection` path of an association is **not** a membership: a collection
 /// is not a member of itself, and the walk must not invent a cycle out of the
 /// path that names it. With nothing carrying anything the walk explores the
-/// collection's own memberships — and finds none.
+/// collection's own memberships - and finds none.
 ///
 /// This is the filter of the paired paths (`Collection` and `Dataobject[j]` of
-/// one rank): `only_the_paired_paths_are_memberships` did not exercise it — a
-/// collection with no member is never asked for its own memberships — and
+/// one rank): `only_the_paired_paths_are_memberships` did not exercise it - a
+/// collection with no member is never asked for its own memberships - and
 /// reading the `.Collection` path as `Dataobject[0]` left every test of this
 /// file green (sabotaged on 02/10).
 ///
@@ -752,7 +752,7 @@ fn a_collection_is_not_a_member_of_itself() {
     );
 
     // And a collection that does hold a collection is still followed one step
-    // further — the control, so the check above is not an empty walk.
+    // further - the control, so the check above is not an empty walk.
     let mut package = chain();
     package.folder(10).folder(11).set(20, &[(10, &[1]), (11, &[10])]);
     let built = package.built();
@@ -793,7 +793,7 @@ fn only_an_association_set_writes_a_membership() {
 // -- the shorter property walk -------------------------------------------------
 
 /// A property climbs to its kind and the kind's parents, a collection at each
-/// step — and **stops there**: nothing on the representation, the
+/// step - and **stops there**: nothing on the representation, the
 /// interpretation, the feature or the model answers (§2.2).
 ///
 /// To break it: let the property descend to the representation (the test
@@ -843,7 +843,7 @@ fn a_property_does_not_climb_to_its_representation() {
     assert_eq!(hit(&walker.resolve_property(&u(50), &kinds)).rank, 1);
 }
 
-/// The collections of the property and of its kind answer at ranks 2 and 4 —
+/// The collections of the property and of its kind answer at ranks 2 and 4 -
 /// the collection of the property before the kind, the kind before the
 /// collection of the kind.
 ///
@@ -892,7 +892,7 @@ fn the_kind_chain_is_the_resolvers() {
 // -- the batch -----------------------------------------------------------------
 
 /// A population: the answers are the one-by-one answers, and an object that
-/// several share — a collection — is **asked once**.
+/// several share - a collection - is **asked once**.
 ///
 /// To break it: the memoisation (the counter exceeds 1); or a memoisation per
 /// walk instead of per package (same on the shared collection).
@@ -938,7 +938,7 @@ fn the_batch_equals_the_unit_and_asks_each_object_once() {
 
 // -- the parents, against the cascade that already walks them -----------------
 
-/// The parents the index gives are the parents `color::Cascade::chain` walks —
+/// The parents the index gives are the parents `color::Cascade::chain` walks -
 /// two independent readings of the three fields, one from the objects, one from
 /// the index's edges.
 ///

@@ -39,7 +39,7 @@ pub fn well_with(n: &str, s: f64, intervals: Vec<Interval>) -> Item {
 }
 
 /// Two wells that share the middle of the column: A sees Top, Mid, Bottom, B sees
-/// Mid, Bottom, Deep — and a unit with no colour of its own.
+/// Mid, Bottom, Deep - and a unit with no colour of its own.
 pub fn catalogue_of_two() -> Catalogue {
     catalogue(vec![
         well_with(

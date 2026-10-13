@@ -1,7 +1,7 @@
 //! Dotted-path access into generated objects.
 //!
-//! Supports `Citation.Title`, `TrianglePatch[0].Count`, and — through
-//! [`get_ignore_case`] — the same paths written in any casing, so a user who
+//! Supports `Citation.Title`, `TrianglePatch[0].Count`, and - through
+//! [`get_ignore_case`] - the same paths written in any casing, so a user who
 //! does not know the model exactly can still address a value.
 
 use crate::error::{Error, Result};
@@ -151,7 +151,7 @@ pub fn get_string(root: &dyn Reflect, path: &str) -> Result<Option<String>> {
 /// [`set`] walks to a path's parent and writes one field. This walks the whole
 /// path and hands back the object itself, which is what a caller needs when the
 /// thing to change is not one value but a small cluster of them that must stay
-/// consistent — a `DataObjectReference`'s uuid, type and title being the case
+/// consistent - a `DataObjectReference`'s uuid, type and title being the case
 /// this was written for. Doing that through [`set`] would mean three walks and
 /// three chances to write half of a change.
 pub fn object_mut<'a>(root: &'a mut dyn Reflect, path: &str) -> Result<&'a mut dyn Reflect> {
@@ -199,7 +199,7 @@ pub fn set(root: &mut dyn Reflect, path: &str, value: OwnedValue) -> Result<()> 
     }
 }
 
-/// Set one value from JSON — a scalar, or a whole object.
+/// Set one value from JSON - a scalar, or a whole object.
 ///
 /// # Why this exists next to [`set`]
 ///
@@ -209,7 +209,7 @@ pub fn set(root: &mut dyn Reflect, path: &str, value: OwnedValue) -> Result<()> 
 /// JavaScript could set a title and nothing else.
 ///
 /// Here the value arrives as JSON and the **field decides how to read it**. The
-/// field knows its type, whether it repeats, and — for an abstract slot — which
+/// field knows its type, whether it repeats, and - for an abstract slot - which
 /// concrete classes are allowed; `$type` in the JSON picks among them, exactly
 /// as it does in a document.
 ///
@@ -268,7 +268,7 @@ pub fn set_json_value(
         });
     }
 
-    // The field, found the same way `set_field` finds it — by name, then
+    // The field, found the same way `set_field` finds it - by name, then
     // ignoring case. A path typed by a person says `citation.title` as often as
     // `Citation.Title`, and refusing the first while accepting it one segment
     // earlier would be the sort of inconsistency nobody can remember.

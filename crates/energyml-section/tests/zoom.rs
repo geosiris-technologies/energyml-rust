@@ -231,7 +231,7 @@ fn dots_and_texts_in_the_plot_say_where_they_are_anchored() {
         let at = format!("{} {}", t.attr("x").unwrap(), t.attr("y").unwrap());
         assert_eq!(t.attr("data-zoom-fixed"), Some(at.as_str()));
     }
-    // What is outside the plot group is never counter-scaled — it never grows.
+    // What is outside the plot group is never counter-scaled - it never grows.
     assert!(
         els.iter()
             .filter(|e| !e.in_plot)

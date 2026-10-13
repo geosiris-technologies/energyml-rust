@@ -1,7 +1,7 @@
-//! `pointset` — a `PointSetRepresentation` from anything that has points.
+//! `pointset` - a `PointSetRepresentation` from anything that has points.
 //!
 //! The most general operation: a mesh, a polyline, a triangulated surface, a
-//! feature collection — whatever the topology, the points are what a point set
+//! feature collection - whatever the topology, the points are what a point set
 //! takes, and extracting them is what `Shape` already knows how to do. This
 //! is the second example of the original need: from a 3D model of
 //! polylines or of a surface, extract a point cloud.
@@ -35,7 +35,7 @@ pub struct PointsetParams {
 /// What `pointset` takes.
 ///
 /// A shape **or** a feature collection: two optional slots rather than one
-/// required, because it is *one or the other* — a slot naming only one would
+/// required, because it is *one or the other* - a slot naming only one would
 /// hide half of what the operation does.
 #[derive(Debug, Inputs)]
 pub struct PointsetInputs {
@@ -56,7 +56,7 @@ impl Operation for Pointset {
     fn about(&self) -> About {
         About {
             name: "pointset",
-            describe: "a point set from whatever has points — a shape of any topology, or the positions of a feature collection",
+            describe: "a point set from whatever has points - a shape of any topology, or the positions of a feature collection",
             category: Category::Create,
             makes: &["resqml22.PointSetRepresentation"],
             recipe: "pointset",
@@ -93,7 +93,7 @@ impl Operation for Pointset {
         params: PointsetParams,
         cx: &Context<'_>,
     ) -> Result<Plan, Refusal> {
-        // Every point of every shape, then every position of the features —
+        // Every point of every shape, then every position of the features -
         // each placed in the frame written, as `write` builds it again below.
         let frame = support::frame_in(&cx.known(), &params.written.frame, cx.identity, cx.when, &mut 0)?;
         let mut points: Vec<[f64; 3]> = Vec::new();
@@ -135,7 +135,7 @@ impl Operation for Pointset {
     }
 }
 
-/// **The point set, written** — what the operation does, and what an
+/// **The point set, written** - what the operation does, and what an
 /// operation that computes its own points (`estimate`) calls directly:
 /// typed in, no bag to derive and no choices read back by name. `name` is
 /// what the input is called in the one refusal this can raise; `seed` is

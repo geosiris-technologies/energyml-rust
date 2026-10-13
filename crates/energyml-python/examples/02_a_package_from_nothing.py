@@ -8,7 +8,7 @@ with an empty one and puts in the whole chain RESQML asks for:
 
     BoundaryFeature          what exists in the ground
       HorizonInterpretation  what someone decided it is
-        PointSetRepresentation   where they put it — points, in a CRS
+        PointSetRepresentation   where they put it - points, in a CRS
           ContinuousProperty     and a number on each point
 
 None of these five objects is special to the bridge: they are dictionaries, and
@@ -23,8 +23,8 @@ import numpy as np
 
 from energyml.rust.epc import ArrayRef, Epc
 
-# The projected CRS the points are given in — Lambert-93, the French national
-# grid — and a vertical CRS for the elevations. **The geometry points at the
+# The projected CRS the points are given in - Lambert-93, the French national
+# grid - and a vertical CRS for the elevations. **The geometry points at the
 # projected CRS itself**, not at a compound one: EML 2.3 has no top-level
 # compound of a projected and a vertical CRS, so the pair is written and the
 # vertical one is referenced by nothing. That is a known gap of the schema, not
@@ -52,7 +52,7 @@ def main(out_dir: str) -> None:
 
     pkg = Epc.create("top-chalk.epc")
     # An empty package has no path, so nothing says where its `.h5` should go.
-    # Opening a package answers that question — beside the `.epc` — and
+    # Opening a package answers that question - beside the `.epc` - and
     # creating one cannot, so it is asked here.
     pkg.set_data_root(out_dir)
 
@@ -89,7 +89,7 @@ def main(out_dir: str) -> None:
     }
 
     # 3. The interpretation: someone's decision about that feature, in a domain.
-    #    `depth` rather than `time` — these points are metres, not seconds, and
+    #    `depth` rather than `time` - these points are metres, not seconds, and
     #    the two are not interchangeable.
     interpretation = {
         "$type": "resqml22.HorizonInterpretation",
@@ -101,7 +101,7 @@ def main(out_dir: str) -> None:
     }
 
     # 4. The representation: where the interpretation has been put. A scatter
-    #    of picks rather than a surface — four points on a gentle dome.
+    #    of picks rather than a surface - four points on a gentle dome.
     points = np.array(
         [
             [650000.0, 6860000.0, -1250.0],
@@ -186,7 +186,7 @@ def reference(obj: dict) -> dict:
     """A DataObjectReference to an object being built here.
 
     It is made from the dictionary rather than from a summary, because these
-    objects are not in the package yet — the reference has to exist before the
+    objects are not in the package yet - the reference has to exist before the
     thing it names is put.
     """
     return {
@@ -215,7 +215,7 @@ def external_array(file: str, path: str, count: int) -> dict:
 
 
 def check(epc: str, picks_uuid: str, property_uuid: str) -> None:
-    """Read the package back — the only statement worth making about a write."""
+    """Read the package back - the only statement worth making about a write."""
     again = Epc.open(epc)
     print(f"{len(again.objects())} objects read back:")
     for one in again.objects():

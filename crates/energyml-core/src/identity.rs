@@ -101,7 +101,7 @@ pub struct ObjectKey<'a> {
     pub domain: &'a str,
     /// Schema version, in the form its source wrote.
     pub version: VersionRef<'a>,
-    /// Complex type name, verbatim — `obj_Activity`, `TriangulatedSetRepresentation`.
+    /// Complex type name, verbatim - `obj_Activity`, `TriangulatedSetRepresentation`.
     pub object_type: &'a str,
     /// UUID exactly as read; never rewritten, only compared without case.
     pub uuid: &'a str,
@@ -135,7 +135,7 @@ impl<'a> ObjectKey<'a> {
     }
 
     /// **The** uri of an object: `eml:///dataspace('demo')/resqml20.obj_Activity(uuid)`,
-    /// without the dataspace segment when none is given — and with the object's
+    /// without the dataspace segment when none is given - and with the object's
     /// version whenever it declares one, `…(uuid=…,version='2')` (Identifier
     /// Specification v5.0 §3.4.2, p. 14). Internally the uri always carries the
     /// version number when the object has one (ADR-0003). An empty or blank
@@ -172,7 +172,7 @@ impl<'a> ObjectKey<'a> {
     }
 
     /// Same object: same uuid (case-insensitively), and object versions that do
-    /// not contradict each other — an absent one means "the latest", so it
+    /// not contradict each other - an absent one means "the latest", so it
     /// matches anything.
     pub fn same_object(&self, other: &ObjectKey<'_>) -> bool {
         self.uuid.eq_ignore_ascii_case(other.uuid)
@@ -199,7 +199,7 @@ impl<'a> ObjectKey<'a> {
     }
 }
 
-/// Identity of an EnergyML object, owned — for storing, hashing and
+/// Identity of an EnergyML object, owned - for storing, hashing and
 /// serializing. `version` is always the dotted form.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ObjectId {
@@ -279,7 +279,7 @@ impl ObjectId {
     /// Build from an ETP URI, returning the dataspace it carried, if any.
     pub fn from_etp_uri(uri: &str) -> Result<(Option<String>, Self)> {
         let (dataspace, qualified_type, uuid) = split_etp_uri(uri)?;
-        // The versioned form, `(uuid=…,version='…')` — Identifier Specification
+        // The versioned form, `(uuid=…,version='…')` - Identifier Specification
         // v5.0 §3.4.2 (p. 14): the version is part of the identity, never of
         // the uuid.
         let (uuid, object_version) = match uuid.split_once(",version='") {
@@ -311,7 +311,7 @@ impl ObjectId {
     }
 
     /// **The identity of an object**, read from the object itself through
-    /// reflection — a top-level object or a reference to one (a
+    /// reflection - a top-level object or a reference to one (a
     /// `DataObjectReference`, a `ContactElementReference`, a `ContactElement`):
     /// the uuid by its role (`/^u?uid$/i`, resolved when the code was
     /// generated), the type by the object's own type or the reference's
@@ -322,7 +322,7 @@ impl ObjectId {
         key_of_reflect(object).map(|key| key.to_owned_id())
     }
 
-    /// The identity a uri names, and the dataspace it names when it names one —
+    /// The identity a uri names, and the dataspace it names when it names one -
     /// the one reading of a text into an identity ([`ObjectId::from_etp_uri`]).
     pub fn parse(uri: &str) -> Result<(Option<String>, ObjectId)> {
         Self::from_etp_uri(uri)
@@ -332,7 +332,7 @@ impl ObjectId {
     /// has none), and its version **when it declares one**: any view that shows
     /// an object's type and title also shows its version unless that is empty
     /// or absent (ADR-0003).
-    /// `resqml22.TriangulatedSetRepresentation — H3 (version 2)`.
+    /// `resqml22.TriangulatedSetRepresentation - H3 (version 2)`.
     pub fn label(&self, title: Option<&str>) -> String {
         let title = title
             .map(str::trim)
@@ -344,8 +344,8 @@ impl ObjectId {
             .map(str::trim)
             .filter(|version| !version.is_empty())
         {
-            Some(version) => format!("{} — {title} (version {version})", self.qualified_type()),
-            None => format!("{} — {title}", self.qualified_type()),
+            Some(version) => format!("{} - {title} (version {version})", self.qualified_type()),
+            None => format!("{} - {title}", self.qualified_type()),
         }
     }
 
@@ -356,8 +356,8 @@ impl ObjectId {
 }
 
 impl PartialEq for ObjectId {
-    /// Uuid is compared without case — hexadecimal is case-insensitive, and
-    /// writers disagree about it — everything else exactly.
+    /// Uuid is compared without case - hexadecimal is case-insensitive, and
+    /// writers disagree about it - everything else exactly.
     fn eq(&self, other: &Self) -> bool {
         self.uuid.eq_ignore_ascii_case(&other.uuid)
             && self.domain == other.domain
@@ -508,7 +508,7 @@ pub enum IdentityKind {
     TopLevel,
     /// A reference to one: `DataObjectReference` and the types extending it.
     ObjectRef,
-    /// Neither — an ordinary nested type.
+    /// Neither - an ordinary nested type.
     None,
 }
 
@@ -547,7 +547,7 @@ pub trait ObjectIdentity {
     }
 }
 
-/// Identity, writable — for building objects and references dynamically.
+/// Identity, writable - for building objects and references dynamically.
 pub trait ObjectIdentityMut: ObjectIdentity {
     /// Set the uuid, rejecting anything that is not one.
     fn set_uuid(&mut self, uuid: &str) -> Result<()>;
@@ -565,7 +565,7 @@ pub trait ObjectRef: ObjectIdentity + Default + Sized {
     /// Fill in the fields this version knows about, and only those.
     fn from_key(key: &ObjectKey<'_>) -> Self;
 
-    /// Reference anything identifiable — a top-level object of any version, or
+    /// Reference anything identifiable - a top-level object of any version, or
     /// another reference of any version.
     fn referencing<T: ObjectIdentity + ?Sized>(source: &T) -> Result<Self> {
         let key = key_of(source)
@@ -587,7 +587,7 @@ impl<T: ObjectIdentity + ?Sized> AsObjectRef for T {
 }
 
 // ---------------------------------------------------------------------------
-// Building a key — the generic part stays thin on purpose
+// Building a key - the generic part stays thin on purpose
 // ---------------------------------------------------------------------------
 
 /// Identity of anything identifiable, borrowed.
@@ -654,8 +654,8 @@ pub fn key_from_parts<'a>(
 }
 
 /// Content type of anything identifiable. Borrowed whenever the string already
-/// exists — a top-level object's `TypeInfo`, or a reference that already stores
-/// a content type — and built only when a conversion is unavoidable.
+/// exists - a top-level object's `TypeInfo`, or a reference that already stores
+/// a content type - and built only when a conversion is unavoidable.
 pub fn content_type_of<'a, T: ObjectIdentity + ?Sized>(source: &'a T) -> Option<Cow<'a, str>> {
     if let Some(DeclaredType::ContentType(ct)) = source.declared_type() {
         return Some(Cow::Borrowed(ct));
@@ -693,7 +693,7 @@ pub fn etp_uri_of<T: ObjectIdentity + ?Sized>(source: &T, dataspace: Option<&str
 /// Read a role-carrying field of an object reached through reflection.
 ///
 /// The role indices live in [`TypeInfo::roles`] and are resolved at generation
-/// time, so this is an index into a static array — not a search by name.
+/// time, so this is an index into a static array - not a search by name.
 fn role_str(object: &dyn Reflect, index: Option<u16>) -> Option<&str> {
     let info = object.type_info();
     let field = info.fields.get(index? as usize)?;
@@ -721,7 +721,7 @@ pub fn title_of_reflect(object: &dyn Reflect) -> Option<&str> {
 }
 
 /// Object version of an object reached dynamically: its own `objectVersion`,
-/// or the `VersionString` inside its `Citation` — where eml 2.0 keeps it.
+/// or the `VersionString` inside its `Citation` - where eml 2.0 keeps it.
 ///
 /// The second half was missing until 10/09, and it read as a real finding:
 /// `energyml check` called a reference *at version `my version`* to an
@@ -746,7 +746,7 @@ pub fn declared_type_of_reflect(object: &dyn Reflect) -> Option<DeclaredType<'_>
     role_str(object, roles.content_type).map(DeclaredType::ContentType)
 }
 
-/// Identity of an object reached dynamically — works on a `Box<dyn DynObject>`
+/// Identity of an object reached dynamically - works on a `Box<dyn DynObject>`
 /// read from an EPC without knowing its concrete type.
 pub fn key_of_reflect(object: &dyn Reflect) -> Option<ObjectKey<'_>> {
     let info = object.type_info();
@@ -760,7 +760,7 @@ pub fn key_of_reflect(object: &dyn Reflect) -> Option<ObjectKey<'_>> {
     )
 }
 
-/// **The uri of an object or of a reference to one**, reached dynamically —
+/// **The uri of an object or of a reference to one**, reached dynamically -
 /// the full identity, version included when one is declared. The one way a
 /// reference becomes an address inside the library: following a reference by
 /// its uuid alone reads the wrong version as soon as a package holds two.
@@ -769,7 +769,7 @@ pub fn uri_of_reflect(object: &dyn Reflect) -> Option<String> {
 }
 
 /// **The address a reference is followed by**: its full uri
-/// ([`uri_of_reflect`]), or — the one exception, and it is the reference's —
+/// ([`uri_of_reflect`]), or - the one exception, and it is the reference's -
 /// its uuid when it names **no type** (no `QualifiedType`, no `ContentType`),
 /// since a uri is built from the type. A store resolves that uuid when it is
 /// unique and refuses it by name when it is not. `None` for no identity at all.
@@ -783,7 +783,7 @@ pub fn address_of_reflect(object: &dyn Reflect) -> Option<String> {
 }
 
 /// How the version of a held object stands against the version a reference (or
-/// an address) names — **the one rule**, written here once.
+/// an address) names - **the one rule**, written here once.
 ///
 /// *A named version is read; a short reference is accepted when nothing
 /// contradicts it.* Two versions named and different are two objects; a
@@ -791,7 +791,7 @@ pub fn address_of_reflect(object: &dyn Reflect) -> Option<String> {
 /// nothing. Blank is none (a `VersionString` of spaces says nothing).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum VersionFit {
-    /// The same version — or neither side names one. The best answer.
+    /// The same version - or neither side names one. The best answer.
     Exact,
     /// One side names none: nothing contradicts. Accepted, after an exact one.
     Compatible,
@@ -817,12 +817,12 @@ pub fn versions_agree(wanted: Option<&str>, held: Option<&str>) -> bool {
     version_fit(wanted, held) != VersionFit::Contradicts
 }
 
-/// **The address of an object known by the parts a text gives of it** — a
+/// **The address of an object known by the parts a text gives of it** - a
 /// declared type (a `ContentType` or a `QualifiedType`, whichever the text
 /// holds), a uuid and an object version: the same address
 /// [`address_of_reflect`] makes of a typed reference, for a reader that scans
 /// text (a subtree kept as `AnyXml`). Its uri when a type is declared and
-/// parses; the uuid, trimmed, when none is — the one exception, and it is the
+/// parses; the uuid, trimmed, when none is - the one exception, and it is the
 /// reference's.
 pub fn address_of_parts(declared_type: Option<&str>, uuid: &str, object_version: Option<&str>) -> String {
     let uuid = uuid.trim();
@@ -849,7 +849,7 @@ pub fn address_of_parts(declared_type: Option<&str>, uuid: &str, object_version:
 }
 
 /// **What an address names**: its uuid (lowercase) and the object version it
-/// names, when it names one. An address is a uri — the identity — or, at the
+/// names, when it names one. An address is a uri - the identity - or, at the
 /// library's entry only, a bare uuid, which names no version. The one reading
 /// of an address into the two things a comparison needs.
 pub fn parse_address(address: &str) -> (String, Option<String>) {
@@ -888,7 +888,7 @@ fn set_role_str(object: &mut dyn Reflect, index: Option<u16>, value: &str) -> Re
 
 /// Write an object's uuid, wherever its type keeps it.
 ///
-/// `uuid`, `UUID` or `uid` depending on the release and the type — the roles
+/// `uuid`, `UUID` or `uid` depending on the release and the type - the roles
 /// resolved it at generation time, so this is an index rather than a search,
 /// and a caller does not have to know which spelling it is looking at.
 ///
@@ -896,7 +896,7 @@ fn set_role_str(object: &mut dyn Reflect, index: Option<u16>, value: &str) -> Re
 /// nowhere to put one, and that is an answer rather than a failure.
 ///
 /// **The value is validated first.** A uuid written here is what the object's
-/// URI is built from, so a malformed one does not produce a bad field — it
+/// URI is built from, so a malformed one does not produce a bad field - it
 /// produces an object that cannot be a part, discovered much later. The refusal
 /// names the value.
 pub fn set_uuid_reflect(object: &mut dyn Reflect, uuid: &str) -> Result<bool> {
@@ -912,15 +912,15 @@ pub fn set_uuid_reflect(object: &mut dyn Reflect, uuid: &str) -> Result<bool> {
 ///
 /// # A reference that names no type is refused
 ///
-/// One of the two spellings is **mandatory** — it is what says *what* is being
+/// One of the two spellings is **mandatory** - it is what says *what* is being
 /// pointed at, and a `DataObjectReference` carrying a uuid and nothing else
 /// cannot be resolved by anything: not by this build, not by fesapi, not by an
 /// ETP server, which needs the qualified type to form the URI at all.
 ///
 /// This used to be able to happen quietly. The two writes were attempted and
 /// their result **discarded**, so a reference type whose role table named no
-/// type field — a hand-written model, a release whose spelling the roles do not
-/// yet detect — produced an object that looked built, went into the package,
+/// type field - a hand-written model, a release whose spelling the roles do not
+/// yet detect - produced an object that looked built, went into the package,
 /// and came back a dangling reference at the far end, where nothing points at
 /// the call that made it.
 ///
@@ -1059,11 +1059,11 @@ fn visit_value<'a>(
 pub struct NestedObject<'a> {
     /// Dotted path where it sits: `ChannelSet[0].Channel[2]`.
     pub path: String,
-    /// Its identity — a nested object has a uuid and a type like any other.
+    /// Its identity - a nested object has a uuid and a type like any other.
     pub key: ObjectKey<'a>,
 }
 
-/// Every data object nested inside `root`, at any depth — `root` itself
+/// Every data object nested inside `root`, at any depth - `root` itself
 /// excluded.
 ///
 /// # Why a reference may name one
@@ -1073,7 +1073,7 @@ pub struct NestedObject<'a> {
 /// as a part of its own; and a `ChannelSet`'s rows can only be read against
 /// the channels it lists inline. PRODML's flow-test data then **references**
 /// the channel set and its channels (`AbstractFlowTestData.ChannelSet`,
-/// `TimeChannel`, FlowTestActivity.xsd l. 95–103) — *"Channel is a WITSML
+/// `TimeChannel`, FlowTestActivity.xsd l. 95-103) - *"Channel is a WITSML
 /// object; Channels are collected into Channel Sets and the Channel Set is
 /// where the actual values are stored"* (PRODML Technical Usage Guide v2.3
 /// §13.6 p. 118). ETP treats the channels of a channel set as data objects of
@@ -1134,13 +1134,13 @@ fn visit_nested<'a>(value: FieldValue<'a>, path: String, out: &mut Vec<NestedObj
 /// # Why this is not optional
 ///
 /// An `xs:any`, or an abstract type the generator could not lower, comes back
-/// as [`AnyXml`][crate::any_xml::AnyXml] — the source text, kept verbatim so
+/// as [`AnyXml`][crate::any_xml::AnyXml] - the source text, kept verbatim so
 /// nothing is lost on rewrite. Nothing *of the content*, that is: the
 /// references inside it were invisible to the walk above, and the walk above is
 /// what regenerates a package's `.rels`.
 ///
-/// The corpus makes the cost concrete. `GraphicalInformationSet` — the object
-/// carrying every colour assignment in an EnergyML package — is exactly such a
+/// The corpus makes the cost concrete. `GraphicalInformationSet` - the object
+/// carrying every colour assignment in an EnergyML package - is exactly such a
 /// case, and rewriting `testingPackageCpp22.epc` took its **18 relationships to
 /// 0**. The colours survived, because the text did; the index a `.rels`-driven
 /// viewer walks did not.
@@ -1165,7 +1165,7 @@ fn refs_in_source<'a>(source: &'a str, prefix: &str, out: &mut Vec<RefEdge<'a>>)
         uuid: Option<&'a str>,
         declared: Option<&'a str>,
         /// `ObjectVersion` (eml 2.3) or `VersionString` (eml 2.0), beside
-        /// the uuid — read for the same reason the type is: a checker that
+        /// the uuid - read for the same reason the type is: a checker that
         /// saw a version on a typed reference and none on one kept as text
         /// reported every island reference as silent, whatever it said.
         object_version: Option<&'a str>,
@@ -1286,7 +1286,7 @@ mod tests {
     /// A reference kept as text carries its version like a typed one: the
     /// eml 2.3 `ObjectVersion`, the eml 2.0 `VersionString`, and none when
     /// the text says none. Breaks if the element is read on the wrong frame
-    /// or not at all — which made every island reference look silent.
+    /// or not at all - which made every island reference look silent.
     #[test]
     fn a_reference_in_kept_text_carries_its_version() {
         let source = concat!(

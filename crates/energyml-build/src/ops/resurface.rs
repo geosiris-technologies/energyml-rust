@@ -1,4 +1,4 @@
-//! `resurface` — MBA's representation target: recompute a shape's own z
+//! `resurface` - MBA's representation target: recompute a shape's own z
 //! (or, in the mean-plane frame, its own height off the mean plane), keeping
 //! its topology bit for bit. The need: give as input a grid […] or a
 //! triangulatedSetRepresentation to apply MBA on it and have it create a new
@@ -7,16 +7,16 @@
 //!
 //! # What makes this different from `estimate`
 //!
-//! In `estimate` the samples and the queries are two different things — a
+//! In `estimate` the samples and the queries are two different things - a
 //! shape and a cloud somebody hands in separately. Here they are **the same
 //! set of points**: the shape's own nodes are fitted, and evaluated again at
-//! their own `(x, y)` — a smoothing/re-approximation in place, never a
+//! their own `(x, y)` - a smoothing/re-approximation in place, never a
 //! second calculation (a small algorithm extracts the points of the given
 //! object, to reuse the code asked for above, then the same indices are
-//! reused — exactly one branch, not a new computation).
+//! reused - exactly one branch, not a new computation).
 //!
 //! **Scoped to MBA only**, for the same reason `estimate` is
-//! (`crates/energyml-build/src/ops/estimate.rs`'s own module doc) — a
+//! (`crates/energyml-build/src/ops/estimate.rs`'s own module doc) - a
 //! deliberate reduction for this task, not a reading of the original need.
 //!
 //! # A new object, never an edit
@@ -33,38 +33,38 @@
 //! promises to keep the same indices, and a ring that removed nodes or
 //! triangles would break that promise. The rule kept here is the proposed
 //! one: a ring only decides which of the shape's own points
-//! **inform the fit** — every point, ring-excluded or not, is still
+//! **inform the fit** - every point, ring-excluded or not, is still
 //! evaluated and still appears in the output, at the same rank. A ring on
-//! `resurface` filters only the samples, never the copied topology —
+//! `resurface` filters only the samples, never the copied topology -
 //! proposed, not a settled decision,
 //! and this file follows it as the conservative reading (nothing disappears
 //! silently from an object whose whole point is to keep its shape).
 //!
-//! # `frame = meanPlane` — a grid keeps `world`, a triangulated surface does not
+//! # `frame = meanPlane` - a grid keeps `world`, a triangulated surface does not
 //!
 //! A `Grid2dRepresentation`'s height is a vertical `ZValueArray` (the same
-//! reasoning as `interpolate_mba`'s module doc) — `meanPlane`
+//! reasoning as `interpolate_mba`'s module doc) - `meanPlane`
 //! is refused, named, for a grid target. A `TriangulatedSetRepresentation`
 //! writes explicit 3D points per node already
-//! (`crates/energyml-build/src/ops/triangles.rs::write`, `point_geometry`) —
+//! (`crates/energyml-build/src/ops/triangles.rs::write`, `point_geometry`) -
 //! there is no vertical-only constraint to run into, and `meanPlane` is
 //! written in full there: every node is projected to `(u, v)`, refitted, and
-//! rotated back, generally moving it off its own former `(x, y)` too — a
+//! rotated back, generally moving it off its own former `(x, y)` too - a
 //! point of the surface is returned, not an elevation.
 //!
-//! **Settled: this split is not a question left open** — a
+//! **Settled: this split is not a question left open** - a
 //! grid target keeps `world`; a triangulated one carries `meanPlane`.
-//! **Also settled: one mean plane for the whole shape**
-//! — piecewise mean planes for a listric, strongly-curved fault are a later
+//! **Also settled: one mean plane for the whole shape** -
+//! piecewise mean planes for a listric, strongly-curved fault are a later
 //! increment, not written here; [`check_not_folded`] is what says when one
 //! plane no longer suffices for a given input, rather than a silent guess.
 //!
 //! # References
 //!
 //! - Lee, Wolberg, Shin, *"Scattered Data Interpolation with Multilevel B-Splines"*, IEEE Transactions on Visualization and Computer Graphics, vol. 3, n° 3, 1997, p. 228-244 (DOI 10.1109/2945.620490), as cited in `energyml-geostat` (`mba`).
-//!   TODO(reference): verify — the citation above (journal, pages, DOI) was not re-checked against the paper (see `energyml-geostat/src/mba.rs`).
+//!   TODO(reference): verify - the citation above (journal, pages, DOI) was not re-checked against the paper (see `energyml-geostat/src/mba.rs`).
 //! - Principal components (Hoppe, 1992) reweighted with Huber's weights, as named in `energyml-geostat` (`extend`, reused by `mba_frame`).
-//!   TODO(reference): verify — Hoppe (1992) and Huber's weights are named without a full citation, and the 1.4826 scale factor of the median absolute residual is unreferenced; add the references (authors, year, title, venue, DOI) once checked.
+//!   TODO(reference): verify - Hoppe (1992) and Huber's weights are named without a full citation, and the 1.4826 scale factor of the median absolute residual is unreferenced; add the references (authors, year, title, venue, DOI) once checked.
 
 use energyml_analysis::mba::{Domain, Mba};
 use energyml_analysis::mba_frame::{Frame as MeanFrame, check_not_folded};
@@ -95,7 +95,7 @@ pub struct ResurfaceParams {
     /// advanced: the coarsest control grid's cell count along the second axis
     #[param(advanced, min = 1)]
     pub coarsest_j: Option<usize>,
-    /// the frame MBA is fitted in — a grid target keeps `world` (see the module doc); a triangulated surface carries `meanPlane` in full (settled)
+    /// the frame MBA is fitted in - a grid target keeps `world` (see the module doc); a triangulated surface carries `meanPlane` in full (settled)
     #[param(flatten)]
     pub frame: MbaFrame,
     /// The frame, what is represented, the naming.
@@ -103,7 +103,7 @@ pub struct ResurfaceParams {
     pub written: Written,
 }
 
-/// What `resurface` takes. `topology = "grid"` is the form's hint only — a
+/// What `resurface` takes. `topology = "grid"` is the form's hint only - a
 /// triangulated surface is accepted too, and `check` is what actually judges
 /// the topology, exactly as `triangles::check` already does for its own
 /// input rather than trusting a single-word hint.
@@ -112,15 +112,15 @@ pub struct ResurfaceInputs {
     /// the grid or triangulated surface to recompute
     #[input(topology = "grid")]
     pub shape: Shape,
-    /// keeps only the samples inside this ring for the fit — every node is still recomputed and kept (module doc)
+    /// keeps only the samples inside this ring for the fit - every node is still recomputed and kept (module doc)
     #[input(topology = "polylines")]
     pub outer: Option<Shape>,
-    /// removes the samples inside each of these rings from the fit — every node is still recomputed and kept
+    /// removes the samples inside each of these rings from the fit - every node is still recomputed and kept
     #[input(topology = "polylines")]
     pub inner: Vec<Shape>,
 }
 
-/// Which topology, owned rather than borrowed from the input `Shape` — this
+/// Which topology, owned rather than borrowed from the input `Shape` - this
 /// file matches on it more than once, and an owned value sidesteps every
 /// question of how long a borrow of `inputs.shape` would need to live.
 #[derive(Clone)]
@@ -129,7 +129,7 @@ enum Kind {
     Triangles(Vec<[u32; 3]>),
 }
 
-/// The word a refusal names a topology by — the same vocabulary
+/// The word a refusal names a topology by - the same vocabulary
 /// `triangles.rs::check` already uses for its own refusal.
 fn topology_word(topology: &Topology) -> &'static str {
     match topology {
@@ -183,7 +183,7 @@ fn kind_of(shape: &Shape) -> Result<(Kind, Vec<[f64; 3]>), Refusal> {
         other => Err(Refusal::on(
             "shape",
             format!(
-                "`{}`'s topology is {}: resurface recopies a lattice or a triangulation, it does not decide one — no topology to recopy here",
+                "`{}`'s topology is {}: resurface recopies a lattice or a triangulation, it does not decide one - no topology to recopy here",
                 shape.name,
                 topology_word(other)
             ),
@@ -192,7 +192,7 @@ fn kind_of(shape: &Shape) -> Result<(Kind, Vec<[f64; 3]>), Refusal> {
 }
 
 /// The ranks of `points` kept for the fit: inside `outer` (if given),
-/// outside every `inner` — the same rule `interpolate_mba`/`estimate` apply,
+/// outside every `inner` - the same rule `interpolate_mba`/`estimate` apply,
 /// restated on ranks so every point can still be evaluated afterwards
 /// (module doc).
 fn fit_ranks(points: &[[f64; 3]], outer: Option<&Shape>, inner: &[Shape]) -> Result<Vec<usize>, Refusal> {
@@ -318,7 +318,7 @@ impl Operation for Resurface {
         let fit_w: Vec<f64> = fit_ranks.iter().map(|&at| local[at][2]).collect();
         let all_uv: Vec<[f64; 2]> = local.iter().map(|p| [p[0], p[1]]).collect();
 
-        // Ω is every point's own bounding box — no margin: samples and
+        // Ω is every point's own bounding box - no margin: samples and
         // queries are the same set here (module doc), so coverage is never
         // a question the way it is for `estimate`.
         let mut lo = [f64::INFINITY; 2];
@@ -390,7 +390,7 @@ impl Operation for Resurface {
                 }
                 let dir1 = [dir1_raw[0] / step1, dir1_raw[1] / step1];
                 let dir2 = [dir2_raw[0] / step2, dir2_raw[1] / step2];
-                // Computed, never affirmed — `Provisional`, same
+                // Computed, never affirmed - `Provisional`, same
                 // reading and the same two thresholds as
                 // `interpolate_mba::plan_given` (its module doc).
                 let dot = dir1[0] * dir2[0] + dir1[1] * dir2[1];
@@ -469,7 +469,7 @@ impl Operation for Resurface {
         if ring_excluded > 0 {
             plan.says.push(Note {
                 key: "ring-filtered",
-                detail: format!("{ring_excluded} node(s) outside `outer`/`inner` were not fitted, but are still recomputed and kept — the topology is not touched"),
+                detail: format!("{ring_excluded} node(s) outside `outer`/`inner` were not fitted, but are still recomputed and kept - the topology is not touched"),
             });
         }
         if answer.set_aside > 0 {

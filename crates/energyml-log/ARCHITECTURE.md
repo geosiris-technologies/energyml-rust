@@ -6,19 +6,19 @@ The one place a `tracing` subscriber is installed. It is a leaf: pure Rust, no n
 
 ## Rules
 
-**The libraries emit, they never configure** — no library crate installs a subscriber. Whether anything is shown, how, and at which level is the face's decision, made in one place.
+**The libraries emit, they never configure** - no library crate installs a subscriber. Whether anything is shown, how, and at which level is the face's decision, made in one place.
 
-**Off by default** — with no filter argument and no `ENERGYML_LOG` in the environment, `init` installs nothing: no subscriber, no cost, and the output of every command is what it was. An explicit argument wins over the variable.
+**Off by default** - with no filter argument and no `ENERGYML_LOG` in the environment, `init` installs nothing: no subscriber, no cost, and the output of every command is what it was. An explicit argument wins over the variable.
 
-**Always stderr, never stdout** — stdout carries results that scripts read; logging must not be able to corrupt them.
+**Always stderr, never stdout** - stdout carries results that scripts read; logging must not be able to corrupt them.
 
 **The filter is `tracing_subscriber::EnvFilter` syntax** (`info`, `energyml_build=debug,energyml_storage=info`, `off`); `ENERGYML_LOG_FORMAT` chooses `text` or `json`.
 
-**A span says how long it took** — closing a span writes `time.busy` and `time.idle`, so timing needs no instrumentation beyond opening the span.
+**A span says how long it took** - closing a span writes `time.busy` and `time.idle`, so timing needs no instrumentation beyond opening the span.
 
-**The level can change while the program runs** — `LogHandle::set_filter` swaps the filter live, from off to `debug` and back, even when the program started with logs off, provided it installed through `init_reloadable`. This is what a "log level" menu calls.
+**The level can change while the program runs** - `LogHandle::set_filter` swaps the filter live, from off to `debug` and back, even when the program started with logs off, provided it installed through `init_reloadable`. This is what a "log level" menu calls.
 
-**`log` records are bridged** — crates that still use the `log` crate go through the same filter once a subscriber is installed.
+**`log` records are bridged** - crates that still use the `log` crate go through the same filter once a subscriber is installed.
 
 ## Deliberately not here
 

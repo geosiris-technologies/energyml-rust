@@ -1,8 +1,8 @@
-//! `grid` — a `Grid2dRepresentation` from a regular lattice of heights.
+//! `grid` - a `Grid2dRepresentation` from a regular lattice of heights.
 //!
 //! Written the way the corpus writes horizons: an x, y lattice as the
 //! supporting geometry and the z values in an external array, the **slow
-//! axis first** (the house lattice rule — see `Lattice`). The lattice is
+//! axis first** (the house lattice rule - see `Lattice`). The lattice is
 //! written as it is, in the frame it was computed in: reprojecting one
 //! would bend its axes, so a frame created here has to be the lattice's own
 //! system, and a frame of the package is taken on its word.
@@ -35,7 +35,7 @@ pub struct GridParams {
 /// What `grid` takes.
 #[derive(Debug, Inputs)]
 pub struct GridInputs {
-    /// the lattice of heights to write — one grid per plan
+    /// the lattice of heights to write - one grid per plan
     pub lattice: LatticeIn,
 }
 
@@ -46,7 +46,7 @@ impl Operation for Grid {
     fn about(&self) -> About {
         About {
             name: "grid",
-            describe: "a 2D grid — a map — from a regular lattice of heights: the x, y lattice as supporting geometry, the z values in the data file",
+            describe: "a 2D grid - a map - from a regular lattice of heights: the x, y lattice as supporting geometry, the z values in the data file",
             category: Category::Create,
             makes: &["resqml22.Grid2dRepresentation"],
             recipe: "grid",
@@ -89,12 +89,12 @@ impl Operation for Grid {
     }
 }
 
-/// **The grid, written** — what the operation does, and what an operation
+/// **The grid, written** - what the operation does, and what an operation
 /// that computes a lattice (`interpolate`) calls directly: typed in, no bag
 /// to derive and no choices to read back by name.
 ///
 /// `name` is what the lattice is called in a refusal, `seed` what the derived
-/// identities hang from — the caller's, so that two routes to the same grid
+/// identities hang from - the caller's, so that two routes to the same grid
 /// name it the same.
 pub fn write(
     name: &str,
@@ -109,13 +109,13 @@ pub fn write(
     if ni < 2 || nj < 2 {
         return Err(Refusal::on(
             "lattice",
-            format!("`{name}`: a grid needs at least 2 nodes along each axis — {ni} × {nj} given"),
+            format!("`{name}`: a grid needs at least 2 nodes along each axis - {ni} × {nj} given"),
         ));
     }
     if !(dx.is_finite() && dx > 0.0 && dy.is_finite() && dy > 0.0) {
         return Err(Refusal::on(
             "lattice",
-            format!("`{name}`: the spacing must be positive — [{dx}, {dy}] given"),
+            format!("`{name}`: the spacing must be positive - [{dx}, {dy}] given"),
         ));
     }
     let nodes = ni * nj;
@@ -139,7 +139,7 @@ pub fn write(
         return Err(Refusal::on(
             "project",
             format!(
-                "a lattice is written as it is, in the frame it was computed in: placing EPSG:{source} into EPSG:{} would bend its axes — name a `crs` of the package, or create the frame with `sourceEpsg` equal to `project`",
+                "a lattice is written as it is, in the frame it was computed in: placing EPSG:{source} into EPSG:{} would bend its axes - name a `crs` of the package, or create the frame with `sourceEpsg` equal to `project`",
                 target.epsg()
             ),
         ));
@@ -227,8 +227,8 @@ pub fn write(
     // unit directions and a constant step, and this is its immediate
     // inverse.
     //
-    // What keeps the two in agreement is therefore not shared code — the
-    // boundary is a reflection boundary — but a check:
+    // What keeps the two in agreement is therefore not shared code - the
+    // boundary is a reflection boundary - but a check:
     // `a_written_lattice_reads_back_as_the_shape_it_carried` applies the
     // plan, reads the object back through the real reader, and compares point by point.
     let points: Vec<[f64; 3]> = (0..nj)

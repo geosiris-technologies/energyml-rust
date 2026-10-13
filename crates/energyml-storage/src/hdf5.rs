@@ -5,32 +5,32 @@
 //! files. That is the arrangement ADR-0007 asks for,
 //! and it is what keeps `wasm32` compiling.
 //!
-//! Built on `hdf5-metno`, the living continuation of the original `hdf5` crate
-//! — renamed to `hdf5` in `Cargo.toml`, so the day the original restarts the
+//! Built on `hdf5-metno`, the living continuation of the original `hdf5` crate -
+//! renamed to `hdf5` in `Cargo.toml`, so the day the original restarts the
 //! change is one line and no `use` moves.
 //!
 //! # Copies
 //!
 //! A chunked or compressed dataset has to be materialised somewhere, so one
-//! copy — file to memory — is the floor. This backend stays at that floor:
+//! copy - file to memory - is the floor. This backend stays at that floor:
 //!
 //! - [`ArrayBackend::read`] fills a typed `Vec` through HDF5's own
 //!   `read_into_raw`, which writes directly into it. **One copy.** Asking for
 //!   the bytes afterwards ([`ArrayValues::as_bytes`]) borrows that same memory.
 //! - [`ArrayBackend::read_into`] takes the caller's buffer and hands it to the
-//!   same call. **One copy and no allocation** — a vertex buffer is filled from
+//!   same call. **One copy and no allocation** - a vertex buffer is filled from
 //!   the file with nothing in between.
 //!
 //! # Open files
 //!
-//! Held open and reused, bounded, and re-stated on every hit — see `open`, below.
+//! Held open and reused, bounded, and re-stated on every hit - see `open`, below.
 //! Opening is not free and a package reads one file over and over: 218 opens
 //! became 1 on the corpus. What makes it safe rather than merely fast is that
 //! a cached handle is only trusted while the file's modification time and
 //! length are what they were when it was opened.
 //!
 //! Going below one copy means mapping the file and pointing at it, which HDF5
-//! allows only for a contiguous, unfiltered, native-endian dataset — and would
+//! allows only for a contiguous, unfiltered, native-endian dataset - and would
 //! need `unsafe`, which this crate forbids. Worth doing the day a profile says
 //! so; not worth pretending it is already done.
 
@@ -82,8 +82,8 @@ impl ArrayBackend for Hdf5Backend {
             return true;
         }
         // Neither a MIME type nor a telling extension: a workflow engine hands
-        // its tools `dataset_7.dat`. The content decides — the HDF5 signature
-        // opens the file — so such a file is read, and a file of another
+        // its tools `dataset_7.dat`. The content decides - the HDF5 signature
+        // opens the file - so such a file is read, and a file of another
         // format (CSV, Parquet) still steps aside for the backend that has it.
         has_hdf5_signature(file)
     }
@@ -130,7 +130,7 @@ impl ArrayBackend for Hdf5Backend {
 
         // One arm per element type: the read is generic, so the type has to be
         // named somewhere, and naming it here keeps every caller free of it.
-        // Each arm allocates once and lets HDF5 fill it — no intermediate.
+        // Each arm allocates once and lets HDF5 fill it - no intermediate.
         let values = match &descriptor {
             TypeDescriptor::Float(FloatSize::U8) => {
                 ArrayValues::F64(fill(&dataset, &selection, wanted, file, path_in_file)?)
@@ -370,7 +370,7 @@ impl Selection {
             //
             // Two spellings of "the whole thing" are accepted: the count as
             // the flat number of values, and the count as the number of
-            // **rows** — a real producer writes `Count=70` for a (70, 3)
+            // **rows** - a real producer writes `Count=70` for a (70, 3)
             // dataset of points, counting points where the schema counts
             // values. Unambiguous when it equals the leading dimension
             // exactly.
@@ -408,7 +408,7 @@ impl Selection {
 /// Small on purpose. A package's arrays live in **one** `.h5` in every corpus
 /// file and in every producer's output, so one entry already gets the whole
 /// win; the rest is headroom for a model split across a handful of files. What
-/// the bound is really for is the process file-descriptor limit — an unbounded
+/// the bound is really for is the process file-descriptor limit - an unbounded
 /// cache over a directory of a thousand `.h5` files is a crash, not a cache.
 const DEFAULT_OPEN_LIMIT: usize = 8;
 
@@ -420,7 +420,7 @@ struct Cached {
     ///
     /// The reason the cache is safe. A handle held across somebody else's write
     /// serves the data the file used to hold, which is a correctness bug and
-    /// not a performance one — so every hit re-stats the file, and a stamp that
+    /// not a performance one - so every hit re-stats the file, and a stamp that
     /// moved throws the handle away. A `stat` costs a microsecond or two
     /// against the 1.5 ms an open costs, so the check keeps essentially all of
     /// the win and none of the risk.
@@ -489,7 +489,7 @@ pub fn real_opens() -> u64 {
 
 /// Close every cached file.
 ///
-/// Call it before moving, replacing or deleting an `.h5` — see
+/// Call it before moving, replacing or deleting an `.h5` - see
 /// [`set_open_file_limit`] for why that is not merely tidy on Windows.
 pub fn close_cached_files() {
     if let Ok(mut files) = cache().lock() {
@@ -510,7 +510,7 @@ fn evict(file: &Path) {
 /// good intentions. One pass over `testingPackageCpp.epc` touches **218
 /// arrays**, all in one `.h5`: without a cache that is 218 opens, with one it
 /// is **1**, and the metadata pass goes from 18 ms to 5 ms. The ratio is what
-/// travels — a reservoir model carries arrays by the ten thousand, and the
+/// travels - a reservoir model carries arrays by the ten thousand, and the
 /// requirement's own observation is right that they nearly always live in a
 /// single file.
 fn open(file: &Path) -> Result<hdf5::File> {
@@ -557,14 +557,14 @@ fn open(file: &Path) -> Result<hdf5::File> {
 ///
 /// Deliberately **not** `File::create`, which truncates: a package's arrays all
 /// live in one `.h5`, so writing the second one must not erase the first.
-/// One dataset into a file already open for writing — the groups leading to
+/// One dataset into a file already open for writing - the groups leading to
 /// it, the dataset replaced when it exists. Neither opens nor flushes: that is
 /// the caller's, once for one dataset or for many.
 fn write_into(handle: &hdf5::File, file: &Path, path_in_file: &str, data: &ArrayData) -> Result<()> {
     let bad = |message: String| external(file, path_in_file, ExternalDataReason::Backend(message));
 
     // The shape is the object's, not the buffer's, and the two disagreeing
-    // is the caller's bug — writing the values under a shape that does not
+    // is the caller's bug - writing the values under a shape that does not
     // describe them produces a file that reads back as something else.
     let shape: Vec<usize> = data
         .metadata
@@ -602,7 +602,7 @@ fn write_into(handle: &hdf5::File, file: &Path, path_in_file: &str, data: &Array
     }
 
     // HDF5 cannot resize a dataset in place, so replacing one means
-    // unlinking it first. The space is not reclaimed — see the trait doc.
+    // unlinking it first. The space is not reclaimed - see the trait doc.
     if handle.dataset(path_in_file).is_ok() {
         handle
             .unlink(path_in_file)
@@ -659,7 +659,7 @@ fn open_for_writing(file: &Path) -> Result<hdf5::File> {
     // **No clock in the file.** HDF5 writes a modification time into the
     // header of every group by default (the root included; datasets are left
     // untimed by `hdf5-metno` already), so two runs of the same recipe wrote
-    // two `.h5` differing in 946 bytes and nothing else — measured on
+    // two `.h5` differing in 946 bytes and nothing else - measured on
     // Lutetia, 28/09. A file that is a function of its inputs is what lets a
     // package be replayed and **compared**, the way `generate --check` holds
     // the generated crates: the Lutetia example the front end opens is versioned
@@ -729,7 +729,7 @@ fn into<T: hdf5::H5Type + Copy>(
 
     // A hyperslab still goes through the crate's `ndarray` return type; the
     // copy out of it is the price of a partial read until `hdf5-metno` grows a
-    // `read_slice_into`. The whole-dataset path — every array in the corpus —
+    // `read_slice_into`. The whole-dataset path - every array in the corpus -
     // does not pay it.
     let hyperslab: Vec<hdf5::SliceOrIndex> = selection
         .start

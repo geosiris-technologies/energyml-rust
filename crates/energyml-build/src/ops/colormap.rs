@@ -1,15 +1,15 @@
-//! `colormap` — a `ContinuousColorMap` that draws flat bands: one colour per
+//! `colormap` - a `ContinuousColorMap` that draws flat bands: one colour per
 //! band, a band starting at each level.
 //!
 //! What the old promoter's `colormap` arm wrote, from a [`Source::Ramp`]:
 //! the levels ascending and one colour per band. The stops come out in pairs
-//! so that a *continuous* map draws flat bands — `energyml_domain::color::banded`
+//! so that a *continuous* map draws flat bands - `energyml_domain::color::banded`
 //! decides that, and it is the one place that does. No input from the
 //! package: a colour map is a legend, and a legend attaches to a property by
 //! the graphical information a later gesture writes.
 //!
-//! **The levels and their colours may also be said in words** — `levels` and
-//! `colours` (`#rrggbb`) — for a caller that has no ramp to hand: a recipe.
+//! **The levels and their colours may also be said in words** - `levels` and
+//! `colours` (`#rrggbb`) - for a caller that has no ramp to hand: a recipe.
 //! A use case: testing a painting that follows its colour map, on one of the
 //! properties of a DTM built from BRGM boreholes. One or the other: a ramp **and** levels is two
 //! answers to one question, and refused by name, as is neither.
@@ -34,16 +34,16 @@ pub struct Colormap;
 pub struct ColormapParams {
     /// the colour map's title
     pub title: Title,
-    /// the levels, ascending, a band starting at each — when no ramp is given
+    /// the levels, ascending, a band starting at each - when no ramp is given
     pub levels: Vec<f64>,
-    /// one colour per level, #rrggbb or #rrggbbaa — when no ramp is given
+    /// one colour per level, #rrggbb or #rrggbbaa - when no ramp is given
     pub colours: Vec<String>,
 }
 
 /// What `colormap` takes.
 #[derive(Debug, Inputs)]
 pub struct ColormapInputs {
-    /// the levels and their colours — or `levels` and `colours`, said in words
+    /// the levels and their colours - or `levels` and `colours`, said in words
     pub ramp: Option<Ramp>,
 }
 
@@ -54,7 +54,7 @@ impl Operation for Colormap {
     fn about(&self) -> About {
         About {
             name: "colormap",
-            describe: "a colour map of flat bands — one colour per band, a band starting at each level",
+            describe: "a colour map of flat bands - one colour per band, a band starting at each level",
             category: Category::Properties,
             makes: &["resqml22.ContinuousColorMap"],
             recipe: "colormap",
@@ -72,7 +72,7 @@ impl Operation for Colormap {
     }
 
     /// A **ramp** given is judged at the offer, as it always was: one level is
-    /// no band, and the colours must be as many as the levels — said before any
+    /// no band, and the colours must be as many as the levels - said before any
     /// work. Bands said in words are judged in `plan`, where the parameters are.
     fn check(&self, inputs: &ColormapInputs) -> Result<(), Refusal> {
         let Some(ramp) = &inputs.ramp else { return Ok(()) };
@@ -92,7 +92,7 @@ impl Operation for Colormap {
             (Some(_), false) => {
                 return Err(Refusal::on(
                     "levels",
-                    "a ramp and levels are both given: two answers to one question — give one or the other",
+                    "a ramp and levels are both given: two answers to one question - give one or the other",
                 ));
             }
             (Some(ramp), true) => (ramp.levels, ramp.colours, "ramp"),
@@ -175,7 +175,7 @@ impl Operation for Colormap {
 }
 
 /// Why these bands are not bands, or `None`: one level is no band, and a band
-/// starts at each level, the last one open-ended — as many colours as levels,
+/// starts at each level, the last one open-ended - as many colours as levels,
 /// `banded`'s own contract, named before any work.
 fn bands_refusal(levels: usize, colours: usize, slot: &'static str) -> Option<Refusal> {
     if levels < 2 {
@@ -195,7 +195,7 @@ fn bands_refusal(levels: usize, colours: usize, slot: &'static str) -> Option<Re
     None
 }
 
-/// **The colour map, written** — what the operation does, and what
+/// **The colour map, written** - what the operation does, and what
 /// `isocontours` calls with the levels it cut: one `ContinuousColorMap` of flat
 /// bands, a band starting at each level. `until` closes the last band there
 /// ([`energyml_domain::color::banded_until`]); `None`, it runs upwards with no

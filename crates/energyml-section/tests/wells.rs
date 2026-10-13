@@ -1,4 +1,4 @@
-//! `read::wells` — a well read for the section view (ADR-0015).
+//! `read::wells` - a well read for the section view (ADR-0015).
 //!
 //! Every object is built in memory after the specification, never read from a
 //! package: RESQML TRG 2.2 §12.17 (p. 314) for the trajectory, *"the MdDatum
@@ -39,7 +39,7 @@ const DATUM: &str = "11111111-1111-4111-8111-111111111111";
 const WELLBORE: &str = "e0000000-0000-4000-8000-000000000001";
 const DRILLED: &str = "e0000000-0000-4000-8000-0000000000a1";
 const PLANNED: &str = "e0000000-0000-4000-8000-0000000000a2";
-/// A boundary, and an interpretation of it — not a wellbore.
+/// A boundary, and an interpretation of it - not a wellbore.
 const BOUNDARY: &str = "e0000000-0000-4000-8000-0000000000b0";
 const OF_BOUNDARY: &str = "e0000000-0000-4000-8000-0000000000b1";
 const RANK: &str = "a0000000-0000-4000-8000-000000000001";
@@ -126,8 +126,8 @@ fn datum() -> eml23::ReferencePointInACrs {
     }
 }
 
-/// A trajectory with no geometry — drilled from its datum, vertically, from MD
-/// 2.5 to MD 65 — saying which interpretation it represents.
+/// A trajectory with no geometry - drilled from its datum, vertically, from MD
+/// 2.5 to MD 65 - saying which interpretation it represents.
 fn trajectory(uuid: &str, represents: Option<&str>) -> resqml22::WellboreTrajectoryRepresentation {
     resqml22::WellboreTrajectoryRepresentation {
         uuid: uuid.to_string(),
@@ -308,7 +308,7 @@ fn package() -> Prefetched {
     cache
 }
 
-/// The scene's system — that of the objects, so nothing is reprojected.
+/// The scene's system - that of the objects, so nothing is reprojected.
 fn lambert() -> System {
     System {
         epsg: 2154,
@@ -351,11 +351,11 @@ fn spans(intervals: &[energyml_section::model::Interval]) -> Vec<(f64, f64, &str
 
 // -- the head, the path, the MD --------------------------------------------------
 
-/// The head is the datum — (1000, 2000, 37.73) — **not the first node**: the
+/// The head is the datum - (1000, 2000, 37.73) - **not the first node**: the
 /// frame's first node is at MD 10, 10 m below it, and the trajectory's at MD
 /// 2.5. Both are collared at the same place, a frame at its trajectory's.
 ///
-/// To make it fail: `head: path[0]` in `read_well_with` — the head drops by 10 m
+/// To make it fail: `head: path[0]` in `read_well_with` - the head drops by 10 m
 /// (frame) or 2.5 m (trajectory).
 #[test]
 fn the_head_is_the_datum_and_not_the_first_node() {
@@ -391,7 +391,7 @@ fn the_head_is_the_datum_and_not_the_first_node() {
 // -- one wellbore, one key -------------------------------------------------------
 
 /// A frame and its trajectory are one wellbore, and so are the two
-/// trajectories — planned and drilled — of one wellbore feature (see ADR-0015). The key is the **feature's** uuid.
+/// trajectories - planned and drilled - of one wellbore feature (see ADR-0015). The key is the **feature's** uuid.
 ///
 /// To make it fail: key = the object's own uuid (the planned and the drilled
 /// ones part), or key = the trajectory's uuid (same).
@@ -408,11 +408,11 @@ fn a_frame_and_its_trajectory_are_one_wellbore() {
     );
 }
 
-/// With no chain the frame takes the key of the trajectory it hangs on — and
-/// the trajectory its own uuid — so they are still one line. An interpretation
+/// With no chain the frame takes the key of the trajectory it hangs on - and
+/// the trajectory its own uuid - so they are still one line. An interpretation
 /// of something that is no wellbore feature is **not** a chain.
 ///
-/// To make it fail: accept any `InterpretedFeature` — `T_ODD` takes the
+/// To make it fail: accept any `InterpretedFeature` - `T_ODD` takes the
 /// boundary's uuid; or return `None` when there is no chain.
 #[test]
 fn without_a_chain_a_frame_takes_the_trajectory_it_hangs_on() {
@@ -431,7 +431,7 @@ fn without_a_chain_a_frame_takes_the_trajectory_it_hangs_on() {
 
 // -- the strata ------------------------------------------------------------------
 
-/// A frame that states its units gives them as intervals along its MD — the
+/// A frame that states its units gives them as intervals along its MD - the
 /// colour of each from the package's graphics when the caller has them, and
 /// `None` (never transparent) when it does not.
 ///
@@ -468,7 +468,7 @@ fn a_frame_with_strata_gives_its_intervals() {
     );
 }
 
-/// A frame that states nothing says **why** it has no interval — never an
+/// A frame that states nothing says **why** it has no interval - never an
 /// empty list that looks like a well without rock. With the frames of its
 /// wellbore handed over it is painted from them, by MD (a node opens the
 /// interval: node 10 is Priabonian, node 25 Bartonian), and the same
@@ -501,7 +501,7 @@ fn a_silent_frame_says_why_it_has_no_interval() {
     let carried = read_with(F_SILENT, &context).expect("read");
     assert_eq!(carried.strata, None);
     // The stating frame's rock between the silent frame's nodes: Priabonian to
-    // 20, Bartonian below — not the Priabonian of node 10 stretched to node 25,
+    // 20, Bartonian below - not the Priabonian of node 10 stretched to node 25,
     // which this said until 03/10 (`strata_by_md::Painting::intervals`).
     assert_eq!(
         spans(&carried.intervals),
@@ -518,7 +518,7 @@ fn a_silent_frame_says_why_it_has_no_interval() {
 
 /// An object that is no well is refused **by its type**, one that is not in
 /// the package by its uri, and a frame whose trajectory is absent by that
-/// trajectory — each carries the object it was asked for, so the lot goes on.
+/// trajectory - each carries the object it was asked for, so the lot goes on.
 ///
 /// To make it fail: let another type through to `head_of`.
 #[test]
@@ -613,7 +613,7 @@ impl energyml_domain::source::ArraySource for TwoVersions<'_> {
 ///
 /// Internally only the full uri is used (ADR-0003).
 ///
-/// To make it fail: in `wells::trajectory_of_frame`, ask `source.object(uuid)` — the
+/// To make it fail: in `wells::trajectory_of_frame`, ask `source.object(uuid)` - the
 /// wellbore comes out as `T_ALONE`.
 #[test]
 fn a_frame_belongs_to_the_wellbore_of_the_trajectory_version_it_names() {

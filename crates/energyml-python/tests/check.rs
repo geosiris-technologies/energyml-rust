@@ -1,7 +1,7 @@
 //! Judging a package, and the arithmetic that says whether it is sound.
 //!
-//! The report is `energyml-domain::check`'s — the same one `energyml check`
-//! prints — so what is checked here is not the finding logic but the two things
+//! The report is `energyml-domain::check`'s - the same one `energyml check`
+//! prints - so what is checked here is not the finding logic but the two things
 //! a caller acts on: **that the sections say whether they ran**, and that the
 //! findings agree with what another path over the same package says.
 
@@ -55,7 +55,7 @@ fn the_accounting_puts_each_section_on_the_right_side() {
 
     // **What would break if a section moved sides.** An unreadable part is a
     // fault of the file and counts as an error; a `.rels` disagreement is an
-    // index disagreeing with the truth and counts as a warning — the DORs are
+    // index disagreeing with the truth and counts as a warning - the DORs are
     // what the file means (ADR-0002). Someone moving
     // either would change whether `energyml check` exits 0 on a real package,
     // and these two inequalities are what says so.
@@ -155,7 +155,7 @@ fn a_package_created_here_is_sound_the_moment_it_exists() {
     // in the browser **lives in memory**, its health status is displayed
     // permanently, and nobody can fix what it is blamed for. Every new EPC
     // showed a health error: core.xml is missing. An alarm that cannot be
-    // switched off is an alarm one learns to ignore — including the day it says
+    // switched off is an alarm one learns to ignore - including the day it says
     // something else.
     //
     // The real cause was **two writers in the repository disagreeing about what

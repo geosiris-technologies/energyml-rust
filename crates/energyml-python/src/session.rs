@@ -5,7 +5,7 @@
 //! It is the WebAssembly front end's rule, and it holds here for the same reason:
 //! **everything that can be wrong lives in Rust the test suite exercises; the
 //! binding only converts.** A pyo3 binding can only be tested with a Python
-//! interpreter able to load a `cdylib` — which happens after `maturin
+//! interpreter able to load a `cdylib` - which happens after `maturin
 //! develop`, and so never under `cargo test`. Logic written up there would be
 //! code nobody can exercise.
 //!
@@ -14,7 +14,7 @@
 //!
 //! # Two layers, and the second one is thin
 //!
-//! The catalogue — objects as JSON, arrays as numbers — is what a package
+//! The catalogue - objects as JSON, arrays as numbers - is what a package
 //! *is*. Above it sits what the libraries make of a package: the geometry of a
 //! representation and the values hanging on it, which `energyml-geometry` and
 //! `energyml-domain` already compute. Nothing of that is reimplemented here;
@@ -32,7 +32,7 @@ use energyml_storage::{EpcStore, SaveOptions};
 
 /// What a caller learns about an object without reading it.
 ///
-/// The four fields every view in this repository shows — the front end's tree, the
+/// The four fields every view in this repository shows - the front end's tree, the
 /// `list` command, the wasm module's inventory. The same ones here, for the
 /// same reason: it is what a catalogue has to say for a caller to choose what
 /// to open.
@@ -46,7 +46,7 @@ pub struct Summary {
     pub qualified_type: String,
     /// The citation's title, empty when there is none.
     pub title: String,
-    /// The `objectVersion` the object declares — `None` when it declares none
+    /// The `objectVersion` the object declares - `None` when it declares none
     /// or a blank one. With the title, what tells two versions of one uuid apart.
     pub object_version: Option<String>,
 }
@@ -84,7 +84,7 @@ impl ArrayRef {
 pub struct Shape {
     /// How many elements per dimension.
     pub dimensions: Vec<i64>,
-    /// The element type, as the backend names it — `double`, `int64`.
+    /// The element type, as the backend names it - `double`, `int64`.
     pub element_type: String,
 }
 
@@ -110,7 +110,7 @@ pub enum Block {
 }
 
 impl Block {
-    /// How many numbers — regardless of the shape, which is said elsewhere.
+    /// How many numbers - regardless of the shape, which is said elsewhere.
     pub fn len(&self) -> usize {
         match self {
             Block::F64(v) => v.len(),
@@ -187,7 +187,7 @@ impl Block {
 /// **Flat runs, because that is what numpy takes.** A triangle list crosses as
 /// 3M indices and not as M triples: the shape is the caller's `reshape`, and
 /// the variable-length cases (polygons, polylines, cells) have no fixed width
-/// to reshape to anyway — they carry their counts beside them.
+/// to reshape to anyway - they carry their counts beside them.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Topology {
     /// Points that mean nothing together.
@@ -219,7 +219,7 @@ pub enum Topology {
     /// `index` holds **the RESQML cell number of each entry**, and it is empty
     /// when they coincide. It is not decoration: a reader drops a cell the file
     /// marks undefined, so on a faulted or eroded grid an entry sits before the
-    /// cell it belongs to — and anything that addresses a cell by the number
+    /// cell it belongs to - and anything that addresses a cell by the number
     /// the file uses (a connection set, for one) would be quietly wrong.
     Hexahedra {
         cells: Vec<u32>,
@@ -230,7 +230,7 @@ pub enum Topology {
     Grid { fastest: usize, slowest: usize },
     /// Indexed segments: 2M indices, each pair one edge.
     ///
-    /// What polylines cannot say — they address *consecutive* points, and the
+    /// What polylines cannot say - they address *consecutive* points, and the
     /// edges of a wireframe join nodes that are nowhere near each other.
     Segments(Vec<u32>),
 }
@@ -287,14 +287,14 @@ pub struct Format {
 
 /// Every type of the generated model this build carries.
 ///
-/// **The model is the Rust one, read through reflection** — not a second copy
+/// **The model is the Rust one, read through reflection** - not a second copy
 /// of it. A release added to `crates/generated/` appears here the day it is
 /// registered, with its fields and its documentation, and nothing on this side
 /// changes.
 ///
 /// `package` filters on `eml`, `resqml`, `witsml` or `prodml`; `top_level_only`
 /// keeps the types that can be a part of an EPC on their own, which is what a
-/// caller about to create an object wants — and so it is
+/// caller about to create an object wants - and so it is
 /// [`energyml_schemas::may_create`], the one list every face offers: a
 /// development drop (`resqml 2.2_dev3`) is read, never offered. Without the
 /// flag the whole registry comes back, the drop included, as an inventory.
@@ -340,8 +340,8 @@ pub fn describe_type(name: &str) -> Result<TypeDescription, String> {
             TypeKind::Choice => "choice",
         }
         .to_string(),
-        // The key a JSON document uses for each field — `_` for the text of a
-        // simple content — from the writer's own mapping, not `json_name`.
+        // The key a JSON document uses for each field - `_` for the text of a
+        // simple content - from the writer's own mapping, not `json_name`.
         fields: info
             .fields
             .iter()
@@ -380,7 +380,7 @@ pub fn describe_type(name: &str) -> Result<TypeDescription, String> {
 /// **This is how an object is created here**, and it is the generated model
 /// that makes it: the registry builds the instance, the JSON writer renders it,
 /// and what comes back carries its `$type`. Filling it in and handing it to
-/// `put` is the whole of creating an object — no class per type on this side,
+/// `put` is the whole of creating an object - no class per type on this side,
 /// and no second model to keep in step.
 ///
 /// # The uuid is given, never invented
@@ -388,7 +388,7 @@ pub fn describe_type(name: &str) -> Result<TypeDescription, String> {
 /// `uuid` is optional and there is **no default**, because an identity is not
 /// always a coin toss: `energyml-build` derives its uuids (v5) so that a second
 /// run over the same source names the same objects, and a template that quietly
-/// stamped a random one would give such a caller a fresh identity every run —
+/// stamped a random one would give such a caller a fresh identity every run -
 /// visible only at the second, when the package doubles its objects.
 ///
 /// Left out, the field comes back empty and `put` refuses by naming it. That
@@ -397,8 +397,8 @@ pub fn describe_type(name: &str) -> Result<TypeDescription, String> {
 ///
 /// An abstract type is refused by name, with what extends it: the schema says
 /// it cannot be instantiated, and a caller who asked for one wants one of its
-/// subtypes. **No build of this workspace registers one today** — the registry
-/// carries what can be a part — so that branch is a guard for the day a release
+/// subtypes. **No build of this workspace registers one today** - the registry
+/// carries what can be a part - so that branch is a guard for the day a release
 /// does, and `tests/model.rs` says so out loud rather than pretending to cover
 /// it.
 pub fn template(qualified_type: &str, uuid: Option<&str>) -> Result<String, String> {
@@ -424,7 +424,7 @@ one of these can: {}",
     }
     let mut object = registry.create(qualified_type).map_err(|why| format!("{why}"))?;
     if let Some(uuid) = uuid {
-        // Where the type keeps it — `uuid`, `UUID` or `uid` — resolved from the
+        // Where the type keeps it - `uuid`, `UUID` or `uid` - resolved from the
         // roles rather than by name, and refused here if it is not one.
         energyml_core::identity::set_uuid_reflect(object.as_reflect_mut(), uuid)
             .map_err(|why| format!("{why}"))?;
@@ -434,7 +434,7 @@ one of these can: {}",
 
 /// The name of a field's type, as someone filling a dictionary needs it.
 ///
-/// `{:?}` on a `FieldType` prints a function pointer — true and useless. What a
+/// `{:?}` on a `FieldType` prints a function pointer - true and useless. What a
 /// caller wants is the type to put in `$type`, or the name of the scalar.
 fn type_name_of(ty: &energyml_core::reflect::FieldType) -> String {
     use energyml_core::reflect::FieldType;
@@ -483,7 +483,7 @@ pub fn formats() -> Vec<Format> {
 ///
 /// `energyml_storage::rename::Rename`, converted. The **quote**: the caller
 /// shows it and decides, which is the answer to the question the request itself
-/// asked — update automatically, or ask.
+/// asked - update automatically, or ask.
 #[derive(Debug, Clone, Default)]
 pub struct RenamePlan {
     /// The file as the package names it today.
@@ -507,7 +507,7 @@ pub struct Renamed {
     pub fields: usize,
     /// `.rels` entries rewritten.
     pub relationships: usize,
-    /// `moved`, `absent` or `not-on-disk` — three answers and not two, because
+    /// `moved`, `absent` or `not-on-disk` - three answers and not two, because
     /// *there was nothing to move* and *this store has no disk* are different
     /// news and a caller conflating them would report a missing file that is
     /// not missing.
@@ -531,7 +531,7 @@ pub struct CheckReport {
     pub diagnostics: Vec<(String, String, String)>,
     /// Parts that could not be read: uri, and why.
     pub unreadable: Vec<(String, String)>,
-    /// Whether the schema section ran — not the same as finding nothing.
+    /// Whether the schema section ran - not the same as finding nothing.
     pub schema_checked: bool,
     /// Objects against their schema.
     pub schema: Vec<energyml_domain::check::SchemaIssue>,
@@ -541,7 +541,7 @@ pub struct CheckReport {
     pub properties_unresolved: usize,
     /// Properties whose values do not add up with what they hang on.
     pub counts: Vec<energyml_domain::check::CountIssue>,
-    /// Properties whose count could not be judged — not checked, not fine.
+    /// Properties whose count could not be judged - not checked, not fine.
     pub counts_unchecked: usize,
     /// Whether the business rules ran.
     pub rules_checked: bool,
@@ -550,7 +550,7 @@ pub struct CheckReport {
     /// The business rules, violated or uncheckable.
     pub rules: Vec<energyml_domain::check::RuleFinding>,
     /// References that point somewhere wrong, or nowhere. Each carries whether
-    /// it is an error and whether the target is a catalogue concept — absent by
+    /// it is an error and whether the target is a catalogue concept - absent by
     /// design, so neither an error nor a warning.
     pub references: Vec<(String, String, String, String, bool, bool)>,
     /// Where the `.rels` index and the objects disagree.
@@ -559,7 +559,7 @@ pub struct CheckReport {
 
 /// A dataspace: what a store holds packages in.
 ///
-/// An EPC is one dataspace and always will be — the concept comes from ETP,
+/// An EPC is one dataspace and always will be - the concept comes from ETP,
 /// where a server holds several. It is here rather than left out because the
 /// **shape of the answer** must not change the day the other store arrives.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -617,7 +617,7 @@ pub struct TypeSummary {
     pub package: String,
     /// The release, as the directory names it: `2.0.1`, `2.2`.
     pub version: String,
-    /// Whether the XSD type is abstract — **it cannot be created**.
+    /// Whether the XSD type is abstract - **it cannot be created**.
     pub is_abstract: bool,
     /// Whether it may be a part of an EPC on its own.
     pub is_top_level: bool,
@@ -628,7 +628,7 @@ pub struct TypeSummary {
 /// One field of a type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldSummary {
-    /// The name a JSON document uses — the one to put in a dictionary.
+    /// The name a JSON document uses - the one to put in a dictionary.
     pub name: String,
     /// The schema's own documentation.
     pub doc: String,
@@ -636,7 +636,7 @@ pub struct FieldSummary {
     pub type_name: String,
     /// The values an enumeration field accepts.
     ///
-    /// Empty for anything else — and **not exhaustive** when `is_open` is set:
+    /// Empty for anything else - and **not exhaustive** when `is_open` is set:
     /// the Energistics `…Ext` enumerations take any other string too, which is
     /// how a producer names a concept the standard does not.
     pub allowed: Vec<String>,
@@ -661,7 +661,7 @@ pub struct TypeDescription {
     pub fields: Vec<FieldSummary>,
     /// Its values, for an enumeration; its cases, for a choice.
     pub variants: Vec<String>,
-    /// The types that extend it — **where to look when this one is abstract**.
+    /// The types that extend it - **where to look when this one is abstract**.
     pub subtypes: Vec<String>,
     /// The type it extends, when it extends one.
     pub base: Option<String>,
@@ -687,7 +687,7 @@ pub struct Copied {
 /// The other end of a reference, and where it sits.
 ///
 /// One struct for both directions on purpose: an edge is an edge, and which end
-/// is described is said by the call that returned it — [`Package::references`]
+/// is described is said by the call that returned it - [`Package::references`]
 /// describes the target, [`Package::referenced_by`] describes the source.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Link {
@@ -695,7 +695,7 @@ pub struct Link {
     pub uri: String,
     /// Its uuid.
     pub uuid: String,
-    /// Its qualified type — **as the reference declares it** when the target is
+    /// Its qualified type - **as the reference declares it** when the target is
     /// the far end, which is not always what the package holds.
     pub qualified_type: String,
     /// Its title, when one is known.
@@ -707,7 +707,7 @@ pub struct Link {
     pub path: String,
     /// Whether the package holds the object described.
     ///
-    /// Always true looking backwards — a package cannot hold a reference from
+    /// Always true looking backwards - a package cannot hold a reference from
     /// an object it does not have. Looking forwards it is the news: `false`
     /// with a type the standard publishes in a catalogue is normal, `false`
     /// with anything else is a dangling reference.
@@ -725,16 +725,16 @@ pub struct PropertyValues {
     pub kind: Option<String>,
     /// Its unit, when it states one.
     pub uom: Option<String>,
-    /// `points` or `cells` — **checked against the geometry**, not trusted.
+    /// `points` or `cells` - **checked against the geometry**, not trusted.
     pub scope: String,
     /// Values per element: 1 for a scalar, more for a vector.
     pub components: u64,
     /// The values, widened to `f64`, in element order.
     pub values: Vec<f64>,
     /// The colour ramp the **package** states for this property: RGBA rows in
-    /// 0–1, low value first.
+    /// 0-1, low value first.
     ///
-    /// Empty when the package states none, and empty is the right answer — the
+    /// Empty when the package states none, and empty is the right answer - the
     /// standard defines no default ramp, and inventing one would hand back a
     /// picture the file does not describe.
     ///
@@ -750,8 +750,8 @@ pub struct PropertyValues {
 /// # One door, and it is synchronous
 ///
 /// `EnergymlStorage` is an `async` trait, because an ETP store talks to a
-/// server. `EpcStore` carries the same operations synchronously — it is what
-/// the command line uses — and that is the one bound here: Python is
+/// server. `EpcStore` carries the same operations synchronously - it is what
+/// the command line uses - and that is the one bound here: Python is
 /// synchronous, and spinning a runtime up to await a file read would be paying
 /// for machinery nothing needs. The day ETP arrives, it arrives through its
 /// own door.
@@ -769,7 +769,7 @@ impl Package {
         let path = path.as_ref();
         let registry = Arc::new(energyml_schemas::all());
         // **The refusal names the path.** What comes up from the I/O layer is
-        // `The system cannot find the file specified. (os error 2)` — the operating
+        // `The system cannot find the file specified. (os error 2)` - the operating
         // system's own sentence, in the operating system's own language, and
         // it says which file about nothing. A caller who passed three paths
         // would have no way to tell which one failed.
@@ -791,7 +791,7 @@ impl Package {
     /// An empty package, holding nothing but the two parts the specification
     /// requires.
     ///
-    /// It has no path — where it goes is decided at [`Package::save_as`], and a
+    /// It has no path - where it goes is decided at [`Package::save_as`], and a
     /// function that both created and placed a package would give a caller no
     /// way to look before writing. Its data files land where
     /// [`Package::set_data_root`] says, and until then in the working
@@ -811,7 +811,7 @@ impl Package {
     ///
     /// An EPC names its `.h5` by a bare file name (EPC §3.2.3), so something
     /// has to say which folder that name is relative to. Opening a package
-    /// answers it — beside the `.epc` — and creating one cannot, which is why
+    /// answers it - beside the `.epc` - and creating one cannot, which is why
     /// this exists and why it is not hidden in a constructor.
     pub fn set_data_root(&mut self, dir: impl AsRef<Path>) {
         self.store.external_files_mut().set_root(dir.as_ref());
@@ -820,7 +820,7 @@ impl Package {
     /// Pin the name a package gives a data file to a path of its own.
     ///
     /// **For the caller who is told where the files are but not what the
-    /// package calls them** — a Galaxy tool gets `dataset_7.dat` while the
+    /// package calls them** - a Galaxy tool gets `dataset_7.dat` while the
     /// objects say `result.h5`. Reads and writes of an array whose file is
     /// `name` go to `path` whatever the package says, and the pin wins over
     /// everything else the storage layer would try (`ExternalFiles::set`). Pin
@@ -862,7 +862,7 @@ impl Package {
     ///
     /// Plans first, every time. Handing this a name and having it do less than
     /// all three would leave a package that opens and whose arrays cannot be
-    /// found — the fault `energyml check` reports, made by the tool meant to
+    /// found - the fault `energyml check` reports, made by the tool meant to
     /// prevent it.
     pub fn rename_data_file(&mut self, from: &str, to: &str) -> Result<Renamed, String> {
         use energyml_storage::rename::{self, FileMove};
@@ -894,7 +894,7 @@ impl Package {
     /// **The title comes from the headers, the list comes from the
     /// resources**, and the two are not the same thing: a summary is read off
     /// the zip part's name, a title requires parsing that part. An unreadable
-    /// part therefore loses its title and **keeps its row** — dropping it from
+    /// part therefore loses its title and **keeps its row** - dropping it from
     /// the list would say the package does not contain it, which is the
     /// opposite news.
     pub fn objects(&self) -> Vec<Summary> {
@@ -921,7 +921,7 @@ impl Package {
             .collect()
     }
 
-    /// The uri of a uuid, or `None` — which lets a caller work with the
+    /// The uri of a uuid, or `None` - which lets a caller work with the
     /// identifiers it reads in its other tools rather than with URIs.
     ///
     /// Through the store's gate: a uuid the package holds under **two**
@@ -939,7 +939,7 @@ impl Package {
     ///
     /// **JSON is the exchange form, and that is a choice.** A RESQML object has
     /// hundreds of fields and a type hierarchy; exposing it as Python classes
-    /// would mean generating one module per release — redoing in Python what
+    /// would mean generating one module per release - redoing in Python what
     /// `crates/generated/` does in Rust, and redoing it at every new release. A
     /// dictionary is read, edited and written back without a single line
     /// knowing a type.
@@ -948,7 +948,7 @@ impl Package {
         energyml_core::json::write_string(object.as_reflect(), false).map_err(|why| format!("{why}"))
     }
 
-    /// Put an object — a new one, or a replacement for the same uuid.
+    /// Put an object - a new one, or a replacement for the same uuid.
     ///
     /// Returns the uri written, which is not necessarily the expected one: it
     /// is derived from the type and the uuid the JSON carries, so a caller who
@@ -1014,7 +1014,7 @@ impl Package {
     /// Write an array.
     ///
     /// **The shape and the values must agree**, and the store refuses when they
-    /// do not, naming both counts — an array whose shape promises more numbers
+    /// do not, naming both counts - an array whose shape promises more numbers
     /// than it carries writes without error in some formats and reads back
     /// silently with zeros at the end. The check is `EpcStore`'s and not this
     /// bridge's, so every writer gets it.
@@ -1068,7 +1068,7 @@ impl Package {
     ///
     /// The loop a caller writes over [`Package::objects`], done here where it
     /// costs nothing: a summary already carries the type, so the type filter
-    /// runs **before any header is read** — a package of seventy thousand
+    /// runs **before any header is read** - a package of seventy thousand
     /// objects asked for its five point sets inflates five citations, not
     /// seventy thousand (08/10/2026: `objects()` first, then the filter, cost
     /// 20 s of a run that needed 5 headers). The title filter, which does need
@@ -1127,7 +1127,7 @@ impl Package {
 
     /// The same shape as one triangle mesh: points and triples, patches merged.
     ///
-    /// What a viewer wants, and it **says** that it triangulates — quadrilaterals
+    /// What a viewer wants, and it **says** that it triangulates - quadrilaterals
     /// and cells are cut, which is a decision the caller can now see being made
     /// rather than discover in the numbers.
     pub fn mesh(&self, uri: &str, placement: &str) -> Result<(Vec<f64>, Vec<u32>), String> {
@@ -1147,7 +1147,7 @@ impl Package {
     /// Reads **every** property of the package, because nothing in a
     /// representation lists its own: every link points the other way. What
     /// comes back is what fits this shape; the second list holds what did not,
-    /// rather than disappearing — a property dropped in silence is a colour a
+    /// rather than disappearing - a property dropped in silence is a colour a
     /// caller will never know it is missing.
     pub fn properties(&self, uri: &str) -> Result<(Vec<PropertyValues>, Vec<String>), String> {
         // Named before anything is read, because *this package holds no such
@@ -1205,14 +1205,14 @@ impl Package {
     /// What this object points at.
     ///
     /// The cheap direction: one object read. `present` says whether the package
-    /// holds the target — the question to ask before following it.
+    /// holds the target - the question to ask before following it.
     pub fn references(&self, uri: &str) -> Result<Vec<Link>, String> {
         let object = self.store.get_object(uri).map_err(|why| format!("{why}"))?;
         Ok(energyml_storage::graph::references(object.as_reflect())
             .into_iter()
             .map(|one| {
-                // Resolved as a reference — uuid, type, and the version the
-                // reference names, read from its uri by the one parser — and
+                // Resolved as a reference - uuid, type, and the version the
+                // reference names, read from its uri by the one parser - and
                 // answered with **the uri of the object found**: a reference
                 // written without a version to an object that declares one
                 // names it by the full uri the store knows it by, never by the
@@ -1283,7 +1283,7 @@ impl Package {
     /// they go.
     ///
     /// Returns `(needed, missing)`. `needed` is a set nothing in the package
-    /// would break if it were cut out on its own — what an extraction or a copy
+    /// would break if it were cut out on its own - what an extraction or a copy
     /// into another package takes. `missing` is what is referenced and not
     /// held, minus what the standard publishes in a catalogue: a closure that
     /// dropped those in silence would call a set closed when the package it
@@ -1302,7 +1302,7 @@ impl Package {
     ///
     /// The bytes rather than a file: a caller that wants a file writes one, and
     /// a caller serving this over HTTP has what it needs without going through
-    /// the disk. One document for the lot — which is what the format decides,
+    /// the disk. One document for the lot - which is what the format decides,
     /// not this: OBJ concatenates, GeoJSON encloses.
     ///
     /// `placement` overrides what the exporter would have chosen, and choosing
@@ -1310,11 +1310,11 @@ impl Package {
     /// wants, and overriding that is for a caller who knows better.
     ///
     /// `with_properties` carries the values too, for the formats that write
-    /// them — a VTK field array, a GeoJSON property. It is off by default and
+    /// them - a VTK field array, a GeoJSON property. It is off by default and
     /// that is a cost, not a preference: nothing in a representation lists its
     /// properties, so finding them means reading every property of the package.
     ///
-    /// `metadata` is a **metadata spec as JSON** — `{"key": "dotted.path"}` —
+    /// `metadata` is a **metadata spec as JSON** - `{"key": "dotted.path"}` -
     /// collected on every object and written verbatim by every format, so the
     /// same spec yields the same keys in an OBJ comment, a GeoJSON property and
     /// a VTK field array. [`standard_metadata`] gives the one this workspace
@@ -1336,7 +1336,7 @@ impl Package {
         let exporter = exporters.get(format).map_err(|why| format!("{why}"))?;
         // **The geodesy, built whether or not anybody asks.** RFC 7946 makes
         // GeoJSON WGS 84 by definition, so the exporter refuses a model in
-        // projected metres without a reprojector — and without this line
+        // projected metres without a reprojector - and without this line
         // `export(…, "geojson")` was impossible from Python while the command
         // line wrote it. It costs a `BTreeMap`.
         let backend = energyml_proj::Proj4::new();
@@ -1355,7 +1355,7 @@ impl Package {
 
         // **The one door** (`scene::of_package`): one walk for the lot, the
         // properties read once for the package rather than once per object,
-        // and the colour ramps resolved — which needs the whole package, so
+        // and the colour ramps resolved - which needs the whole package, so
         // nothing reading shape by shape could have done it.
         let resources = self.store.resources();
         let only: Vec<String> = uris
@@ -1419,7 +1419,7 @@ impl Package {
         Ok(out)
     }
 
-    /// Copy objects — **and everything they need** — out of another package.
+    /// Copy objects - **and everything they need** - out of another package.
     ///
     /// What a partial export cannot stand in for: this package keeps what it
     /// has, and receives the objects asked for plus their closure. Asking for
@@ -1429,7 +1429,7 @@ impl Package {
     ///
     /// Returns what was copied, **what the closure added**, what is referenced
     /// and missing from the source, and how many datasets travelled. `arrays`
-    /// is `copy` or `leave` — leaving them makes this package name the other
+    /// is `copy` or `leave` - leaving them makes this package name the other
     /// one's data file, which is legal and rarely what anyone means.
     pub fn copy_from(&mut self, source: &Package, uris: &[String], arrays: &str) -> Result<Copied, String> {
         let how = match arrays {
@@ -1456,7 +1456,7 @@ impl Package {
     /// Judge this package: everything that can be said against it.
     ///
     /// The sections are the ones `energyml check` prints, and the arithmetic is
-    /// the same — this reads the report, it does not recompute it. `schema` is
+    /// the same - this reads the report, it does not recompute it. `schema` is
     /// the slowest section and the one a caller who has just validated
     /// elsewhere can do without; `rules` are the business constraints the
     /// technical guides state and no XSD can enforce.
@@ -1542,7 +1542,7 @@ impl Package {
     /// Plural because the mother trait is plural: ETP asks for a hundred in one
     /// message, and an interface that could only ask for one would condemn the
     /// network store to be slow. A uri that cannot be read is **missing from
-    /// the answer rather than failing it** — ninety-nine good ones must not be
+    /// the answer rather than failing it** - ninety-nine good ones must not be
     /// lost to one bad one.
     pub fn headers(&self, uris: &[String]) -> Vec<Header> {
         self.store
@@ -1553,7 +1553,7 @@ impl Package {
             .collect()
     }
 
-    /// The types this store can read — the generated model behind it.
+    /// The types this store can read - the generated model behind it.
     pub fn supported_types(&self) -> Vec<TypeSummary> {
         self.store
             .supported_types()
@@ -1576,7 +1576,7 @@ impl Package {
     /// The relationships recorded for a part.
     ///
     /// **An index, not the truth.** What an object references comes from its
-    /// own DORs — `references` answers that — and the two disagreeing is
+    /// own DORs - `references` answers that - and the two disagreeing is
     /// exactly what `check` reports.
     pub fn relationships(&self, part: &str) -> Result<Vec<Relationship>, String> {
         self.store
@@ -1653,7 +1653,7 @@ fn patch_of(patch: &geom::Patch) -> Patch {
             },
             geom::Topology::Polyhedra(cells) => {
                 // The private runs are not reachable, and asking for the faces
-                // cell by cell is the accessor that exists — it also hands them
+                // cell by cell is the accessor that exists - it also hands them
                 // already wound outward, which is the one thing a caller cannot
                 // work out for itself.
                 let mut cell_face_counts = Vec::with_capacity(cells.cell_count());

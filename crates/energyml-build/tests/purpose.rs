@@ -7,7 +7,7 @@
 //! object that would in a second step allow creating a RESQML object […] for
 //! the web it must be well split. The two halves of a plan existed
 //! ; what was missing was being able to ask for only one. Keeping
-//! an artefact required a frame, a title, a data file — everything that
+//! an artefact required a frame, a title, a data file - everything that
 //! only the writing asks for.
 //!
 //! # What would have to break to make it turn red
@@ -96,7 +96,7 @@ fn without_a_frame_the_writing_also_comes_back_blocked() {
 }
 
 /// **The relaxation, where it lives.** On a real bag almost everything is
-/// suggested, so a geometry plan would pass even if the purpose were ignored —
+/// suggested, so a geometry plan would pass even if the purpose were ignored -
 /// that is what the first sabotage showed. Here a required title **without**
 /// suggestion: refused for writing, left empty for the geometry; and a
 /// required computation setting, refused in both cases.
@@ -182,7 +182,7 @@ fn what_the_computation_asks_for_stays_required_on_a_geometry_plan() {
         )
         .expect_err("`spacing` manque");
     assert!(why.message().contains("spacing"), "{}", why.message());
-    // And with it, the geometry comes out — still without a frame.
+    // And with it, the geometry comes out - still without a frame.
     let plan = registry
         .plan_for(
             "interpolate",

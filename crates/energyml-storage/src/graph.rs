@@ -1,7 +1,7 @@
 //! Checking that the references inside a package point somewhere.
 //!
 //! A `DataObjectReference` carries three things: a uuid, a declared type, and a
-//! title. Nothing keeps them in agreement with the object they name — the uuid
+//! title. Nothing keeps them in agreement with the object they name - the uuid
 //! can point at a part that was never packaged, the declared type can be the
 //! one the writer *thought* it was, and both mistakes survive every XSD
 //! validator ever written, because each reference is well-formed on its own.
@@ -54,7 +54,7 @@ pub enum RefIssueKind {
     ///
     /// `PropertyKind` is the case, and it is not marginal. The dictionary
     /// shipped with the standard defines several hundred of them and nothing
-    /// asks a package to embed the ones it uses — a package of 120 wellbores
+    /// asks a package to embed the ones it uses - a package of 120 wellbores
     /// produced 1 086 of these and not one genuine dangling reference, which
     /// is precisely how a real one gets buried.
     ///
@@ -63,7 +63,7 @@ pub enum RefIssueKind {
     /// (`energyml_domain::property_kind::Resolver`, which `energyml check`
     /// already runs). This variant only says: not being here proves nothing.
     ExternallyDefined,
-    /// The target exists but is a different *concept* — the reference says
+    /// The target exists but is a different *concept* - the reference says
     /// `WellboreInterpretation`, the part is a `HorizonInterpretation`.
     ///
     /// Always a real error: whatever reads this will follow the reference and
@@ -71,14 +71,14 @@ pub enum RefIssueKind {
     ConceptMismatch {
         /// Qualified type of the nearest object found.
         found: String,
-        /// The **full uri of every object that carries the uuid** — none of them
+        /// The **full uri of every object that carries the uuid** - none of them
         /// is what the reference names. The message built from them reads
         /// 'uuid found but type or version should be one of the following: '
         /// followed by the uris of the objects that carry the right uuid but
         /// not the right type or version number. Sorted.
         candidates: Vec<String>,
     },
-    /// Same concept, different version — `resqml20.obj_Activity` naming a
+    /// Same concept, different version - `resqml20.obj_Activity` naming a
     /// `resqml22.Activity`.
     ///
     /// A warning, not an error. A package may mix versions (EPC §3.2), and a
@@ -93,12 +93,12 @@ pub enum RefIssueKind {
     /// The right object, at another revision: the reference's
     /// `ObjectVersion` and the object's `objectVersion` disagree.
     ///
-    /// An **error** when the reference names a revision — one the object is
+    /// An **error** when the reference names a revision - one the object is
     /// not at, or one where the object carries none: whatever follows it is
     /// promised a revision the package does not hold. A **warning** when the
     /// reference names none and the object does: the Identifier
     /// Specification has a reader assume *the latest*, which is what the
-    /// package holds, so nothing breaks — but a package that stamps every
+    /// package holds, so nothing breaks - but a package that stamps every
     /// object with a version and writes its references without one says two
     /// things, and the Webstudio flags it. It was exactly
     /// what our own translation produced, and this checker said nothing.
@@ -107,10 +107,10 @@ pub enum RefIssueKind {
         referenced: Option<String>,
         /// What the object carries, when it carries anything. `None` also when
         /// several entries of the uuid and type are held and none is *the*
-        /// object — see `candidates`.
+        /// object - see `candidates`.
         found: Option<String>,
         /// The full uri of every object that carries the uuid, sorted. A
-        /// reference resolves **exactly** — by uuid, type and version — and when
+        /// reference resolves **exactly** - by uuid, type and version - and when
         /// nothing answers, this is the list a person picks from.
         candidates: Vec<String>,
     },
@@ -119,8 +119,8 @@ pub enum RefIssueKind {
     ///
     /// A **warning**, never an error: a reader resolves by uuid and finds the
     /// right object, so nothing breaks. What it does break is every list built
-    /// from references rather than from the objects — a graph, a tree, a
-    /// picker — which then shows a name the package no longer uses, or no name
+    /// from references rather than from the objects - a graph, a tree, a
+    /// picker - which then shows a name the package no longer uses, or no name
     /// at all. The Webstudio reports it, and this checker did not (seen on a
     /// package our own translation wrote: the two references of a
     /// `LocalEngineeringCompoundCrs` carried an empty title).
@@ -130,13 +130,13 @@ pub enum RefIssueKind {
         /// What the object calls itself.
         found: String,
     },
-    /// The reference names a type **no schema this build carries defines** —
+    /// The reference names a type **no schema this build carries defines** -
     /// well formed (`resqml22.NoSuchThing` matches the `QualifiedType`
     /// pattern) and pointing at nothing a reader could ever open.
     ///
     /// A **warning**: the pattern accepts any two-digit version, so a package
     /// written against a release this build does not carry says the same thing.
-    /// It is the one reference finding no store can make — it needs the
+    /// It is the one reference finding no store can make - it needs the
     /// registry of types, which is why it is [`check_declared_types`] and not
     /// part of [`check_references`].
     UnknownType,
@@ -183,7 +183,7 @@ impl fmt::Display for RefIssue {
             },
             RefIssueKind::ExternallyDefined => write!(
                 f,
-                "references {} ({}), which the Energistics catalogue defines — a package need not carry it",
+                "references {} ({}), which the Energistics catalogue defines - a package need not carry it",
                 self.target_uuid,
                 self.declared_type.as_deref().unwrap_or("?")
             ),
@@ -196,7 +196,7 @@ impl fmt::Display for RefIssue {
             ),
             RefIssueKind::VersionMismatch { found, candidates } => write!(
                 f,
-                "references {} as `{}`, but that object is a `{found}` — same concept, other version{}",
+                "references {} as `{}`, but that object is a `{found}` - same concept, other version{}",
                 self.target_uuid,
                 self.declared_type.as_deref().unwrap_or("?"),
                 should_be_one_of(candidates)
@@ -247,7 +247,7 @@ impl fmt::Display for RefIssue {
                 ..
             } => write!(
                 f,
-                "references {} without an ObjectVersion, and that object is at version `{}` — a reader assumes the latest, which is this one; say it",
+                "references {} without an ObjectVersion, and that object is at version `{}` - a reader assumes the latest, which is this one; say it",
                 self.target_uuid,
                 found.as_deref().unwrap_or("?")
             ),
@@ -256,7 +256,7 @@ impl fmt::Display for RefIssue {
                 found,
             } => write!(
                 f,
-                "calls {} `{referenced}`, and that object calls itself `{found}` — the title in a reference is a copy, and this one is stale",
+                "calls {} `{referenced}`, and that object calls itself `{found}` - the title in a reference is a copy, and this one is stale",
                 self.target_uuid
             ),
             RefIssueKind::TitleMismatch {
@@ -264,7 +264,7 @@ impl fmt::Display for RefIssue {
                 found,
             } => write!(
                 f,
-                "references {} with no title, and that object is called `{found}` — the title in a reference is a copy, and this one is empty",
+                "references {} with no title, and that object is called `{found}` - the title in a reference is a copy, and this one is empty",
                 self.target_uuid
             ),
             RefIssueKind::UnknownType => write!(
@@ -309,7 +309,7 @@ pub enum Cached {
     },
 }
 
-/// The reference's `ObjectVersion` against the object's — see
+/// The reference's `ObjectVersion` against the object's - see
 /// [`RefIssueKind::ObjectVersionMismatch`] for which way each case goes.
 fn revision_check(referenced: Option<&str>, found: &Cached, candidates: &[String]) -> Option<RefIssueKind> {
     let Cached::Read {
@@ -340,7 +340,7 @@ fn stated_version(
     cached_of: &dyn Fn(&ObjectSummary) -> Cached,
 ) -> Option<Option<String>> {
     match cached_of(target) {
-        // Not read — but the store spells **the version into the uri** of an entry
+        // Not read - but the store spells **the version into the uri** of an entry
         // that declares one, so a uri that carries a version says it. One that
         // carries none says nothing: *not read* and *states none* differ.
         Cached::Unread => match identity::ObjectId::parse(&target.uri) {
@@ -390,7 +390,7 @@ fn title_check(referenced: Option<&str>, found: &Cached) -> Option<RefIssueKind>
 
 /// Check every reference one object holds against what the package contains.
 ///
-/// `known` answers "is there an object with this uuid, and what is it?" — a
+/// `known` answers "is there an object with this uuid, and what is it?" - a
 /// closure rather than a store, so this function has no idea whether the
 /// package is a file, a dataspace or a test fixture. Its lifetime is named
 /// because elision would otherwise tie the answer to the uuid that was asked
@@ -406,8 +406,8 @@ fn title_check(referenced: Option<&str>, found: &Cached) -> Option<RefIssueKind>
 /// ```
 ///
 /// The borrow is not an EPC assumption. A store that hands its inventory over
-/// by value — as [`crate::storage::EnergymlStorage::resources`] does, and as an
-/// ETP client must — indexes the `Vec` it owns and borrows from that:
+/// by value - as [`crate::storage::EnergymlStorage::resources`] does, and as an
+/// ETP client must - indexes the `Vec` it owns and borrows from that:
 ///
 /// ```no_run
 /// # use energyml_storage::{ObjectSummary, graph};
@@ -426,8 +426,8 @@ fn title_check(referenced: Option<&str>, found: &Cached) -> Option<RefIssueKind>
 /// # }
 /// ```
 ///
-/// `cached_of` answers what the target says of itself — its `objectVersion`
-/// and its title — when the caller has read the object; the summary carries
+/// `cached_of` answers what the target says of itself - its `objectVersion`
+/// and its title - when the caller has read the object; the summary carries
 /// neither, since a level-1 listing reads no part. [`check_all_references`]
 /// answers it from the objects it is given; a caller with none to hand answers
 /// [`Cached::Unread`] and gets no finding about either.
@@ -445,11 +445,11 @@ pub fn check_references<'i>(
     )
 }
 
-/// [`check_references`] for a package that may hold **one uuid several times** —
+/// [`check_references`] for a package that may hold **one uuid several times** -
 /// under two `objectVersion`s, or two releases. `held` is asked for **every
 /// entry that carries the uuid** the reference names; the check then resolves
-/// the reference **exactly**, by the identity read from it — uuid, qualified
-/// type, `objectVersion` when it carries one — and when nothing answers while
+/// the reference **exactly**, by the identity read from it - uuid, qualified
+/// type, `objectVersion` when it carries one - and when nothing answers while
 /// the uuid is held, the finding names every candidate by its full uri.
 /// `cached_of` is asked about an entry and not about its
 /// uuid, so the revision of the reference is compared with the revision of the
@@ -495,8 +495,8 @@ pub fn check_references_by<'i>(
             .map(str::trim)
             .filter(|version| !version.is_empty());
 
-        // **Exact resolution**: the entries of the right type — *a wrong version
-        // is not a wrong type*, so a release that differs is not exact — and,
+        // **Exact resolution**: the entries of the right type - *a wrong version
+        // is not a wrong type*, so a release that differs is not exact - and,
         // among them, the one at the version the reference names.
         let same_type: Vec<&ObjectSummary> = candidates
             .iter()
@@ -515,7 +515,7 @@ pub fn check_references_by<'i>(
                     out.push(issue(kind));
                 }
             }
-            // The right type, and no entry at the version named — or several
+            // The right type, and no entry at the version named - or several
             // and none that is *the* one a reference without a version means.
             None if !same_type.is_empty() => {
                 let sole = if same_type.len() == 1 {
@@ -538,7 +538,7 @@ pub fn check_references_by<'i>(
             // No entry of the uuid has the type. Compare the concept first, the
             // version second: a package is allowed to mix versions, so
             // "different version" and "different thing" must not come out as the
-            // same complaint — the nearest candidate decides which this is.
+            // same complaint - the nearest candidate decides which this is.
             None => {
                 let near = candidates
                     .iter()
@@ -573,7 +573,7 @@ pub fn check_references_by<'i>(
 }
 
 /// The entry a reference names **exactly** among the entries of its uuid and
-/// type: the one at the version it states, or — when it states none — the only
+/// type: the one at the version it states, or - when it states none - the only
 /// one, else the only one that declares none. `None` when nothing answers, and
 /// then nothing is guessed: the finding lists the candidates instead. An entry
 /// whose version was not read is not disqualified (nothing says it differs).
@@ -609,7 +609,7 @@ fn exact_among<'a>(
 
 /// Every reference that names a type `knows` does not recognise.
 ///
-/// `knows` answers "does any schema define this qualified type?" — a closure,
+/// `knows` answers "does any schema define this qualified type?" - a closure,
 /// so that the storage layer keeps no registry of its own. References to a
 /// concept the standard publishes in a catalogue (`PropertyKind` and the like)
 /// are skipped: their types are known, and absence of the object is not news.
@@ -639,7 +639,7 @@ pub fn check_declared_types<'a>(
     out
 }
 
-/// The data objects nested inside the objects given, by uuid — each with a
+/// The data objects nested inside the objects given, by uuid - each with a
 /// summary of its own that names **the part holding it** as its locator, and
 /// the uuid of that part's object.
 ///
@@ -697,7 +697,7 @@ pub fn check_all_references<'a, 'i>(
 }
 
 /// [`check_all_references`] for a caller that can name **every** entry of a
-/// uuid beyond the batch — the unreadable part of a package, a store's whole
+/// uuid beyond the batch - the unreadable part of a package, a store's whole
 /// listing. `elsewhere` answers all of them, not the first: a reference that
 /// names a version no readable object carries is still answered by the
 /// entries of its uuid, each by its full uri, and an entry that cannot be read
@@ -749,8 +749,8 @@ pub fn check_all_references_with<'a, 'i>(
             .unwrap_or(Cached::Unread)
     };
     // Every entry that carries the uuid: the batch's, then what the caller knows
-    // beyond it (entries it could not read, another store's listing) — one per
-    // uri — and, when nothing holds the uuid, the object nested in a part.
+    // beyond it (entries it could not read, another store's listing) - one per
+    // uri - and, when nothing holds the uuid, the object nested in a part.
     let held = |uuid: &str| -> Vec<&ObjectSummary> {
         let key = uuid.to_ascii_lowercase();
         let mut out: Vec<&ObjectSummary> = in_batch
@@ -779,7 +779,7 @@ pub fn check_all_references_with<'a, 'i>(
 // Repair
 // ---------------------------------------------------------------------------
 
-/// What a repair pass did — or refused to do — to one reference.
+/// What a repair pass did - or refused to do - to one reference.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RefRepair {
     /// URI of the object holding the reference.
@@ -822,7 +822,7 @@ pub enum Refusal {
     /// and inventing one is not a repair.
     Dangling,
     /// The target exists but is another concept entirely. Either the uuid is a
-    /// typo and the type is right, or the reverse — and nothing here can tell.
+    /// typo and the type is right, or the reverse - and nothing here can tell.
     /// Rewriting the type would point the reference confidently at the wrong
     /// object.
     ConceptMismatch {
@@ -832,7 +832,7 @@ pub enum Refusal {
         found: String,
     },
     /// The reference lives in a subtree the model could not type, kept as
-    /// source text. It is *found* — the graph draws it — but reflection cannot
+    /// source text. It is *found* - the graph draws it - but reflection cannot
     /// walk down to it, so nothing can write to it either.
     /// `GraphicalInformationSet` is the case that exists in the corpus.
     Unreachable {
@@ -871,16 +871,16 @@ impl fmt::Display for RefRepair {
                 }
             }
             RepairOutcome::Refused(Refusal::Dangling) => {
-                write!(f, "left alone — {} is not in this package", self.target_uuid)
+                write!(f, "left alone - {} is not in this package", self.target_uuid)
             }
             RepairOutcome::Refused(Refusal::ConceptMismatch { declared, found }) => write!(
                 f,
-                "left alone — says `{declared}`, but {} is a `{found}`; which half is wrong is not \
+                "left alone - says `{declared}`, but {} is a `{found}`; which half is wrong is not \
                  something this package says",
                 self.target_uuid
             ),
             RepairOutcome::Refused(Refusal::Unreachable { reason }) => {
-                write!(f, "left alone — {reason}")
+                write!(f, "left alone - {reason}")
             }
         }
     }
@@ -898,7 +898,7 @@ pub struct Target {
     /// Its `objectVersion`, when it carries one.
     ///
     /// `None` means *the object states no revision*, and a reference to it
-    /// says none either — which is what the Identifier Specification reads as
+    /// says none either - which is what the Identifier Specification reads as
     /// *the only or latest version*. A reference that names a revision such an
     /// object does not have is **left alone**: which half is wrong is not
     /// something the package says, the same rule the uuid follows.
@@ -911,7 +911,7 @@ pub struct Target {
 ///
 /// A `DataObjectReference` caches four things about its target: the uuid, the
 /// declared type, the title, and the revision. **The target object is the
-/// authority for its own type, its own title and its own `objectVersion`** —
+/// authority for its own type, its own title and its own `objectVersion`** -
 /// those are copies, and a copy that disagrees with the original is simply
 /// stale. Those are rewritten.
 ///
@@ -919,14 +919,14 @@ pub struct Target {
 /// it: a translated package stamps every object `objectVersion="0"` and wrote
 /// every reference without one, so the package said two things and nothing
 /// could put it right. A reference naming a revision the target does **not**
-/// carry is left alone — clearing it would be deciding which half is wrong.
+/// carry is left alone - clearing it would be deciding which half is wrong.
 ///
 /// The target is *not* an authority for **which object was meant**. So a
 /// reference naming a uuid that is not there, or naming an object of another
 /// concept entirely, is reported and left exactly as it was: see [`Refusal`].
 /// The rule this follows is that a repair may fix a copy, never a decision.
 ///
-/// The uuid is never rewritten — it is the one field that says what was meant.
+/// The uuid is never rewritten - it is the one field that says what was meant.
 ///
 /// Only references that changed, or that were refused, come back; a reference
 /// already in agreement produces nothing.
@@ -1097,7 +1097,7 @@ mod tests {
     #[test]
     fn the_obj_prefix_is_not_a_difference() {
         assert!(same_qualified_type("resqml20.obj_Activity", "resqml20.Activity"));
-        // Case is noise on both halves — writers disagree about it, and a
+        // Case is noise on both halves - writers disagree about it, and a
         // reference is not wrong for having spelled the domain `RESQML`.
         assert!(same_qualified_type("RESQML20.obj_activity", "resqml20.Activity"));
         assert!(!same_qualified_type("resqml20.obj_Activity", "resqml22.Activity"));
@@ -1185,7 +1185,7 @@ mod tests {
         // carried an empty title, the Webstudio flagged it and this
         // checker did not look at titles at all. What it would take to
         // break this: comparing a title the target does not have, or making it
-        // an error — a reader resolves by uuid and finds the right object.
+        // an error - a reader resolves by uuid and finds the right object.
         let read = |title: Option<&str>| Cached::Read {
             object_version: None,
             title: title.map(str::to_string),
@@ -1245,7 +1245,7 @@ mod tests {
         ] {
             assert!(is_externally_defined(declared), "{declared}");
         }
-        // Nothing else gets the exemption — a missing representation is a
+        // Nothing else gets the exemption - a missing representation is a
         // missing representation, and `PropertyKindFacet` is not a kind.
         for declared in [
             "resqml22.WellboreFrameRepresentation",
@@ -1262,8 +1262,8 @@ mod tests {
         // _package` one layer up: the predicate existed and the graph did not
         // carry it, so every viewer drawn from the graph counted a well-known
         // kind as a reference into nothing. `assemble` rather than `build`
-        // because it is the path with no object to walk — the one an ETP client
-        // takes — and because it needs no reflection here.
+        // because it is the path with no object to walk - the one an ETP client
+        // takes - and because it needs no reflection here.
         let held = summary(
             "00000000-0000-4000-8000-000000000001",
             "resqml22.ContinuousProperty",
@@ -1291,7 +1291,7 @@ mod tests {
         assert!(!node(kind).present && node(kind).externally_defined);
         // The one that must stay a fault: absent, and nothing publishes it.
         assert!(!node(gone).present && !node(gone).externally_defined);
-        // A property of the type, not of the absence — so a consumer's rule is
+        // A property of the type, not of the absence - so a consumer's rule is
         // the conjunction and never a flag read in a particular order.
         assert!(node(&held.uri).present && !node(&held.uri).externally_defined);
         assert!(graph.to_json().contains("\"externallyDefined\": true"));
@@ -1328,15 +1328,15 @@ mod tests {
 
 /// A disagreement between the `.rels` index and the objects themselves.
 ///
-/// The rule this crate follows everywhere — the `.rels` speed things up, the DORs
-/// are authoritative — makes none of these fatal: whatever the index says, the reader
+/// The rule this crate follows everywhere - the `.rels` speed things up, the DORs
+/// are authoritative - makes none of these fatal: whatever the index says, the reader
 /// follows the `DataObjectReference`s and gets the right answer. They matter
 /// for two other reasons.
 ///
 /// A tool that **does** trust the index gets a different graph from the one the
 /// data describes, and there are such tools. And the EPC specification §3.4.1
-/// makes both directions mandatory — *"for every relationship between two XML
-/// data objects there are two .rels files"* — so a disagreement is a departure
+/// makes both directions mandatory - *"for every relationship between two XML
+/// data objects there are two .rels files"* - so a disagreement is a departure
 /// from the specification, which is exactly what `energyml check` is for.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RelIssue {
@@ -1361,7 +1361,7 @@ pub enum RelIssueKind {
     },
     /// A `destinationObject` declares a link the object does not make.
     ///
-    /// The index remembers a reference that was edited away — an edge drawn
+    /// The index remembers a reference that was edited away - an edge drawn
     /// from nothing.
     Unbacked {
         /// Relationship id, so it can be found in the file.
@@ -1382,7 +1382,7 @@ pub enum RelIssueKind {
     /// The link exists, and the index has it the wrong way round.
     ///
     /// Reported as one finding rather than as the two it would otherwise
-    /// produce — an unbacked relationship *and* an undeclared reference — since
+    /// produce - an unbacked relationship *and* an undeclared reference - since
     /// it is one mistake, and the producer's, not two of the reader's.
     /// `ALWYN-RESQML.epc` is full of them.
     Reversed {
@@ -1444,7 +1444,7 @@ pub struct Related<'a> {
 ///
 /// A part name is matched on its **file name** rather than its path. A `.rels`
 /// target is relative to the `_rels` folder's parent, so the same object is
-/// written `Foo.xml` from the root and `../Foo.xml` from a subfolder — and an
+/// written `Foo.xml` from the root and `../Foo.xml` from a subfolder - and an
 /// EPC part name is unique across the package whichever layout it uses.
 ///
 /// # Why this one *is* EPC-only, and stays so
@@ -1453,9 +1453,9 @@ pub struct Related<'a> {
 /// unchanged. This does not, and it should not be made to: it needs
 /// [`crate::storage::LocalPackage::relationships`], and a `.rels` file is an
 /// OPC artefact that exists nowhere else. There is nothing to confront in a
-/// dataspace — the server *is* the index, so it cannot disagree with itself.
+/// dataspace - the server *is* the index, so it cannot disagree with itself.
 ///
-/// The reader-independent question — "what references what" — is
+/// The reader-independent question - "what references what" - is
 /// [`crate::storage::EnergymlStorage::edges`], and that one an ETP client
 /// answers natively. This is the narrower question "does the package's own
 /// index agree with its objects", and it is a question only a package has.
@@ -1482,7 +1482,7 @@ pub fn check_relationships(objects: &[Related<'_>]) -> Vec<RelIssue> {
             .entry(item.summary.uuid.to_ascii_lowercase())
             .or_insert(item.summary);
     }
-    // A reference to a nested object is a link to the part that holds it —
+    // A reference to a nested object is a link to the part that holds it -
     // what the writer records (see [`nested_index`]).
     let nested = nested_index(objects.iter().map(|item| (item.summary, item.object)));
     // Who references whom, from the objects themselves.
@@ -1524,13 +1524,13 @@ pub fn check_relationships(objects: &[Related<'_>]) -> Vec<RelIssue> {
             }
             let kind = relationship.short_kind().to_string();
             // `mlToExternalPartProxy` **is** how a package declares a reference
-            // to an HDF5 proxy — EPC §3.4.1 names it, and this library's own
+            // to an HDF5 proxy - EPC §3.4.1 names it, and this library's own
             // writer emits it rather than the generic pair. Not counting it as a
             // declaration made every package this library saved complain about
             // a link it had itself written correctly: two components of the
             // house disagreeing about one fact, which is the shape the rules
             // forbid. Found by cutting a real package and running `check` on the
-            // result — not by reading the code.
+            // result - not by reading the code.
             //
             // Its reverse, `externalPartProxyToMl`, is the proxy's own side and
             // reads like `sourceObject`.
@@ -1604,7 +1604,7 @@ pub fn check_relationships(objects: &[Related<'_>]) -> Vec<RelIssue> {
         }
 
         // The other direction: what the object references and the index omits.
-        // Only for targets the package holds — a reference out of the package
+        // Only for targets the package holds - a reference out of the package
         // cannot have a relationship, and `check_references` already reports it
         // as dangling.
         for (uuid, path) in &mine {
@@ -1632,7 +1632,7 @@ pub fn check_relationships(objects: &[Related<'_>]) -> Vec<RelIssue> {
 /// One object, as a viewer needs to label it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Node {
-    /// ETP URI — the identity that means the same thing in an EPC and in a
+    /// ETP URI - the identity that means the same thing in an EPC and in a
     /// dataspace, which is why it is the node's key rather than the part name.
     pub uri: String,
     /// Uuid on its own, for a viewer that wants the short form.
@@ -1648,7 +1648,7 @@ pub struct Node {
     pub title: Option<String>,
     /// Whether the package actually holds this object.
     ///
-    /// A referenced object that is not here still gets a node — a graph that
+    /// A referenced object that is not here still gets a node - a graph that
     /// silently drops the edges leading out of the package is a graph that
     /// says the package is self-contained when it is not.
     pub present: bool,
@@ -1656,18 +1656,18 @@ pub struct Node {
     /// catalogue, so that not finding it in the package means nothing.
     ///
     /// A property of the type and not of this node's presence, deliberately:
-    /// a consumer's rule is then the plain conjunction — *absent **and** not
-    /// externally defined is a dangling reference* — rather than a flag whose
+    /// a consumer's rule is then the plain conjunction - *absent **and** not
+    /// externally defined is a dangling reference* - rather than a flag whose
     /// meaning depends on reading another flag first.
     ///
     /// It exists because a count that lacked it was **wrong in the one
     /// direction that matters**: on a BRGM package every one of the four
-    /// absent nodes was a well-known `PropertyKind` — `code`, `description`,
-    /// `formation name`, `unknown` — reported as four references into nothing.
+    /// absent nodes was a well-known `PropertyKind` - `code`, `description`,
+    /// `formation name`, `unknown` - reported as four references into nothing.
     /// That is the case the project rules name: a reference to a well-known
     /// kind must not be reported as dangling. [`check_all_references`] already
     /// made the distinction ([`RefIssueKind::ExternallyDefined`]); the graph
-    /// did not, so every viewer built on it made the same mistake — and
+    /// did not, so every viewer built on it made the same mistake - and
     /// re-deriving the predicate on the far side of the JSON would be two
     /// readers of one fact, which is what this crate does not do.
     pub externally_defined: bool,
@@ -1690,7 +1690,7 @@ pub struct Edge {
 ///
 /// The requirement asks for a graph on the storage parent class (parent of
 /// epc and etp) so that graphs can be generated in every case. The way to
-/// get that is not to put it on the trait — a default method would still have
+/// get that is not to put it on the trait - a default method would still have
 /// to read every object, and deciding when to read is the caller's business
 /// and nobody else's. It is to build it from what any implementation can hand
 /// over: a summary and a deserialized object. An `EpcStore` produces those; an
@@ -1720,8 +1720,8 @@ fn version_of(object: &dyn Reflect) -> Option<String> {
 
 /// The nodes a reference names among the nodes of its uuid: by type when the
 /// type matches something (*a wrong version is not a wrong type*), by version
-/// when the reference carries one — a version nobody carries still names the one
-/// candidate there is — and when it names no version of an object held in
+/// when the reference carries one - a version nobody carries still names the one
+/// candidate there is - and when it names no version of an object held in
 /// several, the one that declares none if exactly one does, **else all of them**.
 fn select(held: &[Held], qualified_type: &str, version: Option<&str>) -> Vec<usize> {
     let mut left: Vec<&Held> = held.iter().collect();
@@ -1774,10 +1774,10 @@ pub fn build<'a>(objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn R
         });
     }
 
-    // **A reference to an object nested in a part is a link to that part** —
+    // **A reference to an object nested in a part is a link to that part** -
     // a PRODML flow test naming a WITSML `ChannelSet` held in a `Log`, or its
     // `Channel`s. On the Lutetia model the statistics kept showing
-    // "references to an absent object" — the front end counts
+    // "references to an absent object" - the front end counts
     // a node that is not present, and these were nodes for objects the package
     // does hold, one level down. The rule `derived_graph` already follows (see
     // [`nested_index`]): an edge to the container, none within one object.
@@ -1836,7 +1836,7 @@ pub fn build<'a>(objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn R
                     present: false,
                 });
             }
-            // The object the reference names — and, where it names no version of
+            // The object the reference names - and, where it names no version of
             // an object held in several, **each** of them: this graph is what a
             // closure and a "who depends on this" are drawn from, and a
             // dependency that is too wide costs a copy, one that is too narrow
@@ -1858,7 +1858,7 @@ pub fn build<'a>(objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn R
 /// Build the graph from an inventory and a set of edges obtained *elsewhere*.
 ///
 /// The counterpart of [`build`] for a store that can answer "what references
-/// what" without handing over the objects — which is exactly what ETP does:
+/// what" without handing over the objects - which is exactly what ETP does:
 /// `GetResources` with `includeEdges` replies `GetResourcesEdgesResponse`, a
 /// list of source/target pairs, and no object XML crosses the wire at all.
 ///
@@ -1867,7 +1867,7 @@ pub fn build<'a>(objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn R
 /// whole point of [`crate::storage::EnergymlStorage::graph`] being a provided
 /// method over [`crate::storage::EnergymlStorage::edges`].
 ///
-/// `titles` is looked up by URI and may be missing entries — a graph without
+/// `titles` is looked up by URI and may be missing entries - a graph without
 /// labels is still a graph, and forcing a header read to draw one would undo
 /// the saving this function exists for.
 ///
@@ -1939,7 +1939,7 @@ pub fn assemble<'a>(
 /// One object pointing at another, resolved far enough to act on.
 ///
 /// Not a uuid: what a caller needs before deleting or copying something is
-/// **which** object points at it and **where inside it** — so an interface can
+/// **which** object points at it and **where inside it** - so an interface can
 /// take a person there, and a copy can follow the field rather than guess.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Pointer {
@@ -1959,7 +1959,7 @@ pub struct Pointer {
 ///
 /// The cheap direction: an object carries its own references, so this reads one
 /// object where [`dependents`] reads every one of them. The target's uri is
-/// built exactly as [`build`] builds it — same crate, one spelling — and the
+/// built exactly as [`build`] builds it - same crate, one spelling - and the
 /// title is the **hint the reference carries**, which is not a source of truth:
 /// what the target is actually called is a question for the package.
 pub fn references(object: &dyn Reflect) -> Vec<Pointer> {
@@ -1986,7 +1986,7 @@ pub fn references(object: &dyn Reflect) -> Vec<Pointer> {
 /// **The question to answer before deleting anything**, and the one direction a
 /// package has no index for: a `DataObjectReference` says what it names, and
 /// nothing says who named it. Every object has to be asked, which is why this
-/// takes the objects rather than a store — the caller decides when to pay for
+/// takes the objects rather than a store - the caller decides when to pay for
 /// reading them, exactly as [`build`] does.
 ///
 /// The comparison is on the uuid and case-insensitive, because that is what an
@@ -2023,7 +2023,7 @@ pub fn dependents<'a>(
 pub struct Closure {
     /// The seeds and everything they reach, in the graph's own order.
     ///
-    /// The set [`crate::extract::plan`] would call closed — pass it as
+    /// The set [`crate::extract::plan`] would call closed - pass it as
     /// `wanted` and nothing breaks.
     pub needed: Vec<String>,
     /// Referenced, and the package does not hold it.
@@ -2031,7 +2031,7 @@ pub struct Closure {
     /// **Named rather than dropped**: a closure that quietly ignored a
     /// reference into nothing would report a set as closed when the package it
     /// came from was already broken. Entries the standard publishes in a
-    /// catalogue — a well-known `PropertyKind` — are not in here, because not
+    /// catalogue - a well-known `PropertyKind` - are not in here, because not
     /// holding them means nothing.
     pub missing: Vec<String>,
 }
@@ -2043,7 +2043,7 @@ pub struct Closure {
 /// [`crate::extract::plan`] deliberately does **not** close a set: it takes the
 /// set the caller decided on and reports what would break, because two
 /// implementations of one walk would be two answers to the same question. This
-/// is that one walk, in the library, and `plan` still checks the result — so a
+/// is that one walk, in the library, and `plan` still checks the result - so a
 /// caller can close a set here and be told by a different piece of code whether
 /// it worked.
 ///
@@ -2095,7 +2095,7 @@ pub fn closure(graph: &Graph, seeds: &[String]) -> Closure {
     }
 }
 
-/// An object's `Citation.Title`, the title a graph node carries — shared with
+/// An object's `Citation.Title`, the title a graph node carries - shared with
 /// the package index (`energyml_domain::package_index`) so the two say the same.
 pub fn title_of(object: &dyn Reflect) -> Option<String> {
     let energyml_core::value::FieldValue::Object(citation) = object.field("Citation")? else {
@@ -2193,7 +2193,7 @@ impl Graph {
                 ", style=dashed".to_string()
             };
             // The node's **uri** is its id: it names one entry, where the uuid
-            // names every version of it — two versions of an object would be
+            // names every version of it - two versions of an object would be
             // one box, and an edge to either would land on the same one.
             out.push_str(&format!(
                 "  \"{}\" [label=\"{label}\"{style}];\n",

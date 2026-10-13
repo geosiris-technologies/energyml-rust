@@ -1,9 +1,9 @@
-//! Cutting a package to a chosen set — `energyml_storage::extract`.
+//! Cutting a package to a chosen set - `energyml_storage::extract`.
 //!
 //! The writing half needs a real package and is covered by the corpus run. What
 //! is here is the **planning** half, which is where the decisions are: what is
-//! kept, what is left, how much of what is left is clean, and — the one that
-//! earns the feature its keep — which references the cut would break, told apart
+//! kept, what is left, how much of what is left is clean, and - the one that
+//! earns the feature its keep - which references the cut would break, told apart
 //! from the ones the source was already breaking.
 
 use energyml_storage::extract::{Broken, plan};
@@ -102,7 +102,7 @@ fn a_choice_that_is_not_closed_names_every_reference_it_would_break() {
 #[test]
 fn a_reference_the_source_never_held_is_not_the_cut_s_fault() {
     // A well-known kind, a cross-package model boundary. Reporting it as broken
-    // would blame the extraction for the package's own state — and a report that
+    // would blame the extraction for the package's own state - and a report that
     // cries wolf on every property is a report nobody reads.
     let (resources, graph) = package();
     let made = plan(
@@ -119,7 +119,7 @@ fn a_reference_the_source_never_held_is_not_the_cut_s_fault() {
 #[test]
 fn what_is_left_and_still_pointed_at_is_counted_apart() {
     // `left == clean` is what says a cut is self-contained. Here the spare is
-    // pointed at by something kept, so it is left *and* not clean — which is the
+    // pointed at by something kept, so it is left *and* not clean - which is the
     // signal that the choice was not closed.
     let mut resources = vec![summary("rep"), summary("spare")];
     resources.push(summary("interp"));
@@ -165,7 +165,7 @@ fn asking_twice_for_the_same_object_keeps_it_once() {
 
 /// The proxy relationship is a declaration, and the checker now says so.
 ///
-/// Not a unit test of `plan` — it guards the fix that cutting a real package
+/// Not a unit test of `plan` - it guards the fix that cutting a real package
 /// uncovered. The library's own writer emits `mlToExternalPartProxy` for a
 /// reference to an HDF5 proxy, which is what EPC §3.4.1 asks for; the checker
 /// only accepted the generic `destinationObject`, so **every package this

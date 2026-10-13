@@ -1,4 +1,4 @@
-//! `edit-object` — an object of the package with fields set: rewritten under
+//! `edit-object` - an object of the package with fields set: rewritten under
 //! its own uuid, or copied under a new one.
 //!
 //! What the front end's object editor does, made scriptable:
@@ -10,10 +10,10 @@
 //! # Why an operation for this
 //!
 //! Every other operation writes what it **decides**, and refuses what its
-//! specification forbids — `fault-from-sticks` refuses `IsListric` on a fault
+//! specification forbids - `fault-from-sticks` refuses `IsListric` on a fault
 //! that is not normal, `collection` computes `HomogeneousDatatype` from the
 //! members. That is right, and it leaves one thing no operation can do: state
-//! a field **as told**. A recipe needs it twice — to correct an object after
+//! a field **as told**. A recipe needs it twice - to correct an object after
 //! the step that wrote it, and to write the deliberate anomalies a check must
 //! find (the deliberate-anomalies model: objects that are
 //! deliberately wrong, each against a written rule, to prove that the
@@ -27,30 +27,30 @@
 //!   writes them (`Citation.Description`, `ThrowInterpretation[0].Throw`), `[n]` for
 //!   the n-th of a list. Every step but the last must exist; the last may add
 //!   a field the object does not hold, and `null` removes one. A path that
-//!   leads nowhere is refused by name, never created on the way — a typo would
+//!   leads nowhere is refused by name, never created on the way - a typo would
 //!   otherwise write a field no reader looks at;
 //! - **`uuid` and `$type` are refused**: the identity is what `copy` changes,
 //!   and a type is another object;
 //! - **a value is JSON**, and text that is not is refused rather than taken as
-//!   a string — `"reverse"` and `reverse` would otherwise be two spellings, one
+//!   a string - `"reverse"` and `reverse` would otherwise be two spellings, one
 //!   of which a number would silently change meaning under;
 //! - **the object is not validated here**: a plan is pure and holds no schema.
 //!   What does not read back as its type is refused by `apply`, which names the
 //!   object; each change is **said** in the plan, old value and new, so the
 //!   edit is never silent;
 //! - **a reference keeps what it is**: `reference` set at `referenceAt`
-//!   replaces the `Uuid`, `QualifiedType` and `Title` of the reference there —
-//!   a `ContactElement` stays one, with its qualifier —, and only a place that
+//!   replaces the `Uuid`, `QualifiedType` and `Title` of the reference there -
+//!   a `ContactElement` stays one, with its qualifier -, and only a place that
 //!   holds nothing receives the `DataObjectReference` as given;
 //! - **the citation says it was edited**: `LastUpdate` and `Editor` in place;
 //!   a copy gets its own title, `Creation` and `Originator`. **A title is not
 //!   rewritten in place**: every reference to the object holds a copy of it,
-//!   and `check` calls each copy that disagrees stale — three warnings, the
+//!   and `check` calls each copy that disagrees stale - three warnings, the
 //!   first time this ran on Lutetia's `[ERROR]` table.
 //!
 //! # Identity
 //!
-//! In place, the uuid is the object's — which is the point: what references it
+//! In place, the uuid is the object's - which is the point: what references it
 //! keeps doing so. A copy's uuid comes from the object copied and the copy's
 //! title: the same copy is the same object from one run to the next.
 
@@ -67,20 +67,20 @@ pub struct EditObject;
 /// What `edit-object` is told.
 #[derive(Debug, Params)]
 pub struct EditObjectParams {
-    /// the fields to set, each `path = value` — the path in the workspace's JSON encoding (`Citation.Description`, `Key[0]._`), the value in JSON (`"reverse"`, `true`, `null` to remove)
+    /// the fields to set, each `path = value` - the path in the workspace's JSON encoding (`Citation.Description`, `Key[0]._`), the value in JSON (`"reverse"`, `true`, `null` to remove)
     pub fields: Vec<String>,
-    /// the title of a copy — given, the object is copied under a new uuid with this title; left out, it is rewritten under its own
+    /// the title of a copy - given, the object is copied under a new uuid with this title; left out, it is rewritten under its own
     pub copy: Option<String>,
     /// an object of the package whose reference is set at `referenceAt`
     pub reference: Option<ObjectRef>,
-    /// where the reference to `reference` goes — a path, as in `fields`
+    /// where the reference to `reference` goes - a path, as in `fields`
     pub reference_at: Option<String>,
 }
 
 /// What `edit-object` takes.
 #[derive(Debug, Inputs)]
 pub struct EditObjectInputs {
-    /// the object to edit — of any type
+    /// the object to edit - of any type
     pub object: ObjectIn,
 }
 
@@ -91,7 +91,7 @@ struct Step {
     index: Option<usize>,
 }
 
-/// `A.B[2].C` — refused by name when a step is empty or an index is no number.
+/// `A.B[2].C` - refused by name when a step is empty or an index is no number.
 fn parse_path(path: &str) -> Result<Vec<Step>, String> {
     let path = path.trim();
     if path.is_empty() {
@@ -108,7 +108,7 @@ fn parse_path(path: &str) -> Result<Vec<Step>, String> {
                 let index = inside
                     .trim()
                     .parse::<usize>()
-                    .map_err(|_| format!("`{part}`: `{inside}` is no rank — a list is indexed from 0"))?;
+                    .map_err(|_| format!("`{part}`: `{inside}` is no rank - a list is indexed from 0"))?;
                 (name, Some(index))
             }
         };
@@ -143,14 +143,14 @@ fn parse_field(text: &str) -> Result<(String, Vec<Step>, Value), String> {
     let value = value.trim();
     let value: Value = serde_json::from_str(value).map_err(|why| {
         format!(
-            "`{value}` is not JSON ({why}) — a text is quoted: `{} = \"{value}\"`",
+            "`{value}` is not JSON ({why}) - a text is quoted: `{} = \"{value}\"`",
             path.trim()
         )
     })?;
     Ok((path.trim().to_string(), steps, value))
 }
 
-/// A value as a note shows it — short.
+/// A value as a note shows it - short.
 fn shown(value: Option<&Value>) -> String {
     match value {
         None => "absent".to_string(),
@@ -192,7 +192,7 @@ fn set(object: &mut Value, path: &str, steps: &[Step], value: Value) -> Result<O
         Some(at) => {
             let list = map
                 .get_mut(&last.name)
-                .ok_or_else(|| format!("`{path}`: `{}` is not in the object — a rank can only be set in a list that is there", last.name))?
+                .ok_or_else(|| format!("`{path}`: `{}` is not in the object - a rank can only be set in a list that is there", last.name))?
                 .as_array_mut()
                 .ok_or_else(|| format!("`{path}`: `{}` is no list", last.name))?;
             let count = list.len();
@@ -204,7 +204,7 @@ fn set(object: &mut Value, path: &str, steps: &[Step], value: Value) -> Result<O
             })?;
             if value.is_null() {
                 return Err(format!(
-                    "`{path}`: an item of a list is not removed by `null` — set the whole list"
+                    "`{path}`: an item of a list is not removed by `null` - set the whole list"
                 ));
             }
             Ok(Some(std::mem::replace(slot, value)))
@@ -258,7 +258,7 @@ impl Operation for EditObject {
     fn about(&self) -> About {
         About {
             name: "edit-object",
-            describe: "an object of the package with fields set as told — rewritten under its own uuid, or copied under a new one",
+            describe: "an object of the package with fields set as told - rewritten under its own uuid, or copied under a new one",
             category: Category::Create,
             // Any type: the object's own.
             makes: &[],
@@ -284,7 +284,7 @@ impl Operation for EditObject {
             Refusal::on(
                 "object",
                 format!(
-                    "`{}` arrived without its content — an object is edited whole, and only the package's reader hands it over",
+                    "`{}` arrived without its content - an object is edited whole, and only the package's reader hands it over",
                     reference.title
                 ),
             )
@@ -303,7 +303,7 @@ impl Operation for EditObject {
                     return Err(Refusal::on(
                         "reference",
                         format!(
-                            "expected a DataObjectReference, got {} — a bare uuid names no type",
+                            "expected a DataObjectReference, got {} - a bare uuid names no type",
                             target.0
                         ),
                     ));
@@ -342,7 +342,7 @@ impl Operation for EditObject {
                     Some(_) => "`copy` titles the copy, and `fields` sets `Citation.Title` too: say it once"
                         .to_string(),
                     None => format!(
-                        "`Citation.Title` is not rewritten in place: every reference to `{}` holds a copy of its title, and each would go stale — copy it under the new title instead",
+                        "`Citation.Title` is not rewritten in place: every reference to `{}` holds a copy of its title, and each would go stale - copy it under the new title instead",
                         reference.title
                     ),
                 },

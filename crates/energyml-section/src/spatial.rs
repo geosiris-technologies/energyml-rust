@@ -17,7 +17,7 @@
 //!   list scanned on every query; once it outgrows a share of the tree
 //!   ([`Index::needs_rebuild`]) the next insert folds it in and rebuilds.
 //! - **Exact by construction**: a query returns every item whose box meets the
-//!   query box (closed boxes: touching counts), and **only** those — the same
+//!   query box (closed boxes: touching counts), and **only** those - the same
 //!   answer as a linear scan, in another order. The tests confront the two on
 //!   random data. What the tree saves is the boxes it never opens, not any
 //!   precision; a query by a polygon is its bounding box ([`Rect::of_points`]),
@@ -229,7 +229,7 @@ impl<T> Index<T> {
         }
     }
 
-    /// Every item whose box meets `window`, the tree's and the overflow's — the
+    /// Every item whose box meets `window`, the tree's and the overflow's - the
     /// set a linear scan gives, in no particular order.
     pub fn query(&self, window: &Rect) -> Vec<&T> {
         let mut out = Vec::new();

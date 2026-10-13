@@ -3,7 +3,7 @@
 //! # Why identity travels with the geometry
 //!
 //! An exported surface that is only a set of triangles is a dead end. The
-//! question asked of an export is almost never "what shape is this" alone — it
+//! question asked of an export is almost never "what shape is this" alone - it
 //! is "which horizon is this, which interpretation does it come from, and where
 //! do I look it up again". So a [`SceneObject`] carries the uuid and the ETP
 //! URI alongside the points, and the interpretation and feature above them when
@@ -11,7 +11,7 @@
 //!
 //! That chain is a RESQML habit worth knowing: a representation *represents* an
 //! interpretation, and an interpretation *interprets* a feature. Three objects
-//! for one horizon — the shape, the reading of it, and the thing itself. An
+//! for one horizon - the shape, the reading of it, and the thing itself. An
 //! export that drops the top two produces a file nobody can trace back.
 //!
 //! # Why the CRS is carried and not applied
@@ -44,7 +44,7 @@ pub enum Placement {
     /// Placed and normalised to metres.
     ///
     /// Fails rather than guessing when the CRS states a unit this build cannot
-    /// convert — a model in feet read as metres is 3.28 times too far out with
+    /// convert - a model in feet read as metres is 3.28 times too far out with
     /// every coordinate still looking plausible.
     Metres,
 }
@@ -89,7 +89,7 @@ states a unit this build cannot convert)"
 pub struct SceneObject {
     /// The representation's uuid.
     pub uuid: String,
-    /// Its ETP URI — what an application looks it up by.
+    /// Its ETP URI - what an application looks it up by.
     pub uri: String,
     /// Its citation title, or an empty string when it has none.
     pub title: String,
@@ -107,14 +107,14 @@ pub struct SceneObject {
     ///
     /// Empty unless the caller supplied one. Exporters write these verbatim, so
     /// the same spec produces the same keys in an OBJ comment, a GeoJSON
-    /// property and a VTK field array — one configuration, every format.
+    /// property and a VTK field array - one configuration, every format.
     pub metadata: Metadata,
     /// Values hanging on this shape: one number per node, per cell, per
     /// triangle.
     ///
     /// Empty unless the caller filled it with [`attributes_for`], because
     /// reading them means reading every property of the package and their
-    /// external arrays — which an export of pure geometry has no reason to
+    /// external arrays - which an export of pure geometry has no reason to
     /// pay for.
     pub attributes: Vec<Attribute>,
 }
@@ -122,7 +122,7 @@ pub struct SceneObject {
 /// A property's values, lined up with the points or the cells of a shape.
 ///
 /// What a viewer colours by. The scope is decided from the property's
-/// `IndexableElement` and **checked against the geometry** — a mismatch is
+/// `IndexableElement` and **checked against the geometry** - a mismatch is
 /// reported and the attribute dropped rather than written against the wrong
 /// elements, where it would draw a plausible picture of nothing.
 #[derive(Clone, Debug, PartialEq)]
@@ -142,10 +142,10 @@ pub struct Attribute {
     /// The values, widened to `f64` and in element order.
     pub values: Vec<f64>,
     /// A colour ramp for these values, sampled from the package's own colour
-    /// map when it has one: RGBA rows in 0–1, low value first.
+    /// map when it has one: RGBA rows in 0-1, low value first.
     ///
     /// Empty when the package states no colour for this property, and empty is
-    /// the right answer — the standard defines no default ramp, and inventing
+    /// the right answer - the standard defines no default ramp, and inventing
     /// one would draw a picture the file does not describe. Filled by the
     /// caller, because resolving a colour needs the whole package (see
     /// `energyml_domain::color::Cascade`).
@@ -157,7 +157,7 @@ pub struct Attribute {
 pub enum AttributeScope {
     /// One value per point.
     Points,
-    /// One value per cell — a triangle, a line segment, a hexahedron.
+    /// One value per cell - a triangle, a line segment, a hexahedron.
     Cells,
 }
 
@@ -182,12 +182,12 @@ impl SceneObject {
         self.place(points, placement)
     }
 
-    /// The shape itself, every patch placed as asked — its topology untouched.
+    /// The shape itself, every patch placed as asked - its topology untouched.
     ///
     /// What an operation computing **for the scene** must read: the scene draws
     /// the projected placement, so a geometry computed in the local frame and
     /// handed back as an artefact lands where the file's numbers are, not where
-    /// the object is drawn — offsets, rotation and the vertical flip missing.
+    /// the object is drawn - offsets, rotation and the vertical flip missing.
     /// The same `place` as every other placement here, so the two cannot drift.
     pub fn geometry_in(&self, placement: Placement) -> Result<Geometry> {
         let mut out = self.geometry.clone();
@@ -222,7 +222,7 @@ impl SceneObject {
         })
     }
 
-    /// Place points that are not part of this object's own geometry — in the
+    /// Place points that are not part of this object's own geometry - in the
     /// same coordinate system, through the same `place` every patch goes
     /// through, so a caller drawing something *alongside* the shape (a
     /// frame's head portion, `crate::well::head_portion`) cannot place it
@@ -256,7 +256,7 @@ impl SceneObject {
     /// This object drawn in the shape asked for.
     ///
     /// Borrowed when the shape is already what the object naturally is, which
-    /// is the ordinary case — [`Shape::Auto`] on anything, or a rule that
+    /// is the ordinary case - [`Shape::Auto`] on anything, or a rule that
     /// happens to agree with the file.
     ///
     /// **The points never move**, because every conversion in [`crate::shape`]
@@ -264,7 +264,7 @@ impl SceneObject {
     /// through untouched. A **cell**-scoped one may not: asking a hexahedral
     /// grid for its surface replaces a million cells with the faces around
     /// them, and there is no value per face to be had. Such an attribute is
-    /// dropped rather than written against elements it was not measured on —
+    /// dropped rather than written against elements it was not measured on -
     /// the same rule as everywhere else here, and the reason it is safe for the
     /// case that matters is that a 2D grid drawn as quadrilaterals has exactly
     /// as many cells as before, so nothing is lost there.
@@ -282,7 +282,7 @@ impl SceneObject {
         let points_before = self.geometry.point_count();
         let geometry = self.geometry.as_shape(shape)?;
 
-        // A **summary** — an outline, a centroid — replaces the points, so
+        // A **summary** - an outline, a centroid - replaces the points, so
         // nothing that hangs on them survives it. Four corners saying where a
         // horizon is cannot carry a value per node of the horizon, and keeping
         // the array would line it up against corners it was never measured on.
@@ -291,7 +291,7 @@ impl SceneObject {
         } else if geometry.cell_count() == cells_before {
             self.attributes.clone()
         } else {
-            // The points held, the cells did not — asking a hexahedral grid for
+            // The points held, the cells did not - asking a hexahedral grid for
             // its outside. A per-node property still lines up; a per-cell one
             // has no value for a face.
             self.attributes
@@ -308,7 +308,7 @@ impl SceneObject {
         }))
     }
 
-    /// This object with every node that has no position removed — or `None`
+    /// This object with every node that has no position removed - or `None`
     /// when every node has one, which is the ordinary case and costs one pass
     /// and no copy.
     ///
@@ -322,7 +322,7 @@ impl SceneObject {
     ///
     /// The attributes come along. Their values go through the same index maps
     /// the geometry was compacted with, so a property still lines up with the
-    /// elements it was written for — leaving them alone would colour the
+    /// elements it was written for - leaving them alone would colour the
     /// survivors with their neighbours' numbers, which is the worst of the three
     /// possible outcomes because it is the one that looks right.
     ///
@@ -398,7 +398,7 @@ pub fn object_of_with(
 
     let interpretation = related(representation, INTERPRETS);
     // The feature hangs off the interpretation, not the representation, so it
-    // needs one more hop through the store — and it is worth it: the feature is
+    // needs one more hop through the store - and it is worth it: the feature is
     // the name a person recognises.
     //
     // Followed by the **reference**, so the version it names is the version
@@ -426,7 +426,7 @@ pub fn object_of_with(
         // `SceneObject` in the export tests holds. It was the Rust type name,
         // so an OBJ comment, a GeoJSON property and a VTK field array all
         // carried `PointSetRepresentation` where the package says
-        // `resqml20.obj_PointSetRepresentation` — a name that does not say
+        // `resqml20.obj_PointSetRepresentation` - a name that does not say
         // which release it came from, in the one line of an export meant to
         // lead back to the package.
         qualified_type: energyml_core::json::qualified_type_of(info),
@@ -439,7 +439,7 @@ pub fn object_of_with(
     })
 }
 
-/// Where a property's colour decision comes from — **the seam that keeps this
+/// Where a property's colour decision comes from - **the seam that keeps this
 /// crate below the caches**.
 ///
 /// A scene needs *what colour the package gives this property*, and the answer
@@ -546,7 +546,7 @@ pub fn colour_ramp(
 
 /// `n - 1` interval values as `n` node values.
 ///
-/// **Each node takes exactly one interval** — the one it opens — and the
+/// **Each node takes exactly one interval** - the one it opens - and the
 /// deepest node takes the one it closes. That is what makes this a
 /// correspondence rather than a reduction: nothing is averaged, no majority is
 /// taken and there is no tie to break, which matters because these values are
@@ -576,8 +576,8 @@ fn intervals_onto_nodes(values: &[f64], components: usize, point_count: usize, s
 /// took far too long). The same quadratic shape as a front end's
 /// `colourChains` (×1 870).
 ///
-/// The grouping rule is [`energyml_domain::property::Index`]'s — case-blind
-/// `SupportingRepresentation` — not a second one written here; this keeps the
+/// The grouping rule is [`energyml_domain::property::Index`]'s - case-blind
+/// `SupportingRepresentation` - not a second one written here; this keeps the
 /// objects beside it, because [`attributes_for`] reads their values.
 pub struct PropertiesOf<'a> {
     index: energyml_domain::property::Index,
@@ -603,7 +603,7 @@ impl<'a> PropertiesOf<'a> {
         }
     }
 
-    /// The properties hanging on this representation, in package order —
+    /// The properties hanging on this representation, in package order -
     /// what to hand [`attributes_for`] for it.
     pub fn of(&self, representation_uuid: &str) -> Vec<&'a dyn Reflect> {
         self.index
@@ -613,7 +613,7 @@ impl<'a> PropertiesOf<'a> {
             .collect()
     }
 
-    /// The properties that could not be read — said once, not once per object.
+    /// The properties that could not be read - said once, not once per object.
     pub fn unread(&self) -> &[String] {
         &self.unread
     }
@@ -622,7 +622,7 @@ impl<'a> PropertiesOf<'a> {
 /// Line a package's properties up with a shape.
 ///
 /// The properties are passed in rather than searched for: nothing in a
-/// representation lists them — every link points the other way — so finding
+/// representation lists them - every link points the other way - so finding
 /// them means walking the package, which is the caller's job and not this
 /// function's (see `energyml_domain::property::Index`).
 ///
@@ -641,7 +641,7 @@ pub fn attributes_for(
     // has one value per **hexahedron**, and of a polyline set one per line.
     let cell_count = object.geometry.cell_count();
     // **One line, and only one**: a wellbore frame, whose `intervals` are its
-    // segments (RESQML 2.2 Usage Guide §4.2.1, Table 1, p. 38: *"intervals —
+    // segments (RESQML 2.2 Usage Guide §4.2.1, Table 1, p. 38: *"intervals -
     // wellbore frames, column-layer grids"*). Its geometry counts the whole
     // line as one cell, so `n - 1` interval values have no array of their
     // length until they are moved onto the nodes. A set of several lines is
@@ -678,8 +678,8 @@ pub fn attributes_for(
         let scope = match read.indexable {
             IndexableElement::Nodes => AttributeScope::Points,
             // A frame's `intervals`: the same correspondence as `intervals
-            // from datum` below. They used to go to the cells — one, the
-            // whole line — and every interval property of a frame was refused
+            // from datum` below. They used to go to the cells - one, the
+            // whole line - and every interval property of a frame was refused
             // (*« `BSS000NSYT — formation` has 3 value(s) for 1 cell(s) »*),
             // which is what the well column and its colours asked for.
             IndexableElement::Intervals if one_line => AttributeScope::Points,
@@ -697,7 +697,7 @@ pub fn attributes_for(
             // itself would put every value on one element.
             //
             // What makes this a correspondence rather than a reduction is that
-            // **each node takes exactly one interval** — the one it opens, and
+            // **each node takes exactly one interval** - the one it opens, and
             // for the deepest node the one it closes. So there is no average,
             // no majority and no tie to break, which matters because these are
             // categories: a soil type between two others is a third rock, not
@@ -743,7 +743,7 @@ pub fn attributes_for(
         // The interval → node correspondence, done before anything counts:
         // `n - 1` interval values become `n` node values, each node taking the
         // interval it opens and the deepest one the interval it closes. Only
-        // where the numbers say the property really is per segment — otherwise
+        // where the numbers say the property really is per segment - otherwise
         // the count check below is left to report the disagreement, which is
         // its job.
         let frame_intervals = read.indexable == IndexableElement::IntervalsFromDatum
@@ -756,8 +756,8 @@ pub fn attributes_for(
                 refused.push(format!(
                     "`{}` hangs on {}: its {segments} interval value(s) were moved onto \
                      the {point_count} node(s), each taking the interval below it and the \
-                     deepest one the interval above. Nothing was averaged — these are \
-                     categories — but the correspondence is this build's rule, not the \
+                     deepest one the interval above. Nothing was averaged - these are \
+                     categories - but the correspondence is this build's rule, not the \
                      standard's.",
                     read.title.as_deref().unwrap_or(&read.uuid),
                     read.indexable
@@ -771,7 +771,7 @@ pub fn attributes_for(
         };
         let mut components = read.values_per_element().max(1);
         // The corpus contains a property that declares two values per node and
-        // stores one — the producer ignoring its own
+        // stores one - the producer ignoring its own
         // `ValueCountPerIndexableElement`. The values are usable as scalars,
         // and refusing them would lose a real array over a wrong number, so
         // they are attached **as scalars with the disagreement reported**.
@@ -822,7 +822,7 @@ pub fn attributes_for(
 /// The field names a representation uses to name its interpretation.
 ///
 /// Two spellings, both in the corpus: RESQML 2.0.1 says `RepresentedInterpretation`,
-/// 2.2 says `RepresentedObject` — the second is wider, since 2.2 lets a
+/// 2.2 says `RepresentedObject` - the second is wider, since 2.2 lets a
 /// representation represent things that are not interpretations.
 const INTERPRETS: &[&str] = &["RepresentedInterpretation", "RepresentedObject"];
 
@@ -888,8 +888,8 @@ mod tests {
     ///
     /// Reported from the front end as *"`SP170 nom_geol` hangs on intervals from
     /// datum, which is neither the points nor the cells"*. The refusal was
-    /// right — a frame of `n` node depths is **one** polyline cell and `n - 1`
-    /// intervals, so there was no array of that length to attach to — and the
+    /// right - a frame of `n` node depths is **one** polyline cell and `n - 1`
+    /// intervals, so there was no array of that length to attach to - and the
     /// answer is to move the values onto the nodes rather than to invent a
     /// cell for them.
     ///
@@ -918,7 +918,7 @@ mod tests {
     /// A vector-valued property moves whole tuples, never a stride of one.
     ///
     /// Getting this wrong would shift every component by one node and produce
-    /// an array of exactly the right length — the shape of error no count check
+    /// an array of exactly the right length - the shape of error no count check
     /// can see.
     #[test]
     fn components_travel_together() {
@@ -1000,8 +1000,8 @@ pub struct Scene {
 ///
 /// # Why this is here rather than in each caller
 ///
-/// It was written three times — `energyml export`, `energyml geometry` and the
-/// Python bridge — and the three had begun to differ: the colour ramps were
+/// It was written three times - `energyml export`, `energyml geometry` and the
+/// Python bridge - and the three had begun to differ: the colour ramps were
 /// resolved by one of them and reachable from neither of the others. A piece of
 /// reading repeated in every face is a piece of reading that answers
 /// differently depending on the door somebody came in by, which is the fault
@@ -1014,7 +1014,7 @@ pub struct Scene {
 /// that exports and a viewer that draws want different answers.
 ///
 /// The source is a [`ValueSource`] and a list of summaries rather than a store,
-/// so an ETP dataspace reads the way a file does — the rule that holds for
+/// so an ETP dataspace reads the way a file does - the rule that holds for
 /// every reader here (ADR-0002).
 pub fn of_package(
     resources: &[energyml_storage::ObjectSummary],
@@ -1023,7 +1023,7 @@ pub fn of_package(
 ) -> Scene {
     // A `match` and not `unwrap_or_else`: the built-in registry is `'static`,
     // and the closure form makes the borrow checker demand that the caller's be
-    // `'static` too — which no caller holding its own registry can give.
+    // `'static` too - which no caller holding its own registry can give.
     let readers = match request.readers {
         Some(readers) => readers,
         None => crate::readers::default_readers(),
@@ -1056,7 +1056,7 @@ pub fn of_package(
             }
         };
         // Not a refusal and not a silence: a package is mostly objects that are
-        // not shapes at all — a CRS, an interpretation, a property — and
+        // not shapes at all - a CRS, an interpretation, a property - and
         // listing those as refused would bury the ones that really are.
         if !geometry::is_supported(object.as_reflect()) {
             continue;
@@ -1108,7 +1108,7 @@ fn attach(
     out.unattached.extend(by_representation.unread().iter().cloned());
 
     // The colour ramp comes from the package's own maps, so the cascade needs
-    // the whole package — which is why it is resolved here rather than by an
+    // the whole package - which is why it is resolved here rather than by an
     // exporter, which is handed one object at a time.
     // Every set, in package order, read as one (`GraphicalSet::merged`).
     let sets: Vec<energyml_domain::color::GraphicalSet> = resources

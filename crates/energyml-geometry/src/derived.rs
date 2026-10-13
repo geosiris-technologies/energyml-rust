@@ -24,8 +24,8 @@
 //! - **Flat.** `Value` is a step in the support's *node index*, so the next row
 //!   is `+Value` positions along the support's single list of nodes.
 //! - **Per axis.** `Value` is a step along *that axis* of the support, to be
-//!   multiplied by the support's stride — the number of nodes in the faster
-//!   axes — before it becomes an index.
+//!   multiplied by the support's stride - the number of nodes in the faster
+//!   axes - before it becomes an index.
 //!
 //! Both are in range on the files in the corpus, so no bounds check separates
 //! them, and both produce exactly as many points as the representation
@@ -36,13 +36,13 @@
 //! **The schema, on the start.** eml's own annotation on `StartValue` reads
 //! *"Value representing the global start for the lattice: i.e., iStart +
 //! jStart\*ni + kStart\*ni\*nj"*. So the start is a per-axis position
-//! **flattened through the support's extents** — the lattice is written in the
+//! **flattened through the support's extents** - the lattice is written in the
 //! support's index space, and the encoder is expected to know `ni`.
 //!
 //! **The standard, on the sibling type.** The entry this one needed is written
 //! out in full one section earlier, for
-//! `ParametricLineFromRepresentationLatticeArray` — the same selection over a
-//! support's *lines* instead of its nodes — and identical word for word in
+//! `ParametricLineFromRepresentationLatticeArray` - the same selection over a
+//! support's *lines* instead of its nodes - and identical word for word in
 //! 2.0.1 and 2.2:
 //!
 //! > BUSINESS RULE: The dimensions of the integer lattice array must be
@@ -54,8 +54,8 @@
 //!
 //! *Dimensions* consistent with *dimensions*: one lattice axis per axis of the
 //! support, which is the per-axis reading stated as a rule. Note that this
-//! type's own entry says something weaker — the indices must be consistent
-//! with the **size** of the support — so the rule is borrowed from the sibling
+//! type's own entry says something weaker - the indices must be consistent
+//! with the **size** of the support - so the rule is borrowed from the sibling
 //! rather than quoted from here. That is why the corpus had to settle it too.
 //!
 //! **The corpus, on the steps.** Two producers, two releases, and the same
@@ -69,7 +69,7 @@
 //! Read **per axis**, each is an exact bijection: every node of the support is
 //! selected once, which is what a horizon picked on a whole seismic survey is.
 //! ALWYN's largest index comes out at `848 × 1163 + 1162 = 987 386`, and the
-//! support holds `849 × 1163 = 987 387` nodes — the last one, exactly.
+//! support holds `849 × 1163 = 987 387` nodes - the last one, exactly.
 //!
 //! Read **flat**, ALWYN's 987 387 slots would land on 2 011 distinct nodes:
 //! `j + i`, a thin diagonal band, with the horizon's 987 387 depths stacked on
@@ -83,7 +83,7 @@
 //!
 //! If the per-axis reading runs past the end of the support, this does **not**
 //! quietly try the other one. A file that needs the other reading is a file
-//! this module has understood wrongly, and the failure says so and names both —
+//! this module has understood wrongly, and the failure says so and names both -
 //! which is worth more than a picture drawn from the second guess.
 
 use std::cell::Cell;
@@ -97,7 +97,7 @@ use crate::values::scalar_i64;
 
 /// How deep a chain of borrowed geometry may go.
 ///
-/// A support may itself borrow from a third representation — legal, and one
+/// A support may itself borrow from a third representation - legal, and one
 /// hop is what the corpus does. A support that borrows from something that
 /// borrows back is not legal and is also not detectable from one end of the
 /// chain, so the depth is capped rather than the cycle chased.
@@ -150,7 +150,7 @@ pub(crate) fn indices_on(lattice: &dyn Reflect, shape: &[usize], at: &str) -> Re
             return Err(Error::malformed(
                 at,
                 format!(
-                    "the selection reaches {index} of a support with {available} — read as a \
+                    "the selection reaches {index} of a support with {available} - read as a \
                      step along each axis of the support, which is what the standard's own \
                      business rules describe; a file meaning a step in the flat order would \
                      need a different reading and this one has not guessed at it"
@@ -200,8 +200,8 @@ pub fn read(array: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Result<V
 
     let stated = shape_of(support);
 
-    // The support's own points, evaluated once. This is the expensive line —
-    // ALWYN's support is a million-node lattice — and it is why the depth guard
+    // The support's own points, evaluated once. This is the expensive line -
+    // ALWYN's support is a million-node lattice - and it is why the depth guard
     // is a guard and not a formality.
     let points = BORROWED.with(|d| {
         d.set(depth + 1);
@@ -222,7 +222,7 @@ pub fn read(array: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Result<V
                 return Err(Error::malformed(
                     at,
                     format!(
-                        "the support {support_uri} states {shape:?} — {declared} node(s) — and \
+                        "the support {support_uri} states {shape:?} - {declared} node(s) - and \
                          evaluates to {}",
                         points.len()
                     ),
@@ -256,10 +256,10 @@ pub fn count(array: &dyn Reflect, at: &str) -> Result<usize> {
 
 /// The shape the selection picks out, slowest axis first.
 ///
-/// One axis per `Offset`, `count + 1` nodes along each — the same shape a
+/// One axis per `Offset`, `count + 1` nodes along each - the same shape a
 /// stored lattice reports, and asked for the same reason: to tell whether the
 /// z dataset laid over these points was written with the axes the other way
-/// round — see `points::lattice_dims`, which is what calls this.
+/// round - see `points::lattice_dims`, which is what calls this.
 pub fn selection_dims(array: &dyn Reflect) -> Result<Vec<usize>> {
     Ok(selection_of(array, "selection")?
         .steps
@@ -292,7 +292,7 @@ struct Selection {
     /// The first node, already flat: the schema defines it as
     /// `iStart + jStart * ni + kStart * ni * nj`.
     start: i64,
-    /// One per axis, slowest first — the same order as
+    /// One per axis, slowest first - the same order as
     /// [`crate::points`]'s lattice and as `FastestAxisCount` implies.
     steps: Vec<Step>,
 }
@@ -344,7 +344,7 @@ impl Selection {
 /// The shape of a representation's nodes, slowest axis first, when it states
 /// one.
 ///
-/// A `Grid2dRepresentation` does — `SlowestAxisCount` × `FastestAxisCount` —
+/// A `Grid2dRepresentation` does - `SlowestAxisCount` × `FastestAxisCount` -
 /// and that is the only case where a stride means anything. Everything else is
 /// one flat list of nodes, and `None` says so: a selection over two axes of
 /// something with no second axis has nothing to be combined with, and refusing
@@ -356,7 +356,7 @@ impl Selection {
 /// one is a **moved** one: resqml 2.0.1 puts the two counts inside
 /// `Grid2dPatch`, and 2.2 lifted them onto the representation. Same names, one
 /// level apart, so a reader that looks only at the object finds nothing on a
-/// 2.0.1 file — and "nothing" here means "flat list", which is a wrong answer
+/// 2.0.1 file - and "nothing" here means "flat list", which is a wrong answer
 /// rather than no answer. Both places are looked in, nearest first.
 fn shape_of(support: &dyn Reflect) -> Option<Vec<usize>> {
     let holders = [Some(support), field_object(support, "Grid2dPatch")];
@@ -369,7 +369,7 @@ fn shape_of(support: &dyn Reflect) -> Option<Vec<usize>> {
             (None, None) => {}
         }
     }
-    // Everything else — a triangulated set, a point set — is a flat list, and
+    // Everything else - a triangulated set, a point set - is a flat list, and
     // `None` says so rather than guessing a length.
     None
 }

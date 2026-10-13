@@ -1,14 +1,14 @@
-//! `earth-model-from-stratigraphy` — an earth model made from a unit or a whole
+//! `earth-model-from-stratigraphy` - an earth model made from a unit or a whole
 //! column.
 //!
 //! The package under test is written by `stratigraphy-from-geolts` from the
 //! chart extract of `support/geolts_extract.rs`, then read back as a person's
-//! package is — the unit reaches the operation through `read::known_of_object`,
+//! package is - the unit reaches the operation through `read::known_of_object`,
 //! the stratigraphy with it.
 //!
 //! **The nesting is confronted with the register.** Which stages lie under the
 //! Eocene is computed by `energyml_domain::stratigraphy::subtree` from the ages
-//! the units state; the chart states the same fact another way — the `broader`
+//! the units state; the chart states the same fact another way - the `broader`
 //! links of the BRGM's SKOS register, which the subtree never reads. The two
 //! must name the same units.
 
@@ -194,7 +194,7 @@ fn a_model_of_the_eocene_holds_what_the_register_puts_under_it() {
     register.sort();
     assert!(
         !register.is_empty(),
-        "the extract puts something under the Eocene — otherwise this proves nothing"
+        "the extract puts something under the Eocene - otherwise this proves nothing"
     );
     assert_eq!(
         held, register,
@@ -320,7 +320,7 @@ fn the_tops_and_bottoms_run_from_the_youngest_down() {
         "{order:?}"
     );
     // The Priabonian is the youngest stage: its top comes before the
-    // Bartonian's, and its bottom before the Bartonian's top — base of A, then
+    // Bartonian's, and its bottom before the Bartonian's top - base of A, then
     // top of B.
     let at = |title: &str| {
         order
@@ -342,8 +342,8 @@ fn the_tops_and_bottoms_run_from_the_youngest_down() {
 
 /// The occurrence *“expresses the units issued from the
 /// stratigraphicColumn”*. Each occurrence is confronted with the rank it
-/// names **as the domain reads that rank back from the package** —
-/// `stratigraphy::columns`, which knows nothing of occurrences — so the writer
+/// names **as the domain reads that rank back from the package** -
+/// `stratigraphy::columns`, which knows nothing of occurrences - so the writer
 /// of the occurrence and the writer of the rank are not checked by one another.
 #[test]
 fn the_model_says_which_units_exist_in_it_one_occurrence_per_rank() {
@@ -373,7 +373,7 @@ fn the_model_says_which_units_exist_in_it_one_occurrence_per_rank() {
         .expect("the model's column");
     assert!(
         model_column.ranks.len() > 1,
-        "a model of the Eocene has its series and its stages — otherwise one rank proves little"
+        "a model of the Eocene has its series and its stages - otherwise one rank proves little"
     );
 
     let occurrences = of_type(&made, "resqml22.GeologicUnitOccurrenceInterpretation");
@@ -575,8 +575,8 @@ fn two_objects_of_one_title_are_refused_by_name() {
 
 #[test]
 fn undated_units_get_their_horizons_and_no_organisation() {
-    // Without ages the stages are placed by the units the ranks share — none
-    // here — so the model holds the Eocene alone; its top and bottom are
+    // Without ages the stages are placed by the units the ranks share - none
+    // here - so the model holds the Eocene alone; its top and bottom are
     // written, and no order is claimed.
     let bag = Pieces::empty().with("from", from(hand_made(false)));
     let made = plan(OPERATION, &bag, json!({})).expect("a plan");
@@ -612,7 +612,7 @@ fn enriching_keeps_the_uuid_it_is_given_and_asks_for_one() {
         object(
             "kept-uuid",
             "resqml22.EarthModelInterpretation",
-            "Eocène — earth model",
+            "Eocène - earth model",
         ),
     );
     let made = plan(OPERATION, &bag, json!({ "mode": "enrich" })).expect("a plan");

@@ -1,4 +1,4 @@
-//! A well's stratigraphy along its MD — sections, units, colours, refusals.
+//! A well's stratigraphy along its MD - sections, units, colours, refusals.
 //!
 //! Every object is built in memory from the generated types, after the
 //! specification rather than after a package: RESQML TRG 2.2 §5.34 (p. 130)
@@ -11,12 +11,12 @@
 //!
 //! - reading an index as a position **in the package**, or in title order,
 //!   rather than in the rank's `StratigraphicUnits` (2.2) or by its declared
-//!   `Index` (2.0.1) — the ranks below list their units out of both orders;
-//! - reading a category code as a **row position** rather than a key — the
+//!   `Index` (2.0.1) - the ranks below list their units out of both orders;
+//! - reading a category code as a **row position** rather than a key - the
 //!   keys below are `10, 20, 35`, so a position lookup finds no row for any;
-//! - taking the reference's cached title over the unit's own — the ranks below
+//! - taking the reference's cached title over the unit's own - the ranks below
 //!   cache a stale one;
-//! - moving the node rule by one — the colours below differ from one section
+//! - moving the node rule by one - the colours below differ from one section
 //!   to the next, so a shifted node takes its neighbour's;
 //! - drawing a null, an out-of-rank index or two ranks' disagreement instead
 //!   of refusing it.
@@ -122,7 +122,7 @@ fn frame(
 ) -> resqml22::WellboreFrameRepresentation {
     resqml22::WellboreFrameRepresentation {
         uuid: FRAME.to_string(),
-        citation: citation("F1 — frame"),
+        citation: citation("F1 - frame"),
         node_count: mds.len() as i64,
         node_md: Some(eml23::AbstractFloatingPointArray::FloatingPointXmlArray(
             eml23::FloatingPointXmlArray {
@@ -152,7 +152,7 @@ fn mapping(rank: &str, elements: &[i64], ends: &[i64]) -> resqml22::IntervalStra
     }
 }
 
-/// A 2.2 rank listing these units **in this order** — the order an index
+/// A 2.2 rank listing these units **in this order** - the order an index
 /// counts in. The references cache a stale title on purpose.
 fn rank(uuid: &str, units: &[&str]) -> resqml22::StratigraphicColumnRankInterpretation {
     resqml22::StratigraphicColumnRankInterpretation {
@@ -184,14 +184,14 @@ fn unit(uuid: &str, title: &str) -> Box<dyn DynObject> {
     })
 }
 
-/// A `GraphicalInformationSet` giving these units these colours — written by
+/// A `GraphicalInformationSet` giving these units these colours - written by
 /// the writer the front end uses and read back by the reader, rather than built as
 /// the reader's output: what is tested is then what a package would say.
 fn graphics(colours: &[(&str, Rgba)]) -> Vec<(String, GraphicalSet)> {
     vec![(SET.to_string(), one_set(colours))]
 }
 
-/// One set, read — to hand several to [`Known::graphics`].
+/// One set, read - to hand several to [`Known::graphics`].
 fn one_set(colours: &[(&str, Rgba)]) -> GraphicalSet {
     let mut set = eml23::GraphicalInformationSet::default();
     for (uuid, rgba) in colours {
@@ -236,7 +236,7 @@ fn node_hex(strata: &Strata, missing: Rgba) -> Vec<String> {
 /// `Index`, so the index **is** the position in that list.
 #[test]
 fn sections_come_from_the_interval_units_through_the_rank() {
-    // The rank lists Priabonian, Bartonian, Lutetian — youngest first, the
+    // The rank lists Priabonian, Bartonian, Lutetian - youngest first, the
     // order `age` means. Not the order the uuids sort in, and not the order
     // the objects are added to the package below.
     let the_rank = rank(RANK, &[PRIABONIAN, BARTONIAN, LUTETIAN]);
@@ -266,8 +266,8 @@ fn sections_come_from_the_interval_units_through_the_rank() {
             ranks: vec![RANK.to_string()]
         }
     );
-    // The whole rank, in its order — a legend for every frame mapped through it
-    // — and each title the unit's own, not the stale one the rank cached.
+    // The whole rank, in its order - a legend for every frame mapped through it
+    // - and each title the unit's own, not the stale one the rank cached.
     let titles: Vec<&str> = strata.units.iter().map(|unit| unit.title.as_str()).collect();
     assert_eq!(titles, ["Priabonian", "Bartonian", "Lutetian"]);
     assert_eq!(
@@ -305,7 +305,7 @@ fn sections_come_from_the_interval_units_through_the_rank() {
 
     // Five nodes for four sections: each node takes the section it opens, the
     // deepest the one it closes. Bartonian and the null take the colour of
-    // absent values — the caller's, transparent here.
+    // absent values - the caller's, transparent here.
     assert_eq!(
         node_hex(&strata, GONE),
         ["#ff0000ff", "#00000000", "#00000000", "#0000ffff", "#0000ffff"]
@@ -384,7 +384,7 @@ fn a_unit_the_file_does_not_colour_takes_the_callers_palette_and_says_so() {
         hex(strata.node_colours_with(GONE, &palette)),
         [grey.to_hex(), GREEN.to_hex(), RED.to_hex(), RED.to_hex()]
     );
-    // No palette: what it did before — the colour of absent values.
+    // No palette: what it did before - the colour of absent values.
     assert_eq!(hex(strata.node_colours_with(GONE, &[])), node_hex(&strata, GONE));
     assert_eq!(node_hex(&strata, GONE)[..2], ["#00000000", "#00000000"]);
     assert!(
@@ -407,7 +407,7 @@ fn a_unit_the_file_does_not_colour_takes_the_callers_palette_and_says_so() {
 /// one cascade, ADR-0009): the most
 /// specific level wins, and at one level the later statement, the package's
 /// order being the order of the statements. Two sets disagreeing at that level
-/// are **said** and the colour is kept — they used to leave the unit with
+/// are **said** and the colour is kept - they used to leave the unit with
 /// none, and a recoloured unit went black in the legend.
 ///
 /// What would make it fail: reading only the first set (Bartonian is coloured
@@ -447,7 +447,7 @@ fn every_set_is_read_and_two_that_disagree_give_the_later_statement_and_say_so()
     // Bartonian's own entry, in the second set, beats its feature's in the first.
     assert_eq!(strata.units[1].colour, Some(BLUE));
     assert_eq!(strata.units[1].colour_from.as_deref(), Some(BARTONIAN));
-    // Lutetian: red in one set, blue in the other, both on the unit itself — the
+    // Lutetian: red in one set, blue in the other, both on the unit itself - the
     // later statement, the second set's, is the colour, and the other is said.
     assert_eq!(strata.units[2].colour, Some(BLUE));
     assert_eq!(strata.units[2].colour_from.as_deref(), Some(LUTETIAN));
@@ -461,7 +461,7 @@ fn every_set_is_read_and_two_that_disagree_give_the_later_statement_and_say_so()
     );
 
     // The package's order is the order of the statements: swapped, the other
-    // set is the later one — and the answer is the one the colour column gives.
+    // set is the later one - and the answer is the one the colour column gives.
     let swapped = vec![sets[1].clone(), sets[0].clone()];
     let known = Known {
         graphics: &swapped,
@@ -482,7 +482,7 @@ fn every_set_is_read_and_two_that_disagree_give_the_later_statement_and_say_so()
 /// RESQML 2.0.1: the frame spells its field `IntervalStratigraphiUnits` (the
 /// XSD's own typo), the mapping names a `StratigraphicOrganization`, the
 /// indices are one integer per interval, and the rank's units carry a declared
-/// `Index` — which the index designates, whatever their order in the list.
+/// `Index` - which the index designates, whatever their order in the list.
 #[test]
 fn a_2_0_1_frame_indexes_its_units_by_their_declared_index() {
     let dor20 = |uuid: &str, kind: &str, title: &str| energyml_eml_2_0::DataObjectReference {
@@ -633,10 +633,10 @@ fn category_package(
     };
     let property = resqml22::DiscreteProperty {
         uuid: PROPERTY.to_string(),
-        citation: citation("F1 — STRA"),
+        citation: citation("F1 - STRA"),
         indexable_element: eml23::IndexableElement::Intervals,
         value_count_per_indexable_element: vec![1],
-        supporting_representation: dor(FRAME, "resqml22.WellboreFrameRepresentation", "F1 — frame"),
+        supporting_representation: dor(FRAME, "resqml22.WellboreFrameRepresentation", "F1 - frame"),
         values_for_patch: vec![resqml22::AbstractValueArray::IntegerXmlArray(integers(values))],
         category_lookup: Some(dor(TABLE, "eml23.ColumnBasedTable", "STRA")),
         ..Default::default()
@@ -646,7 +646,7 @@ fn category_package(
 }
 
 /// Common TRG 2.3 §9.1: *"Defines a key column which make the table a lookup
-/// table."* The value is looked up in the key column — the keys here are not
+/// table."* The value is looked up in the key column - the keys here are not
 /// `0..n`, so a position lookup would find no row at all.
 #[test]
 fn a_category_is_looked_up_by_its_key_not_by_its_position() {
@@ -677,7 +677,7 @@ fn a_category_is_looked_up_by_its_key_not_by_its_position() {
         units_of(&strata),
         [Some("Bartonian"), Some("Lutetian"), Some("Priabonian"), None]
     );
-    // One unit per row, keyed on the key — what the front end's category legend
+    // One unit per row, keyed on the key - what the front end's category legend
     // keys on too.
     assert_eq!(
         strata.units.iter().map(|unit| unit.code).collect::<Vec<_>>(),
@@ -787,7 +787,7 @@ fn a_mapping_one_interval_short_is_refused() {
 }
 
 /// Two ranks naming two different units for one interval: the TRG ranks no
-/// rank above another, so the reader does not choose — and a named rank does.
+/// rank above another, so the reader does not choose - and a named rank does.
 #[test]
 fn two_ranks_that_disagree_are_ambiguous_until_one_is_named() {
     let stages = rank(RANK, &[BARTONIAN]);
@@ -838,8 +838,8 @@ fn two_ranks_that_disagree_are_ambiguous_until_one_is_named() {
         }
     );
 
-    // Where they do **not** disagree — a mapping per rank, each interval named
-    // by one of them — the two merge, which is how a package written by
+    // Where they do **not** disagree - a mapping per rank, each interval named
+    // by one of them - the two merge, which is how a package written by
     // `wells-and-properties-from-table` maps its passes.
     let merged = frame(
         &[0.0, 10.0, 20.0],

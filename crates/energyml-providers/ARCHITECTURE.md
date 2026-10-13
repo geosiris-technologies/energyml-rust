@@ -1,4 +1,4 @@
-# energyml-providers — architecture
+# energyml-providers - architecture
 
 Related decisions: [ADR 0005](../../docs/adr/0005-refuse-rather-than-draw.md), [ADR 0006](../../docs/adr/0006-registries-rather-than-match.md), [ADR 0011](../../docs/adr/0011-tests-follow-the-specification.md), [ADR 0012](../../docs/adr/0012-no-face-carries-logic.md).
 

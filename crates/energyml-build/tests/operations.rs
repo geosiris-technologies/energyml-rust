@@ -114,7 +114,7 @@ fn a_feature_collection_offers_sigeol_and_suggests_the_stage_from_the_file_name(
         .iter()
         .find(|s| s.name == "stage")
         .expect("the stage slot");
-    // The one fact that is not in the file, read off its name — and still a
+    // The one fact that is not in the file, read off its name - and still a
     // slot, so that a file named otherwise asks for it.
     assert_eq!(stage.suggested, Some(json!("Bartonien")));
     assert!(stage.is_required());
@@ -173,7 +173,7 @@ fn a_polyline() -> Pieces {
 #[test]
 fn the_two_halves_of_the_frame_are_declared_alternatives() {
     // The feedback: a form asked for a crs **and** epsgCodes at once. What
-    // fixes it is the declaration, and it is what is read here — a
+    // fixes it is the declaration, and it is what is read here - a
     // form that hid things at random would pass this test, and a module that
     // excluded nothing would too. To make it turn red: remove a `when` from
     // `common_slots`.
@@ -241,7 +241,7 @@ fn a_suggestion_suffices_to_satisfy_a_slot_that_depends_on_it() {
 #[test]
 fn an_empty_that_creates_says_so() {
     // The question was whether the interpretation could also be offered for
-    // creation, with its feature, and the two linked — the operation already did, and nothing said so.
+    // creation, with its feature, and the two linked - the operation already did, and nothing said so.
     // This test is what keeps the sentence: an `Otherwise::Nothing` here would make
     // the form read *you may do without*.
     let registry = Registry::new();
@@ -260,7 +260,7 @@ fn an_empty_that_creates_says_so() {
     );
     let datum = needs.iter().find(|s| s.name == "datum").unwrap();
     // **Two forms since 24/09**, and the frame decides:
-    // in the compound that a geometry names — common TRG v2.3 §13.25, p. 371 —
+    // in the compound that a geometry names - common TRG v2.3 §13.25, p. 371 -
     // or, under a `ProjectedCrs` taken as it stands, in it and its vertical
     // (§13.24, p. 370). Declaring only one, the old one, promised the
     // form an object that the plan no longer writes under a compound.
@@ -292,7 +292,7 @@ fn an_activity_records_what_the_run_was_told_and_returns_it() {
     // was typed would not be a provenance.
     //
     // To make it turn red: let each operation choose what it
-    // records, which was the case before — the activity of a well said
+    // records, which was the case before - the activity of a well said
     // `sourceEpsg` and not `ground`.
     let registry = Registry::new();
     let choices = Choices::new().set("epsg", 2154).set("title", "Lambert-93");
@@ -325,7 +325,7 @@ fn an_activity_records_what_the_run_was_told_and_returns_it() {
     assert_eq!(of("epsg"), Some(json!(2154)));
     assert_eq!(of("title"), Some(json!("Lambert-93")));
     // A flag: eml 2.3 has none, so it travels as text and comes back
-    // as a boolean — the conversion is in `coerce`, not in the caller.
+    // as a boolean - the conversion is in `coerce`, not in the caller.
     assert_eq!(
         of("projected"),
         Some(json!(true)),
@@ -363,7 +363,7 @@ fn a_suggestion_fills_what_was_left_out_and_a_wrong_shape_is_refused() {
         .expect("projected by suggestion");
     assert_eq!(plan.objects[0].qualified_type, "eml23.ProjectedCrs");
     // And, `projected` suggested true, the frame a geometry names is the
-    // compound over it — not the `ProjectedCrs`, which is what this line alone
+    // compound over it - not the `ProjectedCrs`, which is what this line alone
     // said until 24/09 (RESQML TRG 2.2 §3.1, p. 22).
     assert_eq!(
         plan.of_role("crs")
@@ -394,8 +394,8 @@ fn crs_makes_the_two_halves_and_the_compound_that_joins_them_named_the_same_twic
     // To break: a uuid drawn from a clock or a random source.
     //
     // **Four objects over metres, since 24/09.** The test said two: the
-    // `ProjectedCrs` and the `VerticalCrs`, and a geometry named the first —
-    // against RESQML TRG 2.2 §3.1 p. 22, *“From: AbstractGeometry.LocalCrs —
+    // `ProjectedCrs` and the `VerticalCrs`, and a geometry named the first -
+    // against RESQML TRG 2.2 §3.1 p. 22, *“From: AbstractGeometry.LocalCrs -
     // To: LocalEngineeringCompoundCrs”*, and leaving the vertical referenced
     // by nothing. The two halves keep their
     // order and their names; the plane and the compound follow them.
@@ -438,7 +438,7 @@ fn crs_makes_the_two_halves_and_the_compound_that_joins_them_named_the_same_twic
         once.objects[2].json["OriginProjectedCrs"]["uuid"],
         json!(once.objects[0].uuid)
     );
-    // Degrees, when asked — and 2154 is no geographic code, so the degrees are
+    // Degrees, when asked - and 2154 is no geographic code, so the degrees are
     // asked of 4326. No compound over degrees (CRS.xsd l. 504): the two halves,
     // the geographic one named, and the plan says it is the named exception.
     let degrees = registry
@@ -507,8 +507,8 @@ fn given_uuids_are_taken_in_the_plans_order_and_too_few_is_refused() {
 #[test]
 fn crs_writes_an_origin_an_azimuth_and_a_vertical_origin_where_the_schema_puts_them() {
     // A plane turned 30° from grid north,
-    // its origin near a platform, a depth axis, and a vertical origin — in the
-    // vertical system, its sense and unit (CRS.xsd l. 517–520). To break: an
+    // its origin near a platform, a depth axis, and a vertical origin - in the
+    // vertical system, its sense and unit (CRS.xsd l. 517-520). To break: an
     // argument dropped on the way to `crs::build`, which would write the
     // identity and read back as a frame nobody asked for.
     let plan = Registry::new()
@@ -547,7 +547,7 @@ fn crs_writes_an_origin_an_azimuth_and_a_vertical_origin_where_the_schema_puts_t
 fn two_axes_on_one_code_share_the_halves_and_the_plane_and_differ_by_the_compound() {
     // What the recipe of Lutetia leans on (an origin, an azimuth and a time axis over the base systems):
     // a depth frame and a time frame over Lambert-93 and NGF-IGN69 are **one**
-    // projected system, one vertical, one plane — and two compounds. To break:
+    // projected system, one vertical, one plane - and two compounds. To break:
     // the axis left out of the compound's seed (the second run overwrites the
     // first), or put in the plane's (two planes where there is one).
     let registry = Registry::new();
@@ -577,7 +577,7 @@ fn two_axes_on_one_code_share_the_halves_and_the_plane_and_differ_by_the_compoun
     }
     assert_ne!(uuid(&depth, "crs"), uuid(&time, "crs"));
     // The time axis counts down in the unit `timeUom` defaults to, `IsTime` set;
-    // the vertical system stays a length — a top-level one can be nothing else
+    // the vertical system stays a length - a top-level one can be nothing else
     // (CRS.xsd l. 677).
     let axis = &time.of_role("crs").next().unwrap().json["VerticalAxis"];
     assert_eq!(
@@ -684,7 +684,7 @@ fn crs_applies_into_an_empty_package_with_its_template_and_activity() {
         made.invalid
     );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
-    // Four objects — the two halves, the plane and the compound, since 24/09 —
+    // Four objects - the two halves, the plane and the compound, since 24/09 -
     // the template, the activity. The count was four when `crs` wrote two, and
     // it is `apply` that parses each object into its generated type: an
     // embedded `OriginProjectedCrs` or a `VerticalAxis` spelt wrong is refused
@@ -705,18 +705,18 @@ fn crs_applies_into_an_empty_package_with_its_template_and_activity() {
     // Nothing was there: the first writing replaces nothing.
     assert!(made.replaced.is_empty(), "{:?}", made.replaced);
 
-    // Applied again, the template is not inserted twice — and the objects are
+    // Applied again, the template is not inserted twice - and the objects are
     // the same, so the package does not grow a second CRS.
     let again = apply(&plan, &mut store, &when());
     assert!(again.refused.is_empty(), "{:?}", again.refused);
     assert_eq!(again.written.len(), 5, "{:?}", again.written);
     // **And the second says so.** Identity is derived, so replaying replaces
-    // its own objects — it is intended, and it is precisely why it is
+    // its own objects - it is intended, and it is precisely why it is
     // counted: overwriting those of *another* run has the same shape, and nobody
     // would see it otherwise.
     // The four CRS **and the activity**: an activity is new on each run
     // because its uuid derives from the instant, and this test freezes one. That is what
-    // makes it useful here — it shows that the count follows the derived identity
+    // makes it useful here - it shows that the count follows the derived identity
     // and nothing else.
     assert_eq!(
         again.replaced.len(),
@@ -730,13 +730,13 @@ fn crs_applies_into_an_empty_package_with_its_template_and_activity() {
 ///
 /// The triangulation that the reference model asks for, and the one that could
 /// not pass before: a point set written from a GeoJSON named the `ProjectedCrs`,
-/// so its frame read back with a horizontal code and **no vertical one** — the
+/// so its frame read back with a horizontal code and **no vertical one** - the
 /// `VerticalCrs` was in the package, referenced by nothing. Two independent
 /// sources of one fact: the codes the run was told, and what
 /// `energyml_domain::crs::of` reads off the written representation, through the
 /// references the package holds.
 ///
-/// To break: `Built::reference` pointing at the `ProjectedCrs` again — the
+/// To break: `Built::reference` pointing at the `ProjectedCrs` again - the
 /// vertical code comes back `None`.
 #[test]
 fn a_written_point_set_names_a_frame_whose_two_codes_read_back() {
@@ -798,8 +798,8 @@ fn a_written_point_set_names_a_frame_whose_two_codes_read_back() {
     assert!(frame.is_identity(), "{frame:?}");
 }
 
-/// **An origin, an azimuth and a time axis written by `crs` read back as such**
-/// — the two lines of the reference model's steps: *the time frame read back as time;
+/// **An origin, an azimuth and a time axis written by `crs` read back as such** -
+/// the two lines of the reference model's steps: *the time frame read back as time;
 /// the frame read back with its azimuth of 30°*. The writer and `energyml_domain::crs`'s
 /// reader are the two sources; the XSD is the arbiter of what each field means.
 #[test]
@@ -851,15 +851,15 @@ fn a_turned_and_offset_frame_and_a_time_frame_read_back_as_written() {
     assert_eq!(frame.projected.epsg(), Some(2154));
     assert_eq!(frame.vertical.epsg(), Some(5720));
     // An azimuth of 30° clockwise from grid north is the local Y axis pointing
-    // N30E — RESQML 2.0.1 `Common.xsd` l. 136–145 for the sense. So the local
+    // N30E - RESQML 2.0.1 `Common.xsd` l. 136-145 for the sense. So the local
     // point (0, 100, 0) sits 100 m along N30E from the origin, whatever
     // convention the reader keeps internally: the assertion is on the place.
     let [x, y, _] = frame.to_projected([0.0, 100.0, 0.0]);
     let (sin, cos) = 30f64.to_radians().sin_cos();
     assert!((x - (651_000.0 + 100.0 * sin)).abs() < 1e-6, "x = {x}");
     assert!((y - (6_862_000.0 + 100.0 * cos)).abs() < 1e-6, "y = {y}");
-    // The axis counts down, and its origin is 35 m **above** the datum — in the
-    // vertical system's sense (CRS.xsd l. 517–520): a local depth of 10 is an
+    // The axis counts down, and its origin is 35 m **above** the datum - in the
+    // vertical system's sense (CRS.xsd l. 517-520): a local depth of 10 is an
     // elevation of 25.
     assert!(!frame.is_time());
     let [_, _, elevation] = frame.to_projected([0.0, 0.0, 10.0]);
@@ -891,7 +891,7 @@ fn sigeol_plans_the_same_objects_the_writer_made_and_counts_what_it_dropped() {
         .expect("planned by suggestion alone");
     let roles: Vec<&str> = plan.objects.iter().map(|o| o.role.as_str()).collect();
     // Two CRS, the table, then feature / interpretation / representation /
-    // property per group — two groups: a Bartonien bottom and a Bartonien top.
+    // property per group - two groups: a Bartonien bottom and a Bartonien top.
     assert_eq!(&roles[..3], &["crs", "vertical-crs", "table"]);
     assert_eq!(roles.len(), 3 + 2 * 4, "{roles:?}");
     assert_eq!(plan.datasets.len(), 2);
@@ -976,10 +976,10 @@ fn names_a_release(why: &str) -> bool {
     .any(|word| why.to_lowercase().contains(word))
 }
 
-/// **No `Unfit` mentions a release** — the control the specification asks for.
+/// **No `Unfit` mentions a release** - the control the specification asks for.
 ///
 /// `Unfit` was carrying refusals of two natures: *this operation has nothing to
-/// do with this input* — an `outline` over a number — and *this input could not
+/// do with this input* - an `outline` over a number - and *this input could not
 /// be written here*. Only the first is an inaptitude; the second is a condition
 /// of writing, and it belongs to `Plan::blocked`. An offer marked unfit for the
 /// second reason is the defect reported on Volve: the operation computed five
@@ -988,11 +988,11 @@ fn names_a_release(why: &str) -> bool {
 /// # What would have to break for it to go red
 ///
 /// A `fitness` that looks at the qualified type of a known object and refuses
-/// an older release — which is exactly what `support.rs` did until 11/09, and
+/// an older release - which is exactly what `support.rs` did until 11/09, and
 /// what a future operation writing 2.2 objects is tempted to do again.
 #[test]
 fn no_unfitness_names_a_release() {
-    // The bag that tempts it: everything a 2.0.1 package hands over — the
+    // The bag that tempts it: everything a 2.0.1 package hands over - the
     // object, its CRS, and a shape of it.
     let old = Pieces::empty()
         .with(
@@ -1057,7 +1057,7 @@ fn no_unfitness_names_a_release() {
 /// `takes()` says what an operation takes; `fitness()` judges a bag. They are
 /// two statements of the same fact, and nothing linked them: an operation could
 /// declare *a triangulated shape* and refuse a triangulated shape, or
-/// the reverse — a form would then have asked for exactly what the module
+/// the reverse - a form would then have asked for exactly what the module
 /// allait rejeter.
 ///
 /// The check builds, for each operation, **the bag that its own declaration
@@ -1072,7 +1072,7 @@ fn no_unfitness_names_a_release() {
 /// The operations whose refusal is about the **content** of a piece, and not
 /// about its kind.
 ///
-/// `Takes` says a piece kind and, for a shape, the expected topology —
+/// `Takes` says a piece kind and, for a shape, the expected topology -
 /// it is a **filter**, which sorts the list of the form; the refusal stays
 /// with `fitness`, which alone sees the whole bag. `sigeol-units` does take a
 /// collection of features, and requires in addition a GeoSciML vocabulary inside:
@@ -1086,7 +1086,7 @@ fn no_unfitness_names_a_release() {
 /// `sigeol-boreholes` is that second entry, and it is **exactly the same case**,
 /// not a neighbouring one: it takes a collection of features and requires a
 /// GeoSciML `Borehole` inside. Both read the same format and part ways on
-/// the vocabulary that format carries — which a piece kind cannot
+/// the vocabulary that format carries - which a piece kind cannot
 /// say, since both take the same kind. Inventing a `borehole-features` kind
 /// for it would make `Source::kind` a second vocabulary, the very one
 /// that the specification refuses; and writing it here is what keeps the
@@ -1148,7 +1148,7 @@ fn a_pure_creation_declares_no_input() {
     //
     // - `stratigraphy-from-geolts` (24/09): its material is the BRGM chart
     //   that the library embeds (`energyml_domain::geolts`), and what it is
-    //   told is **which branches** — a setting, not an input of the
+    //   told is **which branches** - a setting, not an input of the
     //   scene;
     // - `business-associate` (25/09): an organisation is named, it is not read
     //   from any piece of the scene.
@@ -1168,7 +1168,7 @@ fn a_pure_creation_declares_no_input() {
 ///
 /// The activity already records its inputs as such; declaring them also
 /// in the projection would make the same thing an input *and* a setting, and
-/// `template.rs` compares by title — the two would read as a disagreement of
+/// `template.rs` compares by title - the two would read as a disagreement of
 /// direction. That is why `takes()` is separate from `needs()`.
 #[test]
 fn inputs_do_not_pass_into_the_template() {
@@ -1186,7 +1186,7 @@ fn inputs_do_not_pass_into_the_template() {
     }
 }
 
-/// The bag that this declaration describes — to confront `takes` and `fitness`.
+/// The bag that this declaration describes - to confront `takes` and `fitness`.
 /// An OSDU template entry, for [`bag_for`].
 fn column(name: &str, uuid: &str) -> serde_json::Value {
     json!({
@@ -1226,7 +1226,7 @@ fn bag_for(takes: &[energyml_build::operation::Slot]) -> Pieces {
         // **As many values as the floor asks for**, named as the front end
         // names them: `surfaces`, `surfaces 2`. One was enough as long as
         // all the operations were `1..1`; the first that asks for
-        // two — `cross-section` — made this check red for a reason that
+        // two - `cross-section` - made this check red for a reason that
         // was not its own. It is also the first time that the cardinality
         // declared on 11/09 is **exercised** by a check.
         let how_many = slot.least.max(1) as usize;
@@ -1235,7 +1235,7 @@ fn bag_for(takes: &[energyml_build::operation::Slot]) -> Pieces {
                 let (points, topology) = match wants.topology {
                     Some("triangles") => (square(), Topology::Triangles(vec![[0, 1, 2], [0, 2, 3]])),
                     Some("polylines") => (square(), Topology::Polylines(vec![4])),
-                    // A 2 × 2 lattice, row by row, the fast axis along x —
+                    // A 2 × 2 lattice, row by row, the fast axis along x -
                     // `horizon-from-law` (24/09) declares `grid`, and a point
                     // cloud in its place is refused at the offer.
                     Some("grid") => (
@@ -1251,7 +1251,7 @@ fn bag_for(takes: &[energyml_build::operation::Slot]) -> Pieces {
                         },
                     ),
                     // One corner-point cell, its eight corners `i` fastest,
-                    // then `j`, then the level — `grid-properties` and
+                    // then `j`, then the level - `grid-properties` and
                     // `local-grid` (28/09) declare cells, and read them.
                     Some("hexahedra") => (
                         vec![
@@ -1301,7 +1301,7 @@ fn bag_for(takes: &[energyml_build::operation::Slot]) -> Pieces {
             //
             // Not building it here would have exempted `wells-from-table` from the
             // check by filing it under `CONTENT_REFUSERS`, which would have been
-            // wrong: what it requires — that the template name the roles — is
+            // wrong: what it requires - that the template name the roles - is
             // carried by the piece itself, where a GeoSciML vocabulary is
             // buried in the features.
             "table" => {
@@ -1343,7 +1343,7 @@ F1,650000,6800000,120,25
                 levels: vec![0.0, 10.0, 20.0],
                 colours: vec![hsv(0.0), hsv(120.0), hsv(240.0)],
             },
-            // **An object of the package, of the first type that the slot declares** —
+            // **An object of the package, of the first type that the slot declares** -
             // or of any type if the slot takes them all. `collection`
             // (24/09) is the first operation whose object input is
             // required without `every`: without this case, the bag stayed empty and the
@@ -1362,7 +1362,7 @@ F1,650000,6800000,120,25
                 }),
                 ..Default::default()
             }),
-            // A file carried as it is — `media` (25/09), the only operation
+            // A file carried as it is - `media` (25/09), the only operation
             // that takes one.
             "document" => Source::Document {
                 name: "README.md".to_string(),
@@ -1372,7 +1372,7 @@ F1,650000,6800000,120,25
             _ => continue,
         };
         // **A shape whose slot names types is an object of the package**,
-        // and it arrives with its companion `X (object)` — what
+        // and it arrives with its companion `X (object)` - what
         // `read::in_slot` writes. `export-media` (25/09) is the first to
         // refuse without it: a file linked to what it shows needs a uuid, and
         // an artefact has none. Without this case, the check went red for a
@@ -1412,14 +1412,14 @@ F1,650000,6800000,120,25
 /// check it.
 ///
 /// Nobody had checked it. The `sourceEpsg` slot announced an
-/// `eml23.LocalEngineeringCompoundCrs` that `crs::built` did not write — seen
+/// `eml23.LocalEngineeringCompoundCrs` that `crs::built` did not write - seen
 /// on 21/09 by **counting the types written** by an import of 936 boreholes: a
 /// `ProjectedCrs`, a `VerticalCrs`, no compound. Since 24/09 the
 /// compound is written (RESQML TRG 2.2 §3.1 p. 22), it came back into the
 /// declaration, and this check requires both directions: nothing written that is not
 /// declared, nothing declared that no path writes.
 ///
-/// The confrontation is therefore against a **plan**, never against `makes()` — which
+/// The confrontation is therefore against a **plan**, never against `makes()` - which
 /// only lists what the operation produces by itself, not what its frame
 /// makes. That was the first attempt, and it went red for the wrong reason.
 #[test]
@@ -1457,7 +1457,7 @@ fn what_a_slot_declares_it_creates_is_what_the_plan_writes() {
     // system in metres, projected or taken as it stands (without `project`, the target is
     // the source), writes the compound; degrees write their
     // `Geographic2dCrs`, the named exception. Together they must write
-    // **everything** that the slot declares — the converse of the contract, held in full
+    // **everything** that the slot declares - the converse of the contract, held in full
     // rather than by an "at least one horizontal".
     let mut seen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for (source, project) in [(2154, Some(2154)), (2154, None), (4326, None)] {

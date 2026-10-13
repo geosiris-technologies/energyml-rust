@@ -5,7 +5,7 @@
 //! produces a package that opens, lists an object, and places it nowhere.
 //!
 //! So the checks are about what came **along**, and one of them walks the
-//! arrived package with `references` — each object's own DORs — rather than
+//! arrived package with `references` - each object's own DORs - rather than
 //! with the graph the copy closed on. Two walks, written apart, and the second
 //! is what would catch the first getting it wrong.
 
@@ -46,7 +46,7 @@ fn a_surface_arrives_with_what_it_needs_and_the_rest_is_said() {
 
     // **The point of the whole operation.** One object was asked for and more
     // than one arrived; a copy that took only what was named would leave a
-    // representation with no interpretation and no CRS — an object that opens
+    // representation with no interpretation and no CRS - an object that opens
     // and means nothing.
     assert!(done.objects.contains(&surface.uri), "what was asked for is there");
     assert!(
@@ -98,7 +98,7 @@ fn what_arrives_is_closed_and_a_second_reader_says_so() {
     for uri in into.objects().into_iter().map(|one| one.uri) {
         for link in into.references(&uri).expect("references answer") {
             // A reference into nothing is only acceptable if the *source* had
-            // it too — a copy is not answerable for a package that was already
+            // it too - a copy is not answerable for a package that was already
             // naming what it did not hold.
             if !link.present {
                 let in_source = from.find(None, None).into_iter().any(|one| one.uuid == link.uuid);
@@ -135,14 +135,14 @@ fn the_numbers_that_arrive_are_the_numbers_that_left() {
         .expect("the copy is made");
 
     // Number for number, through two different files. A copy that wrote the
-    // right count of wrong numbers — a transposed shape, a widened type —
+    // right count of wrong numbers - a transposed shape, a widened type -
     // would pass every other check here.
     let (there, before) = from.read_array(first).expect("the source reads");
     let (here, after) = into.read_array(first).expect("the copy reads");
     assert_eq!(here.dimensions, there.dimensions, "the shape travelled");
     assert_eq!(here.element_type, there.element_type, "and the type");
     // `assert_eq!` on the block compares the variant too, so this says the
-    // type did not widen on the way — the triangles of this corpus are
+    // type did not widen on the way - the triangles of this corpus are
     // `int8`, and an `int64` copy of them would still hold the right numbers.
     assert_eq!(after, before, "and every value, in the same type");
 }

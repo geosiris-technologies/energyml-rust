@@ -5,7 +5,7 @@
 //! a place between them. For a pillar that means "the same pillar, at depth
 //! 300, then 500"; for a wellbore it means measured depth along the hole.
 //!
-//! That buys real compactness — a grid of a million cells shares its pillars —
+//! That buys real compactness - a grid of a million cells shares its pillars -
 //! and it costs an evaluation that has to know what kind of line each one is.
 //!
 //! # The kinds
@@ -23,12 +23,12 @@
 //! | 4 | Z linear cubic spline |
 //! | 5 | minimum-curvature spline |
 //!
-//! **This table was wrong here until 01/08.** It was written shifted by one —
-//! −1 read as vertical, 0 as linear — which made the four splines refuse under
+//! **This table was wrong here until 01/08.** It was written shifted by one -
+//! −1 read as vertical, 0 as linear - which made the four splines refuse under
 //! each other's names and, worse, made kind 1 (a *linear* spline, the simplest
 //! thing in the list) refuse as "a natural cubic spline". The corpus settles
 //! it: `testingPackageCpp`'s trajectory `acd2cdcf` declares kind 0 and holds a
-//! line whose x and y never move — a vertical well, not a linear spline — and
+//! line whose x and y never move - a vertical well, not a linear spline - and
 //! grid `3ce91933` declares kinds 1, 4, 0, 0, 0, 0 for six pillars of which
 //! four have a single control point, which only a *vertical* reading of 0
 //! makes sense of.
@@ -37,14 +37,14 @@
 //!
 //! **Vertical.** *"Control points are (X,Y,-). Parameter values are
 //! interpreted as depth => (X,Y,Z), **where the depth to Z conversion depends
-//! on the vertical CRS direction**."* — RESQML TRG v2.2 §3.8, word for word,
+//! on the vertical CRS direction**."* - RESQML TRG v2.2 §3.8, word for word,
 //! and identical in the 2.0.1 guide. So x and y come from the control point,
 //! and the parameter becomes the third coordinate **through the CRS**: a
 //! depth-positive-down system stores the depth as it stands, an
 //! elevation-positive-up one stores its negation. See [`Vertical`] for the
 //! defect that clause exists to prevent, which was live here until 06/08.
 //! A line left with a single control point
-//! after padding is read this way whatever its declared kind — there is
+//! after padding is read this way whatever its declared kind - there is
 //! nothing to interpolate between.
 //!
 //! **Linear.** Piecewise linear in the parameter.
@@ -56,7 +56,7 @@
 //! to a straight segment, which is the schema's own special case (1).
 //!
 //! **Z linear cubic.** *"(X,Y) follow a natural cubic spline and Z follows a
-//! linear spline."* Exactly that — the same spline as above for two of the
+//! linear spline."* Exactly that - the same spline as above for two of the
 //! three components.
 //!
 //! **Tangential cubic.** Cubic Hermite: values and *first* derivatives at the
@@ -64,14 +64,14 @@
 //! When it does not, the schema says to compute them *"from the control point
 //! data using a quadratic fit to the control point and the two adjacent
 //! control points (if internal) or, if at an edge, by a vanishing second
-//! derivative"* — which is what `derived_tangents` does below, and which is why
+//! derivative"* - which is what `derived_tangents` does below, and which is why
 //! the fallback "reduces locally to a natural spline".
 //!
 //! **Minimum curvature.** *"Interpolating minimum-curvature basis functions
 //! obtained by a circular arc construction. This differs from the 'drilling'
 //! algorithm in which the parameter must be arc length."* Between two knots
 //! the direction is rotated from one tangent to the other at a constant rate,
-//! and the position is its integral — the arc of a circle. Where the data is
+//! and the position is its integral - the arc of a circle. Where the data is
 //! arc-consistent this reproduces the drilling formula exactly, dogleg angle
 //! and ratio factor included; where it is not, the arc would miss the far
 //! knot, so a linear term closes the gap. That closing term is **a choice, not
@@ -82,7 +82,7 @@
 //! **Checked against the Technical Usage Guide on 05/09, and it stays a
 //! choice.** §5.3.5 poses the problem the other way round: given a station, a
 //! parameter step and two tangents, *"what is the position of the next
-//! station"* — the far knot is an **output** there, so an arc that misses it
+//! station"* - the far knot is an **output** there, so an arc that misses it
 //! cannot arise and the guide has nothing to say about it. In a RESQML
 //! parametric line every knot carries a stated control point, so the file can
 //! and does state a position the arc does not reach. The gap is real, the
@@ -96,7 +96,7 @@
 //! `KnotCount` is *"typically chosen to be the maximum number of control
 //! points … on any parametric line"*, and shorter lines are *"pad\[ded\] with
 //! NaN values"*. So a line's real length is its leading run of finite control
-//! points, and everything downstream — the spline solve above all — sees only
+//! points, and everything downstream - the spline solve above all - sees only
 //! that. Reading the padding as data puts NaN in the tridiagonal system and
 //! poisons the whole line.
 //!
@@ -117,12 +117,12 @@
 //!
 //! `isBounded` exists in neither schema, so no file can ask for truncation:
 //! the "otherwise" branch is the only readable one. This reader clamped until
-//! 16/09/2026, which was reading a flag nobody can write — and it showed on a
+//! 16/09/2026, which was reading a flag nobody can write - and it showed on a
 //! real grid. In Volve's `Volve_SGrid` (100 × 186 × 50, 54 927 split
 //! coordinate lines), **90 738 of 3 764 514 parameters lie outside their
 //! line's control points, 72 384 of them on split lines**: exactly the fault
 //! zones. Clamped, the cells on one side of a fault collapsed onto the
-//! pillar's last control point — up to 130 m off — and the grid drew faces
+//! pillar's last control point - up to 130 m off - and the grid drew faces
 //! bridging the throw. Read as the standard says, those cells land where the
 //! HDF5 puts them (checked point by point against a reading in Python).
 
@@ -142,12 +142,12 @@ const TINY: f64 = 1e-12;
 /// # The bug this type exists to end
 ///
 /// A **vertical** parametric line stores no z: the parameter *is* the depth,
-/// and the standard says in one clause how to turn it into a coordinate —
+/// and the standard says in one clause how to turn it into a coordinate -
 /// *"the depth to Z conversion depends on the vertical CRS direction"*. This
 /// module used to write `z = parameter` and stop there, which is right for a
 /// `ZIncreasingDownward` system and **mirrors the line about the datum** in an
 /// elevation system: a well drawn going up, its logs with it, while every
-/// surface of the same package — whose points are stored, not computed — stayed
+/// surface of the same package - whose points are stored, not computed - stayed
 /// where it belonged. Reported on a model built from BRGM well data, where the
 /// wells hung above the horizons they were made from.
 ///
@@ -155,7 +155,7 @@ const TINY: f64 = 1e-12;
 /// [`energyml_domain::crs::Crs::to_projected`]: the placement layer turns local
 /// coordinates into projected ones and runs **once**, on everything. Doing the
 /// depth-to-z conversion there as well would flip the line a second time. What
-/// happens here is the earlier question — *what number does this file mean* —
+/// happens here is the earlier question - *what number does this file mean* -
 /// and the reader is the only one that can answer it, because only the reader
 /// knows the parameter was a depth.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -178,7 +178,7 @@ impl Vertical {
     /// What a CRS says, or the reading to take when nothing says anything.
     ///
     /// A geometry naming no CRS, or naming one this package does not hold, has
-    /// stated no direction — and nothing downstream will place it either, since
+    /// stated no direction - and nothing downstream will place it either, since
     /// `SceneObject::place` leaves points alone when there is no CRS. Both ends
     /// then agree to leave the file's own numbers as they are, which is what
     /// `Down` means here: the parameter is a depth and stays one.
@@ -201,19 +201,19 @@ impl Vertical {
 /// The interpolation of one parametric line.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Kind {
-    /// −1 — the line does not exist. Its points have no position.
+    /// −1 - the line does not exist. Its points have no position.
     Null,
-    /// 0 — x and y from the control point, the parameter is the third coordinate.
+    /// 0 - x and y from the control point, the parameter is the third coordinate.
     Vertical,
-    /// 1 — piecewise linear in the parameter.
+    /// 1 - piecewise linear in the parameter.
     Linear,
-    /// 2 — natural cubic spline.
+    /// 2 - natural cubic spline.
     NaturalCubic,
-    /// 3 — cubic Hermite through the tangents.
+    /// 3 - cubic Hermite through the tangents.
     TangentialCubic,
-    /// 4 — x and y natural cubic, z piecewise linear.
+    /// 4 - x and y natural cubic, z piecewise linear.
     ZLinearCubic,
-    /// 5 — circular-arc minimum curvature.
+    /// 5 - circular-arc minimum curvature.
     MinimumCurvature,
 }
 
@@ -247,7 +247,7 @@ impl Kind {
 ///
 /// The points are taken to be laid out over the array's **own** lines, one slot
 /// per line per level. That holds whenever a thing has as many coordinate lines
-/// as parametric ones — which is every case but a faulted grid. For that one,
+/// as parametric ones - which is every case but a faulted grid. For that one,
 /// see [`read_on_lines`].
 pub fn read(
     array: &dyn Reflect,
@@ -264,18 +264,18 @@ pub fn read(
 /// `on[c]` is the parametric line that coordinate line `c` evaluates against,
 /// and the points are laid out level-major over `on.len()` coordinate lines.
 ///
-/// This exists for one case, and it is not exotic — it is every faulted grid.
+/// This exists for one case, and it is not exotic - it is every faulted grid.
 /// A fault displaces the rock on one side of a pillar relative to the other, so
 /// RESQML gives that pillar a **split coordinate line**: a second column of
 /// points for the columns on the far side. The split is *the same geometric
-/// line* — same control points, same kind — carrying different parameters. A
+/// line* - same control points, same kind - carrying different parameters. A
 /// grid with 6 pillars and 2 splits therefore has **8 coordinate lines and 6
 /// parametric lines**, and its `Parameters` array is shaped over the 8.
 ///
 /// Read as though the two counts agreed, everything after the first level lands
 /// on the wrong line: the parameter meant for pillar 0 at level 1 is evaluated
 /// against pillar 2, and so on around a cycle of six. The depths stay plausible
-/// because they *are* real depths — only the x and y come from the wrong
+/// because they *are* real depths - only the x and y come from the wrong
 /// pillar. What comes out is a mesh of the right size, in the right place, with
 /// its faces pointing in every direction. A picture of nothing that looks like
 /// a picture of something.
@@ -403,7 +403,7 @@ impl Lines {
     /// Three things, and each answers a question that had to be guessed for the
     /// node version: the lattice has **one axis per axis of the support**; the
     /// start is **flat**, with the flattening spelled out; and for a grid the lines
-    /// **are** the pillars, in pillar order — `(Ni + 1) × (Nj + 1)`, i fastest.
+    /// **are** the pillars, in pillar order - `(Ni + 1) × (Nj + 1)`, i fastest.
     ///
     /// Those rules were in this workspace's own generated code the whole time. The
     /// XSD carries them as annotations and the generator copies annotations, so
@@ -444,12 +444,12 @@ impl Lines {
             ));
         };
         // The borrower's own sense, and it is the support's: a representation
-        // that borrows another's lines is in that other's system — the same
+        // that borrows another's lines is in that other's system - the same
         // rule `crs::of` follows to give the two the same CRS.
         let lines = Self::read(array, source, &format!("{at}.{support_uri}"), vertical)?;
 
         // *"For a column-layer grid, the parametric lines follow the indexing
-        // of the pillars"* — so the shape is the pillar lattice, slowest axis
+        // of the pillars"* - so the shape is the pillar lattice, slowest axis
         // first, and a support that is not a grid is one flat list of lines.
         let shape = pillar_shape(support).unwrap_or_else(|| vec![lines.lines.len()]);
         let stated: usize = shape.iter().product();
@@ -457,7 +457,7 @@ impl Lines {
             return Err(Error::malformed(
                 at,
                 format!(
-                    "the support {support_uri} states a {shape:?} pillar lattice — {stated} line(s) — \
+                    "the support {support_uri} states a {shape:?} pillar lattice - {stated} line(s) - \
                      and carries {}",
                     lines.lines.len()
                 ),
@@ -594,15 +594,15 @@ pub(crate) struct Line {
     control: Vec<Point>,
     /// The parameter of each control point, ascending.
     knots: Vec<f64>,
-    /// Second derivatives at the knots — empty unless the kind is cubic.
+    /// Second derivatives at the knots - empty unless the kind is cubic.
     moments: Vec<Point>,
-    /// dP/dparameter at the knots — empty unless the kind is Hermite.
+    /// dP/dparameter at the knots - empty unless the kind is Hermite.
     tangents: Vec<Point>,
     /// Whether the knots were read from the file rather than assumed 0, 1, 2 …
     ///
     /// It matters in one place, and there it matters a lot: see [`Line::stations`].
     parametrised: bool,
-    /// Which way the local z counts — the clause the standard attaches to the
+    /// Which way the local z counts - the clause the standard attaches to the
     /// vertical kind, and nothing else. See [`Vertical`].
     vertical: Vertical,
 }
@@ -627,7 +627,7 @@ impl Line {
 
         let parametrised = knots.is_some();
         let mut control: Vec<Point> = control[..length].to_vec();
-        // No parameters given: the knots are at 0, 1, 2 … — what the schema
+        // No parameters given: the knots are at 0, 1, 2 … - what the schema
         // says to assume, and what a caller has no other way to know.
         let mut knots: Vec<f64> = match knots {
             Some(knots) => knots[..length].to_vec(),
@@ -685,7 +685,7 @@ impl Line {
     /// A spline passes through its knots, so for the curved kinds this is the
     /// control points and nothing more. It differs for a **vertical** line,
     /// where the schema says the control points are `(X,Y,-)` and the third
-    /// coordinate comes from the parameter — so the stations are the ones the
+    /// coordinate comes from the parameter - so the stations are the ones the
     /// parameters put there, not whatever was written in the unused slot.
     ///
     /// Unless the file gave no parameters at all. Then the knots here are the
@@ -711,14 +711,14 @@ impl Line {
     /// schema itself**: RESQML 2.0.1 writes `LineIndiexOnSupportingRepresentation`
     /// (sic), 2.2 corrected it to `LineIndexOnSupportingRepresentation`. Reading
     /// only the corrected spelling refuses every 2.0.1 file and reading only the
-    /// typo refuses every 2.2 one, so both are read — as everywhere a release
+    /// typo refuses every 2.2 one, so both are read - as everywhere a release
     /// respells a field.
     ///
     /// No file in the corpus has one, so this is written against the standard
     /// and tested against a borrowing built in the test: a support's own line,
     /// borrowed, must evaluate to what the support's own array gives.
     fn borrowed_one(object: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Result<Self> {
-        // The borrower's own sense, and it is the support's — the same rule the
+        // The borrower's own sense, and it is the support's - the same rule the
         // plural form follows.
         let vertical = Vertical::read(object, source);
         let Some(support_uri) = crate::well::reference_of(object, "SupportingRepresentation") else {
@@ -766,7 +766,7 @@ impl Line {
         Ok(lines.lines[index as usize].clone())
     }
 
-    /// A single `ParametricLineGeometry` — one line, its knots, its kind.
+    /// A single `ParametricLineGeometry` - one line, its knots, its kind.
     pub(crate) fn single(geometry: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Result<Self> {
         let name = geometry.type_info().name;
         if name == "ParametricLineFromRepresentationGeometry" {
@@ -833,13 +833,13 @@ impl Line {
         const NOWHERE: Point = [f64::NAN; 3];
 
         if self.kind == Kind::Null || self.control.is_empty() {
-            // "null value: no line" — and a point on a line that does not
+            // "null value: no line" - and a point on a line that does not
             // exist has no coordinates. NaN is how RESQML itself writes an
             // absent point, and the callers already count them out loud.
             return NOWHERE;
         }
         // A single control point determines nothing to interpolate along, so
-        // the parameter is the third coordinate — the vertical pillar case,
+        // the parameter is the third coordinate - the vertical pillar case,
         // and the majority of the corpus's parametric grids.
         if self.kind == Kind::Vertical || self.control.len() == 1 {
             // *"Parameter values are interpreted as depth => (X,Y,Z), where the
@@ -949,9 +949,9 @@ impl Line {
 
     /// Minimum curvature: the arc of the circle the two tangents describe.
     ///
-    /// The direction turns from one tangent to the other at a constant rate —
+    /// The direction turns from one tangent to the other at a constant rate -
     /// `d(f) = (sin((1−f)α)·t̂₀ + sin(fα)·t̂₁) / sin α`, the shortest rotation
-    /// between them — and the position is its integral, which is a circular
+    /// between them - and the position is its integral, which is a circular
     /// arc. Its closed form is the `integral` below.
     ///
     /// Two things follow, and both are worth knowing:
@@ -959,7 +959,7 @@ impl Line {
     /// * On data that really lies on an arc, this **is** the drilling formula.
     ///   `∫₀¹ d` comes out parallel to `t̂₀ + t̂₁` with length `2·sin(α/2)/α`,
     ///   so the chord is `(L/2)·RF·(t̂₀+t̂₁)` with the ratio factor
-    ///   `RF = (2/α)·tan(α/2)` — the expression every directional-drilling
+    ///   `RF = (2/α)·tan(α/2)` - the expression every directional-drilling
     ///   package uses, arrived at rather than copied.
     /// * On data that does not, the arc ends somewhere other than the far
     ///   knot. The closing term puts it back, linearly across the interval, so
@@ -978,7 +978,7 @@ impl Line {
 
         let alpha = dot(t0, t1).clamp(-1.0, 1.0).acos();
         // No dogleg is a straight segment; a dogleg of 180° has no arc through
-        // it at all — the circle would be a point. Both are the straight
+        // it at all - the circle would be a point. Both are the straight
         // reading, and the second is the one that would divide by zero.
         if alpha < STRAIGHT || (std::f64::consts::PI - alpha) < 1e-9 {
             return lerp(p0, p1, fraction);
@@ -1008,7 +1008,7 @@ impl Line {
     }
 }
 
-/// **One parametric line, evaluable anywhere along it** — what a caller needs
+/// **One parametric line, evaluable anywhere along it** - what a caller needs
 /// to place a parameter *between* two knots: a measured depth on a wellbore
 /// trajectory, where a computed top falls (a geological
 /// operation).
@@ -1022,15 +1022,15 @@ impl Line {
 pub struct Path(Line);
 
 impl Path {
-    /// The line a `ParametricLineGeometry` states — kind, control points,
+    /// The line a `ParametricLineGeometry` states - kind, control points,
     /// parameters and tangents as the file writes them, the sense of its
     /// vertical read from its own `LocalCrs`.
     pub fn of(geometry: &dyn Reflect, source: &dyn ValueSource) -> Result<Path> {
         Line::single(geometry, source, "ParametricLineGeometry").map(Path)
     }
 
-    /// A line from values: `kind` is the schema's `LineKindIndex` — an index
-    /// the standard does not define is refused, like in a file — and one
+    /// A line from values: `kind` is the schema's `LineKindIndex` - an index
+    /// the standard does not define is refused, like in a file - and one
     /// parameter per control point.
     pub fn new(
         kind: i64,
@@ -1080,13 +1080,13 @@ impl Path {
         )))
     }
 
-    /// The point at `parameter` — past either end, the first or last interval
+    /// The point at `parameter` - past either end, the first or last interval
     /// extended, as the standard reads an unbounded line.
     pub fn at(&self, parameter: f64) -> Point {
         self.0.at(parameter)
     }
 
-    /// The parameters of its knots, ascending — `None` when the file stated
+    /// The parameters of its knots, ascending - `None` when the file stated
     /// none: the knots are then the assumed 0, 1, 2 … and a parameter along
     /// the line is no measured depth.
     pub fn knots(&self) -> Option<&[f64]> {
@@ -1102,7 +1102,7 @@ impl Path {
 /// against exactly this (§5.3.5): *"If the two tangent vectors are close to
 /// parallel then α will be close to 0, and some care has to be taken when
 /// evaluating these expressions."* The closed form divides by `α·sin α` and
-/// subtracts two cosines that are both within `α²` of 1 — catastrophic
+/// subtracts two cosines that are both within `α²` of 1 - catastrophic
 /// cancellation, and the guard let it happen over four decades.
 ///
 /// Measured on the expression as written, with two unit tangents `α` apart:
@@ -1116,13 +1116,13 @@ impl Path {
 ///
 /// The two cross between `1e-6` and `1e-5`: below that the closed form is
 /// rounding noise, and above it the straight reading starts losing a real
-/// curve. `1e-6` is the conservative side of the crossing — it keeps the arc
+/// curve. `1e-6` is the conservative side of the crossing - it keeps the arc
 /// wherever the arc is worth having.
 ///
 /// The straight reading **is** the limit the guide gives there: it prints the
 /// series for `(1−cos α)/sin α → α/2` and adds that *"additional higher order
 /// terms in α may also be included to improve upon this approximation"*. The
-/// leading term is the straight segment, and the next is `O(α²)` relative —
+/// leading term is the straight segment, and the next is `O(α²)` relative -
 /// under 1e-12 at this threshold, which is finer than the closed form manages
 /// anywhere near it.
 const STRAIGHT: f64 = 1e-6;
@@ -1131,7 +1131,7 @@ const STRAIGHT: f64 = 1e-6;
 /// `control`, with a vanishing second derivative at both ends.
 ///
 /// The tridiagonal system `hᵢ·Mᵢ₋₁ + 2(hᵢ+hᵢ₊₁)·Mᵢ + hᵢ₊₁·Mᵢ₊₁ = 6·(Δᵢ₊₁ − Δᵢ)`,
-/// solved once for all three components — the matrix depends only on the
+/// solved once for all three components - the matrix depends only on the
 /// knots, so x, y and z share the elimination.
 fn moments(knots: &[f64], control: &[Point]) -> Vec<Point> {
     let n = control.len();
@@ -1175,7 +1175,7 @@ fn moments(knots: &[f64], control: &[Point]) -> Vec<Point> {
 /// quadratic function with the two adjacent control points. At edge knots, the
 /// second derivative vanishes."* The first is the derivative of the parabola
 /// through three points; the second, written out for a cubic Hermite piece,
-/// is `m₀ = (3·Δ/h − m₁)/2` — the natural-spline end condition, which is why
+/// is `m₀ = (3·Δ/h − m₁)/2` - the natural-spline end condition, which is why
 /// the schema says the fallback "reduces locally to a natural spline".
 fn derived_tangents(knots: &[f64], control: &[Point]) -> Vec<Point> {
     let n = control.len();
@@ -1263,7 +1263,7 @@ fn lerp(a: Point, b: Point, fraction: f64) -> Point {
 /// and nothing says another representation has to agree.
 /// Which line of the support a borrowed geometry takes.
 ///
-/// Two spellings, and the first is the schema's own typo — RESQML 2.0.1 writes
+/// Two spellings, and the first is the schema's own typo - RESQML 2.0.1 writes
 /// `LineIndiexOnSupportingRepresentation`, 2.2 corrected it. Neither release
 /// knows the other's name for it.
 const LINE_INDEX: &[&str] = &[
@@ -1302,7 +1302,7 @@ fn find_line_array(object: &dyn Reflect) -> Option<&dyn Reflect> {
 /// `(Nj + 1) × (Ni + 1)`, because that is what *"the parametric lines follow
 /// the indexing of the pillars"* means for a grid, and it is the shape the
 /// line selection's axes are matched against. Split coordinate lines are **not**
-/// counted: they are extra *columns of points*, not extra lines — a split line
+/// counted: they are extra *columns of points*, not extra lines - a split line
 /// is the same geometric line as the pillar it splits, which is exactly why
 /// `37c45c00` has 8 coordinate lines and 6 parametric ones.
 fn pillar_shape(support: &dyn Reflect) -> Option<Vec<usize>> {
@@ -1333,12 +1333,12 @@ mod tests {
     ///
     /// > *"Parameter values are interpreted as depth => (X,Y,Z), where the depth
     /// > to Z conversion depends on the vertical CRS direction."*
-    /// > — RESQML TRG v2.2 §3.8, identical in the 2.0.1 guide.
+    /// > - RESQML TRG v2.2 §3.8, identical in the 2.0.1 guide.
     ///
     /// Without it a well is **mirrored about its datum** in an elevation
     /// system: the trajectory and its frames go up, every stored surface of the
     /// same package stays down, and no individual number looks wrong. That is
-    /// how it survived until 06/08 — reported on a model whose wells hung above
+    /// how it survived until 06/08 - reported on a model whose wells hung above
     /// the horizons built from them.
     #[test]
     fn a_vertical_line_turns_its_depth_into_z_through_the_crs() {
@@ -1426,7 +1426,7 @@ mod tests {
         within(a, b, 1e-6)
     }
 
-    /// Equality to a stated tolerance — the derivative checks below measure
+    /// Equality to a stated tolerance - the derivative checks below measure
     /// with a finite difference, whose own truncation error sets the floor.
     fn within(a: Point, b: Point, tolerance: f64) -> bool {
         (0..3).all(|axis| (a[axis] - b[axis]).abs() < tolerance)
@@ -1434,8 +1434,8 @@ mod tests {
 
     #[test]
     fn the_kind_table_is_the_schemas_own() {
-        // The table was shifted by one until 01/08, which made kind 1 — the
-        // *linear* spline — refuse as "a natural cubic spline". Pinned here so
+        // The table was shifted by one until 01/08, which made kind 1 - the
+        // *linear* spline - refuse as "a natural cubic spline". Pinned here so
         // it cannot drift back.
         assert_eq!(Kind::of(-1), Some(Kind::Null));
         assert_eq!(Kind::of(0), Some(Kind::Vertical));
@@ -1472,7 +1472,7 @@ mod tests {
     }
 
     /// *"Otherwise, the interpolant in the first or last interval is used as
-    /// an extrapolating function"* — and `isBounded`, the flag that would say
+    /// an extrapolating function"* - and `isBounded`, the flag that would say
     /// otherwise, is in no schema. A pillar of a faulted grid carries
     /// parameters past its control points on purpose: truncating them put
     /// Volve's cells 130 m from where its HDF5 says they are.
@@ -1496,7 +1496,7 @@ mod tests {
     }
 
     /// Three control points, and the extension follows the interval it leaves
-    /// by — the last one, not the line from end to end.
+    /// by - the last one, not the line from end to end.
     #[test]
     fn the_extension_follows_the_interval_it_leaves_by() {
         let line = line(
@@ -1576,7 +1576,7 @@ mod tests {
             Some(vec![0.0, 1.0, 2.0, 3.0]),
         );
         // The second difference of a cubic is `h²·f″ + h³·f‴` exactly, so this
-        // estimate carries `h·f‴` of truncation — around 1e-4 here. The
+        // estimate carries `h·f‴` of truncation - around 1e-4 here. The
         // tolerance is set above that and the interior curvature, measured the
         // same way, is asserted to be orders larger so the check cannot pass
         // by being blind.
@@ -1597,7 +1597,7 @@ mod tests {
             let measured = second(end, inward);
             assert!(
                 within(measured, [0.0; 3], 1e-2),
-                "at {end}: {measured:?} — a natural spline has none"
+                "at {end}: {measured:?} - a natural spline has none"
             );
         }
         let inside = second(1.5, 1.0);
@@ -1637,7 +1637,7 @@ mod tests {
     #[test]
     fn a_minimum_curvature_segment_is_the_circle_it_describes() {
         // A quarter of the unit circle in the xy plane: from (1,0) heading +y
-        // to (0,1) heading −x. Halfway along, a circle is at 45° — and nothing
+        // to (0,1) heading −x. Halfway along, a circle is at 45° - and nothing
         // else is. This is the check that says the construction is the arc it
         // claims to be rather than something arc-shaped.
         let line = Line::new(
@@ -1672,7 +1672,7 @@ mod tests {
     #[test]
     fn a_curve_still_reaches_its_far_knot_when_the_arc_would_miss_it() {
         // Tangents that no circle through both points can honour. The arc is
-        // still drawn, and the closing term puts its end back on the knot —
+        // still drawn, and the closing term puts its end back on the knot -
         // the departure the module documentation names.
         let line = Line::new(
             Kind::MinimumCurvature,
@@ -1701,7 +1701,7 @@ mod tests {
         let derivative = mul(sub(line.at(step), line.at(0.0)), 1.0 / step);
         assert!(
             within(derivative, [0.0, 2.0, 0.0], 1e-3),
-            "{derivative:?} — a forward difference carries `h·f″/2` of error"
+            "{derivative:?} - a forward difference carries `h·f″/2` of error"
         );
     }
 

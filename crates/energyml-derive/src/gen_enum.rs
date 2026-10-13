@@ -1,4 +1,4 @@
-//! Code generation for `#[derive(EnergymlEnum)]` — XSD `simpleType`
+//! Code generation for `#[derive(EnergymlEnum)]` - XSD `simpleType`
 //! enumerations, including the open `...Ext` ones that also accept free text.
 
 use proc_macro2::TokenStream;
@@ -70,7 +70,7 @@ pub fn expand(input: &DeriveInput, data: &DataEnum) -> syn::Result<TokenStream> 
 
     // **What an open enumeration's free text must still be.** Without this,
     // `open` means *anything*, where the schema says *anything matching the
-    // widening member's pattern* — in practice `.*:.*`, an authority and a name
+    // widening member's pattern* - in practice `.*:.*`, an authority and a name
     // around a mandatory colon. A `uom="unknown"` went unreported here for
     // exactly that reason while three other validators refused it (07/09).
     //
@@ -201,7 +201,7 @@ pub fn expand(input: &DeriveInput, data: &DataEnum) -> syn::Result<TokenStream> 
                 let __text = r.read_text()?;
                 // Through the reader rather than straight to `from_xml_text`,
                 // so a closed enumeration outside its list can be repaired in
-                // lenient mode — with the string that was there recorded,
+                // lenient mode - with the string that was there recorded,
                 // since the variant cannot hold it.
                 r.value::<Self>(&__text, "enumeration", #name_str)
             }

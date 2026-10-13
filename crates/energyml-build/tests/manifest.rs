@@ -1,4 +1,4 @@
-//! The run manifest — `energyml_build::manifest`,
+//! The run manifest - `energyml_build::manifest`,
 //! (ADR 0017).
 //!
 //! # What is confronted with what
@@ -10,7 +10,7 @@
 //! role's uris, and the `collection` is a `DataobjectCollection` the store
 //! holds, whose members are named by the `CollectionsToDataobjectsAssociationSet`
 //! the store holds (`Collection.xsd`: `SingleCollectionAssociation` has
-//! `Collection` 1..1 and `Dataobject` 1..∞) — read from the store, not from
+//! `Collection` 1..1 and `Dataobject` 1..∞) - read from the store, not from
 //! `apply`'s own return.
 //!
 //! The operations are declared **in this file**: a fake one in the shipped
@@ -54,7 +54,7 @@ fn empty_store() -> EpcStore {
 }
 
 /// Writes `items` features of role `item`, then one of role `other`; declares
-/// `item` and a role `ghost` it never writes — or nothing, when `declared` is off.
+/// `item` and a role `ghost` it never writes - or nothing, when `declared` is off.
 struct Fake {
     name: &'static str,
     items: usize,

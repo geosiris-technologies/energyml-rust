@@ -1,4 +1,4 @@
-//! `stratigraphy-from-geolts` — a RESQML stratigraphic column from the BRGM
+//! `stratigraphy-from-geolts` - a RESQML stratigraphic column from the BRGM
 //! chronostratigraphic chart, whole or by branches.
 //!
 //! The need: import everything from geolts to build the complete
@@ -9,7 +9,7 @@
 //! # The shape, as the RESQML 2.2 reference guide states it
 //!
 //! ```text
-//! Model  “BRGM chronostratigraphy — Crétacé”          the organisation
+//! Model  “BRGM chronostratigraphy - Crétacé”          the organisation
 //!   ↑ InterpretedFeature
 //! StratigraphicColumnRankInterpretation × one per level  (§6.45)
 //!   StratigraphicUnits → StratigraphicUnitInterpretation, youngest first
@@ -18,19 +18,19 @@
 //! StratigraphicColumn  Ranks → the rank interpretations  (§6.44)
 //! ```
 //!
-//! - **a rank per level of the chart** — system, series, sub-series, stage —
+//! - **a rank per level of the chart** - system, series, sub-series, stage -
 //!   because RESQML has no link from a unit to the unit that contains it: *“it
 //!   is possible to find previous unit containment relationships between
 //!   several ranks”* (TRG 2.2 §6.3 p. 166). The containment is carried by the
 //!   ranks and the ages, and the register's URI is on every object for whoever
 //!   wants the tree;
 //! - **a rank is numbered by its level**: `RankInStratigraphicColumn` is the
-//!   chart's level less one — the supereonothem 0, the system 3, the series 4,
-//!   the stage 6 — whatever else the column holds (see below);
+//!   chart's level less one - the supereonothem 0, the system 3, the series 4,
+//!   the stage 6 - whatever else the column holds (see below);
 //! - **youngest first** in every rank: `AscendingOrderingCriteria` is `age`,
 //!   *“from youngest to oldest period”* (§6.34), and the column's ranks *“must
 //!   be ordered by age”* (§6.44 business rule, p. 212). A division the chart
-//!   gives no age to is **refused by name** — an order guessed would put it
+//!   gives no age to is **refused by name** - an order guessed would put it
 //!   anywhere; one it gives no **level** to is refused too, having no rank;
 //! - **the same uuid in every package**: uuid v5 in the URL namespace over the
 //!   division's URI, which anyone can recompute without this tool. The
@@ -39,13 +39,13 @@
 //!
 //! # What is chosen, and the defaults
 //!
-//! `units` are the branches — each with everything below it. By default only
+//! `units` are the branches - each with everything below it. By default only
 //! the chart's **reference** divisions that are still valid, down to the
 //! **stage**: the substages are nearly all regional, and a regional synonym
 //! beside its reference stage (the Ludien beside the Priabonien) is two units
 //! for one interval of time. `regional` and `finest` open both.
 //!
-//! # A branch comes with the chain above it — `ancestors`, on by default
+//! # A branch comes with the chain above it - `ancestors`, on by default
 //!
 //! The need: the geolts import shows the whole column very well, but
 //! one sometimes wants to work on a sub-part. When a sub-part of the
@@ -58,8 +58,8 @@
 //!
 //! - **the parents were missing.** A column of the Eocene alone began at the
 //!   series: nothing said what it is a part of. `ancestors` puts in the **chain**
-//!   above each branch chosen — its parent, the parent's parent, up to the root
-//!   of the chart — and **none of their other children**: the Eocene brings the
+//!   above each branch chosen - its parent, the parent's parent, up to the root
+//!   of the chart - and **none of their other children**: the Eocene brings the
 //!   Paleogene, the Cenozoic and the Phanerozoic, never the Paleocene or the
 //!   Oligocene, which nobody chose. The parents answer to the same settings as
 //!   the branches (`regional`, `finest`), and one they leave out is **passed
@@ -67,13 +67,13 @@
 //!   Eocene, a *usual* sub-series, and the Eocene above it still comes;
 //! - **the numbers were positions.** `RankInStratigraphicColumn` counted the
 //!   levels the column happened to hold, so the parents alone would have moved
-//!   the Eocene from rank 0 to rank 3 — still not the 4 it has beside the
+//!   the Eocene from rank 0 to rank 3 - still not the 4 it has beside the
 //!   Precambrian, the chart's only supereonothem, and the stages would still
 //!   move by one whenever a branch holds one of the twelve reference
 //!   sub-series (both measured on the snapshot of 24/09). So the number is the
 //!   **level's**, and a division has the same rank in every column. A level the
-//!   column holds nothing of has **no rank at all** — a rank lists at least one
-//!   unit (TRG 2.2 §6.45 p. 213, `StratigraphicUnits` 1..*) — and the others
+//!   column holds nothing of has **no rank at all** - a rank lists at least one
+//!   unit (TRG 2.2 §6.45 p. 213, `StratigraphicUnits` 1..*) - and the others
 //!   keep their numbers: the gap *is* the absent level, and the plan names it
 //!   (`ranks-absent`). A reader that sorts by the number, as
 //!   `energyml_domain::stratigraphy` does, is unaffected by a gap.
@@ -83,12 +83,12 @@
 //! [`ANCESTOR`] whose value is the division's URI. Not on the division itself:
 //! its uuid is the same in every package, chosen or added, and an object saying
 //! *not chosen* in one package and nothing in the other would be two objects
-//! under one uuid — which a second import into the same package would rewrite
+//! under one uuid - which a second import into the same package would rewrite
 //! back and forth. The rank's uuid derives from the selection, **added parents
 //! included**, so it is the one object for which *not chosen* is a stable fact.
 //!
 //! A parent the chart gives no age is refused on `ancestors`, by name, with the
-//! way out — the rule of a chosen division, which is refused on `units`. None
+//! way out - the rule of a chosen division, which is refused on `units`. None
 //! on the snapshot of 24/09: its 698 divisions are all dated.
 //!
 //! `ancestors` off writes the branches alone, **still numbered by their
@@ -112,10 +112,10 @@ pub struct StratigraphyFromGeolts;
 ///
 /// **Both are the BRGM's own words**: the GeolTs register states every
 /// division in French and in English (`skos:prefLabel`, `'Upper Lutetian'@en |
-/// 'Lutétien supérieur'@fr` — all 698 concepts of the 24/09 snapshot carry
+/// 'Lutétien supérieur'@fr` - all 698 concepts of the 24/09 snapshot carry
 /// both). The decision: what is taken from the BRGM may be in
 /// French, like the names of the units, as it comes from the official stratigraphy,
-/// unless an English stratigraphy of the BRGM can be reached — the
+/// unless an English stratigraphy of the BRGM can be reached - the
 /// register is that English stratigraphy. French stays the default, the
 /// register's first language; the other is kept as an alias, so a search by
 /// either finds the division. The uuids come from the register's URI and do
@@ -129,7 +129,7 @@ pub enum Language {
 }
 
 impl Language {
-    /// A division's title in this language — the other one when the register
+    /// A division's title in this language - the other one when the register
     /// left this one empty, never a translation of ours.
     pub(crate) fn of(self, one: &Concept) -> String {
         match self {
@@ -153,7 +153,7 @@ pub struct StratigraphyParams {
     /// the divisions of the BRGM chart to import, each with everything below it
     #[param(least = 1)]
     pub units: Vec<ChartTerm>,
-    /// also the chain of divisions above them — not their other children — so each keeps the rank of its level
+    /// also the chain of divisions above them - not their other children - so each keeps the rank of its level
     ///
     /// On by default since 24/09, and answering to `regional` and `finest` like
     /// the branches do; see the module. Off, the branches are written alone.
@@ -167,7 +167,7 @@ pub struct StratigraphyParams {
     pub finest: usize,
     /// the name of the column; left out, the chart's and the branches'
     pub title: Option<String>,
-    /// the language the divisions are titled in — both are the BRGM register's own labels
+    /// the language the divisions are titled in - both are the BRGM register's own labels
     #[param(default = Language::Fr, optional)]
     pub language: Language,
 }
@@ -229,7 +229,7 @@ impl Operation for StratigraphyFromGeolts {
     fn about(&self) -> About {
         About {
             name: "stratigraphy-from-geolts",
-            describe: "a stratigraphic column from the BRGM chronostratigraphic chart (GeolTs), whole or by branches — takes no input",
+            describe: "a stratigraphic column from the BRGM chronostratigraphic chart (GeolTs), whole or by branches - takes no input",
             category: Category::Import,
             makes: &[
                 "resqml22.Model",
@@ -274,25 +274,25 @@ pub struct Selected {
     /// then the parents they bring, nearest first.
     pub taken: Vec<u32>,
     /// The part of `taken` that is there **only** as the parent of a chosen
-    /// division — not chosen itself, and said so.
+    /// division - not chosen itself, and said so.
     pub added: Vec<u32>,
 }
 
-/// Whether the settings take a division the chart holds — the one filter a
+/// Whether the settings take a division the chart holds - the one filter a
 /// branch and a chain of parents share, so a parent is in the column exactly
 /// when a larger branch holding it would have put it there.
 fn admitted(one: &Concept, params: &StratigraphyParams) -> bool {
     (params.regional || one.is_reference()) && usize::from(one.level) <= params.finest
 }
 
-/// The divisions a selection takes: the branches, then — `ancestors` on — the
+/// The divisions a selection takes: the branches, then - `ancestors` on - the
 /// chain above each, **and nothing else of it**.
 pub fn selection(chart: &Chart, params: &StratigraphyParams) -> Result<Selected, Refusal> {
     if chart.is_empty() {
         return Err(Refusal::new(
             "refused",
             format!(
-                "{} holds no division — this build has no BRGM chart to draw a column from",
+                "{} holds no division - this build has no BRGM chart to draw a column from",
                 chart.label()
             ),
         ));
@@ -356,7 +356,7 @@ pub fn selection(chart: &Chart, params: &StratigraphyParams) -> Result<Selected,
             "ancestors",
             format!(
                 "{} parent(s) of the divisions chosen state no age in the chart, so where they sit in a column \
-                 cannot be read: {} — they are there only as parents; `ancestors` off writes the branches alone",
+                 cannot be read: {} - they are there only as parents; `ancestors` off writes the branches alone",
                 undated.len(),
                 undated.join(", ")
             ),
@@ -375,7 +375,7 @@ pub(crate) struct Ancestor {
 }
 
 /// The number of a level's rank: **the level less one**, so a division has the
-/// same `RankInStratigraphicColumn` in every column — see the module. `None`
+/// same `RankInStratigraphicColumn` in every column - see the module. `None`
 /// for a division the chart gives no level (0), which has no rank to be in.
 fn rank_number(level: u8) -> Option<i64> {
     if level == 0 {
@@ -385,7 +385,7 @@ fn rank_number(level: u8) -> Option<i64> {
     }
 }
 
-/// The URL-namespace uuid of a text — computable by anyone, without this tool.
+/// The URL-namespace uuid of a text - computable by anyone, without this tool.
 fn url_uuid(text: &str) -> String {
     Uuid::new_v5(&Uuid::NAMESPACE_URL, text.as_bytes()).to_string()
 }
@@ -415,15 +415,15 @@ fn description(one: &Concept, language: Language) -> Option<String> {
         parts.push(one.note.clone());
     }
     // `Citation/Description` is bounded by the schema (2 000 characters).
-    (!parts.is_empty()).then(|| parts.join(" — ").chars().take(2_000).collect())
+    (!parts.is_empty()).then(|| parts.join(" - ").chars().take(2_000).collect())
 }
 
-/// The register's facts that RESQML has no field for, as `ExtensionNameValue`
-/// — the standard's own place for them, named after the register's predicate.
+/// The register's facts that RESQML has no field for, as `ExtensionNameValue` -
+/// the standard's own place for them, named after the register's predicate.
 ///
 /// `Value` is a `StringMeasure`: simple content, **its text is the value**
 /// (common v2.3 `BaseTypes.xsd`), which the JSON of a plan spells `_` and the
-/// XML writes as the element's text — `tests/stratigraphy.rs` reads it back
+/// XML writes as the element's text - `tests/stratigraphy.rs` reads it back
 /// from the saved bytes. A fact the register leaves empty is not written: an
 /// extension naming nothing says nothing, and this library's own XML reader
 /// takes an empty `<Value/>` for an absent one.
@@ -462,7 +462,7 @@ fn aliases(one: &Concept, language: Language) -> Vec<eml::ObjectAlias> {
     let mut out = vec![eml::ObjectAlias {
         authority: "BRGM GeolTs".to_string(),
         identifier: one.uri(),
-        description: Some(format!("{} — {}", language.of(one), one.level_name())),
+        description: Some(format!("{} - {}", language.of(one), one.level_name())),
         ..Default::default()
     }];
     for notation in &one.notations {
@@ -479,7 +479,7 @@ fn aliases(one: &Concept, language: Language) -> Vec<eml::ObjectAlias> {
             ..Default::default()
         });
     }
-    // Its other names — the other language's, and the register's synonyms — so
+    // Its other names - the other language's, and the register's synonyms - so
     // a search by any of them finds it. `Identifier` is bounded at 64.
     let other = language.other(one);
     for (authority, name) in std::iter::once((other.0, &other.1))
@@ -522,7 +522,7 @@ fn column(chart: &Chart, params: &StratigraphyParams, cx: &Context<'_>) -> Resul
     let title = params
         .title
         .clone()
-        .unwrap_or_else(|| format!("BRGM chronostratigraphy — {}", roots.join(", ")));
+        .unwrap_or_else(|| format!("BRGM chronostratigraphy - {}", roots.join(", ")));
     // What each added parent sits above: the chosen divisions whose chain holds it.
     let ancestors: Vec<Ancestor> = selected
         .added
@@ -556,7 +556,7 @@ fn column(chart: &Chart, params: &StratigraphyParams, cx: &Context<'_>) -> Resul
             key: "ancestors",
             detail: format!(
                 "{} division(s) not chosen are in the column as the parents of those that were, so each keeps the \
-                 rank of its level: {} — each marked `{ANCESTOR}` on its rank; `ancestors` off leaves them out",
+                 rank of its level: {} - each marked `{ANCESTOR}` on its rank; `ancestors` off leaves them out",
                 ancestors.len(),
                 ancestors
                     .iter()
@@ -580,7 +580,7 @@ fn column(chart: &Chart, params: &StratigraphyParams, cx: &Context<'_>) -> Resul
             key: "ranks-absent",
             detail: format!(
                 "no rank {}: the column holds no division of these levels, and a rank lists at least one unit \
-                 (RESQML 2.2 §6.45) — the other ranks keep the numbers of their levels",
+                 (RESQML 2.2 §6.45) - the other ranks keep the numbers of their levels",
                 absent.join(", ")
             ),
         });
@@ -588,7 +588,7 @@ fn column(chart: &Chart, params: &StratigraphyParams, cx: &Context<'_>) -> Resul
     says.push(Note {
         key: "source",
         detail: format!(
-            "{} — https://data.geoscience.fr/ncl/GeolTs, CC BY 4.0",
+            "{} - https://data.geoscience.fr/ncl/GeolTs, CC BY 4.0",
             chart.label()
         ),
     });
@@ -620,7 +620,7 @@ pub(crate) struct RankMade {
     /// Its `RankInStratigraphicColumn`: the level less one.
     pub(crate) number: i64,
     pub(crate) reference: eml::DataObjectReference,
-    /// The chart ids of its units, **in the order the rank lists them** — the
+    /// The chart ids of its units, **in the order the rank lists them** - the
     /// order an index into `StratigraphicUnits` counts in.
     pub(crate) units: Vec<u32>,
 }
@@ -639,7 +639,7 @@ pub(crate) struct ColumnMade {
 ///
 /// `stratigraphy-from-geolts` calls it with a branch; an import of boreholes
 /// with the divisions its passes name. The units' uuids come from their URI
-/// alone, so the two columns share the Priabonien rather than holding two —
+/// alone, so the two columns share the Priabonien rather than holding two -
 /// and their ranks are numbered by level alike, so the Priabonien is in rank 6
 /// in both.
 pub(crate) fn write_column(
@@ -653,7 +653,7 @@ pub(crate) fn write_column(
 }
 
 /// [`write_column`], with the divisions that are there only as parents of
-/// chosen ones — each marked on its rank, and part of the selection's identity.
+/// chosen ones - each marked on its rank, and part of the selection's identity.
 pub(crate) fn write_column_with(
     chart: &Chart,
     taken: &[u32],
@@ -676,7 +676,7 @@ pub(crate) fn write_column_with(
         ..Default::default()
     };
 
-    // A rank is its level's, so a division with no level has none to be in —
+    // A rank is its level's, so a division with no level has none to be in -
     // refused by name rather than filed under a number it does not have.
     let levelless: Vec<String> = taken
         .iter()
@@ -712,8 +712,8 @@ pub(crate) fn write_column_with(
         .collect::<Vec<_>>()
         .join(",");
     // **Which of them were added is part of the selection.** Two runs can hold
-    // the same divisions and differ in what was chosen — a parent with a
-    // single child, chosen, or brought by that child — and their ranks say
+    // the same divisions and differ in what was chosen - a parent with a
+    // single child, chosen, or brought by that child - and their ranks say
     // different things. Nothing added, nothing appended: the uuids of a column
     // without parents are those of before 24/09.
     if !ancestors.is_empty() {
@@ -770,7 +770,7 @@ pub(crate) fn write_column_with(
                 aliases: aliases(one, language),
                 extension_name_value: extensions(one),
                 // `IsWellKnown` is the standard's own list of bodies; a BRGM
-                // division is not on it — the same reasoning as `build.rs`.
+                // division is not on it - the same reasoning as `build.rs`.
                 is_well_known: false,
                 ..Default::default()
             };
@@ -827,7 +827,7 @@ pub(crate) fn write_column_with(
             });
             units_written += 1;
         }
-        let rank_title = format!("{title} — {}", geolts::level_name(*level));
+        let rank_title = format!("{title} - {}", geolts::level_name(*level));
         let rank_uuid = url_uuid(&format!(
             "{}?selection={selection_key}#rank-{level}",
             geolts::REGISTER
@@ -907,14 +907,14 @@ pub(crate) fn write_column_with(
         json: energyml_core::json::write_value(&column),
     });
     // **The chart's own colours**, one `DefaultGraphicalInformation` per
-    // division, on its interpretation **and** its feature — the cascade reads
+    // division, on its interpretation **and** its feature - the cascade reads
     // the unit first, then the rock it interprets (§4.21), so a view that
     // stops at either finds it. A set of its own, derived from the selection:
     // these colours are a statement of the register, not a choice somebody
     // made in the package, and they must not end up mixed into one.
     if !painted.is_empty() {
         let set_uuid = url_uuid(&format!("{}?selection={selection_key}#colours", geolts::REGISTER));
-        let set_title = format!("{title} — BRGM chart colours");
+        let set_title = format!("{title} - BRGM chart colours");
         let set = eml::GraphicalInformationSet {
             uuid: set_uuid.clone(),
             schema_version: "2.3".to_string(),

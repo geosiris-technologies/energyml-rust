@@ -1,7 +1,7 @@
 """Add a triangulated surface to an existing package.
 
-Opens an EPC, looks through what is already in it — a CRS to place the points
-in, an interpretation for the surface to represent — writes a new
+Opens an EPC, looks through what is already in it - a CRS to place the points
+in, an interpretation for the surface to represent - writes a new
 `TriangulatedSetRepresentation` with its own citation, puts its points and
 triangles in the package's HDF5 file, and saves the whole thing somewhere else.
 
@@ -44,8 +44,8 @@ def main(source: str, out_dir: str) -> None:
     print(f"  crs             {crs.title}  ({crs.uuid})")
     print(f"  interpretation  {interpretation.title}  ({interpretation.uuid})")
 
-    # 2. The shape. A flat array of coordinates — RESQML writes its points flat
-    #    — and the triangles as indices into it. This one is a square split in
+    # 2. The shape. A flat array of coordinates - RESQML writes its points flat
+    #    - and the triangles as indices into it. This one is a square split in
     #    two, lifted on one corner so it is not flat.
     points = np.array(
         [
@@ -105,7 +105,7 @@ def main(source: str, out_dir: str) -> None:
     written = pkg.put(surface)
     print(f"put {written}")
 
-    # 4. The numbers. Flat, with the shape beside them — the same convention as
+    # 4. The numbers. Flat, with the shape beside them - the same convention as
     #    when they are read back.
     pkg.write_array(ArrayRef(data_file, points_path), points.ravel(), [len(points), 3])
     pkg.write_array(
@@ -114,8 +114,8 @@ def main(source: str, out_dir: str) -> None:
 
     # 5. And out. The diagnostics are **returned** rather than printed by the
     #    library, so a caller that ignores them does so knowingly. Most of
-    #    these belong to the package as it was found — a reference to an object
-    #    that is not in it cannot be given a relationship — and saying how many
+    #    these belong to the package as it was found - a reference to an object
+    #    that is not in it cannot be given a relationship - and saying how many
     #    there are is how a new one becomes visible.
     said = pkg.save_as(epc_path)
     print(f"saved with {len(said)} diagnostic(s)")
@@ -128,8 +128,8 @@ def main(source: str, out_dir: str) -> None:
 def depth_crs(pkg: Epc) -> Summary:
     """A CRS whose vertical axis measures depth rather than time.
 
-    A package can hold both, and they are told apart by what they *say* —
-    `VerticalAxis.IsTime` — not by their titles. Placing points measured in
+    A package can hold both, and they are told apart by what they *say* -
+    `VerticalAxis.IsTime` - not by their titles. Placing points measured in
     metres in a CRS whose vertical unit is a second would produce a package
     that opens perfectly and means something else.
     """

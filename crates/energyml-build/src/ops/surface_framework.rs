@@ -1,4 +1,4 @@
-//! `surface-framework` — a `NonSealedSurfaceFrameworkRepresentation`: the
+//! `surface-framework` - a `NonSealedSurfaceFrameworkRepresentation`: the
 //! representations of a structural organisation gathered in one indexed list,
 //! and the contacts between them named as nodes of those representations.
 //!
@@ -12,20 +12,20 @@
 //! contact patches with no identity. This collection of contact
 //! representations is completed by a set of representations gathered at the
 //! representation set representation level”* (RESQML 2.2 Structural.xsd
-//! l. 234–246; TRG 2.2 §11.11 p. 280). It is what represents a structural
-//! organisation — *“Structural organization interpretation represented by a
+//! l. 234-246; TRG 2.2 §11.11 p. 280). It is what represents a structural
+//! organisation - *“Structural organization interpretation represented by a
 //! non-sealed surface framework”* (RESQML usage guide 2.2, draft, §7.3.1.2.2,
-//! figure 7-21 p. 98) —, so `RepresentedObject` is the organisation, and it
+//! figure 7-21 p. 98) -, so `RepresentedObject` is the organisation, and it
 //! gathers *“step by step, the structural information on boundaries and
 //! contacts between boundaries, all along the workflow, even if they are not
-//! all totally topologically consistent”* (§8.3.2.1 p. 119–120). A framework
+//! all totally topologically consistent”* (§8.3.2.1 p. 119-120). A framework
 //! of the faults alone, while the horizons wait, is that.
 //!
 //! **The order of `representations` is the framework's statement**: a
 //! contact patch names its surface *“by its index, in the list of
 //! representations contained in the organization”* (`ContactPatch.
-//! RepresentationIndex`, Structural.xsd l. 182–186), so reordering the list
-//! breaks every contact — the slot is `ordered`, and the list is written as
+//! RepresentationIndex`, Structural.xsd l. 182-186), so reordering the list
+//! breaks every contact - the slot is `ordered`, and the list is written as
 //! given.
 //!
 //! # A contact: a patch of `lips`, its lines nodes of a representation
@@ -33,10 +33,10 @@
 //! Each patch of a `lips` input is **one contact**, each of its lines **one
 //! contact patch**: *“The ordered list of nodes (identified by their global
 //! index) in the supporting representation, which constitutes the contact
-//! patch”* (`SupportingRepresentationNodes`, l. 187–191). The nodes are found
-//! **by position**, exactly, in the representations given — the lips
+//! patch”* (`SupportingRepresentationNodes`, l. 187-191). The nodes are found
+//! **by position**, exactly, in the representations given - the lips
 //! `fault-throw` writes are nodes of the torn surface position for position,
-//! the footwall's line then the hanging wall's — and a line that is no line of
+//! the footwall's line then the hanging wall's - and a line that is no line of
 //! nodes of a given representation is refused by name: a contact defined by
 //! its own geometry (`NonSealedContact.Geometry`) is not written here.
 //!
@@ -44,26 +44,26 @@
 //!
 //! *“The index of the contact. Indicates identity of the contact in the
 //! surface framework context. It is used for contact identities and to find
-//! the interpretation of this particular contact”* (l. 119–124). A RESQML 2.2
+//! the interpretation of this particular contact”* (l. 119-124). A RESQML 2.2
 //! contact interpretation has no index of its own
 //! (`AbstractContactInterpretationPart` carries only `PartOf`, Interpretations.xsd
-//! l. 463–475), so the one reading left is **its position** in the
-//! organisation's `ContactInterpretation` list — and what the bag knows of the
+//! l. 463-475), so the one reading left is **its position** in the
+//! organisation's `ContactInterpretation` list - and what the bag knows of the
 //! organisation does not include that list. `contactIndex` states it, one per
 //! contact, distinct; it is **not checked** against the organisation, and the
 //! plan says so.
 //!
 //! # Why not sealed
 //!
-//! A sealed framework says that its contact patches are collocated nodes —
+//! A sealed framework says that its contact patches are collocated nodes -
 //! *“When several nodes are topologically associated, they have absolutely
-//! the same geometry”* (usage guide §8.3.2.2 p. 120–121) — and its contacts
+//! the same geometry”* (usage guide §8.3.2.2 p. 120-121) - and its contacts
 //! *“must have an identity kind of "colocated" or "equivalent"”*.
 //! The reference model asks for one (*“`SealedContact` `collocation`, patches ≥ 2”*); the
 //! workspace cannot write it honestly today: the fault surfaces
 //! (`fault-from-sticks`) carry no node on the horizons' cutoffs, so no patch of
 //! a fault is collocated with a lip; and the two lips of one torn horizon are
-//! not collocated with each other — they were, before the throw, which is a
+//! not collocated with each other - they were, before the throw, which is a
 //! *previous* collocation, and a contact interpretation has one `Index` for two
 //! lines. Written anyway, `collocation` would state a false fact about every
 //! node. This operation writes the non-sealed framework; the sealed one waits
@@ -72,8 +72,8 @@
 //! # Identity
 //!
 //! What the framework says is what it is: its title, its organisation, its
-//! representations in order and its contacts. A horizon joining it later — H1
-//! to H7 wait for a human review — makes another snapshot.
+//! representations in order and its contacts. A horizon joining it later - H1
+//! to H7 wait for a human review - makes another snapshot.
 
 use serde_json::json;
 
@@ -95,7 +95,7 @@ pub struct SurfaceFramework;
 /// What `surface-framework` is told.
 #[derive(Debug, Params)]
 pub struct FrameworkParams {
-    /// for each contact — each patch of `lips`, in order — the position, from 0, of the contact interpretation it represents in the organisation's list
+    /// for each contact - each patch of `lips`, in order - the position, from 0, of the contact interpretation it represents in the organisation's list
     #[param(min = 0.0)]
     pub contact_index: Vec<i64>,
     /// The title and the file.
@@ -109,14 +109,14 @@ pub struct FrameworkInputs {
     /// the structural organisation the framework represents
     #[input(types = "resqml22.StructuralOrganizationInterpretation")]
     pub organisation: ObjectIn,
-    /// the representations the framework gathers — surfaces of the organisation's horizons and faults — in the order its contacts index them
+    /// the representations the framework gathers - surfaces of the organisation's horizons and faults - in the order its contacts index them
     #[input(
         types = "resqml22.TriangulatedSetRepresentation, resqml22.Grid2dRepresentation, resqml22.PlaneSetRepresentation, resqml22.PolylineSetRepresentation, resqml22.PointSetRepresentation",
         least = 1,
         ordered
     )]
     pub representations: Vec<Shape>,
-    /// the contacts — each patch one contact, each of its lines nodes of one of the representations, as `fault-throw` writes its lips
+    /// the contacts - each patch one contact, each of its lines nodes of one of the representations, as `fault-throw` writes its lips
     #[input(topology = "polylines", ordered)]
     pub lips: Vec<Shape>,
 }
@@ -130,7 +130,7 @@ fn class_of(qualified_type: &str) -> String {
         .to_ascii_lowercase()
 }
 
-/// A position, exactly — the key nodes are found by.
+/// A position, exactly - the key nodes are found by.
 fn at(p: &[f64; 3]) -> [u64; 3] {
     [p[0].to_bits(), p[1].to_bits(), p[2].to_bits()]
 }
@@ -148,7 +148,7 @@ impl Operation for SurfaceFramework {
     fn about(&self) -> About {
         About {
             name: "surface-framework",
-            describe: "a non-sealed surface framework — the representations of a structural organisation in one indexed list, and the contacts between them as nodes of those representations",
+            describe: "a non-sealed surface framework - the representations of a structural organisation in one indexed list, and the contacts between them as nodes of those representations",
             category: Category::Faults,
             makes: &["resqml22.NonSealedSurfaceFrameworkRepresentation"],
             recipe: "surface-framework",
@@ -179,7 +179,7 @@ impl Operation for SurfaceFramework {
             return Err(Refusal::on(
                 "organisation",
                 format!(
-                    "`{}` is a `{}` — a surface framework represents a structural organisation (RESQML usage guide 2.2, draft, §7.3.1.2.2 p. 98)",
+                    "`{}` is a `{}` - a surface framework represents a structural organisation (RESQML usage guide 2.2, draft, §7.3.1.2.2 p. 98)",
                     organisation.title, organisation.qualified_type
                 ),
             ));
@@ -193,7 +193,7 @@ impl Operation for SurfaceFramework {
             let reference = shape.known.as_ref().and_then(|known| known.reference.clone()).ok_or_else(|| {
                 Refusal::on(
                     "representations",
-                    format!("`{}` is no object of the package — a framework gathers representations by reference", shape.name),
+                    format!("`{}` is no object of the package - a framework gathers representations by reference", shape.name),
                 )
             })?;
             if let Some(twice) = members
@@ -203,7 +203,7 @@ impl Operation for SurfaceFramework {
                 return Err(Refusal::on(
                     "representations",
                     format!(
-                        "`{}` is given twice — one representation has one index in a framework",
+                        "`{}` is given twice - one representation has one index in a framework",
                         twice.title
                     ),
                 ));
@@ -226,7 +226,7 @@ impl Operation for SurfaceFramework {
                     return Err(Refusal::on(
                         "lips",
                         format!(
-                            "`{}` holds a patch that is no set of lines — a contact is lines of nodes",
+                            "`{}` holds a patch that is no set of lines - a contact is lines of nodes",
                             lips.name
                         ),
                     ));
@@ -260,7 +260,7 @@ impl Operation for SurfaceFramework {
                                     return Err(Refusal::on(
                                         "lips",
                                         format!(
-                                            "`{}` patch {} line {line}: `{}` holds its node ({}, {}, {}) twice — which one the contact names is not decided here",
+                                            "`{}` patch {} line {line}: `{}` holds its node ({}, {}, {}) twice - which one the contact names is not decided here",
                                             lips.name, patch.index, member.title, p[0], p[1], p[2]
                                         ),
                                     ));
@@ -279,7 +279,7 @@ impl Operation for SurfaceFramework {
                         return Err(Refusal::on(
                             "lips",
                             format!(
-                                "`{}` patch {} line {line}: its nodes are not nodes of any representation given — a contact patch names nodes of one of them (ContactPatch.SupportingRepresentationNodes, RESQML 2.2 Structural.xsd l. 187–191); give the surface they lie on, or the lips `fault-throw` wrote with it",
+                                "`{}` patch {} line {line}: its nodes are not nodes of any representation given - a contact patch names nodes of one of them (ContactPatch.SupportingRepresentationNodes, RESQML 2.2 Structural.xsd l. 187-191); give the surface they lie on, or the lips `fault-throw` wrote with it",
                                 lips.name, patch.index
                             ),
                         ));
@@ -292,7 +292,7 @@ impl Operation for SurfaceFramework {
             return Err(Refusal::on(
                 "contactIndex",
                 format!(
-                    "{} index(es) for {} contact(s) — one per patch of `lips`, in order: the position of the contact interpretation each represents in the organisation",
+                    "{} index(es) for {} contact(s) - one per patch of `lips`, in order: the position of the contact interpretation each represents in the organisation",
                     params.contact_index.len(),
                     contacts.len()
                 ),
@@ -302,14 +302,14 @@ impl Operation for SurfaceFramework {
             if *index < 0 {
                 return Err(Refusal::on(
                     "contactIndex",
-                    format!("`contactIndex[{at}]` is {index} — a position counts from 0"),
+                    format!("`contactIndex[{at}]` is {index} - a position counts from 0"),
                 ));
             }
             if params.contact_index[..at].contains(index) {
                 return Err(Refusal::on(
                     "contactIndex",
                     format!(
-                        "`contactIndex[{at}]` repeats {index} — the index is the contact's identity in the framework (Structural.xsd l. 119–124)"
+                        "`contactIndex[{at}]` repeats {index} - the index is the contact's identity in the framework (Structural.xsd l. 119-124)"
                     ),
                 ));
             }
@@ -406,20 +406,20 @@ impl Operation for SurfaceFramework {
         if contacts.is_empty() {
             says.push(Note {
                 key: "no-contact",
-                detail: "no contact is written: the representations are gathered, and how they meet is not stated — the non-sealed framework the usage guide describes as a step of the workflow (§8.3.2.1 p. 119–120)".to_string(),
+                detail: "no contact is written: the representations are gathered, and how they meet is not stated - the non-sealed framework the usage guide describes as a step of the workflow (§8.3.2.1 p. 119-120)".to_string(),
             });
         } else {
             says.push(Note {
                 key: "contact-index",
                 detail: format!(
-                    "{} contact(s), each `Index` the position stated in `contactIndex` — RESQML 2.2 contact interpretations have no index of their own, and the organisation's list is not read here: not checked",
+                    "{} contact(s), each `Index` the position stated in `contactIndex` - RESQML 2.2 contact interpretations have no index of their own, and the organisation's list is not read here: not checked",
                     contacts.len()
                 ),
             });
         }
         says.push(Note {
             key: "non-sealed",
-            detail: "non-sealed: a sealed framework states collocated nodes (RESQML usage guide 2.2, draft, §8.3.2.2 p. 120–121), and no fault surface written here has nodes on the horizons' cutoffs".to_string(),
+            detail: "non-sealed: a sealed framework states collocated nodes (RESQML usage guide 2.2, draft, §8.3.2.2 p. 120-121), and no fault surface written here has nodes on the horizons' cutoffs".to_string(),
         });
 
         // -- the activity -----------------------------------------------------------------------------------
@@ -433,7 +433,7 @@ impl Operation for SurfaceFramework {
             number("contactCount", contacts.len()),
             number("contactPatchCount", patch_count),
         ];
-        // What the registry cannot record — a list is no single value — and a
+        // What the registry cannot record - a list is no single value - and a
         // second run needs, in the order given.
         for index in &params.contact_index {
             parameters.push(Parameter::Double {

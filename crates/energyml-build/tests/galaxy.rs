@@ -4,7 +4,7 @@
 //! for a given operation?
 //!
 //! What would have to break: a variable the `<command>` uses that no input or
-//! output declares — Galaxy renders it as the empty string, and the runner gets
+//! output declares - Galaxy renders it as the empty string, and the runner gets
 //! an argument with nothing after it; or `dataFile` offered as a parameter,
 //! which the runner fixes itself (the HDF5 it copies to Galaxy's output).
 
@@ -197,7 +197,7 @@ fn an_object_slot_left_empty_says_it_takes_every_object_and_the_uris_can_be_filt
 
 /// The need: run a translation of a csv, optionally passing
 /// a source epc+h5 to complete, and get
-/// an epc + h5 either new or completed — the input package is optional when
+/// an epc + h5 either new or completed - the input package is optional when
 /// every object slot is (here `wells` and `lookups`, which take every object
 /// when left empty), required only when a slot must be given objects of it.
 #[test]
@@ -236,8 +236,8 @@ fn a_declared_role_is_an_output_and_the_runner_is_told_where_to_write_it() {
         outputs.contains(r#"<data name="manifest" format="json""#),
         "{outputs}"
     );
-    assert!(outputs.contains(r#"<data name="uris_representation" format="txt" label="[Output] URIs of representation — the point sets""#), "{outputs}");
-    assert!(outputs.contains(r#"<data name="uris_category_lookup" format="txt" label="[Output] URIs of category-lookup — the codes""#), "{outputs}");
+    assert!(outputs.contains(r#"<data name="uris_representation" format="txt" label="[Output] URIs of representation - the point sets""#), "{outputs}");
+    assert!(outputs.contains(r#"<data name="uris_category_lookup" format="txt" label="[Output] URIs of category-lookup - the codes""#), "{outputs}");
     assert!(
         outputs.contains(r#"<data name="uris_out" "#),
         "the existing output stays"

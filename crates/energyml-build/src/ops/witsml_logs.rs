@@ -1,6 +1,6 @@
-//! `witsml-logs` — the WITSML 2.1 side of a wellbore's continuous properties:
+//! `witsml-logs` - the WITSML 2.1 side of a wellbore's continuous properties:
 //! one `Log`, its `ChannelSet` indexed by measured depth, a `Channel` per
-//! property — for the doublet's temperature and hydrostatic pressure that
+//! property - for the doublet's temperature and hydrostatic pressure that
 //! `well-logs` already laid on the wellbore frames (`temperature-doublet`,
 //! `pression-doublet` of the recipe).
 //!
@@ -8,7 +8,7 @@
 //! reference model) wrote the `Well`/`Wellbore`/`Trajectory`
 //! side and named, among what it does not write, the logs and channel sets.
 //! This is that side, for whatever a frame already carries
-//! as a RESQML continuous property — logs that pick their own index kind
+//! as a RESQML continuous property - logs that pick their own index kind
 //! and content and are not this operation's concern.
 //!
 //! # What is read, and from where
@@ -18,8 +18,8 @@
 //! `interpretation` (which RESQML wellbore this is), `datum` (what the index
 //! counts from), `reference` (what a property's `SupportingRepresentation`
 //! must name to hang on this frame). **RESQML continuous properties**, each
-//! resolved into [`crate::pieces::KnownProperty`] — kind, uom, indexable
-//! element, values, facets — read only on a frame
+//! resolved into [`crate::pieces::KnownProperty`] - kind, uom, indexable
+//! element, values, facets - read only on a frame
 //! (`crates/energyml-build/ARCHITECTURE.md`: a property on a frame is a
 //! positional array): the values here are exactly the frame's node count,
 //! or the property is refused by name.
@@ -40,33 +40,33 @@
 //! The need: the model does not provide for it, but could the
 //! "Data" of the "ChannelData" carry the path of a
 //! dataset in the h5? Given a file, each `ChannelSet`'s rows go to **one
-//! dataset** of it — `[rows, 1 + channels]`, the inline rows row for row, a
+//! dataset** of it - `[rows, 1 + channels]`, the inline rows row for row, a
 //! value the source states as not-a-number written `NaN` where inline writes
-//! `null` — `FileUri` naming the file and `Data` the dataset's path. **An
+//! `null` - `FileUri` naming the file and `Data` the dataset's path. **An
 //! extension beyond WITSML 2.1**, decided and argued;
 //! its reader is
 //! `energyml_domain::series::channel_set::read_with`. Left out, nothing
-//! changes — not a byte of the inline output, not a uuid: the extension's
+//! changes - not a byte of the inline output, not a uuid: the extension's
 //! seeds and titles carry the file, so a package can hold both forms of the
 //! same channels side by side.
 //!
 //! # The row layout, and what is and is not cited
 //!
 //! Neither the XSD nor its generated comment says how the numbers inside that
-//! JSON string are arranged — `Data` is typed a bare `string`. The Energistics
+//! JSON string are arranged - `Data` is typed a bare `string`. The Energistics
 //! JSON Style Guide (p. 8) names where
 //! the layout **is** specified: *"When reading WITSML v2.1, the JSON on-disk
 //! representation for channel sets (a format that is specified in Section 3
 //! of the WITSML v2.1 Release Notes), the arrays may have NULLs."* That
 //! release notes document is not among the specifications at hand (only
 //! technical reference guides and the style guide are), so its exact grammar
-//! cannot be cited here page and paragraph — flagged, not guessed past.
+//! cannot be cited here page and paragraph - flagged, not guessed past.
 //!
 //! What **is** applied is the one row shape the object model leaves no other
-//! way to read: a `ChannelSet` carries one `Index` (here, one — see below) and
+//! way to read: a `ChannelSet` carries one `Index` (here, one - see below) and
 //! `n` `Channel`s, and one `Data` shared by all of them, so a row can only be
 //! *the index value(s), then one value per channel, in the order channels are
-//! listed* — the ETP `ChannelDataRecord`/`DataItem` convention this format is
+//! listed* - the ETP `ChannelDataRecord`/`DataItem` convention this format is
 //! a file-embedded cousin of (`Channel`'s own doc comment: *"directly
 //! corresponds to the ChannelMetadataRecord structure in ETP"*). A value the
 //! source states as not-a-number is written `null`, which the style guide's
@@ -75,20 +75,20 @@
 //!
 //! # One index, never two
 //!
-//! WITSML TRG 2.1 §7.7 p. 152: `ChannelSet.Index[0].IndexKind` — an MD index
+//! WITSML TRG 2.1 §7.7 p. 152: `ChannelSet.Index[0].IndexKind` - an MD index
 //! **or** a time index, never both.
-//! This operation writes exactly one: `MeasuredDepth`, in metres — the
+//! This operation writes exactly one: `MeasuredDepth`, in metres - the
 //! convention every frame of this crate already writes its `NodeMd` in
-//! (`witsml-wells`'s `measured()`, hardcoded `m`) — increasing, its datum the
+//! (`witsml-wells`'s `measured()`, hardcoded `m`) - increasing, its datum the
 //! frame's own (`MdInterval.Datum`, the same reference `witsml-wells` puts on
 //! its `Trajectory`'s index).
 //!
-//! # One Log per frame, nested — not three parts
+//! # One Log per frame, nested - not three parts
 //!
 //! A `Log`, a `ChannelSet` and a `Channel` are each declared `top_level` in
 //! the schema (any of the three **can** stand alone), but `ChannelSet.Channel`
 //! and `Log.ChannelSet` are inline fields (`Vec<AnyChannelSet>`,
-//! `Vec<AnyChannel>`) — *"Primarily a container for one or more channel sets…
+//! `Vec<AnyChannel>`) - *"Primarily a container for one or more channel sets…
 //! most of the log information is now at the channel set level"* (`Log`'s own
 //! doc comment). Writing three parts per frame would scatter one channel
 //! set's data across three files for no reader to reassemble; this build
@@ -97,13 +97,13 @@
 //!
 //! # A Channel names a logging company, a Log does not (found, not assumed)
 //!
-//! `Channel/LoggingCompany` has no `[0..1]` in the schema — required — where
+//! `Channel/LoggingCompany` has no `[0..1]` in the schema - required - where
 //! `ChannelSet/LoggingCompany` and `Log/LoggingCompany` both do (WITSML TRG
 //! v2.1 p. 138, cross-checked against the generated field:
 //! `Channel::logging_company: DataObjectReference`, not `Option<…>`, the only
 //! one of the three that is not). A property laid by a law has no company
 //! that logged it, and nothing here invents a `BusinessAssociate` nobody
-//! named — `loggingCompany` is therefore a required setting, a reference the
+//! named - `loggingCompany` is therefore a required setting, a reference the
 //! caller gives (`eml23.BusinessAssociate`), not an object this build creates.
 //! Lutetia has none yet (the BRGM's is real, and not built), so
 //! its recipe step is `attente`, exactly like `temperature-forages` waits on
@@ -114,24 +114,24 @@
 //! `witsml-wells` derives a `Wellbore`'s uuid from the RESQML wellbore
 //! interpretation it represents: `Uuid::new_v5(NAMESPACE, "witsml-wells:wellbore:{interpretation.uuid}")`
 //! (its `plan`, the `bore_uuid[b] = support::next_uuid(cx.identity,
-//! &format!("witsml-wells:wellbore:{}", …), &mut rank)` line — `Identity::uuid`
+//! &format!("witsml-wells:wellbore:{}", …), &mut rank)` line - `Identity::uuid`
 //! ignores `rank` for the derived policy this build uses everywhere, so the
 //! seed alone decides it). This operation names the **same** wellbore its
 //! frame represents, so its `Log`, `ChannelSet` and every `Channel` reference
-//! that uuid — recomputed from the same seed, **not** duplicated as a second
+//! that uuid - recomputed from the same seed, **not** duplicated as a second
 //! formula living in two files by coincidence, but the same string, because
 //! `witsml_wells.rs` does not expose it. It should:
 //! `pub(crate) fn wellbore_uuid(identity: &Identity, interpretation_uuid: &str) -> Result<String, Error>`
 //! in `ops/witsml_wells.rs`, replacing its own inline `format!(…)` with a call
-//! to it — see the report handed back with this file.
+//! to it - see the report handed back with this file.
 //!
 //! **This equality holds under `Identity::derived()`, the policy this whole
-//! crate uses for a recipe** — two operations naming the same content name
+//! crate uses for a recipe** - two operations naming the same content name
 //! the same uuid without agreeing on anything but the seed. Under
 //! `Identity::Given`, a caller-supplied list, it does not: a given uuid was
 //! handed to `witsml-wells`'s own plan, at its own rank, and no rank this
 //! plan could ask for would be that one. That is not particular to this
-//! operation — any cross-plan reference recomputed this way shares it — and
+//! operation - any cross-plan reference recomputed this way shares it - and
 //! it is said here rather than solved, because solving it is a change to
 //! `Identity` itself, not to a wellbore reference.
 //!
@@ -139,9 +139,9 @@
 //!
 //! Only a RESQML 2.2 `ContinuousProperty`, indexed on `nodes`, one value per
 //! node, no facet (a `Channel` has no field for one), naming a `PropertyKind`
-//! by reference and a unit. Anything else — discrete, boolean, a vector, a
+//! by reference and a unit. Anything else - discrete, boolean, a vector, a
 //! property indexed on intervals or in time, one with no kind or no unit, one
-//! this build cannot map to a WITSML unit code — is **dropped by name**, never
+//! this build cannot map to a WITSML unit code - is **dropped by name**, never
 //! silently absorbed or silently ignored (`Plan::dropped`). A frame that ends
 //! up with no channel gets no `Log`, and is dropped too; a run that writes no
 //! `Log` at all is refused, the case that would otherwise look most like
@@ -177,7 +177,7 @@ const SHORT_TEXT: usize = 64;
 /// What `witsml-logs` is told.
 #[derive(Debug, Params)]
 pub struct WitsmlLogsParams {
-    /// the BusinessAssociate a Channel must name — WITSML 2.1 requires it (unlike a ChannelSet's or a Log's, which do not); a law-derived value has no company that logged it, so name the one responsible for the law, or the author's own
+    /// the BusinessAssociate a Channel must name - WITSML 2.1 requires it (unlike a ChannelSet's or a Log's, which do not); a law-derived value has no company that logged it, so name the one responsible for the law, or the author's own
     #[param(need = Need::Object { types: &["eml23.BusinessAssociate"] })]
     pub logging_company: ObjectRef,
     /// the properties are invented (laid by a law, not measured): every object made carries synthetic = true and says so
@@ -186,7 +186,7 @@ pub struct WitsmlLogsParams {
     /// the RESQML property this operation only repackages.
     #[param(default = false, optional)]
     pub synthetic: bool,
-    /// the HDF5 file the channel values go into instead of the XML — each ChannelSet's rows become one dataset of it, FileUri naming the file and Data the dataset: an extension beyond WITSML 2.1, which a reader that does not know it refuses; left out, the values are written inline in Data
+    /// the HDF5 file the channel values go into instead of the XML - each ChannelSet's rows become one dataset of it, FileUri naming the file and Data the dataset: an extension beyond WITSML 2.1, which a reader that does not know it refuses; left out, the values are written inline in Data
     ///
     /// **No default, and not `dataFile`**: a recipe gives every operation
     /// declaring `dataFile` its own file, and this one must stay inline unless
@@ -198,12 +198,12 @@ pub struct WitsmlLogsParams {
 /// What `witsml-logs` takes.
 #[derive(Debug, Inputs)]
 pub struct WitsmlLogsInputs {
-    /// the wellbore frames — each becomes one Log, indexed by its own measured depths
+    /// the wellbore frames - each becomes one Log, indexed by its own measured depths
     ///
     /// **Left empty, every frame of the package.**
     #[input(least = 1, types = "resqml22.WellboreFrameRepresentation", every)]
     pub frames: Vec<Shape>,
-    /// the RESQML continuous properties laid on those frames — each becomes a Channel of its frame's Log
+    /// the RESQML continuous properties laid on those frames - each becomes a Channel of its frame's Log
     ///
     /// **Left empty, every continuous property of the package.** One that
     /// hangs on none of `frames`, or that this operation cannot turn into a
@@ -212,7 +212,7 @@ pub struct WitsmlLogsInputs {
     pub properties: Vec<ObjectIn>,
 }
 
-/// A frame, as this operation must find it — or why it cannot. Owned
+/// A frame, as this operation must find it - or why it cannot. Owned
 /// (cloned once out of `Known`), the same choice `witsml-wells`'s own `Read`
 /// makes for the same reason: a plan reads a package once, at the boundary,
 /// and everything after that is values, not borrows to keep straight.
@@ -225,7 +225,7 @@ struct FrameInfo {
     mds: Vec<f64>,
 }
 
-/// A frame, read — or the refusal that names what it lacks.
+/// A frame, read - or the refusal that names what it lacks.
 fn frame_of(shape: &Shape) -> Result<FrameInfo, String> {
     let known = shape.known.as_ref().ok_or_else(|| {
         format!("`{}` comes with nothing known of it: a Log is written from what the package says of a RESQML wellbore frame", shape.name)
@@ -250,7 +250,7 @@ fn frame_of(shape: &Shape) -> Result<FrameInfo, String> {
         format!("`{name}` names no datum: a Channel's measured-depth index needs the reference point its depths are counted from")
     })?;
     let mds = known.node_mds.clone().ok_or_else(|| {
-        format!("`{name}` states no measured depth for its nodes — it is no wellbore frame, or this build cannot read its arrays")
+        format!("`{name}` states no measured depth for its nodes - it is no wellbore frame, or this build cannot read its arrays")
     })?;
     if mds.is_empty() {
         return Err(format!(
@@ -280,12 +280,12 @@ fn frame_of(shape: &Shape) -> Result<FrameInfo, String> {
     })
 }
 
-/// A continuous property, read as one channel's worth of values — or why it
+/// A continuous property, read as one channel's worth of values - or why it
 /// cannot be one. Owns what it reads rather than borrowing it, so it outlives
 /// the loop that gathers a frame's channels without tying this module to a
 /// lifetime shared with the properties given.
 struct Judged {
-    /// The RESQML property itself — what a channel's citation and a refusal
+    /// The RESQML property itself - what a channel's citation and a refusal
     /// name.
     reference: Ref,
     kind: Ref,
@@ -293,13 +293,13 @@ struct Judged {
     values: Vec<f64>,
 }
 
-/// The class of a qualified type — `ContinuousProperty` of
+/// The class of a qualified type - `ContinuousProperty` of
 /// `resqml22.ContinuousProperty`.
 fn class_of(qualified_type: &str) -> &str {
     qualified_type.rsplit('.').next().unwrap_or(qualified_type)
 }
 
-/// The WITSML unit code of a uom this operation knows — `well-logs` writes
+/// The WITSML unit code of a uom this operation knows - `well-logs` writes
 /// exactly these two (`degC`, `bar`); anything else is refused **by name**
 /// rather than guessed at, since no generic uom-string-to-enum reader lives
 /// at this layer (`energyml-domain::units` only converts numbers, and this
@@ -313,7 +313,7 @@ fn uom_of(uom: &str) -> Option<eml::UnitOfMeasureExt> {
     }
 }
 
-/// A property that can become a channel, or the reason it cannot — every
+/// A property that can become a channel, or the reason it cannot - every
 /// reason a reason **not to read**, never a reading made anyway.
 fn judge_property(reference: &Ref, facts: &KnownProperty, nodes: usize) -> Result<Judged, String> {
     if class_of(&reference.qualified_type) != "ContinuousProperty"
@@ -327,10 +327,10 @@ fn judge_property(reference: &Ref, facts: &KnownProperty, nodes: usize) -> Resul
     let raw = facts
         .values
         .as_ref()
-        .map_err(|why| format!("its values did not read — {why}"))?;
+        .map_err(|why| format!("its values did not read - {why}"))?;
     if facts.timed {
         return Err(
-            "it is indexed in time — a channel here is indexed by measured depth, not by a time step"
+            "it is indexed in time - a channel here is indexed by measured depth, not by a time step"
                 .to_string(),
         );
     }
@@ -342,7 +342,7 @@ fn judge_property(reference: &Ref, facts: &KnownProperty, nodes: usize) -> Resul
     let per_element: u64 = facts.value_count.iter().product();
     if per_element > 1 {
         return Err(format!(
-            "it holds {per_element} value(s) per node — a vector or a tensor — and a channel holds one value per node"
+            "it holds {per_element} value(s) per node - a vector or a tensor - and a channel holds one value per node"
         ));
     }
     if facts.indexable != "nodes" {
@@ -370,7 +370,7 @@ fn judge_property(reference: &Ref, facts: &KnownProperty, nodes: usize) -> Resul
     };
     if raw.len() != nodes {
         return Err(format!(
-            "it holds {} value(s) where the frame has {nodes} node(s) — a channel takes one value per node",
+            "it holds {} value(s) where the frame has {nodes} node(s) - a channel takes one value per node",
             raw.len()
         ));
     }
@@ -387,7 +387,7 @@ fn judge_property(reference: &Ref, facts: &KnownProperty, nodes: usize) -> Resul
     })
 }
 
-/// A reference read from a settled `ObjectRef` — a bare uuid, or a
+/// A reference read from a settled `ObjectRef` - a bare uuid, or a
 /// `DataObjectReference` given whole.
 pub(crate) fn reference_from(
     slot: &str,
@@ -434,7 +434,7 @@ fn nan_unless_finite(value: f64) -> f64 {
     if value.is_finite() { value } else { f64::NAN }
 }
 
-/// Values as a seed carries them — exactly, NaN included (`well-logs`'s own
+/// Values as a seed carries them - exactly, NaN included (`well-logs`'s own
 /// `digest`, duplicated: a small, pure formatting helper, not the kind of
 /// formula this module's doc asks a caller to share rather than copy).
 fn digest(values: &[f64]) -> String {
@@ -467,7 +467,7 @@ impl Operation for WitsmlLogs {
     fn about(&self) -> About {
         About {
             name: "witsml-logs",
-            describe: "the WITSML side of a wellbore's continuous properties: a Log per frame, its ChannelSet indexed by measured depth, a Channel per property — the data blob written inline, or to an HDF5 dataset when channelDataFile asks (an extension beyond WITSML 2.1)",
+            describe: "the WITSML side of a wellbore's continuous properties: a Log per frame, its ChannelSet indexed by measured depth, a Channel per property - the data blob written inline, or to an HDF5 dataset when channelDataFile asks (an extension beyond WITSML 2.1)",
             category: Category::Wells,
             makes: &["witsml21.Log"],
             recipe: "witsml-logs",
@@ -489,7 +489,7 @@ impl Operation for WitsmlLogs {
             Slot::required(
                 "logCount",
                 number(),
-                "Log objects written — one per frame that ends up with a channel",
+                "Log objects written - one per frame that ends up with a channel",
             ),
             Slot::required(
                 "channelCount",
@@ -608,7 +608,7 @@ impl Operation for WitsmlLogs {
                     Ok(judged) => channels.push(judged),
                     Err(why) => dropped.push(Dropped {
                         count: 1,
-                        why: format!("`{}`: not turned into a channel — {why}", reference.title),
+                        why: format!("`{}`: not turned into a channel - {why}", reference.title),
                     }),
                 }
             }
@@ -661,7 +661,7 @@ impl Operation for WitsmlLogs {
                     return Err(Refusal::on(
                         "properties",
                         format!(
-                            "`{}`'s property kind is titled `{mnemonic}`, {} characters — a Channel's Mnemonic holds {SHORT_TEXT}",
+                            "`{}`'s property kind is titled `{mnemonic}`, {} characters - a Channel's Mnemonic holds {SHORT_TEXT}",
                             judged.reference.title,
                             mnemonic.chars().count()
                         ),
@@ -685,7 +685,7 @@ impl Operation for WitsmlLogs {
                     &mut rank,
                 )?;
                 let description = format!(
-                    "Same values as `{}` (RESQML {}), laid by a law — see that object's citation for the law and its source.",
+                    "Same values as `{}` (RESQML {}), laid by a law - see that object's citation for the law and its source.",
                     judged.reference.title, judged.reference.qualified_type
                 );
                 let channel = witsml::Channel {
@@ -766,7 +766,7 @@ impl Operation for WitsmlLogs {
             // -- the ChannelSet, nested (not a second part) -------------------
             let channel_set = witsml::ChannelSet {
                 citation: citation(
-                    &titled(format!("{wellbore_title} — channels")),
+                    &titled(format!("{wellbore_title} - channels")),
                     Some(format!(
                         "The channels of `{}`: {}.",
                         frame.name,
@@ -784,8 +784,8 @@ impl Operation for WitsmlLogs {
                 ..Default::default()
             };
 
-            // -- the Log — the one part this operation writes -----------------
-            let log_title = titled(format!("{wellbore_title} — Log"));
+            // -- the Log - the one part this operation writes -----------------
+            let log_title = titled(format!("{wellbore_title} - Log"));
             let log_description = format!(
                 "The WITSML side of {} continuous propert{} on `{}`: {}.",
                 channels.len(),
@@ -867,13 +867,13 @@ impl Operation for WitsmlLogs {
             None => Note {
                 key: "written",
                 detail: format!(
-                    "{log_count} Log(s), {channel_count} Channel(s), the values inline — never a FileUri, never the HDF5"
+                    "{log_count} Log(s), {channel_count} Channel(s), the values inline - never a FileUri, never the HDF5"
                 ),
             },
             Some(file) => Note {
                 key: "written",
                 detail: format!(
-                    "{log_count} Log(s), {channel_count} Channel(s), the values in `{file}`, one dataset per ChannelSet — FileUri names the file and Data the dataset, an extension beyond WITSML 2.1: a reader that does not know it refuses the rows"
+                    "{log_count} Log(s), {channel_count} Channel(s), the values in `{file}`, one dataset per ChannelSet - FileUri names the file and Data the dataset, an extension beyond WITSML 2.1: a reader that does not know it refuses the rows"
                 ),
             },
         }];

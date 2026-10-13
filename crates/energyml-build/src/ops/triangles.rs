@@ -1,7 +1,7 @@
-//! `triangles` — a `TriangulatedSetRepresentation` from a triangulated shape.
+//! `triangles` - a `TriangulatedSetRepresentation` from a triangulated shape.
 //!
 //! One `TrianglePatch` per patch of the shape, each with its own points and
-//! its indices **local to the patch** — the usage that keeps every patch
+//! its indices **local to the patch** - the usage that keeps every patch
 //! self-contained, and the one the house reader accepts alongside the other.
 //! A shape whose topology is not triangles is refused by name: quads and
 //! polygons would need a triangulation nobody asked for, and points and
@@ -36,10 +36,10 @@ pub struct TrianglesParams {
 /// What `triangles` takes.
 #[derive(Debug, Inputs)]
 pub struct TrianglesInputs {
-    /// triangulated shapes, copied as they are — each patch its own
+    /// triangulated shapes, copied as they are - each patch its own
     ///
     /// **Several**, each with its patches: what `plan` has done from the first
-    /// day — one RESQML patch per input patch. Promoting the panels of a
+    /// day - one RESQML patch per input patch. Promoting the panels of a
     /// section is one shape per panel (12/09).
     #[input(topology = "triangles", least = 1)]
     pub shape: Vec<Shape>,
@@ -52,7 +52,7 @@ impl Operation for Triangles {
     fn about(&self) -> About {
         About {
             name: "triangles",
-            describe: "a triangulated surface from a shape whose topology is triangles — one patch per patch, indices local",
+            describe: "a triangulated surface from a shape whose topology is triangles - one patch per patch, indices local",
             category: Category::Create,
             makes: &["resqml22.TriangulatedSetRepresentation"],
             recipe: "triangles",
@@ -65,8 +65,8 @@ impl Operation for Triangles {
     }
 
     /// A shape whose topology is not triangles is refused **naming what it
-    /// is**: quads and polygons would need a triangulation nobody asked for —
-    /// that is `triangulate` — and points and polylines have no faces at all.
+    /// is**: quads and polygons would need a triangulation nobody asked for -
+    /// that is `triangulate` - and points and polylines have no faces at all.
     fn check(&self, inputs: &TrianglesInputs) -> Result<(), Refusal> {
         let mut triangulated = 0usize;
         let mut other: Vec<&'static str> = Vec::new();
@@ -91,7 +91,7 @@ impl Operation for Triangles {
         Err(Refusal::on(
             "shape",
             format!(
-                "the shape's topology is {} — a triangulated surface takes triangles, and triangulating is not decided here",
+                "the shape's topology is {} - a triangulated surface takes triangles, and triangulating is not decided here",
                 if other.is_empty() {
                     "empty".to_string()
                 } else {
@@ -138,7 +138,7 @@ impl Operation for Triangles {
     }
 }
 
-/// **The triangulated set, written** — what the operation does, and what an
+/// **The triangulated set, written** - what the operation does, and what an
 /// operation that decides triangles (`triangulate`, `cross-section`) calls
 /// directly: typed in, no bag to derive and no choices read back by name.
 /// `seed` is the caller's, so that two routes to the same set name it the same.
@@ -177,7 +177,7 @@ pub fn write(
                 return Err(Refusal::on(
                     "shape",
                     format!(
-                        "`{}` patch {}: a triangle names node {bad} and the patch holds {n} — indices are local to the patch",
+                        "`{}` patch {}: a triangle names node {bad} and the patch holds {n} - indices are local to the patch",
                         shape.name, patch.index
                     ),
                 ));
@@ -286,8 +286,8 @@ pub fn write(
             seed,
             parameters,
         },
-        // What the frame must say of itself — degrees, a `ProjectedCrs` taken
-        // as it stands — and nothing when it is a compound.
+        // What the frame must say of itself - degrees, a `ProjectedCrs` taken
+        // as it stands - and nothing when it is a compound.
         says: frame.says,
         dropped: Vec::new(),
     })

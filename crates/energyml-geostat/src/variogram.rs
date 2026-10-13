@@ -4,38 +4,38 @@
 //! distance*; the empirical variogram measures it from the data and a
 //! model makes it usable at every distance. The split matters: the
 //! empirical bins are arithmetic over the samples (testable exactly), the
-//! model is a choice — and a fitted model says which choice and with what
+//! model is a choice - and a fitted model says which choice and with what
 //! parameters, instead of burying them.
 //!
 //! Conventions worth stating, because both have a silent wrong reading:
-//! - `range` is the **practical** range for the exponential model — the
+//! - `range` is the **practical** range for the exponential model - the
 //!   distance where the model reaches ~95 % of the sill (`1 − e⁻³`), which
 //!   is what most geostatistics software reports. The raw exponential
 //!   parameter is `range / 3`.
 //! - `γ(0) = 0` always. A nugget is the *limit* of `γ` as `h → 0⁺`, not
-//!   its value at zero — this is what keeps kriging exact at its samples.
+//!   its value at zero - this is what keeps kriging exact at its samples.
 //!
-//! TODO(reference): verify — the empirical variogram and its models follow standard geostatistics; no publication is cited in this code. Add a reference once checked.
+//! TODO(reference): verify - the empirical variogram and its models follow standard geostatistics; no publication is cited in this code. Add a reference once checked.
 
 use crate::Error;
 
 /// One distance class of the empirical variogram.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bin {
-    /// The mean pair distance of the class — not the class centre, the
+    /// The mean pair distance of the class - not the class centre, the
     /// distance the pairs actually have; fitting against the centre biases
     /// the model where pairs cluster near an edge.
     pub distance: f64,
     /// The semivariance `(1 / 2n) Σ (zᵢ − zⱼ)²` over the class's pairs.
     pub semivariance: f64,
-    /// How many pairs the class holds — the weight of the class in a fit.
+    /// How many pairs the class holds - the weight of the class in a fit.
     pub pairs: usize,
 }
 
 /// What [`empirical`] answers: the bins, and the honesty counter.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Empirical {
-    /// Only classes that hold at least one pair — an empty class says
+    /// Only classes that hold at least one pair - an empty class says
     /// nothing and would fit as if it said zero.
     pub bins: Vec<Bin>,
     /// Samples set aside for a `NaN` value or coordinate.
@@ -45,7 +45,7 @@ pub struct Empirical {
 /// The empirical variogram of `values` sampled at `samples`.
 ///
 /// Pairs farther apart than `max_distance` are left out; the default is
-/// **half the largest pair distance**, the standard practice — beyond it
+/// **half the largest pair distance**, the standard practice - beyond it
 /// the classes hold few pairs and mostly noise. `classes` is how many
 /// distance classes divide `[0, max_distance]`.
 pub fn empirical<const N: usize>(
@@ -99,7 +99,7 @@ pub fn empirical<const N: usize>(
         top
     };
     if farthest <= 0.0 {
-        // Every usable sample sits on one point — no distance, no variogram.
+        // Every usable sample sits on one point - no distance, no variogram.
         return Err(Error::DuplicateSamplePositions { first: 0, second: 1 });
     }
     let reach = max_distance.unwrap_or(farthest / 2.0);
@@ -133,7 +133,7 @@ pub fn empirical<const N: usize>(
     Ok(Empirical { bins, set_aside })
 }
 
-/// The shape of a variogram model — the registry-style list this crate
+/// The shape of a variogram model - the registry-style list this crate
 /// evaluates. A new shape is a new variant plus one arm in `shape`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModelKind {
@@ -147,7 +147,7 @@ pub enum ModelKind {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
     pub kind: ModelKind,
-    /// The discontinuity at the origin — measurement noise plus
+    /// The discontinuity at the origin - measurement noise plus
     /// variability below the sampling distance. `γ(0)` itself is 0.
     pub nugget: f64,
     /// The plateau: the variance the field settles at, far away.
@@ -158,7 +158,7 @@ pub struct Model {
 }
 
 impl Model {
-    /// A model stated by hand — refused by name when the numbers cannot
+    /// A model stated by hand - refused by name when the numbers cannot
     /// be a variogram (negative nugget, sill below nugget, range ≤ 0).
     pub fn new(kind: ModelKind, nugget: f64, sill: f64, range: f64) -> Result<Model, Error> {
         if !(nugget.is_finite() && nugget >= 0.0) {
@@ -200,7 +200,7 @@ impl Model {
         }
     }
 
-    /// `γ(h)` — zero at zero, nugget-limited above it, sill far away.
+    /// `γ(h)` - zero at zero, nugget-limited above it, sill far away.
     pub fn evaluate(&self, h: f64) -> f64 {
         if h <= 0.0 {
             return 0.0;
@@ -209,7 +209,7 @@ impl Model {
     }
 
     /// Fit a model of `kind` to an empirical variogram, by weighted least
-    /// squares — each class weighted by its pair count, so a class of
+    /// squares - each class weighted by its pair count, so a class of
     /// three pairs does not bend the model like a class of three hundred.
     ///
     /// The range is searched over a grid spanning the observed distances
@@ -230,7 +230,7 @@ impl Model {
         let mut best: Option<(f64, Model)> = None;
         for step in 0..64 {
             // Log-spaced candidates from the shortest class to past the
-            // longest — a range beyond the data is a legitimate answer
+            // longest - a range beyond the data is a legitimate answer
             // (the field decorrelates slower than the survey is wide).
             let t = step as f64 / 63.0;
             let range = shortest * (2.0 * longest / shortest).powf(t);
@@ -251,7 +251,7 @@ impl Model {
 }
 
 impl ModelKind {
-    /// For a fixed range, the weighted least-squares `(nugget, sill)` —
+    /// For a fixed range, the weighted least-squares `(nugget, sill)` -
     /// the model is linear in both once the shape is known. Clamped to
     /// nugget ≥ 0 and sill ≥ nugget, because a fit outside those is not a
     /// variogram and the clamp is re-solved, not just cut.
@@ -283,7 +283,7 @@ impl ModelKind {
             (0.0, if s_ss > 0.0 { s_sy / s_ss } else { 0.0 })
         };
         if nugget < 0.0 {
-            // Re-solve with nugget pinned at 0 — dropping the constraint's
+            // Re-solve with nugget pinned at 0 - dropping the constraint's
             // row, not clipping the unconstrained answer.
             nugget = 0.0;
             spread = if s_ss > 0.0 { s_sy / s_ss } else { 0.0 };
@@ -306,7 +306,7 @@ mod tests {
     use super::*;
 
     /// Nine samples on a line, values = x: every pair at distance h has
-    /// (Δz)² = h², so γ(h) = h²/2 exactly — arithmetic, not statistics.
+    /// (Δz)² = h², so γ(h) = h²/2 exactly - arithmetic, not statistics.
     fn line() -> (Vec<[f64; 2]>, Vec<f64>) {
         let samples: Vec<[f64; 2]> = (0..9).map(|at| [at as f64, 0.0]).collect();
         let values = samples.iter().map(|p| p[0]).collect();
@@ -317,7 +317,7 @@ mod tests {
     fn the_empirical_variogram_of_a_linear_field_is_h_squared_over_two() {
         let (samples, values) = line();
         // Reach 4.5 puts each integer distance in its own right-open
-        // class — reach 4.0 would clamp d = 4 into d = 3's class and mix
+        // class - reach 4.0 would clamp d = 4 into d = 3's class and mix
         // two distances in one bin.
         let observed = empirical(&samples, &values, Some(4.5), 4).unwrap();
         for bin in &observed.bins {
@@ -330,7 +330,7 @@ mod tests {
                 expected
             );
         }
-        // Distance 1 has 8 pairs, distance 4 has 5 — the counts are data.
+        // Distance 1 has 8 pairs, distance 4 has 5 - the counts are data.
         assert_eq!(observed.bins[0].pairs, 8);
         assert_eq!(observed.bins[3].pairs, 5);
     }

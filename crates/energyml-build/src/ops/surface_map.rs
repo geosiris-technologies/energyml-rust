@@ -1,4 +1,4 @@
-//! `surface-map` — what a triangulated horizon says about itself, as a
+//! `surface-map` - what a triangulated horizon says about itself, as a
 //! continuous property at every node: dip, dip azimuth, or one of the four
 //! curvatures.
 //!
@@ -6,7 +6,7 @@
 //! The computation is
 //! [`energyml_analysis::surface`], written and tested against shapes whose
 //! answer is known analytically; this is the seam that turns one of its
-//! answers into an object of the package — and it is an **operation**, so the
+//! answers into an object of the package - and it is an **operation**, so the
 //! CLI and the front end reach it by the door they already have, with no command
 //! and no form written for it.
 //!
@@ -14,7 +14,7 @@
 //!
 //! `what` picks one, and the plan writes one property. Two maps are two runs,
 //! which is what [`super::property`] itself says of two fields: one property
-//! per field. It also keeps the derived uuid honest — the field's name carries
+//! per field. It also keeps the derived uuid honest - the field's name carries
 //! the map, so `dip` and `azimuth` of one surface never collide.
 //!
 //! # Which way is up is read, never guessed
@@ -28,12 +28,12 @@
 //! # What has no value, and why it is not an error
 //!
 //! The azimuth of a horizontal node, and every curvature of a boundary node,
-//! do not exist — the analysis writes `NaN` there and counts them, and so does
+//! do not exist - the analysis writes `NaN` there and counts them, and so does
 //! the property. A note says how many. Extrapolating them would draw a rim of
 //! invented structure exactly where people look for the edge of the data.
 //!
 //! A surface of several patches is one mesh here, its patches concatenated in
-//! their own order — which is the node order of the representation, so value
+//! their own order - which is the node order of the representation, so value
 //! *i* lands on node *i*. Nothing welds two patches that meet, because nothing
 //! in the document says they do: a node on such a seam is on the boundary of
 //! its patch, so its curvature is `NaN` like any other rim node, and the note
@@ -133,7 +133,7 @@ pub struct SurfaceMapParams {
     /// which map
     #[param(default = What::Dip)]
     pub what: What,
-    /// what the third coordinate measures — an elevation (larger is higher) or a depth (larger is lower)
+    /// what the third coordinate measures - an elevation (larger is higher) or a depth (larger is lower)
     ///
     /// Suggested from the CRS the reader read, never from the shape: a bowl
     /// and a dome are the same triangles.
@@ -142,12 +142,12 @@ pub struct SurfaceMapParams {
     pub representation: ObjectRef,
     /// what is measured; left out, the kind of the standard dictionary the map is measured under
     pub property_kind: Option<PropertyKindRef>,
-    /// the unit of the values; left out, the map's own — degrees, or 1/m
+    /// the unit of the values; left out, the map's own - degrees, or 1/m
     pub uom: Option<String>,
     /// the property's title; left out, the surface's and the map's
     ///
     /// **Not suggested**, deliberately: a suggestion is settled before `plan`
-    /// runs, so one written here would be the same whatever `what` says — and
+    /// runs, so one written here would be the same whatever `what` says - and
     /// it was: every map of a surface came out titled *dip*.
     pub title: Option<Title>,
     /// the external file the values go into
@@ -166,7 +166,7 @@ pub struct SurfaceMapInputs {
 /// The surface as one mesh: the coordinates flat, the triangles global.
 ///
 /// The patches are concatenated in their own order, each one's indices moved
-/// by the nodes before it — the node numbering a representation states, so a
+/// by the nodes before it - the node numbering a representation states, so a
 /// value lands on the node it was computed for.
 fn mesh_of(shape: &Shape) -> (Vec<f64>, Vec<u32>) {
     let mut points: Vec<f64> = Vec::new();
@@ -181,12 +181,12 @@ fn mesh_of(shape: &Shape) -> (Vec<f64>, Vec<u32>) {
     (points, triangles)
 }
 
-/// The lattice a shape is, when it is **one** 2D grid — `(fastest, slowest)`.
+/// The lattice a shape is, when it is **one** 2D grid - `(fastest, slowest)`.
 ///
 /// A `Grid2dRepresentation` has no listed face: its cells are the lattice's,
 /// and reading them as triangles would cut each in two by a diagonal the file
 /// never chose. Its slope is read by central differences instead
-/// (`energyml_analysis::surface::lattice_slope`, 25/09 — the DTM of Lutetia).
+/// (`energyml_analysis::surface::lattice_slope`, 25/09 - the DTM of Lutetia).
 fn lattice_of(shape: &Shape) -> Option<(usize, usize)> {
     match shape.geometry.patches.as_slice() {
         [one] => match one.topology {
@@ -204,7 +204,7 @@ impl Operation for SurfaceMap {
     fn about(&self) -> About {
         About {
             name: "surface-map",
-            describe: "dip, dip azimuth or curvature of a triangulated surface, dip and dip azimuth of a 2D grid — one value per node, written as a continuous property",
+            describe: "dip, dip azimuth or curvature of a triangulated surface, dip and dip azimuth of a 2D grid - one value per node, written as a continuous property",
             category: Category::Analysis,
             makes: &["resqml22.ContinuousProperty"],
             recipe: "surface-map",
@@ -274,7 +274,7 @@ impl Operation for SurfaceMap {
             _ if lattice_of(&inputs.shape).is_some() => {
                 return Err(Refusal::on(
                     "what",
-                    "the curvature of a 2D grid is not written yet: the operators here need triangles, and cutting each cell in two would be a choice the file never made — dip and dip azimuth are read on a grid",
+                    "the curvature of a 2D grid is not written yet: the operators here need triangles, and cutting each cell in two would be a choice the file never made - dip and dip azimuth are read on a grid",
                 ));
             }
             _ => {
@@ -320,7 +320,7 @@ impl Operation for SurfaceMap {
                 let of = known
                     .and_then(|k| k.reference.as_ref().map(|r| r.title.clone()))
                     .unwrap_or_else(|| source.clone());
-                format!("{of} — {}", map.label)
+                format!("{of} - {}", map.label)
             }
         };
         let uom = params.uom.unwrap_or_else(|| map.uom.to_string());
@@ -388,7 +388,7 @@ impl Operation for SurfaceMap {
 
     /// `what` and `vertical` are **not** here, though the activity records
     /// them: a title cannot be an input and an output of one template, and
-    /// they are inputs — the writer files them under the parameter the
+    /// they are inputs - the writer files them under the parameter the
     /// projection already declares.
     fn reports(&self) -> Vec<Slot> {
         vec![

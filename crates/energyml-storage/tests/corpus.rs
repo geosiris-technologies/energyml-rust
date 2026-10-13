@@ -7,7 +7,7 @@
 //!
 //! What is checked is deliberately not "it parses": it is that the three levels
 //! of ADR-0002 agree with each other. The identity a
-//! listing shows must be the identity the deserialized object carries — if they
+//! listing shows must be the identity the deserialized object carries - if they
 //! can disagree, the cheap levels are worthless.
 
 use std::io::Cursor;
@@ -24,7 +24,7 @@ use energyml_storage::{EnergymlStorage, EpcStore, LocalPackage, graph};
 /// Every schema version the workspace generates.
 ///
 /// One line rather than a hand-kept subset: a list written out here goes stale
-/// the day a release is added, and nothing would notice — the suite would keep
+/// the day a release is added, and nothing would notice - the suite would keep
 /// passing while quietly never covering the new version. `energyml-schemas`
 /// holds the one list, and its own test fails when it disagrees with
 /// `codegen.toml`.
@@ -33,7 +33,7 @@ fn registry() -> Arc<Registry> {
 }
 
 /// The public reference packages, found by `fixtures.rs`: the
-/// fesapi pair and the four resqpy ones, each beside its `.h5` companion —
+/// fesapi pair and the four resqpy ones, each beside its `.h5` companion -
 /// which is what lets an array pointer naming `testingPackageCpp22.h5` be
 /// resolved relative to its package.
 fn corpus() -> Vec<PathBuf> {
@@ -60,7 +60,7 @@ fn every_package_opens_and_lists_its_objects() {
         let resources = store.resources();
         assert!(
             !resources.is_empty(),
-            "{} holds no EnergyML object at all — the inventory is wrong",
+            "{} holds no EnergyML object at all - the inventory is wrong",
             path.display()
         );
         for summary in &resources {
@@ -91,7 +91,7 @@ fn every_package_opens_and_lists_its_objects() {
             // learns to ignore, which is how a real warning gets missed.
             assert!(
                 !diagnostic.message.contains("no type this build knows"),
-                "{}: `{}` — nothing in this corpus is an alien part",
+                "{}: `{}` - nothing in this corpus is an alien part",
                 path.display(),
                 diagnostic.message
             );
@@ -107,7 +107,7 @@ fn the_three_levels_agree() {
     }
     for path in &files {
         let mut store = EpcStore::open(path, registry()).expect("the package opens");
-        // The corpus carries genuinely defective packages —
+        // The corpus carries genuinely defective packages -
         // `80wells_surf_modified_val_color.epc` has a `FluidCharacterization`
         // missing a required element. This test is about the three levels
         // agreeing on identity, not about strictness (which has its own
@@ -124,7 +124,7 @@ fn the_three_levels_agree() {
             let object = match store.get_object(&summary.uri) {
                 Ok(object) => object,
                 Err(energyml_storage::Error::UnknownType(_)) => continue,
-                Err(e) => panic!("{}: {} — {e}", path.display(), summary.uri),
+                Err(e) => panic!("{}: {} - {e}", path.display(), summary.uri),
             };
             let key = identity::key_of_reflect(object.as_reflect())
                 .unwrap_or_else(|| panic!("{}: {} carries no identity", path.display(), summary.uri));
@@ -141,7 +141,7 @@ fn the_three_levels_agree() {
             // being true once PRODML 2.3 was generated: until then, 2.3 not being generated, a
             // part stamped `2.3` fell back on 2.2 on **both** sides and the
             // two agreed by accident. Generating 2.3 separates them, and the
-            // separation is right — the `TimeSeriesData` of
+            // separation is right - the `TimeSeriesData` of
             // `80wells_surf_modified_val_color.epc` declares `2.3` on 2.2
             // content, and the package has no `[Content_Types].xml` to
             // contradict it. The index believes the stamp, without parsing; the read
@@ -224,11 +224,11 @@ fn arrays_are_located_in_both_spellings() {
     );
     assert!(
         with_mime > 0,
-        "not one proxy declared its format — the MIME type on `EpcExternalPartReference` is being dropped"
+        "not one proxy declared its format - the MIME type on `EpcExternalPartReference` is being dropped"
     );
     assert!(
         old_form + new_form > 0,
-        "the corpus holds no external array at all — suspicious"
+        "the corpus holds no external array at all - suspicious"
     );
     assert!(
         unresolved.is_empty(),
@@ -242,8 +242,8 @@ fn arrays_are_located_in_both_spellings() {
 fn json_round_trips_on_every_object_of_the_corpus() {
     // The strongest test the JSON encoding can have: 425 objects written by two
     // independent implementations, each written out, read back and written
-    // again. Anything the encoding cannot express — a substituted subtype, a
-    // foreign XML subtree, a jagged array of doubles — comes out as a
+    // again. Anything the encoding cannot express - a substituted subtype, a
+    // foreign XML subtree, a jagged array of doubles - comes out as a
     // difference between the two documents.
     let files = corpus();
     if skip_if_empty(&files, "json_round_trips_on_every_object_of_the_corpus") {
@@ -262,16 +262,16 @@ fn json_round_trips_on_every_object_of_the_corpus() {
             // **The expected type is the object's, not the URI's.**
             //
             // The assertion compared against `summary.qualified_type`, that is,
-            // what the index **guessed** without parsing — and it passed as long as
+            // what the index **guessed** without parsing - and it passed as long as
             // the two could not diverge. They diverge since
             // PRODML 2.3 exists: `80wells_surf_modified_val_color.epc` carries
             // a `TimeSeriesData` stamped `schemaVersion="2.3"` whose
             // content is 2.2 (its `Key`s are `xs:string`, which only
-            // 2.2 allows — 2.3 wants a required `keyword` there), and the package
+            // 2.2 allows - 2.3 wants a required `keyword` there), and the package
             // has no `[Content_Types].xml` to contradict the stamp.
             //
             // What this test means is *the document names its own type,
-            // and names it first* — a property of the JSON encoding. Making it
+            // and names it first* - a property of the JSON encoding. Making it
             // depend on the index made it, by accident, a test of
             // version identification, which has its own.
             let expected = identity::key_of_reflect(object.as_reflect())
@@ -299,7 +299,7 @@ fn json_round_trips_on_every_object_of_the_corpus() {
     eprintln!("{checked} objects round-tripped through JSON");
     assert!(
         checked > 100,
-        "only {checked} objects — the corpus is not what it should be"
+        "only {checked} objects - the corpus is not what it should be"
     );
 }
 
@@ -342,11 +342,11 @@ fn every_validation_path_of_the_corpus_points_at_something() {
     eprintln!("{issues} validation issue(s) on the corpus, {indexed} inside a repeated field");
     assert!(
         issues > 0,
-        "no issue at all on the corpus — the check proves nothing"
+        "no issue at all on the corpus - the check proves nothing"
     );
     assert!(
         indexed > 0,
-        "no issue inside a repeated field — the case that was broken is not covered"
+        "no issue inside a repeated field - the case that was broken is not covered"
     );
 }
 
@@ -394,7 +394,7 @@ fn a_reference_can_carry_its_target() {
 fn a_package_survives_being_rewritten() {
     // The acceptance test of §10 of the design: read an EPC, write it back,
     // read the result, compare. The comparison is each object's canonical JSON,
-    // which is complete — a field lost anywhere in the chain shows up as a
+    // which is complete - a field lost anywhere in the chain shows up as a
     // difference.
     let files = corpus();
     if skip_if_empty(&files, "a_package_survives_being_rewritten") {
@@ -438,7 +438,7 @@ fn a_package_survives_being_rewritten() {
 
         // A package we wrote ourselves must be conformant: no fallback, no
         // duplicate override, no missing core properties. Notes are another
-        // matter — "prodml23 is not registered" is as true of what we wrote as
+        // matter - "prodml23 is not registered" is as true of what we wrote as
         // of what we read, and saying so is the honest answer.
         let departures: Vec<_> = package
             .diagnostics()
@@ -471,7 +471,7 @@ fn a_package_survives_being_rewritten() {
         // Parts the specification does not describe belong to the producer, and
         // rewriting one away is a loss nothing would ever mention. fesapi's
         // `docProps/extendedCore.xml` is the real case, in both reference
-        // packages — `docProps/` is package metadata rather than an attachment,
+        // packages - `docProps/` is package metadata rather than an attachment,
         // which is exactly how it fell through.
         if let Ok(original) = source.read_attachment("docProps/extendedCore.xml") {
             let kept = package
@@ -520,7 +520,7 @@ fn a_package_survives_being_rewritten() {
 #[test]
 fn an_open_package_is_modifiable() {
     // §12: open, edit, save. The archive is untouched until the save, and the
-    // edit survives it — through the type-agnostic path, since that is what an
+    // edit survives it - through the type-agnostic path, since that is what an
     // editing interface built on reflection will use.
     let files = corpus();
     if skip_if_empty(&files, "an_open_package_is_modifiable") {
@@ -718,7 +718,7 @@ fn reading_an_array_says_which_capability_is_missing() {
         return;
     }
     // **Two absences, and they are not the same one.** A package whose data
-    // file was never shipped beside it answers `FileMissing` — correctly, and
+    // file was never shipped beside it answers `FileMissing` - correctly, and
     // before the question this test is asking is ever reached. Taking the first
     // package in the corpus and demanding `FeatureNotEnabled` therefore turns
     // "somebody added an `.epc` without its `.h5`" into a failure of the array
@@ -785,7 +785,7 @@ fn every_array_of_the_corpus_reads() {
     let mut kinds: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
 
     // A package whose `.h5` companion was never downloaded is not a failure of
-    // the backend — it is a gap in the corpus. Counted and printed, so a pass
+    // the backend - it is a gap in the corpus. Counted and printed, so a pass
     // is never mistaken for coverage.
     let is_absent = |e: &energyml_storage::Error| {
         matches!(
@@ -826,7 +826,7 @@ fn every_array_of_the_corpus_reads() {
                             }
                         };
                         // The values must account for exactly the elements the
-                        // shape promises — a silent truncation would pass every
+                        // shape promises - a silent truncation would pass every
                         // other check in this file.
                         let elements: i64 = data.metadata.dimensions.iter().product();
                         assert_eq!(
@@ -854,7 +854,7 @@ fn every_array_of_the_corpus_reads() {
     if absent > 0 {
         eprintln!("{absent} skipped: their package's `.h5` companion is not in testdata/");
     }
-    assert!(read > 100, "only {read} arrays read — the corpus has hundreds");
+    assert!(read > 100, "only {read} arrays read - the corpus has hundreds");
     assert!(
         failures.is_empty(),
         "{} array(s) could not be read: {:#?}",
@@ -867,8 +867,8 @@ fn every_array_of_the_corpus_reads() {
 #[cfg(feature = "hdf5")]
 fn the_values_are_the_values() {
     // Byte counts prove nothing about content. These two datasets were read
-    // with `h5dump` and the numbers written down here, so a decoding mistake —
-    // wrong element type, wrong endianness, an off-by-one in a hyperslab —
+    // with `h5dump` and the numbers written down here, so a decoding mistake -
+    // wrong element type, wrong endianness, an off-by-one in a hyperslab -
     // shows up as a wrong number rather than a right length.
     let Some(path) = crate::fixtures::find("testingPackageCpp22.epc") else {
         eprintln!("skipped `the_values_are_the_values`: the reference package is not in the fixtures");
@@ -952,7 +952,7 @@ fn a_path_need_not_contain_a_uuid() {
 fn a_backend_is_chosen_by_mime_type_not_by_habit() {
     // `ExternalDataArrayPart` carries a MIME type precisely so the data need
     // not be HDF5. This registers a backend for another format and checks the
-    // dispatch picks it — the mechanism, without waiting for a real CSV reader.
+    // dispatch picks it - the mechanism, without waiting for a real CSV reader.
     use energyml_storage::{ArrayBackend, Backends};
 
     struct Csv;
@@ -1045,7 +1045,7 @@ fn an_hdf5_file_is_checked_against_the_package() {
                         reason: energyml_storage::ExternalDataReason::FileMissing,
                         ..
                     }) => {}
-                    Err(e) => panic!("{}: {} — {e}", path.display(), summary.uuid),
+                    Err(e) => panic!("{}: {} - {e}", path.display(), summary.uuid),
                 }
             }
         }
@@ -1096,7 +1096,7 @@ fn attachments_exclude_the_objects_and_the_plumbing() {
 ///
 /// `GraphicalInformationSet` carries every colour assignment in an EnergyML
 /// package, and the generator cannot lower its `AbstractGraphicalInformation`
-/// list — so it comes back as `AnyXml`, source text kept verbatim. The text
+/// list - so it comes back as `AnyXml`, source text kept verbatim. The text
 /// survived a rewrite; the **references inside it** did not, because
 /// `collect_refs` walked reflection and reflection saw an opaque blob. And
 /// `collect_refs` is what regenerates the `.rels`.
@@ -1138,7 +1138,7 @@ fn a_rewrite_keeps_the_references_hidden_in_unmodelled_xml() {
             .unwrap_or(0);
         // Not equality: the writer regenerates the index from the references
         // themselves, so it can come out *more* complete than the producer left
-        // it — `testingPackageCpp.epc` gains one. What must never happen is
+        // it - `testingPackageCpp.epc` gains one. What must never happen is
         // losing them, which is what used to happen, all of them at once.
         assert!(
             after >= before,
@@ -1164,7 +1164,7 @@ fn a_rewrite_keeps_the_references_hidden_in_unmodelled_xml() {
 ///
 /// The requirement is for something a web or desktop interface can draw
 /// *"with some info (title, uuid/uri etc)"*. So the test is about the labels as
-/// much as the edges — and about the nodes that stand for objects the package
+/// much as the edges - and about the nodes that stand for objects the package
 /// references without holding, because a graph that dropped those would draw a
 /// self-contained package where there is none.
 #[test]
@@ -1186,7 +1186,7 @@ fn the_graph_labels_its_nodes_and_admits_what_is_missing() {
         assert!(!graph.nodes.is_empty(), "{}: an empty graph", path.display());
         assert!(!graph.edges.is_empty(), "{}: no edge at all", path.display());
 
-        // Every edge lands on a node — the property a viewer relies on and the
+        // Every edge lands on a node - the property a viewer relies on and the
         // one that breaks it silently when it does not hold.
         let uris: std::collections::HashSet<&str> = graph.nodes.iter().map(|n| n.uri.as_str()).collect();
         for edge in &graph.edges {
@@ -1221,7 +1221,7 @@ fn the_graph_labels_its_nodes_and_admits_what_is_missing() {
         // so, and the two questions are answered by the same predicate the
         // reference check uses. Without it a package's only absent nodes are
         // its well-known `PropertyKind`s and every one of them counts as a
-        // reference into nothing — measured on a BRGM package: four of four.
+        // reference into nothing - measured on a BRGM package: four of four.
         for node in graph.nodes.iter().filter(|n| !n.present) {
             let kind = node.type_key.eq_ignore_ascii_case("PropertyKind");
             assert_eq!(
@@ -1259,7 +1259,7 @@ fn an_object_created_in_this_session_is_addressable_by_every_accessor() {
     //
     // `resources()` walked the overlay, so a created object appeared in a
     // listing. `resource()` and `find_by_uuid()` went through `by_uuid`, which
-    // is built from the archive and never touched again — so the same object was
+    // is built from the archive and never touched again - so the same object was
     // **listed and not addressable**.
     //
     // Neither of those is an obscure accessor. Spelling a reference starts by
@@ -1270,7 +1270,7 @@ fn an_object_created_in_this_session_is_addressable_by_every_accessor() {
     // not be written.
     //
     // Asserted across all four accessors together, because the bug was not that
-    // any one of them was wrong — it was that they disagreed.
+    // any one of them was wrong - it was that they disagreed.
     let files = corpus();
     if skip_if_empty(&files, "an_object_created_in_this_session_is_addressable") {
         return;
@@ -1280,7 +1280,7 @@ fn an_object_created_in_this_session_is_addressable_by_every_accessor() {
         .expect("the package opens");
 
     // Any concrete top-level type this build can make, taken from the registry
-    // rather than named — the point is the store, not the type.
+    // rather than named - the point is the store, not the type.
     let Some(made) = store
         .resources()
         .first()
@@ -1307,7 +1307,7 @@ fn an_object_created_in_this_session_is_addressable_by_every_accessor() {
     assert!(store.get_object(&uri).is_ok(), "it does not read back");
     assert!(
         store.resource(&uri).is_ok(),
-        "it is listed but has no resource — the disagreement this test exists for"
+        "it is listed but has no resource - the disagreement this test exists for"
     );
     assert_eq!(
         store.find_by_uuid(uuid).map(|s| s.uri.clone()),
@@ -1331,13 +1331,13 @@ fn an_object_created_in_this_session_is_addressable_by_every_accessor() {
 /// EPC §3.2.3 puts the external file name in the proxy's `.rels` and nowhere
 /// else, and the writer implemented exactly that. Real packages do more:
 /// `testingPackageCpp22.epc` puts an `externalResource` straight on **every**
-/// object that holds an array — 51 of them — and this reader has always
+/// object that holds an array - 51 of them - and this reader has always
 /// honoured it, as route 3 of `external_file_for`.
 ///
 /// The writer had no counterpart, so a rewrite dropped all 51 of them. Nothing
 /// failed and nothing was reported, because the reader finds the file by other
 /// means: the package still opened here. Another tool, following the
-/// relationships as the package presents them, would have found nothing — and
+/// relationships as the package presents them, would have found nothing - and
 /// the earlier note recorded this as *"2 pointers out of 211"*, which is what
 /// the search recovers, not what was lost.
 ///

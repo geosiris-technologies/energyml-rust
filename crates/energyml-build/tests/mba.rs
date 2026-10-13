@@ -1,17 +1,17 @@
-//! `interpolate`'s `Method::Mba`, `estimate` and `resurface` — the
+//! `interpolate`'s `Method::Mba`, `estimate` and `resurface` - the
 //! build-layer side of the MBA operations design.
 //!
-//! **These tests only compile once the integration retouches are applied** —
+//! **These tests only compile once the integration retouches are applied** -
 //! `estimate`/`resurface` are not yet in `ops::builtin()`, `Method` has no
 //! `Mba` case yet, and `pointset::write` does not exist as a free function
 //! yet. Written now, against the shape the integration doc promises, the way
 //! every other test in this suite already talks to an operation: through
 //! `Registry::plan`, a `Pieces` bag and a flat `Choices`, never the typed
-//! structs directly — see `tests/interpolate_onto.rs`, whose helpers this
+//! structs directly - see `tests/interpolate_onto.rs`, whose helpers this
 //! file's own mirror closely.
 //!
-//! The numeric properties of MBA itself — exact interpolation, a constant
-//! or a plane reproduced, non-affine-invariance, the tanh test — are already
+//! The numeric properties of MBA itself - exact interpolation, a constant
+//! or a plane reproduced, non-affine-invariance, the tanh test - are already
 //! covered without any package at all, in
 //! `crates/energyml-analysis/src/mba.rs` and `mba_frame.rs`'s own
 //! `#[cfg(test)]` modules. What is specific to *this* layer, and only
@@ -78,7 +78,7 @@ fn plane_cloud(n: usize, spacing: f64, plane: impl Fn(f64, f64) -> f64) -> Geome
 }
 
 /// **`interpolate` with `method = mba` reproduces a constant field**
-/// (`Fitted` extent, `world` frame — the simplest path). To break: in
+/// (`Fitted` extent, `world` frame - the simplest path). To break: in
 /// `interpolate_mba::plan_fitted`, keeping only the last level (removing
 /// the coarsest level from the sum) would make the value fall back to zero
 /// far from the samples, cf. `mba.rs`'s own test of the same property without a
@@ -120,11 +120,11 @@ fn interpolate_with_mba_reproduces_a_constant_field() {
 }
 
 /// **`resurface` on a `Grid2dRepresentation` keeps the lattice
-/// identical, bit for bit** — the origin, the steps and the counts do not
+/// identical, bit for bit** - the origin, the steps and the counts do not
 /// move, only `z` changes. To break: swap `fastest`/`slowest` in
 /// `resurface::plan`'s reconstruction of `dir2_raw` (read `points[slowest]`
 /// instead of `points[fastest]`) turns red on the counts/directions, not
-/// on the values — the proof that this test looks at the topology and not
+/// on the values - the proof that this test looks at the topology and not
 /// only at the numeric result.
 #[test]
 fn resurface_keeps_a_grids_lattice_bit_for_bit() {
@@ -185,7 +185,7 @@ fn resurface_keeps_a_grids_lattice_bit_for_bit() {
     let origin = &support["Origin"];
     assert_eq!(origin["Coordinate1"], json!(0.0));
     assert_eq!(origin["Coordinate2"], json!(0.0));
-    // The slow axis first, the fast one second — the house order.
+    // The slow axis first, the fast one second - the house order.
     let [slow, fast] = [&support["Dimension"][0], &support["Dimension"][1]];
     assert_eq!(fast["Spacing"]["Value"], json!(dx), "the fast axis' step moved");
     assert_eq!(slow["Spacing"]["Value"], json!(dy), "the slow axis' step moved");
@@ -194,7 +194,7 @@ fn resurface_keeps_a_grids_lattice_bit_for_bit() {
         panic!("heights are doubles")
     };
     assert_eq!(z.len(), ni * nj, "the node count moved");
-    // Loose sanity on the heights themselves — the point of *this* test is
+    // Loose sanity on the heights themselves - the point of *this* test is
     // the lattice staying put, not MBA's numerics (already covered without
     // a package at all, `crates/energyml-analysis/src/mba.rs`'s own tests).
     for j in 0..nj {
@@ -212,7 +212,7 @@ fn resurface_keeps_a_grids_lattice_bit_for_bit() {
 /// **`resurface` on a `TriangulatedSetRepresentation` keeps the triangle
 /// indices identical, row for row.** To break: sorting the triangles by
 /// their first index before rewriting them would turn this test red without
-/// touching the count or the positions — precisely the bug that a test that
+/// touching the count or the positions - precisely the bug that a test that
 /// compared only sets would not see.
 #[test]
 fn resurface_keeps_a_triangulated_surfaces_indices_line_for_line() {
@@ -223,7 +223,7 @@ fn resurface_keeps_a_triangulated_surfaces_indices_line_for_line() {
         [2.0, 2.0, 1.2],
         [1.0, 1.0, 1.0],
     ];
-    // Deliberately **not** sorted by first index: 4 before 0, 2 before 1 —
+    // Deliberately **not** sorted by first index: 4 before 0, 2 before 1 -
     // exactly the order a "tidy" rewrite would be tempted to normalise.
     let triangles: Vec<[u32; 3]> = vec![[4, 0, 1], [4, 1, 3], [2, 0, 4], [3, 4, 2]];
     let surface = Geometry {
@@ -266,7 +266,7 @@ fn resurface_keeps_a_triangulated_surfaces_indices_line_for_line() {
         .json;
     let written_indices = &written["TrianglePatch"][0]["Triangles"]["Values"];
     // The dataset the writer actually queued is the source of truth for the
-    // indices — the JSON only carries a pointer to it (`support::external`).
+    // indices - the JSON only carries a pointer to it (`support::external`).
     let dataset = made
         .datasets
         .iter()
@@ -278,7 +278,7 @@ fn resurface_keeps_a_triangulated_surfaces_indices_line_for_line() {
     let expected: Vec<i64> = triangles.iter().flatten().map(|&i| i as i64).collect();
     assert_eq!(
         indices, &expected,
-        "the triangle indices moved — resurface must recopy them, not re-triangulate"
+        "the triangle indices moved - resurface must recopy them, not re-triangulate"
     );
     assert!(
         written_indices.is_object() || written_indices.is_string(),
@@ -353,13 +353,13 @@ fn estimate_reads_the_z_of_a_cloud_the_caller_gives() {
 
 /// **An inner ring removes what it should, and only that.**
 /// Verified by an independent computation (an even-odd loop written here, not
-/// `energyml_geometry::clip::nodes_in_ring`) — otherwise the test verifies that the
+/// `energyml_geometry::clip::nodes_in_ring`) - otherwise the test verifies that the
 /// function agrees with itself. The cloud is **not** symmetric
 /// with respect to the ring, on purpose: a symmetric set
 /// would let a test through that inverted `inside`/`outside`. To break:
 /// invert the sense of the `nodes_in_ring(..., true)` filter into
 /// `nodes_in_ring(..., false)` in `estimate::ring_keep` would keep the ring
-/// instead of the rest — this test detects it because the expected count is
+/// instead of the rest - this test detects it because the expected count is
 /// computed without ever sharing code with the implementation.
 #[test]
 fn an_inner_ring_removes_exactly_the_samples_it_should() {
@@ -469,7 +469,7 @@ fn an_inner_ring_removes_exactly_the_samples_it_should() {
     );
 }
 
-/// **Given a field, `estimate` estimates the field — not the samples' z.**
+/// **Given a field, `estimate` estimates the field - not the samples' z.**
 ///
 /// The first version fitted the samples' local height in the world frame
 /// too, i.e. their elevation even when a field was given (caught by the
@@ -541,20 +541,20 @@ fn estimate_with_a_field_estimates_the_field() {
         let got = flat[rank * 3 + 2];
         assert!(
             (got - 7.0).abs() < 1e-6,
-            "query {rank}: {got} — the field is 7, the elevation there is {}",
+            "query {rank}: {got} - the field is 7, the elevation there is {}",
             slope(p[0], p[1])
         );
     }
 }
 
 /// **Rings cut the grid too, not only the samples.**
-/// The report: an outerring was tried […] and the grid overflows all the same —
+/// The report: an outerring was tried […] and the grid overflows all the same -
 /// `outer`/`inner` only filtered the scatter, and the rectangle
 /// covered everything. A node outside `outer` or inside an `inner` must come out NaN,
 /// the others not. Verified by an even-odd loop written here, never
 /// `clip::inside_ring`, and on non-symmetric rings with corners at `.3`
 /// (no node on an edge). To break: remove the call to `mask_by_rings` in
-/// `plan_fitted` — all the nodes outside the ring come back finite.
+/// `plan_fitted` - all the nodes outside the ring come back finite.
 #[test]
 fn the_rings_cut_the_grids_nodes_too() {
     fn inside(polygon: &[[f64; 2]], p: [f64; 2]) -> bool {

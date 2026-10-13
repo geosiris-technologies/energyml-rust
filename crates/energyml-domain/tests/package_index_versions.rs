@@ -1,11 +1,11 @@
-//! The package index over a package that holds **one uuid more than once** —
+//! The package index over a package that holds **one uuid more than once** -
 //! (ADR-0010, ADR-0003). An entry is
 //! (uuid, type, `objectVersion`), so the index has a node per entry, reads each
 //! by the uri that names it alone (the bare uuid is ambiguous in the store), and
 //! sends a reference to the node it names.
 //!
 //! Every assertion sets the index beside `graph::build` over the objects, the
-//! confrontation `package_index.rs` makes for every package — two readers of one
+//! confrontation `package_index.rs` makes for every package - two readers of one
 //! fact, written independently. The package is fabricated here, zip and all.
 //!
 //! What would have to break: `read_into` asking the store for the bare uuid
@@ -68,7 +68,7 @@ fn object(content_type: &str, xml: String) -> Box<dyn energyml_core::registry::D
 }
 
 /// The package: the surface in two versions, put through the two gates, written,
-/// and **read back** — so that the index meets entries of an archive.
+/// and **read back** - so that the index meets entries of an archive.
 fn package() -> EpcStore {
     let registry = Arc::new(energyml_schemas::all());
     let empty = energyml_storage::extract::empty_package(Some(0)).expect("an empty package");

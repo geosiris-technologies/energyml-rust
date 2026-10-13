@@ -1,10 +1,10 @@
 //! Files that are not objects, and the objects they show.
 //!
 //! An EPC may carry "other files that contain additional, informal information
-//! relevant to the contents of the package" — a PDF, a picture, a README —
+//! relevant to the contents of the package" - a PDF, a picture, a README -
 //! "as a guideline … stored in a folder named `media`"
 //! (`Energistics_Packaging_Conventions_v1.0_Doc_v1.2.pdf`, §3.2,
-//! pp. 11–12; "An optional media folder may contain any type of media
+//! pp. 11-12; "An optional media folder may contain any type of media
 //! file--no restrictions", §3.3 p. 14). Putting the bytes in is
 //! [`crate::EpcStore::set_attachment`]; this module holds the rules that are
 //! the specification's rather than the store's.
@@ -12,13 +12,13 @@
 //! # What ties a file to an object
 //!
 //! **Not the content type.** `[Content_Types].xml` gives each part its MIME
-//! type (§2.2.1 p. 9, §3.3 p. 14) — it says *what* the part is, never *which
-//! object* it is about. That is an OPC relationship, and §3.4.2 (pp. 15–16)
+//! type (§2.2.1 p. 9, §3.3 p. 14) - it says *what* the part is, never *which
+//! object* it is about. That is an OPC relationship, and §3.4.2 (pp. 15-16)
 //! names the pair:
 //!
-//! - `destinationMedia` — "The object in Target is a media representation for
+//! - `destinationMedia` - "The object in Target is a media representation for
 //!   the current object", in the **object's** `.rels`;
-//! - `sourceMedia` — "The current object is a media representation for the
+//! - `sourceMedia` - "The current object is a media representation for the
 //!   object in Target", in the **part's** `.rels`.
 //!
 //! Both are written, as every other relationship of this writer is: §3.4.1
@@ -39,7 +39,7 @@
 //!   `namespace_…` and `version_…`
 //!   (`Energistics_Packaging_Conventions_v1.1_Doc_v1.0.pdf` §3.6 p. 17: other
 //!   directories "MUST NOT start with any of the prefixes stated above");
-//! - a content type that is not a media type — `type "/" subtype *(";"
+//! - a content type that is not a media type - `type "/" subtype *(";"
 //!   parameter)`, RFC 2616 §3.7. §3.3 (p. 14) names that grammar for the
 //!   content type of an XML data object; §2.2.1 (p. 9) gives *every* part "a
 //!   specific mime content type", and a MIME type has no other grammar, so the
@@ -47,21 +47,21 @@
 //!
 //! Two part names that differ only by case are one part to OPC (ISO/IEC
 //! 29500-2 §9.1.1.1, which EPC §3.2.1 defers to; that standard is not in this
-//! repository — the rule is stated from it, not quoted), so adding the second
+//! repository - the rule is stated from it, not quoted), so adding the second
 //! is a clash the store refuses by name.
 
 use crate::error::{Error, Result};
 
-/// `destinationMedia`, as EPC §3.4.2 (p. 16) spells it — in the object's `.rels`.
+/// `destinationMedia`, as EPC §3.4.2 (p. 16) spells it - in the object's `.rels`.
 pub const DESTINATION_MEDIA: &str = "destinationMedia";
 
-/// `sourceMedia`, as EPC §3.4.2 (p. 16) spells it — in the media part's `.rels`.
+/// `sourceMedia`, as EPC §3.4.2 (p. 16) spells it - in the media part's `.rels`.
 pub const SOURCE_MEDIA: &str = "sourceMedia";
 
 /// A part of the package related to an object it is a media representation of.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MediaLink {
-    /// The part name, without a leading slash — `media/README.md`.
+    /// The part name, without a leading slash - `media/README.md`.
     pub part: String,
     /// The object's uuid, lowercased.
     pub uuid: String,
@@ -123,14 +123,14 @@ pub fn check_part_name(part: &str) -> Result<String> {
     Ok(name)
 }
 
-/// Whether `text` is a media type, `type/subtype` with optional parameters —
+/// Whether `text` is a media type, `type/subtype` with optional parameters -
 /// the RFC 2616 §3.7 grammar (EPC §2.2.1 p. 9, §3.3 p. 14). `Ok` with the text
 /// trimmed, or the refusal that says which half is wrong.
 pub fn check_media_type(text: &str) -> Result<String> {
     let trimmed = text.trim();
     let refuse = |why: &str| {
         Err(Error::Package(format!(
-            "`{text}` is not a content type: {why} — a media type is `type/subtype`, as RFC 2616 §3.7 \
+            "`{text}` is not a content type: {why} - a media type is `type/subtype`, as RFC 2616 §3.7 \
              writes it (EPC §2.2.1 p. 9, §3.3 p. 14)"
         )))
     };
@@ -167,7 +167,7 @@ fn is_token(text: &str) -> bool {
             .all(|c| c.is_ascii() && !c.is_ascii_control() && !"()<>@,;:\\\"/[]?={} \t".contains(c))
 }
 
-/// Where a relationship's `Target` lands, as a part name — relative to the
+/// Where a relationship's `Target` lands, as a part name - relative to the
 /// folder of the part whose `.rels` holds it (OPC), or absolute with a leading
 /// slash. `None` when it climbs out of the package.
 pub fn resolve_target(from_part: &str, target: &str) -> Option<String> {

@@ -2,7 +2,7 @@
 //!
 //! The acceptance criteria of the design (§11): the local kinds of
 //! `80wells` walk up to the root through the dictionary, and Volve's resolve
-//! without needing one at all. Plus the two things a resolver must never do —
+//! without needing one at all. Plus the two things a resolver must never do -
 //! pick between two kinds sharing a title, and answer "not found" without
 //! saying where it looked.
 
@@ -17,7 +17,7 @@ use energyml_storage::EpcStore;
 /// Every schema version the workspace generates.
 ///
 /// One line rather than a hand-kept subset: a list written out here goes stale
-/// the day a release is added, and nothing would notice — the suite would keep
+/// the day a release is added, and nothing would notice - the suite would keep
 /// passing while quietly never covering the new version. `energyml-schemas`
 /// holds the one list, and its own test fails when it disagrees with
 /// `codegen.toml`.
@@ -179,7 +179,7 @@ fn a_local_kind_walks_up_to_the_root_of_the_dictionary() {
     }
     assert!(
         crossed > 0,
-        "no chain crossed from the package into the dictionary — the two halves never met"
+        "no chain crossed from the package into the dictionary - the two halves never met"
     );
 }
 
@@ -235,7 +235,7 @@ fn the_shipped_dictionary_holds_what_it_claims() {
         let length = dictionary.by_title("length");
         assert_eq!(length.len(), 1);
         assert_eq!(length[0].quantity_class.as_deref(), Some("length"));
-        // The one real ambiguity in the shipped file — the reason `by_title`
+        // The one real ambiguity in the shipped file - the reason `by_title`
         // returns a list rather than an option.
         assert_eq!(dictionary.by_title("spring stiffness").len(), 2);
         // And the root, which is its own parent.
@@ -329,7 +329,7 @@ fn an_ancestry_stops_at_the_root_that_is_its_own_parent() {
             chain.iter().map(|k| &k.title).collect::<Vec<_>>()
         );
 
-        // The root is its own parent — the walk must stop on the repeat rather
+        // The root is its own parent - the walk must stop on the repeat rather
         // than run forever, which is the only reason `ancestry` keeps a set.
         let root = dictionary.by_title("property")[0];
         assert_eq!(dictionary.ancestry(&root.uuid).len(), 1);

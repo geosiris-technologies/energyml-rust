@@ -1,9 +1,9 @@
-//! `zone-statistics` — a property's statistics per zone and per stratigraphic
+//! `zone-statistics` - a property's statistics per zone and per stratigraphic
 //! unit, as an
 //! `eml23.ColumnBasedTable` read back into the generated type.
 //!
 //! The expected rows are recomputed **here, by a naive loop** over the values
-//! and the keys — never by `energyml_domain::stats`, which is what the
+//! and the keys - never by `energyml_domain::stats`, which is what the
 //! operation uses.
 //!
 //! # What would have to break to make it turn red
@@ -270,7 +270,7 @@ fn a_kind_is_required_when_the_values_do_not_state_one() {
     assert_eq!(refused.refusals()[0].slot.as_deref(), Some("propertyKind"));
 }
 
-/// A frame of five intervals naming three units — the second interval none —
+/// A frame of five intervals naming three units - the second interval none -
 /// and an integer property on those intervals, whose null is -999.
 fn well(values: Vec<i64>, units: Vec<Option<Ref>>, supporting: &str) -> Pieces {
     let frame = Known {

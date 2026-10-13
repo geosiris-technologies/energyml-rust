@@ -1,11 +1,11 @@
-//! `extend` — a polyline prolonged at its ends, a triangulated surface grown
+//! `extend` - a polyline prolonged at its ends, a triangulated surface grown
 //! past its border.
 //!
 //! The need: extend a point cloud, a surface or polylines to widen a model
 //! synthetically. For example, a fault surface that stops too low: widen that
 //! surface by 10 m upwards, 5 downwards and 8 on the sides.
 //!
-//! The computation is `energyml_analysis::extend` — the direction read on a
+//! The computation is `energyml_analysis::extend` - the direction read on a
 //! robust fit to a **band** of the border, the rings, the dip frame, the
 //! refusals; this is the seam, and the writing is delegated to the writer of
 //! the kind the input came as (`polylines::write`, `triangles::write`).
@@ -13,29 +13,29 @@
 //! # Two axes
 //!
 //! The method is a parameter of the operation, and each method has its
-//! own sub-parameters: one operation `extend`, and two unions —
+//! own sub-parameters: one operation `extend`, and two unions -
 //!
 //! - **`method`**, how the direction is read and followed. `linear` only: the
 //!   band, and straight on. `natural` (the curvature, damped to zero) is the
-//!   second method and is not written — a case a form would offer and the
+//!   second method and is not written - a case a form would offer and the
 //!   operation refuse would be a promise nobody keeps;
 //! - **`toward`**, how far: `around` (one distance), `ends` (a polyline's
 //!   start and end), `dip` (up, down and sides, along the surface or as a
-//!   height, in the frame of the surface's mean plane — or of the vertical, for
+//!   height, in the frame of the surface's mean plane - or of the vertical, for
 //!   a polyline). `until` a surface waits for a ray caster.
 //!
 //! # The invented is never mixed silently with the measured
 //!
 //! - **a new object**, as for every operation (so that the earlier
 //!   version is always there to compare with): the input stays as it was;
-//! - **inside it, the original nodes come first and bit for bit** — for a
+//! - **inside it, the original nodes come first and bit for bit** - for a
 //!   surface, nodes `0..n` and the triangles that were there, in their order;
 //!   for a polyline, its nodes in the middle, the invented ones before and
 //!   after. The plan says where the invented ones are (`invented`), and the
 //!   activity records how many (`originalNodes`, `addedNodes`);
 //! - **the artefact tree has a child**: the invented nodes as a
 //!   cloud under the result, so the scene can show them apart. It has no object
-//!   of its own — it is the part of the representation the root names.
+//!   of its own - it is the part of the representation the root names.
 //!
 //! The property *distance to the original border* that the first design leaves open is not
 //! written: the count and the range say the same, and the property can come
@@ -43,19 +43,19 @@
 //!
 //! # What is refused
 //!
-//! At the offer, by name: a **point cloud** (it has no border of its own —
+//! At the offer, by name: a **point cloud** (it has no border of its own -
 //! `triangulate` it, then extend the surface: the second reading, which
 //! needs no code of its own), a **closed** polyline (a ring has no end; widening
 //! it is an offset, another operation), a 2D grid, a surface of several
 //! patches (two patches meeting along a seam would be extended along it), mixed
-//! kinds. At the computation: what `energyml_analysis::extend` refuses — a flat
+//! kinds. At the computation: what `energyml_analysis::extend` refuses - a flat
 //! surface in the dip frame, fronts that cross, a closed surface, several
 //! pieces.
 //!
 //! # References
 //!
 //! - Principal components (Hoppe, 1992) reweighted with Huber's weights, as named in `energyml-geostat` (`extend`, reused by `mba_frame`).
-//!   TODO(reference): verify — Hoppe (1992) and Huber's weights are named without a full citation, and the 1.4826 scale factor of the median absolute residual is unreferenced; add the references (authors, year, title, venue, DOI) once checked.
+//!   TODO(reference): verify - Hoppe (1992) and Huber's weights are named without a full citation, and the 1.4826 scale factor of the median absolute residual is unreferenced; add the references (authors, year, title, venue, DOI) once checked.
 
 use energyml_analysis::extend::{Dip, ExtendError, Reach, Setting, extend_line, extend_surface};
 use energyml_domain::provenance::Parameter;
@@ -76,7 +76,7 @@ use super::written::Written;
 pub struct Extend;
 
 /// Past this many times the band, the extension reaches farther than the
-/// direction was read over — said, not refused.
+/// direction was read over - said, not refused.
 const FAR: f64 = 3.0;
 
 /// What `extend` is told.
@@ -88,12 +88,12 @@ pub struct ExtendParams {
     /// How far.
     #[param(flatten)]
     pub toward: Toward,
-    /// The frame, what is represented, the naming — for the writer of the result.
+    /// The frame, what is represented, the naming - for the writer of the result.
     #[param(flatten)]
     pub written: Written,
 }
 
-/// how the direction is read and followed — linear: straight on, along a line or a plane fitted to a band of the border
+/// how the direction is read and followed - linear: straight on, along a line or a plane fitted to a band of the border
 #[derive(Debug, Params)]
 #[params(tag = "method")]
 pub enum Method {
@@ -105,12 +105,12 @@ pub enum Method {
 /// The linear extension.
 #[derive(Debug, Params)]
 pub struct LinearParams {
-    /// linear: how much of the border the direction is read over — a polyline's last so much of length, the nodes within so much of a surface's border node — in the units of the frame; too narrow reads the noise, too wide smooths a real bend
+    /// linear: how much of the border the direction is read over - a polyline's last so much of length, the nodes within so much of a surface's border node - in the units of the frame; too narrow reads the noise, too wide smooths a real bend
     #[param(min = 0)]
     pub band: f64,
 }
 
-/// how far — one distance all around, a polyline's two ends, or up, down and sides in the dip frame
+/// how far - one distance all around, a polyline's two ends, or up, down and sides in the dip frame
 #[derive(Debug, Params)]
 #[params(tag = "toward")]
 pub enum Toward {
@@ -145,7 +145,7 @@ pub struct EndsParams {
 /// In the dip frame.
 #[derive(Debug, Params)]
 pub struct DipParams {
-    /// dip: how far up — up the steepest line of the surface's mean plane, or for a polyline's end pointing up
+    /// dip: how far up - up the steepest line of the surface's mean plane, or for a polyline's end pointing up
     #[param(default = 0.0, optional, min = 0)]
     pub up: f64,
     /// dip: how far down
@@ -154,10 +154,10 @@ pub struct DipParams {
     /// dip: how far along the horizontal of the plane, or for a level end; in between, the answers blend by the square of the direction's components
     #[param(default = 0.0, optional, min = 0)]
     pub sides: f64,
-    /// dip: whether `up` and `down` are lengths along the surface or heights — on a fault dipping 60°, 10 m along the dip is 8.7 m of height
+    /// dip: whether `up` and `down` are lengths along the surface or heights - on a fault dipping 60°, 10 m along the dip is 8.7 m of height
     #[param(default = Measure::Along)]
     pub measure: Measure,
-    /// dip: what the third coordinate measures — an elevation (larger is higher) or a depth (larger is lower)
+    /// dip: what the third coordinate measures - an elevation (larger is higher) or a depth (larger is lower)
     ///
     /// Suggested from the CRS the reader read, never from the shape: up is a
     /// fact of the frame.
@@ -213,7 +213,7 @@ fn kind_of(shape: &Shape) -> Result<Kind, Refusal> {
             for local in 0..runs.len() {
                 if said_closed(patch, local, shape.closed.as_deref(), at).unwrap_or(false) {
                     return refuse(format!(
-                        "polyline {at} is closed — a ring has no end to prolong; widening it is an offset, another operation"
+                        "polyline {at} is closed - a ring has no end to prolong; widening it is an offset, another operation"
                     ));
                 }
                 at += 1;
@@ -224,25 +224,25 @@ fn kind_of(shape: &Shape) -> Result<Kind, Refusal> {
     if surfaces == patches.len() {
         if surfaces > 1 {
             return refuse(format!(
-                "it holds {surfaces} triangulated patches — two patches meeting along a seam would be extended along it; extend one patch at a time"
+                "it holds {surfaces} triangulated patches - two patches meeting along a seam would be extended along it; extend one patch at a time"
             ));
         }
         return Ok(Kind::Surface);
     }
     if lines + surfaces > 0 {
-        return refuse("its patches mix lines and faces — one extension extends one kind".to_string());
+        return refuse("its patches mix lines and faces - one extension extends one kind".to_string());
     }
     match &patches[0].topology {
         Topology::Points => refuse(
-            "it is a point cloud, which has no border of its own — `triangulate` it, then extend the surface"
+            "it is a point cloud, which has no border of its own - `triangulate` it, then extend the surface"
                 .to_string(),
         ),
         Topology::Grid { .. } => refuse(
-            "it is a 2D grid — a lattice grows by rows and columns, not by rings, and that is not written"
+            "it is a 2D grid - a lattice grows by rows and columns, not by rings, and that is not written"
                 .to_string(),
         ),
         _ => refuse(
-            "it holds neither polylines nor triangles — only those have a border to extend".to_string(),
+            "it holds neither polylines nor triangles - only those have a border to extend".to_string(),
         ),
     }
 }
@@ -254,7 +254,7 @@ impl Operation for Extend {
     fn about(&self) -> About {
         About {
             name: "extend",
-            describe: "polylines prolonged at their ends, or a triangulated surface grown past its border — along a direction read on a band of the border; the original nodes kept bit for bit, the invented ones marked apart",
+            describe: "polylines prolonged at their ends, or a triangulated surface grown past its border - along a direction read on a band of the border; the original nodes kept bit for bit, the invented ones marked apart",
             category: Category::Geometry,
             makes: &[
                 "resqml22.PolylineSetRepresentation",
@@ -371,13 +371,13 @@ impl Operation for Extend {
                     return Err(Refusal::about(
                         "value",
                         distance_slot,
-                        "every distance is zero — there is nothing to extend",
+                        "every distance is zero - there is nothing to extend",
                     ));
                 }
                 says.push(Note {
                     key: "invented",
                     detail: format!(
-                        "{added} node(s) invented past the ends, each line keeping its own nodes bit for bit between them — {}",
+                        "{added} node(s) invented past the ends, each line keeping its own nodes bit for bit between them - {}",
                         ranges.join("; ")
                     ),
                 });
@@ -410,7 +410,7 @@ impl Operation for Extend {
                 says.push(Note {
                     key: "invented",
                     detail: format!(
-                        "{added} node(s) and {} triangle(s) invented in {} ring(s) past the border — nodes 0..{original} and triangles 0..{} are the original ones bit for bit, nodes {original}..{} are invented",
+                        "{added} node(s) and {} triangle(s) invented in {} ring(s) past the border - nodes 0..{original} and triangles 0..{} are the original ones bit for bit, nodes {original}..{} are invented",
                         made.triangles.len() - made.original_triangles,
                         made.rings,
                         made.original_triangles,
@@ -430,7 +430,7 @@ impl Operation for Extend {
                     says.push(Note {
                         key: "holes",
                         detail: format!(
-                            "{} hole(s) left as they are — only the outer border is extended",
+                            "{} hole(s) left as they are - only the outer border is extended",
                             made.holes
                         ),
                     });
@@ -452,7 +452,7 @@ impl Operation for Extend {
         if outliers > 0 {
             says.push(Note {
                 key: "outliers",
-                detail: format!("{outliers} node(s) near the border stand off the direction read there and were weighted down — look at them"),
+                detail: format!("{outliers} node(s) near the border stand off the direction read there and were weighted down - look at them"),
             });
         }
         if longest > FAR * band {
@@ -519,7 +519,7 @@ impl Operation for Extend {
             plan.shapes.push(Made {
                 id: format!("{}-invented", root.id),
                 parent: Some(root.id.clone()),
-                title: format!("{} — invented nodes", root.title),
+                title: format!("{} - invented nodes", root.title),
                 geometry: Geometry {
                     kind: "extend",
                     patches: vec![Patch {

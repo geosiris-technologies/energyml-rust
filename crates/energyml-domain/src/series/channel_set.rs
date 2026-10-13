@@ -8,7 +8,7 @@
 //! is named by the Energistics JSON Style Guide (`energistics_json_guide.pdf`
 //! p. 8): *"the JSON on-disk representation for channel sets (a format that is
 //! specified in Section 3 of the WITSML v2.1 Release Notes), the arrays may
-//! have NULLs"* — and those release notes are **not** among this repository's reference documents. So the
+//! have NULLs"* - and those release notes are **not** among this repository's reference documents. So the
 //! layout read here is the one the object model leaves no other way to read,
 //! and the one `energyml-build`'s `witsml-logs` writes
 //! (`crates/energyml-build/src/ops/witsml_logs.rs`, *The row layout*): this
@@ -30,32 +30,32 @@
 //!   [`Refused::IndexFamilyMix`] (Lutetia's *one index, never two* is a writing
 //!   choice, not a reading rule).
 //! - **Direction.** *"The direction of the index, either increasing or
-//!   decreasing"* (§7.5 p. 149): the primary must run that way, strictly —
+//!   decreasing"* (§7.5 p. 149): the primary must run that way, strictly -
 //!   [`Refused::NotMonotone`]; `unordered` is [`Refused::UnorderedIndex`].
 //! - **`FileUri`.** *"If this field is non-null, then the data field is
-//!   ignored"* (§7.2 p. 146) — this build does not read the bulk file the
+//!   ignored"* (§7.2 p. 146) - this build does not read the bulk file the
 //!   standard means (its format is the release notes'): [`Refused::FileUri`],
 //!   never the inline data read in its place. `FileUri` **and** `Data`
 //!   together are this library's extension, below.
 //! - **Each channel has its own index** (§7.7 p. 151, *"Each channel has its
 //!   own index"*): a channel whose primary index differs from the set's in
-//!   kind, unit, direction or datum is [`Refused::ChannelIndexContradicts`] —
+//!   kind, unit, direction or datum is [`Refused::ChannelIndexContradicts`] -
 //!   its values would be read against an index they are not on. The mnemonic
 //!   is not compared: two names for one index change no number.
-//! - **Nulls.** The style guide's *"the arrays may have NULLs"* — a `null` is
+//! - **Nulls.** The style guide's *"the arrays may have NULLs"* - a `null` is
 //!   [`Quality::Absent`]; `"NaN"`, `"+Infinity"`, `"-Infinity"` are the
 //!   guide's spellings of the non-finite numbers (same page) and read as
 //!   such.
 //!
-//! # Rows in an HDF5 dataset — an extension beyond the standard
+//! # Rows in an HDF5 dataset - an extension beyond the standard
 //!
 //! The model does not provide for this, but the "Data" of a "ChannelData" may
 //! carry the path of a dataset in the h5 file. The decision and its reasons are
 //! ADR-0013; what this reader holds to:
 //!
 //! - **the form is told by syntax, never guessed from content.** `FileUri`
-//!   names the file — the standard's own field for *"a reference to an
-//!   external file"* (the class's note, §7.2 p. 146) — and `Data`, which the
+//!   names the file - the standard's own field for *"a reference to an
+//!   external file"* (the class's note, §7.2 p. 146) - and `Data`, which the
 //!   standard ignores once `FileUri` is set, holds the **absolute** path of a
 //!   dataset in it: it begins with `/`, which no JSON text can
 //!   (`energyml_storage::array::is_channel_data_in_file`, the one definition,
@@ -65,15 +65,15 @@
 //!   `[rows, indexes + channels]`, each row the index value(s) then one value
 //!   per channel in the order they are listed. `NaN` is what inline writes
 //!   `null`; an infinity reads as its inline spelling would. So the cells
-//!   become the JSON the inline form parses to, and **one loop** reads both —
+//!   become the JSON the inline form parses to, and **one loop** reads both -
 //!   inline and referenced cannot drift into two readings of a row;
 //! - **read through [`ArraySource`], never a store**: the location is the
 //!   source's (`energyml_storage::array` locates the form, so a cut, an import
 //!   or a prefetch carries the dataset too), and a build without the HDF5
-//!   backend is [`Refused::DatasetNeedsFeature`] — a missing capability,
+//!   backend is [`Refused::DatasetNeedsFeature`] - a missing capability,
 //!   never a series of nothing;
 //! - **what a numeric dataset cannot hold is refused before anything is
-//!   read**: a `date time` index, a string or a boolean channel —
+//!   read**: a `date time` index, a string or a boolean channel -
 //!   [`Refused::DatasetColumnKind`]. Encoding a date as a number of seconds
 //!   would be a second invention on top of the first.
 //!
@@ -82,7 +82,7 @@
 //! `ChannelDataKind` (§7.3 p. 147): `double`, `float`, `measured depth`,
 //! `true vertical depth`, `elapsed time` are numbers; `int`, `long`, `bytes`
 //! integers; `boolean`; `string`; `date time` an ISO text, read as Unix
-//! seconds. `pass indexed depth` — pass, direction and depth in one value —
+//! seconds. `pass indexed depth` - pass, direction and depth in one value -
 //! has no JSON form any document here states, and is refused by name, like
 //! any kind outside this list.
 
@@ -98,7 +98,7 @@ use crate::property::PropertyKindRef;
 use crate::source::{ArraySource, NoObjects};
 use crate::values::Values;
 
-/// Whether this reads the object — a channel set of any flavour
+/// Whether this reads the object - a channel set of any flavour
 /// (`ChannelSet`, `PPFGChannelSet`), by the fields a set carries.
 pub fn reads(object: &dyn Reflect) -> bool {
     object.type_info().type_key.ends_with("ChannelSet")
@@ -106,13 +106,13 @@ pub fn reads(object: &dyn Reflect) -> bool {
         && object.type_info().field_ignore_case("Data").is_some()
 }
 
-/// Whether this reads the object as a log — a container of channel sets.
+/// Whether this reads the object as a log - a container of channel sets.
 pub fn reads_log(object: &dyn Reflect) -> bool {
     object.type_info().type_key.ends_with("Log")
         && object.type_info().field_ignore_case("ChannelSet").is_some()
 }
 
-/// Every channel set of a log, each read — the first refusal names its set.
+/// Every channel set of a log, each read - the first refusal names its set.
 ///
 /// With no array source: a set whose rows are in a dataset is refused by name
 /// ([`Refused::DatasetNotLocated`]); [`read_log_with`] reads it.
@@ -183,7 +183,7 @@ struct Declared {
     datum: Option<String>,
 }
 
-/// One `ChannelIndex`, read — or refused.
+/// One `ChannelIndex`, read - or refused.
 fn declared(index: &dyn Reflect, rank: usize) -> Result<Declared, Refused> {
     let mnemonic = text(index, "Mnemonic").unwrap_or_else(|| format!("index {}", rank + 1));
     let written = text(index, "IndexKind").ok_or_else(|| Refused::Missing {
@@ -234,7 +234,7 @@ struct Listed {
 enum Rows<'a> {
     /// `Data` alone: the JSON rows.
     Inline(String),
-    /// `FileUri` and `Data`: a dataset of an HDF5 file — the extension.
+    /// `FileUri` and `Data`: a dataset of an HDF5 file - the extension.
     Dataset {
         /// The `ChannelData`, which the array source locates.
         data: &'a dyn Reflect,
@@ -246,13 +246,13 @@ enum Rows<'a> {
 }
 
 /// Read a channel set with no array source: rows kept in a dataset are
-/// refused by name ([`Refused::DatasetNotLocated`]) — [`read_with`] reads
+/// refused by name ([`Refused::DatasetNotLocated`]) - [`read_with`] reads
 /// them.
 pub fn read(set: &dyn Reflect) -> Result<Series, Refused> {
     read_with(set, &NoObjects)
 }
 
-/// Read a channel set, its rows inline or in a dataset `arrays` reads — the
+/// Read a channel set, its rows inline or in a dataset `arrays` reads - the
 /// one reading of a set, both forms through the same row loop.
 pub fn read_with(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Series, Refused> {
     if !reads(set) {
@@ -485,7 +485,7 @@ pub fn read_with(set: &dyn Reflect, arrays: &dyn ArraySource) -> Result<Series, 
     })
 }
 
-/// The rows of a dataset, as the cells the inline JSON would parse to — so
+/// The rows of a dataset, as the cells the inline JSON would parse to - so
 /// the row loop of [`read_with`] reads them as it reads inline rows.
 fn dataset_rows(
     data: &dyn Reflect,
@@ -588,7 +588,7 @@ fn cells_of(values: &energyml_storage::ArrayValues) -> Vec<Value> {
     }
 }
 
-/// A number, an instant or nothing — or a refusal naming the cell.
+/// A number, an instant or nothing - or a refusal naming the cell.
 fn read_number(cell: &Value, decode: Decode, row: usize, column: &str) -> Result<Option<f64>, Refused> {
     let wrong = |found: String| Refused::ValueKind {
         row,

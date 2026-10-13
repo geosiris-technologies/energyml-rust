@@ -1,4 +1,4 @@
-//! `contacts-from-frames` — the tops and the bases of the units a set of
+//! `contacts-from-frames` - the tops and the bases of the units a set of
 //! wellbore frames crosses, as point sets, and what the wells' properties hold
 //! there.
 //!
@@ -9,7 +9,7 @@
 //!
 //! # What it reads: the units the frames themselves state
 //!
-//! `IntervalStratigraphicUnits` (TRG 2.2 §5.34) — one unit per **interval**,
+//! `IntervalStratigraphicUnits` (TRG 2.2 §5.34) - one unit per **interval**,
 //! resolved at the boundary into [`crate::pieces::Known::interval_units`]. So
 //! the contact between two units is a **node**: the limit between the last
 //! interval of one and the first of the next. Nothing is guessed about *before,
@@ -18,29 +18,29 @@
 //! # What makes a contact
 //!
 //! - **a top only where something lies above it, a base only where something
-//!   lies below** — the top of the first interval of a hole is where the log
+//!   lies below** - the top of the first interval of a hole is where the log
 //!   starts, not a contact; an interval without a unit (`n.d.`) is no unit, so a
 //!   limit with it is no contact either;
 //! - **two point sets per unit**, its top and its base, **even when they hold
 //!   the same points** as the neighbour's: the base of A and the top of B part
 //!   where erosion took something away, and that is what one wants to see;
 //! - **a unit that comes back lower in the same hole** (A, B, A) would give two
-//!   tops for one hole: refused by name — which of the two is *the* top is a
+//!   tops for one hole: refused by name - which of the two is *the* top is a
 //!   geologist's call, not this module's.
 //!
 //! Each point set represents a `HorizonInterpretation` of a `BoundaryFeature`
 //! named after the unit and the side, derived from the unit's own uuid: the top
 //! of the Priabonien is the same object whichever run extracts it.
 //!
-//! # At a rank of the chart — `rank`, `unit`
+//! # At a rank of the chart - `rank`, `unit`
 //!
 //! A frame names the division each pass was **observed** as, and a horizon is
 //! often the limit of a **group** of them: the base of the Lutetian is the base
 //! of « Lutétien », « Lutétien moyen » or « Lutétien inférieur » depending on
 //! the borehole. Told a `rank` of the BRGM
 //! chart, a `unit` of it, or both, each interval is read **against the division
-//! of that rank** rather than by its name — inside it, outside it by the chart's
-//! ages, or neither — and a contact is only a limit between inside and outside:
+//! of that rank** rather than by its name - inside it, outside it by the chart's
+//! ages, or neither - and a contact is only a limit between inside and outside:
 //! the limit between the Upper Lutetian and the Lutetian is none. Only the unit
 //! of each interval changes; every rule here holds as it stands. How an interval
 //! is read is [`super::contacts_rank`], the chart's answer
@@ -58,8 +58,8 @@
 //! properties to create must be anticipated up front, in case some wells lack
 //! some of them, with null values for some points).
 //!
-//! The properties arrive through the slot `properties` — left empty, every
-//! property of the package — each resolved at the boundary into
+//! The properties arrive through the slot `properties` - left empty, every
+//! property of the package - each resolved at the boundary into
 //! [`crate::pieces::Known::property`], values included, so the plan stays
 //! pure. What is decided here:
 //!
@@ -68,25 +68,25 @@
 //!   depth is known; a frame's property is positional on the same nodes. So no
 //!   MD is looked up and no tolerance is chosen: the index the request wanted to
 //!   find is the one the contact was found at, and matching a depth against a
-//!   list of depths would be a second, less exact, way of getting it back —
+//!   list of depths would be a second, less exact, way of getting it back -
 //!   two floats that went through a file and an HDF5 dataset each;
 //! - **a node property is read at the node; an interval property on the
-//!   unit's side of it.** An interval has no value *at* a node — a node is
+//!   unit's side of it.** An interval has no value *at* a node - a node is
 //!   where two of them meet. The top of a unit takes the interval that begins
 //!   there, the unit's first; its base the one that ends there, the unit's
 //!   last. Each point set is a surface **of that unit**, so each takes what was
-//!   measured in it — and the base of A and the top of B, the same node, then
+//!   measured in it - and the base of A and the top of B, the same node, then
 //!   carry A's value and B's: what writing two point sets was for;
 //! - **one property per (kind, measure, element, facets)**, gathered over every
-//!   frame before anything is written — the anticipation the request asks for. The
-//!   measure is the title without the wellbore's name (`F1 — PHI` and
-//!   `F2 — PHI` are one `PHI`). A point whose wellbore does not carry it is
+//!   frame before anything is written - the anticipation the request asks for. The
+//!   measure is the title without the wellbore's name (`F1 - PHI` and
+//!   `F2 - PHI` are one `PHI`). A point whose wellbore does not carry it is
 //!   **null**, and so is one whose wellbore's own value is null there: NaN for
 //!   a continuous copy, the standard's null for doubles; `nullValue` on the
 //!   array of a discrete one, which RESQML makes state its own. The two are
 //!   counted apart, because *this well has no such log* and *the log is empty
 //!   here* are two findings;
-//! - **the same kind, the same unit, the same table — by reference.** A copy
+//! - **the same kind, the same unit, the same table - by reference.** A copy
 //!   names the `PropertyKind` and the `CategoryLookup` its sources name, so a
 //!   code keeps its meaning: it is read against the very table it was a rank
 //!   in;
@@ -95,7 +95,7 @@
 //!   somebody, and `energyml_domain::wellbore_table::merge` calls the same
 //!   thing a conflict. So are two tables for one code, a measure continuous in
 //!   one well and discrete in another, a code equal to the declared null, and a
-//!   wellbore carrying two properties under one key — which of the two is the
+//!   wellbore carrying two properties under one key - which of the two is the
 //!   well's cannot be guessed, and naming the one in `properties` settles it;
 //! - **what is not copied is set aside by name, never read wrong**: a boolean
 //!   (a flag has no null, so a point whose well lacks it could only be written
@@ -110,22 +110,22 @@
 //! from their content: the point sets keep the uuids they had before this
 //! existed, whether it is on or off.
 //!
-//! # Naming each point after its well — `wellOrigin`
+//! # Naming each point after its well - `wellOrigin`
 //!
 //! The need: when extracting point sets from the wells, a discrete property
 //! should assign to each point the name of the original well. That implies, in
 //! the 3D view, being able to display a discrete property's value per point as a
-//! label, as is done for wellheads — drawing a property as label fields with
+//! label, as is done for wellheads - drawing a property as label fields with
 //! settings for text size, colour and so on.
 //!
-//! The second half — the 3D view — is a display concern and none of this
+//! The second half - the 3D view - is a display concern and none of this
 //! crate's; what this operation owes is the property. Every point already
-//! names, in `Origin`, the frame it came from — that is how a copied
+//! names, in `Origin`, the frame it came from - that is how a copied
 //! measurement finds its row. `wellOrigin` writes the same fact as a
 //! `DiscreteProperty` on the point set's nodes: one code per point, read
 //! against a `ColumnBasedTable` (eml23) that lists every well's name.
 //!
-//! - **one table, shared by every point set of this run** — a code has to
+//! - **one table, shared by every point set of this run** - a code has to
 //!   mean the same well wherever it is read, and a table per point set would
 //!   let two of them disagree about what `0` names;
 //! - **the kind is `wells-from-table`'s own `wellName` role**
@@ -134,11 +134,11 @@
 //!   `properties-from-table`'s copies: a consumer resolves this kind exactly
 //!   as it resolves the one that role already writes, rather than a second
 //!   uuid for the same idea;
-//! - **the index is the well's rank of encounter**, never the alphabet — two
+//! - **the index is the well's rank of encounter**, never the alphabet - two
 //!   runs over the same frames in the same order write the same codes, and a
 //!   sorted table would make the codes depend on which wells happen to sort
 //!   first;
-//! - **on, and the default is the subject** — the same choice `copyProperties`
+//! - **on, and the default is the subject** - the same choice `copyProperties`
 //!   made above and for the same reason: the request is the subject's own, and
 //!   it costs no point set anything. The table and the properties are written
 //!   *beside* them, after every one, so a run with it off writes fewer
@@ -170,7 +170,7 @@ pub struct ContactsFromFrames;
 /// What it is told.
 #[derive(Debug, Params)]
 pub struct ContactsParams {
-    /// The frame the points are written in — the frames' own, suggested.
+    /// The frame the points are written in - the frames' own, suggested.
     #[param(flatten)]
     pub frame: FrameParams,
     /// the HDF5 file the points, and the values copied onto them, go into
@@ -179,7 +179,7 @@ pub struct ContactsParams {
     /// copy onto each point what its wellbore's properties hold there
     ///
     /// **On, and the default is the subject.** What the wells say at a contact
-    /// is what the extraction knew, and a point set without it has lost it —
+    /// is what the extraction knew, and a point set without it has lost it -
     /// the request asked for it (quoted in the module). It costs no
     /// point set anything: the copies are written *beside* them, and the point
     /// sets' uuids do not depend on it, so a run with it off writes fewer
@@ -194,7 +194,7 @@ pub struct ContactsParams {
     pub copy_properties: bool,
     /// name each point after the well it came from
     ///
-    /// **On, and the default is the subject** — the request itself
+    /// **On, and the default is the subject** - the request itself
     /// (see the module doc), and it costs no point set anything: a
     /// `DiscreteProperty` and a shared `ColumnBasedTable` are written
     /// *beside* the point sets, after every one, so a run with it off writes
@@ -207,43 +207,43 @@ pub struct ContactsParams {
     ///
     /// A continuous copy has NaN, the standard's null for doubles. An integer
     /// array must **state** its null (`eml23.IntegerExternalArray.NullValue`),
-    /// and the sources may each state a different one — so one integer, the
+    /// and the sources may each state a different one - so one integer, the
     /// same for every copy, declared rather than borrowed from whichever well
     /// came first. A source's own null becomes this one; a source **code**
     /// equal to it is refused by name, since it would then read as a null.
     /// `-9999`, as `properties-from-table` writes.
     ///
     /// The same integer is declared on `wellOrigin`'s array, even though it
-    /// never holds it there — every point has a well, so the field states a
+    /// never holds it there - every point has a well, so the field states a
     /// null the array never carries, rather than a second setting for a
     /// value that would go unused.
     #[param(default = -9999i64, optional, group = "operation")]
     pub null_value: i64,
-    /// read the frames at this rank of the BRGM chart — its level less one: 3 system, 4 series, 5 sub-series, 6 stage, 7 substage
+    /// read the frames at this rank of the BRGM chart - its level less one: 3 system, 4 series, 5 sub-series, 6 stage, 7 substage
     ///
     /// Each interval is then read **against the divisions of that rank**
     /// rather than by the unit its frame names, so the limit between two
     /// divisions of one stage is no contact: the base of the Lutetian is where
     /// the Lutetian ends, whether the pass above it is « Lutétien », « Lutétien
     /// moyen » or « Lutétien inférieur ». Alone,
-    /// every division of that rank the frames reach — a finer one read as the
+    /// every division of that rank the frames reach - a finer one read as the
     /// coarsest division of that rank above it; with `unit`, that one alone,
     /// which must be of this rank. The number is the `RankInStratigraphicColumn`
     /// `stratigraphy-from-geolts` writes. Left out with `unit`, the unit's own;
     /// left out alone, the units the frames name, as before.
     #[param(min = 0.0, max = 9.0, group = "operation")]
     pub rank: Option<usize>,
-    /// only this division of the BRGM chart — its top and its base, whatever finer divisions the frames name
+    /// only this division of the BRGM chart - its top and its base, whatever finer divisions the frames name
     ///
     /// Its label, its code or its id (`1255`, the Lutetian). An interval is
     /// inside it when the chart places its division under it, outside it when
-    /// the chart's ages do not overlap, and neither otherwise — a coarser
-    /// division that holds it, a regional one whose time overlaps, no age —
+    /// the chart's ages do not overlap, and neither otherwise - a coarser
+    /// division that holds it, a regional one whose time overlaps, no age -
     /// and no contact is read across that. A frame without an interval inside
     /// it gives no point, and is counted.
     #[param(group = "operation")]
     pub unit: Option<ChartTerm>,
-    /// with `rank` or `unit`: the language the chart's divisions are titled in — the one the units were written in, so the same setting as `stratigraphy-from-geolts` and `wells-and-properties-from-table`
+    /// with `rank` or `unit`: the language the chart's divisions are titled in - the one the units were written in, so the same setting as `stratigraphy-from-geolts` and `wells-and-properties-from-table`
     #[param(default = super::stratigraphy::Language::Fr, optional)]
     pub language: super::stratigraphy::Language,
 }
@@ -253,7 +253,7 @@ pub struct ContactsParams {
 pub struct ContactsInputs {
     /// the wellbore frames whose intervals name their units
     ///
-    /// **Left empty, every frame of the package** — the declaration of
+    /// **Left empty, every frame of the package** - the declaration of
     /// `wells-from-table`. A frame that maps no interval to a unit is counted
     /// and passed over.
     #[input(least = 1, types = "resqml22.WellboreFrameRepresentation", every)]
@@ -261,7 +261,7 @@ pub struct ContactsInputs {
     /// the properties of those frames whose values the points take
     ///
     /// **Left empty, every property of the package**, each kept only if it
-    /// hangs on one of the frames — the others are counted and passed over.
+    /// hangs on one of the frames - the others are counted and passed over.
     /// Named, only those are copied: the way to settle a wellbore that carries
     /// two properties of one measure.
     ///
@@ -296,7 +296,7 @@ impl Side {
 /// unit's side of that node.
 #[derive(Debug, Clone, Copy)]
 struct Origin {
-    /// Its rank among the frames that gave contacts — see [`Used`].
+    /// Its rank among the frames that gave contacts - see [`Used`].
     frame: usize,
     /// The node the point is.
     node: usize,
@@ -305,7 +305,7 @@ struct Origin {
     interval: usize,
 }
 
-/// The points of one side of one unit, and where each came from — two lists
+/// The points of one side of one unit, and where each came from - two lists
 /// of one length, in the order of the frames.
 struct Found {
     unit: Ref,
@@ -326,12 +326,12 @@ impl Found {
 /// The points of each side of each unit, by the unit's uuid.
 type Contacts = BTreeMap<(String, Side), Found>;
 
-/// A frame that gave contacts — what a point's [`Origin`] names.
+/// A frame that gave contacts - what a point's [`Origin`] names.
 struct Used {
     /// Its uuid, lower-cased: what a property's `SupportingRepresentation`
     /// names.
     uuid: Option<String>,
-    /// The wellbore's name — its title without the writer's suffix, what a
+    /// The wellbore's name - its title without the writer's suffix, what a
     /// property's title starts with.
     well: String,
     /// How many nodes it places.
@@ -401,7 +401,7 @@ impl Operation for ContactsFromFrames {
     fn about(&self) -> About {
         About {
             name: "contacts-from-frames",
-            describe: "the top and the base of each unit the wellbore frames cross, as two point sets per unit — where their intervals name their units, or read at a rank of the BRGM chart — with what the wells' properties hold there",
+            describe: "the top and the base of each unit the wellbore frames cross, as two point sets per unit - where their intervals name their units, or read at a rank of the BRGM chart - with what the wells' properties hold there",
             category: Category::Wells,
             makes: &[
                 "resqml22.BoundaryFeature",
@@ -455,8 +455,8 @@ impl Operation for ContactsFromFrames {
                 "it takes wellbore frames; the input holds none, and the package gives none either",
             ));
         }
-        // **How each interval is read**: by the unit its frame names, or — told
-        // a rank or a unit of the chart — against the division of that rank.
+        // **How each interval is read**: by the unit its frame names, or - told
+        // a rank or a unit of the chart - against the division of that rank.
         // Refused before any frame is read: a rank the chart does not have is
         // the setting's fault, not the frames'.
         let mut reading = Reading::of(params.rank, params.unit.as_ref(), params.language)?;
@@ -493,7 +493,7 @@ impl Operation for ContactsFromFrames {
                 return Err(Refusal::on(
                     "frames",
                     format!(
-                        "`{title}` has {} node(s) for {} interval(s) — an interval lies between two nodes, so where its contacts are cannot be read",
+                        "`{title}` has {} node(s) for {} interval(s) - an interval lies between two nodes, so where its contacts are cannot be read",
                         nodes.len(),
                         units.len()
                     ),
@@ -507,8 +507,8 @@ impl Operation for ContactsFromFrames {
             });
             // One sequence of units per reading of the frame, each as long as
             // its intervals: the frame's own when named; at a rank, one per
-            // division read — inside it, its neighbour outside, `None` for
-            // neither — so a contact is the same node found the same way.
+            // division read - inside it, its neighbour outside, `None` for
+            // neither - so a contact is the same node found the same way.
             for units in reading.sequences(units, &title) {
                 // Runs of one unit, and whether one comes back.
                 let mut seen: Vec<&str> = Vec::new();
@@ -533,13 +533,13 @@ impl Operation for ContactsFromFrames {
                         return Err(Refusal::on(
                             "frames",
                             format!(
-                                "`{title}` crosses `{}` twice, so it would give two tops in one hole — which one is the unit's top is not for this operation to decide",
+                                "`{title}` crosses `{}` twice, so it would give two tops in one hole - which one is the unit's top is not for this operation to decide",
                                 unit.title
                             ),
                         ));
                     }
                     seen.push(&unit.uuid);
-                    // A top where a unit lies above, a base where one lies below —
+                    // A top where a unit lies above, a base where one lies below -
                     // and the unit's own interval at each: the first that begins
                     // at its top, the last that ends at its base.
                     if at > 0 && units[at - 1].is_some() {
@@ -579,7 +579,7 @@ impl Operation for ContactsFromFrames {
             return Err(Refusal::on(
                 "frames",
                 format!(
-                    "no contact between two units in the {} frame(s) given — {unmapped} of them map no interval to a unit; `wells-and-properties-from-table` writes that mapping with `units`",
+                    "no contact between two units in the {} frame(s) given - {unmapped} of them map no interval to a unit; `wells-and-properties-from-table` writes that mapping with `units`",
                     inputs.frames.len()
                 ),
             ));
@@ -599,8 +599,8 @@ impl Operation for ContactsFromFrames {
         let mut written: Vec<Written> = Vec::with_capacity(found.len());
         for ((unit_uuid, side), one) in &found {
             let (unit, points) = (&one.unit, &one.points);
-            let title = format!("{} — {}", unit.title, side.word());
-            // `reading_seed` is empty when named — the seeds of before — and
+            let title = format!("{} - {}", unit.title, side.word());
+            // `reading_seed` is empty when named - the seeds of before - and
             // says the rank otherwise: the base of a stage and the base of the
             // passes named after it are two objects.
             let feature_uuid = support::next_uuid(
@@ -633,7 +633,7 @@ impl Operation for ContactsFromFrames {
                 },
                 ..Default::default()
             };
-            // The points of this side, in the order of the frames — the same
+            // The points of this side, in the order of the frames - the same
             // content, the same object.
             let digest = points
                 .iter()
@@ -730,7 +730,7 @@ impl Operation for ContactsFromFrames {
         objects.extend(copied.objects);
         datasets.extend(copied.datasets);
 
-        // **After every point set, and after the copies** — same reason as
+        // **After every point set, and after the copies** - same reason as
         // both: the point sets' uuids do not move when this is toggled.
         let named = if params.well_origin {
             name_wells(&used, &found, &written, &params, cx, &mut rank)?
@@ -743,7 +743,7 @@ impl Operation for ContactsFromFrames {
         let mut says = vec![Note {
             key: "contacts",
             detail: format!(
-                "{sets} point set(s) — a top and a base per unit where a unit lies on the other side — from {frames_used} frame(s)"
+                "{sets} point set(s) - a top and a base per unit where a unit lies on the other side - from {frames_used} frame(s)"
             ),
         }];
         if unmapped > 0 {
@@ -753,12 +753,12 @@ impl Operation for ContactsFromFrames {
             });
         }
         // At a rank: what was read, which frames reach the division, and what
-        // was read as neither inside nor outside — each counted and named.
+        // was read as neither inside nor outside - each counted and named.
         says.extend(reading.says());
         says.extend(copied.says);
         says.extend(named.says);
-        // What the frame must say of itself — a `ProjectedCrs` taken as it
-        // stands, degrees — and nothing when it is a compound.
+        // What the frame must say of itself - a `ProjectedCrs` taken as it
+        // stands, degrees - and nothing when it is a compound.
         says.extend(frame.says);
         let mut parameters = frame.parameters;
         parameters.push(Parameter::Double {
@@ -803,7 +803,7 @@ struct Copied {
 }
 
 impl Copied {
-    /// Nothing copied — `copyProperties` is off — and how much that left.
+    /// Nothing copied - `copyProperties` is off - and how much that left.
     ///
     /// Said rather than silent: a run that copies nothing and a run over
     /// wells that carry nothing would otherwise read the same.
@@ -837,16 +837,16 @@ impl Copied {
 struct Key {
     /// The property kind's uuid, lower-cased.
     kind: String,
-    /// The title without the wellbore — see [`measure_of`].
+    /// The title without the wellbore - see [`measure_of`].
     measure: String,
     /// `nodes` or `intervals`.
     element: String,
-    /// The facets, as written — `porosity` and `porosity, max` are two.
+    /// The facets, as written - `porosity` and `porosity, max` are two.
     facets: String,
 }
 
 /// The values of one frame's property, its nulls already told apart: `None`
-/// where the source is null — NaN, or the integer its array declares.
+/// where the source is null - NaN, or the integer its array declares.
 enum Cells {
     Real(Vec<Option<f64>>),
     Code(Vec<Option<i64>>),
@@ -860,7 +860,7 @@ enum Number {
 }
 
 impl Cells {
-    /// The value at that rank — `None` for a null, or a rank past the end.
+    /// The value at that rank - `None` for a null, or a rank past the end.
     fn at(&self, row: usize) -> Option<Number> {
         match self {
             Cells::Real(values) => values.get(row).copied().flatten().map(Number::Real),
@@ -877,7 +877,7 @@ struct Judged<'a> {
     cells: Cells,
 }
 
-/// Everything gathered under one [`Key`], over every frame — and what must
+/// Everything gathered under one [`Key`], over every frame - and what must
 /// agree for one property to hold all of it.
 struct Measure<'a> {
     /// What the copies are titled after.
@@ -892,7 +892,7 @@ struct Measure<'a> {
     /// The values, by the frame they come from ([`Used`] rank), and the title
     /// of the property that held them.
     by_frame: BTreeMap<usize, (&'a str, Cells)>,
-    /// Every property gathered here, named — what a refusal lists.
+    /// Every property gathered here, named - what a refusal lists.
     sources: Vec<String>,
     /// Why this key is not copied, when it is not.
     conflict: Option<String>,
@@ -914,7 +914,7 @@ impl<'a> Measure<'a> {
         }
     }
 
-    /// One more wellbore's property under this key — or the reason the key
+    /// One more wellbore's property under this key - or the reason the key
     /// cannot hold it, which then stands for the whole key: a measure copied
     /// for some wells and refused for others would read as wells without it.
     fn add(
@@ -939,30 +939,30 @@ impl<'a> Measure<'a> {
         };
         self.conflict = if judged.discrete != self.discrete {
             Some(format!(
-                "`{name}` is continuous for one wellbore and discrete for another — one name, two measurements"
+                "`{name}` is continuous for one wellbore and discrete for another - one name, two measurements"
             ))
         } else if facts.uom.as_deref() != self.uom {
             Some(format!(
-                "`{name}` is in {} for one wellbore and in {} for another — a property holds one unit, and converting would choose it for somebody",
+                "`{name}` is in {} for one wellbore and in {} for another - a property holds one unit, and converting would choose it for somebody",
                 self.uom.unwrap_or("no unit"),
                 facts.uom.as_deref().unwrap_or("no unit")
             ))
         } else if lower(self.lookup) != lower(facts.lookup.as_ref()) {
             Some(format!(
-                "the codes of `{name}` are ranks in two tables, {} and {} — a property names one table, and translating a code from one to the other is not this operation's to decide",
+                "the codes of `{name}` are ranks in two tables, {} and {} - a property names one table, and translating a code from one to the other is not this operation's to decide",
                 table(self.lookup),
                 table(facts.lookup.as_ref())
             ))
         } else if let Some((other, _)) = self.by_frame.get(&at) {
             Some(format!(
-                "`{}` carries two `{name}`, `{other}` and `{title}` — which one is the wellbore's cannot be guessed; name the one to copy in `properties`",
+                "`{}` carries two `{name}`, `{other}` and `{title}` - which one is the wellbore's cannot be guessed; name the one to copy in `properties`",
                 frame.well
             ))
         } else if let Cells::Code(codes) = &judged.cells
             && codes.contains(&Some(null))
         {
             Some(format!(
-                "`{title}` holds the code {null}, which is also the null this run declares — choose another `nullValue`"
+                "`{title}` holds the code {null}, which is also the null this run declares - choose another `nullValue`"
             ))
         } else {
             None
@@ -973,7 +973,7 @@ impl<'a> Measure<'a> {
     }
 }
 
-/// Properties not copied, by cause — each one named.
+/// Properties not copied, by cause - each one named.
 #[derive(Default)]
 struct Aside(BTreeMap<String, Vec<String>>);
 
@@ -987,7 +987,7 @@ impl Aside {
             .into_iter()
             .map(|(cause, names)| Dropped {
                 count: names.len(),
-                why: format!("{}: not copied — {cause}", listed(&names)),
+                why: format!("{}: not copied - {cause}", listed(&names)),
             })
             .collect()
     }
@@ -1003,7 +1003,7 @@ fn listed(names: &[String]) -> String {
     }
 }
 
-/// The class of a qualified type — `DiscreteProperty` of `resqml22.DiscreteProperty`.
+/// The class of a qualified type - `DiscreteProperty` of `resqml22.DiscreteProperty`.
 fn class_of(qualified_type: &str) -> &str {
     qualified_type.rsplit('.').next().unwrap_or(qualified_type)
 }
@@ -1020,13 +1020,13 @@ fn frame_of(facts: &KnownProperty, used: &[Used]) -> Option<usize> {
 ///
 /// **The rule of `energyml_domain::wellbore_table`**, where it is private
 /// (`heading`): a writer titles a property `« <well> — <measure> »`, and the
-/// prefix is removed **only when it is this wellbore's** — cutting at the first
+/// prefix is removed **only when it is this wellbore's** - cutting at the first
 /// separator would make `« porosity — corrected »` a measure named `corrected`.
-/// `F1 — PHI` and `F2 — PHI` are then one measure, `PHI`, which is what lets one
+/// `F1 - PHI` and `F2 - PHI` are then one measure, `PHI`, which is what lets one
 /// property hold both wells.
 fn measure_of(title: &str, well: &str) -> String {
     if !well.is_empty() {
-        for cut in [" — ", " : ", " - "] {
+        for cut in [" - ", " : ", " - "] {
             if let Some(rest) = title.strip_prefix(well).and_then(|rest| rest.strip_prefix(cut)) {
                 return rest.to_string();
             }
@@ -1035,7 +1035,7 @@ fn measure_of(title: &str, well: &str) -> String {
     title.to_string()
 }
 
-/// A frame's property as a column of that frame — or the cause it is not
+/// A frame's property as a column of that frame - or the cause it is not
 /// copied. Every cause is a reason **not to read**, never a reading made
 /// anyway: a value taken from the wrong component, step or rank looks exactly
 /// like a right one.
@@ -1050,7 +1050,7 @@ fn judge<'a>(reference: &Ref, facts: &'a KnownProperty, nodes: usize) -> Result<
         "ContinuousProperty" => false,
         "DiscreteProperty" => true,
         "BooleanProperty" => {
-            return Err("a flag has no null, so a point whose wellbore lacks it could only be written true or false — a value nobody stated".to_string());
+            return Err("a flag has no null, so a point whose wellbore lacks it could only be written true or false - a value nobody stated".to_string());
         }
         "CommentProperty" => {
             return Err(
@@ -1072,9 +1072,9 @@ fn judge<'a>(reference: &Ref, facts: &'a KnownProperty, nodes: usize) -> Result<
     let values = facts
         .values
         .as_ref()
-        .map_err(|why| format!("its values did not read — {why}"))?;
+        .map_err(|why| format!("its values did not read - {why}"))?;
     if facts.timed {
-        return Err("it is indexed in time — one value per node and per step, and which step a contact is at is stated nowhere".to_string());
+        return Err("it is indexed in time - one value per node and per step, and which step a contact is at is stated nowhere".to_string());
     }
     if facts.realizations {
         return Err(
@@ -1084,7 +1084,7 @@ fn judge<'a>(reference: &Ref, facts: &'a KnownProperty, nodes: usize) -> Result<
     let per_element: u64 = facts.value_count.iter().product();
     if per_element > 1 {
         return Err(format!(
-            "it holds {per_element} values per element — a vector or a tensor — and which component belongs to a point is not for this operation to pick"
+            "it holds {per_element} values per element - a vector or a tensor - and which component belongs to a point is not for this operation to pick"
         ));
     }
     let rows = match facts.indexable.as_str() {
@@ -1109,7 +1109,7 @@ fn judge<'a>(reference: &Ref, facts: &'a KnownProperty, nodes: usize) -> Result<
     }
     if values.len() != rows {
         return Err(format!(
-            "it holds {} value(s) where the frame has {rows} {} — read here, each point would take a neighbour's value",
+            "it holds {} value(s) where the frame has {rows} {} - read here, each point would take a neighbour's value",
             values.len(),
             facts.indexable
         ));
@@ -1145,7 +1145,7 @@ fn judge<'a>(reference: &Ref, facts: &'a KnownProperty, nodes: usize) -> Result<
 ///
 /// Two passes, and the order is the subject: **every** property of every
 /// frame is gathered under its key first, so that the set of copies is known
-/// before one is written — a point set whose wells lack a measure another well
+/// before one is written - a point set whose wells lack a measure another well
 /// carries gets it anyway, null where it is missing.
 fn copy(
     properties: &[ObjectIn],
@@ -1210,7 +1210,7 @@ fn copy(
         if let Some(why) = &measure.conflict {
             out.dropped.push(Dropped {
                 count: measure.sources.len(),
-                why: format!("{}: not copied — {why}", listed(&measure.sources)),
+                why: format!("{}: not copied - {why}", listed(&measure.sources)),
             });
         }
     }
@@ -1262,7 +1262,7 @@ fn copy(
     out.says.push(Note {
         key: "properties",
         detail: format!(
-            "{} propert(ies) copied onto the point sets — {kept} measure(s) of the wellbores, one property per kind, name and element",
+            "{} propert(ies) copied onto the point sets - {kept} measure(s) of the wellbores, one property per kind, name and element",
             out.written
         ),
     });
@@ -1305,14 +1305,14 @@ fn copy(
 
 /// One copy on one point set: the object and its array.
 ///
-/// **The shape is the one `properties-from-table` writes** —
+/// **The shape is the one `properties-from-table` writes** -
 /// `ValuesForPatch` and not `Values`, `ValueCountPerIndexableElement` a list,
-/// the integer null on the array — taken from that writer rather than from
+/// the integer null on the array - taken from that writer rather than from
 /// memory: written from memory the first time there, it gave 1 680 objects
 /// `energyml check` refused, and a plan cannot say so.
 ///
 /// Its uuid comes from its content: the point set, the key and the
-/// values — the same run writes the same object, a changed value a second one.
+/// values - the same run writes the same object, a changed value a second one.
 fn write_one(
     set: &Written,
     key: &Key,
@@ -1322,7 +1322,7 @@ fn write_one(
     cx: &Context<'_>,
     rank: &mut usize,
 ) -> Result<(NewObject, Dataset), Refusal> {
-    let title = format!("{} — {}", set.title, measure.name);
+    let title = format!("{} - {}", set.title, measure.name);
     let (values, digest) = if measure.discrete {
         let codes: Vec<i64> = cells
             .iter()
@@ -1400,7 +1400,7 @@ fn write_one(
         // each has taken the one value of its side.
         "IndexableElement": "nodes",
         "ValueCountPerIndexableElement": [1],
-        // The kind the sources name — a reference, never a copy.
+        // The kind the sources name - a reference, never a copy.
         "PropertyKind": measure.kind.dor(),
         "SupportingRepresentation": {
             "$type": "eml23.DataObjectReference",
@@ -1444,7 +1444,7 @@ fn write_one(
 ///
 /// **The order of encounter, never the alphabet**: a code is the well's rank
 /// among the frames that gave contacts, so two runs over the same frames in
-/// the same order write the same table — the rule `properties-from-table`'s
+/// the same order write the same table - the rule `properties-from-table`'s
 /// own `Categories` follows for a text column, applied to a name this module
 /// already knows rather than one read from a file.
 #[derive(Default)]
@@ -1453,7 +1453,7 @@ struct WellNames {
 }
 
 impl WellNames {
-    /// This well's code — assigned at the first frame that names it.
+    /// This well's code - assigned at the first frame that names it.
     fn code(&mut self, well: &str) -> i64 {
         match self.order.iter().position(|one| one == well) {
             Some(at) => at as i64,
@@ -1487,7 +1487,7 @@ impl Named {
     }
 }
 
-/// Name every point of every point set after the well it came from — see
+/// Name every point of every point set after the well it came from - see
 /// "Naming each point after its well" in the module doc.
 ///
 /// **One table, shared by every point set of this run**, written once beside
@@ -1502,7 +1502,7 @@ fn name_wells(
     cx: &Context<'_>,
     rank: &mut usize,
 ) -> Result<Named, Refusal> {
-    // One code per frame, in the order `used` already keeps — the same order
+    // One code per frame, in the order `used` already keeps - the same order
     // `Origin::frame` indexes, so a point's code is `well_codes[origin.frame]`
     // with no lookup of its own.
     let mut names = WellNames::default();
@@ -1536,7 +1536,7 @@ fn name_wells(
         "uuid": table_uuid,
         "schemaVersion": "2.3",
         "Citation": support::citation(cx.when, &title),
-        // **A single column, in the order of encounter** — the shape
+        // **A single column, in the order of encounter** - the shape
         // `properties-from-table::lookup_table` writes for a text column: no
         // key column, because the value carried by each property already
         // *is* the row's position, not a key looked up against one.
@@ -1585,7 +1585,7 @@ fn name_wells(
         let count = codes.len();
         let path = format!("/resqml22/{uuid}/values");
         let array = support::external(&params.data_file, &path, &[count as i64]);
-        let property_title = format!("{} — well", set.title);
+        let property_title = format!("{} - well", set.title);
         let object = json!({
             "$type": "resqml22.DiscreteProperty",
             "uuid": uuid,

@@ -1,15 +1,15 @@
-//! What the PRODML operations that write an invented object share — the
+//! What the PRODML operations that write an invented object share - the
 //! citation that says it is synthetic and where its values come from, the
 //! `synthetic = true` marker, the derived uuids, the UTC instants.
 //!
 //! `prodml-doublet` wrote these as closures of its own plan; `fluid-sample`,
 //! `dts-installation` and `product-flow-model` write the same three things on
-//! every object, so they are here once — with the doublet's helpers
+//! every object, so they are here once - with the doublet's helpers
 //! ([`super::prodml_doublet::synthetic_by`], `titled`, `wellbore_because`)
 //! reused rather than copied.
 //!
-//! The rules: an invented value says so — `ExtensionNameValue` `synthetic = true` and a sentence in
-//! `Citation/Description` on every object invented — and no constant
+//! The rules: an invented value says so - `ExtensionNameValue` `synthetic = true` and a sentence in
+//! `Citation/Description` on every object invented - and no constant
 //! without a source: the source is required, and a blank one is refused.
 
 use energyml_eml_2_3 as eml;
@@ -30,7 +30,7 @@ pub(crate) struct Writer<'a> {
 }
 
 impl<'a> Writer<'a> {
-    /// A writer for `operation`, whose values come from `source` — refused
+    /// A writer for `operation`, whose values come from `source` - refused
     /// when blank (ADR-0019).
     pub fn new(cx: &'a Context<'a>, operation: &'static str, source: &str) -> Result<Self, Refusal> {
         let source = source.trim();
@@ -60,16 +60,16 @@ impl<'a> Writer<'a> {
     }
 
     /// A citation whose description says the object is synthetic, what it
-    /// is, and where its values come from — refused past the 2000 characters
+    /// is, and where its values come from - refused past the 2000 characters
     /// a `Citation/Description` holds.
     pub fn citation(&self, title: &str, what: &str) -> Result<eml::Citation, Refusal> {
-        let description = format!("Synthetic — {what}. Source: {}", self.source);
+        let description = format!("Synthetic - {what}. Source: {}", self.source);
         let length = description.chars().count();
         if length > 2000 {
             return Err(Refusal::on(
                 "source",
                 format!(
-                    "makes a description of {length} characters, and a Citation/Description holds 2000 — cite the document shorter"
+                    "makes a description of {length} characters, and a Citation/Description holds 2000 - cite the document shorter"
                 ),
             ));
         }

@@ -1,4 +1,4 @@
-//! Choose a **type** from what the build knows — and say what a form is
+//! Choose a **type** from what the build knows - and say what a form is
 //! allowed to change.
 //!
 //! The need: for feature types, the documentation gives the list of possible
@@ -14,7 +14,7 @@
 //! It holds the **filtering**, which can be wrong: a form that offers a
 //! type an operation cannot write is a form that makes a promise. It does not
 //! hold the **list**: it comes from the schema registry, which the caller
-//! owns — the crate's rule, *an operation reads nothing*, applied one step
+//! owns - the crate's rule, *an operation reads nothing*, applied one step
 //! earlier. `energyml-build` therefore does not depend on `energyml-schemas`, and one
 //! test suffices to exercise the sorting with a few hand-written candidates.
 //!
@@ -29,11 +29,11 @@
 
 use serde_json::{Value, json};
 
-/// What a slot accepts of an axis — a package, a version — in three states.
+/// What a slot accepts of an axis - a package, a version - in three states.
 ///
 /// Deliberately more general than the type choice alone: the same value
 /// will serve to bound a `Need::Object` by package, or a free text field the
-/// day an operation wants to. The rendering is the same on both sides —
+/// day an operation wants to. The rendering is the same on both sides -
 /// a list or a field, greyed out or not.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Constraint {
@@ -54,7 +54,7 @@ impl Constraint {
         }
     }
 
-    /// Is the control fixed? — which decides the greying out.
+    /// Is the control fixed? - which decides the greying out.
     pub fn is_fixed(&self) -> bool {
         matches!(self, Constraint::Only(_))
     }
@@ -70,7 +70,7 @@ impl Constraint {
         }
     }
 
-    /// What the control shows on opening — the first named value.
+    /// What the control shows on opening - the first named value.
     pub fn suggested(&self) -> Option<&'static str> {
         self.named().first().copied()
     }
@@ -92,14 +92,14 @@ impl Constraint {
 /// What a slot asks for when it asks for a **type**.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeChoice {
-    /// The proposed filter on the type name — `feature`, `interpretation`.
+    /// The proposed filter on the type name - `feature`, `interpretation`.
     ///
     /// **A default, never a limit**: the person clears or replaces it,
     /// and the list opens up. That is what was asked for, word for word.
     pub filter: &'static str,
-    /// Of which packages — `resqml`, `witsml` — and whether the choice is fixed.
+    /// Of which packages - `resqml`, `witsml` - and whether the choice is fixed.
     pub package: Constraint,
-    /// Of which versions — `2.2` — and whether the choice is fixed.
+    /// Of which versions - `2.2` - and whether the choice is fixed.
     pub version: Constraint,
     /// Offer only **concrete** types.
     ///
@@ -120,7 +120,7 @@ impl TypeChoice {
         }
     }
 
-    /// The same, bound to this package and this version — fixed.
+    /// The same, bound to this package and this version - fixed.
     pub fn only_in(mut self, package: &'static [&'static str], version: &'static [&'static str]) -> Self {
         self.package = Constraint::Only(package);
         self.version = Constraint::Only(version);
@@ -153,7 +153,7 @@ impl TypeChoice {
 pub struct Candidate {
     /// `resqml22.BoundaryFeature`.
     pub qualified_type: String,
-    /// `BoundaryFeature` — what the filter applies to.
+    /// `BoundaryFeature` - what the filter applies to.
     pub name: String,
     /// `resqml`, `witsml`.
     pub package: String,
@@ -165,7 +165,7 @@ pub struct Candidate {
 
 /// The types a choice retains, in the order they arrived.
 ///
-/// `filter` is what the person typed — empty, or absent, means *everything the
+/// `filter` is what the person typed - empty, or absent, means *everything the
 /// constraint lets through*, and not *nothing*. The comparison is
 /// case-insensitive and applies to the **name**, not the qualified type: one
 /// types `feature`, not `resqml22.`.
@@ -211,7 +211,7 @@ pub fn matching<'a>(
         .collect()
 }
 
-/// Is this type **writable** under this choice? — the refusal, named.
+/// Is this type **writable** under this choice? - the refusal, named.
 ///
 /// What `matching` hides, this refuses: a form sorts, a plan must
 /// say *why* it will not write. Both read the same constraint, which is
@@ -331,7 +331,7 @@ mod tests {
 
     #[test]
     fn the_filter_can_be_changed_and_empty_opens_everything() {
-        // The filter must be editable by the user — and clearing it
+        // The filter must be editable by the user - and clearing it
         // shows everything the constraint lets through, never nothing.
         let choice = TypeChoice::filtered("feature").only_in(&["resqml"], &["2.2"]);
         assert_eq!(

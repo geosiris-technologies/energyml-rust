@@ -1,4 +1,4 @@
-//! `energyml series` — a log, a time series, a flow test or production
+//! `energyml series` - a log, a time series, a flow test or production
 //! periods, read as series and printed.
 //!
 //! Argument parsing and display only: reading, refusing, counting and
@@ -27,7 +27,7 @@ pub struct SeriesArgs {
     /// The object to read: a WITSML `Log` or `ChannelSet` (nested ones too), a
     /// PRODML `TimeSeriesData`, a flow test, a `WellProductionParameters`.
     uuid: String,
-    /// Print the readout as JSON — what the front end receives.
+    /// Print the readout as JSON - what the front end receives.
     #[arg(long)]
     json: bool,
     /// Also decimate every numeric channel over its whole index into at most
@@ -124,7 +124,7 @@ pub fn run(args: SeriesArgs, modes: Modes) -> Result<()> {
                     one.role,
                     one.remark
                         .as_deref()
-                        .map(|remark| format!("  — {remark}"))
+                        .map(|remark| format!("  - {remark}"))
                         .unwrap_or_default()
                 );
                 print_series("channel set", &one.series, args.rows);

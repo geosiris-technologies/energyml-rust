@@ -1,15 +1,15 @@
-//! **The speed report of the operations** — `cargo bench --workspace --bench speed`.
+//! **The speed report of the operations** - `cargo bench --workspace --bench speed`.
 //!
 //! Not a test: nothing here fails, and neither `cargo test` nor the CI runs
-//! it. What it measures is **the slope**, not the stopwatch — the time of an
+//! it. What it measures is **the slope**, not the stopwatch - the time of an
 //! operation at three or four sizes and the exponent drawn from them. The
 //! absolute figure of a development machine moves from one day to the next; a
 //! computation that quadruples when its input doubles shows on any of them.
 //! The reasoning is that a slope is portable where a stopwatch is not; the report is
 //! kept dated, with the machine it ran on.
 //!
-//! The inputs are **synthetic and deterministic** — surfaces, clouds and
-//! fault traces drawn from a fixed seed — so two runs time the same work.
+//! The inputs are **synthetic and deterministic** - surfaces, clouds and
+//! fault traces drawn from a fixed seed - so two runs time the same work.
 //! Each case is timed through `Registry::plan_for` (the whole plan, as the
 //! front end asks it: `Purpose::Geometry`), and the two heaviest algorithms are
 //! also timed alone, to say whether the time goes to the computation or to
@@ -26,7 +26,7 @@ use energyml_geometry::geometry::{Geometry, Patch, Topology};
 /// The side of every synthetic extent, in metres.
 const EXTENT: f64 = 10_000.0;
 
-/// `splitmix64` — a fixed seed, the same numbers on every machine.
+/// `splitmix64` - a fixed seed, the same numbers on every machine.
 struct Seeded(u64);
 
 impl Seeded {
@@ -155,7 +155,7 @@ fn spacing_for(nodes: usize) -> f64 {
     EXTENT / ((nodes as f64).sqrt() - 1.0)
 }
 
-/// The median of a few passes — fewer the longer one takes.
+/// The median of a few passes - fewer the longer one takes.
 fn median(mut run: impl FnMut()) -> Duration {
     let first = Instant::now();
     run();
@@ -211,7 +211,7 @@ fn cases() -> Vec<Case> {
     const SAMPLES: usize = 2000;
     vec![
         Case {
-            name: "loft between two sticks — nodes per stick",
+            name: "loft between two sticks - nodes per stick",
             counts: "nodes on each of two sticks",
             sizes: vec![10_000, 40_000, 160_000],
             run: Box::new(|n| {
@@ -229,7 +229,7 @@ fn cases() -> Vec<Case> {
             }),
         },
         Case {
-            name: "project onto a surface — nodes",
+            name: "project onto a surface - nodes",
             counts: "nodes projected, onto 40 000 surface nodes",
             sizes: vec![10_000, 40_000, 160_000],
             run: Box::new(|n| {
@@ -244,7 +244,7 @@ fn cases() -> Vec<Case> {
             }),
         },
         Case {
-            name: "densify smooth — nodes added",
+            name: "densify smooth - nodes added",
             counts: "nodes added, 10 traces × 50 segments",
             sizes: vec![10_000, 40_000, 160_000],
             run: Box::new(|n| {
@@ -256,7 +256,7 @@ fn cases() -> Vec<Case> {
             }),
         },
         Case {
-            name: "interpolate idw — grid nodes",
+            name: "interpolate idw - grid nodes",
             counts: "grid nodes, 2 000 samples",
             sizes: vec![10_000, 40_000, 160_000],
             run: Box::new(|n| {
@@ -268,7 +268,7 @@ fn cases() -> Vec<Case> {
             }),
         },
         Case {
-            name: "interpolate idw — samples",
+            name: "interpolate idw - samples",
             counts: "samples, 40 000 grid nodes",
             sizes: vec![500, 2_000, 8_000],
             run: Box::new(|n| {
@@ -336,7 +336,7 @@ fn cases() -> Vec<Case> {
             }),
         },
         Case {
-            name: "interpolate kriging — samples",
+            name: "interpolate kriging - samples",
             counts: "samples, 10 000 grid nodes",
             sizes: vec![250, 500, 1_000],
             run: Box::new(|n| {

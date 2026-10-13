@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 use energyml_rust::session::Package;
 
-/// A copy of a corpus package and its data file, in a folder of its own —
+/// A copy of a corpus package and its data file, in a folder of its own -
 /// renaming inside the fixtures would take the file away from every other test.
 fn workbench(case: &str, package: &str, data: &str) -> Option<(PathBuf, String)> {
     let (Some(source_epc), Some(source_h5)) = (crate::fixtures::find(package), crate::fixtures::find(data))

@@ -1,19 +1,19 @@
-//! `local-grid` — a refined window of an `IjkGridRepresentation`, its
+//! `local-grid` - a refined window of an `IjkGridRepresentation`, its
 //! geometry derived from the parent's (the reference model's local grid:
-//! `LocalGridSet` + a child `IjkGridRepresentation` — window I
-//! 10–13, J 8–11, all K, refined 2 × 2 × 1 → 8 × 8 × 10 = 640;
+//! `LocalGridSet` + a child `IjkGridRepresentation` - window I
+//! 10-13, J 8-11, all K, refined 2 × 2 × 1 → 8 × 8 × 10 = 640;
 //! `IjkParentWindow` (TRG §5.31 p. 127 ◐), and
 //! `ParentWindow.ParentIjkGridRepresentation` 1..1 pointing at the parent grid).
 //!
 //! The mother grid here is a small synthetic corner-point box built by hand,
-//! its cells laid the way the geometry reader lays them (`cells_of`) — and, to
+//! its cells laid the way the geometry reader lays them (`cells_of`) - and, to
 //! stand for the Chalk grid, the same box with a K gap (`gapped_mother`) or a fault
 //! (`faulted_mother`). Its three coordinates
-//! are affine in `(i, j, k)` — `X0 + DX·i + 0.1·k`, and so on — on purpose:
+//! are affine in `(i, j, k)` - `X0 + DX·i + 0.1·k`, and so on - on purpose:
 //! trilinear interpolation reproduces an affine function **exactly** at any
 //! fractional position, so `expected()` below, evaluated independently of the
 //! operation at the child's own fractional coordinates, is a real check on
-//! the arithmetic — an axis swap, a wrong pillar formula or an off-by-one
+//! the arithmetic - an axis swap, a wrong pillar formula or an off-by-one
 //! would show up as a mismatch at generic interior nodes, not only at the
 //! corners.
 //!
@@ -21,7 +21,7 @@
 //!
 //! `the_child_reads_back_through_the_geometry_reader` (behind `feature =
 //! "hdf5"`) writes the plan's objects into a real `EpcStore`, reopens it, and
-//! reads the child back through `energyml_geometry::scene::object_of` —
+//! reads the child back through `energyml_geometry::scene::object_of` -
 //! which, for an `IjkGridRepresentation` with a `ParentWindow` and no
 //! `Geometry`, delegates to `crates/energyml-geometry/src/parent.rs`: a
 //! second, independent trilinear interpolation over a real HDF5 hyperslab of
@@ -43,7 +43,7 @@ use energyml_build::operation::{Choices, Identity, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
-/// The parent's cell counts — small, but more than one refined cell wide on
+/// The parent's cell counts - small, but more than one refined cell wide on
 /// every axis, so a transposed axis or a wrong step would still show.
 const PNI: usize = 6;
 const PNJ: usize = 5;
@@ -63,7 +63,7 @@ fn when() -> When {
     }
 }
 
-/// The parent's corner at pillar `(i, j)`, level `k` — affine in `(i, j, k)`,
+/// The parent's corner at pillar `(i, j)`, level `k` - affine in `(i, j, k)`,
 /// and each coordinate reads a different mix of the three so an axis mix-up
 /// cannot hide behind another axis agreeing by coincidence.
 fn corner(i: usize, j: usize, k: usize) -> [f64; 3] {
@@ -75,7 +75,7 @@ fn corner(i: usize, j: usize, k: usize) -> [f64; 3] {
     ]
 }
 
-/// The same corner, evaluated at a **fractional** parent position — what a
+/// The same corner, evaluated at a **fractional** parent position - what a
 /// correct trilinear interpolation of an affine field must equal, computed
 /// here independently of `crates/energyml-build/src/ops/local_grid.rs`.
 fn expected(i: f64, j: f64, k: f64) -> [f64; 3] {
@@ -89,11 +89,11 @@ fn expected(i: f64, j: f64, k: f64) -> [f64; 3] {
 const PILLARS: usize = (PNI + 1) * (PNJ + 1);
 
 /// Cells as `energyml_geometry::ijk::read` lays them: RESQML order (i fastest,
-/// then j, then k), each the four pillars of its column — `(i, j)`,
-/// `(i + 1, j)`, `(i + 1, j + 1)`, `(i, j + 1)` — on its top level, then the
+/// then j, then k), each the four pillars of its column - `(i, j)`,
+/// `(i + 1, j)`, `(i + 1, j + 1)`, `(i, j + 1)` - on its top level, then the
 /// same four on its base level. `tops[k]` is the level layer `k`'s top sits
 /// at (one more past a K gap), and `line_of(pillar, column)` the coordinate
-/// line a column uses at a pillar — a split line on the far side of a fault.
+/// line a column uses at a pillar - a split line on the far side of a fault.
 fn cells_of(lines: usize, tops: &[usize], line_of: impl Fn(usize, usize) -> usize) -> Vec<[u32; 8]> {
     let mut cells = Vec::new();
     for &top in tops {
@@ -155,7 +155,7 @@ fn mother_geometry() -> Geometry {
 
 /// The mother with a **K gap after layer 0**: `PNK + 2` levels, layer 0
 /// between levels 0 and 1, the void between 1 and 2, layer `k ≥ 1` between
-/// `k + 1` and `k + 2` — so `corner(i, j, level)` puts layer 1's top at 2.
+/// `k + 1` and `k + 2` - so `corner(i, j, level)` puts layer 1's top at 2.
 fn gapped_mother() -> Geometry {
     let tops: Vec<usize> = (0..PNK).map(|k| if k == 0 { 0 } else { k + 1 }).collect();
     hexahedra(levels_of(PNK + 2), cells_of(PILLARS, &tops, |pillar, _| pillar))
@@ -219,8 +219,8 @@ fn bag() -> Pieces {
     bag_of(mother_geometry())
 }
 
-/// The window, brought down to this mother's size: I 1–3, J 1–2 (spans 3
-/// and 2), every K (0–2, span 3), refined 2 × 2 × 1 — 6 × 4 × 3 = 72 cells.
+/// The window, brought down to this mother's size: I 1-3, J 1-2 (spans 3
+/// and 2), every K (0-2, span 3), refined 2 × 2 × 1 - 6 × 4 × 3 = 72 cells.
 fn answers() -> Choices {
     Choices::new()
         .set("i0", 1)
@@ -346,14 +346,14 @@ fn the_counts_come_from_the_window_and_the_refinement() {
 // -- the boundary of the window coincides exactly with the parent's nodes ----------------
 
 /// **Every node on the window's boundary is the parent's own corner, bit for
-/// bit** — no interpolation error at the seam a reader must stitch to the
+/// bit** - no interpolation error at the seam a reader must stitch to the
 /// parent grid.
 #[test]
 fn the_windows_boundary_coincides_exactly_with_the_parent() {
     let plan = planned(&bag(), &answers()).unwrap();
     let points = &plan.shapes[0].geometry.patches[0].points;
     // Corners of the child box: (ci, cj, ck) at 0 or the max map to parent
-    // pillars (1 or 4, i.e. i0 or i1+1) and (1 or 3), (0 or 3) — i.e. i0..=i1+1
+    // pillars (1 or 4, i.e. i0 or i1+1) and (1 or 3), (0 or 3) - i.e. i0..=i1+1
     // and so on.
     for &(ci, i) in &[(0usize, 1usize), (6, 4)] {
         for &(cj, j) in &[(0usize, 1usize), (4, 3)] {
@@ -367,15 +367,15 @@ fn the_windows_boundary_coincides_exactly_with_the_parent() {
             }
         }
     }
-    // A boundary node that is not a corner of the box — e.g. the middle of an
-    // edge, ci = 2 (parent i = 1 + 2/2 = 2, an integer pillar), cj = 0 — still
+    // A boundary node that is not a corner of the box - e.g. the middle of an
+    // edge, ci = 2 (parent i = 1 + 2/2 = 2, an integer pillar), cj = 0 - still
     // lands exactly on the parent's node, since I is refined but J is not
     // interpolated away from cj = 0.
     assert_eq!(node(points, [6, 4], 2, 0, 0), corner(2, 1, 0));
 }
 
 /// **A node strictly inside the window is the parent's lattice, trilinearly
-/// interpolated** — checked against `expected()`, computed independently of
+/// interpolated** - checked against `expected()`, computed independently of
 /// the operation, at the exact fractional parent position the child node asks
 /// for.
 #[test]
@@ -419,11 +419,11 @@ fn a_reversed_window_is_refused() {
 }
 
 /// **A parent cell corner with no height is refused by name**, naming the
-/// pillar and the level — never a silently propagated `NaN`.
+/// pillar and the level - never a silently propagated `NaN`.
 #[test]
 fn an_undefined_parent_corner_is_refused() {
     let mut geometry = mother_geometry();
-    // Pillar (2, 2), level 1 — inside the window's span (I 1..=3, J 1..=2, K
+    // Pillar (2, 2), level 1 - inside the window's span (I 1..=3, J 1..=2, K
     // 0..=2), so a cell the window covers touches it.
     let level = 1;
     let at = (level * (PNJ + 1) + 2) * (PNI + 1) + 2;
@@ -438,7 +438,7 @@ fn an_undefined_parent_corner_is_refused() {
 // -- faults and K gaps: refused inside the window, nothing outside it -----------------------
 
 /// **A fault inside the window is refused, naming its pillar.** Pillar
-/// (3, 2) is split, and the window (I 1–3, J 1–2) holds columns on both sides
+/// (3, 2) is split, and the window (I 1-3, J 1-2) holds columns on both sides
 /// of it: the child's node there would have one position per side.
 #[test]
 fn a_fault_inside_the_window_is_refused() {
@@ -473,8 +473,8 @@ fn a_k_gap_inside_the_window_is_refused() {
     );
 }
 
-/// **Below a K gap, the window starts at its first layer's top — a level, not
-/// the layer's index.** Layers 1–2 of the gapped mother sit at levels 2–4, so
+/// **Below a K gap, the window starts at its first layer's top - a level, not
+/// the layer's index.** Layers 1-2 of the gapped mother sit at levels 2-4, so
 /// the child's three levels are 2, 3 and 4; the layer's index would have put
 /// its top at level 1, inside the void.
 #[test]
@@ -542,11 +542,11 @@ fn a_cell_dropped_by_the_reader_inside_the_window_is_refused() {
 
 /// **The geometry reader reads the same nodes this operation planned.** The
 /// mother is written into a real package, with a real HDF5 `Points` array, and
-/// **read back through the geometry reader** — what the operation is given in
+/// **read back through the geometry reader** - what the operation is given in
 /// a recipe, cells laid and turned the reader's way, not a shape built here.
 /// The local grid planned from it is applied beside it, the package saved and
 /// reopened, and the child read back through
-/// `energyml_geometry::scene::object_of` — which, for an
+/// `energyml_geometry::scene::object_of` - which, for an
 /// `IjkGridRepresentation` with a `ParentWindow` and no `Geometry`, is
 /// `crates/energyml-geometry/src/parent.rs`: a hyperslab of the parent's real
 /// `Points`, trilinearly interpolated by code that shares nothing with
@@ -651,7 +651,7 @@ fn round_trip(gapped: bool, choices: &Choices, name: &str) -> Trip {
         dropped: Vec::new(),
     };
     // `local-grid` has its canonical template (in the shipped templates,
-    // 28/09), so both applies record their activity — and a refusal is a
+    // 28/09), so both applies record their activity - and a refusal is a
     // failure, not something to read past.
     energyml_build::apply::apply(&mother_plan, &mut store, &when())
         .activity
@@ -724,9 +724,9 @@ fn the_child_reads_back_through_the_geometry_reader() {
 }
 
 /// **The same below a K gap, written and read.** The window starts under the
-/// gap (layers 1–2), so the reader must find it at level 2 of the file's
+/// gap (layers 1-2), so the reader must find it at level 2 of the file's
 /// five: the two sides agree with each other **and** with `corner()` read at
-/// levels 2–4 — a reader that took the layer for the level would agree with
+/// levels 2-4 - a reader that took the layer for the level would agree with
 /// neither.
 #[cfg(feature = "hdf5")]
 #[test]

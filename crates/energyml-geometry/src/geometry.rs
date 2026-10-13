@@ -47,11 +47,11 @@ pub enum Topology {
     ///
     /// What a 2D grid's cells are, and what a hexahedron's faces are. Kept as
     /// four corners rather than split into two triangles, because that is what
-    /// the file says a cell *is* — OBJ, VTK and GeoJSON each write a
+    /// the file says a cell *is* - OBJ, VTK and GeoJSON each write a
     /// quadrilateral directly, and halving it here would hand all three a
     /// decision none of them asked for.
     ///
-    /// The ring is oriented so its signed area in the XY plane is positive —
+    /// The ring is oriented so its signed area in the XY plane is positive -
     /// **measured, not assumed**. That is the winding RFC 7946 asks of a
     /// GeoJSON exterior ring, and the one a renderer reads as front-facing.
     Quads(Vec<[u32; 4]>),
@@ -62,32 +62,32 @@ pub enum Topology {
     /// `Vec<u32>` each would be that many allocations, while an outline
     /// produces one ring of arbitrary length that no fixed array can hold.
     ///
-    /// Wound like a quadrilateral — positive signed area in XY, measured — and
+    /// Wound like a quadrilateral - positive signed area in XY, measured - and
     /// **not closed**: the repeat of the first point is a GeoJSON requirement,
     /// added where GeoJSON is written rather than carried everywhere.
     Polygons(Vec<Vec<u32>>),
     /// One or more runs of consecutive points; each entry is a run's length.
     ///
-    /// Closed polylines are not marked here — RESQML says so in a separate
+    /// Closed polylines are not marked here - RESQML says so in a separate
     /// boolean array, and inventing a convention would be worse than leaving
     /// it out.
     Polylines(Vec<u32>),
     /// Cells of eight corners, indexed into the patch's points.
     ///
-    /// The corners are in VTK's order — face `(0,1,2,3)`'s right-hand normal
-    /// points at face `(4,5,6,7)` — because that is the one convention every
+    /// The corners are in VTK's order - face `(0,1,2,3)`'s right-hand normal
+    /// points at face `(4,5,6,7)` - because that is the one convention every
     /// consumer states explicitly, and a hexahedron built the other way round
     /// renders as a hole.
     Hexahedra {
         /// One entry per cell, eight point indices each.
         cells: Vec<[u32; 8]>,
-        /// `Ni`, `Nj`, `Nk` — the shape the cells were built from.
+        /// `Ni`, `Nj`, `Nk` - the shape the cells were built from.
         dimensions: [usize; 3],
         /// **The RESQML cell index of each entry**, or empty when they coincide.
         ///
         /// A position here is *not* always the number RESQML calls the cell.
         /// The reader drops a cell its `CellGeometryIsDefined` flag marks
-        /// undefined, and one whose pillars carry no location — so `cells` is
+        /// undefined, and one whose pillars carry no location - so `cells` is
         /// **compacted**, and on a grid with holes every entry after the first
         /// hole sits one place before the cell it belongs to.
         ///
@@ -98,8 +98,8 @@ pub enum Topology {
         /// and eroded ones a connection set exists for. PaleoGTM has 3 647
         /// undefined cells out of 33 048.
         ///
-        /// **Empty means the identity** — nothing was dropped, so a position is
-        /// the index — which is the ordinary case and costs no memory on a grid
+        /// **Empty means the identity** - nothing was dropped, so a position is
+        /// the index - which is the ordinary case and costs no memory on a grid
         /// of ten million cells. Read it through [`Topology::cell_at`] rather
         /// than directly, so that convention lives in one place.
         index: Vec<u32>,
@@ -115,18 +115,18 @@ pub enum Topology {
     Polyhedra(Polyhedra),
     /// Indexed segments: pairs of node indices, each pair one edge.
     ///
-    /// What [`Topology::Polylines`] cannot say — that topology addresses
+    /// What [`Topology::Polylines`] cannot say - that topology addresses
     /// **consecutive** points, and the edges of a wireframe join nodes that
     /// are nowhere near each other in the array. This is the variant its
     /// module doc promised (*"adding `Topology::Segments` later would make it
     /// work with no change here"*), and what `Shape::Lines` on a surface now
     /// produces: the **cell edges**, each stored once. Derived data, like the
-    /// skin of a volume — not an invention.
+    /// skin of a volume - not an invention.
     Segments(Vec<[u32; 2]>),
 }
 
 impl Topology {
-    /// How many **cells** this topology holds — one per triangle, quad, ring,
+    /// How many **cells** this topology holds - one per triangle, quad, ring,
     /// polyline or volume cell, which is what a per-cell property has one
     /// value for. The one definition; [`Geometry::cell_count`] and the
     /// triangle→cell numbering of [`Geometry::drawable`] both sum it, and two
@@ -140,7 +140,7 @@ impl Topology {
             Topology::Hexahedra { cells, .. } => cells.len(),
             Topology::Grid { fastest, slowest } => fastest.saturating_sub(1) * slowest.saturating_sub(1),
             Topology::Polyhedra(cells) => cells.cell_count(),
-            // A segment is a wireframe's cell — which is also what drops
+            // A segment is a wireframe's cell - which is also what drops
             // per-cell attributes through the conversion: the count changes,
             // and a surface-cell value has no honest place on an edge shared
             // by two cells.
@@ -159,7 +159,7 @@ impl Topology {
 /// winding turns outward for one of the two cells and inward for the other, so
 /// the flag belongs to the *pair*.
 ///
-/// Stored flat — four runs and a parallel flag array — because a corpus grid is
+/// Stored flat - four runs and a parallel flag array - because a corpus grid is
 /// two cells and a real one is millions, and three levels of `Vec` for the
 /// latter is a lot of allocations to describe a list of integers.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -206,7 +206,7 @@ impl Polyhedra {
         self.cell_starts.len().saturating_sub(1)
     }
 
-    /// How many distinct faces — not the number of cell-face pairs, which is
+    /// How many distinct faces - not the number of cell-face pairs, which is
     /// larger wherever a face is shared.
     pub fn face_count(&self) -> usize {
         self.face_starts.len().saturating_sub(1)
@@ -252,7 +252,7 @@ impl Polyhedra {
     ///
     /// A fan from each face's first node. Exact for a triangle, exact for a
     /// planar polygon, and an approximation for a face whose corners are not
-    /// coplanar — which the schema neither forbids nor says how to split, the
+    /// coplanar - which the schema neither forbids nor says how to split, the
     /// one place it comes close being the optional hinge-node faces. The fan is
     /// stated rather than hidden: a caller wanting the hinge-node tessellation
     /// has to do it from the face lists, which are right here.
@@ -274,26 +274,26 @@ impl Polyhedra {
     /// # Why the boundary and not every face
     ///
     /// [`Polyhedra::triangles`] emits every cell's every face, interior ones
-    /// included — right for counting, wrong for drawing. A grid of a hundred
+    /// included - right for counting, wrong for drawing. A grid of a hundred
     /// thousand cells has a few thousand faces on its skin and hundreds of
     /// thousands inside it, each shared by two cells and each drawn twice, one
     /// of the two facing the camera. What comes out is an opaque block whose
     /// surface z-fights with itself, at ten times the cost of the picture
     /// actually wanted.
     ///
-    /// A face is on the boundary when exactly one cell claims it — the same
+    /// A face is on the boundary when exactly one cell claims it - the same
     /// rule the hexahedral path uses, and here it needs no geometry at all,
     /// because the shared faces are already shared *by index*: the file states
     /// which cells meet at which face, so counting the claims is exact where
     /// hashing corner sets is a reconstruction.
     ///
     /// The winding comes from the flag the file carries for that cell-face
-    /// pair, so the ring returned turns outward for the one cell that owns it —
+    /// pair, so the ring returned turns outward for the one cell that owns it -
     /// which, for a boundary face, is outward from the grid.
     ///
     /// Rings of any length, not triangles: a face may be a quadrilateral, and
-    /// splitting it here would hand a consumer that wants polygons — GeoJSON,
-    /// VTK, OBJ — a decision it did not ask for. [`Geometry::drawable`] fans
+    /// splitting it here would hand a consumer that wants polygons - GeoJSON,
+    /// VTK, OBJ - a decision it did not ask for. [`Geometry::drawable`] fans
     /// them where a renderer needs triangles.
     pub fn boundary(&self) -> Vec<Vec<u32>> {
         let mut claims = vec![0u32; self.face_count()];
@@ -336,7 +336,7 @@ pub struct Patch {
     /// Index of the patch inside the representation, as RESQML numbers them.
     pub index: usize,
     /// Where this patch's points start in the representation's own node
-    /// numbering — the running sum of the preceding patches' point counts.
+    /// numbering - the running sum of the preceding patches' point counts.
     ///
     /// A subrepresentation, a property, or anything else that indexes *nodes of
     /// the representation* counts from here; [`Topology`] indices do not, see
@@ -344,7 +344,7 @@ pub struct Patch {
     pub node_offset: usize,
     /// The points, in the representation's local coordinate system.
     pub points: Vec<Point>,
-    /// How they connect — always indexed into this patch's own [`points`],
+    /// How they connect - always indexed into this patch's own [`points`],
     /// whichever convention the file used.
     ///
     /// [`points`]: Patch::points
@@ -352,7 +352,7 @@ pub struct Patch {
     /// Which of this patch's polylines close back on their first node.
     ///
     /// One entry per run of [`Topology::Polylines`], **empty when the file
-    /// says nothing** — which is not the same as *all open*: a producer that
+    /// says nothing** - which is not the same as *all open*: a producer that
     /// omits `ClosedPolylines` has stated nothing, and a reader that drew the
     /// closing edge anyway would invent a ring.
     ///
@@ -385,7 +385,7 @@ impl Topology {
 
     /// Where the cell RESQML numbers `cell` sits in this topology, if it is here.
     ///
-    /// `None` for a cell the reader dropped — undefined, or with no located
+    /// `None` for a cell the reader dropped - undefined, or with no located
     /// pillar. That is an answer and not a failure: the file names a cell that
     /// has no shape, and drawing something for it would be drawing a place the
     /// grid says is not one.
@@ -395,7 +395,7 @@ impl Topology {
                 if index.is_empty() {
                     return ((cell as usize) < cells.len()).then_some(cell as usize);
                 }
-                // Sorted by construction — the reader walks k, then j, then i —
+                // Sorted by construction - the reader walks k, then j, then i -
                 // so a binary search rather than a scan over ten million cells.
                 index.binary_search(&cell).ok()
             }
@@ -424,7 +424,7 @@ impl Geometry {
         self.point_count() == 0
     }
 
-    /// **The nodes of these ranks, in the order asked** — the representation's
+    /// **The nodes of these ranks, in the order asked** - the representation's
     /// own numbering, the running sum of its patches' points ([`Patch::node_offset`]).
     ///
     /// The numbering a click in the scene returns and `transform`'s `nodes`
@@ -452,7 +452,7 @@ impl Geometry {
     /// Total number of **cells**, whatever kind of cell this shape has.
     ///
     /// A triangle, a polyline, a hexahedron and a grid cell all count as one,
-    /// because that is what a per-cell property has one value for — and what a
+    /// because that is what a per-cell property has one value for - and what a
     /// consumer will line those values up against. A shape of loose points has
     /// no cells at all.
     pub fn cell_count(&self) -> usize {
@@ -494,7 +494,7 @@ impl Geometry {
     ///
     /// `merged` emits indices only for [`Topology::Triangles`], which is right
     /// for what it is for. But a viewer given nothing else draws a **point
-    /// cloud** — and that is what a 2D grid and a well trajectory came out as:
+    /// cloud** - and that is what a 2D grid and a well trajectory came out as:
     /// a horizon rendered as a spray of dots, a borehole as a dotted line. The
     /// data was there the whole time; nothing turned a cell into two triangles
     /// or a station list into segments.
@@ -509,15 +509,15 @@ impl Geometry {
     /// - bare **points** stay points, because that is what they are.
     ///
     /// A cell with a non-finite corner is **dropped rather than drawn**. A grid
-    /// with holes is ordinary — an eroded horizon, a survey clipped to a
-    /// licence block — and a triangle through `NaN` does not render as a hole,
+    /// with holes is ordinary - an eroded horizon, a survey clipped to a
+    /// licence block - and a triangle through `NaN` does not render as a hole,
     /// it renders as a spike across the whole scene.
     ///
     /// And the node itself goes with it. Dropping only the cells leaves the
     /// `NaN` in the buffer a viewer uploads, which is not a missing dot: three
     /// numbers that are not numbers make the object's bounding sphere `NaN`, the
     /// frustum test fails for the whole object, and the framing of the **entire
-    /// scene** goes with it — one console line per frame, about a node that only
+    /// scene** goes with it - one console line per frame, about a node that only
     /// ever meant "no data here". So [`Drawable`] carries locations only, the
     /// indices are renumbered onto them, and [`Drawable::dropped`] says how many
     /// there were: a surface that comes out empty because every node was `NaN`
@@ -528,9 +528,9 @@ impl Geometry {
         let mut triangle_cells: Vec<u32> = Vec::new();
         let mut lines: Vec<[u32; 2]> = Vec::new();
         let mut node_cells: Vec<u32> = Vec::new();
-        // The cell numbering is the **original** topology's, patch by patch —
+        // The cell numbering is the **original** topology's, patch by patch -
         // the numbering `cell_count` sums and a per-cell property lines up
-        // against — even where the drawing swaps in a derived skin.
+        // against - even where the drawing swaps in a derived skin.
         let mut cell_base = 0u32;
         // One skinned patch and the table is a lie for the whole object: a
         // boundary face is not a cell, so the mapping is withheld entirely
@@ -542,7 +542,7 @@ impl Geometry {
             // **A volume's node that no cell names is not a location.** The
             // IJK reader drops a cell its `CellGeometryIsDefined` flag marks
             // undefined, and the standard makes that flag override the
-            // numbers — which stay finite in the file, since nothing obliges a
+            // numbers - which stay finite in the file, since nothing obliges a
             // writer to null them. Left in the buffer, such a node was drawn
             // as a dot exactly where the grid says there is nothing (seen
             // on ALWYN's IJK grids). A lattice or a point
@@ -550,8 +550,8 @@ impl Geometry {
             // right, and the ALWYN horizons are nothing but lone nodes.
             let placed = orphans_as_holes(&patch.points, &patch.topology);
             points.extend_from_slice(&placed);
-            // Every node enters with no cell; the polylines arm — the one
-            // place membership is unique — rewrites its own below.
+            // Every node enters with no cell; the polylines arm - the one
+            // place membership is unique - rewrites its own below.
             node_cells.resize(points.len(), Drawable::NO_CELL);
             let finite = |index: u32| -> bool {
                 placed
@@ -573,14 +573,14 @@ impl Geometry {
             // IJK grid and an unstructured grid come out as point clouds: the
             // arms below had nothing to match, so the viewer fell through to
             // its last resort and drew the nodes. The data was complete the
-            // whole time — nothing turned a cell into faces.
+            // whole time - nothing turned a cell into faces.
             //
             // Through `shape::reshape` rather than a second implementation:
             // that module already decides which faces are on the outside, and
             // two derivations of the same boundary is exactly the pair of
             // readers that agree on a total and disagree on what it means.
             //
-            // A refusal is kept rather than swallowed — the arms below still
+            // A refusal is kept rather than swallowed - the arms below still
             // have a volume case, which emits nothing, so a topology whose
             // boundary this build cannot derive stays a point cloud instead of
             // becoming silently empty.
@@ -614,7 +614,7 @@ impl Geometry {
                     }
                 }
                 Topology::Grid { fastest, slowest } => {
-                    // Row-major, the fast axis first — the order the lattice
+                    // Row-major, the fast axis first - the order the lattice
                     // evaluates its points in, so a cell is four neighbours and
                     // not an index computation anybody has to re-derive.
                     for row in 0..slowest.saturating_sub(1) {
@@ -633,7 +633,7 @@ impl Geometry {
                     let mut at: u32 = 0;
                     for (cell, run) in runs.iter().enumerate() {
                         // Every node of a run belongs to that run and no
-                        // other — the membership that makes per-cell painting
+                        // other - the membership that makes per-cell painting
                         // of lines a lookup instead of a de-index. `get_mut`
                         // rather than an index: a run declaring more nodes
                         // than the patch holds is a malformed file, not a
@@ -692,8 +692,8 @@ impl Geometry {
 
 /// A volume's points, with every node no cell names turned into a hole.
 ///
-/// Borrowed when every node is named — the ordinary grid pays one pass and no
-/// copy — and owned with `NaN` on the orphans otherwise, so that [`compact`]
+/// Borrowed when every node is named - the ordinary grid pays one pass and no
+/// copy - and owned with `NaN` on the orphans otherwise, so that [`compact`]
 /// drops them the way it drops a node the file left null, and counts them in
 /// [`Drawable::dropped`]. Surfaces, lines and point sets are handed back as
 /// they are: a node of theirs that no cell names is still a location.
@@ -732,7 +732,7 @@ pub(crate) fn orphans_as_holes<'a>(
 /// back untouched, so the ordinary case walks the points once and allocates
 /// nothing. Only a shape with holes pays for the map.
 ///
-/// An index into a node that was dropped is filtered rather than clamped — by
+/// An index into a node that was dropped is filtered rather than clamped - by
 /// construction there is none, since a cell with a non-finite corner is never
 /// emitted, but a bent index draws a triangle across the model and there is no
 /// version of that worth having.
@@ -767,8 +767,8 @@ fn compact(
         }
     }
     let at = |index: u32| moved.get(index as usize).copied().unwrap_or(GONE);
-    // The cell table is filtered **with** its triangle — zipped, not re-derived
-    // — or every triangle after a dropped one wears its neighbour's cell. An
+    // The cell table is filtered **with** its triangle - zipped, not re-derived
+    // - or every triangle after a dropped one wears its neighbour's cell. An
     // empty table (a volume's skin) stays empty rather than gaining entries.
     let mapped = !triangle_cells.is_empty();
     let mut cells_kept = Vec::new();
@@ -787,7 +787,7 @@ fn compact(
         })
         .collect();
     // The node table follows its nodes: an entry per **kept** point, in the
-    // same order the points were kept — filtered any other way, every node
+    // same order the points were kept - filtered any other way, every node
     // after a hole would wear its neighbour's cell.
     let node_cells_kept: Vec<u32> = node_cells
         .into_iter()
@@ -811,51 +811,51 @@ fn compact(
 
 /// What a viewer needs: the points, and how to join them.
 ///
-/// Both index lists at once because a representation can have some of each — a
-/// wellbore frame is stations *and* markers — and a caller that had to ask
+/// Both index lists at once because a representation can have some of each - a
+/// wellbore frame is stations *and* markers - and a caller that had to ask
 /// twice would walk the patches twice.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Drawable {
-    /// Every patch's points, concatenated — and every one of them a location.
+    /// Every patch's points, concatenated - and every one of them a location.
     pub points: Vec<Point>,
     /// Triples into `points`.
     pub triangles: Vec<[u32; 3]>,
     /// Pairs into `points`: the segments of every polyline.
     pub lines: Vec<[u32; 2]>,
-    /// Nodes left out because they hold no location — a `NaN` corner of a grid
+    /// Nodes left out because they hold no location - a `NaN` corner of a grid
     /// with holes, the padding of a short parametric line.
     ///
     /// Counted rather than swallowed: a representation whose nodes are *all*
     /// undefined comes back empty, and empty is exactly what a reader that
     /// found nothing also returns. This is what tells the two apart.
     pub dropped: usize,
-    /// The **cell** each triangle was cut from — `triangle_cells[i]` for
-    /// `triangles[i]` — in the numbering of [`Geometry::cell_count`], which is
+    /// The **cell** each triangle was cut from - `triangle_cells[i]` for
+    /// `triangles[i]` - in the numbering of [`Geometry::cell_count`], which is
     /// the numbering a per-cell property's values line up against.
     ///
     /// This is what lets a viewer paint a flat colour per cell: three.js
-    /// colours vertices, so an aplat needs the geometry de-indexed — each
-    /// triangle its own three vertices — and each new vertex needs to know
+    /// colours vertices, so an aplat needs the geometry de-indexed - each
+    /// triangle its own three vertices - and each new vertex needs to know
     /// which cell's value it wears. Deriving this table outside the merge
     /// would mean re-deriving the fan of a polygon, the split of a quad and
-    /// the row order of a lattice, and agreeing with them forever — the exact
+    /// the row order of a lattice, and agreeing with them forever - the exact
     /// pair of readers this repository refuses.
     ///
     /// **Empty when the mapping does not exist**, never guessed: a volume is
     /// drawn by its boundary skin, and a boundary face is a *face*, not a
-    /// cell — naming one per triangle would line a property's values up
+    /// cell - naming one per triangle would line a property's values up
     /// against elements they were not measured on. Empty and full are the two
     /// honest states; a caller that finds it empty refuses per-cell painting
     /// by name, exactly as it did before this field existed.
     pub triangle_cells: Vec<u32>,
-    /// The cell each **node** belongs to, where that is unique — one entry per
+    /// The cell each **node** belongs to, where that is unique - one entry per
     /// point, [`Drawable::NO_CELL`] where it is not.
     ///
     /// The unique case is a polyline: every node of a run belongs to that run
-    /// and no other, so painting a `PolylineSetRepresentation` per cell — one
-    /// colour a polyline — needs no de-indexing at all: segments of one run
+    /// and no other, so painting a `PolylineSetRepresentation` per cell - one
+    /// colour a polyline - needs no de-indexing at all: segments of one run
     /// share vertices and share a colour, and two runs never share a vertex.
-    /// A surface's node is the opposite — shared between cells, which is
+    /// A surface's node is the opposite - shared between cells, which is
     /// exactly why faces go through [`Drawable::triangle_cells`] and a
     /// de-index instead. `NO_CELL` there is the honest entry, and a viewer's
     /// out-of-range guard turns it into the transparent it already gives a
@@ -865,7 +865,7 @@ pub struct Drawable {
 
 impl Drawable {
     /// The entry of [`Drawable::node_cells`] for a node that belongs to no
-    /// single cell — a surface node, shared between the cells around it.
+    /// single cell - a surface node, shared between the cells around it.
     pub const NO_CELL: u32 = u32::MAX;
 }
 
@@ -877,7 +877,7 @@ pub fn of(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Geom
 /// The geometry of a representation, using a registry the caller controls.
 ///
 /// The entry point for an application that has taught the crate a
-/// representation it does not know — see [`crate::readers`].
+/// representation it does not know - see [`crate::readers`].
 pub fn of_with(
     readers: &Readers,
     representation: &dyn Reflect,
@@ -890,8 +890,8 @@ pub fn of_with(
     let patches = reader.read(representation, source)?;
     // The crate's rule, applied to every reader at once: a representation that
     // evaluates to nothing is an error naming it, never a silent empty result.
-    // The corpus has a real case — a `TriangulatedSetRepresentation` of 891
-    // bytes with no `TrianglePatch` at all — and "no geometry" must not look
+    // The corpus has a real case - a `TriangulatedSetRepresentation` of 891
+    // bytes with no `TrianglePatch` at all - and "no geometry" must not look
     // like a working read of a representation with nothing to draw.
     if patches.is_empty() {
         return Err(Error::malformed(
@@ -912,8 +912,8 @@ pub fn is_supported(representation: &dyn Reflect) -> bool {
     supports(representation.type_info().type_key)
 }
 
-/// [`is_supported`] from the concept's name alone — `TriangulatedSetRepresentation`,
-/// without `obj_` — so a listing can ask **before** parsing the object.
+/// [`is_supported`] from the concept's name alone - `TriangulatedSetRepresentation`,
+/// without `obj_` - so a listing can ask **before** parsing the object.
 ///
 /// The same answer by construction: `is_supported` is this, on the type key the
 /// object would report. What it buys is measured: `drawable` over a package of
@@ -923,7 +923,7 @@ pub fn supports(type_key: &str) -> bool {
     crate::readers::default_readers().handles(type_key)
 }
 
-/// How many nodes the document states this representation holds — no read.
+/// How many nodes the document states this representation holds - no read.
 ///
 /// The pair of [`is_supported`]: that one says *can this be drawn at all*, from
 /// the concept's name alone; this one says *how big is it*, from what the
@@ -955,7 +955,7 @@ pub(crate) fn builtin_readers() -> Vec<Box<dyn RepresentationReader>> {
         /// What the document states this concept holds, when it states it.
         ///
         /// `None` here means the concept says nothing a listing could use, and
-        /// most of them do not — see [`RepresentationReader::declared_nodes`].
+        /// most of them do not - see [`RepresentationReader::declared_nodes`].
         nodes: Option<fn(&dyn Reflect) -> Option<u64>>,
     }
 
@@ -989,9 +989,9 @@ pub(crate) fn builtin_readers() -> Vec<Box<dyn RepresentationReader>> {
     }
 
     // The second argument is deliberately absent more often than not: a concept
-    // that keeps its node count in an array — a `PolylineSetRepresentation`'s
-    // `NodeCountPerPolyline` — or that states elements rather than nodes — a
-    // `SubRepresentation`, an IJK grid drawn by its skin — has nothing to say
+    // that keeps its node count in an array - a `PolylineSetRepresentation`'s
+    // `NodeCountPerPolyline` - or that states elements rather than nodes - a
+    // `SubRepresentation`, an IJK grid drawn by its skin - has nothing to say
     // here that would not have to be measured anyway.
     vec![
         reader!(
@@ -1024,7 +1024,7 @@ pub(crate) fn builtin_readers() -> Vec<Box<dyn RepresentationReader>> {
         reader!("GridConnectionSetRepresentation", crate::connection::read),
         // Not a RESQML representation: a WITSML trajectory, drawn from its
         // stations (`crate::stations`). Keyed on the concept like the rest, so
-        // a WITSML 2.0 `Trajectory` reaches it too — and is refused there by
+        // a WITSML 2.0 `Trajectory` reaches it too - and is refused there by
         // name, having no `DefaultMdDatum` to count its depths from.
         reader!(
             "Trajectory",
@@ -1048,7 +1048,7 @@ pub(crate) fn builtin_readers() -> Vec<Box<dyn RepresentationReader>> {
 /// `UnstructuredGridRepresentation` states `CellCount` there and puts
 /// `NodeCount` on its `Geometry`, beside the `Points` it counts. Both are read
 /// by looking for the field, which is also what makes this survive a release
-/// that moves it — the mistake `grid_2d` already had to accommodate.
+/// that moves it - the mistake `grid_2d` already had to accommodate.
 fn stated_node_count(representation: &dyn Reflect) -> Option<u64> {
     let count = crate::values::scalar_i64(representation, "NodeCount").or_else(|| {
         let geometry = field_object(representation, "Geometry")?;
@@ -1059,7 +1059,7 @@ fn stated_node_count(representation: &dyn Reflect) -> Option<u64> {
 
 /// A trajectory's `KnotCount`: the control points of its parametric line.
 ///
-/// The line is a **single** one, which is what makes this answerable — the
+/// The line is a **single** one, which is what makes this answerable - the
 /// `KnotCount` of a line *set* is the longest line's, and the short ones are
 /// padded with `NaN`, so a set states an upper bound and not a count (see
 /// `parametric.rs`). A trajectory with no `Geometry` at all falls back to its
@@ -1084,8 +1084,8 @@ fn patch_count_nodes(representation: &dyn Reflect) -> Option<u64> {
 
 /// A lattice states both its axes, and their product is its nodes.
 ///
-/// **Declared, not drawn.** A node of the lattice may carry no location — that
-/// is ALWYN's every-other-node horizons — and the reader drops those. So this
+/// **Declared, not drawn.** A node of the lattice may carry no location - that
+/// is ALWYN's every-other-node horizons - and the reader drops those. So this
 /// is an upper bound on what will appear, which is what a size hint is for.
 fn grid_2d_nodes(representation: &dyn Reflect) -> Option<u64> {
     // 2.0.1 puts the two counts on `Grid2dPatch`, 2.2 on the representation:
@@ -1125,18 +1125,18 @@ fn non_negative(value: i64) -> Option<u64> {
 
 /// One patch of a representation, whichever way its version wraps it.
 ///
-/// RESQML 2.0.1 puts a `PointGeometry` under a patch element — `NodePatch`,
-/// `LinePatch`, `TrianglePatch` — as a child called `Geometry`. RESQML 2.2
+/// RESQML 2.0.1 puts a `PointGeometry` under a patch element - `NodePatch`,
+/// `LinePatch`, `TrianglePatch` - as a child called `Geometry`. RESQML 2.2
 /// sometimes drops the wrapper and names the geometry itself, as in
 /// `NodePatchGeometry`. The two are told apart by looking for `Points`: an
 /// element that has one *is* the geometry.
 ///
 /// The distinction cost real points. Reading only the 2.0.1 spelling gave a 2.2
 /// point set zero patches, and zero patches is a successful call returning
-/// nothing to draw — so [`patch_points`] refuses a patch with no geometry
+/// nothing to draw - so [`patch_points`] refuses a patch with no geometry
 /// rather than yielding an empty vector.
 struct PatchParts<'a> {
-    /// The element carrying the sibling fields — triangle indices, node counts.
+    /// The element carrying the sibling fields - triangle indices, node counts.
     owner: &'a dyn Reflect,
     /// The `PointGeometry`, if the patch declares one.
     geometry: Option<&'a dyn Reflect>,
@@ -1186,7 +1186,9 @@ fn triangulated(representation: &dyn Reflect, source: &dyn ValueSource) -> Resul
                     ));
                 }
                 let base = node_offset_used(&flat, node_offset, points.len(), &at)?;
-                flat.chunks_exact(3)
+                flat.as_chunks::<3>()
+                    .0
+                    .iter()
                     .map(|c| [(c[0] - base) as u32, (c[1] - base) as u32, (c[2] - base) as u32])
                     .collect()
             }
@@ -1208,8 +1210,8 @@ fn triangulated(representation: &dyn Reflect, source: &dyn ValueSource) -> Resul
 ///
 /// RESQML calls a triangulated set *"a representation … which gets its geometry
 /// from a 1D array of points"*, and the two reference implementations read that
-/// sentence differently: FESAPI writes indices into that single array — patch 1
-/// of a 5-node patch 0 starts at 5 — while resqpy writes them relative to each
+/// sentence differently: FESAPI writes indices into that single array - patch 1
+/// of a 5-node patch 0 starts at 5 - while resqpy writes them relative to each
 /// patch and adds the offset only when it merges. Both kinds of file exist, so
 /// this decides from the numbers instead of picking a side, and returns the base
 /// to subtract.
@@ -1271,7 +1273,7 @@ fn polyline(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Ve
         let at = format!("NodePatch[{index}]");
         let points = patch_points(&patch, source, &at)?;
         // One patch is one run of consecutive nodes. `IsClosed` says whether
-        // the last joins the first, and it is left to the caller — see
+        // the last joins the first, and it is left to the caller - see
         // `Topology::Polylines`.
         let length = points.len() as u32;
         let start = node_offset;
@@ -1334,7 +1336,7 @@ fn polyline_set(representation: &dyn Reflect, source: &dyn ValueSource) -> Resul
 /// A wellbore trajectory: one parametric line, at its own knots.
 ///
 /// The knots are the stations the well was surveyed at, and they are what comes
-/// out — not a resampling of the curve between them. Two reasons, and the
+/// out - not a resampling of the curve between them. Two reasons, and the
 /// second is the binding one: a spline passes through its own knots, so
 /// sampling between them changes how smooth the drawn path looks and nothing
 /// about where it goes; and the nodes of a trajectory are what its properties
@@ -1342,7 +1344,7 @@ fn polyline_set(representation: &dyn Reflect, source: &dyn ValueSource) -> Resul
 ///
 /// The line is still *evaluated* rather than its control points copied out. It
 /// matters for a vertical well, where the schema fills the third coordinate
-/// from the parameter and leaves the control point's own slot meaningless —
+/// from the parameter and leaves the control point's own slot meaningless -
 /// see [`crate::parametric::Line::stations`].
 fn trajectory(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Vec<Patch>> {
     let at = "WellboreTrajectoryRepresentation";
@@ -1370,13 +1372,13 @@ fn grid_2d(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Vec
     let slowest = values::scalar_i64(patch, "SlowestAxisCount").unwrap_or(0).max(0) as usize;
 
     // The two counts and the point count must agree, and when they do not it is
-    // the file that is wrong — worth saying rather than drawing a wrong grid.
+    // the file that is wrong - worth saying rather than drawing a wrong grid.
     let mut points = points;
     if fastest * slowest != points.len() {
         // One known writer disagrees in a provable way: SKUA-GOCAD sizes its
         // lattice `Spacing.Count` in points instead of intervals, so the
         // evaluated lattice is exactly one point too large per axis. When the
-        // arithmetic pins it — (fastest+1) × (slowest+1) points — the extra
+        // arithmetic pins it - (fastest+1) × (slowest+1) points - the extra
         // row and column are dropped; see `points::drop_last_per_axis`.
         if (fastest + 1) * (slowest + 1) == points.len() {
             points = crate::points::drop_last_per_axis(points, &[slowest + 1, fastest + 1]);
@@ -1444,7 +1446,7 @@ fn geometry_points(owner: &dyn Reflect, source: &dyn ValueSource, at: &str) -> R
 
 /// A field's objects, whether the schema made it a list or a single element.
 ///
-/// Shared with the readers that live in their own modules — one implementation
+/// Shared with the readers that live in their own modules - one implementation
 /// of *what does this field hold*, because two would differ the first time one
 /// of them met a field the schema declares singular and a file repeats.
 pub(crate) fn field_list<'a>(object: &'a dyn Reflect, field: &str) -> Vec<&'a dyn Reflect> {

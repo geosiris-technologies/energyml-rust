@@ -1,4 +1,4 @@
-# energyml — architecture
+# energyml - architecture
 
 Related decision: none of its own; the facade only reflects the layering described in [ARCHITECTURE.md](../../ARCHITECTURE.md).
 

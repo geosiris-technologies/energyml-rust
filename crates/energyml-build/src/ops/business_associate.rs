@@ -1,4 +1,4 @@
-//! `business-associate` — an `eml23.BusinessAssociate`: a company, an
+//! `business-associate` - an `eml23.BusinessAssociate`: a company, an
 //! organisation, a person's role, named so that other objects can point at it.
 //!
 //! No operation wrote one before. The synthetic reference model asks for the
@@ -14,19 +14,19 @@
 //! context (e.g., a well) »*. Its one required element is `Name` (≤ 256
 //! characters); everything else is optional. Written, and only when given:
 //!
-//! - **`Name`**, and `Citation/Title` beside it — the same text: the title of a
+//! - **`Name`**, and `Citation/Title` beside it - the same text: the title of a
 //!   business associate is its name;
 //! - **`Role`**, 0..∞ `NameStruct`: *« A business associate generally has one
 //!   role but the role may be called different things in different naming
-//!   systems »* — hence several roles, and one optional `authority` (the naming
+//!   systems »* - hence several roles, and one optional `authority` (the naming
 //!   system) put on each. A role given twice is refused, by its text;
 //! - **`OrganizationKind`**, from the schema's own closed list
-//!   (`OrganizationKind`); the open extension (`.*:.*`) is not offered — a
+//!   (`OrganizationKind`); the open extension (`.*:.*`) is not offered - a
 //!   word nobody reads is not a kind;
-//! - **`AuthorityCode`** — *« The code used when this business associate is
+//! - **`AuthorityCode`** - *« The code used when this business associate is
 //!   used as an authority attribute »*: the word an `ObjectAlias/@authority`
 //!   writes to mean this associate;
-//! - **`Aliases`**, each `authority=identifier` — `ObjectAlias` requires both —,
+//! - **`Aliases`**, each `authority=identifier` - `ObjectAlias` requires both -,
 //!   with an optional `IdentifierKind` per alias from EML's list
 //!   (`aliasKinds`, as many as the aliases or none);
 //! - **`Citation/Description`**, when given.
@@ -41,7 +41,7 @@
 //! `EffectiveDateTime`, `TerminationDateTime`, `Purpose`, `IsInternal`,
 //! `AssociatedWith`, `PersonnelCount`: this operation takes none of them.
 //! A real organisation's contact details are not this build's to state, and
-//! a synthetic one's would be invented — the reference model's rule 4 wants the
+//! a synthetic one's would be invented - the reference model's rule 4 wants the
 //! real to keep its provenance and the invented to say so, and an address
 //! typed into a recipe is neither. The plan **says** what it left out
 //! (`left-out`), so an associate with a name only does not read as one whose
@@ -72,7 +72,7 @@ const SHORT_LIMIT: usize = 64;
 /// `Citation/Description`.
 const DESCRIPTION_LIMIT: usize = 2000;
 
-/// The kind of organisation — EML's `OrganizationKind`, a closed list.
+/// The kind of organisation - EML's `OrganizationKind`, a closed list.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
 pub enum OrganizationKind {
     /// An academic institution.
@@ -106,7 +106,7 @@ impl OrganizationKind {
     }
 }
 
-/// What an alias is — EML's `AliasIdentifierKind`, a closed list.
+/// What an alias is - EML's `AliasIdentifierKind`, a closed list.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
 pub enum AliasKind {
     /// An abbreviation.
@@ -174,9 +174,9 @@ impl AliasKind {
 /// What `business-associate` is told.
 #[derive(Debug, Params)]
 pub struct BusinessAssociateParams {
-    /// the associate's name — also its title, and what makes it the same associate from one run to the next
+    /// the associate's name - also its title, and what makes it the same associate from one run to the next
     pub title: Title,
-    /// its roles in this context, as « logging company » or « data provider » — the same role may be named in several naming systems
+    /// its roles in this context, as « logging company » or « data provider » - the same role may be named in several naming systems
     pub roles: Vec<String>,
     /// the naming system of the roles (NameStruct authority), as a company or a standard
     pub role_authority: Option<String>,
@@ -186,7 +186,7 @@ pub struct BusinessAssociateParams {
     pub authority_code: Option<String>,
     /// its other names or identifiers, each authority=identifier
     pub aliases: Vec<String>,
-    /// what each alias is, in the order of the aliases — as many as the aliases, or none
+    /// what each alias is, in the order of the aliases - as many as the aliases, or none
     pub alias_kinds: Vec<AliasKind>,
     /// a sentence on who the associate is, written in Citation/Description
     pub description: Option<String>,
@@ -203,7 +203,7 @@ fn bounded(slot: &str, what: &str, text: &str, limit: usize) -> Result<String, R
         return Err(Refusal::on(
             slot,
             format!(
-                "{what} `{text}` has {count} characters and the schema holds {limit}: refused rather than cut — half a name reads exactly like a whole one"
+                "{what} `{text}` has {count} characters and the schema holds {limit}: refused rather than cut - half a name reads exactly like a whole one"
             ),
         ));
     }
@@ -225,7 +225,7 @@ impl Operation for BusinessAssociate {
     fn about(&self) -> About {
         About {
             name: "business-associate",
-            describe: "a business associate — a company, an organisation, a person's role — by its name, its roles and its aliases; no contact details — takes no input",
+            describe: "a business associate - a company, an organisation, a person's role - by its name, its roles and its aliases; no contact details - takes no input",
             category: Category::Create,
             makes: &["eml23.BusinessAssociate"],
             recipe: "business-associate",
@@ -301,7 +301,7 @@ impl Operation for BusinessAssociate {
                 return Err(Refusal::on(
                     "aliases",
                     format!(
-                        "alias {} `{}` names no authority: write it authority=identifier — an alias without its authority resolves nowhere",
+                        "alias {} `{}` names no authority: write it authority=identifier - an alias without its authority resolves nowhere",
                         at + 1,
                         alias.trim()
                     ),
@@ -357,12 +357,12 @@ impl Operation for BusinessAssociate {
 
         let mut says = vec![Note {
             key: "left-out",
-            detail: "no address, phone number, email, contact, person name or dates: this operation takes none of them — an organisation's contact details are never invented here".to_string(),
+            detail: "no address, phone number, email, contact, person name or dates: this operation takes none of them - an organisation's contact details are never invented here".to_string(),
         }];
         if no_role {
             says.push(Note {
                 key: "no-role",
-                detail: format!("`{name}` is written with no role: valid — Role is 0..∞ — and what it does in this context is not said"),
+                detail: format!("`{name}` is written with no role: valid - Role is 0..∞ - and what it does in this context is not said"),
             });
         }
 

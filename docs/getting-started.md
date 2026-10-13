@@ -1,6 +1,6 @@
 # Getting started
 
-Ten minutes, three ways in — Rust, Python, command line — all on the same file:
+Ten minutes, three ways in - Rust, Python, command line - all on the same file:
 `package/Lutetia.epc` (with its `Lutetia.h5`) from the reference model
 [`energyml-lutetia`](https://github.com/geosiris-technologies/energyml-lutetia).
 Lutetia is a synthetic, documented, multi-domain model written in RESQML 2.2,
@@ -20,10 +20,10 @@ ls energyml-lutetia/package      # Lutetia.epc  Lutetia.h5
 
 | You want | Do |
 |---|---|
-| the command line | `cargo install energyml-cli --features hdf5` (installs `energyml`; `enyml` is an alias) — TODO(verify): crates.io name and release binaries |
-| the Rust libraries | `cargo add energyml --features all` (or only the versions you read, for example `--features resqml22`; the `energyml` crate turns no schema version on by itself) — TODO(verify): crates.io name |
-| Python | `pip install energyml-rust` (imported as `energyml.rust`) — TODO(verify): final distribution name on PyPI |
-| a container | `docker pull ghcr.io/geosiris-technologies/energyml` — TODO(verify): image not yet published, see [Docker](docker.md) |
+| the command line | `cargo install energyml-cli --features hdf5` (installs `energyml`; `enyml` is an alias) - TODO(verify): crates.io name and release binaries |
+| the Rust libraries | `cargo add energyml --features all` (or only the versions you read, for example `--features resqml22`; the `energyml` crate turns no schema version on by itself) - TODO(verify): crates.io name |
+| Python | `pip install energyml-rust` (imported as `energyml.rust`) - TODO(verify): final distribution name on PyPI |
+| a container | `docker pull ghcr.io/geosiris-technologies/energyml` - TODO(verify): image not yet published, see [Docker](docker.md) |
 
 ## Command line
 

@@ -9,7 +9,7 @@
 //! nobody needs is a bug with good intentions: **1.5 ms** to open
 //! `testingPackageCpp.h5`, and one pass over that package's geometry touches
 //! **218 arrays** in that one file. A third of a second of `open()` on a
-//! package small enough to be a test fixture — and the requirement's own
+//! package small enough to be a test fixture - and the requirement's own
 //! observation is right, every corpus package keeps all its arrays in one file.
 //!
 //! # Why these tests count rather than time
@@ -23,7 +23,7 @@
 //! A handle held across somebody else's write serves the data the file *used
 //! to* hold. That is a correctness bug, and a cache that can produce one is
 //! worse than no cache. So every hit re-stats the file and a stamp that moved
-//! throws the handle away — a `stat` against a 1.5 ms open is free, and it is
+//! throws the handle away - a `stat` against a 1.5 ms open is free, and it is
 //! what makes the rest of this safe.
 
 #![cfg(feature = "hdf5")]
@@ -40,8 +40,8 @@ mod fixtures;
 
 /// The cache is one per **process**, so the tests of it have to be too.
 ///
-/// Not a convenience: a process-wide cache is the right shape — the same file
-/// reached through two `EpcStore`s should be opened once, not twice — and the
+/// Not a convenience: a process-wide cache is the right shape - the same file
+/// reached through two `EpcStore`s should be opened once, not twice - and the
 /// consequence is that a test which sets the bound and a test which counts
 /// opens cannot run at the same time. Cargo runs tests in parallel by default,
 /// so they take this in turn and say why.
@@ -118,7 +118,7 @@ fn a_file_that_changed_is_not_served_from_the_cache() {
     let path = write_file("stale", 1.0);
     assert_eq!(read_one(&path), 1.0);
 
-    // Long enough that the modification time is certainly different — some
+    // Long enough that the modification time is certainly different - some
     // filesystems keep it to the second, and the point is the stamp, not the
     // clock.
     std::thread::sleep(std::time::Duration::from_millis(1100));
@@ -226,7 +226,7 @@ fn the_store_reads_through_the_cache() {
 
 /// What the cache is worth on a real package, in opens and in milliseconds.
 ///
-/// Reports rather than asserts a duration — the count is the claim, the clock
+/// Reports rather than asserts a duration - the count is the claim, the clock
 /// is context. Skips when `testdata/` is empty, like every other corpus test.
 #[test]
 fn what_the_cache_saves_on_the_corpus() {
@@ -267,7 +267,7 @@ fn what_the_cache_saves_on_the_corpus() {
     set_open_file_limit(8);
 
     eprintln!(
-        "{}: {} array(s) — without the cache {cold_opens} open(s) in {cold_ms} ms, \
+        "{}: {} array(s) - without the cache {cold_opens} open(s) in {cold_ms} ms, \
          with it {warm_opens} in {warm_ms} ms",
         package.file_name().unwrap().to_string_lossy(),
         locations.len()

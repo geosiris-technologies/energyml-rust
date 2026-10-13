@@ -1,4 +1,4 @@
-//! The extract of the BRGM chart that the stratigraphy tests install — shared
+//! The extract of the BRGM chart that the stratigraphy tests install - shared
 //! by `tests/stratigraphy.rs` and `tests/earth_model_from_stratigraphy.rs`.
 //!
 //! Every row copied from the BRGM export of 24/09/2026

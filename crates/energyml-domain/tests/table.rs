@@ -1,6 +1,6 @@
 //! Tables, against the one the corpus contains.
 //!
-//! `866841eb` — the KrPc table of `testingPackageCpp22` and `80wells` — is the
+//! `866841eb` - the KrPc table of `testingPackageCpp22` and `80wells` - is the
 //! only `ColumnBasedTable` in the whole corpus, and it carries the trap worth
 //! pinning: its three value columns point at `column1`, `column2` and
 //! `column3`, and its **key** column points at `column0`. The key is written
@@ -21,7 +21,7 @@ use energyml_storage::EpcStore;
 /// Every schema version the workspace generates.
 ///
 /// One line rather than a hand-kept subset: a list written out here goes stale
-/// the day a release is added, and nothing would notice — the suite would keep
+/// the day a release is added, and nothing would notice - the suite would keep
 /// passing while quietly never covering the new version. `energyml-schemas`
 /// holds the one list, and its own test fails when it disagrees with
 /// `codegen.toml`.
@@ -86,7 +86,7 @@ fn every_table_of_the_corpus_reads_and_declares_its_keys() {
             path.display(),
             table.uuid
         );
-        // Keys come first, whatever order the document wrote them in — the
+        // Keys come first, whatever order the document wrote them in - the
         // corpus writes the key **last**.
         let first_value = table.columns.iter().position(|c| !c.key).unwrap_or(0);
         let last_key = table.columns.iter().rposition(|c| c.key).unwrap_or(0);
@@ -96,7 +96,7 @@ fn every_table_of_the_corpus_reads_and_declares_its_keys() {
             path.display()
         );
         eprintln!(
-            "{}: `{}` — {} key(s), {} value column(s)",
+            "{}: `{}` - {} key(s), {} value column(s)",
             path.file_name().unwrap().to_string_lossy(),
             table.title.as_deref().unwrap_or(&table.uuid),
             table.keys().len(),
@@ -193,7 +193,7 @@ fn the_key_column_is_the_one_the_document_says_not_the_first_dataset() {
 
         // The KrPc table: water saturation → relative permeabilities and
         // capillary pressure. Saturations rise, so the first key is the
-        // smallest — which is only true if the key really is `column0`.
+        // smallest - which is only true if the key really is `column0`.
         let first = lookup.rows.cell(0, 0).expect("a first key");
         let last = lookup.rows.cell(lookup.rows.rows - 1, 0).expect("a last key");
         if let (Cell::Number(first), Cell::Number(last)) = (first, last) {
@@ -262,7 +262,7 @@ fn a_property_reaches_its_lookup_and_the_integers_gain_a_meaning() {
                     read.uuid
                 )
             });
-            // Every value of the property should be a key of the table — that
+            // Every value of the property should be a key of the table - that
             // is what a category lookup is for. Not asserted, because a
             // producer may leave values uncovered, but a value that *is* a key
             // must find its row.

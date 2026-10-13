@@ -1,6 +1,6 @@
 //! Label placement without overlap, measured against a real font.
 //!
-//! The width of a label is `energyml_sheet::text::string_width_pt` — the
+//! The width of a label is `energyml_sheet::text::string_width_pt` - the
 //! drilling sheet's own table of advances, not a second one
 //! (ADR-0015). That function works in points, and a point is
 //! only a size: asked at a size in pixels it answers in pixels.
@@ -68,7 +68,7 @@ impl Rect2 {
 /// that stays inside the bounds and clear of every label placed before
 /// (alternately above and below, or shifted progressively to the left or right,
 /// with a reset once the following lines are far enough). The order of the positions is the
-/// caller's — it is what a label *prefers* — and the reset comes by itself: a
+/// caller's - it is what a label *prefers* - and the reset comes by itself: a
 /// label far from the others finds its first position free.
 pub struct Placer {
     bounds: Rect2,
@@ -84,13 +84,13 @@ impl Placer {
         }
     }
 
-    /// A place nothing may take — a text or a mark already drawn there.
+    /// A place nothing may take - a text or a mark already drawn there.
     pub fn block(&mut self, rect: Rect2) {
         self.taken.push(rect);
     }
 
     /// The index of the first of `positions` that is free, taken; `None` when
-    /// none is — the label is folded, and the caller counts it.
+    /// none is - the label is folded, and the caller counts it.
     pub fn place(&mut self, positions: &[Rect2]) -> Option<usize> {
         let at = positions
             .iter()

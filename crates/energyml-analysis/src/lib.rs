@@ -1,8 +1,8 @@
-//! What is *computed from* EnergyML shapes — as opposed to what the file
+//! What is *computed from* EnergyML shapes - as opposed to what the file
 //! describes, which is `energyml-geometry`'s whole job and stays there.
 //!
 //! Geometry answers "what shape does this document state", analysis answers
-//! "what can be derived from it" — wells and grids, structural measures, laws
+//! "what can be derived from it" - wells and grids, structural measures, laws
 //! and tests, water chemistry and logs. The domain-neutral algorithms
 //! (interpolation, meshing, iso-contours, …) live in `energyml-geostat` and are
 //! re-exported here, so `energyml_analysis::kriging::…` and the other paths
@@ -10,16 +10,16 @@
 //! are plain samples and query points, so the crate compiles to wasm with
 //! no feature flags and a caller on any storage (EPC, ETP, none at all)
 //! uses it the same way. The result of an interpolation is meant to become
-//! a legitimate EnergyML object — a `ContinuousProperty` on a `Grid2d` —
+//! a legitimate EnergyML object - a `ContinuousProperty` on a `Grid2d` -
 //! written into the model, not beside it; that promotion belongs to the
 //! caller, which is why the functions here never see a store.
 //!
 //! House rules, applied:
-//! - **A `NaN` sample is set aside, never averaged** — it is how the corpus
+//! - **A `NaN` sample is set aside, never averaged** - it is how the corpus
 //!   says *no data here*, and the count of what was set aside is part of
 //!   the answer, not a silent repair.
 //! - **Refusals are named.** No samples, mismatched lengths, a power that
-//!   is not a positive number — each says what is wrong, because an
+//!   is not a positive number - each says what is wrong, because an
 //!   interpolated `NaN` and "the call was malformed" are different news.
 //!
 //! # References

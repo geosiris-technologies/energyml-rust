@@ -1,4 +1,4 @@
-//! `thickness` — the thickness between two horizons at every node of the upper
+//! `thickness` - the thickness between two horizons at every node of the upper
 //! one, written as a continuous property on it: the isochore, or the isopach.
 //!
 //! The computation is
@@ -8,13 +8,13 @@
 //! **The first operation written against typed parameters and inputs**
 //!: every setting is
 //! a field of [`ThicknessParams`], its default written once; the two surfaces
-//! are fields of [`ThicknessInputs`], bound by the framework — `plan` reads no
+//! are fields of [`ThicknessInputs`], bound by the framework - `plan` reads no
 //! name and knows no `(object)` suffix.
 //!
 //! # Two roles, read by the slot's name
 //!
 //! `top` and `base` are two surfaces, and nothing in their geometry says which
-//! is which — an interpretation can have its picks crossed, and that is one of
+//! is which - an interpretation can have its picks crossed, and that is one of
 //! the things this measures. The roles are the names of the pieces, never an
 //! altitude: sorting by height would decide exactly where the answer is
 //! interesting, and a thickness computed upside down is the negative of the
@@ -25,12 +25,12 @@
 //! A difference of heights read in two frames is a difference of two origins.
 //! When both inputs say their CRS and the two differ, the plan is refused and
 //! names them; the same for two vertical units. When neither says, nothing can
-//! be checked — the inputs of the scene are all placed in one frame, which is
+//! be checked - the inputs of the scene are all placed in one frame, which is
 //! the ordinary case of a thickness drawn from artefacts.
 //!
 //! # A time vertical is an isochron
 //!
-//! Two horizons in two-way time give a difference in **time** — the dictionary
+//! Two horizons in two-way time give a difference in **time** - the dictionary
 //! calls it `vertical time thickness`, and that is what the isochore writes
 //! then. The isopach is refused: its dip mixes a horizontal length with a
 //! vertical time, which is not an angle.
@@ -82,9 +82,9 @@ pub struct ThicknessParams {
     /// isochore (vertical) or isopach (perpendicular to the beds)
     #[param(default = What::Isochore)]
     pub what: What,
-    /// what the third coordinate measures — an elevation (larger is higher) or a depth (larger is lower)
+    /// what the third coordinate measures - an elevation (larger is higher) or a depth (larger is lower)
     pub vertical: Vertical,
-    /// the representation the values are laid on — the top's
+    /// the representation the values are laid on - the top's
     pub representation: ObjectRef,
     /// what is measured; left out, the kind of the standard dictionary for the measure
     pub property_kind: Option<PropertyKindRef>,
@@ -93,7 +93,7 @@ pub struct ThicknessParams {
     /// the property's title; left out, the two surfaces' and the measure's
     ///
     /// Not suggested: a suggestion is settled before `plan`, so it could not
-    /// follow `what` — see `surface-map`.
+    /// follow `what` - see `surface-map`.
     pub title: Option<Title>,
     /// the external file the values go into
     #[param(default = String::from("data.h5"))]
@@ -103,12 +103,12 @@ pub struct ThicknessParams {
 /// What `thickness` takes.
 #[derive(Debug, Inputs)]
 pub struct ThicknessInputs {
-    /// the upper surface — the values are written on its nodes
+    /// the upper surface - the values are written on its nodes
     pub top: Shape,
-    /// the lower surface — triangles, or the cells of a grid
+    /// the lower surface - triangles, or the cells of a grid
     ///
-    /// `triangles` ranks the form's list; the cells of a grid are read too —
-    /// bilinearly — and [`Operation::check`] is what decides.
+    /// `triangles` ranks the form's list; the cells of a grid are read too -
+    /// bilinearly - and [`Operation::check`] is what decides.
     #[input(topology = "triangles")]
     pub base: Shape,
 }
@@ -130,7 +130,7 @@ impl Operation for Thickness {
     fn about(&self) -> About {
         About {
             name: "thickness",
-            describe: "the thickness between two horizons — isochore or isopach — at every node of the top, written as a continuous property",
+            describe: "the thickness between two horizons - isochore or isopach - at every node of the top, written as a continuous property",
             category: Category::Analysis,
             makes: &["resqml22.ContinuousProperty"],
             recipe: "thickness",
@@ -194,7 +194,7 @@ impl Operation for Thickness {
             return Err(Refusal::new(
                 "frames",
                 format!(
-                    "`top` is in `{}` and `base` in `{}`: a difference of their heights would be a difference of two origins — bring them into one frame first",
+                    "`top` is in `{}` and `base` in `{}`: a difference of their heights would be a difference of two origins - bring them into one frame first",
                     a.title, b.title
                 ),
             ));
@@ -206,7 +206,7 @@ impl Operation for Thickness {
         {
             return Err(Refusal::new(
                 "units",
-                format!("`top` counts its heights in `{a}` and `base` in `{b}` — one unit, or no difference"),
+                format!("`top` counts its heights in `{a}` and `base` in `{b}` - one unit, or no difference"),
             ));
         }
         let frame_unit = top_unit.or(base_unit);
@@ -216,7 +216,7 @@ impl Operation for Thickness {
             (None, None) => {
                 return Err(Refusal::on(
                     "uom",
-                    "is required: neither surface says the unit of its heights — name it, a thickness without one is a number",
+                    "is required: neither surface says the unit of its heights - name it, a thickness without one is a number",
                 ));
             }
         };
@@ -229,14 +229,14 @@ impl Operation for Thickness {
             return Err(Refusal::on(
                 "uom",
                 format!(
-                    "`{uom}` is a {given:?} and the frame counts its heights in a {frame:?} — the values would be read in the wrong family"
+                    "`{uom}` is a {given:?} and the frame counts its heights in a {frame:?} - the values would be read in the wrong family"
                 ),
             ));
         }
         if time && measure == Measure::Stratigraphic {
             return Err(Refusal::on(
                 "what",
-                "an isopach needs lengths on all three axes: with heights in time the dip mixes metres and seconds, which is not an angle — ask for the isochore (an isochron), or convert to depth first",
+                "an isopach needs lengths on all three axes: with heights in time the dip mixes metres and seconds, which is not an angle - ask for the isochore (an isochron), or convert to depth first",
             ));
         }
 
@@ -277,10 +277,10 @@ impl Operation for Thickness {
         let label = if time { "isochron" } else { params.what.word() };
         let title = match params.title {
             Some(given) => given.0,
-            None => format!("{} — {} {label}", title_of(&top, "top"), title_of(&base, "base")),
+            None => format!("{} - {} {label}", title_of(&top, "top"), title_of(&base, "base")),
         };
 
-        // The field over the top, handed to the property writer **typed** —
+        // The field over the top, handed to the property writer **typed** -
         // with what is known of the top, whose node count it checks. The seed
         // is the one the derived bag's field gave before.
         let over = if top.known.is_some() {
@@ -339,7 +339,7 @@ impl Operation for Thickness {
         if measure == Measure::Stratigraphic {
             say(
                 "parallel-beds",
-                "the isopach is the vertical thickness times the cosine of the top's dip — exact where the beds run parallel, an approximation where they do not; the thickness along the normal waits for the ray caster"
+                "the isopach is the vertical thickness times the cosine of the top's dip - exact where the beds run parallel, an approximation where they do not; the thickness along the normal waits for the ray caster"
                     .to_string(),
             );
         }
@@ -364,7 +364,7 @@ impl Operation for Thickness {
             say(
                 "folded",
                 format!(
-                    "{} node(s) lie over several faces of the base that disagree — a fold or a reverse fault; which one is the base there is not a numerical choice: NaN",
+                    "{} node(s) lie over several faces of the base that disagree - a fold or a reverse fault; which one is the base there is not a numerical choice: NaN",
                     found.folded
                 ),
             );
@@ -391,7 +391,7 @@ impl Operation for Thickness {
             say(
                 "crossed",
                 format!(
-                    "{} node(s) have the base above the top: their thickness is negative, and kept — two picks that cross",
+                    "{} node(s) have the base above the top: their thickness is negative, and kept - two picks that cross",
                     found.crossed
                 ),
             );
@@ -409,7 +409,7 @@ impl Operation for Thickness {
     }
 
     /// `what` and `vertical` are inputs, recorded under the parameters the
-    /// projection already declares — a title cannot be both.
+    /// projection already declares - a title cannot be both.
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
             Slot::required(
@@ -428,7 +428,7 @@ impl Operation for Thickness {
             count("undefinedCount", "nodes with no thickness, written as NaN"),
             count(
                 "crossedCount",
-                "nodes where the base lies above the top — negative, kept",
+                "nodes where the base lies above the top - negative, kept",
             ),
         ]
     }

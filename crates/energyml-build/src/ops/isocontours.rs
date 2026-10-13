@@ -1,4 +1,4 @@
-//! `isocontours` — the contour lines of a surface, as polylines.
+//! `isocontours` - the contour lines of a surface, as polylines.
 //!
 //! A viewer used to compute them with a button of its own,
 //! because the module did not know how; this is the second half of the same
@@ -7,15 +7,15 @@
 //!
 //! # What is contoured
 //!
-//! **A field laid on the shape if there is one, the elevation otherwise** — the same
+//! **A field laid on the shape if there is one, the elevation otherwise** - the same
 //! rule as `interpolate`, and for the same reason: *what is being mapped*
 //! is data of the bag, and assuming the elevation would contour the depth
 //! of a surface whose porosity was wanted, without anything failing.
 //!
 //! # What it does not do itself
 //!
-//! The computation is [`energyml_analysis::isocontour`] — the levels, the segments,
-//! the chaining — and the writing is that of [`super::polylines`]: a contour
+//! The computation is [`energyml_analysis::isocontour`] - the levels, the segments,
+//! the chaining - and the writing is that of [`super::polylines`]: a contour
 //! line is a set of polylines, some of them closed, and a second
 //! writer of the same object would be a second place for the same mistakes.
 //!
@@ -24,19 +24,19 @@
 //! The need: 2 checkboxes, one to know whether to create the polylines in the
 //! model, the other whether to create the property; at least one of the two
 //! must be ticked. The bands used to be a front end command on a contour artefact,
-//! so **a contour written directly into the package never led to one** —
+//! so **a contour written directly into the package never led to one** -
 //! putting the colour on the surface required going through *keep as artefact*.
 //! `bands` writes in the same plan:
 //!
-//! - the **property** — the contoured values, one per node of the surface — by
+//! - the **property** - the contoured values, one per node of the surface - by
 //!   [`super::property::write`];
-//! - the **map** — a sharp band per interval, starting at each level
-//!   cut — by [`super::colormap::write`];
+//! - the **map** - a sharp band per interval, starting at each level
+//!   cut - by [`super::colormap::write`];
 //! - and the **entry** that links them, written by `energyml_domain::color` as
 //!   everywhere. In the package's colour set if it has one (rewritten under its
 //!   uuid, `apply` replaces), in a new set if it has none, and **refused
 //!   if it has several**: the standard does not say which one decides a colour, and
-//!   choosing one here would decide over someone's data — the rule the front end's
+//!   choosing one here would decide over someone's data - the rule the front end's
 //!   command already held.
 //!
 //! The colours come from the caller (`colours`, a ramp): this workspace
@@ -46,7 +46,7 @@
 //! # References
 //!
 //! - Marching triangles, as implemented in `energyml-geostat` (`isocontour`).
-//!   TODO(reference): verify — marching triangles is named without a citation; add a reference once checked.
+//!   TODO(reference): verify - marching triangles is named without a citation; add a reference once checked.
 
 use energyml_analysis::isocontour;
 use energyml_domain::color::{self, Decorated, Scaling};
@@ -71,7 +71,7 @@ pub struct Isocontours;
 
 /// What `isocontours` is told.
 ///
-/// **Not `closed`**: it belongs to the computation — a contour is closed where
+/// **Not `closed`**: it belongs to the computation - a contour is closed where
 /// it closes, and saying so in its place would write rings the surface does
 /// not have.
 #[derive(Debug, Params)]
@@ -79,13 +79,13 @@ pub struct IsocontoursParams {
     /// write the contour lines into the model, as a polyline set
     #[param(default = true, optional)]
     pub lines: bool,
-    /// write the contoured values into the model too — a continuous property on the surface, drawn in flat colour bands that start at each level
+    /// write the contoured values into the model too - a continuous property on the surface, drawn in flat colour bands that start at each level
     #[param(default = false, optional)]
     pub bands: bool,
-    /// The frame, what is represented, the naming — for the polyline writer.
+    /// The frame, what is represented, the naming - for the polyline writer.
     #[param(flatten, when = "lines: true")]
     pub written: Written,
-    /// how many **intervals** to cut the range into — one level fewer than that is drawn
+    /// how many **intervals** to cut the range into - one level fewer than that is drawn
     #[param(default = 10.0, optional, min = 1.0, max = 1000.0)]
     pub count: f64,
     /// What the bands are written as.
@@ -93,13 +93,13 @@ pub struct IsocontoursParams {
     pub banded: BandsParams,
 }
 
-/// What `bands` writes — asked only when it is ticked.
+/// What `bands` writes - asked only when it is ticked.
 #[derive(Debug, Clone, Params)]
 pub struct BandsParams {
-    /// what the contoured values measure — a property kind of the package or of the standard dictionary; left out, `elevation` or `depth` from the way the surface's frame counts z
+    /// what the contoured values measure - a property kind of the package or of the standard dictionary; left out, `elevation` or `depth` from the way the surface's frame counts z
     #[param(group = "naming")]
     pub property_kind: Option<PropertyKindRef>,
-    /// the unit of the contoured values — an Energistics uom code; left out, the field's, or the vertical unit of the surface's frame
+    /// the unit of the contoured values - an Energistics uom code; left out, the field's, or the vertical unit of the surface's frame
     #[param(group = "naming")]
     pub uom: Option<String>,
     /// the property's title; left out, the surface's and what is contoured
@@ -120,10 +120,10 @@ pub struct IsocontoursInputs {
     ///
     /// Optional, and its absence is an answer: the surface's z.
     pub field: Option<FieldIn>,
-    /// with `bands`: the colours, a ramp sampled once per band over its own range — the palette of whoever asks, since this workspace ships none
+    /// with `bands`: the colours, a ramp sampled once per band over its own range - the palette of whoever asks, since this workspace ships none
     #[input(palette)]
     pub colours: Option<Ramp>,
-    /// with `bands`: the graphical information set the colour link goes into; left empty, the package's own — none, a new set is written; several, refused until one is named
+    /// with `bands`: the graphical information set the colour link goes into; left empty, the package's own - none, a new set is written; several, refused until one is named
     #[input(types = "eml23.GraphicalInformationSet", every)]
     pub colour_set: Vec<ObjectIn>,
 }
@@ -202,7 +202,7 @@ impl Operation for Isocontours {
         if field_of(inputs).is_none() {
             return Err(Refusal::on(
                 "shape",
-                "an iso-contour is drawn across faces, and this shape has no triangle — `triangulate` makes them from a cloud",
+                "an iso-contour is drawn across faces, and this shape has no triangle - `triangulate` makes them from a cloud",
             ));
         }
         // A field over another piece is not the values of this surface: said,
@@ -219,7 +219,7 @@ impl Operation for Isocontours {
             ));
         }
         // The contour is drawn across faces, from values read at
-        // their nodes — `field_of` reads `field.values` straight as one
+        // their nodes - `field_of` reads `field.values` straight as one
         // number per node. A field over cells has one value per triangle, not
         // per node: read the same way, every value would land on the wrong
         // point, silently, because the two arrays can have the same length by
@@ -232,7 +232,7 @@ impl Operation for Isocontours {
             return Err(Refusal::on(
                 "field",
                 format!(
-                    "lies on `{}`, and a contour reads values at nodes — no transfer from `{}` to nodes is offered here",
+                    "lies on `{}`, and a contour reads values at nodes - no transfer from `{}` to nodes is offered here",
                     field.on, field.on
                 ),
             ));
@@ -288,7 +288,7 @@ impl Operation for Isocontours {
             return Err(Refusal::on(
                 "shape",
                 format!(
-                    "no contour crosses `{}` at any of its {} level(s) — every triangle is on one side",
+                    "no contour crosses `{}` at any of its {} level(s) - every triangle is on one side",
                     found.name,
                     levels.len()
                 ),
@@ -299,7 +299,7 @@ impl Operation for Isocontours {
         // RESQML would say it with a discrete property laid on the
         // polylines; without it, a set of curves does not say which is at
         // which elevation. The levels are in the note and the activity, so
-        // nothing is lost — but the object, alone, does not carry them.
+        // nothing is lost - but the object, alone, does not carry them.
         let runs: Vec<u32> = lines.iter().map(|line| line.len() as u32).collect();
         let name = format!("isocontours of {}", found.name);
         let shape = Shape {
@@ -334,8 +334,8 @@ impl Operation for Isocontours {
         let mut plan =
             super::polylines::write(&polylines, &params.written, None, &format!("{name}:{title}"), cx)?;
         if !params.lines {
-            // **The lines are computed, not written**: the shape stays — it is
-            // what a scene draws and keeps — and nothing of the polyline set's
+            // **The lines are computed, not written**: the shape stays - it is
+            // what a scene draws and keeps - and nothing of the polyline set's
             // writing does, a missing frame included, which only the writing of
             // the lines needed.
             plan.objects.clear();
@@ -407,7 +407,7 @@ impl Operation for Isocontours {
                 .join(", "),
         });
         if skipped > 0 {
-            // A triangle no level crosses cleanly — an undefined
+            // A triangle no level crosses cleanly - an undefined
             // node, a degenerate face. Staying silent would make a
             // holed curve look whole.
             plan.says.push(Note {
@@ -433,7 +433,7 @@ impl Operation for Isocontours {
         let mut slots =
             crate::operation::AnyOperation::reports(&crate::operation::Typed(super::polylines::Polylines));
         // **Not `count`**: it is already declared as an input, and `template.rs`
-        // compares by title — the same name on both sides reads as a
+        // compares by title - the same name on both sides reads as a
         // disagreement of direction. What an input is worth is already in
         // the activity under the parameter the projection declares.
         slots.push(count("levelCount", "levels actually cut"));
@@ -463,12 +463,12 @@ impl Operation for Isocontours {
     }
 }
 
-/// The time units a vertical axis counts in — what makes a contoured elevation
+/// The time units a vertical axis counts in - what makes a contoured elevation
 /// a travel time, and its kind `two way time`. The Energistics spellings.
 const TIME_UNITS: &[&str] = &["s", "ms", "us", "ns", "min", "h"];
 
 /// The kind the values are measured under when none is named, looked up by
-/// title in the dictionary — `elevation` for a frame counting up, `depth` for
+/// title in the dictionary - `elevation` for a frame counting up, `depth` for
 /// one counting down, `two way time` for one counting in time. A field's
 /// values say nothing of what they measure, and a frame that does not say which
 /// way z counts leaves nothing to decide from: both are refused by name.
@@ -515,7 +515,7 @@ fn kind_of(found: &Field, known: Option<&Known>, uom: &str) -> Result<(serde_jso
 
 /// The colour of band `rank` of `count`, read on the ramp **at the same place
 /// of its own range**: the first band takes its bottom, the last its top. A
-/// ramp is a step function — a colour holds from its level to the next — which
+/// ramp is a step function - a colour holds from its level to the next - which
 /// is how the caller samples a palette into it, densely.
 fn band_colour(ramp: &Ramp, rank: usize, count: usize) -> energyml_domain::color::Hsv {
     let low = ramp.levels[0];
@@ -530,7 +530,7 @@ fn band_colour(ramp: &Ramp, rank: usize, count: usize) -> energyml_domain::color
     ramp.colours[index].clone()
 }
 
-/// The bands — the property, its colour map and the entry joining them —
+/// The bands - the property, its colour map and the entry joining them -
 /// added to `plan`. See the module's doc.
 fn bands(
     inputs: &IsocontoursInputs,
@@ -549,7 +549,7 @@ fn bands(
         return Err(Refusal::on(
             "bands",
             format!(
-                "the bands are a property laid on the surface, and `{}` is not an object of the package — write it first, or untick `bands`",
+                "the bands are a property laid on the surface, and `{}` is not an object of the package - write it first, or untick `bands`",
                 found.name
             ),
         ));
@@ -557,7 +557,7 @@ fn bands(
     let colours = inputs.colours.as_ref().ok_or_else(|| {
         Refusal::on(
             "colours",
-            "the bands need their colours: a ramp, the caller's palette sampled — none is shipped here",
+            "the bands need their colours: a ramp, the caller's palette sampled - none is shipped here",
         )
     })?;
     if colours.levels.is_empty() || colours.colours.len() != colours.levels.len() {
@@ -598,11 +598,11 @@ fn bands(
     };
     let title = match &banded.bands_title {
         Some(given) => given.0.clone(),
-        None => format!("{} — contoured {what}", surface.title),
+        None => format!("{} - contoured {what}", surface.title),
     };
     let seed = cx.seed(&title);
 
-    // The property: the contoured values, one per node of the surface — the
+    // The property: the contoured values, one per node of the surface - the
     // numbers the levels were cut from, so the bands fall where the lines do.
     let field = FieldIn {
         name: format!("{} bands", found.name),
@@ -631,8 +631,8 @@ fn bands(
         .ok_or_else(|| Refusal::new("refused", "the property writer wrote nothing"))?;
 
     // The colour map: **the whole range of the values**, cut at the levels. A
-    // band starts at the lowest value when it is below the first level — the
-    // values down there are painted too, and deserve their own colour — and
+    // band starts at the lowest value when it is below the first level - the
+    // values down there are painted too, and deserve their own colour - and
     // the last is closed at the highest, so that no band has no width (the last
     // colour of the band map used to be missing).
     let (low, high) = isocontour::range(&found.values).unwrap_or((levels[0], levels[levels.len() - 1]));
@@ -642,7 +642,7 @@ fn bands(
     }
     // A level **at** the highest value starts a band that holds nothing: cut
     // on a range's own ends (a pyramid's top), it made the last colour a band
-    // of no width — the one the legend never showed.
+    // of no width - the one the legend never showed.
     starts.extend(levels.iter().copied().filter(|level| *level < high));
     let band_colours: Vec<_> = (0..starts.len())
         .map(|rank| band_colour(colours, rank, starts.len()))
@@ -651,12 +651,12 @@ fn bands(
         &starts,
         &band_colours,
         Some(high),
-        &format!("{title} — bands"),
+        &format!("{title} - bands"),
         &seed,
         cx,
     )?;
 
-    // The entry joining them, in the package's set — or a new one.
+    // The entry joining them, in the package's set - or a new one.
     let targets = [Decorated {
         uuid: property.uuid.clone(),
         qualified_type: property.qualified_type.clone(),
@@ -670,7 +670,7 @@ fn bands(
     let sets: Vec<&ObjectIn> = inputs
         .colour_set
         .iter()
-        // The one object slot also receives what no slot names — a CRS picked
+        // The one object slot also receives what no slot names - a CRS picked
         // in the form: passed over, not refused.
         .filter(|one| {
             one.known
@@ -686,7 +686,7 @@ fn bands(
             return Err(Refusal::on(
                 "colourSet",
                 format!(
-                    "this package holds {} GraphicalInformationSet ({}), and nothing says which one decides a colour — the standard does not: name the one to write in",
+                    "this package holds {} GraphicalInformationSet ({}), and nothing says which one decides a colour - the standard does not: name the one to write in",
                     many.len(),
                     many.iter()
                         .filter_map(|one| one.known.reference.as_ref().map(|r| format!("`{}`", r.title)))
@@ -700,7 +700,7 @@ fn bands(
     plan.says.push(Note {
         key: "bands",
         detail: format!(
-            "{} value(s) on `{}` as `{title}`, drawn through {} band(s) — the entry {} `{}`",
+            "{} value(s) on `{}` as `{title}`, drawn through {} band(s) - the entry {} `{}`",
             found.values.len(),
             surface.title,
             starts.len(),
@@ -720,7 +720,7 @@ fn bands(
     Ok(())
 }
 
-/// A `GraphicalInformationSet` holding the one entry — the package had none.
+/// A `GraphicalInformationSet` holding the one entry - the package had none.
 fn new_set(
     targets: &[Decorated],
     map: &Decorated,
@@ -752,7 +752,7 @@ fn new_set(
     })
 }
 
-/// The package's set, with the entry added — rewritten under its own uuid,
+/// The package's set, with the entry added - rewritten under its own uuid,
 /// which `apply` replaces. Added by `energyml_domain::color::set_colour_map`,
 /// the writer the front end's colour gesture calls: what it refuses (an object
 /// already drawn through another map in this set) is refused here too.

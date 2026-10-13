@@ -2,21 +2,21 @@
 //!
 //! Energistics ships `resqml 2.2_dev3` next to `resqml 2.2`, and files written
 //! before 2.2 was final are out there. The awkward part is that the drop's own
-//! schemas declare the *release's* version — `v2.2_dev3/ResqmlAllObjects.xsd`
-//! says `version="2.2"` — so a drop document and a released 2.2 document carry
+//! schemas declare the *release's* version - `v2.2_dev3/ResqmlAllObjects.xsd`
+//! says `version="2.2"` - so a drop document and a released 2.2 document carry
 //! the same namespace, the same `schemaVersion`, the same content type and the
 //! same qualified type. Nothing on the wire separates them.
 //!
 //! That leaves the answer the releases already use: return every candidate,
 //! best first, and let the parser settle it by *refusing* the wrong one. What
-//! the drop adds is an order — the release is tried before its drops, a
-//! document that names a drop gets that drop first — and a rule in
+//! the drop adds is an order - the release is tried before its drops, a
+//! document that names a drop gets that drop first - and a rule in
 //! `Registry::register` so the shared qualified type keeps resolving to the
 //! release.
 //!
 //! `BoundaryFeature` is the discriminator throughout: RESQML 2.2 requires an
 //! `IsWellKnown` element and the drop has no such field, so a document without
-//! it refuses as 2.2 and reads as the drop. With it, **both** parse — which is
+//! it refuses as 2.2 and reads as the drop. With it, **both** parse - which is
 //! what makes the ordering tests mean something, since then only the order can
 //! decide.
 
@@ -31,7 +31,7 @@ const UUID: &str = "7b2f19a4-1c33-4d55-9f01-2ab7c6e40188";
 const RESQML: &str = "http://www.energistics.org/energyml/data/resqmlv2";
 const EML: &str = "http://www.energistics.org/energyml/data/commonv2";
 
-/// The release and its drop, both registered — the situation every test here
+/// The release and its drop, both registered - the situation every test here
 /// is about. The drop is registered *first*, as `energyml_schemas::all` does.
 fn registry() -> Arc<Registry> {
     let mut registry = Registry::new();
@@ -50,7 +50,7 @@ fn xml(schema: Option<&str>, well_known: bool) -> String {
         .unwrap_or_default();
     // Required by 2.2, absent from the drop's schema entirely. Unknown children
     // are skipped rather than rejected, so its presence never stops the drop
-    // reading — it only stops the *release* refusing.
+    // reading - it only stops the *release* refusing.
     let flag = if well_known {
         "<resqml:IsWellKnown>false</resqml:IsWellKnown>"
     } else {
@@ -115,7 +115,7 @@ fn read_as(name: &str, schema: Option<&str>, well_known: bool) -> String {
 
 /// A document saying `2.2` is a released 2.2, and is read as one.
 ///
-/// `IsWellKnown` is present, so the drop would parse it too — the drop skips
+/// `IsWellKnown` is present, so the drop would parse it too - the drop skips
 /// the element it does not know. Only the order decides, which is the point.
 #[test]
 fn a_document_saying_the_release_is_read_as_the_release() {
@@ -126,7 +126,7 @@ fn a_document_saying_the_release_is_read_as_the_release() {
 ///
 /// This is the walk the ladder exists for: `IsWellKnown` is absent, RESQML 2.2
 /// requires it, so the first candidate fails on the strict pass and the second
-/// answers. Nothing here guesses — the drop is reached only because the release
+/// answers. Nothing here guesses - the drop is reached only because the release
 /// said no.
 #[test]
 fn a_document_the_release_refuses_falls_through_to_the_drop() {
@@ -163,7 +163,7 @@ fn a_document_naming_the_drop_is_read_as_the_drop() {
 ///
 /// The directory writes `2.2_dev3` and nothing obliges a producer to agree, so
 /// the separator and the case are ignored. A spelling that missed would send a
-/// drop document to the release — which, on a document the release can parse,
+/// drop document to the release - which, on a document the release can parse,
 /// fails nothing and returns the wrong object.
 #[test]
 fn the_drop_is_recognised_however_it_is_spelled() {
@@ -184,7 +184,7 @@ fn the_drop_is_recognised_however_it_is_spelled() {
 
 /// A different drop of the same release is not this one.
 ///
-/// `dev2` is not registered, so the release answers — and that is the right
+/// `dev2` is not registered, so the release answers - and that is the right
 /// answer, not a silent promotion of `dev3` to "close enough".
 #[test]
 fn an_unknown_drop_falls_back_to_the_release_not_to_another_drop() {
@@ -194,7 +194,7 @@ fn an_unknown_drop_falls_back_to_the_release_not_to_another_drop() {
 /// Relabelling a mislabelled part is what makes it readable as the drop.
 ///
 /// The loop this closes, end to end. A part written against the drop but
-/// declaring the release is read as the *release* — and the release succeeds,
+/// declaring the release is read as the *release* - and the release succeeds,
 /// skipping what it does not know, so nothing refuses and nothing falls back.
 /// `relabel::set_schema_version` edits the declaration without parsing the
 /// document, and the same bytes then read as the drop.
@@ -240,7 +240,7 @@ fn relabelling_the_declaration_is_what_sends_a_part_to_the_drop() {
 /// A package that **declares** its content types, which is the ordinary shape.
 ///
 /// `package` above deliberately declares none, so identification has to come
-/// from the document. Here the index is present and complete — and that is
+/// from the document. Here the index is present and complete - and that is
 /// exactly the case where a drop used to be lost.
 fn package_declaring(name: &str, schema: Option<&str>, well_known: bool) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("energyml-drops-{name}-{}", std::process::id()));
@@ -270,7 +270,7 @@ fn package_declaring(name: &str, schema: Option<&str>, well_known: bool) -> Path
 /// **A content type cannot name a drop, so it must not settle the version.**
 ///
 /// `application/x-resqml+xml;version=2.2;type=BoundaryFeature` is what the
-/// released 2.2 *and* `2.2_dev3` both write — the drop's schemas declare the
+/// released 2.2 *and* `2.2_dev3` both write - the drop's schemas declare the
 /// release's own version. So when the index resolves, it resolves to the
 /// release, and until this was fixed the part's own `schemaVersion` was never
 /// consulted: the candidate walk had one entry and the drop never got a turn.
@@ -279,7 +279,7 @@ fn package_declaring(name: &str, schema: Option<&str>, well_known: bool) -> Path
 /// errors, all of them `QualifiedType` failing its pattern on an empty string,
 /// because eml 2.2 references were being read as eml 2.3. Afterwards: none.
 ///
-/// `IsWellKnown` is the discriminator and it is **absent** here — the release
+/// `IsWellKnown` is the discriminator and it is **absent** here - the release
 /// requires it, the drop has no such field. Read as the release it comes back
 /// invented; read as the drop it does not exist.
 #[test]

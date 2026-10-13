@@ -1,11 +1,11 @@
-//! `ijk-grid-from-horizons` — an `IjkGridRepresentation` between ordered
+//! `ijk-grid-from-horizons` - an `IjkGridRepresentation` between ordered
 //! horizon grids: K layers per zone, vertical pillars on the horizons' lattice
 //! (or every `coarsening`-th node of it), in the horizons' frame.
 //!
 //! This is the IJK-grid step of the reference model's build plan: the main
-//! grid has zone 1, the Ypresian (layers 1–3, from the third to the fifth
+//! grid has zone 1, the Ypresian (layers 1-3, from the third to the fifth
 //! horizon, the fourth inside); one K gap, the Meudon marls, an unmeshed cover
-//! (from the fifth to the sixth horizon); and zone 2, the Chalk (layers 4–10,
+//! (from the fifth to the sixth horizon); and zone 2, the Chalk (layers 4-10,
 //! from the sixth to the seventh horizon). With the five horizons in that order, the grid is
 //! `layers = [2, 1, 0, 7]`: three layers of Ypresian split at the fourth horizon, the gap, seven
 //! of Chalk.
@@ -22,31 +22,31 @@
 //! `horizons` is **`ordered`**, top to bottom as declared: which surface is over
 //! which is what the grid is built on, and sorting by height would decide it
 //! exactly where two picks disagree (a role is read from the slot's name, and a
-//! crossing is **said, never corrected** — `crossing` refuses by default, and
+//! crossing is **said, never corrected** - `crossing` refuses by default, and
 //! `pinch` is a decision the caller states, recorded in the activity and
 //! counted).
 //!
 //! # One lattice, the horizons'
 //!
-//! Every horizon is a **2D grid on the same lattice** — the same counts, the
-//! same nodes — refused by name otherwise: pillars standing on one horizon's
+//! Every horizon is a **2D grid on the same lattice** - the same counts, the
+//! same nodes - refused by name otherwise: pillars standing on one horizon's
 //! nodes and reading another's heights between its nodes would be a resampling
 //! nobody stated. A grid of the package comes in the order its
 //! `FastestAxisCount` says; the lattice must be the house one, along +x then
 //! +y of its frame (a grid is never reprojected, and its order is the house order), or it is refused as
 //! turned.
 //!
-//! # One frame, the horizons' — and a turned grid
+//! # One frame, the horizons' - and a turned grid
 //!
 //! The pillars are the horizons' nodes, so the grid **is** in their frame:
-//! `crs` is suggested from them, and a `crs` naming another system — or a frame
-//! created here with `sourceEpsg` — is refused, as `horizon-from-law` refuses
+//! `crs` is suggested from them, and a `crs` naming another system - or a frame
+//! created here with `sourceEpsg` - is refused, as `horizon-from-law` refuses
 //! it. Two horizons in two frames, or counting in two units, are refused the
 //! way `thickness` refuses them.
 //!
 //! The reference model's main grid is in a local frame turned 30° (confirmed in
 //! review). Nothing here turns a lattice: a grid in that frame is built from
-//! horizons **gridded in that frame** — their lattice is straight in that frame's
+//! horizons **gridded in that frame** - their lattice is straight in that frame's
 //! numbers, and turned only once placed in Lambert-93. What this refuses is a
 //! lattice turned **in its own frame's numbers**, which the pillars could only
 //! follow by re-indexing.
@@ -54,7 +54,7 @@
 //! # What the file says, and where the TRG says it
 //!
 //! - **the points are explicit**: a `Point3dExternalArray` of
-//!   `levels × (Nj + 1) × (Ni + 1) × 3`, levels first, `i` fastest — the layout
+//!   `levels × (Nj + 1) × (Ni + 1) × 3`, levels first, `i` fastest - the layout
 //!   `energyml_geometry::ijk` reads (*« Point Geometry is that of the column
 //!   layer coordinate line nodes. Coordinate line nodes for all of the
 //!   coordinate lines, with NKL nodes per line »*, TRG 2.2 §5.1 p. 94). The reference model
@@ -63,17 +63,17 @@
 //! - **`PillarShape` `vertical`** (TRG §5.39 p. 135): x and y are the same at
 //!   every level of a pillar;
 //! - **`KDirection` `down`** (TRG §5.35 p. 131): the horizons are given top to
-//!   bottom, so K increases with depth — pinched cells included;
+//!   bottom, so K increases with depth - pinched cells included;
 //! - **`KGaps`** for a zone of no layer (TRG §5.36 p. 132), `GapAfterLayer`
-//!   inline — `Nk − 1` flags;
+//!   inline - `Nk − 1` flags;
 //! - **`GridIsRighthanded`**, from the triple product of the I, J, K tangents
 //!   in the frame's numbers (TRG §5.29 `IjkGridGeometry` p. 125): false in elevation, true in
-//!   depth. The reader does not trust it and measures each cell — which is
+//!   depth. The reader does not trust it and measures each cell - which is
 //!   what `crates/energyml-geometry/src/ijk.rs` says it should do;
 //! - **a hole is a cell whose geometry is not defined**, not an inactive cell.
-//!   `CellGeometryIsDefined` false where a corner has no height — *« If the
+//!   `CellGeometryIsDefined` false where a corner has no height - *« If the
 //!   indicator shows that the cell geometry is NOT defined, then this attribute
-//!   overrides any other node geometry specification »* (TRG §5.1 p. 94) — and
+//!   overrides any other node geometry specification »* (TRG §5.1 p. 94) - and
 //!   `PillarGeometryIsDefined` false for a pillar no defined cell touches
 //!   (mandatory, same page); the missing nodes are written `NaN`. Both are a
 //!   `BooleanConstantArray` when every one is true, an external array of 0/1
@@ -91,9 +91,9 @@
 //!
 //! # What is left out, and said
 //!
-//! Split coordinate lines (the reference model's 21 split pillars along one fault, TRG §5.17) —
+//! Split coordinate lines (the reference model's 21 split pillars along one fault, TRG §5.17) -
 //! those are `faulted-ijk-grid`'s (`faulted_grid.rs`), which cuts the grid this
-//! module stacks and writes it through `between`, the one writer of both —, the
+//! module stacks and writes it through `between`, the one writer of both -, the
 //! `IntervalStratigraphicUnits` (`unit-lookup`'s),
 //! `NodeIsColocatedInKDirection` for the pinched nodes (optional; its layout,
 //! *« #CoordinateLines x (NKL-1) »*, has no reader here to confirm its order,
@@ -103,7 +103,7 @@
 //!
 //! From what the grid **is**: its horizons (their uuid, or their name in the
 //! bag), the layers, the coarsening, the crossing rule, the title. A new
-//! layering is another grid — with another cell count, a property written on
+//! layering is another grid - with another cell count, a property written on
 //! the old one would no longer fit, and enriching does not overwrite
 //! (identity comes from the content). The horizons' heights are not in the
 //! seed: re-gridding a horizon rewrites the same grid, the way correcting a
@@ -143,21 +143,21 @@ pub enum Crossing {
 /// What `ijk-grid-from-horizons` is told.
 #[derive(Debug, Params)]
 pub struct IjkGridParams {
-    /// the layers of each zone, top to bottom — one count per pair of consecutive horizons; 0 leaves the zone unmeshed, a K gap
+    /// the layers of each zone, top to bottom - one count per pair of consecutive horizons; 0 leaves the zone unmeshed, a K gap
     ///
     /// **Ordered**: the first count is the zone between the first two
-    /// horizons. No default — how finely a zone is layered is the model.
+    /// horizons. No default - how finely a zone is layered is the model.
     #[param(least = 1, ordered)]
     pub layers: Vec<usize>,
-    /// a pillar on every this-many nodes of the horizons' lattice, along both axes — 1 keeps every node
+    /// a pillar on every this-many nodes of the horizons' lattice, along both axes - 1 keeps every node
     #[param(default = 1_usize, min = 1)]
     pub coarsening: usize,
-    /// what the third coordinate of the horizons measures — an elevation (larger is higher) or a depth (larger is lower)
+    /// what the third coordinate of the horizons measures - an elevation (larger is higher) or a depth (larger is lower)
     ///
     /// Suggested from the horizons' frame, never guessed: *above* is what a
     /// crossing is, and above is +z in elevation and −z in depth.
     pub axis: Vertical,
-    /// where a horizon lies above the one declared over it — refuse the grid, or pinch: the lower brought up to the upper, a zero-thickness cell
+    /// where a horizon lies above the one declared over it - refuse the grid, or pinch: the lower brought up to the upper, a zero-thickness cell
     #[param(default = Crossing::Refuse)]
     pub crossing: Crossing,
     /// The frame, what is represented, the naming.
@@ -168,7 +168,7 @@ pub struct IjkGridParams {
 /// What `ijk-grid-from-horizons` takes.
 #[derive(Debug, Inputs)]
 pub struct IjkGridInputs {
-    /// the horizons the grid lies between, **top to bottom** — 2D grids on one lattice, one per input
+    /// the horizons the grid lies between, **top to bottom** - 2D grids on one lattice, one per input
     #[input(topology = "grid", least = 2, ordered)]
     pub horizons: Vec<Shape>,
 }
@@ -202,7 +202,7 @@ fn key_of(shape: &Shape) -> String {
         .unwrap_or_else(|| shape.name.clone())
 }
 
-/// The counts of a horizon — `[ni, nj]` — or why it is none a pillar stands on.
+/// The counts of a horizon - `[ni, nj]` - or why it is none a pillar stands on.
 fn grid_counts(shape: &Shape) -> Result<[usize; 2], String> {
     let [patch] = shape.geometry.patches.as_slice() else {
         return Err(format!(
@@ -213,7 +213,7 @@ fn grid_counts(shape: &Shape) -> Result<[usize; 2], String> {
     };
     let Topology::Grid { fastest, slowest } = &patch.topology else {
         return Err(format!(
-            "`{}` is no 2D grid: the pillars stand on the horizons' lattice, so each horizon is a Grid2dRepresentation — make one with `interpolate` first",
+            "`{}` is no 2D grid: the pillars stand on the horizons' lattice, so each horizon is a Grid2dRepresentation - make one with `interpolate` first",
             title_of(shape)
         ));
     };
@@ -230,7 +230,7 @@ fn grid_counts(shape: &Shape) -> Result<[usize; 2], String> {
     Ok(counts)
 }
 
-/// The lattice of every horizon, the same — or the refusal that names the
+/// The lattice of every horizon, the same - or the refusal that names the
 /// first one that is not.
 fn one_lattice(horizons: &[Shape]) -> Result<analysis::Lattice, Refusal> {
     let mut first: Option<(analysis::Lattice, String)> = None;
@@ -246,7 +246,7 @@ fn one_lattice(horizons: &[Shape]) -> Result<analysis::Lattice, Refusal> {
             return Err(Refusal::on(
                 "horizons",
                 format!(
-                    "`{}` is on a lattice of {} × {} nodes from ({}, {}) every ({}, {}), and `{name}` on one of {} × {} from ({}, {}) every ({}, {}): the pillars stand on one lattice — grid the horizons on the same one",
+                    "`{}` is on a lattice of {} × {} nodes from ({}, {}) every ({}, {}), and `{name}` on one of {} × {} from ({}, {}) every ({}, {}): the pillars stand on one lattice - grid the horizons on the same one",
                     title_of(shape),
                     lattice.counts[0],
                     lattice.counts[1],
@@ -270,7 +270,7 @@ fn one_lattice(horizons: &[Shape]) -> Result<analysis::Lattice, Refusal> {
 }
 
 /// A boolean array: a constant when every flag is true, an external array of
-/// 0/1 otherwise — and the dataset it needs.
+/// 0/1 otherwise - and the dataset it needs.
 fn flags(flags: &[bool], file: &str, path: String, dimensions: Vec<i64>) -> (Value, Option<Dataset>) {
     if flags.iter().all(|flag| *flag) {
         return (
@@ -299,7 +299,7 @@ impl Operation for IjkGridFromHorizons {
     fn about(&self) -> About {
         About {
             name: "ijk-grid-from-horizons",
-            describe: "an IJK grid between horizon grids given top to bottom — layers per zone, a zone of no layer a K gap, vertical pillars on the horizons' lattice, in their frame",
+            describe: "an IJK grid between horizon grids given top to bottom - layers per zone, a zone of no layer a K gap, vertical pillars on the horizons' lattice, in their frame",
             category: Category::Geometry,
             makes: &["resqml22.IjkGridRepresentation"],
             recipe: "ijk-grid-from-horizons",
@@ -320,13 +320,13 @@ impl Operation for IjkGridFromHorizons {
     }
 
     /// `layers`, `coarsening`, `axis` and `crossing` are inputs, recorded under
-    /// the parameters the projection already declares — a title cannot be both.
+    /// the parameters the projection already declares - a title cannot be both.
     fn reports(&self) -> Vec<Slot> {
         support::frame_reports(grid_reports())
     }
 }
 
-/// What a grid between horizons suggests — the frame and the axis from the
+/// What a grid between horizons suggests - the frame and the axis from the
 /// horizons, and neither their title nor their interpretation.
 pub(super) fn suggest_grid(bag: &Pieces, slots: &mut Suggestions<'_>) {
     super::written::suggest_written(bag, None, slots);
@@ -352,7 +352,7 @@ pub(super) fn suggest_grid(bag: &Pieces, slots: &mut Suggestions<'_>) {
 }
 
 /// The lattice the horizons share, or the refusal naming the first that does
-/// not — what `check` asks of any grid between horizons.
+/// not - what `check` asks of any grid between horizons.
 pub(super) fn check_horizons(horizons: &[Shape]) -> Result<(), Refusal> {
     one_lattice(horizons).map(|_| ())
 }
@@ -374,18 +374,18 @@ pub(super) fn grid_reports() -> Vec<Slot> {
         count("ni", "cells along I, along x"),
         count("nj", "cells along J, along y"),
         count("nk", "layers"),
-        count("gapCount", "K gaps — zones of no layer"),
+        count("gapCount", "K gaps - zones of no layer"),
         count(
             "holeCount",
             "horizon nodes on the pillars with no height, written as NaN",
         ),
         count(
             "undefinedCellCount",
-            "cells with a corner of no height — CellGeometryIsDefined false",
+            "cells with a corner of no height - CellGeometryIsDefined false",
         ),
         count(
             "crossedCount",
-            "pillar nodes where a horizon lay above the one over it — pinched when asked, refused otherwise",
+            "pillar nodes where a horizon lay above the one over it - pinched when asked, refused otherwise",
         ),
         count(
             "zeroThicknessCount",
@@ -420,7 +420,7 @@ pub(super) struct Faulting<'a> {
     pub cut: Cutter<'a>,
 }
 
-/// The grid between `horizons`, cut by faults when `faulting` is given — the
+/// The grid between `horizons`, cut by faults when `faulting` is given - the
 /// one writer of an `IjkGridRepresentation` between horizons (an operation
 /// that writes the same object as another delegates to it).
 pub(super) fn between(
@@ -442,7 +442,7 @@ pub(super) fn between(
             return Err(Refusal::new(
                 "frames",
                 format!(
-                    "`{}` is in `{}` and `{}` in `{}`: a grid between heights read in two frames stacks two origins — bring them into one frame first",
+                    "`{}` is in `{}` and `{}` in `{}`: a grid between heights read in two frames stacks two origins - bring them into one frame first",
                     title_of(&horizons[0]),
                     a.title,
                     title_of(shape),
@@ -456,7 +456,7 @@ pub(super) fn between(
             return Err(Refusal::new(
                 "units",
                 format!(
-                    "`{}` counts its heights in `{a}` and `{}` in `{b}` — one unit, or no grid",
+                    "`{}` counts its heights in `{a}` and `{}` in `{b}` - one unit, or no grid",
                     title_of(&horizons[0]),
                     title_of(shape)
                 ),
@@ -476,7 +476,7 @@ pub(super) fn between(
                     return Err(Refusal::on(
                         "crs",
                         format!(
-                            "names another frame than the horizons' `{}`: the pillars are their nodes, so the grid is in their frame — name it, or leave `crs` out to take it",
+                            "names another frame than the horizons' `{}`: the pillars are their nodes, so the grid is in their frame - name it, or leave `crs` out to take it",
                             frame.title
                         ),
                     ));
@@ -525,7 +525,7 @@ pub(super) fn between(
             IjkError::Crossed { count, first } => Refusal::on(
                 "crossing",
                 format!(
-                    "{count} pillar node(s) have a horizon above the one declared over it — the first at ({}, {}): `{}` at {} over `{}` at {}. Give the horizons top to bottom, correct the picks, or ask for `pinch`",
+                    "{count} pillar node(s) have a horizon above the one declared over it - the first at ({}, {}): `{}` at {} over `{}` at {}. Give the horizons top to bottom, correct the picks, or ask for `pinch`",
                     lattice.origin[0] + first.node[0] as f64 * lattice.spacing[0],
                     lattice.origin[1] + first.node[1] as f64 * lattice.spacing[1],
                     name(first.lower),
@@ -572,13 +572,13 @@ pub(super) fn between(
         return Err(Refusal::on(
             "project",
             format!(
-                "the pillars stand on the horizons' lattice, in the frame it was computed in: placing EPSG:{source} into EPSG:{} would bend its axes — name a `crs` of the package, or create the frame with `sourceEpsg` equal to `project`",
+                "the pillars stand on the horizons' lattice, in the frame it was computed in: placing EPSG:{source} into EPSG:{} would bend its axes - name a `crs` of the package, or create the frame with `sourceEpsg` equal to `project`",
                 target.epsg()
             ),
         ));
     }
     // The unit the heights count in: the horizons' own, or the frame created
-    // here — `crs::build` writes its systems in metres.
+    // here - `crs::build` writes its systems in metres.
     let unit = first_unit
         .clone()
         .or_else(|| (!frame.objects.is_empty()).then(|| "m".to_string()));
@@ -601,7 +601,7 @@ pub(super) fn between(
     // -- the object ------------------------------------------------------------------------
     let (points, point_dimensions, cell_defined, pillar_defined) = match &cut {
         // *« Otherwise the nodes will be 2D »* (TRG 2.2 §5.1 p. 94): levels,
-        // then every coordinate line — the pillars', then the splits.
+        // then every coordinate line - the pillars', then the splits.
         Some((cut, pillars)) => (
             cut.faulted.points(pillars),
             vec![cut.faulted.levels as i64, cut.faulted.lines as i64, 3],
@@ -661,7 +661,7 @@ pub(super) fn between(
     });
     if let Some((cut, _)) = &cut {
         // TRG 2.2 §5.17 `ColumnLayerSplitCoordinateLines` p. 111: the pillar
-        // of each split line, and — a jagged array — the columns that use it.
+        // of each split line, and - a jagged array - the columns that use it.
         let faulted = &cut.faulted;
         let count = faulted.split_pillars.len();
         let columns: Vec<i64> = faulted
@@ -734,7 +734,7 @@ pub(super) fn between(
     }
 
     // **The computed shape**: the nodes and the defined cells,
-    // in the order the reader returns — which
+    // in the order the reader returns - which
     // `tests/ijk_grid.rs::the_geometry_reader_reads_the_nodes_and_the_cells_planned`
     // and `tests/faulted_grid.rs` check against the `energyml-geometry` reader,
     // which shares nothing with this computation.
@@ -770,7 +770,7 @@ pub(super) fn between(
     say(
         "order",
         format!(
-            "the horizons as declared, top to bottom: `{}` — never sorted by height",
+            "the horizons as declared, top to bottom: `{}` - never sorted by height",
             order.join("` over `")
         ),
     );
@@ -801,7 +801,7 @@ pub(super) fn between(
         say(
             "pinched-crossings",
             format!(
-                "{} pillar node(s) had a horizon above the one declared over it: brought up to it, as asked (`crossing = pinch`) — the upper horizon wins, the older one stops at it",
+                "{} pillar node(s) had a horizon above the one declared over it: brought up to it, as asked (`crossing = pinch`) - the upper horizon wins, the older one stops at it",
                 built.crossed
             ),
         );

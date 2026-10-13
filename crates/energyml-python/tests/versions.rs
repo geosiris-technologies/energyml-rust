@@ -115,7 +115,7 @@ fn a_summary_carries_the_version_the_object_declares() {
 fn a_link_carries_the_version_of_the_object_it_describes() {
     let (_directory, package) = package();
     // Backwards: the horizon points at the package's version 2, and the horizon
-    // itself declares none — each end says its own.
+    // itself declares none - each end says its own.
     let second = package
         .objects()
         .into_iter()
@@ -129,7 +129,7 @@ fn a_link_carries_the_version_of_the_object_it_describes() {
     assert_eq!(horizon.object_version, None, "the horizon declares no version");
     // Forwards: the link's version comes from the object found when the package
     // holds it. (The version a reference *states* is read from `graph::references`,
-    // whose `Pointer` does not carry it yet — a known gap.)
+    // whose `Pointer` does not carry it yet - a known gap.)
     let horizon = package
         .objects()
         .into_iter()

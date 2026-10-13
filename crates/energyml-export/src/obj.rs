@@ -1,8 +1,8 @@
-//! Wavefront OBJ — triangles and polylines, in metres.
+//! Wavefront OBJ - triangles and polylines, in metres.
 //!
 //! The simplest useful export: every mesh viewer reads it, it is text, and it
 //! carries exactly what geometry has. What it does not carry is a coordinate
-//! system, so the numbers are placed and normalised to metres before writing —
+//! system, so the numbers are placed and normalised to metres before writing -
 //! an OBJ of eastings in feet is a file nobody can combine with anything.
 //!
 //! The identity goes into comments. OBJ has no metadata section, and a `#` line
@@ -58,7 +58,7 @@ impl Exporter for ObjExporter {
         // One implementation, and `write` goes through it too. OBJ vertex
         // indices are **1-based and file-global**, so writing several objects
         // means carrying a running offset that a per-object function cannot
-        // know about — and two code paths for one format is how the single-object
+        // know about - and two code paths for one format is how the single-object
         // header came to say less than the multi-object one.
         let mut base = 1u32;
         for object in objects {
@@ -66,7 +66,7 @@ impl Exporter for ObjExporter {
                 continue;
             }
             // Reshaped as the caller's rules ask, then stripped of the nodes
-            // that have no position — one funnel, one order, for every format.
+            // that have no position - one funnel, one order, for every format.
             // `v NaN NaN NaN` is not something an OBJ reader can place, and a
             // face indexed on one has no shape. See `registry::prepare`.
             let object = crate::registry::prepare(object, options)?;
@@ -115,7 +115,7 @@ impl Exporter for ObjExporter {
                         }
                     }
                     // A cell becomes its six faces. Interior faces are written
-                    // twice — once for each cell that owns them — which is
+                    // twice - once for each cell that owns them - which is
                     // wasteful and correct; deduplicating them would mean
                     // deciding which side is outside, and a faulted grid has no
                     // single answer to that.
@@ -134,7 +134,7 @@ impl Exporter for ObjExporter {
                         }
                     }
                     // An unstructured cell becomes its own faces, whatever
-                    // shape they are — OBJ takes a polygon of any size, so a
+                    // shape they are - OBJ takes a polygon of any size, so a
                     // quadrilateral stays one instead of becoming two
                     // triangles. Already wound outward, so the normals a viewer
                     // computes point out of the model rather than half in and
@@ -165,7 +165,7 @@ impl Exporter for ObjExporter {
                             )?;
                         }
                     }
-                    // A ring of any length — OBJ's `f` takes as many indices as
+                    // A ring of any length - OBJ's `f` takes as many indices as
                     // it is given, so an outline goes in as one face.
                     Topology::Polygons(rings) => {
                         for ring in rings {
@@ -175,7 +175,7 @@ impl Exporter for ObjExporter {
                         }
                     }
                     // A lattice still asked for as a lattice, and a point set.
-                    // `Shape::Surface` — the default for a grid — turns the
+                    // `Shape::Surface` - the default for a grid - turns the
                     // first into `Quads` above.
                     Topology::Grid { .. } | Topology::Points => {
                         writeln!(out, "# {} point(s), no faces", patch.points.len())?;
@@ -276,7 +276,7 @@ fn sanitise(title: &str, uuid: &str) -> String {
 /// Break a sentence into comment-length lines.
 ///
 /// An OBJ comment has no continuation and no length limit, but a 300-character
-/// `#` line is one a person scrolls past — and this one is the caveat that
+/// `#` line is one a person scrolls past - and this one is the caveat that
 /// stops them measuring a depth off the file, so it has to be readable.
 fn wrap_comment(text: &str) -> Vec<String> {
     const WIDTH: usize = 76;

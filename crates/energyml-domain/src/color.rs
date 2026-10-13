@@ -16,13 +16,13 @@
 //! detailed graphical information."*
 //!
 //! **There is no RGB type.** Every colour in the standard is an `HsvColor`,
-//! and the schema puts **no bounds** on its four numbers — no
+//! and the schema puts **no bounds** on its four numbers - no
 //! `minInclusive`, no `maxInclusive`, just a link to Wikipedia. The corpus is
-//! consistent with hue in 0–360 and the rest in 0–1, so that is what [`Hsv`]
+//! consistent with hue in 0-360 and the rest in 0-1, so that is what [`Hsv`]
 //! validates, and a colour outside it is refused by name rather than silently
 //! producing a different one.
 //!
-//! # What decides which colour applies — the cascade
+//! # What decides which colour applies - the cascade
 //!
 //! Nothing in the three technical reference guides defines precedence or
 //! inheritance for graphical information: searched for `inherit`, `propagat`,
@@ -36,17 +36,17 @@
 //!    being drawn, then for the whole object;
 //! 4. the same on its **interpretation**;
 //! 5. the same on its **feature**;
-//! 6. nothing — and then it is `None`, never an invented colour.
+//! 6. nothing - and then it is `None`, never an invented colour.
 //!
 //! Two guarantees come with it. The result always says **which level** it came
 //! from, so an application can refuse an inherited colour rather than have the
-//! choice made for it; and steps 4–5 can be switched off entirely
+//! choice made for it; and steps 4-5 can be switched off entirely
 //! ([`Cascade::inherit`]).
 //!
 //! # `ValueVectorIndex` is an index into the data
 //!
 //! It selects the component of a vector-valued property, the same index space
-//! `LabelPerComponent` labels — **not** an entry of the colour map. The
+//! `LabelPerComponent` labels - **not** an entry of the colour map. The
 //! decisive argument is in the schema: `ContourLineSetInformation` carries
 //! `ValueVectorIndex` and has no `ColorMap` at all. Reading it as a palette
 //! index turns a 5 000-node gradient into one flat colour, which is exactly
@@ -75,29 +75,29 @@ use crate::source::ObjectSource;
 /// wrong colour.
 #[derive(Clone, PartialEq, Debug)]
 pub struct Hsv {
-    /// 0–360 degrees.
+    /// 0-360 degrees.
     pub hue: f64,
-    /// 0–1.
+    /// 0-1.
     pub saturation: f64,
-    /// 0–1.
+    /// 0-1.
     pub value: f64,
-    /// 0 fully transparent, 1 fully opaque — the one bound the schema does
+    /// 0 fully transparent, 1 fully opaque - the one bound the schema does
     /// state, in prose.
     pub alpha: f64,
     /// `Title`, the name of the colour, when the producer gave one.
     pub title: Option<String>,
 }
 
-/// A colour ready to be drawn, each channel in 0–1.
+/// A colour ready to be drawn, each channel in 0-1.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Rgba {
-    /// Red, 0–1.
+    /// Red, 0-1.
     pub r: f64,
-    /// Green, 0–1.
+    /// Green, 0-1.
     pub g: f64,
-    /// Blue, 0–1.
+    /// Blue, 0-1.
     pub b: f64,
-    /// Alpha, 0–1.
+    /// Alpha, 0-1.
     pub a: f64,
 }
 
@@ -114,21 +114,21 @@ impl Rgba {
         format!("#{r:02x}{g:02x}{b:02x}{a:02x}")
     }
 
-    /// `#rrggbb` or `#rrggbbaa` — six digits are opaque — the inverse of
+    /// `#rrggbb` or `#rrggbbaa` - six digits are opaque - the inverse of
     /// [`Rgba::to_hex`].
     ///
     /// Everything else is refused, with the text it was given: a colour that
     /// silently becomes another is the failure a web front end's colour module
     /// was written about. Stricter than `u8::from_str_radix` alone, which takes
-    /// a sign — `#+f+f+f` read as a dark grey in the front end's bridge until
-    /// 24/09/2026, whose own doc promised *nothing else is accepted* — and the
+    /// a sign - `#+f+f+f` read as a dark grey in the front end's bridge until
+    /// 24/09/2026, whose own doc promised *nothing else is accepted* - and the
     /// `#` is required. The one reader of a colour's text: the front end's bridge
     /// and the `graphical-information` operation call it.
     pub fn parse(text: &str) -> std::result::Result<Rgba, String> {
         let text = text.trim();
         let refused = || {
             format!(
-                "`{text}` is not a colour written `#rrggbb` or `#rrggbbaa` — red, green, blue and, with eight digits, alpha, two hexadecimal digits each"
+                "`{text}` is not a colour written `#rrggbb` or `#rrggbbaa` - red, green, blue and, with eight digits, alpha, two hexadecimal digits each"
             )
         };
         let Some(digits) = text.strip_prefix('#') else {
@@ -169,7 +169,7 @@ impl Hsv {
     /// application thinks in `#rrggbb`: a palette offered in a menu, a colour
     /// picked in a dialog, a ramp taken from a chart library. The standard
     /// stores HSV and nothing else, so every one of those has to come through
-    /// here — to be sampled like a map the file carries, and to be *written*
+    /// here - to be sampled like a map the file carries, and to be *written*
     /// as a `DiscreteColorMap` or a `ContinuousColorMap` the day a package is
     /// given the colours somebody chose.
     ///
@@ -274,7 +274,7 @@ impl Hsv {
     ///
     /// Refuses rather than wraps: a hue of 500 wrapped to 140 is a *different
     /// colour*, drawn without a word. There is no facet anywhere on
-    /// `HsvColor`, so no validator will ever catch this — which is precisely
+    /// `HsvColor`, so no validator will ever catch this - which is precisely
     /// why it is caught here.
     pub fn checked(
         hue: f64,
@@ -289,7 +289,7 @@ impl Hsv {
                 return Err(Error::malformed(
                     at,
                     format!(
-                        "`{name}` is {v}, outside {low}–{high}. The XSD declares no bounds on \
+                        "`{name}` is {v}, outside {low}-{high}. The XSD declares no bounds on \
                          `HsvColor`, so this cannot be caught by validation; it is refused here \
                          rather than drawn as a different colour"
                     ),
@@ -341,7 +341,7 @@ pub enum Interpolation {
 #[derive(Clone, PartialEq, Debug)]
 pub struct Stop {
     /// `Index` on a continuous entry (a double), `index` on a discrete one (a
-    /// long). The capital letter really does differ between the two — it is in
+    /// long). The capital letter really does differ between the two - it is in
     /// the schema, not a typo of the writer.
     pub index: f64,
     /// The colour at that index.
@@ -468,8 +468,8 @@ impl ColorMap {
 
     /// The colour for one value.
     ///
-    /// `None` where the map genuinely has no answer — a null value and no
-    /// `NullColor` — because an invented colour is indistinguishable from a
+    /// `None` where the map genuinely has no answer - a null value and no
+    /// `NullColor` - because an invented colour is indistinguishable from a
     /// real one.
     ///
     /// The order, which is the only reading of §4.21 and §4.5 of the TRG that
@@ -478,11 +478,11 @@ impl ColorMap {
     /// 1. a null value takes `NullColor`;
     /// 2. `ColorInformation.MinMax`, when given, is the range of the
     ///    **property**: values outside it *"continue to have the extreme
-    ///    colour from this range"*, so they are clamped — and that clamping is
+    ///    colour from this range"*, so they are clamped - and that clamping is
     ///    what makes `AboveMaxColor`/`BelowMinColor` unreachable, which is why
     ///    they only apply when `MinMax` is absent;
     /// 3. the value is placed in the map's own index range;
-    /// 4. a discrete map takes **the nearest lower entry that exists** — the
+    /// 4. a discrete map takes **the nearest lower entry that exists** - the
     ///    schema's own example: stops at 10, 20, 30 and a value of 16.5 give
     ///    the colour of 10.
     pub fn sample(&self, value: Option<f64>, scaling: &Scaling) -> Option<Rgba> {
@@ -601,7 +601,7 @@ impl ColorMap {
 ///   index, and a colour map with two stops at the same place is not a map any
 ///   more. A millionth of the band survives any sane serialisation;
 /// - **small enough to be invisible.** Over a band of 25 it puts the closing
-///   stop at 24.999975 — under a thousandth of a pixel on any legend anyone
+///   stop at 24.999975 - under a thousandth of a pixel on any legend anyone
 ///   will draw.
 const BAND_EDGE: f64 = 1e-6;
 
@@ -612,13 +612,13 @@ const BAND_EDGE: f64 = 1e-6;
 /// from one to the next.
 ///
 /// `levels` are the band boundaries, ascending, and `colours` gives the colour
-/// of the band *starting* at each level — so the two have the same length, and
+/// of the band *starting* at each level - so the two have the same length, and
 /// the last colour runs from the last level upwards.
 ///
 /// # Why this is a shape and not a kind of map
 ///
 /// RESQML has a `DiscreteColorMap`, which does not interpolate and would give
-/// hard edges for free — but it is indexed by a **discrete** value, so using
+/// hard edges for free - but it is indexed by a **discrete** value, so using
 /// it means replacing the measurements with band numbers. The decision was to
 /// keep the `ContinuousProperty` carrying its real values, and
 /// this is what that costs: a continuous map whose stops come in pairs. A
@@ -626,14 +626,14 @@ const BAND_EDGE: f64 = 1e-6;
 /// as many stops, and draws the same picture.
 ///
 /// Refuses rather than guesses when the two lists disagree, when a level is
-/// not a finite number, or when the levels do not ascend — a map whose stops
+/// not a finite number, or when the levels do not ascend - a map whose stops
 /// are out of order paints bands nobody asked for.
 pub fn banded(levels: &[f64], colours: &[Hsv]) -> Result<Vec<Stop>> {
     if levels.len() != colours.len() {
         return Err(crate::Error::unsupported(
             "banding a colour map",
             format!(
-                "{} level(s) and {} colour(s) — one colour per band, and a band starts at each level",
+                "{} level(s) and {} colour(s) - one colour per band, and a band starts at each level",
                 levels.len(),
                 colours.len()
             ),
@@ -682,13 +682,13 @@ pub fn banded(levels: &[f64], colours: &[Hsv]) -> Result<Vec<Stop>> {
 }
 
 /// [`banded`], with the **last band closed** at `top`: one more stop, the last
-/// colour, at `top` — when `top` is above the last level; `banded` itself
+/// colour, at `top` - when `top` is above the last level; `banded` itself
 /// otherwise.
 ///
 /// Reported: in the object edit view, the coloured band did not show the last
 /// colour. The last band of [`banded`] is a single stop: it
 /// runs upwards by the map's clamping and has **no width** on the map itself,
-/// so a legend drawn from the first index to the last never shows it — while
+/// so a legend drawn from the first index to the last never shows it - while
 /// every value above the last level is painted with it. A caller that knows
 /// where its values end (`isocontours`, from the range it cut) closes it there.
 pub fn banded_until(levels: &[f64], colours: &[Hsv], top: f64) -> Result<Vec<Stop>> {
@@ -703,11 +703,11 @@ pub fn banded_until(levels: &[f64], colours: &[Hsv], top: f64) -> Result<Vec<Sto
     Ok(stops)
 }
 
-/// How a value is placed on a map — everything `ColorInformation` says about
+/// How a value is placed on a map - everything `ColorInformation` says about
 /// the mapping, without the map itself.
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub struct Scaling {
-    /// `ColorInformation.MinMax` — the range of the **property**.
+    /// `ColorInformation.MinMax` - the range of the **property**.
     pub min_max: Option<(f64, f64)>,
     /// `UseLogarithmicMapping`.
     pub logarithmic: bool,
@@ -805,7 +805,7 @@ impl std::fmt::Display for Scope {
 /// One `IndexableElementInfo` of a `DefaultGraphicalInformation`.
 #[derive(Clone, PartialEq, Debug)]
 pub struct ElementInfo {
-    /// Its rank in `IndexableElementInfo` — **the file's**, not this list's.
+    /// Its rank in `IndexableElementInfo` - **the file's**, not this list's.
     ///
     /// An information this build does not know is skipped with a note, so the
     /// n-th element read is not always the n-th of the file. An editor that
@@ -824,7 +824,7 @@ pub struct ElementInfo {
     /// `true`: the constant alpha replaces the mapped one. `false` or absent:
     /// the two are multiplied.
     pub overwrite_color_alpha: bool,
-    /// `ActiveColorInformationIndex` — a **positional** index into the set.
+    /// `ActiveColorInformationIndex` - a **positional** index into the set.
     pub active_color: Option<usize>,
 }
 
@@ -853,7 +853,7 @@ pub enum Information {
         value_vector_index: Option<u64>,
     },
     /// `AlphaInformation`, `SizeInformation`, `AnnotationInformation`,
-    /// `ContourLineSetInformation` — kept rather than dropped, because
+    /// `ContourLineSetInformation` - kept rather than dropped, because
     /// `Active*InformationIndex` is a **position** in this list and dropping
     /// an entry would silently shift every index after it.
     Other {
@@ -872,15 +872,15 @@ pub struct Entry {
     /// [`Entry::target_uris`].
     pub targets: Vec<String>,
     /// The **address** of each target, parallel to `targets`: the uri of the
-    /// reference ([`identity::address_of_parts`] — its type and, when it names
+    /// reference ([`identity::address_of_parts`] - its type and, when it names
     /// one, its version), or the uuid when the reference names no type. What an
     /// entry decorates is an object **at a version**: two versions of one
     /// representation are two objects, and an entry that names one does not
-    /// paint the other. Empty for an entry built by hand from uuids — it then
+    /// paint the other. Empty for an entry built by hand from uuids - it then
     /// names every version of each ([`Entry::addresses`]).
     pub target_uris: Vec<String>,
     /// The uri of the colour map a `ColorInformation` names, **version
-    /// included** — what the map is read by, so that a package holding the map
+    /// included** - what the map is read by, so that a package holding the map
     /// twice answers the one the entry names. `None` for an entry that names no
     /// map, was read from raw XML, or was built by hand: the map's uuid in
     /// [`Information::Color`] then stands in.
@@ -891,7 +891,7 @@ pub struct Entry {
 
 impl Entry {
     /// What the entry names, by address: [`Entry::target_uris`] when they say
-    /// one per target, else the uuids — which name every version.
+    /// one per target, else the uuids - which name every version.
     pub fn addresses(&self) -> &[String] {
         if self.target_uris.len() == self.targets.len() {
             &self.target_uris
@@ -904,29 +904,29 @@ impl Entry {
 /// A `GraphicalInformationSet`, read.
 #[derive(Clone, PartialEq, Debug, Default)]
 pub struct GraphicalSet {
-    /// Entries, in document order — the order is part of the meaning.
+    /// Entries, in document order - the order is part of the meaning.
     pub entries: Vec<Entry>,
     /// What could not be read, in words.
     pub notes: Vec<String>,
 }
 
 impl GraphicalSet {
-    /// Several sets of one package read as one, in package order — **the one
+    /// Several sets of one package read as one, in package order - **the one
     /// reading of several sets**, which every caller goes through.
     ///
     /// The standard says nothing of how two sets combine
     /// (ADR-0009, checked against the three TRGs). The rule
-    /// settled for the rest of the cascade — *the most
-    /// specific wins; at equal specificity, the order of the document* (§7.3)
-    /// — extends to it without a new decision: the entries are laid end to
+    /// settled for the rest of the cascade - *the most
+    /// specific wins; at equal specificity, the order of the document* (§7.3) -
+    /// extends to it without a new decision: the entries are laid end to
     /// end, so the cascade still tries the most specific level first **across
     /// every set**, and at one level the **last** entry written answers, as it
-    /// does within one set ([`GraphicalSet::targeting`]) — a later set in the
+    /// does within one set ([`GraphicalSet::targeting`]) - a later set in the
     /// package is a later statement. Positions are renumbered so they stay one
     /// wiring.
     ///
     /// Until 28/09 the front end read only the **first** set, the export too, and
-    /// the command line all of them — three readings of one package. It showed
+    /// the command line all of them - three readings of one package. It showed
     /// on Lutetia the day a second set appeared: the thirteen units of the
     /// strata table got their own set, listed before the chart's, and the
     /// chart's other thirty-four units lost their colour in the front end.
@@ -954,7 +954,7 @@ impl GraphicalSet {
     /// concrete subtypes lives in RESQML 2.2**. RESQML depends on eml, so the
     /// generated eml crate cannot know them: the generator keeps what it
     /// cannot type as [`AnyXml`], and every entry of every real set arrives
-    /// that way. Reading it means reading the subtree — which is what
+    /// that way. Reading it means reading the subtree - which is what
     /// `read_raw_entry` does, on the same narrow scanner the property kind
     /// dictionary uses.
     ///
@@ -1132,10 +1132,10 @@ pub enum Level {
     Interpretation,
     /// Its feature's.
     Feature,
-    /// A collection that holds the object, or one of its parents — only on an
+    /// A collection that holds the object, or one of its parents - only on an
     /// answer of [`crate::color_inherit`], never of [`Cascade::resolve`].
     Collection,
-    /// The model that references the object or one of its parents — same.
+    /// The model that references the object or one of its parents - same.
     Model,
 }
 
@@ -1180,7 +1180,7 @@ pub struct Decision {
     pub paint: Paint,
     /// Which level answered.
     pub level: Level,
-    /// Uuid of the object that carried the information — for a face that shows
+    /// Uuid of the object that carried the information - for a face that shows
     /// one; the walk goes by [`Decision::found_on_uri`].
     pub found_on: String,
     /// Uri (the full identity) of the object that carried it, or the address
@@ -1207,7 +1207,7 @@ pub struct Carried {
 }
 
 impl Carried {
-    /// What the object says for exactly this target — **not** a fallback.
+    /// What the object says for exactly this target - **not** a fallback.
     pub fn exact(&self, scope: Scope) -> Option<&Decision> {
         self.slots[scope.index()].as_ref()
     }
@@ -1226,7 +1226,7 @@ impl Carried {
 pub struct Step {
     /// Which level this link is.
     pub level: Level,
-    /// Uuid of the object at this link — for a face that shows one; the walk
+    /// Uuid of the object at this link - for a face that shows one; the walk
     /// goes by [`Step::uri`].
     ///
     /// No title: this module reads colours, and resolving a title means opening
@@ -1244,7 +1244,7 @@ pub struct Step {
 /// What is being drawn.
 #[derive(Clone, Debug)]
 pub struct Request<'a> {
-    /// The **address** of the representation: its **uri**, the full identity —
+    /// The **address** of the representation: its **uri**, the full identity -
     /// the version it declares included, so that two versions of one
     /// representation are two requests with two colours. A bare uuid is the
     /// library's entry adapter: it names no version, and decorates the entries
@@ -1253,7 +1253,7 @@ pub struct Request<'a> {
     /// Both spellings are read since 05/10/2026 (entry targets are addresses
     /// too, [`Entry::target_uris`]). The confusion between the two cost a defect
     /// found on 04/09: the wasm layer passed a uri here while entry targets were
-    /// uuids, and they never matched — a colour set on the representation itself
+    /// uuids, and they never matched - a colour set on the representation itself
     /// was never found, while one inherited from its interpretation or its
     /// feature was, because the walk up (`parent_of`) yielded uuids. A package
     /// that duplicates its colours at all three levels, as `80wells` does, hid
@@ -1288,7 +1288,7 @@ pub struct Cascade<'a> {
     /// object itself carries.
     pub inherit: bool,
     /// The set's entries by target, built the first time an object is asked
-    /// about — see [`Cascade::targeting`].
+    /// about - see [`Cascade::targeting`].
     targets: RefCell<Option<TargetMap>>,
 }
 
@@ -1296,7 +1296,7 @@ pub struct Cascade<'a> {
 /// document order.
 ///
 /// Built **once per cascade**. [`GraphicalSet::targeting`] scans every entry and
-/// lowercases every target of each, for **each object asked about** — and a walk
+/// lowercases every target of each, for **each object asked about** - and a walk
 /// asks about every object it passes: a package whose set holds thousands of
 /// entries paid thousands of string allocations per rung, and a walk has a
 /// dozen. The map is keyed by the set it was built from (its address and its
@@ -1306,7 +1306,7 @@ struct TargetMap {
     set: *const GraphicalSet,
     entries: usize,
     /// Lowercase uuid → the positions of the entries naming it, each with the
-    /// version it names — the version is **part of what is targeted**, so it is
+    /// version it names - the version is **part of what is targeted**, so it is
     /// compared when an object (a uri) asks, not dropped by the key.
     by_target: HashMap<String, Vec<(usize, Option<String>)>>,
 }
@@ -1322,7 +1322,7 @@ impl<'a> Cascade<'a> {
         }
     }
 
-    /// The entries of the set that target this object, **latest first** — what
+    /// The entries of the set that target this object, **latest first** - what
     /// [`GraphicalSet::targeting`] answers, from a map instead of a scan.
     fn targeting(&self, address: &str) -> Vec<&'a Entry> {
         let set: &'a GraphicalSet = self.set;
@@ -1377,13 +1377,13 @@ impl<'a> Cascade<'a> {
     /// colour.
     ///
     /// **Links that carry nothing are in the list.** They are the answer to
-    /// "why not that one" — a parent that exists and says nothing is not the
+    /// "why not that one" - a parent that exists and says nothing is not the
     /// same as a parent that does not exist, and dropping it would leave a
     /// person looking for a rung that was never shown.
     ///
     /// The order is `resolve`'s own, so **the winner is the first link that
     /// carries something**. That is a property, not a coincidence, and a test
-    /// holds the two functions to it — they walk separately (`resolve` stops
+    /// holds the two functions to it - they walk separately (`resolve` stops
     /// early, and stopping early is why it does not open every parent of every
     /// object in a scene), so nothing but that test keeps them from drifting.
     ///
@@ -1414,7 +1414,7 @@ impl<'a> Cascade<'a> {
         let mut level = Level::Representation;
         // The identity of the rung: the caller's address for the first one (a
         // uri, or a bare uuid at the entry), and for every rung above it the
-        // address its reference names — read by the version that reference
+        // address its reference names - read by the version that reference
         // names.
         let mut current = request.representation.to_string();
         let mut guard = 0;
@@ -1447,13 +1447,13 @@ impl<'a> Cascade<'a> {
 
     /// Resolve one request.
     ///
-    /// `None` means no level answered — and that is the answer, not a failure:
+    /// `None` means no level answered - and that is the answer, not a failure:
     /// the standard defines no default colour, so inventing one would be a
     /// picture that says something the file does not.
     pub fn resolve(&self, request: &Request<'_>, objects: &dyn ObjectSource) -> Result<Option<Decision>> {
         let mut notes = Vec::new();
 
-        // 1 — the property itself.
+        // 1 - the property itself.
         if let Some(property) = request.property
             && let Some(decision) =
                 self.color_information_on(property, Level::Property, objects, &mut notes)?
@@ -1461,7 +1461,7 @@ impl<'a> Cascade<'a> {
             return Ok(Some(decision));
         }
 
-        // 2 — its kind, then the kind's ancestors. The chain is already
+        // 2 - its kind, then the kind's ancestors. The chain is already
         // ordered nearest-first, so "most specific wins" is just its order.
         for (depth, kind) in request.kind_chain.iter().enumerate() {
             if let Some(mut decision) =
@@ -1477,7 +1477,7 @@ impl<'a> Cascade<'a> {
             }
         }
 
-        // 3, 4, 5 — the object, then up the chain of what it represents.
+        // 3, 4, 5 - the object, then up the chain of what it represents.
         let mut level = Level::Representation;
         let mut current = request.representation.to_string();
         let mut guard = 0;
@@ -1579,7 +1579,7 @@ impl<'a> Cascade<'a> {
     ///
     /// Per target, the entries are tried latest first (as
     /// [`GraphicalSet::targeting`] orders them) and the first that gives the
-    /// target a constant colour answers — the same rule
+    /// target a constant colour answers - the same rule
     /// [`Cascade::default_information_on`] applies to the one target it is
     /// asked for. Entries meant for another viewer are skipped, and said, in
     /// [`Carried::skipped`] and in the notes of the decisions found after them.
@@ -1638,7 +1638,7 @@ impl<'a> Cascade<'a> {
     }
 
     /// The entry and the element that give one object a constant colour for
-    /// `element` — **the one choice**: entries latest first, another viewer's
+    /// `element` - **the one choice**: entries latest first, another viewer's
     /// skipped (and said in `notes`), the element asked for first and the whole
     /// object second. [`Cascade::default_information_on`] decides by it, and
     /// [`Cascade::constant_written`] answers with it, so *the colour shown* and
@@ -1718,18 +1718,18 @@ impl<'a> Cascade<'a> {
     }
 
     /// **Every** statement of the constant colour one object carries at
-    /// `scope`: each entry naming it — in this set, latest first, another
-    /// viewer's skipped as the decision skips them — whose element for that
+    /// `scope`: each entry naming it - in this set, latest first, another
+    /// viewer's skipped as the decision skips them - whose element for that
     /// scope states a `ConstantColor`. The first is the one the cascade takes
     /// ([`Cascade::constant_written`]); the others say the same thing about the
-    /// same object somewhere else — another set of the package, typically: the
+    /// same object somewhere else - another set of the package, typically: the
     /// GeolTs chart writes its units' colours in a set of its own, and a
     /// package's own set may colour them too.
     ///
     /// Changing the colour **where it is written** changes all of them:
     /// changing only the one in force would leave the file stating two colours
     /// for one object, and a reader that asks every set (the strata of
-    /// wellbores once did) would then find no colour at all — a black legend.
+    /// wellbores once did) would then find no colour at all - a black legend.
     pub fn constant_statements(&self, uuid: &str, scope: Scope) -> Vec<Written> {
         let mut out = Vec::new();
         for entry in self.targeting(uuid) {
@@ -1762,7 +1762,7 @@ impl<'a> Cascade<'a> {
 
     /// **Where** the constant colour one object carries for `element` is
     /// written: the entry (its position in this set), the element (its rank in
-    /// `IndexableElementInfo`, the file's) and every object the entry names —
+    /// `IndexableElementInfo`, the file's) and every object the entry names -
     /// the objects a change of that value changes too. `None` when the object
     /// carries no constant colour of its own (it may still inherit one: ask its
     /// carrier). Decided by the same choice as the colour shown
@@ -1784,8 +1784,8 @@ impl<'a> Cascade<'a> {
 
 /// Read one `GraphicalInformation` that arrived as an untyped subtree.
 ///
-/// The shape is fixed and shallow — a target reference, a viewer kind, a few
-/// numbers and one `HsvColor` per indexable element — so it is read with the
+/// The shape is fixed and shallow - a target reference, a viewer kind, a few
+/// numbers and one `HsvColor` per indexable element - so it is read with the
 /// crate's narrow scanner rather than by pulling in an XML parser. What it
 /// cannot make sense of becomes [`Information::Other`] **with a note**, and
 /// keeps its position, because `Active*InformationIndex` counts these.
@@ -1936,8 +1936,8 @@ fn raw_f64(section: &str, field: &str) -> Option<f64> {
 ///
 /// **Only upward, and only by these three fields.** The rule: colour
 /// propagation follows the FIRP hierarchy only, never an interpretation that
-/// references a representation. An object that points *down* — a set naming the
-/// interpretation of each of its parts, say — is not a step of this chain, and
+/// references a representation. An object that points *down* - a set naming the
+/// interpretation of each of its parts, say - is not a step of this chain, and
 /// following it would give one representation as many parents as it has pieces.
 ///
 /// The level comes back with the uuid because **the step number does not say
@@ -1948,7 +1948,7 @@ fn raw_f64(section: &str, field: &str) -> Option<f64> {
 /// misnames the source of a colour a user is looking at.
 ///
 /// Read by **address**: the uri the rung was reached by (the version its
-/// reference names), or the caller's own address for the first rung — a uri, or
+/// reference names), or the caller's own address for the first rung - a uri, or
 /// a bare uuid at the entry. Returns the next rung's address: the uri its
 /// reference names (the uuid when the reference names no type).
 fn parent_of(address: &str, objects: &dyn ObjectSource) -> Option<(String, Option<Level>)> {
@@ -1978,7 +1978,7 @@ fn parent_of(address: &str, objects: &dyn ObjectSource) -> Option<(String, Optio
 
 /// Which level a reference points at, read from the type it declares.
 ///
-/// `None` when the reference carries no usable type — an answer, not a guess:
+/// `None` when the reference carries no usable type - an answer, not a guess:
 /// the caller then says the step is unnamed rather than naming it wrong.
 fn level_of_reference(reference: &dyn Reflect) -> Option<Level> {
     let declared = text(reference, "QualifiedType").or_else(|| text(reference, "ContentType"))?;
@@ -2027,7 +2027,7 @@ fn scalar_u64(object: &dyn Reflect, field: &str) -> Option<u64> {
     }
 }
 
-/// The uuid a reference names — the identity layer's reading, so every
+/// The uuid a reference names - the identity layer's reading, so every
 /// spelling of the field is one answer.
 fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
     energyml_core::identity::uuid_of_reflect(object)
@@ -2040,7 +2040,7 @@ mod tests {
     use super::*;
 
     /// The two forms, and nothing else: a sign, a missing `#`, three digits
-    /// or a stray character are refused by name — never read as some colour.
+    /// or a stray character are refused by name - never read as some colour.
     #[test]
     fn a_colour_reads_back_from_its_hex_and_nothing_else_reads() {
         let red = Rgba::parse("#ff0000").expect("six digits");
@@ -2058,7 +2058,7 @@ mod tests {
     }
 
     /// The rank an element carries is **the file's**, even past one this build
-    /// skips — what an editor writing the colour back into
+    /// skips - what an editor writing the colour back into
     /// `IndexableElementInfo[at]` needs (24/09). Counted in the list read, it
     /// would point at the skipped neighbour.
     #[test]
@@ -2165,7 +2165,7 @@ mod tests {
     #[test]
     fn a_discrete_map_takes_the_nearest_lower_entry_that_exists() {
         // The schema's own example: stops at 10, 20, 30 and a value of 16.5
-        // gives the colour of 10 — not of 16.
+        // gives the colour of 10 - not of 16.
         let map = map(None, vec![(10.0, 0.0), (20.0, 120.0), (30.0, 240.0)]);
         let scaling = Scaling::default();
         assert_eq!(map.sample(Some(16.5), &scaling).unwrap().to_hex(), "#ff0000ff");
@@ -2178,7 +2178,7 @@ mod tests {
         // The two edge colours are what lets a caller keep an index no table
         // names from borrowing a neighbouring category: below the first stop
         // the fallback is the *first entry*, above the last it is the nearest
-        // lower — both plausible, both silent. A category palette supplied by
+        // lower - both plausible, both silent. A category palette supplied by
         // an application's palette sets both edges
         // transparent for exactly this reason; this test is what it stands on.
         let mut m = map(None, vec![(10.0, 0.0), (20.0, 120.0)]);
@@ -2192,7 +2192,7 @@ mod tests {
         m.above_max = Some(hsv(60.0));
         assert_eq!(m.sample(Some(5.0), &scaling).unwrap().to_hex(), "#0000ffff");
         assert_eq!(m.sample(Some(25.0), &scaling).unwrap().to_hex(), "#ffff00ff");
-        // On a stop, the entry itself — the edges only speak outside the range.
+        // On a stop, the entry itself - the edges only speak outside the range.
         assert_eq!(m.sample(Some(20.0), &scaling).unwrap().to_hex(), "#00ff00ff");
     }
 
@@ -2216,7 +2216,7 @@ mod tests {
 
     #[test]
     fn above_and_below_only_apply_when_min_max_is_absent() {
-        // With `MinMax` given, the clamp makes them unreachable — which is the
+        // With `MinMax` given, the clamp makes them unreachable - which is the
         // only reading of the two TRG sections that does not contradict
         // itself.
         let mut m = map(
@@ -2298,7 +2298,7 @@ const XSI: (&str, &str) = ("xsi", "http://www.w3.org/2001/XMLSchema-instance");
 /// # Why this is XML text and not an object
 ///
 /// `GraphicalInformationSet` is an EML 2.3 object and its entries are RESQML
-/// 2.2 types — the slot is declared as a foreign subtree, and the reader keeps
+/// 2.2 types - the slot is declared as a foreign subtree, and the reader keeps
 /// it as [`AnyXml`] for that reason. So writing an entry means writing the
 /// subtree, and the shape below is the one [`GraphicalSet::read`] parses: the
 /// reader is the specification of the writer, and the pair is held by a test
@@ -2312,7 +2312,7 @@ const XSI: (&str, &str) = ("xsi", "http://www.w3.org/2001/XMLSchema-instance");
 /// # Several targets, and one scope
 ///
 /// `AbstractGraphicalInformation.TargetObject` is `maxOccurs="unbounded"`, so
-/// **one entry may decorate a whole set of objects** — which is what colouring
+/// **one entry may decorate a whole set of objects** - which is what colouring
 /// thirty surfaces at once produces, and it is one statement rather than thirty.
 /// An empty `targets` gives an entry that decorates nothing; the reader already
 /// reports that state, so it is written rather than refused here, and it is the
@@ -2403,7 +2403,7 @@ fn targets_xml(targets: &[Decorated]) -> String {
 /// # The order of the elements is the schema's, not a preference
 ///
 /// `TargetObject`, `MinMax`, `UseLogarithmicMapping`, `UseReverseMapping`,
-/// `ValueVectorIndex`, `ColorMap` — an `xsd:sequence`, so a document that puts
+/// `ValueVectorIndex`, `ColorMap` - an `xsd:sequence`, so a document that puts
 /// them in another order is one no validator accepts. The two booleans are
 /// **required** and written even when false; the three optionals are omitted
 /// when there is nothing to say, which is not the same as writing a default.
@@ -2411,7 +2411,7 @@ fn targets_xml(targets: &[Decorated]) -> String {
 /// # What this does not do
 ///
 /// It does not create the map. §13.2 point 6: *a colormap must already be in
-/// the set or referenced by it — the frame chooses one, it does not make one*.
+/// the set or referenced by it - the frame chooses one, it does not make one*.
 /// So `map` is a reference to an object that exists, and this writer has no
 /// opinion about where it came from.
 pub fn colour_map_entry(
@@ -2495,10 +2495,10 @@ fn escape(text: &str) -> String {
     out
 }
 
-/// Where a constant colour is stated — [`Cascade::constant_written`].
+/// Where a constant colour is stated - [`Cascade::constant_written`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Written {
-    /// The entry's position in the set read — in a merged set, the merged
+    /// The entry's position in the set read - in a merged set, the merged
     /// position ([`locate_merged`] gives it back in its own set).
     pub position: usize,
     /// The element's rank in `IndexableElementInfo`, the file's.
@@ -2510,7 +2510,7 @@ pub struct Written {
 }
 
 /// A position of [`GraphicalSet::merged`] given back as (which set, which
-/// position in it) — the inverse of the renumbering `merged` does, and nothing
+/// position in it) - the inverse of the renumbering `merged` does, and nothing
 /// else: the sets in the order they were merged.
 pub fn locate_merged(sets: &[GraphicalSet], position: usize) -> Option<(usize, usize)> {
     let mut offset = 0;
@@ -2527,14 +2527,14 @@ pub fn locate_merged(sets: &[GraphicalSet], position: usize) -> Option<(usize, u
 /// it is stated, and nothing else.
 ///
 /// The rule: either modify the existing referenced value, or assign the object
-/// its own if it uses one through a path — this is the first
+/// its own if it uses one through a path - this is the first
 /// half. Where [`set_constant_colour`] rewrites an entry from what this build
 /// read of it, and so refuses an entry that names several objects (rebuilding
 /// it could drop what the reader does not model), this edits the one
 /// `ConstantColor` through the typed subtree and writes the entry back: every
 /// target, every other element, every field the reader skips stays as it was.
-/// An entry that names several objects is therefore recoloured for all of them
-/// — which is what *changing the value at its source* means; the caller says
+/// An entry that names several objects is therefore recoloured for all of them -
+/// which is what *changing the value at its source* means; the caller says
 /// so before ([`Written::targets`]).
 ///
 /// The entry is a subtree typed on the way in (`AnyXml::typed`, the road the
@@ -2627,7 +2627,7 @@ pub enum Wrote {
 /// this scope: two entries naming one target with one role is a case the
 /// standard leaves undecided (ADR-0009, point 3), and writing a second one would be *this* tool creating the
 /// ambiguity it complains about elsewhere. An entry that colours the same
-/// object's nodes when the faces are being coloured is left alone — it says
+/// object's nodes when the faces are being coloured is left alone - it says
 /// something else, which is what `scope` is for.
 ///
 /// The entries this does not understand are carried through untouched. They
@@ -2643,8 +2643,8 @@ pub enum Wrote {
 /// entry that names a target being recoloured **and** targets that are not is a
 /// named refusal ([`Error::Unsupported`]) rather than a rewrite.
 ///
-/// Splitting it — keeping the others in place and adding one entry for the
-/// recoloured object — is the operation somebody will eventually want, and it is
+/// Splitting it - keeping the others in place and adding one entry for the
+/// recoloured object - is the operation somebody will eventually want, and it is
 /// deliberately not done here: rebuilding the remainder means writing it back
 /// from what this build could parse, and anything in that subtree that the
 /// reader does not model would be dropped on the way. Refusing loses nothing and
@@ -2682,7 +2682,7 @@ pub fn set_constant_colour(
 /// element to aim at. So *the same statement* here means *a colour map on these
 /// objects*, full stop.
 ///
-/// The map is a reference to a `ColorMap` that **already exists** — §13.2 point
+/// The map is a reference to a `ColorMap` that **already exists** - §13.2 point
 /// 6. Creating one is a different operation, and one this writer would have no
 /// values to fill.
 pub fn set_colour_map(
@@ -2704,7 +2704,7 @@ pub fn set_colour_map(
 /// Put one entry in a set, replacing the one that says the same thing.
 ///
 /// The road both writers take, written once. `says` is what *the same thing*
-/// means for the caller — a constant colour at a scope, a colour map — and
+/// means for the caller - a constant colour at a scope, a colour map - and
 /// `about` names it in a refusal, where a person reads it.
 fn put(
     set: &mut dyn Reflect,
@@ -2795,7 +2795,7 @@ fn put(
 }
 
 /// The colour of an object the package says nothing about: a hue derived from
-/// a seed (its uuid), at a fixed saturation and lightness — **a front ender's
+/// a seed (its uuid), at a fixed saturation and lightness - **a front ender's
 /// `colourFor`**, which gives every uncoloured
 /// object of its 3D view its colour.
 ///
@@ -2803,7 +2803,7 @@ fn put(
 /// such pairs (a second reader is confronted with the first): the same table
 /// of seeds and answers is asserted on both sides (`tests/derived_colour.rs`
 /// here, a front end's colour test). It exists in Rust so a drawing
-/// made without a scene — the section view's SVG from the CLI — gives a surface
+/// made without a scene - the section view's SVG from the CLI - gives a surface
 /// the colour the 3D view gives it, rather than one colour for every surface.
 ///
 /// FNV-1a over the seed's UTF-16 code units (JavaScript's `charCodeAt`), the
@@ -2812,7 +2812,7 @@ fn put(
 pub fn derived_colour(seed: &str) -> String {
     // JavaScript's numbers, exactly: the offset basis is the *unsigned*
     // 2166136261 until the first `^=` turns the hash into a signed 32-bit
-    // integer — so an empty seed hashes to the unsigned value, every other seed
+    // integer - so an empty seed hashes to the unsigned value, every other seed
     // to a signed one. The shared table holds the empty seed for that reason.
     let mut hash: i64 = 0x811c9dc5;
     for unit in seed.encode_utf16() {

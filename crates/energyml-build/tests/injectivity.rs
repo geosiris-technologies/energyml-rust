@@ -1,16 +1,16 @@
 //! The injectivity index **recovered** from a test `injection-test`
-//! synthesized — the recovered injectivity index is confronted with the parameter
+//! synthesized - the recovered injectivity index is confronted with the parameter
 //! that synthesized the pressure.
 //!
 //! Two independent sources of one fact: the `injectivity` parameter given to
 //! the operation, and what `energyml_analysis::step_rate` reads back from the
-//! channel values the plan wrote — through their JSON, their `TIME` strings
+//! channel values the plan wrote - through their JSON, their `TIME` strings
 //! parsed here, never through the operation's own arithmetic. The Hall plot is
 //! a third reading of the same `1 / II`.
 //!
 //! The settled criterion (`k`, `ε`) is declared in each test, and the
 //! relaxation time is chosen so that the synthesized steps do or do not
-//! settle by a margin a comment computes — the criterion is not tuned on the
+//! settle by a margin a comment computes - the criterion is not tuned on the
 //! model, the model is placed on either side of it.
 
 use serde_json::Value;
@@ -36,8 +36,8 @@ fn planned(response_minutes: f64) -> Plan {
         }),
     );
     let choices = Choices::new()
-        .set("title", "GTH-2 — injection test")
-        .set("source", "synthetic — a test of the injectivity diagnostic")
+        .set("title", "GTH-2 - injection test")
+        .set("source", "synthetic - a test of the injectivity diagnostic")
         .set("start", "2025-06-02T08:00:00Z")
         .set("steps", serde_json::json!(STEPS))
         .set("stepHours", 2.0)
@@ -59,7 +59,7 @@ fn planned(response_minutes: f64) -> Plan {
         .unwrap_or_else(|why| panic!("a plan: {why}"))
 }
 
-/// Seconds since 1970 of `YYYY-MM-DDTHH:MM:SSZ` — the civil-to-days algorithm
+/// Seconds since 1970 of `YYYY-MM-DDTHH:MM:SSZ` - the civil-to-days algorithm
 /// of H. Hinnant, *chrono-Compatible Low-Level Date Algorithms*
 /// (`days_from_civil`), so that the instants come from the strings written
 /// and not from the operation's own clock.
@@ -129,12 +129,12 @@ fn the_index_read_from_the_settled_steps_is_the_one_that_synthesized_them() {
     // τ = 10 min on steps of 2 h sampled every 5 min. Each step starts 2 bar
     // (20 m3/h ÷ 10) from its target; the window of the last 4 samples opens
     // 100 min into the step, where |dp/dt| = 2 / 10 × e^(−10) bar/min
-    // ≈ 5.4e-4 bar/h — under ε = 1e-3 bar/h by a factor of two, and the next
+    // ≈ 5.4e-4 bar/h - under ε = 1e-3 bar/h by a factor of two, and the next
     // sample halves it again. The last sample still lies 2 × e^(−11.5)
     // ≈ 2e-5 bar short of its target, the same for the first two steps, so
     // the slope barely sees it.
     // To break: regress q against Δp, take 1 / intercept, or read the static
-    // pressure from the first step — the index moves off 10.
+    // pressure from the first step - the index moves off 10.
     let plan = planned(10.0);
     let (hours, rates, pressures) = columns(&plan);
     let series = Series::new(&hours, &rates, &pressures).expect("a series");
@@ -178,7 +178,7 @@ fn a_test_whose_steps_never_settle_is_refused_step_by_step() {
     // τ = 120 min, the length of a step: 100 min in, |dp/dt| is still
     // 2 / 120 × e^(−100/120) bar/min ≈ 0.43 bar/h, four hundred times ε.
     // Every step is refused by its rank; no index is read.
-    // To break: read an unsettled step at its last sample — an index comes
+    // To break: read an unsettled step at its last sample - an index comes
     // out, from pressures that stopped short of their targets.
     let plan = planned(120.0);
     let (hours, rates, pressures) = columns(&plan);
@@ -207,7 +207,7 @@ fn a_test_whose_steps_never_settle_is_refused_step_by_step() {
 #[test]
 fn the_hall_slope_of_an_instant_response_is_the_inverse_of_the_index() {
     // τ = 0: from the second sample on, every pressure is P0 + q / II, so
-    // each trapezoid of Δp is the trapezoid of q divided by II — the Hall
+    // each trapezoid of Δp is the trapezoid of q divided by II - the Hall
     // line from sample 2 to the last has slope 1 / II exactly. (The first
     // sample is the static pressure at the first rate: the first interval is
     // not on the line, which is why it is left out.)
@@ -219,7 +219,7 @@ fn the_hall_slope_of_an_instant_response_is_the_inverse_of_the_index() {
     let last = plot.volume.len() - 1;
     let slope = (plot.pressure_time[last] - plot.pressure_time[1]) / (plot.volume[last] - plot.volume[1]);
     assert!((slope - 1.0 / II).abs() < 1e-12, "{slope} where 1 / {II}");
-    // The volume injected is 20, 40, 60 m3/h for 2 h each, 240 m3 — but the
+    // The volume injected is 20, 40, 60 m3/h for 2 h each, 240 m3 - but the
     // sample at an instant carries the rate that starts there, so the
     // interval that ends each step is credited the mean of two rates: the
     // trapezoid the module states counts (20 / 2) × (5 / 60) m3 too much at

@@ -1,4 +1,4 @@
-//! `project` — nodes projected vertically onto a surface or a level
+//! `project` - nodes projected vertically onto a surface or a level
 //!. The arithmetic is tested in
 //! `energyml_analysis::project` and `heights`; this holds the seam.
 //!
@@ -176,7 +176,7 @@ fn refusals_name_what_is_missing_or_what_contradicts() {
     );
 }
 
-/// **A grid read as a lattice is projected onto bilinearly** — at the centre of
+/// **A grid read as a lattice is projected onto bilinearly** - at the centre of
 /// a cell whose one corner is at 4, the height is 1; cut in two triangles it
 /// would be 2 along the diagonal. The front end draws the two triangles, which is
 /// why its picking and this operation differ inside a grid's cells.

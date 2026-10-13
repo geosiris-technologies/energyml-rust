@@ -43,7 +43,7 @@ fn start(e: &BytesStart, parents: &[String]) -> El {
     }
 }
 
-/// Parse the whole document; any error is a failed test — "the document stays valid XML".
+/// Parse the whole document; any error is a failed test - "the document stays valid XML".
 fn parse(svg: &str) -> Vec<El> {
     let mut reader = Reader::from_str(svg);
     let mut out: Vec<El> = Vec::new();
@@ -245,7 +245,7 @@ fn a_hostile_title_comes_out_escaped_and_the_document_stays_xml() {
     );
     let els = parse(&out); // would panic on invalid XML
     // The only script is the drawing's own zoom (`View::zoom_script`, on by
-    // default), its text the file it is written from — nothing a title brought.
+    // default), its text the file it is written from - nothing a title brought.
     let scripts: Vec<_> = els.iter().filter(|e| e.name == "script").collect();
     assert_eq!(scripts.len(), 1, "one script, the zoom's");
     assert!(
@@ -433,8 +433,8 @@ fn the_size_of_a_big_drawing_is_the_size_of_its_nodes() {
     assert!(out.len() < 4_000_000, "{}", out.len());
 }
 
-/// The root carries the map an overlay reads a pointer through —
-/// `data-frame`, `data-window`, `data-scale` — and it is the map the drawing
+/// The root carries the map an overlay reads a pointer through -
+/// `data-frame`, `data-window`, `data-scale` - and it is the map the drawing
 /// was drawn with: well A's head, `(150, 0)` in the section, mapped through
 /// those attributes, lands on the first point of a polyline the SVG draws.
 ///
@@ -504,7 +504,7 @@ fn origin_of(els: &[El]) -> Option<String> {
 fn the_title_band_writes_the_first_point_of_each_trace_with_its_epsg_code() {
     let cat = with_origins();
     let long = origin_of(&parse(&drawn(&cat, &view()))).expect("the long section writes its origin");
-    assert_eq!(long, "origin (s = 0): X 500000.0 · Y 6000000.0 — EPSG:2154");
+    assert_eq!(long, "origin (s = 0): X 500000.0 · Y 6000000.0 - EPSG:2154");
     // A cross section's point 0 is its own, not the long section's.
     let mut v = view();
     v.target = Target::Section {
@@ -515,7 +515,7 @@ fn the_title_band_writes_the_first_point_of_each_trace_with_its_epsg_code() {
         y: [-500.0, 0.0],
     });
     let cross = origin_of(&parse(&drawn(&cat, &v))).expect("the cross section writes its origin");
-    assert_eq!(cross, "origin (s = 0): X 500400.0 · Y 5999900.0 — EPSG:2154");
+    assert_eq!(cross, "origin (s = 0): X 500400.0 · Y 5999900.0 - EPSG:2154");
     // The plan has a band too, and its (0, 0) is the origin.
     v.target = Target::Plan;
     v.window = None;
@@ -706,7 +706,7 @@ fn plan_view() -> View {
 }
 
 /// The chevrons of a section line, each as the unit vector from the middle of its
-/// two arms to its tip, in pixels — read from the SVG by a parser.
+/// two arms to its tip, in pixels - read from the SVG by a parser.
 fn chevrons(els: &[El], section: &str) -> Vec<[f64; 2]> {
     let want = format!("direction-{section}");
     let mut inside = false;

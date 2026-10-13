@@ -1,4 +1,4 @@
-//! Where the library's `tracing` output goes — installed once, by a face.
+//! Where the library's `tracing` output goes - installed once, by a face.
 //!
 //! **The libraries emit, they never configure.** `energyml-build`,
 //! `energyml-storage` and the rest open spans and send events; none of them
@@ -17,7 +17,7 @@
 //! - **A span says how long it took**: closing a span writes a line with
 //!   `time.busy` and `time.idle`.
 //! - **The level can change while the program runs.** [`LogHandle::set_filter`]
-//!   swaps the filter live — from off to `debug` and back — which is what a
+//!   swaps the filter live - from off to `debug` and back - which is what a
 //!   desktop application's "log level" menu calls. It works even when the
 //!   program started with logs off, provided it installed through
 //!   [`init_reloadable`].
@@ -181,7 +181,7 @@ pub fn requested(spec: Option<&str>) -> Option<String> {
 /// `spec` is the face's explicit filter (a `--log` flag); it wins over
 /// `ENERGYML_LOG`. `format` likewise wins over `ENERGYML_LOG_FORMAT`. With
 /// neither a filter nor the variable, nothing is installed and the returned
-/// handle is inactive ([`LogHandle::is_installed`] is false) — a program that
+/// handle is inactive ([`LogHandle::is_installed`] is false) - a program that
 /// wants to switch logs on later uses [`init_reloadable`] instead.
 pub fn init(spec: Option<&str>, format: Option<Format>) -> Result<LogHandle, Error> {
     match requested(spec) {
@@ -205,7 +205,7 @@ fn install(spec: &str, format: Option<Format>) -> Result<LogHandle, Error> {
     let (dispatch, handle) = dispatch(spec, format, std::io::stderr, std::io::stderr().is_terminal())?;
     tracing::dispatcher::set_global_default(dispatch).map_err(|_| Error::AlreadyInstalled)?;
     // The ETP crates speak `log`: carry their records into the subscriber. A
-    // logger already installed is left alone — the face's own, by its choice.
+    // logger already installed is left alone - the face's own, by its choice.
     let _ = tracing_log::LogTracer::init();
     Ok(handle)
 }

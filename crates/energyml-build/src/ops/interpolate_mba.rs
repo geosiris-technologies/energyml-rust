@@ -1,4 +1,4 @@
-//! `Method::Mba` for `interpolate` — the MBA case's own settings and the
+//! `Method::Mba` for `interpolate` - the MBA case's own settings and the
 //! whole of its planning, kept out of `interpolate.rs` so that file gains
 //! only the case itself and a two-line delegation (the MBA integration
 //! proposal).
@@ -6,81 +6,81 @@
 //! # Why this is a whole plan of its own, not another arm of `run`
 //!
 //! `interpolate`'s three existing methods (`Idw`, `Kriging`, `Rbf`) share one
-//! lattice-and-write pipeline because they all answer the same question —
-//! *what value at this `(x, y)`* — on samples and queries that stay in world
+//! lattice-and-write pipeline because they all answer the same question -
+//! *what value at this `(x, y)`* - on samples and queries that stay in world
 //! coordinates throughout. MBA adds two things the shared
 //! pipeline was never built for: a lattice that can be given
-//! directly by two — possibly oblique — direction vectors instead of fitted
+//! directly by two - possibly oblique - direction vectors instead of fitted
 //! to the samples' bounding box, and `outer`/`inner` rings that filter the
 //! samples before anything is fitted. Both are self-contained enough, and
 //! specific enough to this one method, that duplicating a couple of the
 //! shared helpers here (by reusing them, `pub(crate)`, not by copying their
-//! text — see the integration notes) is a smaller, safer change than folding a
+//! text - see the integration notes) is a smaller, safer change than folding a
 //! fifth kind of lattice determination into `interpolate.rs`'s shared `plan`.
 //!
 //! # The two extents
 //!
 //! - [`MbaExtent::Fitted`] is exactly what the other three methods already
 //!   do: the samples' own bounding box, widened by `margin`, covered by
-//!   cells of `spacing` — or, with `onto`, an existing grid's lattice reused
+//!   cells of `spacing` - or, with `onto`, an existing grid's lattice reused
 //!   as it is. Reached through [`lattice_for`]/[`lattice_onto`], made
 //!   `pub(crate)` for this file rather than duplicated.
 //! - [`MbaExtent::Given`] is the extent as the requester stated it: two
 //!   direction vectors, with a scale for each, a count of i and j, and a
-//!   starting point. The two directions need not be orthogonal — the
+//!   starting point. The two directions need not be orthogonal - the
 //!   lattice a `Point3dLatticeArray` can already state (RESQML TRG 2.2
 //!   §3.17-3.18). MBA is fitted in the lattice's own
-//!   `(u, v)` — **Provisional (open question: fitted in the lattice's
+//!   `(u, v)` - **Provisional (open question: fitted in the lattice's
 //!   frame or in the world frame)**: the integration proposal makes this
 //!   reading (the second of two) over fitting in the world
 //!   frame with a parallelogram `Ω`, because it needs no change to the
 //!   B-spline core and makes `Ω` trivially rectangular whatever the angle
 //!   between the two vectors; the alternative is a genuine open question
 //!   that is left to the requester. `IDW`/kriging/RBF would
-//!   not need this at all — only their **query** positions would be oblique,
-//!   which changes nothing about how they are computed — so `Given` only
+//!   not need this at all - only their **query** positions would be oblique,
+//!   which changes nothing about how they are computed - so `Given` only
 //!   does the `(u, v)` change of basis for `Mba`; the shared lattice
 //!   machinery for the other methods is untouched here.
 //!
 //! # What is not written here, and why
 //!
 //! **`frame = meanPlane` is refused for this operation's grid target,
-//! named** — a `Grid2dRepresentation`'s height is a
+//! named** - a `Grid2dRepresentation`'s height is a
 //! *vertical* `ZValueArray` over a lattice, and a value fitted in a tilted
 //! local frame is offset **along the mean plane's normal**, which the
-//! existing schema path cannot state without an explicit 3D points array —
+//! existing schema path cannot state without an explicit 3D points array -
 //! left as an open question in the proposal itself (to be checked against
 //! the schema before writing). Refusing rather than writing a grid that
 //! quietly means something else is the conservative reading of the house
 //! rule *refuse rather than draw* (ADR-0005). `estimate` and `resurface`
 //! (`crates/energyml-build/src/ops/estimate.rs`,
-//! `crates/energyml-build/src/ops/resurface.rs`) do not have this problem —
-//! their targets are points and triangles, not a vertical height array — and
+//! `crates/energyml-build/src/ops/resurface.rs`) do not have this problem -
+//! their targets are points and triangles, not a vertical height array - and
 //! carry `meanPlane` in full. **Confirmed in review (open question settled):
 //! this is a settled reading, not a question
-//! left open for a later increment** — `interpolate`'s grid stays `world`.
+//! left open for a later increment** - `interpolate`'s grid stays `world`.
 //!
-//! **`outer`/`inner` filter the samples and cut the grid** — a node outside
+//! **`outer`/`inner` filter the samples and cut the grid** - a node outside
 //! `outer` or inside an `inner` is written `NaN` (`mask_by_rings`;
 //! rings used to filter the samples only, and the grid ran
-//! past the ring). **And only for this one method** — the
+//! past the ring). **And only for this one method** - the
 //! design frames rings as a slot every MBA-serving operation should
 //! offer identically, which would mean teaching `interpolate`'s
 //! shared pipeline about them for `Idw`/`Kriging`/`Rbf` too. That is a real,
 //! separate piece of work (rings are one of the
 //! things the first design leaves as future increments) and is
-//! scoped out here on purpose — `outer`/`inner` are read only by this file,
+//! scoped out here on purpose - `outer`/`inner` are read only by this file,
 //! for `Method::Mba`; a run of `Idw`/`Kriging`/`Rbf` that names them leaves
 //! them unread rather than refusing, which is honest about what is missing
 //! but not yet the refusal a tidier version would give.
 //!
-//! TODO(reference): verify — the MBA method is a published algorithm (multilevel
+//! TODO(reference): verify - the MBA method is a published algorithm (multilevel
 //! B-spline approximation); name its paper here (the core in `energyml-analysis` cites it).
 //!
 //! # References
 //!
 //! - Lee, Wolberg, Shin, *"Scattered Data Interpolation with Multilevel B-Splines"*, IEEE Transactions on Visualization and Computer Graphics, vol. 3, n° 3, 1997, p. 228-244 (DOI 10.1109/2945.620490), as cited in `energyml-geostat` (`mba`).
-//!   TODO(reference): verify — the citation above (journal, pages, DOI) was not re-checked against the paper (see `energyml-geostat/src/mba.rs`).
+//!   TODO(reference): verify - the citation above (journal, pages, DOI) was not re-checked against the paper (see `energyml-geostat/src/mba.rs`).
 
 use energyml_domain::provenance::Parameter;
 
@@ -94,7 +94,7 @@ use super::interpolate::{
     InterpolateInputs, InterpolateParams, lattice_for, lattice_onto, queries, samples_of,
 };
 
-/// A grid nobody meant to ask for — the same ceiling `interpolate.rs`
+/// A grid nobody meant to ask for - the same ceiling `interpolate.rs`
 /// already enforces (`MOST_NODES` there) for the `Fitted` extent, restated
 /// here for `Given`, whose count comes from `count1 × count2` rather than a
 /// fitted bounding box. Kept as its own constant rather than importing the
@@ -105,7 +105,7 @@ const MOST_NODES: usize = 10_000_000;
 /// What `Method::Mba` is told, beyond the shared `spacing`/`margin`/`onto`.
 #[derive(Debug, Params)]
 pub struct MbaParams {
-    /// advanced: the coarsest control grid's cell count along the first (fastest) axis — left out, the paper's own rule (§4.1: as coarse as possible, by the domain's aspect ratio), never the sample density
+    /// advanced: the coarsest control grid's cell count along the first (fastest) axis - left out, the paper's own rule (§4.1: as coarse as possible, by the domain's aspect ratio), never the sample density
     #[param(advanced, min = 1)]
     pub coarsest_i: Option<usize>,
     /// advanced: the coarsest control grid's cell count along the second (slowest) axis
@@ -121,7 +121,7 @@ pub struct MbaParams {
 
 /// The reference-frame parameter requested for the whole MBA family,
 /// defaulting to `world`. **Settled (open question closed in review):
-/// `interpolate`'s grid target keeps `world` only —
+/// `interpolate`'s grid target keeps `world` only -
 /// `meanPlane` is for `estimate` and `resurface`,** because a node
 /// displaced along the mean plane's normal does not fit a
 /// `Point3dZValueArray` (module doc). This is no longer a proposal to
@@ -129,33 +129,33 @@ pub struct MbaParams {
 /// caller who names it gets this file's own named refusal instead of an
 /// unknown-case error from the parameter framework.
 ///
-/// The enumeration is shaped so that a third case — a stated dip and azimuth
-/// rather than a fitted mean plane — can be added later without breaking
+/// The enumeration is shaped so that a third case - a stated dip and azimuth
+/// rather than a fitted mean plane - can be added later without breaking
 /// either existing case (an open question, left for a later increment, not
 /// implemented here).
 #[derive(Debug, Params)]
 #[params(tag = "frame")]
 pub enum MbaFrame {
-    /// Fitted in world (x, y) — the only case this operation writes.
+    /// Fitted in world (x, y) - the only case this operation writes.
     #[case(default, name = "world")]
     World,
-    /// The mean plane's own tilted frame — refused here (module doc); carried
+    /// The mean plane's own tilted frame - refused here (module doc); carried
     /// in full by `estimate` and `resurface`.
     #[case(name = "meanPlane")]
     MeanPlane,
 }
 
-/// The lattice's extent — the existing `spacing`/`margin`/`onto` of
+/// The lattice's extent - the existing `spacing`/`margin`/`onto` of
 /// `interpolate.rs`, or a lattice given directly by two direction vectors.
 #[derive(Debug, Params)]
 #[params(tag = "extent")]
 pub enum MbaExtent {
-    /// The samples' own bounding box (`spacing`, `margin`), or `onto`'s — the
+    /// The samples' own bounding box (`spacing`, `margin`), or `onto`'s - the
     /// case every other method already writes.
     #[case(default)]
     Fitted,
-    /// Two direction vectors, their own step and count, and a starting point
-    /// — as the requester stated them.
+    /// Two direction vectors, their own step and count, and a starting point -
+    /// as the requester stated them.
     Given(GivenExtent),
 }
 
@@ -165,14 +165,14 @@ pub enum MbaExtent {
 /// primitives already implement it.
 #[derive(Debug, Params)]
 pub struct GivenExtent {
-    // Named `start` — the requester's "starting point" — and not `origin`:
+    // Named `start` - the requester's "starting point" - and not `origin`:
     // `interpolate` already records the origin it used as the *output*
     // `originX`, and one title cannot be both (tests/operations.rs).
     /// the lattice's starting point, x
     pub start_x: f64,
     /// the lattice's starting point, y
     pub start_y: f64,
-    /// the first (fastest) axis's direction — need not be a unit vector, and need not be orthogonal to the second
+    /// the first (fastest) axis's direction - need not be a unit vector, and need not be orthogonal to the second
     pub direction1_x: f64,
     /// the first axis's direction, y
     pub direction1_y: f64,
@@ -199,7 +199,7 @@ fn refuse_mba(slot: &str, e: energyml_analysis::mba::Error) -> Refusal {
     Refusal::on(slot, e.to_string())
 }
 
-/// The plan-view samples, filtered by `outer`/`inner` —
+/// The plan-view samples, filtered by `outer`/`inner` -
 /// kept when inside `outer` (if given) and outside every `inner`.
 /// A caller that names neither gets the samples back untouched, and never
 /// pays for `nodes_in_ring`.
@@ -240,9 +240,9 @@ fn filter_by_rings(
 }
 
 /// The grid's own nodes cut by the same rings (ring usage 2): a
-/// node outside `outer` or inside an `inner` becomes `NaN` — a hole, which
+/// node outside `outer` or inside an `inner` becomes `NaN` - a hole, which
 /// `grid::write` and `oblique_grid::write` already count and say. Reported
-/// problem: an outer ring was given and the grid still overflowed it —
+/// problem: an outer ring was given and the grid still overflowed it -
 /// the rings filtered the samples only, so the rectangle still covered
 /// everything past the ring. `nodes` are the nodes' world `(x, y)`, in the
 /// order of `z`. Answers how many were cut.
@@ -281,7 +281,7 @@ fn mask_by_rings(
     Ok(count)
 }
 
-/// A ring's corners in plan, flat `[x, y, …]` — refused by `slot`'s name when
+/// A ring's corners in plan, flat `[x, y, …]` - refused by `slot`'s name when
 /// it cannot enclose anything.
 fn ring_of(slot: &str, shape: &Shape) -> Result<Vec<f64>, Refusal> {
     let points: Vec<[f64; 3]> = shape
@@ -303,11 +303,11 @@ fn ring_of(slot: &str, shape: &Shape) -> Result<Vec<f64>, Refusal> {
     Ok(points.iter().flat_map(|p| [p[0], p[1]]).collect())
 }
 
-/// Drops the samples that fall outside `domain`, counted — never passed to
+/// Drops the samples that fall outside `domain`, counted - never passed to
 /// [`Mba::interpolate`], which refuses a call given one (module doc of
 /// `energyml_analysis::mba`, *"MBA does not extrapolate…"*). Needed because
 /// `lattice_for`'s bounding box, floor-rounded to a whole number of cells,
-/// can undershoot the samples' own extent by nearly one cell — a sample the
+/// can undershoot the samples' own extent by nearly one cell - a sample the
 /// existing methods would simply see at reduced weight near an edge, and
 /// which this file instead has to keep out of the rectangle MBA is fitted
 /// on, exactly like a ring would (`filter_by_rings`, above).
@@ -324,7 +324,7 @@ fn filter_to_domain(at: &[[f64; 2]], values: &[f64], domain: Domain) -> (Vec<[f6
     (kept_at, kept_values, dropped)
 }
 
-/// The coarsest control grid — declared (`coarsest_i`/`coarsest_j`), or the
+/// The coarsest control grid - declared (`coarsest_i`/`coarsest_j`), or the
 /// paper's own rule (§4.1, p. 233: *"as coarse as possible"*) applied to the
 /// **domain's** aspect ratio, never the sample density: 1 on the shorter
 /// axis, the rounded ratio on the longer.
@@ -343,7 +343,7 @@ fn coarsest_of(mba: &MbaParams, domain_size: [f64; 2]) -> [usize; 2] {
     ]
 }
 
-/// The plan for `Method::Mba` — called from `interpolate.rs`'s `plan()` with
+/// The plan for `Method::Mba` - called from `interpolate.rs`'s `plan()` with
 /// a two-line arm; see the module doc for why the rest lives here.
 pub fn plan(
     inputs: &InterpolateInputs,
@@ -370,7 +370,7 @@ pub fn plan(
         return Err(Refusal::on(
             "field",
             format!(
-                "`{}` holds {} node(s) and the field {} value(s) — a sample is a place and a number",
+                "`{}` holds {} node(s) and the field {} value(s) - a sample is a place and a number",
                 samples.name,
                 samples.at.len(),
                 samples.values.len()
@@ -433,7 +433,7 @@ pub fn plan(
 type Planned = (Plan, [f64; 2], ([usize; 2], usize));
 
 /// `MbaExtent::Fitted`: the shared bounding-box/`onto` lattice, reused as it
-/// is — `lattice_for`/`lattice_onto`, `pub(crate)` in `interpolate.rs`.
+/// is - `lattice_for`/`lattice_onto`, `pub(crate)` in `interpolate.rs`.
 fn plan_fitted(
     inputs: &InterpolateInputs,
     params: &InterpolateParams,
@@ -452,7 +452,7 @@ fn plan_fitted(
                 Refusal::about(
                     "required",
                     "spacing",
-                    "`spacing` is required: the cell size of the grid — or give `onto`, or `extent = given`",
+                    "`spacing` is required: the cell size of the grid - or give `onto`, or `extent = given`",
                 )
             })?;
             let (origin, counts) = lattice_for(at, spacing, params.margin)?;
@@ -529,7 +529,7 @@ fn plan_fitted(
 }
 
 /// `MbaExtent::Given`: the two direction vectors, fitted in the lattice's own
-/// `(u, v)` — **Provisional (open question: lattice frame)**, see the module doc.
+/// `(u, v)` - **Provisional (open question: lattice frame)**, see the module doc.
 fn plan_given(
     inputs: &InterpolateInputs,
     params: &InterpolateParams,
@@ -594,14 +594,14 @@ fn plan_given(
             "value",
             "count1",
             format!(
-                "{} by {} — {nodes} nodes, past the {MOST_NODES} this writes: reduce `count1`/`count2`",
+                "{} by {} - {nodes} nodes, past the {MOST_NODES} this writes: reduce `count1`/`count2`",
                 given.count1, given.count2
             ),
         ));
     }
     cx.stop_if_cancelled()?;
 
-    // The change of basis to the lattice's own (u, v) — MBA is
+    // The change of basis to the lattice's own (u, v) - MBA is
     // fitted where the grid says it is, never in a world-frame
     // parallelogram, which the core (`energyml_analysis::mba::Mba`) has no
     // notion of. `M⁻¹ (p - origin)`, `M = [dir1_hat | dir2_hat]`.
@@ -646,13 +646,13 @@ fn plan_given(
     let mut z = answer.values;
     let ring_cut = mask_by_rings(&nodes, &mut z, inputs.outer.as_ref(), &inputs.inner)?;
 
-    // Whether the two world directions are orthogonal — computed, never
+    // Whether the two world directions are orthogonal - computed, never
     // affirmed. **Provisional (open question)**: the business rule
     // (RESQML TRG 2.2 §3.17 p. 40) says to
     // omit `AllDimensionsAreOrthogonal` "if you don't know it"; a computed
     // dot product is never exactly zero for a caller's own numbers, so a
     // confident tolerance band decides `true`/`false` and a narrow band in
-    // between omits the field — the two thresholds (1e-6, 1e-3) are this
+    // between omits the field - the two thresholds (1e-6, 1e-3) are this
     // file's own choice, not read off the business rule, which states the
     // *when to omit* but not *how close counts as unknown*.
     let dot = dir1_hat[0] * dir2_hat[0] + dir1_hat[1] * dir2_hat[1];
@@ -723,7 +723,7 @@ fn plan_given(
     Ok((plan, domain_size, (coarsest, answer.levels)))
 }
 
-/// The nodes the rings cut, said — a hole nobody named reads as a fit that failed.
+/// The nodes the rings cut, said - a hole nobody named reads as a fit that failed.
 fn said_ring_cut(plan: &mut Plan, cut: usize) {
     if cut > 0 {
         plan.says.push(Note {
@@ -733,7 +733,7 @@ fn said_ring_cut(plan: &mut Plan, cut: usize) {
     }
 }
 
-/// The title of the samples' shape, or its name — mirrors `interpolate.rs`'s
+/// The title of the samples' shape, or its name - mirrors `interpolate.rs`'s
 /// own `title_of`, kept local rather than reused: it is three lines, and the
 /// existing one takes a `&Shape` this file does not always have handy.
 fn samples_name(inputs: &InterpolateInputs) -> String {
@@ -746,7 +746,7 @@ fn samples_name(inputs: &InterpolateInputs) -> String {
         .unwrap_or_else(|| inputs.shape.name.clone())
 }
 
-/// The given grid's identity key, for the seed — mirrors `interpolate.rs`'s
+/// The given grid's identity key, for the seed - mirrors `interpolate.rs`'s
 /// inline use at the same spot.
 fn onto_key(onto: &Shape) -> String {
     onto.known

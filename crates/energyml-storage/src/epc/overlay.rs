@@ -2,7 +2,7 @@
 //!
 //! Decided in ADR-0002: an EPC is not opened
 //! read-only to be rewritten elsewhere. It is opened, its objects are edited,
-//! and it is saved. That is what the reflection built in step 2 was for —
+//! and it is saved. That is what the reflection built in step 2 was for -
 //! editing an object without knowing its type at compile time, and later
 //! generating editing interfaces from the same metadata.
 //!
@@ -12,14 +12,14 @@
 //! archive. A save merges.
 //!
 //! It is cheap: an EnergyML object is a few kilobytes of XML. What is big in an
-//! EPC — the arrays — is not in the EPC at all, it is beside it.
+//! EPC - the arrays - is not in the EPC at all, it is beside it.
 //!
 //! # Transactions are one more layer
 //!
 //! ETP's `StartTransaction` / `Commit` / `Rollback` (protocol 18) map onto this
 //! without touching a disk: start pushes a layer, commit merges it down,
 //! rollback throws it away. ETP v1.2 forbids nested transactions, so the
-//! stack is never more than one deep — which is why this holds an `Option` and
+//! stack is never more than one deep - which is why this holds an `Option` and
 //! not a `Vec`.
 //!
 //! A rollback that undoes nothing would be a lie, and an abstraction that lies
@@ -28,15 +28,15 @@
 //! # The raw layer, beside the objects
 //!
 //! One thing here is not an object: a part whose XML this build **cannot
-//! parse**. Broken markup, a byte that is not UTF-8, a part of zero length —
+//! parse**. Broken markup, a byte that is not UTF-8, a part of zero length -
 //! there is no `DynObject` to hold, and no uuid to key it by when the damage
 //! reaches the root element. Repairing such a part is exactly what a design
 //! tool is for, so it is staged as bytes, keyed by **part name**, in a map
 //! beside the objects.
 //!
 //! Two maps rather than one enum because they are addressed differently and
-//! both have to survive a transaction. Where they collide — bytes staged for
-//! the part of an object that was also edited — the **bytes win**, because
+//! both have to survive a transaction. Where they collide - bytes staged for
+//! the part of an object that was also edited - the **bytes win**, because
 //! staging bytes is the more deliberate act: it says "I know better than the
 //! parser", and the only reason to say it is that the parser was wrong.
 
@@ -83,29 +83,29 @@ pub struct Overlay {
     ///
     /// One case makes this necessary: a broken part the inventory could not
     /// address is copied verbatim on save, because nothing knows what it is.
-    /// Repair it and it becomes an object — which the writer then places under
+    /// Repair it and it becomes an object - which the writer then places under
     /// the name its type and uuid dictate. Without this set the package would
     /// come out holding **both**, the repaired object and the wreck it was
     /// made from.
     superseded: BTreeSet<String>,
-    /// Parts a caller has removed — an attachment taken back out of the package.
+    /// Parts a caller has removed - an attachment taken back out of the package.
     dropped: BTreeSet<String>,
     /// `(media part, lowercased object uuid)` → related (`true`) or unrelated
     /// (`false`) in this session, committed. What the archive's `.rels` said
     /// is read from the archive; this is only what changed since.
     media: BTreeMap<(String, String), bool>,
-    /// The same, inside the open transaction — a rollback undoes a relation
+    /// The same, inside the open transaction - a rollback undoes a relation
     /// like it undoes an object.
     media_transaction: Option<BTreeMap<(String, String), bool>>,
-    /// Every object write, counted and named — what a derived view of the
+    /// Every object write, counted and named - what a derived view of the
     /// package (the package index) asks to know what to re-read.
     /// (ADR-0010): this layer is the one
     /// door every object write goes through, so the signal lives here and
     /// nowhere else.
     revisions: Revisions,
-    /// Every change to the **files** of the package — a part staged, dropped or
+    /// Every change to the **files** of the package - a part staged, dropped or
     /// restored, a media relation made or undone, a transaction opened, merged
-    /// or thrown away — counted, and **not** named. Beside `revisions` because
+    /// or thrown away - counted, and **not** named. Beside `revisions` because
     /// none of these is an object write, so the object journal never saw them;
     /// a derived view of the files (the listing of what is attached to an
     /// object, `energyml_domain::attachments::Cache`) compares its own stamp
@@ -119,17 +119,17 @@ impl Overlay {
         self.revisions.current()
     }
 
-    /// The count of changes to the package's files — see the field.
+    /// The count of changes to the package's files - see the field.
     pub fn files_revision(&self) -> u64 {
         self.files
     }
 
-    /// Which objects were written after `since` — see [`Revisions::changed_since`].
+    /// Which objects were written after `since` - see [`Revisions::changed_since`].
     pub fn changed_since(&self, since: u64) -> Changed {
         self.revisions.changed_since(since)
     }
 
-    /// What was written after `since`, and what in each object — see
+    /// What was written after `since`, and what in each object - see
     /// [`Revisions::changes_since`].
     pub fn changes_since(&self, since: u64) -> Since {
         self.revisions.changes_since(since)
@@ -185,7 +185,7 @@ impl Overlay {
         out.into_iter().map(|(k, v)| (k.clone(), v)).collect()
     }
 
-    /// The bytes staged for a part, if any — the transaction first.
+    /// The bytes staged for a part, if any - the transaction first.
     pub fn raw(&self, part: &str) -> Option<&[u8]> {
         self.raw_transaction
             .as_ref()
@@ -231,7 +231,7 @@ impl Overlay {
     ///
     /// Beside `superseded` rather than inside it, because the two say different
     /// things and only one of them is reversible. *Superseded* is a fact the
-    /// library worked out — an object now stands where a wreck was — and nothing
+    /// library worked out - an object now stands where a wreck was - and nothing
     /// asks for it to be undone. *Dropped* is a person removing an attachment,
     /// which they may want back before the save; hence [`Overlay::restore_part`]
     /// and no equivalent for the other.
@@ -272,7 +272,7 @@ impl Overlay {
         self.transaction.is_some()
     }
 
-    /// What the layer says about this uuid — the transaction first, since it
+    /// What the layer says about this uuid - the transaction first, since it
     /// sits above.
     pub fn get(&self, uuid: &str) -> Option<&Change> {
         let key = uuid.to_ascii_lowercase();
@@ -306,7 +306,7 @@ impl Overlay {
         match map.get_mut(&key) {
             Some(Change::Put(object)) => {
                 // A mutable borrow is an edit in place: counted as a write
-                // whether or not the caller ends up changing anything — too
+                // whether or not the caller ends up changing anything - too
                 // wide costs a re-read, too narrow is a stale index.
                 self.revisions.touch_what(&key, uri, what);
                 Some(object)
@@ -315,7 +315,7 @@ impl Overlay {
         }
     }
 
-    /// The same borrow, with no journal line — for a gate that has journaled
+    /// The same borrow, with no journal line - for a gate that has journaled
     /// the edit itself, and takes the borrow again to hand it out.
     pub fn get_mut_unjournaled(&mut self, uuid: &str) -> Option<&mut Box<dyn DynObject>> {
         let key = uuid.to_ascii_lowercase();

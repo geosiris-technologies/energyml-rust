@@ -1,20 +1,20 @@
-//! `change-frame` — a representation read in one frame and written in another
+//! `change-frame` - a representation read in one frame and written in another
 //!.
 //!
 //! The form of the assertions comes from the specification: a depth axis
 //! counts down from an origin written *“in the base vertical CRS”* (CRS.xsd
-//! l. 517–520; common TRG 2.3 §12.20 p. 322 and §12.34 p. 338); an azimuth
+//! l. 517-520; common TRG 2.3 §12.20 p. 322 and §12.34 p. 338); an azimuth
 //! turns the local Y axis clockwise from grid north (RESQML 2.0.1 `Common.xsd`
-//! l. 136–145, the sense `crs` writes); a linear velocity law `V(z) = V₀ + k·z`
+//! l. 136-145, the sense `crs` writes); a linear velocity law `V(z) = V₀ + k·z`
 //! gives the one-way time `τ(z) = ln(1 + k·z/V₀)/k`, twice that down and back,
 //! and `2z/V₀` at constant velocity. The numbers are the tests' own, at **map
-//! coordinates** — Lambert-93, x ≈ 651 000, y ≈ 6 861 000 — because two defects
+//! coordinates** - Lambert-93, x ≈ 651 000, y ≈ 6 861 000 - because two defects
 //! of 24/09 only showed far from the origin, and in a **turned, offset** frame
 //! like the reference model's.
 //!
 //! The frames are written by `crs` and read back by the boundary
 //! (`read::known_of_object`), as the recipe reads them; where a written node is
-//! is checked through `energyml_domain::crs::read_with` over the stored frame —
+//! is checked through `energyml_domain::crs::read_with` over the stored frame -
 //! a second reading of the frame, not the operation's.
 //!
 //! # What would have to break to make it turn red
@@ -105,7 +105,7 @@ impl Frames {
         self.write(choices, "crs")
     }
 
-    /// The frame `known` names, read again from the package — `read_with`,
+    /// The frame `known` names, read again from the package - `read_with`,
     /// not the operation.
     fn read(&self, known: &Known) -> energyml_domain::crs::Crs {
         let uuid = &known.crs.as_ref().expect("a frame").uuid;
@@ -115,8 +115,8 @@ impl Frames {
     }
 }
 
-/// A 3 × 2 lattice at map coordinates, 25 m along x and **40** along y — two
-/// spacings, so that a transposed lattice shows — its heights `z(i, j)`, `i`
+/// A 3 × 2 lattice at map coordinates, 25 m along x and **40** along y - two
+/// spacings, so that a transposed lattice shows - its heights `z(i, j)`, `i`
 /// varying fastest: the house order.
 fn lattice(z: impl Fn(usize, usize) -> f64) -> Geometry {
     let mut points = Vec::new();
@@ -167,11 +167,11 @@ fn surface(points: Vec<[f64; 3]>, triangles: Vec<[u32; 3]>) -> Geometry {
 }
 
 /// The bag the recipe builds: the shape named after its slot, what the
-/// boundary knows of it — the frame it is in, placement included, and H6's
-/// interpretation — and the frame `crs` names, as its companion.
+/// boundary knows of it - the frame it is in, placement included, and H6's
+/// interpretation - and the frame `crs` names, as its companion.
 fn bag(geometry: Geometry, qualified_type: &str, from: &Known, to: &Known) -> Pieces {
     let known = Known {
-        reference: Some(Ref::new(SHAPE, qualified_type, "H6 — top of the Chalk")),
+        reference: Some(Ref::new(SHAPE, qualified_type, "H6 - top of the Chalk")),
         interpretation: Some(Ref::new(H6, "resqml22.HorizonInterpretation", "H6")),
         node_count: Some(geometry.point_count()),
         ..from.clone()
@@ -200,7 +200,7 @@ fn linear(choices: Choices, v0: f64, k: f64, travel: &str) -> Choices {
         .set("v0", v0)
         .set("k", k)
         .set("travelTime", travel)
-        .set("source", "synthetic — a trial law, not a measurement")
+        .set("source", "synthetic - a trial law, not a measurement")
 }
 
 fn plan(bag: &Pieces, choices: Choices) -> Result<Plan, Error> {
@@ -212,7 +212,7 @@ fn refused(bag: &Pieces, choices: Choices) -> Refusal {
     why.refusals()[0].clone()
 }
 
-/// The nodes as written — the shape the plan carries is what the arrays hold.
+/// The nodes as written - the shape the plan carries is what the arrays hold.
 fn written(plan: &Plan) -> Vec<[f64; 3]> {
     plan.shapes[0]
         .geometry
@@ -256,7 +256,7 @@ fn chalk(i: usize, j: usize) -> f64 {
 /// **An elevation becomes a depth about the origin the depth frame states.**
 ///
 /// The depth compound counts down from 35 m above NGF: *“in the base vertical
-/// CRS”* (CRS.xsd l. 517–520), so a node at elevation z is written 35 − z, and
+/// CRS”* (CRS.xsd l. 517-520), so a node at elevation z is written 35 − z, and
 /// a hole stays a hole. To break: write −z (the origin forgotten), z − 35 (the
 /// origin read along the local axis), z (the sign kept).
 #[test]
@@ -443,7 +443,7 @@ fn the_law_counts_depth_from_the_time_origin_and_comes_back() {
 // -- the plane ----------------------------------------------------------------------
 
 /// **A turned, offset frame writes numbers that place back where the nodes
-/// were** — the reference model's frame: 30° from grid north, its origin at the
+/// were** - the reference model's frame: 30° from grid north, its origin at the
 /// platform, depths from 35 m above NGF. To break: the azimuth ignored or
 /// turned the other way, the plane's origin forgotten, the depth origin lost.
 #[test]
@@ -494,7 +494,7 @@ fn a_turned_and_offset_frame_places_every_node_back_where_it_was() {
             assert!((a[axis] - b[axis]).abs() < 1e-6, "{a:?} placed back at {b:?}");
         }
     }
-    // The frame did move the numbers — otherwise the agreement would prove
+    // The frame did move the numbers - otherwise the agreement would prove
     // nothing about which ones are local.
     assert!(
         (output[3][0] - nodes[3][0]).abs() > 1_000.0 && (output[3][1] - nodes[3][1]).abs() > 1_000.0,
@@ -513,8 +513,8 @@ fn a_turned_and_offset_frame_places_every_node_back_where_it_was() {
 }
 
 /// **A grid moves its origin, and refuses a turned frame.** `grid` writes a
-/// lattice along the frame's +x then +y: an offset keeps it — the origin moves,
-/// the spacings and the order stay — and a turn would need turned axes. To
+/// lattice along the frame's +x then +y: an offset keeps it - the origin moves,
+/// the spacings and the order stay - and a turn would need turned axes. To
 /// break: write the grid in the turned frame anyway, or keep the old origin.
 #[test]
 fn a_grid_moves_its_origin_and_refuses_a_turned_frame() {
@@ -666,7 +666,7 @@ fn a_time_needs_a_law_and_a_law_needs_a_time_and_a_source() {
         linear(into(&time), 0.0, 0.6, "two-way"),
     );
     assert_eq!(why.slot.as_deref(), Some("v0"), "{}", why.message);
-    // The control: stated whole, the same law is planned — so each refusal
+    // The control: stated whole, the same law is planned - so each refusal
     // above is about what it names.
     plan(
         &bag(points(), kind, &depth, &time),
@@ -676,7 +676,7 @@ fn a_time_needs_a_law_and_a_law_needs_a_time_and_a_source() {
 }
 
 /// **A frame that does not say how its third ordinate counts is refused by its
-/// name** — a `ProjectedCrs` named directly has no vertical system; a time
+/// name** - a `ProjectedCrs` named directly has no vertical system; a time
 /// frame counting in metres, a length frame counting in milliseconds (tampered:
 /// `crs` refuses to write either). To break: default an absent vertical to an
 /// elevation, or trust the flag over the unit.
@@ -720,7 +720,7 @@ fn a_frame_that_does_not_say_how_it_counts_is_refused_by_its_name() {
 }
 
 /// **The same frame, and a frame nobody resolved, are refused.** To break:
-/// fall back on an identity placement when none is known — which is right on
+/// fall back on an identity placement when none is known - which is right on
 /// every frame of the corpus and wrong on the turned frame.
 #[test]
 fn the_same_frame_and_a_frame_nobody_resolved_are_refused() {
@@ -750,7 +750,7 @@ fn the_same_frame_and_a_frame_nobody_resolved_are_refused() {
 
 /// **The same input is the same object; another law, or other nodes, another
 /// one.** `pointset` hangs its uuid on the bag's first piece, here always
-/// `shape`: to break, drop the seeded bag — the two clouds then collide.
+/// `shape`: to break, drop the seeded bag - the two clouds then collide.
 #[test]
 fn the_same_input_is_the_same_object_and_another_content_another() {
     let mut frames = Frames::new();
@@ -813,7 +813,7 @@ fn the_same_horizon_in_another_frame_represents_the_same_interpretation() {
     .expect("planned");
     let object = representation(&planned);
     assert_eq!(object["RepresentedObject"]["Uuid"], json!(H6), "{object}");
-    assert_eq!(object["Citation"]["Title"], json!("H6 — top of the Chalk"));
+    assert_eq!(object["Citation"]["Title"], json!("H6 - top of the Chalk"));
     let roles: Vec<&str> = planned.objects.iter().map(|one| one.role.as_str()).collect();
     assert_eq!(
         roles,
@@ -829,7 +829,7 @@ fn the_same_horizon_in_another_frame_represents_the_same_interpretation() {
 /// grid is written by `grid` in the boreholes' elevation frame, read by the
 /// boundary (`read::pieces_of_object`, the placement included), changed into a
 /// depth frame with an origin at the platform, and both grids are read by the
-/// scene reader — two readings of where each node is, the operation between
+/// scene reader - two readings of where each node is, the operation between
 /// them. To break: any of the above, or a writer that reads the frame's
 /// placement twice.
 #[cfg(feature = "hdf5")]
@@ -867,7 +867,7 @@ fn a_grid_written_read_and_changed_lands_where_the_reader_placed_it() {
         )
         .with("frame", Source::Object(elevation.clone()));
     let choices = Choices::new()
-        .set("title", "H6 — top of the Chalk")
+        .set("title", "H6 - top of the Chalk")
         .set("featureType", "resqml22.BoundaryFeature")
         .set("interpretationType", "resqml22.BoundaryFeatureInterpretation");
     let grid = Registry::new()
@@ -929,7 +929,7 @@ fn a_grid_written_read_and_changed_lands_where_the_reader_placed_it() {
         }
     }
     // And the stored numbers did change: depths from 35 m, an origin at the
-    // platform — otherwise the agreement would prove nothing.
+    // platform - otherwise the agreement would prove nothing.
     for (was, is) in local_before.iter().zip(&local_after) {
         assert!((is[2] - (35.0 - was[2])).abs() < 1e-9, "{was:?} → {is:?}");
         assert!(

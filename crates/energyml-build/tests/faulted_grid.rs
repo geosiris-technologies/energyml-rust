@@ -1,4 +1,4 @@
-//! `faulted-ijk-grid` — an IJK grid between horizons, cut by fault surfaces
+//! `faulted-ijk-grid` - an IJK grid between horizons, cut by fault surfaces
 //! (the need: at least one grid that is “cut” by the
 //! faults […] a little displaced downwards on one side, and with cells
 //! removed near one or two faults).
@@ -14,7 +14,7 @@
 //!   (TRG §5.1 p. 94, §5.36 p. 132; the usage guide's 4 × 3 × 2 example writes
 //!   *“NODES = 24 x 3”* for 20 pillars and 4 splits, §9.19.2 p. 174);
 //! - a cell whose `CellGeometryIsDefined` is false has no geometry, whatever its
-//!   nodes say (TRG §5.1 p. 94) — so it is not drawn.
+//!   nodes say (TRG §5.1 p. 94) - so it is not drawn.
 //!
 //! The throw is this operation's stated law, the one `fault-throw` writes
 //! (`maximum · 4s(1 − s) · (1 − d / reach)`), and the tests restate it from the
@@ -92,7 +92,7 @@ fn top(x: f64) -> f64 {
     5.0 - 0.02 * (x - X0)
 }
 
-/// The four horizons, top to bottom: `layers = [2, 0, 2]` — two layers, a gap,
+/// The four horizons, top to bottom: `layers = [2, 0, 2]` - two layers, a gap,
 /// two layers.
 fn horizons() -> Vec<(&'static str, Geometry)> {
     let grid = |z: &dyn Fn(f64) -> f64| {
@@ -391,7 +391,7 @@ fn splits(plan: &Plan) -> Vec<(usize, Vec<usize>)> {
 /// runs between rows j = 1 and j = 2, so the seven pillars at j = 2 split,
 /// serving the rows north of it. Where they cross, pillar (2, 2), the four
 /// columns around it each move differently: its own line and **three** split
-/// lines — the most an IJK pillar can have (usage guide §9.11.1 p. 151).
+/// lines - the most an IJK pillar can have (usage guide §9.11.1 p. 151).
 /// Every split line comes after the pillars, on a pillar that exists (TRG
 /// §5.17 p. 111).
 #[test]
@@ -463,8 +463,8 @@ fn the_pillars_on_a_fault_split_and_the_moved_side_takes_the_split_line() {
 
 /// **The split nodes are the throw below the pillar's own, on one side only.**
 /// At the pillars A alone splits, the split line of every level is the
-/// pillar's own line lowered by A's throw there — `10 · 4s(1 − s) · (1 − d /
-/// 100)`, `s` along A, `d` from it — and the pillar's own line is the footwall:
+/// pillar's own line lowered by A's throw there - `10 · 4s(1 − s) · (1 − d /
+/// 100)`, `s` along A, `d` from it - and the pillar's own line is the footwall:
 /// untouched south of B, lowered by B's throw alone north of it, where both
 /// sides are in B's hanging wall. West of A and south of B nothing moves; east
 /// of A, a pillar's own line is lowered by A's drag.
@@ -532,7 +532,7 @@ fn the_split_nodes_are_displaced_by_the_throw_on_one_side_only() {
 // -- the removed cells ---------------------------------------------------------------
 
 /// **The removed cells are exactly those asked for**: one column of B's
-/// hanging wall next to B — the row j = 2 — in the layers 2 and 3, none next
+/// hanging wall next to B - the row j = 2 - in the layers 2 and 3, none next
 /// to A (`deadColumns = [0, 1]`). `CellGeometryIsDefined` false for those
 /// twelve, true for every other.
 #[test]
@@ -572,7 +572,7 @@ fn the_cells_next_to_a_fault_are_removed_as_asked_and_only_those() {
     // Every layer when none is named.
     let every = planned(&bag(), &answers().set("deadLayers", json!([]))).unwrap();
     assert_eq!(number(&every, "deadCellCount"), 24.0);
-    // None asked, none removed — and the flag array is the constant.
+    // None asked, none removed - and the flag array is the constant.
     let none = planned(&bag(), &answers().set("deadColumns", json!([]))).unwrap();
     assert_eq!(number(&none, "deadCellCount"), 0.0);
     assert_eq!(
@@ -592,7 +592,7 @@ fn the_cells_next_to_a_fault_are_removed_as_asked_and_only_those() {
 fn the_grid_represents_the_model_and_says_its_throw_is_invented() {
     let choices = answers()
         .set("synthetic", true)
-        .set("source", "synthetic — a test");
+        .set("source", "synthetic - a test");
     let plan = planned(&bag(), &choices).unwrap_or_else(|why| panic!("{why}"));
     let grid = the_grid(&plan);
     assert_eq!(grid["RepresentedObject"]["Uuid"], earth_model()["Uuid"]);
@@ -601,7 +601,7 @@ fn the_grid_represents_the_model_and_says_its_throw_is_invented() {
         grid["Citation"]["Description"]
             .as_str()
             .unwrap()
-            .contains("synthetic — a test")
+            .contains("synthetic - a test")
     );
     assert_eq!(grid["Geometry"]["KDirection"], json!("down"));
     assert_eq!(grid["Geometry"]["PillarShape"], json!("vertical"));
@@ -735,7 +735,7 @@ fn what_cannot_cut_the_grid_is_refused_by_name() {
     assert!(why.contains("The other frame"), "{why}");
 
     // A reverse fault that stops at −25, inside the K gap's roof: the nodes
-    // below it go up 30 m, the ones above stay — the top of the lower zone
+    // below it go up 30 m, the ones above stay - the top of the lower zone
     // (−30) ends above the base of the upper one (−20). Refused, never drawn
     // inside out. The same fault normal is a thicker gap, and is written.
     let sealed = bag_with(&[("A", fault_a_from(-25.0, FAULT_BOTTOM))], &frame());
@@ -753,8 +753,8 @@ fn what_cannot_cut_the_grid_is_refused_by_name() {
     planned(&sealed, &reverse.set("throw", json!(["normal"]))).expect("a normal throw only thickens the gap");
 }
 
-/// **A node moves only where the fault is**: a fault that stops at −25 m —
-/// sealed under the top of the grid, as F2 is under H6 — leaves the three
+/// **A node moves only where the fault is**: a fault that stops at −25 m -
+/// sealed under the top of the grid, as F2 is under H6 - leaves the three
 /// levels above it where they were on both sides of its split pillars, and
 /// throws the three below.
 #[test]
@@ -795,8 +795,8 @@ fn a_fault_sealed_inside_the_grid_leaves_the_levels_above_it() {
 
 // -- the reader, confronted -----------------------------------------------------------------
 
-/// **Written, reopened, read by `energyml_geometry::ijk`** — a reader written
-/// against the TRG that shares no line with this writer — and confronted with
+/// **Written, reopened, read by `energyml_geometry::ijk`** - a reader written
+/// against the TRG that shares no line with this writer - and confronted with
 /// what the file **declares**: the node count is
 /// `(pillars + Count) × (Nk + 1 + gaps)` read off the XML (`Ni`, `Nj`, `Nk`, `KGaps/Count`,
 /// `ColumnLayerSplitCoordinateLines/Count`); the cell count is `Ni · Nj · Nk`
@@ -917,7 +917,7 @@ fn the_reader_draws_the_split_nodes_and_not_the_removed_cells() {
     // -- the corners on a split pillar ------------------------------------------------
     // Pillar (2, 0): column (1, 0) is A's footwall, column (2, 0) its hanging
     // wall. Each cell's corners at x = X0 + 50, y = Y0 are its corners on
-    // that pillar — the reader's own winding aside.
+    // that pillar - the reader's own winding aside.
     let at_pillar = |cell: usize| -> Vec<f64> {
         let position = index
             .iter()

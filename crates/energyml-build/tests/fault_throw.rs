@@ -1,13 +1,13 @@
-//! `fault-throw` — a horizon torn along its faults: the surface with its
+//! `fault-throw` - a horizon torn along its faults: the surface with its
 //! `SplitEdgePatch`, the new interpretation it represents, and the lips
 //! (step 7 of the reference model).
 //!
 //! The form of the assertions comes from the schema and the reference-model description: a split
 //! edge is *“a consecutive pair of nodes”* in *“a 2D array […] with
-//! dimensions 2 x numSplitEdges”* (RESQML 2.2 Structural.xsd l. 206–219; TRG
+//! dimensions 2 x numSplitEdges”* (RESQML 2.2 Structural.xsd l. 206-219; TRG
 //! 2.2 §11.7 p. 276); a changed set of points represents a **new**
 //! interpretation (usage guide 2.2, draft, §7.2.2 p. 72); the lips are
-//! `contact` lines (Structural.xsd l. 60–64); an invented object carries
+//! `contact` lines (Structural.xsd l. 60-64); an invented object carries
 //! `synthetic = true` and its source. The
 //! numbers are the tests' own, at map coordinates where Lutetia is.
 //!
@@ -44,7 +44,7 @@ fn frame() -> Ref {
     Ref::new(
         "cccccccc-0000-4000-8000-000000000003",
         "eml23.LocalEngineeringCompoundCrs",
-        "Lutetia — boreholes (elevation)",
+        "Lutetia - boreholes (elevation)",
     )
 }
 
@@ -52,7 +52,7 @@ fn feature() -> Ref {
     Ref::new(
         "fe000000-0000-4000-8000-000000000006",
         "resqml22.BoundaryFeature",
-        "H6 — top of the Chalk — feature",
+        "H6 - top of the Chalk - feature",
     )
 }
 
@@ -60,7 +60,7 @@ fn old_interpretation() -> Ref {
     Ref::new(
         "1e000000-0000-4000-8000-000000000006",
         "resqml22.HorizonInterpretation",
-        "H6 — top of the Chalk — interpretation",
+        "H6 - top of the Chalk - interpretation",
     )
 }
 
@@ -76,7 +76,7 @@ fn known(reference: Ref, interpretation: Option<Ref>) -> Known {
     }
 }
 
-/// A flat horizon at −50 m, a 21 × 21 lattice 10 m apart — a grid of the
+/// A flat horizon at −50 m, a 21 × 21 lattice 10 m apart - a grid of the
 /// package, as `read::in_slot` puts it in the bag.
 fn horizon() -> Source {
     let mut points = Vec::new();
@@ -146,7 +146,7 @@ fn bag_with(fault_shape: Source, fault_frame: Ref) -> Pieces {
                 Ref::new(
                     "9d000000-0000-4000-8000-000000000006",
                     "resqml22.Grid2dRepresentation",
-                    "H6 — top of the Chalk",
+                    "H6 - top of the Chalk",
                 ),
                 Some(old_interpretation()),
             )),
@@ -170,7 +170,7 @@ fn bag() -> Pieces {
 fn base() -> Choices {
     Choices::new()
         .set("crs", frame().dor())
-        .set("title", "H6 — top of the Chalk, faulted")
+        .set("title", "H6 - top of the Chalk, faulted")
         .set("maximumThrow", json!([10.0]))
         .set("throw", json!(["normal"]))
         .set("profile", "parabolic")
@@ -180,7 +180,7 @@ fn base() -> Choices {
 fn choices() -> Choices {
     base()
         .set("synthetic", true)
-        .set("source", "synthetic — the test's own throw")
+        .set("source", "synthetic - the test's own throw")
 }
 
 fn planned(pieces: &Pieces, choices: &Choices) -> Result<Plan, String> {
@@ -211,7 +211,12 @@ fn floats(plan: &Plan, path: &str) -> Vec<[f64; 3]> {
         .find(|d| d.path == path)
         .unwrap_or_else(|| panic!("no dataset {path}"));
     match &found.values {
-        Numbers::F64(values) => values.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect(),
+        Numbers::F64(values) => values
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .map(|c| [c[0], c[1], c[2]])
+            .collect(),
         other => panic!("{path}: {other:?}"),
     }
 }
@@ -261,7 +266,9 @@ fn written_surface(plan: &Plan) -> (Vec<[f64; 3]>, Vec<[i64; 3]>) {
     let patch = &surface.json["TrianglePatch"][0];
     let points = floats(plan, &path_in(&patch["Geometry"]["Points"]["Coordinates"]));
     let triangles = integers(plan, &path_of(&patch["Triangles"]))
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|t| [t[0], t[1], t[2]])
         .collect();
     (points, triangles)
@@ -278,7 +285,9 @@ fn split_edges(plan: &Plan) -> Vec<Vec<[i64; 2]>> {
             let array = &edge_patch["SplitEdges"];
             let count = &array["Values"]["ExternalDataArrayPart"][0]["Count"];
             let pairs: Vec<[i64; 2]> = integers(plan, &path_of(array))
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
                 .map(|p| [p[0], p[1]])
                 .collect();
             assert_eq!(
@@ -304,7 +313,7 @@ fn a_torn_horizon_is_a_surface_a_new_interpretation_and_its_lips() {
     let interpretation = one(&plan, "resqml22.HorizonInterpretation");
     let lips = one(&plan, "resqml22.PolylineSetRepresentation");
     // A new interpretation of the same feature, and the surface
-    // represents it — not the one the horizon had.
+    // represents it - not the one the horizon had.
     assert_eq!(
         interpretation.json["InterpretedFeature"]["Uuid"],
         json!(feature().uuid)
@@ -315,7 +324,7 @@ fn a_torn_horizon_is_a_surface_a_new_interpretation_and_its_lips() {
     );
     assert_ne!(interpretation.uuid, old_interpretation().uuid);
     assert_eq!(interpretation.json["Domain"], json!("depth"));
-    // The lips are contacts, a patch with two open lines — and, since
+    // The lips are contacts, a patch with two open lines - and, since
     // 02/10 (a reported need: resqml objects without an interpretation are wrong), they
     // represent the torn horizon's new interpretation, as the surface does.
     assert_eq!(lips.json["LineRole"], json!("contact"));
@@ -349,8 +358,8 @@ fn a_torn_horizon_is_a_surface_a_new_interpretation_and_its_lips() {
 }
 
 /// **Two readings of one fact**: which edges are split. The
-/// topology says it in its way — an edge bordered by a single triangle, which
-/// is not on the border of the lattice, can only be a lip — and
+/// topology says it in its way - an edge bordered by a single triangle, which
+/// is not on the border of the lattice, can only be a lip - and
 /// `SplitEdgePatch` declares it. The two are compared without one being
 /// computed from the other: the first is read in the array of the
 /// triangles written, the second in the arrays of the edges.
@@ -388,9 +397,9 @@ fn the_split_edges_are_the_edges_the_triangles_leave_open() {
     assert_eq!(number(&plan, "splitEdgeCount"), declared.len() as f64);
 }
 
-/// The lips are the surface's nodes, position for position — the footwall's
+/// The lips are the surface's nodes, position for position - the footwall's
 /// line on the split edges of the first `EdgePatch`, the hanging wall's on the
-/// second — and the drop between them is the parabola, computed here from the
+/// second - and the drop between them is the parabola, computed here from the
 /// footwall's `y` alone.
 #[test]
 fn the_lips_are_the_split_nodes_and_drop_by_the_profile() {
@@ -512,7 +521,7 @@ fn the_identity_is_the_horizon_and_the_title() {
     let again = planned(&bag(), &choices().set("maximumThrow", json!([12.0]))).expect("planned");
     let uuids = |plan: &Plan| plan.objects.iter().map(|o| o.uuid.clone()).collect::<Vec<_>>();
     assert_eq!(uuids(&first), uuids(&again));
-    let renamed = planned(&bag(), &choices().set("title", "H6 — another")).expect("planned");
+    let renamed = planned(&bag(), &choices().set("title", "H6 - another")).expect("planned");
     assert!(uuids(&first).iter().all(|u| !uuids(&renamed).contains(u)));
     let distinct: BTreeSet<String> = uuids(&first).into_iter().collect();
     assert_eq!(distinct.len(), first.objects.len());

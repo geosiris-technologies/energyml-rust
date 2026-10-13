@@ -1,6 +1,6 @@
 //! IJK grids: pillars, split coordinate lines, and cells.
 //!
-//! The most numerous representation in the reference corpus — 30 of them — and
+//! The most numerous representation in the reference corpus - 30 of them - and
 //! the one a reservoir application is really asking for.
 //!
 //! # The model, in one paragraph
@@ -10,14 +10,14 @@
 //! layer boundary. There are `(Ni + 1) × (Nj + 1)` pillars in the regular
 //! lattice, and a cell takes its eight corners from the four pillars around it
 //! at two consecutive levels. The `Points` array is therefore shaped
-//! `(Nk + 1) × lines × 3` and indexed `k × lines + line` — layer first, pillar
+//! `(Nk + 1) × lines × 3` and indexed `k × lines + line` - layer first, pillar
 //! second.
 //!
 //! # Faults, which is where it gets interesting
 //!
 //! A fault means two cells that share a pillar do **not** share its points:
 //! the rock is displaced. RESQML expresses that with **split coordinate
-//! lines** — extra lines appended after the regular pillars, each saying which
+//! lines** - extra lines appended after the regular pillars, each saying which
 //! pillar it duplicates and which columns use it instead.
 //!
 //! So resolving a corner is a lookup, not an index:
@@ -28,7 +28,7 @@
 //! ```
 //!
 //! Getting that wrong does not fail. It produces a grid that draws, with the
-//! cells on one side of every fault pulled onto the other side's pillars —
+//! cells on one side of every fault pulled onto the other side's pillars -
 //! plausible everywhere except at the faults, which is exactly where anyone
 //! looking at the model is looking. The reference package is called *"two
 //! faulted sugar cubes"* for a reason: two cells, one fault, and the two
@@ -46,18 +46,18 @@
 //! VTK requires the first four corners of a hexahedron to form a face whose
 //! right-hand normal points at the opposite face. Whether the natural IJK order
 //! satisfies that depends on `GridIsRighthanded`, on `KDirection`, and on
-//! whether the CRS flipped z — three flags that interact, and each of the eight
+//! whether the CRS flipped z - three flags that interact, and each of the eight
 //! combinations is a chance to be wrong.
 //!
-//! So it is **computed**, per cell, from the cell's own signed volume — see
+//! So it is **computed**, per cell, from the cell's own signed volume - see
 //! `oriented`. A cell that comes out inside-out renders as a hole, which is
 //! another failure that looks like working software with nothing in it.
 //!
 //! Per cell rather than per grid, and the corpus says why it has to be. In
 //! `h+g_PaleoGTM` the grid `01e02598` declares `GridIsRighthanded = true`, and
 //! 379 of its 29 401 cells come out wound the other way: pillar row `j = 49`
-//! has folded back past `j = 48` — its y values sit *below* both neighbouring
-//! rows — so twenty-four columns of that grid are reversed in plan view. That
+//! has folded back past `j = 48` - its y values sit *below* both neighbouring
+//! rows - so twenty-four columns of that grid are reversed in plan view. That
 //! is the file's own geometry, confirmed against the HDF5 with `h5py`, and a
 //! reader that took the flag as the answer would emit those cells inside out.
 
@@ -132,12 +132,12 @@ pub fn read(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Ve
     // inferred from the coordinates, because RESQML says in as many words that
     // they win:
     //
-    //   `PillarGeometryIsDefined` — "Indicator that a pillar has at least one
+    //   `PillarGeometryIsDefined` - "Indicator that a pillar has at least one
     //   node with a defined cell geometry. **If the indicator does not indicate
     //   that the pillar geometry is defined, then this over-rides any other
     //   node geometry specification.**" (RESQML TRG v2.2 §5.1; mandatory)
     //
-    //   `CellGeometryIsDefined` — "Indicator that a cell has a defined
+    //   `CellGeometryIsDefined` - "Indicator that a cell has a defined
     //   geometry. **If the indicator shows that the cell geometry is NOT
     //   defined, then this attribute overrides any other node geometry
     //   specification.**" (§5.1; optional)
@@ -145,7 +145,7 @@ pub fn read(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Ve
     // Note what they do *not* say: neither promises the coordinates will be
     // NaN. A writer may mark a cell undefined and still leave finite numbers on
     // its pillars, and until these were read such a grid came out whole. The
-    // NaN check below stays — it catches the writers that mark nothing.
+    // NaN check below stays - it catches the writers that mark nothing.
     let pillar_defined = flags(geometry, source, "PillarGeometryIsDefined");
     let cell_defined = flags(geometry, source, "CellGeometryIsDefined");
 
@@ -158,8 +158,8 @@ pub fn read(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Ve
         for j in 0..nj {
             for i in 0..ni {
                 let column = j * ni + i;
-                // Cell index in RESQML's own order — i fastest, then j, then k
-                // — which is the order both flag arrays are in.
+                // Cell index in RESQML's own order - i fastest, then j, then k
+                // - which is the order both flag arrays are in.
                 let cell_index = layer * nj * ni + column;
                 if says_undefined(&cell_defined, cell_index) {
                     skipped += 1;
@@ -195,7 +195,7 @@ pub fn read(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Ve
                 }
                 // **Which cell this is, in the file's own numbering.** Kept
                 // because the push above is conditional: a cell the flag marks
-                // undefined, or whose pillars carry no location, is skipped —
+                // undefined, or whose pillars carry no location, is skipped -
                 // so a position in `cells` is not the number RESQML calls the
                 // cell as soon as a grid has one hole. Anything addressing a
                 // cell by that number (a grid connection set names pairs of
@@ -235,14 +235,14 @@ pub fn read(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Ve
 /// The rule VTK states: the right-hand normal of face `(0,1,2,3)` points at
 /// face `(4,5,6,7)`. Rather than deduce that from `GridIsRighthanded`,
 /// `KDirection` and whatever the CRS did to z, it is measured on the cell
-/// itself — see the module header for why the flags cannot answer it.
+/// itself - see the module header for why the flags cannot answer it.
 ///
 /// # What is measured, and why it is not the face normal
 ///
 /// The obvious reading of VTK's sentence is arithmetic: take the normal of
 /// face `(0,1,2,3)` and dot it with the vector to the centre of `(4,5,6,7)`.
 /// That was the first implementation, and it was later found to give a
-/// **negative answer for both orderings** of the same cell — so it swapped,
+/// **negative answer for both orderings** of the same cell - so it swapped,
 /// changed nothing, and emitted the cell inside out.
 ///
 /// The cause is that a cell corner is not a plane. `h+g_PaleoGTM` has cells
@@ -254,8 +254,8 @@ pub fn read(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Ve
 ///
 /// So the quantity measured is the **signed volume** of the trilinear
 /// hexahedron, by the divergence theorem over its six faces, each split into
-/// four triangles at its own centre. It is the same statement — VTK's rule and
-/// a positive volume agree on any cell where the rule is well defined — but it
+/// four triangles at its own centre. It is the same statement - VTK's rule and
+/// a positive volume agree on any cell where the rule is well defined - but it
 /// is a property of the whole cell rather than of one of its faces, and it
 /// **negates exactly** when the two faces are swapped. That last point is what
 /// makes the decision total: one of the two orderings is right unless the
@@ -282,8 +282,8 @@ pub(crate) fn oriented(node: [u32; 8], points: &[Point]) -> [u32; 8] {
 ///
 /// The points are taken relative to the cell's own mean before anything is
 /// multiplied. Without that the sum is a difference of terms of order
-/// `coordinate³` — a corpus grid sits at x ≈ 13 000 m, so the terms run to
-/// 10¹² while the answer is 10² — and the sign of a thin cell would be decided
+/// `coordinate³` - a corpus grid sits at x ≈ 13 000 m, so the terms run to
+/// 10¹² while the answer is 10² - and the sign of a thin cell would be decided
 /// by cancellation rather than by its shape.
 fn signed_volume(node: [u32; 8], points: &[Point]) -> f64 {
     // Each face wound so its right-hand normal points *out* of the cell when
@@ -362,7 +362,7 @@ impl Splits {
     /// What a local grid asks before deriving its geometry from this grid: a
     /// child node on a pillar the fault has split has one position per side,
     /// and [`crate::parent`] refuses rather than pick. A split line used by a
-    /// column *outside* the window changes nothing here — the window's own
+    /// column *outside* the window changes nothing here - the window's own
     /// pillars still hold the values its columns use.
     pub(crate) fn within(&self, ni: usize, origin: [usize; 2], span: [usize; 2]) -> Option<usize> {
         self.lookup
@@ -469,7 +469,7 @@ pub(crate) fn split_lines(
 /// rather than `Nk + 1`, and layer `k` no longer sits between levels `k` and
 /// `k + 1`.
 ///
-/// Reading a gapped grid as if it had none does not fail — it produces cells
+/// Reading a gapped grid as if it had none does not fail - it produces cells
 /// spanning the void, each one layer too tall, and a model whose total
 /// thickness is wrong by the size of the gaps.
 pub(crate) fn layer_tops(
@@ -541,7 +541,7 @@ fn field_object<'a>(object: &'a dyn Reflect, field: &str) -> Option<&'a dyn Refl
 
 /// One of the grid's `…IsDefined` boolean arrays, when it holds one.
 ///
-/// `None` covers three cases that are all the same answer — the field is
+/// `None` covers three cases that are all the same answer - the field is
 /// absent, it is not a boolean array, or it could not be read (its external
 /// dataset is missing, say). In every one of them **nothing is known**, and the
 /// caller falls back to the coordinates. Treating an unreadable flag as `false`
@@ -576,7 +576,7 @@ mod tests {
     /// The ground truth here is arithmetic, not a measurement: face `(0,1,2,3)`
     /// of this cube lies at z = 0 wound anticlockwise seen from above, so its
     /// right-hand normal points at z = 1, which is where face `(4,5,6,7)` is.
-    /// That is VTK's rule met, so `oriented` must leave it alone — and must put
+    /// That is VTK's rule met, so `oriented` must leave it alone - and must put
     /// the exchanged one back.
     fn cube() -> Vec<Point> {
         vec![
@@ -608,8 +608,8 @@ mod tests {
     /// `h+g_PaleoGTM`, grid `01e02598`, cell 26447: one of its four pillars is
     /// collapsed over seventeen of the grid's nineteen levels, so the cell is
     /// 20 m thick at one corner and 2 m at the other three while its faces are
-    /// warped through 33 m. The old measure — the normal of face `(0,1,2,3)`
-    /// against the vector to face `(4,5,6,7)` — is **negative for both**
+    /// warped through 33 m. The old measure - the normal of face `(0,1,2,3)`
+    /// against the vector to face `(4,5,6,7)` - is **negative for both**
     /// orderings of this cell (-3389.9 natural, -626.3 swapped), so it swapped
     /// and emitted the cell inside out.
     ///
@@ -617,7 +617,7 @@ mod tests {
     /// checked against `h5py` before being written here. What the assertion
     /// claims is not one of them: it is that the ordering `oriented` returns is
     /// the one with the positive volume, and that the two orderings disagree
-    /// about the sign — which is the property the old measure lacked.
+    /// about the sign - which is the property the old measure lacked.
     #[test]
     fn the_twisted_cell_of_a_collapsed_pillar_is_oriented_by_its_volume() {
         // Level 16 first, which is the order the reader assembles.

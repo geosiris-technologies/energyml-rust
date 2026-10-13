@@ -4,7 +4,7 @@
 //! package with this shape is client data that cannot be committed. The
 //! objects here reproduce it exactly: a RESQML 2.2
 //! `WellboreTrajectoryRepresentation` whose whole spatial content is an
-//! `MdInterval` and a `ReferencePointInACrs` — including the real file's
+//! `MdInterval` and a `ReferencePointInACrs` - including the real file's
 //! contradiction, a vertical CRS naming **EPSG:5714** (a height, positive up)
 //! while stating `Direction: down`.
 
@@ -64,8 +64,8 @@ fn trajectory() -> WellboreTrajectoryRepresentation {
         md_interval: MdInterval {
             md_min: 2.5,
             md_max: 65.0,
-            // Explicit, because `LengthUomExt::default()` is `0.1 ft` — the
-            // first variant of the enum, not a sensible unit — and the reader
+            // Explicit, because `LengthUomExt::default()` is `0.1 ft` - the
+            // first variant of the enum, not a sensible unit - and the reader
             // converts whatever the interval declares.
             uom: energyml_eml_2_3::LengthUomExt::M,
             datum: Some(dor(DATUM)),
@@ -121,7 +121,7 @@ fn a_trajectory_with_only_a_datum_is_a_vertical_well() {
     let patch = &found.patches[0];
     assert!(matches!(&patch.topology, Topology::Polylines(runs) if runs == &vec![2]));
 
-    // Head at elevation − MdMin, bottom at elevation − MdMax — and the
+    // Head at elevation − MdMin, bottom at elevation − MdMax - and the
     // elevation read as a **height**, because EPSG:5714 says so even though
     // the object's own `Direction` says `down`. Believing the direction would
     // put this Paris wellhead 37 m under the sea.
@@ -132,7 +132,7 @@ fn a_trajectory_with_only_a_datum_is_a_vertical_well() {
 #[test]
 fn the_datum_gives_the_well_its_crs() {
     // No `LocalCrs` anywhere, yet the well is fully georeferenced through the
-    // reference point — the CRS layer must see through it, or the well can
+    // reference point - the CRS layer must see through it, or the well can
     // never be exported to GeoJSON.
     let crs = energyml_domain::crs::of(&trajectory(), &Wellsite)
         .unwrap()
@@ -140,7 +140,7 @@ fn the_datum_gives_the_well_its_crs() {
     assert_eq!(crs.vertical, energyml_domain::CrsKind::Epsg(5714));
     assert_eq!(crs.vertical_direction, energyml_domain::VerticalDirection::Up);
     // The horizontal CRS object is not in the store: stated as unknown, not
-    // invented and not an error — the placement is still usable locally.
+    // invented and not an error - the placement is still usable locally.
     assert_eq!(crs.projected, energyml_domain::CrsKind::Unknown);
 }
 
@@ -187,13 +187,13 @@ fn a_frame_places_its_depths_on_the_well() {
     assert!(matches!(&patch.topology, Topology::Polylines(runs) if runs == &vec![3]));
 }
 
-/// A frame's `intervals` attach — moved onto its nodes, never refused.
+/// A frame's `intervals` attach - moved onto its nodes, never refused.
 ///
-/// Reported from the front end: a `BSS000NSYT — formation` property had 3
+/// Reported from the front end: a `BSS000NSYT - formation` property had 3
 /// values for 1 cell x 1 component and was not attached. `intervals`
 /// is **the** element a wellbore frame's per-segment properties hang on (RESQML
-/// 2.2 Usage Guide §4.2.1, Table 1, p. 38: *"intervals — wellbore frames,
-/// column-layer grids"*) — `n` node depths, `n - 1` intervals — and the
+/// 2.2 Usage Guide §4.2.1, Table 1, p. 38: *"intervals - wellbore frames,
+/// column-layer grids"*) - `n` node depths, `n - 1` intervals - and the
 /// geometry counts the frame as one polyline, one cell. Only `intervals from
 /// datum` had the correspondence; this is the ordinary case.
 #[test]
@@ -217,7 +217,7 @@ fn a_frames_intervals_attach_onto_its_nodes() {
         trajectory: dor(TRAJECTORY),
         ..Default::default()
     };
-    // Three passes — three formations, as codes of a lookup.
+    // Three passes - three formations, as codes of a lookup.
     let formation = |indexable: IndexableElement| DiscreteProperty {
         uuid: "77777777-7777-7777-7777-777777777777".to_string(),
         indexable_element: indexable,
@@ -240,7 +240,7 @@ fn a_frames_intervals_attach_onto_its_nodes() {
     let (found, notes) = scene::attributes_for(&object, &[&property], &Wellsite);
     assert_eq!(found.len(), 1, "attached, not refused: {notes:?}");
     assert_eq!(found[0].scope, AttributeScope::Points);
-    // Each node takes the interval it opens, the deepest the one it closes —
+    // Each node takes the interval it opens, the deepest the one it closes -
     // and every value came from the file: no mean anywhere.
     assert_eq!(found[0].values, vec![4.0, 7.0, 9.0, 9.0]);
     assert!(
@@ -260,7 +260,7 @@ fn a_frames_intervals_attach_onto_its_nodes() {
 }
 
 // ---------------------------------------------------------------------------
-// A frame's head portion — MD 0 to its first node, never stated by any
+// A frame's head portion - MD 0 to its first node, never stated by any
 // object (seen on a SIGEOL import).
 
 fn frame_from(mds: Vec<f64>) -> WellboreFrameRepresentation {
@@ -282,7 +282,7 @@ fn frame_from(mds: Vec<f64>) -> WellboreFrameRepresentation {
 /// The vertical case, matching `BSS000NNHD`: a trajectory with only a datum
 /// (no `Geometry`), a frame whose first node is below the wellhead. The head
 /// portion is the straight segment `Anchor::at` already draws for the rest of
-/// this file — same formula, so the seam at the first node cannot show.
+/// this file - same formula, so the seam at the first node cannot show.
 #[test]
 fn a_frames_head_portion_runs_from_the_datum_to_its_first_node() {
     let frame = frame_from(vec![10.0, 20.0, 30.0]);
@@ -354,7 +354,7 @@ fn an_unreadable_datum_is_refused_by_name() {
 /// rather than a straight guess, sampled with the exact reader `frame` uses
 /// for its own nodes (`Line::at`), so the two never disagree at the seam.
 ///
-/// `LineKindIndex` 1 — linear spline — over two control points at
+/// `LineKindIndex` 1 - linear spline - over two control points at
 /// `(1000, 2000, 37.73)` (MD 0) and `(1010, 2000, -62.27)` (MD 100), so a
 /// point at any MD is an exact linear interpolation the test can compute by
 /// hand.

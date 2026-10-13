@@ -1,22 +1,22 @@
-//! A WITSML `ChannelSet` whose rows are a dataset of an HDF5 file — **an
+//! A WITSML `ChannelSet` whose rows are a dataset of an HDF5 file - **an
 //! extension beyond WITSML 2.1** (ADR-0013),
 //! read by `channel_set::read_with` through an [`ArraySource`].
 //!
 //! What is held, each by a test that fails when it is broken:
 //!
-//! - **the two forms read the same series** — the rows the test writes inline
+//! - **the two forms read the same series** - the rows the test writes inline
 //!   and the same rows as a `[rows, indexes + channels]` dataset, `NaN` where
 //!   inline writes `null`, compared to each other **and** to the test's own
 //!   values (a reader agreeing with itself proves nothing);
 //! - **the form is told by syntax**: `FileUri` beside an inline blob stays the
-//!   standard's form — WITSML TRG v2.1 §7.2 p. 146, *"If this field is
-//!   non-null, then the data field is ignored"* — and only an absolute path
+//!   standard's form - WITSML TRG v2.1 §7.2 p. 146, *"If this field is
+//!   non-null, then the data field is ignored"* - and only an absolute path
 //!   (`/…`, which no JSON text begins with, RFC 8259 §2) is a dataset;
 //! - **the location is the storage's**: `energyml_storage::array::locate`
 //!   finds the dataset form and nothing else, so a cut or an import carries it;
 //! - **each refusal by its variant**: no source, no dataset, no backend (a
 //!   missing capability, never an empty series), a shape that is not the rows,
-//!   a column a number cannot hold — the last one before anything is read.
+//!   a column a number cannot hold - the last one before anything is read.
 //!
 //! The sources here are the test's: a map of datasets, and one that answers
 //! as a build without HDF5 does. The same reading through a real `.h5` is in
@@ -38,7 +38,7 @@ use energyml_storage::{
 use energyml_witsml_2_1 as witsml;
 
 // ---------------------------------------------------------------------------
-// Building by hand — the form from the schema, the values the test's own
+// Building by hand - the form from the schema, the values the test's own
 // ---------------------------------------------------------------------------
 
 fn citation(title: &str) -> eml::Citation {
@@ -114,7 +114,7 @@ fn set_with(
     }
 }
 
-/// MD, then T (double, degC), P (double, bar), N (long) — in that order.
+/// MD, then T (double, degC), P (double, bar), N (long) - in that order.
 fn columns() -> Vec<witsml::AnyChannel> {
     vec![
         channel(T_CHANNEL, "T", witsml::ChannelDataKind::Double, "degC", md()),
@@ -178,8 +178,8 @@ fn dataset() -> ArrayData {
 // Two sources: a map of datasets, and a build without HDF5
 // ---------------------------------------------------------------------------
 
-/// Datasets by `(file, path)`. It locates with the **storage's** locator — the
-/// one a store uses — and counts its reads.
+/// Datasets by `(file, path)`. It locates with the **storage's** locator - the
+/// one a store uses - and counts its reads.
 #[derive(Default)]
 struct Datasets {
     held: BTreeMap<(String, String), ArrayData>,
@@ -301,7 +301,7 @@ fn the_rows_inline_and_in_a_dataset_read_as_the_same_series() {
     let referenced = channel_set::read_with(&in_file(FILE, PATH), &source).expect("the dataset reads");
     assert_eq!(source.reads.get(), 1, "one read of the dataset");
 
-    // Against each other — through the JSON a front end receives, where `NaN`
+    // Against each other - through the JSON a front end receives, where `NaN`
     // compares as `null`…
     assert_eq!(written.to_json(), referenced.to_json());
     // …and against the test's own rows, which neither reader wrote.

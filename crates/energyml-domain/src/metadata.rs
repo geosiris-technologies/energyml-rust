@@ -3,7 +3,7 @@
 //! # What this is for
 //!
 //! An exported surface needs to carry more than triangles: a title, a uuid, a
-//! content type, and — the part that actually costs something — values that
+//! content type, and - the part that actually costs something - values that
 //! live in *other objects*. The feature name of a horizon is three objects
 //! away: the representation names an interpretation, the interpretation names a
 //! feature, and the name a person recognises is on the third.
@@ -28,7 +28,7 @@
 //! step:
 //!
 //! 1. if the current object **has** the field, use it;
-//! 2. otherwise, if the current object is a reference — it carries a uuid —
+//! 2. otherwise, if the current object is a reference - it carries a uuid -
 //!    resolve it through the store and look for the field on the target.
 //!
 //! Order matters, and this is the useful way round. A `DataObjectReference`
@@ -42,7 +42,7 @@
 //!
 //! `uuid`, `uri`, `contentType`, `qualifiedType` and `title` are computed from
 //! the object's identity rather than read from a field, and work at any point
-//! in a path — including after crossing a reference. They are what an export
+//! in a path - including after crossing a reference. They are what an export
 //! usually wants and what the XML does not directly hold.
 //!
 //! # Nothing found is not an error
@@ -51,7 +51,7 @@
 //! deliberate: a spec is written once and run over a whole package, where some
 //! objects have an interpretation and some do not, and failing the export
 //! because one surface lacks a feature would make the feature unusable. What a
-//! caller can still see is [`Metadata::misses`] — every key that found nothing,
+//! caller can still see is [`Metadata::misses`] - every key that found nothing,
 //! so a spec with a typo in it is visible rather than silently empty.
 
 use std::collections::BTreeMap;
@@ -65,7 +65,7 @@ use crate::source::ObjectSource;
 
 /// Which keys to collect, and where each comes from.
 ///
-/// Ordered, so the output of an export is stable between runs — a diff of two
+/// Ordered, so the output of an export is stable between runs - a diff of two
 /// exports should show what changed in the data, not a reshuffle of keys.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Spec {
@@ -129,7 +129,7 @@ impl Spec {
     /// ```
     ///
     /// Key order is kept as written, which `serde_json::Map` does not do by
-    /// default — so the object is walked as raw text rather than deserialized
+    /// default - so the object is walked as raw text rather than deserialized
     /// into a map. A spec is a human-written file and its order is a choice.
     pub fn from_json(text: &str) -> Result<Self> {
         let value: serde_json::Value = serde_json::from_str(text)
@@ -161,7 +161,7 @@ impl Spec {
         for (key, path) in &self.entries {
             // Every key of the spec goes into `order`, found or not. A key that
             // resolved to nothing is still something the caller **asked for**,
-            // and a format with a null — GeoJSON — should say so rather than
+            // and a format with a null - GeoJSON - should say so rather than
             // drop the column. See [`Metadata::entries`].
             if !order.iter().any(|existing| existing == key) {
                 order.push(key.clone());
@@ -243,7 +243,7 @@ impl Metadata {
 
     /// The keys that found nothing.
     ///
-    /// Not an error — see the module documentation — but worth showing, because
+    /// Not an error - see the module documentation - but worth showing, because
     /// a mistyped path and a legitimately absent value look identical in the
     /// output and only one of them is worth fixing.
     pub fn misses(&self) -> &[String] {
@@ -254,7 +254,7 @@ impl Metadata {
     pub fn insert(&mut self, key: impl Into<String>, value: impl Into<String>) {
         let key = key.into();
         // `order` now holds keys that found nothing too, so membership is what
-        // decides — not whether a value was already there.
+        // decides - not whether a value was already there.
         if !self.order.contains(&key) {
             self.order.push(key.clone());
         }
@@ -264,20 +264,20 @@ impl Metadata {
 
 /// Follow one path from an object, crossing references as needed.
 ///
-/// `None` when any step leads nowhere — see the module documentation for why
+/// `None` when any step leads nowhere - see the module documentation for why
 /// that is a result rather than an error.
 pub fn value_at(object: &dyn Reflect, path: &str, source: &dyn ObjectSource) -> Option<String> {
     let segments = path::parse(path).ok()?;
     walk(object, &segments, source, 0, Goal::Text)
 }
 
-/// The `type_key` of the **reference** a path ends on — same walk as
+/// The `type_key` of the **reference** a path ends on - same walk as
 /// [`value_at`] (crossings and version respellings included), different last
 /// step: instead of rendering the final object as its uuid, read which
 /// concept its reference names.
 ///
 /// This is what lets a business rule say *the interpreted feature of the
-/// represented interpretation is a `SeismicLatticeFeature`* — a path that
+/// represented interpretation is a `SeismicLatticeFeature`* - a path that
 /// crosses one reference and ends on another (`energyml_domain::rules`,
 /// BRT4/BRT5's condition). `None` when the path does not end on a readable
 /// reference.
@@ -289,7 +289,7 @@ pub fn target_key_at(object: &dyn Reflect, path: &str, source: &dyn ObjectSource
 /// What the last step of a walk should yield.
 #[derive(Clone, Copy)]
 enum Goal {
-    /// The lexical value — a scalar as text, a final object as its uuid.
+    /// The lexical value - a scalar as text, a final object as its uuid.
     Text,
     /// The `type_key` the final reference names. A path ending on a scalar
     /// yields nothing: a number is not a reference.
@@ -329,7 +329,7 @@ fn walk(
             Goal::TargetKey => None,
         },
         // A path that stops on an object: its identity is the only sensible
-        // rendering — or, for a rule, the concept its reference names.
+        // rendering - or, for a rule, the concept its reference names.
         Some(Step::Object(child)) if last => match goal {
             Goal::Text => identity_value(child, "uuid"),
             Goal::TargetKey => identity::key_of_reflect(child).map(|key| key.type_key().to_owned()),
@@ -339,7 +339,7 @@ fn walk(
         // number.
         Some(Step::Value(_)) => None,
         // Not a field here. If this object is a reference, the field may be on
-        // what it points at — the whole reason this function exists.
+        // what it points at - the whole reason this function exists.
         None => {
             identity::uuid_of_reflect(object).filter(|u| !u.is_empty())?;
             // By the full identity the reference carries, version included.
@@ -356,8 +356,8 @@ enum Step<'a> {
 
 /// Elements the releases spell differently, grouped by what they mean.
 ///
-/// The same rule the rest of the workspace follows — `energyml-geometry` has
-/// `INTERPRETS`, `energyml-domain::color` has its own list — brought here
+/// The same rule the rest of the workspace follows - `energyml-geometry` has
+/// `INTERPRETS`, `energyml-domain::color` has its own list - brought here
 /// because a path is written by a person, once, and then run against packages
 /// of every release. Without this, `RepresentedInterpretation.…` finds nothing
 /// on a resqml 2.2 file and `RepresentedObject.…` finds nothing on a 2.0.1 one,
@@ -365,7 +365,7 @@ enum Step<'a> {
 ///
 /// It bit the shipped spec: [`Spec::standard`] asks for
 /// `RepresentedInterpretation.uuid`, which on every 2.2 package in the corpus
-/// resolved to nothing at all — quietly, since a path that finds nothing is a
+/// resolved to nothing at all - quietly, since a path that finds nothing is a
 /// result and not an error.
 const SYNONYMS: &[&[&str]] = &[
     &["RepresentedInterpretation", "RepresentedObject"],
@@ -403,13 +403,13 @@ fn field_any_spelling<'a>(object: &'a dyn Reflect, name: &str) -> Option<FieldVa
 }
 
 /// Whether the path names something this object **declares** and that holds
-/// nothing — an association the model allows and this document left out.
+/// nothing - an association the model allows and this document left out.
 ///
 /// The distinction it exists for: a field that is absent and a path that
 /// names no field at all are different news. The first is a document being
 /// terse (and whether the schema required it is `Validate`'s business); the
 /// second is a mistake in whoever wrote the path. Anything reasoning over
-/// paths — a business rule, a metadata spec — needs to tell them apart, and
+/// paths - a business rule, a metadata spec - needs to tell them apart, and
 /// it cannot do that from a `None`.
 ///
 /// Version spellings are followed here too, which is the whole reason this
@@ -428,7 +428,7 @@ pub fn absent_at(object: &dyn Reflect, path: &str) -> bool {
             Some(FieldValue::Null) => return true,
             Some(FieldValue::List(items)) if items.is_empty() => return true,
             Some(FieldValue::Object(child)) if !last => current = child,
-            // Declared and holding something — nothing absent here.
+            // Declared and holding something - nothing absent here.
             Some(_) => return false,
             // Not a field of this type under any spelling: not absence.
             None => return false,
@@ -444,7 +444,7 @@ pub fn absent_at(object: &dyn Reflect, path: &str) -> bool {
 /// right nearly always and wrong in one case: when two releases disagree about
 /// what an element may *hold*, one statement per release is two rules, and each
 /// has to be able to say which spelling it is about. Without this,
-/// `RepresentedInterpretation` — RESQML 2.0.1's stricter typing — would judge
+/// `RepresentedInterpretation` - RESQML 2.0.1's stricter typing - would judge
 /// every 2.2 package through the synonym and report as a violation exactly what
 /// 2.2 added.
 ///
@@ -474,7 +474,7 @@ fn step<'a>(object: &'a dyn Reflect, name: &str, index: Option<usize>) -> Option
     }
 }
 
-/// `FieldValue` is not `Clone` — it borrows — but the two variants that matter
+/// `FieldValue` is not `Clone` - it borrows - but the two variants that matter
 /// here are a scalar and an object reference, both of which are copyable.
 fn copy_of<'a>(item: &FieldValue<'a>) -> FieldValue<'a> {
     match item {

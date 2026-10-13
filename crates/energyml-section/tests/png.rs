@@ -1,5 +1,5 @@
 //! The PNG export (`png::render`): the SVG rasterised with the embedded font,
-//! or — without the `png` feature — a refusal that says how to get it.
+//! or - without the `png` feature - a refusal that says how to get it.
 
 use energyml_section::model::{Item, SectionKey, Side, Target, View};
 use energyml_section::png;

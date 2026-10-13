@@ -1,9 +1,9 @@
-//! `clip` — a shape cut by rings: what lies outside `outer`, or inside one of
+//! `clip` - a shape cut by rings: what lies outside `outer`, or inside one of
 //! the `inner` rings, goes.
 //!
 //! The need: an operation that applies inner and outer rings to point sets,
 //! surfaces and so on, which avoids modifying the other
-//! operations — the rings `interpolate` reads for MBA are one operation's
+//! operations - the rings `interpolate` reads for MBA are one operation's
 //! own; this one cuts **any** shape, after whichever operation made it.
 //!
 //! # What a cut does, by kind
@@ -12,7 +12,7 @@
 //! a cloud loses its nodes, a line is cut at them, a surface loses the
 //! triangles that name one. **The cut follows the nodes, not the ring**: a
 //! triangle straddling the ring goes whole, and no node is added on the ring's
-//! edge — the boundary of the result is the mesh's own, said in the plan.
+//! edge - the boundary of the result is the mesh's own, said in the plan.
 //!
 //! A **2D grid keeps its lattice**: a cut node becomes a hole (`NaN`), the
 //! grid's way of having no node there (`grid::write` counts and says them).
@@ -27,7 +27,7 @@
 //! - a shape and a ring that name two frames: their numbers do not compare;
 //! - nothing cut: the result would be the shape itself, under a new uuid;
 //! - everything cut: nothing would be left to write;
-//! - a volume, or patches of several kinds — what `transform` refuses to write.
+//! - a volume, or patches of several kinds - what `transform` refuses to write.
 //!
 //! # References
 //!
@@ -53,7 +53,7 @@ pub struct Clip;
 /// What `clip` is told.
 #[derive(Debug, Params)]
 pub struct ClipParams {
-    /// The frame, what is represented, the naming — for the writer of the result.
+    /// The frame, what is represented, the naming - for the writer of the result.
     #[param(flatten)]
     pub written: Written,
 }
@@ -61,12 +61,12 @@ pub struct ClipParams {
 /// What `clip` takes.
 #[derive(Debug, Inputs)]
 pub struct ClipInputs {
-    /// the shape to cut — a cloud, polylines, a triangulated surface or a 2D grid
+    /// the shape to cut - a cloud, polylines, a triangulated surface or a 2D grid
     pub shape: Shape,
     /// keeps only what lies inside this ring
     #[input(topology = "polylines")]
     pub outer: Option<Shape>,
-    /// cut a hole each — what lies inside one of them goes
+    /// cut a hole each - what lies inside one of them goes
     #[input(topology = "polylines")]
     pub inner: Vec<Shape>,
 }
@@ -179,7 +179,7 @@ impl Operation for Clip {
     fn about(&self) -> About {
         About {
             name: "clip",
-            describe: "a shape cut by rings — what lies outside the outer ring or inside an inner one goes: a cloud loses those nodes, a line is cut, a surface loses the triangles that name one, a 2D grid gets holes",
+            describe: "a shape cut by rings - what lies outside the outer ring or inside an inner one goes: a cloud loses those nodes, a line is cut, a surface loses the triangles that name one, a 2D grid gets holes",
             category: Category::Geometry,
             makes: &[
                 "resqml22.PointSetRepresentation",
@@ -207,7 +207,7 @@ impl Operation for Clip {
 
     fn plan(&self, inputs: ClipInputs, params: ClipParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
         // Refused here and not in `check`: each ring is optional on its own,
-        // and only the pair says « at least one » — which no slot can declare.
+        // and only the pair says « at least one » - which no slot can declare.
         if inputs.outer.is_none() && inputs.inner.is_empty() {
             return Err(Refusal::on(
                 "outer",
@@ -222,7 +222,7 @@ impl Operation for Clip {
             return Err(Refusal::on(
                 "shape",
                 format!(
-                    "every node of `{}` lies inside `outer` and outside every `inner`: nothing to cut — the result would be the shape itself",
+                    "every node of `{}` lies inside `outer` and outside every `inner`: nothing to cut - the result would be the shape itself",
                     title_of(shape)
                 ),
             ));

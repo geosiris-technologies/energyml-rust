@@ -1,4 +1,4 @@
-//! The colour of an object, **one rule for every face** — the walks that
+//! The colour of an object, **one rule for every face** - the walks that
 //! a WebAssembly front end used to keep for itself (the inheritance-resolution order), now held by the [`Cache`].
 //!
 //! All the deciding is `energyml_domain::color_inherit` (the order) over
@@ -7,7 +7,7 @@
 //! package index. Nothing here knows a rank.
 //!
 //! Before the cache existed the front end answered by those walks and the command line, the
-//! scene's colour ramps and `well_strata` by `Cascade::resolve` — a shorter
+//! scene's colour ramps and `well_strata` by `Cascade::resolve` - a shorter
 //! order that ignores the collections and the model: **two colour rules
 //! depending on the face** (ADR-0009). The command line now asks
 //! [`Cache::decision`] and [`of_package`], the front end asks the same.
@@ -17,7 +17,7 @@
 //! A `ColourSlot`, beside the package index: the walk of each object asked,
 //! and the merged `GraphicalInformationSet`. Both are exact **for the index and
 //! the store** because every question first brings the index up to date and
-//! then drops what the update disturbed (`IndexSlot::take_disturbed`) — the
+//! then drops what the update disturbed (`IndexSlot::take_disturbed`) - the
 //! walks that looked at an object that changed, or that gained or lost a
 //! reference, and the walks of the objects an entry of the set decorated
 //! differently. With the layer off the slot is a fresh one, dropped after the
@@ -89,7 +89,7 @@ fn walk_key(store: &EpcStore, name: &str) -> Result<String, Error> {
 #[derive(Default)]
 pub(crate) struct ColourSlot {
     cache: ColourCache,
-    /// The package's `GraphicalInformationSet`s read as one — `None` when it has
+    /// The package's `GraphicalInformationSet`s read as one - `None` when it has
     /// none, once `read` is true.
     set: Option<GraphicalSet>,
     /// The uuids of the sets that were read.
@@ -124,7 +124,7 @@ impl Default for Options {
 }
 
 /// Every `GraphicalInformationSet` of the package, read, with its (lowercase)
-/// uuid — what `energyml_domain::well_strata` asks all of.
+/// uuid - what `energyml_domain::well_strata` asks all of.
 pub fn graphical_sets(store: &EpcStore) -> Result<Vec<(String, GraphicalSet)>, Error> {
     let mut sets = Vec::new();
     for summary in store.resources() {
@@ -141,14 +141,14 @@ pub fn graphical_sets(store: &EpcStore) -> Result<Vec<(String, GraphicalSet)>, E
 }
 
 /// The package's sets read as **one** (`GraphicalSet::merged`, in package
-/// order — the first alone hid, on Lutetia, the chart's colours behind the
+/// order - the first alone hid, on Lutetia, the chart's colours behind the
 /// strata table's set), or `None` when it has none.
 pub fn graphical_set(store: &EpcStore) -> Result<Option<GraphicalSet>, Error> {
     let sets = graphical_sets(store)?;
     Ok((!sets.is_empty()).then(|| GraphicalSet::merged(sets.into_iter().map(|(_, set)| set))))
 }
 
-/// A property's kind then the kind's parents, nearest first — because a colour
+/// A property's kind then the kind's parents, nearest first - because a colour
 /// set on `length` applies to every kind derived from it, and that inheritance
 /// is most of the point of colouring by kind at all. Empty when the property
 /// states no kind or the kind does not resolve.
@@ -240,7 +240,7 @@ fn settle(
     Ok(())
 }
 
-/// [`Cache::decision`] over an index the caller already holds — what a loop
+/// [`Cache::decision`] over an index the caller already holds - what a loop
 /// over many objects asks, so that a cache that keeps nothing builds its index
 /// once for the loop and not once per object.
 fn decide_in(
@@ -274,14 +274,14 @@ impl Cache {
     /// The ladders of `rows`, in order, **from the walks the cache keeps**: one
     /// walker for all of them, the walk of an object done once, a target the
     /// tiers already read does not answer resuming it. `None` when the package
-    /// holds no `GraphicalInformationSet` — the caller answers `null` per row.
+    /// holds no `GraphicalInformationSet` - the caller answers `null` per row.
     pub fn ladders(&self, store: &EpcStore, rows: &[Row<'_>]) -> Result<Option<Vec<Ladder>>, Error> {
         let mut fresh = ColourSlot::default();
         let mut held = self.colours.try_borrow_mut();
         // A question asked while another is being answered finds the slot held:
         // it answers from a slot of its own rather than panic (as
         // `IndexSlot::with`). Only the real slot reads the index's account of
-        // what was disturbed — a throwaway one must not eat it.
+        // what was disturbed - a throwaway one must not eat it.
         let (slot, kept): (&mut ColourSlot, bool) = match held.as_deref_mut() {
             Ok(slot) if self.layers().colours => (slot, true),
             _ => (&mut fresh, false),
@@ -377,15 +377,15 @@ impl Cache {
         Ok(out)
     }
 
-    /// **The colour rule, once**: what one object — or one property of it —
+    /// **The colour rule, once**: what one object - or one property of it -
     /// inherits, by the inheritance-resolution order: the object, its
     /// collections, its parents and theirs, then the model; for a property, its
     /// kind and the kind's parents and nothing beyond. The answer carries its
     /// level; the notes of the walk join the decision's. `None` means no level
-    /// answered — an answer, not a failure: the standard defines no default
+    /// answered - an answer, not a failure: the standard defines no default
     /// colour.
     ///
-    /// `representation` is a **uuid** — an entry's target is one, and the walk
+    /// `representation` is a **uuid** - an entry's target is one, and the walk
     /// up to the interpretation and the feature yields them; passing the uri
     /// (which the front end once did) meant a colour set on the
     /// representation itself was never found. A caller that holds the uri asks
@@ -422,7 +422,7 @@ impl Cache {
         self.decision(store, set, &key, property, chain, options)
     }
 
-    /// What the colour walks did so far — walks begun and dropped, tiers read,
+    /// What the colour walks did so far - walks begun and dropped, tiers read,
     /// objects read. **Work, not time**: what a test asserts to say a walk was
     /// not done twice, and what an invalidation cost.
     pub fn colour_walk_stats(&self) -> Stats {
@@ -432,7 +432,7 @@ impl Cache {
             .unwrap_or_default()
     }
 
-    /// Whether the cache holds the walk of this object — for the tests of the
+    /// Whether the cache holds the walk of this object - for the tests of the
     /// invalidation, which say what was thrown away and what was kept.
     #[doc(hidden)]
     pub fn colour_walk_held(&self, uuid: &str) -> bool {
@@ -443,7 +443,7 @@ impl Cache {
     }
 }
 
-/// A cache and the store it is the cache of — what the scene asks its colours
+/// A cache and the store it is the cache of - what the scene asks its colours
 /// of (`energyml_geometry::scene::Request::colours`).
 pub struct Colouring<'a> {
     /// The cache.
@@ -503,13 +503,13 @@ pub struct Report {
     pub notes: Vec<String>,
     /// Every representation and property asked, in package order.
     pub rows: Vec<Coloured>,
-    /// How many of them have a colour — the count a test can assert, so that
+    /// How many of them have a colour - the count a test can assert, so that
     /// an empty answer does not pass for a true one.
     pub coloured: usize,
 }
 
 /// What every representation and every property of the package inherits, by
-/// [`Cache::decision`] — **what `energyml colors` prints**, and what the front end's
+/// [`Cache::decision`] - **what `energyml colors` prints**, and what the front end's
 /// `colour_of` answers object by object.
 ///
 /// A property is walked through its own chain (its kind and the kind's

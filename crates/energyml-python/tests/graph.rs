@@ -2,7 +2,7 @@
 //!
 //! Each check confronts one direction with the other: what an object *says* it
 //! points at, against what a scan of every object says points back. A graph
-//! that agreed with itself would prove nothing — these two are computed by
+//! that agreed with itself would prove nothing - these two are computed by
 //! different walks over different inputs.
 
 use std::path::PathBuf;
@@ -73,7 +73,7 @@ fn an_object_is_never_its_own_dependent() {
 fn a_reference_into_nothing_is_said_to_be_absent() {
     let Some(package) = package() else { return };
 
-    // This corpus package names objects it does not hold — the save says so in
+    // This corpus package names objects it does not hold - the save says so in
     // its diagnostics. The point here is that `references` reports it as a
     // fact on the link rather than dropping the edge: an object that quietly
     // lost its dangling references would look self-contained.
@@ -148,7 +148,7 @@ fn what_is_missing_from_a_closure_is_named() {
     assert_eq!(needed.len(), all.len(), "asking for everything keeps everything");
 
     // Not asserted as a number: what matters is that each one is a uri and
-    // that a well-known property kind is **not** in the list — the mistake
+    // that a well-known property kind is **not** in the list - the mistake
     // this repository has already made once, where four references to the
     // Energistics catalogue were reported as dangling.
     for one in &missing {

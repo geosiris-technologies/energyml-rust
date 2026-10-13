@@ -10,34 +10,34 @@
 //!
 //! - a **triangulated surface** has an exact boundary: the edges that belong
 //!   to one triangle only, chained into closed loops. A surface with a hole
-//!   has two loops, and both come out — which is the outer one is a
+//!   has two loops, and both come out - which is the outer one is a
 //!   question of area, answered by the caller if it cares;
-//! - anything else — a point cloud, a set of polylines — has no boundary of
+//! - anything else - a point cloud, a set of polylines - has no boundary of
 //!   its own, and what can honestly be drawn around it is its **convex hull**
 //!   in plan view. It is not the same thing, and the caller is told which it
 //!   got so it can say so.
 //!
 //! # A boundary that is not a set of simple loops is refused
 //!
-//! A node with three boundary edges — two surfaces touching at a corner, a
-//! sliver folded on itself — has no unambiguous loop through it. Choosing one
+//! A node with three boundary edges - two surfaces touching at a corner, a
+//! sliver folded on itself - has no unambiguous loop through it. Choosing one
 //! would draw a contour that looks right and is not; the refusal names the
 //! node so that somebody can look at it.
 //!
 //! # Simplification drops what does not turn
 //!
 //! A node strictly between its neighbours contributes nothing to the outline
-//! and is dropped when it lies within `tolerance` of the chord — `0` keeps
+//! and is dropped when it lies within `tolerance` of the chord - `0` keeps
 //! everything but the exactly collinear. Measured in the shape's own units, in
 //! 3D: a point that is collinear in plan and steps in Z is a corner.
 //!
-//! TODO(reference): verify — Andrew's monotone chain is named without a full citation; add the original reference once checked.
+//! TODO(reference): verify - Andrew's monotone chain is named without a full citation; add the original reference once checked.
 
 use std::collections::BTreeMap;
 
 use crate::Error;
 
-/// A closed loop of node indices — the first node is not repeated.
+/// A closed loop of node indices - the first node is not repeated.
 pub type Loop = Vec<u32>;
 
 /// The boundary loops of a triangulated surface, each closed, in the order
@@ -114,7 +114,7 @@ fn forward(directed: &BTreeMap<(u32, u32), (u32, u32)>, from: u32, neighbours: &
 
 /// The convex hull of the points in plan view (XY), counterclockwise, as
 /// indices into `points`. Andrew's monotone chain. Z is the contributing
-/// point's own — a hull is a plan view, and its corners have no depth of
+/// point's own - a hull is a plan view, and its corners have no depth of
 /// their own.
 pub fn hull_xy(points: &[[f64; 3]]) -> Result<Loop, Error> {
     let mut order: Vec<usize> = (0..points.len())
@@ -158,7 +158,7 @@ pub fn hull_xy(points: &[[f64; 3]]) -> Result<Loop, Error> {
 
 /// The same loop without the nodes that do not turn: a node within
 /// `tolerance` of the chord between its neighbours is dropped. Never below
-/// three nodes — a ring of two is an edge, not an outline.
+/// three nodes - a ring of two is an edge, not an outline.
 pub fn simplify(points: &[[f64; 3]], ring: &[u32], tolerance: f64) -> Loop {
     let tolerance = if tolerance.is_finite() && tolerance >= 0.0 {
         tolerance
@@ -197,7 +197,7 @@ pub fn simplify(points: &[[f64; 3]], ring: &[u32], tolerance: f64) -> Loop {
 }
 
 /// Whether to drop this node: only if it lies on the chord, and only while
-/// three would remain. One drop per pass at most in a row is not needed —
+/// three would remain. One drop per pass at most in a row is not needed -
 /// dropping two collinear neighbours in one pass is still correct, since each
 /// was tested against its original neighbours, and the loop repeats anyway.
 fn dropped_this_pass(dropped: &mut bool, on_chord: bool, room: bool) -> bool {
@@ -226,7 +226,7 @@ fn distance_to_chord(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> f64 {
     (cross[0] * cross[0] + cross[1] * cross[1] + cross[2] * cross[2]).sqrt() / ac_len
 }
 
-/// The signed area of a loop in plan view — positive counterclockwise. What
+/// The signed area of a loop in plan view - positive counterclockwise. What
 /// tells an outer loop (the largest magnitude) from a hole.
 pub fn area_xy(points: &[[f64; 3]], ring: &[u32]) -> f64 {
     let n = ring.len();

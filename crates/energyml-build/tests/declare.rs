@@ -1,4 +1,4 @@
-//! The declaration derived from types — (ADR 0017).
+//! The declaration derived from types - (ADR 0017).
 //! Every type here is declared **in the test**: a fake operation in
 //! the registry would be an entry the front end offers to somebody.
 //!
@@ -31,7 +31,7 @@ enum Kernel {
 struct Settings {
     /// the cell size
     ///
-    /// This second paragraph is for whoever reads the code — not a label.
+    /// This second paragraph is for whoever reads the code - not a label.
     #[param(min = 0.0, uom = "m")]
     cell_size: f64,
     /// how many neighbours
@@ -89,7 +89,7 @@ fn a_field_is_declared_by_its_type_its_doc_and_its_attributes() {
 #[test]
 fn the_default_value_is_the_suggestion_and_the_reading_of_the_absence() {
     // **One expression, two readers.** Settled or not, an absent field reads as
-    // its default — the value the form suggested.
+    // its default - the value the form suggested.
     let read = Settings::read(
         &Choices::new()
             .set("cellSize", 25.0)
@@ -222,7 +222,7 @@ fn a_union_is_read_by_its_case_and_what_is_not_of_the_case_does_not_exist() {
             model: Model::Spherical(Stated { sill: 3.0 })
         })
     );
-    // **Written back** — the inverse of the reading: the case's word, then its
+    // **Written back** - the inverse of the reading: the case's word, then its
     // own fields; an absent value left out.
     let kriged = Method::Kriging(Kriging {
         radius: Some(5.0),
@@ -250,7 +250,7 @@ fn a_union_is_read_by_its_case_and_what_is_not_of_the_case_does_not_exist() {
         .is_none()
     );
 
-    // Unsettled, an absent choice reads as the default case — and its own
+    // Unsettled, an absent choice reads as the default case - and its own
     // fields as theirs: the rule of a field's default, for a union.
     assert_eq!(
         Method::read(&Choices::new()).unwrap(),
@@ -358,7 +358,7 @@ fn a_multiple_slot_takes_its_pieces_in_the_order_of_their_rank() {
         [1.0, 2.0, 3.0]
     );
     // A piece named after nothing joins its one candidate slot, **after** the
-    // named ones — a writer takes every shape it is given.
+    // named ones - a writer takes every shape it is given.
     let bound = Many::bind(&bag.clone().with("Horizon", shape(4.0))).unwrap();
     assert_eq!(
         bound.surfaces.iter().map(z_of).collect::<Vec<_>>(),
@@ -370,8 +370,8 @@ fn a_multiple_slot_takes_its_pieces_in_the_order_of_their_rank() {
 
 #[test]
 fn a_piece_without_a_name_goes_to_the_only_slot_of_its_kind_and_otherwise_is_a_refusal() {
-    // The caller that names nothing — the CLI without `slot=`, a piece named by
-    // its title — and the older pairing convention, `object`.
+    // The caller that names nothing - the CLI without `slot=`, a piece named by
+    // its title - and the older pairing convention, `object`.
     let bag = Pieces::empty()
         .with("Horizon 1", shape(5.0))
         .with("object", known("Horizon 1"));
@@ -383,7 +383,7 @@ fn a_piece_without_a_name_goes_to_the_only_slot_of_its_kind_and_otherwise_is_a_r
     );
 
     // One **required** slot of that kind and an optional one: the unnamed
-    // piece is the samples — the CLI passes them so — and nothing becomes a
+    // piece is the samples - the CLI passes them so - and nothing becomes a
     // fault that was not named one.
     let bound = Samples::bind(
         &Pieces::empty()
@@ -393,7 +393,7 @@ fn a_piece_without_a_name_goes_to_the_only_slot_of_its_kind_and_otherwise_is_a_r
     .unwrap();
     assert_eq!(z_of(&bound.shape), 5.0);
     assert_eq!(bound.faults.iter().map(z_of).collect::<Vec<_>>(), [9.0]);
-    // And with no fault named, the unnamed samples are not **also** a fault —
+    // And with no fault named, the unnamed samples are not **also** a fault -
     // the case the first version of this test did not reach, and let a
     // looser rule through.
     let bound = Samples::bind(&Pieces::empty().with("Horizon 1", shape(5.0))).unwrap();

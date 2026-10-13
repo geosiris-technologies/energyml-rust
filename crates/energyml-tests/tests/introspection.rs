@@ -6,7 +6,7 @@
 //! 1. **What may go in this field?** For a field typed by an abstract type the
 //!    document chooses a concrete one with `xsi:type`, and the list of
 //!    candidates is spread across the substitution group.
-//! 2. **What may this value be?** For an enumeration, the declared values —
+//! 2. **What may this value be?** For an enumeration, the declared values -
 //!    and, for the `…Ext` ones, *any other string as well*. Nothing in a value
 //!    of that type says which of the two kinds it is, so a caller offering a
 //!    closed list where the schema allows free text silently blocks legitimate
@@ -84,7 +84,7 @@ fn a_closed_enumeration_offers_its_values_and_says_they_are_all() {
 #[test]
 fn an_open_enumeration_offers_its_values_and_says_a_string_is_allowed_too() {
     // The `…Ext` types. The declared values are a *suggestion list*, not a
-    // constraint — which is exactly what a form needs to know before it
+    // constraint - which is exactly what a form needs to know before it
     // decides between a dropdown and a combo box.
     let info = <energyml_eml_2_3::PropertyKind as EnergymlType>::type_info();
     let class = field(info, "QuantityClass");
@@ -166,8 +166,8 @@ fn the_two_kinds_of_enumeration_are_distinguishable_across_the_whole_model() {
                 if !ty.name.ends_with("Ext") {
                     // Worth collecting rather than asserting away: the `…Ext`
                     // convention is **not** the whole story. The union types
-                    // that fold in the legacy units — `MassPerVolumeUomWithLegacy`
-                    // and its kin — are open too, and a caller keying on the
+                    // that fold in the legacy units - `MassPerVolumeUomWithLegacy`
+                    // and its kin - are open too, and a caller keying on the
                     // name alone would offer a closed dropdown for them.
                     // Openness is a property of the type, which is exactly why
                     // it is a flag and not a naming rule.
@@ -204,7 +204,7 @@ fn the_two_kinds_of_enumeration_are_distinguishable_across_the_whole_model() {
 /// enumeration carries a `TypeInfo` like everything else. Every consumer read
 /// that as "this slot holds one object of this class": an editor offered
 /// *create a `ThrowKindExt`*, wrote `{}` into the field, and the JSON reader
-/// asked the registry for `resqml22.ThrowKindExt` — which is deliberately not
+/// asked the registry for `resqml22.ThrowKindExt` - which is deliberately not
 /// registered, since an enumeration is written as its lexical value and never
 /// as an object. The report was
 ///
@@ -241,7 +241,7 @@ fn an_enumeration_field_accepts_no_class() {
 }
 
 /// The other half of the same guarantee, one layer down: if an object reaches
-/// an enumeration slot anyway — by another page, by a hand-written document —
+/// an enumeration slot anyway - by another page, by a hand-written document -
 /// the refusal names the **shape**, not a registry entry.
 
 #[test]
@@ -287,7 +287,7 @@ fn an_object_in_an_enumeration_slot_is_refused_by_name() {
 // Reaching a type the registry does not index
 // ---------------------------------------------------------------------------
 
-/// `Registry::find_type` answers for the nested types too — which is most of
+/// `Registry::find_type` answers for the nested types too - which is most of
 /// them, and all of the ones an editor opens.
 ///
 /// This used to live in `energyml-cli`, so the command line could describe a
@@ -310,7 +310,7 @@ fn a_nested_type_is_reachable_by_name_and_by_qualified_type() {
         .expect("a nested type resolves by qualified type");
     assert_eq!(patch.name, "TrianglePatch");
 
-    // An enumeration — registered nowhere, and the case that started this.
+    // An enumeration - registered nowhere, and the case that started this.
     let enumeration = registry
         .find_type("resqml22.ThrowKindExt")
         .expect("an enumeration resolves even though it is not registered");
@@ -340,7 +340,7 @@ fn a_qualified_name_is_not_matched_as_a_bare_one() {
     let registry = energyml_schemas::all();
 
     // `TrianglePatch` exists in resqml 2.0.1 and 2.2. Asked for by qualified
-    // type, each must come back as itself — not as whichever the walk reached
+    // type, each must come back as itself - not as whichever the walk reached
     // first.
     for (asked, version) in [
         ("resqml22.TrianglePatch", "2.2"),
@@ -361,9 +361,9 @@ fn a_qualified_name_is_not_matched_as_a_bare_one() {
 /// The documentation dump covers the whole model, not just what the registry
 /// constructs.
 ///
-/// Enumerations and choices are deliberately absent from the registry — they
+/// Enumerations and choices are deliberately absent from the registry - they
 /// are written as lexical values or selected by `xsi:type`, never built by
-/// name — so a dump that iterated the registry alone shipped 3 345 structs
+/// name - so a dump that iterated the registry alone shipped 3 345 structs
 /// and **not one** of the vocabularies people actually look up. The closure
 /// walk is what fixes that, and this test is what keeps it fixed: each kind
 /// must be present, and the eml 2.3 release must hold open enumerations,
@@ -379,7 +379,7 @@ fn the_docs_dump_reaches_the_types_the_registry_does_not_construct() {
     for release in releases.as_array().into_iter().flatten() {
         // Runtime support is not a release: `AnyXml` carries no version, and
         // grouped naively it minted a one-type release called `eml-` in every
-        // index — the first thing a person testing `/docs` tripped over.
+        // index - the first thing a person testing `/docs` tripped over.
         assert!(
             release["package"].as_str().is_some_and(|p| !p.is_empty())
                 && release["version"].as_str().is_some_and(|v| !v.is_empty()),
@@ -407,7 +407,7 @@ fn the_docs_dump_reaches_the_types_the_registry_does_not_construct() {
     );
 
     // And a field's offer survives the trip: an enumeration field carries its
-    // values, an abstract field its concrete subtypes — the two answers a
+    // values, an abstract field its concrete subtypes - the two answers a
     // form, or an AI reading this file, needs.
     let a_field_with_values = releases
         .as_array()
@@ -421,7 +421,7 @@ fn the_docs_dump_reaches_the_types_the_registry_does_not_construct() {
 
 /// **A description names the key the JSON writes.** The front end's editor, the
 /// type documentation and the Python bridge described a field by
-/// `FieldInfo::json_name` — the XML name — while the JSON writer keys the text
+/// `FieldInfo::json_name` - the XML name - while the JSON writer keys the text
 /// of a simple content `_`. So every `*Measure` and `StringMeasure` was
 /// described as `Value` and written as `_`, and the editor opened on an empty
 /// field (the editor's user reported that the Value part looked empty and only
@@ -475,7 +475,7 @@ fn every_key_the_json_writes_is_a_name_the_description_announces() {
 /// **Nothing could see it**, and that is why this test exists. The value was
 /// still carried in `Other`, so a written document was byte-identical and the
 /// round-trip campaign over 425 real parts stayed green; and no code outside the
-/// generated crates matches on these variants — `units.rs` works from strings.
+/// generated crates matches on these variants - `units.rs` works from strings.
 /// The defect broke nothing. It only made every unit unvalidatable, and made the
 /// type say something untrue about the schema. Found on 07/09 by confronting a
 /// BRGM package with three other validators.
@@ -493,14 +493,14 @@ fn a_union_of_several_enumerations_keeps_them_all() {
             listed.len()
         );
     }
-    // And the legacy member is still there — a union adds, it does not replace.
+    // And the legacy member is still there - a union adds, it does not replace.
     assert!(
         listed.contains(&"1E6 bbl"),
         "the legacy units stay: a union is the sum of its members"
     );
     assert!(
         listed.len() > 1400,
-        "68 values is the legacy list alone — the sign of the 07/09 defect; found {}",
+        "68 values is the legacy list alone - the sign of the 07/09 defect; found {}",
         listed.len()
     );
 }
@@ -509,8 +509,8 @@ fn a_union_of_several_enumerations_keeps_them_all() {
 ///
 /// The widening member is `EnumExtensionPattern`, `<xs:pattern value=".*:.*"/>`:
 /// an authority and a name around a **mandatory colon**. Dropping it made *open*
-/// mean *anything*, so a `uom="unknown"` — which is in neither list and has no
-/// colon — passed here while the python tool, webstudio and Xerces all refused
+/// mean *anything*, so a `uom="unknown"` - which is in neither list and has no
+/// colon - passed here while the python tool, webstudio and Xerces all refused
 /// it.
 #[test]
 fn an_open_enumeration_still_refuses_free_text_of_the_wrong_shape() {

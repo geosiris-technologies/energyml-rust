@@ -328,8 +328,8 @@ fn init_str(f: &Field, value: TokenStream) -> TokenStream {
 /// `ObjectIdentity`, plus `ObjectIdentityMut` and `ObjectRef` where they apply.
 ///
 /// Only direct field access is generated here: three or four one-line methods
-/// that inline away. Everything derived from them — building a content type,
-/// walking references, comparing identities — lives in `energyml_core::identity`
+/// that inline away. Everything derived from them - building a content type,
+/// walking references, comparing identities - lives in `energyml_core::identity`
 /// and is compiled once for the whole workspace rather than per type.
 fn identity_impls(name: &Ident, c: &Container, fields: &[Field], roles: &Roles) -> TokenStream {
     if !roles.carries_identity(c) {
@@ -346,7 +346,7 @@ fn identity_impls(name: &Ident, c: &Container, fields: &[Field], roles: &Roles) 
     let uuid_expr = borrow_str(uuid_field);
 
     // A reference states its title directly; a top-level object keeps it in its
-    // Citation, whose own type differs per version — so that hop goes through
+    // Citation, whose own type differs per version - so that hop goes through
     // reflection, which is an index into a static array, not a name lookup.
     let title_expr = match (roles.title, roles.citation) {
         (Some(i), _) => borrow_str(&fields[i]),
@@ -649,7 +649,7 @@ fn type_info_impl(name: &Ident, c: &Container, fields: &[Field], roles: &Roles) 
         quote!(&[]),
         roles.expr(),
         // Every generated struct derives `Default`, so building an empty one
-        // needs nothing but the type — which is exactly what reflection could
+        // needs nothing but the type - which is exactly what reflection could
         // not name before this.
         quote!(::core::option::Option::Some(|| {
             ::std::boxed::Box::new(<#name as ::core::default::Default>::default())
@@ -823,7 +823,7 @@ fn xml_serialize_impl(name: &Ident, fields: &[Field]) -> TokenStream {
         });
 
     // A wildcard's prefixes were declared on an ancestor of the document it
-    // came from, so they are re-declared on the element that carries it — the
+    // came from, so they are re-declared on the element that carries it - the
     // content is written verbatim and would otherwise bind them to nothing.
     let any_attrs = fields.iter().filter(|f| f.binding == Binding::Any).map(|f| {
         let ident = &f.ident;
@@ -848,7 +848,7 @@ fn xml_serialize_impl(name: &Ident, fields: &[Field]) -> TokenStream {
         let xml_name = &f.xml_name;
         let ns = &f.ns;
         // An xsd:list is one element holding every value, so it is written
-        // once from the joined text — never one element per item.
+        // once from the joined text - never one element per item.
         if f.list {
             return quote! {
                 w.write_element(
@@ -942,8 +942,8 @@ fn xml_deserialize_impl(name: &Ident, fields: &[Field]) -> TokenStream {
         });
 
     // Group element fields by XML local name. A struct can legitimately have two
-    // children with the same local name in different namespaces — WITSML objects
-    // declare their own `witsml:Citation` next to the inherited `eml:Citation` —
+    // children with the same local name in different namespaces - WITSML objects
+    // declare their own `witsml:Citation` next to the inherited `eml:Citation` -
     // so those groups are disambiguated by the resolved namespace URI.
     let mut groups: Vec<(String, Vec<&Field>)> = Vec::new();
     for f in fields.iter().filter(|f| f.binding == Binding::Element) {

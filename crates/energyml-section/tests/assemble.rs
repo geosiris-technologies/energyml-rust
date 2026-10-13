@@ -252,7 +252,7 @@ fn of_two_frames_of_a_wellbore_the_one_that_knows_its_strata_is_kept() {
 }
 
 /// A member painted from the wellbore's frames (`borrowed`) has the stated
-/// frame's units on its own nodes, and can count more intervals than it — the
+/// frame's units on its own nodes, and can count more intervals than it - the
 /// frame that **states** them keeps the line all the same, whatever the
 /// order the members come in. What happened on Lutetia once the faces gave
 /// `frames_of` (03/10): the line went to a trajectory, then to the frame
@@ -691,7 +691,7 @@ fn bad_inputs_are_refused_before_anything_is_assembled() {
 }
 
 /// What the front end may fill is decided here: a horizon or a plain surface,
-/// triangulated or a 2D grid alike — never a fault, an IJK grid or a well. And
+/// triangulated or a 2D grid alike - never a fault, an IJK grid or a well. And
 /// a 2D grid is a `Surface`: it is cut in a line like a triangulated one, and
 /// `RowKind::Grid` is the IJK grid its doc says.
 #[test]

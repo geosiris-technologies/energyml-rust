@@ -1,10 +1,10 @@
-//! The colour cascade under the inheritance order — `energyml_domain::color_inherit`.
+//! The colour cascade under the inheritance order - `energyml_domain::color_inherit`.
 //!
 //! See ADR-0009. The
 //! packages are **built in memory** (the same pieces as `inherit.rs`, which
 //! holds the rank tests of the walk itself): what is tested here is what the
-//! colour adds to the walk — the level an answer is told by, the property's
-//! shorter order, the ladder's rungs — never a file.
+//! colour adds to the walk - the level an answer is told by, the property's
+//! shorter order, the ladder's rungs - never a file.
 //!
 //! The shape of the assertions is the design's: *the object, its collections, its
 //! parents, …, the model; a property climbs only to its kind*. A colour is
@@ -163,7 +163,7 @@ fn a_collection_answers_before_the_interpretation_and_says_so() {
 }
 
 /// Without a collection the parents answer, and the level is the type the
-/// package holds for the parent — an interpretation, then a feature — whatever
+/// package holds for the parent - an interpretation, then a feature - whatever
 /// the number of steps.
 ///
 /// To break it: name the level by the number of steps (the feature, at rank 5, two
@@ -200,7 +200,7 @@ fn the_parents_answer_at_the_level_of_their_type() {
     );
 }
 
-/// The model closes the walk — after the whole chain — and says so.
+/// The model closes the walk - after the whole chain - and says so.
 ///
 /// To break it: do not raise the level of a `Via::Model` step (it would say
 /// "feature").
@@ -219,7 +219,7 @@ fn the_model_answers_last_and_says_so() {
     assert_eq!(found.value.level, Level::Feature);
 }
 
-/// Nothing found is `None` — the front end keeps the hue of the uuid — and a colour
+/// Nothing found is `None` - the front end keeps the hue of the uuid - and a colour
 /// that sits on the model's collection is **said**, not applied.
 ///
 /// To break it: follow the model's collections (the project's hue would win).
@@ -244,7 +244,7 @@ fn nothing_found_is_none_and_a_project_colour_is_noted() {
     );
 }
 
-/// §2.2: a property goes to its kind and **stops** — a colour on its
+/// §2.2: a property goes to its kind and **stops** - a colour on its
 /// representation, interpretation or feature is not its colour (painting a
 /// property is a view). The old order fell through to the representation.
 ///
@@ -340,8 +340,8 @@ fn a_tie_is_kept_with_its_level() {
     assert_eq!(hex_of(&found.ties[0].value.paint), hex(10.0));
 }
 
-/// A member is paired with the collection of **its own** association — the
-/// `Collection` and `Dataobject[j]` of the same rank `i` — and an association
+/// A member is paired with the collection of **its own** association - the
+/// `Collection` and `Dataobject[j]` of the same rank `i` - and an association
 /// that names no collection makes no member.
 ///
 /// The membership filter of the paired paths, the one `inherit.rs` did not
@@ -496,7 +496,7 @@ fn the_ladder_puts_the_answering_collection_after_the_object() {
     );
 }
 
-/// A property's ladder is the property and its kinds — no representation
+/// A property's ladder is the property and its kinds - no representation
 /// rung, since the property does not inherit from it.
 ///
 /// To break it: keep the representation's rungs on a property's ladder.
@@ -547,9 +547,9 @@ fn with_inheritance_off_only_the_object_answers() {
 }
 
 /// **The whole order, one rung at a time.** One object carries every place a
-/// colour can sit — itself, a collection, a collection of that collection, its
+/// colour can sit - itself, a collection, a collection of that collection, its
 /// interpretation, a collection of the interpretation (and of that), its
-/// feature, a collection of the feature, the earth model — and the colour is
+/// feature, a collection of the feature, the earth model - and the colour is
 /// taken away from the winner until nothing is left. Each answer is the next
 /// rung of the ADR-0009 order, with its level and its rank: 1. directly on the
 /// object; 2. a collection that references the object; 2 bis. collections of
@@ -562,7 +562,7 @@ fn with_inheritance_off_only_the_object_answers() {
 /// different borehole, and this is the proof that the rungs are in that order.
 ///
 /// To break it: swap two ranks in `Walker::run` (the collection before the object,
-/// the interpretation before the nested collection, the model before the feature) —
+/// the interpretation before the nested collection, the model before the feature) -
 /// the walk that follows the winner's removal stops at the wrong rung.
 #[test]
 fn every_rung_answers_in_the_order_of_the_design() {
@@ -619,8 +619,8 @@ fn every_rung_answers_in_the_order_of_the_design() {
     assert!(inherited(&built, &painted(&[]), 1).resolution.is_none());
 }
 
-/// A collection that holds **the model** is the model's collection — rank 7,
-/// which the house leaves out (§2.1) — and the walk **says** so instead of
+/// A collection that holds **the model** is the model's collection - rank 7,
+/// which the house leaves out (§2.1) - and the walk **says** so instead of
 /// applying it. The same colour on the model itself does answer, at rank 6:
 /// that is the control, so the silence is the collection's and not the model's.
 ///

@@ -2,14 +2,14 @@
 //!
 //! `--lenient` started as a rule about **cardinality**: a required item that
 //! is absent gets its default and is reported. This suite is about the level
-//! above — values that are *there* and cannot be read:
+//! above - values that are *there* and cannot be read:
 //!
 //! | in the document | strict | lenient |
 //! |---|---|---|
 //! | `<SurfaceRole>banana</SurfaceRole>` on a closed enumeration | refuses | first variant, and the string is recorded |
 //! | `<Count>abc</Count>` where a number belongs | refuses | `0`, recorded |
 //! | `<IsClosed>yes</IsClosed>` | refuses | `false`, recorded |
-//! | `&nbsp;` — an entity nothing defines | refuses | U+FFFD, recorded |
+//! | `&nbsp;` - an entity nothing defines | refuses | U+FFFD, recorded |
 //! | `xsi:type` naming an unknown subtype **of a concrete base** | refuses | the base, recorded |
 //! | `xsi:type` naming an unknown subtype of a purely abstract one | refuses | **refuses** |
 //!
@@ -89,8 +89,8 @@ fn a_closed_enumeration_outside_its_list_keeps_the_string_it_could_not_use() {
     let repaired = one(&departures);
     assert_eq!(repaired.kind, "enumeration");
     assert_eq!(repaired.found, "banana");
-    // The variant cannot hold the string — a closed enumeration has no
-    // `Other(String)` — so the record is the only place it survives.
+    // The variant cannot hold the string - a closed enumeration has no
+    // `Other(String)` - so the record is the only place it survives.
     assert!(!repaired.used.is_empty());
     assert!(
         repaired.to_string().contains("banana") && repaired.to_string().contains(&repaired.used),
@@ -119,7 +119,7 @@ fn a_number_that_is_not_a_number_becomes_zero_and_says_so() {
 
 #[test]
 fn a_boolean_spelled_in_words_is_repaired() {
-    // XSD allows `true`, `false`, `1` and `0` — and nothing else. `yes` is a
+    // XSD allows `true`, `false`, `1` and `0` - and nothing else. `yes` is a
     // producer being helpful in the wrong direction.
     assert!(
         xml::from_xml_str::<bool>("<v>yes</v>").is_err(),
@@ -132,7 +132,7 @@ fn a_boolean_spelled_in_words_is_repaired() {
 #[test]
 fn an_entity_nothing_defines_becomes_the_replacement_character() {
     // This reader ignores DOCTYPE, so every named entity outside the five
-    // predefined ones arrives undefined — which is exactly what a document
+    // predefined ones arrives undefined - which is exactly what a document
     // carrying `&nbsp;` in a title does.
     let xml = part("<resqml:SurfaceRole>map</resqml:SurfaceRole>")
         .replace("a surface with a defect", "a surface&nbsp;with a defect");

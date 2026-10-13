@@ -1,4 +1,4 @@
-//! Where a collection came from — **named**, and nothing fetched.
+//! Where a collection came from - **named**, and nothing fetched.
 //!
 //! The use case: GeoJSON import should accept local files, but also external
 //! URLs.
@@ -6,22 +6,22 @@
 //! # Why the name is not a detail
 //!
 //! An import reads things from the name of what it was given. `sigeol-units`
-//! takes the **stage** from it — `GeologicUnit_Bartonien_pretty.json` →
-//! *Bartonien* — and that stage decides top from base for every surface of the
+//! takes the **stage** from it - `GeologicUnit_Bartonien_pretty.json` →
+//! *Bartonien* - and that stage decides top from base for every surface of the
 //! package ([`crate::sigeol::stage_of_file_name`]). A URL whose name came back
 //! as `download?id=42`, or as the whole address, would not merely look untidy:
 //! the operation would ask for a stage it could have read, and somebody would
 //! type the wrong one.
 //!
-//! So a URL is reduced to **the file it names** — the last path segment, with
+//! So a URL is reduced to **the file it names** - the last path segment, with
 //! the query string and the fragment removed and the percent-escapes undone.
 //!
 //! # And nothing is fetched here
 //!
 //! `energyml-build` has no I/O and keeps none (a parser and a vocabulary, no
 //! storage, no I/O). What this module decides is what
-//! a caller needs **before** fetching — whether the text is to be read off a
-//! disk or off a network, and what the result will be called — so that the CLI
+//! a caller needs **before** fetching - whether the text is to be read off a
+//! disk or off a network, and what the result will be called - so that the CLI
 //! and the front end ask the same question of the same code and cannot come to two
 //! answers about the same address.
 
@@ -47,7 +47,7 @@ impl Source {
 ///
 /// **Only `http` and `https`.** Not `file:`, which a path already covers and
 /// which two platforms spell differently; not `ftp:` or anything else, which no
-/// caller here can fetch — and a scheme accepted but not fetchable is a
+/// caller here can fetch - and a scheme accepted but not fetchable is a
 /// refusal that arrives one step too late, naming the network instead of the
 /// address. A Windows drive letter (`C:/data/x.json`) is a path, which is why the
 /// test is on the two schemes and not on *contains a colon*.
@@ -59,12 +59,12 @@ pub fn source_of(input: &str) -> Source {
     Source::File(input.to_string())
 }
 
-/// The name a source is known by — the file it names.
+/// The name a source is known by - the file it names.
 ///
 /// For a path, its last component. For a URL, the last **path** segment: the
 /// query and the fragment are dropped, and percent-escapes are undone so that
-/// `GeologicUnit_Lut%C3%A9tien.json` comes back as `GeologicUnit_Lutétien.json`
-/// — the accent matters, because the stage is compared without folding it
+/// `GeologicUnit_Lut%C3%A9tien.json` comes back as `GeologicUnit_Lutétien.json` -
+/// the accent matters, because the stage is compared without folding it
 /// ([`crate::sigeol::Unit::side_for`]).
 ///
 /// Falls back to the whole text when there is nothing better: an address ending
@@ -78,14 +78,14 @@ pub fn name_of(source: &Source) -> String {
             .unwrap_or(path)
             .to_string(),
         Source::Url(url) => {
-            // The order is the point: strip the fragment, then the query — a
+            // The order is the point: strip the fragment, then the query - a
             // fragment may contain a `?`, and cutting the query first would
             // leave half of it behind.
             let without_fragment = url.split('#').next().unwrap_or(url);
             let path = without_fragment.split('?').next().unwrap_or(without_fragment);
             // **The authority is cut off by position, not by looking at it.**
             // Everything before the first `/` after `://` is the host and its
-            // port — it names no file, and testing it for a colon instead let
+            // port - it names no file, and testing it for a colon instead let
             // `https://a.example/` answer *a.example*, which reads as a file
             // called after the server.
             let after_scheme = path.split_once("://").map(|(_, rest)| rest).unwrap_or(path);
@@ -138,7 +138,7 @@ mod tests {
     #[test]
     fn a_path_and_an_address_are_told_apart_by_their_scheme() {
         assert_eq!(source_of("data/x.geojson"), Source::File("data/x.geojson".into()));
-        // A Windows path has a colon and is not an address — which is why the
+        // A Windows path has a colon and is not an address - which is why the
         // test is on the scheme and not on *contains a colon*.
         assert_eq!(source_of("C:/data/x.json"), Source::File("C:/data/x.json".into()));
         assert_eq!(
@@ -149,7 +149,7 @@ mod tests {
             source_of("HTTP://a.example/x.json"),
             Source::Url("HTTP://a.example/x.json".into())
         );
-        // Not fetchable by any caller here, so it is a path and fails as one —
+        // Not fetchable by any caller here, so it is a path and fails as one -
         // rather than being accepted and refused a step later by the network.
         assert!(matches!(source_of("ftp://a.example/x.json"), Source::File(_)));
         assert!(matches!(source_of("file:///c:/x.json"), Source::File(_)));
@@ -169,7 +169,7 @@ mod tests {
                 .as_deref(),
             Some("Bartonien")
         );
-        // A token in the query would otherwise end up in the name — and in the
+        // A token in the query would otherwise end up in the name - and in the
         // activity that records it.
         assert_eq!(
             named("https://a.example/GeologicUnit_Lutétien.json?token=secret"),

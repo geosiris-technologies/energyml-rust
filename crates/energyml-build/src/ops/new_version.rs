@@ -1,4 +1,4 @@
-//! `new-version` — an object of the package copied under another
+//! `new-version` - an object of the package copied under another
 //! `objectVersion`: the same uuid, the same type, the same content, **a second
 //! entry** beside the first.
 //!
@@ -6,8 +6,8 @@
 //! holds one object in two versions (ADR 0003):
 //! a copy of an object with a different version.
 //! And the rule it exercises: accept the short uri when there is no conflict (or when an object
-//! has no version), and the form with the version when there is one
-//! — so when the object copied
+//! has no version), and the form with the version when there is one -
+//! so when the object copied
 //! declares no version, it keeps the short uri and the copy takes the form with
 //! its version; when it declares one, both take the form with theirs.
 //!
@@ -16,7 +16,7 @@
 //! It is not `edit-object`. That one rewrites an object under its own identity
 //! (a `put` that **replaces**) or copies it under a **new uuid**. This one keeps
 //! the uuid and changes the third part of the identity, and it is written
-//! through the one gate that adds a version — `EpcStore::put_as_new_version` — so
+//! through the one gate that adds a version - `EpcStore::put_as_new_version` - so
 //! that an ordinary write can never make a second version by accident. The plan
 //! says so with the role of the object ([`NEW_VERSION_ROLE`]); `apply` reads it.
 //!
@@ -26,12 +26,12 @@
 //! - an empty `version`;
 //! - a `version` the object already carries: the copy would be the object itself,
 //!   and the store refuses the exact identity twice;
-//! - an object whose JSON holds no place for a version — the refusal names the
+//! - an object whose JSON holds no place for a version - the refusal names the
 //!   two spellings looked for, `objectVersion` (eml 2.1 and later) and
 //!   `Citation.VersionString` (eml 2.0, where RESQML 2.0.1 keeps it).
 //!
-//! The copy keeps the object's **title** — every reference to the object holds a
-//! copy of it, and a title that moved would make each of them stale — and its
+//! The copy keeps the object's **title** - every reference to the object holds a
+//! copy of it, and a title that moved would make each of them stale - and its
 //! creation; the citation says it was edited (`LastUpdate`, `Editor`).
 
 use serde_json::{Value, json};
@@ -49,14 +49,14 @@ pub struct NewVersion;
 /// What `new-version` is told.
 #[derive(Debug, Params)]
 pub struct NewVersionParams {
-    /// the `objectVersion` the copy carries — another than the object's own
+    /// the `objectVersion` the copy carries - another than the object's own
     pub version: String,
 }
 
 /// What `new-version` takes.
 #[derive(Debug, Inputs)]
 pub struct NewVersionInputs {
-    /// the object to copy beside itself, a second entry of its uuid — of any type
+    /// the object to copy beside itself, a second entry of its uuid - of any type
     // (Not worded with the release vocabulary: `no_unfitness_names_a_release`
     // reads every refusal for it, and an objectVersion is not a release.)
     pub object: ObjectIn,
@@ -99,7 +99,7 @@ impl Operation for NewVersion {
     fn about(&self) -> About {
         About {
             name: "new-version",
-            describe: "an object of the package copied under another objectVersion — the same uuid and type, a second entry beside the first",
+            describe: "an object of the package copied under another objectVersion - the same uuid and type, a second entry beside the first",
             category: Category::Create,
             // Any type: the object's own.
             makes: &[],
@@ -125,7 +125,7 @@ impl Operation for NewVersion {
             Refusal::on(
                 "object",
                 format!(
-                    "`{}` arrived without its content — an object is copied whole, and only the package's reader hands it over",
+                    "`{}` arrived without its content - an object is copied whole, and only the package's reader hands it over",
                     reference.title
                 ),
             )

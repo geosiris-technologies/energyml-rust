@@ -1,5 +1,5 @@
-//! The three representation operations — `pointset`, `polylines`,
-//! `triangles` — on the two kinds of input they take: a shape already in a
+//! The three representation operations - `pointset`, `polylines`,
+//! `triangles` - on the two kinds of input they take: a shape already in a
 //! frame of the package, and a feature collection in its own system.
 //!
 //! What would have to break for each to go red is said on each.
@@ -18,7 +18,7 @@ fn when() -> When {
     }
 }
 
-/// The frame the shapes of these tests are in — a **compound**.
+/// The frame the shapes of these tests are in - a **compound**.
 ///
 /// It was a `LocalEngineering2dCrs` until 24/09, and every test here took it
 /// as a frame: a half of a system, with no vertical, named as a geometry's
@@ -180,7 +180,7 @@ fn a_feature_collection_becomes_a_point_set_with_its_own_crs_created() {
     let roles: Vec<&str> = plan.objects.iter().map(|o| o.role.as_str()).collect();
     // **The frame created is the compound over the projected system, and it is
     // what the geometry names.** Until 24/09 the roles were `crs`,
-    // `vertical-crs`, `representation`, and `crs` was the `ProjectedCrs` —
+    // `vertical-crs`, `representation`, and `crs` was the `ProjectedCrs` -
     // which this test pinned as the `LocalCrs`, against RESQML TRG 2.2 §3.1
     // p. 22, the vertical system referenced by nothing.
     assert_eq!(
@@ -203,7 +203,7 @@ fn a_feature_collection_becomes_a_point_set_with_its_own_crs_created() {
         geometry["LocalCrs"]["QualifiedType"],
         json!("eml23.LocalEngineeringCompoundCrs")
     );
-    // 3 + 5 positions, the ring's repeat included — a point set keeps every position.
+    // 3 + 5 positions, the ring's repeat included - a point set keeps every position.
     assert_eq!(plan.datasets[0].dimensions, vec![8, 3]);
     // Placed in metres: a Lambert-93 easting is six hundred thousand-odd.
     let x = match &plan.datasets[0].values {
@@ -239,7 +239,7 @@ fn a_feature_collection_against_a_crs_of_the_package_is_refused() {
 /// **This test said "refused" until 12/09.** A missing frame became what a wrong release already was:
 /// a condition of the **writing**, carried in `blocked`, never a refusal to
 /// compute. The shape comes out, the object is there with a stand-in reference,
-/// and `apply` is the only one to refuse — naming the two ways of giving a
+/// and `apply` is the only one to refuse - naming the two ways of giving a
 /// frame.
 #[test]
 fn a_shape_without_a_frame_is_blocked_by_name_not_refused() {
@@ -273,8 +273,8 @@ fn a_shape_without_a_frame_is_blocked_by_name_not_refused() {
 /// **A half of a system named as the frame blocks the writing, by its name.**
 ///
 /// A frame must be a whole system: `frame_in` took **any** reference, so a geometry
-/// could name a `VerticalCrs` — or a `LocalEngineering2dCrs`, which these very
-/// tests did — as its `LocalCrs`. Each half reads back perfectly well and
+/// could name a `VerticalCrs` - or a `LocalEngineering2dCrs`, which these very
+/// tests did - as its `LocalCrs`. Each half reads back perfectly well and
 /// places nothing whole: no horizontal, or no vertical. RESQML TRG 2.2 §3.1
 /// p. 22 associates the compound. Carried and not raised, like a CRS of
 /// another release: the geometry does not depend on the frame.
@@ -324,7 +324,7 @@ fn a_half_of_a_system_named_as_the_frame_blocks_the_writing_by_its_name() {
     assert!(whole.blocked.is_none(), "{:?}", whole.blocked);
 }
 
-/// **A `ProjectedCrs` named as it stands is taken, and said** — a deliberate
+/// **A `ProjectedCrs` named as it stands is taken, and said** - a deliberate
 /// decision of 24/09: the BRGM's surfaces point at theirs, and refusing
 /// them would make every operation on them a dead end. The note is the
 /// difference with a compound, and without it the choice would be silent.
@@ -378,7 +378,7 @@ fn a_projected_crs_named_as_the_frame_is_taken_with_a_note() {
 }
 
 /// **Degrees keep their `Geographic2dCrs`, and the plan says it is the named
-/// exception** — decision (a) of 24/09: EML 2.3 has no compound over degrees
+/// exception** - decision (a) of 24/09: EML 2.3 has no compound over degrees
 /// (`LocalEngineering2dCrs.OriginProjectedCrs` is a `ProjectedCrs`, CRS.xsd
 /// l. 504).
 #[test]
@@ -427,7 +427,7 @@ fn a_frame_created_in_degrees_is_the_named_exception() {
 ///
 /// The operation was not at fault: on a 2.2 package it returns five boundary
 /// rings and 1,061 points. It refused to **compute** because it
-/// could not **write** — and looked up rather than assumed, the CRS reaches
+/// could not **write** - and looked up rather than assumed, the CRS reaches
 /// only one place of the code, the `LocalCrs` of the geometry written. The
 /// rings have no need of it.
 ///
@@ -550,7 +550,7 @@ fn polylines_said_closed_by_the_shape_are_written_closed_without_a_note() {
 #[test]
 fn a_run_whose_ends_coincide_is_seen_closed_the_repeat_dropped_and_the_plan_says_so() {
     // To break: the repeat kept (RESQML does not repeat the first node), or the
-    // closure taken without a note — a ring seen where a line was meant.
+    // closure taken without a note - a ring seen where a line was meant.
     let mut ring = square();
     ring.push(ring[0]);
     let geometry = Geometry {
@@ -743,7 +743,7 @@ fn surface_with_field(values: Vec<f64>) -> Pieces {
 #[test]
 fn a_field_over_a_representation_becomes_a_property_with_its_count_checked() {
     // To break: the representation not suggested from the piece the field
-    // names, or a field of the wrong length accepted — values on the wrong
+    // names, or a field of the wrong length accepted - values on the wrong
     // elements is the silent failure this check exists for.
     let pieces = surface_with_field(vec![-100.0, -110.0, -120.0, -130.0]);
     let registry = Registry::new();
@@ -874,7 +874,7 @@ fn a_ramp_becomes_a_colour_map_of_flat_bands() {
     assert_eq!(object.qualified_type, "resqml22.ContinuousColorMap");
     assert_eq!(object.title, "bandes");
     // Flat bands: each band's colour is stated at both its ends, and the last
-    // band, open-ended, at its start alone — 2n − 1 stops for n levels.
+    // band, open-ended, at its start alone - 2n − 1 stops for n levels.
     assert_eq!(object.json["Entry"].as_array().unwrap().len(), 5);
     assert!(plan.datasets.is_empty());
     let odd = Pieces::empty().with(
@@ -1258,7 +1258,7 @@ fn a_lattice_is_refused_when_its_counts_and_heights_disagree_or_its_frame_would_
         )
         .unwrap();
     // The frame created over metres is the compound and its three parts since
-    // 24/09 — `crs` the compound the lattice names (RESQML TRG 2.2 §3.1 p. 22).
+    // 24/09 - `crs` the compound the lattice names (RESQML TRG 2.2 §3.1 p. 22).
     assert_eq!(
         plan.objects.iter().map(|o| o.role.as_str()).collect::<Vec<_>>(),
         vec![
@@ -1347,7 +1347,7 @@ fn an_interpolation_writes_a_grid_of_the_samples_extent_in_lattice_order() {
     assert_eq!(lattice["Origin"]["Coordinate2"], json!(0.0));
     assert_eq!(plan.datasets[0].dimensions, vec![4, 4]);
 
-    // A radial basis reproduces a plane, so every node is on it — and node
+    // A radial basis reproduces a plane, so every node is on it - and node
     // `j * ni + i` is at `(i, j)`, which is what a transposition would break.
     let z = values_of(&plan);
     assert_eq!(z.len(), 16);
@@ -1580,7 +1580,7 @@ fn dipping_plane(slope_degrees: f64) -> Geometry {
     }
 }
 
-/// **A 2D grid is measured as a lattice** — Lutetia's DTM (25/09). The same
+/// **A 2D grid is measured as a lattice** - Lutetia's DTM (25/09). The same
 /// plane as [`dipping_plane`], its nodes a 3 x 3 lattice at map coordinates
 /// with no listed face: fit, 30 degrees of dip and 90 of azimuth everywhere,
 /// read by central differences on the positions; a curvature is refused by
@@ -1735,7 +1735,7 @@ fn a_dip_map_is_the_angle_the_plane_makes_and_the_azimuth_the_way_it_falls() {
     assert_eq!(plan.objects.len(), 1);
     let object = &plan.objects[0];
     assert_eq!(object.qualified_type, "resqml22.ContinuousProperty");
-    assert_eq!(object.title, "The source — dip");
+    assert_eq!(object.title, "The source - dip");
     assert_eq!(object.json["Uom"], json!("dega"));
     assert_eq!(object.json["IndexableElement"], json!("nodes"));
     // The kind is the dictionary's, looked up by title.
@@ -1769,7 +1769,7 @@ fn a_dip_map_is_the_angle_the_plane_makes_and_the_azimuth_the_way_it_falls() {
             &when(),
         )
         .unwrap();
-    assert_eq!(plan.objects[0].title, "The source — dip azimuth");
+    assert_eq!(plan.objects[0].title, "The source - dip azimuth");
     assert_eq!(
         plan.objects[0].json["PropertyKind"]["Title"],
         json!("dip azimuth")
@@ -1940,13 +1940,13 @@ fn a_surface_map_refuses_what_it_cannot_read_by_name() {
 /// # The defect it removes, and why it was not visible here
 ///
 /// Two tests of one binary share the process, so two folders
-/// named by `process::id()` alone are **the same folder** — and these tests
+/// named by `process::id()` alone are **the same folder** - and these tests
 /// run in parallel and each ends with a `remove_dir_all`. One
 /// erases while the other writes.
 ///
 /// On Windows the race is invisible: `remove_dir_all` fails as long as a
 /// file is open, and the failure is ignored. On Linux it succeeds, and
-/// `save_as` then refuses with `NotFound` — a message that designates neither the faulty
+/// `save_as` then refuses with `NotFound` - a message that designates neither the faulty
 /// test nor the race. CI showed it on 19/09; the suite had passed here
 /// for weeks.
 ///
@@ -1957,8 +1957,8 @@ fn a_surface_map_refuses_what_it_cannot_read_by_name() {
 /// `#[cfg(feature = "hdf5")]` because its three callers are: without
 /// that, the configuration without a backend compiles a function that nobody
 /// calls, and `lint` runs with `-D warnings`. It is the rule that
-/// the CI configuration states for production code — *a dead item in the
-/// configuration without a backend is marked* — and it applies to tests.
+/// the CI configuration states for production code - *a dead item in the
+/// configuration without a backend is marked* - and it applies to tests.
 #[cfg(feature = "hdf5")]
 fn scratch(test: &str) -> std::path::PathBuf {
     let dir = std::env::temp_dir().join(format!("energyml-build-{test}-{}", std::process::id()));
@@ -1979,7 +1979,7 @@ fn a_map_is_written_reread_by_the_reader_and_takes_a_property_counted_against_it
     let mut store = energyml_build::epc::open(None, "map.epc", registry.clone()).unwrap();
     store.external_files_mut().set_root(&dir);
     // The frame the lattice names has to exist for the reader to place it.
-    // The compound — role `crs` — and not the first object, which is the
+    // The compound - role `crs` - and not the first object, which is the
     // `ProjectedCrs` since `crs` writes four (24/09): a lattice named on it would
     // be taken, with a note, and name a frame RESQML TRG 2.2 §3.1 p. 22 does not.
     let frame = Registry::new()
@@ -2160,7 +2160,7 @@ fn a_point_set_is_written_saved_and_reopened() {
 
 // -- the computed shape ------------------------------------------------------
 
-/// An operation produces **an artefact first** — and the plan carries it.
+/// An operation produces **an artefact first** - and the plan carries it.
 ///
 /// The rule: the predefined operations must
 /// first produce an artefact that will then be promoted […] rather than creating
@@ -2169,7 +2169,7 @@ fn a_point_set_is_written_saved_and_reopened() {
 /// # What would have to break to make it turn red
 ///
 /// Return a plan that writes a representation without carrying the shape that
-/// justifies it. The defect would be mute on the package side — the object is right — and
+/// justifies it. The defect would be mute on the package side - the object is right - and
 /// total on the scene side: nothing to show before writing, so nothing more to
 /// juger.
 #[test]
@@ -2237,7 +2237,7 @@ fn a_computed_representation_is_carried_by_the_plan() {
 /// exactly the kind of wrong that looks like right.
 #[test]
 fn the_shape_and_the_resqml_say_the_same_topology() {
-    // Two polylines, one closed and one open — otherwise the plan writes a
+    // Two polylines, one closed and one open - otherwise the plan writes a
     // `BooleanConstantArray` and the disagreement would have nowhere to show.
     let ring = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]];
     let open = [[5.0, 0.0, 0.0], [6.0, 0.0, 0.0]];
@@ -2320,8 +2320,8 @@ fn the_shape_and_the_resqml_say_the_same_topology() {
 /// starts**.
 ///
 /// `node_offset` is the rank of the first node of the patch in the whole shape.
-/// The indices of a triangle stay local to the patch — which the operation
-/// explicitly refuses otherwise — so without this offset, two patches put end to
+/// The indices of a triangle stay local to the patch - which the operation
+/// explicitly refuses otherwise - so without this offset, two patches put end to
 /// end would draw the second on the nodes of the first.
 #[test]
 fn the_patches_of_a_surface_keep_their_rank_and_their_start() {
@@ -2351,7 +2351,7 @@ fn the_patches_of_a_surface_keep_their_rank_and_their_start() {
 }
 
 /// **An absence that is an answer.** Three operations compute no
-/// geometry, and three others do not carry one yet — each saying why
+/// geometry, and three others do not carry one yet - each saying why
 /// beside its `Vec::new()`. Confusing them would lose the difference between
 /// *there is nothing to carry* and *it has not been done*.
 #[test]
@@ -2368,7 +2368,7 @@ fn what_computes_no_geometry_says_so() {
     assert!(plan.shapes.is_empty(), "a CRS is not a shape");
     assert!(
         !plan.objects.is_empty(),
-        "and it does write objects — the two are not the same emptiness"
+        "and it does write objects - the two are not the same emptiness"
     );
 }
 
@@ -2386,7 +2386,7 @@ fn what_computes_no_geometry_says_so() {
 /// # What would have to break to make it turn red
 ///
 /// Remove the operation from the registry, or make it refuse what `triangles`
-/// already refuses — in which case the reported case comes back as it was.
+/// already refuses - in which case the reported case comes back as it was.
 #[test]
 fn a_point_cloud_is_offered_to_the_triangulation() {
     let cloud = known(Geometry {
@@ -2401,7 +2401,7 @@ fn a_point_cloud_is_offered_to_the_triangulation() {
         .expect("offered");
     assert_eq!(offer.fitness, Fitness::Fit);
 
-    // And `triangles` still refuses — that is the distinction, not an
+    // And `triangles` still refuses - that is the distinction, not an
     // oversight: copying a topology and deciding one are two gestures.
     let other = registry
         .offers(&cloud)
@@ -2439,7 +2439,7 @@ fn the_triangulation_returns_a_surface_and_its_triangles() {
     assert_eq!(triangles.len(), 2, "four corners make two triangles");
     assert_eq!(shape.geometry.patches[0].points.len(), 4);
 
-    // And the writing is that of `triangles`, signed with the name of this one — a
+    // And the writing is that of `triangles`, signed with the name of this one - a
     // second writer of the same object would be a second place for the same
     // mistakes.
     let object = plan.objects.iter().find(|o| o.role == "representation").unwrap();
@@ -2452,7 +2452,7 @@ fn the_triangulation_returns_a_surface_and_its_triangles() {
 
 /// **An already triangulated surface is sent back to `triangles`, by name.**
 ///
-/// Triangulating it again would lay a second skin over the first — the rule the
+/// Triangulating it again would lay a second skin over the first - the rule the
 /// front end already held for its button. And a refusal that does not say where to go reads
 /// as *this cannot be done*.
 #[test]
@@ -2489,7 +2489,7 @@ fn collinear_points_are_refused_rather_than_returned_empty() {
         kind: "x",
         patches: vec![patch(0, line, Topology::Points)],
     });
-    // The offer is good — there are well over three points — and it is the computation
+    // The offer is good - there are well over three points - and it is the computation
     // that refuses, which is the only honest answer: collinearity can only
     // be established by triangulating.
     let registry = Registry::new();
@@ -2511,7 +2511,7 @@ fn collinear_points_are_refused_rather_than_returned_empty() {
     assert!(why.message().to_lowercase().contains("collinear"), "{why}");
 }
 
-/// Duplicates are counted, not refused — and the plan **says so**.
+/// Duplicates are counted, not refused - and the plan **says so**.
 ///
 /// Two points at the same (x, y) are a single vertex for the Delaunay; the second
 /// stays in the object written and is named by no triangle. Keeping quiet would make
@@ -2601,7 +2601,7 @@ fn a_cloud_without_triangles_is_sent_back_to_the_triangulation() {
 ///
 /// A curve that goes around the summit of a pyramid is **closed**; writing it
 /// open, or writing all the curves open, gives polylines
-/// of which nothing to the eye distinguishes the good ones — a ring missing one
+/// of which nothing to the eye distinguishes the good ones - a ring missing one
 /// edge in two hundred looks like a ring.
 ///
 /// And the plan **carries its shape**, so the closure is there too:
@@ -2631,7 +2631,7 @@ fn a_curve_that_goes_around_the_summit_is_written_closed() {
     };
     assert!(any_closed, "a curve around a summit is closed: {closed}");
 
-    // And the computed shape says the same — two statements of the same fact.
+    // And the computed shape says the same - two statements of the same fact.
     let shape = &plan.shapes[0];
     assert!(
         shape.geometry.patches[0].closed.iter().any(|c| *c),
@@ -2692,15 +2692,15 @@ fn a_flat_surface_is_refused_saying_its_value() {
 
 /// **`isocontours` already takes a field, over the elevation.** `field`
 /// is declared on `IsocontoursInputs` since the operation was written, so
-/// asking for a slot that is already there — what is missing is checked by the
+/// asking for a slot that is already there - what is missing is checked by the
 /// two tests below. This one is the positive control: a field linear in `x`
 /// (`value = x + 2`, so it does not land on the boundary values the square's
-/// own edges already carry — `isocontour::levels` anchors on multiples of the
+/// own edges already carry - `isocontour::levels` anchors on multiples of the
 /// spacing from **zero**, and a field spanning exactly `0..10` would draw
 /// spurious levels at 0 and 10, running along the square's own edges) is
 /// contoured at its one level (`count = 1` over `2..12` gives the single
 /// multiple of ten in range, level 10, so `x = 8`), and every point of the
-/// resulting line lies on the analytic line `x = 8` — confronted
+/// resulting line lies on the analytic line `x = 8` - confronted
 /// independently of the computation, on the written shape's own points.
 #[test]
 fn a_linear_field_is_contoured_on_the_analytic_line() {
@@ -2750,12 +2750,12 @@ fn a_linear_field_is_contoured_on_the_analytic_line() {
 
 /// **A field on cells is refused rather than misread as one value per
 /// node.** `field_of` would otherwise hand `isocontour::contour` two values
-/// for two triangles as if they were four values at four nodes — the wrong
+/// for two triangles as if they were four values at four nodes - the wrong
 /// numbers on the wrong points, silently, since nothing here checks the
 /// count against the node count. No transfer from cells to nodes exists in
 /// this workspace, so this is a refusal, not a guess.
 ///
-/// To break: drop the `field.on != "nodes"` check in `isocontours::check` —
+/// To break: drop the `field.on != "nodes"` check in `isocontours::check` -
 /// this goes green on a bag no other test in this file exercises.
 #[test]
 fn a_field_on_the_cells_is_refused_rather_than_measured_on_nodes() {
@@ -2794,8 +2794,8 @@ fn a_field_on_the_cells_is_refused_rather_than_measured_on_nodes() {
 
 /// **The lattice written and the shape carried agree, point by point.**
 ///
-/// The operation writes a `Point3dLatticeArray` — an origin, two directions,
-/// two steps — and carries the developed points beside it. They are two
+/// The operation writes a `Point3dLatticeArray` - an origin, two directions,
+/// two steps - and carries the developed points beside it. They are two
 /// statements of one fact, separated by a reflection boundary that no shared
 /// code crosses: the plan's development is arithmetic on
 /// numbers, the reader's goes through `Reflect` and handles what producers
@@ -2805,7 +2805,7 @@ fn a_field_on_the_cells_is_refused_rather_than_measured_on_nodes() {
 /// # What would have to break to make it turn red
 ///
 /// An inverted axis, one step taken for the other, the origin placed at the centre rather
-/// than at node (0, 0) — and the most dangerous, the z sheet read by columns
+/// than at node (0, 0) - and the most dangerous, the z sheet read by columns
 /// rather than by rows: the grid then comes out transposed, which no count of
 /// points signals.
 #[cfg(feature = "hdf5")]

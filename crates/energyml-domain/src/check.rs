@@ -4,7 +4,7 @@
 //!
 //! It was in the command line: three hundred lines that read, judged and
 //! printed in one pass, so `energyml check` was the only thing in the workspace
-//! that could answer *is this package sound?* — not the front end, not the Python
+//! that could answer *is this package sound?* - not the front end, not the Python
 //! bridge, not a service. The rule (ADR-0012): the CLI must be like the Python
 //! bridge, every computation in the library, and the CLI and wasm only bridges
 //! to the library's features.
@@ -12,7 +12,7 @@
 //! So the judging is here and the printing stayed there. What moved with it is
 //! the part that is easy to miss: **the accounting**. Which finding counts as
 //! an error is a decision, not a display choice, and two faces that counted
-//! differently would disagree about whether a file is valid — which is the
+//! differently would disagree about whether a file is valid - which is the
 //! exact bug this repository found between its own `check` and a partner's
 //! validator on 07/09.
 //!
@@ -20,7 +20,7 @@
 //!
 //! A report joins what the storage layer noticed (diagnostics, references,
 //! `.rels`), what the schema says (`energyml-core`), and what the technical
-//! guides say (property kinds, business rules — this crate). `energyml-domain`
+//! guides say (property kinds, business rules - this crate). `energyml-domain`
 //! is the lowest crate that can see all three; storage cannot, because the
 //! rules live above it.
 //!
@@ -85,7 +85,7 @@ pub struct Package<'a> {
     pub unreadable: &'a [(String, String)],
     /// What the reader had to say while indexing and deserializing.
     pub diagnostics: &'a [Diagnostic],
-    /// Where a uuid is looked up — for the property kinds and the rules.
+    /// Where a uuid is looked up - for the property kinds and the rules.
     pub source: &'a dyn ObjectSource,
     /// The types this build can read, for the rules that ask.
     pub known: Option<&'a Registry>,
@@ -94,8 +94,8 @@ pub struct Package<'a> {
 /// One part of a package, read.
 ///
 /// The object arrives as a `DynObject` and not as a `&dyn Reflect` because two
-/// sections need two different views of it — the schema section validates, the
-/// others reflect — and handing over one of them would make the caller pass the
+/// sections need two different views of it - the schema section validates, the
+/// others reflect - and handing over one of them would make the caller pass the
 /// same object twice.
 pub struct Part<'a> {
     /// Its place in the inventory.
@@ -133,8 +133,8 @@ pub struct PropertyIssue {
     /// The difference the caller needs to count: a deprecated kind is worth
     /// saying, a unit outside its quantity class is worth refusing.
     pub is_a_defect: bool,
-    /// **An abstract kind used directly** — an error, not a warning. The
-    /// specification only *advises* against it — common TRG 2.3 §11.9,
+    /// **An abstract kind used directly** - an error, not a warning. The
+    /// specification only *advises* against it - common TRG 2.3 §11.9,
     /// `PropertyKind.IsAbstract`: *"If the Is Abstract flag is set, then this
     /// entry should be used only as the parent of a real property"*. The weight
     /// is a house decision, not a MUST of the specification.
@@ -151,7 +151,7 @@ pub struct CountIssue {
     /// Whether it condemns the file. **A whole multiple of what is declared is
     /// not**: a time series written as one dataset holds `steps ×` the values of
     /// one, which the guides *neither describe nor forbid* (a property that
-    /// contradicts itself is reported) — said, not condemned. Any other disagreement cannot be laid on the elements the
+    /// contradicts itself is reported) - said, not condemned. Any other disagreement cannot be laid on the elements the
     /// property names, and is an error. The remark is **listed and not counted**
     /// in [`Report::warnings`], like a catalogue reference: Lutetia's own
     /// time series are such, and a clean model must not warn about its design.
@@ -172,10 +172,10 @@ pub struct RuleFinding {
     /// Why it could not be judged, when it could not.
     ///
     /// **Never a pass.** A rule that could not be evaluated says something is
-    /// missing in order to judge — a target outside the package — not that the
+    /// missing in order to judge - a target outside the package - not that the
     /// file is right.
     pub why: Option<String>,
-    /// How much a violation weighs — declared by the rule.
+    /// How much a violation weighs - declared by the rule.
     pub gravity: crate::rules::Gravity,
 }
 
@@ -184,14 +184,14 @@ pub struct RuleFinding {
 pub struct Report {
     /// What the reader noticed while indexing and deserializing.
     pub diagnostics: Vec<Diagnostic>,
-    /// How many objects read — what the other sections judged. Beside
+    /// How many objects read - what the other sections judged. Beside
     /// `unreadable`, so that *nothing to say* about three objects and about
     /// three hundred never read the same.
     pub read: usize,
     /// Parts that could not be read: uri, and why.
     pub unreadable: Vec<(String, String)>,
     /// Objects against their schema. Empty and `schema_checked` false when the
-    /// caller did not ask — which is not the same as clean.
+    /// caller did not ask - which is not the same as clean.
     pub schema: Vec<SchemaIssue>,
     /// Whether the schema section was run at all.
     pub schema_checked: bool,
@@ -204,7 +204,7 @@ pub struct Report {
     /// carry.
     pub properties_unresolved: usize,
     /// Properties whose number of values is not `element count × values per
-    /// element` — `energyml properties --check` used to be the only thing that
+    /// element` - `energyml properties --check` used to be the only thing that
     /// asked. **An error** when the values cannot be laid on the elements they
     /// name, which is what the TRGs' *"array length must equal …"* sentences
     /// say (RESQML TRG 2.2 §7.1; Properties.xsd, `ValueCountPerIndexableElement`);
@@ -213,7 +213,7 @@ pub struct Report {
     /// Properties whose count could not be judged: the pair (representation,
     /// indexable element) is not one this build can count, the representation
     /// is not in the package, or the values could not be counted. Counted and
-    /// never an error — it says *not checked*, not *fine*.
+    /// never an error - it says *not checked*, not *fine*.
     pub counts_unchecked: usize,
     /// Business rules.
     pub rules: Vec<RuleFinding>,
@@ -234,7 +234,7 @@ impl Report {
     ///
     /// A package diagnostic of severity `Warning` is an *error*: it is
     /// documented, at its definition, as *the package departs from the
-    /// specification; the reader coped* — and a departure from the
+    /// specification; the reader coped* - and a departure from the
     /// specification is what every validator calls an error. This counted it as
     /// a warning and exited 0, so on the BRGM package of 07/09 `energyml check`
     /// said *0 error(s)* about four `BoundaryFeature`s whose `Citation` omits
@@ -308,7 +308,7 @@ impl Report {
     /// References to a concept the standard publishes in a catalogue.
     ///
     /// Absent from the package **by design**, so neither an error nor a
-    /// warning — and listed apart, because a thousand of them mixed in bury the
+    /// warning - and listed apart, because a thousand of them mixed in bury the
     /// ones that mean something.
     pub fn catalogue_references(&self) -> Vec<&RefIssue> {
         self.references.iter().filter(|one| one.is_info()).collect()
@@ -330,7 +330,7 @@ pub fn documented_rules() -> Vec<Box<dyn validate::ValidationRule>> {
 
 /// `Citation.Format` names the software that wrote the object.
 ///
-/// EML 2.3 `Abstract.xsd` l. 393–399: *"Software or service that was used to
+/// EML 2.3 `Abstract.xsd` l. 393-399: *"Software or service that was used to
 /// originate the object [...] Must be human and machine readable and
 /// unambiguously identify the software by including the organization name,
 /// software application name and software version"*. The element is
@@ -368,12 +368,12 @@ impl validate::ValidationRule for CitationFormat {
     }
 }
 
-/// Read everything an EPC holds and [`check`] it — the reading the command
+/// Read everything an EPC holds and [`check`] it - the reading the command
 /// line and the Python bridge each wrote out, line for line, before 24/09.
 ///
 /// **What it reads, and why all of it**: every `.rels` (not on the open path,
 /// an open proportional to the number of objects being what level 1 promises
-/// not to be — but a truncated or duplicated relationship index is exactly what
+/// not to be - but a truncated or duplicated relationship index is exactly what
 /// a check is for), every external file (the store records what is wrong with
 /// each on the way past), and every object **before** the diagnostics are
 /// taken: a lenient read records what it had to invent while deserializing,
@@ -429,7 +429,7 @@ pub fn of_store(store: &energyml_storage::EpcStore, options: &Options) -> Report
 ///
 /// With no array reader, the one rule that judges values
 /// (`house/discrete-value-in-lookup`) comes back *uncheckable* for each
-/// property it would have judged — [`check_with_arrays`] is the same with one.
+/// property it would have judged - [`check_with_arrays`] is the same with one.
 pub fn check(package: &Package<'_>, options: &Options) -> Report {
     check_with_arrays(package, options, None)
 }
@@ -454,7 +454,7 @@ pub fn check_with_arrays(
         ..Default::default()
     };
 
-    // 1 — the objects against their schema: facets, cardinality, patterns.
+    // 1 - the objects against their schema: facets, cardinality, patterns.
     if options.schema {
         let documented = documented_rules();
         for one in package.objects {
@@ -471,7 +471,7 @@ pub fn check_with_arrays(
         }
     }
 
-    // 2 — the properties, against what the technical reference guides state and
+    // 2 - the properties, against what the technical reference guides state and
     // no XSD can: an abstract property kind used directly, a deprecated one, a
     // unit outside its kind's quantity class. All three are perfectly readable
     // files saying something they should not.
@@ -503,9 +503,9 @@ pub fn check_with_arrays(
         }
     }
 
-    // 2b — the counts: what a property holds against what it hangs on. Only when
+    // 2b - the counts: what a property holds against what it hangs on. Only when
     // there is something to count with (`arrays`): without it the values cannot
-    // be counted, and `Property::check` has nothing to compare — said by
+    // be counted, and `Property::check` has nothing to compare - said by
     // `counts_unchecked`, never by silence.
     if options.rules {
         use crate::property;
@@ -555,7 +555,7 @@ pub fn check_with_arrays(
                         );
                         let says = if multiple {
                             format!(
-                                "{other} — a whole multiple: a time series or realizations in one dataset, which the guides neither describe nor forbid"
+                                "{other} - a whole multiple: a time series or realizations in one dataset, which the guides neither describe nor forbid"
                             )
                         } else {
                             format!("{other}")
@@ -571,15 +571,15 @@ pub fn check_with_arrays(
         }
     }
 
-    // 3 — the business constraints: what the technical guides associate and no
+    // 3 - the business constraints: what the technical guides associate and no
     // XSD can enforce. Three outcomes and not two: the inapplicable is silent
     // by construction, a violation is a fault of the file, and a rule that
-    // could not be evaluated is *uncheckable* — never a pass.
+    // could not be evaluated is *uncheckable* - never a pass.
     //
     // Two halves, one list: the rules the closed vocabulary can say (data,
     // `rules::trg`), then the ones that need several objects or an array
     // (code, `integrity`). Their findings have the same shape and are counted
-    // the same way — a reader of the report has no reason to know which half
+    // the same way - a reader of the report has no reason to know which half
     // spoke.
     if options.rules {
         use crate::rules::{self, Outcome};
@@ -612,7 +612,7 @@ pub fn check_with_arrays(
         }
     }
 
-    // 4 — the references. Nothing else finds these: each DOR is well-formed on
+    // 4 - the references. Nothing else finds these: each DOR is well-formed on
     // its own, and no XSD validator knows what the package contains.
     let pairs = package
         .objects
@@ -620,7 +620,7 @@ pub fn check_with_arrays(
         .map(|one| (one.summary, one.object.as_reflect()));
     // **Every** entry of a uuid, not the first: a package may hold one object in
     // several versions, and a reference is resolved by uuid, type and version.
-    // Indexed once — a lookup per reference would scan the inventory each time.
+    // Indexed once - a lookup per reference would scan the inventory each time.
     let mut by_uuid: std::collections::HashMap<String, Vec<&ObjectSummary>> =
         std::collections::HashMap::new();
     for one in package.summaries.iter() {
@@ -648,7 +648,7 @@ pub fn check_with_arrays(
             .extend(graph::check_declared_types(pairs, &knows));
     }
 
-    // 5 — the index against the objects. The `.rels` are a cache of the graph
+    // 5 - the index against the objects. The `.rels` are a cache of the graph
     // the DORs describe; §3.4.1 makes both directions mandatory, and nothing
     // keeps the cache honest.
     let related: Vec<Related<'_>> = package

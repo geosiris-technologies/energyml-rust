@@ -1,12 +1,12 @@
-//! `pressure-transient-analysis` — a PRODML `PressureTransientAnalysis` of a
+//! `pressure-transient-analysis` - a PRODML `PressureTransientAnalysis` of a
 //! flow test: one homogeneous layer, its permeability, thickness, porosity and
-//! initial pressure, and — when they are given — the RESQML grid properties
+//! initial pressure, and - when they are given - the RESQML grid properties
 //! that distribute the permeability and the porosity.
 //!
 //! The reference model's analysis that cites the grid:
 //! `PressureTransientAnalysis` → `DistributedParametersSubModel.
 //! PermeabilityArrayRefID` / `PorosityArrayRefID` → the grid properties. The
-//! red thread between RESQML and PRODML — homogeneous, its
+//! red thread between RESQML and PRODML - homogeneous, its
 //! `FlowTestActivity` given once and its two array references to the
 //! grid.
 //!
@@ -17,14 +17,14 @@
 //! or reference a grid of geometrically distributed values”* and carries the
 //! `DistributedParametersSubModel` whose `Is…Gridded` flags say which
 //! parameters the grid holds (`pta_models`, PRODML 2.3). So the model is the
-//! numerical one exactly when a grid property is given — the only one that
-//! can say so — and the analytical one otherwise. The constants are written
+//! numerical one exactly when a grid property is given - the only one that
+//! can say so - and the analytical one otherwise. The constants are written
 //! either way: both models require them.
 //!
 //! # What is referenced, and what is not read
 //!
 //! `PermeabilityArrayRefID` and `PorosityArrayRefID` name the **properties**
-//! as the reference model does — *“Reference to RESQML grid containing
+//! as the reference model does - *“Reference to RESQML grid containing
 //! Permeability values”*, and the values are the property's. Lutetia's
 //! permeability is three scalar properties (`grid-properties`, kx, ky, kz):
 //! the horizontal radial permeability is kx's.
@@ -34,7 +34,7 @@
 //! a reference, not its content (`Known::json` is a door still to be decided,
 //! as an open point). So the uid is **told** (`testPeriod`), and
 //! `crates/energyml-build/tests/lutetia.rs` checks, in the written package,
-//! that the period named is one the test holds — a second source of the same
+//! that the period named is one the test holds - a second source of the same
 //! fact rather than trust.
 //!
 //! # Every value is invented
@@ -74,14 +74,14 @@ const FLOW_TESTS: &[&str] = &[
 pub struct PtaParams {
     /// the title of the analysis
     pub title: String,
-    /// where the values come from — a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
+    /// where the values come from - a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
     pub source: String,
-    /// the uid of the test period analysed, a period of the flow test given — `PrincipalTestPeriodRef`
+    /// the uid of the test period analysed, a period of the flow test given - `PrincipalTestPeriodRef`
     pub test_period: String,
-    /// the model's name — `ModelName`, a description with no semantic meaning
+    /// the model's name - `ModelName`, a description with no semantic meaning
     #[param(default = String::from("homogeneous"), optional)]
     pub model_name: String,
-    /// the phases analysed — single phase water, single phase oil, single phase gas, or a multiphase kind of the PRODML list
+    /// the phases analysed - single phase water, single phase oil, single phase gas, or a multiphase kind of the PRODML list
     #[param(default = String::from("single phase water"), optional)]
     pub phase: String,
     /// the horizontal radial permeability, in mD
@@ -101,15 +101,15 @@ pub struct PtaParams {
 /// What `pressure-transient-analysis` takes.
 #[derive(Debug, Inputs)]
 pub struct PtaInputs {
-    /// the flow test analysed — its `FlowTestActivity`, given once
+    /// the flow test analysed - its `FlowTestActivity`, given once
     #[input(
         types = "prodml23.InjectionFlowTest, prodml23.DrillStemTest, prodml23.ProductionTransientTest, prodml23.ProductionFlowTest, prodml23.InterwellTest, prodml23.VerticalInterferenceTest, prodml23.WaterLevelTest, prodml23.FormationTesterStation"
     )]
     pub test: ObjectIn,
-    /// the permeability distributed on a grid — a property of the grid's cells; the model is then the numerical one
+    /// the permeability distributed on a grid - a property of the grid's cells; the model is then the numerical one
     #[input(types = "resqml22.ContinuousProperty")]
     pub permeability_array: Option<ObjectIn>,
-    /// the porosity distributed on a grid — a property of the grid's cells; the model is then the numerical one
+    /// the porosity distributed on a grid - a property of the grid's cells; the model is then the numerical one
     #[input(types = "resqml22.ContinuousProperty")]
     pub porosity_array: Option<ObjectIn>,
 }
@@ -146,7 +146,7 @@ impl Operation for PressureTransientAnalysis {
     fn about(&self) -> About {
         About {
             name: "pressure-transient-analysis",
-            describe: "a pressure transient analysis of a flow test — one homogeneous layer, its permeability, thickness, porosity and initial pressure, numerical when grid properties distribute them — every value stated and sourced",
+            describe: "a pressure transient analysis of a flow test - one homogeneous layer, its permeability, thickness, porosity and initial pressure, numerical when grid properties distribute them - every value stated and sourced",
             category: Category::Synthetic,
             makes: &["prodml23.PressureTransientAnalysis"],
             recipe: "pressure-transient-analysis",
@@ -226,7 +226,7 @@ impl Operation for PressureTransientAnalysis {
         // **Each `Abbreviation` is the one the schema fixes** (`fixed=` in prodml
         // 2.3 PtaParameters.xsd: `K`, `h`, `k.h`, `Phi`, `Pi`). This wrote `k`,
         // `kh` and `phi` until 04/10/2026, when `fixed` became a facet that
-        // `Validate` reads — the first thing it found.
+        // `Validate` reads - the first thing it found.
         let permeability = prodml::HorizontalRadialPermeability {
             uid: "k".to_string(),
             abbreviation: "K".to_string(),
@@ -326,7 +326,7 @@ impl Operation for PressureTransientAnalysis {
             model_name: params.model_name.trim().to_string(),
             principal_test_period_ref: vec![period.to_string()],
             layer_model: vec![prodml::LayerModel {
-                name: format!("{title} — layer"),
+                name: format!("{title} - layer"),
                 aggregate_layers_model: false,
                 reservoir_model: Some(reservoir),
                 ..Default::default()
@@ -373,7 +373,7 @@ impl Operation for PressureTransientAnalysis {
         says.push(Note {
             key: "test-period",
             detail: format!(
-                "the period analysed is `{period}` of `{}` — told, not read: an object in the bag is a reference, not its content",
+                "the period analysed is `{period}` of `{}` - told, not read: an object in the bag is a reference, not its content",
                 test.title
             ),
         });

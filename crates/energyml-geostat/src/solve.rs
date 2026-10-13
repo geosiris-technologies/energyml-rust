@@ -1,10 +1,10 @@
-//! A dense LU factorisation with partial pivoting — the ~60 lines that
+//! A dense LU factorisation with partial pivoting - the ~60 lines that
 //! spare the crate a linear-algebra dependency, shared by kriging and RBF.
 //!
 //! Both systems are symmetric but **not** positive definite (the Lagrange
 //! border of ordinary kriging, the polynomial border of a conditionally
 //! positive definite RBF kernel), so pivoting is a requirement, not
-//! caution — a Cholesky would fail on exactly the matrices these methods
+//! caution - a Cholesky would fail on exactly the matrices these methods
 //! build. Factor once, back-substitute per right-hand side.
 
 use crate::Error;

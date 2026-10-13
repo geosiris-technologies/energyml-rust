@@ -11,7 +11,7 @@
 //!
 //! In each, a package is looked for at the root and under `fesapi/` and
 //! `resqpy/` (the layout of the lock). Nothing found: **a panic when `$ENERGYML_FIXTURES_REQUIRED` is
-//! set** — a missing reference package is a failure in CI, never a skip — and
+//! set** - a missing reference package is a failure in CI, never a skip - and
 //! `None` otherwise, the caller printing that it skipped.
 //!
 //! The same file is in every test crate that reads packages; keep the copies
@@ -70,7 +70,7 @@ pub fn find(name: &str) -> Option<PathBuf> {
     if found.is_none() && in_ci() {
         panic!(
             "reference package `{name}` not found (looked in $ENERGYML_FIXTURES_DIR, target/fixtures, testdata): \
-             a missing reference package is a failure in CI, never a skip — run scripts/fetch-fixtures.py"
+             a missing reference package is a failure in CI, never a skip - run scripts/fetch-fixtures.py"
         );
     }
     found

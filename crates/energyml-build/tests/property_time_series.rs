@@ -1,4 +1,4 @@
-//! `property-time-series` — a property through a time series, in the two forms
+//! `property-time-series` - a property through a time series, in the two forms
 //! RESQML 2.2 has for it (step 9 of the reference model;
 //! the property series).
 //!
@@ -6,20 +6,20 @@
 //! from what this crate writes:
 //!
 //! - `AbstractProperty` states `Time` (`GeologicTime`, 0..1) and
-//!   `TimeOrIntervalSeries` (0..1), and no time index — RESQML Technical
+//!   `TimeOrIntervalSeries` (0..1), and no time index - RESQML Technical
 //!   Reference Guide v2.2 §7.1 p. 222;
 //! - a property naming a series holds **every** step of it, time the slowest
-//!   dimension — TRG v2.2 §7, the note of the diagram p. 221: *“[TimeCount] …
+//!   dimension - TRG v2.2 §7, the note of the diagram p. 221: *“[TimeCount] …
 //!   [IndexableElementCount] …”*; so one property per step does **not** name
 //!   the series;
-//! - a time index names an instant by its place in the series' list — *“The
+//! - a time index names an instant by its place in the series' list - *“The
 //!   list ordering is used by the time index”*, Energistics common Technical
 //!   Reference Guide v2.3 §11.14 p. 297;
 //! - under `UseInterval`, `n` instants give `n − 1` values (answered
 //!   25/09);
 //! - an invented value says so and cites its source (ADR-0019).
 //!
-//! The numbers — the snapshot, the dates, the change per year — are the tests'
+//! The numbers - the snapshot, the dates, the change per year - are the tests'
 //! own. The dates' distances are counted **from the calendar**, in days, and
 //! never by the date parser the operation uses.
 //!
@@ -50,12 +50,12 @@ const KIND: &str = "e703be06-7c3f-4d1b-8a4c-2d2d4e6c7a10";
 const SERIES: &str = "5e5e5e5e-0000-4000-8000-000000005e5e";
 
 /// The snapshot: a pressure in bar at five nodes, the first above the water
-/// table — no value there.
+/// table - no value there.
 fn snapshot() -> Vec<f64> {
     vec![f64::NAN, 0.5, 1.5, 2.5, 3.5]
 }
 
-/// The series of the tests, and the days from its first instant to each —
+/// The series of the tests, and the days from its first instant to each -
 /// 2016 is a leap year: 366 days to 2017, 731 to 2018.
 const INSTANTS: [&str; 3] = [
     "2016-01-01T00:00:00Z",
@@ -70,7 +70,7 @@ fn facts(values: Vec<f64>) -> KnownProperty {
         supporting: Some(Ref::new(
             FRAME,
             "resqml22.WellboreFrameRepresentation",
-            "GTH-1 — frame",
+            "GTH-1 - frame",
         )),
         indexable: "nodes".to_string(),
         value_count: vec![1],
@@ -87,7 +87,7 @@ fn facts(values: Vec<f64>) -> KnownProperty {
 
 fn base_with(facts: KnownProperty) -> Source {
     Source::Object(Known {
-        reference: Some(Ref::new(BASE, "resqml22.ContinuousProperty", "GTH-1 — pressure")),
+        reference: Some(Ref::new(BASE, "resqml22.ContinuousProperty", "GTH-1 - pressure")),
         property: Some(facts),
         ..Known::default()
     })
@@ -187,7 +187,7 @@ fn each_step_is_a_property_dated_by_its_own_instant_and_naming_no_series() {
             );
         }
     }
-    assert_eq!(plan.objects[1].title, "GTH-1 — pressure — 2017-01-01T00:00:00Z");
+    assert_eq!(plan.objects[1].title, "GTH-1 - pressure - 2017-01-01T00:00:00Z");
 }
 
 // -- the series: one property, time the slowest dimension -------------------------
@@ -272,7 +272,7 @@ fn an_anchor_moves_the_instant_the_snapshot_holds_at() {
 #[test]
 fn every_property_says_it_is_synthetic_and_cites_its_law_and_source() {
     for choices in [steps(), series(true)] {
-        let plan = planned(&bag(), &choices.set("source", "a sourced law — synthetic")).expect("a plan");
+        let plan = planned(&bag(), &choices.set("source", "a sourced law - synthetic")).expect("a plan");
         for property in &plan.objects {
             let extension = &property.json["ExtensionNameValue"][0];
             assert_eq!(extension["Name"], json!("synthetic"));
@@ -281,9 +281,9 @@ fn every_property_says_it_is_synthetic_and_cites_its_law_and_source() {
                 .as_str()
                 .expect("a description");
             assert!(description.contains("not measured"), "{description}");
-            assert!(description.contains("a sourced law — synthetic"), "{description}");
+            assert!(description.contains("a sourced law - synthetic"), "{description}");
             assert!(
-                description.contains("GTH-1 — pressure"),
+                description.contains("GTH-1 - pressure"),
                 "the base is named: {description}"
             );
         }
@@ -454,8 +454,8 @@ fn given_uuids_are_handed_out_one_per_property() {
 
 // -- read back: the instant a property names is the series' own ------------------------
 
-/// Plays a small package — a well, its hydrostatic pressure, a series, and both
-/// forms laid through it — writes it, and reads it back **independently**: the
+/// Plays a small package - a well, its hydrostatic pressure, a series, and both
+/// forms laid through it - writes it, and reads it back **independently**: the
 /// instants from the series object as the file holds it, the values from the
 /// HDF5 file through `energyml-domain`, and each expected value from the
 /// calendar.
@@ -586,7 +586,7 @@ set = { form = "series", useInterval = true, change = -0.5, source = "synthetic:
             && snapshot.iter().any(|value| value.is_finite())
     );
 
-    // The calendar, keyed by the text the series holds — never by a parser.
+    // The calendar, keyed by the text the series holds - never by a parser.
     let days = |instant: &str| match instant {
         "2016-01-01T00:00:00Z" => 0.0,
         "2017-01-01T00:00:00Z" => 366.0,

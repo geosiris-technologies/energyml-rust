@@ -8,13 +8,13 @@ Related decisions: [ADR-0001](../../docs/adr/0001-generated-code-is-committed.md
 
 ## Rules
 
-**All behaviour lives here, not in the generated code** — changing how an `xsi:type` is written must be a change to one file in this crate, not a regeneration of twelve generated crates. The generator therefore emits constants and annotations; the derive emits trait impls.
+**All behaviour lives here, not in the generated code** - changing how an `xsi:type` is written must be a change to one file in this crate, not a regeneration of twelve generated crates. The generator therefore emits constants and annotations; the derive emits trait impls.
 
-**Three derives** — `EnergymlObject` (complex type; cardinality inferred from `Option<T>` / `Vec<T>`, `min`/`max` only when the schema says something the type cannot), `EnergymlEnum` (simple type enumeration; `#[energyml(open)]` with an `Other(String)` variant for the open `...Ext` types) and `EnergymlChoice` (abstract type or substitution group, selected by `xsi:type`; transparent to reflection).
+**Three derives** - `EnergymlObject` (complex type; cardinality inferred from `Option<T>` / `Vec<T>`, `min`/`max` only when the schema says something the type cannot), `EnergymlEnum` (simple type enumeration; `#[energyml(open)]` with an `Other(String)` variant for the open `...Ext` types) and `EnergymlChoice` (abstract type or substitution group, selected by `xsi:type`; transparent to reflection).
 
-**Generated impls stay small** — there are about a thousand derived impls, and default trait bodies are recompiled for each. The derive emits only `#[inline]` field accessors for identity (six of them) and leaves default bodies as one-line calls into `energyml-core`, where the shared code is compiled once.
+**Generated impls stay small** - there are about a thousand derived impls, and default trait bodies are recompiled for each. The derive emits only `#[inline]` field accessors for identity (six of them) and leaves default bodies as one-line calls into `energyml-core`, where the shared code is compiled once.
 
-**Field roles are detected from names** — case- and separator-insensitively (`UUID`, `Uuid`, `VersionString`, `ObjectVersion` need no special case anywhere), with `#[energyml(role = "...")]` as an explicit override. A `uid` counts as an identifier only on a top-level or reference type.
+**Field roles are detected from names** - case- and separator-insensitively (`UUID`, `Uuid`, `VersionString`, `ObjectVersion` need no special case anywhere), with `#[energyml(role = "...")]` as an explicit override. A `uid` counts as an identifier only on a top-level or reference type.
 
 **Children are matched on namespace and local name** when a struct has two same-named children, because WITSML types carry their own `Citation` next to the inherited one; matching on the local name alone reads one into the other.
 

@@ -1,4 +1,4 @@
-//! `section-view` — the line a section was drawn along, written as a
+//! `section-view` - the line a section was drawn along, written as a
 //! section-line feature with its polylines, and the drawing attached to it.
 //!
 //! The form of the assertions comes from what the inputs **state**, never from
@@ -8,12 +8,12 @@
 //!   node;
 //! - `Crosses::Count` spreads its cross sections evenly, **ends included**
 //!   (`energyml_section::model::Crosses`), each running from its `before`
-//!   end on the left of the trace to its `after` end on the right — so on a
+//!   end on the left of the trace to its `after` end on the right - so on a
 //!   trace heading east, three cross sections stand at its two ends and its
 //!   middle, north to south, `before` long northward and `after` southward;
 //! - an `eml23.Attachment` of the part-address form names its part in
 //!   `ContentUri` and the object in `ObjectReference` (`Attachment.xsd`), and
-//!   the part is related to the `Attachment` (EPC v1.0 §3.4.2 pp. 15–16) —
+//!   the part is related to the `Attachment` (EPC v1.0 §3.4.2 pp. 15-16) -
 //!   checked by **the reader of the domain**, `energyml_domain::attachments`,
 //!   not by looking at what the plan said;
 //! - a PNG starts with its signature and its `IHDR` (PNG §5.2, §5.6).
@@ -66,7 +66,7 @@ fn inputs() -> Inputs {
     }
 }
 
-/// The section drawn by the section view itself — its metadata included.
+/// The section drawn by the section view itself - its metadata included.
 fn drawing(inputs: &Inputs) -> String {
     let catalogue = energyml_section::compute(inputs, |_, _| unreachable!("nothing is asked"))
         .expect("the inputs are valid");
@@ -81,7 +81,7 @@ fn drawing(inputs: &Inputs) -> String {
     )
 }
 
-/// The first 24 bytes of a PNG of `w` × `h` — all the operation reads of one.
+/// The first 24 bytes of a PNG of `w` × `h` - all the operation reads of one.
 fn png(w: u32, h: u32) -> Vec<u8> {
     let mut bytes = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13];
     bytes.extend_from_slice(b"IHDR");
@@ -119,7 +119,7 @@ fn choices() -> Choices {
         .set("project", 2154)
         .set("vertical", 5720)
         .set("elevation", 35.0)
-        .set("title", "Section A–A'")
+        .set("title", "Section A-A'")
 }
 
 fn plan(pieces: &Pieces, choices: Choices) -> Result<Plan, Vec<(Option<String>, String)>> {
@@ -204,7 +204,7 @@ fn the_lines_written_are_the_lines_the_drawing_states() {
     }
     assert_eq!(lines["LinePatch"][1]["ClosedPolylines"]["Value"], json!(false));
 
-    // Every setting of the run is a parameter of its own — the values this
+    // Every setting of the run is a parameter of its own - the values this
     // test typed in `inputs()` and in the view, never a JSON string.
     assert_eq!(plan.activity.recipe, "section-view");
     let recorded = recorded(&plan);
@@ -247,7 +247,7 @@ fn the_lines_written_are_the_lines_the_drawing_states() {
     );
 }
 
-/// Every parameter of the activity, as (title, value) — a reference as its uuid.
+/// Every parameter of the activity, as (title, value) - a reference as its uuid.
 fn recorded(plan: &Plan) -> Vec<(String, Value)> {
     use energyml_domain::provenance::Parameter;
     plan.activity
@@ -280,7 +280,7 @@ fn a_setting_that_disagrees_with_the_drawing_is_refused_on_its_slot() {
 }
 
 /// The objects the section was computed from are the activity's inputs, by
-/// reference with the package's titles — and one the package does not hold is
+/// reference with the package's titles - and one the package does not hold is
 /// refused by its uri: the drawing was made from another package.
 #[test]
 fn the_objects_the_drawing_was_computed_from_are_its_inputs() {
@@ -313,11 +313,11 @@ fn the_objects_the_drawing_was_computed_from_are_its_inputs() {
     let pieces = bag(&svg, None)
         .with(
             "objects",
-            held(A, "resqml22.WellboreFrameRepresentation", "GTH-1 — frame"),
+            held(A, "resqml22.WellboreFrameRepresentation", "GTH-1 - frame"),
         )
         .with(
             "objects 2",
-            held(B, "resqml22.Grid2dRepresentation", "H3 — top of the Ypresian"),
+            held(B, "resqml22.Grid2dRepresentation", "H3 - top of the Ypresian"),
         )
         .with(
             "objects 3",
@@ -344,19 +344,19 @@ fn the_objects_the_drawing_was_computed_from_are_its_inputs() {
         2,
         "the two asked, not the third: {references:?}"
     );
-    assert_eq!(references[0]["Title"], "GTH-1 — frame");
+    assert_eq!(references[0]["Title"], "GTH-1 - frame");
     assert_eq!(references[1]["Uuid"], B);
 
     let partial = bag(&svg, None).with(
         "objects",
-        held(A, "resqml22.WellboreFrameRepresentation", "GTH-1 — frame"),
+        held(A, "resqml22.WellboreFrameRepresentation", "GTH-1 - frame"),
     );
     let why = said(&plan_of(&partial), "objects");
     assert!(why.contains(B), "{why}");
 }
 
 /// A drawing over several packages names objects this package does not hold:
-/// they are said, not refused — and only those of the package named by
+/// they are said, not refused - and only those of the package named by
 /// `store` are its inputs.
 #[test]
 fn another_packages_objects_are_said_and_not_asked_of_this_one() {
@@ -394,7 +394,7 @@ fn another_packages_objects_are_said_and_not_asked_of_this_one() {
             reference: Some(Ref::new(
                 A,
                 "resqml22.WellboreFrameRepresentation",
-                "GTH-1 — frame",
+                "GTH-1 - frame",
             )),
             ..Default::default()
         }),
@@ -426,7 +426,7 @@ fn another_packages_objects_are_said_and_not_asked_of_this_one() {
     assert!(why.contains(B) && !why.contains(A), "{why}");
 }
 
-/// Storing a section again — redrawn, so other bytes — writes its drawings
+/// Storing a section again - redrawn, so other bytes - writes its drawings
 /// over themselves: the same `Attachment`s under the same parts, never a
 /// second pair beside the first.
 #[test]
@@ -533,7 +533,7 @@ fn the_images_are_parts_attached_to_the_lines_and_results_of_the_activity() {
         .pieces
         .iter()
         .inspect(|piece| assert_eq!(piece.form, Form::PartAddress, "{piece:?}"))
-        // The lines' own — attached to the feature, they would be inherited
+        // The lines' own - attached to the feature, they would be inherited
         // through the interpretation, and listed all the same.
         .inspect(|piece| {
             assert_eq!(
@@ -554,15 +554,15 @@ fn the_images_are_parts_attached_to_the_lines_and_results_of_the_activity() {
     assert_eq!(
         found,
         vec![
-            // A folder named after the section — `Section A–A'`, what a part
+            // A folder named after the section - `Section A-A'`, what a part
             // name may hold of it.
             (
-                Location::Part("media/sections/Section_A_A/long.png".into()),
+                Location::Part("media/sections/Section_A-A/long.png".into()),
                 Some("image/png".into()),
                 Some("SectionView".into())
             ),
             (
-                Location::Part("media/sections/Section_A_A/long.svg".into()),
+                Location::Part("media/sections/Section_A-A/long.svg".into()),
                 Some("image/svg+xml".into()),
                 Some("SectionView".into())
             ),
@@ -675,7 +675,7 @@ fn frame(uuid: &str, kind: &str, down: bool) -> Known {
 /// The need: before saving, check whether a compatible projected/vertical
 /// and compoundCrs already exist in the target package. Compatible
 /// is what would be created, the sense aside: a compound of that projected code,
-/// no offset, no rotation, a length in metres — one counting up first.
+/// no offset, no rotation, a length in metres - one counting up first.
 #[test]
 fn a_frame_of_the_package_is_compatible_when_it_is_what_would_be_created() {
     const COMPOUND: &str = "eml23.LocalEngineeringCompoundCrs";
@@ -712,7 +712,7 @@ fn a_frame_of_the_package_is_compatible_when_it_is_what_would_be_created() {
 }
 
 /// Stored in a frame of the package counting down, the elevation is written as
-/// its depth — the lines are at 35 m above the datum either way.
+/// its depth - the lines are at 35 m above the datum either way.
 #[test]
 fn under_a_frame_counting_down_the_elevation_is_written_as_its_depth() {
     let depth = frame(
@@ -724,7 +724,7 @@ fn under_a_frame_counting_down_the_elevation_is_written_as_its_depth() {
     let choices = Choices::new()
         .set("crs", dor)
         .set("elevation", 35.0)
-        .set("title", "Section A–A'");
+        .set("title", "Section A-A'");
     let pieces = bag(&drawing(&inputs()), None).with("crs", Source::Object(depth));
     let plan = plan(&pieces, choices).unwrap_or_else(|e| panic!("{e:?}"));
     let nodes = patches(&plan);
@@ -743,7 +743,7 @@ fn under_a_frame_counting_down_the_elevation_is_written_as_its_depth() {
 // -- further drawings -------------------------------------------------------
 
 /// The need: an attachment as a folder that holds all the exports.
-/// A section is exported as several files — its cross sections, its plan view —
+/// A section is exported as several files - its cross sections, its plan view -
 /// and each is attached to the lines the way the first is.
 fn view_of(inputs: &Inputs, target: Target) -> String {
     let catalogue = energyml_section::compute(inputs, |_, _| unreachable!("nothing is asked"))
@@ -832,9 +832,9 @@ fn further_drawings_are_attached_to_the_lines_in_the_folder_of_the_section() {
     );
     assert!(made.refused.is_empty(), "{:?}", made.refused);
 
-    // Five drawings in all, every one in `media/sections/Section_A_A/`, its type
+    // Five drawings in all, every one in `media/sections/Section_A-A/`, its type
     // the one its bytes state.
-    let folder = "media/sections/Section_A_A";
+    let folder = "media/sections/Section_A-A";
     let want: Vec<(String, Option<String>)> = [
         ("cross-1.svg", "image/svg+xml"),
         ("long.png", "image/png"),
@@ -890,7 +890,7 @@ fn further_drawings_are_attached_to_the_lines_in_the_folder_of_the_section() {
 }
 
 /// A drawing is what its bytes say: an SVG named `.png` is attached as an SVG,
-/// and a JPEG named `.svg` is refused — by its name, on the slot.
+/// and a JPEG named `.svg` is refused - by its name, on the slot.
 #[test]
 fn a_further_drawing_is_typed_by_its_bytes_and_never_its_name() {
     let svg = view_of(&inputs(), Target::Plan).into_bytes();
@@ -947,7 +947,7 @@ fn a_drawing_of_another_trace_is_refused() {
         "drawings",
     );
     assert!(why.contains("another trace"), "{why}");
-    // An SVG that states no section view is a picture, attached as it is — and said.
+    // An SVG that states no section view is a picture, attached as it is - and said.
     let picture = b"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"/>".to_vec();
     let made =
         plan(&bag_with_drawings(&[("legend.svg", picture)]), choices()).unwrap_or_else(|e| panic!("{e:?}"));
@@ -958,7 +958,7 @@ fn a_drawing_of_another_trace_is_refused() {
     );
 }
 
-/// Storing the section again — redrawn, so other bytes — writes the same
+/// Storing the section again - redrawn, so other bytes - writes the same
 /// attachments over themselves: five, never ten.
 #[test]
 fn a_second_storing_replaces_every_drawing_it_attached() {
@@ -1018,8 +1018,8 @@ fn without_further_drawings_the_plan_is_what_it_was() {
     );
     assert_eq!(after[..before.len()], before[..]);
     assert_eq!(after.len(), before.len() + 3);
-    // The identity is the rule the section's own files always had — the lines
-    // and what the file is — and a further drawing's is the lines and its file's
+    // The identity is the rule the section's own files always had - the lines
+    // and what the file is - and a further drawing's is the lines and its file's
     // name: this is what makes a second storing replace.
     let lines = lines_of(&alone);
     let derived = |what: &str| {
@@ -1040,23 +1040,23 @@ fn without_further_drawings_the_plan_is_what_it_was() {
     assert_eq!(
         attachments(&alone),
         vec![
-            ("media/sections/Section_A_A/long.svg".to_string(), derived("SVG")),
-            ("media/sections/Section_A_A/long.png".to_string(), derived("PNG")),
+            ("media/sections/Section_A-A/long.svg".to_string(), derived("SVG")),
+            ("media/sections/Section_A-A/long.png".to_string(), derived("PNG")),
         ]
     );
     assert_eq!(
         attachments(&with)[2..],
         [
             (
-                "media/sections/Section_A_A/cross-1.svg".to_string(),
+                "media/sections/Section_A-A/cross-1.svg".to_string(),
                 derived("file:cross-1.svg")
             ),
             (
-                "media/sections/Section_A_A/plan.svg".to_string(),
+                "media/sections/Section_A-A/plan.svg".to_string(),
                 derived("file:plan.svg")
             ),
             (
-                "media/sections/Section_A_A/plan.png".to_string(),
+                "media/sections/Section_A-A/plan.png".to_string(),
                 derived("file:plan.png")
             ),
         ]
@@ -1073,7 +1073,7 @@ fn without_further_drawings_the_plan_is_what_it_was() {
 /// The need: it is enough to list the activities that point to the right
 /// activity template. A stored section is listed **by its activity's
 /// template**: the section's activity is listed, with its name and the lines
-/// it wrote; the activity of another operation is not — **even titled like a
+/// it wrote; the activity of another operation is not - **even titled like a
 /// section view**, since a title is anybody's to edit. To make it fail: test
 /// the activity's title instead of its descriptor, or drop the template test.
 #[test]
@@ -1115,10 +1115,10 @@ fn a_stored_section_is_listed_by_its_activitys_template_never_its_title() {
         .uri
         .clone();
     assert_eq!(listed[0].polyline.as_deref(), Some(lines.as_str()));
-    assert_eq!(listed[0].name.as_deref(), Some("Section A–A'"));
+    assert_eq!(listed[0].name.as_deref(), Some("Section A-A'"));
     assert_eq!(listed[0].title, section.activity.title);
     // The drawing to reopen is the part the activity names, and it reads by
-    // that name alone — no index of the package.
+    // that name alone - no index of the package.
     assert_eq!(
         listed[0].drawings,
         vec![

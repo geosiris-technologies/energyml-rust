@@ -6,7 +6,7 @@
 //!
 //! `energyml-resqml2-2`, `energyml-witsml2-0`, `energyml-utils` and their
 //! siblings all install under `energyml/`. A file of ours landing anywhere but
-//! `energyml/rust/` would overwrite one of theirs — silently, at `pip install`
+//! `energyml/rust/` would overwrite one of theirs - silently, at `pip install`
 //! time, and it would be their code that broke.
 //!
 //! This is a promise a comment cannot keep, so it is checked: the module name
@@ -70,7 +70,7 @@ fn every_python_file_of_this_crate_lives_under_energyml_rust() {
 
     // **Including `energyml/__init__.py`, which must not exist.** Without it the
     // folder is a namespace package when this bridge is alone and an ordinary
-    // sub-folder when one of the other distributions has laid its own down —
+    // sub-folder when one of the other distributions has laid its own down -
     // both work, and nothing of anyone else's is overwritten.
     assert!(
         wrong.is_empty(),

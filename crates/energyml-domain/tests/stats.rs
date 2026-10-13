@@ -17,7 +17,7 @@ fn floats(values: &[f64]) -> Values {
 fn the_extremes_are_the_edges_and_the_last_bin_is_closed() {
     // Ten values 0…9, four bins: the edges are 0 and 9, and the 9 belongs to
     // the last bin. Computed the obvious way it lands at index 4 of a 4-bin
-    // array — out of range, or silently dropped, and the value a person opened
+    // array - out of range, or silently dropped, and the value a person opened
     // the histogram to find is the one that vanishes.
     let summary = Summary::of(&floats(&[0., 1., 2., 3., 4., 5., 6., 7., 8., 9.]), 4);
     let histogram = summary.histogram.expect("a range has a histogram");
@@ -31,7 +31,7 @@ fn the_extremes_are_the_edges_and_the_last_bin_is_closed() {
 
 #[test]
 fn a_value_that_is_not_a_number_is_counted_rather_than_averaged() {
-    // How the corpus says "no data here" — 785 250 of ALWYN's 987 387 grid
+    // How the corpus says "no data here" - 785 250 of ALWYN's 987 387 grid
     // nodes. Counting them as values drags the mean towards nothing; skipping
     // them without saying so hides that four fifths of the array is empty.
     let summary = Summary::of(&floats(&[1.0, f64::NAN, 3.0, f64::INFINITY]), 8);

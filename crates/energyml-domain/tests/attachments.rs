@@ -1,12 +1,12 @@
-//! The files attached to an object, in every form — `energyml_domain::attachments`.
+//! The files attached to an object, in every form - `energyml_domain::attachments`.
 //!
 //! See ADR-0014. The packages are
 //! **built in memory** after the specifications, never read from a file:
 //!
-//! - Energistics Packaging Conventions v1.0 §3.4.2 pp. 15–16: a media part is
+//! - Energistics Packaging Conventions v1.0 §3.4.2 pp. 15-16: a media part is
 //!   tied to an object by `destinationMedia` (form A);
 //! - `eml23.Attachment` (`Attachment.xsd`): `Content` is `xsd:base64Binary`
-//!   and required — it may be empty; `ContentUri` is *"A URI pointing to the
+//!   and required - it may be empty; `ContentUri` is *"A URI pointing to the
 //!   location of the attached content"*; `ObjectReference` names the object;
 //!   `Md` is *"the along-hole measured depth within the RepresentedObject where
 //!   the attachment is indexed"* (forms B, C, D);
@@ -269,7 +269,7 @@ fn each_form_is_found_by_its_own_door_with_what_the_object_states() {
         listing.pieces
     );
 
-    // A — a part tied by destinationMedia: no MD, no category, the part's own type and size.
+    // A - a part tied by destinationMedia: no MD, no category, the part's own type and size.
     let a = piece(&listing, "part:media/fiche.pdf");
     assert_eq!(
         (a.form, a.size, a.media_type.as_deref()),
@@ -278,7 +278,7 @@ fn each_form_is_found_by_its_own_door_with_what_the_object_states() {
     assert_eq!(a.location, Location::Part("media/fiche.pdf".into()));
     assert!(a.md.is_none() && a.category.is_none() && a.attachment.is_none());
 
-    // B — the bytes are in the XML; Md = 0 is the head of the hole (the datum).
+    // B - the bytes are in the XML; Md = 0 is the head of the hole (the datum).
     let b = piece_of(&listing, &u(10));
     assert_eq!(
         (b.form, b.location.clone(), b.size),
@@ -293,12 +293,12 @@ fn each_form_is_found_by_its_own_door_with_what_the_object_states() {
         (Some("HeadImage"), Some("tete.png"))
     );
 
-    // C — `Content` empty and the address a part of the package: the address is followed.
+    // C - `Content` empty and the address a part of the package: the address is followed.
     let c = piece_of(&listing, &u(11));
     assert_eq!((c.form, c.size), (Form::PartAddress, Some(PNG.len() as u64)));
     assert_eq!(c.location, Location::Part("media/symbols/piezometre.png".into()));
 
-    // D — an external address, never followed, so no size.
+    // D - an external address, never followed, so no size.
     let d = piece_of(&listing, &u(12));
     assert_eq!((d.form, d.size), (Form::External, None));
     assert_eq!(
@@ -442,7 +442,7 @@ fn what_does_not_go_is_said_never_silently_listed() {
 
 /// What an object does not carry it inherits, and the piece says from whom:
 /// by a collection (the object a member), by a parent (the feature of its
-/// interpretation) — and its own pieces hide both.
+/// interpretation) - and its own pieces hide both.
 #[test]
 fn an_inherited_piece_says_where_it_came_from_and_an_own_piece_hides_it() {
     let mut store = store();
@@ -591,7 +591,7 @@ fn an_inherited_piece_says_where_it_came_from_and_an_own_piece_hides_it() {
     );
 }
 
-/// An object nobody attaches anything to has an empty listing — not an error,
+/// An object nobody attaches anything to has an empty listing - not an error,
 /// not a sentinel.
 #[test]
 fn nothing_attached_is_an_empty_listing() {

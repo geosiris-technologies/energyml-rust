@@ -8,7 +8,7 @@
 //! the other formats that are already supported should be visible.
 //!
 //! The tests of `mesh.rs` pin each reader on a hand-written file, which
-//! is the right form — **the shape of the assertions comes from the
+//! is the right form - **the shape of the assertions comes from the
 //! specification, not from what we produce**. This one asks the other
 //! question, which is a question about *us*: what our exporter writes,
 //! does our reader read it back?
@@ -20,8 +20,8 @@
 //!
 //! That the points come back identical. They cannot: the export places
 //! in WGS 84 for GeoJSON and the import reprojects to a UTM zone, so the
-//! loop crosses two systems. What is verified is what must be —
-//! **the file is read without refusal, and it returns nodes** — because an import
+//! loop crosses two systems. What is verified is what must be -
+//! **the file is read without refusal, and it returns nodes** - because an import
 //! that returned zero nodes looks exactly like an empty file.
 
 use energyml_build::mesh;
@@ -47,7 +47,7 @@ const VTP: &str = r#"<?xml version="1.0"?>
 </VTKFile>
 "#;
 
-/// The same, as an `UnstructuredGrid` — the other container that we write.
+/// The same, as an `UnstructuredGrid` - the other container that we write.
 const VTU: &str = r#"<?xml version="1.0"?>
 <VTKFile type="UnstructuredGrid" version="1.0">
   <UnstructuredGrid>
@@ -77,7 +77,7 @@ fn a_vtp_from_our_exporter_comes_back() {
     assert_eq!(nodes(&made), 3);
     // The coordinates are those of the file, to the digit: nothing in this
     // path reprojects, and an import that silently moved things would be
-    // the costliest defect of all — it passes every check.
+    // the costliest defect of all - it passes every check.
     assert_eq!(made.patches[0].points[0], [652_844.8, 6_864_033.8, 38.5]);
 }
 
@@ -100,7 +100,7 @@ fn a_csv_from_our_exporter_comes_back_by_its_named_columns() {
 #[test]
 fn a_geojson_from_our_exporter_comes_back_in_metres() {
     // Our GeoJSON is in WGS 84, as RFC 7946 imposes. The import carries it
-    // into a UTM zone deduced from its longitude — so the loop crosses two
+    // into a UTM zone deduced from its longitude - so the loop crosses two
     // systems, and what is verified is that it arrives in metres.
     let text = r#"{"type":"FeatureCollection","features":[
       {"type":"Feature","bbox":[2.32,48.96,38.5,2.33,48.97,38.5],
@@ -120,13 +120,13 @@ fn a_geojson_from_our_exporter_comes_back_in_metres() {
 
 #[test]
 fn the_six_formats_written_are_the_six_formats_read() {
-    // **The check that was missing.** It does not compare two lists of strings —
-    // that would be true the day it is written and false the next — it verifies
+    // **The check that was missing.** It does not compare two lists of strings -
+    // that would be true the day it is written and false the next - it verifies
     // that each extension that the exporter produces finds a reader.
     //
     // `energyml-export` is not a dependency of this crate, and it must not
     // become one for a test: the list is therefore quoted here, with its source.
-    // If it grows without this file moving, it is this check that will say so —
+    // If it grows without this file moving, it is this check that will say so -
     // it will refuse the new extension.
     for written in [".obj", ".csv", ".geojson", ".vtk", ".vtp", ".vtu"] {
         assert!(

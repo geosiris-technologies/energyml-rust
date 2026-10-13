@@ -3,7 +3,7 @@
 //! Every other way of changing a package goes through an object: read it, edit
 //! it by reflection, let the writer serialise it back. That whole path assumes
 //! the part **parses**, and the audit of 01/08 left three cases where it does
-//! not — markup that does not close, a part of zero length, a byte that is not
+//! not - markup that does not close, a part of zero length, a byte that is not
 //! UTF-8. Those were named refusals, which was honest and left the file
 //! unfixable.
 //!
@@ -14,7 +14,7 @@
 //!
 //! Worse than an unreadable part is one the **inventory drops**. When the
 //! damage reaches the root element, and the part name carries no uuid either,
-//! there is nothing to address the part by — so it did not appear in `list`, in
+//! there is nothing to address the part by - so it did not appear in `list`, in
 //! `check`'s object section, or anywhere else. It was in the archive and in no
 //! listing. `unreadable()` reports it by part name, and the part name is enough
 //! to read and replace it.
@@ -47,7 +47,7 @@ const NEIGHBOUR_PART: &str = "TriangulatedSetRepresentation_2b5223fb-d5f0-5d9e-b
 ///
 /// It carries a `RepresentedObject` pointing at the package's other part,
 /// because a relationship is only written for a reference that has somewhere to
-/// go — and one of the tests below is entirely about the relationships.
+/// go - and one of the tests below is entirely about the relationships.
 fn healthy() -> String {
     object(UUID, Some(NEIGHBOUR))
 }
@@ -94,7 +94,7 @@ ContentType=\"application/x-resqml+xml;version=2.2;type=TriangulatedSetRepresent
 
 /// A one-object package whose single part holds exactly these bytes.
 ///
-/// `declare` says whether `[Content_Types].xml` mentions the part at all —
+/// `declare` says whether `[Content_Types].xml` mentions the part at all -
 /// without it, and with damage at the root, nothing can address the part, which
 /// is the invisible case.
 fn package(name: &str, part: &str, bytes: &[u8], declare: bool) -> PathBuf {
@@ -135,7 +135,7 @@ fn truncated() -> Vec<u8> {
 /// The fourth copy a reference carries: the revision of its target.
 ///
 /// Added on 10/09, after `energyml check` learned to compare it and found our
-/// own translations saying two things — every object stamped `objectVersion=0`
+/// own translations saying two things - every object stamped `objectVersion=0`
 /// and every reference silent. What would have to break for this to go red: the
 /// version left out of the drift check, written where the target has none, or a
 /// reference naming a revision the target lacks quietly cleared.
@@ -236,7 +236,7 @@ fn an_empty_part_says_it_is_empty() {
 
 /// The case that used to be invisible: damage at the root, no uuid anywhere.
 ///
-/// It is in the archive and in no listing — not in `resources`, not addressable
+/// It is in the archive and in no listing - not in `resources`, not addressable
 /// by uri. Only the part name reaches it, which is why `unreadable` reports one
 /// and `raw_part` takes one.
 #[test]
@@ -253,7 +253,7 @@ fn a_part_the_inventory_dropped_is_still_reachable_by_name() {
     assert_eq!(broken[0].part, "Broken.xml");
     assert!(
         broken[0].uri.is_none(),
-        "no uri — the part name is the only handle there is"
+        "no uri - the part name is the only handle there is"
     );
     assert_eq!(store.raw_part("Broken.xml").expect("readable as bytes"), b"");
 }
@@ -329,7 +329,7 @@ fn a_repair_that_parses_gets_its_relationships_back() {
     );
     assert!(
         !names(&verbatim).contains(&rels),
-        "through the byte layer, they are not — which is why the two exist"
+        "through the byte layer, they are not - which is why the two exist"
     );
 }
 
@@ -405,7 +405,7 @@ fn a_read_sees_what_was_staged() {
 /// A rollback undoes a staged repair, like every other change.
 ///
 /// The raw layer is a second map, so it had to be taught the transaction
-/// separately — and a rollback that undid the objects but kept the bytes would
+/// separately - and a rollback that undid the objects but kept the bytes would
 /// be exactly the kind of half-truth `overlay.rs` refuses to ship.
 #[test]
 fn a_rollback_undoes_a_staged_repair() {
@@ -432,7 +432,7 @@ fn a_rollback_undoes_a_staged_repair() {
 
 /// Repairing a nameless part puts it back under its proper name.
 ///
-/// Not something the repair asks for — a consequence of rejoining the object
+/// Not something the repair asks for - a consequence of rejoining the object
 /// layer. The writer places a part from the object's own type and uuid, so a
 /// part called `Broken.xml`, once it parses, comes out of the save as
 /// `TriangulatedSetRepresentation_<uuid>.xml` with its `.rels` beside it. The

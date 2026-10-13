@@ -1,8 +1,8 @@
 //! PRODML 2.3 `WellProductionParameters`: period by period, a start, a
-//! duration, and a rate per product — the quantity is the rate times the
+//! duration, and a rate per product - the quantity is the rate times the
 //! period's **own** duration.
 //!
-//! `ProductionWellPeriod` (SimpleProductVolume.xsd l. 465–491): `StartTime`
+//! `ProductionWellPeriod` (SimpleProductVolume.xsd l. 465-491): `StartTime`
 //! 1..1, `Duration` 1..1 (an `eml:TimeMeasure`), `ProductRate` 1..n, each with
 //! a `VolumeFlowRate` and/or a `MassFlowRate`. A period is not a month: the
 //! duration the file states is the one multiplied, never an assumed calendar step.
@@ -10,12 +10,12 @@
 //! # Units are checked, never converted blindly
 //!
 //! The duration's unit must be a time unit `energyml-domain::units` knows; a
-//! rate's unit must read `<quantity>/<time>` with the time a unit it knows —
+//! rate's unit must read `<quantity>/<time>` with the time a unit it knows -
 //! `m3/h`, `bbl/d`, `kg/s`. The quantity is then
 //! `rate × duration / (one time unit of the rate)`, both times in seconds
 //! through [`crate::units::seconds`], and its unit is the rate's numerator
 //! **as written**: this build has no table of volumes or masses, so it
-//! converts nothing it cannot check. Any other unit is [`Refused::Unit`] —
+//! converts nothing it cannot check. Any other unit is [`Refused::Unit`] -
 //! a quantity computed from a unit read wrong is a number with nothing to show
 //! it is wrong.
 //!
@@ -54,7 +54,7 @@ pub struct Period {
 pub struct Product {
     /// The product, as written (`water - processed`, `oil`, …).
     pub product: String,
-    /// `volume` or `mass` — which rate of `ProductRate` this is; `None` for a
+    /// `volume` or `mass` - which rate of `ProductRate` this is; `None` for a
     /// product the period gives no rate for.
     pub basis: Option<&'static str>,
     /// The rate.
@@ -90,7 +90,7 @@ impl Period {
     }
 }
 
-/// Whether this reads the object — a `WellProductionParameters`, by its
+/// Whether this reads the object - a `WellProductionParameters`, by its
 /// periods.
 pub fn reads(object: &dyn Reflect) -> bool {
     object.type_info().field_ignore_case("ProductionPeriod").is_some()
@@ -161,7 +161,7 @@ pub fn read(object: &dyn Reflect) -> Result<Vec<Period>, Refused> {
                 let per = crate::units::seconds(1.0, denominator).map_err(|why| Refused::Unit {
                     what: what.clone(),
                     uom: uom.clone(),
-                    why: format!("`{denominator}` is not a time this build converts — {why}"),
+                    why: format!("`{denominator}` is not a time this build converts - {why}"),
                 })?;
                 if numerator.trim().is_empty() {
                     return Err(Refused::Unit {

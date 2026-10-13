@@ -12,7 +12,7 @@
         rich = export_of(pkg, [one.uri], "geojson", metadata=standard_metadata())
 
 **Not a second copy of `energyml.resqml`.** An object crosses as a dictionary
-and always will; what lives here are the operations *on* RESQML — the ones a
+and always will; what lives here are the operations *on* RESQML - the ones a
 caller would otherwise redo from raw arrays.
 
 These functions take the package rather than hanging off it, because a package

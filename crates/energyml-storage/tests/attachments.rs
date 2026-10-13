@@ -1,13 +1,13 @@
 //! Files that are not objects: putting one in, taking one out, listing them.
 //!
-//! An EPC is a zip, and §3.6 lets it carry anything — a report, a picture, a
+//! An EPC is a zip, and §3.6 lets it carry anything - a report, a picture, a
 //! note. The reader already copied those through a rewrite; what was missing is
 //! the other direction, and the thing worth testing about it is not that a byte
 //! survives. It is that **the listing and the file agree after every operation**:
 //! a part added exists before the save, a part removed stops existing before the
 //! save, and both are still true after the round trip.
 //!
-//! `testdata/` is git-ignored, so every test skips when the corpus is absent —
+//! `testdata/` is git-ignored, so every test skips when the corpus is absent -
 //! a test that goes red on a fresh clone teaches people to ignore red tests.
 
 use std::io::Cursor;
@@ -30,7 +30,7 @@ fn open() -> Option<EpcStore> {
     EpcStore::open(package()?, registry()).ok()
 }
 
-/// Save to memory and open what came out — the only proof that survives.
+/// Save to memory and open what came out - the only proof that survives.
 fn round_trip(store: &EpcStore) -> EpcStore {
     let mut out = Cursor::new(Vec::new());
     store
@@ -58,7 +58,7 @@ fn a_file_put_in_is_listed_before_the_save_and_survives_it() {
         .expect("an attachment goes in");
 
     // Before the save. A listing that only became right after a round trip
-    // would be a listing nobody could act on — the whole point is to show what
+    // would be a listing nobody could act on - the whole point is to show what
     // the package holds *now*.
     let listed = store.parts();
     let entry = listed
@@ -72,7 +72,7 @@ fn a_file_put_in_is_listed_before_the_save_and_survives_it() {
     assert!(store.attachments().iter().any(|p| p == "media/rapport.pdf"));
     assert_eq!(store.read_attachment("media/rapport.pdf").unwrap(), NOTE);
 
-    // And after it, with the content type the caller stated — not one guessed
+    // And after it, with the content type the caller stated - not one guessed
     // from the extension, which is the fallback and not the answer.
     let reopened = round_trip(&store);
     assert_eq!(reopened.read_attachment("media/rapport.pdf").unwrap(), NOTE);
@@ -168,7 +168,7 @@ fn a_file_can_be_put_back_after_being_removed() {
     store.remove_attachment("media/note.txt").unwrap();
     assert!(!store.attachments().iter().any(|p| p == "media/note.txt"));
 
-    // Putting it back is putting it back — not adding a second part named the
+    // Putting it back is putting it back - not adding a second part named the
     // same, and not leaving it on a removed list that a save would obey.
     store
         .set_attachment("media/note.txt", b"deux".to_vec(), Some("text/plain".into()))

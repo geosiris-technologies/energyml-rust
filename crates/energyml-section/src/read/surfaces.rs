@@ -6,7 +6,7 @@
 //! The order is the order of refusals, cheapest first, each one naming the
 //! object: not in the package, not a representation this build reads (an IJK
 //! grid has its own reading, [`crate::read::grids`], and its own refusals), a CRS that cannot be
-//! read, a read that fails, **no triangles** (it draws as points or lines — the
+//! read, a read that fails, **no triangles** (it draws as points or lines - the
 //! cut is of triangles), points that cannot be brought into the scene. An
 //! object that gets through is cut and never empty-handed by accident: a
 //! section it does not cross has no entry, and an object crossing none is the
@@ -29,7 +29,7 @@ use crate::read::frame::{frame_of, to_scene};
 use crate::read::grids::Grid;
 
 /// The uuid a uri names: `eml:///resqml22.Foo(uuid)` gives `uuid`, and a text
-/// that is not a uri is taken as the uuid itself — `ObjectSource::object` is
+/// that is not a uri is taken as the uuid itself - `ObjectSource::object` is
 /// asked by uuid.
 ///
 /// Lower case, since a store keys its objects that way.
@@ -53,8 +53,8 @@ pub fn read_surface(
     read_surface_coloured(source, store, uri, sections, scene, Colouring::default())
 }
 
-/// Where a surface's colour is looked for: the package's sets, merged, and —
-/// when the face has it — the package's index, for the inheritance order.
+/// Where a surface's colour is looked for: the package's sets, merged, and -
+/// when the face has it - the package's index, for the inheritance order.
 #[derive(Clone, Copy, Default)]
 pub struct Colouring<'a> {
     /// The package's `GraphicalInformationSet`s, merged.
@@ -66,7 +66,7 @@ pub struct Colouring<'a> {
     pub resolver: Option<&'a crate::read::ColourOf<'a>>,
 }
 
-/// [`read_surface`], with the package's colour sets merged — the surface takes
+/// [`read_surface`], with the package's colour sets merged - the surface takes
 /// the colour the file gives it ([`file_colour`]).
 #[allow(clippy::result_large_err)]
 pub fn read_surface_coloured(
@@ -90,7 +90,7 @@ pub fn read_surface_coloured(
 pub struct Prepared {
     /// What the drawing calls it.
     pub object: ObjectId,
-    /// What it is — from its interpretation.
+    /// What it is - from its interpretation.
     pub role: TraceRole,
     /// In time, carried onto the depth axis.
     pub time: bool,
@@ -105,22 +105,22 @@ pub struct Prepared {
     /// Its triangles.
     pub triangles: Vec<[u32; 3]>,
     /// **The node numbering, reconciled**: `nodes[i]` is the number, in the
-    /// representation's own numbering (the running sum of its patches' points —
+    /// representation's own numbering (the running sum of its patches' points -
     /// the numbering a front end's colour buffer indexes, so the front end's per-node
     /// paint), of `points[i]`. The two differ whenever the reader dropped a
     /// node that holds no location (`Geometry::drawable` compacts them out and
-    /// renumbers): a lattice with holes — Lutetia's horizons in grid form — is
+    /// renumbers): a lattice with holes - Lutetia's horizons in grid form - is
     /// the ordinary case. Empty when the reader cannot say (a grid, or a shape
     /// whose dropped nodes are not just the non-finite ones): the cut then
     /// carries no sources and is drawn in the flat colour.
     pub nodes: Vec<u32>,
-    /// An IJK grid's cells, in the scene's system — then `points` and
+    /// An IJK grid's cells, in the scene's system - then `points` and
     /// `triangles` are empty, and a section cuts its envelope ([`Grid::cut`]).
     pub grid: Option<Grid>,
 }
 
 /// The first half of [`read_surface_coloured`]: read, judged, placed in the
-/// scene and coloured — every refusal is here, none in the cut.
+/// scene and coloured - every refusal is here, none in the cut.
 #[allow(clippy::result_large_err)]
 pub fn prepare_surface(
     source: &dyn ValueSource,
@@ -209,7 +209,7 @@ pub fn prepare_surface(
         return Err(refuse(
             &object,
             format!(
-                "`{}` ({}) has no triangles — {} point(s) and {} line segment(s): only a triangulated shape is cut",
+                "`{}` ({}) has no triangles - {} point(s) and {} line segment(s): only a triangulated shape is cut",
                 object.title,
                 object.qualified_type,
                 drawn.points.len(),
@@ -252,7 +252,7 @@ pub fn prepare_surface(
 /// the raw numbering. **The count is the check**: if the finite nodes are not
 /// exactly as many as the points kept (a volume's node that no cell names is
 /// dropped too, `orphans_as_holes`), the mapping is not this one and nothing is
-/// claimed — empty.
+/// claimed - empty.
 pub fn drawn_nodes(geometry: &energyml_geometry::geometry::Geometry, kept: usize) -> Vec<u32> {
     let finite: Vec<u32> = geometry
         .patches
@@ -266,7 +266,7 @@ pub fn drawn_nodes(geometry: &energyml_geometry::geometry::Geometry, kept: usize
 }
 
 /// The second half of [`read_surface_coloured`]: a prepared surface cut along
-/// every section. Pure arithmetic — nothing is read, nothing refused.
+/// every section. Pure arithmetic - nothing is read, nothing refused.
 pub fn cut_prepared(prepared: &Prepared, sections: &[SectionTrace]) -> SurfaceRead {
     if let Some(grid) = &prepared.grid {
         return SurfaceRead {
@@ -287,14 +287,14 @@ pub fn cut_prepared(prepared: &Prepared, sections: &[SectionTrace]) -> SurfaceRe
 
     let mut cuts = Vec::new();
     for (trace, found) in sections.iter().zip(all) {
-        // A section the surface does not cross has no entry — `Missed`, if it
+        // A section the surface does not cross has no entry - `Missed`, if it
         // crosses none, is said by the row, not by an empty cut here.
         if found.is_empty() {
             continue;
         }
         let made = fence::curve_sourced(&found);
         // The edge each point lies on, in the representation's numbering (the
-        // paint's — `Prepared::nodes`). One list per span, one source per
+        // paint's - `Prepared::nodes`). One list per span, one source per
         // point; if any node cannot be translated, the cut says nothing
         // rather than a part of it.
         let sources = sources_of(prepared, &made.sources).unwrap_or_default();
@@ -319,12 +319,12 @@ pub fn cut_prepared(prepared: &Prepared, sections: &[SectionTrace]) -> SurfaceRe
     }
 }
 
-/// The cut's sources, translated into the representation's node numbering —
+/// The cut's sources, translated into the representation's node numbering -
 /// `None` when the preparation holds no numbering, or a node is out of it.
 ///
 /// A source whose end was **clipped** to the section's window lies inside its
 /// triangle, not on an edge: it carries the nearer crossing's edge and `t`
-/// (`CutEnd::clipped`), so its colour is that crossing's — the contract has no
+/// (`CutEnd::clipped`), so its colour is that crossing's - the contract has no
 /// way to say more, and the clipped end of a span is a fraction of one triangle
 /// from the crossing it takes.
 fn sources_of(prepared: &Prepared, sources: &[Vec<section::CutEnd>]) -> Option<Vec<Vec<CutSource>>> {
@@ -348,7 +348,7 @@ fn sources_of(prepared: &Prepared, sources: &[Vec<section::CutEnd>]) -> Option<V
         .collect()
 }
 
-/// What the surface is, from the **type of the interpretation** it represents —
+/// What the surface is, from the **type of the interpretation** it represents -
 /// `RepresentedInterpretation` in RESQML 2.0.1, `RepresentedObject` in 2.2, the
 /// pair `scene::SceneObject::interpretation` already reads. Never the title: a
 /// horizon called "Fault_3" is a horizon.
@@ -357,15 +357,15 @@ fn sources_of(prepared: &Prepared, sources: &[Vec<section::CutEnd>]) -> Option<V
 /// is the fact), and the reference's qualified type is the fallback. No
 /// interpretation, or one that is neither: `Other`.
 /// The colour the package gives an object: the library's cascade over the
-/// package's sets — the representation, then its interpretation, then its
+/// package's sets - the representation, then its interpretation, then its
 /// feature (`energyml_domain::color::Cascade`, where the 3D viewer's ladder
 /// starts). Only a **constant** colour answers here: a map colours by a
 /// property, and a section draws a surface as one line. `None` when nothing in
-/// the file speaks — the drawing then falls back on the role's colour, and never
+/// the file speaks - the drawing then falls back on the role's colour, and never
 /// invents one in the file's name.
 ///
 /// What this does not walk: the inheritance through collections and models
-/// (`color_inherit`), which needs the package's index — a face that has it
+/// (`color_inherit`), which needs the package's index - a face that has it
 /// passes the colour in the view instead (`View::colours`).
 pub fn file_colour(colouring: Colouring<'_>, uuid: &str, source: &dyn ValueSource) -> Option<String> {
     let set = colouring.set?;
@@ -373,7 +373,7 @@ pub fn file_colour(colouring: Colouring<'_>, uuid: &str, source: &dyn ValueSourc
 }
 
 /// [`file_colour`] for an object of the package: the face's resolver, when
-/// given, is asked by the object's **full uri** — a uuid would hand both
+/// given, is asked by the object's **full uri** - a uuid would hand both
 /// versions of a surface the colour of one.
 pub fn file_colour_of(
     colouring: Colouring<'_>,
@@ -396,7 +396,7 @@ fn cascade_colour(
 ) -> Option<String> {
     let cascade = Cascade::new(set);
     let decision = match index {
-        // The whole order — the 3D viewer's (`Cascade::inherited`): Lutetia
+        // The whole order - the 3D viewer's (`Cascade::inherited`): Lutetia
         // colours its horizons through the collections they belong to, which
         // the shorter walk below never reaches.
         Some(index) => cascade
@@ -445,7 +445,7 @@ fn role_of(representation: &dyn Reflect, read: &SceneObject, source: &dyn ValueS
 }
 
 /// The age of the interpretation a surface represents, `[old, young]` in
-/// millions of years before present — **an interval, never a bare value**: a
+/// millions of years before present - **an interval, never a bare value**: a
 /// horizon may state a span (`HasOccurredDuring`, or `OlderPossibleAge` and
 /// `YoungerPossibleAge`) and the detection judges only what is disjoint, so a
 /// point is the interval `[a, a]` and nothing is lost by it.
@@ -454,7 +454,7 @@ fn role_of(representation: &dyn Reflect, read: &SceneObject, source: &dyn ValueS
 ///
 /// 1. `HasOccurredDuring` → `GeologicTimeBasedTimeInterval`, whose `Start` and
 ///    `End` each carry an `AgeOffsetAttribute` in years (positive into the
-///    past, eml 2.3) — the reading `energyml_domain::stratigraphy` gives a
+///    past, eml 2.3) - the reading `energyml_domain::stratigraphy` gives a
 ///    unit's age;
 /// 2. `OlderPossibleAge` **and** `YoungerPossibleAge` (RESQML 2.2, years);
 /// 3. `AbsoluteAge` (a `GeologicTime`), as the point.
@@ -500,7 +500,7 @@ pub fn age_of(interpretation: &dyn Reflect) -> Option<[f64; 2]> {
     None
 }
 
-/// The feature the interpretation of `read` interprets — the reflection the
+/// The feature the interpretation of `read` interprets - the reflection the
 /// scene already does (`SceneObject::feature`: `InterpretedFeature` in 2.0.1 and
 /// 2.2, through the interpretation), as a lowercase uuid. `None` when the
 /// object names no interpretation, or the package cannot be followed to the
@@ -519,11 +519,11 @@ fn age_of_represented(representation: &dyn Reflect, source: &dyn ValueSource) ->
 }
 
 /// Whether an object of this qualified type is one a section cuts: a
-/// triangulated surface, a 2D grid (a horizon on a lattice — Lutetia's are), or
+/// triangulated surface, a 2D grid (a horizon on a lattice - Lutetia's are), or
 /// an IJK grid (its envelope).
 ///
 /// What "every surface of the package" means for a face that lists a package
-/// (the CLI's default) — decided here, so the front end and the CLI agree.
+/// (the CLI's default) - decided here, so the front end and the CLI agree.
 pub fn is_cut_type(qualified_type: &str) -> bool {
     [
         "TriangulatedSetRepresentation",

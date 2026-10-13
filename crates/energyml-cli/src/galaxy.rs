@@ -1,4 +1,4 @@
-//! `energyml galaxy-tool` — the Galaxy tool XML of an operation, written from
+//! `energyml galaxy-tool` - the Galaxy tool XML of an operation, written from
 //! its declaration (`energyml_build::galaxy`). This file reads arguments and
 //! writes files; what a tool holds is the library's.
 
@@ -11,7 +11,7 @@ use clap::Args;
 use energyml_build::galaxy::{ToolOptions, tool_xml};
 use energyml_build::operation::Registry;
 
-/// Write the Galaxy tool XML of an operation — or of every one (`--all`).
+/// Write the Galaxy tool XML of an operation - or of every one (`--all`).
 #[derive(Args, Debug)]
 pub struct GalaxyToolArgs {
     /// The operation, as `energyml create --list` names it.
@@ -59,7 +59,7 @@ pub fn run(args: GalaxyToolArgs) -> Result<ExitCode> {
         bail!("name an operation, or give --all --dir DIR")
     };
     let Some(operation) = registry.get(&name) else {
-        bail!("no operation is called `{name}` — `energyml create --list` names them");
+        bail!("no operation is called `{name}` - `energyml create --list` names them");
     };
     let xml = tool_xml(operation, &options);
     match args.out {

@@ -1,4 +1,4 @@
-//! `earth-model-from-stratigraphy` — an earth model made from a stratigraphic
+//! `earth-model-from-stratigraphy` - an earth model made from a stratigraphic
 //! unit, or from a whole column: the `Model`, its column restricted to what the
 //! unit contains, a top and a bottom for every unit, and the
 //! `EarthModelInterpretation` that gathers them.
@@ -10,14 +10,14 @@
 //!
 //! # What is written
 //!
-//! - **the `Model`**, named after the unit when none is given — a model is
+//! - **the `Model`**, named after the unit when none is given - a model is
 //!   created, for example, for "Cretaceous" if that is what was requested.
 //!   Its uuid comes from its title, through the writer
 //!   `earth-model` uses, so the same title is the same model whichever
 //!   operation writes it;
 //! - **the column**: the unit's rank and the finer ones, **restricted** to the
 //!   units the unit contains (`energyml_domain::stratigraphy::subtree`, which
-//!   decides the nesting — never here). A rank whose units are exactly the
+//!   decides the nesting - never here). A rank whose units are exactly the
 //!   subtree's is **taken as it is**; a restricted one interprets the model
 //!   and keeps its source's number. A column whose ranks are all taken
 //!   as they are is itself taken;
@@ -25,15 +25,15 @@
 //!   with Feature and interpretation only, e.g. "Bartonian
 //!   TOP" and "Bartonian BOTTOM"): a `BoundaryFeature` and a
 //!   `HorizonInterpretation` each, unless the package already holds one of that
-//!   title — compared **without case**, in case the user already
-//!   wrote these objects by hand — which is then taken. Two of one title
+//!   title - compared **without case**, in case the user already
+//!   wrote these objects by hand - which is then taken. Two of one title
 //!   are refused by name: choosing would be guessing. The switch `boundaries`
 //!   turns it off, for when the user already has these objects;
-//! - **a structural organisation** of those horizons, ordered by age — only
+//! - **a structural organisation** of those horizons, ordered by age - only
 //!   when every unit states its age: an ordered list whose order nobody
 //!   stated would be the one lie this crate refuses to draw. Without ages the
 //!   horizons are written and the organisation is not, and the plan says so;
-//! - **an occurrence per rank of the column** — a
+//! - **an occurrence per rank of the column** - a
 //!   `GeologicUnitOccurrenceInterpretation` that says which units exist in
 //!   *this* model. The occurrence is part of the earth model and describes
 //!   what exists in the real world of the model; a given unit may not appear
@@ -41,20 +41,20 @@
 //!   should express the units coming from the stratigraphicColumn. One per rank because
 //!   `IsOccurrenceOf` is *« 0..1 To: StratigraphicColumnRankInterpretation »*
 //!   (RESQML TRG 2.2 §6.31 p. 199), and because a succession is read at one
-//!   rank — the Eocene and the Lutetian are not one after the other. Each lists
+//!   rank - the Eocene and the Lutetian are not one after the other. Each lists
 //!   its rank's units in the rank's order, under the rank's criterion: the
 //!   column as it is, until a person removes an eroded unit or turns an
-//!   overturned succession over — the occurrence is the object that will say
+//!   overturned succession over - the occurrence is the object that will say
 //!   it, the column stays the chart;
 //! - **the `EarthModelInterpretation`**, by `earth_model::write`, the one writer
 //!   of it. `mode = snapshot` makes a new one when the content
-//!   is new — the earlier stays; `mode = enrich` rewrites the one given in
+//!   is new - the earlier stays; `mode = enrich` rewrites the one given in
 //!   `enrich` under its own uuid (the user is asked whether to make a
 //!   new one or enrich).
 //!
 //! # What is not written yet
 //!
-//! The contacts of a restricted rank are **not copied** — counted in a note;
+//! The contacts of a restricted rank are **not copied** - counted in a note;
 //! the wells of the model and its sides neither.
 
 use std::collections::BTreeMap;
@@ -92,17 +92,17 @@ pub struct FromStratigraphyParams {
     /// a new snapshot, or the interpretation given in `enrich` rewritten under its uuid
     #[param(default = Mode::Snapshot, optional)]
     pub mode: Mode,
-    /// write a top and a bottom — a boundary feature and a horizon interpretation — for every unit, taking those the package already holds under the same title
+    /// write a top and a bottom - a boundary feature and a horizon interpretation - for every unit, taking those the package already holds under the same title
     #[param(default = true, optional)]
     pub boundaries: bool,
-    /// a second snapshot of the same content, on purpose — left out for the ordinary case
+    /// a second snapshot of the same content, on purpose - left out for the ordinary case
     pub variant: Option<String>,
 }
 
 /// What `earth-model-from-stratigraphy` takes.
 #[derive(Debug, Inputs)]
 pub struct FromStratigraphyInputs {
-    /// the stratigraphic unit the model is made for — or a whole stratigraphic column
+    /// the stratigraphic unit the model is made for - or a whole stratigraphic column
     #[input(types = "resqml22.StratigraphicUnitInterpretation, resqml22.StratigraphicColumn")]
     pub from: ObjectIn,
     /// the model the earth model interprets; left empty, a model named after the unit is written
@@ -111,7 +111,7 @@ pub struct FromStratigraphyInputs {
     /// the column to read the unit in, when several columns list it and say different things
     #[input(types = "resqml22.StratigraphicColumn")]
     pub column: Option<ObjectIn>,
-    /// the earth model interpretation to rewrite — `mode = enrich` only
+    /// the earth model interpretation to rewrite - `mode = enrich` only
     #[input(types = "resqml22.EarthModelInterpretation")]
     pub enrich: Option<ObjectIn>,
     /// the boundary features and horizon interpretations of the package: a « `<unit>` TOP » or « `<unit>` BOTTOM » found here, whatever its case, is taken
@@ -165,7 +165,7 @@ impl Side {
 }
 
 /// A boundary of the model: whose, which side, and the interpretation that
-/// stands for it — taken from the package or written here.
+/// stands for it - taken from the package or written here.
 struct Limit {
     unit: Named,
     side: Side,
@@ -173,7 +173,7 @@ struct Limit {
     interpretation: eml::DataObjectReference,
 }
 
-/// What the package holds under one title, per type — lowercased keys, so « bartonien top » finds « Bartonien TOP ».
+/// What the package holds under one title, per type - lowercased keys, so « bartonien top » finds « Bartonien TOP ».
 #[derive(Default)]
 struct Existing {
     features: BTreeMap<String, Vec<eml::DataObjectReference>>,
@@ -210,7 +210,7 @@ impl Existing {
             Some(many) => Err(Refusal::on(
                 "existing",
                 format!(
-                    "{} {what}s of the package are titled « {title} » (compared without case): {} — which one is this model's is not said; retitle one, or turn `boundaries` off and link them by hand",
+                    "{} {what}s of the package are titled « {title} » (compared without case): {} - which one is this model's is not said; retitle one, or turn `boundaries` off and link them by hand",
                     many.len(),
                     many.iter()
                         .map(|one| format!("{} ({})", one.title, one.uuid))
@@ -252,7 +252,7 @@ fn chosen(trees: Vec<Subtree>, column: Option<&ObjectIn>, unit: &str) -> Result<
     Err(Refusal::on(
         "column",
         format!(
-            "`{unit}` is listed by {} columns that do not contain the same units under it: {} — name the one to read in `column`",
+            "`{unit}` is listed by {} columns that do not contain the same units under it: {} - name the one to read in `column`",
             trees.len(),
             trees
                 .iter()
@@ -291,7 +291,7 @@ impl Operation for EarthModelFromStratigraphy {
     }
 
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
-        // The unit's title, read from the bag — a suggestion reads nothing else.
+        // The unit's title, read from the bag - a suggestion reads nothing else.
         let unit = bag.iter().find_map(|(_, source)| match source {
             Source::Object(known) if known.stratigraphy.is_some() => {
                 known.reference.as_ref().map(|one| one.title.clone())
@@ -301,7 +301,7 @@ impl Operation for EarthModelFromStratigraphy {
         if let Some(unit) = unit {
             slots.set(
                 "title",
-                serde_json::Value::String(format!("{unit} — earth model")),
+                serde_json::Value::String(format!("{unit} - earth model")),
             );
         }
     }
@@ -315,7 +315,7 @@ impl Operation for EarthModelFromStratigraphy {
         if let Identity::Given(_) = cx.identity {
             return Err(Refusal::new(
                 "refused",
-                "an earth model is named from its content — the same unit and the same column give the same objects; it does not take given uuids",
+                "an earth model is named from its content - the same unit and the same column give the same objects; it does not take given uuids",
             ));
         }
         let Some(from) = inputs.from.known.reference.clone() else {
@@ -325,7 +325,7 @@ impl Operation for EarthModelFromStratigraphy {
             return Err(Refusal::on(
                 "from",
                 format!(
-                    "this operation writes RESQML 2.2; `{}` is a {} — translate the package first",
+                    "this operation writes RESQML 2.2; `{}` is a {} - translate the package first",
                     from.title, from.qualified_type
                 ),
             ));
@@ -334,7 +334,7 @@ impl Operation for EarthModelFromStratigraphy {
             return Err(Refusal::on(
                 "from",
                 format!(
-                    "nothing is known of the stratigraphy around `{}` — it was not read from a package",
+                    "nothing is known of the stratigraphy around `{}` - it was not read from a package",
                     from.title
                 ),
             ));
@@ -423,7 +423,7 @@ impl Operation for EarthModelFromStratigraphy {
         if contacts_left > 0 {
             says.push(Note {
                 key: "contacts-not-copied",
-                detail: format!("{contacts_left} contact(s) between kept units of the restricted ranks are not copied yet — they stay on the source ranks"),
+                detail: format!("{contacts_left} contact(s) between kept units of the restricted ranks are not copied yet - they stay on the source ranks"),
             });
         }
 
@@ -449,7 +449,7 @@ impl Operation for EarthModelFromStratigraphy {
                 ),
                 50,
             )?;
-            let title = format!("{root_title} — column");
+            let title = format!("{root_title} - column");
             let written = resqml::StratigraphicColumn {
                 uuid: uuid.clone(),
                 schema_version: "2.2".to_string(),
@@ -530,7 +530,7 @@ impl Operation for EarthModelFromStratigraphy {
                     let keys: Vec<String> = limits.iter().map(|one| one.interpretation.uuid.to_ascii_lowercase()).collect();
                     let uuid =
                         cx.identity.uuid(&format!("earth-model:structure:{}:{}", model.uuid.to_ascii_lowercase(), keys.join(",")), 60)?;
-                    let title = format!("{root_title} — structure");
+                    let title = format!("{root_title} - structure");
                     let organisation = resqml::StructuralOrganizationInterpretation {
                         uuid: uuid.clone(),
                         schema_version: "2.2".to_string(),
@@ -587,7 +587,7 @@ impl Operation for EarthModelFromStratigraphy {
                 return Err(Refusal::on(
                     "enrich",
                     format!(
-                        "`{}` is given to enrich while `mode` is `snapshot` — say `mode = enrich`, or leave `enrich` empty",
+                        "`{}` is given to enrich while `mode` is `snapshot` - say `mode = enrich`, or leave `enrich` empty",
                         given.name
                     ),
                 ));
@@ -619,7 +619,7 @@ impl Operation for EarthModelFromStratigraphy {
                 detail: format!("the package already holds `{}` with this content: the same objects are written again, no new snapshot", made.interpretation_title),
             });
         }
-        // The model first — everything interprets it — then what the
+        // The model first - everything interprets it - then what the
         // interpretation references, then the interpretation.
         let (model_objects, interpretation_objects): (Vec<_>, Vec<_>) = made
             .objects
@@ -634,7 +634,7 @@ impl Operation for EarthModelFromStratigraphy {
             Note {
                 key: "contains",
                 detail: format!(
-                    "{} rank(s) — {} taken as they are, {restricted} restricted — holding {} unit(s)",
+                    "{} rank(s) - {} taken as they are, {restricted} restricted - holding {} unit(s)",
                     tree.ranks.len(),
                     tree.ranks.len() - restricted,
                     tree.ranks.iter().map(|one| one.units.len()).sum::<usize>()
@@ -742,7 +742,7 @@ fn write_rank(
         ),
         10 + at,
     )?;
-    let title = format!("{} — {root_title}", label(&sub.source));
+    let title = format!("{} - {root_title}", label(&sub.source));
     let rank = resqml::StratigraphicColumnRankInterpretation {
         uuid: uuid.clone(),
         schema_version: "2.2".to_string(),
@@ -784,8 +784,8 @@ fn write_rank(
     ))
 }
 
-/// The occurrence of one rank in the model: the rank it is an occurrence of —
-/// taken or restricted —, its units in the rank's order, its criterion. It
+/// The occurrence of one rank in the model: the rank it is an occurrence of -
+/// taken or restricted -, its units in the rank's order, its criterion. It
 /// interprets the model, as the restricted rank and the structure do.
 ///
 /// Its uuid comes from the model, the rank and the units it lists: an
@@ -816,7 +816,7 @@ fn write_occurrence(
         ),
         70 + at,
     )?;
-    let title = format!("{root_title} — occurrence of {}", label(&sub.source));
+    let title = format!("{root_title} - occurrence of {}", label(&sub.source));
     let occurrence = resqml::GeologicUnitOccurrenceInterpretation {
         uuid: uuid.clone(),
         schema_version: "2.2".to_string(),
@@ -938,7 +938,7 @@ fn ages_of(columns: &Columns) -> BTreeMap<String, [f64; 2]> {
 ///
 /// A top is at its unit's young end, a bottom at its old end. At one age the
 /// bottom of the unit above comes before the top of the unit below (both are written, base of A then top of B); among tops the coarser comes
-/// first, among bottoms the finer — the outer limit encloses the inner.
+/// first, among bottoms the finer - the outer limit encloses the inner.
 fn ordered_by_age(limits: &mut [Limit], ages: &BTreeMap<String, [f64; 2]>) -> Result<(), usize> {
     let undated = {
         let mut seen: Vec<&str> = limits
@@ -968,7 +968,7 @@ fn ordered_by_age(limits: &mut [Limit], ages: &BTreeMap<String, [f64; 2]>) -> Re
     Ok(())
 }
 
-/// The model's top and bottom: those of its root — the unit, or the first and
+/// The model's top and bottom: those of its root - the unit, or the first and
 /// last units of a whole column's coarsest rank.
 fn frontiers(
     tree: &Subtree,

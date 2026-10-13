@@ -1,11 +1,11 @@
-//! `attach` — a file attached to an object, in the four forms, through the one
+//! `attach` - a file attached to an object, in the four forms, through the one
 //! door: `Registry::plan`, then `apply`, then **the reader of the domain** (the
 //! writer and the reader are two code paths of one fact, and they are confronted).
 //!
 //! The form of the assertions comes from the specifications:
 //!
-//! - Energistics Packaging Conventions v1.0 §3.4.2 pp. 15–16: `destinationMedia`
-//!   from the object, `sourceMedia` back — the part form carries no depth and no
+//! - Energistics Packaging Conventions v1.0 §3.4.2 pp. 15-16: `destinationMedia`
+//!   from the object, `sourceMedia` back - the part form carries no depth and no
 //!   category;
 //! - `eml23.Attachment` (`Attachment.xsd`): `Content` is required base 64 and may
 //!   be empty; `ContentUri` is *"A URI pointing to the location of the attached
@@ -258,8 +258,8 @@ fn part_address_writes_the_part_related_to_the_attachment_that_names_it() {
     let [part] = attach.media.as_slice() else {
         panic!("one part: {:?}", attach.media)
     };
-    // Packaging Conventions v1.0 §3.4.2 pp. 15–16: destinationMedia — *“The
-    // object in Target is a media representation for the current object”* —
+    // Packaging Conventions v1.0 §3.4.2 pp. 15-16: destinationMedia - *“The
+    // object in Target is a media representation for the current object”* -
     // from the Attachment, not from the target (which would list the file twice).
     assert_eq!(
         part.related_to,
@@ -429,7 +429,7 @@ fn what_the_inputs_cannot_make_is_refused_on_the_slot_that_says_why() {
         )
         .contains("space")
     );
-    // A type is stated, never guessed — for every form that carries a file.
+    // A type is stated, never guessed - for every form that carries a file.
     for form in ["part", "inline", "part-address"] {
         let undeclared = bag(well_ref(), Some((PICTURE, None)));
         assert!(
@@ -552,7 +552,7 @@ fn a_depth_goes_on_what_has_one() {
 }
 
 /// A RESQML 2.0.1 package has no `Attachment` object: B, C and D are refused
-/// by name and the part form is offered — which still works there.
+/// by name and the part form is offered - which still works there.
 #[test]
 fn a_release_without_attachment_is_refused_by_name_and_the_part_form_is_offered() {
     let old = Ref::new(
@@ -629,9 +629,9 @@ fn a_document_named_with_a_folder_is_a_part_already_and_keeps_its_name() {
 }
 
 /// Lutetia's recipe names `attach`, and
-/// the recipe is **valid against the operation's own declaration** — its step
+/// the recipe is **valid against the operation's own declaration** - its step
 /// names, the *names* of its settings, its entries (not their values: only
-/// playing it judges those) — without playing it (playing needs HDF5,
+/// playing it judges those) - without playing it (playing needs HDF5,
 /// `tests/lutetia.rs`). The recipe is a versioned file of the repository, like
 /// the one `lutetia.rs` reads.
 #[test]

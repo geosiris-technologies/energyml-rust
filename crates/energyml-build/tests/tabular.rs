@@ -55,7 +55,7 @@ fn a_separator_inside_quotes_does_not_vote() {
 
 #[test]
 fn a_semicolon_file_is_proposed_a_comma_decimal() {
-    // Proposed, never imposed — and it is the only non-ambiguous combination: a
+    // Proposed, never imposed - and it is the only non-ambiguous combination: a
     // semicolon file that writes `1,5` is the French convention.
     // `File.TabularData` cannot say it (checked: the schema only speaks of
     // “decimal” for the fixed-width format), so it is up to us.

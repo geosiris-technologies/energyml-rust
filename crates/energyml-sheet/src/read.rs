@@ -1,5 +1,5 @@
-//! A package's `WellboreFrameRepresentation` turned into a [`crate::layout::Board`]
-//! — the third step of the sheet design.
+//! A package's `WellboreFrameRepresentation` turned into a [`crate::layout::Board`] -
+//! the third step of the sheet design.
 //!
 //! # What this module reuses, and what it does not
 //!
@@ -9,15 +9,15 @@
 //!
 //! - **Stratigraphy** ([`energyml_domain::well_strata::of_frame`]) answers
 //!   for a rank of `IntervalStratigraphicUnits` *and* for a categorical
-//!   property with a `CategoryLookup` — both come back as a
+//!   property with a `CategoryLookup` - both come back as a
 //!   [`well_strata::Strata`] (sections, units, colours, the FIRP colour
 //!   cascade already resolved), and `track_from_strata` is the only new
 //!   code: turning that shape into an [`IntervalTrack`].
 //! - **A table row's label** is [`energyml_domain::table::Lookup`], reached
-//!   through `well_strata::of_frame`'s own `Wanted::Category` — this module
+//!   through `well_strata::of_frame`'s own `Wanted::Category` - this module
 //!   never opens a `ColumnBasedTable` itself.
 //! - **A property kind's title** is
-//!   [`energyml_domain::property_kind::Resolver`] — package, then
+//!   [`energyml_domain::property_kind::Resolver`] - package, then
 //!   dictionary, then the standard name, exactly as every other reader in
 //!   this workspace resolves one.
 //!
@@ -29,11 +29,11 @@
 //!
 //! `energyml_geometry::scene::attributes_for` was read before writing this
 //! (per the crate's rules) for the same interval ↔ node correspondence
-//! rule — *"each node takes the interval it opens, the deepest one the
-//! interval it closes"* — but it is not called from here: it moves interval
+//! rule - *"each node takes the interval it opens, the deepest one the
+//! interval it closes"* - but it is not called from here: it moves interval
 //! values **onto nodes**, for painting a 3D tube that has one point per node
 //! and no notion of an interval at all. A sheet's [`IntervalTrack`] already
-//! has `[md_top, md_base]` cells, so there is nothing to project — the rule
+//! has `[md_top, md_base]` cells, so there is nothing to project - the rule
 //! is the same, the shape it is applied to is not. Depending on
 //! `energyml-geometry` for this increment would pull in the whole point/
 //! topology evaluation stack for a correspondence that is four lines without
@@ -44,7 +44,7 @@
 //!
 //! - **Per-node properties create no track** (curves come in step 4). They are
 //!   counted and named in [`Read::notes`], never silently dropped.
-//! - **Only one line of `NodeMd`** is read — a frame with several patches, or
+//! - **Only one line of `NodeMd`** is read - a frame with several patches, or
 //!   several `IntervalStratigraphicUnits` disagreeing across more than one
 //!   rank, is handled ("never merged"), but nothing here reads a
 //!   second frame to align against (`energyml_domain::strata_by_md`, for a
@@ -65,20 +65,20 @@ use energyml_storage::ObjectSummary;
 
 use crate::layout::{Board, Interval, IntervalTrack, MdTrack, Track};
 
-/// The frame's own MD array — spelled the same in every release. Read here,
-/// directly, with [`energyml_domain::values::read`] — the shared low-level
+/// The frame's own MD array - spelled the same in every release. Read here,
+/// directly, with [`energyml_domain::values::read`] - the shared low-level
 /// array reader every version-agnostic reader in this workspace goes
-/// through — rather than through `well_strata`, so a board can still be built
+/// through - rather than through `well_strata`, so a board can still be built
 /// for a frame with properties and no stratigraphy at all.
 const NODE_MD: &str = "NodeMd";
 
-/// The frame's own stratigraphic mappings — the two spellings
+/// The frame's own stratigraphic mappings - the two spellings
 /// `energyml_domain::well_strata`'s own (private) `MAPPINGS` constant reads;
 /// duplicated as literal strings rather than imported, because listing
-/// *which ranks a frame names* is not reading what they say — the indices,
+/// *which ranks a frame names* is not reading what they say - the indices,
 /// the units and the colours stay `well_strata`'s alone (see the module doc).
 const MAPPINGS: &[&str] = &["IntervalStratigraphicUnits", "IntervalStratigraphiUnits"];
-/// And what a mapping names as the rank its indices count in —
+/// And what a mapping names as the rank its indices count in -
 /// `well_strata`'s own (private) `ORGANISATION`.
 const ORGANISATION: &[&str] = &[
     "StratigraphicOrganizationInterpretation",
@@ -92,9 +92,9 @@ const ORGANISATION: &[&str] = &[
 /// How a property column's header is chosen.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum PropertyLabel {
-    /// The title of the property's resolved `PropertyKind` — the sheet design's own
+    /// The title of the property's resolved `PropertyKind` - the sheet design's own
     /// proposal, and the default: a property's own title usually repeats the
-    /// well and the context ("GTH-1 — pressure, yearly — …"), and a sheet
+    /// well and the context ("GTH-1 - pressure, yearly - …"), and a sheet
     /// that is already GTH-1's says less in more room.
     #[default]
     Kind,
@@ -103,14 +103,14 @@ pub enum PropertyLabel {
 }
 
 /// Which of the frame's interval properties become tracks, and in which
-/// order — "the checkboxes of the request become the list of
+/// order - "the checkboxes of the request become the list of
 /// tracks, orderable".
 #[derive(Clone, Debug, Default)]
 pub enum TrackSelection {
     /// Every interval property the frame carries, in the package's own order.
     #[default]
     All,
-    /// Only these property uuids, in this order — compared without case.
+    /// Only these property uuids, in this order - compared without case.
     Only(Vec<String>),
 }
 
@@ -123,9 +123,9 @@ pub enum TrackSelection {
 /// of them is a plain field a caller overrides directly, or through the
 /// `with_*` builders below.
 pub struct Options {
-    /// What a person reads above the MD column — no default: the sheet design forbids a
+    /// What a person reads above the MD column - no default: the sheet design forbids a
     /// hardcoded label in either language, so a caller supplies one (its own
-    /// translation, or an English default it owns — never invented here).
+    /// translation, or an English default it owns - never invented here).
     pub md_header: String,
     /// How a property column's header is chosen.
     pub label: PropertyLabel,
@@ -185,13 +185,13 @@ impl Options {
 
 /// [`board_of_frame`]'s answer: the board [`crate::layout::compute`] takes,
 /// plus what this reading had to say rather than silently do or silently
-/// drop — a per-node property counted, a property whose count fits neither
+/// drop - a per-node property counted, a property whose count fits neither
 /// the intervals nor the nodes, two ranks that disagreed and were drawn as
 /// separate tracks rather than merged.
 ///
 /// Not folded into [`Board`] itself: this crate's rule is that
 /// `layout::Board` is plain data nobody but its own module writes, and
-/// [`crate::layout::compute`] will add its own notes to what it lays out —
+/// [`crate::layout::compute`] will add its own notes to what it lays out -
 /// [`Read::notes`] are the ones that exist **before** a layout is even asked
 /// for.
 pub struct Read {
@@ -201,7 +201,7 @@ pub struct Read {
     pub notes: Vec<String>,
 }
 
-/// Why a frame could not become a [`Board`] at all — named, never a guess.
+/// Why a frame could not become a [`Board`] at all - named, never a guess.
 #[derive(Debug, thiserror::Error)]
 pub enum Refusal {
     /// The object is not a wellbore frame, or states no measured depths.
@@ -255,7 +255,7 @@ impl ObjectSource for AsObjects<'_> {
 /// [`Board`]: the MD column, then one track per stratigraphic rank the frame
 /// carries, then one track per interval property attached to it.
 ///
-/// `resources` is the package's own listing — nothing in a representation
+/// `resources` is the package's own listing - nothing in a representation
 /// lists the properties or the colour sets that decorate it (the same reason
 /// `energyml_geometry::scene::of_package` takes one), so the caller supplies
 /// it, the way it already supplies one to build a scene.
@@ -301,7 +301,7 @@ pub fn board_of_frame(
     })];
 
     // Every `GraphicalInformationSet` and every `StratigraphicUnitInterpretation`
-    // of the package, read once — `well_strata::Known`'s own contract: several
+    // of the package, read once - `well_strata::Known`'s own contract: several
     // sets may exist (the GeolTs import writes the chart's colours in a set of
     // its own beside the package's), and a category row is matched to a unit by
     // title only among the units the package actually holds.
@@ -358,7 +358,7 @@ pub fn board_of_frame(
             }
             Err(well_strata::Refusal::Ambiguous { why, .. }) => {
                 // "Two contradictory sources of strata... two
-                // tracks, never a merge" — so every rank is drawn on its
+                // tracks, never a merge" - so every rank is drawn on its
                 // own rather than the merged read that just refused.
                 notes.push(format!(
                     "`{display_title}`'s stratigraphic ranks disagree on at least one interval ({why}); drawn \
@@ -386,7 +386,7 @@ pub fn board_of_frame(
                     }
                 }
             }
-            // No mapping through any rank names an interval — an ordinary
+            // No mapping through any rank names an interval - an ordinary
             // absence (a frame may name a rank in its schema without a real
             // mapping), not a defect.
             Err(well_strata::Refusal::Absent { .. }) => {}
@@ -438,7 +438,7 @@ pub fn board_of_frame(
         match read.indexable {
             IndexableElement::Nodes => node_property_count += 1,
             IndexableElement::Intervals | IndexableElement::IntervalsFromDatum => candidates.push(summary),
-            // Neither this frame's nodes nor its intervals — out of scope
+            // Neither this frame's nodes nor its intervals - out of scope
             // for a per-frame sheet whatever it is (e.g. a property hanging
             // on `patches` or `representation`); not drawn, not counted as a
             // curve either, since it names no MD axis at all.
@@ -511,7 +511,7 @@ pub fn board_of_frame(
     })
 }
 
-/// Distinct stratigraphic ranks the frame's mapping names — read on the
+/// Distinct stratigraphic ranks the frame's mapping names - read on the
 /// document alone, the same two field-name pairs `well_strata` reads under
 /// its own private `MAPPINGS`/`ORGANISATION` (see the module doc): *which*
 /// ranks are named, never their indices, their units or their colours.
@@ -545,7 +545,7 @@ fn stratigraphy_ranks(frame: &dyn Reflect) -> Vec<(String, String)> {
     ranks
 }
 
-/// A rank's own title, for a track header — "Stratigraphy" (the sheet design's own
+/// A rank's own title, for a track header - "Stratigraphy" (the sheet design's own
 /// fallback wording, not a French or English phrase invented here) when the
 /// package does not hold the rank or it has no title.
 fn rank_header(rank_uri: &str, source: &dyn ArraySource) -> String {
@@ -556,7 +556,7 @@ fn rank_header(rank_uri: &str, source: &dyn ArraySource) -> String {
         .unwrap_or_else(|| "Stratigraphy".to_string())
 }
 
-/// A [`well_strata::Strata`] turned into an [`IntervalTrack`] — the only new
+/// A [`well_strata::Strata`] turned into an [`IntervalTrack`] - the only new
 /// code a stratigraphy or a categorical-property track needs, since every
 /// section, unit, colour and title already came from `well_strata`.
 fn track_from_strata(
@@ -589,7 +589,7 @@ fn track_from_strata(
 }
 
 /// A property column's label: the chosen [`PropertyLabel`],
-/// before its unit — [`with_unit`] appends that, once [`disambiguate`] has
+/// before its unit - [`with_unit`] appends that, once [`disambiguate`] has
 /// had its say.
 fn column_label(read: &property::Property<'_>, source: &dyn ArraySource, options: &Options) -> String {
     match options.label {
@@ -605,7 +605,7 @@ fn column_label(read: &property::Property<'_>, source: &dyn ArraySource, options
     }
 }
 
-/// The unit appended when the property has one — the sheet design's own example,
+/// The unit appended when the property has one - the sheet design's own example,
 /// *"pressure (bar)"*.
 fn with_unit(label: &str, uom: Option<&str>) -> String {
     match uom {
@@ -615,11 +615,11 @@ fn with_unit(label: &str, uom: Option<&str>) -> String {
 }
 
 /// **Two columns never share a header.** A kind names *what is measured*, and
-/// a frame may carry several properties of one kind — Lutetia's
+/// a frame may carry several properties of one kind - Lutetia's
 /// `BSS000NSYT` has two `source`, two `name`, two `identifier`: under
 /// identical headers the columns cannot be told apart. Every column whose
 /// label is shared takes its property's own title instead, shortened by
-/// [`beyond_shared`] of what it repeats of the frame's title — the well's
+/// [`beyond_shared`] of what it repeats of the frame's title - the well's
 /// name, which the sheet already is. Said in a
 /// note, since the header is then not the one asked for.
 fn disambiguate(
@@ -656,10 +656,10 @@ fn disambiguate(
     ));
 }
 
-/// `title` without the words it shares, at its start, with `frame_title` —
-/// `"BSS000NSYT — source_etage"` beside `"BSS000NSYT — frame"` is
+/// `title` without the words it shares, at its start, with `frame_title` -
+/// `"BSS000NSYT - source_etage"` beside `"BSS000NSYT - frame"` is
 /// `"source_etage"`. The cut falls on a word boundary, never inside a word
-/// (`"… — formation"` beside `"… — frame"` keeps `formation`), and the
+/// (`"… - formation"` beside `"… - frame"` keeps `formation`), and the
 /// punctuation left in front is dropped. A title that would be left empty, or
 /// that shares nothing, is returned whole: shortening is a courtesy, never a
 /// reason to lose the name.
@@ -684,16 +684,16 @@ pub fn beyond_shared<'a>(title: &'a str, frame_title: &str) -> &'a str {
         title[..end].rfind(char::is_whitespace).map_or(0, |at| at + 1)
     };
     let rest = title[cut..].trim_start_matches(|c: char| {
-        c.is_whitespace() || matches!(c, '—' | '–' | '-' | ':' | ',' | '/' | '|')
+        c.is_whitespace() || matches!(c, '\u{2014}' | '\u{2013}' | '-' | ':' | ',' | '/' | '|')
     });
     if rest.is_empty() || cut == 0 { title } else { rest }
 }
 
-/// One interval property's track — categorical (through its `CategoryLookup`,
+/// One interval property's track - categorical (through its `CategoryLookup`,
 /// by `well_strata::of_frame`'s own `Wanted::Category`) or, lacking one,
 /// discrete/continuous, read and aligned against `mds` directly.
 ///
-/// `None` when the property could not be attached at all — always with a
+/// `None` when the property could not be attached at all - always with a
 /// note in `notes` naming why, never a silent drop (refuse
 /// rather than draw).
 #[allow(clippy::too_many_arguments)]
@@ -711,7 +711,7 @@ fn build_property_track(
 ) -> Option<Track> {
     if read.indexable == IndexableElement::IntervalsFromDatum {
         // The design's own wording: reported like `attributes_for` reports it, even
-        // though nothing is moved here — a sheet's cells are already
+        // though nothing is moved here - a sheet's cells are already
         // MD-indexed, so there is no node to move the value onto (module doc).
         notes.push(format!(
             "`{header}` hangs on intervals from datum; drawn as an ordinary interval track, since this \
@@ -778,13 +778,13 @@ fn build_property_track(
     if numbers.len() != interval_count {
         if numbers.len() == node_count {
             notes.push(format!(
-                "`{header}` holds {node_count} value(s), one per node of this frame — a per-node value is not \
+                "`{header}` holds {node_count} value(s), one per node of this frame - a per-node value is not \
                  drawn as an interval track (step 4 of the sheet design)"
             ));
         } else {
             notes.push(format!(
                 "`{header}` holds {} value(s), and this frame has {interval_count} interval(s) and {node_count} \
-                 node(s) — its count fits neither",
+                 node(s) - its count fits neither",
                 numbers.len()
             ));
         }
@@ -811,7 +811,7 @@ fn build_property_track(
     ))
 }
 
-/// A number without useless zeros — `10`, not `10.0` — the same convention
+/// A number without useless zeros - `10`, not `10.0` - the same convention
 /// [`crate::layout`]'s own (private) `format_md` uses, kept separate because
 /// a property value is not a measured depth and does not need to share code
 /// with it to agree on what "no useless zeros" means.
@@ -825,7 +825,7 @@ fn format_number(value: f64) -> String {
 
 /// A discrete or continuous value, in text, with its unit when it has one
 /// (*"discreteProperties are to be interpreted by the CBT if they
-/// have one linked"* — no lookup here means there is none).
+/// have one linked"* - no lookup here means there is none).
 fn format_value(value: f64, uom: Option<&str>) -> String {
     match uom {
         Some(unit) if !unit.is_empty() => format!("{} {unit}", format_number(value)),

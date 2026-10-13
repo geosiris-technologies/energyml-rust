@@ -1,4 +1,4 @@
-//! `wells-from-table` — boreholes from a table and its OSDU template.
+//! `wells-from-table` - boreholes from a table and its OSDU template.
 //!
 //! The sibling of [`super::sigeol_boreholes`], which reads the same kind of object
 //! from another format: one operation per vocabulary, both going through
@@ -10,7 +10,7 @@
 //! # Roles are read by the uuid of the property kind
 //!
 //! `PropertyType.PropertyTypeID` carries the uuid of the Energistics kind, and it is the
-//! key — never the name. Measured: the shipped dictionary holds 3,662 kinds for
+//! key - never the name. Measured: the shipped dictionary holds 3,662 kinds for
 //! 3,661 titles, `spring stiffness` being carried by two kinds of the same
 //! quantity class. A key right 3,661 times out of 3,662 is wrong without
 //! warning.
@@ -23,11 +23,11 @@
 //!
 //! | | what a row is | what it carries |
 //! |---|---|---|
-//! | **heads table** | a borehole | name, head, ground, codes — the constants |
+//! | **heads table** | a borehole | name, head, ground, codes - the constants |
 //! | **indexed table** | a measurement at an MD | the MD, and the properties |
 //!
 //! A table **with no MD column** is a heads table. The criterion falls out of the
-//! template, it is not guessed — and it is the pair that every borehole dataset has
+//! template, it is not guessed - and it is the pair that every borehole dataset has
 //! already, a file of heads and a file of measurements.
 //!
 //! This module writes the boreholes; the properties along the MD are
@@ -39,7 +39,7 @@
 //! role**: it is the template that must be corrected, not the file. A constant
 //! that varies where it should not is a refusal that names the borehole and its
 //! two values. A column that the template does not describe, on the other hand, is
-//! ignored and counted — a business file always carries some.
+//! ignored and counted - a business file always carries some.
 
 use std::collections::BTreeMap;
 
@@ -62,7 +62,7 @@ use super::written::FrameParams;
 pub struct Role {
     /// The uuid of the kind in the Energistics dictionary.
     pub uuid: &'static str,
-    /// The title it carries, for messages — **never for matching**.
+    /// The title it carries, for messages - **never for matching**.
     pub title: &'static str,
     /// The word by which a refusal names it.
     pub role: &'static str,
@@ -101,7 +101,7 @@ pub const ROLES: &[Role] = &[
     // **The top of a pass**. Declared,
     // a row is an interval `[top, MD]` and not a measurement at an MD:
     // the frame receives one node per limit and the properties are laid on its
-    // intervals. This is what makes the tops and bases of units exact —
+    // intervals. This is what makes the tops and bases of units exact -
     // the file says where a pass begins, and keeping only the end forced
     // guessing.
     Role {
@@ -130,16 +130,16 @@ pub struct WellsFromTable;
 /// What it is told.
 #[derive(Debug, Params)]
 pub struct TableParams {
-    /// the EPSG code the file's coordinates are in — left out, a column must state it
+    /// the EPSG code the file's coordinates are in - left out, a column must state it
     ///
     /// A constant is read in a column **or** imposed here, and this setting
     /// wins. When given, the activity records that the caller said so.
     pub source_epsg: Option<Epsg>,
-    /// reproject into this EPSG system, in metres — a borehole cannot be written in degrees
+    /// reproject into this EPSG system, in metres - a borehole cannot be written in degrees
     pub project: Option<Epsg>,
     /// the EPSG code of the vertical system, when known; left out, the package says unknown
     pub vertical: Option<Epsg>,
-    /// what the measured depths are counted from — the ground, unless the file says otherwise
+    /// what the measured depths are counted from - the ground, unless the file says otherwise
     #[param(default = DatumKind::GroundLevel)]
     pub datum_kind: DatumKind,
     /// the external file the coordinates go into
@@ -156,7 +156,7 @@ pub struct TableParams {
     ///
     /// **Off, and the default is the point.** Adding an MD in the middle
     /// of a frame renumbers its nodes, so **every property already laid
-    /// on it then describes the wrong depths** — a valid package,
+    /// on it then describes the wrong depths** - a valid package,
     /// curves that draw, and everything shifted. Writing a second trajectory/frame
     /// pair is what protects what is already there; it hangs on the
     /// same interpretation, so nothing is lost.
@@ -178,16 +178,16 @@ pub struct TableInputs {
     ///
     /// **A borehole is the same when its title and its head agree**
     /// (a decision taken for identity matching). The title alone is the producer's key
-    /// and can collide — two campaigns, two `SP1`; the head
+    /// and can collide - two campaigns, two `SP1`; the head
     /// alone says nothing about a deviated hole that crosses another.
     ///
     /// **An object entry, not a shape**: nothing here looks at the geometry
-    /// of a frame, and a shape slot would not carry the filter by type
-    /// — the front end applies it only to object slots, so that declaring it
+    /// of a frame, and a shape slot would not carry the filter by type -
+    /// the front end applies it only to object slots, so that declaring it
     /// would be a declaration that does nothing.
     ///
     /// What a given frame contributes is already resolved at the edge: `wellhead`
-    /// returns `[x, y, ground]` — read from the datum, never from the geometry —,
+    /// returns `[x, y, ground]` - read from the datum, never from the geometry -,
     /// `node_mds` the depths, `interpretation` what a second trajectory
     /// must attach to, `trajectory` and `datum` what an enrichment
     /// rewrites. `plan` stays pure: it does not read the package, it receives what
@@ -195,14 +195,14 @@ pub struct TableInputs {
     ///
     /// **Left empty, these are all the frames of the target package** (a decision:
     /// all the boreholes of the current stage should be used by default to enrich
-    /// them) — it is
+    /// them) - it is
     /// `every`, filled by `read::every` for the front end as for the CLI.
     /// A frame that is that of no borehole of the file gets in the way of nothing: it
     /// is matched to nobody.
     ///
     /// A package without a frame, or a caller who builds their bag themselves, gets
     /// the earlier behaviour: the seed keeps the MDs, so a different set
-    /// writes a second object — the only safe answer when one cannot see what
+    /// writes a second object - the only safe answer when one cannot see what
     /// is there, since replacing would lose the depths one does not know
     /// about.
     #[input(
@@ -216,13 +216,13 @@ pub struct TableInputs {
 ///
 /// Nothing is read here: everything comes from `Known`, resolved at the edge.
 struct Held<'a> {
-    /// Its frame — what is rewritten when enriching.
+    /// Its frame - what is rewritten when enriching.
     frame: &'a crate::pieces::Ref,
     /// What a second trajectory attaches to. `None` when the frame does not name
     /// its interpretation, and it is then **a new one**: one cannot
     /// attach a second representation to what nobody names.
     interpretation: Option<&'a crate::pieces::Ref>,
-    /// Its trajectory — what is rewritten with the frame when enriching.
+    /// Its trajectory - what is rewritten with the frame when enriching.
     trajectory: Option<&'a crate::pieces::Ref>,
     /// Its datum: the point from which its MDs are counted. One more trajectory
     /// must name **that one**, otherwise *counted from what* no longer has a single answer.
@@ -231,7 +231,7 @@ struct Held<'a> {
     head: [f64; 3],
     /// The depths of its nodes.
     mds: &'a [f64],
-    /// The frame of its geometry — what a **rewritten** trajectory must not
+    /// The frame of its geometry - what a **rewritten** trajectory must not
     /// leave silently.
     crs: Option<&'a crate::pieces::Ref>,
 }
@@ -248,12 +248,12 @@ impl<'a> Standing<'a> {
     ///
     /// **What is not a frame is refused by its type**, and named. One day,
     /// the scene's *choose* list gave the trajectories with the
-    /// frames — 240 pieces for 120 boreholes — and the refusal said *"120 of the
+    /// frames - 240 pieces for 120 boreholes - and the refusal said *"120 of the
     /// 240 given state no wellhead or no node depths"*: true, and mute on the
     /// one thing to correct.
     ///
     /// **A mute frame is a fault only if a borehole of the file bears
-    /// its name** — see [`Standing::find`]. Keeping quiet about it would then pass it off
+    /// its name** - see [`Standing::find`]. Keeping quiet about it would then pass it off
     /// as a borehole absent from the package, and a duplicate would be written in the belief of
     /// creating. But since `wells` takes all the frames of the package by default,
     /// refusing one that no row names would block an import
@@ -300,7 +300,7 @@ impl<'a> Standing<'a> {
             return Err(Refusal::on(
                 "wells",
                 format!(
-                    "{} of the {} given are no wellbore frame, and a well is recognised by its frame: {}. Give the `WellboreFrameRepresentation`s — or nothing, and every frame of the package is taken",
+                    "{} of the {} given are no wellbore frame, and a well is recognised by its frame: {}. Give the `WellboreFrameRepresentation`s - or nothing, and every frame of the package is taken",
                     strangers.len(),
                     wells.len(),
                     strangers.join(", ")
@@ -312,8 +312,8 @@ impl<'a> Standing<'a> {
 
     /// The borehole of the package that **is** this one: title and head agreeing.
     ///
-    /// The title first, exact then by prefix — a writer titles its frame
-    /// `"<borehole> — frame"` and the file only carries `<borehole>` — with the
+    /// The title first, exact then by prefix - a writer titles its frame
+    /// `"<borehole> - frame"` and the file only carries `<borehole>` - with the
     /// rule that **a name followed by an alphanumeric character is another
     /// name**, otherwise `…-SP1` would be a candidate for `…-SP102`.
     ///
@@ -345,7 +345,7 @@ impl<'a> Standing<'a> {
                 .collect();
         }
         match found.len() {
-            // **Nothing readable bears this name — but a mute frame may
+            // **Nothing readable bears this name - but a mute frame may
             // bear it**, and that is then the one thing that cannot
             // be kept quiet: it would be writing a second borehole beside it.
             0 => match self.mute.iter().find(|title| titled(title)) {
@@ -376,8 +376,8 @@ impl<'a> Standing<'a> {
 
 /// Notes of the same key, in one sentence.
 ///
-/// When identical, they are counted (`120 × …`); when different — each names its
-/// borehole —, the first are said and the rest counted. A list of a hundred and
+/// When identical, they are counted (`120 × …`); when different - each names its
+/// borehole -, the first are said and the rest counted. A list of a hundred and
 /// twenty titles is not news, it is a wall.
 fn gathered(details: &[String]) -> String {
     const SHOWN: usize = 3;
@@ -445,13 +445,13 @@ pub(crate) struct Hole {
     pub(crate) rows: Vec<usize>,
 }
 
-/// The objects of **the frame a run creates** — `crs::Built::new_objects`, by
+/// The objects of **the frame a run creates** - `crs::Built::new_objects`, by
 /// the roles it writes them under (`crs::FRAME_ROLE` is the one a geometry
 /// names). `degrees` is whether the run may write the frame in degrees, which
 /// is a `Geographic2dCrs` under the same role: a well cannot (its vertical
 /// extent has no reader in degrees), a point set can.
 ///
-/// Every one of them is `0..1` — a named `crs` writes none, and a run has one
+/// Every one of them is `0..1` - a named `crs` writes none, and a run has one
 /// frame. Shared by the operations that take `sourceEpsg`/`project`/`vertical`.
 pub(crate) fn frame_outputs(degrees: bool) -> Vec<Output> {
     vec![
@@ -464,7 +464,7 @@ pub(crate) fn frame_outputs(degrees: bool) -> Vec<Output> {
             },
             least: 0,
             most: Some(1),
-            describe: "the coordinate system the geometry names — the compound over the projected plane and the vertical system, or the geographic system when kept in degrees; none when the run names one of the package",
+            describe: "the coordinate system the geometry names - the compound over the projected plane and the vertical system, or the geographic system when kept in degrees; none when the run names one of the package",
         },
         Output {
             role: "projected-crs",
@@ -490,7 +490,7 @@ pub(crate) fn frame_outputs(degrees: bool) -> Vec<Output> {
     ]
 }
 
-/// What a run of `wells-from-table` writes, by role — the wells' own objects
+/// What a run of `wells-from-table` writes, by role - the wells' own objects
 /// and the frame's. Reused by `wells-and-properties-from-table`, which runs it
 /// first.
 pub(crate) fn outputs() -> Vec<Output> {
@@ -514,7 +514,7 @@ pub(crate) fn outputs() -> Vec<Output> {
             types: &["eml23.ReferencePointInALocalEngineeringCompoundCrs"],
             least: 0,
             most: None,
-            describe: "the reference point each hole's depths are counted from, with its ground elevation — the collar",
+            describe: "the reference point each hole's depths are counted from, with its ground elevation - the collar",
         },
         Output {
             role: "trajectory",
@@ -528,7 +528,7 @@ pub(crate) fn outputs() -> Vec<Output> {
             types: &["resqml22.WellboreFrameRepresentation"],
             least: 0,
             most: None,
-            describe: "one frame per hole the file gives depths for — its nodes are the measured depths",
+            describe: "one frame per hole the file gives depths for - its nodes are the measured depths",
         },
     ];
     out.extend(frame_outputs(false));
@@ -570,7 +570,7 @@ impl Operation for WellsFromTable {
     ///
     /// The asymmetry that `sigeol-boreholes` paid for on 19/09: an operation that
     /// fills no slot lets a package in degrees be written, which `check`
-    /// validates and which nothing draws. A suggestion, never a default — a
+    /// validates and which nothing draws. A suggestion, never a default - a
     /// reprojection moves every coordinate.
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
         let Some((_, _, table, template)) = bag.tables().next() else {
@@ -600,7 +600,7 @@ impl Operation for WellsFromTable {
         {
             slots.set("sourceEpsg", json!(found));
         }
-        // The target, for its part, is deduced from the numbers and not from a country — a UTM zone
+        // The target, for its part, is deduced from the numbers and not from a country - a UTM zone
         // is a function of the longitude. It only makes sense if the file
         // is in degrees, which only a source code of 4326 says.
         if let Some((lon, lat)) = first
@@ -629,17 +629,17 @@ impl Operation for WellsFromTable {
 
 impl WellsFromTable {
     /// The plan, **and the frame on which each borehole ends** with its
-    /// depths — what `wells-and-properties-from-table` passes to
+    /// depths - what `wells-and-properties-from-table` passes to
     /// `properties_from_table::lay`. The frame of an unchanged borehole is that
     /// of the package; that of a written borehole is the new one, which the plan carries.
     ///
     /// `more` returns, for a borehole, **what its frame will carry beyond its
-    /// depths** — the correspondence of its passes with units
+    /// depths** - the correspondence of its passes with units
     /// (`wells-and-properties-from-table`). This text enters the seed of
     /// the trajectory and of the frame: a frame that says something else is another
     /// object, never the same one rewritten. And a recognised borehole whose
     /// depths are already there is **not** left as it is when there is
-    /// something more to say — the frame of the package does not carry it.
+    /// something more to say - the frame of the package does not carry it.
     pub(crate) fn plan_ending(
         &self,
         inputs: TableInputs,
@@ -663,7 +663,7 @@ impl WellsFromTable {
         let mut aside = SetAside::default();
         let mut says: Vec<Note> = Vec::new();
 
-        // **The source code: a column, or the setting — and the setting
+        // **The source code: a column, or the setting - and the setting
         // wins.** Read before the frame, since it is what decides it.
         let mut source_epsg = params.source_epsg;
         for table in &inputs.table {
@@ -694,12 +694,12 @@ impl WellsFromTable {
 
         // **A table that is already projected need not restate its code.** `frame_in` reads
         // an absent `project` as *keep the degrees*, which is right for a
-        // GeoJSON — RFC 7946 fixes it at 4326 — and wrong here: the coordinates
+        // GeoJSON - RFC 7946 fixes it at 4326 - and wrong here: the coordinates
         // of a CSV are in the system the file declares, and it is
         // often already metric (EPSG:3949 in the BRGM corpus). Requiring
         // `project` would force retyping the code that has just been read.
         //
-        // So: without a target, the target **is** the source — unless the source is
+        // So: without a target, the target **is** the source - unless the source is
         // geographic, in which case nothing is decided here and the refusal further down
         // does its work. A code that this build does not know is treated as
         // geographic: *I do not know* must lead to the refusal that asks, not
@@ -734,7 +734,7 @@ impl WellsFromTable {
                 format!(
                     "a borehole is a vertical extent, and EPSG:{code} measures its horizontal axes in degrees \
                      while its depths are linear: every hole would be written between a hundred and ten thousand \
-                     times longer than the model is wide — name a projected system in `project` (EPSG:2154 for mainland France)"
+                     times longer than the model is wide - name a projected system in `project` (EPSG:2154 for mainland France)"
                 ),
             ));
         }
@@ -746,7 +746,7 @@ impl WellsFromTable {
         let parameters = std::mem::take(&mut frame.parameters);
         // The notes per borehole, **all kept**: `unchanged`, `merged`,
         // `ground-moved` each name their borehole, and keeping only the
-        // first would write *"120 × `SP1` is already in the package"* —
+        // first would write *"120 × `SP1` is already in the package"* -
         // one borehole, a hundred and twenty times.
         let mut from_writer: BTreeMap<&'static str, Vec<String>> = BTreeMap::new();
 
@@ -948,7 +948,7 @@ impl Columns {
                 Refusal::on(
                     word,
                     format!(
-                        "no column is declared for the {} of a hole — add one to the template, keyed on the \
+                        "no column is declared for the {} of a hole - add one to the template, keyed on the \
                          property kind `{}`",
                         role(word).title,
                         role(word).uuid
@@ -1032,7 +1032,7 @@ struct Made {
     unmeasured: Option<f64>,
     /// **The frame on which this borehole ends**, and its depths:
     /// that of the package when nothing changes, the new one otherwise. It is what an
-    /// operation that lays properties right after must aim at — `None` for
+    /// operation that lays properties right after must aim at - `None` for
     /// a heads table, which writes no frame.
     frame: Option<(crate::pieces::Ref, Vec<f64>)>,
 }
@@ -1065,14 +1065,14 @@ fn one_hole(
     let ground_cell = one_number(table, &hole.rows, at.ground, "elevation", &title)?;
 
     // The depths: sorted, de-duplicated or refused. **None** when the
-    // template names no MD column — a heads table says where a
+    // template names no MD column - a heads table says where a
     // borehole is collared and nothing of its path, and making up a node at
     // MD 0 for it would write a trajectory that the file does not state.
     let mds = match (at.md, at.top) {
         (None, None) => Vec::new(),
         (Some(column), None) => depths(table, &hole.rows, column, &title)?,
         // **Passes: one node per limit.** Tops and bases together, sorted,
-        // without duplicates — a pass contiguous with the next shares its node
+        // without duplicates - a pass contiguous with the next shares its node
         // with it, and that is the limit between the two.
         (Some(base), Some(top)) => {
             let passes = intervals(table, &hole.rows, top, base, &title)?;
@@ -1080,7 +1080,7 @@ fn one_hole(
         }
         (None, Some(_)) => {
             return Err(format!(
-                "`{title}`: the template declares a `{}` column and no `{}` column — a pass needs where it ends as well as where it starts",
+                "`{title}`: the template declares a `{}` column and no `{}` column - a pass needs where it ends as well as where it starts",
                 role("topDepth").title,
                 role("measuredDepth").title
             ));
@@ -1088,7 +1088,7 @@ fn one_hole(
     };
     // **What nobody measured is said all the same.** The borehole no longer starts
     // at the ground, so nothing is *drawn* across what is not
-    // sounded — but the gap between the datum and the first measurement remains a fact
+    // sounded - but the gap between the datum and the first measurement remains a fact
     // of the file, and three boreholes of the BRGM corpus carry it at 10.5, 31.5 and
     // 36.25 m. Keeping quiet about it would make a borehole that starts thirty metres under the
     // ground an ordinary borehole.
@@ -1106,7 +1106,7 @@ fn one_hole(
     let [x, y, ground] = placed[0];
 
     // **The borehole of the package that is this one**: title and head, the rule
-    // of identity matching. Nothing is read here — `standing` carries what the slot
+    // of identity matching. Nothing is read here - `standing` carries what the slot
     // `wells` gave, resolved at the edge.
     let matched = standing
         .find(&title, [x, y], params.head_tolerance)
@@ -1115,7 +1115,7 @@ fn one_hole(
     // **The ground is a value, not an identity.** Two files that place the
     // same head at two altitudes do not describe two boreholes: they
     // disagree on a measurement, and every node depends on it. It is therefore a
-    // conflict — a second trajectory, never a silent correction.
+    // conflict - a second trajectory, never a silent correction.
     let ground_moved = matched.is_some_and(|held| (held.head[2] - ground).abs() > params.head_tolerance);
     // What is **continued**: the recognised borehole, unless the ground has moved.
     let continuing = matched.filter(|_| !ground_moved);
@@ -1157,7 +1157,7 @@ fn one_hole(
     // The trajectory is **always** there when the borehole is in `standing`:
     // `Standing::of` requires a head, and `read::wellhead_of` only finds it by
     // going through `Trajectory`. The `None` is therefore the branch that the invariant
-    // closes, kept rather than an `unwrap` — a panic here would cost a whole
+    // closes, kept rather than an `unwrap` - a panic here would cost a whole
     // run for a malformed frame.
     let keeping = continuing.filter(|_| params.enrich).and_then(|held| {
         held.trajectory
@@ -1168,7 +1168,7 @@ fn one_hole(
     // **Identity comes from what the object is, not from the file**.
     // A measurement that made it necessary: the
     // same CSV under another name took three boreholes to six, each
-    // doubled under two identities — and nothing said so.
+    // doubled under two identities - and nothing said so.
     //
     // Three seeds, because three things differ:
     //
@@ -1240,7 +1240,7 @@ fn one_hole(
 
         let interpretation_uuid = support::next_uuid(identity, &format!("well-interpretation:{key}"), rank)
             .map_err(|why| why.to_string())?;
-        let interpretation_title = format!("{title} — interpretation");
+        let interpretation_title = format!("{title} - interpretation");
         objects.push(NewObject {
             uuid: interpretation_uuid.clone(),
             qualified_type: "resqml22.WellboreInterpretation".to_string(),
@@ -1272,7 +1272,7 @@ fn one_hole(
     // trajectory already there names it, and two reference points at the same
     // place under two uuids would make a package where *counted from what*
     // would not have a single answer. When the ground has moved, on the other hand, it is
-    // another point — hence `continuing` and not `matched`.
+    // another point - hence `continuing` and not `matched`.
     let kept_datum = continuing.and_then(|held| held.datum).map(|one| one.dor());
     let (datum, datum_objects) = super::well::datum_in(
         &Datum {
@@ -1294,7 +1294,7 @@ fn one_hole(
 
     // **A heads table stops here**: the borehole, its interpretation and its
     // datum are written, and there is neither trajectory nor frame. It is the pair
-    // that every borehole dataset has — a file of heads, a file of measurements —
+    // that every borehole dataset has - a file of heads, a file of measurements -
     // and what the first lacks is precisely the path.
     if mds.is_empty() {
         return Ok(Made {
@@ -1310,31 +1310,31 @@ fn one_hole(
     // **A rewritten trajectory does not change frame silently** (an audit
     // finding on the harvest and the CRS). Enriching rewrites the object of the
     // package under its uuid; writing it under the frame of this run made
-    // a BRGM borehole change frame — its own compound against ours — without
+    // a BRGM borehole change frame - its own compound against ours - without
     // any line saying so.
     //
     // **Keeping it is not possible here**, and that is what decides the refusal:
-    // the numbers of this run are placed — projected, like `Known::wellhead`
-    // which `read::wellhead_of` places — and writing them under the frame of the borehole
+    // the numbers of this run are placed - projected, like `Known::wellhead`
+    // which `read::wellhead_of` places - and writing them under the frame of the borehole
     // would need its `from_projected`, which this operation, being pure, does not receive.
     // Under an identity compound they would land right; under a
     // rotated or shifted one, elsewhere, and nothing says which of the two it is. So:
     // the same frame as this run, or the borehole set aside **by name**, with the
-    // way that remains — `enrich` off writes a second trajectory beside it.
+    // way that remains - `enrich` off writes a second trajectory beside it.
     if let (Some(_), Some(held)) = (keeping, continuing) {
         let ours = frame.crs["Uuid"].as_str().unwrap_or_default();
         match held.crs {
             Some(own) if own.uuid.eq_ignore_ascii_case(ours) => {}
             Some(own) => {
                 return Err(format!(
-                    "`{title}`: `enrich` rewrites the trajectory already in the package, which is written in `{}` and not in this run's frame `{}` — its depths would be placed in this run's frame and written under one whose origin and azimuth this operation does not receive, changing its frame without a word. Leave `enrich` off to write a second trajectory beside it",
+                    "`{title}`: `enrich` rewrites the trajectory already in the package, which is written in `{}` and not in this run's frame `{}` - its depths would be placed in this run's frame and written under one whose origin and azimuth this operation does not receive, changing its frame without a word. Leave `enrich` off to write a second trajectory beside it",
                     own.title,
                     frame.crs["Title"].as_str().unwrap_or_default()
                 ));
             }
             None => {
                 return Err(format!(
-                    "`{title}`: `enrich` rewrites the trajectory already in the package, and the package does not say which frame it is written in — rewritten in this run's frame, it could change frame without a word. Leave `enrich` off to write a second trajectory beside it"
+                    "`{title}`: `enrich` rewrites the trajectory already in the package, and the package does not say which frame it is written in - rewritten in this run's frame, it could change frame without a word. Leave `enrich` off to write a second trajectory beside it"
                 ));
             }
         }
@@ -1346,7 +1346,7 @@ fn one_hole(
             seed: &along,
             line: &line,
             // The depths of the file, not depths rebuilt from
-            // the line derived from them — the detour is not exact.
+            // the line derived from them - the detour is not exact.
             mds: Some(&mds),
             ground,
             uom: "m",
@@ -1370,7 +1370,7 @@ fn one_hole(
     .map_err(|why| why.to_string())?;
 
     let nodes = written.nodes;
-    // The frame that this borehole now carries — read from what has just been
+    // The frame that this borehole now carries - read from what has just been
     // written, never rederived: its uuid is the one `well::write` chose.
     let ends = written
         .objects
@@ -1402,7 +1402,7 @@ fn one_hole(
                 key: "continued",
                 detail: format!(
                     "`{title}`: a second trajectory and frame beside the {} node(s) already there, on the same \
-                     interpretation — the properties already laid on the first one keep their meaning",
+                     interpretation - the properties already laid on the first one keep their meaning",
                     held.mds.len()
                 ),
             });
@@ -1452,7 +1452,7 @@ fn one_number(table: &Table, rows: &[usize], column: usize, what: &str, title: &
             None => found = Some((value, *rank)),
             Some((seen, at)) if (seen - value).abs() > f64::EPSILON => {
                 return Err(format!(
-                    "`{title}`: the {what} is stated twice and differently — {seen} on line {} and {value} on line {}; \
+                    "`{title}`: the {what} is stated twice and differently - {seen} on line {} and {value} on line {}; \
                      a wellhead has one position, and averaging would be this importer deciding",
                     at + 1,
                     rank + 1
@@ -1468,13 +1468,13 @@ fn one_number(table: &Table, rows: &[usize], column: usize, what: &str, title: &
 
 /// The depths of a borehole: sorted, and without duplicates.
 ///
-/// **Rows are sorted, never a column** — here the MDs alone suffice
+/// **Rows are sorted, never a column** - here the MDs alone suffice
 /// since nothing else depends on them yet, but the order returned is that of the
 /// values and it is increasing, which a frame requires.
 ///
-/// A duplicate means one of three things that the file does not tell apart —
+/// A duplicate means one of three things that the file does not tell apart -
 /// two contradictory measurements, the same row twice, or two properties
-/// filled in on two complementary rows — and two of them lose
+/// filled in on two complementary rows - and two of them lose
 /// a measurement. So it refuses, naming the two rows.
 fn depths(table: &Table, rows: &[usize], column: usize, title: &str) -> Result<Vec<f64>, String> {
     let mut found: Vec<(f64, usize)> = Vec::new();
@@ -1501,7 +1501,7 @@ fn depths(table: &Table, rows: &[usize], column: usize, title: &str) -> Result<V
     for pair in found.windows(2) {
         if (pair[0].0 - pair[1].0).abs() <= f64::EPSILON {
             return Err(format!(
-                "`{title}`: two rows state the measured depth {} (lines {} and {}) — a frame's nodes are distinct, \
+                "`{title}`: two rows state the measured depth {} (lines {} and {}) - a frame's nodes are distinct, \
                  and which of the two holds cannot be guessed",
                 pair[0].0,
                 pair[0].1 + 1,
@@ -1528,7 +1528,7 @@ fn depths(table: &Table, rows: &[usize], column: usize, title: &str) -> Result<V
     //   the DEM cloud of a batch of boreholes will be drawn, and not from frame nodes;
     // - **a one-point line is refused by `well::write`**, by its
     //   name. Without the zero, a borehole with a single measurement has no trajectory
-    //   any more — and that is good news, where a phantom node made one.
+    //   any more - and that is good news, where a phantom node made one.
     //
     // The rule of 18/09 (*the zero of the MDs is the ground*) remains that of
     // `borehole::Borehole::mds`, whose format states intervals from
@@ -1540,7 +1540,7 @@ fn depths(table: &Table, rows: &[usize], column: usize, title: &str) -> Result<V
 /// overlap**.
 ///
 /// A pass whose top is not above its base is refused,
-/// naming its line — a zero or negative thickness is not a measurement to
+/// naming its line - a zero or negative thickness is not a measurement to
 /// correct here. Two passes that overlap too, naming both
 /// lines: on the common interval, the file says two things, and keeping
 /// one would be deciding which. **A gap between two passes is allowed**: the
@@ -1586,7 +1586,7 @@ pub(crate) fn intervals(
         };
         if from >= to {
             return Err(format!(
-                "`{title}`: line {} runs from {from} down to {to} — a pass's top lies above its base",
+                "`{title}`: line {} runs from {from} down to {to} - a pass's top lies above its base",
                 rank + 1
             ));
         }
@@ -1601,7 +1601,7 @@ pub(crate) fn intervals(
         // computation paths do not land to the bit on the same limit.
         if pair[1].0 < pair[0].1 - 1e-6 {
             return Err(format!(
-                "`{title}`: lines {} and {} overlap — {}–{} and {}–{} — and on the common interval the file says two things",
+                "`{title}`: lines {} and {} overlap - {}-{} and {}-{} - and on the common interval the file says two things",
                 pair[0].2 + 1,
                 pair[1].2 + 1,
                 pair[0].0,
@@ -1665,7 +1665,7 @@ fn constant_epsg(table: &Table, template: &crate::osdu::Template) -> Result<Opti
                 return Err(Refusal::on(
                     "sourceEpsg",
                     format!(
-                        "the file states two projection codes — EPSG:{seen} on line {} and EPSG:{code} on line {}; \
+                        "the file states two projection codes - EPSG:{seen} on line {} and EPSG:{code} on line {}; \
                          holes of one file share one frame, and placing them together in either would place some of them wrong",
                         at + 1,
                         rank + 1
@@ -1681,7 +1681,7 @@ fn constant_epsg(table: &Table, template: &crate::osdu::Template) -> Result<Opti
 /// The rank of the column that a role occupies in **this** file.
 ///
 /// `None` when the template does not declare this role; a named refusal when it
-/// declares it and the file does not have the column — the two pieces of news are
+/// declares it and the file does not have the column - the two pieces of news are
 /// different, and only the second can be fixed by editing the CSV.
 pub(crate) fn column_at(
     table: &Table,

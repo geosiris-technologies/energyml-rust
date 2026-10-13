@@ -4,7 +4,7 @@
 
 # energyml-rust
 
-**Read, write and compute EnergyML (RESQML, WITSML, PRODML) data — Rust, Python, CLI**
+**Read, write and compute EnergyML (RESQML, WITSML, PRODML) data - Rust, Python, CLI**
 
 [![crates.io](https://img.shields.io/crates/v/energyml-core.svg)](https://crates.io/crates/energyml-core)
 [![docs.rs](https://img.shields.io/docsrs/energyml-core)](https://docs.rs/energyml-core)
@@ -14,7 +14,7 @@
 
 </div>
 
-EnergyML data travels as **EPC packages**: a zip of XML objects plus HDF5 files holding the big arrays. `energyml-rust` opens them, checks them, edits and rewrites them, turns their representations into points and meshes, and exports the result — with the same behaviour from Rust, from Python and from the command line.
+EnergyML data travels as **EPC packages**: a zip of XML objects plus HDF5 files holding the big arrays. `energyml-rust` opens them, checks them, edits and rewrites them, turns their representations into points and meshes, and exports the result - with the same behaviour from Rust, from Python and from the command line.
 
 - Every released RESQML, WITSML and PRODML schema version, as typed Rust, with reflection and JSON.
 - EPC read and write, tolerant of real-world files and never silent about what it tolerated.
@@ -50,7 +50,7 @@ let store = EpcStore::open("Lutetia.epc", registry)?;
 
 for summary in store.resources() {
     let header = store.header(&summary.uri)?;
-    println!("{} — {}", header.summary.qualified_type, header.display_name());
+    println!("{} - {}", header.summary.qualified_type, header.display_name());
 }
 # Ok::<(), energyml::storage::Error>(())
 ```
@@ -102,7 +102,7 @@ Start with [docs/getting-started.md](docs/getting-started.md) for a ten-minute w
 | `energyml-cli` | The `energyml` command. |
 | `energyml-python` | The Python bridge (`pip install energyml-rust`). Not published to crates.io. |
 | `energyml-tests`, `energyml-roundtrip` | End-to-end tests and the structural round-trip validator. Not published. |
-| `crates/generated/*` | Twelve crates generated from the Energistics schemas — see [crates/generated/README.md](crates/generated/README.md). |
+| `crates/generated/*` | Twelve crates generated from the Energistics schemas - see [crates/generated/README.md](crates/generated/README.md). |
 
 The architecture and each crate's role are in [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -112,12 +112,12 @@ The architecture and each crate's role are in [ARCHITECTURE.md](ARCHITECTURE.md)
 - [Library guide](docs/library.md)
 - [Command line](docs/cli.md)
 - [Python](docs/python.md)
-- [Gallery](docs/gallery.md) — every image, with the command that produced it
+- [Gallery](docs/gallery.md) - every image, with the command that produced it
 - [Architecture decision records](docs/adr/)
 
 ## Made by Geosiris
 
-`energyml-rust` is developed by [Geosiris](https://www.geosiris.com). A public web application built on this library is coming — TODO(verify): link when it is live.
+`energyml-rust` is developed by [Geosiris](https://www.geosiris.com). A public web application built on this library is coming - TODO(verify): link when it is live.
 
 ## Disclaimer and notices
 

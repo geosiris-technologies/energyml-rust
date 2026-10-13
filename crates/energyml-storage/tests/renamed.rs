@@ -2,8 +2,8 @@
 //!
 //! Someone renames `model.epc` and `model.h5` to `project_final.*`. Someone
 //! else is sent the `.h5` under whatever name their colleague's export tool
-//! chose. Nothing was lost in either case — every number is still on disk,
-//! usually in the very folder the package is in — and the only thing standing
+//! chose. Nothing was lost in either case - every number is still on disk,
+//! usually in the very folder the package is in - and the only thing standing
 //! between the person and their data is a string.
 //!
 //! So the resolution asks the question that actually matters: **which file
@@ -12,7 +12,7 @@
 //! and `Origin` for what each place in it means.
 //!
 //! What this suite pins is that the permissiveness works, that it prefers the
-//! right answers in the right order, and — the part that keeps it honest —
+//! right answers in the right order, and - the part that keeps it honest -
 //! that it never goes anywhere without saying so.
 
 #[cfg(feature = "hdf5")]
@@ -164,7 +164,7 @@ fn offers_are_tried_in_order_and_an_empty_one_steps_aside() {
 #[cfg(feature = "hdf5")]
 fn a_pinned_name_outranks_everything() {
     // Pinning is the one case where somebody has stated, about *this* name,
-    // where the file is. Nothing the package says outranks that — and the
+    // where the file is. Nothing the package says outranks that - and the
     // package here says something that would otherwise work.
     let Some((epc, beside)) = renamed("pinned", "project_final.epc", Some("beside.h5")) else {
         return;
@@ -199,7 +199,7 @@ fn a_pinned_name_outranks_everything() {
 fn a_package_that_is_right_is_not_searched() {
     // The cost of being permissive has to be zero for everyone who does not
     // need it. A package whose names are correct resolves through its own
-    // declaration and records nothing — no departure, no diagnostic, no
+    // declaration and records nothing - no departure, no diagnostic, no
     // wandering through the folder.
     let Some((epc, _)) = renamed(
         "intact",

@@ -1,4 +1,4 @@
-//! The section view — long and cross sections of a model along a trace.
+//! The section view - long and cross sections of a model along a trace.
 //!
 //! ADR-0015 is this crate's specification: every
 //! non-trivial choice in the code follows the decision recorded there.
@@ -11,14 +11,14 @@
 //!                                       View ──► layout ──► Layout ──► svg::write
 //! ```
 //!
-//! 1. [`read::contribution`] reads one package's objects — wells, surfaces,
-//!    grids — reprojected into the scene's system and cut along every section
+//! 1. [`read::contribution`] reads one package's objects - wells, surfaces,
+//!    grids - reprojected into the scene's system and cut along every section
 //!    trace. It is the only stage that touches a store.
 //! 2. [`assemble::assemble`] joins the contributions of every package into a
 //!    [`model::Catalogue`]: wells projected on each section, frames and
 //!    trajectories of one wellbore folded into one line, every object's fate.
 //! 3. [`layout::layout`] turns a catalogue and a [`model::View`] into a
-//!    [`layout::Layout`] — scales, ticks, fills, labels, all in numbers — and
+//!    [`layout::Layout`] - scales, ticks, fills, labels, all in numbers - and
 //!    [`svg::write`] writes it. Nothing is read or recomputed here: the front end
 //!    redraws on every view change, the export draws the same view.
 //!
@@ -49,8 +49,8 @@ use crate::inputs::InputsError;
 use crate::model::{Asked, Catalogue, Contribution, Inputs, SectionTrace, View};
 
 /// The whole calculation for one call: the sections' traces, one contribution
-/// per package — read by `read_one`, which is the face's, since only the face
-/// holds the packages — and the catalogue.
+/// per package - read by `read_one`, which is the face's, since only the face
+/// holds the packages - and the catalogue.
 ///
 /// The faces (the CLI, wasm) call this rather than chaining the stages
 /// themselves: no face carries logic (ADR-0012).
@@ -69,13 +69,13 @@ pub fn compute(
 
 /// One package handed to [`compute_packages`]: the store id its objects are
 /// asked under (`Asked::store`), where they are read, what the face already
-/// knows of it, and — when the face keeps one — its cache.
+/// knows of it, and - when the face keeps one - its cache.
 pub struct Opened<'a> {
     /// The id `Asked::store` names it by (`s1`, `s2`, … in the front end).
     pub store: String,
     /// Where its objects and arrays are read.
     pub source: &'a dyn energyml_domain::ArraySource,
-    /// Its colour sets, index and colour resolver — the face's own when it has them.
+    /// Its colour sets, index and colour resolver - the face's own when it has them.
     pub context: read::PackageContext<'a>,
     /// What it keeps between two calculations; `None`: nothing is kept.
     pub cache: Option<&'a mut read::PackageCache>,
@@ -84,14 +84,14 @@ pub struct Opened<'a> {
 /// The whole calculation over **one or several packages**, each with its own
 /// selection (`Inputs::objects`, one `Asked` per package): every package read
 /// through its cache, the contributions merged by [`assemble::assemble`] into
-/// one catalogue — the wells of all packages projected on the same sections,
+/// one catalogue - the wells of all packages projected on the same sections,
 /// their surfaces cut along the same traces, in the scene's one system.
 ///
 /// A selection naming a package that is not among `packages` is not dropped:
 /// each of its objects comes back refused, naming the package.
 ///
-/// A face that holds its packages in separate owners — the front end has one wasm
-/// `Session` per package — cannot hand them in one call: it calls
+/// A face that holds its packages in separate owners - the front end has one wasm
+/// `Session` per package - cannot hand them in one call: it calls
 /// [`crosses::traces`], then [`read::contribution_cached`] in each, then
 /// [`assemble::assemble`]. That is this function, cut where its owners are.
 pub fn compute_packages(
@@ -154,8 +154,8 @@ pub enum RedrawError {
     Inputs(#[from] InputsError),
 }
 
-/// **A drawing made again** from what its own metadata says it was made of —
-/// the inputs and the view — over the packages given (`--from-svg`).
+/// **A drawing made again** from what its own metadata says it was made of -
+/// the inputs and the view - over the packages given (`--from-svg`).
 ///
 /// On the same packages, the same bytes: that is how a drawing kept beside a
 /// model is known to be the model's still.
@@ -169,7 +169,7 @@ pub fn redraw(
     Ok(draw(&catalogue, &metadata.view))
 }
 
-/// A catalogue drawn for a view: [`layout::layout`] then [`svg::write`] — what
+/// A catalogue drawn for a view: [`layout::layout`] then [`svg::write`] - what
 /// the screen, the download, the CLI and the package all call (one
 /// drawer, so the export is what was shown).
 pub fn draw(catalogue: &Catalogue, view: &View) -> String {

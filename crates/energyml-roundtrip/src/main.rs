@@ -8,7 +8,7 @@
 //! Files written by fesapi, resqpy or any other implementation are the only
 //! honest test of a reader: the schemas say what is legal, they say what is
 //! actually produced. Each XML part is deserialized through the registry,
-//! serialized back, and the two are compared *structurally* — see [`shape`].
+//! serialized back, and the two are compared *structurally* - see [`shape`].
 //!
 //! Exit code is non-zero when a part failed to read or lost information, so
 //! this can sit in CI once a corpus is available to it.
@@ -75,7 +75,7 @@ const ACCEPTED_LOSSES: &[Accepted] = &[Accepted {
     reason: "PRODML 2.2 declares `TimeSeriesData/Key` with `type=\"xs:string\"` \
              (`TimeSeriesData.xsd`): that element carries no attribute. fesapi \
              writes `keyword` and `xsi:type=\"prodml23:KeywordValueStruct\"` on it, \
-             which belong to the `Key` of `TimeSeriesStatistic` — the other `Key` in \
+             which belong to the `Key` of `TimeSeriesStatistic` - the other `Key` in \
              the same package, whose type is `KeywordValueStruct`. No conformant \
              reader can read that attribute back: the document is at fault, not the \
              reading.",
@@ -141,7 +141,7 @@ impl PartResult {
 ///
 /// A second copy of this list used to live here, beside the one in the CLI.
 /// Neither was checked against anything, so a new release left out of one of
-/// them made this tool report the part as an unreadable loss — a *false* loss
+/// them made this tool report the part as an unreadable loss - a *false* loss
 /// report, which is the worst thing a round-trip tool can produce.
 fn registry() -> Registry {
     energyml_schemas::all()
@@ -305,12 +305,12 @@ fn check_part(
     // How a real EPC reader picks the type; falling back to the root element
     // when the package has no `[Content_Types].xml` entry for this part.
     // How a real EPC reader picks the type. `[Content_Types].xml` is the
-    // authority — but it is written by hand-rolled code in every
+    // authority - but it is written by hand-rolled code in every
     // implementation, so when it names something unusable the root element is
     // the better authority. The fallback is recorded, not hidden.
     let object = match declared_content_type.as_deref() {
         // Strictly. A round-trip measures whether reading and writing preserve
-        // the document, and a tolerant read invents what the document omitted —
+        // the document, and a tolerant read invents what the document omitted -
         // which the writer would then emit, turning an absent element into an
         // empty one and reporting the file as *changed by us*. A part this
         // refuses is a part that cannot be round-tripped without inventing, and
@@ -320,7 +320,7 @@ fn check_part(
             Err(first) => match read_by_root(&before.root, before.schema_version.as_deref(), reg, bytes) {
                 Ok(o) => {
                     result.note = Some(format!(
-                        "contentType `{ct}` unusable ({first}) — type deduced from the root element"
+                        "contentType `{ct}` unusable ({first}) - type deduced from the root element"
                     ));
                     Ok(o)
                 }
@@ -396,22 +396,22 @@ fn version_parts(version: &str) -> Vec<u32> {
 ///
 /// The document's `schemaVersion` is the only version signal it carries, and
 /// it is a *hint*, not a decision: it is written by hand-rolled code in every
-/// implementation, and a producer may stamp a release we do not generate —
+/// implementation, and a producer may stamp a release we do not generate -
 /// fesapi writes `2.3` on PRODML 2.2 documents. So the rule is the newest
 /// release that does not claim to be more recent than the document, and,
 /// when none qualifies, simply the newest.
 ///
 /// Order matters more than it looks. Every version of a package shares one
 /// namespace URI, so with the versions sorted the other way a RESQML 2.2
-/// document read by root element was read as 2.0.1 — which succeeds, because
-/// an unknown child is skipped for forward compatibility — and every element
+/// document read by root element was read as 2.0.1 - which succeeds, because
+/// an unknown child is skipped for forward compatibility - and every element
 /// 2.2 added came back missing. The round trip then reported *its own* choice
 /// of reader as the file losing information.
 fn version_rank(
     info: &energyml_core::reflect::TypeInfo,
     declared: Option<&[u32]>,
 ) -> (bool, Vec<u32>, Vec<u32>) {
-    // `schema_version` is the form identifiers use — `2.0` for RESQML 2.0.1 —
+    // `schema_version` is the form identifiers use - `2.0` for RESQML 2.0.1 -
     // and it is what a document's `schemaVersion` is comparable to.
     let schema = version_parts(info.schema_version);
     let not_newer = declared.is_some_and(|want| schema.as_slice() <= want);
@@ -420,8 +420,8 @@ fn version_rank(
 
 /// Identify a standalone document from its root element.
 ///
-/// The namespace URI gives the package but not the version — every RESQML
-/// version shares one URI — so the candidates are tried in turn and the first
+/// The namespace URI gives the package but not the version - every RESQML
+/// version shares one URI - so the candidates are tried in turn and the first
 /// that reads wins. `declared_version` is the root's `schemaVersion`, used to
 /// order them; see [`version_rank`].
 fn read_by_root(
@@ -484,8 +484,8 @@ fn summary(results: &[PartResult]) -> String {
         .iter()
         .filter(|r| r.failure.is_none() && r.losses() == 0 && r.additions() > 0)
         .count();
-    // A part whose only difference is an accepted loss is not equivalent — it
-    // came back without something the document carried — so it gets its own
+    // A part whose only difference is an accepted loss is not equivalent - it
+    // came back without something the document carried - so it gets its own
     // bucket rather than being rounded up into the good news.
     let equivalent = results.iter().filter(|r| r.is_clean()).count();
     let tolerated = results
@@ -496,7 +496,7 @@ fn summary(results: &[PartResult]) -> String {
     let accepted: usize = results.iter().map(|r| r.accepted.len()).sum();
     let mut out = format!(
         "{total} part(s): {equivalent} equivalent, {noisy} with additions, \
-         {lossy} with losses, {failed} unreadable — {redundant} redundant xsi:type not rewritten"
+         {lossy} with losses, {failed} unreadable - {redundant} redundant xsi:type not rewritten"
     );
     if accepted > 0 {
         let _ = write!(out, ", {accepted} accepted loss(es) on {tolerated} part(s)");
@@ -511,7 +511,7 @@ fn render_report(results: &[PartResult], max_findings: usize) -> String {
         "Each XML part is deserialised then re-serialised, and the two documents are \
          compared on their *structure*: which elements, in which namespace, how many times, \
          with which attributes and values. Prefixes, attribute order, `2.0` written as \
-         `2` and insignificant whitespace do not count — they carry no information.\n\n",
+         `2` and insignificant whitespace do not count - they carry no information.\n\n",
     );
     out.push_str(&format!("**{}**\n\n", summary(results)));
 
@@ -562,7 +562,7 @@ fn render_report(results: &[PartResult], max_findings: usize) -> String {
             if entry.1.len() < 3 {
                 entry
                     .1
-                    .push(format!("`{}` — `{}`", short(&result.origin), diff.path));
+                    .push(format!("`{}` - `{}`", short(&result.origin), diff.path));
             }
         }
     }
@@ -571,11 +571,11 @@ fn render_report(results: &[PartResult], max_findings: usize) -> String {
         out.push_str(
             "What the document carries and no conformant reader can read back, because the \
              schema declares nothing at that place to receive it. These differences do not \
-             fail the check — but they remain differences, and each one cites the schema \
+             fail the check - but they remain differences, and each one cites the schema \
              that settles it.\n\n",
         );
         for (reason, (count, examples)) in &by_reason {
-            out.push_str(&format!("- {reason} — {count} occurrence(s)\n"));
+            out.push_str(&format!("- {reason} - {count} occurrence(s)\n"));
             for example in examples {
                 out.push_str(&format!("  - {example}\n"));
             }
@@ -593,7 +593,7 @@ fn render_report(results: &[PartResult], max_findings: usize) -> String {
                 .or_default() += 1;
         }
         for (note, count) in &by_note {
-            out.push_str(&format!("- {note} — {count} part(s)\n"));
+            out.push_str(&format!("- {note} - {count} part(s)\n"));
         }
         out.push('\n');
     }
@@ -609,7 +609,7 @@ fn render_report(results: &[PartResult], max_findings: usize) -> String {
                 .push(failure.origin.clone());
         }
         for (reason, origins) in &by_reason {
-            out.push_str(&format!("- **{}** — {} part(s)\n", reason, origins.len()));
+            out.push_str(&format!("- **{}** - {} part(s)\n", reason, origins.len()));
             for origin in origins.iter().take(5) {
                 out.push_str(&format!("  - `{}`\n", short(origin)));
             }
@@ -653,7 +653,7 @@ fn render_report(results: &[PartResult], max_findings: usize) -> String {
         }
         for (diff, _) in result.accepted.iter().take(max_findings) {
             out.push_str(&format!(
-                "  - {} `{}`: expected `{}`, got `{}` — **accepted**\n",
+                "  - {} `{}`: expected `{}`, got `{}` - **accepted**\n",
                 diff.kind.label(),
                 diff.path,
                 diff.expected,
@@ -665,7 +665,7 @@ fn render_report(results: &[PartResult], max_findings: usize) -> String {
 
     let equivalent = results.iter().filter(|r| r.is_clean()).count();
     out.push_str(&format!(
-        "## Equivalent parts\n\n{equivalent} part(s) come back with the same information — \
+        "## Equivalent parts\n\n{equivalent} part(s) come back with the same information - \
          give or take the redundant `xsi:type`, which this report counts separately.\n"
     ));
     out
@@ -699,8 +699,8 @@ mod tests {
 
     /// The defect this ordering exists for: RESQML 2.0.1 and 2.2 share one
     /// namespace URI and both declare a `BoundaryFeature` element, 2.0.1 reads
-    /// a 2.2 document without complaining — an unknown child is skipped for
-    /// forward compatibility — and `IsWellKnown`, which only 2.2 has, came back
+    /// a 2.2 document without complaining - an unknown child is skipped for
+    /// forward compatibility - and `IsWellKnown`, which only 2.2 has, came back
     /// missing. Eight parts of the corpus were reported as lossy for it.
     #[test]
     fn the_declared_schema_version_picks_the_release() {
@@ -734,11 +734,11 @@ mod tests {
     ///
     /// **The example had to change on 21/09, and that is the point of the
     /// note.** This test used to declare `2.3` and expect `2.2`, because 2.3
-    /// was a release nobody here generated — fesapi stamps it on PRODML 2.2
+    /// was a release nobody here generated - fesapi stamps it on PRODML 2.2
     /// documents, and reading those as 2.0 dropped everything 2.2 added.
     /// Generating PRODML 2.3 made that expectation false *and right to be
     /// false*: a document that says 2.3 must now be read as 2.3. So the
-    /// property is retested where it still bites — `2.1`, which no crate here
+    /// property is retested where it still bites - `2.1`, which no crate here
     /// generates and which must land on 2.0 rather than on the newest of all.
     #[test]
     fn an_unknown_release_falls_back_to_the_newest_below_it() {

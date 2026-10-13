@@ -1,4 +1,4 @@
-//! `inputs::validate` — every refusal names the field and the value
+//! `inputs::validate` - every refusal names the field and the value
 //! (ADR-0015).
 
 use energyml_section::inputs::{InputsError, MAX_CROSSES, validate};

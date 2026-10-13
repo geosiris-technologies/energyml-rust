@@ -1,4 +1,4 @@
-//! Reading a whole package into shapes — the piece three faces had each.
+//! Reading a whole package into shapes - the piece three faces had each.
 //!
 //! `energyml export`, `energyml geometry` and the Python bridge assembled this
 //! themselves, and the three had begun to differ: the colour ramps were
@@ -7,7 +7,7 @@
 //!
 //! # What makes these falsifiable
 //!
-//! Counting objects would pass on almost any mistake — a walk that attached no
+//! Counting objects would pass on almost any mistake - a walk that attached no
 //! property, or one that attached every property to every shape, both return
 //! the same number of shapes. So each check names the **thing that would be
 //! wrong**: an attribute whose values are not the count of the elements it
@@ -15,7 +15,7 @@
 //! type through, a cheap default that is not cheap.
 
 // Everything here needs a build that can read an HDF5 dataset, so the whole
-// file is behind the feature — imports and helpers included, or a build without
+// file is behind the feature - imports and helpers included, or a build without
 // it warns about what it compiled for nothing. It runs in the `hdf5` CI step, like
 // `tests/corpus.rs` beside it.
 #[cfg(feature = "hdf5")]
@@ -35,7 +35,7 @@ fn registry() -> Arc<Registry> {
     Arc::new(energyml_schemas::all())
 }
 
-/// One reference package, or `None` — the packages are fetched, not
+/// One reference package, or `None` - the packages are fetched, not
 /// versioned, so a fresh clone must skip rather than fail (and CI must not).
 #[cfg(feature = "hdf5")]
 fn package(name: &str) -> Option<PathBuf> {
@@ -65,7 +65,7 @@ fn a_package_comes_back_as_shapes_that_name_themselves() {
         // **A qualified type, not a class name.** It was the Rust type name
         // until 20/09, so an OBJ comment, a GeoJSON property and a VTK field
         // all carried `Grid2dRepresentation` where the package says
-        // `resqml22.Grid2dRepresentation` — a name that does not say which
+        // `resqml22.Grid2dRepresentation` - a name that does not say which
         // release it came from, in the one line of an export meant to lead
         // back to the package.
         assert!(
@@ -82,7 +82,7 @@ fn a_package_comes_back_as_shapes_that_name_themselves() {
         assert!(!object.uuid.is_empty(), "{} has no uuid", object.uri);
     }
 
-    // A sound package of the corpus reads whole. Not a count of objects — a
+    // A sound package of the corpus reads whole. Not a count of objects - a
     // count of **failures**, which is the number a caller acts on.
     assert!(read.unreadable.is_empty(), "parts refused: {:?}", read.unreadable);
 }
@@ -154,7 +154,7 @@ fn the_properties_land_on_the_shapes_they_belong_to() {
     for (object, attribute) in &attached {
         // **The count is the check.** A property lined up against the wrong
         // elements draws a plausible picture of nothing, which is the one
-        // outcome worth ruling out — and it is what `attributes_for` refuses
+        // outcome worth ruling out - and it is what `attributes_for` refuses
         // on, so a walk that skipped that refusal would show up here.
         let elements = match attribute.scope {
             scene::AttributeScope::Points => object.geometry.point_count(),
@@ -172,8 +172,8 @@ fn the_properties_land_on_the_shapes_they_belong_to() {
     }
 
     // And **the colours arrive**, which is the half only `export` could reach
-    // before: the cascade needs the whole package, so an exporter — handed one
-    // object — cannot resolve it, and neither could anything that read a
+    // before: the cascade needs the whole package, so an exporter - handed one
+    // object - cannot resolve it, and neither could anything that read a
     // package shape by shape.
     let with_a_ramp = attached.iter().filter(|(_, a)| !a.lut.is_empty()).count();
     assert!(

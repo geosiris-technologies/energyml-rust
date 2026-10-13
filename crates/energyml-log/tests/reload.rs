@@ -1,4 +1,4 @@
-//! The level changes while the program runs — the desktop application's switch.
+//! The level changes while the program runs - the desktop application's switch.
 
 use std::io;
 use std::sync::{Arc, Mutex};

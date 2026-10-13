@@ -1,8 +1,8 @@
-//! `wells-and-properties-from-table` — the boreholes **and** their properties, in
+//! `wells-and-properties-from-table` - the boreholes **and** their properties, in
 //! un run.
 //!
 //! The need: an operation that chains the two automatically, and that
-//! also appears in the front end for translation and enrichment — after
+//! also appears in the front end for translation and enrichment - after
 //! noting that an import from the front end did not lay the properties
 //! on them.
 //!
@@ -15,8 +15,8 @@
 //! come from `properties_from_table::lay`, laid on those frames.
 //!
 //! This is what makes the composition correct where a chaining of two plans
-//! would not be: the second operation does not re-read the package — the new frames
-//! are not in it yet — it receives those that the first has just
+//! would not be: the second operation does not re-read the package - the new frames
+//! are not in it yet - it receives those that the first has just
 //! decided, and those of the package that it has recognised.
 //!
 //! # The passes tied to the units of the BRGM chart
@@ -25,20 +25,20 @@
 //! the unit of each pass (`STRA`, and `unitLabels` its label, `Nom_STRA`),
 //! each frame receives **`IntervalStratigraphicUnits`** (TRG 2.2 §5.34): one
 //! unit index per **interval**, in a rank of a stratigraphic
-//! column — *“Array length must equal the number of intervals”*,
+//! column - *“Array length must equal the number of intervals”*,
 //! which the passes make possible.
 //!
 //! Three choices, written here because they decide the shape of the package:
 //!
-//! - **the column is that of the observed divisions** — exactly those that
+//! - **the column is that of the observed divisions** - exactly those that
 //!   the passes name, written by `super::stratigraphy::write_column`. Their
 //!   uuids come from their URI in the register: the Priabonian of this column
 //!   **is** that of a column drawn from the chart by
 //!   `stratigraphy-from-geolts`, not a second one;
 //! - **one rank per level, hence one correspondence per rank**: `Q` is a
-//!   system, `e4`–`e7` are stages. The frame admits several
+//!   system, `e4`-`e7` are stages. The frame admits several
 //!   `IntervalStratigraphicUnits` (0..*); in each, an interval whose
-//!   unit is of another level — or of no known division — carries the
+//!   unit is of another level - or of no known division - carries the
 //!   null value, which the rule provides for (*“use null value”*);
 //! - **the correspondence is in the identity of the frame**: the seed of the
 //!   trajectory and of the frame carries the units of each pass. Another
@@ -46,7 +46,7 @@
 //!   first one rewritten.
 //!
 //! A pass whose code and label designate no division of the
-//! chart — `n.d.` in a producer's table — stays **without a unit, and counted**: inventing a
+//! chart - `n.d.` in a producer's table - stays **without a unit, and counted**: inventing a
 //! local one is one more step, not a guess of this operation.
 //!
 //! # What is not taken over
@@ -74,16 +74,16 @@ use super::wells_from_table::{
 /// The operation.
 pub struct WellsAndProperties;
 
-/// What it is told — the settings of the two operations, `dataFile` in common.
+/// What it is told - the settings of the two operations, `dataFile` in common.
 #[derive(Debug, Params)]
 pub struct BothParams {
-    /// the EPSG code the file's coordinates are in — left out, a column must state it
+    /// the EPSG code the file's coordinates are in - left out, a column must state it
     pub source_epsg: Option<Epsg>,
-    /// reproject into this EPSG system, in metres — a borehole cannot be written in degrees
+    /// reproject into this EPSG system, in metres - a borehole cannot be written in degrees
     pub project: Option<Epsg>,
     /// the EPSG code of the vertical system, when known; left out, the package says unknown
     pub vertical: Option<Epsg>,
-    /// what the measured depths are counted from — the ground, unless the file says otherwise
+    /// what the measured depths are counted from - the ground, unless the file says otherwise
     #[param(default = DatumKind::GroundLevel)]
     pub datum_kind: DatumKind,
     /// the external file the coordinates and the property values go into
@@ -102,14 +102,14 @@ pub struct BothParams {
     /// the integer a discrete property uses where the file says nothing
     #[param(default = -9999i64, optional)]
     pub null_value: i64,
-    /// the column naming each pass's stratigraphic unit, a code like `STRA` — given, each frame maps its intervals to the units of the BRGM chart
+    /// the column naming each pass's stratigraphic unit, a code like `STRA` - given, each frame maps its intervals to the units of the BRGM chart
     pub units: Option<String>,
     /// the column giving that code's label, like `Nom_STRA`, which tells apart the chart's divisions sharing a code
     pub unit_labels: Option<String>,
-    /// the language the chart's divisions are titled in — the same units as `stratigraphy-from-geolts` writes, so the same setting
+    /// the language the chart's divisions are titled in - the same units as `stratigraphy-from-geolts` writes, so the same setting
     #[param(default = super::stratigraphy::Language::Fr, optional)]
     pub language: super::stratigraphy::Language,
-    /// how the text columns are written — one property each, or gathered in a table with one property pointing at its rows
+    /// how the text columns are written - one property each, or gathered in a table with one property pointing at its rows
     #[param(default = TextColumns::Separate, optional)]
     pub text_columns: TextColumns,
     /// also carry the columns the template does not name, in a table of their own, rather than leave them out
@@ -129,7 +129,7 @@ pub struct BothInputs {
     pub table: Vec<TableIn>,
     /// the wells already in the package, to recognise rather than duplicate
     ///
-    /// Left empty, these are all the frames of the target package — the declaration
+    /// Left empty, these are all the frames of the target package - the declaration
     /// of `wells-from-table`, taken over as it is.
     #[input(
         types = "resqml22.WellboreFrameRepresentation, resqml20.obj_WellboreFrameRepresentation",
@@ -165,7 +165,7 @@ impl BothParams {
     }
 }
 
-/// The union of what the halves write, **and the units column's** — each
+/// The union of what the halves write, **and the units column's** - each
 /// half's own list, merged by role, never retyped.
 ///
 /// A role two halves share (`feature`, `interpretation`: the wells' and the
@@ -220,7 +220,7 @@ impl Operation for WellsAndProperties {
             describe: "wellbores and the properties along them from a tabular file and an OSDU column template, in one run: wells-from-table, then properties-from-table on the frames it made or recognised",
             category: Category::Import,
             makes: &[
-                // In the compound the run creates — `wells-from-table`'s datum.
+                // In the compound the run creates - `wells-from-table`'s datum.
                 "eml23.ReferencePointInALocalEngineeringCompoundCrs",
                 "resqml22.WellboreFeature",
                 "resqml22.WellboreInterpretation",
@@ -229,7 +229,7 @@ impl Operation for WellsAndProperties {
                 "resqml22.ContinuousProperty",
                 "resqml22.DiscreteProperty",
                 // No `CategoricalProperty`: RESQML 2.2 has none
-                // `tests/makes.rs`) — the table below is what gives a code
+                // `tests/makes.rs`) - the table below is what gives a code
                 // its meaning, through `DiscreteProperty.CategoryLookup`.
                 "eml23.ColumnBasedTable",
             ],
@@ -242,7 +242,7 @@ impl Operation for WellsAndProperties {
         &[Category::Wells, Category::Properties]
     }
 
-    /// What `wells-from-table` proposes — the system of the file, and a metric
+    /// What `wells-from-table` proposes - the system of the file, and a metric
     /// zone when it is in degrees. The slots carry the same names.
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
         WellsFromTable.suggest(bag, slots);
@@ -307,7 +307,7 @@ impl Operation for WellsAndProperties {
 
         // **A table of heads has nothing to lay**: no frame, no MD.
         // This is the first plan, said as it is, and not the refusal of
-        // `properties-from-table` — which would state a fault where there is only a
+        // `properties-from-table` - which would state a fault where there is only a
         // table without measurements.
         if frames.is_empty() {
             let mut plan = first;
@@ -342,7 +342,7 @@ impl Operation for WellsAndProperties {
         plan.activity.parameters.extend(second.activity.parameters);
         if let (Some(passes), Some(column)) = (&passes, &params.units) {
             let title = format!(
-                "{} — {column}",
+                "{} - {column}",
                 table.first().map(|one| one.file.as_str()).unwrap_or("table")
             );
             let language = params.language;
@@ -398,7 +398,7 @@ fn passes_of(
             return Err(Refusal::on(
                 "units",
                 format!(
-                    "`{}`: a unit is laid on the **intervals** of a frame, so the template must declare the well name, the measured depth and where each pass starts — its `top depth`",
+                    "`{}`: a unit is laid on the **intervals** of a frame, so the template must declare the well name, the measured depth and where each pass starts - its `top depth`",
                     input.file
                 ),
             ));
@@ -448,7 +448,7 @@ fn attach(
         let key = (pass.2.clone(), pass.3.clone());
         if !named.contains_key(&key) {
             let found = if key.1.is_empty() {
-                // Without a label, the code alone — unique or refused by
+                // Without a label, the code alone - unique or refused by
                 // `resolve`, never the first that comes.
                 chart.resolve(&key.0).ok().map(|one| one.id)
             } else {

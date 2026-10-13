@@ -1,4 +1,4 @@
-//! `collection` — an `eml23.DataobjectCollection` and the
+//! `collection` - an `eml23.DataobjectCollection` and the
 //! `CollectionsToDataobjectsAssociationSet` that says what is in it.
 //!
 //! A collection holds nothing itself: its sequence has no member field, and
@@ -6,9 +6,9 @@
 //! `SingleCollectionAssociation` {`Collection`, `Dataobject` 1..∞} per
 //! collection (Collection.xsd). The synthetic reference model asks for three
 //! kinds of them: a **project**
-//! holding every object of the package — *« The RESQML V2.2 Version allows to
+//! holding every object of the package - *« The RESQML V2.2 Version allows to
 //! gather information in a given DataObjectCollection which CollectionKind is a
-//! "Project" »* (RESQML usage guide 2.2, draft, §7 p. 66) —, a folder per
+//! "Project" »* (RESQML usage guide 2.2, draft, §7 p. 66) -, a folder per
 //! well, and the set of the model's wellbore interpretations that an
 //! `EarthModelInterpretation` names.
 //!
@@ -24,20 +24,20 @@
 //! - **a collection without members is refused**: `Dataobject` is 1..∞, so
 //!   its association could not be written, and a collection nothing is in
 //!   reads exactly like one that holds what it should;
-//! - **a member given twice is written once, counted and named** — the schema
+//! - **a member given twice is written once, counted and named** - the schema
 //!   says the second *« must be ignored »*; writing it would ask every reader
 //!   to. It is ordinary, not a fault: the frames an import writes are the same
 //!   objects each time, so every step that frames with the same codes gives
-//!   them again — and a count nobody can explain is not one to trust;
+//!   them again - and a count nobody can explain is not one to trust;
 //! - **`HomogeneousDatatype` is what the members are**, on the collection and
 //!   on its association: true when they share one type. Asked for
-//!   (`homogeneous`) and not so, it is refused with the types found — the TRG
+//!   (`homogeneous`) and not so, it is refused with the types found - the TRG
 //!   2.2 §6.19 p. 187 wants the wellbore set of an earth model to hold
 //!   *« only WellboreInterpretation »*, and a boolean cannot say which type,
 //!   only be checked against the members.
 //!
-//! The collection's uuid comes from its title and kind — the same folder is
-//! the same object from one run to the next — and the association set's from
+//! The collection's uuid comes from its title and kind - the same folder is
+//! the same object from one run to the next - and the association set's from
 //! what it associates: other members, another set.
 
 use std::collections::BTreeSet;
@@ -51,7 +51,7 @@ use crate::operation::{About, ActivityDraft, Category, Context, NewObject, Note,
 /// The operation.
 pub struct Collection;
 
-/// What the collection is for — EML's `CollectionKind`, a closed list.
+/// What the collection is for - EML's `CollectionKind`, a closed list.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
 pub enum Kind {
     /// A folder.
@@ -81,7 +81,7 @@ impl Kind {
 /// What `collection` is told.
 #[derive(Debug, Params)]
 pub struct CollectionParams {
-    /// the collection's title — with its kind, what makes it the same collection from one run to the next
+    /// the collection's title - with its kind, what makes it the same collection from one run to the next
     pub title: Title,
     /// what the collection is for
     #[param(default = Kind::Folder, optional)]
@@ -94,7 +94,7 @@ pub struct CollectionParams {
 /// What `collection` takes.
 #[derive(Debug, Inputs)]
 pub struct CollectionInputs {
-    /// the objects the collection holds — of any type, other collections included
+    /// the objects the collection holds - of any type, other collections included
     #[input(least = 1)]
     pub members: Vec<ObjectIn>,
 }
@@ -106,7 +106,7 @@ impl Operation for Collection {
     fn about(&self) -> About {
         About {
             name: "collection",
-            describe: "a collection of data objects — a folder, a project, a study — and the association set that says what it holds",
+            describe: "a collection of data objects - a folder, a project, a study - and the association set that says what it holds",
             category: Category::Create,
             makes: &[
                 "eml23.DataobjectCollection",
@@ -126,7 +126,7 @@ impl Operation for Collection {
         let title = params.title.0.trim().to_string();
         let mut seen = BTreeSet::new();
         let mut members = Vec::with_capacity(inputs.members.len());
-        // Each repeated object — by uuid, named by title — with how many times
+        // Each repeated object - by uuid, named by title - with how many times
         // it came again.
         let mut twice: Vec<(String, String, usize)> = Vec::new();
         for member in &inputs.members {
@@ -161,7 +161,7 @@ impl Operation for Collection {
             return Err(Refusal::on(
                 "homogeneous",
                 format!(
-                    "the members are of {} types — {} — and one was required",
+                    "the members are of {} types - {} - and one was required",
                     types.len(),
                     types.iter().copied().collect::<Vec<_>>().join(", ")
                 ),
@@ -186,7 +186,7 @@ impl Operation for Collection {
                 .join(",")
         );
         let set_uuid = cx.identity.uuid(&seed, 1)?;
-        let set_title = format!("{title} — members");
+        let set_title = format!("{title} - members");
 
         let citation = |title: &str| eml::Citation {
             title: title.to_string(),
@@ -222,7 +222,7 @@ impl Operation for Collection {
                 members.len(),
                 types.len(),
                 if homogeneous {
-                    format!(" — all {}", types.iter().next().copied().unwrap_or_default())
+                    format!(" - all {}", types.iter().next().copied().unwrap_or_default())
                 } else {
                     String::new()
                 }

@@ -4,7 +4,7 @@
 //! package readable rather than a bag of points:
 //!
 //! ```text
-//! RockVolumeFeature            « Marnes et Caillasses » — the rock body itself
+//! RockVolumeFeature            « Marnes et Caillasses » - the rock body itself
 //!   ↑ InterpretedFeature
 //! StratigraphicUnitInterpretation   its ages, its role, one reading of it
 //!   ↑ RepresentedObject
@@ -16,7 +16,7 @@
 //! Because RESQML separates *what exists* from *what somebody decided about
 //! it*, and a SIGEOL export is squarely the second: `observationMethod` on every
 //! feature reads « Dire d'expert ou jugement de l'ingénieur ». Collapsing the
-//! pair — putting the ages on the feature — would state as a property of the
+//! pair - putting the ages on the feature - would state as a property of the
 //! rock what is in fact one expert's reading, and the next import from another
 //! source could not disagree with it without contradicting the geology.
 //!
@@ -25,7 +25,7 @@
 //! No store, no HDF5, no uuid drawn. This module takes the groups and the uuids
 //! it is given and returns objects; writing them and putting the coordinates in
 //! a file is [`crate::epc`]'s business. That is the rule the workspace follows
-//! everywhere — `energyml_storage::graph`, `energyml_domain::provenance` — and
+//! everywhere - `energyml_storage::graph`, `energyml_domain::provenance` - and
 //! it is what lets these be tested without a package.
 
 use energyml_eml_2_3 as eml;
@@ -38,7 +38,7 @@ use crate::sigeol::{Side, Unit};
 ///
 /// EML 2.3 has no way to say « 41.2 Ma » on its own: a `GeologicTime` is a
 /// `DateTime` **plus** an offset in years, positive into the past. So the pair
-/// only means something against a stated instant, and this is it — the epoch,
+/// only means something against a stated instant, and this is it - the epoch,
 /// written down rather than left to whoever reads the file.
 pub const AGE_REFERENCE: &str = "1970-01-01T00:00:00Z";
 
@@ -56,8 +56,8 @@ pub struct Group {
     /// How many source features fed this group, before deduplication.
     ///
     /// Carried so the activity can state the gap. A SIGEOL export writes one
-    /// feature per borehole *pass*, not per place — 10 374 features for 1 291
-    /// points on the Bartonien — and a package that showed only the second
+    /// feature per borehole *pass*, not per place - 10 374 features for 1 291
+    /// points on the Bartonien - and a package that showed only the second
     /// number would look like a much thinner survey than it is.
     pub features: usize,
 }
@@ -83,7 +83,7 @@ pub struct Array {
     pub file: String,
     /// The dataset's path inside it.
     ///
-    /// **Opaque, and never parsed** — the schema says `PathInExternalFile` is a
+    /// **Opaque, and never parsed** - the schema says `PathInExternalFile` is a
     /// string and nothing more. `/resqml22/<uuid>/points` is what fesapi writes,
     /// a convention and not a rule.
     pub path: String,
@@ -94,7 +94,7 @@ pub struct Array {
 /// Build the three objects of one group.
 ///
 /// `citation` makes a `Citation` from a title, so the originator, the format and
-/// the creation instant are decided once by the caller — a clock is an input.
+/// the creation instant are decided once by the caller - a clock is an input.
 pub fn group(
     group: &Group,
     array: &Array,
@@ -110,7 +110,7 @@ pub fn group(
         citation: citation(&name),
         // The BRGM lithostratigraphic referential is a published vocabulary,
         // but `IsWellKnown` in RESQML means *this feature is one of the
-        // standard's own well-known bodies* — which these are not. Saying
+        // standard's own well-known bodies* - which these are not. Saying
         // otherwise would claim an authority the standard has not granted.
         is_well_known: false,
         ..Default::default()
@@ -138,7 +138,7 @@ pub fn group(
 
     // What somebody reads in a list of forty objects: the unit alone would give
     // two objects the same name the day a second surface is imported.
-    let title = format!("{name} — {} {}", group.stage, group.side.label());
+    let title = format!("{name} - {} {}", group.stage, group.side.label());
     let representation = resqml::PointSetRepresentation {
         uuid: crate::naming::point_set(&key, &group.stage, group.side.label()),
         schema_version: "2.2".to_string(),
@@ -189,7 +189,7 @@ fn occurred_during(unit: &Unit) -> Option<resqml::AbstractTimeInterval> {
             // **Start is the old end and end is the young one.** An interval
             // runs forwards in time; writing them the other way round would
             // describe a unit that stops before it begins, and no validator
-            // would catch it — both are well-formed dates with well-formed
+            // would catch it - both are well-formed dates with well-formed
             // offsets.
             start: geologic_time(old),
             end: geologic_time(young),
@@ -300,7 +300,7 @@ mod tests {
     #[test]
     fn an_interval_runs_forwards_and_the_offsets_are_positive_into_the_past() {
         // The trap: `start` is the **old** end. Written the other way round it
-        // describes a unit that stops before it begins, and nothing complains —
+        // describes a unit that stops before it begins, and nothing complains -
         // both are well-formed dates with well-formed offsets.
         let made = built();
         let Some(resqml::AbstractTimeInterval::GeologicTimeBasedTimeInterval(interval)) =
@@ -383,7 +383,7 @@ mod tests {
         let made = built();
         assert_eq!(
             made.representation.citation.title,
-            "Marnes et Caillasses — Bartonien Top"
+            "Marnes et Caillasses - Bartonien Top"
         );
         assert_eq!(made.feature.citation.title, "Marnes et Caillasses");
     }

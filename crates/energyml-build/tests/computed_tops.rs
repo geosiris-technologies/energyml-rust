@@ -1,4 +1,4 @@
-//! `computed-tops` — where a well crosses horizons: the depth of each crossing, what
+//! `computed-tops` - where a well crosses horizons: the depth of each crossing, what
 //! is written, what is said, what is refused.
 //!
 //! **The form of the assertions comes from the specification and from
@@ -6,9 +6,9 @@
 //! surface, so the position the path has there lies on the surface; N
 //! boundaries make N+1 intervals (RESQML TRG v2.2 §12.15 p. 312); a boundary
 //! references a `BoundaryFeatureInterpretation` (§12.6 p. 302) and a WITSML
-//! `WellboreMarker` holding the depth (WITSML TRG v2.1 §24.6 pp. 582–583).
+//! `WellboreMarker` holding the depth (WITSML TRG v2.1 §24.6 pp. 582-583).
 //! **The numbers are the tests' own**, each computed by hand beside its
-//! assertion — a straight hole through a plane, a circular arc through a
+//! assertion - a straight hole through a plane, a circular arc through a
 //! level, a bilinear surface whose height is its formula.
 
 use serde_json::json;
@@ -34,7 +34,7 @@ fn frame() -> Ref {
     Ref::new(
         "aaaaaaaa-0000-4000-8000-00000000000f",
         "eml23.LocalEngineeringCompoundCrs",
-        "Lutetia — test frame",
+        "Lutetia - test frame",
     )
 }
 
@@ -46,7 +46,7 @@ fn trajectory() -> Ref {
     )
 }
 
-/// A well whose line is `path`, drawn at its stations, in `frame` — an
+/// A well whose line is `path`, drawn at its stations, in `frame` - an
 /// elevation frame in metres, which is what the builders here write.
 fn well(path: Path, frame: Ref) -> Vec<(String, Source)> {
     let knots = path.knots().expect("a line with its depths").to_vec();
@@ -98,7 +98,7 @@ fn well(path: Path, frame: Ref) -> Vec<(String, Source)> {
 }
 
 /// A horizon: a 2D grid of `n × n` nodes, `spacing` apart from `(x0, y0)`,
-/// whose heights are `f` — exact between the nodes whenever `f` is bilinear,
+/// whose heights are `f` - exact between the nodes whenever `f` is bilinear,
 /// which is what a grid's cell is read as.
 fn grid(x0: f64, y0: f64, n: usize, spacing: f64, f: impl Fn(f64, f64) -> f64) -> Geometry {
     let mut points = Vec::new();
@@ -123,7 +123,7 @@ fn grid(x0: f64, y0: f64, n: usize, spacing: f64, f: impl Fn(f64, f64) -> f64) -
     }
 }
 
-/// A horizon of the package: its shape, and what is known of it — a
+/// A horizon of the package: its shape, and what is known of it - a
 /// representation, its horizon interpretation, its frame.
 fn horizon(slot: &str, rank: usize, title: &str, geometry: Geometry, frame: Ref) -> Vec<(String, Source)> {
     vec![
@@ -242,7 +242,7 @@ fn a_deviated_hole_gets_its_marker_at_the_algebras_depth() {
         -300.0 + 0.1 * (x - X0)
     });
     let plan = planned(
-        &bag(well(path, frame()), vec![("H3 — toit", plane, frame())]),
+        &bag(well(path, frame()), vec![("H3 - toit", plane, frame())]),
         Choices::new(),
     )
     .expect("a plan");
@@ -260,7 +260,7 @@ fn a_deviated_hole_gets_its_marker_at_the_algebras_depth() {
         "counted from the trajectory's datum"
     );
     assert_eq!(found[0].json["WellboreMarkerKind"], json!("stratigraphic"));
-    assert_eq!(found[0].json["Citation"]["Title"], json!("H3 — toit — GTH-test"));
+    assert_eq!(found[0].json["Citation"]["Title"], json!("H3 - toit - GTH-test"));
 
     let set = plan.of_role("interval-set").next().expect("the interval set");
     assert_eq!(set.qualified_type, "resqml22.WellboreIntervalSet");
@@ -273,7 +273,7 @@ fn a_deviated_hole_gets_its_marker_at_the_algebras_depth() {
         "the horizon's interpretation"
     );
     assert_eq!(boundaries[0]["GeologicBoundaryKind"], json!("horizon"));
-    // N boundaries, N + 1 intervals — TRG v2.2 §12.15 p. 312.
+    // N boundaries, N + 1 intervals - TRG v2.2 §12.15 p. 312.
     assert_eq!(set.json["MarkerInterval"].as_array().map(Vec::len), Some(2));
     assert_eq!(
         set.json["RepresentedObject"]["Uuid"],
@@ -296,11 +296,11 @@ fn a_deviated_hole_gets_its_marker_at_the_algebras_depth() {
 /// **A curved hole is followed along its arc, not along its chord.**
 ///
 /// A build from the vertical to the horizontal, radius `R = 600`: two
-/// stations, `R π / 2` apart in depth, their tangents down then east — a
+/// stations, `R π / 2` apart in depth, their tangents down then east - a
 /// minimum-curvature line (kind 5), which the reader evaluates as the arc
 /// `x = R (1 − cos(s/R))`, `z = −R sin(s/R)` from the head. A level `d` below
 /// the head is met at `s = R asin(d / R)`. The chord between the two stations
-/// meets it elsewhere — `s = (R π / 2) · d / R` along it —, so straightening the
+/// meets it elsewhere - `s = (R π / 2) · d / R` along it -, so straightening the
 /// line makes this red.
 #[test]
 fn a_curved_hole_is_followed_between_its_stations() {
@@ -327,13 +327,13 @@ fn a_curved_hole_is_followed_between_its_stations() {
     assert!((md - expected).abs() < 1e-6, "{md} against {expected}");
 }
 
-/// **Each marker's position lies on its horizon** — the confrontation this
+/// **Each marker's position lies on its horizon** - the confrontation this
 /// operation is judged by, and it asks nothing of the code that found them.
 ///
 /// The hole is the arc above, re-evaluated **from the marker's depth by its own
 /// formula**; the horizon is a grid of the bilinear
 /// `f = −200 + 0.05 (x − X0) − 0.02 (y − Y0) + 1e-5 (x − X0)(y − Y0)`, whose
-/// height anywhere *is* `f` — a grid's cell is read bilinearly, and `f` is
+/// height anywhere *is* `f` - a grid's cell is read bilinearly, and `f` is
 /// bilinear. So `|z(md) − f(x(md), y(md))|` is measured with two formulas and
 /// no reader.
 ///
@@ -341,7 +341,7 @@ fn a_curved_hole_is_followed_between_its_stations() {
 /// m at a kilometre); the path moves at most one metre per metre of depth and
 /// the surface rises at most `0.05 + 0.02 + 1e-5 · 2000 ≈ 0.09` per metre, so
 /// the depth alone costs under 1e-12 m. What remains is the rounding of
-/// map-scale coordinates — a northing of 6.86e6 m carries ~1e-9 m — and the
+/// map-scale coordinates - a northing of 6.86e6 m carries ~1e-9 m - and the
 /// reader's closed form of the arc against the formula here, ~1e-10 m on a
 /// 600 m radius. 1e-6 m is three orders above all of it, and three below a
 /// millimetre, finer than any depth is ever stated.
@@ -399,7 +399,7 @@ fn each_markers_position_lies_on_its_horizon() {
 
 /// **Down through a horizon and back up through it: two markers, said.**
 ///
-/// Three stations — down 400 m over 500 m of hole, then back up — through the
+/// Three stations - down 400 m over 500 m of hole, then back up - through the
 /// level −150: `−400 s / 500 = −150` at `s = 187.5`, and on the way up
 /// `−400 + 400 (s − 500) / 500 = −150` at `s = 812.5`.
 #[test]
@@ -421,11 +421,11 @@ fn a_hole_that_turns_back_crosses_twice_and_says_so() {
     assert!((md_of(found[0]) - 187.5).abs() < 1e-9 && (md_of(found[1]) - 812.5).abs() < 1e-9);
     assert_eq!(
         found[0].json["Citation"]["Title"],
-        json!("H4 — GTH-test (1 of 2)")
+        json!("H4 - GTH-test (1 of 2)")
     );
     assert_eq!(
         found[1].json["Citation"]["Title"],
-        json!("H4 — GTH-test (2 of 2)")
+        json!("H4 - GTH-test (2 of 2)")
     );
     let again = said(&plan, "crossed-again");
     assert_eq!(again.len(), 1);
@@ -443,7 +443,7 @@ fn a_hole_that_turns_back_crosses_twice_and_says_so() {
     assert_eq!(set.json["MarkerInterval"].as_array().map(Vec::len), Some(3));
 }
 
-/// **A horizon never reached gives no marker, and is counted and named** — with
+/// **A horizon never reached gives no marker, and is counted and named** - with
 /// what the hole did instead. The hole ends at −760 (`40 − 0.8 · 1000`); the
 /// deeper horizon is at −1000, 240 below its end.
 #[test]
@@ -484,7 +484,7 @@ fn a_horizon_never_reached_gives_no_marker_and_is_named() {
     );
 }
 
-/// **No crossing at all is a refusal naming each horizon** — a plan with
+/// **No crossing at all is a refusal naming each horizon** - a plan with
 /// nothing to write reads like *nothing to do here*.
 #[test]
 fn no_crossing_at_all_is_refused_naming_each_horizon() {
@@ -519,7 +519,7 @@ fn a_horizon_in_another_frame_is_refused_naming_both() {
     )
     .expect_err("two frames");
     assert!(
-        why.contains("Another frame") && why.contains("Lutetia — test frame") && why.contains("`H2`"),
+        why.contains("Another frame") && why.contains("Lutetia - test frame") && why.contains("`H2`"),
         "{why}"
     );
 }
@@ -608,7 +608,7 @@ fn json_of(store: &energyml_storage::EpcStore, uuid: &str) -> serde_json::Value 
     energyml_core::json::write_value(object.as_reflect())
 }
 
-/// **Applied, saved, read back** — a well planned with a build section, a
+/// **Applied, saved, read back** - a well planned with a build section, a
 /// tilted triangulated horizon, both written with their arrays; the markers
 /// computed from the package as the front end and the CLI read it, saved, and read
 /// back: each marker's depth, evaluated on the trajectory **as read back**,
@@ -627,7 +627,7 @@ fn markers_are_applied_saved_and_read_back_on_their_horizon() {
     store.external_files_mut().set_root(&dir);
 
     // The well: Lambert-93 over NGF-IGN69, a hold then a build of 60° at
-    // 3°/30 m eastward then a hold — minimum curvature.
+    // 3°/30 m eastward then a hold - minimum curvature.
     let choices = Choices::new()
         .set("sourceEpsg", 2154)
         .set("project", 2154)
@@ -694,7 +694,7 @@ fn markers_are_applied_saved_and_read_back_on_their_horizon() {
         );
     let choices = Choices::new()
         .set("crs", crs.dor())
-        .set("title", "H5 — top of the Lutétien")
+        .set("title", "H5 - top of the Lutétien")
         .set("featureType", "resqml22.BoundaryFeature")
         .set("interpretationType", "resqml22.HorizonInterpretation");
     let horizon_plan = Registry::new()

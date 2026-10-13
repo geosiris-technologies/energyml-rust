@@ -1,4 +1,4 @@
-# energyml-build-derive — architecture
+# energyml-build-derive - architecture
 
 Related decision: [ADR 0017](../../docs/adr/0017-operation-is-a-pure-function.md) (an operation is a pure function; its declaration is one fact).
 
@@ -8,9 +8,9 @@ The procedural macros behind `energyml-build`'s typed operations. An operation's
 
 Three derives:
 
-- `Choice` — a unit enum becomes a closed list of words (`thin-plate`);
-- `Params` — on a struct, one slot per field (or a nested block with `flatten`); on an enum with `#[params(tag = "…")]`, a **union**: one choice slot, then each case's slots, each acting only under its case;
-- `Inputs` — one input slot per field, bound by the framework.
+- `Choice` - a unit enum becomes a closed list of words (`thin-plate`);
+- `Params` - on a struct, one slot per field (or a nested block with `flatten`); on an enum with `#[params(tag = "…")]`, a **union**: one choice slot, then each case's slots, each acting only under its case;
+- `Inputs` - one input slot per field, bound by the framework.
 
 ## Rules
 

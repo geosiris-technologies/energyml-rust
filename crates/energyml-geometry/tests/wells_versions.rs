@@ -6,7 +6,7 @@
 //! fabricated in memory, the frame in versions 1 and 2, **titled apart**; the
 //! `wanted` filter selects by title, so which entry was read decides which
 //! frames go on. These frames carry no trajectory, so each one that goes on is
-//! *noted* as unreadable — and the note names the entry by its full uri.
+//! *noted* as unreadable - and the note names the entry by its full uri.
 //!
 //! What would have to break: reading by `summary.uuid` again. Both entries are
 //! then read as the first, titled « F, first », and nothing matches

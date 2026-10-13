@@ -8,8 +8,8 @@
 //! | 2.1, 2.2 | `ExternalDatasetPart` | a DOR, `EpcExternalPartReference` | `PathInExternalFile` |
 //! | 2.3 | `ExternalDataArrayPart` | `URI`, on the part itself | `PathInExternalFile` |
 //!
-//! The middle one is neither of its neighbours — the older shape's proxy
-//! reference with the newer shape's path — and nothing matched it, so every
+//! The middle one is neither of its neighbours - the older shape's proxy
+//! reference with the newer shape's path - and nothing matched it, so every
 //! array of every eml 2.1/2.2 package came back as *"declares no external data
 //! at all"*. That is witsml 2.0, prodml 2.0 and resqml 2.2_dev3.
 //!
@@ -60,8 +60,8 @@ fn the_eml_2_2_form_names_a_file_and_a_dataset() {
 
 /// **`StartIndex` and `Count` are not a hyperslab, and are not read as one.**
 ///
-/// They are single values describing a *flat* range — `ExternalFileProxy`
-/// repeats, so an array may be split across parts — while `start`/`count` on a
+/// They are single values describing a *flat* range - `ExternalFileProxy`
+/// repeats, so an array may be split across parts - while `start`/`count` on a
 /// location are the per-dimension selection eml 2.3 introduced. Passing one as
 /// the other is not a small error: it made every polyline of the client package
 /// ask for **one** dimension of a **two**-dimensional dataset and refuse, with

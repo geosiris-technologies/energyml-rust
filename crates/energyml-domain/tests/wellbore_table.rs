@@ -1,8 +1,8 @@
 //! A borehole read as a table, and several in one file.
 //!
-//! What can be **wrong** here is the merging of several wells — a column that
+//! What can be **wrong** here is the merging of several wells - a column that
 //! slips by one rank, two different measurements under one header, a label that
-//! splits its line in two — and none of that needs a file. The corpus serves at
+//! splits its line in two - and none of that needs a file. The corpus serves at
 //! the end, to say that the reading holds on real objects.
 
 #[cfg(feature = "hdf5")]
@@ -45,7 +45,7 @@ fn well(name: &str, mds: &[&str], columns: Vec<Column>) -> WellTable {
 #[test]
 fn a_well_that_lacks_a_column_gets_empty_cells_and_never_a_shifted_row() {
     // **The point that carries the merge.** F2 has no `PHI`; if its absence
-    // shifted the row, F2's `STRA` would land under the `PHI` header — a
+    // shifted the row, F2's `STRA` would land under the `PHI` header - a
     // perfectly well-formed CSV half of whose columns lie.
     let one = well(
         "F1",
@@ -117,7 +117,7 @@ fn two_wells_whose_category_tables_differ_still_merge() {
 fn two_measurements_under_one_heading_are_named_and_not_merged() {
     // Millidarcies from one borehole and square metres from another in one
     // column give a file that nothing downstream can detect. It is said, and the
-    // caller decides — split the files, or write anyway.
+    // caller decides - split the files, or write anyway.
     let one = well(
         "F1",
         &["10"],
@@ -155,7 +155,7 @@ fn two_measurements_under_one_heading_are_named_and_not_merged() {
 #[test]
 fn a_label_that_carries_the_separator_is_quoted() {
     // RFC 4180, and it is not theoretical: a lithology is written
-    // "argile, sableuse". Without quoting, the line splits in two — and the
+    // "argile, sableuse". Without quoting, the line splits in two - and the
     // file remains perfectly well formed.
     let one = well(
         "F1",
@@ -171,7 +171,7 @@ fn a_label_that_carries_the_separator_is_quoted() {
     let lines: Vec<&str> = csv.lines().collect();
     assert_eq!(lines[0], "well,MD,STRA");
     assert_eq!(lines[1], "F1,10,\"argile, sableuse\"");
-    // A quote is doubled — that is the format's rule, not an escape of our own.
+    // A quote is doubled - that is the format's rule, not an escape of our own.
     assert_eq!(lines[2], "F1,20,\"marne \"\"dure\"\"\"");
 
     // And with a semicolon, the comma no longer needs quoting: what gets quoted
@@ -205,7 +205,7 @@ fn every_wellbore_frame_of_the_private_corpus_tabulates_one_row_per_node_or_pass
 fn tabulate(paths: Vec<PathBuf>) {
     // **The shape comes from the spec, the values from the file.** What is
     // required is structural: the depth is the first column, and each column has
-    // exactly as many values as the table has rows — one per node, or one per
+    // exactly as many values as the table has rows - one per node, or one per
     // pass. A shorter column would be the silent shift this whole module exists
     // to prevent.
     let mut seen = 0usize;
@@ -218,7 +218,7 @@ fn tabulate(paths: Vec<PathBuf>) {
         // Every property parsed **once per package**, then filtered per frame.
         // Parsed per frame, `h+g_PaleoGTM` (443 frames, ~960 properties) cost
         // ~424 000 XML parses and ran for over five minutes in the `hdf5` CI step
-        // (29/09) — for the same answer.
+        // (29/09) - for the same answer.
         let properties: Vec<_> = summaries
             .iter()
             .filter(|other| other.qualified_type.contains("Property"))
@@ -242,7 +242,7 @@ fn tabulate(paths: Vec<PathBuf>) {
             seen += 1;
             // Two shapes, with the depth first in both. One row per node: `MD`.
             // One row per pass, as soon as the frame carries a property indexed
-            // on its intervals: the top then the base — and a pass ends where the
+            // on its intervals: the top then the base - and a pass ends where the
             // next one begins, since both come from the same nodes
             // (`IndexableElement` `intervals`: n − 1 values for n nodes). Read the
             // shape by `from` and not by the title: that is what this check had
@@ -267,7 +267,7 @@ fn tabulate(paths: Vec<PathBuf>) {
                     }
                 }
                 ref other => panic!(
-                    "{}: the depth is the axis, so the first column — not {other:?}",
+                    "{}: the depth is the axis, so the first column - not {other:?}",
                     table.well
                 ),
             }

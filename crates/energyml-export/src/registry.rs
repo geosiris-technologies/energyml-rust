@@ -17,7 +17,7 @@ pub struct Options<'a> {
     pub reprojector: Option<&'a dyn Reprojector>,
     /// Override the placement the exporter would choose.
     ///
-    /// For a caller that knows better — a viewer that wants local coordinates
+    /// For a caller that knows better - a viewer that wants local coordinates
     /// out of a format that would normally be projected.
     pub placement: Option<Placement>,
     /// Reproject into this EPSG system before writing.
@@ -29,39 +29,39 @@ pub struct Options<'a> {
     /// Write coordinates as they are stored, reprojecting nothing.
     ///
     /// The escape hatch for the formats whose specification fixes a coordinate
-    /// system — GeoJSON is WGS 84 by definition. With this set, such a format
+    /// system - GeoJSON is WGS 84 by definition. With this set, such a format
     /// writes the **placed native coordinates** instead, embeds the legacy
     /// 2008 `crs` member when the EPSG code is known (QGIS and GDAL honour
     /// it), and accepts objects that name no CRS at all.
     ///
     /// The file is then knowingly non-conformant. That is the point: for a
-    /// package under repair, coordinates one can look at beat a refusal — but
+    /// package under repair, coordinates one can look at beat a refusal - but
     /// it has to be asked for, because a conformant-looking file with the
     /// wrong coordinate system is the silent failure this crate is arranged
     /// against.
     pub native_crs: bool,
-    /// Which form to draw each type in — see [`crate::shapes`].
+    /// Which form to draw each type in - see [`crate::shapes`].
     ///
     /// Empty means every object in its natural shape, which is what every
     /// export did before there was anything to ask.
     pub shapes: crate::shapes::Shapes,
     /// **Length units one second of vertical travel time stands for.**
     ///
-    /// `None` — the default — keeps the refusal: a representation in a time
+    /// `None` - the default - keeps the refusal: a representation in a time
     /// system cannot be written in metres, and saying so is the honest answer.
     ///
     /// # This is an equivalence, not a conversion
     ///
     /// A seismic surface has no depth. Getting one needs a velocity model the
-    /// package does not carry, and RESQML puts the time *kind* — two-way
-    /// against one-way — outside the CRS on purpose (TRG §12.9 leaves it to the
+    /// package does not carry, and RESQML puts the time *kind* - two-way
+    /// against one-way - outside the CRS on purpose (TRG §12.9 leaves it to the
     /// acquisition activity), so nothing in the file even says whether to
     /// halve. Every number this produces is therefore **half or double** a real
     /// depth depending on a fact the file withholds.
     ///
     /// What it buys is a mesh: a surface that can sit in the same file as the
     /// depth objects around it, at a size somebody can look at. That is a
-    /// legitimate thing to want and this is the only honest way to give it —
+    /// legitimate thing to want and this is the only honest way to give it -
     /// the caller states the number, and the number is written into the file
     /// beside the geometry so the mesh carries its own caveat. A mesh loses its
     /// context the day it is exported; the export is the last moment anything
@@ -118,7 +118,7 @@ impl<'a> Options<'a> {
 
     /// Whether this object's vertical axis can be placed at all.
     ///
-    /// `false` for a time-domain object with no equivalence stated — which is
+    /// `false` for a time-domain object with no equivalence stated - which is
     /// the state every export was in until one could be. Asked *before*
     /// writing, so such an object is **skipped and counted** rather than
     /// failing the whole export at the first one: nine seismic horizons in
@@ -135,8 +135,8 @@ impl<'a> Options<'a> {
             return false;
         }
         // And the axis has to state a unit that *is* a time. A package can
-        // contradict itself here — a 2.0.1 `LocalTime3dCrs` with no `TimeUom`
-        // falls back to `VerticalUom`, which is a length by design — and the
+        // contradict itself here - a 2.0.1 `LocalTime3dCrs` with no `TimeUom`
+        // falls back to `VerticalUom`, which is a length by design - and the
         // equivalence has nothing to convert. Asked before writing so that one
         // such object is skipped and counted, instead of aborting an export of
         // forty that were fine: *"`m` is a Length unit, but a Time was expected
@@ -192,7 +192,7 @@ impl<'a> Options<'a> {
 
     /// A time-domain object, placed with a stated equivalence.
     ///
-    /// The horizontal axes are metres like every other export — they are
+    /// The horizontal axes are metres like every other export - they are
     /// lengths and there is nothing special about them. Only the vertical one
     /// is converted twice: into **seconds** through the CRS's own vertical
     /// unit, which is `ms` in every corpus package and would be a silent factor
@@ -217,7 +217,7 @@ impl<'a> Options<'a> {
         };
         let vertical = |value: f64| -> Result<f64> {
             // `vertical_axis_uom`, never `vertical_uom`: a 2.0.1 time CRS
-            // states `VerticalUom` as a **length** — it describes the ZOffset —
+            // states `VerticalUom` as a **length** - it describes the ZOffset -
             // and puts the axis unit in `TimeUom`. ALWYN reads `m` for the
             // first and `ms` for the second.
             let seconds = match crs.vertical_axis_uom() {
@@ -237,8 +237,8 @@ impl<'a> Options<'a> {
 
     /// The points, in one named EPSG system.
     ///
-    /// For a format whose coordinate system is fixed by its own specification
-    /// — GeoJSON is WGS 84 and nothing else — rather than chosen by the caller.
+    /// For a format whose coordinate system is fixed by its own specification -
+    /// GeoJSON is WGS 84 and nothing else - rather than chosen by the caller.
     ///
     /// Placement is **always** `Metres` here, and not the caller's choice:
     /// a reprojection consumes projected metres. Feeding it local coordinates,
@@ -258,7 +258,7 @@ impl<'a> Options<'a> {
         let Some(backend) = self.reprojector else {
             return Err(Error::Placement(format!(
                 "`{}` is in EPSG:{source} and this export wants EPSG:{target}; \
-                 supply a `Reprojector` — `energyml_proj::Proj4` is one",
+                 supply a `Reprojector` - `energyml_proj::Proj4` is one",
                 object.title
             )));
         };
@@ -273,7 +273,7 @@ impl<'a> Options<'a> {
 /// produces a file that looks complete and is not, and nothing downstream can
 /// tell.
 pub trait Exporter: Send + Sync {
-    /// The name a caller asks for — `obj`, `geojson`. Lower case, no dot.
+    /// The name a caller asks for - `obj`, `geojson`. Lower case, no dot.
     fn name(&self) -> &'static str;
 
     /// The file extension, without the dot.
@@ -297,7 +297,7 @@ pub trait Exporter: Send + Sync {
     fn handles(&self, object: &SceneObject) -> bool;
 
     /// [`Exporter::handles`], for the exporters whose answer depends on the
-    /// options — GeoJSON accepts an object with no EPSG code once
+    /// options - GeoJSON accepts an object with no EPSG code once
     /// [`Options::native_crs`] is set.
     fn handles_with(&self, object: &SceneObject, options: &Options<'_>) -> bool {
         self.handles(object) && options.can_place_vertical(object)
@@ -309,7 +309,7 @@ pub trait Exporter: Send + Sync {
     /// Write several into one file.
     ///
     /// The default writes them in order, which is right for the formats where
-    /// concatenation is the format — OBJ is one. A format with a single
+    /// concatenation is the format - OBJ is one. A format with a single
     /// enclosing document, like GeoJSON, overrides this.
     fn write_all(&self, objects: &[SceneObject], out: &mut dyn Write, options: &Options<'_>) -> Result<()> {
         for object in objects {
@@ -323,7 +323,7 @@ pub trait Exporter: Send + Sync {
 /// that has no position.
 ///
 /// **Every exporter calls this first, and the rule has one implementation.** A
-/// node whose coordinates are NaN cannot be written in any of these formats —
+/// node whose coordinates are NaN cannot be written in any of these formats -
 /// OBJ has no syntax for it, VTK's readers put it at the origin or refuse the
 /// file, and `NaN` is **not a JSON value**, so one null Z made a whole GeoJSON
 /// unparseable by `JSON.parse`. Leaving each writer to remember that separately
@@ -333,7 +333,7 @@ pub trait Exporter: Send + Sync {
 /// that carries no null pays one pass over its points and no copy.
 ///
 /// What the standard does and does not say about those nulls is set out in
-/// [`energyml_geometry::defined`] — including the two RESQML flags that outrank
+/// [`energyml_geometry::defined`] - including the two RESQML flags that outrank
 /// the coordinates for column-layer grids.
 pub fn drawable(object: &SceneObject) -> std::borrow::Cow<'_, SceneObject> {
     match object.drawable_only() {
@@ -410,7 +410,7 @@ impl Exporters {
     }
 
     /// The exporter for a format name, matched case-insensitively and with a
-    /// leading dot forgiven — `obj`, `OBJ` and `.obj` are one request.
+    /// leading dot forgiven - `obj`, `OBJ` and `.obj` are one request.
     pub fn find(&self, name: &str) -> Option<&dyn Exporter> {
         let wanted = name.trim().trim_start_matches('.').to_ascii_lowercase();
         self.entries

@@ -1,4 +1,4 @@
-//! The business rules that need **more than one object** to judge — the code
+//! The business rules that need **more than one object** to judge - the code
 //! half of the rule set, beside the data half in [`crate::rules`].
 //!
 //! # Why code, when the rules are data
@@ -17,7 +17,7 @@
 //!   (the rule vocabulary cannot reach array lengths or array contents);
 //! - **a disjunction, or a set**: *IsListric is present iff the fault's only
 //!   throw kind is normal* asks whether a list holds exactly one distinct
-//!   value — `forEach` is a conjunction over the first element of each item.
+//!   value - `forEach` is a conjunction over the first element of each item.
 //!
 //! These are the anomalies found by the synthetic reference model audit
 //! (ADR-0018). The contact-subject anomaly is a data rule
@@ -28,19 +28,19 @@
 //!
 //! Every check answers with a [`Finding`] of [`crate::rules`], so `check` files
 //! them in one list and counts them one way: a violation weighs what its check
-//! declares ([`Integrity::gravity`]), an uncheckable is neither — never a silent
+//! declares ([`Integrity::gravity`]), an uncheckable is neither - never a silent
 //! pass. Every one was first a warning; the weights were then reviewed
 //! against the `[ERROR]` model of Lutetia, and all
 //! of them are errors but `house/time-series-asset-resolves`. None of the texts
 //! cited below is an RFC 2119 *MUST* (the Energistics documents that use RFC
-//! 2119 — the packaging conventions, ETP — write it in capitals; the reference
+//! 2119 - the packaging conventions, ETP - write it in capitals; the reference
 //! guides' business rules do not): the weight is that decision, not the
 //! specification's.
 //!
 //! # House rules are named as such
 //!
 //! A `trg/` id cites a guide or a schema. A `house/` id is a reading this
-//! repository chose where the specification is silent — a discrete value absent from its table, a series naming an unknown well — and
+//! repository chose where the specification is silent - a discrete value absent from its table, a series naming an unknown well - and
 //! its documentation says so, and says where the decision is written.
 //!
 //! Nothing here opens a file: an [`ObjectSource`] lends the objects, an
@@ -60,12 +60,12 @@ use crate::values::Values;
 
 /// One cross-object check: its id, what it means, and the code that judges.
 pub struct Integrity {
-    /// The id findings carry — `trg/…` for a rule of the standard, `house/…`
+    /// The id findings carry - `trg/…` for a rule of the standard, `house/…`
     /// for one of ours.
     pub id: &'static str,
     /// What the rule means, for the report.
     pub says: &'static str,
-    /// How much a violation weighs — see [`Gravity`].
+    /// How much a violation weighs - see [`Gravity`].
     pub gravity: Gravity,
     judge: fn(&Context<'_>, &Integrity, &mut Vec<Finding>),
 }
@@ -78,7 +78,7 @@ struct Context<'a> {
     arrays: Option<&'a dyn ArraySource>,
 }
 
-/// The shipped checks — the list `check` runs and counts.
+/// The shipped checks - the list `check` runs and counts.
 ///
 /// A slice rather than a `match`, like every list here that will grow: a new
 /// check is an entry and a function.
@@ -107,19 +107,19 @@ const CHECKS: &[Integrity] = &[
     },
     Integrity {
         id: "trg/is-listric-iff-normal",
-        says: "IsListric is present if and only if the fault is normal (RESQML Interpretations.xsd l. 659–662, TRG 2.2 §6.20 p. 188: \"Must be present if the fault is normal. Must not be present if the fault is not normal.\"; a fault is normal when normal is its only throw kind)",
+        says: "IsListric is present if and only if the fault is normal (RESQML Interpretations.xsd l. 659-662, TRG 2.2 §6.20 p. 188: \"Must be present if the fault is normal. Must not be present if the fault is not normal.\"; a fault is normal when normal is its only throw kind)",
         gravity: Gravity::Error,
         judge: is_listric_iff_normal,
     },
     Integrity {
         id: "trg/homogeneous-collection",
-        says: "a collection declaring HomogeneousDatatype true holds data objects of one type only (EML 2.3 Collection.xsd l. 66–70: \"If true all data objects in the collection are of the same Energistics data type\")",
+        says: "a collection declaring HomogeneousDatatype true holds data objects of one type only (EML 2.3 Collection.xsd l. 66-70: \"If true all data objects in the collection are of the same Energistics data type\")",
         gravity: Gravity::Error,
         judge: homogeneous_collection,
     },
     Integrity {
         id: "trg/homogeneous-association",
-        says: "a collection association declaring HomogeneousDatatype true lists data objects of one type only (EML 2.3 Collection.xsd l. 82–86, the same sentence on SingleCollectionAssociation)",
+        says: "a collection association declaring HomogeneousDatatype true lists data objects of one type only (EML 2.3 Collection.xsd l. 82-86, the same sentence on SingleCollectionAssociation)",
         gravity: Gravity::Error,
         judge: homogeneous_association,
     },
@@ -134,7 +134,7 @@ const CHECKS: &[Integrity] = &[
 /// Run every check over a package's objects.
 ///
 /// `objects` is every object that read, with its uuid; `source` lends what a
-/// reference names; `arrays`, when given, reads the arrays — without it, the
+/// reference names; `arrays`, when given, reads the arrays - without it, the
 /// one check that needs values says *uncheckable* for each object it would
 /// have judged.
 pub fn run(
@@ -159,8 +159,8 @@ pub fn run(
 // ---------------------------------------------------------------------------
 
 /// **House rule**, and the reading is written down: the value is looked up in the
-/// key column — because neither
-/// the common TRG 2.3 §9.1–9.2 (p. 190–191) nor the RESQML TRG 2.2 §7.7
+/// key column - because neither
+/// the common TRG 2.3 §9.1-9.2 (p. 190-191) nor the RESQML TRG 2.2 §7.7
 /// (p. 230) says how a value designates a row, beyond *"Defines a key column
 /// which make the table a lookup table"*. `energyml-domain::table` and the front end
 /// read it the same way; a value no key matches is a value no legend can name.
@@ -277,7 +277,7 @@ fn discrete_value_in_lookup(context: &Context<'_>, check: &Integrity, out: &mut 
 // ---------------------------------------------------------------------------
 
 /// **House rule.** A PRODML `Key` is
-/// text — TimeSeriesData.xsd l. 67 makes it no reference — so nothing in the
+/// text - TimeSeriesData.xsd l. 67 makes it no reference - so nothing in the
 /// schema ties a series to a well; the house convention does, with an
 /// Energistics URI (Identifier Specification v4.0 §6.3 p. 14: `path-part =
 /// component-type [ "(" identifier ")" ]`, and §6.3.1: *"The actual component
@@ -285,8 +285,8 @@ fn discrete_value_in_lookup(context: &Context<'_>, check: &Integrity, out: &mut 
 ///
 /// So the `well(…)` part of an `asset identifier` is looked for among the
 /// package's WITSML wells, by the **name** WITSML 2 gives a well: its
-/// `Citation.Title`, or its `NameLegal`. A name is not an identity — this
-/// repository's rule — so two wells answering to
+/// `Citation.Title`, or its `NameLegal`. A name is not an identity - this
+/// repository's rule - so two wells answering to
 /// the name make the series **uncheckable**, never matched to the first.
 ///
 /// What is left alone, and why: a URI with no `well(…)` part names something
@@ -354,7 +354,7 @@ fn time_series_asset_resolves(context: &Context<'_>, check: &Integrity, out: &mu
 
 /// The names WITSML 2 gives a well: its `Citation.Title`, and its
 /// `NameLegal` when it has one. Shared with `series::time_series`, which
-/// matches a series to a well by the same names — one reading of *which well
+/// matches a series to a well by the same names - one reading of *which well
 /// this name means*, not two.
 pub(crate) fn names_of(object: &dyn Reflect) -> Vec<String> {
     let mut names: Vec<String> = identity::title_of_reflect(object)
@@ -365,11 +365,11 @@ pub(crate) fn names_of(object: &dyn Reflect) -> Vec<String> {
     names
 }
 
-/// The identifier of the `well(…)` part of an Energistics URI — `None` when
+/// The identifier of the `well(…)` part of an Energistics URI - `None` when
 /// the path has no such part, an error when the text is not such a URI.
 ///
 /// Energistics Identifier Specification v4.0 §6.1 p. 13: `emlUri = "eml:" [
-/// "//" authority ] "/" path` — the scheme is not case sensitive, the path is
+/// "//" authority ] "/" path` - the scheme is not case sensitive, the path is
 /// (§6.3 p. 14).
 pub(crate) fn well_named_by(uri: &str) -> Result<Option<String>, String> {
     let rest = uri.trim();
@@ -430,8 +430,8 @@ fn percent_decoded(text: &str) -> String {
 /// be one trajectory per wellbore with definitive=true and it must define the
 /// geometry of the whole wellbore (surface to bottom)."*
 ///
-/// Judged per **wellbore**, and the finding is filed under the wellbore's uuid
-/// — the object the rule is about, whether the package holds it or not — with
+/// Judged per **wellbore**, and the finding is filed under the wellbore's uuid -
+/// the object the rule is about, whether the package holds it or not - with
 /// the trajectories named in what was read. One finding per wellbore, however
 /// many trajectories claim it.
 fn one_definitive_trajectory_per_wellbore(context: &Context<'_>, check: &Integrity, out: &mut Vec<Finding>) {
@@ -476,13 +476,13 @@ fn one_definitive_trajectory_per_wellbore(context: &Context<'_>, check: &Integri
 // IsListric on a fault that is not normal
 // ---------------------------------------------------------------------------
 
-/// RESQML Interpretations.xsd l. 659–662 (2.2) and the same annotation in
+/// RESQML Interpretations.xsd l. 659-662 (2.2) and the same annotation in
 /// 2.0.1: *"Indicates if the normal fault is listric or not. BUSINESS RULE:
 /// Must be present if the fault is normal. Must not be present if the fault is
 /// not normal."* (TRG 2.2 §6.20 p. 188.)
 ///
 /// **What "normal" means is the one reading here**, and it is the design's:
-/// present if and only if the only set is normal — normal is the fault's **only** throw kind, across every
+/// present if and only if the only set is normal - normal is the fault's **only** throw kind, across every
 /// `ThrowInterpretation`. An oblique fault (`normal` and `strike-slip`) is
 /// therefore not normal, and carries no `IsListric`.
 ///
@@ -490,7 +490,7 @@ fn one_definitive_trajectory_per_wellbore(context: &Context<'_>, check: &Integri
 ///
 /// - a fault that declares no throw at all: nothing says whether it is normal,
 ///   and an absent condition does not hold (the house reading of `when`);
-/// - a thrust with `IsListric` false — the same page contradicts the business
+/// - a thrust with `IsListric` false - the same page contradicts the business
 ///   rule: *"A thrust surface is specified as a FaultInterpretation whose
 ///   FaultThrow kind is "thrust" and which has the attributes: is Listric = 0"*.
 ///   Two sentences of one guide disagree, so the finding is *uncheckable* and
@@ -550,11 +550,11 @@ struct Member {
 type Memberships = BTreeMap<String, Vec<(Option<String>, Vec<Member>)>>;
 
 /// What each collection holds, read from every
-/// `CollectionsToDataobjectsAssociationSet` of the package — the only place
+/// `CollectionsToDataobjectsAssociationSet` of the package - the only place
 /// EML 2.3 writes membership (Collection.xsd: *"The relationships (between the
 /// data objects and the collection) are specified and managed using the
 /// SingleCollectionAssociation"*). Keyed by the lower-cased collection uuid,
-/// each entry **carrying the version the association names** — two versions of
+/// each entry **carrying the version the association names** - two versions of
 /// a collection hold two different member lists, and [`members_of`] tells them
 /// apart.
 ///
@@ -636,7 +636,7 @@ fn homogeneous_association(context: &Context<'_>, check: &Integrity, out: &mut V
     }
 }
 
-/// The types among the members, counted, when there are several — `None` when
+/// The types among the members, counted, when there are several - `None` when
 /// the members are of one type.
 fn mixed(members: &[&Member]) -> Option<String> {
     let mut counted: Vec<(&str, usize)> = Vec::new();
@@ -716,7 +716,7 @@ fn unverifiable(check: &Integrity, uuid: &str, why: String) -> Finding {
     }
 }
 
-/// A scalar field as its wire text — an enumeration's value, `true` for a
+/// A scalar field as its wire text - an enumeration's value, `true` for a
 /// boolean. `None` when absent.
 fn text(object: &dyn Reflect, name: &str) -> Option<String> {
     match object.field(name)? {
@@ -829,7 +829,7 @@ mod tests {
         // The scheme is not case sensitive (§6.1); `wellbore(…)` is not `well(…)`.
         assert_eq!(well_named_by("EML://a.b/wellbore(01)/wellhead"), Ok(None));
         // Not an Energistics URI: an error, which the check turns into an
-        // uncheckable — never a pass.
+        // uncheckable - never a pass.
         assert!(well_named_by("GTH-1 wellhead").is_err());
     }
 

@@ -1,4 +1,4 @@
-//! `horizon-from-law` — a horizon laid by a sourced law over a reference grid,
+//! `horizon-from-law` - a horizon laid by a sourced law over a reference grid,
 //! cut by the erosion surfaces above it (step
 //! 4 of the reference model).
 //!
@@ -54,8 +54,8 @@ fn other_frame() -> Ref {
 }
 
 /// The positions of the reference: a 5 × 4 lattice from (1000, 2000), 25
-/// along x and **40** along y — two spacings, so that a transposed lattice
-/// shows — `i` along x varying fastest, the house order.
+/// along x and **40** along y - two spacings, so that a transposed lattice
+/// shows - `i` along x varying fastest, the house order.
 fn positions() -> Vec<[f64; 2]> {
     let mut out = Vec::new();
     for j in 0..4 {
@@ -84,7 +84,7 @@ fn lattice(z: impl Fn(f64, f64) -> f64) -> Geometry {
     }
 }
 
-/// What the caller knows of an object of the package — with an
+/// What the caller knows of an object of the package - with an
 /// interpretation, which the new horizon must **not** be offered.
 fn known(uuid: &str, title: &str, frame: &Ref, uom: &str, up: bool) -> Source {
     Source::Object(Known {
@@ -114,7 +114,7 @@ fn reference(z: impl Fn(f64, f64) -> f64, up: bool) -> Pieces {
         )
         .with(
             "reference (object)",
-            known(REFERENCE, "H6 — top of the Chalk", &frame(), "m", up),
+            known(REFERENCE, "H6 - top of the Chalk", &frame(), "m", up),
         )
 }
 
@@ -145,17 +145,17 @@ fn with_cut(pieces: Pieces, cut: Geometry, up: bool) -> Pieces {
         )
         .with(
             "cuts (object)",
-            known(CUT, "H1 — base of the alluvium", &frame(), "m", up),
+            known(CUT, "H1 - base of the alluvium", &frame(), "m", up),
         )
 }
 
-/// H7, 95 below its reference — the answers every test starts from.
+/// H7, 95 below its reference - the answers every test starts from.
 fn answers() -> Choices {
     Choices::new()
         .set("thickness", 95.0)
         .set("side", "below")
         .set("source", "synthetic: the test's own value")
-        .set("title", "H7 — top of the Santonian")
+        .set("title", "H7 - top of the Santonian")
 }
 
 fn planned(pieces: &Pieces, choices: &Choices) -> Result<Plan, String> {
@@ -210,7 +210,7 @@ fn dipping(x: f64, y: f64) -> f64 {
 
 /// **A parallel horizon is the thickness away, toward its side, in the
 /// frame's sense**: below is `z − t` in elevation and `z + t` in depth, above
-/// the reverse — the sense read off the reference's frame and recorded. And it
+/// the reverse - the sense read off the reference's frame and recorded. And it
 /// is written on the reference's own lattice: origin, both spacings, both
 /// counts, the slow axis first.
 #[test]
@@ -244,7 +244,7 @@ fn a_parallel_horizon_is_at_the_thickness_towards_its_side_in_the_sense_of_the_f
     let lattice = &grid["Geometry"]["Points"]["SupportingGeometry"];
     assert_eq!(lattice["Origin"]["Coordinate1"], json!(1000.0));
     assert_eq!(lattice["Origin"]["Coordinate2"], json!(2000.0));
-    // The slow axis first — y, 40 apart, 3 steps — then x, 25 apart, 4 steps.
+    // The slow axis first - y, 40 apart, 3 steps - then x, 25 apart, 4 steps.
     assert_eq!(lattice["Dimension"][0]["Spacing"]["Value"], json!(40.0));
     assert_eq!(lattice["Dimension"][0]["Spacing"]["Count"], json!(3));
     assert_eq!(lattice["Dimension"][1]["Spacing"]["Value"], json!(25.0));
@@ -261,7 +261,7 @@ fn a_parallel_horizon_is_at_the_thickness_towards_its_side_in_the_sense_of_the_f
 }
 
 /// **A linear law** is its thickness at the anchor, and changes along its
-/// azimuth only — east here, so along x — and the plan says the range laid.
+/// azimuth only - east here, so along x - and the plan says the range laid.
 #[test]
 fn a_linear_law_changes_along_its_azimuth_only() {
     let answers = answers()
@@ -280,7 +280,7 @@ fn a_linear_law_changes_along_its_azimuth_only() {
     assert_eq!(text(&plan, "law"), "linear");
 }
 
-/// **A hole of the reference is a hole of the horizon, and it is counted** —
+/// **A hole of the reference is a hole of the horizon, and it is counted** -
 /// never filled from its neighbours.
 #[test]
 fn a_hole_in_the_reference_stays_a_hole_and_is_counted() {
@@ -313,7 +313,7 @@ fn a_hole_in_the_reference_stays_a_hole_and_is_counted() {
 #[test]
 fn a_cut_never_lets_the_horizon_pass_above_it() {
     // In elevation: the horizon at 0 − 10 = −10; the cut over x ∈ [990, 1060]
-    // at −13 + (x − 1000)/10 — below the horizon at x = 1000 and 1025
+    // at −13 + (x − 1000)/10 - below the horizon at x = 1000 and 1025
     // (eroded), above it at x = 1050 (kept); x = 1075 and 1100 lie beyond it.
     let cut = |x: f64| -13.0 + (x - 1000.0) / 10.0;
     let pieces = with_cut(reference(|_, _| 0.0, true), plate(990.0, 1060.0, cut), true);
@@ -347,7 +347,7 @@ fn a_cut_never_lets_the_horizon_pass_above_it() {
     );
 
     // In depth, the same picture: the horizon at 0 + 10 = 10, the cut at
-    // 13 − (x − 1000)/10 — deeper than the horizon at x = 1000, so above it
+    // 13 − (x − 1000)/10 - deeper than the horizon at x = 1000, so above it
     // there is nothing left to cut: the horizon is eroded.
     let cut = |x: f64| 13.0 - (x - 1000.0) / 10.0;
     let pieces = with_cut(reference(|_, _| 0.0, false), plate(990.0, 1060.0, cut), false);
@@ -364,7 +364,7 @@ fn a_cut_never_lets_the_horizon_pass_above_it() {
     assert_eq!(number(&plan, "erodedCount"), 8.0);
 }
 
-/// **A grid is a cut too** — the ground is one — read on its cells,
+/// **A grid is a cut too** - the ground is one - read on its cells,
 /// bilinearly, the reading `thickness` gives its base.
 #[test]
 fn a_grid_cuts_like_a_surface() {
@@ -401,8 +401,8 @@ fn a_grid_cuts_like_a_surface() {
 // -- what the object says of itself ----------------------------------------
 
 /// **Laid, not measured, and from what**: `synthetic = true` and a
-/// description naming the law, the reference and the source — rule 4 of
-/// the rule for invented values — and the thickness recorded with the frame's unit.
+/// description naming the law, the reference and the source - rule 4 of
+/// the rule for invented values - and the thickness recorded with the frame's unit.
 #[test]
 fn the_horizon_says_it_is_laid_and_cites_its_source() {
     let plan = planned(&reference(dipping, true), &answers()).unwrap();
@@ -416,7 +416,7 @@ fn the_horizon_says_it_is_laid_and_cites_its_source() {
         "the source: {description}"
     );
     assert!(
-        description.contains("H6 — top of the Chalk"),
+        description.contains("H6 - top of the Chalk"),
         "the reference: {description}"
     );
     assert!(
@@ -467,7 +467,7 @@ fn the_reference_lends_its_frame_not_its_interpretation() {
     );
 }
 
-/// **Same inputs, same objects** — and another horizon, another object.
+/// **Same inputs, same objects** - and another horizon, another object.
 #[test]
 fn same_inputs_same_uuid_and_another_title_another_object() {
     let once = planned(&reference(dipping, true), &answers()).unwrap();
@@ -603,7 +603,7 @@ fn a_single_frame_that_of_the_reference() {
 
 /// **What is not a law is not laid**: a zero thickness, a negative one, a
 /// linear law that turns negative, a lattice that is not the house one, and a
-/// horizon eroded everywhere — which would be a grid of holes.
+/// horizon eroded everywhere - which would be a grid of holes.
 #[test]
 fn what_is_not_a_law_is_not_laid() {
     let why = planned(&reference(dipping, true), &answers().set("thickness", 0.0)).unwrap_err();

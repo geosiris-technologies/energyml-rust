@@ -2,7 +2,7 @@
 //!
 //! The corpus holds one: fesapi's tetrahedron-plus-prism, two cells sharing one
 //! face, everything well-formed. It is checked against measured normals in
-//! `corpus.rs`. What it cannot check is what happens when a file is **wrong** —
+//! `corpus.rs`. What it cannot check is what happens when a file is **wrong** -
 //! and the ways an unstructured grid can be wrong are the ways it is worth
 //! being careful about, because every one of them produces a plausible drawing
 //! rather than an error.
@@ -32,7 +32,7 @@ const PROXY: &str = "33333333-3333-3333-3333-333333333333";
 
 /// The eight corners of the unit cube, in the order `0bZYX`.
 ///
-/// So node `n` is at `(n & 1, (n >> 1) & 1, (n >> 2) & 1)` — which makes every
+/// So node `n` is at `(n & 1, (n >> 1) & 1, (n >> 2) & 1)` - which makes every
 /// assertion below readable without a diagram.
 fn cube_points() -> Vec<f64> {
     let mut values = Vec::new();
@@ -401,8 +401,8 @@ fn a_face_count_that_contradicts_the_faces_is_refused() {
     );
 }
 
-/// A grid with a cell count and nothing else is legal — the schema advertises
-/// it, "characterized by a cell count, and potentially nothing else" — and has
+/// A grid with a cell count and nothing else is legal - the schema advertises
+/// it, "characterized by a cell count, and potentially nothing else" - and has
 /// no shape at all. Named rather than drawn as nothing.
 #[test]
 fn a_grid_with_no_geometry_is_named_not_empty() {

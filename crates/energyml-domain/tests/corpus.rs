@@ -1,6 +1,6 @@
 //! The CRS view, against every coordinate system in the reference packages.
 //!
-//! The geometry corpus test reads CRSs the way an application does — through
+//! The geometry corpus test reads CRSs the way an application does - through
 //! the representation that names one. This one goes at them directly, so a
 //! coordinate system nothing points at is still read, and so the two RESQML
 //! versions are compared against each other rather than merely both passing.
@@ -15,7 +15,7 @@ use energyml_storage::EpcStore;
 /// Every schema version the workspace generates.
 ///
 /// One line rather than a hand-kept subset: a list written out here goes stale
-/// the day a release is added, and nothing would notice — the suite would keep
+/// the day a release is added, and nothing would notice - the suite would keep
 /// passing while quietly never covering the new version. `energyml-schemas`
 /// holds the one list, and its own test fails when it disagrees with
 /// `codegen.toml`.
@@ -52,7 +52,7 @@ fn every_coordinate_system_reads() {
                 continue;
             };
             let read = crs::read_with(object.as_reflect(), &store)
-                .unwrap_or_else(|e| panic!("{}: {} — {e}", path.display(), summary.uuid));
+                .unwrap_or_else(|e| panic!("{}: {} - {e}", path.display(), summary.uuid));
 
             *kinds.entry(read.kind.to_string()).or_default() += 1;
             if read.is_component() {
@@ -89,7 +89,7 @@ fn every_coordinate_system_reads() {
             // is the spec's, not the corpus's: 2.0.1 puts the axis unit in
             // `TimeUom` beside a `VerticalUom` that describes the datum, and
             // eml 2.3 divides the same two facts between `VerticalAxis.Uom`
-            // and the referenced `VerticalCrs` — so whichever release it came
+            // and the referenced `VerticalCrs` - so whichever release it came
             // from, the unit of the axis has to come back a time.
             //
             // It failed on every eml 2.3 compound time CRS until 06/09, and
@@ -144,9 +144,9 @@ fn every_coordinate_system_reads() {
 /// The two versions describe the same place the same way.
 ///
 /// The reference packages are the same model written twice, once in RESQML
-/// 2.0.1 and once in 2.2. The CRSs are spelled completely differently — one
+/// 2.0.1 and once in 2.2. The CRSs are spelled completely differently - one
 /// object against three, `XOffset` against `OriginProjectedCoordinate1`,
-/// `ZIncreasingDownward` against `VerticalAxis.Direction` — so if the view is
+/// `ZIncreasingDownward` against `VerticalAxis.Direction` - so if the view is
 /// doing its job, both come out identical. Nothing else in the suite compares
 /// the two versions against *each other*.
 #[test]

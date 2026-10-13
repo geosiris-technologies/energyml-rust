@@ -9,8 +9,8 @@
 //!
 //! The package is fabricated in memory: one `BoundaryFeature` written the way a
 //! RESQML 2.0.1 producer writes it (`obj_` root, `schemaVersion="2.0"`). It is
-//! the case that hurts: RESQML 2.2 *can* read it — its one extra required
-//! element is defaulted by a tolerant read — so without the refusal the part
+//! the case that hurts: RESQML 2.2 *can* read it - its one extra required
+//! element is defaulted by a tolerant read - so without the refusal the part
 //! comes back as a plausible 2.2 object.
 
 use std::io::{Cursor, Write};
@@ -118,7 +118,7 @@ fn assert_refused(store: &EpcStore, what: &str) {
 /// and not read as RESQML 2.2.
 ///
 /// What to break: delete the `refusal` computation in `classify` (the content
-/// type path) and the substitution reads the part as 2.2 — `Ok` instead of the
+/// type path) and the substitution reads the part as 2.2 - `Ok` instead of the
 /// refusal.
 #[test]
 fn a_part_of_an_absent_version_is_refused_by_name_not_read_as_another() {

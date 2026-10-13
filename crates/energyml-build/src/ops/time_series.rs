@@ -1,4 +1,4 @@
-//! `time-series` — an `eml23.TimeSeries` from a list of instants, continuing
+//! `time-series` - an `eml23.TimeSeries` from a list of instants, continuing
 //! another series when asked: the time a property, a geometry or an activity
 //! counts in.
 //!
@@ -10,7 +10,7 @@
 //!
 //! # What is written, and what is refused
 //!
-//! - **the instants as given**, each a `GeologicTime` with its `DateTime` —
+//! - **the instants as given**, each a `GeologicTime` with its `DateTime` -
 //!   a W3CDTF date-time in UTC, `2016-01-01T00:00:00Z`. One that does not read
 //!   is refused by name, never widened or guessed: a series in which one date
 //!   was reinterpreted looks exactly like a series that was right;
@@ -18,14 +18,14 @@
 //!   by the time index”* (the documentation of `TimeSeries.Time`,
 //!   CommonTypes.xsd), so a property that says *index 3* means the fourth date
 //!   as listed; a series out of order would give every index a date nobody
-//!   meant. Two equal instants are refused too — an index that two dates share
+//!   meant. Two equal instants are refused too - an index that two dates share
 //!   is an index that names neither;
 //! - **`TimeStep`, on demand**: 0…n−1 inline. The documentation of
-//!   `TimeSeries` states the one rule it has — *“If present TimeStep count
-//!   must match Time count”* — and this writes it so;
+//!   `TimeSeries` states the one rule it has - *“If present TimeStep count
+//!   must match Time count”* - and this writes it so;
 //! - **a parent, given as an input**: `TimeSeriesParentage` with
-//!   `ParentTimeIndex` {`Index`, `TimeSeries` → the parent} and `HasOverlap`
-//!   — *“the end state of one calculation is the initial state of the
+//!   `ParentTimeIndex` {`Index`, `TimeSeries` → the parent} and `HasOverlap` -
+//!   *“the end state of one calculation is the initial state of the
 //!   next”* (the documentation of `HasOverlap`). The index is checked against
 //!   nothing it cannot see: the parent's dates are not read here (a plan is
 //!   pure), so an index is only refused when it is negative, and the activity
@@ -48,7 +48,7 @@ pub struct TimeSeriesParams {
     /// the instants, in increasing order, each a UTC date-time as 2016-01-01T00:00:00Z
     #[param(least = 1)]
     pub times: Vec<String>,
-    /// also write TimeStep, 0 to n−1 — its count must match the instants'
+    /// also write TimeStep, 0 to n−1 - its count must match the instants'
     #[param(default = false, optional)]
     pub time_steps: bool,
     /// with a parent: the index, in the parent series, of the instant this one continues from
@@ -73,7 +73,7 @@ impl Operation for TimeSeries {
     fn about(&self) -> About {
         About {
             name: "time-series",
-            describe: "a time series from a list of instants, continuing another one when asked — the time a property, a geometry or an activity counts in",
+            describe: "a time series from a list of instants, continuing another one when asked - the time a property, a geometry or an activity counts in",
             category: Category::Frame,
             makes: &["eml23.TimeSeries"],
             recipe: "time-series",
@@ -211,7 +211,7 @@ impl Operation for TimeSeries {
             says.push(Note {
                 key: "continues",
                 detail: format!(
-                    "continues `{}` from its instant {index}{} — the index is not checked against the parent's dates, which a plan does not read",
+                    "continues `{}` from its instant {index}{} - the index is not checked against the parent's dates, which a plan does not read",
                     parent.title,
                     if params.overlap { ", which is also this series' first instant" } else { "" }
                 ),

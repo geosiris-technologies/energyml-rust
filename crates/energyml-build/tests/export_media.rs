@@ -1,15 +1,15 @@
-//! `export-media` — a representation written by an exporter of
+//! `export-media` - a representation written by an exporter of
 //! `energyml-export` and put in the package, related to it
 //!.
 //!
 //! The form of the assertions comes from three documents, never from what the
 //! operation produced: the packaging conventions
-//! (Energistics Packaging Conventions v1.0 — every
+//! (Energistics Packaging Conventions v1.0 - every
 //! part typed in `[Content_Types].xml`, §2.2.1 p. 9; `destinationMedia` from
-//! the object and `sourceMedia` back, §3.4.2 pp. 15–16); the reference-model rule that
-//! *“the types come from the exporter, not from a second table”*
-//! — the content type is compared with `mime()`, not with a
-//! string written here; and the formats themselves — one `v` line per vertex
+//! the object and `sourceMedia` back, §3.4.2 pp. 15-16); the reference-model rule that
+//! *“the types come from the exporter, not from a second table”* -
+//! the content type is compared with `mime()`, not with a
+//! string written here; and the formats themselves - one `v` line per vertex
 //! and one `f` per face in an OBJ, and the definition of EPSG:2154, whose
 //! projection origin (lon 3°E, lat 46.5°N) is written (700 000 m, 6 600 000 m).
 //!
@@ -38,7 +38,7 @@ fn when() -> When {
     }
 }
 
-/// The frame as `energyml_domain::crs` reads a compound written by `crs` —
+/// The frame as `energyml_domain::crs` reads a compound written by `crs` -
 /// the identity over EPSG:2154 + EPSG:5720, metres, elevation.
 fn lambert93() -> Crs {
     Crs {
@@ -62,7 +62,7 @@ fn surface_ref(title: &str, qualified_type: &str) -> Ref {
     Ref::new(SURFACE, qualified_type, title)
 }
 
-/// What the bag says of an object of the package — as `read::pieces_of_object`
+/// What the bag says of an object of the package - as `read::pieces_of_object`
 /// writes it, named for the slot.
 fn known(reference: Ref, placement: Option<Crs>) -> Known {
     Known {
@@ -130,7 +130,7 @@ fn ring() -> Geometry {
     }
 }
 
-/// One hexahedron — the shape an IJK grid is read as.
+/// One hexahedron - the shape an IJK grid is read as.
 fn one_cell() -> Geometry {
     let mut points = Vec::new();
     for z in [0.0, -10.0] {
@@ -176,7 +176,7 @@ fn lines_starting(text: &str, head: &str) -> usize {
 
 #[test]
 fn an_obj_is_the_registrys_bytes_typed_by_its_mime_and_related_to_the_object() {
-    let title = "H3 — top of the Yprésien";
+    let title = "H3 - top of the Yprésien";
     let pieces = bag(
         two_triangles(),
         Some(known(
@@ -200,7 +200,7 @@ fn an_obj_is_the_registrys_bytes_typed_by_its_mime_and_related_to_the_object() {
     assert_eq!(media.related_to, [SURFACE]);
 
     // The format's own grammar: a `v` per node, an `f` per triangle, and the
-    // uuid in a comment — counted against the bag written above.
+    // uuid in a comment - counted against the bag written above.
     let text = String::from_utf8(media.bytes.clone()).expect("an OBJ is text");
     assert_eq!(lines_starting(&text, "v "), 4, "{text}");
     assert_eq!(lines_starting(&text, "f "), 2, "{text}");
@@ -243,7 +243,7 @@ fn a_geojson_is_in_wgs84_and_the_origin_of_lambert93_lands_where_epsg_2154_puts_
     let pieces = bag(
         ring(),
         Some(known(
-            surface_ref("Lutetia — model extent", "resqml22.PolylineSetRepresentation"),
+            surface_ref("Lutetia - model extent", "resqml22.PolylineSetRepresentation"),
             Some(lambert93()),
         )),
     );
@@ -274,7 +274,7 @@ fn a_vtu_of_a_grid_cell_is_typed_by_the_vtk_exporter() {
     let pieces = bag(
         one_cell(),
         Some(known(
-            surface_ref("Ypresian–Chalk grid", "resqml22.IjkGridRepresentation"),
+            surface_ref("Ypresian-Chalk grid", "resqml22.IjkGridRepresentation"),
             Some(lambert93()),
         )),
     );
@@ -335,7 +335,7 @@ fn what_cannot_be_exported_is_refused_on_its_slot() {
         "{none:?}"
     );
 
-    // A frame named and not given — the shape was read placed.
+    // A frame named and not given - the shape was read placed.
     let placed = refusals(
         &bag(
             two_triangles(),
@@ -408,18 +408,18 @@ fn what_cannot_be_exported_is_refused_on_its_slot() {
 
 #[test]
 fn a_title_becomes_a_file_name_and_nothing_left_falls_back_to_the_uuid() {
-    assert_eq!(file_name_of("H3 — top of the Yprésien"), "h3-top-of-the-ypresien");
-    assert_eq!(file_name_of("  Ypresian–Chalk grid "), "ypresian-chalk-grid");
+    assert_eq!(file_name_of("H3 - top of the Yprésien"), "h3-top-of-the-ypresien");
+    assert_eq!(file_name_of("  Ypresian-Chalk grid "), "ypresian-chalk-grid");
     assert_eq!(
         file_name_of("a/b\\c"),
         "a-b-c",
         "no folder slips in through a title"
     );
-    assert_eq!(file_name_of("——"), "");
+    assert_eq!(file_name_of("--"), "");
     let pieces = bag(
         two_triangles(),
         Some(known(
-            surface_ref("——", "resqml22.TriangulatedSetRepresentation"),
+            surface_ref("--", "resqml22.TriangulatedSetRepresentation"),
             Some(lambert93()),
         )),
     );
@@ -436,10 +436,10 @@ fn a_title_becomes_a_file_name_and_nothing_left_falls_back_to_the_uuid() {
 /// crate, not the store:
 ///
 /// - the part's bytes equal the exporter run on what `energyml-geometry`
-///   reads from the saved package — `scene::object_of`, the route `energyml
-///   export` takes — so the bag rebuilds the object the library reads;
+///   reads from the saved package - `scene::object_of`, the route `energyml
+///   export` takes - so the bag rebuilds the object the library reads;
 /// - the OBJ's `v` and `f` lines equal the `NodeCount` and the triangle
-///   `Count` the representation's own XML declares — a count the OBJ writer
+///   `Count` the representation's own XML declares - a count the OBJ writer
 ///   never saw;
 /// - `[Content_Types].xml` types the part with `mime()`, and both `.rels` hold
 ///   their half of the relationship (EPC §3.4.2 p. 16).
@@ -473,7 +473,7 @@ fn an_export_applied_and_saved_is_in_the_zip_with_both_relations() {
                 .set("sourceEpsg", 2154)
                 .set("project", 2154)
                 .set("vertical", 5720)
-                .set("title", "H3 — top of the Yprésien"),
+                .set("title", "H3 - top of the Yprésien"),
             &Identity::derived(),
             &when(),
         )
@@ -549,7 +549,7 @@ fn an_export_applied_and_saved_is_in_the_zip_with_both_relations() {
     );
 
     let text = String::from_utf8(bytes).unwrap();
-    // The first number of the first element `tag` after `from` — the XML as
+    // The first number of the first element `tag` after `from` - the XML as
     // the archive holds it, read by nothing of this workspace.
     let declared = |from: &str, tag: &str| -> usize {
         let start = xml.find(from).unwrap_or_else(|| panic!("`{from}` in {xml}"));

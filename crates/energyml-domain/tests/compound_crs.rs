@@ -7,19 +7,19 @@
 //! so a reader that confused the two statements, or turned the wrong way,
 //! passed every corpus test. The citations each test rests on:
 //!
-//! - `LocalEngineeringCompoundCrs.OriginVerticalCoordinate` — *"Vertical
+//! - `LocalEngineeringCompoundCrs.OriginVerticalCoordinate` - *"Vertical
 //!   coordinate of the origin of the local engineering CRS in the base vertical
 //!   CRS (consequently in the uom of the base vertical CRS)"*: CRS.xsd
-//!   l. 517–520, and common TRG 2.3 §12.20 p. 322;
-//! - `VerticalAxis` — `Direction`, `Uom`, `IsTime`: the local axis, common TRG
-//!   2.3 §12.34 p. 338; `VerticalCrs` — its own `Direction` and `uom`: the
+//!   l. 517-520, and common TRG 2.3 §12.20 p. 322;
+//! - `VerticalAxis` - `Direction`, `Uom`, `IsTime`: the local axis, common TRG
+//!   2.3 §12.34 p. 338; `VerticalCrs` - its own `Direction` and `uom`: the
 //!   datum, §12.35 p. 339;
-//! - `ArealRotation` — *"The rotation of the local Y axis relative to the
+//! - `ArealRotation` - *"The rotation of the local Y axis relative to the
 //!   projected Y axis. A positive value indicates a clockwise rotation from the
 //!   projected Y axis"*: RESQML TRG 2.0.1 §2.1 p. 10. `Azimuth` is documented
 //!   nowhere in 2.3 (common TRG 2.3 §12.19 p. 321 has no notes), and is read as
-//!   the same clockwise angle from grid north — see `crs::read_with`;
-//! - `ReferencePointInALocalEngineeringCompoundCrs.Crs` — *"To:
+//!   the same clockwise angle from grid north - see `crs::read_with`;
+//! - `ReferencePointInALocalEngineeringCompoundCrs.Crs` - *"To:
 //!   LocalEngineeringCompoundCrs"*: common TRG 2.3 §13.25 p. 371.
 
 use energyml_core::registry::DynObject;
@@ -134,7 +134,7 @@ fn system(
 
 /// A depth axis under a datum that counts up.
 ///
-/// The axis says `down`, NGF-IGN69 says `up`, and the origin is 35 — metres
+/// The axis says `down`, NGF-IGN69 says `up`, and the origin is 35 - metres
 /// *above* the NGF zero, since the schema writes it in the base vertical CRS.
 /// A local depth z is then 35 − z metres of elevation. The reader before
 /// 24/09 let the datum's `up` overwrite the axis and applied the origin along
@@ -182,7 +182,7 @@ fn the_axis_counts_depths_and_the_origin_is_a_height_on_the_datum() {
     }
 }
 
-/// When the two count the same way — every package of the corpus — nothing
+/// When the two count the same way - every package of the corpus - nothing
 /// moves: the origin is along the axis as it stands. Pinned so that the
 /// conversion above cannot be "fixed" by negating every origin.
 #[test]
@@ -218,8 +218,8 @@ fn an_axis_and_a_datum_counting_the_same_way_keep_the_origin_as_written() {
 /// The unit follows the axis, and the origin is converted into it.
 ///
 /// An axis in feet over a datum in metres, origin 10 (metres, the datum's):
-/// the stored z is in feet, so `vertical_uom` must say `ft` — the datum's `m`
-/// would read every depth 3.28 times too short — and the origin must be
+/// the stored z is in feet, so `vertical_uom` must say `ft` - the datum's `m`
+/// would read every depth 3.28 times too short - and the origin must be
 /// 10 m expressed in feet before it is added to one.
 #[test]
 fn the_axis_unit_is_the_unit_of_z_and_the_origin_is_converted_into_it() {
@@ -243,7 +243,7 @@ fn the_axis_unit_is_the_unit_of_z_and_the_origin_is_converted_into_it() {
 
 /// A time compound: the axis says time and milliseconds, the datum stays a
 /// length. `is_time` and the axis unit come from the axis alone; the origin
-/// takes the datum's sense but no unit conversion — a length and a time are
+/// takes the datum's sense but no unit conversion - a length and a time are
 /// not joined here (a translation tool names the same gap).
 #[test]
 fn a_time_axis_is_a_time_system_whatever_its_datum_is() {
@@ -308,11 +308,11 @@ fn an_origin_whose_datum_is_missing_is_refused_and_a_zero_one_is_not() {
 
 /// The rotation: 30° clockwise from grid north places the local x axis at
 /// (cos 30°, −sin 30°) and the local y axis at (sin 30°, cos 30°) from the
-/// origin — a clockwise turn, as the survey azimuths and RESQML 2.0.1's
+/// origin - a clockwise turn, as the survey azimuths and RESQML 2.0.1's
 /// `ArealRotation` both state it.
 ///
 /// Confronted with the 2.0.1 system that says the same thing: `ArealRotation`
-/// 30° — which the reader took anticlockwise until 24/09, turning a 2.0.1
+/// 30° - which the reader took anticlockwise until 24/09, turning a 2.0.1
 /// model and its own 2.2 translation (a translation tool carries the angle
 /// unchanged) in opposite directions.
 #[test]
@@ -373,7 +373,7 @@ fn an_azimuth_from_true_north_is_refused() {
 }
 
 // ---------------------------------------------------------------------------
-// 1b — the datum written in a compound
+// 1b - the datum written in a compound
 
 fn point_in(
     uuid_of_system: &str,
@@ -406,7 +406,7 @@ fn trajectory() -> energyml_resqml_2_2::WellboreTrajectoryRepresentation {
 }
 
 /// A trajectory whose only anchor is a point in a compound is georeferenced
-/// through it: the compound's EPSG identities, and **none** of its placement —
+/// through it: the compound's EPSG identities, and **none** of its placement -
 /// the geometry layer has already placed the datum through the compound, and
 /// the offsets and azimuth must not reach the points a second time.
 ///
@@ -453,7 +453,7 @@ fn a_well_anchored_in_a_compound_takes_its_identity_not_its_offsets() {
 }
 
 /// The point itself: `compound_of_datum` hands back the compound, and its
-/// placement of the point's local coordinates is where the collar is —
+/// placement of the point's local coordinates is where the collar is -
 /// 10 m along the local x axis turned 30° clockwise, 5 m deep under an origin
 /// 35 m above NGF.
 #[test]

@@ -3,7 +3,7 @@
 //!
 //! RESQML says *where* things are; WITSML and PRODML mostly say *when* and
 //! *how much*. The two readers
-//! below are **distinct** — their sources have nothing in common:
+//! below are **distinct** - their sources have nothing in common:
 //!
 //! | reader | source | form |
 //! |---|---|---|
@@ -14,10 +14,10 @@
 //! them:
 //!
 //! - [`flow_test`] follows a PRODML flow test's references to the WITSML
-//!   channels that hold its measurements — through the part that holds a
+//!   channels that hold its measurements - through the part that holds a
 //!   **nested** channel set (`energyml_core::identity::nested_objects`);
 //! - [`decimate`] reduces a channel to a bounded number of buckets over a
-//!   range, spikes and gaps kept — what the front end asks on every zoom;
+//!   range, spikes and gaps kept - what the front end asks on every zoom;
 //! - [`production`] reads a `WellProductionParameters` period by period, the
 //!   quantity being the rate times the period's **own** duration;
 //! - [`instant`] turns an `xsd:dateTime` into Unix seconds, or refuses it.
@@ -25,7 +25,7 @@
 //! # What is refused, and how
 //!
 //! Every refusal is a variant of [`Refused`], never a message to match on: a
-//! caller — a test, the front end — asks *which* refusal, and the text is only for
+//! caller - a test, the front end - asks *which* refusal, and the text is only for
 //! a person. None of them is an empty series: a set that holds nothing is
 //! [`Refused::NoData`], never zero rows that look like a log with nothing in
 //! it (ADR-0005: refuse rather than draw).
@@ -38,7 +38,7 @@
 //! - PRODML: *"If the status attribute is absent and the value is not "NaN",
 //!   the data value can be assumed to be good with no restrictions"*
 //!   (TimeSeriesData.xsd l. 100; Product Volume, Network Model & Time Series
-//!   Usage Guide v2.3 §8.2 p. 31). So a `status` — `frozen` or any other — is
+//!   Usage Guide v2.3 §8.2 p. 31). So a `status` - `frozen` or any other - is
 //!   **not** good, and a `NaN` is absent;
 //! - WITSML: a `null` in a row (the Energistics JSON Style Guide p. 8: *"the
 //!   arrays may have NULLs"*) is absent.
@@ -64,11 +64,11 @@ pub mod time_series;
 // The series
 // ---------------------------------------------------------------------------
 
-/// Values against one index — a WITSML channel set, a PRODML time series, the
+/// Values against one index - a WITSML channel set, a PRODML time series, the
 /// channels a flow test points at.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Series {
-    /// The uuid of the object the values were read from — a channel set, a
+    /// The uuid of the object the values were read from - a channel set, a
     /// time series.
     pub uuid: String,
     /// Its title, as its citation gives it.
@@ -103,7 +103,7 @@ impl Series {
     /// The series as the bridges hand it to a front end.
     ///
     /// One conversion, here, so the CLI, wasm and Python write the same JSON.
-    /// `null` stands for every sample that is not a number — JSON has no `NaN`,
+    /// `null` stands for every sample that is not a number - JSON has no `NaN`,
     /// and a gap written as `0` is a spike through the middle of a chart.
     pub fn to_json(&self) -> Value {
         json!({
@@ -119,12 +119,12 @@ impl Series {
 /// What an index counts. Only the four a row can be read against: the other
 /// `DataIndexKind`s (`temperature`, `pressure`, `scalar`) are neither time nor
 /// depth, and `pass indexed depth` has no JSON form stated anywhere this
-/// repository holds — both refused by name in [`channel_set`].
+/// repository holds - both refused by name in [`channel_set`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IndexKind {
-    /// `date time` — values are UTC Unix seconds.
+    /// `date time` - values are UTC Unix seconds.
     DateTime,
-    /// `elapsed time` — values are a duration in the index's unit.
+    /// `elapsed time` - values are a duration in the index's unit.
     ElapsedTime,
     /// `measured depth`.
     MeasuredDepth,
@@ -154,7 +154,7 @@ impl IndexKind {
         }
     }
 
-    /// Time or depth — WITSML TRG v2.1 §7.7 p. 151: *"A 'compatible' index
+    /// Time or depth - WITSML TRG v2.1 §7.7 p. 151: *"A 'compatible' index
     /// simply means that all of the channels are either in time or in depth
     /// using a common datum."*
     pub fn family(self) -> IndexFamily {
@@ -187,7 +187,7 @@ impl IndexFamily {
 ///
 /// `Unordered`, the third value of eml 2.3 `IndexDirection`, is only ever a
 /// **secondary** index's: a primary declared so is refused by name
-/// ([`Refused::UnorderedIndex`]) rather than sorted — sorting rows the file
+/// ([`Refused::UnorderedIndex`]) rather than sorted - sorting rows the file
 /// did not sort is a decision made in its place.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Direction {
@@ -195,7 +195,7 @@ pub enum Direction {
     Increasing,
     /// Each value less than the one before.
     Decreasing,
-    /// No order stated — a secondary index only.
+    /// No order stated - a secondary index only.
     Unordered,
 }
 
@@ -215,10 +215,10 @@ impl Direction {
 pub struct Index {
     /// What it counts.
     pub kind: IndexKind,
-    /// Its mnemonic — `dTim` for a PRODML time series, which names none.
+    /// Its mnemonic - `dTim` for a PRODML time series, which names none.
     pub mnemonic: String,
     /// The unit of [`Index::values`]. For [`IndexKind::DateTime`] it is always
-    /// `s` — the values are Unix seconds — whatever the file declared: the
+    /// `s` - the values are Unix seconds - whatever the file declared: the
     /// file's values are ISO text, which has no unit.
     pub uom: Option<String>,
     /// Which way it runs.
@@ -251,7 +251,7 @@ pub enum Quality {
     /// No value: a `null` in a WITSML row, a `NaN` in a PRODML sample with no
     /// status.
     Absent,
-    /// A value the source qualifies — a PRODML `status` (`frozen`, `bad`, …),
+    /// A value the source qualifies - a PRODML `status` (`frozen`, `bad`, …),
     /// or an infinity (`"+Infinity"`, JSON Style Guide p. 8), which is a value
     /// no chart can place.
     Flagged(String),
@@ -267,14 +267,14 @@ impl Quality {
 /// One channel of values.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Channel {
-    /// Its uuid — a WITSML channel's; `None` for the one channel of a PRODML
+    /// Its uuid - a WITSML channel's; `None` for the one channel of a PRODML
     /// time series, which is the series itself.
     pub uuid: Option<String>,
-    /// Its mnemonic — a PRODML series' title, which has none.
+    /// Its mnemonic - a PRODML series' title, which has none.
     pub mnemonic: String,
     /// Its unit, as written.
     pub uom: Option<String>,
-    /// The WITSML `ChannelDataKind`, as written (`double`, `date time`, …) —
+    /// The WITSML `ChannelDataKind`, as written (`double`, `date time`, …) -
     /// `date time` values are Unix seconds. `None` for PRODML.
     pub data_kind: Option<String>,
     /// The property kind the channel names, when it names one.
@@ -287,7 +287,7 @@ pub struct Channel {
     pub quality: Vec<Quality>,
 }
 
-/// What a channel holds, counted — the arithmetic a face prints without doing.
+/// What a channel holds, counted - the arithmetic a face prints without doing.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Tally {
     /// Samples whose quality is good.
@@ -423,7 +423,7 @@ pub(crate) fn number(value: f64) -> Value {
 // Refusals
 // ---------------------------------------------------------------------------
 
-/// Everything a series reader refuses to guess — each named, none an empty
+/// Everything a series reader refuses to guess - each named, none an empty
 /// series.
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
 pub enum Refused {
@@ -461,7 +461,7 @@ pub enum Refused {
         found: String,
     },
 
-    /// A sample with no instant in a series of several — TimeSeriesData.xsd
+    /// A sample with no instant in a series of several - TimeSeriesData.xsd
     /// l. 100: *"If no time is specified then the value is static and only one
     /// sample can be defined."*
     #[error(
@@ -475,7 +475,7 @@ pub enum Refused {
     },
 
     /// An instant that does not read.
-    #[error("{at}: `{text}` is not a date-time this reads — {why}")]
+    #[error("{at}: `{text}` is not a date-time this reads - {why}")]
     Instant {
         /// Where it was met.
         at: String,
@@ -542,7 +542,7 @@ pub enum Refused {
         what: String,
     },
 
-    /// Time and depth indexes in one set — WITSML TRG v2.1 §7.7 p. 151.
+    /// Time and depth indexes in one set - WITSML TRG v2.1 §7.7 p. 151.
     #[error(
         "the index `{other}` is in {other_family} where the primary `{primary}` is in {primary_family}: a channel set is in time or in depth, never both (WITSML TRG v2.1 §7.7 p. 151)"
     )]
@@ -572,7 +572,7 @@ pub enum Refused {
     )]
     NoData,
 
-    /// Rows in an HDF5 dataset — the extension of ADR-0013 — that the array
+    /// Rows in an HDF5 dataset - the extension of ADR-0013 - that the array
     /// source does not locate: a source that holds no arrays, or one that does
     /// not know the form.
     #[error(
@@ -586,9 +586,9 @@ pub enum Refused {
     },
 
     /// That dataset could not be read because this build has no backend for
-    /// its format — a missing **capability**, never missing data.
+    /// its format - a missing **capability**, never missing data.
     #[error(
-        "the rows are the dataset `{path}` of `{file}`, and reading it needs the `{feature}` feature, which this build does not have — a missing capability, not missing data"
+        "the rows are the dataset `{path}` of `{file}`, and reading it needs the `{feature}` feature, which this build does not have - a missing capability, not missing data"
     )]
     DatasetNeedsFeature {
         /// The file.
@@ -599,7 +599,7 @@ pub enum Refused {
         feature: String,
     },
 
-    /// That dataset could not be read — no such file, no such dataset, not an
+    /// That dataset could not be read - no such file, no such dataset, not an
     /// HDF5 file.
     #[error("the rows are the dataset `{path}` of `{file}`, and it did not read: {why}")]
     DatasetNotRead {
@@ -629,7 +629,7 @@ pub enum Refused {
         channels: usize,
     },
 
-    /// A column a numeric dataset cannot hold — a date-time, a string, a
+    /// A column a numeric dataset cannot hold - a date-time, a string, a
     /// boolean.
     #[error(
         "`{column}` holds `{kind}`, and a column of an HDF5 dataset holds numbers: this form carries numeric indexes and channels only"
@@ -733,7 +733,7 @@ pub enum Refused {
         set: String,
     },
 
-    /// A rate and a pressure indexed on different instants — pairing them
+    /// A rate and a pressure indexed on different instants - pairing them
     /// would interpolate one ([`rate_pressure`]).
     #[error(
         "the rate is indexed by `{first}` and the pressure by `{second}`, on different instants: pairing them would interpolate one of the two"
@@ -781,7 +781,7 @@ pub enum Refused {
         uuid: String,
     },
 
-    /// Two objects answering to one name — *a name is not an identity*.
+    /// Two objects answering to one name - *a name is not an identity*.
     #[error("`{name}` names {} objects ({}): a name is not an identity", .uuids.len(), .uuids.join(", "))]
     NameNotAnIdentity {
         /// The name.
@@ -869,7 +869,7 @@ pub enum Refused {
 pub enum Readout {
     /// A channel set, or every channel set of a log.
     Sets(Vec<Series>),
-    /// A PRODML time series — boxed, being the largest by far.
+    /// A PRODML time series - boxed, being the largest by far.
     TimeSeries(Box<time_series::TimeSeries>),
     /// The channels a flow test points at.
     FlowTest(Vec<flow_test::Measured>),
@@ -878,7 +878,7 @@ pub enum Readout {
 }
 
 impl Readout {
-    /// Every series it holds, in order — what a face iterates to draw or to
+    /// Every series it holds, in order - what a face iterates to draw or to
     /// decimate, whichever reader answered.
     pub fn series(&self) -> Vec<&Series> {
         match self {
@@ -913,14 +913,14 @@ impl Readout {
 pub struct Reader {
     /// A name for listings.
     pub name: &'static str,
-    /// Whether it reads this object — by shape, never by version.
+    /// Whether it reads this object - by shape, never by version.
     pub reads: fn(&dyn energyml_core::value::Reflect) -> bool,
     /// Read it; `objects` and `source` lend what it references.
     pub read: ReadFn,
 }
 
 /// How a [`Reader`] reads: the object, every object of the package with its
-/// uuid, and the source that lends the rest — objects, and the arrays a
+/// uuid, and the source that lends the rest - objects, and the arrays a
 /// channel set's rows may be (`channel_set`, *Rows in an HDF5 dataset*).
 pub type ReadFn = fn(
     &dyn energyml_core::value::Reflect,
@@ -928,7 +928,7 @@ pub type ReadFn = fn(
     &dyn crate::source::ArraySource,
 ) -> Result<Readout, Refused>;
 
-/// The shipped readers — a slice rather than a `match`, like every list here
+/// The shipped readers - a slice rather than a `match`, like every list here
 /// that will grow: a new reader is an entry and a function.
 pub fn readers() -> &'static [Reader] {
     READERS
@@ -962,8 +962,8 @@ const READERS: &[Reader] = &[
     },
 ];
 
-/// Read the object `uuid` — a part among `objects`, one nested in them, or one
-/// `source` lends — with the first reader that takes it.
+/// Read the object `uuid` - a part among `objects`, one nested in them, or one
+/// `source` lends - with the first reader that takes it.
 ///
 /// `objects` is every object of the package the caller has read, with its
 /// uuid, as [`crate::integrity::run`] takes them: a nested channel set is
@@ -1056,7 +1056,7 @@ pub fn resolve_at<'a>(
 }
 
 /// [`resolve`] for a **reference**: the object it names, at the version it
-/// names — the way a reader follows a `DataObjectReference` among the objects
+/// names - the way a reader follows a `DataObjectReference` among the objects
 /// it has in hand.
 pub fn resolve_reference<'a>(
     reference: &dyn energyml_core::value::Reflect,
@@ -1069,7 +1069,7 @@ pub fn resolve_reference<'a>(
     resolve_named(uuid, version, objects)
 }
 
-/// The object of `uuid` the wanted version names, among the objects in hand —
+/// The object of `uuid` the wanted version names, among the objects in hand -
 /// `energyml_core::identity::version_fit`, the one rule: the exact version
 /// first, then one that contradicts nothing.
 fn resolve_named<'a>(
@@ -1182,7 +1182,7 @@ pub(crate) fn identity_of(object: &dyn Reflect) -> (String, String) {
     )
 }
 
-/// Refuse an index that does not run the way it says — strictly: two rows at
+/// Refuse an index that does not run the way it says - strictly: two rows at
 /// one index are two values at one place, and which one holds is stated
 /// nowhere.
 pub(crate) fn monotone(index: &Index) -> Result<(), Refused> {

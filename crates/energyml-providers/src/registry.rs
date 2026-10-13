@@ -1,4 +1,4 @@
-//! The list of providers — a registry, not a `match`.
+//! The list of providers - a registry, not a `match`.
 //!
 //! The repository's rule wherever a list grows: a trait, a registry, the
 //! shipped providers pushed by default, and **the caller's tried first** so that
@@ -52,7 +52,7 @@ impl Providers {
     pub fn get(&self, name: &str) -> crate::Result<&dyn Provider> {
         self.all().find(|one| one.name() == name).ok_or_else(|| {
             crate::Error::Refused(format!(
-                "`{name}` is not a provider this build knows — it has {}",
+                "`{name}` is not a provider this build knows - it has {}",
                 self.all().map(|one| one.name()).collect::<Vec<_>>().join(", ")
             ))
         })
@@ -64,13 +64,13 @@ impl Providers {
 /// The single door to the outside. The front end does not read the providers one by
 /// one: it asks for this once, and draws from it its list of APIs, the
 /// collections of each, and the form of each collection. A provider added to
-/// [`Providers::builtin`] appears here **without a line changing elsewhere** —
+/// [`Providers::builtin`] appears here **without a line changing elsewhere** -
 /// the property this crate exists to hold, and which
 /// `an_added_provider_reaches_the_catalogue_without_touching_anything` checks.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Catalogue {
-    /// The providers, the added ones first — the registry's order.
+    /// The providers, the added ones first - the registry's order.
     pub providers: Vec<Declared>,
 }
 

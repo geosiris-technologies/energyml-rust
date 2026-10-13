@@ -1,4 +1,4 @@
-//! `representation-set` — a `RepresentationSetRepresentation` of given
+//! `representation-set` - a `RepresentationSetRepresentation` of given
 //! representations.
 //!
 //! The form of the assertions comes from what the TRG and the usage guide
@@ -6,7 +6,7 @@
 //! p. 245); its index is *“implicit. It follows the order on which the
 //! representations are given”* (Technical Usage Guide 2.2, draft, §4.7 p. 42);
 //! `IsHomogeneous` says *“that all of the selected representations are of a
-//! single kind”* (TRG §8.8). The objects — titles, uuids — are the tests' own.
+//! single kind”* (TRG §8.8). The objects - titles, uuids - are the tests' own.
 //! The written set is read back and checked by `energyml check` in
 //! `tests/blocked_wellbore.rs`, beside real members.
 //!
@@ -56,7 +56,7 @@ fn bag(members: &[Source]) -> Pieces {
 
 fn chalk_grids() -> Vec<Source> {
     vec![
-        member(1, "resqml22.IjkGridRepresentation", "Ypresian–Chalk grid"),
+        member(1, "resqml22.IjkGridRepresentation", "Ypresian-Chalk grid"),
         member(2, "resqml22.IjkGridRepresentation", "GTH-1 refined window"),
         member(
             3,
@@ -102,7 +102,7 @@ fn is_homogeneous_is_what_the_members_are() {
     assert_eq!(
         written,
         vec![
-            "Ypresian–Chalk grid",
+            "Ypresian-Chalk grid",
             "GTH-1 refined window",
             "Calcaire grossier truncated",
             "GTH-2 drain"

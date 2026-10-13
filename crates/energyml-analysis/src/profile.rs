@@ -1,5 +1,5 @@
-//! **Wells projected on a long profile** — which wellheads fall in the band
-//! around a drawn track, where along it, how far and on which side — and the
+//! **Wells projected on a long profile** - which wellheads fall in the band
+//! around a drawn track, where along it, how far and on which side - and the
 //! band itself, as a polygon.
 //!
 //! Pure arithmetic: a plan polyline `[x, y]`, two widths, wellheads. Nothing
@@ -10,7 +10,7 @@
 //! # The rules, applied to the letter
 //!
 //! - *"Plan distance from the wellhead to every section of the polyline; if the
-//!   smallest distance is under the width, keep it"* — the distance is
+//!   smallest distance is under the width, keep it"* - the distance is
 //!   measured **from the head, in plan, to every segment**; a well is kept when
 //!   that distance is **strictly under the width of its side**. A head exactly
 //!   on the limit is not kept.
@@ -18,21 +18,21 @@
 //!   segment `A -> B`, `P` is on the left when `(B - A) x (P - A) > 0`. A head
 //!   exactly on the axis (`= 0`) counts as left, or as right when the left width
 //!   is zero. Where the closest point is a **vertex**, the side is the one of
-//!   the vertex's **bisector** — the line along the mean direction of its two
+//!   the vertex's **bisector** - the line along the mean direction of its two
 //!   segments (the only answer that does not depend on the order they are
 //!   visited in; the outer wedge of a turn is entirely on one side of it).
 //! - *"Beyond an end, wells are ignored. Only those that project onto the
-//!   segments are taken."* — a head that projects beyond an end of
+//!   segments are taken."* - a head that projects beyond an end of
 //!   the track is **ignored**, never drawn, but **counted**
 //!   ([`Profile::beyond_an_end`]): a gap that is not said looks like a well that
 //!   is absent from the package.
-//! - *Outer wedge* — in the **outer wedge of a turn** (the head projects on
+//! - *Outer wedge* - in the **outer wedge of a turn** (the head projects on
 //!   neither adjacent segment) the well is projected **on the vertex**: its
 //!   abscisse is the vertex's and its distance the one to the vertex. Inside a
 //!   turn a head that projects on two segments takes the **nearest**.
 //! - The segments near a head are found through a **grid** of cells of side
 //!   `max(left, right)`, each segment filed in every cell its widened bounding
-//!   box touches — exact, unlike *« the nearest vertex first »*, which can miss
+//!   box touches - exact, unlike *« the nearest vertex first »*, which can miss
 //!   the right segment (a head halfway along a long segment is far from both its
 //!   ends, and a neighbouring vertex can be nearer than they are).
 //!
@@ -62,7 +62,7 @@
 //!
 //! A well that is *nearest* on one side but too far there, while a farther
 //! segment on the other side is within *its* side's width (a track that passes
-//! on both sides of a head, a narrow U), is **kept** — by that other segment,
+//! on both sides of a head, a narrow U), is **kept** - by that other segment,
 //! and the band contains it. Keeping the criterion and the band the same region
 //! matters more than the order the two candidates are tried in.
 
@@ -106,7 +106,7 @@ pub struct Kept {
     /// The unit direction `[dx, dy]` of the track **where this well was kept**:
     /// the direction of the segment the projection retained, and at a vertex
     /// (the outer wedge of a turn) the **mean** of the two segments'
-    /// directions, normalised — the bisector the side is read against.
+    /// directions, normalised - the bisector the side is read against.
     /// What places each node of the
     /// well along the profile: `s_node = s + (node - head) . direction`.
     pub direction: [f64; 2],
@@ -177,7 +177,7 @@ pub enum ProfileError {
     GridTooLarge { index: usize, cells: u64 },
 }
 
-/// The most cells one segment may be filed in — a guard against a width of a
+/// The most cells one segment may be filed in - a guard against a width of a
 /// millimetre on a track of kilometres, not a limit anyone meets.
 const MAX_CELLS_PER_SEGMENT: u64 = 4_000_000;
 
@@ -546,7 +546,7 @@ pub struct Section {
     pub length: f64,
 }
 
-/// Validates, projects and draws the band in one call — what a width slider
+/// Validates, projects and draws the band in one call - what a width slider
 /// re-asks on release.
 pub fn project(
     track: &[[f64; 2]],

@@ -7,17 +7,17 @@
 //! Nothing is recomputed here; every piece is the library's own, the one the
 //! 3D view and the profile read:
 //!
-//! - **the head** is `energyml_geometry::well::head_of` — the datum the
+//! - **the head** is `energyml_geometry::well::head_of` - the datum the
 //!   trajectory's `MdInterval` names, **never the first node** (a trajectory
 //!   whose first node is at MD 2.5 is collared 2.5 above it). A frame is
 //!   collared where **its trajectory** is, as `heads::of_objects` says;
-//! - **the nodes** are `scene::object_of(..).drawable_in(Projected)` — the very
+//! - **the nodes** are `scene::object_of(..).drawable_in(Projected)` - the very
 //!   points the 3D draws, so a node cannot sit in one place there and in
 //!   another here;
 //! - **the MD of each node** is `strata_by_md::node_mds`, the function the strata
 //!   painting reads. The two answers must agree on how many nodes there are:
 //!   when they do not, the MD is withheld **and said** rather than given to
-//!   nodes by guesswork — an MD on the wrong node is a well graduated wrongly;
+//!   nodes by guesswork - an MD on the wrong node is a well graduated wrongly;
 //! - **the intervals** are `strata_by_md::Painting::intervals`, by the same
 //!   rule as the colours of the nodes (*a node opens the interval*).
 //!
@@ -29,7 +29,7 @@
 //! Lutetia draws a borehole as two trajectories and two frames. [`WellRead::wellbore`]
 //! is what lets `assemble` fold them into one line: the uuid of the feature
 //! the chain *representation → wellbore interpretation → wellbore feature*
-//! ends on — the interpretation is the trajectory's, else the frame's own.
+//! ends on - the interpretation is the trajectory's, else the frame's own.
 //! A representation of a WITSML `Wellbore` is keyed by that wellbore. With no
 //! chain, a frame is keyed by the trajectory it hangs on, and a trajectory by
 //! itself, so the frame and the trajectory it hangs on are still one line.
@@ -68,7 +68,7 @@ pub use crate::read::{FramesOf, PackageContext as WellContext};
 /// One wellbore trajectory or frame, read in the scene's system: its head (the
 /// datum, never the first node), its nodes and their MD, its strata intervals.
 ///
-/// Without the package's colours or the frames of its wellbore — see the
+/// Without the package's colours or the frames of its wellbore - see the
 /// module; [`read_well_with`] takes them.
 // A refusal is the cold path, met once per object, and it carries the object's
 // whole identity on purpose: boxing it would change every construction site
@@ -163,7 +163,7 @@ pub fn read_well_with(
 }
 
 /// A well's object, found: what its identity says and the trajectory it is
-/// collared on — the part of [`read_well_with`] that reads no array.
+/// collared on - the part of [`read_well_with`] that reads no array.
 struct Located {
     held: Box<dyn DynObject>,
     object: ObjectId,
@@ -244,7 +244,7 @@ fn locate(source: &dyn ValueSource, store: &str, uri: &str) -> Result<Located, R
 }
 
 /// What a well is, and where it is collared, **without reading any array**: the
-/// object, its kind, its wellbore, and its head in the scene's system — what
+/// object, its kind, its wellbore, and its head in the scene's system - what
 /// the corridor filter decides on (`read::contribution_cached`).
 #[derive(Clone, Debug, PartialEq)]
 pub struct HeadRead {
@@ -254,7 +254,7 @@ pub struct HeadRead {
     pub kind: WellKind,
     /// The wellbore it describes, as [`WellRead::wellbore`].
     pub wellbore: Option<String>,
-    /// The head in the scene's system, `[x, y, z]` — the very point
+    /// The head in the scene's system, `[x, y, z]` - the very point
     /// [`read_well_with`] gives `WellRead::head`.
     pub head: [f64; 3],
 }
@@ -262,7 +262,7 @@ pub struct HeadRead {
 impl HeadRead {
     /// The well as `assemble` needs it **when no section is near** (`head_only`): its
     /// identity, its wellbore and its head, no node and no interval. Never
-    /// drawn — it is only ever the reason a well is refused as too far, which
+    /// drawn - it is only ever the reason a well is refused as too far, which
     /// says nothing but the head.
     pub fn stub(&self) -> WellRead {
         WellRead {
@@ -310,7 +310,7 @@ pub fn read_head(
     })
 }
 
-/// The trajectory a frame hangs on, or what is wrong with it — a sentence that
+/// The trajectory a frame hangs on, or what is wrong with it - a sentence that
 /// continues *"is a wellbore frame …"*.
 fn trajectory_of_frame(frame: &dyn Reflect, source: &dyn ValueSource) -> Result<Box<dyn DynObject>, String> {
     let Some(FieldValue::Object(reference)) = frame.field("Trajectory") else {
@@ -382,13 +382,13 @@ fn strata_of(
             format!("`{name}`: no stratigraphic unit holds any of its intervals")
         } else {
             format!(
-                "`{name}`: no stratigraphic unit holds any of its intervals — {}",
+                "`{name}`: no stratigraphic unit holds any of its intervals - {}",
                 notes.join("; ")
             )
         };
         return (Vec::new(), Some(why), borrowed);
     }
-    // The interval carries the uri of its unit — what the front end later asks the
+    // The interval carries the uri of its unit - what the front end later asks the
     // colour walks for, so that an edited colour shows without a new catalogue.
     // It used to be **found** by title and colour among the painting's units,
     // and refused when two units shared both.
@@ -417,14 +417,14 @@ fn hex(colour: Rgba) -> String {
 
 /// What makes a frame and its trajectory one wellbore.
 ///
-/// The wellbore feature reached by *interpretation → feature* — the
-/// interpretation of the trajectory, else the representation's own — or the
+/// The wellbore feature reached by *interpretation → feature* - the
+/// interpretation of the trajectory, else the representation's own - or the
 /// WITSML wellbore a representation names; failing that the trajectory's own
 /// uuid, which is also what a frame hanging on it gets.
 ///
-/// **The key is a uuid on purpose**: it names a *wellbore* — a concept two
+/// **The key is a uuid on purpose**: it names a *wellbore* - a concept two
 /// objects share (a frame and its trajectory), a feature that has no version
-/// in practice — and not one object of the package. What is *read* on the way
+/// in practice - and not one object of the package. What is *read* on the way
 /// is followed by the reference, so the version it names is the version read.
 fn wellbore_of(root: &dyn Reflect, trajectory: &dyn Reflect, source: &dyn ValueSource) -> Option<String> {
     const REPRESENTED: [&str; 2] = ["RepresentedObject", "RepresentedInterpretation"];

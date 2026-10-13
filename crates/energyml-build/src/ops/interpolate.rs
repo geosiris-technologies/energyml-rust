@@ -1,4 +1,4 @@
-//! `interpolate` — a regular map from scattered samples, written as a 2D grid.
+//! `interpolate` - a regular map from scattered samples, written as a 2D grid.
 //!
 //! A geological operation, and the request for
 //! an `energyml compute` command is answered otherwise: `energyml create`
@@ -11,7 +11,7 @@
 //! # What is interpolated, and where the values come from
 //!
 //! The samples are the shape's nodes, read in plan view: `x` and `y` locate a
-//! sample, and the value is the **third coordinate** — the ordinary case, a
+//! sample, and the value is the **third coordinate** - the ordinary case, a
 //! horizon from a point cloud. When the bag also carries a `Source::Field`
 //! over that shape, the field is the value instead and the third coordinate is
 //! ignored: *interpolate this property* and *interpolate this elevation* are
@@ -21,7 +21,7 @@
 //!
 //! `spacing` is the only geometry asked for. The extent is the samples' own
 //! bounding box, widened by `margin` and covered by whole cells, which is the
-//! answer somebody wants nine times out of ten — and the origin and the two
+//! answer somebody wants nine times out of ten - and the origin and the two
 //! counts are **reported** in the activity, so what was written down is not a
 //! number nobody stated. Naming an extent by hand is a slot to add when
 //! somebody needs one, not a form to fill in every time.
@@ -30,11 +30,11 @@
 //!
 //! Several horizons fitted each to its own seeds land on as many lattices, and
 //! `ijk-grid-from-horizons` refuses two lattices by name: its pillars stand on
-//! one. The optional input `onto` is an existing 2D grid whose lattice —
-//! origin, steps, counts — is **reused as it is**: every horizon of a model
+//! one. The optional input `onto` is an existing 2D grid whose lattice -
+//! origin, steps, counts - is **reused as it is**: every horizon of a model
 //! can be interpolated onto the ground's. `spacing` and `margin` are then the
 //! other way of saying the same thing, and they say so (`Without(["onto"])`,
-//! [`crate::declare::given_inputs`]) — a run given both is refused naming both.
+//! [`crate::declare::given_inputs`]) - a run given both is refused naming both.
 //!
 //! The lattice is read off the grid's nodes by the reader that
 //! `ijk-grid-from-horizons` judges it with, `energyml_analysis::ijk::lattice_of`:
@@ -43,12 +43,12 @@
 //! written step whenever the sum lands on it (25 m on Lambert-93 does). Two
 //! things are refused by name rather than bent:
 //!
-//! - **a grid in another frame than the samples** — both frames are named. A
+//! - **a grid in another frame than the samples** - both frames are named. A
 //!   grid is never reprojected (a grid keeps the frame it was written in), and a lattice read in one frame and filled with
 //!   heights read in another would place every node somewhere else. The frame
 //!   written must be the grid's as well: a `crs` naming another, or one created
 //!   with `sourceEpsg`, is refused;
-//! - **a lattice turned or reversed in its frame's numbers** — the grid writer
+//! - **a lattice turned or reversed in its frame's numbers** - the grid writer
 //!   writes one along +x then +y; querying a turned lattice and writing it
 //!   straight would move every node without a word.
 //!
@@ -66,8 +66,8 @@
 //! optional, multiple `faults` input, read by the name of its slot; and it
 //! turns kriging from one global system into one small system per query,
 //! which is also what gives kriging the search `radius` and `neighbours` it
-//! did not have. Radial basis functions are **global** — every sample enters
-//! every estimate by construction — so `rbf` with a fault is refused by name
+//! did not have. Radial basis functions are **global** - every sample enters
+//! every estimate by construction - so `rbf` with a fault is refused by name
 //! rather than quietly ignoring the trace.
 //!
 //! # What is refused, and what is merely `NaN`
@@ -75,13 +75,13 @@
 //! A refusal names both ends: too few samples for the kernel, a spacing that
 //! is not positive, a grid smaller than two nodes on an axis, a grid so large
 //! that it was surely a typo. What is *not* refused is a node no sample could
-//! reach — IDW with a radius leaves those `NaN`, and [`super::grid`] writes
+//! reach - IDW with a radius leaves those `NaN`, and [`super::grid`] writes
 //! them as holes and counts them.
 //!
 //! # Typed, and the method a union
 //!
 //! Step 6 of the operations architecture: the settings are
-//! [`InterpolateParams`], the method a union whose cases carry their own —
+//! [`InterpolateParams`], the method a union whose cases carry their own -
 //! and the kriging model a union inside it. The flat list a form renders is
 //! generated from it, each setting acting only under its case; before, an IDW
 //! run recorded `kernel: thin-plate` in its activity.
@@ -89,13 +89,13 @@
 //! # References
 //!
 //! - Shepard's method (inverse distance weighting), as named in `energyml-geostat` (`idw`).
-//!   TODO(reference): verify — Shepard's method is named without a full citation; add the original reference (authors, year, title, venue, DOI) once checked.
+//!   TODO(reference): verify - Shepard's method is named without a full citation; add the original reference (authors, year, title, venue, DOI) once checked.
 //! - Ordinary kriging and the variogram models of `energyml-geostat` (`kriging`, `variogram`).
-//!   TODO(reference): verify — no publication is cited for ordinary kriging or the variogram models; add a reference once checked.
+//!   TODO(reference): verify - no publication is cited for ordinary kriging or the variogram models; add a reference once checked.
 //! - Radial basis function interpolation of `energyml-geostat` (`rbf`).
-//!   TODO(reference): verify — no publication is cited for radial basis function interpolation with conditionally positive definite kernels; add a reference once checked.
+//!   TODO(reference): verify - no publication is cited for radial basis function interpolation with conditionally positive definite kernels; add a reference once checked.
 //! - Lee, Wolberg, Shin, *"Scattered Data Interpolation with Multilevel B-Splines"*, IEEE Transactions on Visualization and Computer Graphics, vol. 3, n° 3, 1997, p. 228-244 (DOI 10.1109/2945.620490), as cited in `energyml-geostat` (`mba`).
-//!   TODO(reference): verify — the citation above (journal, pages, DOI) was not re-checked against the paper (see `energyml-geostat/src/mba.rs`).
+//!   TODO(reference): verify - the citation above (journal, pages, DOI) was not re-checked against the paper (see `energyml-geostat/src/mba.rs`).
 
 use energyml_analysis::ijk::{self, LatticeError};
 use energyml_analysis::{
@@ -126,23 +126,23 @@ const MOST_NODES: usize = 10_000_000;
 /// each interpolator carries its own settings, and the kriging model a
 /// second union inside it. On the wire it is the flat list a form already
 /// renders, each setting acting only under its case; in `plan` it is a Rust
-/// `enum`, so the IDW case has no `kernel` to read — and nothing to record.
+/// `enum`, so the IDW case has no `kernel` to read - and nothing to record.
 #[derive(Debug, Params)]
 pub struct InterpolateParams {
-    /// the cell size of the grid, in the units of the frame — unless `onto` gives the lattice
+    /// the cell size of the grid, in the units of the frame - unless `onto` gives the lattice
     ///
     /// **Required when it acts** (`least = 1`) and acting only without `onto`:
     /// an `Option` because a run given `onto` has none, and `plan` refuses its
     /// absence by name when neither is there.
     #[param(min = 0.0, least = 1, without = ["onto"])]
     pub spacing: Option<f64>,
-    /// how far past the samples the grid reaches, in the same units — unless `onto` gives the lattice
+    /// how far past the samples the grid reaches, in the same units - unless `onto` gives the lattice
     #[param(default = 0.0, optional, min = 0.0, without = ["onto"])]
     pub margin: f64,
     /// The interpolator, and its own settings.
     #[param(flatten)]
     pub method: Method,
-    /// The frame, what is represented, the naming — for the grid writer.
+    /// The frame, what is represented, the naming - for the grid writer.
     #[param(flatten)]
     pub written: support::Written,
 }
@@ -158,14 +158,14 @@ pub enum Method {
     Kriging(KrigingParams),
     /// Radial basis functions.
     Rbf(RbfParams),
-    /// Multilevel B-spline Approximation — see `super::interpolate_mba`.
+    /// Multilevel B-spline Approximation - see `super::interpolate_mba`.
     Mba(super::interpolate_mba::MbaParams),
 }
 
 /// Inverse distance.
 #[derive(Debug, Params)]
 pub struct IdwParams {
-    /// inverse distance: the exponent — larger is more local
+    /// inverse distance: the exponent - larger is more local
     #[param(default = 2.0, optional, min = 0.0)]
     pub power: f64,
     /// inverse distance and kriging: ignore samples farther than this; a node out of reach of every sample is left empty
@@ -259,10 +259,10 @@ pub struct InterpolateInputs {
     pub shape: Shape,
     /// the values, instead of the nodes' elevation
     pub field: Option<Field>,
-    /// fault traces the interpolation must not see across — a sample behind one takes no part
+    /// fault traces the interpolation must not see across - a sample behind one takes no part
     #[input(topology = "polylines")]
     pub faults: Vec<Shape>,
-    /// an existing 2D grid whose lattice — origin, steps, counts — the map is computed on, instead of one fitted to the samples; in the samples' frame
+    /// an existing 2D grid whose lattice - origin, steps, counts - the map is computed on, instead of one fitted to the samples; in the samples' frame
     #[input(topology = "grid")]
     pub onto: Option<Shape>,
     /// `method = mba` only: keeps only the samples inside this ring
@@ -283,7 +283,7 @@ fn title_of(shape: &Shape) -> String {
         .unwrap_or_else(|| shape.name.clone())
 }
 
-/// The counts of the grid `onto` names — `[ni, nj]` — or why it is none.
+/// The counts of the grid `onto` names - `[ni, nj]` - or why it is none.
 fn grid_counts(onto: &Shape) -> Result<[usize; 2], Refusal> {
     let [patch] = onto.geometry.patches.as_slice() else {
         return Err(Refusal::on(
@@ -307,7 +307,7 @@ fn grid_counts(onto: &Shape) -> Result<[usize; 2], Refusal> {
     Ok([*fastest, *slowest])
 }
 
-/// The lattice of the grid `onto` names, **as it is** — or the refusal that
+/// The lattice of the grid `onto` names, **as it is** - or the refusal that
 /// names what makes it one this operation cannot fill.
 ///
 /// Its frame is checked against the samples' and against the frame written:
@@ -324,7 +324,7 @@ pub(crate) fn lattice_onto(
             "onto",
             match why {
                 LatticeError::Turned { along_i, along_j } => format!(
-                    "`{title}` runs along ({}, {}) then ({}, {}) in its frame's numbers: a turned or reversed lattice is not filled here — the grid is written along +x then +y, and querying a turned one to write it straight would move every node",
+                    "`{title}` runs along ({}, {}) then ({}, {}) in its frame's numbers: a turned or reversed lattice is not filled here - the grid is written along +x then +y, and querying a turned one to write it straight would move every node",
                     along_i[0], along_i[1], along_j[0], along_j[1]
                 ),
                 other => format!("`{title}` {other}"),
@@ -341,7 +341,7 @@ pub(crate) fn lattice_onto(
         return Err(Refusal::on(
             "onto",
             format!(
-                "`{}` is in `{}` and the samples `{}` in `{}`: a grid is never reprojected — interpolate onto a grid of the samples' frame, or bring the samples into `{}` first",
+                "`{}` is in `{}` and the samples `{}` in `{}`: a grid is never reprojected - interpolate onto a grid of the samples' frame, or bring the samples into `{}` first",
                 title_of(onto),
                 grid_frame.title,
                 title_of(samples),
@@ -362,7 +362,7 @@ pub(crate) fn lattice_onto(
                 return Err(Refusal::on(
                     "crs",
                     format!(
-                        "names another frame than `{}`'s `{}`: the lattice is written as it is, so in its own frame — name that one, or leave `crs` out to take it",
+                        "names another frame than `{}`'s `{}`: the lattice is written as it is, so in its own frame - name that one, or leave `crs` out to take it",
                         title_of(onto),
                         grid_frame.title
                     ),
@@ -385,7 +385,7 @@ pub(crate) fn lattice_onto(
     Ok(lattice)
 }
 
-/// The bag without the grid `onto` and what is known of it — what the frame
+/// The bag without the grid `onto` and what is known of it - what the frame
 /// and the naming are suggested from. The given grid lends its lattice and
 /// nothing else: its interpretation or its title on the new map is the error a
 /// suggestion would make look deliberate.
@@ -441,7 +441,7 @@ pub(crate) fn lattice_for(
         return Err(Refusal::about(
             "value",
             "spacing",
-            format!("`spacing` must be a positive length — {spacing} given"),
+            format!("`spacing` must be a positive length - {spacing} given"),
         )
         .into());
     }
@@ -473,7 +473,7 @@ pub(crate) fn lattice_for(
         return Err(Refusal::about(
             "value",
             "spacing",
-            format!("a spacing of {spacing} makes {ni} by {nj} — {nodes} nodes, past the {MOST_NODES} this writes: widen the spacing"),
+            format!("a spacing of {spacing} makes {ni} by {nj} - {nodes} nodes, past the {MOST_NODES} this writes: widen the spacing"),
         )
         .into());
     }
@@ -508,7 +508,7 @@ fn double(title: &str, value: f64) -> Parameter {
     }
 }
 
-/// The run — **one arm per case of the union**, each reading only its own
+/// The run - **one arm per case of the union**, each reading only its own
 /// settings, because those are the only ones its case has.
 fn run(
     method: &Method,
@@ -590,7 +590,7 @@ fn run(
             // one costs a solve per node (`Ordinary::without_variance`).
             let mut kriging = Ordinary::new(model).without_variance();
             // The same neighbourhood words as IDW's, and they mean the same:
-            // a radius, a cap — which is what turns the one global system into
+            // a radius, a cap - which is what turns the one global system into
             // one per query, the BRGM's kind.
             if let Some(radius) = settings.radius {
                 kriging = kriging.with_radius(radius);
@@ -666,7 +666,7 @@ fn run(
             })
         }
         // `Method::Mba` is planned by `super::interpolate_mba::plan` before
-        // `run` is ever called — see the arm added to `Operation::plan`
+        // `run` is ever called - see the arm added to `Operation::plan`
         // below. This arm only keeps the match exhaustive.
         Method::Mba(_) => Err(Error::new(
             "`mba` is planned by `interpolate_mba::plan`, never `run`".to_string(),
@@ -691,7 +691,7 @@ impl Operation for Interpolate {
     fn about(&self) -> About {
         About {
             name: "interpolate",
-            describe: "a regular map from scattered samples — inverse distance, kriging, radial basis or multilevel B-spline (MBA) — written as a 2D grid",
+            describe: "a regular map from scattered samples - inverse distance, kriging, radial basis or multilevel B-spline (MBA) - written as a 2D grid",
             category: Category::Geometry,
             makes: &["resqml22.Grid2dRepresentation"],
             recipe: "interpolate",
@@ -758,7 +758,7 @@ impl Operation for Interpolate {
             return Err(Refusal::on(
                 "field",
                 format!(
-                    "`{}` holds {} node(s) and the field {} value(s) — a sample is a place and a number",
+                    "`{}` holds {} node(s) and the field {} value(s) - a sample is a place and a number",
                     samples.name,
                     samples.at.len(),
                     samples.values.len()
@@ -773,7 +773,7 @@ impl Operation for Interpolate {
             }
             None => {
                 let spacing = params.spacing.ok_or_else(|| {
-                    Refusal::about("required", "spacing", "`spacing` is required: the cell size of the grid — or give `onto`, a grid whose lattice to reuse")
+                    Refusal::about("required", "spacing", "`spacing` is required: the cell size of the grid - or give `onto`, a grid whose lattice to reuse")
                 })?;
                 let (origin, counts) = lattice_for(&samples.at, spacing, params.margin)?;
                 (origin, [spacing, spacing], counts)
@@ -811,12 +811,12 @@ impl Operation for Interpolate {
         if other_horizons > 0 {
             ran.says.push(Note {
                 key: "faults-elsewhere",
-                detail: format!("{other_horizons} fault trace(s) lie at another horizon's depth and were set aside — only the traces at this horizon's depth act as barriers"),
+                detail: format!("{other_horizons} fault trace(s) lie at another horizon's depth and were set aside - only the traces at this horizon's depth act as barriers"),
             });
         }
 
         // The lattice goes to the grid writer as it is, in the frame the
-        // samples were read in — which is why `grid` refuses to place one.
+        // samples were read in - which is why `grid` refuses to place one.
         // **Typed in**: no bag to derive, no choices to read back by name. The
         // seed is the one the derived bag's first piece gave, so the objects
         // are named as they always were.
@@ -829,8 +829,8 @@ impl Operation for Interpolate {
             z: ran.values,
         };
         let title = params.written.naming.title();
-        // The given grid enters the seed — the same samples on another lattice
-        // are another grid — and a run without it keeps the seed it had.
+        // The given grid enters the seed - the same samples on another lattice
+        // are another grid - and a run without it keeps the seed it had.
         let onto_key = inputs.onto.as_ref().map(|onto| {
             onto.known
                 .as_ref()
@@ -852,7 +852,7 @@ impl Operation for Interpolate {
         });
         match &inputs.onto {
             // What the run was told: the grid whose lattice it reused, as an
-            // input — `spacing` and `margin` were not asked, so not recorded.
+            // input - `spacing` and `margin` were not asked, so not recorded.
             Some(onto) => {
                 if let Some(reference) = onto.known.as_ref().and_then(|known| known.reference.as_ref()) {
                     plan.activity.parameters.push(Parameter::Object {

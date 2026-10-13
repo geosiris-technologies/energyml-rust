@@ -15,14 +15,14 @@ use crate::error::Result;
 ///
 /// One trait, so everything above is written once. An EPC file implements it
 /// below; an ETP dataspace will implement it the same way and nothing else
-/// changes — which is the point of the seam, not a side effect.
+/// changes - which is the point of the seam, not a side effect.
 pub trait ObjectSource {
     /// An object of the store, by uuid. `None` when it holds no such object.
     fn object(&self, uuid: &str) -> Option<Box<dyn DynObject>>;
 
     /// The same, **saying why** when there is nothing to hand back.
     ///
-    /// A reader resolving a reference does not care why the target is absent —
+    /// A reader resolving a reference does not care why the target is absent -
     /// it has one thing to do either way. A reader walking a whole package
     /// does: *this part breaks its schema* and *this package holds no such
     /// object* are repaired in different places, and the first is the message
@@ -35,13 +35,13 @@ pub trait ObjectSource {
             .ok_or_else(|| "this store holds no such object".to_string())
     }
 
-    /// An object by its **uri** — the address a caller holds when it has one.
+    /// An object by its **uri** - the address a caller holds when it has one.
     ///
     /// Two versions of an object share a uuid, and only the uri tells them
     /// apart (ADR-0003, ADR-0010): a store that
     /// can hold both overrides this with its own resolution, and answers the
     /// version the uri names or refuses by name. The default is for a source
-    /// that holds one object per uuid — for it the uuid **is** the address, so
+    /// that holds one object per uuid - for it the uuid **is** the address, so
     /// it is asked by the uuid the uri carries.
     fn object_at(&self, uri: &str) -> Option<Box<dyn DynObject>> {
         self.object(&energyml_core::identity::parse_address(uri).0)
@@ -52,8 +52,8 @@ pub trait ObjectSource {
         self.read_object(&energyml_core::identity::parse_address(uri).0)
     }
 
-    /// **The object a reference names** — a `DataObjectReference`, a
-    /// `ContactElementReference`, a `ContactElement` — by its full identity
+    /// **The object a reference names** - a `DataObjectReference`, a
+    /// `ContactElementReference`, a `ContactElement` - by its full identity
     /// ([`energyml_core::identity::address_of_reflect`]): the version it names is
     /// the version read, and a reference that names no type is followed by its
     /// uuid, the only address it has. The one way a reader follows a reference.
@@ -78,7 +78,7 @@ impl ObjectSource for EpcStore {
         self.get_object(uuid).map_err(|why| format!("{why}"))
     }
 
-    // The store resolves a uri itself — the version it names included.
+    // The store resolves a uri itself - the version it names included.
     fn object_at(&self, uri: &str) -> Option<Box<dyn DynObject>> {
         self.get_object(uri).ok()
     }
@@ -90,8 +90,8 @@ impl ObjectSource for EpcStore {
 
 /// Reading the arrays an object points at.
 ///
-/// Sits on top of [`ObjectSource`] because a derived array — a boolean written
-/// as the indices that are true, an integer array written as a mask — needs
+/// Sits on top of [`ObjectSource`] because a derived array - a boolean written
+/// as the indices that are true, an integer array written as a mask - needs
 /// both: the numbers, and sometimes the object holding them.
 ///
 /// One trait for both EPC and ETP, again: the layers above name this and
@@ -136,7 +136,7 @@ impl ArraySource for EpcStore {
 ///
 /// For reading a self-contained RESQML 2.0.1 CRS, where following a reference
 /// is never needed. An eml 2.3 compound CRS read through this comes back
-/// missing its offsets and its EPSG code — which is why
+/// missing its offsets and its EPSG code - which is why
 /// [`crate::crs::read`] says so in its documentation.
 pub struct NoObjects;
 
@@ -179,7 +179,7 @@ impl ArraySource for NoObjects {
 /// # The problem this exists for
 ///
 /// [`ObjectSource`] and [`ArraySource`] are **synchronous**, and everything
-/// above them — colour resolution, property reading, the geometry readers —
+/// above them - colour resolution, property reading, the geometry readers -
 /// is written against them. [`EnergymlStorage`](energyml_storage::storage::EnergymlStorage)
 /// is **asynchronous**, because ETP is a WebSocket and a browser cannot block.
 /// An `EpcStore` bridges the two by having a complete synchronous API of its
@@ -188,7 +188,7 @@ impl ArraySource for NoObjects {
 ///
 /// So the bridge is not a blocking call but a **prefetch**: ask for everything
 /// in one asynchronous pass, then read it synchronously. That is the shape ETP
-/// was designed for in the first place — every request is plural, and asking
+/// was designed for in the first place - every request is plural, and asking
 /// for a hundred objects in one message is the point.
 ///
 /// # What it does not do
@@ -200,7 +200,7 @@ impl ArraySource for NoObjects {
 /// read, because reading every array of a package is not a prefetch, it is a
 /// download; [`Prefetched::fetch_arrays`] takes the ones the caller wants.
 /// Anything that was not fetched is refused **by name** rather than returned
-/// empty — a reader that silently sees no array draws a representation with no
+/// empty - a reader that silently sees no array draws a representation with no
 /// points and says nothing.
 pub struct Prefetched {
     /// Objects by lowercase uuid.
@@ -213,7 +213,7 @@ pub struct Prefetched {
 
 /// What identifies one array read: everything the store needs to perform it.
 ///
-/// Not the field path — two fields may name the same dataset, and a caller may
+/// Not the field path - two fields may name the same dataset, and a caller may
 /// legitimately locate an array twice. Not a hash either: the pieces are short
 /// and the string is only ever a map key.
 fn slot(location: &ArrayLocation) -> String {
@@ -304,16 +304,16 @@ impl Prefetched {
     ///
     /// `roots` are URIs. `depth` is how far a reference is followed:
     ///
-    /// - `0` — the roots and nothing else.
-    /// - `1` — enough for a representation and the objects it names directly.
-    /// - `3` — enough for a colour cascade
+    /// - `0` - the roots and nothing else.
+    /// - `1` - enough for a representation and the objects it names directly.
+    /// - `3` - enough for a colour cascade
     ///   (representation → interpretation → feature) and for an eml 2.3
     ///   compound CRS.
     ///
     /// Only references to objects the store actually lists are followed: a
     /// dangling reference is a fact about the package, not a reason to fail a
     /// prefetch. An object that does not deserialize is skipped for the same
-    /// reason the plural reads are partial — one bad object must not lose the
+    /// reason the plural reads are partial - one bad object must not lose the
     /// other ninety-nine.
     ///
     /// Arrays are located, not read. See [`Prefetched::fetch_arrays`].
@@ -366,7 +366,7 @@ impl Prefetched {
     /// wants the lot passes [`Prefetched::locations`].
     ///
     /// Returns the number read. An array that fails to read is left out rather
-    /// than failing the batch — [`ArraySource::read`] will then refuse it by
+    /// than failing the batch - [`ArraySource::read`] will then refuse it by
     /// name, which is more useful than a prefetch that fails wholesale.
     pub async fn fetch_arrays<S>(&mut self, store: &S, locations: &[ArrayLocation]) -> usize
     where
@@ -403,12 +403,12 @@ impl ArraySource for Prefetched {
         if let Some(uuid) = energyml_core::identity::uuid_of_reflect(object) {
             return self.locations_of(uuid).to_vec();
         }
-        // A part of an object, not the object — what every value reader hands
+        // A part of an object, not the object - what every value reader hands
         // over (`source.locate(array)`), and it has no uuid to look up. Its
         // arrays are among those recorded for the object it belongs to: walk
         // the part without resolving anything, and take the recorded
         // location with the same path, proxy and slice. Found 15/09 by the
-        // ETP bridge's acceptance test — until then no reader had gone
+        // ETP bridge's acceptance test - until then no reader had gone
         // through a prefetch, and each would have drawn nothing.
         energyml_storage::array::locate(object)
             .into_iter()
@@ -491,7 +491,7 @@ fn not_prefetched(location: &ArrayLocation) -> crate::Error {
     crate::Error::unsupported(
         "reading an array",
         format!(
-            "`{}` of `{}` was not prefetched — add it to `fetch_arrays` before reading",
+            "`{}` of `{}` was not prefetched - add it to `fetch_arrays` before reading",
             location.field_path, location.path_in_file
         ),
     )

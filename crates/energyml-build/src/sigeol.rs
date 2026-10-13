@@ -3,7 +3,7 @@
 //!
 //! Reads the vocabulary and nothing else: no RESQML here, no store, no
 //! geometry. What it answers is *which unit is this feature about, between which
-//! ages, and does it mark that unit's top or its base* — and where the file does
+//! ages, and does it mark that unit's top or its base* - and where the file does
 //! not say, it says so rather than guessing.
 //!
 //! # The inversion, measured and not assumed
@@ -23,19 +23,19 @@
 //! | Yprésien | Yprésien | 47.8 | Yprésien | 56.0 | 245 |
 //!
 //! Fewer Ma is more recent, so the field *named* `older` holds the unit's
-//! **young** end — its top — and the one named `younger` holds its base. The
+//! **young** end - its top - and the one named `younger` holds its base. The
 //! names are inverted with respect to their content.
 //!
 //! **So the ends are ordered on the numbers, never on the field names.** Reading
 //! the labels gives exactly the opposite answer, and both answers produce a file
 //! that opens cleanly: a top set labelled as a bottom set is the failure this
 //! module is written against. When there are no numeric bounds nothing is
-//! claimed at all — the names are not evidence.
+//! claimed at all - the names are not evidence.
 //!
 //! # The side is decided against the **queried stage**, and one surface comes out
 //!
 //! The rule, and its shape, went through two wrong versions before
-//! this one — both caught by the corpus, which is why it is a test and not a
+//! this one - both caught by the corpus, which is why it is a test and not a
 //! reading exercise:
 //!
 //! - the first gave a unit one side chosen from its own two ends. It produced
@@ -50,7 +50,7 @@
 //! |---|---|
 //! | the unit's young end (fewer Ma) | that stage's **Top** |
 //! | the unit's old end (more Ma) | that stage's **Bottom** |
-//! | neither | nothing — the unit does not touch it |
+//! | neither | nothing - the unit does not touch it |
 //!
 //! A unit lying wholly inside one stage matches both ends; the young end is
 //! tried first, so it yields a `Top`. That is a choice and it is written down
@@ -58,7 +58,7 @@
 //! emit two surfaces sharing one point cloud, which is the version this one
 //! replaced.
 //!
-//! **And the queried stage is not in the file.** No SIGEOL export names it —
+//! **And the queried stage is not in the file.** No SIGEOL export names it -
 //! not in the collection header, not in a feature. It comes from the file name
 //! (`GeologicUnit_<Stage>_pretty.json`, see [`stage_of_file_name`]) or from the
 //! caller, and a caller that has neither gets no side at all rather than a
@@ -77,7 +77,7 @@ pub enum Side {
 }
 
 impl Side {
-    /// The word a title uses — the same the BRGM pipeline writes on its own
+    /// The word a title uses - the same the BRGM pipeline writes on its own
     /// boundary features (`Lutétien Top`, `Priabonien Bottom`).
     pub fn label(self) -> &'static str {
         match self {
@@ -92,7 +92,7 @@ impl Side {
 pub struct Surface {
     /// Top or base of the unit.
     pub side: Side,
-    /// The stage the surface lies in — the young end for a top, the old end
+    /// The stage the surface lies in - the young end for a top, the old end
     /// for a base.
     pub stage: Age,
 }
@@ -120,21 +120,21 @@ impl Age {
 /// What one feature is about.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Unit {
-    /// The lithostratigraphic unit's name — « Marnes et Caillasses ».
+    /// The lithostratigraphic unit's name - « Marnes et Caillasses ».
     pub name: Option<String>,
     /// Its entry in the BRGM lithostratigraphic referential. The uuid at the
     /// end of this URL is a **permanent identifier the producer already owns**,
     /// which is why the objects built from it can be named deterministically
     /// rather than freshly each run.
     pub href: Option<String>,
-    /// The young end of the unit — whatever the field carrying it is called.
+    /// The young end of the unit - whatever the field carrying it is called.
     pub young: Age,
     /// The old end.
     pub old: Age,
     /// Whether the two ends could be **ordered**, which is what decides which is
     /// which. False when the producer wrote no numeric bounds, or equal ones.
     pub ordered: bool,
-    /// Why the ends are ordered as they are, in one sentence — kept so a report
+    /// Why the ends are ordered as they are, in one sentence - kept so a report
     /// can say it rather than leaving a reader to rediscover the inversion.
     pub because: &'static str,
 }
@@ -155,7 +155,7 @@ impl Unit {
     /// Which surface of `stage` these points mark, and `None` when none.
     ///
     /// Three ways to get `None`, and they are three different facts a caller may
-    /// want to tell apart — [`Unit::because`] says which:
+    /// want to tell apart - [`Unit::because`] says which:
     ///
     /// - the ends do not **order** (no numeric bounds, or equal ones), so young
     ///   and old are not established and nothing can be compared;
@@ -202,11 +202,11 @@ impl Unit {
     /// A stable key for grouping: the unit, and which of its surfaces.
     ///
     /// The rule is to gather every point in the same point set when they are on
-    /// the same unit and the same top/bottom — a group by exactly this.
+    /// the same unit and the same top/bottom - a group by exactly this.
     ///
     /// Keyed on the **referential uuid** when the file gives one: two producers
     /// spell a unit two ways, and a permanent identifier is what a referential
-    /// exists to provide. The title is the fallback, and `?` the last resort —
+    /// exists to provide. The title is the fallback, and `?` the last resort -
     /// which groups every nameless unit together rather than losing them.
     pub fn key(&self, side: Side) -> (String, Side) {
         let name = self
@@ -224,7 +224,7 @@ impl Unit {
 /// exports carry are dropped, and **only those**: anything else between the
 /// underscores is kept whole, because a stage name may contain them and this
 /// reader has no list of stages to check against. The suffixes are the two
-/// naming schemes of the producer —
+/// naming schemes of the producer -
 ///
 /// - the first export: `_pretty`;
 /// - the second (a later series of exports):
@@ -232,11 +232,11 @@ impl Unit {
 ///   middle token naming the **field** the export was asked on (it is no part
 ///   of the stage), and `GeologicUnit_Priabonien_ZONE_2.json` carrying none.
 ///   Originally only `_pretty` was dropped, so `Bartonien_olderNamedAge_ZONE_2`
-///   came out as a stage — which `sigeol-units` then refused, naming the
+///   came out as a stage - which `sigeol-units` then refused, naming the
 ///   stages the file holds, instead of reading the right one.
 ///
 /// **This is a convention, not a fact of the format**, and it is the weakest
-/// link in the whole reading — no GeoJSON names the question it answers. It is
+/// link in the whole reading - no GeoJSON names the question it answers. It is
 /// therefore only ever a *default*: a caller that knows the stage passes it, and
 /// what this returns is what a person would have typed anyway. `None` when the
 /// name does not follow the convention, never a guess at the first word.
@@ -268,7 +268,7 @@ fn zone_suffix(name: &str) -> Option<&str> {
 
 /// Read a feature's `properties`.
 ///
-/// Returns `None` when the document says nothing this module recognises — not
+/// Returns `None` when the document says nothing this module recognises - not
 /// an error: a collection may legitimately hold features of another kind, and
 /// the caller decides whether that is a problem.
 pub fn unit_of(properties: &Value) -> Option<Unit> {
@@ -399,7 +399,7 @@ mod tests {
     fn the_young_end_is_the_smaller_number_of_ma_whatever_the_field_is_called() {
         // The real Priabonien feature: `olderNamedAge` = Priabonien at 33.9 Ma,
         // `youngerNamedAge` = Bartonien at 41.2. Fewer Ma is more recent, so the
-        // field named `older` holds the young end — the unit's top.
+        // field named `older` holds the young end - the unit's top.
         let unit = unit_of(&properties(
             "Formations indifférenciées du Calcaire de Saint-Ouen et du Calcaire de Champigny",
             ("Priabonien", 33.9),
@@ -409,7 +409,7 @@ mod tests {
         assert_eq!(unit.young.name.as_deref(), Some("Priabonien"));
         assert_eq!(unit.old.name.as_deref(), Some("Bartonien"));
 
-        // Asked about the Priabonien — which is the young end — the points mark
+        // Asked about the Priabonien - which is the young end - the points mark
         // that stage's top. Asked about the Bartonien, the same points mark the
         // Bartonien's bottom: one export, one question, one surface.
         assert_eq!(unit.side_for("Priabonien"), Some(Side::Top));
@@ -503,7 +503,7 @@ mod tests {
 
     #[test]
     fn without_numeric_ages_nothing_is_claimed_at_all() {
-        // The field names are not evidence — they are inverted in exactly the
+        // The field names are not evidence - they are inverted in exactly the
         // files this module was written for.
         let mut props = properties("X", ("Priabonien", 33.9), ("Bartonien", 41.2));
         props["geologicHistory"][0]["numericAge"] = Value::Null;

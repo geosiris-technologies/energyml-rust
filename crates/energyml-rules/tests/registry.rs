@@ -5,7 +5,7 @@ use energyml_rules::{
 };
 use std::collections::BTreeSet;
 
-/// Ids are unique, aliases included — the build refuses otherwise, and this
+/// Ids are unique, aliases included - the build refuses otherwise, and this
 /// states it of what shipped.
 ///
 /// To break it: duplicate a rule in `rules/inherit.toml` (the build refuses,
@@ -156,7 +156,7 @@ fn every_superseded_rule_has_a_replacement_that_names_it() {
 /// very string of its rule.
 ///
 /// To break it: change the spelling of an id in a `rules/*.toml`; the constant
-/// follows (it is generated), so this test does not go red — the safeguard is
+/// follows (it is generated), so this test does not go red - the safeguard is
 /// that the code citing `id::TYPO` does not **compile** (tried by hand).
 #[test]
 fn constants_resolve() {
@@ -172,7 +172,7 @@ fn constants_resolve() {
     assert!(get("house/inherit/no-such-rule").is_none());
 }
 
-/// The reverse link: *which rules hold here?* — a view and a type, the exact
+/// The reverse link: *which rules hold here?* - a view and a type, the exact
 /// key.
 ///
 /// To break it: remove `{ type = "view", key = "object.colour-stack" }` from
@@ -193,7 +193,7 @@ fn the_reverse_link_finds_rules_at_an_anchor() {
 }
 
 /// French is optional **per rule**, and a rule not translated answers in
-/// English and says so — a missing word never passes for a language.
+/// English and says so - a missing word never passes for a language.
 ///
 /// To break it: make `text_in` return `fallback: false` when nothing is
 /// translated.

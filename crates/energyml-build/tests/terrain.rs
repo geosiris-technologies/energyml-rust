@@ -1,11 +1,11 @@
-//! `terrain` — a grid of ground elevations from a DEM fetched elsewhere. What
+//! `terrain` - a grid of ground elevations from a DEM fetched elsewhere. What
 //! the writing of the grid does (the hole count, the frame, the data file) is
 //! `grid`'s own; this holds what the terrain adds: **the source, the licence
 //! and the attribution travel with the heights**, and a DEM that covers
 //! nothing is refused.
 //!
-//! The lattice is fabricated — 4 × 3 nodes, a step of 25 along x and 12.5
-//! along y, `z = 100 + i + 10 j` with one hole — so that a transposed order, a
+//! The lattice is fabricated - 4 × 3 nodes, a step of 25 along x and 12.5
+//! along y, `z = 100 + i + 10 j` with one hole - so that a transposed order, a
 //! swapped step or a lost hole each shows. No network, no file: the raster
 //! reaches the operation as a piece, as `energyml-providers` will hand it.
 //!
@@ -15,8 +15,8 @@
 //! steps or counts), losing or swapping `source`, `service`, `layer`,
 //! `licence`, `attribution`, `fetched` in the activity, keeping quiet about the licence in
 //! the note or in the citation, letting through a DEM without a single value,
-//! a row or a column of nodes, an empty source, or reading the clock — or
-//! `fetched` — in the seed of the identity.
+//! a row or a column of nodes, an empty source, or reading the clock - or
+//! `fetched` - in the seed of the identity.
 
 use energyml_build::operation::{Choices, Identity, Numbers, Plan, Registry, When};
 use energyml_build::pieces::{Lattice, Pieces, Source};
@@ -34,7 +34,7 @@ const SOURCE: &str = "ign-rge-alti";
 const SERVICE: &str = "https://data.geopf.fr/wms-r";
 const LAYER: &str = "ELEVATION.ELEVATIONGRIDCOVERAGE";
 const LICENCE: &str = "Licence Ouverte Etalab 2.0";
-const ATTRIBUTION: &str = "IGN — RGE ALTI";
+const ATTRIBUTION: &str = "IGN - RGE ALTI";
 const FETCHED: &str = "2026-10-01T08:30:00Z";
 
 const ORIGIN: [f64; 2] = [652_000.0, 6_862_000.0];
@@ -106,7 +106,7 @@ fn number_of(plan: &Plan, title: &str) -> Option<f64> {
     })
 }
 
-/// **One grid, on the lattice that was given** — the node count, the origin
+/// **One grid, on the lattice that was given** - the node count, the origin
 /// and the steps are the DEM's own, the heights keep their order and the hole
 /// stays a hole.
 ///
@@ -164,7 +164,7 @@ fn a_dem_is_written_as_it_came() {
     assert_eq!(patch.points[4][1] - patch.points[0][1], STEPS[1]);
 }
 
-/// **The activity says where the heights come from** — and what the lattice
+/// **The activity says where the heights come from** - and what the lattice
 /// was, as `interpolate` says its own.
 ///
 /// Casser : drop one of the six `text(…)` pushes in `terrain::plan` *and* the
@@ -244,17 +244,17 @@ fn the_title_comes_from_the_source() {
     let made = plan(&bag(dem()), &choices).unwrap_or_else(|why| panic!("{why}"));
     assert_eq!(
         grid_of(&made).json["Citation"]["Title"],
-        format!("MNT — {SOURCE}")
+        format!("MNT - {SOURCE}")
     );
 }
 
 /// **A DEM with no value is not a surface**, and a point or a line is not one
-/// either — each refused by name, by this operation and not by the writer
+/// either - each refused by name, by this operation and not by the writer
 /// beneath it.
 ///
 /// Casser : remove the all-NaN refusal (the plan would write a grid of holes),
 /// or the `ni < 2 || nj < 2` one (`grid::write` would still refuse, with its
-/// own words — which the assertion tells apart).
+/// own words - which the assertion tells apart).
 #[test]
 fn a_dem_without_value_or_without_surface_is_refused() {
     let mut empty = dem();
@@ -286,7 +286,7 @@ fn a_dem_without_value_or_without_surface_is_refused() {
     assert_eq!(number_of(&made, "holeCount"), Some(11.0));
 }
 
-/// **A source that says nothing is refused by its name** — each of the six.
+/// **A source that says nothing is refused by its name** - each of the six.
 ///
 /// Casser : drop one `given(…)` call in `terrain::plan`; the loop names which.
 #[test]
@@ -304,7 +304,7 @@ fn a_mute_source_is_refused_by_name() {
     plan(&bag(dem()), &answers().set("fetched", "2026-10-01")).unwrap_or_else(|why| panic!("{why}"));
 }
 
-/// **The same fetch writes the same uuid; another source writes another** —
+/// **The same fetch writes the same uuid; another source writes another** -
 /// and when it was fetched is not part of the name: the same tile refetched
 /// is the same terrain.
 ///

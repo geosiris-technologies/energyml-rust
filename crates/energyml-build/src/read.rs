@@ -1,18 +1,18 @@
 //! An object of a package as pieces: its shape, and what is then known of it.
 //!
 //! The one place that turns a stored representation into a [`Source::Shape`]
-//! and a [`Source::Object`] — the CLI's `--from model.epc#uuid` and the
+//! and a [`Source::Object`] - the CLI's `--from model.epc#uuid` and the
 //! front end's *create from this object* both call it. Two derivations of *what
 //! the caller knows of an object* would be the shape of a bug once found here:
 //! two readers agreeing on a uuid and disagreeing on which CRS is vertical.
 //!
 //! It reads: the geometry through the scene reader every export uses, the CRS
-//! and interpretation it resolves, and — by reflection on the compound CRS —
+//! and interpretation it resolves, and - by reflection on the compound CRS -
 //! its vertical half and direction, which a well's datum needs and a reader of
 //! frames resolves to know which way is down.
 //!
 //! [`known_of_object`] is the same question asked of an object that **has no
-//! geometry** — the CRS somebody just picked in a form. It is what makes an
+//! geometry** - the CRS somebody just picked in a form. It is what makes an
 //! answer behave like an input: *an answer is not an endpoint, it is one more
 //! input*.
 
@@ -20,12 +20,12 @@ use energyml_storage::{EpcStore, ObjectSummary};
 
 use crate::pieces::{Known, Ref, Source};
 
-/// The entry `key` names — a full uri (`eml:///resqml22.X(uuid=…,version='2')`),
-/// a short one, or a bare uuid — resolved by the store's one lookup. **A uuid
+/// The entry `key` names - a full uri (`eml:///resqml22.X(uuid=…,version='2')`),
+/// a short one, or a bare uuid - resolved by the store's one lookup. **A uuid
 /// alone is the caller's grace, not this module's habit**: everything inside
 /// reads by the summary's uri, so that an object held in two versions is read as
 /// the version asked for, and a bare uuid that names several is refused with
-/// its candidates (internally an object is always named by its full uri —
+/// its candidates (internally an object is always named by its full uri -
 /// ADR-0003).
 fn summary_for(store: &EpcStore, key: &str) -> Result<ObjectSummary, String> {
     match store.resolve(key) {
@@ -37,12 +37,12 @@ fn summary_for(store: &EpcStore, key: &str) -> Result<ObjectSummary, String> {
     }
 }
 
-/// **The entry a reference names**, by its full identity — uuid, type and the
+/// **The entry a reference names**, by its full identity - uuid, type and the
 /// `objectVersion` it states ([`EpcStore::resolve_reference`]): the one way a
 /// reader of this crate follows a reference, so that an object held in two
 /// versions is read as the version the reference means. A reference that names
 /// no type is looked up by what it does name, and an uuid that leaves several
-/// candidates answers `None` — the checker says why, this reader does not guess.
+/// candidates answers `None` - the checker says why, this reader does not guess.
 fn followed<'a>(
     store: &'a EpcStore,
     reference: &dyn energyml_core::value::Reflect,
@@ -57,7 +57,7 @@ fn followed<'a>(
     }
 }
 
-/// The entry a [`Ref`] names — [`followed`] for what a piece already holds.
+/// The entry a [`Ref`] names - [`followed`] for what a piece already holds.
 fn summary_of_ref<'a>(store: &'a EpcStore, one: &Ref) -> Option<&'a ObjectSummary> {
     let qualified_type = Some(one.qualified_type.as_str()).filter(|text| !text.is_empty());
     store
@@ -65,8 +65,8 @@ fn summary_of_ref<'a>(store: &'a EpcStore, one: &Ref) -> Option<&'a ObjectSummar
         .ok()
 }
 
-/// What `holder` says of the object `uuid`: the reference it holds to it —
-/// type and version —, found among its own references. `None` when `holder`
+/// What `holder` says of the object `uuid`: the reference it holds to it -
+/// type and version -, found among its own references. `None` when `holder`
 /// holds none to that uuid (a CRS a frame borrows from its trajectory).
 fn reference_held(holder: &dyn energyml_core::value::Reflect, uuid: &str) -> Option<Ref> {
     energyml_core::identity::collect_refs(holder)
@@ -79,8 +79,8 @@ fn reference_held(holder: &dyn energyml_core::value::Reflect, uuid: &str) -> Opt
 }
 
 /// The entry `holder` names by `uuid`: by the reference it holds to it when it
-/// holds one, by the uuid alone — [`EpcStore::lookup_uuid`], which refuses a
-/// uuid that names several — when it holds none.
+/// holds one, by the uuid alone - [`EpcStore::lookup_uuid`], which refuses a
+/// uuid that names several - when it holds none.
 fn held<'a>(
     store: &'a EpcStore,
     holder: &dyn energyml_core::value::Reflect,
@@ -95,14 +95,14 @@ fn held<'a>(
 /// The two pieces an object of the package makes: `(name, shape)` and
 /// `(name (object), known)`.
 ///
-/// `uuid` may be a bare uuid or a uri — **a uri when the package may hold the
-/// object in several versions**; the object must read as a geometry —
-/// a representation with arrays the store can reach — or the error names why
+/// `uuid` may be a bare uuid or a uri - **a uri when the package may hold the
+/// object in several versions**; the object must read as a geometry -
+/// a representation with arrays the store can reach - or the error names why
 /// not, the array backend included.
 ///
 /// The shape is in the object's **local** frame: what a plan that *writes*
 /// needs, because RESQML geometry is stored local. A plan computing for the
-/// **scene** reads it placed — see [`pieces_of_object_in`].
+/// **scene** reads it placed - see [`pieces_of_object_in`].
 pub fn pieces_of_object(store: &EpcStore, key: &str) -> Result<Vec<(String, Source)>, String> {
     pieces_of_object_in(store, key, energyml_geometry::Placement::Local)
 }
@@ -115,13 +115,13 @@ pub fn pieces_of_object(store: &EpcStore, key: &str) -> Result<Vec<(String, Sour
 /// mis-positioned in Z.
 /// The scene draws the projected placement and holds its artefacts in it; a
 /// geometry computed from the local numbers and kept as an artefact landed
-/// where the file's numbers are — offsets, rotation and, for a CRS counting
+/// where the file's numbers are - offsets, rotation and, for a CRS counting
 /// downward (every time CRS, most depth ones), the **vertical flip** missing.
 /// Every input of a geometry plan must be in the one frame the scene uses, or
 /// the computation mixes frames; an artefact input is already placed.
 ///
 /// `vertical_up` then says **up**: `to_projected` has flipped a downward axis,
-/// so the placed z is an elevation whatever the file counted — and an
+/// so the placed z is an elevation whatever the file counted - and an
 /// operation that reads the direction (the curvature signs of `surface-map`)
 /// must be told what it is actually given.
 pub fn pieces_of_object_in(
@@ -134,15 +134,15 @@ pub fn pieces_of_object_in(
         .get_object(&summary.uri)
         .map_err(|e| format!("reading {}: {e}", summary.uri))?;
     let built = energyml_geometry::scene::object_of(object.as_reflect(), store, &summary.uri)
-        .map_err(|e| format!("{}: no geometry could be read — {e}", summary.uri))?;
+        .map_err(|e| format!("{}: no geometry could be read - {e}", summary.uri))?;
 
     let crs = built.crs.as_ref().and_then(|crs| {
         // By the reference the object holds to it (version included), by the uuid
-        // alone only when it holds none — a frame borrowing its trajectory's.
+        // alone only when it holds none - a frame borrowing its trajectory's.
         held(store, object.as_reflect(), &crs.uuid)
             // **The object's own title**, the uri only when it has none. A
             // reference's title is a copy, and a copy that differs is what
-            // `check` calls stale — on every object written against a CRS of
+            // `check` calls stale - on every object written against a CRS of
             // the package (ten warnings on the contacts of a real package).
             .map(|found| Ref::of_summary(found, titled(store, found)))
     });
@@ -160,8 +160,8 @@ pub fn pieces_of_object_in(
     // The frame's vertical half, read off the compound CRS by reflection: what
     // a datum must reference. Found through a compound, or through the
     // compound a reference point is written in (`vertical_half`). Absent when
-    // the frame names a bare `ProjectedCrs` — which names no vertical system,
-    // and one is not guessed from the package — or a vertical system the
+    // the frame names a bare `ProjectedCrs` - which names no vertical system,
+    // and one is not guessed from the package - or a vertical system the
     // package does not hold: *not known*, never *none*.
     let vertical_crs = built.crs.as_ref().and_then(|crs| {
         let system = held(store, object.as_reflect(), &crs.uuid)?;
@@ -185,7 +185,7 @@ pub fn pieces_of_object_in(
     // **What the file says of closure travels with the shape.** The reader
     // reads it (`ClosedPolylines`); without this line, copying a closed
     // polyline of the package would write an open one, and the operation would
-    // have to *guess* it from the coincidence of the two ends — which it can
+    // have to *guess* it from the coincidence of the two ends - which it can
     // do and notes, but which has no place when the file states it. `None`
     // when no patch says anything.
     let closed: Vec<bool> = built
@@ -205,8 +205,8 @@ pub fn pieces_of_object_in(
             Source::Object(Known {
                 reference: Some(Ref::of_summary(&summary, name)),
                 // The codes the frame names, when it names any. `energyml-domain`
-                // has already told the four cases apart — a code, a local
-                // authority, an explicit *unknown*, nothing at all — so this is
+                // has already told the four cases apart - a code, a local
+                // authority, an explicit *unknown*, nothing at all - so this is
                 // a copy and not a second reading of the same fact.
                 crs_epsg: built
                     .crs
@@ -250,12 +250,12 @@ pub fn pieces_of_object_in(
 ///
 /// # Why a slot's name and not the object's title
 ///
-/// An operation reads its roles by the names of its pieces — `trace` and
+/// An operation reads its roles by the names of its pieces - `trace` and
 /// `surfaces` for `cross-section`, `fault` for `intersect`, `faults` for the
 /// barriers of `interpolate`, `top` and `base` for `thickness`. An object of
 /// the package came named by its title, so none of them saw it: `intersect` on
 /// a fault and a horizon of the package was unfit, and a fault of the package
-/// given as `faults` was no barrier — silently. The one place the
+/// given as `faults` was no barrier - silently. The one place the
 /// renaming is written; the front end and the CLI both come through here.
 pub fn in_slot(slot: &str, read: Vec<(String, Source)>) -> Vec<(String, Source)> {
     read.into_iter()
@@ -270,18 +270,18 @@ pub fn in_slot(slot: &str, read: Vec<(String, Source)>) -> Vec<(String, Source)>
 }
 
 /// The bag, with every slot that declares [`Otherwise::Every`] and was left
-/// empty filled from `store` — the front end and the CLI both come through here.
+/// empty filled from `store` - the front end and the CLI both come through here.
 ///
 /// An empty slot is one no piece is named after: neither `wells` nor
 /// `wells 2`. It then receives every object of `store` whose type the slot
 /// [accepts](crate::operation::Takes::accepts), each as
-/// [`pieces_of_object_in`] reads it — a shape and its companion, named
-/// `wells`, `wells 2`, … — or, for an object that is no representation, what
+/// [`pieces_of_object_in`] reads it - a shape and its companion, named
+/// `wells`, `wells 2`, … - or, for an object that is no representation, what
 /// [`known_of_object`] knows of it.
 ///
 /// **A representation that cannot be read is an error, not a gap**: a build
 /// with no array backend must say so rather than import as if the package held
-/// no well — after which every hole would be written a second time.
+/// no well - after which every hole would be written a second time.
 ///
 /// [`Otherwise::Every`]: crate::operation::Otherwise::Every
 pub fn every(
@@ -349,7 +349,7 @@ pub fn every(
 }
 
 /// The frames of the package a geometry of `projected` can be written in
-/// instead of creating one — every `LocalEngineeringCompoundCrs` read as it
+/// instead of creating one - every `LocalEngineeringCompoundCrs` read as it
 /// states itself, judged by [`crate::crs::compatible_frames`].
 pub fn compatible_frames(store: &EpcStore, projected: i64) -> Vec<Known> {
     let candidates: Vec<Known> = store
@@ -375,22 +375,22 @@ pub fn compatible_frames(store: &EpcStore, projected: i64) -> Vec<Known> {
 ///
 /// That one reads a representation, and a CRS is not one: `object_of` refuses
 /// it, rightly, because it has no points. But a form that has just been given a
-/// CRS wants exactly what that CRS *says* — its projected and vertical EPSG
+/// CRS wants exactly what that CRS *says* - its projected and vertical EPSG
 /// codes, so that it stops asking for them.
 ///
 /// Four cases, in order, and none of them is an error:
 ///
-/// - it **is a property** — decided on its type: then what it states, its
+/// - it **is a property** - decided on its type: then what it states, its
 ///   values included when it hangs on a wellbore frame
 ///   ([`crate::pieces::Known::property`]), so that an operation can carry it
 ///   (`contacts-from-frames`);
 /// - it **reads as a coordinate system**: then it *is* the frame, and the facts
-///   are its own — that is what makes `common_slots` suggest `project` and
+///   are its own - that is what makes `common_slots` suggest `project` and
 ///   `vertical` from a system somebody named;
 /// - it reads as a **geometry**: the same `Known` `pieces_of_object` builds,
 ///   without the shape;
 /// - it reads as neither: the object exists and nothing more is known. A
-///   reference and nothing else, never a refusal — a slot fed an object of an
+///   reference and nothing else, never a refusal - a slot fed an object of an
 ///   unexpected sort must fail on the slot, by name, not here.
 ///
 /// `key` is **the object's uri** (a bare uuid is the caller's grace, refused
@@ -400,7 +400,7 @@ pub fn known_of_object(store: &EpcStore, key: &str) -> Result<Known, String> {
     known_of_object_reached(store, key, Reach::Named)
 }
 
-/// How an object came to be read — which decides whose property values are.
+/// How an object came to be read - which decides whose property values are.
 ///
 /// See [`property_of`]: a property somebody **named** has its values read
 /// whatever it hangs on; one met while filling a slot with *every* property of
@@ -416,7 +416,7 @@ enum Reach {
 /// [`known_of_object`], reached as said.
 fn known_of_object_reached(store: &EpcStore, key: &str, reach: Reach) -> Result<Known, String> {
     let mut known = known_of_object_but_whole(store, key, reach)?;
-    // The object whole (`Known::json`), whichever branch answered — the
+    // The object whole (`Known::json`), whichever branch answered - the
     // geometry branch has already read it.
     if known.json.is_none()
         && let Ok(summary) = summary_for(store, key)
@@ -440,7 +440,7 @@ fn known_of_object_but_whole(store: &EpcStore, key: &str, reach: Reach) -> Resul
 
     // **A property first, and decided on its type.** Before the CRS branch,
     // because a 2.2 property may name a `LocalCrs` and `crs::read_with` would
-    // then answer for it — a property taken for a coordinate system, which
+    // then answer for it - a property taken for a coordinate system, which
     // `suggest_written` would offer as the frame of what is written.
     if is_property(&summary.qualified_type) {
         return Ok(Known {
@@ -452,7 +452,7 @@ fn known_of_object_but_whole(store: &EpcStore, key: &str, reach: Reach) -> Resul
 
     // **A unit or a column: the stratigraphy around it.** The whole of it,
     // because what a unit contains is stated by the finer ranks of its column
-    // and by the models already made of it — none of which it names.
+    // and by the models already made of it - none of which it names.
     if is_stratigraphy(&summary.qualified_type) {
         return Ok(Known {
             stratigraphy: Some(stratigraphy_of(store)),
@@ -461,7 +461,7 @@ fn known_of_object_but_whole(store: &EpcStore, key: &str, reach: Reach) -> Resul
         });
     }
 
-    // **A time series: its instants**, in their order — what a property laid
+    // **A time series: its instants**, in their order - what a property laid
     // through it names by place (`Known::instants`).
     if summary
         .qualified_type
@@ -513,7 +513,7 @@ fn known_of_object_but_whole(store: &EpcStore, key: &str, reach: Reach) -> Resul
     }
 }
 
-/// The `DateTime` of each `Time` of a time series, in the list's order — the
+/// The `DateTime` of each `Time` of a time series, in the list's order - the
 /// same field in eml 2.0 and 2.3 (`GeologicTime.DateTime`). `None` when one of
 /// them states none: a list with a hole would shift every index after it.
 fn instants_of(reflect: &dyn energyml_core::value::Reflect) -> Option<Vec<String>> {
@@ -539,7 +539,7 @@ fn instants_of(reflect: &dyn energyml_core::value::Reflect) -> Option<Vec<String
 /// `StringTableLookup` has `Key` then `Value`, a category table has the code
 /// then its name, and a one-column table *is* the list.
 ///
-/// `None` for everything else — and an unreadable table answers `None` too:
+/// `None` for everything else - and an unreadable table answers `None` too:
 /// continuing a table that could not be read would write codes against an
 /// order that was guessed.
 fn categories_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) -> Option<Vec<String>> {
@@ -556,8 +556,8 @@ fn categories_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) 
         .collect()
 }
 
-/// Whether a qualified type names a property: its class ends in `Property` —
-/// `ContinuousProperty`, `DiscreteProperty`, `obj_CategoricalProperty`, … —
+/// Whether a qualified type names a property: its class ends in `Property` -
+/// `ContinuousProperty`, `DiscreteProperty`, `obj_CategoricalProperty`, … -
 /// which neither `PropertyKind` nor `PropertySet` does.
 /// A stratigraphic unit or a stratigraphic column, in any release.
 fn is_stratigraphy(qualified_type: &str) -> bool {
@@ -571,7 +571,7 @@ fn is_stratigraphy(qualified_type: &str) -> bool {
     )
 }
 
-/// The package's columns, ranks, units and earth models, read once — only the
+/// The package's columns, ranks, units and earth models, read once - only the
 /// objects `stratigraphy::columns` looks at, so a package of two thousand wells
 /// does not read two thousand trajectories to answer.
 fn stratigraphy_of(store: &EpcStore) -> energyml_domain::stratigraphy::Columns {
@@ -605,7 +605,7 @@ fn is_property(qualified_type: &str) -> bool {
         .ends_with("Property")
 }
 
-/// What a property states, for an operation that carries it elsewhere — see
+/// What a property states, for an operation that carries it elsewhere - see
 /// [`crate::pieces::KnownProperty`].
 ///
 /// Everything is read through `energyml_domain::property::read`, the one
@@ -617,7 +617,7 @@ fn is_property(qualified_type: &str) -> bool {
 /// # Whose values are read: the named, and a frame's
 ///
 /// A slot left empty to take *every property of the package* (`read::every`)
-/// lands here one object at a time — so reading every array here would read
+/// lands here one object at a time - so reading every array here would read
 /// every array of the package for an operation that wanted a frame's. A
 /// frame's array is a log's length; a grid's can be millions of values. Met
 /// that way ([`Reach::Every`]), the values are read for a property that hangs
@@ -651,7 +651,7 @@ fn property_of(
                 lookup: None,
                 null_value: None,
                 facets: Vec::new(),
-                values: Err(format!("it does not read as a property — {why}")),
+                values: Err(format!("it does not read as a property - {why}")),
             };
         }
     };
@@ -695,14 +695,14 @@ fn property_of(
             if reach == Reach::Every && !found.qualified_type.ends_with("WellboreFrameRepresentation") =>
         {
             Err(format!(
-                "its values are not read when every property of the package is taken: it hangs on a `{}`, and only a wellbore frame's are — a log's length, where another representation's can be millions; name it to have them read",
+                "its values are not read when every property of the package is taken: it hangs on a `{}`, and only a wellbore frame's are - a log's length, where another representation's can be millions; name it to have them read",
                 found.qualified_type
             ))
         }
         Some(found) => match read.patches.as_slice() {
             [one] => one.read(store).map_err(|why| why.to_string()),
             many => Err(format!(
-                "it states {} value array(s) on its `{}`, and which elements each covers is not read here — one patch is",
+                "it states {} value array(s) on its `{}`, and which elements each covers is not read here - one patch is",
                 many.len(),
                 found.qualified_type
             )),
@@ -723,7 +723,7 @@ fn property_of(
     }
 }
 
-/// The reference a field holds, as the file writes it — uuid, qualified type,
+/// The reference a field holds, as the file writes it - uuid, qualified type,
 /// title, and the version it names. `None` when the field is absent or names no
 /// uuid.
 fn reference_at(reflect: &dyn energyml_core::value::Reflect, field: &str) -> Option<Ref> {
@@ -753,7 +753,7 @@ fn reference_at(reflect: &dyn energyml_core::value::Reflect, field: &str) -> Opt
 /// `IntervalStratigraphicUnits` (TRG 2.2 §5.34).
 ///
 /// Each correspondence names a `StratigraphicColumnRankInterpretation` and
-/// gives, per interval, an index into its `StratigraphicUnits` — through a
+/// gives, per interval, an index into its `StratigraphicUnits` - through a
 /// jagged array, *« since a single interval may correspond to several
 /// units »*. Several correspondences (one per rank) are **merged**: an interval
 /// takes the unit the one correspondence that names it gives. Two that name two
@@ -820,7 +820,7 @@ fn interval_units_of(
         for end in &lengths {
             let end = usize::try_from(*end).ok()?.min(elements.len());
             // The first index of the interval that names a unit of the rank;
-            // a null — negative, or past the list — names none.
+            // a null - negative, or past the list - names none.
             let unit = elements
                 .get(start..end)
                 .unwrap_or_default()
@@ -852,7 +852,7 @@ fn interval_units_of(
 
 /// The measured depths a wellbore frame states for its nodes.
 ///
-/// `None` for anything else — and `None` too when the array cannot be read,
+/// `None` for anything else - and `None` too when the array cannot be read,
 /// which is what a build without an array backend gives. The two are the same
 /// answer here (*this object does not tell us*) and they are told apart by the
 /// refusal of whoever asked, never by an empty vector: a frame with no node is
@@ -875,7 +875,7 @@ fn node_mds_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) ->
 /// and a `ReferencePointInACrs` *is* the answer.
 ///
 /// **This is not the geometry**, and it cannot be: a trajectory starts at the
-/// first stated depth, so its first node is not the ground — on a well whose
+/// first stated depth, so its first node is not the ground - on a well whose
 /// log starts at 31.5 m, reading it there would answer thirty metres too low.
 /// The datum is the only thing that states it.
 ///
@@ -886,7 +886,7 @@ fn node_mds_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) ->
 /// Its coordinates are local ones
 /// of the compound its `Crs` names (common TRG 2.3 §13.25 p. 371), so the
 /// answer is [`energyml_domain::crs::Crs::to_projected`] of them: projected x
-/// and y, an elevation in the compound's vertical unit — the frame a
+/// and y, an elevation in the compound's vertical unit - the frame a
 /// `ReferencePointInACrs` is written in when its vertical CRS counts up, which
 /// is what the builders here write. A compound that cannot be read, or that
 /// counts time, answers `None`: a collar that cannot be placed is not known,
@@ -933,11 +933,11 @@ fn wellhead_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) ->
     wellhead_of(store, trajectory.as_reflect())
 }
 
-/// **The hole a wellbore object runs along** — [`crate::pieces::Known::path`]:
+/// **The hole a wellbore object runs along** - [`crate::pieces::Known::path`]:
 /// a trajectory's own line, or the line of the trajectory a frame names,
 /// through `energyml_geometry::well::path_of` and nothing else.
 ///
-/// `None` for what is neither — a type test on the class name, the release
+/// `None` for what is neither - a type test on the class name, the release
 /// and the `obj_` of 2.0.1 aside. A trajectory whose line cannot be evaluated
 /// is `Some`, its reason in the `path`.
 fn path_of(
@@ -1003,7 +1003,7 @@ fn path_of(
     })
 }
 
-/// The trajectory and the datum a frame names — their **references**, not
+/// The trajectory and the datum a frame names - their **references**, not
 /// their values.
 ///
 /// `wellhead_of` already walks this path to read the head; this returns the two
@@ -1049,7 +1049,7 @@ fn well_refs_of(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) -
 /// Two hops at most: the object names it (a `LocalEngineeringCompoundCrs`, a
 /// `ReferencePointInACrs`), or it is a
 /// `ReferencePointInALocalEngineeringCompoundCrs` whose `Crs` names the
-/// compound that does (common TRG 2.3 §13.25 p. 371) — the datum form
+/// compound that does (common TRG 2.3 §13.25 p. 371) - the datum form
 /// a version translation writes, and the one chosen for a
 /// datum under a compound. A `ProjectedCrs` names none, and `None` says so.
 fn vertical_half(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) -> Option<Ref> {
@@ -1076,7 +1076,7 @@ fn vertical_half(store: &EpcStore, reflect: &dyn energyml_core::value::Reflect) 
 }
 
 /// The title a reference to this object copies: its own `Citation/Title`, read
-/// off the object — the store's summary carries none — and the uri only when
+/// off the object - the store's summary carries none - and the uri only when
 /// the object cannot be read or has no title.
 fn titled(store: &EpcStore, found: &energyml_storage::resource::ObjectSummary) -> String {
     store
@@ -1088,7 +1088,7 @@ fn titled(store: &EpcStore, found: &energyml_storage::resource::ObjectSummary) -
 
 /// A section view a package holds, as **its activity** says it: the activity,
 /// and the polyline set it wrote (`None` when that object is not in the package
-/// any more — still listed, and refused by name when reopened).
+/// any more - still listed, and refused by name when reopened).
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredSection {
@@ -1102,18 +1102,18 @@ pub struct StoredSection {
     /// The polyline set's uri, when the package holds it.
     pub polyline: Option<String>,
     /// The parts of its drawings, as the activity names them: the main SVG
-    /// (`svgPart`) first, then the further drawings (`drawingPart`) — read by
+    /// (`svgPart`) first, then the further drawings (`drawingPart`) - read by
     /// their part name when reopened, with no index of the package.
     pub drawings: Vec<String>,
 }
 
-/// The section views stored in a package — listing the activities that point
+/// The section views stored in a package - listing the activities that point
 /// to the right activity template is enough; there is no need to read all the
 /// image files.
 ///
 /// **Only the `Activity` objects are read**, picked from the listing by type;
 /// each is kept when its `ActivityDescriptor` names `section-view`'s template
-/// (its uuid, `provenance::template_uuid`) — never its title, which anybody may
+/// (its uuid, `provenance::template_uuid`) - never its title, which anybody may
 /// edit. The polyline set is the `output` the activity names, the drawings the
 /// parts its `svgPart` and `drawingPart` name; their bytes and metadata are read
 /// only when it is reopened. On a package of sixty thousand objects this reads
@@ -1162,8 +1162,8 @@ pub fn stored_sections(store: &EpcStore) -> Vec<StoredSection> {
             (named_output && kind.contains("PolylineSetRepresentation")).then_some(reference)
         });
         let name = wrote.as_ref().and_then(|r| text(field(r, "Title")));
-        // By the identity the activity's reference states — uuid, type and
-        // `ObjectVersion` — so that a section drawn over a versioned copy names
+        // By the identity the activity's reference states - uuid, type and
+        // `ObjectVersion` - so that a section drawn over a versioned copy names
         // the copy and not its original.
         let polyline = wrote.as_ref().and_then(|r| {
             let uuid = text(field(r, "Uuid"))?;

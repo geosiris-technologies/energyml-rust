@@ -1,26 +1,26 @@
-//! Cutting a surface with a ring seen from above — removing parts:
+//! Cutting a surface with a ring seen from above - removing parts:
 //! the user draws a ring (outer or
-//! inner), and what falls inside — or outside — becomes a **new**
+//! inner), and what falls inside - or outside - becomes a **new**
 //! representation. Never a modification of the original: it stays what the
 //! producer wrote, and the provenance says which came from which.
 //!
 //! # The rules
 //!
 //! - **A triangle goes to the side its centre is on.** A triangle the ring
-//!   crosses is not cut in two: v1 classifies it by its centroid, and says so
-//!   — cutting cleanly would mean inserting vertices on the boundary, which
+//!   crosses is not cut in two: v1 classifies it by its centroid, and says so -
+//!   cutting cleanly would mean inserting vertices on the boundary, which
 //!   will come if a real need measures it. The boundary is therefore jagged at
 //!   the triangle's own scale, which is visible and honest, where an
 //!   approximate cut would be smooth and wrong.
 //! - **On the edge counts as inside.** The even-odd test puts boundary points
 //!   on one side or the other according to rounding; counting them inside
-//!   makes the choice deterministic and stated — a ring drawn exactly along an
+//!   makes the choice deterministic and stated - a ring drawn exactly along an
 //!   edge does not make the triangle flicker.
 //! - **The result is compacted.** Nodes no triangle references any more are
 //!   dropped and the indices remapped: a new representation does not carry
 //!   another one's points.
 //! - **Empty is an answer.** A ring that catches nothing yields zero
-//!   triangles, and the caller says so with the counts — no empty object
+//!   triangles, and the caller says so with the counts - no empty object
 //!   created in silence.
 
 /// One half of a cut: its compacted points, its remapped triangles.
@@ -62,7 +62,7 @@ pub fn inside_ring(point: [f64; 2], ring: &[[f64; 2]]) -> bool {
 
 /// The trimmed surface: the triangles kept (on the requested side), compacted.
 ///
-/// `keep_inside` says which side survives — keeping the inside cuts out a
+/// `keep_inside` says which side survives - keeping the inside cuts out a
 /// patch, keeping the outside punches a hole. A triangle with a `NaN` corner is
 /// dropped (no side is its own), and so is one with an invalid index.
 pub fn trim(points: &[[f64; 3]], triangles: &[[u32; 3]], ring: &[[f64; 2]], keep_inside: bool) -> Cutout {
@@ -88,11 +88,11 @@ pub fn trim(points: &[[f64; 3]], triangles: &[[u32; 3]], ring: &[[f64; 2]], keep
 
 /// Which side of a polyline in plan a point falls on.
 ///
-/// The sign of the cross product against the **nearest** segment — measuring
+/// The sign of the cross product against the **nearest** segment - measuring
 /// against a distant one would give the side of a bend the point does not run
 /// along. Positive to the left of the direction of travel, negative to the
 /// right; a point exactly on the line yields 0 and `split_by_line` files it on
-/// the left — deterministic, like a ring's edge.
+/// the left - deterministic, like a ring's edge.
 pub fn side_of_line(point: [f64; 2], line: &[[f64; 2]]) -> f64 {
     let [x, y] = point;
     let mut best = f64::MAX;
@@ -163,15 +163,15 @@ fn compact(points: &[[f64; 3]], kept: &[[u32; 3]]) -> Cutout {
     (out_points, out_triangles)
 }
 
-/// **The nodes inside a ring drawn in plan** — or outside it: the ring
+/// **The nodes inside a ring drawn in plan** - or outside it: the ring
 /// selector, asked for as a shift + mouse-drag gesture drawing a ring that
 /// selects a set of points inside it.
 ///
 /// `points` are flat `[x, y, z, …]`, as the scene draws them; `ring` is flat
-/// `[x, y, …]`, **closed implicitly** — a drawing whose ends do not meet is
+/// `[x, y, …]`, **closed implicitly** - a drawing whose ends do not meet is
 /// joined straight from its end to its start, as asked. The answer is the
-/// ranks of the nodes whose (x, y) lies inside the ring by [`inside_ring`] —
-/// the reading `trim` makes, the boundary counted inside — or outside it.
+/// ranks of the nodes whose (x, y) lies inside the ring by [`inside_ring`] -
+/// the reading `trim` makes, the boundary counted inside - or outside it.
 /// A node with no finite position is in neither: it has no place to be
 /// selected by.
 ///
@@ -179,20 +179,22 @@ fn compact(points: &[[f64; 3]], kept: &[[u32; 3]]) -> Cutout {
 /// arrays that are not pairs and triplets are not a ring and nodes.
 pub fn nodes_in_ring(points: &[f64], ring: &[f64], outside: bool) -> Result<Vec<u32>, String> {
     if !points.len().is_multiple_of(3) {
-        return Err(format!("{} coordinate(s) — nodes are triplets", points.len()));
+        return Err(format!("{} coordinate(s) - nodes are triplets", points.len()));
     }
     if !ring.len().is_multiple_of(2) {
-        return Err(format!("{} coordinate(s) — a ring in plan is pairs", ring.len()));
+        return Err(format!("{} coordinate(s) - a ring in plan is pairs", ring.len()));
     }
-    let corners: Vec<[f64; 2]> = ring.chunks_exact(2).map(|c| [c[0], c[1]]).collect();
+    let corners: Vec<[f64; 2]> = ring.as_chunks::<2>().0.iter().map(|c| [c[0], c[1]]).collect();
     if corners.len() < 3 {
         return Err(format!(
-            "a ring of {} corner(s) encloses nothing — three at least",
+            "a ring of {} corner(s) encloses nothing - three at least",
             corners.len()
         ));
     }
     Ok(points
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .enumerate()
         .filter(|(_, p)| p.iter().all(|c| c.is_finite()))
         .filter(|(_, p)| inside_ring([p[0], p[1]], &corners) != outside)

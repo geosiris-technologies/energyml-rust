@@ -1,6 +1,6 @@
 [package]
 name = "energyml-rules"
-description = "The house rules: what this library decides where the specification is silent, ambiguous or interpreted — a registry any crate can cite, no runtime dependency."
+description = "The house rules: what this library decides where the specification is silent, ambiguous or interpreted - a registry any crate can cite, no runtime dependency."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

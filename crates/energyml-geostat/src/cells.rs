@@ -1,4 +1,4 @@
-//! **Which cells** — a box of an IJK grid by its index ranges, and the cells a
+//! **Which cells** - a box of an IJK grid by its index ranges, and the cells a
 //! wellbore path crosses with the measured depth of each entry and exit: the
 //! computations behind the `subrepresentation` and `blocked-wellbore`
 //! operations, without a file.
@@ -9,10 +9,10 @@
 //! in the order a renderer wants: `[0..4]` on the level of the smaller K, going
 //! round the column in the IJ circular node order `(0,0) → (1,0) → (1,1) →
 //! (0,1)`, and `[4..8]` the same four on the level of the larger K. That order
-//! is the RESQML one — *« the RESQML IJ node ordering within a column of the
+//! is the RESQML one - *« the RESQML IJ node ordering within a column of the
 //! grid starts at the (0,0) corner and then increases first [in I] then [in
 //! J]: (0,0), (1,0), (1,1), (0,1) »* (RESQML Technical Usage Guide 2.2, draft,
-//! §9.12, Figure 9-18 p. 152) — and it is what names a cell's faces.
+//! §9.12, Figure 9-18 p. 152) - and it is what names a cell's faces.
 //!
 //! # The local faces
 //!
@@ -21,13 +21,13 @@
 //! […] Faces per cell indices appear in the grid connections representation
 //! and the blocked wellbore representation »* (same guide, §9.12.3 p. 159). So:
 //!
-//! - **0** — the face on the level of the smaller K, **1** — on the larger;
-//! - **2** — the side between corners 0 and 1 (`(0,0)–(1,0)`, the J− side),
-//!   **3** — between 1 and 2 (I+), **4** — between 2 and 3 (J+), **5** —
+//! - **0** - the face on the level of the smaller K, **1** - on the larger;
+//! - **2** - the side between corners 0 and 1 (`(0,0)-(1,0)`, the J− side),
+//!   **3** - between 1 and 2 (I+), **4** - between 2 and 3 (J+), **5** -
 //!   between 3 and 0 (I−).
 //!
 //! *Top* is read as the smaller K. That is what it is for a grid whose
-//! `KDirection` is `down` — the one `ijk-grid-from-horizons` writes — and the
+//! `KDirection` is `down` - the one `ijk-grid-from-horizons` writes - and the
 //! guide gives no other reading; a caller that means the geometric top of a
 //! grid counted upwards says so before calling.
 //!
@@ -36,13 +36,13 @@
 //! The path is a polyline whose nodes carry a measured depth. Between two nodes
 //! it runs **straight**, and the MD along that chord is interpolated
 //! **linearly**: exact at every node, and short of the arc by what a curved
-//! hole bends between them — which [`Blocked::chord_excess`] measures, so a
+//! hole bends between them - which [`Blocked::chord_excess`] measures, so a
 //! caller says it rather than hides it. An MD step **shorter** than its chord
 //! is refused: no hole is shorter than the straight line between two of its
 //! points.
 //!
 //! The cells are intersected **exactly for what they are when their pillars
-//! stand vertical and each column is a parallelogram in plan** — the grids
+//! stand vertical and each column is a parallelogram in plan** - the grids
 //! `ijk-grid-from-horizons` writes on a lattice. A layer boundary is then the
 //! bilinear patch through its four corner heights over the column, a
 //! quadratic along a straight chord, and where the path crosses it is a root.
@@ -50,10 +50,10 @@
 //! name**: the surface between its corners is then no bilinear patch in plan,
 //! and cutting it by a diagonal the file never chose would be a guess.
 //!
-//! A stretch of path **two cells of one grid both claim** — a path running
-//! along the face they share — is refused, naming both: which cell holds it is
+//! A stretch of path **two cells of one grid both claim** - a path running
+//! along the face they share - is refused, naming both: which cell holds it is
 //! nothing the geometry decides. Several grids are taken **in the order
-//! given**, the first that holds a stretch holding it — a local grid listed
+//! given**, the first that holds a stretch holding it - a local grid listed
 //! before its parent, as a real model wants GTH-1 in the refined window. A cell
 //! entered where a grid listed earlier stops holding the path has no entry
 //! face in the second: it was not entered through one.
@@ -64,14 +64,14 @@ use std::fmt;
 pub type Point = [f64; 3];
 
 /// A micrometre, in plan: what a pillar may lean and a parallelogram be off by
-/// and still be read as what it was meant to be — the drift of a sum of
+/// and still be read as what it was meant to be - the drift of a sum of
 /// spacings, nothing anybody means.
 const PLAN_TOLERANCE: f64 = 1e-6;
 
 /// A cell of an IJK grid, its corners in index order (module header).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Hexahedron {
-    /// Its RESQML index — `i + ni·(j + nj·k)`.
+    /// Its RESQML index - `i + ni·(j + nj·k)`.
     pub index: u64,
     /// `[0..4]` on the smaller K, `(0,0) (1,0) (1,1) (0,1)`; `[4..8]` the same
     /// on the larger K.
@@ -93,7 +93,7 @@ pub struct Held {
     pub grid: usize,
     /// The cell's RESQML index in that grid.
     pub cell: u64,
-    /// The local faces the path enters and leaves by — `None` where it starts
+    /// The local faces the path enters and leaves by - `None` where it starts
     /// or ends inside the cell, or enters where an earlier grid lets it go.
     pub faces: [Option<u8>; 2],
 }
@@ -104,7 +104,7 @@ pub struct Held {
 pub struct Blocked {
     /// The measured depth of each node, increasing.
     pub node_md: Vec<f64>,
-    /// One per interval — `node_md.len() − 1` — the cell it lies in, or `None`
+    /// One per interval - `node_md.len() − 1` - the cell it lies in, or `None`
     /// for a stretch in no cell of any grid.
     pub intervals: Vec<Option<Held>>,
     /// The largest `(ΔMD − chord) / ΔMD` over the path's segments: how far the
@@ -114,7 +114,7 @@ pub struct Blocked {
 }
 
 impl Blocked {
-    /// The intervals that lie in a cell — `CellCount` (RESQML TRG 2.2 §5.32
+    /// The intervals that lie in a cell - `CellCount` (RESQML TRG 2.2 §5.32
     /// `IntervalGridCells` p. 128: *« The number of non-null entries in the
     /// grid indices array »*).
     pub fn cell_count(&self) -> usize {
@@ -212,7 +212,7 @@ impl fmt::Display for CellsError {
             }
             CellsError::Beyond { axis, last, count } => write!(
                 f,
-                "the {axis} range ends at {last}, and the grid has {count} cell(s) along {axis} — indices from 0 to {}",
+                "the {axis} range ends at {last}, and the grid has {count} cell(s) along {axis} - indices from 0 to {}",
                 count.saturating_sub(1)
             ),
             CellsError::Mismatched { nodes, mds } => {
@@ -256,7 +256,7 @@ impl fmt::Display for CellsError {
 
 impl std::error::Error for CellsError {}
 
-/// The cells of an IJK box, in RESQML order — `i` fastest, then `j`, then `k`.
+/// The cells of an IJK box, in RESQML order - `i` fastest, then `j`, then `k`.
 ///
 /// `dimensions` is `[ni, nj, nk]`; each range is `[first, last]`, **both
 /// included**, or `None` for the whole axis. A range reversed or past the grid
@@ -388,7 +388,7 @@ fn roots(a: f64, b: f64, c: f64, low: f64, high: f64) -> Vec<f64> {
     let scale = a.abs().max(b.abs()).max(c.abs());
     let mut out = Vec::new();
     if scale == 0.0 {
-        // Identically zero: the path runs in the level itself. No crossing —
+        // Identically zero: the path runs in the level itself. No crossing -
         // the stretch is then held by both cells it separates, and refused
         // as such.
         return out;
@@ -494,7 +494,7 @@ fn inside(cell: &Column, a: Point, b: Point) -> Vec<(f64, f64, [Edge; 2])> {
         }
     }
     // By position; at one position a level face before a side, a side before
-    // a node — through an edge the path touches two faces, and the K face is
+    // a node - through an edge the path touches two faces, and the K face is
     // the one named.
     let rank = |edge: &Edge| match edge {
         Edge::Face(0) | Edge::Face(1) => 0,
@@ -523,7 +523,7 @@ fn inside(cell: &Column, a: Point, b: Point) -> Vec<(f64, f64, [Edge; 2])> {
     out
 }
 
-/// Where along the path each of these measured depths falls — on the chords,
+/// Where along the path each of these measured depths falls - on the chords,
 /// as [`block`] spreads the MD. A depth outside the path's is `None`.
 pub fn positions(points: &[Point], mds: &[f64], at: &[f64]) -> Vec<Option<Point>> {
     at.iter()
@@ -540,7 +540,7 @@ pub fn positions(points: &[Point], mds: &[f64], at: &[f64]) -> Vec<Option<Point>
         .collect()
 }
 
-/// Block a path through grids — see the module header.
+/// Block a path through grids - see the module header.
 ///
 /// `points` and `mds` are the path's nodes and their measured depths; `grids`
 /// are taken in the order given.
@@ -691,19 +691,19 @@ pub fn block(points: &[Point], mds: &[f64], grids: &[Grid]) -> Result<Blocked, C
 
 #[cfg(test)]
 mod tests {
-    //! The form of the assertions is the guide's — an interval per stretch
-    //! between two faces, 0/1 the K faces and 2–5 the sides in the IJ circular
+    //! The form of the assertions is the guide's - an interval per stretch
+    //! between two faces, 0/1 the K faces and 2-5 the sides in the IJ circular
     //! order (RESQML Technical Usage Guide 2.2, draft, §9.12.3 p. 159; §11.5
     //! p. 214: *« For each actual grid cell, the blocked well contains the
     //! cell index and the cell face indices where the trajectory enters and
     //! exits »*). The cell a point is in is confronted with **arithmetic** on
-    //! a regular grid — `floor` of the offsets — which shares nothing with the
+    //! a regular grid - `floor` of the offsets - which shares nothing with the
     //! clipping and the roots above.
 
     use super::*;
 
     /// A regular grid, `ni × nj × nk` boxes of `size`, its top at `z = 0`,
-    /// K going **down** (elevation decreasing) — `[0..4]` on the upper level.
+    /// K going **down** (elevation decreasing) - `[0..4]` on the upper level.
     fn boxes(origin: [f64; 2], size: [f64; 3], counts: [usize; 3]) -> Grid {
         let [ni, nj, nk] = counts;
         let mut cells = Vec::new();
@@ -785,7 +785,7 @@ mod tests {
 
     /// **The cells crossed are the cells the path is in**: at the middle of
     /// every interval, the arithmetic cell of that point; and between two
-    /// intervals of the path no cell is missed — the arithmetic at a hundred
+    /// intervals of the path no cell is missed - the arithmetic at a hundred
     /// points along the path finds only cells the blocking names.
     #[test]
     fn a_slanted_hole_is_held_by_the_cells_arithmetic_finds() {
@@ -897,7 +897,7 @@ mod tests {
         // At (0.5, 0.5) the bilinear top is 0.25: entered at MD 2.75.
         assert!((blocked.node_md[0] - 2.75).abs() < 1e-12, "{:?}", blocked.node_md);
         // Along the diagonal, u = v = t and z = 1 − t: the top h = t² is met
-        // where 1 − t = t², at t = (√5 − 1) / 2 — the product term of the
+        // where 1 − t = t², at t = (√5 − 1) / 2 - the product term of the
         // patch is what puts it there, not at t = 1.
         let points = [[0.0, 0.0, 1.0], [10.0, 10.0, 0.0]];
         let chord = 201.0f64.sqrt();

@@ -1,16 +1,16 @@
 //! `witsml-logs` with `channelDataFile`: each `ChannelSet`'s rows written to a
-//! dataset of an HDF5 file, `FileUri` naming the file and `Data` the dataset —
+//! dataset of an HDF5 file, `FileUri` naming the file and `Data` the dataset -
 //! **an extension beyond WITSML 2.1**.
 //!
 //! Two paths meet here and neither checks itself: the writer lays the dataset
 //! out by its module doc, the reader (`channel_set::read_with`) reads it by
-//! its own. The values are compared to **the test's inputs** — the depths and
-//! the property values handed to the plan — and, through a real `.h5`, to the
+//! its own. The values are compared to **the test's inputs** - the depths and
+//! the property values handed to the plan - and, through a real `.h5`, to the
 //! RESQML property the log repeats, read by `energyml_domain::property`, a
 //! reader that knows nothing of WITSML.
 //!
 //! And the default is held: left out, the plan writes no dataset, no
-//! `FileUri`, and records no such parameter — `tests/lutetia.rs` holds the rest
+//! `FileUri`, and records no such parameter - `tests/lutetia.rs` holds the rest
 //! byte for byte.
 
 use std::cell::Cell;
@@ -57,7 +57,7 @@ fn property(uuid: &str, title: &str, kind_uuid: &str, kind: &str, uom: &str, val
             supporting: Some(Ref::new(
                 FRAME,
                 "resqml22.WellboreFrameRepresentation",
-                "GTH-1 — frame",
+                "GTH-1 - frame",
             )),
             indexable: "nodes".to_string(),
             value_count: vec![1],
@@ -80,7 +80,7 @@ fn pieces() -> Pieces {
         reference: Some(Ref::new(
             FRAME,
             "resqml22.WellboreFrameRepresentation",
-            "GTH-1 — frame",
+            "GTH-1 - frame",
         )),
         interpretation: Some(Ref::new(
             INTERPRETATION,
@@ -92,7 +92,7 @@ fn pieces() -> Pieces {
         datum: Some(Ref::new(
             DATUM,
             "eml23.ReferencePointInALocalEngineeringCompoundCrs",
-            "GTH-1 — datum",
+            "GTH-1 - datum",
         )),
         ..Known::default()
     };
@@ -116,7 +116,7 @@ fn pieces() -> Pieces {
             "properties",
             property(
                 "20000000-0000-4000-8000-000000000001",
-                "GTH-1 — temperature",
+                "GTH-1 - temperature",
                 "30000000-0000-4000-8000-000000000001",
                 "temperature",
                 "degC",
@@ -127,7 +127,7 @@ fn pieces() -> Pieces {
             "properties 2",
             property(
                 "20000000-0000-4000-8000-000000000002",
-                "GTH-1 — pressure",
+                "GTH-1 - pressure",
                 "30000000-0000-4000-8000-000000000002",
                 "pressure",
                 "bar",
@@ -149,7 +149,7 @@ fn plan(choices: Choices) -> Plan {
         .expect("a plan")
 }
 
-/// The plan's one Log, read back through its JSON — the road `apply` takes.
+/// The plan's one Log, read back through its JSON - the road `apply` takes.
 fn log_of(plan: &Plan) -> Box<dyn DynObject> {
     let schemas = energyml_schemas::all();
     let logs: Vec<_> = plan
@@ -179,7 +179,7 @@ fn values_only(series: &Series) -> Value {
     json
 }
 
-/// The plan's datasets, served as a store would serve them once written —
+/// The plan's datasets, served as a store would serve them once written -
 /// located by the storage's own locator, and counted.
 struct Written<'a> {
     plan: &'a Plan,
@@ -243,7 +243,7 @@ impl ArraySource for Written<'_> {
 #[test]
 fn left_out_the_values_stay_inline_and_nothing_names_a_file() {
     // To break: a default given to `channelDataFile`, or the recipe's
-    // `dataFile` reaching it — the Lutetia logs would move into the `.h5`.
+    // `dataFile` reaching it - the Lutetia logs would move into the `.h5`.
     let inline = plan(choices());
     assert!(inline.datasets.is_empty(), "no dataset by default");
     let data = &set_json(&inline)["Data"];
@@ -351,7 +351,7 @@ fn given_a_file_the_rows_go_to_one_dataset_the_set_names() {
 #[test]
 fn the_dataset_reads_back_as_the_inline_rows_and_as_the_values_given() {
     // To break: the rows written column-major, a channel left out of a row, a
-    // NaN written as 0 — each moves the dataset away from the inline rows and
+    // NaN written as 0 - each moves the dataset away from the inline rows and
     // from the test's own values.
     let inline = channel_set::read_log(log_of(&plan(choices())).as_reflect()).expect("the inline log reads");
     let written = plan(choices().set("channelDataFile", FILE));

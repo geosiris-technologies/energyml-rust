@@ -1,4 +1,4 @@
-//! `loft` — a surface between polylines, in their order
+//! `loft` - a surface between polylines, in their order
 //!. The stitch is tested in
 //! `energyml_analysis::loft`; this holds the seam.
 //!
@@ -63,7 +63,7 @@ fn a_surface_between_two_sticks_in_the_order_of_the_slot() {
         panic!("triangles")
     };
     assert_eq!(triangles.len(), 6, "two bands");
-    // The middle stick's nodes are 2, 3, 4: every triangle touches it — the
+    // The middle stick's nodes are 2, 3, 4: every triangle touches it - the
     // order of the slot, 1 then 2 then 3, and never 1 with 3.
     assert!(
         triangles.iter().all(|t| t.iter().any(|v| (2..=4).contains(v))),

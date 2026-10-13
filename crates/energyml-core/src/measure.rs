@@ -6,7 +6,7 @@
 //! <ArealRotation uom="rad">0.0</ArealRotation>
 //! ```
 //!
-//! and generates the same Rust shape — a text-bound number plus a `uom`
+//! and generates the same Rust shape - a text-bound number plus a `uom`
 //! attribute:
 //!
 //! ```ignore
@@ -17,7 +17,7 @@
 //! ```
 //!
 //! What differs is the *type*: about 190 measure structs per version, each with
-//! its own unit enum, none sharing a trait — roughly 730 unrelated types across
+//! its own unit enum, none sharing a trait - roughly 730 unrelated types across
 //! the four common versions. Anything wanting "the number and its unit" would
 //! otherwise match on concrete types, once per version, forever.
 //!
@@ -36,12 +36,12 @@
 //! `dB.MW`/`dB.mW`). Code that matches `LengthUom::Mm` reads a length off by
 //! **10⁹** on one version and is correct on the other, silently.
 //!
-//! The wire values — `m`, `ft`, `rad`, `dega` — did not change: 1500 unit
+//! The wire values - `m`, `ft`, `rad`, `dega` - did not change: 1500 unit
 //! strings in eml 2.0, 1540 in eml 2.3, purely additive, nothing removed and
 //! nothing respelled. So this module reads the *string* and never the variant,
 //! and so must everything downstream.
 //!
-//! This module knows no unit names and converts nothing — that is schema
+//! This module knows no unit names and converts nothing - that is schema
 //! vocabulary and belongs above the core. It only knows the *shape*.
 
 use crate::reflect::Binding;
@@ -54,7 +54,7 @@ pub struct Measure {
     pub value: f64,
     /// The `uom` attribute, exactly as written.
     ///
-    /// `None` when the element has none — some measures make it optional, and
+    /// `None` when the element has none - some measures make it optional, and
     /// an absent unit is not the same as an unknown one.
     pub uom: Option<String>,
 }

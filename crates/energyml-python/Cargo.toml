@@ -9,12 +9,12 @@ description = "Python bindings for energyml-rust: read and write EPC + HDF5 pack
 # The module is published by maturin, not by cargo on a crate registry:
 # nobody depends on this one from Rust.
 publish = false
-# One test binary, `tests/main.rs` — see its doc.
+# One test binary, `tests/main.rs` - see its doc.
 autotests = false
 
 [lib]
 # `cdylib` so that Python can load the module, and `rlib` so that the
-# repository's native suite can exercise it — it is the same rule as the WebAssembly front end's:
+# repository's native suite can exercise it - it is the same rule as the WebAssembly front end's:
 # everything that can be wrong is tested natively.
 #
 # This name is **not** the one `import` will see: maturin renames the artefact
@@ -23,7 +23,7 @@ autotests = false
 #
 # **And it cannot simply be `energyml`.** `energyml-cli` ships a binary of that
 # name, so on Windows both targets wrote the same
-# `target/debug/deps/energyml.pdb`: `cargo test --workspace` hit `LNK1201 —
+# `target/debug/deps/energyml.pdb`: `cargo test --workspace` hit `LNK1201 -
 # error writing to program database` as soon as both were rebuilt in the same
 # invocation. The name read slightly better; it cost the whole test suite on
 # half of the machines. It now follows the distribution, `energyml-rust`.
@@ -50,7 +50,7 @@ energyml-geometry = { path = "../energyml-geometry", version = "0.1.0" }
 energyml-export = { path = "../energyml-export", version = "0.1.0" }
 # **Geodesy, and it is needed even when nobody asks for it**: RFC 7946 makes
 # GeoJSON WGS 84 by definition, so the exporter **refuses** a model in projected
-# metres without a reprojector — which this bridge used to do, so that
+# metres without a reprojector - which this bridge used to do, so that
 # `export(…, "geojson")` was impossible from Python while the command line wrote
 # it. Pure Rust, wasm included: nothing native comes in here.
 energyml-proj = { path = "../energyml-proj", version = "0.1.0" }
@@ -61,19 +61,19 @@ serde_json = "1.0"
 # **Nothing is on by default, and that is not caution: it is what keeps
 # `cargo build --workspace` doable without installing anything.** A workspace
 # member that requires a C library and an interpreter requires them for *all*
-# the others, through feature unification — ordinary compilation, lint, wasm,
+# the others, through feature unification - ordinary compilation, lint, wasm,
 # everything would pay for a bridge they have no use for. The cost of this
 # choice is real and it is named: without `python`, `lib.rs` is empty, and only
 # `session` is exercised by the suite (which is all it could exercise anyway).
 [features]
 default = []
-# Tests on the private real-file corpus under testdata/ — real-file campaign, run privately. Off by default.
+# Tests on the private real-file corpus under testdata/ - real-file campaign, run privately. Off by default.
 private-corpus = []
 # What maturin turns on, and the only combination that produces a module.
 # `hdf5` is part of it: a Python bridge that did not read `.h5` files would let
 # h5py back in through the window, which is exactly what was asked to avoid.
 python = ["dep:pyo3", "dep:numpy", "hdf5"]
-# The native backend, alone — for the `hdf5` CI suite, which exercises array
+# The native backend, alone - for the `hdf5` CI suite, which exercises array
 # reading and writing without needing an interpreter.
 hdf5 = ["energyml-storage/hdf5"]
 

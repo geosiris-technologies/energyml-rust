@@ -1,8 +1,8 @@
-//! `attach` — a file attached to an object, or to a collection, in the form
+//! `attach` - a file attached to an object, or to a collection, in the form
 //! the destination can hold.
 //!
 //! The attachment operation has to be offered in the operations list and also
-//! in the view that adds and lists the package's internal media — one operation, three
+//! in the view that adds and lists the package's internal media - one operation, three
 //! doors (the operations list, the package's files, an object's sheet), each
 //! pre-filling what it knows.
 //!
@@ -10,10 +10,10 @@
 //!
 //! | form | written here | where the bytes go |
 //! |---|---|---|
-//! | **part** (A) | what `media` writes — **delegated**, not rewritten | a part of the zip, `destinationMedia` / `sourceMedia` (EPC §3.4.2 pp. 15–16) |
+//! | **part** (A) | what `media` writes - **delegated**, not rewritten | a part of the zip, `destinationMedia` / `sourceMedia` (EPC §3.4.2 pp. 15-16) |
 //! | **inline** (B) | an `eml23.Attachment`, `Content` in base 64 | the XML of the object |
 //! | **part-address** (C) | an `eml23.Attachment` with `Content` empty and `ContentUri` a part name, **plus the part** (by `media`, related to the `Attachment` itself: `destinationMedia`) | the zip |
-//! | **external** (D) | an `eml23.Attachment` with `Content` empty and `ContentUri` an http(s) address | a server — never fetched here |
+//! | **external** (D) | an `eml23.Attachment` with `Content` empty and `ContentUri` an http(s) address | a server - never fetched here |
 //!
 //! `energyml_domain::attachments` reads all four back, and the test confronts
 //! the two: what is written here is what that reader finds.
@@ -21,20 +21,20 @@
 //! # What is decided, and what is refused
 //!
 //! - **the form follows what is given** when it is not stated: a file is a
-//!   part (A — it passes everywhere and grows no object), an address alone is
+//!   part (A - it passes everywhere and grows no object), an address alone is
 //!   external (D). A form stated that the inputs cannot make is refused on its
 //!   slot: a file for D, an address for A, B or C;
 //! - **an `Attachment` is an EML 2.3 object**, so B, C and D are refused on a
-//!   target of a release that has none (RESQML 2.0.1, EML 2.0 — a type whose
+//!   target of a release that has none (RESQML 2.0.1, EML 2.0 - a type whose
 //!   package number ends in `20`), **by name, with the part form offered**;
 //! - **a part has no depth and no category** (A is the packaging conventions'
 //!   relation, which carries neither): `md` and `category` with the part form
 //!   are refused, and the forms that carry them are named;
 //! - **a depth goes on what has a measured depth**: a well, a trajectory, a
-//!   frame, a log, or a collection (which may hold wells — a depth of 0 on a
+//!   frame, a log, or a collection (which may hold wells - a depth of 0 on a
 //!   collection puts the image at the head of the hole). A surface with an
-//!   `md` is refused. `Md` is **the head of the hole** at 0 — the datum, not
-//!   necessarily the ground — and the unit is written with it;
+//!   `md` is refused. `Md` is **the head of the hole** at 0 - the datum, not
+//!   necessarily the ground - and the unit is written with it;
 //! - **the content type is stated, never guessed** (the rule of `media`): the
 //!   one the source declared or `contentType`; required for the three forms
 //!   that carry a file, optional for an address;
@@ -48,7 +48,7 @@
 //! The package's files view hands a part over **by its part name**
 //! (`media/symbols/x.png`) to be related to an object. Written under the default
 //! `media/` + name it would be a second copy, so a document whose name holds a
-//! folder keeps that name as its part name — unless `path` says otherwise. A
+//! folder keeps that name as its part name - unless `path` says otherwise. A
 //! file picked from a disk has no folder in its name; the inline form's
 //! `FileName` is always the last segment (*a name only, not a path*).
 //!
@@ -81,7 +81,7 @@ use crate::operation::{
 /// The operation.
 pub struct Attach;
 
-/// The form of the attachment — the four forms of the module doc.
+/// The form of the attachment - the four forms of the module doc.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
 pub enum Form {
     /// A part of the package, related to the object (the packaging conventions).
@@ -97,33 +97,33 @@ pub enum Form {
 /// What `attach` is told.
 #[derive(Debug, Params)]
 pub struct AttachParams {
-    /// how the attachment is written: the part of the package (A), the file inside the object (B), an address to a part (C) or to a server (D) — left out, a file is a part and an address is external
+    /// how the attachment is written: the part of the package (A), the file inside the object (B), an address to a part (C) or to a server (D) - left out, a file is a part and an address is external
     pub form: Option<Form>,
-    /// the external address of the file, http or https — instead of a file, for the external form
+    /// the external address of the file, http or https - instead of a file, for the external form
     pub address: Option<String>,
-    /// the measured depth the file is indexed at, along the hole — 0 is the head of the hole; left out, the file is about the whole object
+    /// the measured depth the file is indexed at, along the hole - 0 is the head of the hole; left out, the file is about the whole object
     pub md: Option<f64>,
     /// the unit of `md`
     #[param(default = String::from("m"), optional)]
     pub md_uom: String,
-    /// what the file is, in a word — `Symbol`, `HeadImage`, `CuttingsPicture` (64 characters at most)
+    /// what the file is, in a word - `Symbol`, `HeadImage`, `CuttingsPicture` (64 characters at most)
     pub category: Option<String>,
-    /// the file's name, without a folder — left out, the file's own (64 characters at most)
+    /// the file's name, without a folder - left out, the file's own (64 characters at most)
     pub file_name: Option<String>,
-    /// the file's content type, `image/png` — left out, what its source declared; never guessed from the name
+    /// the file's content type, `image/png` - left out, what its source declared; never guessed from the name
     pub content_type: Option<String>,
-    /// for the part and part-address forms: the part's name in the package — left out, `media/` and the file's name
+    /// for the part and part-address forms: the part's name in the package - left out, `media/` and the file's name
     pub path: Option<String>,
-    /// the attachment's title — left out, the file's name and what it is attached to
+    /// the attachment's title - left out, the file's name and what it is attached to
     pub title: Option<Title>,
 }
 
 /// What `attach` takes.
 #[derive(Debug, Inputs)]
 pub struct AttachInputs {
-    /// the object or collection the file is attached to — what is attached to a collection applies to its members
+    /// the object or collection the file is attached to - what is attached to a collection applies to its members
     pub target: ObjectIn,
-    /// the file, carried as bytes — left out when only an address is given
+    /// the file, carried as bytes - left out when only an address is given
     pub file: Option<Document>,
 }
 
@@ -177,7 +177,7 @@ impl Operation for Attach {
     fn about(&self) -> About {
         About {
             name: "attach",
-            describe: "a file attached to an object or a collection — a part of the package, or an Attachment carrying the file, naming a part or an address",
+            describe: "a file attached to an object or a collection - a part of the package, or an Attachment carrying the file, naming a part or an address",
             category: Category::Create,
             makes: &["eml23.Attachment"],
             recipe: "attach",
@@ -230,7 +230,7 @@ impl Operation for Attach {
             (_, true, true) => {
                 return Err(Refusal::on(
                     "address",
-                    "a file and an address are both given: the file is written in the package or the object, and the address names a file that stays where it is — give one",
+                    "a file and an address are both given: the file is written in the package or the object, and the address names a file that stays where it is - give one",
                 ));
             }
             (None, true, false) => Form::Part,
@@ -245,7 +245,7 @@ impl Operation for Attach {
                 return Err(Refusal::on(
                     "form",
                     format!(
-                        "the {} form writes the file: give it as `file` — an address alone is the external form",
+                        "the {} form writes the file: give it as `file` - an address alone is the external form",
                         form.word()
                     ),
                 ));
@@ -258,7 +258,7 @@ impl Operation for Attach {
             return Err(Refusal::on(
                 "form",
                 format!(
-                    "`{}` is a {}, of a release that has no `Attachment` object (EML 2.3): the {} form cannot name it — the part form (`part`) relates a file to it in the package",
+                    "`{}` is a {}, of a release that has no `Attachment` object (EML 2.3): the {} form cannot name it - the part form (`part`) relates a file to it in the package",
                     reference.title,
                     reference.qualified_type,
                     form.word()
@@ -275,7 +275,7 @@ impl Operation for Attach {
                 if given {
                     return Err(Refusal::on(
                         slot,
-                        "a part related to an object carries neither a depth nor a category (EPC §3.4.2 pp. 15–16): the inline, part-address and external forms do",
+                        "a part related to an object carries neither a depth nor a category (EPC §3.4.2 pp. 15-16): the inline, part-address and external forms do",
                     ));
                 }
             }
@@ -284,7 +284,7 @@ impl Operation for Attach {
             return Err(Refusal::on(
                 "md",
                 format!(
-                    "`{}` is a {}, which has no measured depth: a depth indexes a file along a well, a trajectory, a frame, a log — or a collection that may hold wells",
+                    "`{}` is a {}, which has no measured depth: a depth indexes a file along a well, a trajectory, a frame, a log - or a collection that may hold wells",
                     reference.title, reference.qualified_type
                 ),
             ));
@@ -296,8 +296,8 @@ impl Operation for Attach {
             }
             Some(value) => {
                 let uom = params.md_uom.trim();
-                // The enumeration is open — a word it does not list is kept as
-                // `Other` — so a unit that is not the standard list's is
+                // The enumeration is open - a word it does not list is kept as
+                // `Other` - so a unit that is not the standard list's is
                 // refused here, where it would otherwise be written as typed.
                 let uom = match <eml::LengthUomExt as XmlText>::from_xml_text(uom) {
                     Ok(eml::LengthUomExt::Other(_)) | Err(_) => {
@@ -357,7 +357,7 @@ impl Operation for Attach {
                 None if required => Err(Refusal::on(
                     "contentType",
                     format!(
-                        "the content type of `{file}` is stated nowhere — give `contentType`; it is never guessed from a file's name"
+                        "the content type of `{file}` is stated nowhere - give `contentType`; it is never guessed from a file's name"
                     ),
                 )),
                 None => Ok(None),
@@ -365,7 +365,7 @@ impl Operation for Attach {
         };
 
         // A document named with a folder is **already a part of the package**
-        // — `media/symbols/x.png`, as the files view hands one over to be
+        // - `media/symbols/x.png`, as the files view hands one over to be
         // related to an object: its name is its part name, and the default
         // `media/` + name would write it a second time under another one. A
         // file from a disk has no folder in its name.
@@ -446,7 +446,7 @@ impl Operation for Attach {
                 says.push(Note {
                         key: "form",
                         detail: format!(
-                            "the inline form: {} byte(s) in the object's `Content`, in base 64 — the object grows by a third",
+                            "the inline form: {} byte(s) in the object's `Content`, in base 64 - the object grows by a third",
                             file.bytes.len()
                         ),
                     });
@@ -492,7 +492,7 @@ impl Operation for Attach {
                 });
                 says.push(Note {
                         key: "convention",
-                        detail: "`ContentUri` names a part of the package by its path: this tool's reading of a relative address — the schema says only *a URI pointing to the location of the attached content*".to_string(),
+                        detail: "`ContentUri` names a part of the package by its path: this tool's reading of a relative address - the schema says only *a URI pointing to the location of the attached content*".to_string(),
                     });
                 parameters.push(Parameter::Text {
                     title: "part".to_string(),
@@ -545,7 +545,7 @@ impl Operation for Attach {
                     .or_else(|| (!tail.is_empty() && tail.chars().count() <= 64).then(|| tail.to_string()));
                 says.push(Note {
                         key: "form",
-                        detail: "the external form: the attachment names an address, and nothing is fetched — a reader follows it on request".to_string(),
+                        detail: "the external form: the attachment names an address, and nothing is fetched - a reader follows it on request".to_string(),
                     });
                 parameters.push(Parameter::Text {
                     title: "address".to_string(),
@@ -584,8 +584,8 @@ impl Operation for Attach {
         );
         let uuid = cx.identity.uuid(&seed, 0)?;
         // Form C: the Attachment is the object the part is a media
-        // representation of — `destinationMedia` from its `.rels`,
-        // `sourceMedia` back (Packaging Conventions v1.0 §3.4.2 pp. 15–16:
+        // representation of - `destinationMedia` from its `.rels`,
+        // `sourceMedia` back (Packaging Conventions v1.0 §3.4.2 pp. 15-16:
         // *« The object in Target is a media representation for the current
         // object »*). Without it the part is in the zip and nothing in the
         // package's relations says what it is for (the part would otherwise
@@ -601,7 +601,7 @@ impl Operation for Attach {
                     md.measured_depth.value,
                     md.measured_depth.uom.as_xml_str(),
                     if md.measured_depth.value == 0.0 {
-                        " — the head of the hole, at the datum"
+                        " - the head of the hole, at the datum"
                     } else {
                         ""
                     }

@@ -17,7 +17,7 @@
 //! # The four decisions
 //!
 //! - **A value that is not a number is counted, not skipped.** `NaN` is how the
-//!   corpus says *no data here* — 785 250 of ALWYN's 987 387 grid nodes — and
+//!   corpus says *no data here* - 785 250 of ALWYN's 987 387 grid nodes - and
 //!   the count of them is often the most useful number on the panel. It is kept
 //!   apart from the total so that "how much of this array is real" is a
 //!   subtraction anybody can check, and neither the mean nor the extremes see
@@ -28,7 +28,7 @@
 //!   Below [`CATEGORY_LIMIT`] distinct integers it comes back as counts per
 //!   value; above it, as a histogram.
 //! - **The extremes are the bin edges, and the last bin is closed.** A value
-//!   equal to the maximum belongs to the last bin, not to a bin past the end —
+//!   equal to the maximum belongs to the last bin, not to a bin past the end -
 //!   the classic off-by-one, and it silently drops exactly the values a person
 //!   is looking for when they open a histogram.
 //! - **A series is decimated here, not in the transport.** Plotting a million
@@ -60,7 +60,7 @@ pub const TEXT_LIMIT: usize = 24;
 pub struct Category {
     /// The value, as it should be shown: `3`, `true`, `Top Brent`.
     pub label: String,
-    /// Its numeric reading, when it has one — what a chart puts on an axis.
+    /// Its numeric reading, when it has one - what a chart puts on an axis.
     pub value: Option<f64>,
     /// How many times it occurs.
     pub count: u64,
@@ -69,9 +69,9 @@ pub struct Category {
 /// The counts of an array's values across equal intervals.
 #[derive(Clone, PartialEq, Debug)]
 pub struct Histogram {
-    /// Lower edge of the first bin — the array's minimum.
+    /// Lower edge of the first bin - the array's minimum.
     pub from: f64,
-    /// Upper edge of the last bin — the array's maximum, **included**.
+    /// Upper edge of the last bin - the array's maximum, **included**.
     pub to: f64,
     /// One count per bin, low to high.
     pub bins: Vec<u64>,
@@ -86,7 +86,7 @@ impl Histogram {
         (self.to - self.from) / self.bins.len() as f64
     }
 
-    /// The half-open interval a bin covers — closed at the top for the last one.
+    /// The half-open interval a bin covers - closed at the top for the last one.
     pub fn edges(&self, bin: usize) -> (f64, f64) {
         let width = self.width();
         (
@@ -114,7 +114,7 @@ pub struct Summary {
     pub family: Family,
     /// How many values there are, `NaN` included.
     pub count: usize,
-    /// How many of them are numbers — the population every statistic below is
+    /// How many of them are numbers - the population every statistic below is
     /// computed over.
     pub finite: usize,
     /// How many are not: `NaN`, `+INF`, `-INF`. The corpus's way of saying "no
@@ -131,7 +131,7 @@ pub struct Summary {
     /// Equal-interval counts, when the values are a range.
     ///
     /// `None` for text, for a discrete array small enough to be listed value by
-    /// value, and for an array with no finite value at all — three cases where
+    /// value, and for an array with no finite value at all - three cases where
     /// a histogram would be a picture of nothing.
     pub histogram: Option<Histogram>,
     /// Counts per value, when there are few enough of them to name.
@@ -141,7 +141,7 @@ pub struct Summary {
     pub categories: Vec<Category>,
     /// How many distinct values the array holds, when that was counted.
     ///
-    /// Only for the families where it is cheap and meaningful — booleans,
+    /// Only for the families where it is cheap and meaningful - booleans,
     /// integers, strings. `None` for floating point, where distinctness is a
     /// question about bit patterns rather than about data.
     pub distinct: Option<usize>,
@@ -170,8 +170,8 @@ impl Summary {
 /// Floating point and integers: the same arithmetic, one flag apart.
 ///
 /// The flag is whether being *discrete* is worth acting on. An integer array
-/// with a handful of distinct values is a set of categories — facies, regions,
-/// zone indices — and binning it draws spikes with meaningless gaps between
+/// with a handful of distinct values is a set of categories - facies, regions,
+/// zone indices - and binning it draws spikes with meaningless gaps between
 /// them. A floating-point array is never treated that way, even when it happens
 /// to hold three values: equality on doubles is a bit pattern, not a category.
 fn numeric(
@@ -279,7 +279,7 @@ fn histogram(values: impl Iterator<Item = f64>, min: f64, max: f64, bins: usize)
         let bin = if width > 0.0 {
             // `min` is not multiplied out: `(value - min) / width` keeps the
             // first bin exact, which matters when the range is tiny next to the
-            // values themselves — depths around 3 000 m spanning two metres.
+            // values themselves - depths around 3 000 m spanning two metres.
             ((value - min) / width) as usize
         } else {
             0
@@ -322,7 +322,7 @@ fn booleans(values: &[bool]) -> Summary {
         mean,
         deviation: mean.map(|p| (p * (1.0 - p)).sqrt()),
         histogram: None,
-        // Both, always, and in this order — a run of ten thousand `true` says
+        // Both, always, and in this order - a run of ten thousand `true` says
         // something different from ten thousand values of which none is false,
         // and a legend that omits the empty half hides which of the two it is.
         categories: vec![

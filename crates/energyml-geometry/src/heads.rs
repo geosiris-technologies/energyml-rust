@@ -1,4 +1,4 @@
-//! **The wellheads of many wells, in the coordinates a scene draws them in** —
+//! **The wellheads of many wells, in the coordinates a scene draws them in** -
 //! what a profile projects (the wiring that was still to be done for the
 //! well profile view).
 //!
@@ -20,18 +20,18 @@
 //! # One frame of reference, or a refusal
 //!
 //! A profile measures distances in a plane; two heads in two systems would be
-//! measured against each other in one set of numbers that mean two things — a
+//! measured against each other in one set of numbers that mean two things - a
 //! wrong answer that looks like a right one. [`Heads::system`] is the system
 //! every head shares, and [`of_objects`] **refuses the lot** when they do not,
 //! naming the first two that disagree. Whether the *track* is in that system
-//! is the caller's to check — it holds the track — and [`Heads::system`] is
+//! is the caller's to check - it holds the track - and [`Heads::system`] is
 //! what it compares with.
 //!
 //! # What is refused, and what is not
 //!
 //! One object that cannot be read goes to [`Heads::refused`] with its name and
 //! its reason, and the others go on. A frame takes the head of **its
-//! trajectory**; anything else — a surface, a WITSML trajectory — is refused as
+//! trajectory**; anything else - a surface, a WITSML trajectory - is refused as
 //! what it is.
 
 use energyml_core::identity;
@@ -79,7 +79,7 @@ pub struct Heads {
 }
 
 /// The way two heads can be told apart: the EPSG code and, outside `Metres`,
-/// the horizontal unit — two systems that spell the same number differently
+/// the horizontal unit - two systems that spell the same number differently
 /// are two systems.
 #[derive(Clone, Debug, PartialEq)]
 struct System {
@@ -100,7 +100,7 @@ impl System {
     }
 }
 
-/// The trajectories of a package, by uri — what "every well" means here: one
+/// The trajectories of a package, by uri - what "every well" means here: one
 /// head per hole. A frame hangs on a trajectory and would repeat its head, so
 /// the frames are left out unless they are asked for by name.
 pub fn trajectories_of(summaries: &[ObjectSummary]) -> Vec<String> {
@@ -111,8 +111,8 @@ pub fn trajectories_of(summaries: &[ObjectSummary]) -> Vec<String> {
         .collect()
 }
 
-/// The heads of these objects — wellbore trajectories or frames, resolved by
-/// `source` from what `asked` says (a uri or a uuid, as the source takes it) —
+/// The heads of these objects - wellbore trajectories or frames, resolved by
+/// `source` from what `asked` says (a uri or a uuid, as the source takes it) -
 /// placed as asked. See the module for the refusals.
 ///
 /// # Errors
@@ -201,7 +201,7 @@ fn head_of_one(
     ))
 }
 
-/// `head_of`'s projected `x`/`y` into a placement — the table of the module.
+/// `head_of`'s projected `x`/`y` into a placement - the table of the module.
 fn place(
     x: f64,
     y: f64,

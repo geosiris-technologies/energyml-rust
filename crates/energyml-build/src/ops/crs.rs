@@ -1,4 +1,4 @@
-//! `crs` — a coordinate reference system from an EPSG code, out of nothing.
+//! `crs` - a coordinate reference system from an EPSG code, out of nothing.
 //!
 //! The most degenerate operation, and the one that puts the trait to the test
 //! from the far end: **no input at all**. A design that made the input
@@ -12,41 +12,41 @@
 //! (RESQML TRG v2.2, §3.1, p. 22). So over metres this writes the
 //! `ProjectedCrs`, the `VerticalCrs`, the `LocalEngineering2dCrs` set on the
 //! first (embedded as its `OriginProjectedCrs`) and the
-//! `LocalEngineeringCompoundCrs` that joins the plane to the vertical — and the
+//! `LocalEngineeringCompoundCrs` that joins the plane to the vertical - and the
 //! compound is the object a geometry names, role [`crate::crs::FRAME_ROLE`].
 //!
 //! The doc used to say that *a `LocalCrs` a representation attaches to
-//! references both* halves: it did not — there was no compound, and what a
+//! references both* halves: it did not - there was no compound, and what a
 //! geometry named was the horizontal half, the vertical referenced by nothing
 //! (a defect found by an audit of the reference model).
 //!
 //! Over **degrees** there is no compound to write: `OriginProjectedCrs` is a
 //! `ProjectedCrs` (`CRS.xsd` l. 504). The two halves are written, the plan
 //! says it (`frame-degrees`), and asking for an origin, an azimuth or another
-//! axis on degrees is refused — a deliberate decision.
+//! axis on degrees is refused - a deliberate decision.
 //!
 //! # What the local frame can say
 //!
-//! By default the **identity** — origin 0/0, azimuth 0, the axis counting the
-//! way the vertical system does, in metres, origin 0 in it — so what is written
+//! By default the **identity** - origin 0/0, azimuth 0, the axis counting the
+//! way the vertical system does, in metres, origin 0 in it - so what is written
 //! under it is what was written under the `ProjectedCrs`. The parameters are
 //! the ones the reference model's frames need, and their names are shared
 //! with the recipe that builds that model:
 //!
-//! - `originEasting`, `originNorthing` — where the local origin sits in the
+//! - `originEasting`, `originNorthing` - where the local origin sits in the
 //!   projected system;
-//! - `azimuth` — the rotation of the local Y axis, **degrees clockwise from
-//!   grid north** (RESQML 2.0.1 `Common.xsd` l. 136–145 for the sense, the one
+//! - `azimuth` - the rotation of the local Y axis, **degrees clockwise from
+//!   grid north** (RESQML 2.0.1 `Common.xsd` l. 136-145 for the sense, the one
 //!   the azimuth replaced; `AzimuthReference` written `grid north`);
-//! - `axis` — `elevation` (the vertical system's own sense), `depth` (down),
+//! - `axis` - `elevation` (the vertical system's own sense), `depth` (down),
 //!   `time` (down, `IsTime`, in `timeUom`);
-//! - `originVertical` — the vertical coordinate of the local origin **in the
-//!   vertical system**, its sense and unit (`CRS.xsd` l. 517–520).
+//! - `originVertical` - the vertical coordinate of the local origin **in the
+//!   vertical system**, its sense and unit (`CRS.xsd` l. 517-520).
 //!
 //! # A code of degrees under a `ProjectedCrs` is refused
 //!
 //! `crs --set epsg=4326` wrote a `ProjectedCrs` whose code measures degrees,
-//! and nothing said so — `crate::crs::is_geographic` existed and was not called
+//! and nothing said so - `crate::crs::is_geographic` existed and was not called
 //! (a defect found in audit). Both mismatches are refused by name now, and a code this build
 //! does not know is written as asked and said to be unchecked: *I do not know*
 //! is not *no*.
@@ -60,7 +60,7 @@ use crate::operation::{About, ActivityDraft, Category, Context, Note, Operation,
 /// The operation.
 pub struct Crs;
 
-/// What `crs` is told — and nothing taken: `Inputs = ()`.
+/// What `crs` is told - and nothing taken: `Inputs = ()`.
 #[derive(Debug, Params)]
 pub struct CrsParams {
     /// the EPSG code of the horizontal system
@@ -82,10 +82,10 @@ pub struct CrsParams {
     /// Which way the local z counts.
     #[param(flatten)]
     pub axis: AxisParams,
-    /// the vertical coordinate of the local origin, in the vertical system — its sense and its unit
+    /// the vertical coordinate of the local origin, in the vertical system - its sense and its unit
     #[param(default = 0.0, optional, uom = "m")]
     pub origin_vertical: f64,
-    /// the title of the frame a geometry names — the compound, or the horizontal system in degrees; defaults to what it is
+    /// the title of the frame a geometry names - the compound, or the horizontal system in degrees; defaults to what it is
     pub title: Option<Title>,
 }
 
@@ -105,7 +105,7 @@ pub enum AxisParams {
 /// A time axis.
 #[derive(Debug, Params)]
 pub struct TimeAxis {
-    /// time: the unit the axis counts in — ms, s
+    /// time: the unit the axis counts in - ms, s
     #[param(default = String::from("ms"), optional)]
     pub time_uom: String,
 }
@@ -127,7 +127,7 @@ impl Operation for Crs {
     fn about(&self) -> About {
         About {
             name: "crs",
-            describe: "a coordinate system from EPSG codes — the projected and vertical halves and the local compound a geometry names, with an origin, an azimuth and a depth or time axis on demand — takes no input",
+            describe: "a coordinate system from EPSG codes - the projected and vertical halves and the local compound a geometry names, with an origin, an azimuth and a depth or time axis on demand - takes no input",
             category: Category::Frame,
             makes: &[
                 "eml23.ProjectedCrs",
@@ -163,7 +163,7 @@ impl Operation for Crs {
             }
             (None, _) => says.push(Note {
                 key: "epsg-unchecked",
-                detail: format!("EPSG:{epsg} is not in this build's table, so whether it measures degrees or metres was not checked — it is written as asked"),
+                detail: format!("EPSG:{epsg} is not in this build's table, so whether it measures degrees or metres was not checked - it is written as asked"),
             }),
             _ => {}
         }
@@ -193,8 +193,8 @@ impl Operation for Crs {
             ..Default::default()
         };
         let mut built = crate::crs::build(&target, &vertical, &local, &names, citation).map_err(|why| {
-            // Every refusal of `build` is about what this operation was told —
-            // a number, the time unit, a local frame over degrees — and it
+            // Every refusal of `build` is about what this operation was told -
+            // a number, the time unit, a local frame over degrees - and it
             // names the setting in backticks when it is one.
             let slot = [
                 "timeUom",
@@ -234,7 +234,7 @@ impl Operation for Crs {
                 recipe: "crs",
                 title: format!("crs → {}", frame.title),
                 // What tells two runs apart is what tells their compounds
-                // apart — the frame's uuid carries all of it.
+                // apart - the frame's uuid carries all of it.
                 seed: format!("{epsg}:{vertical_key}:{}", frame.uuid),
                 parameters: vec![
                     Parameter::Double {

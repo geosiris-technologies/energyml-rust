@@ -1,10 +1,10 @@
-//! What a face that holds a whole package — an `EpcStore` — gives the section
+//! What a face that holds a whole package - an `EpcStore` - gives the section
 //! besides its objects: its colour sets, its index, and the objects a section
 //! takes when nobody chose.
 //!
 //! This was written in `energyml profile`, and a second face would have written
 //! it again (ADR-0012: no face carries logic). A face that
-//! already holds these — the front end keeps its index and its colour walks — builds
+//! already holds these - the front end keeps its index and its colour walks - builds
 //! a [`crate::read::PackageContext`] from its own instead, and never calls
 //! [`Listed::of`].
 
@@ -57,7 +57,7 @@ impl<'a> Listed<'a> {
         })
     }
 
-    /// The context the calculation reads through — borrowed from this listing.
+    /// The context the calculation reads through - borrowed from this listing.
     /// The same the front end's session gives: its index, and a silent well painted
     /// from the frames of its wellbore.
     pub fn context(&self) -> PackageContext<'_> {
@@ -70,7 +70,7 @@ impl<'a> Listed<'a> {
     }
 }
 
-/// The frames that represent a wellbore (a uuid), **by the index** — its
+/// The frames that represent a wellbore (a uuid), **by the index** - its
 /// dependents of that type, never a scan of the package (measured on a front end's
 /// `frames_of_wellbore`: 1.15 s a well by scanning).
 pub fn frames_of_wellbore(store: &EpcStore, index: &PackageIndex, wellbore: &str) -> Vec<Box<dyn DynObject>> {
@@ -82,9 +82,9 @@ pub fn frames_of_wellbore(store: &EpcStore, index: &PackageIndex, wellbore: &str
         .collect()
 }
 
-/// What a section takes from a package when nobody chose: **every** well —
+/// What a section takes from a package when nobody chose: **every** well -
 /// trajectories and frames, a frame carrying the strata and folding into its
-/// trajectory's line (ADR-0015) — and every surface and grid a
+/// trajectory's line (ADR-0015) - and every surface and grid a
 /// section cuts ([`is_cut_type`]). By uri, in the package's order.
 pub fn selection(store: &EpcStore) -> (Vec<String>, Vec<String>) {
     let resources = store.resources();

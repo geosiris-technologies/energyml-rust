@@ -1,5 +1,5 @@
 //! A cache that keeps nothing answers what a cache that keeps everything
-//! answers — **the audit: cache on, cache off, on Lutetia**.
+//! answers - **the audit: cache on, cache off, on Lutetia**.
 //!
 //! There is one implementation (ADR-0010): a layer that is off runs the same code
 //! over a slot thrown away after the call. What differs is what is *held*, and

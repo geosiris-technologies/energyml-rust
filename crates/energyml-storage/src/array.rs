@@ -3,7 +3,7 @@
 //! An EnergyML object rarely carries its numbers. It carries a *pointer* to
 //! them, and there are two spellings of that pointer, both in use:
 //!
-//! | | RESQML 2.0.1 / eml 2.0–2.2 | RESQML 2.2 / eml 2.3 |
+//! | | RESQML 2.0.1 / eml 2.0-2.2 | RESQML 2.2 / eml 2.3 |
 //! |---|---|---|
 //! | in the object | `Hdf5Dataset`: a DOR to an `EpcExternalPartReference`, plus `PathInHdfFile` | `ExternalDataArrayPart`: `URI`, `PathInExternalFile`, `MimeType`, `Count`, `StartIndex` |
 //! | file name | in the proxy's `.rels`, as an `externalResource` target | in the object, in `URI` |
@@ -16,7 +16,7 @@
 //! WITSML 2.1 `ChannelData` whose `FileUri` names an HDF5 file and whose `Data`
 //! holds the path of a dataset in it (ADR-0013).
 //! Located here like the other two, so that everything that walks the arrays
-//! of an object — a cut, an import, a rename, a prefetch — carries it along
+//! of an object - a cut, an import, a rename, a prefetch - carries it along
 //! instead of losing it in silence.
 //!
 //! # The path inside the file is opaque
@@ -24,7 +24,7 @@
 //! `PathInExternalFile` and `PathInHdfFile` are **strings, and nothing else**.
 //! fesapi writes `/resqml22/<uuid>/Points` and the convention is convenient,
 //! but no part of the schema requires the uuid to be in there, or requires any
-//! shape at all. Nothing here parses, splits or validates the path — it is
+//! shape at all. Nothing here parses, splits or validates the path - it is
 //! handed to the backend exactly as the object wrote it, and a package that
 //! calls its dataset `/my/points` works. `a_path_need_not_contain_a_uuid` in
 //! the tests pins that down, because it is the kind of assumption that gets
@@ -32,12 +32,12 @@
 //!
 //! # And the format is not necessarily HDF5
 //!
-//! Both spellings carry a MIME type, so both can point at something else — a
+//! Both spellings carry a MIME type, so both can point at something else - a
 //! CSV, a Parquet file, whatever a producer and a consumer agree on. eml 2.3
-//! puts it in the part (`MimeType`); eml 2.0–2.2 put it on the
+//! puts it in the part (`MimeType`); eml 2.0-2.2 put it on the
 //! `EpcExternalPartReference`, where it is a **mandatory** element whose
 //! documentation reads "MIME type for HDF proxy is: application/x-hdf5 (by
-//! RESQML convention)" — a convention, therefore, not a rule. The MIME type is
+//! RESQML convention)" - a convention, therefore, not a rule. The MIME type is
 //! what picks the backend; HDF5 is merely the one that ships.
 //!
 //! [`locate`] is a **free function over an object already in memory**, not a
@@ -49,7 +49,7 @@ use energyml_core::identity;
 use energyml_core::reflect::TypeKind;
 use energyml_core::value::{FieldValue, Reflect, Scalar};
 
-/// Where one array — or one slice of one — actually lives.
+/// Where one array - or one slice of one - actually lives.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ArrayLocation {
     /// The file, as the package names it. A bare file name in practice, though
@@ -60,10 +60,10 @@ pub struct ArrayLocation {
     pub file: String,
     /// Path of the dataset inside the file, e.g. `/resqml22/<uuid>/Points`.
     pub path_in_file: String,
-    /// MIME type declared for the data — `application/x-hdf5`, but the field
+    /// MIME type declared for the data - `application/x-hdf5`, but the field
     /// exists precisely so it need not be.
     ///
-    /// eml 2.3 carries it in the part itself; eml 2.0–2.2 carry it on the
+    /// eml 2.3 carries it in the part itself; eml 2.0-2.2 carry it on the
     /// `EpcExternalPartReference`, which is why resolving a proxy yields this
     /// as well as the file name (see [`ProxyTarget`]).
     pub mime: Option<String>,
@@ -161,7 +161,7 @@ impl ProxyResolver for NoProxies {
 /// Every array the object points at, both spellings, without a resolver.
 ///
 /// Locations that go through a proxy come back with an empty `file` and a
-/// `proxy_uuid` set — enough to ask the store afterwards.
+/// `proxy_uuid` set - enough to ask the store afterwards.
 pub fn locate(object: &dyn Reflect) -> Vec<ArrayLocation> {
     locate_with(object, &NoProxies)
 }
@@ -176,8 +176,8 @@ pub fn locate_with(object: &dyn Reflect, resolver: &dyn ProxyResolver) -> Vec<Ar
 /// The type names that mean "here is where the numbers are".
 ///
 /// Three, not two, and the middle one was missing until 31/08. eml 2.1 and 2.2
-/// carry `ExternalDatasetPart` — reached through a field spelled
-/// `ExternalFileProxy` — which is the older shape's proxy reference with the
+/// carry `ExternalDatasetPart` - reached through a field spelled
+/// `ExternalFileProxy` - which is the older shape's proxy reference with the
 /// newer shape's `PathInExternalFile`. It is neither of its neighbours, and
 /// nothing matched it: every array of every eml 2.1/2.2 package came back as
 /// "declares no external data at all". That is witsml 2.0, prodml 2.0 and
@@ -187,7 +187,7 @@ const NEW_FORM: &str = "ExternalDataArrayPart";
 const MID_FORM: &str = "ExternalDatasetPart";
 const OLD_FORM: &str = "Hdf5Dataset";
 
-/// A WITSML `ChannelData` whose rows are a dataset of an HDF5 file — **an
+/// A WITSML `ChannelData` whose rows are a dataset of an HDF5 file - **an
 /// extension beyond the standard** (ADR-0013).
 ///
 /// WITSML TRG v2.1 §7.2 p. 146 gives `ChannelData` two forms: `Data`, *"The
@@ -195,21 +195,21 @@ const OLD_FORM: &str = "Hdf5Dataset";
 /// bulk data. If this field is non-null, then the data field is ignored."*
 /// The extension is the pair: `FileUri` names the file as the standard has it
 /// name one (a relative URI, the same string an `ExternalDataArrayPart.URI`
-/// of the package holds), and `Data` — which the standard ignores once
-/// `FileUri` is set — holds the **absolute path of the dataset** inside it.
+/// of the package holds), and `Data` - which the standard ignores once
+/// `FileUri` is set - holds the **absolute path of the dataset** inside it.
 /// [`is_channel_data_in_file`] is the one definition of the form.
 const CHANNEL_DATA: &str = "ChannelData";
 
 /// Whether a `ChannelData`'s `FileUri` and `Data` are the extension of
-/// `CHANNEL_DATA` — the **one** definition, which the locator here and the
+/// `CHANNEL_DATA` - the **one** definition, which the locator here and the
 /// series reader of `energyml-domain` both ask.
 ///
 /// Both present, and `Data` an absolute HDF5 path: it begins with `/`, which
-/// **no JSON text can** — RFC 8259 §2, a JSON text is optional whitespace then
+/// **no JSON text can** - RFC 8259 §2, a JSON text is optional whitespace then
 /// a value, and a value begins with `{`, `[`, `"`, `-`, a digit, `t`, `f` or
 /// `n`. So the test is not a guess on content: the two syntaxes are disjoint,
 /// and a standard file that writes `FileUri` **beside** an inline blob (the
-/// standard then ignores the blob, §7.2 p. 146) stays the standard's form —
+/// standard then ignores the blob, §7.2 p. 146) stays the standard's form -
 /// never a dataset path made of JSON. `FileUri` alone is the standard's form
 /// too (a bulk file in the release notes' format, not an HDF5 dataset).
 pub fn is_channel_data_in_file(file_uri: &str, data: &str) -> bool {
@@ -217,10 +217,10 @@ pub fn is_channel_data_in_file(file_uri: &str, data: &str) -> bool {
 }
 
 /// The MIME type the extension implies: the file `FileUri` names is HDF5 by
-/// the extension's own definition — `ChannelData` has no field to say it.
+/// the extension's own definition - `ChannelData` has no field to say it.
 const CHANNEL_DATA_MIME: &str = "application/x-hdf5";
 
-/// The field of a located part that names its **file** — what a rename or an
+/// The field of a located part that names its **file** - what a rename or an
 /// import rewrites. `uri` for the eml 2.3 form; `file_uri` for a WITSML
 /// `ChannelData` (`CHANNEL_DATA`). The two proxy forms name no file here
 /// (their proxy's `.rels` does), and are never asked.
@@ -231,7 +231,7 @@ pub fn file_field(part_type: &str) -> &'static str {
     }
 }
 
-/// The field of a located part that holds the **path inside the file** —
+/// The field of a located part that holds the **path inside the file** -
 /// `path_in_hdf_file` for the eml 2.0 form, `data` for a WITSML `ChannelData`,
 /// `path_in_external_file` otherwise.
 pub fn path_field(part_type: &str) -> &'static str {
@@ -309,7 +309,7 @@ fn walk_value(
     }
 }
 
-/// A `ChannelData` naming a file **and** a dataset — [`is_channel_data_in_file`];
+/// A `ChannelData` naming a file **and** a dataset - [`is_channel_data_in_file`];
 /// `None` for either standard form, which carries no dataset to locate.
 ///
 /// The path is handed over as written, like every path here: never trimmed or
@@ -347,8 +347,8 @@ fn from_new_form(object: &dyn Reflect, path: &str) -> ArrayLocation {
 ///
 /// The DOR is spelled `EpcExternalPartReference` here rather than `HdfProxy`,
 /// and it names the same thing: the part whose `.rels` carries the file name.
-/// `Count` and `StartIndex` are single values, not lists — this shape predates
-/// the multi-dimensional slicing eml 2.3 added — but they go into the same
+/// `Count` and `StartIndex` are single values, not lists - this shape predates
+/// the multi-dimensional slicing eml 2.3 added - but they go into the same
 /// vectors, so every reader above sees one kind of `ArrayLocation`.
 fn from_mid_form(object: &dyn Reflect, path: &str, resolver: &dyn ProxyResolver) -> ArrayLocation {
     let proxy_uuid = object
@@ -371,8 +371,8 @@ fn from_mid_form(object: &dyn Reflect, path: &str, resolver: &dyn ProxyResolver)
         mime: target.mime,
         // **`StartIndex` and `Count` are deliberately not carried over.**
         //
-        // They are single values describing a *flat* range — `ExternalFileProxy`
-        // repeats, so an array may be split across parts — while
+        // They are single values describing a *flat* range - `ExternalFileProxy`
+        // repeats, so an array may be split across parts - while
         // `ArrayLocation::start`/`count` are the per-dimension hyperslab eml 2.3
         // introduced. The two are not the same thing, and passing one as the
         // other is not a small error: on this corpus it made every polyline ask
@@ -410,7 +410,7 @@ fn from_old_form(object: &dyn Reflect, path: &str, resolver: &dyn ProxyResolver)
     ArrayLocation {
         file: target.file,
         path_in_file: string_field(object, "path_in_hdf_file").unwrap_or_default(),
-        // Declared by the proxy, not by this part — which is the whole reason
+        // Declared by the proxy, not by this part - which is the whole reason
         // resolving a proxy returns two things.
         mime: target.mime,
         start: Vec::new(),
@@ -447,7 +447,7 @@ fn int_list(object: &dyn Reflect, name: &str) -> Vec<i64> {
 /// Not part of [`ArrayMetadata`], and that is deliberate: ETP's
 /// `GetDataArrayMetadata` answers a shape and a type and says nothing about
 /// byte order, because a transfer defines its own. This is a property of **the
-/// file**, and it matters to exactly one kind of caller — one that must write
+/// file**, and it matters to exactly one kind of caller - one that must write
 /// down how the bytes are stored, as an EML 2.3 external array declaration
 /// does. So it is asked for separately, by
 /// [`crate::backend::ArrayBackend::byte_order`], and never inferred.
@@ -483,7 +483,7 @@ pub struct ArrayMetadata {
 /// A block of numbers, in the type the file holds them.
 ///
 /// **Typed, not converted.** A dataset of doubles comes back as `Vec<f64>`,
-/// integers as `Vec<i32>`, and so on — because the point of reading a million
+/// integers as `Vec<i32>`, and so on - because the point of reading a million
 /// points is to hand them to something that draws them, and every conversion on
 /// the way is a copy of the whole array. See [`ArrayData`] for the counting.
 #[derive(Debug, Clone, PartialEq)]
@@ -534,7 +534,7 @@ impl ArrayValues {
     }
 
     /// The element type, named the way [`ArrayMetadata`] names it.
-    /// Every element widened to `f64` — see [`ArrayData::to_f64`], which is
+    /// Every element widened to `f64` - see [`ArrayData::to_f64`], which is
     /// this with the shape beside it. **This copies.**
     pub fn to_f64(&self) -> Vec<f64> {
         match self {
@@ -567,7 +567,7 @@ impl ArrayValues {
         }
     }
 
-    /// The same memory seen as bytes. **No copy** — a borrow, for a caller
+    /// The same memory seen as bytes. **No copy** - a borrow, for a caller
     /// about to hand the block to a GPU, a socket or a file.
     pub fn as_bytes(&self) -> &[u8] {
         match self {
@@ -590,8 +590,8 @@ impl ArrayValues {
 /// # How many copies
 ///
 /// Reading a compressed or chunked dataset cannot be done without the library
-/// materialising it somewhere, so **one** copy — from the file into the
-/// caller's memory — is the floor. What this type is shaped to avoid is the
+/// materialising it somewhere, so **one** copy - from the file into the
+/// caller's memory - is the floor. What this type is shaped to avoid is the
 /// second and third:
 ///
 /// | | |
@@ -602,7 +602,7 @@ impl ArrayValues {
 /// | [`ArrayData::to_f64`] | widens every element. One more copy, and you asked for it |
 ///
 /// And [`crate::ArrayBackend::read_into`] removes even the first allocation:
-/// the caller supplies the buffer — a vertex buffer, a memory-mapped region —
+/// the caller supplies the buffer - a vertex buffer, a memory-mapped region -
 /// and the file is decoded straight into it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ArrayData {
@@ -650,7 +650,7 @@ impl ArrayData {
         }
     }
 
-    /// The values as `u32`, borrowed, when that is what the file holds —
+    /// The values as `u32`, borrowed, when that is what the file holds -
     /// what RESQML uses for indices.
     pub fn u32(&self) -> Option<&[u32]> {
         match &self.values {
@@ -672,8 +672,8 @@ impl ArrayData {
 /// A buffer the caller owns, for a backend to decode straight into.
 ///
 /// The zero-allocation path: an application that already holds the memory the
-/// numbers must end up in — a vertex buffer, a mapped file, a slice of a larger
-/// block — passes it here and the file is read directly into it. Nothing is
+/// numbers must end up in - a vertex buffer, a mapped file, a slice of a larger
+/// block - passes it here and the file is read directly into it. Nothing is
 /// allocated, nothing is copied afterwards.
 #[non_exhaustive]
 pub enum ArrayBuffer<'a> {
@@ -745,7 +745,7 @@ pub struct Resolution {
     pub declared: String,
     /// The file the numbers came out of.
     pub path: std::path::PathBuf,
-    /// Which kind of place that was — see [`crate::backend::Origin`].
+    /// Which kind of place that was - see [`crate::backend::Origin`].
     pub origin: crate::backend::Origin,
 }
 

@@ -6,7 +6,7 @@
 //! hard-wired HDF5 call, for a reason set out in ADR-0002:
 //!
 //! - **HDF5 must be optional.** An EPC has to be readable, editable and
-//!   writable with no native library anywhere near the build — that is what
+//!   writable with no native library anywhere near the build - that is what
 //!   keeps `energyml-core` and this crate compiling for `wasm32`. Without the
 //!   feature, only *reading an array* fails, and it fails saying which
 //!   capability is missing rather than pretending the data is absent.
@@ -20,7 +20,7 @@
 //!
 //! # Where a file is
 //!
-//! An array pointer names a file, usually as a bare name — `model.h5` — which
+//! An array pointer names a file, usually as a bare name - `model.h5` - which
 //! the specification says sits beside the package. But a caller may know
 //! better: a cloud service has neither the right names nor a disk, and a
 //! package moved after export names files that are no longer there. So the
@@ -29,7 +29,7 @@
 //! # The question is not "where is the file"
 //!
 //! It is **"which file holds this dataset"**, and the difference is the whole
-//! design. A name is a *hint* — a good one, usually right, and worth trying
+//! design. A name is a *hint* - a good one, usually right, and worth trying
 //! first. But a person who renames `model.epc` to `model_final.epc`, or who
 //! receives the `.h5` from a colleague under another name, has not broken their
 //! data: every number is still there, in a file sitting right next to the
@@ -69,11 +69,11 @@ pub trait ArrayBackend: Send + Sync {
     /// declared and on the file name.
     fn handles(&self, mime: Option<&str>, file: &Path) -> bool;
 
-    /// Shape and element type, without reading the values —
+    /// Shape and element type, without reading the values -
     /// `GetDataArrayMetadata`.
     fn metadata(&self, file: &Path, path_in_file: &str) -> Result<ArrayMetadata>;
 
-    /// The values, or the slice `start`/`count` names — `GetDataArrays` and
+    /// The values, or the slice `start`/`count` names - `GetDataArrays` and
     /// `GetDataSubarrays`. Empty bounds mean the whole dataset.
     ///
     /// One copy: out of the file, into the returned block. Use
@@ -87,7 +87,7 @@ pub trait ArrayBackend: Send + Sync {
     /// touched. Returns the shape that was read.
     ///
     /// The buffer must hold exactly the elements the selection asks for, in the
-    /// element type the dataset holds — [`ArrayBackend::metadata`] says both
+    /// element type the dataset holds - [`ArrayBackend::metadata`] says both
     /// without reading anything. A mismatch is an error, never a silent partial
     /// read.
     fn read_into(
@@ -104,8 +104,8 @@ pub trait ArrayBackend: Send + Sync {
     ///
     /// `Ok(None)` for a backend that does not know, and for a one-byte element
     /// where there is nothing to order. **Never a guess**: a caller that writes
-    /// this down — an EML 2.3 external array declares the storage type, byte
-    /// order included — would otherwise make every value read wrong while the
+    /// this down - an EML 2.3 external array declares the storage type, byte
+    /// order included - would otherwise make every value read wrong while the
     /// document stayed valid. A backend that cannot answer says so, and the
     /// caller refuses or defers rather than assuming the usual one.
     ///
@@ -119,7 +119,7 @@ pub trait ArrayBackend: Send + Sync {
     /// The uuid the file claims for itself, when the format has a place for one.
     ///
     /// EPC §3.2.3 requires an HDF5 file to carry, at its root, a `uuid`
-    /// attribute equal to that of its `EpcExternalPartReference` — a
+    /// attribute equal to that of its `EpcExternalPartReference` - a
     /// cross-validation that catches the one mistake nothing else does: reading
     /// somebody else's file because it happened to have the right name.
     fn file_uuid(&self, _file: &Path) -> Result<Option<String>> {
@@ -138,7 +138,7 @@ pub trait ArrayBackend: Send + Sync {
     /// Create or replace a dataset, and the groups leading to it.
     ///
     /// The file is created when it does not exist. Replacing an existing
-    /// dataset is allowed — HDF5 cannot resize one in place, so the old one is
+    /// dataset is allowed - HDF5 cannot resize one in place, so the old one is
     /// unlinked first and the space it held is **not** reclaimed. Rewriting the
     /// same file many times grows it; that is HDF5's model, not a defect here,
     /// and a caller that cares repacks.
@@ -155,7 +155,7 @@ pub trait ArrayBackend: Send + Sync {
         })
     }
 
-    /// Write several datasets into **one** file — what a plan of many arrays
+    /// Write several datasets into **one** file - what a plan of many arrays
     /// asks. One result per item, in their order: a refusal of one is not the
     /// refusal of the others.
     ///
@@ -174,7 +174,7 @@ pub trait ArrayBackend: Send + Sync {
     ///
     /// The other half of the cross-validation [`ArrayBackend::file_uuid`]
     /// reads. Writing the numbers without writing this produces a file that
-    /// this very crate will later refuse — so it is part of writing, not a
+    /// this very crate will later refuse - so it is part of writing, not a
     /// nicety.
     fn set_file_uuid(&self, file: &Path, _uuid: &str) -> Result<()> {
         Err(Error::ExternalData {
@@ -190,7 +190,7 @@ pub trait ArrayBackend: Send + Sync {
 /// How a file name in an array pointer becomes a path on a disk.
 #[derive(Debug, Clone, Default)]
 pub struct ExternalFiles {
-    /// Where relative names are looked up — the folder holding the package,
+    /// Where relative names are looked up - the folder holding the package,
     /// which is what the specification recommends.
     root: Option<PathBuf>,
     /// Names the caller has pinned to a path, whatever the package says.
@@ -203,7 +203,7 @@ pub struct ExternalFiles {
     present: Vec<String>,
 }
 
-/// Why a path is worth trying, and — through the order of the variants — how
+/// Why a path is worth trying, and - through the order of the variants - how
 /// strongly.
 ///
 /// The list is a chain of responsibility: each origin is asked in turn whether
@@ -222,7 +222,7 @@ pub enum Origin {
     /// in the order they were offered.
     ///
     /// Before the document's own name, because offering a file is an
-    /// instruction — a person who passes `--h5 somewhere/data.h5` is saying
+    /// instruction - a person who passes `--h5 somewhere/data.h5` is saying
     /// "use this", and they usually pass it precisely because the package's own
     /// name is wrong.
     Offered(usize),
@@ -286,7 +286,7 @@ impl ExternalFiles {
     /// Pin one name to a path, overriding whatever the package says.
     ///
     /// For the packages whose HDF5 file was renamed, or moved, or never had the
-    /// name the object claims — all of which happen.
+    /// name the object claims - all of which happen.
     pub fn set(&mut self, name: impl Into<String>, path: impl Into<PathBuf>) -> &mut Self {
         self.overrides.insert(name.into(), path.into());
         self
@@ -316,7 +316,7 @@ impl ExternalFiles {
     ///
     /// **For a store that has no filesystem**, which in practice means a
     /// browser. Everything else here answers "which path", and every candidate
-    /// is filtered on the path existing — which is false for all of them when
+    /// is filtered on the path existing - which is false for all of them when
     /// there are no paths. Without this, the search yields nothing in a
     /// browser and no array is ever read, *whatever backend is plugged in*: the
     /// resolution would collapse silently one layer above the thing that was
@@ -324,8 +324,8 @@ impl ExternalFiles {
     ///
     /// So a declared name is a candidate whose path is the name itself. It goes
     /// nowhere on disk, and it is not meant to: a backend that lives outside
-    /// this process — h5wasm behind [`ArrayBackend`], holding the bytes in its
-    /// own memory — receives that name and resolves it its own way.
+    /// this process - h5wasm behind [`ArrayBackend`], holding the bytes in its
+    /// own memory - receives that name and resolves it its own way.
     ///
     /// The bytes deliberately do **not** come through here. Whoever decodes the
     /// format is who should hold them, and for HDF5 in a browser that is the
@@ -333,7 +333,7 @@ impl ExternalFiles {
     /// can hand them straight back out would buy nothing.
     ///
     /// Named rather than offered, because a caller who has the file also knows
-    /// what it is called — it is a file they picked or were given. A name that
+    /// what it is called - it is a file they picked or were given. A name that
     /// matches nothing in the package still gets its turn, under
     /// [`Origin::Offered`], in the order declared.
     pub fn declare_present(&mut self, name: impl Into<String>) -> &mut Self {
@@ -349,7 +349,7 @@ impl ExternalFiles {
         &self.present
     }
 
-    /// Whether any name was declared present — the shape a store takes when it
+    /// Whether any name was declared present - the shape a store takes when it
     /// has no filesystem to resolve against.
     pub fn is_virtual(&self) -> bool {
         !self.present.is_empty()
@@ -360,7 +360,7 @@ impl ExternalFiles {
     ///
     /// Existence is filtered here; **content is not**. Whether a candidate
     /// actually holds the dataset is a question only a backend can answer, and
-    /// asking it is the caller's half of the job — see [`Origin`] for why the
+    /// asking it is the caller's half of the job - see [`Origin`] for why the
     /// division matters.
     ///
     /// `package` is the `.epc` itself when there is one on disk, which is what
@@ -376,7 +376,7 @@ impl ExternalFiles {
         // A name someone declared present is a candidate as it stands: there is
         // no path to test, which is the whole point. Existence is asserted by
         // the caller and the *content* is still checked by the backend, so the
-        // chain keeps the property that decides everything — the file that
+        // chain keeps the property that decides everything - the file that
         // holds the dataset wins, whether it lives on a disk or in another
         // process's memory.
         let declare = |origin: Origin, name: &str, out: &mut Vec<Candidate>| {
@@ -389,7 +389,7 @@ impl ExternalFiles {
         for (rank, name) in self.present.iter().enumerate() {
             let bare = name.rsplit(['/', '\\']).next().unwrap_or(name);
             // The one the document asks for comes first, then the rest in the
-            // order declared — the same shape as pinned before offered.
+            // order declared - the same shape as pinned before offered.
             let origin = match name == declared || bare == bare_declared {
                 true => Origin::Pinned,
                 false => Origin::Offered(rank),
@@ -431,9 +431,9 @@ impl ExternalFiles {
         }
 
         // 5. Everything else in the folder, in a stable order. Not filtered by
-        //    extension — choosing a backend is the caller's job and it does it
+        //    extension - choosing a backend is the caller's job and it does it
         //    better, since a file named without one may still declare a MIME
-        //    type — except for the one kind that is never an array file: a
+        //    type - except for the one kind that is never an array file: a
         //    **package**. A folder holding two `.epc` files is the ordinary
         //    case, and offering one as a place to look for the other's numbers
         //    can only waste an open and confuse a message.
@@ -504,7 +504,7 @@ impl ExternalFiles {
     /// Where a file of this name *would* go, whether or not it is there yet.
     ///
     /// [`ExternalFiles::resolve`] answers "where is it", and every branch of it
-    /// requires the file to exist — which is right for reading and useless for
+    /// requires the file to exist - which is right for reading and useless for
     /// writing. This answers "where should it be written", using the same
     /// precedence so that a file created here is found by `resolve` afterwards.
     ///
@@ -551,7 +551,7 @@ impl Backends {
 
     /// Whatever this build was compiled with.
     ///
-    /// HDF5 when the `hdf5` feature is on, nothing otherwise — and "nothing"
+    /// HDF5 when the `hdf5` feature is on, nothing otherwise - and "nothing"
     /// is a supported state, not a broken one.
     pub fn compiled_in() -> Self {
         #[allow(unused_mut)]

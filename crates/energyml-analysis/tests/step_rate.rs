@@ -1,7 +1,7 @@
 //! Settled steps, the injectivity index and the Hall plot
 //!
 //!
-//! Every expected value here is computed by hand in the comment beside it —
+//! Every expected value here is computed by hand in the comment beside it -
 //! never by calling the module under test a second way. The recovery of an
 //! index from a synthesized test lives in
 //! `crates/energyml-build/tests/injectivity.rs`, against the parameter that
@@ -42,7 +42,7 @@ fn the_fit_of_three_settled_steps_is_the_one_computed_by_hand() {
     // SS_res = 1/6, SS_tot = 42/9 → R² = 1 − (1/6)/(14/3) = 27/28;
     // index 1 / 0.15 = 20/3.
     // To break: regress q against Δp, or take the mean of the window
-    // where the pressure has not moved anyway — the first turns red here.
+    // where the pressure has not moved anyway - the first turns red here.
     let (h, q, p) = series_of(&[
         (10.0, &[P0 + 1.0; 4]),
         (20.0, &[P0 + 3.0; 4]),
@@ -71,7 +71,7 @@ fn the_fit_of_three_settled_steps_is_the_one_computed_by_hand() {
         [1, 2, 3]
     );
     assert!(found.set_aside.is_empty());
-    // q / Δp step by step: 10, 20/3, 7.5 — reported beside, never the index.
+    // q / Δp step by step: 10, 20/3, 7.5 - reported beside, never the index.
     let ratios: Vec<f64> = found
         .ratios
         .iter()
@@ -159,7 +159,7 @@ fn the_window_is_the_last_k_samples_of_the_step_and_no_more() {
     // The pressure moves between samples 1 and 2 of the step, then stays:
     // the last 3 samples are still (2 differences of 0), the last 4 are not.
     // To break: count k differences instead of k − 1, or look at the first
-    // samples of the step — one of the two assertions turns red.
+    // samples of the step - one of the two assertions turns red.
     let values: &[f64] = &[P0, P0 + 1.0, P0 + 1.0, P0 + 1.0];
     let (h, q, p) = series_of(&[(10.0, values)]);
     let series = Series::new(&h, &q, &p).unwrap();
@@ -351,7 +351,7 @@ fn what_is_no_step_rate_test_is_refused_by_name() {
 #[test]
 fn a_constant_rate_against_a_constant_rise_is_a_line_of_slope_rise_over_rate() {
     // q = 30 m3/h, Δp = 3 bar at every sample: ∫q dt = 30 t m3 and
-    // ∫Δp dt = 3 t bar·h, whatever the sampling — slope 3 / 30 = 0.1 bar·h/m3,
+    // ∫Δp dt = 3 t bar·h, whatever the sampling - slope 3 / 30 = 0.1 bar·h/m3,
     // the inverse of an index of 10 m3/h/bar.
     // To break: integrate p instead of p − p_static (the y values move by
     // P0·t), or drop the dt (the uneven sampling shows).
@@ -377,7 +377,7 @@ fn a_constant_rate_against_a_constant_rise_is_a_line_of_slope_rise_over_rate() {
 
 #[test]
 fn the_integral_is_a_trapezoid() {
-    // Two samples 2 h apart, 10 then 20 m3/h: (10 + 20) / 2 × 2 = 30 m3 —
+    // Two samples 2 h apart, 10 then 20 m3/h: (10 + 20) / 2 × 2 = 30 m3 -
     // a left rectangle would say 20, a right one 40. The pressure rises from
     // 0 to 4 bar above static: (0 + 4) / 2 × 2 = 4 bar·h.
     let plot = hall(

@@ -1,4 +1,4 @@
-//! The relations the index lays while it builds, and keeps while it updates —
+//! The relations the index lays while it builds, and keeps while it updates -
 //! `energyml_domain::package_index` (ADR-0010).
 //!
 //! The link optimisation of the inheritance walk also applies to attachments and
@@ -6,18 +6,18 @@
 //! graph-construction time, rather than by traversing the whole graph
 //! afterwards.
 //!
-//! The packages are **built in memory** after the specifications — common TRG
+//! The packages are **built in memory** after the specifications - common TRG
 //! 2.3 §8.3 and §8.5 for the associations, `Attachment.xsd` for the attachments,
-//! `GraphicalInformationSet` of eml 2.3 for the decorations — never read from a
+//! `GraphicalInformationSet` of eml 2.3 for the decorations - never read from a
 //! file. The shape of the assertions is the design's; what is counted is
 //! **work** (`PackageIndex::traffic`, `attachments::CacheStats`), never time.
 //!
 //! # Triangulation
 //!
 //! A component must never be asked to check itself: the tables
-//! are confronted with a second reading that shares nothing with the index —
+//! are confronted with a second reading that shares nothing with the index -
 //! the objects read back **by their field names** (`reread`), where the index
-//! reads reference **paths** — and, for the graphical entries, with
+//! reads reference **paths** - and, for the graphical entries, with
 //! `GraphicalSet::read`, which scans the XML with another scanner than the
 //! reference walk the index is built from.
 
@@ -321,7 +321,7 @@ fn names(object: &dyn Reflect, field: &str) -> Vec<String> {
     }
 }
 
-/// What the objects say, **read back by their field names** — no reference
+/// What the objects say, **read back by their field names** - no reference
 /// path, no `collect_refs`, nothing the index is built from.
 fn reread(store: &EpcStore) -> BTreeSet<String> {
     let mut lines = BTreeSet::new();
@@ -441,7 +441,7 @@ fn assert_same(label: &str, got: &BTreeSet<String>, wanted: &BTreeSet<String>) {
 /// one entry of two targets.
 ///
 /// To break it: do not remove `target != id` from `lay_set`, or make an association's
-/// `Collection` say `Part::Member` — the `held` row changes and the test goes
+/// `Collection` say `Part::Member` - the `held` row changes and the test goes
 /// red; or empty a table in `Relations::take`.
 #[test]
 fn the_tables_say_what_a_second_reading_says() {
@@ -470,7 +470,7 @@ fn the_tables_say_what_a_second_reading_says() {
     assert!(index.relation_rows() > 0);
 }
 
-/// §8.3: the same collection named by two associations of one set — the second
+/// §8.3: the same collection named by two associations of one set - the second
 /// is ignored, and the row **says so**, so a walk does not have to count.
 #[test]
 fn a_collection_named_twice_in_a_set_is_marked_repeated_once_and_for_all() {
@@ -545,7 +545,7 @@ fn assert_update_equals_rebuild(store: &EpcStore, updated: &PackageIndex) {
 /// else's change, and what the update disturbs is that member.
 ///
 /// To break it: do not remove the `held` rows of a re-absorbed set
-/// (`Relations::forget`) — the existing member would be counted twice.
+/// (`Relations::forget`) - the existing member would be counted twice.
 #[test]
 fn a_collection_that_gains_a_member_is_followed_by_the_tables() {
     let mut store = fabricated();
@@ -705,7 +705,7 @@ fn a_graphical_set_that_changes_moves_its_rows() {
 }
 
 /// An `Attachment` **added**: the table names it, the update disturbs the
-/// object it names — and only that one.
+/// object it names - and only that one.
 #[test]
 fn an_attachment_that_is_added_is_followed_and_disturbs_its_object() {
     let mut store = fabricated();
@@ -737,10 +737,10 @@ fn an_attachment_that_is_added_is_followed_and_disturbs_its_object() {
 // -- the walks read rows, not edges ----------------------------------------------
 
 /// A walk answers from the relation tables: **no reference is turned into a
-/// `Pointer`** and no node is scanned — the work counters say so, and the
+/// `Pointer`** and no node is scanned - the work counters say so, and the
 /// answer is the same as ever.
 ///
-/// To break it: put `index.dependents_of(uuid)` back in `Walker::links_of` — the
+/// To break it: put `index.dependents_of(uuid)` back in `Walker::links_of` - the
 /// count of edges read stops being zero.
 #[test]
 fn a_walk_reads_rows_and_never_turns_edges_into_pointers() {
@@ -781,7 +781,7 @@ fn big(n: u32) -> EpcStore {
 /// call. It reads a row.
 ///
 /// To break it: put the `index.nodes()` scan back in `Reader::carries`, or in
-/// `Reader::pieces_of` — `nodes_scanned` stops being zero and the test goes red.
+/// `Reader::pieces_of` - `nodes_scanned` stops being zero and the test goes red.
 #[test]
 fn listing_what_is_attached_does_not_scan_the_package() {
     const N: u32 = 400;
@@ -806,7 +806,7 @@ fn listing_what_is_attached_does_not_scan_the_package() {
     assert_eq!(
         after.nodes_scanned - before.nodes_scanned,
         0,
-        "no node is scanned — the package holds {N}+"
+        "no node is scanned - the package holds {N}+"
     );
     assert_eq!(
         after.edges_read - before.edges_read,
@@ -818,7 +818,7 @@ fn listing_what_is_attached_does_not_scan_the_package() {
 /// A listing is **kept**: asking again walks nothing, and what an update
 /// disturbs drops exactly the listings that were read from it.
 ///
-/// To break it: make `Cache::disturb` a `clear` — the listing of 4, which nothing
+/// To break it: make `Cache::disturb` a `clear` - the listing of 4, which nothing
 /// changed here touched, would go with the others and the count of dropped
 /// listings would go from 1 to 2.
 #[test]
@@ -857,8 +857,8 @@ fn a_listing_is_kept_and_dropped_by_what_it_was_read_from() {
     let direct = attachments::attachments_of(&store, &index, &[u(4), u(3), u(3)]);
     assert_eq!(again, direct);
 
-    // An attachment comes to name 3: 3's listing goes, 4's — read from the
-    // feature, the interpretation and their collections, never from 3 — stays.
+    // An attachment comes to name 3: 3's listing goes, 4's - read from the
+    // feature, the interpretation and their collections, never from 3 - stays.
     attach(&mut store, 42, 3, IMAGE, PNG);
     let disturbed = index.update(&store, &[u(42)], store.revision());
     assert_eq!(cache.disturb(&disturbed), 1);
@@ -872,7 +872,7 @@ fn a_listing_is_kept_and_dropped_by_what_it_was_read_from() {
     );
 
     // The feature's attachment is replaced by another: 4 read the carrier and its
-    // attachments, so 4 goes — 3 stays.
+    // attachments, so 4 goes - 3 stays.
     attach(&mut store, 41, 1, "resqml22.WellboreFeature", b"another file");
     let disturbed = index.update(&store, &[u(41)], store.revision());
     assert_eq!(cache.disturb(&disturbed), 1);
@@ -882,10 +882,10 @@ fn a_listing_is_kept_and_dropped_by_what_it_was_read_from() {
 }
 
 /// The files are not objects: no journal names them, so they carry a stamp, and
-/// a change of it drops **every** listing and lists the files again — a media
+/// a change of it drops **every** listing and lists the files again - a media
 /// relation made after the listing is not served from before it.
 ///
-/// To break it: do not compare `files_stamp` in `Cache::listings` — the listing of
+/// To break it: do not compare `files_stamp` in `Cache::listings` - the listing of
 /// 3 would stay at one piece after `relate_media`.
 #[test]
 fn a_change_of_the_packages_files_drops_every_listing() {

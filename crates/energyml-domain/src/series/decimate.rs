@@ -9,16 +9,16 @@
 //!
 //! The range `[from, to]` is cut into `buckets` equal slices of the index.
 //! Within a slice, each **run** of consecutive good samples gives at most four
-//! points — its first, its least, its greatest and its last, in the order the
-//! samples come — so a one-sample spike anywhere in a slice survives, and the
+//! points - its first, its least, its greatest and its last, in the order the
+//! samples come - so a one-sample spike anywhere in a slice survives, and the
 //! line drawn through the points enters and leaves the slice where the data
 //! does. Nothing is averaged: a mean flattens the very spike a sensor chart is
 //! read for.
 //!
-//! **A gap stays a gap.** A sample that is not [`Quality::Good`] — absent, or
+//! **A gap stays a gap.** A sample that is not [`Quality::Good`] - absent, or
 //! flagged (`frozen` and the other PRODML statuses: *"If the status attribute
 //! is absent and the value is not "NaN", the data value can be assumed to be
-//! good"*, TimeSeriesData.xsd l. 100, and so a flagged one is not) — ends the
+//! good"*, TimeSeriesData.xsd l. 100, and so a flagged one is not) - ends the
 //! run it interrupts. The next good sample starts a new one, marked
 //! [`Point::starts_run`], which a chart must not join to the point before.
 //! Bridging a frozen window with a straight line is exactly the interpolation
@@ -31,7 +31,7 @@
 //! four: **`points ≤ 4 × (buckets + gaps)`**, since each gap splits at most one
 //! run in two. A slice with no good sample gives nothing; it is not filled.
 //!
-//! Only the samples inside the range are read — no sample just outside is
+//! Only the samples inside the range are read - no sample just outside is
 //! added to carry the line to the edge. The index being strictly monotone (the
 //! readers refuse it otherwise), the samples in range are contiguous.
 

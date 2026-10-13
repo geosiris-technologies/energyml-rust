@@ -1,4 +1,4 @@
-//! The **filled** cross-section — the panels between two surfaces along a
+//! The **filled** cross-section - the panels between two surfaces along a
 //! trace.
 //!
 //! [`section::cut`] gives the curves; this module puts
@@ -19,15 +19,15 @@
 //! This is where the difference is decided between an honest section and one
 //! that lies with nothing to show it:
 //!
-//! - **a hole** — a surface does not cover the whole trace, or its nodes are
+//! - **a hole** - a surface does not cover the whole trace, or its nodes are
 //!   undefined: the panel **stops**. Never an extrapolation, not even out to
 //!   the edge of the drawing; a band extended "to look right" invents a unit
 //!   where nobody has data;
-//! - **a wedge** — the thickness falls to zero: that is ordinary geology (a
+//! - **a wedge** - the thickness falls to zero: that is ordinary geology (a
 //!   unit pinching out), the panel closes and nothing is reported. Code that
 //!   shouted about this would shout about half of all models, and people would
 //!   learn to ignore its messages;
-//! - **a crossing** — the thickness turns negative: the panel is cut at the
+//! - **a crossing** - the thickness turns negative: the panel is cut at the
 //!   exact crossing point and the inverted part becomes a **marked** patch. It
 //!   is neither removed nor straightened: a crossing has at least four causes
 //!   (erosion, an extrapolated surface, fault throw, wrong data) and choosing
@@ -38,13 +38,13 @@
 //!
 //! A panel is a list of patches, one per continuous piece. That is already the
 //! splitting mechanism (`promote_artefact` writes one `TrianglePatch` per
-//! patch, with its own dataset), so multi-patch costs nothing — and it settles
+//! patch, with its own dataset), so multi-patch costs nothing - and it settles
 //! holes **and** crossings by the same route, with no special case.
 
 use crate::section::{self, Cut};
 
 /// The relative tolerance of a wedge: beyond it, two surfaces cross; below it,
-/// they touch. Relative to the section's vertical extent, never absolute — a
+/// they touch. Relative to the section's vertical extent, never absolute - a
 /// model in millimetres and a model in kilometres do not share an idea of
 /// "zero".
 const PINCH: f64 = 1e-9;
@@ -56,13 +56,13 @@ pub struct Curve {
     /// The spans, each sorted by increasing s. Two spans do not touch: between
     /// them, the surface does not cut the trace.
     pub spans: Vec<Vec<[f64; 2]>>,
-    /// What the curve could not say — a span dropped, and why.
+    /// What the curve could not say - a span dropped, and why.
     pub notes: Vec<String>,
 }
 
 /// The (s, z) curves of a surface, from its cut segments.
 ///
-/// The chaining is `section`'s — welded on an exactly shared end — because that
+/// The chaining is `section`'s - welded on an exactly shared end - because that
 /// is what tells two sheets of a faulted surface from two neighbouring
 /// triangles, with no threshold.
 ///
@@ -92,7 +92,7 @@ pub struct SourcedCurve {
 }
 
 /// [`curve`], keeping the source of every point of every span. The spans, their
-/// order, their notes are [`curve`]'s — one function behind both.
+/// order, their notes are [`curve`]'s - one function behind both.
 pub fn curve_sourced(cuts: &[section::SourcedCut]) -> SourcedCurve {
     let chains = section::chain_sourced(cuts)
         .into_iter()
@@ -119,7 +119,7 @@ fn curve_of_chains(chains: Vec<(section::Chain, Vec<section::CutEnd>)>) -> Sourc
         }
         if !samples.windows(2).all(|pair| pair[1][0] >= pair[0][0]) {
             out.notes.push(format!(
-                "span {at}: the abscissa is not monotonic — the surface folds back along this \
+                "span {at}: the abscissa is not monotonic - the surface folds back along this \
                  trace, and z is not a function of s there"
             ));
             continue;
@@ -140,7 +140,7 @@ fn curve_of_chains(chains: Vec<(section::Chain, Vec<section::CutEnd>)>) -> Sourc
     }
 }
 
-/// A curve's z at an abscissa, interpolated **within a span** — `None` outside
+/// A curve's z at an abscissa, interpolated **within a span** - `None` outside
 /// the spans: between two spans, the surface does not exist.
 fn z_at(span: &[[f64; 2]], s: f64) -> Option<f64> {
     let (first, last) = (span.first()?, span.last()?);
@@ -167,10 +167,10 @@ pub struct Patch {
     pub points: Vec<[f64; 3]>,
     /// The triangles, three indices into `points`.
     pub triangles: Vec<[u32; 3]>,
-    /// The same vertices in (s, z) — the section laid flat, for free.
+    /// The same vertices in (s, z) - the section laid flat, for free.
     pub profile: Vec<[f64; 2]>,
     /// The expected order is **inverted** here: the surface given as the upper
-    /// one passes below the other. A sign, never a correction — this is what
+    /// one passes below the other. A sign, never a correction - this is what
     /// the interpretation workshop will ask a human to settle.
     pub inverted: bool,
 }
@@ -178,15 +178,15 @@ pub struct Patch {
 /// What a panel yields: its pieces, and what it noticed.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Panel {
-    /// The material, in continuous pieces — one per hole and per crossing.
+    /// The material, in continuous pieces - one per hole and per crossing.
     pub patches: Vec<Patch>,
-    /// The findings — a crossing measured, a span dropped. Never a silence: a
+    /// The findings - a crossing measured, a span dropped. Never a silence: a
     /// mute section and a section with no problem look alike.
     pub notes: Vec<String>,
 }
 
 impl Panel {
-    /// Whether the panel holds any material — an empty panel is an answer (the
+    /// Whether the panel holds any material - an empty panel is an answer (the
     /// two surfaces meet nowhere along this trace), not a failure.
     pub fn is_empty(&self) -> bool {
         self.patches.is_empty()
@@ -200,7 +200,7 @@ impl Panel {
 /// either been applied by the caller or not, and a silent inversion here would
 /// flip every section of a package in depth.
 ///
-/// `trace` is what places the vertices back in 3D — a panel that did not know
+/// `trace` is what places the vertices back in 3D - a panel that did not know
 /// where it is would overlay nothing in the scene.
 pub fn panel(upper: &Curve, lower: &Curve, trace: &[[f64; 2]]) -> Panel {
     let mut out = Panel::default();
@@ -247,7 +247,7 @@ pub fn panel(upper: &Curve, lower: &Curve, trace: &[[f64; 2]]) -> Panel {
             let crossed = build(&mut out, &samples, trace, scale * PINCH);
             if crossed > 0 {
                 out.notes.push(format!(
-                    "spans {i}/{j}: {crossed} crossing(s) — the upper surface passes below the \
+                    "spans {i}/{j}: {crossed} crossing(s) - the upper surface passes below the \
                      lower one, which only a human can explain (erosion, extension, throw, wrong \
                      data)"
                 ));
@@ -263,7 +263,7 @@ pub fn panel(upper: &Curve, lower: &Curve, trace: &[[f64; 2]]) -> Panel {
 /// of the thickness. Returns the number of crossings.
 fn build(out: &mut Panel, samples: &[(f64, f64, f64)], trace: &[[f64; 2]], pinch: f64) -> usize {
     let mut crossed = 0usize;
-    // The current sign: `None` while the thickness is nil — a panel that starts
+    // The current sign: `None` while the thickness is nil - a panel that starts
     // on a wedge has no side yet.
     let mut current: Vec<(f64, f64, f64)> = Vec::new();
     let mut sign: Option<bool> = None;
@@ -289,7 +289,7 @@ fn build(out: &mut Panel, samples: &[(f64, f64, f64)], trace: &[[f64; 2]], pinch
             (_, None) => current.push(*sample),
             (Some(was), Some(side)) if was == side => current.push(*sample),
             // The crossing: cut at the **exact** intersection of the two
-            // segments, not at the last sample — otherwise the patch spills
+            // segments, not at the last sample - otherwise the patch spills
             // over onto the side that is no longer its own.
             (Some(was), Some(side)) => {
                 debug_assert_ne!(was, side);
@@ -308,7 +308,7 @@ fn build(out: &mut Panel, samples: &[(f64, f64, f64)], trace: &[[f64; 2]], pinch
     crossed
 }
 
-/// Where two curves cross between two samples — both segments are linear, so
+/// Where two curves cross between two samples - both segments are linear, so
 /// the abscissa resolves exactly.
 fn crossing(a: (f64, f64, f64), b: (f64, f64, f64)) -> (f64, f64, f64) {
     let (s0, zu0, zl0) = a;
@@ -338,7 +338,7 @@ fn flush(out: &mut Panel, current: &mut Vec<(f64, f64, f64)>, trace: &[[f64; 2]]
     for (s, zu, zl) in &samples {
         let [x, y] = point_at(trace, *s);
         // Two vertices per abscissa: the top then the bottom, so the bottom's
-        // index is the top's plus one — which the triangulation assumes.
+        // index is the top's plus one - which the triangulation assumes.
         points.push([x, y, *zu]);
         points.push([x, y, *zl]);
         profile.push([*s, *zu]);
@@ -370,7 +370,7 @@ fn flush(out: &mut Panel, current: &mut Vec<(f64, f64, f64)>, trace: &[[f64; 2]]
     });
 }
 
-/// The point of the trace at a curvilinear abscissa — the same abscissa
+/// The point of the trace at a curvilinear abscissa - the same abscissa
 /// `section::cut` accumulates, so the two place themselves at the same spot.
 ///
 /// Outside the trace, the point is **clamped** to its ends rather than
@@ -402,7 +402,7 @@ pub fn point_at(trace: &[[f64; 2]], s: f64) -> [f64; 2] {
 /// trace, at a given abscissa.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Crossline {
-    /// The curvilinear abscissa on the leading trace — the same one
+    /// The curvilinear abscissa on the leading trace - the same one
     /// `section::cut` accumulates, so the two place themselves at the same spot.
     pub s: f64,
     /// The two ends in plan: `[x0, y0, x1, y1]`. A two-point polyline, ready for
@@ -419,7 +419,7 @@ pub struct Crosslines {
     pub notes: Vec<String>,
 }
 
-/// The crosslines of a leading trace — the *fence* proper
+/// The crosslines of a leading trace - the *fence* proper
 /// (crosslines that cut each other are refused).
 ///
 /// # What it is
@@ -432,7 +432,7 @@ pub struct Crosslines {
 ///
 /// A hand-drawn trace has its vertices where the hand clicked: crowded in a
 /// bend, spread out on a straight run. One crossline per vertex would therefore
-/// give a grid whose spacing means nothing — dense where someone hesitated.
+/// give a grid whose spacing means nothing - dense where someone hesitated.
 /// Curvilinear abscissa is the only measure that makes a step regular.
 ///
 /// # `half_width` is a **half**-width
@@ -447,7 +447,7 @@ pub struct Crosslines {
 /// In a bend tighter than the half-width, two neighbouring crosslines run
 /// through each other. Drawing them would produce an intersection that does not
 /// exist, and the eye reads it as a structure. The refusal says **where** and
-/// **which half-width** would pass — a refusal that does not say how to get out
+/// **which half-width** would pass - a refusal that does not say how to get out
 /// of it is a closed door.
 ///
 /// Refused rather than corrected: dropping one of the two crosslines settles
@@ -468,7 +468,7 @@ pub fn crosslines(trace: &[[f64; 2]], spacing: f64, half_width: f64) -> Result<C
         let (a, b) = (pair[0], pair[1]);
         if !a.iter().chain(b.iter()).all(|v| v.is_finite()) {
             return Err(
-                "the trace carries a point with no position — nothing is perpendicular \
+                "the trace carries a point with no position - nothing is perpendicular \
                         to it"
                     .into(),
             );
@@ -509,7 +509,7 @@ pub fn crosslines(trace: &[[f64; 2]], spacing: f64, half_width: f64) -> Result<C
             let centre = point_at(trace, s);
             let [tx, ty] = tangent_at(&segments, s);
             // The normal in plan: the tangent turned a quarter turn. Its
-            // direction does not matter — the crossline is symmetric — but it
+            // direction does not matter - the crossline is symmetric - but it
             // is the **same** everywhere, which keeps the crosslines consistent
             // with each other and makes a crossing detectable.
             let (nx, ny) = (-ty, tx);
@@ -530,8 +530,8 @@ pub fn crosslines(trace: &[[f64; 2]], spacing: f64, half_width: f64) -> Result<C
     // because an angle needs a radius of curvature and a clicked trace has none.
     //
     // **Every pair, not only the neighbours.** The document spoke only of the
-    // bend, but a trace that folds back on itself — a hairpin, a trace that
-    // recrosses — makes crosslines far apart in s run through each other, with
+    // bend, but a trace that folds back on itself - a hairpin, a trace that
+    // recrosses - makes crosslines far apart in s run through each other, with
     // perfectly tame neighbours. Checking only the neighbours would read as
     // "verified", and the square over a few dozen crosslines costs nothing.
     for (at, one) in lines.iter().enumerate() {
@@ -565,7 +565,7 @@ pub fn crosslines(trace: &[[f64; 2]], spacing: f64, half_width: f64) -> Result<C
 
 /// The unit tangent at abscissa `s`, taken on the segment that contains it.
 ///
-/// At a vertex the tangent jumps — there are two, one per side. The *incoming*
+/// At a vertex the tangent jumps - there are two, one per side. The *incoming*
 /// segment's is returned, and that choice beats an average: a bisector would
 /// give a crossline perpendicular to neither segment, hence oblique to the
 /// section it crosses.
@@ -597,7 +597,7 @@ fn crossing_reach(one: &[f64; 4], two: &[f64; 4]) -> Option<f64> {
 
     if denominator.abs() < 1e-15 {
         // Parallel. Two **distinct** parallel crosslines never run through each
-        // other — the ordinary case of a straight trace, where all of them are.
+        // other - the ordinary case of a straight trace, where all of them are.
         // But parallel and **carried by the same line**, they overlap, and two
         // panels drawn on top of each other state the same section twice. That
         // is the case of a trace that comes back exactly along its own path,
@@ -608,7 +608,7 @@ fn crossing_reach(one: &[f64; 4], two: &[f64; 4]) -> Option<f64> {
             return None;
         }
         // On the same line: they overlap as long as their centres are closer
-        // than the sum of the two half-lengths — which are the same half-width.
+        // than the sum of the two half-lengths - which are the same half-width.
         let apart = (other[0] - centre[0]).hypot(other[1] - centre[1]);
         let half = r[0].hypot(r[1]) / 2.0;
         return (apart < half * 2.0).then_some(apart / 2.0);
@@ -617,7 +617,7 @@ fn crossing_reach(one: &[f64; 4], two: &[f64; 4]) -> Option<f64> {
     let t = (dx * s[1] - dy * s[0]) / denominator;
     let u = (dx * r[1] - dy * r[0]) / denominator;
     // Bounds **inclusive**: two crosslines touching end to end are the exact
-    // limit of the refused case, and on the right side of the refusal — "refuse
+    // limit of the refused case, and on the right side of the refusal - "refuse
     // rather than draw". That is consistent with the message, which offers a
     // half-width *under* the measure rather than equal to it.
     if !(0.0..=1.0).contains(&t) || !(0.0..=1.0).contains(&u) {
@@ -687,7 +687,7 @@ mod tests {
     #[test]
     fn a_wedge_pinches_out_without_a_word() {
         // The roof comes down until it touches the base: a unit pinching out,
-        // ordinary geology — no message, and one continuous sheet.
+        // ordinary geology - no message, and one continuous sheet.
         let panel = panel(&curve_of(sloped(100.0, 50.0)), &curve_of(flat(50.0)), &trace());
         assert_eq!(panel.patches.len(), 1, "{:?}", panel.notes);
         assert!(
@@ -707,7 +707,7 @@ mod tests {
     fn a_crossing_splits_the_panel_and_marks_the_inverted_half() {
         // Two surfaces crossing in the middle: the "upper" one ends up below
         // the "lower" one. The panel is cut at the crossing and the second half
-        // is marked — neither straightened nor removed.
+        // is marked - neither straightened nor removed.
         let panel = panel(
             &curve_of(sloped(100.0, 0.0)),
             &curve_of(sloped(0.0, 100.0)),
@@ -732,7 +732,7 @@ mod tests {
     #[test]
     fn a_hole_in_a_surface_ends_the_patch_rather_than_bridging_it() {
         // Two squares separated by a void: the upper surface does not exist in
-        // the middle of the trace. The panel must stop there and resume after —
+        // the middle of the trace. The panel must stop there and resume after -
         // never bridge, which would invent material.
         let points = vec![
             [0.0, 0.0, 100.0],
@@ -770,8 +770,8 @@ mod tests {
 
     #[test]
     fn a_bent_trace_places_its_points_on_the_bend() {
-        // The curvilinear abscissa is continuous through the bend — that is
-        // what `section::cut` accumulates — so placing back in 3D must follow
+        // The curvilinear abscissa is continuous through the bend - that is
+        // what `section::cut` accumulates - so placing back in 3D must follow
         // the bend and not the chord.
         let bent = vec![[0.0, 0.0], [5.0, 0.0], [5.0, 5.0]];
         assert_eq!(point_at(&bent, 0.0), [0.0, 0.0]);

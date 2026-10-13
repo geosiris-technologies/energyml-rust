@@ -262,7 +262,7 @@ fn an_age_that_is_not_a_number_is_no_age() {
 }
 
 /// The failure itself: a contribution holding a `NaN` does not read back, and
-/// one passed through `finite` does — the same `serde_json` both ways, the
+/// one passed through `finite` does - the same `serde_json` both ways, the
 /// road between a session's contribution and the catalogue.
 #[test]
 fn a_contribution_passed_through_finite_reads_back() {
@@ -312,8 +312,8 @@ fn a_contribution_passed_through_finite_reads_back() {
     assert_eq!(back.notes.len(), 1);
 }
 
-/// A well kept with a note is **one** row, drawn — not a drawn row and a
-/// refused row for the same object — and its note reaches the catalogue.
+/// A well kept with a note is **one** row, drawn - not a drawn row and a
+/// refused row for the same object - and its note reaches the catalogue.
 #[test]
 fn a_kept_well_is_drawn_and_its_note_reaches_the_catalogue() {
     // To make it fail: pass the note through `refused` (the first draft) → two rows

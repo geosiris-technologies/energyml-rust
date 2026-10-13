@@ -1,4 +1,4 @@
-# Pinned reference packages, downloaded in CI and on demand — never committed.
+# Pinned reference packages, downloaded in CI and on demand - never committed.
 #
 # Each entry names the origin repository, the exact commit, the path in it, the
 # SHA-256 and size of the file at that commit, and the licence of the source.

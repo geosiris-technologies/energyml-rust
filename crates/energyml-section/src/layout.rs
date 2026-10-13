@@ -4,7 +4,7 @@
 //! window and the scales, the **vertical exaggeration they result in**
 //! (written on the drawing), the graduations, what is drawn and in which order,
 //! the fills, the wells' colours and labels, the warnings. [`crate::svg`] only
-//! writes what is decided here — which is why `tests/layout.rs` asserts on
+//! writes what is decided here - which is why `tests/layout.rs` asserts on
 //! numbers, and `tests/svg.rs` on the markup.
 //!
 //! Nothing is read and no geometry of the model is computed: a layout is
@@ -19,26 +19,26 @@
 //!
 //! # What `View` does here
 //!
-//! * `hidden` — absent: no group, no label, no fill, and no fill *from* it nor
+//! * `hidden` - absent: no group, no label, no fill, and no fill *from* it nor
 //!   *towards* it (a hidden line is not a neighbour);
-//! * `highlight` — marked ([`LaidObject::highlighted`]), nothing else changes;
-//! * `portion` — a **truncation**: what falls in `[start, end]`, bounds
+//! * `highlight` - marked ([`LaidObject::highlighted`]), nothing else changes;
+//! * `portion` - a **truncation**: what falls in `[start, end]`, bounds
 //!   included, abscissas unchanged (*a well at 150 m stays at 150 m*);
 //!   a trace is cut at the bounds, a well is kept whole when its head's
 //!   abscissa is inside;
-//! * `window` — the viewport. `None`: everything, with a margin.
+//! * `window` - the viewport. `None`: everything, with a margin.
 //!
 //! # Axes
 //!
-//! `AxisMode::Projected` is drawn. `Coordinates` is drawn too — the trace is
+//! `AxisMode::Projected` is drawn. `Coordinates` is drawn too - the trace is
 //! in the scene's system, so the true `(x, y)` at each tick is one
 //! `fence::point_at` away. `Geodesic` is **not**: it needs a scale factor along
 //! the trace from `energyml-proj` (and a reprojection when the scene's system
 //! is not the one the factor is known in), and this crate has no dependency on
 //! it. The layout falls back to the projected distance **and says so** in a
 //! warning ([`Layout::x_axis`]'s `mode` is the one actually drawn); the shape
-//! to fill — a function from `s` to a geodesic distance, applied to the tick
-//! values — is [`Axis`]: ticks carry their `value` and their `label`
+//! to fill - a function from `s` to a geodesic distance, applied to the tick
+//! values - is [`Axis`]: ticks carry their `value` and their `label`
 //! separately for that reason.
 
 pub(crate) mod fill;
@@ -83,13 +83,13 @@ pub struct Layout {
     pub whole: Window,
     /// Pixels per unit of the window, `[horizontal, vertical]`.
     pub scale: [f64; 2],
-    /// The vertical exaggeration those scales give — `scale[1] / scale[0]` —
+    /// The vertical exaggeration those scales give - `scale[1] / scale[0]` -
     /// for a section; `None` for the plan, which is equal on both axes.
     pub exaggeration: Option<f64>,
     /// What is written about it on the drawing: `"vertical exaggeration ×2.5"`.
     pub exaggeration_text: String,
     /// The position of the trace's first point (`s = 0`) with its EPSG code,
-    /// written at the centre of the title band — shortened to the code, or left
+    /// written at the centre of the title band - shortened to the code, or left
     /// out (and counted in the warnings), when the band is too narrow. Empty
     /// when the view asks for none.
     pub origin_text: String,
@@ -107,7 +107,7 @@ pub struct Layout {
     pub warnings: Vec<String>,
     /// How many labels did not fit and were folded.
     pub folded_labels: usize,
-    /// How many lines of notes the drawing has room for under its plot —
+    /// How many lines of notes the drawing has room for under its plot -
     /// what [`Layout::written_warnings`] writes. `0` when the view asks for no
     /// notes.
     pub note_lines: usize,
@@ -136,7 +136,7 @@ pub struct Rect {
 pub struct Axis {
     /// The title, with its unit.
     pub title: String,
-    /// What it says — may differ from what the view asked (geodesic → projected).
+    /// What it says - may differ from what the view asked (geodesic → projected).
     pub mode: AxisMode,
     /// The ticks, round numbers.
     pub ticks: Vec<Tick>,
@@ -151,7 +151,7 @@ pub struct Tick {
     pub at: f64,
     /// Its text.
     pub label: String,
-    /// A second line of text — the other coordinate on a `Coordinates` axis.
+    /// A second line of text - the other coordinate on a `Coordinates` axis.
     pub sublabel: Option<String>,
 }
 
@@ -166,7 +166,7 @@ pub struct Layer {
     pub objects: Vec<LaidObject>,
 }
 
-/// What a group is *about* — one attribute each, so that `data-key` stays the
+/// What a group is *about* - one attribute each, so that `data-key` stays the
 /// one-per-object handle the front end reads.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Attr {
@@ -181,11 +181,11 @@ pub enum Attr {
     /// A decoration (a mark), named.
     Decor(String),
     /// A strata legend entry: the decoration's name, the full uri of the
-    /// unit it shows, and the packages whose wells show it in this colour —
+    /// unit it shows, and the packages whose wells show it in this colour -
     /// what the front end opens the unit's colour by, and in which packages.
     UnitEntry(String, String, Vec<String>),
     /// A marker (`View::markers`): its name and, on the drawing, the key of the
-    /// object it marks — `data-marker` and `data-key`. In the legend, no key.
+    /// object it marks - `data-marker` and `data-key`. In the legend, no key.
     Marker {
         /// The marker's name.
         name: String,
@@ -205,7 +205,7 @@ pub struct LaidObject {
     pub title: String,
     /// Put forward on purpose (`View::highlight`).
     pub highlighted: bool,
-    /// For a well: the head, in the window's units — where it was projected.
+    /// For a well: the head, in the window's units - where it was projected.
     pub at: Option<[f64; 2]>,
     /// What is drawn.
     pub shapes: Vec<Shape>,
@@ -222,12 +222,12 @@ pub struct LaidInterval {
     pub to: f64,
     /// The unit's title.
     pub unit: String,
-    /// The unit's full uri, when the interval names one — what the front end finds
+    /// The unit's full uri, when the interval names one - what the front end finds
     /// the unit by (never its title).
     pub unit_uri: Option<String>,
-    /// The colour drawn — the interval's own, or the well's when it has none.
+    /// The colour drawn - the interval's own, or the well's when it has none.
     pub colour: String,
-    /// The line's width, pixels — the well's.
+    /// The line's width, pixels - the well's.
     pub width: f64,
     /// The piece of path, pixels.
     pub points: Vec<[f64; 2]>,
@@ -328,7 +328,7 @@ pub enum Shape {
 }
 
 /// What the SVG's `<metadata>` holds: enough to refuse by name
-/// and to redraw — the format, the version of this crate, the inputs (the trace
+/// and to redraw - the format, the version of this crate, the inputs (the trace
 /// itself, in coordinates and system) and the view.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -346,7 +346,7 @@ pub struct Metadata {
 impl Layout {
     /// The warnings as they are written under the plot: every one when they
     /// fit in [`Layout::note_lines`], else as many as fit less one, and a last
-    /// line counting the others — a note dropped is still said to exist.
+    /// line counting the others - a note dropped is still said to exist.
     pub fn written_warnings(&self) -> Vec<String> {
         let room = self.note_lines;
         if self.warnings.len() <= room {
@@ -358,14 +358,14 @@ impl Layout {
         let mut out: Vec<String> = self.warnings[..room - 1].to_vec();
         let hidden = self.warnings.len() - (room - 1);
         out.push(if out.is_empty() {
-            format!("{hidden} notes — not shown at this size")
+            format!("{hidden} notes - not shown at this size")
         } else {
-            format!("+ {hidden} more notes — not shown at this size")
+            format!("+ {hidden} more notes - not shown at this size")
         });
         out
     }
 
-    /// The front end keys of every object drawn, in drawing order — one per object,
+    /// The front end keys of every object drawn, in drawing order - one per object,
     /// whatever its layers (fills and labels are not keys).
     pub fn keys(&self) -> Vec<&str> {
         self.layers
@@ -395,7 +395,7 @@ const MARGIN_RIGHT: f64 = 20.0;
 const MARGIN_TOP: f64 = 72.0;
 const MARGIN_BOTTOM: f64 = 46.0;
 const LINE_PX: f64 = 14.0;
-/// The plan's top margin: its title — its labels are inside its frame.
+/// The plan's top margin: its title - its labels are inside its frame.
 const PLAN_TOP: f64 = 36.0;
 /// The smallest share of the drawing's height the plot keeps: notes are folded
 /// and the band of well labels lowered before the plot is squeezed under it
@@ -416,7 +416,7 @@ const MARK_COLOUR: &str = "#7b1fa2";
 // Entry
 
 /// Lay a catalogue out for a view. Reads nothing, computes no geometry of the
-/// model — only where things go.
+/// model - only where things go.
 pub fn layout(catalogue: &Catalogue, view: &View) -> Layout {
     match view.target {
         Target::Section { key } => section(catalogue, view, key),
@@ -443,7 +443,7 @@ fn unit_of(catalogue: &Catalogue) -> String {
         .unwrap_or_default()
 }
 
-/// Warnings common to every target — what the drawing owes its reader.
+/// Warnings common to every target - what the drawing owes its reader.
 fn common_warnings(catalogue: &Catalogue) -> Vec<String> {
     let mut out = Vec::new();
     let refused = catalogue
@@ -452,7 +452,7 @@ fn common_warnings(catalogue: &Catalogue) -> Vec<String> {
         .filter(|r| matches!(r.outcome, Outcome::Refused { .. }))
         .count();
     if refused > 0 {
-        out.push(format!("{refused} objects refused — see the objects list"));
+        out.push(format!("{refused} objects refused - see the objects list"));
     }
     let set_aside = catalogue
         .plan
@@ -461,7 +461,7 @@ fn common_warnings(catalogue: &Catalogue) -> Vec<String> {
         .filter(|w| w.rejected.is_some())
         .count();
     if set_aside > 0 {
-        out.push(format!("{set_aside} wells set aside — projected nowhere"));
+        out.push(format!("{set_aside} wells set aside - projected nowhere"));
     }
     out
 }
@@ -559,8 +559,8 @@ fn frame_of(view: &View, lines: usize, right: f64, left: f64, top: f64) -> Rect 
 }
 
 /// How a drawing of height `h` shares itself out: the top margin for `levels`
-/// levels of well labels (`top_for`), and the lines of notes. Notes go first —
-/// down to one, the line that counts them — then levels of labels down to one,
+/// levels of well labels (`top_for`), and the lines of notes. Notes go first -
+/// down to one, the line that counts them - then levels of labels down to one,
 /// until the plot keeps [`PLOT_SHARE`] of the height. Returns the top margin,
 /// the levels kept and the lines of notes.
 fn budget(
@@ -592,7 +592,7 @@ fn is_hidden(view: &View, key: &str) -> bool {
 }
 
 /// The width an object is drawn at: the view's own for it when it is valid,
-/// else `default`. A refused width is not drawn here — [`width_warnings`] names it.
+/// else `default`. A refused width is not drawn here - [`width_warnings`] names it.
 fn width_of(view: &View, key: &str, default: f64) -> f64 {
     view.widths
         .iter()
@@ -606,7 +606,7 @@ fn valid_width(w: f64) -> bool {
     w.is_finite() && w > 0.0 && w <= crate::model::MAX_WIDTH_PX
 }
 
-/// One warning per width the view asks for that cannot be drawn — never a
+/// One warning per width the view asks for that cannot be drawn - never a
 /// silent clamp. The object is named by its uri (the key's store part dropped).
 fn width_warnings(view: &View) -> Vec<String> {
     view.widths
@@ -614,7 +614,7 @@ fn width_warnings(view: &View) -> Vec<String> {
         .filter(|(_, w)| !valid_width(*w))
         .map(|(k, w)| {
             let uri = k.split('\0').next_back().unwrap_or(k);
-            format!("line width {w} refused for {uri} — it must be above 0 and at most {} px; the default is drawn", crate::model::MAX_WIDTH_PX)
+            format!("line width {w} refused for {uri} - it must be above 0 and at most {} px; the default is drawn", crate::model::MAX_WIDTH_PX)
         })
         .collect()
 }
@@ -653,7 +653,7 @@ fn span_extent(span: &[[f64; 2]]) -> f64 {
 
 /// The colour of a surface neither the scene nor the file colours: the hue the
 /// 3D view gives it, derived from its uuid (`energyml_domain::color::derived_colour`,
-/// the front end's `colourFor`) — so a drawing without a scene shows the surfaces in
+/// the front end's `colourFor`) - so a drawing without a scene shows the surfaces in
 /// the colours the 3D view shows them, rather than one colour for all. An object with no uuid takes its role's.
 pub(crate) fn fallback_colour(uuid: &str, role: TraceRole) -> String {
     if uuid.is_empty() {
@@ -671,7 +671,7 @@ fn envelope_colour(view: &View, e: &EnvelopeItem) -> String {
 }
 
 /// A surface's colour: the scene's first (the front end's stack), then the one the
-/// file gives, then the 3D view's hue — never a colour invented from its name.
+/// file gives, then the 3D view's hue - never a colour invented from its name.
 /// **One resolution** for the drawing and the 3D panels (`panels.rs`): two
 /// would let a panel and the line it fills from disagree.
 pub(crate) fn trace_colour(view: &View, t: &TraceItem) -> String {
@@ -707,7 +707,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     };
     let sec = find_section(catalogue, key);
     if sec.is_none() {
-        warnings.push(format!("{title}: not in the catalogue — nothing to draw"));
+        warnings.push(format!("{title}: not in the catalogue - nothing to draw"));
     }
     let empty = Section {
         key,
@@ -761,7 +761,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
                 }
                 time_drawn |= t.time;
                 // The scene's colour first (the front end's stack), then the one the
-                // file gives, then the role's — never a colour invented in the
+                // file gives, then the role's - never a colour invented in the
                 // file's name.
                 let colour = trace_colour(view, t);
                 traces.push(KeptTrace {
@@ -825,7 +825,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
             .count();
         if count > 0 {
             warnings.push(format!(
-                "{count} {} — see the notes",
+                "{count} {} - see the notes",
                 if count == 1 { one } else { many }
             ));
         }
@@ -902,7 +902,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
             .count();
         if lost > 0 {
             warnings.push(format!(
-                "{lost} well(s) drawn only where a stratigraphic unit is known — the portions with no strata information are not drawn"
+                "{lost} well(s) drawn only where a stratigraphic unit is known - the portions with no strata information are not drawn"
             ));
         }
     }
@@ -931,7 +931,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     } else {
         0
     };
-    // Names: in codes mode, the codes and their legend — decided before the
+    // Names: in codes mode, the codes and their legend - decided before the
     // frame, since the legend takes its room on the right.
     let coded = (view.labels == LabelMode::Codes).then(|| codes(catalogue));
     let mut entries: Vec<LegendEntry> = Vec::new();
@@ -1013,7 +1013,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
 
     let mut layers = Vec::new();
 
-    // envelopes — the grids' fills, at the very back; their outlines come
+    // envelopes - the grids' fills, at the very back; their outlines come
     // after every fill (`outlines`), so that nothing coloured covers a line
     // (objects with a coloured background go to the back of the drawing so that the
     // others stay visible).
@@ -1070,7 +1070,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
         objects: env_fills,
     });
 
-    // fills — a trace to its neighbour, per the view's choices.
+    // fills - a trace to its neighbour, per the view's choices.
     let lines: Vec<fill::Line<'_>> = traces
         .iter()
         .map(|t| fill::Line {
@@ -1122,7 +1122,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
         objects: env_lines,
     });
 
-    // erosions — a background of the lines, so it sits before them; a section
+    // erosions - a background of the lines, so it sits before them; a section
     // with none suspected adds no layer, and its drawing is what it was.
     let erosion_objects = erosion_marks(sec, &traces, [plo, phi], &map);
     if !erosion_objects.is_empty() {
@@ -1180,7 +1180,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
         }
         if let Some(why) = paint_refusal {
             warnings.push(format!(
-                "scene colours refused for {} — {why}; the surface is drawn in its own colour",
+                "scene colours refused for {} - {why}; the surface is drawn in its own colour",
                 t.item.object.title
             ));
         }
@@ -1257,7 +1257,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
         // phone, nine crossings on 2 160 m wrote "× cross 0 × cross 1 …" on
         // each other). In order of preference, level by level from the edge
         // the text hugs: the whole text on the right of the line, then on its
-        // left, then the short form on the right and on the left — a short text
+        // left, then the short form on the right and on the left - a short text
         // on its own level reads better than a long one stacked into the plot,
         // where it covers what is drawn. The line is always drawn: a mark with
         // no place keeps it and loses only its text, and that is counted.
@@ -1313,7 +1313,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
     }
     if marks_unlabelled > 0 {
         warnings.push(format!(
-            "{marks_unlabelled} section marks unlabelled — they did not fit"
+            "{marks_unlabelled} section marks unlabelled - they did not fit"
         ));
     }
     let marks_group = if mark_shapes.is_empty() {
@@ -1342,7 +1342,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
         trace_objects[owner].shapes.push(text);
     }
     if names_folded > 0 {
-        warnings.push(format!("{names_folded} surface names folded — they did not fit"));
+        warnings.push(format!("{names_folded} surface names folded - they did not fit"));
     }
     // A contour is a line under the lines it marks: behind the traces and the wells.
     let contours = marked.contours(&map);
@@ -1425,7 +1425,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
         });
     }
     if folded > 0 {
-        warnings.push(format!("{folded} well labels folded — they did not fit"));
+        warnings.push(format!("{folded} well labels folded - they did not fit"));
     }
     if view.strata_legend {
         let shown: Vec<StrataEntry> = strata
@@ -1480,7 +1480,7 @@ fn section(catalogue: &Catalogue, view: &View, key: SectionKey) -> Layout {
 const EROSION_COLOUR: &str = "#d81b60";
 
 /// The suspected erosions of a section, laid out: the lens between the two
-/// surfaces over the portion, and the older surface thickened there — it is the
+/// surfaces over the portion, and the older surface thickened there - it is the
 /// one that should stop. Only what is drawn counts: a hidden surface marks
 /// nothing, and a portion cut to the view's `portion`.
 fn erosion_marks(
@@ -1606,10 +1606,10 @@ const TITLE_PX: f64 = 14.0;
 const TITLE_GAP_PX: f64 = 16.0;
 
 /// Where a drawing's first point is, for its title band: `origin (s = 0): X 500000.0 ·
-/// Y 6000000.0 — EPSG:2154`. The band is shared with the title (left, bold) and
+/// Y 6000000.0 - EPSG:2154`. The band is shared with the title (left, bold) and
 /// the exaggeration (right): the line goes at the centre of the free space
-/// between them, in the form that fits — whole, then the EPSG code alone, then
-/// nothing — and a shortened or dropped one is counted in `warnings`, like the
+/// between them, in the form that fits - whole, then the EPSG code alone, then
+/// nothing - and a shortened or dropped one is counted in `warnings`, like the
 /// marks that find no room. Widths are the embedded font's, the title's with
 /// the margin a bold face needs. The vertical system is not written: the
 /// catalogue does not carry it.
@@ -1630,7 +1630,7 @@ fn origin_line(
     }
     let code = system.map(|s| format!("EPSG:{}", s.epsg));
     let whole = match &code {
-        Some(c) => format!("origin (s = 0): X {x:.1} · Y {y:.1} — {c}"),
+        Some(c) => format!("origin (s = 0): X {x:.1} · Y {y:.1} - {c}"),
         None => format!("origin (s = 0): X {x:.1} · Y {y:.1}"),
     };
     let left = frame.x + labels::width_px(title, TITLE_PX) * 1.1 + TITLE_GAP_PX;
@@ -1648,12 +1648,12 @@ fn origin_line(
         let short = format!("origin: {c}");
         if labels::width_px(&short, FONT_PX) <= room {
             warnings.push(
-                "origin position shortened to its EPSG code — the title band is too narrow".to_string(),
+                "origin position shortened to its EPSG code - the title band is too narrow".to_string(),
             );
             return put(short);
         }
     }
-    warnings.push("origin position not written — the title band is too narrow".to_string());
+    warnings.push("origin position not written - the title band is too narrow".to_string());
     (String::new(), 0.0)
 }
 
@@ -1695,7 +1695,7 @@ fn x_axis(sec: &Section, map: &Map, mode: AxisMode, unit: &str) -> Axis {
         .collect();
     Axis {
         title: match mode {
-            AxisMode::Coordinates => format!("distance along the trace{suffix} — true coordinates (x, y)"),
+            AxisMode::Coordinates => format!("distance along the trace{suffix} - true coordinates (x, y)"),
             _ => format!("distance along the trace{suffix}"),
         },
         mode,
@@ -1733,7 +1733,7 @@ fn well_colour(w: &WellItem, view: &View) -> String {
     };
     match view.well_colouring {
         WellColouring::Side => side.to_string(),
-        // The scene's colour — or, when the scene gives none, a neutral one
+        // The scene's colour - or, when the scene gives none, a neutral one
         // rather than a side colour the user did not ask for.
         WellColouring::Scene => {
             colour_of(view, &w.object.key()).unwrap_or_else(|| NEUTRAL_COLOUR.to_string())
@@ -1747,7 +1747,7 @@ fn well_colour(w: &WellItem, view: &View) -> String {
 }
 
 /// Where each point of a surface's cut comes from (`SurfaceCut::sources`),
-/// parallel to its spans — what lets `paint::surfaces::trace_pieces` lay a
+/// parallel to its spans - what lets `paint::surfaces::trace_pieces` lay a
 /// per-node colour along it. **The catalogue's `TraceItem` does not carry it
 /// yet** (only `SurfaceCut` does, and `assemble` does not copy it): until the
 /// contract gives the item a `sources` field this answers `None`, and every
@@ -1757,7 +1757,7 @@ fn cut_sources(item: &TraceItem) -> Option<&[Vec<CutSource>]> {
 }
 
 /// The sources of one kept span: the original span it still is, point for
-/// point — a span a portion cut (or whose repeated points were dropped) is no
+/// point - a span a portion cut (or whose repeated points were dropped) is no
 /// longer parallel to its sources and is not painted.
 fn source_of_span<'a>(
     item: &TraceItem,
@@ -1771,8 +1771,8 @@ fn source_of_span<'a>(
         .map(|(_, from)| from.as_slice())
 }
 
-/// The paint the scene gives a well: its own key's first, and — one line being
-/// the frame and the trajectory of one wellbore, folded — then the keys
+/// The paint the scene gives a well: its own key's first, and - one line being
+/// the frame and the trajectory of one wellbore, folded - then the keys
 /// of the objects folded into it, in the order the catalogue lists them. The
 /// first that has one wins; the line that is drawn is the kept object's, so a
 /// paint given to the frame is the common case and the others are the fallback
@@ -1798,7 +1798,7 @@ fn paint_of<'a>(view: &'a View, w: &WellItem) -> Option<(&'a Paint, String)> {
 
 fn paint_refusal(w: &WellItem, why: &str) -> String {
     format!(
-        "scene colours refused for {} — {why}; the well is drawn in its own colour",
+        "scene colours refused for {} - {why}; the well is drawn in its own colour",
         well_name(&w.object)
     )
 }
@@ -1849,7 +1849,7 @@ fn laid_well(
     }
 
     // What the scene paints along the well, under scene colouring, when it gives
-    // something that fits: the pieces replace the single line — the scene's
+    // something that fits: the pieces replace the single line - the scene's
     // paint is what the scene shows. A paint that does not fit was
     // said before the frame (`check`); the well is then drawn as below.
     let painted =
@@ -1904,11 +1904,11 @@ fn laid_well(
     }
 
     // The line itself is the well's colour (`well_colour`: the scene's, or the
-    // neutral grey) and shows wherever no interval is drawn over it — the dark
+    // neutral grey) and shows wherever no interval is drawn over it - the dark
     // portions of a well with no strata information. Not a "no information"
     // style, only what lies under the intervals. Off: only the intervals draw.
     if view.well_colouring != WellColouring::Strata || unstratified.is_default() {
-        // The line under the intervals — what a drawing always was, byte for byte.
+        // The line under the intervals - what a drawing always was, byte for byte.
         shapes.push(Shape::Polyline {
             points: path,
             stroke: colour.clone(),
@@ -1985,7 +1985,7 @@ fn effective_style(view: &View, warnings: &mut Vec<String>) -> UnstratifiedStyle
     }
 }
 
-/// The id of the `<pattern>` the hatched style strokes with — prefixed, so that
+/// The id of the `<pattern>` the hatched style strokes with - prefixed, so that
 /// it cannot clash with an id of a drawing this one is pasted into.
 pub const HATCH_ID: &str = "esv-unstratified-hatch";
 
@@ -2082,8 +2082,8 @@ fn tick_across(points: &[[f64; 2]], width: f64) -> Option<[[f64; 2]; 2]> {
     Some([[a[0] - nx, a[1] - ny], [a[0] + nx, a[1] + ny]])
 }
 
-/// The colour a unit is given **now** — [`View::unit_colours`], by the key of the
-/// well's package and the unit's full uri — else the one baked into the interval
+/// The colour a unit is given **now** - [`View::unit_colours`], by the key of the
+/// well's package and the unit's full uri - else the one baked into the interval
 /// when the catalogue was made. **The one reading** both the wells and the strata
 /// legend make of "the colour of an interval", so they cannot disagree.
 fn own_colour(iv: &Interval, store: &str, view: &View) -> Option<String> {
@@ -2099,7 +2099,7 @@ fn own_colour(iv: &Interval, store: &str, view: &View) -> Option<String> {
 
 /// The colour an interval is drawn in: its own under strata colouring, the
 /// well's when the file gives it none or the wells are coloured another way.
-/// **The one place** it is decided — the strata legend asks the same.
+/// **The one place** it is decided - the strata legend asks the same.
 fn interval_colour(iv: &Interval, store: &str, well_colour: &str, view: &View) -> String {
     match view.well_colouring {
         WellColouring::Strata => own_colour(iv, store, view).unwrap_or_else(|| well_colour.to_string()),
@@ -2179,7 +2179,7 @@ fn well_labels(
             let space = if unit.is_empty() { "" } else { " " };
             lines.push(format!("{:.0}{space}{unit} {}", w.d, side_letter(w.side)));
         }
-        // A head near the top of the plot is labelled above the plot — the
+        // A head near the top of the plot is labelled above the plot - the
         // labels do not cover the data, the marks or each other's wells.
         let floor = if head[1] < map.frame.y + map.frame.h * 0.2 {
             map.frame.y - 2.0
@@ -2491,7 +2491,7 @@ fn plan(catalogue: &Catalogue, view: &View) -> Layout {
         objects: legend_box.into_iter().collect(),
     });
     if folded > 0 {
-        warnings.push(format!("{folded} well labels folded — they did not fit"));
+        warnings.push(format!("{folded} well labels folded - they did not fit"));
     }
 
     let (xs, xv) = ticks::values(window.x[0], window.x[1], frame.w / 90.0);
@@ -2570,8 +2570,8 @@ const NAME_SHIFTS: usize = 6;
 const LEGEND_MIN_PX: f64 = 120.0;
 const LEGEND_MAX_PX: f64 = 280.0;
 
-/// The code of every object the catalogue draws — `W` wells, `H` horizons, `F`
-/// faults, `S` other surfaces, `G` grids — numbered in **one order for the whole
+/// The code of every object the catalogue draws - `W` wells, `H` horizons, `F`
+/// faults, `S` other surfaces, `G` grids - numbered in **one order for the whole
 /// catalogue**, so an object keeps its code on every section and on the plan:
 /// wells by their abscissa on the long section, then by cross section; horizons
 /// and other surfaces top first (their mean height where first cut); faults
@@ -2581,7 +2581,7 @@ fn codes(catalogue: &Catalogue) -> HashMap<String, String> {
         .chain(&catalogue.crosses)
         .collect();
     let mut wells: Vec<(String, usize, f64)> = Vec::new();
-    // (key, family, sort value) — the first cut met decides.
+    // (key, family, sort value) - the first cut met decides.
     let mut surfaces: Vec<(String, char, f64)> = Vec::new();
     let mut seen = std::collections::HashSet::new();
     for (rank, sec) in sections.iter().enumerate() {
@@ -2743,7 +2743,7 @@ fn head_labels(
     (out, folded)
 }
 
-/// The boxes of the texts among `shapes`, measured with the sheet's table — what
+/// The boxes of the texts among `shapes`, measured with the sheet's table - what
 /// a placer must keep clear of.
 fn text_rects<'a>(shapes: impl Iterator<Item = &'a Shape>) -> Vec<labels::Rect2> {
     shapes
@@ -2784,7 +2784,7 @@ struct LineName {
 
 /// Surface names without overlap: each name first just above
 /// the end of its line, then just below, then slid left along the line by its
-/// own width — above, below — step by step; the names are taken top first, so a
+/// own width - above, below - step by step; the names are taken top first, so a
 /// name far from the others finds its first place free (the *reset*). A name
 /// with no place within [`NAME_SHIFTS`] steps is folded and counted.
 fn line_names(
@@ -2841,7 +2841,7 @@ const STRATA_LEFT_PX: f64 = 4.0;
 /// The space between the strata legend and the axes' own margin, pixels.
 const STRATA_GAP_PX: f64 = 8.0;
 
-/// One unit the wells show, with the colour its interval is drawn in — and the
+/// One unit the wells show, with the colour its interval is drawn in - and the
 /// packages whose wells show it so. A unit is one entry per colour, not per
 /// package: two packages that agree are one line, two that do not are two.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -2855,7 +2855,7 @@ struct StrataEntry {
 }
 
 impl StrataEntry {
-    /// The same unit in the same colour — what merges two wells' intervals into
+    /// The same unit in the same colour - what merges two wells' intervals into
     /// one entry, whatever package each well is in.
     fn same_line(&self, unit: &str, colour: &str, unit_uri: Option<&str>) -> bool {
         self.unit == unit && self.colour == colour && self.unit_uri.as_deref() == unit_uri
@@ -2872,8 +2872,8 @@ impl StrataEntry {
     }
 }
 
-/// The title each entry is written with: the unit's, and — when the same unit
-/// shows in another entry too, in another colour — the names of the packages
+/// The title each entry is written with: the unit's, and - when the same unit
+/// shows in another entry too, in another colour - the names of the packages
 /// whose wells show it in this one. One place, read by the width and by the
 /// drawing, so the box is as wide as what it says.
 fn strata_titles(entries: &[StrataEntry], view: &View) -> Vec<String> {
@@ -2895,7 +2895,7 @@ fn strata_titles(entries: &[StrataEntry], view: &View) -> Vec<String> {
                 .any(|(j, other)| j != i && other.same_unit(e));
             if twice && !e.stores.is_empty() {
                 format!(
-                    "{title} — {}",
+                    "{title} - {}",
                     e.stores.iter().map(|s| name(s)).collect::<Vec<_>>().join(", ")
                 )
             } else {
@@ -2909,7 +2909,7 @@ fn painted(view: &View, w: &WellItem) -> bool {
     paint_of(view, w).is_some_and(|(paint, _)| crate::paint::check(w.path.len(), paint, &view.joints).is_ok())
 }
 
-/// The units the wells could show in a legend, in stratigraphic order — top
+/// The units the wells could show in a legend, in stratigraphic order - top
 /// down along the wells, so the younger first. Only an interval with a colour of
 /// its own counts (without one it takes its well's, which says nothing of the
 /// unit), under strata colouring, on a well the scene does not paint (its
@@ -2985,13 +2985,13 @@ fn strata_units(wells: &[&WellItem], view: &View) -> Vec<StrataEntry> {
     order
 }
 
-/// Whether some part of a well's path (by MD) is covered by no interval — or the
+/// Whether some part of a well's path (by MD) is covered by no interval - or the
 /// well has no MD to lay intervals on, so none of it is.
 fn has_unstratified(w: &WellItem) -> bool {
     unstratified_spans(w).is_none_or(|spans| !spans.is_empty())
 }
 
-/// Why the strata legend asked for is not drawn — one note, naming the cause.
+/// Why the strata legend asked for is not drawn - one note, naming the cause.
 fn strata_refusal(wells: &[&WellItem], view: &View) -> String {
     if view.well_colouring != WellColouring::Strata {
         return "strata legend not drawn: the wells are not coloured by strata".to_string();
@@ -3010,7 +3010,7 @@ fn strata_refusal(wells: &[&WellItem], view: &View) -> String {
     }
 }
 
-/// The strata legend's width for these units, pixels — `0` when there is none.
+/// The strata legend's width for these units, pixels - `0` when there is none.
 fn strata_width(entries: &[StrataEntry], no_strata: bool, view: &View) -> f64 {
     if entries.is_empty() {
         return 0.0;
@@ -3036,7 +3036,7 @@ fn unit_title(unit: &str) -> String {
 }
 
 /// The strata legend, in a box at `x` from `top` down to at most `bottom`: a
-/// heading, then a swatch and a title per unit — **one object per unit**, with
+/// heading, then a swatch and a title per unit - **one object per unit**, with
 /// the unit's title and the colour its interval is drawn in. What does not fit is
 /// said on its last line. Nothing when there is no unit: never an empty box.
 fn strata_legend(
@@ -3181,7 +3181,7 @@ struct LegendEntry {
     round: bool,
 }
 
-/// The legend's width for these entries, pixels — `0` when there is none.
+/// The legend's width for these entries, pixels - `0` when there is none.
 fn legend_width(entries: &[LegendEntry]) -> f64 {
     if entries.is_empty() {
         return 0.0;
@@ -3279,7 +3279,7 @@ fn legend(mut entries: Vec<LegendEntry>, x: f64, width: f64, top: f64, bottom: f
     if shown < entries.len() {
         shapes.push(Shape::Text {
             at: [x + 8.0, top + LINE_PX * (shown as f64 + 2.0)],
-            text: format!("+ {} more — in the objects list", entries.len() - shown),
+            text: format!("+ {} more - in the objects list", entries.len() - shown),
             anchor: Anchor::Start,
             size: SMALL_PX,
             fill: INK.into(),

@@ -2,7 +2,7 @@
 //!
 //! Everything here is about the *package*, not about EnergyML. It reads
 //! `[Content_Types].xml` and the `.rels` parts, and it is deliberately
-//! forgiving — the reference package published with fesapi breaks three rules
+//! forgiving - the reference package published with fesapi breaks three rules
 //! of the specification at once, and refusing it would make the reader useless.
 //! Every departure produces a [`Diagnostic`]; none is swallowed.
 
@@ -40,8 +40,8 @@ pub(crate) struct Package {
     /// Part name → uncompressed size, as the central directory declares it.
     ///
     /// Declared, not measured: reading every part to weigh it would inflate the
-    /// whole archive. A listing that says so is worth having — it is what tells
-    /// somebody which of the three hundred parts is the one worth looking at —
+    /// whole archive. A listing that says so is worth having - it is what tells
+    /// somebody which of the three hundred parts is the one worth looking at -
     /// and a forged size misleads a listing rather than costing anything, which
     /// is why [`Package::read`] still refuses to trust the same number.
     sizes: BTreeMap<String, u64>,
@@ -70,7 +70,7 @@ impl Package {
                 part.read_to_end(&mut content_types)?;
             }
             Err(_) => {
-                // Mandatory in OPC, so its absence is a real problem — but the
+                // Mandatory in OPC, so its absence is a real problem - but the
                 // parts are still there, and the root element of each can type
                 // it. Say so and carry on.
                 diagnostics.push(Diagnostic::warning(
@@ -116,7 +116,7 @@ impl Package {
         // forged package can claim four gigabytes for a part holding twelve
         // bytes, and reserving it first would abort the process before a single
         // byte was inflated. Reserve what a real part plausibly needs and let
-        // `read_to_end` grow past it — the cost of being wrong is a few
+        // `read_to_end` grow past it - the cost of being wrong is a few
         // reallocations, and the cost of trusting it is the whole process.
         const PREALLOCATION_CAP: usize = 8 * 1024 * 1024;
         let mut bytes = Vec::with_capacity((entry.size() as usize).min(PREALLOCATION_CAP));
@@ -166,7 +166,7 @@ impl Package {
     ///
     /// The diagnostics come back rather than being recorded here, because
     /// `Package` has nowhere to put one: it is the zip and nothing else. The
-    /// caller that owns a diagnostics list — the store — records them, and
+    /// caller that owns a diagnostics list - the store - records them, and
     /// `record` deduplicates, so a `.rels` read a hundred times reports its
     /// defect once.
     pub(crate) fn relationships_reporting(&self, part: &str) -> Result<(Vec<Relationship>, Vec<Diagnostic>)> {
@@ -179,7 +179,7 @@ impl Package {
     }
 }
 
-/// Part names are written with and without a leading slash — the OPC spec
+/// Part names are written with and without a leading slash - the OPC spec
 /// wants one, the fesapi package omits it on half its entries. Compare on the
 /// form the archive itself uses.
 pub(crate) fn normalize(part: &str) -> String {
@@ -260,7 +260,7 @@ fn parse_content_types(
 
 /// Read one `.rels` part, and say what was wrong with it.
 ///
-/// A malformed `.rels` used to stop the walk and keep whatever had been read —
+/// A malformed `.rels` used to stop the walk and keep whatever had been read -
 /// the relationships after the broken byte simply were not there, and nothing
 /// said so. For a package whose `.rels` are how the HDF5 companion is found,
 /// "half the relationships" is a package that half works, which is the hardest
@@ -297,7 +297,7 @@ impl SeenIds {
 /// [`parse_relationships_reporting`], and the number of `Id` lookups it made.
 ///
 /// Public only so that `tests/package_lookups.rs` can prove the duplicate
-/// check is linear — one lookup per relationship — by count rather than by
+/// check is linear - one lookup per relationship - by count rather than by
 /// clock. Not part of the API.
 #[doc(hidden)]
 pub fn parse_relationships_counting(xml: &[u8], part: &str) -> (Vec<Relationship>, Vec<Diagnostic>, u64) {
@@ -340,7 +340,7 @@ pub fn parse_relationships_counting(xml: &[u8], part: &str) -> (Vec<Relationship
                 }
                 // `Id` is an xsd:ID: unique within the part, by the OPC schema.
                 // ALWYN breaks it in 73 of its 203 `.rels`, which is why this
-                // is a note and not a refusal — but a duplicate is what makes
+                // is a note and not a refusal - but a duplicate is what makes
                 // an editor overwrite one relationship with another.
                 if !id.is_empty() && seen.repeats(&id) {
                     diagnostics.push(Diagnostic::note(
@@ -436,7 +436,7 @@ mod tests {
 
     #[test]
     fn a_duplicate_id_is_reported() {
-        // ALWYN does this in 73 of its 203 `.rels`. Not fatal — hence a note —
+        // ALWYN does this in 73 of its 203 `.rels`. Not fatal - hence a note -
         // but it is what makes an editor overwrite one relationship with
         // another.
         let xml = br#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">

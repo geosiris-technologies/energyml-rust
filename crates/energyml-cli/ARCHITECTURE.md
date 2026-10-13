@@ -1,4 +1,4 @@
-# energyml-cli — architecture
+# energyml-cli - architecture
 
 Related decisions: [ADR 0012](../../docs/adr/0012-no-face-carries-logic.md) (no face carries logic), [ADR 0006](../../docs/adr/0006-registries-rather-than-match.md), [ADR 0003](../../docs/adr/0003-identity-full-uri-one-door.md), [ADR 0010](../../docs/adr/0010-package-index-and-caches.md), [ADR 0016](../../docs/adr/0016-one-crate-one-test-binary.md).
 

@@ -1,4 +1,4 @@
-//! `intersect` — the trace of a fault on each horizon it cuts.
+//! `intersect` - the trace of a fault on each horizon it cuts.
 //!
 //! The need: an operation that takes 2 surfaces and outputs their
 //! intersection polyline. It could be done between one fault and several other
@@ -10,13 +10,13 @@
 //!
 //! A barrier and a meshing constraint are rules on a **line in plan view**; a
 //! dipping fault surface projects to a band, and the right line depends on the
-//! horizon one stands on. The intersection is that line, horizon by horizon —
+//! horizon one stands on. The intersection is that line, horizon by horizon -
 //! exactly what the other RESQML convention writes by hand: a horizontal
 //! polyline at the height of the horizon.
 //!
 //! # Two roles, one object, one tree
 //!
-//! `fault` is single, `surfaces` are several and **unordered** — a trace does
+//! `fault` is single, `surfaces` are several and **unordered** - a trace does
 //! not depend on the order of the horizons, and declaring an order that does
 //! not matter would put meaningless arrows in the form. What comes out is **one**
 //! `PolylineSetRepresentation`, a patch per horizon, written by
@@ -27,7 +27,7 @@
 //!
 //! # What is said
 //!
-//! A horizon the fault does not cut gives an empty trace — that is an
+//! A horizon the fault does not cut gives an empty trace - that is an
 //! answer, counted by its name. A fault that cuts **no** horizon is
 //! a refusal: an empty plan would read as a successful computation that saw nothing.
 //! A horizon torn by the fault gives two traces, one per lip; they
@@ -55,22 +55,22 @@ pub struct Intersect;
 
 /// What `intersect` is told.
 ///
-/// **Not `closed`**: it belongs to the computation — a trace closes where the
+/// **Not `closed`**: it belongs to the computation - a trace closes where the
 /// fault pierces a horizon in a loop.
 #[derive(Debug, Params)]
 pub struct IntersectParams {
-    /// The frame, what is represented, the naming — for the polyline writer.
+    /// The frame, what is represented, the naming - for the polyline writer.
     #[param(flatten)]
     pub written: Written,
 }
 
-/// What `intersect` takes — **two roles, read by the slot's name**.
+/// What `intersect` takes - **two roles, read by the slot's name**.
 #[derive(Debug, Inputs)]
 pub struct IntersectInputs {
     /// the fault, as a triangulated surface
     #[input(topology = "triangles")]
     pub fault: Shape,
-    /// the surfaces the fault cuts — one trace per surface, in no particular order
+    /// the surfaces the fault cuts - one trace per surface, in no particular order
     #[input(topology = "triangles", least = 1)]
     pub surfaces: Vec<Shape>,
 }
@@ -108,12 +108,12 @@ fn surface_of(shape: &Shape) -> Option<Surface<'_>> {
     }
 }
 
-/// The two roles, read as surfaces — or the refusal that names what is not one.
+/// The two roles, read as surfaces - or the refusal that names what is not one.
 fn surfaces_of(inputs: &IntersectInputs) -> Result<(Surface<'_>, Vec<Surface<'_>>), Refusal> {
     let fault = surface_of(&inputs.fault).ok_or_else(|| {
         Refusal::on(
             "fault",
-            "must be a triangulated surface — a fault given as lines is already a trace",
+            "must be a triangulated surface - a fault given as lines is already a trace",
         )
     })?;
     let mut surfaces = Vec::new();
@@ -124,7 +124,7 @@ fn surfaces_of(inputs: &IntersectInputs) -> Result<(Surface<'_>, Vec<Surface<'_>
                 return Err(Refusal::on(
                     "surfaces",
                     format!(
-                        "`{}` is not triangulated — `triangulate` makes a surface from a cloud",
+                        "`{}` is not triangulated - `triangulate` makes a surface from a cloud",
                         one.name
                     ),
                 ));
@@ -141,7 +141,7 @@ impl Operation for Intersect {
     fn about(&self) -> About {
         About {
             name: "intersect",
-            describe: "the trace of a fault surface on every surface it cuts — one polyline set, a patch per surface",
+            describe: "the trace of a fault surface on every surface it cuts - one polyline set, a patch per surface",
             category: Category::Faults,
             makes: &["resqml22.PolylineSetRepresentation"],
             recipe: "intersect",
@@ -193,7 +193,7 @@ impl Operation for Intersect {
                 says.push(Note {
                     key: "torn",
                     detail: format!(
-                        "{}: {} separate traces — a surface torn by the fault gives one per lip",
+                        "{}: {} separate traces - a surface torn by the fault gives one per lip",
                         surface.name,
                         lines.len()
                     ),
@@ -292,7 +292,7 @@ impl Operation for Intersect {
                     least: Some(0),
                     most: None,
                 },
-                "how many the fault cuts — one patch each",
+                "how many the fault cuts - one patch each",
             ),
             Slot::optional(
                 "uncutSurfaces",
@@ -306,7 +306,7 @@ impl Operation for Intersect {
     }
 }
 
-/// The tree: a grouping root, one child per horizon — the trace that will
+/// The tree: a grouping root, one child per horizon - the trace that will
 /// later be designated as `faults` for that horizon.
 fn tree_of(written: &[Made], per_surface: &[Traced], patches: &[Patch]) -> Vec<Made> {
     let Some(first) = written.first() else {

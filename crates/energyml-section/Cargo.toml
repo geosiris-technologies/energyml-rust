@@ -1,6 +1,6 @@
 [package]
 name = "energyml-section"
-description = "The section view: long and cross sections of a model along a trace — wells projected, surfaces cut — computed into a catalogue and written as SVG."
+description = "The section view: long and cross sections of a model along a trace - wells projected, surfaces cut - computed into a catalogue and written as SVG."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -27,11 +27,11 @@ energyml-domain = { path = "../energyml-domain", version = "0.1.0" }
 energyml-geometry = { path = "../energyml-geometry", version = "0.1.0" }
 # `profile::Corridor`: projecting heads on a trace, the band.
 energyml-analysis = { path = "../energyml-analysis", version = "0.1.0" }
-# `text`: measuring a label against the font the SVG is written in — the
+# `text`: measuring a label against the font the SVG is written in - the
 # drilling sheet's own table, not a second one (ADR-0015).
 energyml-sheet = { path = "../energyml-sheet", version = "0.1.0" }
-# `read::package`: a package's listing — its colour sets, its index, the
-# objects a section takes by default — for a face that holds a whole store.
+# `read::package`: a package's listing - its colour sets, its index, the
+# objects a section takes by default - for a face that holds a whole store.
 energyml-storage = { path = "../energyml-storage", version = "0.1.0" }
 # The catalogue, the inputs and the view travel as JSON (the front end, the CLI, the
 # SVG's metadata) and come back from it (`energyml profile --from-svg`).
@@ -39,7 +39,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"
 # `png`: the SVG rendered to a PNG, in Rust, with the font the labels were
-# measured against (`fonts/`) — optional, so a build without it says so rather
+# measured against (`fonts/`) - optional, so a build without it says so rather
 # than carrying a rasteriser nobody asked for. Pure Rust, wasm included. No
 # system fonts: the same picture on every machine.
 resvg = { version = "0.48", optional = true, default-features = false, features = ["text"] }

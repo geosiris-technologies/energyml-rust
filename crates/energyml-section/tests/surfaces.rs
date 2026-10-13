@@ -49,7 +49,7 @@ enum Held {
 struct Store {
     objects: HashMap<String, Held>,
     datasets: HashMap<String, (ArrayValues, Vec<i64>)>,
-    /// Arrays read — what a cache saves, counted where it is spent.
+    /// Arrays read - what a cache saves, counted where it is spent.
     reads: std::cell::Cell<usize>,
 }
 
@@ -399,11 +399,11 @@ fn a_plane_cut_along_a_straight_trace_is_the_line_the_formula_gives() {
 }
 
 /// A trace that does not cross the surface gives **no entry**: the surface is
-/// read (`Ok`), it just crosses nothing — not a refusal, and not an empty cut. A
+/// read (`Ok`), it just crosses nothing - not a refusal, and not an empty cut. A
 /// cross section that does cross has its own entry, under its own key.
 ///
 /// To make it fail: push a `SurfaceCut` for every section whatever `found`
-/// holds — the missed trace gets an empty one and `cuts.len()` is 2.
+/// holds - the missed trace gets an empty one and `cuts.len()` is 2.
 #[test]
 fn a_trace_that_misses_the_surface_has_no_cut_and_the_one_that_crosses_keeps_its_key() {
     let store = plane_store(HORIZON, "Top", None);
@@ -428,7 +428,7 @@ fn a_trace_that_misses_the_surface_has_no_cut_and_the_one_that_crosses_keeps_its
 
 /// **Triangulation** (ADR-0011: two independent sources of one fact).
 /// The abscissa of a point of the cut and the one `Corridor::project` gives a
-/// head set down at the same place agree — on a trace with a bend, where they
+/// head set down at the same place agree - on a trace with a bend, where they
 /// would part if either forgot to accumulate the length of the first leg.
 ///
 /// The fact is the height at a given spot: `Corridor` knows nothing of surfaces
@@ -438,7 +438,7 @@ fn a_trace_that_misses_the_surface_has_no_cut_and_the_one_that_crosses_keeps_its
 /// the bend's outer wedge and well past it on the second leg, one of them set
 /// to the side (its foot is not where the head is).
 ///
-/// To make it fail: in `cut_many`, drop the `offset` of the segments — the
+/// To make it fail: in `cut_many`, drop the `offset` of the segments - the
 /// second leg is cut from s = 0 and `z_at` finds the first leg's heights there.
 #[test]
 fn the_abscissa_of_a_cut_is_the_one_corridor_gives_a_head_at_the_same_spot() {
@@ -475,13 +475,13 @@ fn the_abscissa_of_a_cut_is_the_one_corridor_gives_a_head_at_the_same_spot() {
 }
 
 /// Two systems. The object is in EPSG:32631 and the scene in EPSG:2154, and the
-/// test's `Reprojector` is a **known translation** (+1000 east, +2000 north — no
+/// test's `Reprojector` is a **known translation** (+1000 east, +2000 north - no
 /// geodesy, a fact the test writes down): the cut along a scene trace is then
 /// the cut of the same plane along the same trace moved back by that vector,
 /// which is the cut of the first test. And the call to the backend is real:
 /// `NoReprojection` refuses the same read, naming the two codes.
 ///
-/// To make it fail: skip the `reproject_placed` call in `to_scene` — the plane
+/// To make it fail: skip the `reproject_placed` call in `to_scene` - the plane
 /// sits 1000 m west of where it should and the trace misses it.
 #[test]
 fn an_object_in_another_system_is_cut_where_the_scene_draws_it() {
@@ -535,11 +535,11 @@ fn an_object_in_another_system_is_cut_where_the_scene_draws_it() {
 }
 
 /// The same EPSG code in another unit is a conversion, not an identity: a plane
-/// written in feet is cut along a trace in metres at `0.3048` of its numbers —
+/// written in feet is cut along a trace in metres at `0.3048` of its numbers -
 /// and the backend is not asked (`NoReprojection` would refuse).
 ///
 /// To make it fail: have `frame_of` read the unit as `"m"` whatever the CRS
-/// says — the plane is 3.28 times too big and the line ends at s = 800 / 0.3048.
+/// says - the plane is 3.28 times too big and the line ends at s = 800 / 0.3048.
 #[test]
 fn the_same_system_in_feet_is_converted_to_the_scenes_metres() {
     let mut store = Store::default();
@@ -572,7 +572,7 @@ fn the_same_system_in_feet_is_converted_to_the_scenes_metres() {
 /// that names no CRS at all is in the second case.
 ///
 /// To make it fail: let `(Some, None)` or `(None, Some)` fall through in
-/// `to_scene` with the points unchanged — each read then succeeds.
+/// `to_scene` with the points unchanged - each read then succeeds.
 #[test]
 fn a_system_on_one_side_only_is_refused_by_name() {
     let store = plane_store(HORIZON, "Top", None);
@@ -867,10 +867,10 @@ impl ArraySource for TwoVersions<'_> {
 /// **version 2**, which is a fault; version 1 (the one a uuid alone reaches) is
 /// a horizon. The role is the one of the version named.
 ///
-/// Internally only the full uri is used (ADR-0003) — a package can hold one uuid twice.
+/// Internally only the full uri is used (ADR-0003) - a package can hold one uuid twice.
 ///
 /// To make it fail: in `surfaces::role_of` (or `scene::interpretation_of`) ask
-/// the source for the interpretation's uuid — the role is then `Horizon`.
+/// the source for the interpretation's uuid - the role is then `Horizon`.
 #[test]
 fn the_role_comes_from_the_version_the_reference_names() {
     let interpretation = "b0000000-0000-4000-8000-000000000001";
@@ -915,7 +915,7 @@ fn the_role_comes_from_the_version_the_reference_names() {
 }
 
 /// A uri names its object by the uuid in its parentheses; a bare uuid is taken
-/// as itself, lower-cased — the store keys its objects that way.
+/// as itself, lower-cased - the store keys its objects that way.
 ///
 /// To make it fail: return the uri untouched.
 #[test]
@@ -993,7 +993,7 @@ fn asked(store: &str, revision: u64, surfaces: &[&str]) -> energyml_section::mod
 /// `read::cache`: a surface is read and placed once per revision of its
 /// package; moving the trace cuts it again **without reading it**; a second
 /// run on the same trace does nothing at all. Counted on the store's own array
-/// reads — the work the cache exists to save — and the cached answer is the
+/// reads - the work the cache exists to save - and the cached answer is the
 /// uncached one.
 ///
 /// To make it fail: key the placed surface on the sections too (the moved
@@ -1179,8 +1179,8 @@ fn a_cut_is_kept_for_its_line_whoever_asks() {
 }
 
 /// `compute_packages`: two packages, each with its own selection, give **one**
-/// catalogue — both surfaces cut along the same trace, each under its
-/// package's id — and a selection naming a package that is not open is
+/// catalogue - both surfaces cut along the same trace, each under its
+/// package's id - and a selection naming a package that is not open is
 /// refused object by object, naming the package.
 ///
 /// To make it fail: read every selection from the first package (the second

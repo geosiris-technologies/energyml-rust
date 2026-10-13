@@ -1,4 +1,4 @@
-//! `well-logs` — a temperature and a hydrostatic pressure laid on wellbore
+//! `well-logs` - a temperature and a hydrostatic pressure laid on wellbore
 //! frames by a sourced law of the vertical depth below the ground
 //! below the ground.
 //!
@@ -10,8 +10,8 @@
 //! it, nor along the hole; a hydrostatic pressure is about a bar per ten
 //! metres of water; the kinds are the dictionary's `temperature` and
 //! `pressure` (§6.6); an invented value says so and cites its source (§3, rules
-//! 4 and 5). The numbers — the heads, the slope of the ground, the law's
-//! coefficients — are the tests' own, in Lambert-93 on purpose: a defect of
+//! 4 and 5). The numbers - the heads, the slope of the ground, the law's
+//! coefficients - are the tests' own, in Lambert-93 on purpose: a defect of
 //! `heights` only showed far from the origin (24/09).
 //!
 //! # What would have to break to make it turn red
@@ -52,7 +52,7 @@ const WELL_INTERPRETATION: &str = "99999999-0000-4000-8000-000000000009";
 /// The head of GTH-1 as the reference model places it, in Lambert-93.
 const HEAD: [f64; 2] = [651_620.0, 6_861_170.0];
 /// The ground under that head, and how it slopes: 2 cm per metre toward the
-/// east — so that a ground read under a deviated node is not the head's.
+/// east - so that a ground read under a deviated node is not the head's.
 const GROUND_AT_HEAD: f64 = 45.0;
 const SLOPE: f64 = 0.02;
 
@@ -62,26 +62,26 @@ fn ground_at(x: f64) -> f64 {
 }
 
 /// The two frames of reference of the tests: one counting up (an elevation),
-/// one counting down (a depth) — identity compounds both, as every frame this
+/// one counting down (a depth) - identity compounds both, as every frame this
 /// crate writes.
 fn crs(up: bool) -> Ref {
     if up {
         Ref::new(
             UP,
             "eml23.LocalEngineeringCompoundCrs",
-            "Lambert-93 + NGF-IGN69 — elevation",
+            "Lambert-93 + NGF-IGN69 - elevation",
         )
     } else {
         Ref::new(
             DOWN,
             "eml23.LocalEngineeringCompoundCrs",
-            "Lambert-93 + NGF-IGN69 — depth",
+            "Lambert-93 + NGF-IGN69 - depth",
         )
     }
 }
 
-/// A wellbore frame of the test: its datum and its nodes **placed** —
-/// easting, northing, elevation — and the measured depth of each node.
+/// A wellbore frame of the test: its datum and its nodes **placed** -
+/// easting, northing, elevation - and the measured depth of each node.
 struct Well {
     uuid: &'static str,
     title: &'static str,
@@ -115,7 +115,7 @@ fn deviated() -> Well {
         .collect();
     Well {
         uuid: GTH1,
-        title: "GTH-1 — frame",
+        title: "GTH-1 - frame",
         datum,
         mds,
         nodes,
@@ -153,7 +153,7 @@ impl Well {
             interpretation: Some(Ref::new(
                 WELL_INTERPRETATION,
                 "resqml22.WellboreInterpretation",
-                "GTH-1 — interpretation",
+                "GTH-1 - interpretation",
             )),
             node_count: Some(self.nodes.len()),
             node_mds: Some(self.mds.clone()),
@@ -161,14 +161,14 @@ impl Well {
             datum: Some(Ref::new(
                 "dada0000-0000-4000-8000-00000000da7a",
                 "eml23.ReferencePointInALocalEngineeringCompoundCrs",
-                "GTH-1 — datum",
+                "GTH-1 - datum",
             )),
             ..Known::default()
         }
     }
 }
 
-/// The frame in the bag, under `name`, with what is known of it — its nodes in
+/// The frame in the bag, under `name`, with what is known of it - its nodes in
 /// the frame's own numbers: `z` an elevation when it counts up, a depth when
 /// it counts down.
 fn put(bag: Pieces, name: &str, well: &Well, up: bool, known: Known) -> Pieces {
@@ -203,7 +203,7 @@ fn add(bag: Pieces, name: &str, well: &Well, up: bool) -> Pieces {
 }
 
 /// The test's ground as a triangulated plate around the doublet, in the frame
-/// `up` names — with an interpretation, which no property may take.
+/// `up` names - with an interpretation, which no property may take.
 fn ground(bag: Pieces, up: bool, frame: Ref) -> Pieces {
     let corners = [
         [651_400.0, 6_860_900.0],
@@ -238,7 +238,7 @@ fn ground(bag: Pieces, up: bool, frame: Ref) -> Pieces {
             reference: Some(Ref::new(
                 GROUND,
                 "resqml22.TriangulatedSetRepresentation",
-                "Lutetia — sol",
+                "Lutetia - sol",
             )),
             crs: Some(frame),
             vertical_uom: Some("m".into()),
@@ -345,7 +345,7 @@ fn one_value_per_node_on_the_frame_it_names() {
     assert_eq!(property.json["SupportingRepresentation"]["Uuid"], json!(GTH1));
     assert_eq!(property.json["IndexableElement"], json!("nodes"));
     assert_eq!(property.json["Uom"], json!("degC"));
-    // The kind of the standard dictionary, found by its title — §6.6 names it:
+    // The kind of the standard dictionary, found by its title - §6.6 names it:
     // `temperature` 08260920.
     assert_eq!(
         property.json["PropertyKind"]["Uuid"],
@@ -354,7 +354,7 @@ fn one_value_per_node_on_the_frame_it_names() {
     assert_eq!(property.json["PropertyKind"]["Title"], json!("temperature"));
 
     // Positional: exactly as many values as the frame has nodes, the empty
-    // ones included — a shorter array would put each value on the wrong node.
+    // ones included - a shorter array would put each value on the wrong node.
     let nodes = deviated().nodes.len();
     assert_eq!(values(&plan, &property.uuid).len(), nodes);
     assert_eq!(plan.datasets.len(), 1);
@@ -392,13 +392,13 @@ fn the_law_is_read_at_the_vertical_depth_below_the_ground_at_the_head() {
         );
     }
     // Five nodes lie deep enough; the datum is in the air, two are shallower
-    // than the reference depth — said, not filled.
+    // than the reference depth - said, not filled.
     assert_eq!(laid.iter().filter(|v| v.is_finite()).count(), 5);
     assert_eq!(number(&plan, "aboveGroundCount"), 1.0);
     assert_eq!(number(&plan, "shallowCount"), 2.0);
     assert!(same(number(&plan, "groundRead"), GROUND_AT_HEAD));
 
-    // And not any of the three near misses, at the deepest node — MD 120,
+    // And not any of the three near misses, at the deepest node - MD 120,
     // 67 m below the ground at the head, 61 m east of it along the slope.
     let last = well.nodes.len() - 1;
     let deepest = laid[last];
@@ -454,7 +454,7 @@ fn a_depth_frame_gives_the_temperatures_of_an_elevation_frame() {
 fn the_ground_read_and_the_ground_stated_agree() {
     // Two answers to one question: the ground under the head is 45, and the
     // datum stands 3 m above it. Read on the surface, or counted from the datum,
-    // the values must be the same — in either sense of the axis.
+    // the values must be the same - in either sense of the axis.
     for up in [true, false] {
         let read = planned(&gth1(up), &temperature()).expect("the ground read");
         let stated = planned(
@@ -610,7 +610,7 @@ fn a_ground_in_another_frame_is_refused() {
 
 #[test]
 fn a_frame_whose_numbers_are_not_where_its_datum_puts_them_is_refused() {
-    // The datum placed, the nodes in the frame's local numbers — what an
+    // The datum placed, the nodes in the frame's local numbers - what an
     // origin of the compound would make of them: 6.9 million metres off.
     let well = deviated();
     let local = Well {
@@ -654,7 +654,7 @@ fn a_frame_with_no_node_where_the_law_holds_is_set_aside_by_name() {
     // 20 m, so it has nothing to give.
     let short = vertical(
         SHORT,
-        "BSS000TEST — frame",
+        "BSS000TEST - frame",
         651_700.0,
         6_861_200.0,
         0.0,
@@ -679,7 +679,7 @@ fn a_frame_with_no_node_where_the_law_holds_is_set_aside_by_name() {
 fn a_laid_property_says_it_is_synthetic_and_cites_its_source() {
     let plan = planned(
         &gth1(true),
-        &temperature().set("source", "a sourced law — synthetic"),
+        &temperature().set("source", "a sourced law - synthetic"),
     )
     .expect("a plan");
     let property = &plan.objects[0];
@@ -690,7 +690,7 @@ fn a_laid_property_says_it_is_synthetic_and_cites_its_source() {
         .as_str()
         .expect("a description");
     assert!(
-        description.contains("not measured") && description.contains("a sourced law — synthetic"),
+        description.contains("not measured") && description.contains("a sourced law - synthetic"),
         "{description}"
     );
     assert!(plan.says.iter().any(|note| note.key == "synthetic"));
@@ -700,8 +700,8 @@ fn a_laid_property_says_it_is_synthetic_and_cites_its_source() {
 fn the_property_is_named_for_the_wellbore_and_takes_nothing_of_the_frame_or_the_ground() {
     let plan = planned(&gth1(true), &temperature()).expect("a plan");
     let property = &plan.objects[0];
-    assert_eq!(property.title, "GTH-1 — temperature");
-    assert_eq!(property.json["Citation"]["Title"], json!("GTH-1 — temperature"));
+    assert_eq!(property.title, "GTH-1 - temperature");
+    assert_eq!(property.json["Citation"]["Title"], json!("GTH-1 - temperature"));
     let written = property.json.to_string();
     assert!(
         !written.contains(WELL_INTERPRETATION),
@@ -735,7 +735,7 @@ fn the_same_inputs_give_the_same_uuids_and_another_gradient_another_property() {
         "frames 2",
         &vertical(
             GTH3,
-            "GTH-3 — frame",
+            "GTH-3 - frame",
             651_800.0,
             6_861_200.0,
             3.0,
@@ -756,7 +756,7 @@ fn the_same_inputs_give_the_same_uuids_and_another_gradient_another_property() {
     assert_ne!(first[0], first[1], "two frames, two properties");
     assert_eq!(first, again, "the same inputs, the same objects");
 
-    // Another gradient is another property, beside the first — never the first
+    // Another gradient is another property, beside the first - never the first
     // rewritten under its uuid.
     let steeper = uuids(&planned(&two, &temperature().set("gradient", 31.0)).expect("a plan"));
     assert!(
@@ -777,7 +777,7 @@ fn given_uuids_are_handed_out_one_per_property() {
         "frames 2",
         &vertical(
             GTH3,
-            "GTH-3 — frame",
+            "GTH-3 - frame",
             651_800.0,
             6_861_200.0,
             3.0,

@@ -1,4 +1,4 @@
-//! Resampling a polyline, and the distance from a point to one — the two
+//! Resampling a polyline, and the distance from a point to one - the two
 //! small tools a clean remesh near a fault needs.
 //!
 //! The need: near faults the measurements are always noisy and uncertain, so it
@@ -6,19 +6,19 @@
 //! edges on each side at the fault lips. Both come down to this:
 //! drop the samples within a buffer of the trace, and give the trace vertices
 //! at a regular spacing. A constrained triangulation then meets the trace with
-//! exactly those vertices, on both sides — the same count by construction.
+//! exactly those vertices, on both sides - the same count by construction.
 
 /// The polyline resampled at `spacing`, by arc length **in plan view**, ends
 /// kept; z follows the line.
 ///
 /// Plan view and not 3D, and it is the point: two horizons cut by the same
 /// fault carry traces with the same (x, y) and different z. Measured in plan,
-/// the same spacing gives them the **same nodes** along the fault — which is
+/// the same spacing gives them the **same nodes** along the fault - which is
 /// what a volume mesh between them will need. Measured in 3D, the steeper
 /// trace would come out sparser, and nothing would line up.
 ///
 /// The last interval is whatever is left, never stretched: a trace of 10 at
-/// a spacing of 3 gives nodes at 0, 3, 6, 9, 10 — the geometry is the trace's,
+/// a spacing of 3 gives nodes at 0, 3, 6, 9, 10 - the geometry is the trace's,
 /// not the spacing's. Refused by name for a non-positive spacing; a line of
 /// fewer than two positions comes back as it is.
 pub fn resample(line: &[[f64; 3]], spacing: f64) -> Result<Vec<[f64; 3]>, String> {
@@ -49,7 +49,7 @@ pub fn resample(line: &[[f64; 3]], spacing: f64) -> Result<Vec<[f64; 3]>, String
         }
         since = length - (at - spacing);
     }
-    // The last vertex is the trace's own end — kept unless the walk landed on
+    // The last vertex is the trace's own end - kept unless the walk landed on
     // it exactly, in which case it is already there.
     let last = *line.last().unwrap();
     if out.last() != Some(&last) {
@@ -91,7 +91,7 @@ mod tests {
         let out = resample(&line, 3.0).unwrap();
         let xs: Vec<f64> = out.iter().map(|p| p[0]).collect();
         assert_eq!(xs, vec![0.0, 3.0, 6.0, 9.0, 10.0]);
-        // z follows the line — and the spacing was measured in plan: in 3D the
+        // z follows the line - and the spacing was measured in plan: in 3D the
         // line is 11.18 long, and the nodes would not sit on 3, 6, 9.
         assert!((out[1][2] - 1.5).abs() < 1e-12);
     }

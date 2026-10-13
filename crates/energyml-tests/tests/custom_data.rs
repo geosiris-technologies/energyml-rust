@@ -1,4 +1,4 @@
-//! `xsd:any` — the vendor extension point — end to end.
+//! `xsd:any` - the vendor extension point - end to end.
 //!
 //! `CustomData` is the only `xsd:any` in the whole schema set, and it hangs off
 //! **every** top-level object of every eml version. Until the audit of
@@ -14,7 +14,7 @@ use energyml_eml_2_3 as eml;
 use energyml_resqml_2_2 as resqml;
 
 /// A vendor subtree whose prefix is declared on the **root**, as a real
-/// document does — the subtree does not carry the declaration, so it has to be
+/// document does - the subtree does not carry the declaration, so it has to be
 /// remembered and re-emitted or the output binds `geo:` to nothing.
 const SOURCE: &str = "\
 <resqml:TriangulatedSetRepresentation \
@@ -73,7 +73,7 @@ fn a_vendor_extension_survives_a_round_trip() {
         custom.content
     );
     // Character references resolved on the way in and re-escaped on the way
-    // out — kept, not lost, and not double-escaped.
+    // out - kept, not lost, and not double-escaped.
     assert!(
         custom.content.contains("relevé &amp; contrôlé"),
         "{}",
@@ -103,7 +103,7 @@ fn a_vendor_extension_survives_a_round_trip() {
         "{written}"
     );
 
-    // And what came out reads back **equal** — the real test of a round trip.
+    // And what came out reads back **equal** - the real test of a round trip.
     let again: resqml::TriangulatedSetRepresentation =
         xml::from_xml_str(&written).expect("the output reads back");
     assert_eq!(again, object);
@@ -134,7 +134,7 @@ fn an_object_without_vendor_data_writes_no_wildcard() {
 #[test]
 fn an_unknown_child_is_still_skipped_where_no_wildcard_was_declared() {
     // `Citation` declares no `xsd:any`, so a child from a future minor version
-    // is skipped as before — the wildcard must not become a catch-all
+    // is skipped as before - the wildcard must not become a catch-all
     // everywhere.
     let source = "\
 <eml:Citation xmlns:eml=\"http://www.energistics.org/energyml/data/commonv2\">\

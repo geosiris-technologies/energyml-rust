@@ -3,8 +3,8 @@
 //! The store used to keep the first part of a uuid and dropped the others with a
 //! warning, so a package holding one object in two versions, or one uuid under
 //! two releases, lost all but one of them without saying which. These tests
-//! fabricate such packages **by hand** — the zip, the part names, the content
-//! types, the `objectVersion` attribute — so that what is read does not come
+//! fabricate such packages **by hand** - the zip, the part names, the content
+//! types, the `objectVersion` attribute - so that what is read does not come
 //! from the writer under test, and then pin the rule: accept the short uri when
 //! there is no conflict (or when the object has no version), and the form with
 //! the version when there is a conflict.
@@ -14,14 +14,14 @@
 //! - Identifier Specification v5.0 §3.4.2 (p. 14): the canonical form with a
 //!   version is `eml:///{type}(uuid={uuid},version='{version}')`; §3.4.2.1
 //!   (p. 15): a URI without a version, when several exist, *implicitly refers to
-//!   the most recent version* — and ETP 1.2 says nothing of how to tell which,
+//!   the most recent version* - and ETP 1.2 says nothing of how to tell which,
 //!   so this store names the candidates instead of choosing one;
 //! - EPC v1.1 §3.6 (p. 17): *"A data object XML file MUST be contained in a
 //!   unique path"*, and *"If this data object is versioned, the unique path
 //!   should contain a directory called 'version_id'"*.
 //!
-//! (The file `versions.rs` beside this one is about **releases** — one namespace
-//! for 2.0.1 and 2.2 — and keeps its name.)
+//! (The file `versions.rs` beside this one is about **releases** - one namespace
+//! for 2.0.1 and 2.2 - and keeps its name.)
 
 use std::io::{Cursor, Read, Write};
 use std::sync::Arc;
@@ -168,8 +168,8 @@ fn open_bytes(bytes: Vec<u8>) -> EpcStore {
     EpcStore::from_reader(Box::new(Cursor::new(bytes)), "versions.epc", registry()).expect("opens")
 }
 
-/// The package of the lot's proof: **four entries** of two uuids — X in two
-/// versions, Y under two releases — and two horizons that name X.
+/// The package of the lot's proof: **four entries** of two uuids - X in two
+/// versions, Y under two releases - and two horizons that name X.
 fn four_entries() -> Vec<Part> {
     vec![
         part(
@@ -237,7 +237,7 @@ fn what_of(change: &Change, uri: &str) -> Option<What> {
         .map(|object| object.what)
 }
 
-/// An object, read from XML — one the store being tested does not hold.
+/// An object, read from XML - one the store being tested does not hold.
 fn object22(uuid: &str, version: Option<&str>, title: &str) -> Box<dyn DynObject> {
     registry()
         .read_xml_as(CT22, feature22(uuid, version, title).as_bytes(), ReadMode::Strict)
@@ -250,7 +250,7 @@ fn object22(uuid: &str, version: Option<&str>, title: &str) -> Box<dyn DynObject
 // ---------------------------------------------------------------------------
 
 /// What would have to break for this to go red: the open loop dropping a part
-/// whose uuid is already known — **the "first part wins" it had before**.
+/// whose uuid is already known - **the "first part wins" it had before**.
 /// There were then two entries, not four, and the sabotage that proves it is
 /// restoring that line.
 #[test]
@@ -266,7 +266,7 @@ fn four_entries_are_four_entries() {
         ]),
         "X in two versions, Y in two releases: four entries, each under the uri that names it alone"
     );
-    // The same uuid under two *types* keeps the short form of each — the types
+    // The same uuid under two *types* keeps the short form of each - the types
     // differ, so nothing conflicts; X's versions conflict, so both name theirs.
     assert!(
         store
@@ -308,7 +308,7 @@ fn the_entry_without_a_version_keeps_the_short_uri_beside_a_versioned_one() {
     );
 }
 
-/// **An object that declares a version is spelled with it**, namesake or not —
+/// **An object that declares a version is spelled with it**, namesake or not -
 /// internally the uri always carries the version number when there is one
 /// (ADR-0003). The short form still **names** it: an address
 /// given by a user, resolved at the door to the full one.
@@ -392,7 +392,7 @@ fn a_versioned_uri_names_exactly_its_entry_or_nothing() {
     );
 }
 
-/// A short uri that conflicts is **refused by name** — never answered with
+/// A short uri that conflicts is **refused by name** - never answered with
 /// whichever came first. The candidates are the uris that resolve.
 #[test]
 fn a_short_uri_that_conflicts_is_refused_naming_each_candidate() {
@@ -443,7 +443,7 @@ fn one_uuid_under_two_releases_is_named_by_its_type() {
 
 /// A reference resolves by (uuid, type, version when it carries one) with the
 /// rules of a uri; one that names no version of an object held in several is
-/// refused by name — and one that names a version nobody holds is not found.
+/// refused by name - and one that names a version nobody holds is not found.
 #[test]
 fn a_reference_is_resolved_by_what_it_says_or_refused_by_name() {
     let store = four();
@@ -507,8 +507,8 @@ fn the_graph_sends_a_reference_to_the_entry_it_names() {
     // Nothing is dangling in this package, and the nodes are all present.
     assert!(graph.nodes.iter().all(|node| node.present), "{:?}", graph.nodes);
     // The checker compares a reference's `ObjectVersion` with the entry it names:
-    // H says `2` and names the entry that carries `2` — no mismatch; H0 says
-    // nothing of a version and names objects that carry one — the warning the
+    // H says `2` and names the entry that carries `2` - no mismatch; H0 says
+    // nothing of a version and names objects that carry one - the warning the
     // checker already gives for that, and no error.
     let issues = energyml_storage::graph::check_all_references(
         read.iter().map(|(s, o)| (s, o.as_reflect())),
@@ -534,7 +534,7 @@ fn the_graph_sends_a_reference_to_the_entry_it_names() {
 // Writing, and the journal
 // ---------------------------------------------------------------------------
 
-/// The journal names the entry that was written — by the uri that names it — and
+/// The journal names the entry that was written - by the uri that names it - and
 /// **not** its namesake.
 #[test]
 fn an_edit_is_journaled_under_the_uri_of_the_entry_it_touched() {
@@ -569,7 +569,7 @@ fn an_edit_is_journaled_under_the_uri_of_the_entry_it_touched() {
     );
 }
 
-/// An ordinary `put` replaces the entry of the object's version — and only that
+/// An ordinary `put` replaces the entry of the object's version - and only that
 /// one. It never makes a second version.
 #[test]
 fn an_ordinary_put_replaces_the_entry_of_its_version_and_makes_no_new_one() {
@@ -673,7 +673,7 @@ fn the_gate_adds_a_version_and_refuses_the_exact_identity() {
 /// A second version of an object **moves no uri**: each entry is spelled with
 /// its own version from the start (internally the uri always carries the
 /// version number when there is one, ADR-0003), so the
-/// journal names the newcomer only — and a removal, the removed one only.
+/// journal names the newcomer only - and a removal, the removed one only.
 #[test]
 fn a_second_version_moves_no_uri_and_the_journal_names_the_newcomer_only() {
     let mut store = open_bytes(zip_of(&[part(
@@ -831,7 +831,7 @@ fn a_package_of_four_entries_is_written_under_unique_paths_and_reads_back_the_sa
     );
     assert!(rels.contains("version_2/BoundaryFeature_"), "{rels}");
     assert!(!rels.contains("version_1/BoundaryFeature_"), "{rels}");
-    // Two relationships of one `.rels` never share an `Id` (§3.4.1) — H0 names
+    // Two relationships of one `.rels` never share an `Id` (§3.4.1) - H0 names
     // both versions of X.
     let rels = text_in(
         &bytes,

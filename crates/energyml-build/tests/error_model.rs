@@ -1,6 +1,6 @@
 //! The `[ERROR]` model of the reference model, in miniature: each
-//! deliberate anomaly written the way the Lutetia recipe writes it — an
-//! ordinary operation, then the fault stated in one field by `edit-object` —
+//! deliberate anomaly written the way the Lutetia recipe writes it - an
+//! ordinary operation, then the fault stated in one field by `edit-object` -
 //! and `energyml_domain::check` must find **exactly** it, on the object
 //! names, and nothing on the clean objects beside.
 //!
@@ -12,31 +12,31 @@
 //! fires on which object is what the texts cited say (E-01 … E-09 are this
 //! file's own labels for the anomalies):
 //!
-//! - E-01, E-02 — an abstract property kind carries no value (common TRG 2.3
+//! - E-01, E-02 - an abstract property kind carries no value (common TRG 2.3
 //!   §11.9; the Energistics dictionary 2.3 marks `force per length` and
 //!   `property` `IsAbstract`);
-//! - E-03 — a discrete value names a row of its table by the key column (common
+//! - E-03 - a discrete value names a row of its table by the key column (common
 //!   TRG 2.3 §9.1 p. 190);
-//! - E-04 — an `asset identifier` names a well of the package (Energistics
+//! - E-04 - an `asset identifier` names a well of the package (Energistics
 //!   Identifier Specification v4.0 §6.3 p. 14);
-//! - E-06 — *"There can only be one trajectory per wellbore with
+//! - E-06 - *"There can only be one trajectory per wellbore with
 //!   definitive=true"* (WITSML TRG 2.1 §16.6 p. 350), filed on the wellbore;
-//! - E-07 — IsListric *"Must not be present if the fault is not normal"*
-//!   (RESQML Interpretations.xsd l. 659–662, TRG 2.2 §6.20 p. 188);
-//! - E-08 — *"If true all data objects in the collection are of the same
-//!   Energistics data type"* (Collection.xsd l. 66–70) on the collection, and
+//! - E-07 - IsListric *"Must not be present if the fault is not normal"*
+//!   (RESQML Interpretations.xsd l. 659-662, TRG 2.2 §6.20 p. 188);
+//! - E-08 - *"If true all data objects in the collection are of the same
+//!   Energistics data type"* (Collection.xsd l. 66-70) on the collection, and
 //!   *"the DataobjectCollection must only contain WellboreInterpretation"*
-//!   (RESQML TRG 2.2 §6.19 p. 187) on the earth model — two findings, the
+//!   (RESQML TRG 2.2 §6.19 p. 187) on the earth model - two findings, the
 //!   association keeping its own flag false;
-//! - E-09 — a contact element is a geological interpretation or a frontier,
+//! - E-09 - a contact element is a geological interpretation or a frontier,
 //!   never a representation (RESQML TRG 2.2 §6.9 p. 173), one finding when the
 //!   direct object is geological.
 //!
 //! E-05 (a unit against its kind's quantity class) is something `check`
 //! cannot judge yet: it is left out, not pinned as a silence.
 //!
-//! The package is played from a recipe written here — never the Lutetia
-//! recipe's output — into a temporary folder, and read back from the saved
+//! The package is played from a recipe written here - never the Lutetia
+//! recipe's output - into a temporary folder, and read back from the saved
 //! files. Needs HDF5: the properties and the wells write arrays, and E-03 reads
 //! them back.
 
@@ -135,7 +135,7 @@ set = { existence = "planned", synthetic = true }
 nom = "erreur-trajectoire-bis"
 operation = "edit-object"
 entrees = [ { creneau = "object", etape = "erreur-witsml", type = "Trajectory" } ]
-set = { copy = "[ERROR] GTH-9 — trajectory, a second definitive one", fields = ['Citation.Description = "E-06"'] }
+set = { copy = "[ERROR] GTH-9 - trajectory, a second definitive one", fields = ['Citation.Description = "E-06"'] }
 
 [[etape]]
 nom = "erreur-proprietes"
@@ -155,8 +155,8 @@ set = { fields = ['KeyColumn = [{"Title": "code", "ValueCountPerRow": 1, "Proper
 [[etape]]
 nom = "erreur-serie"
 operation = "edit-object"
-entrees = [ { creneau = "object", etape = "doublet", type = "TimeSeriesData", titre = "GTH-1 — wellhead pressure" } ]
-set = { copy = "[ERROR] GTH-99 — wellhead pressure", fields = ['Key[0]._ = "eml://test.example.com/well(GTH-99)/wellbore(01)/wellhead"'] }
+entrees = [ { creneau = "object", etape = "doublet", type = "TimeSeriesData", titre = "GTH-1 - wellhead pressure" } ]
+set = { copy = "[ERROR] GTH-99 - wellhead pressure", fields = ['Key[0]._ = "eml://test.example.com/well(GTH-99)/wellbore(01)/wellhead"'] }
 
 [[etape]]
 nom = "erreur-f9"
@@ -298,7 +298,7 @@ fn each_anomaly_is_found_once_on_its_object_and_the_clean_objects_are_silent() {
             .to_string()
     };
 
-    // Nothing else is wrong with the package: the anomalies are all there is —
+    // Nothing else is wrong with the package: the anomalies are all there is -
     // eight weighed as errors, E-04 a warning.
     assert_eq!(
         report.errors(),
@@ -349,18 +349,18 @@ fn each_anomaly_is_found_once_on_its_object_and_the_clean_objects_are_silent() {
         }))
         .collect();
     let expected: BTreeSet<(String, String)> = [
-        ("property kind: abstract", "[ERROR] GTH-9 — force per length"), // E-01
-        ("property kind: abstract", "[ERROR] GTH-9 — property"),         // E-02
+        ("property kind: abstract", "[ERROR] GTH-9 - force per length"), // E-01
+        ("property kind: abstract", "[ERROR] GTH-9 - property"),         // E-02
         (
             "house/discrete-value-in-lookup",
-            "[ERROR] GTH-9 — [ERROR] lithology",
+            "[ERROR] GTH-9 - [ERROR] lithology",
         ), // E-03
         (
             "house/time-series-asset-resolves",
-            "[ERROR] GTH-99 — wellhead pressure",
+            "[ERROR] GTH-99 - wellhead pressure",
         ), // E-04
         ("trg/one-definitive-trajectory-per-wellbore", "[ERROR] GTH-9"), // E-06, on the wellbore
-        ("trg/is-listric-iff-normal", "[ERROR] F9 — interpretation"),    // E-07
+        ("trg/is-listric-iff-normal", "[ERROR] F9 - interpretation"),    // E-07
         ("trg/homogeneous-collection", "[ERROR] wells"),                 // E-08
         ("trg/wellbore-interpretation-set-holds-wellbores", "[ERROR] model"), // E-08
         ("trg/contact-element-is-geological", "[ERROR] structure"),      // E-09
@@ -377,8 +377,8 @@ fn each_anomaly_is_found_once_on_its_object_and_the_clean_objects_are_silent() {
         report.rules
     );
 
-    // Each finding is on an `[ERROR]` object: the clean ones — the doublet, its
-    // series, F1 — are silent.
+    // Each finding is on an `[ERROR]` object: the clean ones - the doublet, its
+    // series, F1 - are silent.
     for (rule, on) in &found {
         assert!(
             on.starts_with("[ERROR]"),

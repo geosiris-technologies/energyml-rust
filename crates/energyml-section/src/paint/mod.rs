@@ -1,5 +1,5 @@
 //! What the front end's scene paints along an object, laid on a section
-//! (`View::paints`, `View::joints`) — the resolver the front end supplies; without
+//! (`View::paints`, `View::joints`) - the resolver the front end supplies; without
 //! a paint, `layout` draws as before (the default resolver).
 //!
 //! Contract of 05/10, filled by the agents of the same day: `well_pieces` here
@@ -30,7 +30,7 @@ pub const SMOOTH_STEP_PX: f64 = 2.0;
 /// make the SVG larger.
 pub const SMOOTH_MOST: usize = 64;
 
-/// Alpha below this is "no value" — the 3D view's threshold (`fragmentAt`:
+/// Alpha below this is "no value" - the 3D view's threshold (`fragmentAt`:
 /// alpha under one half is discarded), so the section and the scene agree on
 /// which stretches are absent. A buffer's alpha is 0 or 255 in practice; the
 /// midpoint only decides what a stray byte means.
@@ -71,7 +71,7 @@ struct Read {
 fn read(nodes: usize, paint: &Paint, joints: &Joint) -> Result<Read, String> {
     if paint.nodes.len() != nodes {
         return Err(format!(
-            "the paint holds {} node colours but the well has {nodes} nodes — they must match one to one",
+            "the paint holds {} node colours but the well has {nodes} nodes - they must match one to one",
             paint.nodes.len()
         ));
     }
@@ -99,12 +99,12 @@ fn read(nodes: usize, paint: &Paint, joints: &Joint) -> Result<Read, String> {
 
 /// Whether a paint fits a well of `nodes` nodes and its colours read: the
 /// refusal [`well_pieces`] gives for those two reasons, before any pixel is
-/// laid — `layout` says it before it reserves the room for its notes.
+/// laid - `layout` says it before it reserves the room for its notes.
 pub fn check(nodes: usize, paint: &Paint, joints: &Joint) -> Result<(), String> {
     read(nodes, paint, joints).map(|_| ())
 }
 
-/// A point of segment `a`–`b` at `t`, exact at both ends: two stretches that
+/// A point of segment `a`-`b` at `t`, exact at both ends: two stretches that
 /// meet at a node meet on the very same point, which is what merging compares.
 fn at(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
     if t <= 0.0 {
@@ -118,12 +118,12 @@ fn at(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
 
 /// A well's path, already laid in pixels (one point per node, in node order),
 /// painted: the pieces to draw, joints included, or why the paint does not fit
-/// this well — said by name, and the well is then drawn as before.
+/// this well - said by name, and the well is then drawn as before.
 ///
 /// The reading is a web 3D view's (`fragmentAt`), transcribed on the path in pixels:
 ///
 /// * **Net**: node `k`'s colour over the stretch from node `k` to node `k+1`;
-///   **Smooth**: from node `k`'s colour to node `k+1`'s — except that an absent
+///   **Smooth**: from node `k`'s colour to node `k+1`'s - except that an absent
 ///   neighbour stops the blend (the stretch is then flat in node `k`'s colour),
 ///   because an interpolated absent colour is a dark fringe, not a value. Each
 ///   smooth stretch is cut into sub-pieces about [`SMOOTH_STEP_PX`] long (at
@@ -133,16 +133,16 @@ fn at(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
 ///   A gap, never a colour.
 /// * joints (`jointFlags`): never at the two ends; `Nodes` at every inner
 ///   node, `Changes` where the node's bytes differ from the previous node's
-///   (alpha included — absent next to a colour is a change). A joint is
+///   (alpha included - absent next to a colour is a change). A joint is
 ///   `joints.px` long, centred on the node: each half is **drawn only if the
-///   run on its side is at least two joints long** (`jointsFit` — below that a
+///   run on its side is at least two joints long** (`jointsFit` - below that a
 ///   run would be all joint, a gap that looks like missing data), the run being
 ///   from the flagged node (or the end of the well) before to the one after:
 ///   a stretch in `Nodes`, a stretch of one colour in `Changes` (05/10), so a
 ///   finely sampled well keeps its changes. A half lies on whatever stretches it
 ///   covers, and only where they are drawn. Alpha 0 leaves the joint's span empty;
 ///   otherwise the joint colour is composited over the stretch's colour **at
-///   the node** (`rgb + (joint − rgb)·alpha`, the 3D rule — on a smooth stretch
+///   the node** (`rgb + (joint − rgb)·alpha`, the 3D rule - on a smooth stretch
 ///   the underlying colour moves a little across half a joint, and the node's
 ///   is used), precomputed: the pieces always carry opacity 1.
 ///
@@ -184,8 +184,8 @@ pub fn well_pieces(path_px: &[[f64; 2]], paint: &Paint, joints: &Joint) -> Resul
         arc[k] = arc[k - 1] + ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2)).sqrt();
     }
     // Where the joints are, as spans of abscissa. A joint is judged on the
-    // **run** its half lies in — from the flagged node (or the end of the
-    // well) before it to the flagged node (or the end) after it — never on the
+    // **run** its half lies in - from the flagged node (or the end of the
+    // well) before it to the flagged node (or the end) after it - never on the
     // stretch between two nodes: in `Changes` a run is a stretch of one colour,
     // which on a finely sampled well (a node every metre) holds many
     // nodes; in `Nodes` every inner node is flagged and a run is a stretch, the
@@ -255,7 +255,7 @@ pub fn well_pieces(path_px: &[[f64; 2]], paint: &Paint, joints: &Joint) -> Resul
             let (u0, u1) = ((pair[0] - s0) / len, (pair[1] - s0) / len);
             if in_joint((pair[0] + pair[1]) / 2.0) {
                 // Alpha 0 is a gap. Otherwise the joint over the paint at the
-                // node the joint stands on — the end of the stretch it is near.
+                // node the joint stands on - the end of the stretch it is near.
                 if alpha > 0.0 {
                     let under = if (u0 + u1) / 2.0 < 0.5 { from } else { to };
                     push(vec![at(a, b, u0), at(a, b, u1)], hex_of(mix(under, joint, alpha)));

@@ -1,10 +1,10 @@
 //! The BRGM chronostratigraphic chart (`energyml_domain::geolts`).
 //!
-//! **An extract of the register, written here** — five concepts and their
+//! **An extract of the register, written here** - five concepts and their
 //! bounds, copied from the export `https://data.geoscience.fr/ncl/GeolTs?_format=csv`
 //! and `…/GeolTsBound?_format=csv` on 24/09/2026 (BRGM, CC BY 4.0), reduced to
 //! the columns the reader uses. The house rule: a reference document is cited,
-//! never read by a test — the snapshot under `data/geolts/` is what the build
+//! never read by a test - the snapshot under `data/geolts/` is what the build
 //! embeds, not what these assertions rest on.
 
 use energyml_domain::geolts::Chart;
@@ -19,7 +19,7 @@ const CONCEPTS: &str = r#"@id,skos:prefLabel,skos:notation,<https://data.geoscie
 <https://data.geoscience.fr/ncl/GeolTs/2183>,'Ludian'@en|'Ludien'@fr,e7,LUDI,<https://data.geoscience.fr/ncl/DivChronoStrat/7>,<https://data.geoscience.fr/ncl/natelem/2>,<https://data.geoscience.fr/ncl/GeolTs/1262>,'253','205','161',<https://data.geoscience.fr/ncl/GeolTsBound/1263>,<https://data.geoscience.fr/ncl/GeolTsBound/1264>,<http://inspire.ec.europa.eu/registry/status/valid>,Bassin de Paris
 "#;
 
-/// Their bounds, verbatim — note the **decimal comma** the export writes.
+/// Their bounds, verbatim - note the **decimal comma** the export writes.
 const BOUNDS: &str = r#"@id,time:numericPosition
 <https://data.geoscience.fr/ncl/GeolTsBound/1249>,'56'
 <https://data.geoscience.fr/ncl/GeolTsBound/1259>,"41,2"
@@ -58,7 +58,7 @@ fn the_parent_is_the_deepest_broader_above() {
     assert_eq!(chart.parent(1262).map(|one| one.id), Some(1249));
     assert_eq!(chart.ancestors(1263), vec![1262, 1249]);
     // The Bartonien's nearer parent (the Middle Eocene, 1254) is not in the
-    // extract, so the Eocene is what remains — never nothing.
+    // extract, so the Eocene is what remains - never nothing.
     assert_eq!(chart.parent(1259).map(|one| one.id), Some(1249));
 }
 
@@ -80,7 +80,7 @@ fn a_branch_is_the_concept_and_everything_below_it() {
 #[test]
 fn a_column_lists_youngest_first() {
     // RESQML's `age` criterion: *"from youngest to oldest period"* (TRG 2.2
-    // §6.34). The Priabonien (37.8–33.9) sits above the Bartonien (41.2–37.8).
+    // §6.34). The Priabonien (37.8-33.9) sits above the Bartonien (41.2-37.8).
     let chart = chart();
     let order: Vec<u32> = chart
         .by_age(&[1259, 1263])

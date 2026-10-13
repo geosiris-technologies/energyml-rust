@@ -3,7 +3,7 @@
 // **Included verbatim by `build.rs` and by `geolts.rs`**, the pattern of
 // `dictionary_xml.rs`: the build-time compaction and a run-time reading of a
 // fresh export can never disagree on what a column means. So this file uses
-// nothing outside `std`, and nothing here is `pub` at the crate's surface —
+// nothing outside `std`, and nothing here is `pub` at the crate's surface -
 // `geolts` wraps it.
 //
 // The export is a SKOS register flattened into CSV (RFC 4180): one concept
@@ -16,7 +16,7 @@
 pub(crate) struct RawConcept {
     /// The number that ends its URI: `…/GeolTs/1263` is 1263.
     pub(crate) id: u32,
-    /// The French label — the register's reference language.
+    /// The French label - the register's reference language.
     pub(crate) label_fr: String,
     /// The English label, when there is one.
     pub(crate) label_en: String,
@@ -29,26 +29,26 @@ pub(crate) struct RawConcept {
     pub(crate) level: u8,
     /// `natelem/n`: 1 reference, 2 regional, 3 usual, 4 obsolete, 5 informal.
     pub(crate) nature: u8,
-    /// `skos:broader`, every one of them — a concept may name its series
+    /// `skos:broader`, every one of them - a concept may name its series
     /// **and** its sub-series.
     pub(crate) parents: Vec<u32>,
     /// The chart's colour, `[r, g, b]`, or none.
     pub(crate) colour: Option<[u8; 3]>,
-    /// Where it begins, in millions of years before present — the **old** end.
+    /// Where it begins, in millions of years before present - the **old** end.
     pub(crate) begins_ma: Option<f64>,
-    /// Where it ends — the **young** end.
+    /// Where it ends - the **young** end.
     pub(crate) ends_ma: Option<f64>,
-    /// `valid`, `retired`, `submitted` — INSPIRE's status.
+    /// `valid`, `retired`, `submitted` - INSPIRE's status.
     pub(crate) status: String,
     /// `dct:spatial`: `Monde`, `Europe`, `Bassin de Paris`…
     pub(crate) spatial: String,
-    /// `dct:source`: the reference the division is taken from — `Gradstein et
+    /// `dct:source`: the reference the division is taken from - `Gradstein et
     /// al. (2012)`. Filled for 593 of 698 on the snapshot.
     pub(crate) source: String,
     /// The register's note on the division (`skos:skopeNote`, the export's own
-    /// spelling) — 154 of 698.
+    /// spelling) - 154 of 698.
     pub(crate) note: String,
-    /// `skos:altLabel`, its other names — 43 of 698.
+    /// `skos:altLabel`, its other names - 43 of 698.
     pub(crate) alt_labels: Vec<String>,
     /// Whether its base is defined by a GSSP, or a GSSA.
     pub(crate) gssp: bool,
@@ -102,7 +102,7 @@ pub(crate) fn csv_records(text: &str) -> Result<Vec<Vec<String>>, String> {
     Ok(records)
 }
 
-/// The values of a cell: `a|b|c`, **outside** quotes — a label may hold a `|`.
+/// The values of a cell: `a|b|c`, **outside** quotes - a label may hold a `|`.
 fn values(cell: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut current = String::new();
@@ -163,7 +163,7 @@ pub(crate) fn bounds(text: &str) -> Result<Vec<(u32, f64)>, String> {
     for row in rows {
         let (Some(id), Some(position)) = (row.get(id).and_then(|one| tail(one)), row.get(at)) else { continue };
         let Some(first) = values(position).into_iter().next() else { continue };
-        // **A decimal comma**: the export writes `41,2` for 41.2 Ma — measured
+        // **A decimal comma**: the export writes `41,2` for 41.2 Ma - measured
         // on the snapshot, next to `'56'` for a whole number. Parsed as a point
         // number only, every fractional age would be dropped without a word,
         // and the stages would lose their order.

@@ -1,7 +1,7 @@
 //! Applying a plan: the only place that touches storage.
 //!
-//! Everything has been decided already — the objects, their uuids, the arrays,
-//! what the activity records — so what is left is plumbing, and plumbing is
+//! Everything has been decided already - the objects, their uuids, the arrays,
+//! what the activity records - so what is left is plumbing, and plumbing is
 //! where an honest error message matters more than a clever one. Nothing here
 //! is refused silently: an object that will not read back, an array the
 //! backend cannot write, a template that is missing, each is named in
@@ -9,23 +9,23 @@
 //!
 //! # The order, and why it is not free
 //!
-//! The same as the SIGEOL writer's, for the same reason — it is about what a
+//! The same as the SIGEOL writer's, for the same reason - it is about what a
 //! **reader** of a half-written package would see:
 //!
-//! 1. the objects, in the plan's order — an operation puts what nothing points
+//! 1. the objects, in the plan's order - an operation puts what nothing points
 //!    at first;
 //! 2. the arrays, into the external file;
 //! 3. the files the plan carries (`Plan::media`) and their relations to the
-//!    objects they show — after the objects, so that one of the same plan can
+//!    objects they show - after the objects, so that one of the same plan can
 //!    be named;
 //! 4. the canonical `ActivityTemplate`, unless the package already holds it;
 //! 5. the activity, which names everything above.
 //!
-//! # `EpcStore`, and not the trait — for now
+//! # `EpcStore`, and not the trait - for now
 //!
 //! `EnergymlStorage` is the reading trait; `put` and `write_array_to` are the
 //! package's own. When the ETP client arrives, this is the one function that
-//! grows a second implementation — which is the point of keeping it alone.
+//! grows a second implementation - which is the point of keeping it alone.
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -41,18 +41,18 @@ use crate::pieces::Ref;
 /// What applying a plan did.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Made {
-    /// The uris written, in order — objects, then the template if it was
+    /// The uris written, in order - objects, then the template if it was
     /// added, then the activity.
     pub written: Vec<String>,
     /// What could not be written, and why.
     pub refused: Vec<String>,
     /// The activity's uri, when it was written.
     pub activity: Option<String>,
-    /// The uris that this write **replaced** — the object was already there.
+    /// The uris that this write **replaced** - the object was already there.
     ///
     /// This is news and not a detail: a package written twice from two
     /// different sources is the ordinary case, and `put` replaces silently.
-    /// Replaying the same file replaces its own objects — the identity is
+    /// Replaying the same file replaces its own objects - the identity is
     /// derived, that is intended, and the count says so; overwriting those of
     /// **another** run is what one wants to see before discovering it in the
     /// package.
@@ -65,8 +65,8 @@ pub struct Made {
     ///
     /// This is the news the package would otherwise leave unsaid. Since the
     /// identity comes from the content, a different content no longer
-    /// overwrites: it **adds**. That is the intended behaviour — when the
-    /// values differ, a second property is created — and it is also the one
+    /// overwrites: it **adds**. That is the intended behaviour - when the
+    /// values differ, a second property is created - and it is also the one
     /// thing a package does not show by itself: two objects with the same
     /// title read as a duplicate, not as two versions, as long as nobody says
     /// that the second has just been written.
@@ -75,21 +75,21 @@ pub struct Made {
     /// differs from the first. Knowing that requires reading both whole
     /// objects; this only opens their header.
     pub versioned: Vec<String>,
-    /// The files put in the package (`Plan::media`), by part name — a part is
+    /// The files put in the package (`Plan::media`), by part name - a part is
     /// not an object and has no uri, so it is not in [`Made::written`].
     pub media: Vec<String>,
-    /// **What an object written breaks in its schema** — one line per error of
+    /// **What an object written breaks in its schema** - one line per error of
     /// `Validate` (pattern, facet, cardinality, `fixed`, lexical type…), naming
     /// the object, the path and the rule.
     ///
     /// Not a refusal: the object is written, because losing what somebody asked
     /// for over a facet is a worse answer than saying it. But **an operation
     /// that writes non-conformant objects is a defect of the operation**, and
-    /// this is where it shows — `section-view` wrote `CulturalFeatureKind =
+    /// this is where it shows - `section-view` wrote `CulturalFeatureKind =
     /// "section line"`, which `CulturalFeatureKindExt` (`.*:.*`) forbids, and
     /// nothing said so until it was found. Tests of operations assert it is empty.
     pub invalid: Vec<String>,
-    /// **The collections this run wrote, by role** — `(role, uri)`, in the plan's
+    /// **The collections this run wrote, by role** - `(role, uri)`, in the plan's
     /// order of roles. A role of eight objects or more (`MANY`) is grouped into a
     /// `DataobjectCollection`; this is where its address is said, so that the run
     /// manifest ([`crate::manifest`]) names it without deriving it a second
@@ -97,7 +97,7 @@ pub struct Made {
     pub collections: Vec<(String, String)>,
 }
 
-/// What the objects of a plan break in their schema — what [`Made::invalid`]
+/// What the objects of a plan break in their schema - what [`Made::invalid`]
 /// reports after the write, for a caller that only **plans** (a test of one
 /// operation, a preview). One line per error of `Validate`: object, path, rule.
 ///
@@ -137,8 +137,8 @@ pub fn apply(plan: &Plan, store: &mut EpcStore, when: &When) -> Made {
 
 /// Write a plan, with or without its arrays.
 ///
-/// Without, for a store whose array backend cannot write — the browser's
-/// h5wasm bridge — where the caller writes the arrays itself, right after the
+/// Without, for a store whose array backend cannot write - the browser's
+/// h5wasm bridge - where the caller writes the arrays itself, right after the
 /// objects that name them exist. The external file is still registered, so
 /// that `save` names it in the `.rels`.
 pub fn apply_with(plan: &Plan, store: &mut EpcStore, when: &When, arrays: bool) -> Made {
@@ -147,7 +147,7 @@ pub fn apply_with(plan: &Plan, store: &mut EpcStore, when: &When, arrays: bool) 
 
 /// Write a plan, its activity a **sub-activity** of `parent` when one is given.
 ///
-/// eml 2.3 `Activity.Parent`, 0..1 — *« An optional parent activity, when the
+/// eml 2.3 `Activity.Parent`, 0..1 - *« An optional parent activity, when the
 /// activity is a sub-activity »* (common TRG 2.3 §3.3 p. 42). A recipe
 /// ([`crate::recipe`]) is a workflow whose steps are operations, and each
 /// operation's activity names the workflow's root **as it is written**, which
@@ -173,8 +173,8 @@ pub fn apply_under(
     let mut made = Made::default();
     // **What is missing for writing is refused here, and nowhere else.**
     //
-    // A blocked plan has computed its geometry — it is good, the scene can keep
-    // it — and it lacks what is needed to write the objects that would carry it
+    // A blocked plan has computed its geometry - it is good, the scene can keep
+    // it - and it lacks what is needed to write the objects that would carry it
     // (a plan without a frame is blocked, not refused). `apply` is the only
     // place that touches storage, so the only one that has to refuse.
     //
@@ -200,13 +200,13 @@ pub fn apply_under(
     // many times as we write, the cost that a front end's colour chains once paid.
     // And *before adding a call, say what it reads*: a title is not in an
     // object's summary, it is in its citation, so this opens the header of each
-    // part **of the type concerned** — a few hundred bytes each. Filtering by
+    // part **of the type concerned** - a few hundred bytes each. Filtering by
     // type is what makes it cheap in the case that matters: enriching a
     // package of boreholes with properties only opens the properties, and
     // there are none yet.
     //
     // And it is **before** the loop, because that is the only window in which
-    // the question has an answer — afterwards, all the titles are there.
+    // the question has an answer - afterwards, all the titles are there.
     let writing: BTreeSet<&str> = plan
         .objects
         .iter()
@@ -287,8 +287,8 @@ pub fn apply_under(
     }
 
     // The files, then what each one shows. The store refuses by name what the
-    // packaging conventions forbid — a reserved name, a content type that is
-    // not one, an object or a part that is not there — and each refusal is
+    // packaging conventions forbid - a reserved name, a content type that is
+    // not one, an object or a part that is not there - and each refusal is
     // said here, never skipped.
     for media in &plan.media {
         if let Err(e) =
@@ -315,7 +315,7 @@ pub fn apply_under(
         }
     };
     // *Is there such an object*: the template is one per uuid, and the question is
-    // existence — what `find_by_uuid` is for.
+    // existence - what `find_by_uuid` is for.
     if store.find_by_uuid(template_uuid).is_none() {
         match provenance::template(recipe) {
             Ok(template) => put(
@@ -360,14 +360,14 @@ pub fn apply_under(
                 // Energistics data type »*. This field used to carry the type
                 // name, and the consequence was not cosmetic: the collection
                 // could not be read back, so `apply` refused it and **no run
-                // had a collection** — a refusal measured on 120 boreholes, the
+                // had a collection** - a refusal measured on 120 boreholes, the
                 // only place where it showed.
                 //
                 // And it is **computed** rather than asserted true. The grouping
                 // is by role, so it is true in practice; but a role that one
                 // day carried two types would then write a false flag, and a
                 // false flag is what a reader believes without opening the
-                // list — which is all it is for.
+                // list - which is all it is for.
                 "HomogeneousDatatype": homogeneous(objects),
             }),
             "the collection of this run",
@@ -410,7 +410,7 @@ pub fn apply_under(
                         "QualifiedType": "eml23.DataobjectCollection",
                         // **The collection's own title**, count included: a
                         // reference's title is a copy, and a copy that differs
-                        // is what `check` reports as stale — on every run that
+                        // is what `check` reports as stale - on every run that
                         // grouped anything (two warnings per package).
                         "Title": collection_title(&plan.activity.title, role, objects.len()),
                     },
@@ -435,7 +435,7 @@ pub fn apply_under(
                 "schemaVersion": "2.3",
                 "Citation": {
                     "$type": "eml23.Citation",
-                    "Title": format!("{} — collections", plan.activity.title),
+                    "Title": format!("{} - collections", plan.activity.title),
                     "Originator": when.originator,
                     "Creation": when.creation,
                     "Format": energyml_core::CITATION_FORMAT,
@@ -448,8 +448,8 @@ pub fn apply_under(
         );
     }
 
-    // And what remains is named directly: the unique ones — a CRS, a graphical
-    // information set — are what one goes looking for in an activity.
+    // And what remains is named directly: the unique ones - a CRS, a graphical
+    // information set - are what one goes looking for in an activity.
     for object in &grouped.named {
         parameters.push(Parameter::Object {
             title: "output".to_string(),
@@ -500,7 +500,7 @@ pub fn apply_under(
 /// collection rather than each of them.
 ///
 /// A number, and a small one. Measured on an import of 936 boreholes: the
-/// activity carried **4 692 parameters, 4 682 of them `output`** — 99.8 % —
+/// activity carried **4 692 parameters, 4 682 of them `output`** - 99.8 % -
 /// and the front end's object editor froze on it. It was not a defect of the
 /// editor: it was given an object nobody can read.
 ///
@@ -523,7 +523,7 @@ struct Outputs<'a> {
 /// collection.
 ///
 /// By role and not by qualified type, because the role says *what this object
-/// is for this run* — two `PointSetRepresentation`s produced as `roof` and as
+/// is for this run* - two `PointSetRepresentation`s produced as `roof` and as
 /// `base` are two batches, not one. `NewObject::role` exists for exactly that.
 ///
 /// **The plan's order is kept**, so that two runs of the same file write the
@@ -581,7 +581,7 @@ fn put(
         Ok(document) => {
             // **Asked before writing**, and it is the only window in which the question
             // has an answer: after `put`, the object is there in both cases. By the
-            // identity of the object read — (uuid, type) —, not by its uuid: a uuid
+            // identity of the object read - (uuid, type) -, not by its uuid: a uuid
             // held under another type is not what `put` replaces.
             let already = energyml_core::identity::ObjectId::of_reflect(document.root.as_reflect())
                 .is_some_and(|id| {
@@ -617,8 +617,8 @@ fn put(
     }
 }
 
-/// The title of a run's collection — written once, so the collection and the
+/// The title of a run's collection - written once, so the collection and the
 /// references to it cannot disagree.
 fn collection_title(activity: &str, role: &str, count: usize) -> String {
-    format!("{activity} — {role} ({count} objects)")
+    format!("{activity} - {role} ({count} objects)")
 }

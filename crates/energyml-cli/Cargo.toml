@@ -51,11 +51,11 @@ energyml-geometry = { path = "../energyml-geometry", version = "0.1.0" }
 energyml-export = { path = "../energyml-export", version = "0.1.0" }
 # `profile`: the long profile of the wells on a track. The arithmetic is there.
 energyml-analysis = { path = "../energyml-analysis", version = "0.1.0" }
-# `profile --svg`: the section view — the catalogue, its layout and its SVG.
+# `profile --svg`: the section view - the catalogue, its layout and its SVG.
 # The command only parses and writes.
 energyml-section = { path = "../energyml-section", version = "0.1.0" }
 energyml-domain = { path = "../energyml-domain", version = "0.1.0" }
-# What a command keeps of the package it opened, layer by layer — off unless
+# What a command keeps of the package it opened, layer by layer - off unless
 # the command is on the fixed list of `src/layers.rs`.
 energyml-cache = { path = "../energyml-cache", version = "0.1.0" }
 energyml-rules = { path = "../energyml-rules", version = "0.1.0" }
@@ -79,14 +79,14 @@ energyml-build = { path = "../energyml-build", version = "0.1.0" }
 
 [features]
 default = []
-# Tests on the private real-file corpus under testdata/ — real-file campaign, run privately. Off by default.
+# Tests on the private real-file corpus under testdata/ - real-file campaign, run privately. Off by default.
 private-corpus = []
 # `profile --png`: the section view rasterised in Rust, with its font embedded.
 # Off by default; without it `--png` refuses and says to rebuild with it.
 png = ["energyml-section/png"]
 # Read the arrays, not only locate them. Needs the HDF5 C library at build time.
 # Geometry forwards the same switch: without it, only the forms that carry no
-# data — lattices above all — still evaluate.
+# data - lattices above all - still evaluate.
 hdf5 = [
     "energyml-storage/hdf5",
     "energyml-geometry/hdf5",

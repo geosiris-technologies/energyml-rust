@@ -9,8 +9,8 @@
 //! identity attributes, walks forward to `Citation`, takes what is in it, and
 //! returns the moment the citation closes. What follows is never looked at.
 //!
-//! It is a free function over bytes already in memory —
-//! (ADR-0002) — so the synchronous and the asynchronous paths share it without
+//! It is a free function over bytes already in memory -
+//! (ADR-0002) - so the synchronous and the asynchronous paths share it without
 //! either owning it.
 
 use quick_xml::events::Event;
@@ -23,25 +23,25 @@ use quick_xml::events::Event;
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PeekedHeader {
     /// The type the root **is**: the local name of the root element,
-    /// `obj_Activity` or `Activity` — or, when the root carries an `xsi:type`,
+    /// `obj_Activity` or `Activity` - or, when the root carries an `xsi:type`,
     /// the type that attribute names.
     ///
     /// Kept because it is the fallback when `[Content_Types].xml` types a part
-    /// wrongly — which the reference package does.
+    /// wrongly - which the reference package does.
     ///
     /// # Why the `xsi:type` wins
     ///
     /// PRODML 2.3 gives `FlowTestActivity` a global element and none of its
     /// subtypes, though its own documentation says *"This object is abstract;
     /// you must choose one of the available types"* (FlowTestActivity.xsd
-    /// l. 186–190). An injection test is therefore written
-    /// `<prodml:FlowTestActivity xsi:type="prodml:InjectionFlowTest">` — the
+    /// l. 186-190). An injection test is therefore written
+    /// `<prodml:FlowTestActivity xsi:type="prodml:InjectionFlowTest">` - the
     /// form of Energistics' own example, `xml_examples/FlowTest/
     /// FlowTestActivity.xml` l. 2. Matched on the element, the part would be
     /// taken for the empty base and everything the test says would be lost.
     pub root_name: String,
     /// The root element's own name, when an `xsi:type` made [`root_name`]
-    /// something else — `FlowTestActivity` for an `InjectionFlowTest`.
+    /// something else - `FlowTestActivity` for an `InjectionFlowTest`.
     ///
     /// [`root_name`]: PeekedHeader::root_name
     pub root_element: Option<String>,
@@ -54,12 +54,12 @@ pub struct PeekedHeader {
     /// It says which **package** the object belongs to and nothing about its
     /// version: Energistics gave every version of a package the same namespace,
     /// so `resqmlv2` covers RESQML 2.0.1 and 2.2 alike. That makes it exactly
-    /// half of the identification — the half `schemaVersion` does not do, and
+    /// half of the identification - the half `schemaVersion` does not do, and
     /// the half that tells `resqml20.Activity` from `eml23.Activity`, two types
     /// with the same name in different packages.
     pub namespace: Option<String>,
     /// `objectVersion` attribute. An attribute, not an element, in every
-    /// version that has one — eml 2.1 and later.
+    /// version that has one - eml 2.1 and later.
     pub object_version: Option<String>,
     /// `Citation/Title`.
     pub title: Option<String>,
@@ -69,7 +69,7 @@ pub struct PeekedHeader {
     pub creation: Option<String>,
     /// `Citation/LastUpdate`, lexical.
     pub last_update: Option<String>,
-    /// `Citation/Format` — the producing software, as it named itself.
+    /// `Citation/Format` - the producing software, as it named itself.
     pub format: Option<String>,
 }
 
@@ -114,7 +114,7 @@ pub fn peek_reader<R: std::io::BufRead>(source: R) -> PeekedHeader {
                 if !root_seen {
                     root_seen = true;
                     out.root_name = name;
-                    // The root's own prefix, before its declarations are read —
+                    // The root's own prefix, before its declarations are read -
                     // an element is in the namespace its prefix is bound to on
                     // itself or on an ancestor, and the root has no ancestor.
                     let prefix = prefix_of(e.name().as_ref());
@@ -142,8 +142,8 @@ pub fn peek_reader<R: std::io::BufRead>(source: R) -> PeekedHeader {
                         && declarations.iter().any(|(p, uri)| *p == bound && uri == XSI)
                     {
                         let named = value.rsplit(':').next().unwrap_or(&value).trim().to_string();
-                        // A type naming itself — `LocalDepth3dCrs` typed
-                        // `obj_LocalDepth3dCrs`, as some producers write — is
+                        // A type naming itself - `LocalDepth3dCrs` typed
+                        // `obj_LocalDepth3dCrs`, as some producers write - is
                         // no substitution: the element stays the name.
                         let fold =
                             |name: &str| name.strip_prefix("obj_").unwrap_or(name).to_ascii_lowercase();
@@ -186,8 +186,8 @@ pub fn peek_reader<R: std::io::BufRead>(source: R) -> PeekedHeader {
                 let name = local_name(e.name().as_ref());
                 if name == "Citation" {
                     // The whole point: everything a listing needs is now read,
-                    // and the rest of the part — which may be megabytes of
-                    // inline geometry — is never touched.
+                    // and the rest of the part - which may be megabytes of
+                    // inline geometry - is never touched.
                     break;
                 }
                 if in_citation && current.as_deref() == Some(name.as_str()) {

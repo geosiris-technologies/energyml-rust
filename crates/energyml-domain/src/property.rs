@@ -2,18 +2,18 @@
 //!
 //! # What a property is, and where the difficulty is
 //!
-//! A property is numbers attached to a representation: one value — or several
-//! — per cell, per node, per triangle. Reading the numbers is already done
+//! A property is numbers attached to a representation: one value - or several -
+//! per cell, per node, per triangle. Reading the numbers is already done
 //! ([`crate::values`] handles all eighteen array forms). What is left is the
 //! part that decides whether those numbers mean anything:
 //!
-//! - **which elements they hang on** — `IndexableElement`, 29 values, and a
+//! - **which elements they hang on** - `IndexableElement`, 29 values, and a
 //!   value the schema does not know is an error rather than a guess;
 //! - **how many there should be**, which is `element_count × ∏ value counts`
 //!   and is the single most damaging thing to get wrong: a wrong count reads
 //!   as a plausible array of the wrong shape;
 //! - **which patch each array belongs to**, and this is a real semantic break
-//!   between versions — 2.0.1 attaches by an explicit
+//!   between versions - 2.0.1 attaches by an explicit
 //!   `RepresentationPatchIndex`, 2.2 attaches **by position**;
 //! - **what kind of quantity it is**, which in 2.0.1 is an inline choice
 //!   between a standard name and a local reference, and in 2.2 is a plain
@@ -21,7 +21,7 @@
 //!
 //! # What this module does not do
 //!
-//! It does not *resolve* the property kind — following the reference into the
+//! It does not *resolve* the property kind - following the reference into the
 //! package, or into the Energistics dictionary, and walking up the parent
 //! chain. That needs a seam (the dictionary is 3.1 MB and must not land in a
 //! wasm bundle by default), so [`PropertyKindRef`] says what the document
@@ -199,7 +199,7 @@ fn squash(text: &str) -> String {
         .collect()
 }
 
-/// What the document says the property kind is — not what it resolves to.
+/// What the document says the property kind is - not what it resolves to.
 ///
 /// The two versions say it in genuinely different ways, and flattening them
 /// into one string would lose the distinction that matters: a standard kind is
@@ -228,7 +228,7 @@ pub enum PropertyKindRef {
 /// When a property applies.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct TimeRef {
-    /// Index into the series — 2.0.1 `TimeIndex.Index`, absent in the 2.2
+    /// Index into the series - 2.0.1 `TimeIndex.Index`, absent in the 2.2
     /// `TimeOrIntervalSeries` form until an index is chosen.
     pub index: Option<u64>,
     /// Uuid of the `TimeSeries` object.
@@ -238,7 +238,7 @@ pub struct TimeRef {
     pub use_interval: bool,
 }
 
-/// One qualifier on a property — `eml:Facet` (`what`, `direction`, …).
+/// One qualifier on a property - `eml:Facet` (`what`, `direction`, …).
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Facet {
     /// The facet kind, lexically (`what`, `side`, `direction`, …).
@@ -265,7 +265,7 @@ pub struct Patch<'a> {
 impl Patch<'_> {
     /// The patch of the representation these values belong to.
     ///
-    /// The explicit index when there is one, the position otherwise — which is
+    /// The explicit index when there is one, the position otherwise - which is
     /// exactly what the 2.2 annotation prescribes: *"The ordering of
     /// ValuesForPatch matches the ordering of the patches in the xml document
     /// of the representation."*
@@ -292,21 +292,21 @@ pub struct Property<'a> {
     /// Values per indexable element, **slowest dimension first**.
     ///
     /// One entry in 2.0.1 (`Count`), one or more in 2.2
-    /// (`ValueCountPerIndexableElement`). The order is normative: TRG 2.2 §7.1
-    /// — *"The top XML element is slower than the bottom."*
+    /// (`ValueCountPerIndexableElement`). The order is normative: TRG 2.2 §7.1 -
+    /// *"The top XML element is slower than the bottom."*
     pub value_count_per_element: Vec<u64>,
     /// The unit, when the property has one. Only continuous properties do.
     pub uom: Option<String>,
     /// What kind of quantity this is, unresolved.
     pub kind: Option<PropertyKindRef>,
     /// The **uri** of the `PropertyKind` the property references, version
-    /// included — what [`crate::property_kind::Resolver::resolve_at`] reads it
+    /// included - what [`crate::property_kind::Resolver::resolve_at`] reads it
     /// by. `None` for a standard name, which names no object.
     pub kind_uri: Option<String>,
     /// Uuid of the representation these values hang on.
     pub supporting_representation: Option<String>,
     /// The **uri** of that representation, the version the reference names
-    /// included — what to read it by when a package holds the uuid twice.
+    /// included - what to read it by when a package holds the uuid twice.
     pub supporting_representation_uri: Option<String>,
     /// Uuid of the lookup table, for a categorical or discrete property that
     /// names one.
@@ -317,7 +317,7 @@ pub struct Property<'a> {
     /// When it applies.
     pub time: Option<TimeRef>,
     /// 2.0.1 `RealizationIndex`. The 2.2 `RealizationIndices` is an array, so
-    /// it is not read here — it is a dimension of the values, not a scalar.
+    /// it is not read here - it is a dimension of the values, not a scalar.
     pub realization: Option<u64>,
     /// Whether the document declares `RealizationIndices` (2.2).
     ///
@@ -343,8 +343,8 @@ impl Property<'_> {
         element_count.saturating_mul(self.values_per_element())
     }
 
-    /// What does not add up between this property, its representation, and —
-    /// when the caller has read them — the values themselves.
+    /// What does not add up between this property, its representation, and -
+    /// when the caller has read them - the values themselves.
     ///
     /// Returns problems rather than failing, and that is deliberate: the
     /// reference packages contain real disagreements. `testingPackageCpp22`
@@ -448,7 +448,7 @@ pub fn read(object: &dyn Reflect) -> Result<Property<'_>> {
     })?;
 
     // 2.0.1 `Count` (exactly one) and 2.2 `ValueCountPerIndexableElement` (one
-    // or more) are the same thing under two names — the 2.2 rename is what
+    // or more) are the same thing under two names - the 2.2 rename is what
     // settled the contradiction between the 2.0.1 XSD annotation ("number of
     // elements in a 1D list") and its narrative documentation ("value count
     // per indexable element"). The narrative won.
@@ -487,7 +487,7 @@ pub fn read(object: &dyn Reflect) -> Result<Property<'_>> {
 /// and attaches by position. `PatchOfPoints` is the same shape as
 /// `PatchOfValues` with the array under `Points`, for a 2.0.1 points property;
 /// `PointsForPatch` is its 2.2 counterpart, the array by position like
-/// `ValuesForPatch` — the rename this crate's own translation carries across
+/// `ValuesForPatch` - the rename this crate's own translation carries across
 /// (as a translation tool does), so a points property from either version reads
 /// here.
 fn read_patches(object: &dyn Reflect) -> Vec<Patch<'_>> {
@@ -644,7 +644,7 @@ pub struct Entry {
 ///
 /// Built by walking the properties once. The relationships in `.rels` are
 /// **never** the source: they are an index a producer maintains by hand, and
-/// `80wells` — 202 objects — carries no `.rels` at all while every one of its
+/// `80wells` - 202 objects - carries no `.rels` at all while every one of its
 /// properties names its `SupportingRepresentation`. What the objects say is
 /// the truth; what the package says about them is a convenience.
 #[derive(Clone, Debug, Default)]
@@ -697,7 +697,7 @@ impl Index {
     /// Read and index every object of an iterator that is a property.
     ///
     /// Returns what could not be read, uuid and reason, rather than skipping
-    /// it — an index that quietly holds 37 of 40 properties is worse than one
+    /// it - an index that quietly holds 37 of 40 properties is worse than one
     /// that holds 37 and says which three are missing.
     pub fn build<'a>(objects: impl IntoIterator<Item = &'a dyn Reflect>) -> (Self, Vec<String>) {
         let mut index = Self::new();
@@ -729,7 +729,7 @@ impl Index {
             .unwrap_or(&[])
     }
 
-    /// Every property hanging on the representation a **uri** names — the
+    /// Every property hanging on the representation a **uri** names - the
     /// version included, so two versions of one representation keep their
     /// properties apart. Only the properties whose reference was read with a
     /// uri are answered; a uuid-only caller asks [`Index::of`].
@@ -742,7 +742,7 @@ impl Index {
 
     /// Properties of a representation whose kind is this one.
     ///
-    /// Matched on what the document *states*, not on a resolved chain — an
+    /// Matched on what the document *states*, not on a resolved chain - an
     /// index has no resolver. Use [`crate::property_kind`] when the question
     /// is "and everything derived from it".
     pub fn by_kind<'a>(&'a self, representation_uuid: &str, kind: &'a PropertyKindRef) -> Vec<&'a Entry> {
@@ -820,12 +820,12 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
     // **A computed zero is a refusal, not a count**, and this crate's own rule
     // says so: *a count is computed or refused, never assumed*. The sums below
     // add up a field across the patches, and a field that is not there adds up
-    // to nothing — which is indistinguishable from a representation that really
+    // to nothing - which is indistinguishable from a representation that really
     // holds nothing, and is the answer downstream trusts to decide that every
     // property mis-aligns.
     //
     // It is not hypothetical. A 2.0.1 `PolylineSetRepresentation` states its
-    // node count as **`NodeCountPerPolyline`, an array in the HDF5** — there is
+    // node count as **`NodeCountPerPolyline`, an array in the HDF5** - there is
     // no scalar `NodeCount` on the patch, so the sum found nothing and answered
     // `0`. The honest answer is that the number is not knowable without reading
     // an array, and this function reads none.
@@ -849,12 +849,12 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
             // independent sources say so in the same words: Table 7 of the
             // Technical Usage Guide (*"interval edges … NKL = NK + GapCount +
             // 1"*), §9.12 beside the coordinate lines, and the annotation the
-            // XSD itself carries on `KGaps` — *"NKL = NK + gapCount + 1"*,
+            // XSD itself carries on `KGaps` - *"NKL = NK + gapCount + 1"*,
             // with *"Number of INTERVALS = gapCount + NK"* on the line above.
             //
             // Two counts below were wrong for want of it. `interval edges`
             // answered `NK + 1`, short by one per gap, **while the node count
-            // in this same function already used the gap-aware figure** — two
+            // in this same function already used the gap-aware figure** - two
             // formulas for one quantity, disagreeing. And `intervals` was
             // refused outright.
             let gaps = k_gaps(representation);
@@ -884,7 +884,7 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
                 // pillars and coordinate lines."* Table 7 says the same thing
                 // as a formula, `NIL x NJL + SplitPillarCount`, and its
                 // `coordinate lines` row builds on this one rather than
-                // repeating it — which is why the two look alike.
+                // repeating it - which is why the two look alike.
                 Pillars => Ok((ni + 1) * (nj + 1) + split_pillars(representation)),
                 I0 => Ok(ni),
                 I0Edges => Ok(ni + 1),
@@ -894,7 +894,7 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
                 // §9.12.3.1, the one element whose indexing the guide calls
                 // not obvious, and which it therefore spells out: *"the
                 // indexing is implicit and first follows the I column edges
-                // (NIL x NJ) and then the J column edges (NI x NJL)"* — the
+                // (NIL x NJ) and then the J column edges (NI x NJL)"* - the
                 // same two products Table 7 gives, plus the split edges a
                 // fault adds.
                 ColumnEdges => Ok((ni + 1) * nj + ni * (nj + 1) + split_column_edges(representation)),
@@ -911,7 +911,7 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
                 // The count that was refused until the split lines were
                 // understood. A fault means two cells sharing a pillar do not
                 // share its points, and RESQML says so by appending **split
-                // coordinate lines** after the regular pillars — so the grid
+                // coordinate lines** after the regular pillars - so the grid
                 // has `pillars + splits` lines, each carrying one point per
                 // layer boundary.
                 //
@@ -930,7 +930,7 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
                         // **plus one per K gap**: a gap is a break in the
                         // layering, and both sides of it carry their own
                         // points. `80wells` has a grid with one gap, where the
-                        // formula without it is short by a whole level — 72
+                        // formula without it is short by a whole level - 72
                         // nodes claimed against the 96 the file holds.
                         _ => lines * nkl,
                     })
@@ -956,7 +956,7 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
         // the same number of values as the number of cell pairs."*
         //
         // So `faces` is the connection count, and `Count` is where the object
-        // states it — a scalar in the XML, so this needs no array read. `cells`
+        // states it - a scalar in the XML, so this needs no array read. `cells`
         // is **not** the same number and is refused: a connection names two
         // cells, and answering the pair count for it would line a per-cell array
         // up against half the elements it belongs to.
@@ -997,9 +997,9 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
                 // `intervals from datum` joins them, and the provenance of that
                 // is worth stating because it is **not** a quotation: no
                 // schema documents the pair, and the Technical Usage Guide's
-                // table is not shipped here. What settled it is the reasoning —
+                // table is not shipped here. What settled it is the reasoning -
                 // N node depths bound N−1 intervals, and "from datum" says how
-                // their extents are *expressed*, not how many there are —
+                // their extents are *expressed*, not how many there are -
                 // confirmed against a client package where **306 of 306**
                 // properties hold exactly `NodeCount − 1` values, measured from
                 // the HDF5 datasets against the counts the XML declares.
@@ -1017,11 +1017,11 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
         }
         // **Two of these three counts have never been on the object.** RESQML
         // declares `CellCount` on the representation and `NodeCount` /
-        // `FaceCount` on `UnstructuredGridGeometry` — in 2.0.1 and in 2.2 alike,
+        // `FaceCount` on `UnstructuredGridGeometry` - in 2.0.1 and in 2.2 alike,
         // so this is not a respelling between versions but a place that was
         // never right. Asking the object alone refused every property indexed on
         // the nodes or the faces of an unstructured grid, in every version, with
-        // a message naming the field — which reads as a malformed file rather
+        // a message naming the field - which reads as a malformed file rather
         // than as a reader looking in the wrong place.
         "UnstructuredGridRepresentation" => match element {
             Cells => required(representation, "CellCount"),
@@ -1030,7 +1030,7 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
             _ => refuse(),
         },
         // A sub-representation lists its own elements, so the count it
-        // declares is the answer whatever kind of element it selects — the one
+        // declares is the answer whatever kind of element it selects - the one
         // type where the pair does not matter.
         "SubRepresentation" => counted(sum_over_patches(
             representation,
@@ -1041,7 +1041,7 @@ pub fn element_count(representation: &dyn Reflect, element: IndexableElement) ->
     }
 }
 
-/// How many K gaps the grid declares — breaks in the layering, each adding a
+/// How many K gaps the grid declares - breaks in the layering, each adding a
 /// layer boundary and therefore a level of points.
 fn k_gaps(representation: &dyn Reflect) -> u64 {
     representation
@@ -1053,8 +1053,8 @@ fn k_gaps(representation: &dyn Reflect) -> u64 {
 
 /// How many split coordinate lines a grid geometry declares.
 ///
-/// Zero for a grid with no fault. Both spellings are read — RESQML 2.0.1 says
-/// `SplitCoordinateLines`, 2.2 says `ColumnLayerSplitCoordinateLines` — and an
+/// Zero for a grid with no fault. Both spellings are read - RESQML 2.0.1 says
+/// `SplitCoordinateLines`, 2.2 says `ColumnLayerSplitCoordinateLines` - and an
 /// absent element means none rather than an error, because most grids have
 /// none.
 fn split_coordinate_lines(representation: &dyn Reflect) -> u64 {
@@ -1074,7 +1074,7 @@ fn split_coordinate_lines(representation: &dyn Reflect) -> u64 {
 /// Guide §9.12.2 states the effect outright: *"This option does not modify the
 /// indexing of the cells or columns, but it **does increase the number of
 /// pillars and coordinate lines**."* Missing it makes the node count short by
-/// one whole coordinate line per gap pillar — on exactly the grids that model a
+/// one whole coordinate line per gap pillar - on exactly the grids that model a
 /// fracture with a volume rather than a surface.
 fn split_pillars(representation: &dyn Reflect) -> u64 {
     representation
@@ -1222,7 +1222,7 @@ fn integers(object: &dyn Reflect, field: &str) -> Vec<u64> {
 /// almost always enough is the cheap half of not having to know which version
 /// wrote the file.
 ///
-/// The refusal, when neither has it, is `required`'s — it names the field and
+/// The refusal, when neither has it, is `required`'s - it names the field and
 /// the type, which is what someone opening the file needs.
 fn in_geometry(object: &dyn Reflect, field: &str) -> Result<u64> {
     if let Some(found) = integer(object, field) {
@@ -1246,7 +1246,7 @@ fn required(object: &dyn Reflect, field: &str) -> Result<u64> {
 }
 
 /// The uuid a `DataObjectReference` carries, under either spelling.
-/// The uuid a reference names — the identity layer's reading, so every
+/// The uuid a reference names - the identity layer's reading, so every
 /// spelling of the field is one answer.
 fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
     energyml_core::identity::uuid_of_reflect(object)
@@ -1287,7 +1287,7 @@ mod tests {
     /// `read()`'s own doc comment has claimed `PointsProperty` since it was
     /// written, and nothing here checked it: `read_patches` looked for
     /// `PatchOfPoints` (2.0.1) and never for `PointsForPatch` (2.2), so every
-    /// 2.2 points property read as **zero patches** — a schema-invalid answer
+    /// 2.2 points property read as **zero patches** - a schema-invalid answer
     /// (1..∞) that `every_property_of_the_corpus_reads` in
     /// `energyml-domain/tests/property.rs` only ever caught because a
     /// translated package happened to land in `testdata/` with one. No native
@@ -1339,15 +1339,15 @@ mod tests {
     /// This is the test that was missing, and its absence cost two whole
     /// families of property. The enumeration here was written from the
     /// specification's prose rather than from the generated enums, and three of
-    /// its lexical values exist in no schema at all — `enumeration`,
-    /// `interval`, `radial origin polyline` — while two the schemas do spell
+    /// its lexical values exist in no schema at all - `enumeration`,
+    /// `interval`, `radial origin polyline` - while two the schemas do spell
     /// were absent: `enumerated elements` and `intervals from datum`.
     ///
     /// The consequence was not a warning. `property::read` refuses an element
     /// it cannot parse, so **every** property indexed on either value was
     /// dropped before anything could look at it: 296 of 306 in one client
     /// package, all of them the soil types along its wells. And it was never a
-    /// drop-only problem — `intervals from datum` is in eml 2.3, so released
+    /// drop-only problem - `intervals from datum` is in eml 2.3, so released
     /// RESQML 2.2 packages were losing them too.
     ///
     /// `enumeration` and the other two phantoms are kept as variants rather
@@ -1372,8 +1372,8 @@ mod tests {
         );
 
         // The two other phantoms are untouched variants that happen to spell
-        // themselves in no schema. They still parse — removing a public variant
-        // breaks callers, and an unreachable one costs nothing — and they are
+        // themselves in no schema. They still parse - removing a public variant
+        // breaks callers, and an unreachable one costs nothing - and they are
         // named here so the next person comparing the two lists finds the
         // answer rather than the question.
         for phantom in ["interval", "radial origin polyline"] {

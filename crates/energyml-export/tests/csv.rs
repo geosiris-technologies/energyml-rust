@@ -1,7 +1,7 @@
 //! The long CSV export, end to end through the registry.
 //!
 //! The fixture reproduces what `attributes_for` produces: per-node values (with
-//! a NaN — the corpus's "no data here") and per-cell values. The assertions
+//! a NaN - the corpus's "no data here") and per-cell values. The assertions
 //! count the rows and read the cells back: a CSV with the right number of rows
 //! but the values shifted by one column is exactly the file a spreadsheet loads
 //! without complaining.
@@ -72,7 +72,7 @@ fn a_well_with_logs_writes_one_row_per_node_and_per_cell_value() {
     // 3 nodes × 1 per-node property, + 2 cell values.
     assert_eq!(lines.len(), 1 + 3 + 2);
 
-    // The title's comma is quoted — otherwise every row gains a column and
+    // The title's comma is quoted - otherwise every row gains a column and
     // everything shifts with no error.
     assert!(lines[1].starts_with("\"AUB, 12\",u-1,node,0,"));
     let first: Vec<&str> = lines[1].splitn(8, ',').collect();
@@ -86,7 +86,7 @@ fn a_well_with_logs_writes_one_row_per_node_and_per_cell_value() {
     );
     assert!(lines[3].ends_with(",80.5"));
 
-    // The cells: no coordinates — a cell has not one position but eight — and
+    // The cells: no coordinates - a cell has not one position but eight - and
     // the index that places it back in the grid.
     assert!(lines[4].contains(",cell,0,,,,Perm,,mD,12.5"), "{}", lines[4]);
     assert!(lines[5].contains(",cell,1,,,,Perm,,mD,13"), "{}", lines[5]);
@@ -103,7 +103,7 @@ fn an_object_with_no_attribute_still_writes_its_nodes() {
         .write(&bare, &mut out, &Options::default())
         .expect("writes");
     let text = String::from_utf8(out).expect("utf-8");
-    // Geometry alone is an answer: three nodes, empty property columns — not
+    // Geometry alone is an answer: three nodes, empty property columns - not
     // an empty file that looks like a broken export.
     assert_eq!(text.lines().count(), 1 + 3);
     assert!(text.lines().nth(1).expect("row").ends_with(",,,,"));
@@ -121,7 +121,7 @@ fn a_group_shares_one_header() {
         .write_all(&[a_well(), second], &mut out, &Options::default())
         .expect("writes");
     let text = String::from_utf8(out).expect("utf-8");
-    // One header only: the well is a column, not a block — that is what makes
+    // One header only: the well is a column, not a block - that is what makes
     // a group export pasteable as it stands into a spreadsheet.
     assert_eq!(text.lines().filter(|line| line.starts_with("object,")).count(), 1);
     assert!(text.contains("Another,u-2"));
@@ -131,7 +131,7 @@ fn a_group_shares_one_header() {
 fn geojson_refuses_an_object_whose_every_node_is_undefined() {
     // The bug seen from the interface: an object whose every position
     // is NaN passed the gate on its point count, was emptied by the
-    // preparation, and came out as a Feature with empty coordinates — a file
+    // preparation, and came out as a Feature with empty coordinates - a file
     // every reader loads and that shows nothing.
     let exporters = Exporters::builtin();
     let exporter = exporters.get("geojson").expect("geojson is registered");

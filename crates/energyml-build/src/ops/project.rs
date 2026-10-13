@@ -1,4 +1,4 @@
-//! `project` — nodes projected **vertically** onto a surface, or onto a level
+//! `project` - nodes projected **vertically** onto a surface, or onto a level
 //!. The whole shape, or some of
 //! its nodes.
 //!
@@ -9,7 +9,7 @@
 //! # What is left, and said
 //!
 //! A node with no face above or below it, or over a fold, is **left where it
-//! was and counted** — in a note and in the activity. The other choices
+//! was and counted** - in a note and in the activity. The other choices
 //! would each lie: removed, a line would have a hole and a surface a node its
 //! triangles still name; left without a word, it would look projected.
 //!
@@ -43,17 +43,17 @@ pub struct ProjectParams {
     /// What the nodes go onto.
     #[param(flatten)]
     pub onto: OntoParams,
-    /// only these nodes are projected — their ranks in the shape; left out, every node
+    /// only these nodes are projected - their ranks in the shape; left out, every node
     ///
     /// **Advanced**: a form fills it from the nodes pointed in the scene.
     #[param(advanced)]
     pub nodes: Vec<usize>,
-    /// The frame, what is represented, the naming — for the writer of the result.
+    /// The frame, what is represented, the naming - for the writer of the result.
     #[param(flatten)]
     pub written: Written,
 }
 
-/// what the nodes are projected onto — a surface, given as an input, or a level
+/// what the nodes are projected onto - a surface, given as an input, or a level
 #[derive(Debug, Params)]
 #[params(tag = "onto")]
 pub enum OntoParams {
@@ -74,9 +74,9 @@ pub struct LevelParams {
 /// What `project` takes.
 #[derive(Debug, Inputs)]
 pub struct ProjectInputs {
-    /// the nodes to project — a cloud, polylines or a triangulated surface
+    /// the nodes to project - a cloud, polylines or a triangulated surface
     pub shape: Shape,
-    /// the surface to project onto — its triangles, or a grid's cells; left out when projecting onto a level
+    /// the surface to project onto - its triangles, or a grid's cells; left out when projecting onto a level
     #[input(topology = "triangles")]
     pub surface: Option<Shape>,
 }
@@ -96,7 +96,7 @@ impl Operation for Project {
     fn about(&self) -> About {
         About {
             name: "project",
-            describe: "nodes projected vertically onto a surface or a level — the z replaced, x and y kept — whole, or only some of its nodes",
+            describe: "nodes projected vertically onto a surface or a level - the z replaced, x and y kept - whole, or only some of its nodes",
             category: Category::Geometry,
             makes: &[
                 "resqml22.PointSetRepresentation",
@@ -149,7 +149,7 @@ impl Operation for Project {
             (OntoParams::Surface, None) => {
                 return Err(Refusal::on(
                     "surface",
-                    "projecting onto a surface needs one — or `onto: level`, with a z",
+                    "projecting onto a surface needs one - or `onto: level`, with a z",
                 ));
             }
             (OntoParams::Level(_), Some(_)) => {
@@ -169,7 +169,7 @@ impl Operation for Project {
                     return Err(Refusal::new(
                         "frames",
                         format!(
-                            "`shape` is in `{}` and `surface` in `{}` — bring them into one frame first",
+                            "`shape` is in `{}` and `surface` in `{}` - bring them into one frame first",
                             a.title, b.title
                         ),
                     ));
@@ -235,14 +235,14 @@ impl Operation for Project {
         if turned > 0 {
             says.push(Note {
                 key: "flipped",
-                detail: format!("{turned} triangle(s) turned over in plan — a fold, kept as it is"),
+                detail: format!("{turned} triangle(s) turned over in plan - a fold, kept as it is"),
             });
         }
         if made.outside > 0 {
             says.push(Note {
                 key: "outside",
                 detail: format!(
-                    "{} node(s) with no face above or below — left where they were",
+                    "{} node(s) with no face above or below - left where they were",
                     made.outside
                 ),
             });
@@ -251,7 +251,7 @@ impl Operation for Project {
             says.push(Note {
                 key: "folded",
                 detail: format!(
-                    "{} node(s) over a fold of the surface — left where they were",
+                    "{} node(s) over a fold of the surface - left where they were",
                     made.folded
                 ),
             });
@@ -259,7 +259,7 @@ impl Operation for Project {
         if made.unplaced > 0 {
             says.push(Note {
                 key: "unplaced",
-                detail: format!("{} node(s) with no finite position — left", made.unplaced),
+                detail: format!("{} node(s) with no finite position - left", made.unplaced),
             });
         }
 
@@ -298,9 +298,9 @@ impl Operation for Project {
             count("projectedNodes", "nodes projected"),
             count(
                 "outsideNodes",
-                "nodes with no face above or below — left where they were",
+                "nodes with no face above or below - left where they were",
             ),
-            count("foldedNodes", "nodes over a fold — left where they were"),
+            count("foldedNodes", "nodes over a fold - left where they were"),
             Slot::optional(
                 "flippedTriangles",
                 Need::Number {
@@ -308,7 +308,7 @@ impl Operation for Project {
                     least: None,
                     most: None,
                 },
-                "triangles turned over in plan by the projection — a surface only",
+                "triangles turned over in plan by the projection - a surface only",
             ),
         ])
     }

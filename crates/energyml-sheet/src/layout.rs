@@ -1,16 +1,16 @@
-//! The drilling sheet's page layout — pure data, no package read.
+//! The drilling sheet's page layout - pure data, no package read.
 //!
 //! The sheet design is the specification this module answers to; every
 //! non-obvious choice below states the rule that decided it. This module turns a [`Board`] (what to draw:
 //! an ordered list of [`Track`]s) and [`Params`] (how big, how much text) into
-//! a [`Layout`] — sections with their vertical positions, cells already
+//! a [`Layout`] - sections with their vertical positions, cells already
 //! wrapped into lines, ticks, and the notes a caller or a legend must show.
 //! [`crate::svg`] is the only thing that turns a [`Layout`] into bytes; this
 //! module is what gets **tested**, in numbers.
 //!
 //! # What is deliberately not here
 //!
-//! Reading an EPC — the frame, the strata, the property, the CBT — is
+//! Reading an EPC - the frame, the strata, the property, the CBT - is
 //! `crate::read`, not written yet. Nothing in
 //! this module opens a package or a value array; a [`Board`] is exactly as
 //! much data as its caller hands over.
@@ -23,7 +23,7 @@
 //! ([`TrackRegistry`], built-ins [`Fill`] and [`TextRender`]). Both follow the
 //! repository's rule: a trait, a registry, the built-ins pushed in by
 //! default, and [`ModeRegistry::register`] / [`TrackRegistry::register`] put
-//! a caller's addition **first**, so it is tried before — and can replace — a
+//! a caller's addition **first**, so it is tried before - and can replace - a
 //! built-in of the same id.
 
 use energyml_domain::color::Rgba;
@@ -32,7 +32,7 @@ use energyml_domain::color::Rgba;
 // Constants that are this crate's own choice, not the specification's
 // ---------------------------------------------------------------------------
 
-/// 1 point = 1/72 inch, and 1 inch = 25.4 mm exactly — a physical fact, not a
+/// 1 point = 1/72 inch, and 1 inch = 25.4 mm exactly - a physical fact, not a
 /// choice. `pub(crate)`: [`crate::svg`] needs the same conversion for its own
 /// (unrelated) horizontal-layout heuristic.
 pub(crate) const PT_TO_MM: f64 = 25.4 / 72.0;
@@ -48,7 +48,7 @@ const LINE_HEIGHT_FACTOR: f64 = 1.2;
 const CELL_MARGIN_LINES: f64 = 0.5;
 
 /// How close two measured depths must be, in metres, to be treated as the
-/// same boundary — the corpus's coordinates are `f64`, and two independent
+/// same boundary - the corpus's coordinates are `f64`, and two independent
 /// callers computing "the same" MD rarely land on the identical bit pattern.
 const MD_EPSILON: f64 = 1e-6;
 
@@ -57,13 +57,13 @@ pub(crate) fn line_height_mm(size_pt: f64) -> f64 {
 }
 
 /// The minimum height a cell's content demands (*"a section requires the
-/// height of its tallest content"*) — its line count, plus the margin.
+/// height of its tallest content"*) - its line count, plus the margin.
 fn cell_min_height_mm(lines: usize, size_pt: f64) -> f64 {
     (lines.max(1) as f64 + CELL_MARGIN_LINES) * line_height_mm(size_pt)
 }
 
 /// A measured depth, printed without a French or English word attached
-/// (no hardcoded label) — just the number, to the nearest whole metre
+/// (no hardcoded label) - just the number, to the nearest whole metre
 /// unless it needs a fraction.
 fn format_md(value: f64) -> String {
     if (value - value.round()).abs() < 1e-9 {
@@ -82,49 +82,49 @@ fn format_md(value: f64) -> String {
 /// Plain data: everything a caller already knows, and nothing this crate
 /// would have to read a package to find out.
 pub struct Board {
-    /// The sheet's title, shown once in the header. `None` draws no title —
+    /// The sheet's title, shown once in the header. `None` draws no title -
     /// never an invented one (no French, no English, hardcoded here).
     pub title: Option<String>,
-    /// The tracks, left to right, in the order they are drawn — "the checkboxes
+    /// The tracks, left to right, in the order they are drawn - "the checkboxes
     /// of the request become the list of tracks, orderable".
     pub tracks: Vec<Track>,
 }
 
 /// One column of the sheet.
 pub enum Track {
-    /// The depth column — one per sheet, drawn from the sections' own
+    /// The depth column - one per sheet, drawn from the sections' own
     /// boundaries: a track by node, in the taxonomy of the track kinds,
     /// and the reason it creates no section of its own.
     Md(MdTrack),
-    /// A column of `[md_top, md_base]` intervals — the only kind of track
+    /// A column of `[md_top, md_base]` intervals - the only kind of track
     /// that cuts the sheet into sections.
     Intervals(IntervalTrack),
 }
 
 /// The depth column.
 pub struct MdTrack {
-    /// What a person reads above it — supplied by the caller, since no
+    /// What a person reads above it - supplied by the caller, since no
     /// French or English word for "depth" is hardcoded here.
     pub header: String,
 }
 
 /// A column of intervals: the general shape behind strata, a categorical
-/// property with its CBT, or any other banded reading of a well —
+/// property with its CBT, or any other banded reading of a well -
 /// this increment does not care which, only that each interval states an
 /// optional colour and an optional text.
 pub struct IntervalTrack {
     /// What a person reads above the column.
     pub header: String,
-    /// The intervals, in no particular order — [`compute`] does not assume
+    /// The intervals, in no particular order - [`compute`] does not assume
     /// they are sorted or contiguous.
     pub intervals: Vec<Interval>,
     /// Which [`TrackRender`]s of the registry draw this track's cells, tried
-    /// in order — e.g. `["fill", "text"]` for a coloured column with a label
+    /// in order - e.g. `["fill", "text"]` for a coloured column with a label
     /// on it, or just `["text"]` for a text-only column (the "flat fill" and
     /// "text" applied to the same track, as the demand's stratigraphy
     /// column does).
     pub renders: Vec<String>,
-    /// The column's width, in characters — fixes how wide a
+    /// The column's width, in characters - fixes how wide a
     /// "text" render wraps to. Unused by a track with no text render.
     pub max_chars: usize,
     /// The floor `max_chars` may not go under, so a column is never so
@@ -133,14 +133,14 @@ pub struct IntervalTrack {
 }
 
 impl IntervalTrack {
-    /// What the BSS sections cut at — the crate's own default,
+    /// What the BSS sections cut at - the crate's own default,
     /// not a magic number chosen here.
     pub const DEFAULT_MAX_CHARS: usize = 32;
     /// The default floor under `max_chars`.
     pub const DEFAULT_MIN_CHARS: usize = 8;
 
     /// A track with the repository's stated defaults for `max_chars` and
-    /// `min_chars` — override either with
+    /// `min_chars` - override either with
     /// [`IntervalTrack::with_max_chars`] / [`IntervalTrack::with_min_chars`].
     pub fn new(header: impl Into<String>, intervals: Vec<Interval>, renders: Vec<String>) -> Self {
         IntervalTrack {
@@ -173,19 +173,19 @@ pub struct Interval {
     /// interval; equal is a zero-thickness marker, refused nowhere here (it
     /// draws as a section with no MD extent, not as an error).
     pub md_base: f64,
-    /// The text a "text" render draws — `None` draws nothing, which is not
+    /// The text a "text" render draws - `None` draws nothing, which is not
     /// the same as an empty string (an empty string is still a case to
     /// wrap, drawing one empty line; `None` draws no case at all).
     pub text: Option<String>,
-    /// The colour a "fill" render paints — `None` paints nothing. Never
+    /// The colour a "fill" render paints - `None` paints nothing. Never
     /// defaulted to a colour of this crate's choosing (rule: nothing is written
     /// without evidence).
     pub colour: Option<Rgba>,
-    /// The object this interval represents — an ETP URI, or any identifier
-    /// the caller wants a hover or a click to carry — written as `data-uri`.
+    /// The object this interval represents - an ETP URI, or any identifier
+    /// the caller wants a hover or a click to carry - written as `data-uri`.
     /// `None` when there is nothing to link to.
     pub uri: Option<String>,
-    /// The row of a CBT this interval's text or colour came from — written
+    /// The row of a CBT this interval's text or colour came from - written
     /// as `data-row`, so an application can highlight the row a hover
     /// is over. `None` when there is none.
     pub row: Option<String>,
@@ -194,7 +194,7 @@ pub struct Interval {
 /// What decides the sheet's overall size.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum HeightGoal {
-    /// Millimetres of paper per metre of MD — 5.0 for 1:200 (1 cm per 2 m).
+    /// Millimetres of paper per metre of MD - 5.0 for 1:200 (1 cm per 2 m).
     Scale(f64),
     /// A total height for the sheet's body, in millimetres.
     Total(f64),
@@ -203,14 +203,14 @@ pub enum HeightGoal {
 /// How big to draw, and how much text a column may carry.
 ///
 /// No field here has a library default: the design leaves the
-/// scale, the page height and the text size **open questions** — they are
+/// scale, the page height and the text size **open questions** - they are
 /// not chosen yet, and this crate does not guess on anyone's behalf. A
 /// caller states all four every time.
 pub struct Params {
     /// The id of the [`ProportionMode`] to use, looked up in the registry
     /// [`compute`] is given.
     pub proportion: String,
-    /// The sheet's target size — the mode may still grow past it
+    /// The sheet's target size - the mode may still grow past it
     /// ([`Layout::grown`]).
     pub height: HeightGoal,
     /// The page's width, in millimetres.
@@ -224,7 +224,7 @@ pub struct Params {
 // The proportion-mode registry
 // ---------------------------------------------------------------------------
 
-/// One section's MD thickness and the minimum height its content demands —
+/// One section's MD thickness and the minimum height its content demands -
 /// what a [`ProportionMode`] positions.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SectionSpan {
@@ -237,11 +237,11 @@ pub struct SectionSpan {
 
 /// What a [`ProportionMode`] answers.
 pub struct ModeResult {
-    /// The top of section 0, then the boundary after every section — one
+    /// The top of section 0, then the boundary after every section - one
     /// more entry than there are sections. Monotonically non-decreasing:
     /// [`compute`]'s own invariant, checked by `tests/layout.rs`.
     pub y_mm: Vec<f64>,
-    /// The actual total used — equal to the requested target unless the
+    /// The actual total used - equal to the requested target unless the
     /// mode grew the sheet.
     pub total_mm: f64,
     /// Whether the sheet had to grow past what was asked.
@@ -250,27 +250,27 @@ pub struct ModeResult {
     pub notes: Vec<String>,
 }
 
-/// A function from sections to vertical positions — a registry entry.
+/// A function from sections to vertical positions - a registry entry.
 /// Must be monotone, and must say what its axis measures.
 pub trait ProportionMode: Send + Sync {
-    /// The registry id — what [`Params::proportion`] names.
+    /// The registry id - what [`Params::proportion`] names.
     fn id(&self) -> &'static str;
     /// What a person reads on the sheet as the axis's meaning ("the
     /// mode is written on the sheet").
     fn axis_label(&self) -> &'static str;
-    /// Whether this mode distorts MD — when it does, [`compute`] adds a
+    /// Whether this mode distorts MD - when it does, [`compute`] adds a
     /// [`Ruler`] in the margin so a reader can still find the true position.
     fn deformed(&self) -> bool;
     /// Position every section, given a target total height in millimetres.
     fn positions(&self, sections: &[SectionSpan], target_mm: f64) -> ModeResult;
 }
 
-/// y proportional to MD thickness — no section receives more or less than
+/// y proportional to MD thickness - no section receives more or less than
 /// its share of `target_mm`, whatever its content needs.
 ///
 /// A section whose content does not fit its imposed height is **not**
 /// enlarged: [`compute`] truncates its text with an ellipsis instead
-/// (the second fallback for a too-small section — the first, a trapezoid connecting a displaced
+/// (the second fallback for a too-small section - the first, a trapezoid connecting a displaced
 /// case to its section, is not implemented this increment; said, not
 /// pretended).
 pub struct ToScale;
@@ -312,13 +312,13 @@ impl ProportionMode for ToScale {
 }
 
 /// Every section gets at least its minimum; what remains of `target_mm` is
-/// shared in proportion to MD thickness — a level-filling algorithm, exactly
+/// shared in proportion to MD thickness - a level-filling algorithm, exactly
 /// as the rule states it: *"sections whose proportional share is below
 /// their minimum receive their minimum; the rest is shared in proportion
 /// among the others; repeat until none falls below its minimum"*.
 ///
 /// If the minimums alone exceed `target_mm`, the sheet grows to fit them
-/// exactly — there is nothing left to share proportionally in that case —
+/// exactly - there is nothing left to share proportionally in that case -
 /// and [`ModeResult::grown`] and [`ModeResult::notes`] say so.
 pub struct Readable;
 
@@ -379,7 +379,7 @@ impl ProportionMode for Readable {
                     let share = if remaining_thickness > 0.0 {
                         remaining_budget * (s.thickness_m / remaining_thickness)
                     } else {
-                        // Every still-active section has zero MD thickness —
+                        // Every still-active section has zero MD thickness -
                         // nothing to divide the budget by, so split evenly.
                         remaining_budget / active_count as f64
                     };
@@ -443,7 +443,7 @@ impl ModeRegistry {
         ModeRegistry(vec![Box::new(ToScale), Box::new(Readable)])
     }
 
-    /// Add a mode, tried before every one already registered — so it can
+    /// Add a mode, tried before every one already registered - so it can
     /// replace a built-in of the same id, not just extend the list.
     pub fn register(&mut self, mode: Box<dyn ProportionMode>) {
         self.0.insert(0, mode);
@@ -480,7 +480,7 @@ pub struct LaidCell {
     pub uri: Option<String>,
     /// [`Interval::row`], likewise.
     pub row: Option<String>,
-    /// Neither a colour nor a text — an interval with nothing to say, or no
+    /// Neither a colour nor a text - an interval with nothing to say, or no
     /// interval at all here: "an interval without a value is a stated
     /// blank, never filled in". Computed, not asked for: true exactly when
     /// both fields above are `None`.
@@ -492,7 +492,7 @@ pub struct LaidCell {
 pub struct TextCell {
     /// The lines, in reading order.
     pub lines: Vec<String>,
-    /// The untruncated text, always kept — an SVG `<title>` reads it in
+    /// The untruncated text, always kept - an SVG `<title>` reads it in
     /// full even when [`TextCell::lines`] had to be cut short.
     pub full_text: String,
     /// How many of [`TextCell::lines`] were cut with no separator to break
@@ -503,9 +503,9 @@ pub struct TextCell {
     pub truncated: bool,
 }
 
-/// One track's contribution to a cell, from one interval — a registry entry.
+/// One track's contribution to a cell, from one interval - a registry entry.
 pub trait TrackRender: Send + Sync {
-    /// The registry id — what [`IntervalTrack::renders`] names.
+    /// The registry id - what [`IntervalTrack::renders`] names.
     fn id(&self) -> &'static str;
     /// Add this render's contribution to `cell`. `max_width_pt` is the
     /// column's text budget (`max_chars` × the font's mean advance);
@@ -590,7 +590,7 @@ impl Default for TrackRegistry {
 // What comes back
 // ---------------------------------------------------------------------------
 
-/// One section of the sheet — the union of every interval track's bounds,
+/// One section of the sheet - the union of every interval track's bounds,
 /// positioned.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LaidSection {
@@ -599,19 +599,19 @@ pub struct LaidSection {
     /// The MD of its base, in metres.
     pub md_base: f64,
     /// Its top, in millimetres from the body's own top (excluding the
-    /// header — [`Layout::header_height_mm`]).
+    /// header - [`Layout::header_height_mm`]).
     pub y_top_mm: f64,
     /// Its base, likewise.
     pub y_base_mm: f64,
     /// The height its own content asks for: the tallest of its cells
     /// once wrapped, or one line for the MD label. A deformed mode honours it
     /// (`y_base_mm - y_top_mm >= min_mm`); a to-scale one may not, and
-    /// truncates instead. Kept so that a test — and a page — can tell the two
+    /// truncates instead. Kept so that a test - and a page - can tell the two
     /// apart without recomputing it.
     pub min_mm: f64,
 }
 
-/// One tick of the MD column — a boundary between two sections, or the very
+/// One tick of the MD column - a boundary between two sections, or the very
 /// top or base of the sheet.
 #[derive(Clone, Debug, PartialEq)]
 pub struct MdTick {
@@ -628,12 +628,12 @@ pub struct MdTick {
 pub enum LaidTrack {
     /// The depth column.
     Md {
-        /// [`MdTrack::header`], unchanged — assumed to fit one line: this
+        /// [`MdTrack::header`], unchanged - assumed to fit one line: this
         /// increment does not allocate a column width for it (that is
         /// [`crate::svg`]'s heuristic, not part of what is tested here), so
         /// wrapping it would need a number this module has no basis for.
         header: String,
-        /// One tick per section boundary — [`compute`]'s own MDs, not a
+        /// One tick per section boundary - [`compute`]'s own MDs, not a
         /// caller's list (the MD column has no data of its own).
         /// Empty when no interval track is present to name a boundary: an MD
         /// column alone has nothing to derive a tick from.
@@ -645,7 +645,7 @@ pub enum LaidTrack {
         header: String,
         /// The header, wrapped to the column's text width when it renders
         /// text ("a header too long for its column wraps
-        /// like a cell") — one line, unwrapped, for a column with
+        /// like a cell") - one line, unwrapped, for a column with
         /// no text render (a pure fill has no width this module derives).
         header_lines: Vec<String>,
         /// [`IntervalTrack::max_chars`], carried through for [`crate::svg`].
@@ -662,16 +662,16 @@ pub enum LaidTrack {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Ruler {
     /// Where every section boundary would sit at true scale, sharing the
-    /// same total height as the deformed drawing — one entry per boundary,
+    /// same total height as the deformed drawing - one entry per boundary,
     /// same length and same order as a [`LaidTrack::Md`]'s ticks.
     pub y_true_mm: Vec<f64>,
-    /// The ruler's own total height, in millimetres — equal to the sheet's
+    /// The ruler's own total height, in millimetres - equal to the sheet's
     /// actual body height, since the ruler and the deformed drawing are two
     /// readings of the same span.
     pub total_mm: f64,
 }
 
-/// A drilling sheet, laid out — what `tests/layout.rs` checks in numbers,
+/// A drilling sheet, laid out - what `tests/layout.rs` checks in numbers,
 /// and the only thing [`crate::svg::write`] reads.
 #[derive(Debug)]
 pub struct Layout {
@@ -681,22 +681,22 @@ pub struct Layout {
     pub mode_id: String,
     /// [`ProportionMode::axis_label`] of the mode used.
     pub axis_label: String,
-    /// What the deformed modes require written on the sheet, under the header — the
+    /// What the deformed modes require written on the sheet, under the header - the
     /// mode's id, what its axis measures, and whether the sheet grew.
     pub mode_note: String,
     /// [`ProportionMode::deformed`] of the mode used.
     pub deformed: bool,
     /// [`Params::page_width_mm`], unchanged.
     pub page_width_mm: f64,
-    /// [`Params::text_size_pt`], unchanged — [`crate::svg`] needs it again to
+    /// [`Params::text_size_pt`], unchanged - [`crate::svg`] needs it again to
     /// size text and to lay columns out horizontally, and reading it back
     /// off the [`Layout`] means a caller never has to keep the original
     /// [`Params`] around just for that.
     pub text_size_pt: f64,
-    /// The header's height, in millimetres — the title (if any), the mode
+    /// The header's height, in millimetres - the title (if any), the mode
     /// note, and the tallest wrapped column header.
     pub header_height_mm: f64,
-    /// The body's total height, in millimetres — the sum of every
+    /// The body's total height, in millimetres - the sum of every
     /// [`LaidSection`]'s height; equal to the mode's requested target unless
     /// [`Layout::grown`].
     pub body_height_mm: f64,
@@ -709,18 +709,18 @@ pub struct Layout {
     /// The margin ruler, when the mode is deformed.
     pub ruler: Option<Ruler>,
     /// What could not be drawn as asked, or had to be said rather than
-    /// silently done — an unknown render id, a blank track, a truncation, a
+    /// silently done - an unknown render id, a blank track, a truncation, a
     /// grown sheet.
     pub notes: Vec<String>,
 }
 
-/// Why [`compute`] refused to lay out a board — named, never a guess (refuse
+/// Why [`compute`] refused to lay out a board - named, never a guess (refuse
 /// rather than draw).
 #[derive(Debug, thiserror::Error)]
 pub enum Refusal {
     /// A column narrower than its own floor.
     #[error(
-        "track `{track}`: max_chars ({max_chars}) is below min_chars ({min_chars}) — a column this narrow \
+        "track `{track}`: max_chars ({max_chars}) is below min_chars ({min_chars}) - a column this narrow \
          would put every word alone on its own line, which is exactly what min_chars exists to refuse"
     )]
     MaxCharsBelowMinChars {
@@ -748,7 +748,7 @@ pub fn compute(board: &Board, params: &Params) -> Result<Layout, Refusal> {
     compute_with(board, params, &ModeRegistry::default(), &TrackRegistry::default())
 }
 
-/// [`compute`], with the caller's own registries — built-ins plus whatever
+/// [`compute`], with the caller's own registries - built-ins plus whatever
 /// was [`ModeRegistry::register`]ed or [`TrackRegistry::register`]ed.
 pub fn compute_with(
     board: &Board,
@@ -776,7 +776,7 @@ pub fn compute_with(
             id: params.proportion.clone(),
         })?;
 
-    // Only interval tracks cut the sheet — a track by node (the MD
+    // Only interval tracks cut the sheet - a track by node (the MD
     // column is exactly that: one value per node, not per interval) creates
     // no section, because it never runs this loop.
     let mut bounds: Vec<f64> = Vec::new();
@@ -849,9 +849,9 @@ pub fn compute_with(
         }
         if blanks > 0 {
             // "An interval without a value is a stated blank, never
-            // filled in" — said here, not just silently left empty in the SVG.
+            // filled in" - said here, not just silently left empty in the SVG.
             notes.push(format!(
-                "track `{}`: {blanks} of {} section(s) are blank — no colour and no text named for them",
+                "track `{}`: {blanks} of {} section(s) are blank - no colour and no text named for them",
                 interval_track.header,
                 section_bounds.len()
             ));
@@ -989,7 +989,7 @@ pub fn compute_with(
     };
 
     let mode_note = format!(
-        "{} — axis: {}{}",
+        "{} - axis: {}{}",
         mode.id(),
         mode.axis_label(),
         if result.grown {

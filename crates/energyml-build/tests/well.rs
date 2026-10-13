@@ -1,4 +1,4 @@
-//! `well-from-polyline` — what it computes, what it writes, what it refuses.
+//! `well-from-polyline` - what it computes, what it writes, what it refuses.
 //!
 //! The triangulation is the reader this workspace ships: what the trajectory
 //! JSON says is what `energyml-geometry`'s parametric reader expects, and the
@@ -31,7 +31,7 @@ fn bag(points: Vec<[f64; 3]>, vertical_up: Option<bool>, with_vertical_crs: bool
     )
 }
 
-/// The same, in the frame given — a `ProjectedCrs` named as it stands, say.
+/// The same, in the frame given - a `ProjectedCrs` named as it stands, say.
 fn bag_in(points: Vec<[f64; 3]>, vertical_up: Option<bool>, with_vertical_crs: bool, frame: Ref) -> Pieces {
     let n = points.len() as u32;
     Pieces::empty()
@@ -165,11 +165,11 @@ fn a_deviated_polyline_becomes_datum_feature_interpretation_trajectory_and_frame
         json!(role(&plan, "interpretation").uuid)
     );
     // The datum: at the first point, at the ground, **in the compound** the
-    // trajectory is in — decision (b) of 24/09, common TRG v2.3 §13.25 p. 371.
+    // trajectory is in - decision (b) of 24/09, common TRG v2.3 §13.25 p. 371.
     // Until then it was a `ReferencePointInACrs` whose `ProjectedCoordinates`
     // named this compound: a local position given for a projected one, the
     // type of the reference wrong (a defect found by an audit,
-    // §2.4) — and no assertion here looked at that field.
+    // §2.4) - and no assertion here looked at that field.
     let datum = role(&plan, "datum");
     assert_eq!(
         datum.qualified_type,
@@ -253,7 +253,7 @@ fn the_measured_depths_are_the_drop_then_the_chord_length() {
 fn a_vertical_hole_whose_ground_is_the_systems_zero_is_written_as_the_vertical_kind() {
     // To break: the detection reading the shape choice instead of the points.
     // The ground is at 0 here, so the measured depths **are** the CRS's depths
-    // and kind 0 says the same thing as the points do — which is the only case
+    // and kind 0 says the same thing as the points do - which is the only case
     // where it may be written, see `a_vertical_hole_drilled_from_a_hill`.
     let pieces = bag(
         vec![
@@ -288,14 +288,14 @@ fn a_vertical_hole_drilled_from_a_hill_stays_a_linear_spline_and_says_why() {
     // does not interpolate: *"Parameter values are interpreted as depth =>
     // (X,Y,Z), where the depth to Z conversion depends on the vertical CRS
     // direction"* (TRG v2.2 §3.8). A trajectory's parameter is the **measured
-    // depth**, counted from the datum — the two agree only when the datum sits
+    // depth**, counted from the datum - the two agree only when the datum sits
     // at the system's zero. Here the ground is at 20, so MD 20 is the wellhead
     // and kind 0 would read it back at z = -20: the frame forty metres under
     // the trajectory it is supposed to sample.
     //
     // Found on the SIGEOL import of a thousand boreholes, whose heads are at
     // real BRGM elevations. The report: everything
-    // works, even the addition to the 3D scene, at least in appearance because nothing shows in the canvas — the
+    // works, even the addition to the 3D scene, at least in appearance because nothing shows in the canvas - the
     // map, which uses the wellhead, was right, and the exported OBJ had the
     // trajectory at z = 39.57 and its frame at z = 0, -1.8, -5.2.
     //
@@ -446,7 +446,7 @@ fn an_existing_datum_and_interpretation_are_used_and_not_recreated() {
 /// **A datum in a `ProjectedCrs` needs the vertical system beside it; one in a
 /// compound does not.**
 ///
-/// This test refused a datum under a *compound* with no vertical CRS known —
+/// This test refused a datum under a *compound* with no vertical CRS known -
 /// right while the datum was a `ReferencePointInACrs`, which names its
 /// `VerticalCrs` itself (common TRG v2.3 §13.24, p. 370). In the compound
 /// (§13.25, p. 371) the vertical system is reached through the `Crs` it
@@ -455,7 +455,7 @@ fn an_existing_datum_and_interpretation_are_used_and_not_recreated() {
 /// (decision (c) of 24/09).
 #[test]
 fn a_datum_in_a_projected_crs_needs_the_vertical_system_and_one_in_a_compound_does_not() {
-    // The `ProjectedCrs` is the frame of the input, suggested as `crs` — and
+    // The `ProjectedCrs` is the frame of the input, suggested as `crs` - and
     // the input knows no vertical system for it.
     let why = Registry::new()
         .plan(
@@ -468,7 +468,7 @@ fn a_datum_in_a_projected_crs_needs_the_vertical_system_and_one_in_a_compound_do
         .expect_err("no vertical CRS");
     assert!(why.message().contains("vertical CRS"), "{why}");
 
-    // Under the compound of the same bag, the datum is made — in it.
+    // Under the compound of the same bag, the datum is made - in it.
     let plan = Registry::new()
         .plan(
             "well-from-polyline",
@@ -484,15 +484,15 @@ fn a_datum_in_a_projected_crs_needs_the_vertical_system_and_one_in_a_compound_do
     );
 }
 
-/// **Under a `ProjectedCrs` named as it stands, the datum is projected — in that
+/// **Under a `ProjectedCrs` named as it stands, the datum is projected - in that
 /// `ProjectedCrs`, with its vertical system**, and the plan says the frame is
 /// taken with a note. An audit found the same object written under a
 /// compound: `ProjectedCoordinates.Crs` pointing at something that is no
 /// projected system.
 #[test]
 fn a_datum_under_a_named_projected_crs_is_given_in_it_and_its_vertical_system() {
-    // The input's frame is a `ProjectedCrs` whose vertical system it knows —
-    // a BRGM surface, say — and `crs` is suggested from it.
+    // The input's frame is a `ProjectedCrs` whose vertical system it knows -
+    // a BRGM surface, say - and `crs` is suggested from it.
     let plan = Registry::new()
         .plan(
             "well-from-polyline",
@@ -528,7 +528,7 @@ fn a_datum_under_a_named_projected_crs_is_given_in_it_and_its_vertical_system() 
 }
 
 /// **A wellbore is refused in degrees**, as `sigeol-boreholes` and
-/// `wells-from-table` refuse it — a defect found by an audit: this operation
+/// `wells-from-table` refuse it - a defect found by an audit: this operation
 /// lacked the refusal, and a GeoJSON line left without `project` came out a
 /// hole between a hundred and ten thousand times longer than the model is
 /// wide, in a package `check` validates.
@@ -582,7 +582,7 @@ fn a_wellbore_in_degrees_is_refused_naming_what_to_set() {
 
 /// **A half of a system named as the frame blocks the well, and the frame's
 /// block reaches the plan.** `well-from-polyline` wrote `blocked: None`
-/// whatever `support::frame_in` said — a well under a RESQML 2.0.1 system
+/// whatever `support::frame_in` said - a well under a RESQML 2.0.1 system
 /// would have been applied half of one release.
 #[test]
 fn a_frame_that_blocks_blocks_the_well() {
@@ -691,7 +691,7 @@ fn two_polylines_or_a_surface_are_refused_by_name() {
 #[test]
 fn a_geojson_line_makes_a_well_in_a_crs_created_here() {
     // The frame created with the plan carries its own vertical CRS, so the
-    // datum can be created too — five objects plus the two CRS.
+    // datum can be created too - five objects plus the two CRS.
     let collection = energyml_build::geojson::read(
         r#"{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"LineString","coordinates":[[2.0,48.0,100],[2.0,48.0,-500]]},"properties":{}}]}"#,
     )
@@ -714,7 +714,7 @@ fn a_geojson_line_makes_a_well_in_a_crs_created_here() {
         .unwrap();
     let roles: Vec<&str> = plan.objects.iter().map(|o| o.role.as_str()).collect();
     // The frame created is the compound over Lambert-93 (RESQML TRG 2.2 §3.1
-    // p. 22) — four objects where there were two — and the datum sits in it:
+    // p. 22) - four objects where there were two - and the datum sits in it:
     // it names the compound, which reaches the vertical system, where it named
     // the `VerticalCrs` itself beside a `ProjectedCoordinates` in the
     // `ProjectedCrs`.
@@ -740,7 +740,7 @@ fn a_geojson_line_makes_a_well_in_a_crs_created_here() {
         role(&plan, "crs").json["VerticalCrs"]["Uuid"],
         json!(role(&plan, "vertical-crs").uuid)
     );
-    // Vertical, and the created frame is up — but the ground is at 100, so the
+    // Vertical, and the created frame is up - but the ground is at 100, so the
     // measured depths are not the system's depths and kind 0 would sink the
     // whole hole by a hundred metres. A linear spline through the same two
     // points places them exactly, and its parameter is the MD.
@@ -816,20 +816,20 @@ fn read_back(line: &str, ground: f64, tag: &str) -> (Vec<[f64; 3]>, Vec<[f64; 3]
     (answers.pop().unwrap(), frame)
 }
 
-/// **The head a datum states is where the trajectory starts — read by two
+/// **The head a datum states is where the trajectory starts - read by two
 /// readers, through a frame that moves things.**
 ///
 /// The datum read by `energyml_geometry::well`
 /// (`head_of`: the reference point, placed through the compound it names)
 /// against the first node of the trajectory read from its control points and
-/// placed through its `LocalCrs` by `energyml_domain::crs`. Two sources — the
-/// datum's own numbers in the XML, the control points in the HDF5 — for one
+/// placed through its `LocalCrs` by `energyml_domain::crs`. Two sources - the
+/// datum's own numbers in the XML, the control points in the HDF5 - for one
 /// fact: the hole is collared where it starts.
 ///
 /// **The frame is turned 30° and offset**, like the grid frame of Lutetia
 ///: under the identity compound every error of frame would be
-/// invisible, local and projected numbers being the same. an audit found —
-/// local coordinates written as projected ones — was exactly that. To break:
+/// invisible, local and projected numbers being the same. an audit found -
+/// local coordinates written as projected ones - was exactly that. To break:
 /// write the datum's coordinates projected while the trajectory's stay local,
 /// or name a different frame on the datum.
 #[cfg(feature = "hdf5")]
@@ -927,7 +927,7 @@ fn a_datum_read_by_the_well_reader_is_the_first_node_of_its_trajectory_placed_th
             "axis {axis}: the datum reads {head:?}, the first node {placed:?}"
         );
     }
-    // And the frame did move things — otherwise the agreement would prove
+    // And the frame did move things - otherwise the agreement would prove
     // nothing about which numbers are local.
     assert!(
         (placed[0] - first[0]).abs() > 1_000.0 && (placed[1] - first[1]).abs() > 1_000.0,
@@ -956,8 +956,8 @@ fn a_frames_nodes_land_on_the_trajectory_they_sample() {
     // points as one placed on it.
     //
     // The two objects are read **independently** by the reader this workspace
-    // ships — one from `ControlPoints`, one by evaluating the parametric line
-    // at each `NodeMd` — so agreeing is a fact about the file, not about a
+    // ships - one from `ControlPoints`, one by evaluating the parametric line
+    // at each `NodeMd` - so agreeing is a fact about the file, not about a
     // shared code path. A frame created here puts one node on each control
     // point, which is what makes the comparison exact.
     //

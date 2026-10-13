@@ -94,7 +94,7 @@ fn a_superseded_rule_is_read_beside_its_replacement() {
 }
 
 /// A translation that names an id which does not exist is refused **by its
-/// name** — a French file that outlived a renamed rule must not rot quietly.
+/// name** - a French file that outlived a renamed rule must not rot quietly.
 ///
 /// To break it: in `parse`, do not check `by_id.contains_key` before accepting
 /// a translation; the test goes red.

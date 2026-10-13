@@ -72,7 +72,7 @@ fn to_scale_height_is_proportional_to_md_thickness() {
 #[test]
 fn readable_each_section_gets_at_least_its_minimum_order_is_kept_and_the_sum_is_the_target() {
     // A long description, a very thin section that still needs its own
-    // minimum, and a blank one — three different reasons a section might
+    // minimum, and a blank one - three different reasons a section might
     // need help. What would break this: the level-filling loop in
     // `Readable::positions` freezing the wrong sections, or not
     // distributing the whole of what is left over the ones that stay
@@ -112,14 +112,14 @@ fn readable_each_section_gets_at_least_its_minimum_order_is_kept_and_the_sum_is_
         // section got 0.75 mm and this test still passed.
         assert!(
             section.y_base_mm - section.y_top_mm >= section.min_mm - 1e-9,
-            "section {}–{} m got {} mm, below its minimum {} mm",
+            "section {}-{} m got {} mm, below its minimum {} mm",
             section.md_top,
             section.md_base,
             section.y_base_mm - section.y_top_mm,
             section.min_mm
         );
     }
-    // And the thin section **did** need the help — otherwise the check above
+    // And the thin section **did** need the help - otherwise the check above
     // proves nothing: its to-scale share is under its minimum.
     let thin = &layout.sections[1];
     assert!(
@@ -243,12 +243,12 @@ fn max_chars_below_min_chars_is_refused_by_name() {
 
 #[test]
 fn a_track_by_node_creates_no_section() {
-    // The MD column is a "track by node" — one value per node, not per
-    // interval — and it carries no MD list of its own for exactly that
+    // The MD column is a "track by node" - one value per node, not per
+    // interval - and it carries no MD list of its own for exactly that
     // reason: `compute` derives its ticks from the sections, never the
     // other way around. What would break this: a future change that gives
     // `MdTrack` data of its own and wires it into the boundary collection
-    // the way `Track::Intervals` is wired in — the section count would then
+    // the way `Track::Intervals` is wired in - the section count would then
     // grow past what the one interval track alone states.
     let interval_track = IntervalTrack::new(
         "unit",
@@ -353,9 +353,9 @@ fn readable_never_has_to_truncate_its_own_text() {
     // A consistency check on the crate's own invariant (documented
     // in the crate): `Readable`'s minimum height is computed from the exact
     // same line count the truncation pass later measures against, so it
-    // should never trigger. What would break this: the two computations —
+    // should never trigger. What would break this: the two computations -
     // the minimum height in `compute`'s first pass, and the truncation
-    // check in its second — drifting apart (a different line-height
+    // check in its second - drifting apart (a different line-height
     // constant, an off-by-one in the margin).
     let long = "word ".repeat(60);
     let track = IntervalTrack::new(

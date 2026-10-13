@@ -5,8 +5,8 @@
 //!
 //! | name | `obj_Activity` | used by |
 //! |---|---|---|
-//! | [`TypeInfo::xml_name`] | `Activity` | the XML tag — the *element* name |
-//! | [`TypeInfo::object_type`] | `obj_Activity` | contentType, qualifiedType, EPC part name — the *complexType* name |
+//! | [`TypeInfo::xml_name`] | `Activity` | the XML tag - the *element* name |
+//! | [`TypeInfo::object_type`] | `obj_Activity` | contentType, qualifiedType, EPC part name - the *complexType* name |
 //! | [`TypeInfo::type_key`] | `Activity` | grouping and translation across versions |
 //!
 //! RESQML 2.0.1 and common 2.0 prefix their top-level complexTypes with `obj_`
@@ -44,14 +44,14 @@ pub fn has_obj_prefix(name: &str) -> bool {
     name.starts_with(OBJ_PREFIX)
 }
 
-/// Exact comparison — case and prefix included. The default, and the one that
+/// Exact comparison - case and prefix included. The default, and the one that
 /// is right when the name came from a document.
 pub fn type_eq(a: &str, b: &str) -> bool {
     a == b
 }
 
 /// Loose comparison: the `obj_` prefix is ignored on both sides, and so is
-/// case. For user input and for grouping one concept across versions —
+/// case. For user input and for grouping one concept across versions -
 /// never for deciding what to write.
 ///
 /// ```
@@ -93,8 +93,8 @@ pub fn version_eq(a: &str, b: &str) -> bool {
 
 /// Split a version into its release and its pre-release suffix.
 ///
-/// Energistics ships development drops beside the releases — `resqml
-/// 2.2_dev3` sits next to `resqml 2.2` — and **the drop declares the release's
+/// Energistics ships development drops beside the releases - `resqml
+/// 2.2_dev3` sits next to `resqml 2.2` - and **the drop declares the release's
 /// own version**: `v2.2_dev3/ResqmlAllObjects.xsd` says `version="2.2"`, the
 /// same string the final 2.2 says. So a document written against dev3 is
 /// indistinguishable from a 2.2 document by declaration alone; the directory
@@ -144,7 +144,7 @@ pub fn is_prerelease(version: &str) -> bool {
 /// Whether two pre-release suffixes name the same drop, whichever way each is
 /// spelled: `dev3`, `DEV3` and `dev-3` are one.
 ///
-/// The spelling varies because nothing standardises it — the directory says
+/// The spelling varies because nothing standardises it - the directory says
 /// `2.2_dev3`, a producer may write `2.2dev3` in `schemaVersion`, and matching
 /// those as different strings would send a dev3 document to the wrong crate.
 pub fn prerelease_eq(a: &str, b: &str) -> bool {
@@ -240,7 +240,7 @@ mod tests {
     #[test]
     fn a_version_that_is_only_a_suffix_claims_no_release() {
         // Defensive: nothing should hand this in. What matters is that it
-        // claims no release — a `dev3` that came back as the release `3`, or
+        // claims no release - a `dev3` that came back as the release `3`, or
         // as `2.2`, would file a document under a version nobody wrote.
         assert_eq!(split_prerelease("dev3"), ("", Some("dev3")));
         assert_eq!(release_of("dev3"), "");

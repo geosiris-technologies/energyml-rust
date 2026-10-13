@@ -1,6 +1,6 @@
 //! A well anchored by a point written in a local engineering compound CRS.
 //!
-//! `ReferencePointInALocalEngineeringCompoundCrs` — common TRG 2.3 §13.25
+//! `ReferencePointInALocalEngineeringCompoundCrs` - common TRG 2.3 §13.25
 //! p. 371: *"A reference point which is defined in the context of a compound
 //! (2D horizontal + 1D vertical) CRS"*, its `Crs` going *"To:
 //! LocalEngineeringCompoundCrs"*. The form an external translation tool writes for a
@@ -10,7 +10,7 @@
 //! Its coordinates are **local** ones of that compound, so the collar is where
 //! the compound places them: through its origin, its azimuth, and a vertical
 //! axis that may count down from a datum that counts up. The system here is
-//! built by hand to exercise all three at once — the corpus has none of them.
+//! built by hand to exercise all three at once - the corpus has none of them.
 
 use energyml_core::registry::DynObject;
 use energyml_domain::source::ObjectSource;
@@ -179,7 +179,7 @@ fn close(found: [f64; 3], expected: [f64; 3]) -> bool {
 
 /// The well stands at the placed collar and runs down from it.
 ///
-/// Refused before 24/09 — the datum type was not one this reader knew — and
+/// Refused before 24/09 - the datum type was not one this reader knew - and
 /// placed raw it would stand at (10, 0), 5 m *up*: the compound's origin, its
 /// azimuth and its vertical sense all missing, each number reasonable.
 #[test]
@@ -208,7 +208,7 @@ fn a_well_anchored_in_a_compound_stands_where_the_compound_places_its_collar() {
 
 /// **Placed once.** The CRS the well is given carries the compound's EPSG
 /// identities and none of its placement, so the placement layer leaves the
-/// points where the well reader put them — the two readers composed, the way
+/// points where the well reader put them - the two readers composed, the way
 /// every export composes them. With the compound's offsets there, the collar
 /// would move by (1000, 2000) a second time.
 #[test]

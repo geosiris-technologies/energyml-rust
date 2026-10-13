@@ -1,4 +1,4 @@
-//! The markers a section can carry, **declared** — the shapes read from the
+//! The markers a section can carry, **declared** - the shapes read from the
 //! model, the places listed (ADR-0015).
 //!
 //! The house rule, as for [`crate::style::declared`]: *what the library
@@ -14,11 +14,11 @@
 //! `diamond`, `plus`, `point`, `pyramid`, `sphere`, `star`, `tetrahedron`). They
 //! are read **by reflection**, from every release the registry holds
 //! (`FieldType::allowed_values`), and each shape remembers the pairs
-//! *(qualified type of the enumeration, value)* that write it — what an
+//! *(qualified type of the enumeration, value)* that write it - what an
 //! attachment of the marker to a package would write. A release that
 //! adds a value brings the shape with no line here; what it cannot bring is the
 //! way to **draw** it, so a value [`is_drawn`] does not know is listed with
-//! `drawn: false` and refused by name when a marker asks for it — never a
+//! `drawn: false` and refused by name when a marker asks for it - never a
 //! default circle. [`CONTOUR`] is the tool's own shape (a wide line under the
 //! well), with no pair.
 
@@ -39,7 +39,7 @@ pub const CONTOUR: &str = "contour";
 /// The places a marker can sit at, in the order the form lists them.
 pub const PLACES: [&str; 3] = ["head", "bottom", "md"];
 
-/// The shapes the drawer knows how to write — the one list the drawing and
+/// The shapes the drawer knows how to write - the one list the drawing and
 /// [`DeclaredShape::drawn`] both read.
 const DRAWN: [&str; 11] = [
     "circle",
@@ -93,7 +93,7 @@ pub struct DeclaredPlace {
     pub takes_value: bool,
 }
 
-/// The shapes the registry's releases offer, and the places — what the front end's
+/// The shapes the registry's releases offer, and the places - what the front end's
 /// form is built from.
 ///
 /// Shapes come in the order the registry met them, once each however many
@@ -168,16 +168,16 @@ fn shape(id: &str, format: Vec<(String, String)>) -> DeclaredShape {
 /// The size of a symbol when nothing says otherwise, pixels.
 pub const DEFAULT_SIZE_PX: f64 = 12.0;
 
-/// A marker asked for in words, against the objects of a catalogue — what the
+/// A marker asked for in words, against the objects of a catalogue - what the
 /// command line's `--marker` gives (08/10, Lutetia's BSS wells).
 ///
 /// `NAME:shape=diamond,colour=#1565c0,at=bottom,type=WellboreTrajectory,title=BSS`.
 /// `shape`, `colour` and `at` (`head`, `bottom`, `md` with `md=VALUE`) are
 /// required; `size` defaults to [`DEFAULT_SIZE_PX`]. The objects are the
-/// catalogue's rows `shown_in` that section — drawn there, or merged into a
-/// line drawn there; `None`: on any section — whose qualified type contains
+/// catalogue's rows `shown_in` that section - drawn there, or merged into a
+/// line drawn there; `None`: on any section - whose qualified type contains
 /// `type` (several joined by
-/// `|`, any of them) and whose title contains `title`, case ignored — the
+/// `|`, any of them) and whose title contains `title`, case ignored - the
 /// storage's own [`type_matches`](energyml_storage::resource::type_matches) and
 /// [`title_matches`](energyml_storage::resource::title_matches). At least one
 /// of the two is asked for, and a marker that matches no object is refused: a
@@ -262,7 +262,7 @@ pub fn from_spec(
     // What the section shows: drawn there, or folded into the line of another
     // object drawn there (the marker lands on that line). A refused or missed
     // object, or one drawn on another section only, has no place in the drawing
-    // — naming it would only add a note that nothing is there.
+    // - naming it would only add a note that nothing is there.
     let drawn_in = |row: &ObjectRow| match &row.outcome {
         Outcome::Drawn { sections } => shown_in.is_none_or(|key| sections.contains(&key)),
         _ => false,

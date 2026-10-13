@@ -1,18 +1,18 @@
-//! What an operation's author writes — **typed** — and the adapter that puts
+//! What an operation's author writes - **typed** - and the adapter that puts
 //! it behind the interface the registry, the WebAssembly front end and the CLI run.
 //!
 //! Two traits.
 //! [`Operation`] is written against a struct of parameters and a struct of
 //! inputs, both derived ([`crate::declare`]); `plan` receives them already
 //! read and bound, and never looks a name up. [`AnyOperation`] is the erased
-//! interface everything else executes — the one every operation implemented
+//! interface everything else executes - the one every operation implemented
 //! directly before this, and the one an operation not yet migrated still
 //! implements. [`typed`] turns the first into the second.
 //!
 //! # What the adapter does, in order
 //!
 //! - `takes` is the inputs' slots, `needs` the parameters' slots with the
-//!   operation's suggestions posed on them — a suggestion that names no slot
+//!   operation's suggestions posed on them - a suggestion that names no slot
 //!   is a **failed assertion** in a debug build, never a silent loss;
 //! - `fitness` binds the inputs (the kind of each piece, its count), then asks
 //!   the operation's own [`Operation::check`];
@@ -27,10 +27,10 @@ use crate::operation::{
 };
 use crate::pieces::Pieces;
 
-/// Who an operation is — what a listing, a form title and an activity read.
+/// Who an operation is - what a listing, a form title and an activity read.
 #[derive(Debug, Clone, Copy)]
 pub struct About {
-    /// `thickness`, `interpolate` — the name a caller asks for.
+    /// `thickness`, `interpolate` - the name a caller asks for.
     pub name: &'static str,
     /// One line, for `--list` and a form.
     pub describe: &'static str,
@@ -76,14 +76,14 @@ pub struct Context<'a> {
     pub feedback: &'a dyn Feedback,
     /// The bag as the caller gave it. An operation reads its **inputs** from
     /// what was bound, never from here; what it may read here is what the
-    /// caller **resolved** — [`Context::known`] — and the seed of the run —
+    /// caller **resolved** - [`Context::known`] - and the seed of the run -
     /// [`Context::seed`]. And, until the last writer is typed, a derived bag
     /// handed to one that still reads pieces by name.
     pub bag: &'a Pieces,
 }
 
 impl<'a> Context<'a> {
-    /// Everything the caller resolved about the objects involved — the
+    /// Everything the caller resolved about the objects involved - the
     /// inputs' **and the answers'**: a CRS picked in a form comes back as a
     /// piece of its own, carrying the vertical half of its frame, which is not
     /// an input and is what a writer needs to reference it.
@@ -91,13 +91,13 @@ impl<'a> Context<'a> {
         self.bag.objects().map(|(_, known)| known).collect()
     }
 
-    /// The seed the run's derived identities hang from — the first piece the
+    /// The seed the run's derived identities hang from - the first piece the
     /// caller gave, and the title. What `support::seed_of` has always been.
     pub fn seed(&self, title: &str) -> String {
         crate::ops::support::seed_of(self.bag, title)
     }
 
-    /// The name of the first piece the caller gave — what a derived name
+    /// The name of the first piece the caller gave - what a derived name
     /// (`outline of …`) is built on, so that it names what it always named.
     pub fn first(&self) -> String {
         self.bag
@@ -107,7 +107,7 @@ impl<'a> Context<'a> {
             .unwrap_or_default()
     }
 
-    /// A refusal if the caller asked to stop — for a long loop to call.
+    /// A refusal if the caller asked to stop - for a long loop to call.
     pub fn stop_if_cancelled(&self) -> Result<(), Refusal> {
         if self.feedback.cancelled() {
             Err(Refusal::new(
@@ -122,17 +122,17 @@ impl<'a> Context<'a> {
 
 /// A way of creating objects, written against typed parameters and inputs.
 pub trait Operation: Send + Sync + 'static {
-    /// The parameters — a derived struct, or `()`.
+    /// The parameters - a derived struct, or `()`.
     type Params: Params;
-    /// The inputs — a derived struct, or `()`.
+    /// The inputs - a derived struct, or `()`.
     type Inputs: Inputs;
 
     /// Who it is.
     fn about(&self) -> About;
 
-    /// **The other categories it is also listed under** — none by default.
+    /// **The other categories it is also listed under** - none by default.
     ///
-    /// Some operations belong in several categories — for example the one that
+    /// Some operations belong in several categories - for example the one that
     /// extracts wellhead points to create a point set is filed under "write" but
     /// could also be under "Wells". Declared here
     /// rather than guessed by the front end from what the operation takes: a slot of
@@ -142,17 +142,17 @@ pub trait Operation: Send + Sync + 'static {
         &[]
     }
 
-    /// Propose values read off the inputs — the CRS of the surface, the
+    /// Propose values read off the inputs - the CRS of the surface, the
     /// direction of its vertical axis. Runs on **any** bag, the empty one
     /// included; it poses values on declared slots, by name.
     fn suggest(&self, _bag: &Pieces, _slots: &mut Suggestions<'_>) {}
 
-    /// What the kind and count of the inputs cannot say — a base with no face.
+    /// What the kind and count of the inputs cannot say - a base with no face.
     fn check(&self, _inputs: &Self::Inputs) -> Result<(), Refusal> {
         Ok(())
     }
 
-    /// The plan — pure, from what was bound and read.
+    /// The plan - pure, from what was bound and read.
     fn plan(&self, inputs: Self::Inputs, params: Self::Params, cx: &Context<'_>) -> Result<Plan, Refusal>;
 
     /// What the activity records that is neither a choice nor an output.
@@ -160,7 +160,7 @@ pub trait Operation: Send + Sync + 'static {
         Vec::new()
     }
 
-    /// What it writes, by role — [`AnyOperation::gives`]. Empty: not declared yet.
+    /// What it writes, by role - [`AnyOperation::gives`]. Empty: not declared yet.
     fn gives(&self) -> Vec<Output> {
         Vec::new()
     }

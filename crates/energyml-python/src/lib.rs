@@ -1,4 +1,4 @@
-//! The Python bridge — **conversion, and nothing else**.
+//! The Python bridge - **conversion, and nothing else**.
 //!
 //! The library has to be usable from Python. This first increment covers only
 //! reading and writing an EPC and its `.h5` files; operations and the rest will
@@ -15,7 +15,7 @@
 //!
 //! Decided at the start, and not as a performance detail. A view would share
 //! the memory of the block that was read, so its lifetime would be the
-//! package's — and an array Python keeps after closing its package would read
+//! package's - and an array Python keeps after closing its package would read
 //! freed memory. Python has no way to prevent that, and the defect would not
 //! show at the write but weeks later, as wrong numbers or a crash with no
 //! traceback.
@@ -33,7 +33,7 @@ pub mod session;
 // requires them for every other member: through feature unification, `cargo
 // build --workspace` would go looking for `libpython` and HDF5 to compile the
 // lint or the wasm pass. maturin turns `python` on (see `pyproject.toml`);
-// nobody else needs it, and `session` — where everything that can be wrong
-// lives — compiles and tests without any of it.
+// nobody else needs it, and `session` - where everything that can be wrong
+// lives - compiles and tests without any of it.
 #[cfg(feature = "python")]
 pub mod bindings;

@@ -1,4 +1,4 @@
-//! `fault-from-sticks` — a fault: its `BoundaryFeature`, its
+//! `fault-from-sticks` - a fault: its `BoundaryFeature`, its
 //! `FaultInterpretation`, the triangulated surface lofted between its sticks,
 //! and the sticks themselves.
 //!
@@ -9,14 +9,14 @@
 //! and azimuth, and one fault is written in two patches. The sticks carry
 //! `LineRole` `interpretation line`.
 //!
-//! # Two ways to give the surface — a union
+//! # Two ways to give the surface - a union
 //!
-//! - **`sticks`** — stated one by one, as text (`x y z; x y z; …`, top to
+//! - **`sticks`** - stated one by one, as text (`x y z; x y z; …`, top to
 //!   bottom, the entries in order along the strike) or as the `lines` inputs,
 //!   one polyline each, in the slot's order. A blank entry ends a patch: a fault
 //!   in two patches is two bands, and a stick repeated on both sides of
-//!   the break is the edge they share — written once among the sticks;
-//! - **`plane`** — a trace, a dip and a dip azimuth, and how far down: one
+//!   the break is the edge they share - written once among the sticks;
+//! - **`plane`** - a trace, a dip and a dip azimuth, and how far down: one
 //!   stick per point of the trace, drawn by `energyml_analysis::fault_sticks`.
 //!   A curved trace warps the plane. The sticks drawn are **not** written:
 //!   nobody digitised them, and the reference model holds the sticks of only some of its faults.
@@ -26,28 +26,28 @@
 //! An operation that writes the same object as another delegates to it: the loft
 //! is `energyml_analysis::loft`, the surface is [`super::triangles::write`],
 //! the sticks [`super::polylines::write`], the feature and its interpretation
-//! [`super::support::represented_in`] — the one place the pair is made. What
+//! [`super::support::represented_in`] - the one place the pair is made. What
 //! this module adds is what that shared writer cannot know: **the fields of a
-//! fault** — the throw, `IsListric`, `IsSealed`, `MaximumThrow`, `MeanDip`,
+//! fault** - the throw, `IsListric`, `IsSealed`, `MaximumThrow`, `MeanDip`,
 //! `MeanAzimuth`, `Domain`, `HasOccurredDuring`. The interpretation it made is
 //! rewritten, typed, with them; its uuid and title are kept. That is the
 //! decision the crate's rules ask for (a fault interpretation carries
 //! fields the shared writer doesn't write: decide and say): the pair is still
 //! made in one place, and the fields of one kind of interpretation live in the
-//! one operation that knows them — rather than a third copy of the pair beside
+//! one operation that knows them - rather than a third copy of the pair beside
 //! `well`'s and `boundary`'s.
 //!
 //! RESQML 2.2 has no kind on a `BoundaryFeature` (Features.xsd: `IsWellKnown`
-//! only — the 2.0.1 `TectonicBoundaryKind` is gone): what makes it a fault is
+//! only - the 2.0.1 `TectonicBoundaryKind` is gone): what makes it a fault is
 //! the `FaultInterpretation` of it.
 //!
 //! # `IsListric`: the business rule, refused by name
 //!
 //! *« Indicates if the normal fault is listric or not. BUSINESS RULE: Must be
 //! present if the fault is normal. Must not be present if the fault is not
-//! normal. »* (RESQML 2.2 Interpretations.xsd l. 659–662; TRG 2.2 §6.20
+//! normal. »* (RESQML 2.2 Interpretations.xsd l. 659-662; TRG 2.2 §6.20
 //! p. 188.) The reference model reads *normal* as **the one throw is normal**
-//! (a fault with two throws has no `IsListric`) — and so does this: a single
+//! (a fault with two throws has no `IsListric`) - and so does this: a single
 //! `normal` requires `listric`, anything else refuses it, a fault with no throw
 //! stated included (its presence would say the fault is normal). The model's
 //! first plan broke the first half of that rule on one fault; the deliberate-anomalies
@@ -55,7 +55,7 @@
 //! not write.
 //!
 //! The type's own annotation says a thrust *« has the attributes: is Listric =
-//! 0, MaximumThrow = 0 »* — which the element's business rule forbids for a
+//! 0, MaximumThrow = 0 »* - which the element's business rule forbids for a
 //! fault that is not normal. The business rule is followed, and the plan says
 //! so when a thrust is given.
 //!
@@ -64,14 +64,14 @@
 //! The reference model's rules on invented objects (ADR-0019): every invented
 //! object carries an `ExtensionNameValue` `synthetic = true` and a sentence in
 //! `Citation/Description`, and no constant goes without a source. With `synthetic`, a
-//! `source` is required, and every object written — feature, interpretation,
-//! surface, sticks — carries the mark and the sentence, the form
+//! `source` is required, and every object written - feature, interpretation,
+//! surface, sticks - carries the mark and the sentence, the form
 //! `horizon-from-law` writes. A fault digitised from data states its source
 //! too, when given, without the mark.
 //!
 //! # Two readings of the dip
 //!
-//! `MeanDip` and `MeanAzimuth` are what the model **states** — *« "mean" means
+//! `MeanDip` and `MeanAzimuth` are what the model **states** - *« "mean" means
 //! "representative"; it is not a mathematically derived mean »*
 //! (Interpretations.xsd). The lofted surface is **measured** as well
 //! (`fault_sticks::orientation`), recorded in the activity and said beside what
@@ -83,20 +83,20 @@
 //! From the title, like `horizon-from-law`'s: correcting a stick rewrites the
 //! same fault (correcting means editing the recipe and replaying it).
 //! Under uuids given by the caller, the sticks take theirs
-//! **after** the surface's — the two writers each count from the start.
+//! **after** the surface's - the two writers each count from the start.
 //!
 //! # What is not suggested
 //!
 //! Neither the title nor an interpretation of an input: a stick read from the
-//! package represents something else, and a fault filed under it — the defect
-//! `well-from-plan` once had with the ground — is what a suggestion would
+//! package represents something else, and a fault filed under it - the defect
+//! `well-from-plan` once had with the ground - is what a suggestion would
 //! make look deliberate. This operation declares no `interpretation` slot at
 //! all: it makes its own.
 //!
 //! # References
 //!
 //! - Christiansen and Sederberg (1978), the classic tiling between contours, and Fuchs, Kedem and Uselton (1977), the optimum, as named in `energyml-geostat` (`loft`).
-//!   TODO(reference): verify — both citations are given without title, venue or DOI; complete and check them.
+//!   TODO(reference): verify - both citations are given without title, venue or DOI; complete and check them.
 
 use serde_json::json;
 
@@ -123,7 +123,7 @@ use super::written::{FrameParams, NamingParams, NewFeatureParams, RepresentedPar
 /// The operation.
 pub struct FaultFromSticks;
 
-/// How a fault moved — RESQML's `ThrowKind`, a closed list here: an open
+/// How a fault moved - RESQML's `ThrowKind`, a closed list here: an open
 /// value would be a kind nobody reads.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
 pub enum Throw {
@@ -160,25 +160,25 @@ pub struct FaultParams {
     /// How the surface is given.
     #[param(flatten)]
     pub geometry: GeometryParams,
-    /// how the fault moved — one kind, or several for a fault with several plays; left out, the interpretation states none
+    /// how the fault moved - one kind, or several for a fault with several plays; left out, the interpretation states none
     pub throw: Vec<Throw>,
-    /// whether the normal fault is listric — required when its one throw is normal, refused otherwise (the business rule of IsListric)
+    /// whether the normal fault is listric - required when its one throw is normal, refused otherwise (the business rule of IsListric)
     pub listric: Option<bool>,
     /// whether the fault is sealed
     pub sealed: Option<bool>,
     /// the largest throw, in metres
     #[param(min = 0.0, uom = "m")]
     pub maximum_throw: Option<f64>,
-    /// the representative dip, in degrees from the horizontal — stated, and confronted with the surface's
+    /// the representative dip, in degrees from the horizontal - stated, and confronted with the surface's
     #[param(min = 0.0, max = 90.0, uom = "dega")]
     pub mean_dip: Option<f64>,
-    /// the representative dip direction, in degrees clockwise from grid north — stated, and confronted with the surface's
+    /// the representative dip direction, in degrees clockwise from grid north - stated, and confronted with the surface's
     #[param(min = 0.0, max = 360.0, uom = "dega")]
     pub mean_azimuth: Option<f64>,
     /// the fault is invented: every object written carries `synthetic = true` and its source
     #[param(default = false, optional)]
     pub synthetic: bool,
-    /// where the fault comes from — a document with its page, or why a synthetic fault is plausible; required for a synthetic one
+    /// where the fault comes from - a document with its page, or why a synthetic fault is plausible; required for a synthetic one
     pub source: Option<String>,
     /// Where the coordinates are.
     #[param(flatten)]
@@ -188,7 +188,7 @@ pub struct FaultParams {
     pub naming: NamingParams,
 }
 
-/// how the surface is given — sticks stated one by one, or a plane drawn from a trace, a dip and a dip azimuth
+/// how the surface is given - sticks stated one by one, or a plane drawn from a trace, a dip and a dip azimuth
 #[derive(Debug, Params)]
 #[params(tag = "geometry")]
 pub enum GeometryParams {
@@ -202,7 +202,7 @@ pub enum GeometryParams {
 /// What sticks given one by one add.
 #[derive(Debug, Params)]
 pub struct SticksParams {
-    /// sticks: one per entry, its points `x y z` separated by `;`, top to bottom, the entries in order along the strike — a blank entry ends a patch; or leave it empty and give `lines`
+    /// sticks: one per entry, its points `x y z` separated by `;`, top to bottom, the entries in order along the strike - a blank entry ends a patch; or leave it empty and give `lines`
     pub sticks: Vec<String>,
     /// sticks: write the sticks too, as a polyline set whose role is `interpretation line`
     #[param(default = true, optional)]
@@ -212,7 +212,7 @@ pub struct SticksParams {
 /// What a plane adds.
 #[derive(Debug, Params)]
 pub struct PlaneParams {
-    /// plane: the fault's top line, its points `x y z` separated by `;` — a curved trace warps the plane
+    /// plane: the fault's top line, its points `x y z` separated by `;` - a curved trace warps the plane
     pub trace: String,
     /// plane: the dip, in degrees from the horizontal
     #[param(min = 0.0, max = 90.0, uom = "dega")]
@@ -228,13 +228,13 @@ pub struct PlaneParams {
 /// What `fault-from-sticks` takes.
 #[derive(Debug, Inputs)]
 pub struct FaultInputs {
-    /// the sticks, one polyline per input, top to bottom, in order along the strike — or give them as text in `sticks`
+    /// the sticks, one polyline per input, top to bottom, in order along the strike - or give them as text in `sticks`
     #[input(topology = "polylines", ordered)]
     pub lines: Vec<Shape>,
-    /// the older genetic boundary the faulting came after — with `chronoTop`, when the fault occurred
+    /// the older genetic boundary the faulting came after - with `chronoTop`, when the fault occurred
     #[input(types = "resqml22.HorizonInterpretation, resqml22.BoundaryFeatureInterpretation")]
     pub chrono_bottom: Option<ObjectIn>,
-    /// the younger genetic boundary the faulting came before — with `chronoBottom`
+    /// the younger genetic boundary the faulting came before - with `chronoBottom`
     #[input(types = "resqml22.HorizonInterpretation, resqml22.BoundaryFeatureInterpretation")]
     pub chrono_top: Option<ObjectIn>,
 }
@@ -258,7 +258,7 @@ fn points_of(text: &str) -> Result<Vec<[f64; 3]>, String> {
         let words: Vec<&str> = piece.split_whitespace().collect();
         if words.len() != 3 {
             return Err(format!(
-                "point {} is `{piece}` — a point is `x y z`, three numbers separated by spaces, and points are separated by `;`",
+                "point {} is `{piece}` - a point is `x y z`, three numbers separated by spaces, and points are separated by `;`",
                 at + 1
             ));
         }
@@ -270,7 +270,7 @@ fn points_of(text: &str) -> Result<Vec<[f64; 3]>, String> {
                 .filter(|v| v.is_finite())
                 .ok_or_else(|| {
                     format!(
-                        "point {}: `{word}` is not a finite number — a decimal separator is `.`",
+                        "point {}: `{word}` is not a finite number - a decimal separator is `.`",
                         at + 1
                     )
                 })?;
@@ -280,7 +280,7 @@ fn points_of(text: &str) -> Result<Vec<[f64; 3]>, String> {
     Ok(out)
 }
 
-/// The one open polyline an input holds — or why it is no stick.
+/// The one open polyline an input holds - or why it is no stick.
 fn one_stick(shape: &Shape) -> Result<Vec<[f64; 3]>, Refusal> {
     let mut found: Option<Vec<[f64; 3]>> = None;
     let mut global = 0usize;
@@ -295,7 +295,7 @@ fn one_stick(shape: &Shape) -> Result<Vec<[f64; 3]>, Refusal> {
                 return Err(Refusal::on(
                     "lines",
                     format!(
-                        "`{}` holds several polylines — a stick is one line: give one per input, in order along the strike",
+                        "`{}` holds several polylines - a stick is one line: give one per input, in order along the strike",
                         shape.name
                     ),
                 ));
@@ -313,7 +313,7 @@ fn one_stick(shape: &Shape) -> Result<Vec<[f64; 3]>, Refusal> {
                 return Err(Refusal::on(
                     "lines",
                     format!(
-                        "`{}` is a ring — a stick is an open line, top to bottom",
+                        "`{}` is a ring - a stick is an open line, top to bottom",
                         shape.name
                     ),
                 ));
@@ -338,7 +338,7 @@ fn dated(slot: &str, input: &ObjectIn) -> Result<eml::DataObjectReference, Refus
 }
 
 /// The `synthetic` mark the reference model asks of an invented object
-/// (ADR-0019) — the form `horizon-from-law` writes.
+/// (ADR-0019) - the form `horizon-from-law` writes.
 fn synthetic_mark() -> eml::ExtensionNameValue {
     eml::ExtensionNameValue {
         name: "synthetic".to_string(),
@@ -362,7 +362,7 @@ impl Operation for FaultFromSticks {
     fn about(&self) -> About {
         About {
             name: "fault-from-sticks",
-            describe: "a fault — its feature, its fault interpretation with the throw it is given, the surface lofted between its sticks (or drawn from a plane), and the sticks",
+            describe: "a fault - its feature, its fault interpretation with the throw it is given, the surface lofted between its sticks (or drawn from a plane), and the sticks",
             category: Category::Faults,
             makes: &[
                 "resqml22.BoundaryFeature",
@@ -378,7 +378,7 @@ impl Operation for FaultFromSticks {
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
         super::written::suggest_written(bag, None, slots);
         // **Not an input's title**: a stick read from the package is another
-        // object, and the fault is named for itself — see the module.
+        // object, and the fault is named for itself - see the module.
         if let Some(slot) = slots.slot_mut("title") {
             slot.suggested = None;
             slot.from = None;
@@ -392,11 +392,11 @@ impl Operation for FaultFromSticks {
         match (&inputs.chrono_bottom, &inputs.chrono_top) {
             (Some(_), None) => Err(Refusal::on(
                 "chronoTop",
-                "`chronoBottom` is given alone: a time interval between two genetic boundaries needs `chronoTop` too — the one the faulting came before",
+                "`chronoBottom` is given alone: a time interval between two genetic boundaries needs `chronoTop` too - the one the faulting came before",
             )),
             (None, Some(_)) => Err(Refusal::on(
                 "chronoBottom",
-                "`chronoTop` is given alone: a time interval between two genetic boundaries needs `chronoBottom` too — the one the faulting came after",
+                "`chronoTop` is given alone: a time interval between two genetic boundaries needs `chronoBottom` too - the one the faulting came after",
             )),
             _ => Ok(()),
         }
@@ -417,7 +417,7 @@ impl Operation for FaultFromSticks {
             (true, None) => {
                 return Err(Refusal::on(
                     "listric",
-                    "the fault's one throw is normal, and `IsListric` must then be given — « BUSINESS RULE: Must be present if the fault is normal » (RESQML 2.2 Interpretations.xsd l. 659–662; TRG 2.2 §6.20 p. 188): say whether it is listric",
+                    "the fault's one throw is normal, and `IsListric` must then be given - « BUSINESS RULE: Must be present if the fault is normal » (RESQML 2.2 Interpretations.xsd l. 659-662; TRG 2.2 §6.20 p. 188): say whether it is listric",
                 ));
             }
             (false, Some(_)) => {
@@ -432,7 +432,7 @@ impl Operation for FaultFromSticks {
                 return Err(Refusal::on(
                     "listric",
                     format!(
-                        "`IsListric` is for a normal fault — « Must not be present if the fault is not normal » (RESQML 2.2 Interpretations.xsd l. 659–662; TRG 2.2 §6.20 p. 188) — and this one's throw is {what}: leave it out (a fault with several plays is not *the* normal fault the rule names)"
+                        "`IsListric` is for a normal fault - « Must not be present if the fault is not normal » (RESQML 2.2 Interpretations.xsd l. 659-662; TRG 2.2 §6.20 p. 188) - and this one's throw is {what}: leave it out (a fault with several plays is not *the* normal fault the rule names)"
                     ),
                 ));
             }
@@ -447,7 +447,7 @@ impl Operation for FaultFromSticks {
         if params.synthetic && source.is_none() {
             return Err(Refusal::on(
                 "source",
-                "a synthetic fault says where its numbers come from — a document with its page, or why they are plausible (reference-model rule: no constant without a source)",
+                "a synthetic fault says where its numbers come from - a document with its page, or why they are plausible (reference-model rule: no constant without a source)",
             ));
         }
         let chrono = match (&inputs.chrono_bottom, &inputs.chrono_top) {
@@ -460,7 +460,7 @@ impl Operation for FaultFromSticks {
 
         // -- the sticks, in patches ----------------------------------------------
         let mut says: Vec<Note> = Vec::new();
-        // The sticks as the patches use them, and the sticks to write — a stick
+        // The sticks as the patches use them, and the sticks to write - a stick
         // repeated across a break is the edge two patches share, one stick.
         let mut patches: Vec<Vec<Stick>> = Vec::new();
         let mut written_sticks: Vec<Stick> = Vec::new();
@@ -471,7 +471,7 @@ impl Operation for FaultFromSticks {
                     (false, false) => {
                         return Err(Refusal::on(
                             "sticks",
-                            "the sticks are given twice — as text in `sticks` and as `lines`: give them one way",
+                            "the sticks are given twice - as text in `sticks` and as `lines`: give them one way",
                         ));
                     }
                     (true, true) => {
@@ -490,7 +490,7 @@ impl Operation for FaultFromSticks {
                                     return Err(Refusal::on(
                                         "sticks",
                                         format!(
-                                            "`sticks[{at}]` is blank where no patch has begun — a blank entry ends a patch that holds sticks"
+                                            "`sticks[{at}]` is blank where no patch has begun - a blank entry ends a patch that holds sticks"
                                         ),
                                     ));
                                 }
@@ -521,7 +521,7 @@ impl Operation for FaultFromSticks {
                         if current.is_empty() {
                             return Err(Refusal::on(
                                 "sticks",
-                                "the last entry is blank — a blank entry ends a patch, and the patch after it would hold no stick",
+                                "the last entry is blank - a blank entry ends a patch, and the patch after it would hold no stick",
                             ));
                         }
                         patches.push(current);
@@ -592,7 +592,7 @@ impl Operation for FaultFromSticks {
                     return Err(Refusal::on(
                         "crs",
                         format!(
-                            "the frame counts its vertical axis in `{unit}`, and a plane is drawn in metres — a dip is an angle between two lengths of one unit"
+                            "the frame counts its vertical axis in `{unit}`, and a plane is drawn in metres - a dip is an angle between two lengths of one unit"
                         ),
                     ));
                 }
@@ -638,7 +638,7 @@ impl Operation for FaultFromSticks {
                 return Err(Refusal::on(
                     slot,
                     format!(
-                        "patch {} holds {} stick(s) — a band is lofted between two at least",
+                        "patch {} holds {} stick(s) - a band is lofted between two at least",
                         at + 1,
                         patch.len()
                     ),
@@ -648,7 +648,7 @@ impl Operation for FaultFromSticks {
                 return Err(Refusal::on(
                     slot,
                     format!(
-                        "`{}` has {} point(s) — a stick is a line, two points at least",
+                        "`{}` has {} point(s) - a stick is a line, two points at least",
                         short.name,
                         short.points.len()
                     ),
@@ -691,7 +691,7 @@ impl Operation for FaultFromSticks {
                 says.push(Note {
                     key: "stick-order",
                     detail: format!(
-                        "`{}` does not advance along the strike from `{}`: the surface folds back there — the order given is kept, check it",
+                        "`{}` does not advance along the strike from `{}`: the surface folds back there - the order given is kept, check it",
                         patch[back].name,
                         patch[back - 1].name
                     ),
@@ -705,7 +705,7 @@ impl Operation for FaultFromSticks {
             });
         }
 
-        // -- the surface, and the pair — written by their writers -----------------
+        // -- the surface, and the pair - written by their writers -----------------
         let seed = format!("fault-from-sticks:{title}");
         let written = Written {
             frame: params.frame.clone(),
@@ -757,7 +757,7 @@ impl Operation for FaultFromSticks {
             return Err(Refusal::on(
                 "source",
                 format!(
-                    "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                    "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
                     text.chars().count()
                 ),
             ));
@@ -833,7 +833,7 @@ impl Operation for FaultFromSticks {
         let mut sticks_written = 0usize;
         if write_sticks && !written_sticks.is_empty() {
             // The frame the surface named: the compound created with it, or the
-            // one named — so that the sticks create no second frame.
+            // one named - so that the sticks create no second frame.
             let frame_params = match plan.objects.iter().find(|one| one.role == crate::crs::FRAME_ROLE) {
                 Some(created) => FrameParams {
                     crs: Some(CrsRef(json!({
@@ -859,7 +859,7 @@ impl Operation for FaultFromSticks {
                     }))),
                 },
                 naming: NamingParams {
-                    title: Some(crate::declare::Title(format!("{title} — sticks"))),
+                    title: Some(crate::declare::Title(format!("{title} - sticks"))),
                     data_file: params.naming.data_file.clone(),
                 },
                 new_feature: NewFeatureParams {
@@ -873,7 +873,7 @@ impl Operation for FaultFromSticks {
                 .map(|stick| stick.points.len() as u32)
                 .collect();
             let lines = Shape {
-                name: format!("{title} — sticks"),
+                name: format!("{title} - sticks"),
                 geometry: Geometry {
                     kind: "sticks",
                     patches: vec![Patch {
@@ -918,9 +918,9 @@ impl Operation for FaultFromSticks {
             )?;
             for mut object in sticks.objects {
                 if object.role == "representation" {
-                    // The sticks' `LineRole` `interpretation line` — *« Line
+                    // The sticks' `LineRole` `interpretation line` - *« Line
                     // corresponding to a digitalization along an earth model
-                    // section »* (RESQML 2.2 Structural.xsd l. 55–58).
+                    // section »* (RESQML 2.2 Structural.xsd l. 55-58).
                     object.json["LineRole"] = json!("interpretation line");
                     object.role = "sticks".to_string();
                 }
@@ -991,7 +991,7 @@ impl Operation for FaultFromSticks {
                 }
             }
             if found.dip > 89.9 {
-                detail.push_str(" — a vertical surface dips either way, and its measured azimuth is one of two opposite directions");
+                detail.push_str(" - a vertical surface dips either way, and its measured azimuth is one of two opposite directions");
             }
             says.push(Note {
                 key: "orientation",
@@ -1009,7 +1009,7 @@ impl Operation for FaultFromSticks {
         if throws.contains(&Throw::Thrust) {
             says.push(Note {
                 key: "thrust",
-                detail: "a thrust: the type's annotation gives it « is Listric = 0, MaximumThrow = 0 », which the business rule of IsListric forbids for a fault that is not normal — the business rule is followed (Interpretations.xsd l. 659–662)".to_string(),
+                detail: "a thrust: the type's annotation gives it « is Listric = 0, MaximumThrow = 0 », which the business rule of IsListric forbids for a fault that is not normal - the business rule is followed (Interpretations.xsd l. 659-662)".to_string(),
             });
         }
         if params.synthetic {
@@ -1052,7 +1052,7 @@ impl Operation for FaultFromSticks {
                 .parameters
                 .push(number("measuredDipAzimuth", found.dip_azimuth, Some("dega")));
         }
-        // What the registry cannot record — a list is no single value — and a
+        // What the registry cannot record - a list is no single value - and a
         // second run needs, in the order given.
         for one in &throws {
             plan.activity.parameters.push(Parameter::Text {
@@ -1076,7 +1076,7 @@ impl Operation for FaultFromSticks {
 
     /// The counts the writers record, and what this measures. `throw`,
     /// `sticks` and the stated numbers are inputs, recorded under the
-    /// parameters the projection already declares — a title cannot be both.
+    /// parameters the projection already declares - a title cannot be both.
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
             Slot::required(
@@ -1108,7 +1108,7 @@ impl Operation for FaultFromSticks {
             count("writtenStickCount", "sticks written as a polyline set"),
             angle(
                 "measuredDip",
-                "the dip of the surface as lofted, area-weighted — when the frame says which way is up",
+                "the dip of the surface as lofted, area-weighted - when the frame says which way is up",
             ),
             angle(
                 "measuredDipAzimuth",
@@ -1126,7 +1126,7 @@ fn same(a: &[[f64; 3]], b: &[[f64; 3]]) -> bool {
             .all(|(p, q)| p.iter().zip(q).all(|(x, y)| x.to_bits() == y.to_bits()))
 }
 
-/// What the frame the plan will write is — read by the frame's own reader
+/// What the frame the plan will write is - read by the frame's own reader
 /// ([`support::frame_in`]), whose objects are **not** kept: the surface's
 /// writer makes them. A frame in degrees is refused: a fault is a vertical
 /// extent, and degrees against metres is what no reader reconciles (the
@@ -1143,7 +1143,7 @@ fn inspect(params: &FrameParams, cx: &Context<'_>) -> Result<Inspected, Refusal>
         return Err(Refusal::on(
             slot,
             format!(
-                "a fault is a vertical extent, and {what} measures its horizontal axes in degrees while its depths are metres — name a projected system in `project`, or a LocalEngineeringCompoundCrs as `crs`"
+                "a fault is a vertical extent, and {what} measures its horizontal axes in degrees while its depths are metres - name a projected system in `project`, or a LocalEngineeringCompoundCrs as `crs`"
             ),
         ));
     }

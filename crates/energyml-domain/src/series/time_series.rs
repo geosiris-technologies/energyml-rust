@@ -1,10 +1,10 @@
 //! PRODML 2.3 `TimeSeriesData`: typed samples, each with its instant and its
-//! status, read into a [`Series`] — and matched to a well by its keys.
+//! status, read into a [`Series`] - and matched to a well by its keys.
 //!
 //! # The shape
 //!
 //! `DataValue` 0..n, each a `DoubleValue` or a `StringValue` (TimeSeriesData.xsd
-//! l. 87), holding a value, an optional `dTim` and — for a double only — an
+//! l. 87), holding a value, an optional `dTim` and - for a double only - an
 //! optional `status`. What the schema says of them, on `dTim` (l. 100, and
 //! l. 119 for strings): *"If no time is specified then the value is static and
 //! only one sample can be defined. […] If the status attribute is absent and
@@ -14,7 +14,7 @@
 //! - one sample and no instant is a **static** value ([`Content::Static`]),
 //!   several samples of which one has no instant are refused
 //!   ([`Refused::UntimedSample`]);
-//! - a status makes a sample [`Quality::Flagged`] — `frozen` *"indicates the
+//! - a status makes a sample [`Quality::Flagged`] - `frozen` *"indicates the
 //!   sensor has been reading the same value for a specific period of time"*
 //!   (Product Volume, Network Model & Time Series Usage Guide v2.3 §8.2 p. 31),
 //!   which is not a measurement of that minute; a `NaN` with no status is
@@ -25,18 +25,18 @@
 //!   reader that draws a series against its instants does, and sorting what
 //!   the file did not sort is a decision about the data made in its place.
 //!
-//! An empty series is [`Content::Empty`] — said, never a series of nothing.
+//! An empty series is [`Content::Empty`] - said, never a series of nothing.
 //!
 //! # A series names its well by text
 //!
-//! `Key` is a `KeywordValueStruct` (TimeSeriesData.xsd l. 67) — text, **no
+//! `Key` is a `KeywordValueStruct` (TimeSeriesData.xsd l. 67) - text, **no
 //! reference**. The
 //! convention that ties it to a well is the house rule
 //! `house/time-series-asset-resolves` of [`crate::integrity`]: the `well(…)`
 //! part of an `asset identifier` URI names a well by its title or its
 //! `NameLegal`. [`well_of`] and [`of_well`] read it with **the same two
-//! functions** that rule uses, and refuse by name when zero or several match
-//! — a name is not an identity.
+//! functions** that rule uses, and refuse by name when zero or several match -
+//! a name is not an identity.
 
 use serde_json::{Value, json};
 
@@ -79,7 +79,7 @@ pub enum Content {
         /// Its quality.
         quality: Quality,
     },
-    /// No sample at all — the schema allows it (`DataValue` 0..n).
+    /// No sample at all - the schema allows it (`DataValue` 0..n).
     Empty,
 }
 
@@ -125,7 +125,7 @@ impl TimeSeries {
     }
 }
 
-/// Whether this reads the object — a `TimeSeriesData`, by its type name.
+/// Whether this reads the object - a `TimeSeriesData`, by its type name.
 pub fn reads(object: &dyn Reflect) -> bool {
     object.type_info().type_key == "TimeSeriesData"
 }
@@ -334,7 +334,7 @@ fn well_named_by_object(series: &dyn Reflect) -> Result<Option<String>, Refused>
 }
 
 /// The well a series names, among `objects` (every object of the package,
-/// with its uuid) — a WITSML `Well` answering to the name by its title or its
+/// with its uuid) - a WITSML `Well` answering to the name by its title or its
 /// `NameLegal`, exactly as `house/time-series-asset-resolves` looks.
 ///
 /// Refused when the series names no well, when no well or several answer.
@@ -362,17 +362,17 @@ pub fn well_of<'a>(
     }
 }
 
-/// The one time series of `objects` that names `well` — a `Well` or a
-/// `Wellbore`, matched by its title and `NameLegal` — and, when given, has
+/// The one time series of `objects` that names `well` - a `Well` or a
+/// `Wellbore`, matched by its title and `NameLegal` - and, when given, has
 /// that measure class.
 ///
 /// Refused by name:
 ///
 /// - the object has no name to match by;
-/// - another object of the same type answers to one of its names — the series
+/// - another object of the same type answers to one of its names - the series
 ///   could mean either (*a name is not an identity*);
-/// - no series, or several, answer. A well commonly has several series — a
-///   head pressure and a head temperature — so a caller that wants one says
+/// - no series, or several, answer. A well commonly has several series - a
+///   head pressure and a head temperature - so a caller that wants one says
 ///   which by `measure_class`; with none, several is a refusal and never the
 ///   first.
 ///

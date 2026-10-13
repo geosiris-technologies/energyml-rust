@@ -1,4 +1,4 @@
-//! `GridConnectionSetRepresentation` — the connections a grid states between
+//! `GridConnectionSetRepresentation` - the connections a grid states between
 //! its cells, and what can honestly be drawn for them.
 //!
 //! # What the standard says, and what it settles
@@ -33,20 +33,20 @@
 //!
 //! The second is not a fallback for the first. It is what the file says when it
 //! says only that, and it is the *only* honest picture of a **non-neighbour
-//! connection** — two cells that do not touch, between which no shared face
+//! connection** - two cells that do not touch, between which no shared face
 //! exists at all. The usage guide concedes as much: *"Even if a face does not
-//! actually exist, most of the time it conceptually exists"* — conceptually,
+//! actually exist, most of the time it conceptually exists"* - conceptually,
 //! which is not a place one can draw.
 //!
 //! # The local face ordering is specified for both kinds of grid
 //!
 //! This is what made the reader writable, and it was the part assumed missing:
 //!
-//! - **IJK** — TUG §9.12: *"there are 6 'faces per cell': 0=top, 1=bottom, 2-5
+//! - **IJK** - TUG §9.12: *"there are 6 'faces per cell': 0=top, 1=bottom, 2-5
 //!   are side faces following the IJ circular node ordering"*;
-//! - **unstructured** — TUG §9.13: *"for a cell of the model with N faces as
+//! - **unstructured** - TUG §9.13: *"for a cell of the model with N faces as
 //!   specified by the 'faces per cell' element, the faces are numbered from 0 to
-//!   N-1 in this order"* — a direct index into `FacesPerCell`, which
+//!   N-1 in this order"* - a direct index into `FacesPerCell`, which
 //!   `unstructured.rs` already reads.
 //!
 //! # An alternate cell indexing changes what every number here means
@@ -55,7 +55,7 @@
 //! an **unstructured** grid carry an `AlternateCellIndex`, and TRG §5.10 is
 //! absolute about it: *"If defined, this alternate cell indexing is the only one
 //! to rely on when referencing the representation cells."* TUG §9.10.2.1 names
-//! this reader among the consequences — *"must be the only one considered for
+//! this reader among the consequences - *"must be the only one considered for
 //! any related grid cell objects, such as grid connection set"*.
 //!
 //! Nothing here resolves it, so such a grid is **refused by name**. Read against
@@ -65,7 +65,7 @@
 //! # A cell is addressed by the number the *file* uses
 //!
 //! The trap this reader would have fallen into: `Topology::Hexahedra` compacts
-//! its cells — an undefined one is not pushed — so a position is not the RESQML
+//! its cells - an undefined one is not pushed - so a position is not the RESQML
 //! cell index on a grid with holes. `Topology::position_of` is the translation,
 //! and a cell it cannot place is a **named refusal** rather than a neighbour
 //! drawn in its stead.
@@ -81,7 +81,7 @@ use crate::values::read_integers;
 /// The field by which a grid declares an **alternate cell indexing**.
 ///
 /// RESQML 2.2 only, and on an unstructured grid only. `OriginalCellIndex` holds
-/// an `AlternateCellIndex`, whose effect on this reader is total — TRG §5.10:
+/// an `AlternateCellIndex`, whose effect on this reader is total - TRG §5.10:
 /// *"If defined, this alternate cell indexing is **the only one to rely on**
 /// when referencing the representation cells"*, and the Usage Guide §9.10.2.1
 /// names the consequence: *"this alternate cell indexing must be the only one
@@ -92,7 +92,7 @@ use crate::values::read_integers;
 /// is **refused by name** rather than read against the contiguous numbering,
 /// which would address a different cell for every pair and say nothing. The
 /// guide calls its use *"strongly discouraged except if no other solution is
-/// acceptable"*, and no package of the corpus has one — which is why refusing
+/// acceptable"*, and no package of the corpus has one - which is why refusing
 /// is the right first answer and not a shortcut.
 const ALTERNATE_INDEX: &[&str] = &["OriginalCellIndex"];
 
@@ -108,7 +108,7 @@ const GRIDS: &[&str] = &["Grid"];
 ///
 /// And they are not necessarily faults. The guide is explicit that *"a
 /// connection may also represent a horizon or geobody boundary"*, so nothing
-/// here says "fault" — the feature says what it is, and this reader carries the
+/// here says "fault" - the feature says what it is, and this reader carries the
 /// reference rather than a label it made up.
 const INTERPRETATIONS: &[&str] = &["ConnectionInterpretations"];
 /// The cell pairs: `2 × Count`, `(Cell1, Cell2)` per connection.
@@ -123,7 +123,7 @@ const FACE_PAIRS: &[&str] = &["LocalFacePerCellIndexPairs"];
 /// The grids are read through the same `source`: `ArraySource` requires
 /// `ObjectSource`, so a store that can hand out an array can hand out the grid
 /// the array's indices are about. That is why this reader has the ordinary
-/// signature despite resolving references — the same road `parent.rs` takes for
+/// signature despite resolving references - the same road `parent.rs` takes for
 /// a local grid's parent.
 pub(crate) fn read(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Vec<Patch>> {
     Ok(build(representation, source)?.0)
@@ -136,8 +136,8 @@ pub(crate) fn read(representation: &dyn Reflect, source: &dyn ValueSource) -> Re
 /// connection: with faces it is one ring per *side*, so two per connection, and
 /// either branch drops a side whose cell the grid cannot place. Lining a
 /// per-connection array up against the drawn entries by position would
-/// therefore be right on a whole grid and silently shifted on the pierced ones
-/// — the same failure this reader already had to disarm once, over cell
+/// therefore be right on a whole grid and silently shifted on the pierced ones -
+/// the same failure this reader already had to disarm once, over cell
 /// numbering.
 fn build(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<(Vec<Patch>, Vec<u32>)> {
     let Some(pairs) = integers(representation, CELL_PAIRS, source)? else {
@@ -203,7 +203,7 @@ fn build(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<(Vec<
         // segment from "the last two points" is the mistake this workspace keeps
         // meeting: a side the grid cannot place pushes nothing, the count goes
         // odd, and the next connection's first centre is joined to the previous
-        // connection's — every segment after a hole wearing its neighbour's end.
+        // connection's - every segment after a hole wearing its neighbour's end.
         let mut centres: [Option<Point>; 2] = [None, None];
 
         for (side, centre) in centres.iter_mut().enumerate() {
@@ -211,7 +211,7 @@ fn build(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<(Vec<
             // **A side that names no cell is a side that is not there.** Not a
             // failure and not a hole in the grid: the file says this connection
             // has one end, which is how a fault reaching the edge of a model is
-            // written. It contributes nothing and is not counted as unplaced —
+            // written. It contributes nothing and is not counted as unplaced -
             // conflating the two would report a defect about a conformant file.
             let Some(cell) = pairs[at] else {
                 continue;
@@ -226,7 +226,7 @@ fn build(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<(Vec<
 
             // A named face of `None` on a side that *does* name a cell: the
             // file states the cell and not which of its faces. There is nothing
-            // to draw and nothing to guess, so the side contributes nothing —
+            // to draw and nothing to guess, so the side contributes nothing -
             // the same answer as a missing cell, for the same reason.
             let face = match faces.as_ref() {
                 None => None,
@@ -264,7 +264,7 @@ fn build(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<(Vec<
         }
 
         // Without faces, the connection **is** the segment between the two
-        // centres — and only when both were placed. Half a segment is a line to
+        // centres - and only when both were placed. Half a segment is a line to
         // nowhere, and the file states a connection, not a point.
         if let [Some(a), Some(b)] = centres {
             let base = points.len() as u32;
@@ -303,7 +303,7 @@ fn build(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<(Vec<
 
 /// One interpretation a connection set names, as the file names it.
 ///
-/// A reference and nothing more. Resolving it is the caller's business — the
+/// A reference and nothing more. Resolving it is the caller's business - the
 /// title is here so a list can be shown without a second lookup, and it is the
 /// reference's own `Title`, not a name invented for it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -319,11 +319,11 @@ pub struct ConnectionFeature {
 /// The alignment is the point: `per_entry` has exactly one row per cell of the
 /// patch `read` returns, in the same order, so it can be coloured like a
 /// discrete per-cell property with no arithmetic in between. A row is a *list*
-/// because the file's array is jagged — a connection may name none (an empty
+/// because the file's array is jagged - a connection may name none (an empty
 /// row) or several (*"multiple faults discretized onto a single connection"*).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Interpretations {
-    /// The interpretations named, in the file's order — the order the indices
+    /// The interpretations named, in the file's order - the order the indices
     /// index. Not the order they are drawn in, and not deduplicated.
     pub features: Vec<ConnectionFeature>,
     /// One row per drawn entry: the indices into [`features`].
@@ -339,7 +339,7 @@ pub struct Interpretations {
 ///
 /// The two are returned together because they are one walk. Reading the
 /// interpretations separately would mean placing every cell twice and, worse,
-/// two placements that could disagree — a side dropped in one and kept in the
+/// two placements that could disagree - a side dropped in one and kept in the
 /// other shifts every row after it, and nothing would say so.
 pub fn read_with_interpretations(
     representation: &dyn Reflect,
@@ -385,7 +385,7 @@ pub fn read_with_interpretations(
     // connection is what the schema says; a file that wrote one row per drawn
     // side, or per grid, produces a shorter or longer array that would still
     // index cleanly for a while and attribute the wrong fault from the first
-    // discrepancy onward — a picture that is confident, colourful and wrong.
+    // discrepancy onward - a picture that is confident, colourful and wrong.
     let connections = origin.iter().copied().max().map_or(0, |last| last as usize + 1);
     if rows.len() < connections {
         return Err(Error::malformed(
@@ -484,7 +484,7 @@ fn read_grids(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<
 
 /// The corners of one local face of one cell, in the file's own numbering.
 ///
-/// `Ok(None)` for a cell the grid dropped — undefined, or with no located
+/// `Ok(None)` for a cell the grid dropped - undefined, or with no located
 /// pillar. That is an answer: the file names a cell the grid says has no shape.
 /// An out-of-range **face** is a different matter and refuses by name, because
 /// nothing about the file explains it.
@@ -496,9 +496,9 @@ fn face_of(shape: &Geometry, cell: u64, face: usize) -> Result<Option<Vec<Point>
         return match &patch.topology {
             Topology::Hexahedra { cells, .. } => {
                 let corners = cells[position];
-                // TUG §9.12: 0 = top, 1 = bottom, 2–5 the sides in the IJ
+                // TUG §9.12: 0 = top, 1 = bottom, 2-5 the sides in the IJ
                 // circular node ordering. `Topology::Hexahedra` holds its eight
-                // corners in VTK's order — face (0,1,2,3) against (4,5,6,7) —
+                // corners in VTK's order - face (0,1,2,3) against (4,5,6,7) -
                 // which is the same pair of quadrilaterals, and the four sides
                 // follow the same circular order.
                 let quad: [usize; 4] = match face {
@@ -553,7 +553,7 @@ fn face_of(shape: &Geometry, cell: u64, face: usize) -> Result<Option<Vec<Point>
     Ok(None)
 }
 
-/// The centre of a cell — the average of its corners.
+/// The centre of a cell - the average of its corners.
 ///
 /// `None` for a cell the grid dropped, for the same reason as above. The centre
 /// is the honest anchor for a connection with no face: it is a point of the
@@ -605,12 +605,12 @@ fn name_of(topology: &Topology) -> &'static str {
 /// An integer array under the first of these fields that carries one.
 ///
 /// `None` when none of them does, which the schema allows for two of the three
-/// arrays here — absent is not an error, and telling that apart from an empty
+/// arrays here - absent is not an error, and telling that apart from an empty
 /// array is the whole reason this returns an option.
 ///
 /// A negative index is refused rather than cast: `CellIndexPairs` is declared
 /// `PositiveLong`, and a negative one read as `u64` becomes an enormous cell
-/// number that no grid places — a connection silently dropped instead of a file
+/// number that no grid places - a connection silently dropped instead of a file
 /// reported.
 fn integers(
     object: &dyn Reflect,
@@ -622,7 +622,7 @@ fn integers(
             continue;
         };
         // **The array's own null value, and it is not decoration here.** A
-        // connection may name a cell on one side and nothing on the other —
+        // connection may name a cell on one side and nothing on the other -
         // TRG §5.25 calls these *"single cell-faces, which are missing a
         // corresponding cell face entry"*, and they are how a fault reaching
         // the edge of a model is written. `testingPackageCpp` has three
@@ -631,7 +631,7 @@ fn integers(
         // against `NullValue -1`.
         //
         // Read without it, the `-1` refused the whole set by name and the
-        // `9999` would have been looked up as a cell — the second being the
+        // `9999` would have been looked up as a cell - the second being the
         // worse of the two, because a grid with 10 000 cells would have found
         // one and drawn a face nobody named.
         let null = crate::values::scalar_i64(array, "NullValue");

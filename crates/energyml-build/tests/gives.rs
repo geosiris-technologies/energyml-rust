@@ -1,13 +1,13 @@
 //! What an operation declares it writes (`Operation::gives`), held against
-//! what its plans really carry — the six operations of the table-to-wells
+//! what its plans really carry - the six operations of the table-to-wells
 //! chain.
 //!
 //! *A role a plan writes and the declaration does not name is a defect of the
 //! operation.* The roles are the strings `NewObject::role` takes, many set by
 //! shared writers (`well::write`, `crs::build`, `property::write`…), so a
 //! declaration cannot be checked by reading one file: it is checked by running
-//! plans — several variants per operation, each option that changes what is
-//! written — and asking of **every object** of **every plan**:
+//! plans - several variants per operation, each option that changes what is
+//! written - and asking of **every object** of **every plan**:
 //!
 //! - is its role declared, and its qualified type among that role's types;
 //! - does the count under its role sit inside `least..most`;
@@ -118,7 +118,7 @@ fn hold(op: &str, plans: &[(&str, &Plan)], caller_chosen: &[&str]) {
                 .or_default()
                 .insert(object.qualified_type.clone());
         }
-        // Counts: a bound is held only where the plan is whole — a plan that
+        // Counts: a bound is held only where the plan is whole - a plan that
         // writes nothing of a role is checked against `least` too, since
         // `plans` holds runs that are not refused.
         for one in &gives {
@@ -233,7 +233,7 @@ fn without(template: &Value, dropped: &[&str]) -> Value {
 
 const DATUM: &str = "eml23.ReferencePointInALocalEngineeringCompoundCrs";
 
-/// What a held well gives the bag — copied from `tests/wells_from_table.rs`,
+/// What a held well gives the bag - copied from `tests/wells_from_table.rs`,
 /// where the depths are *stated*, since reading them needs the HDF5 backend.
 fn held(text: &str, before: &Plan, head: [f64; 3], mds: &[f64], template: &Value) -> Pieces {
     let of = |kind: &str| -> Option<Ref> {
@@ -335,8 +335,8 @@ fn wells_from_table_declares_what_its_plans_write() {
         &[],
     );
 
-    // A run that changes nothing writes no well object — only the frame it
-    // would have used — and still sits inside the declaration.
+    // A run that changes nothing writes no well object - only the frame it
+    // would have used - and still sits inside the declaration.
     let unchanged = run(
         "wells-from-table",
         "unchanged",
@@ -422,8 +422,8 @@ fn properties_bag() -> Pieces {
         column("LITHO", "44444444-4444-4444-8444-444444444445", "string"),
     ]);
     let pieces = table_bag(PROPERTIES_FILE, &template);
-    let pieces = frame(pieces, 0, "F1 — frame", &[10.0, 20.0, 30.0]);
-    frame(pieces, 1, "F2 — frame", &[10.0, 30.0])
+    let pieces = frame(pieces, 0, "F1 - frame", &[10.0, 20.0, 30.0]);
+    frame(pieces, 1, "F2 - frame", &[10.0, 30.0])
 }
 
 #[test]
@@ -508,7 +508,7 @@ fn wells_and_properties_declares_the_union_of_its_halves() {
         ("heads", &heads),
     ];
 
-    // **`units`** adds the chart's column — only with the chart this build embeds.
+    // **`units`** adds the chart's column - only with the chart this build embeds.
     let with_units = if chart_is_there() {
         Some(run(
             op,
@@ -646,7 +646,7 @@ fn property(frame: &str, measure: &str, discrete: bool, values: Values) -> Known
         reference: Some(Ref::new(
             format!("uuid-{frame}-{measure}"),
             format!("resqml22.{class}"),
-            format!("{frame} — {measure}"),
+            format!("{frame} - {measure}"),
         )),
         property: Some(KnownProperty {
             supporting: Some(Ref::new(

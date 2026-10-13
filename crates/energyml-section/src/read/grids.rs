@@ -1,7 +1,7 @@
 //! The envelope of an IJK grid along a section (ADR-0015).
 //!
 //! A section does not show every cell wall of a grid: it shows where the grid
-//! **is** — its roof and its floor along the trace, the rock between them, and
+//! **is** - its roof and its floor along the trace, the rock between them, and
 //! where it is cut by a fault or by nothing at all. The reading is the library's
 //! (`energyml_geometry::ijk`, `parent`): hexahedra with the file's own cell
 //! numbers, split coordinate lines honoured, K gaps honoured, undefined cells
@@ -17,21 +17,21 @@
 //! trace, so a grid of millions of cells pays for the few hundred the trace
 //! passes through.
 //!
-//! Cells of one column (`i`, `j`) are then stacked, highest first, into **runs**
-//! — consecutive layers with no K gap between them (the floor of one and the roof
-//! of the next are not at the same height there) — and a run is a polygon:
+//! Cells of one column (`i`, `j`) are then stacked, highest first, into **runs** -
+//! consecutive layers with no K gap between them (the floor of one and the roof
+//! of the next are not at the same height there) - and a run is a polygon:
 //! the roof of its first cell, the floor of its last. A column's **roof** is the
 //! roof of its highest cell and its **floor** the floor of its lowest, whatever
 //! lies between.
 //!
 //! Neighbouring columns join when they **meet**: the end of one's roof is the
 //! start of the next's, to the millimetre. Where the roofs meet in `s` and not in
-//! `z`, the two columns do not share their pillars there — a split coordinate
-//! line, a fault — and the roof (or the floor) **jumps**: the span is cut, and
+//! `z`, the two columns do not share their pillars there - a split coordinate
+//! line, a fault - and the roof (or the floor) **jumps**: the span is cut, and
 //! the vertical step is a segment of `faults`. Where nothing meets in `s`, a
 //! column with no defined cell lies between (`CellGeometryIsDefined`, a
 //! sub-grid, a missing column): the span is cut, the fill is cut, and no step is
-//! drawn — a hole is not a fault.
+//! drawn - a hole is not a fault.
 //!
 //! # What is exact and what is not
 //!
@@ -71,7 +71,7 @@ struct Cell {
     mean_z: f64,
 }
 
-/// An IJK grid's cells in the scene's system, before any section cuts them —
+/// An IJK grid's cells in the scene's system, before any section cuts them -
 /// what a cache keeps while the trace moves.
 #[derive(Clone, Debug)]
 pub struct Grid {
@@ -381,7 +381,7 @@ impl Run {
 }
 
 /// Whether the floor `above` rests on the roof `below` where they overlap in
-/// `s` — and `false` where they do not overlap at all, or where they are apart
+/// `s` - and `false` where they do not overlap at all, or where they are apart
 /// (a K gap).
 fn touches(above: &[P], below: &[P], tol_z: f64) -> bool {
     let (Some(a0), Some(a1), Some(b0), Some(b1)) = (above.first(), above.last(), below.first(), below.last())

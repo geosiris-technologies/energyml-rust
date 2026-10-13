@@ -1,4 +1,4 @@
-//! `blocked-wellbore` — a `BlockedWellboreRepresentation`: *« the information
+//! `blocked-wellbore` - a `BlockedWellboreRepresentation`: *« the information
 //! that allows you to locate, on one or several grids (existing or planned),
 //! the intersection of volume (cells) and surface (faces) elements with a
 //! wellbore trajectory »* (RESQML TRG 2.2 §12.1 p. 297).
@@ -28,28 +28,28 @@
 //! `Trajectory` the one the blocked wellbore names. Between two frame nodes
 //! the path runs straight and the MD is spread along the chord: exact at every
 //! node, and the most a chord falls short of its MD step is **reported**
-//! (`chordExcess`) — a dense frame on a curved hole is what makes it small.
+//! (`chordExcess`) - a dense frame on a curved hole is what makes it small.
 //!
 //! # What is written
 //!
 //! - **a node at every entry and exit**, from the first entry to the last exit;
-//!   an interval between two cells where the path is in none — a K gap, a hole
-//!   in the grid, between two grids — is **null** (*« Null values signify that
+//!   an interval between two cells where the path is in none - a K gap, a hole
+//!   in the grid, between two grids - is **null** (*« Null values signify that
 //!   the interval is not within a grid »*, TRG §5.32 `IntervalGridCells`
 //!   p. 128; *« a value of -1 is used »*, usage guide §11.5 p. 214);
 //! - **`CellCount`**, *« the number of non-null entries in the grid indices
 //!   array »* (same page), `GridIndices` and `CellIndices` one per interval,
-//!   `LocalFacePairPerCellIndices` two per interval — *« the entry and exit
+//!   `LocalFacePairPerCellIndices` two per interval - *« the entry and exit
 //!   intersection faces of the trajectory in the cell. Use null for missing
 //!   intersections, e.g., when a trajectory originates or terminates within a
-//!   cell »* — all in the external file (`Plan::datasets`), `NullValue` −1;
+//!   cell »* - all in the external file (`Plan::datasets`), `NullValue` −1;
 //! - **the local faces** of an IJK cell: *« 0=top, 1=bottom, 2-5 are side
 //!   faces following the IJ circular node ordering »* (usage guide §9.12.3
-//!   p. 159) — 0 the face at the smaller K, which is the top of a grid whose
+//!   p. 159) - 0 the face at the smaller K, which is the top of a grid whose
 //!   `KDirection` is `down` (the one `ijk-grid-from-horizons` writes), and the
 //!   plan says so;
 //! - **the grids in the order given**: where two hold one stretch, the first
-//!   listed holds it — in the reference model the local grid is listed before its parent.
+//!   listed holds it - in the reference model the local grid is listed before its parent.
 //!
 //! # A cell in index order, from a shape in VTK's
 //!
@@ -57,9 +57,9 @@
 //! swapped when the cell measured inside out (`energyml_geometry::ijk::
 //! oriented`), the circular order kept within each. Which quadrilateral is the
 //! smaller K is read off the node numbers: a column-layer grid stores its
-//! points **level by level** — *« Coordinate line nodes for all of the
+//! points **level by level** - *« Coordinate line nodes for all of the
 //! coordinate lines, with NKL nodes per line »* in an array whose slowest
-//! dimension is the level (RESQML TRG 2.2 §5.1 p. 94, and the reader) — so of
+//! dimension is the level (RESQML TRG 2.2 §5.1 p. 94, and the reader) - so of
 //! two corners on one coordinate line, the smaller number is the smaller K.
 //!
 //! # What is refused, by name
@@ -67,7 +67,7 @@
 //! A frame whose depths the package does not state, or that names no
 //! trajectory; a grid that is no IJK grid, in another frame than the path, or
 //! whose pillars lean (`energyml_analysis::cells`); a stretch two cells of one
-//! grid both hold; a path through no cell — a blocked wellbore with no cell
+//! grid both hold; a path through no cell - a blocked wellbore with no cell
 //! could not state its `CellCount`, which is 1 or more.
 //!
 //! # Identity
@@ -98,7 +98,7 @@ pub struct BlockedWellbore;
 /// What `blocked-wellbore` is told.
 #[derive(Debug, Params)]
 pub struct BlockedWellboreParams {
-    /// What the blocked wellbore represents — suggested from the frame.
+    /// What the blocked wellbore represents - suggested from the frame.
     #[param(flatten)]
     pub represented: RepresentedParams,
     /// The title and the file.
@@ -109,10 +109,10 @@ pub struct BlockedWellboreParams {
 /// What `blocked-wellbore` takes.
 #[derive(Debug, Inputs)]
 pub struct BlockedWellboreInputs {
-    /// the wellbore frame the path is — its measured depths, its nodes on the trajectory it names
+    /// the wellbore frame the path is - its measured depths, its nodes on the trajectory it names
     #[input(topology = "polylines", types = "resqml22.WellboreFrameRepresentation")]
     pub frame: Shape,
-    /// the IJK grids the path is blocked in, in order: where two hold one stretch, the first listed holds it — a local grid before its parent
+    /// the IJK grids the path is blocked in, in order: where two hold one stretch, the first listed holds it - a local grid before its parent
     #[input(types = "resqml22.IjkGridRepresentation", least = 1, ordered)]
     pub grids: Vec<Shape>,
 }
@@ -127,7 +127,7 @@ fn title_of(shape: &Shape) -> String {
         .unwrap_or_else(|| shape.name.clone())
 }
 
-/// A grid's cells in index order — see the module header.
+/// A grid's cells in index order - see the module header.
 fn grid_of(shape: &Shape) -> Result<(Grid, usize), Refusal> {
     let [
         Patch {
@@ -193,7 +193,7 @@ impl Operation for BlockedWellbore {
     fn about(&self) -> About {
         About {
             name: "blocked-wellbore",
-            describe: "a blocked wellbore — the cells of IJK grids a wellbore frame crosses, with the MD of each entry and exit and the faces it goes through",
+            describe: "a blocked wellbore - the cells of IJK grids a wellbore frame crosses, with the MD of each entry and exit and the faces it goes through",
             category: Category::Wells,
             makes: &["resqml22.BlockedWellboreRepresentation"],
             recipe: "blocked-wellbore",
@@ -212,7 +212,7 @@ impl Operation for BlockedWellbore {
         if let Some(frame) = &known.reference {
             slots.inferred(
                 "title",
-                json!(format!("{} — blocked", frame.title)),
+                json!(format!("{} - blocked", frame.title)),
                 frame.clone(),
             );
         }
@@ -266,7 +266,7 @@ impl Operation for BlockedWellbore {
             return Err(Refusal::on(
                 "frame",
                 format!(
-                    "`{}`: its measured depths could not be read — a blocked wellbore's MD are the frame's, never derived from its drawing",
+                    "`{}`: its measured depths could not be read - a blocked wellbore's MD are the frame's, never derived from its drawing",
                     frame_ref.title
                 ),
             ));
@@ -322,7 +322,7 @@ impl Operation for BlockedWellbore {
                 return Err(Refusal::new(
                     "frames",
                     format!(
-                        "`{}` is in `{}` and `{}` in `{}`: a path and cells read in two frames meet where neither is — bring them into one frame first",
+                        "`{}` is in `{}` and `{}` in `{}`: a path and cells read in two frames meet where neither is - bring them into one frame first",
                         frame_ref.title,
                         a.title,
                         title_of(grid),
@@ -347,7 +347,7 @@ impl Operation for BlockedWellbore {
                 CellsError::Leaning { grid, .. }
                 | CellsError::NotParallelogram { grid, .. }
                 | CellsError::Shared { grid, .. } => {
-                    format!(" — grid {grid} is `{}`", title_of(&grids[*grid]))
+                    format!(" - grid {grid} is `{}`", title_of(&grids[*grid]))
                 }
                 _ => String::new(),
             };
@@ -491,7 +491,7 @@ impl Operation for BlockedWellbore {
             },
             Note {
                 key: "faces",
-                detail: "local faces: 0 at the smaller K, 1 at the larger — top and bottom for a KDirection down — and 2–5 the sides after the IJ circular node order (0,0) (1,0) (1,1) (0,1) (RESQML Technical Usage Guide 2.2 §9.12.3 p. 159, Figure 9-18 p. 152); −1 where the path starts or ends in a cell, or leaves a grid listed earlier".to_string(),
+                detail: "local faces: 0 at the smaller K, 1 at the larger - top and bottom for a KDirection down - and 2-5 the sides after the IJ circular node order (0,0) (1,0) (1,1) (0,1) (RESQML Technical Usage Guide 2.2 §9.12.3 p. 159, Figure 9-18 p. 152); −1 where the path starts or ends in a cell, or leaves a grid listed earlier".to_string(),
             },
             Note {
                 key: "chords",
@@ -504,7 +504,7 @@ impl Operation for BlockedWellbore {
         if outside > 0 {
             says.push(Note {
                 key: "outside",
-                detail: format!("{outside} interval(s) between two cells are in none — a K gap, an undefined cell, the space between two grids: written null (−1)"),
+                detail: format!("{outside} interval(s) between two cells are in none - a K gap, an undefined cell, the space between two grids: written null (−1)"),
             });
         }
         for (grid, holes) in grids.iter().zip(&undefined) {
@@ -586,8 +586,8 @@ impl Operation for BlockedWellbore {
             )
         };
         vec![
-            count("nodeCount", "nodes — an entry or an exit each"),
-            count("cellCount", "intervals in a cell — CellCount"),
+            count("nodeCount", "nodes - an entry or an exit each"),
+            count("cellCount", "intervals in a cell - CellCount"),
             count("outsideIntervalCount", "intervals in no cell, written null"),
             count(
                 "chordExcess",

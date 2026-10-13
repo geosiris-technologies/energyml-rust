@@ -5,7 +5,7 @@ name: release-cli
 # archive per target to the GitHub release.
 #
 # Later option: replace this matrix with cargo-dist (installers, Homebrew tap,
-# GHCR image) — see dist-workspace.toml once it exists.
+# GHCR image) - see dist-workspace.toml once it exists.
 on:
   push:
     tags:

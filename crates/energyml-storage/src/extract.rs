@@ -2,8 +2,8 @@
 //!
 //! # Why a package can be cut at all
 //!
-//! Everything a store holds ends up in a permanent one — an ETP server, an OSDU
-//! catalogue — and not everything deserves to. What went through a sandbox is
+//! Everything a store holds ends up in a permanent one - an ETP server, an OSDU
+//! catalogue - and not everything deserves to. What went through a sandbox is
 //! attempts, resolutions and realisations; what is versed is a decision. The
 //! partial EPC is how that decision is exercised without a server:
 //! it carries exactly the same list, and reads back with the same tools.
@@ -12,24 +12,24 @@
 //!
 //! [`plan`] answers, from the reference graph alone, what the new package would
 //! hold and what it would break. It touches no file, so a caller can show the
-//! consequences before anybody commits to them — which is the whole point of a
+//! consequences before anybody commits to them - which is the whole point of a
 //! curation tool, and the reason this is not simply "write these parts".
 //!
 //! # Reporting is half the job
 //!
 //! A curated package that loses something in silence is **worse** than one that
 //! was never curated: nobody will ever learn the thing was missing. So the plan
-//! carries three numbers a person can act on — what is kept, what is left, and
+//! carries three numbers a person can act on - what is kept, what is left, and
 //! **how much of what is left nothing kept refers to**, which is the one that
-//! says the cut is clean — and it names every reference the cut would break.
+//! says the cut is clean - and it names every reference the cut would break.
 //!
 //! # Two references that leave the package are not the same news
 //!
 //! A kept object naming something the new package will not hold is either:
 //!
-//! - **the cut's doing** — the source held it and the choice left it out. That
+//! - **the cut's doing** - the source held it and the choice left it out. That
 //!   is a broken reference somebody has to decide about;
-//! - **already the case in the source** — the package names an object it never
+//! - **already the case in the source** - the package names an object it never
 //!   held. A well-known property kind is the ordinary example, and a
 //!   cross-package model boundary the other. Carrying that over changes nothing
 //!   and is not the extraction's fault.
@@ -49,7 +49,7 @@ pub struct Broken {
     pub from: String,
     /// What it names.
     pub to: String,
-    /// Where inside `from` — `Grid2dPatch.SupportingRepresentation`.
+    /// Where inside `from` - `Grid2dPatch.SupportingRepresentation`.
     pub path: String,
     /// Whether the **source** package held the target.
     ///
@@ -91,7 +91,7 @@ impl Plan {
 
 /// Work out what a cut would do, without touching a file.
 ///
-/// `wanted` is the closed set the caller decided on — this does not close it
+/// `wanted` is the closed set the caller decided on - this does not close it
 /// again. Two implementations of one walk would be two answers to the same
 /// question; what this does instead is **check** the result, which is the
 /// cheaper and more useful half: a set that is not closed is reported reference
@@ -175,7 +175,7 @@ pub enum Arrays {
     ///
     /// The paths inside the new file are the **same** as in the source. Keeping
     /// them means the objects need no rewriting, so an extraction cannot
-    /// invalidate a pointer by renumbering one — and a person comparing the two
+    /// invalidate a pointer by renumbering one - and a person comparing the two
     /// files reads the same names.
     Copy,
     /// Leave the pointers alone: the new package names the source's data file.
@@ -206,7 +206,7 @@ pub struct Extraction {
     pub unreadable: Vec<String>,
 }
 
-/// The bytes of an EPC holding nothing — the two parts the specification makes
+/// The bytes of an EPC holding nothing - the two parts the specification makes
 /// mandatory, and no object.
 ///
 /// Built rather than copied from a source: a new package must not inherit
@@ -214,7 +214,7 @@ pub struct Extraction {
 ///
 /// **Public since 08/09/2026**, and the reason is a count. This was the only
 /// way in the workspace to make an empty package and it was private, so
-/// `energyml-build` — which creates one when no EPC is given — would have
+/// `energyml-build` - which creates one when no EPC is given - would have
 /// needed a second copy. There is already a second: a front ender
 /// writes the same two parts in TypeScript, because the front end makes
 /// one before any Rust is asked anything. Two implementations of *an EPC is two
@@ -232,14 +232,14 @@ pub fn empty_package(created: Option<i64>) -> Result<Vec<u8>> {
     // one, its own being the only one within reach.
     //
     // **Three parts, not two.** The first two are OPC's; the third is
-    // `docProps/core.xml`, which the EPC makes mandatory (§3.5) — with its
+    // `docProps/core.xml`, which the EPC makes mandatory (§3.5) - with its
     // content type and the package relationship that §3.5.2 requires.
     //
     // It was missing, and the defect was visible from outside: `EpcStore`
     // warns *"absent, though the EPC conventions make the core properties
     // mandatory"*, so **every new package opened with a health warning**.
-    // Two writers in the repository disagreed on what a minimal EPC is — the
-    // one that judges and the one that creates — which is the first kind of
+    // Two writers in the repository disagreed on what a minimal EPC is - the
+    // one that judges and the one that creates - which is the first kind of
     // defect this workspace names.
     let core = CoreProperties {
         // The producer is **this tool**, and that is the truth: nobody has put
@@ -248,7 +248,7 @@ pub fn empty_package(created: Option<i64>) -> Result<Vec<u8>> {
         creator: "energyml-rust".to_string(),
         // **The clock comes from the caller**, and this is not a preference:
         // `SystemTime::now()` on `wasm32-unknown-unknown` does not return an
-        // error, it **panics** — *"time not implemented on this platform"*.
+        // error, it **panics** - *"time not implemented on this platform"*.
         // It is the rule a front end's save already paid for, and that this empty
         // package reintroduced: creating an EPC in the front end panicked at the
         // very moment the mandatory part was added.
@@ -308,7 +308,7 @@ pub fn empty_package(created: Option<i64>) -> Result<Vec<u8>> {
 /// wants to show the consequences first calls [`plan`] and gets the same answer
 /// this uses, so what somebody agreed to is what happens.
 ///
-/// `wanted` is expected to be closed — see [`plan`], which reports every
+/// `wanted` is expected to be closed - see [`plan`], which reports every
 /// reference it does not close. This writes it as given: repairing a selection
 /// on the way past would produce a package nobody chose.
 pub fn extract(
@@ -346,7 +346,7 @@ pub fn extract(
                 }
                 // A pointer the source cannot satisfy is not the extraction's
                 // to invent, and a build with no writing backend cannot copy at
-                // all. Either way it is **named** — see `arrays_missed`.
+                // all. Either way it is **named** - see `arrays_missed`.
                 Err(_) => missed.push(format!("{}:{}", location.file, location.path_in_file)),
             }
         }
@@ -368,16 +368,16 @@ struct Filled {
     /// Every dataset the written objects point at, **once** each, in the order
     /// they were met.
     ///
-    /// Once, because two objects naming the same dataset is ordinary — a grid
-    /// and its sub-representation — and copying it twice would either fail on
+    /// Once, because two objects naming the same dataset is ordinary - a grid
+    /// and its sub-representation - and copying it twice would either fail on
     /// the second write or, worse, count one array as two.
     arrays: Vec<crate::array::ArrayLocation>,
 }
 
 /// Put the kept objects into `target`, and declare the files their proxies name.
 ///
-/// The half every way of cutting shares — to a file on disk ([`extract`]) or to
-/// bytes in memory ([`to_bytes`]) — so the two cannot disagree about which
+/// The half every way of cutting shares - to a file on disk ([`extract`]) or to
+/// bytes in memory ([`to_bytes`]) - so the two cannot disagree about which
 /// objects go and which file each proxy stands for. What they do with the
 /// arrays differs, and is theirs.
 fn fill(source: &EpcStore, target: &mut EpcStore, kept: &[String]) -> Result<Filled> {
@@ -385,7 +385,7 @@ fn fill(source: &EpcStore, target: &mut EpcStore, kept: &[String]) -> Result<Fil
     let mut arrays = Vec::new();
     let mut seen: std::collections::HashSet<(String, String)> = Default::default();
     // Which external file each proxy names. The new package has to **declare**
-    // them, or its `.rels` cannot point at the proxy — and `energyml check`
+    // them, or its `.rels` cannot point at the proxy - and `energyml check`
     // then reports a reference the objects make and the index omits. Found by
     // running the command and reading the check, not by reasoning about it.
     let mut files: std::collections::BTreeMap<String, String> = Default::default();
@@ -424,7 +424,7 @@ fn fill(source: &EpcStore, target: &mut EpcStore, kept: &[String]) -> Result<Fil
 /// One data file the cut package names, and the name it will carry there.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataFile {
-    /// The file as the source names it — its bare name.
+    /// The file as the source names it - its bare name.
     pub from: String,
     /// The name the cut package will give it. Equal to `from` when nobody
     /// asked for another.
@@ -435,7 +435,7 @@ pub struct DataFile {
 
 /// One dataset to carry into the cut's data file.
 ///
-/// The **path does not change** — the same bargain as [`Arrays::Copy`]: keeping
+/// The **path does not change** - the same bargain as [`Arrays::Copy`]: keeping
 /// it means no object has to be rewritten for its numbers, only for the name of
 /// the file that holds them.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -448,7 +448,7 @@ pub struct ArrayCopy {
     pub to: String,
 }
 
-/// What cutting a package to bytes would come to — or came to.
+/// What cutting a package to bytes would come to - or came to.
 ///
 /// [`Plan`] plus the two things a caller without a disk has to know: which data
 /// files the new package names and under which names, and which datasets must
@@ -462,10 +462,10 @@ pub struct Cut {
     /// Every dataset to carry, once each.
     ///
     /// **The caller copies them.** Writing HDF5 is a backend's job, and the
-    /// caller this exists for — a browser — holds its files in h5wasm, beyond
+    /// caller this exists for - a browser - holds its files in h5wasm, beyond
     /// this crate's reach. The same division `create_apply` makes.
     pub arrays: Vec<ArrayCopy>,
-    /// Array pointers whose file nothing names — a proxy with no `.rels`.
+    /// Array pointers whose file nothing names - a proxy with no `.rels`.
     ///
     /// Named, never dropped: the package will point at them and nobody can
     /// copy them, so the numbers will be missing and somebody must be told.
@@ -488,7 +488,7 @@ impl Cut {
 }
 
 /// What cutting `source` to `wanted` would do, renaming its data files as
-/// `names` says — without producing a byte.
+/// `names` says - without producing a byte.
 ///
 /// `names` maps a data file's bare name, as [`Cut::files`] lists it, to the
 /// name it should carry in the new package. A file left out keeps its name.
@@ -503,7 +503,7 @@ pub fn quote(
     names: &std::collections::BTreeMap<String, String>,
 ) -> Result<Cut> {
     // **A fixed date, never the machine's clock.** A quote's package is never
-    // written, so the date it would carry is nobody's concern — while
+    // written, so the date it would carry is nobody's concern - while
     // `SystemTime::now()` **panics** on `wasm32-unknown-unknown` (*"time not
     // implemented on this platform"*). Passing `None` here made the front end's
     // export dialog panic on its first quote: the rule
@@ -514,7 +514,7 @@ pub fn quote(
 /// Cut `source` to `wanted`, as bytes: the package, and the list of datasets
 /// the caller must copy into the renamed data files.
 ///
-/// Refused as a whole while [`quote`] has a refusal — a cut that breaks what
+/// Refused as a whole while [`quote`] has a refusal - a cut that breaks what
 /// was whole, a rename the package cannot carry. `created` is the clock, in
 /// Unix seconds, which a browser must supply (`SystemTime::now` panics there).
 pub fn to_bytes(
@@ -593,14 +593,14 @@ fn prepare(
     let breaks = made.broken.iter().filter(|one| one.in_source).count();
     if breaks > 0 {
         cut.refusals.push(format!(
-            "this selection is not closed: {breaks} reference(s) would be broken — add what they name"
+            "this selection is not closed: {breaks} reference(s) would be broken - add what they name"
         ));
     }
     for asked in names.keys() {
         if !cut.files.iter().any(|one| &one.from == asked) {
             let named: Vec<&str> = cut.files.iter().map(|one| one.from.as_str()).collect();
             cut.refusals.push(format!(
-                "`{asked}` is not a data file the kept objects name — they name {}",
+                "`{asked}` is not a data file the kept objects name - they name {}",
                 if named.is_empty() {
                     "none".to_string()
                 } else {
@@ -616,7 +616,7 @@ fn prepare(
         target.external_files_mut().declare_present(file.from.clone());
     }
     // **The rename is the rename operation**, run on the cut package: the same
-    // three places, the same refusals — a second way of rewriting a file name
+    // three places, the same refusals - a second way of rewriting a file name
     // would be a second answer to where file names are written.
     for file in cut.files.clone() {
         if file.to == file.from {
@@ -660,7 +660,7 @@ fn prepare(
     Ok((cut, target))
 }
 
-/// The last segment of a declared location — how the rename compares names.
+/// The last segment of a declared location - how the rename compares names.
 fn bare_name(declared: &str) -> &str {
     match declared.rfind(['/', '\\']) {
         Some(at) => &declared[at + 1..],
@@ -685,8 +685,8 @@ pub struct Copied {
     pub added: Vec<String>,
     /// Referenced by what was copied, and the source does not hold it.
     ///
-    /// The copy is still made — refusing would make a package that is already
-    /// broken uncopyable — but the target inherits the dangling reference and
+    /// The copy is still made - refusing would make a package that is already
+    /// broken uncopyable - but the target inherits the dangling reference and
     /// the caller has to know. Concepts the standard publishes in a catalogue
     /// are not in here.
     pub missing: Vec<String>,
@@ -698,7 +698,7 @@ pub struct Copied {
     pub unreadable: Vec<String>,
 }
 
-/// Copy objects — **and everything they need** — from one package into another.
+/// Copy objects - **and everything they need** - from one package into another.
 ///
 /// What `copy_part_from_other_model` is in resqpy, and the operation a partial
 /// export cannot stand in for: the target already exists and keeps what it has.
@@ -710,8 +710,8 @@ pub struct Copied {
 /// sees what it received.
 ///
 /// Objects already in the target are written over: a uuid is an identity, and
-/// two packages holding the same uuid hold the same object. The alternative —
-/// renumbering on the way in — would break every reference that names it.
+/// two packages holding the same uuid hold the same object. The alternative -
+/// renumbering on the way in - would break every reference that names it.
 pub fn copy_into(from: &EpcStore, into: &mut EpcStore, wanted: &[String], arrays: Arrays) -> Result<Copied> {
     let (held, unreadable) = from.read_objects(None);
     let graph = crate::graph::build(
@@ -733,7 +733,7 @@ pub fn copy_into(from: &EpcStore, into: &mut EpcStore, wanted: &[String], arrays
         ..Default::default()
     };
 
-    // Which external file each proxy names, for the target's own `.rels` —
+    // Which external file each proxy names, for the target's own `.rels` -
     // the same bargain `extract` strikes, and found the same way: by running
     // the command and reading `energyml check` afterwards.
     let mut files: std::collections::BTreeMap<String, String> = Default::default();

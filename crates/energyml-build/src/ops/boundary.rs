@@ -1,4 +1,4 @@
-//! `boundary` — a cultural feature and its outline: a model frontier, a
+//! `boundary` - a cultural feature and its outline: a model frontier, a
 //! licence block, a pipeline, as a closed polyline the package can point at.
 //!
 //! What the old artefact promoter alone still knew how to make, and the last
@@ -6,10 +6,10 @@
 //! old one while this was missing.
 //!
 //! Three objects, linked before any exists: a `CulturalFeature` of the chosen
-//! kind, a `GenericFeatureInterpretation` of it, and the polyline set — closed
+//! kind, a `GenericFeatureInterpretation` of it, and the polyline set - closed
 //! by default, because a boundary is a ring, and said so through `closed` so
 //! that the writer neither detects nor notes anything. The writing is
-//! [`super::polylines`]'s — [`super::polylines::write`], typed in since step 8
+//! [`super::polylines`]'s - [`super::polylines::write`], typed in since step 8
 //! of the operations architecture: a second writer of the same
 //! object would be a second place for the same mistakes.
 
@@ -29,7 +29,7 @@ use super::written::{FrameParams, NamingParams, NewFeatureParams, RepresentedPar
 /// The operation.
 pub struct Boundary;
 
-/// What the feature is — RESQML's `CulturalFeatureKind`, a closed list.
+/// What the feature is - RESQML's `CulturalFeatureKind`, a closed list.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
 pub enum Kind {
     /// A model frontier.
@@ -46,7 +46,7 @@ pub enum Kind {
     Pipeline,
 }
 
-/// What `boundary` is told: the frame and the naming — **not** the
+/// What `boundary` is told: the frame and the naming - **not** the
 /// interpretation, which it makes; naming one would be naming two.
 #[derive(Debug, Params)]
 pub struct BoundaryParams {
@@ -79,7 +79,7 @@ impl Operation for Boundary {
     fn about(&self) -> About {
         About {
             name: "boundary",
-            describe: "a cultural feature — a model frontier, a licence block, a pipeline — with its interpretation and its outline as closed polylines",
+            describe: "a cultural feature - a model frontier, a licence block, a pipeline - with its interpretation and its outline as closed polylines",
             category: Category::Create,
             makes: &[
                 "resqml22.CulturalFeature",
@@ -87,7 +87,7 @@ impl Operation for Boundary {
                 "resqml22.PolylineSetRepresentation",
             ],
             recipe: "boundary",
-            // It writes the pair itself — declared so that the form can offer
+            // It writes the pair itself - declared so that the form can offer
             // *create one* beside *choose one*, before anything is planned.
             represents: Some((
                 "resqml22.CulturalFeature",
@@ -114,7 +114,7 @@ impl Operation for Boundary {
         if runs == 0 {
             return Err(Refusal::on(
                 "shape",
-                "the shape has no polyline — its topology is points, triangles or cells",
+                "the shape has no polyline - its topology is points, triangles or cells",
             ));
         }
         Ok(())
@@ -152,8 +152,8 @@ impl Operation for Boundary {
         let feature_uuid = support::next_uuid(cx.identity, &format!("boundary-feature:{seed}"), &mut rank)?;
         let interpretation_uuid =
             support::next_uuid(cx.identity, &format!("boundary-interpretation:{seed}"), &mut rank)?;
-        let feature_title = format!("{title} — feature");
-        let interpretation_title = format!("{title} — interpretation");
+        let feature_title = format!("{title} - feature");
+        let interpretation_title = format!("{title} - interpretation");
         let feature = crate::operation::NewObject {
             uuid: feature_uuid.clone(),
             qualified_type: "resqml22.CulturalFeature".to_string(),

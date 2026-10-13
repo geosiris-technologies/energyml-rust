@@ -112,8 +112,8 @@ impl<'r> ValidationCtx<'r> {
 
     /// Descend into element `index` of the field just entered.
     ///
-    /// The index is appended to the current segment — `TrianglePatch` becomes
-    /// `TrianglePatch[1]` — rather than pushed as one of its own, because
+    /// The index is appended to the current segment - `TrianglePatch` becomes
+    /// `TrianglePatch[1]` - rather than pushed as one of its own, because
     /// [`crate::path`] reads `a.b[1].c` and rejects `a.b.[1].c`. A path a
     /// caller cannot follow back to the value is a message that cannot be hung
     /// on the widget showing it, which is the only reason paths are recorded.

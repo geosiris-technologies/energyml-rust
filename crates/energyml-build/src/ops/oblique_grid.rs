@@ -1,26 +1,26 @@
 //! A `Grid2dRepresentation` from an origin and two direction vectors, each
-//! with its own step and count — two direction vectors, a scale for each,
+//! with its own step and count - two direction vectors, a scale for each,
 //! a number of i and j, and a starting point.
 //!
 //! # Why this is a separate writer, not a change to `grid::write`
 //!
 //! `crates/energyml-build/src/ops/grid.rs::write` hardcodes the two axes at
 //! `[1, 0, 0]` and `[0, 1, 0]` and always writes
-//! `AllDimensionsAreOrthogonal: true` — the case every method wrote until
+//! `AllDimensionsAreOrthogonal: true` - the case every method wrote until
 //! now. The idea is extending that one function so every method benefits (the extension
 //! serves every method, not only MBA), which is real and
 //! worth doing, but is a change to an existing file's behaviour, not an
-//! addition — and this crate's rule for the task at hand is the other way
+//! addition - and this crate's rule for the task at hand is the other way
 //! round: only new files, every retouch to an existing one written out for
 //! the maintainer to apply.
 //! This file is the addition that lets `interpolate`'s `Method::Mba` with
 //! `extent = given` (`crates/energyml-build/src/ops/interpolate_mba.rs`)
-//! write something *today*; folding it back into `grid::write` — so every
-//! method gains oblique lattices, not only MBA — is the natural next step,
+//! write something *today*; folding it back into `grid::write` - so every
+//! method gains oblique lattices, not only MBA - is the natural next step,
 //! named here rather than done silently.
 //!
 //! It is `write`'s own body with the two directions and the orthogonality
-//! flag as parameters instead of literals — same frame handling, same
+//! flag as parameters instead of literals - same frame handling, same
 //! citation, same activity and holes bookkeeping, same computed shape for
 //! the scene (the shape is the output). Nothing here decides *whether* the
 //! two directions are orthogonal: `write_oblique`'s caller states it, having
@@ -37,10 +37,10 @@ use crate::operation::{Context, Dataset, NewObject, Note, Numbers, Plan, Refusal
 use super::support;
 use super::written::Written;
 
-/// The grid, written with an oblique — or simply a second, not-yet-checked —
+/// The grid, written with an oblique - or simply a second, not-yet-checked -
 /// pair of directions. `direction1`/`direction2` are unit vectors in the
 /// plan; `z` is `count1 × count2` heights, the first (`direction1`) axis
-/// varying fastest — the same order [`super::grid::write`] uses for its own
+/// varying fastest - the same order [`super::grid::write`] uses for its own
 /// `[ni, nj]`. `orthogonal` is written as given, `AllDimensionsAreOrthogonal`
 /// left out on `None` (the business rule cited in the module doc).
 #[allow(clippy::too_many_arguments)]
@@ -62,13 +62,13 @@ pub fn write(
     if count1 < 2 || count2 < 2 {
         return Err(Refusal::on(
             "count1",
-            format!("`{name}`: a grid needs at least 2 nodes along each axis — {count1} × {count2} given"),
+            format!("`{name}`: a grid needs at least 2 nodes along each axis - {count1} × {count2} given"),
         ));
     }
     if !(step1.is_finite() && step1 > 0.0 && step2.is_finite() && step2 > 0.0) {
         return Err(Refusal::on(
             "step1",
-            format!("`{name}`: the steps must be positive — [{step1}, {step2}] given"),
+            format!("`{name}`: the steps must be positive - [{step1}, {step2}] given"),
         ));
     }
     let nodes = count1 * count2;
@@ -92,7 +92,7 @@ pub fn write(
         return Err(Refusal::on(
             "project",
             format!(
-                "a lattice is written as it is, in the frame it was computed in: placing EPSG:{source} into EPSG:{} would bend its axes — name a `crs` of the package, or create the frame with `sourceEpsg` equal to `project`",
+                "a lattice is written as it is, in the frame it was computed in: placing EPSG:{source} into EPSG:{} would bend its axes - name a `crs` of the package, or create the frame with `sourceEpsg` equal to `project`",
                 target.epsg()
             ),
         ));
@@ -126,7 +126,7 @@ pub fn write(
             "Coordinate3": 0.0,
         },
         // The slow axis (`direction2`) first, the fast one
-        // (`direction1`) second — the same order `grid::write` already
+        // (`direction1`) second - the same order `grid::write` already
         // uses for its own [0,1,0]/[1,0,0], the last dimension varying
         // fastest.
         "Dimension": [
@@ -172,7 +172,7 @@ pub fn write(
         object["RepresentedObject"] = reference;
     }
 
-    // The lattice developed into points — same reasoning as `grid::write`'s
+    // The lattice developed into points - same reasoning as `grid::write`'s
     // own: this operation writes the lattice with
     // whatever direction vectors it was given, and unrolling it here is the
     // inverse of that, not a borrow from the reflective reader.

@@ -3,20 +3,20 @@
 //!
 //! The export covers the `WellboreFrame`s of a storage (EPC or ETP), with the
 //! wellbore name, its dates, the aliases of its feature, the values of its
-//! properties — the labels of the categorical tables (CBT) for discrete ones —
+//! properties - the labels of the categorical tables (CBT) for discrete ones -
 //! and any other useful information, the headers taken from the property
 //! kinds. The aim is to produce the shape of the borehole CSV that the import
 //! starts from: what comes out of here must be able to go back in.
 //!
 //! # What is where
 //!
-//! - **what a frame carries** — the MD of each node and its properties, codes
-//!   resolved to labels — is [`energyml_domain::wellbore_table`], which the
+//! - **what a frame carries** - the MD of each node and its properties, codes
+//!   resolved to labels - is [`energyml_domain::wellbore_table`], which the
 //!   well view reads too;
-//! - **where it is** — the head and the coordinates of each node — is the
+//! - **where it is** - the head and the coordinates of each node - is the
 //!   geometry: [`crate::well::head_of`] and the scene, the same reads as what
 //!   draws the well;
-//! - **what surrounds it** — the feature, its aliases, the system — is
+//! - **what surrounds it** - the feature, its aliases, the system - is
 //!   followed here, through the references;
 //! - **the headers** are decided **once for the whole file**, never per
 //!   wellbore: a wellbore that had only one of the two columns of kind `code`
@@ -44,7 +44,7 @@ use crate::source::ValueSource;
 pub struct Export {
     /// The headers and the rows, ready for [`wt::to_csv`].
     pub merged: Merged,
-    /// Each wellbore, its headers already those of the file — what a caller
+    /// Each wellbore, its headers already those of the file - what a caller
     /// merges alone to write one file per wellbore.
     pub tables: Vec<WellTable>,
     /// What was left out, wellbore by wellbore, **named**.
@@ -56,12 +56,12 @@ type UriAndObject = (String, Box<dyn DynObject>);
 
 /// The wellbores of this package, in one table.
 ///
-/// `wanted` designates the frames — uuid, uri or a piece of the title — and
+/// `wanted` designates the frames - uuid, uri or a piece of the title - and
 /// empty means all of them. A frame that does not read is **named in the
 /// notes** and the others carry on: a file of a hundred and twenty wellbores
 /// does not fall over for one.
 ///
-/// **A list of summaries and a `ValueSource`, never an `EpcStore`** — the rule
+/// **A list of summaries and a `ValueSource`, never an `EpcStore`** - the rule
 /// of `scene::of_package`, for the same reason: an ETP dataspace then reads
 /// like a file.
 pub fn of_store(summaries: &[ObjectSummary], source: &dyn ValueSource, wanted: &[String]) -> Export {
@@ -186,7 +186,7 @@ fn around(
 
     let mut columns: Vec<Column> = Vec::new();
     // The aliases: an industry code, a national identifier. One per column,
-    // named by its authority — two of the same name are numbered.
+    // named by its authority - two of the same name are numbered.
     let mut seen: HashMap<String, usize> = HashMap::new();
     for owner in feature
         .iter()
@@ -207,7 +207,7 @@ fn around(
         }
     }
 
-    // Where: the head, read at the datum — not at the first node, which is not
+    // Where: the head, read at the datum - not at the first node, which is not
     // the ground when the first log starts lower down.
     let head = follow(source, frame, "Trajectory")
         .ok_or_else(|| "the frame names no trajectory".to_string())
@@ -220,12 +220,12 @@ fn around(
             columns.push(constant("y coordinate", "head", Some(number(y))));
             columns.push(constant("elevation", "head", Some(number(z))));
         }
-        Err(why) => notes.push(format!("{well}: no wellhead — {why}")),
+        Err(why) => notes.push(format!("{well}: no wellhead - {why}")),
     }
 
     // The system, and the coordinates of each node as the scene reads them: the
     // same read as what draws the well. **Their z follows the convention of
-    // `well.rs`** — the file's own numbers when the trajectory has a geometry,
+    // `well.rs`** - the file's own numbers when the trajectory has a geometry,
     // an elevation (upwards) when it has only a datum, never both in one
     // package.
     let placed = crate::scene::object_of(frame, source, uri);
@@ -270,10 +270,10 @@ fn around(
                 ));
             }
         }
-        Err(why) => notes.push(format!("{well}: the nodes are not placed — {why}")),
+        Err(why) => notes.push(format!("{well}: the nodes are not placed - {why}")),
     }
 
-    // The MD first: it is the axis — the top and base of each pass when the
+    // The MD first: it is the axis - the top and base of each pass when the
     // table is organised by interval.
     let by_passes = table
         .columns
@@ -285,7 +285,7 @@ fn around(
     if let Some(points) = nodes {
         // **Fixed names**, never a kind: `z coordinate` would go sometimes to
         // the node, sometimes to a `Z` property of the same kind, depending on
-        // the package — and a header whose meaning changes from one file to
+        // the package - and a header whose meaning changes from one file to
         // the next cannot be read back.
         for (axis, title) in [(0, "node x"), (1, "node y"), (2, "node z")] {
             columns.push(Column {
@@ -374,7 +374,7 @@ fn in_order(merged: Merged, tables: &[WellTable]) -> Merged {
 /// The headers, decided **for the whole file**.
 ///
 /// The title of the property kind when it designates only one column of the
-/// file; the title of the property otherwise — three columns of kind
+/// file; the title of the property otherwise - three columns of kind
 /// `formation name` would all be called the same, and the kind `unknown` says
 /// nothing. The wellbore's own columns (head, system, nodes) go **first**:
 /// they are the ones entitled to `x coordinate`, and a property of that kind
@@ -450,7 +450,7 @@ fn follow(source: &dyn ValueSource, object: &dyn Reflect, field: &str) -> Option
 
 /// The aliases of an object: `(header, identifier)`.
 ///
-/// **The header is what the alias is, then who gives it** —
+/// **The header is what the alias is, then who gives it** -
 /// `industry code (BRGM/BSS)`, `regulatory identifier (BRGM/BSS)`: the SIGEOL
 /// import writes three per wellbore, and `alias`, `alias 2`, `alias 3` did not
 /// say which one is the BSS code. `authority` is an XML **attribute**, hence

@@ -1,4 +1,4 @@
-//! Reading a foreign mesh — OBJ and legacy VTK — in the currency of a shape.
+//! Reading a foreign mesh - OBJ and legacy VTK - in the currency of a shape.
 //!
 //! # Why here
 //!
@@ -7,7 +7,7 @@
 //!
 //! The supposition that the Rust part surely exposes the formats it supports did
 //! not hold, and it was worth checking: **this repository only ever wrote these
-//! formats**. `energyml-export` is their writer; the reader lived in the front end —
+//! formats**. `energyml-export` is their writer; the reader lived in the front end -
 //! an OBJ parser and a VTK parser in JavaScript. Two
 //! implementations of one format would have ended up accepting different things
 //! without anything saying so, and the front end is the side that neither `cargo
@@ -21,7 +21,7 @@
 //!
 //! # What it returns
 //!
-//! A [`Geometry`], the currency of the repository — what the readers produce and
+//! A [`Geometry`], the currency of the repository - what the readers produce and
 //! what the exporters consume. Not a structure of our own: the caller puts it
 //! in a bag, and the fifteen operations read it like any other shape.
 
@@ -61,14 +61,14 @@ pub enum Ask {
     ///
     /// A two-column cloud is a map, not a shape: placing it at zero would be
     /// choosing an elevation on someone's behalf, and zero is no more neutral
-    /// than any other — it is sea level in half the systems and the bottom of
+    /// than any other - it is sea level in half the systems and the bottom of
     /// the model in the other half.
     Height,
     /// In which projected system to place degrees.
     ///
     /// A GeoJSON is in WGS 84 by definition (RFC 7946) and a scene is in
     /// metres. Without reprojection, an extent of 0.25° falls beside a model
-    /// eighteen kilometres wide and a thousand times too small — the exact
+    /// eighteen kilometres wide and a thousand times too small - the exact
     /// defect a SIGEOL import once cost. The code is not guessed:
     /// `crs::utm_epsg_of` **proposes** one, drawn from the coordinates.
     Projection,
@@ -90,7 +90,7 @@ impl Ask {
 ///
 /// [`Format::asks`] says what a format *may* require; it does not say what
 /// *this* file does not carry. A BRGM GeoJSON writes
-/// `[2.2953, 48.875, 58]` — third ordinate included — and its UTM zone is
+/// `[2.2953, 48.875, 58]` - third ordinate included - and its UTM zone is
 /// deduced from its longitude: it needs nothing. Asking anyway is a
 /// question the caller has already answered without knowing it.
 ///
@@ -100,7 +100,7 @@ impl Ask {
 ///
 /// # Why the refusal carries it
 ///
-/// The first version recognised the lack by words in the message —
+/// The first version recognised the lack by words in the message -
 /// `why.contains("give a height")`. Two truths for one fact, in two
 /// places: the day the sentence changes, the question stops being asked and
 /// **nothing says so**. The form no longer opens, and the caller concludes that
@@ -110,7 +110,7 @@ impl Ask {
 pub struct Refused {
     /// What is shown: a sentence that names the file and its line.
     pub why: String,
-    /// What was missing — **empty when no answer would lift this refusal**. A
+    /// What was missing - **empty when no answer would lift this refusal**. A
     /// binary VTK is not repaired by filling in a field, and opening a form
     /// for it would promise what cannot be kept.
     pub missing: Vec<Ask>,
@@ -140,16 +140,16 @@ impl std::fmt::Display for Refused {
     }
 }
 
-/// Where a reading placed the degrees a format carries — and **who** decided it.
+/// Where a reading placed the degrees a format carries - and **who** decided it.
 ///
 /// # Why the reading says so
 ///
 /// A report from a user: the GeoJSON import showed nothing in the scene unless
-/// EPSG codes to reproject onto were given by hand — is that normal?
+/// EPSG codes to reproject onto were given by hand - is that normal?
 ///
 /// It was not normal, and half of the cause was here. With no code given,
-/// [`read_geojson`] carried the degrees into the UTM zone of the first position
-/// — a **proposal** drawn from the numbers, which this module applied without
+/// [`read_geojson`] carried the degrees into the UTM zone of the first position -
+/// a **proposal** drawn from the numbers, which this module applied without
 /// saying so. In a Lambert-93 scene, a GeoJSON of the Paris basin placed in
 /// UTM 31N arrives some 1 450 km to the south-west of the model: read, drawn,
 /// and out of sight. And the caller could say nothing about it, since nothing
@@ -157,24 +157,24 @@ impl std::fmt::Display for Refused {
 ///
 /// `Placed` says it, and says whether the code was **given or proposed**: a
 /// proposal applied silently is a hidden defect; said, it is a
-/// suggestion that can be replaced — the rule that `crs::utm_epsg_of` already
+/// suggestion that can be replaced - the rule that `crs::utm_epsg_of` already
 /// writes for SIGEOL imports.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Placed {
     /// The EPSG code of the coordinates returned.
     pub epsg: i64,
-    /// Chosen here — the UTM zone of the first position — rather than given.
+    /// Chosen here - the UTM zone of the first position - rather than given.
     pub proposed: bool,
     /// This code measures **degrees**: the positions stayed longitudes and
     /// latitudes. Placed in a scene in metres, they fall thousands of
-    /// kilometres from everything in it — the case a caller must be able to
+    /// kilometres from everything in it - the case a caller must be able to
     /// name rather than draw.
     pub degrees: bool,
 }
 
 /// A shape read, and where its degrees were placed.
 ///
-/// `placed` is `None` for a format that carries no degrees — an OBJ, a
+/// `placed` is `None` for a format that carries no degrees - an OBJ, a
 /// VTK, a CSV are in the scene's system or in none, and this module has
 /// decided nothing in their place. It is an absence, not a "nothing moved".
 #[derive(Debug, Clone)]
@@ -238,13 +238,13 @@ pub const FORMATS: &[Format] = &[
     },
 ];
 
-/// VTK XML — `.vtp` and `.vtu` — whose `DataArray`s are `ascii`.
+/// VTK XML - `.vtp` and `.vtu` - whose `DataArray`s are `ascii`.
 ///
 /// # One reader for both
 ///
 /// They differ only by the names of their sections: a `.vtp` keeps its
 /// cells under `Polys`, `Lines` and `Strips`, a `.vtu` under `Cells`. The rest
-/// is identical — `Points`, then `connectivity`/`offsets` that say where
+/// is identical - `Points`, then `connectivity`/`offsets` that say where
 /// each cell ends. Two readers would have been the same thing twice,
 /// with an even chance that a fix goes into only one of them.
 ///
@@ -252,7 +252,7 @@ pub const FORMATS: &[Format] = &[
 ///
 /// `format="binary"` and `format="appended"` exist, and we write neither.
 /// Reading them requires base64, zlib compression and the offsets of the
-/// *appended* blocks — three things that would be done by halves. A refusal that
+/// *appended* blocks - three things that would be done by halves. A refusal that
 /// names the encoding says what to do (re-export as ascii); a reader that
 /// returned an empty mesh would say the file is empty.
 ///
@@ -260,8 +260,8 @@ pub const FORMATS: &[Format] = &[
 ///
 /// VTK XML gives the **end** of each cell, not its length: cell `i`
 /// runs from `offsets[i-1]` to `offsets[i]`. Reading the array as lengths
-/// gives a mesh that is plausible and wrong — the first cells are right,
-/// the next ones drift — which no assertion on a number of points would
+/// gives a mesh that is plausible and wrong - the first cells are right,
+/// the next ones drift - which no assertion on a number of points would
 /// see.
 pub fn read_vtk_xml(text: &str) -> Result<Geometry, String> {
     if let Some(bad) = ["\"binary\"", "\"appended\""]
@@ -269,7 +269,7 @@ pub fn read_vtk_xml(text: &str) -> Result<Geometry, String> {
         .find(|kind| text.contains(**kind))
     {
         return Err(format!(
-            "this file has {} DataArrays; this build reads `ascii` only — re-export it as ascii",
+            "this file has {} DataArrays; this build reads `ascii` only - re-export it as ascii",
             bad.trim_matches('"')
         ));
     }
@@ -281,7 +281,12 @@ pub fn read_vtk_xml(text: &str) -> Result<Geometry, String> {
             points.len()
         ));
     }
-    let places: Vec<[f64; 3]> = points.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect();
+    let places: Vec<[f64; 3]> = points
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .map(|c| [c[0], c[1], c[2]])
+        .collect();
 
     let mut triangles = Vec::new();
     let mut segments = Vec::new();
@@ -375,7 +380,7 @@ pub fn read_vtk_xml(text: &str) -> Result<Geometry, String> {
 /// A text scan and not an XML tree: what is sought is a run of
 /// numbers between two known tags, and building a tree to find it
 /// would ask the crate for a dependency that its wasm target would pay on every
-/// page — to read six files. The refusal above covers what this scan
+/// page - to read six files. The refusal above covers what this scan
 /// could not read.
 fn xml_array(text: &str, section: Option<&str>, named: Option<&str>) -> Option<Vec<f64>> {
     let hay = match section {
@@ -415,7 +420,7 @@ fn xml_array(text: &str, section: Option<&str>, named: Option<&str>) -> Option<V
 /// A CSV has no standard: the separator is a comma, a semicolon
 /// or a tab depending on the spreadsheet that wrote it, and the header may be missing.
 /// Refusing whatever is not exactly `x,y,z` would refuse most of the
-/// files we receive — so the columns are **named if they are**
+/// files we receive - so the columns are **named if they are**
 /// (`x`/`y`/`z`, `easting`/`northing`, `lon`/`lat`… no: see below) and
 /// taken by position otherwise.
 ///
@@ -427,7 +432,7 @@ fn xml_array(text: &str, section: Option<&str>, named: Option<&str>) -> Option<V
 /// # The missing height
 ///
 /// Two columns make a map, not a shape. Placing the cloud at zero would be
-/// choosing an elevation on someone's behalf — and zero is not neutral: it is
+/// choosing an elevation on someone's behalf - and zero is not neutral: it is
 /// sea level in half the vertical systems and the bottom of the model
 /// in the other half. The format **asks** for it (`Ask::Height`), and without an answer it
 /// refuses, saying what to give.
@@ -489,7 +494,7 @@ pub fn read_csv(text: &str, height: Option<f64>) -> Result<Geometry, Refused> {
             None => height.ok_or_else(|| {
                 Refused::wanting(
                     format!(
-                        "row {}: two columns and no height — this file states where, not how deep",
+                        "row {}: two columns and no height - this file states where, not how deep",
                         at + 1
                     ),
                     vec![Ask::Height],
@@ -506,7 +511,7 @@ pub fn read_csv(text: &str, height: Option<f64>) -> Result<Geometry, Refused> {
     Ok(one_patch("csv", points, Vec::new(), Vec::new()))
 }
 
-/// The separator is the one that splits the most — measured, never assumed.
+/// The separator is the one that splits the most - measured, never assumed.
 fn split_row(row: &str) -> Vec<&str> {
     [';', '\t', ',']
         .iter()
@@ -526,7 +531,7 @@ fn header(cells: &[&str]) -> Option<Result<(usize, usize, Option<usize>), String
     if find(&["lon", "longitude", "lng"]).is_some() && find(&["lat", "latitude"]).is_some() {
         return Some(Err(
             "this file's columns are longitude and latitude: a scene is in metres, and degrees \
-placed in one land beside the model and a thousand times too small — write it as GeoJSON, which \
+placed in one land beside the model and a thousand times too small - write it as GeoJSON, which \
 this build projects, or give the columns projected coordinates"
                 .to_string(),
         ));
@@ -542,18 +547,18 @@ this build projects, or give the columns projected coordinates"
 ///
 /// RFC 7946 fixes the system: WGS 84, in degrees. A scene is in metres. Without
 /// reprojection, an extent of 0.25° is placed beside a model eighteen
-/// kilometres wide and a thousand times too small — the exact defect a SIGEOL
+/// kilometres wide and a thousand times too small - the exact defect a SIGEOL
 /// import once cost, and it passes `check` without a word.
 ///
 /// The code is not guessed for all that: a projection moves every
 /// coordinate, so it is a decision. `crs::utm_epsg_of` **proposes** one,
-/// drawn from the longitude of the data itself, and the caller replaces it —
+/// drawn from the longitude of the data itself, and the caller replaces it -
 /// provided it knows it was proposed: see [`read_geojson_placed`].
 pub fn read_geojson(text: &str, projection: Option<i64>, height: Option<f64>) -> Result<Geometry, Refused> {
     read_geojson_placed(text, projection, height).map(|read| read.geometry)
 }
 
-/// The same reading, and **the system in which it placed the degrees** — see
+/// The same reading, and **the system in which it placed the degrees** - see
 /// [`Placed`].
 ///
 /// A scene that already has a system must receive the file in it: any
@@ -628,8 +633,8 @@ makes optional",
             epsg,
             proposed: projection.is_none(),
             // *I do not know* is not *no* (`crs::is_geographic`): a code
-            // unknown to this build does not get here — `place` would have
-            // refused it, naming it — except 4326 onto itself, which is known.
+            // unknown to this build does not get here - `place` would have
+            // refused it, naming it - except 4326 onto itself, which is known.
             degrees: crate::crs::is_geographic(epsg) == Some(true),
         }),
     })
@@ -639,7 +644,7 @@ makes optional",
 ///
 /// On the **extension**, case-insensitive. Sniffing the content would be a second
 /// way of deciding the format, and the two would end up no longer saying the same
-/// thing of the same file — each reader already refuses by name what is not
+/// thing of the same file - each reader already refuses by name what is not
 /// of its dialect.
 pub fn format_of(name: &str) -> Option<&'static Format> {
     let lower = name.to_ascii_lowercase();
@@ -664,12 +669,12 @@ pub fn read_given(name: &str, text: &str, given: &Given) -> Result<Geometry, Str
     read_or_ask(name, text, given).map_err(|refused| refused.why)
 }
 
-/// The same reading, but its refusal says **what was missing** — see [`Refused`].
+/// The same reading, but its refusal says **what was missing** - see [`Refused`].
 pub fn read_or_ask(name: &str, text: &str, given: &Given) -> Result<Geometry, Refused> {
     read_placed(name, text, given).map(|read| read.geometry)
 }
 
-/// The same reading, and **where it placed the degrees** of the file — see
+/// The same reading, and **where it placed the degrees** of the file - see
 /// [`Placed`]. What a scene calls, because only it can compare that
 /// system with its own.
 pub fn read_placed(name: &str, text: &str, given: &Given) -> Result<Read, Refused> {
@@ -686,13 +691,13 @@ pub fn read_placed(name: &str, text: &str, given: &Given) -> Result<Read, Refuse
         Some(format) if format.name == "vtp" || format.name == "vtu" => {
             read_vtk_xml(text).map(unplaced).map_err(Refused::flat)
         }
-        // The only two that can lack something — and they only
+        // The only two that can lack something - and they only
         // find out by reading: a `z` column may be there, an altitude
         // may be written position by position.
         Some(format) if format.name == "csv" => read_csv(text, given.height).map(unplaced),
         Some(format) if format.name == "geojson" => read_geojson_placed(text, given.projection, given.height),
         _ => Err(Refused::flat(format!(
-            "`{name}` is not a mesh this build reads — it reads {}",
+            "`{name}` is not a mesh this build reads - it reads {}",
             FORMATS.iter().map(|f| f.name).collect::<Vec<_>>().join(", ")
         ))),
     }
@@ -708,7 +713,7 @@ fn one_patch(
     // **Triangles win over segments when there are both.** A patch carries one
     // topology; an OBJ that declares faces *and* `l`s is a surface with lines
     // on it, and it is the surface that describes it. The segments then
-    // become a second patch, on the same points — which `node_offset` can
+    // become a second patch, on the same points - which `node_offset` can
     // express.
     let mut patches = Vec::new();
     if !triangles.is_empty() {
@@ -722,7 +727,7 @@ fn one_patch(
     }
     if !segments.is_empty() {
         // **The offset is the running sum**, which `Patch::node_offset`
-        // defines — and not zero because the two patches carry the same
+        // defines - and not zero because the two patches carry the same
         // points. A zero here and everything that indexes *the representation's
         // nodes* would designate the nodes of the first patch believing it
         // named those of the second: two readers agreeing on a total and
@@ -750,11 +755,11 @@ fn one_patch(
 
 /// Read an OBJ.
 ///
-/// Covers what real exports write: `v x y z` (extra components — vertex
-/// colours, `w` — are ignored), `f` in the three spellings of
+/// Covers what real exports write: `v x y z` (extra components - vertex
+/// colours, `w` - are ignored), `f` in the three spellings of
 /// indices (`7`, `7/2`, `7//3`), **negative** indices (relative to the end,
 /// as the format defines), polygons fanned into triangles, and `l` as
-/// chains of segments. Everything else — `vt`, `vn`, `usemtl`, comments —
+/// chains of segments. Everything else - `vt`, `vn`, `usemtl`, comments -
 /// passes silently: it is real data, not an error.
 ///
 /// Refuses **naming the line**: a zero index (the format counts from
@@ -794,7 +799,7 @@ pub fn read_obj(text: &str) -> Result<Geometry, String> {
     }
 
     if points.is_empty() {
-        return Err("no vertex (`v`) in this file — it is not an OBJ, or it is empty".to_string());
+        return Err("no vertex (`v`) in this file - it is not an OBJ, or it is empty".to_string());
     }
     Ok(one_patch("obj", points, triangles, segments))
 }
@@ -813,7 +818,7 @@ fn indices<'a>(words: impl Iterator<Item = &'a str>, count: usize, line: usize) 
         };
         if index == 0 {
             return Err(format!(
-                "line {line}: index 0 does not exist — the format counts from 1"
+                "line {line}: index 0 does not exist - the format counts from 1"
             ));
         }
         // Negative: relative to the end, as the format defines.
@@ -834,12 +839,12 @@ fn indices<'a>(words: impl Iterator<Item = &'a str>, count: usize, line: usize) 
 
 /// Read a **legacy ASCII** VTK (`# vtk DataFile Version …`).
 ///
-/// The classic dialect, cells prefixed by their count — the one
+/// The classic dialect, cells prefixed by their count - the one
 /// `energyml-export` writes. `POLYDATA` (POLYGONS fanned, LINES as chains,
 /// VERTICES passed over in silence, the points being already there) and
 /// `UNSTRUCTURED_GRID` (CELLS + CELL_TYPES: triangle, quad, polygon,
 /// hexahedron as six faces, polyline). `FIELD`, `POINT_DATA` and `CELL_DATA`
-/// stop the reading — real data, not errors.
+/// stop the reading - real data, not errors.
 ///
 /// Refuses by name: a `BINARY` file, an unhandled `DATASET`, the
 /// 5.1 layout with `OFFSETS`/`CONNECTIVITY` (to be re-exported as the classic one), an
@@ -851,7 +856,7 @@ pub fn read_vtk(text: &str) -> Result<Geometry, String> {
         lower.starts_with("# vtk datafile") || lower.starts_with("#vtk datafile")
     }) {
         return Err(
-            "the first line is not `# vtk DataFile Version …` — this is not a legacy VTK".to_string(),
+            "the first line is not `# vtk DataFile Version …` - this is not a legacy VTK".to_string(),
         );
     }
     if rows.iter().any(|row| row.trim().eq_ignore_ascii_case("BINARY")) {
@@ -983,7 +988,7 @@ fn fan(ring: &[u32], out: &mut Vec<[u32; 3]>) {
     }
 }
 
-/// The points of a VTK — **the numbers may spread over several lines**,
+/// The points of a VTK - **the numbers may spread over several lines**,
 /// which the format allows and the exports do.
 fn vtk_points(rows: &[&str]) -> Result<Vec<[f64; 3]>, String> {
     let Some(at) = rows.iter().position(|row| {
@@ -1022,7 +1027,9 @@ fn vtk_points(rows: &[&str]) -> Result<Vec<[f64; 3]>, String> {
         ));
     }
     Ok(numbers[..declared * 3]
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|p| [p[0], p[1], p[2]])
         .collect())
 }
@@ -1075,7 +1082,7 @@ fn vtk_cells(rows: &[&str], section: &str, points: usize) -> Result<Vec<Vec<u32>
     Ok(out)
 }
 
-/// The integers of a section, flat — `CELL_TYPES` is the case.
+/// The integers of a section, flat - `CELL_TYPES` is the case.
 fn vtk_numbers(rows: &[&str], section: &str) -> Vec<i64> {
     let Some(at) = rows.iter().position(|row| {
         row.split_whitespace()

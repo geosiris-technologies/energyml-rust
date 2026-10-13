@@ -1,4 +1,4 @@
-//! `witsml-logs` — the WITSML 2.1 side of a wellbore's continuous properties:
+//! `witsml-logs` - the WITSML 2.1 side of a wellbore's continuous properties:
 //! a `Log`, its `ChannelSet` indexed by measured depth, a `Channel` per
 //! property, the data blob inline.
 //!
@@ -39,7 +39,7 @@ const PRESSURE_KIND: &str = "30000000-0000-4000-8000-000000000002";
 const BUSINESS_ASSOCIATE: &str = "40000000-0000-4000-8000-000000000001";
 
 /// A straight vertical hole: `count` nodes, 10 m of MD apart, from `head`
-/// straight down — Lambert-93-like, so a defect that only shows far from the
+/// straight down - Lambert-93-like, so a defect that only shows far from the
 /// origin would show here too.
 const HEAD: [f64; 3] = [651_000.0, 6_861_000.0, 50.0];
 
@@ -54,7 +54,7 @@ fn mds(count: usize) -> Vec<f64> {
     (0..count).map(|k| k as f64 * 10.0).collect()
 }
 
-/// What `witsml-logs` and `witsml-wells` both need of one frame — the same
+/// What `witsml-logs` and `witsml-wells` both need of one frame - the same
 /// `Known`, because the two operations read one frame, not two: `witsml-logs`
 /// only reads `reference`, `interpretation`, `datum` and `node_mds`; the rest
 /// is here only so the same fixture also drives a real `witsml-wells` plan
@@ -64,7 +64,7 @@ fn frame_known(count: usize) -> Known {
         reference: Some(Ref::new(
             FRAME,
             "resqml22.WellboreFrameRepresentation",
-            "GTH-1 — frame",
+            "GTH-1 - frame",
         )),
         crs: Some(Ref::new(
             COMPOUND,
@@ -76,7 +76,7 @@ fn frame_known(count: usize) -> Known {
         interpretation: Some(Ref::new(
             INTERPRETATION,
             "resqml22.WellboreInterpretation",
-            "GTH-1 — interpretation",
+            "GTH-1 - interpretation",
         )),
         vertical_uom: Some("m".to_string()),
         vertical_up: Some(true),
@@ -86,12 +86,12 @@ fn frame_known(count: usize) -> Known {
         trajectory: Some(Ref::new(
             TRAJECTORY,
             "resqml22.WellboreTrajectoryRepresentation",
-            "GTH-1 — trajectory",
+            "GTH-1 - trajectory",
         )),
         datum: Some(Ref::new(
             DATUM,
             "eml23.ReferencePointInALocalEngineeringCompoundCrs",
-            "GTH-1 — datum",
+            "GTH-1 - datum",
         )),
         ..Known::default()
     }
@@ -123,7 +123,7 @@ fn frame_bag(pieces: Pieces, count: usize) -> Pieces {
         .with("frames (object)", Source::Object(frame_known(count)))
 }
 
-/// A continuous property laid on [`FRAME`] — [`frame_known`]'s own reference.
+/// A continuous property laid on [`FRAME`] - [`frame_known`]'s own reference.
 fn property(
     uuid: &str,
     title: &str,
@@ -138,7 +138,7 @@ fn property(
             supporting: Some(Ref::new(
                 FRAME,
                 "resqml22.WellboreFrameRepresentation",
-                "GTH-1 — frame",
+                "GTH-1 - frame",
             )),
             indexable: "nodes".to_string(),
             value_count: vec![1],
@@ -160,7 +160,7 @@ fn temperature() -> Known {
     // this is where a channel's row must read `null`, never a number.
     property(
         TEMPERATURE_PROPERTY,
-        "GTH-1 — temperature",
+        "GTH-1 - temperature",
         TEMPERATURE_KIND,
         "temperature",
         "degC",
@@ -171,7 +171,7 @@ fn temperature() -> Known {
 fn pressure() -> Known {
     property(
         PRESSURE_PROPERTY,
-        "GTH-1 — pressure",
+        "GTH-1 - pressure",
         PRESSURE_KIND,
         "pressure",
         "bar",
@@ -195,7 +195,7 @@ fn bag(properties: Vec<Known>) -> Pieces {
 }
 
 fn logging_company() -> Value {
-    json!({ "$type": "eml23.DataObjectReference", "Uuid": BUSINESS_ASSOCIATE, "QualifiedType": "eml23.BusinessAssociate", "Title": "energyml-rust — synthetic law" })
+    json!({ "$type": "eml23.DataObjectReference", "Uuid": BUSINESS_ASSOCIATE, "QualifiedType": "eml23.BusinessAssociate", "Title": "energyml-rust - synthetic law" })
 }
 
 fn choices() -> Choices {
@@ -208,7 +208,7 @@ fn planned(pieces: &Pieces, choices: Choices) -> Result<Plan, String> {
         .map_err(|why| why.to_string())
 }
 
-/// The JSON of a plan's object, read back into its generated type — the road
+/// The JSON of a plan's object, read back into its generated type - the road
 /// `apply` takes.
 fn read<T: energyml_core::value::Reflect + Clone>(object: &energyml_build::operation::NewObject) -> T {
     let schemas = energyml_schemas::all();
@@ -253,7 +253,7 @@ fn channels_of(set: &witsml::ChannelSet) -> Vec<witsml::Channel> {
         .collect()
 }
 
-/// The data blob, parsed — rows in the order the file states them.
+/// The data blob, parsed - rows in the order the file states them.
 fn rows_of(set: &witsml::ChannelSet) -> Vec<Vec<Value>> {
     let text = set
         .data
@@ -291,7 +291,7 @@ fn a_log_nests_one_channel_set_indexed_by_measured_depth() {
     assert_eq!(
         plan.objects.len(),
         1,
-        "one Log, nesting its ChannelSet and Channels — none of them a part of its own"
+        "one Log, nesting its ChannelSet and Channels - none of them a part of its own"
     );
     assert_eq!(plan.objects[0].qualified_type, "witsml21.Log");
 
@@ -352,7 +352,7 @@ fn one_channel_per_property_carries_its_own_uom_and_kind() {
     assert_eq!(pressure.channel_property_kind.uuid, PRESSURE_KIND);
 
     // The rows carry the channels in `ChannelSet.Channel`'s own order, the
-    // temperature's `NaN` written `null` — the one spelling JSON has for it.
+    // temperature's `NaN` written `null` - the one spelling JSON has for it.
     let temperature_at = channels.iter().position(|c| c.mnemonic == "temperature").unwrap() + 1;
     let pressure_at = channels.iter().position(|c| c.mnemonic == "pressure").unwrap() + 1;
     let rows = rows_of(&set);
@@ -433,12 +433,12 @@ fn same_inputs_make_the_same_uuids() {
         the_channel_set(&the_log(&again)).uuid
     );
 
-    // And a changed value writes a second object — the same rule
+    // And a changed value writes a second object - the same rule
     // `properties-from-table` and `well-logs` hold: same content, same uuid;
     // different content, a second one, never a silent rewrite.
     let changed = property(
         TEMPERATURE_PROPERTY,
-        "GTH-1 — temperature",
+        "GTH-1 - temperature",
         TEMPERATURE_KIND,
         "temperature",
         "degC",
@@ -464,7 +464,7 @@ fn a_frame_with_no_usable_property_is_refused() {
     // Log with no channel.
     let mut elsewhere = property(
         TEMPERATURE_PROPERTY,
-        "elsewhere — temperature",
+        "elsewhere - temperature",
         TEMPERATURE_KIND,
         "temperature",
         "degC",
@@ -505,7 +505,7 @@ fn a_property_of_the_wrong_shape_is_set_aside_and_counted_not_silently_dropped()
     assert!(
         plan.dropped
             .iter()
-            .any(|one| one.why.contains("GTH-1 — temperature")),
+            .any(|one| one.why.contains("GTH-1 - temperature")),
         "{:?}",
         plan.dropped
     );

@@ -1,4 +1,4 @@
-//! `interpolate` onto a **given** lattice — the input `onto`, an existing 2D
+//! `interpolate` onto a **given** lattice - the input `onto`, an existing 2D
 //! grid whose origin, steps and counts are reused as they are.
 //!
 //! Why it exists: `ijk-grid-from-horizons` stands its pillars on **one**
@@ -9,7 +9,7 @@
 //! `(i, j)` at `origin + (i·dx, j·dy)`, `i` along x varying fastest, the slow
 //! axis first in `Dimension`. The numbers are the tests' own, at map
 //! coordinates in Lambert-93 where the recipe's horizons are, with an origin
-//! that is no round number and two different steps — a transposed lattice shows.
+//! that is no round number and two different steps - a transposed lattice shows.
 //!
 //! # What would have to break to make it turn red
 //!
@@ -58,7 +58,7 @@ fn other_frame() -> Ref {
 }
 
 /// The ground: a `Grid2dRepresentation` read back, its nodes placed the way
-/// the reader places a lattice — `origin + direction × distance`.
+/// the reader places a lattice - `origin + direction × distance`.
 fn ground() -> Geometry {
     let mut points = Vec::new();
     for j in 0..NJ {
@@ -121,7 +121,7 @@ fn known(uuid: &str, qualified_type: &str, title: &str, frame: &Ref) -> Source {
     })
 }
 
-/// The samples, and the ground as `onto` when given — each with what the
+/// The samples, and the ground as `onto` when given - each with what the
 /// package says of it, as `read::in_slot` names them.
 fn bag(samples: Geometry, samples_frame: &Ref, onto: Option<(Geometry, &Ref)>) -> Pieces {
     let mut pieces = Pieces::empty()
@@ -137,7 +137,7 @@ fn bag(samples: Geometry, samples_frame: &Ref, onto: Option<(Geometry, &Ref)>) -
             known(
                 "5eed5eed-0000-4000-8000-000000000001",
                 "resqml22.PointSetRepresentation",
-                "H4 — top",
+                "H4 - top",
                 samples_frame,
             ),
         );
@@ -155,7 +155,7 @@ fn bag(samples: Geometry, samples_frame: &Ref, onto: Option<(Geometry, &Ref)>) -
                 known(
                     "9a0d9a0d-0000-4000-8000-000000000002",
                     "resqml22.Grid2dRepresentation",
-                    "Lutetia — DTM",
+                    "Lutetia - DTM",
                     grid_frame,
                 ),
             );
@@ -174,7 +174,7 @@ fn idw(title: &str) -> Choices {
 }
 
 /// The written grid's lattice, as the file will say it:
-/// `(origin, [dx, dy], [ni, nj])` — read off the object, not the plan's notes.
+/// `(origin, [dx, dy], [ni, nj])` - read off the object, not the plan's notes.
 fn written_lattice(plan: &Plan) -> ([f64; 2], [f64; 2], [usize; 2]) {
     let grid = &plan.of_role("representation").next().expect("a grid").json;
     let support = &grid["Geometry"]["Points"]["SupportingGeometry"];
@@ -184,7 +184,7 @@ fn written_lattice(plan: &Plan) -> ([f64; 2], [f64; 2], [usize; 2]) {
         number(&support["Origin"]["Coordinate1"]),
         number(&support["Origin"]["Coordinate2"]),
     ];
-    // The slow axis first — j, along y — as the array beside it is laid out.
+    // The slow axis first - j, along y - as the array beside it is laid out.
     let [slow, fast] = [&support["Dimension"][0], &support["Dimension"][1]];
     assert_eq!(
         slow["Direction"]["Coordinate2"],
@@ -257,7 +257,7 @@ fn two_seed_sets_onto_one_grid_share_its_lattice_bit_for_bit() {
         bits(&b),
         "two horizons onto one grid, two lattices: {a:?} and {b:?}"
     );
-    // And it is the given one's — origin and counts exactly, steps too, on
+    // And it is the given one's - origin and counts exactly, steps too, on
     // an axis each: 25 along x, 40 along y.
     assert_eq!(
         bits(&a),
@@ -269,7 +269,7 @@ fn two_seed_sets_onto_one_grid_share_its_lattice_bit_for_bit() {
     assert_eq!(double(&h4, "originY").map(f64::to_bits), Some(Y0.to_bits()));
     assert_eq!(double(&h4, "fastestAxisCount"), Some(NI as f64));
     assert_eq!(double(&h4, "slowestAxisCount"), Some(NJ as f64));
-    // What it was told: the grid, as an input — neither `spacing` nor
+    // What it was told: the grid, as an input - neither `spacing` nor
     // `margin`, which nobody gave.
     let told = titles(&h4);
     assert!(
@@ -281,7 +281,7 @@ fn two_seed_sets_onto_one_grid_share_its_lattice_bit_for_bit() {
         "the given grid is not recorded as an input: {told:?}"
     );
 
-    // The control: the same seeds fitted each to itself are two lattices —
+    // The control: the same seeds fitted each to itself are two lattices -
     // what the pillars of `ijk-grid-from-horizons` could not stand on.
     let fitted = |geometry: Geometry, title: &str| {
         plan(
@@ -302,7 +302,7 @@ fn two_seed_sets_onto_one_grid_share_its_lattice_bit_for_bit() {
 }
 
 /// `spacing` and `margin` are the other way of saying the lattice: declared
-/// `Without(["onto"])`, projected optional, and **heard** — a run given
+/// `Without(["onto"])`, projected optional, and **heard** - a run given
 /// `onto` is not asked its spacing, and one given both is refused naming both.
 #[test]
 fn spacing_and_onto_are_alternatives_and_said_so() {
@@ -379,7 +379,7 @@ fn a_grid_in_another_frame_is_refused_naming_both() {
             known(
                 "9a0d9a0d-0000-4000-8000-000000000002",
                 "resqml22.Grid2dRepresentation",
-                "Lutetia — DTM",
+                "Lutetia - DTM",
                 &frame(),
             ),
         );
@@ -394,7 +394,7 @@ fn a_grid_in_another_frame_is_refused_naming_both() {
         why.contains("`sourceEpsg`") && why.contains("The boreholes frame"),
         "{why}"
     );
-    // And left out, the grid's frame is the one suggested — and written.
+    // And left out, the grid's frame is the one suggested - and written.
     let made = plan(&bare, idw("H4")).expect("the grid's frame");
     let grid = &made.of_role("representation").next().unwrap().json;
     assert_eq!(grid["Geometry"]["LocalCrs"]["Uuid"], json!(frame().uuid));
@@ -427,7 +427,7 @@ fn a_turned_lattice_is_refused_by_name() {
 }
 
 /// What the samples cannot reach on the given lattice stays a hole: `NaN` in
-/// the array, counted in the plan — never filled.
+/// the array, counted in the plan - never filled.
 #[test]
 fn nodes_out_of_reach_on_the_given_lattice_stay_holes_counted() {
     let samples = seeds([X0 + 10.0, Y0 + 20.0], [X0 + 40.0, Y0 + 60.0], 20.0);

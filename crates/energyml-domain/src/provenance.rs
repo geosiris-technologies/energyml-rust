@@ -7,10 +7,10 @@
 //!
 //! # Why this is here and not in the JavaScript face
 //!
-//! It used to live in a WebAssembly front end, because artefact promotion —
-//! the first thing that needed provenance — was written for the 3D view. That
+//! It used to live in a WebAssembly front end, because artefact promotion -
+//! the first thing that needed provenance - was written for the 3D view. That
 //! was accretion, not a decision, and it contradicted the rule that crate states
-//! about itself in its own first paragraph: *a translation, not a layer — nothing
+//! about itself in its own first paragraph: *a translation, not a layer - nothing
 //! here knows anything the libraries do not*. The canonical templates and the way
 //! an activity is assembled were knowledge nothing else had.
 //!
@@ -25,13 +25,13 @@
 //! The rule this crate and `energyml-storage::graph` both follow: **free
 //! functions over values, no store**. `activity` returns the JSON of an
 //! `Activity`; putting it in a package, looking up whether the template is
-//! already there, resolving a uri into a `DataObjectReference` — all of that
+//! already there, resolving a uri into a `DataObjectReference` - all of that
 //! belongs to whoever owns the store, and differs between an EPC and a
 //! dataspace.
 //!
 //! # JSON and not typed objects, deliberately
 //!
-//! The templates are eml 2.3 documents, so this is version-specific *data* —
+//! The templates are eml 2.3 documents, so this is version-specific *data* -
 //! like `data/property_kinds.tsv`, which this crate
 //! already carries the same way. Keeping it as the workspace's own JSON encoding
 //! means no dependency on a generated crate, one registry rather than one per
@@ -55,7 +55,7 @@ pub fn templates() -> &'static Value {
     static TEMPLATES: OnceLock<Value> = OnceLock::new();
     TEMPLATES.get_or_init(|| {
         let mut all: Value = serde_json::from_str(include_str!("../data/activityTemplates.json"))
-            .expect("data/activityTemplates.json is valid JSON — checked by a test");
+            .expect("data/activityTemplates.json is valid JSON - checked by a test");
         // `Citation.Format` carries the software's version, so it cannot live in
         // a file written by hand: it would go stale at the first release. It is
         // set here, once, for every template.
@@ -74,13 +74,13 @@ pub fn templates() -> &'static Value {
 ///
 /// A refusal and not a silently invented template: inventing one per package is
 /// exactly what the fixed-uuid rule exists to prevent, and the failure would be
-/// invisible — every package would carry a plausible template of its own and
+/// invisible - every package would carry a plausible template of its own and
 /// nothing would join them.
 pub fn template(recipe: &str) -> Result<&'static Value, String> {
     let found = &templates()[recipe];
     if found.is_null() {
         return Err(format!(
-            "no canonical template for `{recipe}` — add it to data/activityTemplates.json"
+            "no canonical template for `{recipe}` - add it to data/activityTemplates.json"
         ));
     }
     Ok(found)
@@ -97,7 +97,7 @@ pub fn template_uuid(recipe: &str) -> Result<&'static str, String> {
 ///
 /// Three kinds and no more, because three are what the templates declare:
 /// `double` with a unit, `string`, and a reference to an object. A caller with
-/// something else has a template to extend first, which is the right order —
+/// something else has a template to extend first, which is the right order -
 /// a parameter no template declares is a parameter no consumer will look for.
 #[derive(Debug, Clone)]
 pub enum Parameter {
@@ -108,7 +108,7 @@ pub enum Parameter {
         /// The value.
         value: f64,
         /// The Energistics uom code. `None` becomes `Euc`, Energistics'
-        /// *unitless* — never an invented unit.
+        /// *unitless* - never an invented unit.
         uom: Option<String>,
     },
     /// A word: a mode, a file name, a stage.
@@ -177,7 +177,7 @@ pub struct Record<'a> {
     pub title: Option<&'a str>,
     /// The output object's title, for the default activity title.
     pub output_title: Option<&'a str>,
-    /// The reference to the template, as JSON — the caller builds it because it
+    /// The reference to the template, as JSON - the caller builds it because it
     /// knows where the template ended up in its store.
     pub descriptor: Value,
     /// The parameters, inputs and outputs among them.
@@ -187,7 +187,7 @@ pub struct Record<'a> {
 /// Build the `Activity`.
 ///
 /// Refuses only what it can judge: an unknown recipe. Everything else it is
-/// handed — a uuid, a date, a reference — is the caller's to have got right,
+/// handed - a uuid, a date, a reference - is the caller's to have got right,
 /// and checking a uuid's shape here would be a second validator disagreeing with
 /// the one in the schema.
 pub fn activity(record: &Record<'_>) -> Result<Value, String> {
@@ -254,7 +254,7 @@ mod tests {
             let (date, rest) = creation.split_once('T').unwrap_or(("", ""));
             assert!(
                 !date.is_empty() && rest.contains(['Z', '+', '-']),
-                "{recipe}: the template's Citation.Creation `{creation}` is no dateTime — it is written as it is, and `check` refuses it"
+                "{recipe}: the template's Citation.Creation `{creation}` is no dateTime - it is written as it is, and `check` refuses it"
             );
         }
     }
@@ -282,7 +282,7 @@ mod tests {
         let why = template("no-such-recipe").expect_err("refused");
         assert!(why.contains("no-such-recipe"), "{why}");
         assert!(why.contains("data/activityTemplates.json"), "{why}");
-        // And an activity cannot be built for it either — the refusal is not
+        // And an activity cannot be built for it either - the refusal is not
         // only on the lookup, or a caller could write an activity pointing at a
         // template nobody can insert.
         let record = Record {

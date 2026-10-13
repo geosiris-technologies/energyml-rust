@@ -2,7 +2,7 @@
 // The source schemas carry no copyright line.
 // Distributed under the Energistics Product License Agreement, https://www.energistics.org/product-license-agreement
 // Input fingerprint (SHA-256, see schemas.lock): da03de9635ebb7aee0d4eea5cc3b90ba97a35d1a79dcae30ac9486b463023e3d
-//! eml 2.0 — generated from the Energistics XSD schemas.
+//! eml 2.0 - generated from the Energistics XSD schemas.
 //!
 //! Do not edit: run `cargo run -p energyml-codegen -- generate` instead.
 //!

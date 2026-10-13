@@ -1,12 +1,12 @@
 //! A subtree the generator does not model, kept instead of dropped.
 //!
-//! The Energistics schemas embed foreign vocabularies — a full GML CRS
+//! The Energistics schemas embed foreign vocabularies - a full GML CRS
 //! definition inside `eml:ProjectedGmlCrs`, for instance. Generating Rust for
 //! all of GML is out of scope, but *losing* the definition when a file is read
 //! and written back is worse than not understanding it: a round trip would
 //! quietly turn a georeferenced object into an unreferenced one.
 //!
-//! [`AnyXml`] holds such a subtree as it was read — attributes and content —
+//! [`AnyXml`] holds such a subtree as it was read - attributes and content -
 //! and writes it back unchanged. Nothing interprets it; it survives.
 
 use quick_xml::events::{BytesEnd, BytesStart};
@@ -29,8 +29,8 @@ pub struct AnyXml {
     pub content: String,
     /// Prefix → namespace URI for every prefix the content uses.
     ///
-    /// The subtree was written under declarations that lived on an ancestor —
-    /// typically the document root — and those do not travel with it. Without
+    /// The subtree was written under declarations that lived on an ancestor -
+    /// typically the document root - and those do not travel with it. Without
     /// carrying them, writing the subtree back produces XML where `resqml:` is
     /// bound to nothing: well-formed to the eye, unusable to a parser.
     pub namespaces: Vec<(String, String)>,
@@ -82,7 +82,7 @@ impl XmlSerialize for AnyXml {
     }
 }
 
-/// Append one element — its own start tag included — to a wildcard's content.
+/// Append one element - its own start tag included - to a wildcard's content.
 ///
 /// The counterpart of [`AnyXml::xml_read`] for an `xsd:any`: there, the
 /// carrying element is known and only its *inside* is kept; here the element
@@ -90,7 +90,7 @@ impl XmlSerialize for AnyXml {
 /// written back.
 ///
 /// Used by generated code in the arm that would otherwise skip an unknown
-/// child. A struct without a wildcard field still skips — this is only reached
+/// child. A struct without a wildcard field still skips - this is only reached
 /// when the schema said `xsd:any`.
 pub fn capture_into(
     into: &mut AnyXml,
@@ -193,7 +193,7 @@ impl XmlDeserialize for AnyXml {
         }
         // Carry only what the subtree actually uses. A declaration that came
         // along for the ride would be re-emitted next to the identical one the
-        // surrounding document already made — and two `xmlns:eml` on one tag is
+        // surrounding document already made - and two `xmlns:eml` on one tag is
         // not valid XML.
         namespaces.retain(|(prefix, _)| {
             content.contains(&format!("<{prefix}:"))
@@ -344,8 +344,8 @@ impl AnyXml {
     ///
     /// A GML CRS definition is genuinely foreign: nothing here models GML. But
     /// `GraphicalInformationSet.GraphicalInformation` is declared in EML 2.3 as
-    /// `AbstractGraphicalInformation`, and its concrete classes —
-    /// `DefaultGraphicalInformation`, `ColorInformation` — are **generated**,
+    /// `AbstractGraphicalInformation`, and its concrete classes -
+    /// `DefaultGraphicalInformation`, `ColorInformation` - are **generated**,
     /// in RESQML 2.2. The field falls back to a subtree only because a package
     /// cannot name the classes of one that depends on it, which is a fact about
     /// crate layering and not about the data.
@@ -371,7 +371,7 @@ impl AnyXml {
             .map(|known| known.prefix)?;
         // The namespace names the **package**, never the release: every version
         // of RESQML shares one URI. So the candidates are ranked, and the rank
-        // is not cosmetic — picking the wrong release picks a different class.
+        // is not cosmetic - picking the wrong release picks a different class.
         // Measured on 04/09: `2.2_dev3` was chosen ahead of `2.2`, its
         // `TargetObject` is a reference of the older shape, and a round trip
         // through it **dropped `QualifiedType` and invented an empty
@@ -394,7 +394,7 @@ impl AnyXml {
     ///
     /// Lenient on purpose: a subtree that a producer wrote loosely is still
     /// worth editing, and refusing it here would put the front end back where it
-    /// was — a list of indices. What could not be read is the caller's to
+    /// was - a list of indices. What could not be read is the caller's to
     /// report, through the departures.
     pub fn typed(
         &self,
@@ -425,8 +425,8 @@ impl AnyXml {
     ///
     /// Keeps the attributes and the declarations it already had: they say what
     /// the subtree *is* and which prefixes its text uses, and neither is the
-    /// object's to restate. Only the content changes, which is the whole point
-    /// — editing one value must not rewrite the shape of the element around it.
+    /// object's to restate. Only the content changes, which is the whole point -
+    /// editing one value must not rewrite the shape of the element around it.
     pub fn rebuilt(&self, object: &dyn crate::registry::DynObject) -> crate::error::Result<AnyXml> {
         let info = object.as_reflect().type_info();
         let namespace = crate::ns::Namespace::well_known(info.package).ok_or_else(|| {
@@ -453,8 +453,8 @@ impl AnyXml {
     /// A subtree built from an object, for a slot that holds subtrees.
     ///
     /// The counterpart of [`AnyXml::typed`], and the reason it is needed: a
-    /// list of subtrees written back **whole** — an element added, one removed
-    /// — arrives as typed objects, and without this every one of them would
+    /// list of subtrees written back **whole** - an element added, one removed -
+    /// arrives as typed objects, and without this every one of them would
     /// become an empty subtree. Silently, which is the part that matters.
     ///
     /// The `xsi:type` is stamped from the object's own type, and the three
@@ -478,7 +478,7 @@ impl AnyXml {
     }
 }
 
-/// Everything between the first `>` and the last `<` — the element's content,
+/// Everything between the first `>` and the last `<` - the element's content,
 /// which is what an [`AnyXml`] holds.
 ///
 /// A self-closing root has no content, and neither does an empty one; both come

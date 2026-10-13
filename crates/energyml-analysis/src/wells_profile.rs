@@ -1,10 +1,10 @@
-//! **A long profile over a package's wells** — the heads of the wells read in
+//! **A long profile over a package's wells** - the heads of the wells read in
 //! one placement, projected on a drawn track.
 //!
 //! The arithmetic is [`crate::profile`] and the heads are
 //! `energyml_geometry::heads`; this is the one place that joins them, so a face
 //! (the command line, a WebAssembly front end) parses its arguments,
-//! calls [`of_wells`] and prints — it decides nothing.
+//! calls [`of_wells`] and prints - it decides nothing.
 //!
 //! The track is in the **placement** asked for, in that placement's unit; the
 //! answer's [`WellsProfile::system`] is the EPSG code the heads share, for the
@@ -55,8 +55,8 @@ impl WellsProfile {
     }
 }
 
-/// Projects `asked` (wellbore trajectories or frames) on `track` — plan
-/// `[x, y]` in `placement` — within `left` / `right`. `arc_step` is the angle in
+/// Projects `asked` (wellbore trajectories or frames) on `track` - plan
+/// `[x, y]` in `placement` - within `left` / `right`. `arc_step` is the angle in
 /// radians a rounded outer turn of the band is cut at.
 ///
 /// # Errors

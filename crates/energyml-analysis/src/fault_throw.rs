@@ -1,10 +1,10 @@
-//! **Throwing a horizon across its faults** — the horizon triangulated with
+//! **Throwing a horizon across its faults** - the horizon triangulated with
 //! the traces of the faults that cut it as constraints, torn along each trace,
 //! and its hanging wall offset by a throw that dies out at both ends.
 //!
 //! Written for `fault-throw` in `energyml-build`: a step of the build plan of a synthetic model:
 //! horizons triangulated with the fault trace as a constraint, then **torn**
-//! along it — the trace nodes duplicated, the cut edges declared as a
+//! along it - the trace nodes duplicated, the cut edges declared as a
 //! `SplitEdgePatch`, the hanging-wall compartment lowered by the throw, which
 //! decreases to zero at the ends of the fault. The
 //! verb of the schema says it: `splits`, *« the fault has opened a pair of
@@ -15,28 +15,28 @@
 //!
 //! # What is done, in order
 //!
-//! 1. the horizon's nodes are triangulated on (x, y) — a Delaunay, the one
+//! 1. the horizon's nodes are triangulated on (x, y) - a Delaunay, the one
 //!    `triangulate` decides ([`crate::triangulate_xy`]);
 //! 2. each fault surface is intersected with that surface ([`crate::intersect()`]):
 //!    **its trace on this horizon**, one open line, or a refusal naming what
-//!    was found instead — nothing, several pieces, a ring;
+//!    was found instead - nothing, several pieces, a ring;
 //! 3. the nodes are triangulated again with the traces as constraint edges
 //!    ([`crate::triangulate_xy_constrained`]): no triangle straddles a trace,
-//!    and each trace becomes a **chain of edges** — found here by walking the
+//!    and each trace becomes a **chain of edges** - found here by walking the
 //!    nodes that lie on it in the order of their abscissa, every consecutive
 //!    pair required to be an edge;
 //! 4. each chain is **torn**: every node of it but its two ends is duplicated,
 //!    and the triangles on the hanging-wall side take the copy. The ends are
-//!    kept single — the throw is zero there, so the two lips meet;
+//!    kept single - the throw is zero there, so the two lips meet;
 //! 5. the hanging wall is **offset**: a node on the hanging-wall side, at a
 //!    distance `d` in plan from the trace and at the position `s` along it,
-//!    moves by `throw(s) · (1 − d / reach)` — the full throw on the lip, none
-//!    beyond `reach` — downward for a normal fault, upward for a reverse one;
+//!    moves by `throw(s) · (1 − d / reach)` - the full throw on the lip, none
+//!    beyond `reach` - downward for a normal fault, upward for a reverse one;
 //!    with `heave`, also horizontally by that amount over `tan(dip)`, so that
 //!    the hanging-wall lip slides along a plane of the fault's mean dip rather
 //!    than straight down. The footwall does not move.
 //!
-//! # The throw along the trace — a synthetic law, stated
+//! # The throw along the trace - a synthetic law, stated
 //!
 //! `throw(s) = maximum · profile(s)`, `s` the plan-view arc length along the
 //! trace over its whole length, and `profile` zero at both ends and one in the
@@ -46,12 +46,12 @@
 //!
 //! # Which side is the hanging wall
 //!
-//! The side of the trace toward which the fault **dips** — the block above
+//! The side of the trace toward which the fault **dips** - the block above
 //! the fault plane. The dip is **measured** on the fault surface
 //! ([`crate::fault_sticks::orientation`], area-weighted), never taken from a
 //! stated `MeanAzimuth`: the surface is what the horizon is torn against. A
 //! vertical fault has no hanging wall and is refused by name, as is a trace
-//! that runs within 30° of the dip direction on average — the side it would
+//! that runs within 30° of the dip direction on average - the side it would
 //! read is noise.
 //!
 //! # What is refused rather than decided
@@ -76,7 +76,7 @@ use crate::fault_sticks::{self, Orientation};
 use crate::intersect::intersect;
 use crate::triangulate::{triangulate_xy, triangulate_xy_constrained};
 
-/// Two positions this close in plan are one — a millionth of a metre, a length
+/// Two positions this close in plan are one - a millionth of a metre, a length
 /// no survey states and far above the rounding of coordinates taken relative
 /// to the horizon's first node.
 pub const TOLERANCE: f64 = 1e-6;
@@ -86,11 +86,11 @@ pub const TOLERANCE: f64 = 1e-6;
 /// says a vertical surface with.
 pub const VERTICAL: f64 = 89.9;
 
-/// Below this mean sine between the trace and the dip direction — 30° — the
+/// Below this mean sine between the trace and the dip direction - 30° - the
 /// side a trace reads as the hanging wall is refused rather than trusted.
 pub(crate) const ACROSS: f64 = 0.5;
 
-/// How the throw varies along the trace — zero at both ends, one in the middle.
+/// How the throw varies along the trace - zero at both ends, one in the middle.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Profile {
     /// `4 s (1 − s)`.
@@ -116,9 +116,9 @@ impl Profile {
 /// Which way the hanging wall goes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Sense {
-    /// Down — a normal fault.
+    /// Down - a normal fault.
     Down,
-    /// Up — a reverse fault, or a thrust.
+    /// Up - a reverse fault, or a thrust.
     Up,
 }
 
@@ -131,7 +131,7 @@ pub struct Fault<'a> {
     pub points: &'a [[f64; 3]],
     /// Its triangles, indices into `points`.
     pub triangles: &'a [[u32; 3]],
-    /// The throw where it is largest, in the frame's vertical unit — reached
+    /// The throw where it is largest, in the frame's vertical unit - reached
     /// only where the profile is one.
     pub maximum_throw: f64,
     /// Which way its hanging wall goes.
@@ -153,7 +153,7 @@ pub struct Settings {
     pub up: bool,
 }
 
-/// The two lips of a fault on the torn horizon — node indices into
+/// The two lips of a fault on the torn horizon - node indices into
 /// [`Torn::points`], both running the trace in the same direction, and sharing
 /// their two ends.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -171,7 +171,7 @@ pub struct Thrown {
     pub orientation: Orientation,
     /// Its lips.
     pub lip: Lip,
-    /// The largest offset its lip received — below the maximum when no node
+    /// The largest offset its lip received - below the maximum when no node
     /// falls where the profile is one.
     pub largest: f64,
     /// How many nodes it moved, its lip's copies included.
@@ -196,7 +196,7 @@ pub struct Torn {
     pub split: usize,
     /// How many nodes moved.
     pub moved: usize,
-    /// How many triangles the offset turned over in plan — a heave larger than
+    /// How many triangles the offset turned over in plan - a heave larger than
     /// a triangle does that, and it is said, not corrected.
     pub flipped: usize,
 }
@@ -225,7 +225,7 @@ pub enum TearError {
         why: String,
     },
     /// A fault with no area.
-    #[error("`{fault}` has no area — no triangle to measure its dip on")]
+    #[error("`{fault}` has no area - no triangle to measure its dip on")]
     NoSurface {
         /// The fault.
         fault: String,
@@ -248,7 +248,7 @@ pub enum TearError {
     },
     /// A fault that cuts it in several pieces.
     #[error(
-        "`{fault}` cuts the horizon in {count} separate traces — which of them to tear, and how their throws meet, is not decided here"
+        "`{fault}` cuts the horizon in {count} separate traces - which of them to tear, and how their throws meet, is not decided here"
     )]
     Pieces {
         /// The fault.
@@ -257,14 +257,14 @@ pub enum TearError {
         count: usize,
     },
     /// A fault whose trace closes on itself.
-    #[error("`{fault}` cuts the horizon along a closed ring — a ring has no end for its throw to die out at")]
+    #[error("`{fault}` cuts the horizon along a closed ring - a ring has no end for its throw to die out at")]
     Ring {
         /// The fault.
         fault: String,
     },
     /// Two traces that meet.
     #[error(
-        "the traces of `{first}` and `{second}` cross or touch — tearing a horizon across a crossing of faults is not done here"
+        "the traces of `{first}` and `{second}` cross or touch - tearing a horizon across a crossing of faults is not done here"
     )]
     Crossing {
         /// One fault.
@@ -274,7 +274,7 @@ pub enum TearError {
     },
     /// A trace too close to the dip direction to tell the sides apart.
     #[error(
-        "the trace of `{fault}` runs {angle:.0}° from its dip direction on average — within 30°, which side is the hanging wall cannot be read from it"
+        "the trace of `{fault}` runs {angle:.0}° from its dip direction on average - within 30°, which side is the hanging wall cannot be read from it"
     )]
     AlongDip {
         /// The fault.
@@ -294,7 +294,7 @@ pub enum TearError {
     },
     /// A chain edge without a triangle on each side.
     #[error(
-        "the edge {a}–{b} of the trace of `{fault}` does not have one triangle on each side — the trace runs along the horizon's border, or the surface folds there"
+        "the edge {a}-{b} of the trace of `{fault}` does not have one triangle on each side - the trace runs along the horizon's border, or the surface folds there"
     )]
     Sides {
         /// The fault.
@@ -333,7 +333,7 @@ pub(crate) fn length2(v: [f64; 2]) -> f64 {
 }
 
 /// The nearest point of a polyline to `p`, in plan: its abscissa along the
-/// line, its distance, and the side of `p` — the sign of the cross product
+/// line, its distance, and the side of `p` - the sign of the cross product
 /// with the segment it falls on.
 pub(crate) fn project(line: &[Point], p: &Point) -> Option<(f64, f64, f64)> {
     let mut best: Option<(f64, f64, f64)> = None;
@@ -395,7 +395,7 @@ fn close3(a: &Point, b: &Point) -> bool {
     (a[0] - b[0]).abs() <= TOLERANCE && (a[1] - b[1]).abs() <= TOLERANCE && (a[2] - b[2]).abs() <= TOLERANCE
 }
 
-/// The pieces of an intersection, joined where their ends meet — a fault in
+/// The pieces of an intersection, joined where their ends meet - a fault in
 /// two patches cuts a horizon in two pieces that share an end to the
 /// rounding, not to the bit, since each patch numbers its corners its own way.
 pub(crate) fn weld(mut lines: Vec<Vec<Point>>) -> Vec<(Vec<Point>, bool)> {
@@ -489,7 +489,7 @@ fn edges_of(triangles: &[[u32; 3]]) -> HashMap<(u32, u32), Vec<usize>> {
 }
 
 /// The nodes of the triangulation that lie on the trace, in the order of their
-/// abscissa along it — and every consecutive pair an edge, or the refusal.
+/// abscissa along it - and every consecutive pair an edge, or the refusal.
 fn chain_along(
     points: &[Point],
     trace: &[Point],
@@ -716,7 +716,7 @@ fn tear(
     Ok(copies)
 }
 
-/// Throw a horizon across its faults — see the module.
+/// Throw a horizon across its faults - see the module.
 ///
 /// `cloud` is the horizon's nodes, every one a finite position; a hole in a
 /// lattice is the caller's to refuse or to set aside, since a triangulation
@@ -750,7 +750,10 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
     let flat: Vec<f64> = nodes.iter().flatten().copied().collect();
     let first: Vec<[u32; 3]> = triangulate_xy(&flat)
         .map_err(|why| TearError::Horizon { why })?
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .map(|c| c.as_slice())
         .map(|t| [t[0], t[1], t[2]])
         .collect();
 
@@ -817,7 +820,10 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
     let mut points = made.points;
     let mut triangles: Vec<[u32; 3]> = made
         .triangles
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .map(|c| c.as_slice())
         .map(|t| [t[0], t[1], t[2]])
         .collect();
     let edges = edges_of(&triangles);
@@ -948,7 +954,7 @@ pub fn throw(cloud: &[Point], faults: &[Fault<'_>], settings: &Settings) -> Resu
 mod tests {
     use super::*;
 
-    /// Where a real model sits — the tests run at map coordinates, since a defect once
+    /// Where a real model sits - the tests run at map coordinates, since a defect once
     /// only showed far from the origin.
     const X0: f64 = 651_000.0;
     const Y0: f64 = 6_861_000.0;
@@ -997,7 +1003,7 @@ mod tests {
     }
 
     /// A fault dying out inside a 21 × 21 horizon 10 m apart: from y = 45 to
-    /// y = 155, through x = 105 at the horizon's level — between two columns of
+    /// y = 155, through x = 105 at the horizon's level - between two columns of
     /// nodes, so that no edge of the horizon lies in the fault plane.
     fn thrown(throw: f64, reach: f64, heave: bool) -> Torn {
         let cloud = horizon(21, 10.0, -50.0);
@@ -1161,7 +1167,7 @@ mod tests {
     }
 
     /// A reverse fault lifts its hanging wall; a depth frame counts the other
-    /// way — both flip the sign of the vertical offset, not its size.
+    /// way - both flip the sign of the vertical offset, not its size.
     #[test]
     fn the_sense_and_the_frame_set_the_sign() {
         let cloud = horizon(21, 10.0, -50.0);
@@ -1298,7 +1304,7 @@ mod tests {
     }
 
     /// A fault in two patches cuts the horizon in two pieces that share an
-    /// end: they are one trace, welded — F1 of Lutetia is made of two
+    /// end: they are one trace, welded - F1 of Lutetia is made of two
     /// patches.
     #[test]
     fn a_fault_in_two_patches_is_one_trace() {
@@ -1360,7 +1366,7 @@ mod tests {
                 .sum::<usize>()
         );
         // The node at x = 150, y = 100: 85 m east of F1's trace, 5 m east of
-        // F2's, both at their middle — the two drags add.
+        // F2's, both at their middle - the two drags add.
         let at = cloud
             .iter()
             .position(|p| p[0] == X0 + 150.0 && p[1] == Y0 + 100.0)

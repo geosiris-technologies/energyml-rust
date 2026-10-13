@@ -1,8 +1,8 @@
-//! **A wellbore from a drilling plan** — straight holds and circular arcs,
+//! **A wellbore from a drilling plan** - straight holds and circular arcs,
 //! surveyed by the minimum curvature method: measured depth in, stations out
 //! (north, east and vertical depth from where the plan starts).
 //!
-//! Written for `well-from-plan` in `energyml-build` (a synthetic model: a trajectory from a drilling plan — kick-off, build rate,
+//! Written for `well-from-plan` in `energyml-build` (a synthetic model: a trajectory from a drilling plan - kick-off, build rate,
 //! hold, resumption, drain, lateral). Nothing here reads a package or knows a frame: the
 //! operation places the stations, this module only says where along the hole
 //! they are.
@@ -26,7 +26,7 @@
 //! ΔTVD  = ΔMD / 2 · (cos I1 + cos I2) · RF
 //! ```
 //!
-//! In vectors — `t = (sin I cos A, sin I sin A, cos I)`, north, east, down —
+//! In vectors - `t = (sin I cos A, sin I sin A, cos I)`, north, east, down -
 //! the dogleg is the angle between `t1` and `t2`, and `Δp = ΔMD / 2 · RF ·
 //! (t1 + t2)`: the chord of the arc, **exact** on it, not an approximation of
 //! it. The direction part of the way along an arc is the one the same paper
@@ -34,14 +34,14 @@
 //!
 //! # What a plan says, and what this decides
 //!
-//! - **a hold** goes straight on in the direction the hole has — for a new
+//! - **a hold** goes straight on in the direction the hole has - for a new
 //!   well, straight down: a well starts vertical;
 //! - **a curve** turns the hole at a *dogleg severity* in degrees per 30 m of
 //!   measured depth ([`RATE_LENGTH`]) until it points at the inclination and
-//!   azimuth said. One arc, so its length is the dogleg over the rate — **the
+//!   azimuth said. One arc, so its length is the dogleg over the rate - **the
 //!   MD at which the direction is reached is computed, never asked**, and the
 //!   station at the end of the arc carries the direction said, exactly;
-//! - **a build raises the inclination and a drop lowers it** — the words are
+//! - **a build raises the inclination and a drop lowers it** - the words are
 //!   checked, because a *build* that lowers is a plan misread somewhere;
 //! - **every station is on the arc**: each is computed from its section's
 //!   start by the formula above, never by summing chords from station to
@@ -63,12 +63,12 @@
 use std::f64::consts::PI;
 
 /// The length a rate is counted over: a dogleg severity is in **degrees per
-/// 30 m** of measured depth — the metric convention used here (a
-/// build of about 13–17°/30 m).
+/// 30 m** of measured depth - the metric convention used here (a
+/// build of about 13-17°/30 m).
 pub const RATE_LENGTH: f64 = 30.0;
 
 /// The most stations one plan may place. A step of a millimetre along a
-/// kilometre of hole is a mistake in the step, not a survey — refused with its
+/// kilometre of hole is a mistake in the step, not a survey - refused with its
 /// count rather than computed for a minute.
 pub const MOST_STATIONS: usize = 1_000_000;
 
@@ -79,7 +79,7 @@ const NO_TURN: f64 = 1e-12;
 /// What a curve section is called, and so what it must do to the inclination.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Turn {
-    /// Any change of direction — inclination, azimuth or both.
+    /// Any change of direction - inclination, azimuth or both.
     Any,
     /// The inclination must rise.
     Build,
@@ -97,7 +97,7 @@ pub enum Section {
     },
     /// Straight on in the direction the hole has, down to this MD.
     HoldTo {
-        /// The measured depth the section ends at — kept as given.
+        /// The measured depth the section ends at - kept as given.
         md: f64,
     },
     /// One circular arc, at `rate` degrees per 30 m, until the hole points at
@@ -110,7 +110,7 @@ pub enum Section {
         inclination: f64,
         /// The azimuth reached, degrees clockwise from the frame's north.
         azimuth: f64,
-        /// What the section was called — checked against what it does.
+        /// What the section was called - checked against what it does.
         turn: Turn,
     },
 }
@@ -124,7 +124,7 @@ pub struct Tie {
     pub md: f64,
     /// Degrees from vertical down.
     pub inclination: f64,
-    /// Degrees clockwise from north — meaningless, and kept, when vertical.
+    /// Degrees clockwise from north - meaningless, and kept, when vertical.
     pub azimuth: f64,
 }
 
@@ -153,7 +153,7 @@ pub struct Station {
     pub north: f64,
     /// East of where the plan starts.
     pub east: f64,
-    /// Vertical depth below where the plan starts — positive down.
+    /// Vertical depth below where the plan starts - positive down.
     pub tvd: f64,
 }
 
@@ -164,7 +164,7 @@ pub struct Planned {
     pub stations: Vec<Station>,
     /// For each section, the index of the station it ends at.
     pub ends: Vec<usize>,
-    /// The radius of the tightest arc of the plan — `None` when it has none.
+    /// The radius of the tightest arc of the plan - `None` when it has none.
     pub tightest: Option<f64>,
 }
 
@@ -176,33 +176,33 @@ pub enum PlanError {
     #[error("a plan has one section at least")]
     NoSection,
     #[error(
-        "the plan starts nowhere: MD {md}, inclination {inclination}°, azimuth {azimuth}° — an MD and an azimuth are finite numbers, an inclination is in [0°, 180°]"
+        "the plan starts nowhere: MD {md}, inclination {inclination}°, azimuth {azimuth}° - an MD and an azimuth are finite numbers, an inclination is in [0°, 180°]"
     )]
     BadTie { md: f64, inclination: f64, azimuth: f64 },
     #[error("section {section}: a length is a finite number of metres > 0, not {given}")]
     BadLength { section: usize, given: f64 },
     #[error(
-        "section {section}: `hold to {md}` does not come after MD {at}, where the hole already is — the sections run down the hole, in order"
+        "section {section}: `hold to {md}` does not come after MD {at}, where the hole already is - the sections run down the hole, in order"
     )]
     NotAfter { section: usize, md: f64, at: f64 },
     #[error("section {section}: a rate is a finite number of degrees per 30 m > 0, not {given}")]
     BadRate { section: usize, given: f64 },
     #[error(
-        "section {section}: an inclination is in [0°, 180°] — 0 down, 90 horizontal, 180 up — not {given}"
+        "section {section}: an inclination is in [0°, 180°] - 0 down, 90 horizontal, 180 up - not {given}"
     )]
     BadInclination { section: usize, given: f64 },
     #[error("section {section}: an azimuth is in [0°, 360°], not {given}")]
     BadAzimuth { section: usize, given: f64 },
     #[error(
-        "section {section}: a build raises the inclination, and this one goes from {from}° to {to}° — call it a drop, or a curve"
+        "section {section}: a build raises the inclination, and this one goes from {from}° to {to}° - call it a drop, or a curve"
     )]
     NotABuild { section: usize, from: f64, to: f64 },
     #[error(
-        "section {section}: a drop lowers the inclination, and this one goes from {from}° to {to}° — call it a build, or a curve"
+        "section {section}: a drop lowers the inclination, and this one goes from {from}° to {to}° - call it a build, or a curve"
     )]
     NotADrop { section: usize, from: f64, to: f64 },
     #[error(
-        "section {section}: the hole already points at inclination {inclination}°, azimuth {azimuth}° — a curve to where it points has no length"
+        "section {section}: the hole already points at inclination {inclination}°, azimuth {azimuth}° - a curve to where it points has no length"
     )]
     NoTurn {
         section: usize,
@@ -210,17 +210,17 @@ pub enum PlanError {
         azimuth: f64,
     },
     #[error(
-        "section {section}: the curve turns the hole back on itself, a dogleg of 180° — no single arc does that, the plane it would turn in is undefined"
+        "section {section}: the curve turns the hole back on itself, a dogleg of 180° - no single arc does that, the plane it would turn in is undefined"
     )]
     Reversal { section: usize },
     #[error(
-        "the plan would place {count} stations, more than the {most} one plan may hold — take a larger step"
+        "the plan would place {count} stations, more than the {most} one plan may hold - take a larger step"
     )]
     TooManyStations { count: usize, most: usize },
 }
 
 impl PlanError {
-    /// The section a refusal is about, counted from 1 — `None` when it is
+    /// The section a refusal is about, counted from 1 - `None` when it is
     /// about the whole plan (its step, its start, its size).
     pub fn section(&self) -> Option<usize> {
         match self {
@@ -252,11 +252,11 @@ fn mul(a: Vector, k: f64) -> Vector {
 }
 
 /// The three pieces of the minimum curvature method, **from
-/// `energyml_geometry::min_curvature`** — reading a surveyed hole is reading a
+/// `energyml_geometry::min_curvature`** - reading a surveyed hole is reading a
 /// shape, and this crate sits above geometry, never inside it.
 pub use energyml_geometry::min_curvature::{direction, dogleg, ratio_factor};
 
-/// The inclination and azimuth of a unit direction, in degrees — `carried` as
+/// The inclination and azimuth of a unit direction, in degrees - `carried` as
 /// the azimuth when the direction is vertical and has none.
 pub fn angles(t: [f64; 3], carried: f64) -> (f64, f64) {
     let inclination = t[2].clamp(-1.0, 1.0).acos().to_degrees();
@@ -275,7 +275,7 @@ pub fn radius(rate: f64) -> f64 {
 }
 
 /// How far an arc of this radius strays from the chord joining two of its
-/// points `spacing` apart along it — the sagitta, `R (1 − cos(s / 2R))`. What
+/// points `spacing` apart along it - the sagitta, `R (1 − cos(s / 2R))`. What
 /// a straight line between two stations misses of the arc they sit on.
 pub fn sag(radius: f64, spacing: f64) -> f64 {
     radius * (1.0 - (spacing / (2.0 * radius)).cos())
@@ -297,7 +297,7 @@ enum Laid {
         t2: Vector,
         beta: f64,
         per_metre: f64,
-        /// The azimuth the arc starts with — carried while it is vertical.
+        /// The azimuth the arc starts with - carried while it is vertical.
         start_azimuth: f64,
         /// The direction it was told to reach, as said.
         end: (f64, f64),
@@ -313,7 +313,7 @@ impl Laid {
 }
 
 /// The grid measured depths strictly between `from` and `to`: the multiples
-/// of `step`, each computed as `k · step` — never accumulated, so the
+/// of `step`, each computed as `k · step` - never accumulated, so the
 /// thousandth is where the first would put it.
 fn grid_between(from: f64, to: f64, step: f64) -> impl Iterator<Item = f64> {
     let slack = step * 1e-9;
@@ -347,8 +347,8 @@ fn station(md: f64, p: Vector, inclination: f64, azimuth: f64) -> Station {
     }
 }
 
-/// The plan laid out from `tie`, a station every `step` metres of MD — the
-/// multiples of `step` — and one at each section's end.
+/// The plan laid out from `tie`, a station every `step` metres of MD - the
+/// multiples of `step` - and one at each section's end.
 pub fn plan(tie: Tie, sections: &[Section], step: f64) -> Result<Planned, PlanError> {
     if !(step.is_finite() && step > 0.0) {
         return Err(PlanError::BadStep { given: step });
@@ -462,7 +462,7 @@ pub fn plan(tie: Tie, sections: &[Section], step: f64) -> Result<Planned, PlanEr
                     return Err(PlanError::Reversal { section: number });
                 }
                 // Radians of turn per metre of MD; the arc's length is the
-                // dogleg over it — the MD where the direction is reached.
+                // dogleg over it - the MD where the direction is reached.
                 let per_metre = rate.to_radians() / RATE_LENGTH;
                 let length = beta / per_metre;
                 let r = radius(rate);
@@ -603,7 +603,7 @@ mod tests {
 
     #[test]
     fn a_depth_given_is_the_depth_written_and_the_ends_are_stations() {
-        // `hold to 43.7` ends at the number written — the grid goes on at the
+        // `hold to 43.7` ends at the number written - the grid goes on at the
         // multiples of the step on the other side of it.
         let planned = plan(
             Tie::vertical(),

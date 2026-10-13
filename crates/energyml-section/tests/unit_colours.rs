@@ -2,8 +2,8 @@
 //!
 //! After the colour of a resqml22.StratigraphicUnitInterpretation was changed,
 //! the section colours were not triggered by the update and the legends of the
-//! 3D scene (up to date) and of the sections differed
-//! — the intervals carried the colour baked in when the catalogue was made, so a
+//! 3D scene (up to date) and of the sections differed -
+//! the intervals carried the colour baked in when the catalogue was made, so a
 //! colour edited since never reached the drawing. `View.unit_colours` is the table
 //! the wells **and** the legend read first; and the black tick at the
 //! stratigraphic changes is `View.strata_ticks`.
@@ -172,8 +172,8 @@ fn a_tick_crosses_the_well_at_each_boundary_between_units_when_asked() {
 /// dot is: zoomed in, it stays a few pixels across the well instead of growing
 /// with the drawing (the zoom script used to ignore the black ticks).
 /// A well's interval and the legend entry of its unit carry the unit's full
-/// uri (`data-unit-uri`): the front end finds a unit by it — to match a hovered
-/// interval to its legend entry, to open the unit's colour — and never by its
+/// uri (`data-unit-uri`): the front end finds a unit by it - to match a hovered
+/// interval to its legend entry, to open the unit's colour - and never by its
 /// title (internally only the full uri is used: ADR-0003).
 #[test]
 fn intervals_and_legend_entries_name_their_unit_by_uri() {
@@ -248,7 +248,7 @@ fn no_tick_on_a_well_that_is_not_coloured_by_strata() {
     assert!(ticks_of(&svg::write(&layout(&baked(), &side))).is_empty());
 }
 
-/// The same unit, Top, in a well of `s1` and a well of `s2` — one uri, as two
+/// The same unit, Top, in a well of `s1` and a well of `s2` - one uri, as two
 /// packages written against one chart carry it.
 fn two_packages() -> Catalogue {
     let mut top_a = named(
@@ -280,7 +280,7 @@ fn legend_stores(els: &[El]) -> Vec<(String, String)> {
 }
 
 /// Changing the colour of the second "Lutétien" of the
-/// legend changed the first — the entry named its unit and not its package.
+/// legend changed the first - the entry named its unit and not its package.
 /// An entry now says **which packages** show the unit in its colour: one line
 /// for packages that agree, carrying both.
 ///
@@ -294,7 +294,7 @@ fn packages_that_agree_on_a_unit_are_one_entry_carrying_both() {
     );
 }
 
-/// …and two lines for packages that do not, each with its package — named in
+/// …and two lines for packages that do not, each with its package - named in
 /// the title, because two "Top" entries with nothing to tell them apart would be
 /// ambiguous.
 ///
@@ -311,8 +311,8 @@ fn packages_that_disagree_on_a_unit_are_two_entries_each_named_by_its_package() 
     assert_eq!(
         legend_stores(&els),
         vec![
-            ("Top — s1".to_string(), "s1".to_string()),
-            ("Top — second.epc".to_string(), "s2".to_string())
+            ("Top - s1".to_string(), "s1".to_string()),
+            ("Top - second.epc".to_string(), "s2".to_string())
         ],
         "a package with no name is named by its id"
     );
@@ -321,7 +321,7 @@ fn packages_that_disagree_on_a_unit_are_two_entries_each_named_by_its_package() 
     assert!(
         entries_of_the_legend(&alone)
             .iter()
-            .all(|(title, _)| !title.contains('—'))
+            .all(|(title, _)| !title.contains(" - "))
     );
 }
 

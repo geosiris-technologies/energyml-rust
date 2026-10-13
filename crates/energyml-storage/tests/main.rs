@@ -7,7 +7,7 @@
 //!
 //! **A new test file is a `mod` line here**, otherwise it does not run. A file
 //! that installs a process-wide default (a `set_default`, a global allocator)
-//! keeps a binary of its own, as a `[[test]]` in `Cargo.toml` — here `hdf5_cache`,
+//! keeps a binary of its own, as a `[[test]]` in `Cargo.toml` - here `hdf5_cache`,
 //! which counts the opens of the one HDF5 cache of the process and bounds it.
 
 mod absent;

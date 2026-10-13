@@ -9,13 +9,13 @@
 //! Measured on the boreholes WFS: `Transfer-Encoding: chunked`, no
 //! `Content-Length`, first byte at **2.56 s** and last at **11.67 s** for
 //! 50.8 MB. A reader that waits for the end does nothing during nine tenths of
-//! the answer — hence [`Answer::body`], which is a `Read` and not a `Vec`.
+//! the answer - hence [`Answer::body`], which is a `Read` and not a `Vec`.
 
 use std::io::Read;
 
 use crate::error::{Error, Result};
 
-/// A round trip to make — and nothing that makes it.
+/// A round trip to make - and nothing that makes it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Request {
     /// The complete address, parameters included.
@@ -43,7 +43,7 @@ pub struct Answer {
 impl Answer {
     /// The whole body, when it is small **and one knows it is**.
     ///
-    /// For a quote or a refusal — a few kilobytes. Never for a harvest: it is
+    /// For a quote or a refusal - a few kilobytes. Never for a harvest: it is
     /// exactly the read this crate exists to avoid, hence the ceiling, which is
     /// there for the typo and not for the data.
     pub fn text(mut self, most: usize) -> Result<String> {
@@ -128,7 +128,7 @@ pub mod native {
                 .and_then(|value| value.to_str().ok())
                 .map(str::to_string);
             // **The body is not read here.** `into_reader` gives a `'static`
-            // reader — detached from the response, hence returnable — and the
+            // reader - detached from the response, hence returnable - and the
             // ceiling lives *on that reader*: it stops the read instead of
             // being discovered afterwards, which is what the CLI's `fetch` used
             // to do, downloading 512 MB before saying it was too much.

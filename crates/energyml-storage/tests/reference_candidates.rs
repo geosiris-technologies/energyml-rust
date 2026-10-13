@@ -1,5 +1,5 @@
 //! **A reference resolves exactly, and when nothing answers it names the
-//! candidates** — lot I0 of the identity review. The requirement:
+//! candidates** - lot I0 of the identity review. The requirement:
 //!
 //! > In validation, the checks on DORs should be able to detect that a
 //! > reference is missing because the uri generated from the DOR […] has the
@@ -13,7 +13,7 @@
 //!
 //! What would have to break: resolving by uuid alone again (the first entry
 //! answers every reference, so a reference to version 3 is compared with
-//! version 1 and the finding lists one uri — or none).
+//! version 1 and the finding lists one uri - or none).
 //!
 //! The DOT export is checked here too: it cut the uri by hand and drew two
 //! versions as one box.

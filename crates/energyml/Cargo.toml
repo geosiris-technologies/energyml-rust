@@ -46,7 +46,7 @@ default = []
 
 # **Schema versions: one feature per version, forwarded to `energyml-schemas`**,
 # which holds the optional dependencies. `resqml22` alone brings RESQML 2.2 and
-# the EML 2.3 it is built on — no 2.0.1, no WITSML, no PRODML. With none of
+# the EML 2.3 it is built on - no 2.0.1, no WITSML, no PRODML. With none of
 # them, the registry is empty and a lookup of a shipped version is a named
 # refusal ("RESQML 2.2 is not compiled in: enable the `resqml22` feature").
 eml20 = ["energyml-schemas/eml20"]

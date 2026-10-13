@@ -2,15 +2,15 @@
 //!
 //! Reflection could read anything and build almost nothing.
 //! `Registry::create` makes a **top-level** object from a table keyed by
-//! qualified type; a nested type — a `Citation`, a `Point3dLatticeArray`, an
-//! `AbstractValueArray` — is in no such table and has no qualified type to key
+//! qualified type; a nested type - a `Citation`, a `Point3dLatticeArray`, an
+//! `AbstractValueArray` - is in no such table and has no qualified type to key
 //! it by. So anything walking the schema in order to *construct* stopped dead
 //! at the first nested field: a random-data generator, a "new object" form in
 //! a UI, a translator filling a target model.
 //!
 //! `TypeInfo::make` closes it. Every generated struct and enumeration already
 //! derives `Default`, so the constructor costs one function pointer per type
-//! and no generated line changes — the `TypeInfo` literal comes from the derive
+//! and no generated line changes - the `TypeInfo` literal comes from the derive
 //! macro, not from the emitted source.
 //!
 //! What is pinned here is the contract a builder relies on:
@@ -36,7 +36,7 @@ fn registry() -> Registry {
 #[test]
 fn a_nested_type_builds_from_its_type_info() {
     // `Citation` is the case that mattered: every object has one, it is
-    // required, and it is not a top-level object — so nothing could make one.
+    // required, and it is not a top-level object - so nothing could make one.
     let info = <energyml_eml_2_0::abstract_::Citation as EnergymlType>::type_info();
     let built = info.create().expect("a citation builds");
     assert_eq!(built.type_info().name, "Citation");

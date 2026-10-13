@@ -1,4 +1,4 @@
-//! `subrepresentation` — a `SubRepresentation` of one representation of the
+//! `subrepresentation` - a `SubRepresentation` of one representation of the
 //! package.
 //!
 //! The form of the assertions comes from the TRG and the guide: *“An ordered
@@ -32,7 +32,7 @@ fn when() -> When {
 }
 
 /// A 3 × 2 × 2 IJK grid of unit boxes, cell `(i, j, k)` at `[i, i+1] × [j,
-/// j+1] × [−k−1, −k]`, drawn as the reader draws it — `index` the RESQML
+/// j+1] × [−k−1, −k]`, drawn as the reader draws it - `index` the RESQML
 /// numbers of the cells kept when one is undefined.
 fn boxes(undefined: Option<u32>) -> Geometry {
     let (ni, nj, nk) = (3usize, 2usize, 2usize);
@@ -161,8 +161,8 @@ fn centres(plan: &Plan) -> Vec<[f64; 3]> {
         .collect()
 }
 
-/// **Given indices are written as given** — order kept, the element named on
-/// the object, the support on the patch — and the cells drawn are those cells.
+/// **Given indices are written as given** - order kept, the element named on
+/// the object, the support on the patch - and the cells drawn are those cells.
 #[test]
 fn given_indices_are_written_in_order_and_drawn_as_those_cells() {
     let choices = Choices::new()
@@ -185,7 +185,7 @@ fn given_indices_are_written_in_order_and_drawn_as_those_cells() {
 }
 
 /// **The box is the productive reservoir's rule**: the lower layer, `k = 1`, is cells 6 to 11 in
-/// RESQML order — `i` fastest — and two ranges cut it further.
+/// RESQML order - `i` fastest - and two ranges cut it further.
 #[test]
 fn an_ijk_box_is_its_cells_in_resqml_order() {
     let lower = planned(

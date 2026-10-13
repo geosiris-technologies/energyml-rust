@@ -12,17 +12,17 @@ Related decisions: [ADR-0005](../../docs/adr/0005-refuse-rather-than-draw.md), [
 
 ## Rules
 
-**A new rule enters the registry in the same commit as the decision or the code that makes it** — a rule touched is a rule rewritten here. Other crates' documentation refers to the registry and does not copy a rule.
+**A new rule enters the registry in the same commit as the decision or the code that makes it** - a rule touched is a rule rewritten here. Other crates' documentation refers to the registry and does not copy a rule.
 
-**A rule that changes meaning is a new id** — with `supersedes`, the old one passing to `superseded`; history is information. Ids have the shape `house/<theme>/<name>`; two ids published before that shape remain flat and no other flat id is accepted.
+**A rule that changes meaning is a new id** - with `supersedes`, the old one passing to `superseded`; history is information. Ids have the shape `house/<theme>/<name>`; two ids published before that shape remain flat and no other flat id is accepted.
 
-**`designed` is a rule decided and not yet coded** — it says so wherever it is shown. Moving it to `active` belongs to the commit that codes it.
+**`designed` is a rule decided and not yet coded** - it says so wherever it is shown. Moving it to `active` belongs to the commit that codes it.
 
-**References are quoted strings, never read at run time** — the loader checks their form (a specification document from a closed list, a section / page / line, a repository-relative path), not the document. A reference is a citation a reader can verify, not a dependency of the build.
+**References are quoted strings, never read at run time** - the loader checks their form (a specification document from a closed list, a section / page / line, a repository-relative path), not the document. A reference is a citation a reader can verify, not a dependency of the build.
 
-**The loader is shared between the build and the tests** — `build/loader.rs` is `include!`d by `build.rs` and by the tests, so what the build refuses and what the tests try to break are the same code. Every guard answers with a named error (file, rule, field). Guards are tested with fabricated files, because the shipped registry passes them all by construction; each test says what to break to turn it red.
+**The loader is shared between the build and the tests** - `build/loader.rs` is `include!`d by `build.rs` and by the tests, so what the build refuses and what the tests try to break are the same code. Every guard answers with a named error (file, rule, field). Guards are tested with fabricated files, because the shipped registry passes them all by construction; each test says what to break to turn it red.
 
-**No logic belonging to a face** — filtering and JSON selection live here, so the command line, wasm and Python only convert.
+**No logic belonging to a face** - filtering and JSON selection live here, so the command line, wasm and Python only convert.
 
 ## Deliberately not here
 

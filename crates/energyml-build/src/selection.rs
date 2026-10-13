@@ -1,4 +1,4 @@
-//! Selecting objects by rings — a step **before** the operations, not a change to them.
+//! Selecting objects by rings - a step **before** the operations, not a change to them.
 //!
 //! The use case: when selecting objects for operations, apply ring filters
 //! (outer/inner) without modifying the operations. The user selects all the
@@ -11,7 +11,7 @@
 //!
 //! A selection answers *which of these objects*, as lists of uris; an operation
 //! then takes them as it takes any other. [`clip`](crate::ops) is the opposite
-//! question — it cuts a shape — and the two do not share a decision beyond the
+//! question - it cuts a shape - and the two do not share a decision beyond the
 //! point-in-ring test, which is `energyml_geometry::clip::inside_ring` (even-odd,
 //! the border counts as inside).
 //!
@@ -19,20 +19,20 @@
 //!
 //! A point is **in the region** when it is inside at least one `outer` ring (no
 //! `outer` at all means everywhere) and inside no `inner` ring. A node exactly on
-//! a ring's border is inside that ring — so on an `inner` it is *out* of the
+//! a ring's border is inside that ring - so on an `inner` it is *out* of the
 //! region.
 //!
 //! # The three tests
 //!
-//! - [`Test::Inside`] — every node, in plan, is in the region. Judged on nodes:
+//! - [`Test::Inside`] - every node, in plan, is in the region. Judged on nodes:
 //!   an edge that leaves the region between two nodes inside does not change it
 //!   (a triangle whose corners are all in does not look at its sides);
-//! - [`Test::Touches`] — some node is in the region, **or** some edge (a segment
+//! - [`Test::Touches`] - some node is in the region, **or** some edge (a segment
 //!   of a line, a side of a triangle) passes through it without a node inside.
 //!   An edge is cut at every point it meets a ring border and the pieces are
 //!   tested at their midpoints, so a hole in the middle of an edge is seen and a
 //!   ring crossing between two outside nodes is too;
-//! - [`Test::Head`] — the head of a well is in the region. The head is the
+//! - [`Test::Head`] - the head of a well is in the region. The head is the
 //!   **first node** of a wellbore trajectory or frame, placed. Any other object
 //!   has no head: it is judged as `Touches`, and a note says so.
 //!
@@ -43,7 +43,7 @@
 //!
 //! An object that is not in the package, cannot be read, has no node, names no
 //! horizontal system when the rings name one, or whose system cannot be brought
-//! into the rings' — each goes to [`Selected::refused`] with its reason. Nothing
+//! into the rings' - each goes to [`Selected::refused`] with its reason. Nothing
 //! is put in `kept` or `dropped` by default.
 //!
 //! The rings' coordinates are in the units of their system as the reprojection
@@ -75,7 +75,7 @@ pub struct Rings {
 
 impl Rings {
     /// A ring of fewer than three vertices, or with a coordinate that is not a
-    /// number, encloses nothing — refused rather than judged as an empty region.
+    /// number, encloses nothing - refused rather than judged as an empty region.
     pub fn check(&self) -> Result<(), String> {
         for (role, rings) in [("outer", &self.outer), ("inner", &self.inner)] {
             for (at, ring) in rings.iter().enumerate() {
@@ -196,7 +196,7 @@ pub struct Judgement {
     pub substituted: bool,
 }
 
-/// Judge one footprint against the region — pure, no package.
+/// Judge one footprint against the region - pure, no package.
 ///
 /// # Errors
 ///

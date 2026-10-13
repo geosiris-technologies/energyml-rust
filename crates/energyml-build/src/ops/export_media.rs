@@ -1,35 +1,35 @@
-//! `export-media` — one representation of the package, written by an exporter
+//! `export-media` - one representation of the package, written by an exporter
 //! of `energyml-export`, and put **in the package** beside it.
 //!
 //! In the reference model: an OBJ export of a surface, a GeoJSON export of a
 //! point set in WGS 84, a VTK XML export of a grid, each related to the object it shows. The part and its two
-//! relationships are [`super::media`]'s — `Plan::media`, written by `apply`
+//! relationships are [`super::media`]'s - `Plan::media`, written by `apply`
 //! with `destinationMedia` from the object and `sourceMedia` back (EPC §3.4.2
-//! pp. 15–16). What this operation adds is the **bytes**, and they come from
+//! pp. 15-16). What this operation adds is the **bytes**, and they come from
 //! the export registry and nowhere else: a second writer of OBJ here would be
 //! a second place for the same mistakes, and the file in the package would
 //! stop being what `energyml export` writes.
 //!
 //! # What is decided here
 //!
-//! - **the content type is the exporter's own `mime()`** — content types come
+//! - **the content type is the exporter's own `mime()`** - content types come
 //!   from the exporter, not from a second table.
 //!   There is no `contentType` setting to disagree with it;
 //! - **the object is rebuilt from the bag**, never from a store: the shape
 //!   `read::pieces_of_object` reads (local, as a writing plan reads it) and
-//!   its companion — the reference, the interpretation, and the frame that
+//!   its companion - the reference, the interpretation, and the frame that
 //!   places it (`Known::placement`). That is everything an exporter reads of
 //!   a [`SceneObject`] but two things, and both are said rather than filled:
 //!   the **feature** above the interpretation is not in the bag, so the file
 //!   names the object and its interpretation and no feature (`identity`); and
-//!   no property rides along — `attributes` stay empty, as in an `energyml
+//!   no property rides along - `attributes` stay empty, as in an `energyml
 //!   export` without `--properties`;
 //! - **a GeoJSON is reprojected by `energyml-proj`**, the one `Reprojector`
-//!   the workspace ships (pure Rust, wasm included) — RFC 7946 fixes WGS 84,
+//!   the workspace ships (pure Rust, wasm included) - RFC 7946 fixes WGS 84,
 //!   and the exporter refuses without a backend rather than writing eastings
 //!   as longitudes;
 //! - **the default part name is the library's**: `media/export/<title>.<ext>`,
-//!   the title folded to a file name (`H3 — top of the Yprésien` →
+//!   the title folded to a file name (`H3 - top of the Yprésien` →
 //!   `h3-top-of-the-ypresien`); `path` overrides it, checked by the function
 //!   the store applies (`energyml_storage::epc::media::check_part_name`), so
 //!   what `apply` would refuse is refused here, in the same words.
@@ -38,15 +38,15 @@
 //!
 //! - a shape that is **no object of the package** (an artefact, a mesh file):
 //!   the part is related to what it shows, and an export with no uuid cannot
-//!   be traced back — the reason exports carry an identity at all
+//!   be traced back - the reason exports carry an identity at all
 //!   (`energyml-export`, *Identity travels with the geometry*);
-//! - a shape whose frame is **named but not given** — read placed, or a frame
+//! - a shape whose frame is **named but not given** - read placed, or a frame
 //!   that could not be read: the exporter places the numbers itself, and
 //!   placing them twice, or not at all, writes a plausible file in the wrong
 //!   place;
 //! - a format the registry does not hold, listing what it holds;
-//! - an object the exporter declines — no EPSG code for a GeoJSON, a vertical
-//!   axis in travel time (an export states no equivalence here), no point —
+//! - an object the exporter declines - no EPSG code for a GeoJSON, a vertical
+//!   axis in travel time (an export states no equivalence here), no point -
 //!   with the reason the exporter gives when it writes.
 //!
 //! No object is made, so no uuid is derived. The activity records the part,
@@ -69,23 +69,23 @@ pub struct ExportMedia;
 /// What `export-media` is told.
 #[derive(Debug, Params)]
 pub struct ExportMediaParams {
-    /// the exporter to write with — a name the export registry holds, as `energyml export --list` prints them (`obj`, `geojson`, `vtu`…)
+    /// the exporter to write with - a name the export registry holds, as `energyml export --list` prints them (`obj`, `geojson`, `vtu`…)
     pub format: String,
-    /// the part name in the package — left out, `media/export/` and the object's title with the exporter's extension (EPC §3.2: "a folder named media")
+    /// the part name in the package - left out, `media/export/` and the object's title with the exporter's extension (EPC §3.2: "a folder named media")
     pub path: Option<String>,
 }
 
 /// What `export-media` takes.
 #[derive(Debug, Inputs)]
 pub struct ExportMediaInputs {
-    /// the representation to export — an object of the package, which the file is then a media representation of
+    /// the representation to export - an object of the package, which the file is then a media representation of
     #[input(
         types = "resqml22.TriangulatedSetRepresentation, resqml22.PolylineSetRepresentation, resqml22.PointSetRepresentation, resqml22.Grid2dRepresentation, resqml22.IjkGridRepresentation, resqml22.UnstructuredGridRepresentation, resqml22.WellboreTrajectoryRepresentation"
     )]
     pub shape: Shape,
 }
 
-/// The object of the package the shape is, and what is known of it — or the
+/// The object of the package the shape is, and what is known of it - or the
 /// refusal that says it is none.
 fn object_of(shape: &Shape) -> Result<(&Ref, &Known), Refusal> {
     match shape
@@ -105,7 +105,7 @@ fn object_of(shape: &Shape) -> Result<(&Ref, &Known), Refusal> {
     }
 }
 
-/// The object as the exporters see it, rebuilt from what the bag says — or
+/// The object as the exporters see it, rebuilt from what the bag says - or
 /// the refusal that names what is missing.
 fn scene_object(shape: &Shape) -> Result<SceneObject, Refusal> {
     let (reference, known) = object_of(shape)?;
@@ -115,7 +115,7 @@ fn scene_object(shape: &Shape) -> Result<SceneObject, Refusal> {
         return Err(Refusal::on(
             "shape",
             format!(
-                "`{}` names the frame `{}` and the bag does not say how it places a number — the shape was read \
+                "`{}` names the frame `{}` and the bag does not say how it places a number - the shape was read \
                  placed, or its frame could not be read; an exporter places the numbers itself, from the local ones",
                 reference.title, frame.title
             ),
@@ -142,8 +142,8 @@ fn scene_object(shape: &Shape) -> Result<SceneObject, Refusal> {
     })
 }
 
-/// A title as a file name: lower case, accents folded, anything else a dash —
-/// `H3 — top of the Yprésien` → `h3-top-of-the-ypresien`. Empty when nothing
+/// A title as a file name: lower case, accents folded, anything else a dash -
+/// `H3 - top of the Yprésien` → `h3-top-of-the-ypresien`. Empty when nothing
 /// of the title survives.
 pub fn file_name_of(title: &str) -> String {
     let mut out = String::new();
@@ -175,7 +175,7 @@ pub fn file_name_of(title: &str) -> String {
     out.trim_end_matches('-').to_string()
 }
 
-/// Why an exporter declines an object, in the words a person can act on —
+/// Why an exporter declines an object, in the words a person can act on -
 /// what `handles_with` answers with a boolean.
 fn declined(exporter: &dyn Exporter, object: &SceneObject, options: &Options<'_>) -> String {
     let mut facts = Vec::new();
@@ -213,7 +213,7 @@ impl Operation for ExportMedia {
     fn about(&self) -> About {
         About {
             name: "export-media",
-            describe: "a representation written by an exporter — OBJ, GeoJSON, VTK — and put in the package as a part related to it",
+            describe: "a representation written by an exporter - OBJ, GeoJSON, VTK - and put in the package as a part related to it",
             category: Category::Create,
             makes: &[],
             recipe: "export-media",
@@ -233,7 +233,7 @@ impl Operation for ExportMedia {
             Slot::required(
                 "mediaType",
                 Need::Text,
-                "the content type written for it — the exporter's own",
+                "the content type written for it - the exporter's own",
             ),
             Slot::required(
                 "byteCount",

@@ -8,8 +8,8 @@
 //!
 //! The scene's own answers are a front end's CRS lookup (an object's CRS, then
 //! `reproject::System::of`) and a front end's drawable `verticalIsTime`
-//! (`Crs::is_time`). This module asks the same two library functions —
-//! `crs::of` and `System::of` — rather than reading a CRS a second way: the
+//! (`Crs::is_time`). This module asks the same two library functions -
+//! `crs::of` and `System::of` - rather than reading a CRS a second way: the
 //! section view and the scene must agree on which system an object is in, or
 //! one of them draws a model where it is not.
 //!
@@ -19,7 +19,7 @@
 //! scene's" (a Lambert-93 model read as UTM looks right and is 600 km away).
 //!
 //! - the object names a system and the scene has none, or the reverse;
-//! - an object in time and no `time_factor` — which says how many metres of
+//! - an object in time and no `time_factor` - which says how many metres of
 //!   depth a unit of time is worth in this scene;
 //! - whatever the reprojection backend refuses (a datum it does not know, a
 //!   unit it cannot convert), in the backend's own words.
@@ -41,12 +41,12 @@ pub struct ObjectFrame {
     pub time: bool,
 }
 
-/// The frame of a representation, read from its CRS — the same reading the
+/// The frame of a representation, read from its CRS - the same reading the
 /// scene makes (`workspace.systemOf`), never a second one.
 ///
 /// An object that names **no** CRS has no system and no time: its local
 /// coordinates are the only ones there are, and that is [`to_scene`]'s to judge
-/// against the scene. A CRS that names no EPSG code gives no system either —
+/// against the scene. A CRS that names no EPSG code gives no system either -
 /// `System::of` refuses it, and for the scene that is the same fact (nothing to
 /// reproject from), said by [`to_scene`] when it matters. A CRS that cannot be
 /// read at all is an error, never an absent frame.
@@ -71,7 +71,7 @@ pub fn frame_of(source: &dyn ValueSource, representation: &dyn Reflect) -> Resul
 ///
 /// The points are **placed** ones (`Placement::Projected`): the CRS's offset,
 /// rotation and vertical flip are already applied, which is what
-/// `reproject_placed` wants — applying them twice is the bug that function
+/// `reproject_placed` wants - applying them twice is the bug that function
 /// exists to make impossible. On error the points are left as they were.
 pub fn to_scene(points: &mut [[f64; 3]], frame: &ObjectFrame, scene: &Scene<'_>) -> Result<(), String> {
     // The time first, since it is a refusal that needs no work: nothing is
@@ -134,7 +134,7 @@ pub fn to_scene(points: &mut [[f64; 3]], frame: &ObjectFrame, scene: &Scene<'_>)
     Ok(())
 }
 
-/// The system of the first of these objects that names one — what a face with
+/// The system of the first of these objects that names one - what a face with
 /// a single package and no scene (the CLI) takes as the scene's system.
 /// `None` when none of them names one.
 pub fn first_system(source: &dyn ValueSource, uris: &[String]) -> Option<System> {

@@ -68,7 +68,7 @@ fn resqml_2_0_1_objects_inherit_the_abstract_object_fields() {
 
 #[test]
 fn the_hdf5_proxy_of_common_2_0_is_a_top_level_object() {
-    // Declared as a global element with no substitutionGroup — the case the
+    // Declared as a global element with no substitutionGroup - the case the
     // fallback detection exists for. It is in nearly every RESQML 2.0.1 EPC.
     let info = <eml20::EpcExternalPartReference as EnergymlType>::type_info();
     assert!(info.is_top_level, "EpcExternalPartReference is a part of its own");
@@ -166,7 +166,7 @@ fn every_top_level_type_agrees_with_its_own_identifiers() {
 fn one_concept_is_reachable_across_its_versions() {
     let mut reg = registry::Registry::new();
     // `Activity` is `resqml:obj_Activity` in 2.0.1 and `eml:Activity` from
-    // common 2.1 on — the concept changed package as well as spelling, which is
+    // common 2.1 on - the concept changed package as well as spelling, which is
     // exactly what `type_key` exists to bridge.
     resqml201::register(&mut reg);
     eml23::register(&mut reg);
@@ -190,7 +190,7 @@ fn a_2_0_1_content_type_still_resolves_either_way() {
         reg.by_content_type("application/x-resqml+xml;version=2.0;type=obj_Activity")
             .is_some()
     );
-    // Written by a tool that drops it — still readable, per the tolerant lookup.
+    // Written by a tool that drops it - still readable, per the tolerant lookup.
     assert!(
         reg.by_content_type("application/x-resqml+xml; version=2.0; type=Activity")
             .is_some()
@@ -223,15 +223,15 @@ fn references_inside_an_object_are_found_by_reflection() {
 ///
 /// # The failure this rules out
 ///
-/// A `DataObjectReference` says *what* it points at through one of two fields —
-/// `ContentType` in eml 2.0/2.1/2.2, `QualifiedType` in eml 2.3 — and one of
+/// A `DataObjectReference` says *what* it points at through one of two fields -
+/// `ContentType` in eml 2.0/2.1/2.2, `QualifiedType` in eml 2.3 - and one of
 /// them is mandatory: with neither, the uuid is all there is, and nothing can
 /// resolve it. An ETP client cannot even form the URI, which is
 /// `eml:///<qualifiedType>(<uuid>)`.
 ///
 /// `set_target_reflect` used to attempt both writes and **discard the result**,
 /// so a reference type whose role table named no type field came out looking
-/// built and went into the package as a dangling reference — discovered, if at
+/// built and went into the package as a dangling reference - discovered, if at
 /// all, at the far end, where nothing points back at the call that made it.
 ///
 /// The sweep is over every registered reference type rather than one of them

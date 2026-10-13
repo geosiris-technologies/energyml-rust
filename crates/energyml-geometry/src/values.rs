@@ -1,15 +1,15 @@
 //! Numeric arrays, as geometry wants them.
 //!
 //! The reading itself is [`energyml_domain::values`], which covers every form
-//! in every family — floating point, integer, boolean and string, external or
+//! in every family - floating point, integer, boolean and string, external or
 //! constant or lattice or range or inline or derived. This module is the thin
 //! layer that gives geometry the two shapes it actually uses: a `Vec<f64>` of
 //! coordinates and a `Vec<i64>` of indices.
 //!
 //! The widening is deliberate *here*: an array reached through this path is
 //! about to be mixed with coordinates or handed to a renderer, and both want
-//! one type. Code that needs the file's own type — a property array on its way
-//! to a GPU — should call [`energyml_domain::values::read_native`] or
+//! one type. Code that needs the file's own type - a property array on its way
+//! to a GPU - should call [`energyml_domain::values::read_native`] or
 //! [`energyml_domain::values::read_into`], which do not widen and do not
 //! allocate.
 

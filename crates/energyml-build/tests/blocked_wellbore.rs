@@ -1,4 +1,4 @@
-//! `blocked-wellbore` — the cells of IJK grids a wellbore frame crosses
+//! `blocked-wellbore` - the cells of IJK grids a wellbore frame crosses
 //!.
 //!
 //! The form of the assertions comes from the TRG and the usage guide: a node
@@ -9,14 +9,14 @@
 //! *“0=top, 1=bottom, 2-5 are side faces following the IJ circular node
 //! ordering”* (same guide §9.12.3 p. 159); `CellCount` *“the number of
 //! non-null entries”*, the arrays one per interval, the faces two (RESQML TRG
-//! 2.2 §5.32 `IntervalGridCells` p. 128). The numbers — the lattice, the
-//! planes, the path — are the tests' own.
+//! 2.2 §5.32 `IntervalGridCells` p. 128). The numbers - the lattice, the
+//! planes, the path - are the tests' own.
 //!
 //! **What the path crosses is confronted with arithmetic** (the cells are
 //! those that the path really crosses): the grid is on
 //! a lattice and its layer boundaries are planes this file writes as formulas,
 //! so the cell a point is in is `floor` of its offsets and a comparison with
-//! the planes — nothing shared with the clipping and the roots of
+//! the planes - nothing shared with the clipping and the roots of
 //! `energyml_analysis::cells`, nor with the IJK grid writer.
 //!
 //! # What would have to break to make it turn red
@@ -57,7 +57,7 @@ fn frame() -> Ref {
     )
 }
 
-/// The top of the grid, a plane dipping along x — so a level is no flat.
+/// The top of the grid, a plane dipping along x - so a level is no flat.
 fn top(x: f64, _y: f64) -> f64 {
     0.1 * (x - X0)
 }
@@ -117,8 +117,8 @@ fn by_arithmetic(p: [f64; 3]) -> Option<u64> {
     Some((i as usize + 3 * (j as usize + 2 * k)) as u64)
 }
 
-/// The IJK grid, as `ijk-grid-from-horizons` plans it — its shape the one the
-/// geometry reader draws, VTK's order and all — with what the package says of it.
+/// The IJK grid, as `ijk-grid-from-horizons` plans it - its shape the one the
+/// geometry reader draws, VTK's order and all - with what the package says of it.
 fn the_grid() -> (Geometry, Known) {
     let mut pieces = Pieces::empty();
     for (rank, (title, geometry)) in horizons().into_iter().enumerate() {
@@ -431,8 +431,8 @@ fn the_cells_crossed_are_the_cells_arithmetic_finds() {
     );
 }
 
-/// **A vertical hole enters each cell by the top and leaves by the bottom** —
-/// faces 0 and 1 — on a grid the reader hands in VTK's order, its two
+/// **A vertical hole enters each cell by the top and leaves by the bottom** -
+/// faces 0 and 1 - on a grid the reader hands in VTK's order, its two
 /// quadrilaterals swapped in elevation. Undoing the swap is what makes it 0
 /// then 1, and not 1 then 0.
 #[test]
@@ -464,7 +464,7 @@ fn a_vertical_hole_goes_in_by_face_0_and_out_by_face_1() {
 }
 
 /// **The object names what the frame names**: its trajectory, the grids
-/// in the order given, the counts, and — suggested — the frame's
+/// in the order given, the counts, and - suggested - the frame's
 /// interpretation and a title from the frame's.
 #[test]
 fn the_object_names_the_frames_trajectory_and_the_grids() {
@@ -473,7 +473,7 @@ fn the_object_names_the_frames_trajectory_and_the_grids() {
     assert_eq!(object["$type"], "resqml22.BlockedWellboreRepresentation");
     assert_eq!(object["Trajectory"]["Uuid"], json!(trajectory().uuid));
     assert_eq!(object["RepresentedObject"]["Uuid"], json!(interpretation().uuid));
-    assert_eq!(object["Citation"]["Title"], "GTH-1 frame — blocked");
+    assert_eq!(object["Citation"]["Title"], "GTH-1 frame - blocked");
     let (_, grid) = the_grid();
     let grids = object["IntervalGridCells"]["Grid"].as_array().unwrap();
     assert_eq!(grids.len(), 1);
@@ -586,7 +586,7 @@ fn what_cannot_be_blocked_is_refused_by_name() {
 
 // -- written, reread, checked --------------------------------------------------------
 
-/// A nested object of a read object — the first, for a list.
+/// A nested object of a read object - the first, for a list.
 #[cfg(feature = "hdf5")]
 fn child<'a>(
     reflect: &'a dyn energyml_core::value::Reflect,
@@ -605,7 +605,7 @@ fn child<'a>(
 /// **Written, reread, confronted, checked.** The chain as a package makes it:
 /// a frame of reference (`crs`), the grid (`ijk-grid-from-horizons`), a well
 /// (`well-from-polyline`), all reopened from the file; then the blocked
-/// wellbore, a sub-representation of the grid (the lower zone, an IJK box —
+/// wellbore, a sub-representation of the grid (the lower zone, an IJK box -
 /// the sub-representation rule) and a set of the grid and the blocked wellbore, from what
 /// was **read back**. Reopened again: the blocked wellbore's arrays read from
 /// the HDF5 against the arithmetic, the sub-representation drawn by

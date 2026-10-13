@@ -2,7 +2,7 @@
 //!
 //! The control this suite exists for is the one the design asked for by name:
 //! rename, **save**, reopen, and read. A half-done rename passes every other
-//! check — the package opens, the objects are all there — and fails only when
+//! check - the package opens, the objects are all there - and fails only when
 //! somebody tries to draw something.
 //!
 //! # Why reading is not enough on its own
@@ -13,8 +13,8 @@
 //! deliberate and it makes the obvious assertion worthless: *the arrays still
 //! read* would pass on a rename that changed nothing but the file on disk.
 //!
-//! So the assertion is on what the package **says** — the names it declares,
-//! the file each array pointer names — and, where the arrays are read, on the
+//! So the assertion is on what the package **says** - the names it declares,
+//! the file each array pointer names - and, where the arrays are read, on the
 //! store having gone **nowhere it had to report**. A departure is a warning
 //! here, and the absence of one is what says the document is right rather than
 //! merely lucky.
@@ -50,7 +50,7 @@ fn workbench(case: &str, package: &str, data: &str) -> Option<(PathBuf, PathBuf)
     Some((epc, h5))
 }
 
-/// Every array pointer of a package, proxies resolved — so both spellings of
+/// Every array pointer of a package, proxies resolved - so both spellings of
 /// "where the numbers live" answer the same question.
 fn pointers(store: &EpcStore) -> Vec<energyml_storage::ArrayLocation> {
     store
@@ -73,7 +73,7 @@ fn files_named(store: &EpcStore) -> Vec<String> {
 #[test]
 fn the_newer_form_names_its_file_in_a_field_of_every_array() {
     // eml 2.3: the name is in `ExternalDataArrayPart.Uri`, one per array, and
-    // there is no proxy at all — so a rename that only touched the `.rels`
+    // there is no proxy at all - so a rename that only touched the `.rels`
     // would touch nothing here.
     let Some((epc, _)) = workbench("plan22", "testingPackageCpp22.epc", "testingPackageCpp22.h5") else {
         eprintln!("skipped: the corpus is not present");
@@ -112,7 +112,7 @@ fn the_older_form_names_its_file_in_a_relationship() {
     // **And six fields as well**, which is the package and not the form: this
     // fesapi package carries an `eml23.ColumnBasedTable` and a
     // `resqml22.SeismicWellboreFrameRepresentation` inside an otherwise 2.0.1
-    // archive — the mirror of the 2.0.1 objects `external_file_for` documents
+    // archive - the mirror of the 2.0.1 objects `external_file_for` documents
     // inside `testingPackageCpp22.epc`. An EPC may mix releases (§3.2), so a
     // rename that handled one spelling and not the other would leave half a
     // package pointing at a file that is gone. The shape of the assertion comes
@@ -288,7 +288,7 @@ fn a_renamed_package_reads_without_having_to_look_around() {
     // 2.0.1 objects of this package carry the HDF5 file name where a uuid
     // belongs (see `EpcStore::external_file_for`). A rename cannot follow a
     // name written in the wrong field, and correcting a producer's mistake is
-    // not what it was asked to do — so the pointer resolves by fallback, as it
+    // not what it was asked to do - so the pointer resolves by fallback, as it
     // always did, and says so.
     let fesapi = reopened
         .diagnostics()

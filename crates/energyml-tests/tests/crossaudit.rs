@@ -2,7 +2,7 @@
 //!
 //! # What this suite is looking for
 //!
-//! Not "does it crash" — the rest of the suite covers that. This one hunts one
+//! Not "does it crash" - the rest of the suite covers that. This one hunts one
 //! specific shape of bug, the shape found on 02/08 twice in one afternoon:
 //!
 //! > **two readers agreeing on a total and disagreeing on what it means.**
@@ -16,7 +16,7 @@
 //!
 //! The defence is **triangulation**: never ask one component to check itself.
 //! Every check here confronts at least two independent sources of the same
-//! fact, at least one of which is not code this workspace wrote — the bytes in
+//! fact, at least one of which is not code this workspace wrote - the bytes in
 //! the HDF5 file, the part names in the zip, the counts the XML declares.
 //!
 //! # The confrontations
@@ -107,7 +107,7 @@ impl Findings {
 /// and `(6, 2)` says two columns whatever the reader divides by.
 ///
 /// The rule is narrow on purpose. A trailing dimension is only meaningful when
-/// the schema fixes it — `Point3d…Array` is 3 wide, `Point2d…Array` is 2 —
+/// the schema fixes it - `Point3d…Array` is 3 wide, `Point2d…Array` is 2 -
 /// and the check says nothing about the arrays whose width is a property count
 /// or a patch length, because there it has no independent expectation to
 /// compare with and an assertion would just be the reader agreeing with itself.
@@ -138,8 +138,8 @@ fn array_shapes() {
                     let Some(&last) = meta.dimensions.last() else {
                         continue;
                     };
-                    // A flat dataset says nothing about the width — the file is
-                    // entitled to store 3n doubles in one dimension — so only a
+                    // A flat dataset says nothing about the width - the file is
+                    // entitled to store 3n doubles in one dimension - so only a
                     // *shaped* one is evidence.
                     if meta.dimensions.len() < 2 {
                         continue;
@@ -155,7 +155,7 @@ fn array_shapes() {
                     // And the reader, against the same shape. The check above
                     // confronts the file with the type that names it, which is
                     // worth having but says nothing about what the reader did
-                    // with either — reverting the divisor bug of 02/08 would
+                    // with either - reverting the divisor bug of 02/08 would
                     // leave it green. This is the half that goes red: the
                     // dataset holds `product(dimensions)` numbers, the type
                     // fixes how many make a point, so the answer is arithmetic
@@ -167,7 +167,7 @@ fn array_shapes() {
                         findings.check(evaluated.len() == expected, || {
                             format!(
                                 "{file}: {where_} is a `{name}` over a dataset shaped {:?} \
-                                 — {expected} point(s) — and read {} of them",
+                                 - {expected} point(s) - and read {} of them",
                                 meta.dimensions,
                                 evaluated.len()
                             )
@@ -237,14 +237,14 @@ fn walk_arrays<'a>(object: &'a dyn Reflect, at: String, out: &mut Vec<(String, &
 
 /// **What an array says it holds, against what came out of it.**
 ///
-/// `points::count` answers without evaluating — it is what a caller asks before
-/// deciding whether to load a million points — and `points::read` answers by
+/// `points::count` answers without evaluating - it is what a caller asks before
+/// deciding whether to load a million points - and `points::read` answers by
 /// doing the work. They are two code paths over the same array, and the whole
 /// value of the cheap one is that it agrees with the expensive one.
 ///
 /// This generalises a check that existed for IJK grids alone. The divisor bug
 /// found on 02/08 lived in *both* paths at once, so this would not have caught
-/// it — which is exactly why [`array_shapes`] asks the file instead. Kept
+/// it - which is exactly why [`array_shapes`] asks the file instead. Kept
 /// because the two drifting apart is a different bug, and a likelier one: they
 /// are edited separately.
 #[test]
@@ -297,7 +297,7 @@ fn point_counts() {
 /// about the order of its rungs.
 ///
 /// So the package is **derived**: one copy of a real one with some `Originator`
-/// elements removed — which strict refuses and tolerant reads past — and one
+/// elements removed - which strict refuses and tolerant reads past - and one
 /// numeric value corrupted, which tolerant refuses and lenient repairs. Now the
 /// three rungs are three different heights, the ordering is a real claim, and
 /// the test asserts they are *distinct* as well as ordered. Equal sets would
@@ -327,7 +327,7 @@ fn tolerance_ladder() {
     let tolerant = refused(false, false);
     let lenient = refused(false, true);
     eprintln!(
-        "damaged package: refused — strict {}, tolerant {}, lenient {}",
+        "damaged package: refused - strict {}, tolerant {}, lenient {}",
         strict.len(),
         tolerant.len(),
         lenient.len()
@@ -393,9 +393,9 @@ fn tolerance_ladder() {
 /// A copy of a corpus package with two deliberate injuries: some `Originator`
 /// elements removed, and one dimension replaced by a word.
 ///
-/// Both are things producers really do — the first is the client package that
+/// Both are things producers really do - the first is the client package that
 /// prompted the 02/08 change, the second is what a hand-rolled writer emits
-/// when a field is empty — and they are the two rungs the ladder is made of.
+/// when a field is empty - and they are the two rungs the ladder is made of.
 #[cfg(feature = "hdf5")]
 fn damaged(name: &str) -> Option<PathBuf> {
     let source = crate::fixtures::find(name)?;
@@ -453,8 +453,8 @@ fn damaged(name: &str) -> Option<PathBuf> {
 /// **Every representation is accounted for.**
 ///
 /// An export that writes 30 files out of 33 objects and says "30 written" has
-/// told the truth and hidden the question. The three fates — written, refused
-/// with a reason, skipped for a stated reason — have to add up to the number of
+/// told the truth and hidden the question. The three fates - written, refused
+/// with a reason, skipped for a stated reason - have to add up to the number of
 /// representations the geometry layer says it supports, or something is being
 /// dropped between the two.
 ///
@@ -500,7 +500,7 @@ fn export_completeness() {
         findings.check(evaluated + refused == supported, || {
             format!("{file}: {supported} supported, {evaluated} evaluated, {refused} refused")
         });
-        eprintln!("{file}: {supported} supported — {evaluated} evaluated, {refused} refused");
+        eprintln!("{file}: {supported} supported - {evaluated} evaluated, {refused} refused");
     }
 
     findings.finish("export completeness", 10);
@@ -518,7 +518,7 @@ fn export_completeness() {
 /// one code path and cannot disagree with itself.
 #[test]
 fn identity_triangle() {
-    // The corpus is gitignored — it re-downloads, it does not version — so it is
+    // The corpus is gitignored - it re-downloads, it does not version - so it is
     // simply absent on a runner. Skipping is not the same as passing: the
     // assertion below still refuses an empty run *when the files are there*,
     // which is the case it exists for. Without this the test fails on CI for a
@@ -534,7 +534,7 @@ fn identity_triangle() {
         let file = name_of(&path);
         let store = EpcStore::open(&path, registry()).expect("the package opens");
         for summary in store.resources() {
-            // The part name, when it carries a uuid at all — some producers
+            // The part name, when it carries a uuid at all - some producers
             // name parts without one, which is legal and simply says nothing.
             let Some(in_name) = uuid_in(&summary.locator) else {
                 continue;
@@ -584,13 +584,13 @@ fn uuid_in(name: &str) -> Option<String> {
 ///
 /// The round-trip check that already exists compares **element counts**: it
 /// reads a part, writes it, and confirms the same tags appear the same number
-/// of times. That is a real check and it catches real losses — but it is
+/// of times. That is a real check and it catches real losses - but it is
 /// precisely the shape this suite distrusts. Two elements whose *values* have
 /// swapped, a number written into the wrong sibling, a list reordered: every
 /// one of those keeps the counts identical.
 ///
 /// So this one walks the two object trees in parallel through reflection and
-/// compares what is *in* them — every scalar, at every path, in order. Read,
+/// compares what is *in* them - every scalar, at every path, in order. Read,
 /// write, read again, and the second object has to equal the first.
 ///
 /// Read back **strictly**: an object that only round-trips because the second
@@ -749,7 +749,7 @@ fn shape_of(value: Option<&energyml_core::value::FieldValue<'_>>) -> &'static st
     }
 }
 
-/// **Borrowed geometry, borrowed system** — and the two are resolved by
+/// **Borrowed geometry, borrowed system** - and the two are resolved by
 /// different walks, so they are confronted here.
 ///
 /// # The bug this was written for
@@ -757,11 +757,11 @@ fn shape_of(value: Option<&energyml_core::value::FieldValue<'_>>) -> &'static st
 /// `testingPackageCpp22` has a `WellboreFrameRepresentation` whose trajectory
 /// carries a `Geometry`. The frame's nodes are that parametric line evaluated
 /// at the frame's own measured depths, so they land in the trajectory's local
-/// CRS — `EPSG:23031`, counting **downward**. The geometry reader followed the
+/// CRS - `EPSG:23031`, counting **downward**. The geometry reader followed the
 /// `Trajectory` reference to compute them.
 ///
 /// The CRS lookup did not. It looked for a system on the frame, found none, and
-/// answered `None` — which is a legal answer, given plenty of objects name no
+/// answered `None` - which is a legal answer, given plenty of objects name no
 /// system. So `to_projected` ran on the trajectory and not on its own frame:
 /// the well descended to −1000 and its log points climbed to +600. Nothing
 /// errored, no count disagreed, and every individual number looked reasonable.
@@ -771,7 +771,7 @@ fn shape_of(value: Option<&energyml_core::value::FieldValue<'_>>) -> &'static st
 ///
 /// The check iterates [`BORROWED_GEOMETRY_FIELDS`], the same constant the
 /// resolver reads. A representation that starts borrowing geometry costs one
-/// string there and is covered here for nothing — which is the point, because
+/// string there and is covered here for nothing - which is the point, because
 /// the next such object will be added by someone who has never read this file.
 #[test]
 #[cfg(feature = "hdf5")]

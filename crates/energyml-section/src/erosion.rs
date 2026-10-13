@@ -7,7 +7,7 @@
 //!
 //! On one section, take two **horizons** that both state an age
 //! ([`TraceItem::age`], an interval `[old, young]` in Ma). `A` is older than `B`
-//! only when the two intervals are **disjoint** — `A.young > B.old`; an
+//! only when the two intervals are **disjoint** - `A.young > B.old`; an
 //! overlap, or two equal ages, orders nothing and is not judged. An older
 //! horizon lies **above** a younger one nowhere, so wherever, at the same `s`,
 //! the younger one is below the older one (`z` up: `z_young < z_old`), the
@@ -17,7 +17,7 @@
 //! geologist's to say, so the module reports the **portion** `[s0, s1]` and
 //! proposes the first reading in words. **A proposal is never applied.**
 //!
-//! What is not judged: a horizon without an age (the rule — most files date
+//! What is not judged: a horizon without an age (the rule - most files date
 //! nothing, and nothing is inferred from a name or a depth), a fault (it does
 //! not stack), a span where only one of the two lines exists (a surface that
 //! stops is not a surface that crosses), and a grid's envelope.
@@ -41,11 +41,11 @@ const MIN_LENGTH: f64 = 1e-6;
 pub struct Portion {
     /// On which section.
     pub section: SectionKey,
-    /// The horizon the ages say is older — the one that should stop.
+    /// The horizon the ages say is older - the one that should stop.
     pub older: ObjectId,
     /// Its age, `[old, young]` in Ma.
     pub older_age: [f64; 2],
-    /// The horizon the ages say is younger — the one that truncates.
+    /// The horizon the ages say is younger - the one that truncates.
     pub younger: ObjectId,
     /// Its age, `[old, young]` in Ma.
     pub younger_age: [f64; 2],
@@ -56,7 +56,7 @@ pub struct Portion {
 }
 
 impl Portion {
-    /// The correction proposed, in words — and only in words.
+    /// The correction proposed, in words - and only in words.
     pub fn proposal(&self) -> String {
         format!(
             "`{older}` should stop against `{younger}` between s = {s0} and s = {s1} (an erosion: the younger surface \
@@ -72,7 +72,7 @@ impl Portion {
     pub fn said(&self) -> String {
         format!(
             "erosion suspected on {section}: `{younger}` ({ya}) passes below `{older}` ({oa}) between s = {s0} and s = {s1}, \
-             though it is the younger — proposal: {proposal}",
+             though it is the younger - proposal: {proposal}",
             section = section_name(self.section),
             younger = self.younger.title,
             ya = age_text(self.younger_age),
@@ -172,7 +172,7 @@ fn z_at(spans: &[Vec<[f64; 2]>], s: f64) -> Option<f64> {
     })
 }
 
-/// The stretches of `s` where `lower` is below `upper` — both exist there, and
+/// The stretches of `s` where `lower` is below `upper` - both exist there, and
 /// `z_lower < z_upper` by more than the tolerance. Between two breakpoints (a
 /// vertex of either) the difference is linear, so its sign change is exact.
 fn below(upper: &[Vec<[f64; 2]>], lower: &[Vec<[f64; 2]>]) -> Vec<(f64, f64)> {
@@ -226,12 +226,12 @@ fn section_name(key: SectionKey) -> String {
     }
 }
 
-/// `10 Ma`, or `10–5 Ma` for a span.
+/// `10 Ma`, or `10-5 Ma` for a span.
 fn age_text(age: [f64; 2]) -> String {
     if (age[0] - age[1]).abs() < 1e-9 {
         format!("{} Ma", trim(age[0]))
     } else {
-        format!("{}–{} Ma", trim(age[0]), trim(age[1]))
+        format!("{}-{} Ma", trim(age[0]), trim(age[1]))
     }
 }
 

@@ -2,15 +2,15 @@
 //!
 //! The workspace is about to become several repositories: the public library
 //! (`energyml-rust`), the public ETP stack (`retp`), and private ones. A public
-//! crate that depends on a private one — even optionally, even as a
-//! dev-dependency — cannot be published, because Cargo resolves every
+//! crate that depends on a private one - even optionally, even as a
+//! dev-dependency - cannot be published, because Cargo resolves every
 //! dependency into the lockfile. And the library must not depend on `retp`,
 //! which depends on the library: that would be a cycle between repositories.
 //!
 //! The rules, checked on `cargo metadata`:
 //! - a library crate depends on no private crate and no ETP crate;
 //! - an ETP crate depends on no private crate;
-//! - `energyml-geostat` depends on no `energyml-*` crate at all — it is the
+//! - `energyml-geostat` depends on no `energyml-*` crate at all - it is the
 //!   domain-neutral computation crate.
 //!
 //! The checker is a pure function so that it can be shown to fail: the first
@@ -196,7 +196,7 @@ fn no_public_crate_depends_on_what_it_cannot_publish_with() {
     for expected in ["energyml-core", "energyml-cli", "energyml-storage", NEUTRAL] {
         assert!(
             ws.contains_key(expected),
-            "`{expected}` is not a workspace member — the check would prove nothing"
+            "`{expected}` is not a workspace member - the check would prove nothing"
         );
     }
     let found = violations(&ws);

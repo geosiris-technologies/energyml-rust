@@ -1,10 +1,10 @@
-//! Reading a `FeatureCollection` — the format, and nothing about geology.
+//! Reading a `FeatureCollection` - the format, and nothing about geology.
 //!
 //! # Why this is not the exporter run backwards
 //!
 //! [`energyml_export::geojson`] writes what this workspace knows: a feature per
 //! object, `properties` carrying uuid, uri, type. Reading a **foreign** file is
-//! the opposite problem — the producer's vocabulary is unknown, arbitrarily
+//! the opposite problem - the producer's vocabulary is unknown, arbitrarily
 //! nested, and the only honest thing to do with it is keep it. So this module
 //! parses the *format* (RFC 7946) and stops there; what the properties mean is
 //! [`crate::sigeol`]'s business, and neither knows about RESQML.
@@ -21,7 +21,7 @@
 //! refuses to *read* them, **naming the pair**, because the number is the
 //! diagnosis: somebody who sees `650000, 6860000` recognises Lambert-93 without
 //! being told what to look for. A legacy 2008 `crs` member that names anything
-//! other than CRS84/4326 is refused for the same reason — it is the producer
+//! other than CRS84/4326 is refused for the same reason - it is the producer
 //! saying, in the file, that the coordinates are not what the format promises.
 
 use serde_json::Value;
@@ -62,7 +62,7 @@ pub struct Feature {
     pub id: Option<String>,
     /// What kind of geometry it carries.
     pub shape: Shape,
-    /// Positions in parts — one part per ring, per line, per place.
+    /// Positions in parts - one part per ring, per line, per place.
     ///
     /// Kept as parts rather than flattened: joining two fault sticks end to end
     /// would draw a line the file does not state.
@@ -72,7 +72,7 @@ pub struct Feature {
 }
 
 impl Feature {
-    /// Every position of every part, in order — for a caller that wants the
+    /// Every position of every part, in order - for a caller that wants the
     /// cloud and not the topology.
     pub fn positions(&self) -> impl Iterator<Item = Position> + '_ {
         self.parts.iter().flat_map(|part| part.iter().copied())
@@ -82,7 +82,7 @@ impl Feature {
 /// What a collection gave, and what it could not.
 ///
 /// `refused` is never a count. A feature dropped without a reason is
-/// indistinguishable from one the file never had — the rule the whole workspace
+/// indistinguishable from one the file never had - the rule the whole workspace
 /// follows, and the reason a reader that refuses half a file still returns the
 /// other half.
 #[derive(Debug, Clone, Default)]
@@ -111,7 +111,7 @@ impl std::error::Error for Rejected {}
 /// Fails as a whole only for what makes the document unusable; a feature that
 /// cannot be read is named in `refused` and the rest still comes back.
 /// **One implementation, two faces.** This is [`read_streaming`] with
-/// everything kept and a sink that pushes into a `Vec` — so a caller holding a
+/// everything kept and a sink that pushes into a `Vec` - so a caller holding a
 /// whole document in memory and one reading a network answer as it arrives get
 /// the same refusals, word for word, and the format is decided in one place.
 pub fn read(text: &str) -> Result<Collection, Rejected> {
@@ -149,7 +149,7 @@ fn feature(entry: &Value, at: usize) -> Result<Feature, String> {
     // **Before the `coordinates` check, and that ordering is the point.** A
     // `GeometryCollection` carries `geometries`, not `coordinates`, so demanding
     // coordinates first made this refusal unreachable and answered with *the
-    // geometry has no coordinates* — true, useless, and it sends the reader
+    // geometry has no coordinates* - true, useless, and it sends the reader
     // looking for a malformed file rather than for the one shape this reader
     // will not take. Found by the test written for the message.
     if kind == "GeometryCollection" {
@@ -236,7 +236,7 @@ fn position(value: &Value, name: &str) -> Result<Position, String> {
     if !lon.is_finite() || !lat.is_finite() || lon.abs() > 180.0 || lat.abs() > 90.0 {
         // The pair is in the message because the number *is* the diagnosis.
         return Err(format!(
-            "{name}: [{lon}, {lat}] is not a longitude and a latitude — a GeoJSON is WGS 84 by \
+            "{name}: [{lon}, {lat}] is not a longitude and a latitude - a GeoJSON is WGS 84 by \
              definition (RFC 7946), and these look like projected metres"
         ));
     }
@@ -325,7 +325,7 @@ mod tests {
         );
         let read = read(&text).expect("a collection");
         assert!(read.refused.is_empty(), "{:?}", read.refused);
-        // Two places, two parts — never one part of two, which a caller could
+        // Two places, two parts - never one part of two, which a caller could
         // join into a line that the file does not state.
         assert_eq!(read.features[0].parts.len(), 2);
         assert_eq!(read.features[1].parts.len(), 1);
@@ -368,7 +368,7 @@ mod tests {
 /// # Why this exists beside the streaming reader, and matters more
 ///
 /// Measured on a real harvest of 2 000 boreholes with their intervals
-/// (50,8 MB of GeoJSON): reading it costs **1 185 MB** of peak memory, ×23 —
+/// (50,8 MB of GeoJSON): reading it costs **1 185 MB** of peak memory, ×23 -
 /// and the same 2 000 features with their properties removed weigh **3 MB**.
 /// What costs is not reading the document, it is **keeping what nobody asked
 /// for**: a map preview wants footprints, not `observationMethod`.
@@ -387,7 +387,7 @@ pub enum Keep<'a> {
     ///
     /// Top-level and not dotted paths: a path language is a second query
     /// syntax, and the one thing a caller reliably knows is the name a producer
-    /// puts at the top. A key that is not there is not an error — a collection
+    /// puts at the top. A key that is not there is not an error - a collection
     /// where half the features carry a field is ordinary.
     Only(&'a [&'a str]),
 }
@@ -403,7 +403,7 @@ pub struct Wanted<'a> {
 ///
 /// **The only way to cancel.** Without it, stopping means reading to the end
 /// and throwing the result away, which is the opposite of what a *Cancel*
-/// button is for — and on a 50 MB answer it is nine seconds of nothing.
+/// button is for - and on a 50 MB answer it is nine seconds of nothing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Flow {
     /// Hand me the next one.
@@ -416,7 +416,7 @@ pub enum Flow {
 ///
 /// **It arrives at the end, and it has to.** Measured on the BRGM WFS: in its
 /// GeoJSON, `"features"` starts at byte 28 and `numberMatched`,
-/// `numberReturned` and `crs` are at byte 783 596 — the very end. A reader that
+/// `numberReturned` and `crs` are at byte 783 596 - the very end. A reader that
 /// hands features over as they arrive cannot announce a total first, which is
 /// why a count is asked for by a **separate** request (`resultType=hits`)
 /// rather than read off the answer.
@@ -428,7 +428,7 @@ pub struct Summary {
     pub refused: Vec<String>,
     /// Whether the sink asked to stop before the end.
     pub stopped: bool,
-    /// What the document said it matched, when it says so at all — a WFS
+    /// What the document said it matched, when it says so at all - a WFS
     /// answer carries it, a file written by hand does not.
     pub matched: Option<u64>,
     /// What the document said it returned, same caveat.
@@ -439,21 +439,21 @@ pub struct Summary {
 ///
 /// Nothing of the document is held: not the text, not a `serde_json::Value` of
 /// the whole of it. What is held at any moment is one feature plus whatever the
-/// sink keeps — so the peak belongs to the caller, which is the point.
+/// sink keeps - so the peak belongs to the caller, which is the point.
 ///
 /// [`read`] is the same work with `Keep::All` and a sink that pushes into a
 /// `Vec`; there is one implementation, and two faces of it.
 ///
 /// # The legacy `crs` member, and the one thing streaming changes
 ///
-/// [`read`] refuses a document declaring anything but WGS 84 — a Lambert-93
+/// [`read`] refuses a document declaring anything but WGS 84 - a Lambert-93
 /// "GeoJSON" read as degrees puts a Paris-basin model in the Gulf of Guinea.
 /// A stream can meet that member **after** the features, and then the refusal
 /// comes too late to be a refusal. Both cases are handled and they are not the
 /// same news:
 ///
-/// - **before the features** — where a producer of such a file writes it, the
-///   member being the 2008 form — nothing has been handed over and this
+/// - **before the features** - where a producer of such a file writes it, the
+///   member being the 2008 form - nothing has been handed over and this
 ///   refuses, exactly like [`read`];
 /// - **after** them, this still fails, and the message says the features were
 ///   already handed over, because a caller that drew them has to know to
@@ -512,7 +512,7 @@ impl<'de, 'a, S: FnMut(Feature) -> Flow> serde::de::Visitor<'de> for Document<'a
             match key.as_str() {
                 "type" => kind = Some(map.next_value()?),
                 "crs" => {
-                    // The legacy member. Read as a whole — it is three fields —
+                    // The legacy member. Read as a whole - it is three fields -
                     // and judged at once.
                     let value: Value = map.next_value()?;
                     if let Some(name) = value
@@ -523,12 +523,12 @@ impl<'de, 'a, S: FnMut(Feature) -> Flow> serde::de::Visitor<'de> for Document<'a
                         let plain = name.rsplit(':').next().unwrap_or(name);
                         if !matches!(plain, "CRS84" | "4326" | "84") {
                             return Err(M::Error::custom(format!(
-                                "the collection declares `{name}` — a GeoJSON is WGS 84 by \
+                                "the collection declares `{name}` - a GeoJSON is WGS 84 by \
                                  definition (RFC 7946), and this reader will not guess a \
                                  transformation; reproject the file first{}",
                                 match seen_features {
                                     true =>
-                                        " — and it says so **after** its features, which \
+                                        " - and it says so **after** its features, which \
                                              were already handed over: throw them away",
                                     false => "",
                                 }
@@ -616,7 +616,7 @@ impl<'de, 'a, S: FnMut(Feature) -> Flow> serde::de::Visitor<'de> for Features<'a
                         // Drained rather than abandoned: leaving a half-read
                         // array behind makes the enclosing map read the rest of
                         // this feature as its own keys. It costs the parse of
-                        // what is left and keeps none of it — and a caller who
+                        // what is left and keeps none of it - and a caller who
                         // wanted the download to stop stops the *reader*, which
                         // is a door up (`Transport`).
                         while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}

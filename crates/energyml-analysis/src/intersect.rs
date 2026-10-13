@@ -1,9 +1,9 @@
-//! The intersection of two triangulated surfaces — a fault against a horizon,
+//! The intersection of two triangulated surfaces - a fault against a horizon,
 //! as polylines.
 //!
 //! The need: a fault is often a **surface** cutting
 //! several horizons, and neither a barrier nor a constrained triangulation can
-//! take a dipping surface directly — both are rules on a plan-view *line*,
+//! take a dipping surface directly - both are rules on a plan-view *line*,
 //! and the line depends on which horizon one stands on. The intersection is
 //! that line. Run once against every horizon of a stratigraphic unit set, it
 //! gives one trace per horizon, which is exactly the "horizontal polyline at
@@ -15,7 +15,7 @@
 //! planes cross. The piece is the **overlap** of two segments on that line:
 //! `T1` cut by the plane of `T2`, and `T2` cut by the plane of `T1`. Each cut
 //! end lies on an edge of one triangle and is computed from that edge's two
-//! corners — **taken in a fixed order** — and the other triangle's plane. Two
+//! corners - **taken in a fixed order** - and the other triangle's plane. Two
 //! neighbouring triangles sharing that edge therefore compute the same end,
 //! bit for bit, which is what lets [`chain`] weld on exact equality with no
 //! threshold: the rule of `energyml_geometry::section`, kept as it stands.
@@ -23,7 +23,7 @@
 //! # What it does not do
 //!
 //! It does not decide which side is the hanging wall, does not measure a
-//! throw, and does not join two traces across a gap — a horizon torn by the
+//! throw, and does not join two traces across a gap - a horizon torn by the
 //! fault yields two separate traces, one per lip, and they stay two. That is
 //! left to a later operation, which starts from these lines.
 
@@ -77,7 +77,7 @@ fn signed(n: &[f64; 3], d: f64, p: &Point) -> f64 {
     n[0] * p[0] + n[1] * p[1] + n[2] * p[2] + d
 }
 
-/// Where a triangle's edges cross a plane — zero, one (a touch) or two points.
+/// Where a triangle's edges cross a plane - zero, one (a touch) or two points.
 ///
 /// The corners of each edge are taken in **index order** so that the same edge
 /// seen from the neighbouring triangle yields the same bits.
@@ -155,7 +155,7 @@ fn aabb(t: &[Point; 3]) -> ([f64; 3], [f64; 3]) {
 /// Every intersection segment between two surfaces, in no particular order.
 ///
 /// A uniform grid over the second surface keeps this from being every
-/// triangle against every triangle — a horizon is a hundred thousand
+/// triangle against every triangle - a horizon is a hundred thousand
 /// triangles, and the product of two of them is not a number to iterate.
 pub fn pieces(
     points_a: &[Point],
@@ -246,7 +246,7 @@ pub fn pieces(
     (out, dropped)
 }
 
-/// Weld pieces into traces on **exactly** shared ends — the rule of
+/// Weld pieces into traces on **exactly** shared ends - the rule of
 /// `energyml_geometry::section::chain`, without the profile.
 pub fn chain(pieces: &[Piece]) -> Vec<Trace> {
     let key = |p: &Point| -> [u64; 3] { [p[0].to_bits(), p[1].to_bits(), p[2].to_bits()] };
@@ -375,7 +375,7 @@ mod tests {
 
     /// **The weld is exact across many triangles.** A wall through a gridded
     /// horizon crosses eight triangles; the pieces must come back as one trace,
-    /// not eight — which only holds if neighbouring triangles compute their
+    /// not eight - which only holds if neighbouring triangles compute their
     /// shared end bit for bit.
     #[test]
     fn a_gridded_horizon_welds_into_a_single_trace() {

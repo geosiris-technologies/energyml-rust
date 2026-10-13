@@ -1,18 +1,18 @@
-//! **A value that drifts with time** — the law that lays a
+//! **A value that drifts with time** - the law that lays a
 //! property through a time series by (the `property-time-series` operation, both forms).
 //!
 //! Nothing here reads a package or knows RESQML: the inputs are a snapshot of
 //! values, an anchor instant, a change per year and the instants of a series,
-//! all in plain numbers, so that what can be wrong in the arithmetic — which
+//! all in plain numbers, so that what can be wrong in the arithmetic - which
 //! step gets which offset, how many steps there are, which dimension runs
-//! slowest — is tested without a file. The operation that writes the objects
+//! slowest - is tested without a file. The operation that writes the objects
 //! only sews.
 //!
 //! # The law
 //!
 //! A snapshot `v₀(e)`, one value per element, holds at the anchor `t₀`; every
 //! value changes by `r` per year from there: `v(e, t) = v₀(e) + r · (t − t₀) / Y`,
-//! `Y` the Julian year of 365.25 days — the year `flow_law` counts a decline
+//! `Y` the Julian year of 365.25 days - the year `flow_law` counts a decline
 //! per, and for the same reason: a change *per year* read over months of 28 to
 //! 31 days is only exact against one stated length. A linear drift is the
 //! least a law in time can say; it is a law, stated and sourced by its caller,
@@ -24,12 +24,12 @@
 //! ordering is used by the time index »*, Energistics common Technical
 //! Reference Guide v2.3 §11.14 p. 297). A property through it holds either one
 //! value per element **at** each instant, or one **over** each interval from
-//! an instant to the next — `TimeOrIntervalSeries.UseInterval`
-//! (CommonTypes.xsd l. 423–428), which the schema leaves undocumented. `n`
+//! an instant to the next - `TimeOrIntervalSeries.UseInterval`
+//! (CommonTypes.xsd l. 423-428), which the schema leaves undocumented. `n`
 //! instants make `n − 1` intervals: Do 13 dates under `UseInterval`
 //! give 12 values? Answered yes. The value over an
 //! interval is the law's **mean** over it, which for a linear law is its value
-//! at the middle — exactly, not as an approximation.
+//! at the middle - exactly, not as an approximation.
 //!
 //! # Time is the slowest dimension
 //!
@@ -39,12 +39,12 @@
 //! … \[IndexableElementCount] … \[ValueCountPerIndexableElement] »*. [`lay`]
 //! writes `values[t · n + e]`: every element at the first step, then every
 //! element at the second. Laid the other way, a series reads as a property
-//! whose elements each hold the whole history of one node — the same count,
+//! whose elements each hold the whole history of one node - the same count,
 //! and every value on the wrong element.
 
 use crate::flow_law::HOURS_PER_YEAR;
 
-/// Seconds in the Julian year, 365.25 days — the year a change is counted per.
+/// Seconds in the Julian year, 365.25 days - the year a change is counted per.
 pub const SECONDS_PER_YEAR: f64 = HOURS_PER_YEAR * 3600.0;
 
 /// What a law in time or a list of instants cannot be, by name. Ranks count
@@ -83,13 +83,13 @@ impl Drift {
         Ok(Drift { anchor, per_year })
     }
 
-    /// What the drift adds at `seconds` — negative before the anchor for a
+    /// What the drift adds at `seconds` - negative before the anchor for a
     /// positive change.
     pub fn at(&self, seconds: i64) -> f64 {
         self.per_year * (seconds - self.anchor) as f64 / SECONDS_PER_YEAR
     }
 
-    /// What the drift adds **on average** from `from` to `to` — its value at
+    /// What the drift adds **on average** from `from` to `to` - its value at
     /// the middle, which for a linear law is its mean exactly. Computed in
     /// floating point: halving an odd number of seconds in integers would lose
     /// half a second.
@@ -110,7 +110,7 @@ pub enum Steps {
 }
 
 /// What the drift adds at each step of a series whose instants are
-/// `instants`, in seconds since the epoch — one offset per instant, or per
+/// `instants`, in seconds since the epoch - one offset per instant, or per
 /// interval.
 ///
 /// The instants are refused by their rank when they do not increase: a
@@ -150,7 +150,7 @@ pub fn offsets(drift: &Drift, instants: &[i64], steps: Steps) -> Result<Vec<f64>
 
 /// The snapshot `base` moved by each offset, **time slowest**:
 /// `values[t · base.len() + e] = base[e] + offsets[t]`. A `NaN` of the
-/// snapshot — an element the law it came from said nothing about — stays
+/// snapshot - an element the law it came from said nothing about - stays
 /// `NaN` at every step: a drift of nothing is nothing.
 pub fn lay(base: &[f64], offsets: &[f64]) -> Vec<f64> {
     offsets

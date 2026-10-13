@@ -1,4 +1,4 @@
-//! `horizon-from-law` — a horizon where no borehole measures it, laid by a
+//! `horizon-from-law` - a horizon where no borehole measures it, laid by a
 //! **sourced law** below or above a reference surface and cut by the erosion
 //! surfaces above it; written as a 2D grid on the reference's own lattice.
 //!
@@ -11,11 +11,11 @@
 //! What they need is what this
 //! declares:
 //!
-//! - **a thickness from a reference** — one horizon under another, one over the
-//!   base of the Lutetian — the same everywhere (`law: parallel`) or changing along a
+//! - **a thickness from a reference** - one horizon under another, one over the
+//!   base of the Lutetian - the same everywhere (`law: parallel`) or changing along a
 //!   direction (`law: linear`), a union of cases like `interpolate`'s method;
-//! - **a truncation** — an older horizon stops a younger one (a rule of the
-//!   reference model) — by
+//! - **a truncation** - an older horizon stops a younger one (a rule of the
+//!   reference model) - by
 //!   the erosion surfaces given as `cuts`.
 //!
 //! A plane given by a point, a dip and an azimuth is **not** offered: no
@@ -25,8 +25,8 @@
 //! # The computation is `energyml_analysis::horizon_law`
 //!
 //! The house rule: a computation lives in `energyml-analysis`, never in an
-//! operation (ADR-0017). That module says what a node answers — laid, a hole of the
-//! reference, eroded, under a folded cut, beyond the cuts — and this one counts
+//! operation (ADR-0017). That module says what a node answers - laid, a hole of the
+//! reference, eroded, under a folded cut, beyond the cuts - and this one counts
 //! each in the activity and says each in the plan. The cuts are read by
 //! `energyml_analysis::heights` through `support::Faces`, the one reading of
 //! *the height of a surface under this (x, y)* that `thickness` and `project`
@@ -35,20 +35,20 @@
 //! # The writing is `grid`'s
 //!
 //! An operation that writes the same object as another delegates to it: the new
-//! horizon goes to [`super::grid::write`] as a [`Lattice`] — the reference's
+//! horizon goes to [`super::grid::write`] as a [`Lattice`] - the reference's
 //! origin, spacing and counts, and the laid heights in the house order, `i`
 //! along x fastest. So the reference **is a 2D grid**, refused by name at the
 //! offer otherwise (lay the law on a triangulated surface and write it as a
 //! grid would be choosing a lattice nobody stated; `interpolate` makes a grid
 //! of a surface first). Its lattice is read off its nodes and must be the
-//! house one — along +x then +y, regular — or the plan is refused naming the
+//! house one - along +x then +y, regular - or the plan is refused naming the
 //! first node that is not: `grid` writes no rotated or reversed lattice.
 //!
 //! # One frame, the reference's
 //!
 //! The law is laid on the reference's heights, so the new horizon **is** in
 //! the reference's frame: `crs` is suggested from it, and a `crs` naming
-//! another system — or a frame created here with `sourceEpsg` — is refused,
+//! another system - or a frame created here with `sourceEpsg` - is refused,
 //! the heights would otherwise be read against another origin. A cut in
 //! another frame, or counting in another unit, is refused the way `thickness`
 //! refuses two frames: a height compared across two origins is a comparison of
@@ -62,8 +62,8 @@
 //! one is refused by name: a document with its page, or a plausible value said
 //! to be one.
 //!
-//! And the rule on invented objects — an `ExtensionNameValue` `synthetic = true` and a sentence in
-//! `Citation/Description` on every invented object — is written on the grid,
+//! And the rule on invented objects - an `ExtensionNameValue` `synthetic = true` and a sentence in
+//! `Citation/Description` on every invented object - is written on the grid,
 //! whatever the source of its thickness: a surface laid by a law is not a
 //! measurement. `ExtensionNameValue` is the eml 2.3 `AbstractObject` field for
 //! it (`Abstract.xsd`, `ExtensionNameValue`), and the description stays within
@@ -73,20 +73,20 @@
 //!
 //! `interpretation` and `title`, which the shared block would read off the
 //! reference: the horizon laid is **another** horizon, and one filed under the reference's
-//! interpretation — or titled after it — is the error a suggestion would make
+//! interpretation - or titled after it - is the error a suggestion would make
 //! look deliberate.
 //!
 //! # Identity
 //!
-//! Named like `interpolate`'s grids — by what the horizon is, its reference and
-//! its title — and not by its law: restating a thickness rewrites the same
+//! Named like `interpolate`'s grids - by what the horizon is, its reference and
+//! its title - and not by its law: restating a thickness rewrites the same
 //! horizon, which is what correcting a recipe means (correcting means editing
 //! the recipe and replaying it).
 //!
 //! # References
 //!
 //! - The horizon law is a synthetic law stated in `energyml-analysis`, which cites no published source for it.
-//!   TODO(reference): verify — no publication is cited; if the law follows one, add it (authors, year, title, venue, DOI) once checked.
+//!   TODO(reference): verify - no publication is cited; if the law follows one, add it (authors, year, title, venue, DOI) once checked.
 
 use serde_json::json;
 
@@ -110,9 +110,9 @@ pub struct HorizonFromLaw;
 /// What `horizon-from-law` is told.
 #[derive(Debug, Params)]
 pub struct HorizonLawParams {
-    /// the thickness between the reference and the new horizon, measured vertically, in the unit of the reference's heights — for a linear law, the thickness at its anchor
+    /// the thickness between the reference and the new horizon, measured vertically, in the unit of the reference's heights - for a linear law, the thickness at its anchor
     ///
-    /// Vertical — an isochore — because a node of a grid carries one height
+    /// Vertical - an isochore - because a node of a grid carries one height
     /// per (x, y). Where the reference dips, the thickness across the beds is
     /// this times the cosine of the dip, and the plan says so.
     #[param(min = 0.0)]
@@ -120,24 +120,24 @@ pub struct HorizonLawParams {
     /// The law the thickness follows.
     #[param(flatten)]
     pub law: LawParams,
-    /// which side of the reference the new horizon lies on — below it (older, deeper) or above it (younger, shallower)
+    /// which side of the reference the new horizon lies on - below it (older, deeper) or above it (younger, shallower)
     ///
     /// No default: which side is the geology, and a default would state it
     /// for whoever did not.
     pub side: Side,
-    /// what the third coordinate of the reference measures — an elevation (larger is higher) or a depth (larger is lower)
+    /// what the third coordinate of the reference measures - an elevation (larger is higher) or a depth (larger is lower)
     ///
     /// Suggested from the reference's frame, never guessed: *below* is down,
     /// and down is −z in elevation and +z in depth.
     pub axis: Vertical,
-    /// where the thickness comes from — a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
+    /// where the thickness comes from - a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
     pub source: String,
-    /// The frame, what is represented, the naming — for the grid writer.
+    /// The frame, what is represented, the naming - for the grid writer.
     #[param(flatten)]
     pub written: Written,
 }
 
-/// the law the thickness follows — the same everywhere, or changing linearly along a direction
+/// the law the thickness follows - the same everywhere, or changing linearly along a direction
 #[derive(Debug, Params)]
 #[params(tag = "law")]
 pub enum LawParams {
@@ -151,7 +151,7 @@ pub enum LawParams {
 /// What a linear law adds to its thickness.
 #[derive(Debug, Params)]
 pub struct LinearParams {
-    /// linear: how much the thickness changes per unit of horizontal distance along the azimuth — positive thickens that way, negative thins
+    /// linear: how much the thickness changes per unit of horizontal distance along the azimuth - positive thickens that way, negative thins
     pub gradient: f64,
     /// linear: the direction the gradient runs along, clockwise from grid north
     #[param(min = 0.0, max = 360.0, uom = "dega")]
@@ -174,13 +174,13 @@ pub enum Side {
 /// What `horizon-from-law` takes.
 #[derive(Debug, Inputs)]
 pub struct HorizonLawInputs {
-    /// the surface the law is laid from — a 2D grid, whose lattice the new horizon takes
+    /// the surface the law is laid from - a 2D grid, whose lattice the new horizon takes
     #[input(topology = "grid")]
     pub reference: Shape,
-    /// erosion surfaces the new horizon may not rise above — where one lies below it, the horizon is eroded and left a hole
+    /// erosion surfaces the new horizon may not rise above - where one lies below it, the horizon is eroded and left a hole
     ///
     /// `triangles` ranks the form's list; the cells of a grid are read too,
-    /// bilinearly — the reading `thickness` gives its base.
+    /// bilinearly - the reading `thickness` gives its base.
     #[input(topology = "triangles")]
     pub cuts: Vec<Shape>,
 }
@@ -204,7 +204,7 @@ fn title_of(shape: &Shape) -> String {
         .unwrap_or_else(|| shape.name.clone())
 }
 
-/// The counts of a grid shape — `[ni, nj]` — or why it is none a law is laid
+/// The counts of a grid shape - `[ni, nj]` - or why it is none a law is laid
 /// on.
 fn grid_counts(geometry: &Geometry) -> Result<[usize; 2], String> {
     let [patch] = geometry.patches.as_slice() else {
@@ -215,7 +215,7 @@ fn grid_counts(geometry: &Geometry) -> Result<[usize; 2], String> {
     };
     let Topology::Grid { fastest, slowest } = &patch.topology else {
         return Err(
-            "is no 2D grid: the new horizon is written on the reference's lattice, so the reference is a Grid2dRepresentation — make one of a surface or of points with `interpolate` first"
+            "is no 2D grid: the new horizon is written on the reference's lattice, so the reference is a Grid2dRepresentation - make one of a surface or of points with `interpolate` first"
                 .to_string(),
         );
     };
@@ -237,7 +237,7 @@ fn grid_counts(geometry: &Geometry) -> Result<[usize; 2], String> {
 /// A lattice as [`lattice_of`] reads it: origin, spacing, counts `[ni, nj]`.
 type LatticeRead = ([f64; 2], [f64; 2], [usize; 2]);
 
-/// The reference's lattice — origin, spacing, counts — read off its nodes, or
+/// The reference's lattice - origin, spacing, counts - read off its nodes, or
 /// the first node that is not where the house lattice puts it.
 ///
 /// The house order is `grid`'s (a grid is never reprojected, and its order is the house order):
@@ -302,7 +302,7 @@ impl Operation for HorizonFromLaw {
     fn about(&self) -> About {
         About {
             name: "horizon-from-law",
-            describe: "a horizon where no borehole measures it — laid at a sourced thickness below or above a reference grid, and cut by the erosion surfaces above it — written as a 2D grid on the reference's lattice",
+            describe: "a horizon where no borehole measures it - laid at a sourced thickness below or above a reference grid, and cut by the erosion surfaces above it - written as a 2D grid on the reference's lattice",
             category: Category::Synthetic,
             makes: &["resqml22.Grid2dRepresentation"],
             recipe: "horizon-from-law",
@@ -313,7 +313,7 @@ impl Operation for HorizonFromLaw {
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
         super::written::suggest_written(bag, None, slots);
         // **Not the reference's interpretation, nor its title**: the horizon
-        // laid is another one — see the module.
+        // laid is another one - see the module.
         for name in ["interpretation", "title"] {
             if let Some(slot) = slots.slot_mut(name) {
                 slot.suggested = None;
@@ -364,7 +364,7 @@ impl Operation for HorizonFromLaw {
         if source.is_empty() {
             return Err(Refusal::on(
                 "source",
-                "is empty: a thickness is sourced — a document with its page or paragraph, or a plausible value said to be one (reference-model rule: no constant without a source)",
+                "is empty: a thickness is sourced - a document with its page or paragraph, or a plausible value said to be one (reference-model rule: no constant without a source)",
             ));
         }
 
@@ -378,7 +378,7 @@ impl Operation for HorizonFromLaw {
             return Err(Refusal::on(
                 "reference",
                 format!(
-                    "counts its heights in `{unit}`, a time: a thickness is a length — convert the reference to depth first"
+                    "counts its heights in `{unit}`, a time: a thickness is a length - convert the reference to depth first"
                 ),
             ));
         }
@@ -390,7 +390,7 @@ impl Operation for HorizonFromLaw {
                 return Err(Refusal::new(
                     "frames",
                     format!(
-                        "`reference` is in `{}` and the cut `{}` in `{}`: a height compared across two frames is a comparison of two origins — bring them into one frame first",
+                        "`reference` is in `{}` and the cut `{}` in `{}`: a height compared across two frames is a comparison of two origins - bring them into one frame first",
                         a.title,
                         title_of(cut),
                         b.title
@@ -403,7 +403,7 @@ impl Operation for HorizonFromLaw {
                 return Err(Refusal::new(
                     "units",
                     format!(
-                        "`reference` counts its heights in `{a}` and the cut `{}` in `{b}` — one unit, or no comparison",
+                        "`reference` counts its heights in `{a}` and the cut `{}` in `{b}` - one unit, or no comparison",
                         title_of(cut)
                     ),
                 ));
@@ -422,7 +422,7 @@ impl Operation for HorizonFromLaw {
                         return Err(Refusal::on(
                             "crs",
                             format!(
-                                "names another frame than the reference's `{}`: the law is laid on the reference's heights, so the new horizon is in its frame — name it, or leave `crs` out to take it",
+                                "names another frame than the reference's `{}`: the law is laid on the reference's heights, so the new horizon is in its frame - name it, or leave `crs` out to take it",
                                 frame.title
                             ),
                         ));
@@ -485,12 +485,12 @@ impl Operation for HorizonFromLaw {
             range,
         } = laid;
         if !z.iter().any(|one| one.is_finite()) {
-            // A grid of holes would read as a horizon with nothing to show —
+            // A grid of holes would read as a horizon with nothing to show -
             // the case that looks most like a success.
             return Err(Refusal::new(
                 "refused",
                 format!(
-                    "no node of the horizon is left: {holes} hole(s) of the reference, {eroded} eroded, {folded} under a folded cut, of {} — nothing would be drawn",
+                    "no node of the horizon is left: {holes} hole(s) of the reference, {eroded} eroded, {folded} under a folded cut, of {} - nothing would be drawn",
                     z.len()
                 ),
             ));
@@ -535,7 +535,7 @@ impl Operation for HorizonFromLaw {
             return Err(Refusal::on(
                 "source",
                 format!(
-                    "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                    "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
                     description.chars().count()
                 ),
             ));
@@ -582,7 +582,7 @@ impl Operation for HorizonFromLaw {
         let mut say = |key: &'static str, detail: String| plan.says.push(Note { key, detail });
         say(
             "law",
-            format!("{stated}, {side_word} `{reference_title}` — source: {source}"),
+            format!("{stated}, {side_word} `{reference_title}` - source: {source}"),
         );
         say(
             "vertical-thickness",
@@ -602,7 +602,7 @@ impl Operation for HorizonFromLaw {
             say(
                 "reference-holes",
                 format!(
-                    "{holes} node(s) of `{reference_title}` have no height: the law has nothing to stand on there — holes"
+                    "{holes} node(s) of `{reference_title}` have no height: the law has nothing to stand on there - holes"
                 ),
             );
         }
@@ -610,7 +610,7 @@ impl Operation for HorizonFromLaw {
             say(
                 "eroded",
                 format!(
-                    "{eroded} node(s) lie above a cut: eroded, written as holes — the horizon stops at the erosion surface, it does not follow it"
+                    "{eroded} node(s) lie above a cut: eroded, written as holes - the horizon stops at the erosion surface, it does not follow it"
                 ),
             );
         }
@@ -618,7 +618,7 @@ impl Operation for HorizonFromLaw {
             say(
                 "folded",
                 format!(
-                    "{folded} node(s) lie under a folded cut, whose sheets disagree: which one erodes is not a numerical choice — holes"
+                    "{folded} node(s) lie under a folded cut, whose sheets disagree: which one erodes is not a numerical choice - holes"
                 ),
             );
         }
@@ -642,7 +642,7 @@ impl Operation for HorizonFromLaw {
     }
 
     /// `thickness`, `law`, `side`, `axis` and `source` are inputs, recorded
-    /// under the parameters the projection already declares — a title cannot
+    /// under the parameters the projection already declares - a title cannot
     /// be both.
     fn reports(&self) -> Vec<Slot> {
         let count = |name: &'static str, about: &'static str| {
@@ -662,12 +662,12 @@ impl Operation for HorizonFromLaw {
             count("slowestAxisCount", "nodes along y"),
             count(
                 "holeCount",
-                "nodes of the reference with no height — holes of the new horizon too",
+                "nodes of the reference with no height - holes of the new horizon too",
             ),
-            count("erodedCount", "nodes a cut lies below — eroded, written as holes"),
+            count("erodedCount", "nodes a cut lies below - eroded, written as holes"),
             count(
                 "foldedCount",
-                "nodes under a folded cut — undecided, written as holes",
+                "nodes under a folded cut - undecided, written as holes",
             ),
             Slot::optional(
                 "beyondCutsCount",
@@ -676,7 +676,7 @@ impl Operation for HorizonFromLaw {
                     least: None,
                     most: None,
                 },
-                "nodes no cut lies over or under — nothing erodes them; with cuts only",
+                "nodes no cut lies over or under - nothing erodes them; with cuts only",
             ),
         ])
     }

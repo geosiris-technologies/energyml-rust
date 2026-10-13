@@ -1,7 +1,7 @@
 //! The revision counter and its log: what changed since a reader last looked.
 //!
 //! Two groups. The first tests `Revisions` alone. The second tests the wiring
-//! in `EpcStore`, one test per write door — see the marker below.
+//! in `EpcStore`, one test per write door - see the marker below.
 
 use std::collections::BTreeSet;
 
@@ -166,7 +166,7 @@ mod wiring {
     fn package(name: &str, uuids: &[&str]) -> PathBuf {
         // **One folder per call.** `foreign(C)` is called by several tests at
         // once, and the same name wiped and rewrote one file while another test
-        // was reading it — "not a zip: Could not find EOCD" in CI.
+        // was reading it - "not a zip: Could not find EOCD" in CI.
         static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let call = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let dir =

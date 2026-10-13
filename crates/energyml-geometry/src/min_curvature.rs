@@ -1,5 +1,5 @@
-//! **The minimum curvature method** — the arc tangent to two directions that
-//! joins two stations of a well path — and, run **forward**, where a surveyed
+//! **The minimum curvature method** - the arc tangent to two directions that
+//! joins two stations of a well path - and, run **forward**, where a surveyed
 //! hole runs: positions from the stations a directional survey measured, a
 //! measured depth, an inclination and an azimuth each, out north, east and
 //! vertical depth from the first station.
@@ -10,36 +10,36 @@
 //! RESQML parametric line is ([`crate::parametric`]): the stations are what the
 //! file says, the positions are the hole. `energyml-analysis` sits **above**
 //! geometry and never inside it; when this method first
-//! lived there, geometry had to depend on analysis to draw a trajectory — the
+//! lived there, geometry had to depend on analysis to draw a trajectory - the
 //! layering upside down. So the method comes down here, and
 //! `energyml_analysis::well_plan` (the plan) and `survey` (the inverse)
 //! import its pieces from this module.
 //!
 //! Written for the reader of a WITSML 2.1 `Trajectory` ([`crate::stations`]): a
-//! `TrajectoryStation` carries `Md`, `Incl` — *« Hole inclination, measured
-//! from vertical »* — and `Azi` — *« Hole azimuth. Corrected to wells azimuth
-//! reference »* (WITSML TRG 2.1 §16.10 p. 356–358). Nothing here reads a
+//! `TrajectoryStation` carries `Md`, `Incl` - *« Hole inclination, measured
+//! from vertical »* - and `Azi` - *« Hole azimuth. Corrected to wells azimuth
+//! reference »* (WITSML TRG 2.1 §16.10 p. 356-358). Nothing here reads a
 //! package or knows a frame: the caller says which north the azimuths are from,
 //! and places the first station.
 //!
-//! **Not `energyml_analysis::survey`.** That module is the inverse — positions in,
-//! angles out — and is what `witsml-wells` writes stations with. The two are
+//! **Not `energyml_analysis::survey`.** That module is the inverse - positions in,
+//! angles out - and is what `witsml-wells` writes stations with. The two are
 //! independent code paths over one method, which is what lets a round trip
 //! through both confront them (`energyml-build/tests/witsml_trajectory.rs`).
 //!
 //! # The method, and where its form comes from
 //!
 //! Two stations are joined by **the circular arc tangent to both
-//! directions** — API Bulletin D20 (*Directional Drilling Survey Calculation
+//! directions** - API Bulletin D20 (*Directional Drilling Survey Calculation
 //! Methods and Terminology*, 1985), in the form of Sawaryn & Thorogood, *A
 //! Compendium of Directional Calculations Based on the Minimum Curvature
-//! Method* (SPE 84246, SPE Drilling & Completion 20(1), 2005) — the same
-//! source `energyml_analysis::well_plan` cites — and the pieces below are the
+//! Method* (SPE 84246, SPE Drilling & Completion 20(1), 2005) - the same
+//! source `energyml_analysis::well_plan` cites - and the pieces below are the
 //! ones it uses, never a second copy of them:
 //!
 //! ```text
-//! t     = (sin I cos A, sin I sin A, cos I)          north, east, down — [`direction`]
-//! β     = the angle between t1 and t2                the dogleg — [`dogleg`]
+//! t     = (sin I cos A, sin I sin A, cos I)          north, east, down - [`direction`]
+//! β     = the angle between t1 and t2                the dogleg - [`dogleg`]
 //! RF    = (2 / β) · tan(β / 2), 1 when β = 0          [`ratio_factor`]
 //! Δp    = ΔMD / 2 · RF · (t1 + t2)
 //! ```
@@ -47,25 +47,25 @@
 //! `Δp` is the **chord** of the arc, exact on it. Each station is the previous
 //! one plus its interval's chord: a survey states nothing between two stations
 //! but that they are joined by one arc, so there is no section start to compute
-//! from the way a plan does — the sum is the method.
+//! from the way a plan does - the sum is the method.
 //!
 //! # Conventions
 //!
 //! - **angles in degrees**: an inclination from vertical down (0 down, 90
-//!   horizontal, 180 up), an azimuth clockwise from the north the caller names
-//!   — *« 0.00 and 360.00 represent North, 90.00 is East, 180.00 is South and
+//!   horizontal, 180 up), an azimuth clockwise from the north the caller names -
+//!   *« 0.00 and 360.00 represent North, 90.00 is East, 180.00 is South and
 //!   270.00 is West »* (§16.10 p. 357, `ClosureDirection`). The unit of the
 //!   file is the caller's business: this module holds no unit table, and a
 //!   second one beside `energyml-domain`'s would be a second answer to *what is
 //!   a grad*. The reader converts, and refuses a unit that is not an angle;
 //! - **measured depths in one length unit**, and the positions come out in it;
-//! - **the first station is the origin**: `(0, 0, 0)` — where it is in the
+//! - **the first station is the origin**: `(0, 0, 0)` - where it is in the
 //!   world is the caller's, who knows the datum.
 //!
 //! # A station with no azimuth
 //!
-//! Is read only where the hole is **vertical** — its inclination's sine at most
-//! [`VERTICAL`] — and then points straight down (or up): a vertical hole has no
+//! Is read only where the hole is **vertical** - its inclination's sine at most
+//! [`VERTICAL`] - and then points straight down (or up): a vertical hole has no
 //! azimuth, and `witsml-wells` writes none there (*« Where the hole is
 //! vertical, no azimuth is written: there is none »*). Anywhere else the
 //! azimuth decides where the hole goes, and its absence is refused rather than
@@ -76,7 +76,7 @@
 //! Fewer than two stations, a number that is not finite, measured depths that
 //! do not increase, a station with no inclination, a station off vertical with
 //! no azimuth, an inclination outside [0°, 180°], an azimuth outside
-//! [0°, 360°], and two stations whose directions are opposite — a dogleg of
+//! [0°, 360°], and two stations whose directions are opposite - a dogleg of
 //! 180° lies in no one plane, the arc is undefined.
 
 use std::f64::consts::PI;
@@ -98,14 +98,14 @@ pub fn direction(inclination: f64, azimuth: f64) -> [f64; 3] {
     [i.sin() * a.cos(), i.sin() * a.sin(), i.cos()]
 }
 
-/// The dogleg between two unit directions, in radians — as `2 asin(|t2 − t1| /
+/// The dogleg between two unit directions, in radians - as `2 asin(|t2 − t1| /
 /// 2)`, the same angle as the `acos` of the textbook form but not losing its
 /// digits when it is small.
 pub fn dogleg(t1: [f64; 3], t2: [f64; 3]) -> f64 {
     2.0 * (norm(sub(t2, t1)) / 2.0).clamp(0.0, 1.0).asin()
 }
 
-/// The ratio factor of the minimum curvature method, `(2 / β) tan(β / 2)` —
+/// The ratio factor of the minimum curvature method, `(2 / β) tan(β / 2)` -
 /// its series `1 + β² / 12` below a microradian, where the quotient loses its
 /// digits.
 pub fn ratio_factor(beta: f64) -> f64 {
@@ -117,8 +117,8 @@ pub fn ratio_factor(beta: f64) -> f64 {
 }
 
 /// Below this, the sine of an inclination makes the hole **vertical**: a
-/// station there may state no azimuth. A ten-millionth — 6e-6° of inclination
-/// — the threshold under which `energyml_analysis::survey` writes none; what an azimuth
+/// station there may state no azimuth. A ten-millionth - 6e-6° of inclination -
+/// the threshold under which `energyml_analysis::survey` writes none; what an azimuth
 /// could still move there is a ten-millionth of the hole's length sideways.
 pub const VERTICAL: f64 = 1e-7;
 
@@ -130,9 +130,9 @@ const REVERSAL: f64 = 1e-9;
 pub struct Measured {
     /// The measured depth.
     pub md: f64,
-    /// Degrees from vertical down — `None` when the station states none.
+    /// Degrees from vertical down - `None` when the station states none.
     pub inclination: Option<f64>,
-    /// Degrees clockwise from north — `None` when the station states none,
+    /// Degrees clockwise from north - `None` when the station states none,
     /// which is read only where the hole is vertical.
     pub azimuth: Option<f64>,
 }
@@ -147,7 +147,7 @@ pub struct Located {
     pub north: f64,
     /// East of the first station.
     pub east: f64,
-    /// Vertical depth below the first station — positive down.
+    /// Vertical depth below the first station - positive down.
     pub tvd: f64,
 }
 
@@ -172,7 +172,7 @@ pub enum StationsError {
         given: f64,
     },
     #[error(
-        "station {station}: MD {md} does not come after MD {previous} — the stations of a survey run down the hole, in order"
+        "station {station}: MD {md} does not come after MD {previous} - the stations of a survey run down the hole, in order"
     )]
     /// A measured depth that does not come after the previous one.
     NotIncreasing {
@@ -183,14 +183,14 @@ pub enum StationsError {
         /// The previous station's.
         previous: f64,
     },
-    #[error("station {station}: no inclination — the direction of the hole there is not stated")]
+    #[error("station {station}: no inclination - the direction of the hole there is not stated")]
     /// A station with no inclination.
     NoInclination {
         /// The station, from 1.
         station: usize,
     },
     #[error(
-        "station {station}: no azimuth, and the hole is inclined {inclination}° there — which way it goes is not stated, and reading it as north would be a guess"
+        "station {station}: no azimuth, and the hole is inclined {inclination}° there - which way it goes is not stated, and reading it as north would be a guess"
     )]
     /// An inclined station with no azimuth.
     NoAzimuth {
@@ -200,7 +200,7 @@ pub enum StationsError {
         inclination: f64,
     },
     #[error(
-        "station {station}: an inclination is in [0°, 180°] — 0 down, 90 horizontal, 180 up — not {given}°"
+        "station {station}: an inclination is in [0°, 180°] - 0 down, 90 horizontal, 180 up - not {given}°"
     )]
     /// An inclination outside [0°, 180°].
     BadInclination {
@@ -218,7 +218,7 @@ pub enum StationsError {
         given: f64,
     },
     #[error(
-        "station {station}: the hole turns back on itself since the station before, a dogleg of 180° — no single arc does that, the plane it would turn in is undefined"
+        "station {station}: the hole turns back on itself since the station before, a dogleg of 180° - no single arc does that, the plane it would turn in is undefined"
     )]
     /// A dogleg of 180°: the arc's plane is undefined.
     Reversal {
@@ -227,7 +227,7 @@ pub enum StationsError {
     },
 }
 
-/// The unit direction of one station — checked, north, east, down.
+/// The unit direction of one station - checked, north, east, down.
 fn direction_of(station: usize, measured: &Measured) -> Result<[f64; 3], StationsError> {
     let inclination = measured
         .inclination

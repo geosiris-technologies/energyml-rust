@@ -1,4 +1,4 @@
-//! A well drawn in the colours the front end's scene shows along it — `Paint`,
+//! A well drawn in the colours the front end's scene shows along it - `Paint`,
 //! `Joint` and `paint::well_pieces` (colours are either graded for continuous
 //! properties or fixed per stretch for discrete ones, and the joints are either
 //! where the value changes or at every MD).
@@ -18,7 +18,7 @@ use crate::layout::{catalogue, id, view, well};
 const RED: &str = "#ff0000ff";
 const BLUE: &str = "#0000ffff";
 const GREEN: &str = "#00ff00ff";
-/// A colour with no value: alpha 0 — its rgb must never be drawn.
+/// A colour with no value: alpha 0 - its rgb must never be drawn.
 const NONE: &str = "#12345600";
 
 fn paint(nodes: &[&str], blend: Blend) -> Paint {
@@ -168,7 +168,7 @@ fn smooth_over_a_long_stretch_is_cut_into_pieces_that_climb_evenly() {
 
 #[test]
 fn smooth_does_not_blend_into_an_absent_neighbour() {
-    // Node 1 has no value: node 0's stretch toward it is flat red — an
+    // Node 1 has no value: node 0's stretch toward it is flat red - an
     // interpolated absent colour is a dark fringe, not a value.
     let pieces = well_pieces(
         &along(&[0.0, 100.0, 200.0]),
@@ -219,7 +219,7 @@ fn joints_at_nodes_mark_every_inner_node_and_never_the_ends() {
     )
     .unwrap();
     let marks = of(&pieces, "#000000");
-    assert_eq!(marks.len(), 3, "inner nodes 1, 2, 3 — not the two ends");
+    assert_eq!(marks.len(), 3, "inner nodes 1, 2, 3 - not the two ends");
     for (mark, node) in marks.iter().zip([100.0, 200.0, 300.0]) {
         assert!(
             (length(mark) - 10.0).abs() < 1e-9,
@@ -302,7 +302,7 @@ fn a_joint_of_alpha_zero_is_a_gap() {
 #[test]
 fn a_translucent_joint_is_composited_over_the_paint_at_that_point() {
     // red → blue at node 2, a black joint at alpha 0.5: half of it lies over
-    // red, half over blue — `rgb + (joint − rgb)·alpha`.
+    // red, half over blue - `rgb + (joint − rgb)·alpha`.
     let pieces = well_pieces(
         &five(),
         &paint(&[RED, RED, BLUE, BLUE, BLUE], Blend::Net),
@@ -318,8 +318,8 @@ fn a_translucent_joint_is_composited_over_the_paint_at_that_point() {
 
 #[test]
 fn a_stretch_shorter_than_two_joints_keeps_its_colour() {
-    // The 15 px stretch could hold only 1.5 joints: it would be all joint — a
-    // gap that looks like missing data — so it stays plain (`jointsFit`).
+    // The 15 px stretch could hold only 1.5 joints: it would be all joint - a
+    // gap that looks like missing data - so it stays plain (`jointsFit`).
     let pieces = well_pieces(
         &along(&[0.0, 15.0, 200.0, 400.0]),
         &paint(&[RED, RED, RED, RED], Blend::Net),
@@ -393,7 +393,7 @@ fn one_well(w: WellItem) -> Catalogue {
     catalogue(vec![Item::Well(w)])
 }
 
-/// The default view under **scene** colouring, unpainted — what a painted view
+/// The default view under **scene** colouring, unpainted - what a painted view
 /// is compared with.
 fn scene_view() -> View {
     View {
@@ -402,7 +402,7 @@ fn scene_view() -> View {
     }
 }
 
-/// A view where the scene paints `key` — under **scene** colouring, the only one
+/// A view where the scene paints `key` - under **scene** colouring, the only one
 /// a scene's paint is drawn under.
 fn painted_view(key: String, nodes: &[&str], blend: Blend) -> View {
     View {
@@ -477,7 +477,7 @@ fn under_scene_colouring_a_painted_well_is_drawn_in_pieces_instead_of_its_line_a
 /// Strata colouring is what was asked: a paint the scene gives the well does
 /// not replace its units, nor the ticks between them. The black ticks at the
 /// stratigraphic changes had vanished and the colour looked uniform along the
-/// boreholes — the scene painted the wells, and the paint
+/// boreholes - the scene painted the wells, and the paint
 /// won over the strata the drawing was set to.
 #[test]
 fn under_strata_colouring_the_strata_and_their_ticks_win_over_the_scene_paint() {
@@ -603,7 +603,7 @@ fn without_a_paint_for_the_object_nothing_changes() {
         Item::Well(well("B", 700.0, 30.0, Side::Right)),
     ]);
     let base = layout(&cat, &view());
-    // Joints asked, and a paint given — for an object that is not in the drawing.
+    // Joints asked, and a paint given - for an object that is not in the drawing.
     let v = View {
         paints: vec![(key_of("elsewhere"), paint(&[RED; 3], Blend::Smooth))],
         joints: joints(JointKind::Nodes, 6.0, 1.0),
@@ -615,7 +615,7 @@ fn without_a_paint_for_the_object_nothing_changes() {
         "no paint for a drawn object: the layers are those of the unpainted view"
     );
     assert_eq!(other.warnings, base.warnings);
-    // The SVG differs only by what it says of the view (its metadata) — remove
+    // The SVG differs only by what it says of the view (its metadata) - remove
     // that, and the drawings are the same bytes.
     let strip = |text: String| {
         let (a, rest) = text.split_once("<metadata>").unwrap();
@@ -744,7 +744,7 @@ fn assemble_carries_a_cut_s_sources_onto_the_catalogue_item() {
 #[test]
 fn at_changes_a_joint_is_judged_on_the_run_of_one_colour_not_on_the_stretch() {
     // Nodes every 5 px: ten red stretches, then ten blue. A joint of 3 px needs
-    // 6 px — no stretch holds it, each run of one colour (50 px) does.
+    // 6 px - no stretch holds it, each run of one colour (50 px) does.
     let xs: Vec<f64> = (0..21).map(|k| 5.0 * k as f64).collect();
     let colours: Vec<&str> = (0..21).map(|k| if k < 10 { RED } else { BLUE }).collect();
     let pieces = well_pieces(
@@ -779,7 +779,7 @@ fn at_changes_a_joint_is_judged_on_the_run_of_one_colour_not_on_the_stretch() {
 #[test]
 fn at_changes_a_run_shorter_than_two_joints_keeps_its_side_plain() {
     // Red over two 2.5 px stretches (a 5 px run), then blue over stretches of
-    // 4 px (a 100 px run): the change at x = 5 has only its blue half — the red
+    // 4 px (a 100 px run): the change at x = 5 has only its blue half - the red
     // run cannot hold two joints of 3 px, the blue one can, though none of its
     // stretches could (the old rule drew nothing here).
     let mut xs = vec![0.0, 2.5, 5.0];

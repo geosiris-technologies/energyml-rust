@@ -1,4 +1,4 @@
-//! `transform` — a shape moved, turned and scaled
+//! `transform` - a shape moved, turned and scaled
 //!.
 //!
 //! # What would have to break to make it turn red
@@ -126,7 +126,7 @@ fn a_translation_moves_every_node_and_keeps_the_topology() {
     );
 }
 
-/// **The rotation first, about the pivot, then the translation** — pinned on a
+/// **The rotation first, about the pivot, then the translation** - pinned on a
 /// point whose two orders disagree.
 #[test]
 fn rotation_first_then_translation() {
@@ -210,7 +210,7 @@ fn a_rigid_move_keeps_the_distances() {
 
 #[test]
 fn only_some_nodes_move_and_the_pivot_is_theirs() {
-    // Nodes 1 and 2 only: a quarter turn about **their** centre (1, 0.5, 5) —
+    // Nodes 1 and 2 only: a quarter turn about **their** centre (1, 0.5, 5) -
     // node 1 (1, 0, 5) goes to (1.5, 0.5, 5), node 2 (1, 1, 5) to (0.5, 0.5, 5).
     let made = plan(
         &square(),
@@ -233,7 +233,7 @@ fn only_some_nodes_move_and_the_pivot_is_theirs() {
 }
 
 /// **The scale first, then the rotation, both about the pivot, then the
-/// translation** — pinned on a point where every other order disagrees.
+/// translation** - pinned on a point where every other order disagrees.
 #[test]
 fn scale_first_then_rotation_then_translation() {
     let bag = Pieces::empty().with("shape", shape(vec![[1.0, 0.0, 0.0]], Topology::Points));
@@ -283,7 +283,7 @@ fn a_uniform_scale_starts_from_the_centre_of_what_moves() {
     );
 }
 
-/// **A translation alone has no pivot** — not answered, not suggested, not
+/// **A translation alone has no pivot** - not answered, not suggested, not
 /// recorded (`Applies::Any`). Without the condition it would record
 /// `pivot: centre`, the defect `When` was made for.
 #[test]
@@ -300,7 +300,7 @@ fn a_translation_alone_has_no_pivot() {
         })
         .collect();
     assert!(!titles.iter().any(|t| t.starts_with("pivot")), "{titles:?}");
-    // Given anyway, it is refused by name — it would do nothing.
+    // Given anyway, it is refused by name - it would do nothing.
     let why = Registry::new()
         .plan_for(
             "transform",
@@ -476,7 +476,7 @@ fn a_grid_or_a_mixture_is_unfit_saying_so() {
     );
 }
 
-/// **A move that turns a triangle over is counted, never refused** — a folded
+/// **A move that turns a triangle over is counted, never refused** - a folded
 /// surface is a legitimate result.
 #[test]
 fn a_flipped_triangle_is_counted() {

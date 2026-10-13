@@ -1,10 +1,10 @@
-//! What one package keeps between two calculations — so that a face which
+//! What one package keeps between two calculations - so that a face which
 //! recomputes (the front end, on every change of trace or selection) reads each
 //! object once.
 //!
 //! The calculation can exploit the optimisations the front end already caches, so
-//! as not to recompute what the front end already has. The front end's own caches — its
-//! package index, its colour walks — come in through
+//! as not to recompute what the front end already has. The front end's own caches - its
+//! package index, its colour walks - come in through
 //! [`crate::read::PackageContext`]; this is the section's own, kept by the face
 //! next to the package (one per package, as the wasm `Session` is).
 //!
@@ -19,9 +19,9 @@
 //!
 //! The package is told by its **revision** (`Asked::revision`, the store's):
 //! another revision, another store id or another scene and everything is
-//! dropped — a stale well is a well drawn where the file no longer puts it.
-//! A cut depends on the **line** and on nothing else of the section — not its
-//! corridor, not its key, not the other sections — so it is kept under
+//! dropped - a stale well is a well drawn where the file no longer puts it.
+//! A cut depends on the **line** and on nothing else of the section - not its
+//! corridor, not its key, not the other sections - so it is kept under
 //! `(surface, line)`, several per surface (ADR-0010),
 //! and going A → B → A cuts nothing the third time. A line the surface misses
 //! is kept too: it is an answer. What is kept carries no section key; the key
@@ -82,7 +82,7 @@ struct Key {
     time_factor: Option<u64>,
 }
 
-/// A section's line, as the cut's identity: the bits of its polyline's `f64`s —
+/// A section's line, as the cut's identity: the bits of its polyline's `f64`s -
 /// an exact key, never a rounded one.
 type Line = Vec<[u64; 2]>;
 
@@ -94,7 +94,7 @@ fn line_of(section: &SectionTrace) -> Line {
         .collect()
 }
 
-/// One package's reads, kept — see the module.
+/// One package's reads, kept - see the module.
 #[derive(Default)]
 pub struct PackageCache {
     key: Option<Key>,
@@ -122,7 +122,7 @@ impl PackageCache {
         self.work
     }
 
-    /// Drop everything — what a face does when it closes the package.
+    /// Drop everything - what a face does when it closes the package.
     pub fn clear(&mut self) {
         self.key = None;
         self.wells.clear();
@@ -199,7 +199,7 @@ impl PackageCache {
         found
     }
 
-    /// A surface cut along `sections`: placed once, and cut once **per line** —
+    /// A surface cut along `sections`: placed once, and cut once **per line** -
     /// only the lines it has not been cut along are cut now. The answer is the
     /// one a fresh cache gives (the cuts in the order of `sections`, a missed
     /// line left out, each labelled with the key of the section asking).

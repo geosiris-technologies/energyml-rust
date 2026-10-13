@@ -4,8 +4,8 @@
 //! an EPC reader both need: `[Content_Types].xml` gives a content type string,
 //! and the registry turns it into a live object.
 //!
-//! Registration is explicit — each generated crate exposes a `register`
-//! function — rather than link-time collection. Link-time tricks are fragile
+//! Registration is explicit - each generated crate exposes a `register`
+//! function - rather than link-time collection. Link-time tricks are fragile
 //! under `wasm32` and make the set of known types depend on linker behaviour.
 
 use std::collections::HashMap;
@@ -250,14 +250,14 @@ impl Registry {
     }
 
     /// Add one type. Later registrations of the same key win, which lets a
-    /// caller override a generated type with its own — with one exception, and
+    /// caller override a generated type with its own - with one exception, and
     /// it is load-bearing: **a development drop never displaces a release.**
     ///
     /// `resqml 2.2_dev3` computes the *same* qualified type as `resqml 2.2`.
     /// The drop's schemas declare `version="2.2"`, so `resqml22.Activity` names
     /// a type in both crates while these maps hold one index per key. Left to
     /// registration order, adding the drop would silently re-point every
-    /// `resqml22.` lookup — every DOR resolution, every JSON `$type` — of the
+    /// `resqml22.` lookup - every DOR resolution, every JSON `$type` - of the
     /// *released* 2.2 at the drop's types, and nothing would fail: the objects
     /// are plausible, and mostly identical. Which release a document is read as
     /// is decided by the reader, over ordered candidates, not by whoever called
@@ -299,7 +299,7 @@ impl Registry {
         }
         // A release whose version and schema version differ answers to both
         // spellings. RESQML 2.0.1 stamps `schemaVersion="2.0"`, so its
-        // qualified type is `resqml20.…` — and fesapi writes
+        // qualified type is `resqml20.…` - and fesapi writes
         // `version=2.0.1` in some of its references (an activity's
         // `ActivityDescriptor`), which compacts to `resqml201.…`. Either
         // spelling names this type; refusing the second would leave a
@@ -360,14 +360,14 @@ impl Registry {
     /// Tolerant lookup for user input and command lines: `activity`,
     /// `Activity` and `obj_Activity` all find the same types.
     ///
-    /// Deliberately separate from the exact lookups — being loose is a
+    /// Deliberately separate from the exact lookups - being loose is a
     /// decision the caller makes, never a default.
     pub fn find_type_loose(&self, name: &str) -> Vec<&'static TypeInfo> {
         self.types_by_key(name)
     }
 
     /// Build a reference to `key` in one eml version, without naming its Rust
-    /// type — the dynamic counterpart of `DataObjectReference::from_key`.
+    /// type - the dynamic counterpart of `DataObjectReference::from_key`.
     ///
     /// The version decides which fields exist, so this is what a UI or a
     /// translator uses when the target version is only known at runtime.
@@ -399,11 +399,11 @@ impl Registry {
         self.entries.iter().map(|e| e.info)
     }
 
-    /// Every registered top-level object type — what a "new object" menu lists.
+    /// Every registered top-level object type - what a "new object" menu lists.
     ///
     /// Includes the types [`TypeInfo::is_nestable`] flags: they are legal EPC
     /// parts too, and whether to show a type that *can* be inlined is the
-    /// caller's decision — `.filter(|i| !i.is_nestable)` when listing only the
+    /// caller's decision - `.filter(|i| !i.is_nestable)` when listing only the
     /// ones that are never children.
     pub fn top_level_types(&self) -> impl Iterator<Item = &'static TypeInfo> + '_ {
         self.entries.iter().map(|e| e.info).filter(|i| i.is_top_level)
@@ -424,13 +424,13 @@ impl Registry {
             .map(|i| &self.entries[*i])
     }
 
-    /// A type by name, **anywhere the model can be reached from here** —
+    /// A type by name, **anywhere the model can be reached from here** -
     /// registered or not.
     ///
     /// # Why a lookup is not enough
     ///
     /// The registry holds what can be a *part* of a package: top-level objects.
-    /// Everything else hangs off their fields — `Citation`, `TrianglePatch`,
+    /// Everything else hangs off their fields - `Citation`, `TrianglePatch`,
     /// and **every enumeration**, which is registered nowhere on purpose since
     /// nothing is ever a part of one. A caller asking about one of those gets
     /// `None` from every `by_*` method here, and the honest answer is not "this
@@ -438,7 +438,7 @@ impl Registry {
     /// does not index it.
     ///
     /// So the fallback walks out from the registered types through fields,
-    /// choice variants, subtypes and bases, visiting each type once — the model
+    /// choice variants, subtypes and bases, visiting each type once - the model
     /// is deeply cyclic, and a walk that did not remember would not terminate.
     ///
     /// # Two spellings, and telling them apart by the dot
@@ -451,7 +451,7 @@ impl Registry {
     /// therefore matched as a qualified type and nothing else.
     ///
     /// This lived in `energyml-cli` until 04/08, which meant the command line
-    /// could describe a type the web could not — the CLI knowing something the
+    /// could describe a type the web could not - the CLI knowing something the
     /// library does not, which is a bug in the layering rather than a feature
     /// of the CLI.
     pub fn find_type(&self, name: &str) -> Option<&'static TypeInfo> {
@@ -518,8 +518,8 @@ impl Registry {
             .map(|i| &self.entries[*i])
     }
 
-    /// The entry a root is read as: `entry` itself, or — when the root's
-    /// `xsi:type` names one of its subtypes — that subtype.
+    /// The entry a root is read as: `entry` itself, or - when the root's
+    /// `xsi:type` names one of its subtypes - that subtype.
     ///
     /// A part declared as the element's type (`type=FlowTestActivity`) whose
     /// root says `xsi:type="prodml:InjectionFlowTest"` **is** the injection
@@ -534,7 +534,7 @@ impl Registry {
         };
         let local = naming::strip_obj_prefix(crate::xml::local_part(&named));
         // Any of the type's own names: producers write the **complex type**
-        // there as often as not — `h+g_PaleoGTM.epc` roots a
+        // there as often as not - `h+g_PaleoGTM.epc` roots a
         // `<resqml2:LocalDepth3dCrs>` with `xsi:type="resqml2:obj_LocalDepth3dCrs"`,
         // the type naming itself.
         let names = |info: &'static TypeInfo| {
@@ -547,7 +547,7 @@ impl Registry {
         }
         // `TypeInfo::subtypes` is not filled for structs, so the subtype is
         // found the other way: a registered type whose `base` chain reaches
-        // the declared one. Identity by pointer — every `TypeInfo` is a static.
+        // the declared one. Identity by pointer - every `TypeInfo` is a static.
         let descends = |info: &'static TypeInfo| {
             let mut at = info.base.map(|base| base());
             while let Some(ancestor) = at {
@@ -575,8 +575,8 @@ impl Registry {
     /// Say that a schema version **exists but is not registered here**, and why.
     ///
     /// The registry cannot tell an absent type from a type nobody ever heard of:
-    /// both come back `None`. The caller that built it knows the difference — it
-    /// chose not to compile a version it ships — and this is where it says so.
+    /// both come back `None`. The caller that built it knows the difference - it
+    /// chose not to compile a version it ships - and this is where it says so.
     /// A reader that finds a document declaring such a version **refuses it by
     /// `why`** instead of reading it as another release of the same package (a
     /// 2.0.1 part read as 2.2 does not fail, it yields a plausible object holding
@@ -601,7 +601,7 @@ impl Registry {
     }
 
     /// The refusal for `(package, version)` when that version was declared
-    /// absent — `2.0` and `2.0.1` are one version, `2.2` the release and
+    /// absent - `2.0` and `2.0.1` are one version, `2.2` the release and
     /// `2.2_dev3` the drop.
     pub fn absent(&self, package: &str, version: &str) -> Option<&str> {
         self.absent
@@ -686,13 +686,13 @@ impl Registry {
     /// The difference only shows when two registered types share a content
     /// type, and exactly one thing makes them: a development drop and the
     /// release it precedes. `resqml 2.2_dev3` declares `version="2.2"`, so it
-    /// computes `application/x-resqml+xml;version=2.2;type=BoundaryFeature` —
+    /// computes `application/x-resqml+xml;version=2.2;type=BoundaryFeature` -
     /// the released 2.2's own string.
     ///
     /// A caller walking ordered candidates must dispatch on the candidate, not
     /// on that string. Going back through [`Registry::by_content_type`] hands
     /// every candidate of such a pair the *same* entry, so the walk still runs,
-    /// still reports a fallback, and still reads the same type each time —
+    /// still reports a fallback, and still reads the same type each time -
     /// which looks exactly like a walk that worked. Measured: with the drop
     /// registered and the read dispatched by content type, a document the
     /// release cannot parse came back as the release anyway.
@@ -723,7 +723,7 @@ impl Registry {
         Ok((object, departures.defaulted))
     }
 
-    /// The same, with **everything** leniency had to do — what was invented
+    /// The same, with **everything** leniency had to do - what was invented
     /// for an absent item, and what was replaced for a value that was there
     /// and wrong.
     ///
@@ -758,7 +758,7 @@ impl Registry {
     ///
     /// No qualified type is passed in: `$type` is in the document, which is the
     /// whole point of the encoding. Objects carried under `_data` are dropped
-    /// here — use [`Registry::read_json_document`] to keep them.
+    /// here - use [`Registry::read_json_document`] to keep them.
     #[cfg(feature = "json")]
     pub fn read_json(&self, text: &str) -> Result<Box<dyn DynObject>> {
         Ok(crate::json::read_string(text, self)?.root)
@@ -773,8 +773,8 @@ impl Registry {
 
 /// Serialize an object as a standalone EPC part.
 ///
-/// Everything the low-level [`crate::xml::to_xml_string`] asks for — the tag,
-/// its namespace, the declarations to put on the root — is already in
+/// Everything the low-level [`crate::xml::to_xml_string`] asks for - the tag,
+/// its namespace, the declarations to put on the root - is already in
 /// [`TypeInfo`], so a part writer should not have to spell them again. This is
 /// the call an EPC or ETP writer makes once per object.
 pub fn to_part(object: &dyn DynObject, opts: crate::xml::XmlWriteOptions) -> Result<String> {
@@ -793,7 +793,7 @@ pub fn to_part(object: &dyn DynObject, opts: crate::xml::XmlWriteOptions) -> Res
     }
 
     // **A type with no global element of its own is written under its
-    // ancestor's, saying what it is** — see [`TypeInfo::root_element`].
+    // ancestor's, saying what it is** - see [`TypeInfo::root_element`].
     match info.root_element {
         Some(element) => {
             let typed = Substituted {
@@ -810,11 +810,11 @@ pub fn to_part(object: &dyn DynObject, opts: crate::xml::XmlWriteOptions) -> Res
 ///
 /// PRODML 2.3 declares a global element for `FlowTestActivity` and for none of
 /// its subtypes, though its documentation says *"This object is abstract; you
-/// must choose one of the available types"* (FlowTestActivity.xsd l. 186–190).
+/// must choose one of the available types"* (FlowTestActivity.xsd l. 186-190).
 /// A document can only name an `InjectionFlowTest` as
-/// `<prodml:FlowTestActivity xsi:type="prodml:InjectionFlowTest">` — the form
+/// `<prodml:FlowTestActivity xsi:type="prodml:InjectionFlowTest">` - the form
 /// of Energistics' own example (`xml_examples/FlowTest/FlowTestActivity.xml`
-/// l. 2). The part's **identity** stays the concrete type — content type
+/// l. 2). The part's **identity** stays the concrete type - content type
 /// `type=InjectionFlowTest`, qualified type `prodml23.InjectionFlowTest`:
 /// the project's rule, the specifications being silent on it. Readers accept
 /// both declarations (see [`Registry::read_xml_as`]).
@@ -842,7 +842,7 @@ impl XmlSerialize for Substituted<'_> {
 /// reason as [`normalize_content_type`].
 /// The qualified type of any type, including the nested ones the generator does
 /// not stamp with one. Kept in step with [`crate::json::qualified_type_of`],
-/// which is the same rule — duplicated only so the `json` feature can be off.
+/// which is the same rule - duplicated only so the `json` feature can be off.
 fn computed_qualified_type(info: &'static TypeInfo) -> String {
     format!(
         "{}{}.{}",
@@ -867,7 +867,7 @@ fn normalize_qualified_type(value: &str) -> String {
 /// Lookup key for a content type.
 ///
 /// Writers disagree about whitespace around `;` and about the `obj_` prefix, so
-/// matching is deliberately tolerant — but only here, on the way *in*. What
+/// matching is deliberately tolerant - but only here, on the way *in*. What
 /// gets written back out is always the verbatim string from `TypeInfo`.
 fn normalize_content_type(value: &str) -> String {
     match parse_content_type(value) {

@@ -44,8 +44,8 @@ pub struct Collection {
 pub struct AreaFilter {
     /// The path of the geometric property, as the service expects it.
     ///
-    /// For a complex-feature WFS this is not a column name but a path —
-    /// `gsmlbh:referenceLocation/gsmlbh:OriginPosition/gsmlbh:location` — and
+    /// For a complex-feature WFS this is not a column name but a path -
+    /// `gsmlbh:referenceLocation/gsmlbh:OriginPosition/gsmlbh:location` - and
     /// nobody can guess it: it is declared.
     pub property: String,
     /// The label shown next to the drawing.
@@ -60,7 +60,7 @@ pub struct Filter {
     pub name: String,
     /// The label.
     pub label: String,
-    /// What it means, in one sentence — **why** it is there.
+    /// What it means, in one sentence - **why** it is there.
     ///
     /// A label says *what*, this sentence says *what it is for*: without it,
     /// `codeSpace` is three words nobody knows how to fill in.
@@ -72,7 +72,7 @@ pub struct Filter {
     pub required: bool,
     /// What the provider proposes, and which stays editable.
     ///
-    /// A suggestion, never a lock — the rule of the creation door's `Slot`s.
+    /// A suggestion, never a lock - the rule of the creation door's `Slot`s.
     /// `None` when nothing sensible can be proposed: proposing a random value
     /// is worse than leaving it empty.
     pub suggest: Option<String>,
@@ -106,7 +106,7 @@ pub enum Kind {
 /// The format of the map view, that of GeoJSON (RFC 7946), and the one a drawn
 /// outline already gives. Converting elsewhere would be a second geodesy; the
 /// axis order a service expects is the business of that service and of nobody
-/// else — see [`crate::wfs`], which measured it.
+/// else - see [`crate::wfs`], which measured it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "as", content = "of", rename_all = "camelCase")]
 pub enum Area {
@@ -122,7 +122,7 @@ pub enum Area {
         north: f64,
     },
     /// A closed ring, longitude then latitude, the first point repeated at the
-    /// end — what the map view writes.
+    /// end - what the map view writes.
     Ring(Vec<(f64, f64)>),
 }
 
@@ -179,7 +179,7 @@ pub struct Query {
     /// The conditions, all conjoined.
     ///
     /// Conjoined and not a tree: it can be drawn as a form, read aloud, and
-    /// there is no precedence to learn — the same argument the scene's
+    /// there is no precedence to learn - the same argument the scene's
     /// `Selector` already settled.
     pub terms: Vec<Term>,
     /// The ceiling the caller sets, in **entities**.

@@ -5,7 +5,7 @@
 //!
 //! The analyses take three slices of one length and read no package
 //! (`step_rate.rs`, *Nothing here reads a package*). What a flow test holds is
-//! [`super::flow_test::Measured`] series — one channel each, against the
+//! [`super::flow_test::Measured`] series - one channel each, against the
 //! test's time channel. This is the one place that turns the second into the
 //! first, so the front end, the CLI and Python hand the analyses the same columns.
 //!
@@ -16,14 +16,14 @@
 //! `FlowChannel` of the **one** `MeasuredFlowRate` item, the pressure the
 //! `PressureChannel` of the **one** `MeasuredPressure` item (a
 //! `PressureDerivativeChannel` beside it is not a pressure). None is
-//! [`Refused::Missing`]; several is [`Refused::SeveralMatch`] — which of two
+//! [`Refused::Missing`]; several is [`Refused::SeveralMatch`] - which of two
 //! pressures a diagnostic reads is stated nowhere, and the first is a guess.
 //!
 //! # One time axis, never two made into one
 //!
 //! Both series are indexed by their item's `TimeChannel`. When the two indexes
 //! do not hold the same instants, pairing a rate with a pressure means
-//! interpolating one of them — [`Refused::DifferentInstants`]. `injection-test`
+//! interpolating one of them - [`Refused::DifferentInstants`]. `injection-test`
 //! writes one `TIME` channel for both, which is the case this reads.
 //!
 //! # Units
@@ -32,7 +32,7 @@
 //!   its unit, converted through [`crate::units::seconds`] or refused. Hours
 //!   count from the first sample.
 //! - **Rate.** Its unit must read `<volume>/<time>` with the time a unit
-//!   [`crate::units`] knows — `m3/h`, `m3/d`, `bbl/d` — the rule
+//!   [`crate::units`] knows - `m3/h`, `m3/d`, `bbl/d` - the rule
 //!   [`super::production`] already applies. It is brought to **per hour**,
 //!   and its volume kept as written: this build has no table of volumes and
 //!   converts nothing it cannot check.
@@ -43,7 +43,7 @@
 //!
 //! A sample that is not [`Quality::Good`] becomes `NaN` in its column: the
 //! analyses refuse a `NaN` rate by its rank and treat a `NaN` pressure as a
-//! hole — never a value.
+//! hole - never a value.
 
 use super::flow_test::Measured;
 use super::{Channel, IndexKind, Quality, Refused};
@@ -57,14 +57,14 @@ pub struct RateAndPressure {
     pub rates: Vec<f64>,
     /// The pressure, in [`RateAndPressure::pressure_uom`]; `NaN` where not good.
     pub pressures: Vec<f64>,
-    /// `<volume>/h` — the rate's volume as written, per hour.
+    /// `<volume>/h` - the rate's volume as written, per hour.
     pub rate_uom: String,
-    /// The rate's volume as written — `m3`.
+    /// The rate's volume as written - `m3`.
     pub volume_uom: String,
-    /// The pressure's unit as written — `bar`.
+    /// The pressure's unit as written - `bar`.
     pub pressure_uom: String,
     /// The first sample's index value, in the index's own terms (Unix seconds
-    /// for a `date time` index) — what "hour 0" is.
+    /// for a `date time` index) - what "hour 0" is.
     pub origin: f64,
     /// The rate channel's mnemonic.
     pub rate_channel: String,
@@ -119,7 +119,7 @@ pub fn rate_and_pressure(measured: &[Measured]) -> Result<RateAndPressure, Refus
         return Err(Refused::Unit {
             what: format!("the pressure `{}`", pressure_channel.mnemonic),
             uom: pressure_uom,
-            why: "not a pressure unit this build knows — a test pointing at the wrong channel draws a line through the wrong quantity".to_string(),
+            why: "not a pressure unit this build knows - a test pointing at the wrong channel draws a line through the wrong quantity".to_string(),
         });
     }
 

@@ -3,12 +3,12 @@
 //! The unit test of `table` verifies that each column names a kind **from its
 //! own list**, which is circular: it would pass on seven invented uuids.
 //! This one confronts the constants with the **official dictionary**, read by
-//! `energyml-domain` from the PropertyKind dictionary v2.3
-//! — two independent sources of the same fact, one of which is not code written
+//! `energyml-domain` from the PropertyKind dictionary v2.3 -
+//! two independent sources of the same fact, one of which is not code written
 //! here. It is the triangulation that the project's contribution rules ask for.
 //!
 //! What this catches: a mistyped uuid. A package carrying it would have a
-//! dangling reference that no store resolves — precisely the fault that the
+//! dangling reference that no store resolves - precisely the fault that the
 //! graph has distinguished since yesterday from a legitimate absence.
 
 use energyml_build::table;
@@ -35,7 +35,7 @@ fn every_kind_named_by_the_table_is_in_the_official_dictionary() {
                 )
             });
             // **And the title too.** A right uuid under a wrong name would write
-            // in every reference a title that the dictionary contradicts — a
+            // in every reference a title that the dictionary contradicts - a
             // reader that displays the title of the DOR would show something other than
             // what the reference designates.
             assert_eq!(
@@ -54,7 +54,7 @@ fn every_kind_named_by_the_table_is_in_the_official_dictionary() {
 fn the_check_can_fail() {
     // The counter-proof: a uuid that does not exist must be unfindable. Without
     // it, an empty dictionary would make the previous test pass without proving
-    // anything — two checks of this suite have already passed on empty
+    // anything - two checks of this suite have already passed on empty
     // sets on the first try.
     property_kind::with_default(|dictionary| {
         assert!(

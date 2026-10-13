@@ -20,7 +20,7 @@ pub enum Error {
     /// The text is **its own**, repeated as is: it is the one who knows why, and
     /// rewording it would lose the only sentence somebody can act on. Measured
     /// on real services: a WFS answers its refusals as an `ows:ExceptionReport`,
-    /// in XML, with a 400 — even when JSON is asked for.
+    /// in XML, with a 400 - even when JSON is asked for.
     Server {
         /// The HTTP code.
         status: u16,

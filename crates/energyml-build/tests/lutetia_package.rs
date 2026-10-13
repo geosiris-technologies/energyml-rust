@@ -5,9 +5,9 @@
 //! 1. `$ENERGYML_LUTETIA_DIR`, laid out like the public `energyml-lutetia`
 //!    repository (the contract is written in that repository's README and in
 //!    `scripts/fetch-lutetia.py` of this one):
-//!    - `package/Lutetia.epc` (+ `Lutetia.h5`) — the **clean** model;
+//!    - `package/Lutetia.epc` (+ `Lutetia.h5`) - the **clean** model;
 //!    - `package-with-errors/Lutetia-with-errors.epc` or `Lutetia.epc`
-//!      (+ the `.h5` the EPC names) — the variant with deliberate errors;
+//!      (+ the `.h5` the EPC names) - the variant with deliberate errors;
 //!    - `recipe/recette.toml` and `recipe/donnees/…`;
 //!    - `recipe/energyml-version` (read by nobody here; it pins the CLI that replays);
 //!    - `written-on`, optional: the platform stamp the replay writes, see [`Stamp`];
@@ -15,8 +15,8 @@
 //!    (**the clean package and the one with errors are filed under the other
 //!    names there**).
 //!
-//! Nothing found: a panic when `$ENERGYML_LUTETIA_DIR` is set — a directory that was
-//! named and lacks the model is a failure, never a skip — and otherwise a printed
+//! Nothing found: a panic when `$ENERGYML_LUTETIA_DIR` is set - a directory that was
+//! named and lacks the model is a failure, never a skip - and otherwise a printed
 //! note and `None`, the test returning (CI fetches Lutetia only once its repository
 //! is pinned in `tests/lutetia.lock`).
 //!
@@ -108,7 +108,7 @@ pub fn package(variant: Variant) -> Option<PathBuf> {
 /// ```
 ///
 /// - line 1, the platform, spelled as node's `process.platform` (`win32`,
-///   `linux`, `darwin`) — the only line the monorepo's file has;
+///   `linux`, `darwin`) - the only line the monorepo's file has;
 /// - an optional `arch: …` line, spelled as node's `process.arch` (`x64`,
 ///   `arm64`).
 ///
@@ -168,7 +168,7 @@ pub fn here() -> String {
     format!("{}/{}", node_platform(), node_arch())
 }
 
-/// The stamp shipped with the packages — `None` when there is none, and the
+/// The stamp shipped with the packages - `None` when there is none, and the
 /// comparison is then exact.
 pub fn written_on() -> Option<Stamp> {
     let mut candidates = Vec::new();

@@ -3,20 +3,20 @@
 //!
 //! A recipe can be corrected or extended later, and the code can replay the
 //! generation. Chosen: **a versioned recipe, a runner in the
-//! library, a command** — neither a session script nor a program written for
+//! library, a command** - neither a session script nor a program written for
 //! one model.
 //!
 //! # What a recipe is
 //!
-//! A TOML file (the reference model's recipe is one): a header — the package's name,
+//! A TOML file (the reference model's recipe is one): a header - the package's name,
 //! the instant and the author every object is stamped with, the HDF5 file, the
-//! title of the workflow template — and `[[etape]]`s, in order. A step names
+//! title of the workflow template - and `[[etape]]`s, in order. A step names
 //! an operation of the registry, its answers (`set`, typed as TOML types them),
 //! its inputs (`entrees`), the template of the tables it reads, and the use
 //! cases and objects of the model it serves (`sert`, recopied, never read).
 //!
 //! An input is **either** a file relative to the recipe **or** what an earlier
-//! step wrote, named by that step's name and narrowed by type, title or role —
+//! step wrote, named by that step's name and narrowed by type, title or role -
 //! never a uuid copied from a previous run. A setting that takes an object of
 //! the package (`crs`, `interpretation`, …) names it the same way:
 //! `crs = { etape = "reperes", type = "eml23.LocalEngineeringCompoundCrs" }`.
@@ -28,20 +28,20 @@
 //! leaves empty, [`crate::operation::Registry::plan`] plans with
 //! `Identity::derived()` and the recipe's instant, [`crate::apply`] writes into
 //! **one** in-memory package for the whole run. The first refusal stops the run
-//! and names the step — a step is never skipped in silence, and a package half
+//! and names the step - a step is never skipped in silence, and a package half
 //! made is never saved.
 //!
 //! A step can be **held** (`attente = "why"`): it is checked like the others,
 //! reported as held with its reason, and not played. A step that takes what a
 //! held step would write is refused before anything runs, unless it is held
-//! too — an input that is not there is not an empty input.
+//! too - an input that is not there is not an empty input.
 //!
 //! # The recipe is the workflow
 //!
-//! Played, a recipe writes an `ActivityTemplate` of its own — one `subActivity`
+//! Played, a recipe writes an `ActivityTemplate` of its own - one `subActivity`
 //! parameter per step, whose `Constraint` names the operation's canonical
 //! template (a template cannot name the template of its sub-activities in any
-//! other way, `Activities.xsd` l. 155–211) — and a root `Activity`. **Every
+//! other way, `Activities.xsd` l. 155-211) - and a root `Activity`. **Every
 //! operation's activity carries `Parent` → that root from the moment it is
 //! written**: the root's uuid is derived from the recipe before the first step,
 //! which the workflow structure requires. The root names each step's activity in a
@@ -52,8 +52,8 @@
 //! The instant and the author are the recipe's; every object uuid is derived
 //! from content (the operations' rule); the workflow's are derived from the
 //! recipe. One thing is added to what an operation derives: **the step's name
-//! enters its activity's seed**. Two steps of one operation over the same seed
-//! — the depth and the time frames of `crs`, over the same EPSG codes — would
+//! enters its activity's seed**. Two steps of one operation over the same seed -
+//! the depth and the time frames of `crs`, over the same EPSG codes - would
 //! otherwise write one activity twice, and the second would replace the first:
 //! a step of the workflow gone without a word.
 
@@ -80,7 +80,7 @@ const GIVE_TEMPLATE: &str = "`template = \"<file.json>\"` on its step";
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Recipe {
-    /// The package's name — and the root activity's, unless `activite` says
+    /// The package's name - and the root activity's, unless `activite` says
     /// otherwise.
     #[serde(rename = "titre")]
     pub title: String,
@@ -94,7 +94,7 @@ pub struct Recipe {
     /// names another `dataFile`.
     #[serde(rename = "donnees", default = "data_h5")]
     pub data_file: String,
-    /// The title of the workflow's `ActivityTemplate` — `workflow:lutetia`.
+    /// The title of the workflow's `ActivityTemplate` - `workflow:lutetia`.
     pub workflow: String,
     /// The title of the root `Activity`; left out, [`Recipe::title`].
     #[serde(rename = "activite", default)]
@@ -115,31 +115,31 @@ fn data_h5() -> String {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Step {
-    /// Its name — unique, and how a later step names what it wrote.
+    /// Its name - unique, and how a later step names what it wrote.
     #[serde(rename = "nom")]
     pub name: String,
     /// The operation, as `energyml create --list` names it.
     pub operation: String,
-    /// The answers, by slot name, typed as TOML types them — a number, a flag,
-    /// a list, text — or a reference to what an earlier step wrote.
+    /// The answers, by slot name, typed as TOML types them - a number, a flag,
+    /// a list, text - or a reference to what an earlier step wrote.
     #[serde(default)]
     pub set: BTreeMap<String, Value>,
     /// The inputs.
     #[serde(rename = "entrees", default)]
     pub inputs: Vec<Entry>,
-    /// What the columns of its tables mean — relative to the recipe, like
+    /// What the columns of its tables mean - relative to the recipe, like
     /// `energyml create --template`.
     #[serde(default)]
     pub template: Option<String>,
-    /// The use cases and objects of the model it serves — recopied into the
+    /// The use cases and objects of the model it serves - recopied into the
     /// report and the workflow, never read.
     #[serde(rename = "sert", default)]
     pub serves: Vec<String>,
     /// Why it waits, when it does: checked, reported, not played.
     #[serde(rename = "attente", default)]
     pub held: Option<String>,
-    /// The group it belongs to, when a variant of the package may leave it out
-    /// — `erreur` for the steps of Lutetia's `[ERROR]` model. See
+    /// The group it belongs to, when a variant of the package may leave it out -
+    /// `erreur` for the steps of Lutetia's `[ERROR]` model. See
     /// [`Recipe::without`].
     #[serde(rename = "groupe", default)]
     pub group: Option<String>,
@@ -159,13 +159,13 @@ pub struct Entry {
     /// The earlier step whose objects are taken.
     #[serde(rename = "etape", default)]
     pub step: Option<String>,
-    /// Only its objects of this type — `eml23.VerticalCrs`, or the bare class.
+    /// Only its objects of this type - `eml23.VerticalCrs`, or the bare class.
     #[serde(rename = "type", default)]
     pub qualified_type: Option<String>,
     /// Only its objects of this exact title.
     #[serde(rename = "titre", default)]
     pub title: Option<String>,
-    /// Only its objects of this role in the plan — `representation`, `crs`.
+    /// Only its objects of this role in the plan - `representation`, `crs`.
     #[serde(default)]
     pub role: Option<String>,
 }
@@ -176,7 +176,7 @@ pub enum Mode {
     /// Every step is planned and applied, arrays included.
     Write,
     /// Every step is planned and applied **without its arrays** into a package
-    /// that is never saved — what a quote can say. A step that reads the
+    /// that is never saved - what a quote can say. A step that reads the
     /// geometry an earlier one would write stops there, and says why.
     Plan,
 }
@@ -184,7 +184,7 @@ pub enum Mode {
 /// An object a step wrote, as a later step can name it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Object {
-    /// Its role in the plan — `representation`, `crs`, `feature`.
+    /// Its role in the plan - `representation`, `crs`, `feature`.
     pub role: String,
     /// `resqml22.PolylineSetRepresentation`.
     pub qualified_type: String,
@@ -192,7 +192,7 @@ pub struct Object {
     pub uuid: String,
     /// Its title.
     pub title: String,
-    /// **Its address** — the full uri, the version it declares included
+    /// **Its address** - the full uri, the version it declares included
     /// (ADR-0003). What a later step reads it by: a step may write a
     /// second version of an object beside the first, and both have one uuid.
     pub uri: String,
@@ -210,7 +210,7 @@ impl Object {
         }
     }
 
-    /// The reference to it — uuid, type, title **and version** (the uri's).
+    /// The reference to it - uuid, type, title **and version** (the uri's).
     fn reference(&self) -> Ref {
         Ref::of_uri(&self.uri, self.title.clone())
             .unwrap_or_else(|| Ref::new(self.uuid.clone(), self.qualified_type.clone(), self.title.clone()))
@@ -228,7 +228,7 @@ pub struct Done {
     pub serves: Vec<String>,
     /// Why it was not played, when it was held.
     pub held: Option<String>,
-    /// Its activity's title — empty when held.
+    /// Its activity's title - empty when held.
     pub title: String,
     /// The objects its plan made, in order.
     pub objects: Vec<Object>,
@@ -238,14 +238,14 @@ pub struct Done {
     pub says: Vec<Note>,
     /// What the plan set aside, counted.
     pub dropped: Vec<Dropped>,
-    /// What reading its inputs set aside — a feature of a GeoJSON that did
+    /// What reading its inputs set aside - a feature of a GeoJSON that did
     /// not read, named.
     pub set_aside: Vec<String>,
-    /// What applying it did — written, replaced, versioned. `None` when held.
+    /// What applying it did - written, replaced, versioned. `None` when held.
     pub made: Option<Made>,
     /// Its activity, as the workflow names it. `None` when held.
     pub activity: Option<Ref>,
-    /// What it wrote, as the run manifest says it — `None` when held.
+    /// What it wrote, as the run manifest says it - `None` when held.
     pub manifest: Option<crate::manifest::Step>,
     /// The external files its plan wrote arrays into.
     pub data_files: Vec<String>,
@@ -275,7 +275,7 @@ impl Done {
 /// The workflow a recipe writes: its template and its root activity.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Workflow {
-    /// The `ActivityTemplate` — one `subActivity` parameter per step.
+    /// The `ActivityTemplate` - one `subActivity` parameter per step.
     pub template: Ref,
     /// The root `Activity`, every step's `Parent`.
     pub activity: Ref,
@@ -330,7 +330,7 @@ pub enum StoppedAt {
     Package,
 }
 
-/// Why a run did not reach its end — where, and every refusal found there.
+/// Why a run did not reach its end - where, and every refusal found there.
 #[derive(Debug, Clone)]
 pub struct Stop {
     /// Where.
@@ -369,7 +369,7 @@ impl std::fmt::Display for Stop {
 impl std::error::Error for Stop {}
 
 impl Recipe {
-    /// Read a recipe. A key it does not know is refused by name — `entree`
+    /// Read a recipe. A key it does not know is refused by name - `entree`
     /// for `entrees` would otherwise be a step with no input, which reads like
     /// one that needs none.
     pub fn parse(text: &str) -> Result<Recipe, Stop> {
@@ -381,7 +381,7 @@ impl Recipe {
         self.activity.as_deref().unwrap_or(&self.title)
     }
 
-    /// **The same recipe, with the steps of these groups left out** — held,
+    /// **The same recipe, with the steps of these groups left out** - held,
     /// with the reason said, so that they are checked, reported and declared
     /// in the workflow's template like any held step, and not played.
     ///
@@ -408,7 +408,7 @@ impl Recipe {
                     .filter_map(|step| step.group.as_deref())
                     .collect();
                 return Err(format!(
-                    "no step of this recipe is in the group `{group}` — its groups are {}",
+                    "no step of this recipe is in the group `{group}` - its groups are {}",
                     if known.is_empty() {
                         "none".to_string()
                     } else {
@@ -435,7 +435,7 @@ impl Recipe {
         Ok(out)
     }
 
-    /// Whether the recipe holds together — **before any plan**, every fault at
+    /// Whether the recipe holds together - **before any plan**, every fault at
     /// once: an unknown operation, a name used twice, an input from a step
     /// that comes later, from no step, or from a held one.
     pub fn check(&self, operations: &Registry) -> Result<(), Stop> {
@@ -445,7 +445,7 @@ impl Recipe {
         }
         if !is_instant(&self.creation) {
             wrong.push(format!(
-                "`creation` is `{}`: expected `YYYY-MM-DDThh:mm:ssZ` — the instant every object is stamped with, stated so that two runs write one package",
+                "`creation` is `{}`: expected `YYYY-MM-DDThh:mm:ssZ` - the instant every object is stamped with, stated so that two runs write one package",
                 self.creation
             ));
         }
@@ -476,20 +476,20 @@ impl Recipe {
                 ));
             } else if let Some(first) = self.steps[..at].iter().position(|one| one.name == step.name) {
                 wrong.push(format!(
-                    "{named}: the name is already step {}'s — a step is named to be referenced, and two of one name are one ambiguity",
+                    "{named}: the name is already step {}'s - a step is named to be referenced, and two of one name are one ambiguity",
                     first + 1
                 ));
             }
             match operations.get(&step.operation) {
                 None => wrong.push(format!(
-                    "{named}: no operation is called `{}` — `energyml create --list` names them",
+                    "{named}: no operation is called `{}` - `energyml create --list` names them",
                     step.operation
                 )),
                 // **A setting the operation does not declare is refused**, not
                 // carried: `azimuht` for `azimuth` would otherwise be a frame
                 // written without its rotation, which reads like one that has
-                // none. `needs` answers on the empty bag — it is what the
-                // template is projected from — so every slot is there, the
+                // none. `needs` answers on the empty bag - it is what the
+                // template is projected from - so every slot is there, the
                 // conditional ones included.
                 Some(operation) => {
                     let declared: Vec<&'static str> = operation
@@ -499,7 +499,7 @@ impl Recipe {
                         .collect();
                     for key in step.set.keys().filter(|key| !declared.contains(&key.as_str())) {
                         wrong.push(format!(
-                            "{named}: `{}` has no setting `{key}` — it takes {}",
+                            "{named}: `{}` has no setting `{key}` - it takes {}",
                             step.operation,
                             declared
                                 .iter()
@@ -512,7 +512,7 @@ impl Recipe {
             }
             if step.held.as_deref().is_some_and(|why| why.trim().is_empty()) {
                 wrong.push(format!(
-                    "{named}: `attente` is empty — a held step says why it waits"
+                    "{named}: `attente` is empty - a held step says why it waits"
                 ));
             }
 
@@ -521,7 +521,7 @@ impl Recipe {
                 let entry_named = format!("{named}, input {}", k + 1);
                 match (&entry.file, &entry.step) {
                     (Some(_), Some(_)) => wrong.push(format!(
-                        "{entry_named}: it names a file **and** a step — an input is one or the other"
+                        "{entry_named}: it names a file **and** a step - an input is one or the other"
                     )),
                     (None, None) => wrong.push(format!(
                         "{entry_named}: it names neither a `fichier` nor an `etape`"
@@ -529,14 +529,14 @@ impl Recipe {
                     (Some(file), None) => {
                         if entry.qualified_type.is_some() || entry.title.is_some() || entry.role.is_some() {
                             wrong.push(format!(
-                                "{entry_named}: `type`, `titre` and `role` narrow what a step wrote — a file has nothing of the kind to narrow"
+                                "{entry_named}: `type`, `titre` and `role` narrow what a step wrote - a file has nothing of the kind to narrow"
                             ));
                         }
                         // A recipe names objects by the step that wrote them,
                         // never by a uuid copied out of another run.
                         if file.contains('#') {
                             wrong.push(format!(
-                                "{entry_named}: `{file}` names an object by its uuid — a recipe names what an earlier step wrote with `etape`, never a uuid copied from a run"
+                                "{entry_named}: `{file}` names an object by its uuid - a recipe names what an earlier step wrote with `etape`, never a uuid copied from a run"
                             ));
                         }
                     }
@@ -556,17 +556,17 @@ impl Recipe {
             for target in targets {
                 if target == step.name {
                     wrong.push(format!(
-                        "{named}: it takes what it writes itself — a step reads what earlier steps wrote"
+                        "{named}: it takes what it writes itself - a step reads what earlier steps wrote"
                     ));
                 } else if let Some((_, held)) = earlier.iter().find(|(name, _)| *name == target) {
                     if let (Some(why), None) = (held, &step.held) {
                         wrong.push(format!(
-                            "{named}: it takes what `{target}` writes, and `{target}` is held ({why}) — hold this step too, or release that one"
+                            "{named}: it takes what `{target}` writes, and `{target}` is held ({why}) - hold this step too, or release that one"
                         ));
                     }
                 } else if self.steps[at + 1..].iter().any(|later| later.name == target) {
                     wrong.push(format!(
-                        "{named}: it takes what `{target}` writes, and `{target}` comes after it — a step reads what earlier steps wrote"
+                        "{named}: it takes what `{target}` writes, and `{target}` comes after it - a step reads what earlier steps wrote"
                     ));
                 } else {
                     wrong.push(format!(
@@ -584,7 +584,7 @@ impl Recipe {
     }
 
     /// The workflow's template and root activity, **derived from the recipe
-    /// before any step runs** — which is what lets every step's activity name
+    /// before any step runs** - which is what lets every step's activity name
     /// its `Parent` as it is written.
     ///
     /// The template from what it states: each step's name, operation, what it
@@ -621,7 +621,7 @@ impl Recipe {
     }
 }
 
-/// A uuid v5 in the crate's namespace — the one every derived identity hangs
+/// A uuid v5 in the crate's namespace - the one every derived identity hangs
 /// from.
 fn derived(name: &str) -> String {
     uuid::Uuid::new_v5(&crate::naming::NAMESPACE, name.as_bytes()).to_string()
@@ -660,7 +660,7 @@ impl Pick {
     }
 
     /// A reference written as a setting: a table whose `etape` names the
-    /// step. Any other table is left as it is — `Ok(None)`.
+    /// step. Any other table is left as it is - `Ok(None)`.
     fn of_value(value: &Value) -> Result<Option<Pick>, String> {
         let Value::Object(map) = value else {
             return Ok(None);
@@ -678,7 +678,7 @@ impl Pick {
             .find(|key| !["etape", "type", "titre", "role"].contains(&key.as_str()))
         {
             return Err(format!(
-                "`{key}` is no part of a reference to a step — `etape`, and to narrow it `type`, `titre`, `role`"
+                "`{key}` is no part of a reference to a step - `etape`, and to narrow it `type`, `titre`, `role`"
             ));
         }
         let text = |key: &str| -> Result<Option<String>, String> {
@@ -720,7 +720,7 @@ impl Pick {
     }
 }
 
-/// Every reference a setting holds — itself, or the items of its list.
+/// Every reference a setting holds - itself, or the items of its list.
 fn picks_in(value: &Value, out: &mut Vec<Result<Pick, String>>) {
     match value {
         Value::Array(items) => items.iter().for_each(|item| picks_in(item, out)),
@@ -733,7 +733,7 @@ fn picks_in(value: &Value, out: &mut Vec<Result<Pick, String>>) {
     }
 }
 
-/// Whether an object of type `qualified` is of the type `wanted` names — the
+/// Whether an object of type `qualified` is of the type `wanted` names - the
 /// qualified type exactly when it has a package, the bare class otherwise,
 /// case and RESQML 2.0.1's `obj_` ignored, as [`crate::operation::Takes::accepts`]
 /// compares.
@@ -767,7 +767,7 @@ fn listed(objects: &[Object]) -> String {
     out.join(", ")
 }
 
-/// What an earlier step wrote that a reference keeps — at least one.
+/// What an earlier step wrote that a reference keeps - at least one.
 fn picked<'a>(pick: &Pick, written: &'a BTreeMap<String, Vec<Object>>) -> Result<Vec<&'a Object>, String> {
     let objects = written.get(&pick.step).map(Vec::as_slice).unwrap_or_default();
     let kept: Vec<&Object> = objects.iter().filter(|one| pick.keeps(one)).collect();
@@ -787,7 +787,7 @@ fn file_source(base: &Path, file: &str) -> Where {
 }
 
 /// What an earlier step wrote, as pieces: a representation as its shape and
-/// its companion, anything else as what is known of it — the line
+/// its companion, anything else as what is known of it - the line
 /// [`crate::read::every`] and the front end draw, **on the type**.
 fn pieces_of_written(
     store: &EpcStore,
@@ -796,7 +796,7 @@ fn pieces_of_written(
     mode: Mode,
 ) -> Result<Vec<(String, Source)>, String> {
     // **A representation this build cannot draw has no shape to offer**, and
-    // is an object like any other — what a collection's members take. Decided
+    // is an object like any other - what a collection's members take. Decided
     // on the type (`energyml_geometry::geometry::is_supported`), never on the
     // words of a failed read: a framework is written by `surface-framework`
     // and gathered by the project, and nothing reads its geometry yet.
@@ -823,7 +823,7 @@ fn pieces_of_written(
             // array, so a geometry an earlier step planned is not there to be
             // read back.
             Mode::Plan => format!(
-                "`{}` ({}) cannot be read back: a plan writes no array, so the geometry an earlier step would write is not there — play the recipe with an output to go further ({why})",
+                "`{}` ({}) cannot be read back: a plan writes no array, so the geometry an earlier step would write is not there - play the recipe with an output to go further ({why})",
                 object.title, object.qualified_type
             ),
         }),
@@ -836,7 +836,7 @@ fn pieces_of_written(
 }
 
 /// A setting, its references to earlier steps replaced by the object they
-/// name — **one** object each, a setting taking one — and those objects kept
+/// name - **one** object each, a setting taking one - and those objects kept
 /// aside so that what is known of them can come back into the bag.
 fn resolved(
     value: &Value,
@@ -856,7 +856,7 @@ fn resolved(
                 let [one] = kept.as_slice() else {
                     let owned: Vec<Object> = kept.iter().copied().cloned().collect();
                     return Err(format!(
-                        "{} names {} objects — {}; a setting takes one: narrow it with `type`, `titre` or `role`",
+                        "{} names {} objects - {}; a setting takes one: narrow it with `type`, `titre` or `role`",
                         pick.said(),
                         owned.len(),
                         listed(&owned)
@@ -870,7 +870,7 @@ fn resolved(
     }
 }
 
-/// Play one step into the store — the path `energyml create` takes.
+/// Play one step into the store - the path `energyml create` takes.
 #[allow(clippy::too_many_arguments)]
 fn play_step(
     step: &Step,
@@ -896,7 +896,7 @@ fn play_step(
         .ok_or_else(|| one(format!("no operation is called `{}`", step.operation)))?;
     let mut set_aside: Vec<String> = Vec::new();
 
-    // The template of its tables, read once for the step — `--template`.
+    // The template of its tables, read once for the step - `--template`.
     let template = match &step.template {
         None => None,
         Some(file) => Some(entries::template(reader, &file_source(base, file)).map_err(one)?),
@@ -917,7 +917,7 @@ fn play_step(
                 .map(|slot| numbering.next(slot))
                 .unwrap_or_else(|| name.clone());
             // A file for a slot that takes a **document** is carried as bytes
-            // — the operation's declaration decides, never the file's name.
+            // - the operation's declaration decides, never the file's name.
             if entries::takes_document(&operation.takes(), entry.slot.as_deref()) {
                 let (bytes, declared) = reader.bytes(&source).map_err(one)?;
                 bag = bag.with(piece, entries::read_document(&name, bytes, declared.as_deref()));
@@ -946,7 +946,7 @@ fn play_step(
 
     drop(reading);
     // The answers, references resolved. What a reference named comes back into
-    // the bag as a **companion** — `crs (object)` — **after** the inputs: an
+    // the bag as a **companion** - `crs (object)` - **after** the inputs: an
     // answer is an input (`read::known_of_object`), and the frame of a CRS
     // named here gives its vertical half this way, as it does in the front end. A
     // companion binds to no slot, so it cannot be taken for an input.
@@ -967,7 +967,7 @@ fn play_step(
     if choices.get("dataFile").is_none() && operation.needs(&bag).iter().any(|slot| slot.name == "dataFile") {
         choices = choices.set("dataFile", recipe.data_file.clone());
     }
-    // **What a slot takes when left empty, from the package being built** —
+    // **What a slot takes when left empty, from the package being built** -
     // `Otherwise::Every`, the function `--into` and the front end call.
     let bag = crate::read::every(
         store,
@@ -985,8 +985,8 @@ fn play_step(
                 .map(|refusal| refusal.message.clone())
                 .collect::<Vec<_>>()
         })?;
-    // The step's name in its activity's seed — see the module.
-    plan.activity.seed = format!("{} — step {}", plan.activity.seed, step.name);
+    // The step's name in its activity's seed - see the module.
+    plan.activity.seed = format!("{} - step {}", plan.activity.seed, step.name);
 
     let made = {
         let _span = tracing::info_span!(
@@ -1058,7 +1058,7 @@ fn write_workflow(
         // **A template cannot name the template of its sub-activities**:
         // `ParameterTemplate` has no reference to another template, and
         // `DataObjectContentType` is for a `dataObject` only (Activities.xsd
-        // l. 155–211). `Constraint` — free text — is the one place the schema
+        // l. 155-211). `Constraint` - free text - is the one place the schema
         // leaves for it, and it says so itself: *« it will be better to have a
         // formal description of the constraint »*.
         let maker: &str = operations
@@ -1084,7 +1084,7 @@ fn write_workflow(
             is_output: false,
             title: step.step.clone(),
             max_occurs: 1,
-            // A held step is declared — it is part of the workflow — and
+            // A held step is declared - it is part of the workflow - and
             // absent from the run.
             min_occurs: if step.held.is_some() { 0 } else { 1 },
             // `String2000`, the schema's bound.
@@ -1100,7 +1100,7 @@ fn write_workflow(
         ..Default::default()
     };
 
-    // **The parent names its children** — the other half of `Parent`, so the
+    // **The parent names its children** - the other half of `Parent`, so the
     // tree reads from either end (the parent names its children by its
     // parameters, each child names its parent by `Parent`).
     let children: Vec<eml::AbstractActivityParameter> = done
@@ -1141,7 +1141,7 @@ fn write_workflow(
     Ok(())
 }
 
-/// Play a recipe into `store` — every step, then the workflow. **Nothing is
+/// Play a recipe into `store` - every step, then the workflow. **Nothing is
 /// saved**: the store is the caller's.
 ///
 /// `base` is the recipe's folder, which its files are relative to; `reader` is
@@ -1183,7 +1183,7 @@ pub fn play(
                 // collections grouping a plan's many objects (`grouping`), and
                 // its activity (`activity`). A project collection holds every object of the
                 // package, so an entry naming a step without a `type` must
-                // bring them all — found by `tests/lutetia.rs`, which set the
+                // bring them all - found by `tests/lutetia.rs`, which set the
                 // project against the package; narrowed by `type`, they stay
                 // out.
                 let mut objects = one.objects.clone();
@@ -1253,7 +1253,7 @@ pub fn play(
     })
 }
 
-/// Play a recipe and save the package to `out` — the whole of
+/// Play a recipe and save the package to `out` - the whole of
 /// `energyml create --recipe … --out …`.
 ///
 /// One in-memory package for the run, saved **only** when every step and the
@@ -1295,7 +1295,7 @@ pub fn run(
     // **A bare name is in the current folder**, and the store must be told:
     // without a root, `--out package.epc` wrote the package and refused each
     // of its arrays (« `data.h5`: file not found »), two thousand lines of
-    // refusals for a file that looks as if it came out — the trap that
+    // refusals for a file that looks as if it came out - the trap that
     // `energyml-cli/src/create.rs` comments on, set here the same way.
     let parent = out
         .parent()
@@ -1322,7 +1322,7 @@ pub fn run(
     Ok(played)
 }
 
-/// Plan a recipe — every step planned and applied without arrays into a
+/// Plan a recipe - every step planned and applied without arrays into a
 /// package that is never saved ([`Mode::Plan`]).
 pub fn plan(
     recipe: &Recipe,

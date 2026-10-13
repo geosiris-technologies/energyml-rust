@@ -221,7 +221,7 @@ fn the_bbox_axis_order_follows_the_crs_projected_xy_geographic_latlon() {
     let catalogue = builtin();
     let rge = catalogue.get("ign-rge-alti").unwrap();
 
-    // Projected: easting, northing — the window the service was measured with.
+    // Projected: easting, northing - the window the service was measured with.
     let request = wms_raster_request(rge, [651000.0, 6860000.0, 652000.0, 6861000.0], 2154, 20, 20).unwrap();
     let q = query_of(&request.url);
     assert_eq!(q["CRS"], "EPSG:2154");
@@ -685,12 +685,12 @@ fn what_is_not_read_is_refused_by_name() {
 
 // -- asking for a window, and reading what comes back ------------------------
 
-/// Paris, in Lambert-93 and in degrees — covered by every IGN relief source.
+/// Paris, in Lambert-93 and in degrees - covered by every IGN relief source.
 const PARIS: [f64; 4] = [651_000.0, 6_860_000.0, 652_000.0, 6_861_000.0];
 const PARIS_WGS84: [f64; 4] = [2.33, 48.85, 2.35, 48.87];
 
 /// **The window grows to whole pixels from its south-west corner**, and says
-/// it does. To make it fail: round `ceil` to `floor` — 1,000 m at 300 m would give
+/// it does. To make it fail: round `ceil` to `floor` - 1,000 m at 300 m would give
 /// 3 pixels and 900 m, a 100 m band lost without saying so.
 #[test]
 fn a_window_is_snapped_to_whole_pixels_of_the_step() {
@@ -708,9 +708,9 @@ fn a_window_is_snapped_to_whole_pixels_of_the_step() {
     assert_eq!((query["WIDTH"].as_str(), query["HEIGHT"].as_str()), ("4", "4"));
 }
 
-/// **Left to choose, it takes the finest relief source it can read** — never
+/// **Left to choose, it takes the finest relief source it can read** - never
 /// one whose protocol is not read yet. To make it fail: remove the filter on
-/// `WmsRaster` — Copernicus or the terrarium tiles, coarser here, would not
+/// `WmsRaster` - Copernicus or the terrarium tiles, coarser here, would not
 /// win, but a fine COG source would win and then refuse.
 #[test]
 fn left_to_choose_the_finest_readable_relief_source_is_taken() {
@@ -771,7 +771,7 @@ fn answer(status: u16, body: Vec<u8>) -> energyml_providers::transport::Answer {
 }
 
 /// **A refusal is the server's words**, even sent with a 200: a WMS answers
-/// a `ServiceException` in XML. To make it fail: read every body as a TIFF — we
+/// a `ServiceException` in XML. To make it fail: read every body as a TIFF - we
 /// would say *not a TIFF* instead of what the service explained.
 #[test]
 fn what_a_service_answers_instead_of_a_tiff_is_its_own_refusal() {
@@ -818,8 +818,8 @@ fn the_area_in_degrees_envelopes_all_four_corners() {
     assert!(terrain::area_wgs84([1.0, 0.0, 0.0, 1.0], 2154, shear).is_err());
 }
 
-/// To make it fail: swap `TILEROW` and `TILECOL` — the image lands in the wrong
-/// place and stays plausible —, or give a template to another tile set.
+/// To make it fail: swap `TILEROW` and `TILECOL` - the image lands in the wrong
+/// place and stays plausible -, or give a template to another tile set.
 #[test]
 fn a_wmts_in_pm_is_a_zxy_template_and_nothing_else_is() {
     let catalogue = TerrainCatalogue::parse(

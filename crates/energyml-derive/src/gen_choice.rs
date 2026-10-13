@@ -1,4 +1,4 @@
-//! Code generation for `#[derive(EnergymlChoice)]` — abstract XSD types and
+//! Code generation for `#[derive(EnergymlChoice)]` - abstract XSD types and
 //! substitution groups, mapped to a Rust enum whose variants are the concrete
 //! subtypes and selected on the wire by `xsi:type`.
 
@@ -229,7 +229,7 @@ pub fn expand(input: &DeriveInput, data: &DataEnum) -> syn::Result<TokenStream> 
     });
 
     // Without an `xsi:type`, an element declared with a concrete base is that
-    // base — whatever the element happens to be named. `Range` typed
+    // base - whatever the element happens to be named. `Range` typed
     // `PlaneAngleOperatingRange` is the common shape, and matching on the
     // element name alone would reject it.
     let implicit_fallback = match variants.iter().find(|v| v.implicit) {
@@ -248,7 +248,7 @@ pub fn expand(input: &DeriveInput, data: &DataEnum) -> syn::Result<TokenStream> 
                 // says the element is a type we cannot construct, and reading
                 // it as the base would silently drop whatever the subtype
                 // added. Leniently, the base is still the best available
-                // reading of the fields it *does* share — and the substitution
+                // reading of the fields it *does* share - and the substitution
                 // is recorded, so nothing is lost quietly.
                 if r.is_lenient()
                     && let ::core::option::Option::Some(__t) = &__xsi

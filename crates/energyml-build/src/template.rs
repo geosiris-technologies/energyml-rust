@@ -2,16 +2,16 @@
 //!
 //! The ideal is one activity template per operation. There are canonical
 //! templates in `rc/activityTemplates.json`,
-//! written by hand next to the code that honours them — two places for one
+//! written by hand next to the code that honours them - two places for one
 //! fact. The rule here: **the [`Slot`] is the source, the `ParameterTemplate`
 //! is a projection of it**, and a test replays the projection against the file
 //! the way `generate --all --check` replays the generator against the committed
-//! crates. The canonical uuid stays a constant of the file — never recomputed,
+//! crates. The canonical uuid stays a constant of the file - never recomputed,
 //! never changed.
 //!
 //! What EML 2.3 can say is most of a form: `AllowedKind`, `MinOccurs`,
-//! `MaxOccurs`, `DataObjectContentType`. What it cannot — a closed list, a
-//! bound, a unit — goes into `Constraint`, which is free text meant for
+//! `MaxOccurs`, `DataObjectContentType`. What it cannot - a closed list, a
+//! bound, a unit - goes into `Constraint`, which is free text meant for
 //! exactly that.
 
 use serde_json::{Value, json};
@@ -47,7 +47,7 @@ pub fn parameter_template(slot: &Slot, is_input: bool) -> Value {
     out
 }
 
-/// A `When` or an `Any` of them, in the template's plain words — no backticks.
+/// A `When` or an `Any` of them, in the template's plain words - no backticks.
 fn condition_words(applies: &crate::operation::Applies) -> Option<String> {
     use crate::operation::Applies;
     match applies {
@@ -110,7 +110,7 @@ fn bound<T: std::fmt::Display>(bound: Option<T>) -> String {
 }
 
 /// The whole template an operation projects to, with the canonical uuid the
-/// file already holds — or `?` when the file has none yet, which the check
+/// file already holds - or `?` when the file has none yet, which the check
 /// below reports.
 pub fn template_of(operation: &dyn AnyOperation) -> Value {
     let recipe = operation.recipe();
@@ -151,13 +151,13 @@ pub fn template_of(operation: &dyn AnyOperation) -> Value {
     })
 }
 
-/// Where the canonical file and the projection disagree — empty when they
+/// Where the canonical file and the projection disagree - empty when they
 /// agree.
 ///
 /// Compared by parameter title, on what the form is made of: the kind, the
 /// direction, the occurrences. The file may carry an `input` parameter the
-/// projection does not declare — the objects of the bag are recorded under it
-/// by the writer — and nothing else the operation does not declare.
+/// projection does not declare - the objects of the bag are recorded under it
+/// by the writer - and nothing else the operation does not declare.
 pub fn disagreements(operation: &dyn AnyOperation) -> Vec<String> {
     let recipe = operation.recipe();
     let mut out = Vec::new();

@@ -2,7 +2,7 @@
 //!
 //! **This file only holds what a generic WFS cannot guess**: the address, the
 //! two collections, the paths its filters expect, and the axis order it
-//! imposes. Everything else is in [`crate::wfs`] — which is what makes the next
+//! imposes. Everything else is in [`crate::wfs`] - which is what makes the next
 //! service nearly free.
 //!
 //! Everything here was read off the service itself (`GetCapabilities` and
@@ -21,7 +21,7 @@ pub fn bss() -> Wfs {
         name: "brgm-bss".to_string(),
         about: "The boreholes of the Banque du sous-sol (BRGM), as GeoSciML 4.1 Borehole".to_string(),
         endpoint: ENDPOINT.to_string(),
-        attribution: "BRGM — Banque du sous-sol (BSS)".to_string(),
+        attribution: "BRGM - Banque du sous-sol (BSS)".to_string(),
         // **`None` does not mean "free".** The service's capabilities declare
         // neither fees nor constraints (`ows:Fees` and `ows:AccessConstraints`
         // are empty), which is not the same as a stated licence. As long as
@@ -77,7 +77,7 @@ fn boreholes() -> Collection {
     }
 }
 
-/// The intervals alone — 2,303,818 entities, as measured.
+/// The intervals alone - 2,303,818 entities, as measured.
 fn intervals() -> Collection {
     Collection {
         name: "intervals".to_string(),

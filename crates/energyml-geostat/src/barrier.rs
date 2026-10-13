@@ -13,7 +13,7 @@
 //! It is not a displacement, not a distance around the fault tip, and not a
 //! surface: a fault here is a set of 2D segments and nothing else. A sample
 //! just past the tip of a fault is visible from just before it, because the
-//! segment between them crosses nothing — the geometry says so, and guessing
+//! segment between them crosses nothing - the geometry says so, and guessing
 //! a shadow beyond the tip would be a decision nobody stated.
 //!
 //! # Touching counts as crossing
@@ -39,7 +39,7 @@ const CHUNK: usize = 16;
 /// IDW over 10 000 nodes, 2 000 samples and 500 fault segments took 32 s,
 /// every sight line tested against every segment. Two closed segments that
 /// share a point have that point in both of their bounding boxes, so a box
-/// that the sight line's box does not touch holds no segment it meets — the
+/// that the sight line's box does not touch holds no segment it meets - the
 /// test is skipped, never decided. The comparisons are on the coordinates
 /// themselves, so there is no rounding to argue about.
 #[derive(Debug, Clone, PartialEq)]
@@ -93,7 +93,7 @@ impl Barriers {
         self.segments.len()
     }
 
-    /// Whether the straight segment `a`–`b` crosses (or touches) any fault.
+    /// Whether the straight segment `a`-`b` crosses (or touches) any fault.
     pub fn blocks(&self, a: [f64; 2], b: [f64; 2]) -> bool {
         let sight = bounds([a, b]);
         self.boxes
@@ -108,13 +108,13 @@ impl Barriers {
     }
 }
 
-/// Of `near` — `(distance, sample)` pairs already in reach — keep the ones no
+/// Of `near` - `(distance, sample)` pairs already in reach - keep the ones no
 /// fault hides, and of those the `cap` nearest when there is a cap.
 ///
 /// With a cap the candidates are walked **nearest first**, and the walk stops
 /// at the `cap`-th visible one: the same neighbourhood as testing every
 /// candidate and then taking the nearest, for the fault tests of the few that
-/// are kept. The cap applies *after* the fault, never before — a wall of near
+/// are kept. The cap applies *after* the fault, never before - a wall of near
 /// samples behind a trace must not crowd out the only visible one. Ties are
 /// broken by the sample's rank, so the answer does not depend on a sort's
 /// whims.
@@ -150,7 +150,7 @@ fn bounds(points: impl IntoIterator<Item = [f64; 2]>) -> [[f64; 2]; 2] {
         })
 }
 
-/// Whether two closed boxes share a point — touching counts, as it does for
+/// Whether two closed boxes share a point - touching counts, as it does for
 /// the segments.
 fn overlap(a: &[[f64; 2]; 2], b: &[[f64; 2]; 2]) -> bool {
     a[0][0] <= b[1][0] && b[0][0] <= a[1][0] && a[0][1] <= b[1][1] && b[0][1] <= a[1][1]
@@ -162,12 +162,12 @@ fn orient(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> f64 {
     (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
 }
 
-/// Whether `c` lies on the closed segment `a`–`b`, `c` being collinear with it.
+/// Whether `c` lies on the closed segment `a`-`b`, `c` being collinear with it.
 fn on_segment(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> bool {
     c[0] >= a[0].min(b[0]) && c[0] <= a[0].max(b[0]) && c[1] >= a[1].min(b[1]) && c[1] <= a[1].max(b[1])
 }
 
-/// Whether the closed segments `a`–`b` and `c`–`d` share at least one point.
+/// Whether the closed segments `a`-`b` and `c`-`d` share at least one point.
 ///
 /// The textbook orientation test, endpoints included: a proper crossing has
 /// `c` and `d` on opposite sides of `ab` **and** `a`, `b` on opposite sides of
@@ -203,7 +203,7 @@ mod tests {
         assert!(fault.blocks([0.0, 5.0], [10.0, 5.0]));
         // Same side: free.
         assert!(!fault.blocks([0.0, 2.0], [4.0, 8.0]));
-        // Past the tip of the fault: free — the geometry says so, and a
+        // Past the tip of the fault: free - the geometry says so, and a
         // shadow beyond the tip would be a decision nobody stated.
         assert!(!fault.blocks([0.0, 12.0], [10.0, 12.0]));
     }
@@ -226,7 +226,7 @@ mod tests {
         assert_eq!(bent.len(), 2);
         assert!(bent.blocks([5.0, -1.0], [5.0, 1.0]));
         assert!(bent.blocks([9.0, 5.0], [11.0, 5.0]));
-        // Crossing the chord (0,0)–(10,10) but neither arm: free.
+        // Crossing the chord (0,0)-(10,10) but neither arm: free.
         assert!(!bent.blocks([2.0, 6.0], [6.0, 2.0]));
     }
 
@@ -238,7 +238,7 @@ mod tests {
         assert!(why.to_string().contains("non-finite"), "{why}");
     }
 
-    /// **The boxes decide nothing** — confronted with the plain test against
+    /// **The boxes decide nothing** - confronted with the plain test against
     /// every segment, over sight lines and traces drawn at random, touching
     /// cases included (positions on a coarse lattice, so that endpoints and
     /// collinear pieces are frequent rather than never).
@@ -278,7 +278,7 @@ mod tests {
                 (a[1] + draw() % 17.0 - 8.0).clamp(0.0, 40.0),
             ];
             let plain = faults.segments.iter().any(|[c, d]| segments_meet(a, b, *c, *d));
-            assert_eq!(faults.blocks(a, b), plain, "{a:?}–{b:?}");
+            assert_eq!(faults.blocks(a, b), plain, "{a:?}-{b:?}");
             if plain { blocked += 1 } else { free += 1 }
         }
         assert!(

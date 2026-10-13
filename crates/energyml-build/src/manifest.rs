@@ -1,9 +1,9 @@
-//! **The run manifest** — what a run wrote, by step and by role, as JSON.
+//! **The run manifest** - what a run wrote, by step and by role, as JSON.
 //!
 //! Chaining operations in a workflow requires that operations expose the
 //! objects they created. The manifest is
-//! written by the library from what [`crate::apply`] **wrote** — the same source
-//! as the activity — and a face (the CLI's `--manifest`, a Galaxy tool) only
+//! written by the library from what [`crate::apply`] **wrote** - the same source
+//! as the activity - and a face (the CLI's `--manifest`, a Galaxy tool) only
 //! carries it.
 //!
 //! # What it says, and what it does not guess
@@ -11,11 +11,11 @@
 //! - one [`Step`] per operation played; roles in the order the plan first meets
 //!   them, then the roles the operation declares ([`AnyOperation::gives`]) that
 //!   the run did not write, with `count: 0`;
-//! - `declared` is `false` for a role the plan wrote and `gives()` does not name
-//!   — said, never silent; an operation whose `gives()` is empty has every role
+//! - `declared` is `false` for a role the plan wrote and `gives()` does not name -
+//!   said, never silent; an operation whose `gives()` is empty has every role
 //!   undeclared;
 //! - `uris` are full uris (`NewObject::uri`), in the plan's order, **only the
-//!   ones `apply` wrote** — an object refused is not in the manifest, and the
+//!   ones `apply` wrote** - an object refused is not in the manifest, and the
 //!   step's `refused` counts the refusals;
 //! - `collection` is the uri `apply` wrote for that role
 //!   ([`Made::collections`]), `null` when it wrote none.
@@ -25,7 +25,7 @@ use serde::{Deserialize, Serialize};
 use crate::apply::Made;
 use crate::operation::{AnyOperation, Plan};
 
-/// The `format` of a manifest — versioned, so that a reader can refuse one it
+/// The `format` of a manifest - versioned, so that a reader can refuse one it
 /// does not know.
 pub const FORMAT: &str = "energyml-run-outputs/1";
 
@@ -57,7 +57,7 @@ pub struct Package {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Step {
-    /// The step's name — the recipe's, or the operation's for a `create`.
+    /// The step's name - the recipe's, or the operation's for a `create`.
     pub name: String,
     /// The operation, as `energyml create --list` names it.
     pub operation: String,
@@ -77,12 +77,12 @@ pub struct Outputs {
     pub role: String,
     /// Does the operation's `gives()` name this role?
     pub declared: bool,
-    /// What the role is, in one line — the declaration's; empty when undeclared.
+    /// What the role is, in one line - the declaration's; empty when undeclared.
     pub describe: String,
     /// The qualified types: the declared ones, or the ones written when the role
     /// is not declared.
     pub types: Vec<String>,
-    /// How many uris — what `apply` wrote.
+    /// How many uris - what `apply` wrote.
     pub count: usize,
     /// The `DataobjectCollection` `apply` wrote for the role, if any.
     pub collection: Option<String>,

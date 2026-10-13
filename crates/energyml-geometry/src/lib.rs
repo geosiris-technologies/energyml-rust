@@ -12,14 +12,14 @@
 //! | Form | Where the numbers are |
 //! |---|---|
 //! | `Point3dExternalArray` / `Point3dHdf5Array` | in the external file |
-//! | `Point3dLatticeArray` | **nowhere** — an origin, direction vectors and spacings, from which the points are *computed* |
+//! | `Point3dLatticeArray` | **nowhere** - an origin, direction vectors and spacings, from which the points are *computed* |
 //! | `Point3dZValueArray` | x and y from a supporting geometry (usually a lattice), z from an array |
 //! | `Point3dParametricArray` | on parametric lines, evaluated from control points |
 //! | `Point3dFromRepresentationLatticeArray` | in *another* representation |
 //!
 //! On the reference corpus that is 71 external arrays against 19 that are not,
 //! so a reader that only knows HDF5 silently loses every 2D grid and every
-//! wellbore trajectory — and loses them as *empty geometry*, which looks like
+//! wellbore trajectory - and loses them as *empty geometry*, which looks like
 //! a working program showing nothing. The same is true of plain numeric arrays:
 //! `DoubleConstantArray` and `DoubleLatticeArray` carry no data either.
 //!
@@ -32,7 +32,7 @@
 //! produce a plausible-looking result rather than an error:
 //!
 //! - **Patch node numbering.** A triangle's indices may be numbered inside its
-//!   own patch or across the whole representation — FESAPI writes one, resqpy
+//!   own patch or across the whole representation - FESAPI writes one, resqpy
 //!   the other. [`geometry`] decides from the numbers and refuses what fits
 //!   neither, and [`Patch::node_offset`] records the patch's place.
 //! - **Lattice axis order.** Dimensions are listed slowest first, so the *last*

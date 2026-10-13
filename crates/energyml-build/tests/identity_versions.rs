@@ -8,16 +8,16 @@
 //! with `find_by_uuid` (which answers *one of them*), a recipe named what a step
 //! wrote by uuid, a collection counted two versions as a repetition.
 //!
-//! Every package here is fabricated in memory — never a file — with one uuid in
+//! Every package here is fabricated in memory - never a file - with one uuid in
 //! two versions **titled apart**, so that reading the wrong entry shows.
 //!
 //! What would have to break, each one tried (see the report of the change):
 //!
-//! - `read::followed` answering `find_by_uuid` — the vertical half of the
+//! - `read::followed` answering `find_by_uuid` - the vertical half of the
 //!   compound that names version 2 comes back as version 1;
-//! - `Object::reference` dropping the version — the DOR a recipe passes to the
+//! - `Object::reference` dropping the version - the DOR a recipe passes to the
 //!   next step names no version;
-//! - `Ref::uri` without the version — every address below is the short one.
+//! - `Ref::uri` without the version - every address below is the short one.
 
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -298,7 +298,7 @@ fn the_vertical_half_is_the_version_the_compound_names() {
 fn a_reference_that_names_no_version_among_two_is_not_guessed() {
     let store = three_compounds();
     // Both entries declare a version, and the reference names none: *which* is
-    // not something the package says, so there is no vertical half — never one
+    // not something the package says, so there is no vertical half - never one
     // of the two.
     let known =
         energyml_build::read::known_of_object(&store, &uri_of(&store, ON_NONE)).expect("the compound reads");
@@ -449,7 +449,7 @@ impl AnyOperation for SaysWhatItIsGiven {
         "says-what-it-is-given"
     }
     fn describe(&self) -> &'static str {
-        "reports the reference it was given — a test operation"
+        "reports the reference it was given - a test operation"
     }
     fn makes(&self) -> &'static [&'static str] {
         &["resqml22.BoundaryFeature"]
@@ -525,7 +525,7 @@ impl Reader for NoFile {
 }
 
 /// A step writes a vertical system; the next copies it under version 2; the
-/// last names the copy — by the step that wrote it, never by a uuid.
+/// last names the copy - by the step that wrote it, never by a uuid.
 const COPY_THEN_NAME: &str = r#"
 titre = "Mini"
 creation = "2026-10-06T00:00:00Z"
@@ -595,7 +595,7 @@ fn a_recipe_names_what_a_step_wrote_by_its_uri_the_version_included() {
         "both addresses resolve"
     );
 
-    // **No object of a step is listed twice** — the copy is written by the plan
+    // **No object of a step is listed twice** - the copy is written by the plan
     // *and* reported by `apply`, and the two meet by their uri.
     for done in &played.steps {
         let uris: Vec<&String> = done.objects.iter().map(|one| &one.uri).collect();
@@ -644,7 +644,7 @@ fn a_stored_section_names_the_version_of_its_polyline_set() {
         parameters: vec![energyml_domain::provenance::Parameter::Object {
             title: "output".to_string(),
             // The declared type is what the section wrote; the entries are a
-            // feature — the version is what is under test, and a type that
+            // feature - the version is what is under test, and a type that
             // matches nothing leaves the uuid and the version to decide.
             reference: json!({
                 "$type": "eml23.DataObjectReference",

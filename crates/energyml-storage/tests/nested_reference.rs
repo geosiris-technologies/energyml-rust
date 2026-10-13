@@ -3,12 +3,12 @@
 //!
 //! PRODML flow-test data references a WITSML channel set and its channels
 //! (`AbstractFlowTestData.ChannelSet`, `TimeChannel`, FlowTestActivity.xsd
-//! l. 95–103); the usage guide puts the values there: *"Channel is a WITSML
+//! l. 95-103); the usage guide puts the values there: *"Channel is a WITSML
 //! object; Channels are collected into Channel Sets and the Channel Set is where
 //! the actual values are stored"* (PRODML Technical Usage Guide v2.3 §13.6
 //! p. 118). A WITSML `Log` holds its `ChannelSet` and its `Channel`s inline, each
 //! with a uuid. Such a reference resolves to the part holding
-//! the nested object — the writer links the two parts, and neither the
+//! the nested object - the writer links the two parts, and neither the
 //! reference check nor the `.rels` check calls it dangling.
 
 use std::sync::Arc;
@@ -40,8 +40,8 @@ fn channel(uuid: &str, mnemonic: &str) -> String {
 fn log() -> String {
     format!(
         r#"<witsml:Log xmlns:witsml="http://www.energistics.org/energyml/data/witsmlv2" xmlns:eml="http://www.energistics.org/energyml/data/commonv2" uuid="{LOG}" schemaVersion="2.1">{}<witsml:ChannelSet uuid="{SET}" schemaVersion="2.1">{}{}{}</witsml:ChannelSet></witsml:Log>"#,
-        citation("GTH-2 — injection test log"),
-        citation("GTH-2 — injection test channels"),
+        citation("GTH-2 - injection test log"),
+        citation("GTH-2 - injection test channels"),
         channel(TIME, "TIME"),
         channel(PRESSURE, "BHP"),
     )
@@ -56,12 +56,12 @@ fn dor(element: &str, uuid: &str, qualified: &str, title: &str) -> String {
 fn injection_test() -> String {
     format!(
         r#"<prodml:FlowTestActivity xmlns:prodml="http://www.energistics.org/energyml/data/prodmlv2" xmlns:eml="http://www.energistics.org/energyml/data/commonv2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="prodml:InjectionFlowTest" uuid="{TEST}" schemaVersion="2.3">{}<prodml:IntervalMeasurementSet><prodml:Location/><prodml:MeasuredPressure>{}{}{}</prodml:MeasuredPressure></prodml:IntervalMeasurementSet></prodml:FlowTestActivity>"#,
-        citation("GTH-2 — injection test"),
+        citation("GTH-2 - injection test"),
         dor(
             "ChannelSet",
             SET,
             "witsml21.ChannelSet",
-            "GTH-2 — injection test channels"
+            "GTH-2 - injection test channels"
         ),
         dor("TimeChannel", TIME, "witsml21.Channel", "TIME"),
         dor("PressureChannel", PRESSURE, "witsml21.Channel", "BHP"),

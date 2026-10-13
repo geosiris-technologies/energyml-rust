@@ -1,4 +1,4 @@
-//! Erosions suspected from the surfaces' ages (ADR-0015), on traces built by hand — no package is read, except the
+//! Erosions suspected from the surfaces' ages (ADR-0015), on traces built by hand - no package is read, except the
 //! interpretations the age reader is shown, built in memory.
 
 use energyml_section::erosion::{self, detect};
@@ -305,13 +305,13 @@ fn the_warning_counts_what_the_catalogue_noticed_about_the_section() {
     let l = layout(&cat, &view());
     assert!(
         l.warnings
-            .contains(&"2 erosions suspected — see the notes".to_string()),
+            .contains(&"2 erosions suspected - see the notes".to_string()),
         "{:?}",
         l.warnings
     );
     assert!(
         l.warnings
-            .contains(&"1 crossing mismatch — see the notes".to_string()),
+            .contains(&"1 crossing mismatch - see the notes".to_string()),
         "{:?}",
         l.warnings
     );

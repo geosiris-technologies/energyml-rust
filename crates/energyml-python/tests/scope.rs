@@ -69,7 +69,7 @@ fn the_bridge_depends_on_no_etp_crate() {
 fn what_it_does_depend_on_is_the_library_itself() {
     // The other half of the promise: excluding two things is only meaningful if
     // the rest is *named*, otherwise the next dependency slips in unremarked.
-    // These are the crates that read, write and interpret a package — the
+    // These are the crates that read, write and interpret a package - the
     // original library, and nothing else.
     let allowed = [
         "energyml-core",
@@ -92,7 +92,7 @@ fn what_it_does_depend_on_is_the_library_itself() {
         .collect();
     assert!(
         unexpected.is_empty(),
-        "new dependencies: {unexpected:?} — if they belong here, say so in this list and in \
+        "new dependencies: {unexpected:?} - if they belong here, say so in this list and in \
 the Python bridge design notes"
     );
 }

@@ -1,6 +1,6 @@
 [package]
 name = "energyml-cache"
-description = "What a package keeps of itself, layer by layer, and lets go of exactly when what it read changes — optional, one implementation, wasm included."
+description = "What a package keeps of itself, layer by layer, and lets go of exactly when what it read changes - optional, one implementation, wasm included."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

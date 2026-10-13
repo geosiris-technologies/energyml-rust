@@ -1,4 +1,4 @@
-//! `energyml_domain::series` — the readers of WITSML channel sets and PRODML
+//! `energyml_domain::series` - the readers of WITSML channel sets and PRODML
 //! time series, the flow-test resolver, the decimation and the production
 //! periods, each refusal by its variant.
 //!
@@ -8,8 +8,8 @@
 //! run time). A refusal is asserted by its
 //! **variant**, never by words in its message.
 //!
-//! The round trip against the writers of `energyml-build` —
-//! `witsml-logs`, `injection-test`, `prodml-doublet` — is in
+//! The round trip against the writers of `energyml-build` -
+//! `witsml-logs`, `injection-test`, `prodml-doublet` - is in
 //! `crates/energyml-build/tests/series_readback.rs`: build depends on domain,
 //! not the reverse.
 
@@ -222,7 +222,7 @@ fn a_row_is_the_index_then_one_value_per_channel_in_the_order_listed() {
         Values::Floating(vec![1.0, 2.0, 3.0]),
         "the second column is P, not T"
     );
-    // JSON Style Guide p. 8: "the arrays may have NULLs" — absent, not zero.
+    // JSON Style Guide p. 8: "the arrays may have NULLs" - absent, not zero.
     assert_eq!(t.quality, [Quality::Good, Quality::Absent, Quality::Good]);
     assert!(t.numbers().unwrap()[1].is_nan());
     assert_eq!(t.tally().min, Some(10.5));
@@ -550,7 +550,7 @@ fn time_series(
     values: Vec<prodml::AbstractValue>,
 ) -> prodml::TimeSeriesData {
     prodml::TimeSeriesData {
-        citation: citation(&format!("{well} — series")),
+        citation: citation(&format!("{well} - series")),
         uuid: uuid.into(),
         schema_version: "2.3".into(),
         key: vec![prodml::KeywordValueStruct {
@@ -1134,7 +1134,7 @@ fn period(
 
 fn parameters(periods: Vec<prodml::ProductionWellPeriod>) -> prodml::WellProductionParameters {
     prodml::WellProductionParameters {
-        citation: citation("GTH-1 — producing"),
+        citation: citation("GTH-1 - producing"),
         uuid: "90000000-0000-4000-8000-000000000002".into(),
         schema_version: "2.3".into(),
         production_period: periods,
@@ -1144,7 +1144,7 @@ fn parameters(periods: Vec<prodml::ProductionWellPeriod>) -> prodml::WellProduct
 
 #[test]
 fn a_periods_quantity_is_its_rate_times_its_own_duration() {
-    // January: 744 h at 40 m3/h. February: 672 h at a rate per **day** — the
+    // January: 744 h at 40 m3/h. February: 672 h at a rate per **day** - the
     // two times meet through `units::seconds`, never by multiplying the
     // numbers as written (672 × 960 would be 645 120).
     let read = production::read(&parameters(vec![

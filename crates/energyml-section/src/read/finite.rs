@@ -3,7 +3,7 @@
 //! Building a section on a large real-world model failed with: *"the
 //! contributions do not read: invalid type: null, expected f64 at line 1 column
 //! 2496480"*. The package holds SIGEOL boreholes with no
-//! elevation — their trajectories' control points are `NaN` — and intervals
+//! elevation - their trajectories' control points are `NaN` - and intervals
 //! whose top or base MD is `NaN`. `serde_json` writes a `NaN` as `null`, and the
 //! catalogue, reading the contribution back, refused the whole of it: one well
 //! without a datum took every section of every package down.
@@ -15,13 +15,13 @@
 //! - **a well** keeps the nodes it can place; a node with a coordinate or an MD
 //!   that is not finite is dropped and counted. A well left with no finite head
 //!   or fewer than two nodes cannot be drawn: it is **refused**, by name, with
-//!   the reason — never drawn at a guessed depth;
+//!   the reason - never drawn at a guessed depth;
 //! - **an interval** whose top or base is not finite is not drawn (where would
-//!   it start?); the well stays, and the count is said — in a note of code
+//!   it start?); the well stays, and the count is said - in a note of code
 //!   `notANumber`, never a refusal: the well is drawn, and a refused row beside
 //!   its drawn row would say two things of one object;
-//! - **a surface's cut** is broken where a point is not finite — a span on each
-//!   side, never a segment through the hole — and a closed fill that holds one
+//! - **a surface's cut** is broken where a point is not finite - a span on each
+//!   side, never a segment through the hole - and a closed fill that holds one
 //!   is dropped; each cut says how many points went;
 //! - **an age** that is not finite is no age.
 
@@ -38,7 +38,7 @@ fn finite3(point: &[f64; 3]) -> bool {
 /// The code of the note that says what was dropped.
 pub const NOT_A_NUMBER: &str = "notANumber";
 
-/// A well with only what is finite, and a note saying what was dropped — or
+/// A well with only what is finite, and a note saying what was dropped - or
 /// why it cannot be drawn at all.
 #[allow(clippy::result_large_err)]
 pub fn finite_well(mut well: WellRead) -> Result<(WellRead, Option<Note>), Refused> {
@@ -129,7 +129,7 @@ fn split_spans(spans: &mut Vec<Vec<[f64; 2]>>) -> usize {
 ///
 /// `sources` empty is "no sources", and stays so. Sources that are not parallel
 /// to the spans (a list per span, an entry per point) cannot be carried: they
-/// are cleared — the cut is then drawn flat — rather than left to name the
+/// are cleared - the cut is then drawn flat - rather than left to name the
 /// wrong points.
 fn split_spans_sourced(spans: &mut Vec<Vec<[f64; 2]>>, sources: &mut Vec<Vec<CutSource>>) -> usize {
     let parallel = !sources.is_empty()

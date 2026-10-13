@@ -1,4 +1,4 @@
-//! `extend-boreholes` — continue a wellbore frame below its logged base, down
+//! `extend-boreholes` - continue a wellbore frame below its logged base, down
 //! to at most a stated depth, and mark the added part as synthetic.
 //!
 //! This is the borehole-extension step of the reference model's build plan:
@@ -6,14 +6,14 @@
 //! Ten BSS boreholes log only their upper few tens of metres; a
 //! frame stops where the log stops, and `temperature-forages` and
 //! `pression-forages` want one that reaches further down so that a law can be
-//! posed on it — the steps of the reference recipe that take them as input
+//! posed on it - the steps of the reference recipe that take them as input
 //! (`temperature-forages` and `pression-forages`) wait on this operation.
 //!
 //! # Delegated, not duplicated
 //!
 //! An operation that writes the same object as another delegates to it
 //! (ADR-0017): the new trajectory and frame go
-//! through [`super::well::write`], the one writer of the two — the measured
+//! through [`super::well::write`], the one writer of the two - the measured
 //! depths, the vertical detection, the parametric line's kind are all its.
 //! What this module adds is the extension itself: where it stops, how it is
 //! cut, and what says it is not measured.
@@ -23,16 +23,16 @@
 //! Enriching does not overwrite: identity comes from the content, and
 //! recognising a borehole takes the title **and** the head, so "enriching" has a price
 //! (see the identity rules): a property already laid on the old frame is
-//! **positional** — insert a node in the middle and every value after it
+//! **positional** - insert a node in the middle and every value after it
 //! describes the wrong depth. So the old trajectory and frame are left
 //! exactly as they are, and the extension is a **second** pair, on the same
-//! interpretation and the same datum — the MD zero has not moved, only the
+//! interpretation and the same datum - the MD zero has not moved, only the
 //! hole has grown. There is no `enrich` setting here to ask for the other
 //! thing: `Wellbore::keep` is always `None`.
 //!
 //! Every measured depth the old frame stated is carried **bit for bit**: the
 //! new frame's control points are the old ones, unchanged, plus the ones this
-//! module adds below — never a value rebuilt from the line, which is known
+//! module adds below - never a value rebuilt from the line, which is known
 //! not to round-trip (a given MD is not recomputed).
 //!
 //! # Where it stops, and how it is cut
@@ -42,23 +42,23 @@
 //! reach, not a length added: ten BSS holes stop at very different depths, and
 //! a flat "add 150 m" would send some of them well past what is wanted.
 //! `step` cuts the added part at regular measured depths, its **last node
-//! always exactly at `maxDepth`**, whatever the remainder — the same shape
+//! always exactly at `maxDepth`**, whatever the remainder - the same shape
 //! `well::frame_mds` gives a control point between a stated spacing, written
 //! out by hand here since that helper is private to its module.
 //!
 //! A frame already at or past `maxDepth` has nothing to extend, and is refused
 //! by name rather than silently left as it is: asking to extend it is very
 //! likely the wrong frame, or a `maxDepth` too shallow for what is already
-//! measured — either way a word beats a quiet no-op.
+//! measured - either way a word beats a quiet no-op.
 //!
 //! # The direction continued, and why it is honest only for a straight hole
 //!
 //! The added nodes continue the **last** direction the frame's own nodes
-//! describe — the unit vector between its last two distinct positions, scaled
+//! describe - the unit vector between its last two distinct positions, scaled
 //! by each new node's distance in measured depth. That is exact for a straight
 //! segment and nothing more: it is not arithmetic, it is the same kind of
 //! assumption `energyml-geometry/src/well.rs` already makes for a trajectory
-//! with no shape of its own — *taken because it is the only reading the data
+//! with no shape of its own - *taken because it is the only reading the data
 //! permits*. A BSS hole is vertical, so the assumption costs nothing here; a
 //! frame with fewer than two distinct nodes falls back to the frame's own
 //! vertical direction (`Known::vertical_up`), and refuses by name when neither
@@ -71,7 +71,7 @@
 //! Here only **part** of the new trajectory and frame is invented, so the mark
 //! says where: `synthetic` (`true`) beside `syntheticFromMd`, the measured
 //! depth above which every node is the file's own and below which every one is
-//! laid by this operation, at `step` from a stated `source` — required, and
+//! laid by this operation, at `step` from a stated `source` - required, and
 //! refused blank, the same rule a constant is given (no constant without a source): a
 //! plausible value is declared synthetic.
 
@@ -97,13 +97,13 @@ pub struct ExtendBoreholes;
 /// What it is told.
 #[derive(Debug, Params)]
 pub struct ExtendParams {
-    /// how deep the frame may reach, in measured depth from its datum — a frame already at or past it has nothing to extend
+    /// how deep the frame may reach, in measured depth from its datum - a frame already at or past it has nothing to extend
     #[param(default = 200.0, optional, min = 0.0, uom = "m")]
     pub max_depth: f64,
-    /// a node every so many metres of measured depth in the part added — the last is always exactly at `maxDepth`, whatever the remainder
+    /// a node every so many metres of measured depth in the part added - the last is always exactly at `maxDepth`, whatever the remainder
     #[param(default = 10.0, optional, min = 0.0, uom = "m")]
     pub step: f64,
-    /// where the extension comes from — a document, or why the value is plausible (reference-model rule: no constant without a source): the added part is never measured, so this can never cite a log
+    /// where the extension comes from - a document, or why the value is plausible (reference-model rule: no constant without a source): the added part is never measured, so this can never cite a log
     pub source: String,
     /// the external file the new arrays go into
     #[param(default = String::from("data.h5"))]
@@ -113,7 +113,7 @@ pub struct ExtendParams {
 /// What it takes.
 #[derive(Debug, Inputs)]
 pub struct ExtendInputs {
-    /// the wellbore frames to extend — left empty, every frame of the package
+    /// the wellbore frames to extend - left empty, every frame of the package
     #[input(
         least = 1,
         types = "resqml22.WellboreFrameRepresentation, resqml20.obj_WellboreFrameRepresentation",
@@ -122,7 +122,7 @@ pub struct ExtendInputs {
     pub frames: Vec<Shape>,
 }
 
-/// The unit direction to continue in — the last two distinct positions the
+/// The unit direction to continue in - the last two distinct positions the
 /// frame's own nodes describe, or its stated vertical when fewer than two
 /// differ.
 fn last_direction(nodes: &[[f64; 3]], vertical_up: Option<bool>) -> Result<[f64; 3], &'static str> {
@@ -147,7 +147,7 @@ fn last_direction(nodes: &[[f64; 3]], vertical_up: Option<bool>) -> Result<[f64;
 }
 
 /// The measured depths to add: every `step` from the one the frame already
-/// reaches, the last always exactly at `maxDepth` — the shape
+/// reaches, the last always exactly at `maxDepth` - the shape
 /// `well::frame_mds` gives a spacing that does not divide the interval evenly,
 /// applied here by hand since that helper is private to its module.
 fn added_mds(last: f64, step: f64, max_depth: f64) -> Vec<f64> {
@@ -161,7 +161,7 @@ fn added_mds(last: f64, step: f64, max_depth: f64) -> Vec<f64> {
     out
 }
 
-/// The two `ExtensionNameValue`s a partly-invented object carries — see the
+/// The two `ExtensionNameValue`s a partly-invented object carries - see the
 /// module doc, and the rule on invented objects (ADR-0019).
 fn synthetic_marks(from_md: f64, uom: &str, source: &str) -> Value {
     json!([
@@ -170,7 +170,7 @@ fn synthetic_marks(from_md: f64, uom: &str, source: &str) -> Value {
             "Name": "synthetic",
             "Value": { "$type": "eml23.StringMeasure", "_": "true" },
             "Description": format!(
-                "below {from_md} {uom} of measured depth the nodes are laid by `extend-boreholes`, not measured — source: {source}"
+                "below {from_md} {uom} of measured depth the nodes are laid by `extend-boreholes`, not measured - source: {source}"
             ),
         },
         {
@@ -200,7 +200,7 @@ fn extend_one(
 ) -> Result<Extended, String> {
     let known: &Known = one.known.as_ref().ok_or_else(|| {
         format!(
-            "`{}` states nothing of itself — no wellhead, no measured depths, no datum, no interpretation",
+            "`{}` states nothing of itself - no wellhead, no measured depths, no datum, no interpretation",
             one.name
         )
     })?;
@@ -275,12 +275,16 @@ fn extend_one(
     }
 
     // **The title does not change** (an enrichment keeps the title and writes
-    // no version field) —
-    // `well::write` builds `"{base} — trajectory"` and `"{base} — frame"`, so
+    // no version field) -
+    // `well::write` builds `"{base} - trajectory"` and `"{base} - frame"`, so
     // `base` is what the old frame's own title was built from.
-    let base_title = title.strip_suffix(" — frame").unwrap_or(&title).to_string();
+    let base_title = title
+        .strip_suffix(" - frame")
+        .or_else(|| title.strip_suffix(" \u{2014} frame"))
+        .unwrap_or(&title)
+        .to_string();
     // **The identity comes from the content**: the frame continued, the
-    // measured depths added — a correction to either is a second extension,
+    // measured depths added - a correction to either is a second extension,
     // never the first rewritten in place. **The `source` text is not in it**:
     // it says where the invented values come from, not what the object is, so
     // rewording a citation must not rename the object.
@@ -316,7 +320,7 @@ fn extend_one(
             vertical_up: known.vertical_up,
             crs: &crs_dor,
             citation: &cite,
-            // **Never** — the old trajectory and frame are left exactly as
+            // **Never** - the old trajectory and frame are left exactly as
             // they are; see the module doc.
             keep: None,
         },
@@ -327,7 +331,7 @@ fn extend_one(
 
     let marks = synthetic_marks(last_md, &uom, &params.source);
     let description = format!(
-        "Continues `{title}` below {last_md} {uom} of measured depth, laid at {} {uom} steps to {} {uom} — not measured. Source: {}",
+        "Continues `{title}` below {last_md} {uom} of measured depth, laid at {} {uom} steps to {} {uom} - not measured. Source: {}",
         params.step, params.max_depth, params.source
     );
     let mut objects = written.objects;
@@ -432,7 +436,7 @@ impl Operation for ExtendBoreholes {
         }
 
         // **Nothing to write is refused, never a quiet empty plan.** With one
-        // frame given, this is the refusal a caller sees by name — the same
+        // frame given, this is the refusal a caller sees by name - the same
         // sentence the aggregate below only joins.
         if extended == 0 {
             let why = aside

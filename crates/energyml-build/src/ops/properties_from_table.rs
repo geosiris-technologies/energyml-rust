@@ -1,7 +1,7 @@
-//! `properties-from-table` — the columns of a CSV laid on frames.
+//! `properties-from-table` - the columns of a CSV laid on frames.
 //!
 //! The second half of the table-to-boreholes design: `wells-from-table`
-//! **creates** the boreholes, this one **enriches** — it makes no frame and
+//! **creates** the boreholes, this one **enriches** - it makes no frame and
 //! lays the values on those the package already holds.
 //!
 //! # What makes this operation delicate: an array is positional
@@ -31,7 +31,7 @@
 //! Columns that reference another CSV are not handled yet. The grouping into
 //! `eml23.ColumnBasedTable` is
 //! done since 01/10: `textColumns` and `everything`, see
-//! `crates/energyml-build/ARCHITECTURE.md` — the default remains one property per
+//! `crates/energyml-build/ARCHITECTURE.md` - the default remains one property per
 //! column.
 
 use std::collections::BTreeMap;
@@ -69,11 +69,11 @@ pub struct PropertiesParams {
     /// add the file's measured depths that the frame does not carry
     ///
     /// Left off, the frame is not touched and a value whose depth the model
-    /// does not have is set aside and counted — never moved to the nearest
+    /// does not have is set aside and counted - never moved to the nearest
     /// node, which would be inventing. This is the *over-splitting* switch.
     #[param(default = false, optional, group = "operation")]
     pub subdivide: bool,
-    /// how the text columns are written — one property each, or gathered in a table with one property pointing at its rows
+    /// how the text columns are written - one property each, or gathered in a table with one property pointing at its rows
     ///
     /// `separate` is what this operation always wrote: one `DiscreteProperty`
     /// and one single-column table per text column. `shared-table` gathers
@@ -89,7 +89,7 @@ pub struct PropertiesParams {
     /// They have no property kind, so they get the dictionary's `unknown`
     /// (*“a specific Property Code cannot be determined from the information
     /// provided”*), and their table and its pointing property say so in their
-    /// titles. Gathered as `textColumns` says — a table per frame with
+    /// titles. Gathered as `textColumns` says - a table per frame with
     /// `table-per-well`, one for the run otherwise.
     #[param(default = false, optional, group = "operation")]
     pub everything: bool,
@@ -108,14 +108,14 @@ pub enum TextColumns {
     TablePerWell,
 }
 
-/// The property kind of the columns no template names — the dictionary's
+/// The property kind of the columns no template names - the dictionary's
 /// `unknown`, concrete, *“used to assert that a specific Property Code cannot
 /// be determined from the information provided”*. The root `property` is
 /// abstract and may not type a property.
 const UNKNOWN_KIND: (&str, &str) = ("73f28137-03ef-45b4-8e85-31869c7d36fd", "unknown");
 
 /// The property kind of a property whose value is the rank of a row of a
-/// multi-column table — the dictionary's `multi use property`, *“whose
+/// multi-column table - the dictionary's `multi use property`, *“whose
 /// meaning can only be interpreted within the context of its use”*: the
 /// context is the table its `CategoryLookup` names.
 const POINTER_KIND: (&str, &str) = ("47a4319d-c8a4-45dc-8600-f96d4b289138", "multi use property");
@@ -131,7 +131,7 @@ pub struct PropertiesInputs {
     /// Their MDs arrive resolved (`Known::node_mds`): they are what
     /// says at which array rank a row of the file lands.
     ///
-    /// **Left empty, these are all the frames of the target package** — the same
+    /// **Left empty, these are all the frames of the target package** - the same
     /// declaration as `wells` of `wells-from-table`, and for the same reason:
     /// they are found by the name of the borehole, so those that no row
     /// names receive nothing.
@@ -147,7 +147,7 @@ pub struct PropertiesInputs {
     /// **extended**: its rows keep their rank, so the codes already written
     /// keep their meaning, and the new values are added at the end. Without it,
     /// a second batch writes its own table and the same integer designates two
-    /// things — measured on two batches of the BRGM corpus.
+    /// things - measured on two batches of the BRGM corpus.
     #[input(types = "eml23.ColumnBasedTable, resqml20.StringTableLookup")]
     pub lookups: Vec<ObjectIn>,
 }
@@ -205,8 +205,8 @@ impl Operation for PropertiesFromTable {
             name: "properties-from-table",
             describe: "the columns of a table laid on the wellbore frames of the package, aligned on measured depth and never shifted",
             category: Category::Wells,
-            // No `CategoricalProperty`: RESQML 2.2 has none — a code's meaning
-            // is `DiscreteProperty.CategoryLookup` — and the name reaches the
+            // No `CategoricalProperty`: RESQML 2.2 has none - a code's meaning
+            // is `DiscreteProperty.CategoryLookup` - and the name reaches the
             // registry only through the `2.2_dev3` drop (`tests/makes.rs`).
             makes: &["resqml22.ContinuousProperty", "resqml22.DiscreteProperty"],
             recipe: "properties-from-table",
@@ -277,7 +277,7 @@ impl Operation for PropertiesFromTable {
             return Err(Refusal::on(
                 "frames",
                 "it takes the wellbore frames to enrich; the input holds none, and the package gives none either. \
-                 This operation writes no frame — `wells-from-table` creates them",
+                 This operation writes no frame - `wells-from-table` creates them",
             ));
         }
         // **The frames, indexed by the name of the borehole.** The link between a
@@ -289,7 +289,7 @@ impl Operation for PropertiesFromTable {
     }
 }
 
-/// The columns of the tables laid on **already known** frames — the body
+/// The columns of the tables laid on **already known** frames - the body
 /// of `plan`, without the reading of the slot.
 ///
 /// `wells-and-properties-from-table` calls it with the frames that
@@ -315,14 +315,14 @@ pub(crate) fn lay(
     //
     // The first attempt assigned them per borehole, and that was wrong in a way
     // that could not be seen: measured on the BRGM corpus, code 0 of `STRA`
-    // designated **five** things depending on the borehole — `e7` for 75 of them,
+    // designated **five** things depending on the borehole - `e7` for 75 of them,
     // `e6` for 35, then `n.d.`, `Q`, `e5`. Two boreholes of the same package
     // were therefore not comparable, and the day the `StringTableLookup` that gives
     // them their meaning is written, it would say only one.
     //
     // The key is **(kind, column name)** and not the kind alone: measured
-    // too, the uuid is not unique per column — `TYP` and `STRA`
-    // share theirs, and so do the three `Nom_*` — so the kind alone
+    // too, the uuid is not unique per column - `TYP` and `STRA`
+    // share theirs, and so do the three `Nom_*` - so the kind alone
     // would mix two vocabularies in one table.
     let mut codes: BTreeMap<(String, String), Categories> = BTreeMap::new();
     // The run's gathered tables (`shared-table`), keyed by what they gather,
@@ -343,7 +343,7 @@ pub(crate) fn lay(
             return Err(Refusal::on(
                 "lookups",
                 format!(
-                    "`{}` does not read as a category table, so its rows cannot be continued — and continuing an order one has guessed would make every code already written mean something else",
+                    "`{}` does not read as a category table, so its rows cannot be continued - and continuing an order one has guessed would make every code already written mean something else",
                     reference.title
                 ),
             ));
@@ -392,19 +392,19 @@ pub(crate) fn lay(
         };
         // **Passes, when the template declares their top**: a row
         // holds over the interval `[top, MD]`, and the property is laid on the
-        // intervals of the frame — one fewer than it has nodes.
+        // intervals of the frame - one fewer than it has nodes.
         let top_at = column_at(table, &input.template, "topDepth")?;
         // The columns that become properties: those of the template
         // that the file carries and that are not a role.
         let carried = payload_columns(table, &input.template);
-        // What no template column names — carried only with `everything`.
+        // What no template column names - carried only with `everything`.
         let undeclared = undeclared_columns(table, &input.template);
         undeclared_count += undeclared.len();
         // **A property kind is required by the schema**, measured in the generated
         // type: `resqml22.ContinuousProperty::property_kind` is
         // not an `Option`. A column that the template attaches to no
         // kind would therefore write an object that `check` refuses, and the plan
-        // does not validate — it describes. The refusal falls here, naming the
+        // does not validate - it describes. The refusal falls here, naming the
         // column, because it is the template that must be corrected.
         if let Some(mute) = carried.iter().find(|(column, _)| column.kind.is_none()) {
             return Err(Refusal::on(
@@ -446,7 +446,7 @@ pub(crate) fn lay(
                         return Err(Refusal::on(
                             "table",
                             format!(
-                                "`{}`: its frame has {} node(s), so no interval to lay a pass on — a pass lies between two nodes",
+                                "`{}`: its frame has {} node(s), so no interval to lay a pass on - a pass lies between two nodes",
                                 hole.title,
                                 frame.mds.len()
                             ),
@@ -489,7 +489,7 @@ pub(crate) fn lay(
                 objects.extend(made.objects);
                 datasets.extend(made.datasets);
             }
-            // **The text columns, gathered** — and, with `everything`, the
+            // **The text columns, gathered** - and, with `everything`, the
             // columns no template names, in a table of their own: they carry no
             // property kind, and mixing them with declared ones would give a
             // declared column's neighbours a meaning nobody stated.
@@ -513,7 +513,7 @@ pub(crate) fn lay(
                     group,
                     columns.iter().map(|one| one.title.clone()).collect::<Vec<_>>(),
                 );
-                let title = format!("{} — {}", hole.title, group.words());
+                let title = format!("{} - {}", hole.title, group.words());
                 let (values, lookup, lookup_title) = match params.text_columns {
                     TextColumns::TablePerWell => {
                         // One table for this frame: a row per element that
@@ -558,7 +558,7 @@ pub(crate) fn lay(
                         // The run's table: a row per distinct combination, its
                         // uuid derived once every frame has contributed.
                         let shared = shared.entry(key.clone()).or_insert_with(|| Gathered {
-                            title: format!("{source} — {}", group.words()),
+                            title: format!("{source} - {}", group.words()),
                             columns: columns.clone(),
                             ..Gathered::default()
                         });
@@ -619,7 +619,7 @@ pub(crate) fn lay(
         }
     }
 
-    // **The run's gathered tables, written last** — like the category tables
+    // **The run's gathered tables, written last** - like the category tables
     // below, and for the same reason: a table emitted after the first frame
     // would hold its rows only. Their uuid comes from what they hold.
     for (key, one) in shared.iter_mut() {
@@ -660,7 +660,7 @@ pub(crate) fn lay(
         says.push(Note {
             key: "gathered",
             detail: format!(
-                "{} propert(ies) point at the rows of {} table(s) gathering the text columns ({}) — a value is the rank of a row there",
+                "{} propert(ies) point at the rows of {} table(s) gathering the text columns ({}) - a value is the rank of a row there",
                 tally.gathered,
                 tally.tables,
                 params.text_columns.word()
@@ -762,7 +762,7 @@ pub(crate) fn lay(
         says.push(Note {
             key: "depths-dropped",
             detail: format!(
-                "{} row(s) state a measured depth no frame carries, and were left out — turn `subdivide` on to \
+                "{} row(s) state a measured depth no frame carries, and were left out - turn `subdivide` on to \
                  add them instead",
                 tally.dropped
             ),
@@ -802,7 +802,7 @@ pub(crate) fn lay(
     //
     // The **codes** are not in it, and that is deliberate: since a
     // `ColumnBasedTable` carries them, noting them here would be two homes for
-    // one fact. The second, in addition, did not hold — measured on the
+    // one fact. The second, in addition, did not hold - measured on the
     // corpus, the list was 3,070 and 6,659 characters where
     // `Parameter.Value` allows 2,000, and `energyml check` refused
     // the activity.
@@ -880,7 +880,7 @@ pub(crate) struct Frames<'a> {
 impl<'a> Frames<'a> {
     /// **What is not a frame is refused by its type**, and a frame
     /// whose depths cannot be read is a fault only if a row
-    /// of the file names it — see [`Frames::find`]. Since `frames` takes
+    /// of the file names it - see [`Frames::find`]. Since `frames` takes
     /// by default all those of the package, refusing one that no row
     /// names would block the import over a borehole that has nothing to do with it.
     fn of(frames: &'a [Shape]) -> Result<Frames<'a>, Refusal> {
@@ -916,7 +916,7 @@ impl<'a> Frames<'a> {
             return Err(Refusal::on(
                 "frames",
                 format!(
-                    "{} of the {} given are no wellbore frame, and values are laid on a frame's measured depths: {}. Give the `WellboreFrameRepresentation`s — or nothing, and every frame of the package is taken",
+                    "{} of the {} given are no wellbore frame, and values are laid on a frame's measured depths: {}. Give the `WellboreFrameRepresentation`s - or nothing, and every frame of the package is taken",
                     strangers.len(),
                     frames.len(),
                     strangers.join(", ")
@@ -926,7 +926,7 @@ impl<'a> Frames<'a> {
         Ok(Frames { known, mute })
     }
 
-    /// **Given** frames, with their depths — those that a plan of
+    /// **Given** frames, with their depths - those that a plan of
     /// `wells-from-table` has just written or recognised. None is
     /// mute: each carries the MDs that define it.
     pub(crate) fn given(frames: &'a [(crate::pieces::Ref, Vec<f64>)]) -> Frames<'a> {
@@ -939,11 +939,11 @@ impl<'a> Frames<'a> {
         }
     }
 
-    /// The frame of a borehole — **exact first, then by prefix**.
+    /// The frame of a borehole - **exact first, then by prefix**.
     ///
-    /// A writer titles its frame `“<borehole> — frame”`, and the file only
+    /// A writer titles its frame `“<borehole> - frame”`, and the file only
     /// carries `<borehole>`. The prefix catches that; ambiguity, for its part, is
-    /// **refused** rather than settled on the first found — designating the wrong
+    /// **refused** rather than settled on the first found - designating the wrong
     /// frame would lay each value on another borehole, which nothing on screen
     /// would show.
     fn find(&self, well: &str) -> Result<Option<&KnownFrame<'a>>, Refusal> {
@@ -954,7 +954,7 @@ impl<'a> Frames<'a> {
         // Measured on the BRGM corpus: `CONVERGENCE-MELCHIOR-SP1` is a
         // prefix of `…-SP102` and of `…-SP103`, so a bare prefix returned
         // three candidates where there is only one. What separates a title from
-        // its writer suffix — `“F1 — frame”`, `“F1 : trajectory”` —
+        // its writer suffix - `“F1 - frame”`, `“F1 : trajectory”` -
         // is never alphanumeric.
         let named = |title: &str| {
             title.starts_with(well)
@@ -982,7 +982,7 @@ impl<'a> Frames<'a> {
             many => Err(Refusal::on(
                 "frames",
                 format!(
-                    "`{well}` names {} frames of the package — {} — and which one carries these values cannot be \
+                    "`{well}` names {} frames of the package - {} - and which one carries these values cannot be \
                      guessed",
                     many.len(),
                     many.iter()
@@ -1034,7 +1034,7 @@ fn rows_by_depth(
             return Err(Refusal::on(
                 "table",
                 format!(
-                    "`{}`: two rows state the measured depth {} (lines {} and {}) — a frame's nodes are distinct, \
+                    "`{}`: two rows state the measured depth {} (lines {} and {}) - a frame's nodes are distinct, \
                      and which of the two holds cannot be guessed",
                     hole.title,
                     pair[0].0,
@@ -1049,10 +1049,10 @@ fn rows_by_depth(
 
 /// Where each node of the frame takes its value.
 struct Places {
-    /// For each element (in the order of the frame), the row of the file — or
+    /// For each element (in the order of the frame), the row of the file - or
     /// nothing. A node, or an interval between two nodes: see `on`.
     at: Vec<Option<usize>>,
-    /// `nodes` or `intervals` — the `IndexableElement` that the property declares.
+    /// `nodes` or `intervals` - the `IndexableElement` that the property declares.
     on: &'static str,
     /// The MDs of the file added to the frame.
     added: Vec<f64>,
@@ -1067,7 +1067,7 @@ struct Places {
 fn places_of(rows: &[(f64, usize)], mds: &[f64], subdivide: bool) -> Places {
     // A node and a row are recognised at the same depth, to within one
     // millionth of a metre. Comparing two floats for identity would make
-    // the matching depend on the path each number took — the file
+    // the matching depend on the path each number took - the file
     // for one, the HDF5 for the other.
     let same = |a: f64, b: f64| (a - b).abs() <= 1e-6;
     let mut nodes: Vec<f64> = mds.to_vec();
@@ -1100,7 +1100,7 @@ fn places_of(rows: &[(f64, usize)], mds: &[f64], subdivide: bool) -> Places {
 /// Where each **interval** of the frame takes its value, for passes.
 ///
 /// Interval *k* goes from node *k* to node *k + 1*. A pass covers the
-/// intervals between the node of its top and that of its base — only one when the
+/// intervals between the node of its top and that of its base - only one when the
 /// frame was written from those passes, several when another source
 /// cut it more finely, and the value of the pass then holds on each:
 /// it is what a pass says, *from here to there*. A pass one of whose limits is not
@@ -1146,7 +1146,7 @@ fn places_of_passes(passes: &[(f64, f64, usize)], mds: &[f64], subdivide: bool) 
 
 /// The uuid that a table of categories will carry, as long as it is not known.
 ///
-/// A property names its table **before** the table is complete — all the
+/// A property names its table **before** the table is complete - all the
 /// boreholes must have contributed to know what it carries, and therefore
 /// what its uuid is. This marker holds the place and `plan` replaces it. It is
 /// a constant rather than a string written twice, because a
@@ -1158,7 +1158,7 @@ const PATCH: &str = "“table”";
 ///
 /// Identical values, same uuid, hence a rewrite to the identical and nothing
 /// lost; different values, different uuid, hence a second object beside it.
-/// The name of the file is not in it — it identifies nothing of the borehole, and putting it there
+/// The name of the file is not in it - it identifies nothing of the borehole, and putting it there
 /// made two exports of the same producer two sets of objects.
 fn seed_of(well: &str, column: &str, values: &str) -> String {
     format!("table-property:{well}|{column}|{values}")
@@ -1167,7 +1167,7 @@ fn seed_of(well: &str, column: &str, values: &str) -> String {
 /// The seed, and **what the values index** when they are not nodes.
 ///
 /// On nodes, the earlier seed, unchanged: properties already written
-/// keep their uuid. On intervals, the word is added — the same
+/// keep their uuid. On intervals, the word is added - the same
 /// codes laid on passes are another object.
 fn seed_on(well: &str, column: &str, values: &str, on: &str) -> String {
     if on == "nodes" {
@@ -1195,7 +1195,7 @@ fn numbers(values: &[f64]) -> String {
     out
 }
 
-/// The codes, as text — and **the labels will come with the table**, whose
+/// The codes, as text - and **the labels will come with the table**, whose
 /// uuid depends on them.
 fn integers(values: &[i64]) -> String {
     let mut out = String::with_capacity(values.len() * 4);
@@ -1217,7 +1217,7 @@ struct Written {
 
 /// The columns of the template that the file carries and that are not a role.
 ///
-/// A role is a **structure** — the name of the borehole, its head, its depth —
+/// A role is a **structure** - the name of the borehole, its head, its depth -
 /// and writing it as a property would repeat it at every node. Everything else is a
 /// measurement, and that is what is laid.
 fn payload_columns<'a>(
@@ -1252,7 +1252,7 @@ fn one_column(
     rank: &mut usize,
 ) -> Result<Written, Refusal> {
     let _ = rows;
-    let title = format!("{well} — {}", column.name);
+    let title = format!("{well} - {}", column.name);
     let cell = |row: Option<usize>| -> Option<&str> {
         let value = table.rows[row?].get(*at)?.trim();
         // An empty cell **and** the template's absence value say the same
@@ -1314,7 +1314,7 @@ fn one_column(
         // table of the run**, never from a local counter: see `plan`.
         // A **given** table is recognised by the title of its column; otherwise
         // the key is (kind, column), which tells apart two columns of the same
-        // kind — `TYP` and `STRA` share theirs.
+        // kind - `TYP` and `STRA` share theirs.
         let given = (String::new(), column.name.clone());
         key = if codes.get(&given).is_some_and(|one| one.given) {
             given
@@ -1323,8 +1323,8 @@ fn one_column(
         };
         // **The uuid of the table also awaits knowing what it carries.**
         // Deriving it from the column alone would be worse than a duplicate: a second
-        // run would rewrite it with *its* values, and the properties of the first —
-        // which name it — would read their codes against a table that
+        // run would rewrite it with *its* values, and the properties of the first -
+        // which name it - would read their codes against a table that
         // lacks rows. It is therefore set at the end (`plan`), and the
         // properties receive it through a patch-up, for lack of being able to
         // know it before all the boreholes have contributed.
@@ -1410,8 +1410,8 @@ fn cite(title: &str, when: &crate::operation::When) -> Value {
 ///
 /// **`ValuesForPatch`, not `Values`**, and `ValueCountPerIndexableElement` is
 /// a *list*. Written from memory the first time, that gave 1,680 objects that
-/// `energyml check` all refuses — `ValuesForPatch requires at least 1
-/// occurrence, found 0` — and nothing in the plan could say so: a plan does not
+/// `energyml check` all refuses - `ValuesForPatch requires at least 1
+/// occurrence, found 0` - and nothing in the plan could say so: a plan does not
 /// validate, it describes. That is why the form is taken from the writer that
 /// exists rather than reinvented.
 fn values_for_patch(file: &str, path: &str, count: usize, float: bool, null_value: i64) -> Value {
@@ -1434,7 +1434,7 @@ fn values_for_patch(file: &str, path: &str, count: usize, float: bool, null_valu
     }
 }
 
-/// A continuous property on the nodes — or the intervals — of a frame.
+/// A continuous property on the nodes - or the intervals - of a frame.
 #[allow(clippy::too_many_arguments)]
 fn continuous(
     uuid: &str,
@@ -1497,7 +1497,7 @@ fn discrete(
         object["PropertyKind"] = kind;
     }
     // **A code only has meaning against its table**, and RESQML 2.2 says so through
-    // `CategoryLookup` — a `DataObjectReference` that the schema does not type, and
+    // `CategoryLookup` - a `DataObjectReference` that the schema does not type, and
     // that `csv-to-energyml` points at an `eml23.ColumnBasedTable` for
     // its 480 properties. That reading is the authoritative one here: the XSD says
     // only *a reference*.
@@ -1564,12 +1564,12 @@ fn kind_reference(column: &Column) -> Option<Value> {
 ///
 /// **The order of encounter, never the alphabet**: an alphabetical order would make
 /// the codes depend on the dataset, so two packages of the same producer
-/// would not have the same ones — and a code is what a `StringTableLookup`
+/// would not have the same ones - and a code is what a `StringTableLookup`
 /// traduira.
 #[derive(Default)]
 struct Categories {
     order: Vec<String>,
-    /// The uuid of the `ColumnBasedTable` that will give them their meaning, derived once —
+    /// The uuid of the `ColumnBasedTable` that will give them their meaning, derived once -
     /// **or that of the table being continued**, which does not change.
     lookup: String,
     /// What the table carries, to cite it and attach it to its kind.
@@ -1615,7 +1615,7 @@ fn is_numeric(column: &Column) -> bool {
 }
 
 /// What a gathered table holds: the template's text columns, or the columns no
-/// template names. Two tables, never one — see `lay`.
+/// template names. Two tables, never one - see `lay`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum Group {
     Declared,
@@ -1656,7 +1656,7 @@ impl GatheredColumn {
     }
 }
 
-/// The columns of the file no template column names, in the file's order —
+/// The columns of the file no template column names, in the file's order -
 /// each with the dictionary's `unknown` kind.
 fn undeclared_columns(
     table: &crate::tabular::Table,
@@ -1688,7 +1688,7 @@ fn undeclared_columns(
         .collect()
 }
 
-/// A row of the gathered table for each element of the frame — `None` where
+/// A row of the gathered table for each element of the frame - `None` where
 /// every cell is empty, which is a null of the pointing property and no row.
 fn gathered_cells(
     table: &crate::tabular::Table,
@@ -1720,7 +1720,7 @@ fn gathered_cells(
 }
 
 /// A gathered table under construction (`shared-table`): its rows are the
-/// distinct combinations met, **in the order met** — the rule of
+/// distinct combinations met, **in the order met** - the rule of
 /// `Categories::code`, for the same reason.
 #[derive(Default)]
 struct Gathered {
@@ -1744,7 +1744,7 @@ impl Gathered {
 }
 
 /// A `ColumnBasedTable` gathering several columns: a `Column` each, with **its
-/// own** property kind — what a table is for (`eml23.ColumnBasedTable`: *“the
+/// own** property kind - what a table is for (`eml23.ColumnBasedTable`: *“the
 /// values are arranged against columns that are defined by PropertyKind, UOM
 /// and Facet”*). The values are in the XML, as `lookup_table` writes them.
 fn gathered_table(

@@ -1,10 +1,10 @@
-//! *Which objects* — one composable answer, instead of one list per feature.
+//! *Which objects* - one composable answer, instead of one list per feature.
 //!
 //! # Why a selector and not a selection
 //!
 //! Everything an application does to several objects at once asks the same
 //! question twice: *which ones*, then *what to do*. Written as a list of uuids,
-//! the answer is dead the moment the package changes — it names what was there
+//! the answer is dead the moment the package changes - it names what was there
 //! when somebody clicked, not what is there now. Written as a **selector**, it
 //! survives a reload, applies to objects that arrive later, can be shown back to
 //! a person ("every `Grid2dRepresentation`"), written into a document and
@@ -17,7 +17,7 @@
 //!
 //! # What it costs to answer
 //!
-//! [`Selector::Type`] and [`Selector::Uuids`] are answered from the inventory —
+//! [`Selector::Type`] and [`Selector::Uuids`] are answered from the inventory -
 //! no object is deserialized. [`Selector::Field`] has to read each candidate,
 //! and says so by taking an [`ObjectSource`]. Composing them with [`Selector::AllOf`]
 //! puts the cheap ones first, so a field match over a package of ten thousand
@@ -28,7 +28,7 @@
 //! §3.1 also wants selection by model, by `CollectionToDataObject`, by
 //! `RepresentationSetRepresentation` and by the presence of a property of a
 //! given kind. All four are **graph** questions rather than object questions,
-//! and they want the edges rather than the objects — `energyml_storage::graph`
+//! and they want the edges rather than the objects - `energyml_storage::graph`
 //! already builds those. They arrive as more variants of this enum, not as
 //! another mechanism, which is the whole point of the shape.
 
@@ -46,7 +46,7 @@ use crate::source::ObjectSource;
 /// the cheap selectors as expensive as the dear one.
 #[derive(Debug, Clone, Copy)]
 pub struct Candidate<'a> {
-    /// What identifies the object. A uuid here, a uri in a browser — the caller
+    /// What identifies the object. A uuid here, a uri in a browser - the caller
     /// gets back exactly what it handed in.
     pub id: &'a str,
     /// The uuid used to read the object, when a selector has to.
@@ -67,7 +67,7 @@ pub enum Selector {
     /// An explicit list, kept as the exception it is: a manual selection is
     /// still a selector, so the mechanism has one shape rather than two.
     Uuids(Vec<String>),
-    /// A dotted path and the value it must hold — `Citation.Originator`,
+    /// A dotted path and the value it must hold - `Citation.Originator`,
     /// `Geosiris`. The path crosses references, as every path in this crate
     /// does, so `RepresentedInterpretation.Citation.Title` is one term.
     ///
@@ -83,7 +83,7 @@ pub enum Selector {
     /// Everything the inner selector does *not* name.
     Not(Box<Selector>),
     /// Every term must name it. Empty means everything, as an empty conjunction
-    /// does — and that is worth knowing before writing one by accident.
+    /// does - and that is worth knowing before writing one by accident.
     AllOf(Vec<Selector>),
     /// Any term naming it is enough. Empty means nothing.
     AnyOf(Vec<Selector>),
@@ -108,8 +108,8 @@ impl Selector {
 
 /// Whether one type name means the same concept as another.
 ///
-/// The qualified type carries a package prefix — `resqml22.Grid2dRepresentation`
-/// — and the older releases spell the type itself `obj_Grid2dRepresentation`.
+/// The qualified type carries a package prefix - `resqml22.Grid2dRepresentation` -
+/// and the older releases spell the type itself `obj_Grid2dRepresentation`.
 /// Both are stripped before comparing, which is what `naming::type_eq_loose`
 /// does; the prefix is dropped here because it belongs to the *package*, not to
 /// the type, and a selector that named it would stop matching the day a package
@@ -125,8 +125,8 @@ fn matches(selector: &Selector, candidate: &Candidate<'_>, source: &dyn ObjectSo
         Selector::All => true,
         Selector::Type(wanted) => type_matches(candidate.qualified_type, wanted),
         Selector::Uuids(list) => list.iter().any(|id| id == candidate.id || id == candidate.uuid),
-        // Read by the id when the caller offered a uri — the version it names is
-        // the version judged — and by the uuid otherwise.
+        // Read by the id when the caller offered a uri - the version it names is
+        // the version judged - and by the uuid otherwise.
         Selector::Field { path, equals } => match read_candidate(candidate, source) {
             // An object the source cannot hand over is **not** a match, and is
             // not an error either: a lazy store answers for what it has, and a

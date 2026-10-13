@@ -2,18 +2,18 @@
 //!
 //! The failure this prevents is silent on both ends: a shape promising more
 //! values than the block holds writes **without error** in some formats and
-//! reads back with zeros at the tail — plausible numbers that nothing flags,
+//! reads back with zeros at the tail - plausible numbers that nothing flags,
 //! in a file that opens everywhere. The other direction is worse still: a
 //! shape promising fewer quietly drops the rest.
 //!
 //! It is checked in the store rather than in each backend, and rather than in
 //! whichever caller thought of it first: the file would be wrong, not the
-//! caller. Every writer gets it — the command line, `energyml-build`, the
-//! Python bridge — and none of them has to remember.
+//! caller. Every writer gets it - the command line, `energyml-build`, the
+//! Python bridge - and none of them has to remember.
 //!
 //! No `hdf5` feature: the refusal comes before a backend is looked for, which
 //! is itself worth pinning. A build with no backend must say *the shape is
-//! wrong*, not *there is no backend* — the second sends someone to install a
+//! wrong*, not *there is no backend* - the second sends someone to install a
 //! library that would not have helped.
 
 use std::sync::Arc;
@@ -80,7 +80,7 @@ fn a_shape_promising_fewer_is_refused_too() {
 #[test]
 fn a_shape_that_agrees_gets_past_the_check() {
     let store = empty_store();
-    // It fails — there is no backend here — but it must fail for *that*, which
+    // It fails - there is no backend here - but it must fail for *that*, which
     // is what says the check let it through. Without this, a check that refused
     // everything would look just as green.
     let why = store

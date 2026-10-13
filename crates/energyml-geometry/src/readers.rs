@@ -3,7 +3,7 @@
 //! # Why a registry rather than a match
 //!
 //! Reading a representation used to be one `match` over five type names. That
-//! works until somebody needs a sixth — and the somebody is not always in this
+//! works until somebody needs a sixth - and the somebody is not always in this
 //! repository. An application with its own RESQML extension, a build that wants
 //! IJK grids before this crate ships them, a version whose spelling nobody here
 //! has seen: each of those is a reader to add, and none of them should require
@@ -23,14 +23,14 @@
 //!
 //! # What "another version" costs
 //!
-//! Nothing, in the ordinary case — and that is by design rather than by luck.
+//! Nothing, in the ordinary case - and that is by design rather than by luck.
 //! Readers are keyed on [`TypeInfo::type_key`], the name of the *concept*,
 //! which the generator makes identical across versions: RESQML 2.0.1's
 //! `obj_PointSetRepresentation` and RESQML 2.2's `PointSetRepresentation` are
 //! both `PointSetRepresentation`. A new release that keeps the concept is read
 //! by the reader that already exists.
 //!
-//! What costs something is a new release that *respells the insides* — and that
+//! What costs something is a new release that *respells the insides* - and that
 //! has happened twice already, both times silently: 2.2 dropped the patch
 //! wrapper (`NodePatchGeometry` rather than `NodePatch` → `Geometry`), and
 //! renamed a lattice's `Offset` to `Dimension`. Those live inside the readers,
@@ -70,7 +70,7 @@ pub trait RepresentationReader: Send + Sync {
 
     /// How many nodes the **document states**, without reading one array.
     ///
-    /// The answer to *how big is this before I ask for it* — what a chooser
+    /// The answer to *how big is this before I ask for it* - what a chooser
     /// needs to offer a thousand representations without opening the data file.
     /// [`read`](Self::read) is the only thing that knows how many points there
     /// really are, and it costs a decompression per dataset.
@@ -128,7 +128,7 @@ impl Readers {
     /// Add one, tried **before** everything already there.
     ///
     /// Last pushed wins, so a caller can replace a built-in rather than only
-    /// extend the set — which is what makes it possible to fix a reader in an
+    /// extend the set - which is what makes it possible to fix a reader in an
     /// application without waiting for a release here.
     pub fn push(&mut self, reader: Box<dyn RepresentationReader>) -> &mut Self {
         self.entries.insert(0, reader);
@@ -161,7 +161,7 @@ impl Readers {
     /// What the document states one representation holds, without a read.
     ///
     /// `None` when no reader handles the concept as well as when the reader
-    /// that does cannot say — the caller has no use for the difference, since
+    /// that does cannot say - the caller has no use for the difference, since
     /// both mean *ask the geometry if you want a number*.
     pub fn declared_nodes(&self, representation: &dyn Reflect) -> Option<u64> {
         self.find(representation.type_info().type_key)

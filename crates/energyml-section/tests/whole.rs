@@ -1,7 +1,7 @@
 //! `data-whole`: the extent a drawing would have with no window asked.
 //!
-//! A front end that holds a zoomed drawing — the detached window, or a definition
-//! reopened with its saved window — has no drawing of the whole to clamp its
+//! A front end that holds a zoomed drawing - the detached window, or a definition
+//! reopened with its saved window - has no drawing of the whole to clamp its
 //! zooms to, and its wheel was dead. The drawing now says it itself, on its
 //! root, and says the **same** thing however it was zoomed.
 

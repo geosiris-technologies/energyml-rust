@@ -1,22 +1,22 @@
-//! `transform` — a shape **moved, turned and scaled**: a translation, a
+//! `transform` - a shape **moved, turned and scaled**: a translation, a
 //! rotation about an axis through a pivot, a scale taken from the same pivot, on
 //! the whole shape or on some of its nodes.
 //!
 //! The front end drives it through an editing mode.
 //! The need: a translation (specific to each axis) or
 //! a rotation (an XYZ axis entered by the user and an angle in degrees or
-//! radians) — a node alone, to correct a badly placed point — and,
+//! radians) - a node alone, to correct a badly placed point - and,
 //! the scale: the scale is a welcome addition.
 //!
 //! # What it is, and what it is not
 //!
 //! An **affine** move, rigid when there is no scale: the topology is copied as
-//! it is — same nodes, same order, same triangles or polylines. So the
+//! it is - same nodes, same order, same triangles or polylines. So the
 //! properties of a moved object stay attached to the right nodes (they are
 //! indexed by node, and no node is added or lost), and a copy is `transform`
-//! with nothing to do — which is how the front end duplicates an object into an
+//! with nothing to do - which is how the front end duplicates an object into an
 //! artefact. A scale changes distances, which a thickness or an area measured
-//! before it no longer matches — the activity says it was scaled.
+//! before it no longer matches - the activity says it was scaled.
 //!
 //! The scale is **not** the vertical exaggeration: that one changes how the
 //! scene is looked at and writes nothing; this one writes the geometry.
@@ -29,27 +29,27 @@
 //! # The order, stated once
 //!
 //! **The scale first, then the rotation, both about the pivot, then the
-//! translation** — the classic order. The other orders would turn or scale the
+//! translation** - the classic order. The other orders would turn or scale the
 //! translated shape about a pivot it has left, or stretch along axes the
 //! rotation has already turned. There is **one** pivot for both: scaled about
 //! one point and turned about another is not a gesture anybody makes. It is
-//! computed on **what moves** — the centre of the box of the chosen nodes, or of
-//! the whole shape — unless it is given; and it is read only when something
+//! computed on **what moves** - the centre of the box of the chosen nodes, or of
+//! the whole shape - unless it is given; and it is read only when something
 //! turns or scales (`Applies::Any`), so a translation records none.
 //!
 //! # Refused by name
 //!
 //! - an axis of length zero: a rotation needs a direction;
-//! - a scale of zero, which flattens the shape onto a plane — that is a
-//!   projection, and it will have that name — or negative, which is a mirror and
+//! - a scale of zero, which flattens the shape onto a plane - that is a
+//!   projection, and it will have that name - or negative, which is a mirror and
 //!   turns every triangle inside out without saying so;
 //! - a node out of the shape: a correction aimed at a node that does not exist
 //!   would move nothing and look as if it had worked;
 //! - a rotation about an axis that is not vertical, when the shape's heights are
 //!   a **time** (its frame says so): x and y are metres, z milliseconds, and
 //!   turning one into the other gives a surface that looks like one and is
-//!   nothing — the refusal of `thickness` for the isopach, for the same reason;
-//! - a topology this writes nothing for yet — a grid's cells, a volume: moving a
+//!   nothing - the refusal of `thickness` for the isopach, for the same reason;
+//! - a topology this writes nothing for yet - a grid's cells, a volume: moving a
 //!   grid would write it as a triangulated surface or as a lattice with turned
 //!   vectors, and choosing is a decision, not a default. Mixed patches too
 //!   (faces **and** lines): one representation holds one kind.
@@ -83,7 +83,7 @@ pub struct TransformParams {
     /// the move along y, in the units of the frame
     #[param(default = 0.0, optional)]
     pub dy: f64,
-    /// the move along z, in the unit of the heights — metres, or milliseconds for a surface in time
+    /// the move along z, in the unit of the heights - metres, or milliseconds for a surface in time
     #[param(default = 0.0, optional)]
     pub dz: f64,
     /// The rotation, if any, and its settings.
@@ -92,17 +92,17 @@ pub struct TransformParams {
     /// The scale, if any, and its factors.
     #[param(flatten)]
     pub scale: Scale,
-    /// The point the rotation and the scale are about — read only when one of
+    /// The point the rotation and the scale are about - read only when one of
     /// them is asked for. After both, which it depends on.
     #[param(flatten, when_any = "rotate: axis; scale: uniform, axes")]
     pub pivot: Pivot,
-    /// only these nodes move — their ranks in the shape; left out, the whole shape moves
+    /// only these nodes move - their ranks in the shape; left out, the whole shape moves
     ///
     /// **Advanced**: a form fills it from the nodes chosen in the scene, not by
     /// typing ranks.
     #[param(advanced)]
     pub nodes: Vec<usize>,
-    /// The frame, what is represented, the naming — for the writer of the result.
+    /// The frame, what is represented, the naming - for the writer of the result.
     #[param(flatten)]
     pub written: Written,
 }
@@ -118,7 +118,7 @@ pub enum Rotation {
     Axis(AxisParams),
 }
 
-/// A rotation: the axis and the angle — about the pivot.
+/// A rotation: the axis and the angle - about the pivot.
 #[derive(Debug, Params)]
 pub struct AxisParams {
     /// rotation: the x component of the axis
@@ -127,7 +127,7 @@ pub struct AxisParams {
     /// rotation: the y component of the axis
     #[param(default = 0.0, optional)]
     pub axis_y: f64,
-    /// rotation: the z component of the axis — (0, 0, 1) turns about the vertical
+    /// rotation: the z component of the axis - (0, 0, 1) turns about the vertical
     #[param(default = 1.0, optional)]
     pub axis_z: f64,
     /// rotation: the angle, anticlockwise looking down the axis
@@ -137,7 +137,7 @@ pub struct AxisParams {
     pub unit: AngleUnit,
 }
 
-/// whether the shape is scaled — the same factor on every axis, or one per axis
+/// whether the shape is scaled - the same factor on every axis, or one per axis
 #[derive(Debug, Params)]
 #[params(tag = "scale")]
 pub enum Scale {
@@ -153,7 +153,7 @@ pub enum Scale {
 /// A scale, the same on every axis.
 #[derive(Debug, Params)]
 pub struct UniformScale {
-    /// scale: the factor on every axis — 2 doubles every distance from the pivot
+    /// scale: the factor on every axis - 2 doubles every distance from the pivot
     pub factor: f64,
 }
 
@@ -166,7 +166,7 @@ pub struct AxesScale {
     /// scale: the factor along y
     #[param(default = 1.0, optional)]
     pub scale_y: f64,
-    /// scale: the factor along z — of the heights, in their own unit
+    /// scale: the factor along z - of the heights, in their own unit
     #[param(default = 1.0, optional)]
     pub scale_z: f64,
 }
@@ -180,7 +180,7 @@ pub enum AngleUnit {
     Rad,
 }
 
-/// the point the rotation and the scale are about — the centre of what moves, the origin of the frame, or a point given
+/// the point the rotation and the scale are about - the centre of what moves, the origin of the frame, or a point given
 #[derive(Debug, Params)]
 #[params(tag = "pivot")]
 pub enum Pivot {
@@ -207,7 +207,7 @@ pub struct PivotPoint {
 /// What `transform` takes.
 #[derive(Debug, Inputs)]
 pub struct TransformInputs {
-    /// the shape to move — a cloud, polylines or a triangulated surface
+    /// the shape to move - a cloud, polylines or a triangulated surface
     pub shape: Shape,
 }
 
@@ -234,7 +234,7 @@ pub(crate) fn kind_of(geometry: &Geometry) -> Result<Kind, String> {
             Topology::Triangles(_) => Kind::Triangles,
             other => {
                 return Err(format!(
-                    "patch {} is {} — writing it back would make it another kind of representation, and that is a decision, not a default",
+                    "patch {} is {} - writing it back would make it another kind of representation, and that is a decision, not a default",
                     patch.index,
                     topology_word(other)
                 ));
@@ -243,7 +243,7 @@ pub(crate) fn kind_of(geometry: &Geometry) -> Result<Kind, String> {
         match found {
             Some(was) if was != kind => {
                 return Err(
-                    "its patches mix kinds (faces and lines, or points) — one representation holds one kind"
+                    "its patches mix kinds (faces and lines, or points) - one representation holds one kind"
                         .to_string(),
                 );
             }
@@ -266,7 +266,7 @@ fn topology_word(topology: &Topology) -> &'static str {
     }
 }
 
-/// The rotation of a vector about a unit axis — Rodrigues' formula.
+/// The rotation of a vector about a unit axis - Rodrigues' formula.
 fn rotated(v: [f64; 3], k: [f64; 3], cos: f64, sin: f64) -> [f64; 3] {
     let dot = k[0] * v[0] + k[1] * v[1] + k[2] * v[2];
     let cross = [
@@ -281,7 +281,7 @@ fn rotated(v: [f64; 3], k: [f64; 3], cos: f64, sin: f64) -> [f64; 3] {
     ]
 }
 
-/// The centre of the box of what moves — the chosen nodes, or every node.
+/// The centre of the box of what moves - the chosen nodes, or every node.
 fn centre_of(geometry: &Geometry, chosen: Option<&[bool]>) -> [f64; 3] {
     let mut low = [f64::INFINITY; 3];
     let mut high = [f64::NEG_INFINITY; 3];
@@ -307,11 +307,11 @@ struct Around {
     pivot: [f64; 3],
     /// Per axis; `[1, 1, 1]` when nothing scales.
     factors: [f64; 3],
-    /// The unit axis, the cosine and the sine — `None` when nothing turns.
+    /// The unit axis, the cosine and the sine - `None` when nothing turns.
     turn: Option<([f64; 3], f64, f64)>,
 }
 
-/// Move the nodes — every one, or those `chosen` — and say how many moved.
+/// Move the nodes - every one, or those `chosen` - and say how many moved.
 fn moved(
     geometry: &Geometry,
     chosen: Option<&[bool]>,
@@ -336,7 +336,7 @@ fn moved(
                     count += 1;
                     let q = match around {
                         Some(a) => {
-                            // Scaled, then turned — about the pivot.
+                            // Scaled, then turned - about the pivot.
                             let c = a.pivot;
                             let s = [
                                 (p[0] - c[0]) * a.factors[0],
@@ -372,7 +372,7 @@ fn moved(
     )
 }
 
-/// **Written by the writer of its kind** — the same object the shape came as,
+/// **Written by the writer of its kind** - the same object the shape came as,
 /// never a second copy of a writer. `transform` and `project` both end here.
 pub(crate) fn write_as(
     kind: Kind,
@@ -406,7 +406,7 @@ pub(crate) fn write_as(
     }
 }
 
-/// The triangles a move turned over in plan, every patch — counted, never
+/// The triangles a move turned over in plan, every patch - counted, never
 /// refused: a folded surface is a legitimate result.
 /// Shared with `project`.
 pub(crate) fn flipped_in(before: &Geometry, after: &Geometry) -> usize {
@@ -436,7 +436,7 @@ impl Operation for Transform {
     fn about(&self) -> About {
         About {
             name: "transform",
-            describe: "a shape moved, turned and scaled — a translation, a rotation about an axis, a scale, both about one pivot — whole, or only some of its nodes",
+            describe: "a shape moved, turned and scaled - a translation, a rotation about an axis, a scale, both about one pivot - whole, or only some of its nodes",
             category: Category::Geometry,
             makes: &[
                 "resqml22.PointSetRepresentation",
@@ -472,7 +472,7 @@ impl Operation for Transform {
         let kind = kind_of(&shape.geometry).map_err(|why| Refusal::on("shape", why))?;
         let total = shape.geometry.point_count();
 
-        // The nodes that move — checked, all of them, before anything moves.
+        // The nodes that move - checked, all of them, before anything moves.
         let chosen: Option<Vec<bool>> = if params.nodes.is_empty() {
             None
         } else {
@@ -481,7 +481,7 @@ impl Operation for Transform {
                     "value",
                     "nodes",
                     format!(
-                        "`nodes` names node {bad}, and the shape holds {total} (ranks from 0) — a correction aimed at a node that does not exist would move nothing"
+                        "`nodes` names node {bad}, and the shape holds {total} (ranks from 0) - a correction aimed at a node that does not exist would move nothing"
                     ),
                 ));
             }
@@ -529,7 +529,7 @@ impl Operation for Transform {
                     return Err(Refusal::about(
                         "value",
                         "axisZ",
-                        "the axis (`axisX`, `axisY`, `axisZ`) has no length — a rotation needs a direction",
+                        "the axis (`axisX`, `axisY`, `axisZ`) has no length - a rotation needs a direction",
                     ));
                 }
                 let k = [axis.axis_x / length, axis.axis_y / length, axis.axis_z / length];
@@ -544,7 +544,7 @@ impl Operation for Transform {
                     return Err(Refusal::about(
                         "value",
                         "axisZ",
-                        "the heights are a time and the axis is not vertical: turning would mix metres and milliseconds, which is not a rotation — turn about the vertical (0, 0, 1), or convert to depth first",
+                        "the heights are a time and the axis is not vertical: turning would mix metres and milliseconds, which is not a rotation - turn about the vertical (0, 0, 1), or convert to depth first",
                     ));
                 }
                 let radians = match axis.unit {
@@ -566,7 +566,7 @@ impl Operation for Transform {
             }
         };
 
-        // The pivot, only when something turns or scales — the condition its
+        // The pivot, only when something turns or scales - the condition its
         // slot carries, so a translation has none to record.
         let around = if turn.is_some() || factors.is_some() {
             let pivot = match &params.pivot {
@@ -576,7 +576,7 @@ impl Operation for Transform {
             };
             // The pivot is **reported**: the centre of a box is a number
             // nobody stated, and an activity that did not record it could not
-            // be read back into the same move. Under names of their own —
+            // be read back into the same move. Under names of their own -
             // `pivotX` is an input already, and one title cannot be both
             // (`crates/energyml-build/ARCHITECTURE.md`).
             for (title, value) in [
@@ -621,7 +621,7 @@ impl Operation for Transform {
             if turned > 0 {
                 says.push(Note {
                     key: "flipped",
-                    detail: format!("{turned} triangle(s) turned over in plan — a fold, kept as it is"),
+                    detail: format!("{turned} triangle(s) turned over in plan - a fold, kept as it is"),
                 });
             }
         }
@@ -675,11 +675,11 @@ impl Operation for Transform {
             count("movedNodes", "nodes moved"),
             optional(
                 "flippedTriangles",
-                "triangles turned over in plan by the move — a surface only",
+                "triangles turned over in plan by the move - a surface only",
             ),
             optional(
                 "pivotUsedX",
-                "the pivot the rotation and the scale were about, x — as used",
+                "the pivot the rotation and the scale were about, x - as used",
             ),
             optional("pivotUsedY", "the pivot as used, y"),
             optional("pivotUsedZ", "the pivot as used, z"),

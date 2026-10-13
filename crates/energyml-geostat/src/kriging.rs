@@ -1,23 +1,23 @@
-//! Ordinary kriging — the estimator that says how sure it is.
+//! Ordinary kriging - the estimator that says how sure it is.
 //!
 //! Where IDW weights by distance alone, kriging weights by the fitted
 //! [`Model`]: samples beyond the range stop
 //! mattering, clustered samples share their influence instead of counting
-//! twice, and every estimate comes with its **kriging variance** — the
+//! twice, and every estimate comes with its **kriging variance** - the
 //! model's own statement of uncertainty, which is the reason to pay for
 //! kriging at all.
 //!
 //! The system is dense and solved once: the kriging matrix depends only on
 //! the samples, so it is LU-factorised a single time and each query is one
-//! back-substitution — O(n³) once, O(n²) per query, honest for the
+//! back-substitution - O(n³) once, O(n²) per query, honest for the
 //! hundreds of wells this serves.
 //!
 //! # Global, or by neighbourhood
 //!
 //! That single factorisation holds only while every query sees every sample.
 //! A search radius, a cap on the neighbours, or a fault as a barrier make the
-//! sample set **depend on the query** — kriging with fault lines
-//! is of that kind — and then each query assembles and solves its own small
+//! sample set **depend on the query** - kriging with fault lines
+//! is of that kind - and then each query assembles and solves its own small
 //! system. Same estimator, same variance formula; only the set of samples in
 //! the sum changes. A query no sample reaches is `NaN` and counted, like an
 //! IDW radius nobody reaches. The two paths are cross-checked against each
@@ -26,12 +26,12 @@
 //!
 //! Two refusals worth naming: two samples
 //! on the **same position** make the matrix singular by construction
-//! (refused up front, naming both indices — the fix is deduplication, and
+//! (refused up front, naming both indices - the fix is deduplication, and
 //! choosing which value wins is the caller's call, not this crate's); and
 //! a system the factorisation finds singular anyway refuses rather than
 //! returning the garbage a zero pivot produces.
 //!
-//! TODO(reference): verify — ordinary kriging follows standard geostatistics; no publication is cited in this code. Add a reference once checked.
+//! TODO(reference): verify - ordinary kriging follows standard geostatistics; no publication is cited in this code. Add a reference once checked.
 
 use crate::Error;
 use crate::barrier::{Barriers, keep_visible};
@@ -43,7 +43,7 @@ use crate::variogram::Model;
 #[derive(Debug, Clone)]
 pub struct Ordinary {
     pub model: Model,
-    /// A query closer than this to a sample *is* that sample — same rule
+    /// A query closer than this to a sample *is* that sample - same rule
     /// and same default as [`crate::Idw`].
     pub exact_within: f64,
     /// Only samples within this distance of the query take part. `None` =
@@ -51,7 +51,7 @@ pub struct Ordinary {
     pub radius: Option<f64>,
     /// Only the `k` nearest samples take part. `None` = all of them.
     pub neighbours: Option<usize>,
-    /// Faults the estimator must not see across — see [`Barriers`].
+    /// Faults the estimator must not see across - see [`Barriers`].
     pub barriers: Option<Barriers>,
     /// Whether the kriging variance is wanted. `true` by default; a caller
     /// that writes only the estimates says so with [`Ordinary::without_variance`],
@@ -65,14 +65,14 @@ pub struct Ordinary {
 pub struct KrigingAnswer {
     /// One estimate per query, in order.
     pub values: Vec<f64>,
-    /// The kriging variance of each estimate — 0 on a sample, growing
+    /// The kriging variance of each estimate - 0 on a sample, growing
     /// towards `sill` (and past it, by the Lagrange term) far from data.
     /// `NaN` where the estimate is. **Empty** when the variance was not asked
-    /// for ([`Ordinary::without_variance`]) — an absence, not a list of zeros.
+    /// for ([`Ordinary::without_variance`]) - an absence, not a list of zeros.
     pub variances: Vec<f64>,
     /// Samples set aside for a `NaN` value or coordinate.
     pub set_aside: usize,
-    /// Queries no sample could reach — behind a fault, or past the radius.
+    /// Queries no sample could reach - behind a fault, or past the radius.
     /// Each is a `NaN` in `values`.
     pub unreached: usize,
 }
@@ -96,13 +96,13 @@ impl Ordinary {
     ///
     /// The ordinary kriging matrix `M` is symmetric, so the estimate
     /// `wᵀz`, with `M [w; μ] = [γ₀; 1]`, is also `aᵀ [γ₀; 1]` with
-    /// `M a = [z; 0]` — the **dual** form. `a` is solved once for all queries,
+    /// `M a = [z; 0]` - the **dual** form. `a` is solved once for all queries,
     /// and each query then costs one variogram term per sample instead of a
     /// solve in `n²`. Measured by a speed report: 20 s for 1 000 samples
     /// onto 10 000 nodes, the variance nobody wrote included.
     /// The two forms are confronted in
     /// the tests. The variance, which needs the weights themselves, has no
-    /// such shortcut — hence a switch rather than a change.
+    /// such shortcut - hence a switch rather than a change.
     #[must_use]
     pub fn without_variance(mut self) -> Self {
         self.variance = false;
@@ -179,7 +179,7 @@ impl Ordinary {
                 .sum::<f64>()
                 .sqrt()
         };
-        // Coincident samples make two identical rows — singular by
+        // Coincident samples make two identical rows - singular by
         // construction, and better refused with both names than found as
         // a mysterious zero pivot below.
         for (at, (a, _)) in usable.iter().enumerate() {
@@ -212,7 +212,7 @@ impl Ordinary {
         let factored = Lu::factor(matrix, side)?;
 
         if !self.variance {
-            // The dual form — see `without_variance`.
+            // The dual form - see `without_variance`.
             let mut rhs: Vec<f64> = usable.iter().map(|(_, z)| *z).collect();
             rhs.push(0.0);
             let dual = factored.solve(&rhs);
@@ -259,7 +259,7 @@ impl Ordinary {
             rhs[n] = 1.0;
             let weights = factored.solve(&rhs);
             let estimate: f64 = weights[..n].iter().zip(&usable).map(|(w, (_, z))| w * z).sum();
-            // σ² = Σ wᵢ γ(dᵢ) + μ — the Lagrange multiplier is weights[n].
+            // σ² = Σ wᵢ γ(dᵢ) + μ - the Lagrange multiplier is weights[n].
             let variance: f64 = weights[..n]
                 .iter()
                 .zip(&rhs[..n])
@@ -279,8 +279,8 @@ impl Ordinary {
 
     /// The by-neighbourhood path: one small system per query.
     ///
-    /// The neighbourhood is decided in this order — exact hit, then the
-    /// fault, then the radius, then the `k` nearest — and the order matters
+    /// The neighbourhood is decided in this order - exact hit, then the
+    /// fault, then the radius, then the `k` nearest - and the order matters
     /// only for the last: the nearest `k` are taken among the samples that
     /// are already visible and in reach, never the other way round, or a
     /// wall of near samples behind a fault would crowd out every visible one.
@@ -315,7 +315,7 @@ impl Ordinary {
                 continue;
             }
             // The fault after the radius (cheap first), the cap after the
-            // fault (the rule) — see `keep_visible`.
+            // fault (the rule) - see `keep_visible`.
             match &self.barriers {
                 Some(faults) => keep_visible(&mut near, self.neighbours, |at| {
                     faults.blocks(plan(&usable[at].0), plan(query))
@@ -390,7 +390,7 @@ mod tests {
         Model::new(ModelKind::Spherical, 0.0, 1.0, 10.0).unwrap()
     }
 
-    /// **The dual form gives the estimates of the primal one** — on scattered
+    /// **The dual form gives the estimates of the primal one** - on scattered
     /// samples, onto queries between, beside and far from them, for each
     /// model. And it gives no variance, rather than zeros.
     #[test]
@@ -449,7 +449,7 @@ mod tests {
     #[test]
     fn a_constant_field_is_reproduced_with_the_weights_summing_to_one() {
         // Ordinary kriging's defining constraint: Σw = 1, so a constant
-        // field comes back constant — anywhere, any model.
+        // field comes back constant - anywhere, any model.
         let samples = [[0.0, 0.0], [5.0, 1.0], [2.0, 8.0], [7.0, 6.0]];
         let values = [4.2; 4];
         let queries = [[3.0, 3.0], [-10.0, -10.0], [100.0, 0.0]];
@@ -472,7 +472,7 @@ mod tests {
 
     /// **The two paths are one estimator.** With a cap larger than the
     /// sample count, no radius and no fault, the by-neighbourhood path must
-    /// reproduce the global factorisation to the last digit — values and
+    /// reproduce the global factorisation to the last digit - values and
     /// variances. A local assembly wrong by one index would still return
     /// plausible numbers; this is what catches it.
     #[test]
@@ -499,7 +499,7 @@ mod tests {
     }
 
     /// A fault is a barrier: the query a hair from the far sample hears only
-    /// the near ones — the same case as IDW's, on the other estimator.
+    /// the near ones - the same case as IDW's, on the other estimator.
     #[test]
     fn a_sample_behind_a_fault_takes_no_part() {
         let fault = Barriers::from_polylines(&[vec![[5.0, -10.0], [5.0, 10.0]]]).unwrap();
@@ -560,7 +560,7 @@ mod tests {
     #[test]
     fn far_from_every_sample_the_estimate_tends_to_the_mean() {
         // Beyond the range every γ is the sill: the system flattens and
-        // ordinary kriging hands back the sample mean — the property that
+        // ordinary kriging hands back the sample mean - the property that
         // distinguishes it from IDW, which chases the nearest value. The
         // samples must be **mutually** uncorrelated too (farther than the
         // range from each other): clustered samples get GLS weights, and

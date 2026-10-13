@@ -2,7 +2,7 @@
 
 The crates in this directory are **generated code**. They are produced by an internal Geosiris generator from the Energistics XML schemas (and, for ETP, the Avro schemas), and written here by a regeneration bot.
 
-**Do not edit them by hand.** A CI check rejects any pull request that touches `crates/generated/**` unless it comes from the bot. If you find a defect — a missing field, a wrong type, a name that does not match the schema — **open an issue** that names the schema type and version. Do not send a pull request: the fix belongs in the generator, and the next regeneration would overwrite a hand edit.
+**Do not edit them by hand.** A CI check rejects any pull request that touches `crates/generated/**` unless it comes from the bot. If you find a defect - a missing field, a wrong type, a name that does not match the schema - **open an issue** that names the schema type and version. Do not send a pull request: the fix belongs in the generator, and the next regeneration would overwrite a hand edit.
 
 Provenance: each source file begins with the Energistics notice of its source and the generator version. `schemas.lock` (TODO(verify): to come) will record the SHA-256 of every input schema; it contains no Energistics content. See [NOTICE](../../NOTICE) at the repository root for the attribution and the Energistics Product License Agreement that apply to these crates.
 

@@ -6,7 +6,7 @@ edition.workspace = true
 rust-version.workspace = true
 # Spelled out rather than inherited: wasm-pack parses the manifests of a
 # WebAssembly front end's path dependencies before running wasm-opt, and
-# does not resolve workspace inheritance — `license.workspace = true` reaches
+# does not resolve workspace inheritance - `license.workspace = true` reaches
 # it as a table where it wants a string, and the wasm build dies *after*
 # writing the module, leaving a usable artefact and an unread exit code.
 license = "Apache-2.0"
@@ -17,7 +17,7 @@ readme = "README.md"
 homepage = "https://www.geosiris.com"
 documentation = "https://docs.rs/energyml-storage"
 include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
-# One test binary, `tests/main.rs` — see its doc.
+# One test binary, `tests/main.rs` - see its doc.
 autotests = false
 
 [dependencies]
@@ -45,7 +45,7 @@ ndarray = { version = "0.17", optional = true }
 
 [features]
 default = []
-# Tests on the private real-file corpus under testdata/ — real-file campaign, run privately. Off by default.
+# Tests on the private real-file corpus under testdata/ - real-file campaign, run privately. Off by default.
 private-corpus = []
 # Read arrays from HDF5 files. Needs the C library at build time.
 hdf5 = ["dep:hdf5", "dep:ndarray"]
@@ -66,7 +66,7 @@ energyml-resqml-2-2-dev3 = { path = "../generated/energyml-resqml-2-2-dev3", ver
 
 # Every schema version the workspace generates, for the corpus tests. The four
 # above are named individually because `versions.rs` and `mistyped.rs` build
-# objects of a *chosen* release by hand — that is the point of those tests.
+# objects of a *chosen* release by hand - that is the point of those tests.
 energyml-schemas = { path = "../energyml-schemas", version = "0.1.0", features = ["all"] }
 
 [lints.rust]

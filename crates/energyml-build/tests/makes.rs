@@ -2,18 +2,18 @@
 //!
 //! A defect found while writing the reference model: `properties-from-table` and
 //! `wells-and-properties-from-table` declared they made
-//! `resqml22.CategoricalProperty`, which RESQML 2.2 does not have — a code's
+//! `resqml22.CategoricalProperty`, which RESQML 2.2 does not have - a code's
 //! meaning goes through `DiscreteProperty.CategoryLookup` there. The front end shows
 //! that list and looks up objects of the same types in it (`modelsFor`), and
 //! nothing confronted it with the schemas.
 //!
 //! **Asking the schema registry whether it knows the name is not enough**, and
 //! that is what makes this less obvious than it looks: `resqml22.CategoricalProperty`
-//! **is** in `energyml_schemas::all()` — through the `2.2_dev3` development
+//! **is** in `energyml_schemas::all()` - through the `2.2_dev3` development
 //! drop, registered so that files written against it still open. A check on
 //! *known* would have passed over the defect. The question that holds is the
-//! one the front end asks of a type somebody creates — *does a release have it, and
-//! does it name a part?* — which is `energyml_schemas::may_create`, the one
+//! one the front end asks of a type somebody creates - *does a release have it, and
+//! does it name a part?* - which is `energyml_schemas::may_create`, the one
 //! answer the workspace gives to it.
 
 use energyml_build::operation::Registry;
@@ -34,7 +34,7 @@ fn every_type_an_operation_makes_is_a_part_a_release_can_hold() {
                 // The drop owns the names its release does not have: that is
                 // how `resqml22.CategoricalProperty` resolves at all.
                 Some(entry) if !energyml_schemas::may_create(entry.info) => wrong.push(format!(
-                    "`{}` makes `{made}`, which only {} {} holds — nothing a release writes",
+                    "`{}` makes `{made}`, which only {} {} holds - nothing a release writes",
                     operation.name(),
                     entry.info.package,
                     entry.info.version
@@ -46,7 +46,7 @@ fn every_type_an_operation_makes_is_a_part_a_release_can_hold() {
     // The negative control: an empty `makes` everywhere would pass the loop.
     assert!(
         checked >= 20,
-        "only {checked} type(s) declared over the whole registry — the loop proved nothing"
+        "only {checked} type(s) declared over the whole registry - the loop proved nothing"
     );
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
 }
@@ -54,7 +54,7 @@ fn every_type_an_operation_makes_is_a_part_a_release_can_hold() {
 /// The control the check above rests on, kept apart so that it says which of
 /// its two halves broke: the name this defect was about **resolves**, and it is
 /// **not** creatable. If the drop stopped being registered, the check above
-/// would still catch the name — as unknown — but this one would say why the
+/// would still catch the name - as unknown - but this one would say why the
 /// first half of the argument no longer holds.
 #[test]
 fn the_categorical_property_of_2_2_is_a_drop_name_only() {

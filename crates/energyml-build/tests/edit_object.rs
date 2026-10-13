@@ -1,10 +1,10 @@
-//! `edit-object`: an object of the package with fields set as told —
+//! `edit-object`: an object of the package with fields set as told -
 //! rewritten under its own uuid, or copied under a new one.
 //!
 //! Pure plans over hand-made objects: what the operation is handed is
 //! `Known::json`, which the package's reader fills, and here the test does. The
 //! objects, uuids and titles are the test's own; the shapes follow the
-//! workspace's JSON encoding (`energyml_core::json`) — `ContactElement` and
+//! workspace's JSON encoding (`energyml_core::json`) - `ContactElement` and
 //! `Qualifier` as RESQML 2.2 Interpretations.xsd writes a contact.
 
 use energyml_build::operation::{Choices, Identity, Plan, Registry, When};
@@ -21,18 +21,18 @@ fn when() -> When {
     }
 }
 
-/// A fault interpretation, normal and listric — what `fault-from-sticks` writes.
+/// A fault interpretation, normal and listric - what `fault-from-sticks` writes.
 fn fault() -> Value {
     json!({
         "$type": "resqml22.FaultInterpretation",
         "uuid": FAULT,
         "schemaVersion": "2.2",
-        "Citation": { "$type": "eml23.Citation", "Title": "F9 — interpretation", "Originator": "someone", "Creation": "2026-01-01T00:00:00Z" },
+        "Citation": { "$type": "eml23.Citation", "Title": "F9 - interpretation", "Originator": "someone", "Creation": "2026-01-01T00:00:00Z" },
         "IsListric": true,
         "ThrowInterpretation": [ { "$type": "resqml22.FaultThrow", "Throw": ["normal"] } ],
         "ContactInterpretation": [ {
             "$type": "resqml22.BinaryContactInterpretationPart",
-            "Subject": { "$type": "resqml22.ContactElement", "Uuid": FAULT, "QualifiedType": "resqml22.FaultInterpretation", "Title": "F9 — interpretation", "Qualifier": "footwall" },
+            "Subject": { "$type": "resqml22.ContactElement", "Uuid": FAULT, "QualifiedType": "resqml22.FaultInterpretation", "Title": "F9 - interpretation", "Qualifier": "footwall" },
             "Verb": "stops"
         } ],
     })
@@ -45,7 +45,7 @@ fn bag(json: Option<Value>) -> Pieces {
             reference: Some(Ref {
                 uuid: FAULT.into(),
                 qualified_type: "resqml22.FaultInterpretation".into(),
-                title: "F9 — interpretation".into(),
+                title: "F9 - interpretation".into(),
                 object_version: None,
             }),
             json,
@@ -78,7 +78,7 @@ fn in_place_the_fields_change_and_nothing_else() {
     // Everything else as it was.
     assert_eq!(written["IsListric"], json!(true));
     assert_eq!(written["ContactInterpretation"], fault()["ContactInterpretation"]);
-    assert_eq!(written["Citation"]["Title"], json!("F9 — interpretation"));
+    assert_eq!(written["Citation"]["Title"], json!("F9 - interpretation"));
     assert_eq!(
         written["Citation"]["Creation"],
         json!("2026-01-01T00:00:00Z"),

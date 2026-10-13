@@ -1,7 +1,7 @@
-//! `polylines` — a `PolylineSetRepresentation` from runs of points.
+//! `polylines` - a `PolylineSetRepresentation` from runs of points.
 //!
-//! From a shape whose topology is polylines — contour lines of the scene, a
-//! trajectory read from the package — or from a feature collection of lines
+//! From a shape whose topology is polylines - contour lines of the scene, a
+//! trajectory read from the package - or from a feature collection of lines
 //! and areas. That is what the isovalues need: closed or
 //! open polylineSetRepresentations, as the case may be, one for each small
 //! line.
@@ -10,10 +10,10 @@
 //!
 //! RESQML states closure in its own array, so it has to come from somewhere:
 //!
-//! - **said** — the shape carries `closed`, one flag per polyline, because the
+//! - **said** - the shape carries `closed`, one flag per polyline, because the
 //!   producer knew (the contouring closes its rings); an area of a feature
 //!   collection is a ring by definition; the `closed` choice forces every line;
-//! - **seen** — otherwise the first and last point coinciding is read as a
+//! - **seen** - otherwise the first and last point coinciding is read as a
 //!   closed ring, the repeat is dropped (RESQML does not repeat the first
 //!   node), and the plan **says so** in a note. Never silently: a ring seen
 //!   where the producer meant an open line back to its start is a decision
@@ -52,7 +52,7 @@ pub struct PolylinesParams {
 /// What `polylines` takes.
 #[derive(Debug, Inputs)]
 pub struct PolylinesInputs {
-    /// shapes holding polylines — each one becomes its own patch
+    /// shapes holding polylines - each one becomes its own patch
     ///
     /// **Several**, each its patch: a `PolylineSetRepresentation` has
     /// `LinePatch 1..*`, and promoting the traces of a fault on five horizons
@@ -71,8 +71,8 @@ struct Line {
     seen: bool,
 }
 
-/// The polylines of the input — with what was said and what was seen —
-/// **one group per input patch** — or per feature
+/// The polylines of the input - with what was said and what was seen -
+/// **one group per input patch** - or per feature
 /// collection.
 ///
 /// # Why groups
@@ -81,12 +81,12 @@ struct Line {
 /// flatten every line into a single one. `intersect` then wrote a fault's
 /// traces on five horizons as **one** patch while its plan, its tree and its
 /// documentation said *one patch per horizon*. A patch is
-/// what a reader addresses — *the trace on this horizon* — so it survives the
+/// what a reader addresses - *the trace on this horizon* - so it survives the
 /// writing, as it already did in [`super::triangles`].
-/// **The closure a shape says of one of its polylines** — patch-local first,
+/// **The closure a shape says of one of its polylines** - patch-local first,
 /// then the piece-wide list: a shape built by a caller states it once for all
 /// its lines, a shape read from a file states it per patch. `None`: nobody said,
-/// which is not *open* — a reader that decided would invent or lose a ring.
+/// which is not *open* - a reader that decided would invent or lose a ring.
 ///
 /// `local` is the polyline's rank in its patch, `global` its rank in the shape.
 /// Public to the operations that read polylines before writing them
@@ -125,7 +125,7 @@ fn lines_of(
                     Refusal::on(
                         "shape",
                         format!(
-                            "`{name}`: the polylines add up to more nodes than the patch holds — a count that does not add up would shift every following polyline"
+                            "`{name}`: the polylines add up to more nodes than the patch holds - a count that does not add up would shift every following polyline"
                         ),
                     )
                 })?;
@@ -161,7 +161,7 @@ fn lines_of(
 
 fn line(mut points: Vec<[f64; 3]>, said: Option<bool>, forced: Option<bool>) -> Line {
     // Bit for bit and not `==`: a position without a third ordinate carries a
-    // NaN, and `NaN != NaN` would read every flat ring as open — the same
+    // NaN, and `NaN != NaN` would read every flat ring as open - the same
     // reason `assemble` compares its places on the bits.
     let same = |a: &[f64; 3], b: &[f64; 3]| a.iter().zip(b).all(|(x, y)| x.to_bits() == y.to_bits());
     let coincide = points.len() >= 2 && same(&points[0], &points[points.len() - 1]);
@@ -184,7 +184,7 @@ impl Operation for Polylines {
     fn about(&self) -> About {
         About {
             name: "polylines",
-            describe: "a polyline set from runs of points — a shape with polylines, or the lines and areas of a feature collection; closed where said, or where the ends coincide",
+            describe: "a polyline set from runs of points - a shape with polylines, or the lines and areas of a feature collection; closed where said, or where the ends coincide",
             category: Category::Create,
             makes: &["resqml22.PolylineSetRepresentation"],
             recipe: "polylines",
@@ -218,12 +218,12 @@ impl Operation for Polylines {
         } else if !inputs.shape.is_empty() {
             Err(Refusal::on(
                 "shape",
-                "the shape has no polyline — its topology is points, triangles or cells",
+                "the shape has no polyline - its topology is points, triangles or cells",
             ))
         } else if inputs.features.is_some() {
             Err(Refusal::on(
                 "features",
-                "the feature collection holds only points — a polyline needs lines or areas",
+                "the feature collection holds only points - a polyline needs lines or areas",
             ))
         } else {
             Err(Refusal::new(
@@ -271,7 +271,7 @@ impl Operation for Polylines {
     }
 }
 
-/// **The polyline set, written** — what the operation does, and what an
+/// **The polyline set, written** - what the operation does, and what an
 /// operation that computes lines (`outline`, `isocontours`, `intersect`)
 /// calls directly: typed in, no bag to derive and no choices to read back by
 /// name. `seed` is the caller's, so that two routes to the same set name it
@@ -305,7 +305,7 @@ pub fn write(
             return Err(Refusal::new(
                 "refused",
                 format!(
-                    "polyline {at} is closed with {} nodes — two would fold the ring onto its own edge",
+                    "polyline {at} is closed with {} nodes - two would fold the ring onto its own edge",
                     line.points.len()
                 ),
             ));
@@ -328,8 +328,8 @@ pub fn write(
         } else {
             json!({ "$type": "eml23.BooleanConstantArray", "Value": flags[0], "Count": flags.len() })
         };
-        // One patch keeps the path it always had, so a single-patch set —
-        // the ordinary case — writes exactly what it wrote before.
+        // One patch keeps the path it always had, so a single-patch set -
+        // the ordinary case - writes exactly what it wrote before.
         let path = if groups.len() == 1 {
             format!("/resqml22/{uuid}/points")
         } else {
@@ -356,7 +356,7 @@ pub fn write(
             values: Numbers::F64(points.iter().flatten().copied().collect()),
         });
         // The shape is the output, one patch per patch written, and
-        // `node_offset` is **the running sum** — the contract of `Patch`.
+        // `node_offset` is **the running sum** - the contract of `Patch`.
         // It carries the closure, which the points array does not say.
         made.push(Patch {
             index: at,
@@ -394,7 +394,7 @@ pub fn write(
     if seen > 0 {
         says.push(Note {
             key: "closed-seen",
-            detail: format!("{seen} polyline(s) closed because their ends coincide — nobody said so; `--set closed=false` keeps them open"),
+            detail: format!("{seen} polyline(s) closed because their ends coincide - nobody said so; `--set closed=false` keeps them open"),
         });
     }
     let mut objects = frame.objects;

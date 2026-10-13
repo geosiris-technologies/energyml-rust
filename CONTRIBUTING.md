@@ -2,7 +2,7 @@
 
 Thank you for helping. Bug reports, reproductions and pull requests are welcome. By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md). Security problems go through [SECURITY.md](SECURITY.md), never through a public issue.
 
-Everything — code, comments, messages, documentation — is written in **English**.
+Everything - code, comments, messages, documentation - is written in **English**.
 
 ## The rules that matter
 
@@ -18,7 +18,7 @@ Everything — code, comments, messages, documentation — is written in **Engli
 8. **Faces hold no logic.** The CLI parses arguments and prints; the Python bridge converts. Anything that decides lives in a library crate first, and is bridged afterwards.
 9. **`energyml-core` stays free of native dependencies.** WebAssembly is a hard requirement; HDF5 and similar live behind optional features in the storage layer.
 10. **A message and the test that asserts it change in the same commit.** Rewording an error, a refusal or a diagnostic without the assertion that checks it leaves the suite red, or worse, silently stops checking the wording.
-11. **Everything here is in English** — code, comments, messages, test names and docs. French appears only as data: values quoted from a file or a French standard, place and geological names.
+11. **Everything here is in English** - code, comments, messages, test names and docs. French appears only as data: values quoted from a file or a French standard, place and geological names.
 
 ## Building and testing
 
@@ -39,12 +39,33 @@ python scripts/fetch-fixtures.py        # into target/fixtures/
 
 The HDF5 tests need the HDF5 library installed (for example `libhdf5-dev` on Debian/Ubuntu) and the `hdf5` feature.
 
+## Commit messages
+
+Commits follow [Conventional Commits 1.0](https://www.conventionalcommits.org/en/v1.0.0/), the
+convention release-plz reads to choose the next version and write the CHANGELOG:
+
+```
+<type>(<scope>): <summary in the imperative, lower case, no final full stop>
+
+<why, wrapped at 100 columns>
+
+BREAKING CHANGE: <what a caller must change>   (only for a breaking change)
+```
+
+- **type**: `feat` (a new capability, a minor version), `fix` (a bug fix, a patch version),
+  `perf`, `refactor`, `docs`, `test`, `build`, `ci`, `chore`, `revert`.
+- **scope**: the crate without its `energyml-` prefix (`storage`, `build`, `cli`, `schemas`), or
+  a broader word when several crates move together (`deps`, `ci`).
+- **breaking change**: a `!` after the scope (`feat(storage)!: ...`) and a `BREAKING CHANGE:` line
+  in the body. Before 1.0, a breaking change raises the minor version; `cargo-semver-checks` also
+  runs in CI and flags an API break the message did not announce.
+
 ## Pull requests
 
 - Keep a pull request to one subject, with a description of what changes and why.
 - Add or update tests and documentation with the code.
 - CI must pass: formatting per crate, clippy with `-D warnings`, tests on Linux, macOS and Windows, wasm32 checks, docs without warnings, `cargo deny`.
-- Commit messages: a short imperative summary, then the reason.
+- Commit messages follow the convention above.
 
 ## Licence
 

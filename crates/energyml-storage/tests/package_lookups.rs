@@ -2,7 +2,7 @@
 //!
 //! Opening a 72 808-object package took 121 s in `mediaLinks`: `Package::has`
 //! was a `Vec::contains` over every part name, and the duplicate-`Id` check of a
-//! `.rels` scanned the relationships already read — one `.rels` held 70 127 of
+//! `.rels` scanned the relationships already read - one `.rels` held 70 127 of
 //! them. Both were quadratic.
 //!
 //! **Work is counted, not timed.** `parse_relationships_counting` returns how
@@ -128,7 +128,7 @@ fn a_package_of_many_parts_opens_and_says_the_same_things() {
     )
     .expect("opens");
     // `has` answers for a part present, with or without the leading slash, and
-    // for one absent — read through the public door, `raw_part`.
+    // for one absent - read through the public door, `raw_part`.
     assert!(store.raw_part("media/f0.bin").is_ok());
     assert!(store.raw_part("/media/f1999.bin").is_ok());
     assert!(store.raw_part("media/f2000.bin").is_err());

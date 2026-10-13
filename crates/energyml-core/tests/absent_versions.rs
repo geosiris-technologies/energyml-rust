@@ -21,8 +21,8 @@ fn registry() -> Registry {
 
 /// `2.0`, `2.0.1`, `20` and `201` are one version, whatever the case of the
 /// package. Break it: compare `compact_version(version)` of the registry's own
-/// spelling only (drop the `compact` list) and `2.0` — what a RESQML 2.0.1
-/// `schemaVersion` says — is no longer absent.
+/// spelling only (drop the `compact` list) and `2.0` - what a RESQML 2.0.1
+/// `schemaVersion` says - is no longer absent.
 #[test]
 fn every_spelling_of_a_version_names_it() {
     let registry = registry();
@@ -97,7 +97,7 @@ fn a_content_type_names_the_version() {
 }
 
 /// The two lookups that used to say "unknown type (not registered)" now carry
-/// the refusal when the version was declared absent — and still say it for a
+/// the refusal when the version was declared absent - and still say it for a
 /// name nobody declared. Break it: build the error with `UnknownType` only.
 #[test]
 fn creating_and_reading_an_absent_version_is_a_named_refusal() {

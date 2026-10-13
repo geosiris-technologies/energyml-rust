@@ -7,7 +7,7 @@
 //! touches. Measured on 06/09 through the browser road, on `h+g_PaleoGTM.epc`
 //! and its 208 MB of HDF5: **47.9 s and 1 530 dataset reads**, against 302 ms
 //! for the reference graph and 85 ms for the inventory. Nothing was drawn at
-//! the end of it — the front end holds every row unread until somebody asks — so the
+//! the end of it - the front end holds every row unread until somebody asks - so the
 //! whole of it went into filling in numbers.
 //!
 //! [`geometry::declared_nodes`] is the cheap half of that answer, and the
@@ -18,7 +18,7 @@
 //!   pass a test that handed it one;
 //! - it answers **`None` rather than zero** where the document says nothing. A
 //!   zero is a claim about the contents, and the wrong one;
-//! - it is **declared, not drawn**. `corpus.rs` holds the other half — the
+//! - it is **declared, not drawn**. `corpus.rs` holds the other half - the
 //!   confrontation with what the reader actually produces, on real files.
 //!
 //! [`ValueSource`]: energyml_geometry::source::ValueSource
@@ -86,7 +86,7 @@ fn one_patch_is_the_whole_answer() {
 #[test]
 fn a_surface_with_no_patch_says_nothing_rather_than_zero() {
     // The distinction the whole module turns on. A sum over no patch is zero,
-    // and zero would be shown as *this surface holds nothing* — a claim about
+    // and zero would be shown as *this surface holds nothing* - a claim about
     // the file, made by arithmetic over an empty list.
     let surface = triangulated(&[]);
     assert_eq!(geometry::declared_nodes(surface.as_reflect()), None);
@@ -116,7 +116,7 @@ fn a_point_set_states_the_count_of_each_node_patch() {
 
 #[test]
 fn a_lattice_states_both_its_axes() {
-    // The product is the nodes of the lattice — an **upper bound** on what will
+    // The product is the nodes of the lattice - an **upper bound** on what will
     // be drawn, since a node carrying no location is dropped by the reader.
     // That is why the number is called declared and never replaces a measured
     // one; `corpus.rs` is where the two are confronted.
@@ -134,7 +134,7 @@ fn a_lattice_states_both_its_axes() {
 
 #[test]
 fn a_polyline_set_keeps_its_counts_in_an_array_and_so_states_nothing() {
-    // `NodeCountPerPolyline` is an `AbstractIntegerArray` — the numbers are in
+    // `NodeCountPerPolyline` is an `AbstractIntegerArray` - the numbers are in
     // the data file. Answering here would mean reading it, which is the cost
     // this function exists to avoid; answering zero would be a lie. So: `None`,
     // and the row shows a size once it is drawn.
@@ -162,8 +162,8 @@ fn a_concept_no_reader_handles_states_nothing() {
 
 #[test]
 fn a_wellbore_frame_states_its_nodes_on_the_object() {
-    // `NodeCount` is *the number of nodes*, and `NodeMd` — one measured depth
-    // per node — is the array it counts. Reading the array is what this
+    // `NodeCount` is *the number of nodes*, and `NodeMd` - one measured depth
+    // per node - is the array it counts. Reading the array is what this
     // function exists not to do.
     let frame = energyml_resqml_2_0_1::WellboreFrameRepresentation {
         node_count: 1_204,
@@ -177,7 +177,7 @@ fn an_unstructured_grid_states_its_nodes_under_its_geometry() {
     // The one concept that hangs `NodeCount` somewhere else: the object states
     // `CellCount`, and the node count sits on the `Geometry` beside the
     // `Points` it counts. Looked for by field rather than by concept, so a
-    // release that moves it again costs nothing — and so that reading the
+    // release that moves it again costs nothing - and so that reading the
     // object's own `CellCount` as nodes stays impossible.
     let grid = energyml_resqml_2_0_1::UnstructuredGridRepresentation {
         cell_count: 27,
@@ -195,7 +195,7 @@ fn a_trajectory_states_the_knots_of_its_single_line() {
     // `KnotCount` is answerable here and **not** for a parametric line *set*:
     // there it is the longest line's, and the short lines are padded with `NaN`
     // (see `parametric.rs`), so a set states a bound and not a count. A
-    // trajectory carries one line, so the two coincide — and the corpus agrees
+    // trajectory carries one line, so the two coincide - and the corpus agrees
     // on all forty of its trajectories.
     let trajectory = energyml_resqml_2_0_1::WellboreTrajectoryRepresentation {
         geometry: Some(
@@ -213,7 +213,7 @@ fn a_trajectory_states_the_knots_of_its_single_line() {
 
 #[test]
 fn a_trajectory_with_no_geometry_states_nothing() {
-    // It is drawn from its datum instead — the reader's own fallback — and
+    // It is drawn from its datum instead - the reader's own fallback - and
     // nothing in the document says how many stations that will give.
     let trajectory = energyml_resqml_2_0_1::WellboreTrajectoryRepresentation::default();
     assert!(geometry::is_supported(trajectory.as_reflect()));

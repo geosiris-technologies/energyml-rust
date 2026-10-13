@@ -1,10 +1,10 @@
-//! **Where a well crosses a surface** — the computed tops.
+//! **Where a well crosses a surface** - the computed tops.
 //!
 //! # What is computed, and with what
 //!
-//! A path — a function from a measured depth to a position, which the caller
+//! A path - a function from a measured depth to a position, which the caller
 //! evaluates (`energyml_geometry::parametric::Path` for a trajectory of a
-//! package: the reader that draws the well, minimum curvature included) — and
+//! package: the reader that draws the well, minimum curvature included) - and
 //! a surface read by [`crate::heights`], the one reading of *the height of
 //! this surface under this (x, y)*. Along the path,
 //!
@@ -12,7 +12,7 @@
 //!
 //! and a crossing is a root of `g`: bracketed where two samples of the path
 //! lie on either side of the surface, then bisected to the last representable
-//! measured depth. Neither the path nor the surface is re-implemented here —
+//! measured depth. Neither the path nor the surface is re-implemented here -
 //! a second evaluator of either would be a second answer to where the well
 //! is, or where the horizon is.
 //!
@@ -22,7 +22,7 @@
 //! a vertical line meets such a surface once, so the crossing is a root in one
 //! variable, and [`crate::heights`] already buckets the faces to answer it.
 //! `intersect` was done the same way, without the ray caster. What a ray
-//! caster would add is exactly what heights refuse — an overturned surface, a
+//! caster would add is exactly what heights refuse - an overturned surface, a
 //! reverse fault, where several faces lie under one position: there the
 //! crossing is **not decided** here, and every such span is named
 //! ([`Tops::folded`]). That case is what still waits for a ray caster.
@@ -32,23 +32,23 @@
 //! - **crossings**, in the order of the path: a well that goes down through a
 //!   horizon and back up through it crosses it twice, and both are answers;
 //! - **touches**: the path meets the surface at a sample and leaves on the
-//!   side it came from — no crossing, said;
+//!   side it came from - no crossing, said;
 //! - **gaps**: the path is on one side, leaves the surface's footprint (or
 //!   passes over a hole), and comes back on the other. It crossed *where the
-//!   surface is not*, which is no top — counted, with its span;
+//!   surface is not*, which is no top - counted, with its span;
 //! - **folded**: the same, across a region where the surface has several
 //!   heights. The crossing is somewhere in the span, and which face it is on
 //!   is not a numerical choice;
-//! - **unresolved**: the bisection met a position with no single height — a
-//!   face set aside, the edge of a hole — before it converged;
+//! - **unresolved**: the bisection met a position with no single height - a
+//!   face set aside, the edge of a hole - before it converged;
 //! - and when there is **no crossing at all**, which side the path stayed on
 //!   and how close it came, or that it never passed over the surface.
 //!
 //! # The one limit, named
 //!
 //! A sign change is only seen between two samples. Two crossings closer than
-//! one sampling step along the path — a hole that dips into a surface and out
-//! again within a step — cancel, and are missed. The step is the caller's
+//! one sampling step along the path - a hole that dips into a surface and out
+//! again within a step - cancel, and are missed. The step is the caller's
 //! ([`plan_spacing`] proposes half the surface's median edge in plan: a path
 //! moves at most one unit in plan per unit of measured depth, so every face it
 //! passes over is sampled at least twice), and it is reported with the answer.
@@ -78,16 +78,16 @@ impl Side {
 pub struct Crossing {
     /// The measured depth where `z` equals the surface's height.
     pub md: f64,
-    /// The path's position there — the path evaluated at [`Crossing::md`].
+    /// The path's position there - the path evaluated at [`Crossing::md`].
     pub at: [f64; 3],
     /// The side the path comes from, in the order of increasing depth.
     pub from: Side,
-    /// How far the position lies from the surface vertically, `z − h` — the
+    /// How far the position lies from the surface vertically, `z − h` - the
     /// residual of the bisection, a few units in the last place.
     pub residual: f64,
 }
 
-/// What a path does with respect to one surface — see the module.
+/// What a path does with respect to one surface - see the module.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Tops {
     /// The crossings, by increasing measured depth.
@@ -96,7 +96,7 @@ pub struct Tops {
     /// it came from.
     pub touches: Vec<f64>,
     /// `[from, to]` spans where the path changes side where the surface is
-    /// not — outside its footprint, over a hole.
+    /// not - outside its footprint, over a hole.
     pub gaps: Vec<[f64; 2]>,
     /// `[from, to]` spans where the path changes side over a fold of the
     /// surface: a crossing is in the span, undecided.
@@ -107,7 +107,7 @@ pub struct Tops {
     /// When no sample changed side: the one side every sample with a height
     /// lies on. `None` when some did, or when no sample has a height.
     pub side: Option<Side>,
-    /// The smallest `|z − h|` over the samples with a height — how close the
+    /// The smallest `|z − h|` over the samples with a height - how close the
     /// path came, when it did not cross.
     pub closest: Option<f64>,
     /// How many samples of the path have a height under them.
@@ -125,7 +125,7 @@ pub struct Tops {
 pub enum TopsError {
     /// Fewer than two finite, increasing knots: no stretch of hole to follow.
     #[error(
-        "the path states {given} usable knot(s) — a stretch of hole needs two finite measured depths, increasing"
+        "the path states {given} usable knot(s) - a stretch of hole needs two finite measured depths, increasing"
     )]
     NoStretch {
         /// How many were usable.
@@ -139,7 +139,7 @@ pub enum TopsError {
     },
     /// More samples than a path is worth.
     #[error(
-        "sampling {length} of hole every {step} asks for {wanted} evaluations where {most} is the most — give a larger step"
+        "sampling {length} of hole every {step} asks for {wanted} evaluations where {most} is the most - give a larger step"
     )]
     TooManySamples {
         /// The length of hole.
@@ -156,7 +156,7 @@ pub enum TopsError {
 /// The most samples along one path.
 pub const MOST_SAMPLES: usize = 5_000_000;
 
-/// The median length, in plan, of the edges of a surface's faces — what a
+/// The median length, in plan, of the edges of a surface's faces - what a
 /// sampling step is proposed from. `None` when no edge has a finite, non-zero
 /// length.
 pub fn plan_spacing(surface: &Surface) -> Option<f64> {
@@ -176,8 +176,20 @@ pub fn plan_spacing(surface: &Surface) -> Option<f64> {
             }
         }
     };
-    surface.triangles.chunks_exact(3).for_each(&mut ring);
-    surface.quads.chunks_exact(4).for_each(&mut ring);
+    surface
+        .triangles
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .map(|c| c.as_slice())
+        .for_each(&mut ring);
+    surface
+        .quads
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|c| c.as_slice())
+        .for_each(&mut ring);
     if lengths.is_empty() {
         return None;
     }
@@ -296,10 +308,10 @@ fn bisect(
     pick.or(best)
 }
 
-/// Where a path crosses a surface — see the module.
+/// Where a path crosses a surface - see the module.
 ///
 /// `path` gives the position at a measured depth; `knots` are the measured
-/// depths it states (its stations) — the path is followed from the first to
+/// depths it states (its stations) - the path is followed from the first to
 /// the last, never beyond: a well does not exist past its last station. A
 /// non-finite position counts as one with no height under it.
 pub fn tops(
@@ -422,7 +434,7 @@ mod tests {
     use super::*;
 
     /// A square of `2 × half` on a side, centred on the origin, as a plane
-    /// `z = c + a·x + b·y` — two triangles, exact for a plane.
+    /// `z = c + a·x + b·y` - two triangles, exact for a plane.
     fn plane(half: f64, c: f64, a: f64, b: f64) -> (Vec<f64>, Vec<u32>) {
         let z = |x: f64, y: f64| c + a * x + b * y;
         let corners = [[-half, -half], [half, -half], [half, half], [-half, half]];
@@ -445,8 +457,8 @@ mod tests {
 
     /// **A straight hole through a tilted plane lands where the algebra says.**
     ///
-    /// The path `p(s) = (s·sin θ, 0, −s·cos θ)` — a hole at θ from the
-    /// vertical, collared at the origin — meets `z = c + a·x` where
+    /// The path `p(s) = (s·sin θ, 0, −s·cos θ)` - a hole at θ from the
+    /// vertical, collared at the origin - meets `z = c + a·x` where
     /// `−s cos θ = c + a s sin θ`, so `s = −c / (cos θ + a sin θ)`. To break:
     /// a bisection that stops early, a root taken at a sample, `x` and `y`
     /// swapped in the height.
@@ -474,8 +486,8 @@ mod tests {
     }
 
     /// **An arc is followed, not its chord.** A quarter circle of radius `R`
-    /// from the vertical to the horizontal — `x = R (1 − cos(s/R))`,
-    /// `z = −R sin(s/R)` — meets the plane `z = −d` at `s = R asin(d/R)`. The
+    /// from the vertical to the horizontal - `x = R (1 − cos(s/R))`,
+    /// `z = −R sin(s/R)` - meets the plane `z = −d` at `s = R asin(d/R)`. The
     /// chord between the two stations meets it elsewhere: sampling the chord
     /// instead of the path makes this red.
     #[test]
@@ -500,7 +512,7 @@ mod tests {
     fn a_hole_that_turns_back_crosses_twice() {
         let (points, triangles) = plane(2000.0, -100.0, 0.0, 0.0);
         let surface = heights(&points, &triangles);
-        // A parabola in depth: z = −s (400 − s) / 400 — its deepest point is
+        // A parabola in depth: z = −s (400 − s) / 400 - its deepest point is
         // −100 at s = 200… just touching. Deeper: −s (400 − s) / 300.
         let path = |s: f64| [s, 0.0, -s * (400.0 - s) / 300.0];
         let found = tops(&path, &[0.0, 400.0], 7.0, &surface).expect("a path");
@@ -598,7 +610,7 @@ mod tests {
         assert_eq!(found.touches, vec![200.0]);
     }
 
-    /// **A crossing at a sample is still a crossing** — the root is the
+    /// **A crossing at a sample is still a crossing** - the root is the
     /// sample itself, found without bisecting.
     #[test]
     fn a_crossing_on_a_sample_is_found_there() {

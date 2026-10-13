@@ -1,11 +1,11 @@
-//! `representation-set` — a `RepresentationSetRepresentation` grouping given
+//! `representation-set` - a `RepresentationSetRepresentation` grouping given
 //! representations: *“a "bag" of representations […] If the individual
 //! representations are all of the same, then you can indicate that the set is
 //! homogenous”* (RESQML TRG 2.2 §8.8 p. 245).
 //!
 //! Step 8 of the build plan of Lutetia, the grids of the Chalk grouped:
 //! (`RepresentationSetRepresentation`,
-//! `IsHomogeneous` false) — the class exists in the final XSD even though the release
+//! `IsHomogeneous` false) - the class exists in the final XSD even though the release
 //! notes say it was removed (the schema wins). And the writer that was
 //! named as missing for a cross-section
 //! (no writer of `RepresentationSetRepresentation` existed here).
@@ -23,7 +23,7 @@
 //!
 //! # `IsHomogeneous` is what the members are
 //!
-//! Computed, never guessed: true when every member is of one type — *“the
+//! Computed, never guessed: true when every member is of one type - *“the
 //! reader software need only read the first individual representation to
 //! understand the kinds of individual representations that are gathered in the
 //! set”* (same guide, §4.7 p. 43). `homogeneous`, when stated, is **checked**
@@ -40,7 +40,7 @@
 //!
 //! # Identity
 //!
-//! From what the set is — its title and its members, in order: the same bag is
+//! From what the set is - its title and its members, in order: the same bag is
 //! the same object from one run to the next, another bag another object.
 
 use std::collections::BTreeSet;
@@ -63,9 +63,9 @@ pub struct RepresentationSet;
 /// What `representation-set` is told.
 #[derive(Debug, Params)]
 pub struct RepresentationSetParams {
-    /// the set's title — with its members, what makes it the same set from one run to the next
+    /// the set's title - with its members, what makes it the same set from one run to the next
     pub title: Title,
-    /// what the members must be: true, all of one type; false, of several — left out, what they are is written
+    /// what the members must be: true, all of one type; false, of several - left out, what they are is written
     ///
     /// **A check, not a value**: `IsHomogeneous` is written from the
     /// members, and a stated answer that disagrees is refused.
@@ -78,7 +78,7 @@ pub struct RepresentationSetParams {
 /// What `representation-set` takes.
 #[derive(Debug, Inputs)]
 pub struct RepresentationSetInputs {
-    /// the representations the set groups, in order — a member's place is its index in the set
+    /// the representations the set groups, in order - a member's place is its index in the set
     #[input(least = 1, ordered)]
     pub representations: Vec<ObjectIn>,
 }
@@ -100,7 +100,7 @@ impl Operation for RepresentationSet {
     fn about(&self) -> About {
         About {
             name: "representation-set",
-            describe: "a set of representations — a bag, in the order given, whose IsHomogeneous is what the members are",
+            describe: "a set of representations - a bag, in the order given, whose IsHomogeneous is what the members are",
             category: Category::Create,
             makes: &["resqml22.RepresentationSetRepresentation"],
             recipe: "representation-set",
@@ -178,7 +178,7 @@ impl Operation for RepresentationSet {
                     )
                 } else {
                     format!(
-                        "says of several types, and every member is a `{}` — leave it out, or say true",
+                        "says of several types, and every member is a `{}` - leave it out, or say true",
                         types.iter().next().cloned().unwrap_or_default()
                     )
                 },
@@ -240,7 +240,7 @@ impl Operation for RepresentationSet {
                     )
                 } else {
                     format!(
-                        "IsHomogeneous false: {} types — {}",
+                        "IsHomogeneous false: {} types - {}",
                         types.len(),
                         types.iter().cloned().collect::<Vec<_>>().join(", ")
                     )
@@ -298,7 +298,7 @@ impl Operation for RepresentationSet {
             Slot::required(
                 "isHomogeneous",
                 Need::Flag,
-                "IsHomogeneous as written — what the members are",
+                "IsHomogeneous as written - what the members are",
             ),
         ]
     }

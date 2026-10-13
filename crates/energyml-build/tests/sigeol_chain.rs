@@ -26,7 +26,7 @@ fn when() -> When {
 
 /// One `GeologicUnit` feature as the SIGEOL exports write it: a point at the
 /// **ground** of its borehole, the formation under `composition`, the two ages
-/// under `geologicHistory` — `olderNamedAge` carrying whatever is given first.
+/// under `geologicHistory` - `olderNamedAge` carrying whatever is given first.
 fn unit(id: &str, formation: &str, older: (&str, f64), younger: (&str, f64)) -> String {
     format!(
         r#"{{"type":"Feature","id":"{id}",
@@ -92,11 +92,11 @@ fn number(plan: &Plan, title: &str) -> f64 {
 
 // -- fact 2 (file names): the stage the export was asked about --------------
 
-/// **The second export's names** — `GeologicUnit_<Stage>_<field>_ZONE_<n>.json`
+/// **The second export's names** - `GeologicUnit_<Stage>_<field>_ZONE_<n>.json`
 /// (`Data_Jerome_v2`, 01/10). Only `_pretty` was peeled, so the suggested stage
 /// was `Bartonien_olderNamedAge_ZONE_2`: no unit has that at either end, and the
 /// run was refused naming the stages the file holds. To break: put the old
-/// `stage_of_file_name` back — the three names below each come out whole.
+/// `stage_of_file_name` back - the three names below each come out whole.
 #[test]
 fn the_second_exports_file_names_suggest_their_stage() {
     let one = vec![unit(
@@ -128,7 +128,7 @@ fn the_second_exports_file_names_suggest_their_stage() {
 }
 
 /// The suggestion is not decoration: the plan runs on it, and **writes the
-/// unit's surface of that stage**. To break: the same revert — the plan then
+/// unit's surface of that stage**. To break: the same revert - the plan then
 /// refuses (`no unit of the file has … at either end`).
 #[test]
 fn a_run_on_a_second_exports_name_plans_by_the_suggested_stage_alone() {
@@ -160,7 +160,7 @@ fn a_run_on_a_second_exports_name_plans_by_the_suggested_stage_alone() {
         .filter(|one| one.qualified_type == "resqml22.PointSetRepresentation")
         .map(|one| one.title.as_str())
         .collect();
-    assert_eq!(titles, vec!["Marnes et Caillasses — Bartonien Top"]);
+    assert_eq!(titles, vec!["Marnes et Caillasses - Bartonien Top"]);
 }
 
 // -- fact 2: the ends are ordered on the Ma, the side decided against the stage
@@ -168,7 +168,7 @@ fn a_run_on_a_second_exports_name_plans_by_the_suggested_stage_alone() {
 /// **The names are inverted, the numbers are not.** The unit's `olderNamedAge`
 /// is the Bartonien at 37.8 Ma and its `youngerNamedAge` the Lutétien at 47.8:
 /// the *young* end is in the field called `older`. Asked about the Bartonien the
-/// points mark its **top**; asked about the Lutétien, its **base** — and a
+/// points mark its **top**; asked about the Lutétien, its **base** - and a
 /// producer who wrote the fields the right way round must give the same answer.
 /// To break: order the ends on the field names in `sigeol::unit_of`.
 #[test]
@@ -185,7 +185,7 @@ fn the_side_follows_the_ma_and_the_stage_of_the_file_never_the_field_names() {
                 .find(|one| one.qualified_type == "resqml22.PointSetRepresentation")
                 .map(|one| one.title.clone())
                 .expect("a point set");
-            assert_eq!(title, format!("Calcaire grossier — {stage} {side}"));
+            assert_eq!(title, format!("Calcaire grossier - {stage} {side}"));
         }
     }
 }
@@ -193,12 +193,12 @@ fn the_side_follows_the_ma_and_the_stage_of_the_file_never_the_field_names() {
 // -- fact 5: a unit in two files is one pass --------------------------------
 
 /// **The Lutétien unit whose two ages are both the Lutétien is in the
-/// `olderNamedAge` file and in the `youngerNamedAge` file** — the same feature,
+/// `olderNamedAge` file and in the `youngerNamedAge` file** - the same feature,
 /// the same id, twice (measured 01/10: all 8 311 features of the first file are
 /// in the second). It is one pass of one borehole: the activity's
 /// `featureCount` and the table's `passes` say 2, not 4, and the repeat is
 /// *named* in the plan rather than counted as a duplicate place. To break:
-/// remove the `repeated` branch of `assemble::plan` — both numbers double.
+/// remove the `repeated` branch of `assemble::plan` - both numbers double.
 #[test]
 fn a_unit_stated_in_two_exports_is_one_pass() {
     let items = features(&[
@@ -259,10 +259,10 @@ fn a_unit_stated_in_two_exports_is_one_pass() {
     assert_eq!(counted, vec![2]);
 }
 
-/// The counterpart: **two features that merely share an id are two features** —
+/// The counterpart: **two features that merely share an id are two features** -
 /// an `id` is the producer's key and a second layer may reuse it, so it only
 /// counts as a repeat at the same places. To break: key the repeat on the id
-/// alone — the second point is lost.
+/// alone - the second point is lost.
 #[test]
 fn a_shared_id_at_another_place_is_not_a_repeat() {
     let here = unit("7", "Calcaire grossier", ("Lutétien", 41.2), ("Lutétien", 47.8));
@@ -340,9 +340,9 @@ fn node_mds(plan: &Plan) -> Vec<f64> {
 }
 
 /// **The whole log, and not the first pass found.** Passes that overlap
-/// (`0–2` and `1–3`, two units mapped on one slice) and one that leaves a hole
-/// (`3.5–4`): the frame has a node at **every** distinct bound — the elementary
-/// intervals the CSV path writes one row each for — and a zero at the ground
+/// (`0-2` and `1-3`, two units mapped on one slice) and one that leaves a hole
+/// (`3.5-4`): the frame has a node at **every** distinct bound - the elementary
+/// intervals the CSV path writes one row each for - and a zero at the ground
 /// when the log does not state one. To break: take the first
 /// and last bound only in `Borehole::mds`.
 #[test]
@@ -362,7 +362,7 @@ fn the_frame_of_an_imported_hole_has_a_node_at_every_bound_of_its_log() {
     );
 }
 
-/// The `Known` the package would give back for the frame `made` wrote — what
+/// The `Known` the package would give back for the frame `made` wrote - what
 /// `wells-from-table`'s `wells` slot receives from a caller. Its depths are
 /// **stated**, as in `tests/wells_from_table.rs`: reading them back is the
 /// storage layer's job and would make this test depend on an optional feature.
@@ -403,7 +403,7 @@ fn column(name: &str, uuid: &str, value_type: &str) -> Value {
 }
 
 /// The CSV the script writes: one row per **elementary** pass, `DEB` the top
-/// depth, `PROF` the base — the structural roles of the light template.
+/// depth, `PROF` the base - the structural roles of the light template.
 fn passes_csv(known: &Known, rows: &[(f64, f64)]) -> String {
     let [x, y, z] = known.wellhead.expect("a head");
     let mut text = String::from("SONDAGE,X,Y,Z_MNT,DEB,PROF\n");
@@ -448,16 +448,16 @@ fn enrich(csv: &str, known: Known) -> Plan {
 
 /// **The chain**: `sigeol-boreholes`, then the CSV the script writes from the
 /// same log, with `enrich` on. Every limit of the table's passes is already a
-/// node of the imported frame, so the frame is **not** touched — no node
-/// inserted, none renumbered, no property to rewrite — and the hole is
+/// node of the imported frame, so the frame is **not** touched - no node
+/// inserted, none renumbered, no property to rewrite - and the hole is
 /// recognised by its title and its head. That holds when the import added the
 /// zero the CSV path never writes (a log that starts at 3 m).
 ///
 /// To break: drop a bound of the log from the import (`Borehole::mds` keeping
-/// the first and the last only) — the table then states depths the frame lacks,
+/// the first and the last only) - the table then states depths the frame lacks,
 /// the plan writes a frame and says `merged` instead of `unchanged`. (An extra
 /// depth in the import would not redden it: the frame would hold more than the
-/// table, and nothing is renumbered — the zero is that case.)
+/// table, and nothing is renumbered - the zero is that case.)
 #[test]
 fn the_csv_enrichment_lands_on_the_imported_frame_without_moving_a_node() {
     for (log, rows) in [

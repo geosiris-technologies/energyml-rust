@@ -1,6 +1,6 @@
 //! Resolving what a property *is*: the kind, its parents, its quantity class.
 //!
-//! [`crate::property`] reads what the document says — a name, or a reference.
+//! [`crate::property`] reads what the document says - a name, or a reference.
 //! This module follows it: into the package, then into a dictionary, up the
 //! parent chain to the root, and it says at every step where the answer came
 //! from and what it could not follow.
@@ -8,11 +8,11 @@
 //! # Where a kind is looked for, in order
 //!
 //! 1. **The package.** The TRG encourages writing a `PropertyKind` object into
-//!    the EPC itself, and a kind that is there is authoritative — it is what
+//!    the EPC itself, and a kind that is there is authoritative - it is what
 //!    the producer meant, not what a dictionary of the same uuid might say.
 //! 2. **The dictionary**, which by default is the Energistics one shipped with
 //!    this crate (eml 2.3, 3 662 kinds), and which a caller may replace.
-//! 3. **Nothing** — and then the refusal names the uuid, the title the
+//! 3. **Nothing** - and then the refusal names the uuid, the title the
 //!    reference cached, both places that were searched, and what to do about
 //!    it. "Not found" with no names is what sends someone reading source code.
 //!
@@ -20,22 +20,22 @@
 //!
 //! Three ways in, by design:
 //!
-//! - [`builtin`] — the shipped dictionary, **parsed on first use** and then
+//! - [`builtin`] - the shipped dictionary, **parsed on first use** and then
 //!   kept. Nothing is parsed by a program that never resolves a kind.
-//! - [`set_default`] — a caller replaces it, once, at startup: a newer
+//! - [`set_default`] - a caller replaces it, once, at startup: a newer
 //!   dictionary, a company one, or a trimmed one for a wasm bundle.
-//! - [`Dictionary::from_xml`] / [`Dictionary::from_compact`] — an explicit
+//! - [`Dictionary::from_xml`] / [`Dictionary::from_compact`] - an explicit
 //!   dictionary handed to [`Resolver::with_dictionary`], which touches no
 //!   global state at all.
 //!
 //! The shipped dictionary is the compacted table `data/property_kinds.tsv`
 //! (3 662 kinds, tab-separated lines, generated from the Energistics XML by the
 //! private generator). `build.rs` validates it and fails the build when it is
-//! absent or empty — never an empty built-in dictionary.
+//! absent or empty - never an empty built-in dictionary.
 //!
 //! # Two vocabularies that are not the same list
 //!
-//! RESQML 2.0.1 writes a *standard* kind as a name from its own enumeration —
+//! RESQML 2.0.1 writes a *standard* kind as a name from its own enumeration -
 //! `rock volume`, `index`, `cell length`. The eml 2.3 dictionary is a
 //! different list with different names, and roughly half of the 2.0.1
 //! vocabulary is simply not in it. So a standard kind resolves **by title**
@@ -54,7 +54,7 @@ use energyml_core::value::{Reflect, Scalar};
 
 use crate::scan::{self, RawKind};
 
-// `scan` is private — the reader is an implementation detail — but `RawKind` is
+// `scan` is private - the reader is an implementation detail - but `RawKind` is
 // what every lookup here hands back, so it has to be nameable. Without this a
 // caller outside the crate could use the result of `by_uuid` and never write
 // its type: no `let kind: &RawKind`, no function taking one, no `Vec<&RawKind>`
@@ -74,7 +74,7 @@ pub struct Kind {
     /// Uuid of the parent kind, when it has one that is not itself.
     pub parent: Option<String>,
     /// The **uri** of the parent, version included, when the package's own
-    /// kind names one — what the walk up reads it by.
+    /// kind names one - what the walk up reads it by.
     pub parent_uri: Option<String>,
     /// Name of a class in the Energistics unit dictionary.
     ///
@@ -89,7 +89,7 @@ pub struct Kind {
     pub found_in: Found,
 }
 
-/// Where a kind came from — part of the answer, not a detail.
+/// Where a kind came from - part of the answer, not a detail.
 ///
 /// An application that colours by kind, or converts units by quantity class,
 /// behaves differently when the answer came from the package the user opened
@@ -132,7 +132,7 @@ impl Resolution {
         &self.chain[0]
     }
 
-    /// The nearest quantity class in the chain — the property's own if it has
+    /// The nearest quantity class in the chain - the property's own if it has
     /// one, otherwise the first ancestor that states one.
     pub fn quantity_class(&self) -> Option<&str> {
         self.chain.iter().find_map(|kind| kind.quantity_class.as_deref())
@@ -147,7 +147,7 @@ impl Resolution {
             .join(" ← ")
     }
 
-    /// Whether the kind used directly is abstract — which the schema advises
+    /// Whether the kind used directly is abstract - which the schema advises
     /// against, word for word: *"If the Is Abstract flag is set, then this
     /// entry should be used only as the parent of a real property"* (eml 2.3
     /// `PropertyKind.IsAbstract`, the same text in 2.1 and 2.2).
@@ -270,7 +270,7 @@ impl Dictionary {
     /// three rows. Typing `pressure` into 3 662 entries matches 89 of them; an
     /// alphabetical list opens on `absolute pressure` and buries `pressure`
     /// itself forty rows down. So: exact title first, then titles *starting*
-    /// with the query, then the rest — and alphabetical inside each band, so
+    /// with the query, then the rest - and alphabetical inside each band, so
     /// the order is stable and a person can learn it.
     ///
     /// An empty query is not an error and not everything: it is the head of the
@@ -279,7 +279,7 @@ impl Dictionary {
     /// **Abstract and deprecated kinds are returned.** They are part of the
     /// vocabulary and a person looking one up needs to find it; refusing to
     /// show them would make the dictionary look incomplete. Each carries its
-    /// own flag, and the caller decides whether to grey it out — a decision
+    /// own flag, and the caller decides whether to grey it out - a decision
     /// about display, made where display is decided.
     pub fn search(&self, query: &str, limit: usize) -> Vec<&RawKind> {
         let needle = query.trim().to_ascii_lowercase();
@@ -317,7 +317,7 @@ impl Dictionary {
     ///
     /// The number a list has to show beside a truncated one. `search` takes a
     /// limit and returns no total, so a front end that showed only its output said
-    /// *"here are 60 kinds"* about a dictionary of thousands — and a person
+    /// *"here are 60 kinds"* about a dictionary of thousands - and a person
     /// looking for one that did not make the cut has no way to know whether it
     /// is absent or merely beyond the sixtieth.
     ///
@@ -405,7 +405,7 @@ pub fn set_default(dictionary: Dictionary) {
 
 /// Follows a [`PropertyKindRef`] to what it means.
 ///
-/// Built over an [`ObjectSource`] — the package — and a dictionary, in that
+/// Built over an [`ObjectSource`] - the package - and a dictionary, in that
 /// order of authority.
 pub struct Resolver<'a> {
     objects: &'a dyn ObjectSource,
@@ -468,7 +468,7 @@ impl<'a> Resolver<'a> {
             let parent_uri = chain.last().and_then(|kind| kind.parent_uri.clone());
             if seen.contains(&parent.to_ascii_lowercase()) {
                 // The dictionary's root is its own parent, so this is the
-                // normal way the walk ends — not an anomaly.
+                // normal way the walk ends - not an anomaly.
                 break;
             }
             if chain.len() >= self.depth_limit {
@@ -499,7 +499,7 @@ impl<'a> Resolver<'a> {
     }
 
     /// One kind: the package first, then the dictionary. By its uri when the
-    /// reference gave one — the package may hold the kind twice — and by the
+    /// reference gave one - the package may hold the kind twice - and by the
     /// uuid otherwise; the dictionary knows uuids only (a published kind has
     /// no version).
     fn lookup(
@@ -538,8 +538,8 @@ impl<'a> Resolver<'a> {
             .unwrap_or_default();
         Err(Error::Missing(format!(
             "property kind `{uuid}`{named}: it is not an object of this package, and {} does not \
-             hold it either{}. Either the EPC is missing the `PropertyKind` object it references — \
-             the specification allows and encourages carrying it — or the dictionary that defines \
+             hold it either{}. Either the EPC is missing the `PropertyKind` object it references - \
+             the specification allows and encourages carrying it - or the dictionary that defines \
              it has to be loaded with `property_kind::set_default`",
             dictionary.label(),
             if dictionary.is_empty() {
@@ -560,7 +560,7 @@ impl<'a> Resolver<'a> {
             1 => {
                 let mut kind = from_raw(candidates[0], Found::Dictionary);
                 // The uuid comes from the dictionary, but the document never
-                // said one — worth a note, because it is the one place a kind
+                // said one - worth a note, because it is the one place a kind
                 // gains an identity it was not written with.
                 notes.push(format!(
                     "`{name}` is a RESQML 2.0.1 standard property kind; it was matched by title to \
@@ -599,7 +599,7 @@ impl<'a> Resolver<'a> {
                 // Ambiguity is reported, never resolved by picking one.
                 notes.push(format!(
                     "`{name}` matches {} kinds of {} by title ({}); none was chosen, because a title \
-                     is not an identity — resolution stopped at the name",
+                     is not an identity - resolution stopped at the name",
                     candidates.len(),
                     dictionary.label(),
                     candidates
@@ -697,7 +697,7 @@ fn text(object: &dyn Reflect, field: &str) -> Option<String> {
     }
 }
 
-/// The uuid a reference names — the identity layer's reading, so every
+/// The uuid a reference names - the identity layer's reading, so every
 /// spelling of the field is one answer.
 fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
     energyml_core::identity::uuid_of_reflect(object)
@@ -1075,7 +1075,7 @@ fn dimension_of_class(class: &str) -> Option<crate::units::Dimension> {
 /// Check one property against the three rules the guides state.
 ///
 /// `uom` is the property's own unit, absent for a discrete or boolean
-/// property. Returns everything that is wrong, and — as a separate variant —
+/// property. Returns everything that is wrong, and - as a separate variant -
 /// what could not be checked at all.
 pub fn check(resolution: &Resolution, uom: Option<&str>) -> Vec<KindIssue> {
     use crate::units::Dimension;

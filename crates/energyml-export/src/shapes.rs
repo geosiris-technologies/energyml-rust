@@ -3,8 +3,8 @@
 //! # The problem this solves
 //!
 //! [`energyml_geometry::shape::Shape`] lets a caller ask for *one* object in a
-//! particular form. But an export is usually a whole package — thirty-seven
-//! representations of six different kinds, out of one command — and the answer
+//! particular form. But an export is usually a whole package - thirty-seven
+//! representations of six different kinds, out of one command - and the answer
 //! is not the same for all of them. Someone loading a package into QGIS wants
 //! the horizons as polygons and the fault sticks as lines; someone building a
 //! point-cloud index wants the nodes of everything.
@@ -17,9 +17,9 @@
 //!
 //! # Why substrings, and not a full glob or regex
 //!
-//! A rule matches when its pattern appears in the object's **qualified type** —
-//! `resqml20.obj_Grid2dRepresentation`, `resqml22.TriangulatedSetRepresentation`
-//! — case-insensitively. That one rule covers every level of precision anyone
+//! A rule matches when its pattern appears in the object's **qualified type** -
+//! `resqml20.obj_Grid2dRepresentation`, `resqml22.TriangulatedSetRepresentation` -
+//! case-insensitively. That one rule covers every level of precision anyone
 //! actually needs:
 //!
 //! | Pattern | Matches |
@@ -30,7 +30,7 @@
 //! | `*` | everything, as a final fallback |
 //!
 //! A glob or a regex would add escaping, anchoring and a class of typo that
-//! fails **silently** — a pattern that matches nothing looks exactly like a
+//! fails **silently** - a pattern that matches nothing looks exactly like a
 //! pattern whose objects are absent. Substrings have none of that, and
 //! [`Selector`] is an enum precisely so a `Selector::Regex` can be added later
 //! without changing a single caller or a single command line.
@@ -38,8 +38,8 @@
 //! # First match wins, and order is the caller's
 //!
 //! Rules are tried in the order they were given. That is what makes a general
-//! rule and an exception composable in one line — `--as Grid2d=surface --as
-//! '*=points'` means *grids as polygons, everything else as nodes* — and it is
+//! rule and an exception composable in one line - `--as Grid2d=surface --as
+//! '*=points'` means *grids as polygons, everything else as nodes* - and it is
 //! the only ordering a person can predict without reading this file.
 //!
 //! # A rule that cannot be honoured is an error, not a shrug
@@ -123,7 +123,7 @@ impl Shapes {
         let Some(shape) = Shape::parse(shape) else {
             let names: Vec<&str> = Shape::all().iter().map(|s| s.name()).collect();
             return Err(format!(
-                "`{shape}` is not a shape — try one of: {}",
+                "`{shape}` is not a shape - try one of: {}",
                 names.join(", ")
             ));
         };

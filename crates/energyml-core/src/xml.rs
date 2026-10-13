@@ -87,7 +87,7 @@ impl Default for XmlWriteOptions {
 }
 
 impl XmlWriteOptions {
-    /// No declaration, no indentation — the form used for byte-exact round trips.
+    /// No declaration, no indentation - the form used for byte-exact round trips.
     pub const COMPACT: XmlWriteOptions = XmlWriteOptions {
         declaration: false,
         indent: None,
@@ -314,7 +314,7 @@ impl fmt::Display for Defaulted {
 /// Distinct from [`Defaulted`], and the distinction is the whole point: an
 /// absent element is a producer forgetting something, while a value of
 /// `hello` where a number belongs is a producer writing something *wrong*.
-/// The second is worse, so it carries what was found — which means it
+/// The second is worse, so it carries what was found - which means it
 /// allocates, and it allocates only for documents that are broken.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Repaired {
@@ -386,15 +386,15 @@ impl<'a> XmlReader<'a> {
     /// document.
     ///
     /// This is the **second** of two tolerances, and the two are deliberately
-    /// separate. An item the document does not carry is handled without asking
-    /// — see [`strict`][Self::strict] for why, and for how to turn that off.
+    /// separate. An item the document does not carry is handled without asking -
+    /// see [`strict`][Self::strict] for why, and for how to turn that off.
     /// What this switch adds is repair of what the document *does* carry and
     /// gets wrong.
     ///
     /// **Values that are there and wrong**: a closed enumeration outside its
     /// list, a number that is not a number, a boolean spelled `yes`, an entity
     /// nothing defines, an `xsi:type` naming an unknown subtype of a *concrete*
-    /// base. Each takes the default — or the base — and is recorded as
+    /// base. Each takes the default - or the base - and is recorded as
     /// [`Repaired`], **with the string the document carried**, since that is
     /// the only record of what the producer wrote.
     ///
@@ -428,20 +428,20 @@ impl<'a> XmlReader<'a> {
     ///
     /// A parser's job is to say what the document says. Whether the document
     /// says everything it *should* is a different question, this workspace
-    /// already answers it — [`crate::validate::Validate`], on the object, with
-    /// a path and a rule — and answering it twice, once in a place that can
+    /// already answers it - [`crate::validate::Validate`], on the object, with
+    /// a path and a rule - and answering it twice, once in a place that can
     /// only answer by refusing, costs everything the document did carry.
     ///
     /// The arithmetic is stark. A package of 1618 objects whose producer
-    /// omitted `Citation.Originator` — one string, that nothing downstream
-    /// reads — was **1618 objects unreadable**: no geometry, no references, no
+    /// omitted `Citation.Originator` - one string, that nothing downstream
+    /// reads - was **1618 objects unreadable**: no geometry, no references, no
     /// titles, no export, no JSON. Every byte of real content in that file was
     /// held hostage to a field nobody wanted. Refusing there does not protect a
     /// caller from bad data; it hands them nothing and calls it safety.
     ///
     /// What is filled is never silent: each one is recorded as [`Defaulted`],
     /// and the layers above turn them into diagnostics. A caller that will
-    /// **write the object back** is the one that has to care — an absent
+    /// **write the object back** is the one that has to care - an absent
     /// required element returns as an empty string or a zero, and saving that
     /// puts on disk a value nobody wrote. That caller is the one that should
     /// ask for strictness, and now it can.
@@ -481,7 +481,7 @@ impl<'a> XmlReader<'a> {
         self.repaired.push(repaired);
     }
 
-    /// Parse a lexical value, or — in lenient mode — replace what cannot be
+    /// Parse a lexical value, or - in lenient mode - replace what cannot be
     /// parsed and say so.
     ///
     /// This is where leniency stops being about cardinality. A closed
@@ -492,7 +492,7 @@ impl<'a> XmlReader<'a> {
     /// object over one bad word loses the ninety-nine that were fine.
     ///
     /// So in lenient mode the field takes its default and the departure is
-    /// recorded **with the string that was there** — the only record of what
+    /// recorded **with the string that was there** - the only record of what
     /// the producer actually wrote, and the thing a repair needs.
     pub fn value<T: XmlText + Default>(&mut self, text: &str, kind: &'static str, name: &str) -> Result<T> {
         match T::from_xml_text(text) {
@@ -555,8 +555,8 @@ impl<'a> XmlReader<'a> {
 
     /// Resolve a required field from the slot the deserializer filled.
     ///
-    /// Called once per required field by generated code — around a thousand
-    /// impls — so the body lives here and each call site stays one line.
+    /// Called once per required field by generated code - around a thousand
+    /// impls - so the body lives here and each call site stays one line.
     pub fn required<T: Default>(
         &mut self,
         slot: Option<T>,
@@ -584,7 +584,7 @@ impl<'a> XmlReader<'a> {
     /// Text is **coalesced**: quick-xml reports `&amp;` as its own
     /// `GeneralRef` event and splits the surrounding characters into separate
     /// `Text` events, so `Fault &amp; Horizon` arrives in three pieces. They
-    /// are joined, entities resolved, and delivered as one `Text` — otherwise
+    /// are joined, entities resolved, and delivered as one `Text` - otherwise
     /// every title holding an ampersand comes back mangled.
     pub fn next_event(&mut self) -> Result<XmlEvent> {
         if let Some(event) = self.pending.take() {
@@ -630,8 +630,8 @@ impl<'a> XmlReader<'a> {
                         // this reader, so `&nbsp;` and every other named
                         // entity outside the predefined five arrive here.
                         // Strictly that is a malformed document; leniently the
-                        // character becomes U+FFFD — the replacement
-                        // character, which is what it is — and the reference
+                        // character becomes U+FFFD - the replacement
+                        // character, which is what it is - and the reference
                         // is recorded verbatim so a repair can put back what
                         // was meant.
                         Err(e) if self.lenient => {
@@ -662,7 +662,7 @@ impl<'a> XmlReader<'a> {
             };
 
             // Whitespace-only runs are indentation between elements, not
-            // content — the reader has always dropped those. What survives is
+            // content - the reader has always dropped those. What survives is
             // trimmed as a whole, which is what the per-event trimming used to
             // achieve for the common case of one event per value.
             let trimmed = text.trim();
@@ -744,7 +744,7 @@ pub fn attr_value(start: &BytesStart<'_>, name: &str) -> Result<Option<String>> 
 /// Local part of a QName or qualified type.
 ///
 /// `resqml:PointGeometry`, `resqml22.PointGeometry` and `PointGeometry` all
-/// reduce to `PointGeometry` — documents disagree on the prefix, never on this.
+/// reduce to `PointGeometry` - documents disagree on the prefix, never on this.
 pub fn local_part(value: &str) -> &str {
     value.rsplit([':', '.']).next().unwrap_or(value)
 }
@@ -787,7 +787,7 @@ pub fn from_xml_str<T: XmlDeserialize>(input: &str) -> Result<T> {
     T::xml_read(&mut reader, &root)
 }
 
-/// Deserialize from bytes already in memory — the shape a cloud service gets
+/// Deserialize from bytes already in memory - the shape a cloud service gets
 /// back from a download.
 pub fn from_xml_bytes<T: XmlDeserialize>(input: &[u8]) -> Result<T> {
     let mut cursor = input;
@@ -844,7 +844,7 @@ pub fn from_xml_bytes_lenient<T: XmlDeserialize>(input: &[u8]) -> Result<(T, Vec
 /// single spaces.
 ///
 /// `eml:FloatingPointXmlArrayList` and its siblings carry inline array data
-/// this way — one element holding a whitespace-separated run of values — so the
+/// this way - one element holding a whitespace-separated run of values - so the
 /// generated field is a `Vec<T>` and this is what puts it back on the wire.
 pub fn join_list<T: XmlText>(items: &[T]) -> String {
     let mut out = String::new();
@@ -891,7 +891,7 @@ fn leak(name: &str) -> &'static str {
 
 /// Split the lexical form of an `xsd:list` and parse every item.
 ///
-/// XSD collapses any run of whitespace — spaces, tabs, newlines — so a value
+/// XSD collapses any run of whitespace - spaces, tabs, newlines - so a value
 /// wrapped over several lines in a file reads the same as one written on a
 /// single line. Empty or whitespace-only text is an empty list rather than an
 /// error: how many items are required is a cardinality question, and that

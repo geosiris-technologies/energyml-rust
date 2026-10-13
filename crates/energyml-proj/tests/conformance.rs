@@ -77,7 +77,7 @@ fn every_reference_point_matches_proj_to_the_millimetre() {
 fn the_corpus_crs_lands_where_the_datum_shift_puts_it() {
     // The single most valuable assertion in the crate. EPSG:23031 is the CRS of
     // every fesapi package in `testdata/`. Without `+towgs84` this point comes
-    // out at exactly 3.0° — the central meridian, suspiciously round — and 151 m
+    // out at exactly 3.0° - the central meridian, suspiciously round - and 151 m
     // from the truth. The roundness is the tell.
     let out = Proj4::new()
         .reproject([500000.0, 4650000.0, 0.0], 23031, 4326)
@@ -88,7 +88,7 @@ fn the_corpus_crs_lands_where_the_datum_shift_puts_it() {
     assert!(with_datum < 0.005, "{with_datum} m from the reference");
     assert!(
         without_datum > 100.0,
-        "only {without_datum:.1} m from the no-datum answer — the shift is not being applied"
+        "only {without_datum:.1} m from the no-datum answer - the shift is not being applied"
     );
 }
 
@@ -129,7 +129,7 @@ fn a_whole_array_converts_the_same_as_the_points_one_by_one() {
 #[test]
 fn web_mercator_is_reachable_and_round_trips() {
     // The other target every map wants, and the one whose definition uses
-    // `+nadgrids=@null` — the spelling the datum check has to read as a
+    // `+nadgrids=@null` - the spelling the datum check has to read as a
     // statement rather than as silence.
     let backend = Proj4::new();
     let mercator = backend

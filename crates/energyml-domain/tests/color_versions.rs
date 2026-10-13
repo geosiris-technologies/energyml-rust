@@ -1,4 +1,4 @@
-//! The colour of an object **at a version** — the walk of the colour is keyed by
+//! The colour of an object **at a version** - the walk of the colour is keyed by
 //! the object's uri, not by its uuid (ADR-0003).
 //!
 //! A bare uuid is accepted only at the library's entry, for the user's convenience; internally only full uris are used, which avoids sources of bugs. A
@@ -8,9 +8,9 @@
 //! reference (`eml:TargetObject` carries an `ObjectVersion`): it paints that
 //! version and no other.
 //!
-//! The packages are built in memory — the rule being tested is the project's, not
+//! The packages are built in memory - the rule being tested is the project's, not
 //! a corpus's. What would have to break: the targets read by uuid alone, the
-//! walk's key a uuid, or the ladder's rung found by uuid — the two versions would
+//! walk's key a uuid, or the ladder's rung found by uuid - the two versions would
 //! then share one colour, the last entry's.
 
 use std::io::Cursor;
@@ -221,7 +221,7 @@ fn the_cache_keeps_a_walk_per_version_and_disturbs_one_alone() {
 }
 
 /// An entry whose reference names **no version** contradicts none: it paints
-/// every version (a short reference is accepted when nothing contradicts it) —
+/// every version (a short reference is accepted when nothing contradicts it) -
 /// and a version that names another is left alone.
 #[test]
 fn an_entry_naming_no_version_paints_every_version_and_one_naming_another_paints_none_of_them() {

@@ -1,4 +1,4 @@
-//! `GridConnectionSetRepresentation` — what the file states, and nothing else.
+//! `GridConnectionSetRepresentation` - what the file states, and nothing else.
 //!
 //! No package of the corpus holds one, so the grid and the connection set are
 //! built here. The workshop rule applies in its strict form: **the shape of the
@@ -8,7 +8,7 @@
 //! Four traps are guarded, and each one is a way of looking right:
 //!
 //! - a cell addressed by its **position** instead of its number, which is right
-//!   on a whole grid and wrong on a pierced one — that is, on exactly the grids
+//!   on a whole grid and wrong on a pierced one - that is, on exactly the grids
 //!   a connection set exists for;
 //! - a segment drawn from "the last two points", which joins two different
 //!   connections as soon as a side could not be placed;
@@ -87,7 +87,7 @@ impl Store {
         self
     }
 
-    /// Mark cell 0 undefined — the hole that makes a position stop being a number.
+    /// Mark cell 0 undefined - the hole that makes a position stop being a number.
     fn with_hole(mut self) -> Self {
         self.defined = Some(vec![0, 1]);
         self
@@ -178,7 +178,7 @@ impl ArraySource for Store {
 #[test]
 fn without_faces_a_connection_is_the_segment_between_two_cell_centres() {
     // TUG §9.16: *"geometry as such is never attached to a connection"*. With
-    // no face named, all the file states is "these two cells are joined" — the
+    // no face named, all the file states is "these two cells are joined" - the
     // segment between their centres says that and invents nothing.
     let store = Store::new(&[(0, 1)], None, None);
     let set = build::connections(&[(0, 1)], None, None);
@@ -209,7 +209,7 @@ fn with_faces_the_named_face_of_each_cell_is_drawn() {
             assert!(rings.iter().all(|ring| ring.len() == 4));
             // **The rings do not overlap**: the second is indexed on its own
             // points. Indexed like the first, it would draw the same face
-            // twice, with the right ring count and the right point count — the
+            // twice, with the right ring count and the right point count - the
             // shape of mistake no count catches.
             assert_eq!(rings[0], vec![0, 1, 2, 3]);
             assert_eq!(rings[1], vec![4, 5, 6, 7]);
@@ -238,7 +238,7 @@ fn a_cell_the_grid_dropped_is_not_a_neighbouring_cell() {
 fn a_side_that_cannot_be_placed_never_joins_the_next_connection() {
     // The second trap: a segment drawn from "the last two points" joins two
     // different connections as soon as a side is missing. Here cell 0 is
-    // undefined and two connections name it on one side — so **no** segment
+    // undefined and two connections name it on one side - so **no** segment
     // may come out, and above all not one joining the two surviving halves,
     // which belong to different connections.
     let store = Store::new(&[(0, 1), (1, 0)], None, None).with_hole();
@@ -252,7 +252,7 @@ fn a_side_that_cannot_be_placed_never_joins_the_next_connection() {
 fn a_local_face_outside_the_cell_refuses_by_name() {
     // An IJK cell has six faces (TUG §9.12). An index of 6 is explained by
     // nothing in the file, so it is refused rather than folded back into range
-    // — a modulo would have drawn the top face for face 6.
+    // - a modulo would have drawn the top face for face 6.
     let store = Store::new(&[(0, 1)], Some(&[6, 0]), None);
     let set = build::connections(&[(0, 1)], Some(&[6, 0]), None);
 
@@ -318,7 +318,7 @@ fn the_reader_is_registered_under_the_concept() {
 #[test]
 fn every_drawn_ring_carries_the_interpretation_of_the_connection_it_came_from() {
     // TRG §5.25: the jagged array exists so that a connection may name zero,
-    // one or several interpretations — *"multiple faults discretized onto a
+    // one or several interpretations - *"multiple faults discretized onto a
     // single connection"*. Here connection 0 names one, connection 1 names two,
     // and each side of a connection is drawn as its own ring, so the answer has
     // one row per **ring** and not one per connection.
@@ -357,7 +357,7 @@ fn every_drawn_ring_carries_the_interpretation_of_the_connection_it_came_from() 
 #[test]
 fn a_dropped_side_shifts_nothing() {
     // **The test this feature exists for.** With a hole in the grid, one side of
-    // one connection is not drawn — so the drawn entries and the file's
+    // one connection is not drawn - so the drawn entries and the file's
     // connections stop being the same list. A reader that walked the
     // interpretations separately, or lined them up by position, would give every
     // ring after the hole its neighbour's fault: the right number of rows, a
@@ -408,7 +408,7 @@ fn an_index_that_names_no_interpretation_refuses_by_name() {
 fn fewer_rows_than_connections_refuses_rather_than_guessing_the_rest() {
     // The length mismatch that would otherwise index cleanly for a while: two
     // connections, one row. Reading it would attribute the first fault to the
-    // first connection and then run off the end — or, worse in another shape,
+    // first connection and then run off the end - or, worse in another shape,
     // silently repeat.
     let store = Store::new(&[(0, 1), (1, 0)], None, None).with_interpretations(&[0], &[1]);
     let set = build::interpreted(build::connections(&[(0, 1), (1, 0)], None, None), &[GRID]);

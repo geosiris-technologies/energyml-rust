@@ -3,35 +3,35 @@
 //!
 //! Not [`resample`](fn@crate::resample): that one walks the line at a spacing and
 //! keeps only the two ends, so the inner vertices go and the corners are cut.
-//! This one adds and never removes — the need being to cut a polyline up by
-//! adding points — and both names are needed, or one will be believed when the
+//! This one adds and never removes - the need being to cut a polyline up by
+//! adding points - and both names are needed, or one will be believed when the
 //! other was run.
 //!
 //! # Where the points go
 //!
-//! - **by count** — `n` points over the line's **whole length**, at 1/(n+1),
+//! - **by count** - `n` points over the line's **whole length**, at 1/(n+1),
 //!   2/(n+1)… of it. The vertices staying, the intervals are not equal; that is
 //!   what is asked, and saying it spares the surprise;
-//! - **by spacing** — a **station** every `every`, counted from the start like a
+//! - **by spacing** - a **station** every `every`, counted from the start like a
 //!   chainage, and a station within `tolerance` of a vertex is not added: the
 //!   example of the notes, no point at 5 m when there is one at 4.80 m with a
 //!   tolerance of 0.25.
 //!
 //! And **on the segments, or on a curve through the vertices** (`smooth`): a
 //! centripetal Catmull-Rom (Yuksel, Schaefer and Keyser, 2011), which neither
-//! loops nor overshoots between two close vertices — a natural cubic
+//! loops nor overshoots between two close vertices - a natural cubic
 //! oscillates near a bend, and a smoothed line that bulges is worse than an
 //! angular one. The vertices are on the curve, so they do not move.
 //!
 //! The length is measured **in 3D** (a trajectory, a trace picked in relief) or
 //! **in plan** (a fault trace, where two horizons cut by the same fault must get
-//! the same nodes — the reason `resample` measures in plan).
+//! the same nodes - the reason `resample` measures in plan).
 //!
 //! A closed line is densified along its closing segment too; a line whose
-//! closure nobody stated is **open** here — adding points on an edge the file
+//! closure nobody stated is **open** here - adding points on an edge the file
 //! does not draw would invent a ring.
 //!
-//! TODO(reference): verify — the centripetal Catmull-Rom citation (Yuksel, Schaefer and Keyser, 2011) is given without title, venue or DOI; complete and check it.
+//! TODO(reference): verify - the centripetal Catmull-Rom citation (Yuksel, Schaefer and Keyser, 2011) is given without title, venue or DOI; complete and check it.
 
 /// Where the added points go along the line.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -74,10 +74,10 @@ fn length(a: [f64; 3], b: [f64; 3], along: Along) -> f64 {
 }
 
 /// The point at fraction `t` of the way from `p1` to `p2`, on a centripetal
-/// Catmull-Rom through `p0, p1, p2, p3` — Barry and Goldman's pyramid.
+/// Catmull-Rom through `p0, p1, p2, p3` - Barry and Goldman's pyramid.
 fn catmull_rom(p0: [f64; 3], p1: [f64; 3], p2: [f64; 3], p3: [f64; 3], t: f64) -> [f64; 3] {
     // Centripetal: knots spaced by the square root of the chord. A chord of
-    // zero would make two knots equal and the pyramid divide by zero — kept
+    // zero would make two knots equal and the pyramid divide by zero - kept
     // apart by a hair, which leaves that span straight.
     let knot = |a: [f64; 3], b: [f64; 3]| length(a, b, Along::Space).sqrt().max(1e-12);
     let t0 = 0.0;
@@ -101,7 +101,7 @@ fn catmull_rom(p0: [f64; 3], p1: [f64; 3], p2: [f64; 3], p3: [f64; 3], t: f64) -
     mix(b1, b2, t1, t2)
 }
 
-/// The line densified — `closed` draws its closing segment, `smooth` puts the
+/// The line densified - `closed` draws its closing segment, `smooth` puts the
 /// added points on a curve through the vertices.
 ///
 /// Refused by name: a count of zero (nothing to add is a copy, not a
@@ -115,7 +115,7 @@ pub fn densify(
     smooth: bool,
 ) -> Result<Densified, String> {
     match placement {
-        Placement::Count(0) => return Err("the count must be at least 1 — adding none is a copy".to_string()),
+        Placement::Count(0) => return Err("the count must be at least 1 - adding none is a copy".to_string()),
         Placement::Spacing { every, tolerance } => {
             if !(every.is_finite() && every > 0.0) {
                 return Err(format!("the spacing must be a finite number > 0, not {every}"));
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn by_count_over_the_whole_length() {
-        // Length 10, three points: at 2.5, 5, 7.5 — whatever the vertices.
+        // Length 10, three points: at 2.5, 5, 7.5 - whatever the vertices.
         let line = [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [10.0, 0.0, 0.0]];
         let out = densify(&line, false, Placement::Count(3), Along::Space, false).unwrap();
         let xs: Vec<f64> = out.points.iter().map(|p| p[0]).collect();
@@ -255,7 +255,7 @@ mod tests {
     #[test]
     fn by_spacing_stations_from_the_start_with_a_tolerance() {
         // The example of the notes: a vertex at 4.80, stations every 5 with a
-        // tolerance of 0.25 — no station at 5, one at 10.
+        // tolerance of 0.25 - no station at 5, one at 10.
         let line = [[0.0, 0.0, 0.0], [4.8, 0.0, 0.0], [12.0, 0.0, 0.0]];
         let out = densify(
             &line,

@@ -23,15 +23,15 @@
 //!
 //! # The rules that are normative, and the ones that are ours
 //!
-//! **Row identity is positional, and that is in the specification** — common
+//! **Row identity is positional, and that is in the specification** - common
 //! TRG §9.1, on `Column.Values`: *"Ordering matters since it will be the same
 //! in all columns allowing to map a column value to another one."* Row *i* is
 //! index *i* in every column, key columns included.
 //!
-//! **A key column makes it a lookup** — same section: *"Defines a key column
+//! **A key column makes it a lookup** - same section: *"Defines a key column
 //! which make the table a lookup table."*
 //!
-//! **`CategoryLookup` points at a `ColumnBasedTable`** — the XSD lost the
+//! **`CategoryLookup` points at a `ColumnBasedTable`** - the XSD lost the
 //! association (an untyped `DataObjectReference` with no annotation), both
 //! technical reference guides state it. A mixed package may still hold 2.0.1
 //! lookups beside it, so the target type is dispatched on and anything else is
@@ -46,7 +46,7 @@
 //! # A trap the corpus contains
 //!
 //! In `80wells`, the table's three value columns point at `column1`, `column2`
-//! and `column3`, and its **key** column points at `column0` — the key is
+//! and `column3`, and its **key** column points at `column0` - the key is
 //! serialized last in the XML and stored first in the file. Deriving the
 //! dataset order from the document order gets every value wrong while looking
 //! perfectly healthy.
@@ -66,7 +66,7 @@ pub struct Column<'a> {
     /// `Description`.
     pub description: Option<String>,
     /// The column's own unit, which **overrides** the one its property kind
-    /// implies — the one override the standard does state.
+    /// implies - the one override the standard does state.
     pub uom: Option<String>,
     /// What the column measures. Mandatory in a `ColumnBasedTable`; absent in
     /// a 2.0.1 lookup, which has no notion of it.
@@ -76,7 +76,7 @@ pub struct Column<'a> {
     pub values_per_row: u64,
     /// Qualifiers on the column.
     pub facets: Vec<Facet>,
-    /// Whether this is a `KeyColumn` — what makes the table a lookup.
+    /// Whether this is a `KeyColumn` - what makes the table a lookup.
     pub key: bool,
     /// The array, in whichever of the eighteen forms it is. `None` for a
     /// 2.0.1 lookup, whose values are inline pairs rather than an array.
@@ -89,7 +89,7 @@ impl Column<'_> {
     /// The values of this column.
     ///
     /// Reads the array where there is one, and hands back the inline pairs
-    /// where there is not — the caller does not have to know which shape the
+    /// where there is not - the caller does not have to know which shape the
     /// table had.
     pub fn read(&self, source: &dyn ArraySource) -> Result<Values> {
         if let Some(inline) = &self.inline {
@@ -124,8 +124,8 @@ pub struct Table<'a> {
 impl<'a> Table<'a> {
     /// Read a lookup object.
     ///
-    /// Accepts `eml23.ColumnBasedTable` — the normative target of
-    /// `CategoryLookup` — and the two RESQML 2.0.1 lookups, which a mixed
+    /// Accepts `eml23.ColumnBasedTable` - the normative target of
+    /// `CategoryLookup` - and the two RESQML 2.0.1 lookups, which a mixed
     /// package may still carry. Anything else is refused **naming the type it
     /// found**, because "not a table" without the name is the kind of message
     /// that sends someone reading source code.
@@ -171,7 +171,7 @@ impl<'a> Table<'a> {
         })
     }
 
-    /// The key columns — what makes it a lookup rather than a list.
+    /// The key columns - what makes it a lookup rather than a list.
     pub fn keys(&self) -> Vec<&Column<'a>> {
         self.columns.iter().filter(|column| column.key).collect()
     }
@@ -184,14 +184,14 @@ impl<'a> Table<'a> {
     /// Read every column, with the row count checked across them.
     ///
     /// Row identity is positional and normative, so columns of different
-    /// lengths are a real defect — reported, never repaired by truncating in
+    /// lengths are a real defect - reported, never repaired by truncating in
     /// silence, because truncating shifts every row of the shorter column
     /// against the longer.
     ///
     /// A column that cannot be read does **not** silence the table: it comes
     /// back as `None`, named in the notes with the reader's own words, and the
     /// row count is taken across the columns that read. The real case is a
-    /// `ColumnBasedTable` with one external column in a build — or a browser —
+    /// `ColumnBasedTable` with one external column in a build - or a browser -
     /// without the array backend: its string columns are right there in the
     /// XML, and refusing them because a neighbouring column lives in a file
     /// nobody can open turned a readable table into nothing, silently.
@@ -233,7 +233,7 @@ impl<'a> Table<'a> {
 /// The values of a table, column by column, with the rows lined up.
 pub struct Rows {
     /// One entry per column of the table, in the same order. `None` is a
-    /// column that could not be read — named in the notes — and its cells
+    /// column that could not be read - named in the notes - and its cells
     /// answer `None`, which is not the same as a column of empty strings.
     pub columns: Vec<Option<Values>>,
     /// How many rows can be read across every column **that read**.
@@ -280,8 +280,8 @@ impl Cell {
 
     /// Whether two cells are the same key.
     ///
-    /// Numbers are compared as numbers whatever they were stored as — a key
-    /// column of `int32` and a query of `3.0` are the same key — and text is
+    /// Numbers are compared as numbers whatever they were stored as - a key
+    /// column of `int32` and a query of `3.0` are the same key - and text is
     /// compared exactly, because a facies name is a name.
     pub fn matches(&self, other: &Cell) -> bool {
         match (self, other) {
@@ -308,7 +308,7 @@ impl std::fmt::Display for Cell {
 
 /// A table with its values read, ready to be searched.
 pub struct Lookup {
-    /// Column titles, in the table's order — keys first.
+    /// Column titles, in the table's order - keys first.
     pub titles: Vec<Option<String>>,
     /// Which of them are keys.
     pub key_columns: Vec<usize>,
@@ -340,7 +340,7 @@ impl Lookup {
 
     /// The row whose key columns hold this tuple, and every duplicate of it.
     ///
-    /// The first element is the row a caller should use — *first match wins*,
+    /// The first element is the row a caller should use - *first match wins*,
     /// which is this repository's rule and not the standard's, because nothing
     /// anywhere requires keys to be unique. Anything after the first is a
     /// **duplicate key**, handed back rather than hidden, so a caller can say
@@ -363,7 +363,7 @@ impl Lookup {
     /// What a single-key lookup maps a number to: the other columns of the
     /// first matching row.
     ///
-    /// The common case — facies 3 → its name, saturation → its permeability —
+    /// The common case - facies 3 → its name, saturation → its permeability -
     /// without the caller building a tuple.
     pub fn of(&self, key: f64) -> Option<Vec<Option<Cell>>> {
         let found = self.find(&[Cell::Number(key)]);
@@ -378,7 +378,7 @@ impl Lookup {
 
     /// Every key that appears more than once, with the rows carrying it.
     ///
-    /// Not an error — nothing forbids it — but a lookup with duplicate keys
+    /// Not an error - nothing forbids it - but a lookup with duplicate keys
     /// answers arbitrarily, and an application that cares should be able to
     /// find out before it does.
     pub fn duplicate_keys(&self) -> Vec<(Vec<Cell>, Vec<usize>)> {
@@ -444,7 +444,7 @@ fn read_columns(object: &dyn Reflect) -> Vec<Column<'_>> {
 /// A 2.0.1 lookup: pairs in the document, turned into two columns.
 ///
 /// Key and value, in that order, so the shape a caller sees is the same as a
-/// column-based table's — which is the whole point of reading them into one
+/// column-based table's - which is the whole point of reading them into one
 /// type.
 fn read_pairs<'a>(object: &dyn Reflect, uuid: &str) -> Result<Vec<Column<'a>>> {
     let mut keys_numeric = Vec::new();
@@ -552,7 +552,7 @@ fn scalar_u64(object: &dyn Reflect, field: &str) -> Option<u64> {
     }
 }
 
-/// The uuid a reference names — the identity layer's reading, so every
+/// The uuid a reference names - the identity layer's reading, so every
 /// spelling of the field is one answer.
 fn uuid_of_reference(object: &dyn Reflect) -> Option<String> {
     energyml_core::identity::uuid_of_reflect(object)
@@ -582,7 +582,7 @@ mod tests {
         // The real case: a `ColumnBasedTable` whose string columns are right
         // there in the XML, next to one external column in a build without the
         // array backend. Failing the whole table turned readable rows into
-        // nothing, silently — the exact opposite of "half an index beats
+        // nothing, silently - the exact opposite of "half an index beats
         // none". The broken column's cells answer `None`, which is not a
         // column of empty strings.
         let readable = Column {
@@ -640,7 +640,7 @@ mod tests {
 
     #[test]
     fn a_duplicate_key_is_reported_rather_than_chosen_between() {
-        // Nothing in the standard forbids it, so it is not an error — but a
+        // Nothing in the standard forbids it, so it is not an error - but a
         // caller must be able to find out before trusting the answer.
         let table = lookup(
             Values::Integer(vec![1, 2, 2]),

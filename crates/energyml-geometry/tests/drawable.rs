@@ -3,8 +3,8 @@
 //! The bug this pins was reported twice from a real session, in the same words
 //! both times: grids are always read as a point cloud and never as a surface,
 //! and wellbores are loaded as point clouds. The data
-//! was there the whole way — `Topology::Grid` and `Topology::Polylines` are
-//! what the readers already produced — but nothing turned a cell into two
+//! was there the whole way - `Topology::Grid` and `Topology::Polylines` are
+//! what the readers already produced - but nothing turned a cell into two
 //! triangles or a station list into segments, so a viewer given only points
 //! drew only points.
 
@@ -44,7 +44,7 @@ fn grid() -> Geometry {
 
 #[test]
 fn a_grid_becomes_two_triangles_per_cell() {
-    // 3 × 2 points is 2 × 1 cells, so four triangles — not a spray of six dots.
+    // 3 × 2 points is 2 × 1 cells, so four triangles - not a spray of six dots.
     let drawn = grid().drawable();
     assert_eq!(drawn.points.len(), 6);
     assert_eq!(drawn.triangles.len(), 4);
@@ -64,13 +64,13 @@ fn a_grid_becomes_two_triangles_per_cell() {
 
 #[test]
 fn a_cell_with_a_missing_corner_is_dropped_rather_than_drawn() {
-    // A grid with holes is ordinary — an eroded horizon, a survey clipped to a
+    // A grid with holes is ordinary - an eroded horizon, a survey clipped to a
     // licence block. A triangle through `NaN` does not render as a hole; it
     // renders as a spike across the entire scene.
     let mut geometry = grid();
     geometry.patches[0].points[4] = [f64::NAN, f64::NAN, f64::NAN];
     let drawn = geometry.drawable();
-    // Point 4 is a corner of three of the four triangles, so one survives — the
+    // Point 4 is a corner of three of the four triangles, so one survives - the
     // far half of the second cell. Named rather than counted: what matters is
     // that every triangle still standing avoids the hole.
     //
@@ -115,7 +115,7 @@ fn a_ring_the_file_calls_closed_gets_the_segment_that_closes_it() {
     // drawn open, because the reader took `NodeCountPerPolyline` and never
     // `ClosedPolylines`. What one would have to break to make this go red:
     // forget the last segment, or repeat the first node instead of going back
-    // to it — which would shift every property indexed on the nodes.
+    // to it - which would shift every property indexed on the nodes.
     let square = vec![[0.0; 3], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]];
     let ring = Patch {
         index: 0,
@@ -140,7 +140,7 @@ fn a_ring_the_file_calls_closed_gets_the_segment_that_closes_it() {
     };
     assert_eq!(silent.drawable().lines, vec![[0, 1], [1, 2], [2, 3]]);
 
-    // Mixed in one patch, each on its own terms — and the indices stay the
+    // Mixed in one patch, each on its own terms - and the indices stay the
     // patch's, the second line closing back on *its own* first node.
     let mixed = Patch {
         index: 0,
@@ -182,7 +182,7 @@ fn a_ring_the_file_calls_closed_gets_the_segment_that_closes_it() {
 
 #[test]
 fn indices_are_rebased_when_several_patches_are_merged() {
-    // The failure this prevents draws patch two using patch one's points —
+    // The failure this prevents draws patch two using patch one's points -
     // which looks like a plausible surface in the wrong place.
     let geometry = Geometry {
         kind: "TriangulatedSetRepresentation",
@@ -314,14 +314,14 @@ mod corpus {
     }
 
     /// The report: 2D grids (notably RESQML 2.0.1) are sometimes read as a point
-    /// cloud when surfaces are wanted — and a viewer draws a point
+    /// cloud when surfaces are wanted - and a viewer draws a point
     /// cloud for exactly one reason: it was handed no index at all.
     ///
     /// # What the corpus says, and why this is not `triangles > 0`
     ///
     /// Eight of ALWYN's nine 2D grids come out with no triangle, and the reason
     /// is in the file rather than in the reader. Their `ZValues` dataset is
-    /// declared 849 × 1163 — the lattice's own size — and holds a value on
+    /// declared 849 × 1163 - the lattice's own size - and holds a value on
     /// **every other node**: `nan, 3251.18, nan, 3249.63, …` in `h5dump`, with
     /// 193 288 of the 202 136 gaps between defined values equal to 2. No cell
     /// of the declared lattice has four defined corners, so there is no quad to
@@ -330,9 +330,9 @@ mod corpus {
     ///
     /// So the check is the one that can actually fail: **every cell whose four
     /// corners are defined is drawn**, counted here from the points rather than
-    /// taken from `drawable`. A reader that lost the lattice — wrong axis
+    /// taken from `drawable`. A reader that lost the lattice - wrong axis
     /// counts, a transposed row length, a topology dropped on the way to the
-    /// viewer — comes out with defined cells and no triangles, which is the
+    /// viewer - comes out with defined cells and no triangles, which is the
     /// bug this is for, and it stays red on ALWYN's grids as well as on the
     /// ones that do draw.
     #[test]
@@ -394,7 +394,7 @@ mod corpus {
                 }
                 if drawn.triangles.len() != cells {
                     wrong.push(format!(
-                        "{} {} — {cells} triangle(s) the nodes define, {} drawn",
+                        "{} {} - {cells} triangle(s) the nodes define, {} drawn",
                         path.file_name().unwrap_or_default().to_string_lossy(),
                         summary.uri,
                         drawn.triangles.len(),
@@ -472,7 +472,7 @@ mod corpus {
 }
 
 // ---------------------------------------------------------------------------
-// Volumes — the same bug one level up
+// Volumes - the same bug one level up
 // ---------------------------------------------------------------------------
 //
 // Reported in the same words as the two above: some IJK grids of the testing
@@ -523,15 +523,15 @@ fn a_hexahedral_grid_becomes_its_surface_not_a_point_cloud() {
 }
 
 /// A node of a volume that no cell names is dropped with the cells that
-/// would have named it — not drawn as a dot where the grid says there is
+/// would have named it - not drawn as a dot where the grid says there is
 /// nothing.
 ///
 /// The case is the IJK reader's: a cell its `CellGeometryIsDefined` flag marks
 /// undefined is skipped, and the standard makes the flag override the numbers,
 /// so the cell's corners stay finite in the buffer. Two cubes side by side,
 /// the second one skipped: its four exclusive corners must go, the shared four
-/// must stay, and the count must say so. The numbers are the cube's own — eight
-/// corners, six faces, twelve triangles — not a first run's.
+/// must stay, and the count must say so. The numbers are the cube's own - eight
+/// corners, six faces, twelve triangles - not a first run's.
 #[test]
 fn a_volume_node_no_cell_names_is_dropped_not_drawn_as_a_dot() {
     let mut points = cube(0.0);
@@ -560,7 +560,7 @@ fn a_volume_node_no_cell_names_is_dropped_not_drawn_as_a_dot() {
     );
 
     // A surface keeps its lone nodes: a node a lattice samples is a location
-    // whether or not the cells around it are complete — the ALWYN horizons are
+    // whether or not the cells around it are complete - the ALWYN horizons are
     // nothing but lone nodes.
     let lone = Geometry {
         kind: "Grid2dRepresentation",
@@ -587,7 +587,7 @@ fn a_volume_node_no_cell_names_is_dropped_not_drawn_as_a_dot() {
 #[test]
 fn a_shared_face_is_drawn_once_and_from_the_outside() {
     // Two cells stacked in Z. Twelve face-instances, of which two are the same
-    // interior face seen from either side — so the skin is ten faces, and
+    // interior face seen from either side - so the skin is ten faces, and
     // emitting every face would give twelve.
     let mut points = cube(0.0);
     points.extend_from_slice(&cube(1.0)[4..]);
@@ -642,7 +642,7 @@ fn an_unstructured_grid_becomes_its_surface_too() {
 
     let drawn = geometry.drawable();
     assert_eq!(drawn.points.len(), 5);
-    // Six boundary faces, each a triangle. The shared one is left out — which
+    // Six boundary faces, each a triangle. The shared one is left out - which
     // is the whole difference between this and `Polyhedra::triangles`, whose
     // answer here would be seven.
     assert_eq!(drawn.triangles.len(), 6, "the shared face is interior");
@@ -652,7 +652,7 @@ fn an_unstructured_grid_becomes_its_surface_too() {
 #[test]
 fn every_triangle_names_the_cell_it_was_cut_from() {
     // The table a flat-shaded (per-cell) painting stands on: three.js colours
-    // vertices, so an aplat de-indexes the geometry — and each new vertex has
+    // vertices, so an aplat de-indexes the geometry - and each new vertex has
     // to know which cell's value it wears. The numbering is `cell_count`'s,
     // across patches, whatever the primitive was cut into.
     let two_patches = Geometry {
@@ -662,7 +662,7 @@ fn every_triangle_names_the_cell_it_was_cut_from() {
                 vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
                 Topology::Triangles(vec![[0, 1, 2]]),
             ),
-            // A quad is cut into two triangles — both wear the same cell.
+            // A quad is cut into two triangles - both wear the same cell.
             patch(
                 vec![[2.0, 0.0, 0.0], [3.0, 0.0, 0.0], [3.0, 1.0, 0.0], [2.0, 1.0, 0.0]],
                 Topology::Quads(vec![[0, 1, 2, 3]]),
@@ -686,7 +686,7 @@ fn every_triangle_names_the_cell_it_was_cut_from() {
 #[test]
 fn a_grid_cell_and_a_dropped_corner_keep_the_table_in_lockstep() {
     // A lattice with one NaN corner: the two triangles touching it vanish, and
-    // their cell entries must vanish **with them** — a table filtered on its
+    // their cell entries must vanish **with them** - a table filtered on its
     // own is every triangle after the hole wearing its neighbour's value.
     let mut points = Vec::new();
     for row in 0..2 {
@@ -722,7 +722,7 @@ fn a_volume_drawn_by_its_skin_refuses_the_table_rather_than_guessing() {
     // A boundary face is a *face*, not a cell: naming one per triangle would
     // line a per-cell property up against elements it was not measured on.
     // Empty is the honest state, and the caller refuses per-cell painting by
-    // name — exactly as it did before the table existed.
+    // name - exactly as it did before the table existed.
     let cube = Geometry {
         kind: "IjkGridRepresentation",
         patches: vec![patch(
@@ -755,7 +755,7 @@ fn a_volume_drawn_by_its_skin_refuses_the_table_rather_than_guessing() {
 fn every_polyline_node_names_its_run_and_surface_nodes_name_none() {
     // One colour a polyline needs no de-indexing: every node of a run belongs
     // to that run and no other, so the table is a lookup. A surface node is
-    // the opposite — shared between the cells around it — and its entry says
+    // the opposite - shared between the cells around it - and its entry says
     // so (`NO_CELL`) instead of picking one.
     let mixed = Geometry {
         kind: "PolylineSetRepresentation",
@@ -795,7 +795,7 @@ fn every_polyline_node_names_its_run_and_surface_nodes_name_none() {
 
 #[test]
 fn a_dropped_node_takes_its_cell_entry_with_it() {
-    // The table follows its nodes through the NaN filter — filtered any other
+    // The table follows its nodes through the NaN filter - filtered any other
     // way, every node after the hole wears its neighbour's run.
     let holed = Geometry {
         kind: "PolylineSetRepresentation",
@@ -817,13 +817,13 @@ fn a_dropped_node_takes_its_cell_entry_with_it() {
 
 /// Rule (Energistics common TRG v2.3 §6.31 `FloatingPointExternalArray`: "By
 /// convention, the null value is NaN"; `defined.rs` quotes it): a terrain lattice
-/// whose no-data pixels are NaN draws as a surface **with a hole in it** — the
+/// whose no-data pixels are NaN draws as a surface **with a hole in it** - the
 /// node is not a point, and no triangle touches it. A 4 x 4 lattice has 18
 /// triangles; the interior node (1, 1) is a corner of 6 of them (2 cells share
 /// it as the diagonal's end, 4 as a plain corner).
 /// To break it: remove **both** defences of `drawable()` (the
 /// `finite(a) && finite(b) && finite(c)` in `triangle` and the
-/// `renumbered.contains(&GONE)` in the index filter) —
+/// `renumbered.contains(&GONE)` in the index filter) -
 /// a triangle with a NaN elevation is then drawn, and `NaN` reaches the front end.
 #[test]
 fn a_terrain_lattice_with_a_nan_node_draws_a_surface_with_a_hole() {

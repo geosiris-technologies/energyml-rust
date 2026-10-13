@@ -1,4 +1,4 @@
-//! The judgement of a selection by rings, on fabricated footprints — no package.
+//! The judgement of a selection by rings, on fabricated footprints - no package.
 //!
 //! The rule under test is the one in `energyml_build::selection`'s module doc:
 //! the region is inside one `outer` (none: everywhere) and inside no `inner`;

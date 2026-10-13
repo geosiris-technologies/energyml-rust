@@ -17,7 +17,7 @@
 //!   when `outputFormat=application/json` is requested;
 //! - **the axis order depends on the parameter, not on the service.** This
 //!   service wants `lat, lon` in a `bbox` naming `urn:ogc:def:crs:EPSG::4326`,
-//!   and `lon, lat` in a CQL `SRID=4326;POLYGON`, which is WKT — measured,
+//!   and `lon, lat` in a CQL `SRID=4326;POLYGON`, which is WKT - measured,
 //!   16,984 entities one way and **0 the other**, both with a 200 and no
 //!   complaint. The first half had been measured and then **generalised to the
 //!   second without being measured**, and `energyml fetch` returned zero on a
@@ -35,21 +35,21 @@ use crate::{About, Provider};
 ///
 /// Declared, never guessed, and the qualification "in a CQL filter" is the fruit
 /// of a mistake: *the same service may want both*. Measured on the BRGM one, on
-/// the same area —
+/// the same area -
 ///
 /// | where | order | entities |
 /// |---|---|---|
 /// | `bbox=…,urn:ogc:def:crs:EPSG::4326` | `lat, lon` | boreholes around Paris |
 /// | `cql_filter=Intersects(…,SRID=4326;POLYGON(…))` | **`lon, lat`** | **16,984** |
-/// | the same CQL in `lat, lon` | — | **0** |
+/// | the same CQL in `lat, lon` | - | **0** |
 ///
 /// Both answer 200 without complaining, and one of the two returns zero
 /// entities or those of another continent. That is why it is a field of the
-/// provider, checked by a quote — which costs one kilobyte and would, here, have
+/// provider, checked by a quote - which costs one kilobyte and would, here, have
 /// avoided downloading fifty megabytes of nothing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Axes {
-    /// `lon, lat` — what CQL wants on the BRGM service, **measured**.
+    /// `lon, lat` - what CQL wants on the BRGM service, **measured**.
     LonLat,
     /// `lat, lon`, for a service that would ask for it that way.
     LatLon,
@@ -87,7 +87,7 @@ impl Wfs {
             .find(|one| one.name == name)
             .ok_or_else(|| {
                 Error::Refused(format!(
-                    "`{name}` is not a collection of `{}` — it offers {}",
+                    "`{name}` is not a collection of `{}` - it offers {}",
                     self.name,
                     self.collections
                         .iter()
@@ -111,7 +111,7 @@ impl Wfs {
     /// The CQL filter, when the request carries one.
     ///
     /// **Checked before being encoded**: a term that matches no declared filter
-    /// is a refusal **here**, with no request — the server would refuse it too,
+    /// is a refusal **here**, with no request - the server would refuse it too,
     /// but after a round trip and in its own words.
     fn cql(&self, collection: &Collection, query: &Query) -> Result<Option<String>> {
         let mut clauses: Vec<String> = Vec::new();
@@ -154,7 +154,7 @@ impl Wfs {
             .find(|one| one.name == term.name)
             .ok_or_else(|| {
                 Error::Refused(format!(
-                    "`{}` is not a filter of `{}` — it accepts {}",
+                    "`{}` is not a filter of `{}` - it accepts {}",
                     term.name,
                     collection.name,
                     match collection.filters.is_empty() {
@@ -356,7 +356,7 @@ pub fn exception(text: &str) -> Option<(Option<String>, String)> {
             // **An entity is an event, not text.** quick-xml splits the content
             // around `&quot;` and returns the reference on its own; ignoring it
             // turned *Attribute "identifier" not found* into
-            // `Attributeidentifiernot found` — a refusal one rereads twice
+            // `Attributeidentifiernot found` - a refusal one rereads twice
             // before understanding that it is ours.
             Ok(Event::GeneralRef(entity)) if in_text => match &*entity {
                 b"quot" => says.push('"'),

@@ -1,15 +1,15 @@
-//! Files in the package, and the objects they show — EPC §3.4.2.
+//! Files in the package, and the objects they show - EPC §3.4.2.
 //!
 //! `Energistics_Packaging_Conventions_v1.0_Doc_v1.2.pdf`:
 //!
 //! - other files "As a guideline … stored in a folder named `media`" (§3.2,
-//!   pp. 11–12), "An optional media folder may contain any type of media
+//!   pp. 11-12), "An optional media folder may contain any type of media
 //!   file--no restrictions" (§3.3 p. 14);
 //! - `[Content_Types].xml` gives "a specific mime content type for each part in
 //!   the package" (§2.2.1 p. 9);
 //! - `destinationMedia`: "The object in Target is a media representation for
 //!   the current object"; `sourceMedia`: "The current object is a media
-//!   representation for the object in Target" (§3.4.2 pp. 15–16).
+//!   representation for the object in Target" (§3.4.2 pp. 15-16).
 //!
 //! **The package is read back with the `zip` crate and `quick-xml`**, not with
 //! the store: a writer and its own reader agreeing on a relationship proves
@@ -86,7 +86,7 @@ fn reopen(bytes: &[u8]) -> EpcStore {
 
 // ------------------------------------------------------------- independent read
 
-/// Every entry of the archive, by name — the `zip` crate, nothing of ours.
+/// Every entry of the archive, by name - the `zip` crate, nothing of ours.
 fn entries(bytes: &[u8]) -> BTreeMap<String, Vec<u8>> {
     let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).expect("a zip");
     let mut out = BTreeMap::new();
@@ -162,7 +162,7 @@ fn relationships(archive: &BTreeMap<String, Vec<u8>>, rels: &str) -> Vec<(String
 }
 
 /// The content type `[Content_Types].xml` gives a part: its `Override`, else
-/// the `Default` of its extension — OPC's rule.
+/// the `Default` of its extension - OPC's rule.
 fn declared_type(archive: &BTreeMap<String, Vec<u8>>, part: &str) -> Option<String> {
     let index = archive.get("[Content_Types].xml").expect("the index is there");
     let wanted = format!("/{part}");
@@ -221,7 +221,7 @@ fn a_media_part_is_written_typed_and_related_both_ways() {
     );
     let archive = entries(&bytes);
 
-    // The bytes, exactly — the binary ones above all.
+    // The bytes, exactly - the binary ones above all.
     assert_eq!(archive.get("media/README.md").map(Vec::as_slice), Some(README));
     assert_eq!(archive.get("media/fiche-GTH-1.pdf"), Some(&binary()));
     // The type the caller stated, not one guessed from the extension.
@@ -287,7 +287,7 @@ fn a_rewrite_keeps_the_relations_the_archive_held() {
 
 #[test]
 fn a_relation_read_from_either_end_is_the_same_relation() {
-    // A producer may write only one of the two directions — §3.4.1 makes a
+    // A producer may write only one of the two directions - §3.4.1 makes a
     // non-XML part's `.rels` optional. Here the part's side is removed from the
     // archive by hand, and the object's alone must still be read as the link.
     let mut store = store();

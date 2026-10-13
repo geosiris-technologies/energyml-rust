@@ -8,12 +8,12 @@
 //!
 //! # A length, not an absolute z
 //!
-//! The request is for "the z of the end" — a wish that reads naturally as an absolute
+//! The request is for "the z of the end" - a wish that reads naturally as an absolute
 //! coordinate, but a fixed z would put the free end above or below the head
 //! depending on where in the frame the cloud sits, which is not what a
 //! synthetic wellhead means. What is asked here instead is a **length**: how
 //! far the polyline descends from its head, the same for every point of the
-//! cloud. Which way "descends" is is not a convention of this module — it is
+//! cloud. Which way "descends" is is not a convention of this module - it is
 //! read from the CRS (`up`), exactly as the requirement says: the cloud's CRS decides, not a convention
 //! of the operation.
 //!
@@ -27,11 +27,11 @@
 //! the same draw it always had, and adding a point never reshuffles the
 //! others'.
 //!
-//! TODO(reference): verify — SplitMix64 is described as a public-domain generator without a citation; add the original reference once checked.
+//! TODO(reference): verify - SplitMix64 is described as a public-domain generator without a citation; add the original reference once checked.
 
 use crate::Error;
 
-/// A tiny, deterministic generator — [SplitMix64](https://prng.di.unimi.it/splitmix64.c),
+/// A tiny, deterministic generator - [SplitMix64](https://prng.di.unimi.it/splitmix64.c),
 /// public domain, chosen because it needs no crate of its own (this one stays
 /// dependency-free and wasm-compatible) and is exactly the generator its name
 /// promises: splitting one seed into as many independent streams as there are
@@ -40,7 +40,7 @@ struct SplitMix64(u64);
 
 impl SplitMix64 {
     /// One independent stream per point: the run's seed, mixed with the
-    /// point's rank rather than walked to — a cloud of a million points does
+    /// point's rank rather than walked to - a cloud of a million points does
     /// not cost a million steps to reach the last one.
     fn for_point(seed: u64, index: usize) -> Self {
         let mixed = (index as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
@@ -76,7 +76,7 @@ impl SplitMix64 {
 pub enum Cuts {
     /// Exactly this many, every polyline.
     Fixed(u32),
-    /// Uniform between two bounds, inclusive — drawn once per point.
+    /// Uniform between two bounds, inclusive - drawn once per point.
     Random { min: u32, max: u32 },
 }
 
@@ -108,7 +108,7 @@ impl Cuts {
 pub enum Length {
     /// Exactly this long, every polyline.
     Fixed(f64),
-    /// Uniform between two bounds — drawn once per point.
+    /// Uniform between two bounds - drawn once per point.
     Random { min: f64, max: f64 },
 }
 
@@ -151,7 +151,7 @@ impl Spacing {
     }
 
     /// One relative weight per segment (`cuts` of them), summing to `cuts` on
-    /// average — never zero, so two nodes never land on the same point.
+    /// average - never zero, so two nodes never land on the same point.
     fn weights(&self, cuts: u32, rng: &mut SplitMix64) -> Vec<f64> {
         match *self {
             Spacing::Regular => vec![1.0; cuts as usize],
@@ -277,7 +277,7 @@ mod tests {
                 assert_eq!(p, q);
             }
         }
-        // And a different seed draws differently — else the test could not fail.
+        // And a different seed draws differently - else the test could not fail.
         let c = vertical_polylines(&heads, &cuts, &length, &spacing, true, 43).unwrap();
         assert!(
             a.iter()
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn a_single_tip_does_not_merge_two_points() {
-        // A point added at the end must not change the draw of the ones before it —
+        // A point added at the end must not change the draw of the ones before it -
         // each point's stream is independent of how many others there are.
         let a = vertical_polylines(
             &[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],

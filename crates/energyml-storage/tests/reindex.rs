@@ -1,7 +1,7 @@
 //! Saving a package whose parts were staged as **bytes**.
 //!
-//! Staging bytes is what protects the content — nothing is deserialised, so
-//! nothing can be dropped — and it is the whole point of `relabel`. But the
+//! Staging bytes is what protects the content - nothing is deserialised, so
+//! nothing can be dropped - and it is the whole point of `relabel`. But the
 //! `.rels` are built from an object's `DataObjectReference`s, and a part staged
 //! as bytes has no object. So one save writes parts that are byte-perfect and an
 //! index that is **gone**.
@@ -41,7 +41,7 @@ fn citation(title: &str) -> String {
     )
 }
 
-/// A horizon that names its feature — the reference the `.rels` must carry.
+/// A horizon that names its feature - the reference the `.rels` must carry.
 fn interpretation() -> String {
     format!(
         "<resqml:HorizonInterpretation xmlns:resqml=\"{RESQML}\" xmlns:eml=\"{EML}\" \
@@ -97,7 +97,7 @@ fn package(name: &str) -> PathBuf {
 }
 
 /// How many `.rels` a saved package carries, read from the zip rather than
-/// from this library — two independent views of the same fact.
+/// from this library - two independent views of the same fact.
 fn rels(path: &Path) -> usize {
     let file = std::fs::File::open(path).expect("readable");
     let mut zip = zip::ZipArchive::new(file).expect("a zip");
@@ -142,7 +142,7 @@ fn a_staged_part_loses_its_relationships_unless_the_package_is_reindexed() {
             .expect("saves and rebuilds");
     }
 
-    // The source is built by hand and carries no `.rels` at all — the writer
+    // The source is built by hand and carries no `.rels` at all - the writer
     // makes them. So the comparison is between the two *saves*, which is the
     // real question anyway: one save against the same save reindexed.
     let after_plain = rels(&plain);
@@ -183,7 +183,7 @@ fn the_intermediate_package_is_cleaned_up() {
 ///
 /// Reindexing reopens and saves, which for a part that is no longer staged
 /// means re-serialising it. If that lost the new version the whole exercise
-/// would be pointless, and the loss would be invisible — the package would
+/// would be pointless, and the loss would be invisible - the package would
 /// simply read as the release again.
 #[test]
 fn reindexing_keeps_the_version_the_relabelling_wrote() {

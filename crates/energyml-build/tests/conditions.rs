@@ -1,4 +1,4 @@
-//! `Applies::When` — a slot that acts only for a value of another, and the
+//! `Applies::When` - a slot that acts only for a value of another, and the
 //! conditions nesting through it (ADR 0017).
 //!
 //! # What would have to break to make it turn red
@@ -77,7 +77,7 @@ fn titles(parameters: &[Parameter]) -> Vec<&str> {
 
 /// **An activity records what the run used, and only that.** The defect this
 /// fixes: an IDW run recorded `kernel: thin-plate` and `model: fitted`,
-/// because those slots had a suggestion and always applied — so they were
+/// because those slots had a suggestion and always applied - so they were
 /// settled, and whatever is settled is recorded.
 #[test]
 fn an_activity_only_records_the_settings_of_its_method() {
@@ -155,7 +155,7 @@ fn conditions_nest_and_a_setting_outside_its_method_is_refused() {
     );
 
     // **Transitively**: a model answered under IDW is out, and so is its
-    // `nugget` — read on the model *as settled*, not as answered. Reading the
+    // `nugget` - read on the model *as settled*, not as answered. Reading the
     // raw answer would let `nugget` stand on a model that was just removed.
     let why = settle(
         Choices::new()
@@ -176,7 +176,7 @@ fn conditions_nest_and_a_setting_outside_its_method_is_refused() {
         why.message()
     );
 
-    // Stated model: its three numbers act — and, since the method is a union,
+    // Stated model: its three numbers act - and, since the method is a union,
     // **are required** there, refused by name at settling rather than by the
     // plan once the work has started. And the method switched away takes the
     // model **and** its numbers with it, suggestions included.
@@ -245,7 +245,7 @@ fn the_wire_and_the_template_state_the_condition() {
     assert_eq!(wire["applies"]["kind"], "when");
     assert_eq!(wire["applies"]["slot"], "model");
     assert_eq!(wire["advanced"], false);
-    // The neighbourhood is advanced — folded away in a form — and says so on
+    // The neighbourhood is advanced - folded away in a form - and says so on
     // the wire, the one slot of two cases keeping the flag.
     let radius = slots.iter().find(|s| s.name == "radius").unwrap();
     assert!(radius.advanced && radius.json()["advanced"] == true);
@@ -288,7 +288,7 @@ fn every_built_in_operation_has_its_category() {
 
 #[test]
 fn a_secondary_category_is_neither_the_main_one_nor_other() {
-    // The decision of 26/09: an operation may be filed “also” elsewhere —
+    // The decision of 26/09: an operation may be filed “also” elsewhere -
     // the cloud of wellheads under “Wells”. A secondary category that
     // repeated the main one would show it twice in the same list, and
     // “other” is not a filing.
@@ -316,7 +316,7 @@ fn a_secondary_category_is_neither_the_main_one_nor_other() {
     }
     assert!(
         declared > 0,
-        "at least one operation declares another category — else this proves nothing"
+        "at least one operation declares another category - else this proves nothing"
     );
     let wellheads = registry.get("pointset-from-wellheads").expect("registered");
     assert!(wellheads.also().contains(&Category::Wells));
@@ -333,7 +333,7 @@ fn a_secondary_category_is_neither_the_main_one_nor_other() {
 /// The criterion is read in what the operation declares: an operation that
 /// invents **only on request** carries a `synthetic` parameter (`fault-throw`,
 /// `witsml-wells`…) and stays in its category; an operation that always
-/// invents has no such parameter — it is not a choice for it — and goes into
+/// invents has no such parameter - it is not a choice for it - and goes into
 /// `Synthetic`. An operation of `Synthetic` is filed “also” nowhere,
 /// and no operation is filed “also” under `Synthetic`.
 #[test]
@@ -366,7 +366,7 @@ fn operations_that_invent_are_filed_apart() {
     }
     assert!(
         !apart.is_empty(),
-        "no operation ranged apart — this proves nothing"
+        "no operation ranged apart - this proves nothing"
     );
     // The criterion is real: the two that invent on demand do declare it.
     for on_demand in ["fault-throw", "witsml-wells"] {
@@ -404,9 +404,9 @@ fn operations_that_invent_are_filed_apart() {
     }
 }
 
-/// “Measure” writes what is measured **on** a shape — a property, a
-/// table —, never a new shape. The report: why is a grid MBA
-/// categorised as “measure” when it creates an object — `interpolate`,
+/// “Measure” writes what is measured **on** a shape - a property, a
+/// table -, never a new shape. The report: why is a grid MBA
+/// categorised as “measure” when it creates an object - `interpolate`,
 /// `estimate` and `resurface` write a representation and were filed there.
 /// To break: put `Category::Analysis` back on `interpolate`.
 #[test]
@@ -427,7 +427,7 @@ fn measuring_makes_no_representation() {
             op.name()
         );
     }
-    assert!(measured > 0, "no operation under analysis — this proves nothing");
+    assert!(measured > 0, "no operation under analysis - this proves nothing");
     for makes_a_shape in ["interpolate", "estimate", "resurface"] {
         assert_eq!(
             registry.get(makes_a_shape).expect("registered").category(),

@@ -5,17 +5,17 @@
 //! ADR 0017 holds the why. The
 //! short of it: a parameter used to be declared in `needs()` and then read
 //! back **by its name** in `plan()`, its default written a second time beside
-//! its suggestion — two places for one fact. Here the field is the
+//! its suggestion - two places for one fact. Here the field is the
 //! declaration, its type is the kind of answer, its doc comment is the label,
 //! and `default = …` is written once.
 //!
 //! Three derives:
 //!
-//! - `Choice` — a unit enum becomes a closed list of words (`thin-plate`);
-//! - `Params` — on a struct, one slot per field (or a nested block with
+//! - `Choice` - a unit enum becomes a closed list of words (`thin-plate`);
+//! - `Params` - on a struct, one slot per field (or a nested block with
 //!   `flatten`); on an enum with `#[params(tag = "…")]`, a **union**: one
 //!   choice slot, then each case's slots, each acting only under its case;
-//! - `Inputs` — one input slot per field, bound by the framework.
+//! - `Inputs` - one input slot per field, bound by the framework.
 //!
 //! The generated code names `::energyml_build`; the crate says
 //! `extern crate self as energyml_build` so that it compiles inside it too.
@@ -29,7 +29,7 @@ use syn::{Attribute, Data, DeriveInput, Expr, Fields, LitStr, parse_macro_input}
 
 // ---------------------------------------------------------------- helpers
 
-/// The **first paragraph** of an item's doc comment, joined into one line —
+/// The **first paragraph** of an item's doc comment, joined into one line -
 /// the label of a slot. What follows a blank line is a note for whoever reads
 /// the code, not a label for whoever fills the form.
 fn doc_of(attrs: &[Attribute]) -> Option<String> {
@@ -86,7 +86,7 @@ fn lits(list: &[String]) -> Vec<LitStr> {
 
 // ---------------------------------------------------------------- Choice
 
-/// A unit enum as a closed list of words — `#[choice(name = "…")]` renames a
+/// A unit enum as a closed list of words - `#[choice(name = "…")]` renames a
 /// variant, the default is its name in kebab-case.
 #[proc_macro_derive(Choice, attributes(choice))]
 pub fn derive_choice(input: TokenStream) -> TokenStream {
@@ -157,7 +157,7 @@ fn choice(input: &DeriveInput) -> syn::Result<Tokens> {
 
 // ---------------------------------------------------------------- Params
 
-/// One slot per field, or a union of cases — see the crate documentation.
+/// One slot per field, or a union of cases - see the crate documentation.
 #[proc_macro_derive(Params, attributes(param, params, case))]
 pub fn derive_params(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -195,9 +195,9 @@ struct ParamAttrs {
     need: Option<Expr>,
     flatten: bool,
     optional: bool,
-    /// `"rotate: axis; scale: uniform, axes"` — applies when one of those holds.
+    /// `"rotate: axis; scale: uniform, axes"` - applies when one of those holds.
     when_any: Option<String>,
-    /// `"bands: true"` — applies when that one holds. For a controller that is
+    /// `"bands: true"` - applies when that one holds. For a controller that is
     /// no union (a flag): a union's case says it by the union's own tag.
     when: Option<String>,
 }
@@ -224,7 +224,7 @@ fn param_attrs(attrs: &[Attribute]) -> syn::Result<ParamAttrs> {
                 "advanced" => out.advanced = true,
                 "ordered" => out.ordered = true,
                 "flatten" => out.flatten = true,
-                // May be left out — and then takes its default: what
+                // May be left out - and then takes its default: what
                 // `Slot::optional(…).suggest(…)` said by hand.
                 "optional" => out.optional = true,
                 "when_any" => out.when_any = Some(meta.value()?.parse::<LitStr>()?.value()),
@@ -248,7 +248,7 @@ fn when_one(text: &str, span: Span) -> syn::Result<Tokens> {
     if text.contains(';') {
         return Err(syn::Error::new(
             span,
-            "`when` is one condition — two or more are `when_any`",
+            "`when` is one condition - two or more are `when_any`",
         ));
     }
     let slot = LitStr::new(slot.trim(), Span::call_site());
@@ -294,7 +294,7 @@ fn when_any(text: &str, span: Span) -> syn::Result<Tokens> {
     if branches.len() < 2 {
         return Err(syn::Error::new(
             span,
-            "`when_any` joins two conditions or more — one is `when`, by a union's case",
+            "`when_any` joins two conditions or more - one is `when`, by a union's case",
         ));
     }
     Ok(quote! { ::energyml_build::operation::Applies::Any(vec![#(#branches),*]) })
@@ -448,7 +448,7 @@ fn params_struct(input: &DeriveInput) -> syn::Result<Tokens> {
             }
         });
         let fallback = match &attrs.default {
-            // The default is the value the reading takes in its absence — the
+            // The default is the value the reading takes in its absence - the
             // same expression as the suggestion, so the two cannot drift.
             Some(default) => quote! { None => Ok(#default), },
             None => quote! {},
@@ -576,7 +576,7 @@ fn params_union(input: &DeriveInput) -> syn::Result<Tokens> {
     let suggest = default
         .as_ref()
         .map(|word| quote! { slot = slot.suggest(::energyml_build::declare::Json::from(#word)); });
-    // The default case is also **the reading of an absent choice** — the rule
+    // The default case is also **the reading of an absent choice** - the rule
     // of a field's default: one expression, two readers.
     let absent = default.as_ref().map(|word| quote! { .or(Some(#word)) });
     let group = group.map(|g| quote! { slot = slot.grouped(#g); });
@@ -612,7 +612,7 @@ fn params_union(input: &DeriveInput) -> syn::Result<Tokens> {
 
 // ---------------------------------------------------------------- Inputs
 
-/// One input slot per field, bound by the framework — see the crate
+/// One input slot per field, bound by the framework - see the crate
 /// documentation.
 #[proc_macro_derive(Inputs, attributes(input))]
 pub fn derive_inputs(input: TokenStream) -> TokenStream {
@@ -671,9 +671,9 @@ fn inputs(input: &DeriveInput) -> syn::Result<Tokens> {
                     "least" => least = Some(meta.value()?.parse()?),
                     "ordered" => ordered = true,
                     // Left empty, every object of the target package of these
-                    // `types` — `Otherwise::Every`, filled by `read::every`.
+                    // `types` - `Otherwise::Every`, filled by `read::every`.
                     "every" => every = true,
-                    // A ramp read as a palette — `Takes::palette`.
+                    // A ramp read as a palette - `Takes::palette`.
                     "palette" => palette = true,
                     _ => return Err(meta.error("unknown `input` attribute")),
                 }

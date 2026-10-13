@@ -2,7 +2,7 @@
 //! **declared** (several styles are offered: fixed colour, texture, dashes…, and the front end
 //! must adapt dynamically to the styles proposed).
 //!
-//! The house rule — the operations' slots, the providers' filters — *what the
+//! The house rule - the operations' slots, the providers' filters - *what the
 //! library declares **is** the front end's form*: [`declared`] lists each style, its
 //! parameters and their kinds, and the front end builds a select and one control per
 //! parameter from it, spelling no style and no parameter. A style added here
@@ -29,7 +29,7 @@ pub struct StyleDecl {
     pub label: String,
     /// Its parameters, in the order the form shows them.
     pub params: Vec<ParamDecl>,
-    /// The style a front end offers a **new** view — hatched
+    /// The style a front end offers a **new** view - hatched
     /// texture for the portions without strata. The library's own default
     /// stays the first of the list (what a drawing has without asking: the CLI,
     /// the versioned drawings); this is the face's suggestion, said here so that
@@ -191,7 +191,7 @@ pub fn declared() -> Vec<StyleDecl> {
 }
 
 impl StyleDecl {
-    /// The style this declaration gives with every parameter at its default — the
+    /// The style this declaration gives with every parameter at its default - the
     /// JSON the front end starts a choice from, read back through `serde`.
     pub fn default_style(&self) -> Result<UnstratifiedStyle, serde_json::Error> {
         let mut object = serde_json::Map::new();

@@ -1,4 +1,4 @@
-//! The data of the section view — what goes in, what one package gives, what
+//! The data of the section view - what goes in, what one package gives, what
 //! the calculation answers, and how it is looked at.
 //!
 //! ADR-0015: **this file is the contract
@@ -19,7 +19,7 @@ pub const FORMAT: u32 = 1;
 // Identity
 
 /// A horizontal coordinate system: an EPSG code and the unit its coordinates
-/// are written in — `energyml_domain::reproject::System`, serialisable.
+/// are written in - `energyml_domain::reproject::System`, serialisable.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct System {
@@ -33,7 +33,7 @@ pub struct System {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ObjectId {
-    /// The package it is in — the front end's store id (`s1`, `s2`, …).
+    /// The package it is in - the front end's store id (`s1`, `s2`, …).
     pub store: String,
     /// Its uri in that package.
     pub uri: String,
@@ -46,7 +46,7 @@ pub struct ObjectId {
 }
 
 impl ObjectId {
-    /// The key of an object across stores: store and uri joined by a NUL — one
+    /// The key of an object across stores: store and uri joined by a NUL - one
     /// spelling, so a key read off the SVG (`data-key`) is a key any consumer
     /// of this model can build from the same two parts.
     pub fn key(&self) -> String {
@@ -60,14 +60,14 @@ pub fn object_key(store: &str, uri: &str) -> String {
 }
 
 // ---------------------------------------------------------------------------
-// Inputs — what, if it changes, makes a new catalogue
+// Inputs - what, if it changes, makes a new catalogue
 
 /// What the calculation is made of. Two catalogues built from equal inputs are
 /// the same catalogue: this is the cache key, and the SVG's metadata.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Inputs {
-    /// The leading trace, `[x, y]` in the scene's system — where it was pointed.
+    /// The leading trace, `[x, y]` in the scene's system - where it was pointed.
     pub trace: Vec<[f64; 2]>,
     /// That system; `None` for a scene with none (every object then has to be
     /// in its own frame, and an object that names a system is refused).
@@ -80,7 +80,7 @@ pub struct Inputs {
     pub crosses: Crosses,
     /// The objects asked for, package by package.
     pub objects: Vec<Asked>,
-    /// The scene's time scale — metres of the vertical axis per unit of time —
+    /// The scene's time scale - metres of the vertical axis per unit of time -
     /// when an object in time is asked for. `None`: an object in
     /// time is refused by name.
     pub time_factor: Option<f64>,
@@ -92,12 +92,12 @@ pub struct Inputs {
 pub struct Asked {
     /// The package.
     pub store: String,
-    /// Its revision when asked — part of the cache key: an edit makes a new
+    /// Its revision when asked - part of the cache key: an edit makes a new
     /// contribution from this package, and only from it.
     pub revision: u64,
     /// Wellbore trajectories and frames, by uri.
     pub wells: Vec<String>,
-    /// Anything with triangles — surfaces, and IJK grids (their envelope), by uri.
+    /// Anything with triangles - surfaces, and IJK grids (their envelope), by uri.
     pub surfaces: Vec<String>,
 }
 
@@ -170,7 +170,7 @@ pub enum SectionKey {
     },
 }
 
-/// A section's trace in plan, as `crosses::traces` computes it from the inputs —
+/// A section's trace in plan, as `crosses::traces` computes it from the inputs -
 /// what `read` cuts along and `assemble` projects on.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -190,7 +190,7 @@ pub struct SectionTrace {
 }
 
 // ---------------------------------------------------------------------------
-// What one package gives — `read`'s answer, before any projection
+// What one package gives - `read`'s answer, before any projection
 
 /// What one package gives the calculation (`read::contribution`). Pure data in
 /// the scene's system: `assemble` needs no source to project it.
@@ -205,14 +205,14 @@ pub struct Contribution {
     pub surfaces: Vec<SurfaceRead>,
     /// What was asked and could not be read, with the reason.
     pub refused: Vec<Refused>,
-    /// What was read but not all of it kept — a well's nodes or intervals that
+    /// What was read but not all of it kept - a well's nodes or intervals that
     /// are not numbers (`read::finite`). The object is drawn, so this is not a
     /// refusal; `assemble` passes these on to the catalogue's notes.
     #[serde(default)]
     pub notes: Vec<Note>,
 }
 
-/// An object refused, and why — in English, naming what was refused.
+/// An object refused, and why - in English, naming what was refused.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Refused {
@@ -240,11 +240,11 @@ pub struct WellRead {
     pub object: ObjectId,
     /// Frame or trajectory.
     pub kind: WellKind,
-    /// The wellbore it describes — what makes a frame and its trajectory one
+    /// The wellbore it describes - what makes a frame and its trajectory one
     /// line: the uuid of the wellbore feature, or of the trajectory a
     /// frame hangs on when no feature is reachable. `None`: it stands alone.
     pub wellbore: Option<String>,
-    /// The head, `[x, y, z]` — the datum, never the first node.
+    /// The head, `[x, y, z]` - the datum, never the first node.
     pub head: [f64; 3],
     /// The nodes drawn, `[x, y, z]`.
     pub path: Vec<[f64; 3]>,
@@ -255,11 +255,11 @@ pub struct WellRead {
     /// Why there are no intervals, when there are none and some were wanted.
     pub strata: Option<String>,
     /// The intervals are **borrowed** from other frames of the wellbore, looked
-    /// up at this one's MDs — not stated by this object. What makes the frame
+    /// up at this one's MDs - not stated by this object. What makes the frame
     /// that states them keep the line (`assemble`).
     #[serde(default)]
     pub borrowed: bool,
-    /// Told by its head alone — **not read**: no node, no interval. A well far
+    /// Told by its head alone - **not read**: no node, no interval. A well far
     /// from every section (`read::contribution_bounded`); `assemble` never folds
     /// it into a wellbore's line (nothing to rank it by) and refuses it on its
     /// own row, from its head.
@@ -275,13 +275,13 @@ pub struct Interval {
     pub from: f64,
     /// Where it ends, MD.
     pub to: f64,
-    /// Its colour, `#rrggbb` or `#rrggbbaa`, resolved by the package's cascade —
+    /// Its colour, `#rrggbb` or `#rrggbbaa`, resolved by the package's cascade -
     /// `None` when the package gives none (drawn in the well's colour, never
     /// left transparent).
     pub colour: Option<String>,
     /// The unit's title.
     pub unit: String,
-    /// The unit's **full uri** (uuid and version, as the package holds it) —
+    /// The unit's **full uri** (uuid and version, as the package holds it) -
     /// what lets a view say the colour of the unit after the catalogue was made
     /// ([`View::unit_colours`]). `None` when the unit cannot be named without a
     /// guess (two units of one title and colour in the frame, or one the package
@@ -290,7 +290,7 @@ pub struct Interval {
     pub unit_uri: Option<String>,
 }
 
-/// What a surface is, as its interpretation says — never its title.
+/// What a surface is, as its interpretation says - never its title.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum TraceRole {
@@ -312,14 +312,14 @@ pub struct SurfaceRead {
     pub role: TraceRole,
     /// Read in time and carried onto the depth axis by `time_factor`.
     pub time: bool,
-    /// The colour the package gives it — its `GraphicalInformationSet`, by the
-    /// library's cascade (representation, interpretation, feature) — or `None`
+    /// The colour the package gives it - its `GraphicalInformationSet`, by the
+    /// library's cascade (representation, interpretation, feature) - or `None`
     /// when it gives none. A colour of the **file**, never of the scene.
     #[serde(default)]
     pub colour: Option<String>,
     /// Its age, `[old, young]` in millions of years before present, when its
     /// interpretation states one as numbers (`read::surfaces::age_of`); `None`
-    /// when the file does not — an age is never inferred.
+    /// when the file does not - an age is never inferred.
     #[serde(default)]
     pub age: Option<[f64; 2]>,
     /// The uuid of the feature its interpretation interprets (lowercase), when
@@ -341,10 +341,10 @@ pub struct SurfaceCut {
     pub section: SectionKey,
     /// What is drawn.
     pub shape: CutShape,
-    /// What the cut could not say — a folded span dropped, and why.
+    /// What the cut could not say - a folded span dropped, and why.
     pub notes: Vec<String>,
     /// Where each point of a `Trace` cut comes from on the surface, parallel
-    /// to `spans` (one list per span, one source per point) — what lets a
+    /// to `spans` (one list per span, one source per point) - what lets a
     /// colour given **per node** of the surface (`View::paints`) be laid along
     /// the cut. Empty for an envelope, and when the reader cannot say: the cut
     /// is then drawn in the object's flat colour, as before.
@@ -353,7 +353,7 @@ pub struct SurfaceCut {
 }
 
 /// A point of a cut, as a place on an edge of the surface: `node a + t·(node b
-/// − node a)`, the nodes numbered **as the representation numbers them** — the
+/// − node a)`, the nodes numbered **as the representation numbers them** - the
 /// running count of its patches' nodes, holes included, which is what a
 /// per-node colour buffer of the representation indexes (`colour_buffer`). The
 /// reader drops non-finite nodes before it cuts; `read::surfaces` translates
@@ -395,7 +395,7 @@ pub enum CutShape {
 }
 
 // ---------------------------------------------------------------------------
-// The catalogue — `assemble`'s answer
+// The catalogue - `assemble`'s answer
 
 /// What the calculation answers: everything that is drawn, in data.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -529,7 +529,7 @@ pub struct TraceItem {
     #[serde(default)]
     pub feature: Option<String>,
     /// Where each point of each span comes from on the surface
-    /// ([`SurfaceCut::sources`]), parallel to `spans` — what a paint of the
+    /// ([`SurfaceCut::sources`]), parallel to `spans` - what a paint of the
     /// front end (`View::paints`) is laid along. Empty when the reader cannot say.
     #[serde(default)]
     pub sources: Vec<Vec<CutSource>>,
@@ -557,7 +557,7 @@ pub struct EnvelopeItem {
 }
 
 /// The view from above, in local coordinates: the first point of the trace is
-/// `(0, 0)` — no six-figure coordinates in the SVG.
+/// `(0, 0)` - no six-figure coordinates in the SVG.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Plan {
@@ -581,7 +581,7 @@ pub struct PlanWell {
     pub object: ObjectId,
     /// Its head, local `[x, y]`.
     pub head: [f64; 2],
-    /// Where it was projected, on which section, with its foot (local) — empty
+    /// Where it was projected, on which section, with its foot (local) - empty
     /// for a well projected nowhere.
     pub feet: Vec<(SectionKey, [f64; 2])>,
     /// Why it was projected nowhere, when it was not (beyond an end, too far…).
@@ -599,7 +599,7 @@ pub struct ObjectRow {
     /// What became of it.
     pub outcome: Outcome,
     /// Whether the front end may offer a fill up or down from this object: a
-    /// surface that is a horizon or anything but a fault — triangulated or a 2D
+    /// surface that is a horizon or anything but a fault - triangulated or a 2D
     /// grid alike. Never a fault (a sub-vertical surface bounds no unit), an
     /// IJK grid (its envelope has its own fills) or a well. Decided here, once;
     /// the front end only reads it.
@@ -633,7 +633,7 @@ pub enum Outcome {
         /// The line it went into.
         into: ObjectId,
     },
-    /// Read, but it crosses no section — not a refusal.
+    /// Read, but it crosses no section - not a refusal.
     Missed,
     /// Refused, and why.
     Refused {
@@ -659,9 +659,9 @@ pub struct Note {
 }
 
 // ---------------------------------------------------------------------------
-// The view — how a catalogue is looked at
+// The view - how a catalogue is looked at
 
-/// What to draw and how — nothing here makes a new catalogue.
+/// What to draw and how - nothing here makes a new catalogue.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct View {
@@ -669,7 +669,7 @@ pub struct View {
     pub target: Target,
     /// The window drawn; `None`: everything, with a margin.
     pub window: Option<Window>,
-    /// A portion of the trace: `[s start, s end]`, a truncation — the
+    /// A portion of the trace: `[s start, s end]`, a truncation - the
     /// abscissas keep their origin at the trace's first point.
     pub portion: Option<[f64; 2]>,
     /// The drawing's size in pixels.
@@ -678,14 +678,14 @@ pub struct View {
     pub background: String,
     /// Objects hidden in this drawing, by key.
     pub hidden: Vec<String>,
-    /// Colours the scene gives objects, by key — the front end's colour stack,
+    /// Colours the scene gives objects, by key - the front end's colour stack,
     /// resolved by the front end (never a second resolution here).
     pub colours: Vec<(String, String)>,
     /// The colour of each stratigraphic unit **now**, by the key of its well's
     /// package and the unit's full uri ([`object_key`] of `store` and
     /// [`Interval::unit_uri`]), resolved by the library's colour walks. Read
     /// before the colour baked into an interval, by the wells **and** by the
-    /// strata legend, so that the two cannot disagree — and a colour edited
+    /// strata legend, so that the two cannot disagree - and a colour edited
     /// after the catalogue was made shows without making a new one. Empty: the
     /// baked colours, as drawings always were (and then **not written** into
     /// the metadata).
@@ -707,7 +707,7 @@ pub struct View {
     pub show: Show,
     /// What the horizontal axis says.
     pub axis: AxisMode,
-    /// Objects put forward on purpose — exported.
+    /// Objects put forward on purpose - exported.
     pub highlight: Vec<String>,
     /// How objects are named on the drawing: their whole title, or a short code
     /// (`H0`, `W3`, `F1`…) and a legend beside it.
@@ -715,12 +715,12 @@ pub struct View {
     pub labels: LabelMode,
     /// What the front end's scene paints along an object, by key: one colour per
     /// node, resolved by the front end from what its 3D view already holds (a
-    /// property, the strata) — never a second resolution here (the resolver is supplied by the front end). An object without
+    /// property, the strata) - never a second resolution here (the resolver is supplied by the front end). An object without
     /// one is drawn as before: that is the default resolver.
     #[serde(default)]
     pub paints: Vec<(String, Paint)>,
-    /// Marks along a painted well — at every node, or where its colour
-    /// changes — the 3D view's joints.
+    /// Marks along a painted well - at every node, or where its colour
+    /// changes - the 3D view's joints.
     #[serde(default)]
     pub joints: Joint,
     /// Write, into the SVG, the script that lets it zoom itself when opened
@@ -743,7 +743,7 @@ pub struct View {
     pub strata_ticks: bool,
     /// Under strata colouring, draw the portions of a well that carry no strata
     /// information (below the last interval, between two) in the well's own
-    /// colour — as drawings always did. Off: a well is drawn only where a unit
+    /// colour - as drawings always did. Off: a well is drawn only where a unit
     /// is known (its head and label stay), and a note counts the wells that lost
     /// portions. On by default, and then **not written** into
     /// the metadata, so earlier drawings keep their bytes.
@@ -762,15 +762,15 @@ pub struct View {
     #[serde(default, skip_serializing_if = "UnstratifiedStyle::is_default")]
     pub unstratified: UnstratifiedStyle,
     /// What each package is called, by the front end's store id (`s1` → the file's
-    /// name): the strata legend writes it beside a unit shown more than once —
+    /// name): the strata legend writes it beside a unit shown more than once -
     /// the same unit, two colours, because two packages do not agree on it
     /// (the legend says which package the entries sharing a name come from). A store with no name
     /// here is named by its id. Empty, and then **not written** into the
     /// metadata, so earlier drawings keep their bytes.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub store_names: Vec<(String, String)>,
-    /// Named markers on a set of objects — a symbol or a contour at the head,
-    /// the bottom or a depth of each — listed in a legend of their own
+    /// Named markers on a set of objects - a symbol or a contour at the head,
+    /// the bottom or a depth of each - listed in a legend of their own
     /// (ADR-0015). Empty,
     /// and then **not written** into the metadata, so earlier drawings keep
     /// their bytes.
@@ -865,7 +865,7 @@ impl Default for UnstratifiedStyle {
 }
 
 impl UnstratifiedStyle {
-    /// Whether this is the default — what is not written.
+    /// Whether this is the default - what is not written.
     pub fn is_default(&self) -> bool {
         *self == Self::default()
     }
@@ -903,7 +903,7 @@ impl UnstratifiedStyle {
     }
 }
 
-/// The ranges the style parameters are held to — **the same numbers**
+/// The ranges the style parameters are held to - **the same numbers**
 /// [`crate::style::declared`] gives the front end as `min` and `max`.
 pub mod style_limits {
     /// A dash or a gap, pixels.
@@ -931,7 +931,7 @@ fn zoom_on() -> bool {
 #[serde(rename_all = "camelCase")]
 pub struct Paint {
     /// `#rrggbbaa`, one per node of the object in the order the module reads
-    /// its nodes (`colourBuffer`) — alpha 0: no value there, a gap, never a
+    /// its nodes (`colourBuffer`) - alpha 0: no value there, a gap, never a
     /// colour.
     pub nodes: Vec<String>,
     /// How the colour runs from one node to the next.
@@ -939,7 +939,7 @@ pub struct Paint {
     pub blend: Blend,
 }
 
-/// How a paint is read between two nodes — a front end's `Blend`.
+/// How a paint is read between two nodes - a front end's `Blend`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Blend {
@@ -950,7 +950,7 @@ pub enum Blend {
     Smooth,
 }
 
-/// Where a well is marked — a front end's `JointKind`.
+/// Where a well is marked - a front end's `JointKind`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum JointKind {
@@ -964,7 +964,7 @@ pub enum JointKind {
 }
 
 /// A mark along a painted well: a stretch of `px` pixels centred on the node,
-/// in `colour` at `alpha` — alpha 0 is a gap.
+/// in `colour` at `alpha` - alpha 0 is a gap.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Joint {
@@ -999,8 +999,8 @@ pub enum LabelMode {
     /// The title, in full (cut with "…" past a width).
     #[default]
     Full,
-    /// A letter and a number — `W` wells, `H` horizons, `F` faults, `S` other
-    /// surfaces, `G` grids — numbered in an order the whole catalogue shares, so
+    /// A letter and a number - `W` wells, `H` horizons, `F` faults, `S` other
+    /// surfaces, `G` grids - numbered in an order the whole catalogue shares, so
     /// an object has the same code on every section and on the plan; the titles
     /// are in a legend beside the drawing.
     Codes,
@@ -1008,7 +1008,7 @@ pub enum LabelMode {
 
 impl View {
     /// The style the unstratified portions are drawn in: `hidden` when the
-    /// legacy `draw_unstratified` is off, whatever `unstratified` says — the one
+    /// legacy `draw_unstratified` is off, whatever `unstratified` says - the one
     /// place the two are read together.
     pub fn unstratified_style(&self) -> UnstratifiedStyle {
         if self.draw_unstratified {
@@ -1130,7 +1130,7 @@ pub struct Show {
     /// Each surface's name, at the end of its trace.
     #[serde(default = "shown")]
     pub surface_names: bool,
-    /// What the drawing says about itself under its plot — refused objects,
+    /// What the drawing says about itself under its plot - refused objects,
     /// wells set aside, labels folded. Off where another drawing beside it
     /// says the same (the front end's plan band, above its section).
     #[serde(default = "shown")]

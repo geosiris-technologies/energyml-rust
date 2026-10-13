@@ -21,7 +21,7 @@ pub fn step(range: f64, target: f64) -> f64 {
     nice * magnitude
 }
 
-/// The tick values in `[min, max]`, multiples of the step — computed as
+/// The tick values in `[min, max]`, multiples of the step - computed as
 /// `k × step`, never accumulated, so a long axis does not drift.
 pub fn values(min: f64, max: f64, target: f64) -> (f64, Vec<f64>) {
     let range = max - min;

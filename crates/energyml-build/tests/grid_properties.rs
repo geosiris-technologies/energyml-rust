@@ -1,4 +1,4 @@
-//! `grid-properties` — a pressure or a temperature by a sourced law of each
+//! `grid-properties` - a pressure or a temperature by a sourced law of each
 //! cell's own vertical depth below the ground, or a porosity, a net-to-gross
 //! ratio or a permeability uniform within each K layer, laid on the cells of
 //! an `IjkGridRepresentation` (step 8 of the reference model:
@@ -18,7 +18,7 @@
 //! # What would have to break to make it turn red
 //!
 //! Dividing by the wrong count to find the K layer of a cell (`i +
-//! ni·(j + nj·k)` — breaking it into `cell_index % per_layer` turns the layers
+//! ni·(j + nj·k)` - breaking it into `cell_index % per_layer` turns the layers
 //! test red); ignoring `Topology::position_of` and indexing a cell
 //! directly by its RESQML number (turns the hole test red, which counts
 //! on cell 5; tried and put back); accepting an empty source; accepting a
@@ -47,12 +47,12 @@ fn crs() -> Ref {
     Ref::new(
         FRAME,
         "eml23.LocalEngineeringCompoundCrs",
-        "test frame — elevation",
+        "test frame - elevation",
     )
 }
 
 /// A 2 × 2 × 2 IJK grid of flat, vertical-pillar boxes, 100 m square cells,
-/// elevation top to bottom 1000, 950, 900 m — drawn as the reader draws it
+/// elevation top to bottom 1000, 950, 900 m - drawn as the reader draws it
 /// (`Topology::position_of`, `index` the RESQML numbers of the cells kept
 /// when one is undefined). Cell `(i, j, k)` is number `i + 2·(j + 2·k)`, so
 /// cell 5 is `(1, 0, 1)`.
@@ -223,10 +223,10 @@ fn temperature_choices() -> Choices {
 
 /// **The core of the operation**: the law is read at each cell's own depth
 /// below the ground, in the RESQML order, and a cell with no defined geometry
-/// is `NaN` — never invented, never skipped.
+/// is `NaN` - never invented, never skipped.
 #[test]
 fn a_temperature_follows_the_cells_own_depth_and_a_cell_with_no_geometry_is_nan() {
-    // Cell 5 — (i=1, j=0, k=1) — has no defined geometry.
+    // Cell 5 - (i=1, j=0, k=1) - has no defined geometry.
     let plan = planned(&bag(Some(5), true), &temperature_choices()).unwrap_or_else(|why| panic!("{why}"));
     assert_eq!(plan.objects.len(), 1, "one property for the grid");
     let property = &plan.objects[0];
@@ -284,7 +284,7 @@ fn a_hydrostatic_pressure_follows_the_same_depth() {
     assert_eq!(property.json["PropertyKind"]["Title"], json!("pressure"));
     let values = values_of(&plan, &property.uuid);
     // The water table is exactly at the ground: 75 m and 125 m of water,
-    // fresh water and standard gravity — about 1 bar per 10 m.
+    // fresh water and standard gravity - about 1 bar per 10 m.
     assert!(close(values[0], 75.0 * 1000.0 * 9.80665 / 1e5), "{}", values[0]);
     assert!(close(values[4], 125.0 * 1000.0 * 9.80665 / 1e5), "{}", values[4]);
 }
@@ -299,7 +299,7 @@ fn a_depth_law_without_a_ground_is_refused_by_name() {
 // -- porosity, net-to-gross: one value per K layer, geometry or not --------------
 
 /// **The other half of the operation**: a K-layer value does not read the
-/// geometry at all — even the cell with no defined geometry gets its layer's
+/// geometry at all - even the cell with no defined geometry gets its layer's
 /// value.
 #[test]
 fn a_porosity_is_the_same_on_every_cell_of_its_k_layer_defined_geometry_or_not() {
@@ -373,7 +373,7 @@ fn a_permeability_is_written_as_three_scalar_properties_one_per_direction() {
         .set("uom", "mD")
         .set("source", "synthetic: test");
     let plan = planned(&bag(None, false), &choices).unwrap_or_else(|why| panic!("{why}"));
-    assert_eq!(plan.objects.len(), 3, "kx, ky, kz — three scalar properties");
+    assert_eq!(plan.objects.len(), 3, "kx, ky, kz - three scalar properties");
     for object in &plan.objects {
         assert_eq!(
             object.json["PropertyKind"]["Title"],

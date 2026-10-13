@@ -18,7 +18,7 @@
 //!
 //! | [`Shape`] | What comes out |
 //! |---|---|
-//! | [`Shape::Auto`] | the richest form this topology supports — the default |
+//! | [`Shape::Auto`] | the richest form this topology supports - the default |
 //! | [`Shape::Points`] | the nodes, and nothing joining them |
 //! | [`Shape::Lines`] | polylines |
 //! | [`Shape::Surface`] | triangles and quadrilaterals |
@@ -49,13 +49,13 @@
 //! boundaries** rather than inventions:
 //!
 //! - **Cells → Lines** gives the wireframe: the edges of the cells, each
-//!   stored once, as [`Topology::Segments`] — the indexed-segment topology
+//!   stored once, as [`Topology::Segments`] - the indexed-segment topology
 //!   this module's earlier refusal said would make it work with no change
 //!   here. The edges are the *cells'* edges, never the triangulation's: a
 //!   quad contributes four, not the diagonal its drawing splits it by, because
 //!   the diagonal is an artefact of rendering and not a line the file
 //!   describes. A volume goes through its boundary first, so its wireframe is
-//!   the outside's edges — the same rule as its surface. Decided in favour of
+//!   the outside's edges - the same rule as its surface. Decided in favour of
 //!   a wireframe over a named refusal: the precedent is the skin below, and an edge of a
 //!   cell is data-derived exactly the way a boundary face is.
 //!
@@ -68,8 +68,8 @@
 //!   always four corners; [`Shape::Volume`] still keeps them whole, and VTK
 //!   writes those natively.
 //!
-//! A refusal names both ends — *"a PolylineSet cannot be exported as a
-//! surface"* — because the caller who asked for it wrote a rule, and a rule
+//! A refusal names both ends - *"a PolylineSet cannot be exported as a
+//! surface"* - because the caller who asked for it wrote a rule, and a rule
 //! that silently does nothing is worse than one that fails.
 
 use std::collections::HashMap;
@@ -97,7 +97,7 @@ pub enum Shape {
     Volume,
     /// One polygon: the convex hull of every node, whatever the topology was.
     ///
-    /// A **summary**, not a rendering — the first of the two shapes here whose
+    /// A **summary**, not a rendering - the first of the two shapes here whose
     /// output is not the object. It answers "where is this", which is what a
     /// discovery index wants and what OSDU's `SpatialArea` asks for: *"a polygon
     /// boundary that reflects the locale of the content"*. (OSDU).
@@ -105,7 +105,7 @@ pub enum Shape {
     /// Convex and not concave, deliberately: an alpha-shape follows a horizon's
     /// bays and holes far better, and it needs a parameter whose wrong value
     /// silently cuts the outline into pieces. A hull has no parameter and no
-    /// wrong answer — it is simply the smallest convex thing containing the
+    /// wrong answer - it is simply the smallest convex thing containing the
     /// data.
     Outline,
     /// One point: the mean of the nodes.
@@ -113,7 +113,7 @@ pub enum Shape {
     /// The other summary, and OSDU's `SpatialPoint`: *"a centroid point that
     /// reflects the locale of the content"*.
     ///
-    /// The mean of the **nodes**, which is not the centroid of the area — a
+    /// The mean of the **nodes**, which is not the centroid of the area - a
     /// densely sampled corner pulls it. Saying so rather than implying a
     /// precision this does not have; for "where is this on a map", at the scale
     /// these are used, the difference is invisible.
@@ -150,8 +150,8 @@ impl Shape {
     /// Whether this shape summarises the object instead of drawing it.
     ///
     /// The two are different in a way a caller has to know about: a summary
-    /// **replaces the points**, so nothing that hangs on nodes or cells — a
-    /// property, a colour ramp — comes through it. Four points that say where a
+    /// **replaces the points**, so nothing that hangs on nodes or cells - a
+    /// property, a colour ramp - comes through it. Four points that say where a
     /// horizon is cannot carry a value per node of the horizon.
     pub fn is_summary(&self) -> bool {
         matches!(self, Shape::Outline | Shape::Centroid)
@@ -159,7 +159,7 @@ impl Shape {
 
     /// Parse a name, case-insensitively.
     ///
-    /// The plural and singular both work — someone writing `--as Grid=polygon`
+    /// The plural and singular both work - someone writing `--as Grid=polygon`
     /// means the same thing as `surface`, and refusing them over an `s` teaches
     /// nothing.
     pub fn parse(text: &str) -> Option<Shape> {
@@ -200,7 +200,7 @@ impl Topology {
     ///
     /// The one place that question is answered, so the fast path and the
     /// conversion cannot disagree. [`Topology::Grid`] is the exception worth
-    /// naming: its natural shape is a surface, but it is not one *yet* — its
+    /// naming: its natural shape is a surface, but it is not one *yet* - its
     /// cells have to be derived from the lattice indexing first.
     pub fn is_already(&self, shape: Shape) -> bool {
         // A summary is never what an object already is: it replaces the points.
@@ -230,7 +230,7 @@ impl Geometry {
     /// Whether every patch can be drawn in this shape.
     ///
     /// Asked *before* an export starts, so a caller can report or skip rather
-    /// than find a half-written file — the same reason
+    /// than find a half-written file - the same reason
     /// `Exporter::handles` exists.
     pub fn can_be(&self, shape: Shape) -> bool {
         self.patches
@@ -240,8 +240,8 @@ impl Geometry {
 
     /// This geometry in the shape asked for, or a refusal naming both ends.
     ///
-    /// The points are untouched — every conversion here is arithmetic on
-    /// indices — so a node's position, and anything indexed on nodes, survives
+    /// The points are untouched - every conversion here is arithmetic on
+    /// indices - so a node's position, and anything indexed on nodes, survives
     /// unchanged. What changes is only what joins them.
     pub fn as_shape(&self, shape: Shape) -> Result<Geometry> {
         // A summary is about the **object**, not a patch of it: the hull of a
@@ -278,9 +278,9 @@ impl Geometry {
     /// **those two do not share a point list**.
     ///
     /// They diverge for exactly one reason, and it is a rule this crate applies
-    /// on purpose: a node of a *volume* that no cell names is not a location —
+    /// on purpose: a node of a *volume* that no cell names is not a location -
     /// `CellGeometryIsDefined` marks cells undefined while their coordinates
-    /// stay perfectly finite in the file — so [`Geometry::drawable`] turns those
+    /// stay perfectly finite in the file - so [`Geometry::drawable`] turns those
     /// orphans into holes and drops them. Reshaping to segments first destroys
     /// the volume topology, nothing is an orphan of a segment list, and every
     /// node survives. On `h+g_PaleoGTM.epc` that is 37 772 points against the
@@ -288,7 +288,7 @@ impl Geometry {
     /// vertices that were not there**.
     ///
     /// Out-of-range indices are not an error a viewer reports; WebGL reads
-    /// whatever the buffer holds, so the edges land somewhere — near the origin,
+    /// whatever the buffer holds, so the edges land somewhere - near the origin,
     /// as it happened. A wrong picture with no message is this workspace's
     /// least favourite kind of failure.
     ///
@@ -296,7 +296,7 @@ impl Geometry {
     ///
     /// So that the same nodes are dropped, in the same order, by the same
     /// compaction. The survivors of a reshaped geometry are then exactly the
-    /// survivors of the original, and an index means the same thing in both —
+    /// survivors of the original, and an index means the same thing in both -
     /// which is the property a caller drawing one buffer with two index lists
     /// needs, and the one it cannot check for itself.
     pub fn wireframe(&self) -> Result<Vec<[u32; 2]>> {
@@ -338,7 +338,7 @@ impl Geometry {
             _ => {
                 let ring = hull(&nodes);
                 let indices: Vec<u32> = (0..ring.len() as u32).collect();
-                // Fewer than three points cannot bound an area — a straight
+                // Fewer than three points cannot bound an area - a straight
                 // line of nodes, or two of them. The nodes themselves are the
                 // honest answer, and a caller who asked for an area gets told
                 // by the geometry type rather than by a degenerate polygon.
@@ -368,7 +368,7 @@ impl Geometry {
 ///
 /// Andrew's monotone chain: sort, then sweep the lower and upper boundaries,
 /// dropping any point that does not turn left. `O(n log n)`, dominated by the
-/// sort, and exact in the sense that matters — every input point is inside or
+/// sort, and exact in the sense that matters - every input point is inside or
 /// on the result, and no smaller convex polygon is.
 ///
 /// Z is carried through from the point that contributed each corner rather than
@@ -412,7 +412,7 @@ fn hull(points: &[Point]) -> Vec<Point> {
 /// The edges of a set of cells, each stored **once**.
 ///
 /// Undirected: the shared edge of two neighbouring cells is one line, not two
-/// drawn on top of each other — the same de-duplication reasoning as a
+/// drawn on top of each other - the same de-duplication reasoning as a
 /// volume's boundary, one dimension down. The pair is normalised low-first for
 /// the lookup and kept in first-seen order in the output, so the result is
 /// stable for a stable input.
@@ -448,7 +448,7 @@ pub(crate) fn reshape(topology: &Topology, points: &[Point], shape: Shape) -> Re
         Shape::Points => Ok(Topology::Points),
 
         // Only from polylines, and the reason is a limit worth stating rather
-        // than working around — until `Topology::Segments` existed. The edges
+        // than working around - until `Topology::Segments` existed. The edges
         // are the **cells'**, never the triangulation's: a quad contributes
         // four, not the diagonal its drawing splits it by. A volume goes
         // through its boundary first, so its wireframe is the outside's edges,
@@ -495,7 +495,7 @@ pub(crate) fn reshape(topology: &Topology, points: &[Point], shape: Shape) -> Re
             // are quadrilaterals and its sharing has to be rediscovered by
             // hashing corner sets; an unstructured cell's faces are rings of
             // any length and the file already says which cells meet at which
-            // face — so the boundary is counted, not reconstructed, and the
+            // face - so the boundary is counted, not reconstructed, and the
             // result is `Polygons` because a face is not always four corners.
             Topology::Polyhedra(cells) => Ok(Topology::Polygons(cells.boundary())),
             _ => Err(refuse(topology, "a surface")),
@@ -522,8 +522,8 @@ fn refuse(topology: &Topology, wanted: &'static str) -> Error {
 
 /// The cells of a 2D grid, four corners each, wound the right way round.
 ///
-/// The corner indices come from the rule RESQML writes for a `Grid2dPatch` —
-/// *"Index = FastestIndex + FastestAxisCount × SlowestIndex"* — so nothing here
+/// The corner indices come from the rule RESQML writes for a `Grid2dPatch` -
+/// *"Index = FastestIndex + FastestAxisCount × SlowestIndex"* - so nothing here
 /// is a convention this crate chose. The **winding** is not stated anywhere, so
 /// it is not assumed either: the signed area is measured and the ring reversed
 /// when it comes out negative, which is what RFC 7946 asks of a GeoJSON
@@ -552,10 +552,10 @@ fn grid_cells(fastest: usize, slowest: usize, points: &[Point]) -> Vec<[u32; 4]>
 
 /// A ring whose signed area in the XY plane is positive.
 ///
-/// Measured rather than assumed — the same move `ijk::oriented` makes for a
+/// Measured rather than assumed - the same move `ijk::oriented` makes for a
 /// hexahedron, and for the same reason: the flags that would decide it a priori
-/// interact, and each combination is a chance to be wrong. A degenerate ring —
-/// zero area, a collapsed cell — is left as it came, because there is no
+/// interact, and each combination is a chance to be wrong. A degenerate ring -
+/// zero area, a collapsed cell - is left as it came, because there is no
 /// orientation to find and reversing it would only be noise.
 fn wound(ring: [u32; 4], points: &[Point]) -> [u32; 4] {
     let mut area = 0.0;
@@ -573,7 +573,7 @@ fn wound(ring: [u32; 4], points: &[Point]) -> [u32; 4] {
 
 /// The outside of a hexahedral grid: the faces used by exactly one cell.
 ///
-/// Every face of every cell would draw the interior ones twice, back to back —
+/// Every face of every cell would draw the interior ones twice, back to back -
 /// which renders as z-fighting and multiplies a big grid's file size for
 /// nothing anyone can see. A face shared by two cells is interior *by
 /// definition*, so the boundary is the faces that appear once, and that is a

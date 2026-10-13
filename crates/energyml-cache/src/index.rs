@@ -40,7 +40,7 @@ pub struct IndexSlot {
     /// See [`IndexSlot::set_partial`].
     partial: Cell<bool>,
     /// What the index's updates have disturbed since each consumer last asked
-    /// ([`IndexSlot::take_disturbed`]) — what a cache of derived answers must
+    /// ([`IndexSlot::take_disturbed`]) - what a cache of derived answers must
     /// drop, see `PackageIndex::update_with`. **One account per consumer**: the
     /// colour walks and the attachment listings each keep answers derived from
     /// the same links, and the one that asked first must not eat what the other
@@ -59,7 +59,7 @@ pub enum Consumer {
 }
 
 /// An account that nobody reads grows with every edit; past this many uuids it
-/// is told to throw everything away instead — too wide costs a re-walk, never
+/// is told to throw everything away instead - too wide costs a re-walk, never
 /// a stale answer.
 const DISTURBED_CAP: usize = 50_000;
 
@@ -69,7 +69,7 @@ pub struct Disturbed {
     /// The index was built (or rebuilt) from scratch: nothing derived from the
     /// previous one is known to hold.
     pub everything: bool,
-    /// Lowercase uuids whose derived answers may have changed — the objects that
+    /// Lowercase uuids whose derived answers may have changed - the objects that
     /// changed and the ones that gained or lost a reference from them.
     pub uuids: Vec<String>,
 }
@@ -86,8 +86,8 @@ impl IndexSlot {
     /// what was fetched and nothing else.
     ///
     /// The index is then marked incomplete (`PackageIndex::is_complete` is
-    /// `false`: the index of a connection is never `complete`)
-    /// — it answers for **what was taken**, and a caller that needs more asks
+    /// `false`: the index of a connection is never `complete`) -
+    /// it answers for **what was taken**, and a caller that needs more asks
     /// the server. It does not change what is indexed: the store's inventory is
     /// what it is. Sticky: it describes the store, so a rebuild keeps it, until
     /// `set_partial(false)` is said.
@@ -132,7 +132,7 @@ impl IndexSlot {
             .map(PackageIndex::is_complete)
     }
 
-    /// What the updates of the index disturbed since this consumer last asked —
+    /// What the updates of the index disturbed since this consumer last asked -
     /// and forget it. A cache of answers derived from the links asks this
     /// **inside** [`IndexSlot::with`], once the index is exact for the store, and
     /// drops what it names (`color_walks::ColourCache::disturb`,
@@ -157,7 +157,7 @@ impl IndexSlot {
         }
     }
 
-    /// Run `f` on an index that is exact for `store` — **the invalidation rule
+    /// Run `f` on an index that is exact for `store` - **the invalidation rule
     /// of ADR-0010**.
     ///
     /// No index: build one, in one call. A pass started by
@@ -181,7 +181,7 @@ impl IndexSlot {
         }
     }
 
-    /// Advance the pass by `n` objects, and say how far it is — the
+    /// Advance the pass by `n` objects, and say how far it is - the
     /// worker loops, yielding between two slices, so a `mesh` or a click is
     /// answered in the middle of a long pass.
     ///

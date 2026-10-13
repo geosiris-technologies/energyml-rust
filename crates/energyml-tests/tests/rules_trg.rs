@@ -89,7 +89,7 @@ fn the_trg_set_applies_to_the_corpus_and_stays_decidable() {
             .collect();
         assert!(
             unverifiable.is_empty(),
-            "{package}: {} check(s) could not be decided — a path in our own rules is wrong: {:?}",
+            "{package}: {} check(s) could not be decided - a path in our own rules is wrong: {:?}",
             unverifiable.len(),
             &unverifiable[..unverifiable.len().min(3)]
         );
@@ -97,7 +97,7 @@ fn the_trg_set_applies_to_the_corpus_and_stays_decidable() {
         // What the rules say about the files is **displayed**, not pinned.
         for finding in &findings {
             if let Outcome::Violation { read } = &finding.outcome {
-                eprintln!("{package}: {} on {} — {read}", finding.rule, finding.uuid);
+                eprintln!("{package}: {} on {} - {read}", finding.rule, finding.uuid);
             }
         }
         for rule in &rules {
@@ -160,7 +160,7 @@ fn a_misspelled_path_would_be_caught_the_negative_control() {
         findings
             .iter()
             .any(|finding| matches!(finding.outcome, Outcome::Unverifiable { .. })),
-        "a misspelled path went unnoticed — the decidability assertion above proves nothing"
+        "a misspelled path went unnoticed - the decidability assertion above proves nothing"
     );
 }
 

@@ -1,6 +1,6 @@
 //! Every integration test of `energyml-rules`, in **one** binary (ADR-0016: one
 //! crate, one test binary): `autotests = false`, one
-//! `[[test]]`. A new test file is a new `mod` line below — Cargo no longer
+//! `[[test]]`. A new test file is a new `mod` line below - Cargo no longer
 //! finds it alone.
 //!
 //! Run them: `cargo test --workspace --test house`.

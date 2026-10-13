@@ -1,22 +1,22 @@
-//! 2D Delaunay for the `triangulate` operation — the heavy computation
+//! 2D Delaunay for the `triangulate` operation - the heavy computation
 //! done in Rust because this is where a test reaches it and because `spade` has **exact** predicates: a
 //! triangulation on floating-point predicates yields, over nearly collinear
-//! points — a set of boreholes always is — triangles that overlap without any
+//! points - a set of boreholes always is - triangles that overlap without any
 //! simple assertion seeing it.
 //!
 //! The surface is 2.5D: the triangulation runs on (x, y) and each point's z is
-//! kept as it stands — that is the definition of a surface with one value per
+//! kept as it stands - that is the definition of a surface with one value per
 //! position, a horizon's. Two points at the same (x, y) are **one** vertex for
 //! the triangulation; the triangles returned index the first of the two, and
-//! the duplicate is simply unused — refusing it would rule out real point
+//! the duplicate is simply unused - refusing it would rule out real point
 //! clouds, which have them.
 //!
 //! # Two entry points, one algorithm
 //!
 //! [`triangulate_xy`] is the plain Delaunay: the triangles index the caller's
 //! own buffer, and no point is added. [`triangulate_xy_constrained`] takes
-//! fault traces as **constraint edges** — the constrained Delaunay of `spade`
-//! — so that no triangle straddles a fault: the trace becomes a chain of
+//! fault traces as **constraint edges** - the constrained Delaunay of `spade` -
+//! so that no triangle straddles a fault: the trace becomes a chain of
 //! triangle edges, and the two blocks are triangulated on each side of it.
 //! That adds points (the trace's own, and one at every place two traces
 //! cross), so it hands back the **whole** point list rather than indices into
@@ -24,10 +24,10 @@
 //!
 //! What a constraint is not: a barrier. The triangles on the two sides share
 //! the trace's vertices, so the surface stays one sheet, folded along the
-//! fault rather than cut — and the z of a trace vertex is the trace's own,
+//! fault rather than cut - and the z of a trace vertex is the trace's own,
 //! which is why a fault handed to this function must carry one.
 //!
-//! TODO(reference): verify — Delaunay triangulation is delegated to the `spade` crate; cite the underlying references (as documented by that crate) once checked.
+//! TODO(reference): verify - Delaunay triangulation is delegated to the `spade` crate; cite the underlying references (as documented by that crate) once checked.
 
 use spade::handles::FixedVertexHandle;
 use spade::{
@@ -35,11 +35,11 @@ use spade::{
     Triangulation,
 };
 
-/// **Where an insertion starts looking** — a hierarchy of coarser
+/// **Where an insertion starts looking** - a hierarchy of coarser
 /// triangulations, so that locating a point costs `log n`.
 ///
 /// `spade`'s default starts from the last vertex inserted and walks: cheap for
-/// points that arrive in order, `√n` per point for a cloud that does not — and
+/// points that arrive in order, `√n` per point for a cloud that does not - and
 /// clouds do not. The speed report measured an exponent of 1.84 and a million
 /// points in 106 s. The order of
 /// insertion is unchanged, and so is the triangulation: only the search that
@@ -51,7 +51,7 @@ type Hint = HierarchyHintGenerator<f64>;
 ///
 /// Refusals are named, never empty results: fewer than three points, a
 /// non-finite coordinate (with its position), and the case that most resembles
-/// a success — points all collinear, whose triangulation is empty. "A
+/// a success - points all collinear, whose triangulation is empty. "A
 /// successful evaluation that yields nothing is a bug, not a result."
 pub fn triangulate_xy(points: &[f64]) -> Result<Vec<u32>, String> {
     let count = check_triples(points)?;
@@ -78,7 +78,7 @@ pub fn triangulate_xy(points: &[f64]) -> Result<Vec<u32>, String> {
         }
     }
     if triangles.is_empty() {
-        return Err(format!("the {count} points are collinear — no triangle exists"));
+        return Err(format!("the {count} points are collinear - no triangle exists"));
     }
     Ok(triangles)
 }
@@ -92,7 +92,7 @@ pub struct Triangulated {
     pub points: Vec<[f64; 3]>,
     /// Index triples into `points`, wound anticlockwise in the plane.
     pub triangles: Vec<u32>,
-    /// How many of `points` were not in the cloud — trace vertices and
+    /// How many of `points` were not in the cloud - trace vertices and
     /// crossings. Said, because a surface with more nodes than its samples
     /// is a surface somebody has to be told about.
     pub added: usize,
@@ -160,7 +160,7 @@ pub fn triangulate_xy_constrained(points: &[f64], faults: &[Vec<[f64; 3]>]) -> R
     let cloud = cdt.num_vertices();
 
     // The traces, one constraint per piece. A trace vertex that lands on an
-    // existing (x, y) is that vertex — its z is the cloud's, not the trace's,
+    // existing (x, y) is that vertex - its z is the cloud's, not the trace's,
     // because the cloud was there first and a fault does not move a sample.
     // Looked up rather than inserted: `insert` on a taken position **replaces**
     // the vertex's data, which is exactly the overwrite this guards against.
@@ -184,7 +184,7 @@ pub fn triangulate_xy_constrained(points: &[f64], faults: &[Vec<[f64; 3]>]) -> R
             }
             let (a, b) = (ends[0], ends[1]);
             // Where two traces cross, the new vertex's z is read along the
-            // trace being inserted — the only line it is known to lie on.
+            // trace being inserted - the only line it is known to lie on.
             let made = cdt.add_constraint_and_split(from, to, |at| {
                 let dx = b[0] - a[0];
                 let dy = b[1] - a[1];
@@ -214,7 +214,7 @@ pub fn triangulate_xy_constrained(points: &[f64], faults: &[Vec<[f64; 3]>]) -> R
         }
     }
     if triangles.is_empty() {
-        return Err(format!("the {count} points are collinear — no triangle exists"));
+        return Err(format!("the {count} points are collinear - no triangle exists"));
     }
     let added = out.len() - cloud;
     Ok(Triangulated {
@@ -234,7 +234,7 @@ fn check_triples(points: &[f64]) -> Result<usize, String> {
     let count = points.len() / 3;
     if count < 3 {
         return Err(format!(
-            "{count} point(s) — at least three are needed for a triangle"
+            "{count} point(s) - at least three are needed for a triangle"
         ));
     }
     Ok(count)
@@ -251,7 +251,7 @@ mod tests {
         ]
     }
 
-    /// Whether some triangle edge crosses the open segment `a`–`b`.
+    /// Whether some triangle edge crosses the open segment `a`-`b`.
     fn an_edge_crosses(made: &Triangulated, a: [f64; 2], b: [f64; 2]) -> bool {
         let orient = |p: [f64; 2], q: [f64; 2], r: [f64; 2]| {
             (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
@@ -263,7 +263,7 @@ mod tests {
             let o4 = orient(p, q, b);
             o1 * o2 < 0.0 && o3 * o4 < 0.0
         };
-        made.triangles.chunks_exact(3).any(|t| {
+        made.triangles.as_chunks::<3>().0.iter().any(|t| {
             let p = |i: u32| {
                 let v = made.points[i as usize];
                 [v[0], v[1]]
@@ -301,11 +301,16 @@ mod tests {
                 .any(|p| p[0] == 3.0 && p[1] == -1.0 && p[2] == 0.0)
         );
         assert!(made.constraints >= 1);
-        // And the plain triangulation, on the same cloud, does cross it —
+        // And the plain triangulation, on the same cloud, does cross it -
         // otherwise this test would prove nothing.
         let plain = triangulate_xy(&square()).unwrap();
         let plain_made = Triangulated {
-            points: square().chunks_exact(3).map(|p| [p[0], p[1], p[2]]).collect(),
+            points: square()
+                .as_chunks::<3>()
+                .0
+                .iter()
+                .map(|p| [p[0], p[1], p[2]])
+                .collect(),
             triangles: plain,
             added: 0,
             duplicates: 0,

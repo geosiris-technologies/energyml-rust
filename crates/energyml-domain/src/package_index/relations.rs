@@ -13,17 +13,17 @@
 //!
 //! | table | filled by | read by |
 //! |---|---|---|
-//! | **parents** — the three FIRP fields of a node | every node | `Walker::parents_of`, the models' parents |
-//! | **associations** — the collections an association set names, with the §8.3 repeat decided, and the members of each | a `CollectionsToDataobjectsAssociationSet` | `Walker::associations_of` |
-//! | **held** — the other direction: the memberships of an object | the same | `Walker::links_of` |
-//! | **projects** — the collections whose `Kind` is `project` | a `DataobjectCollection` (its `Kind` field, no second read) | `Walker::is_project` |
-//! | **modelled** — who is referenced by a `Model` or an `EarthModelInterpretation` | those two types | `Walker::model_candidates` |
-//! | **decorated** — who an entry of a `GraphicalInformationSet` targets, and what kind of entry | a `GraphicalInformationSet` | *who carries a graphical information*, [`PackageIndex::graphical_entries_of`] |
-//! | **attached** — which `Attachment` objects name an object (`ObjectReference`) | an `eml23.Attachment` | `attachments::attachments_of` |
+//! | **parents** - the three FIRP fields of a node | every node | `Walker::parents_of`, the models' parents |
+//! | **associations** - the collections an association set names, with the §8.3 repeat decided, and the members of each | a `CollectionsToDataobjectsAssociationSet` | `Walker::associations_of` |
+//! | **held** - the other direction: the memberships of an object | the same | `Walker::links_of` |
+//! | **projects** - the collections whose `Kind` is `project` | a `DataobjectCollection` (its `Kind` field, no second read) | `Walker::is_project` |
+//! | **modelled** - who is referenced by a `Model` or an `EarthModelInterpretation` | those two types | `Walker::model_candidates` |
+//! | **decorated** - who an entry of a `GraphicalInformationSet` targets, and what kind of entry | a `GraphicalInformationSet` | *who carries a graphical information*, [`PackageIndex::graphical_entries_of`] |
+//! | **attached** - which `Attachment` objects name an object (`ObjectReference`) | an `eml23.Attachment` | `attachments::attachments_of` |
 //!
 //! **Edges and tables, never resolutions.** Nothing here walks: a table is a
 //! row per reference that already existed, so the build costs one pass over the
-//! edges it took anyway — no object is read for it, and the only two things
+//! edges it took anyway - no object is read for it, and the only two things
 //! taken from an object are a `Kind` and the type names of the entries of a
 //! graphical set. A resolution (a walk, a colour, a listing) is still computed on
 //! demand and kept by its own cache, and **dropped by the same disturbance** the
@@ -55,7 +55,7 @@ pub(super) struct Facts {
 struct Row {
     index: u64,
     collection: NodeId,
-    /// Decided when the row was laid: common TRG 2.3 §8.3 — the same collection
+    /// Decided when the row was laid: common TRG 2.3 §8.3 - the same collection
     /// named by an earlier association of the same set.
     repeated_of: Option<u64>,
     /// `(position in the association, member)`.
@@ -164,7 +164,7 @@ impl Relations {
                 _ => {}
             }
         }
-        // By association, then by the collection's uuid as it is written — the
+        // By association, then by the collection's uuid as it is written - the
         // order `Walker::associations_of` always gave.
         collections.sort_by(|a, b| (a.0, &nodes[a.1 as usize].uuid).cmp(&(b.0, &nodes[b.1 as usize].uuid)));
         let mut first: HashMap<String, u64> = HashMap::new();
@@ -289,7 +289,7 @@ impl Relations {
 pub struct Membership<'a> {
     /// Uuid of the `CollectionsToDataobjectsAssociationSet`, as written.
     pub holder: &'a str,
-    /// Its uri — the identity the walks key by.
+    /// Its uri - the identity the walks key by.
     pub holder_uri: &'a str,
     /// `i` of `SingleCollectionAssociation[i]`.
     pub association: u64,
@@ -304,10 +304,10 @@ pub struct AssociationRow<'a> {
     pub index: u64,
     /// Uuid of the collection, as written.
     pub collection: &'a str,
-    /// Its uri — the identity the walks key by.
+    /// Its uri - the identity the walks key by.
     pub collection_uri: &'a str,
     /// Common TRG 2.3 §8.3: the same collection named by an earlier association
-    /// of the set — the index of that one.
+    /// of the set - the index of that one.
     pub repeated_of: Option<u64>,
 }
 
@@ -317,7 +317,7 @@ pub struct AssociationRow<'a> {
 pub struct ModelRef<'a> {
     /// Its uuid, as written.
     pub uuid: &'a str,
-    /// Its uri — the identity the walks key by.
+    /// Its uri - the identity the walks key by.
     pub uri: &'a str,
     /// `Model` or `EarthModelInterpretation`.
     pub type_key: &'a str,
@@ -337,7 +337,7 @@ pub struct GraphicalRow<'a> {
 }
 
 impl GraphicalRow<'_> {
-    /// Whether the entry is a `DefaultGraphicalInformation` — the one the
+    /// Whether the entry is a `DefaultGraphicalInformation` - the one the
     /// inheritance of a colour reads.
     pub fn is_default(&self) -> bool {
         self.kind.contains("DefaultGraphicalInformation")
@@ -345,7 +345,7 @@ impl GraphicalRow<'_> {
 }
 
 impl PackageIndex {
-    /// The node an address names — [`PackageIndex::find`]: a uri, or a bare
+    /// The node an address names - [`PackageIndex::find`]: a uri, or a bare
     /// uuid at the entry.
     fn lay(&self, address: &str) -> Option<NodeId> {
         self.find(address)
@@ -355,7 +355,7 @@ impl PackageIndex {
         self.work.rows.fetch_add(rows as u64, Ordering::Relaxed);
     }
 
-    /// The parents of an object — the three fields `RepresentedObject`,
+    /// The parents of an object - the three fields `RepresentedObject`,
     /// `RepresentedInterpretation`, `InterpretedFeature`, as `(rank of the field
     /// in that list, the parent's node)`, in that order. The node carries the
     /// parent's uri, which is what the walks go on by.
@@ -398,7 +398,7 @@ impl PackageIndex {
             .collect()
     }
 
-    /// The objects an association of a set lists, in order — the **members** of
+    /// The objects an association of a set lists, in order - the **members** of
     /// the collection that association names. The way *from* a collection *to*
     /// what it holds (`memberships_of` is the way back).
     pub fn members_of_association(&self, holder: &str, association: u64) -> Vec<&IndexNode> {
@@ -419,7 +419,7 @@ impl PackageIndex {
     }
 
     /// The associations (set, index) that name this object as their
-    /// **collection** — the sets that hold it.
+    /// **collection** - the sets that hold it.
     pub fn collection_named_by(&self, collection: &str) -> Vec<(&IndexNode, u64)> {
         let Some(wanted) = self.lay(collection) else {
             return Vec::new();
@@ -460,7 +460,7 @@ impl PackageIndex {
             .collect()
     }
 
-    /// Whether this object is a `DataobjectCollection` of `Kind` `project` — the
+    /// Whether this object is a `DataobjectCollection` of `Kind` `project` - the
     /// model's own collection, which the walk does not follow.
     pub fn is_project(&self, uuid: &str) -> bool {
         self.lay(uuid)
@@ -494,7 +494,7 @@ impl PackageIndex {
     }
 
     /// The `GraphicalInformationSet`s of the package, in node order (inventory
-    /// order for a build) — **what a caller reading them all asks the index**
+    /// order for a build) - **what a caller reading them all asks the index**
     /// instead of scanning the store's listing.
     pub fn graphical_sets(&self) -> Vec<&IndexNode> {
         self.relations
@@ -516,7 +516,7 @@ impl PackageIndex {
             .collect()
     }
 
-    /// The entries of a `GraphicalInformationSet` that **target** this object —
+    /// The entries of a `GraphicalInformationSet` that **target** this object -
     /// who carries a graphical information, and what kind. Empty: nothing in the
     /// package decorates it.
     pub fn graphical_entries_of(&self, uuid: &str) -> Vec<GraphicalRow<'_>> {

@@ -14,9 +14,9 @@
 //! - can it say who references whom? (`edges`)
 //! - can it draw the graph? (`graph`)
 //!
-//! And the one that matters for ETP: a store that answers `edges` **natively**
-//! — as `GetResources` with `includeEdges` does, from the server's index,
-//! without a single object crossing the wire — must get the same graph without
+//! And the one that matters for ETP: a store that answers `edges` **natively** -
+//! as `GetResources` with `includeEdges` does, from the server's index,
+//! without a single object crossing the wire - must get the same graph without
 //! the trait falling back to deserializing everything. `Indexed` below refuses
 //! to hand over objects at all, which is the only way to prove it.
 
@@ -78,7 +78,7 @@ uuid=\"{INTERP}\" schemaVersion=\"2.2\">\
         uuid: uuid.to_string(),
         qualified_type: ty.to_string(),
         content_type: format!("application/x-resqml+xml;version=2.2;type={name}"),
-        // Not a part name: this store has no parts. Which is the point — the
+        // Not a part name: this store has no parts. Which is the point - the
         // locator is opaque above this crate, and nothing may build on it.
         locator: format!("in-memory:{uuid}"),
     };
@@ -100,7 +100,7 @@ uuid=\"{INTERP}\" schemaVersion=\"2.2\">\
 
 /// A store made of two XML strings and a registry.
 ///
-/// No zip, no `.rels`, no `[Content_Types].xml`, no HDF5 — the closest thing to
+/// No zip, no `.rels`, no `[Content_Types].xml`, no HDF5 - the closest thing to
 /// an ETP client this workspace can build before the client exists.
 struct InMemory {
     registry: Arc<Registry>,
@@ -217,8 +217,8 @@ impl EnergymlStorage for InMemory {
     }
 }
 
-/// The same store, except that it answers `edges` from an index — the way ETP
-/// does — and **refuses** to deserialize anything.
+/// The same store, except that it answers `edges` from an index - the way ETP
+/// does - and **refuses** to deserialize anything.
 ///
 /// The refusal is the assertion: if the provided `graph` ever falls back to
 /// reading objects, this store returns an empty graph and the test fails.
@@ -421,7 +421,7 @@ fn a_graph_may_be_asked_for_a_selection() {
 /// [`energyml_storage::graph::assemble`] joins an inventory to edges obtained
 /// some other way. The trait's `graph` uses the second over the first, so if
 /// the two ever drifted a store answering `edges` natively would silently draw
-/// a different picture from one that does not — the exact failure mode this
+/// a different picture from one that does not - the exact failure mode this
 /// whole seam exists to rule out. Checked against every EPC of the corpus
 /// rather than a fixture, because the ways a real package differs from a
 /// fixture are the ways the two could disagree.
@@ -498,7 +498,7 @@ fn on_a_real_package_the_two_builders_agree() {
             );
         }
         eprintln!(
-            "{}: {} node(s), {} edge(s) — both builders agree",
+            "{}: {} node(s), {} edge(s) - both builders agree",
             path.file_name().unwrap().to_string_lossy(),
             through_the_trait.nodes.len(),
             through_the_trait.edges.len()
@@ -511,7 +511,7 @@ fn on_a_real_package_the_two_builders_agree() {
 /// The reference check works from an inventory owned by the caller.
 ///
 /// [`energyml_storage::graph::check_references`] takes a closure returning a
-/// **borrowed** summary, which suits `EpcStore::find_by_uuid` — it borrows from
+/// **borrowed** summary, which suits `EpcStore::find_by_uuid` - it borrows from
 /// the store's own index. A store that hands its inventory over by value, as
 /// `resources` does and as an ETP client has no choice but to do, was the case
 /// nothing had tried. It works, and this is what says so: the caller owns the

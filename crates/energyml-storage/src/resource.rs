@@ -3,9 +3,9 @@
 //! Three levels of materialisation, and a listing needs all three (see
 //! ADR-0002):
 //!
-//! 1. [`ObjectSummary`] — identity only, from the package index. No object XML
+//! 1. [`ObjectSummary`] - identity only, from the package index. No object XML
 //!    is opened at all.
-//! 2. [`ObjectHeader`] — plus the citation. Read by stopping the XML parser as
+//! 2. [`ObjectHeader`] - plus the citation. Read by stopping the XML parser as
 //!    soon as the citation has gone by; the rest of the part is never parsed.
 //! 3. The object itself, through the registry.
 //!
@@ -36,7 +36,7 @@ pub struct ObjectSummary {
     pub uri: String,
     /// UUID, as written.
     pub uuid: String,
-    /// `resqml20.obj_Activity` — the identifier used across versions.
+    /// `resqml20.obj_Activity` - the identifier used across versions.
     pub qualified_type: String,
     /// The full content type, as the package declares it.
     pub content_type: String,
@@ -55,7 +55,7 @@ pub struct ObjectSummary {
 pub struct ObjectHeader {
     /// Level 1.
     pub summary: ObjectSummary,
-    /// `Citation.Title` — the name a user recognises.
+    /// `Citation.Title` - the name a user recognises.
     pub title: Option<String>,
     /// Who or what produced the object.
     pub originator: Option<String>,
@@ -77,7 +77,7 @@ impl ObjectHeader {
         &self.summary.uri
     }
 
-    /// Title, or the uuid when the citation has none — a UI needs *something*
+    /// Title, or the uuid when the citation has none - a UI needs *something*
     /// to show, and an empty row is worse than a technical one.
     pub fn display_name(&self) -> &str {
         match self.title.as_deref() {
@@ -87,7 +87,7 @@ impl ObjectHeader {
     }
 
     /// The title (the uuid when there is none) followed by ` (version N)` when
-    /// the object declares a non-blank `objectVersion` — what a column that
+    /// the object declares a non-blank `objectVersion` - what a column that
     /// already has its own type column shows. The same rule as [`Self::label`].
     pub fn titled(&self) -> String {
         match self
@@ -101,8 +101,8 @@ impl ObjectHeader {
         }
     }
 
-    /// What a view shows of the object: `type — title (version N)`, the
-    /// version only when the object declares a non-blank one —
+    /// What a view shows of the object: `type - title (version N)`, the
+    /// version only when the object declares a non-blank one -
     /// [`energyml_core::identity::ObjectId::label`], the one spelling every
     /// face uses. The qualified type alone when it cannot be parsed.
     pub fn label(&self) -> String {
@@ -114,7 +114,7 @@ impl ObjectHeader {
                 id.object_version = self.object_version.clone();
                 id.label(self.title.as_deref())
             }
-            Err(_) => format!("{} — {}", self.summary.qualified_type, self.display_name()),
+            Err(_) => format!("{} - {}", self.summary.qualified_type, self.display_name()),
         }
     }
 }
@@ -146,7 +146,7 @@ impl Relationship {
         self.kind.rsplit('/').next().unwrap_or(&self.kind)
     }
 
-    /// Whether this relationship points at a file outside the package —
+    /// Whether this relationship points at a file outside the package -
     /// an HDF5 file, typically.
     pub fn is_external_resource(&self) -> bool {
         self.external || self.short_kind() == "externalResource"
@@ -158,7 +158,7 @@ impl Relationship {
 /// **One spelling, because four had grown**: `list`, `show` and `geometry` in
 /// the command line each lowercased their own way, and the Python bridge was
 /// about to make a fourth. The filter is a substring and not a type name on
-/// purpose — `Representation` is the useful question, and nobody wants to type
+/// purpose - `Representation` is the useful question, and nobody wants to type
 /// `resqml22.TriangulatedSetRepresentation` to ask it.
 pub fn type_matches(qualified_type: &str, filter: &str) -> bool {
     qualified_type.to_lowercase().contains(&filter.to_lowercase())
@@ -167,7 +167,7 @@ pub fn type_matches(qualified_type: &str, filter: &str) -> bool {
 /// Whether a citation title contains this filter, ignoring case.
 ///
 /// Beside [`type_matches`] and for the same reason. A title is not in an
-/// [`ObjectSummary`] — reading one costs a header pass — so this takes the
+/// [`ObjectSummary`] - reading one costs a header pass - so this takes the
 /// title the caller already has.
 pub fn title_matches(title: &str, filter: &str) -> bool {
     title.to_lowercase().contains(&filter.to_lowercase())
@@ -201,7 +201,7 @@ mod tests {
         let versioned = header(Some("Top Brent"), Some("2"));
         assert_eq!(
             versioned.label(),
-            "resqml22.BoundaryFeature — Top Brent (version 2)"
+            "resqml22.BoundaryFeature - Top Brent (version 2)"
         );
         assert_eq!(versioned.titled(), "Top Brent (version 2)");
     }
@@ -210,7 +210,7 @@ mod tests {
     fn no_version_a_blank_one_or_no_title_changes_nothing_but_what_is_missing() {
         for none in [None, Some(""), Some("   ")] {
             let plain = header(Some("Top Brent"), none);
-            assert_eq!(plain.label(), "resqml22.BoundaryFeature — Top Brent", "{none:?}");
+            assert_eq!(plain.label(), "resqml22.BoundaryFeature - Top Brent", "{none:?}");
             assert_eq!(plain.titled(), "Top Brent", "{none:?}");
         }
         // No title: the uuid stands in, and the version still shows.

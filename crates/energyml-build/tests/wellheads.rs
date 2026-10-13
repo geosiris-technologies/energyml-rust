@@ -1,4 +1,4 @@
-//! `pointset-from-wellheads` — the DEM of a batch of boreholes.
+//! `pointset-from-wellheads` - the DEM of a batch of boreholes.
 //!
 //! The shape of the assertions comes from the rule that a trajectory starts at the
 //! first stated depth, so the node at MD 0 is the datum; the values are written here.
@@ -20,7 +20,7 @@ fn crs(uuid: &str, title: &str) -> Ref {
 }
 
 /// A borehole of the package: its shape (trajectory nodes) and what is
-/// known of it — including **its collar, which is not its first node**.
+/// known of it - including **its collar, which is not its first node**.
 fn well(bag: Pieces, name: &str, nodes: &[[f64; 3]], head: Option<[f64; 3]>, frame: Ref) -> Pieces {
     let geometry = Geometry {
         kind: "resqml22.WellboreTrajectoryRepresentation",
@@ -92,7 +92,7 @@ fn the_collar_comes_from_the_datum_and_not_from_the_first_node() {
     // **The check that carries the whole operation.** Since 22/09 a
     // trajectory starts at the first stated depth, so its first
     // node is **not** the ground: on a borehole whose log starts at 31.5 m,
-    // reading it there would answer thirty metres too low — and a terrain
+    // reading it there would answer thirty metres too low - and a terrain
     // surface thirty metres too low looks exactly like a terrain surface.
     //
     // The two boreholes below are made for that: their first node is
@@ -128,7 +128,7 @@ fn the_collar_comes_from_the_datum_and_not_from_the_first_node() {
 #[test]
 fn a_wellbore_with_no_datum_is_named_rather_than_left_out() {
     // A mute borehole set aside in silence would make a DEM with holes a DEM that
-    // looks complete — the result that most looks like a success.
+    // looks complete - the result that most looks like a success.
     let bag = well(
         Pieces::empty(),
         "F1",
@@ -202,7 +202,7 @@ fn the_same_wells_write_the_same_pointset_twice() {
 }
 
 /// **The collars are written under a frame where placed is local, and the plan
-/// says so** — or refused by name when the wells' frame states no projected
+/// says so** - or refused by name when the wells' frame states no projected
 /// code. `Known::wellhead` is a *placed* collar (projected x, y, an elevation:
 /// `read::wellhead_of`), so the wells' own compound, whose origin and azimuth a
 /// pure operation does not receive, cannot hold it as it stands.
@@ -278,16 +278,16 @@ fn placed_collars_are_written_under_the_identity_frame_of_the_wells_codes() {
     );
 }
 
-/// **Under a turned frame, the collar is written where the datum is** — A defect of
+/// **Under a turned frame, the collar is written where the datum is** - A defect of
 /// an audit: the collars were written with
 /// the datums' coordinates as they stand, under the wells' `LocalCrs`. Right
 /// under an identity compound, which is every package of the corpus; wrong as
-/// soon as the compound has an origin or an azimuth — the grid frame of
+/// soon as the compound has an origin or an azimuth - the grid frame of
 /// Lutetia is turned 30°.
 ///
 /// The whole way, and two readers: a frame turned by `crs`, a well written in
-/// it by `well-from-polyline`, the package read back by `read::pieces_of_object`
-/// — which places `Known::wellhead` through the compound its datum names — then
+/// it by `well-from-polyline`, the package read back by `read::pieces_of_object` -
+/// which places `Known::wellhead` through the compound its datum names - then
 /// the collar written here, under the identity compound of the same codes,
 /// against the datum read by `energyml_geometry::well`. To break: the collar
 /// written under the turned compound, where its placed numbers would be read
@@ -417,7 +417,7 @@ fn under_a_turned_frame_a_collar_is_written_where_its_datum_is() {
             "axis {axis}: the collar is written at {collar:?}, the datum is at {datum:?}"
         );
     }
-    // And the turned frame did move it — the local collar is (10, 20): the
+    // And the turned frame did move it - the local collar is (10, 20): the
     // agreement would say nothing of that defect if both were the raw numbers.
     assert!(
         (collar[0] - 10.0).abs() > 1_000.0 && (collar[1] - 20.0).abs() > 1_000.0,

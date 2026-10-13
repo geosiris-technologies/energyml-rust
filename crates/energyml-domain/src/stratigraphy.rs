@@ -412,7 +412,7 @@ pub struct Named {
     pub uuid: String,
     /// **The uri** of the object the reference names: the held object's own
     /// identity (its type and the version it declares) when the package holds
-    /// it, the reference's own address otherwise — its uri when it names a type,
+    /// it, the reference's own address otherwise - its uri when it names a type,
     /// the uuid when it names none. What a view opens and keys by: two versions
     /// of one object are two uris with one uuid.
     pub uri: String,
@@ -445,17 +445,17 @@ pub struct ColumnUnit {
     /// the package rather than a diagram beside it.
     pub represented: Vec<Named>,
     /// **Its age span**, `[old, young]` in millions of years before present,
-    /// when the unit states one as numbers — a `GeologicTimeBasedTimeInterval`
+    /// when the unit states one as numbers - a `GeologicTimeBasedTimeInterval`
     /// in its `HasOccurredDuring` (RESQML 2.2 §6.47).
     ///
     /// `None` is the ordinary case: not one package of the corpus dates its
     /// units (24/09), and a 2.0.1 unit bounds its time by two **horizons**,
-    /// which are not numbers. What a view does with it — aligning two ranks by
-    /// the interval that contains another — is only honest where the file said
+    /// which are not numbers. What a view does with it - aligning two ranks by
+    /// the interval that contains another - is only honest where the file said
     /// it, so nothing is derived here.
     pub age: Option<[f64; 2]>,
-    /// **The earth models that hold this unit** — made *for* it (`root`) or
-    /// merely containing it — found by walking the references backwards:
+    /// **The earth models that hold this unit** - made *for* it (`root`) or
+    /// merely containing it - found by walking the references backwards:
     /// unit ← rank ← column ← `EarthModelInterpretation`
     /// Filled in the same
     /// pass as the column, so a view asks nothing per card.
@@ -467,13 +467,13 @@ pub struct ColumnUnit {
 pub struct ModelOf {
     /// The `EarthModelInterpretation`.
     pub emi: Named,
-    /// The `Model` it interprets — empty when its `InterpretedFeature` is.
+    /// The `Model` it interprets - empty when its `InterpretedFeature` is.
     pub model: Named,
     /// **Made for this unit**: the unit is the only one of the coarsest rank of
-    /// the model's column. Otherwise the model only *contains* it — a Paleogene
+    /// the model's column. Otherwise the model only *contains* it - a Paleogene
     /// model contains the Eocene, and the two answer different questions.
     pub root: bool,
-    /// `Citation/Creation`, verbatim — what orders two snapshots of one model.
+    /// `Citation/Creation`, verbatim - what orders two snapshots of one model.
     pub created: String,
     /// What the model carries besides its column.
     pub structure: bool,
@@ -501,8 +501,8 @@ pub struct RankContact {
     pub part_of: Option<Named>,
     /// `ContactRelationship` - 2.0.1 only.
     pub relationship: Option<String>,
-    /// The sides of the contact the file says are **not conformable** — an
-    /// erosion, an onlap — each named by the unit on that side, with the
+    /// The sides of the contact the file says are **not conformable** - an
+    /// erosion, an onlap - each named by the unit on that side, with the
     /// statement that says so. Empty is *nothing stated*, not *conformable*.
     pub unconformable: Vec<Unconformable>,
 }
@@ -511,19 +511,19 @@ pub struct RankContact {
 ///
 /// Named by the **unit** on that side rather than by *above* or *below*: the
 /// direction of a contact is not data (see [`RankContact::joins`]), and a view
-/// that draws the rank in another order than the list — by age — would put
+/// that draws the rank in another order than the list - by age - would put
 /// an *above* on the wrong side.
 ///
 /// Four statements say it, two per release, and none is invented here:
 ///
-/// - the side's own `SecondaryQualifier` — `erosion` in 2.0.1, `unconformable`
+/// - the side's own `SecondaryQualifier` - `erosion` in 2.0.1, `unconformable`
 ///   in 2.2 (the unit so qualified is the one that stops against the other
 ///   without conforming to it);
-/// - the horizon the contact is `PartOf` — `IsConformableAbove` /
+/// - the horizon the contact is `PartOf` - `IsConformableAbove` /
 ///   `IsConformableBelow` set to `false` in 2.2, a `BoundaryRelation` of
 ///   `unconformable above` / `below` / `below and above` in 2.0.1. Those speak
 ///   of *above* and *below* the horizon, which this reader turns into a unit
-///   through the rank's order — and only when the criterion is one that
+///   through the rank's order - and only when the criterion is one that
 ///   descends; otherwise it says nothing.
 ///
 /// `baselap` (2.0.1) is left out: it is an onlap or a downlap, a geometry of
@@ -624,7 +624,7 @@ fn text(object: &dyn Reflect, name: &str) -> Option<String> {
     }
 }
 
-/// The objects of a package, by uuid — and **every version of a uuid** the
+/// The objects of a package, by uuid - and **every version of a uuid** the
 /// package holds, so that a reference finds the one it names
 /// ([`Held::of`]) instead of whichever came last.
 #[derive(Default)]
@@ -653,7 +653,7 @@ impl<'a> Held<'a> {
     }
 
     /// **The object a reference names**: of the objects held under its uuid,
-    /// the one at the version it names (`identity::version_fit`, the one rule —
+    /// the one at the version it names (`identity::version_fit`, the one rule -
     /// the exact version, then one that contradicts nothing). A uuid held once
     /// answers whatever version the reference spells, as the store's lookup
     /// does (*a wrong version is not a wrong object*, the checker reports it);
@@ -701,7 +701,7 @@ fn named(reference: &dyn Reflect, held: &Held<'_>) -> Named {
                 .map(str::to_owned)
                 .unwrap_or(cached),
             kind: target.type_info().type_key.to_owned(),
-            // The identity of the object found — the version it declares — not
+            // The identity of the object found - the version it declares - not
             // what the reference spelt.
             uri: identity::uri_of_reflect(target)
                 .or(address)
@@ -765,7 +765,7 @@ const UNCONFORMABLE_MODES: &[&str] = &["unconformable", "erosion"];
 /// Fill each contact's [`Unconformable`] sides, once the rank's order is known.
 ///
 /// `position` gives each unit's place in the rank, top first; `None` when the
-/// criterion does not say which way the list runs — then *above* and *below*
+/// criterion does not say which way the list runs - then *above* and *below*
 /// a horizon cannot be turned into a unit, and only the sides' own modes are
 /// read.
 fn read_unconformities(
@@ -856,7 +856,7 @@ fn read_unconformities(
 /// age; the reference instant moves it by a few decades, which is below what a
 /// stage boundary is known to. An interval bounded by horizons (the other
 /// `AbstractTimeInterval`) has no number and gives `None`. `Start` is the old
-/// end — an interval runs forwards in time — and the pair comes back ordered
+/// end - an interval runs forwards in time - and the pair comes back ordered
 /// whatever the file wrote, since a reversed interval is a slip of the writer,
 /// not a different age.
 fn age_of(unit: &dyn Reflect) -> Option<[f64; 2]> {
@@ -1068,7 +1068,7 @@ pub fn columns<'a>(objects: impl Iterator<Item = &'a dyn Reflect>) -> Columns {
 /// The earth models of the package, attached to their columns and units.
 ///
 /// One sweep over the `EarthModelInterpretation`s: each names its column, the
-/// column's ranks list units, and every such unit gains the model — `root`
+/// column's ranks list units, and every such unit gains the model - `root`
 /// when it is the sole unit of the coarsest rank. A model whose column is not
 /// in the package attaches to nothing, and says so.
 fn attach_models(out: &mut Columns, all: &[&dyn Reflect], held: &Held<'_>) {
@@ -1126,7 +1126,7 @@ fn attach_models(out: &mut Columns, all: &[&dyn Reflect], held: &Held<'_>) {
             .collect();
         members.sort();
         members.dedup();
-        // Every drawing of these units gets it — in the model's own column and
+        // Every drawing of these units gets it - in the model's own column and
         // in any other column or loose rank that lists the same unit object.
         for column in out.columns.iter_mut() {
             for rank in column.ranks.iter_mut() {
@@ -1174,7 +1174,7 @@ fn attach_models(out: &mut Columns, all: &[&dyn Reflect], held: &Held<'_>) {
 pub struct SubRank {
     /// The rank they come from.
     pub source: Named,
-    /// Its number — kept by a restricted copy.
+    /// Its number - kept by a restricted copy.
     pub number: Option<i64>,
     /// Its ordering criterion, verbatim.
     pub criteria: String,
@@ -1183,7 +1183,7 @@ pub struct SubRank {
     /// **The units are exactly the source rank's**: the rank is taken as it is
     /// rather than copied.
     pub whole: bool,
-    /// The source's contacts whose **two** sides are kept — statements of the
+    /// The source's contacts whose **two** sides are kept - statements of the
     /// file, copied as they are; a contact with one side outside is dropped.
     pub contacts: Vec<RankContact>,
 }
@@ -1195,7 +1195,7 @@ pub struct Subtree {
     pub column: Option<Named>,
     /// The root's rank, then the finer ones, coarsest first.
     pub ranks: Vec<SubRank>,
-    /// What could not be placed, and why — a rank or a unit, never guessed.
+    /// What could not be placed, and why - a rank or a unit, never guessed.
     pub unplaced: Vec<(Named, String)>,
 }
 
@@ -1215,7 +1215,7 @@ const AGE_TOLERANCE_MA: f64 = 1e-6;
 ///    unit is inside when its span is contained in the root's, to a year; a
 ///    unit that **overlaps** a limit is named in `unplaced`, never put on one
 ///    side;
-/// 3. **by shared units** otherwise — the rule the front end's `alignRanks` uses: a
+/// 3. **by shared units** otherwise - the rule the front end's `alignRanks` uses: a
 ///    unit the two ranks share is a marker, and what lies between two markers
 ///    in the finer rank belongs to the root when the root is **alone** between
 ///    the same markers in its own rank;
@@ -1237,7 +1237,7 @@ pub fn subtree(columns: &Columns, root: &str) -> Result<Vec<Subtree>, String> {
     }
     if out.is_empty() {
         return Err(format!(
-            "unit {root} is listed by no rank — nothing says what it contains"
+            "unit {root} is listed by no rank - nothing says what it contains"
         ));
     }
     Ok(out)
@@ -1298,7 +1298,7 @@ fn subtree_in(column: Option<&Named>, ranks: &[ColumnRank], root: &str) -> Optio
                     tree.unplaced.push((
                         unit.unit.clone(),
                         format!(
-                            "{} ({u_old}–{u_young} Ma) overlaps a limit of {} ({old}–{young} Ma) — left out rather than put on one side",
+                            "{} ({u_old}-{u_young} Ma) overlaps a limit of {} ({old}-{young} Ma) - left out rather than put on one side",
                             label(&unit.unit),
                             label(&root_unit.unit)
                         ),
@@ -1342,7 +1342,7 @@ fn between_markers(home: &ColumnRank, finer: &ColumnRank, root: &str) -> Result<
         .map(|offset| here + 1 + offset);
     if above.is_none() && below.is_none() {
         return Err(format!(
-            "rank {} states no age and shares no unit with {} — left out of the model rather than guessed",
+            "rank {} states no age and shares no unit with {} - left out of the model rather than guessed",
             label(&finer.rank),
             label(&home.rank)
         ));
@@ -1354,7 +1354,7 @@ fn between_markers(home: &ColumnRank, finer: &ColumnRank, root: &str) -> Result<
     let to = below.unwrap_or(home.units.len());
     if to - from != 1 {
         return Err(format!(
-            "rank {}: {} is not alone between the units it shares with {} — which of them owns the units between is not stated",
+            "rank {}: {} is not alone between the units it shares with {} - which of them owns the units between is not stated",
             label(&finer.rank),
             label(&home.units[here].unit),
             label(&home.rank)
@@ -1415,7 +1415,7 @@ fn label(named: &Named) -> String {
 const FAULTS: &str = "Faults";
 /// The frontiers of an organisation's volume of interest.
 const FRONTIERS: &[&str] = &["TopFrontier", "BottomFrontier", "Sides"];
-/// The verbs by which a fault **offsets** a surface — and so is younger than
+/// The verbs by which a fault **offsets** a surface - and so is younger than
 /// it. `stops` is not among them: a fault that stops at a horizon may be
 /// sealed by it or rooted in it, and nothing in the contact says which.
 const OFFSETS: &[&str] = &["splits", "crosses"];
@@ -1427,7 +1427,7 @@ pub struct Surface {
     pub surface: Named,
     /// The stratigraphic rank its entry declares.
     pub rank: Option<i64>,
-    /// `IsConformableAbove` / `IsConformableBelow` (2.2) — `None` when the
+    /// `IsConformableAbove` / `IsConformableBelow` (2.2) - `None` when the
     /// file says nothing, which is not *conformable*.
     pub conformable_above: Option<bool>,
     /// See `conformable_above`.
@@ -1441,7 +1441,7 @@ pub struct Surface {
 pub struct Fault {
     /// The fault interpretation.
     pub fault: Named,
-    /// The kinds of throw its `ThrowInterpretation`s state — `normal`,
+    /// The kinds of throw its `ThrowInterpretation`s state - `normal`,
     /// `reverse`, `dextral`, … verbatim, each once.
     pub throws: Vec<String>,
     /// `MaximumThrow`, `MeanDip`, `MeanAzimuth`, as `value uom`.
@@ -1455,7 +1455,7 @@ pub struct Fault {
     /// `IsSealed`.
     pub sealed: Option<bool>,
     /// When it moved, `[old, young]` in Ma, when a throw or the fault states
-    /// it as numbers — the same reading as a unit's age.
+    /// it as numbers - the same reading as a unit's age.
     pub active: Option<[f64; 2]>,
     /// The horizons it **offsets** (`splits`, `crosses`), uuids in the
     /// organisation's order. Cross-cutting: the fault is younger than each.
@@ -1469,13 +1469,13 @@ pub struct Organisation {
     pub organisation: Named,
     /// The ordering criterion, verbatim.
     pub criteria: String,
-    /// The horizons, **top down** when the criterion descends — the list's
+    /// The horizons, **top down** when the criterion descends - the list's
     /// order otherwise, and `descends` says which.
     pub horizons: Vec<Surface>,
     /// Whether the criterion is one the schema defines, all three of which
     /// run from the top down.
     pub descends: bool,
-    /// The faults, in the order the file lists them — an order that means
+    /// The faults, in the order the file lists them - an order that means
     /// nothing for a fault, and is not used as one.
     pub faults: Vec<Fault>,
     /// The frontiers of the volume: top, bottom, sides.
@@ -1521,7 +1521,7 @@ fn flag(object: &dyn Reflect, name: &str) -> Option<bool> {
     }
 }
 
-/// Read a fault interpretation — the object when the package holds it, the
+/// Read a fault interpretation - the object when the package holds it, the
 /// reference alone otherwise.
 fn read_fault(reference: Named, held: &Held<'_>) -> Fault {
     let object = held.get(&reference.uuid).copied();
@@ -1562,7 +1562,7 @@ fn read_organisation(object: &dyn Reflect, held: &Held<'_>) -> Organisation {
     let descends = matches!(criteria.trim(), "age" | "apparent depth" | "measured depth");
     if !descends {
         notes.push(format!(
-            "organisation {} states \"{}\" as its criterion — the direction of its horizons is not asserted",
+            "organisation {} states \"{}\" as its criterion - the direction of its horizons is not asserted",
             organisation.title, criteria
         ));
     }
@@ -1581,7 +1581,7 @@ fn read_organisation(object: &dyn Reflect, held: &Held<'_>) -> Organisation {
             // A `FeatureInterpretationSet` in place of a single surface: said,
             // not guessed at.
             notes.push(format!(
-                "entry {position} of the ordered list is not a single surface — left out"
+                "entry {position} of the ordered list is not a single surface - left out"
             ));
             continue;
         };
@@ -1644,7 +1644,7 @@ fn read_organisation(object: &dyn Reflect, held: &Held<'_>) -> Organisation {
     read_unconformities(&mut contacts, descends.then_some(&position), held);
 
     // Cross-cutting: a fault that splits or crosses a horizon is younger than
-    // it. The fault is looked for on **either** side of the contact — the
+    // it. The fault is looked for on **either** side of the contact - the
     // reference package writes it as the subject, and nothing obliges that.
     for fault in &mut faults {
         let mut offsets: Vec<String> = Vec::new();
@@ -1681,7 +1681,7 @@ fn read_organisation(object: &dyn Reflect, held: &Held<'_>) -> Organisation {
 
 /// Every structural organisation of a package.
 ///
-/// Several are ordinary — two structural scenarios of one model — and none is
+/// Several are ordinary - two structural scenarios of one model - and none is
 /// preferred: the view offers a choice (with several structural
 /// organisations, a selector).
 pub fn structures<'a>(objects: impl Iterator<Item = &'a dyn Reflect>) -> Vec<Organisation> {
@@ -2025,7 +2025,7 @@ mod tests {
     /// are not conformable, each by the unit on that side.
     ///
     /// RESQML 2.0.1: `ContactMode` `erosion` on a side (the unit is truncated),
-    /// and the `BoundaryRelation` of the horizon the contact is `PartOf` —
+    /// and the `BoundaryRelation` of the horizon the contact is `PartOf` -
     /// *"unconformable below"* speaks of what is under the horizon, turned
     /// into a unit by the rank's order.
     #[test]
@@ -2097,7 +2097,7 @@ mod tests {
                 .map(|side| side.unit.as_str())
                 .collect::<Vec<_>>()
         };
-        // "unconformable below" H1: the unit under it, u-b — though the
+        // "unconformable below" H1: the unit under it, u-b - though the
         // contact names u-b as its subject. A side names its unit by full uri.
         assert_eq!(
             sides(0),
@@ -2118,8 +2118,8 @@ mod tests {
 
     /// RESQML 2.0.1: the organisation lists its faults apart, its horizons by
     /// index, and says what cuts what in its contacts. A fault that `splits`
-    /// two horizons is younger than both — cross-cutting, the only relative
-    /// dating the contacts support — and the list comes back in the
+    /// two horizons is younger than both - cross-cutting, the only relative
+    /// dating the contacts support - and the list comes back in the
     /// organisation's order, top first, whatever the document order.
     #[test]
     fn an_organisation_reads_its_horizons_its_faults_and_what_cuts_what() {
@@ -2187,12 +2187,12 @@ mod tests {
         let f = &one.faults[0];
         assert_eq!(f.fault.title, "F1", "the title comes from the object");
         assert_eq!(f.throws, ["normal"]);
-        // In the organisation's order, top first — the contacts listed it last.
+        // In the organisation's order, top first - the contacts listed it last.
         assert_eq!(f.offsets, ["h-top", "h-base"]);
     }
 
     /// RESQML 2.2: the fault is an entry of the **same** ordered list as the
-    /// horizons — first, in the reference package — and must not be read as
+    /// horizons - first, in the reference package - and must not be read as
     /// a horizon above them. And a horizon's `IsConformableBelow = false`
     /// comes through.
     #[test]

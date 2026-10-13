@@ -1,11 +1,11 @@
-//! `media` — a file put in the package and related to the objects it shows,
+//! `media` - a file put in the package and related to the objects it shows,
 //! through the one door: `Registry::plan`, then `apply`, then a recipe.
 //!
 //! The form of the assertions is the packaging conventions'
 //! (Energistics Packaging Conventions v1.0): every
 //! part typed in `[Content_Types].xml` (§2.2.1 p. 9); the object tied to the
 //! file by `destinationMedia`, the file back by `sourceMedia` (§3.4.2
-//! pp. 15–16). The storage half is confronted with the `zip` crate in
+//! pp. 15-16). The storage half is confronted with the `zip` crate in
 //! `energyml-storage/tests/media.rs`; here the package is **saved and
 //! reopened**, and its `.rels` and index are read as the bytes the archive
 //! holds, not through the store's relationship parser.
@@ -300,7 +300,7 @@ impl Reader for Files {
     }
 }
 
-/// Two files, one binary, related to the frame a first step wrote — by the
+/// Two files, one binary, related to the frame a first step wrote - by the
 /// step's name, never by a uuid.
 const RECIPE: &str = r#"
 titre = "Media"

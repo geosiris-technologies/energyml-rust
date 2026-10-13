@@ -60,7 +60,7 @@
         "datum": "NGF-IGN69 (France metropolitaine; overseas territories use other datums)"
       },
       "licence": "Licence Ouverte / Etalab 2.0",
-      "attribution": "IGN — RGE ALTI®",
+      "attribution": "IGN - RGE ALTI®",
       "needsKey": false,
       "note": "Measured: GetMap CRS=EPSG:2154 BBOX=651000,6860000,652000,6861000 WIDTH=HEIGHT=20 answered 200 image/geotiff, little-endian, uncompressed, one strip, float32, GDAL_NODATA -99999. MaxWidth/MaxHeight 5010. The coverage box is the layer's geographic envelope, which includes overseas territories and much sea or foreign land: a box inside it is not a promise of data. EPSG:4326 listed but not measured; WMS 1.3.0 wants lat,lon there. Coverage (01/10/2026): mainland France with Corsica, Guadeloupe, Martinique, Guyane, La Réunion and Mayotte, each as an APPROXIMATE box. The layer's own WMS envelope (-62.95, -24, 58, 51.11) was not used: it is the hull of all of them and holds Spain, which then passed the coverage test and answered nothing but no-data."
     },
@@ -93,7 +93,7 @@
         "datum": "NGF-IGN69"
       },
       "licence": "Licence Ouverte / Etalab 2.0",
-      "attribution": "IGN — LiDAR HD",
+      "attribution": "IGN - LiDAR HD",
       "needsKey": false,
       "note": "Coverage is APPROXIMATE: the box is metropolitan France, but LiDAR HD coverage is partial and still growing, so a box inside it may answer with nodata. Same service and same GeoTIFF form as ign-rge-alti; vertical datum and licence not re-verified for this layer."
     },
@@ -126,7 +126,7 @@
         "datum": "NGF-IGN69"
       },
       "licence": "Licence Ouverte / Etalab 2.0",
-      "attribution": "IGN — RGE ALTI®",
+      "attribution": "IGN - RGE ALTI®",
       "needsKey": false,
       "note": "This is a SURFACE model, not bare earth: it includes buildings and vegetation. Unverified: coverage box, resolution, CRS list and datum are assumed to follow ign-rge-alti and were not measured for this layer."
     },
@@ -158,7 +158,7 @@
       "resolutionM": 0.2,
       "vertical": null,
       "licence": "Licence Ouverte / Etalab 2.0",
-      "attribution": "IGN — BD ORTHO®",
+      "attribution": "IGN - BD ORTHO®",
       "needsKey": false,
       "note": "Unverified: coverage box (metropolitan France only; overseas orthophotos exist under other layers) and the 0.2 m resolution, which is the nominal BD ORTHO value and varies by area. Tile matrix set PM is Web Mercator, EPSG:3857."
     },

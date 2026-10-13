@@ -1,4 +1,4 @@
-//! Terrain and imagery sources — a catalogue, one request builder, one reader.
+//! Terrain and imagery sources - a catalogue, one request builder, one reader.
 //!
 //! The need: show digital terrain model (DTM) data in the 3D canvas, as textured
 //! areas with relief, from public data and APIs whose access rights have been
@@ -7,7 +7,7 @@
 //!
 //! # A protocol is code, a source is data
 //!
-//! What a WMS raster *is* — how to ask it for a window, how to read the answer —
+//! What a WMS raster *is* - how to ask it for a window, how to read the answer -
 //! is written once, here. Which services exist, over which area, at which
 //! resolution, under which licence, is a **catalogue**: a JSON file
 //! (`catalogue/terrain.json`, embedded) that a user can extend or override with
@@ -26,7 +26,7 @@
 //! WMS 1.3.0 gives the BBOX of a geographic CRS in the CRS's own axis order:
 //! EPSG:4326 is **latitude, longitude**. A projected CRS such as EPSG:2154 is
 //! easting, northing. The caller of [`wms_raster_request`] always passes the
-//! window as `[x_min, y_min, x_max, y_max]` — longitude/easting first — and the
+//! window as `[x_min, y_min, x_max, y_max]` - longitude/easting first - and the
 //! builder swaps for the CRS that wants it, so the decision is made in one
 //! place and pinned by a test, never left to each caller.
 //!
@@ -95,7 +95,7 @@ pub enum Protocol {
         tile_matrix_set: String,
         /// The MIME type of a tile.
         format: String,
-        /// The style asked for — WMTS requires one. The IGN Géoplateforme
+        /// The style asked for - WMTS requires one. The IGN Géoplateforme
         /// answers `normal`; left out, the standard's `default`.
         #[serde(default = "default_style")]
         style: String,
@@ -192,7 +192,7 @@ impl TerrainCatalogue {
     ///
     /// Refuses, by name, an unreadable document, a duplicated `id`, an entry
     /// with an empty `id`, and a coverage that is empty or has an impossible
-    /// box — a catalogue that parses must be one `covering` can trust.
+    /// box - a catalogue that parses must be one `covering` can trust.
     pub fn parse(json: &str) -> Result<Self> {
         let catalogue: TerrainCatalogue = serde_json::from_str(json)
             .map_err(|why| Error::Unreadable(format!("terrain catalogue: {why}")))?;
@@ -319,7 +319,7 @@ pub fn lat_lon_first(epsg: u32) -> bool {
 /// The `GetMap` for a WMS raster source.
 ///
 /// `bbox` is `[x_min, y_min, x_max, y_max]` **in the CRS `epsg`, longitude or
-/// easting first** — whatever the CRS wants on the wire, the builder swaps.
+/// easting first** - whatever the CRS wants on the wire, the builder swaps.
 /// Refuses: a protocol that is not a WMS raster (named, *not read yet*); an
 /// EPSG the source does not list; a degenerate or non-finite window; a width or
 /// height of 0 or above [`MAX_PIXELS`].
@@ -528,7 +528,7 @@ impl Ifd<'_> {
 }
 
 /// Read a GeoTIFF: **baseline, little-endian, uncompressed, one band, float32,
-/// strips** — the form the IGN service answers in (measured).
+/// strips** - the form the IGN service answers in (measured).
 ///
 /// Reads `ModelPixelScale` (33550), `ModelTiepoint` (33922) and `GDAL_NODATA`
 /// (42113). Refuses by name, never by guessing: big-endian and BigTIFF files,
@@ -706,8 +706,8 @@ impl Voids {
     }
 }
 
-/// Which pixels of a raster have no height — row-major, first row north, like
-/// [`Raster::values`] — and why.
+/// Which pixels of a raster have no height - row-major, first row north, like
+/// [`Raster::values`] - and why.
 ///
 /// A relief raster has no height under [`LOWEST_LAND_M`], so that is a hole
 /// whatever the file says; what the file declares is a hole too, and a resampled
@@ -797,14 +797,14 @@ pub fn lattice_of(raster: &Raster) -> Result<energyml_build::pieces::Lattice> {
 }
 
 // ---------------------------------------------------------------------------
-// Asking for a terrain window — what a face calls, so that the CLI and the
+// Asking for a terrain window - what a face calls, so that the CLI and the
 // front end decide nothing (ADR-0012: no face carries logic).
 
 /// A terrain window, ready to be asked for: which source, the window snapped to
 /// whole pixels of the step, and the request. Computed, never fetched.
 #[derive(Debug, Clone)]
 pub struct Ask<'a> {
-    /// The source chosen — the one named, or the finest that covers the area.
+    /// The source chosen - the one named, or the finest that covers the area.
     pub source: &'a TerrainSource,
     /// The window actually asked for, `[x_min, y_min, x_max, y_max]` in `epsg`:
     /// the area given, its east and north edges pushed out to whole pixels.
@@ -822,7 +822,7 @@ pub struct Ask<'a> {
 }
 
 impl Ask<'_> {
-    /// The service the source is spoken to at — what the `terrain` operation
+    /// The service the source is spoken to at - what the `terrain` operation
     /// records as `service`.
     pub fn service(&self) -> &str {
         match &self.source.protocol {
@@ -831,7 +831,7 @@ impl Ask<'_> {
         }
     }
 
-    /// The layer asked of it — what the operation records as `layer`; the
+    /// The layer asked of it - what the operation records as `layer`; the
     /// source id when the protocol has no layer.
     pub fn layer(&self) -> &str {
         match &self.source.protocol {
@@ -844,7 +844,7 @@ impl Ask<'_> {
 /// Why no terrain can be made from `source` by this crate today, or `None`.
 ///
 /// The one verdict, used by [`ask`] when it chooses on the caller's behalf and
-/// by a face that greys what cannot be chosen — two copies of *which sources
+/// by a face that greys what cannot be chosen - two copies of *which sources
 /// are read* would disagree the day a protocol gains its reader.
 pub fn unread(source: &TerrainSource) -> Option<String> {
     if source.kind != SourceKind::Relief {
@@ -868,7 +868,7 @@ pub fn unread(source: &TerrainSource) -> Option<String> {
 /// request.
 ///
 /// - `source` names a catalogue entry; left out, **the finest relief source
-///   whose protocol is read** and whose coverage holds `area_wgs84` is taken —
+///   whose protocol is read** and whose coverage holds `area_wgs84` is taken -
 ///   a source this module cannot read yet is never chosen on the caller's
 ///   behalf;
 /// - `area` is `[x_min, y_min, x_max, y_max]` in `epsg`; `area_wgs84` is the
@@ -881,7 +881,7 @@ pub fn unread(source: &TerrainSource) -> Option<String> {
 /// Refused by name: a step that is not a positive number, an unknown source,
 /// a source that needs a key (nothing here sends one),
 /// a source of another kind, a source that does not cover the area, and a
-/// window above [`MAX_PIXELS`] on a side — with the step that would fit.
+/// window above [`MAX_PIXELS`] on a side - with the step that would fit.
 pub fn ask<'a>(
     catalogue: &'a TerrainCatalogue,
     source: Option<&str>,
@@ -978,8 +978,8 @@ pub fn ask<'a>(
 /// Read what a terrain request answered: a GeoTIFF, or the service's own
 /// explanation.
 ///
-/// A WMS that refuses answers **in XML, often with a 200** — a
-/// `ServiceException` — and reading it as a TIFF would say *not a TIFF*, true
+/// A WMS that refuses answers **in XML, often with a 200** - a
+/// `ServiceException` - and reading it as a TIFF would say *not a TIFF*, true
 /// and useless. So anything that is not a TIFF (by its first bytes, not by the
 /// declared type, which a refusal does not always set) is read as text and
 /// handed back as the server's words.
@@ -1010,14 +1010,14 @@ pub fn read_answer(answer: crate::transport::Answer, most: usize) -> Result<Rast
 }
 
 // ---------------------------------------------------------------------------
-// What a face needs besides the request — so that no face reprojects corners
+// What a face needs besides the request - so that no face reprojects corners
 // or spells a tile address (ADR-0012: no face carries logic).
 
 /// An area in WGS 84 degrees, `[west, south, east, north]`: the four corners of
 /// `area` (`[x_min, y_min, x_max, y_max]` in `epsg`) moved by `reproject` and
 /// enveloped, so that a box the projection turns is not cut short.
 ///
-/// The geodesy is the caller's — `energyml-proj` natively and in wasm alike —
+/// The geodesy is the caller's - `energyml-proj` natively and in wasm alike -
 /// because this crate does no geodesy; what is decided here is *which points*
 /// and *which envelope*, once for the CLI and the front end. `reproject` takes and
 /// gives `[x, y, z]`, longitude first for a geographic system.
@@ -1063,7 +1063,7 @@ pub fn area_wgs84(
 ///
 /// Only a WMTS in **`PM`** (Web Mercator, the matrix set every tile map
 /// speaks) is a template: its `TILEMATRIX` is the zoom, `TILEROW` the `y` and
-/// `TILECOL` the `x` — measured on the IGN Géoplateforme.
+/// `TILECOL` the `x` - measured on the IGN Géoplateforme.
 /// Another matrix set would need its own grid, and is
 /// refused by name rather than drawn at the wrong place; another protocol is
 /// not imagery a tile layer can take.
@@ -1098,7 +1098,5 @@ pub fn tile_template(source: &TerrainSource) -> Result<String> {
 /// The whole `N`-item chunks of `items`, as arrays (what `<[T]>::as_chunks` gives);
 /// a trailing remainder is dropped.
 fn fixed_chunks<T, const N: usize>(items: &[T]) -> impl Iterator<Item = &[T; N]> {
-    items
-        .chunks_exact(N)
-        .map(|c| <&[T; N]>::try_from(c).expect("chunks_exact yields N items"))
+    items.as_chunks::<N>().0.iter()
 }

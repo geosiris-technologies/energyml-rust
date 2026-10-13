@@ -3,11 +3,11 @@
 //!
 //! PRODML 2.3 declares an element for `FlowTestActivity` and for none of its
 //! subtypes, though its documentation says *"This object is abstract; you must
-//! choose one of the available types"* (FlowTestActivity.xsd l. 186–190). So an
+//! choose one of the available types"* (FlowTestActivity.xsd l. 186-190). So an
 //! injection test can only be written
-//! `<prodml:FlowTestActivity xsi:type="prodml:InjectionFlowTest">` — the form of
+//! `<prodml:FlowTestActivity xsi:type="prodml:InjectionFlowTest">` - the form of
 //! Energistics' own example (`xml_examples/FlowTest/FlowTestActivity.xml`
-//! l. 2). The part's identity is the concrete type — content type
+//! l. 2). The part's identity is the concrete type - content type
 //! `type=InjectionFlowTest`, qualified type `prodml23.InjectionFlowTest`:
 //! the specifications being silent on it, this is the library's decision.
 
@@ -30,7 +30,7 @@ fn document(xsi_type: &str) -> String {
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <prodml:FlowTestActivity xmlns:prodml="http://www.energistics.org/energyml/data/prodmlv2" xmlns:eml="http://www.energistics.org/energyml/data/commonv2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="{xsi_type}" uuid="{UUID}" schemaVersion="2.3">
   <eml:Citation>
-    <eml:Title>GTH-2 — injection test</eml:Title>
+    <eml:Title>GTH-2 - injection test</eml:Title>
     <eml:Originator>test</eml:Originator>
     <eml:Creation>2026-09-27T00:00:00Z</eml:Creation>
     <eml:Format>test</eml:Format>
@@ -54,7 +54,7 @@ fn registry() -> Arc<Registry> {
 
 #[test]
 fn declared_as_its_element_the_part_is_read_as_what_its_xsi_type_says() {
-    // Read as the empty base, everything the test says would be lost — and an
+    // Read as the empty base, everything the test says would be lost - and an
     // object with every field at its default reads exactly like a right one.
     let object = registry()
         .read_xml(ELEMENT, document("prodml:InjectionFlowTest").as_bytes())
@@ -157,7 +157,7 @@ fn through_a_package_it_keeps_its_identity_and_its_content() {
 /// A root whose `xsi:type` names **its own** complex type is no substitution.
 ///
 /// `h+g_PaleoGTM.epc` roots `<resqml2:LocalDepth3dCrs>` with
-/// `xsi:type="resqml2:obj_LocalDepth3dCrs"` — RESQML 2.0.1's complex type is
+/// `xsi:type="resqml2:obj_LocalDepth3dCrs"` - RESQML 2.0.1's complex type is
 /// `obj_LocalDepth3dCrs`, its element `LocalDepth3dCrs`. Taken for a subtype, the
 /// part was refused and dropped out of the graph.
 #[test]

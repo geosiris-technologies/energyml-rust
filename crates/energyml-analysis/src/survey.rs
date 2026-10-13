@@ -1,11 +1,11 @@
-//! **A survey read back from its stations** — the inclination, the azimuth and
+//! **A survey read back from its stations** - the inclination, the azimuth and
 //! the dogleg of a wellbore at each station, from where the stations are and
 //! their measured depths: the minimum curvature method, inverted. And where
-//! each station is from the datum — its vertical depth and its displacement.
+//! each station is from the datum - its vertical depth and its displacement.
 //!
 //! Written for `witsml-wells` in `energyml-build` (a synthetic model): a WITSML 2.1 `TrajectoryStation`
 //! carries `Incl` and `Azi` (WITSML TRG 2.1 §16.10 p. 356), and the RESQML
-//! trajectories of a package carry positions and measured depths — a linear
+//! trajectories of a package carry positions and measured depths - a linear
 //! spline through the stations `well-from-plan` surveyed, a vertical line, a
 //! line through a borehole's passes. Nothing here reads a package or knows a
 //! frame: the caller turns its frame into north, east and **down**.
@@ -14,7 +14,7 @@
 //!
 //! The minimum curvature method joins two stations by **the circular arc
 //! tangent to both directions** (API Bulletin D20, 1985; the form of Sawaryn &
-//! Thorogood, SPE 84246, 2005 — `well_plan` holds the forward formula). With
+//! Thorogood, SPE 84246, 2005 - `well_plan` holds the forward formula). With
 //! unit directions `t1`, `t2`, the dogleg `β` between them and `ΔMD` of hole,
 //! its chord is
 //!
@@ -22,7 +22,7 @@
 //! Δp = ΔMD / 2 · RF(β) · (t1 + t2),     RF(β) = (2 / β) · tan(β / 2)
 //! ```
 //!
-//! so the chord **bisects** the two directions — it lies along `t1 + t2` — and
+//! so the chord **bisects** the two directions - it lies along `t1 + t2` - and
 //! its length is `ΔMD / 2 · RF(β) · 2 cos(β / 2) = ΔMD · sin(β/2) / (β/2)`. Two
 //! consequences, and they are the whole module:
 //!
@@ -31,8 +31,8 @@
 //!   `t1` and the chord;
 //! - **that is an arc only if its length says so**: `|Δp| = ΔMD · sin(β/2) /
 //!   (β/2)`, which the positions and the depths **check**, interval by
-//!   interval. A kinked line — straight segments meeting at an angle, the way a
-//!   polyline drawn by hand is — fails it at its first corner, by name.
+//!   interval. A kinked line - straight segments meeting at an angle, the way a
+//!   polyline drawn by hand is - fails it at its first corner, by name.
 //!
 //! # Where the first direction comes from
 //!
@@ -48,14 +48,14 @@
 //!
 //! # Conventions
 //!
-//! - **inclination** in degrees from vertical down — 0 down, 90 horizontal;
+//! - **inclination** in degrees from vertical down - 0 down, 90 horizontal;
 //! - **azimuth** in degrees **clockwise from north**, in [0, 360): *« 0.00 and
 //!   360.00 represent North, 90.00 is East, 180.00 is South and 270.00 is
-//!   West »* (WITSML TRG 2.1 §16.10 p. 357, `ClosureDirection` — the same
+//!   West »* (WITSML TRG 2.1 §16.10 p. 357, `ClosureDirection` - the same
 //!   north as `Azi`, the trajectory's `AziRef`). **None where the hole is
 //!   vertical**, which has no azimuth: a zero there would say *north*;
 //! - **dogleg severity** in degrees per 30 m of measured depth
-//!   ([`RATE_LENGTH`]), over the interval that **ends** at the station — none
+//!   ([`RATE_LENGTH`]), over the interval that **ends** at the station - none
 //!   at the first.
 //!
 //! # Refused by name
@@ -64,7 +64,7 @@
 //! do not increase, a chord longer than its hole (no path between two points is
 //! shorter than the straight line), two stations at one place, no straight
 //! interval, and an interval that is not one arc from the direction the hole
-//! has — a turn past 180°, or a chord whose length is not the arc's.
+//! has - a turn past 180°, or a chord whose length is not the arc's.
 
 use std::f64::consts::FRAC_PI_2;
 
@@ -73,8 +73,8 @@ use crate::well_plan::{RATE_LENGTH, dogleg};
 /// How close to its hole a chord must be for the interval to be **straight**,
 /// and how close to the arc's a chord must be for the stations to be **on**
 /// one: a ten-millionth of the hole, plus [`FLOOR`]. A dogleg under about
-/// 0.09° over one interval reads as none; the doglegs of a plan — 2.5° per
-/// 5 m station at 15°/30 m, 0.5° per metre — are far above it.
+/// 0.09° over one interval reads as none; the doglegs of a plan - 2.5° per
+/// 5 m station at 15°/30 m, 0.5° per metre - are far above it.
 pub const SLACK: f64 = 1e-7;
 
 /// What is allowed on any chord whatever its length, in metres: the rounding
@@ -83,13 +83,13 @@ pub const SLACK: f64 = 1e-7;
 pub const FLOOR: f64 = 1e-8;
 
 /// Below this horizontal part, a unit direction is vertical and has no
-/// azimuth — a ten-millionth, 6e-6 degree of inclination. What a chain of
+/// azimuth - a ten-millionth, 6e-6 degree of inclination. What a chain of
 /// mirrors leaves in a vertical direction read back across map coordinates is
 /// of the order of 1e-8: twenty mirrors over 5 m chords whose ends each carry
 /// 1e-9 m of rounding.
 const VERTICAL: f64 = 1e-7;
 
-/// One station: its measured depth and where it is — **north, east and down**,
+/// One station: its measured depth and where it is - **north, east and down**,
 /// from any origin, in the unit of the measured depth.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Point {
@@ -104,10 +104,10 @@ pub struct Point {
 pub struct Direction {
     /// Degrees from vertical down.
     pub inclination: f64,
-    /// Degrees clockwise from north, in [0, 360) — `None` where the hole is
+    /// Degrees clockwise from north, in [0, 360) - `None` where the hole is
     /// vertical.
     pub azimuth: Option<f64>,
-    /// Degrees per 30 m of measured depth over the interval that ends here —
+    /// Degrees per 30 m of measured depth over the interval that ends here -
     /// `None` at the first station.
     pub dogleg_severity: Option<f64>,
 }
@@ -115,7 +115,7 @@ pub struct Direction {
 /// Where a station is from the datum.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Offset {
-    /// The vertical depth below the datum — positive down.
+    /// The vertical depth below the datum - positive down.
     pub tvd: f64,
     /// North of the datum.
     pub north: f64,
@@ -123,7 +123,7 @@ pub struct Offset {
     pub east: f64,
     /// The horizontal distance from the datum.
     pub closure: f64,
-    /// Its direction, clockwise from north — `None` under the datum.
+    /// Its direction, clockwise from north - `None` under the datum.
     pub closure_direction: Option<f64>,
 }
 
@@ -154,7 +154,7 @@ pub enum SurveyError {
     },
     /// Two stations further apart than the hole between them.
     #[error(
-        "between MD {from} and MD {to} the stations are {chord} apart for {hole} of hole — a hole is never shorter than the straight line between two of its points"
+        "between MD {from} and MD {to} the stations are {chord} apart for {hole} of hole - a hole is never shorter than the straight line between two of its points"
     )]
     ChordLongerThanHole {
         /// The upper station's measured depth.
@@ -224,7 +224,7 @@ fn norm(a: Vector) -> f64 {
     dot(a, a).sqrt()
 }
 
-/// What a chord of `hole` may be off by — see [`SLACK`] and [`FLOOR`].
+/// What a chord of `hole` may be off by - see [`SLACK`] and [`FLOOR`].
 fn allowed(hole: f64) -> f64 {
     SLACK * hole + FLOOR
 }
@@ -239,7 +239,7 @@ fn sinc(x: f64) -> f64 {
 }
 
 /// A direction in the horizontal plane, in degrees clockwise from north, in
-/// [0, 360) — a remainder of −1e-15 is 360 once rounded, and 360 is north.
+/// [0, 360) - a remainder of −1e-15 is 360 once rounded, and 360 is north.
 fn bearing(north: f64, east: f64) -> f64 {
     let degrees = east.atan2(north).to_degrees().rem_euclid(360.0);
     if degrees >= 360.0 {
@@ -260,7 +260,7 @@ struct Chord {
 }
 
 impl Chord {
-    /// How far from straight — what the chord lacks of the hole, per unit of
+    /// How far from straight - what the chord lacks of the hole, per unit of
     /// hole.
     fn deficit(&self) -> f64 {
         (self.hole - self.length) / self.hole
@@ -270,7 +270,7 @@ impl Chord {
         (self.hole - self.length).abs() <= allowed(self.hole)
     }
 
-    /// The dogleg of the arc from direction `t` along this chord — or the
+    /// The dogleg of the arc from direction `t` along this chord - or the
     /// refusal that says the stations are on none.
     fn arc(&self, t: Vector, known_at: f64) -> Result<f64, SurveyError> {
         // The angle between the direction and the chord is half the dogleg:
@@ -298,7 +298,7 @@ fn mirrored(t: Vector, unit: Vector) -> Vector {
     mul(image, 1.0 / norm(image))
 }
 
-/// The direction of the hole at every station — see the module.
+/// The direction of the hole at every station - see the module.
 // Stations and intervals are two arrays walked together, one a step ahead of
 // the other: an index says it more plainly than two zipped iterators.
 #[allow(clippy::needless_range_loop)]
@@ -404,7 +404,7 @@ pub fn directions(points: &[Point]) -> Result<Vec<Direction>, SurveyError> {
         .collect())
 }
 
-/// Where each station is from `datum` — north, east and down, like the
+/// Where each station is from `datum` - north, east and down, like the
 /// stations: its vertical depth below the datum, its displacement, and the
 /// closure and its direction.
 pub fn offsets(points: &[Point], datum: [f64; 3]) -> Vec<Offset> {
@@ -525,7 +525,7 @@ mod tests {
     #[test]
     fn far_from_the_origin_the_directions_hold() {
         // The same well at its Lambert-93 place (651 620, 6 861 170), its
-        // datum at 48 m of elevation — the scale at which `heights` once
+        // datum at 48 m of elevation - the scale at which `heights` once
         // answered "outside" everywhere. A coordinate of 6.86e6 m carries
         // about 1e-9 m of rounding; over 5 m chords and some sixty mirrors it
         // stays well under 1e-5 degree.
@@ -565,7 +565,7 @@ mod tests {
     #[test]
     fn a_drain_is_horizontal_and_points_where_it_goes() {
         // GTH-2: vertical to 30, a build at 15°/30 m to horizontal towards the
-        // west, a drain of 250 m. West is 270, clockwise from north — a
+        // west, a drain of 250 m. West is 270, clockwise from north - a
         // counter-clockwise reading would say 90.
         let stations = well_plan::plan(
             Tie::vertical(),
@@ -647,7 +647,7 @@ mod tests {
     fn a_sidetrack_that_starts_on_an_arc_reads_its_first_direction_backward_from_its_hold() {
         // GTH-3 ST1: from MD 43 on a vertical parent, a build at once to 45°
         // towards the north, then a hold. The first interval is an arc, so the
-        // direction at the kick-off comes back from the hold — and must be the
+        // direction at the kick-off comes back from the hold - and must be the
         // parent's, vertical.
         let tie = Tie {
             md: 43.0,
@@ -744,7 +744,7 @@ mod tests {
     #[test]
     fn a_path_that_is_all_arcs_has_no_first_direction_and_says_so() {
         // A build from the surface with no hold anywhere: each arc's dogleg is
-        // known, the plane it turns in is not — refused rather than assumed to
+        // known, the plane it turns in is not - refused rather than assumed to
         // start vertical.
         let stations = well_plan::plan(Tie::vertical(), &[curve(10.0, 60.0, 90.0, Turn::Build)], 10.0)
             .expect("a plan")

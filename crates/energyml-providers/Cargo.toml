@@ -26,19 +26,19 @@ include = ["src/**", "catalogue/**", "Cargo.toml", "README.md", "LICENSE*", "NOT
 energyml-build = { path = "../energyml-build", version = "0.1.0" }
 # **What a provider declares has to cross a boundary.** The front end renders the
 # form, the Python bridge will list it: without serialisation each would rewrite
-# the declaration in its own language — and a second copy of a list is a list
+# the declaration in its own language - and a second copy of a list is a list
 # that ends up no longer saying the same thing.
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 # XML is not a choice: a WFS answers its **refusals** as an
 # `ows:ExceptionReport`, and its quote (`resultType=hits`) in XML too, even
 # when JSON is asked for. A reader that only tried JSON would say "this is not
-# JSON" — true, useless, and it would send people looking in the wrong place.
+# JSON" - true, useless, and it would send people looking in the wrong place.
 quick-xml = "0.41"
 
 # **The network is optional, and off by default.** wasm has no blocking call,
 # and a workspace member that requires an HTTP client would make every other
-# one pay for it through feature unification — the same rule the Python bridge
+# one pay for it through feature unification - the same rule the Python bridge
 # applies to HDF5 and pyo3.
 ureq = { version = "3", optional = true }
 

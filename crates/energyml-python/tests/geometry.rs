@@ -1,7 +1,7 @@
 //! The second layer: shapes, values, slices and queries.
 //!
 //! What the catalogue cannot say. These checks are the ones that would catch a
-//! bridge handing back plausible numbers — so each confronts the geometry
+//! bridge handing back plausible numbers - so each confronts the geometry
 //! reader with **the object's own JSON**, which is a different reader over the
 //! same file. Two implementations agreeing on a count is worth more than one
 //! implementation repeating itself.
@@ -47,7 +47,7 @@ fn a_surface_comes_back_as_points_and_triangles_the_json_agrees_with() {
 
     // **The confrontation.** The object's JSON states `NodeCount` and the
     // number of values in the triangle array; the geometry reader never looks
-    // at either — it reads the arrays. If the two disagree, one of them is
+    // at either - it reads the arrays. If the two disagree, one of them is
     // wrong, and that is exactly the bug that would otherwise ship.
     let object: Value = serde_json::from_str(&package.get(&uri).expect("the object reads")).expect("JSON");
     let patch = &object["TrianglePatch"][0];
@@ -109,7 +109,7 @@ fn a_placement_that_is_not_one_is_refused_with_the_list() {
 
     // Nothing to skip and nothing to read: this is the check that runs even on
     // a machine with no corpus geometry at all, and it protects the one thing
-    // a silent default would ruin — a model placed in the wrong system looks
+    // a silent default would ruin - a model placed in the wrong system looks
     // exactly like a model placed in the right one.
     let why = package
         .geometry(&uri, "global")
@@ -262,7 +262,7 @@ fn the_catalogue_answers_a_question_instead_of_being_walked() {
             one.qualified_type
         );
     }
-    // Case does not matter, and the two filters are an AND — a filter that
+    // Case does not matter, and the two filters are an AND - a filter that
     // quietly ORed would return more, which is the failure a test of one
     // filter alone would miss.
     let titled = package.find(Some("CRS"), Some("default"));

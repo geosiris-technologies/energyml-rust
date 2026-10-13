@@ -1,12 +1,12 @@
-//! `property` — a `ContinuousProperty` from a field of values laid over a
+//! `property` - a `ContinuousProperty` from a field of values laid over a
 //! representation of the package.
 //!
-//! The values come as a [`Source::Field`] — one number per indexable element
-//! of a named piece — and the representation they sit on as the
+//! The values come as a [`Source::Field`] - one number per indexable element
+//! of a named piece - and the representation they sit on as the
 //! [`crate::pieces::Source::Object`] that piece names, or the object the piece
 //! is paired with. What the old promoter's `property`
-//! arm did, with the one check it made — *the representation holds that many
-//! nodes, the values that many* — kept, and made from what the input knows
+//! arm did, with the one check it made - *the representation holds that many
+//! nodes, the values that many* - kept, and made from what the input knows
 //! rather than from a store: `Known::node_count` is filled by the reader of
 //! objects, and a field over `nodes` that does not add up is refused by name.
 //! A field over anything else cannot be counted here and the plan says so.
@@ -28,15 +28,15 @@ use super::support;
 /// The operation.
 pub struct Property;
 
-/// What `property` is told — and what `thickness` and `surface-map` hand it,
+/// What `property` is told - and what `thickness` and `surface-map` hand it,
 /// typed, when they delegate the writing.
 #[derive(Debug, Clone, Params)]
 pub struct PropertyParams {
     /// the representation the values are laid on
     pub representation: ObjectRef,
-    /// what is measured — a property kind of the package or of the standard dictionary
+    /// what is measured - a property kind of the package or of the standard dictionary
     pub property_kind: PropertyKindRef,
-    /// the unit of the values — an Energistics uom code, `Euc` for none
+    /// the unit of the values - an Energistics uom code, `Euc` for none
     pub uom: String,
     /// the property's title
     pub title: Title,
@@ -59,7 +59,7 @@ impl Operation for Property {
     fn about(&self) -> About {
         About {
             name: "property",
-            describe: "a continuous property from a field of values laid over a representation — one value per node or cell",
+            describe: "a continuous property from a field of values laid over a representation - one value per node or cell",
             category: Category::Properties,
             makes: &["resqml22.ContinuousProperty"],
             recipe: "property",
@@ -79,7 +79,7 @@ impl Operation for Property {
         }
         if let Some(reference) = known_named(bag, over).and_then(|known| known.reference.as_ref()) {
             slots.inferred("representation", reference.dor(), reference.clone());
-            slots.set("title", json!(format!("{} — property", reference.title)));
+            slots.set("title", json!(format!("{} - property", reference.title)));
         }
     }
 
@@ -126,10 +126,10 @@ impl Operation for Property {
     }
 }
 
-/// **The property, written** — what the operation does, and what `thickness`
+/// **The property, written** - what the operation does, and what `thickness`
 /// and `surface-map` call directly with the values they computed: typed in, no
 /// bag to derive. `known` is what is known of the representation the values
-/// lie on — the one count this can check, its nodes; `seed` is the caller's.
+/// lie on - the one count this can check, its nodes; `seed` is the caller's.
 pub fn write(
     field: &Field,
     known: Option<&Known>,
@@ -140,19 +140,19 @@ pub fn write(
     write_timed(field, known, params, seed, cx, &Timing::Timeless)
 }
 
-/// When the values of a property hold — the two forms RESQML 2.2 has for a
+/// When the values of a property hold - the two forms RESQML 2.2 has for a
 /// property through time, and neither.
 ///
 /// `AbstractProperty` states `Time` (`GeologicTime`, 0..1) and
-/// `TimeOrIntervalSeries` (0..1) — RESQML Technical Reference Guide v2.2 §7.1
-/// p. 222 — and **no time index**: the one a draft of the usage guide showed
+/// `TimeOrIntervalSeries` (0..1) - RESQML Technical Reference Guide v2.2 §7.1
+/// p. 222 - and **no time index**: the one a draft of the usage guide showed
 /// is absent from the final XSD.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Timing {
     /// No time is said.
     Timeless,
     /// The values hold at one instant: `Time/DateTime`, a W3CDTF date-time as
-    /// written — one property per step of a series.
+    /// written - one property per step of a series.
     At(String),
     /// The values hold at every step of a series, **time the slowest
     /// dimension** (TRG v2.2 §7, the note of the diagram p. 221:
@@ -163,13 +163,13 @@ pub enum Timing {
         series: serde_json::Value,
         /// `UseInterval`: one step per interval from an instant to the next.
         use_interval: bool,
-        /// How many steps the values hold — the series' instants, one fewer
+        /// How many steps the values hold - the series' instants, one fewer
         /// over intervals.
         steps: usize,
     },
 }
 
-/// [`write()`], with the time the values hold at — the one writer of a
+/// [`write()`], with the time the values hold at - the one writer of a
 /// `ContinuousProperty`, timed or not (`property-time-series` calls it).
 pub fn write_timed(
     field: &Field,
@@ -192,7 +192,7 @@ pub fn write_timed(
         return Err(Refusal::on(
             "field",
             format!(
-                "{} value(s) do not make {steps} step(s) of equal length — each step holds one value per element",
+                "{} value(s) do not make {steps} step(s) of equal length - each step holds one value per element",
                 values.len()
             ),
         ));
@@ -229,7 +229,7 @@ pub fn write_timed(
             return Err(Refusal::on(
                 "field",
                 format!(
-                    "`{over}` holds {nodes} node(s) and the field {per_step} value(s){} — values would land on the wrong elements",
+                    "`{over}` holds {nodes} node(s) and the field {per_step} value(s){} - values would land on the wrong elements",
                     if steps > 1 { format!(" per step, over {steps} steps") } else { String::new() }
                 ),
             ));

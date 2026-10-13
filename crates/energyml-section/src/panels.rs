@@ -1,4 +1,4 @@
-//! The section fills, put back on the trace — the coloured panels of the 3D
+//! The section fills, put back on the trace - the coloured panels of the 3D
 //! view (ADR-0015).
 //!
 //! The 3D surfaces are created from the 2D view being drawn. Their colouring
@@ -6,10 +6,10 @@
 //! view, as to whether the colour propagates up to the line above, the line
 //! below, or both.
 //!
-//! The panels are the **polygons of the drawing** — the same rule
+//! The panels are the **polygons of the drawing** - the same rule
 //! (`crate::layout::fill::polygons`: a trace to its neighbour in each
 //! abscissa, nothing where there is none), the same choices (`View::fills`), the same hidden traces,
-//! the same colour — each vertex `(s, z)` put back at `point_at(trace, s)`, `z`
+//! the same colour - each vertex `(s, z)` put back at `point_at(trace, s)`, `z`
 //! unchanged. Nothing is recomputed from a surface: the 3D shows what the 2D
 //! drew.
 //!
@@ -30,13 +30,13 @@ use crate::model::{Catalogue, FillChoice, Item, Section, SectionKey, TraceItem, 
 pub struct Panel {
     /// The section the polygons stand on.
     pub section: SectionKey,
-    /// The trace (surface) they fill from, by key — `FillChoice::key`.
+    /// The trace (surface) they fill from, by key - `FillChoice::key`.
     pub key: String,
     /// Their colour: the drawing's.
     pub colour: String,
     /// Each polygon's vertices, not closed.
     pub polygons: Vec<Vec<[f64; 3]>>,
-    /// The same polygons in the section's own `(s, z)`, vertex for vertex —
+    /// The same polygons in the section's own `(s, z)`, vertex for vertex -
     /// where a polygon is flat, so where it is triangulated: unrolled from its
     /// 3D vertices instead, a trace folding back on itself would fold it too.
     pub sz: Vec<Vec<[f64; 2]>>,

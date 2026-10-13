@@ -1,19 +1,19 @@
-//! The model's documentation, as JSON — the reflection, serialized once.
+//! The model's documentation, as JSON - the reflection, serialized once.
 //!
 //! # Why this exists
 //!
-//! Everything here is already answerable at runtime — `TypeInfo`, `FieldInfo`
+//! Everything here is already answerable at runtime - `TypeInfo`, `FieldInfo`
 //! and `VariantInfo` carry the `xsd:documentation`, the cardinalities, the
 //! accepted types and the declared values, which is what drives the UI's
 //! documentation view. What was missing is the same answer **as a document**:
-//! a static JSON a tool — or an AI — can fetch without running the
+//! a static JSON a tool - or an AI - can fetch without running the
 //! application, and without the Energistics login the schema downloads sit
 //! behind. The CLI writes these files; a front end build ships them beside the
 //! front end.
 //!
 //! # The shape
 //!
-//! One JSON object per (package, version) — `resqml 2.2`, `eml 2.3` — holding
+//! One JSON object per (package, version) - `resqml 2.2`, `eml 2.3` - holding
 //! every registered type of that release. Filtering "only resqml" or "only
 //! resqml 2.2" is therefore *choosing files*, not a query language: the index
 //! lists what exists, and each file is self-contained.
@@ -21,7 +21,7 @@
 //! The spellings are the model's, not inventions: `xmlName` is the element
 //! name, `objectType` the complexType name (the one identifiers use),
 //! `typeKey` the cross-version grouping key. The three-names rule of the
-//! repository applies to documentation too — a reader who only ever sees a
+//! repository applies to documentation too - a reader who only ever sees a
 //! merged name cannot tell an element from its type, and that distinction is
 //! an interoperability fact, not cosmetics.
 
@@ -30,12 +30,12 @@ use serde_json::{Value, json};
 use crate::reflect::{Binding, FieldInfo, MaxOccurs, TypeInfo, TypeKind, VariantInfo};
 use crate::registry::Registry;
 
-/// Every type reachable from the registered ones — the registry's entries plus
+/// Every type reachable from the registered ones - the registry's entries plus
 /// the closure of their fields and variants.
 ///
 /// The walk is not optional: enumerations and choices are **deliberately
-/// absent from the registry** — they are written as lexical values or selected
-/// by `xsi:type`, never constructed by name — so iterating the registry alone
+/// absent from the registry** - they are written as lexical values or selected
+/// by `xsi:type`, never constructed by name - so iterating the registry alone
 /// documents 3 345 structs and not one of the vocabularies people actually
 /// look up. Every enumeration is reachable through some field, every choice
 /// through a field or a variant, and each carries its own package and version,
@@ -64,7 +64,7 @@ fn reachable(registry: &Registry) -> Vec<&'static TypeInfo> {
 
 /// Every registered release, one entry per (package, version), types included.
 ///
-/// Sorted by package then version so the output is stable — a regenerated
+/// Sorted by package then version so the output is stable - a regenerated
 /// file that only reorders is a diff nobody can review.
 pub fn registry_docs(registry: &Registry) -> Value {
     let mut releases: Vec<(&'static str, &'static str, Vec<&'static TypeInfo>)> = Vec::new();
@@ -77,8 +77,8 @@ pub fn registry_docs(registry: &Registry) -> Value {
             None => releases.push((info.package, info.version, vec![info])),
         }
     }
-    // A type with no version is runtime support, not a release: `AnyXml` — the
-    // kept-verbatim wrapper for foreign vocabularies — reaches here through
+    // A type with no version is runtime support, not a release: `AnyXml` - the
+    // kept-verbatim wrapper for foreign vocabularies - reaches here through
     // the fields that hold it, and grouped naively it minted a one-type
     // release called `eml-` in every index. The schema releases all state
     // their version; what does not is not schema.
@@ -102,7 +102,7 @@ pub fn registry_docs(registry: &Registry) -> Value {
 
 /// One type, everything the reflection knows about it.
 pub fn type_doc(info: &'static TypeInfo) -> Value {
-    // The JSON key comes from `json::json_keys`, the writer's own mapping —
+    // The JSON key comes from `json::json_keys`, the writer's own mapping -
     // `json_name` says `Value` where the JSON writes `_`.
     let keys = crate::json::json_keys(info);
     let fields: Vec<Value> = info
@@ -139,7 +139,7 @@ pub fn type_doc(info: &'static TypeInfo) -> Value {
 
 /// One field: names, documentation, shape, and what may go in it.
 fn field_doc(field: &FieldInfo, json_key: &str) -> Value {
-    // What may go in the field — the question `--describe` answers, asked of
+    // What may go in the field - the question `--describe` answers, asked of
     // every field at once. An enumeration offers its values, an abstract type
     // its concrete subtypes with the `xsi:type` that selects each; a reference
     // is where reflection stops, and saying so beats letting a reader assume
@@ -179,7 +179,7 @@ fn field_doc(field: &FieldInfo, json_key: &str) -> Value {
             MaxOccurs::Unbounded => Value::Null,
         },
         "required": field.is_required(),
-        // One element holding every value, not one element per value — the
+        // One element holding every value, not one element per value - the
         // `xsd:list` distinction the repository documents at length.
         "xsdList": field.is_list,
         "scalar": field.ty.type_info().is_none(),
@@ -192,7 +192,7 @@ fn field_doc(field: &FieldInfo, json_key: &str) -> Value {
 
 /// One variant: a declared value for an enumeration, a selectable subtype for
 /// a choice. The `Other` hole of an open enumeration is not a value and is
-/// left out — `type_doc` says `open` instead, once.
+/// left out - `type_doc` says `open` instead, once.
 fn variant_doc(variant: &VariantInfo) -> Value {
     json!({
         "name": variant.name,

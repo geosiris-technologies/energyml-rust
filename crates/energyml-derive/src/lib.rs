@@ -7,10 +7,10 @@
 //!
 //! Three derives cover the whole model:
 //!
-//! - [`macro@EnergymlObject`] — an XSD `complexType`.
-//! - [`macro@EnergymlEnum`] — an XSD `simpleType` enumeration, `open` for the
+//! - [`macro@EnergymlObject`] - an XSD `complexType`.
+//! - [`macro@EnergymlEnum`] - an XSD `simpleType` enumeration, `open` for the
 //!   Energistics `...Ext` types that also accept free text.
-//! - [`macro@EnergymlChoice`] — an abstract type or substitution group, selected
+//! - [`macro@EnergymlChoice`] - an abstract type or substitution group, selected
 //!   on the wire by `xsi:type`.
 //!
 //! ```ignore
@@ -54,8 +54,8 @@ mod ty;
 /// `min_inclusive`, `max_inclusive`, `min_exclusive`, `max_exclusive`,
 /// `min_length`, `max_length`, `pattern`.
 ///
-/// Cardinality is read off the Rust type — `Option<T>` is optional, `Vec<T>` is
-/// repeated — so `min` and `max` are only needed when the schema says something
+/// Cardinality is read off the Rust type - `Option<T>` is optional, `Vec<T>` is
+/// repeated - so `min` and `max` are only needed when the schema says something
 /// the Rust type cannot express (`minOccurs="2"`, say).
 #[proc_macro_derive(EnergymlObject, attributes(energyml))]
 pub fn derive_energyml_object(input: TokenStream) -> TokenStream {

@@ -6,17 +6,17 @@
 //!
 //! What a generated type gets:
 //!
-//! - [`xml`] — namespace-aware XML reading and writing, with explicit control of
+//! - [`xml`] - namespace-aware XML reading and writing, with explicit control of
 //!   prefixes and `xsi:type`. Serde handles JSON only.
-//! - [`reflect`] — a `&'static TypeInfo` per type: fields, XSD cardinality,
+//! - [`reflect`] - a `&'static TypeInfo` per type: fields, XSD cardinality,
 //!   facets, documentation, accepted types for polymorphic fields.
-//! - [`value`] — object-safe dynamic access, so a UI can walk and complete an
+//! - [`value`] - object-safe dynamic access, so a UI can walk and complete an
 //!   instance it has no compile-time knowledge of.
-//! - [`path`] — `Citation.Title` style access, optionally case-insensitive.
-//! - [`validate`] — structural validation from the schema, plus a hook for
+//! - [`path`] - `Citation.Title` style access, optionally case-insensitive.
+//! - [`validate`] - structural validation from the schema, plus a hook for
 //!   business rules.
-//! - [`registry`] — create and read objects by content type or qualified type.
-//! - [`identifiers`] — UUID, content type, qualified type and ETP URI parsing.
+//! - [`registry`] - create and read objects by content type or qualified type.
+//! - [`identifiers`] - UUID, content type, qualified type and ETP URI parsing.
 //!
 //! Generated code is written by `energyml-codegen`; the `energyml-derive` macros
 //! turn the annotated structs it emits into implementations of the traits above.
@@ -48,7 +48,7 @@ pub use error::{Error, Result};
 
 /// What every object this software writes says in `Citation.Format`.
 ///
-/// EML 2.3 `Abstract.xsd` l. 393–399 documents the field as *"Software or
+/// EML 2.3 `Abstract.xsd` l. 393-399 documents the field as *"Software or
 /// service that was used to originate the object and the file format created
 /// [...] including the organization name, software application name and
 /// software version [...] provided by the application that creates or edits

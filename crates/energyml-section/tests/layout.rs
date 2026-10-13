@@ -1,6 +1,6 @@
 //! The layout, in numbers (ADR-0015): everything that can
 //! be wrong in the drawing is a number here, and these tests state it on
-//! hand-built catalogues — no package is read.
+//! hand-built catalogues - no package is read.
 
 use energyml_section::layout::{Attr, Layout, Shape, layout};
 use energyml_section::model::*;
@@ -358,7 +358,7 @@ fn a_fill_is_cut_at_a_crossing_instead_of_twisting_through_it() {
     // H is flat at -100; X goes from -50 to -150 and crosses it at 500 m.
     // Down from H, X is the nearest line below only from 500 to 1000; before the
     // crossing it is above H, so the nearest below is L. One polygon per
-    // neighbour, cut at the crossing — none twisting through it.
+    // neighbour, cut at the crossing - none twisting through it.
     let cat = catalogue(vec![
         Item::Trace(trace("H", vec![vec![[0.0, -100.0], [1000.0, -100.0]]])),
         Item::Trace(trace("X", vec![vec![[0.0, -50.0], [1000.0, -150.0]]])),
@@ -450,7 +450,7 @@ fn down(n: &str) -> View {
 }
 
 /// A fault that cuts the interval between a horizon and the one below it used to
-/// be that horizon's neighbour — its mean gap was tiny where it stood — and the
+/// be that horizon's neighbour - its mean gap was tiny where it stood - and the
 /// fill stopped at it (the fill must reach the faults but not run between
 /// horizon lines).
 #[test]
@@ -530,7 +530,7 @@ fn a_fault_is_never_filled_whatever_the_view_says() {
     assert_eq!(layout(&cat, &down("F")).layer("fills").unwrap().objects.len(), 1);
 }
 
-/// Two versions of one horizon — the file says so by their feature — are never
+/// Two versions of one horizon - the file says so by their feature - are never
 /// each other's neighbour: a band 0.01 m high is not the unit below.
 #[test]
 fn two_versions_of_one_horizon_are_not_neighbours_but_two_features_are() {
@@ -1058,11 +1058,11 @@ fn two_surface_names_ending_together_do_not_sit_on_each_other() {
     // written in the same place.
     let cat = catalogue(vec![
         Item::Trace(trace(
-            "H3 — top of the Ypresian",
+            "H3 - top of the Ypresian",
             vec![vec![[0.0, -100.0], [1000.0, -100.0]]],
         )),
         Item::Trace(trace(
-            "H4 — top of the Sparnacian",
+            "H4 - top of the Sparnacian",
             vec![vec![[0.0, -101.0], [1000.0, -101.0]]],
         )),
     ]);
@@ -1199,9 +1199,9 @@ fn a_small_drawing_keeps_half_its_height_for_the_plot_and_counts_the_notes_it_fo
     let last = written.last().expect("a line says the notes exist");
     let folded = small.warnings.len() - (written.len() - 1);
     let said = if written.len() == 1 {
-        format!("{folded} notes — not shown at this size")
+        format!("{folded} notes - not shown at this size")
     } else {
-        format!("+ {folded} more notes — not shown at this size")
+        format!("+ {folded} more notes - not shown at this size")
     };
     assert_eq!(last, &said);
     // What is written fits between the plot and the bottom of the drawing.
@@ -1252,7 +1252,7 @@ fn a_mark_at_the_end_of_the_trace_keeps_its_text_inside_the_plot() {
 }
 
 /// A surface's name never sits on the text of a mark: both are inside the plot,
-/// and "H1 — base × cross 1 Quaternary" read as one.
+/// and "H1 - base × cross 1 Quaternary" read as one.
 #[test]
 fn a_surface_name_keeps_clear_of_the_marks_texts() {
     // A horizon running out right under the crossing at 400 m, at the top of the plot.
@@ -1272,7 +1272,7 @@ fn a_surface_name_keeps_clear_of_the_marks_texts() {
     }
 }
 
-/// In the plan, a well's name never covers a head — the heads are what a plan
+/// In the plan, a well's name never covers a head - the heads are what a plan
 /// is read for.
 #[test]
 fn a_plan_label_never_covers_a_head() {
@@ -1374,7 +1374,7 @@ fn the_short_form_is_used_when_the_long_one_does_not_fit() {
     // Whole texts first, in every place; the short form only once none is left.
     // Six crossings in one spot take the six whole places (right and left, three
     // levels); a seventh, 30 px from the end of the plot, has no whole text on
-    // its right (it would run out) and none on its left (the stack is there) —
+    // its right (it would run out) and none on its left (the stack is there) -
     // but its short form fits on the right.
     let mut cat = two_wells();
     let v = view();

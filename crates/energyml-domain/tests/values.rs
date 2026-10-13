@@ -16,7 +16,7 @@ use energyml_storage::EpcStore;
 /// Every schema version the workspace generates.
 ///
 /// One line rather than a hand-kept subset: a list written out here goes stale
-/// the day a release is added, and nothing would notice — the suite would keep
+/// the day a release is added, and nothing would notice - the suite would keep
 /// passing while quietly never covering the new version. `energyml-schemas`
 /// holds the one list, and its own test fails when it disagrees with
 /// `codegen.toml`.
@@ -156,7 +156,7 @@ fn every_value_array_of_the_corpus_reads() {
 ///
 /// The mirror of the geometry crate's lattice test, and the same argument: a
 /// constant array and a lattice carry their values in the XML, so a build with
-/// no HDF5 — a WebAssembly one, say — must still read them. If this ever needs
+/// no HDF5 - a WebAssembly one, say - must still read them. If this ever needs
 /// the feature, something has started going to the file when it should not.
 #[test]
 fn the_computed_forms_need_no_backend() {
@@ -188,7 +188,7 @@ fn the_computed_forms_need_no_backend() {
                     }
                     done = true;
                     let values = values::read(array, &store, here)
-                        .unwrap_or_else(|e| panic!("{}: {here} — {e}", path.display()));
+                        .unwrap_or_else(|e| panic!("{}: {here} - {e}", path.display()));
                     families.insert(format!("{:?}", values.family()));
                     read += 1;
                 });
@@ -255,7 +255,7 @@ fn the_native_path_avoids_the_widening() {
                             }
                         }
                         // A computed form has no file, so there is nothing to
-                        // read natively — and saying `None` rather than
+                        // read natively - and saying `None` rather than
                         // erroring is what lets a caller try this first.
                         Ok(None) => {
                             computed += 1;
@@ -309,7 +309,7 @@ fn jagged_arrays_unpack_into_rows() {
                             rows += unpacked.len();
                         }
                         Err(e) if e.is_missing_file() => {}
-                        Err(e) => panic!("{}: {at} — {e}", path.display()),
+                        Err(e) => panic!("{}: {at} - {e}", path.display()),
                     }
                 });
             }
@@ -429,7 +429,7 @@ fn every_value_array_in_an_object_is_found_with_its_path() {
             }
 
             // No array inside another: an array's `Count`, its `HdfProxy`, the
-            // integer array a mask is built from — all its own business, and
+            // integer array a mask is built from - all its own business, and
             // listing them beside it would offer the parts of an answer as
             // though they were answers.
             for array in &found {
@@ -451,11 +451,11 @@ fn every_value_array_in_an_object_is_found_with_its_path() {
 
     assert!(
         seen > 50,
-        "{seen} value array(s) found — the corpus holds far more"
+        "{seen} value array(s) found - the corpus holds far more"
     );
     // The half the file walk cannot see, and the reason this exists.
     assert!(
         computed > 0,
-        "no computed array found — the walk proves nothing new"
+        "no computed array found - the walk proves nothing new"
     );
 }

@@ -3,12 +3,12 @@
 //! `testingPackageCpp22.epc` and `80wells` hold the same
 //! `GraphicalInformationSet`: 15 entries, 12 of them constant colours on
 //! features, interpretations and representations, and 3 `ColorInformation`
-//! pointing at colour maps — including the kind-versus-property conflict that
+//! pointing at colour maps - including the kind-versus-property conflict that
 //! made the property-over-kind rule necessary (entry 12 targets the `cellIndex` **kind**,
 //! entry 13 targets a **property** of that kind).
 //!
 //! RESQML 2.0.1 has no colour at all, so ALWYN and Volve are expected to have
-//! nothing here — and a test that finds colour in them would be finding a bug.
+//! nothing here - and a test that finds colour in them would be finding a bug.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -21,7 +21,7 @@ use energyml_storage::EpcStore;
 /// Every schema version the workspace generates.
 ///
 /// One line rather than a hand-kept subset: a list written out here goes stale
-/// the day a release is added, and nothing would notice — the suite would keep
+/// the day a release is added, and nothing would notice - the suite would keep
 /// passing while quietly never covering the new version. `energyml-schemas`
 /// holds the one list, and its own test fails when it disagrees with
 /// `codegen.toml`.
@@ -158,7 +158,7 @@ fn a_property_beats_its_kind() {
     }
     assert!(
         proved,
-        "the kind-versus-property conflict is not in the corpus any more — this test no longer proves the kind-versus-property rule"
+        "the kind-versus-property conflict is not in the corpus any more - this test no longer proves the kind-versus-property rule"
     );
 }
 
@@ -212,7 +212,7 @@ fn a_representation_with_no_colour_of_its_own_inherits_and_says_so() {
     }
     assert!(
         inherited > 0,
-        "no representation inherited a colour — colour inheritance is never exercised by this corpus"
+        "no representation inherited a colour - colour inheritance is never exercised by this corpus"
     );
 }
 
@@ -299,7 +299,7 @@ fn every_colour_map_of_the_corpus_reads_and_samples() {
 #[test]
 fn colouring_by_a_property_gives_a_map_and_the_component_to_use() {
     // The end of the chain: a continuous property, its `ColorInformation`, its
-    // map, and `ValueVectorIndex` handed back as what it is — the component of
+    // map, and `ValueVectorIndex` handed back as what it is - the component of
     // the value vector, not an entry of the map.
     let sets = sets();
     if sets.is_empty() {
@@ -341,12 +341,12 @@ fn colouring_by_a_property_gives_a_map_and_the_component_to_use() {
             };
             mapped += 1;
             assert!(!map.stops.is_empty());
-            // The corpus's continuous entry declares MinMax 0–1 and
-            // ValueVectorIndex 1 — a component index, kept as such.
+            // The corpus's continuous entry declares MinMax 0-1 and
+            // ValueVectorIndex 1 - a component index, kept as such.
             if let Some(component) = value_vector_index {
                 assert!(
                     *component < read.values_per_element().max(1),
-                    "{}: component {component} of a property with {} value(s) per element — the \
+                    "{}: component {component} of a property with {} value(s) per element - the \
                      index is into the data, so it has to fit the data",
                     read.uuid,
                     read.values_per_element()
@@ -369,7 +369,7 @@ fn a_2_0_1_package_has_no_colour_and_that_is_the_standard_not_a_gap() {
     for path in corpus() {
         let name = path.file_name().unwrap().to_string_lossy().to_string();
         // The public packages that are 2.0.1 throughout: the four resqpy ones.
-        // fesapi's `testingPackageCpp` is not one of them — it mixes in RESQML
+        // fesapi's `testingPackageCpp` is not one of them - it mixes in RESQML
         // 2.2 objects, colour maps included. (ALWYN and Volve are in
         // `..._private` below.)
         if name.starts_with("testingPackageCpp") {
@@ -407,7 +407,7 @@ fn a_2_0_1_package_has_no_colour_private() {
 }
 
 // ---------------------------------------------------------------------------
-// Writing a colour back — the reader is the specification of the writer
+// Writing a colour back - the reader is the specification of the writer
 
 /// A colour written into a set comes back out of the reader as the colour that
 /// went in, and the entry names the object it decorates.
@@ -415,7 +415,7 @@ fn a_2_0_1_package_has_no_colour_private() {
 /// **The round trip is the whole test.** A writer checked against a string of
 /// its own making proves that the string is what the writer writes; checked
 /// against the reader, it proves that another tool reading this package finds
-/// the colour — and the reader is the one this workspace ships, tested against
+/// the colour - and the reader is the one this workspace ships, tested against
 /// every set of the corpus.
 #[test]
 fn a_colour_written_into_a_set_is_read_back_as_itself() {
@@ -515,8 +515,8 @@ fn a_colour_written_into_a_set_is_read_back_as_itself() {
 ///
 /// The first two extensions of §13.3, and they are the same write. What makes
 /// them worth a test rather than an assertion about a signature: an entry
-/// decorating several objects is **one statement** — `TargetObject` is
-/// unbounded in the schema — and a writer that emitted one entry per object
+/// decorating several objects is **one statement** - `TargetObject` is
+/// unbounded in the schema - and a writer that emitted one entry per object
 /// would be saying something the file cannot tell apart from thirty unrelated
 /// decisions. The scope is the other half: colouring the faces is not colouring
 /// the object, and both live in one set at once.
@@ -581,7 +581,7 @@ fn one_entry_can_colour_several_objects_and_a_scope_that_is_not_the_object() {
         panic!("{:?}", entry.information)
     };
     // The scope the writer was given, read back by the reader that is its
-    // specification — not by a string comparison on what was written.
+    // specification - not by a string comparison on what was written.
     assert!(
         elements.iter().any(|element| element.scope == Scope::Faces),
         "the entry should colour the faces, and it holds {:?}",
@@ -619,7 +619,7 @@ fn one_entry_can_colour_several_objects_and_a_scope_that_is_not_the_object() {
 ///
 /// Until 04/09 the writer replaced the entry it found with a single-target one:
 /// an entry decorating four surfaces, recoloured through one of them, left the
-/// other three with no colour at all — from a gesture that named one object, in
+/// other three with no colour at all - from a gesture that named one object, in
 /// silence. Refusing loses nothing and says which entry stands in the way.
 #[test]
 fn recolouring_one_object_of_a_shared_entry_is_refused_rather_than_losing_the_others() {
@@ -690,15 +690,15 @@ fn recolouring_one_object_of_a_shared_entry_is_refused_rather_than_losing_the_ot
 ///
 /// §13.2 point 6. The round trip is the whole test, for the same reason it is
 /// for a constant colour: a writer checked against a string of its own making
-/// proves that the string is what the writer writes. Checked against the reader
-/// — the one this workspace ships against every set of the corpus — it proves
+/// proves that the string is what the writer writes. Checked against the reader -
+/// the one this workspace ships against every set of the corpus - it proves
 /// that another tool opening this package finds a colour map on these objects.
 ///
 /// The element **order** is what a hand-written subtree gets wrong: the schema
 /// declares an `xsd:sequence`, so `MinMax` before the two flags before
 /// `ValueVectorIndex` before `ColorMap`, and a document in another order is one
 /// no validator accepts. The reader is order-insensitive, so it cannot catch
-/// that — which is said here rather than left as a false sense of cover.
+/// that - which is said here rather than left as a false sense of cover.
 #[test]
 fn a_colour_map_written_into_a_set_is_read_back_as_itself() {
     let Some((path, _store, before)) = sets().into_iter().next() else {
@@ -801,8 +801,8 @@ fn a_colour_map_written_into_a_set_is_read_back_as_itself() {
 
 /// A constant colour and a colour map on one object are two entries.
 ///
-/// They say different things — *this object is blue* and *this object is
-/// painted by that map* — so neither replaces the other. The assertion that
+/// They say different things - *this object is blue* and *this object is
+/// painted by that map* - so neither replaces the other. The assertion that
 /// would fail if the two writers shared their notion of *the same statement*,
 /// which they nearly do: they share everything else.
 #[test]
@@ -869,7 +869,7 @@ fn a_constant_colour_and_a_colour_map_do_not_replace_each_other() {
 /// representation → interpretation → feature has a short form, and naming the
 /// level by counting steps calls a feature "the interpretation".
 ///
-/// The colour is the same either way — which is exactly why this needed a test
+/// The colour is the same either way - which is exactly why this needed a test
 /// rather than being noticed. What is wrong is the provenance, and provenance
 /// is the half of the answer a user reads to decide where to change it.
 #[test]
@@ -955,7 +955,7 @@ fn a_representation_that_names_a_feature_directly_says_feature() {
 /// because `resolve` stops at the first answer and that early stop is what keeps
 /// a scene from opening every parent of every object. Two walks that must agree
 /// and nothing forcing them to is the shape this repository distrusts, so the
-/// agreement is asserted rather than assumed — over the corpus, where the ladders
+/// agreement is asserted rather than assumed - over the corpus, where the ladders
 /// are real.
 #[test]
 fn the_chain_is_the_ladder_and_resolve_takes_its_first_carrying_rung() {
@@ -982,7 +982,7 @@ fn the_chain_is_the_ladder_and_resolve_takes_its_first_carrying_rung() {
             let chain = cascade.chain(&request, store).expect("the chain walks");
             let decided = cascade.resolve(&request, store).expect("the cascade runs");
 
-            // The first rung that carries something is what `resolve` returns —
+            // The first rung that carries something is what `resolve` returns -
             // and when none carries, `resolve` says nothing.
             assert_eq!(
                 chain.iter().find_map(|step| step.carries.clone()),
@@ -1008,7 +1008,7 @@ fn the_chain_is_the_ladder_and_resolve_takes_its_first_carrying_rung() {
     }
 
     assert!(compared > 0, "no representation was compared");
-    // The rung that carries nothing is the whole point of returning the list —
+    // The rung that carries nothing is the whole point of returning the list -
     // "this parent exists and says nothing" is what a person needs to see. If
     // the corpus never produced one, this test would be proving only the easy
     // half.
@@ -1085,7 +1085,7 @@ fn banded_map(levels: &[f64], colours: &[color::Hsv]) -> color::ColorMap {
 /// stops**: inside a band the colour does not move, and at the level it jumps.
 ///
 /// A `ContinuousColorMap` interpolates, so this is exactly what a single stop
-/// per level would fail to do — which is what makes this test able to fail.
+/// per level would fail to do - which is what makes this test able to fail.
 #[test]
 fn a_banded_map_paints_flat_colour_between_its_levels() {
     let levels = [0.0, 25.0, 50.0, 75.0];
@@ -1184,7 +1184,7 @@ fn banding_refuses_by_name() {
 
 /// **Several sets of a package read as one** (`GraphicalSet::merged`, 28/09):
 /// in package order, positions renumbered end to end, and at one level the
-/// **last** entry written answers — as within one set. Until then the front end
+/// **last** entry written answers - as within one set. Until then the front end
 /// read the first set only, and on Lutetia the chart's colours hid behind the
 /// strata table's set: an object colour in the second set only was simply not
 /// found.
@@ -1215,7 +1215,7 @@ fn several_sets_read_as_one_in_package_order() {
         merged.at(3).map(|one| one.targets.clone()),
         Some(vec!["c".to_string()])
     );
-    // Only in the second set: found — the defect was that it was not.
+    // Only in the second set: found - the defect was that it was not.
     assert_eq!(merged.targeting("c").len(), 1);
     // In both: the later statement first, as `targeting` orders one set.
     let named = |one: &color::Entry| match &one.information {

@@ -44,7 +44,7 @@ pub enum ExistenceKind {
     Other(String),
 }
 
-/// `xsd:simpleContent`: a number with a `uom` attribute — the shape every
+/// `xsd:simpleContent`: a number with a `uom` attribute - the shape every
 /// measure type in `MeasureType.xsd` uses.
 #[derive(Debug, Default, Clone, PartialEq, EnergymlObject)]
 #[energyml(package = "eml", version = "2.3", xml_name = "LengthMeasure")]
@@ -285,18 +285,18 @@ fn unknown_elements_are_skipped_rather_than_rejected() {
     assert_eq!(parsed.triangle_patch.len(), 2);
 }
 
-/// A missing required element does not stop the read — and does stop a
+/// A missing required element does not stop the read - and does stop a
 /// **strict** one.
 ///
 /// The default was the other way round until 02/08, and the arithmetic that
 /// changed it is worth keeping: a package of 1618 objects whose producer
-/// omitted `Citation.Originator` — one string nothing downstream reads — was
+/// omitted `Citation.Originator` - one string nothing downstream reads - was
 /// 1618 objects unreadable. No geometry, no references, no titles, no export.
 /// Refusing there does not protect a caller from bad data; it hands them
 /// nothing.
 ///
 /// Saying what a document *should* have carried is a real job, and this
-/// workspace already does it — `Validate`, on the object, with a path and a
+/// workspace already does it - `Validate`, on the object, with a path and a
 /// rule. Doing it a second time in the parser, where the only available answer
 /// is to refuse, is what cost the 1618.
 #[test]
@@ -357,8 +357,8 @@ fn a_value_that_is_there_and_wrong_is_a_different_question() {
 
 /// The same document a strict read refuses, read for what it does carry.
 ///
-/// Real producers ship packages missing a mandatory element — `Citation`
-/// without its `Originator` is the one seen in the wild — and refusing the part
+/// Real producers ship packages missing a mandatory element - `Citation`
+/// without its `Originator` is the one seen in the wild - and refusing the part
 /// loses the geometry and the references it wrote correctly.
 #[test]
 fn a_lenient_read_defaults_what_is_missing_and_says_so() {
@@ -382,7 +382,7 @@ fn a_lenient_read_defaults_what_is_missing_and_says_so() {
 /// A value that is present and wrong is **repaired** in lenient mode, and the
 /// string that was there is kept in the record.
 ///
-/// This used to be a refusal — leniency was about cardinality alone. It
+/// This used to be a refusal - leniency was about cardinality alone. It
 /// changed on 01/08/2026, deliberately: for a tool whose job is to open a
 /// broken file and repair it, losing the ninety-nine fields that were fine
 /// over one bad word is the wrong trade. What has not changed is that nothing
@@ -504,12 +504,12 @@ fn same_local_name_in_two_namespaces_stays_distinct() {
 
 /// Generated types carry **no serde derive**. JSON is written from reflection,
 /// because only reflection can name the concrete subtype behind a polymorphic
-/// field — see `energyml_core::json`. What the generator must emit is therefore
+/// field - see `energyml_core::json`. What the generator must emit is therefore
 /// nothing at all for JSON, which is what this file now shows.
 #[test]
 fn json_round_trip() {
     // Writing needs no registry; **reading does**, and it needs every nested
-    // type, not just the top-level one — `$type` names them all and the reader
+    // type, not just the top-level one - `$type` names them all and the reader
     // builds each one by name. A generated crate's `register` covers this by
     // construction; a hand-written model has to say so.
     let mut registry = registry::Registry::new();
@@ -711,7 +711,7 @@ fn business_rules_extend_validation() {
 }
 
 // ---------------------------------------------------------------------------
-// Registry — dynamic construction and reading
+// Registry - dynamic construction and reading
 // ---------------------------------------------------------------------------
 
 fn test_registry() -> registry::Registry {
@@ -885,7 +885,7 @@ fn object_identity_matches_the_registry() {
 //
 // The generator must emit these three shapes: a RESQML 2.0.1 object, whose
 // complexType is prefixed `obj_` while its element is not, and the two spellings
-// of a reference — eml 2.0/2.1/2.2 with a ContentType, eml 2.3 with a
+// of a reference - eml 2.0/2.1/2.2 with a ContentType, eml 2.3 with a
 // QualifiedType.
 // ---------------------------------------------------------------------------
 
@@ -1171,7 +1171,7 @@ fn an_empty_list_element_is_an_empty_vec_not_an_error() {
     assert!(parsed.values.is_empty());
 
     // How many values are required is a cardinality question, so validation is
-    // what complains — not the reader.
+    // what complains - not the reader.
     let report = validate::Validate::validate(&parsed);
     assert!(
         report
@@ -1228,7 +1228,7 @@ fn reflection_tells_a_list_apart_from_a_repeated_element() {
 // `xsi:type` on a *concrete* declared type
 // ---------------------------------------------------------------------------
 
-/// A concrete type other types extend — `witsml:PlaneAngleOperatingRange` is
+/// A concrete type other types extend - `witsml:PlaneAngleOperatingRange` is
 /// the real shape: concrete, and `AzimuthRange` extends it.
 #[derive(Debug, Default, Clone, PartialEq, EnergymlObject)]
 #[energyml(package = "witsml", version = "2.1", xml_name = "PlaneAngleOperatingRange")]
@@ -1268,7 +1268,7 @@ pub enum AnyPlaneAngleOperatingRange {
     AzimuthRange(AzimuthRange),
 }
 
-/// The owner. Note the element is called `Range`, not after its type — the
+/// The owner. Note the element is called `Range`, not after its type - the
 /// case that makes matching on the element name alone insufficient.
 #[derive(Debug, Default, Clone, PartialEq, EnergymlObject)]
 #[energyml(package = "witsml", version = "2.1", xml_name = "ContinuousGyro")]
@@ -1389,7 +1389,7 @@ fn reflection_sees_through_the_substitution() {
 // Entities and text runs
 // ---------------------------------------------------------------------------
 
-/// An ampersand in a title is ordinary in real data — and quick-xml reports
+/// An ampersand in a title is ordinary in real data - and quick-xml reports
 /// `&amp;` as an event of its own, splitting the surrounding characters into
 /// separate text events. Joining them wrongly mangles the value in silence.
 #[test]
@@ -1440,7 +1440,7 @@ fn indentation_between_elements_is_still_not_content() {
 ///
 /// The declarations that made `resqml:` meaningful lived on the document root
 /// of the file it came from. Writing the subtree back under a different root
-/// without them produces XML no parser can resolve — which is how a real
+/// without them produces XML no parser can resolve - which is how a real
 /// `eml:GraphicalInformationSet` came back empty.
 #[test]
 fn a_kept_subtree_carries_its_namespace_declarations() {

@@ -1,4 +1,4 @@
-# energyml-sheet — architecture
+# energyml-sheet - architecture
 
 Related decisions: [ADR 0005](../../docs/adr/0005-refuse-rather-than-draw.md), [ADR 0011](../../docs/adr/0011-tests-follow-the-specification.md), [ADR 0016](../../docs/adr/0016-one-crate-one-test-binary.md).
 

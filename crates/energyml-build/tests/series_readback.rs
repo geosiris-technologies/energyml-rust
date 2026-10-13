@@ -1,14 +1,14 @@
 //! The series readers of `energyml_domain::series`, against the writers of
 //! this crate: what `witsml-logs`, `injection-test` and `prodml-doublet`
-//! write, read back and compared **to the inputs the test gave** — the
-//! depths, the steps, the instants, the frozen window — never to what the
+//! write, read back and compared **to the inputs the test gave** - the
+//! depths, the steps, the instants, the frozen window - never to what the
 //! writer says it wrote.
 //!
 //! Two code paths meet here and neither checks itself: the writer lays rows
 //! out by its own module doc (`witsml_logs.rs`, *The row layout*), the reader
 //! reads them by its own (`channel_set.rs`, *inferred*). A reader that
 //! swapped two columns, or a writer that did, turns these red; a reader and a
-//! writer that agreed on a wrong layout would not — which is why the layout
+//! writer that agreed on a wrong layout would not - which is why the layout
 //! is also pinned by hand-written rows in `energyml-domain/tests/series.rs`,
 //! and why the values compared here are the test's own.
 //!
@@ -32,7 +32,7 @@ use energyml_domain::source::NoObjects;
 use energyml_domain::values::Values;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
 
-/// A plan's objects, read back through their JSON — the road `apply` takes —
+/// A plan's objects, read back through their JSON - the road `apply` takes -
 /// each with its uuid.
 fn objects_of(plan: &Plan) -> Vec<(String, Box<dyn DynObject>)> {
     let schemas = energyml_schemas::all();
@@ -80,19 +80,19 @@ fn frame_bag() -> Pieces {
         reference: Some(Ref::new(
             FRAME,
             "resqml22.WellboreFrameRepresentation",
-            "GTH-1 — frame",
+            "GTH-1 - frame",
         )),
         interpretation: Some(Ref::new(
             INTERPRETATION,
             "resqml22.WellboreInterpretation",
-            "GTH-1 — interpretation",
+            "GTH-1 - interpretation",
         )),
         node_count: Some(n as usize),
         node_mds: Some(mds()),
         datum: Some(Ref::new(
             DATUM,
             "eml23.ReferencePointInALocalEngineeringCompoundCrs",
-            "GTH-1 — datum",
+            "GTH-1 - datum",
         )),
         ..Known::default()
     };
@@ -121,7 +121,7 @@ fn property(uuid: &str, title: &str, kind_uuid: &str, kind: &str, uom: &str, val
             supporting: Some(Ref::new(
                 FRAME,
                 "resqml22.WellboreFrameRepresentation",
-                "GTH-1 — frame",
+                "GTH-1 - frame",
             )),
             indexable: "nodes".to_string(),
             value_count: vec![1],
@@ -148,7 +148,7 @@ fn what_witsml_logs_writes_reads_back_as_the_depths_and_values_given() {
             "properties",
             Source::Object(property(
                 "20000000-0000-4000-8000-000000000001",
-                "GTH-1 — temperature",
+                "GTH-1 - temperature",
                 "30000000-0000-4000-8000-000000000001",
                 "temperature",
                 "degC",
@@ -159,7 +159,7 @@ fn what_witsml_logs_writes_reads_back_as_the_depths_and_values_given() {
             "properties 2",
             Source::Object(property(
                 "20000000-0000-4000-8000-000000000002",
-                "GTH-1 — pressure",
+                "GTH-1 - pressure",
                 "30000000-0000-4000-8000-000000000002",
                 "pressure",
                 "bar",
@@ -205,8 +205,8 @@ fn what_witsml_logs_writes_reads_back_as_the_depths_and_values_given() {
         .channel("pressure")
         .expect("a channel named after its kind");
     assert_eq!(temperature.uom.as_deref(), Some("degC"));
-    // The NaN the property holds above the ground comes back absent — the
-    // writer's `null`, the reader's `Quality::Absent` — and nothing else does.
+    // The NaN the property holds above the ground comes back absent - the
+    // writer's `null`, the reader's `Quality::Absent` - and nothing else does.
     assert_eq!(temperature.quality[0], Quality::Absent);
     assert!(temperature.quality[1..].iter().all(Quality::is_good));
     assert_eq!(&temperature.numbers().unwrap()[1..], &TEMPERATURES[1..]);
@@ -239,8 +239,8 @@ fn injection_plan() -> Plan {
         }),
     );
     let choices = Choices::new()
-        .set("title", "GTH-2 — injection test")
-        .set("source", "synthetic — a test of the series readers")
+        .set("title", "GTH-2 - injection test")
+        .set("source", "synthetic - a test of the series readers")
         .set("start", START)
         .set("steps", json!(STEPS))
         .set("stepHours", 2.0)
@@ -270,7 +270,7 @@ fn injection_plan() -> Plan {
 }
 
 /// The instants the test asked for: from START, every 30 minutes, three steps
-/// of two hours and the last instant — 13.
+/// of two hours and the last instant - 13.
 fn asked_instants() -> Vec<f64> {
     let start = instant::unix_seconds(START).unwrap();
     (0..13).map(|k| start + k as f64 * 1800.0).collect()
@@ -347,7 +347,7 @@ fn the_flow_test_resolves_its_channels_through_the_log_and_the_pressure_is_the_i
     assert_eq!(measured[1].series.channels[0].mnemonic, "BHP");
     assert_eq!(pressure[0], P0, "before any water goes in");
     for (at, value) in pressure.iter().enumerate().skip(1) {
-        // `responseMinutes` 0: settled at once — the definition of II.
+        // `responseMinutes` 0: settled at once - the definition of II.
         let expected = P0 + STEPS[step_of(at)] / II;
         assert!(
             (value - expected).abs() < 1e-9,
@@ -413,7 +413,7 @@ fn doublet_plan() -> Plan {
     let choices = Choices::new()
         .set("facility", "Heat exchanger")
         .set("fluid", "Eau")
-        .set("source", "synthetic — a test of the series readers")
+        .set("source", "synthetic - a test of the series readers")
         .set("times", json!(MONTHS))
         .set("rate", RATE)
         .set("decline", DECLINE)
@@ -495,7 +495,7 @@ fn the_frozen_window_asked_comes_back_flagged_on_the_asked_instants() {
     assert_eq!(
         frozen,
         [2, 3],
-        "02:00 and 03:00 — the 120 minutes asked from 02:00"
+        "02:00 and 03:00 - the 120 minutes asked from 02:00"
     );
     // The producer has two series (pressure, temperature): no class, no pick.
     assert!(matches!(

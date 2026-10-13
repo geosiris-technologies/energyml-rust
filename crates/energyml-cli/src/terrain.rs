@@ -1,4 +1,4 @@
-//! `energyml terrain` — a digital elevation model fetched from a catalogue
+//! `energyml terrain` - a digital elevation model fetched from a catalogue
 //! source and written as a `Grid2dRepresentation`.
 //!
 //! The use case is draping elevation relief textures over zones in the 3D
@@ -43,7 +43,7 @@ pub struct TerrainArgs {
     /// shipped catalogue, and replace the one that has the same identifier.
     #[arg(long, value_name = "FILE.json")]
     pub catalogue: Option<PathBuf>,
-    /// List the catalogue — and, with `--area`, what covers the window.
+    /// List the catalogue - and, with `--area`, what covers the window.
     #[arg(long)]
     pub list: bool,
     /// Download, and write the grid into this package.
@@ -52,11 +52,11 @@ pub struct TerrainArgs {
     /// An existing package to add the grid to.
     #[arg(long, value_name = "FILE.epc")]
     pub into: Option<PathBuf>,
-    /// A choice of the operation, `name=value` — `vertical=5720`, `title=…`,
+    /// A choice of the operation, `name=value` - `vertical=5720`, `title=…`,
     /// `crs=…` for a reference system of the `--into` package.
     #[arg(long = "set", value_name = "NAME=VALUE")]
     pub choices: Vec<String>,
-    /// The retrieval instant to write — now otherwise.
+    /// The retrieval instant to write - now otherwise.
     #[arg(long)]
     pub now: Option<String>,
     /// Who writes, for each `Citation`.
@@ -96,14 +96,14 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
         args.step,
     )
     .map_err(|why| anyhow::anyhow!("{why}"))?;
-    println!("source      {} — {}", ask.source.id, ask.source.title);
+    println!("source      {} - {}", ask.source.id, ask.source.title);
     println!("licence     {}", ask.source.licence);
     println!("attribution {}", ask.source.attribution);
     if let Some(note) = &ask.source.note {
         println!("note        {note}");
     }
     println!(
-        "window      [{}, {}, {}, {}] EPSG:{} — {} × {} pixels of {} ({} nodes)",
+        "window      [{}, {}, {}, {}] EPSG:{} - {} × {} pixels of {} ({} nodes)",
         ask.bbox[0],
         ask.bbox[1],
         ask.bbox[2],
@@ -117,7 +117,7 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
     println!("request     {}", ask.request.url);
 
     let Some(out) = args.out else {
-        println!("\nnothing was requested — `--out FILE.epc` to download and write");
+        println!("\nnothing was requested - `--out FILE.epc` to download and write");
         return Ok(ExitCode::SUCCESS);
     };
 
@@ -159,7 +159,7 @@ pub fn run(args: TerrainArgs) -> Result<ExitCode> {
         .set("fetched", fetched.as_str());
     // The grid is in `--crs`; a frame is created in it unless one is named.
     let names_a_frame = args.choices.iter().any(|one| one.starts_with("crs="));
-    // `sourceEpsg` alone keeps the numbers in that system — metres or degrees;
+    // `sourceEpsg` alone keeps the numbers in that system - metres or degrees;
     // `project` would ask a projection, which a geographic `--crs` is not.
     if !names_a_frame {
         choices = choices.set("sourceEpsg", u64::from(args.crs));
@@ -261,7 +261,7 @@ fn parse_area(text: &str) -> Result<[f64; 4]> {
     Ok(area)
 }
 
-/// The area in WGS 84 degrees — the corners and the envelope are the
+/// The area in WGS 84 degrees - the corners and the envelope are the
 /// library's (`terrain::area_wgs84`), the geodesy is `energyml-proj`.
 fn to_wgs84(area: [f64; 4], epsg: u32) -> Result<[f64; 4]> {
     let backend = energyml_proj::Proj4::new();

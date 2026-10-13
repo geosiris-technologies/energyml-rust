@@ -1,23 +1,23 @@
 //! What a **law of depth** gives along a wellbore: a temperature rising with a
-//! geothermal gradient, a hydrostatic pressure below a water table — one value
+//! geothermal gradient, a hydrostatic pressure below a water table - one value
 //! per node, from the node's vertical depth below the ground.
 //!
 //! A step of the build plan of the synthetic model (`well-logs`: pressure,
 //! temperature, and logs derived from lithology), and the two requirements
 //! that a law can give:
 //!
-//! > pressure — hydrostatic below the top of the water table (~1 bar per 10 m
+//! > pressure - hydrostatic below the top of the water table (~1 bar per 10 m
 //! > of water), marked synthetic
 //! >
-//! > temperature — ~12–13 °C at about 20 m, then a gradient of a few °C per
-//! > 100 m — order of magnitude only, **source to be found**
+//! > temperature - ~12-13 °C at about 20 m, then a gradient of a few °C per
+//! > 100 m - order of magnitude only, **source to be found**
 //!
-//! TODO(reference): verify — the geothermal gradient and the hydrostatic law carry no published source (the requirement itself says the source is still to be found).
+//! TODO(reference): verify - the geothermal gradient and the hydrostatic law carry no published source (the requirement itself says the source is still to be found).
 //!
 //! # One depth, and only one
 //!
 //! Every law here is a function of **the vertical depth below the ground**, in
-//! metres — not the measured depth, which runs along the hole and is longer as
+//! metres - not the measured depth, which runs along the hole and is longer as
 //! soon as the hole deviates, and not the depth below the datum, which stands
 //! above the ground on a rig. The caller computes it from what the package
 //! states (a node's elevation, the ground under the head); this module never
@@ -25,16 +25,16 @@
 //!
 //! # Where a law holds, and where it says nothing
 //!
-//! - **above the ground** no law of the subsurface holds: a node there — the
-//!   datum on a kelly bushing, the first metres of a hole measured from it —
+//! - **above the ground** no law of the subsurface holds: a node there - the
+//!   datum on a kelly bushing, the first metres of a hole measured from it -
 //!   gets NaN, and is counted (`above_ground`);
-//! - **above where the law starts** — the depth its temperature is stated at,
-//!   the water table — the law says nothing either: NaN, counted apart
+//! - **above where the law starts** - the depth its temperature is stated at,
+//!   the water table - the law says nothing either: NaN, counted apart
 //!   (`shallow`). Extrapolating a gradient up into the zone of seasonal swings,
 //!   or a column of water above the water, would write values nobody stated.
 //!
-//! The two counts are two findings — *the hole starts in the air* and *the law
-//! starts deeper* — and are never added up here.
+//! The two counts are two findings - *the hole starts in the air* and *the law
+//! starts deeper* - and are never added up here.
 //!
 //! # A node cannot lie farther from its datum than its measured depth
 //!
@@ -42,13 +42,13 @@
 //! positions it computed its depths from: a measured depth is a length along
 //! the hole from the datum, and a straight line is the shortest path, so a node
 //! farther from the datum than its MD is not where the datum and the depths put
-//! it. It is a **necessary** condition, not a proof — a frame offset by less
-//! than its depths passes — and its caller says so.
+//! it. It is a **necessary** condition, not a proof - a frame offset by less
+//! than its depths passes - and its caller says so.
 
 use std::fmt;
 
 /// A node within this of the ground, or of where a law starts, is taken on it:
-/// a micrometre — what a difference of two elevations drifts by, nothing a
+/// a micrometre - what a difference of two elevations drifts by, nothing a
 /// producer means.
 const SLACK: f64 = 1e-6;
 
@@ -95,12 +95,12 @@ impl fmt::Display for Coefficient {
 /// What this module refuses, by name.
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum LogError {
-    #[error("the {which} of the law must be a finite number — {given} given")]
+    #[error("the {which} of the law must be a finite number - {given} given")]
     NotFinite { which: Coefficient, given: f64 },
-    #[error("the {which} must be greater than 0 — {given} given: a column of water would weigh nothing")]
+    #[error("the {which} must be greater than 0 - {given} given: a column of water would weigh nothing")]
     NotPositive { which: Coefficient, given: f64 },
     #[error(
-        "the {which} must be 0 or more — {given} given: a law of the subsurface starts at the ground or below it"
+        "the {which} must be 0 or more - {given} given: a law of the subsurface starts at the ground or below it"
     )]
     Negative { which: Coefficient, given: f64 },
     #[error(
@@ -113,17 +113,17 @@ pub enum LogError {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Law {
     /// `at` °C at `from` metres below the ground, and `gradient` °C more per
-    /// metre deeper — a geothermal gradient, in °C/m.
+    /// metre deeper - a geothermal gradient, in °C/m.
     Geothermal {
         /// The temperature at `from`, in °C.
         at: f64,
-        /// Where it is stated, in metres below the ground — 0 or more.
+        /// Where it is stated, in metres below the ground - 0 or more.
         from: f64,
         /// °C per metre of vertical depth.
         gradient: f64,
     },
-    /// `at_table` pascals at the water table, `table` metres below the ground
-    /// — negative when the water stands above it — and `density × gravity`
+    /// `at_table` pascals at the water table, `table` metres below the ground -
+    /// negative when the water stands above it - and `density × gravity`
     /// pascals more per metre deeper.
     Hydrostatic {
         /// The water table, in metres below the ground.
@@ -132,13 +132,13 @@ pub enum Law {
         density: f64,
         /// m/s².
         gravity: f64,
-        /// The pressure at the water table, in pascals — 0 for a gauge pressure.
+        /// The pressure at the water table, in pascals - 0 for a gauge pressure.
         at_table: f64,
     },
 }
 
 impl Law {
-    /// Whether the law can be laid — every coefficient finite, a reference
+    /// Whether the law can be laid - every coefficient finite, a reference
     /// depth at or below the ground, a column of water that weighs something.
     pub fn check(&self) -> Result<(), LogError> {
         let finite = |which: Coefficient, given: f64| {
@@ -180,7 +180,7 @@ impl Law {
         Ok(())
     }
 
-    /// Where the law starts, in metres below the ground — never above it: a
+    /// Where the law starts, in metres below the ground - never above it: a
     /// water table above the ground (artesian water) starts the law at the
     /// ground, since the air above it is no subsurface.
     pub fn start(&self) -> f64 {
@@ -191,7 +191,7 @@ impl Law {
     }
 
     /// The value at `depth` metres below the ground, **without** asking whether
-    /// the law holds there — [`lay`] asks. A depth a micrometre short of the
+    /// the law holds there - [`lay`] asks. A depth a micrometre short of the
     /// start is read on it.
     fn value(&self, depth: f64) -> f64 {
         match *self {
@@ -211,7 +211,7 @@ impl Law {
 pub struct Logged {
     /// One per depth, in their order; NaN where the law says nothing.
     pub values: Vec<f64>,
-    /// Depths above the ground — no law of the subsurface holds there.
+    /// Depths above the ground - no law of the subsurface holds there.
     pub above_ground: usize,
     /// Depths below the ground and above where the law starts.
     pub shallow: usize,
@@ -220,13 +220,13 @@ pub struct Logged {
 }
 
 impl Logged {
-    /// How many values were laid — the depths the law holds at.
+    /// How many values were laid - the depths the law holds at.
     pub fn laid(&self) -> usize {
         self.values.len() - self.above_ground - self.shallow
     }
 }
 
-/// The law at each depth, in metres below the ground — **exactly one value per
+/// The law at each depth, in metres below the ground - **exactly one value per
 /// depth**, NaN where the law says nothing, and the two counts of why.
 ///
 /// A depth that is not a finite number is refused by its rank: it would be a
@@ -267,7 +267,7 @@ pub fn lay(law: &Law, depths: &[f64]) -> Result<Logged, LogError> {
     })
 }
 
-/// A node farther from the datum than its measured depth allows — see
+/// A node farther from the datum than its measured depth allows - see
 /// [`beyond_reach`].
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Beyond {
@@ -280,14 +280,14 @@ pub struct Beyond {
 }
 
 /// The first node that lies farther from `datum` than a hole of its measured
-/// depth can reach — or `None` when every node is within reach.
+/// depth can reach - or `None` when every node is within reach.
 ///
 /// `datum`, `nodes` and `mds` are in **one** length unit, and `nodes` pairs
 /// with `mds` rank for rank (the caller checks both counts first; extra
 /// entries of the longer list are not looked at). The slack is a millimetre
 /// and one part per million of the depth: a frame another producer rounded to
-/// the millimetre passes, a frame placed in another frame of reference — its
-/// local numbers read as placed ones, hundreds of metres or kilometres off —
+/// the millimetre passes, a frame placed in another frame of reference - its
+/// local numbers read as placed ones, hundreds of metres or kilometres off -
 /// does not. A distance that is not a number is beyond reach too.
 pub fn beyond_reach(datum: [f64; 3], nodes: &[[f64; 3]], mds: &[f64]) -> Option<Beyond> {
     nodes

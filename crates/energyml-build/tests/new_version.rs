@@ -1,4 +1,4 @@
-//! `new-version`: an object copied under another `objectVersion` — the test copy
+//! `new-version`: an object copied under another `objectVersion` - the test copy
 //! needed to test identity (ADR 0003), a copy of an
 //! object with a different version.
 //!
@@ -25,14 +25,14 @@ fn when() -> When {
     }
 }
 
-/// A surface's feature: no `objectVersion` — what every writer of this crate
+/// A surface's feature: no `objectVersion` - what every writer of this crate
 /// produces.
 fn surface() -> Value {
     json!({
         "$type": TYPE,
         "uuid": SURFACE,
         "schemaVersion": "2.2",
-        "Citation": { "$type": "eml23.Citation", "Title": "H3 — top of the Ypresian", "Originator": "someone", "Creation": "2026-01-01T00:00:00Z" },
+        "Citation": { "$type": "eml23.Citation", "Title": "H3 - top of the Ypresian", "Originator": "someone", "Creation": "2026-01-01T00:00:00Z" },
         "IsWellKnown": false,
     })
 }
@@ -44,7 +44,7 @@ fn bag(json: Option<Value>) -> Pieces {
             reference: Some(Ref {
                 uuid: SURFACE.into(),
                 qualified_type: TYPE.into(),
-                title: "H3 — top of the Ypresian".into(),
+                title: "H3 - top of the Ypresian".into(),
                 object_version: None,
             }),
             json,
@@ -80,9 +80,9 @@ fn the_plan_keeps_the_identity_and_changes_the_version_only() {
         copy.role, NEW_VERSION_ROLE,
         "written through the gate that adds a version"
     );
-    assert_eq!(copy.title, "H3 — top of the Ypresian", "the same title");
+    assert_eq!(copy.title, "H3 - top of the Ypresian", "the same title");
     assert_eq!(copy.json["objectVersion"], json!("2"));
-    assert_eq!(copy.json["Citation"]["Title"], json!("H3 — top of the Ypresian"));
+    assert_eq!(copy.json["Citation"]["Title"], json!("H3 - top of the Ypresian"));
     assert_eq!(
         copy.json["Citation"]["Creation"],
         json!("2026-01-01T00:00:00Z"),
@@ -138,7 +138,7 @@ fn what_cannot_be_done_is_refused_by_name() {
 }
 
 /// The whole path: the original keeps its short uri, the copy takes the form
-/// with its version, each reads as itself — and played again, the copy is refused
+/// with its version, each reads as itself - and played again, the copy is refused
 /// by name rather than written over the first.
 #[test]
 fn applied_the_original_keeps_the_short_uri_and_the_copy_takes_the_versioned_one() {

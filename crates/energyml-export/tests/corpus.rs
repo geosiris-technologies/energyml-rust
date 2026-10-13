@@ -25,7 +25,7 @@ use energyml_storage::EpcStore;
 /// Every schema version the workspace generates.
 ///
 /// One line rather than a hand-kept subset: a list written out here goes stale
-/// the day a release is added, and nothing would notice — the suite would keep
+/// the day a release is added, and nothing would notice - the suite would keep
 /// passing while quietly never covering the new version. `energyml-schemas`
 /// holds the one list, and its own test fails when it disagrees with
 /// `codegen.toml`.
@@ -54,7 +54,7 @@ fn scene_of(path: &Path) -> Vec<energyml_geometry::SceneObject> {
             objects.push(built);
         }
     }
-    // Time-domain representations cannot be placed in metres — the vertical
+    // Time-domain representations cannot be placed in metres - the vertical
     // axis is travel time, and `Placement::Metres` refuses them by name, which
     // is correct and exactly what these tests must not trip over. ALWYN
     // carries a seismic model in a `LocalTime3dCrs`; a metres-based exporter
@@ -186,7 +186,7 @@ fn geojson_writes_a_document_when_it_can() {
     }
 
     // A stand-in for a geodesy library: it does not compute a real datum shift,
-    // and says so. What is under test here is the document, not the geodesy —
+    // and says so. What is under test here is the document, not the geodesy -
     // the real conversion is `proj4rs`'s job, behind this same trait.
     struct Pretend;
     impl energyml_domain::reproject::Reprojector for Pretend {
@@ -216,7 +216,7 @@ fn geojson_writes_a_document_when_it_can() {
             .unwrap_or_else(|e| panic!("{}: {e}", path.display()));
         let text = String::from_utf8(buffer).expect("GeoJSON is text");
 
-        // One enclosing collection, not several concatenated — the mistake the
+        // One enclosing collection, not several concatenated - the mistake the
         // `write_all` override exists to prevent.
         assert_eq!(
             text.matches("\"FeatureCollection\"").count(),
@@ -308,7 +308,7 @@ fn a_format_can_be_added_without_touching_the_crate() {
 /// The reason the metadata module exists: the name a person recognises for a
 /// horizon is on the *feature*, which is two references away from the
 /// representation. Hard-coding that chain works until somebody wants a fourth
-/// thing, so it is configuration — and this proves the configuration reaches
+/// thing, so it is configuration - and this proves the configuration reaches
 /// through both hops on real files.
 #[test]
 #[cfg(feature = "hdf5")]
@@ -368,7 +368,7 @@ fn a_path_reaches_through_two_references() {
             reached_the_feature += 1;
         }
         // The reference caches a title and the target has its own. They should
-        // agree in a well-formed package — and the point of supporting both is
+        // agree in a well-formed package - and the point of supporting both is
         // that the cheap one is free while the other costs a read.
         if let (Some(cached), Some(resolved)) = (built.metadata.get("cached"), built.metadata.get("resolved"))
         {
@@ -411,7 +411,7 @@ fn every_vtk_flavour_writes_itself() {
             let mut buffer = Vec::new();
             exporter
                 .write(object, &mut buffer, &Options::new())
-                .unwrap_or_else(|e| panic!("{}: {name} — {e}", path.display()));
+                .unwrap_or_else(|e| panic!("{}: {name} - {e}", path.display()));
             let text = String::from_utf8(buffer).expect("VTK ASCII is text");
             assert!(text.contains(marker), "{name}: no `{marker}` in the output");
             // The identity has to be there whether or not a spec was supplied:
@@ -633,8 +633,8 @@ fn the_corpus_goes_out_as_geojson_through_the_real_backend() {
             assert_eq!(placed.len(), out.len());
 
             // Longitude and latitude, not eastings. The corpus sits at easting
-            // 0–750 m in EPSG:23031 — which really is off the coast of Africa,
-            // because these packages carry no georeferencing at all — so a
+            // 0-750 m in EPSG:23031 - which really is off the coast of Africa,
+            // because these packages carry no georeferencing at all - so a
             // range check would prove nothing. The round trip does.
             let back =
                 energyml_domain::reproject::Reprojector::reproject_all(&backend, &out, 4326, source).unwrap();
@@ -649,7 +649,7 @@ fn the_corpus_goes_out_as_geojson_through_the_real_backend() {
                     "{}: {before:?} came back as {after:?}",
                     path.display()
                 );
-                // And the depth is untouched by any of it — bitwise, because
+                // And the depth is untouched by any of it - bitwise, because
                 // real files carry NaN as an "absent" sentinel and NaN != NaN.
                 assert_eq!(before[2].to_bits(), after[2].to_bits());
             }
@@ -664,10 +664,10 @@ fn the_corpus_goes_out_as_geojson_through_the_real_backend() {
 #[test]
 fn native_mode_writes_what_wgs84_mode_refuses() {
     // The escape hatch for a package under repair: no reprojector, no EPSG
-    // code — and still a file one can look at. What the rule forbids is
+    // code - and still a file one can look at. What the rule forbids is
     // *silent* wrongness; this is asked for and labelled.
     let mut orphan = object_with_an_offset_crs();
-    orphan.crs = None; // no CRS at all — the 21 BRGM PointSets
+    orphan.crs = None; // no CRS at all - the 21 BRGM PointSets
 
     // Default mode: not handled, and refused by name if forced through.
     let exporters = Exporters::builtin();
@@ -701,7 +701,7 @@ fn native_mode_labels_the_file_with_the_shared_epsg() {
         .write(&object_with_an_offset_crs(), &mut buffer, &native)
         .unwrap();
     let text = String::from_utf8(buffer).unwrap();
-    // The legacy 2008 member RFC 7946 removed — QGIS and GDAL honour it.
+    // The legacy 2008 member RFC 7946 removed - QGIS and GDAL honour it.
     assert!(text.contains("urn:ogc:def:crs:EPSG::23031"), "{text}");
     // And the coordinates are the *placed* ones, not reprojected: the CRS
     // offsets applied, no geodesy involved.

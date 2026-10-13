@@ -1,4 +1,4 @@
-//! `ijk-grid-from-horizons` — an IJK grid between horizon grids given top to
+//! `ijk-grid-from-horizons` - an IJK grid between horizon grids given top to
 //! bottom.
 //!
 //! The form of the assertions comes from what the schemas and the guides
@@ -9,7 +9,7 @@
 //! geometry is not defined is said by `CellGeometryIsDefined`, and a pillar
 //! with no defined cell by `PillarGeometryIsDefined` (same page); K increases
 //! with depth when the horizons are given top to bottom (TRG §5.35 p. 131).
-//! The numbers — the lattice, the heights — are the tests' own, at map
+//! The numbers - the lattice, the heights - are the tests' own, at map
 //! coordinates in Lambert-93 (x ≈ 651 000, y ≈ 6 861 000), where the
 //! recipe's horizons are.
 //!
@@ -60,8 +60,8 @@ fn other_frame() -> Ref {
     )
 }
 
-/// The lattice: 5 × 4 nodes, 25 along x and **40** along y — two spacings, so
-/// that a transposed lattice shows — `i` along x varying fastest.
+/// The lattice: 5 × 4 nodes, 25 along x and **40** along y - two spacings, so
+/// that a transposed lattice shows - `i` along x varying fastest.
 fn positions() -> Vec<[f64; 2]> {
     let mut out = Vec::new();
     for j in 0..NJ {
@@ -108,25 +108,25 @@ fn h3(x: f64, y: f64) -> f64 {
 }
 
 /// The five horizons of the Chalk grid, H3 to H7, top to bottom, each a different
-/// distance below the one above — so that a layer spread between the wrong
+/// distance below the one above - so that a layer spread between the wrong
 /// pair shows.
 fn o401() -> Vec<(&'static str, Geometry)> {
     vec![
-        ("H3 — top of the Ypresian", grid(h3)),
+        ("H3 - top of the Ypresian", grid(h3)),
         (
-            "H4 — top of the Sparnacian",
+            "H4 - top of the Sparnacian",
             grid(|x, y| h3(x, y) - 15.0 - 0.02 * (x - X0)),
         ),
         (
-            "H5 — top of the Selandian",
+            "H5 - top of the Selandian",
             grid(|x, y| h3(x, y) - 30.0 - 0.02 * (x - X0)),
         ),
         (
-            "H6 — top of the Chalk",
+            "H6 - top of the Chalk",
             grid(|x, y| h3(x, y) - 45.0 - 0.01 * (y - Y0)),
         ),
         (
-            "H7 — top of the Santonian",
+            "H7 - top of the Santonian",
             grid(|x, y| h3(x, y) - 140.0 - 0.01 * (y - Y0)),
         ),
     ]
@@ -186,12 +186,12 @@ fn bag(horizons: &[(&str, Geometry)]) -> Pieces {
     bag_in(horizons, &frame(), true)
 }
 
-/// The Chalk grid's layering: H3–H4 two layers, H4–H5 one, H5–H6 a gap, H6–H7 seven.
+/// The Chalk grid's layering: H3-H4 two layers, H4-H5 one, H5-H6 a gap, H6-H7 seven.
 fn answers() -> Choices {
     Choices::new()
         .set("layers", json!([2, 1, 0, 7]))
         .set("axis", "elevation")
-        .set("title", "Ypresian–Chalk grid")
+        .set("title", "Ypresian-Chalk grid")
 }
 
 fn planned(pieces: &Pieces, choices: &Choices) -> Result<Plan, String> {
@@ -277,8 +277,8 @@ fn node(points: &[f64], pillars: [usize; 2], level: usize, i: usize, j: usize) -
 // -- counts ---------------------------------------------------------------------
 
 /// **The counts come from the inputs**: `Ni`, `Nj` are the lattice's cells, `Nk`
-/// the sum of the layers, one gap per zone of no layer — the Chalk grid's *“11
-/// intervalles = 10 couches + 1 gap”* — and `Nk + 1 + gaps` levels of
+/// the sum of the layers, one gap per zone of no layer - the Chalk grid's *“11
+/// intervalles = 10 couches + 1 gap”* - and `Nk + 1 + gaps` levels of
 /// `(Ni + 1) × (Nj + 1)` pillars.
 #[test]
 fn the_counts_come_from_the_horizons_and_the_layers() {
@@ -290,7 +290,7 @@ fn the_counts_come_from_the_horizons_and_the_layers() {
         (json!(4), json!(3), json!(10))
     );
     assert_eq!(grid["KGaps"]["Count"], json!(1));
-    // `Nk − 1` flags, the gap after the third layer — the last of H4–H5.
+    // `Nk − 1` flags, the gap after the third layer - the last of H4-H5.
     let flags: Vec<bool> = grid["KGaps"]["GapAfterLayer"]["Values"]
         .as_array()
         .unwrap()
@@ -341,7 +341,7 @@ fn each_horizon_is_a_level_and_the_levels_between_are_linear() {
     let plan = planned(&bag(&horizons), &answers()).unwrap();
     let points = floats(&plan, "/points");
     let z = |h: usize, i: usize, j: usize| horizons[h].1.patches[0].points[j * NI + i][2];
-    // H3 at 0, H4 at 2, H5 at 3, H6 at 4 — the gap is the step from 3 to 4 —, H7 at 11.
+    // H3 at 0, H4 at 2, H5 at 3, H6 at 4 - the gap is the step from 3 to 4 -, H7 at 11.
     let levels = [0, 2, 3, 4, 11];
     for j in 0..NJ {
         for i in 0..NI {
@@ -373,8 +373,8 @@ fn each_horizon_is_a_level_and_the_levels_between_are_linear() {
 // -- holes --------------------------------------------------------------------------
 
 /// **A hole undefines the cells it bounds, and no other**: no height on H4 at
-/// node (2, 1) leaves undefined the three layers H3–H5 of the four columns
-/// around it, and keeps the Chalk under it — a hole in H4 says nothing of the
+/// node (2, 1) leaves undefined the three layers H3-H5 of the four columns
+/// around it, and keeps the Chalk under it - a hole in H4 says nothing of the
 /// rock between H6 and H7. Written as `CellGeometryIsDefined` (TRG §5.1
 /// p. 94), NaN at the missing nodes, counted and said.
 #[test]
@@ -474,8 +474,8 @@ fn a_grid_with_no_defined_cell_is_refused() {
 
 /// **A crossing is refused by default, pinched on request**: H5 a metre above
 /// H4 at node (3, 2) is two picks that disagree. Refused, naming where; with
-/// `crossing = pinch`, H5 is brought up to H4 there — a zero-thickness layer,
-/// counted and said — and nothing else moves.
+/// `crossing = pinch`, H5 is brought up to H4 there - a zero-thickness layer,
+/// counted and said - and nothing else moves.
 #[test]
 fn a_crossing_is_refused_by_default_and_pinched_on_request() {
     let mut horizons = o401();
@@ -488,7 +488,7 @@ fn a_crossing_is_refused_by_default_and_pinched_on_request() {
         "the refusal names where: {why}"
     );
     assert!(
-        why.contains("H5 — top of the Selandian") && why.contains("H4 — top of the Sparnacian"),
+        why.contains("H5 - top of the Selandian") && why.contains("H4 - top of the Sparnacian"),
         "{why}"
     );
 
@@ -520,12 +520,12 @@ fn a_crossing_is_refused_by_default_and_pinched_on_request() {
 /// **Above is read off the axis**: the same numbers are in order as
 /// elevations and crossed everywhere as depths. With nothing answered, the
 /// axis comes from the horizons' frame; and a crossing over a hole is still a
-/// crossing — compared against the last horizon that has a height.
+/// crossing - compared against the last horizon that has a height.
 #[test]
 fn the_axis_decides_what_above_means() {
     let unanswered = Choices::new()
         .set("layers", json!([2, 1, 0, 7]))
-        .set("title", "Ypresian–Chalk grid");
+        .set("title", "Ypresian-Chalk grid");
     planned(&bag_in(&o401(), &frame(), true), &unanswered).expect("elevations, top to bottom");
     let why = planned(&bag_in(&o401(), &frame(), false), &unanswered).unwrap_err();
     assert!(
@@ -541,7 +541,7 @@ fn the_axis_decides_what_above_means() {
     horizons[2].1 = moved(horizons[2].1.clone(), 1, 1, h3_there + 2.0);
     let why = planned(&bag(&horizons), &answers()).unwrap_err();
     assert!(
-        why.contains("H5 — top of the Selandian") && why.contains("H3 — top of the Ypresian"),
+        why.contains("H5 - top of the Selandian") && why.contains("H3 - top of the Ypresian"),
         "over the hole in H4: {why}"
     );
 }
@@ -617,7 +617,7 @@ fn a_coarser_lattice_takes_every_other_node() {
 // -- identity -----------------------------------------------------------------------
 
 /// **Same inputs, same grid; another layering, another grid**: the uuid comes
-/// from the horizons, the layers, the coarsening, the rule and the title — a
+/// from the horizons, the layers, the coarsening, the rule and the title - a
 /// new layering changes the cell count, and a property written on the old grid
 /// would no longer fit it. The heights are not in it: re-gridding a horizon
 /// rewrites the same grid.
@@ -660,7 +660,7 @@ fn the_same_inputs_name_the_same_grid() {
 
 /// **The frame and the axis come from the horizons; the title and the
 /// interpretation do not**: the grid is in its horizons' frame, and it is none
-/// of its horizons — H3's name or interpretation on it would be a mistake that
+/// of its horizons - H3's name or interpretation on it would be a mistake that
 /// looks deliberate.
 #[test]
 fn the_frame_is_suggested_and_the_horizons_name_is_not() {
@@ -706,8 +706,8 @@ fn what_cannot_be_a_grid_is_refused_by_name() {
     }
     let why = planned(&bag(&shifted), &answers()).unwrap_err();
     assert!(
-        why.contains("H5 — top of the Selandian")
-            && why.contains("H3 — top of the Ypresian")
+        why.contains("H5 - top of the Selandian")
+            && why.contains("H3 - top of the Ypresian")
             && why.contains("same one"),
         "{why}"
     );
@@ -727,7 +727,7 @@ fn what_cannot_be_a_grid_is_refused_by_name() {
         }],
     };
     let why = planned(&bag(&small), &answers()).unwrap_err();
-    assert!(why.contains("H7 — top of the Santonian"), "{why}");
+    assert!(why.contains("H7 - top of the Santonian"), "{why}");
 
     let (c, s) = (30f64.to_radians().cos(), 30f64.to_radians().sin());
     let turned: Vec<(&str, Geometry)> = o401()
@@ -764,7 +764,7 @@ fn what_cannot_be_a_grid_is_refused_by_name() {
 
 /// **One frame, the horizons'**: two frames or two units among the horizons
 /// are refused, and so is a `crs` naming another frame or a frame created
-/// here — the pillars are the horizons' nodes.
+/// here - the pillars are the horizons' nodes.
 #[test]
 fn the_grid_is_in_the_frame_of_its_horizons_or_refused() {
     let mut pieces = Pieces::empty();
@@ -821,11 +821,11 @@ fn the_grid_is_in_the_frame_of_its_horizons_or_refused() {
 
 /// **The geometry reader reads the nodes and the cells planned.** The grid is
 /// planned by `energyml_analysis::ijk`, written through `apply` into a package
-/// with its HDF5, reopened, and read back by `energyml_geometry::ijk` — a
+/// with its HDF5, reopened, and read back by `energyml_geometry::ijk` - a
 /// reader written against the TRG, which shares no line with the writer. The
 /// two must agree on every node (a NaN where a horizon has a hole), on which
-/// cells are kept — the reader drops the ones `CellGeometryIsDefined` marks,
-/// and a K gap it misread would shift every cell under it by a level — and on
+/// cells are kept - the reader drops the ones `CellGeometryIsDefined` marks,
+/// and a K gap it misread would shift every cell under it by a level - and on
 /// where each kept cell is (its centroid; the winding is the reader's own
 /// business, measured per cell).
 #[cfg(feature = "hdf5")]

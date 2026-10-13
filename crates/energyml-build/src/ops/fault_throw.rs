@@ -1,4 +1,4 @@
-//! `fault-throw` — a horizon torn along the faults that cut it, its hanging
+//! `fault-throw` - a horizon torn along the faults that cut it, its hanging
 //! wall offset: the triangulated surface with its `SplitEdgePatch`, the new
 //! interpretation it represents, and the lips.
 //!
@@ -13,25 +13,25 @@
 //! The computation is `energyml_analysis::fault_throw`: the horizon's nodes
 //! triangulated with each fault's trace as a constraint, the chain of edges
 //! along each trace torn, the hanging wall offset. So this operation
-//! **decides a triangulation**, as `triangulate` does — and takes the horizon
+//! **decides a triangulation**, as `triangulate` does - and takes the horizon
 //! as **nodes**, a grid or a cloud: a surface already triangulated is refused,
 //! since retriangulating it would lay a second skin over the first (the rule
 //! `triangulate` keeps). The surface before the tear is not written: the
-//! `Activity` names it (decided in review) — the
+//! `Activity` names it (decided in review) - the
 //! activity records the horizon it was given.
 //!
 //! # What it writes
 //!
-//! - the torn surface, by [`super::triangles::write`] — one `TrianglePatch`,
+//! - the torn surface, by [`super::triangles::write`] - one `TrianglePatch`,
 //!   and in it **one `SplitEdgePatch` per lip**, footwall then hanging wall,
 //!   fault after fault: *« Describes edges that are not linked to any other
 //!   edge. Because edges do not have indices, a consecutive pair of nodes is
 //!   used to identify each edge »*, *« a 2D array of non-negative integers
 //!   with dimensions 2 x numSplitEdges »* (RESQML 2.2 Structural.xsd
-//!   l. 206–219; TRG 2.2 §11.7 p. 276). The schema says neither how many
+//!   l. 206-219; TRG 2.2 §11.7 p. 276). The schema says neither how many
 //!   `EdgePatch` a tear takes nor what one groups; **one per lip** is this
-//!   operation's reading, the one that lets a reader rebuild each lip as a line
-//!   — it is said in the plan;
+//!   operation's reading, the one that lets a reader rebuild each lip as a line -
+//!   it is said in the plan;
 //! - **a new `HorizonInterpretation`** of the horizon's feature, which the
 //!   surface represents: *« if a user is changing the number or the
 //!   geometrical location of points in the representation of a previously
@@ -40,9 +40,9 @@
 //!   input: what the horizon's previous interpretation interprets is not in
 //!   what the bag knows of it;
 //! - **the lips**, by [`super::polylines::write`]: one patch per fault, two
-//!   open lines each — the footwall's, then the hanging wall's — `LineRole`
+//!   open lines each - the footwall's, then the hanging wall's - `LineRole`
 //!   `contact`, *« Used to represent nonsealed contact interpretation parts
-//!   defined by a horizon/fault intersection »* (Structural.xsd l. 60–64).
+//!   defined by a horizon/fault intersection »* (Structural.xsd l. 60-64).
 //!   Their nodes are nodes of the torn surface, position for position, which
 //!   is what `surface-framework` reads to name them there.
 //!
@@ -52,18 +52,18 @@
 //! differs is refused, naming both. A throw's **sense** is what moves the
 //! hanging wall: `normal` lowers it, `reverse` and `thrust` raise it; a
 //! strike-slip, scissor or variable play states no vertical sense and is
-//! refused by name. These are stated again here — `fault-from-sticks` wrote
+//! refused by name. These are stated again here - `fault-from-sticks` wrote
 //! them on the `FaultInterpretation`, and what the bag knows of an object
 //! does not carry an interpretation's fields: reading them at the boundary is
 //! what would make the two statements one.
 //!
 //! The rest is `energyml_analysis::fault_throw`'s: a vertical fault (no
 //! hanging wall), a fault that misses the horizon or cuts it in pieces or in a
-//! ring, two faults whose traces cross — each refused by its name, on `faults`.
+//! ring, two faults whose traces cross - each refused by its name, on `faults`.
 //!
 //! # A synthetic throw says so
 //!
-//! The throw of the reference model is invented (a throw law — maximum at the
+//! The throw of the reference model is invented (a throw law - maximum at the
 //! centre, null at the ends, a bell-shaped law, synthetic and declared):
 //! with `synthetic`, a `source` is required, and the surface, its
 //! interpretation and the lips carry `synthetic = true` and the sentence
@@ -79,7 +79,7 @@
 //! # References
 //!
 //! - The throw law along a fault trace is a synthetic law stated in `energyml-analysis`, which cites no published source for it.
-//!   TODO(reference): verify — no publication is cited; if the law follows one, add it (authors, year, title, venue, DOI) once checked.
+//!   TODO(reference): verify - no publication is cited; if the law follows one, add it (authors, year, title, venue, DOI) once checked.
 
 use serde_json::json;
 
@@ -108,9 +108,9 @@ pub struct FaultThrow;
 /// How the throw varies along a trace.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
 pub enum Profile {
-    /// `4 s (1 − s)` — zero at both ends, the maximum in the middle.
+    /// `4 s (1 − s)` - zero at both ends, the maximum in the middle.
     Parabolic,
-    /// `√(1 − (2 s − 1)²)` — steeper at the ends, flatter in the middle.
+    /// `√(1 − (2 s − 1)²)` - steeper at the ends, flatter in the middle.
     Elliptic,
 }
 
@@ -133,27 +133,27 @@ impl Profile {
 /// What `fault-throw` is told.
 #[derive(Debug, Params)]
 pub struct FaultThrowParams {
-    /// the largest throw of each fault, in metres, in the order of `faults` — reached where the profile is one
+    /// the largest throw of each fault, in metres, in the order of `faults` - reached where the profile is one
     #[param(least = 1, min = 0.0, uom = "m")]
     pub maximum_throw: Vec<f64>,
-    /// how each fault moved, in the order of `faults` — normal lowers its hanging wall, reverse or thrust raises it
+    /// how each fault moved, in the order of `faults` - normal lowers its hanging wall, reverse or thrust raises it
     #[param(least = 1)]
     pub throw: Vec<Throw>,
-    /// how the throw varies along each trace — zero at both ends, the maximum in the middle
+    /// how the throw varies along each trace - zero at both ends, the maximum in the middle
     ///
     /// No default: a law of throw is a statement about the fault, and a
     /// default would make it for whoever did not.
     pub profile: Profile,
-    /// how far from the trace, in plan, the hanging wall is dragged — the offset falls linearly from the throw on the lip to zero at this distance, in metres
+    /// how far from the trace, in plan, the hanging wall is dragged - the offset falls linearly from the throw on the lip to zero at this distance, in metres
     #[param(min = 0.0, uom = "m")]
     pub reach: f64,
-    /// move the hanging wall along the fault's measured mean dip rather than straight down — its lip then stays on a plane of that dip
+    /// move the hanging wall along the fault's measured mean dip rather than straight down - its lip then stays on a plane of that dip
     #[param(default = false, optional)]
     pub heave: bool,
     /// the throw is invented: every object written carries `synthetic = true` and its source
     #[param(default = false, optional)]
     pub synthetic: bool,
-    /// where the throw comes from — a document with its page, or why an invented one is plausible; required for a synthetic one
+    /// where the throw comes from - a document with its page, or why an invented one is plausible; required for a synthetic one
     pub source: Option<String>,
     /// Where the coordinates are.
     #[param(flatten)]
@@ -166,19 +166,19 @@ pub struct FaultThrowParams {
 /// What `fault-throw` takes.
 #[derive(Debug, Inputs)]
 pub struct FaultThrowInputs {
-    /// the horizon to tear — a grid or a cloud of its nodes, which this operation triangulates with the faults' traces as constraints
+    /// the horizon to tear - a grid or a cloud of its nodes, which this operation triangulates with the faults' traces as constraints
     #[input(topology = "grid")]
     pub horizon: Shape,
-    /// the fault surfaces that cut it, triangulated — in the order `maximumThrow` and `throw` follow
+    /// the fault surfaces that cut it, triangulated - in the order `maximumThrow` and `throw` follow
     #[input(topology = "triangles", least = 1, ordered)]
     pub faults: Vec<Shape>,
-    /// the horizon's feature — the torn surface represents a new interpretation of it
+    /// the horizon's feature - the torn surface represents a new interpretation of it
     #[input(types = "resqml22.BoundaryFeature")]
     pub feature: ObjectIn,
 }
 
-/// The `synthetic` mark the reference model asks of an invented object (ADR-0019)
-/// — the form `horizon-from-law` and `fault-from-sticks` write.
+/// The `synthetic` mark the reference model asks of an invented object (ADR-0019) -
+/// the form `horizon-from-law` and `fault-from-sticks` write.
 fn synthetic_mark() -> eml::ExtensionNameValue {
     eml::ExtensionNameValue {
         name: "synthetic".to_string(),
@@ -197,7 +197,7 @@ fn synthetic_mark() -> eml::ExtensionNameValue {
 type Surface = (Vec<[f64; 3]>, Vec<[u32; 3]>);
 
 /// A shape's triangles, every patch's indices shifted to the whole shape's
-/// nodes — or `None` when it holds none.
+/// nodes - or `None` when it holds none.
 fn surface_of(shape: &Shape) -> Option<Surface> {
     let mut points = Vec::new();
     let mut triangles = Vec::new();
@@ -240,7 +240,7 @@ impl Operation for FaultThrow {
     fn about(&self) -> About {
         About {
             name: "fault-throw",
-            describe: "a horizon torn along the faults that cut it — the triangulated surface with its split edges, its hanging walls offset by a stated throw, a new interpretation of its feature, and the lips",
+            describe: "a horizon torn along the faults that cut it - the triangulated surface with its split edges, its hanging walls offset by a stated throw, a new interpretation of its feature, and the lips",
             category: Category::Faults,
             makes: &[
                 "resqml22.TriangulatedSetRepresentation",
@@ -270,7 +270,7 @@ impl Operation for FaultThrow {
                     return Err(Refusal::on(
                         "horizon",
                         format!(
-                            "`{}` is already triangulated, and this operation decides the triangles itself — with the faults' traces as constraints: give the grid or the cloud of its nodes (retriangulating would lay a second skin over the first)",
+                            "`{}` is already triangulated, and this operation decides the triangles itself - with the faults' traces as constraints: give the grid or the cloud of its nodes (retriangulating would lay a second skin over the first)",
                             name_of(&inputs.horizon)
                         ),
                     ));
@@ -280,7 +280,7 @@ impl Operation for FaultThrow {
                     return Err(Refusal::on(
                         "horizon",
                         format!(
-                            "`{}` is not a surface's nodes — give a grid or a cloud",
+                            "`{}` is not a surface's nodes - give a grid or a cloud",
                             name_of(&inputs.horizon)
                         ),
                     ));
@@ -292,7 +292,7 @@ impl Operation for FaultThrow {
                 return Err(Refusal::on(
                     "faults",
                     format!(
-                        "`{}` is not a triangulated surface — a fault's trace on the horizon is computed from its surface",
+                        "`{}` is not a triangulated surface - a fault's trace on the horizon is computed from its surface",
                         name_of(fault)
                     ),
                 ));
@@ -315,7 +315,7 @@ impl Operation for FaultThrow {
             return Err(Refusal::on(
                 "maximumThrow",
                 format!(
-                    "{} throw(s) for {count} fault(s) — one per fault, in the order of `faults`",
+                    "{} throw(s) for {count} fault(s) - one per fault, in the order of `faults`",
                     params.maximum_throw.len()
                 ),
             ));
@@ -324,7 +324,7 @@ impl Operation for FaultThrow {
             return Err(Refusal::on(
                 "throw",
                 format!(
-                    "{} kind(s) of throw for {count} fault(s) — one per fault, in the order of `faults`",
+                    "{} kind(s) of throw for {count} fault(s) - one per fault, in the order of `faults`",
                     params.throw.len()
                 ),
             ));
@@ -339,7 +339,7 @@ impl Operation for FaultThrow {
                     return Err(Refusal::on(
                         "throw",
                         format!(
-                            "`{name}` is given as {}: that play states no vertical sense, and which way its hanging wall goes is what is thrown — give normal, reverse or thrust",
+                            "`{name}` is given as {}: that play states no vertical sense, and which way its hanging wall goes is what is thrown - give normal, reverse or thrust",
                             other.word()
                         ),
                     ));
@@ -355,7 +355,7 @@ impl Operation for FaultThrow {
         if params.synthetic && source.is_none() {
             return Err(Refusal::on(
                 "source",
-                "a synthetic throw says where its numbers come from — a document with its page, or why they are plausible (no constant without a source, ADR-0019)",
+                "a synthetic throw says where its numbers come from - a document with its page, or why they are plausible (no constant without a source, ADR-0019)",
             ));
         }
 
@@ -367,7 +367,7 @@ impl Operation for FaultThrow {
                 return Err(Refusal::on(
                     "sourceEpsg",
                     format!(
-                        "`{horizon_name}` is in `{}`, and its torn copy is written there — name it as `crs` rather than creating a frame",
+                        "`{horizon_name}` is in `{}`, and its torn copy is written there - name it as `crs` rather than creating a frame",
                         own.title
                     ),
                 ));
@@ -378,7 +378,7 @@ impl Operation for FaultThrow {
                 return Err(Refusal::on(
                     "crs",
                     format!(
-                        "`{horizon_name}` is in `{}`, and the frame named is another — its torn copy is written in the horizon's own frame",
+                        "`{horizon_name}` is in `{}`, and the frame named is another - its torn copy is written in the horizon's own frame",
                         own.title
                     ),
                 ));
@@ -393,7 +393,7 @@ impl Operation for FaultThrow {
                 return Err(Refusal::on(
                     "faults",
                     format!(
-                        "`{name}` is in `{}` and `{horizon_name}` in `{}` — a trace read across two frames is read across two origins",
+                        "`{name}` is in `{}` and `{horizon_name}` in `{}` - a trace read across two frames is read across two origins",
                         theirs.title, own.title
                     ),
                 ));
@@ -412,7 +412,7 @@ impl Operation for FaultThrow {
                 return Err(Refusal::on(
                     "crs",
                     format!(
-                        "the frame counts its vertical axis in `{other}`, and a throw and a reach are given in metres — no conversion is made"
+                        "the frame counts its vertical axis in `{other}`, and a throw and a reach are given in metres - no conversion is made"
                     ),
                 ));
             }
@@ -437,7 +437,7 @@ impl Operation for FaultThrow {
             return Err(Refusal::on(
                 "horizon",
                 format!(
-                    "{holes} of the {} node(s) of `{horizon_name}` have no position — a triangulation of the others would span the holes, drawing a surface the horizon does not state",
+                    "{holes} of the {} node(s) of `{horizon_name}` have no position - a triangulation of the others would span the holes, drawing a surface the horizon does not state",
                     nodes.len()
                 ),
             ));
@@ -574,7 +574,7 @@ impl Operation for FaultThrow {
             return Err(Refusal::on(
                 "source",
                 format!(
-                    "makes a description of {} characters, and a Citation/Description holds 2000 — cite the document shorter",
+                    "makes a description of {} characters, and a Citation/Description holds 2000 - cite the document shorter",
                     text.chars().count()
                 ),
             ));
@@ -590,7 +590,7 @@ impl Operation for FaultThrow {
         let interpretation_uuid = cx
             .identity
             .uuid(&format!("interpretation:{seed}"), plan.objects.len())?;
-        let interpretation_title = format!("{title} — interpretation");
+        let interpretation_title = format!("{title} - interpretation");
         let interpretation = resqml::HorizonInterpretation {
             uuid: interpretation_uuid.clone(),
             schema_version: "2.2".to_string(),
@@ -647,7 +647,7 @@ impl Operation for FaultThrow {
             frame: lips_frame,
             represented: RepresentedParams { interpretation: None },
             naming: NamingParams {
-                title: Some(crate::declare::Title(format!("{title} — lips"))),
+                title: Some(crate::declare::Title(format!("{title} - lips"))),
                 data_file: file.clone(),
             },
             new_feature: NewFeatureParams {
@@ -681,7 +681,7 @@ impl Operation for FaultThrow {
             node_offset += length;
         }
         let lips = Shape {
-            name: format!("{title} — lips"),
+            name: format!("{title} - lips"),
             geometry: Geometry {
                 kind: "lips",
                 patches,
@@ -714,14 +714,14 @@ impl Operation for FaultThrow {
         )?;
         for mut object in lips_plan.objects {
             if object.role == "representation" {
-                // The lips' `LineRole` `contact` — *« Used to represent
+                // The lips' `LineRole` `contact` - *« Used to represent
                 // nonsealed contact interpretation parts defined by a
-                // horizon/fault intersection »* (Structural.xsd l. 60–64).
+                // horizon/fault intersection »* (Structural.xsd l. 60-64).
                 object.json["LineRole"] = json!("contact");
-                // **And they represent the torn horizon's interpretation** —
+                // **And they represent the torn horizon's interpretation** -
                 // the lines where it meets the faults are of that horizon.
                 // Without it the lips of the reference model would stand for
-                // nothing: a resqml object without an interpretation — so the
+                // nothing: a resqml object without an interpretation - so the
                 // horizon's interpretation is proposed for them.
                 object.json["RepresentedObject"] = json!({
                     "$type": "eml23.DataObjectReference",
@@ -758,7 +758,7 @@ impl Operation for FaultThrow {
         says.push(Note {
             key: "new-interpretation",
             detail: format!(
-                "the torn surface represents a new HorizonInterpretation of `{}` — its points changed (RESQML usage guide 2.2, draft, §7.2.2 p. 72); what the horizon's previous interpretation states beyond its feature is not read here, and not copied",
+                "the torn surface represents a new HorizonInterpretation of `{}` - its points changed (RESQML usage guide 2.2, draft, §7.2.2 p. 72); what the horizon's previous interpretation states beyond its feature is not read here, and not copied",
                 feature.title
             ),
         });
@@ -774,7 +774,7 @@ impl Operation for FaultThrow {
             if !params.heave {
                 let off = fault.largest / fault.orientation.dip.to_radians().tan();
                 detail.push_str(&format!(
-                    " — moved straight down, the hanging wall's lip lies off a plane of that dip by up to {off:.3} m (`heave` moves it along)"
+                    " - moved straight down, the hanging wall's lip lies off a plane of that dip by up to {off:.3} m (`heave` moves it along)"
                 ));
             }
             says.push(Note {
@@ -785,7 +785,7 @@ impl Operation for FaultThrow {
         says.push(Note {
             key: "split-edges",
             detail: format!(
-                "{split_edges} split edge(s) in {} SplitEdgePatch — one per lip, the footwall's then the hanging wall's, fault after fault; the schema does not say what an EdgePatch groups (Structural.xsd l. 206–219), and one per lip is this operation's reading",
+                "{split_edges} split edge(s) in {} SplitEdgePatch - one per lip, the footwall's then the hanging wall's, fault after fault; the schema does not say what an EdgePatch groups (Structural.xsd l. 206-219), and one per lip is this operation's reading",
                 torn.faults.len() * 2
             ),
         });
@@ -807,7 +807,7 @@ impl Operation for FaultThrow {
         if torn.flipped > 0 {
             says.push(Note {
                 key: "flipped",
-                detail: format!("{} triangle(s) turned over in plan under the offset — a heave larger than the triangles near the lip; said, not corrected", torn.flipped),
+                detail: format!("{} triangle(s) turned over in plan under the offset - a heave larger than the triangles near the lip; said, not corrected", torn.flipped),
             });
         }
         if params.synthetic {
@@ -839,7 +839,7 @@ impl Operation for FaultThrow {
         plan.activity
             .parameters
             .push(number("flippedTriangleCount", torn.flipped));
-        // What the registry cannot record — a list is no single value — and a
+        // What the registry cannot record - a list is no single value - and a
         // second run needs, in the order given.
         for (one, throw) in params.throw.iter().zip(&params.maximum_throw) {
             plan.activity.parameters.push(Parameter::Text {
@@ -883,7 +883,7 @@ impl Operation for FaultThrow {
     }
 }
 
-/// Which way the vertical axis points, and in what unit — the horizon's own
+/// Which way the vertical axis points, and in what unit - the horizon's own
 /// frame when the bag knows it, else the frame named, else the one created
 /// here (`crs::build`: an identity compound over metres, counting up).
 fn vertical_of(
@@ -902,7 +902,7 @@ fn vertical_of(
     if frame.kind == Some(crate::crs::FrameKind::Geographic) {
         return Err(Refusal::on(
             if params.crs.is_some() { "crs" } else { "project" },
-            "the frame measures its horizontal axes in degrees while a throw and a reach are metres — name a projected system in `project`, or a LocalEngineeringCompoundCrs as `crs`",
+            "the frame measures its horizontal axes in degrees while a throw and a reach are metres - name a projected system in `project`, or a LocalEngineeringCompoundCrs as `crs`",
         ));
     }
     if !frame.objects.is_empty() {

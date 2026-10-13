@@ -2,7 +2,7 @@
 //!
 //! The report that prompted this: a client EPC of 1618 objects whose every
 //! `Citation` was written without its `Originator`. One string, mandatory in
-//! the schema, read by nothing downstream — and the whole file was unreadable.
+//! the schema, read by nothing downstream - and the whole file was unreadable.
 //! Not one geometry, not one reference, not one title, no export, no JSON.
 //!
 //! The reasoning that changed it is in
@@ -35,7 +35,7 @@ fn corpus_file(name: &str) -> Option<PathBuf> {
 /// corpus changes.
 ///
 /// **Built once.** Three tests in this file want it, cargo runs them on three
-/// threads, and the first version of this wrote the same path from all three —
+/// threads, and the first version of this wrote the same path from all three -
 /// so one thread read a zip another was still writing. It passed alone and
 /// failed in the workspace run, which is the worst way for a test to be wrong:
 /// the isolated run that a person does while working is the one that lies.
@@ -136,7 +136,7 @@ fn a_package_missing_a_required_element_still_reads() {
 fn what_was_filled_in_is_reported() {
     // Readable is not the same as silent. Every default the reader put there is
     // a value nobody wrote, and a caller that saves the object would put it on
-    // disk — so it has to be able to find out.
+    // disk - so it has to be able to find out.
     let Some(path) = without_originator("testingPackageCpp22.epc") else {
         return;
     };
@@ -175,7 +175,7 @@ fn a_value_that_is_there_and_wrong_is_still_refused() {
     // The asymmetry, on a real part: absence is read past, nonsense is not. A
     // producer that omits an element forgot; a producer that writes `deux`
     // where a dimension belongs wrote something, and defaulting it throws away
-    // what the file said — an IJK grid silently 0 cells wide.
+    // what the file said - an IJK grid silently 0 cells wide.
     let Some(path) = corpus_file("testingPackageCpp22.epc") else {
         eprintln!("skipped: the corpus is not present");
         return;
@@ -255,7 +255,7 @@ fn the_version_a_part_is_read_as_does_not_change() {
             // reason that stopped being true on 21/09: PRODML 2.3 was not a
             // release this workspace generated, so a part stamped `2.3` fell
             // back to 2.2 on *both* paths and the two agreed by accident.
-            // Generating 2.3 separated them, and the separation is correct —
+            // Generating 2.3 separated them, and the separation is correct -
             // fesapi stamps `schemaVersion="2.3"` on PRODML 2.2 content, and
             // `80wells_surf_modified_val_color.epc` has no `[Content_Types].xml`
             // to contradict it, so the inventory believes the stamp while the
@@ -264,8 +264,8 @@ fn the_version_a_part_is_read_as_does_not_change() {
             // Demanding equality would therefore have forced one of two lies:
             // an inventory that claims to know what only a parser can settle,
             // or a reader that accepts the stamp over the bytes. What must hold
-            // is the thing this repository actually cares about — *the
-            // disagreement is named, not swallowed* — and `get_object` already
+            // is the thing this repository actually cares about - *the
+            // disagreement is named, not swallowed* - and `get_object` already
             // records it whenever it settles on a lower-ranked candidate.
             let said = store
                 .diagnostics()

@@ -1,4 +1,4 @@
-//! `energyml` — inspect and validate EnergyML data stores from a shell.
+//! `energyml` - inspect and validate EnergyML data stores from a shell.
 //!
 //! ```text
 //! energyml list   model.epc              # what is in it
@@ -54,10 +54,10 @@ struct Cli {
     /// Read parts that break the schema instead of refusing them.
     ///
     /// Two kinds of defect are read past. An absent required element comes
-    /// back as its default; a value that is *there* and unreadable — a word
+    /// back as its default; a value that is *there* and unreadable - a word
     /// outside a closed enumeration, a number that is not a number, an
     /// undefined entity, an `xsi:type` naming an unknown subtype of a concrete
-    /// base — is replaced, and the string that was in the file is reported.
+    /// base - is replaced, and the string that was in the file is reported.
     ///
     /// Every one of them is reported. Use it to get at the contents of a
     /// package whose producer wrote something wrong; do not use it for
@@ -65,7 +65,7 @@ struct Cli {
     /// the document said.
     ///
     /// Still refused in both modes: malformed XML, bad encoding, and an
-    /// `xsi:type` on a purely abstract choice — there is nothing to fall back
+    /// `xsi:type` on a purely abstract choice - there is nothing to fall back
     /// to there.
     #[arg(long, global = true)]
     lenient: bool,
@@ -73,7 +73,7 @@ struct Cli {
     /// Refuse a part that omits something the schema requires.
     ///
     /// By default an absent required element is filled with its default and
-    /// reported, because refusing costs every field the part *did* carry — a
+    /// reported, because refusing costs every field the part *did* carry - a
     /// package whose producer left out `Citation.Originator` is otherwise
     /// unreadable in its entirety, geometry included.
     ///
@@ -134,7 +134,7 @@ enum Command {
     Colors(ColorsArgs),
     /// Print the lookup tables: their columns, their keys, and their rows.
     Tables(TablesArgs),
-    /// Write a package's wellbores as a table — one row per node, the discrete values resolved.
+    /// Write a package's wellbores as a table - one row per node, the discrete values resolved.
     Wells(WellsArgs),
     /// Read a log, a time series, a flow test or production periods as series:
     /// the index, the channels, what is absent or flagged, and why a reading is refused.
@@ -145,7 +145,7 @@ enum Command {
     Export(ExportArgs),
     /// List the schema types this build can read.
     Types(TypesArgs),
-    /// Write the model's documentation as JSON — every type, field and value,
+    /// Write the model's documentation as JSON - every type, field and value,
     /// with the `xsd:documentation`, one file per (package, version).
     Docs(DocsArgs),
     /// Work on the parts no parser will touch: list them, take their bytes out,
@@ -160,12 +160,12 @@ enum Command {
     Relabel(RelabelArgs),
     /// Cut a package down to a chosen set of objects, and say what that cost.
     Extract(ExtractArgs),
-    /// Rename the external data file a package points at — the fields, the
+    /// Rename the external data file a package points at - the fields, the
     /// relationships and the file itself, or refuse.
     Rename(RenameArgs),
     /// List the public APIs this build can query, and what each one offers.
     Sources(sources::SourcesArgs),
-    /// Quote — and then harvest — a query against one of them.
+    /// Quote - and then harvest - a query against one of them.
     Fetch(sources::FetchArgs),
     /// List the rules: the house rules of this library, where the specification is silent.
     Rules(rules::RulesArgs),
@@ -177,15 +177,15 @@ enum Command {
     Import(import::ImportArgs),
     /// Create objects through one door: list what an input allows, plan it, write it.
     Create(create::CreateArgs),
-    /// A digital elevation model from a catalogue source, written as a 2D grid —
+    /// A digital elevation model from a catalogue source, written as a 2D grid -
     /// the quote without `--out`.
     Terrain(terrain::TerrainArgs),
     /// Write the reference of every command, `cli-reference.md`, from
-    /// their definitions — or check it (`--check`). A tool of the repository,
+    /// their definitions - or check it (`--check`). A tool of the repository,
     /// run by a script of each repository; hidden from the help.
     #[command(hide = true, name = "cli-reference")]
     CliReference(cli_reference::CliReferenceArgs),
-    /// Write the Galaxy tool XML of an operation from its declaration — what a
+    /// Write the Galaxy tool XML of an operation from its declaration - what a
     /// Galaxy server runs to call it through the `energyml` image. Hidden: a tool
     /// of the repository, not of a reader of packages.
     #[command(hide = true, name = "galaxy-tool")]
@@ -201,7 +201,7 @@ enum Command {
 struct ExtractArgs {
     /// The EPC file to cut.
     file: PathBuf,
-    /// A selection manifest — the JSON the front end writes.
+    /// A selection manifest - the JSON the front end writes.
     ///
     /// The decision travels as a file rather than as a list of arguments for
     /// three reasons: it reads, it versions beside the model it curates, and it
@@ -215,7 +215,7 @@ struct ExtractArgs {
     /// Leave the array pointers naming the source's data file.
     ///
     /// The default copies the referenced datasets beside the new package, which
-    /// is the only way the result is actually smaller — a partial EPC pointing
+    /// is the only way the result is actually smaller - a partial EPC pointing
     /// at the whole source `.h5` is legal and misses the point. Copying needs a
     /// writing backend; without one, this is the honest fallback and the report
     /// says so.
@@ -232,8 +232,8 @@ struct RelabelArgs {
     file: PathBuf,
     /// Which package's parts to relabel: `resqml`, `witsml`, `prodml`, `eml`.
     ///
-    /// Required, and no default. Every version in an EPC is independent — the
-    /// eml parts of a RESQML package have their *own* release — so relabelling
+    /// Required, and no default. Every version in an EPC is independent - the
+    /// eml parts of a RESQML package have their *own* release - so relabelling
     /// everything would declare a version for objects that never had it.
     #[arg(long, value_name = "PACKAGE")]
     package: String,
@@ -241,7 +241,7 @@ struct RelabelArgs {
     ///
     /// Spelled the way Energistics names the release: their own distribution
     /// calls the drop `resqml_v2.2_dev3`. The reader compares versions ignoring
-    /// separator and case, so `2.2dev3` and `2.2-dev3` are read the same — this
+    /// separator and case, so `2.2dev3` and `2.2-dev3` are read the same - this
     /// is about what the file will say, not about what can be read back.
     #[arg(long, value_name = "VERSION")]
     schema_version: String,
@@ -251,7 +251,7 @@ struct RelabelArgs {
     /// a rare shape: an EPC may legitimately mix releases (EPC §3.2), and the
     /// reference package holds RESQML 2.0.1 objects beside 2.2 ones. Relabelling
     /// on the package name alone would declare 2.0.1 parts to be a 2.2
-    /// development drop — the exact corruption this command exists to avoid,
+    /// development drop - the exact corruption this command exists to avoid,
     /// applied by the tool instead of by the producer.
     #[arg(long, value_name = "VERSION")]
     from: Option<String>,
@@ -287,7 +287,7 @@ struct RenameArgs {
     file: PathBuf,
     /// The data file as the package names it today.
     ///
-    /// Absent, the package's own declaration answers — when it declares exactly
+    /// Absent, the package's own declaration answers - when it declares exactly
     /// one file. With several there is no default worth guessing, and the
     /// refusal lists them. That is argument resolution, not a decision about
     /// the package: `rename::plan` is given a name either way.
@@ -296,7 +296,7 @@ struct RenameArgs {
     /// The bare name it should take (EPC §3.2.3: a name, not a path).
     #[arg(long, value_name = "NAME")]
     to: String,
-    /// Carry it out. Without it nothing is touched and the quote is printed —
+    /// Carry it out. Without it nothing is touched and the quote is printed -
     /// the same two steps as `create --plan` and `extract --dry-run`.
     #[arg(long)]
     apply: bool,
@@ -364,13 +364,13 @@ struct ListArgs {
 struct CheckArgs {
     /// The EPC file.
     file: PathBuf,
-    /// Only report errors — no warnings, no notes.
+    /// Only report errors - no warnings, no notes.
     #[arg(long)]
     errors_only: bool,
     /// Skip schema validation of the objects, which is the slow part.
     #[arg(long)]
     no_schema: bool,
-    /// A business rule set, as JSON — **added to** the shipped one.
+    /// A business rule set, as JSON - **added to** the shipped one.
     ///
     /// Added rather than substituted: a house rule and a rule of the
     /// standard answer different questions, and a file that silenced the
@@ -495,7 +495,7 @@ struct WellsArgs {
     /// The field separator.
     #[arg(long, value_name = "CHAR", default_value = ",")]
     separator: char,
-    /// Write anyway when the columns disagree — the clash is still named.
+    /// Write anyway when the columns disagree - the clash is still named.
     #[arg(long)]
     force: bool,
 }
@@ -509,7 +509,7 @@ struct GeometryArgs {
     points: Option<usize>,
     /// Apply the CRS: print projected coordinates instead of local ones.
     ///
-    /// The local placement only — offset, areal rotation and the depth flip.
+    /// The local placement only - offset, areal rotation and the depth flip.
     /// Reprojecting between EPSG systems needs a geodesy backend, which this
     /// build does not carry; see `energyml_domain::reproject`.
     #[arg(long)]
@@ -545,8 +545,8 @@ struct ExportArgs {
     /// reads through two objects. See `energyml_domain::metadata`.
     #[arg(long, value_name = "FILE")]
     metadata: Option<PathBuf>,
-    /// Use the standard metadata keys — identity plus interpretation and
-    /// feature — without writing a file.
+    /// Use the standard metadata keys - identity plus interpretation and
+    /// feature - without writing a file.
     #[arg(long, conflicts_with = "metadata")]
     standard_metadata: bool,
     /// Attach the property values to what is written.
@@ -571,14 +571,14 @@ struct ExportArgs {
     /// wants to see it. `points` and `cells` transfer; leaving this out writes
     /// each property where the file put it.
     ///
-    /// The transfer is a real computation and it is named, not guessed — see
+    /// The transfer is a real computation and it is named, not guessed - see
     /// `--transfer-method`.
     #[arg(long, value_name = "SCOPE", value_parser = ["points", "cells"])]
     properties_on: Option<String>,
     /// Sweep every polyline into a solid tube of this radius.
     ///
     /// A well drawn as a line is one pixel wide at any distance that shows the
-    /// model. A **radius**, not a diameter — every sweep in every renderer takes
+    /// model. A **radius**, not a diameter - every sweep in every renderer takes
     /// a radius, and converting silently at one end of a pair of interfaces is
     /// how a well comes out twice too fat.
     ///
@@ -588,7 +588,7 @@ struct ExportArgs {
     /// through positions the file does not state.
     #[arg(long, value_name = "RADIUS")]
     tube: Option<f64>,
-    /// How many faces go round the tube — the arity of the cross-section.
+    /// How many faces go round the tube - the arity of the cross-section.
     ///
     /// Three is a triangular prism and reads as a mistake; past about sixteen
     /// nothing on screen changes and every vertex is paid for.
@@ -614,7 +614,7 @@ struct ExportArgs {
     /// definitions.
     ///
     /// Where to reach for when the built-in transformation is not the one your
-    /// survey specifies — it is a single Helmert per datum, good to a few
+    /// survey specifies - it is a single Helmert per datum, good to a few
     /// metres, and sometimes that is not good enough.
     #[arg(long, value_name = "FILE")]
     crs_definitions: Option<PathBuf>,
@@ -631,7 +631,7 @@ struct ExportArgs {
     ///
     /// Without it a representation in a seismic time system is **refused**, and
     /// that is the honest default: the package carries no velocity model, and
-    /// RESQML puts the time kind — one-way or two-way — outside the CRS, so a
+    /// RESQML puts the time kind - one-way or two-way - outside the CRS, so a
     /// real depth is half or double whatever this produces.
     ///
     /// What it buys is a mesh you can look at, with the equivalence written
@@ -645,17 +645,17 @@ struct ExportArgs {
     /// carries the native projected coordinates instead, plus the legacy
     /// `crs` member naming the EPSG code when there is one (QGIS and GDAL
     /// honour it), and objects that name no CRS at all are written too. The
-    /// file is knowingly non-conformant — useful for looking at a package
+    /// file is knowingly non-conformant - useful for looking at a package
     /// whose georeferencing is missing or under repair.
     #[arg(long, conflicts_with = "epsg")]
     native_crs: bool,
     /// Draw these types in this form: `--as PATTERN=SHAPE`, repeatable.
     ///
-    /// The pattern matches anywhere in the qualified type, case-insensitively —
+    /// The pattern matches anywhere in the qualified type, case-insensitively -
     /// `Grid2d`, `resqml20.`, `IjkGridRepresentation`, or `*` for everything.
     ///
     /// The shape is `points`, `lines`, `surface`, `volume` or `auto`, or one of
-    /// the two **summaries** — `outline` for the convex hull of the object as a
+    /// the two **summaries** - `outline` for the convex hull of the object as a
     /// single polygon, `centroid` for the mean of its nodes as a single point.
     /// Those two answer "where is this" rather than "what is this", and carry
     /// no property: they are what OSDU's SpatialArea and SpatialPoint ask for.
@@ -681,7 +681,7 @@ struct DocsArgs {
     /// Write one file per (package, version) plus an `index.json`, into this
     /// directory. Without it, the JSON goes to stdout.
     ///
-    /// Files are named `<package>-<version>.json` — `resqml-2.2.json` — so
+    /// Files are named `<package>-<version>.json` - `resqml-2.2.json` - so
     /// "only resqml" or "only resqml 2.2" is choosing files, not a query:
     /// the index says what exists, each file is self-contained.
     #[arg(long, value_name = "DIR")]
@@ -689,7 +689,7 @@ struct DocsArgs {
     /// Only this package: `resqml`, `witsml`, `prodml`, `eml`.
     #[arg(long)]
     package: Option<String>,
-    /// Only this version, e.g. `2.2` — the directory spelling, so RESQML
+    /// Only this version, e.g. `2.2` - the directory spelling, so RESQML
     /// 2.0.1 is `2.0.1`.
     #[arg(long)]
     version: Option<String>,
@@ -706,7 +706,7 @@ struct TypesArgs {
     /// A name (`TriangulatedSetRepresentation`), a qualified type
     /// (`resqml22.TriangulatedSetRepresentation`), or `Type.Field` for one
     /// field. Answers the two questions the schema makes hard: which concrete
-    /// types a field accepts, and which values an enumeration allows — with
+    /// types a field accepts, and which values an enumeration allows - with
     /// open ones marked, since those take any string as well.
     #[arg(long, value_name = "TYPE[.FIELD]")]
     describe: Option<String>,
@@ -824,7 +824,7 @@ pub struct Modes {
 /// ends up reporting zero of something the file plainly contains.
 ///
 /// The hint at the end names the switch that would actually help, which depends
-/// on why the part was refused — and after 02/08 an *absent* element is not one
+/// on why the part was refused - and after 02/08 an *absent* element is not one
 /// of the reasons unless the caller asked for `--strict`.
 fn report_unreadable(unreadable: &[String], modes: &Modes, limit: usize) {
     if unreadable.is_empty() {
@@ -886,7 +886,7 @@ fn list(args: ListArgs, modes: Modes) -> Result<()> {
     eprintln!("{shown} object(s) in {}", args.file.display());
     let diagnostics = store.diagnostics().len();
     if diagnostics > 0 {
-        eprintln!("{diagnostics} diagnostic(s) — run `energyml check` to see them");
+        eprintln!("{diagnostics} diagnostic(s) - run `energyml check` to see them");
     }
     Ok(())
 }
@@ -906,7 +906,7 @@ fn check(args: CheckArgs, modes: Modes) -> Result<ExitCode> {
     println!("== {} ==", args.file.display());
 
     // **Nothing here judges anything, and nothing below computes.** The
-    // reading and the report — including which finding counts as an error —
+    // reading and the report - including which finding counts as an error -
     // are `energyml-domain::check` (`of_store`), so the front end and the Python
     // bridge answer the same question with the same arithmetic. What is left
     // here is printing.
@@ -931,7 +931,7 @@ fn check(args: CheckArgs, modes: Modes) -> Result<ExitCode> {
         },
     );
 
-    // 1 — the package. Departures from OPC and from the EPC conventions,
+    // 1 - the package. Departures from OPC and from the EPC conventions,
     // gathered while the archive was indexed.
     let shown: Vec<_> = report
         .diagnostics
@@ -946,7 +946,7 @@ fn check(args: CheckArgs, modes: Modes) -> Result<ExitCode> {
         println!("  … and {} more", shown.len() - args.max);
     }
 
-    // 2 — the objects, against their schema: facets, cardinality, patterns.
+    // 2 - the objects, against their schema: facets, cardinality, patterns.
     println!(
         "\nobjects: {} read, {} unreadable",
         report.read,
@@ -979,7 +979,7 @@ fn check(args: CheckArgs, modes: Modes) -> Result<ExitCode> {
         println!("\nschema: skipped (--no-schema)");
     }
 
-    // 3 — the properties, against the rules the technical reference guides
+    // 3 - the properties, against the rules the technical reference guides
     // state and no XSD can: an abstract property kind used directly, a
     // deprecated one, a unit outside its kind's quantity class.
     let lines: Vec<String> = report
@@ -1002,7 +1002,7 @@ fn check(args: CheckArgs, modes: Modes) -> Result<ExitCode> {
         );
     }
 
-    // 3 ter — the counts: what a property holds against what it hangs on.
+    // 3 ter - the counts: what a property holds against what it hangs on.
     // Not run with `--no-rules`; an unjudgeable count is named, never silent.
     if report.rules_checked {
         println!(
@@ -1035,10 +1035,10 @@ property counts: {} error(s), {} remark(s)",
         }
     }
 
-    // 3 bis — the **business** constraints: what the technical guides
+    // 3 bis - the **business** constraints: what the technical guides
     // associate and that no XSD can enforce. Three outcomes, not two: the
     // inapplicable is silent by construction, a violation is a fault of the
-    // file, and a rule that could not be evaluated is *uncheckable* — never a
+    // file, and a rule that could not be evaluated is *uncheckable* - never a
     // pass.
     if report.rules_checked {
         let violations = report.rules.iter().filter(|one| one.read.is_some()).count();
@@ -1047,7 +1047,7 @@ property counts: {} error(s), {} remark(s)",
         for finding in &report.rules {
             match (&finding.read, &finding.why) {
                 (Some(read), _) => lines.push(format!(
-                    "  {} {} [{}] — {} (read: {read})",
+                    "  {} {} [{}] - {} (read: {read})",
                     finding.uuid,
                     finding.rule,
                     if finding.gravity == energyml_domain::rules::Gravity::Error {
@@ -1058,7 +1058,7 @@ property counts: {} error(s), {} remark(s)",
                     finding.says
                 )),
                 (None, Some(why)) if !args.errors_only => lines.push(format!(
-                    "  {} {} — not checkable: {why}",
+                    "  {} {} - not checkable: {why}",
                     finding.uuid, finding.rule
                 )),
                 _ => {}
@@ -1086,7 +1086,7 @@ property counts: {} error(s), {} remark(s)",
         println!("\nbusiness rules: skipped (--no-rules)");
     }
 
-    // 4 — the references. Nothing else finds these: each DOR is well-formed on
+    // 4 - the references. Nothing else finds these: each DOR is well-formed on
     // its own, and no XSD validator knows what the package contains.
     let reportable = report.reportable_references();
     let informational = report.catalogue_references();
@@ -1115,10 +1115,10 @@ property counts: {} error(s), {} remark(s)",
         println!("  whether each uuid is in the dictionary is the `properties:` section's job");
     }
 
-    // 5 — the index against the objects. The `.rels` are a cache of the graph
+    // 5 - the index against the objects. The `.rels` are a cache of the graph
     // the DORs describe; §3.4.1 makes both directions mandatory, and nothing
-    // keeps the cache honest. None of this is fatal — the reader follows the
-    // DORs — but a tool that trusts the index draws a different graph from the
+    // keeps the cache honest. None of this is fatal - the reader follows the
+    // DORs - but a tool that trusts the index draws a different graph from the
     // one the data has, and there are such tools.
     if !args.errors_only {
         println!(
@@ -1174,7 +1174,7 @@ fn show(args: ShowArgs, modes: Modes) -> Result<()> {
     }
     // `--with-data` resolves the references of the object being shown against
     // the rest of the package, so a part that will not deserialize is a
-    // reference that will silently come back **unresolved** — the `_data`
+    // reference that will silently come back **unresolved** - the `_data`
     // member simply absent, indistinguishable from a reference that points at
     // nothing. Named on stderr, so the JSON on stdout stays pipeable.
     let mut others = Vec::new();
@@ -1262,7 +1262,7 @@ fn arrays(args: ArraysArgs, modes: Modes) -> Result<()> {
     }
     if args.values.is_none() {
         // Locating is not reading, and the difference is worth one line.
-        eprintln!("(locations only — add `--values` to read them)");
+        eprintln!("(locations only - add `--values` to read them)");
     }
     report_unreadable(&unparsed, &modes, 10);
     Ok(())
@@ -1297,7 +1297,7 @@ fn properties(args: PropertiesArgs, modes: Modes) -> Result<()> {
     let (dictionary_size, dictionary_label) = property_kind::builtin();
     if dictionary_size == 0 {
         eprintln!(
-            "note: {dictionary_label} — kinds that are not objects of this package cannot be resolved; pass `--dictionary <file>` to load one"
+            "note: {dictionary_label} - kinds that are not objects of this package cannot be resolved; pass `--dictionary <file>` to load one"
         );
     }
     let resolver = Resolver::new(&store);
@@ -1340,8 +1340,8 @@ fn properties(args: PropertiesArgs, modes: Modes) -> Result<()> {
         }
         shown += 1;
 
-        // What the document says about the kind, and — when it can be
-        // followed — what it turns out to be.
+        // What the document says about the kind, and - when it can be
+        // followed - what it turns out to be.
         let (kind, resolution) = match &property.kind {
             Some(reference) => {
                 let stated = match reference {
@@ -1467,7 +1467,7 @@ fn properties(args: PropertiesArgs, modes: Modes) -> Result<()> {
     if args.check {
         println!("{disagreements} whose value count contradicts the document");
     } else {
-        println!("(counts not verified against the values — add `--check` to read them)");
+        println!("(counts not verified against the values - add `--check` to read them)");
     }
     if refusals > 0 {
         println!("{refusals} whose element count this build cannot compute");
@@ -1481,7 +1481,7 @@ fn properties(args: PropertiesArgs, modes: Modes) -> Result<()> {
     Ok(())
 }
 
-/// First segment of a uuid — enough to recognise, short enough to read.
+/// First segment of a uuid - enough to recognise, short enough to read.
 fn short_uuid(uuid: &str) -> String {
     uuid.split('-').next().unwrap_or(uuid).to_string()
 }
@@ -1499,7 +1499,7 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
 
     // **The decisions are the library's** (`energyml_cache::colours::of_package`,
     // the rule the front end's `colour_of` answers by): what is left here is the
-    // printing. The set is one object of the package, and there may be none —
+    // printing. The set is one object of the package, and there may be none -
     // RESQML 2.0.1 defines no colour at all, so a 2.0.1 package having none is
     // the standard rather than a defect, and the message says which case it is.
     let report = colours::of_package(
@@ -1516,7 +1516,7 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
     if report.sets == 0 {
         println!(
             "no `GraphicalInformationSet` in this package, so nothing states a colour.
-             (RESQML 2.0.1 has no notion of colour at all — for a 2.0.1 model this is the              standard, not a gap.)"
+             (RESQML 2.0.1 has no notion of colour at all - for a 2.0.1 model this is the              standard, not a gap.)"
         );
         return Ok(());
     }
@@ -1568,7 +1568,7 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
                 };
                 match &decision.paint {
                     Paint::Constant(rgba) => println!(
-                        "    {} — {origin}, entry {}{}",
+                        "    {} - {origin}, entry {}{}",
                         rgba.to_hex(),
                         decision.entry,
                         if decision.visible {
@@ -1584,7 +1584,7 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
                     } => {
                         let (low, high) = map.range();
                         println!(
-                            "    {} map `{}` — {} stop(s) over {low}–{high} — {origin}, entry {}",
+                            "    {} map `{}` - {} stop(s) over {low}-{high} - {origin}, entry {}",
                             if map.continuous.is_some() {
                                 "continuous"
                             } else {
@@ -1595,7 +1595,7 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
                             decision.entry
                         );
                         if let Some((min, max)) = scaling.min_max {
-                            println!("      values clamped to {min}–{max} before mapping");
+                            println!("      values clamped to {min}-{max} before mapping");
                         }
                         if let Some(component) = value_vector_index {
                             println!(
@@ -1611,7 +1611,7 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
             }
             None => {
                 silent += 1;
-                println!("    no colour at any level — nothing is invented");
+                println!("    no colour at any level - nothing is invented");
             }
         }
     }
@@ -1627,7 +1627,7 @@ fn colors(args: ColorsArgs, modes: Modes) -> Result<()> {
 // tables
 // ---------------------------------------------------------------------------
 
-/// `energyml wells` — the wellbores of a package, as a table.
+/// `energyml wells` - the wellbores of a package, as a table.
 ///
 /// The command **decides nothing**: `energyml_domain::wellbore_table` reads,
 /// merges and serialises, and this one chooses the wellbores and prints. That
@@ -1650,7 +1650,7 @@ fn wells(args: WellsArgs, modes: Modes) -> Result<()> {
     }
 
     // **One file per wellbore**: each is merged alone, so no conflict is
-    // possible — the output a column disagreement suggests.
+    // possible - the output a column disagreement suggests.
     if args.separate {
         let dir = args.out.clone().unwrap_or_else(|| PathBuf::from("."));
         std::fs::create_dir_all(&dir).with_context(|| format!("making {}", dir.display()))?;
@@ -1783,7 +1783,7 @@ fn tables(args: TablesArgs, modes: Modes) -> Result<()> {
                         .rows
                         .row(row)
                         .into_iter()
-                        .map(|cell| cell.map(|c| c.to_string()).unwrap_or_else(|| "—".to_string()))
+                        .map(|cell| cell.map(|c| c.to_string()).unwrap_or_else(|| "-".to_string()))
                         .collect();
                     println!("      {}", cells.join("  "));
                 }
@@ -1872,11 +1872,11 @@ fn geometry(args: GeometryArgs, modes: Modes) -> Result<()> {
         // Said out loud, because it is the difference between what the file
         // holds and what an export will contain. A node whose coordinates are
         // NaN is a null the standard defines and a position no format can
-        // write, so the exporters drop it — a count that only showed up as a
+        // write, so the exporters drop it - a count that only showed up as a
         // smaller output file would be a surprise. See `energyml_geometry::defined`.
         let undefined = shape.undefined_count();
         if undefined > 0 {
-            println!("    {undefined} node(s) with no position — counted here, dropped on export");
+            println!("    {undefined} node(s) with no position - counted here, dropped on export");
         }
 
         for patch in &shape.patches {
@@ -2085,7 +2085,7 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
         options = options.with_time_equivalence(per_second);
     }
 
-    // The message, on the terminal, whether or not the flag was given — because
+    // The message, on the terminal, whether or not the flag was given - because
     // the two things a person needs to know are opposite sides of the same
     // fact: without the flag those objects are silently absent from the file,
     // and with it their Z is a number somebody chose.
@@ -2108,7 +2108,7 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
                 eprintln!("  they cannot be placed in metres. Pass --time-equivalence <M_PER_S> to");
                 eprintln!("  write them anyway; 2000 is a mid-range sediment velocity.");
                 // Named, one per line: a count says how many are missing from the
-                // folder, never which — and "which" is what somebody opening the
+                // folder, never which - and "which" is what somebody opening the
                 // folder asks first.
                 for o in objects
                     .iter()
@@ -2129,20 +2129,20 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
 
     let mut written = 0usize;
     // Objects the exporter itself refused, one line each. Separate from
-    // `refused` — that one is the geometry saying it cannot evaluate; this is
+    // `refused` - that one is the geometry saying it cannot evaluate; this is
     // the writing saying it cannot place, convert or encode what was evaluated.
     let mut unwritable: Vec<String> = Vec::new();
     match &args.out {
         // A directory: one file per representation, named
         // `qualifiedType_uuid.ext`.
         //
-        // The uuid is what makes it unique — two objects share a title far more
+        // The uuid is what makes it unique - two objects share a title far more
         // often than anyone expects, and a folder of `Horizon.vtu` overwriting
         // itself is a silent loss. The qualified type in front is what makes it
         // *readable*: a folder of thirty uuids says nothing, and the one thing a
         // person wants to know before opening a file is what kind of thing it
         // is. It carries the release too (`resqml20.` against `resqml22.`),
-        // which matters because a package may hold both — this one does.
+        // which matters because a package may hold both - this one does.
         Some(path) if path.is_dir() || path.extension().is_none() => {
             std::fs::create_dir_all(path)?;
             for object in &writable {
@@ -2158,7 +2158,7 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
                 // **One object failing is not the run failing.** A directory
                 // export is a batch, and a batch that stops at the first
                 // refusal leaves the caller with a folder that looks like a
-                // finished export and holds a fraction of one — which is the
+                // finished export and holds a fraction of one - which is the
                 // failure this whole workspace is arranged against. A time-based
                 // CRS reaching a metre conversion is exactly that case: one
                 // object of thirty-three, and it used to take the other
@@ -2193,7 +2193,7 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
     eprintln!();
     eprintln!("{written} representation(s) written as {}", exporter.name());
     // A spec key that matched **nowhere** is almost always a typo, and it is
-    // invisible in the output — the file simply lacks a property.
+    // invisible in the output - the file simply lacks a property.
     //
     // Only nowhere: a key that found a value on some objects and not others is
     // ordinary. Half the surfaces in a package name an interpretation and half
@@ -2214,7 +2214,7 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
             .collect();
         if !never.is_empty() {
             // With the path, not just the key. A key that matches nothing on
-            // every object of a package is almost never an absent value — it is
+            // every object of a package is almost never an absent value - it is
             // a path that does not exist in this release, and seeing
             // `RepresentedInterpretation.uuid` beside the key is what tells a
             // reader that resqml 2.2 spells that element `RepresentedObject`.
@@ -2336,11 +2336,11 @@ fn preview(data: &energyml_storage::ArrayData, limit: usize) -> String {
 // types
 // ---------------------------------------------------------------------------
 
-/// The model's documentation as JSON — the serialization is
+/// The model's documentation as JSON - the serialization is
 /// `energyml_core::docs`; what lives here is choosing files and writing them.
 ///
 /// The point is a **document**: the same facts the documentation view shows,
-/// fetchable without running the application — and without the Energistics
+/// fetchable without running the application - and without the Energistics
 /// login the schema downloads sit behind. Deployed beside the front end, each
 /// release is one URL.
 fn docs(args: DocsArgs) -> Result<()> {
@@ -2411,15 +2411,15 @@ fn docs(args: DocsArgs) -> Result<()> {
     )
     .context("writing index.json")?;
 
-    // A browser pointed at `/docs/` gets this rather than a 404 or — served
-    // under a single-page application — the application itself, which reads as
+    // A browser pointed at `/docs/` gets this rather than a 404 or - served
+    // under a single-page application - the application itself, which reads as
     // "the docs are not there" to anyone who tries the obvious address. Plain
     // links, no styling to maintain: the JSON files are the interface, this is
     // the signpost.
     let mut listing = String::from(
         "<!doctype html><meta charset=\"utf-8\"><title>EnergyML model documentation</title>\
          <h1>EnergyML model documentation</h1>\
-         <p>One JSON per (package, version) — every type, field and declared value, \
+         <p>One JSON per (package, version) - every type, field and declared value, \
          with the <code>xsd:documentation</code>. <a href=\"index.json\">index.json</a> \
          is the machine-readable list.</p><ul>",
     );
@@ -2428,7 +2428,7 @@ fn docs(args: DocsArgs) -> Result<()> {
         let version = release["version"].as_str().unwrap_or("unknown");
         let count = release["types"].as_array().map(Vec::len).unwrap_or(0);
         listing.push_str(&format!(
-            "<li><a href=\"{package}-{version}.json\">{package} {version}</a> — {count} types</li>"
+            "<li><a href=\"{package}-{version}.json\">{package} {version}</a> - {count} types</li>"
         ));
     }
     listing.push_str("</ul>");
@@ -2466,7 +2466,7 @@ fn types(args: TypesArgs) -> Result<()> {
     Ok(())
 }
 
-/// What may go in each field of a type — the schema's own answer, read back
+/// What may go in each field of a type - the schema's own answer, read back
 /// out of the generated reflection.
 fn describe(registry: &Registry, wanted: &str) -> Result<()> {
     use energyml_core::reflect::{TypeInfo, TypeKind};
@@ -2485,8 +2485,8 @@ fn describe(registry: &Registry, wanted: &str) -> Result<()> {
     let info: &'static TypeInfo = registry
         .by_qualified_type(type_name)
         .map(|entry| entry.info)
-        // A nested type has no qualified type — `Citation`, `TrianglePatch`,
-        // every enumeration — and enumerations are not registered at all,
+        // A nested type has no qualified type - `Citation`, `TrianglePatch`,
+        // every enumeration - and enumerations are not registered at all,
         // since nothing is ever a *part* of that type. They are still
         // reachable: every one of them is the type of some field of something
         // registered, so the search walks out from the registry.
@@ -2516,9 +2516,9 @@ fn describe(registry: &Registry, wanted: &str) -> Result<()> {
                 if info.is_open { "open" } else { "closed" },
                 info.variants.len(),
                 if info.is_open {
-                    " — and any other string, kept verbatim in `Other`"
+                    " - and any other string, kept verbatim in `Other`"
                 } else {
-                    " — and nothing else"
+                    " - and nothing else"
                 }
             );
             for variant in info.variants {
@@ -2625,7 +2625,7 @@ fn describe(registry: &Registry, wanted: &str) -> Result<()> {
                     // The one thing reflection cannot answer, and saying so is
                     // better than leaving a caller to assume.
                     println!(
-                        "      a reference to another object — the XSD does not declare what it \
+                        "      a reference to another object - the XSD does not declare what it \
                          may point at; the RESQML technical reference guide gives the associations"
                     );
                 }
@@ -2644,7 +2644,7 @@ fn describe(registry: &Registry, wanted: &str) -> Result<()> {
 /// Every other command here reads objects. This one reads **bytes**, because
 /// the parts it exists for have none: markup that does not close, a byte that
 /// is not UTF-8, a part of zero length. There is nothing to deserialise and
-/// nothing to edit by reflection, so the loop is the one a text editor gives —
+/// nothing to edit by reflection, so the loop is the one a text editor gives -
 /// take the bytes out, fix them, put them back:
 ///
 /// ```text
@@ -2717,11 +2717,11 @@ fn repair(args: RepairArgs, modes: Modes) -> Result<ExitCode> {
             }
             Err(e) if args.force => {
                 store.set_raw_part(&part, bytes);
-                println!("{part}: still unreadable, staged anyway — {e}");
+                println!("{part}: still unreadable, staged anyway - {e}");
                 staged += 1;
             }
             Err(e) => {
-                println!("{part}: still unreadable, not staged — {e}");
+                println!("{part}: still unreadable, not staged - {e}");
                 refused += 1;
             }
         }
@@ -2737,7 +2737,7 @@ fn repair(args: RepairArgs, modes: Modes) -> Result<ExitCode> {
     };
     let diagnostics = store.save_as(out, &energyml_storage::SaveOptions::default())?;
     println!(
-        "\nwrote {} — {staged} part(s) repaired, {refused} refused",
+        "\nwrote {} - {staged} part(s) repaired, {refused} refused",
         out.display()
     );
     for diagnostic in diagnostics.iter().take(10) {
@@ -2785,8 +2785,8 @@ fn collect_parts(root: &PathBuf, directory: &PathBuf) -> Result<Vec<(String, Vec
 
 /// The reference graph, in a shape something else can draw.
 ///
-/// The nodes carry what a viewer labels with — uri, uuid, type, concept, title
-/// — and the objects the package *references without holding* are in there too,
+/// The nodes carry what a viewer labels with - uri, uuid, type, concept, title -
+/// and the objects the package *references without holding* are in there too,
 /// marked `present: false`. A graph that quietly dropped those would draw a
 /// self-contained package where there is none, which is the one thing a graph
 /// of references is for noticing.
@@ -2817,7 +2817,7 @@ fn graph_command(args: GraphArgs, modes: Modes) -> Result<()> {
     let rendered = match args.format.to_ascii_lowercase().as_str() {
         "json" => graph.to_json(),
         "dot" => graph.to_dot(),
-        other => anyhow::bail!("unknown format `{other}` — `json` or `dot`"),
+        other => anyhow::bail!("unknown format `{other}` - `json` or `dot`"),
     };
     match &args.out {
         Some(path) => {
@@ -2838,7 +2838,7 @@ fn graph_command(args: GraphArgs, modes: Modes) -> Result<()> {
     if outside > 0 {
         match &args.filter {
             Some(needle) => eprintln!(
-                "{outside} referenced object(s) are outside the `{needle}` selection — drop \
+                "{outside} referenced object(s) are outside the `{needle}` selection - drop \
                  `--filter` to bring them in"
             ),
             None => eprintln!("{outside} referenced object(s) are not in this package"),
@@ -2856,12 +2856,12 @@ fn graph_command(args: GraphArgs, modes: Modes) -> Result<()> {
 // h5
 // ---------------------------------------------------------------------------
 
-/// Where each array's numbers really are, and — with `--fix` — a package that
+/// Where each array's numbers really are, and - with `--fix` - a package that
 /// says so.
 ///
 /// The reading side is permissive on purpose: a renamed package still reads,
 /// because the search opens the files beside it and asks which one holds the
-/// dataset. That is the right behaviour and it has a cost — **every reader
+/// dataset. That is the right behaviour and it has a cost - **every reader
 /// pays for the search, every time**, and every reader that is not this one
 /// simply fails. So this command exists to write the answer down: run it once
 /// after renaming, and the package is ordinary again.
@@ -2935,7 +2935,7 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
         }
     }
 
-    // Anything still missing, asked for by name — once, and reused for the
+    // Anything still missing, asked for by name - once, and reused for the
     // rest of the run.
     if args.interactive && !missing.is_empty() {
         use std::io::Write;
@@ -2984,7 +2984,7 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
     };
 
     // Writing the answer down. Two places carry a file name and both are
-    // rewritten, because a package may use either — and a package that has
+    // rewritten, because a package may use either - and a package that has
     // been through several tools may use both.
     let mut fixed = 0usize;
     for (declared, row) in &rows {
@@ -3036,7 +3036,7 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
 
     // Carry over every file name the package *had*. A save regenerates the
     // `.rels` from what the store knows, and what it knows about external files
-    // is `declared_files` — so a name that was only ever read out of a `.rels`
+    // is `declared_files` - so a name that was only ever read out of a `.rels`
     // is dropped unless it is put back first. Repairing a package by losing
     // half its pointers would be a poor repair.
     let found: Vec<(String, String)> = store.external_file_map().into_iter().collect();
@@ -3052,7 +3052,7 @@ fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
     println!("{fixed} declaration(s) rewritten → {}", out.display());
 
     // Did the repair repair? Reopening and counting is the only answer that
-    // does not take the writer's word for it — and the failure it guards
+    // does not take the writer's word for it - and the failure it guards
     // against is real: an `externalResource` relationship on a part that is not
     // a proxy has no counterpart in the writer, so a package that used one
     // comes back with fewer pointers than it went in with.
@@ -3140,12 +3140,12 @@ fn rename_uris(object: &mut dyn energyml_core::value::Reflect, from: &str, to: &
 /// The qualified type of a scene object, `resqml22.TriangulatedSetRepresentation`.
 ///
 /// Read out of the ETP URI rather than from `SceneObject::qualified_type`,
-/// which — despite its name and its doc comment — carries only the bare type
+/// which - despite its name and its doc comment - carries only the bare type
 /// name. Left alone deliberately: that field is written into every export's
 /// metadata (`type` in VTK field data, in GeoJSON properties, in an OBJ
 /// comment), and changing what it holds would change files people already read.
 fn qualified_type_of(object: &energyml_geometry::SceneObject) -> String {
-    // The one reading of a uri into an identity — which also knows a dataspace
+    // The one reading of a uri into an identity - which also knows a dataspace
     // segment and a version qualifier.
     energyml_core::identity::ObjectId::parse(&object.uri)
         .map(|(_, id)| id.qualified_type())
@@ -3173,8 +3173,8 @@ fn file_safe(name: &str) -> String {
 
 /// Correct what a package's parts *declare*, without reading what they hold.
 ///
-/// The case this exists for: a package written against a development drop —
-/// `resqml 2.2_dev3` — whose parts declare the release's `schemaVersion="2.2"`,
+/// The case this exists for: a package written against a development drop -
+/// `resqml 2.2_dev3` - whose parts declare the release's `schemaVersion="2.2"`,
 /// because the drop's own schemas declare it too. Read as the release, such a
 /// part **parses**: unknown children are skipped rather than rejected, so the
 /// object comes back missing whatever the drop has and the release does not,
@@ -3182,7 +3182,7 @@ fn file_safe(name: &str) -> String {
 ///
 /// Which is why this command never deserialises anything. It locates the root
 /// element's tag, rewrites one attribute inside it, and leaves every other byte
-/// alone — so there is no step at which data could be dropped. The `.rels` are
+/// alone - so there is no step at which data could be dropped. The `.rels` are
 /// kept as they were, which is correct here and only here: the references did
 /// not change, because nothing but a version string did.
 ///
@@ -3193,7 +3193,7 @@ fn file_safe(name: &str) -> String {
 ///
 /// Without `--out` it writes nothing and reports what it would do, the same
 /// bargain `repair --apply` offers.
-/// `energyml rename` — the quote, then the bill.
+/// `energyml rename` - the quote, then the bill.
 ///
 /// Nothing here decides anything about the package: `rename::plan` counts what
 /// would change and says why it refuses, `rename::apply` carries it out, and
@@ -3209,11 +3209,11 @@ fn rename_command(args: RenameArgs, modes: Modes) -> Result<ExitCode> {
         None => match store.external_files() {
             [only] => only.clone(),
             [] => anyhow::bail!(
-                "{} declares no external data file — pass `--from <NAME>`",
+                "{} declares no external data file - pass `--from <NAME>`",
                 args.file.display()
             ),
             several => anyhow::bail!(
-                "{} declares {} external data files ({}) — pass `--from <NAME>`",
+                "{} declares {} external data files ({}) - pass `--from <NAME>`",
                 args.file.display(),
                 several.len(),
                 several.join(", ")
@@ -3239,7 +3239,7 @@ fn rename_command(args: RenameArgs, modes: Modes) -> Result<ExitCode> {
     if !args.apply {
         println!(
             "
-nothing touched — pass `--apply` to carry it out"
+nothing touched - pass `--apply` to carry it out"
         );
         return Ok(ExitCode::SUCCESS);
     }
@@ -3269,9 +3269,9 @@ fn relabel(args: RelabelArgs, modes: Modes) -> Result<ExitCode> {
     use energyml_storage::relabel;
 
     let mut store = open(&args.file, &modes)?;
-    // **The decisions are the library's**, since 08/09/2026. They were here —
+    // **The decisions are the library's**, since 08/09/2026. They were here -
     // which parts belong to the package, which releases the file holds, the
-    // refusal when it holds two — and that is logic in a binary, which this
+    // refusal when it holds two - and that is logic in a binary, which this
     // workspace does not do. The front end needs the identical answers, and a
     // second copy of *when is a package too mixed to relabel* is the shape of
     // the bugs this repository keeps finding.
@@ -3280,7 +3280,7 @@ fn relabel(args: RelabelArgs, modes: Modes) -> Result<ExitCode> {
     if args.from.is_none()
         && let Some(why) = survey.refusal()
     {
-        anyhow::bail!("{}: {why} — pass `--from <VERSION>`", args.file.display());
+        anyhow::bail!("{}: {why} - pass `--from <VERSION>`", args.file.display());
     }
 
     if survey.targets.is_empty() {
@@ -3330,10 +3330,10 @@ fn relabel(args: RelabelArgs, modes: Modes) -> Result<ExitCode> {
     }
 
     let Some(out) = args.out else {
-        println!("\nnothing written — pass `--out FILE` to save the corrected package");
+        println!("\nnothing written - pass `--out FILE` to save the corrected package");
         return Ok(ExitCode::SUCCESS);
     };
-    // Two passes, and the library knows why — staging bytes protects the
+    // Two passes, and the library knows why - staging bytes protects the
     // content but leaves no object for the `.rels` to be built from, so the
     // package is reopened and saved again. See `relabel::save_reindexed`.
     let diagnostics = relabel::save_reindexed(
@@ -3375,13 +3375,13 @@ fn extract_command(args: ExtractArgs, modes: Modes) -> Result<ExitCode> {
     let graph = energyml_storage::graph::build(objects.iter().map(|(s, o)| (*s, o.as_reflect())));
     let plan = energyml_storage::extract::plan(&resources, &graph, &wanted);
 
-    // The report before the file, always — and before the *decision* to write,
+    // The report before the file, always - and before the *decision* to write,
     // when it is a dry run. A curated package that lost something in silence is
     // worse than one nobody curated: no one would ever learn it was missing.
     println!("{} object(s) kept, {} left", plan.kept.len(), plan.left);
     if plan.left > 0 {
         println!(
-            "  of those left, {} are referred to by nothing kept — the cut is clean there",
+            "  of those left, {} are referred to by nothing kept - the cut is clean there",
             plan.clean
         );
     }
@@ -3443,7 +3443,7 @@ fn extract_command(args: ExtractArgs, modes: Modes) -> Result<ExitCode> {
     // would find out is when a viewer draws nothing.
     if !done.arrays_missed.is_empty() {
         eprintln!(
-            "{} array(s) could not be copied — the package points at them and does not carry them:",
+            "{} array(s) could not be copied - the package points at them and does not carry them:",
             done.arrays_missed.len()
         );
         for one in done.arrays_missed.iter().take(10) {

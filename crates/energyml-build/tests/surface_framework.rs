@@ -1,12 +1,12 @@
-//! `surface-framework` — a `NonSealedSurfaceFrameworkRepresentation`
+//! `surface-framework` - a `NonSealedSurfaceFrameworkRepresentation`
 //!.
 //!
 //! The form of the assertions comes from the schema and the guide: the
 //! framework represents the structural organisation (usage guide 2.2, draft,
 //! §7.3.1.2.2 p. 98); its `Representation` list is ordered and a contact patch
-//! names a surface by its index there (Structural.xsd l. 182–186); a contact
+//! names a surface by its index there (Structural.xsd l. 182-186); a contact
 //! patch is *“the ordered list of nodes (identified by their global index) in
-//! the supporting representation”* (l. 187–191). The torn horizon and its lips
+//! the supporting representation”* (l. 187-191). The torn horizon and its lips
 //! are made by `fault-throw` in the test itself.
 //!
 //! # What would have to break to make it turn red
@@ -37,7 +37,7 @@ fn frame() -> Ref {
     Ref::new(
         "cccccccc-0000-4000-8000-000000000003",
         "eml23.LocalEngineeringCompoundCrs",
-        "Lutetia — boreholes (elevation)",
+        "Lutetia - boreholes (elevation)",
     )
 }
 
@@ -45,7 +45,7 @@ fn organisation() -> Ref {
     Ref::new(
         "0a000000-0000-4000-8000-000000000210",
         "resqml22.StructuralOrganizationInterpretation",
-        "Lutetia — scenario B, unordered",
+        "Lutetia - scenario B, unordered",
     )
 }
 
@@ -99,8 +99,8 @@ fn fault_ref(k: u32) -> Ref {
     )
 }
 
-/// A horizon torn by `fault-throw`, its lips — the plan's own shapes, which
-/// are what `apply` writes — and its split edges as declared, one list of
+/// A horizon torn by `fault-throw`, its lips - the plan's own shapes, which
+/// are what `apply` writes - and its split edges as declared, one list of
 /// pairs per lip: the fact the framework must find again.
 fn torn() -> (Source, Source, Vec<Vec<i64>>) {
     let mut points = Vec::new();
@@ -241,7 +241,7 @@ fn the_faults_alone_are_gathered_in_order_and_represent_the_organisation() {
         .with("representations 2 (object)", object(fault_ref(1)));
     let plan = planned(
         &pieces,
-        &Choices::new().set("title", "Lutetia — scenario B, non-sealed"),
+        &Choices::new().set("title", "Lutetia - scenario B, non-sealed"),
     )
     .expect("planned");
     let one = framework(&plan);
@@ -307,7 +307,7 @@ fn a_contact_names_the_torn_nodes_fault_throw_declared() {
             "the torn surface is second in the list"
         );
         let chain: Vec<i64> = std::iter::once(pairs[0])
-            .chain(pairs.chunks_exact(2).map(|p| p[1]))
+            .chain(pairs.as_chunks::<2>().0.iter().map(|p| p[1]))
             .collect();
         assert_eq!(nodes(&plan, patch), chain);
     }

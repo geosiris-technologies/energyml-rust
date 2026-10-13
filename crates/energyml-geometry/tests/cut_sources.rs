@@ -4,7 +4,7 @@
 //! Two claims. **Additive**: the plain functions answer what they answered, and
 //! the sourced ones answer the same numbers (pinned here on values worked out by
 //! hand, not on the other function's output alone). **Honest**: every end, put
-//! back through its `(a, b, t)`, is the end — recomputed here from the nodes,
+//! back through its `(a, b, t)`, is the end - recomputed here from the nodes,
 //! not read off the cut.
 
 use energyml_geometry::fence::{self, curve, curve_sourced};
@@ -59,7 +59,7 @@ fn the_plain_cut_and_the_chain_answer_what_they_answered() {
     // The sourced twin gives the same segments, bit for bit.
     let sourced = cut_sourced(&points, &triangles, &trace);
     assert_eq!(sourced.iter().map(|s| s.cut.clone()).collect::<Vec<_>>(), cuts);
-    // And the curve — the spans fence draws — is the same, and by hand:
+    // And the curve - the spans fence draws - is the same, and by hand:
     // s = 5, 10, 15 at z = 10, 15, 20.
     let curved = curve(&cuts);
     assert_eq!(curved.spans.len(), 1);
@@ -119,7 +119,7 @@ fn a_clipped_end_says_so_and_is_not_passed_off_as_on_an_edge() {
             if !source.clipped {
                 assert!(close(place(&points, source), *end));
             } else {
-                // Not on the named edge — that is what the flag admits.
+                // Not on the named edge - that is what the flag admits.
                 assert!(!close(place(&points, source), *end));
                 assert!((end[0] - 7.0).abs() < 1e-9);
             }
@@ -131,7 +131,7 @@ fn a_clipped_end_says_so_and_is_not_passed_off_as_on_an_edge() {
 fn many_traces_give_the_same_answers_and_indices_into_the_whole_surface() {
     // A surface of two squares side by side: the cut along the second one only
     // keeps the triangles of the second (the box prefilter), whose nodes are
-    // 4.. — the sources must still name them in the whole surface's numbering.
+    // 4.. - the sources must still name them in the whole surface's numbering.
     let (mut points, mut triangles) = square();
     points.extend([
         [20.0, 0.0, 1.0],
@@ -171,7 +171,7 @@ fn many_traces_give_the_same_answers_and_indices_into_the_whole_surface() {
 #[test]
 fn a_span_keeps_one_source_per_point_and_each_is_on_its_own_point() {
     // A surface of two squares whose cut is chained, walked in whatever order:
-    // each span point's source must give that point, in 3D, back — after the
+    // each span point's source must give that point, in 3D, back - after the
     // chain was reversed and the spans sorted.
     let (mut points, mut triangles) = square();
     points.extend([

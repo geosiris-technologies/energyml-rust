@@ -2,10 +2,10 @@
 //!
 //! # Why this file exists before the operation that needs it
 //!
-//! `Slot` carries `least` and `most` — a `MinOccurs` and a `MaxOccurs` — **since
+//! `Slot` carries `least` and `most` - a `MinOccurs` and a `MaxOccurs` - **since
 //! the first day**, and none of the thirteen operations uses them: all are
 //! `1..1`. Cardinality was therefore declared and never exercised, which is the
-//! form of debt that the project's contribution rules name — *a capability that nothing
+//! form of debt that the project's contribution rules name - *a capability that nothing
 //! proves*.
 //!
 //! The risk was not the field, it was that the whole chain below it
@@ -218,7 +218,7 @@ fn an_empty_list_is_an_absence() {
     assert!(settle(&op, Choices::new().set("titles", json!([]))).is_ok());
     assert!(settle(&op, Choices::new()).is_ok());
 
-    // And when at least one is needed, both refuse — by the same path
+    // And when at least one is needed, both refuse - by the same path
     // as any slot required for the second.
     let strict = free();
     assert!(settle(&strict, Choices::new().set("titles", json!([]))).is_err());

@@ -2,7 +2,7 @@
 //! units.
 //!
 //! **The chart is an extract written here**, installed as the default for this
-//! test binary alone — the five divisions of `energyml-domain/tests/geolts.rs`,
+//! test binary alone - the five divisions of `energyml-domain/tests/geolts.rs`,
 //! and the chain above the Eocene with its two sister series and the
 //! Precambrian, the chart's only supereonothem; every row copied from the BRGM
 //! export of 24/09/2026 (`https://data.geoscience.fr/ncl/GeolTs`, CC BY 4.0),
@@ -62,7 +62,7 @@ fn url_uuid(text: &str) -> String {
 
 #[test]
 fn a_branch_becomes_one_rank_per_level_youngest_first() {
-    // The branch alone — its parents are the next tests' business.
+    // The branch alone - its parents are the next tests' business.
     let made = plan(
         "stratigraphy-from-geolts",
         &Pieces::empty(),
@@ -71,7 +71,7 @@ fn a_branch_becomes_one_rank_per_level_youngest_first() {
     .expect("a plan");
     // The reference divisions under the Eocene: the Eocene itself (named, so
     // kept), and its two reference stages. The Upper Eocene is a *usual*
-    // division and the Ludien a *regional* one — not taken by default.
+    // division and the Ludien a *regional* one - not taken by default.
     let mut units = titles(&made, "resqml22.StratigraphicUnitInterpretation");
     units.sort();
     assert_eq!(units, vec!["Bartonien", "Eocène", "Priabonien"]);
@@ -87,8 +87,8 @@ fn a_branch_becomes_one_rank_per_level_youngest_first() {
         .iter()
         .find(|one| one["StratigraphicUnits"].as_array().is_some_and(|u| u.len() == 2))
         .expect("the stages");
-    // **Youngest first** (TRG 2.2 §6.34, `age`): the Priabonien (37.8–33.9)
-    // is listed above the Bartonien (41.2–37.8).
+    // **Youngest first** (TRG 2.2 §6.34, `age`): the Priabonien (37.8-33.9)
+    // is listed above the Bartonien (41.2-37.8).
     let order: Vec<&str> = stage["StratigraphicUnits"]
         .as_array()
         .unwrap()
@@ -178,7 +178,7 @@ fn object<'a>(made: &'a Plan, kind: &str, title: &str) -> &'a NewObject {
 /// shift of rank (the Eocene, for example, if it is the one ticked when
 /// selecting for the import operation, lands at rank 0).
 ///
-/// The shape is RESQML's — a column is ranks, a rank lists the units of one
+/// The shape is RESQML's - a column is ranks, a rank lists the units of one
 /// level (TRG 2.2 §6.44 p. 212, §6.45 p. 213); the hierarchy is the chart's.
 #[test]
 fn a_series_chosen_alone_sits_in_the_rank_of_the_series_under_its_system() {
@@ -208,13 +208,13 @@ fn a_series_chosen_alone_sits_in_the_rank_of_the_series_under_its_system() {
     // Each in the rank of its level.
     let (series, eocene_at) = rank_holding(&alone, "Eocène");
     let (system, paleogene_at) = rank_holding(&alone, "Paléogène");
-    assert!(series.ends_with("— series"), "{series}");
-    assert!(system.ends_with("— system"), "{system}");
+    assert!(series.ends_with("- series"), "{series}");
+    assert!(system.ends_with("- system"), "{system}");
 
     // **The numbers are those of a column that misses nothing**: both roots of
     // the extract, the Precambrian (the only supereonothem) included. Counting
-    // the levels a column happens to hold gives the Eocene 3 here and 4 there —
-    // the complaint, one rank further down — so the numbers must agree.
+    // the levels a column happens to hold gives the Eocene 3 here and 4 there -
+    // the complaint, one rank further down - so the numbers must agree.
     let whole = plan(
         "stratigraphy-from-geolts",
         &Pieces::empty(),
@@ -253,8 +253,8 @@ fn a_series_chosen_alone_sits_in_the_rank_of_the_series_under_its_system() {
     );
     assert_eq!(rank_holding(&bare, "Eocène").1, eocene_at);
 
-    // A level the column holds nothing of has no rank — a rank lists 1..*
-    // units (§6.45) — and the gap is said: the supereonothem and the
+    // A level the column holds nothing of has no rank - a rank lists 1..*
+    // units (§6.45) - and the gap is said: the supereonothem and the
     // sub-series here, the Upper Eocene being a *usual* division.
     let gap = alone
         .says
@@ -326,7 +326,7 @@ fn a_parent_nobody_chose_is_said_and_marked_on_its_rank_not_on_itself() {
     );
 
     // **Not on the division**: the Paleogene added is the very object the
-    // Paleogene chosen is — the same uuid, and the same content.
+    // Paleogene chosen is - the same uuid, and the same content.
     let chosen = plan(
         "stratigraphy-from-geolts",
         &Pieces::empty(),
@@ -407,7 +407,7 @@ fn a_division_has_one_uuid_alone_with_its_parents_or_inside_its_parent() {
 
 #[test]
 fn a_parent_the_settings_leave_out_is_passed_over_not_a_stop() {
-    // The Priabonien's parent in the tree is the Upper Eocene — a sub-series
+    // The Priabonien's parent in the tree is the Upper Eocene - a sub-series
     // of *usual* nature, not taken by default. Stopping there would lose the
     // Eocene and everything above it.
     let made = plan(
@@ -424,7 +424,7 @@ fn a_parent_the_settings_leave_out_is_passed_over_not_a_stop() {
     // The chain, not the family: the Bartonien is the Eocene's other stage.
     assert!(!units.iter().any(|one| one == "Bartonien"), "{units:?}");
 
-    // Opening the other natures takes the Upper Eocene, as a parent — and
+    // Opening the other natures takes the Upper Eocene, as a parent - and
     // still none of its other children, the Ludien.
     let wide = plan(
         "stratigraphy-from-geolts",
@@ -468,7 +468,7 @@ fn a_parent_without_an_age_is_refused_on_ancestors_by_name() {
 // -- what an extension value is, in the bytes ---------------------------------
 
 /// The `(Name, Value)` of every `ExtensionNameValue` of a part, read from its
-/// **text** by a scanner of its own — not this library's XML reader, so a value
+/// **text** by a scanner of its own - not this library's XML reader, so a value
 /// the reader would invent or drop cannot pass for one written. A `<Value/>`
 /// reads as an empty value. No entity is unescaped: none of the values checked
 /// here holds one.
@@ -508,11 +508,11 @@ fn extension_pairs(xml: &str) -> Vec<(String, String)> {
 /// StringMeasures in the model generated by geolTS; with the specialised
 /// component the values are visible below, but when unfolded, the value part for
 /// example is always empty! […] And nothing is detected by the
-/// validation — is that normal? I thought value was mandatory.
+/// validation - is that normal? I thought value was mandatory.
 ///
 /// It is: `ExtensionNameValue` declares `Value` with `minOccurs="1"` (common
 /// v2.3 `Abstract.xsd`, complexType `ExtensionNameValue`), and a
-/// `StringMeasure` is **simple content** — its value is the text of the element
+/// `StringMeasure` is **simple content** - its value is the text of the element
 /// itself, beside an optional `uom` attribute (`BaseTypes.xsd`, complexType
 /// `StringMeasure`, extending `eml:String2000`). So the value is read back from
 /// **the saved package's bytes**, not from the plan.
@@ -575,7 +575,7 @@ fn an_extension_value_is_the_text_of_its_element_in_the_saved_part() {
     );
 
     // **And the key the front end reads**: in the JSON the module hands over, the
-    // text of simple content is `_` — the encoding's own key
+    // text of simple content is `_` - the encoding's own key
     // (`energyml_core::json::TEXT_KEY`), never the element's name `Value`.
     let json = &object(&made, "resqml22.RockVolumeFeature", "Priabonien").json;
     let level = json["ExtensionNameValue"]
@@ -691,7 +691,7 @@ fn each_interval_names_its_unit_in_a_rank_of_the_chart() {
 #[test]
 fn the_unit_mapping_is_part_of_the_frames_identity() {
     // §15: another classification of the same passes is a second frame, never
-    // the first one rewritten — and no mapping asked, the frame of before.
+    // the first one rewritten - and no mapping asked, the frame of before.
     let frame_of = |answers: Value| -> String {
         let made = plan("wells-and-properties-from-table", &bag(PASSES), answers).expect("a plan");
         made.objects
@@ -738,7 +738,7 @@ fn a_mapping_without_passes_is_refused_towards_the_top_depth() {
 fn the_charts_colours_are_written_and_read_back_on_each_division() {
     // The register gives every division its colour on the chart (698 of 698 on
     // the snapshot). Written as a `DefaultGraphicalInformation` on the unit and
-    // its feature, in a set of its own — and read back **by the package's own
+    // its feature, in a set of its own - and read back **by the package's own
     // colour reader**, not by looking at what this plan built.
     let made = plan(
         "stratigraphy-from-geolts",
@@ -776,7 +776,7 @@ fn the_charts_colours_are_written_and_read_back_on_each_division() {
         .first()
         .and_then(|one| one.constant_color.clone())
         .expect("a constant colour");
-    // 253, 205, 161 on the chart — through HSV and back, to the unit.
+    // 253, 205, 161 on the chart - through HSV and back, to the unit.
     let rgba = colour.to_rgba();
     let byte = |v: f64| (v * 255.0).round() as i64;
     assert_eq!((byte(rgba.r), byte(rgba.g), byte(rgba.b)), (253, 205, 161));
@@ -792,7 +792,7 @@ fn the_charts_colours_are_written_and_read_back_on_each_division() {
 fn a_written_column_reads_back_with_the_age_of_each_unit() {
     // The writer states each division's span as a `GeologicTimeBasedTimeInterval`;
     // the reader the column view stands on (`stratigraphy::columns`) must give
-    // it back as numbers — that is what aligns a stage under its series.
+    // it back as numbers - that is what aligns a stage under its series.
     let made = plan(
         "stratigraphy-from-geolts",
         &Pieces::empty(),
@@ -826,7 +826,7 @@ fn a_written_column_reads_back_with_the_age_of_each_unit() {
     assert_eq!(age("Eocène"), Some([56.0, 33.9]));
 }
 
-/// The decision: the units may be titled in English — the BRGM register
+/// The decision: the units may be titled in English - the BRGM register
 /// states every division in both languages (`'Eocene'@en|'Eocène'@fr` in the
 /// extract), so English is the register's word, not a translation of ours.
 #[test]

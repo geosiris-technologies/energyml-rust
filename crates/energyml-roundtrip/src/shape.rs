@@ -6,8 +6,8 @@
 //! change is the *information*: which elements exist, in which namespace, how
 //! many times, with which attributes and which values.
 //!
-//! So a document is reduced to three multisets keyed by element path — the
-//! elements themselves, their attributes, their text — and two shapes are
+//! So a document is reduced to three multisets keyed by element path - the
+//! elements themselves, their attributes, their text - and two shapes are
 //! compared entry by entry. A missing entry on the round-tripped side is a
 //! loss; an extra one is an invention. Both are reported.
 
@@ -111,7 +111,7 @@ impl DiffKind {
 /// Attributes that say nothing about the data.
 ///
 /// `xmlns` declarations bind prefixes, which the comparison ignores by design.
-/// `schemaLocation` is a hint to a validator, not content — and a writer that
+/// `schemaLocation` is a hint to a validator, not content - and a writer that
 /// does not emit one is not losing anything.
 fn is_noise(qname: &str) -> bool {
     qname == "xmlns"
@@ -134,7 +134,7 @@ const XSI: &str = "http://www.w3.org/2001/XMLSchema-instance";
 /// One frame per open element, holding what that element declared, so a
 /// re-binding stops applying when its subtree ends. The default namespace is
 /// kept under the empty prefix, and it has to be kept: an unprefixed *QName
-/// value* — `xsi:type="IntegerHdf5Array"` under `xmlns="…/resqmlv2"` — names
+/// value* - `xsi:type="IntegerHdf5Array"` under `xmlns="…/resqmlv2"` - names
 /// the default namespace, unlike an unprefixed attribute *name*, which names
 /// none. Missing that read every such `xsi:type` as a different type from the
 /// one we write back and reported it as lost.
@@ -612,7 +612,7 @@ mod tests {
     }
 
     /// An unprefixed attribute is in no namespace, whatever the default is
-    /// bound to — so a plain `type` attribute is never `xsi:type`.
+    /// bound to - so a plain `type` attribute is never `xsi:type`.
     #[test]
     fn a_plain_type_attribute_is_not_an_xsi_type() {
         let doc = br#"<Root xmlns="http://www.w3.org/2001/XMLSchema-instance"><A type="plain"/></Root>"#;

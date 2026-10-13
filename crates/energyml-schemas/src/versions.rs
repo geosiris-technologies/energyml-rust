@@ -1,4 +1,4 @@
-//! Every version this project knows, compiled or not — and the refusal that
+//! Every version this project knows, compiled or not - and the refusal that
 //! names the feature a missing one needs.
 //!
 //! The registry returned by [`all`](crate::all) holds what the Cargo features
@@ -41,7 +41,7 @@ pub struct KnownVersion {
     pub feature: &'static str,
     /// The generated crate behind the feature.
     pub crate_name: &'static str,
-    /// The features the generated crate is built on — the EML versions it
+    /// The features the generated crate is built on - the EML versions it
     /// depends on. Enabling `feature` enables these too.
     pub requires: &'static [&'static str],
 }
@@ -153,7 +153,7 @@ impl KnownVersion {
         self.is_compiled_in(&compiled_features())
     }
 
-    /// Whether this version is among `compiled` — the same question with the
+    /// Whether this version is among `compiled` - the same question with the
     /// set given, which is how a test asks it with every feature on.
     pub fn is_compiled_in(&self, compiled: &[&str]) -> bool {
         compiled.contains(&self.feature)
@@ -220,7 +220,7 @@ pub fn compiled_features() -> Vec<&'static str> {
     on
 }
 
-/// The row a `(package, version)` names — the pair a namespace and a
+/// The row a `(package, version)` names - the pair a namespace and a
 /// `schemaVersion` give, or the registry's own. `None` for a version this
 /// project does not ship at all.
 pub fn known_version(package: &str, version: &str) -> Option<&'static KnownVersion> {
@@ -229,7 +229,7 @@ pub fn known_version(package: &str, version: &str) -> Option<&'static KnownVersi
 
 /// The row a qualified type names: `resqml22.Model`, `resqml20.obj_Activity`
 /// and `resqml201.obj_Activity` (the first of the last two is the schema
-/// version's spelling, the second the release's — one row). A qualified type
+/// version's spelling, the second the release's - one row). A qualified type
 /// cannot name a development drop, so `resqml22.` is the release.
 pub fn known_version_of_qualified_type(qualified_type: &str) -> Option<&'static KnownVersion> {
     let parts = parse_qualified_type(qualified_type).ok()?;
@@ -247,7 +247,7 @@ pub fn known_version_of_content_type(content_type: &str) -> Option<&'static Know
     known_version(parts.domain, parts.version)
 }
 
-/// A version this project ships that this build did not compile — a **refusal,
+/// A version this project ships that this build did not compile - a **refusal,
 /// not an absence**: the data may be perfectly good, and the build merely did
 /// not ask for the crate that reads it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -278,7 +278,7 @@ impl fmt::Display for MissingFeature {
 impl std::error::Error for MissingFeature {}
 
 /// The refusal for a row, given the set of features that are on. `None` when
-/// the row is among them (or there is no row — a version nobody ships is not a
+/// the row is among them (or there is no row - a version nobody ships is not a
 /// missing feature).
 ///
 /// Pure: the set is a parameter, so that a test can ask the question of every

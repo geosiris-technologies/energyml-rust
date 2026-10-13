@@ -1,5 +1,5 @@
 //! The colour of an object **per target**, walked once, resumed, kept and
-//! invalidated — `energyml_domain::color_walks`.
+//! invalidated - `energyml_domain::color_walks`.
 //!
 //! ADR-0009. The requirement (quoted in full in the module): the colour
 //! inheritance is computed once and each sub-part is looked up in the complete
@@ -10,7 +10,7 @@
 //! Every package is **built in memory** (the pieces of `inherit.rs`), and the
 //! shape of the assertions is the design's: the order of ranks, the closest
 //! tier, the exact target before the whole object within a tier. What is counted
-//! is **work** — tiers read, objects read, walks begun — never time.
+//! is **work** - tiers read, objects read, walks begun - never time.
 
 use std::collections::HashMap;
 
@@ -73,7 +73,7 @@ fn painted(entries: &[(u32, &[(Scope, f64)])]) -> GraphicalSet {
     }
 }
 
-/// A triangulated surface `n` of `interpretation` — a kind whose geometry draws
+/// A triangulated surface `n` of `interpretation` - a kind whose geometry draws
 /// nodes and faces.
 fn surface(package: &mut Package, n: u32, interpretation: Option<u32>) {
     let id = u(n);
@@ -119,7 +119,7 @@ fn level(scoped: &Scoped) -> Option<Level> {
 /// A polyline draws nodes and edges and **nothing else**; a surface its nodes
 /// and faces, its edges following the faces; a grid its volumes too.
 ///
-/// To break it: put `Scope::Faces` in the polylines' row — the test goes red.
+/// To break it: put `Scope::Faces` in the polylines' row - the test goes red.
 #[test]
 fn a_polyline_never_asks_for_faces_or_volumes() {
     for kind in [
@@ -151,7 +151,7 @@ fn a_polyline_never_asks_for_faces_or_volumes() {
 /// members and not their nodes.
 ///
 /// To break it: put all the targets in the "whole object" slot of
-/// `default_information_all` — the nodes would receive the faces' colour.
+/// `default_information_all` - the nodes would receive the faces' colour.
 #[test]
 fn a_faces_only_colour_on_a_collection_paints_the_faces_of_a_member_not_its_nodes() {
     let mut package = Package::default();
@@ -202,12 +202,12 @@ fn a_nodes_only_colour_on_the_object_paints_its_nodes_and_not_its_faces() {
     assert!(answers[1].walked.resolution.is_none());
 }
 
-/// The whole object stands for a target nobody distinguished — **and the
+/// The whole object stands for a target nobody distinguished - **and the
 /// closest wins**: the whole-object colour of the object itself (rank 1) beats
 /// the faces colour of its collection (rank 2).
 ///
 /// To break it: look for the exact target along the whole walk before falling back
-/// on the whole object — the collection would win.
+/// on the whole object - the collection would win.
 #[test]
 fn the_whole_object_falls_back_for_a_target_and_the_closest_tier_wins() {
     let mut package = Package::default();
@@ -270,7 +270,7 @@ fn within_a_tier_the_exact_target_comes_before_the_whole_object() {
 
 /// The whole-object answer of the cache is the answer the walk always gave.
 ///
-/// To break it: (see `color_inherit.rs`) — the `WholeObject` target must answer
+/// To break it: (see `color_inherit.rs`) - the `WholeObject` target must answer
 /// only for the whole object, never for another target.
 #[test]
 fn the_whole_object_is_never_answered_by_another_target() {
@@ -292,15 +292,15 @@ fn the_whole_object_is_never_answered_by_another_target() {
 // -- the walk, resumed ---------------------------------------------------------
 
 /// A walk that went deep for one target **answers the next from what it read**,
-/// and one that stopped early **resumes** for the next — and only that far.
+/// and one that stopped early **resumes** for the next - and only that far.
 ///
 /// The object (rank 1), its interpretation (rank 3) and its feature (rank 5) are
 /// three tiers. The faces colour is on the feature, the nodes colour on the
 /// interpretation.
 ///
 /// To break it: re-read the walk for each target (`cursor` reset and `tiers`
-/// emptied in `answer`) — the counts go up; or do not resume
-/// (`read_next` without effect) — the second target would stay unanswered.
+/// emptied in `answer`) - the counts go up; or do not resume
+/// (`read_next` without effect) - the second target would stay unanswered.
 #[test]
 fn a_walk_is_resumed_not_redone() {
     let mut package = chain();
@@ -371,7 +371,7 @@ fn a_walk_is_resumed_not_redone() {
 /// stops at the first tier; the surface's goes to the feature.
 ///
 /// To break it: ask every object for the five targets (the `drawn_by` table
-/// ignored) — the polyline's count goes up to three.
+/// ignored) - the polyline's count goes up to three.
 #[test]
 fn a_polyline_stops_where_its_targets_are_answered() {
     let mut package = chain();
@@ -417,7 +417,7 @@ fn a_polyline_stops_where_its_targets_are_answered() {
     assert!(skin.stats().tiers_read >= 3, "the faces went up to the feature");
 }
 
-/// A surface's edges are drawn with its faces — and the answer **says** when the
+/// A surface's edges are drawn with its faces - and the answer **says** when the
 /// file gave them another colour.
 ///
 /// To break it: copy the edges' colour instead of the faces' (the paintings
@@ -534,8 +534,8 @@ fn resolve_all(cache: &mut ColourCache, built: &Built, set: &GraphicalSet) {
 /// Changing the colour of a collection throws away the walks of **its members
 /// and of the members of its sub-collections**, and of nobody else.
 ///
-/// To break it: a `disturb` that throws everything away — `5` and `6` lose their
-/// walk; or that throws nothing away — `1` and `2` keep the old colour.
+/// To break it: a `disturb` that throws everything away - `5` and `6` lose their
+/// walk; or that throws nothing away - `1` and `2` keep the old colour.
 #[test]
 fn changing_a_collections_colour_drops_only_the_walks_that_went_through_it() {
     let built = linked().built();
@@ -574,13 +574,13 @@ fn changing_a_collections_colour_drops_only_the_walks_that_went_through_it() {
 }
 
 /// A collection that **gains a member** disturbs that member's walk and nobody
-/// else's — not the collection's other members.
+/// else's - not the collection's other members.
 ///
 /// The change is played through the index (`PackageIndex::update_with`), which
 /// says what it disturbed; the package after is built again.
 ///
 /// To break it: make `disturbed_by` disturb the association set's neighbours (all
-/// the members) — `5` would lose its walk.
+/// the members) - `5` would lose its walk.
 #[test]
 fn a_collection_that_gains_a_member_disturbs_only_that_member() {
     let before = linked();
@@ -631,10 +631,10 @@ fn a_collection_that_gains_a_member_disturbs_only_that_member() {
     assert_eq!(cache.stats().walks_begun, begun + 1);
 }
 
-/// The set moves the walks of the objects whose entries moved — **and the
+/// The set moves the walks of the objects whose entries moved - **and the
 /// positions count**: a set that grows shifts every later entry.
 ///
-/// To break it: compare the entries without their position — the shift test goes red.
+/// To break it: compare the entries without their position - the shift test goes red.
 #[test]
 fn the_positions_of_the_entries_are_part_of_what_changed() {
     let before = painted(&[(1, &[(Scope::Faces, 10.0)]), (2, &[(Scope::Faces, 20.0)])]);

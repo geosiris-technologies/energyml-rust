@@ -1,4 +1,4 @@
-//! `energyml cli-reference` — the reference of every command, written from the
+//! `energyml cli-reference` - the reference of every command, written from the
 //! command definitions themselves.
 //!
 //! The reference is generated so that nobody has to remember to write it: a
@@ -7,7 +7,7 @@
 //!
 //! **Not by reading `--help`'s output**: that text depends on the terminal (its
 //! width, its colours). The help is rendered by `clap` from the same
-//! definitions, at a fixed width, so two machines write the same bytes — which
+//! definitions, at a fixed width, so two machines write the same bytes - which
 //! is what lets `--check` fail on a stale file and on nothing else.
 //!
 //! **What is left out, and why.** `translate` is a separate private program,
@@ -32,7 +32,7 @@ const PRIVATE: &[&str] = &["translate"];
 /// (the public repository: `docs/cli-reference.md`).
 pub const DEFAULT_OUT: &str = "cli-reference.md";
 
-/// Write the reference of every command — or, with `--check`, say whether the
+/// Write the reference of every command - or, with `--check`, say whether the
 /// file written is still what the commands say.
 #[derive(Parser)]
 pub struct CliReferenceArgs {
@@ -63,7 +63,7 @@ pub fn render(mut root: clap::Command) -> String {
     root = root.term_width(WIDTH).max_term_width(WIDTH);
     root.build();
     let mut out = String::new();
-    let _ = writeln!(out, "# `energyml` — command reference");
+    let _ = writeln!(out, "# `energyml` - command reference");
     let _ = writeln!(out);
     let _ = writeln!(
         out,
@@ -97,7 +97,7 @@ pub fn render(mut root: clap::Command) -> String {
         let line = cmd.get_about().map(|text| text.to_string()).unwrap_or_default();
         let _ = writeln!(
             out,
-            "- [`energyml {path}`](#{}) — {}",
+            "- [`energyml {path}`](#{}) - {}",
             anchor(path),
             line.lines().next().unwrap_or("")
         );
@@ -193,7 +193,7 @@ mod tests {
     use super::*;
 
     /// Every visible command of the build has its section, the private one never
-    /// does, and two renderings are the same bytes — what `--check` relies on.
+    /// does, and two renderings are the same bytes - what `--check` relies on.
     #[test]
     fn the_reference_names_every_visible_command_and_never_the_private_one() {
         let root = crate::Cli::command();

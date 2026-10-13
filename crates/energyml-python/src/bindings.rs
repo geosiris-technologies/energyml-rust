@@ -1,4 +1,4 @@
-//! The pyo3 dressing — **conversion, and nothing else**.
+//! The pyo3 dressing - **conversion, and nothing else**.
 //!
 //! Behind the `python` feature, and so absent from an ordinary workspace
 //! build. This file is only reachable after a `maturin develop`: `cargo test`
@@ -97,7 +97,7 @@ impl From<&PyArrayRef> for ArrayRef {
 /// **Flat**, with the shape travelling beside it: RESQML writes its points
 /// flat, and reshaping is the caller's decision. `reshape` is one line in
 /// numpy; imposing it here would turn an array of 3N into a matrix nobody
-/// asked for — and one day into a matrix of the wrong orientation.
+/// asked for - and one day into a matrix of the wrong orientation.
 fn block_into_py(py: Python<'_>, block: Block) -> Py<PyAny> {
     match block {
         Block::F64(v) => v.into_pyarray(py).into_any().unbind(),
@@ -116,8 +116,8 @@ fn block_into_py(py: Python<'_>, block: Block) -> Py<PyAny> {
 /// The other way: a numpy array becomes a typed block.
 ///
 /// **The array's dtype decides**, and a type the format does not carry is
-/// refused with a word on what to do. Converting quietly — a `float16`
-/// promoted to a double, a two-dimensional array flattened on its behalf —
+/// refused with a word on what to do. Converting quietly - a `float16`
+/// promoted to a double, a two-dimensional array flattened on its behalf -
 /// would put something in the file other than what the caller holds, with no
 /// way to notice before reading it back.
 fn block_from_py(array: &Bound<'_, PyAny>) -> PyResult<Block> {
@@ -242,7 +242,7 @@ fn property_into_py<'py>(py: Python<'py>, one: PropertyValues) -> PyResult<Bound
     out.set_item("components", one.components)?;
     out.set_item("values", one.values.into_pyarray(py))?;
     // The colour ramp the **package** states, RGBA rows in 0-1, low value
-    // first — and **empty when it states none**, which is the answer: the
+    // first - and **empty when it states none**, which is the answer: the
     // standard defines no default ramp, so inventing one would hand back a
     // picture the file does not describe. Flat, with the width beside it, like
     // every other array crossing here.
@@ -374,7 +374,7 @@ impl PyEpc {
     /// Rename the external data file: the fields, the relationships, the file.
     ///
     /// Returns `{fields, relationships, file, moved_to}`, where `file` is
-    /// `moved`, `absent` or `not-on-disk`. Refuses — raising — rather than
+    /// `moved`, `absent` or `not-on-disk`. Refuses - raising - rather than
     /// doing part of it: a package naming a file that is not there opens
     /// perfectly and cannot be drawn.
     fn rename_data_file<'py>(
@@ -419,7 +419,7 @@ impl PyEpc {
         py.import("json")?.call_method1("loads", (text,))
     }
 
-    /// The same object as JSON text — for a caller that wants it verbatim.
+    /// The same object as JSON text - for a caller that wants it verbatim.
     fn get_json(&self, uri: &str) -> PyResult<String> {
         self.inner.get(uri).map_err(failed)
     }
@@ -499,7 +499,7 @@ impl PyEpc {
 
     /// Read a slice of an array rather than all of it.
     ///
-    /// `start` and `count` are per dimension — what ETP calls a subarray.
+    /// `start` and `count` are per dimension - what ETP calls a subarray.
     fn read_array_part(
         &self,
         py: Python<'_>,
@@ -525,7 +525,7 @@ impl PyEpc {
             .collect()
     }
 
-    /// Who points at this object — the question to ask before deleting it.
+    /// Who points at this object - the question to ask before deleting it.
     ///
     /// A package has no index for this direction, so every object is read.
     fn referenced_by<'py>(&self, py: Python<'py>, uri: &str) -> PyResult<Vec<Bound<'py, PyDict>>> {
@@ -540,7 +540,7 @@ impl PyEpc {
     /// These objects and everything they need, transitively.
     ///
     /// Returns `(needed, missing)`: a set that can be cut out on its own, and
-    /// what is referenced but not held — minus what the standard publishes in a
+    /// what is referenced but not held - minus what the standard publishes in a
     /// catalogue, whose absence means nothing.
     fn needs(&self, uris: Vec<String>) -> PyResult<(Vec<String>, Vec<String>)> {
         self.inner.needs(&uris).map_err(failed)
@@ -575,7 +575,7 @@ impl PyEpc {
 
     /// Judge this package: everything that can be said against it.
     ///
-    /// The sections `energyml check` prints, and the same arithmetic — the
+    /// The sections `energyml check` prints, and the same arithmetic - the
     /// report comes from the library, counts included. `schema` is the slowest
     /// section; `rules` are the business constraints the technical guides
     /// state. **Not checked is not the same as clean**, so the report says
@@ -730,7 +730,7 @@ impl PyEpc {
             .collect()
     }
 
-    /// The types this store can read — the generated model behind it.
+    /// The types this store can read - the generated model behind it.
     fn supported_types<'py>(&self, py: Python<'py>) -> PyResult<Vec<Bound<'py, PyDict>>> {
         self.inner
             .supported_types()
@@ -750,7 +750,7 @@ impl PyEpc {
         Ok(PyBytes::new(py, &bytes).into_any().unbind())
     }
 
-    /// The relationships recorded for a part — **an index, not the truth**.
+    /// The relationships recorded for a part - **an index, not the truth**.
     fn relationships<'py>(&self, py: Python<'py>, part: &str) -> PyResult<Vec<Bound<'py, PyDict>>> {
         self.inner
             .relationships(part)
@@ -816,7 +816,7 @@ fn formats<'py>(py: Python<'py>) -> PyResult<Vec<Bound<'py, PyDict>>> {
 /// representation lists its properties, so finding them reads every property of
 /// the package.
 ///
-/// `metadata` is a spec as JSON — `{"key": "dotted.path"}` — collected on every
+/// `metadata` is a spec as JSON - `{"key": "dotted.path"}` - collected on every
 /// object and written verbatim by every format, so one spec yields the same
 /// keys in an OBJ comment, a GeoJSON property and a VTK field array.
 /// `standard_metadata()` gives the one this workspace ships.
@@ -899,14 +899,14 @@ fn describe<'py>(py: Python<'py>, name: &str) -> PyResult<Bound<'py, PyDict>> {
 ///
 /// **This is how an object is created here.** The registry builds the instance
 /// and the JSON writer renders it, so what comes back carries its `$type` and
-/// its uuid — fill it in, hand it to `put`, and no class per type ever had to
+/// its uuid - fill it in, hand it to `put`, and no class per type ever had to
 /// exist on this side.
 ///
 /// An abstract type is refused by name, with what extends it.
 ///
 /// `uuid` is optional and has **no default**: an identity is not always a coin
-/// toss — `energyml-build` derives its uuids so a second run names the same
-/// objects — so a template that stamped a random one would hand such a caller
+/// toss - `energyml-build` derives its uuids so a second run names the same
+/// objects - so a template that stamped a random one would hand such a caller
 /// a fresh identity every run. Left out, the field comes back empty and `put`
 /// refuses by naming it; passing it here moves the refusal to the call that
 /// made the mistake.
@@ -920,7 +920,7 @@ fn template<'py>(py: Python<'py>, qualified_type: &str, uuid: Option<&str>) -> P
 /// The shape of a representation: points and topology, placed.
 ///
 /// `placement` is `projected` (the default), `local` or `metres`. Anything else
-/// is refused with the list — a model placed in the wrong system looks exactly
+/// is refused with the list - a model placed in the wrong system looks exactly
 /// like one placed in the right one.
 #[pyfunction]
 #[pyo3(signature = (package, uri, placement = "projected"))]

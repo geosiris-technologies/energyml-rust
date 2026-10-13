@@ -1,11 +1,11 @@
-//! **An IJK grid cut by its faults** — split coordinate lines where a fault
+//! **An IJK grid cut by its faults** - split coordinate lines where a fault
 //! runs between two columns, the hanging wall moved by a stated throw, and the
 //! cells nearest a fault removed on request: the computation behind
 //! `faulted-ijk-grid`, from a
 //! grid [`crate::ijk::stack`] has already built between its horizons.
 //!
 //! The need: the IJK grids of the synthetic model are too regular. At least one
-//! should be "cut" by the faults — perhaps a new one, shifted somewhat downward
+//! should be "cut" by the faults - perhaps a new one, shifted somewhat downward
 //! on one side, with the cells nearest one or two faults removed.
 //!
 //! # What the file will say, and where RESQML says it
@@ -15,10 +15,10 @@
 //!   pillarCount lines, the index of the coordinate line equals the index of
 //!   the corresponding pillar. This array provides the pillar indices for the
 //!   additional (split) coordinate lines »* (RESQML TRG 2.2 §5.17
-//!   `ColumnLayerSplitCoordinateLines` p. 111). The split lines come last —
+//!   `ColumnLayerSplitCoordinateLines` p. 111). The split lines come last -
 //!   *« the coordinate lines for a column-layer grid should always be numbered
 //!   to first follow the pillars, with any additional split coordinate lines
-//!   coming last »* (RESQML Technical Usage Guide 2.2, draft, §9.5.2 p. 136) —
+//!   coming last »* (RESQML Technical Usage Guide 2.2, draft, §9.5.2 p. 136) -
 //!   and *« For a faulted IJK grid each pillar can have up to four coordinate
 //!   lines per pillar »* (§9.11.1 p. 151): one per group of the (up to four)
 //!   columns around it that the faults put on different sides;
@@ -29,10 +29,10 @@
 //!   lines (§9.19.2, figure 9-39, p. 174);
 //! - **a removed cell is a cell whose geometry is not defined**:
 //!   `CellGeometryIsDefined` *« overrides any other node geometry
-//!   specification »* (TRG §5.1 p. 94). Its nodes stay what they are — the
+//!   specification »* (TRG §5.1 p. 94). Its nodes stay what they are - the
 //!   flag, not a `NaN`, is what the reader obeys, and the neighbours share them.
 //!
-//! # Where a fault runs in a grid of vertical pillars — a staircase, said
+//! # Where a fault runs in a grid of vertical pillars - a staircase, said
 //!
 //! The pillars stay vertical (`PillarShape` `vertical`, TRG §5.39 p. 135): a
 //! column is on **one side** of a fault over its whole height, so a dipping
@@ -40,35 +40,35 @@
 //! is decided at **one level**, stated and reported: the middle of the overlap
 //! between the fault's vertical extent and the grid's. There the fault surface
 //! is cut by a horizontal plane ([`crate::intersect()`]), which gives its
-//! **trace**, one open line — nothing, several pieces or a ring is refused by
+//! **trace**, one open line - nothing, several pieces or a ring is refused by
 //! name. A column is in the **hanging wall** when its centre lies on the side of
 //! the trace toward which the fault **dips**, the dip measured on the surface
 //! ([`crate::fault_sticks::orientation`]) as `fault-throw` measures it; a
 //! vertical fault has no hanging wall and is refused, as is a trace that runs
 //! within 30° of its dip direction.
 //!
-//! # The throw — the law `fault-throw` states, so a grid and a torn horizon agree
+//! # The throw - the law `fault-throw` states, so a grid and a torn horizon agree
 //!
 //! At a pillar, the hanging wall moves by `maximum · profile(s) · (1 − d /
 //! reach)`, `s` the pillar's position along the trace (0 to 1, from its plan
-//! length), `d` its distance to the trace in plan, nothing beyond `reach` —
+//! length), `d` its distance to the trace in plan, nothing beyond `reach` -
 //! the law of [`crate::fault_throw`], with its two profiles. Down for a normal
 //! fault, up for a reverse one; **vertically only**, since a pillar is
 //! vertical (no heave). A node moves only where the fault is: a level node
 //! whose height lies outside the fault surface's own vertical extent keeps its
-//! place — a fault sealed under the top of the grid (F2 under H6) leaves the
+//! place - a fault sealed under the top of the grid (F2 under H6) leaves the
 //! top untouched. The footwall does not move.
 //!
 //! At every pillar, the columns around it are grouped by the displacement the
 //! faults give them there; the group that moves least keeps the pillar's own
-//! line — the footwall, on a single fault — and each other group gets a split
+//! line - the footwall, on a single fault - and each other group gets a split
 //! line. Two groups that move alike are one: the throw dies out at the tips of
 //! a fault, and so do its split lines.
 //!
 //! # Refused rather than drawn
 //!
 //! A fault that splits no pillar (its trace misses the grid, or its throw is
-//! zero wherever it does) — a faulted grid with no fault would read as one; a
+//! zero wherever it does) - a faulted grid with no fault would read as one; a
 //! throw that turns a line's levels over (a reverse throw lifting a node above
 //! the one over it); a removed layer past the grid; a grid left with no cell.
 //!
@@ -101,7 +101,7 @@ pub struct Fault<'a> {
     /// Which way its hanging wall goes.
     pub sense: Sense,
     /// How many columns of its hanging wall, counted from the fault, lose
-    /// their cells — 0 keeps them all.
+    /// their cells - 0 keeps them all.
     pub dead_columns: usize,
 }
 
@@ -113,7 +113,7 @@ pub struct Settings<'a> {
     /// How far from the trace, in plan, the hanging wall is dragged.
     pub reach: f64,
     /// The layers, from 0 at the top, in which the columns next to a fault
-    /// lose their cells — empty for every layer.
+    /// lose their cells - empty for every layer.
     pub dead_layers: &'a [usize],
 }
 
@@ -122,7 +122,7 @@ pub struct Settings<'a> {
 pub struct FaultCut {
     /// Its surface's orientation, as measured.
     pub orientation: Orientation,
-    /// The height its trace is read at — the middle of the overlap between
+    /// The height its trace is read at - the middle of the overlap between
     /// its vertical extent and the grid's.
     pub level: f64,
     /// Its trace at that level, in the frame.
@@ -193,7 +193,7 @@ impl Faulted {
         self.cell_defined.iter().filter(|defined| !**defined).count()
     }
 
-    /// The nodes, level first, lines fastest — `x` and `y` the pillar's.
+    /// The nodes, level first, lines fastest - `x` and `y` the pillar's.
     pub fn points(&self, pillars: &[[f64; 2]]) -> Vec<Point> {
         let mut out = Vec::with_capacity(self.levels * self.lines);
         for level in 0..self.levels {
@@ -209,7 +209,7 @@ impl Faulted {
     }
 
     /// The defined cells in RESQML's order, as eight indices into
-    /// [`Faulted::points`] in VTK's order, and the RESQML index of each —
+    /// [`Faulted::points`] in VTK's order, and the RESQML index of each -
     /// empty when every cell is defined. [`Stacked::hexahedra`] with each
     /// corner looked up.
     pub fn hexahedra(&self) -> (Vec<[u32; 8]>, Vec<u32>) {
@@ -253,7 +253,7 @@ impl Faulted {
 pub enum CutError {
     /// No fault given.
     #[error(
-        "no fault given: a grid cut by nothing is the grid between its horizons — `ijk-grid-from-horizons` writes it"
+        "no fault given: a grid cut by nothing is the grid between its horizons - `ijk-grid-from-horizons` writes it"
     )]
     NoFault,
     /// A maximum throw that is not a positive length.
@@ -287,7 +287,7 @@ pub enum CutError {
         layers: usize,
     },
     /// A fault with no area.
-    #[error("`{fault}` has no area — no triangle to measure its dip on")]
+    #[error("`{fault}` has no area - no triangle to measure its dip on")]
     NoSurface {
         /// The fault.
         fault: String,
@@ -328,7 +328,7 @@ pub enum CutError {
     },
     /// A trace in several pieces.
     #[error(
-        "`{fault}` is cut at {level} in {count} separate traces — which of them splits the grid, and how their throws meet, is not decided here"
+        "`{fault}` is cut at {level} in {count} separate traces - which of them splits the grid, and how their throws meet, is not decided here"
     )]
     Pieces {
         /// The fault.
@@ -340,7 +340,7 @@ pub enum CutError {
     },
     /// A trace that closes on itself.
     #[error(
-        "`{fault}` is cut at {level} along a closed ring — a ring has no end for its throw to die out at"
+        "`{fault}` is cut at {level} along a closed ring - a ring has no end for its throw to die out at"
     )]
     Ring {
         /// The fault.
@@ -350,7 +350,7 @@ pub enum CutError {
     },
     /// A trace too close to the dip direction.
     #[error(
-        "the trace of `{fault}` runs {angle:.0}° from its dip direction on average — within 30°, which side is the hanging wall cannot be read from it"
+        "the trace of `{fault}` runs {angle:.0}° from its dip direction on average - within 30°, which side is the hanging wall cannot be read from it"
     )]
     AlongDip {
         /// The fault.
@@ -370,7 +370,7 @@ pub enum CutError {
     },
     /// A throw that turns a line over.
     #[error(
-        "the throw turns the levels over on the line of pillar ({i}, {j}): level {level} ends up above level {above} — a throw larger than the layers it crosses, against their order"
+        "the throw turns the levels over on the line of pillar ({i}, {j}): level {level} ends up above level {above} - a throw larger than the layers it crosses, against their order"
     )]
     Overturned {
         /// The pillar's `i`.
@@ -384,7 +384,7 @@ pub enum CutError {
     },
     /// Nothing left.
     #[error(
-        "none of the {cells} cell(s) keeps a geometry once the cells next to the faults are removed — nothing would be drawn"
+        "none of the {cells} cell(s) keeps a geometry once the cells next to the faults are removed - nothing would be drawn"
     )]
     NothingLeft {
         /// The cells.
@@ -393,7 +393,7 @@ pub enum CutError {
 }
 
 /// The hanging-wall side of a trace walked forward: the sign of the side its
-/// dip direction points to, on average — the rule of `fault_throw`.
+/// dip direction points to, on average - the rule of `fault_throw`.
 fn hanging_wall_side(trace: &[Point], dip_azimuth: f64, fault: &str) -> Result<f64, CutError> {
     let direction = [dip_azimuth.to_radians().sin(), dip_azimuth.to_radians().cos()];
     let (mut sum, mut total) = (0.0f64, 0.0f64);
@@ -429,7 +429,7 @@ struct Read {
     span: [f64; 2],
 }
 
-/// Cut a grid by its faults — see the module.
+/// Cut a grid by its faults - see the module.
 ///
 /// `pillars` is each pillar's `(x, y)`, `i` fastest, in the grid's frame.
 pub fn cut(

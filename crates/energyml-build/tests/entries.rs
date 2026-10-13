@@ -1,9 +1,9 @@
-//! What a caller names, as pieces — `energyml_build::entries`, moved out of
+//! What a caller names, as pieces - `energyml_build::entries`, moved out of
 //! `energyml-cli/src/create.rs` on 24/09 so that the command and the recipe
 //! runner read an input by one rule.
 //!
 //! The command's behaviour is what these tests pin: the same pieces under the
-//! same names, the same refusals **word for word** — a refusal is what somebody
+//! same names, the same refusals **word for word** - a refusal is what somebody
 //! acts on, and a move that changed one would have changed the command.
 //!
 //! # What would make them fail
@@ -22,7 +22,7 @@ use energyml_build::pieces::Source;
 use energyml_build::source::Source as Where;
 use energyml_storage::EpcStore;
 
-/// Texts by source, and what was asked of it — no disk, no network.
+/// Texts by source, and what was asked of it - no disk, no network.
 #[derive(Default)]
 struct Held {
     texts: BTreeMap<String, (String, Option<String>)>,
@@ -58,8 +58,8 @@ impl Reader for Held {
 /// A collection of one point, in WGS 84.
 const ONE_POINT: &str = r#"{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[2.3358,48.8516,35]},"properties":{"name":"a"}}]}"#;
 
-/// A slot is read off the front, and a path — a drive letter, an `=` in a
-/// folder name after a separator — is not taken for one. (The command's own
+/// A slot is read off the front, and a path - a drive letter, an `=` in a
+/// folder name after a separator - is not taken for one. (The command's own
 /// test, moved with the function.)
 #[test]
 fn a_slot_is_words_before_an_equals_sign_and_a_path_is_not_one() {
@@ -77,7 +77,7 @@ fn a_slot_is_words_before_an_equals_sign_and_a_path_is_not_one() {
     assert_eq!(slot_of("=model.epc"), (None, "=model.epc"));
 }
 
-/// **A slot named twice is two pieces**, `wells` then `wells 2` — the names the
+/// **A slot named twice is two pieces**, `wells` then `wells 2` - the names the
 /// binder ranks. Named alike, every shape was paired with the first companion
 /// (23/09).
 #[test]
@@ -89,7 +89,7 @@ fn a_slot_given_twice_is_numbered_and_another_slot_counts_apart() {
     assert_eq!(numbering.next("wells"), "wells 3");
 }
 
-/// The name decides, then what a server **declared** — never the bytes. And a
+/// The name decides, then what a server **declared** - never the bytes. And a
 /// `.json` is not a table: a template is a `.json` too.
 #[test]
 fn a_table_and_a_geojson_are_told_apart_by_name_then_by_declared_type() {
@@ -112,7 +112,7 @@ fn a_table_and_a_geojson_are_told_apart_by_name_then_by_declared_type() {
 }
 
 /// A file becomes a collection named after the file; given to a slot, the
-/// **piece** takes the slot's name and the **collection** keeps the file's —
+/// **piece** takes the slot's name and the **collection** keeps the file's -
 /// which is what an operation reads a stage from.
 #[test]
 fn a_geojson_is_a_collection_named_after_its_file_and_its_piece_after_the_slot() {
@@ -142,7 +142,7 @@ fn a_geojson_is_a_collection_named_after_its_file_and_its_piece_after_the_slot()
 
 /// **The scheme decides before the `#`.** `https://a/x.json#part` is an
 /// address with a fragment, not an object of a package called
-/// `https://a/x.json` — which is what testing for `#` first did.
+/// `https://a/x.json` - which is what testing for `#` first did.
 #[test]
 fn an_address_with_a_fragment_is_fetched_and_never_opened_as_a_package() {
     let url = "https://a.example/x.json#part";
@@ -196,7 +196,7 @@ fn a_table_without_a_template_is_refused_naming_how_to_give_one() {
     );
     assert_eq!(
         why.said("`--template <file.json>`"),
-        "passes.csv: a table needs `--template <file.json>` — an OSDU ColumnBasedTableTemplate, a File.TabularData, or the bare list of column definitions. What a column means is read from it, never guessed from its heading"
+        "passes.csv: a table needs `--template <file.json>` - an OSDU ColumnBasedTableTemplate, a File.TabularData, or the bare list of column definitions. What a column means is read from it, never guessed from its heading"
     );
 }
 
@@ -238,7 +238,7 @@ fn a_table_with_its_template_is_a_table() {
 }
 
 /// What is neither a table nor a GeoJSON is refused naming the file, what it
-/// was served as, and what is read — the command's sentence, unchanged.
+/// was served as, and what is read - the command's sentence, unchanged.
 #[test]
 fn a_file_of_another_kind_is_refused_naming_what_is_read() {
     let mut held = Held::default().with("notes.txt", "hello", Some("text/plain"));
@@ -259,7 +259,7 @@ fn a_file_of_another_kind_is_refused_naming_what_is_read() {
 }
 
 /// A feature that does not read is set aside **by name**, and the rest still
-/// comes — the command prints the line, `  [refused] <file>: <why>`.
+/// comes - the command prints the line, `  [refused] <file>: <why>`.
 #[test]
 fn a_feature_that_does_not_read_is_set_aside_by_name() {
     let mixed = r#"{"type":"FeatureCollection","features":[

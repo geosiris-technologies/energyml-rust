@@ -19,8 +19,8 @@
 //!
 //! A discrete property stores integers, and the integer means nothing alone: it
 //! is the rank of a row in the table `CategoryLookup` names.
-//! [`crate::table::Lookup`] reads it in **both forms** the standard has had —
-//! `StringTableLookup` in 2.0.1, `eml23.ColumnBasedTable` in 2.2 — so this
+//! [`crate::table::Lookup`] reads it in **both forms** the standard has had -
+//! `StringTableLookup` in 2.0.1, `eml23.ColumnBasedTable` in 2.2 - so this
 //! module knows neither: it asks for the label.
 //!
 //! Writing the raw code into a CSV would be worse than an absence: an integer
@@ -30,10 +30,10 @@
 //!
 //! Two boreholes are pasted into one CSV by **uniting their columns**: what a
 //! borehole lacks is an empty cell, not a shifted column. Two things prevent it,
-//! and they are named rather than silently merged — see [`Conflict`].
+//! and they are named rather than silently merged - see [`Conflict`].
 //!
 //! What does **not** prevent it: two boreholes whose category tables differ.
-//! That is precisely what resolution into labels buys — `clay` is `clay`
+//! That is precisely what resolution into labels buys - `clay` is `clay`
 //! whatever code carried it.
 
 use crate::error::Result;
@@ -46,14 +46,14 @@ use energyml_core::value::Reflect;
 /// Where a column comes from.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum From {
-    /// The frame's measured depths — the **base** of each pass when the table
+    /// The frame's measured depths - the **base** of each pass when the table
     /// is arranged by interval.
     MeasuredDepth,
     /// The **top** of each pass, when the table is arranged by interval.
     TopDepth,
     /// A property, by its uuid.
     Property(String),
-    /// What is said of the borehole itself — its head, an alias, its system —
+    /// What is said of the borehole itself - its head, an alias, its system -
     /// and repeated on every row. The word names what it is.
     Wellbore(&'static str),
 }
@@ -61,19 +61,19 @@ pub enum From {
 /// A column of the table.
 #[derive(Debug, Clone)]
 pub struct Column {
-    /// What the header carries — the property's title, or `MD`.
+    /// What the header carries - the property's title, or `MD`.
     pub title: String,
     /// Its unit, when it has one.
     pub uom: Option<String>,
     /// The uuid of the property kind, when the property names one.
     pub kind: Option<String>,
-    /// The **title** of that property kind — `well name`, `measured depth` —,
+    /// The **title** of that property kind - `well name`, `measured depth` -,
     /// which the export prefers as a header when it designates a single column
     /// (property kind names are prioritised as column titles when possible).
     pub kind_title: Option<String>,
     /// Where it comes from.
     pub from: From,
-    /// One value per row — node or interval. `None` is an absence **in the
+    /// One value per row - node or interval. `None` is an absence **in the
     /// file**, not a zero.
     pub values: Vec<Option<String>>,
 }
@@ -98,7 +98,7 @@ pub struct WellTable {
 ///
 /// **Named rather than merged.** Putting millidarcies from one borehole and
 /// square metres from another in one `PERM` column gives a perfectly well-formed
-/// CSV that nothing downstream can detect — the fault this repository refuses
+/// CSV that nothing downstream can detect - the fault this repository refuses
 /// everywhere else.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Conflict {
@@ -127,12 +127,12 @@ impl Conflict {
     pub fn says(&self) -> String {
         match self {
             Conflict::Uom { column, first, other } => format!(
-                "`{column}` is in {} for one wellbore and {} for another — one column cannot hold both",
+                "`{column}` is in {} for one wellbore and {} for another - one column cannot hold both",
                 first.as_deref().unwrap_or("no unit"),
                 other.as_deref().unwrap_or("no unit")
             ),
             Conflict::Kind { column, first, other } => format!(
-                "`{column}` is {} for one wellbore and {} for another — same name, two measurements",
+                "`{column}` is {} for one wellbore and {} for another - same name, two measurements",
                 first.as_deref().unwrap_or("of no stated kind"),
                 other.as_deref().unwrap_or("of no stated kind")
             ),
@@ -149,17 +149,17 @@ impl Conflict {
 
 /// The name of a borehole, stripped of the role a writer appends to it.
 ///
-/// `"F1 — frame"`, `"F1 : trajectory"`, `"F1 — STRA"`: a producer puts the role
+/// `"F1 - frame"`, `"F1 : trajectory"`, `"F1 - STRA"`: a producer puts the role
 /// after the name, and the separator is never alphanumeric. What remains in
 /// front is the identity.
 ///
 /// **This is not a comfort: it is what makes merging possible.** Without it, a
-/// column is called `"F1 — STRA"` for one and `"F2 — STRA"` for the other, so
+/// column is called `"F1 - STRA"` for one and `"F2 - STRA"` for the other, so
 /// the union of the columns unites nothing and a ten-well file has ten times
-/// the same columns, nine tenths empty. Found while exporting — the view alone
+/// the same columns, nine tenths empty. Found while exporting - the view alone
 /// would not have shown it.
 pub fn stem(title: &str) -> &str {
-    for cut in [" — ", " : ", " - "] {
+    for cut in [" - ", " : ", " - "] {
         if let Some(at) = title.find(cut) {
             return title[..at].trim_end();
         }
@@ -173,9 +173,9 @@ pub fn stem(title: &str) -> &str {
 /// a table's header names **the measurement**, and the `STRA` of two boreholes
 /// is the same one. The prefix is removed **only if it is this borehole's**:
 /// cutting at the first separator found would turn a legitimate title such as
-/// `"porosité — corrigée"` into a column `corrigée`.
+/// `"porosité - corrigée"` into a column `corrigée`.
 fn heading(title: &str, well: &str) -> String {
-    for cut in [" — ", " : ", " - "] {
+    for cut in [" - ", " : ", " - "] {
         if let Some(rest) = title.strip_prefix(well).and_then(|rest| rest.strip_prefix(cut)) {
             return rest.to_string();
         }
@@ -197,7 +197,7 @@ pub fn hangs_on(object: &dyn Reflect, representation: &str) -> bool {
 /// A frame and its properties, tabulated.
 ///
 /// `properties` is what the caller found through [`hangs_on`]: this module does
-/// not walk a package, it reads what it is given — the rule that keeps it
+/// not walk a package, it reads what it is given - the rule that keeps it
 /// testable without a file.
 pub fn of_frame(
     frame: &dyn Reflect,
@@ -214,7 +214,7 @@ pub fn of_frame(
     let mut notes = Vec::new();
 
     // The depth first: it is the axis, and it fixes the number of rows. Without
-    // it there is no table — a value without a depth fits nowhere.
+    // it there is no table - a value without a depth fits nowhere.
     let mds = match frame.field("NodeMd") {
         Some(energyml_core::value::FieldValue::Object(array)) => {
             crate::values::read(array, arrays, "NodeMd")?
@@ -229,8 +229,8 @@ pub fn of_frame(
     // **One row per interval when the frame carries passes.** A pass property is
     // worth *from here to there*: putting it on a node would shift it by one
     // rank, and that is the fault `properties-from-table` exists to avoid. So
-    // the table takes the shape of the file it comes from — a top, a base, a
-    // value — and that is what makes the CSV identical to the source one.
+    // the table takes the shape of the file it comes from - a top, a base, a
+    // value - and that is what makes the CSV identical to the source one.
     let by_passes = mds.len() >= 2
         && properties.iter().any(|object| {
             property::read(*object).is_ok_and(|read| read.indexable == IndexableElement::Intervals)
@@ -282,7 +282,7 @@ pub fn of_frame(
     })
 }
 
-/// A property, read into columns — or the reason it was not read.
+/// A property, read into columns - or the reason it was not read.
 ///
 /// **Several columns when its code table has several.** A table that carries the
 /// code **and** its label (`STRA`, `Nom_STRA`) renders both: that is the shape of
@@ -301,7 +301,7 @@ fn one_property(
 
     // **Only what hangs on what the rows are.** An interval property has one
     // fewer value than there are nodes, and putting it on the nodes would shift
-    // every value by one rank — the fault `properties-from-table` exists to
+    // every value by one rank - the fault `properties-from-table` exists to
     // avoid. The reverse too: a node value has no row in a table of passes.
     if read.indexable != wanted {
         return Err(format!(
@@ -320,7 +320,7 @@ fn one_property(
     let values = patch.read(arrays).map_err(|why| format!("`{title}`: {why}"))?;
     if values.len() != rows {
         return Err(format!(
-            "`{title}` holds {} value(s) where the frame has {rows} {} — reading it here would shift every one",
+            "`{title}` holds {} value(s) where the frame has {rows} {} - reading it here would shift every one",
             values.len(),
             if wanted == IndexableElement::Intervals {
                 "interval(s)"
@@ -425,7 +425,7 @@ fn kind_uuid(kind: &property::PropertyKindRef) -> Option<String> {
 /// **The last column that is not a key**, because that is where the label lives
 /// in both forms: a `StringTableLookup` has `Key` and `Value`, a category
 /// `ColumnBasedTable` has the code then its name. A single-column table returns
-/// that column — it *is* the label.
+/// that column - it *is* the label.
 fn label_at(table: &Lookup, values: &Values, at: usize) -> Option<String> {
     let code = match values {
         Values::Integer(v) => *v.get(at)? as usize,
@@ -442,7 +442,7 @@ fn label_at(table: &Lookup, values: &Values, at: usize) -> Option<String> {
     }
 }
 
-/// A value, as text — and `None` for what the file does not say.
+/// A value, as text - and `None` for what the file does not say.
 ///
 /// A `NaN` is **an absence**, not the string `NaN`: that is how properties
 /// created from a table write a node without a measurement, and rendering it
@@ -462,7 +462,7 @@ fn cell_text(values: &Values, at: usize) -> Option<String> {
     }
 }
 
-/// A number written without useless zeros — `6.4` and not `6.4000000000000004`.
+/// A number written without useless zeros - `6.4` and not `6.4000000000000004`.
 fn trim(value: f64) -> String {
     if value == value.trunc() && value.abs() < 1e15 {
         format!("{}", value as i64)
@@ -551,7 +551,7 @@ pub fn merge(tables: &[WellTable]) -> Merged {
 ///
 /// RFC 4180: a field that carries the separator, a quote or a line ending is
 /// quoted, and a quote is doubled. Without that, a label such as
-/// `argile, sableuse` would split its line in two — and the file would remain
+/// `argile, sableuse` would split its line in two - and the file would remain
 /// perfectly well formed.
 pub fn to_csv(merged: &Merged, separator: char) -> String {
     let quote = |cell: &Option<String>| -> String {

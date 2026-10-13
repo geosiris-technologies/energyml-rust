@@ -5,15 +5,15 @@
 //!
 //! 1. [`resolve`] works in the drawing's units, before the frame: which markers
 //!    can be drawn at all, where each of their objects carries them, and one
-//!    note per cause for what cannot. The legend lists what this step kept —
+//!    note per cause for what cannot. The legend lists what this step kept -
 //!    **what is drawn is what the legend says**, from one list.
 //! 2. [`Resolved::contours`], [`Resolved::symbols`] and [`Resolved::legend`] put
 //!    that list on the map.
 //!
 //! A marker is drawn on the objects the drawing holds: a well (its head, its
 //! bottom, a measured depth) or a surface's trace (the first or last point of
-//! its single span). A key the drawing does not hold — hidden, outside the
-//! portion, or not a well or a surface — is counted and said, never drawn
+//! its single span). A key the drawing does not hold - hidden, outside the
+//! portion, or not a well or a surface - is counted and said, never drawn
 //! elsewhere. A shape the drawer does not know is refused by its name.
 
 use std::collections::HashSet;
@@ -96,7 +96,7 @@ fn well_point(w: &WellItem, place: MarkerPlace) -> Result<[f64; 2], Miss> {
     }
 }
 
-/// Decide, in the drawing's units, what the view's markers draw — and say what
+/// Decide, in the drawing's units, what the view's markers draw - and say what
 /// they cannot, one note per marker and cause, counted.
 pub(super) fn resolve(
     view: &View,
@@ -153,7 +153,7 @@ pub(super) fn resolve(
                 if !seen_wells.insert(at) {
                     continue;
                 }
-                let title = format!("{name} — {}", w.object.title);
+                let title = format!("{name} - {}", w.object.title);
                 if marker.shape == CONTOUR {
                     out.placed.push(Placed {
                         entry,
@@ -180,7 +180,7 @@ pub(super) fn resolve(
                     Err(Miss::Nothing) => unplaceable += 1,
                 }
             } else if let Some(t) = traces.iter().find(|t| t.key == *key) {
-                let title = format!("{name} — {}", t.item.object.title);
+                let title = format!("{name} - {}", t.item.object.title);
                 if marker.shape == CONTOUR {
                     let lines: Vec<Vec<[f64; 2]>> = t.spans.iter().map(|s| s.to_vec()).collect();
                     out.placed.push(Placed {
@@ -222,25 +222,25 @@ pub(super) fn resolve(
         };
         if absent > 0 {
             warnings.push(format!(
-                "marker \"{name}\": {} not in this drawing (hidden, outside the portion, or neither a well nor a surface) — nothing marked there",
+                "marker \"{name}\": {} not in this drawing (hidden, outside the portion, or neither a well nor a surface) - nothing marked there",
                 plural(absent, "object is", "objects are")
             ));
         }
         if no_md > 0 {
             warnings.push(format!(
-                "marker \"{name}\": {} no measured depths — nothing marked there",
+                "marker \"{name}\": {} no measured depths - nothing marked there",
                 plural(no_md, "well has", "wells have")
             ));
         }
         if outside > 0 {
             warnings.push(format!(
-                "marker \"{name}\": the measured depth is outside {} — nothing marked there",
+                "marker \"{name}\": the measured depth is outside {} - nothing marked there",
                 plural(outside, "well", "wells")
             ));
         }
         if unplaceable > 0 {
             warnings.push(format!(
-                "marker \"{name}\": {} no such place (a surface has no measured depth, and its ends are one point only when drawn in one piece) — nothing marked there",
+                "marker \"{name}\": {} no such place (a surface has no measured depth, and its ends are one point only when drawn in one piece) - nothing marked there",
                 plural(unplaceable, "object has", "objects have")
             ));
         }
@@ -254,7 +254,7 @@ pub(super) fn resolve(
     }
     if unnamed > 0 {
         warnings.push(format!(
-            "{unnamed} marker(s) without a name not drawn — a marker needs a name for the legend"
+            "{unnamed} marker(s) without a name not drawn - a marker needs a name for the legend"
         ));
     }
     out
@@ -288,7 +288,7 @@ impl Resolved {
         self.entries.is_empty()
     }
 
-    /// The legend's width, pixels — `0` when there is none.
+    /// The legend's width, pixels - `0` when there is none.
     pub fn width(&self) -> f64 {
         if self.entries.is_empty() {
             return 0.0;
@@ -301,7 +301,7 @@ impl Resolved {
         (widest + 36.0).clamp(LEGEND_MIN_PX, LEGEND_MAX_PX)
     }
 
-    /// The contours, one group per marked object — drawn **under** the lines.
+    /// The contours, one group per marked object - drawn **under** the lines.
     pub fn contours(&self, map: &Map) -> Vec<LaidObject> {
         self.placed
             .iter()
@@ -349,7 +349,7 @@ impl Resolved {
     }
 
     /// The legend: a box at `x` from `top` down to at most `bottom`, a heading and
-    /// one line per marker — symbol, name. What does not fit is said on its last line.
+    /// one line per marker - symbol, name. What does not fit is said on its last line.
     pub fn legend(&self, x: f64, width: f64, top: f64, bottom: f64) -> Vec<LaidObject> {
         if self.entries.is_empty() {
             return Vec::new();
@@ -450,7 +450,7 @@ fn decor(name: &str, shapes: Vec<Shape>) -> LaidObject {
     }
 }
 
-/// The bottom edge of a legend's box — what the legend below it starts under.
+/// The bottom edge of a legend's box - what the legend below it starts under.
 pub(super) fn bottom_of(boxed: &LaidObject) -> Option<f64> {
     match boxed.shapes.first() {
         Some(Shape::Polygon { points, .. }) => points.iter().map(|p| p[1]).reduce(f64::max),

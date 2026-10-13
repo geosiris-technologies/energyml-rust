@@ -2,8 +2,8 @@
 //! sample chain (`fluid-sample`), the fiber (`dts-installation`,
 //! DTS) and the loop's flow model (`product-flow-model`).
 //!
-//! **The form of each assertion comes from the schema and the reference-model description — which
-//! object names which , what a unit's ports are — and the values
+//! **The form of each assertion comes from the schema and the reference-model description - which
+//! object names which , what a unit's ports are - and the values
 //! from the bag.** Every JSON a plan writes is read back into its generated
 //! PRODML type before anything is asserted of it, the road `apply` takes.
 //!
@@ -100,8 +100,8 @@ fn synthetic(extensions: &[energyml_eml_2_3::ExtensionNameValue]) -> bool {
 
 // ================================================================ fluid-sample
 
-/// A calcium bicarbonate water with gypsum sulfate — the reference-model example in
-/// order of magnitude — chosen neutral.
+/// A calcium bicarbonate water with gypsum sulfate - the reference-model example in
+/// order of magnitude - chosen neutral.
 fn ions() -> Vec<&'static str> {
     vec![
         "Ca+2=150",
@@ -126,8 +126,8 @@ fn sample_bag() -> Pieces {
 
 fn sample_choices() -> Choices {
     Choices::new()
-        .set("title", "GTH-1 — sample")
-        .set("source", "synthetic — a trial source")
+        .set("title", "GTH-1 - sample")
+        .set("source", "synthetic - a trial source")
         .set("sampledAt", "2025-03-12T09:00:00Z")
         .set("sampleMd", 280.0)
         .set("standardConditions", "15 degC 1 atm")
@@ -287,7 +287,7 @@ fn the_balance_and_the_hardness_agree_with_two_sources_the_operation_does_not_ow
     );
 
     // The hardness, by the textbook factors: 2.497 × Ca + 4.118 × Mg, mg/L
-    // as CaCO3 — rounded from molar masses, so an agreement within 0.05 %.
+    // as CaCO3 - rounded from molar masses, so an agreement within 0.05 %.
     let analysis: prodml::WaterAnalysis = read(of_type(&plan, "prodml23.WaterAnalysis"));
     let hardness = analysis.water_analysis_test[0]
         .total_hardness_per_volume
@@ -415,8 +415,8 @@ fn the_same_sample_keeps_its_uuids_and_another_analysis_is_a_second_object() {
 
 fn dts_choices() -> Choices {
     Choices::new()
-        .set("title", "GTH-3 — DTS")
-        .set("source", "synthetic — a trial source")
+        .set("title", "GTH-3 - DTS")
+        .set("source", "synthetic - a trial source")
         .set("installedFrom", "2025-01-01T00:00:00Z")
         .set("measuredAt", "2025-06-02T00:00:00Z")
         .set("fiberLength", 203.0)
@@ -529,8 +529,8 @@ fn loop_bag(order: &[(&str, &str, &str)]) -> Pieces {
 
 fn flow_choices() -> Choices {
     Choices::new()
-        .set("title", "Lutetia — loop")
-        .set("source", "synthetic — a trial source")
+        .set("title", "Lutetia - loop")
+        .set("source", "synthetic - a trial source")
 }
 
 /// The unit names in the order a network's nodes chain them, from the ports

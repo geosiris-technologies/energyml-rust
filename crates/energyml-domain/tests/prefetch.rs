@@ -2,7 +2,7 @@
 //!
 //! `energyml-domain` was written against [`ObjectSource`] and [`ArraySource`]
 //! rather than against `EpcStore`, so that an ETP client could be dropped in.
-//! Only one thing supplied those traits, though — an EPC — so the claim rested
+//! Only one thing supplied those traits, though - an EPC - so the claim rested
 //! on a seam nothing had ever crossed.
 //!
 //! The seam has a real obstacle behind it, and it is not the trait shape: the
@@ -10,7 +10,7 @@
 //! because ETP is a WebSocket and a browser cannot block on a future. `EpcStore`
 //! gets across by having a synchronous API of its own. A network client has
 //! none, so the crossing is [`Prefetched`]: one asynchronous pass that pulls
-//! what is needed, then synchronous reads out of it — which is the shape ETP
+//! what is needed, then synchronous reads out of it - which is the shape ETP
 //! was designed for, every request being plural.
 //!
 //! What is checked here:
@@ -18,7 +18,7 @@
 //! - a CRS reads from a prefetch, with no EPC anywhere;
 //! - the transitive follow really follows (depth 0 does not, depth 1 does);
 //! - an array that was not prefetched is refused **by name**, not returned
-//!   empty — a geometry reader that silently sees no points draws nothing and
+//!   empty - a geometry reader that silently sees no points draws nothing and
 //!   says nothing, which is the failure this rules out.
 
 use std::sync::Arc;
@@ -220,7 +220,7 @@ impl EnergymlStorage for Remote {
     fn arrays_of(&self, object: &dyn Reflect) -> Vec<ArrayLocation> {
         // A dataspace has no `EpcExternalPartReference` to resolve: the array
         // is addressed by the object's URI and a path. The proxy is left
-        // unresolved and the path is what the store reads by — which is
+        // unresolved and the path is what the store reads by - which is
         // exactly the open shape question about
         // `ArrayLocation::file`.
         locate_with(object, &NoProxies)
@@ -366,8 +366,8 @@ fn reading_into_a_buffer_refuses_a_type_that_does_not_match() {
     assert!(wrong.iter().all(|value| *value == 0));
 }
 
-/// The part of an object a value reader hands over — the `Points` of a node
-/// patch, which has no uuid — finds its array in the prefetch. Every reader
+/// The part of an object a value reader hands over - the `Points` of a node
+/// patch, which has no uuid - finds its array in the prefetch. Every reader
 /// calls `source.locate(array)` with such a part; until 15/09 the prefetch
 /// only answered for whole objects, so a geometry read through it drew
 /// nothing. Found by the ETP bridge's acceptance test.

@@ -4,7 +4,7 @@
 //! one operation. A [`Diagnostic`] does not stop anything: it records that the
 //! store was read anyway, despite something the specification does not allow.
 //!
-//! Files in the wild are not conformant — the reference package published with
+//! Files in the wild are not conformant - the reference package published with
 //! fesapi declares one object twice in `[Content_Types].xml`, with a content
 //! type that belongs to a different part. A reader that refuses such a package
 //! is useless; a reader that swallows the problem is worse. So: read it, and
@@ -27,7 +27,7 @@ pub enum Error {
     /// held under several `objectVersion`s. Identifier Specification v5.0
     /// §3.4.2.1 (p. 15) leaves "the most recent" to the server and ETP 1.2 says
     /// nothing of how to tell; this store does not guess, it names the
-    /// candidates — each spelled with its version, so any one of them resolves.
+    /// candidates - each spelled with its version, so any one of them resolves.
     #[error("`{uri}` names {} objects; name the version: {}", candidates.len(), candidates.join(", "))]
     Ambiguous {
         /// The URI as given.
@@ -46,7 +46,7 @@ pub enum Error {
     },
 
     /// The content type names a type no registered crate declares.
-    #[error("unknown type `{0}` — is the generated crate registered?")]
+    #[error("unknown type `{0}` - is the generated crate registered?")]
     UnknownType(String),
 
     /// The package itself is malformed beyond what tolerance can absorb.
@@ -77,7 +77,7 @@ pub enum Error {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
-    /// A remote store failed as a whole — the session fell, the server
+    /// A remote store failed as a whole - the session fell, the server
     /// refused the request. What the server said of **one** object or array
     /// comes back as that object's own error instead.
     #[error("{store}: {reason}")]
@@ -103,7 +103,7 @@ pub enum Error {
 pub enum ExternalDataReason {
     /// The support for this format is not compiled in.
     ///
-    /// A capability that is missing, **not** data that is absent — the caller
+    /// A capability that is missing, **not** data that is absent - the caller
     /// must be able to tell the two apart, which is why this is not a plain
     /// "not found". Enable the matching feature, or supply the file yourself.
     FeatureNotEnabled {
@@ -133,7 +133,7 @@ pub enum ExternalDataReason {
     ///
     /// Checked before the backend is asked, because a shape that promises more
     /// numbers than there are **writes without error** in some formats and
-    /// reads back with zeros at the end — plausible values that nothing flags.
+    /// reads back with zeros at the end - plausible values that nothing flags.
     /// Both counts are named: it is their difference that says what to fix.
     ShapeDisagrees {
         /// How many the shape promises.
@@ -179,7 +179,7 @@ pub enum Severity {
 /// Something noticed while reading, which did not stop anything.
 ///
 /// Every departure from the specification produces one. The caller decides
-/// whether to ignore them, show them, or treat them as fatal — but they are
+/// whether to ignore them, show them, or treat them as fatal - but they are
 /// never dropped in silence, which is the same rule the code generator follows
 /// for the schemas it cannot map.
 #[derive(Debug, Clone)]

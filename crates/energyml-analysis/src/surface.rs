@@ -3,7 +3,7 @@
 //! The first of the geological operations, and the one with no dependency
 //! at all: local differential geometry over the mesh the file already states.
 //! Curvature is the most used fracture proxy there is, and dip and azimuth are
-//! what every structural map is made of — each comes back as one value per
+//! what every structural map is made of - each comes back as one value per
 //! node, which is a `ContinuousProperty` and nothing else.
 //!
 //! # Which way is up is the caller's to say
@@ -14,12 +14,12 @@
 //! parameter, and everything here is computed after the third coordinate has
 //! been turned into an elevation. This is the architecture `t2d` already
 //! follows: the law lives in the crate, applying it to an object is the
-//! caller's seam — it is the caller that has read the CRS.
+//! caller's seam - it is the caller that has read the CRS.
 //!
 //! Flipping the vertical is a **reflection**, so it is an isometry, and the two
 //! curvatures do not answer to it the same way:
 //!
-//! - **Gaussian curvature is intrinsic** — it is a function of edge lengths
+//! - **Gaussian curvature is intrinsic** - it is a function of edge lengths
 //!   alone (Gauss's *Theorema Egregium*), so it does not move;
 //! - **mean and principal curvatures are signed against the normal**, so they
 //!   change sign.
@@ -29,18 +29,18 @@
 //!
 //! # What is refused, and what is merely absent
 //!
-//! A malformed call refuses by name — a coordinate count that is not a multiple
+//! A malformed call refuses by name - a coordinate count that is not a multiple
 //! of three, a triangle naming a node the surface does not have. What is *not*
 //! a refusal is a value that does not exist at a node:
 //!
 //! - **the azimuth of a horizontal patch.** Steepest descent has no direction
-//!   there, and a zero would read as due north — the one bearing somebody might
+//!   there, and a zero would read as due north - the one bearing somebody might
 //!   act on. It is `NaN`, and the count of those nodes is part of the answer;
 //! - **the azimuth of a vertical patch**, for the same reason from the other
 //!   end: steepest descent is straight down, so its horizontal projection is
 //!   nothing;
 //! - **the curvature of a boundary node.** The discrete operators below need a
-//!   closed ring of triangles around the node — the Voronoi area and the
+//!   closed ring of triangles around the node - the Voronoi area and the
 //!   angular defect both assume it. On the edge of a surface there is no ring,
 //!   and extrapolating one would draw a rim of invented structure exactly where
 //!   people look for the edge of the data.
@@ -51,7 +51,7 @@
 //! Differential-Geometry Operators for Triangulated 2-Manifolds*: the cotangent
 //! Laplacian over the **mixed** area for the mean curvature normal, the angular
 //! defect over the same area for the Gaussian. The mixed area is the part worth
-//! knowing about — a plain Voronoi area goes negative on obtuse triangles, and
+//! knowing about - a plain Voronoi area goes negative on obtuse triangles, and
 //! a negative area turns a curvature inside out without failing.
 
 use std::collections::HashMap;
@@ -61,7 +61,7 @@ use crate::Error;
 /// Which way is up, on the third coordinate.
 ///
 /// RESQML says it per CRS (`ZIncreasingDownward`), and most of the corpus does
-/// increase downward. Guessing it from the data is not possible — a bowl and a
+/// increase downward. Guessing it from the data is not possible - a bowl and a
 /// dome are the same triangles.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Up {
@@ -89,7 +89,7 @@ pub struct Slope {
     /// Dip azimuth in degrees, clockwise from +Y (north), in `[0, 360)`.
     ///
     /// The direction the surface **falls**, which is the one a structural map
-    /// draws. `NaN` where it does not exist — see the module documentation.
+    /// draws. `NaN` where it does not exist - see the module documentation.
     pub azimuth: Vec<f64>,
     /// Nodes where the surface is horizontal, so the azimuth is `NaN`.
     pub flat: usize,
@@ -97,7 +97,7 @@ pub struct Slope {
     pub sheer: usize,
     /// Triangles set aside: no area, or a corner that is not a finite point.
     pub set_aside: usize,
-    /// Nodes no usable triangle reaches — everything about them is `NaN`.
+    /// Nodes no usable triangle reaches - everything about them is `NaN`.
     pub unreached: usize,
 }
 
@@ -106,13 +106,13 @@ pub struct Slope {
 pub struct Curvature {
     /// Mean curvature, signed against *up*: positive over an antiform.
     pub mean: Vec<f64>,
-    /// Gaussian curvature — intrinsic, so the vertical convention does not move it.
+    /// Gaussian curvature - intrinsic, so the vertical convention does not move it.
     pub gaussian: Vec<f64>,
     /// The larger principal curvature (*most positive*, the usual fracture proxy).
     pub maximum: Vec<f64>,
     /// The smaller principal curvature (*most negative*).
     pub minimum: Vec<f64>,
-    /// Nodes on the boundary of the surface — all four values are `NaN` there.
+    /// Nodes on the boundary of the surface - all four values are `NaN` there.
     pub boundary: usize,
     /// Triangles set aside: no area, or a corner that is not a finite point.
     pub set_aside: usize,
@@ -123,7 +123,7 @@ pub struct Curvature {
 /// Dip and dip azimuth at every node.
 ///
 /// The node normal is the **area-weighted** mean of the normals of the
-/// triangles that meet there — the cross product is left unnormalised, so its
+/// triangles that meet there - the cross product is left unnormalised, so its
 /// length is twice the triangle's area and the weighting is free. Averaging
 /// unit normals instead would let a sliver triangle count as much as the face
 /// beside it that is a thousand times larger.
@@ -140,12 +140,12 @@ pub fn slope(points: &[f64], triangles: &[u32], up: Up) -> Result<Slope, Error> 
             continue;
         };
         // `n` is oriented upward, so `n[2] >= 0` and the arc cosine is in
-        // `[0, 90]` — a dip is an angle with the horizontal, never a bearing.
+        // `[0, 90]` - a dip is an angle with the horizontal, never a bearing.
         dip[at] = n[2].clamp(-1.0, 1.0).acos().to_degrees();
         let flatness = n[0].hypot(n[1]);
         if flatness <= LEVEL {
             // Horizontal here: the normal is straight up, so steepest descent
-            // has no direction. Not zero — zero is due north.
+            // has no direction. Not zero - zero is due north.
             flat += 1;
             continue;
         }
@@ -171,21 +171,21 @@ pub fn slope(points: &[f64], triangles: &[u32], up: Up) -> Result<Slope, Error> 
     })
 }
 
-/// How steep a **lattice** is at each node, and which way it falls — a 2D
+/// How steep a **lattice** is at each node, and which way it falls - a 2D
 /// grid (`Grid2dRepresentation`), its nodes row after row, the fast axis first.
 ///
 /// **No cell is cut in two.** Splitting each cell by a diagonal would hand the
 /// triangle reading a choice the file never made, and the two diagonals give
 /// two answers on a twisted cell. The normal at a node is instead the cross
-/// product of its two **central differences** — `P(i+1, j) − P(i−1, j)` along
+/// product of its two **central differences** - `P(i+1, j) − P(i−1, j)` along
 /// the fast axis, `P(i, j+1) − P(i, j−1)` along the slow one, one-sided on the
-/// border — the finite-difference slope every terrain model is read with
+/// border - the finite-difference slope every terrain model is read with
 /// (Zevenbergen & Thorne, 1987, *Quantitative analysis of land surface
-/// topography*, Earth Surface Processes and Landforms 12(1):47–56, the `G`
+/// topography*, Earth Surface Processes and Landforms 12(1):47-56, the `G`
 /// and `H` terms). The differences are taken on the **positions**, not on
 /// indices times a spacing, so a lattice turned in its frame reads right.
 ///
-/// A node whose differences reach a non-finite point — a hole of the grid —
+/// A node whose differences reach a non-finite point - a hole of the grid -
 /// is `unreached`, every value `NaN`, never a slope drawn across the hole.
 pub fn lattice_slope(points: &[f64], fastest: usize, slowest: usize, up: Up) -> Result<Slope, Error> {
     if !points.len().is_multiple_of(3) {
@@ -205,7 +205,7 @@ pub fn lattice_slope(points: &[f64], fastest: usize, slowest: usize, up: Up) -> 
         [points[k], points[k + 1], sign * points[k + 2]]
     };
     let finite = |p: [f64; 3]| p.iter().all(|c| c.is_finite());
-    // The two neighbours along one axis — both when inside, the node itself
+    // The two neighbours along one axis - both when inside, the node itself
     // and its one neighbour on the border; `None` when the axis has one node.
     let span = |k: usize, count: usize| -> Option<(usize, usize)> {
         match count {
@@ -226,7 +226,7 @@ pub fn lattice_slope(points: &[f64], fastest: usize, slowest: usize, up: Up) -> 
                 continue;
             };
             // The node itself too: its central differences skip it, and a hole
-            // would otherwise get the slope of its neighbours — found by the
+            // would otherwise get the slope of its neighbours - found by the
             // test, which counted four unreached where five are.
             let (a, b, c, d) = (at(i0, j), at(i1, j), at(i, j0), at(i, j1));
             if !(finite(at(i, j)) && finite(a) && finite(b) && finite(c) && finite(d)) {
@@ -301,7 +301,7 @@ pub fn curvature(points: &[f64], triangles: &[u32], up: Up) -> Result<Curvature,
         // ends. Walking the corners instead and giving the term to `i` alone
         // was the first version, and it is wrong by exactly a factor of two: a
         // vertex then collects only one of the two cotangents of each of its
-        // edges — the one from the triangle where the far end follows it in
+        // edges - the one from the triangle where the far end follows it in
         // winding order. Nothing about it looks wrong, and the sign, the shape
         // of the map and the Gaussian curvature all stay right; only the scale
         // of the mean curvature is halved. The sphere and the cylinder caught
@@ -326,7 +326,7 @@ pub fn curvature(points: &[f64], triangles: &[u32], up: Up) -> Result<Curvature,
             area[i] += match obtuse {
                 // **The mixed area.** A plain Voronoi cell escapes its own
                 // triangle when that triangle is obtuse, and the formula then
-                // returns a *negative* area — which turns the curvature inside
+                // returns a *negative* area - which turns the curvature inside
                 // out with nothing to show for it.
                 Some(at) if at == corner => face.area / 2.0,
                 Some(_) => face.area / 4.0,
@@ -359,7 +359,7 @@ pub fn curvature(points: &[f64], triangles: &[u32], up: Up) -> Result<Curvature,
         let normal = mesh.normal(at).unwrap_or([0.0, 0.0, 1.0]);
         // Meyer's mean curvature normal is `K = laplacian / (2 A)` and its
         // length is `2 H`. The sign comes from the normal, and the normal is
-        // oriented **up**, so a dome answers positive and a bowl negative —
+        // oriented **up**, so a dome answers positive and a bowl negative -
         // the geological reading of *most positive curvature*.
         let scale = 1.0 / (2.0 * area[at]);
         let h = 0.5 * dot(laplacian[at], normal) * scale;
@@ -388,7 +388,7 @@ pub fn curvature(points: &[f64], triangles: &[u32], up: Up) -> Result<Curvature,
 /// Below this, a direction cosine is no direction at all.
 ///
 /// It is a **cosine**, so it is dimensionless and the same number is right for
-/// a field in metres and one in feet — which is the reason the threshold can be
+/// a field in metres and one in feet - which is the reason the threshold can be
 /// written here rather than asked of the caller. `1e-9` is about
 /// six ten-thousandths of a degree from horizontal.
 const LEVEL: f64 = 1e-9;
@@ -496,20 +496,23 @@ impl Mesh {
 
         let sign = up.sign();
         let held: Vec<[f64; 3]> = points
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .map(|c| c.as_slice())
             .map(|one| [one[0], one[1], sign * one[2]])
             .collect();
 
         let mut faces = Vec::with_capacity(triangles.len() / 3);
         let mut set_aside = 0usize;
         // An edge met once belongs to the boundary; met twice or more, it does
-        // not. Sorted, so the two windings of one edge are one key — a mesh
+        // not. Sorted, so the two windings of one edge are one key - a mesh
         // whose triangles are wound inconsistently is ordinary, and keying on
         // the ordered pair would report every one of its edges as a boundary.
         let mut edges: HashMap<(usize, usize), usize> = HashMap::new();
         let mut sums = vec![[0.0f64; 3]; nodes];
 
-        for face in triangles.chunks_exact(3) {
+        for face in triangles.as_chunks::<3>().0.iter().map(|c| c.as_slice()) {
             let corners = [face[0] as usize, face[1] as usize, face[2] as usize];
             let p = [held[corners[0]], held[corners[1]], held[corners[2]]];
             let n = cross(minus(p[1], p[0]), minus(p[2], p[0]));
@@ -550,8 +553,8 @@ impl Mesh {
             .into_iter()
             .map(|sum| {
                 let length = norm(sum);
-                // A node whose faces cancel each other out — the tip of a fold
-                // closed on itself, a duplicated triangle wound both ways — has
+                // A node whose faces cancel each other out - the tip of a fold
+                // closed on itself, a duplicated triangle wound both ways - has
                 // no normal, and inventing one would give it a dip.
                 if length <= 0.0 || !length.is_finite() {
                     return None;
@@ -604,7 +607,7 @@ mod tests {
     /// A plane of a lattice read by central differences, at map coordinates
     /// and on a lattice turned 30° in its frame: the dip and the downhill
     /// bearing are the plane's, everywhere, and the triangle reading of the
-    /// same plane — the other implementation — agrees. A hole is no slope.
+    /// same plane - the other implementation - agrees. A hole is no slope.
     #[test]
     fn a_lattice_reads_the_slope_of_its_plane_turned_or_not_and_not_across_a_hole() {
         // z = 40 + 0.1 (x − x0) − 0.05 (y − y0), an elevation: downhill is
@@ -677,7 +680,7 @@ mod tests {
     /// A parametric patch as a grid of quads, each split into two triangles.
     ///
     /// One helper for the plane, the sphere and the cylinder, so that the three
-    /// analytic cases are not three meshes written three ways — the one thing a
+    /// analytic cases are not three meshes written three ways - the one thing a
     /// test of curvature must not get wrong is its own input.
     ///
     /// `wrap_u` closes the grid in the first parameter, which is what turns a
@@ -710,7 +713,7 @@ mod tests {
         patch(n, n, false, |u, v| [u, v, z(u, v)])
     }
 
-    /// A sphere of radius `r`, its poles left out — they are the one place a
+    /// A sphere of radius `r`, its poles left out - they are the one place a
     /// latitude/longitude mesh is not a fair test of anything.
     fn sphere(r: f64, nu: usize, nv: usize) -> (Vec<f64>, Vec<u32>) {
         patch(nu, nv, true, |u, v| {
@@ -726,7 +729,7 @@ mod tests {
         })
     }
 
-    /// A vertical tube of radius `r` — the case that tells `H` from `K`.
+    /// A vertical tube of radius `r` - the case that tells `H` from `K`.
     fn cylinder(r: f64, height: f64, nu: usize, nv: usize) -> (Vec<f64>, Vec<u32>) {
         patch(nu, nv, true, |u, v| {
             let phi = u * std::f64::consts::TAU;
@@ -765,8 +768,8 @@ mod tests {
 
     #[test]
     fn a_horizontal_plane_has_no_azimuth_at_all() {
-        // **And not zero.** A zero would read as due north — the one bearing
-        // somebody might act on — where the honest answer is that steepest
+        // **And not zero.** A zero would read as due north - the one bearing
+        // somebody might act on - where the honest answer is that steepest
         // descent has no direction.
         let (points, triangles) = sheet(3, |_, _| 0.0);
         let made = slope(&points, &triangles, Up::PlusZ).expect("a plane");
@@ -791,7 +794,7 @@ mod tests {
     fn the_vertical_convention_turns_the_azimuth_around_and_leaves_the_dip() {
         // A depth axis is a **reflection**, so the angle with the horizontal
         // does not move and the direction of fall reverses. Getting this wrong
-        // draws a map whose arrows all point the wrong way — and every dip on
+        // draws a map whose arrows all point the wrong way - and every dip on
         // it is right, which is what makes it hard to catch by eye.
         let slant: f64 = 25.0_f64.to_radians().tan();
         let (points, triangles) = sheet(3, |x, _| slant * x);
@@ -810,7 +813,10 @@ mod tests {
         let slant: f64 = 20.0_f64.to_radians().tan();
         let (points, triangles) = sheet(3, |x, _| slant * x);
         let flipped: Vec<u32> = triangles
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .map(|c| c.as_slice())
             .flat_map(|one| [one[0], one[2], one[1]])
             .collect();
         let straight = slope(&points, &triangles, Up::PlusZ).expect("plane");
@@ -877,7 +883,10 @@ mod tests {
         let mean = curvature(&points, &triangles, Up::PlusZ).expect("a sphere").mean;
         let cap = |above: bool| -> Vec<f64> {
             points
-                .chunks_exact(3)
+                .as_chunks::<3>()
+                .0
+                .iter()
+                .map(|c| c.as_slice())
                 .enumerate()
                 .filter(|(at, p)| {
                     mean[*at].is_finite() && if above { p[2] > 0.8 * r } else { p[2] < -0.8 * r }
@@ -914,7 +923,7 @@ mod tests {
         for one in answered(&made.mean) {
             assert!(close(one.abs(), 0.5 / r, 0.05), "|mean| {}", one.abs());
         }
-        // One principal curvature is `1/r`, the other is nothing — which of the
+        // One principal curvature is `1/r`, the other is nothing - which of the
         // two carries which name depends on the sign of the tube's normal, so
         // the test reads the pair rather than either name.
         for (a, b) in answered(&made.maximum).iter().zip(answered(&made.minimum)) {
@@ -956,7 +965,7 @@ mod tests {
             }
         }
         // Without this the assertion above would be satisfied by a mean
-        // curvature that is zero everywhere — a test that cannot fail.
+        // curvature that is zero everywhere - a test that cannot fail.
         assert!(
             compared > 500 && signed > 500,
             "{compared} compared, {signed} signed"

@@ -1,4 +1,4 @@
-//! The built-in operations — one file each, and [`builtin`] is the only list.
+//! The built-in operations - one file each, and [`builtin`] is the only list.
 //!
 //! Adding an operation is a file and a line here, plus its canonical template
 //! in `rc/activityTemplates.json`; `tests/operations.rs` checks the two agree.

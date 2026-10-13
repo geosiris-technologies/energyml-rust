@@ -1,15 +1,15 @@
-//! Following a reference reads **the version it names** — `ObjectSource::object_of`,
+//! Following a reference reads **the version it names** - `ObjectSource::object_of`,
 //! the one way a reader of the library goes from a `DataObjectReference` to its
 //! target (ADR-0003).
 //!
 //! The package holds a feature in two versions; one horizon names version 2,
 //! another names no version. The first must come back at version 2; the second
 //! names an object the package holds twice, so it is refused rather than
-//! guessed — the rule being: accept the short uri when there is no conflict,
+//! guessed - the rule being: accept the short uri when there is no conflict,
 //! with a version when there is one.
 //!
 //! What would have to break: `object_of` asking the store for the reference's
-//! uuid alone — the store holds two objects under it, so the horizon naming
+//! uuid alone - the store holds two objects under it, so the horizon naming
 //! version 2 would come back with nothing.
 
 use std::io::Cursor;

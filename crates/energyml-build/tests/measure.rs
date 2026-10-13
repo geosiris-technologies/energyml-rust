@@ -1,4 +1,4 @@
-//! `measure` — areas, lengths and volumes (
+//! `measure` - areas, lengths and volumes (
 //! the geological operations design), confronted with answers computed
 //! **another way**: an analytic formula, or a naive integration written here.
 //!
@@ -166,7 +166,7 @@ fn a_tilted_square_has_its_analytic_area_along_and_in_plan() {
 
 /// `z = x y / 100` over `[0, 100]²` is bilinear on every cell, so the cells
 /// *are* the surface: their areas must add up to the surface integral,
-/// computed here by a plain midpoint rule — no Gauss, no bilinear patch.
+/// computed here by a plain midpoint rule - no Gauss, no bilinear patch.
 #[test]
 fn a_warped_grid_adds_up_to_an_independent_integration() {
     let n = 4usize;
@@ -215,8 +215,8 @@ fn a_warped_grid_adds_up_to_an_independent_integration() {
 
 #[test]
 fn polylines_measure_per_line_and_close_only_what_is_said_closed() {
-    // A 3-4-5 leg then a 12 m drop — 17 along, 5 in plan; then a square of
-    // side 10 the file says closed — 40 both ways.
+    // A 3-4-5 leg then a 12 m drop - 17 along, 5 in plan; then a square of
+    // side 10 the file says closed - 40 both ways.
     let points = vec![
         [0.0, 0.0, 0.0],
         [3.0, 4.0, 0.0],
@@ -259,13 +259,13 @@ fn cell(bottom: [[f64; 3]; 4], top: [[f64; 3]; 4]) -> Vec<[f64; 3]> {
 
 #[test]
 fn cell_volumes_are_exact_and_sit_at_their_number_in_the_grid() {
-    // Cell 0: a frustum of square bases 2 × 2 at z = 0 and 1 × 1 at z = 3 —
+    // Cell 0: a frustum of square bases 2 × 2 at z = 0 and 1 × 1 at z = 3 -
     // planar faces, V = h/3 (A₁ + A₂ + √(A₁A₂)) = 7.
     let frustum = cell(
         [[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [2.0, 2.0, 0.0], [0.0, 2.0, 0.0]],
         [[0.5, 0.5, 3.0], [1.5, 0.5, 3.0], [1.5, 1.5, 3.0], [0.5, 1.5, 3.0]],
     );
-    // Cell 2: the unit cube with one top corner raised by 0.8 — a warped top
+    // Cell 2: the unit cube with one top corner raised by 0.8 - a warped top
     // z = 1 + 0.8 u v, so V = 1 + 0.8/4 = 1.2 exactly; no tetrahedra give it.
     let warped = cell(
         [[5.0, 0.0, 0.0], [6.0, 0.0, 0.0], [6.0, 1.0, 0.0], [5.0, 1.0, 0.0]],

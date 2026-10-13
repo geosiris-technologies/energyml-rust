@@ -1,4 +1,4 @@
-//! `product-flow-model` — a chain of units, each flowing into the next: the
+//! `product-flow-model` - a chain of units, each flowing into the next: the
 //! directed graph PRODML's `ProductFlowModel` draws, for a loop like
 //! the reference model's producer → exchanger → reinjector.
 //!
@@ -12,7 +12,7 @@
 //! PRODML Technical Usage Guide v2.3, §29.1 p. 249: *“A Unit is essentially a
 //! black box that can represent anything (big or small). Ports allow flow in or
 //! out of a Unit. Nodes are used to connect ports”*. Each object given in
-//! `units` — in the order of the slot, which is the direction of flow —
+//! `units` - in the order of the slot, which is the direction of flow -
 //! becomes a unit named after its title; the first has an outlet, the last an
 //! inlet, the others both; the outlet of one and the inlet of the next name
 //! the same node. The order is **declared**, never deduced: which way water
@@ -23,8 +23,8 @@
 //! `ConnectedNode.Node` and `ProductFlowUnit.Facility` are text
 //! (ProductFlowModel.xsd, ProdmlCommon.xsd `FacilityIdentifierStruct`): the
 //! model does not reference the objects it draws. So a unit's facility is the
-//! **title** of the object given — the name its reporting entity or its
-//! facility carries in the package — and the activity names the objects
+//! **title** of the object given - the name its reporting entity or its
+//! facility carries in the package - and the activity names the objects
 //! themselves, which is the only place a reference to them can live. A
 //! wellbore is said to be one (`kind="wellbore"`); a facility or a reporting
 //! entity is not typed here, the kind being a field of the object that this
@@ -55,16 +55,16 @@ pub struct ProductFlowModel;
 /// What `product-flow-model` is told.
 #[derive(Debug, Params)]
 pub struct ProductFlowModelParams {
-    /// the title of the model — its one network is named after it
+    /// the title of the model - its one network is named after it
     pub title: String,
-    /// where the chain comes from — a document with its page or paragraph
+    /// where the chain comes from - a document with its page or paragraph
     pub source: String,
 }
 
 /// What `product-flow-model` takes.
 #[derive(Debug, Inputs)]
 pub struct ProductFlowModelInputs {
-    /// the units, in the direction of flow — each flows into the next
+    /// the units, in the direction of flow - each flows into the next
     #[input(
         types = "prodml23.ReportingEntity, prodml23.Facility, witsml21.Wellbore, resqml22.WellboreFeature",
         least = 2,
@@ -95,7 +95,7 @@ impl Operation for ProductFlowModel {
     fn about(&self) -> About {
         About {
             name: "product-flow-model",
-            describe: "a chain of units flowing one into the next — a PRODML product flow model whose units are named after the objects given, in the order given",
+            describe: "a chain of units flowing one into the next - a PRODML product flow model whose units are named after the objects given, in the order given",
             category: Category::Synthetic,
             makes: &["prodml23.ProductFlowModel"],
             recipe: "product-flow-model",
@@ -221,7 +221,7 @@ impl Operation for ProductFlowModel {
             citation: writer.citation(&title, &format!("the flow of an invented installation, {chain}"))?,
             extension_name_value: vec![writer.synthetic("the flow model of an invented installation")],
             comment: Some(format!(
-                "synthetic — {chain}; the units are named after the objects of the package, which the activity references"
+                "synthetic - {chain}; the units are named after the objects of the package, which the activity references"
             )),
             network: vec![prodml::ProductFlowNetwork {
                 name: title.clone(),

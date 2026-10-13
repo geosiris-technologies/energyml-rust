@@ -4,7 +4,7 @@
 //!
 //! The package is fabricated, and its source is **made to lie to a uuid**: asked
 //! `object(uuid)` it answers the *first* version it holds, and only
-//! `object_at(uri)` tells the two apart — as a store holding both would. A test
+//! `object_at(uri)` tells the two apart - as a store holding both would. A test
 //! that passes therefore proves the reader asked by uri.
 //!
 //! What would have to break: any reader here going back to `source.object(&uuid)`.
@@ -173,7 +173,7 @@ fn ask(ids: &[&str]) -> Vec<String> {
 
 /// A trajectory names the **version** of its datum, and is collared there.
 ///
-/// Casser : in `well::place_datum`, ask `source.object(datum_uuid)` — the head
+/// Casser : in `well::place_datum`, ask `source.object(datum_uuid)` - the head
 /// comes from version 1, at (1000, 2000).
 #[test]
 fn a_trajectory_is_collared_at_the_datum_version_it_names() {
@@ -196,7 +196,7 @@ fn a_trajectory_is_collared_at_the_datum_version_it_names() {
 /// trajectories are collared at two datums.
 ///
 /// Casser : in `heads::head_of_one`, follow the frame's trajectory by
-/// `source.object(uuid)` — the frame is collared at version 1's datum.
+/// `source.object(uuid)` - the frame is collared at version 1's datum.
 #[test]
 fn a_frame_hangs_on_the_trajectory_version_it_names() {
     let mut held = systems();
@@ -253,7 +253,7 @@ fn a_representation_reaches_the_interpretation_version_it_names() {
 /// does not hold is a named refusal carrying the full uri; it must not be
 /// quietly read as the grid's other version.
 ///
-/// Casser : in `connection::read_grids`, ask `source.object(&uuid)` — the grid
+/// Casser : in `connection::read_grids`, ask `source.object(&uuid)` - the grid
 /// of version 1 is found and the refusal is another one (no geometry).
 #[test]
 fn a_connection_set_refuses_a_grid_version_the_package_does_not_hold() {

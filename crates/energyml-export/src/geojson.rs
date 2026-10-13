@@ -1,10 +1,10 @@
-//! GeoJSON — features in WGS 84, carrying their identity.
+//! GeoJSON - features in WGS 84, carrying their identity.
 //!
 //! # Why this one refuses more than it writes
 //!
 //! RFC 7946 is explicit: coordinates are longitude and latitude in decimal
 //! degrees, WGS 84. Not eastings. Not metres. The format has no CRS field any
-//! more — the 2016 revision removed it precisely so that every GeoJSON means
+//! more - the 2016 revision removed it precisely so that every GeoJSON means
 //! the same thing.
 //!
 //! So writing a RESQML surface as GeoJSON is a **datum transformation**, not a
@@ -15,15 +15,15 @@
 //! That refusal is the whole point. Writing projected eastings into the
 //! longitude field produces a file that every tool loads without complaint and
 //! draws in the Gulf of Guinea, a few hundred kilometres off the coast of
-//! Ghana — the place where (0, 0) is. It is the most recognisable wrong answer
+//! Ghana - the place where (0, 0) is. It is the most recognisable wrong answer
 //! in the business, and it comes from exactly this shortcut.
 //!
 //! # The escape hatch, explicit
 //!
 //! What the rule forbids is *silent* wrongness, not native coordinates. With
 //! [`Options::native_crs`] the exporter writes the placed coordinates as they
-//! are, accepts objects that name no CRS at all, and — when the EPSG code is
-//! known and shared — embeds the **legacy 2008 `crs` member** that RFC 7946
+//! are, accepts objects that name no CRS at all, and - when the EPSG code is
+//! known and shared - embeds the **legacy 2008 `crs` member** that RFC 7946
 //! removed and that QGIS and GDAL still honour, so the file says what it is.
 //! The caller asked, the file is labelled: nothing is silent, and a package
 //! under repair can be looked at before it can be reprojected.
@@ -59,7 +59,7 @@ impl Exporter for GeoJsonExporter {
     }
 
     fn describe(&self) -> &'static str {
-        "RFC 7946 GeoJSON in WGS 84 — needs a reprojection backend"
+        "RFC 7946 GeoJSON in WGS 84 - needs a reprojection backend"
     }
 
     fn placement(&self) -> Placement {
@@ -107,7 +107,7 @@ impl Exporter for GeoJsonExporter {
 
     fn write_all(&self, objects: &[SceneObject], out: &mut dyn Write, options: &Options<'_>) -> Result<()> {
         // One enclosing document, so the default "write them in order" is
-        // wrong here — it would emit several collections end to end and produce
+        // wrong here - it would emit several collections end to end and produce
         // a file no parser accepts.
         write!(out, "{{\"type\":\"FeatureCollection\",")?;
         write_crs_member(objects, out, options)?;
@@ -131,7 +131,7 @@ impl Exporter for GeoJsonExporter {
 impl GeoJsonExporter {
     fn feature(&self, object: &SceneObject, out: &mut dyn Write, options: &Options<'_>) -> Result<()> {
         // Reshaped as the caller's rules ask, then stripped of the nodes that
-        // have no position — one funnel, one order, for every format.
+        // have no position - one funnel, one order, for every format.
         // **`NaN` is not a JSON value**: one null Z among 34 000 positions was
         // enough to make a whole `.geojson` fail `JSON.parse`, and RFC 7946 is
         // JSON before it is anything else. See `registry::prepare`.
@@ -155,7 +155,7 @@ impl GeoJsonExporter {
         if options.reprojector.is_none() && crs.projected.epsg() != Some(Wgs84::EPSG) {
             return Err(Error::Placement(format!(
                 "GeoJSON is WGS 84 by definition (RFC 7946) and `{}` is in {}; \
-                 supply a `Reprojector` — `energyml_proj::Proj4` is one — because \
+                 supply a `Reprojector` - `energyml_proj::Proj4` is one - because \
                  writing projected metres into a longitude field puts the model in \
                  the Gulf of Guinea",
                 object.title,
@@ -171,7 +171,7 @@ impl GeoJsonExporter {
         //
         // `points_in_epsg` places to metres **once** and then reprojects. The
         // shape this replaced placed the points and then called `to_epsg`,
-        // which places them again — offsets, rotation, unit scale and the depth
+        // which places them again - offsets, rotation, unit scale and the depth
         // flip all applied twice. On a CRS whose origin is (0, 0) with no
         // rotation, which is every package in the corpus, that is exactly zero
         // difference; on a real one it is not.
@@ -221,7 +221,7 @@ impl GeoJsonExporter {
         // only in VTK: the module documentation of `SceneObject::metadata`
         // promises "the same spec produces the same keys in an OBJ comment, a
         // GeoJSON property and a VTK field array", and until it was fixed only the
-        // third was true — a spec passed to a GeoJSON export produced nothing
+        // third was true - a spec passed to a GeoJSON export produced nothing
         // at all, silently.
         //
         // A key that found nothing is written `null` rather than left out. A
@@ -238,7 +238,7 @@ impl GeoJsonExporter {
             }
         }
         // A property has one value per node or per cell, and a GeoJSON feature
-        // has one set of properties — so what goes in is the **summary**, and
+        // has one set of properties - so what goes in is the **summary**, and
         // it is labelled as such. Writing the first value, or the mean under
         // the property's own name, would look like the value of the object.
         for attribute in &object.attributes {
@@ -286,7 +286,7 @@ fn sanitise_key(name: &str) -> String {
 /// non-conformant file that names its system beats one that says nothing.
 ///
 /// Written when every object that **names** a code names the same one. The
-/// objects that name none ride along under that label — deliberately: they
+/// objects that name none ride along under that label - deliberately: they
 /// were written by the same producer at the same site, and showing them next
 /// to the georeferenced ones is exactly how a person checks whether their
 /// missing CRS was the labelled one. Two objects naming *different* codes get
@@ -351,7 +351,7 @@ fn triangles(object: &SceneObject, points: &[[f64; 3]]) -> String {
 /// What a 2D grid's cells are, and what someone opening a horizon in QGIS
 /// wants: polygons they can colour and query, not three hundred thousand dots.
 /// The ring closes on its first position, as RFC 7946 §3.1.6 requires, and its
-/// winding was already measured in `energyml_geometry::shape` — the RFC asks an
+/// winding was already measured in `energyml_geometry::shape` - the RFC asks an
 /// exterior ring to be counterclockwise, and no RESQML file says which way its
 /// grid runs.
 ///
@@ -388,8 +388,8 @@ fn rings(object: &SceneObject, points: &[[f64; 3]]) -> String {
         base += patch.points.len();
     }
     match out.len() {
-        // A `Polygon`'s coordinates are an **array of rings** — the exterior
-        // one, then any holes — not the ring itself. Writing the ring directly
+        // A `Polygon`'s coordinates are an **array of rings** - the exterior
+        // one, then any holes - not the ring itself. Writing the ring directly
         // produces a document that parses and means something else entirely.
         1 => format!("{{\"type\":\"Polygon\",\"coordinates\":[{}]}}", out[0]),
         _ => format!(
@@ -459,7 +459,7 @@ fn multipoint(points: &[[f64; 3]]) -> String {
 /// The bounding box of a set of positions, as RFC 7946 §5 writes it.
 ///
 /// `[west, south, east, north]` in 2D, `[west, south, low, east, north, high]`
-/// in 3D — **the axis order interleaves**, which is the trap: it is not the two
+/// in 3D - **the axis order interleaves**, which is the trap: it is not the two
 /// corners one after the other. Written with a trailing comma so it can be
 /// dropped into an object, and empty when there is nothing to bound.
 ///

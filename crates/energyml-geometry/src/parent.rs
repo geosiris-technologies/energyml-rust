@@ -3,25 +3,25 @@
 //! Two of them, and they are less alike than they look. A **local grid** names
 //! a window of its parent and a rule for cutting it up; a **sub-representation**
 //! names a list of the parent's elements. The first is a box and the second is
-//! a set, and that difference decides everything below — including how little
+//! a set, and that difference decides everything below - including how little
 //! of the parent each can get away with reading.
 //!
 //! # What a local grid is
 //!
-//! A refined region of another grid. The child names no points at all — it
+//! A refined region of another grid. The child names no points at all - it
 //! names a **parent window**, a box of the parent's cells, and a **regrid**
 //! saying how many child cells each parent cell is cut into. Its geometry is
 //! therefore not read, it is *derived*: the parent's corner-point geometry,
 //! subdivided.
 //!
-//! This crate used to refuse every one of them by name — `an IJK grid with
-//! no Geometry of its own` — which was honest and useless. Refusing is the
+//! This crate used to refuse every one of them by name - `an IJK grid with
+//! no Geometry of its own` - which was honest and useless. Refusing is the
 //! right answer only while the alternative is a guess, and there is no guess
 //! here: the construction is arithmetic on numbers the file gives.
 //!
 //! # Only the window is read
 //!
-//! A local grid refines a small part of a large model — that is what it is for.
+//! A local grid refines a small part of a large model - that is what it is for.
 //! Evaluating the parent whole and keeping a corner of it would read a
 //! reservoir to draw a well pad. So the parent's `Points` is read **through a
 //! hyperslab**: one selection per row of pillars in the window, `(pj + 1)`
@@ -33,8 +33,8 @@
 //! dimension and the HDF5 backend turns them into a selection. Nothing in the
 //! storage layer changed for this.
 //!
-//! An array that cannot be sliced — a lattice, a parametric array, anything
-//! computed rather than stored — falls back to being evaluated whole and
+//! An array that cannot be sliced - a lattice, a parametric array, anything
+//! computed rather than stored - falls back to being evaluated whole and
 //! indexed. That is a correctness fallback, not a fast path, and it is the only
 //! case where a local grid costs its parent.
 //!
@@ -44,7 +44,7 @@
 //! node sitting on a pillar that a fault has split has two positions, one per
 //! side, and choosing between them is exactly the guess this crate does not
 //! make. The corpus's one local grid refines column 0 of *"two faulted sugar
-//! cubes"*, whose two split lines both belong to column 1 — so the window is
+//! cubes"*, whose two split lines both belong to column 1 - so the window is
 //! unambiguous, and a window that were not is *named* rather than drawn on the
 //! wrong side of the fault. Carrying the split down into the child is real work
 //! and wants a file that exercises it.
@@ -52,7 +52,7 @@
 //! **A K gap inside the window is refused the same way, and for the same
 //! reason.** A gap gives the parent one more level of points than it has
 //! layer boundaries, so the child node on the boundary between the two layers
-//! would have two heights — the base of the layer above, the top of the one
+//! would have two heights - the base of the layer above, the top of the one
 //! below. A gap **outside** the window, or at its edge, is only a shift: the
 //! window's first level is the top of its first layer (`ijk::layer_tops`), not
 //! the layer's index. Nothing in RESQML says how a child's own `KGaps` would
@@ -67,7 +67,7 @@
 //! be scattered through the whole grid. There is no hyperslab that means that.
 //!
 //! What there *is*, and what this does not yet do, is read the indices' own
-//! bounding range in one selection and gather from it — never worse than
+//! bounding range in one selection and gather from it - never worse than
 //! reading the parent whole, and much better for the common case of a
 //! sub-representation that names a contiguous region. It is left undone
 //! deliberately: **no package in the corpus contains a sub-representation at
@@ -297,7 +297,7 @@ fn interval_counts(
 /// level counted from the window's own origin.
 struct Lattice {
     points: Vec<Point>,
-    /// Parent cells spanned on I and J — so the pillar counts are these plus
+    /// Parent cells spanned on I and J - so the pillar counts are these plus
     /// one.
     span: [usize; 2],
 }
@@ -328,7 +328,7 @@ impl Lattice {
 
         let Some(geometry) = crate::geometry::field_object(parent, "Geometry") else {
             // A local grid of a local grid is legal, and reads exactly like
-            // this one — but nothing in the corpus does it, so it is named
+            // this one - but nothing in the corpus does it, so it is named
             // rather than recursed into blind.
             return Err(Error::unsupported(
                 "a parent grid that has no geometry of its own either",
@@ -358,7 +358,7 @@ impl Lattice {
         // window's first level is the top of its first layer, not its index.
         // Inside the window it is the fault again, on K: the child's node on
         // that level would have two heights, the base of the layer above and
-        // the top of the one below — refused rather than picked. A gap at the
+        // the top of the one below - refused rather than picked. A gap at the
         // window's edge changes nothing but where the window starts.
         let tops = crate::ijk::layer_tops(parent, source, nk, at)?;
         let levels = tops.last().map(|top| top + 2).unwrap_or(nk + 1);
@@ -374,7 +374,7 @@ impl Lattice {
         let span = [axes[0].parents, axes[1].parents, axes[2].parents];
         let lines = pillars + splits.count;
         // The window's points are the parent's, so they are read in the
-        // parent's system — the geometry that names it is right here.
+        // parent's system - the geometry that names it is right here.
         let vertical = crate::parametric::Vertical::read(geometry, source);
         let points = window_points(array, source, [ni, levels], lines, origin, span, at, vertical)?;
         Ok(Self {
@@ -386,12 +386,12 @@ impl Lattice {
 
 /// Read the window's pillars, slicing the file when the file can be sliced.
 ///
-/// `parent` is the parent's `Ni` and its **levels** — `Nk + 1` plus one per K
-/// gap — and `origin[2]` a level, not a layer.
+/// `parent` is the parent's `Ni` and its **levels** - `Nk + 1` plus one per K
+/// gap - and `origin[2]` a level, not a layer.
 ///
 /// One hyperslab per row of pillars: the pillar index is `j × (Ni + 1) + i`, so
 /// a rectangle of pillars is contiguous along `i` and strided along `j`. Rather
-/// than teach the storage layer a stride, this issues `(pj + 1)` selections —
+/// than teach the storage layer a stride, this issues `(pj + 1)` selections -
 /// each one contiguous, each one a single HDF5 read.
 #[allow(clippy::too_many_arguments)]
 fn window_points(
@@ -505,7 +505,7 @@ fn sliceable(
 /// Interpolating in *pillar* space rather than cell space is what keeps the
 /// child watertight. Placing each child cell inside its parent cell separately
 /// would give a node on a parent-cell boundary one position per side, and they
-/// agree only when the parent's pillars happen to be straight — so the grid
+/// agree only when the parent's pillars happen to be straight - so the grid
 /// would come apart wherever the parent is faulted or curved, by an amount too
 /// small to see and large enough to leak.
 fn build(axes: &[Axis; 3], lattice: &Lattice, dimensions: [usize; 3]) -> Result<Vec<Patch>> {
@@ -596,15 +596,15 @@ fn interpolate(lattice: &Lattice, u: f64, v: f64, w: f64) -> Point {
 /// RESQML **2.0.1** puts one `SupportingRepresentation` on the object and lets
 /// each patch carry one or two `ElementIndices`, each with its *own*
 /// `IndexableElement`. RESQML **2.2** moved the `IndexableElement` up onto the
-/// object and the `SupportingRepresentation` down onto each patch — so in 2.2 a
+/// object and the `SupportingRepresentation` down onto each patch - so in 2.2 a
 /// single sub-representation can draw from several supports, and in 2.0.1 it
 /// cannot. Both are read here; neither is translated into the other, because
 /// what each can express is not the same.
 ///
 /// # What is refused
 ///
-/// **Two `ElementIndices` on one patch.** That is 2.0.1's way of listing pairs
-/// — faces *of* cells, nodes *of* faces — and which member of the pair carries
+/// **Two `ElementIndices` on one patch.** That is 2.0.1's way of listing pairs -
+/// faces *of* cells, nodes *of* faces - and which member of the pair carries
 /// the geometry is not something the file says. Drawing the first and ignoring
 /// the second would be a guess with no symptom.
 ///
@@ -631,7 +631,7 @@ pub(crate) fn sub_representation(
     //
     // Nothing here resolves that convention, so meeting it is a **named
     // refusal**. Reading the schema element anyway would attach every element to
-    // one support the guide says to ignore — a sub-representation drawn whole,
+    // one support the guide says to ignore - a sub-representation drawn whole,
     // from the wrong object, with nothing to say so.
     if let Some(count) = extra_supports(representation)
         && count > 0
@@ -888,7 +888,7 @@ fn dimension(object: &dyn Reflect, field: &str, at: &str) -> Result<usize> {
 /// `None` when the object carries no extra metadata at all, which is the
 /// ordinary case and costs one field lookup.
 ///
-/// The key is matched exactly — `SupportingRepresentation` — because that is
+/// The key is matched exactly - `SupportingRepresentation` - because that is
 /// what the guide spells, and a looser match would catch the per-patch keys
 /// (`SubRepresentationPatch[…]/ElementIndices/SupportingRepresentationIndex`)
 /// and refuse objects that only carry those.

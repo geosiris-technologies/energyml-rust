@@ -1,4 +1,4 @@
-//! `polylines-from-cloud` — fake, dated test data: a vertical polyline
+//! `polylines-from-cloud` - fake, dated test data: a vertical polyline
 //! descending from each point of a point cloud, one wellhead-like line per
 //! point.
 //!
@@ -11,24 +11,24 @@
 //!
 //! # What is decided here
 //!
-//! - **a length, not an absolute z** — the original request reads *"the z of the
+//! - **a length, not an absolute z** - the original request reads *"the z of the
 //!   end"*, but a fixed z would put the free end above or below the head
 //!   depending on where in the frame the cloud sits; a length is what
 //!   descends from every head the same way;
-//! - **the sense of z is read, never assumed** — the CRS says which way is
+//! - **the sense of z is read, never assumed** - the CRS says which way is
 //!   down (`ZIncreasingDownward`), not this operation, and a frame that does
 //!   not say is refused rather than guessed;
-//! - **the seed is a setting, and the activity records it** — the same seed
+//! - **the seed is a setting, and the activity records it** - the same seed
 //!   over the same cloud remakes the same polylines, bit for bit
 //!   ([`energyml_analysis::fake`]);
-//! - **fabricated data says so** — the recipe's own name, and a note on the
+//! - **fabricated data says so** - the recipe's own name, and a note on the
 //!   plan, so that nothing downstream mistakes a synthetic wellhead for a
 //!   measurement.
 //!
 //! # What it does not do itself
 //!
 //! The draw is [`energyml_analysis::fake::vertical_polylines`]; the writing
-//! is [`super::polylines::write`] — a second writer of the same
+//! is [`super::polylines::write`] - a second writer of the same
 //! `PolylineSetRepresentation` would be a second place for the same mistakes.
 
 use energyml_analysis::fake::{self, vertical_polylines};
@@ -50,16 +50,16 @@ pub struct PolylinesFromCloud;
 /// What `polylines-from-cloud` is told.
 #[derive(Debug, Params)]
 pub struct FakeParams {
-    /// how many cuts each polyline gets — `cuts + 1` nodes, the head included
+    /// how many cuts each polyline gets - `cuts + 1` nodes, the head included
     #[param(flatten)]
     pub cuts: Cuts,
-    /// how long each polyline is, from its head down — the frame's vertical unit, and its own sense of down
+    /// how long each polyline is, from its head down - the frame's vertical unit, and its own sense of down
     #[param(flatten)]
     pub length: Length,
     /// how the cuts are placed along the length
     #[param(flatten)]
     pub spacing: Spacing,
-    /// the random seed — the same seed over the same cloud remakes the same polylines
+    /// the random seed - the same seed over the same cloud remakes the same polylines
     #[param(default = 0_i64, optional, min = 0)]
     pub seed: i64,
     /// The frame, what is represented, the naming.
@@ -74,7 +74,7 @@ pub enum Cuts {
     /// exactly this many, every polyline
     #[case(default)]
     Fixed(FixedCuts),
-    /// a random count, uniform between two bounds — the same seed draws the same count
+    /// a random count, uniform between two bounds - the same seed draws the same count
     Random(RandomCuts),
 }
 
@@ -104,7 +104,7 @@ pub enum Length {
     /// exactly this long, every polyline
     #[case(default)]
     Fixed(FixedLength),
-    /// a random length, uniform between two bounds — the same seed draws the same length
+    /// a random length, uniform between two bounds - the same seed draws the same length
     Random(RandomLength),
 }
 
@@ -114,7 +114,7 @@ pub struct FixedLength {
     /// length: exactly this long
     ///
     /// **Not named `length`**: the tag above already is, and `template.rs`
-    /// compares by title — the same name on both would read as one
+    /// compares by title - the same name on both would read as one
     /// parameter declared twice, as two different things.
     #[param(min = 0.0)]
     pub value: f64,
@@ -153,7 +153,7 @@ pub struct Fluctuation {
 /// What `polylines-from-cloud` takes: a point cloud, each point a head.
 #[derive(Debug, Inputs)]
 pub struct FakeInputs {
-    /// the point cloud — each point becomes the head of a polyline
+    /// the point cloud - each point becomes the head of a polyline
     #[input(topology = "points", least = 1)]
     pub shape: Vec<Shape>,
 }
@@ -207,7 +207,7 @@ impl Operation for PolylinesFromCloud {
         if let Some(name) = support::suggested_title(bag)
             && slots.declared("title")
         {
-            slots.set("title", serde_json::json!(format!("{name} — fake polylines")));
+            slots.set("title", serde_json::json!(format!("{name} - fake polylines")));
         }
     }
 
@@ -221,10 +221,10 @@ impl Operation for PolylinesFromCloud {
     }
 
     fn plan(&self, inputs: FakeInputs, params: FakeParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
-        // **The sense of z, read from the frame — never assumed** (the
+        // **The sense of z, read from the frame - never assumed** (the
         // original need's own note). A frame named in the package speaks for itself; one created
         // here from EPSG codes is `crs::build`'s own convention, elevation up
-        // — the same reading `well-from-polyline` gives a fresh frame.
+        // - the same reading `well-from-polyline` gives a fresh frame.
         let known = cx.known();
         let mut discarded_rank = 0usize;
         let frame = support::frame_in(
@@ -269,7 +269,7 @@ impl Operation for PolylinesFromCloud {
             return Err(Refusal::on(
                 slot,
                 format!(
-                    "a vertical polyline is a vertical extent, and {what} measures its horizontal axes in degrees while its length is linear: every polyline would be written between a hundred and ten thousand times longer than the model is wide — name a projected system in `project` (EPSG:2154 for mainland France), or a LocalEngineeringCompoundCrs as `crs`"
+                    "a vertical polyline is a vertical extent, and {what} measures its horizontal axes in degrees while its length is linear: every polyline would be written between a hundred and ten thousand times longer than the model is wide - name a projected system in `project` (EPSG:2154 for mainland France), or a LocalEngineeringCompoundCrs as `crs`"
                 ),
             ));
         }
@@ -304,7 +304,7 @@ impl Operation for PolylinesFromCloud {
         }
         let title = params.written.naming.title();
         let shape = Shape {
-            name: format!("{title} — cloud"),
+            name: format!("{title} - cloud"),
             known: None,
             geometry: Geometry {
                 kind: "polylines-from-cloud",
@@ -335,17 +335,17 @@ impl Operation for PolylinesFromCloud {
             uom: None,
         });
         // **Not `seed`**: it is already a parameter, and `Registry::plan`
-        // records every settled one under its own title automatically — a
+        // records every settled one under its own title automatically - a
         // report of the same title would read as a disagreement of direction
         // (`crates/energyml-build/ARCHITECTURE.md`: a parameter title cannot
         // be both an input and an output).
         //
-        // **Fabricated data says so** — the rule on invented objects (ADR-0019), taken by
+        // **Fabricated data says so** - the rule on invented objects (ADR-0019), taken by
         // the other end: a note nobody can miss, beside the recipe's name.
         plan.says.push(Note {
             key: "fake",
             detail: format!(
-                "synthetic test data: {} vertical polyline(s) generated from a point cloud, seed {} — not a measurement",
+                "synthetic test data: {} vertical polyline(s) generated from a point cloud, seed {} - not a measurement",
                 heads.len(),
                 params.seed
             ),

@@ -1,14 +1,14 @@
-//! `witsml-wells` — the WITSML 2.1 side of RESQML wells: what it writes, how
+//! `witsml-wells` - the WITSML 2.1 side of RESQML wells: what it writes, how
 //! the objects name each other, and what it refuses.
 //!
 //! **The form of the assertions comes from the standards**, cited where used:
 //!
 //! - a `Wellbore` names its `Well` (1..1), and a sidetrack its
-//!   `ParentWellbore` — *“No parent = starts from top”* (WITSML TRG 2.1 §20.2
+//!   `ParentWellbore` - *“No parent = starts from top”* (WITSML TRG 2.1 §20.2
 //!   p. 502);
 //! - a definitive trajectory *“must define the geometry of the whole wellbore
-//!   (surface to bottom)”*, and one tied into another names it —
-//!   `ParentTrajectory`, `MdTieOn` (§16.6 p. 350–351);
+//!   (surface to bottom)”*, and one tied into another names it -
+//!   `ParentTrajectory`, `MdTieOn` (§16.6 p. 350-351);
 //! - a station's azimuth runs clockwise from north: *“0.00 and 360.00
 //!   represent North, 90.00 is East, 180.00 is South and 270.00 is West”*
 //!   (§16.10 p. 357, `ClosureDirection`, the same north as `Azi`), and its
@@ -19,7 +19,7 @@
 //!   datum (RESQML 2.2 `Wells.xsd`, `MdInterval.Datum`).
 //!
 //! **The numbers are the test's own**: the holes are drawn here, straight lines
-//! and circles of radius `R = 30 / (15° in radians)` — an arc at 15°/30 m — at
+//! and circles of radius `R = 30 / (15° in radians)` - an arc at 15°/30 m - at
 //! their Lambert-93 places, because a defect found on 24/09 only showed far
 //! from the origin. Every JSON the plan writes is read back into the generated
 //! WITSML types before anything is asserted of it.
@@ -78,7 +78,7 @@ struct Hole {
     /// Its datum's uuid, its title, and where it is.
     datum: (&'static str, &'static str),
     head: [f64; 3],
-    /// Each node: its measured depth, and where it is in the compound —
+    /// Each node: its measured depth, and where it is in the compound -
     /// Lambert-93 easting, northing, and an elevation (the compound counts
     /// up).
     nodes: Vec<(f64, [f64; 3])>,
@@ -92,7 +92,7 @@ fn gth3() -> Hole {
         frame: "33333333-0000-4000-8000-000000000001",
         trajectory: "33333333-0000-4000-8000-000000000002",
         interpretation: "33333333-0000-4000-8000-000000000003",
-        datum: ("33333333-0000-4000-8000-000000000004", "GTH-3 — datum"),
+        datum: ("33333333-0000-4000-8000-000000000004", "GTH-3 - datum"),
         head,
         nodes: (0..=20)
             .map(|k| k as f64 * 10.0)
@@ -102,7 +102,7 @@ fn gth3() -> Hole {
 }
 
 /// GTH-3 ST1: leaves GTH-3 at MD 40, builds at 15°/30 m to 45° towards the
-/// north — 90 m of arc, to MD 130 — then holds to MD 170. Its depths are
+/// north - 90 m of arc, to MD 130 - then holds to MD 170. Its depths are
 /// GTH-3's, from GTH-3's datum. On the arc, `θ` of turn is `R (1 − cos θ)`
 /// north and `R sin θ` down from the kick-off.
 fn st1() -> Hole {
@@ -144,7 +144,7 @@ fn st1() -> Hole {
 }
 
 /// GTH-2: vertical to MD 30 from its datum at 47 m, an arc at 15°/30 m to the
-/// horizontal towards the **west** — 90° is 180 m of hole, to MD 210 — then a
+/// horizontal towards the **west** - 90° is 180 m of hole, to MD 210 - then a
 /// drain to MD 300. The drain is `R` west and `30 + R` down from the datum at
 /// MD 210.
 fn gth2() -> Hole {
@@ -169,7 +169,7 @@ fn gth2() -> Hole {
         frame: "22222222-0000-4000-8000-000000000001",
         trajectory: "22222222-0000-4000-8000-000000000002",
         interpretation: "22222222-0000-4000-8000-000000000003",
-        datum: ("22222222-0000-4000-8000-000000000004", "GTH-2 — datum"),
+        datum: ("22222222-0000-4000-8000-000000000004", "GTH-2 - datum"),
         head,
         nodes,
     }
@@ -197,7 +197,7 @@ fn frame_of(hole: &Hole) -> (Source, Known) {
         reference: Some(Ref::new(
             hole.frame,
             "resqml22.WellboreFrameRepresentation",
-            format!("{} — frame", hole.name),
+            format!("{} - frame", hole.name),
         )),
         crs: Some(compound()),
         crs_epsg: Some(2154),
@@ -205,7 +205,7 @@ fn frame_of(hole: &Hole) -> (Source, Known) {
         interpretation: Some(Ref::new(
             hole.interpretation,
             "resqml22.WellboreInterpretation",
-            format!("{} — interpretation", hole.name),
+            format!("{} - interpretation", hole.name),
         )),
         vertical_uom: Some("m".into()),
         vertical_up: Some(true),
@@ -216,7 +216,7 @@ fn frame_of(hole: &Hole) -> (Source, Known) {
         trajectory: Some(Ref::new(
             hole.trajectory,
             "resqml22.WellboreTrajectoryRepresentation",
-            format!("{} — trajectory", hole.name),
+            format!("{} - trajectory", hole.name),
         )),
         datum: Some(Ref::new(
             hole.datum.0,
@@ -273,7 +273,7 @@ fn titled<'a>(plan: &'a Plan, qualified: &str, title: &str) -> &'a NewObject {
         })
 }
 
-/// The JSON of a plan's object, read back into its generated type — the road
+/// The JSON of a plan's object, read back into its generated type - the road
 /// `apply` takes. A field misspelt, a value of the wrong kind, and this panics.
 fn read<T: energyml_core::value::Reflect + Clone>(object: &NewObject) -> T {
     let schemas = energyml_schemas::all();
@@ -380,9 +380,9 @@ fn a_well_per_head_a_wellbore_per_resqml_wellbore_a_trajectory_per_resqml_trajec
 
     // Each trajectory names its wellbore.
     for (title, bore) in [
-        ("GTH-3 — trajectory", "GTH-3"),
-        ("GTH-3 ST1 — trajectory", "GTH-3 ST1"),
-        ("GTH-2 — trajectory", "GTH-2"),
+        ("GTH-3 - trajectory", "GTH-3"),
+        ("GTH-3 ST1 - trajectory", "GTH-3 ST1"),
+        ("GTH-2 - trajectory", "GTH-2"),
     ] {
         assert_eq!(
             trajectory(&plan, title).wellbore.uuid,
@@ -394,7 +394,7 @@ fn a_well_per_head_a_wellbore_per_resqml_wellbore_a_trajectory_per_resqml_trajec
     // first; each trajectory after its wellbore.
     let at = |title: &str| plan.objects.iter().position(|o| o.title == title).unwrap();
     assert!(
-        at("GTH-3") < at("GTH-3 — trajectory") && at("GTH-3 — trajectory") < at("GTH-3 ST1"),
+        at("GTH-3") < at("GTH-3 - trajectory") && at("GTH-3 - trajectory") < at("GTH-3 ST1"),
         "{:?}",
         plan.objects.iter().map(|o| &o.title).collect::<Vec<_>>()
     );
@@ -445,8 +445,8 @@ fn a_sidetrack_names_its_parent_and_ties_on_at_its_kickoff() {
         "what the first hole of a well was is not a fact of the package"
     );
 
-    let laterals = trajectory(&plan, "GTH-3 ST1 — trajectory");
-    let parents = titled(&plan, "witsml21.Trajectory", "GTH-3 — trajectory");
+    let laterals = trajectory(&plan, "GTH-3 ST1 - trajectory");
+    let parents = titled(&plan, "witsml21.Trajectory", "GTH-3 - trajectory");
     assert_eq!(
         laterals.parent_trajectory.as_ref().map(|p| p.uuid.as_str()),
         Some(parents.uuid.as_str())
@@ -465,16 +465,16 @@ fn a_sidetrack_names_its_parent_and_ties_on_at_its_kickoff() {
     // Surface to bottom: through the parent's stations above the kick-off.
     assert_eq!(laterals.definitive, Some(true));
     assert_eq!(mds(&laterals)[0], 0.0);
-    assert_eq!(trajectory(&plan, "GTH-3 — trajectory").definitive, Some(true));
+    assert_eq!(trajectory(&plan, "GTH-3 - trajectory").definitive, Some(true));
     assert_eq!(said(&plan, "sidetrack").len(), 1);
 }
 
 #[test]
 fn the_stations_are_the_resqml_nodes_at_their_own_depths_and_places() {
-    // “a given MD is never recomputed” — each station's MD is the frame's
+    // “a given MD is never recomputed” - each station's MD is the frame's
     // own, bit for bit, and its location is the node, in the same compound.
     let plan = planned(&doublet(), Choices::new()).unwrap();
-    let drain = trajectory(&plan, "GTH-2 — trajectory");
+    let drain = trajectory(&plan, "GTH-2 - trajectory");
     assert_eq!(
         mds(&drain),
         gth2().nodes.iter().map(|(md, _)| *md).collect::<Vec<_>>()
@@ -504,7 +504,7 @@ fn the_stations_are_the_resqml_nodes_at_their_own_depths_and_places() {
         .filter(|md| *md < 40.0)
         .collect();
     expected.extend(st1().nodes.iter().map(|(md, _)| *md));
-    assert_eq!(mds(&trajectory(&plan, "GTH-3 ST1 — trajectory")), expected);
+    assert_eq!(mds(&trajectory(&plan, "GTH-3 ST1 - trajectory")), expected);
     // The index and the interval say the same depths, from the same datum.
     assert_eq!(drain.index.index_kind, eml::DataIndexKind::MeasuredDepth);
     assert_eq!(drain.index.direction, eml::IndexDirection::Increasing);
@@ -526,7 +526,7 @@ fn the_stations_are_the_resqml_nodes_at_their_own_depths_and_places() {
 #[test]
 fn a_vertical_hole_is_inclined_zero_and_has_no_azimuth() {
     let plan = planned(&doublet(), Choices::new()).unwrap();
-    let vertical = trajectory(&plan, "GTH-3 — trajectory");
+    let vertical = trajectory(&plan, "GTH-3 - trajectory");
     for station in &vertical.trajectory_station {
         let md = station.md.measured_depth.value;
         assert_eq!(station.incl.as_ref().map(|a| a.value), Some(0.0), "MD {md}");
@@ -543,7 +543,7 @@ fn a_drain_is_horizontal_and_azimuths_run_clockwise_from_grid_north() {
     // West is 270 clockwise from north; counter-clockwise it would be 90. The
     // lateral holds towards the north: 0.
     let plan = planned(&doublet(), Choices::new()).unwrap();
-    let drain = trajectory(&plan, "GTH-2 — trajectory");
+    let drain = trajectory(&plan, "GTH-2 - trajectory");
     assert_eq!(
         drain.azi_ref,
         Some(eml::NorthReferenceKind::GridNorth),
@@ -582,7 +582,7 @@ fn a_drain_is_horizontal_and_azimuths_run_clockwise_from_grid_north() {
     assert!(near(dls.value, 15.0, 1e-6), "{}", dls.value);
     assert_eq!(dls.uom, eml::AnglePerLengthUom::V1Per30DegaPerM);
 
-    let lateral = trajectory(&plan, "GTH-3 ST1 — trajectory");
+    let lateral = trajectory(&plan, "GTH-3 ST1 - trajectory");
     let last = lateral.trajectory_station.last().unwrap();
     assert!(
         near(last.incl.as_ref().unwrap().value, 45.0, 1e-6),
@@ -598,7 +598,7 @@ fn vertical_depths_and_displacements_are_from_the_datum() {
     // The drain at MD 300: 30 m of hold, then R of arc down, below the datum;
     // R of arc then 90 m of drain towards the west.
     let plan = planned(&doublet(), Choices::new()).unwrap();
-    let drain = trajectory(&plan, "GTH-2 — trajectory");
+    let drain = trajectory(&plan, "GTH-2 - trajectory");
     let last = drain.trajectory_station.last().unwrap();
     let r = radius();
     assert!(
@@ -634,7 +634,7 @@ fn the_same_frames_name_the_same_objects_and_a_moved_node_another_trajectory() {
     assert_eq!(uuids(&first), uuids(&again));
 
     // One more metre of drain: the same well, the same wellbore, another
-    // trajectory — never the first one rewritten.
+    // trajectory - never the first one rewritten.
     let mut longer = gth2();
     let last = longer.nodes.last_mut().unwrap();
     last.0 += 1.0;
@@ -650,12 +650,12 @@ fn the_same_frames_name_the_same_objects_and_a_moved_node_another_trajectory() {
         uuid(&first, "witsml21.Wellbore", "GTH-2")
     );
     assert_ne!(
-        uuid(&moved, "witsml21.Trajectory", "GTH-2 — trajectory"),
-        uuid(&first, "witsml21.Trajectory", "GTH-2 — trajectory")
+        uuid(&moved, "witsml21.Trajectory", "GTH-2 - trajectory"),
+        uuid(&first, "witsml21.Trajectory", "GTH-2 - trajectory")
     );
     assert_eq!(
-        uuid(&moved, "witsml21.Trajectory", "GTH-3 — trajectory"),
-        uuid(&first, "witsml21.Trajectory", "GTH-3 — trajectory"),
+        uuid(&moved, "witsml21.Trajectory", "GTH-3 - trajectory"),
+        uuid(&first, "witsml21.Trajectory", "GTH-3 - trajectory"),
         "what did not move keeps its name"
     );
 }
@@ -725,7 +725,7 @@ fn what_the_wells_are_is_written_where_it_is_said() {
         other => panic!("a planned vertical depth: {other:?}"),
     }
     assert_eq!(
-        trajectory(&plan, "GTH-2 — trajectory").extension_name_value.len(),
+        trajectory(&plan, "GTH-2 - trajectory").extension_name_value.len(),
         1
     );
 
@@ -831,19 +831,19 @@ fn a_target_unit_is_every_wellbores_and_nothing_else_is_one() {
 #[test]
 fn north_is_grid_north_only_where_the_datum_proves_it() {
     // The same GTH-2, its datum placed 100 m east of where the frame puts its
-    // MD 0 station — a compound offset from Lambert-93. Its azimuths are the
+    // MD 0 station - a compound offset from Lambert-93. Its azimuths are the
     // frame's own, and `AziRef` says so.
     let (shape, mut known) = frame_of(&gth2());
     known.wellhead = Some([651_695.0, 6_861_145.0, 47.0]);
     let plan = planned(&bag(&[(shape, known)]), Choices::new()).unwrap();
-    let drain = trajectory(&plan, "GTH-2 — trajectory");
+    let drain = trajectory(&plan, "GTH-2 - trajectory");
     assert_eq!(drain.azi_ref, Some(eml::NorthReferenceKind::PlantNorth));
     assert_eq!(said(&plan, "plant-north").len(), 1);
 }
 
 #[test]
 fn a_kinked_line_keeps_its_stations_and_is_given_no_angle() {
-    // Vertical for 20 m, then straight on at 30° — the depths are the lengths
+    // Vertical for 20 m, then straight on at 30° - the depths are the lengths
     // of the segments, as a hand-drawn line has them. No arc turns 30° in no
     // hole: the stations are written with their depths and places, without
     // an inclination nobody can state.
@@ -863,12 +863,12 @@ fn a_kinked_line_keeps_its_stations_and_is_given_no_angle() {
         frame: "44444444-0000-4000-8000-000000000001",
         trajectory: "44444444-0000-4000-8000-000000000002",
         interpretation: "44444444-0000-4000-8000-000000000003",
-        datum: ("44444444-0000-4000-8000-000000000004", "KINK — datum"),
+        datum: ("44444444-0000-4000-8000-000000000004", "KINK - datum"),
         head,
         nodes,
     };
     let plan = planned(&holes(&[kinked]), Choices::new()).unwrap();
-    let line = trajectory(&plan, "KINK — trajectory");
+    let line = trajectory(&plan, "KINK - trajectory");
     assert_eq!(mds(&line), [0.0, 10.0, 20.0, 30.0, 40.0, 50.0]);
     assert!(
         line.trajectory_station
@@ -896,7 +896,7 @@ fn a_frame_without_a_datum_is_refused_by_name() {
     let (shape, mut known) = frame_of(&gth2());
     known.datum = None;
     let why = planned(&bag(&[(shape, known)]), Choices::new()).unwrap_err();
-    assert!(why.contains("GTH-2 — frame") && why.contains("datum"), "{why}");
+    assert!(why.contains("GTH-2 - frame") && why.contains("datum"), "{why}");
 }
 
 #[test]
@@ -908,7 +908,7 @@ fn a_frame_in_degrees_is_refused_by_name() {
         "WGS 84",
     ));
     let why = planned(&bag(&[(shape, known)]), Choices::new()).unwrap_err();
-    assert!(why.contains("GTH-2 — frame") && why.contains("degrees"), "{why}");
+    assert!(why.contains("GTH-2 - frame") && why.contains("degrees"), "{why}");
 }
 
 #[test]
@@ -917,7 +917,7 @@ fn a_frame_that_does_not_say_which_way_is_down_is_refused() {
     known.vertical_up = None;
     let why = planned(&bag(&[(shape, known)]), Choices::new()).unwrap_err();
     assert!(
-        why.contains("GTH-2 — frame") && why.contains("which way"),
+        why.contains("GTH-2 - frame") && why.contains("which way"),
         "{why}"
     );
 }
@@ -977,7 +977,7 @@ fn a_shape_with_nothing_known_of_it_is_fit_and_refused_when_planned() {
 #[test]
 fn what_is_not_written_is_said() {
     // The RESQML side of the link and what §6.7 asks beyond wells and
-    // trajectories: left out, and said — never a silence that reads as done.
+    // trajectories: left out, and said - never a silence that reads as done.
     let plan = planned(&doublet(), Choices::new()).unwrap();
     assert!(
         said(&plan, "resqml-links")

@@ -1,7 +1,7 @@
 //! Writing a representation out, and the formats there are.
 //!
 //! The bridge does not write anything: `energyml-export` does, through its
-//! registry. What is checked here is that the door leads to it — and that what
+//! registry. What is checked here is that the door leads to it - and that what
 //! comes out agrees with what the *geometry* reader says of the same object,
 //! which is a second path over the same file.
 
@@ -143,7 +143,7 @@ fn values_travel_with_the_shape_when_they_are_asked_for() {
 
     // A representation carrying a property, in a format that writes them. The
     // difference between the two exports is the whole point: asked for, the
-    // values are in the file; not asked for, they are not — and neither is the
+    // values are in the file; not asked for, they are not - and neither is the
     // cost of reading every property of the package.
     let found = package
         .find(Some("Representation"), None)
@@ -165,7 +165,7 @@ fn values_travel_with_the_shape_when_they_are_asked_for() {
         .expect("and with values");
     assert!(with.len() > bare.len(), "the values add bytes");
     // VTK names a field array with whitespace replaced, so the comparison is
-    // made on the name **the format uses** rather than on the citation title —
+    // made on the name **the format uses** rather than on the citation title -
     // asserting the raw title would be asserting something the file never
     // claimed.
     let in_file = name.replace(char::is_whitespace, "_");
@@ -183,7 +183,7 @@ fn values_travel_with_the_shape_when_they_are_asked_for() {
 fn a_property_brings_the_colours_the_package_states() {
     // **The half this bridge could not reach until 20/09.** Resolving a ramp
     // walks the package's `GraphicalInformationSet`, so nothing reading shape
-    // by shape can do it — and the bridge read shape by shape. It goes through
+    // by shape can do it - and the bridge read shape by shape. It goes through
     // `scene::of_package` now, which is where `energyml export` got it.
     let Some(package) = package() else { return };
 
@@ -276,7 +276,7 @@ fn a_metadata_spec_reaches_the_document() {
 #[test]
 fn an_object_this_package_does_not_hold_is_refused_by_name() {
     // The walk keeps what it could evaluate, so a uri that named nothing would
-    // simply be missing from the result — and a document missing an object
+    // simply be missing from the result - and a document missing an object
     // somebody asked for by name looks exactly like a complete one.
     let Some(package) = package() else { return };
     let why = package

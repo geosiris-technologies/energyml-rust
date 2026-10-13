@@ -1,5 +1,5 @@
 //! `energyml_sheet::read::board_of_frame` against a frame built after the
-//! specification, not read from a file — the same pattern
+//! specification, not read from a file - the same pattern
 //! `crates/energyml-domain/tests/well_strata.rs` and
 //! `crates/energyml-geometry/tests/well.rs` use, and for the same reason
 //! (tests follow the specification, not a corpus): the corpus holds no
@@ -77,11 +77,11 @@ fn integers(values: &[i64]) -> eml23::IntegerXmlArray {
     }
 }
 
-/// A frame at MD 0, 10, 20, 30 — three intervals, four nodes.
+/// A frame at MD 0, 10, 20, 30 - three intervals, four nodes.
 fn frame() -> resqml22::WellboreFrameRepresentation {
     resqml22::WellboreFrameRepresentation {
         uuid: FRAME.to_string(),
-        citation: citation("F1 — frame"),
+        citation: citation("F1 - frame"),
         node_count: 4,
         node_md: Some(eml23::AbstractFloatingPointArray::FloatingPointXmlArray(
             eml23::FloatingPointXmlArray {
@@ -95,7 +95,7 @@ fn frame() -> resqml22::WellboreFrameRepresentation {
     }
 }
 
-/// A category table keyed `10, 20, 35` — Lutetian, Bartonian, Priabonian —
+/// A category table keyed `10, 20, 35` - Lutetian, Bartonian, Priabonian -
 /// the same shape `energyml-domain/tests/well_strata.rs`'s own
 /// `category_package` builds.
 fn table() -> eml23::ColumnBasedTable {
@@ -124,7 +124,7 @@ fn table() -> eml23::ColumnBasedTable {
     }
 }
 
-/// The categorical property: values `[20, 10, 35]`, one per interval — read
+/// The categorical property: values `[20, 10, 35]`, one per interval - read
 /// through the table above by **key**, not by position (the table's own
 /// keys are not `0..n`, so a position read would find the wrong rows, or
 /// none).
@@ -132,12 +132,12 @@ fn strata_property() -> resqml22::DiscreteProperty {
     resqml22::DiscreteProperty {
         uuid: STRATA_PROPERTY.to_string(),
         // The header a caller with no `PropertyKind` reference falls back
-        // to: this property's own `Citation.Title`, "STRA" — kept
+        // to: this property's own `Citation.Title`, "STRA" - kept
         // short on purpose, since this test looks the track up by header.
         citation: citation("STRA"),
         indexable_element: eml23::IndexableElement::Intervals,
         value_count_per_indexable_element: vec![1],
-        supporting_representation: dor(FRAME, "resqml22.WellboreFrameRepresentation", "F1 — frame"),
+        supporting_representation: dor(FRAME, "resqml22.WellboreFrameRepresentation", "F1 - frame"),
         values_for_patch: vec![resqml22::AbstractValueArray::IntegerXmlArray(integers(&[
             20, 10, 35,
         ]))],
@@ -146,7 +146,7 @@ fn strata_property() -> resqml22::DiscreteProperty {
     }
 }
 
-/// A `PropertyKind` object titled "Pressure" — what [`PropertyLabel::Kind`]
+/// A `PropertyKind` object titled "Pressure" - what [`PropertyLabel::Kind`]
 /// (the default) must resolve to, rather than the property's own
 /// title, which repeats the well.
 fn pressure_kind() -> eml23::PropertyKind {
@@ -163,11 +163,11 @@ fn pressure_kind() -> eml23::PropertyKind {
 fn pressure_property() -> resqml22::DiscreteProperty {
     resqml22::DiscreteProperty {
         uuid: PRESSURE_PROPERTY.to_string(),
-        citation: citation("F1 — pressure, yearly — 2022"),
+        citation: citation("F1 - pressure, yearly - 2022"),
         indexable_element: eml23::IndexableElement::Intervals,
         value_count_per_indexable_element: vec![1],
         property_kind: dor(PRESSURE_KIND, "eml23.PropertyKind", "a stale cached title"),
-        supporting_representation: dor(FRAME, "resqml22.WellboreFrameRepresentation", "F1 — frame"),
+        supporting_representation: dor(FRAME, "resqml22.WellboreFrameRepresentation", "F1 - frame"),
         values_for_patch: vec![resqml22::AbstractValueArray::FloatingPointXmlArray(
             eml23::FloatingPointXmlArray {
                 count_per_value: 1,
@@ -179,15 +179,15 @@ fn pressure_property() -> resqml22::DiscreteProperty {
     }
 }
 
-/// A property that hangs on the frame's **nodes**, not its intervals — one
+/// A property that hangs on the frame's **nodes**, not its intervals - one
 /// value per node (four), which must be counted and must create no track.
 fn node_property() -> resqml22::DiscreteProperty {
     resqml22::DiscreteProperty {
         uuid: NODE_PROPERTY.to_string(),
-        citation: citation("F1 — a per-node log"),
+        citation: citation("F1 - a per-node log"),
         indexable_element: eml23::IndexableElement::Nodes,
         value_count_per_indexable_element: vec![1],
-        supporting_representation: dor(FRAME, "resqml22.WellboreFrameRepresentation", "F1 — frame"),
+        supporting_representation: dor(FRAME, "resqml22.WellboreFrameRepresentation", "F1 - frame"),
         values_for_patch: vec![resqml22::AbstractValueArray::FloatingPointXmlArray(
             eml23::FloatingPointXmlArray {
                 count_per_value: 1,
@@ -254,11 +254,11 @@ fn track_header(track: &Track) -> &str {
     }
 }
 
-/// A CBT's row label reaches the sheet, by key — not by position, and not
+/// A CBT's row label reaches the sheet, by key - not by position, and not
 /// the row's own key echoed back.
 ///
 /// What would break this: `well_strata::of_frame`'s `Wanted::Category` path
-/// stops being called from `read::build_property_track` — the labels would
+/// stops being called from `read::build_property_track` - the labels would
 /// then be `None` (no track at all, since `read.lookup` would go unread) or
 /// a wrong row (a position-based lookup would misname every row, since the
 /// table's keys 10/20/35 are not `0..n`).
@@ -279,13 +279,13 @@ fn a_category_property_is_labelled_through_its_lookup_table() {
     );
 }
 
-/// A property column's header is its `PropertyKind`'s title by default
-/// — not the property's own, which repeats the well and the
+/// A property column's header is its `PropertyKind`'s title by default -
+/// not the property's own, which repeats the well and the
 /// context.
 ///
 /// What would break this: `read::column_label`'s default branch reading
 /// `read.title` first, or the [`energyml_domain::property_kind::Resolver`]
-/// call being skipped — either would show "F1 — pressure, yearly — 2022"
+/// call being skipped - either would show "F1 - pressure, yearly - 2022"
 /// instead of "Pressure".
 #[test]
 fn a_propertys_column_is_headed_by_its_property_kind_title_by_default() {
@@ -304,13 +304,13 @@ fn a_propertys_column_is_headed_by_its_property_kind_title_by_default() {
     );
 }
 
-/// A per-node property creates no section — it is counted in the board's
+/// A per-node property creates no section - it is counted in the board's
 /// notes instead of silently vanishing or crashing the count check that a
 /// four-value array would otherwise fail against three intervals.
 ///
 /// What would break this: the classification loop in `board_of_frame`
 /// stopping to special-case `IndexableElement::Nodes` (it would then land in
-/// `build_property_track`, which would refuse it by its counts — still no
+/// `build_property_track`, which would refuse it by its counts - still no
 /// track, but the wrong reason, and no note naming it as a *node* property).
 #[test]
 fn a_per_node_property_creates_no_track_and_is_counted() {
@@ -322,7 +322,7 @@ fn a_per_node_property_creates_no_track_and_is_counted() {
         read.board
             .tracks
             .iter()
-            .all(|track| track_header(track) != "F1 — a per-node log"),
+            .all(|track| track_header(track) != "F1 - a per-node log"),
         "a per-node property must not become a track: {:?}",
         read.board.tracks.iter().map(track_header).collect::<Vec<_>>()
     );
@@ -333,7 +333,7 @@ fn a_per_node_property_creates_no_track_and_is_counted() {
         "the one node property must be counted in the notes: {:?}",
         read.notes
     );
-    // Exactly three tracks: MD, STRA, Pressure — the node property adds none.
+    // Exactly three tracks: MD, STRA, Pressure - the node property adds none.
     assert_eq!(
         read.board.tracks.len(),
         3,
@@ -342,7 +342,7 @@ fn a_per_node_property_creates_no_track_and_is_counted() {
     );
 }
 
-/// The laid-out sections follow the frame's own `[md_top, md_base]` bounds —
+/// The laid-out sections follow the frame's own `[md_top, md_base]` bounds -
 /// the union the interval tracks state, not a guess and not the whole
 /// `NodeMd` array read as sections one MD apart.
 ///
@@ -373,7 +373,7 @@ fn sections_follow_the_intervals_bounds() {
 }
 
 /// The MD track carries the caller's own header, never one invented here
-/// ("no hardcoded French sentence", and no English one either — a
+/// ("no hardcoded French sentence", and no English one either - a
 /// caller states it every time).
 #[test]
 fn the_md_track_carries_the_callers_header() {
@@ -383,7 +383,7 @@ fn the_md_track_carries_the_callers_header() {
     assert!(matches!(&read.board.tracks[0], Track::Md(md) if md.header == "Depth (m)"));
 }
 
-/// `Options::with_tracks` orders and filters the property tracks — the MD
+/// `Options::with_tracks` orders and filters the property tracks - the MD
 /// column and any stratigraphic-rank track are unaffected, only the
 /// property tracks are selected and reordered.
 ///
@@ -406,19 +406,19 @@ fn track_selection_orders_and_filters_the_property_tracks() {
 }
 
 /// **Two columns never share a header.** Two properties of one kind would
-/// both be headed `Pressure`, and nobody could tell them apart — Lutetia's
+/// both be headed `Pressure`, and nobody could tell them apart - Lutetia's
 /// `BSS000NSYT` showed two `source`, two `name`, two `identifier`.
 /// Each then takes its own title, without the well it repeats, and a note
 /// says so.
 ///
-/// To break it: drop `disambiguate` from `board_of_frame` — both headers go back
+/// To break it: drop `disambiguate` from `board_of_frame` - both headers go back
 /// to `Pressure`.
 #[test]
 fn two_properties_of_one_kind_are_headed_by_their_own_titles() {
     let (frame, _, mut resources) = package();
     let mut second = pressure_property();
     second.uuid = "c0000000-0000-4000-8000-000000000006".to_string();
-    second.citation = citation("F1 — pressure, yearly — 2023");
+    second.citation = citation("F1 - pressure, yearly - 2023");
     let mut objects: Vec<Box<dyn DynObject>> = vec![
         boxed(table()),
         boxed(strata_property()),
@@ -441,7 +441,7 @@ fn two_properties_of_one_kind_are_headed_by_their_own_titles() {
         "a shared kind is no header: {headers:?}"
     );
     assert!(
-        headers.contains(&"pressure, yearly — 2022") && headers.contains(&"pressure, yearly — 2023"),
+        headers.contains(&"pressure, yearly - 2022") && headers.contains(&"pressure, yearly - 2023"),
         "{headers:?}"
     );
     assert!(
@@ -451,36 +451,36 @@ fn two_properties_of_one_kind_are_headed_by_their_own_titles() {
     );
 }
 
-/// What a property title keeps once the frame's words are gone — cut on a
+/// What a property title keeps once the frame's words are gone - cut on a
 /// word, never inside one, and never down to nothing.
 #[test]
 fn a_title_loses_only_the_whole_words_it_shares_with_its_frame() {
     use read::beyond_shared;
     assert_eq!(
-        beyond_shared("BSS000NSYT — source_etage", "BSS000NSYT — frame"),
+        beyond_shared("BSS000NSYT - source_etage", "BSS000NSYT - frame"),
         "source_etage"
     );
     // `f` is shared with `frame`, but half a word is not a word.
     assert_eq!(
-        beyond_shared("BSS000NSYT — formation", "BSS000NSYT — frame"),
+        beyond_shared("BSS000NSYT - formation", "BSS000NSYT - frame"),
         "formation"
     );
     // The frame's title a prefix of the property's.
     assert_eq!(beyond_shared("GTH-1 porosity", "GTH-1"), "porosity");
     // Nothing shared, or nothing left: the title, whole.
-    assert_eq!(beyond_shared("porosity", "GTH-1 — frame"), "porosity");
-    assert_eq!(beyond_shared("GTH-1 — frame", "GTH-1 — frame"), "GTH-1 — frame");
+    assert_eq!(beyond_shared("porosity", "GTH-1 - frame"), "porosity");
+    assert_eq!(beyond_shared("GTH-1 - frame", "GTH-1 - frame"), "GTH-1 - frame");
     assert_eq!(beyond_shared("ABCD porosity", "ABC"), "ABCD porosity");
 }
 
-/// A property hangs on the frame its **reference** names — uuid and version.
+/// A property hangs on the frame its **reference** names - uuid and version.
 /// A package holding the frame twice has properties on each; the sheet of
 /// version 1 must not draw the curve of a property that names version 2.
 ///
 /// Identity rule: internally only the full URI is used (ADR-0003).
 ///
 /// What would break this: `read::board_of_frame` deciding `matches_frame` from
-/// the uuid of the supporting representation alone — the property naming
+/// the uuid of the supporting representation alone - the property naming
 /// version 2 then lands on the sheet of version 1.
 #[test]
 fn a_property_on_another_version_of_the_frame_is_not_on_this_sheet() {

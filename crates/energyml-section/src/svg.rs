@@ -4,23 +4,23 @@
 //! the front end, the CLI and the export draw the same bytes (WYSIWYG by
 //! construction). Four rules:
 //!
-//! * **grouped and annotated** — one `<g>` per object, with `data-key` and
+//! * **grouped and annotated** - one `<g>` per object, with `data-key` and
 //!   `data-kind`; a well has one `<g>` per interval, with its unit
 //!   (`data-unit`, `data-md-from`, `data-md-to`). That is how the front end knows
 //!   what is under the pointer without redoing any geometry;
 //! * **colours are attributes**, never classes (the front end's
 //!   `bakeComputedPaint` trap: a class is lost the moment the SVG leaves the
-//!   front end's stylesheet — an export, a standalone file);
-//! * **everything is escaped** — a package's title is someone else's text and
+//!   front end's stylesheet - an export, a standalone file);
+//! * **everything is escaped** - a package's title is someone else's text and
 //!   the front end inserts this string into its DOM. [`escape`] also drops the
 //!   characters XML 1.0 cannot carry at all;
-//! * **the metadata** — `<metadata>` holds the format, this crate's
+//! * **the metadata** - `<metadata>` holds the format, this crate's
 //!   version, the inputs and the view as JSON, so `--from-svg` can redraw.
 //!
 //! # `data-key` and the NUL
 //!
 //! The front end's key of an object is its store and its uri **joined by a NUL**
-//! (`model::object_key`), and a NUL cannot be written in XML 1.0 — not raw, not
+//! (`model::object_key`), and a NUL cannot be written in XML 1.0 - not raw, not
 //! as `&#0;`; an HTML parser turns it into U+FFFD. So `data-key` carries the
 //! key with the NUL spelled U+2400 (`␀`, *symbol for null*), and the two halves
 //! are also written whole as `data-store` and `data-uri`: the front end rebuilds its
@@ -70,12 +70,12 @@ pub fn write(layout: &Layout) -> String {
     let [w, h] = layout.size;
     // The map a front end's overlay reads a pointer through: the plot's
     // frame in pixels, the window it shows in the drawing's units, and the
-    // pixels per unit — `x = frame.x + (s − window.x0)·scale.x`,
+    // pixels per unit - `x = frame.x + (s − window.x0)·scale.x`,
     // `y = frame.y + frame.h − (z − window.y0)·scale.y`. Written in full, not
     // rounded like the drawing's coordinates: a reading in metres must not
     // inherit a hundredth of a pixel's error times the scale. `data-whole` is
-    // the window with none asked — the same value however the drawing was
-    // zoomed — so a zoom can be clamped to it from any drawing.
+    // the window with none asked - the same value however the drawing was
+    // zoomed - so a zoom can be clamped to it from any drawing.
     let (f, win, scale) = (layout.frame, layout.window, layout.scale);
     // Inkscape's namespace, declared only when a group uses it: a drawing
     // without the strata legend is the bytes it always was.
@@ -238,7 +238,7 @@ pub enum MetadataError {
     /// No `<section-view>` element: this SVG was not written by [`write()`], or
     /// an editor dropped its `<metadata>`.
     #[error(
-        "no section-view metadata in this SVG — it was not written by the section view, or its <metadata> was removed"
+        "no section-view metadata in this SVG - it was not written by the section view, or its <metadata> was removed"
     )]
     Missing,
     /// Written by another format of the metadata.
@@ -254,8 +254,8 @@ pub enum MetadataError {
     Unreadable(String),
 }
 
-/// What [`write()`] put in `<metadata>` — the inputs and the view the drawing was
-/// made from — read back from the SVG's text.
+/// What [`write()`] put in `<metadata>` - the inputs and the view the drawing was
+/// made from - read back from the SVG's text.
 ///
 /// The way back of `write_metadata`, and the only one: `--from-svg` and an
 /// operation that writes the trace an image was drawn along both read here, so
@@ -332,8 +332,8 @@ fn write_axes(out: &mut String, layout: &Layout, zoom: bool) {
     let Rect { x, y, w, h } = layout.frame;
     out.push_str("<g data-layer=\"axes\" fill=\"#444444\" stroke=\"none\">\n");
     // The script rewrites the graduations from the window it shows. An axis
-    // whose ticks carry a second line (true coordinates) cannot be rewritten —
-    // that line is a function of the trace, not of the window — so its ticks
+    // whose ticks carry a second line (true coordinates) cannot be rewritten -
+    // that line is a function of the trace, not of the window - so its ticks
     // are one group each, which the script moves and hides instead.
     let moved = layout.x_axis.ticks.iter().any(|t| t.sublabel.is_some());
     if zoom {
@@ -444,11 +444,11 @@ fn write_axes(out: &mut String, layout: &Layout, zoom: bool) {
     out.push_str("</g>\n");
 }
 
-/// The `<pattern>` the hatched style is stroked with — written only when a shape
+/// The `<pattern>` the hatched style is stroked with - written only when a shape
 /// refers to it, so a drawing without the style is the bytes it always was. Stripes
 /// of the style's colour on nothing, `spacing` apart and rotated by `angle`. Its
 /// units are the drawing's: the zoom script's transform magnifies it with the plot
-/// (a texture, not a stroke — only strokes keep their pixels).
+/// (a texture, not a stroke - only strokes keep their pixels).
 fn hatch_pattern(layout: &Layout) -> String {
     let reference = crate::layout::hatch_ref();
     let used = layout
@@ -542,7 +542,7 @@ fn write_object(out: &mut String, o: &LaidObject, zoom: Zoom) {
                 escape(uri)
             );
             // The packages whose wells show the unit in this colour, by the
-            // front end's store ids — which never hold a space.
+            // front end's store ids - which never hold a space.
             if !stores.is_empty() {
                 let _ = write!(out, " data-unit-stores=\"{}\"", escape(&stores.join(" ")));
             }
@@ -575,7 +575,7 @@ fn write_object(out: &mut String, o: &LaidObject, zoom: Zoom) {
         for [a, b] in o.intervals.iter().filter_map(|iv| iv.tick) {
             // Counter-scaled around its middle, which is on the well: zoomed in,
             // the tick stays a few pixels across the well rather than growing
-            // with the drawing — as wide as the well, which keeps its own width.
+            // with the drawing - as wide as the well, which keeps its own width.
             let middle = [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0];
             let _ = writeln!(
                 out,
@@ -595,7 +595,7 @@ fn write_object(out: &mut String, o: &LaidObject, zoom: Zoom) {
 
 fn write_interval(out: &mut String, iv: &LaidInterval, zoom: Zoom) {
     // The unit's full uri, when the interval names one: what the front end finds the
-    // unit by — its legend entry, its colour — and never its title.
+    // unit by - its legend entry, its colour - and never its title.
     let uri = iv
         .unit_uri
         .as_deref()
@@ -758,7 +758,7 @@ fn write_shape(out: &mut String, shape: &Shape, zoom: Zoom) {
 }
 
 /// A marker's symbol: one group, centred on `at`, that the zoom script keeps at
-/// its pixel size. Every shape is a path or a circle in pixels — nothing loaded,
+/// its pixel size. Every shape is a path or a circle in pixels - nothing loaded,
 /// nothing `cleanSvg` could strip. 3D shapes are drawn as what they look like
 /// from the side: a cube a square, a sphere a disc, a pyramid and a tetrahedron
 /// a triangle (up, and down, so that the two stay apart).

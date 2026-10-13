@@ -5,38 +5,38 @@
 //! **Vertical** (the isochore, TVT): under each node of the top, the base is
 //! found in plan view and its height read there; the thickness is the
 //! difference, turned into *top above base* by the caller's [`Up`]. Exact for
-//! the surfaces as stated — a triangle is linear, a quadrilateral bilinear —
+//! the surfaces as stated - a triangle is linear, a quadrilateral bilinear -
 //! and nothing else is assumed.
 //!
 //! **Stratigraphic** (the isopach, TST): the vertical thickness times the
 //! cosine of the top's dip. That is the **parallel-beds** formula: exact when
 //! the base runs parallel to the top, an approximation otherwise. The exact
-//! measure — along the top's normal until it meets the base — is a ray cast,
+//! measure - along the top's normal until it meets the base - is a ray cast,
 //! and a ray caster is not part of this crate. Writing one here would be a
 //! second one to replace later; the name of the method travels with the values
 //! instead, so nobody reads the approximation as the exact thing.
 //!
 //! # What has no value, and why it is counted
 //!
-//! Every one of these is a `NaN` in `values` and a count beside it — the house
+//! Every one of these is a `NaN` in `values` and a count beside it - the house
 //! rule: a hole that is not counted reads as a surface that is complete.
 //!
 //! - **outside**: no face of the base lies under the node. Extrapolating the
 //!   base past its edge would draw a thickness where nobody picked a horizon;
-//! - **folded**: several faces lie under the node and disagree on its height —
+//! - **folded**: several faces lie under the node and disagree on its height -
 //!   a reverse fault, an overturned fold, a surface that crosses itself. Which
 //!   one is *the* base there is a geological decision, not a numerical one;
-//! - **unplaced**: the node itself has no finite position — a hole of a grid;
+//! - **unplaced**: the node itself has no finite position - a hole of a grid;
 //! - **undipped** (stratigraphic only): the top has no normal at the node.
 //!
 //! And one that **keeps** its value: **crossed**, where the base lies above
-//! the top. A negative thickness is a finding — two picks that cross — and
+//! the top. A negative thickness is a finding - two picks that cross - and
 //! setting it to zero or `NaN` would hide exactly where the interpretation
 //! needs a second look.
 //!
-//! Base faces that cannot be interpolated — a corner that is not a finite
+//! Base faces that cannot be interpolated - a corner that is not a finite
 //! point, no area in plan (a vertical face says nothing about *one* height), a
-//! quadrilateral that is not convex in plan — are **set aside** and counted.
+//! quadrilateral that is not convex in plan - are **set aside** and counted.
 
 use crate::Error;
 use crate::heights::{Height, Heights, check};
@@ -47,9 +47,9 @@ pub use crate::heights::Surface;
 /// Which thickness.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Measure {
-    /// The isochore — true vertical thickness.
+    /// The isochore - true vertical thickness.
     Vertical,
-    /// The isopach — true stratigraphic thickness, by the parallel-beds
+    /// The isopach - true stratigraphic thickness, by the parallel-beds
     /// formula. See the module documentation.
     Stratigraphic,
 }
@@ -67,7 +67,7 @@ pub struct Thickness {
     pub unplaced: usize,
     /// Nodes where the top has no normal (stratigraphic only).
     pub undipped: usize,
-    /// Nodes where the base lies above the top — **kept**, negative.
+    /// Nodes where the base lies above the top - **kept**, negative.
     pub crossed: usize,
     /// Base faces that cannot be interpolated.
     pub set_aside: usize,
@@ -92,7 +92,14 @@ pub fn thickness(top: &Surface, base: &Surface, up: Up, measure: Measure) -> Res
         crossed: 0,
         set_aside: heights.set_aside(),
     };
-    for (at, p) in top.points.chunks_exact(3).enumerate() {
+    for (at, p) in top
+        .points
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .map(|c| c.as_slice())
+        .enumerate()
+    {
         if !p.iter().all(|c| c.is_finite()) {
             out.unplaced += 1;
             continue;
@@ -109,7 +116,7 @@ pub fn thickness(top: &Surface, base: &Surface, up: Up, measure: Measure) -> Res
         // The dip of a quadrilateral top, read on its two halves: the normal at
         // a node is the area-weighted mean of the faces around it, so which
         // diagonal is cut moves it only where the cell is warped.
-        for q in top.quads.chunks_exact(4) {
+        for q in top.quads.as_chunks::<4>().0.iter().map(|c| c.as_slice()) {
             triangles.extend_from_slice(&[q[0], q[1], q[2], q[0], q[2], q[3]]);
         }
         if triangles.is_empty() {
@@ -156,7 +163,7 @@ mod tests {
     }
 
     /// A top with a node at each of these plan positions, on `z(x, y)`, and
-    /// the fan of triangles of a regular grid over them — for the dip.
+    /// the fan of triangles of a regular grid over them - for the dip.
     fn grid_top(n: usize, step: f64, z: impl Fn(f64, f64) -> f64) -> (Vec<f64>, Vec<u32>) {
         let mut points = Vec::new();
         for j in 0..n {
@@ -177,7 +184,7 @@ mod tests {
     }
 
     /// **Parallel planes, dipping**: the isochore is the vertical gap
-    /// everywhere, the isopach that gap times the cosine of the dip — the case
+    /// everywhere, the isopach that gap times the cosine of the dip - the case
     /// where the parallel-beds formula is exact.
     #[test]
     fn two_parallel_planes_give_the_vertical_gap_and_its_cosine() {
@@ -261,7 +268,7 @@ mod tests {
         assert_eq!((found.folded, found.outside, found.unplaced), (1, 1, 1));
     }
 
-    /// **A node on an edge shared by two faces is not a fold** — both faces
+    /// **A node on an edge shared by two faces is not a fold** - both faces
     /// find it, and they agree.
     #[test]
     fn a_node_on_a_shared_edge_is_not_a_fold() {
@@ -280,7 +287,7 @@ mod tests {
     }
 
     /// **A grid cell is bilinear, not two triangles.** Over `z = x·y` on the
-    /// unit square, the centre is 0.25 bilinearly — and 0 or 0.5 on either
+    /// unit square, the centre is 0.25 bilinearly - and 0 or 0.5 on either
     /// diagonal cut, which is what a split would have answered.
     #[test]
     fn a_grid_cell_reads_bilinearly() {
@@ -305,8 +312,8 @@ mod tests {
         );
     }
 
-    /// A face that says nothing about *one* height — vertical, or with a `NaN`
-    /// corner — is set aside and counted; the others still answer.
+    /// A face that says nothing about *one* height - vertical, or with a `NaN`
+    /// corner - is set aside and counted; the others still answer.
     #[test]
     fn a_vertical_or_holed_face_is_dropped_and_counted() {
         let mut base_points = vec![0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 10.0, 0.0];

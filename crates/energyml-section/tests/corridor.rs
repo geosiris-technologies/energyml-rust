@@ -71,8 +71,8 @@ fn tree(index: &Index<usize>, window: &Rect) -> Vec<usize> {
     index.query(window).into_iter().copied().collect()
 }
 
-/// Whatever the tree answers is what a scan answers — the build, the overflow
-/// list, and the rebuild past its size — over many random queries, large and
+/// Whatever the tree answers is what a scan answers - the build, the overflow
+/// list, and the rebuild past its size - over many random queries, large and
 /// small, and boxes that only touch.
 #[test]
 fn the_rtree_equals_a_linear_scan_on_random_boxes() {
@@ -221,7 +221,7 @@ fn lambert() -> System {
 /// The package: 14 columns by 8 rows of vertical wells, one every 100 m from
 /// (-200, -200), with a position nudged off the grid by the generator. Every
 /// fifth well is one wellbore with a **second trajectory collared 30 m to the
-/// east** — the two members of a wellbore that a corridor's edge can separate.
+/// east** - the two members of a wellbore that a corridor's edge can separate.
 struct Package {
     source: Prefetched,
     /// Every well's uri, and where its head is.
@@ -304,7 +304,7 @@ fn scene(system: &System) -> Scene<'_> {
 }
 
 /// The long section along y = 250 over 1 000 m, 90 m each side, and cross
-/// sections across it — a corridor that cuts the grid in a band.
+/// sections across it - a corridor that cuts the grid in a band.
 fn inputs(package: &Package, left: f64, right: f64) -> Inputs {
     Inputs {
         trace: vec![[0.0, 250.0], [500.0, 280.0], [1000.0, 250.0]],
@@ -349,7 +349,7 @@ fn catalogue(inputs: &Inputs, contribution: &Contribution) -> Catalogue {
     assemble(inputs, std::slice::from_ref(contribution)).expect("assembles")
 }
 
-/// The wells whose head is within `reach` of a section's trace — what the
+/// The wells whose head is within `reach` of a section's trace - what the
 /// window must hold at the least, computed here by the distance to a segment,
 /// not by a box.
 fn near_a_trace(package: &Package, inputs: &Inputs) -> usize {
@@ -435,7 +435,7 @@ fn far_wells_stand_alone(bounded: &Catalogue, far: &BTreeSet<String>) {
 
 /// **The drawing does not change.** Read everything, or read what is near and
 /// stand the far wellbores in by their heads: the same sections, the same plan,
-/// the same near rows — and the far wells, member by member, refused as far.
+/// the same near rows - and the far wells, member by member, refused as far.
 #[test]
 fn the_catalogue_is_the_same_with_and_without_the_corridor_filter() {
     let package = package();
@@ -489,7 +489,7 @@ fn the_catalogue_is_the_same_with_and_without_the_corridor_filter() {
 }
 
 /// A well whose head is 0.9 of the width off the trace is **kept** by the
-/// section's rule, so the filter must read it — a box grown by nothing would
+/// section's rule, so the filter must read it - a box grown by nothing would
 /// have left it out.
 #[test]
 fn a_well_at_the_edge_of_the_band_is_read() {
@@ -497,7 +497,7 @@ fn a_well_at_the_edge_of_the_band_is_read() {
     let edge = uuid(0x70, 77_777);
     let d = uuid(0x10, 77_777);
     // On the long section's first leg, (0,250) to (500,280): 81 m above a foot
-    // at x = 300 — a perpendicular distance of about 80.9, inside the 90 m.
+    // at x = 300 - a perpendicular distance of about 80.9, inside the 90 m.
     let at = [300.0, 250.0 + 300.0 * 30.0 / 500.0 + 81.0];
     let mut extra: Vec<Box<dyn DynObject>> = vec![
         Box::new(datum(&d, at[0], at[1])),

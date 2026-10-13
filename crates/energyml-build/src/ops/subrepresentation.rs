@@ -1,4 +1,4 @@
-//! `subrepresentation` — a `SubRepresentation` of one supporting
+//! `subrepresentation` - a `SubRepresentation` of one supporting
 //! representation: *“select a range of nodes, edges, faces, or volumes (cell)
 //! indices from the topological support of an existing representation to
 //! define a sub-representation”* (RESQML TRG 2.2 §8.9 p. 246).
@@ -12,13 +12,13 @@
 //!
 //! Two ways, a union (`select`):
 //!
-//! - **`indices`** — given, by their index in the support, with the element
+//! - **`indices`** - given, by their index in the support, with the element
 //!   they index: `nodes`, `triangles` or `cells`. **Ordered**: *“An ordered
 //!   list of indexable elements”* (TRG §8.9), so a property on the
 //!   sub-representation lines up with the order written;
-//! - **`ijk-box`** — the rule the reference-model description names for a region of cells: every
+//! - **`ijk-box`** - the rule the reference-model description names for a region of cells: every
 //!   cell whose I, J and K are in three ranges (both ends included, from 0,
-//!   an axis left out whole), in RESQML's cell order — `i` fastest, then `j`,
+//!   an axis left out whole), in RESQML's cell order - `i` fastest, then `j`,
 //!   then `k`. The productive reservoir is the Chalk of the grid: the
 //!   layers 4 to 10 of the reference model, `kFirst = 3`, `kLast = 9`. The arithmetic is
 //!   `energyml_analysis::cells::ijk_box`.
@@ -28,7 +28,7 @@
 //! The support's count of the element comes from **its shape**, never from a
 //! second reading of its XML: the nodes it holds (a 2D grid its declared
 //! `fastest × slowest`), its triangles across patches, the cells of an IJK grid
-//! `Ni × Nj × Nk` — *“NI x NJ x NK”*, the cells a grid declares, defined or
+//! `Ni × Nj × Nk` - *“NI x NJ x NK”*, the cells a grid declares, defined or
 //! not (Technical Usage Guide 2.2 Table 7, as `energyml_domain::property` quotes
 //! it). **An index at or past that count is refused by name**, with the count
 //!, and so is an index given twice: two elements of the
@@ -36,12 +36,12 @@
 //! it two values.
 //!
 //! **Not offered, and why**: `edges` and `faces` have no enumeration a shape
-//! carries — an IJK grid's *“"faces" indexing […] depends on the grid faulting
+//! carries - an IJK grid's *“"faces" indexing […] depends on the grid faulting
 //! and column edge enumeration”* (usage guide §9.12.3 p. 159), a triangulated
 //! surface's edges are numbered by no rule this build reads; the cells of an
 //! unstructured grid are refused by name until something here draws them. A
-//! cell selected that the support leaves **undefined** is legal — its index is
-//! in range — and it is counted and said: it has no geometry to draw.
+//! cell selected that the support leaves **undefined** is legal - its index is
+//! in range - and it is counted and said: it has no geometry to draw.
 //!
 //! # What is written
 //!
@@ -102,7 +102,7 @@ pub enum Select {
 /// The indices, given.
 #[derive(Debug, Params)]
 pub struct Given {
-    /// indices: what they index in the support — its nodes, its triangles, the cells of an IJK grid
+    /// indices: what they index in the support - its nodes, its triangles, the cells of an IJK grid
     pub element: Element,
     /// indices: the elements, by their index in the support from 0, in the order the sub-representation lists them
     #[param(least = 1, ordered)]
@@ -112,17 +112,17 @@ pub struct Given {
 /// An IJK box: three ranges, each end included.
 #[derive(Debug, Params)]
 pub struct IjkBox {
-    /// ijk-box: the first I, from 0 — left out, 0
+    /// ijk-box: the first I, from 0 - left out, 0
     pub i_first: Option<usize>,
-    /// ijk-box: the last I, included — left out, the last of the grid
+    /// ijk-box: the last I, included - left out, the last of the grid
     pub i_last: Option<usize>,
-    /// ijk-box: the first J, from 0 — left out, 0
+    /// ijk-box: the first J, from 0 - left out, 0
     pub j_first: Option<usize>,
-    /// ijk-box: the last J, included — left out, the last of the grid
+    /// ijk-box: the last J, included - left out, the last of the grid
     pub j_last: Option<usize>,
-    /// ijk-box: the first K (a layer, gaps not counted), from 0 — left out, 0
+    /// ijk-box: the first K (a layer, gaps not counted), from 0 - left out, 0
     pub k_first: Option<usize>,
-    /// ijk-box: the last K, included — left out, the last of the grid
+    /// ijk-box: the last K, included - left out, the last of the grid
     pub k_last: Option<usize>,
 }
 
@@ -132,7 +132,7 @@ pub struct SubrepresentationParams {
     /// How the elements are chosen.
     #[param(flatten)]
     pub select: Select,
-    /// What the sub-representation represents, when named — it may be another interpretation than the support's (TRG 2.2 §8.9).
+    /// What the sub-representation represents, when named - it may be another interpretation than the support's (TRG 2.2 §8.9).
     #[param(flatten)]
     pub represented: RepresentedParams,
     /// The title and the file.
@@ -143,7 +143,7 @@ pub struct SubrepresentationParams {
 /// What `subrepresentation` takes.
 #[derive(Debug, Inputs)]
 pub struct SubrepresentationInputs {
-    /// the supporting representation — an object of the package, whose elements are chosen
+    /// the supporting representation - an object of the package, whose elements are chosen
     #[input(
         types = "resqml22.IjkGridRepresentation, resqml22.TriangulatedSetRepresentation, resqml22.Grid2dRepresentation, resqml22.PointSetRepresentation, resqml22.PolylineSetRepresentation"
     )]
@@ -160,7 +160,7 @@ fn title_of(shape: &Shape) -> String {
         .unwrap_or_else(|| shape.name.clone())
 }
 
-/// The one IJK patch of a support — its cells, `[ni, nj, nk]`, the RESQML
+/// The one IJK patch of a support - its cells, `[ni, nj, nk]`, the RESQML
 /// index of each cell drawn, and its points.
 type IjkPatch<'a> = (&'a [[u32; 8]], [usize; 3], &'a [u32], &'a [[f64; 3]]);
 
@@ -187,7 +187,7 @@ fn ijk_of(shape: &Shape) -> Result<IjkPatch<'_>, Refusal> {
         ] => Err(Refusal::on(
             "support",
             format!(
-                "`{}` is an unstructured grid: its cells are not selected here yet — nothing in this build draws a sub-representation of them",
+                "`{}` is an unstructured grid: its cells are not selected here yet - nothing in this build draws a sub-representation of them",
                 title_of(shape)
             ),
         )),
@@ -241,7 +241,7 @@ impl Operation for Subrepresentation {
     fn about(&self) -> About {
         About {
             name: "subrepresentation",
-            describe: "a sub-representation of one representation of the package — its nodes, triangles or cells, given by index or as an IJK box",
+            describe: "a sub-representation of one representation of the package - its nodes, triangles or cells, given by index or as an IJK box",
             category: Category::Create,
             makes: &["resqml22.SubRepresentation"],
             recipe: "subrepresentation",
@@ -309,7 +309,7 @@ impl Operation for Subrepresentation {
                     Refusal::on(
                         &slot,
                         format!(
-                            "{why} — `{}` is {} × {} × {} cells",
+                            "{why} - `{}` is {} × {} × {} cells",
                             title_of(&shape),
                             dimensions[0],
                             dimensions[1],
@@ -318,7 +318,7 @@ impl Operation for Subrepresentation {
                     )
                 })?;
                 let said = |axis: usize, r: Option<[usize; 2]>| match r {
-                    Some([a, b]) => format!("{} {a}–{b}", ['I', 'J', 'K'][axis]),
+                    Some([a, b]) => format!("{} {a}-{b}", ['I', 'J', 'K'][axis]),
                     None => format!("every {}", ['I', 'J', 'K'][axis]),
                 };
                 let rule = format!(
@@ -495,7 +495,7 @@ impl Operation for Subrepresentation {
             says.push(Note {
                 key: "undefined-cells",
                 detail: format!(
-                    "{undefined} chosen cell(s) have no geometry — `CellGeometryIsDefined` false on the support: in range, written, and nothing to draw"
+                    "{undefined} chosen cell(s) have no geometry - `CellGeometryIsDefined` false on the support: in range, written, and nothing to draw"
                 ),
             });
         }
@@ -566,7 +566,7 @@ impl Operation for Subrepresentation {
             Slot::required(
                 "indexableElement",
                 Need::Text,
-                "the element the indices index — nodes, triangles, cells",
+                "the element the indices index - nodes, triangles, cells",
             ),
             count("elementCount", "the elements chosen"),
             count("supportCount", "the elements of that kind the support has"),

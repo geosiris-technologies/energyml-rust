@@ -6,12 +6,12 @@
 //! the full uri is used. It prevents sources of
 //! bugs.
 //!
-//! The package is fabricated in memory — never a file — with `X` in versions 1
+//! The package is fabricated in memory - never a file - with `X` in versions 1
 //! and 2, **titled differently**, so that reading the wrong entry shows. A
 //! boundary feature is no representation: `every` then reads what is known of
 //! it, which is what carries the title and the whole object (`Known::json`).
 //!
-//! What would have to break: putting `summary.uuid` back in `every` — both
+//! What would have to break: putting `summary.uuid` back in `every` - both
 //! entries then answer with the title of the same one, and the set of titles
 //! has one member.
 
@@ -115,7 +115,7 @@ fn every_reads_each_version_as_itself() {
     assert_eq!(
         titles.into_iter().collect::<Vec<_>>(),
         vec!["X, first", "X, second"],
-        "each entry is read as itself — the second is not the first read twice"
+        "each entry is read as itself - the second is not the first read twice"
     );
 }
 

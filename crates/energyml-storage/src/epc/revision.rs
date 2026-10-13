@@ -13,10 +13,10 @@
 //! The signal lives in the store, not in the front end's journal, because several
 //! writes never pass through that journal: `create_apply` (thousands of
 //! objects), `repair_references`, `relabel`, `rename`, a package import, the
-//! `put_xml` of an ETP fetch — and the CLI and the Python bridge write through
+//! `put_xml` of an ETP fetch - and the CLI and the Python bridge write through
 //! the same library with no journal at all. An index kept up to date by the front end
 //! would be a second truth about what the store holds. Every object write of
-//! `EpcStore` goes through its `Overlay`, so that is where this is fed — **by the
+//! `EpcStore` goes through its `Overlay`, so that is where this is fed - **by the
 //! gate that writes**, which is the only place that knows what it is writing.
 //!
 //! The log is **bounded**. Past its capacity the oldest entries are dropped and
@@ -24,7 +24,7 @@
 //! means "rebuild", never "nothing". An answer that is too wide costs a rebuild;
 //! an answer that is too narrow is a stale index that looks exactly like a
 //! correct one. The same bargain holds for [`What`]: a gate that cannot tell says
-//! more than it knows, **in one direction only** — never less.
+//! more than it knows, **in one direction only** - never less.
 //!
 //! Pure data: nothing here knows what an object, a package or a transaction is.
 //! The log sits behind a mutex because a dataset is written through `&self`
@@ -34,7 +34,7 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::Mutex;
 
-/// What changed after a given revision, **per object name only** — the shape the
+/// What changed after a given revision, **per object name only** - the shape the
 /// package index asks for. [`Revisions::changes_since`] says more.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Changed {
@@ -42,7 +42,7 @@ pub enum Changed {
     Nothing,
     /// Exactly these objects (lower-cased uuids) were written, and no others.
     /// **The set may be empty**: a dataset or a file was written since, which no
-    /// object name can carry — the revision moved, and a reader of objects alone
+    /// object name can carry - the revision moved, and a reader of objects alone
     /// has nothing to re-read.
     Some(BTreeSet<String>),
     /// The log cannot say which: it overflowed, or something changed that has
@@ -50,7 +50,7 @@ pub enum Changed {
     Everything,
 }
 
-/// What was written in one object — a set of flags, **per ADR-0010**.
+/// What was written in one object - a set of flags, **per ADR-0010**.
 ///
 /// A plain `u8` newtype rather than `bitflags`: the crate has no such dependency
 /// and one set of six bits does not justify adding it.
@@ -70,7 +70,7 @@ impl What {
     pub const CREATED: What = What(8);
     /// The object is gone from the package.
     pub const REMOVED: What = What(16);
-    /// The uuid or the `objectVersion` — what a uri is made of — may have moved.
+    /// The uuid or the `objectVersion` - what a uri is made of - may have moved.
     pub const IDENTITY: What = What(32);
 
     /// A gate that cannot tell what it changed in an object that **stays**:
@@ -107,12 +107,12 @@ impl What {
     }
 
     /// What editing **one value at this dotted path** changes, as far as the
-    /// path alone can tell — the rule of a front ender's `kindOfEdit` and
+    /// path alone can tell - the rule of a front ender's `kindOfEdit` and
     /// `movesIdentity`, which descends
     /// here so that there is one reading of it.
     ///
     /// - a path in the citation (`Citation`, `Citation.Title`): `CITATION`;
-    /// - any other path: `BODY | LINKS_OUT` — the path cannot say whether it
+    /// - any other path: `BODY | LINKS_OUT` - the path cannot say whether it
     ///   reaches a reference, and a gate that misses a moved reference leaves a
     ///   graph that is wrong without a sign. `LINKS_OUT` is dropped afterwards,
     ///   when the object's references are found unmoved ([`EpcStore::edit_at`]);
@@ -183,7 +183,7 @@ impl std::fmt::Debug for What {
 pub struct ObjectChange {
     /// The lower-cased uuid.
     pub uuid: String,
-    /// The uri, when the gate that wrote it had one — filled in by
+    /// The uri, when the gate that wrote it had one - filled in by
     /// `EpcStore::changes_since` from the store when the journal does not hold it.
     pub uri: Option<String>,
     /// What was written, merged over every write of the window.
@@ -191,7 +191,7 @@ pub struct ObjectChange {
 }
 
 /// A dataset of a data file: the file as the package names it, and the path
-/// inside it. **An empty path is the whole file** — a data file brought or
+/// inside it. **An empty path is the whole file** - a data file brought or
 /// replaced in one piece.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DatasetId {
@@ -201,7 +201,7 @@ pub struct DatasetId {
     pub path: String,
 }
 
-/// What one window of writes changed — the merge of every entry between two
+/// What one window of writes changed - the merge of every entry between two
 /// revisions, **one line per object**.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Change {
@@ -215,7 +215,7 @@ pub struct Change {
     pub datasets: Vec<DatasetId>,
     /// A part (attachment, staged bytes) or a media relation moved.
     pub files: bool,
-    /// A proxy was given a data file name — a rename, or a file declared for
+    /// A proxy was given a data file name - a rename, or a file declared for
     /// the first time: `(lower-cased proxy uuid, file name)`, in order.
     pub renamed: Vec<(String, String)>,
 }
@@ -230,7 +230,7 @@ impl Change {
 /// The answer to *what changed since I last looked*.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Since {
-    /// Exactly this, and nothing else — possibly nothing at all.
+    /// Exactly this, and nothing else - possibly nothing at all.
     Exact(Change),
     /// The log cannot say: it overflowed, or something was written that has no
     /// name. The reader rebuilds, never concludes "nothing".
@@ -313,7 +313,7 @@ impl Revisions {
         // Consecutive dataset writes into one file share a line: a SIGEOL import
         // writes tens of thousands of them, and one line each would push every
         // object entry out of the log. The line takes the newest revision, so a
-        // reader who saw the first of them is told about all of them — too wide,
+        // reader who saw the first of them is told about all of them - too wide,
         // never too narrow.
         if let Entry::Datasets { file, paths } = &entry
             && let Some((
@@ -385,7 +385,7 @@ impl Revisions {
         })
     }
 
-    /// Something changed that cannot be named per object — a raw part rewritten.
+    /// Something changed that cannot be named per object - a raw part rewritten.
     /// Advances, and every reader whose revision is older must rebuild.
     pub fn touch_all(&mut self) -> u64 {
         let mut inner = self.lock();
@@ -415,7 +415,7 @@ impl Revisions {
     /// What changed after `since`, per object name only.
     ///
     /// `Nothing` when `since` is the current revision; the uuids when the log
-    /// still reaches back that far; `Everything` otherwise — the log
+    /// still reaches back that far; `Everything` otherwise - the log
     /// overflowed, a `touch_all` came after `since`, or `since` is from the
     /// future (a revision this store never issued, so the reader belongs to
     /// another store).

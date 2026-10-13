@@ -10,9 +10,9 @@
 //! |---|---|
 //! | [`units`] | how much is `1000 ft` in metres |
 //! | [`crs`] | where is this object, and which way does z count |
-//! | [`reproject`] | how do I get that into WGS 84 (a seam — see the module) |
+//! | [`reproject`] | how do I get that into WGS 84 (a seam - see the module) |
 //! | [`values`] | give me the numbers, whichever of the twenty array forms this is |
-//! | [`stats`] | what is in those numbers — extremes, distribution, how much is `NaN` |
+//! | [`stats`] | what is in those numbers - extremes, distribution, how much is `NaN` |
 //! | [`metadata`] | give me that value, even if it lives three objects away |
 //! | [`property`] | what do these numbers hang on, and how many should there be |
 //! | [`property_kind`] | what kind of quantity is it, and what is it a kind *of* |
@@ -27,8 +27,8 @@
 //! **Read by shape, never by version.** A field is found by its name and its
 //! binding, not by matching a concrete generated type. Two hard-won reasons:
 //!
-//! 1. The same concept is spelled differently across versions — RESQML 2.0.1's
-//!    `XOffset` is eml 2.3's `OriginProjectedCoordinate1`, two objects away —
+//! 1. The same concept is spelled differently across versions - RESQML 2.0.1's
+//!    `XOffset` is eml 2.3's `OriginProjectedCoordinate1`, two objects away -
 //!    and a reader that knows only one spelling returns a **plausible empty
 //!    answer** rather than an error.
 //! 2. The generated Rust identifiers are not stable even when the wire format
@@ -40,8 +40,8 @@
 //!
 //! **What cannot be read is named, never defaulted.** A unit outside the
 //! table, a system with no EPSG code, an azimuth from an unsupported
-//! reference: each is an error that says what was missing. The alternative —
-//! returning the value untouched — is indistinguishable from success, and puts
+//! reference: each is an error that says what was missing. The alternative -
+//! returning the value untouched - is indistinguishable from success, and puts
 //! models in the wrong place with every coordinate still looking reasonable.
 //!
 //! # Layering
@@ -60,7 +60,7 @@ pub mod color;
 /// The colour cascade under the inheritance order: the walk of `inherit`, asked
 /// *"does this object carry a colour?"*, and the path that answered.
 pub mod color_inherit;
-/// The colour of an object per target — walked once, resumed on demand, kept
+/// The colour of an object per target - walked once, resumed on demand, kept
 /// between questions and invalidated by the objects a change touched.
 pub mod color_walks;
 pub mod crs;
@@ -78,7 +78,7 @@ mod scan {
 pub mod error;
 pub mod geolts;
 pub mod geolts_rank;
-/// What an object inherits, by which path — the order of ADR-0009, over the
+/// What an object inherits, by which path - the order of ADR-0009, over the
 /// package index.
 pub mod inherit;
 pub mod integrity;
@@ -99,7 +99,7 @@ pub mod series;
 pub mod source;
 pub mod stats;
 /// A wellbore's stratigraphy carried by measured depth onto its other
-/// representations — the frames that state no unit, and the trajectories.
+/// representations - the frames that state no unit, and the trajectories.
 pub mod strata_by_md;
 pub mod stratigraphy;
 pub mod table;
@@ -107,7 +107,7 @@ pub mod units;
 pub mod values;
 pub mod water_analysis;
 /// Which stratigraphic unit each interval of a wellbore frame belongs to, and
-/// the colour the file gives it — what a well is coloured by, section by
+/// the colour the file gives it - what a well is coloured by, section by
 /// section.
 pub mod well_strata;
 pub mod wellbore_table;

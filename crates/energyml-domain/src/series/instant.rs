@@ -1,12 +1,12 @@
 //! An `xsd:dateTime` to Unix seconds, or a refusal that says why.
 //!
 //! `energyml_storage::epc::core_props::unix_seconds` reads the one form a
-//! package's `core.xml` is written in — `Z`, whole seconds — and says `None`
+//! package's `core.xml` is written in - `Z`, whole seconds - and says `None`
 //! for the rest. A series is read from files other people wrote: a PRODML
 //! `dTim` carries an offset or a fraction as readily as a `Z`
 //! (TimeSeriesData.xsd l. 100, the pattern `.+T.+[Z+\-].*` on `dTim`). This
-//! reads the whole lexical form of XML Schema 1.0 Part 2 §3.2.7 —
-//! `-?YYYY-MM-DDThh:mm:ss(.s+)?(Z|(+|-)hh:mm)?` — and refuses by name what it
+//! reads the whole lexical form of XML Schema 1.0 Part 2 §3.2.7 -
+//! `-?YYYY-MM-DDThh:mm:ss(.s+)?(Z|(+|-)hh:mm)?` - and refuses by name what it
 //! cannot place:
 //!
 //! - **no time zone**: §3.2.7 calls such a value *"untimezoned"*; placing it on
@@ -46,7 +46,7 @@ pub fn unix_seconds(text: &str) -> Result<f64, String> {
         return Err(format!("{year:04}-{month:02} has no day {day}"));
     }
 
-    // The zone: `Z`, `+hh:mm`, `-hh:mm` — the last `+` or `-` after the time's
+    // The zone: `Z`, `+hh:mm`, `-hh:mm` - the last `+` or `-` after the time's
     // own digits, since the time holds none.
     let (time, offset_minutes) = if let Some(time) = rest.strip_suffix('Z') {
         (time, 0)
@@ -125,7 +125,7 @@ fn days_in_month(year: i64, month: i64) -> i64 {
     }
 }
 
-/// Days since 1970-01-01 of a proleptic Gregorian date — Howard Hinnant's
+/// Days since 1970-01-01 of a proleptic Gregorian date - Howard Hinnant's
 /// `days_from_civil` (*chrono-Compatible Low-Level Date Algorithms*).
 fn days_from_civil(year: i64, month: i64, day: i64) -> i64 {
     let y = if month <= 2 { year - 1 } else { year };

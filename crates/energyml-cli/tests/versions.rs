@@ -7,7 +7,7 @@
 //! The package is **fabricated here**: one feature in versions `1` and `2`, and
 //! one that declares none. `list` must tell the two versions apart, and print
 //! nothing extra for the object without one. The wording is
-//! `ObjectHeader::titled` / `ObjectId::label` — the CLI only calls it, and
+//! `ObjectHeader::titled` / `ObjectId::label` - the CLI only calls it, and
 //! that is what this test confronts.
 
 use std::path::PathBuf;

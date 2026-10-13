@@ -79,7 +79,7 @@ fn frame(uuid: &str, trajectory: &str) -> WellboreFrameRepresentation {
 }
 
 /// Two wells in two systems (EPSG 2154 and 27572), a frame on the first, a
-/// frame whose trajectory is absent, and a vertical CRS — an object that is no
+/// frame whose trajectory is absent, and a vertical CRS - an object that is no
 /// well at all.
 struct Package;
 
@@ -140,7 +140,7 @@ fn ask(ids: &[&str]) -> Vec<String> {
 /// datum: both read the same point, and the answer names the object as asked.
 ///
 /// Casser : in `heads.rs`, read a frame's head from the frame itself (`root`
-/// instead of `followed`) — the frame is refused as having no `MdInterval`; or
+/// instead of `followed`) - the frame is refused as having no `MdInterval`; or
 /// swap `x` and `y` in `place`.
 #[test]
 fn a_trajectory_and_its_frame_are_collared_at_the_same_datum() {
@@ -159,8 +159,8 @@ fn a_trajectory_and_its_frame_are_collared_at_the_same_datum() {
 /// package does not know. Nothing is placed at the origin instead.
 ///
 /// Casser : in `heads.rs`, drop the `other =>` arm's `return Err` (let any
-/// object through to `head_of`) — the type is no longer named; or turn a
-/// refusal into `[0, 0]` — the three refusals vanish.
+/// object through to `head_of`) - the type is no longer named; or turn a
+/// refusal into `[0, 0]` - the three refusals vanish.
 #[test]
 fn what_is_no_well_is_refused_by_name_and_the_others_go_on() {
     let found = heads::of_objects(
@@ -190,7 +190,7 @@ fn what_is_no_well_is_refused_by_name_and_the_others_go_on() {
 /// Two heads in two systems are **refused as a lot**, naming the second well
 /// and both systems: measuring them in one plane would mix two frames.
 ///
-/// Casser : in `of_objects`, drop the `*first != system` arm — the lot answers
+/// Casser : in `of_objects`, drop the `*first != system` arm - the lot answers
 /// with one head in 27572 beside one in 2154, and this test fails on
 /// `unwrap_err`.
 #[test]
@@ -206,7 +206,7 @@ fn heads_in_two_systems_are_refused() {
     assert!(heads::of_objects(&Package, &ask(&[TRAJ_B]), Placement::Projected).is_ok());
 }
 
-/// `trajectories_of` is one uri per trajectory and never a frame — a frame
+/// `trajectories_of` is one uri per trajectory and never a frame - a frame
 /// would repeat its trajectory's head.
 ///
 /// Casser : match `Representation` instead of `…TrajectoryRepresentation`.

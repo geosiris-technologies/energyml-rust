@@ -9,7 +9,7 @@
 //! is cited, not read at run time).
 //!
 //! A test that only asserted silence on the twin could not fail; the finding
-//! on the broken object is what gives each one its teeth — and each was run
+//! on the broken object is what gives each one its teeth - and each was run
 //! red once, by emptying the check it guards, before being trusted.
 
 use energyml_core::registry::DynObject;
@@ -130,7 +130,7 @@ fn integers(values: &[i64], null: i64) -> eml23::IntegerXmlArray {
     }
 }
 
-/// A category table keyed by 1, 2, 3 — the shape of a lithologies table, a
+/// A category table keyed by 1, 2, 3 - the shape of a lithologies table, a
 /// `KeyColumn` and a value column, both inline.
 fn table() -> eml23::ColumnBasedTable {
     let column = |title: &str, values: &[i64]| eml23::Column {
@@ -246,7 +246,7 @@ fn well(uuid: &str, name: &str) -> witsml21::Well {
     }
 }
 
-/// A `TimeSeriesData` whose `asset identifier` resolves to nothing — the
+/// A `TimeSeriesData` whose `asset identifier` resolves to nothing - the
 /// orphan series. The URI grammar is the
 /// Energistics Identifier Specification v4.0 §6.3 p. 14.
 #[test]
@@ -326,7 +326,7 @@ fn trajectory(uuid: &str, wellbore: &str, definitive: Option<bool>) -> witsml21:
     }
 }
 
-/// Two `Trajectory` `Definitive` on one wellbore — WITSML TRG 2.1 §16.6
+/// Two `Trajectory` `Definitive` on one wellbore - WITSML TRG 2.1 §16.6
 /// p. 350: *"There can only be one trajectory per wellbore with
 /// definitive=true"*. The finding is the wellbore's, and it names both.
 #[test]
@@ -404,7 +404,7 @@ fn fault(
     }
 }
 
-/// `IsListric` on a reverse fault (F9) — Interpretations.xsd l. 659–662,
+/// `IsListric` on a reverse fault (F9) - Interpretations.xsd l. 659-662,
 /// TRG 2.2 §6.20 p. 188: *"Must not be present if the fault is not normal."*
 #[test]
 fn e07_is_listric_on_a_reverse_fault_is_found_once() {
@@ -520,7 +520,7 @@ fn earth_model(uuid: &str, set: &str) -> resqml22::EarthModelInterpretation {
 
 /// A `WellboreInterpretationSet` → a collection `HomogeneousDatatype`
 /// true that mixes a `WellboreInterpretation` and a `HorizonInterpretation`.
-/// Two rules, two findings expected: Collection.xsd l. 66–70 on the collection's flag, and TRG 2.2
+/// Two rules, two findings expected: Collection.xsd l. 66-70 on the collection's flag, and TRG 2.2
 /// §6.19 p. 187 (*"the DataobjectCollection must only contain
 /// WellboreInterpretation"*) on the earth model's set.
 #[test]
@@ -606,7 +606,7 @@ fn e08_a_mixed_wellbore_set_is_found_by_its_two_rules_once_each() {
 }
 
 /// The same flag, written on the association itself (Collection.xsd
-/// l. 82–86): its own list is judged, and the finding is the association
+/// l. 82-86): its own list is judged, and the finding is the association
 /// set's, the association named by its index.
 #[test]
 fn e08_an_association_claiming_one_type_and_listing_two_is_found_once() {
@@ -649,15 +649,15 @@ fn e08_an_association_claiming_one_type_and_listing_two_is_found_once() {
 /// `dimensionless`). The rule is
 /// already `property_kind::check`'s (`UomOutsideQuantityClass`); what is
 /// missing is the table of units per class, so today the answer
-/// is `QuantityClassNotCheckable` — honest, and not a finding.
+/// is `QuantityClassNotCheckable` - honest, and not a finding.
 ///
 /// It is meant to stay red until the units table is done. Ignored so the suite stays green, runnable with `--ignored` to
 /// see it red; the day it lands, the `ignore` goes and this is the test.
 /// The units of `dimensionless` are the sixteen of `DimensionlessUom` in EML
-/// 2.3 QuantityClass.xsd (`%`, `Euc` and its prefixes, `ppk`, `ppm`) — `g/L`
+/// 2.3 QuantityClass.xsd (`%`, `Euc` and its prefixes, `ppk`, `ppm`) - `g/L`
 /// is `mass per volume`.
 #[test]
-#[ignore = "the units of a quantity class are not in this build — red until then, deliberately"]
+#[ignore = "the units of a quantity class are not in this build - red until then, deliberately"]
 fn e05_a_unit_outside_its_kinds_quantity_class_is_a_defect() {
     use energyml_domain::property::PropertyKindRef;
     use energyml_domain::property_kind::{self, KindIssue, Resolver};

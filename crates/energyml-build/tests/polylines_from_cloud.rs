@@ -1,4 +1,4 @@
-//! `polylines-from-cloud` — fake, dated test data. A vertical polyline
+//! `polylines-from-cloud` - fake, dated test data. A vertical polyline
 //! descends from each point of a cloud.
 
 use energyml_build::operation::{Choices, Fitness, Identity, Numbers, Registry, When};
@@ -77,7 +77,7 @@ fn a_surface_is_offered_to_the_operation() {
 
 /// **The test that counts: the top node is, bit for bit, the point of the cloud.**
 ///
-/// Nothing recomputes it — each polyline starts from its head as it is — and
+/// Nothing recomputes it - each polyline starts from its head as it is - and
 /// it is what a point added by mistake would break first: a
 /// rounding or a silent reprojection would make the top node drift
 /// without any count showing it.
@@ -158,7 +158,7 @@ fn the_length_goes_down_in_the_sense_of_the_crs() {
 }
 
 /// **A seed reproduces the same draw.** Two runs, same seed: same
-/// cut counts, same points. A different seed draws others —
+/// cut counts, same points. A different seed draws others -
 /// otherwise the test could never turn red.
 #[test]
 fn a_seed_redoes_the_same_polylines() {
@@ -214,7 +214,7 @@ fn a_seed_redoes_the_same_polylines() {
     assert_ne!(
         points_of(&a),
         points_of(&c),
-        "a different seed draws differently — else this proves nothing"
+        "a different seed draws differently - else this proves nothing"
     );
 }
 

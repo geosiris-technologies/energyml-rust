@@ -1,21 +1,21 @@
-//! `zone-statistics` — the statistics of a property per zone or per
+//! `zone-statistics` - the statistics of a property per zone or per
 //! stratigraphic unit, written as an `eml23.ColumnBasedTable`: one row per
 //! group.
 //!
-//! `energyml-domain` has the statistics; what was missing is the slicing —
+//! `energyml-domain` has the statistics; what was missing is the slicing -
 //! restricting to a sub-representation, to a stratigraphic unit. So:
 //!
-//! - **the slicing is [`energyml_analysis::groups`]** — a key per element,
+//! - **the slicing is [`energyml_analysis::groups`]** - a key per element,
 //!   the elements without one counted apart;
 //! - **the statistics are [`energyml_domain::stats::Summary`]**, one per group,
-//!   never a second mean written here. Its rule is the one needed here: a `NaN` —
-//!   a null — is counted apart and never averaged;
+//!   never a second mean written here. Its rule is the one needed here: a `NaN` -
+//!   a null - is counted apart and never averaged;
 //! - **this is the seam**: what the values are, what the keys are, and whether
 //!   the two lie on the same elements.
 //!
 //! # Two groupings
 //!
-//! - **`by = zone`**: the key of an element is a code — a discrete property on
+//! - **`by = zone`**: the key of an element is a code - a discrete property on
 //!   the same elements (a region, a facies, a zone index), given as a field or
 //!   as a property of the package. A null code puts its element in no group;
 //!   a code that is not a whole number is refused by its rank, never rounded;
@@ -40,12 +40,12 @@
 //! One row per group, in key order: the key (the code, or the rank of the unit
 //! in the frame's order), for a unit its title and uuid, the count of values
 //! summarised and the count of nulls, then minimum, maximum, mean and the
-//! **population** standard deviation — each of the last four under the kind
+//! **population** standard deviation - each of the last four under the kind
 //! of the values, in their unit, with the facet eml 2.3 has for the first
 //! three (`minimum`, `maximum`, `average`, kind `statistics`). There is no
 //! facet for a deviation in the closed list, and an extension would be a
 //! vocabulary invented here: the column says it by its title and description.
-//! A group whose values are all null keeps its row, its statistics `NaN` — a
+//! A group whose values are all null keeps its row, its statistics `NaN` - a
 //! zone with no measure is news, not an omission.
 
 use serde_json::{Value, json};
@@ -71,7 +71,7 @@ pub struct ZoneStatistics;
 /// What the values are grouped by.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Choice)]
 pub enum By {
-    /// The zone code of each element — a discrete property on the same elements.
+    /// The zone code of each element - a discrete property on the same elements.
     Zone,
     /// The stratigraphic unit a wellbore frame names for each interval.
     Unit,
@@ -94,21 +94,21 @@ pub struct ZoneStatisticsParams {
 /// What `zone-statistics` takes.
 #[derive(Debug, Inputs)]
 pub struct ZoneStatisticsInputs {
-    /// the values to summarise — a field laid over a piece, one value per element
+    /// the values to summarise - a field laid over a piece, one value per element
     pub values: Option<Field>,
     /// or a property of the package whose values are read
     #[input(
         types = "resqml22.ContinuousProperty, resqml22.DiscreteProperty, resqml20.obj_ContinuousProperty, resqml20.obj_DiscreteProperty"
     )]
     pub property: Option<ObjectIn>,
-    /// the zone code of each element — a discrete field over the same elements
+    /// the zone code of each element - a discrete field over the same elements
     pub zones: Option<Field>,
     /// or a discrete property of the package over the same elements
     #[input(
         types = "resqml22.DiscreteProperty, resqml20.obj_DiscreteProperty, resqml20.obj_CategoricalProperty"
     )]
     pub zone_property: Option<ObjectIn>,
-    /// the wellbore frame whose intervals name their stratigraphic unit — to group by unit
+    /// the wellbore frame whose intervals name their stratigraphic unit - to group by unit
     #[input(types = "resqml22.WellboreFrameRepresentation, resqml20.obj_WellboreFrameRepresentation")]
     pub frame: Option<ObjectIn>,
 }
@@ -143,7 +143,7 @@ fn from_field(field: &Field, bag: &Pieces) -> Read {
     }
 }
 
-/// The values of a property of the package, as the boundary read them — or
+/// The values of a property of the package, as the boundary read them - or
 /// why they cannot be summarised.
 fn from_property(object: &ObjectIn, slot: &'static str) -> Result<Read, Refusal> {
     let Some(property) = &object.known.property else {
@@ -159,7 +159,7 @@ fn from_property(object: &ObjectIn, slot: &'static str) -> Result<Read, Refusal>
         return Err(Refusal::on(
             slot,
             format!(
-                "`{}` holds {:?} values per element — a vector or a tensor has no single statistic",
+                "`{}` holds {:?} values per element - a vector or a tensor has no single statistic",
                 object.name, property.value_count
             ),
         ));
@@ -220,13 +220,13 @@ fn codes(read: &Read, slot: &'static str) -> Result<Vec<Option<i64>>, Refusal> {
             } else if v.is_finite() && v.fract() == 0.0 && v.abs() < 9.0e15 {
                 Ok(Some(v as i64))
             } else {
-                Err(Refusal::on(slot, format!("element {rank} holds {v}, which is no zone code — a code is a whole number, and rounding it would pick a zone")))
+                Err(Refusal::on(slot, format!("element {rank} holds {v}, which is no zone code - a code is a whole number, and rounding it would pick a zone")))
             }
         })
         .collect()
 }
 
-/// Whether two lists lie on the same elements — or the refusal that says how
+/// Whether two lists lie on the same elements - or the refusal that says how
 /// they do not.
 fn same_elements(values: &Read, keys: &Read, slot: &'static str) -> Result<(), Refusal> {
     if values.on != keys.on {
@@ -312,7 +312,7 @@ impl Operation for ZoneStatistics {
     fn about(&self) -> About {
         About {
             name: "zone-statistics",
-            describe: "the statistics of a property per zone or per stratigraphic unit — count, nulls, minimum, maximum, mean, deviation — as a table, one row per group",
+            describe: "the statistics of a property per zone or per stratigraphic unit - count, nulls, minimum, maximum, mean, deviation - as a table, one row per group",
             category: Category::Analysis,
             makes: &["eml23.ColumnBasedTable"],
             recipe: "zone-statistics",
@@ -346,7 +346,7 @@ impl Operation for ZoneStatistics {
         match (&inputs.values, &inputs.property) {
             (Some(_), Some(_)) => Err(Refusal::on(
                 "property",
-                "the values are given twice — a field or a property, not both",
+                "the values are given twice - a field or a property, not both",
             )),
             (None, None) => Err(Refusal::new(
                 "values",
@@ -354,7 +354,7 @@ impl Operation for ZoneStatistics {
             )),
             _ if inputs.zones.is_some() && inputs.zone_property.is_some() => Err(Refusal::on(
                 "zoneProperty",
-                "the zones are given twice — a field or a property, not both",
+                "the zones are given twice - a field or a property, not both",
             )),
             _ => Ok(()),
         }
@@ -439,7 +439,7 @@ impl Operation for ZoneStatistics {
                     return Err(Refusal::on(
                         "frame",
                         format!(
-                            "names a unit per interval, and the values lie on `{}` — group intervals, or give zones",
+                            "names a unit per interval, and the values lie on `{}` - group intervals, or give zones",
                             values.on
                         ),
                     ));
@@ -509,7 +509,7 @@ impl Operation for ZoneStatistics {
         };
         let uom = params.uom.or(values.uom.clone());
 
-        // The statistics, one summary per group — the domain's, never ours.
+        // The statistics, one summary per group - the domain's, never ours.
         let summaries: Vec<Summary> = grouped
             .groups
             .iter()
@@ -588,7 +588,7 @@ impl Operation for ZoneStatistics {
 
         let title = match params.title {
             Some(given) => given.0,
-            None => format!("{} — statistics by {}", values.name, params.by.word()),
+            None => format!("{} - statistics by {}", values.name, params.by.word()),
         };
         let seed = cx.seed(&title);
         let mut rank = 0usize;
@@ -694,10 +694,10 @@ impl Operation for ZoneStatistics {
             )
         };
         vec![
-            number("groupCount", "groups — rows of the table"),
+            number("groupCount", "groups - rows of the table"),
             number("summarisedCount", "values summarised, nulls set aside"),
             number("nullCount", "null values, counted and never averaged"),
-            number("ungroupedCount", "elements with no zone or unit — in no group"),
+            number("ungroupedCount", "elements with no zone or unit - in no group"),
         ]
     }
 }

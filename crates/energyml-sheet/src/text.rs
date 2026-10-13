@@ -1,14 +1,14 @@
 //! Measuring text against the font the sheet is written in, and wrapping it.
 //!
 //! Sheet design: measuring and wrapping. The sheet is a document meant
-//! to be read on paper or in a browser with no font file of its own — so a
+//! to be read on paper or in a browser with no font file of its own - so a
 //! line break has to be computed here, in Rust, from a table of measured
 //! advances (`widths`), never guessed from a character count. "iiiiii" and
 //! "MMMMMM" are the same length and nowhere near the same width.
 //!
 //! Everything in this module works in **points** (pt), the unit the sheet
 //! writes text in. Converting a line's height to millimetres, for the
-//! layout's vertical arithmetic, is [`crate::layout`]'s job — this module
+//! layout's vertical arithmetic, is [`crate::layout`]'s job - this module
 //! never needs to know what a millimetre is.
 
 // Written by scripts/sheet-font-widths.py, checked by its `--check`: rustfmt must not reflow it.
@@ -27,7 +27,7 @@ pub struct Style {
 /// The advance of one character, in points, at `size_pt`.
 ///
 /// `widths::advance_per_mille` answers for ASCII and Latin-1 and states a
-/// measured default for everything else — never a silent zero, which would
+/// measured default for everything else - never a silent zero, which would
 /// let an unmeasured glyph pack for free and every line after it drift.
 pub fn char_width_pt(ch: char, size_pt: f64) -> f64 {
     f64::from(widths::advance_per_mille(ch)) / 1000.0 * size_pt
@@ -39,17 +39,17 @@ pub fn char_width_pt(ch: char, size_pt: f64) -> f64 {
 /// advances... enough to measure a string without a browser"), and
 /// kerning pairs are a much larger table this increment does not embed. The
 /// error this leaves is the same one `max_chars` already tolerates by
-/// design — a column sized in characters, not sub-millimetres.
+/// design - a column sized in characters, not sub-millimetres.
 pub fn string_width_pt(text: &str, size_pt: f64) -> f64 {
     text.chars().map(|ch| char_width_pt(ch, size_pt)).sum()
 }
 
-/// The mean width of an ASCII character at `size_pt` — what `max_chars`
+/// The mean width of an ASCII character at `size_pt` - what `max_chars`
 /// multiplies to become a column width (*"`max_chars` × the mean
 /// width of a character of the font at that size"*).
 ///
 /// `widths::DEFAULT_ADVANCE_PER_MILLE` *is* that mean, computed once by the
-/// generator from the same table this module measures with — never a second,
+/// generator from the same table this module measures with - never a second,
 /// separately chosen number.
 pub fn average_char_width_pt(size_pt: f64) -> f64 {
     f64::from(widths::DEFAULT_ADVANCE_PER_MILLE) / 1000.0 * size_pt
@@ -68,7 +68,7 @@ pub struct Wrapped {
 }
 
 /// Separators a word may be broken after, when it alone is wider than one
-/// line — *"cut after `/`, `-`, `,` or `;` if it has one, otherwise cut
+/// line - *"cut after `/`, `-`, `,` or `;` if it has one, otherwise cut
 /// bluntly"*.
 const BREAK_AFTER: [char; 4] = ['/', '-', ',', ';'];
 
@@ -76,13 +76,13 @@ const BREAK_AFTER: [char; 4] = ['/', '-', ',', ';'];
 ///
 /// Breaks at spaces first; a word wider than `max_width_pt` on its own is
 /// split after the last of `/ - , ;` it carries that still leaves the
-/// fragment within the width, or — carrying none, or none early enough — cut
+/// fragment within the width, or - carrying none, or none early enough - cut
 /// at the last character that fits, counted in [`Wrapped::hard_cuts`].
 ///
 /// # What this cannot guarantee
 ///
 /// If a single character is itself wider than `max_width_pt` (a column
-/// narrower than one glyph — `min_chars` exists precisely so a caller cannot
+/// narrower than one glyph - `min_chars` exists precisely so a caller cannot
 /// ask for this, see [`crate::layout::Refusal::MaxCharsBelowMinChars`]), a
 /// line carrying only that character will overflow. Every other line is
 /// guaranteed within `max_width_pt`.
@@ -148,13 +148,13 @@ fn flush(current: &mut String, lines: &mut Vec<String>) {
 }
 
 /// Break one word too wide for a line into fragments that each fit
-/// `max_width_pt` — the last fragment may still be joined by further words.
+/// `max_width_pt` - the last fragment may still be joined by further words.
 fn split_word(word: &str, max_width_pt: f64, size_pt: f64, hard_cuts: &mut usize) -> Vec<String> {
     let chars: Vec<char> = word.chars().collect();
     let mut fragments = Vec::new();
     let mut start = 0usize;
     while start < chars.len() {
-        // The longest run from `start` that fits — always at least one
+        // The longest run from `start` that fits - always at least one
         // character, so a pathologically wide glyph still makes progress
         // rather than looping forever (see this function's caller's doc).
         let mut end = start;
@@ -193,7 +193,7 @@ mod tests {
     #[test]
     fn no_line_is_wider_than_the_measured_width() {
         // What would break this: a wrap that counts characters instead of
-        // measuring them — "iiiiiiiiii" and "MMMMMMMMMM" are both ten
+        // measuring them - "iiiiiiiiii" and "MMMMMMMMMM" are both ten
         // characters and nothing alike in width.
         let text = "MMMMMMMMMM iiiiiiiiii MMMMMMMMMM the quick brown fox";
         let size_pt = 10.0;
@@ -229,7 +229,7 @@ mod tests {
     #[test]
     fn a_word_with_no_separator_is_hard_cut_and_it_is_counted() {
         // What would break this: a hard cut that happens but is not counted
-        // — the report would then say a column wrapped perfectly cleanly
+        // - the report would then say a column wrapped perfectly cleanly
         // when it did not.
         let size_pt = 10.0;
         let word = "supercalifragilisticexpialidocious";

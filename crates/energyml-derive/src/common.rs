@@ -37,7 +37,7 @@ pub struct Container {
     /// Version as identifiers spell it: `2.0.1` becomes `2.0`.
     pub schema_version: String,
     pub xml_name: String,
-    /// Complex type name, verbatim — `obj_Activity` keeps its prefix. Defaults
+    /// Complex type name, verbatim - `obj_Activity` keeps its prefix. Defaults
     /// to `xml_name`, which is right for every package that does not use the
     /// prefix.
     pub object_type: String,
@@ -48,7 +48,7 @@ pub struct Container {
     pub content_type: TokenStream,
     pub qualified_type: TokenStream,
     /// `Some("FlowTestActivity")` for a part written under an ancestor's
-    /// element with `xsi:type` — see `TypeInfo::root_element`.
+    /// element with `xsi:type` - see `TypeInfo::root_element`.
     pub root_element: TokenStream,
     pub top_level: bool,
     pub nestable: bool,
@@ -56,7 +56,7 @@ pub struct Container {
     pub object_ref: bool,
     pub is_abstract: bool,
     pub is_open: bool,
-    /// What an open enumeration's free text must still match — the widening
+    /// What an open enumeration's free text must still match - the widening
     /// union member's own pattern. `None` when the schema puts none.
     pub other_pattern: Option<String>,
     pub base: TokenStream,
@@ -218,14 +218,14 @@ impl Container {
 }
 
 /// Version as identifiers spell it: `2.0.1` becomes `2.0`, `2.2` stays `2.2`,
-/// and a development drop reports its release — `2.2_dev3` becomes `2.2`.
+/// and a development drop reports its release - `2.2_dev3` becomes `2.2`.
 ///
 /// The drop's own schemas declare `version="2.2"`, so that is what a document
 /// written against it carries; spelling `2.2_dev3` into content and qualified
 /// types would make this workspace the only thing able to read its own output.
 ///
 /// Mirrors `Package::schema_version` in the generator, and the pair is pinned
-/// end to end by `energyml-schemas/tests/complete.rs` — a test over what was
+/// end to end by `energyml-schemas/tests/complete.rs` - a test over what was
 /// actually generated, rather than over these two functions agreeing.
 fn schema_version_of(version: &str) -> String {
     let bare = version.trim();

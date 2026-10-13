@@ -1,4 +1,4 @@
-//! `terrain` — a `Grid2dRepresentation` from a digital elevation model fetched
+//! `terrain` - a `Grid2dRepresentation` from a digital elevation model fetched
 //! elsewhere, its **source, licence and attribution written with it**.
 //!
 //! The need: to see these DEM data in the 3D canvas,
@@ -20,7 +20,7 @@
 //! # Why `Category::Create`
 //!
 //! `Create` reads *a representation made from a shape or a file, copied as it
-//! is* — which is what this does to a raster that somebody else measured. Not
+//! is* - which is what this does to a raster that somebody else measured. Not
 //! `Analysis`, which is *what is measured on a shape and written as a
 //! property* (and a test forbids a representation under it), not `Geometry`,
 //! which decides a new geometry from the input: nothing is decided here, the
@@ -34,7 +34,7 @@
 //! (the instant, **given**: an operation reads no clock); the same licence and
 //! attribution go into the object's `Citation/Description`, so that they stay
 //! with the grid when the activity is not read; and the plan says them in a
-//! note. All six are **refused when empty** — a terrain whose origin cannot be
+//! note. All six are **refused when empty** - a terrain whose origin cannot be
 //! named is a surface that looks like one and cannot be reused.
 //!
 //! # Refused by name
@@ -49,7 +49,7 @@
 //! # Identity
 //!
 //! The seed is the content: the source, the layer, the lattice (origin,
-//! spacing, counts) and the title — **never the clock, and not `fetched`**.
+//! spacing, counts) and the title - **never the clock, and not `fetched`**.
 //! The same fetch planned twice writes the same uuid; a refetch of the same
 //! tile a month later is the same terrain, and its activity says when.
 
@@ -70,19 +70,19 @@ pub struct Terrain;
 /// block of every writer.
 #[derive(Debug, Params)]
 pub struct TerrainParams {
-    /// the catalogue id of the source the elevations come from — `ign-rge-alti`
+    /// the catalogue id of the source the elevations come from - `ign-rge-alti`
     pub source: String,
-    /// the service that was asked — the URL of the request, or of the endpoint
+    /// the service that was asked - the URL of the request, or of the endpoint
     pub service: String,
     /// the layer or the dataset asked of that service
     pub layer: String,
-    /// the licence the data is under — it travels with the grid
+    /// the licence the data is under - it travels with the grid
     pub licence: String,
-    /// the attribution the licence asks to display — it travels with the grid
+    /// the attribution the licence asks to display - it travels with the grid
     pub attribution: String,
-    /// when the data was fetched, as an ISO 8601 instant — given, never read from a clock
+    /// when the data was fetched, as an ISO 8601 instant - given, never read from a clock
     pub fetched: String,
-    /// The frame, what is represented, the naming — for the writer of the result.
+    /// The frame, what is represented, the naming - for the writer of the result.
     #[param(flatten)]
     pub written: Written,
 }
@@ -90,7 +90,7 @@ pub struct TerrainParams {
 /// What `terrain` takes.
 #[derive(Debug, Inputs)]
 pub struct TerrainInputs {
-    /// the digital elevation model — a lattice of heights in the house order, `NaN` where the source has none
+    /// the digital elevation model - a lattice of heights in the house order, `NaN` where the source has none
     pub lattice: LatticeIn,
 }
 
@@ -120,8 +120,8 @@ fn given(slot: &str, value: &str, what: &str) -> Result<(), Refusal> {
     Ok(())
 }
 
-/// `2026-10-01` or `2026-10-01T12:00:00Z`: four digits, a dash, and — beyond
-/// the date — a `T`. Not a parser: what is refused is a word that is no date.
+/// `2026-10-01` or `2026-10-01T12:00:00Z`: four digits, a dash, and - beyond
+/// the date - a `T`. Not a parser: what is refused is a word that is no date.
 fn looks_like_iso(value: &str) -> bool {
     let bytes = value.trim().as_bytes();
     bytes.len() >= 10
@@ -140,7 +140,7 @@ impl Operation for Terrain {
     fn about(&self) -> About {
         About {
             name: "terrain",
-            describe: "a terrain — a 2D grid of ground elevations from a digital elevation model fetched elsewhere, with its source, licence and attribution written beside the heights",
+            describe: "a terrain - a 2D grid of ground elevations from a digital elevation model fetched elsewhere, with its source, licence and attribution written beside the heights",
             category: Category::Create,
             makes: &["resqml22.Grid2dRepresentation"],
             recipe: "terrain",
@@ -150,8 +150,8 @@ impl Operation for Terrain {
 
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
         // A suggestion reads the bag, never another answer: the title built
-        // from the source (`MNT — <source>`) is derived in `plan`, where the
-        // source is known — here the piece's name stands in for it.
+        // from the source (`MNT - <source>`) is derived in `plan`, where the
+        // source is known - here the piece's name stands in for it.
         super::written::suggest_written(bag, None, slots);
     }
 
@@ -199,7 +199,7 @@ impl Operation for Terrain {
             return Err(Refusal::on(
                 "lattice",
                 format!(
-                    "all {} node(s) of `{name}` have no height: a DEM with no value is not a surface — the source covers nothing of the area asked",
+                    "all {} node(s) of `{name}` have no height: a DEM with no value is not a surface - the source covers nothing of the area asked",
                     lattice.z.len()
                 ),
             ));
@@ -210,7 +210,7 @@ impl Operation for Terrain {
         // derived from the source, which only `plan` knows.
         let left_to_default = written.naming.title.as_ref().is_none_or(|title| title.0 == *name);
         if left_to_default {
-            written.naming.title = Some(Title(format!("MNT — {source}")));
+            written.naming.title = Some(Title(format!("MNT - {source}")));
         }
         let title = written.naming.title();
 
@@ -227,7 +227,7 @@ impl Operation for Terrain {
             return Err(Refusal::on(
                 "licence",
                 format!(
-                    "source, service, layer, licence and attribution make a description of {length} characters, and a Citation/Description holds 2000 — say them shorter"
+                    "source, service, layer, licence and attribution make a description of {length} characters, and a Citation/Description holds 2000 - say them shorter"
                 ),
             ));
         }
@@ -262,14 +262,14 @@ impl Operation for Terrain {
             Note {
                 key: "source",
                 detail: format!(
-                    "elevations of `{source}` ({service}, layer `{layer}`) fetched {fetched}, under the licence {licence} — attribution to display: {attribution}"
+                    "elevations of `{source}` ({service}, layer `{layer}`) fetched {fetched}, under the licence {licence} - attribution to display: {attribution}"
                 ),
             },
         );
         plan.says.push(Note {
             key: "lattice",
             detail: format!(
-                "{ni} by {nj} nodes from ({x0}, {y0}) every ({dx}, {dy}), written as fetched — not resampled"
+                "{ni} by {nj} nodes from ({x0}, {y0}) every ({dx}, {dy}), written as fetched - not resampled"
             ),
         });
         Ok(plan)

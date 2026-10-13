@@ -7,7 +7,7 @@
 //! dataset. **By convention, the null value is NaN.**"* (Energistics common
 //! TRG v2.3 §6.31 `FloatingPointExternalArray`, and the same sentence on
 //! RESQML 2.0.1's `DoubleHdf5Array`). Contrast the integer case, where the null
-//! *"must be explicitly provided in the `NullValue` attribute"* (§6.41) — for
+//! *"must be explicitly provided in the `NullValue` attribute"* (§6.41) - for
 //! doubles it is NaN, always, and no attribute says otherwise.
 //!
 //! So a `Point3dZValueArray` whose `ZValues` holds NaN is holding **nulls**,
@@ -15,19 +15,19 @@
 //! clause in RESQML 2.0.1 or 2.2 says that a null Z makes a node undefined, and
 //! none says that a cell touching an undefined node must not be drawn. For
 //! `Grid2dRepresentation` the specification is entirely silent; the mechanism
-//! it does give for *"the surface stops here"* is topological —
+//! it does give for *"the surface stops here"* is topological -
 //! `PatchBoundaries`' `OuterRing` / `InnerRing`, *"inside the ring, the patch
 //! is defined, outside it is not"* (RESQML TRG v2.2 §11.12).
 //!
 //! For column-layer grids the standard **is** explicit, and it is worth quoting
 //! because it settles what wins:
 //!
-//! > `PillarGeometryIsDefined` — *"Indicator that a pillar has at least one
+//! > `PillarGeometryIsDefined` - *"Indicator that a pillar has at least one
 //! > node with a defined cell geometry. **If the indicator does not indicate
 //! > that the pillar geometry is defined, then this over-rides any other node
 //! > geometry specification.**"* (TRG v2.2 §5.1, mandatory)
 //!
-//! > `CellGeometryIsDefined` — *"Indicator that a cell has a defined geometry.
+//! > `CellGeometryIsDefined` - *"Indicator that a cell has a defined geometry.
 //! > **If the indicator shows that the cell geometry is NOT defined, then this
 //! > attribute overrides any other node geometry specification.**"* (§5.1,
 //! > optional)
@@ -42,7 +42,7 @@
 //! interpretation of RESQML, it is arithmetic: there is no point in space to
 //! put it at, no edge to draw to it, and no cell it can be a corner of. Every
 //! output format this workspace writes demands three numbers per vertex, and
-//! two of the three have no syntax for a missing one — GeoJSON is JSON, and
+//! two of the three have no syntax for a missing one - GeoJSON is JSON, and
 //! **`NaN` is not a JSON value**, so a single null Z made the whole file
 //! unparseable by `JSON.parse`.
 //!
@@ -55,7 +55,7 @@
 //! - **A lattice with a hole is not a lattice.** [`Topology::Grid`] promises a
 //!   `fastest × slowest` rectangle, row by row; drop one node and every index
 //!   after it means something else. So a grid that loses a node becomes
-//!   [`Topology::Points`] — a demotion the caller can see, rather than a
+//!   [`Topology::Points`] - a demotion the caller can see, rather than a
 //!   rectangle that lies about its own shape.
 //! - **Properties move with their elements.** Dropping points without dropping
 //!   the matching property values would colour the survivors with their
@@ -77,8 +77,8 @@ pub fn is_defined(point: &Point) -> bool {
 
 /// A geometry with its undefined nodes removed, and the maps to follow it.
 ///
-/// The maps are in **merged order** — the order [`Geometry::merged`] and
-/// [`Geometry::cell_count`] produce, patch after patch — because that is the
+/// The maps are in **merged order** - the order [`Geometry::merged`] and
+/// [`Geometry::cell_count`] produce, patch after patch - because that is the
 /// order an attribute's values are in.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Compaction {
@@ -104,7 +104,7 @@ impl Geometry {
             .count()
     }
 
-    /// This geometry with every undefined node removed — or `None` when there
+    /// This geometry with every undefined node removed - or `None` when there
     /// is none, which is the ordinary case and costs one pass and no copy.
     ///
     /// `None` rather than a clone of `self` on purpose: the caller can then
@@ -129,7 +129,7 @@ impl Geometry {
             // topology is a face/node index structure with shared faces, and
             // renumbering it correctly means rebuilding the face table and the
             // cell-to-face map. Dropping its points without that would leave
-            // every face pointing at the wrong node — far worse than leaving
+            // every face pointing at the wrong node - far worse than leaving
             // one undrawable cell in place. Refused loudly rather than
             // half-done; see the module documentation.
             let compactable = !matches!(patch.topology, Topology::Polyhedra(_));
@@ -181,7 +181,7 @@ impl Geometry {
     }
 }
 
-/// How many cells a topology has — [`Topology::cell_count`], which became the
+/// How many cells a topology has - [`Topology::cell_count`], which became the
 /// one definition when the drawable's cell table needed it too; this wrapper
 /// stays for the callers' sake.
 fn cells_in(topology: &Topology) -> usize {
@@ -285,7 +285,7 @@ fn compact_topology(
         }
 
         // A run through an undefined node is **cut**, not bridged. Joining the
-        // two survivors would draw a segment across the hole — a line the file
+        // two survivors would draw a segment across the hole - a line the file
         // never described, and one that looks entirely plausible on screen.
         //
         // A cut run becomes several, so the one-value-per-run correspondence a
@@ -354,7 +354,7 @@ fn compact_topology(
             }
             // `dimensions` is kept as it was: it says what shape the cells were
             // *built from*, and that stays true. It is no longer the shape of
-            // the cells that remain, and no consumer should read it as such —
+            // the cells that remain, and no consumer should read it as such -
             // the count is `cells.len()`.
             (
                 Topology::Hexahedra {
@@ -362,7 +362,7 @@ fn compact_topology(
                     dimensions: *dimensions,
                     // **Filtered with its cell**, never re-derived: this pass
                     // drops cells too, and a numbering rebuilt from the survivors
-                    // would renumber them onto themselves — which is exactly the
+                    // would renumber them onto themselves - which is exactly the
                     // mistake the numbering exists to prevent. `kept` holds the
                     // positions that survived, in order.
                     index: kept
@@ -385,7 +385,7 @@ fn compact_topology(
             fastest.saturating_sub(1) * slowest.saturating_sub(1),
         ),
 
-        // Left whole — see the `compactable` guard above, which also keeps this
+        // Left whole - see the `compactable` guard above, which also keeps this
         // patch's points, so these indices still address what they always did.
         Topology::Polyhedra(cells) => (
             Topology::Polyhedra(cells.clone()),

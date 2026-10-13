@@ -2,8 +2,8 @@
 //! representations: the frames that state no unit, and the trajectories.
 //!
 //! Reported: the colours of the stratigraphy were hard to see on boreholes. A
-//! borehole of Lutetia is drawn four times — two frames, two
-//! trajectories — and only the frame that carries `IntervalStratigraphicUnits`
+//! borehole of Lutetia is drawn four times - two frames, two
+//! trajectories - and only the frame that carries `IntervalStratigraphicUnits`
 //! was painted; the three others, drawn over the same place in a flat colour,
 //! left the strata showing in slivers.
 //!
@@ -17,12 +17,12 @@
 //!
 //! # Which representations are "the same wellbore"
 //!
-//! The ones that represent the **same object** — `RepresentedObject` (2.2),
+//! The ones that represent the **same object** - `RepresentedObject` (2.2),
 //! `RepresentedInterpretation` (2.0.1), compared by uuid. In practice a
 //! `WellboreInterpretation`, and it is that rather than its `WellboreFeature`
 //! on purpose: RESQML TRG 2.2 §12.14 (p. 311) says a wellbore interpretation
 //! *"is relative to one particular well trajectory"*, and that *"One wellbore
-//! feature may have multiple wellbore interpretations"* — a planned one and a
+//! feature may have multiple wellbore interpretations"* - a planned one and a
 //! drilled one (`IsDrilled`). An MD along a planned path is not a place along
 //! the drilled hole, so walking up to the feature would paint a plan with the
 //! rock the drill met. A representation of a WITSML `Wellbore` (which the TRG
@@ -36,31 +36,31 @@
 //! toward the bottomhole. All coordinates with the same datum (and same UOM)
 //! can be considered to be in the same coordinate reference system (CRS) and
 //! are thus directly comparable."* So an MD is read against its datum and its
-//! unit, and a frame's are its trajectory's — RESQML TRG 2.2 §12.13 (p. 310),
+//! unit, and a frame's are its trajectory's - RESQML TRG 2.2 §12.13 (p. 310),
 //! `NodeMd`: *"BUSINESS RULE: MD values and UOM must be consistent with the
 //! trajectory representation."* `MdReference` is those three things read
 //! off the trajectory's `MdInterval` (2.2) or its flat `MdDatum`/`MdUom`
 //! (2.0.1), and `comparable` is the rule:
 //!
-//! - **one trajectory** — the representations count from the very same object:
+//! - **one trajectory** - the representations count from the very same object:
 //!   comparable, nothing to check;
 //! - otherwise **the same datum object**, by uuid. Two datums at the same place
 //!   are two datums: nothing here moves an MD from one to the other;
-//! - **the unit**: equal, or converted — a length in feet is a length in
+//! - **the unit**: equal, or converted - a length in feet is a length in
 //!   metres, and that is arithmetic, not a guess. A unit this build cannot
 //!   read is refused;
 //! - **the MD domain** (`MdDomain`, TRG 2.2 §12.8 p. 304): *driller* depths
 //!   are *"The original depths recorded while drilling"*, *logger* depths
-//!   *"in general considered to be more accurate than driller's depth"* — two
+//!   *"in general considered to be more accurate than driller's depth"* - two
 //!   measurements of one hole, which disagree by the stretch of a cable. Two
 //!   domains, or one stated and one not, are not compared.
 //!
-//! A frame that fails the rule is **set aside by name** — never shifted. When
+//! A frame that fails the rule is **set aside by name** - never shifted. When
 //! none is left, the representation is refused (`Refusal::Incomparable`).
 //!
 //! # A node exactly on a limit
 //!
-//! It takes the interval **it opens** — the one below it, as MDs increase —
+//! It takes the interval **it opens** - the one below it, as MDs increase -
 //! and the deepest limit takes the last interval. That is the rule
 //! `Strata::node_colours` gives the stating frame's own nodes, so looking the
 //! frame's own MDs up here gives back exactly its own colours: the intervals
@@ -68,8 +68,8 @@
 //!
 //! # What is not coloured, and said
 //!
-//! - an MD outside every stated interval — above the first, below the last, or
-//!   in a gap between two frames — is **uncoloured** and counted
+//! - an MD outside every stated interval - above the first, below the last, or
+//!   in a gap between two frames - is **uncoloured** and counted
 //!   (`Carried::outside`), never given its neighbour's colour;
 //! - an interval that names no single unit (a null index, or several at once)
 //!   leaves its nodes uncoloured, as it leaves the frame's own;
@@ -77,11 +77,11 @@
 //!   disagreement: the node is uncoloured, counted
 //!   (`Carried::disagreements`) and named in the notes, and neither frame is
 //!   chosen. A frame naming nothing at an MD where another names a unit does not
-//!   disagree — a null index says *not known here*, not *no unit here*.
+//!   disagree - a null index says *not known here*, not *no unit here*.
 //!
 //! # Which frames speak
 //!
-//! Those of the wellbore that carry `IntervalStratigraphicUnits` — told on the
+//! Those of the wellbore that carry `IntervalStratigraphicUnits` - told on the
 //! document alone ([`well_strata::states_units`]), so a frame that states
 //! nothing is never read and an array of it that cannot be read stops nothing.
 //! A frame that does state units and cannot be read **is** a refusal: its
@@ -106,15 +106,15 @@ use crate::units;
 use crate::values::{self, Values};
 use crate::well_strata::{self, Drawn, Known, Refusal, Source, Strata, Unit, Wanted};
 
-/// What a representation represents — 2.2, then 2.0.1.
+/// What a representation represents - 2.2, then 2.0.1.
 const REPRESENTED: &[&str] = &["RepresentedObject", "RepresentedInterpretation"];
 /// Where a 2.2 trajectory groups its MD bounds; 2.0.1 puts them on the object.
 const MD_INTERVAL: &str = "MdInterval";
-/// The datum an MD counts from — 2.2, then 2.0.1.
+/// The datum an MD counts from - 2.2, then 2.0.1.
 const MD_DATUM: &[&str] = &["Datum", "MdDatum"];
-/// The unit of the MDs — 2.2, then 2.0.1.
+/// The unit of the MDs - 2.2, then 2.0.1.
 const MD_UOM: &[&str] = &["Uom", "MdUom"];
-/// The MD bounds — 2.2, then 2.0.1.
+/// The MD bounds - 2.2, then 2.0.1.
 const MD_MIN: &[&str] = &["MdMin", "StartMd"];
 const MD_MAX: &[&str] = &["MdMax", "FinishMd"];
 /// `driller` or `logger` (TRG 2.2 §12.8).
@@ -127,11 +127,11 @@ const TRAJECTORY: &str = "WellboreTrajectoryRepresentation";
 // ---------------------------------------------------------------------------
 
 /// How a representation's measured depths are counted: the trajectory that
-/// says so, its datum, its unit and its MD domain — each `None` when the file
+/// says so, its datum, its unit and its MD domain - each `None` when the file
 /// does not say.
 #[derive(Clone, Debug, PartialEq)]
 pub struct MdReference {
-    /// The trajectory whose `MdInterval` states them, lowercased — the
+    /// The trajectory whose `MdInterval` states them, lowercased - the
     /// representation itself for a trajectory, its `Trajectory` for a frame.
     pub trajectory: String,
     /// The datum object's uuid, lowercased.
@@ -143,7 +143,7 @@ pub struct MdReference {
 }
 
 /// Whether MDs counted against `target` can be looked up in intervals
-/// counted against `stated` — and if so, the factor that takes a `target` MD
+/// counted against `stated` - and if so, the factor that takes a `target` MD
 /// into `stated`'s unit. `Err` is the reason, in a sentence.
 ///
 /// The module's *When two MDs can be compared*: one trajectory, or one datum,
@@ -170,13 +170,13 @@ pub fn comparable(target: &MdReference, stated: &MdReference) -> Result<f64, Str
     };
     if ours != theirs {
         return Err(format!(
-            "its MDs count from datum {ours} and the frame's from datum {theirs} — two datums, and an MD \
+            "its MDs count from datum {ours} and the frame's from datum {theirs} - two datums, and an MD \
              is never moved from one to the other (common TRG 2.3 §6.48)"
         ));
     }
     if target.domain != stated.domain {
         return Err(format!(
-            "its MDs are {} depths and the frame's are {} depths (MdDomain, RESQML TRG 2.2 §12.8) — two \
+            "its MDs are {} depths and the frame's are {} depths (MdDomain, RESQML TRG 2.2 §12.8) - two \
              measurements of the hole, not compared",
             target.domain.as_deref().unwrap_or("unstated"),
             stated.domain.as_deref().unwrap_or("unstated")
@@ -231,7 +231,7 @@ pub fn md_reference(representation: &dyn Reflect, source: &dyn ArraySource) -> R
                 return Err(Refusal::Absent {
                     what: format!("`{title}`"),
                     why: format!(
-                        "names the trajectory {uuid}, which the package does not hold — where its MDs count \
+                        "names the trajectory {uuid}, which the package does not hold - where its MDs count \
                          from is unknown"
                     ),
                 });
@@ -265,11 +265,11 @@ pub fn md_reference(representation: &dyn Reflect, source: &dyn ArraySource) -> R
 }
 
 /// The MD of each node a representation is drawn with, in the order it is
-/// drawn — the order `energyml_geometry` gives its points:
+/// drawn - the order `energyml_geometry` gives its points:
 ///
 /// - a frame: its `NodeMd`;
-/// - a trajectory with a `ParametricLineGeometry`: its `ControlPointParameters`
-///   — the line is drawn at its knots, and a trajectory's parameter **is** its
+/// - a trajectory with a `ParametricLineGeometry`: its `ControlPointParameters` -
+///   the line is drawn at its knots, and a trajectory's parameter **is** its
 ///   MD (the contract `energyml_geometry::well::path_of` states). A line with
 ///   no parameters has knots 0, 1, 2 …, which are no MD: refused;
 /// - a trajectory with no `Geometry`: its `MdMin` and `MdMax`, the two points
@@ -307,7 +307,7 @@ pub fn node_mds(representation: &dyn Reflect, source: &dyn ArraySource) -> Resul
                 return Err(Refusal::Unsupported {
                     what: format!("`{title}`"),
                     why: format!(
-                        "is drawn from a `{kind}`, whose points this reader cannot give an MD to — a parametric \
+                        "is drawn from a `{kind}`, whose points this reader cannot give an MD to - a parametric \
                          line's own knots are what it knows"
                     ),
                 });
@@ -330,7 +330,7 @@ pub fn node_mds(representation: &dyn Reflect, source: &dyn ArraySource) -> Resul
     }
 }
 
-/// The object a representation represents, lowercased — what makes two
+/// The object a representation represents, lowercased - what makes two
 /// representations *the same wellbore*.
 pub fn represented(representation: &dyn Reflect) -> Option<String> {
     REPRESENTED
@@ -340,7 +340,7 @@ pub fn represented(representation: &dyn Reflect) -> Option<String> {
 }
 
 // ---------------------------------------------------------------------------
-// The lookup — pure
+// The lookup - pure
 // ---------------------------------------------------------------------------
 
 /// A frame's stratigraphy, with how its MDs are counted.
@@ -354,11 +354,11 @@ pub struct Stated<'a> {
 /// What one node of a carried painting is.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Node {
-    /// A unit — its position in [`Carried::strata`]'s `units`.
+    /// A unit - its position in [`Carried::strata`]'s `units`.
     Unit(usize),
     /// No stated interval holds this MD (or the MD is not a number).
     Outside,
-    /// The intervals holding it name no single unit — a null index, or
+    /// The intervals holding it name no single unit - a null index, or
     /// several units at once.
     Unnamed,
     /// Two frames name different units here.
@@ -372,15 +372,15 @@ pub struct Carried {
     pub representation: String,
     /// Its title.
     pub title: String,
-    /// The units, merged over the frames used — every unit of the first frame
-    /// in its order, then those the others add — and **no section**: this
+    /// The units, merged over the frames used - every unit of the first frame
+    /// in its order, then those the others add - and **no section**: this
     /// representation has nodes, not the frames' intervals. What a legend
     /// reads, and what [`Carried::node_colours_with`] draws from, so the two
     /// cannot differ.
     pub strata: Strata,
     /// One per node, in the order the representation is drawn.
     pub nodes: Vec<Node>,
-    /// The intervals the frames state, **in this representation's MD** — each
+    /// The intervals the frames state, **in this representation's MD** - each
     /// frame's sections that name a unit, `(top, base, unit)` with the unit's
     /// position in `strata.units`. What [`Painting::intervals`] draws: the
     /// nodes only sample the rock, the frames state it.
@@ -413,9 +413,9 @@ impl Carried {
             .count()
     }
 
-    /// One RGBA per node — [`Strata::node_colours_with`]'s contract: a unit is
+    /// One RGBA per node - [`Strata::node_colours_with`]'s contract: a unit is
     /// drawn with [`Strata::drawn`] over the merged units, and every node that
-    /// is not a unit — outside, unnamed, disputed — takes `missing`.
+    /// is not a unit - outside, unnamed, disputed - takes `missing`.
     pub fn node_colours_with(&self, missing: Rgba, fallback: &[Rgba]) -> Vec<u8> {
         let drawn = self.strata.drawn(fallback);
         self.nodes
@@ -452,7 +452,7 @@ enum Says {
     Unit(usize),
 }
 
-/// The interval of `strata` holding `md` — `[top, base)`, the last one
+/// The interval of `strata` holding `md` - `[top, base)`, the last one
 /// `[top, base]`: the rule [`Strata::node_colours`] gives a frame's own
 /// nodes, so a frame's own MDs find the colours it paints itself with.
 fn says(strata: &Strata, md: f64) -> Says {
@@ -471,7 +471,7 @@ fn says(strata: &Strata, md: f64) -> Says {
 
 /// A frame's intervals, checked to run down: an MD lookup needs `top <= base`
 /// in every interval, which is what the frames of every file this was written
-/// against state — [`well_strata`] does not re-sort them, and neither does this.
+/// against state - [`well_strata`] does not re-sort them, and neither does this.
 fn runs_down(strata: &Strata) -> Result<(), String> {
     // A `NaN` limit orders against nothing, and is refused with the rest.
     let backwards = |section: &well_strata::Section| {
@@ -489,7 +489,7 @@ fn runs_down(strata: &Strata) -> Result<(), String> {
     }
 }
 
-/// Colour the nodes at `mds` — counted against `target` — by what the frames
+/// Colour the nodes at `mds` - counted against `target` - by what the frames
 /// in `stated` say.
 ///
 /// Frames whose MDs cannot be compared ([`comparable`]) or whose intervals do
@@ -516,7 +516,7 @@ pub fn carry(
         return Err(Refusal::Incomparable {
             what: format!("`{title}`"),
             why: format!(
-                "the frames of its wellbore that state its stratigraphic units cannot be read against its MDs — {}",
+                "the frames of its wellbore that state its stratigraphic units cannot be read against its MDs - {}",
                 set_aside.join("; ")
             ),
         });
@@ -627,7 +627,7 @@ pub fn carry(
     let disagreements = carried.disagreements();
     if disagreements > 0 {
         carried.notes.push(format!(
-            "{disagreements} node(s) where two frames of the wellbore name two different units — left \
+            "{disagreements} node(s) where two frames of the wellbore name two different units - left \
              uncoloured, neither frame chosen: {}{}",
             disputed.join("; "),
             if disagreements > disputed.len() {
@@ -640,7 +640,7 @@ pub fn carry(
     let outside = carried.outside();
     if outside > 0 {
         carried.notes.push(format!(
-            "{outside} of {} node(s) lie outside every interval the frames state — left uncoloured, never given \
+            "{outside} of {} node(s) lie outside every interval the frames state - left uncoloured, never given \
              a neighbour's unit",
             carried.nodes.len()
         ));
@@ -655,7 +655,7 @@ pub fn carry(
 /// A representation of a wellbore, painted by its stratigraphic units.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Painting {
-    /// A frame that states them itself — [`well_strata::of_frame`].
+    /// A frame that states them itself - [`well_strata::of_frame`].
     Own(Strata),
     /// Another representation of the wellbore, looked up by MD.
     Carried(Carried),
@@ -670,7 +670,7 @@ impl Painting {
         }
     }
 
-    /// One RGBA per node — [`Strata::node_colours_with`] or
+    /// One RGBA per node - [`Strata::node_colours_with`] or
     /// [`Carried::node_colours_with`].
     pub fn node_colours_with(&self, missing: Rgba, fallback: &[Rgba]) -> Vec<u8> {
         match self {
@@ -680,7 +680,7 @@ impl Painting {
     }
 }
 
-/// One stratigraphic interval of a well, along its measured depth — what a
+/// One stratigraphic interval of a well, along its measured depth - what a
 /// section view draws as a coloured stretch of the well, where a 3D view
 /// colours nodes ([`Painting::node_colours_with`]).
 #[derive(Clone, Debug, PartialEq)]
@@ -690,12 +690,12 @@ pub struct Interval {
     /// Where it ends.
     pub to: f64,
     /// The colour [`Strata::drawn`] resolves for its unit: the file's, else
-    /// the caller's `fallback` palette. `None` is *nothing gives one* — never
+    /// the caller's `fallback` palette. `None` is *nothing gives one* - never
     /// a transparent colour, the caller draws its own.
     pub colour: Option<Rgba>,
     /// The unit's title.
     pub unit: String,
-    /// **The unit's uri** — the identity the reader of the interval finds the
+    /// **The unit's uri** - the identity the reader of the interval finds the
     /// unit by (its legend row, its colour set, its object) instead of
     /// guessing from the title and the colour. `None` for a unit that is only a
     /// row of a table, which no object stands behind.
@@ -712,23 +712,23 @@ impl Painting {
     /// - a representation carried by MD ([`Painting::Carried`]): node *i* opens
     ///   `[md i, md i+1)` with the unit it was given. The deepest node closes
     ///   nothing, so a unit it was given is a zero-length interval
-    ///   `[md, md]` — present so that looking the node's own MD up finds its
+    ///   `[md, md]` - present so that looking the node's own MD up finds its
     ///   colour, drawn as nothing.
     ///
     /// A carried painting draws **the intervals its frames state**
-    /// ([`Carried::spans`]), cut to the MDs its nodes span — never a node's unit
+    /// ([`Carried::spans`]), cut to the MDs its nodes span - never a node's unit
     /// stretched to the next node. Stretched, a node at the base of the last
     /// stated interval carried that unit down to the next node: on Lutetia,
     /// the Sparnacian of BSS000NUGK ran 10 m below where its frame ends it
     /// (03/10). Where two frames state two units, the stretch is a gap, as the
     /// nodes there are.
     ///
-    /// A stretch with no unit — outside every stated interval, unnamed,
-    /// disputed between two frames — is **a gap**, not an interval: the same
+    /// A stretch with no unit - outside every stated interval, unnamed,
+    /// disputed between two frames - is **a gap**, not an interval: the same
     /// nodes that take the caller's `missing` colour in
     /// [`Painting::node_colours_with`]. Neighbouring intervals of one unit are
     /// joined. `mds` is the MD of each node, in the order of the painting's
-    /// nodes — [`node_mds`] — and is only read for a carried painting, which it
+    /// nodes - [`node_mds`] - and is only read for a carried painting, which it
     /// must match node for node: a count that differs is refused, since an MD
     /// given to the wrong node is a stretch of rock in the wrong place. A
     /// carried unit lasts to the next node, as the nodes are all the painting
@@ -786,8 +786,8 @@ impl Painting {
                         push(pair[0], pair[1], unit);
                     }
                 }
-                // A node no interval holds but which has a unit — the deepest
-                // node, one on the closed base of a frame's last interval —
+                // A node no interval holds but which has a unit - the deepest
+                // node, one on the closed base of a frame's last interval -
                 // is a zero-length interval, so that its own MD finds its
                 // colour, drawn as nothing.
                 let mut points: Vec<(f64, usize)> = Vec::new();
@@ -824,11 +824,11 @@ impl Painting {
 /// frames state, looked up at its MDs.
 ///
 /// `frames_of` gives the wellbore frames that **may** represent the wellbore
-/// named by its uuid (lowercase) — a caller that indexes the package hands
+/// named by its uuid (lowercase) - a caller that indexes the package hands
 /// back that wellbore's frames, one that does not hands back all of them: the
 /// ones that represent another object, and `target` itself, are skipped here
 /// either way, so a wider answer is never a wrong one. It is **asked only when
-/// it is needed** — not for a frame that states its own units, which is the
+/// it is needed** - not for a frame that states its own units, which is the
 /// whole of a package written by the SIGEOL import. The list was built before
 /// the call until 01/10, and a front end painting 2 697 such frames parsed the
 /// package's 2 697 frames for each one of them (1,15 s a well, debug, on
@@ -866,7 +866,7 @@ pub fn of_representation(
     let Some(wellbore) = represented(target) else {
         return Err(Refusal::Absent {
             what: format!("`{title}`"),
-            why: "states no stratigraphic unit itself, and names no represented object — so no other \
+            why: "states no stratigraphic unit itself, and names no represented object - so no other \
                   representation of its wellbore can be recognised"
                 .to_string(),
         });

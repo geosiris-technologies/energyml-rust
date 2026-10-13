@@ -1,44 +1,44 @@
-//! `local-grid` — a refined window of an `IjkGridRepresentation` of the
+//! `local-grid` - a refined window of an `IjkGridRepresentation` of the
 //! package: a child grid whose geometry is *derived*, never stored, from a
 //! `ParentWindow` and a `Regrid` per axis (RESQML TRG 2.2 §5.31 p. 127),
 //! grouped with its parent under a `LocalGridSet`.
 //!
-//! In the reference model: a `LocalGridSet` + a child `IjkGridRepresentation`
-//! — window I 10–13, J 8–11, all K, refined 2 × 2 × 1 → 8 × 8 × 10 = 640
+//! In the reference model: a `LocalGridSet` + a child `IjkGridRepresentation` -
+//! window I 10-13, J 8-11, all K, refined 2 × 2 × 1 → 8 × 8 × 10 = 640
 //! cells; an `IjkParentWindow` (TRG §5.31 p. 127); and
 //! `ParentWindow.ParentIjkGridRepresentation` 1..1 → the main grid, the window
 //! being in the main grid.
 //!
 //! # A general operation, not an invention
 //!
-//! A local grid is ordinary RESQML — `Category::Geometry`, like
+//! A local grid is ordinary RESQML - `Category::Geometry`, like
 //! `ijk-grid-from-horizons`, and **no `synthetic` parameter**.
 //!
 //! # What the file says, and where the TRG says it
 //!
-//! - **the window is a box of the parent's cells, 0-based** — *"0-based index
+//! - **the window is a box of the parent's cells, 0-based** - *"0-based index
 //!   for the placement of the window on the parent grid"* (`Regrid.
-//!   InitialIndexOnParentGrid`, `Grids.xsd`; TRG §5.31 p. 127) — `i0..=i1`,
+//!   InitialIndexOnParentGrid`, `Grids.xsd`; TRG §5.31 p. 127) - `i0..=i1`,
 //!   `j0..=j1` inclusive parent cell indices; `k0..=k1` left out for the
 //!   parent's whole K range (all of K);
 //! - **a `Regrid` per axis** (`IRegrid`, `JRegrid`, `KRegrid`), each an
 //!   `InitialIndexOnParentGrid` and, for a refinement greater than one,
-//!   `Intervals` with **one interval per parent cell** — *« writers should set
-//!   the parent count per interval to 1 »* (RESQML TUG 2.2 §9.8.2, p. 142) —
+//!   `Intervals` with **one interval per parent cell** - *« writers should set
+//!   the parent count per interval to 1 »* (RESQML TUG 2.2 §9.8.2, p. 142) -
 //!   and *"If there is a 1:1 correspondence between the parent and child
 //!   cells, then this object is not needed"* (`Grids.xsd`, `Intervals`), so a
 //!   refinement of one on an axis omits it;
 //! - **no `Geometry` at all on the child**: a local grid's points are the
 //!   parent's, subdivided. `crates/energyml-geometry/src/parent.rs` is the
 //!   reader that already does this at read time, through a hyperslab of the
-//!   parent's `Points` — confirmed here by reading it before writing this file.
+//!   parent's `Points` - confirmed here by reading it before writing this file.
 //!   Nothing here writes a `Points` array for the child;
 //! - **a `LocalGridSet`** groups the child under its parent (`ChildGrid`).
 //!   Checked in `crates/generated/energyml-resqml-2-2/src/grids.rs`: it exists
 //!   in RESQML 2.2, with `Citation` and a `ChildGrid` list of
 //!   `DataObjectReference`.
 //!
-//! # The computed shape's calculation lives here — a named exception
+//! # The computed shape's calculation lives here - a named exception
 //!
 //! The house rule is that a computation lives in `energyml-analysis`, never in an
 //! operation (ADR-0017). This file keeps its
@@ -53,16 +53,16 @@
 //! - a parent that is no `IjkGridRepresentation`;
 //! - a window past the parent's extent, or reversed (`i1 < i0`, and the same
 //!   for J and K);
-//! - **a split coordinate line (a fault) or a K gap inside the window** — the
+//! - **a split coordinate line (a fault) or a K gap inside the window** - the
 //!   child's node there would have two positions, and the reader of the child
 //!   refuses both for that reason (`crates/energyml-geometry/src/parent.rs`).
 //!   **Outside the window, or at its edge, neither matters**: the window is
 //!   read off the parent's own cells (`window_of`), which name the points they
 //!   use whatever the faults and gaps elsewhere. That is what lets the child be
-//!   written at all — the reference model's main grid has a K gap (an unmeshed
+//!   written at all - the reference model's main grid has a K gap (an unmeshed
 //!   cover) and a fault, and the well's impact is in the Chalk, below the gap
 //!   and clear of the fault (until then any gap or fault anywhere was refused);
-//! - a parent cell the window covers with no location — dropped by the reader,
+//! - a parent cell the window covers with no location - dropped by the reader,
 //!   or a corner with no height (`NaN`), which trilinear interpolation would
 //!   otherwise carry through every child node it touches, "silently, because
 //!   NaN propagates without erroring" (the geometry crate's rules).
@@ -70,7 +70,7 @@
 //! # Identity
 //!
 //! From what the local grid **is**: its parent, the window, the refinement,
-//! the title. A different window or a different refinement is another grid —
+//! the title. A different window or a different refinement is another grid -
 //! its cell count would no longer fit a property written on the old one.
 
 use serde_json::{Value, json};
@@ -93,19 +93,19 @@ pub struct LocalGrid;
 /// What `local-grid` is told.
 #[derive(Debug, Params)]
 pub struct LocalGridParams {
-    /// first parent cell along I the window starts at — 0-based, as RESQML counts it (`InitialIndexOnParentGrid`, TRG 2.2 §5.31 p. 127)
+    /// first parent cell along I the window starts at - 0-based, as RESQML counts it (`InitialIndexOnParentGrid`, TRG 2.2 §5.31 p. 127)
     pub i0: usize,
     /// last parent cell along I the window ends at, inclusive
     pub i1: usize,
-    /// first parent cell along J the window starts at — 0-based
+    /// first parent cell along J the window starts at - 0-based
     pub j0: usize,
     /// last parent cell along J the window ends at, inclusive
     pub j1: usize,
-    /// first parent cell along K the window starts at — 0-based; left out, the window starts at the parent's first layer
+    /// first parent cell along K the window starts at - 0-based; left out, the window starts at the parent's first layer
     pub k0: Option<usize>,
-    /// last parent cell along K the window ends at, inclusive; left out, the window runs to the parent's last layer — all of K
+    /// last parent cell along K the window ends at, inclusive; left out, the window runs to the parent's last layer - all of K
     pub k1: Option<usize>,
-    /// how many child cells each parent cell along I is cut into — uniform across the whole window
+    /// how many child cells each parent cell along I is cut into - uniform across the whole window
     #[param(default = 2_usize, min = 1)]
     pub ri: usize,
     /// how many child cells each parent cell along J is cut into
@@ -114,7 +114,7 @@ pub struct LocalGridParams {
     /// how many child cells each parent cell along K is cut into
     #[param(default = 1_usize, min = 1)]
     pub rk: usize,
-    /// What the local grid represents, when named — left out, it represents nothing on its own.
+    /// What the local grid represents, when named - left out, it represents nothing on its own.
     #[param(flatten)]
     pub represented: RepresentedParams,
     /// The title and the file.
@@ -125,7 +125,7 @@ pub struct LocalGridParams {
 /// What `local-grid` takes.
 #[derive(Debug, Inputs)]
 pub struct LocalGridInputs {
-    /// the parent `IjkGridRepresentation` the window is cut from — an object of the package, named by uuid in `ParentWindow`
+    /// the parent `IjkGridRepresentation` the window is cut from - an object of the package, named by uuid in `ParentWindow`
     #[input(types = "resqml22.IjkGridRepresentation", topology = "hexahedra")]
     pub parent: Shape,
 }
@@ -141,8 +141,8 @@ fn title_of(shape: &Shape) -> String {
 }
 
 /// The parent as the geometry reader hands it: one patch of hexahedra over
-/// the file's raw `Points` — every level, K gap levels included, and every
-/// coordinate line, split lines included — each cell naming its eight corners
+/// the file's raw `Points` - every level, K gap levels included, and every
+/// coordinate line, split lines included - each cell naming its eight corners
 /// there (`crates/energyml-geometry/src/ijk.rs`, `read`).
 ///
 /// **Read through its cells, never through the layout of `points`.** How many
@@ -177,7 +177,7 @@ fn parent_grid(shape: &Shape) -> Result<ParentGrid<'_>, Refusal> {
         return Err(Refusal::on(
             "parent",
             // Not the object's title: this is what `fitness` says, and a
-            // title may spell anything — a release included.
+            // title may spell anything - a release included.
             "is no IJK grid: a local grid refines the corner-point cells of one",
         ));
     };
@@ -204,7 +204,7 @@ fn parent_grid(shape: &Shape) -> Result<ParentGrid<'_>, Refusal> {
 
 impl ParentGrid<'_> {
     /// The corners of parent cell `(i, j, k)`, or `None` when the reader
-    /// dropped it — a cell the file marks undefined, or with a corner that has
+    /// dropped it - a cell the file marks undefined, or with a corner that has
     /// no location.
     fn cell(&self, i: usize, j: usize, k: usize) -> Option<[u32; 8]> {
         let number = (k * self.nj + j) * self.ni + i;
@@ -221,7 +221,7 @@ impl ParentGrid<'_> {
 /// `(i0 + di, j0 + dj)` at the `dl`-th layer boundary from the top of layer
 /// `k0`, laid out `dl`, then `dj`, then `di` fastest.
 struct Window {
-    /// Parent cells spanned on I and J — so `span + 1` pillars each way.
+    /// Parent cells spanned on I and J - so `span + 1` pillars each way.
     span: [usize; 2],
     nodes: Vec<[f64; 3]>,
 }
@@ -241,14 +241,14 @@ impl Window {
 /// are: side by side, a split coordinate line (a fault) runs between them;
 /// one above the other, a K gap does. Either way the child's node there would
 /// have two positions, and `crates/energyml-geometry/src/parent.rs`, which
-/// reads the child back, refuses both for that reason — so writing one here
+/// reads the child back, refuses both for that reason - so writing one here
 /// would write a grid nothing reads. Faults and gaps **outside** the window
 /// change nothing: the window's cells name the points they use.
 ///
 /// The reader lays each cell's corners as one face then the other, each face
 /// `(i, j)`, `(i + 1, j)`, `(i + 1, j + 1)`, `(i, j + 1)`
 /// (`energyml_geometry::ijk::read`); which face comes first depends on the
-/// winding VTK asks for, so the top is told by the **point index** instead —
+/// winding VTK asks for, so the top is told by the **point index** instead -
 /// levels are stored top first, and the two corners of one pillar sit on one
 /// coordinate line, so the upper one has the smaller index.
 fn window_of(
@@ -291,7 +291,7 @@ fn window_of(
                                 return Err(Refusal::on(
                                     "parent",
                                     format!(
-                                        "`{title}` has a K gap between parent layers {} and {} and the window spans both: the child's node on that boundary would have two heights — give `k0` and `k1` on one side of it",
+                                        "`{title}` has a K gap between parent layers {} and {} and the window spans both: the child's node on that boundary would have two heights - give `k0` and `k1` on one side of it",
                                         other.min(k),
                                         other.max(k)
                                     ),
@@ -301,7 +301,7 @@ fn window_of(
                                 return Err(Refusal::on(
                                     "parent",
                                     format!(
-                                        "`{title}` has a split coordinate line (a fault) at pillar ({}, {}), inside the window: the child's node there would have one position per side — give a window clear of it",
+                                        "`{title}` has a split coordinate line (a fault) at pillar ({}, {}), inside the window: the child's node there would have one position per side - give a window clear of it",
                                         i + ci,
                                         j + cj
                                     ),
@@ -323,7 +323,7 @@ fn window_of(
             return Err(Refusal::on(
                 "parent",
                 format!(
-                    "`{title}` has no height at pillar ({i}, {j}), level {} — a corner of a cell the window covers: a local grid cannot interpolate a cell with no location",
+                    "`{title}` has no height at pillar ({i}, {j}), level {} - a corner of a cell the window covers: a local grid cannot interpolate a cell with no location",
                     lo[2] + dl
                 ),
             ));
@@ -337,7 +337,7 @@ fn window_of(
 }
 
 /// A child node's position on one axis of the window: the low lattice index,
-/// the high one and the fraction between them — `0.0` and `1.0` exact at a
+/// the high one and the fraction between them - `0.0` and `1.0` exact at a
 /// node on the window's boundary, so it **copies** the parent's corner rather
 /// than interpolating it: the window's edge nodes coincide exactly with the
 /// parent's.
@@ -355,7 +355,7 @@ fn axis_node(span: usize, refine: usize, index: usize) -> (usize, usize, f64) {
     (cell, cell + 1, frac)
 }
 
-/// The window's lattice, trilinearly interpolated at a child node — the same
+/// The window's lattice, trilinearly interpolated at a child node - the same
 /// construction as `crates/energyml-geometry/src/parent.rs::interpolate`,
 /// specialised to a uniform integer refinement: bilinear across the four
 /// pillars around the node, then linear between the two levels. **In pillar
@@ -398,7 +398,7 @@ fn interpolate(
 
 /// Put the eight corners in VTK's order.
 ///
-/// A **simplification** of `energyml_geometry::ijk::oriented` — private to
+/// A **simplification** of `energyml_geometry::ijk::oriented` - private to
 /// that crate, and out of reach from an operation, so not reused (the
 /// alternative to writing this: leaving every child cell's winding to chance).
 /// It measures one triple product rather than the signed volume over six
@@ -432,11 +432,11 @@ fn oriented(node: [u32; 8], points: &[[f64; 3]]) -> [u32; 8] {
 
 /// A `Regrid`: no `Intervals` for a 1:1 correspondence (`Grids.xsd`: *"If there
 /// is a 1:1 correspondence between the parent and child cells, then this
-/// object is not needed"*), and otherwise **one interval per parent cell** —
+/// object is not needed"*), and otherwise **one interval per parent cell** -
 /// *« For grid refinement, the number of parent cells in each interval is 1
 /// […] so that a child cell does not span 2 (or more) parent cells, writers
 /// should set the parent count per interval to 1 »* (RESQML TUG 2.2 §9.8.2,
-/// p. 141–142). The two counts are then constant arrays: 1 parent and
+/// p. 141-142). The two counts are then constant arrays: 1 parent and
 /// `refine` children in each of `span` intervals. `ChildCellWeights` is left
 /// out, so the children of a parent cell are equal (`Grids.xsd`).
 fn regrid(start: usize, span: usize, refine: usize) -> Value {
@@ -464,7 +464,7 @@ impl Operation for LocalGrid {
     fn about(&self) -> About {
         About {
             name: "local-grid",
-            describe: "a local grid — a refined window of an IJK grid of the package, its geometry derived from the parent's, grouped with it in a LocalGridSet",
+            describe: "a local grid - a refined window of an IJK grid of the package, its geometry derived from the parent's, grouped with it in a LocalGridSet",
             category: Category::Geometry,
             makes: &["resqml22.IjkGridRepresentation", "resqml22.LocalGridSet"],
             recipe: "local-grid",
@@ -482,7 +482,7 @@ impl Operation for LocalGrid {
         if let Some(reference) = &known.reference {
             slots.inferred(
                 "title",
-                json!(format!("{} — local grid", reference.title)),
+                json!(format!("{} - local grid", reference.title)),
                 reference.clone(),
             );
         }
@@ -548,7 +548,7 @@ impl Operation for LocalGrid {
         let (ri, rj, rk) = (params.ri, params.rj, params.rk);
         // The binder already refuses a refinement of zero (`Need::Integer`
         // bounds `min = 1`) on every path but a direct call to `plan`, which
-        // this crate's own tests use to reach an operation without a package —
+        // this crate's own tests use to reach an operation without a package -
         // so the same refusal is stated here, named, rather than dividing by
         // zero further down.
         if ri == 0 || rj == 0 || rk == 0 {
@@ -639,7 +639,7 @@ impl Operation for LocalGrid {
         if let Some(reference) = represented.reference {
             child["RepresentedObject"] = reference;
         }
-        let set_title = format!("{title} — local grid set");
+        let set_title = format!("{title} - local grid set");
         let child_ref = Ref::new(uuid.clone(), "resqml22.IjkGridRepresentation", title.clone());
         let local_grid_set = json!({
             "$type": "resqml22.LocalGridSet",
@@ -650,7 +650,7 @@ impl Operation for LocalGrid {
         });
 
         // **The computed shape**: the nodes, trilinearly interpolated in the
-        // parent — see the module doc on what is deliberately
+        // parent - see the module doc on what is deliberately
         // left here rather than in `energyml-analysis`.
         let shape = support::made_root(
             &title,
@@ -691,7 +691,7 @@ impl Operation for LocalGrid {
         }
         says.push(Note {
             key: "left-out",
-            detail: "no `OmitParentCells`, no `CellOverlap`: the window is the whole box, at one uniform resolution. No `Geometry` on the child — its points are the parent's, subdivided, read at need by `energyml_geometry::parent::ijk_grid` rather than stored twice".to_string(),
+            detail: "no `OmitParentCells`, no `CellOverlap`: the window is the whole box, at one uniform resolution. No `Geometry` on the child - its points are the parent's, subdivided, read at need by `energyml_geometry::parent::ijk_grid` rather than stored twice".to_string(),
         });
 
         let mut objects = represented.objects;
@@ -737,7 +737,7 @@ impl Operation for LocalGrid {
         })
     }
 
-    /// `ni`, `nj`, `nk` and `cellCount` are computed, not asked — recorded
+    /// `ni`, `nj`, `nk` and `cellCount` are computed, not asked - recorded
     /// under the parameters the projection declares, the way
     /// `ijk-grid-from-horizons` reports its own counts.
     fn reports(&self) -> Vec<Slot> {
@@ -755,11 +755,11 @@ impl Operation for LocalGrid {
         vec![
             count(
                 "ni",
-                "child cells along I — parent cells in the window, times the I refinement",
+                "child cells along I - parent cells in the window, times the I refinement",
             ),
             count("nj", "child cells along J"),
             count("nk", "child cells along K"),
-            count("cellCount", "child cells total — ni × nj × nk"),
+            count("cellCount", "child cells total - ni × nj × nk"),
         ]
     }
 }

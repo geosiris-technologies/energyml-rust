@@ -1,4 +1,4 @@
-//! **Fault sticks** — the lines a fault surface is lofted between, drawn from
+//! **Fault sticks** - the lines a fault surface is lofted between, drawn from
 //! a plane when nobody digitised them, and the orientation of the surface
 //! they make.
 //!
@@ -11,7 +11,7 @@
 //!
 //! # Conventions
 //!
-//! - an **azimuth** is in degrees clockwise from grid north, the `+y` axis —
+//! - an **azimuth** is in degrees clockwise from grid north, the `+y` axis -
 //!   the direction `(sin a, cos a)` in plan, the convention of `well_plan` and
 //!   of RESQML's `DipDirectionNorthReferenceKind` left absent (*« If not set
 //!   (absent), the NorthReferenceKind is Grid North »*, Interpretations.xsd,
@@ -72,7 +72,7 @@ pub enum PlaneError {
     },
     /// The vertical extent is not a positive length.
     #[error(
-        "the vertical extent is how far the fault goes down below its trace, a length above zero — {given} is not"
+        "the vertical extent is how far the fault goes down below its trace, a length above zero - {given} is not"
     )]
     Extent {
         /// What was given.
@@ -83,11 +83,11 @@ pub enum PlaneError {
 /// The sticks of a plane: one per point of the trace, from that point **down
 /// the dip** by `extent`, measured vertically.
 ///
-/// Each stick is two points — the trace point, and the point `extent` below it
+/// Each stick is two points - the trace point, and the point `extent` below it
 /// and `extent / tan(dip)` further along the dip azimuth. A straight trace
 /// makes a plane; a curved one a surface whose every stick dips the same way,
 /// which is what *warped* means here. A vertical plane (`dip = 90`)
-/// drops straight down, with **no** horizontal offset — `tan(90°)` is not
+/// drops straight down, with **no** horizontal offset - `tan(90°)` is not
 /// infinite in floating point, and an offset of 1e-14 m is a number nobody
 /// stated.
 ///
@@ -194,15 +194,15 @@ pub fn orientation(points: &[[f64; 3]], triangles: &[[u32; 3]], up: bool) -> Opt
     Some(Orientation { dip, dip_azimuth })
 }
 
-/// The sticks that do **not** advance along the strike — the rank, from 0, of
+/// The sticks that do **not** advance along the strike - the rank, from 0, of
 /// each stick whose centre in plan is no further along the line from the first
 /// stick's centre to the last one's than the stick before it.
 ///
 /// A loft follows the order it is given (`loft.rs`: *« a loft between sticks
 /// 1, 3, 2 is a different surface, and one that looks like one »*), so a stick
 /// out of order folds the surface back on itself without anything failing.
-/// This finds it; deciding whether it is a mistake — a strongly curved fault
-/// can turn back — is the caller's, and it is said, never corrected.
+/// This finds it; deciding whether it is a mistake - a strongly curved fault
+/// can turn back - is the caller's, and it is said, never corrected.
 ///
 /// Empty for fewer than three sticks, and for sticks whose first and last
 /// centres coincide in plan: there is no strike to advance along.

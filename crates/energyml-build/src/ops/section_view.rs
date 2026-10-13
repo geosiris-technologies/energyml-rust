@@ -1,4 +1,4 @@
-//! `section-view` — the trace a section was drawn along, as a polyline set the
+//! `section-view` - the trace a section was drawn along, as a polyline set the
 //! package can point at, and the drawing attached to it.
 //!
 //! The need: to put it in the reference model, create a
@@ -9,11 +9,11 @@
 //!
 //! # The image is the input, and the trace is read from it
 //!
-//! A section is computed by `energyml-section` from a whole package —
-//! every well, every surface — which a plan cannot read: `plan` is pure. So the
+//! A section is computed by `energyml-section` from a whole package -
+//! every well, every surface - which a plan cannot read: `plan` is pure. So the
 //! drawing is made first (`energyml profile --svg --png`, the front end's export),
 //! and this operation takes **the drawing**. Its `<metadata>` holds the inputs
-//! it was computed from — the trace, the corridors, the cross sections — and
+//! it was computed from - the trace, the corridors, the cross sections - and
 //! `energyml_section::svg::read_metadata` is how they come back. The lines
 //! written are therefore the lines drawn, **one fact**: a trace given beside
 //! the image would be a second statement of it, free to disagree.
@@ -21,23 +21,23 @@
 //! # What is written
 //!
 //! - a `CulturalFeature` of kind **`energyml-rust:section line`** and its
-//!   `GenericFeatureInterpretation` — `CulturalFeatureKindExt` is open
+//!   `GenericFeatureInterpretation` - `CulturalFeatureKindExt` is open
 //!   (`resqml22`), and none of the listed kinds says *the line a section
 //!   follows*; or the interpretation named in `interpretation`;
 //! - the `PolylineSetRepresentation`, by [`super::polylines::write`]: patch 0
-//!   the long section's trace, patch 1 its cross sections (when there are any)
-//!   — the traces `energyml_section::crosses::traces` computes, the same
+//!   the long section's trace, patch 1 its cross sections (when there are any) -
+//!   the traces `energyml_section::crosses::traces` computes, the same
 //!   function the drawing used;
 //! - an `eml23.Attachment` per image, in the **part-address** form, by
-//!   [`super::attach::Attach`] — the part in the zip, related to its
+//!   [`super::attach::Attach`] - the part in the zip, related to its
 //!   `Attachment`, which names the polyline set. The activity lists every
 //!   object written as its output, so the images are results of the run.
 //!
 //! # Further drawings
 //!
 //! The need: an attachment as a folder that holds all the exports.
-//! `drawings` takes the other files of an export — the cross
-//! sections, the view from above, as SVG or PNG — and attaches each to the lines
+//! `drawings` takes the other files of an export - the cross
+//! sections, the view from above, as SVG or PNG - and attaches each to the lines
 //! like the first, in the same folder. What they are is read from their bytes
 //! (a PNG by its signature, an SVG by opening as one), never their name; an SVG
 //! that states a trace must state **this** one; two files on one part are refused
@@ -55,7 +55,7 @@
 //! was computed from are the activity's **`input`s**, by reference, taken from
 //! the package (`objects`, filled by default with every well and surface); one
 //! the package does not hold is refused by its uri. One JSON string of it all
-//! was the first attempt, and a `StringParameter` holds 2000 characters —
+//! was the first attempt, and a `StringParameter` holds 2000 characters -
 //! Lutetia's held 10 155 (03/10).
 //!
 //! # What is checked, because the two can disagree
@@ -71,7 +71,7 @@
 //! # A height nobody drew
 //!
 //! The trace is a line on a map. A polyline set holds three coordinates, and
-//! `elevation` says the third — asked, never assumed (zero is a datum).
+//! `elevation` says the third - asked, never assumed (zero is a datum).
 
 use energyml_domain::provenance::Parameter;
 use energyml_geometry::geometry::{Geometry, Patch, Topology};
@@ -110,16 +110,16 @@ pub struct SectionViewParams {
     /// The frame, what is represented, the naming.
     #[param(flatten)]
     pub written: WrittenImposed,
-    /// the elevation the lines are written at, in the vertical system — under a frame of the package counting down, written as its depth; a section is drawn along a line on a map, and the drawing holds no height for it
+    /// the elevation the lines are written at, in the vertical system - under a frame of the package counting down, written as its depth; a section is drawn along a line on a map, and the drawing holds no height for it
     pub elevation: f64,
-    /// the SVG's part name in the package — left out, `media/sections/`, a folder named after the section, and the file's name
+    /// the SVG's part name in the package - left out, `media/sections/`, a folder named after the section, and the file's name
     pub svg_path: Option<String>,
-    /// the PNG's part name in the package — left out, `media/sections/`, a folder named after the section, and the file's name
+    /// the PNG's part name in the package - left out, `media/sections/`, a folder named after the section, and the file's name
     pub png_path: Option<String>,
     /// what the images are, in a word (64 characters at most)
     #[param(default = String::from("SectionView"), optional)]
     pub category: String,
-    /// the id this package was asked under in the drawing (`s1`, `s2`… in the front end) — its objects are the run's inputs, another package's are not
+    /// the id this package was asked under in the drawing (`s1`, `s2`… in the front end) - its objects are the run's inputs, another package's are not
     #[param(default = String::from("s1"), optional)]
     pub store: String,
     /// What the section was computed with, and how it was drawn.
@@ -140,7 +140,7 @@ pub enum CrossKind {
 
 /// The section drawn: the long one, the plan, or a cross section by index.
 ///
-/// Text and not a choice, because a cross section carries its index — the
+/// Text and not a choice, because a cross section carries its index - the
 /// words of `energyml profile --draw`: `long`, `plan`, `cross:N`.
 fn target_word(target: &Target) -> String {
     match target {
@@ -154,12 +154,12 @@ fn target_word(target: &Target) -> String {
     }
 }
 
-/// **What the section was computed with, and how it was drawn — each a
+/// **What the section was computed with, and how it was drawn - each a
 /// parameter of the template** (an activity template defines all the
 /// parameters, and the activity adapts them).
 ///
-/// Every one is read from the drawing — suggested, so the form shows them and
-/// the registry records them — and **refused if it says otherwise**: the
+/// Every one is read from the drawing - suggested, so the form shows them and
+/// the registry records them - and **refused if it says otherwise**: the
 /// drawing is what was computed, and a value that disagrees with it would be
 /// an activity describing a run that did not happen. The lists keyed by object
 /// (`hidden`, `colours`, …) are one parameter per entry, each short: a single
@@ -205,11 +205,11 @@ pub struct DrawingParams {
     pub well_width: Option<f64>,
     /// the background colour
     pub background: Option<String>,
-    /// the start of the portion of the trace drawn — the abscissas keep their origin
+    /// the start of the portion of the trace drawn - the abscissas keep their origin
     pub portion_start: Option<f64>,
     /// the end of the portion of the trace drawn
     pub portion_end: Option<f64>,
-    /// the window drawn, `x0, x1, y0, y1` — left out, everything with a margin
+    /// the window drawn, `x0, x1, y0, y1` - left out, everything with a margin
     pub window: Vec<f64>,
     /// what is shown, one word per entry: crossings, vertices, distances, names, rejected, bands, surfaceNames
     pub shown: Vec<String>,
@@ -228,7 +228,7 @@ fn spelled(key: &str) -> String {
     key.replace('\0', "\u{2400}")
 }
 
-/// What the drawing states, slot by slot — the **one** reading of the metadata
+/// What the drawing states, slot by slot - the **one** reading of the metadata
 /// into parameters, used to suggest and to confront. A list is a JSON array; a
 /// value the drawing does not have (no time factor, no window) is left out.
 fn drawn(metadata: &Metadata) -> Vec<(&'static str, Value)> {
@@ -339,7 +339,7 @@ fn drawn(metadata: &Metadata) -> Vec<(&'static str, Value)> {
     out
 }
 
-/// The word serde gives one of the view's enumerations — the same as in the
+/// The word serde gives one of the view's enumerations - the same as in the
 /// SVG's metadata, so that a parameter reads as the drawing does.
 fn word<T: serde::Serialize>(value: &T) -> String {
     serde_json::to_value(value)
@@ -406,11 +406,11 @@ enum Named<'a> {
     /// None of them.
     None,
     /// Several: the uri does not say which (its uuid is held in several
-    /// versions and it names none) — their uris.
+    /// versions and it names none) - their uris.
     Several(Vec<String>),
 }
 
-/// The held object an ETP uri names — read by the one parser of uris
+/// The held object an ETP uri names - read by the one parser of uris
 /// (`EtpUri`), never by hand: a hand-made reading took `uuid=…,version='2'` for
 /// a uuid. **The uuid, then the version the uri names**; a short uri
 /// names the entry that declares none when there are several, as the store's own
@@ -430,7 +430,7 @@ fn named_in<'a>(held: &[&'a Ref], uri: &str) -> Named<'a> {
     match asked.object_version.as_deref() {
         Some(version) => same.retain(|one| one.object_version.as_deref() == Some(version)),
         // Several and no version named: the one that declares none, when exactly
-        // one does — and otherwise they all stay, and the uri is ambiguous.
+        // one does - and otherwise they all stay, and the uri is ambiguous.
         None if same.len() > 1 => {
             let bare: Vec<&'a Ref> = same
                 .iter()
@@ -453,13 +453,13 @@ fn named_in<'a>(held: &[&'a Ref], uri: &str) -> Named<'a> {
 /// What `section-view` takes.
 #[derive(Debug, Inputs)]
 pub struct SectionViewInputs {
-    /// the section, drawn as SVG by the section view — the trace and everything it was computed from are read from its metadata
+    /// the section, drawn as SVG by the section view - the trace and everything it was computed from are read from its metadata
     pub svg: Document,
     /// the same drawing as a PNG, for a reader that draws no SVG
     pub png: Option<Document>,
-    /// the other drawings of the same section — its cross sections, its plan view — as SVG or PNG, each attached to the lines like the first; the type of each is read from its bytes, and a second file of the same part name is refused
+    /// the other drawings of the same section - its cross sections, its plan view - as SVG or PNG, each attached to the lines like the first; the type of each is read from its bytes, and a second file of the same part name is refused
     pub drawings: Vec<Document>,
-    /// the wells and surfaces of the package — those the drawing was computed from are recorded as the activity's inputs, and one it names that the package does not hold is refused
+    /// the wells and surfaces of the package - those the drawing was computed from are recorded as the activity's inputs, and one it names that the package does not hold is refused
     #[input(
         types = "resqml22.WellboreFrameRepresentation, resqml22.WellboreTrajectoryRepresentation, resqml22.TriangulatedSetRepresentation, resqml22.Grid2dRepresentation, resqml22.IjkGridRepresentation, resqml20.obj_WellboreFrameRepresentation, resqml20.obj_WellboreTrajectoryRepresentation, resqml20.obj_TriangulatedSetRepresentation, resqml20.obj_Grid2dRepresentation, resqml20.obj_IjkGridRepresentation",
         every
@@ -486,7 +486,7 @@ const STRING_PARAMETER: usize = 2000;
 /// The eight bytes every PNG starts with (PNG §5.2).
 const PNG_SIGNATURE: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
 
-/// A PNG's width and height, from its `IHDR` — which PNG §5.6 puts first.
+/// A PNG's width and height, from its `IHDR` - which PNG §5.6 puts first.
 fn png_size(bytes: &[u8]) -> Option<[u32; 2]> {
     if bytes.len() < 24 || bytes[..8] != PNG_SIGNATURE || &bytes[12..16] != b"IHDR" {
         return None;
@@ -535,7 +535,7 @@ fn drawing_type(file: &Document) -> Result<&'static str, Refusal> {
 }
 
 /// A part name for a file: the one stated, or `media/sections/<the section>/`
-/// and its name — a folder per section, so that drawing a section again
+/// and its name - a folder per section, so that drawing a section again
 /// writes over its own files and nobody else's (a
 /// folder named like the section).
 fn part_of(stated: &Option<String>, title: &str, file: &Document) -> String {
@@ -577,7 +577,7 @@ impl Operation for SectionView {
     fn about(&self) -> About {
         About {
             name: "section-view",
-            describe: "the line a section view was drawn along, as a section-line feature with its polylines, and the drawings — SVG and PNG — attached to it",
+            describe: "the line a section view was drawn along, as a section-line feature with its polylines, and the drawings - SVG and PNG - attached to it",
             category: Category::Create,
             makes: &[
                 FEATURE,
@@ -632,7 +632,7 @@ impl Operation for SectionView {
                     return Err(Refusal::on(
                         slot,
                         format!(
-                            "the drawing was made with {value}, and {told} is given: the activity would describe a run that did not happen — draw it again with {told}, or leave `{slot}` out"
+                            "the drawing was made with {value}, and {told} is given: the activity would describe a run that did not happen - draw it again with {told}, or leave `{slot}` out"
                         ),
                     ));
                 }
@@ -640,7 +640,7 @@ impl Operation for SectionView {
                     return Err(Refusal::on(
                         slot,
                         format!(
-                            "the drawing says nothing of `{slot}`, and {told} is given — draw it again with it, or leave it out"
+                            "the drawing says nothing of `{slot}`, and {told} is given - draw it again with it, or leave it out"
                         ),
                     ));
                 }
@@ -665,7 +665,7 @@ impl Operation for SectionView {
                 {
                     return Err(Refusal::on(
                         "sourceEpsg",
-                        format!("the drawing's trace is in EPSG:{drawn} — its metadata says so — and `sourceEpsg` says EPSG:{source}: the lines would be written where they were not drawn"),
+                        format!("the drawing's trace is in EPSG:{drawn} - its metadata says so - and `sourceEpsg` says EPSG:{source}: the lines would be written where they were not drawn"),
                     ));
                 }
                 if params.written.frame.crs.is_some()
@@ -674,7 +674,7 @@ impl Operation for SectionView {
                 {
                     return Err(Refusal::on(
                         "crs",
-                        format!("the drawing's trace is in EPSG:{drawn} — its metadata says so — and the frame named is over EPSG:{named}"),
+                        format!("the drawing's trace is in EPSG:{drawn} - its metadata says so - and the frame named is over EPSG:{named}"),
                     ));
                 }
             }
@@ -693,7 +693,7 @@ impl Operation for SectionView {
                     return Err(Refusal::on(
                         "png",
                         format!(
-                            "`{}` is not a PNG — it does not start with the PNG signature",
+                            "`{}` is not a PNG - it does not start with the PNG signature",
                             file.file
                         ),
                     ));
@@ -760,7 +760,7 @@ impl Operation for SectionView {
                     return Err(Refusal::on(
                         "drawings",
                         format!(
-                            "`{}` would be stored as `{part}`, the part `{first}` already takes: two files of the same name in a section's folder — rename one",
+                            "`{}` would be stored as `{part}`, the part `{first}` already takes: two files of the same name in a section's folder - rename one",
                             file.file
                         ),
                     ));
@@ -785,7 +785,7 @@ impl Operation for SectionView {
         };
         // **A height, written in the frame's own sense.** The trace is in
         // projected numbers and `elevation` is a height; a frame of the package
-        // places them by its own origin, rotation and sense — a frame counting
+        // places them by its own origin, rotation and sense - a frame counting
         // down takes the height as its depth (the drawings are
         // stored in a package's existing frame rather than a new one). A frame
         // created here is the projected one, counting up: the numbers stand.
@@ -903,7 +903,7 @@ impl Operation for SectionView {
                     file_name: None,
                     content_type: Some(kind.to_string()),
                     path: Some(part.clone()),
-                    title: Some(Title(format!("{title} — {what}"))),
+                    title: Some(Title(format!("{title} - {what}"))),
                 },
                 &sub,
             )?;
@@ -912,12 +912,12 @@ impl Operation for SectionView {
                 value: part,
             });
             // **A drawing drawn again replaces its attachment.** `attach` names
-            // an attachment by its bytes too — a second file is a second
-            // attachment —, and a redrawn section would then leave the first
+            // an attachment by its bytes too - a second file is a second
+            // attachment -, and a redrawn section would then leave the first
             // beside the second, both naming the same part. A section's drawing
             // is named by the section and what it is (`SVG`, `PNG`): the same
             // section stored twice writes the same object over itself. A further
-            // drawing is named by its file's name instead — a section has one
+            // drawing is named by its file's name instead - a section has one
             // SVG and one PNG of its own, and as many others as it has files.
             let mut objects = made.objects;
             let mut media = made.media;
@@ -939,7 +939,7 @@ impl Operation for SectionView {
             plan.media.extend(media);
             Ok(())
         };
-        // Known to be an SVG — its metadata was just read from it — and a PNG
+        // Known to be an SVG - its metadata was just read from it - and a PNG
         // by its signature: the types are stated from the bytes, never the name.
         let svg_part = part_of(&params.svg_path, &title, &inputs.svg);
         attach(
@@ -974,7 +974,7 @@ impl Operation for SectionView {
 
         // -- what the run was. The scalars are recorded by the registry, as
         // every settled choice; a list is one parameter per entry, written
-        // here — each held to what a `StringParameter` holds.
+        // here - each held to what a `StringParameter` holds.
         parameters.push(Parameter::Double {
             title: "crossSectionCount".to_string(),
             value: crosses as f64,
@@ -1013,7 +1013,7 @@ impl Operation for SectionView {
             }
         }
         // The objects the section was computed from are the run's inputs, by
-        // reference — and one the package does not hold says the drawing was
+        // reference - and one the package does not hold says the drawing was
         // made from another package, or before that object was written.
         let held: Vec<&Ref> = inputs
             .objects
@@ -1021,7 +1021,7 @@ impl Operation for SectionView {
             .filter_map(|one| one.known.reference.as_ref())
             .collect();
         // Only this package's: a drawing over several packages names objects
-        // this one does not hold, and that is not a refusal — it is said.
+        // this one does not hold, and that is not a refusal - it is said.
         let elsewhere: usize = metadata
             .inputs
             .objects
@@ -1047,7 +1047,7 @@ impl Operation for SectionView {
                     return Err(Refusal::on(
                         "objects",
                         format!(
-                            "the drawing was computed from `{uri}`, which this package does not hold — it was drawn from another package, or before that object was written"
+                            "the drawing was computed from `{uri}`, which this package does not hold - it was drawn from another package, or before that object was written"
                         ),
                     ));
                 }
@@ -1055,7 +1055,7 @@ impl Operation for SectionView {
                     return Err(Refusal::on(
                         "objects",
                         format!(
-                            "the drawing was computed from `{uri}`, which names an object held in several versions — {} — name one with its version",
+                            "the drawing was computed from `{uri}`, which names an object held in several versions - {} - name one with its version",
                             uris.join(", ")
                         ),
                     ));

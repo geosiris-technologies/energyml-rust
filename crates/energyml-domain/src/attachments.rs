@@ -1,13 +1,13 @@
-//! The files attached to an object — read, in every form the package can hold
+//! The files attached to an object - read, in every form the package can hold
 //! one in (ADR-0014).
 //!
 //! # The four forms
 //!
 //! | | where the bytes are | how it is found |
 //! |---|---|---|
-//! | **A** [`Form::Part`] | a part of the zip | `destinationMedia` in the object's `.rels`, `sourceMedia` back (EPC §3.4.2 pp. 15–16) |
+//! | **A** [`Form::Part`] | a part of the zip | `destinationMedia` in the object's `.rels`, `sourceMedia` back (EPC §3.4.2 pp. 15-16) |
 //! | **B** [`Form::Inline`] | the XML of an `eml23.Attachment`, base 64 in `Content` | `ObjectReference` |
-//! | **C** [`Form::PartAddress`] | a part of the zip, `Content` empty | `ContentUri` read as a **part name** — this tool's convention, said |
+//! | **C** [`Form::PartAddress`] | a part of the zip, `Content` empty | `ContentUri` read as a **part name** - this tool's convention, said |
 //! | **D** [`Form::External`] | a server | `ContentUri` is an `http(s)` address |
 //!
 //! Two rules without which a form lies (§2 of the design):
@@ -16,8 +16,8 @@
 //!   empty string, so C and D write it; a reader that finds `Content` empty
 //!   *and* a `ContentUri` follows the address. Empty with no address is an
 //!   empty file, and it is said (`problems`);
-//! - **B and C together** have two sources. The content is the authority — the
-//!   schema requires it — the address is shown, and a measured disagreement
+//! - **B and C together** have two sources. The content is the authority - the
+//!   schema requires it - the address is shown, and a measured disagreement
 //!   (the part exists and its bytes differ) is said.
 //!
 //! # What is read, and what is not
@@ -28,13 +28,13 @@
 //! object is, but never returned). [`attachment_bytes`] reads **one** piece, at
 //! the moment somebody asks. An external address is **never followed here**:
 //! this module has no network, and the command line must not have one it was
-//! not asked for (§6) — [`Fetched::External`] hands the address back.
+//! not asked for (§6) - [`Fetched::External`] hands the address back.
 //!
 //! # Who attaches to whom
 //!
-//! A piece names an object by its own relation (A) or `ObjectReference` (B–D).
+//! A piece names an object by its own relation (A) or `ObjectReference` (B-D).
 //! One that nobody names is **inherited** through the walk of
-//! [`crate::inherit`] — the object's collections, its parents — and says so in
+//! [`crate::inherit`] - the object's collections, its parents - and says so in
 //! its [`Provenance`]: *a symbol is never listed without where it came from*.
 //! The listing keeps to what the walk resolves: the nearest carrier, with the
 //! tie-break the walk states. An object that has pieces of its own lists those.
@@ -53,17 +53,17 @@ use crate::inherit::{Via, Walker};
 use crate::package_index::PackageIndex;
 use crate::source::ObjectSource;
 
-/// The files of a package, beside its objects — what [`ObjectSource`] is to the
+/// The files of a package, beside its objects - what [`ObjectSource`] is to the
 /// objects. An EPC implements it below; a store with no files answers empty,
 /// and the pieces that need one are not found, which is the truth.
 pub trait FileSource: ObjectSource {
     /// Every media relation: `(object uuid lowercased, part name)`.
     fn media_links(&self) -> Vec<(String, String)>;
-    /// The attachments of the package — `(part, size, content type)`.
+    /// The attachments of the package - `(part, size, content type)`.
     fn files(&self) -> Vec<(String, Option<u64>, Option<String>)>;
     /// The bytes of one part.
     fn read_part(&self, part: &str) -> Result<Vec<u8>, String>;
-    /// The same source as the objects — spelled out, since a trait object
+    /// The same source as the objects - spelled out, since a trait object
     /// does not upcast on the toolchain this crate supports (1.85).
     fn objects(&self) -> &dyn ObjectSource;
 }
@@ -96,18 +96,18 @@ impl FileSource for EpcStore {
 /// Which of the four forms a piece is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Form {
-    /// A — a part of the zip, tied by `destinationMedia`.
+    /// A - a part of the zip, tied by `destinationMedia`.
     Part,
-    /// B — an `Attachment` carrying its bytes in `Content`.
+    /// B - an `Attachment` carrying its bytes in `Content`.
     Inline,
-    /// C — an `Attachment` whose `ContentUri` names a part of the package.
+    /// C - an `Attachment` whose `ContentUri` names a part of the package.
     PartAddress,
-    /// D — an `Attachment` whose `ContentUri` is an external address.
+    /// D - an `Attachment` whose `ContentUri` is an external address.
     External,
 }
 
 impl Form {
-    /// `A`, `B`, `C`, `D` — the letters of the design.
+    /// `A`, `B`, `C`, `D` - the letters of the design.
     pub fn letter(self) -> char {
         match self {
             Form::Part => 'A',
@@ -184,7 +184,7 @@ pub struct Piece {
     pub form: Form,
     /// How it reached the object that asked.
     pub provenance: Provenance,
-    /// The file's name — the `FileName` of an `Attachment`, the part's last
+    /// The file's name - the `FileName` of an `Attachment`, the part's last
     /// segment otherwise.
     pub file_name: Option<String>,
     /// Its media type: `FileType`, or the part's content type.
@@ -193,7 +193,7 @@ pub struct Piece {
     pub size: Option<u64>,
     /// The depth along the hole it is indexed at; `None` is the whole object.
     pub md: Option<Depth>,
-    /// `Category` — `CuttingsPicture`, `Symbol`.
+    /// `Category` - `CuttingsPicture`, `Symbol`.
     pub category: Option<String>,
     /// Where the bytes are.
     pub location: Location,
@@ -216,7 +216,7 @@ pub struct Listing {
 }
 
 impl Piece {
-    /// The JSON every face writes the same way — camelCase, `null` for what is
+    /// The JSON every face writes the same way - camelCase, `null` for what is
     /// not known, and the provenance with its sentence.
     pub fn to_json(&self) -> serde_json::Value {
         use serde_json::json;
@@ -280,7 +280,7 @@ pub enum Fetched {
     },
 }
 
-/// The pieces attached to each of `uuids`, in order — a batch, so that what
+/// The pieces attached to each of `uuids`, in order - a batch, so that what
 /// belongs to the package is read once.
 pub fn attachments_of<S: AsRef<str>>(
     store: &dyn FileSource,
@@ -291,7 +291,7 @@ pub fn attachments_of<S: AsRef<str>>(
 }
 
 /// [`attachments_of`] over [`Files`] the caller already holds: the call then
-/// reads **nothing of the package** — the index's tables for who names whom, the
+/// reads **nothing of the package** - the index's tables for who names whom, the
 /// files' for the media, and the `Attachment` objects the listing is about.
 pub fn attachments_of_with<S: AsRef<str>>(
     files: &Files,
@@ -310,7 +310,7 @@ pub fn attachments_of_with<S: AsRef<str>>(
 
 /// One object's listing, and **every object it was read from** (lowercase
 /// uuids): the object itself, the `Attachment` objects whose content it shows,
-/// and — for an inherited piece — everything the walk looked at and the
+/// and - for an inherited piece - everything the walk looked at and the
 /// carrier. A change to one of them can change the listing; a change to any
 /// other cannot ([`Cache`] is dropped by it).
 fn list_one(
@@ -381,12 +381,12 @@ pub struct CacheStats {
     pub files_read: u64,
 }
 
-/// The listings of a package, **kept between questions** — the attachments' own
+/// The listings of a package, **kept between questions** - the attachments' own
 /// `ColourCache` (ADR-0009).
 ///
 /// **What is kept** is a [`Listing`] per object asked, with every object it was
 /// read from. **What drops it**: a change to one of those objects, and
-/// nothing else — [`PackageIndex::update_with`] says which objects a change
+/// nothing else - [`PackageIndex::update_with`] says which objects a change
 /// disturbed (the ones that changed, and the ones that gained or lost a
 /// reference from them: an `Attachment` that comes to name an object disturbs
 /// **that object**), and [`Cache::disturb`] drops the listings that read one.
@@ -394,7 +394,7 @@ pub struct CacheStats {
 /// The files are the exception: a media relation or a part is not an object, so
 /// no journal of objects names it. They carry a stamp
 /// ([`EpcStore::files_revision`]) that the caller hands in; when it moves, the
-/// files are listed again and **every** listing goes. Coarse, and rare — an
+/// files are listed again and **every** listing goes. Coarse, and rare - an
 /// attachment added or a relation made is a person's act.
 ///
 /// **One walk or two?** The walk of an object's collections and parents does not
@@ -445,8 +445,8 @@ impl Cache {
         self.touching.clear();
     }
 
-    /// Drop the listings read from one of these objects — the uuids a change
-    /// disturbed — and nothing else. Returns how many.
+    /// Drop the listings read from one of these objects - the uuids a change
+    /// disturbed - and nothing else. Returns how many.
     pub fn disturb(&mut self, uuids: &[String]) -> usize {
         let mut doomed: HashSet<String> = HashSet::new();
         for uuid in uuids {
@@ -471,7 +471,7 @@ impl Cache {
         doomed.len()
     }
 
-    /// The listing of each of `uuids`, in order — from what is held, and a
+    /// The listing of each of `uuids`, in order - from what is held, and a
     /// walk only for the objects that are not. `files_stamp` is
     /// [`EpcStore::files_revision`] (or whatever counts the changes of the
     /// files of this source): when it differs from the one the held listings
@@ -523,7 +523,7 @@ impl Cache {
     }
 }
 
-/// The bytes of one piece, by its [`Piece::key`] — read now, not before.
+/// The bytes of one piece, by its [`Piece::key`] - read now, not before.
 pub fn attachment_bytes(store: &dyn FileSource, key: &str) -> Result<Fetched, String> {
     if let Some(part) = key.strip_prefix("part:") {
         let bytes = store.read_part(part).map_err(|why| format!("`{part}`: {why}"))?;
@@ -603,8 +603,8 @@ fn self_provenance(index: &PackageIndex, uuid: &str) -> Provenance {
     }
 }
 
-/// `collection` when any step is a membership — the carrier is then the member
-/// of a group, the more telling of the two words — else `parent` or `model`.
+/// `collection` when any step is a membership - the carrier is then the member
+/// of a group, the more telling of the two words - else `parent` or `model`.
 fn kind_of(path: &[crate::inherit::Step]) -> &'static str {
     if path.iter().any(|step| step.via == Via::Collection) {
         "collection"
@@ -622,7 +622,7 @@ fn kind_of(path: &[crate::inherit::Step]) -> &'static str {
 /// attachment part.
 ///
 /// Not in the package index, and on purpose: the index follows the **objects**,
-/// and a media relation or a part is not an object — the store's journal of
+/// and a media relation or a part is not an object - the store's journal of
 /// object writes never names one. It has its own stamp instead
 /// ([`EpcStore::files_revision`]), which [`Cache`] compares.
 ///
@@ -657,7 +657,7 @@ struct Reader<'a> {
     store: &'a dyn FileSource,
     files: &'a Files,
     /// Which `Attachment` objects name an object: **the index's table**, laid
-    /// while it read them (`PackageIndex::attachments_naming`) — it used to be a
+    /// while it read them (`PackageIndex::attachments_naming`) - it used to be a
     /// scan of every node of the package, for every call.
     index: &'a PackageIndex,
 }
@@ -699,7 +699,7 @@ impl<'a> Reader<'a> {
         out
     }
 
-    /// The piece an `Attachment` object makes, read by its **uri** — the
+    /// The piece an `Attachment` object makes, read by its **uri** - the
     /// version the index laid is the version shown.
     fn attachment(&self, uri: &str, provenance: &Provenance) -> Option<Piece> {
         let object = self.store.object_at(uri)?;
@@ -721,7 +721,7 @@ impl<'a> Reader<'a> {
         };
 
         let (form, location, size) = match (&address, has_content) {
-            // B — and B with an address beside it: the content is the authority.
+            // B - and B with an address beside it: the content is the authority.
             (_, true) => {
                 if let Some(Address::Part(part)) = &address {
                     match (self.files.parts.get(part), &inline) {
@@ -798,7 +798,7 @@ impl<'a> Reader<'a> {
     }
 }
 
-/// An `eml23.Attachment` read by name — no generated type is needed.
+/// An `eml23.Attachment` read by name - no generated type is needed.
 struct RawAttachment {
     content: String,
     content_uri: Option<String>,
@@ -846,7 +846,7 @@ impl RawAttachment {
 
 /// What a `ContentUri` is.
 enum Address {
-    /// A part name — this tool's reading of a relative address.
+    /// A part name - this tool's reading of a relative address.
     Part(String),
     /// `http` or `https`.
     External(String),
@@ -879,7 +879,7 @@ fn classify(uri: &str) -> Address {
 }
 
 // ---------------------------------------------------------------------------
-// Base 64 — RFC 4648 §4
+// Base 64 - RFC 4648 §4
 // ---------------------------------------------------------------------------
 
 const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -908,7 +908,7 @@ pub fn encode_base64(bytes: &[u8]) -> String {
 }
 
 /// Decode base 64; white space is ignored, as `xsd:base64Binary` allows, and
-/// anything else outside the alphabet — or a bad padding — is refused.
+/// anything else outside the alphabet - or a bad padding - is refused.
 pub fn decode_base64(text: &str) -> Result<Vec<u8>, String> {
     let mut sextets: Vec<u8> = Vec::with_capacity(text.len());
     let mut padding = 0usize;

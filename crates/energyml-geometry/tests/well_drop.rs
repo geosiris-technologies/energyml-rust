@@ -3,7 +3,7 @@
 //! RESQML 2.0.1 and the 2.2 development drops put `StartMd`, `FinishMd`,
 //! `MdUom` and `MdDatum` directly on the `WellboreTrajectoryRepresentation`;
 //! the released 2.2 groups the same four values into an `MdInterval`. The
-//! datum differs too — `MdDatum` against `ReferencePointInACrs` — and so does
+//! datum differs too - `MdDatum` against `ReferencePointInACrs` - and so does
 //! how it carries its position and its vertical sense:
 //!
 //! | | 2.0.1 and the drops | released 2.2 |
@@ -130,13 +130,13 @@ fn a_trajectory_with_flat_bounds_is_a_vertical_well() {
     assert_eq!(patch.points[1], [656_719.86, 1_794_344.31, -6.85 - 34.0]);
 }
 
-/// The CRS comes through the datum here too — and it is a **whole** one.
+/// The CRS comes through the datum here too - and it is a **whole** one.
 ///
 /// An `MdDatum` names a `LocalDepth3dCrs`, which carries offsets, EPSG code and
 /// vertical direction together; the 2.2 datum has no such object and its CRS
 /// has to be assembled from a horizontal and a vertical half. Reading the whole
 /// one is what keeps a package with non-zero offsets from putting its wells
-/// where its surfaces are not — with every individual number still looking
+/// where its surfaces are not - with every individual number still looking
 /// reasonable.
 #[test]
 fn the_flat_datum_gives_the_well_a_whole_crs() {
@@ -156,8 +156,8 @@ fn the_flat_datum_gives_the_well_a_whole_crs() {
 /// there is no `MdInterval`, and that widens what looks like an answer: in this
 /// release `StartMd` and `FinishMd` are required, so an empty object carries
 /// `0.0` for both and the bounds check passes on values nobody wrote. What
-/// stops it there is the datum — which the specification's own business rule
-/// makes mandatory — so the refusal names that rather than the bounds. The
+/// stops it there is the datum - which the specification's own business rule
+/// makes mandatory - so the refusal names that rather than the bounds. The
 /// point of the test is that it refuses at all: a well silently placed at the
 /// origin with zero length is the outcome to rule out.
 #[test]

@@ -1,4 +1,4 @@
-//! `fault-from-sticks` — a fault's feature, its interpretation, the surface
+//! `fault-from-sticks` - a fault's feature, its interpretation, the surface
 //! lofted between its sticks and the sticks themselves
 //!.
 //!
@@ -6,10 +6,10 @@
 //! `FaultInterpretation` interprets a `BoundaryFeature` and is what its
 //! representations represent; *“IsListric … Must be present if the
 //! fault is normal. Must not be present if the fault is not normal”*
-//! (Interpretations.xsd l. 659–662); the sticks are `interpretation
-//! line`s (Structural.xsd l. 55–58); an invented object carries
+//! (Interpretations.xsd l. 659-662); the sticks are `interpretation
+//! line`s (Structural.xsd l. 55-58); an invented object carries
 //! `synthetic = true` and its source. The
-//! numbers are the tests' own, placed where Lutetia's F1 is — at map
+//! numbers are the tests' own, placed where Lutetia's F1 is - at map
 //! coordinates, since a defect of 24/09 only showed far from the origin.
 //!
 //! # What would have to break to make it turn red
@@ -44,11 +44,11 @@ fn frame() -> Ref {
     Ref::new(
         "cccccccc-0000-4000-8000-000000000003",
         "eml23.LocalEngineeringCompoundCrs",
-        "Lutetia — boreholes (elevation)",
+        "Lutetia - boreholes (elevation)",
     )
 }
 
-/// What a recipe puts in the bag when a setting names the frame — its
+/// What a recipe puts in the bag when a setting names the frame - its
 /// companion, as `read::known_of_object` reads a system.
 fn framed(up: bool) -> Pieces {
     Pieces::empty().with(
@@ -86,7 +86,7 @@ fn along(k: usize) -> f64 {
     -30.0 + 100.0 * k as f64
 }
 
-/// A point as the text of a stick writes it — `{}` prints the shortest form
+/// A point as the text of a stick writes it - `{}` prints the shortest form
 /// that reads back to the same bits.
 fn written(point: [f64; 3]) -> String {
     format!("{} {} {}", point[0], point[1], point[2])
@@ -114,7 +114,7 @@ fn base(given: Vec<String>) -> Choices {
         .set("synthetic", true)
         .set(
             "source",
-            "synthetic — the test's own fault, placed where Lutetia's F1 is",
+            "synthetic - the test's own fault, placed where Lutetia's F1 is",
         )
 }
 
@@ -176,7 +176,7 @@ fn number(plan: &Plan, title: &str) -> f64 {
     }
 }
 
-/// A polyline piece — a stick drawn in the scene.
+/// A polyline piece - a stick drawn in the scene.
 fn line(points: Vec<[f64; 3]>) -> Source {
     let runs = vec![points.len() as u32];
     Source::Shape {
@@ -280,7 +280,7 @@ fn the_throw_and_what_the_reference_model_states_are_where_the_schema_puts_them(
         fault["uuid"],
         json!(one(&plan, "resqml22.FaultInterpretation").uuid)
     );
-    assert_eq!(fault["Citation"]["Title"], json!("F1 — interpretation"));
+    assert_eq!(fault["Citation"]["Title"], json!("F1 - interpretation"));
 }
 
 #[test]
@@ -289,7 +289,7 @@ fn is_listric_is_required_on_a_normal_fault_and_refused_on_any_other() {
     let why = planned(&framed(true), &base(sticks(3)).set("throw", json!(["normal"])))
         .expect_err("IsListric missing");
     assert!(
-        why.contains("Must be present if the fault is normal") && why.contains("l. 659–662"),
+        why.contains("Must be present if the fault is normal") && why.contains("l. 659-662"),
         "{why}"
     );
     // Reverse, and said: refused.
@@ -304,7 +304,7 @@ fn is_listric_is_required_on_a_normal_fault_and_refused_on_any_other() {
         why.contains("Must not be present") && why.contains("reverse"),
         "{why}"
     );
-    // Two plays — F3's “normal et strike-slip”: not *the* normal fault.
+    // Two plays - F3's “normal et strike-slip”: not *the* normal fault.
     let why = planned(
         &framed(true),
         &base(sticks(3))
@@ -412,7 +412,7 @@ fn a_synthetic_fault_says_so_on_every_object_and_names_its_source() {
 }
 
 /// The loft keeps every node, in the order of the sticks: read on the shape
-/// the plan carries **and** on the array it writes — two readings of one
+/// the plan carries **and** on the array it writes - two readings of one
 /// fact, at map coordinates.
 #[test]
 fn the_surface_is_the_sticks_in_their_order_bit_for_bit() {
@@ -523,7 +523,7 @@ fn a_blank_entry_starts_a_second_patch_and_the_stick_they_share_is_written_once(
 fn a_stick_out_of_order_is_said_and_kept_where_it_was_given() {
     let mut given = sticks(5);
     given.swap(2, 3);
-    let plan = planned(&framed(true), &f1(given)).expect("planned — said, not refused");
+    let plan = planned(&framed(true), &f1(given)).expect("planned - said, not refused");
     let note = plan
         .says
         .iter()
@@ -598,7 +598,7 @@ fn sticks_already_in_the_package_are_not_written_a_second_time() {
     assert_eq!(number(&plan, "writtenStickCount"), 0.0);
 }
 
-/// F4 of the reference model — reverse, sealed, a plane dipping 55° toward 222° — and F3,
+/// F4 of the reference model - reverse, sealed, a plane dipping 55° toward 222° - and F3,
 /// vertical: the sticks drawn go **down** the dip by the extent over its
 /// tangent, and are not written.
 #[test]
@@ -819,7 +819,7 @@ fn the_dating_takes_both_bounds_or_none() {
     };
     let lower = "bbbbbbbb-0000-4000-8000-000000000133";
     let upper = "bbbbbbbb-0000-4000-8000-000000000131";
-    let half = framed(true).with("chronoBottom", horizon(lower, "H3 — interpretation"));
+    let half = framed(true).with("chronoBottom", horizon(lower, "H3 - interpretation"));
     let why = Registry::new()
         .plan(
             "fault-from-sticks",
@@ -830,7 +830,7 @@ fn the_dating_takes_both_bounds_or_none() {
         )
         .expect_err("one bound");
     assert_eq!(why.refusals()[0].slot.as_deref(), Some("chronoTop"), "{why}");
-    let both = half.with("chronoTop", horizon(upper, "H1 — interpretation"));
+    let both = half.with("chronoTop", horizon(upper, "H1 - interpretation"));
     let plan = planned(&both, &f1(sticks(3))).expect("planned");
     let dated = &one(&plan, "resqml22.FaultInterpretation").json["HasOccurredDuring"];
     assert_eq!(

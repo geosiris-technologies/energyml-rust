@@ -13,22 +13,22 @@ the CSV reader has to take every CSV of a folder and not just a single one.
 `energyml` command; this script only does what Galaxy's way of handing files
 makes necessary, and nothing the command could be asked instead:
 
-- **a file's kind is given, not read off its name** — Galaxy names every dataset
+- **a file's kind is given, not read off its name** - Galaxy names every dataset
   `dataset_N.dat`, and the command chooses its reader by the extension. Each
   input says its kind (`--input table:csv=PATH`), and the file is staged under
   that extension, keeping the name Galaxy shows when it is given (`::NAME`,
   `element_identifier` in the tool XML), since an operation reads a stage or a
   date from a file's name;
-- **a collection is a folder or a list** — `PATH` may be a directory (every file
+- **a collection is a folder or a list** - `PATH` may be a directory (every file
   in it, sorted), or several paths joined by commas (a `multiple="true"`
   parameter rendered by Cheetah);
-- **a refusal fails the step** — `create` writes a package and exits 0 even when
+- **a refusal fails the step** - `create` writes a package and exits 0 even when
   arrays were refused;
   any `[refused]` line is an exit code of 1 here;
-- **outputs are named by Galaxy** — the package and its HDF5 are copied to the
+- **outputs are named by Galaxy** - the package and its HDF5 are copied to the
   paths Galaxy gives, and the URIs of what the step made are written one per line
   (what a downstream surface-modelling tool reads);
-- **the run's manifest is the source of the per-role outputs** — `create` is
+- **the run's manifest is the source of the per-role outputs** - `create` is
   called with `--manifest`, the JSON is copied to `--manifest-out`, and each
   `--role-out ROLE=PATH` gets the URIs of that role (every step's, for a
   recipe), one per line. A role file is **always written**: empty when the role wrote
@@ -98,7 +98,7 @@ def staged_name(source: Path, shown: str | None, extension: str, taken: set[str]
 
 
 def stage(source: Path, folder: Path, name: str) -> Path:
-    """A copy of `source` under `name` — a copy and not a link, so a container
+    """A copy of `source` under `name` - a copy and not a link, so a container
     that mounts Galaxy's files read-only still works."""
     target = folder / name
     shutil.copyfile(source, target)
@@ -186,7 +186,7 @@ def run(args: argparse.Namespace) -> int:
             command += ["--set", choice]
 
         # The package to add to, and its arrays: read from the input, written to
-        # a copy — `create` cannot write into a file it is reading (05/10).
+        # a copy - `create` cannot write into a file it is reading (05/10).
         if args.epc_in:
             command += ["--into", str(stage(Path(args.epc_in), inputs, "input.epc"))]
             if args.h5_in:
@@ -211,7 +211,7 @@ def run(args: argparse.Namespace) -> int:
         if done.returncode != 0:
             return done.returncode
         if refused:
-            print(f"{len(refused)} refusal(s) — the step is not a result", file=sys.stderr)
+            print(f"{len(refused)} refusal(s) - the step is not a result", file=sys.stderr)
             return 1
 
         shutil.copyfile(out / "result.epc", args.epc_out)
@@ -298,7 +298,7 @@ def main() -> int:
     one = sub.add_parser("run", help="run one operation, Galaxy's files in and out")
     one.add_argument("operation", help="the operation, as `energyml create --list` names it")
     one.add_argument("--input", action="append", default=[], metavar="SLOT:KIND=PATH[::NAME]",
-                     help="a file for a slot, of a kind (csv, geojson, obj…) — PATH may be a folder or a comma list")
+                     help="a file for a slot, of a kind (csv, geojson, obj…) - PATH may be a folder or a comma list")
     one.add_argument("--object", action="append", default=[], metavar="SLOT=URI|@FILE",
                      help="objects of the input package for a slot")
     one.add_argument("--template", help="what the tables' columns mean (an OSDU template, JSON)")

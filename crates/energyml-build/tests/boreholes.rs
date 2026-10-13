@@ -1,7 +1,7 @@
 //! `sigeol-boreholes`, on the shape the BRGM writes.
 //!
-//! The fixture is `Borehole_indent_extract_1_well.json` — one real hole,
-//! `BSS000LKCG`, trimmed to four of its nine intervals — and the assertions
+//! The fixture is `Borehole_indent_extract_1_well.json` - one real hole,
+//! `BSS000LKCG`, trimmed to four of its nine intervals - and the assertions
 //! follow the root rule: **their form comes from the specification, their
 //! values from the file.** Nothing here pins *1 000 boreholes*; what is pinned
 //! is that a repeated depth range makes one node, that the uuid written is the
@@ -25,8 +25,8 @@ fn when() -> When {
 /// One borehole, in the shape of the real extract.
 ///
 /// Four intervals over three distinct depth ranges: `(0, 0.5)`, `(0.5, 6.4)`
-/// twice — two geologic units mapped onto one slice, as the export does 22 117
-/// times — and `(6.4, 9.7)`.
+/// twice - two geologic units mapped onto one slice, as the export does 22 117
+/// times - and `(6.4, 9.7)`.
 fn export() -> String {
     let interval = |id: &str, begin: f64, end: f64, collection: &str| {
         format!(
@@ -88,7 +88,7 @@ fn export() -> String {
 
 fn pieces_of(text: &str) -> Pieces {
     let read = geojson::read(text).expect("a collection");
-    // The `logElement`s are `GeometryCollection`s, which this reader refuses —
+    // The `logElement`s are `GeometryCollection`s, which this reader refuses -
     // and they are **inside `properties`**, kept verbatim, so the borehole
     // itself reads. If that ever stopped being true the whole import would be
     // empty, so it is asserted here rather than assumed.
@@ -129,9 +129,9 @@ fn object<'a>(
 #[test]
 fn a_borehole_import_into_degrees_is_refused_by_name() {
     // **The defect of 19/09, and it produced a package that was impeccable and
-    // undrawable.** `crate::crs` already named it — *“the horizontal unit is
+    // undrawable.** `crate::crs` already named it - *“the horizontal unit is
     // a degree while the vertical is a metre, which no reader can reconcile”*
-    // — without ever telling the caller.
+    // - without ever telling the caller.
     //
     // For a borehole this is not a nuance: the object **is** a vertical
     // extent. The holes of a BRGM export are 25 m to 2,189 m deep over
@@ -146,7 +146,7 @@ fn a_borehole_import_into_degrees_is_refused_by_name() {
     //
     // Refusing rather than projecting on a guess: an EPSG code chosen here
     // would move every coordinate by a decision that nobody made.
-    // **Called directly**, without the registry — and that is deliberate. Through the
+    // **Called directly**, without the registry - and that is deliberate. Through the
     // registry, `suggest` always fills `project` from the coordinates, and
     // the only paths that would leave it empty are already refused upstream:
     // an out-of-range latitude and a null geometry are set aside by the
@@ -155,7 +155,7 @@ fn a_borehole_import_into_degrees_is_refused_by_name() {
     // This refusal therefore guards the **library**, not the form: a caller
     // who builds their parameters themselves can set `project: None`, and they
     // must not get a package in degrees. Testing it here is the only place
-    // from which it is reachable — and a check that cannot fail would
+    // from which it is reachable - and a check that cannot fail would
     // prove nothing.
     use energyml_build::declare::Epsg;
     use energyml_build::operation::Operation;
@@ -188,10 +188,10 @@ fn a_borehole_import_into_degrees_is_refused_by_name() {
     assert!(said.contains("4326"), "it names the system refused: {said}");
     assert!(said.contains("project"), "and the parameter to fill: {said}");
 
-    // And the ordinary path still passes — otherwise this check would pass by
+    // And the ordinary path still passes - otherwise this check would pass by
     // refusing everything, which is the fault one notch further.
     let plan = planned(Choices::new().set("project", 2154));
-    // The projected half, and the compound over it that the holes name — role
+    // The projected half, and the compound over it that the holes name - role
     // `crs` was the `ProjectedCrs` until 24/09, a geometry naming a half
     // against RESQML TRG 2.2 §3.1 p. 22.
     assert_eq!(object(&plan, "projected-crs").json["$type"], "eml23.ProjectedCrs");
@@ -214,10 +214,10 @@ fn without_setting_anything_the_import_comes_out_in_metres_by_the_utm_zone_of_th
     // decision, and the UTM zone is the only proposal that follows from the numbers
     // rather than from a country.
     //
-    // The shape comes from the rule — an import must come out in a single unit —
+    // The shape comes from the rule - an import must come out in a single unit -
     // and the value from the file: 2.32 E falls in zone 31 north.
     let plan = planned(Choices::new());
-    // The projected half by its role since 24/09 — `crs` is the compound the
+    // The projected half by its role since 24/09 - `crs` is the compound the
     // holes name, over it.
     let crs = object(&plan, "projected-crs");
     assert_eq!(
@@ -245,7 +245,7 @@ fn without_setting_anything_the_import_comes_out_in_metres_by_the_utm_zone_of_th
 #[test]
 fn when_every_hole_is_set_aside_the_refusal_names_why_and_how_many() {
     // **A wholesale refusal is not consumed.** The message said *“the plan
-    // says why for each”* — and there is no plan: it is an error that is
+    // says why for each”* - and there is no plan: it is an error that is
     // returned, so the grouped reasons were thrown away and the caller
     // learned only that something was wrong.
     //
@@ -253,8 +253,8 @@ fn when_every_hole_is_set_aside_the_refusal_names_why_and_how_many() {
     // whose boreholes carry no interval: thirty set aside, and
     // nothing to say so.
     //
-    // The shape comes from the rule of the repository — an absence and a stupidity are not
-    // the same news, so a refusal names what it saw — and the value
+    // The shape comes from the rule of the repository - an absence and a stupidity are not
+    // the same news, so a refusal names what it saw - and the value
     // comes from the file.
     let bare = export().replace("\"logElement\"", "\"logElementAbsent\"");
     let why = Registry::new()
@@ -281,7 +281,7 @@ fn when_every_hole_is_set_aside_the_refusal_names_why_and_how_many() {
 fn a_hole_set_aside_is_named_not_only_counted() {
     // Lutetia keeps a BSS borehole with no elevation **to show its refusal by
     // name**; the first run of its recipe
-    // said “no `referenceLocation.elevation`” with no hole in it — one of
+    // said “no `referenceLocation.elevation`” with no hole in it - one of
     // twenty-three, and nothing to say which (24/09). The title is the BSS code
     // (`the_uuid_written_is_the_producers_own_and_the_title_its_bss_code`).
     let unknown_ground = export().replace("\"elevation\":38.5", "\"elevationAbsent\":38.5");
@@ -303,8 +303,8 @@ fn a_hole_set_aside_is_named_not_only_counted() {
 fn one_borehole_makes_the_five_objects_and_the_pair_of_systems() {
     let plan = planned(Choices::new().set("project", 2154));
     let roles: Vec<&str> = plan.objects.iter().map(|o| o.role.as_str()).collect();
-    // The frame once for the import — the two systems and, since 24/09, the
-    // plane and the compound the geometries name (RESQML TRG 2.2 §3.1 p. 22) —
+    // The frame once for the import - the two systems and, since 24/09, the
+    // plane and the compound the geometries name (RESQML TRG 2.2 §3.1 p. 22) -
     // then the hole: the feature, its interpretation, the datum the depths are
     // measured from, the trajectory and the frame on it. A sixth object for the
     // hole would be one nobody asked for.
@@ -377,7 +377,7 @@ fn the_dates_go_where_the_producer_put_them() {
     let plan = planned(Choices::new().set("project", 2154));
     for role in ["feature", "interpretation", "trajectory", "frame", "datum"] {
         let citation = &object(&plan, role).json["Citation"];
-        // When the hole was drilled — widened from a date to midnight UTC,
+        // When the hole was drilled - widened from a date to midnight UTC,
         // because EML's `Creation` is a date-time and the export writes a day.
         assert_eq!(citation["Creation"], "1965-11-20T00:00:00Z", "{role}");
         // When this package was written.
@@ -401,7 +401,7 @@ fn the_dates_go_where_the_producer_put_them() {
 fn a_purpose_becomes_the_description_and_pushes_the_blurb_out() {
     // The decision: put the purpose in the
     // Citation.Description instead. `EPOS Borehole` is the collection's name, not
-    // the hole's, so a real purpose replaces it rather than joining it — two
+    // the hole's, so a real purpose replaces it rather than joining it - two
     // sources in one sentence would read as one statement the producer never
     // made.
     let text = export().replace(
@@ -452,7 +452,7 @@ fn a_hole_with_no_drilling_date_falls_back_on_the_run_and_is_counted() {
 #[test]
 fn a_repeated_depth_range_makes_one_frame_node_and_not_two() {
     // Two `logElement`s state `(0.5, 6.4)`. Counting them would put two frame
-    // nodes at the same measured depth, with a zero-length interval between —
+    // nodes at the same measured depth, with a zero-length interval between -
     // a frame that reads as having a slice of hole of no thickness.
     let plan = planned(Choices::new().set("project", 2154));
     let frame = object(&plan, "frame");
@@ -492,7 +492,7 @@ fn the_head_is_the_wellhead_and_the_elevation_is_the_ground() {
     // **The shape comes from the spec, the values from the file**: a vertical hole
     // has the *same* horizontal at each node, and that is what is pinned. The
     // exact pair is the one that Lambert-93 gives at 2.32 / 48.9682, and it is
-    // confronted with the producer elsewhere — by an inverse written from the
+    // confronted with the producer elsewhere - by an inverse written from the
     // EPSG formulas, not by a number copied here.
     let (head_x, head_y) = (values[0], values[1]);
     assert!(
@@ -522,7 +522,7 @@ fn the_head_is_the_wellhead_and_the_elevation_is_the_ground() {
 fn a_vertical_hole_collared_above_the_zero_is_a_linear_spline_and_its_parameters_are_the_mds() {
     // Nothing here declares the hole vertical: the shared writer measures it
     // off the control points it is handed. That is what makes the delegation
-    // worth it — one detector, and the SIGEOL holes go through the same one
+    // worth it - one detector, and the SIGEOL holes go through the same one
     // `well-from-polyline` does.
     //
     // **And vertical is not enough to take RESQML's kind 0.** That kind reads
@@ -542,7 +542,7 @@ fn a_vertical_hole_collared_above_the_zero_is_a_linear_spline_and_its_parameters
     );
 
     // **The parameters are the measured depths**, which is what the frame's
-    // `NodeMd` indexes into — the same numbers as `MdInterval`, below.
+    // `NodeMd` indexes into - the same numbers as `MdInterval`, below.
     let parameters = plan
         .datasets
         .iter()
@@ -665,7 +665,7 @@ fn reprojecting_moves_the_head_and_leaves_the_depths_alone() {
     let energyml_build::operation::Numbers::F64(values) = &control.values else {
         panic!("not floats")
     };
-    // Paris in metres, not degrees — the diagnosis is the number itself.
+    // Paris in metres, not degrees - the diagnosis is the number itself.
     assert!(
         values[0] > 600_000.0 && values[0] < 700_000.0,
         "x = {}",
@@ -679,7 +679,7 @@ fn reprojecting_moves_the_head_and_leaves_the_depths_alone() {
     assert_eq!(object(&plan, "trajectory").json["MdInterval"]["MdMax"], 9.7);
     assert_eq!(plan.objects[0].qualified_type, "eml23.ProjectedCrs");
     // Placed under the identity compound, so the numbers above are Lambert-93
-    // as they stand — the compound moves nothing.
+    // as they stand - the compound moves nothing.
     let frame = object(&plan, "crs");
     assert_eq!(frame.json["$type"], "eml23.LocalEngineeringCompoundCrs");
     assert_eq!(frame.json["OriginVerticalCoordinate"], 0.0);
@@ -729,7 +729,7 @@ fn a_hole_with_no_ground_is_set_aside_by_name_and_the_others_go_on() {
 fn a_hole_whose_depths_are_not_in_metres_is_set_aside_rather_than_converted() {
     // The frame's vertical axis is the metre (`crs::build`). Subtracting feet
     // from metres gives a hole three times too short in a package that opens
-    // cleanly — so the unit is named and the conversion left to whoever owns
+    // cleanly - so the unit is named and the conversion left to whoever owns
     // that decision.
     let text = export().replace(r#""@uom":"m""#, r#""@uom":"ft""#);
     // The replacement must have bitten, or the test would pass on the original.
@@ -771,7 +771,7 @@ fn given_uuids_are_refused_because_the_names_belong_to_the_producer() {
 /// **Written into a package, and read back out of it.**
 ///
 /// Everything above asserts on the plan, which is JSON this test module and the
-/// operation both wrote — two halves of one opinion. This one hands the plan to
+/// operation both wrote - two halves of one opinion. This one hands the plan to
 /// `apply`, which parses each object into the generated type and refuses what
 /// does not fit: `Aliases`, `ExtensionNameValue`, `LastUpdate`, `Description`,
 /// the enumerated alias kinds, the `StringMeasure`'s unit attribute. A typo in

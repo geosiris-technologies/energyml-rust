@@ -42,7 +42,7 @@ fn qualified_type_re() -> &'static Regex {
     })
 }
 
-/// A quoted value of an ETP URI — a dataspace path, an object version — where
+/// A quoted value of an ETP URI - a dataspace path, an object version - where
 /// a quote is written twice (ETP v1.2 §25.3.10).
 const QUOTED_PATTERN: &str = r"[^']*?(?:''[^']*?)*";
 
@@ -69,7 +69,7 @@ fn etp_uri_re() -> &'static Regex {
 /// (§25.3.10; the Identifier Specification v5.0 repeats them): a dataspace, a
 /// data object with or without its version, and the two query forms.
 ///
-/// The reader above is lenient — it takes `(uuid=…)`, an alternate form — so
+/// The reader above is lenient - it takes `(uuid=…)`, an alternate form - so
 /// whether a URI is canonical is a question of its own, answered here and
 /// nowhere else.
 fn canonical_etp_uri_res() -> &'static [Regex; 4] {
@@ -176,7 +176,7 @@ pub struct QualifiedType {
     /// Compact version digits as they appear in the string, e.g. `22`.
     pub version: String,
     /// Object type **verbatim**, `obj_` prefix included where the schema has
-    /// one — `resqml20.obj_Activity` keeps it.
+    /// one - `resqml20.obj_Activity` keeps it.
     pub object_type: String,
 }
 
@@ -238,7 +238,7 @@ pub struct EtpUri {
     pub object_type: Option<String>,
     /// Object UUID, normalized to lowercase.
     pub uuid: Option<String>,
-    /// The object's version, `version='…'`, when the URI names one — not to be
+    /// The object's version, `version='…'`, when the URI names one - not to be
     /// confused with [`EtpUri::version`], the schema version of its type.
     pub object_version: Option<String>,
     /// Anything trailing the object, such as a sub-path.
@@ -267,7 +267,7 @@ impl EtpUri {
         })
     }
 
-    /// Whether `value` is a **canonical** ETP URI (ETP v1.2 §25.3.4-25.3.10) —
+    /// Whether `value` is a **canonical** ETP URI (ETP v1.2 §25.3.4-25.3.10) -
     /// what every endpoint must understand, and what some messages require
     /// whatever was negotiated (§3.7.4.2). Anything else, however well it
     /// reads, is at best an alternate URI (§25.3.9).
@@ -295,7 +295,7 @@ impl EtpUri {
     }
 
     /// Build a data-object URI that names the object's version when it has
-    /// one: `eml:///{type}(uuid={uuid},version='{version}')` — Identifier
+    /// one: `eml:///{type}(uuid={uuid},version='{version}')` - Identifier
     /// Specification v5.0 §3.4.2 (p. 14); a quote inside the version is written
     /// twice (ETP v1.2 §25.3.10). Without a version this is the short form,
     /// which §3.4.2.1 (p. 15) reads as *the most recent version*.
@@ -414,7 +414,7 @@ mod tests {
         assert_eq!(no_ds.dataspace, None);
         assert_eq!(no_ds.domain.as_deref(), Some("witsml"));
 
-        // Round trip — against the string read, not against itself.
+        // Round trip - against the string read, not against itself.
         assert_eq!(
             uri.to_string(),
             "eml:///dataspace('demo/ds')/resqml22.TriangulatedSetRepresentation(a1b2c3d4-e5f6-7890-abcd-ef1234567890)"

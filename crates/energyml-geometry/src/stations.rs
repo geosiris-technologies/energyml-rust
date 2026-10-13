@@ -1,13 +1,13 @@
 //! A WITSML `Trajectory`, drawn: its stations placed by the minimum curvature
 //! method from the datum its measured depths are counted from.
 //!
-//! A RESQML trajectory states a **line** — control points, a parametric
-//! spline — and [`crate::parametric`] evaluates it. A WITSML 2.1 trajectory
+//! A RESQML trajectory states a **line** - control points, a parametric
+//! spline - and [`crate::parametric`] evaluates it. A WITSML 2.1 trajectory
 //! states **measurements**: at each `TrajectoryStation` a measured depth, an
 //! inclination *« measured from vertical »* and an azimuth *« Corrected to
-//! wells azimuth reference »* (WITSML TRG 2.1 §16.10 p. 356–358). Where the
+//! wells azimuth reference »* (WITSML TRG 2.1 §16.10 p. 356-358). Where the
 //! hole is follows from them by a method, and the method is
-//! [`crate::min_curvature`] — the minimum curvature method run forward
+//! [`crate::min_curvature`] - the minimum curvature method run forward
 //! (WITSML/PRODML business views). This module is
 //! what it takes to hand that function numbers it can trust, and to put its
 //! answer in the world.
@@ -15,17 +15,17 @@
 //! # Placed by the trajectory's datum, not the well's
 //!
 //! The WITSML 2.1 `Well` carries no datum. The trajectory names
-//! the one its depths count from — `DefaultMdDatum`, an `AbstractReferencePoint`
-//! (§16.6 p. 350) — and a station may name its own in `Md.Datum`. The two must
+//! the one its depths count from - `DefaultMdDatum`, an `AbstractReferencePoint`
+//! (§16.6 p. 350) - and a station may name its own in `Md.Datum`. The two must
 //! agree, and so must `MdInterval.Datum` when it is stated, because that is the
 //! one `energyml_domain::crs::of` reads to give the trajectory its CRS: a
 //! trajectory drawn from one datum and labelled with another is placed twice
 //! or not at all. The datum is placed by `crate::well::place_datum`, the
-//! reading a RESQML well's datum goes through — never a second one.
+//! reading a RESQML well's datum goes through - never a second one.
 //!
 //! **MD 0 is the datum**, by definition of a measured depth, so the first
-//! station must be there. One that starts below it — a survey tied on to
-//! another (`MdTieOn`, `ParentTrajectory`) — does not say where the hole runs
+//! station must be there. One that starts below it - a survey tied on to
+//! another (`MdTieOn`, `ParentTrajectory`) - does not say where the hole runs
 //! above it, and is refused rather than hung from the datum.
 //!
 //! # Which north
@@ -34,18 +34,18 @@
 //! legacy data, it is strongly recommended that this always be specified »*
 //! (`AziRef`, §16.7 p. 352). Honoured, or refused:
 //!
-//! - **grid north** — the north of the projected system the datum is placed in:
+//! - **grid north** - the north of the projected system the datum is placed in:
 //!   the displacement is added to the placed datum as it stands, east along the
 //!   first projected axis and north along the second;
-//! - **plant north** — *« a direction in a local engineering coordinate
+//! - **plant north** - *« a direction in a local engineering coordinate
 //!   reference system »* (eml 2.3 `NorthReferenceKind`): the second axis of the
 //!   compound the datum is written in, so the displacement is turned by that
-//!   compound's azimuth — through `Crs::to_projected`, the placement every
+//!   compound's azimuth - through `Crs::to_projected`, the placement every
 //!   geometry of the compound goes through. A datum written in no compound
 //!   names no plant, and is refused;
-//! - **true, magnetic, astronomic, compass north** — need a convergence or a
+//! - **true, magnetic, astronomic, compass north** - need a convergence or a
 //!   declination this build does not apply: refused by name;
-//! - **none** — refused, unless no station leaves the vertical below the
+//! - **none** - refused, unless no station leaves the vertical below the
 //!   datum, in which case no azimuth moves anything and none is asked.
 //!
 //! An axis order the file states other than east then north is refused where
@@ -58,14 +58,14 @@
 //! `CalcAlgorithm` and the trajectory's `NominalCalcAlgorithm` are optional,
 //! and absent on most surveys; the angles are measurements and some method must
 //! join them. Minimum curvature is the one API D20 and the industry settle on,
-//! and the one the design names. A method the file **states** otherwise —
-//! tangential, radius of curvature, … — is refused: drawing it by another would
+//! and the one the design names. A method the file **states** otherwise -
+//! tangential, radius of curvature, … - is refused: drawing it by another would
 //! move the hole away from where its producer computed it.
 //!
 //! # What comes out
 //!
-//! One polyline, **one node per station** — the stations are what the object
-//! states, and what a log indexed on the trajectory hangs on — in the convention
+//! One polyline, **one node per station** - the stations are what the object
+//! states, and what a log indexed on the trajectory hangs on - in the convention
 //! of `crate::well`: projected x and y, an **elevation** in metres, z-up. The
 //! CRS `energyml_domain::crs::of` gives the trajectory through its
 //! `MdInterval.Datum` carries the identity of the system and none of its
@@ -94,7 +94,7 @@ pub(crate) fn declared(trajectory: &dyn Reflect) -> Option<u64> {
     Some(field_list(trajectory, "TrajectoryStation").len() as u64)
 }
 
-/// The trajectory, drawn — see the module.
+/// The trajectory, drawn - see the module.
 pub(crate) fn read(trajectory: &dyn Reflect, source: &dyn ValueSource) -> Result<Vec<Patch>> {
     let listed = field_list(trajectory, "TrajectoryStation");
     if listed.is_empty() {
@@ -113,7 +113,7 @@ pub(crate) fn read(trajectory: &dyn Reflect, source: &dyn ValueSource) -> Result
         let here = format!("{AT}.TrajectoryStation[{}]", at + 1);
         if measure::enum_value(*station, "StatusTrajStation").as_deref() == Some("rejected") {
             return Err(Error::unsupported(
-                "a trajectory holding a rejected station — whether it is left out is not decided here",
+                "a trajectory holding a rejected station - whether it is left out is not decided here",
                 here,
             ));
         }
@@ -123,7 +123,7 @@ pub(crate) fn read(trajectory: &dyn Reflect, source: &dyn ValueSource) -> Result
         let md = measured_depth(holder, &here)?;
         let counted_from = reference_of(holder, "Datum").or_else(|| default_datum.clone()).ok_or_else(|| {
             Error::unsupported(
-                "a WITSML trajectory whose measured depths name no datum — neither `DefaultMdDatum` nor the station's `Md.Datum`",
+                "a WITSML trajectory whose measured depths name no datum - neither `DefaultMdDatum` nor the station's `Md.Datum`",
                 &here,
             )
         })?;
@@ -157,7 +157,7 @@ pub(crate) fn read(trajectory: &dyn Reflect, source: &dyn ValueSource) -> Result
     }
     if measured[0].md != 0.0 {
         return Err(Error::unsupported(
-            "a WITSML trajectory whose first station is not at its datum — where the hole runs above it is not stated",
+            "a WITSML trajectory whose first station is not at its datum - where the hole runs above it is not stated",
             format!("{AT}.TrajectoryStation[1]: MD {} m", measured[0].md),
         ));
     }
@@ -194,7 +194,7 @@ pub(crate) fn read(trajectory: &dyn Reflect, source: &dyn ValueSource) -> Result
 fn stated_method(object: &dyn Reflect, field: &str, at: &str) -> Result<()> {
     match measure::enum_value(object, field) {
         Some(method) if !method.eq_ignore_ascii_case(MINIMUM_CURVATURE) => Err(Error::unsupported(
-            "a survey computed by a method other than minimum curvature — drawing it by minimum curvature would move the hole from where its producer put it",
+            "a survey computed by a method other than minimum curvature - drawing it by minimum curvature would move the hole from where its producer put it",
             format!("{at}.{field} = `{method}`"),
         )),
         _ => Ok(()),
@@ -202,7 +202,7 @@ fn stated_method(object: &dyn Reflect, field: &str, at: &str) -> Result<()> {
 }
 
 /// A measured depth, in metres: `Md.MeasuredDepth` (eml 2.3), or `Md` itself
-/// where it is the measure (WITSML 2.0) — the field present, never the release.
+/// where it is the measure (WITSML 2.0) - the field present, never the release.
 fn measured_depth(holder: &dyn Reflect, at: &str) -> Result<f64> {
     let found = measure::read(holder)
         .or_else(|| field_object(holder, "MeasuredDepth").and_then(measure::read))
@@ -213,7 +213,7 @@ fn measured_depth(holder: &dyn Reflect, at: &str) -> Result<f64> {
     Ok(units::metres(found.value, &unit)?)
 }
 
-/// An angle, in degrees — `None` when the station states none. A unit that is
+/// An angle, in degrees - `None` when the station states none. A unit that is
 /// not an angle is refused by `energyml_domain::units`, by name.
 fn angle(station: &dyn Reflect, field: &str, at: &str) -> Result<Option<f64>> {
     let Some(holder) = field_object(station, field) else {
@@ -224,7 +224,7 @@ fn angle(station: &dyn Reflect, field: &str, at: &str) -> Result<Option<f64>> {
     let unit = found.uom.ok_or_else(|| {
         Error::malformed(
             format!("{at}.{field}"),
-            "an angle with no unit — degrees or radians is not a guess to make",
+            "an angle with no unit - degrees or radians is not a guess to make",
         )
     })?;
     // Into degrees directly: `convert` leaves a value in `dega` untouched, so
@@ -270,7 +270,7 @@ impl Horizontal {
         let at = format!("{AT}.AziRef");
         let Some(north) = measure::enum_value(trajectory, "AziRef") else {
             return Err(Error::unsupported(
-                "a WITSML trajectory that leaves the vertical and states no `AziRef` — which north its azimuths turn from is not said (WITSML TRG 2.1 §16.7 p. 352)",
+                "a WITSML trajectory that leaves the vertical and states no `AziRef` - which north its azimuths turn from is not said (WITSML TRG 2.1 §16.7 p. 352)",
                 at,
             ));
         };
@@ -299,7 +299,7 @@ impl Horizontal {
                     .filter(|crs| crs.as_reflect().type_info().type_key == "ProjectedCrs")
                     .ok_or_else(|| {
                         Error::unsupported(
-                            "a grid-north survey whose datum is not placed in a projected CRS — the grid it turns from is not named",
+                            "a grid-north survey whose datum is not placed in a projected CRS - the grid it turns from is not named",
                             &at,
                         )
                     })?;
@@ -339,7 +339,7 @@ impl Horizontal {
                     }
                     None => {
                         return Err(Error::unsupported(
-                            "a plant-north survey whose compound's horizontal axes cannot be read — which way its north points is not known",
+                            "a plant-north survey whose compound's horizontal axes cannot be read - which way its north points is not known",
                             at,
                         ));
                     }
@@ -350,11 +350,11 @@ impl Horizontal {
                 })
             }
             ("plant north", None) => Err(Error::unsupported(
-                "a plant-north survey whose datum is written in no local engineering compound — no plant is named to turn from",
+                "a plant-north survey whose datum is written in no local engineering compound - no plant is named to turn from",
                 at,
             )),
             (_, _) => Err(Error::unsupported(
-                "an azimuth reference other than grid or plant north — it needs a convergence or a declination this build does not apply",
+                "an azimuth reference other than grid or plant north - it needs a convergence or a declination this build does not apply",
                 format!("{at} = `{north}`"),
             )),
         }
@@ -380,11 +380,11 @@ fn east_then_north(order: &str, at: &str) -> Result<()> {
     ))
 }
 
-/// Metres per unit of the projected axes — stated, or refused.
+/// Metres per unit of the projected axes - stated, or refused.
 fn horizontal_unit(unit: Option<&str>, at: &str) -> Result<f64> {
     let unit = unit.ok_or_else(|| {
         Error::unsupported(
-            "a projected system that states no unit — a displacement in metres cannot be added to it",
+            "a projected system that states no unit - a displacement in metres cannot be added to it",
             at,
         )
     })?;

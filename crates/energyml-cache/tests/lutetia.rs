@@ -10,7 +10,7 @@
 //!    is the variant with errors; `package/` is the clean one and is not read
 //!    here;
 //! 2. the monorepo, `web/public/examples/lutetia/Lutetia.epc` (the variant
-//!    with errors — in the monorepo the clean one is `lutetia-sans-erreurs`).
+//!    with errors - in the monorepo the clean one is `lutetia-sans-erreurs`).
 //!
 //! Nothing found: a panic when `$ENERGYML_LUTETIA_DIR` is set (a directory that was
 //! named and lacks the model), otherwise a printed note and `None`, and the test returns.

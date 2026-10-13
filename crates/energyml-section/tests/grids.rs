@@ -1,4 +1,4 @@
-//! The envelope of an IJK grid along a section — on grids **fabricated
+//! The envelope of an IJK grid along a section - on grids **fabricated
 //! in the test after the specification** (ADR-0011: the corpus is not
 //! authoritative): pillars on a lattice, levels at known heights, split coordinate
 //! lines written as RESQML writes them. Every expected number is arithmetic on
@@ -384,7 +384,7 @@ fn span_ends(span: &[[f64; 2]]) -> ([f64; 2], [f64; 2]) {
 /// A grid of 4 × 1 × 2 cells, 100 m wide, layers 50 m thick (levels at 1000,
 /// 950, 900), cut along `y = 50` from `x = 0` to `x = 400`: the roof is one span
 /// at 1000 m from `s = 0` to `s = 400`, the floor one at 900 m, and the rock
-/// between them one polygon of 400 × 100 m — **two layers, one run**.
+/// between them one polygon of 400 × 100 m - **two layers, one run**.
 ///
 /// To make it fail: pick the roof as the ring with the *lower* mean height in
 /// `cut_cell` (the roof then reads 900), or cut the run at every cell (four
@@ -496,7 +496,7 @@ fn a_fault_cuts_the_roof_and_the_floor_and_its_step_is_a_fault_segment() {
 /// column of three marked undefined (`CellGeometryIsDefined`, TRG §5.1, which
 /// overrides whatever the pillars hold), the roof and the floor are two spans,
 /// `[0, 100]` and `[200, 300]`, the rock is two polygons, and **no fault** step
-/// is drawn across what is missing — though every pillar is finite.
+/// is drawn across what is missing - though every pillar is finite.
 ///
 /// To make it fail: let `join` extend a span across a gap in `s` (one roof span
 /// bridging the hole), or read the grid without its flags (three columns).
@@ -537,7 +537,7 @@ fn an_undefined_column_interrupts_the_roof_the_floor_and_the_fill() {
 
 /// A **K gap** (`KGaps`, *NKL = NK + gapCount + 1*) leaves the rock of the two
 /// layers in two blocks: the roof is the top of layer 0 (1000 m), the floor the
-/// bottom of layer 1 (850 m) — a K gap is not a hole in the envelope — and the
+/// bottom of layer 1 (850 m) - a K gap is not a hole in the envelope - and the
 /// fill is **two** polygons of 50 m, with the 50 m void between them empty.
 ///
 /// To make it fail: have `touches` answer `true` always (one run, one polygon of
@@ -568,7 +568,7 @@ fn a_k_gap_leaves_the_fill_in_two_blocks_and_the_envelope_whole() {
 /// A trace that passes beside the grid does not meet it: no entry (the caller's
 /// `Missed`), never an empty envelope. A grid in time follows the surfaces' rule:
 /// refused by name without a time factor, and carried onto the depth axis by it
-/// otherwise — the CRS says z increases downward, so 1000 ms is an elevation of
+/// otherwise - the CRS says z increases downward, so 1000 ms is an elevation of
 /// −1000, scaled by 0.5 m per ms.
 ///
 /// To make it fail: build the entry for every section whether or not a cell was

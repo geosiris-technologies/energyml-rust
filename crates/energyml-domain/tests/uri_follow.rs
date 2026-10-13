@@ -1,4 +1,4 @@
-//! The readers of the domain follow a reference **by its full uri** — the
+//! The readers of the domain follow a reference **by its full uri** - the
 //! version it names is the version read (ADR-0003).
 //!
 //! Internally, full uris only (ADR-0003), which avoids sources of bugs. A package may hold one uuid
@@ -8,7 +8,7 @@
 //! The package is fabricated here: a `LocalDepth3dCrs` in two versions (two EPSG
 //! codes), a grid naming each, and a property hanging on each. Each test names
 //! what would have to break to make it fail: a reader asking the source for the
-//! bare uuid — the store holds two objects under it and answers none.
+//! bare uuid - the store holds two objects under it and answers none.
 
 use std::io::Cursor;
 use std::sync::Arc;
@@ -118,7 +118,7 @@ fn epsg_of(store: &EpcStore, grid: &str) -> Option<u64> {
         .and_then(|read| read.projected.epsg())
 }
 
-/// What would have to break: `crs::of` asking for the CRS by its uuid — two
+/// What would have to break: `crs::of` asking for the CRS by its uuid - two
 /// objects hold it, so both grids would come back with a *Missing* error.
 #[test]
 fn a_crs_is_read_at_the_version_the_reference_names() {

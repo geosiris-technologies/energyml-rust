@@ -9,10 +9,10 @@
 //!
 //! So this is **ours**, and it is written where the topology is. Nothing else
 //! in the workspace knows which nodes a cell has: [`Drawable`] carries triangles
-//! and segments, which are the *drawing* of a shape and not its cells —
+//! and segments, which are the *drawing* of a shape and not its cells -
 //! `cell_count()` counts hexahedra for a grid and runs for a polyline set. The
-//! map lives in [`Topology`], so the transfer lives beside it and every consumer
-//! — the exporters, the command line, the browser, the desktop — gets the same
+//! map lives in [`Topology`], so the transfer lives beside it and every consumer -
+//! the exporters, the command line, the browser, the desktop - gets the same
 //! one.
 //!
 //! [`Drawable`]: crate::geometry::Drawable
@@ -23,8 +23,8 @@
 //! property whose two nodes hold 0 and 3 averages to 1.5, which is not a
 //! neighbouring shade of anything: it is a different rock, or no rock at all,
 //! and the picture that comes out is confident and false. So a discrete
-//! property transfers by [`Method::Majority`] — the value most of the nodes
-//! actually hold — and the caller says which it wants rather than getting a
+//! property transfers by [`Method::Majority`] - the value most of the nodes
+//! actually hold - and the caller says which it wants rather than getting a
 //! default that is right half the time.
 //!
 //! `NaN` is a value the corpus uses to mean *no data here*. It is skipped
@@ -42,7 +42,7 @@ use crate::geometry::{Geometry, Topology};
 pub enum Scope {
     /// One value per point.
     Points,
-    /// One value per cell — a triangle, a polyline, a hexahedron, a grid cell.
+    /// One value per cell - a triangle, a polyline, a hexahedron, a grid cell.
     Cells,
 }
 
@@ -72,7 +72,7 @@ pub enum Method {
     ///
     /// For a category, where the mean of two indices names a third thing. Ties
     /// go to the **smallest** value, so the same input always gives the same
-    /// picture — an arbitrary rule, but a stated and stable one.
+    /// picture - an arbitrary rule, but a stated and stable one.
     Majority,
     /// The smallest value.
     Minimum,
@@ -119,7 +119,7 @@ impl Method {
 
     /// Reduce the values gathered for one element.
     ///
-    /// `NaN` never reaches here — the caller filters — so an empty slice means
+    /// `NaN` never reaches here - the caller filters - so an empty slice means
     /// *nothing was defined around this element*, which is `NaN` and not zero.
     fn reduce(self, gathered: &[f64]) -> f64 {
         if gathered.is_empty() {
@@ -132,7 +132,7 @@ impl Method {
             Method::Majority => {
                 // Counted on the bit pattern so that two equal values are one
                 // key whatever arithmetic produced them, and the winner is
-                // resolved by *value* on a tie — the smallest — so the same
+                // resolved by *value* on a tie - the smallest - so the same
                 // input always paints the same picture.
                 let mut counts: HashMap<u64, (usize, f64)> = HashMap::new();
                 for value in gathered {
@@ -173,7 +173,7 @@ impl<const N: usize> JoinWith for [&'static str; N] {
 /// representation's. Getting that wrong silently colours patch 2 with patch 1's
 /// numbers, which on a two-patch surface looks like a plausible picture.
 ///
-/// A grid's cells are derived rather than stored — `(fastest × slowest)` points
+/// A grid's cells are derived rather than stored - `(fastest × slowest)` points
 /// give `(fastest-1) × (slowest-1)` quadrilaterals, in the same row-major order
 /// `cell_count()` uses.
 pub fn cell_nodes(geometry: &Geometry) -> Vec<Vec<u32>> {
@@ -190,7 +190,7 @@ pub fn cell_nodes(geometry: &Geometry) -> Vec<Vec<u32>> {
             Topology::Segments(pairs) => out.extend(pairs.iter().map(|p| shift(p))),
             Topology::Hexahedra { cells, .. } => out.extend(cells.iter().map(|c| shift(c))),
             Topology::Polylines(runs) => {
-                // A run is one cell: the whole polyline, not each segment —
+                // A run is one cell: the whole polyline, not each segment -
                 // `cell_count()` counts runs, and a per-cell property of a
                 // polyline set has one value per line.
                 let mut start = 0u32;
@@ -300,7 +300,7 @@ pub fn transfer(
             Ok(out)
         }
         // One value per point, from the cells that touch it. A point no cell
-        // uses — a loose node of a patch that also has cells — comes back
+        // uses - a loose node of a patch that also has cells - comes back
         // `NaN`, not zero.
         Scope::Points => {
             let mut touching: Vec<Vec<usize>> = vec![Vec::new(); point_count];
@@ -354,7 +354,7 @@ mod tests {
     #[test]
     fn a_grid_cell_has_its_four_corners() {
         // 3×2 points make two cells, and cell 0 is the quadrilateral
-        // (0, 1, 4, 3) — the row below is `+ fastest`. Getting this ring wrong
+        // (0, 1, 4, 3) - the row below is `+ fastest`. Getting this ring wrong
         // averages the wrong corners and draws a plausible picture.
         let map = cell_nodes(&grid(3, 2));
         assert_eq!(map.len(), 2);
@@ -366,7 +366,7 @@ mod tests {
     fn a_patch_offset_is_applied_to_cells() {
         // Two patches: a `Topology` numbers its own points, a property numbers
         // the representation's. Without the offset, patch 1's cells would
-        // point at patch 0's nodes — the same picture, the wrong values.
+        // point at patch 0's nodes - the same picture, the wrong values.
         let mut geometry = grid(2, 2);
         geometry.patches.push(Patch {
             index: 1,
@@ -422,7 +422,7 @@ mod tests {
             &geometry,
         )
         .unwrap();
-        assert_eq!(mean[0], 0.75, "the mean of 0, 0, 3, 0 — not one of the values");
+        assert_eq!(mean[0], 0.75, "the mean of 0, 0, 3, 0 - not one of the values");
         assert_eq!(vote[0], 0.0, "the value three of the four corners hold");
         // And the two really do differ, so this is not passing on a constant.
         assert_ne!(mean[0], vote[0]);

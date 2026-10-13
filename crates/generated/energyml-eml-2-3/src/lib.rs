@@ -2,7 +2,7 @@
 // Copyright (c) 2021 Energistics. All rights reserved.
 // Distributed under the Energistics Product License Agreement, https://www.energistics.org/product-license-agreement
 // Input fingerprint (SHA-256, see schemas.lock): 7e1754fd5d01dd4f189a2bfdd5b2192b34edf0bba4ab203d1709cf083e591b09
-//! eml 2.3 — generated from the Energistics XSD schemas.
+//! eml 2.3 - generated from the Energistics XSD schemas.
 //!
 //! Do not edit: run `cargo run -p energyml-codegen -- generate` instead.
 //!

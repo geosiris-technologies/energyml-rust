@@ -1,8 +1,8 @@
 //! What a **new** package must carry so as not to open on a complaint.
 //!
 //! Reported as: when a new epc is created, there is always a health error: the
-//! core.xml is absent. It was not a defect of the check — it is right, EPC §3.5
-//! makes the core properties mandatory — it was **two writers in the repository
+//! core.xml is absent. It was not a defect of the check - it is right, EPC §3.5
+//! makes the core properties mandatory - it was **two writers in the repository
 //! disagreeing on what a minimal EPC is**: the one that judges knew it, the one
 //! that creates did not write it. The first kind of defect this workspace
 //! names.
@@ -66,7 +66,7 @@ fn the_core_properties_say_the_three_things_they_must() {
 #[test]
 fn the_relationship_the_specification_requires_points_at_them() {
     // §3.5.2: the package relationship to the core properties. Without it,
-    // a conforming reader does not find them — and the file would open
+    // a conforming reader does not find them - and the file would open
     // anyway here, which is exactly the kind of gap that only shows
     // with another tool.
     let store = fresh();
@@ -83,7 +83,7 @@ fn the_relationship_the_specification_requires_points_at_them() {
 fn this_crate_has_exactly_one_clock_and_callers_choose_it() {
     // **The rule learnt again.** `SystemTime::now()` on
     // `wasm32-unknown-unknown` does not return an error: it **panics**, and the
-    // message names neither the function nor the crate —
+    // message names neither the function nor the crate -
     // *"time not implemented on this platform"*. Nothing catches it at
     // compile time, since the code compiles; nothing catches it in the suite,
     // since it runs natively where the clock exists. The only possible
@@ -91,7 +91,7 @@ fn this_crate_has_exactly_one_clock_and_callers_choose_it() {
     //
     // One, in `core_props::now_w3cdtf`, which **native** callers
     // choose explicitly by passing `None`. Everything else receives its date
-    // — `SaveOptions::created`, `empty_package(created)` — and that is what
+    // - `SaveOptions::created`, `empty_package(created)` - and that is what
     // lets the front end supply its own.
     //
     // The shape is that of the check in `retp-proto`, which keeps the same rule
@@ -110,7 +110,7 @@ fn this_crate_has_exactly_one_clock_and_callers_choose_it() {
         let text = std::fs::read_to_string(file).expect("a source file");
         // **Comment lines are skipped**, and the check demanded it
         // on the first try: it went red on the comment that *explains*
-        // the rule. What is counted is a call, never a mention — otherwise
+        // the rule. What is counted is a call, never a mention - otherwise
         // the safeguard would punish explaining it, and the answer
         // would be to stop explaining.
         for line in text.lines() {

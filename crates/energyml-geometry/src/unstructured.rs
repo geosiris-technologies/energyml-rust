@@ -2,7 +2,7 @@
 //!
 //! # The model, and how it differs from IJK
 //!
-//! An IJK grid says where a cell is by *arithmetic* — cell `(i,j,k)` takes its
+//! An IJK grid says where a cell is by *arithmetic* - cell `(i,j,k)` takes its
 //! corners from four pillars at two levels, and the reader computes the
 //! indices. An unstructured grid says it by *enumeration*, in two hops:
 //!
@@ -19,14 +19,14 @@
 //!
 //! A face between two cells is stored **once**, and its node order winds one
 //! way. That order turns the right-hand normal out of one of the two cells and
-//! into the other — so "which way does this face point" has no answer until you
+//! into the other - so "which way does this face point" has no answer until you
 //! say *for which cell*.
 //!
 //! RESQML handles that by making `CellFaceIsRightHanded` parallel to
 //! `FacesPerCell`'s **elements**, not to the faces: *"Array length is the sum
 //! of the cell face count per cell, and the data follows the order of the faces
 //! per cell … list-of-lists."* So it holds one flag per cell-face **slot**, and
-//! the corpus proves the point — face 0 is shared by both cells and carries
+//! the corpus proves the point - face 0 is shared by both cells and carries
 //! `true` in cell 0's slot and `false` in cell 1's.
 //!
 //! Reading it as one flag per face instead of per slot costs nothing on a grid
@@ -39,7 +39,7 @@
 //! complexity of the grid geometry, as an aide to the RESQML reader … BUSINESS
 //! RULE: Should be consistent with the actual geometry of the grid."*
 //!
-//! **Should**, not must — and fesapi's own example grid declares `prism` while
+//! **Should**, not must - and fesapi's own example grid declares `prism` while
 //! holding a tetrahedron and a prism. A reader that trusted it and allocated
 //! six nodes per cell would be wrong on half this file, with no schema
 //! violation to point at. So the shape is never read here; the counts come from
@@ -49,18 +49,18 @@
 //!
 //! Unusually, nothing at all. 2.2 renamed `HingeNodeFaces` to
 //! `UnstructuredGridHingeNodeFaces` and `SubnodeTopology` to
-//! `UnstructuredSubnodeTopology`, and reordered the geometry's children — but
+//! `UnstructuredSubnodeTopology`, and reordered the geometry's children - but
 //! every element this reader touches (`Points`, `NodeCount`, `FaceCount`,
 //! `NodesPerFace`, `FacesPerCell`, `CellFaceIsRightHanded`) kept its name, and
 //! reflection does not care about order. The jagged array changed type,
 //! `resqml:ResqmlJaggedArray` to `eml:JaggedArray`, and kept both its field
-//! names — so even that is invisible here.
+//! names - so even that is invisible here.
 //!
 //! # What is not read
 //!
 //! **Hinge node faces** and **subnodes**, both optional and both about *higher
 //! order* geometry: they refine the shape of a face beyond its corners. The
-//! base geometry is complete without them, which the schema says outright —
+//! base geometry is complete without them, which the schema says outright -
 //! *"only expected to be used if the hinge node faces higher order grid point
 //! attachment arises"*. Nothing in the corpus carries either.
 
@@ -84,7 +84,7 @@ pub fn read(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Ve
     let Some(geometry) = field_object(representation, "Geometry") else {
         // Legal, and the schema advertises it: "characterized by a cell count,
         // and potentially nothing else". Such a grid is an index space for
-        // properties to hang on, with no shape at all — so it is named rather
+        // properties to hang on, with no shape at all - so it is named rather
         // than returned as an empty drawing.
         return Err(Error::unsupported(
             "an unstructured grid with a cell count and no geometry",
@@ -185,7 +185,7 @@ fn declared(geometry: &dyn Reflect, field: &str, at: &str) -> Result<usize> {
 /// A RESQML jagged array, as a flat run plus starts.
 ///
 /// The stored `CumulativeLength` is an *inclusive* running total with no
-/// leading zero — 2.2's own worked example says so: elements `(a b c d e f g
+/// leading zero - 2.2's own worked example says so: elements `(a b c d e f g
 /// h)` with lengths `(3 7 8)`. What every consumer wants is the exclusive form
 /// with both ends, so the conversion happens here, once, rather than at each
 /// index.
@@ -225,7 +225,7 @@ fn jagged(
 /// The length check is the whole value of this function. A file that wrote one
 /// flag per *face* rather than per slot produces an array that is shorter by
 /// the number of shared faces, and reading it anyway would turn every interior
-/// face of the grid inside out — visible as a cell that renders as a hole, and
+/// face of the grid inside out - visible as a cell that renders as a hole, and
 /// invisible in any count.
 fn handedness(geometry: &dyn Reflect, source: &dyn ValueSource, slots: usize, at: &str) -> Result<Vec<bool>> {
     let Some(array) = field_object(geometry, "CellFaceIsRightHanded") else {

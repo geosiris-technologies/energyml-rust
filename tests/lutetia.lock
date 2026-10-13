@@ -1,4 +1,4 @@
-# The pinned Lutetia reference model, fetched in CI and on demand — never committed.
+# The pinned Lutetia reference model, fetched in CI and on demand - never committed.
 #
 # `scripts/fetch-lutetia.py --dest target/lutetia` downloads the archive of the
 # commit below and lays out the directory that `$ENERGYML_LUTETIA_DIR` points

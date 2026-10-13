@@ -1,4 +1,4 @@
-//! **An IJK grid between horizons** — the pillars, the levels, the K gaps, and
+//! **An IJK grid between horizons** - the pillars, the levels, the K gaps, and
 //! which cells have a shape: the computation behind `ijk-grid-from-horizons`
 //! (a step of the synthetic model build), without a file.
 //!
@@ -15,38 +15,38 @@
 //! # Zones, and what a zone of no layer is
 //!
 //! The horizons are given **top to bottom**, in the declared order of the
-//! caller — never sorted by height, which would decide exactly where two picks
+//! caller - never sorted by height, which would decide exactly where two picks
 //! disagree. Two consecutive horizons bound a **zone**, and each zone is given
 //! a number of layers:
 //!
 //! - `n ≥ 1` layers: `n + 1` levels from the upper horizon to the lower one,
 //!   the upper and lower levels **being** the horizons' heights (copied, never
-//!   recomputed) and the levels between them spread **linearly** — the node at
+//!   recomputed) and the levels between them spread **linearly** - the node at
 //!   `l / n` of the way down is `top + (base − top) · l / n`, proportional
 //!   layering (RESQML Technical Usage Guide 2.2, draft, §9.19.7 p. 189: *« a
 //!   two zone model with 6 layers in the first zone and 18 layers in the
 //!   second zone »*);
-//! - `0` layers: the zone is **not meshed** — a K gap. Its upper horizon is the
+//! - `0` layers: the zone is **not meshed** - a K gap. Its upper horizon is the
 //!   base of the layer above, its lower one the top of the layer below, and
 //!   nothing lies between (TRG §5.36: *« With K gaps, the bottom of one layer
 //!   need not be continuous with the top of the next layer »*). the reference model has one:
 //!   the Marnes de Meudon between H5 and H6.
 //!
-//! A gap at the top or the bottom of the stack is no gap — a horizon outside
-//! the grid — and two gaps in a row would need two gaps after one layer, which
+//! A gap at the top or the bottom of the stack is no gap - a horizon outside
+//! the grid - and two gaps in a row would need two gaps after one layer, which
 //! `GapAfterLayer` cannot say: both are refused by name.
 //!
 //! # A hole undefines the cells it touches, and only those
 //!
-//! A `NaN` height of a horizon — a hole of its grid — has no node to give its
+//! A `NaN` height of a horizon - a hole of its grid - has no node to give its
 //! pillar at that level, and the levels interpolated from it have none either.
 //! A cell is **defined when its eight corners are**, and only then. That is
 //! finer than "the column": a hole in H4 says nothing of the Chalk between H6
 //! and H7 under it, and undefining those cells would throw measured rock away.
-//! What the file says of it is `CellGeometryIsDefined` — *« If the indicator
+//! What the file says of it is `CellGeometryIsDefined` - *« If the indicator
 //! shows that the cell geometry is NOT defined, then this attribute overrides
 //! any other node geometry specification »* (TRG 2.2 §5.1
-//! `AbstractColumnLayerGridGeometry` p. 94) — and `PillarGeometryIsDefined`,
+//! `AbstractColumnLayerGridGeometry` p. 94) - and `PillarGeometryIsDefined`,
 //! *« a pillar has at least one node with a defined cell geometry »* (same
 //! page), both computed here.
 //!
@@ -57,9 +57,9 @@
 //! above it on that pillar, so a hole in between does not hide it. Two answers,
 //! and the caller picks one ([`Crossing`]):
 //!
-//! - [`Crossing::Refuse`] — the grid is refused, with the count and the first
+//! - [`Crossing::Refuse`] - the grid is refused, with the count and the first
 //!   node, before anything is built;
-//! - [`Crossing::Pinch`] — the lower horizon is brought **up to** the upper one
+//! - [`Crossing::Pinch`] - the lower horizon is brought **up to** the upper one
 //!   there, and the zone has zero thickness at that pillar: a pinch-out, the
 //!   column-layer grid's own notion (TRG §5.1 p. 94: *« Description of the
 //!   geometry of a column layer grid, e.g., parity and pinch »*). The upper
@@ -87,16 +87,16 @@ use std::fmt;
 use crate::surface::Up;
 
 /// A millionth of a cell: what a reader's running sum of spacings can drift
-/// by, and nothing a producer means — the tolerance `horizon_law` reads a
+/// by, and nothing a producer means - the tolerance `horizon_law` reads a
 /// lattice with.
 const TOLERANCE: f64 = 1e-6;
 
 /// The most nodes a grid may have: `interpolate` refuses a lattice past ten
-/// million nodes for the same reason — eighty megabytes of doubles per axis
+/// million nodes for the same reason - eighty megabytes of doubles per axis
 /// that nobody meant to ask for.
 pub const MAX_NODES: usize = 10_000_000;
 
-/// A regular lattice along +x then +y — the house lattice
+/// A regular lattice along +x then +y - the house lattice
 /// (a grid is not reprojected, and its order is the house order): node `(i, j)` at `origin + (i·dx, j·dy)`,
 /// `i` varying fastest.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -110,7 +110,7 @@ pub struct Lattice {
 }
 
 impl Lattice {
-    /// Whether two lattices put their nodes at the same places — the same
+    /// Whether two lattices put their nodes at the same places - the same
     /// counts, and the first and the last node within a millionth of a cell.
     pub fn same_as(&self, other: &Lattice) -> bool {
         if self.counts != other.counts {
@@ -175,7 +175,7 @@ impl fmt::Display for LatticeError {
             } => write!(f, "declares {ni} × {nj} nodes and holds {held}"),
             LatticeError::Turned { along_i, along_j } => write!(
                 f,
-                "runs along ({}, {}) then ({}, {}): the pillars stand on a lattice along +x then +y of its frame, and a turned or reversed one is not re-indexed here — grid the horizons in the frame the lattice is straight in",
+                "runs along ({}, {}) then ({}, {}): the pillars stand on a lattice along +x then +y of its frame, and a turned or reversed one is not re-indexed here - grid the horizons in the frame the lattice is straight in",
                 along_i[0], along_i[1], along_j[0], along_j[1]
             ),
             LatticeError::Irregular {
@@ -193,8 +193,8 @@ impl fmt::Display for LatticeError {
 
 impl std::error::Error for LatticeError {}
 
-/// The lattice of a grid's nodes — `points` in the house order, `counts` its
-/// `[ni, nj]` — or the first thing that makes it none.
+/// The lattice of a grid's nodes - `points` in the house order, `counts` its
+/// `[ni, nj]` - or the first thing that makes it none.
 pub fn lattice_of(points: &[[f64; 3]], counts: [usize; 2]) -> Result<Lattice, LatticeError> {
     let [ni, nj] = counts;
     if ni < 2 || nj < 2 {
@@ -255,7 +255,7 @@ pub struct Request<'a> {
     pub heights: &'a [Vec<f64>],
     /// `[ni, nj]` of the horizons' common lattice.
     pub counts: [usize; 2],
-    /// One count per zone — per pair of consecutive horizons — top to bottom;
+    /// One count per zone - per pair of consecutive horizons - top to bottom;
     /// `0` leaves the zone unmeshed, a K gap.
     pub layers: &'a [usize],
     /// A pillar on every `step`-th node of the lattice, along both axes.
@@ -357,17 +357,17 @@ impl fmt::Display for IjkError {
             }
             IjkError::LayerCount { zones, given } => write!(
                 f,
-                "{given} count(s) given for {zones} zone(s): one per pair of consecutive horizons, top to bottom — 0 for a zone left unmeshed"
+                "{given} count(s) given for {zones} zone(s): one per pair of consecutive horizons, top to bottom - 0 for a zone left unmeshed"
             ),
             IjkError::GapAtEdge { zone } => write!(
                 f,
-                "zone {} has no layer and is at the {} of the stack: a K gap lies between two layers — leave that horizon out instead",
+                "zone {} has no layer and is at the {} of the stack: a K gap lies between two layers - leave that horizon out instead",
                 zone + 1,
                 if *zone == 0 { "top" } else { "bottom" }
             ),
             IjkError::GapsTogether { zone } => write!(
                 f,
-                "zones {} and {} both have no layer: `GapAfterLayer` holds one gap after a layer — give the gap's top and base only",
+                "zones {} and {} both have no layer: `GapAfterLayer` holds one gap after a layer - give the gap's top and base only",
                 zone,
                 zone + 1
             ),
@@ -376,18 +376,18 @@ impl fmt::Display for IjkError {
                 counts: [ni, nj],
             } => write!(
                 f,
-                "a pillar every {step} node(s) of a {ni} × {nj} lattice leaves fewer than 2 pillars along an axis — at least 1, and at most {}",
+                "a pillar every {step} node(s) of a {ni} × {nj} lattice leaves fewer than 2 pillars along an axis - at least 1, and at most {}",
                 (*ni).min(*nj).saturating_sub(1)
             ),
             IjkError::TooMany { nodes } => {
                 write!(
                     f,
-                    "the grid would have {nodes} nodes, past the {MAX_NODES} a grid may have — coarsen the pillars or use fewer layers"
+                    "the grid would have {nodes} nodes, past the {MAX_NODES} a grid may have - coarsen the pillars or use fewer layers"
                 )
             }
             IjkError::Crossed { count, first } => write!(
                 f,
-                "{count} pillar node(s) have a horizon above the one declared over it — the first at lattice node ({}, {}), horizon {} at {} over horizon {} at {}; give the horizons top to bottom, correct the picks, or ask for `pinch`",
+                "{count} pillar node(s) have a horizon above the one declared over it - the first at lattice node ({}, {}), horizon {} at {} over horizon {} at {}; give the horizons top to bottom, correct the picks, or ask for `pinch`",
                 first.node[0],
                 first.node[1],
                 first.lower + 1,
@@ -397,7 +397,7 @@ impl fmt::Display for IjkError {
             ),
             IjkError::NothingDefined { cells } => write!(
                 f,
-                "none of the {cells} cell(s) has its eight corners — every one touches a hole of a horizon; nothing would be drawn"
+                "none of the {cells} cell(s) has its eight corners - every one touches a hole of a horizon; nothing would be drawn"
             ),
         }
     }
@@ -434,9 +434,9 @@ pub struct Stacked {
     pub pillar_defined: Vec<bool>,
     /// Horizon nodes on the pillars with no height.
     pub holes: usize,
-    /// Pillar nodes where a horizon lay above the one over it — before pinching.
+    /// Pillar nodes where a horizon lay above the one over it - before pinching.
     pub crossed: usize,
-    /// Pillar nodes where a meshed or unmeshed zone has zero thickness —
+    /// Pillar nodes where a meshed or unmeshed zone has zero thickness -
     /// after pinching.
     pub pinched: usize,
     /// Lattice nodes past the last pillar, along i and along j.
@@ -456,7 +456,7 @@ impl Stacked {
         self.cell_defined.iter().filter(|defined| !**defined).count()
     }
 
-    /// The nodes, level first, then `j`, then `i` fastest — `x` and `y` taken
+    /// The nodes, level first, then `j`, then `i` fastest - `x` and `y` taken
     /// from the lattice's own nodes (`nodes`, `ni × nj`, the house order), so
     /// that a pillar stands **exactly** where the horizons' node is.
     pub fn points(&self, nodes: &[[f64; 3]]) -> Vec<[f64; 3]> {
@@ -479,9 +479,9 @@ impl Stacked {
     }
 
     /// The defined cells, in RESQML's order (`i` fastest, then `j`, then `k`),
-    /// as eight indices into [`Stacked::points`] in VTK's hexahedron order —
+    /// as eight indices into [`Stacked::points`] in VTK's hexahedron order -
     /// the face `(0, 1, 2, 3)` wound so that its right-hand normal points at
-    /// `(4, 5, 6, 7)` — and the RESQML index of each, empty when every cell is
+    /// `(4, 5, 6, 7)` - and the RESQML index of each, empty when every cell is
     /// defined (the reader's convention, `energyml_geometry::ijk`).
     pub fn hexahedra(&self) -> (Vec<[u32; 8]>, Vec<u32>) {
         let [ni, nj, nk] = self.cells;
@@ -531,7 +531,7 @@ impl Stacked {
     }
 }
 
-/// The grid between the horizons — or the first reason there is none.
+/// The grid between the horizons - or the first reason there is none.
 pub fn stack(request: &Request<'_>) -> Result<Stacked, IjkError> {
     let Request {
         heights,
@@ -753,7 +753,7 @@ mod tests {
         }
     }
 
-    /// The lattice read off its nodes, with both spacings — a transposed
+    /// The lattice read off its nodes, with both spacings - a transposed
     /// reading would swap 25 and 40.
     #[test]
     fn a_lattice_is_read_off_its_nodes() {
@@ -864,7 +864,7 @@ mod tests {
         assert_eq!(index, vec![1, 3, 4, 5]);
     }
 
-    /// A crossing is refused by default, pinched on request — the lower one
+    /// A crossing is refused by default, pinched on request - the lower one
     /// brought to the upper one, and counted.
     #[test]
     fn a_crossing_is_refused_or_pinched() {

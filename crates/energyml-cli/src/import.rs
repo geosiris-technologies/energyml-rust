@@ -1,10 +1,10 @@
-//! `energyml import` — a GeoJSON in, an EnergyML package out.
+//! `energyml import` - a GeoJSON in, an EnergyML package out.
 //!
 //! Two runs of the same question, and the difference is not a setting:
 //!
-//! - **`--plan`** — *what would this import make?* Reads the file, groups,
+//! - **`--plan`** - *what would this import make?* Reads the file, groups,
 //!   deduplicates, and prints. Writes nothing, opens no package;
-//! - **`--out`** — *do it.* The same decisions, kept in an EPC.
+//! - **`--out`** - *do it.* The same decisions, kept in an EPC.
 //!
 //! `--into` names a package to add to; without it a new one is made. The
 //! ordinary case wants the first: a BRGM pipeline package already holds the
@@ -13,14 +13,14 @@
 //!
 //! Like every command in this binary, this one parses arguments and prints.
 //! What a GeoJSON becomes is decided in `energyml-build`, which has no idea a
-//! command line exists — the whole of it is tested without one.
+//! command line exists - the whole of it is tested without one.
 //!
 //! # The one argument that cannot be guessed
 //!
 //! `--stage`. No GeoJSON names the question it answers, and the stage is what
 //! decides whether a point marks a top or a base. It defaults to the file name
 //! when that follows the SIGEOL convention (`GeologicUnit_<Stage>_pretty.json`)
-//! and is **required** otherwise — never inferred from the first word of a name
+//! and is **required** otherwise - never inferred from the first word of a name
 //! that means something else, because a wrong default here mislabels every
 //! surface in the package and nothing downstream would complain.
 
@@ -45,7 +45,7 @@ pub struct ImportArgs {
     /// An existing package to import into. Without it, a new one is made.
     #[arg(long)]
     into: Option<PathBuf>,
-    /// The stage the export was asked about — what decides top from bottom.
+    /// The stage the export was asked about - what decides top from bottom.
     ///
     /// Read off the file name when it follows `GeologicUnit_<Stage>`, and
     /// required otherwise.
@@ -59,7 +59,7 @@ pub struct ImportArgs {
     ///
     /// **Without it the degrees are written as they stand**, which loses
     /// nothing and cannot be drawn: the horizontal extent is then in degrees and
-    /// the vertical in metres, so a 3D view plots a needle — measured at 335:1
+    /// the vertical in metres, so a 3D view plots a needle - measured at 335:1
     /// on the SIGEOL exports. Nothing in the file lets a reader reconcile the
     /// two, so a scene that is to be looked at needs this.
     ///
@@ -70,7 +70,7 @@ pub struct ImportArgs {
     ///
     /// Left out, the package says **unknown** rather than implying a datum:
     /// RFC 7946 means height above the WGS 84 ellipsoid, and a French producer
-    /// usually writes NGF-IGN69 — forty metres apart, both plausible.
+    /// usually writes NGF-IGN69 - forty metres apart, both plausible.
     #[arg(long)]
     vertical_epsg: Option<i64>,
     /// The external file the coordinates go into.
@@ -96,12 +96,12 @@ pub fn run(args: ImportArgs) -> Result<ExitCode> {
         .unwrap_or_else(|| args.file.display().to_string());
 
     // The stage: the caller's, then the file name's convention, then a refusal
-    // naming both ways out. Never a guess — see the module doc.
+    // naming both ways out. Never a guess - see the module doc.
     let stage = match args.stage.clone().or_else(|| sigeol::stage_of_file_name(&name)) {
         Some(stage) => stage,
         None => bail!(
             "`{name}` does not follow the `GeologicUnit_<Stage>` convention, so the stage this \
-             export answers about cannot be read from it — pass `--stage <Stage>`. It is what \
+             export answers about cannot be read from it - pass `--stage <Stage>`. It is what \
              decides whether a point marks a top or a base, and no GeoJSON states it."
         ),
     };
@@ -117,7 +117,7 @@ pub fn run(args: ImportArgs) -> Result<ExitCode> {
     }
 
     let plan = assemble::plan(&collection, &stage);
-    println!("== {name} — stage queried: {stage} ==\n");
+    println!("== {name} - stage queried: {stage} ==\n");
     for why in plan.skipped() {
         println!("  [set aside] {why}");
     }
@@ -126,7 +126,7 @@ pub fn run(args: ImportArgs) -> Result<ExitCode> {
     }
     if plan.groups.is_empty() {
         // Not an error: a file may legitimately hold nothing for this stage.
-        // But it is said, and the exit code says it too — a run that produced
+        // But it is said, and the exit code says it too - a run that produced
         // nothing must not look like one that produced everything.
         println!("Nothing to import for this stage.");
         return Ok(ExitCode::from(1));
@@ -210,21 +210,21 @@ pub fn run(args: ImportArgs) -> Result<ExitCode> {
     // Saving rebuilds every part from the objects in memory, and a part the
     // reader had to repair comes back carrying the repair. On the BRGM package
     // of 07/09, four `BoundaryFeature`s whose `Citation` omitted `Originator`
-    // and `Format` were rewritten with those elements **present and empty** — so
+    // and `Format` were rewritten with those elements **present and empty** - so
     // the file now satisfies the XSD sequence, `energyml check` reports nothing,
     // and the defect that a partner's validator had flagged is invisible.
     //
     // The reading policy states this hazard in so many words
     // (reading policy of `energyml-core`): *writing it back would put values on disk
-    // nobody wrote*. It is not this command's place to refuse — the caller asked
-    // to import into that package — but it is very much its place to **say so**,
+    // nobody wrote*. It is not this command's place to refuse - the caller asked
+    // to import into that package - but it is very much its place to **say so**,
     // once, naming the parts. A defect that stops being reported is worse than
     // one that is.
     let repaired = store.diagnostics();
     if !repaired.is_empty() && args.into.is_some() {
         eprintln!(
             "\n  [warning] {} departure(s) from the specification in the host package were repaired \
-             on reading, and the save made them permanent — the invented values are now in the \
+             on reading, and the save made them permanent - the invented values are now in the \
              file, and nothing will report them any more:",
             repaired.len()
         );
@@ -254,7 +254,7 @@ pub(crate) fn now() -> String {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    // Days since the epoch to a civil date — Howard Hinnant's algorithm, the
+    // Days since the epoch to a civil date - Howard Hinnant's algorithm, the
     // one every implementation uses. Written out rather than pulled in: this is
     // the only date this binary formats, and `chrono` is a dependency for it.
     let (days, rest) = (seconds / 86_400, seconds % 86_400);

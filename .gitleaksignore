@@ -1,0 +1,5 @@
+# Findings of gitleaks that are not secrets, one fingerprint per line (commit:file:rule:line).
+#
+# A test variable named `key` held an object uuid (`naming.rs`, `the_roles_do_not_collide`) in the
+# first commit; the variable was renamed since, but the history keeps it.
+111e5d60d9d56677d70f9c96e16f32cdfa7bc3e2:crates/energyml-build/src/naming.rs:generic-api-key:147

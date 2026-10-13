@@ -1,7 +1,7 @@
 //! Every integration test of `energyml-build`, in **one** binary.
 //!
 //! Cargo makes a binary per file of `tests/`, and each one is linked against
-//! the whole workspace — HDF5 included under `--features hdf5`. Measured on
+//! the whole workspace - HDF5 included under `--features hdf5`. Measured on
 //! 29/09 in the `hdf5` CI step: 84 binaries, **67 min** for the step, of which
 //! **36 s** ran tests; the rest was compiling and linking. One binary is one
 //! link (`Cargo.toml`: `autotests = false`, one `[[test]]`).
@@ -10,9 +10,9 @@
 //! still gates the whole file, and its `#[path]` still reads next to it.
 //! Run one: `cargo test --workspace --test build lutetia::`.
 //!
-//! A new test file is a new line below — Cargo no longer finds it alone.
+//! A new test file is a new line below - Cargo no longer finds it alone.
 //!
-//! **Except a file that installs a process-wide default** — `geolts::set_default`,
+//! **Except a file that installs a process-wide default** - `geolts::set_default`,
 //! `property_kind::set_default`, or includes `support/geolts_extract.rs`.
 //! Such a file assumes it is the whole process: sharing one made Lutetia read a
 //! 30-concept extract of the BRGM chart instead of the chart (29/09,
@@ -122,7 +122,7 @@ mod witsml_wells;
 mod written;
 mod zone_statistics;
 
-/// No module of this binary installs a process-wide default — see the module
+/// No module of this binary installs a process-wide default - see the module
 /// doc. Read as text: the defaults are set once per process, so the failure
 /// is order-dependent and a run can pass by luck; this cannot.
 ///

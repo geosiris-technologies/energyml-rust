@@ -1,12 +1,12 @@
-//! `structural-organisation` — the boundaries of a structural scenario in the
+//! `structural-organisation` - the boundaries of a structural scenario in the
 //! order it states, its frontiers and its contacts (step 7 of the reference model).
 //!
 //! The form of the assertions comes from the schema: one
 //! `OrderedBoundaryFeatureInterpretation` whose position is the order, and an
-//! `AscendingOrderingCriteria` (Interpretations.xsd l. 976–1012); a contact is
-//! *subject — verb — direct object*, each side a `ContactElement` with its
-//! qualifiers (l. 533–566); a frontier is a cultural feature or a boundary
-//! interpretation (l. 994–1008); the feature an organisation interprets is the
+//! `AscendingOrderingCriteria` (Interpretations.xsd l. 976-1012); a contact is
+//! *subject - verb - direct object*, each side a `ContactElement` with its
+//! qualifiers (l. 533-566); a frontier is a cultural feature or a boundary
+//! interpretation (l. 994-1008); the feature an organisation interprets is the
 //! reference model's `Model`, the one `earth-model` writes. The uuids and
 //! titles are the tests' own, named like Lutetia's.
 //!
@@ -52,7 +52,7 @@ fn fault(uuid: &str, name: &str) -> Source {
     object(
         uuid,
         "resqml22.FaultInterpretation",
-        &format!("{name} — interpretation"),
+        &format!("{name} - interpretation"),
     )
 }
 
@@ -67,7 +67,7 @@ fn scenario() -> Pieces {
             object(
                 H6,
                 "resqml22.HorizonInterpretation",
-                "H6 — top of the Chalk — interpretation",
+                "H6 - top of the Chalk - interpretation",
             ),
         )
         .with("boundaries 2", fault(F2, "F2"))
@@ -78,7 +78,7 @@ fn scenario() -> Pieces {
             object(
                 GROUND,
                 "resqml22.BoundaryFeatureInterpretation",
-                "Lutetia — sol — interpretation",
+                "Lutetia - sol - interpretation",
             ),
         )
         .with(
@@ -86,14 +86,14 @@ fn scenario() -> Pieces {
             object(
                 FRONTIER,
                 "resqml22.CulturalFeature",
-                "Lutetia — emprise — feature",
+                "Lutetia - emprise - feature",
             ),
         )
 }
 
 fn answers() -> Choices {
     Choices::new()
-        .set("title", "Lutetia — scenario A")
+        .set("title", "Lutetia - scenario A")
         .set("ordering", "age")
 }
 
@@ -162,7 +162,7 @@ fn the_organisation_interprets_the_model_and_keeps_its_boundaries_in_the_order_g
             object(
                 H6,
                 "resqml22.HorizonInterpretation",
-                "H6 — top of the Chalk — interpretation",
+                "H6 - top of the Chalk - interpretation",
             ),
         );
     let plan = planned(&reversed, &answers()).expect("planned");
@@ -186,7 +186,7 @@ fn the_criterion_is_written_as_said_and_has_no_default() {
 }
 
 /// Written before the earth model that gathers it, the organisation names the
-/// model by its title — and it is the **same** object `earth-model` writes.
+/// model by its title - and it is the **same** object `earth-model` writes.
 #[test]
 fn a_model_named_by_its_title_is_the_one_earth_model_writes() {
     let mut bag = Pieces::empty();
@@ -291,7 +291,7 @@ fn a_rank_lands_on_the_boundary_its_name_designates_and_f1_is_never_f10() {
         object(
             "0f000000-0000-4000-8000-000000000211",
             "resqml22.FaultInterpretation",
-            "F1 — interpretation (B)",
+            "F1 - interpretation (B)",
         ),
     );
     let why = planned(&bag, &answers().set("ranks", json!(["F1 = 2"]))).expect_err("ambiguous");
@@ -309,7 +309,7 @@ fn a_contact_is_the_sentence_subject_verb_object_with_its_sides() {
     let contacts = json!([
         "F3 {east} crosses F1 {west}",
         "H6 {older} stops F2 {both}",
-        "Lutetia — emprise stops H6 {both}"
+        "Lutetia - emprise stops H6 {both}"
     ]);
     let plan = planned(&scenario(), &answers().set("contacts", contacts)).expect("planned");
     let written = &organisation(&plan).json["ContactInterpretation"];
@@ -404,12 +404,12 @@ fn a_frontier_is_a_cultural_feature_or_a_boundary_interpretation() {
         object(
             "0c000000-0000-4000-8000-000000000051",
             "resqml22.GenericFeatureInterpretation",
-            "Lutetia — emprise — interpretation",
+            "Lutetia - emprise - interpretation",
         ),
     );
     let why = planned(&generic, &answers()).expect_err("a generic interpretation");
     assert_eq!(why.refusals()[0].slot.as_deref(), Some("bottom"), "{why}");
-    assert!(why.message().contains("l. 994–1008"), "{why}");
+    assert!(why.message().contains("l. 994-1008"), "{why}");
     // The cultural feature is taken, and what cannot be checked of it is said.
     let plan = planned(&scenario(), &answers()).expect("planned");
     assert!(
@@ -430,20 +430,20 @@ fn a_member_twice_or_named_and_no_boundary_is_refused_and_an_unnamed_one_is_pass
         object(
             "0c000000-0000-4000-8000-000000000051",
             "resqml22.GenericFeatureInterpretation",
-            "Lutetia — emprise — interpretation",
+            "Lutetia - emprise - interpretation",
         ),
     );
     let why = planned(&named, &answers()).expect_err("no boundary");
-    assert!(why.message().contains("l. 593–598"), "{why}");
+    assert!(why.message().contains("l. 593-598"), "{why}");
 
-    // An object piece nobody named goes to the one required object slot —
-    // how a form's answer arrives — and is passed over, counted.
+    // An object piece nobody named goes to the one required object slot -
+    // how a form's answer arrives - and is passed over, counted.
     let unnamed = scenario().with(
         "an answer",
         object(
             "0c000000-0000-4000-8000-000000000051",
             "resqml22.GenericFeatureInterpretation",
-            "Lutetia — emprise — interpretation",
+            "Lutetia - emprise - interpretation",
         ),
     );
     let plan = planned(&unnamed, &answers()).expect("planned");
@@ -472,7 +472,7 @@ fn the_same_content_is_the_same_organisation_and_anything_said_otherwise_is_anot
             object(
                 H6,
                 "resqml22.HorizonInterpretation",
-                "H6 — top of the Chalk — interpretation",
+                "H6 - top of the Chalk - interpretation",
             ),
         )
         .with("boundaries 2", fault(F1, "F1"))
@@ -483,7 +483,7 @@ fn the_same_content_is_the_same_organisation_and_anything_said_otherwise_is_anot
             object(
                 GROUND,
                 "resqml22.BoundaryFeatureInterpretation",
-                "Lutetia — sol — interpretation",
+                "Lutetia - sol - interpretation",
             ),
         )
         .with(
@@ -491,7 +491,7 @@ fn the_same_content_is_the_same_organisation_and_anything_said_otherwise_is_anot
             object(
                 FRONTIER,
                 "resqml22.CulturalFeature",
-                "Lutetia — emprise — feature",
+                "Lutetia - emprise - feature",
             ),
         );
     assert_ne!(first, uuid(&reordered, &answers()), "an order is content");
@@ -515,7 +515,7 @@ fn the_same_content_is_the_same_organisation_and_anything_said_otherwise_is_anot
     );
     assert_ne!(
         first,
-        uuid(&scenario(), &answers().set("title", "Lutetia — scenario B")),
+        uuid(&scenario(), &answers().set("title", "Lutetia - scenario B")),
         "two scenarios are two"
     );
     assert_ne!(
@@ -536,7 +536,7 @@ fn an_organisation_of_faults_only_says_so() {
     let plan = planned(
         &b,
         &answers()
-            .set("title", "Lutetia — scenario B")
+            .set("title", "Lutetia - scenario B")
             .set("contacts", json!(["F4 {footwall} stops F1 {both}"])),
     )
     .expect("planned");

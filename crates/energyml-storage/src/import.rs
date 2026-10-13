@@ -1,6 +1,6 @@
-//! Bringing part of another package — or all of it — into the one that is open.
+//! Bringing part of another package - or all of it - into the one that is open.
 //!
-//! Asked for as: import part of another package — or all of it — an epc + h5
+//! Asked for as: import part of another package - or all of it - an epc + h5
 //! into the one already open, check for object conflicts so that the user
 //! decides which epc keeps the final object, and likewise for the datasets:
 //! whether the h5 files are merged or kept apart. The design, with each
@@ -9,17 +9,17 @@
 //! # Why not [`crate::extract::copy_into`]
 //!
 //! It already copies a set and its closure from one package into another, and
-//! it **writes over** whatever the target holds under the same uuid — *a uuid
+//! it **writes over** whatever the target holds under the same uuid - *a uuid
 //! is an identity*. True of the identity, false of the content: the corpus
 //! holds one grid under one uuid in two packages, 12.5 m cells in one and a
 //! 19 629 173 km axis in the other. The
 //! import asks instead, and says what each answer entails. `copy_into` keeps its
 //! contract; the Python bridge relies on it.
 //!
-//! # A quote, then the writing — and the bytes are a second half
+//! # A quote, then the writing - and the bytes are a second half
 //!
 //! `plan` reads both packages and writes nothing; `apply_plan` carries the
-//! quote out **in memory** — objects put, pointers rewritten, proxies declared —
+//! quote out **in memory** - objects put, pointers rewritten, proxies declared -
 //! and hands back the dataset copies and file carries it could not do itself
 //! without a writing backend. `copy_datasets` and `carry_files` do them on a
 //! disk; a browser does them through h5wasm, which is the only HDF5 it has.
@@ -60,14 +60,14 @@ pub enum Datasets {
     /// The imported data file joins the package as a file of its own.
     ///
     /// `names` maps a file as the imported package names it to the name it
-    /// takes here, overriding the proposal of the plan — which keeps the name
+    /// takes here, overriding the proposal of the plan - which keeps the name
     /// unless the open package already uses it.
     Separate {
         /// Imported file name → name here.
         names: BTreeMap<String, String>,
     },
     /// Every dataset the imported objects name is copied into a data file of
-    /// the open package — the one it names, when it names only one.
+    /// the open package - the one it names, when it names only one.
     Merge {
         /// The file to copy into. Required when the package names none, or
         /// several.
@@ -112,7 +112,7 @@ pub enum Fate {
     Identical,
     /// Held here, different, and the imported version was chosen.
     Replaces,
-    /// Held here, and the current version stays — by choice, or because it is
+    /// Held here, and the current version stays - by choice, or because it is
     /// a proxy whose fate follows the datasets.
     KeptCurrent,
     /// Held here, different, and nobody has said which to keep.
@@ -164,7 +164,7 @@ pub struct Conflict {
     pub title_there: Option<String>,
     /// Which of the three.
     pub kind: ConflictKind,
-    /// Where the two differ, as dotted paths — the first [`DIFFERENCES`].
+    /// Where the two differ, as dotted paths - the first [`DIFFERENCES`].
     pub differences: Vec<String>,
     /// How many differences there are in all.
     pub total: usize,
@@ -188,7 +188,7 @@ pub struct Pointer {
     pub object: String,
     /// Where inside the object: `Geometry.Points.Coordinates`.
     pub field_path: String,
-    /// The proxy it goes through, for the eml 2.0–2.2 forms.
+    /// The proxy it goes through, for the eml 2.0-2.2 forms.
     pub proxy: Option<String>,
     /// The file and dataset it names in the imported package.
     pub from_file: String,
@@ -246,7 +246,7 @@ pub struct DatasetPlan {
     /// For a merge: the file everything goes into, once known.
     pub target: Option<String>,
     /// For a separate import: each imported file and the name it would take,
-    /// before the request's overrides — what the front end offers to edit.
+    /// before the request's overrides - what the front end offers to edit.
     pub proposed: BTreeMap<String, String>,
     /// Every pointer of every written object.
     pub pointers: Vec<Pointer>,
@@ -262,7 +262,7 @@ pub struct DatasetPlan {
     /// `file:path`. Listed, never deleted.
     pub orphaned: Vec<String>,
     /// Pointers the imported package itself cannot resolve to a file, carried
-    /// as they were by a separate import — the imported package's state, not
+    /// as they were by a separate import - the imported package's state, not
     /// the import's doing.
     pub inherited: Vec<String>,
 }
@@ -270,7 +270,7 @@ pub struct DatasetPlan {
 /// What an import would do.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Plan {
-    /// The imported set — the request closed — in the imported package's order.
+    /// The imported set - the request closed - in the imported package's order.
     pub objects: Vec<Incoming>,
     /// Asked for, and the imported package does not hold it.
     pub unknown: Vec<String>,
@@ -286,7 +286,7 @@ pub struct Plan {
     /// Imported objects that come in **beside** an object the open package holds:
     /// the same uuid and type under another `objectVersion` (ADR-0010: importing
     /// the same uuid under another version takes a new slot).
-    /// Not conflicts — nothing is replaced — and listed so that a person sees that
+    /// Not conflicts - nothing is replaced - and listed so that a person sees that
     /// the package will hold two versions of them. Their fate is [`Fate::New`].
     pub new_versions: Vec<String>,
     /// The numbers.
@@ -325,8 +325,8 @@ impl Plan {
 
 /// Work out what importing `request` from `from` into `into` would do.
 ///
-/// Reads every object of both packages — the closure needs the imported graph,
-/// the consequences need the current one — and probes the target data file for
+/// Reads every object of both packages - the closure needs the imported graph,
+/// the consequences need the current one - and probes the target data file for
 /// the paths a merge would write. Writes nothing.
 pub fn plan(from: &EpcStore, into: &EpcStore, request: &Request) -> Plan {
     let mut out = Plan::default();
@@ -356,7 +356,7 @@ pub fn plan(from: &EpcStore, into: &EpcStore, request: &Request) -> Plan {
         .filter_map(|(uuid, held)| held.first().map(|(s, o, _)| (uuid.clone(), (*s, *o))))
         .collect();
 
-    // 1 — the set, closed.
+    // 1 - the set, closed.
     let listed_there: Vec<ObjectSummary> = from.resources();
     let listed: HashSet<&str> = listed_there.iter().map(|s| s.uri.as_str()).collect();
     let seeds: Vec<String> = if request.wanted.is_empty() {
@@ -410,7 +410,7 @@ pub fn plan(from: &EpcStore, into: &EpcStore, request: &Request) -> Plan {
         }
     }
 
-    // 2 — who points at what, on both sides, for the consequences.
+    // 2 - who points at what, on both sides, for the consequences.
     let uuid_of_here: HashMap<&str, &str> = graph_here
         .nodes
         .iter()
@@ -439,7 +439,7 @@ pub fn plan(from: &EpcStore, into: &EpcStore, request: &Request) -> Plan {
         }
     }
 
-    // 3 — each object of the set, and the conflicts.
+    // 3 - each object of the set, and the conflicts.
     let type_key = |qualified: &str| -> String {
         graph_there
             .nodes
@@ -465,7 +465,7 @@ pub fn plan(from: &EpcStore, into: &EpcStore, request: &Request) -> Plan {
         };
         if !here_by_uuid.contains_key(&key) && into.find_by_uuid(&summary.uuid).is_some() {
             // Held here and unreadable: nothing can say whether the import
-            // would replace a different object — the rule `rename` applies to
+            // would replace a different object - the rule `rename` applies to
             // a part it cannot read.
             out.refusals.push(format!(
                 "{} is held by the open package and cannot be read there, so nothing can say \
@@ -481,7 +481,7 @@ pub fn plan(from: &EpcStore, into: &EpcStore, request: &Request) -> Plan {
             incoming.fate = Fate::Refused;
         } else if let Some((current, current_object)) = {
             // The entry of the open package this one is **the same object as**:
-            // same uuid, same type, same `objectVersion` — an absent one is a
+            // same uuid, same type, same `objectVersion` - an absent one is a
             // value like another. When the open package holds the uuid and type
             // under other versions only, nothing here is this object: it comes in
             // beside them, as a new version. When it holds the uuid under
@@ -570,7 +570,7 @@ pub fn plan(from: &EpcStore, into: &EpcStore, request: &Request) -> Plan {
         out.objects.push(incoming);
     }
 
-    // 4 — the numbers.
+    // 4 - the numbers.
     out.datasets = plan_datasets(
         from,
         into,
@@ -753,7 +753,7 @@ fn separate(
     for proxy in &out.shared_proxies {
         refusals.push(format!(
             "the proxy {proxy} is in both packages and imported objects go through it: kept \
-             apart, one proxy would stand for two files — merge the datasets instead"
+             apart, one proxy would stand for two files - merge the datasets instead"
         ));
     }
 
@@ -1020,7 +1020,7 @@ fn merge(
     out.copies = copies;
 }
 
-/// `/import-<n>` in front of a path — a prefix, never a reading of the path.
+/// `/import-<n>` in front of a path - a prefix, never a reading of the path.
 fn prefixed(n: usize, path_in_file: &str) -> String {
     if path_in_file.starts_with('/') {
         format!("/import-{n}{path_in_file}")
@@ -1029,7 +1029,7 @@ fn prefixed(n: usize, path_in_file: &str) -> String {
     }
 }
 
-/// `model-import.h5`, then `model-import-2.h5`, … — the first nobody uses.
+/// `model-import.h5`, then `model-import-2.h5`, … - the first nobody uses.
 fn free_name(name: &str, used: impl Fn(&str) -> bool) -> String {
     let (stem, extension) = match name.rfind('.') {
         Some(at) if at > 0 => (&name[..at], &name[at..]),
@@ -1054,7 +1054,7 @@ fn bare(name: &str) -> &str {
     name.rsplit(['/', '\\']).next().unwrap_or(name)
 }
 
-/// The same location with its file name replaced, keeping what led to it —
+/// The same location with its file name replaced, keeping what led to it -
 /// the rule of `rename.rs`: `./data/model.h5` renamed is `./data/new.h5`.
 fn renamed(declared: &str, to: &str) -> String {
     match declared.rfind(['/', '\\']) {
@@ -1067,13 +1067,13 @@ fn renamed(declared: &str, to: &str) -> String {
 // Comparing two objects
 // ---------------------------------------------------------------------------
 
-/// Where two objects differ, as dotted paths — the first `limit`, and the total.
+/// Where two objects differ, as dotted paths - the first `limit`, and the total.
 ///
 /// **Structure, not bytes**: both objects are walked field by field
 /// through [`Reflect`], so a namespace prefix, an attribute order or `2.0`
 /// written `2` is no difference at all, and a value that changed is one. `NaN`
 /// equals `NaN`: the corpus uses it as a sentinel, and `==` would call two
-/// identical objects different. Nothing is ignored — a `Citation.LastUpdate` is
+/// identical objects different. Nothing is ignored - a `Citation.LastUpdate` is
 /// a difference, named so the person sees whether it is the only one.
 pub fn differences(a: &dyn Reflect, b: &dyn Reflect, limit: usize) -> (Vec<String>, usize) {
     let mut found = Vec::new();
@@ -1196,23 +1196,23 @@ pub struct Applied {
     /// Of those, the ones that replaced an object of the open package.
     pub replaced: Vec<String>,
     /// Of those, the ones that came in as **another version** of an object the open
-    /// package already held — same uuid and type, another `objectVersion` — and
+    /// package already held - same uuid and type, another `objectVersion` - and
     /// now stand beside it.
     pub new_versions: Vec<String>,
     /// Pointer fields rewritten (a file name, a relocated path).
     pub fields: usize,
     /// Proxies declared.
     pub proxies: usize,
-    /// The datasets to copy — [`copy_datasets`] on a disk, h5wasm in a front end.
+    /// The datasets to copy - [`copy_datasets`] on a disk, h5wasm in a front end.
     pub copies: Vec<DatasetCopy>,
-    /// The files to carry — [`carry_files`] on a disk, h5wasm in a front end.
+    /// The files to carry - [`carry_files`] on a disk, h5wasm in a front end.
     pub carries: Vec<FileCarry>,
 }
 
 /// Plan, check the plan against the one somebody saw, and carry it out.
 ///
-/// `shown` is the plan the person accepted. When the packages changed since —
-/// an edit, a dataset appearing at a target path — the recomputed plan differs
+/// `shown` is the plan the person accepted. When the packages changed since -
+/// an edit, a dataset appearing at a target path - the recomputed plan differs
 /// and this **refuses**: carrying out a stale quote is carrying out something
 /// nobody accepted.
 pub fn apply(
@@ -1270,8 +1270,8 @@ pub fn apply_plan(from: &EpcStore, into: &mut EpcStore, quote: &Plan) -> Result<
         for pointer in by_object.get(one.uri.as_str()).into_iter().flatten() {
             done.fields += rewrite(object.as_reflect_mut(), pointer)?;
         }
-        // An object that comes in beside one of the same uuid and type — another
-        // `objectVersion` — goes through the gate that adds a version: an ordinary
+        // An object that comes in beside one of the same uuid and type - another
+        // `objectVersion` - goes through the gate that adds a version: an ordinary
         // put would replace the one that is there.
         if quote.new_versions.contains(&one.uri) {
             into.put_as_new_version(object)?;
@@ -1284,7 +1284,7 @@ pub fn apply_plan(from: &EpcStore, into: &mut EpcStore, quote: &Plan) -> Result<
             done.replaced.push(one.uri.clone());
         }
     }
-    // Declared **after** the proxies are in, and before any save — the save is
+    // Declared **after** the proxies are in, and before any save - the save is
     // what writes the `.rels` that name them.
     for (proxy, file) in &quote.datasets.proxies {
         into.register_external_file(proxy, file.clone());
@@ -1311,7 +1311,7 @@ fn rewrite(object: &mut dyn Reflect, pointer: &Pointer) -> Result<usize> {
         return Ok(0);
     }
     let part = path::object_mut(object, &pointer.field_path)?;
-    // One table of which field holds what, shared with the locator — a WITSML
+    // One table of which field holds what, shared with the locator - a WITSML
     // channel data in HDF5 names its file in `file_uri` and its dataset in
     // `data` (`crate::array`).
     let path_field = crate::array::path_field(part.type_info().name);
@@ -1331,10 +1331,10 @@ fn rewrite(object: &mut dyn Reflect, pointer: &Pointer) -> Result<usize> {
 /// Copy datasets from one package's files into another's, on a disk.
 ///
 /// Read whole, written whole: the type the file holds is the type written. One
-/// answer per copy, in order — `None` when it went, the reason when it did not.
+/// answer per copy, in order - `None` when it went, the reason when it did not.
 /// A copy that fails does not stop the others: one refusal is not the batch's.
 ///
-/// A store whose files live elsewhere — a browser's, known by names only —
+/// A store whose files live elsewhere - a browser's, known by names only -
 /// has nowhere to write, and each copy says so rather than *file not found*:
 /// there, the front end copies through h5wasm.
 pub fn copy_datasets(from: &EpcStore, into: &EpcStore, copies: &[DatasetCopy]) -> Vec<Option<String>> {

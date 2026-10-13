@@ -1,7 +1,7 @@
 //! A borrowed coordinate system, when the lender is in a **list**.
 //!
 //! Reported on `volve.epc`: the `GridConnectionSetRepresentation` `2efbb020`
-//! came out misplaced, "as if the CRS were not applied". It was not —
+//! came out misplaced, "as if the CRS were not applied". It was not -
 //! `energyml geometry` said `[no CRS]` on 601 560 points.
 //!
 //! A connection set carries no geometry: its points are those of the grids it
@@ -15,7 +15,7 @@
 //!
 //! These tests hold both, plus the rule that bounds them: **if the lenders do not
 //! agree, nothing is borrowed.** Two grids in two systems are two systems, and
-//! taking the first would be "a guess dressed up as a number" — the phrase
+//! taking the first would be "a guess dressed up as a number" - the phrase
 //! `crs.rs` already uses for the neighbouring case of a 2.2 sub-representation
 //! drawing on several supports.
 
@@ -95,7 +95,7 @@ fn connections(grids: &[&str]) -> resqml20::GridConnectionSetRepresentation {
 #[test]
 fn a_connection_set_takes_the_system_of_its_grid() {
     // The Volve defect: 601 560 points drawn where the file does not put them.
-    // The set carries no geometry, hence no `LocalCrs` — its system is the
+    // The set carries no geometry, hence no `LocalCrs` - its system is the
     // grid's, and it has to be fetched.
     let read = crs::of(&connections(&[GRID_A]), &Store)
         .expect("the read succeeds")
@@ -127,7 +127,7 @@ fn two_grids_in_disagreement_borrow_nothing() {
 #[test]
 fn a_grid_absent_from_the_package_does_not_fail_the_read() {
     // A package may legitimately reference a grid it does not hold. That is not
-    // an error — it is an absence of answer.
+    // an error - it is an absence of answer.
     let read = crs::of(&connections(&["dddddddd-0000-4000-8000-000000000009"]), &Store)
         .expect("the read succeeds despite the dangling reference");
     assert!(read.is_none());
@@ -155,8 +155,8 @@ fn sub_representation(supports: &[&str]) -> energyml_resqml_2_2::SubRepresentati
 
 #[test]
 fn a_2_2_sub_representation_takes_the_system_of_its_patches_support() {
-    // Synthetic reference model: "Productive reservoir — Chalk" (a
-    // `SubRepresentation` of the Ypresian–Chalk grid) had no system, and the
+    // Synthetic reference model: "Productive reservoir - Chalk" (a
+    // `SubRepresentation` of the Ypresian-Chalk grid) had no system, and the
     // scene refused it. RESQML TRG 2.2 §8.10 p. 247: the support is
     // `SubRepresentationPatch.SupportingRepresentation`, not a field of the object.
     // To break it: remove the call to `patch_supports_agree` in `crs::of_within`.

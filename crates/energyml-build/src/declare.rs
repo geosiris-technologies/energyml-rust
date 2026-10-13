@@ -1,19 +1,19 @@
-//! Parameters and inputs **declared once**, as Rust types — the runtime the
+//! Parameters and inputs **declared once**, as Rust types - the runtime the
 //! derives of `energyml-build-derive` write against.
 //!
 //! The slots a form and
-//! a template read are still [`Slot`]s — the wire does not change — but they
+//! a template read are still [`Slot`]s - the wire does not change - but they
 //! are *generated* from a struct, and the same struct is what `plan` receives.
 //! A parameter declared in `needs()` and read back by its name in `plan()`,
 //! its default written twice, is what this replaces.
 //!
 //! # The pieces
 //!
-//! - [`Scalar`] — one answer: how it is asked ([`Need`]), read and written;
-//! - [`Param`] — a field: a scalar, `Option<T>` (may be absent) or `Vec<T>`
-//!   (several) — the cardinality comes from the type;
-//! - [`Params`] — a struct of fields, or a union of cases ([`union_slots`]);
-//! - [`Input`], [`InputParam`], [`Inputs`] — the same for what an operation
+//! - [`Scalar`] - one answer: how it is asked ([`Need`]), read and written;
+//! - [`Param`] - a field: a scalar, `Option<T>` (may be absent) or `Vec<T>`
+//!   (several) - the cardinality comes from the type;
+//! - [`Params`] - a struct of fields, or a union of cases ([`union_slots`]);
+//! - [`Input`], [`InputParam`], [`Inputs`] - the same for what an operation
 //!   **takes**, and [`Binder`], the one place that knows how pieces are named.
 
 use energyml_domain::color::Hsv;
@@ -23,10 +23,10 @@ use crate::geojson::Feature;
 use crate::operation::{Applies, Need, Refusal, Slot, Takes};
 use crate::pieces::{Known, Lattice, Pieces, Ref, Source};
 
-/// JSON, as the choices hold it — re-exported for the generated code.
+/// JSON, as the choices hold it - re-exported for the generated code.
 pub use serde_json::Value as Json;
 
-/// The derives, beside the traits they implement — the way serde puts
+/// The derives, beside the traits they implement - the way serde puts
 /// `Serialize` the trait and `Serialize` the derive under one name.
 pub use energyml_build_derive::{Choice, Inputs, Params};
 
@@ -34,11 +34,11 @@ pub use energyml_build_derive::{Choice, Inputs, Params};
 
 /// One answer: how it is asked, read and written.
 pub trait Scalar: Sized {
-    /// The kind of answer — what a form renders and a template projects.
+    /// The kind of answer - what a form renders and a template projects.
     fn need() -> Need;
-    /// The answer, from its JSON — or what is wrong with it.
+    /// The answer, from its JSON - or what is wrong with it.
     fn from_json(value: &Json) -> Result<Self, String>;
-    /// The answer as JSON — what a default suggests.
+    /// The answer as JSON - what a default suggests.
     fn to_json(&self) -> Json;
 }
 
@@ -46,21 +46,21 @@ pub trait Scalar: Sized {
 pub trait Param: Sized {
     /// The kind of answer.
     fn need() -> Need;
-    /// How many values at least — `MinOccurs`.
+    /// How many values at least - `MinOccurs`.
     fn least() -> u32 {
         1
     }
-    /// How many at most — `MaxOccurs`, `None` for no ceiling.
+    /// How many at most - `MaxOccurs`, `None` for no ceiling.
     fn most() -> Option<u32> {
         Some(1)
     }
-    /// The field, from its settled answer — `None` when there is none.
+    /// The field, from its settled answer - `None` when there is none.
     fn read(value: Option<&Json>) -> Result<Self, String>;
     /// The value as JSON, `None` for an absent one.
     fn json(&self) -> Option<Json>;
 }
 
-/// `Param` for a scalar — one value, required. A macro and not a blanket
+/// `Param` for a scalar - one value, required. A macro and not a blanket
 /// implementation, so that `Option<T>` and `Vec<T>` can have theirs.
 #[macro_export]
 macro_rules! scalar_param {
@@ -115,7 +115,7 @@ impl<T: Scalar> Param for Vec<T> {
                 .enumerate()
                 .map(|(at, item)| T::from_json(item).map_err(|why| format!("[{at}]: {why}")))
                 .collect(),
-            Some(other) => Err(format!("takes several values, so a list — not {other}")),
+            Some(other) => Err(format!("takes several values, so a list - not {other}")),
         }
     }
     fn json(&self) -> Option<Json> {
@@ -141,7 +141,7 @@ impl Scalar for f64 {
     }
 }
 
-/// A whole number — an integral float accepted, because EML 2.3 has no
+/// A whole number - an integral float accepted, because EML 2.3 has no
 /// integer parameter and a code read back from an activity is a `double`.
 fn whole(value: &Json) -> Option<i64> {
     value.as_i64().or_else(|| {
@@ -217,7 +217,7 @@ impl Scalar for bool {
     }
 }
 
-/// A title for the objects made — one per plan.
+/// A title for the objects made - one per plan.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Title(pub String);
 
@@ -284,7 +284,7 @@ reference! {
     PropertyKindRef => Need::PropertyKind,
 }
 
-/// A qualified type the build knows — the list and its axes are said with
+/// A qualified type the build knows - the list and its axes are said with
 /// `#[param(need = Need::Type(…))]`, because they are values, not a type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeName(pub String);
@@ -303,7 +303,7 @@ impl Scalar for TypeName {
     }
 }
 
-/// A division of the BRGM chronostratigraphic chart — its label, its code or
+/// A division of the BRGM chronostratigraphic chart - its label, its code or
 /// its id, resolved by the operation against `energyml_domain::geolts`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChartTerm(pub String);
@@ -381,14 +381,14 @@ pub fn default_json<T: Param>(value: &T) -> Json {
 
 // ---------------------------------------------------------------- params
 
-/// A block of parameters — a struct of fields, or a union of cases.
+/// A block of parameters - a struct of fields, or a union of cases.
 pub trait Params: Sized {
     /// The slots, in declaration order: what a form shows and a template
     /// projects. A controller always comes before what it controls.
     fn slots() -> Vec<Slot>;
     /// The block, from settled choices.
     fn read(choices: &crate::operation::Choices) -> Result<Self, Refusal>;
-    /// The block **back** into choices — the inverse of [`Params::read`], for
+    /// The block **back** into choices - the inverse of [`Params::read`], for
     /// an operation that hands its settings to one still reading them by name
     /// (§6). An absent value is left out; a union writes its case's word.
     fn write(&self, choices: crate::operation::Choices) -> crate::operation::Choices;
@@ -408,19 +408,19 @@ impl Params for () {
 }
 
 /// The slots of a union: its choice, then **each case's slots, acting only
-/// under that case** — flattened on the wire, where a form already knows how
+/// under that case** - flattened on the wire, where a form already knows how
 /// to render a slot with a condition (§5.3).
 ///
 /// A slot two cases share (`radius`, for IDW and kriging) is **one** slot
 /// whose condition names both; its kind must be the same in both, or the two
 /// cases are asking two different things under one name. A slot already
-/// conditioned inside its case — the sub-union of a case — keeps its own
+/// conditioned inside its case - the sub-union of a case - keeps its own
 /// condition: its controller is itself under the case, and the conditions
 /// nest through it.
 ///
 /// # Panics
 ///
-/// On a declaration fault — two kinds under one name, or a case's slot that
+/// On a declaration fault - two kinds under one name, or a case's slot that
 /// is also `With`/`Without`, which a flat wire cannot combine with a case.
 /// Every declaration is exercised by the template test, so a fault is a red
 /// test, never a silent form.
@@ -475,10 +475,10 @@ pub struct Piece<'a> {
     pub known: Option<&'a Known>,
 }
 
-/// The bag, each piece paired with what is known of it — **the one place the
+/// The bag, each piece paired with what is known of it - **the one place the
 /// pairing convention is written**.
 ///
-/// A piece `X` is paired with the object piece `X (object)` — what
+/// A piece `X` is paired with the object piece `X (object)` - what
 /// `read::pieces_of_object` and `read::in_slot` produce. And one convention
 /// older than that, kept so that the callers written before it still bind: a
 /// bag holding a single object piece named `object` and a single piece with
@@ -491,19 +491,19 @@ pub fn paired(bag: &Pieces) -> Vec<Piece<'_>> {
             _ => None,
         })
         .collect();
-    // **An object of the package is an input like any other — unless it is the
+    // **An object of the package is an input like any other - unless it is the
     // companion of another piece.**
     //
     // Widened because, in practice, one may want object-creation operations,
     // colour enrichment or problem detection that are not necessarily tied to
     // geometric objects. The mechanism used to bind only a piece **that has a
     // geometry**, so a `ColumnBasedTable`, a property kind or a colour map
-    // could not be inputs — and `properties-from-table` could not continue an
+    // could not be inputs - and `properties-from-table` could not continue an
     // existing table for that reason alone.
     //
     // The companion keeps its status: `X (object)` is *what is known of X*,
     // not an input of its own. Telling it apart by its **name** and not by its
-    // nature is what lets the two coexist — it is the convention that
+    // nature is what lets the two coexist - it is the convention that
     // `read::pieces_of_object` writes, and it is read here and nowhere
     // else.
     let companion = |name: &str| -> bool { name.ends_with(" (object)") };
@@ -541,7 +541,7 @@ pub fn paired(bag: &Pieces) -> Vec<Piece<'_>> {
     out
 }
 
-/// What is known of the object behind the piece a slot names — for an
+/// What is known of the object behind the piece a slot names - for an
 /// operation's suggestions, which run on any bag, bound or not.
 pub fn known_of<'a>(bag: &'a Pieces, slot: &str) -> Option<&'a Known> {
     let pieces = paired(bag);
@@ -555,7 +555,7 @@ pub fn known_of<'a>(bag: &'a Pieces, slot: &str) -> Option<&'a Known> {
         .and_then(|piece| piece.known)
 }
 
-/// What is known of the piece of that name — an object piece itself, or the
+/// What is known of the piece of that name - an object piece itself, or the
 /// object a piece is paired with. What a field's `over` resolves to: the
 /// representation the values lie on, and how many nodes it has.
 pub fn known_named<'a>(bag: &'a Pieces, name: &str) -> Option<&'a Known> {
@@ -571,7 +571,7 @@ pub fn known_named<'a>(bag: &'a Pieces, name: &str) -> Option<&'a Known> {
 
 /// One kind of input.
 pub trait Input: Sized {
-    /// The kind of piece — the vocabulary of [`Source::kind`].
+    /// The kind of piece - the vocabulary of [`Source::kind`].
     const KIND: &'static str;
     /// The input, from a piece of that kind.
     fn from_piece(piece: &Piece<'_>) -> Result<Self, String>;
@@ -585,7 +585,7 @@ pub trait InputParam: Sized {
     fn least() -> u32;
     /// How many at most.
     fn most() -> Option<u32>;
-    /// The field, from the pieces bound to it — the count already checked.
+    /// The field, from the pieces bound to it - the count already checked.
     fn from_items(items: Vec<Self::Item>) -> Self;
 }
 
@@ -612,7 +612,7 @@ macro_rules! input_param {
     )*};
 }
 
-/// A shape: geometry and topology — an object of the package, an artefact, a
+/// A shape: geometry and topology - an object of the package, an artefact, a
 /// mesh file.
 #[derive(Debug, Clone)]
 pub struct Shape {
@@ -645,7 +645,7 @@ impl Input for Shape {
     }
 }
 
-/// Foreign features — a GeoJSON.
+/// Foreign features - a GeoJSON.
 #[derive(Debug, Clone)]
 pub struct Features {
     /// Its name in the bag.
@@ -712,13 +712,13 @@ impl Input for TableIn {
 
 /// An object of the package, taken as an input.
 ///
-/// What an operation receives of it is what the caller has **resolved** — its
+/// What an operation receives of it is what the caller has **resolved** - its
 /// reference, its frame, and what `read::known_of_object` was able to read of
 /// it. It therefore has nothing to look up, and `plan` stays pure: that is the
 /// crate's rule, applied to an object that has no geometry.
 #[derive(Debug, Clone)]
 pub struct ObjectIn {
-    /// Its name in the bag — the slot that received it.
+    /// Its name in the bag - the slot that received it.
     pub name: String,
     /// What is known of it.
     pub known: Known,
@@ -734,8 +734,8 @@ impl Input for ObjectIn {
             }),
             // **Having a geometry does not disqualify.** An object given to an
             // object slot arrives as **two** pieces when it is a
-            // representation — the shape and its companion `X (object)`, which
-            // `read::in_slot` writes — and it is the companion that is wanted.
+            // representation - the shape and its companion `X (object)`, which
+            // `read::in_slot` writes - and it is the companion that is wanted.
             // Refusing on the nature of the first made an object slot
             // unreachable for everything that can be drawn: `wells-from-table`
             // takes frames, and a frame is a representation.
@@ -878,15 +878,15 @@ pub fn input_slot_of<T: InputParam>(
     }
 }
 
-/// What an operation takes — a struct of inputs, bound by the framework.
+/// What an operation takes - a struct of inputs, bound by the framework.
 pub trait Inputs: Sized {
-    /// The input slots — what `takes()` answers.
+    /// The input slots - what `takes()` answers.
     fn slots() -> Vec<Slot>;
     /// The inputs, bound from the bag, or the refusal that names the slot.
     fn bind(bag: &Pieces) -> Result<Self, Refusal>;
 }
 
-/// Nothing taken — `crs`.
+/// Nothing taken - `crs`.
 impl Inputs for () {
     fn slots() -> Vec<Slot> {
         Vec::new()
@@ -900,7 +900,7 @@ impl Inputs for () {
 ///
 /// A slot `top` takes the piece `top`; a slot taking several takes `surfaces`,
 /// `surfaces 2`, `surfaces 3`, in that order. A piece whose name is **no**
-/// slot's goes to the **only required** slot of its kind — or, when no slot of
+/// slot's goes to the **only required** slot of its kind - or, when no slot of
 /// that kind is required, to the only slot of that kind. That is what a caller
 /// that names nothing (the CLI without `slot=`, a test naming a piece by its
 /// title) has always relied on: `interpolate` takes its samples unnamed and
@@ -909,7 +909,7 @@ impl Inputs for () {
 /// which is the top is what reading roles by name exists to prevent.
 pub struct Binder<'a> {
     pieces: Vec<Piece<'a>>,
-    /// What the bag holds, in words — the other end of a refusal.
+    /// What the bag holds, in words - the other end of a refusal.
     kinds: String,
 }
 
@@ -922,8 +922,8 @@ impl<'a> Binder<'a> {
         }
     }
 
-    /// The rank of a piece name under a slot name — `surfaces` 1,
-    /// `surfaces 3` 3 — or `None` when it is not one of that slot's.
+    /// The rank of a piece name under a slot name - `surfaces` 1,
+    /// `surfaces 3` 3 - or `None` when it is not one of that slot's.
     fn rank(slot: &str, name: &str) -> Option<usize> {
         if name == slot {
             return Some(1);
@@ -960,7 +960,7 @@ impl<'a> Binder<'a> {
         }
     }
 
-    /// Whether a piece of the bag goes to `slot` — named after it, or unnamed
+    /// Whether a piece of the bag goes to `slot` - named after it, or unnamed
     /// with `slot` its one candidate: the rule of [`Binder::take`], asked
     /// before anything is bound. See [`given_inputs`].
     pub fn receives(&self, slot: &Slot, slots: &[Slot]) -> bool {
@@ -985,7 +985,7 @@ impl<'a> Binder<'a> {
         named.sort_by_key(|(rank, _)| *rank);
         let mut chosen: Vec<&Piece<'a>> = named.into_iter().map(|(_, piece)| piece).collect();
 
-        // Pieces that are no slot's, of this kind — **appended** after the
+        // Pieces that are no slot's, of this kind - **appended** after the
         // named ones when this is their one candidate slot: a bag may name one
         // piece after the slot and bring others unnamed, and the writer takes
         // them all, as it always has.
@@ -998,7 +998,7 @@ impl<'a> Binder<'a> {
                 return Err(Refusal::on(
                     slot,
                     format!(
-                        "no piece is named `{slot}`, and {} unnamed {kind} piece(s) could be any of `{}` — name them after their slots",
+                        "no piece is named `{slot}`, and {} unnamed {kind} piece(s) could be any of `{}` - name them after their slots",
                         unnamed.len(),
                         rivals.join("`, `")
                     ),
@@ -1012,7 +1012,7 @@ impl<'a> Binder<'a> {
         // **An empty `Every` slot is not yet a shortage**: the edge fills it
         // from the package (`read::every`) when it plans, and a list of offers
         // is judged before that. The operation says what an empty one means
-        // when nothing filled it — `properties-from-table` refuses by its name.
+        // when nothing filled it - `properties-from-table` refuses by its name.
         let filled_later =
             count == 0 && declared.is_some_and(|one| one.otherwise == crate::operation::Otherwise::Every);
         if count < least && !filled_later {
@@ -1020,10 +1020,10 @@ impl<'a> Binder<'a> {
             return Err(Refusal::on(
                 slot,
                 // **Both ends**, the house rule: what it takes, and what the
-                // bag holds instead — `nothing`, `shape`, `features`.
+                // bag holds instead - `nothing`, `shape`, `features`.
                 match least {
                     1 => format!("it takes {about}; the input holds {}", self.kinds),
-                    _ => format!("at least {least} piece(s) are needed, {count} given — {about}"),
+                    _ => format!("at least {least} piece(s) are needed, {count} given - {about}"),
                 },
             ));
         }
@@ -1035,7 +1035,7 @@ impl<'a> Binder<'a> {
             let about = declared.map(|one| one.about).unwrap_or_default();
             return Err(Refusal::on(
                 slot,
-                format!("at most {most} piece(s), and {count} were given — {about}"),
+                format!("at most {most} piece(s), and {count} were given - {about}"),
             ));
         }
         let items = chosen
@@ -1046,13 +1046,13 @@ impl<'a> Binder<'a> {
     }
 }
 
-/// The input slots this bag gives a piece to — what [`Applies`] reads as
+/// The input slots this bag gives a piece to - what [`Applies`] reads as
 /// **given** beside the answered choices.
 ///
 /// An input is not a choice: it arrives as a piece of the bag, never in the
-/// answers. So a setting that is the alternative of an input — `spacing` and
+/// answers. So a setting that is the alternative of an input - `spacing` and
 /// `margin` of `interpolate`, which have no meaning once `onto` gives the
-/// lattice — could not say `Without(["onto"])` and be heard: the condition
+/// lattice - could not say `Without(["onto"])` and be heard: the condition
 /// read the answers only, and `onto` is never among them. This is the one
 /// place that answers *is that input given?*, by the naming rule of
 /// [`Binder::take`], so that the condition and the binding cannot disagree.
@@ -1068,7 +1068,7 @@ pub fn given_inputs(bag: &Pieces, takes: &[Slot]) -> Vec<&'static str> {
 // ---------------------------------------------------------------- suggestions
 
 /// What an operation proposes from its inputs, posed on the declared slots
-/// **by name** — and a name that is no slot's is kept, so that the adapter can
+/// **by name** - and a name that is no slot's is kept, so that the adapter can
 /// fail a test on it rather than drop a suggestion in silence.
 pub struct Suggestions<'a> {
     slots: &'a mut Vec<Slot>,
@@ -1106,7 +1106,7 @@ impl<'a> Suggestions<'a> {
         }
     }
 
-    /// A declared slot, to say more of it than a suggestion — what it creates
+    /// A declared slot, to say more of it than a suggestion - what it creates
     /// when left out, when that depends on the operation.
     pub fn slot_mut(&mut self, slot: &str) -> Option<&mut Slot> {
         match self.slots.iter().position(|one| one.name == slot) {
@@ -1118,7 +1118,7 @@ impl<'a> Suggestions<'a> {
         }
     }
 
-    /// Whether this operation declares that slot — for a suggestion shared by
+    /// Whether this operation declares that slot - for a suggestion shared by
     /// several operations, some of which leave a slot out on purpose
     /// (`boundary` makes its own interpretation, so it declares none).
     pub fn declared(&self, slot: &str) -> bool {

@@ -7,7 +7,7 @@
 //! enum would leave them printing a refusal, and the suite would stay green.
 //!
 //! So the same two objects are built here, in the same shapes, through the same
-//! door. This file is not a second implementation — it is the examples' alarm.
+//! door. This file is not a second implementation - it is the examples' alarm.
 //! When one changes, the other changes with it.
 //!
 //! What it deliberately does *not* check is the Python: that needs an
@@ -69,7 +69,7 @@ fn external_array(file: &str, path: &str, count: usize) -> Value {
 
 /// Example 1: a triangulated surface added to a package that already exists.
 ///
-/// The CRS is chosen by what it **says** — `VerticalAxis.IsTime` — and not by
+/// The CRS is chosen by what it **says** - `VerticalAxis.IsTime` - and not by
 /// its title, which is the point the example makes: a package can hold a depth
 /// CRS and a time CRS, and putting metres in the second one produces something
 /// that opens perfectly and means something else.
@@ -174,7 +174,7 @@ fn the_first_example_writes_a_surface_a_reader_finds_again() {
 /// Example 2: the whole chain, into a package that did not exist.
 ///
 /// Feature, interpretation, representation, property, and the CRS pair they
-/// stand in — six objects, and the `.h5` that two of them point at.
+/// stand in - six objects, and the `.h5` that two of them point at.
 #[cfg(feature = "hdf5")]
 #[test]
 fn the_second_example_builds_a_package_from_nothing() {
@@ -258,7 +258,7 @@ fn the_second_example_builds_a_package_from_nothing() {
             "IndexableElement": "nodes",
             "SupportingRepresentation": reference(
                 "resqml22.PointSetRepresentation", "Top Chalk picks", picks_uuid),
-            // A well-known kind, by uuid, and **not** carried by the package —
+            // A well-known kind, by uuid, and **not** carried by the package -
             // the Energistics dictionary defines it. A local copy would be one
             // more object saying what the standard already says.
             "PropertyKind": reference(

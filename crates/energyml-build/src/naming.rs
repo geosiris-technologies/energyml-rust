@@ -10,7 +10,7 @@
 //! shows everything changed, and nothing can say whether the data moved or only
 //! its names did.
 //!
-//! So every uuid is **derived**, uuid v5 over a namespace and a name — the same
+//! So every uuid is **derived**, uuid v5 over a namespace and a name - the same
 //! choice a version translation makes for the objects it splits, and for the same
 //! reason: no clock, no randomness, nothing that would differ between two
 //! machines or fail to build for wasm.
@@ -22,14 +22,14 @@
 //! - a **unit** is named from its BRGM referential URL. That uuid is permanent,
 //!   the referential exists to provide it, and two exports that spell « Marnes
 //!   et Caillasses » differently still land on one object. When the referential
-//!   gives nothing, the unit's title is the fallback — worse, and stated;
+//!   gives nothing, the unit's title is the fallback - worse, and stated;
 //! - a **surface** is named from the unit, the stage and the side, because that
 //!   triple is what the group *is*;
 //! - the **CRS objects** are named from their EPSG codes alone. Two imports into
 //!   two packages then produce the same 4326 object, which is what makes it
 //!   recognisable as the same system rather than as a coincidence;
 //! - the **activity** is named from the source file, the stage and the run's own
-//!   timestamp — the one place a fresh identity is right, because two imports of
+//!   timestamp - the one place a fresh identity is right, because two imports of
 //!   one file are two events and a package should record both.
 //!
 //! # The namespace is fixed and must never move
@@ -66,7 +66,7 @@ pub fn collection(recipe: &str, seed: &str, role: &str) -> String {
 ///
 /// One per run and not one per role: `CollectionsToDataobjectsAssociationSet`
 /// carries `SingleCollectionAssociation` as `1..∞`, so it holds all the
-/// collections of one run — one per role would be as many more objects in a
+/// collections of one run - one per role would be as many more objects in a
 /// package as this change exists to lighten.
 pub fn associations(recipe: &str, seed: &str) -> String {
     derive(&format!("associations:{recipe}:{seed}"))
@@ -74,7 +74,7 @@ pub fn associations(recipe: &str, seed: &str) -> String {
 
 /// The `RockVolumeFeature` for a lithostratigraphic unit.
 ///
-/// `key` is the unit's referential uuid when it has one, its title otherwise —
+/// `key` is the unit's referential uuid when it has one, its title otherwise -
 /// which is what [`crate::sigeol::Unit::key`] already answers.
 pub fn feature(key: &str) -> String {
     derive(&format!("feature:{key}"))
@@ -88,7 +88,7 @@ pub fn interpretation(key: &str) -> String {
 /// The `PointSetRepresentation` of one surface.
 ///
 /// The triple is the identity of the group: the same unit, on the same stage,
-/// on the same side, is the same point set — whichever file it came out of.
+/// on the same side, is the same point set - whichever file it came out of.
 pub fn point_set(key: &str, stage: &str, side: &str) -> String {
     derive(&format!("pointset:{key}:{stage}:{side}"))
 }
@@ -121,7 +121,7 @@ pub fn activity(source: &str, stage: &str, when: &str) -> String {
 }
 
 /// The activity of any operation: its recipe, what seeded the run, and the
-/// instant — the one place a fresh identity is right, because two runs of one
+/// instant - the one place a fresh identity is right, because two runs of one
 /// file are two events and a package should record both.
 pub fn activity_seeded(recipe: &str, seed: &str, when: &str) -> String {
     derive(&format!("activity:{recipe}:{seed}:{when}"))

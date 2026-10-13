@@ -1,9 +1,9 @@
-//! `extend-boreholes` — a frame prolonged to at most `maxDepth`, recut at
+//! `extend-boreholes` - a frame prolonged to at most `maxDepth`, recut at
 //! `step`, marked as laid below the base it was logged to.
 //!
 //! The shape of the assertions comes from the reference model's build plan, the
 //! rules on invented objects (ADR-0019) and from `crates/energyml-build/ARCHITECTURE.md` (the sections on enriching
-//! without overwriting and on recognising a borehole) — the values are fabricated here,
+//! without overwriting and on recognising a borehole) - the values are fabricated here,
 //! at coordinates near the reference model's own (x ≈ 651 000, y ≈ 6 861 000).
 
 use serde_json::{Value, json};
@@ -29,13 +29,13 @@ fn when() -> When {
     }
 }
 
-/// A vertical frame's measured depths and its collar — the BSS shape: `x`,
+/// A vertical frame's measured depths and its collar - the BSS shape: `x`,
 /// `y` fixed, `z = ground - md`, `vertical_up` true (elevation).
 fn vertical_frame(title: &str, mds: &[f64]) -> Pieces {
     vertical_frame_full(title, mds, true, true, true)
 }
 
-/// The same, with the datum, the interpretation or the wellhead left out —
+/// The same, with the datum, the interpretation or the wellhead left out -
 /// what the refusals below exercise.
 fn vertical_frame_full(
     title: &str,
@@ -60,7 +60,7 @@ fn vertical_frame_full(
         reference: Some(Ref::new(
             FRAME_UUID,
             "resqml22.WellboreFrameRepresentation",
-            format!("{title} — frame"),
+            format!("{title} - frame"),
         )),
         crs: Some(Ref::new(
             CRS_UUID,
@@ -73,20 +73,20 @@ fn vertical_frame_full(
         trajectory: Some(Ref::new(
             TRAJECTORY_UUID,
             "resqml22.WellboreTrajectoryRepresentation",
-            format!("{title} — trajectory"),
+            format!("{title} - trajectory"),
         )),
         datum: with_datum.then(|| {
             Ref::new(
                 DATUM_UUID,
                 "eml23.ReferencePointInALocalEngineeringCompoundCrs",
-                format!("{title} — datum"),
+                format!("{title} - datum"),
             )
         }),
         interpretation: with_interpretation.then(|| {
             Ref::new(
                 INTERPRETATION_UUID,
                 "resqml22.WellboreInterpretation",
-                format!("{title} — interpretation"),
+                format!("{title} - interpretation"),
             )
         }),
         wellhead: with_wellhead.then_some([X, Y, GROUND]),
@@ -185,13 +185,13 @@ fn old_measured_depths_are_kept_bit_for_bit_and_the_deepest_node_lands_on_the_li
     )
     .expect("a plan");
     let written = node_mds_of(&made);
-    // The three logged depths, untouched — not a value rebuilt from the line.
+    // The three logged depths, untouched - not a value rebuilt from the line.
     assert_eq!(
         written[..3].to_vec(),
         mds.to_vec(),
         "the logged depths must survive bit for bit: {written:?}"
     );
-    // Every added node at a `step` of 10 from 12, the last exactly at 50 —
+    // Every added node at a `step` of 10 from 12, the last exactly at 50 -
     // never a value nudged to make the step divide evenly.
     assert_eq!(written[3..].to_vec(), vec![22.0, 32.0, 42.0, 50.0], "{written:?}");
 }
@@ -271,7 +271,7 @@ fn the_old_frame_and_trajectory_are_not_rewritten() {
         TRAJECTORY_UUID,
         "the old trajectory's uuid must not be reused"
     );
-    // And the old pair is not among the written objects at all — nothing here
+    // And the old pair is not among the written objects at all - nothing here
     // rewrites what the file already had.
     assert!(
         made.objects
@@ -300,8 +300,8 @@ fn the_same_inputs_write_the_same_uuids() {
 
 #[test]
 fn a_different_source_is_the_same_extension() {
-    // The identity comes from the content — the frame continued and the depths
-    // added — and the `source` text is not content: it says where the invented
+    // The identity comes from the content - the frame continued and the depths
+    // added - and the `source` text is not content: it says where the invented
     // values come from. Rewording it rewrites the same object (13/10/2026; the
     // pair across operations is `source_not_in_identity`).
     let mds = [0.0, 5.0, 12.0];

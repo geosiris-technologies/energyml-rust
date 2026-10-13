@@ -1,21 +1,21 @@
-//! `fluid-sample` — a water sample taken down a wellbore, and what is drawn
+//! `fluid-sample` - a water sample taken down a wellbore, and what is drawn
 //! from it: the acquisition job, the container, the sample, its water analysis
 //! and a fluid characterization without equation of state.
 //!
 //! The reference model's sample chain: the
 //! chain of custody of a sample of a well's water: `FluidSampleAcquisitionJob`
 //! (`DownholeSampleAcquisition.Wellbore` 1..1) → `FluidSampleContainer` →
-//! `FluidSample` → rock-fluid unit; its analysis — `WaterAnalysis` → test
-//! → components (Ca, Na, Cl, SO₄, HCO₃, Ba); salinity, TDS, hardness — and
+//! `FluidSample` → rock-fluid unit; its analysis - `WaterAnalysis` → test
+//! → components (Ca, Na, Cl, SO₄, HCO₃, Ba); salinity, TDS, hardness - and
 //! a simplified `FluidCharacterization`: groundwater, without an equation of state.
 //!
 //! | object | what it says |
 //! |---|---|
 //! | `FluidSampleAcquisitionJob` | one downhole acquisition in the wellbore given, at the MD given (`Wellbore` 1..1, `FluidSystem` 1..1) |
-//! | `FluidSampleContainer` | the bottle the sample went into — nothing stated of it but that it exists |
+//! | `FluidSampleContainer` | the bottle the sample went into - nothing stated of it but that it exists |
 //! | `FluidSample` | kind `water`, its container, its fluid system, its acquisition (its rock-fluid unit when given) |
 //! | `WaterAnalysis` | one component per ion stated, a test with the hardness and what else was stated (`FluidSample` 1..1) |
-//! | `FluidCharacterization` | a parameter set — density, viscosity, compressibility of the aqueous phase — and no model |
+//! | `FluidCharacterization` | a parameter set - density, viscosity, compressibility of the aqueous phase - and no model |
 //!
 //! # One acquisition per sample, in one job
 //!
@@ -38,19 +38,19 @@
 //! them: two numbers for one fact would be free to disagree.
 //!
 //! The concentrations go in `VolumeConcentration`, which PRODML types as a
-//! `MassPerVolumeMeasure` — the reference model's concentration, of the order of g/L,
+//! `MassPerVolumeMeasure` - the reference model's concentration, of the order of g/L,
 //! is a mass per volume, and PRODML's `MassConcentration` is
 //! a mass per **mass**. The plan says so.
 //!
 //! `AnalysisQuality` is written `unknown`: the schema requires it (FluidAnalysis
 //! `SampleQuality`, one of `invalid`, `unknown`, `valid`), and nobody analysed
-//! this water — `valid` would be a judgement of a laboratory that does not exist.
+//! this water - `valid` would be a judgement of a laboratory that does not exist.
 //!
 //! # A characterization without an equation of state
 //!
 //! Usage Guide v2.3, §11.1.6.3 p. 107: the *« Fluid Characterization Parameter
 //! Option »*, *« based on the requirements of a constant compressibility
-//! pressure transient analysis »* — which is what a fresh water needs: its
+//! pressure transient analysis »* - which is what a fresh water needs: its
 //! density, its viscosity, its compressibility, each on the `aqueous` phase. No
 //! `ModelSpecification` is written; the remark says why.
 //!
@@ -62,7 +62,7 @@
 //! # Identity
 //!
 //! The job, the container and the sample come from the wellbore, the instant
-//! and the depth — the same sample from one run to the next; the analysis from
+//! and the depth - the same sample from one run to the next; the analysis from
 //! the sample and the concentrations; the characterization from the sample
 //! and its parameters. Another analysis of the same sample is a second object,
 //! never a rewrite of the first.
@@ -70,7 +70,7 @@
 //! # References
 //!
 //! - The charge balance error `100 · (Σ cations − Σ anions) / (Σ cations + Σ anions)` and the total hardness as CaCO3 (APHA *Standard Methods*, 2340 B), as cited in `energyml-analysis` (`ion_balance`).
-//!   TODO(reference): verify — cited from memory in `energyml-analysis`; no copy was available.
+//!   TODO(reference): verify - cited from memory in `energyml-analysis`; no copy was available.
 
 use energyml_analysis::ion_balance;
 use energyml_core::xml::XmlText;
@@ -101,16 +101,16 @@ const ACQUISITION: &str = "acquisition-1";
 const TEST: &str = "test-1";
 
 /// Why the characterization has parameters and no model.
-const NO_EOS: &str = "Water without equation of state: the density, the viscosity and the compressibility of the aqueous phase as a parameter set — the « Fluid Characterization Parameter Option » of the PRODML Technical Usage Guide v2.3, §11.1.6.3 p. 107 (groundwater, no EOS).";
+const NO_EOS: &str = "Water without equation of state: the density, the viscosity and the compressibility of the aqueous phase as a parameter set - the « Fluid Characterization Parameter Option » of the PRODML Technical Usage Guide v2.3, §11.1.6.3 p. 107 (groundwater, no EOS).";
 
 // ---------------------------------------------------------------- the declaration
 
 /// What `fluid-sample` is told.
 #[derive(Debug, Params)]
 pub struct FluidSampleParams {
-    /// the title of the sample — its job, its container, its analysis and its characterization are named after it
+    /// the title of the sample - its job, its container, its analysis and its characterization are named after it
     pub title: String,
-    /// where the values come from — a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
+    /// where the values come from - a document with its page or paragraph; a value stated as plausible says so (synthetic, and why)
     pub source: String,
     /// when the sample was taken, a UTC date-time as 2025-03-12T09:00:00Z
     pub sampled_at: String,
@@ -122,16 +122,16 @@ pub struct FluidSampleParams {
     pub sample_md: f64,
     /// the reference conditions the analysis and the characterization are stated at
     pub standard_conditions: Standard,
-    /// the dissolved ions, each as formula=mg/L — Ca+2=110, HCO3-=320
+    /// the dissolved ions, each as formula=mg/L - Ca+2=110, HCO3-=320
     #[param(least = 2)]
     pub components: Vec<String>,
-    /// the largest charge balance error accepted, in percent — beyond it the ions stated are no water
+    /// the largest charge balance error accepted, in percent - beyond it the ions stated are no water
     #[param(default = 5.0, optional, min = 0.0, max = 100.0)]
     pub balance_tolerance: f64,
-    /// the total dissolved solids, in mg/L — left out, none is written
+    /// the total dissolved solids, in mg/L - left out, none is written
     #[param(min = 0.0, uom = "mg/L")]
     pub dissolved_solids: Option<f64>,
-    /// the salinity, in mg/L — left out, none is written
+    /// the salinity, in mg/L - left out, none is written
     #[param(min = 0.0, uom = "mg/L")]
     pub salinity: Option<f64>,
     /// the density of the water, in kg/m3
@@ -151,7 +151,7 @@ pub struct FluidSampleParams {
 /// What `fluid-sample` takes.
 #[derive(Debug, Inputs)]
 pub struct FluidSampleInputs {
-    /// the wellbore the sample was taken in — a WITSML `Wellbore`, or the RESQML `WellboreFeature` of the hole
+    /// the wellbore the sample was taken in - a WITSML `Wellbore`, or the RESQML `WellboreFeature` of the hole
     #[input(types = "witsml21.Wellbore, resqml22.WellboreFeature")]
     pub wellbore: ObjectIn,
     /// the fluid system the sample belongs to
@@ -171,7 +171,7 @@ struct Stated {
     mg_per_l: f64,
 }
 
-/// `Ca+2=110` — the formula and its mg/L, or why the text is not that.
+/// `Ca+2=110` - the formula and its mg/L, or why the text is not that.
 fn stated(rank: usize, text: &str) -> Result<Stated, Refusal> {
     let text = text.trim();
     let Some((formula, value)) = text.split_once('=') else {
@@ -192,7 +192,7 @@ fn stated(rank: usize, text: &str) -> Result<Stated, Refusal> {
         return Err(Refusal::on(
             "components",
             format!(
-                "component {rank} `{text}`: nitrate is `NO3-`, one negative charge, and PRODML 2.3 spells it `NO3-2` (AnionKind, FluidAnalysis.xsd) — which of the two is meant decides the balance, so it is not written"
+                "component {rank} `{text}`: nitrate is `NO3-`, one negative charge, and PRODML 2.3 spells it `NO3-2` (AnionKind, FluidAnalysis.xsd) - which of the two is meant decides the balance, so it is not written"
             ),
         ));
     }
@@ -203,7 +203,7 @@ fn stated(rank: usize, text: &str) -> Result<Stated, Refusal> {
 }
 
 /// The component PRODML writes for an ion, its formula checked against the
-/// closed list of the schema — `AnionKind` or `CationKind` — before its
+/// closed list of the schema - `AnionKind` or `CationKind` - before its
 /// extensible twin is written.
 fn component(rank: usize, ion: &Stated) -> Result<prodml::WaterSampleComponent, Refusal> {
     let (anion, cation) = if prodml::AnionKind::from_xml_text(&ion.formula).is_ok() {
@@ -226,7 +226,7 @@ fn component(rank: usize, ion: &Stated) -> Result<prodml::WaterSampleComponent, 
         return Err(Refusal::on(
             "components",
             format!(
-                "`{}` is neither an anion nor a cation PRODML 2.3 names (AnionKind, CationKind — FluidAnalysis.xsd)",
+                "`{}` is neither an anion nor a cation PRODML 2.3 names (AnionKind, CationKind - FluidAnalysis.xsd)",
                 ion.formula
             ),
         ));
@@ -252,7 +252,7 @@ impl Operation for FluidSample {
     fn about(&self) -> About {
         About {
             name: "fluid-sample",
-            describe: "a water sample taken down a wellbore and its chain — acquisition job, container, sample, water analysis balanced before it is written, and a characterization without equation of state — every value stated and sourced",
+            describe: "a water sample taken down a wellbore and its chain - acquisition job, container, sample, water analysis balanced before it is written, and a characterization without equation of state - every value stated and sourced",
             category: Category::Synthetic,
             makes: &[
                 "prodml23.FluidSampleAcquisitionJob",
@@ -368,7 +368,7 @@ impl Operation for FluidSample {
             return Err(Refusal::on(
                 "components",
                 format!(
-                    "the ions do not balance: {:.3} meq/L of cations against {:.3} meq/L of anions, an error of {:.2} % beyond the {tolerance} % accepted — a water is electrically neutral, so an ion is missing or a concentration is wrong",
+                    "the ions do not balance: {:.3} meq/L of cations against {:.3} meq/L of anions, an error of {:.2} % beyond the {tolerance} % accepted - a water is electrically neutral, so an ion is missing or a concentration is wrong",
                     balance.cations, balance.anions, balance.error
                 ),
             ));
@@ -418,10 +418,10 @@ impl Operation for FluidSample {
             params.reference_temperature,
             params.standard_conditions.word()
         ))?;
-        let job_title = format!("{title} — acquisition job");
-        let container_title = format!("{title} — container");
-        let analysis_title = format!("{title} — water analysis");
-        let characterization_title = format!("{title} — characterization");
+        let job_title = format!("{title} - acquisition job");
+        let container_title = format!("{title} - container");
+        let analysis_title = format!("{title} - water analysis");
+        let characterization_title = format!("{title} - characterization");
         let job_ref = Ref::new(
             job_uuid.clone(),
             "prodml23.FluidSampleAcquisitionJob",
@@ -459,7 +459,7 @@ impl Operation for FluidSample {
                     start_time: sampled_text.clone(),
                     end_time: ended.clone(),
                     remark: format!(
-                        "synthetic — one downhole acquisition at MD {} m; no pressure, temperature or volume of acquisition is stated",
+                        "synthetic - one downhole acquisition at MD {} m; no pressure, temperature or volume of acquisition is stated",
                         params.sample_md
                     ),
                     fluid_sample_container: dor(&container_ref),
@@ -494,7 +494,7 @@ impl Operation for FluidSample {
             )?,
             extension_name_value: vec![writer.synthetic("the container of an invented sample")],
             remark: Some(
-                "synthetic — no make, model, capacity or rating is stated: none is written".to_string(),
+                "synthetic - no make, model, capacity or rating is stated: none is written".to_string(),
             ),
             ..Default::default()
         };
@@ -540,8 +540,8 @@ impl Operation for FluidSample {
             salinity_per_volume: params.salinity.map(|value| eml::MassPerVolumeMeasureExt { value, uom: eml::MassPerVolumeUomExt::MgPerL }),
             total_hardness_per_volume: hardness.map(|value| eml::MassPerVolumeMeasureExt { value, uom: eml::MassPerVolumeUomExt::MgPerL }),
             remark: Some(match hardness {
-                Some(_) => "synthetic — the total hardness is computed from the calcium and magnesium stated, in mg/L as CaCO3".to_string(),
-                None => "synthetic — no calcium nor magnesium is stated, so no hardness is written".to_string(),
+                Some(_) => "synthetic - the total hardness is computed from the calcium and magnesium stated, in mg/L as CaCO3".to_string(),
+                None => "synthetic - no calcium nor magnesium is stated, so no hardness is written".to_string(),
             }),
             ..Default::default()
         };
@@ -560,7 +560,7 @@ impl Operation for FluidSample {
             standard_conditions: Some(conditions()),
             analysis_quality: prodml::SampleQuality::Unknown,
             remark: Some(format!(
-                "synthetic — nobody analysed this water, so its quality is `unknown`; the concentrations are mass per volume (VolumeConcentration, mg/L); cations {:.3} meq/L, anions {:.3} meq/L",
+                "synthetic - nobody analysed this water, so its quality is `unknown`; the concentrations are mass per volume (VolumeConcentration, mg/L); cations {:.3} meq/L, anions {:.3} meq/L",
                 balance.cations, balance.anions
             )),
             water_analysis_test: vec![test],
@@ -669,7 +669,7 @@ impl Operation for FluidSample {
         says.push(Note {
             key: "hardness",
             detail: match hardness {
-                Some(value) => format!("the total hardness, {value:.1} mg/L as CaCO3, is computed from the calcium and magnesium stated — never stated beside them"),
+                Some(value) => format!("the total hardness, {value:.1} mg/L as CaCO3, is computed from the calcium and magnesium stated - never stated beside them"),
                 None => "no calcium nor magnesium is stated: no hardness is written".to_string(),
             },
         });

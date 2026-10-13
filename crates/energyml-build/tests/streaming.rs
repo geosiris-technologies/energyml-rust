@@ -7,12 +7,12 @@
 //!
 //! The gain is measured elsewhere and not here: a stopwatch or a memory
 //! peak in a test measures the machine, not the contract.
-//! The figures of 20/09 — 50.8 MB read in 1,185 MB — are recorded in
+//! The figures of 20/09 - 50.8 MB read in 1,185 MB - are recorded in
 //! the notes on external sources.
 
 use energyml_build::geojson::{self, Feature, Flow, Keep, Wanted};
 
-/// Two entities, properties, and a `crs` member **after** the features —
+/// Two entities, properties, and a `crs` member **after** the features -
 /// as a WFS really writes it (measured: `numberMatched` at byte 783,596).
 fn collection(crs: Option<&str>) -> String {
     let tail = match crs {
@@ -46,7 +46,7 @@ fn everything(text: &str) -> (Vec<Feature>, geojson::Summary) {
 fn the_stream_says_what_the_whole_document_says() {
     // **The confrontation that counts.** `read` is now built on the
     // streaming reader; if the two were ever to diverge, it is here that it
-    // would show — and this check is what allows having only one
+    // would show - and this check is what allows having only one
     // implementation.
     let text = collection(None);
     let whole = geojson::read(&text).expect("a collection");
@@ -65,7 +65,7 @@ fn the_stream_says_what_the_whole_document_says() {
 
 #[test]
 fn what_the_document_says_about_itself_comes_back() {
-    // The counts of the service, carried to the caller — and **they arrive at
+    // The counts of the service, carried to the caller - and **they arrive at
     // the end**, which is the whole argument for the separate quote.
     let (_, summary) = everything(&collection(None));
     assert_eq!(summary.matched, Some(2));
@@ -77,7 +77,7 @@ fn what_the_document_says_about_itself_comes_back() {
 fn what_is_not_asked_for_is_not_kept() {
     // The measured ×400: 2,000 entities weigh 1,185 MB with their properties and
     // 3 MB without. What a test can verify is not the memory peak but
-    // **what remains** — the cause, not the consequence.
+    // **what remains** - the cause, not the consequence.
     let text = collection(None);
 
     let mut none = Vec::new();
@@ -130,7 +130,7 @@ fn what_is_not_asked_for_is_not_kept() {
 
 #[test]
 fn a_sink_that_has_had_enough_stops_the_reading() {
-    // Without that, “cancel” means reading to the end then throwing away — on a
+    // Without that, “cancel” means reading to the end then throwing away - on a
     // 50 MB response, nine seconds of nothing.
     let text = collection(None);
     let mut seen = Vec::new();
@@ -167,8 +167,8 @@ fn a_collection_that_is_not_in_wgs84_is_refused_wherever_it_says_so() {
     // they have to be thrown away.
     assert!(after.0.contains("already handed over"), "{after}");
 
-    // The one that announces it up front — the 2008 form, the one a producer
-    // of such files writes — is refused without anything being returned.
+    // The one that announces it up front - the 2008 form, the one a producer
+    // of such files writes - is refused without anything being returned.
     let before = r#"{"crs":{"type":"name","properties":{"name":"EPSG:2154"}},
                      "type":"FeatureCollection","features":[]}"#;
     let mut seen = 0;

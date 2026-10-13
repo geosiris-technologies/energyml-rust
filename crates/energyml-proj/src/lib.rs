@@ -18,12 +18,12 @@
 //!
 //! Reprojecting has two halves, and only one of them is arithmetic.
 //!
-//! The **projection** — UTM, Lambert, stereographic — is pure trigonometry.
+//! The **projection** - UTM, Lambert, stereographic - is pure trigonometry.
 //! Give it an ellipsoid and a formula and it needs nothing else. proj4rs does
 //! this as well as PROJ does.
 //!
 //! The **datum** is not arithmetic, it is *data*. EPSG:23031 is ED50 / UTM 31N,
-//! and the ED50 ellipsoid is not centred where WGS 84's is — about 178 m away
+//! and the ED50 ellipsoid is not centred where WGS 84's is - about 178 m away
 //! in space. Crossing from one to the other needs seven measured numbers:
 //!
 //! ```text
@@ -32,7 +32,7 @@
 //!
 //! Those numbers have to come from somewhere. `pyproj` ships the whole EPSG
 //! database and never makes you think about it. A Rust crate does not, and
-//! **`crs-definitions` 0.4.0 — the version proj4rs itself pins — carries none
+//! **`crs-definitions` 0.4.0 - the version proj4rs itself pins - carries none
 //! of them.** Of nine systems checked it documents a datum for exactly one,
 //! EPSG:32631, which is already on WGS 84 and needs no shift. 0.5.0 carries all
 //! nine. This crate depends on 0.5.0 directly for that reason.
@@ -44,7 +44,7 @@
 //! | the 0.4.0 string, no datum | 3.00000000 | 42.00127347 |
 //! | the 0.5.0 string, with `+towgs84` | 2.99887374 | 42.00020043 |
 //!
-//! **151 m apart** — 93 m east, 119 m north. Nothing errors, and every
+//! **151 m apart** - 93 m east, 119 m north. Nothing errors, and every
 //! coordinate looks reasonable.
 //!
 //! # How close this is to PROJ
@@ -78,7 +78,7 @@
 //!
 //! Read that second column before reading the first. The disagreement is
 //! **smaller than the accuracy the registry claims for the transformation
-//! itself** — a few metres, on a conversion nobody says is good to better than
+//! itself** - a few metres, on a conversion nobody says is good to better than
 //! six. That is the accuracy this backend buys, and for placing a reservoir
 //! model on a map it is ample.
 //!
@@ -89,7 +89,7 @@
 //! "there is nothing better".
 //!
 //! For survey work none of this is good enough, and the answer there is
-//! [`Proj4::with_definition`] — supply the transformation your survey specifies
+//! [`Proj4::with_definition`] - supply the transformation your survey specifies
 //! and this crate uses it verbatim.
 //!
 //! Grid-based transformations are **refused by name** rather than approximated:
@@ -108,8 +108,8 @@
 //! ```
 //!
 //! That is correct geodesy and wrong for EnergyML. The Z of a representation is
-//! a depth or an elevation against a **vertical CRS** — mean sea level, a
-//! seabed, a rig floor — which is a separate object with its own EPSG code, and
+//! a depth or an elevation against a **vertical CRS** - mean sea level, a
+//! seabed, a rig floor - which is a separate object with its own EPSG code, and
 //! which `to_epsg` is not given. Letting the horizontal datum shift it would
 //! quietly mix two vertical references and move every horizon 60 m.
 //!
@@ -135,7 +135,7 @@ use energyml_domain::reproject::Reprojector;
 /// [`Silent`]: DatumState::Silent
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DatumState {
-    /// `+datum=`, `+towgs84=` or `+nadgrids=@null` — the shift is known,
+    /// `+datum=`, `+towgs84=` or `+nadgrids=@null` - the shift is known,
     /// including when it is known to be zero.
     Stated,
     /// `+nadgrids=` naming a real grid file. Known, and not available here.
@@ -167,7 +167,7 @@ pub fn datum_state(proj4: &str) -> DatumState {
         };
         match key {
             "+datum" | "+towgs84" => state = DatumState::Stated,
-            // `@null` is proj4 for "this system is already on WGS 84" — it is
+            // `@null` is proj4 for "this system is already on WGS 84" - it is
             // how Web Mercator is written, and it is a statement, not silence.
             "+nadgrids" if value == "@null" => state = DatumState::Stated,
             "+nadgrids" => return DatumState::NeedsGrid,
@@ -181,7 +181,7 @@ pub fn datum_state(proj4: &str) -> DatumState {
 ///
 /// Built with [`Proj4::new`]; definitions come from `crs-definitions` 0.5.0
 /// unless you supply your own with [`Proj4::with_definition`] or
-/// [`Proj4::with_definitions_json`], which take precedence — the same
+/// [`Proj4::with_definitions_json`], which take precedence - the same
 /// arrangement as every other registry in this workspace, so a built-in can
 /// always be replaced without forking anything.
 #[derive(Debug, Clone)]
@@ -252,7 +252,7 @@ impl Proj4 {
 
     /// Turn off the datum check.
     ///
-    /// Only sound when every system in play is already on WGS 84 — a package
+    /// Only sound when every system in play is already on WGS 84 - a package
     /// written entirely in EPSG:326xx, 4326 or 3857. Anywhere else this is the
     /// switch that puts the model a hundred metres from where it belongs,
     /// which is why it has to be asked for.
@@ -299,7 +299,7 @@ impl Proj4 {
                 format!("EPSG:{epsg}"),
                 format!(
                     "its definition states no datum (`{proj4}`), so the shift to WGS 84 would be \
-                     silently skipped and the model would land some hundred metres out — supply \
+                     silently skipped and the model would land some hundred metres out - supply \
                      one (`--crs-definitions`, or `Proj4::with_definition`), or say the risk is \
                      accepted (`--allow-silent-datum`, or `allowing_a_silent_datum()`) if every \
                      system here is already on WGS 84"
@@ -415,7 +415,7 @@ impl Reprojector for Proj4 {
                 // The third coordinate goes in as **zero** and comes back
                 // untouched. See `elevation` below: a Helmert is a rotation of
                 // the whole earth-centred frame, so it changes ellipsoidal
-                // height too — and the Z of an EnergyML representation is not
+                // height too - and the Z of an EnergyML representation is not
                 // an ellipsoidal height. It is a depth or an elevation against
                 // a vertical CRS that this call knows nothing about.
                 let mut work = (scale_in(point[0]), scale_in(point[1]), 0.0);
@@ -534,7 +534,7 @@ mod tests {
     #[test]
     fn the_elevation_passes_through_untouched() {
         // Not a formality. proj4rs, given this point at depth, returns it
-        // 60.8 m higher — the ellipsoidal-height half of the ED50 Helmert. A
+        // 60.8 m higher - the ellipsoidal-height half of the ED50 Helmert. A
         // RESQML Z is a depth against a vertical CRS, not an ellipsoidal
         // height, so that shift must not reach it.
         let out = Proj4::new()
@@ -572,7 +572,7 @@ mod tests {
         assert!(offset < 0.05, "{offset} m");
         assert!(
             offset > 0.01,
-            "{offset} m — suspiciously small, is the datum shift running?"
+            "{offset} m - suspiciously small, is the datum shift running?"
         );
     }
 

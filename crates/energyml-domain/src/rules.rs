@@ -84,7 +84,7 @@ pub enum Check {
         /// as one field. But two releases sometimes *disagree* about what a
         /// field may hold, and then a release-blind rule cannot be right for
         /// both. RESQML 2.2 lets a representation name a technical feature and
-        /// 2.0.1 does not, so the two statements are two rules — and each has
+        /// 2.0.1 does not, so the two statements are two rules - and each has
         /// to be able to say which element it is about, or the 2.0.1 one flags
         /// every conforming 2.2 file.
         ///
@@ -98,22 +98,22 @@ pub enum Check {
         /// For the case a decision has named: a rule that knows why a
         /// particular wrong target is there says so beside the finding, rather
         /// than being silenced for it or leaving a reader to rediscover it.
-        /// `trg/geometry-local-crs` is the first — a geometry in degrees under
+        /// `trg/geometry-local-crs` is the first - a geometry in degrees under
         /// a `Geographic2dCrs` is the exception that was kept,
         /// still reported, and reported *as* that exception. JSON: `"notes":
         /// { "Geographic2dCrs": "…" }`.
         notes: Vec<(String, String)>,
         /// A softer reading of a rejected target, tried **one hop further**
-        /// before the rule's own severity is applied — JSON `"through": { … }`,
+        /// before the rule's own severity is applied - JSON `"through": { … }`,
         /// see [`Through`].
         ///
         /// `trg/contact-element-is-geological` is the first user ("option C"): fesapi points a contact at the model
         /// frontier's `GenericFeatureInterpretation` rather than at the
-        /// `CulturalFeature` itself — going through the interpretation the way
+        /// `CulturalFeature` itself - going through the interpretation the way
         /// every other accepted target in this rule already does. The rejected
         /// target is opened, `through.path` is read **on it**, and a match
         /// against `through.targets` turns the finding into `through`'s own
-        /// `gravity`/`says` instead of the rule's — never silence (the letter
+        /// `gravity`/`says` instead of the rule's - never silence (the letter
         /// of the guide still asks for the feature, not its interpretation),
         /// and never the rule's own severity either (the whole point of
         /// `through` is that it usually disagrees with it).
@@ -159,7 +159,7 @@ pub enum Check {
     /// relation checked is
     /// `compare  op  to x PI(times) + plus`.
     Compare {
-        /// Read the paths **without** the release synonyms — see
+        /// Read the paths **without** the release synonyms - see
         /// [`Check::Targets::exact`], which it means exactly the same way.
         exact: bool,
         /// The path to the value being judged.
@@ -182,13 +182,13 @@ pub enum Check {
 /// at this severity and with this wording instead of the check's own.
 ///
 /// Deliberately narrower than `Check::Targets` itself: no `notes`, no nested
-/// `through` — a fallback that itself needed a fallback would say the rule
+/// `through` - a fallback that itself needed a fallback would say the rule
 /// does not know what it wants to say about the target it is looking at.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Through {
     /// The dotted path, read **on the rejected target** and appended to the
     /// check's own `path` (`"Subject"` + `"InterpretedFeature"` reads the
-    /// interpretation `Subject` names to find what it interprets) — the same
+    /// interpretation `Subject` names to find what it interprets) - the same
     /// crossing walk `Check::Targets::path` itself relies on.
     pub path: String,
     /// The concepts that make the rejected target acceptable, softened.
@@ -196,7 +196,7 @@ pub struct Through {
     /// Accept a subtype of one of `targets`, the same meaning as
     /// `Targets::subtypes`.
     pub subtypes: bool,
-    /// The weight of a finding reached this way — independent of the rule's
+    /// The weight of a finding reached this way - independent of the rule's
     /// own `severity`, since the whole point of `through` is that it usually
     /// disagrees with it.
     pub gravity: Gravity,
@@ -230,10 +230,10 @@ pub enum Op {
 
 /// How much a broken rule weighs in `check`.
 ///
-/// **A warning by default** — a rule the guides state is worth knowing, and a
+/// **A warning by default** - a rule the guides state is worth knowing, and a
 /// file that breaks it is often still usable. **An error when declared so**,
-/// rule by rule, following the review of the `[ERROR]` model of Lutetia
-/// — the property kind, discrete value, trajectory, listric fault, collection
+/// rule by rule, following the review of the `[ERROR]` model of Lutetia -
+/// the property kind, discrete value, trajectory, listric fault, collection
 /// and contact anomalies are errors, the series asset anomaly stays a warning. The weight is part of the
 /// rule's declaration, never decided by whoever prints the report.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -271,23 +271,23 @@ pub struct Rule {
     /// not walked into: what it holds is its own business.
     pub nested: bool,
     /// Concepts this rule is **not** about, although they descend from
-    /// `source` — JSON `"except": ["WellboreFrameRepresentation", …]`.
+    /// `source` - JSON `"except": ["WellboreFrameRepresentation", …]`.
     ///
     /// For the case where the guide states a narrower class's own rule: RESQML
     /// TRG 2.2 lets a `WellboreFrameRepresentation` and a
     /// `WellboreTrajectoryRepresentation` represent a WITSML `Wellbore`
     /// (§12.13 p. 310, §12.17 p. 314), which every other representation may
     /// not. The general rule excepts them and a rule of their own states
-    /// what they may aim at — rather than one rule too broad for all the
+    /// what they may aim at - rather than one rule too broad for all the
     /// others, or too narrow for these two. Read in the object's base chain,
     /// like `source`, so a subclass of an excepted concept is excepted too.
     pub except: Vec<String>,
-    /// The releases this rule speaks for — JSON `"release": "2.0.1"` or a list.
+    /// The releases this rule speaks for - JSON `"release": "2.0.1"` or a list.
     ///
     /// Compared with the **version of the object's own schema** (`TypeInfo::version`:
     /// `2.0.1`, `2.2`…). Empty, the rule holds for every release. For the case a
     /// guide states a rule for one release and the other has none, or states it
-    /// differently — BRT1 (a fault interprets a tectonic boundary) has no
+    /// differently - BRT1 (a fault interprets a tectonic boundary) has no
     /// counterpart in 2.2, where `TectonicBoundaryFeature` is gone, and run on
     /// a 2.2 fault it would condemn every conforming file.
     pub release: Vec<String>,
@@ -300,7 +300,7 @@ pub struct Rule {
     pub checks: Vec<Check>,
     /// What the rule means, for the report.
     pub says: String,
-    /// How much breaking it weighs — JSON `"severity": "error"`, a warning
+    /// How much breaking it weighs - JSON `"severity": "error"`, a warning
     /// when absent.
     pub gravity: Gravity,
 }
@@ -331,7 +331,7 @@ pub struct Finding {
     pub says: String,
     /// The outcome - violation or uncheckable; the inapplicable is silent.
     pub outcome: Outcome,
-    /// How much a violation weighs — the rule's.
+    /// How much a violation weighs - the rule's.
     pub gravity: Gravity,
 }
 
@@ -373,18 +373,18 @@ pub struct Finding {
 /// and *"From: AbstractProperty.LocalCrs 0..1 To: LocalEngineeringCompoundCrs"*
 /// (§7.1 p. 222). RESQML 2.0.1's `AbstractLocal3dCrs` is `LocalDepth3dCrs` or
 /// `LocalTime3dCrs`, which the release notes of 2.2 (p. 3) say the compound
-/// replaced — so both rules accept the three.
+/// replaced - so both rules accept the three.
 ///
 /// `trg/geometry-local-crs` is `nested` because a geometry is never an object
 /// of its own (see [`Rule::nested`]). It was missing at first:
 /// every geometry `energyml-build` wrote
 /// named a `ProjectedCrs` or a `Geographic2dCrs`, and nothing said so. It
-/// declares no `severity`, so a violation is a **warning** in `check` — the
+/// declares no `severity`, so a violation is a **warning** in `check` - the
 /// packages already written are readable, and 20 objects of the BRGM package
 /// break it. (Rules are not all warnings: `trg/contact-element-is-geological`
-/// is an error, see [`Gravity`].) The exception decided on 24/09 — a geometry in degrees
+/// is an error, see [`Gravity`].) The exception decided on 24/09 - a geometry in degrees
 /// keeps its `Geographic2dCrs`, EML 2.3 having no compound over a geographic
-/// system — is still reported, **named in the finding** by its note.
+/// system - is still reported, **named in the finding** by its note.
 ///
 /// # The contact rule, and what "geological" and "frontier" are taken to mean
 ///
@@ -401,17 +401,17 @@ pub struct Finding {
 ///   (horizon, fault, geobody boundary, fluid boundary) or a
 ///   `GeologicUnitInterpretation` (stratigraphic unit, geobody, rock fluid
 ///   unit…), in both releases. Left out on purpose: the organisations, the
-///   earth model, the wellbore and the `GenericFeatureInterpretation` — none of
+///   earth model, the wellbore and the `GenericFeatureInterpretation` - none of
 ///   them is a thing a contact can lie between;
 /// - a *frontier feature* is 2.0.1's `FrontierFeature`, and in 2.2 a
-///   `CulturalFeature` — the class RESQML 2.2 keeps a model frontier in
-///   (Interpretations.xsd l. 994–1008: *"either points to a CulturalFeature
+///   `CulturalFeature` - the class RESQML 2.2 keeps a model frontier in
+///   (Interpretations.xsd l. 994-1008: *"either points to a CulturalFeature
 ///   whose Kind is model frontier or to a BoundaryFeatureInterpretation"*).
 ///   Its `Kind` is not read: a typing rule reads what the reference names,
 ///   and a cultural feature of another kind is a narrower defect than the one
 ///   this rule exists for.
 ///
-/// # A frontier reached through its interpretation — `through`, option C
+/// # A frontier reached through its interpretation - `through`, option C
 ///
 /// The finding, on `testingPackage`: a contact relates geological feature
 /// interpretations or a frontier feature, never a representation (RESQML TRG 2.2
@@ -423,19 +423,19 @@ pub struct Finding {
 /// `testdata/testingPackageCpp22.epc` (written by fesapi) has a contact whose
 /// `Subject` is `X Minus Frontier Interp`, a `GenericFeatureInterpretation`
 /// whose own `InterpretedFeature` is the `CulturalFeature` that is the
-/// model's frontier — fesapi reaches the frontier **through its
+/// model's frontier - fesapi reaches the frontier **through its
 /// interpretation**, the way every other accepted target in this rule already
 /// is an interpretation. The letter of TRG 2.2 §6.9 p. 173 asks for the
 /// frontier *feature* itself, not an interpretation of it, so this is not
 /// nothing; but the intent is identifiable one hop away, and fesapi is a
 /// reference implementation, not a fringe producer. The decision
 /// is option C of the three considered (silence, keep the
-/// error, or soften it) — so a `GenericFeatureInterpretation`
+/// error, or soften it) - so a `GenericFeatureInterpretation`
 /// (or any interpretation) reached as `Subject`/`DirectObject`, whose
 /// `InterpretedFeature` is itself a `CulturalFeature` or `FrontierFeature`, is
 /// no longer an error: it is a **named warning** (`through`, see [`Through`]),
-/// and every other wrong target — a representation, an interpretation of
-/// anything else (a seismic line, say) — stays an error exactly as before.
+/// and every other wrong target - a representation, an interpretation of
+/// anything else (a seismic line, say) - stays an error exactly as before.
 const TRG: &str = r#"[
   {
     "id": "trg/property-supporting-representation",
@@ -563,7 +563,7 @@ const TRG: &str = r#"[
           "path": "InterpretedFeature",
           "targets": ["CulturalFeature", "FrontierFeature"],
           "severity": "warning",
-          "says": "a frontier reached through its interpretation — the TRG asks for the frontier feature itself (RESQML TRG 2.2 §6.9 p. 173), not the interpretation fesapi points at"
+          "says": "a frontier reached through its interpretation - the TRG asks for the frontier feature itself (RESQML TRG 2.2 §6.9 p. 173), not the interpretation fesapi points at"
         }
       },
       {
@@ -574,7 +574,7 @@ const TRG: &str = r#"[
           "path": "InterpretedFeature",
           "targets": ["CulturalFeature", "FrontierFeature"],
           "severity": "warning",
-          "says": "a frontier reached through its interpretation — the TRG asks for the frontier feature itself (RESQML TRG 2.2 §6.9 p. 173), not the interpretation fesapi points at"
+          "says": "a frontier reached through its interpretation - the TRG asks for the frontier feature itself (RESQML TRG 2.2 §6.9 p. 173), not the interpretation fesapi points at"
         }
       }
     ],
@@ -585,7 +585,7 @@ const TRG: &str = r#"[
     "source": "FaultInterpretation",
     "release": "2.0.1",
     "check": { "path": "InterpretedFeature", "targets": "TectonicBoundaryFeature" },
-    "says": "a RESQML 2.0.1 fault interpretation interprets a tectonic boundary feature (BRT1 of the Energistics 2016 business-rule delivery; the RESQML validator guide 2017 §5.3.1 p. 36 calls it implicit, not written in the 2.0.1 text — a house reading, hence a warning. 2.2 has no TectonicBoundaryFeature: trg/boundary-interpretation-interprets-boundary states it there)"
+    "says": "a RESQML 2.0.1 fault interpretation interprets a tectonic boundary feature (BRT1 of the Energistics 2016 business-rule delivery; the RESQML validator guide 2017 §5.3.1 p. 36 calls it implicit, not written in the 2.0.1 text - a house reading, hence a warning. 2.2 has no TectonicBoundaryFeature: trg/boundary-interpretation-interprets-boundary states it there)"
   },
   {
     "id": "trg/brt2-earth-model-organization-kind",
@@ -669,7 +669,7 @@ pub fn parse(json: &str) -> Result<Vec<Rule>, String> {
         let id = text("id")?;
         // **An unknown key is a refusal**, never a silently weaker rule: a typo
         // (`"severty": "error"`, `"whne"`, `"subtype"`) used to give a warning, a
-        // rule with no condition or one with no inheritance, without a word —
+        // rule with no condition or one with no inheritance, without a word -
         // the *silently partial registry* this parser exists to refuse.
         if let Some(map) = entry.as_object() {
             const KEYS: &[&str] = &[
@@ -697,7 +697,7 @@ pub fn parse(json: &str) -> Result<Vec<Rule>, String> {
                 found @ (Check::Equals { .. } | Check::Targets { .. }) => Some(found),
                 _ => {
                     return Err(format!(
-                        "rule `{id}`: `when` is `equals` or `targets` — a condition reads, it does not compute"
+                        "rule `{id}`: `when` is `equals` or `targets` - a condition reads, it does not compute"
                     ));
                 }
             },
@@ -794,7 +794,7 @@ fn parse_check(id: &str, check: &Value) -> Result<Check, String> {
             (None, Some(value)) => Expect::Value(value.to_owned()),
             _ => {
                 return Err(format!(
-                    "rule `{id}`: `each` expects `sameAs` (a source path) or `equals` (a value) — exactly one"
+                    "rule `{id}`: `each` expects `sameAs` (a source path) or `equals` (a value) - exactly one"
                 ));
             }
         };
@@ -939,7 +939,7 @@ fn parse_check(id: &str, check: &Value) -> Result<Check, String> {
             equals: equals.to_owned(),
         }),
         _ => Err(format!(
-            "rule `{id}`: a check is `targets`, `equals`, `field`+`equals` or `compare` — nothing else"
+            "rule `{id}`: a check is `targets`, `equals`, `field`+`equals` or `compare` - nothing else"
         )),
     }
 }
@@ -1094,7 +1094,7 @@ pub fn run<'a>(
     findings
 }
 
-/// One rule against one object — or one part of it, `at` saying where (empty
+/// One rule against one object - or one part of it, `at` saying where (empty
 /// for the object itself). What is read or why it could not be is prefixed
 /// with that path, so a finding on a representation's third patch says so.
 fn judge(
@@ -1152,11 +1152,11 @@ fn judge(
     }
 }
 
-/// What one check yields — the outcome, and what should override the rule's
+/// What one check yields - the outcome, and what should override the rule's
 /// own `gravity`/`says` for this one finding, when the check has something
 /// more specific to say than the rule as a whole.
 ///
-/// `None` on both keeps the rule's own weight and wording — every check
+/// `None` on both keeps the rule's own weight and wording - every check
 /// written before 29/09/2026, since the two fields are additive: nothing
 /// existing had to change to gain them. `Check::Targets`'s `through` is the
 /// only source of an override today, and the reason it exists: the fallback
@@ -1179,7 +1179,7 @@ impl Verdict {
     }
 }
 
-/// Every part of `object` — itself included — that is of `concept`, with the
+/// Every part of `object` - itself included - that is of `concept`, with the
 /// dotted path that reaches it (XML names, `[i]` for a repeated element).
 ///
 /// A match is not walked into, and fields holding scalars are not read at all:
@@ -1221,7 +1221,7 @@ fn parts_of<'a>(
 /// The concept a violation read, with the rule's note on it when there is one.
 fn noted(notes: &[(String, String)], key: String) -> String {
     match notes.iter().find(|(concept, _)| *concept == key) {
-        Some((_, note)) => format!("{key} — {note}"),
+        Some((_, note)) => format!("{key} - {note}"),
         None => key,
     }
 }
@@ -1320,7 +1320,7 @@ fn evaluate(
                 return None;
             }
             // The direct target is wrong. `through` may still accept it, one
-            // hop further — see [`Through`] for why `trg/contact-element-is-
+            // hop further - see [`Through`] for why `trg/contact-element-is-
             // geological` needs exactly this.
             if let Some(through) = through {
                 let deeper = format!("{path}.{}", through.path);
@@ -1329,7 +1329,7 @@ fn evaluate(
                 {
                     return Some(Verdict {
                         outcome: Outcome::Violation {
-                            read: format!("{key} — reached through `{deeper}`: {deeper_key}"),
+                            read: format!("{key} - reached through `{deeper}`: {deeper_key}"),
                         },
                         gravity: Some(through.gravity),
                         says: Some(through.says.clone()),
@@ -1413,7 +1413,7 @@ fn evaluate(
             if !disagree.is_empty() {
                 // A real violation does not hide behind an unreadable
                 // neighbour - it goes first, the unreadable is appended.
-                let mut read = format!("{} — expected {wanted}", disagree.join(", "));
+                let mut read = format!("{} - expected {wanted}", disagree.join(", "));
                 if !unreadable.is_empty() {
                     read.push_str(&format!(" (and unreadable: {})", unreadable.join(", ")));
                 }
@@ -1491,14 +1491,14 @@ fn evaluate(
     }
 }
 
-/// Whether the reference at `path` on `object` names one of `targets` —
+/// Whether the reference at `path` on `object` names one of `targets` -
 /// directly (the type the reference itself declares, read for free), or, with
 /// `subtypes`, by inheritance: the registry first (a type's ancestry is
 /// static), the actual target opened through `source` second.
 ///
 /// `Ok(None)` when the reference is not a readable one at all. `Ok(Some((key,
-/// false)))` is a *resolved but wrong* target — the ordinary case a `Targets`
-/// check reports as a violation — and `Ok(Some((key, true)))` is a match. This
+/// false)))` is a *resolved but wrong* target - the ordinary case a `Targets`
+/// check reports as a violation - and `Ok(Some((key, true)))` is a match. This
 /// is [`Check::Targets`]'s own decision, factored out so [`Through`] can run
 /// the exact same test one hop further out, on the rejected target rather
 /// than on the object being judged.
@@ -1544,7 +1544,7 @@ fn concept_at(
         }
     }
     // Inheritance: the target has to be opened to know what it descends from.
-    // As a fallback only, and missing it is an *error* here — a target that
+    // As a fallback only, and missing it is an *error* here - a target that
     // cannot be read is not a faulty one, which the caller reports as
     // uncheckable rather than as a resolved mismatch.
     //
@@ -1724,7 +1724,7 @@ mod tests {
         let notes = [("Geographic2dCrs".to_string(), "the named exception".to_string())];
         assert_eq!(
             noted(&notes, "Geographic2dCrs".into()),
-            "Geographic2dCrs — the named exception"
+            "Geographic2dCrs - the named exception"
         );
         assert_eq!(noted(&notes, "ProjectedCrs".into()), "ProjectedCrs");
     }

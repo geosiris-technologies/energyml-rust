@@ -1,4 +1,4 @@
-//! `earth-model` — a `Model` and the `EarthModelInterpretation` that gathers
+//! `earth-model` - a `Model` and the `EarthModelInterpretation` that gathers
 //! what a package says of it: its stratigraphic column, its structural and
 //! rock-fluid organisations, its unit occurrences.
 //!
@@ -14,19 +14,19 @@
 //!   model Interpretation interprets only a model feature »* (RESQML TRG 2.2
 //!   §6.19, p. 187). The `Model` is written here, its uuid derived from its
 //!   title, so that a second earth model of the same title interprets the
-//!   **same** model — a new snapshot of it, not a second model;
+//!   **same** model - a new snapshot of it, not a second model;
 //! - `StratigraphicColumn` 0..1, `Structure` 0..∞, `Fluid` 0..∞,
 //!   `StratigraphicOccurrences` 0..∞, `WellboreInterpretationSet` 0..∞
-//!   (Interpretations.xsd l. 637–641): each reference points at an object the
+//!   (Interpretations.xsd l. 637-641): each reference points at an object the
 //!   caller gave, typed by the slot that took it. A wellbore set is a
 //!   `DataobjectCollection` that *« must only contain WellboreInterpretation »*
-//!   (TRG 2.2 §6.19 p. 187) — its members are not read here, a plan being pure;
+//!   (TRG 2.2 §6.19 p. 187) - its members are not read here, a plan being pure;
 //! - **the interpretation's uuid comes from what it references.** The same
 //!   column and organisations give the same interpretation; another set gives
-//!   another interpretation of the same model — the « snap shot » the usage
+//!   another interpretation of the same model - the « snap shot » the usage
 //!   guide describes, not a rewrite of the first;
-//! - an interpretation that references nothing is valid — every field is
-//!   optional — and is written, **said** in a note: an empty earth model reads
+//! - an interpretation that references nothing is valid - every field is
+//!   optional - and is written, **said** in a note: an empty earth model reads
 //!   exactly like a finished one in a tree.
 
 use energyml_domain::provenance::Parameter;
@@ -42,7 +42,7 @@ pub struct EarthModel;
 /// What `earth-model` is told.
 #[derive(Debug, Params)]
 pub struct EarthModelParams {
-    /// the model's title — the same title is the same model
+    /// the model's title - the same title is the same model
     pub title: Title,
     /// the earth model interpretation's title; defaults to the model's, followed by « earth model »
     pub interpretation_title: Option<String>,
@@ -54,16 +54,16 @@ pub struct EarthModelInputs {
     /// the stratigraphic column of the model
     #[input(types = "resqml22.StratigraphicColumn")]
     pub column: Option<ObjectIn>,
-    /// the structural organisations — one per scenario
+    /// the structural organisations - one per scenario
     #[input(types = "resqml22.StructuralOrganizationInterpretation")]
     pub structures: Vec<ObjectIn>,
     /// the rock-fluid organisations
     #[input(types = "resqml22.RockFluidOrganizationInterpretation")]
     pub fluids: Vec<ObjectIn>,
-    /// the unit occurrences — a column read along a well
+    /// the unit occurrences - a column read along a well
     #[input(types = "resqml22.GeologicUnitOccurrenceInterpretation")]
     pub occurrences: Vec<ObjectIn>,
-    /// the collections of the model's wellbore interpretations — each holds only WellboreInterpretation (TRG 2.2 §6.19)
+    /// the collections of the model's wellbore interpretations - each holds only WellboreInterpretation (TRG 2.2 §6.19)
     #[input(types = "eml23.DataobjectCollection")]
     pub wellbore_sets: Vec<ObjectIn>,
 }
@@ -93,7 +93,7 @@ pub(crate) struct Written {
     pub(crate) objects: Vec<NewObject>,
     pub(crate) interpretation: eml::DataObjectReference,
     pub(crate) interpretation_title: String,
-    /// The interpretation's seed — the activity's too.
+    /// The interpretation's seed - the activity's too.
     pub(crate) seed: String,
     /// How many references the interpretation holds.
     pub(crate) content: usize,
@@ -104,7 +104,7 @@ pub(crate) struct Written {
 /// `earth-model-from-stratigraphy` both call it, so an interpretation is
 /// written by one piece of code whatever made its column.
 ///
-/// Its uuid comes from what it references, and the model's title — the seed
+/// Its uuid comes from what it references, and the model's title - the seed
 /// `earth-model` has always used, so its objects keep their uuids. `keep` is
 /// the uuid of an interpretation being **enriched**: it keeps it, and the
 /// content replaces what it held.
@@ -162,7 +162,7 @@ pub(crate) fn write(
         .map(|dor| dor.uuid.clone())
         .collect();
     let mut seed = format!("earth-model:interpretation:{title}:{}", content.join(","));
-    // A second snapshot of the same content, on purpose — Paul's and Peter's
+    // A second snapshot of the same content, on purpose - Paul's and Peter's
     // readings of one column (TUG p. 68). Appended only when given, so every
     // interpretation written without one keeps its uuid.
     if let Some(variant) = variant.map(str::trim).filter(|one| !one.is_empty()) {
@@ -176,7 +176,7 @@ pub(crate) fn write(
     let interpretation_title = interpretation_title
         .map(|given| given.trim().to_string())
         .filter(|given| !given.is_empty())
-        .unwrap_or_else(|| format!("{title} — earth model"));
+        .unwrap_or_else(|| format!("{title} - earth model"));
     let interpretation = resqml::EarthModelInterpretation {
         uuid: interpretation_uuid.clone(),
         schema_version: "2.2".to_string(),
@@ -314,7 +314,7 @@ impl Operation for EarthModel {
         if content_len == 0 {
             says.push(Note {
                 key: "empty",
-                detail: "the earth model interpretation references nothing yet: valid — every field is optional — and it reads like a finished one in a tree".to_string(),
+                detail: "the earth model interpretation references nothing yet: valid - every field is optional - and it reads like a finished one in a tree".to_string(),
             });
         }
 

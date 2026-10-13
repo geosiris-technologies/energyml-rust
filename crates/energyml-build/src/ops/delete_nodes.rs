@@ -1,4 +1,4 @@
-//! `delete-nodes` — some nodes of a shape taken out
+//! `delete-nodes` - some nodes of a shape taken out
 //! (the scene-editing design, vertex deletion): a cloud loses them, a polyline
 //! is cut at them, a surface loses the triangles that name them. Deleted points
 //! create holes.
@@ -12,7 +12,7 @@
 //!   look as if it had worked;
 //! - **everything** taken out: nothing would be left to write;
 //! - a grid, a volume: what `transform` refuses to write back. A 2D grid's node
-//!   would become *undefined* (NaN) rather than go — as the scene-artefacts design says —
+//!   would become *undefined* (NaN) rather than go - as the scene-artefacts design says -
 //!   once a grid can be written back; a volume's cells are another affair.
 
 use energyml_analysis::nodes::{erase_from_cloud, erase_from_lines, erase_from_surface};
@@ -34,10 +34,10 @@ pub struct DeleteNodes;
 /// What `delete-nodes` is told.
 #[derive(Debug, Params)]
 pub struct DeleteNodesParams {
-    /// the nodes taken out — their ranks in the shape; a form fills it from the nodes pointed in the scene
+    /// the nodes taken out - their ranks in the shape; a form fills it from the nodes pointed in the scene
     #[param(least = 1)]
     pub nodes: Vec<usize>,
-    /// The frame, what is represented, the naming — for the writer of the result.
+    /// The frame, what is represented, the naming - for the writer of the result.
     #[param(flatten)]
     pub written: Written,
 }
@@ -45,7 +45,7 @@ pub struct DeleteNodesParams {
 /// What `delete-nodes` takes.
 #[derive(Debug, Inputs)]
 pub struct DeleteNodesInputs {
-    /// the shape to take nodes out of — a cloud, polylines or a triangulated surface
+    /// the shape to take nodes out of - a cloud, polylines or a triangulated surface
     pub shape: Shape,
 }
 
@@ -64,7 +64,7 @@ impl Operation for DeleteNodes {
     fn about(&self) -> About {
         About {
             name: "delete-nodes",
-            describe: "some nodes of a shape taken out — a cloud loses them, a polyline is cut at them, a surface loses the triangles that name them",
+            describe: "some nodes of a shape taken out - a cloud loses them, a polyline is cut at them, a surface loses the triangles that name them",
             category: Category::Geometry,
             makes: &[
                 "resqml22.PointSetRepresentation",
@@ -100,7 +100,7 @@ impl Operation for DeleteNodes {
                 "value",
                 "nodes",
                 format!(
-                    "`nodes` names node {bad}, and the shape holds {total} (ranks from 0) — a deletion aimed at nothing would look as if it had worked"
+                    "`nodes` names node {bad}, and the shape holds {total} (ranks from 0) - a deletion aimed at nothing would look as if it had worked"
                 ),
             ));
         }
@@ -154,7 +154,7 @@ impl Operation for DeleteNodes {
     }
 }
 
-/// What [`erase`] took out, counted — said in the plan and in the activity.
+/// What [`erase`] took out, counted - said in the plan and in the activity.
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct Erased {
     /// Nodes taken out.
@@ -181,7 +181,7 @@ impl Erased {
             says.push(Note {
                 key: "dropped",
                 detail: format!(
-                    "{} piece(s) of line left with a single node — dropped",
+                    "{} piece(s) of line left with a single node - dropped",
                     self.dropped
                 ),
             });
@@ -190,7 +190,7 @@ impl Erased {
             says.push(Note {
                 key: "triangles",
                 detail: format!(
-                    "{} triangle(s) that named a node taken out — removed",
+                    "{} triangle(s) that named a node taken out - removed",
                     self.removed
                 ),
             });
@@ -199,7 +199,7 @@ impl Erased {
             says.push(Note {
                 key: "orphans",
                 detail: format!(
-                    "{} node(s) no triangle names any more — compacted away",
+                    "{} node(s) no triangle names any more - compacted away",
                     self.orphans
                 ),
             });
@@ -211,7 +211,7 @@ impl Erased {
 /// The shape without the nodes `gone` marks (one flag per node, in the
 /// shape's ranks): a cloud loses them, a line is cut at them, a surface loses
 /// the triangles that name them. `delete-nodes` and `clip` both take nodes out
-/// through here — one implementation of what a hole does to each kind.
+/// through here - one implementation of what a hole does to each kind.
 ///
 /// Every patch must be points, polylines or triangles (`kind_of`). `Err` holds
 /// how many were taken when **nothing** is left to write.

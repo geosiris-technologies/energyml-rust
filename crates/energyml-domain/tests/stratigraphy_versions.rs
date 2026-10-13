@@ -1,10 +1,10 @@
-//! A stratigraphic unit **at a version** — the column names its units by uri.
+//! A stratigraphic unit **at a version** - the column names its units by uri.
 //!
 //! Internally, full uris only (ADR-0003). A rank may list one unit twice, in two `objectVersion`s (the
 //! identity of a held entry is (uuid, type, version)); `Named::uri` is the
 //! identity of the object a reference names, the version included, so a view
 //! opens the right one and an `unconformable` side names the version it is
-//! about — not the uuid, which both versions share.
+//! about - not the uuid, which both versions share.
 //!
 //! Built in memory from the typed model: the rule tested is the project's, not
 //! a corpus's. What would have to break: `Named` resolving a reference by uuid
@@ -147,7 +147,7 @@ fn an_unconformable_side_is_the_uri_of_its_unit() {
 }
 
 /// A uuid held **once** answers whatever version a reference spells, as the
-/// store's lookup does — the checker reports the mismatch, a name does not refuse.
+/// store's lookup does - the checker reports the mismatch, a name does not refuse.
 #[test]
 fn a_wrong_version_of_a_uuid_held_once_still_names_the_held_object() {
     let (v1, other) = (unit(UNIT, "1", "unit, first version"), unit(OTHER, "1", "other"));
