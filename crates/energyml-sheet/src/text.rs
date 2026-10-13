@@ -3,7 +3,7 @@
 //! Sheet design: measuring and wrapping. The sheet is a document meant
 //! to be read on paper or in a browser with no font file of its own — so a
 //! line break has to be computed here, in Rust, from a table of measured
-//! advances ([`widths`]), never guessed from a character count. "iiiiii" and
+//! advances (`widths`), never guessed from a character count. "iiiiii" and
 //! "MMMMMM" are the same length and nowhere near the same width.
 //!
 //! Everything in this module works in **points** (pt), the unit the sheet
@@ -11,6 +11,8 @@
 //! layout's vertical arithmetic, is [`crate::layout`]'s job — this module
 //! never needs to know what a millimetre is.
 
+// Written by scripts/sheet-font-widths.py, checked by its `--check`: rustfmt must not reflow it.
+#[rustfmt::skip]
 mod widths;
 
 /// A single text style: only the size matters for measuring, since this
@@ -24,7 +26,7 @@ pub struct Style {
 
 /// The advance of one character, in points, at `size_pt`.
 ///
-/// [`widths::advance_per_mille`] answers for ASCII and Latin-1 and states a
+/// `widths::advance_per_mille` answers for ASCII and Latin-1 and states a
 /// measured default for everything else — never a silent zero, which would
 /// let an unmeasured glyph pack for free and every line after it drift.
 pub fn char_width_pt(ch: char, size_pt: f64) -> f64 {
@@ -46,7 +48,7 @@ pub fn string_width_pt(text: &str, size_pt: f64) -> f64 {
 /// multiplies to become a column width (*"`max_chars` × the mean
 /// width of a character of the font at that size"*).
 ///
-/// [`widths::DEFAULT_ADVANCE_PER_MILLE`] *is* that mean, computed once by the
+/// `widths::DEFAULT_ADVANCE_PER_MILLE` *is* that mean, computed once by the
 /// generator from the same table this module measures with — never a second,
 /// separately chosen number.
 pub fn average_char_width_pt(size_pt: f64) -> f64 {

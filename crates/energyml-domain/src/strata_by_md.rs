@@ -38,9 +38,9 @@
 //! are thus directly comparable."* So an MD is read against its datum and its
 //! unit, and a frame's are its trajectory's — RESQML TRG 2.2 §12.13 (p. 310),
 //! `NodeMd`: *"BUSINESS RULE: MD values and UOM must be consistent with the
-//! trajectory representation."* [`MdReference`] is those three things read
+//! trajectory representation."* `MdReference` is those three things read
 //! off the trajectory's `MdInterval` (2.2) or its flat `MdDatum`/`MdUom`
-//! (2.0.1), and [`comparable`] is the rule:
+//! (2.0.1), and `comparable` is the rule:
 //!
 //! - **one trajectory** — the representations count from the very same object:
 //!   comparable, nothing to check;
@@ -56,13 +56,13 @@
 //!   domains, or one stated and one not, are not compared.
 //!
 //! A frame that fails the rule is **set aside by name** — never shifted. When
-//! none is left, the representation is refused ([`Refusal::Incomparable`]).
+//! none is left, the representation is refused (`Refusal::Incomparable`).
 //!
 //! # A node exactly on a limit
 //!
 //! It takes the interval **it opens** — the one below it, as MDs increase —
 //! and the deepest limit takes the last interval. That is the rule
-//! [`Strata::node_colours`] gives the stating frame's own nodes, so looking the
+//! `Strata::node_colours` gives the stating frame's own nodes, so looking the
 //! frame's own MDs up here gives back exactly its own colours: the intervals
 //! are `[top, base)`, the last one `[top, base]`.
 //!
@@ -70,12 +70,12 @@
 //!
 //! - an MD outside every stated interval — above the first, below the last, or
 //!   in a gap between two frames — is **uncoloured** and counted
-//!   ([`Carried::outside`]), never given its neighbour's colour;
+//!   (`Carried::outside`), never given its neighbour's colour;
 //! - an interval that names no single unit (a null index, or several at once)
 //!   leaves its nodes uncoloured, as it leaves the frame's own;
 //! - two frames of the wellbore naming **different** units at one MD is a
 //!   disagreement: the node is uncoloured, counted
-//!   ([`Carried::disagreements`]) and named in the notes, and neither frame is
+//!   (`Carried::disagreements`) and named in the notes, and neither frame is
 //!   chosen. A frame naming nothing at an MD where another names a unit does not
 //!   disagree — a null index says *not known here*, not *no unit here*.
 //!
@@ -734,15 +734,15 @@ impl Painting {
     /// carried unit lasts to the next node, as the nodes are all the painting
     /// knows.
     pub fn intervals(&self, mds: &[f64], fallback: &[Rgba]) -> Result<Vec<Interval>, String> {
-        if let Painting::Carried(carried) = self {
-            if carried.nodes.len() != mds.len() {
-                return Err(format!(
-                    "`{}` is painted at {} node(s) but {} measured depth(s) were given, so no interval can be                      placed without a guess",
-                    carried.title,
-                    carried.nodes.len(),
-                    mds.len()
-                ));
-            }
+        if let Painting::Carried(carried) = self
+            && carried.nodes.len() != mds.len()
+        {
+            return Err(format!(
+                "`{}` is painted at {} node(s) but {} measured depth(s) were given, so no interval can be                      placed without a guess",
+                carried.title,
+                carried.nodes.len(),
+                mds.len()
+            ));
         }
         let strata = self.strata();
         let drawn = strata.drawn(fallback);

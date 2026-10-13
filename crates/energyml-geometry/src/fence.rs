@@ -1,7 +1,7 @@
 //! The **filled** cross-section — the panels between two surfaces along a
 //! trace.
 //!
-//! [`section::cut`](crate::section::cut) gives the curves; this module puts
+//! [`section::cut`] gives the curves; this module puts
 //! material between them. The computation is pure and free of I/O, like the
 //! section: it is domain vocabulary, a desktop interface will reuse it as it
 //! stands, and a test reaches it with no browser.

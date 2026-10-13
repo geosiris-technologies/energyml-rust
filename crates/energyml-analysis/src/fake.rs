@@ -21,7 +21,7 @@
 //!
 //! Chance has a seed, and the seed is an input: the same seed rebuilds the same
 //! polylines. No source of randomness lives in this crate on
-//! its own, and none is reached for here either: [`SplitMix64`] is a fixed,
+//! its own, and none is reached for here either: `SplitMix64` is a fixed,
 //! public-domain generator, seeded once per point from the run's seed and the
 //! point's rank, so a cloud read in a different order still gives every point
 //! the same draw it always had, and adding a point never reshuffles the

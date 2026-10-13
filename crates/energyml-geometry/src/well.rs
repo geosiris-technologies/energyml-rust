@@ -99,7 +99,7 @@ pub fn head_of(trajectory: &dyn Reflect, source: &dyn ValueSource) -> Result<[f6
 }
 
 /// **A trajectory's own line, evaluable at any measured depth** — the reading
-/// [`frame`] places a frame's nodes with, for what needs a depth between two
+/// `frame` places a frame's nodes with, for what needs a depth between two
 /// stations (a computed top).
 ///
 /// Two refusals, and both are the file's silence rather than a gap here:
@@ -212,7 +212,7 @@ const HEAD_SAMPLES: usize = 17;
 /// the datum otherwise — the datum being where MD 0 *is*, by the business
 /// rule that makes `MdInterval.Datum` mandatory (TRG §12.17, quoted at the
 /// top of this module). Both endings are read by the exact evaluation
-/// [`frame`] uses for its own first node, so the two never disagree about
+/// `frame` uses for its own first node, so the two never disagree about
 /// where that node is.
 ///
 /// `Ok(None)` when there is nothing missing — the frame already starts at or

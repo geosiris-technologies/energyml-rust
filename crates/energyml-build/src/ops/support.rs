@@ -128,7 +128,7 @@ pub struct Frame {
     pub vertical: Option<Value>,
     /// What would stop the **writing**, the geometry being computable anyway.
     ///
-    /// Carried rather than returned as an error: see [`Plan::blocked`]. Two
+    /// Carried rather than returned as an error: see `Plan::blocked`. Two
     /// cases: a CRS of an older release than the objects these operations
     /// write, and a named reference that is no whole system — a half, a
     /// reference point.
@@ -142,7 +142,7 @@ pub struct Frame {
     pub kind: Option<FrameKind>,
     /// What the plan must say of its frame: `frame-degrees` for the named
     /// exception, `frame-projected` for a `ProjectedCrs` taken as it stands.
-    /// An operation puts these in its [`Plan::says`], after its own.
+    /// An operation puts these in its `Plan::says`, after its own.
     pub says: Vec<Note>,
 }
 
@@ -172,7 +172,7 @@ fn degrees_note(title: &str) -> Note {
 /// `crs` names a system the coordinates are already in; `sourceEpsg` (with
 /// `project` and `vertical`) builds one and places them. Answering either makes
 /// the other meaningless, and until 10/09 a form showed all four at once —
-/// the form asked for a CRS **and** EPSG codes. [`Applies`] carries the
+/// the form asked for a CRS **and** EPSG codes. `Applies` carries the
 /// exclusion: the form hides what cannot act, and `settle` refuses a caller who
 /// sends both.
 pub fn common_slots(pieces: &Pieces, represents: Option<(&'static str, &'static str)>) -> Vec<Slot> {
@@ -225,7 +225,7 @@ pub struct Represented {
     pub objects: Vec<NewObject>,
 }
 
-/// The same, from the typed blocks — the name-reading [`represented_by`] is
+/// The same, from the typed blocks — the name-reading `represented_by` is
 /// its wrapper for the operations not yet typed. `new_feature` is `None` for
 /// an operation whose block has no feature to choose.
 #[allow(clippy::too_many_arguments)]

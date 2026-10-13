@@ -502,24 +502,23 @@ impl Operation for Transform {
                 ("scaleZ", axes.scale_z),
             ]),
         };
-        if let Some(factors) = &factors {
-            if let Some((name, value)) = factors
+        if let Some(factors) = &factors
+            && let Some((name, value)) = factors
                 .iter()
                 .find(|(_, value)| !(value.is_finite() && *value > 0.0))
-            {
-                let why = if *value < 0.0 {
-                    "is negative: that is a mirror, which turns every triangle inside out without saying so"
-                } else if *value == 0.0 {
-                    "is zero: that flattens the shape onto a plane, which is a projection and not a scale"
-                } else {
-                    "is not a number"
-                };
-                return Err(Refusal::about(
-                    "value",
-                    name,
-                    format!("the scale `{name}` = {value} {why}"),
-                ));
-            }
+        {
+            let why = if *value < 0.0 {
+                "is negative: that is a mirror, which turns every triangle inside out without saying so"
+            } else if *value == 0.0 {
+                "is zero: that flattens the shape onto a plane, which is a projection and not a scale"
+            } else {
+                "is not a number"
+            };
+            return Err(Refusal::about(
+                "value",
+                name,
+                format!("the scale `{name}` = {value} {why}"),
+            ));
         }
         let factors = factors.map(|f| [f[0].1, f[1].1, f[2].1]);
         let turn = match &params.rotation {

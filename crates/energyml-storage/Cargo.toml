@@ -54,8 +54,6 @@ hdf5 = ["dep:hdf5", "dep:ndarray"]
 # `tests/mistyped.rs` builds deliberately mistyped packages of its own; the same
 # version the crate itself reads with, so the two never disagree about a zip.
 zip = { version = "7", default-features = false, features = ["deflate"] }
-# The opaque-path test writes a small HDF5 file of its own.
-hdf5 = { package = "hdf5-metno", version = "0.14" }
 futures-executor = "0.3"
 energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0", version = "0.1.0" }
 energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.0" }

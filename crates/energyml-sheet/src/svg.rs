@@ -21,7 +21,7 @@
 //!
 //! The **horizontal** layout — how wide each column is on the page — is not
 //! decided anywhere in the specification; only a *text* column's width is
-//! (`max_chars`). [`column_widths_mm`] is a heuristic: a text column
+//! (`max_chars`). `column_widths_mm` is a heuristic: a text column
 //! is `max_chars` wide, a fill-only column and the MD column get a fixed
 //! share. The row is **stretched** to [`crate::layout::Layout::page_width_mm`]
 //! when it is narrower, and the page **widens** when it is wider — a column is

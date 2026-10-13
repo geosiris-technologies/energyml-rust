@@ -12,7 +12,7 @@
 //!
 //! The samples are the shape's nodes, read in plan view: `x` and `y` locate a
 //! sample, and the value is the **third coordinate** — the ordinary case, a
-//! horizon from a point cloud. When the bag also carries a [`Source::Field`]
+//! horizon from a point cloud. When the bag also carries a `Source::Field`
 //! over that shape, the field is the value instead and the third coordinate is
 //! ignored: *interpolate this property* and *interpolate this elevation* are
 //! the same computation over different numbers.

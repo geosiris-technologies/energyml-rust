@@ -93,7 +93,7 @@
 //!
 //! Split coordinate lines (the reference model's 21 split pillars along one fault, TRG §5.17) —
 //! those are `faulted-ijk-grid`'s (`faulted_grid.rs`), which cuts the grid this
-//! module stacks and writes it through [`between`], the one writer of both —, the
+//! module stacks and writes it through `between`, the one writer of both —, the
 //! `IntervalStratigraphicUnits` (`unit-lookup`'s),
 //! `NodeIsColocatedInKDirection` for the pinched nodes (optional; its layout,
 //! *« #CoordinateLines x (NKL-1) »*, has no reader here to confirm its order,

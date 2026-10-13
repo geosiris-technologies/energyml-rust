@@ -7,7 +7,7 @@
 //! below, or both.
 //!
 //! The panels are the **polygons of the drawing** — the same rule
-//! ([`crate::layout::fill::polygons`]: a trace to its neighbour in each
+//! (`crate::layout::fill::polygons`: a trace to its neighbour in each
 //! abscissa, nothing where there is none), the same choices (`View::fills`), the same hidden traces,
 //! the same colour — each vertex `(s, z)` put back at `point_at(trace, s)`, `z`
 //! unchanged. Nothing is recomputed from a surface: the 3D shows what the 2D

@@ -17,7 +17,7 @@
 //!
 //! 1. the horizon's nodes are triangulated on (x, y) — a Delaunay, the one
 //!    `triangulate` decides ([`crate::triangulate_xy`]);
-//! 2. each fault surface is intersected with that surface ([`crate::intersect`]):
+//! 2. each fault surface is intersected with that surface ([`crate::intersect()`]):
 //!    **its trace on this horizon**, one open line, or a refusal naming what
 //!    was found instead — nothing, several pieces, a ring;
 //! 3. the nodes are triangulated again with the traces as constraint edges

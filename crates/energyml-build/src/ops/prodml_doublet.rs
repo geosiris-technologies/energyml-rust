@@ -882,7 +882,7 @@ impl Operation for ProdmlDoublet {
             ));
         };
         let step = params.sample_step;
-        if step == 0 || MINUTES_PER_DAY % step != 0 {
+        if step == 0 || !MINUTES_PER_DAY.is_multiple_of(step) {
             return Err(Refusal::on(
                 "sampleStep",
                 format!("{step} minute(s) do not divide a day: the daily statistic would straddle two days"),

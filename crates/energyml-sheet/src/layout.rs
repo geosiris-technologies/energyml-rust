@@ -230,7 +230,7 @@ pub struct Params {
 pub struct SectionSpan {
     /// `md_base - md_top`, in metres.
     pub thickness_m: f64,
-    /// [`cell_min_height_mm`]'s answer, maximised over every track's cell in
+    /// `cell_min_height_mm`'s answer, maximised over every track's cell in
     /// this section.
     pub min_mm: f64,
 }

@@ -1,47 +1,75 @@
-# Rust
+# --- Rust ------------------------------------------------------------------------------------
 /target/
 **/*.rs.bk
-# Libraries commit Cargo.lock only if the workspace ships binaries; this one does.
+*.pdb
+# Reference packages and the Lutetia model are fetched into target/ by the scripts, never committed.
+# A local corpus to test against, if any, lives here and stays local.
+/testdata/
 
-# Fixtures fetched by scripts/fetch-fixtures.py (never committed)
-/target/fixtures/
-
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.venv/
-venv/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-# Python packaging output, at the root and in the Python crate only: a bare `build/`
-# would also hide Rust sources (`crates/energyml-rules/build/`, a `tests/build/` module).
+# Python packaging output, at the root and in the Python crate only: a bare `build/` would also hide
+# Rust sources (`crates/energyml-rules/build/`, a `tests/build/` module).
 /dist/
 /build/
 crates/energyml-python/dist/
 crates/energyml-python/build/
 *.whl
-# maturin build products
 *.so
 *.pyd
 *.dylib
 
-# WebAssembly
-pkg/
+# WebAssembly build output
+/pkg/
 *.wasm
 
-# Documentation build
+# The documentation book, built by CI
 /docs/book/
 
-# Editors and OS
-.idea/
-.vscode/
-*.swp
-.DS_Store
-Thumbs.db
-
-# Local output
-*.log
+# --- Local state that no repository of this family ever commits ---------------------------
+# Secrets
 .env
 .env.*
+*.token
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+
+# Editors, and the local settings of AI assistants
+.idea/
+.vscode/
+.fleet/
+.zed/
+*.swp
+*~
+.claude/
+CLAUDE.local.md
+
+# Operating systems
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Merge and backup leftovers
+*.orig
+*.rej
+*.bak
+
+# Logs, profiles and coverage
+*.log
+*.profraw
+perf.data*
+lcov.info
+coverage/
+htmlcov/
+.coverage
+
+# Python tooling (scripts, the Python bridge, fixture generators)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/

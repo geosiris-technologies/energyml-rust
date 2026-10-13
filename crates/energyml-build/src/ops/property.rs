@@ -156,7 +156,7 @@ pub enum Timing {
     At(String),
     /// The values hold at every step of a series, **time the slowest
     /// dimension** (TRG v2.2 §7, the note of the diagram p. 221:
-    /// *“[TimeCount] … [IndexableElementCount] …”*): `steps` × the elements,
+    /// *“\[TimeCount] … \[IndexableElementCount] …”*): `steps` × the elements,
     /// the array `[steps, elements]`.
     Series {
         /// The `eml23.TimeSeries`, as a `DataObjectReference`.
@@ -169,7 +169,7 @@ pub enum Timing {
     },
 }
 
-/// [`write`], with the time the values hold at — the one writer of a
+/// [`write()`], with the time the values hold at — the one writer of a
 /// `ContinuousProperty`, timed or not (`property-time-series` calls it).
 pub fn write_timed(
     field: &Field,

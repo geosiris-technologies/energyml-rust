@@ -2,7 +2,7 @@
 //! carry itself: **the order, and the path it was found by**.
 //!
 //! Design: ADR-0009. The walk knows nothing about colours: it takes *"does this object
-//! carry I?"* as a function and answers with a [`Resolution`] — the value, the
+//! carry I?"* as a function and answers with a `Resolution` — the value, the
 //! rank it was found at, the object that carries it, **the steps from the
 //! object to it**, the candidates that lost a tie, and what was skipped.
 //!
@@ -20,11 +20,11 @@
 //!
 //! A **property** is a shorter case (searching for the property kind is accepted): the
 //! property, its `PropertyKind`, the kind's parents — a collection at every
-//! step — and **nothing beyond**: [`Walker::resolve_property`].
+//! step — and **nothing beyond**: `Walker::resolve_property`.
 //!
 //! Within a rank, **the shortest path wins**; at equal length, **the first in
 //! document order** (document order is the accepted tie-break), and the others are kept
-//! in [`Resolution::ties`]. Rank 5 is read stage by stage — each stage up is
+//! in `Resolution::ties`. Rank 5 is read stage by stage — each stage up is
 //! the parents, then their collections — so a collection of a grandparent does
 //! not race a great-grandparent.
 //!
@@ -34,13 +34,13 @@
 //! ADR-0010: these relations are built at graph-construction time, not by
 //! traversing the whole graph afterwards.
 //! The walk used to filter the whole of an object's edges
-//! ([`PackageIndex::dependents_of`], [`PackageIndex::references_of`], a `Pointer`
+//! (`PackageIndex::dependents_of`, `PackageIndex::references_of`, a `Pointer`
 //! of five strings per edge) to find its memberships, its parents and the
 //! models that name it, and to open every collection it met to read its `Kind`.
-//! It now reads [`PackageIndex::memberships_of`], [`PackageIndex::associations_of`],
-//! [`PackageIndex::parent_rows`], [`PackageIndex::models_referencing`] and
-//! [`PackageIndex::is_project`]: a row per relation, laid once, kept up to date
-//! by [`PackageIndex::update`] at the place it keeps the references. No object
+//! It now reads `PackageIndex::memberships_of`, `PackageIndex::associations_of`,
+//! `PackageIndex::parent_rows`, `PackageIndex::models_referencing` and
+//! `PackageIndex::is_project`: a row per relation, laid once, kept up to date
+//! by `PackageIndex::update` at the place it keeps the references. No object
 //! is opened by a walk.
 //!
 //! - **membership** (ADR-0014): a
@@ -76,9 +76,9 @@
 //!
 //! # The cost
 //!
-//! A [`Walker`] memoises what is per package — the memberships of a node, the
+//! A `Walker` memoises what is per package — the memberships of a node, the
 //! `Kind` of a collection, the answer of the predicate per object — so a
-//! population ([`Walker::resolve_all`]) pays once for a collection shared by two
+//! population (`Walker::resolve_all`) pays once for a collection shared by two
 //! thousand wells: what is per package is paid once per package.
 
 use std::cell::RefCell;

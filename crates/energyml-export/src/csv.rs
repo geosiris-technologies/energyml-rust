@@ -11,7 +11,7 @@
 //! - **A `NaN` value is an empty cell.** CSV has no convention for "no data";
 //!   an empty cell is what every reader understands, where `NaN` becomes a
 //!   string half of them refuse to sum. *Nodes* with no position are removed
-//!   upstream by [`registry::prepare`], as in every format.
+//!   upstream by [`crate::registry::prepare`], as in every format.
 //! - **A cell value has empty coordinates.** A cell has not one position but
 //!   eight; writing its centroid would be a computed value presented as data
 //!   from the file. The `element` column says `cell`, the index says which one,

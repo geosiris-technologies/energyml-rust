@@ -98,16 +98,17 @@ fn every_coordinate_system_reads() {
             // an axis in seconds. That is the factor of a thousand its own doc
             // comment warns about, and nothing in the crate had caught it
             // because both readings are perfectly valid units.
-            if read.vertical_quantity == VerticalQuantity::Time && !read.is_component() {
-                if let Some(unit) = read.vertical_axis_uom() {
-                    assert_eq!(
-                        energyml_domain::units::Dimension::of(unit),
-                        energyml_domain::units::Dimension::of("s"),
-                        "{}: {} is a time system whose axis unit `{unit}` is not a time",
-                        path.display(),
-                        summary.uuid
-                    );
-                }
+            if read.vertical_quantity == VerticalQuantity::Time
+                && !read.is_component()
+                && let Some(unit) = read.vertical_axis_uom()
+            {
+                assert_eq!(
+                    energyml_domain::units::Dimension::of(unit),
+                    energyml_domain::units::Dimension::of("s"),
+                    "{}: {} is a time system whose axis unit `{unit}` is not a time",
+                    path.display(),
+                    summary.uuid
+                );
             }
         }
     }

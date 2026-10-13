@@ -35,8 +35,8 @@
 //!
 //! RESQML Technical Reference Guide v2.2 §7, the note of the diagram p. 221:
 //! *« Values Per patch are structured that way in HDF (top is slowest
-//! dimension, bottom is fastest dimension) : [RealizationCount] … [TimeCount]
-//! … [IndexableElementCount] … [ValueCountPerIndexableElement] »*. [`lay`]
+//! dimension, bottom is fastest dimension) : \[RealizationCount] … \[TimeCount]
+//! … \[IndexableElementCount] … \[ValueCountPerIndexableElement] »*. [`lay`]
 //! writes `values[t · n + e]`: every element at the first step, then every
 //! element at the second. Laid the other way, a series reads as a property
 //! whose elements each hold the whole history of one node — the same count,

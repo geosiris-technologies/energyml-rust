@@ -20,7 +20,7 @@
 //! agree, and so must `MdInterval.Datum` when it is stated, because that is the
 //! one `energyml_domain::crs::of` reads to give the trajectory its CRS: a
 //! trajectory drawn from one datum and labelled with another is placed twice
-//! or not at all. The datum is placed by [`crate::well::place_datum`], the
+//! or not at all. The datum is placed by `crate::well::place_datum`, the
 //! reading a RESQML well's datum goes through — never a second one.
 //!
 //! **MD 0 is the datum**, by definition of a measured depth, so the first

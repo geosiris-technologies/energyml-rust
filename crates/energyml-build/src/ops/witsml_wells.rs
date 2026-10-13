@@ -30,7 +30,7 @@
 //! - **a sidetrack is found, never assumed.** *“No parent = starts from
 //!   top”* (WITSML TRG 2.1 §20.2 p. 502): a wellbore that shares its datum with
 //!   another and whose first node lies on the other's path **at the same
-//!   measured depth**, to [`ON_PARENT`], leaves it there — which is what a
+//!   measured depth**, to `ON_PARENT`, leaves it there — which is what a
 //!   RESQML `ParentIntersection` states, and what `well-from-plan` writes (the
 //!   sidetrack's depths are its parent's, from its parent's datum). The bag
 //!   does not carry the trajectory's `ParentIntersection` itself; finding the

@@ -402,10 +402,10 @@ pub fn range(values: &[f64]) -> Option<(f64, f64)> {
 
 /// What every entry point checks before it starts.
 fn check(points: &[f64], triangles: &[u32], values: &[f64]) -> Result<(), Error> {
-    if points.len() % 3 != 0 {
+    if !points.len().is_multiple_of(3) {
         return Err(Error::NotTriples { given: points.len() });
     }
-    if triangles.len() % 3 != 0 {
+    if !triangles.len().is_multiple_of(3) {
         return Err(Error::NotTriangles {
             given: triangles.len(),
         });

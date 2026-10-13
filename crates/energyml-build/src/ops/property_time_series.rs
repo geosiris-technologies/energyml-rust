@@ -7,7 +7,7 @@
 //! produces:
 //!
 //! > a `ContinuousProperty` for pressure, a series — `TimeOrIntervalSeries`
-//! > {false, the daily series}; values [11][10][20][24]
+//! > {false, the daily series}; values \[11]\[10]\[20]\[24]
 //! >
 //! > a temperature series, likewise
 //! >
@@ -24,9 +24,9 @@
 //! used:
 //!
 //! - **`series`**: one property holding **every** step, the time its slowest
-//!   dimension — TRG v2.2 §7, the note of the diagram p. 221: *“[TimeCount] :
+//!   dimension — TRG v2.2 §7, the note of the diagram p. 221: *“\[TimeCount] :
 //!   don't provide this dimension if not needed”*, above
-//!   *“[IndexableElementCount]”*. The array is `[steps, elements]`. With
+//!   *“\[IndexableElementCount]”*. The array is `[steps, elements]`. With
 //!   `useInterval`, a step is the interval from an instant to the next: `n`
 //!   instants make `n − 1` values;
 //! - **`steps`**: one property per instant, each dated by its `Time` — and

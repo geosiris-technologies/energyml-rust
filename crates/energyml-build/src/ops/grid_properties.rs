@@ -10,7 +10,7 @@
 //! > a `ContinuousProperty` porosity (cells) — `porosity`
 //! >
 //! > a `ContinuousProperty` permeability — `absolute permeability`;
-//! > `ValueCountPerIndexableElement` [3], `LabelPerComponent` kx ky kz, `Facet`
+//! > `ValueCountPerIndexableElement` \[3], `LabelPerComponent` kx ky kz, `Facet`
 //! > direction
 //! >
 //! > a `ContinuousProperty` NTG — `net gross thickness ratio`

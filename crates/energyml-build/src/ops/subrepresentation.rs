@@ -206,17 +206,17 @@ fn ijk_of(shape: &Shape) -> Result<IjkPatch<'_>, Refusal> {
 fn node_count(shape: &Shape) -> Result<usize, Refusal> {
     let mut total = 0usize;
     for patch in &shape.geometry.patches {
-        if let Topology::Grid { fastest, slowest } = &patch.topology {
-            if patch.points.len() != fastest * slowest {
-                return Err(Refusal::on(
-                    "support",
-                    format!(
-                        "`{}` declares {fastest} × {slowest} nodes and holds {}: its node numbering is not the file's",
-                        title_of(shape),
-                        patch.points.len()
-                    ),
-                ));
-            }
+        if let Topology::Grid { fastest, slowest } = &patch.topology
+            && patch.points.len() != fastest * slowest
+        {
+            return Err(Refusal::on(
+                "support",
+                format!(
+                    "`{}` declares {fastest} × {slowest} nodes and holds {}: its node numbering is not the file's",
+                    title_of(shape),
+                    patch.points.len()
+                ),
+            ));
         }
         total += patch.points.len();
     }

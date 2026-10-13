@@ -1,7 +1,7 @@
 //! Densifying a polyline: **every vertex kept**, points added between them
 //! (the "densify" edit).
 //!
-//! Not [`resample`](crate::resample): that one walks the line at a spacing and
+//! Not [`resample`](fn@crate::resample): that one walks the line at a spacing and
 //! keeps only the two ends, so the inner vertices go and the corners are cut.
 //! This one adds and never removes — the need being to cut a polyline up by
 //! adding points — and both names are needed, or one will be believed when the

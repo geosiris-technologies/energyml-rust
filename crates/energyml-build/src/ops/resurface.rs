@@ -24,7 +24,7 @@
 //! The house rule (`crates/energyml-build/ARCHITECTURE.md`): `apply` only ever
 //! inserts new objects. This operation writes a fresh
 //! `Grid2dRepresentation`/`TriangulatedSetRepresentation`, delegating to
-//! [`super::oblique_grid::write`] or [`super::triangles::write`] exactly as
+//! `super::oblique_grid::write` or [`super::triangles::write`] exactly as
 //! the input's own topology asks; the input stays untouched in the package.
 //!
 //! # `outer`/`inner` filter samples, never the topology

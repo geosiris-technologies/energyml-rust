@@ -15,7 +15,7 @@
 //! | a well, read ([`WellRead`]) | the package, the scene's system | reads nothing again: wells are projected in `assemble` |
 //! | a surface, placed ([`Prepared`]) | the package, the scene's system | reads nothing again |
 //! | a surface's cut along one line | the above **and that line** (its polyline, nothing else) | cuts only the lines it has not cut: another section, a cut; a width, a key, an order, none |
-//! | a well's head ([`HeadSlot`]) and the spatial index over the heads | the package, the scene's system | reads nothing again: the sections only choose which wells to read |
+//! | a well's head (`HeadSlot`) and the spatial index over the heads | the package, the scene's system | reads nothing again: the sections only choose which wells to read |
 //!
 //! The package is told by its **revision** (`Asked::revision`, the store's):
 //! another revision, another store id or another scene and everything is

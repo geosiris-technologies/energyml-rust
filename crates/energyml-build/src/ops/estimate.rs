@@ -16,7 +16,7 @@
 //!
 //! **Scoped to MBA only, unlike the original proposal, which
 //! reuses `interpolate`'s full `Idw`/`Kriging`/`Rbf`/`Mba` union.** This
-//! file's `method` is [`super::interpolate_mba::MbaParams`]'s own settings
+//! file's `method` is `super::interpolate_mba::MbaParams`'s own settings
 //! (minus the extent, meaningless for a cloud target), not a choice of
 //! method — a deliberate reduction of scope for this task, not a reading of
 //! the specification: extending this operation to the other three methods is

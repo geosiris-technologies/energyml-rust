@@ -114,7 +114,7 @@ pub struct FromStratigraphyInputs {
     /// the earth model interpretation to rewrite — `mode = enrich` only
     #[input(types = "resqml22.EarthModelInterpretation")]
     pub enrich: Option<ObjectIn>,
-    /// the boundary features and horizon interpretations of the package: a « <unit> TOP » or « <unit> BOTTOM » found here, whatever its case, is taken
+    /// the boundary features and horizon interpretations of the package: a « `<unit>` TOP » or « `<unit>` BOTTOM » found here, whatever its case, is taken
     #[input(types = "resqml22.BoundaryFeature, resqml22.HorizonInterpretation", every)]
     pub existing: Vec<ObjectIn>,
 }

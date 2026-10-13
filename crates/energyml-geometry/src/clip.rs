@@ -178,10 +178,10 @@ fn compact(points: &[[f64; 3]], kept: &[[u32; 3]]) -> Cutout {
 /// Refused by name: a ring of fewer than three corners encloses nothing, and
 /// arrays that are not pairs and triplets are not a ring and nodes.
 pub fn nodes_in_ring(points: &[f64], ring: &[f64], outside: bool) -> Result<Vec<u32>, String> {
-    if points.len() % 3 != 0 {
+    if !points.len().is_multiple_of(3) {
         return Err(format!("{} coordinate(s) — nodes are triplets", points.len()));
     }
-    if ring.len() % 2 != 0 {
+    if !ring.len().is_multiple_of(2) {
         return Err(format!("{} coordinate(s) — a ring in plan is pairs", ring.len()));
     }
     let corners: Vec<[f64; 2]> = ring.chunks_exact(2).map(|c| [c[0], c[1]]).collect();

@@ -102,17 +102,17 @@ impl<'a> Heights<'a> {
 
 /// The shape of the arrays, before anything is read from them.
 pub(crate) fn check(surface: &Surface) -> Result<(), Error> {
-    if surface.points.len() % 3 != 0 {
+    if !surface.points.len().is_multiple_of(3) {
         return Err(Error::NotTriples {
             given: surface.points.len(),
         });
     }
-    if surface.triangles.len() % 3 != 0 {
+    if !surface.triangles.len().is_multiple_of(3) {
         return Err(Error::NotTriangles {
             given: surface.triangles.len(),
         });
     }
-    if surface.quads.len() % 4 != 0 {
+    if !surface.quads.len().is_multiple_of(4) {
         return Err(Error::NotQuads {
             given: surface.quads.len(),
         });

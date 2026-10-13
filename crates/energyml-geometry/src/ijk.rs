@@ -50,7 +50,7 @@
 //! combinations is a chance to be wrong.
 //!
 //! So it is **computed**, per cell, from the cell's own signed volume — see
-//! [`oriented`]. A cell that comes out inside-out renders as a hole, which is
+//! `oriented`. A cell that comes out inside-out renders as a hole, which is
 //! another failure that looks like working software with nothing in it.
 //!
 //! Per cell rather than per grid, and the corpus says why it has to be. In

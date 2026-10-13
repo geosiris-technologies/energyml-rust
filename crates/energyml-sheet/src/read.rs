@@ -1,4 +1,4 @@
-//! A package's `WellboreFrameRepresentation` turned into a [`layout::Board`]
+//! A package's `WellboreFrameRepresentation` turned into a [`crate::layout::Board`]
 //! — the third step of the sheet design.
 //!
 //! # What this module reuses, and what it does not
@@ -11,7 +11,7 @@
 //!   for a rank of `IntervalStratigraphicUnits` *and* for a categorical
 //!   property with a `CategoryLookup` — both come back as a
 //!   [`well_strata::Strata`] (sections, units, colours, the FIRP colour
-//!   cascade already resolved), and [`track_from_strata`] is the only new
+//!   cascade already resolved), and `track_from_strata` is the only new
 //!   code: turning that shape into an [`IntervalTrack`].
 //! - **A table row's label** is [`energyml_domain::table::Lookup`], reached
 //!   through `well_strata::of_frame`'s own `Wanted::Category` — this module
@@ -644,10 +644,10 @@ fn disambiguate(
         return;
     }
     for (read, _, label) in labelled.iter_mut() {
-        if shared.contains(label) {
-            if let Some(title) = read.title.as_deref().filter(|title| !title.is_empty()) {
-                *label = beyond_shared(title, frame_title).to_string();
-            }
+        if shared.contains(label)
+            && let Some(title) = read.title.as_deref().filter(|title| !title.is_empty())
+        {
+            *label = beyond_shared(title, frame_title).to_string();
         }
     }
     notes.push(format!(

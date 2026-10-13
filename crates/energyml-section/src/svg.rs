@@ -235,7 +235,7 @@ fn write_metadata(out: &mut String, layout: &Layout) {
 /// Why an SVG's metadata could not be read back.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum MetadataError {
-    /// No `<section-view>` element: this SVG was not written by [`write`], or
+    /// No `<section-view>` element: this SVG was not written by [`write()`], or
     /// an editor dropped its `<metadata>`.
     #[error(
         "no section-view metadata in this SVG — it was not written by the section view, or its <metadata> was removed"
@@ -254,7 +254,7 @@ pub enum MetadataError {
     Unreadable(String),
 }
 
-/// What [`write`] put in `<metadata>` — the inputs and the view the drawing was
+/// What [`write()`] put in `<metadata>` — the inputs and the view the drawing was
 /// made from — read back from the SVG's text.
 ///
 /// The way back of `write_metadata`, and the only one: `--from-svg` and an

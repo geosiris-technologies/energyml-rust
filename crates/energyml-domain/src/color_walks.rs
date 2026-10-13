@@ -16,15 +16,15 @@
 //!
 //! # The pieces
 //!
-//! - [`drawn_by`] — **the one table** from the kind of representation to the
+//! - `drawn_by` — **the one table** from the kind of representation to the
 //!   targets its geometry draws. A polyline never asks for a face or a volume.
-//! - [`ColourCache`] — one [`ColourWalk`] per object: the tiers of the
+//! - `ColourCache` — one `ColourWalk` per object: the tiers of the
 //!   inheritance order already read ([`crate::inherit::Walker::advance`]), what
 //!   each carries **for all five targets**, the answer found for each target,
 //!   and the walk's state, so that it can go on. Asking a target an earlier
 //!   target's tier already answers reads nothing; asking one it does not goes on
 //!   from where the walk stopped, **only** for the targets still unanswered.
-//! - [`ColourCache::disturb`] — the invalidation: which walks to throw away
+//! - `ColourCache::disturb` — the invalidation: which walks to throw away
 //!   when objects change. Only those that went through one of them.
 //!
 //! # The fallback rule, per target

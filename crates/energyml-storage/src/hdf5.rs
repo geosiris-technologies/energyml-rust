@@ -515,19 +515,19 @@ fn evict(file: &Path) {
 /// single file.
 fn open(file: &Path) -> Result<hdf5::File> {
     let stamp = stamp_of(file);
-    if let Ok(mut files) = cache().lock() {
-        if let Some(at) = files.entries.iter().position(|entry| entry.path == file) {
-            if files.entries[at].stamp == stamp {
-                // Most recently used goes last, so the eviction below drops the
-                // one nobody has wanted for longest.
-                let entry = files.entries.remove(at);
-                let handle = entry.handle.clone();
-                files.entries.push(entry);
-                return Ok(handle);
-            }
-            // Somebody wrote to it. The handle is of the file that was.
-            files.entries.remove(at);
+    if let Ok(mut files) = cache().lock()
+        && let Some(at) = files.entries.iter().position(|entry| entry.path == file)
+    {
+        if files.entries[at].stamp == stamp {
+            // Most recently used goes last, so the eviction below drops the
+            // one nobody has wanted for longest.
+            let entry = files.entries.remove(at);
+            let handle = entry.handle.clone();
+            files.entries.push(entry);
+            return Ok(handle);
         }
+        // Somebody wrote to it. The handle is of the file that was.
+        files.entries.remove(at);
     }
 
     if let Ok(mut files) = cache().lock() {

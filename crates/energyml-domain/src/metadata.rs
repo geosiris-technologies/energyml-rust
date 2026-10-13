@@ -440,7 +440,7 @@ pub fn absent_at(object: &dyn Reflect, path: &str) -> bool {
 /// Whether the object has a field of this path's **first name**, under that
 /// spelling and no other.
 ///
-/// The escape hatch from [`SYNONYMS`], and it exists because the synonyms are
+/// The escape hatch from `SYNONYMS`, and it exists because the synonyms are
 /// right nearly always and wrong in one case: when two releases disagree about
 /// what an element may *hold*, one statement per release is two rules, and each
 /// has to be able to say which spelling it is about. Without this,
@@ -491,10 +491,10 @@ fn field_ignore_case<'a>(object: &'a dyn Reflect, name: &str) -> Option<FieldVal
     let info = object.type_info();
     let wanted = name.to_ascii_lowercase();
     for field in info.fields {
-        if field.xml_name.to_ascii_lowercase() == wanted || field.name.to_ascii_lowercase() == wanted {
-            if let Some(value) = object.field(field.xml_name).or_else(|| object.field(field.name)) {
-                return Some(value);
-            }
+        if (field.xml_name.to_ascii_lowercase() == wanted || field.name.to_ascii_lowercase() == wanted)
+            && let Some(value) = object.field(field.xml_name).or_else(|| object.field(field.name))
+        {
+            return Some(value);
         }
     }
     None

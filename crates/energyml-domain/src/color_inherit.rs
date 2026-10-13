@@ -4,10 +4,10 @@
 //! parents, theirs, up the FIRP chain, then the model) and nothing about
 //! colours; this module gives it the question — *"does this object carry a
 //! default graphical information for the whole object?"* — and keeps what the
-//! answer needs to be a colour: the [`Decision`] with its level, **and the path
+//! answer needs to be a colour: the `Decision` with its level, **and the path
 //! that found it**.
 //!
-//! # What changes against [`Cascade::resolve`]
+//! # What changes against `Cascade::resolve`
 //!
 //! `resolve` and `chain` read three parent fields from the objects and know no
 //! collection and no model; they stay for a caller that has no package index

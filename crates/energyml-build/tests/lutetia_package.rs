@@ -15,9 +15,10 @@
 //!    (**the clean package and the one with errors are filed under the other
 //!    names there**).
 //!
-//! Nothing found: a panic when `$ENERGYML_FIXTURES_REQUIRED` is set — a missing
-//! reference package is a failure in CI, never a skip — and otherwise a printed
-//! note and `None`, the test returning.
+//! Nothing found: a panic when `$ENERGYML_LUTETIA_DIR` is set — a directory that was
+//! named and lacks the model is a failure, never a skip — and otherwise a printed
+//! note and `None`, the test returning (CI fetches Lutetia only once its repository
+//! is pinned in `tests/lutetia.lock`).
 //!
 //! The lookup is the same as `energyml-cache/tests/lutetia.rs`; keep them alike.
 #![allow(dead_code)]
@@ -42,10 +43,10 @@ fn env_dir() -> Option<PathBuf> {
 }
 
 fn missing(what: &str) -> Option<PathBuf> {
-    if std::env::var_os("ENERGYML_FIXTURES_REQUIRED").is_some() {
+    if env_dir().is_some() {
         panic!(
-            "Lutetia's {what} not found (looked in $ENERGYML_LUTETIA_DIR and the monorepo): \
-             a missing reference package is a failure in CI, never a skip"
+            "Lutetia's {what} not found in $ENERGYML_LUTETIA_DIR: \
+             a directory that was named and lacks the model is a failure, never a skip"
         );
     }
     eprintln!(

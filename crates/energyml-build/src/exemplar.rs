@@ -3,7 +3,7 @@
 //! The need: there is sometimes a lot of information to fill in. Could we offer
 //! to copy some information from an object similar to those about to be
 //! produced? For example "extract the information from another well" — and the
-//! interface would show, under the imported values, "copied from [TITLE]", with
+//! interface would show, under the imported values, "copied from \[TITLE]", with
 //! the uuid in a tooltip.
 //!
 //! # What makes it generic

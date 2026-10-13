@@ -1,7 +1,7 @@
 //! Ordinary kriging — the estimator that says how sure it is.
 //!
 //! Where IDW weights by distance alone, kriging weights by the fitted
-//! [`Model`](crate::variogram::Model): samples beyond the range stop
+//! [`Model`]: samples beyond the range stop
 //! mattering, clustered samples share their influence instead of counting
 //! twice, and every estimate comes with its **kriging variance** — the
 //! model's own statement of uncertainty, which is the reason to pay for
@@ -150,10 +150,10 @@ impl Ordinary {
                 values: values.len(),
             });
         }
-        if let Some(radius) = self.radius {
-            if !(radius.is_finite() && radius > 0.0) {
-                return Err(Error::BadRadius { given: radius });
-            }
+        if let Some(radius) = self.radius
+            && !(radius.is_finite() && radius > 0.0)
+        {
+            return Err(Error::BadRadius { given: radius });
         }
         if self.neighbours == Some(0) {
             return Err(Error::NoNeighbours);
@@ -321,11 +321,11 @@ impl Ordinary {
                     faults.blocks(plan(&usable[at].0), plan(query))
                 }),
                 None => {
-                    if let Some(k) = self.neighbours {
-                        if near.len() > k {
-                            near.select_nth_unstable_by(k - 1, |a, b| a.0.total_cmp(&b.0));
-                            near.truncate(k);
-                        }
+                    if let Some(k) = self.neighbours
+                        && near.len() > k
+                    {
+                        near.select_nth_unstable_by(k - 1, |a, b| a.0.total_cmp(&b.0));
+                        near.truncate(k);
                     }
                 }
             }

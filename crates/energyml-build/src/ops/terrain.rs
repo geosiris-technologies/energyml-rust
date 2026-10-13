@@ -11,7 +11,7 @@
 //! The catalogue of terrain sources, the request and the raster reader live in
 //! `energyml-providers`, which depends on this crate and not the other way
 //! round. **The operation is pure**: no network in `plan`. The fetched raster
-//! arrives as a [`Lattice`] piece already in the house order (origin = the
+//! arrives as a `Lattice` piece already in the house order (origin = the
 //! south-west node, `z[j·ni + i]`, `j` along +y, `NaN` where the source has no
 //! data), and what the source *is* arrives as parameters. The writing is
 //! `grid::write`'s: the same objects, the same data file, the same refusals

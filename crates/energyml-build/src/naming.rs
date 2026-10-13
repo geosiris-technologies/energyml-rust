@@ -150,9 +150,9 @@ mod tests {
         // A feature and its interpretation are two objects. Deriving both from
         // the bare unit key would give one uuid to two objects, and a package
         // that cannot address either.
-        let key = "006fd552-1f63-47b3-bae9-e528f169083c";
-        assert_ne!(feature(key), interpretation(key));
-        assert_ne!(feature(key), table(key));
+        let unit = "006fd552-1f63-47b3-bae9-e528f169083c";
+        assert_ne!(feature(unit), interpretation(unit));
+        assert_ne!(feature(unit), table(unit));
     }
 
     #[test]

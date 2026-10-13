@@ -12,8 +12,8 @@
 //! 2. the monorepo, `web/public/examples/lutetia/Lutetia.epc` (the variant
 //!    with errors — in the monorepo the clean one is `lutetia-sans-erreurs`).
 //!
-//! Nothing found: a panic when `$ENERGYML_FIXTURES_REQUIRED` is set, otherwise
-//! a printed note and `None`, and the test returns.
+//! Nothing found: a panic when `$ENERGYML_LUTETIA_DIR` is set (a directory that was
+//! named and lacks the model), otherwise a printed note and `None`, and the test returns.
 //! Keep this file the same as `energyml-build/tests/lutetia_package.rs` as far
 //! as the lookup goes.
 
@@ -36,10 +36,10 @@ fn locate() -> Option<PathBuf> {
 
 pub fn bytes() -> Option<Vec<u8>> {
     let Some(path) = locate() else {
-        if std::env::var_os("ENERGYML_FIXTURES_REQUIRED").is_some() {
+        if std::env::var_os("ENERGYML_LUTETIA_DIR").is_some() {
             panic!(
-                "Lutetia not found (looked in $ENERGYML_LUTETIA_DIR/package-with-errors and web/public/examples/lutetia): \
-                 a missing reference package is a failure in CI, never a skip"
+                "Lutetia not found in $ENERGYML_LUTETIA_DIR/package-with-errors: \
+                 a directory that was named and lacks the model is a failure, never a skip"
             );
         }
         eprintln!(

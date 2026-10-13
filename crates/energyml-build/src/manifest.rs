@@ -14,7 +14,7 @@
 //! - `declared` is `false` for a role the plan wrote and `gives()` does not name
 //!   — said, never silent; an operation whose `gives()` is empty has every role
 //!   undeclared;
-//! - `uris` are full uris ([`NewObject::uri`]), in the plan's order, **only the
+//! - `uris` are full uris (`NewObject::uri`), in the plan's order, **only the
 //!   ones `apply` wrote** — an object refused is not in the manifest, and the
 //!   step's `refused` counts the refusals;
 //! - `collection` is the uri `apply` wrote for that role

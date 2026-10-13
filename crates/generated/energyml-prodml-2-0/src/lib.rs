@@ -13,6 +13,7 @@
 #![allow(non_camel_case_types)]
 #![allow(clippy::doc_markdown, clippy::doc_lazy_continuation)]
 #![allow(clippy::too_many_lines, clippy::large_enum_variant)]
+#![allow(rustdoc::bare_urls, rustdoc::invalid_html_tags, rustdoc::broken_intra_doc_links)]
 
 pub mod das_acquisition;
 pub mod dts_installed_system;

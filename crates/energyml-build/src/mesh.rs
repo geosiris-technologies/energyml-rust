@@ -393,10 +393,10 @@ fn xml_array(text: &str, section: Option<&str>, named: Option<&str>) -> Option<V
         let head = &hay[head_at..head_end];
         let body_end = hay[head_end..].find("</DataArray>")? + head_end;
         at = body_end + 1;
-        if let Some(wanted) = named {
-            if !head.contains(&format!("Name=\"{wanted}\"")) {
-                continue;
-            }
+        if let Some(wanted) = named
+            && !head.contains(&format!("Name=\"{wanted}\""))
+        {
+            continue;
         }
         return Some(
             hay[head_end + 1..body_end]

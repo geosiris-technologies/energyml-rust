@@ -20,7 +20,7 @@
 //!   object (§5.1);
 //! - **edges**, both directions, each carrying an *interned* path — a package of
 //!   319 244 references names a handful of distinct paths;
-//! - **one [`PropertySheet`] per property**: what [`property::read`] returns and
+//! - **one `PropertySheet` per property**: what [`property::read`] returns and
 //!   the front end's attribute entry needs, *without the object* (§5.1);
 //! - **the relation tables** the inheritance walks and the attachment listings
 //!   read — parents, associations and memberships, projects, models, graphical
@@ -31,14 +31,14 @@
 //!
 //! # The two promises
 //!
-//! 1. **[`PackageIndex::graph`] is `graph::build`'s graph, node for node and edge
+//! 1. **`PackageIndex::graph` is `graph::build`'s graph, node for node and edge
 //!    for edge** — same nodes, same order, same edges, same JSON. The index is
 //!    built by the same walk (`identity::collect_refs`), with the same rules for
-//!    the nodes of objects the package does not hold (see [`IndexBuilder`]). It is
+//!    the nodes of objects the package does not hold (see `IndexBuilder`). It is
 //!    not checked by this module: `tests/package_index.rs` confronts the two on
 //!    every package of the corpus, and breaks the index on purpose to be sure the
 //!    confrontation can fail (a component must never be asked to check itself).
-//! 2. **[`PackageIndex::properties_of`] is `property::read`'s rule** — a property
+//! 2. **`PackageIndex::properties_of` is `property::read`'s rule** — a property
 //!    hangs on the representation its **own** `SupportingRepresentation` field
 //!    names, never on the `.rels` (a package may have none: `80wells` has none).
 //!    The candidates come from the incoming edges, and
@@ -47,14 +47,14 @@
 //!
 //! # Construction: one pass, in slices, dropping every object at once (§5.2, §5.3)
 //!
-//! [`IndexBuilder::step`] reads `n` objects, takes their links and sheets, and
+//! `IndexBuilder::step` reads `n` objects, takes their links and sheets, and
 //! lets each object go before reading the next. A caller that must not block
 //! (a wasm worker) calls it in a loop and yields between slices. The numbers it
-//! reports in [`Progress`] are the real ones.
+//! reports in `Progress` are the real ones.
 //!
 //! # Updating: object by object (§4)
 //!
-//! [`PackageIndex::update`] takes the uuids that changed — the store revision
+//! `PackageIndex::update` takes the uuids that changed — the store revision
 //! journal is where a caller gets them — and re-reads **those** objects
 //! only. It is not a substitute for a rebuild in one respect, stated on the
 //! method: the *order* of nodes after an update is not the order a rebuild would
@@ -568,7 +568,7 @@ impl PackageIndex {
         Some(id)
     }
 
-    /// The node an address names (see [`PackageIndex::find`]: a uri, or a bare
+    /// The node an address names (see `PackageIndex::find`: a uri, or a bare
     /// uuid at the library's entry), when the graph shows one.
     pub fn node(&self, address: &str) -> Option<&IndexNode> {
         let node = &self.nodes[self.find(address)? as usize];
@@ -736,7 +736,7 @@ impl PackageIndex {
     /// creation used to re-ask the whole graph, which a front end holding 62 000
     /// objects paid in full for one new property.
     ///
-    /// For each address (a uri, through [`PackageIndex::find`]):
+    /// For each address (a uri, through `PackageIndex::find`):
     ///
     /// - a node the graph shows: its node, and — when the package holds it —
     ///   its outgoing edges, with the nodes they reach;

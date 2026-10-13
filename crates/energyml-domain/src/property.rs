@@ -1228,10 +1228,10 @@ fn in_geometry(object: &dyn Reflect, field: &str) -> Result<u64> {
     if let Some(found) = integer(object, field) {
         return Ok(found);
     }
-    if let Some(FieldValue::Object(geometry)) = object.field("Geometry") {
-        if let Some(found) = integer(geometry, field) {
-            return Ok(found);
-        }
+    if let Some(FieldValue::Object(geometry)) = object.field("Geometry")
+        && let Some(found) = integer(geometry, field)
+    {
+        return Ok(found);
     }
     required(object, field)
 }

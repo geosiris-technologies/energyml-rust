@@ -317,7 +317,7 @@ pub struct ConnectionFeature {
 /// Which interpretation every **drawn entry** belongs to.
 ///
 /// The alignment is the point: `per_entry` has exactly one row per cell of the
-/// patch [`read`] returns, in the same order, so it can be coloured like a
+/// patch `read` returns, in the same order, so it can be coloured like a
 /// discrete per-cell property with no arithmetic in between. A row is a *list*
 /// because the file's array is jagged — a connection may name none (an empty
 /// row) or several (*"multiple faults discretized onto a single connection"*).

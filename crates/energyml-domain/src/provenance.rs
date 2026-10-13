@@ -23,7 +23,7 @@
 //! # It builds objects; it does not store them
 //!
 //! The rule this crate and `energyml-storage::graph` both follow: **free
-//! functions over values, no store**. [`activity`] returns the JSON of an
+//! functions over values, no store**. `activity` returns the JSON of an
 //! `Activity`; putting it in a package, looking up whether the template is
 //! already there, resolving a uri into a `DataObjectReference` — all of that
 //! belongs to whoever owns the store, and differs between an EPC and a

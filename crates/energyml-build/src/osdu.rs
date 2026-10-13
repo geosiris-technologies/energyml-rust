@@ -339,10 +339,9 @@ fn with_specifications(mut columns: Vec<Value>, data: &Value) -> Vec<Value> {
                 .get("ColumnName")
                 .and_then(Value::as_str)
                 .is_some_and(|n| n.eq_ignore_ascii_case(name))
+                && let Some(map) = column.as_object_mut()
             {
-                if let Some(map) = column.as_object_mut() {
-                    map.insert("AbsentValue".to_string(), absent.clone());
-                }
+                map.insert("AbsentValue".to_string(), absent.clone());
             }
         }
     }

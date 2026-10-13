@@ -14,10 +14,10 @@
 //!
 //! # What is kept
 //!
-//! A [`ColourSlot`], beside the package index: the walk of each object asked,
+//! A `ColourSlot`, beside the package index: the walk of each object asked,
 //! and the merged `GraphicalInformationSet`. Both are exact **for the index and
 //! the store** because every question first brings the index up to date and
-//! then drops what the update disturbed ([`IndexSlot::take_disturbed`]) — the
+//! then drops what the update disturbed (`IndexSlot::take_disturbed`) — the
 //! walks that looked at an object that changed, or that gained or lost a
 //! reference, and the walks of the objects an entry of the set decorated
 //! differently. With the layer off the slot is a fresh one, dropped after the

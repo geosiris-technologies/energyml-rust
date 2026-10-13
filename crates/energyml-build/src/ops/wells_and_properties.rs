@@ -10,9 +10,9 @@
 //!
 //! The crate's rule: *an operation that writes the same object as another
 //! delegates to it*, through its typed function and never through a derived bag. The boreholes
-//! come from [`WellsFromTable::plan_ending`], which also returns **the frame on
+//! come from `WellsFromTable::plan_ending`, which also returns **the frame on
 //! which each borehole ends** and its depths; the properties
-//! come from [`properties_from_table::lay`], laid on those frames.
+//! come from `properties_from_table::lay`, laid on those frames.
 //!
 //! This is what makes the composition correct where a chaining of two plans
 //! would not be: the second operation does not re-read the package — the new frames
@@ -31,7 +31,7 @@
 //! Three choices, written here because they decide the shape of the package:
 //!
 //! - **the column is that of the observed divisions** — exactly those that
-//!   the passes name, written by [`super::stratigraphy::write_column`]. Their
+//!   the passes name, written by `super::stratigraphy::write_column`. Their
 //!   uuids come from their URI in the register: the Priabonian of this column
 //!   **is** that of a column drawn from the chart by
 //!   `stratigraphy-from-geolts`, not a second one;

@@ -57,7 +57,7 @@
 //! # Every object is synthetic, and sourced
 //!
 //! As `prodml-doublet` does: `synthetic = true` and the source in
-//! `Citation/Description` (the reference-model rules on invented objects, ADR-0019), through [`super::prodml_writer`].
+//! `Citation/Description` (the reference-model rules on invented objects, ADR-0019), through `super::prodml_writer`.
 //!
 //! # Identity
 //!

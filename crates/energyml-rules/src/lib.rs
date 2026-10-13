@@ -315,12 +315,11 @@ fn pick(
     field: fn(&Translation) -> Option<&'static str>,
     english: &'static str,
 ) -> Text {
-    if lang != "en" {
-        if let Some(t) = TRANSLATIONS.iter().find(|t| t.id == rule.id && t.lang == lang) {
-            if let Some(value) = field(t) {
-                return Text { value, lang: t.lang };
-            }
-        }
+    if lang != "en"
+        && let Some(t) = TRANSLATIONS.iter().find(|t| t.id == rule.id && t.lang == lang)
+        && let Some(value) = field(t)
+    {
+        return Text { value, lang: t.lang };
     }
     Text {
         value: english,
@@ -345,15 +344,13 @@ pub fn text_in(rule: &Rule, lang: &str) -> Localised {
 
 /// A theme's title in `lang`, English where it is not translated.
 pub fn theme_title(theme: &Theme, lang: &str) -> Text {
-    if lang != "en" {
-        if let Some(t) = THEME_TRANSLATIONS
+    if lang != "en"
+        && let Some(t) = THEME_TRANSLATIONS
             .iter()
             .find(|t| t.id == theme.id && t.lang == lang)
-        {
-            if let Some(value) = t.title {
-                return Text { value, lang: t.lang };
-            }
-        }
+        && let Some(value) = t.title
+    {
+        return Text { value, lang: t.lang };
     }
     Text {
         value: theme.title,

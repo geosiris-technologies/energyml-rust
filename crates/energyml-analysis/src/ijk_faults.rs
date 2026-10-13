@@ -39,7 +39,7 @@
 //! fault is drawn as a vertical staircase along the column faces. Which side
 //! is decided at **one level**, stated and reported: the middle of the overlap
 //! between the fault's vertical extent and the grid's. There the fault surface
-//! is cut by a horizontal plane ([`crate::intersect`]), which gives its
+//! is cut by a horizontal plane ([`crate::intersect()`]), which gives its
 //! **trace**, one open line — nothing, several pieces or a ring is refused by
 //! name. A column is in the **hanging wall** when its centre lies on the side of
 //! the trace toward which the fault **dips**, the dip measured on the surface

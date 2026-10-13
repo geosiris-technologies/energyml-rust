@@ -109,10 +109,10 @@ impl Idw {
         if !(self.power.is_finite() && self.power > 0.0) {
             return Err(Error::BadPower { given: self.power });
         }
-        if let Some(radius) = self.radius {
-            if !(radius.is_finite() && radius > 0.0) {
-                return Err(Error::BadRadius { given: radius });
-            }
+        if let Some(radius) = self.radius
+            && !(radius.is_finite() && radius > 0.0)
+        {
+            return Err(Error::BadRadius { given: radius });
         }
         if self.neighbours == Some(0) {
             return Err(Error::NoNeighbours);
@@ -174,12 +174,12 @@ impl Idw {
                     faults.blocks(plan(&usable[at].1), plan(query))
                 }),
                 None => {
-                    if let Some(k) = self.neighbours {
-                        if near.len() > k {
-                            // The k nearest: a partial sort is all that is needed.
-                            near.select_nth_unstable_by(k - 1, |a, b| a.0.total_cmp(&b.0));
-                            near.truncate(k);
-                        }
+                    if let Some(k) = self.neighbours
+                        && near.len() > k
+                    {
+                        // The k nearest: a partial sort is all that is needed.
+                        near.select_nth_unstable_by(k - 1, |a, b| a.0.total_cmp(&b.0));
+                        near.truncate(k);
                     }
                 }
             }

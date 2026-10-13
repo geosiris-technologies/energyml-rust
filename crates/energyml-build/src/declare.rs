@@ -1027,16 +1027,16 @@ impl<'a> Binder<'a> {
                 },
             ));
         }
-        if let Some(most) = most {
-            if count > most {
-                // With what the slot says of itself: *at most one* is a count,
-                // *one grid per plan* is the reason.
-                let about = declared.map(|one| one.about).unwrap_or_default();
-                return Err(Refusal::on(
-                    slot,
-                    format!("at most {most} piece(s), and {count} were given — {about}"),
-                ));
-            }
+        if let Some(most) = most
+            && count > most
+        {
+            // With what the slot says of itself: *at most one* is a count,
+            // *one grid per plan* is the reason.
+            let about = declared.map(|one| one.about).unwrap_or_default();
+            return Err(Refusal::on(
+                slot,
+                format!("at most {most} piece(s), and {count} were given — {about}"),
+            ));
         }
         let items = chosen
             .into_iter()

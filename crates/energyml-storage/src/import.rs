@@ -18,10 +18,10 @@
 //!
 //! # A quote, then the writing — and the bytes are a second half
 //!
-//! [`plan`] reads both packages and writes nothing; [`apply_plan`] carries the
+//! `plan` reads both packages and writes nothing; `apply_plan` carries the
 //! quote out **in memory** — objects put, pointers rewritten, proxies declared —
 //! and hands back the dataset copies and file carries it could not do itself
-//! without a writing backend. [`copy_datasets`] and [`carry_files`] do them on a
+//! without a writing backend. `copy_datasets` and `carry_files` do them on a
 //! disk; a browser does them through h5wasm, which is the only HDF5 it has.
 //! Objects first, bytes second, and every failure named by its path.
 

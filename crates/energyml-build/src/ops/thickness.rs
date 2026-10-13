@@ -2,7 +2,7 @@
 //! one, written as a continuous property on it: the isochore, or the isopach.
 //!
 //! The computation is
-//! [`energyml_analysis::thickness`]; this is the seam, and the writing is
+//! [`energyml_analysis::thickness()`]; this is the seam, and the writing is
 //! [`super::property`]'s, the way `surface-map` does it.
 //!
 //! **The first operation written against typed parameters and inputs**

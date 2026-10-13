@@ -321,10 +321,10 @@ impl Crs {
     /// is in `TimeUom`. Reading `vertical_uom` on a time system and handing it
     /// to a time conversion is how a millisecond becomes a metre.
     pub fn vertical_axis_uom(&self) -> Option<&str> {
-        if self.is_time() {
-            if let Some(unit) = self.time_uom.as_deref() {
-                return Some(unit);
-            }
+        if self.is_time()
+            && let Some(unit) = self.time_uom.as_deref()
+        {
+            return Some(unit);
         }
         self.vertical_uom.as_deref()
     }
@@ -551,7 +551,7 @@ fn patch_supports_agree(object: &dyn Reflect, source: &dyn ObjectSource, hop: u8
 /// object and is covered by this list.
 ///
 /// A `SeismicWellboreFrameRepresentation` never reaches here: §12.9 gives it
-/// its own `LocalTime3dCrs`, which [`reference`] finds by name, so it takes the
+/// its own `LocalTime3dCrs`, which [`reference()`] finds by name, so it takes the
 /// direct path. That is what the standard asks for — its vertical axis is a
 /// time and the trajectory's is a depth. (Nothing draws one today: the geometry
 /// readers are keyed on `WellboreFrameRepresentation` alone.)

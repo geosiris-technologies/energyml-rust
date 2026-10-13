@@ -21,7 +21,7 @@
 //! - **the intervals** are `strata_by_md::Painting::intervals`, by the same
 //!   rule as the colours of the nodes (*a node opens the interval*).
 //!
-//! Everything then goes through [`frame::to_scene`]: head and nodes in one
+//! Everything then goes through `frame::to_scene`: head and nodes in one
 //! call, so they cannot be moved apart.
 //!
 //! # One wellbore, one key

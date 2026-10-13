@@ -411,7 +411,7 @@ pub struct Datum<'a> {
 /// The reference point the measured depths are counted from: the one named, or
 /// one created at the head, at the ground.
 ///
-/// **Apart from [`write`], and deliberately.** A datum is a fact about the
+/// **Apart from [`write()`], and deliberately.** A datum is a fact about the
 /// *frame* — where zero is — not about the curve; keeping it here lets a caller
 /// put it in its plan where it belongs, and lets the writer take it as a
 /// reference like it takes its interpretation. Folding it into `write` moved it
@@ -609,7 +609,7 @@ pub struct Wellbore<'a> {
     pub citation: &'a dyn Fn(&str) -> Value,
 }
 
-/// What [`write`] wrote, and what it measured doing so.
+/// What [`write()`] wrote, and what it measured doing so.
 pub struct Written {
     /// The trajectory and the frame.
     pub objects: Vec<NewObject>,

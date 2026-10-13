@@ -1057,14 +1057,14 @@ fn check_many(slot: &Slot, value: &Value) -> Vec<Refusal> {
             ),
         )];
     }
-    if let Some(most) = slot.most {
-        if count > most {
-            return vec![Refusal::about(
-                "count",
-                slot.name,
-                format!("`{}` takes at most {most} value(s) and has {count}", slot.name),
-            )];
-        }
+    if let Some(most) = slot.most
+        && count > most
+    {
+        return vec![Refusal::about(
+            "count",
+            slot.name,
+            format!("`{}` takes at most {most} value(s) and has {count}", slot.name),
+        )];
     }
     // Each one, and **every** one: stopping at the first would make correcting a
     // list a matter of as many round trips as it has bad entries.

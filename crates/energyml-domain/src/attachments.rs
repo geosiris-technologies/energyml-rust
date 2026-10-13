@@ -930,7 +930,7 @@ pub fn decode_base64(text: &str) -> Result<Vec<u8>, String> {
         };
         sextets.push(value);
     }
-    if padding > 2 || (sextets.len() + padding) % 4 != 0 || sextets.len() % 4 == 1 {
+    if padding > 2 || !(sextets.len() + padding).is_multiple_of(4) || sextets.len() % 4 == 1 {
         return Err("the length is not that of padded base 64".to_string());
     }
     let mut out = Vec::with_capacity(sextets.len() * 3 / 4);

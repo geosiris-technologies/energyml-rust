@@ -63,10 +63,10 @@ pub fn empirical<const N: usize>(
     if classes == 0 {
         return Err(Error::NoClasses);
     }
-    if let Some(reach) = max_distance {
-        if !(reach.is_finite() && reach > 0.0) {
-            return Err(Error::BadRadius { given: reach });
-        }
+    if let Some(reach) = max_distance
+        && !(reach.is_finite() && reach > 0.0)
+    {
+        return Err(Error::BadRadius { given: reach });
     }
     let usable: Vec<([f64; N], f64)> = samples
         .iter()

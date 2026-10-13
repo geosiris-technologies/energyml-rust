@@ -24,8 +24,8 @@
 //!   `"'None' is not an accepted resource"` kind), never a silent default;
 //! - **several points are separated by `|`**, never by `,` — a comma returns
 //!   `BAD_PARAMETER` (*"cannot be parsed as a valid longitude"*), and so does a
-//!   `lon` list shorter than the `lat` one (*"The number of [lon] values must
-//!   match the number of [lat] values"*);
+//!   `lon` list shorter than the `lat` one (*"The number of \[lon] values must
+//!   match the number of \[lat] values"*);
 //! - **`zonly=false` makes `lon`, `lat`, `z` and `acc` come back** in every
 //!   element; `zonly=true` (or its absence) returns only a bare number per
 //!   point — this module only ever asks for the complete form, so that a point

@@ -188,7 +188,7 @@ pub fn slope(points: &[f64], triangles: &[u32], up: Up) -> Result<Slope, Error> 
 /// A node whose differences reach a non-finite point — a hole of the grid —
 /// is `unreached`, every value `NaN`, never a slope drawn across the hole.
 pub fn lattice_slope(points: &[f64], fastest: usize, slowest: usize, up: Up) -> Result<Slope, Error> {
-    if points.len() % 3 != 0 {
+    if !points.len().is_multiple_of(3) {
         return Err(Error::NotTriples { given: points.len() });
     }
     let nodes = points.len() / 3;
@@ -478,10 +478,10 @@ struct Mesh {
 
 impl Mesh {
     fn of(points: &[f64], triangles: &[u32], up: Up) -> Result<Self, Error> {
-        if points.len() % 3 != 0 {
+        if !points.len().is_multiple_of(3) {
             return Err(Error::NotTriples { given: points.len() });
         }
-        if triangles.len() % 3 != 0 {
+        if !triangles.len().is_multiple_of(3) {
             return Err(Error::NotTriangles {
                 given: triangles.len(),
             });

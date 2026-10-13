@@ -228,7 +228,7 @@ pub fn triangulate_xy_constrained(points: &[f64], faults: &[Vec<[f64; 3]>]) -> R
 
 /// The point count, or the two refusals every entry point shares.
 fn check_triples(points: &[f64]) -> Result<usize, String> {
-    if points.len() % 3 != 0 {
+    if !points.len().is_multiple_of(3) {
         return Err(format!("{} values do not make (x, y, z) triples", points.len()));
     }
     let count = points.len() / 3;

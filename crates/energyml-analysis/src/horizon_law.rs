@@ -19,7 +19,7 @@
 //! `thickness` operation writes as `true vertical thickness` — because a node
 //! of a grid carries one height per (x, y). Where the reference dips, the
 //! thickness measured across the beds is the vertical one times the cosine of
-//! the dip: the parallel-beds formula of [`crate::thickness`], read the other
+//! the dip: the parallel-beds formula of [`crate::thickness()`], read the other
 //! way. The caller says so; nothing here hides it.
 //!
 //! # Truncation

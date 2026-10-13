@@ -38,21 +38,20 @@ fn doc_of(attrs: &[Attribute]) -> Option<String> {
         if !attr.path().is_ident("doc") {
             continue;
         }
-        if let syn::Meta::NameValue(nv) = &attr.meta {
-            if let Expr::Lit(syn::ExprLit {
+        if let syn::Meta::NameValue(nv) = &attr.meta
+            && let Expr::Lit(syn::ExprLit {
                 lit: syn::Lit::Str(text),
                 ..
             }) = &nv.value
-            {
-                let line = text.value().trim().to_string();
-                if line.is_empty() {
-                    if !lines.is_empty() {
-                        break;
-                    }
-                    continue;
+        {
+            let line = text.value().trim().to_string();
+            if line.is_empty() {
+                if !lines.is_empty() {
+                    break;
                 }
-                lines.push(line);
+                continue;
             }
+            lines.push(line);
         }
     }
     (!lines.is_empty()).then(|| lines.join(" "))

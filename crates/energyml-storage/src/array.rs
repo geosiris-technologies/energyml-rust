@@ -201,7 +201,7 @@ const OLD_FORM: &str = "Hdf5Dataset";
 const CHANNEL_DATA: &str = "ChannelData";
 
 /// Whether a `ChannelData`'s `FileUri` and `Data` are the extension of
-/// [`CHANNEL_DATA`] — the **one** definition, which the locator here and the
+/// `CHANNEL_DATA` — the **one** definition, which the locator here and the
 /// series reader of `energyml-domain` both ask.
 ///
 /// Both present, and `Data` an absolute HDF5 path: it begins with `/`, which
@@ -222,7 +222,7 @@ const CHANNEL_DATA_MIME: &str = "application/x-hdf5";
 
 /// The field of a located part that names its **file** — what a rename or an
 /// import rewrites. `uri` for the eml 2.3 form; `file_uri` for a WITSML
-/// `ChannelData` ([`CHANNEL_DATA`]). The two proxy forms name no file here
+/// `ChannelData` (`CHANNEL_DATA`). The two proxy forms name no file here
 /// (their proxy's `.rels` does), and are never asked.
 pub fn file_field(part_type: &str) -> &'static str {
     match part_type {

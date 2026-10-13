@@ -592,24 +592,23 @@ impl Operation for WellsFromTable {
         });
         // The projection code declared by the file, when a column
         // carries it: it is data, not a guess.
-        if let Ok(Some(code)) = template.for_kind(role("sourceEpsg").uuid) {
-            if let Some(found) = table
+        if let Ok(Some(code)) = template.for_kind(role("sourceEpsg").uuid)
+            && let Some(found) = table
                 .column(&code.name)
                 .and_then(|at| table.rows.iter().find_map(|row| row.get(at)))
                 .and_then(|cell| cell.trim().parse::<u32>().ok())
-            {
-                slots.set("sourceEpsg", json!(found));
-            }
+        {
+            slots.set("sourceEpsg", json!(found));
         }
         // The target, for its part, is deduced from the numbers and not from a country — a UTM zone
         // is a function of the longitude. It only makes sense if the file
         // is in degrees, which only a source code of 4326 says.
-        if let Some((lon, lat)) = first {
-            if (-180.0..=180.0).contains(&lon) && (-90.0..=90.0).contains(&lat) {
-                if let Some(found) = crate::crs::utm_epsg_of(lon, lat) {
-                    slots.set("project", json!(found));
-                }
-            }
+        if let Some((lon, lat)) = first
+            && (-180.0..=180.0).contains(&lon)
+            && (-90.0..=90.0).contains(&lat)
+            && let Some(found) = crate::crs::utm_epsg_of(lon, lat)
+        {
+            slots.set("project", json!(found));
         }
     }
 

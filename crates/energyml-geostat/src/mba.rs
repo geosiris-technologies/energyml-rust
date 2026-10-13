@@ -28,7 +28,7 @@
 //!
 //! # The trend removed first — the paper's own linear initialisation
 //!
-//! Left alone, BA *"tend[s] to zero away from the data"*: a control point no
+//! Left alone, BA *"tend\[s] to zero away from the data"*: a control point no
 //! sample reaches is set to zero (p. 231), so the coarsest level itself sinks
 //! toward 0 in a margin, and a constant of 42 came back as 37 there (the first
 //! run of this module's tests). The paper answers it in §7.3
@@ -181,7 +181,7 @@ impl Domain {
         1e-9 * self.size[0].abs().max(self.size[1].abs()).max(1.0)
     }
 
-    /// Whether `at` lies inside `Ω`, boundary included within [`Self::tolerance`].
+    /// Whether `at` lies inside `Ω`, boundary included within `Self::tolerance`.
     ///
     /// A caller that wants "outside is `NaN`" rather than "outside is refused"
     /// — `estimate`'s domain-union policy, `crates/energyml-build/src/ops/interpolate_mba.rs`

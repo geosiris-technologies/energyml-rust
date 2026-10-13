@@ -38,13 +38,13 @@
 //! A category property may carry a map of its own (a `ColorInformation` on the
 //! property or its kind); that is the author's word about those codes and it is
 //! sampled first. Otherwise a table row is linked to a unit of the package **by
-//! its title**, when exactly one unit carries it — and [`Unit::by_title`] says
+//! its title**, when exactly one unit carries it — and `Unit::by_title` says
 //! so, because a title is not an identity (the rule `property_kind` keeps).
 //!
 //! A unit the file does not colour has **no** colour here, never one made up:
 //! the caller paints it with its colour for absent values, or with a palette
-//! **it** hands in ([`Strata::drawn`]) — and either way the answer says the
-//! colour is not the file's ([`Drawn::Fallback`]), so a legend can too.
+//! **it** hands in (`Strata::drawn`) — and either way the answer says the
+//! colour is not the file's (`Drawn::Fallback`), so a legend can too.
 //!
 //! # Several `GraphicalInformationSet`s
 //!
@@ -53,7 +53,7 @@
 //! whatever set the package's own colours live in. Reading only the first set
 //! found would lose every unit colour whenever the other one lists first — a
 //! well drawn transparent with nothing to say why. Nothing in the standard
-//! ranks one set above another (ADR-0009), so the sets are **read as one** — [`GraphicalSet::merged`],
+//! ranks one set above another (ADR-0009), so the sets are **read as one** — `GraphicalSet::merged`,
 //! then one cascade, the reading every other face uses — and the rule is the
 //! one ADR-0009 proposes: the **most specific** level answers (the unit before its
 //! feature), and at one level the later statement. A colour is decided by one
@@ -64,11 +64,11 @@
 //!
 //! # What is refused, and as what
 //!
-//! An absence and a fault are not the same news, so [`Refusal`] keeps them
+//! An absence and a fault are not the same news, so `Refusal` keeps them
 //! apart: a frame that maps no interval is an ordinary frame
-//! ([`Refusal::Absent`]); an index past its rank is a file that contradicts
-//! itself ([`Refusal::Defect`]); two ranks naming two units for one interval is
-//! a choice the file leaves open ([`Refusal::Ambiguous`]) — nothing in the TRG
+//! (`Refusal::Absent`); an index past its rank is a file that contradicts
+//! itself (`Refusal::Defect`); two ranks naming two units for one interval is
+//! a choice the file leaves open (`Refusal::Ambiguous`) — nothing in the TRG
 //! ranks one rank above another, so the caller names the rank it wants.
 //!
 //! # WITSML

@@ -535,10 +535,10 @@ impl ColorMap {
             }
         }
         // Below every stop: the first one, unless the map says otherwise.
-        if position < self.stops[0].index {
-            if let Some(color) = &self.below_min {
-                return color.to_rgba();
-            }
+        if position < self.stops[0].index
+            && let Some(color) = &self.below_min
+        {
+            return color.to_rgba();
         }
         chosen.color.to_rgba()
     }
@@ -764,7 +764,7 @@ impl Scope {
 
     /// The concrete class an entry uses to say *this element of the object*.
     ///
-    /// The inverse of [`Scope::from_type_name`], and beside it on purpose: the
+    /// The inverse of `Scope::from_type_name`, and beside it on purpose: the
     /// reader is the writer's specification, and two lists of five names in two
     /// files is how they come to disagree.
     pub fn type_name(self) -> &'static str {
@@ -1255,7 +1255,7 @@ pub struct Request<'a> {
     /// found on 04/09: the wasm layer passed a uri here while entry targets were
     /// uuids, and they never matched — a colour set on the representation itself
     /// was never found, while one inherited from its interpretation or its
-    /// feature was, because the walk up ([`parent_of`]) yielded uuids. A package
+    /// feature was, because the walk up (`parent_of`) yielded uuids. A package
     /// that duplicates its colours at all three levels, as `80wells` does, hid
     /// that completely.
     pub representation: &'a str,
@@ -1766,7 +1766,7 @@ impl<'a> Cascade<'a> {
     /// the objects a change of that value changes too. `None` when the object
     /// carries no constant colour of its own (it may still inherit one: ask its
     /// carrier). Decided by the same choice as the colour shown
-    /// ([`Cascade::constant_on`]).
+    /// (`Cascade::constant_on`).
     pub fn constant_written(&self, uuid: &str, element: Scope) -> Option<Written> {
         let (entry, info) = self.constant_on(uuid, element, &mut Vec::new())?;
         Some(Written {

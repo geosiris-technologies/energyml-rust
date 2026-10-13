@@ -13,7 +13,7 @@
 //!
 //! The grid between the horizons is `ijk-grid-from-horizons`'s, and this
 //! operation does not write a second one: it takes the same horizons and the
-//! same settings (`#[param(flatten)]`), hands [`super::ijk_grid::between`] a
+//! same settings (`#[param(flatten)]`), hands `super::ijk_grid::between` a
 //! cut, and that function writes the object — an operation that writes the same
 //! object as another delegates to it (ADR-0017). The cut
 //! itself is `energyml_analysis::ijk_faults`, which holds the rules and their

@@ -120,7 +120,7 @@
 //!
 //! The second half — the 3D view — is a display concern and none of this
 //! crate's; what this operation owes is the property. Every point already
-//! names, in [`Origin`], the frame it came from — that is how a copied
+//! names, in `Origin`, the frame it came from — that is how a copied
 //! measurement finds its row. `wellOrigin` writes the same fact as a
 //! `DiscreteProperty` on the point set's nodes: one code per point, read
 //! against a `ColumnBasedTable` (eml23) that lists every well's name.

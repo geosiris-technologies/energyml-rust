@@ -786,7 +786,7 @@ pub fn reference_to(uuid: &str, qualified_type: &str, title: &str) -> eml::DataO
     }
 }
 
-/// A `DataObjectReference` to an object **named by a [`Ref`]** — the version it
+/// A `DataObjectReference` to an object **named by a `Ref`** — the version it
 /// declares included, so that a package holding the object in two versions is
 /// pointed at the one meant. The sibling of [`reference_to`] for what comes from
 /// the package; `reference_to` stays for what this crate has just built, which

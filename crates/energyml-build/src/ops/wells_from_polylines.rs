@@ -16,7 +16,7 @@
 //! vertical detection — a second writer would be a second place for the same
 //! mistakes. What differs from `well-from-polyline` is only what a **set**
 //! adds: several polylines instead of refusing more than one
-//! ([`super::well::polylines_of`], shared rather than duplicated), and titles
+//! (`super::well::polylines_of`, shared rather than duplicated), and titles
 //! that must tell the wells apart.
 //!
 //! # What a bulk creation decides that one well does not have to

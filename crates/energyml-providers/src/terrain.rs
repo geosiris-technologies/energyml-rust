@@ -1095,8 +1095,8 @@ pub fn tile_template(source: &TerrainSource) -> Result<String> {
     ))
 }
 
-/// The whole `N`-item chunks of `items`, as arrays (what `<[T]>::as_chunks` gives, which
-/// needs Rust 1.88 — above this workspace's minimum, 1.85); a trailing remainder is dropped.
+/// The whole `N`-item chunks of `items`, as arrays (what `<[T]>::as_chunks` gives);
+/// a trailing remainder is dropped.
 fn fixed_chunks<T, const N: usize>(items: &[T]) -> impl Iterator<Item = &[T; N]> {
     items
         .chunks_exact(N)

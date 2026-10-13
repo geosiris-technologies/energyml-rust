@@ -98,7 +98,7 @@ pub struct Prepared {
     pub colour: Option<String>,
     /// Its age ([`age_of`]), when its interpretation states one.
     pub age: Option<[f64; 2]>,
-    /// The feature its interpretation interprets ([`feature_of`]).
+    /// The feature its interpretation interprets (`feature_of`).
     pub feature: Option<String>,
     /// Its points, in the scene's system.
     pub points: Vec<[f64; 3]>,
