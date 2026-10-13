@@ -1,0 +1,21 @@
+# Titres français des thèmes. Une traduction ne porte que id, title, text, why.
+
+[[theme]]
+id = "inherit"
+title = "Héritage"
+
+[[theme]]
+id = "colour"
+title = "Couleurs"
+
+[[theme]]
+id = "attach"
+title = "Pièces jointes et collections"
+
+[[theme]]
+id = "table"
+title = "Tables et catégories"
+
+[[theme]]
+id = "series"
+title = "Séries temporelles"

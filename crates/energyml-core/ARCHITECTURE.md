@@ -1,0 +1,51 @@
+# energyml-core: architecture
+
+## Purpose and position
+
+`energyml-core` is the runtime the generated crates stand on. It knows nothing about any schema: it holds the XML reader and writer, JSON, the static reflection table of every type, dynamic access by path, structural validation, the registry that creates and reads objects by name, and the parsers for UUIDs, content types, qualified types and ETP URIs. Everything above it (storage, domain, geometry, the faces) works through these traits and never through a concrete generated type.
+
+It sits at the bottom of the stack, next to `energyml-derive` (the macros it re-exports behind the default `derive` feature). Generated crates depend on it; it depends on no generated crate.
+
+Related decisions: [ADR-0001](../../docs/adr/0001-generated-code-is-committed.md), [ADR-0003](../../docs/adr/0003-identity-full-uri-one-door.md), [ADR-0004](../../docs/adr/0004-reading-policy.md), [ADR-0005](../../docs/adr/0005-refuse-rather-than-draw.md), [ADR-0006](../../docs/adr/0006-registries-rather-than-match.md), [ADR-0007](../../docs/adr/0007-core-has-no-native-dependency.md), [ADR-0008](../../docs/adr/0008-inheritance-and-xsd-list.md).
+
+## Rules
+
+**No native dependency** — WebAssembly is a hard requirement, so anything that needs a C library (HDF5 and the like) lives in the storage layer behind an optional feature, never here.
+
+**Three derives cover the whole model** — `EnergymlObject` (an XSD complex type; cardinality is inferred from `Option<T>` / `Vec<T>`), `EnergymlEnum` (a simple type enumeration; `#[energyml(open)]` plus an `Other(String)` variant models the Energistics `...Ext` types) and `EnergymlChoice` (an abstract type or substitution group, selected on the wire by `xsi:type`; reflection through it is transparent, callers see the concrete subtype). The behaviour lives in the macros, so changing how a construct is written is a change to one file, not a regeneration of every generated crate. `tests/generated_shape.rs` is a hand-written slice of the model in exactly the shape the generator must emit; it is the specification of generator output.
+
+**Identity is one pivot, and it borrows** — `identity` reduces a top-level object, or a `DataObjectReference` of any eml version, to one `ObjectKey`. The key borrows its strings (from the static `TypeInfo`, or from sub-slices of the reference's own content type or qualified type), so comparing, indexing and walking a graph allocate nothing; `ObjectId` is the owned twin. The work is split on purpose: the generator emits every constant string and the role indices, the derive emits six `#[inline]` field accessors and nothing more (default trait bodies are recompiled per impl, and there are about a thousand impls), and `core` holds the parsing and comparison code, compiled once. Field roles (uuid, title, version...) are detected from field names case- and separator-insensitively, with `#[energyml(role = "...")]` as override; a `uid` counts as an identifier only on a top-level or reference type, because dozens of nested WITSML types carry a local `uid` that identifies nothing.
+
+**The object version has two homes, and the reflective reader looks in both** — the `objectVersion` attribute from eml 2.1 on, and `Citation/VersionString` in eml 2.0. A reference kept as untyped XML carries it too, and so does its title. What a walker does not read, a checker later reads as absent, and then reports a problem that is not there.
+
+**Absence and nonsense are different news** — `ReadMode` has three rungs. `Strict` refuses both an absent required item and a present, unreadable value. `Tolerant` (the default) fills the absent item with its default and *reports* it, but still refuses nonsense. `Lenient` also repairs values that are present and wrong (a word outside a closed enumeration, a malformed number, an unknown subtype of a concrete base), and records the document's own string, because a closed enum has nowhere to keep it and a repair tool cannot restore what it was never told. Malformed XML, bad encoding and an `xsi:type` on a purely abstract choice stay errors in every mode: there is nothing to fall back to. A parser saying what the document says and a validator saying what it should have said are two jobs; doing the second inside the parser costs the whole part over one missing element.
+
+**Version resolution depends on strictness, so reading happens twice** — one namespace covers every release of a package (RESQML 2.0.1 and 2.2 share `resqmlv2`; WITSML 2.0 and 2.1 share `witsmlv2`), so the namespace says which package and nothing about which release; `schemaVersion` is optional in practice and may name a version this build lacks. Identification therefore returns every candidate, best first (same namespace, exact `schemaVersion`, prefix-compatible, the `obj_` prefix as a positive signal when present, newest first), and the read walks them, letting the wrong release *fail*. The first pass is always `Strict`, because tolerating absence blunts exactly the difference a parser can see; the caller's own mode only gets a turn when no candidate reads strictly. A fallback that fires is reported; an ambiguity the document settled is not. A walker over ordered candidates must dispatch on the candidate (`read_xml_as_named`), not on a content type the candidates share.
+
+**A development drop never displaces a release** — a pre-release drop computes the same qualified type and content type as the release it precedes. `Registry::register` keeps "later registration wins" (that is how a caller overrides a generated type) except that a drop never takes a release's key. Otherwise adding the drop silently re-points every lookup, reference resolution and JSON `$type` of a released document at the drop's types, and nothing fails. A drop is read, never offered for creation. The qualified type stays that of the release, as the identifier specification builds it from the first two digits of the version (Identifier Specification v5.0, section 2.3.3, pp. 9-10).
+
+**Foreign vocabularies are kept, not dropped** — GML inside a projected CRS, or any `xs:any`, is an `AnyXml` that keeps the subtree (attributes and content) and writes it back. The round trip is semantic, not byte-for-byte: entity spellings, self-closing tags and insignificant whitespace may change. `XmlWriter::write_raw` exists only for this. A subtree is not always foreign: an abstract eml type whose concrete classes live in a dependent package is typable wherever all releases are registered, so `AnyXml` offers `declared_type`, `typed`, `rebuilt` and `of`. The reader calls none of them: what is read from a file is returned verbatim, typing is an operation the caller asks for. JSON accepts a typed object where the model declares a subtree, otherwise a rewritten list would silently turn into empty elements.
+
+**Reference collection reads the untyped XML too** — `collect_refs` regenerates a package's `.rels`; if it ignored references inside `AnyXml`, rewriting a package would drop every relationship held in a kept subtree.
+
+**JSON is written from reflection** — the Energistics JSON encoding puts a `$type` (the qualified type) on every object; it is the discriminant for an abstract field, which has no `xsi:type` in JSON. Serde's derive cannot supply it and its own externally-tagged shape is one nobody else reads. Writing needs no registry; reading needs every mentioned type registered. `serde_json` is used with `float_roundtrip`, because its fast parser is one ULP off on some 17-digit doubles and a JSON round trip would silently move coordinates. `NaN`, `INF` and `-INF` are written as strings: `xsd:double` has all three, JSON none, and `null` would not read back.
+
+**The reader is namespace-aware** — children are matched on `(namespace, local name)` when a struct has two same-named children (WITSML objects declare their own `Citation` beside the inherited eml one). Each `FieldInfo` carries its own `xml_ns`, so inherited fields keep the namespace of their origin. Unknown children are skipped, not rejected, so vendor extensions and newer minor versions stay readable.
+
+**Type links are function pointers** — `TypeInfo` links go through `fn() -> &'static TypeInfo`, because the model is deeply cyclic and statics cannot be. Registration is explicit (`Registry::register`), not link-time collection, which is fragile on wasm.
+
+**What may go in a field is answerable without the schema** — `FieldInfo::accepted_types()` expands an abstract field to its concrete subtypes with the `xsi:type` selecting each; `FieldType::allowed_values()` lists an enumeration. `TypeInfo::is_open` matters: an open type accepts any string beside its declared list, so offering a closed list for one blocks legitimate data. Openness is a flag decided by the union's members, not by the `Ext` suffix; the `...UomWithLegacy` unions are two closed enumerations and are closed. A `DataObjectReference` is where reflection stops: the schema declares no target type, and the allowed associations exist only in the technical reference guides.
+
+**Validation says what it cannot check** — `Validate` covers patterns (including the pattern of an open union), the four kinds of bound, lengths, cardinalities, `fixed` values and the lexical type of kept strings (dateTime, date, time, gYear, gMonth, gDay, duration). A pattern that does not compile is a `pattern-uncheckable` warning, never a silent pass. It cannot check a qualified type naming a type no schema defines (that needs a registry and lives in the graph check), the content of an `AnyXml`, `whiteSpace`, or digit counts (absent from the XSDs).
+
+## Deliberately not here
+
+- No schema knowledge, no generated type, no storage, no file access.
+- No version-specific code path: a new release must not add a branch here.
+- No geodesy, units or CRS (see `energyml-domain`).
+
+## How it is tested
+
+- `tests/generated_shape.rs` runs the derives against the hand-written model that fixes the generator's output shape.
+- The same guarantees (round trip, reflection, validation, read modes, drop handling) are re-checked against the real generated crates by the workspace test crate, so a generator regression fails there.
+- Tests state rules from the specification and use fabricated documents; a check that cannot fail is not a check (ADR-0011).

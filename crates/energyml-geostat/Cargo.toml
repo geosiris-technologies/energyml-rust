@@ -1,0 +1,26 @@
+[package]
+name = "energyml-geostat"
+description = "Domain-neutral interpolation and meshing algorithms (IDW, kriging, RBF, MBA, triangulation, iso-contours, ...). Depends on no EnergyML crate."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["kriging", "interpolation", "rbf", "geostatistics", "triangulation"]
+categories = ["mathematics", "algorithms", "science::geo"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-geostat"
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+
+[dependencies]
+thiserror = "2.0"
+# 2D Delaunay with **exact** predicates. On nearly collinear points -- a line of
+# boreholes is always one -- floating-point predicates return overlapping
+# triangles that no simple assertion would catch. See `triangulate.rs`.
+spade = "2.15.1"
+
+# docs.rs builds on Linux with no native HDF5: every feature builds there.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true

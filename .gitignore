@@ -1,0 +1,43 @@
+# Rust
+/target/
+**/*.rs.bk
+# Libraries commit Cargo.lock only if the workspace ships binaries; this one does.
+
+# Fixtures fetched by scripts/fetch-fixtures.py (never committed)
+/target/fixtures/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.whl
+# maturin build products
+*.so
+*.pyd
+*.dylib
+
+# WebAssembly
+pkg/
+*.wasm
+
+# Documentation build
+/docs/book/
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local output
+*.log
+.env
+.env.*

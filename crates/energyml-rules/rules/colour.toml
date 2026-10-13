@@ -1,0 +1,304 @@
+# Colours. Source: ADR-0009. Code: crates/energyml-domain/src/color.rs.
+#
+# `house/colour/specific-wins-with-fallbacks` was replaced by
+# `house/inherit/rank-order` when the new walk was coded: it passes `superseded` in the
+# commit that codes the new walk, beside the rule that names it.
+
+[[rule]]
+id = "house/colour/specific-wins-with-fallbacks"
+theme = "colour"
+status = "superseded"
+stance = "silent"
+level = 1
+since = "2026-08-01"
+title = "A colour is found by falling back, and the answer says how far it fell"
+text = """
+A colour is looked up from the most specific to the most general: property, its kind, the kind's parents, representation, interpretation, feature. The first that answers wins and carries its level, so a user can see which step gave the colour."""
+why = """
+The standard defines no priority between the places a colour can be written. Specific beats general, and the level travels with the answer because a colour that came from far away is not the same news as one set on the object. Replaced by the rank order of inheritance."""
+rulings = [
+  { by = "maintainer", on = "2026-08-01" },
+]
+refs = [
+  { kind = "code", path = "crates/energyml-domain/src/color.rs", at = "Decision" },
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "no priority in the three TRG (checked 05/09)" },
+]
+at = [
+  { type = "view", key = "object.colour-stack" },
+  { type = "view", key = "object.colour-frame" },
+  { type = "type", key = "GraphicalInformationSet" },
+]
+
+[[rule]]
+id = "house/colour/inherit-switch"
+theme = "colour"
+status = "active"
+stance = "extends"
+level = 2
+since = "2026-08-01"
+title = "The walk up to interpretation and feature can be switched off"
+text = """
+The walk up to the interpretation and the feature can be switched off (`Cascade::inherit = false`), so that an application can refuse an inherited colour and keep only what is set on the object or its kind."""
+why = """
+Whether a colour set on a feature should reach its representations is a choice of the application, not of the standard, so the library offers the switch instead of deciding for everyone."""
+rulings = [
+  { by = "maintainer", on = "2026-08-01" },
+]
+refs = [
+  { kind = "code", path = "crates/energyml-domain/src/color.rs", at = "Cascade" },
+]
+at = [
+  { type = "view", key = "object.colour-frame" },
+]
+switch = "Cascade.inherit"
+
+[[rule]]
+id = "house/colour/last-entry-wins"
+theme = "colour"
+status = "active"
+stance = "silent"
+level = 2
+since = "2026-08-01"
+title = "At equal specificity the last entry written wins"
+text = """
+When two entries of a GraphicalInformationSet are equally specific, the last one written in the set wins."""
+why = """
+The specification does not say what a second entry for the same object means; a later entry reads as a correction of the earlier one."""
+refs = [
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "no conflict rule in the TRG" },
+]
+at = [
+  { type = "type", key = "GraphicalInformationSet" },
+]
+
+[[rule]]
+id = "house/colour/sets-read-as-one"
+theme = "colour"
+status = "active"
+stance = "silent"
+level = 2
+since = "2026-09-28"
+title = "Several graphical sets of a package are read as one"
+text = """
+Several GraphicalInformationSet objects of a package are read as a single one, in package order (`GraphicalSet::merged`). A front end, the scene and the command line used to have three readings; there is one now."""
+why = """
+A package may hold several sets and the standard does not say how they combine. Three readings that disagreed had already shown the same object in two colours."""
+rulings = [
+  { by = "maintainer", on = "2026-09-28" },
+]
+refs = [
+  { kind = "code", path = "crates/energyml-domain/src/color.rs", at = "GraphicalSet::merged" },
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "the TRG do not say how several sets combine" },
+]
+at = [
+  { type = "type", key = "GraphicalInformationSet" },
+]
+
+[[rule]]
+id = "house/colour/viewer-kind-3d"
+theme = "colour"
+status = "active"
+stance = "ambiguous"
+level = 2
+since = "2026-08-01"
+title = "Graphical information is read for the 3D viewer by default"
+text = """
+Graphical information meant for another kind of viewer (base map, section, well correlation) is skipped and reported. The kind `3d` is the default, and an entry that names no kind applies."""
+why = """
+The schema has a ViewerKind but does not say what it changes. The library draws 3D scenes, so it reads what is meant for them and says what it set aside."""
+refs = [
+  { kind = "code", path = "crates/energyml-domain/src/color.rs", at = "ViewerKind", note = "ViewerKind exists in the schema, its effect is not described" },
+]
+at = [
+  { type = "view", key = "object.colour-stack" },
+]
+
+[[rule]]
+id = "house/colour/no-default-colour"
+theme = "colour"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-08-01"
+title = "Nothing found is no colour, never an invented one"
+text = """
+When no colour is found the answer is `None`, never a colour made up. A front end then shows a hue derived from the object's uuid, and labels it as derived."""
+why = """
+The standard defines no default colour. An invented one would look like data; a labelled hue does not claim anything about the file."""
+rulings = [
+  { by = "maintainer", on = "2026-08-01" },
+  { by = "maintainer", on = "2026-09-07" },
+]
+refs = [
+  { kind = "code", path = "crates/energyml-domain/src/color.rs" },
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "no default colour in the TRG" },
+]
+at = [
+  { type = "view", key = "object.colour-stack" },
+]
+
+[[rule]]
+id = "house/colour/hsv-out-of-bounds-refused"
+theme = "colour"
+status = "active"
+stance = "ambiguous"
+level = 2
+since = "2026-08-01"
+title = "An HSV colour out of bounds is refused, never wrapped"
+text = """
+An HsvColor outside its natural bounds is refused by name, never wrapped: a hue of 500 would silently become another colour."""
+why = """
+The schema states no facet on these values, so the bounds are the natural ones of the colour model; a silent wrap would turn a defect of the file into a plausible colour."""
+refs = [
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "no facet in the schema" },
+]
+at = [
+  { type = "view", key = "check.report" },
+]
+
+[[rule]]
+id = "house/colour/value-vector-index-is-data-index"
+theme = "colour"
+status = "active"
+stance = "interpreted"
+level = 2
+since = "2026-08-01"
+title = "ValueVectorIndex indexes the data, not the colour map"
+text = """
+ValueVectorIndex indexes the data - the component of a vector property - and never the colour map."""
+why = """
+The schema names the attribute without saying what it indexes; the reading that makes a colour map independent of the dimension of the data was kept."""
+refs = [
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "settled as a reading of the schema" },
+]
+at = [
+  { type = "type", key = "ColorMap" },
+]
+
+[[rule]]
+id = "house/colour/model-first-view-after"
+theme = "colour"
+status = "designed"
+stance = "silent"
+level = 1
+since = "2026-10-01"
+title = "The model's colours come first; painting is a view"
+text = """
+The official colour lives in the model. Painting a property, another palette, steps or smooth shading are a view: views start from the colours of the model and never write to it."""
+why = """
+A view that wrote to the model would turn an exploration into an edit of the file. The standard says nothing about views."""
+rulings = [
+  { by = "maintainer", on = "2026-10-01" },
+]
+refs = [
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "the TRG do not speak of views" },
+]
+at = [
+  { type = "view", key = "object.colour-stack" },
+]
+
+[[rule]]
+id = "house/colour/hand-change-saved-on-the-object"
+theme = "colour"
+status = "designed"
+stance = "silent"
+level = 1
+since = "2026-10-01"
+title = "A colour changed by hand is saved on the object itself"
+text = """
+A colour changed by hand is saved on the specific object (created if the model had none for it), never on the unit it falls back to. Changing a whole unit is a separate gesture, done on the unit."""
+why = """
+Writing on the unit the colour fell back to would silently recolour every object that inherits from it."""
+rulings = [
+  { by = "maintainer", on = "2026-10-01" },
+]
+refs = [
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "the TRG say nothing about where an edit is written" },
+]
+at = [
+  { type = "view", key = "object.colour-frame" },
+  { type = "view", key = "scene.well-tube" },
+]
+
+[[rule]]
+id = "house/colour/stack-top-wins"
+theme = "colour"
+status = "active"
+stance = "extends"
+level = 1
+since = "2026-09-06"
+title = "An object's colour is a stack; the highest layer that speaks wins"
+text = """
+An object's colour is a stack: the hue derived from its uuid, the model, the category, a forced colour, a painted one, a texture. The highest layer that says something wins; a silent layer is listed but never called "covered"."""
+why = """
+A user who asks why an object has this colour must be able to see every layer and which one answered. The stack is a front end's own presentation, not something the standard describes."""
+rulings = [
+  { by = "maintainer", on = "2026-09-06" },
+]
+refs = [
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md" },
+]
+at = [
+  { type = "view", key = "object.colour-stack" },
+]
+
+[[rule]]
+id = "house/colour/null-colour-is-missing"
+theme = "colour"
+status = "active"
+stance = "restates"
+level = 1
+since = "2026-09-07"
+title = "The colour of nothing is consulted only when the map answered nothing"
+text = """
+The colour of "nothing" goes in `missing`, consulted only when the colour map answered nothing: a package's own NullColor keeps the last word. Transparent is the default, not a void."""
+why = """
+The Technical Reference puts the null colour at the head of the colour map; this rule applies that statement at the one place where a value falls outside the map."""
+rulings = [
+  { by = "maintainer", on = "2026-09-07" },
+]
+refs = [
+  { kind = "spec", doc = "RESQML TRG 2.2", at = "§4.21", note = "puts the null colour first; page to be re-verified" },
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md" },
+]
+at = [
+  { type = "view", key = "scene.property-paint" },
+]
+
+[[rule]]
+id = "house/colour/hole-is-not-flat-colour"
+theme = "colour"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-09-07"
+title = "An element the map cannot colour is a hole, not the colour beneath"
+text = """
+At a pointed element, an element the colour map cannot colour is a discarded fragment, not "the flat colour beneath". The panel says "hole" and never names a colour that is nowhere on screen."""
+why = """
+A panel that named the colour beneath would state something the user cannot see in the picture; this was a defect found on 07/09."""
+refs = [
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "a presentation rule, outside the scope of the TRG" },
+]
+at = [
+  { type = "view", key = "scene.pick-frame" },
+]
+
+[[rule]]
+id = "house/colour/ambiguous-kind-says-so"
+theme = "colour"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-09-06"
+title = "Painting a kind several properties carry paints the first, and says so"
+text = """
+Painting a kind that several properties of one representation carry paints the first and says so (targeted, concerned, ambiguous). A malformed filter catches nothing, never everything."""
+why = """
+A kind is not an identity: nothing in the standard forbids two properties of one kind on a representation. Silently choosing one would look like a precise answer."""
+refs = [
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "the TRG do not forbid two properties of one kind on a representation" },
+]
+at = [
+  { type = "view", key = "scene.property-paint" },
+]

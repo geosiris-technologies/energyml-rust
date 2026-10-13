@@ -1,0 +1,31 @@
+[package]
+name = "energyml-log"
+description = "Installs the one tracing subscriber a face needs: off by default, to stderr, switchable while the program runs."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "Apache-2.0"
+repository.workspace = true
+keywords = ["energyml", "tracing", "logging", "diagnostics", "cli"]
+categories = ["development-tools::debugging"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-log"
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+
+# Pure Rust, no native dependency. The libraries emit `tracing` spans and
+# events and never configure anything; this crate is what a *face* (the CLI,
+# the desktop app) calls once to say where they go.
+[dependencies]
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "json", "registry", "std", "ansi"] }
+# The ETP crates still speak `log`; this carries their records into the subscriber.
+tracing-log = { version = "0.2", default-features = false, features = ["log-tracer", "std"] }
+
+[lints.rust]
+missing_docs = "warn"
+
+# docs.rs builds on Linux with no native HDF5: every feature builds there.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true

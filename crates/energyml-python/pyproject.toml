@@ -1,0 +1,70 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+# **`energyml-rust`, and the import is `energyml.rust`.** The same publisher
+# already ships distributions `energyml-resqml2-2`, `energyml-witsml2-0`,
+# `energyml-utils`… which all drop their modules under `energyml/`. This bridge
+# sits beside them rather than in front of them: a project that has both writes
+# `from energyml.resqml…` and `from energyml.rust…` with nothing stepping on
+# anything.
+name = "energyml-rust"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+description = "Read and write EnergyML packages (EPC + HDF5: RESQML, WITSML, PRODML) from Python, over energyml-rust"
+authors = [{ name = "Geosiris" }]
+maintainers = [{ name = "Geosiris" }]
+# The version comes from `Cargo.toml`: two numbers for one thing would end up no
+# longer saying the same, and Rust is the source.
+dynamic = ["version"]
+dependencies = ["numpy>=1.21"]
+# What a package page shows, and what an index requires before accepting a
+# public release. Written now rather than at publication time: a release that
+# fails on a missing piece of metadata fails *after* having built four wheels.
+readme = "README.md"
+keywords = ["energyml", "resqml", "witsml", "prodml", "epc", "hdf5"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://www.geosiris.com"
+Documentation = "https://geosiris-technologies.github.io/energyml-rust/"
+Repository = "https://github.com/geosiris-technologies/energyml-rust"
+Issues = "https://github.com/geosiris-technologies/energyml-rust/issues"
+
+[tool.maturin]
+# **A mixed project**: `python/` holds the module tree and the compiled
+# extension is placed at its leaf. That is what allows naming the modules
+# (`energyml.rust.epc`) without Rust having to register submodules in
+# `sys.modules`.
+#
+# And there is **no** `python/energyml/__init__.py`, on purpose: without it the
+# folder is a namespace package (PEP 420) when this bridge is alone, and an
+# ordinary subfolder when another `energyml.*` distribution has placed its own.
+# Both work, and nothing overwrites anything — whereas the existing
+# distributions already overwrite that file between themselves.
+python-source = "python"
+module-name = "energyml.rust._core"
+# `abi3-py39` on the pyo3 side: one wheel per platform, not one per Python
+# version. A module compiled for 3.9 loads on 3.13, which divides by five what a
+# release has to build.
+# `python` turns on the binding **and** the HDF5 backend; off by default, they
+# cost the rest of the workspace nothing (see the crate's `Cargo.toml`). Without
+# this line, maturin would build an empty module — and not say so.
+features = ["python", "pyo3/extension-module"]

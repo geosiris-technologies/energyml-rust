@@ -1,0 +1,55 @@
+[package]
+name = "energyml-providers"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Querying public geoscience APIs, and reading what they answer"
+repository.workspace = true
+keywords = ["energyml", "geoscience", "api", "borehole", "gis"]
+categories = ["api-bindings", "science::geo"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-providers"
+include = ["src/**", "catalogue/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+
+[lib]
+# No `[[bin]]` and no special name: this crate is only a library, and
+# `energyml-cli` is the only binary of the workspace to be called `energyml`
+# (see `energyml-python/Cargo.toml` for what a duplicate costs).
+
+[dependencies]
+# **Nothing from storage, nothing from geometry.** This crate builds queries and
+# reads answers; what the entities *mean* is the business of `energyml-build`,
+# and what is made of them that of its operations. The only workspace
+# dependency is the GeoJSON reader, which is the format of the answers.
+energyml-build = { path = "../energyml-build", version = "0.1.0" }
+# **What a provider declares has to cross a boundary.** The front end renders the
+# form, the Python bridge will list it: without serialisation each would rewrite
+# the declaration in its own language — and a second copy of a list is a list
+# that ends up no longer saying the same thing.
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# XML is not a choice: a WFS answers its **refusals** as an
+# `ows:ExceptionReport`, and its quote (`resultType=hits`) in XML too, even
+# when JSON is asked for. A reader that only tried JSON would say "this is not
+# JSON" — true, useless, and it would send people looking in the wrong place.
+quick-xml = "0.38"
+
+# **The network is optional, and off by default.** wasm has no blocking call,
+# and a workspace member that requires an HTTP client would make every other
+# one pay for it through feature unification — the same rule the Python bridge
+# applies to HDF5 and pyo3.
+ureq = { version = "3", optional = true }
+
+[features]
+default = []
+# The native transport: a GET, and the body **streamed**.
+native = ["dep:ureq"]
+
+[dev-dependencies]
+energyml-build = { path = "../energyml-build", version = "0.1.0" }
+
+# docs.rs builds on Linux with no native HDF5: every feature builds there.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true

@@ -1,0 +1,22 @@
+# The themes of the registry. A theme is a field of a rule, not a piece of its
+# id to parse; a theme is a file (`<theme>.toml`) when it has rules to hold.
+
+[[theme]]
+id = "inherit"
+title = "Inheritance"
+
+[[theme]]
+id = "colour"
+title = "Colours"
+
+[[theme]]
+id = "attach"
+title = "Attachments and collections"
+
+[[theme]]
+id = "table"
+title = "Tables and categories"
+
+[[theme]]
+id = "series"
+title = "Time series"

@@ -1,0 +1,204 @@
+# Attachments and collections. Sources: ADR-0014 (attachments) and ADR-0009
+# (inheritance). Code today: `set_attachment`
+# and `relate_media` (crates/energyml-storage/src/epc/media.rs), the `media`
+# operation (crates/energyml-build/src/ops/media.rs). The rest is designed.
+#
+# Spec pages marked "to be re-verified" were deduced from page footers
+# (ADR-0014): check them before quoting to the paragraph.
+
+[[rule]]
+id = "house/attach/collection-applies-to-members"
+theme = "attach"
+status = "designed"
+stance = "silent"
+level = 1
+since = "2026-10-02"
+title = "What is attached to a collection applies to its members"
+text = """
+What is attached to a collection - or coloured on it - applies to its members. This is this tool's convention and it is said wherever it acts ("symbol inherited from collection X"): there is never a symbol without its provenance. It replaces the bounds of 01/10 (off by default, never from `project`, homogeneous collections only, a tie applies nothing): the collection now takes its place in the ordinary inheritance order."""
+why = """
+The specifications describe a collection as a grouping and an Attachment as a file with an indexed depth; none says that one flows from the first to the second. It was asked for so that an official symbol could be given to a set of wells at once instead of one by one."""
+rulings = [
+  { by = "maintainer", on = "2026-10-01" },
+  { by = "maintainer", on = "2026-10-02" },
+]
+refs = [
+  { kind = "spec", doc = "common TRG 2.3", at = "§8.4 p. 187, §8.5 p. 188", note = "describe collections, not propagation (to be re-verified)" },
+  { kind = "spec", doc = "CTA Overview 2.3", at = "§3.5 p. 17" },
+  { kind = "design", path = "docs/adr/0014-horizons-units-attachments-constraints.md" },
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md" },
+]
+at = [
+  { type = "view", key = "object.attachments" },
+  { type = "view", key = "object.colour-stack" },
+  { type = "type", key = "Attachment" },
+]
+
+[[rule]]
+id = "house/attach/md-meaning"
+theme = "attach"
+status = "designed"
+stance = "interpreted"
+level = 1
+since = "2026-10-01"
+title = "What the Md of an attachment means"
+text = """
+An attachment's `Md`: absent means the whole object; `0` means at the well's MD datum (not necessarily the ground); a value above 0 means at that depth along the tube. A `Md` with no known unit is refused by name; one outside the well's range is said, never clamped to an end."""
+why = """
+The schema describes Md as the along-hole measured depth where the attachment is indexed; the three cases above are how this tool reads it, in particular `0` for an image at the head of a well."""
+rulings = [
+  { by = "maintainer", on = "2026-10-01" },
+]
+refs = [
+  { kind = "spec", doc = "EML 2.3 schema", at = "element Attachment.Md", note = "along-hole measured depth where the attachment is indexed" },
+  { kind = "design", path = "docs/adr/0014-horizons-units-attachments-constraints.md" },
+]
+at = [
+  { type = "view", key = "object.attachments" },
+  { type = "view", key = "scene.well-tube" },
+  { type = "type", key = "Attachment.Md" },
+]
+
+[[rule]]
+id = "house/attach/empty-content-follows-uri"
+theme = "attach"
+status = "designed"
+stance = "ambiguous"
+level = 1
+since = "2026-10-01"
+title = "An empty content is not an empty file when there is an address"
+text = """
+An empty `Content` is not an empty file: with a `ContentUri`, the address is followed; with no address, it is an empty file and says so ("attachment without content")."""
+why = """
+`Content` is required by the schema and an empty base64 string is valid, so an empty value cannot mean "absent". The address is the only other thing the object can say."""
+refs = [
+  { kind = "design", path = "docs/adr/0014-horizons-units-attachments-constraints.md", note = "Content is required and empty base64 is valid, so the schema does not say" },
+]
+at = [
+  { type = "view", key = "object.attachments" },
+  { type = "type", key = "Attachment.Content" },
+]
+
+[[rule]]
+id = "house/attach/content-wins-over-uri"
+theme = "attach"
+status = "designed"
+stance = "ambiguous"
+level = 2
+since = "2026-10-01"
+title = "When content and address are both there, the content wins"
+text = """
+An attachment that carries both content and an address has two sources. The content wins, because the schema requires it; the address is shown, and a measurable difference between the two is reported."""
+why = """
+The schema does not say which of two sources prevails. Content is the one it makes mandatory."""
+refs = [
+  { kind = "design", path = "docs/adr/0014-horizons-units-attachments-constraints.md", note = "the schema is silent on a second source" },
+]
+at = [
+  { type = "view", key = "object.attachments" },
+  { type = "view", key = "check.report" },
+]
+
+[[rule]]
+id = "house/attach/uri-is-part-path"
+theme = "attach"
+status = "designed"
+stance = "silent"
+level = 2
+since = "2026-10-01"
+title = "A relative ContentUri is a package part path"
+text = """
+A relative `ContentUri` is read as the path of a package part (`media/symbols/x.png`). This is this tool's convention and it is said as such. The full `pack://` form is also read."""
+why = """
+The schema does not say what the URI points at. A part path keeps the file inside the package, which is what makes the attachment travel with it. Still an open question."""
+refs = [
+  { kind = "design", path = "docs/adr/0014-horizons-units-attachments-constraints.md", note = "the schema does not say what the URI targets" },
+]
+at = [
+  { type = "view", key = "object.attachments" },
+]
+
+[[rule]]
+id = "house/attach/external-url-on-demand"
+theme = "attach"
+status = "designed"
+stance = "extends"
+level = 1
+since = "2026-10-01"
+title = "An external address is followed only on demand"
+text = """
+An external address is never followed when a package is opened: only on a click, or by a setting that is off by default and says so on its button. Credentials are omitted; a CORS refusal is named as a server that does not publish to browsers."""
+why = """
+Opening a package must not make a front end talk to the network on its own. The standard is silent: this protects the user who opens a file they did not write."""
+rulings = [
+  { by = "maintainer", on = "2026-10-01" },
+]
+refs = [
+  { kind = "design", path = "docs/adr/0014-horizons-units-attachments-constraints.md" },
+]
+at = [
+  { type = "view", key = "object.attachments" },
+]
+
+[[rule]]
+id = "house/attach/form-by-destination"
+theme = "attach"
+status = "designed"
+stance = "interpreted"
+level = 2
+since = "2026-10-01"
+title = "The form written follows the destination"
+text = """
+An attachment is written in the form its destination accepts: an EPC part passes everywhere; an `Attachment` object exists only in EML 2.3 and is refused by name on a RESQML 2.0.1 package, with the part form proposed instead."""
+why = """
+A form that the target release cannot hold must be refused where the user asks for it, not discovered by the next reader."""
+rulings = [
+  { by = "maintainer", on = "2026-10-01" },
+]
+refs = [
+  { kind = "design", path = "docs/adr/0014-horizons-units-attachments-constraints.md" },
+]
+at = [
+  { type = "operation", key = "attach" },
+]
+
+[[rule]]
+id = "house/attach/declared-mime-never-guessed"
+theme = "attach"
+status = "active"
+stance = "restates"
+level = 2
+since = "2026-10-01"
+title = "The type of a stored file is declared, never guessed"
+text = """
+The media type of a stored file is declared by the caller, never guessed from its extension. A file linked to nothing is written and said. Names forbidden by the Packaging Conventions are refused."""
+why = """
+An extension is not a media type, and a file silently attached to nothing is the kind of absence that looks like success."""
+refs = [
+  { kind = "spec", doc = "Packaging Conventions 1.0", at = "§3.2.1", note = "part names that are forbidden" },
+  { kind = "code", path = "crates/energyml-storage/src/epc/media.rs", at = "set_attachment" },
+  { kind = "design", path = "docs/adr/0014-horizons-units-attachments-constraints.md" },
+]
+at = [
+  { type = "operation", key = "media" },
+]
+
+[[rule]]
+id = "house/attach/parts-are-local-to-epc"
+theme = "attach"
+status = "active"
+stance = "silent"
+level = 2
+since = "2026-10-01"
+title = "Media parts are a capability of a local package"
+text = """
+Media parts belong to a local package, not to the mother trait of the storage layer: an ETP connection has no files, and the compiler says so instead of a runtime error."""
+why = """
+ETP carries objects and arrays, not files. Putting parts on the mother trait would promise something a server cannot do."""
+refs = [
+  { kind = "design", path = "docs/adr/0014-horizons-units-attachments-constraints.md", note = "ETP does not carry files" },
+  { kind = "design", path = "docs/adr/0002-storage-trait-follows-etp.md" },
+]
+at = [
+  { type = "view", key = "package.files" },
+]

@@ -1,0 +1,110 @@
+[package]
+name = "energyml-build"
+description = "Create EnergyML objects from geometry, foreign files or other objects — one trait, a plan, then the write."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "Apache-2.0"
+repository.workspace = true
+keywords = ["energyml", "resqml", "epc", "geojson", "geoscience"]
+categories = ["science::geo", "parser-implementations"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-build"
+include = ["src/**", "benches/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+# One test binary, not one per file: see `tests/main.rs` for the measure.
+autotests = false
+
+# **The reading and the writing are separated inside the crate, not between two
+# of them.** `geojson` and `sigeol` are pure — a parser and a vocabulary, no
+# store, no I/O — and they are where everything that can be *wrong* lives; the
+# module that opens a package and writes an `.h5` is plumbing over crates that
+# already exist. A translation crate needs two crates because wasm is a hard
+# requirement for it; nothing in a browser imports a SIGEOL export into an EPC,
+# so one crate with an honest internal seam is the smaller true answer. If that
+# ever changes, the seam is already where the split would go.
+[dependencies]
+energyml-core = { path = "../energyml-core", version = "0.1.0" }
+energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.0" }
+energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.1.0" }
+# The two other packages a model carries — Lutetia's wells (`witsml-wells`) and
+# its doublet's production (`prodml-doublet`), steps 10 and 11 of the reference
+# model. The latest release of each; already in
+# every build through `energyml-schemas`, so nothing new reaches wasm.
+energyml-witsml-2-1 = { path = "../generated/energyml-witsml-2-1", version = "0.1.0" }
+energyml-prodml-2-3 = { path = "../generated/energyml-prodml-2-3", version = "0.1.0" }
+energyml-storage = { path = "../energyml-storage", version = "0.1.0" }
+# Reprojection: a GeoJSON is WGS 84 by definition and RESQML wants the
+# package's own projected system. The one Reprojector the workspace ships.
+energyml-proj = { path = "../energyml-proj", version = "0.1.0" }
+energyml-domain = { path = "../energyml-domain", version = "0.1.0" }
+# The currency of a shape: what the readers produce and the exporters consume.
+energyml-geometry = { path = "../energyml-geometry", version = "0.1.0" }
+# The exporters, for `export-media`:
+# a part of the package written by the registry `energyml export` uses, never
+# by a second writer. Already in every WebAssembly build.
+energyml-export = { path = "../energyml-export", version = "0.1.0" }
+# What is computed from a shape — the outline today.
+energyml-analysis = { path = "../energyml-analysis", version = "0.1.0" }
+# `section-view` reads the trace a drawing was made along back from the
+# drawing's metadata — the one reader of it (`svg::read_metadata`) — and the
+# cross sections from the function that drew them. No `png`: the operation
+# takes a PNG, it never renders one.
+energyml-section = { path = "../energyml-section", version = "0.1.0" }
+# The derives that declare an operation's parameters and inputs once
+# (ADR 0017).
+energyml-build-derive = { path = "../energyml-build-derive", version = "0.1.0" }
+# Spans and events only: this crate emits, a face (`energyml-log`) configures.
+tracing = { workspace = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
+# Deterministic object uuids, derived from the source's own identifiers, so a
+# second run of the same file names the same objects. `v5` only — no clock.
+uuid = { version = "1", default-features = false, features = ["v5"] }
+# The recipes (`recipe.rs`): a versioned TOML
+# file of ordered steps. The version `energyml-codegen` already reads its
+# `codegen.toml` with, so the workspace carries one TOML reader; pure Rust
+# (`toml_parser`, `winnow`, `serde_spanned`), so the crate still builds for wasm.
+toml = "1.1"
+
+[features]
+default = []
+# Writing the point arrays needs a real HDF5 backend, like everywhere else.
+hdf5 = ["energyml-storage/hdf5"]
+
+[dev-dependencies]
+energyml-schemas = { path = "../energyml-schemas", version = "0.1.0", features = ["all"] }
+# `tests/export_media.rs` opens the saved package as the archive it is, not
+# through the store that wrote it — the version `energyml-storage` writes with.
+zip = { version = "7", default-features = false, features = ["deflate"] }
+
+[[test]]
+name = "build"
+path = "tests/main.rs"
+
+# Each installs a process-wide default (the GeolTs chart): one process each.
+[[test]]
+name = "contacts_rank"
+path = "tests/contacts_rank.rs"
+
+[[test]]
+name = "stratigraphy"
+path = "tests/stratigraphy.rs"
+
+[[test]]
+name = "earth_model_from_stratigraphy"
+path = "tests/earth_model_from_stratigraphy.rs"
+
+# **The speed report**, not a test: `cargo bench --workspace --bench speed`.
+# Neither `cargo test` nor the CI runs it, and it depends on nothing — a report
+# is asked for, not an analysis of variance.
+[[bench]]
+name = "speed"
+harness = false
+
+[lints.rust]
+missing_docs = "warn"
+
+# docs.rs builds on Linux with no native HDF5: only features needing no native library are listed.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

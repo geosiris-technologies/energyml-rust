@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "energyml-rust: read, write and compute EnergyML data"
+type: software
+authors:
+  - name: "Geosiris"
+    website: "https://www.geosiris.com"
+repository-code: "https://github.com/geosiris-technologies/energyml-rust"
+url: "https://www.geosiris.com"
+license: Apache-2.0
+abstract: >-
+  A Rust library, a Python package and a command-line tool to read, write and
+  compute EnergyML data (RESQML, WITSML, PRODML): EPC packages made of zip,
+  XML and HDF5. Developed by Geosiris; not affiliated with or endorsed by
+  Energistics or The Open Group.
+keywords:
+  - EnergyML
+  - RESQML
+  - WITSML
+  - PRODML
+  - EPC
+  - HDF5
+  - geoscience
+# TODO(verify): add `version` and `date-released` at the first release.

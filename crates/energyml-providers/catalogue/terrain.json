@@ -1,0 +1,259 @@
+{
+  "sources": [
+    {
+      "id": "ign-rge-alti",
+      "title": "IGN RGE ALTI - terrain model (bare earth), 1 m",
+      "kind": "relief",
+      "protocol": {
+        "type": "wmsRaster",
+        "url": "https://data.geopf.fr/wms-r",
+        "layer": "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES",
+        "format": "image/geotiff"
+      },
+      "coverage": {
+        "boxes": [
+          [
+            -5.5,
+            41.0,
+            10.0,
+            51.2
+          ],
+          [
+            -61.85,
+            15.8,
+            -60.95,
+            16.55
+          ],
+          [
+            -61.25,
+            14.35,
+            -60.8,
+            14.9
+          ],
+          [
+            -54.6,
+            2.1,
+            -51.6,
+            5.8
+          ],
+          [
+            55.2,
+            -21.4,
+            55.85,
+            -20.85
+          ],
+          [
+            45.0,
+            -13.0,
+            45.3,
+            -12.6
+          ]
+        ]
+      },
+      "crs": [
+        2154,
+        4326
+      ],
+      "resolutionM": 1.0,
+      "vertical": {
+        "unit": "m",
+        "datum": "NGF-IGN69 (France metropolitaine; overseas territories use other datums)"
+      },
+      "licence": "Licence Ouverte / Etalab 2.0",
+      "attribution": "IGN — RGE ALTI®",
+      "needsKey": false,
+      "note": "Measured: GetMap CRS=EPSG:2154 BBOX=651000,6860000,652000,6861000 WIDTH=HEIGHT=20 answered 200 image/geotiff, little-endian, uncompressed, one strip, float32, GDAL_NODATA -99999. MaxWidth/MaxHeight 5010. The coverage box is the layer's geographic envelope, which includes overseas territories and much sea or foreign land: a box inside it is not a promise of data. EPSG:4326 listed but not measured; WMS 1.3.0 wants lat,lon there. Coverage (01/10/2026): mainland France with Corsica, Guadeloupe, Martinique, Guyane, La Réunion and Mayotte, each as an APPROXIMATE box. The layer's own WMS envelope (-62.95, -24, 58, 51.11) was not used: it is the hull of all of them and holds Spain, which then passed the coverage test and answered nothing but no-data."
+    },
+    {
+      "id": "ign-lidar-hd-mnt",
+      "title": "IGN LiDAR HD - terrain model (bare earth), 0.5 m",
+      "kind": "relief",
+      "protocol": {
+        "type": "wmsRaster",
+        "url": "https://data.geopf.fr/wms-r",
+        "layer": "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.LAMB93",
+        "format": "image/geotiff"
+      },
+      "coverage": {
+        "boxes": [
+          [
+            -5.5,
+            41.0,
+            10.0,
+            51.2
+          ]
+        ]
+      },
+      "crs": [
+        2154
+      ],
+      "resolutionM": 0.5,
+      "vertical": {
+        "unit": "m",
+        "datum": "NGF-IGN69"
+      },
+      "licence": "Licence Ouverte / Etalab 2.0",
+      "attribution": "IGN — LiDAR HD",
+      "needsKey": false,
+      "note": "Coverage is APPROXIMATE: the box is metropolitan France, but LiDAR HD coverage is partial and still growing, so a box inside it may answer with nodata. Same service and same GeoTIFF form as ign-rge-alti; vertical datum and licence not re-verified for this layer."
+    },
+    {
+      "id": "ign-rge-alti-mns",
+      "title": "IGN RGE ALTI - surface model (buildings and vegetation included)",
+      "kind": "relief",
+      "protocol": {
+        "type": "wmsRaster",
+        "url": "https://data.geopf.fr/wms-r",
+        "layer": "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES.MNS",
+        "format": "image/geotiff"
+      },
+      "coverage": {
+        "boxes": [
+          [
+            -5.5,
+            41.0,
+            10.0,
+            51.2
+          ]
+        ]
+      },
+      "crs": [
+        2154
+      ],
+      "resolutionM": 1.0,
+      "vertical": {
+        "unit": "m",
+        "datum": "NGF-IGN69"
+      },
+      "licence": "Licence Ouverte / Etalab 2.0",
+      "attribution": "IGN — RGE ALTI®",
+      "needsKey": false,
+      "note": "This is a SURFACE model, not bare earth: it includes buildings and vegetation. Unverified: coverage box, resolution, CRS list and datum are assumed to follow ign-rge-alti and were not measured for this layer."
+    },
+    {
+      "id": "ign-ortho",
+      "title": "IGN orthophotos (BD ORTHO)",
+      "kind": "imagery",
+      "protocol": {
+        "type": "wmts",
+        "url": "https://data.geopf.fr/wmts",
+        "layer": "ORTHOIMAGERY.ORTHOPHOTOS",
+        "tileMatrixSet": "PM",
+        "format": "image/jpeg",
+        "style": "normal"
+      },
+      "coverage": {
+        "boxes": [
+          [
+            -5.5,
+            41.0,
+            10.0,
+            51.2
+          ]
+        ]
+      },
+      "crs": [
+        3857
+      ],
+      "resolutionM": 0.2,
+      "vertical": null,
+      "licence": "Licence Ouverte / Etalab 2.0",
+      "attribution": "IGN — BD ORTHO®",
+      "needsKey": false,
+      "note": "Unverified: coverage box (metropolitan France only; overseas orthophotos exist under other layers) and the 0.2 m resolution, which is the nominal BD ORTHO value and varies by area. Tile matrix set PM is Web Mercator, EPSG:3857."
+    },
+    {
+      "id": "copernicus-dem-30",
+      "title": "Copernicus DEM GLO-30 (surface model), 30 m",
+      "kind": "relief",
+      "protocol": {
+        "type": "cog",
+        "url": "https://copernicus-dem-30m.s3.amazonaws.com/"
+      },
+      "coverage": {
+        "boxes": [
+          [
+            -180.0,
+            -90.0,
+            180.0,
+            90.0
+          ]
+        ]
+      },
+      "crs": [
+        4326
+      ],
+      "resolutionM": 30.0,
+      "vertical": {
+        "unit": "m",
+        "datum": "EGM2008 geoid heights (unverified)"
+      },
+      "licence": "Copernicus DEM licence",
+      "attribution": "© DLR e.V. 2021 and © Airbus Defence and Space GmbH 2021 provided under COPERNICUS by the European Union and ESA",
+      "needsKey": false,
+      "note": "AWS open data bucket copernicus-dem-30m, one Cloud Optimized GeoTIFF per 1 degree cell. This is a SURFACE model: buildings and vegetation are included. Unverified: the per-cell object naming, the vertical datum, and whether the licence terms allow every use here; read the licence before relying on it."
+    },
+    {
+      "id": "aws-terrain-tiles",
+      "title": "AWS Terrain Tiles (terrarium PNG), worldwide",
+      "kind": "relief",
+      "protocol": {
+        "type": "xyzTerrarium",
+        "template": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
+      },
+      "coverage": {
+        "boxes": [
+          [
+            -180.0,
+            -90.0,
+            180.0,
+            90.0
+          ]
+        ]
+      },
+      "crs": [
+        3857
+      ],
+      "resolutionM": 30.0,
+      "vertical": {
+        "unit": "m",
+        "datum": "mixed, depends on the underlying source (unverified)"
+      },
+      "licence": "Mixed open data (SRTM, 3DEP and others); see the attribution document",
+      "attribution": "Terrain Tiles on AWS, built from several sources: https://github.com/tilezen/joerd/blob/master/docs/attribution.md",
+      "needsKey": false,
+      "note": "Attribution is required. Unverified: the 30 m figure is the nominal global floor, better data exists in places; the licence line is a summary, the attribution document is the authority."
+    },
+    {
+      "id": "s2cloudless-2016",
+      "title": "Sentinel-2 cloudless 2016 (EOX), imagery",
+      "kind": "imagery",
+      "protocol": {
+        "type": "wmts",
+        "url": "https://tiles.maps.eox.at/wmts",
+        "layer": "s2cloudless",
+        "tileMatrixSet": "WGS84",
+        "format": "image/jpeg"
+      },
+      "coverage": {
+        "boxes": [
+          [
+            -180.0,
+            -90.0,
+            180.0,
+            90.0
+          ]
+        ]
+      },
+      "crs": [
+        4326
+      ],
+      "resolutionM": 10.0,
+      "vertical": null,
+      "licence": "CC BY 4.0",
+      "attribution": "Sentinel-2 cloudless - https://s2maps.eu by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2016 & 2017)",
+      "needsKey": false,
+      "note": "ONLY the 2016 mosaic is CC BY 4.0. Later years of s2cloudless are NON-COMMERCIAL (CC BY-NC-SA): do not point this entry at a later layer without changing the licence. Unverified: the layer name for the 2016 mosaic as served (EOX may name it s2cloudless-2016), the tile matrix set name, and the 10 m resolution."
+    }
+  ]
+}

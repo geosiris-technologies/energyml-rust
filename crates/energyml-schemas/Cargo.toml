@@ -1,0 +1,80 @@
+[package]
+name = "energyml-schemas"
+description = "Every EnergyML schema version this workspace generates, in one registry, one Cargo feature per version."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+# Spelled out rather than inherited: wasm-pack parses the manifests of a
+# WebAssembly front end's path dependencies before running wasm-opt, and
+# does not resolve workspace inheritance — `license.workspace = true` reaches
+# it as a table where it wants a string, and the wasm build dies *after*
+# writing the module, leaving a usable artefact and an unread exit code.
+license = "Apache-2.0"
+repository.workspace = true
+keywords = ["energyml", "resqml", "witsml", "prodml", "schemas"]
+categories = ["parser-implementations", "science::geo"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-schemas"
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+
+[dependencies]
+energyml-core = { path = "../energyml-core", version = "0.1.0" }
+
+# Every generated crate the workspace produces, each **optional**: a version is
+# compiled in only when its feature is on (see `[features]`). **This list is
+# the only one.** Adding an Energistics release is a line here, a feature below,
+# a row of `KNOWN_VERSIONS` and a `register` line in `src/lib.rs`, and
+# `tests/complete.rs` fails if any is forgotten.
+energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0", version = "0.1.0", optional = true }
+energyml-eml-2-1 = { path = "../generated/energyml-eml-2-1", version = "0.1.0", optional = true }
+energyml-eml-2-2 = { path = "../generated/energyml-eml-2-2", version = "0.1.0", optional = true }
+energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.0", optional = true }
+energyml-prodml-2-0 = { path = "../generated/energyml-prodml-2-0", version = "0.1.0", optional = true }
+energyml-prodml-2-2 = { path = "../generated/energyml-prodml-2-2", version = "0.1.0", optional = true }
+energyml-prodml-2-3 = { path = "../generated/energyml-prodml-2-3", version = "0.1.0", optional = true }
+energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1", version = "0.1.0", optional = true }
+energyml-resqml-2-2-dev3 = { path = "../generated/energyml-resqml-2-2-dev3", version = "0.1.0", optional = true }
+energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.1.0", optional = true }
+energyml-witsml-2-0 = { path = "../generated/energyml-witsml-2-0", version = "0.1.0", optional = true }
+energyml-witsml-2-1 = { path = "../generated/energyml-witsml-2-1", version = "0.1.0", optional = true }
+
+# **One feature per schema version**, spelled as Energistics spells a qualified
+# type (`resqml22.Model`, `eml23.Citation`): `eml20`..`eml23`, `resqml20` (the
+# 2.0.1 crate; its `schemaVersion` is `2.0`), `resqml22`, `resqml22dev3`,
+# `witsml20`, `witsml21`, `prodml20`, `prodml22`, `prodml23`.
+#
+# A version feature enables its crate and **the EML version that crate is built
+# on** (read from the generated `Cargo.toml`s, and held by
+# `tests/features.rs`), so `resqml22` alone brings RESQML 2.2 and EML 2.3 and
+# nothing else. EML versions stay features of their own.
+[features]
+# Everything, so that a face which never chose keeps working. A library asking
+# for fewer says `default-features = false` and names the versions it reads.
+default = ["all"]
+all = ["eml", "resqml", "witsml", "prodml"]
+
+# The families.
+eml = ["eml20", "eml21", "eml22", "eml23"]
+resqml = ["resqml20", "resqml22", "resqml22dev3"]
+witsml = ["witsml20", "witsml21"]
+prodml = ["prodml20", "prodml22", "prodml23"]
+
+# The versions.
+eml20 = ["dep:energyml-eml-2-0"]
+eml21 = ["dep:energyml-eml-2-1"]
+eml22 = ["dep:energyml-eml-2-2"]
+eml23 = ["dep:energyml-eml-2-3"]
+resqml20 = ["dep:energyml-resqml-2-0-1", "eml20"]
+resqml22 = ["dep:energyml-resqml-2-2", "eml23"]
+resqml22dev3 = ["dep:energyml-resqml-2-2-dev3", "eml22"]
+witsml20 = ["dep:energyml-witsml-2-0", "eml21"]
+witsml21 = ["dep:energyml-witsml-2-1", "eml23"]
+prodml20 = ["dep:energyml-prodml-2-0", "eml21"]
+prodml22 = ["dep:energyml-prodml-2-2", "eml23"]
+prodml23 = ["dep:energyml-prodml-2-3", "eml23"]
+
+# docs.rs builds on Linux with no native HDF5: only features needing no native library are listed.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true

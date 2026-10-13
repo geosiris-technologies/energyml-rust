@@ -1,0 +1,6 @@
+# TODO(verify): replace with the real GitHub team once the organisation is set up.
+* @geosiris-technologies/maintainers
+
+# Generated code is written by the regeneration bot only (see workflows/generated-guard.yml).
+/crates/generated/ @geosiris-technologies/maintainers
+/.github/ @geosiris-technologies/maintainers

@@ -1,0 +1,8 @@
+# The image is built from what the CLI needs, nothing more.
+*
+!Cargo.toml
+!Cargo.lock
+!crates/
+!docker/
+!scripts/galaxy/
+**/target/

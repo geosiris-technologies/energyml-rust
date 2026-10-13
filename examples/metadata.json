@@ -1,0 +1,17 @@
+{
+  "uuid": "uuid",
+  "uri": "uri",
+  "title": "Citation.Title",
+  "contentType": "contentType",
+  "qualifiedType": "qualifiedType",
+  "originator": "Citation.Originator",
+  "created": "Citation.Creation",
+  "format": "Citation.Format",
+
+  "interpretationUuid": "RepresentedInterpretation.uuid",
+  "interpretationTitle": "RepresentedInterpretation.Title",
+
+  "featureUuid": "RepresentedInterpretation.InterpretedFeature.uuid",
+  "featureTitle": "RepresentedInterpretation.InterpretedFeature.Citation.Title",
+  "featureType": "RepresentedInterpretation.InterpretedFeature.qualifiedType"
+}

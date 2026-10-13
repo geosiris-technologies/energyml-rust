@@ -1,0 +1,30 @@
+[package]
+name = "energyml-analysis"
+description = "What is computed from EnergyML shapes: wells, grids, structural measures, laws and tests, above geometry, never inside it."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["energyml", "interpolation", "wells", "geoscience", "statistics"]
+categories = ["science::geo", "mathematics", "algorithms"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-analysis"
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+
+[dependencies]
+# The pieces of the minimum curvature method (`direction`, `dogleg`,
+# `ratio_factor`) live in `energyml_geometry::min_curvature`: reading a
+# surveyed hole is reading a shape, and this crate sits above geometry, never
+# inside it.
+energyml-geometry = { path = "../energyml-geometry", version = "0.1.0" }
+# The domain-neutral algorithms (interpolation, meshing, iso-contours), re-exported
+# from `lib.rs` so `energyml_analysis::kriging::…` and the other paths keep resolving.
+energyml-geostat = { path = "../energyml-geostat", version = "0.1.0" }
+thiserror = "2.0"
+
+# docs.rs builds on Linux with no native HDF5: every feature builds there.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true

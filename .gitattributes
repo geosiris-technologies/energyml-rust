@@ -1,0 +1,63 @@
+# Replaces the monorepo's .gitattributes (the manifest copies that one, then the
+# overlay is laid on top): same rules, plus the ones a public repository needs.
+#
+# LF in the repository AND in every checkout. Development happens on Windows, CI
+# runs on Linux; the generated crates are compared byte for byte by
+# `generate --check` and by the generated-code guard, so a CRLF checkout would
+# make the same tree differ from one platform to the next.
+* text=auto eol=lf
+
+# ---- Source and config ----
+*.rs      text eol=lf
+*.toml    text eol=lf
+*.md      text eol=lf
+*.json    text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.py      text eol=lf
+*.txt     text eol=lf
+*.csv     text eol=lf
+*.tsv     text eol=lf
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+
+# ---- Schemas and reference data ----
+*.xsd     text eol=lf
+*.xml     text eol=lf
+*.avsc    text eol=lf
+
+# ---- Scripts: line endings are load-bearing here ----
+# A .sh with CRLF fails on Linux with a confusing "bad interpreter" error.
+*.sh      text eol=lf
+ci/hooks/*  text eol=lf
+*.ps1     text eol=crlf
+
+# ---- Binary: never convert, never diff as text ----
+*.pdf     binary
+*.tgz     binary
+*.gz      binary
+*.zip     binary
+*.7z      binary
+*.wasm    binary
+*.h5      binary
+*.hdf5    binary
+*.epc     binary
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.ico     binary
+*.ttf     binary
+*.otf     binary
+*.woff    binary
+*.woff2   binary
+*.tif     binary
+*.tiff    binary
+*.whl     binary
+# Byte strings written by another implementation: a conversion would corrupt
+# exactly what they exist to pin.
+*.avro    binary
+
+# ---- Bytes that become part of a package ----
+# Section drawings attached to a model as they are: never converted.
+models/**/donnees/profils/*.svg -text

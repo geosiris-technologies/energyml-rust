@@ -1,0 +1,44 @@
+# The pinned Lutetia reference model, fetched in CI and on demand — never committed.
+#
+# `scripts/fetch-lutetia.py --dest target/lutetia` downloads the archive of the
+# commit below and lays out the directory that `$ENERGYML_LUTETIA_DIR` points
+# to (the contract is in the README of `energyml-lutetia`):
+#
+#     package/            the clean model (Lutetia.epc + Lutetia.h5)
+#     package-with-errors/  the variant with deliberate errors
+#     recipe/             recette.toml, donnees/, energyml-version
+#     written-on          platform stamp of the replay (optional)
+#
+# No test goes to the network: tests read the directory the script filled.
+#
+# To bump the pin (the order matters, there is no cycle):
+#   1. publish `energyml`;
+#   2. in `energyml-lutetia`, advance recipe/energyml-version, replay with
+#      scripts/replay.py and commit package/, package-with-errors/, written-on;
+#   3. here, change `commit` to that commit, and run the tests.
+# The tests that replay the recipe compare with the pinned packages byte for
+# byte only on the platform in `written-on`, and up to float noise elsewhere.
+#
+# PENDING DECISION (version policy): whether the replay tests must compare only
+# at equal `energyml` versions, or whether both repositories move in one change
+# through a local `[patch]`, is not decided yet. Until it is, a change to an
+# operation can fail the replay tests until Lutetia is regenerated.
+
+schema = 1
+
+[source]
+repo = "geosiris-technologies/energyml-lutetia"
+url = "https://github.com/geosiris-technologies/energyml-lutetia"
+# PLACEHOLDER: the repository does not exist yet, so there is no commit to pin.
+# All zeros makes scripts/fetch-lutetia.py fail with a clear message. Replace it
+# with the 40-hex commit of the first published replay.
+commit = "0000000000000000000000000000000000000000"
+
+# SHA-256 of the large files at that commit, to fill in when the pin is real
+# (`sha256sum package/Lutetia.epc ...` in a checkout at that commit). Each entry
+# is checked after extraction; a mismatch is a hard failure.
+[sha256]
+# "package/Lutetia.epc" = "<64 hex>"
+# "package/Lutetia.h5" = "<64 hex>"
+# "package-with-errors/Lutetia.epc" = "<64 hex>"
+# "package-with-errors/Lutetia.h5" = "<64 hex>"

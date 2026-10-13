@@ -1,0 +1,72 @@
+[package]
+name = "energyml-section"
+description = "The section view: long and cross sections of a model along a trace — wells projected, surfaces cut — computed into a catalogue and written as SVG."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+# Spelled out rather than inherited, as `energyml-geometry` explains: wasm-pack
+# reads the manifests of a WebAssembly front end's path dependencies and does not
+# resolve workspace inheritance for `license`.
+license = "Apache-2.0"
+repository.workspace = true
+keywords = ["energyml", "svg", "cross-section", "well", "geoscience"]
+categories = ["visualization", "science::geo"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-section"
+include = ["src/**", "fonts/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+# One test binary, `tests/main.rs` (ADR-0016: one crate, one test binary).
+autotests = false
+
+[dependencies]
+energyml-core = { workspace = true }
+# Reprojection into the scene's system, the strata of a wellbore by MD, units.
+energyml-domain = { path = "../energyml-domain", version = "0.1.0" }
+# Reading a representation into points and triangles, `section::cut`,
+# `fence::curve` / `panel` / `crosslines`, the heads of wells.
+energyml-geometry = { path = "../energyml-geometry", version = "0.1.0" }
+# `profile::Corridor`: projecting heads on a trace, the band.
+energyml-analysis = { path = "../energyml-analysis", version = "0.1.0" }
+# `text`: measuring a label against the font the SVG is written in — the
+# drilling sheet's own table, not a second one (ADR-0015).
+energyml-sheet = { path = "../energyml-sheet", version = "0.1.0" }
+# `read::package`: a package's listing — its colour sets, its index, the
+# objects a section takes by default — for a face that holds a whole store.
+energyml-storage = { path = "../energyml-storage", version = "0.1.0" }
+# The catalogue, the inputs and the view travel as JSON (the front end, the CLI, the
+# SVG's metadata) and come back from it (`energyml profile --from-svg`).
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+# `png`: the SVG rendered to a PNG, in Rust, with the font the labels were
+# measured against (`fonts/`) — optional, so a build without it says so rather
+# than carrying a rasteriser nobody asked for. Pure Rust, wasm included. No
+# system fonts: the same picture on every machine.
+resvg = { version = "0.48", optional = true, default-features = false, features = ["text"] }
+
+[features]
+default = []
+# The PNG export (`png::render`). Off by default: without it, `png::render`
+# refuses by name and says how to get it.
+png = ["dep:resvg"]
+
+[dev-dependencies]
+# `tests/svg.rs` re-reads the SVG with a parser that is not this crate's code.
+quick-xml = "0.41"
+energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.0" }
+energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.1.0" }
+energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0", version = "0.1.0" }
+energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1", version = "0.1.0" }
+energyml-schemas = { path = "../energyml-schemas", version = "0.1.0", features = ["all"] }
+
+[lints.rust]
+missing_docs = "warn"
+
+[[test]]
+name = "section_view"
+path = "tests/main.rs"
+
+# docs.rs builds on Linux with no native HDF5: every feature builds there.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true

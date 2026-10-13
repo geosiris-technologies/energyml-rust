@@ -1,0 +1,17 @@
+[book]
+title = "energyml-rust"
+authors = ["Geosiris"]
+language = "en"
+src = "."
+
+[build]
+build-dir = "../target/book"
+
+[output.html]
+git-repository-url = "https://github.com/geosiris-technologies/energyml-rust"
+default-theme = "light"
+
+# Diagrams use ```mermaid fences, which GitHub draws natively.
+# TODO(verify): add the mdbook-mermaid preprocessor to the CI that builds the book:
+# [preprocessor.mermaid]
+# command = "mdbook-mermaid"

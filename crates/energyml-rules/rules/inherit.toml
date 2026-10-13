@@ -1,0 +1,213 @@
+# Inheritance: what an object does not carry itself, where it is looked up.
+# Source: ADR-0009. The rules were first inscribed as `designed`; once the walk
+# was coded (`energyml-domain::inherit`, asked by `color_inherit` for colours)
+# they passed `active`, and the earlier FIRP rule passed `superseded` in the
+# same commit, beside `rank-order`.
+
+[[rule]]
+id = "house/inherit/rank-order"
+theme = "inherit"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-10-02"
+title = "Where an object looks for what it does not carry"
+text = """
+What an object does not carry itself is looked up in this order: the object itself; the collections that reference it (and collections of collections); its direct parents; the collections that reference the parents (nested ones too); the parents' parents, with the same rules; then the model. The first rank that answers wins, and the walk goes down a rank only when the rank above found nothing. Found nothing: the object keeps the hue derived from its uuid."""
+why = """
+The specification gives no priority and no inheritance: the three TRG name a colour or an attachment on an object and say nothing of what happens for the objects that do not carry one. This order was chosen so that a value set deliberately close to an object always beats one set farther away, and so that a collection - which groups objects on purpose - counts before a parent that merely describes them."""
+rulings = [
+  { by = "maintainer", on = "2026-10-02" },
+]
+refs = [
+  { kind = "code", path = "crates/energyml-domain/src/inherit.rs", at = "Walker", note = "the walk" },
+  { kind = "code", path = "crates/energyml-domain/src/color_inherit.rs", at = "Cascade::inherited", note = "the colour cascade under this order" },
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md" },
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "no priority or inheritance in the three TRG; TUG §2.2.6 not written" },
+]
+supersedes = ["house/inherit/firp-parents", "house/colour/specific-wins-with-fallbacks"]
+at = [
+  { type = "view", key = "object.colour-stack" },
+  { type = "view", key = "object.attachments" },
+  { type = "view", key = "graph.decision-path" },
+]
+
+[[rule]]
+id = "house/inherit/shortest-path-then-document-order"
+theme = "inherit"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-10-02"
+title = "Shortest path wins; a tie goes to the first in document order"
+text = """
+Within a rank the shortest path wins. On equal distance the first candidate wins, "first" being the order of the document - the position of the reference in the object that holds it - and then the uuid as a last resort, never the order a walk happened to visit."""
+why = """
+A conflict needs a verdict everyone can reproduce: the order of a traversal depends on how the index was built, the order of the document does not. The specification names no tie-break at all."""
+rulings = [
+  { by = "maintainer", on = "2026-10-02" },
+]
+refs = [
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "no tie-break in any TRG" },
+]
+at = [
+  { type = "view", key = "graph.decision-path" },
+]
+
+[[rule]]
+id = "house/inherit/ties-are-kept"
+theme = "inherit"
+status = "active"
+stance = "extends"
+level = 1
+since = "2026-10-02"
+title = "A tie is never hidden"
+text = """
+When several candidates tie, the ones not chosen travel with the answer and are shown ("1 other candidate set aside"), so that a user can see that the answer was a choice."""
+why = """
+A silent tie-break looks exactly like a rule that has one obvious answer. Showing the discarded candidates is this tool's own addition; the standard has no notion of it."""
+rulings = [
+  { by = "maintainer", on = "2026-10-02" },
+]
+refs = [
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md" },
+]
+at = [
+  { type = "view", key = "object.colour-stack" },
+  { type = "view", key = "graph.decision-path" },
+]
+
+[[rule]]
+id = "house/inherit/model-collections-not-followed"
+theme = "inherit"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-10-02"
+title = "Collections of the model are not followed"
+text = """
+Collections that gather the model (the seventh rank of the original order), and any collection of kind `project`, are not followed. When information is found on one, the walk notes that it was found there and not applied; the object then keeps the hue derived from its uuid."""
+why = """
+Too far from the object: a colour set on a project must never get ahead of the colour of an object's own interpretation. The case is left out on purpose and said, never forgotten: if a use demands it one day it is a rank to switch back on, not a walk to rewrite."""
+rulings = [
+  { by = "maintainer", on = "2026-10-02" },
+]
+refs = [
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "the TRG say nothing about collections of the model" },
+]
+at = [
+  { type = "view", key = "object.colour-stack" },
+  { type = "view", key = "object.attachments" },
+]
+
+[[rule]]
+id = "house/inherit/property-kind-only"
+theme = "inherit"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-10-02"
+title = "A property inherits from its kind and stops there"
+text = """
+Painting a property is a view, so the walk for a property is: the property, its PropertyKind, the kind's parents - with the collections that reference each of them - and it stops there: no representation, no interpretation, no feature, no model. Nothing found: the view picks its own palette."""
+why = """
+The colour of the representation that carries a property says nothing about the colour map of its values. This is a shortcut compared with today's cascade, which went down to the feature of the carrying representation."""
+rulings = [
+  { by = "maintainer", on = "2026-10-02" },
+]
+refs = [
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "no word on property colours in the TRG" },
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md" },
+]
+at = [
+  { type = "view", key = "scene.property-paint" },
+]
+
+[[rule]]
+id = "house/inherit/collection-is-pointer-array"
+theme = "inherit"
+status = "active"
+stance = "ambiguous"
+level = 2
+since = "2026-10-02"
+title = "A collection is an array of pointers"
+text = """
+The members of a collection are the paired paths of the same rank i in a SingleCollectionAssociation (the `...Collection` and the `...Dataobject[j]`), read from the edges of the package index without reopening the object. Other references of a collection are not memberships."""
+why = """
+The common TRG describe the association but not how an attribute propagates through it, so membership is read the narrowest way the schema supports."""
+rulings = [
+  { by = "maintainer", on = "2026-10-02" },
+]
+refs = [
+  { kind = "spec", doc = "common TRG 2.3", at = "§8.3, §8.5 p. 188", note = "describe the association, not the propagation" },
+  { kind = "design", path = "docs/adr/0014-horizons-units-attachments-constraints.md" },
+  { kind = "design", path = "docs/adr/0010-package-index-and-caches.md" },
+]
+at = [
+  { type = "view", key = "graph.decision-path" },
+]
+
+[[rule]]
+id = "house/inherit/cycle-refused-duplicates-once"
+theme = "inherit"
+status = "active"
+stance = "restates"
+level = 2
+since = "2026-10-02"
+title = "A repeated member counts once; a cycle is refused by name"
+text = """
+A collection repeated in a set, or an object repeated in an association, counts once. A collection that contains itself, near or far, is a named cycle: the walk stops and says so instead of looping."""
+why = """
+The first half is the specification's own statement, applied to the walk; the second is the repository's rule that a refusal names what it refused."""
+refs = [
+  { kind = "spec", doc = "common TRG 2.3", at = "§8.3, §8.5" },
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md" },
+]
+at = [
+  { type = "view", key = "check.report" },
+  { type = "view", key = "object.colour-stack" },
+]
+
+[[rule]]
+id = "house/inherit/firp-parents"
+theme = "inherit"
+status = "superseded"
+stance = "silent"
+level = 1
+since = "2026-09-05"
+title = "The parents of an object are the FIRP chain"
+text = """
+The parents of an object are the FIRP chain only: RepresentedObject (RESQML 2.2) or RepresentedInterpretation (2.0.1), then InterpretedFeature - never a reference pointing down (a list of per-part interpretations is an attribution, not a parent). The FIRP chain remains the backbone of ranks 3 to 5 of the new order; it is no longer the only route, because collections are tried before the parents. Superseded by `house/inherit/rank-order`; `inherit::PARENT_FIELDS` is where the three fields are still read."""
+why = """
+The Technical Reference says an interpretation or a feature carries the colour, but names no direction in which it flows. Following the FIRP hierarchy only keeps a colour from leaking sideways between objects that merely mention each other."""
+rulings = [
+  { by = "maintainer", on = "2026-09-05" },
+]
+refs = [
+  { kind = "code", path = "crates/energyml-domain/src/inherit.rs", at = "PARENT_FIELDS" },
+  { kind = "design", path = "docs/adr/0009-properties-tables-colours.md", note = "replaced in part by rank-order; checked against the TRG on 05/09" },
+]
+at = [
+  { type = "view", key = "object.colour-stack" },
+]
+
+[[rule]]
+id = "house/inherit/level-read-from-type-reached"
+theme = "inherit"
+status = "active"
+stance = "restates"
+level = 2
+since = "2026-09-05"
+title = "The level of an inherited colour is read from the type reached"
+text = """
+The level of an inherited colour (interpretation or feature) is read from the type actually reached by the walk, never counted in steps. An unreadable type leaves the step unnamed."""
+why = """
+Counting steps would give a wrong name as soon as a file skips a link. The Technical Reference states the colour may come from either an interpretation or a technical feature, and the type is what tells which."""
+refs = [
+  { kind = "spec", doc = "RESQML TRG 2.2", at = "§4.10 p. 61", note = "rule on RepresentedObject: either an interpretation or a technical feature (page to be re-verified)" },
+  { kind = "code", path = "crates/energyml-domain/src/color_inherit.rs", at = "level_of" },
+  { kind = "code", path = "crates/energyml-domain/src/color.rs", at = "Level" },
+]
+at = [
+  { type = "view", key = "object.colour-stack" },
+]

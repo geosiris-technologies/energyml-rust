@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest a capability, an export format, a schema construct to support, or a doc improvement.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The use case first, the solution second.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to see?
+  - type: dropdown
+    id: face
+    attributes:
+      label: Which face(s)?
+      multiple: true
+      options: [Rust library, Python package, Command line, Documentation]
+  - type: textarea
+    id: spec
+    attributes:
+      label: Reference
+      description: If this follows a rule of the Energistics specifications, cite the document, page and paragraph.

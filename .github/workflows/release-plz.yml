@@ -1,0 +1,77 @@
+name: release-plz
+
+# On every push to main: open (or update) a release pull request with the version
+# bumps and changelogs; once it is merged, publish to crates.io and tag.
+# Publication uses crates.io trusted publishing (OIDC): no token is stored.
+#
+# The very first publication of each crate is done by hand (`cargo publish`); then
+# trusted publishing is configured per crate on crates.io.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-plz
+  cancel-in-progress: false
+
+jobs:
+  # Opens the release pull request (versions, changelogs, semver check).
+  release-pr:
+    name: release-plz PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: release-plz/action@v0.5
+        with:
+          command: release-pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Publishes crates whose version is not yet on crates.io, and creates the tags.
+  release:
+    name: release-plz release
+    runs-on: ubuntu-latest
+    # Only from main, and only once publishing is switched on in the repository's
+    # variables: creating the repository must not publish anything.
+    if: ${{ github.ref == 'refs/heads/main' && vars.RELEASE_PLZ_PUBLISH == 'true' }}
+    permissions:
+      contents: write
+      id-token: write # crates.io trusted publishing
+      actions: write # start the tag workflows below (workflow_dispatch)
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - id: rp
+        uses: release-plz/action@v0.5
+        with:
+          command: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # No CARGO_REGISTRY_TOKEN: the action exchanges the OIDC token for a short-lived one.
+
+      # Tags pushed with GITHUB_TOKEN start no workflow (push events), but
+      # workflow_dispatch started with GITHUB_TOKEN does run. So the release job
+      # itself starts, on the new tag, the two workflows that listen for it. No
+      # extra secret; the publish gates stay in those workflows (IMAGE_PUBLISH)
+      # and in this job (RELEASE_PLZ_PUBLISH).
+      - name: Start the tag workflows
+        if: ${{ steps.rp.outputs.releases_created == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASES: ${{ steps.rp.outputs.releases }}
+        run: |
+          for tag in $(jq -r '.[].tag' <<< "$RELEASES" | grep '^energyml-cli-v' || true); do
+            gh workflow run release-cli.yml --ref "$tag"
+            gh workflow run docker.yml --ref "$tag"
+          done

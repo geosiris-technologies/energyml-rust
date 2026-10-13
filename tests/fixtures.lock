@@ -1,0 +1,112 @@
+# Pinned reference packages, downloaded in CI and on demand — never committed.
+#
+# Each entry names the origin repository, the exact commit, the path in it, the
+# SHA-256 and size of the file at that commit, and the licence of the source.
+# `scripts/fetch-fixtures.py` downloads every file into `target/fixtures/<dir>/`
+# (or `--dir`), verifies the digest and fails loudly on any mismatch.
+# No test goes to the network: tests read the directory the script filled.
+#
+# To bump a pin: change `commit`, run `python scripts/fetch-fixtures.py --update`
+# (prints the new digests; review them), then commit the lock.
+# Fetched 2026-10-12 from the then-current head of each default branch.
+
+schema = 1
+
+[sources.fesapi-examples]
+repo = "geosiris-technologies/energyml-python"
+branch = "main"
+commit = "793e96c968dc63ba7f51558be1ad72d95fe3bc6f"
+license = "Apache-2.0"
+note = "Packages written by the fesapi example program (RESQML 2.0.1 and 2.2). The fesapi repository itself versions no .epc file."
+
+[sources.resqpy]
+repo = "bp/resqpy"
+branch = "master"
+commit = "544d8b2a32a8410d22d3eecc9d845b4aa1f9ffe5"
+license = "MIT"
+note = "Packages written by resqpy (RESQML 2.0.1)."
+
+[[fixture]]
+source = "fesapi-examples"
+path = "energyml-utils/rc/epc/testingPackageCpp.epc"
+dest = "fesapi/testingPackageCpp.epc"
+sha256 = "17052edaca6000d684700e7c2964b2581b64b56fe141fcd3301d9cdf5da0c1d8"
+size = 347223
+
+[[fixture]]
+source = "fesapi-examples"
+path = "energyml-utils/rc/epc/testingPackageCpp.h5"
+dest = "fesapi/testingPackageCpp.h5"
+sha256 = "21943f98ab3181303be94e40c25473f3ac0f9c3f8cde3d64b4497f4f5c3b5521"
+size = 142895
+
+[[fixture]]
+source = "fesapi-examples"
+path = "energyml-utils/rc/epc/testingPackageCpp22.epc"
+dest = "fesapi/testingPackageCpp22.epc"
+sha256 = "89759baddf5b37b58be387f87d6e549f0ff55a3b68c9cc100ee93bec7d6239cd"
+size = 257549
+
+[[fixture]]
+source = "fesapi-examples"
+path = "energyml-utils/rc/epc/testingPackageCpp22.h5"
+dest = "fesapi/testingPackageCpp22.h5"
+sha256 = "2ade98a66112be2c7ab73fc145e3b190d46dd8f5703a80afb9060e9216640db3"
+size = 141474
+
+[[fixture]]
+source = "resqpy"
+path = "example_data/block.epc"
+dest = "resqpy/block.epc"
+sha256 = "9931a7e8b3b192282ef76c8c7899a73bf5cf45a08f20e43002bc6d2e5d2d9406"
+size = 115027
+
+[[fixture]]
+source = "resqpy"
+path = "example_data/block.h5"
+dest = "resqpy/block.h5"
+sha256 = "b2b0d3d48334d4a62df92f7db8a1ec708fa70484f2eff4a62bbe261939f51d54"
+size = 271140
+
+[[fixture]]
+source = "resqpy"
+path = "example_data/s_bend.epc"
+dest = "resqpy/s_bend.epc"
+sha256 = "ea3cbe4ad1ece3bb47c4eda0643876393c9683984f6c237c55ababf5d7aa6891"
+size = 161618
+
+[[fixture]]
+source = "resqpy"
+path = "example_data/s_bend.h5"
+dest = "resqpy/s_bend.h5"
+sha256 = "da66daa7404a285d2592dc969b1ec3ce5c0c922ff78d9a260e087fdc548a0fca"
+size = 460195
+
+[[fixture]]
+source = "resqpy"
+path = "example_data/tic_tac_toe.epc"
+dest = "resqpy/tic_tac_toe.epc"
+sha256 = "a02512e21cb9911dc6f6d5a9586eb5004c7b11a4eb3cf7130185543a53c3348c"
+size = 24446
+
+[[fixture]]
+source = "resqpy"
+path = "example_data/tic_tac_toe.h5"
+dest = "resqpy/tic_tac_toe.h5"
+sha256 = "f192fa353127a0cad0e711b08515896b8fb3a47d973734b89978c62af7ea49db"
+size = 5552
+
+[[fixture]]
+source = "resqpy"
+path = "tests/test_data/wren/wren.epc"
+dest = "resqpy/wren.epc"
+sha256 = "f442101e5ca691b1d9a3210916fef31c2839059435759731f01234f431546ab2"
+size = 175274
+
+[[fixture]]
+source = "resqpy"
+path = "tests/test_data/wren/wren.h5"
+dest = "resqpy/wren.h5"
+sha256 = "a40f45ac10c8ffd91b996e10a406ebf6be09ee06eff652de666c5a1d7d7ec746"
+size = 94680
+

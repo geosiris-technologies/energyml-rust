@@ -1,0 +1,58 @@
+[package]
+name = "energyml-rules"
+description = "The house rules: what this library decides where the specification is silent, ambiguous or interpreted — a registry any crate can cite, no runtime dependency."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+# Spelled out, not inherited: wasm-pack does not resolve workspace inheritance
+# in the manifests of path dependencies (see `energyml-domain/Cargo.toml`).
+license = "Apache-2.0"
+repository.workspace = true
+keywords = ["energyml", "rules", "resqml", "registry", "geoscience"]
+categories = ["data-structures", "development-tools"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-rules"
+include = ["src/**", "rules/**", "build/**", "build.rs", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+# One test binary, not one per file: see `tests/main.rs`.
+autotests = false
+build = "build.rs"
+
+# **No runtime dependency, wasm included.** `build.rs` turns `rules/*.toml`
+# into statics, so nothing is parsed when a program runs. `toml` is already in
+# the workspace lock (`energyml-codegen`, `energyml-build`) and pure Rust.
+[build-dependencies]
+toml = "1.1"
+
+[dev-dependencies]
+# The tests judge the loader on fabricated rule files (it is included from
+# `build/loader.rs`, as `build.rs` includes it), and cross the two `house/`
+# ids against `integrity::checks()`. A dev-dependency cannot make a cycle the
+# day `energyml-domain` depends on this crate.
+toml = "1.1"
+# **No `version` on purpose.** `cargo publish` drops a dev-dependency that has no
+# version from the published manifest, so publishing this crate neither needs
+# `energyml-domain` to be on the registry first nor breaks if `energyml-domain`
+# one day depends on this crate (a cycle crates.io would refuse). With a version,
+# the dev-dependency would be resolved against the registry at publication.
+energyml-domain = { path = "../energyml-domain" }
+# Reads the JSON the crate writes by hand, to cross it with the registry.
+serde_json = "1.0"
+
+[features]
+default = ["fr"]
+# The French translations, compiled in. Off: the English alone, which is the
+# source and always present.
+fr = []
+
+[lints.rust]
+missing_docs = "warn"
+
+[[test]]
+name = "house"
+path = "tests/main.rs"
+
+# docs.rs builds on Linux with no native HDF5: every feature builds there.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true

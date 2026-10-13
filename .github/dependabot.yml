@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # Rust dependencies (the generated crates are path dependencies and are not updated here).
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      cargo-minor-and-patch:
+        update-types: [minor, patch]
+
+  # Versions of the actions used by the workflows.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  # Python tooling of the bridge. TODO(verify): directory of the Python requirements, if any.
+  - package-ecosystem: pip
+    directory: /crates/energyml-python
+    schedule:
+      interval: weekly

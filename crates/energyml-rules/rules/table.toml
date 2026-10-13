@@ -1,0 +1,29 @@
+# Tables and categories. The two published `house/` check ids live here and in
+# series.toml, with their flat form kept (cited by reports and tests). They are
+# crossed with `energyml_domain::integrity::checks()` in both directions by a
+# test of this crate.
+
+[[rule]]
+id = "house/discrete-value-in-lookup"
+theme = "table"
+status = "active"
+stance = "ambiguous"
+level = 1
+since = "2026-09-27"
+title = "Every value of a categorical property is a key of its lookup table"
+text = """
+Every value of a property with a category lookup is a key of its table's key column. The reading is ours: a KeyColumn makes the table a lookup table, but the standard does not say how a value names a row. A value that is not a key is an error."""
+why = """
+A category value that names no row is a defect of the package, whatever the specification leaves unsaid about how a value finds its row. Weighed as an error on 27/09."""
+rulings = [
+  { by = "maintainer", on = "2026-09-27" },
+]
+refs = [
+  { kind = "spec", doc = "common TRG 2.3", at = "§9.1", note = "KeyColumn makes the table a lookup; the way a value names a row is not described" },
+  { kind = "code", path = "crates/energyml-domain/src/integrity.rs", at = "discrete_value_in_lookup" },
+  { kind = "design", path = "docs/adr/0018-synthetic-reference-model.md" },
+]
+at = [
+  { type = "finding", key = "house/discrete-value-in-lookup" },
+  { type = "view", key = "check.report" },
+]

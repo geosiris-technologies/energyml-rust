@@ -1,0 +1,89 @@
+[package]
+name = "energyml-storage"
+description = "Reads and writes EnergyML data stores: EPC files today, ETP dataspaces later, behind one abstraction."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+# Spelled out rather than inherited: wasm-pack parses the manifests of a
+# WebAssembly front end's path dependencies before running wasm-opt, and
+# does not resolve workspace inheritance — `license.workspace = true` reaches
+# it as a table where it wants a string, and the wasm build dies *after*
+# writing the module, leaving a usable artefact and an unread exit code.
+license = "Apache-2.0"
+repository.workspace = true
+keywords = ["energyml", "epc", "resqml", "hdf5", "storage"]
+categories = ["parser-implementations", "filesystem"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-storage"
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+# One test binary, `tests/main.rs` — see its doc.
+autotests = false
+
+[dependencies]
+energyml-core = { workspace = true }
+# Spans and events only; the face installs the subscriber (`energyml-log`).
+tracing = { workspace = true }
+async-trait = "0.1"
+quick-xml = "0.41"
+thiserror = "2.0"
+# Casts a `Vec<f64>` to `&[u8]` and back without a copy and without `unsafe`
+# here. Tiny, no dependencies, and the alternative was an unsafe block in a
+# crate that forbids them.
+bytemuck = "1"
+zip = { version = "7", default-features = false, features = ["deflate"] }
+
+# The continuation of the original `hdf5` crate, which has been frozen at 0.8.1
+# since 2021; renamed here so the code reads `hdf5::File` and the day the
+# original restarts is a one-line change. Off by default: an EPC must be
+# readable, and modifiable, without a native library anywhere near it.
+hdf5 = { package = "hdf5-metno", version = "0.14", optional = true }
+# Only to name the array type `hdf5` hands back from a hyperslab read; it is
+# already in the tree as that crate's own dependency, so it costs nothing. The
+# major must match the one `hdf5-metno` builds against.
+ndarray = { version = "0.17", optional = true }
+
+[features]
+default = []
+# Tests on the private real-file corpus under testdata/ — real-file campaign, run privately. Off by default.
+private-corpus = []
+# Read arrays from HDF5 files. Needs the C library at build time.
+hdf5 = ["dep:hdf5", "dep:ndarray"]
+
+[dev-dependencies]
+# `tests/mistyped.rs` builds deliberately mistyped packages of its own; the same
+# version the crate itself reads with, so the two never disagree about a zip.
+zip = { version = "7", default-features = false, features = ["deflate"] }
+# The opaque-path test writes a small HDF5 file of its own.
+hdf5 = { package = "hdf5-metno", version = "0.14" }
+futures-executor = "0.3"
+energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0", version = "0.1.0" }
+energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.0" }
+energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1", version = "0.1.0" }
+energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.1.0" }
+# `tests/drops.rs` reads one document against a release and its development
+# drop, which is the only way to observe which of the two was chosen.
+energyml-eml-2-2 = { path = "../generated/energyml-eml-2-2", version = "0.1.0" }
+energyml-resqml-2-2-dev3 = { path = "../generated/energyml-resqml-2-2-dev3", version = "0.1.0" }
+
+# Every schema version the workspace generates, for the corpus tests. The four
+# above are named individually because `versions.rs` and `mistyped.rs` build
+# objects of a *chosen* release by hand — that is the point of those tests.
+energyml-schemas = { path = "../energyml-schemas", version = "0.1.0", features = ["all"] }
+
+[lints.rust]
+missing_docs = "warn"
+
+[[test]]
+name = "storage"
+path = "tests/main.rs"
+
+# Its own process: it counts the opens of the process-wide HDF5 cache and
+# bounds it, which another test reading a file at the same time would skew.
+[[test]]
+name = "hdf5_cache"
+path = "tests/hdf5_cache.rs"
+
+# docs.rs builds on Linux with no native HDF5: only features needing no native library are listed.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

@@ -1,0 +1,103 @@
+[package]
+name = "energyml-cli"
+description = "Command-line tool to inspect and validate EnergyML data stores (EPC files today)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["energyml", "epc", "resqml", "cli", "geoscience"]
+categories = ["command-line-utilities", "science::geo"]
+readme = "README.md"
+# Two binaries (`energyml` and its alias `enyml`): `cargo run -p energyml-cli`
+# runs the first, as every script and command of the documentation expects.
+default-run = "energyml"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-cli"
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+
+[lib]
+name = "energyml_cli"
+path = "src/lib.rs"
+
+# The command. `enyml` (src/bin/enyml.rs) is the same command under a shorter
+# name; both only call `energyml_cli::run`.
+[[bin]]
+name = "energyml"
+path = "src/main.rs"
+# Not documented: the library of the `energyml` crate (the facade) has the same name,
+# and `cargo doc` would write both to `target/doc/energyml/`. The API of this
+# package is `energyml_cli`.
+doc = false
+
+[dependencies]
+anyhow = "1.0"
+# **For `create --from <url>`.** A GeoJSON can live behind an address as well
+# as on a disk, and downloading is I/O: it is here, never in `energyml-build`,
+# which stays a parser and a vocabulary. `ureq` is already the repository's
+# HTTP client and it is blocking, which a command-line binary wants.
+ureq = "3"
+# The public APIs: building a request and reading a response are in the
+# crate, the network is behind its `native` feature. The CLI only keeps the
+# display.
+energyml-providers = { path = "../energyml-providers", version = "0.1.0", features = ["native"] }
+clap = { version = "4.6", features = ["derive"] }
+# For `energyml docs`: the documentation JSON is serde_json `Value`s built by
+# `energyml_core::docs`, and the CLI only chooses files and writes them.
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
+energyml-core = { workspace = true }
+energyml-storage = { path = "../energyml-storage", version = "0.1.0" }
+energyml-geometry = { path = "../energyml-geometry", version = "0.1.0" }
+energyml-export = { path = "../energyml-export", version = "0.1.0" }
+# `profile`: the long profile of the wells on a track. The arithmetic is there.
+energyml-analysis = { path = "../energyml-analysis", version = "0.1.0" }
+# `profile --svg`: the section view — the catalogue, its layout and its SVG.
+# The command only parses and writes.
+energyml-section = { path = "../energyml-section", version = "0.1.0" }
+energyml-domain = { path = "../energyml-domain", version = "0.1.0" }
+# What a command keeps of the package it opened, layer by layer — off unless
+# the command is on the fixed list of `src/layers.rs`.
+energyml-cache = { path = "../energyml-cache", version = "0.1.0" }
+energyml-rules = { path = "../energyml-rules", version = "0.1.0" }
+# The geodesy backend, plugged in at `export --epsg`. Pure Rust, so the CLI
+# stays buildable wherever the library is.
+energyml-proj = { path = "../energyml-proj", version = "0.1.0" }
+
+# Every schema version the workspace generates, in one crate. The list of
+# releases lives there and nowhere else; `energyml-schemas/tests/complete.rs`
+# checks it against `codegen.toml`, so a forgotten release fails a test instead
+# of producing a tool that silently cannot read it.
+energyml-schemas = { path = "../energyml-schemas", version = "0.1.0", features = ["all"] }
+
+energyml-log = { workspace = true }
+energyml-build = { path = "../energyml-build", version = "0.1.0" }
+
+# No dependency on the translation or on ETP, not even an optional one: those
+# tools are separate programs (an external translation tool, `retp`) that
+# `energyml translate …` and `energyml etp …` run when they are on the PATH
+# (`src/external.rs`).
+
+[features]
+default = []
+# Tests on the private real-file corpus under testdata/ — real-file campaign, run privately. Off by default.
+private-corpus = []
+# `profile --png`: the section view rasterised in Rust, with its font embedded.
+# Off by default; without it `--png` refuses and says to rebuild with it.
+png = ["energyml-section/png"]
+# Read the arrays, not only locate them. Needs the HDF5 C library at build time.
+# Geometry forwards the same switch: without it, only the forms that carry no
+# data — lattices above all — still evaluate.
+hdf5 = [
+    "energyml-storage/hdf5",
+    "energyml-geometry/hdf5",
+    "energyml-export/hdf5",
+    "energyml-build/hdf5",
+]
+
+[lints.rust]
+missing_docs = "warn"
+
+# docs.rs builds on Linux with no native HDF5: only features needing no native library are listed.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+features = ["png"]

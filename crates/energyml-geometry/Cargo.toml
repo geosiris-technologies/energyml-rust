@@ -1,0 +1,62 @@
+[package]
+name = "energyml-geometry"
+description = "Turns EnergyML representations into points, indices and a coordinate reference system."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+# Spelled out rather than inherited: wasm-pack parses the manifests of a
+# WebAssembly front end's path dependencies before running wasm-opt, and
+# does not resolve workspace inheritance — `license.workspace = true` reaches
+# it as a table where it wants a string, and the wasm build dies *after*
+# writing the module, leaving a usable artefact and an unread exit code.
+license = "Apache-2.0"
+repository.workspace = true
+keywords = ["energyml", "resqml", "geometry", "mesh", "geoscience"]
+categories = ["science::geo", "mathematics"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-geometry"
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+# One test binary, `tests/main.rs` — see its doc.
+autotests = false
+
+[dependencies]
+energyml-core = { workspace = true }
+energyml-storage = { path = "../energyml-storage", version = "0.1.0" }
+energyml-domain = { path = "../energyml-domain", version = "0.1.0" }
+thiserror = "2.0"
+
+[dev-dependencies]
+energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0", version = "0.1.0" }
+energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.0" }
+energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1", version = "0.1.0" }
+energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.1.0" }
+# `tests/well_drop.rs`: the flat measured-depth shape that 2.0.1 and the 2.2
+# development drops share, which no released-2.2 type can express.
+energyml-resqml-2-2-dev3 = { path = "../generated/energyml-resqml-2-2-dev3", version = "0.1.0" }
+energyml-eml-2-2 = { path = "../generated/energyml-eml-2-2", version = "0.1.0" }
+energyml-witsml-2-1 = { path = "../generated/energyml-witsml-2-1", version = "0.1.0" }
+# `tests/witsml_trajectory.rs`: a WITSML 2.0 trajectory, which the reader keyed
+# on the concept meets too, and refuses by name.
+energyml-witsml-2-0 = { path = "../generated/energyml-witsml-2-0", version = "0.1.0" }
+# Every schema version the workspace generates, in one line — see
+# `energyml-schemas` for why the list lives in exactly one place.
+energyml-schemas = { path = "../energyml-schemas", version = "0.1.0", features = ["all"] }
+
+[features]
+default = []
+# Tests on the private real-file corpus under testdata/ — real-file campaign, run privately. Off by default.
+private-corpus = []
+# Read arrays from HDF5 files, which is where most geometry actually lives.
+hdf5 = ["energyml-storage/hdf5"]
+
+[lints.rust]
+missing_docs = "warn"
+
+[[test]]
+name = "geometry"
+path = "tests/main.rs"
+
+# docs.rs builds on Linux with no native HDF5: only features needing no native library are listed.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

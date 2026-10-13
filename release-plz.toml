@@ -1,0 +1,36 @@
+# release-plz: version bumps, changelogs and publication to crates.io.
+# Docs: https://release-plz.dev/docs/config
+
+[workspace]
+# One changelog per published crate, written from conventional commits.
+changelog_update = true
+# Open release pull requests; tag and publish after merging.
+git_release_enable = false
+semver_check = true
+# Tag format: <crate>-v<version> (for example energyml-cli-v0.2.0), which is what
+# the release-cli workflow listens for.
+git_tag_name = "{{ package }}-v{{ version }}"
+publish_timeout = "10m"
+
+# Crates that are never published to crates.io.
+[[package]]
+name = "energyml-tests"
+publish = false
+release = false
+
+[[package]]
+name = "energyml-roundtrip"
+publish = false
+release = false
+
+[[package]]
+name = "energyml-python"
+# Published to PyPI by the python workflow, not to crates.io. It is still tagged
+# (python-v*) by hand when a wheel release is wanted.
+publish = false
+release = false
+
+[[package]]
+name = "energyml-cli"
+# The binary release is built by workflows/release-cli.yml from the energyml-cli-v* tag.
+git_release_enable = false

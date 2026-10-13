@@ -1,0 +1,32 @@
+[package]
+name = "energyml-derive"
+description = "Derive macros turning generator-emitted structs into EnergyML XML/JSON/reflection/validation implementations."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+# Spelled out rather than inherited: wasm-pack parses the manifests of a
+# WebAssembly front end's path dependencies before running wasm-opt, and
+# does not resolve workspace inheritance — `license.workspace = true` reaches
+# it as a table where it wants a string, and the wasm build dies *after*
+# writing the module, leaving a usable artefact and an unread exit code.
+license = "Apache-2.0"
+repository.workspace = true
+keywords = ["energyml", "derive", "xml", "json", "reflection"]
+categories = ["development-tools::procedural-macro-helpers", "encoding"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-derive"
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2.0", features = ["full", "extra-traits"] }
+quote = "1.0"
+proc-macro2 = "1.0"
+heck = "0.5"
+
+# docs.rs builds on Linux without a native HDF5; only the features that need no native library are listed.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

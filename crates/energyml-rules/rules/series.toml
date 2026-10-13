@@ -1,0 +1,28 @@
+# Time series. See table.toml for the two published flat ids.
+
+[[rule]]
+id = "house/time-series-asset-resolves"
+theme = "series"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-09-27"
+title = "A time series' asset identifier names a well the package holds"
+text = """
+A time series' `asset identifier` names a well that the package holds. Several answers are a refusal, never the first. A violation is a warning."""
+why = """
+TimeSeriesData states the key as text, not as a reference, so the link to a well is a convention of ours. It cannot be an error: the text may name a well that lives elsewhere."""
+rulings = [
+  { by = "maintainer", on = "2026-09-27" },
+]
+refs = [
+  { kind = "spec", doc = "PRODML TimeSeriesData.xsd", at = "l. 67", note = "the key is text, not a reference" },
+  { kind = "spec", doc = "Identifier Specification 4.0", at = "§6.3 p. 14", note = "the URI grammar" },
+  { kind = "code", path = "crates/energyml-domain/src/integrity.rs", at = "time_series_asset_resolves" },
+  { kind = "design", path = "docs/adr/0018-synthetic-reference-model.md" },
+]
+at = [
+  { type = "finding", key = "house/time-series-asset-resolves" },
+  { type = "view", key = "check.report" },
+  { type = "view", key = "series.view" },
+]

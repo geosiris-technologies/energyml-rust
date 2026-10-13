@@ -1,0 +1,42 @@
+# Traduction française du thème inherit : les titres d'abord, le texte de
+# la première règle à titre d'exemple. Pas encore relue par un relecteur
+# francophone : une traduction du registre n'est jamais automatique.
+# Facultative par règle : ce qui n'est pas ici se lit en anglais, et le dit.
+
+[[rule]]
+id = "house/inherit/rank-order"
+title = "Où un objet cherche ce qu'il ne porte pas"
+text = """
+Ce qu'un objet ne porte pas lui-même se cherche dans cet ordre : l'objet ; les collections qui le référencent (et les collections de collections) ; ses parents directs ; les collections qui référencent les parents (imbriquées comprises) ; les parents des parents, avec les mêmes règles ; puis le modèle. Le premier rang qui répond gagne, et on ne descend d'un rang que si celui du dessus n'a rien donné. Rien trouvé : l'objet garde la teinte tirée de son uuid."""
+
+[[rule]]
+id = "house/inherit/shortest-path-then-document-order"
+title = "Le chemin le plus court gagne ; à égalité, le premier dans l'ordre du document"
+
+[[rule]]
+id = "house/inherit/ties-are-kept"
+title = "Une égalité n'est jamais cachée"
+
+[[rule]]
+id = "house/inherit/model-collections-not-followed"
+title = "Les collections du modèle ne sont pas suivies"
+
+[[rule]]
+id = "house/inherit/property-kind-only"
+title = "Une propriété hérite de son kind, et s'arrête là"
+
+[[rule]]
+id = "house/inherit/collection-is-pointer-array"
+title = "Une collection est un tableau de pointeurs"
+
+[[rule]]
+id = "house/inherit/cycle-refused-duplicates-once"
+title = "Un membre répété compte une fois ; un cycle est refusé par son nom"
+
+[[rule]]
+id = "house/inherit/firp-parents"
+title = "Les parents d'un objet sont la chaîne FIRP"
+
+[[rule]]
+id = "house/inherit/level-read-from-type-reached"
+title = "Le niveau d'une couleur héritée se lit sur le type atteint"

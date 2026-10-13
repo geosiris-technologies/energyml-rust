@@ -1,0 +1,44 @@
+[package]
+name = "energyml-cache"
+description = "What a package keeps of itself, layer by layer, and lets go of exactly when what it read changes — optional, one implementation, wasm included."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+# Spelled out rather than inherited, as `energyml-geometry` explains: wasm-pack
+# reads the manifests of a WebAssembly front end's path dependencies and does not
+# resolve workspace inheritance for `license`.
+license = "Apache-2.0"
+repository.workspace = true
+keywords = ["energyml", "cache", "epc", "resqml", "index"]
+categories = ["caching", "data-structures"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-cache"
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+# One test binary, `tests/main.rs` (one crate, one test binary, ADR-0016).
+autotests = false
+
+# Above `energyml-geometry` and below every face (ADR-0010).
+# No native
+# dependency: what this crate holds needs nothing more than `std`.
+[dependencies]
+energyml-core = { workspace = true }
+energyml-storage = { path = "../energyml-storage", version = "0.1.0" }
+energyml-domain = { path = "../energyml-domain", version = "0.1.0" }
+energyml-geometry = { path = "../energyml-geometry", version = "0.1.0" }
+thiserror = "2.0"
+
+[dev-dependencies]
+energyml-schemas = { path = "../energyml-schemas", version = "0.1.0", features = ["all"] }
+
+[lints.rust]
+missing_docs = "warn"
+
+[[test]]
+name = "cache"
+path = "tests/main.rs"
+
+# docs.rs builds on Linux with no native HDF5: every feature builds there.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true

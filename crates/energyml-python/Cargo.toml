@@ -1,0 +1,85 @@
+[package]
+name = "energyml-python"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Python bindings for energyml-rust: read and write EPC + HDF5 packages"
+# The module is published by maturin, not by cargo on a crate registry:
+# nobody depends on this one from Rust.
+publish = false
+# One test binary, `tests/main.rs` — see its doc.
+autotests = false
+
+[lib]
+# `cdylib` so that Python can load the module, and `rlib` so that the
+# repository's native suite can exercise it — it is the same rule as the WebAssembly front end's:
+# everything that can be wrong is tested natively.
+#
+# This name is **not** the one `import` will see: maturin renames the artefact
+# after `module-name` in `pyproject.toml` (`energyml.rust._core`). It only
+# serves `use energyml_rust::session::…` in the tests.
+#
+# **And it cannot simply be `energyml`.** `energyml-cli` ships a binary of that
+# name, so on Windows both targets wrote the same
+# `target/debug/deps/energyml.pdb`: `cargo test --workspace` hit `LNK1201 —
+# error writing to program database` as soon as both were rebuilt in the same
+# invocation. The name read slightly better; it cost the whole test suite on
+# half of the machines. It now follows the distribution, `energyml-rust`.
+name = "energyml_rust"
+crate-type = ["cdylib", "rlib"]
+
+# **The original library, and only it.** Version translation and ETP are
+# workstreams kept apart, and a dependency from here would bring them into the
+# wheel, into the compile time and into everybody's public surface.
+# `tests/scope.rs` reads this table and goes red if either shows up in it.
+[dependencies]
+energyml-core = { path = "../energyml-core", version = "0.1.0" }
+energyml-schemas = { path = "../energyml-schemas", version = "0.1.0", features = ["all"] }
+energyml-storage = { path = "../energyml-storage", version = "0.1.0" }
+# **What the other libraries return and a raw array does not say**: the points
+# of a representation, its topology, the values hanging on it. All of it is
+# already computed there; the bridge only passes it on. No native dependency
+# comes with it: the HDF5 backend stays behind the `hdf5` feature.
+# The check report, the units and the property kinds. Nothing native.
+energyml-domain = { path = "../energyml-domain", version = "0.1.0" }
+energyml-geometry = { path = "../energyml-geometry", version = "0.1.0" }
+# The exporters, through their registry. Nothing native either: they write text
+# and bytes into what they are given.
+energyml-export = { path = "../energyml-export", version = "0.1.0" }
+# **Geodesy, and it is needed even when nobody asks for it**: RFC 7946 makes
+# GeoJSON WGS 84 by definition, so the exporter **refuses** a model in projected
+# metres without a reprojector — which this bridge used to do, so that
+# `export(…, "geojson")` was impossible from Python while the command line wrote
+# it. Pure Rust, wasm included: nothing native comes in here.
+energyml-proj = { path = "../energyml-proj", version = "0.1.0" }
+pyo3 = { version = "0.27", features = ["abi3-py39"], optional = true }
+numpy = { version = "0.27", optional = true }
+serde_json = "1.0"
+
+# **Nothing is on by default, and that is not caution: it is what keeps
+# `cargo build --workspace` doable without installing anything.** A workspace
+# member that requires a C library and an interpreter requires them for *all*
+# the others, through feature unification — ordinary compilation, lint, wasm,
+# everything would pay for a bridge they have no use for. The cost of this
+# choice is real and it is named: without `python`, `lib.rs` is empty, and only
+# `session` is exercised by the suite (which is all it could exercise anyway).
+[features]
+default = []
+# Tests on the private real-file corpus under testdata/ — real-file campaign, run privately. Off by default.
+private-corpus = []
+# What maturin turns on, and the only combination that produces a module.
+# `hdf5` is part of it: a Python bridge that did not read `.h5` files would let
+# h5py back in through the window, which is exactly what was asked to avoid.
+python = ["dep:pyo3", "dep:numpy", "hdf5"]
+# The native backend, alone — for the `hdf5` CI suite, which exercises array
+# reading and writing without needing an interpreter.
+hdf5 = ["energyml-storage/hdf5"]
+
+[dev-dependencies]
+tempfile = "3"
+
+[[test]]
+name = "python"
+path = "tests/main.rs"

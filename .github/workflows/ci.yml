@@ -1,0 +1,353 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  # Formatting, one crate at a time. NEVER `cargo fmt --all`: rustfmt would rewrite
+  # crates/generated/, which is written by the regeneration bot only.
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: cargo fmt --check, per hand-written crate
+        shell: bash
+        run: |
+          status=0
+          for dir in crates/energyml-*/; do
+            crate=$(basename "$dir")
+            echo "::group::fmt $crate"
+            cargo fmt -p "$crate" -- --check || status=1
+            echo "::endgroup::"
+          done
+          exit $status
+
+  # Lints, warnings denied.
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  # The whole test suite on the three desktop systems. Parallelism is capped:
+  # the test binaries link the generated crates and are large.
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      # The reference model lives in its own repository and is read at the commit
+      # pinned in tests/lutetia.lock. While the lock still holds a placeholder (the
+      # repository has no first commit yet), the step warns and the Lutetia tests
+      # skip; a real commit that cannot be fetched fails the job (the script exits
+      # non-zero).
+      - name: Fetch the reference model (Lutetia)
+        shell: bash
+        run: |
+          commit=$(sed -n 's/^commit *= *"\(.*\)"/\1/p' tests/lutetia.lock | head -n 1)
+          # The lock's placeholder is forty zeros: a valid-looking hash that pins nothing.
+          if [[ "$commit" =~ ^[0-9a-f]{40}$ && ! "$commit" =~ ^0+$ ]]; then
+            python scripts/fetch-lutetia.py --dest target/lutetia
+            echo "ENERGYML_LUTETIA_DIR=${{ github.workspace }}/target/lutetia" >> "$GITHUB_ENV"
+          else
+            echo "::warning::tests/lutetia.lock holds no real commit yet ('$commit'): the Lutetia tests are skipped in this job"
+          fi
+      # Reference packages written by other tools: pinned, SHA-256 verified, fetched
+      # by the script (never by a test). A digest mismatch fails the job.
+      - name: Fetch reference packages
+        run: python scripts/fetch-fixtures.py
+      - name: Run the tests
+        shell: bash
+        env:
+          ENERGYML_FIXTURES_DIR: ${{ github.workspace }}/target/fixtures
+          # A reference package that is missing is a failure here, never a skip.
+          ENERGYML_FIXTURES_REQUIRED: "1"
+        run: cargo test --workspace -j 4 -- --test-threads=4
+
+  # The HDF5 paths, on a system HDF5. Features are enabled through the workspace,
+  # never `-p <crate>`, so the build matches the full suite.
+  hdf5:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Install HDF5
+        run: sudo apt-get update && sudo apt-get install -y libhdf5-dev
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Fetch reference packages
+        run: python scripts/fetch-fixtures.py
+      - name: Test with HDF5 enabled
+        env:
+          ENERGYML_FIXTURES_DIR: ${{ github.workspace }}/target/fixtures
+          ENERGYML_FIXTURES_REQUIRED: "1"
+        run: >
+          cargo test --workspace -j 4
+          --features energyml-storage/hdf5,energyml-geometry/hdf5,energyml-domain/hdf5,energyml-export/hdf5,energyml-build/hdf5,energyml-python/hdf5
+          -- --test-threads=4
+      # --all-targets does not build the hdf5 targets unless the feature is on.
+      - name: Clippy with HDF5 enabled
+        run: >
+          cargo clippy --workspace --all-targets
+          --features energyml-storage/hdf5,energyml-geometry/hdf5,energyml-domain/hdf5,energyml-export/hdf5,energyml-build/hdf5,energyml-python/hdf5
+          -- -D warnings
+      # TODO(verify): `energyml-cli` hdf5 feature wiring and the feature list above on the public tree.
+
+  # `docs/cli-reference.md` is generated from the command definitions (with the
+  # `hdf5` and `png` options, so their flags are on the page). It must be what the
+  # commands say today.
+  cli-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install HDF5
+        run: sudo apt-get update && sudo apt-get install -y libhdf5-dev
+      - run: bash scripts/cli-reference.sh --check
+
+  # WebAssembly is a hard requirement: the crates without native dependencies must compile to it.
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo check for wasm32
+        run: >
+          cargo check --target wasm32-unknown-unknown
+          -p energyml-core -p energyml-resqml-2-2 -p energyml-witsml-2-1
+          -p energyml-storage -p energyml-domain -p energyml-geometry
+          -p energyml-export -p energyml-proj -p energyml-cache
+          -p energyml-section -p energyml-sheet
+      # TODO(verify): add energyml-geostat once the analysis split lands.
+
+  # One Cargo feature per schema version (energyml-schemas, relayed by energyml).
+  # The workspace build unifies every feature on, so the narrow builds only
+  # exist here: a library asking for RESQML 2.2 alone must compile and carry
+  # nothing else. `-p` is deliberate in this job: the point is the feature set
+  # of ONE crate, not the workspace's.
+  features:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack
+      - name: No schema version at all
+        run: cargo check -p energyml --no-default-features
+      - name: RESQML 2.2 alone (with the EML 2.3 it needs)
+        run: cargo check -p energyml --no-default-features --features resqml22
+      - name: RESQML 2.0.1 alone, tests included (2.0, 2.0.1, resqml20., resqml201.; a missing version is a named refusal)
+        run: cargo test -p energyml-schemas --no-default-features --features resqml20
+      - name: The facade with RESQML 2.0.1 alone reads 2.0, 2.0.1, resqml20. and resqml201.
+        run: cargo test -p energyml --no-default-features --features resqml20 --test narrow
+      - name: The facade with RESQML 2.2 alone refuses a 2.0.1 part by name, never reads it as 2.2
+        run: cargo test -p energyml --no-default-features --features resqml22 --test narrow
+      - name: Each schema feature on its own
+        run: cargo hack check --each-feature --no-dev-deps -p energyml-schemas
+
+  # Minimum supported Rust version, checked per crate.
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack
+      - run: cargo hack check --workspace --exclude energyml-python --rust-version
+
+  # Rustdoc must build without a single warning (broken intra-doc links included).
+  doc:
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: -D warnings
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo doc --workspace --no-deps --exclude energyml-python
+
+  # Licences, advisories, bans and sources (deny.toml).
+  deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+  # What is published must be self-contained. A table embedded with `include_str!`
+  # or a build script that sits outside the files cargo packs builds fine from a
+  # checkout and fails for every user of the published crate. This job (1) lists
+  # what cargo would put in each .crate and requires every file of the data
+  # folders to be there, and (2) packages every publishable crate (publish = false
+  # crates are skipped by --workspace) without compiling.
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Every data file is in the packaged crate
+        shell: bash
+        run: |
+          status=0
+          # A crate with a folder of embedded data, and that folder.
+          for dir in crates/energyml-*/; do
+            crate=$(basename "$dir")
+            folders=""
+            for f in data catalogue fonts; do
+              [ -d "$dir$f" ] && folders="$folders $f"
+            done
+            [ -z "$folders" ] && continue
+            cargo package --list -p "$crate" --allow-dirty > "package-$crate.txt" || { echo "::error::cargo package --list failed for $crate"; status=1; continue; }
+            for f in $folders; do
+              while IFS= read -r file; do
+                rel=${file#"$dir"}
+                if ! grep -qxF "$rel" "package-$crate.txt"; then
+                  echo "::error::$crate: $rel is not in the packaged crate"
+                  status=1
+                fi
+              done < <(find "$dir$f" -type f)
+            done
+            # The domain tables must be there, whatever else is.
+            if [ "$crate" = energyml-domain ]; then
+              for required in data/property_kinds.tsv data/property_kinds.NOTICE.md data/geolts/GeolTs.csv data/geolts/GeolTsBound.csv data/geolts/LICENSE.md data/activityTemplates.json; do
+                grep -qxF "$required" "package-$crate.txt" || { echo "::error::$crate: required $required missing from the package"; status=1; }
+              done
+            fi
+          done
+          exit $status
+      - name: Package every publishable crate (no compile)
+        # TODO(verify): crates that depend on each other and are not yet on the
+        # registry; --workspace lets cargo resolve them among themselves.
+        run: cargo package --workspace --no-verify --allow-dirty
+
+  # Proves the helpers skip cleanly: with NEITHER ENERGYML_FIXTURES_DIR nor
+  # ENERGYML_LUTETIA_DIR (nor ENERGYML_FIXTURES_REQUIRED) set, the whole suite must
+  # pass. A test that reads a file that is not in the repository and does not skip
+  # shows up here, not on a contributor's machine.
+  no-fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: None of the data variables is set
+        shell: bash
+        run: |
+          if env | grep -E '^ENERGYML_(FIXTURES_DIR|FIXTURES_REQUIRED|LUTETIA_DIR)='; then
+            echo "::error::a data variable is set in this job; it must run without any"
+            exit 1
+          fi
+          test ! -e target/fixtures && test ! -e target/lutetia
+      - name: Run the tests with no reference data
+        run: cargo test --workspace -j 4 -- --test-threads=4
+
+  # Relative links and anchors of README.md, ARCHITECTURE.md, docs/ (the ADRs
+  # included) and the crates' documents. Offline: absolute URLs are not followed.
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python scripts/check-links.py
+
+  # `crates/energyml-sheet/src/text/widths.rs` is generated from Liberation Sans
+  # (the font ships in energyml-section). The committed table must be what
+  # the script writes from that font today.
+  widths:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install fonttools
+      - run: >
+          python scripts/sheet-font-widths.py
+          crates/energyml-section/fonts/LiberationSans-Regular.ttf --check
+
+  # Every `# References` section of an operation holds a citation or says it is
+  # missing (`TODO(reference)`). Whether an operation needs a section is a review
+  # matter: no text criterion tells an algorithm from a mention of one.
+  references:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python scripts/check-references.py
+
+  # What docs.rs will do: nightly, `--cfg docsrs`, the features each crate lists in
+  # [package.metadata.docs.rs]. Linux, no native HDF5.
+  docsrs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: Swatinem/rust-cache@v2
+      - run: python scripts/docsrs-check.py
+
+  # Secrets and personal data never enter this repository (the release was cut from a
+  # first commit with no history, so only the tree is scanned). The binary is built from
+  # source rather than using gitleaks/gitleaks-action, which asks for a licence key on
+  # organisation repositories. TODO(verify): the action's current major is v3.0.0 (Node 24).
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+      - run: go install github.com/gitleaks/gitleaks/v8@latest
+      - name: Scan the working tree and the history
+        run: |
+          "$(go env GOPATH)/bin/gitleaks" dir . --redact --exit-code 1
+          "$(go env GOPATH)/bin/gitleaks" git . --redact --exit-code 1
