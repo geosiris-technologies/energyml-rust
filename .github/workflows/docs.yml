@@ -32,7 +32,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         if: github.event_name == 'push'
         with:
-          path: docs/book
+          path: target/book
 
   # Only pushes to main deploy; pull requests just prove that the book builds.
   deploy:
