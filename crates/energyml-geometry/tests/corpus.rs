@@ -711,10 +711,18 @@ fn every_cell_is_wound_the_way_vtk_wants() {
                         [3, 0, 4, 7],
                     ];
                     let mut volume = 0.0;
-                    // The size of the cell, to judge the sign against: a flat (degenerate) cell has
-                    // a volume of zero up to rounding, whose sign differs from one platform to the
-                    // next (s_bend.epc: -2.7e-14 on Linux); an inside-out cell is far below it.
-                    let mut magnitude = 0.0;
+                    // The size of the cell, to judge the sign against: a pinched (zero-thickness)
+                    // cell has a volume of zero up to rounding, whose sign differs from one platform
+                    // to the next (s_bend.epc: -2.7e-14 on Linux), while an inside-out cell has a
+                    // volume of the order of its extent cubed.
+                    let mut extent = 0.0f64;
+                    for axis in 0..3 {
+                        let values = (0..8).map(|corner| point(corner)[axis]);
+                        let (low, high) = values.fold((f64::INFINITY, f64::NEG_INFINITY), |(l, h), v| {
+                            (l.min(v), h.max(v))
+                        });
+                        extent = extent.max(high - low);
+                    }
                     for face in FACES {
                         let mut middle = [0.0f64; 3];
                         for corner in face {
@@ -740,11 +748,10 @@ fn every_cell_is_wound_the_way_vtk_wants() {
                             ];
                             let tetrahedron = (0..3).map(|i| normal[i] * w[i]).sum::<f64>() / 6.0;
                             volume += tetrahedron;
-                            magnitude += tetrahedron.abs();
                         }
                     }
                     assert!(
-                        volume >= -1e-9 * magnitude,
+                        volume >= -1e-9 * extent.powi(3),
                         "{}: a cell is inside out (volume = {volume})",
                         path.display()
                     );
