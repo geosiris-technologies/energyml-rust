@@ -34,8 +34,11 @@ permissions:
 env:
   MANIFEST: crates/energyml-python/Cargo.toml
   PYPROJECT: crates/energyml-python/pyproject.toml
-  # HDF5 built from its sources and linked in: cmake and a C compiler at build time.
-  FEATURES: hdf5-static
+  # Given on the command line, maturin's `--features` replaces pyproject's list instead of
+  # adding to it: without `python` (pyo3) it built a cffi module, which no runner could
+  # load (14/10/2026). So the whole list, and `hdf5-static`: HDF5 built from its sources
+  # and linked in (cmake and a C compiler at build time).
+  FEATURES: python,pyo3/extension-module,hdf5-static
 
 jobs:
   # The version the wheels carry. A tag must name exactly the version the crate
@@ -91,7 +94,7 @@ jobs:
           command: build
           args: --release --manifest-path ${{ env.MANIFEST }} --out dist --features ${{ env.FEATURES }}
           manylinux: "2_28"
-          before-script-linux: yum install -y cmake
+          before-script-linux: command -v cmake >/dev/null || yum install -y cmake
       - name: Install the wheel and smoke-test it
         shell: bash
         run: |
@@ -150,8 +153,13 @@ jobs:
           # abi3-py39: one wheel per platform.
           args: --release --manifest-path ${{ env.MANIFEST }} --out dist --features ${{ env.FEATURES }}
           # TODO(verify): the musllinux and cross (macOS x86_64, Windows aarch64) builds of HDF5.
+          # The manylinux images have yum; the musllinux cross images are Debian-based.
           before-script-linux: |
-            if command -v yum >/dev/null; then yum install -y cmake; else apk add cmake; fi
+            if ! command -v cmake >/dev/null; then
+              if command -v yum >/dev/null; then yum install -y cmake
+              elif command -v apt-get >/dev/null; then apt-get update && apt-get install -y cmake
+              else apk add cmake; fi
+            fi
       - name: Install the wheel and smoke-test it
         if: matrix.smoke
         shell: bash
