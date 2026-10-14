@@ -20,6 +20,15 @@
 //! caller could end: ending one with a [`Transaction`] that is not the open one
 //! is refused by name. ETP allows one transaction per session (ETP 1.2 §18,
 //! `StartTransaction`); a writer allows one at a time.
+//!
+//! **Outside a transaction, each write stands alone**: nothing groups two calls,
+//! and a caller that needs them applied together begins a transaction first.
+//!
+//! **After a refused end**, the two cases differ, after ETP: a refused commit
+//! applied nothing and the transaction is **over** (ETP 1.2 §18.1.1.1, step
+//! 8.b.ii); a refused rollback leaves it **open** (the specification does not say
+//! otherwise; `TODO(verify)` §18.1.1.1, step 6.b). [`EnergymlWriter::open_transaction`]
+//! tells which.
 
 use energyml_core::registry::DynObject;
 

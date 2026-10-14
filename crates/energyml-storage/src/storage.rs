@@ -239,6 +239,13 @@ pub trait EnergymlStorage {
     /// every caller above (including [`EnergymlStorage::graph`]) becomes
     /// cheaper without changing a line.
     ///
+    /// **What a store states is not what the objects write.** An ETP server's
+    /// edges join objects it holds, include by-value containment, and carry no
+    /// field path; a reference to an object the store does not hold is not among
+    /// them. A caller that needs every reference as written - a dangling
+    /// reference, what a push leaves behind - asks
+    /// [`EnergymlStorage::derived_graph`], which reads the objects.
+    ///
     /// The edges are the DORs, not an index built beside them. An EPC's
     /// `.rels` say roughly the same thing and are checked *against* this by
     /// [`crate::graph::check_relationships`], which is why they are not the

@@ -27,8 +27,9 @@ pub trait EnergymlDataspaces {
     /// ETP `GetDataspaces`.
     async fn list_dataspaces(&self) -> Result<Vec<Dataspace>>;
 
-    /// ETP `PutDataspaces`: create each dataspace, or update what it declares.
-    /// One result per dataspace, in order.
+    /// ETP `PutDataspaces`: create each dataspace, or update one that exists -
+    /// "add or update", and neither ETP nor this trait says which happened. One
+    /// result per dataspace, in order.
     async fn put_dataspaces(&mut self, dataspaces: Vec<Dataspace>) -> Vec<Result<()>>;
 
     /// ETP `DeleteDataspaces`. One result per URI, in order.
