@@ -58,6 +58,28 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: The tag names the version of the code
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          # The tag must name the version of the code it builds: a release `vX.Y.Z` created on a
+          # commit still at another version (14/10/2026: v0.1.2 on a main at 0.1.1) would
+          # publish one version under the name of another. crates.io and PyPI refuse it; so here.
+          crate=$(python3 - <<'EOF'
+          import tomllib
+          cli = tomllib.load(open("crates/energyml-cli/Cargo.toml", "rb"))["package"]["version"]
+          if isinstance(cli, dict):
+              cli = tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["version"]
+          print(cli)
+          EOF
+          )
+          tag="${GITHUB_REF_NAME#energyml-cli-}"
+          tag="${tag#v}"
+          echo "tag=$tag energyml-cli=$crate"
+          if [ "$tag" != "$crate" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match energyml-cli version $crate"
+            exit 1
+          fi
       - name: Version
         id: v
         run: |
