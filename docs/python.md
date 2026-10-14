@@ -170,7 +170,11 @@ open("model.obj", "wb").write(export_of(pkg, [uri], "obj"))
 
 `geometry_of` returns what the file says, patch by patch, with a `topology` key
 (`points`, `triangles`, `quads`, `polygons`, `polylines`, `segments`,
-`hexahedra`, `polyhedra`, `grid`). `placement` is `local`, `projected` (the
+`hexahedra`, `polyhedra`, `grid`), and `index`, the patch's number. An IJK grid's
+`hexahedra` add `cells` (8 node indices per cell), `dimensions` and `cell_index`,
+the RESQML number of each cell - empty when every cell is there, in order: a cell
+the file marks undefined is left out, and the cells after it no longer sit at
+their own number. `placement` is `local`, `projected` (the
 default) or `metres`; an unknown name is refused with the list, and `metres` is
 refused when the unit cannot be converted. `mesh_of` merges and triangulates, and
 says so in its name. `properties_of` returns the values that fit the shape,

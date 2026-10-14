@@ -149,6 +149,11 @@ flatten with `.ravel()` and cast with `.astype(...)` before writing",
 /// **The indices cross flat**, like the points: a triangle list is 3M numbers
 /// and `reshape(-1, 3)` is the caller's line. The variable-length cases have no
 /// width to reshape to, and they carry their counts beside them instead.
+///
+/// `index` is the patch's number, on every patch; a key a topology adds never
+/// reuses it. The cell numbers of `hexahedra` are `cell_index`: until 14/10/2026
+/// they were written under `index` too, replacing the patch's number on an IJK
+/// grid, so that one key held an integer here and an array there.
 fn patch_into_py<'py>(py: Python<'py>, patch: &crate::session::Patch) -> PyResult<Bound<'py, PyDict>> {
     let out = PyDict::new(py);
     out.set_item("index", patch.index)?;
@@ -197,7 +202,7 @@ fn patch_into_py<'py>(py: Python<'py>, patch: &crate::session::Patch) -> PyResul
             out.set_item("topology", "hexahedra")?;
             out.set_item("cells", cells.clone().into_pyarray(py))?;
             out.set_item("dimensions", *dimensions)?;
-            out.set_item("index", index.clone().into_pyarray(py))?;
+            out.set_item("cell_index", index.clone().into_pyarray(py))?;
         }
         Topology::Grid { fastest, slowest } => {
             out.set_item("topology", "grid")?;
