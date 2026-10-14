@@ -38,6 +38,13 @@ allow = [
     "CDLA-Permissive-2.0",
     # MPL-2.0 is file-level copyleft; allowed only as an unmodified dependency.
     "MPL-2.0",
+    # The HDF5 licence, of hdf5-metno-src (HDF5 built from its sources, behind the
+    # `hdf5-static` feature of the wheels and the CLI archives), recognised from its
+    # ext/hdf5/LICENSE. A BSD-style licence: its file says the library "is covered by the
+    # 3-clause BSD License" and gives the three clauses; the paragraph after them grants
+    # a licence on enhancements one chooses to contribute, and asks nothing of a
+    # redistributor.
+    "HDF5",
 ]
 confidence-threshold = 0.8
 # TODO(verify): run `cargo deny check licenses` on the assembled workspace and add any
