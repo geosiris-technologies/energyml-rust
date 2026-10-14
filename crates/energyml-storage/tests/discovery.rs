@@ -4,8 +4,8 @@
 //! The rules come from ETP 1.2: a dataspace URI ignores scope and depth and
 //! answers the dataspace's content (§8.2.2, row 9); an object URI walks the
 //! graph to the depth, in the direction of the scope, then the secondary
-//! expansions, then the type filter, then the edges between what is kept
-//! (§8.1.1.1.4). Sources and targets are those of §8.1.1.1.1: the object holding
+//! expansions, then the type filter, then the edges with either end among what
+//! is kept (§8.1.1.1.4, spelled out in §8.3.1 p. 163, 3.c). Sources and targets are those of §8.1.1.1.1: the object holding
 //! a reference is its source. The graph here is fabricated - the rules are the
 //! specification's, not a package's.
 //!
@@ -71,7 +71,11 @@ fn a_dataspace_answers_its_content_whatever_the_scope_and_depth() {
     deep.types = vec!["resqml22.Grid2dRepresentation".into()];
     let found = ask(&deep, false).unwrap();
     assert_eq!(uris(&found), vec![GRID], "scope and depth ignored, the type kept");
-    assert!(found.edges.is_empty(), "no edge has both ends among one object");
+    assert_eq!(
+        found.edges.len(),
+        3,
+        "every edge touching the grid, its other end filtered out or not (ETP 1.2 §8.3.1, 3.c)"
+    );
 }
 
 #[test]
@@ -109,7 +113,11 @@ fn sources_are_what_references_an_object() {
     ];
     let found = ask(&context, false).unwrap();
     assert_eq!(uris(&found), sorted(vec![HORIZON, GRID]));
-    assert_eq!(found.edges.len(), 1, "grid -> horizon, both kept");
+    assert_eq!(
+        found.edges.len(),
+        4,
+        "grid -> horizon, horizon -> feature, property -> grid, grid -> crs: one end found is enough"
+    );
 }
 
 #[test]

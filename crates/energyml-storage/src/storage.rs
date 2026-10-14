@@ -244,8 +244,9 @@ pub trait EnergymlStorage {
 
     /// What the store **states**: the relationships between objects it holds -
     /// ETP protocol 3, `GetResources` with `includeEdges`, whose reply is
-    /// `GetResourcesEdgesResponse` (ETP 1.2 §8.1.1.1.4, step 4: both ends in
-    /// the answer). This is what discovery walks and counts.
+    /// `GetResourcesEdgesResponse`: both ends are objects of the store, and an
+    /// answer carries those with either end among what it found (ETP 1.2
+    /// §8.3.1, p. 163, 3.c). This is what discovery walks and counts.
     ///
     /// An empty `uris` means the whole store.
     ///

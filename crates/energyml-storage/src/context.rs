@@ -144,8 +144,10 @@ impl Context {
 pub struct Found {
     /// The objects, in the order the store listed them.
     pub resources: Vec<ObjectSummary>,
-    /// The edges whose two ends are both among [`Found::resources`] (§8.1.1.1.4,
-    /// step 4).
+    /// The edges with at least one end among [`Found::resources`]: ETP 1.2
+    /// §8.3.1 (p. 163, `GetResourcesEdgesResponse` row, 3.c) recommends an
+    /// edge "if EITHER end (or both) are present", even when the other end was
+    /// filtered out by the types.
     pub edges: Vec<Edge>,
 }
 
@@ -375,7 +377,7 @@ pub fn discover(
             kept.push(summary);
         }
     }
-    // Step 4: the edges between what is kept.
+    // Step 4: the edges touching what is kept.
     Ok(counted(with_edges(kept, &edges), &edges, context))
 }
 
@@ -391,11 +393,14 @@ pub fn type_matches(pattern: &str, qualified_type: &str) -> bool {
     }
 }
 
+/// The edges of an answer: those with **either** end among the objects found
+/// (ETP 1.2 §8.3.1, p. 163, 3.c - the reading of §8.1.1.1.4 step 4, "not
+/// connected to a node in the final set", that the specification spells out).
 fn with_edges(resources: Vec<ObjectSummary>, edges: &[Edge]) -> Found {
-    let held: BTreeSet<&str> = resources.iter().map(|summary| summary.uri.as_str()).collect();
+    let found: BTreeSet<&str> = resources.iter().map(|summary| summary.uri.as_str()).collect();
     let edges = edges
         .iter()
-        .filter(|edge| held.contains(edge.from.as_str()) && held.contains(edge.to.as_str()))
+        .filter(|edge| found.contains(edge.from.as_str()) || found.contains(edge.to.as_str()))
         .cloned()
         .collect();
     Found { resources, edges }

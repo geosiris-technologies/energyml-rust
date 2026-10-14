@@ -201,8 +201,8 @@ pub mod rules {
             "ETP 1.2 section 23.34.15 (dataObjectTypes): version.* means every data object of that schema version",
             "A type ending in .* keeps every type of that schema version; an exact name keeps that type only.");
         DISC_EDGES = ("DISC-8",
-            "ETP 1.2 section 8.1.1.1.4 step 4 and section 8.3.1 (includeEdges); design note section 3 (both ends in the answer)",
-            "The edges a discovery answers have both ends among the objects it answers; over the model they are the references between held objects.");
+            "ETP 1.2 section 8.1.1.1.4 step 4, spelled out in section 8.3.1 (p. 163, GetResourcesEdgesResponse row, 3.c)",
+            "The edges a discovery answers are the store's edges with either end among the objects it answers; over the model they are the references between held objects.");
         DISC_DANGLING = ("DISC-9",
             "design note section 3 (a stated relationship is between objects the store holds)",
             "A reference to an object the store does not hold adds no object to what a walk reaches.");
@@ -1353,8 +1353,8 @@ async fn reaches<S: EnergymlStorage + Sync>(
     for edge in &found.edges {
         rule!(
             &DISC_EDGES,
-            inside.contains(edge.from.as_str()) && inside.contains(edge.to.as_str()),
-            "{context:?}: the edge {} -> {} has an end outside the objects found",
+            inside.contains(edge.from.as_str()) || inside.contains(edge.to.as_str()),
+            "{context:?}: the edge {} -> {} has neither end among the objects found",
             edge.from,
             edge.to
         );
@@ -1434,11 +1434,10 @@ pub async fn discovery<S: EnergymlStorage + Sync>(make: &dyn Fn() -> S) {
         &[HORIZON_1, FEATURE],
     )
     .await;
-    // The column is the start, not in a `Targets` answer: its edge to the
-    // horizon has one end outside, so it is not answered (both ends, design note
-    // section 3). `TODO(verify)`: ETP 1.2 section 8.1.1.1.4 step 4 reads "not
-    // connected to a node in the final set", which one end could satisfy.
-    let walked = wanted_pairs(&[(HORIZON_1, FEATURE)]);
+    // One end found is enough (ETP 1.2 section 8.3.1, p. 163, 3.c): the column
+    // is the start, not in a `Targets` answer, yet its edge to the horizon is
+    // answered; so is the second horizon's edge to the feature found.
+    let walked = wanted_pairs(&[(COLUMN, HORIZON_1), (HORIZON_1, FEATURE), (HORIZON_2, FEATURE)]);
     rule!(
         &DISC_EDGES,
         pairs(&two.edges) == walked,
