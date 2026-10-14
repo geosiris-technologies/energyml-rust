@@ -35,25 +35,25 @@ crate-type = ["cdylib", "rlib"]
 # wheel, into the compile time and into everybody's public surface.
 # `tests/scope.rs` reads this table and goes red if either shows up in it.
 [dependencies]
-energyml-core = { path = "../energyml-core", version = "0.2.0-alpha.2" }
-energyml-schemas = { path = "../energyml-schemas", version = "0.2.0-alpha.2", features = ["all"] }
-energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.2" }
+energyml-core = { path = "../energyml-core", version = "0.2.0-alpha.3" }
+energyml-schemas = { path = "../energyml-schemas", version = "0.2.0-alpha.3", features = ["all"] }
+energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.3" }
 # **What the other libraries return and a raw array does not say**: the points
 # of a representation, its topology, the values hanging on it. All of it is
 # already computed there; the bridge only passes it on. No native dependency
 # comes with it: the HDF5 backend stays behind the `hdf5` feature.
 # The check report, the units and the property kinds. Nothing native.
-energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.2" }
-energyml-geometry = { path = "../energyml-geometry", version = "0.2.0-alpha.2" }
+energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.3" }
+energyml-geometry = { path = "../energyml-geometry", version = "0.2.0-alpha.3" }
 # The exporters, through their registry. Nothing native either: they write text
 # and bytes into what they are given.
-energyml-export = { path = "../energyml-export", version = "0.2.0-alpha.2" }
+energyml-export = { path = "../energyml-export", version = "0.2.0-alpha.3" }
 # **Geodesy, and it is needed even when nobody asks for it**: RFC 7946 makes
 # GeoJSON WGS 84 by definition, so the exporter **refuses** a model in projected
 # metres without a reprojector - which this bridge used to do, so that
 # `export(…, "geojson")` was impossible from Python while the command line wrote
 # it. Pure Rust, wasm included: nothing native comes in here.
-energyml-proj = { path = "../energyml-proj", version = "0.2.0-alpha.2" }
+energyml-proj = { path = "../energyml-proj", version = "0.2.0-alpha.3" }
 pyo3 = { version = "0.29", features = ["abi3-py39"], optional = true }
 numpy = { version = "0.29", optional = true }
 serde_json = "1.0"
