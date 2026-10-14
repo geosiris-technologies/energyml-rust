@@ -104,13 +104,14 @@ jobs:
       - name: Install the wheel and smoke-test it
         shell: bash
         run: |
-          python scripts/fetch-fixtures.py
+          # Not under target/: the Linux build container leaves it owned by root.
+          python scripts/fetch-fixtures.py --dir "$RUNNER_TEMP/fixtures"
           python -m venv "$RUNNER_TEMP/venv"
           . "$RUNNER_TEMP/venv/bin/activate"
           pip install numpy
           pip install --no-index --find-links dist energyml-rust
           cd "$RUNNER_TEMP"
-          python "$GITHUB_WORKSPACE/scripts/wheel-smoke.py" "$GITHUB_WORKSPACE/target/fixtures/fesapi/testingPackageCpp22.epc"
+          python "$GITHUB_WORKSPACE/scripts/wheel-smoke.py" "$RUNNER_TEMP/fixtures/fesapi/testingPackageCpp22.epc"
           # TODO(verify): run the Python test suite here once it is placed in the public tree.
 
   wheels:
@@ -176,13 +177,14 @@ jobs:
         if: matrix.smoke
         shell: bash
         run: |
-          python scripts/fetch-fixtures.py
+          # Not under target/: the Linux build container leaves it owned by root.
+          python scripts/fetch-fixtures.py --dir "$RUNNER_TEMP/fixtures"
           python -m venv "$RUNNER_TEMP/venv"
           if [ -d "$RUNNER_TEMP/venv/Scripts" ]; then . "$RUNNER_TEMP/venv/Scripts/activate"; else . "$RUNNER_TEMP/venv/bin/activate"; fi
           pip install numpy
           pip install --no-index --find-links dist energyml-rust
           cd "$RUNNER_TEMP"
-          python "$GITHUB_WORKSPACE/scripts/wheel-smoke.py" "$GITHUB_WORKSPACE/target/fixtures/fesapi/testingPackageCpp22.epc"
+          python "$GITHUB_WORKSPACE/scripts/wheel-smoke.py" "$RUNNER_TEMP/fixtures/fesapi/testingPackageCpp22.epc"
       - uses: actions/upload-artifact@v7
         with:
           name: wheels-${{ matrix.os }}-${{ matrix.target }}-${{ matrix.manylinux }}
