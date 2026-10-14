@@ -2,6 +2,8 @@
 
 <img src="docs/images/hero-section.svg" alt="A cross-section of the Lutetia reference model, drawn by energyml-rust" width="100%">
 
+<sub>A section of <a href="https://github.com/geosiris-technologies/energyml-lutetia">Lutetia</a>, a synthetic model (CC BY 4.0) built on boreholes of the BRGM Banque du sous-sol (Licence Ouverte 2.0), modified for the example.</sub>
+
 # energyml-rust
 
 **Read, write and compute EnergyML (RESQML, WITSML, PRODML) data - Rust, Python, CLI**

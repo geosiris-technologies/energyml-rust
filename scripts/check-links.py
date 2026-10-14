@@ -31,6 +31,8 @@ from urllib.parse import unquote
 INLINE = re.compile(r"(?<!\!)\[(?:[^\]\[]|\[[^\]]*\])*\]\(\s*<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\s*\)")
 IMAGE = re.compile(r"\!\[(?:[^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\s*\)")
 REFDEF = re.compile(r"^\s{0,3}\[[^\]]+\]:\s*<?(\S+?)>?(?:\s+.*)?$")
+# The `src` and `href` of HTML written in the Markdown (the README's header image).
+HTMLREF = re.compile(r"<(?:img|a|source)\b[^>]*?\b(?:src|href)\s*=\s*\"([^\"]+)\"", re.I)
 HEADING = re.compile(r"^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$")
 SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
 SKIP_DIRS = {".git", "target", "node_modules", "book"}
@@ -103,7 +105,7 @@ def documents(root: Path) -> list[Path]:
 def targets(path: Path) -> list[tuple[int, str]]:
     found: list[tuple[int, str]] = []
     for no, line in strip_code(path.read_text(encoding="utf-8").splitlines()):
-        for rx in (INLINE, IMAGE):
+        for rx in (INLINE, IMAGE, HTMLREF):
             found += [(no, m.group(1)) for m in rx.finditer(line)]
         m = REFDEF.match(line)
         if m:

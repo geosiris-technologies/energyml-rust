@@ -29,16 +29,15 @@ schema = 1
 [source]
 repo = "geosiris-technologies/energyml-lutetia"
 url = "https://github.com/geosiris-technologies/energyml-lutetia"
-# PLACEHOLDER: the repository does not exist yet, so there is no commit to pin.
-# All zeros makes scripts/fetch-lutetia.py fail with a clear message. Replace it
-# with the 40-hex commit of the first published replay.
-commit = "0000000000000000000000000000000000000000"
+# The first published commit of energyml-lutetia (14/10/2026), replayed byte for
+# byte with energyml-cli 0.1.0 on the platform of its `written-on`.
+commit = "a237f6bf5acdf7cd32fa57f5602040fe53f0fca6"
 
-# SHA-256 of the large files at that commit, to fill in when the pin is real
-# (`sha256sum package/Lutetia.epc ...` in a checkout at that commit). Each entry
-# is checked after extraction; a mismatch is a hard failure.
+# SHA-256 of the large files at that commit (`sha256sum package/Lutetia.epc ...`
+# in a checkout at that commit). Each entry is checked after extraction; a
+# mismatch is a hard failure.
 [sha256]
-# "package/Lutetia.epc" = "<64 hex>"
-# "package/Lutetia.h5" = "<64 hex>"
-# "package-with-errors/Lutetia.epc" = "<64 hex>"
-# "package-with-errors/Lutetia.h5" = "<64 hex>"
+"package/Lutetia.epc" = "03a1c13e206437d5fbe0373413f280d10baed01734eb3b36f82c26a93630062f"
+"package/Lutetia.h5" = "705726a7ce7ecde9d98f96718456b74c6df037dd62083f2003da90686fdbfbd9"
+"package-with-errors/Lutetia.epc" = "bf2bc3ee75e6f275ae3ea5e96e67e9695169faa4d8b98db87f2cafc9218c10eb"
+"package-with-errors/Lutetia.h5" = "10fedeb9cdeaf23a0855e3e450787c0ec56dc4e91935c49cc2bf7f7b7da24351"
