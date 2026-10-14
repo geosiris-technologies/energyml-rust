@@ -43,6 +43,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
+      # The semver check builds each changed crate's rustdoc with all its features,
+      # `hdf5` among them, which links the HDF5 C library.
+      - name: Install HDF5
+        run: sudo apt-get update && sudo apt-get install -y libhdf5-dev
       - uses: release-plz/action@v0.5
         with:
           command: release-pr
