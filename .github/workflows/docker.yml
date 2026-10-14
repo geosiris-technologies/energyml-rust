@@ -4,7 +4,10 @@
 # - pull request: build for linux/amd64, smoke-test, push nothing;
 # - push to main: push the `edge` tag;
 # - a published release vX.Y.Z, or a tag energyml-cli-vX.Y.Z: push `X.Y.Z`, `X.Y`
-#   and `latest` (`latest` not for a pre-release).
+#   and `latest` (`latest` not for a pre-release);
+# - a tag energyml-cli-vX.Y.Z-pre (a pre-release published from dev by release-plz,
+#   which starts this workflow on it): push `X.Y.Z-pre` and `dev`, never `X.Y` nor
+#   `latest`.
 #
 # Nothing is pushed until the repository variable IMAGE_PUBLISH is 'true': until
 # then main, tags and manual runs only build and smoke-test, as a pull request does.
@@ -140,6 +143,17 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # A version with a suffix (0.2.0-alpha.1) is a pre-release: it gets its own tag and
+      # `dev`, and must never take `X.Y` or `latest` from a release.
+      - name: Pre-release
+        id: pre
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_NAME" =~ ^(energyml-cli-)?v[0-9]+\.[0-9]+\.[0-9]+-.+$ ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Tags
         id: meta
         uses: docker/metadata-action@v6
@@ -147,11 +161,12 @@ jobs:
           images: ${{ env.IMAGE }}
           tags: |
             type=edge,branch=main
-            type=match,pattern=energyml-cli-v(\d+\.\d+\.\d+),group=1
-            type=match,pattern=energyml-cli-v(\d+\.\d+)\.\d+,group=1
+            type=match,pattern=^energyml-cli-v(\d+\.\d+\.\d+.*)$,group=1
+            type=match,pattern=^energyml-cli-v(\d+\.\d+)\.\d+$,group=1
             type=match,pattern=^v(\d+\.\d+\.\d+.*)$,group=1
             type=match,pattern=^v(\d+\.\d+)\.\d+$,group=1
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/energyml-cli-v') || (github.event_name == 'release' && !github.event.release.prerelease) }}
+            type=raw,value=dev,enable=${{ steps.pre.outputs.prerelease == 'true' }}
+            type=raw,value=latest,enable=${{ steps.pre.outputs.prerelease != 'true' && (startsWith(github.ref, 'refs/tags/energyml-cli-v') || (github.event_name == 'release' && !github.event.release.prerelease)) }}
       - name: Join the digests into one manifest
         working-directory: /tmp/digests
         run: |

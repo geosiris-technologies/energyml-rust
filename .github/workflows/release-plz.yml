@@ -3,8 +3,9 @@ name: release-plz
 # On every push to main: open (or update) a release pull request with the version
 # bumps and changelogs; once it is merged, publish to crates.io and tag.
 # On every push to dev: publish a crate whose version is not yet on crates.io (a
-# pre-release such as 0.2.0-alpha.1, set by hand in Cargo.toml) and tag it; no
-# release pull request, no CLI binaries, no image.
+# pre-release such as 0.2.0-alpha.1, set by hand in Cargo.toml), tag it, and build
+# the image of that pre-release (tags `X.Y.Z-pre` and `dev`, never `latest`); no
+# release pull request, no CLI binaries.
 # Publication uses crates.io trusted publishing (OIDC): no token is stored. The
 # publish job runs in the `crates-io` environment, which crates.io checks (each
 # crate's trusted publisher names it) and which only `main` and `dev` may deploy to.
@@ -16,8 +17,10 @@ name: release-plz
 # checked against the manifests. The repository variable RELEASE_PLZ_PUBLISH
 # chooses: 'true' publishes on a merge to main or dev and on a release; 'release'
 # on a release only (the release pull request still prepares versions and
-# changelogs); unset, nothing is published. The `crates-io` environment accepts
-# the branches main and dev and the tags `v*` and `*-v*`.
+# changelogs); unset, nothing is published. dev has its own variable, DEV_PUBLISH:
+# 'true' publishes its pre-releases, anything else nothing, whatever main does. The
+# `crates-io` environment accepts the branches main and dev and the tags `v*` and
+# `*-v*`.
 on:
   push:
     branches: [main, dev]
@@ -71,7 +74,8 @@ jobs:
     # switched on in the repository's variables: creating the repository must not
     # publish anything.
     if: >-
-      ${{ (github.event_name != 'release' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && vars.RELEASE_PLZ_PUBLISH == 'true')
+      ${{ (github.event_name != 'release' && github.ref == 'refs/heads/main' && vars.RELEASE_PLZ_PUBLISH == 'true')
+       || (github.event_name != 'release' && github.ref == 'refs/heads/dev' && vars.DEV_PUBLISH == 'true')
        || (github.event_name == 'release' && (vars.RELEASE_PLZ_PUBLISH == 'true' || vars.RELEASE_PLZ_PUBLISH == 'release')) }}
     environment: crates-io
     permissions:
@@ -126,16 +130,19 @@ jobs:
       # extra secret; the publish gates stay in those workflows (IMAGE_PUBLISH)
       # and in this job (RELEASE_PLZ_PUBLISH).
       - name: Start the tag workflows
-        # Not from dev: a pre-release must not become the `latest` image. Not on a GitHub
-        # release either: release-cli.yml and docker.yml listen for the release itself and
-        # attach to it; starting them here too would build everything twice.
-        if: ${{ github.ref != 'refs/heads/dev' && github.event_name != 'release' && steps.rp.outputs.releases_created == 'true' }}
+        # Not on a GitHub release: release-cli.yml and docker.yml listen for the release
+        # itself and attach to it; starting them here too would build everything twice.
+        # From dev, the image only: a pre-release gets no CLI archives, and docker.yml
+        # tags it `X.Y.Z-pre` and `dev`, never `latest`.
+        if: ${{ github.event_name != 'release' && steps.rp.outputs.releases_created == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           RELEASES: ${{ steps.rp.outputs.releases }}
         run: |
           for tag in $(jq -r '.[].tag' <<< "$RELEASES" | grep '^energyml-cli-v' || true); do
-            gh workflow run release-cli.yml --ref "$tag"
+            if [ "$GITHUB_REF" != refs/heads/dev ]; then
+              gh workflow run release-cli.yml --ref "$tag"
+            fi
             gh workflow run docker.yml --ref "$tag"
           done
