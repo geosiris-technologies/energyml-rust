@@ -23,9 +23,9 @@ autotests = false
 # dependency: what this crate holds needs nothing more than `std`.
 [dependencies]
 energyml-core = { workspace = true }
-energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.1" }
-energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.1" }
-energyml-geometry = { path = "../energyml-geometry", version = "0.2.0-alpha.1" }
+energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.2" }
+energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.2" }
+energyml-geometry = { path = "../energyml-geometry", version = "0.2.0-alpha.2" }
 thiserror = "2.0"
 
 [dev-dependencies]

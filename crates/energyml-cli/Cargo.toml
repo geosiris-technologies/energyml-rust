@@ -40,37 +40,37 @@ ureq = "3"
 # The public APIs: building a request and reading a response are in the
 # crate, the network is behind its `native` feature. The CLI only keeps the
 # display.
-energyml-providers = { path = "../energyml-providers", version = "0.2.0-alpha.1", features = ["native"] }
+energyml-providers = { path = "../energyml-providers", version = "0.2.0-alpha.2", features = ["native"] }
 clap = { version = "4.6", features = ["derive"] }
 # For `energyml docs`: the documentation JSON is serde_json `Value`s built by
 # `energyml_core::docs`, and the CLI only chooses files and writes them.
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 energyml-core = { workspace = true }
-energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.1" }
-energyml-geometry = { path = "../energyml-geometry", version = "0.2.0-alpha.1" }
-energyml-export = { path = "../energyml-export", version = "0.2.0-alpha.1" }
+energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.2" }
+energyml-geometry = { path = "../energyml-geometry", version = "0.2.0-alpha.2" }
+energyml-export = { path = "../energyml-export", version = "0.2.0-alpha.2" }
 # `profile`: the long profile of the wells on a track. The arithmetic is there.
-energyml-analysis = { path = "../energyml-analysis", version = "0.2.0-alpha.1" }
+energyml-analysis = { path = "../energyml-analysis", version = "0.2.0-alpha.2" }
 # `profile --svg`: the section view - the catalogue, its layout and its SVG.
 # The command only parses and writes.
-energyml-section = { path = "../energyml-section", version = "0.2.0-alpha.1" }
-energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.1" }
+energyml-section = { path = "../energyml-section", version = "0.2.0-alpha.2" }
+energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.2" }
 # What a command keeps of the package it opened, layer by layer - off unless
 # the command is on the fixed list of `src/layers.rs`.
-energyml-cache = { path = "../energyml-cache", version = "0.2.0-alpha.1" }
-energyml-rules = { path = "../energyml-rules", version = "0.2.0-alpha.1" }
+energyml-cache = { path = "../energyml-cache", version = "0.2.0-alpha.2" }
+energyml-rules = { path = "../energyml-rules", version = "0.2.0-alpha.2" }
 # The geodesy backend, plugged in at `export --epsg`. Pure Rust, so the CLI
 # stays buildable wherever the library is.
-energyml-proj = { path = "../energyml-proj", version = "0.2.0-alpha.1" }
+energyml-proj = { path = "../energyml-proj", version = "0.2.0-alpha.2" }
 
 # Every schema version the workspace generates, in one crate. The list of
 # releases lives there and nowhere else; `energyml-schemas/tests/complete.rs`
 # checks it against `codegen.toml`, so a forgotten release fails a test instead
 # of producing a tool that silently cannot read it.
-energyml-schemas = { path = "../energyml-schemas", version = "0.2.0-alpha.1", features = ["all"] }
+energyml-schemas = { path = "../energyml-schemas", version = "0.2.0-alpha.2", features = ["all"] }
 
 energyml-log = { workspace = true }
-energyml-build = { path = "../energyml-build", version = "0.2.0-alpha.1" }
+energyml-build = { path = "../energyml-build", version = "0.2.0-alpha.2" }
 
 # No dependency on the translation or on ETP, not even an optional one: those
 # tools are separate programs (an external translation tool, `retp`) that
