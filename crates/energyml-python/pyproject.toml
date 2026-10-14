@@ -11,7 +11,12 @@ build-backend = "maturin"
 # anything.
 name = "energyml-rust"
 requires-python = ">=3.9"
-license = { text = "Apache-2.0" }
+# PEP 639: an SPDX expression, and the files named. Left to find them, maturin 1.15
+# wrote `License-File: LICENSE` for this crate's own LICENSE and NOTICE but left them
+# under crates/energyml-python/ in the sdist, and the index refused the archive
+# ("License-File LICENSE does not exist in distribution file", 14/10/2026).
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 description = "Read and write EnergyML packages (EPC + HDF5: RESQML, WITSML, PRODML) from Python, over energyml-rust"
 authors = [{ name = "Geosiris" }]
 maintainers = [{ name = "Geosiris" }]
