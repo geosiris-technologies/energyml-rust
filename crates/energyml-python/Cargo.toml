@@ -76,6 +76,9 @@ python = ["dep:pyo3", "dep:numpy", "hdf5"]
 # The native backend, alone - for the `hdf5` CI suite, which exercises array
 # reading and writing without needing an interpreter.
 hdf5 = ["energyml-storage/hdf5"]
+# HDF5 built from its sources and linked into the module: the published wheels
+# (`python.yml` passes it), which then need no HDF5 on the user's machine.
+hdf5-static = ["hdf5", "energyml-storage/hdf5-static"]
 
 [dev-dependencies]
 tempfile = "3"

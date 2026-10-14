@@ -49,6 +49,10 @@ default = []
 private-corpus = []
 # Read arrays from HDF5 files. Needs the C library at build time.
 hdf5 = ["dep:hdf5", "dep:ndarray"]
+# The same, with the C library built from its sources and linked in (needs CMake and
+# a C compiler, no installed HDF5): what a Python wheel ships, so that it loads on a
+# machine without HDF5. zlib with it, for the deflate-compressed datasets.
+hdf5-static = ["hdf5", "hdf5/static", "hdf5/zlib"]
 
 [dev-dependencies]
 # `tests/mistyped.rs` builds deliberately mistyped packages of its own; the same
