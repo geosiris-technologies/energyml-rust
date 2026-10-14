@@ -17,4 +17,4 @@ repository.workspace = true
 [dependencies]
 energyml-core = { workspace = true }
 energyml-derive = { workspace = true }
-energyml-eml-2-1 = { path = "../energyml-eml-2-1", version = "0.1.0" }
+energyml-eml-2-1 = { path = "../energyml-eml-2-1", version = "0.1.1" }

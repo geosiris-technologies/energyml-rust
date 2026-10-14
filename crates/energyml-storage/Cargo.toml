@@ -55,19 +55,19 @@ hdf5 = ["dep:hdf5", "dep:ndarray"]
 # version the crate itself reads with, so the two never disagree about a zip.
 zip = { version = "7", default-features = false, features = ["deflate"] }
 futures-executor = "0.3"
-energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0", version = "0.1.0" }
-energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.0" }
-energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1", version = "0.1.0" }
-energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.1.0" }
+energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0", version = "0.1.1" }
+energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.1" }
+energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1", version = "0.1.1" }
+energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.1.1" }
 # `tests/drops.rs` reads one document against a release and its development
 # drop, which is the only way to observe which of the two was chosen.
-energyml-eml-2-2 = { path = "../generated/energyml-eml-2-2", version = "0.1.0" }
-energyml-resqml-2-2-dev3 = { path = "../generated/energyml-resqml-2-2-dev3", version = "0.1.0" }
+energyml-eml-2-2 = { path = "../generated/energyml-eml-2-2", version = "0.1.1" }
+energyml-resqml-2-2-dev3 = { path = "../generated/energyml-resqml-2-2-dev3", version = "0.1.1" }
 
 # Every schema version the workspace generates, for the corpus tests. The four
 # above are named individually because `versions.rs` and `mistyped.rs` build
 # objects of a *chosen* release by hand - that is the point of those tests.
-energyml-schemas = { path = "../energyml-schemas", version = "0.1.0", features = ["all"] }
+energyml-schemas = { path = "../energyml-schemas", version = "0.1.1", features = ["all"] }
 
 [lints.rust]
 missing_docs = "warn"
