@@ -53,11 +53,11 @@ png = ["dep:resvg"]
 [dev-dependencies]
 # `tests/svg.rs` re-reads the SVG with a parser that is not this crate's code.
 quick-xml = "0.41"
-energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.1" }
-energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.1.1" }
-energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0", version = "0.1.1" }
-energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1", version = "0.1.1" }
-energyml-schemas = { path = "../energyml-schemas", version = "0.1.1", features = ["all"] }
+energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3" }
+energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2" }
+energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0" }
+energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1" }
+energyml-schemas = { path = "../energyml-schemas", features = ["all"] }
 
 [lints.rust]
 missing_docs = "warn"

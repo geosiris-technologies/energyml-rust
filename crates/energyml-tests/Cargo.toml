@@ -12,22 +12,22 @@ autotests = false
 
 [dev-dependencies]
 energyml-core = { workspace = true }
-energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0", version = "0.1.1" }
-energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.1" }
-energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1", version = "0.1.1" }
-energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.1.1" }
+energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0" }
+energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3" }
+energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1" }
+energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2" }
 # For the two XSD constructs the generator used to drop: an optional
 # `<xs:sequence>` (witsml `TorqueStatistics`) and `mixed="true"` (eml
 # `PhoneNumberStruct`). Both are real declarations, so the tests read the real
 # generated types rather than a fixture.
-energyml-witsml-2-0 = { path = "../generated/energyml-witsml-2-0", version = "0.1.1" }
+energyml-witsml-2-0 = { path = "../generated/energyml-witsml-2-0" }
 # `tests/crossaudit.rs` is the one suite here that spans the whole stack: it
 # exists to confront the storage, domain and geometry layers with each other and
 # with the bytes on disk, which needs all three in one place.
-energyml-storage = { path = "../energyml-storage", version = "0.1.1" }
-energyml-domain = { path = "../energyml-domain", version = "0.1.1" }
-energyml-geometry = { path = "../energyml-geometry", version = "0.1.1" }
-energyml-schemas = { path = "../energyml-schemas", version = "0.1.1", features = ["all"] }
+energyml-storage = { path = "../energyml-storage" }
+energyml-domain = { path = "../energyml-domain" }
+energyml-geometry = { path = "../energyml-geometry" }
+energyml-schemas = { path = "../energyml-schemas", features = ["all"] }
 # The cross-audit derives packages from the corpus - one with elements removed,
 # one with a value corrupted - because a ladder whose three rungs are all empty
 # proves nothing about the order of its rungs.

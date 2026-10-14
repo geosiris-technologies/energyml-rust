@@ -29,7 +29,7 @@ energyml-geometry = { path = "../energyml-geometry", version = "0.1.1" }
 thiserror = "2.0"
 
 [dev-dependencies]
-energyml-schemas = { path = "../energyml-schemas", version = "0.1.1", features = ["all"] }
+energyml-schemas = { path = "../energyml-schemas", features = ["all"] }
 
 [lints.rust]
 missing_docs = "warn"

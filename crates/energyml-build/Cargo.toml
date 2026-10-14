@@ -73,7 +73,7 @@ default = []
 hdf5 = ["energyml-storage/hdf5"]
 
 [dev-dependencies]
-energyml-schemas = { path = "../energyml-schemas", version = "0.1.1", features = ["all"] }
+energyml-schemas = { path = "../energyml-schemas", features = ["all"] }
 # `tests/export_media.rs` opens the saved package as the archive it is, not
 # through the store that wrote it - the version `energyml-storage` writes with.
 zip = { version = "7", default-features = false, features = ["deflate"] }

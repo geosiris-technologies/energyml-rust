@@ -39,12 +39,12 @@ quick-xml = "0.41"
 # `tests/read.rs` builds a frame, its properties and a lookup table in
 # memory, after the specification - the same pattern
 # `crates/energyml-domain/tests/well_strata.rs` uses.
-energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.1" }
-energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.1.1" }
+energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3" }
+energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2" }
 # A package opened for real - every release's schema in one registry - for a
 # test that draws a sheet from a file of `testdata/` or of the front end's
 # examples, and says so when the file is absent.
-energyml-schemas = { path = "../energyml-schemas", version = "0.1.1", features = ["all"] }
+energyml-schemas = { path = "../energyml-schemas", features = ["all"] }
 
 [lints.rust]
 missing_docs = "warn"

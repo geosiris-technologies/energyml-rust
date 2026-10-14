@@ -48,7 +48,7 @@ default = []
 native = ["dep:ureq"]
 
 [dev-dependencies]
-energyml-build = { path = "../energyml-build", version = "0.1.1" }
+energyml-build = { path = "../energyml-build" }
 
 # docs.rs builds on Linux with no native HDF5: every feature builds there.
 [package.metadata.docs.rs]
