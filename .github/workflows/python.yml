@@ -31,6 +31,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch makes a running build pointless; a tag always finishes.
+concurrency:
+  group: python-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type == 'branch' }}
+
 env:
   MANIFEST: crates/energyml-python/Cargo.toml
   PYPROJECT: crates/energyml-python/pyproject.toml
@@ -92,8 +97,9 @@ jobs:
       - uses: PyO3/maturin-action@v1
         with:
           command: build
-          args: --release --manifest-path ${{ env.MANIFEST }} --out dist --features ${{ env.FEATURES }}
+          args: --profile dist --manifest-path ${{ env.MANIFEST }} --out dist --features ${{ env.FEATURES }}
           manylinux: "2_28"
+          sccache: "true"
           before-script-linux: command -v cmake >/dev/null || yum install -y cmake
       - name: Install the wheel and smoke-test it
         shell: bash
@@ -150,16 +156,22 @@ jobs:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
           command: build
-          # abi3-py39: one wheel per platform.
-          args: --release --manifest-path ${{ env.MANIFEST }} --out dist --features ${{ env.FEATURES }}
-          # TODO(verify): the musllinux and cross (macOS x86_64, Windows aarch64) builds of HDF5.
-          # The manylinux images have yum; the musllinux cross images are Debian-based.
+          # abi3-py39: one wheel per platform. The `dist` profile: thin LTO (see Cargo.toml).
+          args: --profile dist --manifest-path ${{ env.MANIFEST }} --out dist --features ${{ env.FEATURES }}
+          sccache: "true"
+          # The cross builds (macOS x86_64, Windows aarch64) are built, not smoke-tested.
+          # TODO(verify): the musllinux builds of HDF5.
+          # HDF5 2.2 needs CMake 3.26 or newer. The manylinux images have yum (3.26.5); the
+          # musllinux cross images are Ubuntu 22.04 with CMake 3.22, so a newer one from pip.
           before-script-linux: |
-            if ! command -v cmake >/dev/null; then
+            recent() { command -v cmake >/dev/null && [ "$(printf '%s\n' 3.26 "$(cmake --version | head -1 | awk '{print $3}')" | sort -V | head -1)" = 3.26 ]; }
+            if ! recent; then
               if command -v yum >/dev/null; then yum install -y cmake
-              elif command -v apt-get >/dev/null; then apt-get update && apt-get install -y cmake
+              elif command -v apt-get >/dev/null; then apt-get update && apt-get install -y python3-pip && python3 -m pip install 'cmake>=3.26'
               else apk add cmake; fi
             fi
+            hash -r
+            cmake --version
       - name: Install the wheel and smoke-test it
         if: matrix.smoke
         shell: bash

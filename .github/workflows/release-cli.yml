@@ -31,18 +31,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # `features: hdf5` builds with HDF5 support; a target without it still reads
-          # and writes packages, and refuses by name to read an array (FeatureNotEnabled).
-          # TODO(verify): HDF5 is meant to be linked statically (hdf5-metno-src, needs cmake);
-          # no workspace feature exposes it yet, so these builds use the system HDF5.
-          - { target: x86_64-unknown-linux-gnu,   os: ubuntu-22.04,     features: hdf5, ext: tar.gz }
-          - { target: aarch64-unknown-linux-gnu,  os: ubuntu-24.04-arm, features: hdf5, ext: tar.gz }
-          - { target: x86_64-unknown-linux-musl,  os: ubuntu-22.04,     features: "",   ext: tar.gz, musl: true }
-          - { target: aarch64-unknown-linux-musl, os: ubuntu-22.04,     features: "",   ext: tar.gz, musl: true }
-          - { target: aarch64-apple-darwin,       os: macos-latest,     features: hdf5, ext: tar.gz }
-          - { target: x86_64-apple-darwin,        os: macos-latest,     features: "",   ext: tar.gz }
-          - { target: x86_64-pc-windows-msvc,     os: windows-latest,   features: hdf5, ext: zip }
-          - { target: aarch64-pc-windows-msvc,    os: windows-latest,   features: "",   ext: zip }
+          # `features: hdf5-static` builds HDF5 from its sources and links it in (CMake is on
+          # every runner image): the archive reads arrays on a machine without HDF5. A target
+          # without it still reads and writes packages, and refuses by name to read an
+          # array (FeatureNotEnabled).
+          # TODO(verify): HDF5 for the musl targets (built with cross).
+          - { target: x86_64-unknown-linux-gnu,   os: ubuntu-22.04,     features: hdf5-static, ext: tar.gz }
+          - { target: aarch64-unknown-linux-gnu,  os: ubuntu-24.04-arm, features: hdf5-static, ext: tar.gz }
+          - { target: x86_64-unknown-linux-musl,  os: ubuntu-22.04,     features: "",          ext: tar.gz, musl: true }
+          - { target: aarch64-unknown-linux-musl, os: ubuntu-22.04,     features: "",          ext: tar.gz, musl: true }
+          - { target: aarch64-apple-darwin,       os: macos-latest,     features: hdf5-static, ext: tar.gz }
+          - { target: x86_64-apple-darwin,        os: macos-latest,     features: hdf5-static, ext: tar.gz }
+          - { target: x86_64-pc-windows-msvc,     os: windows-latest,   features: hdf5-static, ext: zip }
+          - { target: aarch64-pc-windows-msvc,    os: windows-latest,   features: hdf5-static, ext: zip }
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -51,14 +52,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
-      # HDF5 development files, where the build uses them.
-      - name: Install HDF5 (Linux)
-        if: matrix.features == 'hdf5' && runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libhdf5-dev cmake
-      - name: Install HDF5 (macOS)
-        if: matrix.features == 'hdf5' && runner.os == 'macOS'
-        run: brew install hdf5 cmake
-      # TODO(verify): HDF5 on Windows (the MSVC build of HDF5 1.14.x via vcpkg or a prebuilt package).
       - name: Install cross (musl and foreign-architecture Linux targets)
         if: matrix.musl
         uses: taiki-e/install-action@v2
@@ -70,9 +63,9 @@ jobs:
           feat=""
           if [ -n "${{ matrix.features }}" ]; then feat="--features ${{ matrix.features }}"; fi
           if [ "${{ matrix.musl }}" = "true" ]; then
-            cross build --release --locked -p energyml-cli --target ${{ matrix.target }} $feat
+            cross build --profile dist --locked -p energyml-cli --bin energyml --target ${{ matrix.target }} $feat
           else
-            cargo build --release --locked -p energyml-cli --target ${{ matrix.target }} $feat
+            cargo build --profile dist --locked -p energyml-cli --bin energyml --target ${{ matrix.target }} $feat
           fi
       - name: Package
         shell: bash
@@ -81,7 +74,7 @@ jobs:
           mkdir "$name"
           bin=energyml
           if [ "${{ runner.os }}" = "Windows" ]; then bin=energyml.exe; fi
-          cp "target/${{ matrix.target }}/release/$bin" "$name/"
+          cp "target/${{ matrix.target }}/dist/$bin" "$name/"
           cp LICENSE NOTICE README.md "$name/"
           if [ "${{ matrix.ext }}" = "zip" ]; then
             7z a "$name.zip" "$name"
