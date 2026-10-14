@@ -1,16 +1,30 @@
 name: python
 
 # Wheels and sdist for `energyml-rust` (imported as `energyml.rust`), built with
-# maturin from crates/energyml-python.
-#  - pull requests touching the bridge: one wheel + a smoke test;
-#  - tag `python-v*`: the full matrix, sdist, and PyPI trusted publishing.
+# maturin from crates/energyml-python, HDF5 compiled into the module (feature
+# `hdf5-static`): a wheel needs no HDF5 on the machine that installs it.
+#  - pull request touching the crates: one Linux wheel, installed and smoke-tested;
+#  - push to main or dev: the full matrix and the sdist, at a development version
+#    X.Y.(Z+1).devN (N = the run number), published to TestPyPI;
+#  - tag `python-v*`: the full matrix and the sdist at the crate's own version,
+#    published to PyPI. Releases go to PyPI only, development versions to TestPyPI only.
 on:
   pull_request:
     paths:
-      - "crates/energyml-python/**"
-      - "crates/energyml-storage/**"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "scripts/wheel-smoke.py"
       - ".github/workflows/python.yml"
   push:
+    branches: [main, dev]
+    # Path filters are not applied to tags: a python-v* tag always runs.
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "scripts/wheel-smoke.py"
+      - ".github/workflows/python.yml"
     tags:
       - "python-v*"
 
@@ -19,24 +33,48 @@ permissions:
 
 env:
   MANIFEST: crates/energyml-python/Cargo.toml
+  PYPROJECT: crates/energyml-python/pyproject.toml
+  # HDF5 built from its sources and linked in: cmake and a C compiler at build time.
+  FEATURES: hdf5-static
 
 jobs:
-  # A tag must name exactly the version the crate declares (version.workspace -> Cargo.toml).
-  check-tag:
-    if: startsWith(github.ref, 'refs/tags/python-v')
+  # The version the wheels carry. A tag must name exactly the version the crate
+  # declares (version.workspace -> Cargo.toml), and the wheels keep it (empty
+  # output: pyproject's dynamic version, read from Cargo.toml). A push to a branch
+  # builds a PEP 440 development version above the last release: X.Y.(Z+1).devN,
+  # or X.Y.Z.devN when the crate already carries a pre-release (X.Y.Z-alpha.1 on dev).
+  version:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
     steps:
       - uses: actions/checkout@v7
-      - name: Tag equals crate version
+      - id: v
         shell: bash
         run: |
-          tag="${GITHUB_REF_NAME#python-v}"
           crate=$(cargo metadata --no-deps --format-version 1 \
             | python3 -c "import sys,json; print(next(p['version'] for p in json.load(sys.stdin)['packages'] if p['name']=='energyml-python'))")
-          echo "tag=$tag crate=$crate"
-          if [ "$tag" != "$crate" ]; then
-            echo "::error::tag python-v$tag does not match energyml-python version $crate"
+          if ! [[ "$crate" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.+)?$ ]]; then
+            echo "::error::energyml-python version not read: '$crate'"
             exit 1
+          fi
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            tag="${GITHUB_REF_NAME#python-v}"
+            echo "tag=$tag crate=$crate"
+            if [ "$tag" != "$crate" ]; then
+              echo "::error::tag python-v$tag does not match energyml-python version $crate"
+              exit 1
+            fi
+            echo "version=" >> "$GITHUB_OUTPUT"
+          else
+            core="${crate%%-*}"
+            if [ "$core" = "$crate" ]; then
+              IFS=. read -r major minor patch <<< "$core"
+              core="$major.$minor.$((patch + 1))"
+            fi
+            echo "crate=$crate development=$core.dev$GITHUB_RUN_NUMBER"
+            echo "version=$core.dev$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
           fi
 
   # Pull requests: one Linux wheel, installed and exercised.
@@ -51,67 +89,98 @@ jobs:
       - uses: PyO3/maturin-action@v1
         with:
           command: build
-          args: --release --manifest-path ${{ env.MANIFEST }} --out dist
+          args: --release --manifest-path ${{ env.MANIFEST }} --out dist --features ${{ env.FEATURES }}
           manylinux: "2_28"
-          # TODO(verify): HDF5 for the wheel (static build, plan §11.2); until then the system package.
-          before-script-linux: yum install -y hdf5-devel cmake
+          before-script-linux: yum install -y cmake
       - name: Install the wheel and smoke-test it
+        shell: bash
         run: |
-          pip install pytest numpy
-          pip install --no-index --find-links dist energyml-rust
-          python -c "from energyml.rust.epc import Epc; print(Epc)"
           python scripts/fetch-fixtures.py
-          python -c "from energyml.rust.epc import Epc; p = Epc.open('target/fixtures/fesapi/testingPackageCpp22.epc'); assert len(p.objects()) > 0"
+          python -m venv "$RUNNER_TEMP/venv"
+          . "$RUNNER_TEMP/venv/bin/activate"
+          pip install numpy
+          pip install --no-index --find-links dist energyml-rust
+          cd "$RUNNER_TEMP"
+          python "$GITHUB_WORKSPACE/scripts/wheel-smoke.py" "$GITHUB_WORKSPACE/target/fixtures/fesapi/testingPackageCpp22.epc"
           # TODO(verify): run the Python test suite here once it is placed in the public tree.
 
   wheels:
-    if: startsWith(github.ref, 'refs/tags/python-v')
-    needs: check-tag
-    name: wheel ${{ matrix.target }} (${{ matrix.os }})
+    needs: version
+    name: wheel ${{ matrix.target }} (${{ matrix.os }}${{ matrix.manylinux && format(', {0}', matrix.manylinux) || '' }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        # `smoke`: the runner can load what it built (same OS, libc and architecture).
         include:
-          - { os: ubuntu-22.04,     target: x86_64,  manylinux: "2_28" }
-          - { os: ubuntu-24.04-arm, target: aarch64, manylinux: "2_28" }
-          - { os: ubuntu-22.04,     target: x86_64,  manylinux: musllinux_1_2 }
-          - { os: ubuntu-24.04-arm, target: aarch64, manylinux: musllinux_1_2 }
-          - { os: macos-latest,     target: aarch64 }
-          - { os: macos-latest,     target: x86_64 }
-          - { os: windows-latest,   target: x64 }
-          - { os: windows-latest,   target: aarch64 }  # TODO(verify): Windows arm64 is untested
+          - { os: ubuntu-22.04,     target: x86_64,  manylinux: "2_28",        smoke: true }
+          - { os: ubuntu-24.04-arm, target: aarch64, manylinux: "2_28",        smoke: true }
+          - { os: ubuntu-22.04,     target: x86_64,  manylinux: musllinux_1_2, smoke: false }
+          - { os: ubuntu-24.04-arm, target: aarch64, manylinux: musllinux_1_2, smoke: false }
+          - { os: macos-latest,     target: aarch64,                           smoke: true }
+          - { os: macos-latest,     target: x86_64,                            smoke: false }
+          - { os: windows-latest,   target: x64,                               smoke: true }
+          - { os: windows-latest,   target: aarch64,                           smoke: false }  # TODO(verify): Windows arm64 is untested
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+      - name: Development version
+        if: needs.version.outputs.version != ''
+        shell: bash
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          python - <<'EOF'
+          import os
+          path, version = os.environ["PYPROJECT"], os.environ["VERSION"]
+          text = open(path, encoding="utf-8").read()
+          if text.count('dynamic = ["version"]') != 1:
+              raise SystemExit(f"{path}: no single `dynamic = [\"version\"]` to replace")
+          open(path, "w", encoding="utf-8").write(text.replace('dynamic = ["version"]', f'version = "{version}"'))
+          print(f"{path}: version {version}")
+          EOF
       - name: Build wheel
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
           command: build
-          # abi3-py39: one wheel per platform. auditwheel repair embeds HDF5 on Linux.
-          args: --release --manifest-path ${{ env.MANIFEST }} --out dist --auditwheel repair
-          # TODO(verify): HDF5 per target; musllinux and the aarch64 cross builds need a static HDF5 (plan §11.2).
+          # abi3-py39: one wheel per platform.
+          args: --release --manifest-path ${{ env.MANIFEST }} --out dist --features ${{ env.FEATURES }}
+          # TODO(verify): the musllinux and cross (macOS x86_64, Windows aarch64) builds of HDF5.
           before-script-linux: |
-            if command -v yum >/dev/null; then yum install -y hdf5-devel cmake; else apk add hdf5-dev cmake; fi
-      # Windows and macOS wheels do not embed HDF5 by themselves.
-      # TODO(verify): delvewheel (Windows, with `--namespace-pkg energyml`, so that the
-      # loader preamble goes into energyml/rust/__init__.py and never into energyml/__init__.py)
-      # and delocate (macOS) steps, then an import test in a clean venv.
+            if command -v yum >/dev/null; then yum install -y cmake; else apk add cmake; fi
+      - name: Install the wheel and smoke-test it
+        if: matrix.smoke
+        shell: bash
+        run: |
+          python scripts/fetch-fixtures.py
+          python -m venv "$RUNNER_TEMP/venv"
+          if [ -d "$RUNNER_TEMP/venv/Scripts" ]; then . "$RUNNER_TEMP/venv/Scripts/activate"; else . "$RUNNER_TEMP/venv/bin/activate"; fi
+          pip install numpy
+          pip install --no-index --find-links dist energyml-rust
+          cd "$RUNNER_TEMP"
+          python "$GITHUB_WORKSPACE/scripts/wheel-smoke.py" "$GITHUB_WORKSPACE/target/fixtures/fesapi/testingPackageCpp22.epc"
       - uses: actions/upload-artifact@v7
         with:
           name: wheels-${{ matrix.os }}-${{ matrix.target }}-${{ matrix.manylinux }}
           path: dist
 
   sdist:
-    if: startsWith(github.ref, 'refs/tags/python-v')
-    needs: check-tag
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Development version
+        if: needs.version.outputs.version != ''
+        shell: bash
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          sed -i "s/^dynamic = \[\"version\"\]$/version = \"$VERSION\"/" "$PYPROJECT"
+          grep -q "^version = \"$VERSION\"$" "$PYPROJECT"
       - uses: PyO3/maturin-action@v1
         with:
           command: sdist
@@ -122,13 +191,13 @@ jobs:
           path: dist
 
   # PyPI trusted publishing (OIDC): no API token. The `pypi` environment and the
-  # pending publisher are declared on PyPI for this repository and workflow.
-  # Only from a python-v* tag, and only once publishing is switched on in the
-  # repository's variables: creating the repository must not publish anything.
+  # publisher are declared on PyPI for this repository and workflow. Only from a
+  # python-v* tag, and only once publishing is switched on in the repository's
+  # variables: creating the repository must not publish anything.
   publish:
     needs: [wheels, sdist]
     runs-on: ubuntu-latest
-    if: ${{ startsWith(github.ref, 'refs/tags/python-v') && vars.PYPI_PUBLISH == 'true' }}
+    if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'python-v') && vars.PYPI_PUBLISH == 'true' }}
     environment: pypi
     permissions:
       id-token: write
@@ -138,3 +207,24 @@ jobs:
           path: dist
           merge-multiple: true
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  # The development versions, to TestPyPI (its own publisher, environment `testpypi`),
+  # from main and dev only, once TESTPYPI_PUBLISH is 'true'. Install one with
+  #   pip install --pre -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ energyml-rust
+  # (numpy comes from PyPI). A run attempted again re-uploads its files: skipped.
+  publish-test:
+    needs: [wheels, sdist]
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_type == 'branch' && (github.ref_name == 'main' || github.ref_name == 'dev') && vars.TESTPYPI_PUBLISH == 'true' }}
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
