@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-cli-v0.1.1...energyml-cli-v0.1.2) - 2026-10-14
+
+### Other
+
+- a dist profile with thin LTO, and HDF5 compiled into the CLI archives
+
 ## [0.1.1](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-cli-v0.1.0...energyml-cli-v0.1.1) - 2026-10-14
 
 ### Added
