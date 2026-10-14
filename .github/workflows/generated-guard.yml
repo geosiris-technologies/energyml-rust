@@ -30,8 +30,26 @@ jobs:
           changed=$(git diff --name-only "$BASE...$HEAD" -- 'crates/generated/')
           # crates/generated/README.md is documentation, hand-written by maintainers.
           changed=$(echo "$changed" | grep -v '^crates/generated/README.md$' || true)
+          # Release metadata is release-plz's, not the generator's: a crate's
+          # CHANGELOG.md, and a Cargo.toml in which only `version = "…"` values
+          # change (the release pull request bumps them).
+          from=$(git merge-base "$BASE" "$HEAD")
+          versionless() { sed -E 's/version = "[^"]*"/version = ""/g'; }
+          kept=""
+          for f in $changed; do
+            case "$f" in
+              */CHANGELOG.md) continue ;;
+              */Cargo.toml)
+                if before=$(git show "$from:$f" 2>/dev/null) && after=$(git show "$HEAD:$f" 2>/dev/null) \
+                  && [ "$(versionless <<< "$before")" = "$(versionless <<< "$after")" ]; then
+                  continue
+                fi ;;
+            esac
+            kept="$kept$f"$'\n'
+          done
+          changed=$(printf '%s' "$kept")
           if [ -z "$changed" ]; then
-            echo "No generated file changed."
+            echo "No generated file changed beyond release metadata."
             exit 0
           fi
           if [ "$AUTHOR" = "$REGENERATION_BOT" ]; then
