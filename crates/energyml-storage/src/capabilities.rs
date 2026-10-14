@@ -23,6 +23,10 @@ pub struct Capabilities {
     /// The store holds several dataspaces, and creates and deletes them
     /// ([`crate::dataspaces::EnergymlDataspaces`]).
     pub several_dataspaces: bool,
+    /// The store knows containment (a WITSML container and its parts) and
+    /// honours `prune_contained`. Off: `prune_contained = true` is refused by
+    /// name.
+    pub contained_objects: bool,
     /// The store writes part of an array (`PutDataSubarrays`).
     pub subarrays: bool,
     /// The store declares an array before writing it (`PutUninitializedDataArrays`).

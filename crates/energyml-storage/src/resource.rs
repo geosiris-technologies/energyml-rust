@@ -40,6 +40,26 @@ pub struct Dataspace {
     /// ETP `Dataspace.storeLastWrite`: when this store last wrote into it, same
     /// unit. `None` when the store does not keep it.
     pub store_last_write: Option<i64>,
+    /// ETP `Dataspace.customData`: what a server attaches to a dataspace beyond
+    /// ETP's own fields - OSDU's access lists and legal tags (`viewers`,
+    /// `owners`, `legaltags`) travel here. Empty when there is none.
+    pub custom_data: std::collections::BTreeMap<String, CustomValue>,
+}
+
+/// One value of ETP's `customData` (its `DataValue`), the forms a store has
+/// been seen to attach to a dataspace. A floating-point value is not among them
+/// on purpose: it would make every record that carries custom data lose `Eq`,
+/// and none is known to be needed; a store meeting one refuses it by name.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CustomValue {
+    /// A text.
+    Text(String),
+    /// A list of texts (an access list, a list of legal tags).
+    Texts(Vec<String>),
+    /// A boolean.
+    Bool(bool),
+    /// An integer.
+    Integer(i64),
 }
 
 impl Dataspace {
@@ -53,6 +73,7 @@ impl Dataspace {
             last_changed: None,
             store_created: None,
             store_last_write: None,
+            custom_data: std::collections::BTreeMap::new(),
         }
     }
 }
@@ -102,6 +123,13 @@ pub struct ObjectSummary {
     pub store_last_write: Option<i64>,
     /// ETP `Resource.activeStatus`. `None` when the store does not say.
     pub active_status: Option<ActiveStatus>,
+    /// ETP `Resource.sourceCount`: how many objects point at this one, counted
+    /// over the relationships the store states ([`crate::EnergymlStorage::edges`]).
+    /// `None` unless a context asked for counts (`Context::count_objects`).
+    pub source_count: Option<u32>,
+    /// ETP `Resource.targetCount`: how many objects this one points at, same
+    /// counting. `None` unless asked.
+    pub target_count: Option<u32>,
 }
 
 impl ObjectSummary {
@@ -118,6 +146,8 @@ impl ObjectSummary {
             store_created: None,
             store_last_write: None,
             active_status: None,
+            source_count: None,
+            target_count: None,
         }
     }
 

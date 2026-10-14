@@ -14,11 +14,13 @@
 //! - can it say who references whom? (`edges`)
 //! - can it draw the graph? (`graph`)
 //!
-//! And the one that matters for ETP: a store that answers `edges` **natively** -
-//! as `GetResources` with `includeEdges` does, from the server's index,
-//! without a single object crossing the wire - must get the same graph without
-//! the trait falling back to deserializing everything. `Indexed` below refuses
-//! to hand over objects at all, which is the only way to prove it.
+//! And the one that matters for a large store: a store that answers
+//! `references` from an **index** - what the objects write, kept beside them -
+//! must get the same graph without the trait falling back to deserializing
+//! everything. `Indexed` below refuses to hand over objects at all, which is the
+//! only way to prove it. (A server's stated `edges` are another fact: they carry
+//! no path and no reference to an absent object; design note
+//! `deux-sources-un-contrat.md` §3.)
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -269,8 +271,9 @@ impl EnergymlStorage for Indexed {
         Vec::new()
     }
 
-    /// What `GetResources(includeEdges: true)` replies with.
-    async fn edges(&self, _uris: &[String]) -> Result<Vec<Edge>> {
+    /// What an index of the references the objects write answers - the path
+    /// included, which a server's stated edges do not carry.
+    async fn references(&self, _uris: &[String]) -> Result<Vec<Edge>> {
         Ok(vec![Edge::new(
             uri("resqml22.FaultInterpretation", INTERP),
             uri("resqml22.TectonicBoundaryFeature", FAULT),
@@ -332,7 +335,7 @@ fn the_default_edges_are_derived_from_the_objects() {
 }
 
 #[test]
-fn a_store_that_answers_edges_natively_draws_its_graph_without_reading_an_object() {
+fn a_store_that_indexes_its_references_draws_its_graph_without_reading_an_object() {
     let store = Indexed {
         inner: InMemory::new(),
     };
@@ -340,7 +343,7 @@ fn a_store_that_answers_edges_natively_draws_its_graph_without_reading_an_object
     assert_eq!(
         store.inner.reads.load(Ordering::SeqCst),
         0,
-        "the native edges must be used; deserializing anything defeats the purpose"
+        "the indexed references must be used; deserializing anything defeats the purpose"
     );
     assert_eq!(graph.edges.len(), 1);
     assert_eq!(graph.nodes.len(), 2);

@@ -164,8 +164,70 @@ fn with_kinds_stated_the_walk_follows_them_and_expands_once() {
 }
 
 #[test]
-fn a_wildcard_type_is_refused_rather_than_read_as_a_name() {
+fn a_wildcard_type_is_every_type_of_its_schema_version() {
+    // ETP 1.2 §23.34.15: `resqml22.*` means every RESQML 2.2 type.
     let context = Context::dataspace("eml:///").with_types(["resqml22.*"]);
+    let found = ask(&context, false).unwrap();
+    assert_eq!(
+        uris(&found),
+        sorted(vec![FEATURE, HORIZON, GRID, PROPERTY]),
+        "the eml23 crs is not resqml22"
+    );
+    let other = Context::dataspace("eml:///").with_types(["eml23.*"]);
+    assert_eq!(uris(&ask(&other, false).unwrap()), vec![CRS]);
+}
+
+#[test]
+fn a_misplaced_star_is_refused_rather_than_read_as_a_name() {
+    for odd in ["resqml*", "res*ml22.Grid2dRepresentation", "*.*"] {
+        let refused = ask(&Context::dataspace("eml:///").with_types([odd]), false);
+        assert!(matches!(refused, Err(Error::BadUri { .. })), "{odd}: {refused:?}");
+    }
+}
+
+#[test]
+fn counts_are_the_distinct_objects_at_the_other_end_of_the_stated_edges() {
+    let mut context = Context::dataspace("eml:///");
+    context.count_objects = true;
+    let found = ask(&context, false).unwrap();
+    let counts = |uri: &str| {
+        let summary = found.resources.iter().find(|r| r.uri == uri).expect(uri);
+        (summary.source_count, summary.target_count)
+    };
+    assert_eq!(
+        counts(GRID),
+        (Some(1), Some(2)),
+        "the property points at it; it points at horizon and crs"
+    );
+    assert_eq!(counts(FEATURE), (Some(1), Some(0)));
+    assert_eq!(counts(PROPERTY), (Some(0), Some(1)));
+
+    let uncounted = ask(&Context::dataspace("eml:///"), false).unwrap();
+    assert!(
+        uncounted
+            .resources
+            .iter()
+            .all(|r| r.source_count.is_none() && r.target_count.is_none())
+    );
+}
+
+#[test]
+fn a_status_the_store_does_not_state_is_not_filtered_as_nothing() {
+    let mut context = Context::dataspace("eml:///");
+    context.active_status = Some(energyml_storage::ActiveStatus::Inactive);
     let refused = ask(&context, false);
     assert!(matches!(refused, Err(Error::Unsupported { .. })), "{refused:?}");
+}
+
+#[test]
+fn types_of_counts_what_a_context_reached() {
+    let found = ask(&Context::of(GRID, Scope::TargetsOrSelf), false).unwrap();
+    assert_eq!(
+        energyml_storage::context::types_of(&found),
+        vec![
+            ("eml23.LocalEngineeringCompoundCrs".to_string(), 1),
+            ("resqml22.Grid2dRepresentation".to_string(), 1),
+            ("resqml22.HorizonInterpretation".to_string(), 1),
+        ]
+    );
 }

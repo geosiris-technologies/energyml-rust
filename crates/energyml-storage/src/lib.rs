@@ -74,6 +74,10 @@ pub mod backend;
 pub mod capabilities;
 pub mod changes;
 pub mod context;
+/// The rules every implementation of the storage traits is held to, played by
+/// each implementation's tests (design note `deux-sources-un-contrat.md` §4).
+#[cfg(feature = "contract")]
+pub mod contract;
 pub mod dataspaces;
 pub mod epc;
 pub mod error;
@@ -106,6 +110,6 @@ pub use error::{Diagnostic, Error, ExternalDataReason, Result, Severity};
 pub use graph::{Edge, EdgeKind, RefIssue, RefIssueKind};
 pub use raw::{RawFormat, RawObject};
 pub use rename::{Applied as Renamed, FileMove, Rename};
-pub use resource::{ActiveStatus, Dataspace, ObjectHeader, ObjectSummary, Relationship};
+pub use resource::{ActiveStatus, CustomValue, Dataspace, ObjectHeader, ObjectSummary, Relationship};
 pub use storage::{EnergymlStorage, LocalPackage};
 pub use write::{EnergymlWriter, Put, Transaction, TransactionRequest};

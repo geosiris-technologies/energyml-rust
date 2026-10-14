@@ -17,6 +17,7 @@ mod array_shape;
 mod attachments;
 mod byte_order;
 mod change_journal;
+mod contract_epc;
 mod corpus;
 mod discovery;
 mod drops;

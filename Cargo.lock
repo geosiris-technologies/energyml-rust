@@ -679,6 +679,7 @@ dependencies = [
  "energyml-resqml-2-2",
  "energyml-resqml-2-2-dev3",
  "energyml-schemas",
+ "energyml-storage",
  "futures-executor",
  "hdf5-metno",
  "ndarray",

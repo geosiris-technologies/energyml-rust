@@ -20,8 +20,13 @@
 //!   ML's ETP implementation specification"*); a store that derives its edges
 //!   from the objects does not state it ([`crate::graph::Edge::kind`]), so these
 //!   requests are refused by name over such edges.
-//! - **A wildcard in `dataObjectTypes`** (`resqml20.*`) is refused: `TODO(verify)`
-//!   the wildcard forms ETP 1.2 allows there (§8.2.2 and §3.3.4).
+//! - **Filtering on a fact the store does not state** - the active status, the
+//!   store's last write - is refused by name for the object that lacks it, never
+//!   answered as "nothing matches".
+//!
+//! A type ending in `.*` is a wildcard: every type of that schema version
+//! (`resqml20.*`), as `ContextInfo.dataObjectTypes` allows (ETP 1.2 §23.34.15,
+//! p. 475).
 
 use std::collections::{BTreeSet, HashMap, VecDeque};
 
@@ -29,7 +34,7 @@ use energyml_core::identifiers::EtpUri;
 
 use crate::error::{Error, Result};
 use crate::graph::{Edge, EdgeKind};
-use crate::resource::ObjectSummary;
+use crate::resource::{ActiveStatus, ObjectSummary};
 
 /// ETP `ContextScopeKind`: which way from the starting object a request goes,
 /// and whether the starting object is part of the answer.
@@ -87,6 +92,13 @@ pub struct Context {
     /// Keep only objects the store last wrote after this ETP timestamp
     /// (`storeLastWriteFilter`). `None`: no filter.
     pub store_last_write_after: Option<i64>,
+    /// Keep only objects in this active status (`activeStatusFilter`). `None`:
+    /// no filter.
+    pub active_status: Option<ActiveStatus>,
+    /// Count, for each object found, the objects pointing at it and those it
+    /// points at (`countObjects`, ETP 1.2 §8.3.1), over the relationships the
+    /// store states.
+    pub count_objects: bool,
 }
 
 impl Context {
@@ -102,6 +114,8 @@ impl Context {
             include_secondary_targets: false,
             include_secondary_sources: false,
             store_last_write_after: None,
+            active_status: None,
+            count_objects: false,
         }
     }
 
@@ -201,14 +215,32 @@ pub fn discover(
     edges: Vec<Edge>,
     context: &Context,
 ) -> Result<Found> {
-    if context.types.iter().any(|t| t.contains('*')) {
-        return Err(Error::Unsupported {
-            operation: "a wildcard in the types of a context",
-            store: "discover",
+    if let Some(odd) = context
+        .types
+        .iter()
+        .find(|t| t.contains('*') && (!t.ends_with(".*") || t[..t.len() - 1].contains('*')))
+    {
+        return Err(Error::BadUri {
+            uri: odd.clone(),
+            reason: "a type wildcard is a schema version followed by `.*` (ETP 1.2 §23.34.15)".into(),
         });
     }
     let typed = |summary: &ObjectSummary| {
-        context.types.is_empty() || context.types.iter().any(|t| t == &summary.qualified_type)
+        context.types.is_empty()
+            || context
+                .types
+                .iter()
+                .any(|t| type_matches(t, &summary.qualified_type))
+    };
+    let in_status = |summary: &ObjectSummary| match context.active_status {
+        None => Ok(true),
+        Some(wanted) => summary
+            .active_status
+            .map(|status| status == wanted)
+            .ok_or(Error::Unsupported {
+                operation: "filtering on the active status",
+                store: "discover",
+            }),
     };
     let written_after = |summary: &ObjectSummary| match context.store_last_write_after {
         None => Ok(true),
@@ -227,11 +259,11 @@ pub fn discover(
         }
         let mut kept = Vec::new();
         for summary in resources {
-            if typed(&summary) && written_after(&summary)? {
+            if typed(&summary) && written_after(&summary)? && in_status(&summary)? {
                 kept.push(summary);
             }
         }
-        return Ok(with_edges(kept, edges));
+        return Ok(counted(with_edges(kept, &edges), &edges, context));
     }
 
     let wants_kinds = context.navigable != Navigable::Both
@@ -335,21 +367,82 @@ pub fn discover(
     // Step 3: the types, after the traversal; the store's order kept.
     let mut kept = Vec::new();
     for summary in resources {
-        if reached.contains(&summary.uri) && typed(&summary) && written_after(&summary)? {
+        if reached.contains(&summary.uri)
+            && typed(&summary)
+            && written_after(&summary)?
+            && in_status(&summary)?
+        {
             kept.push(summary);
         }
     }
     // Step 4: the edges between what is kept.
-    Ok(with_edges(kept, edges))
+    Ok(counted(with_edges(kept, &edges), &edges, context))
 }
 
-fn with_edges(resources: Vec<ObjectSummary>, edges: Vec<Edge>) -> Found {
+/// Whether a qualified type matches one entry of `dataObjectTypes`: equal, or
+/// of the schema version a `prefix.*` wildcard names (ETP 1.2 §23.34.15).
+/// Type names are case sensitive there; the prefix is compared the same way.
+pub fn type_matches(pattern: &str, qualified_type: &str) -> bool {
+    match pattern.strip_suffix(".*") {
+        Some(version) => qualified_type
+            .split_once('.')
+            .is_some_and(|(prefix, _)| prefix == version),
+        None => pattern == qualified_type,
+    }
+}
+
+fn with_edges(resources: Vec<ObjectSummary>, edges: &[Edge]) -> Found {
     let held: BTreeSet<&str> = resources.iter().map(|summary| summary.uri.as_str()).collect();
     let edges = edges
-        .into_iter()
+        .iter()
         .filter(|edge| held.contains(edge.from.as_str()) && held.contains(edge.to.as_str()))
+        .cloned()
         .collect();
     Found { resources, edges }
+}
+
+/// The source and target counts of each object found, when the context asks
+/// for them: distinct objects at the other end of the store's relationships.
+///
+/// `TODO(verify)`: whether `countObjects` counts over every relationship or
+/// only those `navigableEdges` names (ETP 1.2 §8.3.1 says "counts of sources
+/// and targets for each type of resource"); every stated relationship is
+/// counted here.
+fn counted(mut found: Found, edges: &[Edge], context: &Context) -> Found {
+    if !context.count_objects {
+        return found;
+    }
+    let mut sources: HashMap<&str, BTreeSet<&str>> = HashMap::new();
+    let mut targets: HashMap<&str, BTreeSet<&str>> = HashMap::new();
+    for edge in edges {
+        sources
+            .entry(edge.to.as_str())
+            .or_default()
+            .insert(edge.from.as_str());
+        targets
+            .entry(edge.from.as_str())
+            .or_default()
+            .insert(edge.to.as_str());
+    }
+    let count = |map: &HashMap<&str, BTreeSet<&str>>, uri: &str| {
+        u32::try_from(map.get(uri).map_or(0, BTreeSet::len)).unwrap_or(u32::MAX)
+    };
+    for summary in &mut found.resources {
+        summary.source_count = Some(count(&sources, &summary.uri));
+        summary.target_count = Some(count(&targets, &summary.uri));
+    }
+    found
+}
+
+/// The types a context reaches and how many objects of each - what ETP's
+/// `GetSupportedTypes` answers with `countObjects` (ETP 1.2 §25), derived from
+/// a discovery rather than asked again. Sorted by type.
+pub fn types_of(found: &Found) -> Vec<(String, usize)> {
+    let mut counts: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
+    for summary in &found.resources {
+        *counts.entry(summary.qualified_type.as_str()).or_default() += 1;
+    }
+    counts.into_iter().map(|(t, n)| (t.to_string(), n)).collect()
 }
 
 fn same_dataspace(a: &str, b: &str) -> Result<bool> {

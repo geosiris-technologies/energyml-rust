@@ -223,43 +223,67 @@ pub trait EnergymlStorage {
             .unwrap_or_else(|| Err(crate::error::Error::NotFound(uri.to_string())))
     }
 
-    /// Who references whom - ETP protocol 3, `GetResources` with
-    /// `includeEdges`, whose reply is `GetResourcesEdgesResponse`.
+    /// What the objects **write**: every reference, as the text of each object
+    /// states it (a `DataObjectReference`), with the field it sits in - those
+    /// that point at an object the store does not hold included. That is what a
+    /// dangling reference is, what a push leaves behind, what a graph shows as an
+    /// absent node.
     ///
     /// An empty `uris` means the whole store.
     ///
-    /// **Provided, and meant to be overridden.** The default derives the edges
-    /// the only way a store with no opinion can: it deserializes the objects
-    /// and walks their `DataObjectReference`s. That is correct everywhere and
-    /// cheap on a local file, where the objects are a `read` away.
+    /// **Provided**: the objects are read ([`EnergymlStorage::derived_graph`]).
+    /// Cheap on a local file; a store that indexes its references (an EPC's
+    /// package index) may answer from it, never with less.
     ///
-    /// It is the wrong thing over a WebSocket. ETP answers this question
-    /// natively, from the server's own index, without a single object crossing
-    /// the wire - so an ETP client overrides this with the one message, and
-    /// every caller above (including [`EnergymlStorage::graph`]) becomes
-    /// cheaper without changing a line.
+    /// Not [`EnergymlStorage::edges`]: see the design notes
+    /// (`deux-sources-un-contrat.md` §3) for the two facts the word "edge" was
+    /// covering.
+    async fn references(&self, uris: &[String]) -> Result<Vec<crate::graph::Edge>> {
+        Ok(self.derived_graph(uris).await?.edges)
+    }
+
+    /// What the store **states**: the relationships between objects it holds -
+    /// ETP protocol 3, `GetResources` with `includeEdges`, whose reply is
+    /// `GetResourcesEdgesResponse` (ETP 1.2 §8.1.1.1.4, step 4: both ends in
+    /// the answer). This is what discovery walks and counts.
     ///
-    /// **What a store states is not what the objects write.** An ETP server's
-    /// edges join objects it holds, include by-value containment, and carry no
-    /// field path; a reference to an object the store does not hold is not among
-    /// them. A caller that needs every reference as written - a dangling
-    /// reference, what a push leaves behind - asks
-    /// [`EnergymlStorage::derived_graph`], which reads the objects.
+    /// An empty `uris` means the whole store.
     ///
-    /// The edges are the DORs, not an index built beside them. An EPC's
-    /// `.rels` say roughly the same thing and are checked *against* this by
+    /// **Provided, and meant to be overridden.** The default keeps the
+    /// [`EnergymlStorage::references`] whose target the store holds - their kind
+    /// unknown, since which relationship is primary is each ML's to say (ETP 1.2
+    /// §8.1.1.1.1, note 1). An ETP server answers natively, from its own index,
+    /// without a single object crossing the wire, and states each edge's kind;
+    /// its edges include by-value containment and carry no field path.
+    ///
+    /// A caller that needs every reference as written - a dangling one, what a
+    /// push leaves behind - asks [`EnergymlStorage::references`] instead.
+    ///
+    /// The references are the DORs, not an index built beside them. An EPC's
+    /// `.rels` say roughly the same thing and are checked *against* them by
     /// [`crate::graph::check_relationships`], which is why they are not the
     /// source here: the `.rels` speed things up, the DORs are authoritative.
     async fn edges(&self, uris: &[String]) -> Result<Vec<crate::graph::Edge>> {
-        Ok(self.derived_graph(uris).await?.edges)
+        let held: std::collections::HashSet<String> = self
+            .resources()
+            .await?
+            .into_iter()
+            .map(|summary| summary.uri)
+            .collect();
+        Ok(self
+            .references(uris)
+            .await?
+            .into_iter()
+            .filter(|edge| held.contains(&edge.to))
+            .collect())
     }
 
     /// The reference graph of the store, ready to draw.
     ///
     /// Nodes from [`EnergymlStorage::resources`] and
-    /// [`EnergymlStorage::headers`], edges from [`EnergymlStorage::edges`] -
-    /// so a store that answers the last one natively draws its graph without
-    /// ever deserializing an object.
+    /// [`EnergymlStorage::headers`], edges from [`EnergymlStorage::references`]
+    /// - what the objects write, so that a reference to an object the store
+    /// does not hold is drawn too.
     ///
     /// An empty `uris` means the whole store. Objects referenced but not held
     /// still appear, marked [`crate::graph::Node::present`] `false`.
@@ -270,7 +294,7 @@ pub trait EnergymlStorage {
         } else {
             all.into_iter().filter(|s| uris.contains(&s.uri)).collect()
         };
-        let edges = self.edges(uris).await?;
+        let edges = self.references(uris).await?;
         let of_wanted: Vec<String> = wanted.iter().map(|s| s.uri.clone()).collect();
         let headers = self.headers(&of_wanted).await;
         let titles: std::collections::HashMap<String, String> = headers
@@ -292,10 +316,10 @@ pub trait EnergymlStorage {
 
     /// The graph derived by reading the objects, whatever the store.
     ///
-    /// The floor under [`EnergymlStorage::edges`], kept separate so that an
-    /// implementation overriding `edges` does not accidentally make the
-    /// default `edges` recurse through `graph`. Callers want `graph`; this is
-    /// what makes it work with no help from the store.
+    /// The floor under [`EnergymlStorage::references`], kept separate so that
+    /// an implementation overriding `references` does not accidentally make the
+    /// default recurse through `graph`. Callers want `graph`; this is what makes
+    /// it work with no help from the store.
     async fn derived_graph(&self, uris: &[String]) -> Result<crate::graph::Graph> {
         let all = self.resources().await?;
         let wanted: Vec<ObjectSummary> = if uris.is_empty() {

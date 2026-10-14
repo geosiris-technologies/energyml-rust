@@ -326,3 +326,68 @@ fn the_change_feed_names_what_the_writer_wrote() {
         Since::Everything => panic!("one put is not beyond what the journal can say"),
     }
 }
+
+/// An interpretation of a feature the package does not hold.
+fn interpretation(uuid: &str, feature_uuid: &str) -> String {
+    format!(
+        "<resqml:HorizonInterpretation xmlns:resqml=\"{RESQML}\" xmlns:eml=\"{EML}\" \
+         uuid=\"{uuid}\" schemaVersion=\"2.2\">\
+         <eml:Citation><eml:Title>a horizon</eml:Title>\
+         <eml:Originator>test</eml:Originator>\
+         <eml:Creation>2026-10-14T00:00:00Z</eml:Creation>\
+         <eml:Format>test</eml:Format></eml:Citation>\
+         <resqml:Domain>depth</resqml:Domain>\
+         <resqml:InterpretedFeature>\
+         <eml:Uuid>{feature_uuid}</eml:Uuid>\
+         <eml:QualifiedType>resqml22.BoundaryFeature</eml:QualifiedType>\
+         <eml:Title>a boundary</eml:Title>\
+         </resqml:InterpretedFeature>\
+         </resqml:HorizonInterpretation>"
+    )
+}
+
+/// `references` is what the objects write, `edges` what the store holds both
+/// ends of (design notes, `deux-sources-un-contrat.md` §3): a reference to a
+/// feature the package does not hold is in the first and not in the second.
+#[test]
+fn a_reference_to_an_absent_object_is_written_but_not_an_edge() {
+    const HORIZON: &str = "7d000000-0000-4000-8000-0000000000c1";
+    let mut store = package(&[HELD]);
+    let interpretation = {
+        let mut bytes = Vec::new();
+        {
+            let mut zip = zip::ZipWriter::new(Cursor::new(&mut bytes));
+            let options: zip::write::FileOptions<'_, ()> = zip::write::FileOptions::default();
+            zip.start_file("[Content_Types].xml", options).unwrap();
+            zip.write_all(
+                b"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
+                  <Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\
+                  <Default Extension=\"rels\" \
+                  ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\
+                  </Types>",
+            )
+            .unwrap();
+            zip.start_file(format!("HorizonInterpretation_{HORIZON}.xml"), options)
+                .unwrap();
+            zip.write_all(interpretation(HORIZON, NEW).as_bytes()).unwrap();
+            zip.finish().unwrap();
+        }
+        let other =
+            EpcStore::from_reader(Box::new(Cursor::new(bytes)), "other.epc", registry()).expect("opens");
+        let uri = uri_of(&other, HORIZON);
+        other.get_object(&uri).expect("readable")
+    };
+    let put = run(store.put_objects(vec![interpretation], false));
+    assert!(put[0].is_ok(), "{put:?}");
+
+    let written = run(store.references(&[])).expect("references");
+    assert!(
+        written.iter().any(|edge| edge.to.contains(NEW)),
+        "the reference to the absent feature is written: {written:?}"
+    );
+    let stated = run(store.edges(&[])).expect("edges");
+    assert!(
+        !stated.iter().any(|edge| edge.to.contains(NEW)),
+        "no edge leaves what the store holds: {stated:?}"
+    );
+}
