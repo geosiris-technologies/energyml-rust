@@ -69,6 +69,9 @@ for one in pkg.find("Representation"):
 obj = pkg.get(pkg.objects()[0].uri)        # an object crosses as a dictionary
 ```
 
+Worked examples, stored with their outputs: [the notebooks](examples/notebooks/) - find your way
+around a package, judge one, build one from nothing.
+
 ### Command line
 
 ```sh
@@ -113,7 +116,7 @@ The architecture and each crate's role are in [ARCHITECTURE.md](ARCHITECTURE.md)
 - [Getting started](docs/getting-started.md)
 - [Library guide](docs/library.md)
 - [Command line](docs/cli.md)
-- [Python](docs/python.md)
+- [Python](docs/python.md), and its [notebooks](examples/notebooks/)
 - [Gallery](docs/gallery.md) - every image, with the command that produced it
 - [Architecture decision records](docs/adr/)
 
