@@ -21,13 +21,13 @@ energyml-core = { workspace = true }
 # `well_strata::Strata`, `property::read`, `property_kind::Resolver`,
 # `color::GraphicalSet`, and the `ObjectSource`/`ArraySource` traits `read`
 # is written against.
-energyml-domain = { path = "../energyml-domain", version = "0.1.0" }
+energyml-domain = { path = "../energyml-domain", version = "0.1.1" }
 # `ObjectSummary` only - the package's own listing `read` needs to find a
 # frame's properties and colour sets (nothing in a representation names
 # them). No native dependency: `energyml-domain` already depends on this
 # crate for the same `ObjectSource` reason, with its default (no `hdf5`)
 # features, and `read` asks for nothing more - wasm stays a hard requirement.
-energyml-storage = { path = "../energyml-storage", version = "0.1.0" }
+energyml-storage = { path = "../energyml-storage", version = "0.1.1" }
 thiserror = "2.0"
 
 [dev-dependencies]
@@ -39,12 +39,12 @@ quick-xml = "0.41"
 # `tests/read.rs` builds a frame, its properties and a lookup table in
 # memory, after the specification - the same pattern
 # `crates/energyml-domain/tests/well_strata.rs` uses.
-energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.0" }
-energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.1.0" }
+energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.1" }
+energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.1.1" }
 # A package opened for real - every release's schema in one registry - for a
 # test that draws a sheet from a file of `testdata/` or of the front end's
 # examples, and says so when the file is absent.
-energyml-schemas = { path = "../energyml-schemas", version = "0.1.0", features = ["all"] }
+energyml-schemas = { path = "../energyml-schemas", version = "0.1.1", features = ["all"] }
 
 [lints.rust]
 missing_docs = "warn"

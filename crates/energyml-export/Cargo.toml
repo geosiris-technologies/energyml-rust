@@ -20,24 +20,24 @@ include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
 
 [dependencies]
 energyml-core = { workspace = true }
-energyml-domain = { path = "../energyml-domain", version = "0.1.0" }
-energyml-geometry = { path = "../energyml-geometry", version = "0.1.0" }
+energyml-domain = { path = "../energyml-domain", version = "0.1.1" }
+energyml-geometry = { path = "../energyml-geometry", version = "0.1.1" }
 thiserror = "2.0"
 
 [dev-dependencies]
-energyml-storage = { path = "../energyml-storage", version = "0.1.0" }
+energyml-storage = { path = "../energyml-storage", version = "0.1.1" }
 # Tests only, and it has to stay that way: the point of `Reprojector` is that
 # this crate does not know which geodesy library sits behind it. Here it is the
 # real one, so the corpus goes out through the path an application uses.
-energyml-proj = { path = "../energyml-proj", version = "0.1.0" }
-energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0", version = "0.1.0" }
-energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.0" }
-energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1", version = "0.1.0" }
-energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.1.0" }
-energyml-witsml-2-1 = { path = "../generated/energyml-witsml-2-1", version = "0.1.0" }
+energyml-proj = { path = "../energyml-proj", version = "0.1.1" }
+energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0", version = "0.1.1" }
+energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.1.1" }
+energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1", version = "0.1.1" }
+energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.1.1" }
+energyml-witsml-2-1 = { path = "../generated/energyml-witsml-2-1", version = "0.1.1" }
 # Every schema version the workspace generates, in one line - see
 # `energyml-schemas` for why the list lives in exactly one place.
-energyml-schemas = { path = "../energyml-schemas", version = "0.1.0", features = ["all"] }
+energyml-schemas = { path = "../energyml-schemas", version = "0.1.1", features = ["all"] }
 # Tests only, and for one job: parsing the GeoJSON this crate writes. A
 # hand-rolled writer is exactly where a NaN, a trailing comma or an unescaped
 # quote gets in, and only a real parser notices all three.
