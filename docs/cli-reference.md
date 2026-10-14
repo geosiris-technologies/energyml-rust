@@ -1774,6 +1774,12 @@ Options:
       --marker <NAME:PARAM=VALUE,…>
           With `--svg`: a named marker on the objects of the section whose qualified type contains `type` (`A|B`: any) and whose title contains `title`, case ignored - `NAME:shape=diamond,colour=#1565c0,at=bottom,type=WellboreTrajectory,title=BSS`. `shape` is a RESQML node symbol or `contour`; `at` is `head`, `bottom` or `md` with `md=VALUE`; `size` is in pixels. Repeatable; listed in the legend of markers. A redraw (`--from-svg`) keeps what its own metadata says
 
+      --fill <down|up|both>
+          With `--svg`: fill from every surface that may be filled, in its own colour - `down` to the next line below, `up` to the next above, or `both`. Which surfaces may (a horizon, never a fault nor an IJK grid) and where each fill stops are the library's, as on the page's fill buttons. A redraw (`--from-svg`) keeps what its own metadata says
+
+      --hide-notes
+          With `--svg`: leave out what the drawing says about itself under its plot (refused objects, wells set aside, labels folded). The command still prints every refusal and note
+
       --lenient
           Read parts that break the schema instead of refusing them.
           

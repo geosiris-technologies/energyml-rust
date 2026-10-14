@@ -155,6 +155,23 @@ pub struct ProfileArgs {
         conflicts_with = "from_svg"
     )]
     markers: Vec<String>,
+    /// With `--svg`: fill from every surface that may be filled, in its own
+    /// colour - `down` to the next line below, `up` to the next above, or
+    /// `both`. Which surfaces may (a horizon, never a fault nor an IJK grid) and
+    /// where each fill stops are the library's, as on the page's fill buttons.
+    /// A redraw (`--from-svg`) keeps what its own metadata says.
+    #[arg(
+        long,
+        value_name = "down|up|both",
+        requires = "svg",
+        conflicts_with = "from_svg"
+    )]
+    fill: Option<String>,
+    /// With `--svg`: leave out what the drawing says about itself under its
+    /// plot (refused objects, wells set aside, labels folded). The command
+    /// still prints every refusal and note.
+    #[arg(long, requires = "svg", conflicts_with = "from_svg")]
+    hide_notes: bool,
 }
 
 /// Runs the command.
@@ -378,6 +395,25 @@ fn draw_svg(stores: &[energyml_storage::EpcStore], args: &ProfileArgs) -> Result
         if let Some(text) = &args.unstratified {
             view.unstratified = energyml_section::style::parse(text)
                 .map_err(|why| anyhow!("`--unstratified {text}`: {why}"))?;
+        }
+        view.show.notes = !args.hide_notes;
+        if let Some(way) = &args.fill {
+            let (up, down) = match way.as_str() {
+                "down" => (false, true),
+                "up" => (true, false),
+                "both" => (true, true),
+                other => bail!("`--fill {other}`: one of down, up, both"),
+            };
+            view.fills = catalogue
+                .objects
+                .iter()
+                .filter(|row| row.fillable)
+                .map(|row| energyml_section::model::FillChoice {
+                    key: row.object.key(),
+                    up,
+                    down,
+                })
+                .collect();
         }
         view.labels = match args.labels.as_str() {
             "full" => energyml_section::model::LabelMode::Full,
