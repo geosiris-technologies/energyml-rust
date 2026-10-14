@@ -57,7 +57,13 @@ once, in order, by a maintainer with a short-lived API token; trusted publishing
 is then configured per crate on crates.io (owner `geosiris-technologies`,
 repository `energyml-rust`, workflow `release-plz.yml`, environment `crates-io`)
 and every later release goes through the workflow. The `crates-io` environment
-only accepts deployments from `main`.
+only accepts deployments from `main` and `dev`.
+
+A pre-release goes out from `dev`: set the version by hand (for example
+`0.2.0-alpha.1`) and push. The `release` job publishes every crate whose version
+is not yet on crates.io and tags it; it opens no release pull request and starts
+neither the CLI binaries nor the image. Cargo never picks a pre-release unless
+it is asked for by name (`energyml = "0.2.0-alpha.1"`).
 
 A tag pushed with the workflow token starts no workflow on its own, so the
 `release` job of `release-plz.yml` starts `release-cli.yml` and `docker.yml`
