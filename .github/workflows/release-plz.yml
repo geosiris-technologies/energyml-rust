@@ -126,8 +126,10 @@ jobs:
       # extra secret; the publish gates stay in those workflows (IMAGE_PUBLISH)
       # and in this job (RELEASE_PLZ_PUBLISH).
       - name: Start the tag workflows
-        # Not from dev nor a GitHub pre-release: a pre-release must not become the `latest` image.
-        if: ${{ github.ref != 'refs/heads/dev' && !github.event.release.prerelease && steps.rp.outputs.releases_created == 'true' }}
+        # Not from dev: a pre-release must not become the `latest` image. Not on a GitHub
+        # release either: release-cli.yml and docker.yml listen for the release itself and
+        # attach to it; starting them here too would build everything twice.
+        if: ${{ github.ref != 'refs/heads/dev' && github.event_name != 'release' && steps.rp.outputs.releases_created == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}

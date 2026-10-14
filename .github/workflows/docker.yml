@@ -3,7 +3,8 @@
 #
 # - pull request: build for linux/amd64, smoke-test, push nothing;
 # - push to main: push the `edge` tag;
-# - tag energyml-cli-vX.Y.Z: push `X.Y.Z`, `X.Y` and `latest`.
+# - a published release vX.Y.Z, or a tag energyml-cli-vX.Y.Z: push `X.Y.Z`, `X.Y`
+#   and `latest` (`latest` not for a pre-release).
 #
 # Nothing is pushed until the repository variable IMAGE_PUBLISH is 'true': until
 # then main, tags and manual runs only build and smoke-test, as a pull request does.
@@ -19,6 +20,8 @@ on:
   push:
     branches: [main]
     tags: ["energyml-cli-v*"]
+  release:
+    types: [published]
   workflow_dispatch:
 
 env:
@@ -60,6 +63,7 @@ jobs:
         run: |
           case "$GITHUB_REF" in
             refs/tags/energyml-cli-v*) echo "version=${GITHUB_REF#refs/tags/energyml-cli-v}" >> "$GITHUB_OUTPUT" ;;
+            refs/tags/v*) echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT" ;;
             *) echo "version=edge" >> "$GITHUB_OUTPUT" ;;
           esac
       - name: Build (and push by digest outside pull requests)
@@ -123,7 +127,9 @@ jobs:
             type=edge,branch=main
             type=match,pattern=energyml-cli-v(\d+\.\d+\.\d+),group=1
             type=match,pattern=energyml-cli-v(\d+\.\d+)\.\d+,group=1
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/energyml-cli-v') }}
+            type=match,pattern=^v(\d+\.\d+\.\d+.*)$,group=1
+            type=match,pattern=^v(\d+\.\d+)\.\d+$,group=1
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/energyml-cli-v') || (github.event_name == 'release' && !github.event.release.prerelease) }}
       - name: Join the digests into one manifest
         working-directory: /tmp/digests
         run: |

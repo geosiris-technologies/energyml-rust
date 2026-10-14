@@ -1,12 +1,15 @@
 name: release-cli
 
-# Builds the `energyml` command for the supported targets when a tag
-# `energyml-cli-v*` is pushed (the tag release-plz creates), and attaches one
-# archive per target to the GitHub release.
+# Builds the `energyml` command for the supported targets and attaches one archive
+# per target to a GitHub release: the release `vX.Y.Z` a maintainer publishes (the
+# one that publishes everything, see docs/releasing.md), or the release of a tag
+# `energyml-cli-v*` when release-plz publishes on a merge and starts this workflow.
 #
 # Later option: replace this matrix with cargo-dist (installers, Homebrew tap,
 # GHCR image) - see dist-workspace.toml once it exists.
 on:
+  release:
+    types: [published]
   push:
     tags:
       - "energyml-cli-v*"
@@ -101,4 +104,5 @@ jobs:
       - uses: softprops/action-gh-release@v3
         with:
           files: dist/*
-          generate_release_notes: true
+          # A published release keeps the notes its author wrote.
+          generate_release_notes: ${{ github.event_name != 'release' }}

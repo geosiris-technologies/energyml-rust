@@ -6,8 +6,10 @@ name: python
 #  - pull request touching the crates: one Linux wheel, installed and smoke-tested;
 #  - push to main or dev: the full matrix and the sdist, at a development version
 #    X.Y.(Z+1).devN (N = the run number), published to TestPyPI;
-#  - tag `python-v*`: the full matrix and the sdist at the crate's own version,
-#    published to PyPI. Releases go to PyPI only, development versions to TestPyPI only.
+#  - a published GitHub release `vX.Y.Z` (the one that publishes everything, see
+#    docs/releasing.md), or a tag `python-vX.Y.Z` for the Python package alone: the
+#    full matrix and the sdist at the crate's own version, published to PyPI.
+#    Releases go to PyPI only, development versions to TestPyPI only.
 on:
   pull_request:
     paths:
@@ -27,6 +29,8 @@ on:
       - ".github/workflows/python.yml"
     tags:
       - "python-v*"
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -52,7 +56,7 @@ jobs:
   # builds a PEP 440 development version above the last release: X.Y.(Z+1).devN,
   # or X.Y.Z.devN when the crate already carries a pre-release (X.Y.Z-alpha.1 on dev).
   version:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'release'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.v.outputs.version }}
@@ -68,10 +72,12 @@ jobs:
             exit 1
           fi
           if [ "$GITHUB_REF_TYPE" = tag ]; then
-            tag="${GITHUB_REF_NAME#python-v}"
+            # `vX.Y.Z` (a release) or `python-vX.Y.Z`.
+            tag="${GITHUB_REF_NAME#python-}"
+            tag="${tag#v}"
             echo "tag=$tag crate=$crate"
             if [ "$tag" != "$crate" ]; then
-              echo "::error::tag python-v$tag does not match energyml-python version $crate"
+              echo "::error::tag $GITHUB_REF_NAME does not match energyml-python version $crate"
               exit 1
             fi
             echo "version=" >> "$GITHUB_OUTPUT"
@@ -219,7 +225,7 @@ jobs:
   publish:
     needs: [wheels, sdist]
     runs-on: ubuntu-latest
-    if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'python-v') && vars.PYPI_PUBLISH == 'true' }}
+    if: ${{ (github.event_name == 'release' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'python-v'))) && vars.PYPI_PUBLISH == 'true' }}
     environment: pypi
     permissions:
       id-token: write

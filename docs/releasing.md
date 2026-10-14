@@ -5,25 +5,45 @@ is published from a workstation once the first release is out: publication runs
 from the CI of this repository, on its default branch, with credentials that
 only protected workflows can read.
 
-## What is published where
+## Making a release
 
-| What | Where | Triggered by |
+**A published GitHub release is what publishes**, everything at once:
+
+1. **Merge the release pull request.** `release-plz` keeps one open (opened by the
+   release bot app): it bumps the versions, the requirements between crates and every
+   `CHANGELOG.md`. Merging it publishes nothing: the repository variable
+   `RELEASE_PLZ_PUBLISH` is `release`.
+2. **Create a GitHub release** (Releases > Draft a new release): a new tag `vX.Y.Z`, the
+   workspace version the merge left in `Cargo.toml`, on `main`; title `vX.Y.Z`; notes
+   ("Generate release notes" gives a start). Publish it.
+3. Publishing it starts, each from the release:
+
+| What | Where | Workflow |
 |---|---|---|
-| the library crates (see the order below) | crates.io | `release-plz` ([`release-plz.toml`](../release-plz.toml), `.github/workflows/release-plz.yml`) after a release pull request is merged |
-| `energyml` and `enyml` binaries | GitHub releases | tag `energyml-cli-vX.Y.Z` (`release-cli.yml`) |
-| the `energyml` image | `ghcr.io/geosiris-technologies/energyml` | `main` (tag `edge`) and the same tag (`docker.yml`) |
-| `energyml-rust` wheels (imported as `energyml.rust`) | PyPI | tag `python-vX.Y.Z` (`python.yml`) |
+| the library crates (see the order below) | crates.io | `release-plz.yml`, which also tags each crate `<crate>-vX.Y.Z` |
+| `energyml-rust` wheels and sdist (imported as `energyml.rust`) | PyPI | `python.yml` |
+| the `energyml` archives, one per target, with `SHA256SUMS` | attached to this release | `release-cli.yml` |
+| the `energyml` image, tags `X.Y.Z`, `X.Y` and `latest` | `ghcr.io/geosiris-technologies/energyml` | `docker.yml`, once `IMAGE_PUBLISH` is `true` |
 | not published | | `energyml-tests`, `energyml-roundtrip`, `energyml-python` as a crate (it ships as wheels) |
+
+Each workflow first checks that the tag names the version of the manifests, and stops
+before uploading anything otherwise. A release marked as a pre-release publishes the
+same way but gives the image no `latest`; it does not change the version: a
+pre-release version (`0.2.0-alpha.1`) is set in `Cargo.toml` first.
+
+Between releases, every push to `main` that touches the crates publishes a
+development build of the wheels to TestPyPI (`X.Y.(Z+1).devN`), and the image `edge`.
 
 ## Publication order
 
 A crate can be published only when everything it depends on is already on
 crates.io. The order below comes from the manifests: normal and build
-dependencies decide it, and **dev-dependencies are added to it** so that a crate
-whose tests use a sibling still packages (a dev-dependency that has a `version`
-is resolved against the registry at publication). The graph, edges of every kind
-included, has no cycle. Crates of one level do not depend on each other and can
-go in any order.
+dependencies decide it. Dev-dependencies on a crate of this repository carry no
+`version`: `cargo publish` drops them from the published manifest, so they do not
+constrain the order (a dev-dependency with a `version` is resolved against the
+registry, and on 14/10/2026 that stopped a release at `energyml-storage`, whose
+tests use the generated crates `release-plz` had not published yet). Crates of
+one level do not depend on each other and can go in any order.
 
 | Level | Crates |
 |---|---|
@@ -65,24 +85,19 @@ is not yet on crates.io and tags it; it opens no release pull request and starts
 neither the CLI binaries nor the image. Cargo never picks a pre-release unless
 it is asked for by name (`energyml = "0.2.0-alpha.1"`).
 
-A tag pushed with the workflow token starts no workflow on its own, so the
-`release` job of `release-plz.yml` starts `release-cli.yml` and `docker.yml`
-itself (`workflow_dispatch` on the new `energyml-cli-v*` tag). The publish gates
-(`RELEASE_PLZ_PUBLISH`, `IMAGE_PUBLISH`) apply as before.
+## The publication switch
 
-## Publishing from a GitHub release
+The repository variable `RELEASE_PLZ_PUBLISH` chooses when crates.io is published
+to: `release` (the setting, since 14/10/2026) on a published GitHub release only;
+`true` also on every merge to `main` or `dev`; nothing while it is unset. A
+release's tag must name a version of the manifests, `vX.Y.Z` for the workspace
+version or `<crate>-vX.Y.Z`, and its commit must be on `main` or `dev`.
 
-A published GitHub release publishes too. Its tag must name a version of the
-manifests, `vX.Y.Z` for the workspace version or `<crate>-vX.Y.Z`, and its commit
-must be on `main` or `dev`; otherwise the job stops before uploading anything.
-The release pull request is still what prepares the versions and the changelogs:
-merge it, then create the release on the merge commit.
-
-The repository variable `RELEASE_PLZ_PUBLISH` chooses the trigger: `true`
-publishes on a merge to `main` or `dev` and on a release, `release` on a release
-only, and nothing is published while it is unset. A GitHub release marked as a
-pre-release publishes to crates.io but starts neither the CLI binaries nor the
-image.
+With `true`, a merge publishes the crates and tags them with the workflow token,
+and a tag pushed with that token starts no workflow on its own: the `release` job
+of `release-plz.yml` then starts `release-cli.yml` and `docker.yml` itself
+(`workflow_dispatch` on the new `energyml-cli-v*` tag). On a GitHub release it
+does not, since those two listen for the release themselves.
 
 Before the first publication, check what would be packed, without publishing:
 
@@ -117,10 +132,13 @@ a loop.
 
 The metadata of the wheels is in
 [`crates/energyml-python/pyproject.toml`](../crates/energyml-python/pyproject.toml)
-(distribution `energyml-rust`; the version is read from the crate). Pushing the
-tag `python-vX.Y.Z` builds the wheels and the sdist, and uploads them by PyPI
-trusted publishing. The tag must equal the version of the crate; the `check-tag`
-job fails otherwise.
+(distribution `energyml-rust`; the version is read from the crate). A GitHub
+release `vX.Y.Z` builds the wheels for eight targets and the sdist, with HDF5
+compiled in, and uploads them by PyPI trusted publishing (environment `pypi`).
+The tag `python-vX.Y.Z` does the same for the Python package alone. Either tag
+must equal the version of the crate; the `version` job fails otherwise.
+Development builds go to TestPyPI (environment `testpypi`) from every push to
+`main` or `dev`.
 
 ## The documentation build
 
