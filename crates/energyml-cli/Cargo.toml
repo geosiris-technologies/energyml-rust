@@ -93,6 +93,10 @@ hdf5 = [
     "energyml-export/hdf5",
     "energyml-build/hdf5",
 ]
+# The same, with HDF5 built from its sources and linked in (CMake and a C compiler,
+# no installed HDF5): the released archives (`release-cli.yml`), which then run on
+# a machine without HDF5.
+hdf5-static = ["hdf5", "energyml-storage/hdf5-static"]
 
 [lints.rust]
 missing_docs = "warn"
