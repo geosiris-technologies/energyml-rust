@@ -2,10 +2,12 @@ name: release-plz
 
 # On every push to main: open (or update) a release pull request with the version
 # bumps and changelogs; once it is merged, publish to crates.io and tag.
-# Publication uses crates.io trusted publishing (OIDC): no token is stored.
+# Publication uses crates.io trusted publishing (OIDC): no token is stored. The
+# publish job runs in the `crates-io` environment, which crates.io checks (each
+# crate's trusted publisher names it) and which only `main` may deploy to.
 #
-# The very first publication of each crate is done by hand (`cargo publish`); then
-# trusted publishing is configured per crate on crates.io.
+# A crate new to crates.io needs one publication with an API token first (trusted
+# publishing is configured on a crate that exists): see docs/releasing.md.
 on:
   push:
     branches: [main]
@@ -41,6 +43,7 @@ jobs:
     # Only from main, and only once publishing is switched on in the repository's
     # variables: creating the repository must not publish anything.
     if: ${{ github.ref == 'refs/heads/main' && vars.RELEASE_PLZ_PUBLISH == 'true' }}
+    environment: crates-io
     permissions:
       contents: write
       id-token: write # crates.io trusted publishing

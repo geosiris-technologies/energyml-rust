@@ -53,8 +53,11 @@ three first, then follow `retp`'s own order.
 
 `release-plz` computes this order itself once the crates are on the registry.
 The order matters for the **first** publication of each crate, which is done
-once, in order, by a maintainer; trusted publishing is then configured per
-crate on crates.io and every later release goes through the workflow.
+once, in order, by a maintainer with a short-lived API token; trusted publishing
+is then configured per crate on crates.io (owner `geosiris-technologies`,
+repository `energyml-rust`, workflow `release-plz.yml`, environment `crates-io`)
+and every later release goes through the workflow. The `crates-io` environment
+only accepts deployments from `main`.
 
 A tag pushed with the workflow token starts no workflow on its own, so the
 `release` job of `release-plz.yml` starts `release-cli.yml` and `docker.yml`
