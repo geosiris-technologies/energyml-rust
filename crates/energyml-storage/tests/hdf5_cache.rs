@@ -62,10 +62,7 @@ fn write_file(name: &str, value: f64) -> PathBuf {
             &path,
             "/values",
             &energyml_storage::array::ArrayData {
-                metadata: energyml_storage::array::ArrayMetadata {
-                    dimensions: vec![1],
-                    element_type: "f64".to_string(),
-                },
+                metadata: energyml_storage::array::ArrayMetadata::new(vec![1], "f64".to_string()),
                 values: ArrayValues::F64(vec![value]),
             },
         )
@@ -149,10 +146,7 @@ fn writing_evicts_the_read_handle() {
             &path,
             "/values",
             &energyml_storage::array::ArrayData {
-                metadata: energyml_storage::array::ArrayMetadata {
-                    dimensions: vec![1],
-                    element_type: "f64".to_string(),
-                },
+                metadata: energyml_storage::array::ArrayMetadata::new(vec![1], "f64".to_string()),
                 values: ArrayValues::F64(vec![3.0]),
             },
         )

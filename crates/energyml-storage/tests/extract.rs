@@ -11,13 +11,9 @@ use energyml_storage::graph::{Edge, Graph, Node};
 use energyml_storage::resource::ObjectSummary;
 
 fn summary(uri: &str) -> ObjectSummary {
-    ObjectSummary {
-        uri: uri.to_string(),
-        uuid: uri.to_string(),
-        qualified_type: "resqml22.Thing".to_string(),
-        content_type: "application/x-resqml+xml;version=2.2;type=Thing".to_string(),
-        locator: uri.to_string(),
-    }
+    ObjectSummary::new(uri.to_string(), uri.to_string(), "resqml22.Thing".to_string())
+        .with_content_type("application/x-resqml+xml;version=2.2;type=Thing".to_string())
+        .with_locator(uri.to_string())
 }
 
 fn node(uri: &str, present: bool) -> Node {
@@ -33,11 +29,7 @@ fn node(uri: &str, present: bool) -> Node {
 }
 
 fn edge(from: &str, to: &str) -> Edge {
-    Edge {
-        from: from.to_string(),
-        to: to.to_string(),
-        path: "Ref".to_string(),
-    }
+    Edge::new(from.to_string(), to.to_string(), "Ref".to_string())
 }
 
 /// A representation, its interpretation, that one's feature, and a spare object

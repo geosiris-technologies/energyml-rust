@@ -204,10 +204,7 @@ impl ArrayBackend for Silent {
 
 fn numbers(values: usize, dimensions: Vec<i64>) -> ArrayData {
     ArrayData {
-        metadata: ArrayMetadata {
-            dimensions,
-            element_type: "double".to_string(),
-        },
+        metadata: ArrayMetadata::new(dimensions, "double".to_string()),
         values: ArrayValues::F64(vec![1.0; values]),
     }
 }

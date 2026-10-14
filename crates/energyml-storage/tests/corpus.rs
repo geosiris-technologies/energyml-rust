@@ -999,6 +999,7 @@ fn a_backend_is_chosen_by_mime_type_not_by_habit() {
         count: Vec::new(),
         proxy_uuid: None,
         field_path: "Values".to_string(),
+        resource_uri: None,
     };
     assert_eq!(
         backends.find(&csv, Path::new("table.csv")).unwrap().name(),

@@ -64,6 +64,16 @@ pub enum Error {
         store: &'static str,
     },
 
+    /// A transaction was misused: a second one opened while one is, or one
+    /// ended that is not the open one (ETP protocol 18).
+    #[error("{store}: {reason}")]
+    Transaction {
+        /// Which implementation refused.
+        store: &'static str,
+        /// What was wrong.
+        reason: String,
+    },
+
     /// An external data file could not be reached or read.
     #[error("external data `{location}`: {reason}")]
     ExternalData {

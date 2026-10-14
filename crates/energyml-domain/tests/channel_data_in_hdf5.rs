@@ -166,10 +166,7 @@ fn dataset() -> ArrayData {
         9.0,
     ];
     ArrayData {
-        metadata: ArrayMetadata {
-            dimensions: vec![3, 4],
-            element_type: "float64".into(),
-        },
+        metadata: ArrayMetadata::new(vec![3, 4], "float64"),
         values: ArrayValues::F64(values),
     }
 }
@@ -332,10 +329,7 @@ fn an_integer_dataset_keeps_its_integers_exact() {
     // dataset's integers are read as integers.
     let big = 9_007_199_254_740_993_i64; // 2^53 + 1
     let data = ArrayData {
-        metadata: ArrayMetadata {
-            dimensions: vec![2, 4],
-            element_type: "int64".into(),
-        },
+        metadata: ArrayMetadata::new(vec![2, 4], "int64"),
         values: ArrayValues::I64(vec![0, 1, 2, big, 10, 3, 4, 5]),
     };
     let series =
@@ -347,10 +341,7 @@ fn an_integer_dataset_keeps_its_integers_exact() {
 fn the_same_checks_run_on_a_dataset_as_on_inline_rows() {
     // One row loop: an index that goes back is refused in both forms.
     let back = ArrayData {
-        metadata: ArrayMetadata {
-            dimensions: vec![2, 4],
-            element_type: "float64".into(),
-        },
+        metadata: ArrayMetadata::new(vec![2, 4], "float64"),
         values: ArrayValues::F64(vec![10.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0]),
     };
     let read = channel_set::read_with(&in_file(FILE, PATH), &Datasets::with(FILE, PATH, back));
@@ -492,10 +483,7 @@ fn a_build_without_hdf5_says_so_and_never_reads_an_empty_series() {
 #[test]
 fn a_dataset_that_is_not_the_rows_is_refused_by_its_shape() {
     let shaped = |dimensions: Vec<i64>, count: usize| ArrayData {
-        metadata: ArrayMetadata {
-            dimensions,
-            element_type: "float64".into(),
-        },
+        metadata: ArrayMetadata::new(dimensions, "float64"),
         values: ArrayValues::F64(vec![1.0; count]),
     };
     // One dimension: the rows flattened, which says nothing of their width.

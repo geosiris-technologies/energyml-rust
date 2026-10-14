@@ -663,13 +663,13 @@ pub fn nested_index<'a>(
             if parts.contains(&uuid) {
                 continue;
             }
-            let summary = ObjectSummary {
-                uri: nested.key.etp_uri(None),
-                uuid: nested.key.uuid.to_string(),
-                qualified_type: nested.key.qualified_type(),
-                content_type: nested.key.content_type(),
-                locator: container.locator.clone(),
-            };
+            let summary = ObjectSummary::new(
+                nested.key.etp_uri(None),
+                nested.key.uuid.to_string(),
+                nested.key.qualified_type(),
+            )
+            .with_content_type(nested.key.content_type())
+            .with_locator(container.locator.clone());
             let cached = Cached::Read {
                 object_version: nested.key.object_version.map(str::to_string),
                 title: nested.key.title.map(str::to_string),
@@ -1085,13 +1085,12 @@ mod tests {
     use super::*;
 
     fn summary(uuid: &str, qualified_type: &str) -> ObjectSummary {
-        ObjectSummary {
-            uri: format!("eml:///{qualified_type}({uuid})"),
-            uuid: uuid.to_string(),
-            qualified_type: qualified_type.to_string(),
-            content_type: String::new(),
-            locator: format!("{qualified_type}_{uuid}.xml"),
-        }
+        ObjectSummary::new(
+            format!("eml:///{qualified_type}({uuid})"),
+            uuid.to_string(),
+            qualified_type.to_string(),
+        )
+        .with_locator(format!("{qualified_type}_{uuid}.xml"))
     }
 
     #[test]
@@ -1274,16 +1273,8 @@ mod tests {
             [&held],
             &|_| None,
             [
-                Edge {
-                    from: held.uri.clone(),
-                    to: kind.into(),
-                    path: "PropertyKind".into(),
-                },
-                Edge {
-                    from: held.uri.clone(),
-                    to: gone.into(),
-                    path: "Represents".into(),
-                },
+                Edge::new(held.uri.clone(), kind, "PropertyKind"),
+                Edge::new(held.uri.clone(), gone, "Represents"),
             ],
         );
 
@@ -1674,7 +1665,11 @@ pub struct Node {
 }
 
 /// One reference, from the object holding it to the object it names.
+///
+/// Built with [`Edge::new`]; `#[non_exhaustive]`, so that what ETP adds to an
+/// edge is not a breaking change for every caller.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Edge {
     /// URI of the object holding the reference.
     pub from: String,
@@ -1682,6 +1677,40 @@ pub struct Edge {
     pub to: String,
     /// Where inside the source: `Grid2dPatch.SupportingRepresentation`.
     pub path: String,
+    /// ETP `RelationshipKind`: whether the reference is primary or secondary -
+    /// what `navigableEdges` filters on. `None` when the store does not say:
+    /// an ETP server states it; a store deriving edges from the objects does
+    /// not, until the rule is written once from the specification
+    /// (`TODO(verify)`: ETP 1.2 §8, Discovery, and the relationship rules of the
+    /// Energistics Identifier Specification). Never guessed.
+    pub kind: Option<EdgeKind>,
+}
+
+impl Edge {
+    /// A reference whose kind is not stated.
+    pub fn new(from: impl Into<String>, to: impl Into<String>, path: impl Into<String>) -> Self {
+        Self {
+            from: from.into(),
+            to: to.into(),
+            path: path.into(),
+            kind: None,
+        }
+    }
+
+    /// With the kind the store states.
+    pub fn with_kind(mut self, kind: EdgeKind) -> Self {
+        self.kind = Some(kind);
+        self
+    }
+}
+
+/// ETP `RelationshipKind`, for one edge (`Both` is a filter, not an edge).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EdgeKind {
+    /// A primary relationship: the objects one reads together.
+    Primary,
+    /// A secondary relationship: one followed only on request.
+    Secondary,
 }
 
 /// The reference graph of a set of objects.
@@ -1798,11 +1827,11 @@ pub fn build<'a>(objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn R
                     .and_then(|held| held.first())
                     .map(|held| held.at)
                 {
-                    edges.push(Edge {
-                        from: summary.uri.clone(),
-                        to: nodes[at].uri.clone(),
-                        path: edge.path.clone(),
-                    });
+                    edges.push(Edge::new(
+                        summary.uri.clone(),
+                        nodes[at].uri.clone(),
+                        edge.path.clone(),
+                    ));
                     continue;
                 }
             }
@@ -1842,11 +1871,11 @@ pub fn build<'a>(objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn R
             // dependency that is too wide costs a copy, one that is too narrow
             // breaks a package.
             for at in select(held, &edge.target.qualified_type(), wanted_version) {
-                edges.push(Edge {
-                    from: summary.uri.clone(),
-                    to: nodes[at].uri.clone(),
-                    path: edge.path.clone(),
-                });
+                edges.push(Edge::new(
+                    summary.uri.clone(),
+                    nodes[at].uri.clone(),
+                    edge.path.clone(),
+                ));
             }
         }
     }

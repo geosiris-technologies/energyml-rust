@@ -200,13 +200,7 @@ fn node_property() -> resqml22::DiscreteProperty {
 }
 
 fn summary(uuid: &str, qualified_type: &str) -> ObjectSummary {
-    ObjectSummary {
-        uri: uuid.to_string(),
-        uuid: uuid.to_string(),
-        qualified_type: qualified_type.to_string(),
-        content_type: String::new(),
-        locator: String::new(),
-    }
+    ObjectSummary::new(uuid.to_string(), uuid.to_string(), qualified_type.to_string())
 }
 
 fn package() -> (

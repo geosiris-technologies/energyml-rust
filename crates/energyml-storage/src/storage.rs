@@ -42,10 +42,12 @@ use crate::resource::{Dataspace, ObjectHeader, ObjectSummary};
 #[cfg(target_arch = "wasm32")]
 pub use async_trait::async_trait as storage_async_trait;
 
-/// Reading side of a data store - an EPC file today, an ETP dataspace later.
+/// Reading side of a data store - an EPC file, an ETP dataspace.
 ///
-/// Only reading: writing arrives with the next pass, and putting it here before
-/// the reading half is proven on real files would be designing in the dark.
+/// The writing side is [`crate::write::EnergymlWriter`], the level above one
+/// dataspace [`crate::dataspaces::EnergymlDataspaces`], the change feed
+/// [`crate::changes::EnergymlChanges`]. What a store offers of all that, it says
+/// in [`EnergymlStorage::capabilities`].
 // `async_trait` marks the boxed future of each default method `#[must_use]`,
 // which clippy 1.99 (`double_must_use`, CI 02/10/2026) reads as ours: the
 // future is already `must_use`. The attribute is the macro's, not this code's.
@@ -131,6 +133,76 @@ pub trait EnergymlStorage {
     /// not when the archive was indexed. A borrowed slice would have forced
     /// those to be dropped or the whole package to be read eagerly.
     fn diagnostics(&self) -> Vec<crate::error::Diagnostic>;
+
+    /// What this store offers beyond reading, said before it is asked.
+    ///
+    /// **Provided**: nothing beyond reading. A store that writes, holds several
+    /// dataspaces or keeps its deletions says so by overriding this.
+    fn capabilities(&self) -> crate::capabilities::Capabilities {
+        crate::capabilities::Capabilities::default()
+    }
+
+    /// The objects as bytes - ETP protocol 4, `GetDataObjects` with a `format`.
+    /// One result per URI, in the same order.
+    ///
+    /// **Provided**: refused by name, per object. A store that keeps the bytes
+    /// (an EPC holds the XML of each part, a server what it was sent) overrides
+    /// it and lists the formats in [`EnergymlStorage::capabilities`].
+    async fn get_raw(
+        &self,
+        uris: &[String],
+        format: crate::raw::RawFormat,
+    ) -> Vec<Result<crate::raw::RawObject>> {
+        let _ = format;
+        uris.iter()
+            .map(|_| {
+                Err(crate::error::Error::Unsupported {
+                    operation: "reading objects as bytes",
+                    store: self.store_kind(),
+                })
+            })
+            .collect()
+    }
+
+    /// The objects a context reaches, with the edges between them - ETP
+    /// protocol 3, `GetResources` (and `FindResources`, `GetSupportedTypes`
+    /// and a notification subscription, which name objects the same way).
+    ///
+    /// **Provided, and meant to be overridden**, like [`EnergymlStorage::edges`]:
+    /// the default walks [`EnergymlStorage::resources`] and
+    /// [`EnergymlStorage::edges`] with [`crate::context::discover`] - right
+    /// everywhere, and a whole-store read where an indexed store answers from
+    /// its index. It refuses a store holding several dataspaces: which one the
+    /// listing belongs to is that store's to say.
+    async fn resources_in(&self, context: &crate::context::Context) -> Result<crate::context::Found> {
+        let dataspaces = self.dataspaces().await?;
+        let [dataspace] = dataspaces.as_slice() else {
+            return Err(crate::error::Error::Unsupported {
+                operation: "walking a context over several dataspaces",
+                store: self.store_kind(),
+            });
+        };
+        let resources = self.resources().await?;
+        let edges = self.edges(&[]).await?;
+        crate::context::discover(&dataspace.uri, resources, edges, context)
+    }
+
+    /// The objects deleted from a dataspace - ETP protocol 3,
+    /// `GetDeletedResources`.
+    ///
+    /// **Provided**: refused by name. A store that remembers deletions overrides
+    /// it and says for how long in [`EnergymlStorage::capabilities`]; a store
+    /// that does not must not answer "none deleted".
+    async fn deleted_resources(
+        &self,
+        filter: &crate::context::DeletedFilter,
+    ) -> Result<Vec<crate::context::DeletedResource>> {
+        let _ = filter;
+        Err(crate::error::Error::Unsupported {
+            operation: "listing deleted objects",
+            store: self.store_kind(),
+        })
+    }
 
     /// One object, for the cases where asking for one is what the caller means.
     ///

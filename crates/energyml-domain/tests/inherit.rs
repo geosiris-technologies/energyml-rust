@@ -70,13 +70,11 @@ pub(crate) struct Package {
 
 impl Package {
     pub(crate) fn add(&mut self, uuid: &str, qualified_type: &str, object: Box<dyn DynObject>) {
-        let summary = ObjectSummary {
-            uri: format!("eml:///{qualified_type}({uuid})"),
-            uuid: uuid.to_string(),
-            qualified_type: qualified_type.to_string(),
-            content_type: String::new(),
-            locator: String::new(),
-        };
+        let summary = ObjectSummary::new(
+            format!("eml:///{qualified_type}({uuid})"),
+            uuid.to_string(),
+            qualified_type.to_string(),
+        );
         self.objects.push((summary, object));
     }
 

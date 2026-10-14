@@ -16,7 +16,12 @@
 ///
 /// An EPC **is** a dataspace, holding exactly one. That is not a convenience:
 /// it means code walking a remote dataspace walks a file without knowing it.
+///
+/// `#[non_exhaustive]`, like every record of this module: built with
+/// [`Dataspace::new`] and its fields set afterwards, so that a field ETP needs
+/// tomorrow is not a breaking change for every caller.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Dataspace {
     /// URI of the dataspace: `eml:///dataspace('name')`, or `eml:///` for the
     /// default one.
@@ -27,10 +32,50 @@ pub struct Dataspace {
     pub created: Option<String>,
     /// When it last changed, in its lexical form, when the store knows.
     pub last_changed: Option<String>,
+    /// ETP `Dataspace.storeCreated`: when **this store** created the dataspace,
+    /// as the ETP timestamp (microseconds since the Unix epoch, UTC). `None` when
+    /// the store does not keep it - an EPC does not, and says so rather than
+    /// inventing a date.
+    pub store_created: Option<i64>,
+    /// ETP `Dataspace.storeLastWrite`: when this store last wrote into it, same
+    /// unit. `None` when the store does not keep it.
+    pub store_last_write: Option<i64>,
+}
+
+impl Dataspace {
+    /// A dataspace by its URI and name; everything the store may not know is
+    /// left unknown.
+    pub fn new(uri: impl Into<String>, name: impl Into<String>) -> Self {
+        Self {
+            uri: uri.into(),
+            name: name.into(),
+            created: None,
+            last_changed: None,
+            store_created: None,
+            store_last_write: None,
+        }
+    }
+}
+
+/// ETP `ActiveStatusKind`: whether an object is still growing.
+///
+/// Only a growing object (a WITSML log, a trajectory being drilled) is ever
+/// active; ETP 1.2 carries the status on every resource. `TODO(verify)`: that
+/// every object which cannot grow is `Inactive` (ETP 1.2 §3.12 and the growing
+/// object protocol); until then a store that does not know leaves it unset.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ActiveStatus {
+    /// Still being written.
+    Active,
+    /// Not, or no longer, being written.
+    Inactive,
 }
 
 /// Level 1: an object's identity, without opening it.
+///
+/// Built with [`ObjectSummary::new`]; `#[non_exhaustive]` (see [`Dataspace`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct ObjectSummary {
     /// ETP URI, the way every layer above addresses this object.
     pub uri: String,
@@ -45,13 +90,58 @@ pub struct ObjectSummary {
     /// Deliberately not a path a caller should build on: two EPC files may
     /// disagree on layout, and the specification allows both.
     pub locator: String,
+    /// ETP `Resource.alternateUris`: other URIs the store answers to for this
+    /// object. Empty when it names none.
+    pub alternate_uris: Vec<String>,
+    /// ETP `Resource.storeCreated`: when this store first held the object, as
+    /// the ETP timestamp (microseconds since the Unix epoch, UTC). `None` when
+    /// the store does not keep it.
+    pub store_created: Option<i64>,
+    /// ETP `Resource.storeLastWrite`: when this store last wrote it, same unit.
+    /// `None` when the store does not keep it.
+    pub store_last_write: Option<i64>,
+    /// ETP `Resource.activeStatus`. `None` when the store does not say.
+    pub active_status: Option<ActiveStatus>,
+}
+
+impl ObjectSummary {
+    /// An object's identity; the content type and the locator are empty until
+    /// set, and everything the store may not know is left unknown.
+    pub fn new(uri: impl Into<String>, uuid: impl Into<String>, qualified_type: impl Into<String>) -> Self {
+        Self {
+            uri: uri.into(),
+            uuid: uuid.into(),
+            qualified_type: qualified_type.into(),
+            content_type: String::new(),
+            locator: String::new(),
+            alternate_uris: Vec::new(),
+            store_created: None,
+            store_last_write: None,
+            active_status: None,
+        }
+    }
+
+    /// With the content type the package declares.
+    pub fn with_content_type(mut self, content_type: impl Into<String>) -> Self {
+        self.content_type = content_type.into();
+        self
+    }
+
+    /// With where the object lives inside the store.
+    pub fn with_locator(mut self, locator: impl Into<String>) -> Self {
+        self.locator = locator.into();
+        self
+    }
 }
 
 /// Level 2: the identity, plus what a citation carries.
 ///
 /// Everything here comes from the first few hundred bytes of a part. Nothing
 /// below the citation is parsed.
+///
+/// Built with [`ObjectHeader::new`]; `#[non_exhaustive]` (see [`Dataspace`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct ObjectHeader {
     /// Level 1.
     pub summary: ObjectSummary,
@@ -72,6 +162,27 @@ pub struct ObjectHeader {
 }
 
 impl ObjectHeader {
+    /// The header of an object whose citation is not known yet: every field of
+    /// it unset.
+    pub fn new(summary: ObjectSummary) -> Self {
+        Self {
+            summary,
+            title: None,
+            originator: None,
+            creation: None,
+            last_update: None,
+            format: None,
+            object_version: None,
+            schema_version: None,
+        }
+    }
+
+    /// With a title.
+    pub fn with_title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
     /// Identity of the object.
     pub fn uri(&self) -> &str {
         &self.summary.uri
@@ -178,22 +289,14 @@ mod tests {
     use super::*;
 
     fn header(title: Option<&str>, version: Option<&str>) -> ObjectHeader {
-        ObjectHeader {
-            summary: ObjectSummary {
-                uri: "eml:///resqml22.BoundaryFeature(7f000000-0000-4000-8000-000000000001)".into(),
-                uuid: "7f000000-0000-4000-8000-000000000001".into(),
-                qualified_type: "resqml22.BoundaryFeature".into(),
-                content_type: String::new(),
-                locator: String::new(),
-            },
-            title: title.map(str::to_string),
-            originator: None,
-            creation: None,
-            last_update: None,
-            format: None,
-            object_version: version.map(str::to_string),
-            schema_version: None,
-        }
+        let mut header = ObjectHeader::new(ObjectSummary::new(
+            "eml:///resqml22.BoundaryFeature(7f000000-0000-4000-8000-000000000001)",
+            "7f000000-0000-4000-8000-000000000001",
+            "resqml22.BoundaryFeature",
+        ));
+        header.title = title.map(str::to_string);
+        header.object_version = version.map(str::to_string);
+        header
     }
 
     #[test]

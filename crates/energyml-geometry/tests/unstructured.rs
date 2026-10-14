@@ -197,24 +197,19 @@ impl ArraySource for Store {
                 count: Vec::new(),
                 proxy_uuid: None,
                 field_path: String::new(),
+                resource_uri: None,
             })
             .into_iter()
             .collect()
     }
     fn metadata(&self, location: &ArrayLocation) -> energyml_domain::Result<ArrayMetadata> {
         let (_, shape) = self.get(location)?;
-        Ok(ArrayMetadata {
-            dimensions: shape.clone(),
-            element_type: "f64".to_string(),
-        })
+        Ok(ArrayMetadata::new(shape.clone(), "f64".to_string()))
     }
     fn read(&self, location: &ArrayLocation) -> energyml_domain::Result<ArrayData> {
         let (values, shape) = self.get(location)?;
         Ok(ArrayData {
-            metadata: ArrayMetadata {
-                dimensions: shape.clone(),
-                element_type: "f64".to_string(),
-            },
+            metadata: ArrayMetadata::new(shape.clone(), "f64".to_string()),
             values: ArrayValues::F64(values.clone()),
         })
     }

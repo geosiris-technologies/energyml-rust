@@ -217,10 +217,7 @@ impl ArraySource for Written<'_> {
             panic!("the rows are written as doubles")
         };
         Ok(ArrayData {
-            metadata: ArrayMetadata {
-                dimensions: dataset.dimensions.clone(),
-                element_type: "float64".into(),
-            },
+            metadata: ArrayMetadata::new(dataset.dimensions.clone(), "float64"),
             values: ArrayValues::F64(values.clone()),
         })
     }

@@ -190,13 +190,12 @@ fn a_uuid_nested_nowhere_is_still_dangling() {
             injection_test().as_bytes(),
         )
         .unwrap();
-    let summary = energyml_storage::ObjectSummary {
-        uri: format!("eml:///prodml23.InjectionFlowTest({TEST})"),
-        uuid: TEST.to_string(),
-        qualified_type: "prodml23.InjectionFlowTest".to_string(),
-        content_type: String::new(),
-        locator: "InjectionFlowTest.xml".to_string(),
-    };
+    let summary = energyml_storage::ObjectSummary::new(
+        format!("eml:///prodml23.InjectionFlowTest({TEST})"),
+        TEST.to_string(),
+        "prodml23.InjectionFlowTest".to_string(),
+    )
+    .with_locator("InjectionFlowTest.xml".to_string());
     let issues = graph::check_all_references([(&summary, lonely.as_reflect())], &|_| None);
     assert_eq!(
         issues.len(),
