@@ -25,20 +25,20 @@ include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
 energyml-core = { workspace = true }
 # `default-features = false`: the façade asks for no schema version by itself;
 # the features below forward to the ones the application names.
-energyml-schemas = { path = "../energyml-schemas", version = "0.2.0-alpha.4", default-features = false }
-energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.4" }
-energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.4" }
-energyml-geometry = { path = "../energyml-geometry", version = "0.2.0-alpha.4" }
-energyml-export = { path = "../energyml-export", version = "0.2.0-alpha.4" }
-energyml-proj = { path = "../energyml-proj", version = "0.2.0-alpha.4" }
-energyml-cache = { path = "../energyml-cache", version = "0.2.0-alpha.4" }
-energyml-analysis = { path = "../energyml-analysis", version = "0.2.0-alpha.4" }
-energyml-geostat = { path = "../energyml-geostat", version = "0.2.0-alpha.4" }
-energyml-build = { path = "../energyml-build", version = "0.2.0-alpha.4", optional = true }
-energyml-providers = { path = "../energyml-providers", version = "0.2.0-alpha.4", optional = true }
-energyml-rules = { path = "../energyml-rules", version = "0.2.0-alpha.4" }
-energyml-sheet = { path = "../energyml-sheet", version = "0.2.0-alpha.4" }
-energyml-section = { path = "../energyml-section", version = "0.2.0-alpha.4" }
+energyml-schemas = { path = "../energyml-schemas", version = "0.2.0", default-features = false }
+energyml-storage = { path = "../energyml-storage", version = "0.2.0" }
+energyml-domain = { path = "../energyml-domain", version = "0.2.0" }
+energyml-geometry = { path = "../energyml-geometry", version = "0.2.0" }
+energyml-export = { path = "../energyml-export", version = "0.2.0" }
+energyml-proj = { path = "../energyml-proj", version = "0.2.0" }
+energyml-cache = { path = "../energyml-cache", version = "0.2.0" }
+energyml-analysis = { path = "../energyml-analysis", version = "0.2.0" }
+energyml-geostat = { path = "../energyml-geostat", version = "0.2.0" }
+energyml-build = { path = "../energyml-build", version = "0.2.0", optional = true }
+energyml-providers = { path = "../energyml-providers", version = "0.2.0", optional = true }
+energyml-rules = { path = "../energyml-rules", version = "0.2.0" }
+energyml-sheet = { path = "../energyml-sheet", version = "0.2.0" }
+energyml-section = { path = "../energyml-section", version = "0.2.0" }
 energyml-log = { workspace = true }
 
 [features]

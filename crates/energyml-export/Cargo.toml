@@ -20,8 +20,8 @@ include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
 
 [dependencies]
 energyml-core = { workspace = true }
-energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.4" }
-energyml-geometry = { path = "../energyml-geometry", version = "0.2.0-alpha.4" }
+energyml-domain = { path = "../energyml-domain", version = "0.2.0" }
+energyml-geometry = { path = "../energyml-geometry", version = "0.2.0" }
 thiserror = "2.0"
 
 [dev-dependencies]

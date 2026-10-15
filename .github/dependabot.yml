@@ -3,6 +3,8 @@ updates:
   # Rust dependencies (the generated crates are path dependencies and are not updated here).
   - package-ecosystem: cargo
     directory: /
+    # Updates are integrated on dev, like any other change, and reach main with a release.
+    target-branch: dev
     schedule:
       interval: weekly
     groups:
@@ -12,11 +14,13 @@ updates:
   # Versions of the actions used by the workflows.
   - package-ecosystem: github-actions
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
 
   # Python tooling of the bridge. TODO(verify): directory of the Python requirements, if any.
   - package-ecosystem: pip
     directory: /crates/energyml-python
+    target-branch: dev
     schedule:
       interval: weekly

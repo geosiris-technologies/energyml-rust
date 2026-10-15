@@ -1,21 +1,17 @@
 name: release-cli
 
 # Builds the `energyml` command for the supported targets and attaches one archive
-# per target to a GitHub release: the release `vX.Y.Z` a maintainer publishes (the
-# one that publishes everything, see docs/releasing.md), or the release of a tag
-# `energyml-cli-v*` when release-plz publishes on a merge and starts this workflow.
+# per target to a GitHub release: the release `vX.Y.Z` (or the pre-release
+# `vX.Y.Z-alpha.N`) a maintainer publishes, the one that publishes everything (see
+# docs/releasing.md). A manual run (`gh workflow run release-cli.yml --ref <tag>`)
+# rebuilds the archives of an existing release.
 #
 # Later option: replace this matrix with cargo-dist (installers, Homebrew tap,
 # GHCR image) - see dist-workspace.toml once it exists.
 on:
   release:
     types: [published]
-  push:
-    tags:
-      - "energyml-cli-v*"
-  # Started by release-plz.yml on the new tag (a tag pushed with GITHUB_TOKEN
-  # starts no workflow). Must be run with `--ref <tag>`: the archive names and
-  # the release come from the ref.
+  # Must be run with `--ref <tag>`: the archive names and the release come from the ref.
   workflow_dispatch:
 
 permissions:

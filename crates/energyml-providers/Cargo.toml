@@ -1,6 +1,6 @@
 [package]
 name = "energyml-providers"
-version = "0.2.0-alpha.4"
+version = "0.2.0"
 edition = "2024"
 rust-version.workspace = true
 license = "Apache-2.0"
@@ -23,7 +23,7 @@ include = ["src/**", "catalogue/**", "Cargo.toml", "README.md", "LICENSE*", "NOT
 # reads answers; what the entities *mean* is the business of `energyml-build`,
 # and what is made of them that of its operations. The only workspace
 # dependency is the GeoJSON reader, which is the format of the answers.
-energyml-build = { path = "../energyml-build", version = "0.2.0-alpha.4" }
+energyml-build = { path = "../energyml-build", version = "0.2.0" }
 # **What a provider declares has to cross a boundary.** The front end renders the
 # form, the Python bridge will list it: without serialisation each would rewrite
 # the declaration in its own language - and a second copy of a list is a list

@@ -7,32 +7,53 @@ only protected workflows can read.
 
 ## Making a release
 
-**A published GitHub release is what publishes**, everything at once:
+Two branches: `dev`, where changes are integrated, and `main`, which holds what
+was released. **Nothing is published by a push**: a published GitHub release
+publishes everything at once, and it is created by a maintainer.
 
-1. **Merge the release pull request.** `release-plz` keeps one open (opened by the
-   release bot app): it bumps the versions, the requirements between crates and every
-   `CHANGELOG.md`. Merging it publishes nothing: the repository variable
-   `RELEASE_PLZ_PUBLISH` is `release`.
-2. **Create a GitHub release** (Releases > Draft a new release): a new tag `vX.Y.Z`, the
-   workspace version the merge left in `Cargo.toml`, on `main`; title `vX.Y.Z`; notes
-   ("Generate release notes" gives a start). Publish it.
-3. Publishing it starts, each from the release:
+**A release** (`vX.Y.Z`), from `main`:
+
+1. **Merge `dev` into `main`** (a pull request `dev` → `main`).
+2. **Merge the release pull request.** `release-plz` keeps one open on `main`,
+   opened by the release bot app: the version bumps, the requirements between
+   crates and every `CHANGELOG.md`, written from the conventional commits.
+   Merging it publishes nothing. When `main` still carries a pre-release version
+   (`0.2.0-alpha.4`), `release-plz` does not move to the final version on its
+   own: the version is set by hand in a pull request to `main` instead, with the
+   `CHANGELOG.md` entries (one commit `chore: X.Y.Z`).
+3. **Create a GitHub release** (Releases > Draft a new release): a new tag
+   `vX.Y.Z` on `main`, the workspace version of `Cargo.toml`; title `vX.Y.Z`;
+   notes ("Generate release notes" gives a start). Publish it.
+
+**A pre-release** (`vX.Y.Z-alpha.N`, `-beta.N`, `-rc.N`), from `dev`:
+
+1. **Set the version by hand on `dev`**: one commit `chore: X.Y.Z-alpha.N` that
+   changes the workspace version and the requirements between crates.
+2. **Create a GitHub release** on `dev` with the tag `vX.Y.Z-alpha.N`, and tick
+   **"Set as a pre-release"**. A release from `dev` that is not marked as a
+   pre-release is refused.
+
+Cargo never picks a pre-release unless it is asked for by name
+(`energyml = "0.2.0-alpha.1"`), and pip only with `--pre`.
+
+Publishing a release or a pre-release starts, each from the release:
 
 | What | Where | Workflow |
 |---|---|---|
 | the library crates (see the order below) | crates.io | `release-plz.yml`, which also tags each crate `<crate>-vX.Y.Z` |
 | `energyml-rust` wheels and sdist (imported as `energyml.rust`) | PyPI | `python.yml` |
 | the `energyml` archives, one per target, with `SHA256SUMS` | attached to this release | `release-cli.yml` |
-| the `energyml` image, tags `X.Y.Z`, `X.Y` and `latest` | `ghcr.io/geosiris-technologies/energyml` | `docker.yml`, once `IMAGE_PUBLISH` is `true` |
+| the `energyml` image: `X.Y.Z`, `X.Y` and `latest` for a release; `X.Y.Z-pre` and `dev` for a pre-release | `ghcr.io/geosiris-technologies/energyml` | `docker.yml`, once `IMAGE_PUBLISH` is `true` |
 | not published | | `energyml-tests`, `energyml-roundtrip`, `energyml-python` as a crate (it ships as wheels) |
 
 Each workflow first checks that the tag names the version of the manifests, and stops
-before uploading anything otherwise. A release marked as a pre-release publishes the
-same way but gives the image no `latest`; it does not change the version: a
-pre-release version (`0.2.0-alpha.1`) is set in `Cargo.toml` first.
+before uploading anything otherwise.
 
-Between releases, every push to `main` that touches the crates publishes a
-development build of the wheels to TestPyPI (`X.Y.(Z+1).devN`), and the image `edge`.
+Between releases, every push to `main` or `dev` that touches the crates
+publishes a development build of the wheels to TestPyPI (`X.Y.(Z+1).devN`), and
+every push to `main` the image `edge`. Neither is a release.
+
+Dependency updates (Dependabot) target `dev`, like any other change.
 
 ## Publication order
 
@@ -82,36 +103,15 @@ workflow leaves it alone; the mark is removed once trusted publishing is
 configured. The `crates-io` environment only accepts deployments from `main`
 and `dev`.
 
-A pre-release goes out from `dev`: set the version by hand (for example
-`0.2.0-alpha.1`) and push. The `release` job publishes every crate whose version
-is not yet on crates.io and tags it; it opens no release pull request and starts
-neither the CLI binaries nor the image. Cargo never picks a pre-release unless
-it is asked for by name (`energyml = "0.2.0-alpha.1"`).
-
 ## The publication switch
 
-The repository variable `RELEASE_PLZ_PUBLISH` chooses when crates.io is published
-to: `release` (the setting, since 14/10/2026) on a published GitHub release only;
-`true` also on every merge to `main` or `dev`; nothing while it is unset. A
-release's tag must name a version of the manifests, `vX.Y.Z` for the workspace
-version or `<crate>-vX.Y.Z`, and its commit must be on `main` or `dev`.
-
-With `true`, a merge publishes the crates and tags them with the workflow token,
-and a tag pushed with that token starts no workflow on its own: the `release` job
-of `release-plz.yml` then starts `release-cli.yml` and `docker.yml` itself
-(`workflow_dispatch` on the new `energyml-cli-v*` tag). On a GitHub release it
-does not, since those two listen for the release themselves.
-
-Before the first publication, check what would be packed, without publishing:
-
-```sh
-cargo package --workspace --no-verify --allow-dirty   # what CI's `package` job does
-cargo package --list -p energyml-domain               # the tables must be listed
-```
-
-`--no-verify` is needed in CI because a crate cannot be built from its packed
-sources while the crates below it are not on the registry yet. Once they are,
-drop it.
+The repository variable `RELEASE_PLZ_PUBLISH` is the switch for crates.io:
+`release` publishes on a published GitHub release; unset (or any other value),
+nothing is published, which is how a new repository starts. A release's tag must
+name a version of the manifests, `vX.Y.Z` for the workspace version or
+`<crate>-vX.Y.Z`, and its commit must be on `main` (or on `dev` for a
+pre-release). `PYPI_PUBLISH`, `TESTPYPI_PUBLISH` and `IMAGE_PUBLISH` are the
+switches of the wheels and of the image.
 
 ## The dev-dependency cycle between `energyml-rules` and `energyml-domain`
 
