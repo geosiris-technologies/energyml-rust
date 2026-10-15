@@ -23,17 +23,6 @@ name = "energyml-roundtrip"
 publish = false
 release = false
 
-# New crates: their first publication is made by hand with an API token
-# (trusted publishing is configured on a crate that exists, docs/releasing.md).
-# Until then the workflow leaves them alone.
-[[package]]
-name = "energyml-mcp"
-publish = false
-
-[[package]]
-name = "energyml-mcp-cli"
-publish = false
-
 [[package]]
 name = "energyml-python"
 # Published to PyPI by the python workflow, not to crates.io. It is still tagged
