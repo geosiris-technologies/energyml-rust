@@ -150,7 +150,12 @@ impl Tool for GetReferencesTool {
         let mut body = Map::new();
         body.insert("uri".into(), json!(uri));
         body.insert("direction".into(), json!(direction));
-        body.insert("edge_kinds".into(), json!(ctx.store.capabilities().edge_kinds));
+        let capabilities = ctx.store.capabilities();
+        body.insert("edge_kinds".into(), json!(capabilities.edge_kinds));
+        body.insert(
+            "edge_kind_coverage".into(),
+            crate::tools::common::coverage_value(&capabilities.edge_kind_coverage),
+        );
         page.put(&mut body, "objects");
         paginate(&edge_values, &paging()).put_secondary(&mut body, "edges");
         paginate(&dangling_values, &paging()).put_secondary(&mut body, "dangling");
@@ -173,6 +178,17 @@ fn edge_value(edge: &Edge) -> Value {
             EdgeKind::Secondary => "secondary",
         };
         item.insert("kind".into(), json!(word));
+    }
+    // A kind this crate derived says so; a stated one (a server, the ETP
+    // specification) does not need to.
+    match edge.basis {
+        Some(energyml_storage::KindBasis::DerivedByValue) => {
+            item.insert("kind_basis".into(), json!("derived-by-value"));
+        }
+        Some(energyml_storage::KindBasis::DerivedXsd { .. }) => {
+            item.insert("kind_basis".into(), json!("derived-xsd"));
+        }
+        _ => {}
     }
     Value::Object(item)
 }

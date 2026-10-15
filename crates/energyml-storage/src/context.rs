@@ -18,8 +18,11 @@
 //!   secondary expansions, need to know the kind of each edge. Which relationship
 //!   is primary is ML-specific (ETP 1.2 §8.1.1.1.1, note 1: *"see the relevant
 //!   ML's ETP implementation specification"*); a store that derives its edges
-//!   from the objects does not state it ([`crate::graph::Edge::kind`]), so these
-//!   requests are refused by name over such edges.
+//!   from the objects states it by the rules of [`crate::kinds`], and for an ML
+//!   with no rule the edge has no kind ([`crate::graph::Edge::kind`]). The
+//!   refusal is **met**, not global: a request by kind answers while its walk
+//!   meets only edges that have a kind, and refuses ([`crate::Error::UnstatedKind`],
+//!   naming the type and the cause) at the first edge that has none.
 //! - **Filtering on a fact the store does not state** - the active status, the
 //!   store's last write - is refused by name for the object that lacks it, never
 //!   answered as "nothing matches".
@@ -206,6 +209,27 @@ pub fn is_dataspace_uri(uri: &str) -> Result<bool> {
     Ok(parsed.uuid.is_none() && parsed.object_type.is_none())
 }
 
+/// The refusal of an edge whose kind nobody states: the type of its source and why.
+fn unstated(edge: &Edge) -> Error {
+    let source_type = EtpUri::parse(&edge.from)
+        .ok()
+        .and_then(|uri| Some(format!("{}{}.{}", uri.domain?, uri.version?, uri.object_type?)))
+        .unwrap_or_else(|| edge.from.clone());
+    let why = match edge.basis {
+        Some(crate::kinds::KindBasis::Unknown { why }) => why,
+        _ => "no rule or server states the kind of this edge",
+    };
+    Error::UnstatedKind { source_type, why }
+}
+
+/// An edge met by a request that needs its kind: refused when it has none.
+fn needs_kind(edge: &Edge) -> Result<()> {
+    if edge.kind.is_none() {
+        return Err(unstated(edge));
+    }
+    Ok(())
+}
+
 /// Answer a [`Context`] from what a store lists: its resources and its edges.
 ///
 /// `dataspace` is the URI of the one dataspace these resources belong to: a
@@ -268,15 +292,8 @@ pub fn discover(
         return Ok(counted(with_edges(kept, &edges), &edges, context));
     }
 
-    let wants_kinds = context.navigable != Navigable::Both
-        || context.include_secondary_targets
-        || context.include_secondary_sources;
-    if wants_kinds && edges.iter().any(|edge| edge.kind.is_none()) {
-        return Err(Error::Unsupported {
-            operation: "following relationships by kind, over edges whose kind is not stated",
-            store: "discover",
-        });
-    }
+    // A request by kind is refused when its walk meets an edge with no kind
+    // (`needs_kind`), not because some edge elsewhere in the dataspace has none.
     let follows = |edge: &Edge| match context.navigable {
         Navigable::Both => true,
         Navigable::Primary => edge.kind == Some(EdgeKind::Primary),
@@ -316,23 +333,24 @@ pub fn discover(
         }
         let mut next: Vec<&str> = Vec::new();
         if towards_targets {
-            next.extend(
-                out_of
-                    .get(uri)
-                    .into_iter()
-                    .flatten()
-                    .filter(|e| follows(e))
-                    .map(|e| e.to.as_str()),
-            );
+            for edge in out_of.get(uri).into_iter().flatten() {
+                if context.navigable != Navigable::Both {
+                    needs_kind(edge)?;
+                }
+                if follows(edge) {
+                    next.push(edge.to.as_str());
+                }
+            }
         }
         if towards_sources {
-            next.extend(
-                into.get(uri)
-                    .into_iter()
-                    .flatten()
-                    .filter(|e| follows(e))
-                    .map(|e| e.from.as_str()),
-            );
+            for edge in into.get(uri).into_iter().flatten() {
+                if context.navigable != Navigable::Both {
+                    needs_kind(edge)?;
+                }
+                if follows(edge) {
+                    next.push(edge.from.as_str());
+                }
+            }
         }
         for other in next {
             if seen.insert(other) {
@@ -352,6 +370,7 @@ pub fn discover(
     for uri in &candidates {
         if context.include_secondary_targets {
             for edge in out_of.get(uri.as_str()).into_iter().flatten() {
+                needs_kind(edge)?;
                 if edge.kind == Some(EdgeKind::Secondary) {
                     reached.insert(edge.to.clone());
                 }
@@ -359,6 +378,7 @@ pub fn discover(
         }
         if context.include_secondary_sources {
             for edge in into.get(uri.as_str()).into_iter().flatten() {
+                needs_kind(edge)?;
                 if edge.kind == Some(EdgeKind::Secondary) {
                     reached.insert(edge.from.clone());
                 }

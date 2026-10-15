@@ -251,9 +251,13 @@ pub trait EnergymlStorage {
     /// An empty `uris` means the whole store.
     ///
     /// **Provided, and meant to be overridden.** The default keeps the
-    /// [`EnergymlStorage::references`] whose target the store holds - their kind
-    /// unknown, since which relationship is primary is each ML's to say (ETP 1.2
-    /// §8.1.1.1.1, note 1). An ETP server answers natively, from its own index,
+    /// [`EnergymlStorage::references`] whose target the store holds and, when
+    /// the store provides [`EnergymlStorage::kind_rules`], gives each its kind
+    /// and the basis of it (RESQML always primary, ETP 1.2 §8.2.2; WITSML by the
+    /// specification's examples, then by a labelled derivation; an ML with no
+    /// rule, none: [`crate::kinds`]). Without rules the kind is unknown, since
+    /// which relationship is primary is each ML's to say (ETP 1.2 §8.1.1.1.2,
+    /// note 1). An ETP server answers natively, from its own index,
     /// without a single object crossing the wire, and states each edge's kind;
     /// its edges include by-value containment and carry no field path.
     ///
@@ -271,12 +275,27 @@ pub trait EnergymlStorage {
             .into_iter()
             .map(|summary| summary.uri)
             .collect();
-        Ok(self
+        let held_edges: Vec<crate::graph::Edge> = self
             .references(uris)
             .await?
             .into_iter()
             .filter(|edge| held.contains(&edge.to))
-            .collect())
+            .collect();
+        // The kind is judged here and nowhere else, from the type of the source
+        // and the path of the reference: no object is read for it. No rules, no cost.
+        Ok(match self.kind_rules() {
+            Some(rules) => crate::kinds::judge_edges(rules.as_ref(), held_edges),
+            None => held_edges,
+        })
+    }
+
+    /// The rules that give the kind of an edge this store derives: **provided**,
+    /// `None` (the store states its edges' kinds itself, as an ETP server does,
+    /// or states none). An implementation that derives its edges from the
+    /// objects (`EpcStore`) returns the policy of [`crate::kinds`]; the default
+    /// of [`EnergymlStorage::edges`] applies it, in that one place.
+    fn kind_rules(&self) -> Option<std::sync::Arc<dyn crate::kinds::KindRules>> {
+        None
     }
 
     /// The reference graph of the store, ready to draw.

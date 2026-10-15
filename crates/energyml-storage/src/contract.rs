@@ -52,8 +52,11 @@
 //!   argument selects the objects holding the reference, or any edge touching
 //!   them, is not stated; only the whole-store form (`&[]`) is asserted.
 //! - **Step 4 of §8.1.1.1.4** reads "remove edges that are not connected to a node
-//!   in the final set": literally, one end suffices. The design note (§3) and
-//!   [`Found::edges`] read it as both ends; the rule follows the design note.
+//!   in the final set": one end suffices, as §8.3.1 (p. 163, row 3.c) spells
+//!   out ("if EITHER end (or both) are present"). [`Found::edges`] and DISC-8
+//!   follow that reading; a store keeping only the edges with both ends in the
+//!   answer departs from it (the ETP client of retp did, until its triangulation
+//!   against a server built on this crate showed it).
 //! - **A type of a schema version the session did not negotiate** is an error in
 //!   ETP (§8.2.2, EDATAOBJECTTYPE_NOTSUPPORTED), so "a wildcard of another version
 //!   is empty" is not asserted.
@@ -78,7 +81,7 @@ use crate::array::{ArrayData, ArrayLocation, ArrayMetadata, ArrayValues};
 use crate::context::{Context, DeletedFilter, Found, Navigable, Scope, types_of};
 use crate::dataspaces::EnergymlDataspaces;
 use crate::error::{Error, Result};
-use crate::graph::Edge;
+use crate::graph::{Edge, EdgeKind};
 use crate::raw::{RawFormat, RawObject};
 use crate::resource::{ActiveStatus, Dataspace, ObjectSummary};
 use crate::storage::EnergymlStorage;
@@ -219,8 +222,17 @@ pub mod rules {
             "ETP 1.2 section 8.3.1 (storeLastWriteFilter); capabilities.rs store_times; resource.rs (no date is invented)",
             "A store that keeps the store times states them on every object and filters on them; one that does not leaves them unstated and refuses the filter by name (Unsupported).");
         DISC_KINDS = ("DISC-14",
-            "ETP 1.2 section 8.1.1.1.1 note 1 and section 8.1.1.1.2; capabilities.rs edge_kinds; design note section 2",
-            "Following relationships by kind (Primary, Secondary, the secondary expansions) is refused by name (Unsupported) when the store does not state the kind of its edges, and answered, with every edge's kind stated, when it does.");
+            "ETP 1.2 section 8.1.1.1.2 note 1 and section 8.1.1.1.4 steps 1 and 2; capabilities.rs edge_kinds and edge_kind_coverage; design note genre-des-aretes section 3.5",
+            "A request by kind (Primary, Secondary, the secondary expansions) over the model answers, with every edge it returns carrying a kind, when the store states the kind of the edges of the model's ML (edge_kinds, and the coverage names resqml22 or is All); otherwise it is refused by name (Unsupported or UnstatedKind), never answered with unkinded edges.");
+        KIND_RESQML = ("KIND-1",
+            "ETP 1.2 section 8.2.2 rule 1.a (p. 167-168): in RESQML all relationships are primary",
+            "When the store states edge kinds for RESQML, every edge whose source is a RESQML object is Primary.");
+        KIND_BASIS = ("KIND-3",
+            "ETP 1.2 section 8.1.1.1.2 note 1 (p. 157): the ML rules are in guides this store may not have; kinds.rs labels what it derives",
+            "Every edge that has a kind has a basis, and an edge of a RESQML object is Stated or EtpSpec, never a derived one.");
+        KIND_REFUSED = ("KIND-4",
+            "ETP 1.2 section 8.1.1.1.2 note 1 (p. 157); design note genre-des-aretes section 3.5 (the refusal is met, not global)",
+            "A store that does not state the kind of the model's edges gives them none, and says Unknown or nothing, never a kind; a request by kind that meets them is refused by name.");
         REF_HELD = ("REF-1",
             "design note section 3 (edges are between objects the store holds); ETP 1.2 section 8.1.1.1.4 step 4",
             "Every entry of edges() has both ends among the objects the store holds.");
@@ -1773,18 +1785,59 @@ async fn unstated_facts<S: EnergymlStorage + Sync>(store: &S, state: &Held) {
         }),
     ] {
         let answer = store.resources_in(&kinded).await;
-        if capabilities.edge_kinds {
+        // The model is RESQML 2.2: the kinds are stated for it when the store states
+        // any, and its coverage names resqml22 (or is All).
+        let states_resqml = capabilities.edge_kinds && capabilities.edge_kind_coverage.covers("resqml22");
+        if states_resqml {
             let found = must(&DISC_KINDS, what, answer);
             rule!(
                 &DISC_KINDS,
                 found.edges.iter().all(|edge| edge.kind.is_some()),
-                "{what}: the store states edge kinds and an edge of the answer has none"
+                "{what}: the store states edge kinds for resqml22 and an edge of the answer has none"
             );
+            // KIND-1 and KIND-3 over what the answer returns.
+            for edge in &found.edges {
+                let source_is_resqml = EtpUri::parse(&edge.from)
+                    .ok()
+                    .and_then(|uri| uri.domain)
+                    .is_some_and(|domain| domain == "resqml");
+                rule!(
+                    &KIND_BASIS,
+                    edge.basis.is_some(),
+                    "{what}: the edge {} -> {} has a kind and no basis",
+                    edge.from,
+                    edge.to
+                );
+                if source_is_resqml {
+                    rule!(
+                        &KIND_RESQML,
+                        edge.kind == Some(EdgeKind::Primary),
+                        "{what}: the RESQML edge {} -> {} is {:?}, expected Primary",
+                        edge.from,
+                        edge.to,
+                        edge.kind
+                    );
+                    rule!(
+                        &KIND_BASIS,
+                        matches!(
+                            edge.basis,
+                            Some(crate::kinds::KindBasis::Stated | crate::kinds::KindBasis::EtpSpec { .. })
+                        ),
+                        "{what}: the RESQML edge {} -> {} rests on {:?}, not on the specification or a server",
+                        edge.from,
+                        edge.to,
+                        edge.basis
+                    );
+                }
+            }
         } else {
             rule!(
-                &DISC_KINDS,
-                matches!(answer, Err(Error::Unsupported { .. })),
-                "{what}: the store states no edge kind and the request answered {}",
+                &KIND_REFUSED,
+                matches!(
+                    answer,
+                    Err(Error::Unsupported { .. } | Error::UnstatedKind { .. })
+                ),
+                "{what}: the store states no edge kind for resqml22 and the request answered {}",
                 brief(&answer)
             );
         }

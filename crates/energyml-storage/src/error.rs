@@ -85,6 +85,22 @@ pub enum Error {
         store: &'static str,
     },
 
+    /// A request by relationship kind met an edge whose kind nobody states.
+    ///
+    /// ETP 1.2 section 8.1.1.1.2 (p. 157) leaves the kind of a relationship to
+    /// the ML of the object holding it, and the guide of an ML that has none
+    /// says nothing: the edge has no kind, and the request that needs one is
+    /// refused **when it meets that edge**, not before
+    /// ([`crate::context::discover`]).
+    #[error("`{source_type}`: the kind of its edges is not stated: {why}")]
+    UnstatedKind {
+        /// The qualified type of the object holding the reference
+        /// (`prodml23.FlowTestActivity`), or the URI when it has none.
+        source_type: String,
+        /// Why no rule applies ([`crate::kinds::KindBasis::Unknown`]).
+        why: &'static str,
+    },
+
     /// A transaction was misused: a second one opened while one is, or one
     /// ended that is not the open one (ETP protocol 18).
     #[error("{store}: {reason}")]

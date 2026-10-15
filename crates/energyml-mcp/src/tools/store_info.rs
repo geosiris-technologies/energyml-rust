@@ -96,6 +96,7 @@ impl Tool for StoreInfoTool {
                 "raw_formats": capabilities.raw_formats.iter().map(|format| format.as_etp()).collect::<Vec<_>>(),
                 "store_times": capabilities.store_times,
                 "edge_kinds": capabilities.edge_kinds,
+                "edge_kind_coverage": crate::tools::common::coverage_value(&capabilities.edge_kind_coverage),
                 "native_context": capabilities.native_context,
                 "changes": capabilities.changes,
             }),

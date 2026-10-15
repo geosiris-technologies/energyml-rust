@@ -96,7 +96,7 @@ several servers does not see two `list_resources`.
 | `energyml_list_resources` | The objects of a dataspace, or those reachable from an object, with type and URI. `types`: exact or `family.*`, case sensitive | `resources_in` |
 | `energyml_find_resources` | Case-insensitive substring search: `title_contains`, `type_contains` (not the same as `types` above), `uuid_prefix` | `search::find`, `headers` |
 | `energyml_describe_object` | One object as EnergyML JSON (`$type` on every object), bounded; XML when the store lists it, refused by name otherwise | `get_object`, `header`, `references`, `get_raw` |
-| `energyml_get_references` | Targets, sources or both up to a depth; references to absent objects are reported as `dangling` | `resources_in`, `references`, `resources` |
+| `energyml_get_references` | Targets, sources or both up to a depth; references to absent objects are reported as `dangling`. Each edge carries its `kind` (primary, secondary) when the store states it, and `kind_basis` when that kind is derived rather than given by the specification (ADR-0022); `edge_kind_coverage` names the MLs it is stated for | `resources_in`, `references`, `resources` |
 | `energyml_list_arrays` | The arrays an object points at, with shape and element type, no values; an unreadable array is listed with the reason | `get_object`, `arrays_of`, `array_metadata` |
 | `energyml_read_array_window` | A bounded window of one array, with statistics and a preview; never the whole array | `array_metadata`, `window::read_window` |
 

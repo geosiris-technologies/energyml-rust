@@ -265,10 +265,17 @@ fn get_references_follows_targets_and_sources() {
         "{targets}"
     );
     assert_eq!(targets["dangling"], json!([]));
-    // The EPC derives its edges from the objects and does not state their kind:
-    // the answer says so and shows no kind.
-    assert_eq!(targets["edge_kinds"], false);
-    assert!(targets["edges"][0].get("kind").is_none());
+    // The EPC states the kind of RESQML edges: all primary (ETP 1.2 section
+    // 8.2.2), and says which MLs it states kinds for.
+    assert_eq!(targets["edge_kinds"], true);
+    assert!(
+        targets["edge_kind_coverage"]
+            .as_array()
+            .is_some_and(|mls| mls.iter().any(|m| m == "resqml22")),
+        "{}",
+        targets["edge_kind_coverage"]
+    );
+    assert_eq!(targets["edges"][0]["kind"], "primary");
     assert_eq!(targets["truncated"], false);
 
     let sources = call(

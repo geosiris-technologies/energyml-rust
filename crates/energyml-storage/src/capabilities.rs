@@ -8,6 +8,32 @@
 
 use crate::raw::RawFormat;
 
+/// Of which edges a store states the kind (primary or secondary).
+///
+/// Meaningful when [`Capabilities::edge_kinds`] is on.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum EdgeKindCoverage {
+    /// Of every edge: a server states it for each one it answers.
+    #[default]
+    All,
+    /// Of the edges whose source belongs to these MLs, by qualified-type prefix
+    /// (`resqml22`, `witsml21`), sorted. An edge of another ML has no kind and a
+    /// request by kind that meets it is refused by name
+    /// ([`crate::Error::UnstatedKind`]).
+    Mls(Vec<String>),
+}
+
+impl EdgeKindCoverage {
+    /// Whether the kind of the edges held by objects of this ML prefix is stated.
+    pub fn covers(&self, prefix: &str) -> bool {
+        match self {
+            EdgeKindCoverage::All => true,
+            EdgeKindCoverage::Mls(prefixes) => prefixes.iter().any(|p| p == prefix),
+        }
+    }
+}
+
 /// What a store offers beyond reading objects and arrays.
 ///
 /// `Default` is "nothing beyond": every flag off, every list empty - the
@@ -38,8 +64,12 @@ pub struct Capabilities {
     pub raw_formats: Vec<RawFormat>,
     /// The store keeps the times ETP reports (`storeCreated`, `storeLastWrite`).
     pub store_times: bool,
-    /// The store states the kind of each edge (primary, secondary).
+    /// The store states the kind (primary, secondary) of some of its edges at
+    /// least; [`Capabilities::edge_kind_coverage`] says which.
     pub edge_kinds: bool,
+    /// Of which edges `edge_kinds` holds. An ETP server: all. An EPC: the MLs
+    /// the rules of [`crate::kinds`] cover.
+    pub edge_kind_coverage: EdgeKindCoverage,
     /// The store answers a context natively rather than by walking every edge
     /// ([`crate::EnergymlStorage::resources_in`]).
     pub native_context: bool,
