@@ -34,8 +34,9 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry/index,sharing=locked \
     features="energyml-cli/hdf5"; \
     for f in $(echo "$FEATURES" | tr ',' ' '); do features="$features,energyml-cli/$f"; done; \
     cargo build --release --locked -p energyml-cli --features "$features"; \
+    cargo build --release --locked -p energyml-mcp-cli --features energyml-mcp-cli/hdf5; \
     mkdir /out; \
-    cp target/release/energyml target/release/enyml /out/
+    cp target/release/energyml target/release/enyml target/release/energyml-mcp /out/
 
 FROM debian:bookworm-slim
 RUN apt-get update \

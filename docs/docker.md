@@ -44,6 +44,7 @@ PowerShell users write `-v "${PWD}:/work"`.
 |---|---|
 | `/usr/local/bin/energyml` | the CLI, built with HDF5 and the PNG rasteriser of the section view |
 | `/usr/local/bin/enyml` | the second binary built by the CLI crate; the entry point runs it as it is |
+| `/usr/local/bin/energyml-mcp` | the MCP server over a package ([MCP server](mcp.md)), from the release after 0.2.0; run it with `docker run -i <image> energyml-mcp model.epc` |
 | `/opt/energyml/scripts/galaxy/energyml-galaxy.py` | the runner of the generated [Galaxy tools](galaxy.md) |
 | `/opt/energyml/REF` | the commit the image was built from |
 

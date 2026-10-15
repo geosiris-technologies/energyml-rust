@@ -12,6 +12,6 @@ set -e
 case "${1:-}" in
   "") exec energyml --help ;;
   /*|./*) exec "$@" ;;
-  sh|bash|python3|python|env|enyml) exec "$@" ;;
+  sh|bash|python3|python|env|enyml|energyml-mcp) exec "$@" ;;
   *) exec energyml "$@" ;;
 esac
