@@ -22,8 +22,8 @@ autotests = false
 
 [dependencies]
 energyml-core = { workspace = true }
-energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.3" }
-energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.3" }
+energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.4" }
+energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.4" }
 thiserror = "2.0"
 
 [dev-dependencies]

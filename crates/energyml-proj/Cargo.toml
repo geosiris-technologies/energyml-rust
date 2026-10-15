@@ -19,7 +19,7 @@ documentation = "https://docs.rs/energyml-proj"
 include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
 
 [dependencies]
-energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.3" }
+energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.4" }
 
 # Pure Rust, no C, builds for wasm32-unknown-unknown - the reason this crate
 # exists at all rather than binding PROJ like pyproj does. Default features off:

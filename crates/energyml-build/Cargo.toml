@@ -24,36 +24,36 @@ autotests = false
 # so one crate with an honest internal seam is the smaller true answer. If that
 # ever changes, the seam is already where the split would go.
 [dependencies]
-energyml-core = { path = "../energyml-core", version = "0.2.0-alpha.3" }
-energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.2.0-alpha.3" }
-energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.2.0-alpha.3" }
+energyml-core = { path = "../energyml-core", version = "0.2.0-alpha.4" }
+energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.2.0-alpha.4" }
+energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.2.0-alpha.4" }
 # The two other packages a model carries - Lutetia's wells (`witsml-wells`) and
 # its doublet's production (`prodml-doublet`), steps 10 and 11 of the reference
 # model. The latest release of each; already in
 # every build through `energyml-schemas`, so nothing new reaches wasm.
-energyml-witsml-2-1 = { path = "../generated/energyml-witsml-2-1", version = "0.2.0-alpha.3" }
-energyml-prodml-2-3 = { path = "../generated/energyml-prodml-2-3", version = "0.2.0-alpha.3" }
-energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.3" }
+energyml-witsml-2-1 = { path = "../generated/energyml-witsml-2-1", version = "0.2.0-alpha.4" }
+energyml-prodml-2-3 = { path = "../generated/energyml-prodml-2-3", version = "0.2.0-alpha.4" }
+energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.4" }
 # Reprojection: a GeoJSON is WGS 84 by definition and RESQML wants the
 # package's own projected system. The one Reprojector the workspace ships.
-energyml-proj = { path = "../energyml-proj", version = "0.2.0-alpha.3" }
-energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.3" }
+energyml-proj = { path = "../energyml-proj", version = "0.2.0-alpha.4" }
+energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.4" }
 # The currency of a shape: what the readers produce and the exporters consume.
-energyml-geometry = { path = "../energyml-geometry", version = "0.2.0-alpha.3" }
+energyml-geometry = { path = "../energyml-geometry", version = "0.2.0-alpha.4" }
 # The exporters, for `export-media`:
 # a part of the package written by the registry `energyml export` uses, never
 # by a second writer. Already in every WebAssembly build.
-energyml-export = { path = "../energyml-export", version = "0.2.0-alpha.3" }
+energyml-export = { path = "../energyml-export", version = "0.2.0-alpha.4" }
 # What is computed from a shape - the outline today.
-energyml-analysis = { path = "../energyml-analysis", version = "0.2.0-alpha.3" }
+energyml-analysis = { path = "../energyml-analysis", version = "0.2.0-alpha.4" }
 # `section-view` reads the trace a drawing was made along back from the
 # drawing's metadata - the one reader of it (`svg::read_metadata`) - and the
 # cross sections from the function that drew them. No `png`: the operation
 # takes a PNG, it never renders one.
-energyml-section = { path = "../energyml-section", version = "0.2.0-alpha.3" }
+energyml-section = { path = "../energyml-section", version = "0.2.0-alpha.4" }
 # The derives that declare an operation's parameters and inputs once
 # (ADR 0017).
-energyml-build-derive = { path = "../energyml-build-derive", version = "0.2.0-alpha.3" }
+energyml-build-derive = { path = "../energyml-build-derive", version = "0.2.0-alpha.4" }
 # Spans and events only: this crate emits, a face (`energyml-log`) configures.
 tracing = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
