@@ -48,6 +48,8 @@ pub use structural::*;
 pub use technical::*;
 pub use wells::*;
 
+pub mod relations;
+
 use energyml_core::registry::{Registry, TypeEntry};
 
 /// Register every type of resqml 2.0.1 so it can be created and read by name.
@@ -267,4 +269,5 @@ pub fn register(registry: &mut Registry) {
     registry.register(TypeEntry::of::<WellboreMarkerFrameRepresentation>());
     registry.register(TypeEntry::of::<WellboreTrajectoryParentIntersection>());
     registry.register(TypeEntry::of::<WellboreTrajectoryRepresentation>());
+    registry.register_relations(relations::RELATIONS);
 }

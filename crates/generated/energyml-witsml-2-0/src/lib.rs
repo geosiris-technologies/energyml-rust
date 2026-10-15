@@ -72,6 +72,8 @@ pub use wellbore_geometry::*;
 pub use wellbore_markers::*;
 pub use witsml_common::*;
 
+pub mod relations;
+
 use energyml_core::registry::{Registry, TypeEntry};
 
 /// Register every type of witsml 2.0 so it can be created and read by name.
@@ -349,4 +351,5 @@ pub fn register(registry: &mut Registry) {
     registry.register(TypeEntry::of::<MeasuredDepthCoord>());
     registry.register(TypeEntry::of::<NameTag>());
     registry.register(TypeEntry::of::<WellVerticalDepthCoord>());
+    registry.register_relations(relations::RELATIONS);
 }
