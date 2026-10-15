@@ -19,6 +19,7 @@ mod generated_resqml;
 mod identity;
 mod inheritance;
 mod introspection;
+mod relations;
 mod repairs;
 mod requirements;
 mod rules_trg;
