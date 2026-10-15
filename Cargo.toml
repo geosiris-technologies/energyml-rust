@@ -10,6 +10,7 @@ members = [
     "crates/energyml-domain",
     "crates/energyml-geometry",
     "crates/energyml-export",
+    "crates/energyml-mcp",
     "crates/energyml-proj",
     "crates/energyml-cache",
     "crates/energyml-rules",

@@ -1,0 +1,49 @@
+[package]
+name = "energyml-mcp"
+description = "The tools of a generic, read-only MCP (Model Context Protocol) server over the EnergyML storage traits, independent of any MCP SDK."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+# Spelled out rather than inherited, like the sibling crates: wasm-pack does
+# not resolve workspace inheritance for a license key.
+license = "Apache-2.0"
+repository.workspace = true
+keywords = ["energyml", "mcp", "resqml", "llm", "storage"]
+categories = ["science::geo", "api-bindings"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-mcp"
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+# One test binary, `tests/main.rs`.
+autotests = false
+
+[dependencies]
+energyml-core = { workspace = true }
+energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.3" }
+# The storage traits are `async_trait`; so are `Tool` and `StoreProvider`.
+async-trait = "0.1"
+# Schemas are written by hand as `json!` values: no `schemars` in the
+# workspace, and a schema is part of the contract a snapshot test guards.
+serde_json = "1.0"
+
+[dev-dependencies]
+# Itself with the contract, for its model (`contract::feature`, `horizon`,
+# `column`): the objects of the fabricated package the tests read. By path
+# only: cargo publish drops it.
+energyml-storage = { path = "../energyml-storage", features = ["contract"] }
+energyml-schemas = { path = "../energyml-schemas", features = ["all"] }
+# The in-memory EPC the tests open is a zip built by hand.
+zip = { version = "7", default-features = false, features = ["deflate"] }
+# The executor the storage tests already use; no tokio.
+futures-executor = "0.3"
+
+[lints.rust]
+missing_docs = "warn"
+
+[[test]]
+name = "mcp"
+path = "tests/main.rs"
+
+# docs.rs builds on Linux with no native HDF5: nothing here needs one.
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

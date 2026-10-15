@@ -499,6 +499,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "energyml-mcp"
+version = "0.2.0-alpha.3"
+dependencies = [
+ "async-trait",
+ "energyml-core",
+ "energyml-schemas",
+ "energyml-storage",
+ "futures-executor",
+ "serde_json",
+ "zip",
+]
+
+[[package]]
 name = "energyml-prodml-2-0"
 version = "0.2.0-alpha.3"
 dependencies = [

@@ -38,6 +38,8 @@ mod rename_file;
 mod renamed;
 mod repair;
 mod revision;
+mod search;
 mod substituted_root;
 mod versions;
+mod window;
 mod writer;

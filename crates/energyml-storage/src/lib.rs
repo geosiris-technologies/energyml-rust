@@ -92,7 +92,9 @@ pub mod raw;
 pub mod relabel;
 pub mod rename;
 pub mod resource;
+pub mod search;
 pub mod storage;
+pub mod window;
 pub mod write;
 
 pub use array::{
