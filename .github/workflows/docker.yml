@@ -3,11 +3,9 @@
 #
 # - pull request: build for linux/amd64, smoke-test, push nothing;
 # - push to main: push the `edge` tag;
-# - a published release vX.Y.Z, or a tag energyml-cli-vX.Y.Z: push `X.Y.Z`, `X.Y`
-#   and `latest` (`latest` not for a pre-release);
-# - a tag energyml-cli-vX.Y.Z-pre (a pre-release published from dev by release-plz,
-#   which starts this workflow on it): push `X.Y.Z-pre` and `dev`, never `X.Y` nor
-#   `latest`.
+# - a published release vX.Y.Z: push `X.Y.Z`, `X.Y` and `latest`;
+# - a published pre-release vX.Y.Z-pre (made from dev, see docs/releasing.md): push
+#   `X.Y.Z-pre` and `dev`, never `X.Y` nor `latest`.
 #
 # Nothing is pushed until the repository variable IMAGE_PUBLISH is 'true': until
 # then main, tags and manual runs only build and smoke-test, as a pull request does.
@@ -22,7 +20,6 @@ on:
     paths: ["crates/**", "Cargo.*", "docker/**", "scripts/galaxy/**", ".github/workflows/docker.yml"]
   push:
     branches: [main]
-    tags: ["energyml-cli-v*"]
   release:
     types: [published]
   workflow_dispatch:
