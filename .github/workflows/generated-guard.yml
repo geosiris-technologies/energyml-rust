@@ -11,8 +11,10 @@ permissions:
   contents: read
 
 env:
-  # TODO(verify): login of the regeneration bot account / GitHub App.
-  REGENERATION_BOT: TODO-verify-bot-login
+  # The login of the regeneration robot, a GitHub App (`<app-slug>[bot]`), set as
+  # the repository variable REGENERATION_BOT. Unset, no pull request may change
+  # generated code: the guard fails closed.
+  REGENERATION_BOT: ${{ vars.REGENERATION_BOT }}
 
 jobs:
   guard:
@@ -52,7 +54,7 @@ jobs:
             echo "No generated file changed beyond release metadata."
             exit 0
           fi
-          if [ "$AUTHOR" = "$REGENERATION_BOT" ]; then
+          if [ -n "$REGENERATION_BOT" ] && [ "$AUTHOR" = "$REGENERATION_BOT" ]; then
             echo "Generated files changed by the regeneration bot ($AUTHOR): allowed."
             exit 0
           fi
