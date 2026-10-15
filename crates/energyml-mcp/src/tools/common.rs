@@ -426,3 +426,13 @@ pub(crate) fn element_count(dimensions: &[i64]) -> u64 {
         .iter()
         .fold(1u64, |acc, dim| acc.saturating_mul((*dim).max(0) as u64))
 }
+
+/// `"all"`, or the ML prefixes the store states edge kinds for
+/// (`Capabilities::edge_kind_coverage`).
+pub(crate) fn coverage_value(coverage: &energyml_storage::EdgeKindCoverage) -> serde_json::Value {
+    match coverage {
+        energyml_storage::EdgeKindCoverage::Mls(prefixes) => serde_json::json!(prefixes),
+        // `EdgeKindCoverage` is `#[non_exhaustive]`; what is not a list of MLs is "all".
+        _ => serde_json::json!("all"),
+    }
+}

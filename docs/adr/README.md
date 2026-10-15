@@ -31,6 +31,7 @@ new record that supersedes the old one, which keeps its text and a status line.
 | [0019](0019-synthetic-data-is-flagged-and-sourced.md) | Synthetic data is flagged and sourced |
 | [0020](0020-a-grid-is-never-reprojected.md) | A grid is never reprojected |
 | [0021](0021-own-tool-trait-rmcp-as-adapter.md) | Our own `Tool` trait; the MCP SDK is an adapter behind a feature |
+| [0022](0022-edge-kinds-from-the-specification.md) | The kind of an edge comes from the specification, labelled; the schema facts are generated |
 
 Decisions about the ETP protocol implementation are recorded in the
 [`retp`](https://github.com/geosiris-technologies/retp) repository.

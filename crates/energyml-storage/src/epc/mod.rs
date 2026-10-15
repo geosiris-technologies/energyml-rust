@@ -4485,15 +4485,29 @@ impl EnergymlStorage for EpcStore {
 
     /// An EPC writes, opens transactions, keeps the XML of each part and says
     /// what changed; it is one dataspace, writes whole arrays only, keeps
-    /// neither deletions nor ETP's store times, and does not state edge kinds.
+    /// neither deletions nor ETP's store times, and states the kind of the edges
+    /// of the MLs the rules of [`crate::kinds`] cover - computed from the
+    /// registered types and the policy, never listed twice.
     fn capabilities(&self) -> crate::capabilities::Capabilities {
         crate::capabilities::Capabilities {
             writes: true,
             transactions: true,
             raw_formats: vec![crate::raw::RawFormat::Xml],
             changes: true,
+            edge_kinds: true,
+            edge_kind_coverage: crate::capabilities::EdgeKindCoverage::Mls(
+                crate::kinds::StandardRules::new().covered_prefixes(&self.registry),
+            ),
             ..Default::default()
         }
+    }
+
+    /// The EPC derives its edges from the objects, and judges their kind by the
+    /// standard rules (RESQML, the WITSML examples and derivation; [`crate::kinds`]).
+    fn kind_rules(&self) -> Option<std::sync::Arc<dyn crate::kinds::KindRules>> {
+        Some(std::sync::Arc::new(crate::kinds::StandardRules::over(
+            self.registry.clone(),
+        )))
     }
 
     async fn get_raw(

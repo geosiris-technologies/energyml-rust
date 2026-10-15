@@ -26,6 +26,7 @@ mod external_forms;
 mod extract;
 mod fixtures;
 mod hdf5_write;
+mod kinds;
 mod media;
 mod mistyped;
 mod nested_reference;

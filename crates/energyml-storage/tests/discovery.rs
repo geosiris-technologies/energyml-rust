@@ -142,12 +142,12 @@ fn following_by_kind_is_refused_when_no_edge_states_its_kind() {
     let mut context = Context::of(GRID, Scope::Targets);
     context.navigable = Navigable::Primary;
     let refused = ask(&context, false);
-    assert!(matches!(refused, Err(Error::Unsupported { .. })), "{refused:?}");
+    assert!(matches!(refused, Err(Error::UnstatedKind { .. })), "{refused:?}");
 
     let mut expanded = Context::of(GRID, Scope::Targets);
     expanded.include_secondary_targets = true;
     let refused = ask(&expanded, false);
-    assert!(matches!(refused, Err(Error::Unsupported { .. })), "{refused:?}");
+    assert!(matches!(refused, Err(Error::UnstatedKind { .. })), "{refused:?}");
 }
 
 #[test]

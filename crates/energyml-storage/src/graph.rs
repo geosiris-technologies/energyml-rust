@@ -22,6 +22,7 @@ use energyml_core::identity;
 use energyml_core::naming;
 use energyml_core::value::Reflect;
 
+use crate::kinds::{Judged, KindBasis};
 use crate::resource::{ObjectSummary, Relationship};
 
 /// Something wrong with one reference.
@@ -1678,12 +1679,15 @@ pub struct Edge {
     /// Where inside the source: `Grid2dPatch.SupportingRepresentation`.
     pub path: String,
     /// ETP `RelationshipKind`: whether the reference is primary or secondary -
-    /// what `navigableEdges` filters on. `None` when the store does not say:
-    /// an ETP server states it; a store deriving edges from the objects does
-    /// not, until the rule is written once from the specification
-    /// (`TODO(verify)`: ETP 1.2 §8, Discovery, and the relationship rules of the
-    /// Energistics Identifier Specification). Never guessed.
+    /// what `navigableEdges` filters on. `None` when no rule gives it: an ETP
+    /// server states it; a store deriving its edges applies the rules of
+    /// [`crate::kinds`], which refuse by name (`basis` is then
+    /// [`KindBasis::Unknown`]) where the specification is silent. Never guessed.
     pub kind: Option<EdgeKind>,
+    /// Where `kind` comes from: stated by a server, a rule of the ETP
+    /// specification, or this crate's derivation, each labelled. `None` for an
+    /// edge nobody has judged (a reference as written, `Edge::new`).
+    pub basis: Option<KindBasis>,
 }
 
 impl Edge {
@@ -1694,12 +1698,22 @@ impl Edge {
             to: to.into(),
             path: path.into(),
             kind: None,
+            basis: None,
         }
     }
 
-    /// With the kind the store states.
+    /// With the kind a server states ([`KindBasis::Stated`]).
     pub fn with_kind(mut self, kind: EdgeKind) -> Self {
         self.kind = Some(kind);
+        self.basis = Some(KindBasis::Stated);
+        self
+    }
+
+    /// With the kind the rules of [`crate::kinds`] give it, and what that rests on.
+    /// A judgement without a kind leaves the edge unkinded and records why.
+    pub fn with_judgement(mut self, judged: Judged) -> Self {
+        self.kind = judged.kind;
+        self.basis = Some(judged.basis);
         self
     }
 }

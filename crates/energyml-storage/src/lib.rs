@@ -87,6 +87,8 @@ pub mod graph;
 pub mod hdf5;
 /// Bringing part of another package into the open one: a quote, then the writing.
 pub mod import;
+/// The kind of an edge, primary or secondary, and what each answer rests on.
+pub mod kinds;
 pub mod raw;
 /// Changing what a part declares itself to be, without parsing what it holds.
 pub mod relabel;
@@ -102,7 +104,7 @@ pub use array::{
     Resolution,
 };
 pub use backend::{ArrayBackend, Backends, Candidate, ExternalFiles, Origin};
-pub use capabilities::Capabilities;
+pub use capabilities::{Capabilities, EdgeKindCoverage};
 pub use changes::EnergymlChanges;
 pub use context::{Context, DeletedFilter, DeletedResource, Found, Navigable, Scope};
 pub use dataspaces::EnergymlDataspaces;
@@ -110,6 +112,7 @@ pub use epc::overlay::SavePolicy;
 pub use epc::{EpcStore, SaveOptions, Unreadable};
 pub use error::{Diagnostic, Error, ExternalDataReason, Result, Severity};
 pub use graph::{Edge, EdgeKind, RefIssue, RefIssueKind};
+pub use kinds::{Judged, KindBasis, KindRules, StandardRules};
 pub use raw::{RawFormat, RawObject};
 pub use rename::{Applied as Renamed, FileMove, Rename};
 pub use resource::{ActiveStatus, CustomValue, Dataspace, ObjectHeader, ObjectSummary, Relationship};
