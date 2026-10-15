@@ -55,6 +55,8 @@ pub use osdu_integration::*;
 pub use quantity_class::*;
 pub use value_types::*;
 
+pub mod relations;
+
 use energyml_core::registry::{Registry, TypeEntry};
 
 /// Register every type of eml 2.3 so it can be created and read by name.
@@ -594,4 +596,5 @@ pub fn register(registry: &mut Registry) {
     registry.register(TypeEntry::of::<RelativePressure>());
     registry.register(TypeEntry::of::<TemperaturePressure>());
     registry.register(TypeEntry::of::<VolumeValue>());
+    registry.register_relations(relations::RELATIONS);
 }

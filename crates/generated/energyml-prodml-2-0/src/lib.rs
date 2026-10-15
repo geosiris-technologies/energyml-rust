@@ -63,6 +63,8 @@ pub use time_series_statistic::*;
 pub use well_test::*;
 pub use wft_run::*;
 
+pub mod relations;
+
 use energyml_core::registry::{Registry, TypeEntry};
 
 /// Register every type of prodml 2.0 so it can be created and read by name.
@@ -405,4 +407,5 @@ pub fn register(registry: &mut Registry) {
     registry.register(TypeEntry::of::<WftTest>());
     registry.register(TypeEntry::of::<WftTestData>());
     registry.register(TypeEntry::of::<WftTestResult>());
+    registry.register_relations(relations::RELATIONS);
 }
