@@ -33,7 +33,7 @@ pip install energyml-rust          # the Python package, imported as `energyml.r
 cargo install energyml-cli --features hdf5   # the command line: installs `energyml` (alias `enyml`)
 ```
 
-Pre-built command-line binaries are attached to each [GitHub release](https://github.com/geosiris-technologies/energyml-rust/releases).
+Pre-built command-line binaries are attached to each [GitHub release](https://github.com/geosiris-technologies/energyml-rust/releases), and the image `ghcr.io/geosiris-technologies/energyml` holds the CLI with nothing to install ([Docker](docs/docker.md)). Copy-and-run examples, natively and with the image: [`examples/cli/`](examples/cli/).
 
 ## Try it on the reference model
 
