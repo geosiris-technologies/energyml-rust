@@ -159,13 +159,11 @@ fn a_geometry_in_degrees_is_the_named_exception() {
 }
 
 fn summary(uuid: &str, qualified_type: &str) -> ObjectSummary {
-    ObjectSummary {
-        uri: format!("eml:///{qualified_type}({uuid})"),
-        uuid: uuid.to_string(),
-        qualified_type: qualified_type.to_string(),
-        content_type: String::new(),
-        locator: String::new(),
-    }
+    ObjectSummary::new(
+        format!("eml:///{qualified_type}({uuid})"),
+        uuid.to_string(),
+        qualified_type.to_string(),
+    )
 }
 
 /// A store over exactly the objects of the package, so every reference the

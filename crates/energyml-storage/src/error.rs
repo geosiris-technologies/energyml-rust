@@ -45,6 +45,27 @@ pub enum Error {
         reason: String,
     },
 
+    /// A part of something asked for that is not inside it: a window of an
+    /// array starting or reaching past an axis, a start or count whose rank is
+    /// not the array's. The request is wrong, not the data.
+    #[error("`{location}`: {reason}")]
+    OutOfBounds {
+        /// What was asked into, by its address (an array: `uri` plus path).
+        location: String,
+        /// The figures: which axis, which start, which length.
+        reason: String,
+    },
+
+    /// A request larger than the bound its caller set: answered by naming the
+    /// size, never by returning a part of it as if it were the whole.
+    #[error("`{location}`: {reason}")]
+    TooLarge {
+        /// What was asked for, by its address.
+        location: String,
+        /// The size found and the bound, so the caller knows what to narrow.
+        reason: String,
+    },
+
     /// The content type names a type no registered crate declares.
     #[error("unknown type `{0}` - is the generated crate registered?")]
     UnknownType(String),
@@ -62,6 +83,16 @@ pub enum Error {
         operation: &'static str,
         /// Which implementation refused.
         store: &'static str,
+    },
+
+    /// A transaction was misused: a second one opened while one is, or one
+    /// ended that is not the open one (ETP protocol 18).
+    #[error("{store}: {reason}")]
+    Transaction {
+        /// Which implementation refused.
+        store: &'static str,
+        /// What was wrong.
+        reason: String,
     },
 
     /// An external data file could not be reached or read.

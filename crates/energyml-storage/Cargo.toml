@@ -45,6 +45,9 @@ ndarray = { version = "0.17", optional = true }
 
 [features]
 default = []
+# The contract of the storage traits (`contract`), for the tests of every
+# implementation - this crate's EPC, and an ETP store elsewhere.
+contract = []
 # Tests on the private real-file corpus under testdata/ - real-file campaign, run privately. Off by default.
 private-corpus = []
 # Read arrays from HDF5 files. Needs the C library at build time.
@@ -55,6 +58,10 @@ hdf5 = ["dep:hdf5", "dep:ndarray"]
 hdf5-static = ["hdf5", "hdf5/static", "hdf5/zlib"]
 
 [dev-dependencies]
+# Itself with the contract, so that `cargo test --workspace` plays it on the EPC
+# (a feature-gated test that silently skips would prove nothing). By path only:
+# cargo publish drops it.
+energyml-storage = { path = ".", features = ["contract"] }
 # `tests/mistyped.rs` builds deliberately mistyped packages of its own; the same
 # version the crate itself reads with, so the two never disagree about a zip.
 zip = { version = "7", default-features = false, features = ["deflate"] }

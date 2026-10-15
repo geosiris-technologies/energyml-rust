@@ -76,8 +76,11 @@ The order matters for the **first** publication of each crate, which is done
 once, in order, by a maintainer with a short-lived API token; trusted publishing
 is then configured per crate on crates.io (owner `geosiris-technologies`,
 repository `energyml-rust`, workflow `release-plz.yml`, environment `crates-io`)
-and every later release goes through the workflow. The `crates-io` environment
-only accepts deployments from `main` and `dev`.
+and every later release goes through the workflow. Until its first publication,
+a new crate is marked `publish = false` in `release-plz.toml`, so that the
+workflow leaves it alone; the mark is removed once trusted publishing is
+configured. The `crates-io` environment only accepts deployments from `main`
+and `dev`.
 
 A pre-release goes out from `dev`: set the version by hand (for example
 `0.2.0-alpha.1`) and push. The `release` job publishes every crate whose version

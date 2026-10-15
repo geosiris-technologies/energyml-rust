@@ -10,6 +10,7 @@
 - [Creating objects](creating-objects.md)
 - [Editing a scene](scene-editing.md)
 - [Section view](section-view.md)
+- [The MCP server](mcp.md)
 - [Well sheet](well-sheet.md)
 - [Geostatistics and computation](geostat.md)
 - [Public data sources](data-sources.md)
@@ -53,3 +54,4 @@
 - [0018 A synthetic reference model](adr/0018-synthetic-reference-model.md)
 - [0019 Synthetic data is flagged and sourced](adr/0019-synthetic-data-is-flagged-and-sourced.md)
 - [0020 A grid is never reprojected](adr/0020-a-grid-is-never-reprojected.md)
+- [0021 Our own Tool trait; rmcp as an adapter](adr/0021-own-tool-trait-rmcp-as-adapter.md)

@@ -111,6 +111,7 @@ impl ArraySource for Store {
                 count: Vec::new(),
                 proxy_uuid: Some(PROXY.to_string()),
                 field_path: "Values".to_string(),
+                resource_uri: None,
             })
             .into_iter()
             .collect()
@@ -118,25 +119,16 @@ impl ArraySource for Store {
 
     fn metadata(&self, location: &ArrayLocation) -> energyml_domain::Result<ArrayMetadata> {
         if let Some((_, shape)) = self.doubles.get(&location.path_in_file) {
-            return Ok(ArrayMetadata {
-                dimensions: shape.clone(),
-                element_type: "double".to_string(),
-            });
+            return Ok(ArrayMetadata::new(shape.clone(), "double".to_string()));
         }
         if location.path_in_file == DEFINED {
-            return Ok(ArrayMetadata {
-                dimensions: vec![2],
-                element_type: "int64".to_string(),
-            });
+            return Ok(ArrayMetadata::new(vec![2], "int64".to_string()));
         }
         let (_, shape) = self
             .integers
             .get(&location.path_in_file)
             .ok_or_else(|| energyml_domain::Error::Missing(location.path_in_file.clone()))?;
-        Ok(ArrayMetadata {
-            dimensions: shape.clone(),
-            element_type: "int64".to_string(),
-        })
+        Ok(ArrayMetadata::new(shape.clone(), "int64".to_string()))
     }
 
     fn read(&self, location: &ArrayLocation) -> energyml_domain::Result<ArrayData> {

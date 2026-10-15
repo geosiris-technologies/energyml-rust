@@ -41,10 +41,7 @@ fn at(path: &str) -> ArrayLocation {
 
 fn data(dimensions: Vec<i64>, values: usize) -> ArrayData {
     ArrayData {
-        metadata: ArrayMetadata {
-            dimensions,
-            element_type: "double".to_string(),
-        },
+        metadata: ArrayMetadata::new(dimensions, "double".to_string()),
         values: ArrayValues::F64(vec![1.0; values]),
     }
 }

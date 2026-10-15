@@ -91,10 +91,10 @@ impl ArrayBackend for Hdf5Backend {
     fn metadata(&self, file: &Path, path_in_file: &str) -> Result<ArrayMetadata> {
         let handle = open(file)?;
         let dataset = dataset(&handle, file, path_in_file)?;
-        Ok(ArrayMetadata {
-            dimensions: dataset.shape().iter().map(|d| *d as i64).collect(),
-            element_type: element_type(&dataset, file, path_in_file)?,
-        })
+        Ok(ArrayMetadata::new(
+            dataset.shape().iter().map(|d| *d as i64).collect(),
+            element_type(&dataset, file, path_in_file)?,
+        ))
     }
 
     /// Read from the datatype, through `H5Tget_order`, and never assumed.
@@ -177,10 +177,7 @@ impl ArrayBackend for Hdf5Backend {
         };
 
         Ok(ArrayData {
-            metadata: ArrayMetadata {
-                dimensions: selection.count.clone(),
-                element_type: name_of(&descriptor),
-            },
+            metadata: ArrayMetadata::new(selection.count.clone(), name_of(&descriptor)),
             values,
         })
     }
@@ -233,10 +230,7 @@ impl ArrayBackend for Hdf5Backend {
             ArrayBuffer::U32(b) => into(&dataset, &selection, b, file, path_in_file)?,
             ArrayBuffer::U8(b) => into(&dataset, &selection, b, file, path_in_file)?,
         }
-        Ok(ArrayMetadata {
-            dimensions: selection.count.clone(),
-            element_type,
-        })
+        Ok(ArrayMetadata::new(selection.count.clone(), element_type))
     }
 
     fn file_uuid(&self, file: &Path) -> Result<Option<String>> {

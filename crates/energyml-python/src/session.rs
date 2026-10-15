@@ -988,6 +988,7 @@ impl Package {
         let ArrayMetadata {
             dimensions,
             element_type,
+            ..
         } = self
             .store
             .array_metadata(&array.location())
@@ -1020,10 +1021,7 @@ impl Package {
     /// bridge's, so every writer gets it.
     pub fn write_array(&self, array: &ArrayRef, dimensions: &[i64], block: Block) -> Result<(), String> {
         let data = ArrayData {
-            metadata: ArrayMetadata {
-                dimensions: dimensions.to_vec(),
-                element_type: block.element_type().to_string(),
-            },
+            metadata: ArrayMetadata::new(dimensions.to_vec(), block.element_type().to_string()),
             values: block.into_values(),
         };
         self.store

@@ -251,13 +251,13 @@ pub fn apply_under(
     let mut files: Vec<(&str, Vec<(&str, ArrayData)>)> = Vec::new();
     for dataset in plan.datasets.iter().filter(|_| arrays) {
         let data = ArrayData {
-            metadata: ArrayMetadata {
-                dimensions: dataset.dimensions.clone(),
-                element_type: match dataset.values {
+            metadata: ArrayMetadata::new(
+                dataset.dimensions.clone(),
+                match dataset.values {
                     Numbers::F64(_) => "float64".to_string(),
                     Numbers::I64(_) => "int64".to_string(),
                 },
-            },
+            ),
             values: match &dataset.values {
                 Numbers::F64(values) => ArrayValues::F64(values.clone()),
                 Numbers::I64(values) => ArrayValues::I64(values.clone()),

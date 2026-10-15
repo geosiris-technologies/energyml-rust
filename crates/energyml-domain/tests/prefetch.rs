@@ -111,13 +111,9 @@ xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\
 
     let summary = |ty: &str, uuid: &str, name: &str, title: &str| {
         let _ = title;
-        ObjectSummary {
-            uri: uri(ty, uuid),
-            uuid: uuid.to_string(),
-            qualified_type: ty.to_string(),
-            content_type: format!("application/x-resqml+xml;version=2.0;type={name}"),
-            locator: format!("in-memory:{uuid}"),
-        }
+        ObjectSummary::new(uri(ty, uuid), uuid.to_string(), ty.to_string())
+            .with_content_type(format!("application/x-resqml+xml;version=2.0;type={name}"))
+            .with_locator(format!("in-memory:{uuid}"))
     };
     vec![
         (
@@ -158,12 +154,7 @@ impl EnergymlStorage for Remote {
     }
 
     async fn dataspaces(&self) -> Result<Vec<Dataspace>> {
-        Ok(vec![Dataspace {
-            uri: "eml:///".to_string(),
-            name: "remote".to_string(),
-            created: None,
-            last_changed: None,
-        }])
+        Ok(vec![Dataspace::new("eml:///".to_string(), "remote".to_string())])
     }
 
     async fn resources(&self) -> Result<Vec<ObjectSummary>> {
@@ -178,15 +169,10 @@ impl EnergymlStorage for Remote {
                     .iter()
                     .find(|(s, _)| &s.uri == wanted)
                     .ok_or_else(|| Error::NotFound(wanted.clone()))?;
-                Ok(ObjectHeader {
-                    summary: summary.clone(),
-                    title: None,
-                    originator: None,
-                    creation: None,
-                    last_update: None,
-                    format: None,
-                    object_version: None,
-                    schema_version: Some("2.0".to_string()),
+                Ok({
+                    let mut header = ObjectHeader::new(summary.clone());
+                    header.schema_version = Some("2.0".to_string());
+                    header
                 })
             })
             .collect()
@@ -235,10 +221,7 @@ impl EnergymlStorage for Remote {
             return Err(Error::NotFound(location.path_in_file.clone()));
         }
         Ok(ArrayData {
-            metadata: ArrayMetadata {
-                dimensions: vec![2, 3],
-                element_type: "double".to_string(),
-            },
+            metadata: ArrayMetadata::new(vec![2, 3], "double".to_string()),
             values: ArrayValues::F64(vec![0.0, 0.0, 0.0, 10.0, 20.0, 30.0]),
         })
     }

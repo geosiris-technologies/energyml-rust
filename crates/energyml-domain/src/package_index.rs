@@ -848,10 +848,12 @@ impl PackageIndex {
         });
         triples
             .iter()
-            .map(|&(from, to, path)| Edge {
-                from: uri(from).to_string(),
-                to: uri(to).to_string(),
-                path: self.strings.get(path).to_string(),
+            .map(|&(from, to, path)| {
+                Edge::new(
+                    uri(from).to_string(),
+                    uri(to).to_string(),
+                    self.strings.get(path).to_string(),
+                )
             })
             .collect()
     }

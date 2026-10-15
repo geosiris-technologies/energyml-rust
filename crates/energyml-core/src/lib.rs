@@ -38,6 +38,8 @@ pub mod ns;
 pub mod path;
 pub mod reflect;
 pub mod registry;
+#[cfg(feature = "json")]
+pub mod truncate;
 pub mod validate;
 pub mod value;
 pub mod xml;

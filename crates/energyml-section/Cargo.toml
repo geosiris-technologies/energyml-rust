@@ -21,18 +21,18 @@ autotests = false
 [dependencies]
 energyml-core = { workspace = true }
 # Reprojection into the scene's system, the strata of a wellbore by MD, units.
-energyml-domain = { path = "../energyml-domain", version = "0.1.2" }
+energyml-domain = { path = "../energyml-domain", version = "0.2.0-alpha.4" }
 # Reading a representation into points and triangles, `section::cut`,
 # `fence::curve` / `panel` / `crosslines`, the heads of wells.
-energyml-geometry = { path = "../energyml-geometry", version = "0.1.2" }
+energyml-geometry = { path = "../energyml-geometry", version = "0.2.0-alpha.4" }
 # `profile::Corridor`: projecting heads on a trace, the band.
-energyml-analysis = { path = "../energyml-analysis", version = "0.1.2" }
+energyml-analysis = { path = "../energyml-analysis", version = "0.2.0-alpha.4" }
 # `text`: measuring a label against the font the SVG is written in - the
 # drilling sheet's own table, not a second one (ADR-0015).
-energyml-sheet = { path = "../energyml-sheet", version = "0.1.2" }
+energyml-sheet = { path = "../energyml-sheet", version = "0.2.0-alpha.4" }
 # `read::package`: a package's listing - its colour sets, its index, the
 # objects a section takes by default - for a face that holds a whole store.
-energyml-storage = { path = "../energyml-storage", version = "0.1.2" }
+energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.4" }
 # The catalogue, the inputs and the view travel as JSON (the front end, the CLI, the
 # SVG's metadata) and come back from it (`energyml profile --from-svg`).
 serde = { version = "1.0", features = ["derive"] }

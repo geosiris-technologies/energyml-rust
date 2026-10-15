@@ -213,12 +213,8 @@ fn heads_in_two_systems_are_refused() {
 #[test]
 fn every_well_means_the_trajectories() {
     use energyml_storage::resource::ObjectSummary;
-    let summary = |uri: &str, qualified_type: &str| ObjectSummary {
-        uri: uri.to_string(),
-        uuid: String::new(),
-        qualified_type: qualified_type.to_string(),
-        content_type: String::new(),
-        locator: String::new(),
+    let summary = |uri: &str, qualified_type: &str| {
+        ObjectSummary::new(uri.to_string(), String::new(), qualified_type.to_string())
     };
     let all = [
         summary("a", "resqml22.WellboreTrajectoryRepresentation"),

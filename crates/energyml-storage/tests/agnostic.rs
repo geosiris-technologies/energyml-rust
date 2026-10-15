@@ -14,11 +14,13 @@
 //! - can it say who references whom? (`edges`)
 //! - can it draw the graph? (`graph`)
 //!
-//! And the one that matters for ETP: a store that answers `edges` **natively** -
-//! as `GetResources` with `includeEdges` does, from the server's index,
-//! without a single object crossing the wire - must get the same graph without
-//! the trait falling back to deserializing everything. `Indexed` below refuses
-//! to hand over objects at all, which is the only way to prove it.
+//! And the one that matters for a large store: a store that answers
+//! `references` from an **index** - what the objects write, kept beside them -
+//! must get the same graph without the trait falling back to deserializing
+//! everything. `Indexed` below refuses to hand over objects at all, which is the
+//! only way to prove it. (A server's stated `edges` are another fact: they carry
+//! no path and no reference to an absent object; design note
+//! `deux-sources-un-contrat.md` §3.)
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -73,14 +75,12 @@ uuid=\"{INTERP}\" schemaVersion=\"2.2\">\
 </resqml:InterpretedFeature>\
 </resqml:FaultInterpretation>"
     );
-    let summary = |ty: &str, uuid: &str, name: &str| ObjectSummary {
-        uri: uri(ty, uuid),
-        uuid: uuid.to_string(),
-        qualified_type: ty.to_string(),
-        content_type: format!("application/x-resqml+xml;version=2.2;type={name}"),
-        // Not a part name: this store has no parts. Which is the point - the
-        // locator is opaque above this crate, and nothing may build on it.
-        locator: format!("in-memory:{uuid}"),
+    let summary = |ty: &str, uuid: &str, name: &str| {
+        ObjectSummary::new(uri(ty, uuid), uuid.to_string(), ty.to_string())
+            .with_content_type(format!("application/x-resqml+xml;version=2.2;type={name}"))
+            // Not a part name: this store has no parts. Which is the point - the
+            // locator is opaque above this crate, and nothing may build on it.
+            .with_locator(format!("in-memory:{uuid}"))
     };
     vec![
         (
@@ -140,12 +140,10 @@ impl EnergymlStorage for InMemory {
     }
 
     async fn dataspaces(&self) -> Result<Vec<Dataspace>> {
-        Ok(vec![Dataspace {
-            uri: "eml:///".to_string(),
-            name: "in-memory".to_string(),
-            created: None,
-            last_changed: None,
-        }])
+        Ok(vec![Dataspace::new(
+            "eml:///".to_string(),
+            "in-memory".to_string(),
+        )])
     }
 
     async fn resources(&self) -> Result<Vec<ObjectSummary>> {
@@ -166,15 +164,13 @@ impl EnergymlStorage for InMemory {
                     .split_once("<eml:Title>")
                     .and_then(|(_, rest)| rest.split_once("</eml:Title>"))
                     .map(|(title, _)| title.to_string());
-                Ok(ObjectHeader {
-                    summary: summary.clone(),
-                    title,
-                    originator: Some("test".to_string()),
-                    creation: None,
-                    last_update: None,
-                    format: Some("test".to_string()),
-                    object_version: None,
-                    schema_version: Some("2.2".to_string()),
+                Ok({
+                    let mut header = ObjectHeader::new(summary.clone());
+                    header.title = title;
+                    header.originator = Some("test".to_string());
+                    header.format = Some("test".to_string());
+                    header.schema_version = Some("2.2".to_string());
+                    header
                 })
             })
             .collect()
@@ -275,13 +271,14 @@ impl EnergymlStorage for Indexed {
         Vec::new()
     }
 
-    /// What `GetResources(includeEdges: true)` replies with.
-    async fn edges(&self, _uris: &[String]) -> Result<Vec<Edge>> {
-        Ok(vec![Edge {
-            from: uri("resqml22.FaultInterpretation", INTERP),
-            to: uri("resqml22.TectonicBoundaryFeature", FAULT),
-            path: "InterpretedFeature".to_string(),
-        }])
+    /// What an index of the references the objects write answers - the path
+    /// included, which a server's stated edges do not carry.
+    async fn references(&self, _uris: &[String]) -> Result<Vec<Edge>> {
+        Ok(vec![Edge::new(
+            uri("resqml22.FaultInterpretation", INTERP),
+            uri("resqml22.TectonicBoundaryFeature", FAULT),
+            "InterpretedFeature".to_string(),
+        )])
     }
 }
 
@@ -338,7 +335,7 @@ fn the_default_edges_are_derived_from_the_objects() {
 }
 
 #[test]
-fn a_store_that_answers_edges_natively_draws_its_graph_without_reading_an_object() {
+fn a_store_that_indexes_its_references_draws_its_graph_without_reading_an_object() {
     let store = Indexed {
         inner: InMemory::new(),
     };
@@ -346,7 +343,7 @@ fn a_store_that_answers_edges_natively_draws_its_graph_without_reading_an_object
     assert_eq!(
         store.inner.reads.load(Ordering::SeqCst),
         0,
-        "the native edges must be used; deserializing anything defeats the purpose"
+        "the indexed references must be used; deserializing anything defeats the purpose"
     );
     assert_eq!(graph.edges.len(), 1);
     assert_eq!(graph.nodes.len(), 2);

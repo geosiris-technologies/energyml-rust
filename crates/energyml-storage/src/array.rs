@@ -77,6 +77,16 @@ pub struct ArrayLocation {
     /// Dotted path of the array inside the object, for diagnostics:
     /// `Geometry.Points.Coordinates`.
     pub field_path: String,
+    /// The ETP address of the array: the URI of the data object whose resource
+    /// holds it, `DataArrayIdentifier.uri`, the path being
+    /// [`ArrayLocation::path_in_file`] (`pathInResource`). Filled by a store that
+    /// is addressed that way (an ETP dataspace); `None` for a file, which is
+    /// addressed by [`ArrayLocation::file`]. See [`ArrayLocation::etp`].
+    ///
+    /// `TODO(verify)`: which object's URI ETP 1.2 expects for the older form, the
+    /// `EpcExternalPartReference` or the object pointing at it (ETP 1.2 §13,
+    /// DataArray; Energistics Identifier Specification).
+    pub resource_uri: Option<String>,
 }
 
 impl ArrayLocation {
@@ -106,6 +116,26 @@ impl ArrayLocation {
     /// it is a decision taken rather than a leak nobody noticed.
     pub fn is_resolved(&self) -> bool {
         !self.file.is_empty()
+    }
+
+    /// A location addressed the ETP way: the URI of the object whose resource
+    /// holds the array, and the path inside that resource. The only place the
+    /// pair becomes a location, so that a store and a server never spell the
+    /// conversion twice.
+    pub fn etp(resource_uri: impl Into<String>, path_in_resource: impl Into<String>) -> Self {
+        Self {
+            path_in_file: path_in_resource.into(),
+            resource_uri: Some(resource_uri.into()),
+            ..Self::default()
+        }
+    }
+
+    /// The ETP address of this location, `(uri, pathInResource)`, when it has
+    /// one.
+    pub fn etp_address(&self) -> Option<(&str, &str)> {
+        self.resource_uri
+            .as_deref()
+            .map(|uri| (uri, self.path_in_file.as_str()))
     }
 }
 
@@ -328,6 +358,7 @@ fn from_channel_data(object: &dyn Reflect, path: &str) -> Option<ArrayLocation> 
         count: Vec::new(),
         proxy_uuid: None,
         field_path: path.to_string(),
+        resource_uri: None,
     })
 }
 
@@ -340,6 +371,7 @@ fn from_new_form(object: &dyn Reflect, path: &str) -> ArrayLocation {
         count: int_list(object, "count"),
         proxy_uuid: None,
         field_path: path.to_string(),
+        resource_uri: None,
     }
 }
 
@@ -389,6 +421,7 @@ fn from_mid_form(object: &dyn Reflect, path: &str, resolver: &dyn ProxyResolver)
         count: Vec::new(),
         proxy_uuid,
         field_path: path.to_string(),
+        resource_uri: None,
     }
 }
 
@@ -417,6 +450,7 @@ fn from_old_form(object: &dyn Reflect, path: &str, resolver: &dyn ProxyResolver)
         count: Vec::new(),
         proxy_uuid,
         field_path: path.to_string(),
+        resource_uri: None,
     }
 }
 
@@ -472,12 +506,44 @@ impl std::fmt::Display for ByteOrder {
 ///
 /// The answer to ETP's `GetDataArrayMetadata`, and what a viewer needs before
 /// deciding whether it can afford the data.
+///
+/// Built with [`ArrayMetadata::new`]; `#[non_exhaustive]`, so that what ETP adds
+/// to `DataArrayMetadata` is not a breaking change for every caller.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct ArrayMetadata {
     /// Number of elements along each dimension.
     pub dimensions: Vec<i64>,
-    /// Element type, as the backend names it (`double`, `int64`, …).
+    /// Element type, as the backend names it (`double`, `int64`, …) - the type
+    /// the values travel in (ETP's `transportArrayType`).
     pub element_type: String,
+    /// ETP `logicalArrayType`, when the store distinguishes what the values mean
+    /// from how they travel (an array of booleans carried as bytes). `None` when
+    /// it does not: the element type is then all there is to say.
+    pub logical_type: Option<String>,
+    /// ETP `preferredSubarrayDimensions`: the block a store would rather be read
+    /// by (its chunking). Empty when it has no preference.
+    pub preferred_subarray_dimensions: Vec<i64>,
+    /// ETP `storeCreated` of the array (microseconds since the Unix epoch, UTC).
+    /// `None` when the store does not keep it.
+    pub store_created: Option<i64>,
+    /// ETP `storeLastWrite` of the array, same unit. `None` when not kept.
+    pub store_last_write: Option<i64>,
+}
+
+impl ArrayMetadata {
+    /// A shape and an element type; everything the store may not know is left
+    /// unknown.
+    pub fn new(dimensions: Vec<i64>, element_type: impl Into<String>) -> Self {
+        Self {
+            dimensions,
+            element_type: element_type.into(),
+            logical_type: None,
+            preferred_subarray_dimensions: Vec::new(),
+            store_created: None,
+            store_last_write: None,
+        }
+    }
 }
 
 /// A block of numbers, in the type the file holds them.

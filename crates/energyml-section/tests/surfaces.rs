@@ -98,6 +98,7 @@ impl ArraySource for Store {
                 count: Vec::new(),
                 proxy_uuid: None,
                 field_path: "Points".to_string(),
+                resource_uri: None,
             })
             .into_iter()
             .collect()
@@ -114,10 +115,7 @@ impl ArraySource for Store {
             .get(&location.path_in_file)
             .ok_or_else(|| energyml_domain::Error::Missing(location.path_in_file.clone()))?;
         Ok(ArrayData {
-            metadata: ArrayMetadata {
-                dimensions: dimensions.clone(),
-                element_type: "f64".to_string(),
-            },
+            metadata: ArrayMetadata::new(dimensions.clone(), "f64".to_string()),
             values: values.clone(),
         })
     }

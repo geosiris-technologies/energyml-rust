@@ -28,10 +28,7 @@ fn folder(name: &str) -> std::path::PathBuf {
 
 fn data(dimensions: Vec<i64>, values: ArrayValues) -> ArrayData {
     ArrayData {
-        metadata: ArrayMetadata {
-            element_type: values.element_type().to_string(),
-            dimensions,
-        },
+        metadata: ArrayMetadata::new(dimensions, values.element_type().to_string()),
         values,
     }
 }

@@ -634,6 +634,7 @@ mod tests {
             count: Vec::new(),
             proxy_uuid: None,
             field_path: "Points".to_string(),
+            resource_uri: None,
         };
         match backends.find(&location, Path::new("model.h5")) {
             Err(Error::ExternalData {

@@ -152,13 +152,12 @@ fn a_reference_takes_the_revision_its_target_carries() {
             )
             .expect("the object reads")
     };
-    let summary = energyml_storage::ObjectSummary {
-        uri: format!("eml:///resqml22.TriangulatedSetRepresentation({UUID})"),
-        uuid: UUID.to_string(),
-        qualified_type: "resqml22.TriangulatedSetRepresentation".to_string(),
-        content_type: String::new(),
-        locator: PART.to_string(),
-    };
+    let summary = energyml_storage::ObjectSummary::new(
+        format!("eml:///resqml22.TriangulatedSetRepresentation({UUID})"),
+        UUID.to_string(),
+        "resqml22.TriangulatedSetRepresentation".to_string(),
+    )
+    .with_locator(PART.to_string());
     let target = |version: Option<&str>| Target {
         qualified_type: "resqml22.TriangulatedSetRepresentation".to_string(),
         title: Some("neighbour".to_string()),

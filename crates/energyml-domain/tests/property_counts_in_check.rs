@@ -60,13 +60,9 @@ impl ArraySource for Held {
 
 fn summary(uuid: &str, ty: &str) -> ObjectSummary {
     let name = ty.split('.').nth(1).unwrap();
-    ObjectSummary {
-        uri: format!("eml:///{ty}({uuid})"),
-        uuid: uuid.to_string(),
-        qualified_type: ty.to_string(),
-        content_type: format!("application/x-resqml+xml;version=2.2;type={name}"),
-        locator: format!("{name}_{uuid}.xml"),
-    }
+    ObjectSummary::new(format!("eml:///{ty}({uuid})"), uuid.to_string(), ty.to_string())
+        .with_content_type(format!("application/x-resqml+xml;version=2.2;type={name}"))
+        .with_locator(format!("{name}_{uuid}.xml"))
 }
 
 fn citation() -> eml23::Citation {

@@ -71,6 +71,14 @@
 
 pub mod array;
 pub mod backend;
+pub mod capabilities;
+pub mod changes;
+pub mod context;
+/// The rules every implementation of the storage traits is held to, played by
+/// each implementation's tests (design note `deux-sources-un-contrat.md` §4).
+#[cfg(feature = "contract")]
+pub mod contract;
+pub mod dataspaces;
 pub mod epc;
 pub mod error;
 pub mod extract;
@@ -79,21 +87,31 @@ pub mod graph;
 pub mod hdf5;
 /// Bringing part of another package into the open one: a quote, then the writing.
 pub mod import;
+pub mod raw;
 /// Changing what a part declares itself to be, without parsing what it holds.
 pub mod relabel;
 pub mod rename;
 pub mod resource;
+pub mod search;
 pub mod storage;
+pub mod window;
+pub mod write;
 
 pub use array::{
     ArrayBuffer, ArrayData, ArrayLocation, ArrayMetadata, ArrayValues, NoProxies, ProxyResolver, ProxyTarget,
     Resolution,
 };
 pub use backend::{ArrayBackend, Backends, Candidate, ExternalFiles, Origin};
+pub use capabilities::Capabilities;
+pub use changes::EnergymlChanges;
+pub use context::{Context, DeletedFilter, DeletedResource, Found, Navigable, Scope};
+pub use dataspaces::EnergymlDataspaces;
 pub use epc::overlay::SavePolicy;
 pub use epc::{EpcStore, SaveOptions, Unreadable};
 pub use error::{Diagnostic, Error, ExternalDataReason, Result, Severity};
-pub use graph::{RefIssue, RefIssueKind};
+pub use graph::{Edge, EdgeKind, RefIssue, RefIssueKind};
+pub use raw::{RawFormat, RawObject};
 pub use rename::{Applied as Renamed, FileMove, Rename};
-pub use resource::{Dataspace, ObjectHeader, ObjectSummary, Relationship};
+pub use resource::{ActiveStatus, CustomValue, Dataspace, ObjectHeader, ObjectSummary, Relationship};
 pub use storage::{EnergymlStorage, LocalPackage};
+pub use write::{EnergymlWriter, Put, Transaction, TransactionRequest};

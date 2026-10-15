@@ -24,7 +24,7 @@ autotests = false
 energyml-core = { workspace = true }
 # Only for the `ObjectSource` impl over `EpcStore`: the orphan rule puts it
 # either here or in the storage crate, and storage must not know about CRS.
-energyml-storage = { path = "../energyml-storage", version = "0.1.2" }
+energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.4" }
 thiserror = "2.0"
 # The metadata spec is a JSON file a person writes; parsing it by hand is
 # exactly the kind of thing that goes subtly wrong.

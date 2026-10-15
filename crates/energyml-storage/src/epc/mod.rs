@@ -35,6 +35,7 @@ pub mod overlay;
 pub mod package;
 pub mod revision;
 pub mod write;
+mod writer;
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::io::BufReader;
@@ -407,6 +408,11 @@ pub struct EpcStore {
     /// Refuse a part that omits something the schema requires. Off by default;
     /// see [`EpcStore::set_strict`].
     strict: bool,
+    /// The transaction [`crate::write::EnergymlWriter::begin`] opened, with what
+    /// it was asked: its identity and whether it only reads. The layer itself
+    /// is the overlay's; this is what the writer said of it. Cleared when the
+    /// overlay has no transaction any more, however it ended.
+    writer_transaction: Option<crate::write::Transaction>,
 }
 
 /// The references an object held before an in-place edit, and the journal line
@@ -494,6 +500,7 @@ impl EpcStore {
             unsettled: BTreeSet::new(),
             lenient: false,
             strict: false,
+            writer_transaction: None,
         };
         store.build_inventory();
         Ok(store)
@@ -528,11 +535,11 @@ impl EpcStore {
     /// what lets code walking a remote store walk a file unchanged.
     pub fn dataspace(&self) -> Dataspace {
         let (created, last_changed) = self.core_property_dates();
-        Dataspace {
-            uri: "eml:///".to_string(),
-            name: self.name.clone(),
-            created,
-            last_changed,
+        {
+            let mut dataspace = Dataspace::new("eml:///".to_string(), self.name.clone());
+            dataspace.created = created;
+            dataspace.last_changed = last_changed;
+            dataspace
         }
     }
 
@@ -579,13 +586,11 @@ impl EpcStore {
     /// [`EpcStore::reconcile_uris`] settles it.
     fn summary_of(&self, object: &dyn Reflect) -> Option<ObjectSummary> {
         let key = identity::key_of_reflect(object)?;
-        Some(ObjectSummary {
-            uri: key.etp_uri(None),
-            uuid: key.uuid.to_string(),
-            qualified_type: key.qualified_type(),
-            content_type: key.content_type(),
-            locator: key.part_path(self.save_options.layout),
-        })
+        Some(
+            ObjectSummary::new(key.etp_uri(None), key.uuid.to_string(), key.qualified_type())
+                .with_content_type(key.content_type())
+                .with_locator(key.part_path(self.save_options.layout)),
+        )
     }
 
     /// The summary of one object.
@@ -957,15 +962,16 @@ impl EpcStore {
         let peeked = self
             .package
             .with_part(&entry.summary.locator, |r| header::peek_reader(BufReader::new(r)))?;
-        Ok(ObjectHeader {
-            summary: entry.summary.clone(),
-            title: peeked.title,
-            originator: peeked.originator,
-            creation: peeked.creation,
-            last_update: peeked.last_update,
-            format: peeked.format,
-            object_version: peeked.object_version,
-            schema_version: peeked.schema_version,
+        Ok({
+            let mut header = ObjectHeader::new(entry.summary.clone());
+            header.title = peeked.title;
+            header.originator = peeked.originator;
+            header.creation = peeked.creation;
+            header.last_update = peeked.last_update;
+            header.format = peeked.format;
+            header.object_version = peeked.object_version;
+            header.schema_version = peeked.schema_version;
+            header
         })
     }
 
@@ -4021,13 +4027,13 @@ impl EpcStore {
                 return None;
             };
             return Some(PartEntry {
-                summary: ObjectSummary {
-                    uri: identifiers::EtpUri::object(None, &qualified_type, &uuid),
+                summary: ObjectSummary::new(
+                    identifiers::EtpUri::object(None, &qualified_type, &uuid),
                     uuid,
                     qualified_type,
-                    content_type,
-                    locator: part.to_string(),
-                },
+                )
+                .with_content_type(content_type)
+                .with_locator(part.to_string()),
                 info,
                 slot: String::new(),
                 object_version: normal_version(peeked.as_ref().and_then(|p| p.object_version.as_deref())),
@@ -4089,13 +4095,13 @@ impl EpcStore {
                 )
             });
             return Some(PartEntry {
-                summary: ObjectSummary {
-                    uri: identifiers::EtpUri::object(None, &qualified_type, &uuid),
+                summary: ObjectSummary::new(
+                    identifiers::EtpUri::object(None, &qualified_type, &uuid),
                     uuid,
                     qualified_type,
-                    content_type,
-                    locator: part.to_string(),
-                },
+                )
+                .with_content_type(content_type)
+                .with_locator(part.to_string()),
                 info: None,
                 slot: String::new(),
                 object_version: normal_version(peeked.object_version.as_deref()),
@@ -4171,13 +4177,13 @@ impl EpcStore {
             ));
         }
         Some(PartEntry {
-            summary: ObjectSummary {
-                uri: identifiers::EtpUri::object(None, &qualified_type, &uuid),
+            summary: ObjectSummary::new(
+                identifiers::EtpUri::object(None, &qualified_type, &uuid),
                 uuid,
                 qualified_type,
-                content_type: info.content_type.unwrap_or_default().to_string(),
-                locator: part.to_string(),
-            },
+            )
+            .with_content_type(info.content_type.unwrap_or_default().to_string())
+            .with_locator(part.to_string()),
             info: Some(info),
             slot: String::new(),
             object_version: normal_version(peeked.object_version.as_deref()),
@@ -4475,6 +4481,27 @@ impl EnergymlStorage for EpcStore {
 
     fn diagnostics(&self) -> Vec<Diagnostic> {
         EpcStore::diagnostics(self)
+    }
+
+    /// An EPC writes, opens transactions, keeps the XML of each part and says
+    /// what changed; it is one dataspace, writes whole arrays only, keeps
+    /// neither deletions nor ETP's store times, and does not state edge kinds.
+    fn capabilities(&self) -> crate::capabilities::Capabilities {
+        crate::capabilities::Capabilities {
+            writes: true,
+            transactions: true,
+            raw_formats: vec![crate::raw::RawFormat::Xml],
+            changes: true,
+            ..Default::default()
+        }
+    }
+
+    async fn get_raw(
+        &self,
+        uris: &[String],
+        format: crate::raw::RawFormat,
+    ) -> Vec<Result<crate::raw::RawObject>> {
+        self.raw_objects(uris, format)
     }
 }
 
