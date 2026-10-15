@@ -16,6 +16,8 @@
 //! - [`validate`] - structural validation from the schema, plus a hook for
 //!   business rules.
 //! - [`registry`] - create and read objects by content type or qualified type.
+//! - [`relations`] - where a type holds other data objects by value, and where it
+//!   writes references: tables written by the generator, read by byte-level scanners.
 //! - [`identifiers`] - UUID, content type, qualified type and ETP URI parsing.
 //!
 //! Generated code is written by `energyml-codegen`; the `energyml-derive` macros
@@ -38,6 +40,7 @@ pub mod ns;
 pub mod path;
 pub mod reflect;
 pub mod registry;
+pub mod relations;
 #[cfg(feature = "json")]
 pub mod truncate;
 pub mod validate;
