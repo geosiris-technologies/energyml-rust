@@ -25,6 +25,8 @@ pub use measure_type::*;
 pub use object_reference::*;
 pub use quantity_class::*;
 
+pub mod relations;
+
 use energyml_core::registry::{Registry, TypeEntry};
 
 /// Register every type of eml 2.0 so it can be created and read by name.
@@ -221,4 +223,5 @@ pub fn register(registry: &mut Registry) {
     registry.register(TypeEntry::of::<DataObjectReference>());
     registry.register(TypeEntry::of::<EpcExternalPartReference>());
     registry.register(TypeEntry::of::<Hdf5Dataset>());
+    registry.register_relations(relations::RELATIONS);
 }

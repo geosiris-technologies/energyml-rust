@@ -67,6 +67,8 @@ pub use simple_product_volume::*;
 pub use time_series_data::*;
 pub use time_series_statistic::*;
 
+pub mod relations;
+
 use energyml_core::registry::{Registry, TypeEntry};
 
 /// Register every type of prodml 2.2 so it can be created and read by name.
@@ -529,4 +531,5 @@ pub fn register(registry: &mut Registry) {
     registry.register(TypeEntry::of::<KeywordValueStruct>());
     registry.register(TypeEntry::of::<TimeSeriesStatistic>());
     registry.register(TypeEntry::of::<TimeSeriesThreshold>());
+    registry.register_relations(relations::RELATIONS);
 }
