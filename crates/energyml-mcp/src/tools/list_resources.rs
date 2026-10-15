@@ -89,7 +89,10 @@ impl Tool for ListResourcesTool {
         let limit = Limits::effective(args.count("limit", 1, 500)?, 50, ctx.limits.max_list);
         let cursor = args.string("cursor")?;
 
-        let scope = match args.string("scope")? {
+        let scope = match args
+            .string("scope")?
+            .or_else(|| ctx.default_scope.map(str::to_string))
+        {
             Some(scope) => scope,
             None => {
                 let dataspaces = ctx.store.dataspaces().await?;

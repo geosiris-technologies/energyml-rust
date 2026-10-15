@@ -75,7 +75,9 @@ impl Tool for FindResourcesTool {
         let title = args.string("title_contains")?;
         let type_fragment = args.string("type_contains")?;
         let uuid_prefix = args.string("uuid_prefix")?;
-        let scope = args.string("scope")?;
+        let scope = args
+            .string("scope")?
+            .or_else(|| ctx.default_scope.map(str::to_string));
         let limit = Limits::effective(args.count("limit", 1, 200)?, 25, ctx.limits.max_list);
         let cursor = args.string("cursor")?;
 

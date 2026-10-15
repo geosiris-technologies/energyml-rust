@@ -11,6 +11,7 @@ members = [
     "crates/energyml-geometry",
     "crates/energyml-export",
     "crates/energyml-mcp",
+    "crates/energyml-mcp-cli",
     "crates/energyml-proj",
     "crates/energyml-cache",
     "crates/energyml-rules",

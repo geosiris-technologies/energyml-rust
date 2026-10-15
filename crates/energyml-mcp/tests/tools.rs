@@ -375,3 +375,24 @@ fn no_tool_changes_the_store() {
         "every builtin tool is annotated read-only"
     );
 }
+
+#[test]
+fn a_default_scope_is_what_a_call_naming_none_means() {
+    // A server started on one dataspace (`retp mcp --dataspace`) answers a
+    // call without `scope` on that dataspace, even when the store holds others.
+    let store = model();
+    let limits = Limits::default();
+    let extensions = energyml_mcp::Extensions::new();
+    let other = "eml:///dataspace('another')";
+    let ctx = energyml_mcp::ToolContext::new(&store, &limits, &extensions).with_default_scope(Some(other));
+    let answer = crate::support::run(Registry::builtin().call("energyml_list_resources", &ctx, json!({})));
+    // The model holds no such dataspace: the call went there, and says so by
+    // its refusal or its scope, never by answering on the model's own.
+    match answer {
+        Ok(output) => assert_eq!(output.structured["scope"], other, "{}", output.structured),
+        Err(refused) => assert!(format!("{refused:?}").contains("another"), "{refused:?}"),
+    }
+    // Negative: without a default, the same call answers on the model's only dataspace.
+    let plain = call(&store, "energyml_list_resources", json!({})).unwrap();
+    assert_ne!(plain["scope"], other);
+}

@@ -1,0 +1,34 @@
+This product includes software developed by Geosiris. The following Energistics® products were used in the creation of this work: RESQML™ Data Schema v2.0.1 and v2.2, WITSML™ Data Schema v2.0 and v2.1, PRODML™ Data Schema v2.0, v2.2 and v2.3, Energistics common v2.0 to v2.3, Energistics Transfer Protocol (ETP) v1.2. Energistics®, WITSML™, PRODML™ and RESQML™ are trademarks or registered trademarks of Energistics Consortium, Inc. All rights in the Energistics standards, or any portion thereof, which remain in this work remain with Energistics and are subject to the Energistics Product License Agreement (https://www.energistics.org/product-license-agreement).
+
+
+Data shipped in the crates
+==========================
+
+Energistics PropertyKind dictionary (crate energyml-domain)
+-----------------------------------------------------------
+crates/energyml-domain/data/property_kinds.tsv is a compact, tab-separated form
+(uuid, title, parent, quantity class, abstract flag, deprecation date,
+description) of the Energistics PropertyKindDictionary v2.3 (eml 2.3). The
+Energistics standards, or any portion thereof, remain the property of
+Energistics Consortium, Inc. and are subject to the Energistics Product License
+Agreement (https://www.energistics.org/product-license-agreement). Energistics(R)
+is a trademark or registered trademark of Energistics Consortium, Inc. The
+provenance of the file is in crates/energyml-domain/data/property_kinds.NOTICE.md.
+
+BRGM GeolTs chronostratigraphic chart (crate energyml-domain)
+-------------------------------------------------------------
+crates/energyml-domain/data/geolts/ holds exports of the GeolTs and GeolTsBound
+registers.
+Attribution: BRGM - GeolTs.
+Source: https://data.geoscience.fr/ncl/GeolTs
+Licence: Creative Commons Attribution 4.0 International (CC BY 4.0),
+http://creativecommons.org/licenses/by/4.0/
+Changes: none to the content; the crate compacts the CSV files at build time into
+a tab-separated table (a change of form). The licence note travels with the data
+in crates/energyml-domain/data/geolts/LICENSE.md. This attribution must follow
+any binary, image or container that embeds the table.
+
+Liberation Sans font (crate energyml-section)
+--------------------------------------------------
+crates/energyml-section/fonts/LiberationSans-Regular.ttf is distributed under
+the SIL Open Font License 1.1; its text is in LiberationSans-OFL.txt next to it.

@@ -86,6 +86,9 @@ pub struct ToolContext<'a> {
     pub limits: &'a Limits,
     /// What the embedding application attached. Builtin tools never read it.
     pub extensions: &'a Extensions,
+    /// The dataspace a call means when it names none: the one the server was
+    /// started on (`retp mcp --dataspace`), when the store holds several.
+    pub default_scope: Option<&'a str>,
 }
 
 impl<'a> ToolContext<'a> {
@@ -99,7 +102,14 @@ impl<'a> ToolContext<'a> {
             store,
             limits,
             extensions,
+            default_scope: None,
         }
+    }
+
+    /// The dataspace a call means when it names none.
+    pub fn with_default_scope(mut self, scope: Option<&'a str>) -> Self {
+        self.default_scope = scope;
+        self
     }
 }
 
@@ -109,6 +119,7 @@ impl fmt::Debug for ToolContext<'_> {
             .field("store", &self.store.store_kind())
             .field("limits", self.limits)
             .field("extensions", self.extensions)
+            .field("default_scope", &self.default_scope)
             .finish()
     }
 }

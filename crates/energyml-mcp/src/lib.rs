@@ -67,6 +67,8 @@ mod limits;
 mod provider;
 mod refusal;
 mod registry;
+#[cfg(feature = "server")]
+pub mod server;
 mod tool;
 pub mod tools;
 

@@ -16,6 +16,8 @@ mod extensions;
 mod limits;
 mod refusals;
 mod registry;
+#[cfg(feature = "server")]
+mod server;
 mod snapshot;
 mod support;
 mod tools;

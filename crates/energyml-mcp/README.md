@@ -4,7 +4,7 @@ The tools of a generic, **read-only** [MCP](https://modelcontextprotocol.io) (Mo
 
 This crate is only a face over `energyml-storage`: each tool converts its arguments, calls a trait method or a library function, and shapes the result. It holds no logic about EnergyML, and it depends on **no MCP SDK and no async runtime**. It defines its own `Tool` trait and `Registry`; an adapter to an SDK (`rmcp`) or to a hand-written JSON-RPC loop only has to walk the registry, so replacing the SDK touches no tool and no test.
 
-The stdio binary (`energyml mcp file.epc`) and `retp mcp wss://...` come later, as separate packages that use this one. Native only: the tools are `Send` futures, like the storage traits off wasm.
+The stdio server is the feature `server` (an adapter over the `rmcp` SDK, ADR-0021); the binary `energyml-mcp` (package `energyml-mcp-cli`, so `energyml mcp file.epc`) and `retp mcp wss://...` (the `retp` repository) serve these tools. See the book's page `docs/mcp.md`. Native only: the tools are `Send` futures, like the storage traits off wasm.
 
 ## What an adapter does
 

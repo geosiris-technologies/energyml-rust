@@ -28,6 +28,7 @@ pub const ALIASES: &[(&str, &str)] = &[("etp", "retp"), ("translate", "energyml-
 const INSTALL: &[(&str, &str)] = &[
     ("retp", "cargo install retp-cli"),
     ("energyml-translate", "cargo install energyml-translate-cli"),
+    ("energyml-mcp", "cargo install energyml-mcp-cli"),
 ];
 
 /// The program a subcommand word stands for: the alias if there is one,

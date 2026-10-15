@@ -1,0 +1,65 @@
+[package]
+name = "energyml-mcp-cli"
+description = "The `energyml-mcp` program: a read-only MCP (Model Context Protocol) server over an EnergyML EPC package, on stdio, for Claude and other MCP clients."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["energyml", "mcp", "resqml", "llm", "cli"]
+categories = ["command-line-utilities", "science::geo"]
+readme = "README.md"
+homepage = "https://www.geosiris.com"
+documentation = "https://docs.rs/energyml-mcp-cli"
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+# One test binary, `tests/main.rs`.
+autotests = false
+
+# Only the program: `energyml mcp file.epc` runs `energyml-mcp` through the
+# external-command mechanism of `energyml-cli`, which is why this is a package of
+# its own. tokio and the MCP SDK stay out of the `energyml` binary, its Docker
+# image and the Python wheels.
+[[bin]]
+name = "energyml-mcp"
+path = "src/main.rs"
+# Not documented: the library `energyml-mcp` has the same name, and `cargo doc`
+# would write both to `target/doc/energyml_mcp/` (as `energyml-cli` does for
+# `energyml`). The binary's options are in its `--help` and in docs/mcp.md.
+doc = false
+
+[dependencies]
+anyhow = "1.0"
+# `env`: every limit can also be set by an `ENERGYML_MCP_*` variable, which is
+# what a client configuration file without a shell prefers.
+clap = { version = "4.6", features = ["derive", "env"] }
+# The server (`server` feature: the stdio adapter over the MCP SDK and tokio).
+energyml-mcp = { path = "../energyml-mcp", version = "0.2.0-alpha.3", features = ["server"] }
+energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.3" }
+# Every schema version the workspace generates, like `energyml-cli`: the face
+# that starts the process chooses the registry (ADR-0012), not the MCP crate.
+energyml-schemas = { path = "../energyml-schemas", version = "0.2.0-alpha.3", features = ["all"] }
+
+[dev-dependencies]
+# The fabricated package of the tests: the storage contract's own model.
+energyml-storage = { path = "../energyml-storage", features = ["contract"] }
+# The package is a zip built by hand, in a temporary directory.
+zip = { version = "7", default-features = false, features = ["deflate"] }
+serde_json = "1.0"
+
+[features]
+default = []
+# Read the arrays, not only locate them. Needs the HDF5 C library at build time.
+# Without it, `energyml_list_arrays` lists the arrays as unreadable and
+# `energyml_read_array_window` refuses `feature_not_enabled`: the data is not
+# absent, the means to read it is.
+hdf5 = ["energyml-storage/hdf5"]
+# The same, with HDF5 built from its sources and linked in (CMake and a C
+# compiler, no installed HDF5): the released archives.
+hdf5-static = ["hdf5", "energyml-storage/hdf5-static"]
+
+[lints.rust]
+missing_docs = "warn"
+
+[[test]]
+name = "cli"
+path = "tests/main.rs"

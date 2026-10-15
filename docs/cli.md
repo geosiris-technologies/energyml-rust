@@ -11,7 +11,10 @@ Every option of every command is in the generated
 Some commands exist only in some builds. Commands that read package arrays need
 the `hdf5` feature; `profile --png` needs `png`. ETP commands (talking to a
 remote dataspace) belong to the separate
-[`retp`](https://github.com/geosiris-technologies/retp) project. `galaxy-tool`
+[`retp`](https://github.com/geosiris-technologies/retp) project. `energyml mcp
+file.epc` serves a package to an AI assistant as MCP tools; it is the separate
+program `energyml-mcp` (`cargo install energyml-mcp-cli`, see
+[The MCP server](mcp.md)). `galaxy-tool`
 and `cli-reference` are hidden from `--help` (see [Galaxy tools](galaxy.md)).
 
 Global flags worth knowing: `--lenient` (read past a missing required element or
