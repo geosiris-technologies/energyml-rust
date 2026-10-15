@@ -17,6 +17,7 @@ use crate::identifiers::QualifiedType;
 use crate::identity::{ObjectKey, parse_content_type};
 use crate::naming;
 use crate::reflect::TypeInfo;
+use crate::relations::{RelationsIndex, TypeRelations};
 use crate::validate::Validate;
 use crate::value::Reflect;
 use crate::xml::{XmlDeserialize, XmlReader, XmlSerialize};
@@ -113,6 +114,9 @@ pub struct Registry {
     /// Versions the project knows and this build does not carry, each with the
     /// sentence that refuses it. See [`Registry::declare_absent`].
     absent: Vec<AbsentVersion>,
+    /// The containment and reference tables of the registered crates. See
+    /// [`Registry::register_relations`].
+    relations: RelationsIndex,
 }
 
 /// One schema version that exists but is not registered in this build.
@@ -407,6 +411,52 @@ impl Registry {
     /// ones that are never children.
     pub fn top_level_types(&self) -> impl Iterator<Item = &'static TypeInfo> + '_ {
         self.entries.iter().map(|e| e.info).filter(|i| i.is_top_level)
+    }
+
+    /// Add the relations tables of one generated crate: for each of its
+    /// top-level types, where it holds data objects by value and (WITSML) where
+    /// it writes references. Called by the crate's `register`, after its types.
+    ///
+    /// Registering the same tables twice changes nothing, and a development
+    /// drop never displaces a release in the by-qualified-type lookups, for the
+    /// reason [`Registry::register`] gives.
+    pub fn register_relations(&mut self, tables: &'static [TypeRelations]) {
+        self.relations.add(tables);
+    }
+
+    /// The relations table of a registered type, if its crate has one.
+    ///
+    /// Keyed on package, version and name, so a release and its development
+    /// drop have a table each.
+    pub fn relations_of(&self, info: &TypeInfo) -> Option<&'static TypeRelations> {
+        self.relations.of(info)
+    }
+
+    /// The relations table of a type by qualified type (`witsml21.Log`), in the
+    /// spellings the other lookups accept. A release wins over a development
+    /// drop that shares the qualified type.
+    pub fn relations_for(&self, qualified_type: &str) -> Option<&'static TypeRelations> {
+        self.relations.for_qualified(qualified_type)
+    }
+
+    /// Whether the type holds at least one data object by value: a hash lookup
+    /// and a length test, no table is read. False for a type with no table.
+    pub fn is_container(&self, qualified_type: &str) -> bool {
+        self.relations_for(qualified_type)
+            .is_some_and(|t| t.is_container())
+    }
+
+    /// Whether some registered slot admits the type as a contained data object.
+    /// A hash lookup. A subset of [`TypeInfo::is_nestable`]: that flag says the
+    /// type is reached by some field, this one that it is reached by a slot of
+    /// a type that is itself a part.
+    pub fn may_be_contained(&self, qualified_type: &str) -> bool {
+        self.relations.may_be_contained(qualified_type)
+    }
+
+    /// Every registered table, in registration order.
+    pub fn relations(&self) -> impl Iterator<Item = &'static TypeRelations> + '_ {
+        self.relations.iter()
     }
 
     /// Look up by qualified type, e.g. `resqml22.TriangulatedSetRepresentation`.
@@ -852,7 +902,7 @@ fn computed_qualified_type(info: &'static TypeInfo) -> String {
     )
 }
 
-fn normalize_qualified_type(value: &str) -> String {
+pub(crate) fn normalize_qualified_type(value: &str) -> String {
     match QualifiedType::parse(value) {
         Ok(qt) => format!(
             "{}|{}|{}",
