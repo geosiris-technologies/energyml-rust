@@ -19,7 +19,7 @@ autotests = false
 
 [dependencies]
 energyml-core = { workspace = true }
-energyml-storage = { path = "../energyml-storage", version = "0.2.0-alpha.4" }
+energyml-storage = { path = "../energyml-storage", version = "0.2.0" }
 # The storage traits are `async_trait`; so are `Tool` and `StoreProvider`.
 async-trait = "0.1"
 # Schemas are written by hand as `json!` values: no `schemars` in the

@@ -19,25 +19,25 @@ documentation = "https://docs.rs/energyml-schemas"
 include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
 
 [dependencies]
-energyml-core = { path = "../energyml-core", version = "0.2.0-alpha.4" }
+energyml-core = { path = "../energyml-core", version = "0.2.0" }
 
 # Every generated crate the workspace produces, each **optional**: a version is
 # compiled in only when its feature is on (see `[features]`). **This list is
 # the only one.** Adding an Energistics release is a line here, a feature below,
 # a row of `KNOWN_VERSIONS` and a `register` line in `src/lib.rs`, and
 # `tests/complete.rs` fails if any is forgotten.
-energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0", version = "0.2.0-alpha.4", optional = true }
-energyml-eml-2-1 = { path = "../generated/energyml-eml-2-1", version = "0.2.0-alpha.4", optional = true }
-energyml-eml-2-2 = { path = "../generated/energyml-eml-2-2", version = "0.2.0-alpha.4", optional = true }
-energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.2.0-alpha.4", optional = true }
-energyml-prodml-2-0 = { path = "../generated/energyml-prodml-2-0", version = "0.2.0-alpha.4", optional = true }
-energyml-prodml-2-2 = { path = "../generated/energyml-prodml-2-2", version = "0.2.0-alpha.4", optional = true }
-energyml-prodml-2-3 = { path = "../generated/energyml-prodml-2-3", version = "0.2.0-alpha.4", optional = true }
-energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1", version = "0.2.0-alpha.4", optional = true }
-energyml-resqml-2-2-dev3 = { path = "../generated/energyml-resqml-2-2-dev3", version = "0.2.0-alpha.4", optional = true }
-energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.2.0-alpha.4", optional = true }
-energyml-witsml-2-0 = { path = "../generated/energyml-witsml-2-0", version = "0.2.0-alpha.4", optional = true }
-energyml-witsml-2-1 = { path = "../generated/energyml-witsml-2-1", version = "0.2.0-alpha.4", optional = true }
+energyml-eml-2-0 = { path = "../generated/energyml-eml-2-0", version = "0.2.0", optional = true }
+energyml-eml-2-1 = { path = "../generated/energyml-eml-2-1", version = "0.2.0", optional = true }
+energyml-eml-2-2 = { path = "../generated/energyml-eml-2-2", version = "0.2.0", optional = true }
+energyml-eml-2-3 = { path = "../generated/energyml-eml-2-3", version = "0.2.0", optional = true }
+energyml-prodml-2-0 = { path = "../generated/energyml-prodml-2-0", version = "0.2.0", optional = true }
+energyml-prodml-2-2 = { path = "../generated/energyml-prodml-2-2", version = "0.2.0", optional = true }
+energyml-prodml-2-3 = { path = "../generated/energyml-prodml-2-3", version = "0.2.0", optional = true }
+energyml-resqml-2-0-1 = { path = "../generated/energyml-resqml-2-0-1", version = "0.2.0", optional = true }
+energyml-resqml-2-2-dev3 = { path = "../generated/energyml-resqml-2-2-dev3", version = "0.2.0", optional = true }
+energyml-resqml-2-2 = { path = "../generated/energyml-resqml-2-2", version = "0.2.0", optional = true }
+energyml-witsml-2-0 = { path = "../generated/energyml-witsml-2-0", version = "0.2.0", optional = true }
+energyml-witsml-2-1 = { path = "../generated/energyml-witsml-2-1", version = "0.2.0", optional = true }
 
 # **One feature per schema version**, spelled as Energistics spells a qualified
 # type (`resqml22.Model`, `eml23.Citation`): `eml20`..`eml23`, `resqml20` (the

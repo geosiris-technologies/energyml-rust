@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-cli-v0.1.2...energyml-cli-v0.2.0) - 2026-10-15
+
+### Added
+
+- *(mcp)* the stdio MCP server and the energyml-mcp binary
+
 ## [0.1.2](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-cli-v0.1.1...energyml-cli-v0.1.2) - 2026-10-14
 
 ### Other
