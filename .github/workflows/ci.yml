@@ -3,7 +3,9 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    # dev is where changes are integrated: every push there is tested, not only
+    # the pull request that later brings it to main.
+    branches: [main, dev]
 
 concurrency:
   group: ci-${{ github.ref }}
