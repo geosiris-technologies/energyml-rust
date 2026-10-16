@@ -95,6 +95,22 @@ pub fn is_uuid(value: &str) -> bool {
     uuid_re().is_match(value.trim())
 }
 
+/// Whether a string is the nil UUID, `00000000-0000-0000-0000-000000000000`,
+/// in any letter case and ignoring surrounding whitespace.
+///
+/// The nil UUID matches the `UuidString` pattern of the schemas, so
+/// [`is_uuid`] accepts it. It is the special form of RFC 4122 section 4.1.7
+/// ("all 128 bits set to zero"), and it identifies no instance: Energistics
+/// Identifier Specification v5.0, section 2.3.1 (p. 9), requires that "a unique
+/// instances of business object defined by Energistics data models must be
+/// identified with a UUID as defined by RFC 4122", and two objects of one type
+/// that carry the nil UUID cannot be told apart. This is a detection rule, to
+/// be reported; nothing refuses it.
+pub fn is_nil_uuid(value: &str) -> bool {
+    let value = value.trim();
+    is_uuid(value) && value.bytes().all(|b| b == b'0' || b == b'-')
+}
+
 /// Validate and normalize a UUID to lowercase.
 pub fn normalize_uuid(value: &str) -> Result<String> {
     let trimmed = value.trim();
@@ -357,6 +373,18 @@ mod tests {
             normalize_uuid(" A1B2C3D4-E5F6-7890-ABCD-EF1234567890 ").unwrap(),
             "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
         );
+    }
+
+    /// RFC 4122 section 4.1.7: the nil UUID is "all 128 bits set to zero";
+    /// Energistics Identifier Specification v5.0, section 2.3.1 (p. 9).
+    #[test]
+    fn the_nil_uuid_is_only_all_zeros() {
+        assert!(is_nil_uuid("00000000-0000-0000-0000-000000000000"));
+        assert!(is_nil_uuid(" 00000000-0000-0000-0000-000000000000\n"));
+        assert!(!is_nil_uuid("00000000-0000-0000-0000-000000000001"));
+        assert!(!is_nil_uuid("a1b2c3d4-e5f6-7890-abcd-ef1234567890"));
+        assert!(!is_nil_uuid("0"));
+        assert!(!is_nil_uuid(""));
     }
 
     #[test]

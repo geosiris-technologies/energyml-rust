@@ -69,7 +69,7 @@
 use std::collections::HashMap;
 use std::ops::Range;
 
-use energyml_core::identifiers::EtpUri;
+use energyml_core::identifiers::{self, EtpUri};
 use energyml_core::identity::ObjectId;
 use energyml_core::naming;
 use energyml_core::ns;
@@ -712,6 +712,10 @@ impl<'a> Scanner<'a> {
             }
         };
         id.object_version = version;
+        if identifiers::is_nil_uuid(uuid) {
+            self.diagnostics
+                .push(Diagnostic::nil_uuid(&self.part, Some(&path)));
+        }
         let uri = id.etp_uri(self.dataspace.as_deref());
         let summary = ObjectSummary::new(uri.clone(), uuid, id.qualified_type())
             .with_content_type(id.content_type())
@@ -1086,6 +1090,50 @@ mod tests {
     }
 
     // ---- The walk ---------------------------------------------------------
+
+    /// Energistics Identifier Specification v5.0, section 2.3.1 (p. 9): an
+    /// instance of a business object is identified by a UUID as defined by
+    /// RFC 4122, whose section 4.1.7 makes the nil UUID the form that names no
+    /// instance. An object held by value with the nil UUID is still listed;
+    /// the scan says so, with its path, and a channel with an ordinary uuid
+    /// beside it is not mentioned.
+    ///
+    /// Break it: drop the `is_nil_uuid` check in `try_contained`, and the first
+    /// assertion fails.
+    #[test]
+    fn a_contained_object_with_the_nil_uuid_is_listed_and_warned_about() {
+        let nil = "00000000-0000-0000-0000-000000000000";
+        let nil_channel = channel(1, "nil").replace(&id(1), nil);
+        let xml = log(
+            9,
+            "log",
+            &[channel_set(
+                8,
+                "set",
+                None,
+                &[nil_channel, channel(2, "ordinary")],
+            )],
+        );
+        let scan = scan(&xml, &summary("witsml21.Log", 9, "Log.xml"));
+
+        let held = scan
+            .entries
+            .iter()
+            .find(|e| e.summary.uuid == nil)
+            .expect("the nil-uuid channel is listed all the same");
+        assert_eq!(held.path, "ChannelSet.Channel");
+        let nil_warnings: Vec<_> = scan
+            .diagnostics
+            .iter()
+            .filter(|d| d.message.contains("nil UUID"))
+            .collect();
+        assert_eq!(nil_warnings.len(), 1, "{:?}", scan.diagnostics);
+        assert_eq!(nil_warnings[0].severity, crate::error::Severity::Warning);
+        assert_eq!(nil_warnings[0].part, "Log.xml");
+        assert!(nil_warnings[0].message.starts_with("`ChannelSet.Channel`: "));
+        // The ordinary channel is listed and unremarked.
+        entry(&scan, 2);
+    }
 
     /// A `Log` holding two `ChannelSet`s that hold `Channel`s: the nesting is
     /// composed from three tables, the container of a `Channel` is its
