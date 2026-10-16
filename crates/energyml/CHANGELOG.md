@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-v0.2.0...energyml-v0.3.0) - 2026-10-16
+
+### Fixed
+
+- *(deps)* move to zip 9, every 7.x and 8.x release being yanked
+
 ## [0.2.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-v0.1.2...energyml-v0.2.0) - 2026-10-15
 
 ### Other
