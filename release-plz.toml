@@ -6,7 +6,12 @@
 changelog_update = true
 # Open release pull requests; tag and publish after merging.
 git_release_enable = false
-semver_check = true
+# Off for the 0.3.0 release: cargo-semver-checks builds each crate's published
+# version as the baseline, and every published 0.2.0 needs `zip = "^7"`, whose
+# releases were all yanked (October 2026), so no baseline builds. The version comes
+# from the conventional commits (`feat!` makes it 0.3.0). Back on once 0.3.0, on
+# zip 9, is the baseline.
+semver_check = false
 # Tag format: <crate>-v<version> (for example energyml-cli-v0.2.0), which is what
 # the release-cli workflow listens for.
 git_tag_name = "{{ package }}-v{{ version }}"
