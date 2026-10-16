@@ -1753,7 +1753,7 @@ ContentType=\"application/x-witsml+xml;version=2.1;type=Log\"/>"
         );
 
         let raw = store
-            .raw_objects(&[gamma.clone()], RawFormat::Xml)
+            .raw_objects(std::slice::from_ref(&gamma), RawFormat::Xml)
             .pop()
             .expect("one")
             .expect("raw");
