@@ -30,6 +30,7 @@ mod hdf5_write;
 mod kinds;
 mod media;
 mod mistyped;
+mod named_dataspace;
 mod nested_reference;
 mod nil_uuid;
 mod object_versions;

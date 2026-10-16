@@ -640,6 +640,19 @@ pub fn check_declared_types<'a>(
     out
 }
 
+/// The dataspace path a uri names, `None` for the default dataspace.
+///
+/// A reference (a DOR) names no dataspace: it resolves **inside the dataspace of
+/// the object that writes it** (ETP v1.2 §25.3, a dataspace being the scope in
+/// which a uri is resolved). So the uri of a reference's target is spelled with
+/// the dataspace of its **source**, read here from the source's own uri through
+/// the one door, [`identifiers::EtpUri::parse`].
+fn dataspace_of(uri: &str) -> Option<String> {
+    identifiers::EtpUri::parse(uri)
+        .ok()
+        .and_then(|parsed| parsed.dataspace)
+}
+
 /// The data objects nested inside the objects given, by uuid - each with a
 /// summary of its own that names **the part holding it** as its locator, and
 /// the uuid of that part's object.
@@ -664,8 +677,10 @@ pub fn nested_index<'a>(
             if parts.contains(&uuid) {
                 continue;
             }
+            // The dataspace of the part that holds it: a nested object is in
+            // the dataspace of its container.
             let summary = ObjectSummary::new(
-                nested.key.etp_uri(None),
+                nested.key.etp_uri(dataspace_of(&container.uri).as_deref()),
                 nested.key.uuid.to_string(),
                 nested.key.qualified_type(),
             )
@@ -1838,6 +1853,8 @@ pub fn build<'a>(objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn R
     let nested = nested_index(items.iter().copied());
     let mut edges = Vec::new();
     for (summary, object) in &items {
+        // A reference names no dataspace; it resolves in its source's.
+        let dataspace = dataspace_of(&summary.uri);
         for edge in identity::collect_refs(*object) {
             if edge.target.uuid.is_empty() {
                 continue;
@@ -1877,7 +1894,7 @@ pub fn build<'a>(objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn R
                 });
                 nodes.push(Node {
                     uri: identifiers::EtpUri::object_versioned(
-                        None,
+                        dataspace.as_deref(),
                         &qualified_type,
                         edge.target.uuid,
                         wanted_version,
@@ -2134,6 +2151,14 @@ pub(crate) fn parts_holding(
 /// title is the **hint the reference carries**, which is not a source of truth:
 /// what the target is actually called is a question for the package.
 pub fn references(object: &dyn Reflect) -> Vec<Pointer> {
+    references_in(object, None)
+}
+
+/// [`references`], the targets spelled in the dataspace `dataspace` - that of
+/// the object holding the references, since a reference names no dataspace of
+/// its own and resolves inside its source's (ETP v1.2 §25.3). `None` is the
+/// default dataspace, `eml:///`.
+pub fn references_in(object: &dyn Reflect, dataspace: Option<&str>) -> Vec<Pointer> {
     identity::collect_refs(object)
         .into_iter()
         .filter(|edge| !edge.target.uuid.is_empty())
@@ -2142,7 +2167,7 @@ pub fn references(object: &dyn Reflect) -> Vec<Pointer> {
             Pointer {
                 // The one constructor: the version the reference names, when it
                 // names one, is part of the uri.
-                uri: edge.target.etp_uri(None),
+                uri: edge.target.etp_uri(dataspace),
                 uuid: edge.target.uuid.to_string(),
                 qualified_type,
                 title: edge.target.title.map(str::to_string),

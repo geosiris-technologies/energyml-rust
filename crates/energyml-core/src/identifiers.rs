@@ -305,6 +305,16 @@ impl EtpUri {
         })
     }
 
+    /// Build a dataspace URI: `eml:///dataspace('{path}')`, or `eml:///` for
+    /// the default dataspace (`None`) - ETP v1.2 §25.3.6 (p. 488), the same spelling as
+    /// the dataspace segment of [`EtpUri::object_versioned`].
+    pub fn dataspace_uri(dataspace: Option<&str>) -> String {
+        match dataspace {
+            Some(ds) => format!("eml:///dataspace('{ds}')"),
+            None => "eml:///".to_string(),
+        }
+    }
+
     /// Build a data-object URI.
     pub fn object(dataspace: Option<&str>, qualified_type: &str, uuid: &str) -> String {
         Self::object_versioned(dataspace, qualified_type, uuid, None)
