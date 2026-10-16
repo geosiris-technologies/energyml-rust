@@ -28,6 +28,8 @@
 //! them and records every departure in [`EpcStore::diagnostics`]. Nothing is
 //! swallowed, nothing is fatal that need not be.
 
+mod contained_read;
+mod contents;
 pub mod core_props;
 pub mod header;
 pub mod media;
@@ -56,8 +58,9 @@ use energyml_core::value::Reflect;
 use crate::array::{ArrayData, ArrayLocation, ArrayMetadata, ByteOrder, ProxyResolver};
 use crate::error::{Diagnostic, Error, ExternalDataReason, Result};
 use crate::resource::{Dataspace, ObjectHeader, ObjectSummary, Relationship};
-use crate::storage::{EnergymlStorage, LocalPackage};
+use crate::storage::{Contents, EnergymlStorage, LocalPackage};
 
+use contents::ContainedIndex;
 use overlay::{Change, Overlay, SavePolicy};
 use package::{Package, ReadSeek};
 use revision::What;
@@ -213,6 +216,11 @@ struct Live<'a> {
     version: Option<&'a str>,
     /// The archive's entry, when it has one.
     archive: Option<&'a PartEntry>,
+    /// The data object held by value inside a part, when this is one: then
+    /// `archive` is `None` and `slot` is its uri (never an overlay slot), so
+    /// every path that reads a part through [`EpcStore::entry`] fails with
+    /// `NotFound` instead of answering with the container.
+    nested: Option<&'a contents::ContainedEntry>,
 }
 
 /// What an address says, once parsed: a uuid, and - when the address is a URI -
@@ -256,6 +264,18 @@ fn uuid_of_slot(slot: &str) -> &str {
 /// An `objectVersion` as an identity: surrounding blanks do not count, and an
 /// empty one is no version - the element is optional, and an empty one says the
 /// same as none.
+/// The passes a read goes through for a reading mode: strict first, because
+/// telling two releases apart works by letting the wrong one fail, then the
+/// caller's own mode. One list for a part ([`EpcStore::get_object`]) and for an
+/// object held by value, so that the two readers cannot drift apart.
+fn read_passes(mode: ReadMode) -> &'static [ReadMode] {
+    match mode {
+        ReadMode::Strict => &[ReadMode::Strict],
+        ReadMode::Tolerant => &[ReadMode::Strict, ReadMode::Tolerant],
+        ReadMode::Lenient => &[ReadMode::Strict, ReadMode::Lenient],
+    }
+}
+
 fn normal_version(version: Option<&str>) -> Option<String> {
     version
         .map(str::trim)
@@ -332,6 +352,17 @@ pub struct EpcStore {
     /// relations are laid over it on every call, and the attachments filter is
     /// applied on every call too, since an edit can add or drop a part.
     archive_media: OnceLock<Vec<(String, String)>>,
+    /// The data objects the archive's container parts hold **by value**
+    /// (a `Channel` in a `ChannelSet` in a `Log`), found by streaming those
+    /// parts without deserializing them. Built once, the first time a question
+    /// reaches a type that can be contained or a dataspace that holds a
+    /// container; never by `resources()`, never at open. A package with no
+    /// container part (all of RESQML 2.0.1) reads no part to build it.
+    ///
+    /// Reads through `self.package`, the archive, and never the overlay: no
+    /// edit can make it stale. The overlay's effect (a container removed or
+    /// replaced) is applied when it is read, as `live_of` does for `entries`.
+    contained: OnceLock<ContainedIndex>,
     /// What has changed since the package was opened. Empty until
     /// something is edited, so a reader pays nothing for it.
     overlay: Overlay,
@@ -487,6 +518,7 @@ impl EpcStore {
             external_resources: Mutex::new(HashMap::new()),
             external_files: OnceLock::new(),
             archive_media: OnceLock::new(),
+            contained: OnceLock::new(),
             overlay: Overlay::new(),
             made: HashMap::new(),
             policy: SavePolicy::default(),
@@ -683,7 +715,7 @@ impl EpcStore {
             None => uuid.to_string(),
         };
         Self::choose(
-            self.live_of(&uuid.to_ascii_lowercase()),
+            self.live_for(&uuid.to_ascii_lowercase(), qualified_type)?,
             qualified_type,
             version.as_deref(),
             &given,
@@ -733,6 +765,7 @@ impl EpcStore {
                 summary: &entry.summary,
                 version: self.current_version(&entry.slot, entry.object_version.as_deref()),
                 archive: Some(entry),
+                nested: None,
             });
         }
         for made in self.made.get(uuid).map(Vec::as_slice).unwrap_or_default() {
@@ -746,6 +779,7 @@ impl EpcStore {
                 summary: &made.summary,
                 version: self.current_version(&made.slot, made.object_version.as_deref()),
                 archive: None,
+                nested: None,
             });
         }
         out
@@ -777,7 +811,7 @@ impl EpcStore {
     fn locate(&self, uri: &str) -> Result<Live<'_>> {
         let address = address_of(uri)?;
         Self::choose(
-            self.live_of(&address.uuid),
+            self.live_for(&address.uuid, address.qualified_type.as_deref())?,
             address.qualified_type.as_deref(),
             address.version.as_deref(),
             uri,
@@ -946,7 +980,11 @@ impl EpcStore {
     /// does not fail the others. Each part is inflated only as far as the end
     /// of its citation.
     pub fn headers(&self, uris: &[String]) -> Vec<Result<ObjectHeader>> {
-        uris.iter().map(|uri| self.header(uri)).collect()
+        self.routed(
+            uris,
+            |uri| self.header(uri),
+            |entries| self.contained_headers(entries),
+        )
     }
 
     /// The citation of one object.
@@ -954,6 +992,13 @@ impl EpcStore {
     /// From the object itself when the in-memory layer holds it - reading the
     /// archive would return the citation as it was before the edit.
     pub fn header(&self, uri: &str) -> Result<ObjectHeader> {
+        // An object held by value: its own citation, never its container's.
+        if let Some(content) = self.contained_entry(uri)? {
+            return self
+                .contained_headers(&[content])
+                .pop()
+                .unwrap_or_else(|| Err(Error::NotFound(uri.to_string())));
+        }
         let slot = self.slot_of(uri)?;
         if let Some(Change::Put(object)) = self.overlay.get(&slot) {
             return self.header_of(object.as_reflect());
@@ -962,17 +1007,7 @@ impl EpcStore {
         let peeked = self
             .package
             .with_part(&entry.summary.locator, |r| header::peek_reader(BufReader::new(r)))?;
-        Ok({
-            let mut header = ObjectHeader::new(entry.summary.clone());
-            header.title = peeked.title;
-            header.originator = peeked.originator;
-            header.creation = peeked.creation;
-            header.last_update = peeked.last_update;
-            header.format = peeked.format;
-            header.object_version = peeked.object_version;
-            header.schema_version = peeked.schema_version;
-            header
-        })
+        Ok(contained_read::header_from_peek(&entry.summary, peeked))
     }
 
     /// Every object's citation, in inventory order.
@@ -989,7 +1024,11 @@ impl EpcStore {
     ///
     /// One result per requested URI, in the same order.
     pub fn get_objects(&self, uris: &[String]) -> Vec<Result<Box<dyn DynObject>>> {
-        uris.iter().map(|uri| self.get_object(uri)).collect()
+        self.routed(
+            uris,
+            |uri| self.get_object(uri),
+            |entries| self.contained_objects(entries),
+        )
     }
 
     /// One object, fully deserialized.
@@ -997,6 +1036,14 @@ impl EpcStore {
     /// The in-memory layer first: an object that was edited must not come back
     /// as it was on disk. Each caller gets its own copy.
     pub fn get_object(&self, uri: &str) -> Result<Box<dyn DynObject>> {
+        // An object held by value: extracted from its container's part and read
+        // by the reader a part goes through.
+        if let Some(content) = self.contained_entry(uri)? {
+            return self
+                .contained_objects(&[content])
+                .pop()
+                .unwrap_or_else(|| Err(Error::NotFound(uri.to_string())));
+        }
         match self.overlay.get(&self.slot_of(uri)?) {
             Some(Change::Put(object)) => return Ok(object.clone_box()),
             Some(Change::Removed) => return Err(Error::NotFound(uri.to_string())),
@@ -1037,11 +1084,7 @@ impl EpcStore {
         // that decides *which release this is*. Only when no candidate reads
         // strictly does the caller's own mode get a turn, and by then the
         // question is no longer which version but how much to put right.
-        let passes: &[ReadMode] = match self.mode() {
-            ReadMode::Strict => &[ReadMode::Strict],
-            ReadMode::Tolerant => &[ReadMode::Strict, ReadMode::Tolerant],
-            ReadMode::Lenient => &[ReadMode::Strict, ReadMode::Lenient],
-        };
+        let passes = read_passes(self.mode());
 
         let mut first: Option<Error> = None;
         for mode in passes {
@@ -2613,6 +2656,28 @@ impl EpcStore {
         found
     }
 
+    /// The contained objects of the archive, built on first use.
+    ///
+    /// Reads **only** the parts whose type is a container
+    /// ([`energyml_core::registry::Registry::is_container`]), each once; the
+    /// departures it notices are recorded with the others in
+    /// [`EpcStore::diagnostics`].
+    pub(crate) fn contained(&self) -> &ContainedIndex {
+        self.contained.get_or_init(|| {
+            let (index, diagnostics) = ContainedIndex::build(
+                self.entries.iter().map(|entry| &entry.summary),
+                &self.registry,
+                // `by_uuid` is keyed on the lowercased uuid of the archive's parts.
+                &|uuid| self.by_uuid.contains_key(uuid),
+                &mut |part| self.package.read(part),
+            );
+            for diagnostic in diagnostics {
+                self.record(diagnostic);
+            }
+            index
+        })
+    }
+
     /// Every distinct external file the package declares, across all its
     /// `.rels`. Computed once, the first time something needs it.
     pub fn external_files(&self) -> &[String] {
@@ -2997,6 +3062,9 @@ impl EpcStore {
                 summary.uuid
             )));
         }
+        // An object that exists only by value inside a container is neither
+        // created nor replaced by a put: which one is meant is not decided.
+        self.refuse_contained_put(&summary)?;
         let key = summary.uuid.to_ascii_lowercase();
         let version = normal_version(identity::object_version_of_reflect(object.as_reflect()));
         let versioned = |version: Option<&str>| {
@@ -3207,6 +3275,9 @@ impl EpcStore {
     /// alone takes the short uri back, and the journal says so.
     pub fn remove(&mut self, uri: &str) -> Result<()> {
         self.settle_versions();
+        // An object held by value, or a container whose contained objects live
+        // only inside it, cannot be removed without losing more than was asked.
+        self.refuse_contained_remove(uri)?;
         let slot = match self.slot_of(uri) {
             Ok(slot) => slot,
             // Removing what was already removed in this layer is not a failure:
@@ -4455,6 +4526,10 @@ impl EnergymlStorage for EpcStore {
         Ok(EpcStore::resources(self))
     }
 
+    async fn contents(&self) -> Result<Contents> {
+        EpcStore::contents(self)
+    }
+
     async fn headers(&self, uris: &[String]) -> Vec<Result<ObjectHeader>> {
         EpcStore::headers(self, uris)
     }
@@ -4498,6 +4573,9 @@ impl EnergymlStorage for EpcStore {
             edge_kind_coverage: crate::capabilities::EdgeKindCoverage::Mls(
                 crate::kinds::StandardRules::new().covered_prefixes(&self.registry),
             ),
+            // Reading the objects held by value: listed, linked, read. Not pruned.
+            contained_objects: self.knows_containment(),
+            prune_contained: false,
             ..Default::default()
         }
     }

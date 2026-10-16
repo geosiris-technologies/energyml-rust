@@ -42,10 +42,13 @@
 //!
 //! # Known gaps (what the suite does not assert, and why)
 //!
-//! - **Containment** (WITSML containers, `prune_contained = true`): there is no
-//!   capability that says a store knows containment, so [`containment`] assumes
-//!   none of the stores of this workspace does. The day one does, a capability
-//!   flag is needed first.
+//! - **Containment** (WITSML containers): the model of this module has none, so
+//!   [`containment`] asserts only the refusal of `prune_contained = true` by a
+//!   store that does not honour it. What a store that knows containment lists,
+//!   links and reads, and the write refusals while pruning is off, are the rules
+//!   CONT-2 to CONT-12, KIND-2 and REF-6 of [`crate::contract_witsml`], played on
+//!   its own model; what a store prunes when `prune_contained` is on is the
+//!   server's to say and is not asserted.
 //! - **Active status**: no capability flag either; the rule reads the summaries
 //!   (a status absent from a summary makes the filter refused).
 //! - **Edges of a subset** (`edges(&[uri])`, `references(&[uri])`): whether the
@@ -147,8 +150,8 @@ pub mod rules {
             "write.rs put_raw (refused by default); raw.rs",
             "put_raw either writes the object (then it is listed under the URI answered) or is refused by name (Unsupported); it never answers success and writes nothing.");
         CONT_PRUNE = ("CONT-1",
-            "write.rs put_objects (prune_contained); ETP 1.2 section 9.1.3.2",
-            "A store that does not know containment refuses prune_contained = true by name (Unsupported) rather than ignoring it, and writes or deletes nothing.");
+            "write.rs put_objects (prune_contained); capabilities.rs prune_contained; ETP 1.2 section 9.1.3.2 and section 9.2.2 row 12 (p. 186-187: pruning needs the capability and the flag; ENOCASCADE_DELETE otherwise)",
+            "A store that does not honour prune_contained refuses prune_contained = true by name (Unsupported) rather than ignoring it, and writes or deletes nothing.");
         TX_OFF = ("TX-0",
             "capabilities.rs (transactions); write.rs (refused by name)",
             "A store whose capabilities say it has no transactions refuses begin by name (Unsupported) and holds no open transaction.");
@@ -929,15 +932,17 @@ async fn put_raw_writes_or_refuses<S: EnergymlWriter + Send + Sync>(make: &dyn F
     }
 }
 
-/// **Containment**: a store that does not know containment
-/// ([`crate::Capabilities::contained_objects`] off) refuses
+/// **Containment**: a store that does not honour pruning
+/// ([`crate::Capabilities::prune_contained`] off) refuses
 /// `prune_contained = true` by name and writes or deletes nothing. A store
-/// that knows it (an ETP server: the request travels as asked) is not checked
+/// that honours it (an ETP server: the request travels as asked) is not checked
 /// here - what it prunes is the server's to say, and the triangulation's to
-/// confront (design note `deux-sources-un-contrat.md` §5).
+/// confront (design note `deux-sources-un-contrat.md` §5). What a store that
+/// knows containment must list, link and read is in
+/// [`crate::contract_witsml`], on a model that has containers.
 pub async fn containment<S: EnergymlWriter + Send + Sync>(make: &dyn Fn() -> S, registry: &Registry) {
     let mut store = make();
-    if store.capabilities().contained_objects {
+    if store.capabilities().prune_contained {
         return;
     }
     let before = held(&store).await;
@@ -2185,6 +2190,9 @@ pub async fn array_refusals<S: EnergymlWriter + Send + Sync>(make: &dyn Fn() -> 
 // ---------------------------------------------------------------------------
 
 /// Every group, in turn, on stores the factory builds fresh each time.
+///
+/// The groups on objects held by value need a store holding the WITSML model
+/// and have their own entry point, [`crate::contract_witsml::witsml`].
 pub async fn all<S: EnergymlWriter + EnergymlDataspaces + Send + Sync>(
     make: &dyn Fn() -> S,
     registry: &Registry,

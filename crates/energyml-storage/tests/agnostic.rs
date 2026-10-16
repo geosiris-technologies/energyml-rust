@@ -456,9 +456,19 @@ fn on_a_real_package_the_two_builders_agree() {
             .iter()
             .map(|e| (e.from.clone(), e.to.clone(), e.path.clone()))
             .collect();
-        let mut b: Vec<(String, String, String)> = directly
-            .edges
+        // The trait gives each reference to the data object that writes it and
+        // draws the objects held by value with their edge to the container:
+        // the direct path does the same, from the same contents.
+        let contents = block(EnergymlStorage::contents(&store)).expect("the contents");
+        let written = energyml_storage::graph::attribute_to_writers(
+            directly.edges.clone(),
+            held.iter()
+                .map(|(summary, object)| (*summary, object.as_reflect())),
+            &contents.objects,
+        );
+        let mut b: Vec<(String, String, String)> = written
             .iter()
+            .chain(contents.edges.iter())
             .map(|e| (e.from.clone(), e.to.clone(), e.path.clone()))
             .collect();
         a.sort();

@@ -44,6 +44,16 @@ fn store_info_describes_the_store_and_the_server() {
     assert!(answer["diagnostics"]["shown"].as_array().unwrap().len() <= 10);
 }
 
+/// An EPC read with every schema knows what a part holds by value (WITSML 2.1
+/// `Log`, EML 2.3 `LocalEngineering2dCrs`...) and lists it, but cannot prune a
+/// container's contents: reading a package is not a store's pruning `PutDataObjects`.
+#[test]
+fn store_info_says_the_epc_lists_contained_objects_and_prunes_none() {
+    let answer = call(&model(), "energyml_store_info", json!({})).unwrap();
+    assert_eq!(answer["capabilities"]["contained_objects"], true, "{answer}");
+    assert_eq!(answer["capabilities"]["prune_contained"], false, "{answer}");
+}
+
 #[test]
 fn store_info_lists_the_types_when_asked() {
     let answer = call(&model(), "energyml_store_info", json!({ "include_types": true })).unwrap();

@@ -297,6 +297,11 @@ The ETP client lives in a separate repository,
 trait for a remote dataspace: an application written against the trait changes
 transport by changing the line that builds the store.
 
+The objects a part holds by value (a WITSML `Channel` in a `Log`) are data
+objects of their own: `resources()` lists the parts, `contents()` the contained
+objects with their edge to the container, and `references()` gives a reference
+written inside a contained object to that object ([ADR-0023](adr/0023-objects-held-by-value.md)).
+
 ## Further reading
 
 [Creating objects](creating-objects.md) · [Geostatistics](geostat.md) ·
