@@ -294,6 +294,14 @@ pub struct EpcStore {
     /// Name of the single dataspace this file is: the file name, or whatever
     /// the caller supplied when it opened bytes rather than a path.
     name: String,
+    /// The path of the ETP dataspace this file is served as (`Lutetia`,
+    /// `projets/demo`), or `None` for the default dataspace `eml:///`.
+    ///
+    /// Distinct from `name`, which is only the title shown: this one is part of
+    /// every object's identity, because the identity is the full URI (ETP v1.2
+    /// §25.3, `dataspace('...')/...`). Set once at open and never changed, as
+    /// every uri the store has built carries it.
+    dataspace: Option<String>,
     /// Where it came from, when it came from a disk.
     path: Option<PathBuf>,
     entries: Vec<PartEntry>,
@@ -476,6 +484,27 @@ impl EpcStore {
     /// never assumed, so adding a schema version is an
     /// `register` call in the application and not a change here.
     pub fn open(path: impl AsRef<Path>, registry: Arc<Registry>) -> Result<Self> {
+        Self::open_as(path, registry, None)
+    }
+
+    /// [`EpcStore::open`], the file served as the **named** dataspace
+    /// `dataspace` (an ETP dataspace path such as `Lutetia` or `projets/demo`).
+    ///
+    /// Every uri of the store then reads `eml:///dataspace('Lutetia')/...`, so a
+    /// server holding several packages at once gives two distinct objects two
+    /// distinct uris. A uri of another dataspace, or one without a dataspace, is
+    /// [`Error::NotFound`] here: the identity is the full uri. A name the uri
+    /// grammar refuses is [`Error::BadUri`].
+    pub fn open_in_dataspace(
+        path: impl AsRef<Path>,
+        registry: Arc<Registry>,
+        dataspace: &str,
+    ) -> Result<Self> {
+        let dataspace = checked_dataspace(dataspace)?;
+        Self::open_as(path, registry, Some(dataspace))
+    }
+
+    fn open_as(path: impl AsRef<Path>, registry: Arc<Registry>, dataspace: Option<String>) -> Result<Self> {
         let path = path.as_ref();
         let _span = tracing::info_span!("epc.open", path = %path.display()).entered();
         let file = std::fs::File::open(path)?;
@@ -483,7 +512,7 @@ impl EpcStore {
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| path.display().to_string());
-        let mut store = Self::from_reader(Box::new(file), name, registry)?;
+        let mut store = Self::from_reader_as(Box::new(file), name, registry, dataspace)?;
         // An array pointer names its file with a bare name, and the
         // specification says the file sits beside the package (§3.2.3).
         if let Some(folder) = path.parent() {
@@ -503,6 +532,27 @@ impl EpcStore {
         name: impl Into<String>,
         registry: Arc<Registry>,
     ) -> Result<Self> {
+        Self::from_reader_as(source, name, registry, None)
+    }
+
+    /// [`EpcStore::from_reader`], served as the **named** dataspace `dataspace`;
+    /// see [`EpcStore::open_in_dataspace`].
+    pub fn from_reader_in_dataspace(
+        source: Box<dyn ReadSeek + Send>,
+        name: impl Into<String>,
+        registry: Arc<Registry>,
+        dataspace: &str,
+    ) -> Result<Self> {
+        let dataspace = checked_dataspace(dataspace)?;
+        Self::from_reader_as(source, name, registry, Some(dataspace))
+    }
+
+    fn from_reader_as(
+        source: Box<dyn ReadSeek + Send>,
+        name: impl Into<String>,
+        registry: Arc<Registry>,
+        dataspace: Option<String>,
+    ) -> Result<Self> {
         let _span = tracing::info_span!("epc.read_package").entered();
         let mut diagnostics = Vec::new();
         let package = Package::open(source, &mut diagnostics)?;
@@ -510,6 +560,7 @@ impl EpcStore {
             package,
             registry,
             name: name.into(),
+            dataspace,
             path: None,
             entries: Vec::new(),
             by_uuid: HashMap::new(),
@@ -568,10 +619,36 @@ impl EpcStore {
     pub fn dataspace(&self) -> Dataspace {
         let (created, last_changed) = self.core_property_dates();
         {
-            let mut dataspace = Dataspace::new("eml:///".to_string(), self.name.clone());
+            let mut dataspace = Dataspace::new(self.dataspace_uri(), self.name.clone());
             dataspace.created = created;
             dataspace.last_changed = last_changed;
             dataspace
+        }
+    }
+
+    /// The uri of the dataspace this file is: `eml:///` for the default one,
+    /// `eml:///dataspace('<path>')` for a named one.
+    fn dataspace_uri(&self) -> String {
+        identifiers::EtpUri::dataspace_uri(self.dataspace_path())
+    }
+
+    /// The path of the named dataspace, `None` for the default one - what the
+    /// uri constructors take.
+    fn dataspace_path(&self) -> Option<&str> {
+        self.dataspace.as_deref()
+    }
+
+    /// Refuse a uri of **another** dataspace. A uri that names an object but
+    /// not this store's dataspace names nothing here (the identity is the full
+    /// uri, Identifier Specification v5.0 §3.4; ETP v1.2 §25.3). A bare uuid, or
+    /// something that is not a data-object uri, is left to the caller's own
+    /// reading: that is the adapter at the entrance.
+    fn in_this_dataspace(&self, uri: &str) -> Result<()> {
+        match identifiers::EtpUri::parse(uri) {
+            Ok(parsed) if parsed.uuid.is_some() && parsed.dataspace.as_deref() != self.dataspace_path() => {
+                Err(Error::NotFound(uri.to_string()))
+            }
+            _ => Ok(()),
         }
     }
 
@@ -619,9 +696,13 @@ impl EpcStore {
     fn summary_of(&self, object: &dyn Reflect) -> Option<ObjectSummary> {
         let key = identity::key_of_reflect(object)?;
         Some(
-            ObjectSummary::new(key.etp_uri(None), key.uuid.to_string(), key.qualified_type())
-                .with_content_type(key.content_type())
-                .with_locator(key.part_path(self.save_options.layout)),
+            ObjectSummary::new(
+                key.etp_uri(self.dataspace_path()),
+                key.uuid.to_string(),
+                key.qualified_type(),
+            )
+            .with_content_type(key.content_type())
+            .with_locator(key.part_path(self.save_options.layout)),
         )
     }
 
@@ -709,9 +790,12 @@ impl EpcStore {
     ) -> Result<Live<'_>> {
         let version = normal_version(object_version);
         let given = match qualified_type {
-            Some(qualified_type) => {
-                identifiers::EtpUri::object_versioned(None, qualified_type, uuid, version.as_deref())
-            }
+            Some(qualified_type) => identifiers::EtpUri::object_versioned(
+                self.dataspace_path(),
+                qualified_type,
+                uuid,
+                version.as_deref(),
+            ),
             None => uuid.to_string(),
         };
         Self::choose(
@@ -809,6 +893,7 @@ impl EpcStore {
 
     /// Which entry an address names. See [`EpcStore::resolve`].
     fn locate(&self, uri: &str) -> Result<Live<'_>> {
+        self.in_this_dataspace(uri)?;
         let address = address_of(uri)?;
         Self::choose(
             self.live_for(&address.uuid, address.qualified_type.as_deref())?,
@@ -950,6 +1035,7 @@ impl EpcStore {
             ));
         }
         let mut moved = Vec::new();
+        let dataspace = self.dataspace.clone();
         for (archive, at, slot, qualified_type, version) in &rows {
             let summary = if *archive {
                 &mut self.entries[*at].summary
@@ -960,7 +1046,7 @@ impl EpcStore {
                 }
             };
             let uri = identifiers::EtpUri::object_versioned(
-                None,
+                dataspace.as_deref(),
                 qualified_type,
                 &summary.uuid,
                 version.as_deref(),
@@ -1707,6 +1793,7 @@ impl EpcStore {
 
     /// The media parts related to one object, by part name.
     pub fn media_of(&self, object: &str) -> Result<Vec<String>> {
+        self.in_this_dataspace(object)?;
         let uuid = uuid_in_uri(object)?.to_ascii_lowercase();
         Ok(self
             .media_links()
@@ -1719,6 +1806,7 @@ impl EpcStore {
     /// The two ends of a media relation, checked: the object's lowercased uuid
     /// and the part's name.
     fn media_ends(&self, object: &str, part: &str) -> Result<(String, String)> {
+        self.in_this_dataspace(object)?;
         let uuid = uuid_in_uri(object)?.to_ascii_lowercase();
         if self.find_by_uuid(&uuid).is_none() {
             return Err(Error::NotFound(object.to_string()));
@@ -3068,7 +3156,12 @@ impl EpcStore {
         let key = summary.uuid.to_ascii_lowercase();
         let version = normal_version(identity::object_version_of_reflect(object.as_reflect()));
         let versioned = |version: Option<&str>| {
-            identifiers::EtpUri::object_versioned(None, &summary.qualified_type, &summary.uuid, version)
+            identifiers::EtpUri::object_versioned(
+                self.dataspace_path(),
+                &summary.qualified_type,
+                &summary.uuid,
+                version,
+            )
         };
 
         // The entries of this (uuid, type) as they stand: slot and version.
@@ -4102,7 +4195,7 @@ impl EpcStore {
             };
             return Some(PartEntry {
                 summary: ObjectSummary::new(
-                    identifiers::EtpUri::object(None, &qualified_type, &uuid),
+                    identifiers::EtpUri::object(self.dataspace_path(), &qualified_type, &uuid),
                     uuid,
                     qualified_type,
                 )
@@ -4170,7 +4263,7 @@ impl EpcStore {
             });
             return Some(PartEntry {
                 summary: ObjectSummary::new(
-                    identifiers::EtpUri::object(None, &qualified_type, &uuid),
+                    identifiers::EtpUri::object(self.dataspace_path(), &qualified_type, &uuid),
                     uuid,
                     qualified_type,
                 )
@@ -4252,7 +4345,7 @@ impl EpcStore {
         }
         Some(PartEntry {
             summary: ObjectSummary::new(
-                identifiers::EtpUri::object(None, &qualified_type, &uuid),
+                identifiers::EtpUri::object(self.dataspace_path(), &qualified_type, &uuid),
                 uuid,
                 qualified_type,
             )
@@ -4742,6 +4835,24 @@ fn uuid_in_part_name(part: &str) -> Option<String> {
     let stem = file.get(..file.len().checked_sub(4)?)?;
     let candidate = stem.rsplit('_').next()?;
     identifiers::is_uuid(candidate).then(|| candidate.to_string())
+}
+
+/// The dataspace path a caller asked for, checked through the one door for
+/// uris: it must read back, through [`identifiers::EtpUri::parse`], as exactly
+/// that dataspace and nothing else. A name the grammar refuses (a lone quote,
+/// say) or one that is empty is a named refusal, not a uri built by hand.
+fn checked_dataspace(name: &str) -> Result<String> {
+    let uri = identifiers::EtpUri::dataspace_uri(Some(name));
+    let refuse = |reason: &str| Error::BadUri {
+        uri: uri.clone(),
+        reason: format!("`{name}` is not a usable dataspace name: {reason}"),
+    };
+    let parsed =
+        identifiers::EtpUri::parse(&uri).map_err(|_| refuse("it does not fit the ETP 1.2 grammar"))?;
+    if name.is_empty() || !parsed.is_dataspace() || parsed.dataspace.as_deref() != Some(name) {
+        return Err(refuse("it must be a non-empty dataspace path"));
+    }
+    Ok(name.to_string())
 }
 
 /// What an address names: the uuid, and - for a URI - the qualified type and the

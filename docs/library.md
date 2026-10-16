@@ -135,6 +135,28 @@ the library (`lookup_uuid`, `resolve`) and is turned at once into a full
 identity; internally everything is keyed on the full URI, version included. See
 [ADR 0003](adr/0003-identity-full-uri-one-door.md).
 
+### An EPC as a named dataspace
+
+`EpcStore::open` makes the file the default dataspace: every URI is
+`eml:///<type>(<uuid>)`. A server that serves several EPCs at once (a folder of
+them, each a dataspace named after its file) needs the dataspace in the URI, or
+two distinct objects of two packages would share one:
+
+```rust
+let store = EpcStore::open_in_dataspace("Lutetia.epc", registry, "Lutetia")?;
+// eml:///dataspace('Lutetia')/resqml22.BoundaryFeature(<uuid>)
+assert_eq!(store.dataspace().uri, "eml:///dataspace('Lutetia')");
+```
+
+`EpcStore::from_reader_in_dataspace` does the same for bytes in memory. The name
+is an ETP dataspace path (`Lutetia`, `projets/demo`); one the URI grammar refuses
+is an `Error::BadUri`. Every URI the store builds then carries the dataspace, and
+the identity is the full URI: a URI of another dataspace, or without one, is
+`Error::NotFound` (a bare uuid is still accepted at the edge and answers the full
+URI). A reference names no dataspace and resolves inside the dataspace of the
+object that writes it, so the target of `references()`, `edges()` and `graph()`
+is spelled in its source's. `open` and `from_reader` are unchanged.
+
 ### Reading policy
 
 Strict is the default. `ReadMode::Lenient` (CLI: `--lenient`) tolerates missing
