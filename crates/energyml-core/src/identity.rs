@@ -1001,6 +1001,11 @@ pub struct RefEdge<'a> {
 /// No schema knowledge, so a package version that does not exist yet is covered
 /// the day its crate is generated. This is the raw material for `.rels`
 /// regeneration, for the relationship graph and for reference validation.
+///
+/// Every reference is attributed to `root`, including those written inside the
+/// data objects it holds by value. For the source of a relationship, which is the
+/// object that writes the reference, see
+/// [`identity_owned::collect_refs_owned`](crate::identity_owned::collect_refs_owned).
 pub fn collect_refs(root: &dyn Reflect) -> Vec<RefEdge<'_>> {
     let mut out = Vec::new();
     walk_refs(root, String::new(), &mut out);
@@ -1156,7 +1161,7 @@ fn visit_nested<'a>(value: FieldValue<'a>, path: String, out: &mut Vec<NestedObj
 ///
 /// Everything borrows from `source`, which belongs to the object being walked,
 /// so this allocates nothing but the paths.
-fn refs_in_source<'a>(source: &'a str, prefix: &str, out: &mut Vec<RefEdge<'a>>) {
+pub(crate) fn refs_in_source<'a>(source: &'a str, prefix: &str, out: &mut Vec<RefEdge<'a>>) {
     use quick_xml::events::Event;
 
     /// One open element: where it is, and what its children have said so far.
