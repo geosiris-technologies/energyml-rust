@@ -298,7 +298,7 @@ fn an_epc_says_what_it_offers() {
     assert_eq!(offered.raw_formats, vec![RawFormat::Xml]);
     assert!(!offered.several_dataspaces && !offered.subarrays && !offered.uninitialized_arrays);
     assert_eq!(offered.deletions_kept_for, None);
-    assert!(!offered.store_times);
+    assert_eq!(offered.store_times, energyml_storage::StoreTimes::NotKept);
     // The EPC states the kind of the edges of the MLs the rules of `kinds`
     // cover (RESQML: ETP 1.2 section 8.2.2), and says which.
     assert!(offered.edge_kinds);

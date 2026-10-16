@@ -4576,6 +4576,7 @@ impl EnergymlStorage for EpcStore {
             // Reading the objects held by value: listed, linked, read. Not pruned.
             contained_objects: self.knows_containment(),
             prune_contained: false,
+            store_times: crate::capabilities::StoreTimes::NotKept,
             ..Default::default()
         }
     }

@@ -34,10 +34,40 @@ impl EdgeKindCoverage {
     }
 }
 
+/// Whether a store keeps the times ETP reports (`storeCreated`,
+/// `storeLastWrite`).
+///
+/// ETP 1.2 announces no capability for them, so a client of a server can know
+/// neither way: it says [`StoreTimes::Unknown`] rather than guess, and a store
+/// says what it knows of itself.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum StoreTimes {
+    /// It keeps them: every object states both, and a filter on them answers.
+    Kept,
+    /// It keeps none: no object states one, and a filter on them is refused by
+    /// name.
+    NotKept,
+    /// It has not said, or cannot be asked: nothing is assumed either way.
+    #[default]
+    Unknown,
+}
+
+impl StoreTimes {
+    /// `kept`, `not_kept` or `unknown`: the spelling of a report.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            StoreTimes::Kept => "kept",
+            StoreTimes::NotKept => "not_kept",
+            StoreTimes::Unknown => "unknown",
+        }
+    }
+}
+
 /// What a store offers beyond reading objects and arrays.
 ///
-/// `Default` is "nothing beyond": every flag off, every list empty - the
-/// answer of a store that has not said. Built with [`Capabilities::default`] and
+/// `Default` is "nothing beyond": every flag off, every list empty, the store
+/// times unknown - the answer of a store that has not said. Built with [`Capabilities::default`] and
 /// its fields set; `#[non_exhaustive]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[non_exhaustive]
@@ -68,8 +98,9 @@ pub struct Capabilities {
     pub deletions_kept_for: Option<u64>,
     /// The formats [`crate::EnergymlStorage::get_raw`] answers in. Empty: none.
     pub raw_formats: Vec<RawFormat>,
-    /// The store keeps the times ETP reports (`storeCreated`, `storeLastWrite`).
-    pub store_times: bool,
+    /// Whether the store keeps the times ETP reports (`storeCreated`,
+    /// `storeLastWrite`): kept, not kept, or unknown.
+    pub store_times: StoreTimes,
     /// The store states the kind (primary, secondary) of some of its edges at
     /// least; [`Capabilities::edge_kind_coverage`] says which.
     pub edge_kinds: bool,

@@ -108,7 +108,7 @@ pub use array::{
     Resolution,
 };
 pub use backend::{ArrayBackend, Backends, Candidate, ExternalFiles, Origin};
-pub use capabilities::{Capabilities, EdgeKindCoverage};
+pub use capabilities::{Capabilities, EdgeKindCoverage, StoreTimes};
 pub use changes::EnergymlChanges;
 pub use context::{Context, DeletedFilter, DeletedResource, Found, Navigable, Scope};
 pub use dataspaces::EnergymlDataspaces;
