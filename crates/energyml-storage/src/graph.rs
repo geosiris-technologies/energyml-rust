@@ -1688,6 +1688,10 @@ pub struct Edge {
     /// specification, or this crate's derivation, each labelled. `None` for an
     /// edge nobody has judged (a reference as written, `Edge::new`).
     pub basis: Option<KindBasis>,
+    /// Whether this is a by-value containment (the contained object is the
+    /// source, its direct container the target; ETP 1.2 section 8.1.1.1.1,
+    /// p. 156) and not a reference written in the source. It has no path.
+    pub by_value: bool,
 }
 
 impl Edge {
@@ -1699,6 +1703,7 @@ impl Edge {
             path: path.into(),
             kind: None,
             basis: None,
+            by_value: false,
         }
     }
 
@@ -1714,6 +1719,12 @@ impl Edge {
     pub fn with_judgement(mut self, judged: Judged) -> Self {
         self.kind = judged.kind;
         self.basis = Some(judged.basis);
+        self
+    }
+
+    /// As a by-value containment ([`Edge::by_value`]).
+    pub fn contained(mut self) -> Self {
+        self.by_value = true;
         self
     }
 }
@@ -1996,6 +2007,123 @@ pub struct Pointer {
     pub title: Option<String>,
     /// Where inside it the reference sits: `Grid2dPatch.SupportingRepresentation`.
     pub path: String,
+}
+
+/// The references of [`build`], each given back to the data object that
+/// **writes** it.
+///
+/// [`build`] gives every reference to the part it was read from: right for a
+/// dependency (a part needs what anything inside it names), wrong for what an
+/// object writes. A DOR written inside a contained object - a WITSML `Channel`
+/// in a `ChannelSet` in a `Log` - has that object for its source (ETP 1.2
+/// section 8.1.1.1.1, p. 156), and its path is relative to it (`Wellbore`, not
+/// `ChannelSet[0].Channel[2].Wellbore`), which is what a kind rule keyed on the
+/// source type and the path reads (section 8.1.1.1.2, p. 157: `Channel` to
+/// `Wellbore` is the secondary example).
+///
+/// The writer is the innermost nested data object
+/// ([`identity::nested_objects`]) whose path begins the reference's path. Its
+/// URI is the one the store lists it under: the entry of `contained` (the
+/// objects of [`crate::storage::Contents`]) with its uuid inside this part, or
+/// else the part of `objects` with its uuid (the part is the object). A nested
+/// object the store lists nowhere keeps its references on the part, as
+/// [`build`] gives them: there is no URI to give them to.
+pub fn attribute_to_writers<'a>(
+    edges: Vec<Edge>,
+    objects: impl IntoIterator<Item = (&'a ObjectSummary, &'a dyn Reflect)>,
+    contained: &[ObjectSummary],
+) -> Vec<Edge> {
+    let objects: Vec<(&ObjectSummary, &dyn Reflect)> = objects.into_iter().collect();
+    let by_uri: std::collections::HashMap<&str, &ObjectSummary> = contained
+        .iter()
+        .map(|summary| (summary.uri.as_str(), summary))
+        .collect();
+    // Part URI -> (path of a nested object in it, the URI it is listed under),
+    // innermost first.
+    let mut writers: std::collections::HashMap<&str, Vec<(String, String)>> =
+        std::collections::HashMap::new();
+    for (part, object) in &objects {
+        let mut found = Vec::new();
+        for nested in identity::nested_objects(*object) {
+            let uuid = nested.key.uuid.to_ascii_lowercase();
+            let listed = contained
+                .iter()
+                .find(|entry| entry.uuid.to_ascii_lowercase() == uuid && within(&by_uri, entry, &part.uri))
+                .or_else(|| {
+                    objects
+                        .iter()
+                        .map(|(summary, _)| *summary)
+                        .find(|summary| summary.uri != part.uri && summary.uuid.to_ascii_lowercase() == uuid)
+                });
+            if let Some(listed) = listed {
+                found.push((nested.path, listed.uri.clone()));
+            }
+        }
+        found.sort_by_key(|(path, _)| std::cmp::Reverse(path.len()));
+        writers.insert(part.uri.as_str(), found);
+    }
+    edges
+        .into_iter()
+        .map(|mut edge| {
+            let writer = writers.get(edge.from.as_str()).and_then(|found| {
+                found.iter().find(|(path, _)| {
+                    edge.path.len() > path.len()
+                        && edge.path.starts_with(path.as_str())
+                        && edge.path.as_bytes()[path.len()] == b'.'
+                })
+            });
+            if let Some((path, uri)) = writer {
+                edge.path = edge.path[path.len() + 1..].to_string();
+                edge.from = uri.clone();
+            }
+            edge
+        })
+        .collect()
+}
+
+/// Whether the contained object `summary` sits, at any depth, inside the object
+/// at `container`: up its [`ObjectSummary::contained_in`], through the other
+/// entries of `contained` (by URI).
+pub(crate) fn within(
+    contained: &std::collections::HashMap<&str, &ObjectSummary>,
+    summary: &ObjectSummary,
+    container: &str,
+) -> bool {
+    let mut seen = std::collections::HashSet::new();
+    let mut up: Vec<&str> = summary.contained_in.iter().map(String::as_str).collect();
+    while let Some(uri) = up.pop() {
+        if uri == container {
+            return true;
+        }
+        if !seen.insert(uri) {
+            continue;
+        }
+        if let Some(entry) = contained.get(uri) {
+            up.extend(entry.contained_in.iter().map(String::as_str));
+        }
+    }
+    false
+}
+
+/// The parts (the objects not in `contained`) that hold the contained object
+/// `summary`, up its containers.
+pub(crate) fn parts_holding(
+    contained: &std::collections::HashMap<&str, &ObjectSummary>,
+    summary: &ObjectSummary,
+) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    let mut parts = Vec::new();
+    let mut up: Vec<&str> = summary.contained_in.iter().map(String::as_str).collect();
+    while let Some(uri) = up.pop() {
+        if !seen.insert(uri) {
+            continue;
+        }
+        match contained.get(uri) {
+            Some(entry) => up.extend(entry.contained_in.iter().map(String::as_str)),
+            None => parts.push(uri.to_string()),
+        }
+    }
+    parts
 }
 
 /// What this object points at.

@@ -339,7 +339,7 @@ impl KindRules for StandardRules {
 
 /// The qualified type of an object URI (`resqml22.Grid2dRepresentation`), read
 /// by the one door for URIs.
-fn qualified_type_of(uri: &str) -> Option<String> {
+pub(crate) fn qualified_type_of(uri: &str) -> Option<String> {
     let parsed = EtpUri::parse(uri).ok()?;
     Some(format!(
         "{}{}.{}",

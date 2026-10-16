@@ -78,6 +78,10 @@ pub mod context;
 /// each implementation's tests (design note `deux-sources-un-contrat.md` §4).
 #[cfg(feature = "contract")]
 pub mod contract;
+/// The rules of objects contained by value (WITSML containers), played on a
+/// WITSML model written from the ETP 1.2 specification and the XSD.
+#[cfg(feature = "contract")]
+pub mod contract_witsml;
 pub mod dataspaces;
 pub mod epc;
 pub mod error;
@@ -116,5 +120,5 @@ pub use kinds::{Judged, KindBasis, KindRules, StandardRules};
 pub use raw::{RawFormat, RawObject};
 pub use rename::{Applied as Renamed, FileMove, Rename};
 pub use resource::{ActiveStatus, CustomValue, Dataspace, ObjectHeader, ObjectSummary, Relationship};
-pub use storage::{EnergymlStorage, LocalPackage};
+pub use storage::{Contents, EnergymlStorage, LocalPackage};
 pub use write::{EnergymlWriter, Put, Transaction, TransactionRequest};

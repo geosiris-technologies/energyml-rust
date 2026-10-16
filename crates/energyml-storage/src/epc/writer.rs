@@ -60,18 +60,27 @@ impl EpcStore {
     /// The objects as bytes, for [`crate::EnergymlStorage::get_raw`]: the XML of
     /// each part, as stored or as staged.
     pub(super) fn raw_objects(&self, uris: &[String], format: RawFormat) -> Vec<Result<RawObject>> {
-        uris.iter()
-            .map(|uri| match format {
-                RawFormat::Xml => {
+        match format {
+            // A part goes the way it always went; the objects held by value are
+            // grouped by container and each container is read once.
+            RawFormat::Xml => self.routed(
+                uris,
+                |uri| {
                     let full = self.entry(uri)?.summary.uri.clone();
                     Ok(RawObject::new(full, RawFormat::Xml, self.part_bytes(uri)?))
-                }
-                RawFormat::Json => Err(Error::Unsupported {
-                    operation: "reading objects as JSON",
-                    store: STORE,
-                }),
-            })
-            .collect()
+                },
+                |entries| self.contained_raw(entries),
+            ),
+            RawFormat::Json => uris
+                .iter()
+                .map(|_| {
+                    Err(Error::Unsupported {
+                        operation: "reading objects as JSON",
+                        store: STORE,
+                    })
+                })
+                .collect(),
+        }
     }
 }
 

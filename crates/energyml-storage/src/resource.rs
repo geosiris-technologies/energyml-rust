@@ -130,6 +130,12 @@ pub struct ObjectSummary {
     /// ETP `Resource.targetCount`: how many objects this one points at, same
     /// counting. `None` unless asked.
     pub target_count: Option<u32>,
+    /// The URIs of the containers that hold this object **by value**, direct
+    /// containers only (a `Channel` in a `ChannelSet` in a `Log` names the
+    /// `ChannelSet`), sorted and without duplicates. ETP 1.2 section 9.1.3
+    /// (p. 178): an object "MAY be included in one or more container data
+    /// objects". Empty for a part of the archive.
+    pub contained_in: Vec<String>,
 }
 
 impl ObjectSummary {
@@ -148,6 +154,7 @@ impl ObjectSummary {
             active_status: None,
             source_count: None,
             target_count: None,
+            contained_in: Vec::new(),
         }
     }
 
@@ -160,6 +167,16 @@ impl ObjectSummary {
     /// With where the object lives inside the store.
     pub fn with_locator(mut self, locator: impl Into<String>) -> Self {
         self.locator = locator.into();
+        self
+    }
+
+    /// With the URIs of the containers that hold the object by value. Sorted
+    /// and deduplicated here, so that two summaries of one object compare equal
+    /// whatever order the containers were met in.
+    pub fn with_contained_in(mut self, mut containers: Vec<String>) -> Self {
+        containers.sort();
+        containers.dedup();
+        self.contained_in = containers;
         self
     }
 }

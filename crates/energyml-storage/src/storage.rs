@@ -42,6 +42,21 @@ use crate::resource::{Dataspace, ObjectHeader, ObjectSummary};
 #[cfg(target_arch = "wasm32")]
 pub use async_trait::async_trait as storage_async_trait;
 
+/// What a store holds by value, beside its [`EnergymlStorage::resources`]: the
+/// contained objects and the edges from each to its direct container.
+///
+/// `#[non_exhaustive]` and built from its default, like the other records of
+/// this crate.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct Contents {
+    /// The contained objects, under their canonical URI. Not the ones that are
+    /// also a part (the part is the object), not the same object twice.
+    pub objects: Vec<ObjectSummary>,
+    /// One edge per (contained object, direct container), `Edge::by_value`, path empty.
+    pub edges: Vec<crate::graph::Edge>,
+}
+
 /// Reading side of a data store - an EPC file, an ETP dataspace.
 ///
 /// The writing side is [`crate::write::EnergymlWriter`], the level above one
@@ -68,8 +83,23 @@ pub trait EnergymlStorage {
     /// `GetResources`.
     ///
     /// Cheap by construction: for an EPC this reads `[Content_Types].xml` and
-    /// nothing else. No object XML is opened.
+    /// nothing else. No object XML is opened. **The parts only**: the data
+    /// objects a part holds by value are [`EnergymlStorage::contents`].
     async fn resources(&self) -> Result<Vec<ObjectSummary>>;
+
+    /// The data objects held **by value** inside the objects of
+    /// [`EnergymlStorage::resources`] and not listed by it (a WITSML `Channel`
+    /// inside a `ChannelSet` inside a `Log`; ETP 1.2 section 9.1.3, p. 178), with
+    /// the edge from each to the object that directly holds it (section
+    /// 8.1.1.1.1, p. 156: the contained object is the source).
+    ///
+    /// **Provided**: empty. A store that knows containment
+    /// ([`crate::Capabilities::contained_objects`]) overrides it; an ETP server
+    /// already lists its contained objects in `resources()`, so `EtpStore` keeps
+    /// the default. An EPC reads the container parts to answer, once.
+    async fn contents(&self) -> Result<Contents> {
+        Ok(Contents::default())
+    }
 
     /// Citations for the given objects, without deserializing them.
     ///
@@ -182,8 +212,16 @@ pub trait EnergymlStorage {
                 store: self.store_kind(),
             });
         };
-        let resources = self.resources().await?;
-        let edges = self.edges(&[]).await?;
+        let mut resources = self.resources().await?;
+        let mut edges = self.edges(&[]).await?;
+        // The data objects held by value are objects of the dataspace, and
+        // their edge to the container is a relationship it states (ETP 1.2
+        // section 8.2.2 row 9: a dataspace returns its data objects).
+        if self.capabilities().contained_objects {
+            let contents = self.contents().await?;
+            resources.extend(contents.objects);
+            edges.extend(contents.edges);
+        }
         crate::context::discover(&dataspace.uri, resources, edges, context)
     }
 
@@ -235,11 +273,64 @@ pub trait EnergymlStorage {
     /// Cheap on a local file; a store that indexes its references (an EPC's
     /// package index) may answer from it, never with less.
     ///
+    /// **The source is the object that writes the reference** (ETP 1.2
+    /// section 8.1.1.1.1, p. 156). When the store lists what its objects hold
+    /// by value ([`crate::Capabilities::contained_objects`]), a DOR written
+    /// inside a contained object (a WITSML `Channel` in a `Log`) is that
+    /// object's, its path relative to it ([`crate::graph::attribute_to_writers`]).
+    /// Asking for an object gives what it writes and what the objects it holds
+    /// write; asking for a contained object reads the part that holds it.
+    ///
     /// Not [`EnergymlStorage::edges`]: see the design notes
     /// (`deux-sources-un-contrat.md` §3) for the two facts the word "edge" was
     /// covering.
     async fn references(&self, uris: &[String]) -> Result<Vec<crate::graph::Edge>> {
-        Ok(self.derived_graph(uris).await?.edges)
+        let contents = if self.capabilities().contained_objects {
+            self.contents().await?
+        } else {
+            Contents::default()
+        };
+        let by_uri: std::collections::HashMap<&str, &ObjectSummary> = contents
+            .objects
+            .iter()
+            .map(|entry| (entry.uri.as_str(), entry))
+            .collect();
+        // A contained object is read in the part that holds it.
+        let mut parts: Vec<String> = Vec::new();
+        for uri in uris {
+            match by_uri.get(uri.as_str()) {
+                Some(entry) => parts.extend(crate::graph::parts_holding(&by_uri, entry)),
+                None => parts.push(uri.clone()),
+            }
+        }
+        if !uris.is_empty() && parts.is_empty() {
+            return Ok(Vec::new());
+        }
+        let held = read_parts(self, &parts).await?;
+        let graph = crate::graph::build(
+            held.iter()
+                .map(|(summary, object)| (summary, object.as_reflect())),
+        );
+        let written = crate::graph::attribute_to_writers(
+            graph.edges,
+            held.iter()
+                .map(|(summary, object)| (summary, object.as_reflect())),
+            &contents.objects,
+        );
+        if uris.is_empty() {
+            return Ok(written);
+        }
+        // What was asked for, and what the asked objects hold: a part read
+        // only for a contained object it holds says nothing of its own.
+        Ok(written
+            .into_iter()
+            .filter(|edge| {
+                uris.contains(&edge.from)
+                    || by_uri
+                        .get(edge.from.as_str())
+                        .is_some_and(|entry| uris.iter().any(|uri| crate::graph::within(&by_uri, entry, uri)))
+            })
+            .collect())
     }
 
     /// What the store **states**: the relationships between objects it holds -
@@ -309,12 +400,42 @@ pub trait EnergymlStorage {
     /// still appear, marked [`crate::graph::Node::present`] `false`.
     async fn graph(&self, uris: &[String]) -> Result<crate::graph::Graph> {
         let all = self.resources().await?;
-        let wanted: Vec<ObjectSummary> = if uris.is_empty() {
+        let mut wanted: Vec<ObjectSummary> = if uris.is_empty() {
             all
         } else {
             all.into_iter().filter(|s| uris.contains(&s.uri)).collect()
         };
-        let edges = self.references(uris).await?;
+        let mut edges = self.references(uris).await?;
+        // The objects held by value are objects the store holds: drawn as
+        // present, with their edge to the container, never as absent ones.
+        if self.capabilities().contained_objects {
+            let contents = self.contents().await?;
+            let by_uri: std::collections::HashMap<&str, &ObjectSummary> = contents
+                .objects
+                .iter()
+                .map(|entry| (entry.uri.as_str(), entry))
+                .collect();
+            let drawn: Vec<ObjectSummary> = contents
+                .objects
+                .iter()
+                .filter(|entry| {
+                    uris.is_empty()
+                        || uris.contains(&entry.uri)
+                        || uris.iter().any(|uri| crate::graph::within(&by_uri, entry, uri))
+                })
+                .cloned()
+                .collect();
+            let drawn_uris: std::collections::HashSet<&str> =
+                drawn.iter().map(|entry| entry.uri.as_str()).collect();
+            edges.extend(
+                contents
+                    .edges
+                    .iter()
+                    .filter(|edge| drawn_uris.contains(edge.from.as_str()))
+                    .cloned(),
+            );
+            wanted.extend(drawn);
+        }
         let of_wanted: Vec<String> = wanted.iter().map(|s| s.uri.clone()).collect();
         let headers = self.headers(&of_wanted).await;
         let titles: std::collections::HashMap<String, String> = headers
@@ -341,27 +462,35 @@ pub trait EnergymlStorage {
     /// default recurse through `graph`. Callers want `graph`; this is what makes
     /// it work with no help from the store.
     async fn derived_graph(&self, uris: &[String]) -> Result<crate::graph::Graph> {
-        let all = self.resources().await?;
-        let wanted: Vec<ObjectSummary> = if uris.is_empty() {
-            all
-        } else {
-            all.into_iter().filter(|s| uris.contains(&s.uri)).collect()
-        };
-        let of_wanted: Vec<String> = wanted.iter().map(|s| s.uri.clone()).collect();
-        let objects = self.get_objects(&of_wanted).await;
-        // Only the ones that read. An object this store cannot deserialize
-        // contributes no edges, and saying so with an error would lose the
-        // graph of everything else - the same partiality the plural reads have.
-        let held: Vec<(ObjectSummary, Box<dyn DynObject>)> = wanted
-            .into_iter()
-            .zip(objects)
-            .filter_map(|(summary, object)| object.ok().map(|object| (summary, object)))
-            .collect();
+        let held = read_parts(self, uris).await?;
         Ok(crate::graph::build(
             held.iter()
                 .map(|(summary, object)| (summary, object.as_reflect())),
         ))
     }
+}
+
+/// The parts at `uris` (every part when empty), each with its object: those
+/// that read. An object this store cannot deserialize contributes no edges, and
+/// saying so with an error would lose the graph of everything else - the same
+/// partiality the plural reads have.
+async fn read_parts<S: EnergymlStorage + ?Sized>(
+    store: &S,
+    uris: &[String],
+) -> Result<Vec<(ObjectSummary, Box<dyn DynObject>)>> {
+    let all = store.resources().await?;
+    let wanted: Vec<ObjectSummary> = if uris.is_empty() {
+        all
+    } else {
+        all.into_iter().filter(|s| uris.contains(&s.uri)).collect()
+    };
+    let of_wanted: Vec<String> = wanted.iter().map(|s| s.uri.clone()).collect();
+    let objects = store.get_objects(&of_wanted).await;
+    Ok(wanted
+        .into_iter()
+        .zip(objects)
+        .filter_map(|(summary, object)| object.ok().map(|object| (summary, object)))
+        .collect())
 }
 
 /// Capabilities that belong to a package on a disk, and to nothing else.

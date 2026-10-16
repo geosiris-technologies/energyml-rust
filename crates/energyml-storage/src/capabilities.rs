@@ -49,10 +49,16 @@ pub struct Capabilities {
     /// The store holds several dataspaces, and creates and deletes them
     /// ([`crate::dataspaces::EnergymlDataspaces`]).
     pub several_dataspaces: bool,
-    /// The store knows containment (a WITSML container and its parts) and
-    /// honours `prune_contained`. Off: `prune_contained = true` is refused by
-    /// name.
+    /// The store knows containment (a WITSML container and the data objects it
+    /// holds by value): it lists them ([`crate::EnergymlStorage::contents`]),
+    /// links them to their container and reads them. Reading only: honouring
+    /// `prune_contained` is [`Capabilities::prune_contained`].
     pub contained_objects: bool,
+    /// The store honours `prune_contained = true` on a put or a delete (ETP 1.2
+    /// section 9.1.3.2, p. 179; section 9.2.2 row 12, p. 186-187: it needs the
+    /// capability `OrphanedChildrenPrunedOnDelete` and the flag). Off:
+    /// `prune_contained = true` is refused by name.
+    pub prune_contained: bool,
     /// The store writes part of an array (`PutDataSubarrays`).
     pub subarrays: bool,
     /// The store declares an array before writing it (`PutUninitializedDataArrays`).

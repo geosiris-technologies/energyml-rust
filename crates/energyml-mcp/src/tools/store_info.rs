@@ -90,6 +90,7 @@ impl Tool for StoreInfoTool {
                 "transactions": capabilities.transactions,
                 "several_dataspaces": capabilities.several_dataspaces,
                 "contained_objects": capabilities.contained_objects,
+                "prune_contained": capabilities.prune_contained,
                 "subarrays": capabilities.subarrays,
                 "uninitialized_arrays": capabilities.uninitialized_arrays,
                 "deletions_kept_for_seconds": capabilities.deletions_kept_for,
