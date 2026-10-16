@@ -249,6 +249,21 @@ impl Diagnostic {
         }
     }
 
+    /// An object whose uuid is the nil UUID: the one rule, spelled once, for
+    /// a part (`path` is `None`) and for an object held by value (`path` is
+    /// its path in the container). Detected and said, never refused.
+    pub(crate) fn nil_uuid(part: impl Into<String>, path: Option<&str>) -> Self {
+        let prefix = path.map(|p| format!("`{p}`: ")).unwrap_or_default();
+        Self::warning(
+            part,
+            format!(
+                "{prefix}uuid `00000000-0000-0000-0000-000000000000` is the nil UUID (RFC 4122 section 4.1.7): \
+                 it identifies no instance, so objects that carry it cannot be told apart \
+                 (Energistics Identifier Specification v5.0 section 2.3.1)"
+            ),
+        )
+    }
+
     /// A choice worth recording.
     pub fn note(part: impl Into<String>, message: impl Into<String>) -> Self {
         Self {

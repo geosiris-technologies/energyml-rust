@@ -3835,6 +3835,9 @@ impl EpcStore {
                 continue;
             };
             let key = entry.summary.uuid.to_ascii_lowercase();
+            if identifiers::is_nil_uuid(&key) {
+                self.record(Diagnostic::nil_uuid(part.clone(), None));
+            }
             // **An entry is (uuid, qualified type, objectVersion)**, so the same
             // uuid under another version - or under another release - is
             // another entry, and every part is kept. Only a part that repeats the

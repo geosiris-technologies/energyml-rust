@@ -108,6 +108,12 @@ for diagnostic in store.diagnostics() {           // what the package gets wrong
 }
 ```
 
+An object whose uuid is the nil UUID (`00000000-0000-0000-0000-000000000000`)
+is read and listed as usual, and gets a warning in those diagnostics, whether it
+is a part or held by value in another object: it identifies no instance
+(RFC 4122 section 4.1.7; Energistics Identifier Specification v5.0, section
+2.3.1). `energyml check` shows it in its package section.
+
 Reference checking is a free function over objects in memory, so a client that
 does not hold an EPC can reuse it:
 

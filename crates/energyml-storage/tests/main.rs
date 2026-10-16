@@ -31,6 +31,7 @@ mod kinds;
 mod media;
 mod mistyped;
 mod nested_reference;
+mod nil_uuid;
 mod object_versions;
 mod package_lookups;
 mod proxy_files;
