@@ -1356,7 +1356,12 @@ fn an_object_keeps_the_external_file_it_named() {
     fn rels_with_external(bytes: &[u8]) -> usize {
         let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).expect("a readable archive");
         let names: Vec<String> = (0..archive.len())
-            .filter_map(|i| archive.by_index(i).ok().map(|f| f.name().to_string()))
+            .filter_map(|i| {
+                archive
+                    .by_index(i)
+                    .ok()
+                    .map(|f| f.name().expect("a part name").into_owned())
+            })
             .filter(|name| name.ends_with(".rels"))
             .collect();
         names

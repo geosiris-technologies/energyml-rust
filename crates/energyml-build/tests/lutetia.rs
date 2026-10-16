@@ -556,7 +556,7 @@ impl FloatNoise {
             );
             for i in 0..archive.len() {
                 let mut entry = archive.by_index(i).expect("an entry");
-                let name = entry.name().to_string();
+                let name = entry.name().expect("a part name").into_owned();
                 let mut data = Vec::new();
                 entry.read_to_end(&mut data).expect("it inflates");
                 if name.contains("_rels/") || name == "[Content_Types].xml" {
@@ -752,7 +752,7 @@ fn parts_that_differ(ours: &[u8], again: &[u8]) -> Vec<String> {
                 let mut entry = archive.by_index(i).expect("an entry");
                 let mut data = Vec::new();
                 entry.read_to_end(&mut data).expect("it inflates");
-                (entry.name().to_string(), data)
+                (entry.name().expect("a part name").into_owned(), data)
             })
             .collect()
     }

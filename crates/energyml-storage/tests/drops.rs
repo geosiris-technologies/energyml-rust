@@ -77,7 +77,7 @@ fn package(name: &str, schema: Option<&str>, well_known: bool) -> PathBuf {
 
     let file = std::fs::File::create(&path).expect("creatable");
     let mut zip = zip::ZipWriter::new(file);
-    let options: zip::write::FileOptions<'_, ()> =
+    let options: zip::write::SimpleFileOptions =
         zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
     zip.start_file("[Content_Types].xml", options).unwrap();
     zip.write_all(
@@ -250,7 +250,7 @@ fn package_declaring(name: &str, schema: Option<&str>, well_known: bool) -> Path
 
     let file = std::fs::File::create(&path).expect("creatable");
     let mut zip = zip::ZipWriter::new(file);
-    let options: zip::write::FileOptions<'_, ()> =
+    let options: zip::write::SimpleFileOptions =
         zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
     let part = format!("BoundaryFeature_{UUID}.xml");
     zip.start_file("[Content_Types].xml", options).unwrap();

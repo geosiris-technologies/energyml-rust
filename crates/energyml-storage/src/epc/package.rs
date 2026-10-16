@@ -52,7 +52,14 @@ impl Package {
     pub(crate) fn open(source: Box<dyn ReadSeek + Send>, diagnostics: &mut Vec<Diagnostic>) -> Result<Self> {
         let mut archive =
             zip::ZipArchive::new(source).map_err(|e| Error::Package(format!("not a zip: {e}")))?;
-        let entries: Vec<String> = archive.file_names().map(str::to_string).collect();
+        // A name is UTF-8, or else CP437, which takes any byte: `zip` cannot fail
+        // to decode one today, but if it ever does the package is refused by
+        // name rather than read without the part.
+        let entries: Vec<String> = archive
+            .file_names()
+            .map(|name| name.map(|n| n.into_owned()))
+            .collect::<std::result::Result<_, _>>()
+            .map_err(|e| Error::Package(format!("a part name cannot be read: {e}")))?;
 
         // The sizes, read once from the central directory. `by_index_raw` opens
         // no decoder, so this is a walk over metadata the archive has already
@@ -60,7 +67,11 @@ impl Package {
         let mut sizes = BTreeMap::new();
         for index in 0..archive.len() {
             if let Ok(entry) = archive.by_index_raw(index) {
-                sizes.insert(entry.name().to_string(), entry.size());
+                let name = entry
+                    .name()
+                    .map_err(|e| Error::Package(format!("a part name cannot be read: {e}")))?
+                    .into_owned();
+                sizes.insert(name, entry.size());
             }
         }
 

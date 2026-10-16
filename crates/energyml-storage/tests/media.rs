@@ -94,7 +94,7 @@ fn entries(bytes: &[u8]) -> BTreeMap<String, Vec<u8>> {
         let mut entry = archive.by_index(index).expect("an entry");
         let mut content = Vec::new();
         entry.read_to_end(&mut content).expect("it inflates");
-        out.insert(entry.name().to_string(), content);
+        out.insert(entry.name().expect("a part name").into_owned(), content);
     }
     out
 }

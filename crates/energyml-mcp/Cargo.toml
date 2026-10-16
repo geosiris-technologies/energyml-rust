@@ -45,7 +45,7 @@ server = ["dep:rmcp", "dep:tokio", "dep:futures-executor", "dep:thiserror"]
 energyml-storage = { path = "../energyml-storage", features = ["contract"] }
 energyml-schemas = { path = "../energyml-schemas", features = ["all"] }
 # The in-memory EPC the tests open is a zip built by hand.
-zip = { version = "7", default-features = false, features = ["deflate"] }
+zip = { version = "9", default-features = false, features = ["deflate"] }
 # The executor the storage tests already use; no tokio.
 futures-executor = "0.3"
 # The SDK's own client drives the server in memory (tests/server.rs).

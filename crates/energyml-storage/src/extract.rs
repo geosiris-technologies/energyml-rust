@@ -285,8 +285,8 @@ pub fn empty_package(created: Option<i64>) -> Result<Vec<u8>> {
     let mut bytes = Vec::new();
     {
         let mut zip = zip::ZipWriter::new(std::io::Cursor::new(&mut bytes));
-        let options: zip::write::FileOptions<'_, ()> =
-            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+        let options =
+            zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
         zip.start_file("[Content_Types].xml", options)
             .map_err(|e| Error::Package(format!("writing the content types: {e}")))?;
         zip.write_all(content_types.as_bytes())?;

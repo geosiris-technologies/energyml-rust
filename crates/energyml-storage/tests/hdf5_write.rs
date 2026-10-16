@@ -364,7 +364,7 @@ fn empty_epc() -> Vec<u8> {
     let mut buffer = std::io::Cursor::new(Vec::new());
     {
         let mut zip = zip::ZipWriter::new(&mut buffer);
-        let options: zip::write::FileOptions<'_, ()> =
+        let options: zip::write::SimpleFileOptions =
             zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
         use std::io::Write;
         zip.start_file("[Content_Types].xml", options).unwrap();

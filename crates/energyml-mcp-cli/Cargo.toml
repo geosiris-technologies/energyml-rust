@@ -43,7 +43,7 @@ energyml-schemas = { path = "../energyml-schemas", version = "0.2.0", features =
 # The fabricated package of the tests: the storage contract's own model.
 energyml-storage = { path = "../energyml-storage", features = ["contract"] }
 # The package is a zip built by hand, in a temporary directory.
-zip = { version = "7", default-features = false, features = ["deflate"] }
+zip = { version = "9", default-features = false, features = ["deflate"] }
 serde_json = "1.0"
 
 [features]

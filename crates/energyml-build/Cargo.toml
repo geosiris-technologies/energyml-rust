@@ -76,7 +76,7 @@ hdf5 = ["energyml-storage/hdf5"]
 energyml-schemas = { path = "../energyml-schemas", features = ["all"] }
 # `tests/export_media.rs` opens the saved package as the archive it is, not
 # through the store that wrote it - the version `energyml-storage` writes with.
-zip = { version = "7", default-features = false, features = ["deflate"] }
+zip = { version = "9", default-features = false, features = ["deflate"] }
 
 [[test]]
 name = "build"
