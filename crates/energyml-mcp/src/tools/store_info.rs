@@ -95,7 +95,7 @@ impl Tool for StoreInfoTool {
                 "uninitialized_arrays": capabilities.uninitialized_arrays,
                 "deletions_kept_for_seconds": capabilities.deletions_kept_for,
                 "raw_formats": capabilities.raw_formats.iter().map(|format| format.as_etp()).collect::<Vec<_>>(),
-                "store_times": capabilities.store_times,
+                "store_times": capabilities.store_times.as_str(),
                 "edge_kinds": capabilities.edge_kinds,
                 "edge_kind_coverage": crate::tools::common::coverage_value(&capabilities.edge_kind_coverage),
                 "native_context": capabilities.native_context,
