@@ -405,13 +405,13 @@ fn damaged(name: &str) -> Option<PathBuf> {
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).ok()?;
     let file = std::fs::File::create(&out).ok()?;
     let mut writer = zip::ZipWriter::new(file);
-    let options: zip::write::FileOptions<'_, ()> =
+    let options: zip::write::SimpleFileOptions =
         zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
 
     let (mut absent, mut corrupted) = (0usize, 0usize);
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index).ok()?;
-        let entry_name = entry.name().to_string();
+        let entry_name = entry.name().ok()?.into_owned();
         let mut content = Vec::new();
         std::io::copy(&mut entry, &mut content).ok()?;
         if entry_name.ends_with(".xml")

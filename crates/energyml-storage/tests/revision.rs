@@ -177,7 +177,7 @@ mod wiring {
 
         let file = std::fs::File::create(&path).expect("creatable");
         let mut zip = zip::ZipWriter::new(file);
-        let options: zip::write::FileOptions<'_, ()> =
+        let options: zip::write::SimpleFileOptions =
             zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
         zip.start_file("[Content_Types].xml", options).unwrap();
         zip.write_all(

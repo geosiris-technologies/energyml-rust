@@ -105,7 +105,7 @@ fn package(name: &str, part: &str, bytes: &[u8], declare: bool) -> PathBuf {
 
     let file = std::fs::File::create(&path).expect("the package is creatable");
     let mut zip = zip::ZipWriter::new(file);
-    let options: zip::write::FileOptions<'_, ()> =
+    let options: zip::write::SimpleFileOptions =
         zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
     zip.start_file("[Content_Types].xml", options).unwrap();
     let index = if declare {
@@ -318,7 +318,7 @@ fn a_repair_that_parses_gets_its_relationships_back() {
         let file = std::fs::File::open(path).unwrap();
         let mut zip = zip::ZipArchive::new(file).unwrap();
         (0..zip.len())
-            .map(|i| zip.by_index(i).unwrap().name().to_string())
+            .map(|i| zip.by_index(i).unwrap().name().expect("a part name").into_owned())
             .collect()
     };
     let rels = format!("_rels/{PART}.rels");
@@ -452,7 +452,7 @@ fn a_repaired_part_regains_its_proper_name() {
     let file = std::fs::File::open(&out).unwrap();
     let mut zip = zip::ZipArchive::new(file).unwrap();
     let names: Vec<String> = (0..zip.len())
-        .map(|i| zip.by_index(i).unwrap().name().to_string())
+        .map(|i| zip.by_index(i).unwrap().name().expect("a part name").into_owned())
         .collect();
     assert!(
         names.contains(&PART.to_string()),

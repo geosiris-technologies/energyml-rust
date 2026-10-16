@@ -39,7 +39,7 @@ fn registry(declare_absent: bool) -> Arc<Registry> {
 /// One part, as a 2.0.1 producer writes it, declared by `content_type` when
 /// given (an `Override`), left undeclared when `None`.
 fn package(root: &str, schema_version: &str, content_type: Option<&str>) -> Vec<u8> {
-    let options: zip::write::FileOptions<'_, ()> =
+    let options: zip::write::SimpleFileOptions =
         zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
     let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
     let part = format!("{root}_{UUID}.xml");

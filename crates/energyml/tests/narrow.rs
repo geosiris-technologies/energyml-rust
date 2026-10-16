@@ -40,7 +40,7 @@ const EML: &str = "http://www.energistics.org/energyml/data/commonv2";
 /// 2.0.1 producer writes it, declaring `schema_version` and (when given) the
 /// content type `content_type`.
 fn package_2_0_1(schema_version: &str, content_type: Option<&str>) -> Vec<u8> {
-    let options: zip::write::FileOptions<'_, ()> =
+    let options: zip::write::SimpleFileOptions =
         zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
     let part = format!("obj_BoundaryFeature_{UUID}.xml");
     let overrides = content_type

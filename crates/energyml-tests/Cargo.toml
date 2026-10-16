@@ -31,7 +31,7 @@ energyml-schemas = { path = "../energyml-schemas", features = ["all"] }
 # The cross-audit derives packages from the corpus - one with elements removed,
 # one with a value corrupted - because a ladder whose three rungs are all empty
 # proves nothing about the order of its rungs.
-zip = { version = "7", default-features = false, features = ["deflate"] }
+zip = { version = "9", default-features = false, features = ["deflate"] }
 # `introspection.rs` reads a value into a field through the JSON door, which is
 # how an editor reaches it - the refusal being tested is one a front end provokes.
 serde_json = { version = "1.0", features = ["float_roundtrip"] }

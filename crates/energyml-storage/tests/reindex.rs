@@ -75,7 +75,7 @@ fn package(name: &str) -> PathBuf {
 
     let file = std::fs::File::create(&path).expect("creatable");
     let mut zip = zip::ZipWriter::new(file);
-    let options: zip::write::FileOptions<'_, ()> =
+    let options: zip::write::SimpleFileOptions =
         zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
     zip.start_file("[Content_Types].xml", options).unwrap();
     zip.write_all(
@@ -102,7 +102,11 @@ fn rels(path: &Path) -> usize {
     let file = std::fs::File::open(path).expect("readable");
     let mut zip = zip::ZipArchive::new(file).expect("a zip");
     (0..zip.len())
-        .filter_map(|i| zip.by_index(i).ok().map(|entry| entry.name().to_string()))
+        .filter_map(|i| {
+            zip.by_index(i)
+                .ok()
+                .map(|entry| entry.name().expect("a part name").into_owned())
+        })
         .filter(|name| name.ends_with(".rels"))
         .count()
 }
@@ -198,7 +202,11 @@ fn reindexing_keeps_the_version_the_relabelling_wrote() {
     let mut found = false;
     for i in 0..zip.len() {
         let mut entry = zip.by_index(i).expect("an entry");
-        if !entry.name().starts_with("HorizonInterpretation") {
+        if !entry
+            .name()
+            .expect("a part name")
+            .starts_with("HorizonInterpretation")
+        {
             continue;
         }
         let mut text = String::new();

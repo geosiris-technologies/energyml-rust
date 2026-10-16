@@ -82,7 +82,7 @@ png = ["energyml-section/png"]
 [dev-dependencies]
 # `tests/narrow.rs` fabricates a package in memory; the version the storage
 # crate reads with, so the two never disagree about a zip.
-zip = { version = "7", default-features = false, features = ["deflate"] }
+zip = { version = "9", default-features = false, features = ["deflate"] }
 
 [lints.rust]
 missing_docs = "warn"

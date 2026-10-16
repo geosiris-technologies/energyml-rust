@@ -216,7 +216,11 @@ fn collect_epc(path: &Path, reg: &Registry, out: &mut Vec<PartResult>, cli: &Cli
     }
     let overrides = parse_content_types(&content_types);
 
-    let names: Vec<String> = zip.file_names().map(str::to_string).collect();
+    let names: Vec<String> = zip
+        .file_names()
+        .map(|name| name.map(|n| n.into_owned()))
+        .collect::<std::result::Result<_, _>>()
+        .with_context(|| format!("reading the part names of {}", path.display()))?;
     let mut parts: Vec<String> = names
         .into_iter()
         .filter(|n| n.to_ascii_lowercase().ends_with(".xml"))

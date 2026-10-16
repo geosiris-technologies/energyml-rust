@@ -41,7 +41,7 @@ pub fn write_package(dir: &Path) -> PathBuf {
     let mut bytes = Vec::new();
     {
         let mut zip = zip::ZipWriter::new(Cursor::new(&mut bytes));
-        let options: zip::write::FileOptions<'_, ()> = zip::write::FileOptions::default();
+        let options: zip::write::SimpleFileOptions = zip::write::FileOptions::default();
         zip.start_file("[Content_Types].xml", options).unwrap();
         zip.write_all(
             b"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\

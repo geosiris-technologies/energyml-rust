@@ -100,7 +100,7 @@ fn a_relationship_without_an_id_is_not_looked_up() {
 /// duplicate `Id`.
 fn package(parts: usize) -> Vec<u8> {
     let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
-    let options: zip::write::FileOptions<'_, ()> =
+    let options: zip::write::SimpleFileOptions =
         zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
     let mut put = |name: &str, bytes: &[u8]| {
         zip.start_file(name, options).expect("start");
