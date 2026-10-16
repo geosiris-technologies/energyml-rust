@@ -16,6 +16,8 @@
 //! - [`validate`] - structural validation from the schema, plus a hook for
 //!   business rules.
 //! - [`registry`] - create and read objects by content type or qualified type.
+//! - [`identity_owned`] - references attributed to the data object that writes
+//!   them, stopping at nested data objects.
 //! - [`relations`] - where a type holds other data objects by value, and where it
 //!   writes references: tables written by the generator, read by byte-level scanners.
 //! - [`identifiers`] - UUID, content type, qualified type and ETP URI parsing.
@@ -25,12 +27,17 @@
 
 #![forbid(unsafe_code)]
 
+// The derive writes `::energyml_core::...`; the unit tests of this crate use it.
+#[cfg(test)]
+extern crate self as energyml_core;
+
 pub mod any_xml;
 #[cfg(feature = "json")]
 pub mod docs;
 pub mod error;
 pub mod identifiers;
 pub mod identity;
+pub mod identity_owned;
 #[cfg(feature = "json")]
 pub mod json;
 pub mod lexical;
