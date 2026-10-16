@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-storage-v0.2.0...energyml-storage-v0.3.0) - 2026-10-16
+
+### Added
+
+- *(storage)* open an EPC as a named dataspace
+- *(storage)* warn of an object whose uuid is the nil UUID
+- *(storage)* [**breaking**] the store times may be unknown
+- *(storage)* list the data objects held by value, each the source of what it writes
+- *(storage)* state the kind of the edges a store derives, from the specification
+
+### Fixed
+
+- *(deps)* move to zip 9, every 7.x and 8.x release being yanked
+
+### Other
+
+- *(storage)* a slice of one from a reference, as clippy asks
+
 ## [0.2.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-storage-v0.1.2...energyml-storage-v0.2.0) - 2026-10-15
 
 ### Added

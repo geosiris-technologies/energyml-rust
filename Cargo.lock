@@ -307,7 +307,7 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "energyml"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-analysis",
  "energyml-build",
@@ -330,7 +330,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-analysis"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-geometry",
  "energyml-geostat",
@@ -339,7 +339,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-build"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-analysis",
  "energyml-build-derive",
@@ -365,7 +365,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-build-derive"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -375,7 +375,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-cache"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-domain",
@@ -387,7 +387,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -411,7 +411,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-derive",
  "quick-xml",
@@ -423,7 +423,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-derive"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -433,7 +433,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-domain"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "async-trait",
  "energyml-core",
@@ -452,7 +452,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-eml-2-0"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-derive",
@@ -460,7 +460,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-eml-2-1"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-derive",
@@ -468,7 +468,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-eml-2-2"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-derive",
@@ -476,7 +476,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-eml-2-3"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-derive",
@@ -484,7 +484,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-export"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-domain",
@@ -503,7 +503,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-geometry"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-domain",
@@ -522,7 +522,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-geostat"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "spade",
  "thiserror",
@@ -530,7 +530,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-log"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "tracing",
  "tracing-log",
@@ -539,7 +539,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-mcp"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "async-trait",
  "energyml-core",
@@ -555,7 +555,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-mcp-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -568,7 +568,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-prodml-2-0"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-derive",
@@ -577,7 +577,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-prodml-2-2"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-derive",
@@ -586,7 +586,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-prodml-2-3"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-derive",
@@ -595,7 +595,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-proj"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "crs-definitions",
  "energyml-domain",
@@ -604,7 +604,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-providers"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-build",
  "quick-xml",
@@ -615,7 +615,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-python"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-domain",
@@ -632,7 +632,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-resqml-2-0-1"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-derive",
@@ -641,7 +641,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-resqml-2-2"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-derive",
@@ -650,7 +650,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-resqml-2-2-dev3"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-derive",
@@ -659,7 +659,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-roundtrip"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -671,7 +671,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-rules"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-domain",
  "serde_json",
@@ -680,7 +680,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-schemas"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-eml-2-0",
@@ -699,7 +699,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-section"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-analysis",
  "energyml-core",
@@ -721,7 +721,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-sheet"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-domain",
@@ -735,7 +735,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-storage"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "async-trait",
  "bytemuck",
@@ -759,7 +759,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-tests"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-domain",
@@ -777,7 +777,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-witsml-2-0"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-derive",
@@ -786,7 +786,7 @@ dependencies = [
 
 [[package]]
 name = "energyml-witsml-2-1"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "energyml-core",
  "energyml-derive",
