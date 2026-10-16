@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-analysis-v0.2.0...energyml-analysis-v0.3.0) - 2026-10-16
+
+### Other
+
+- release v0.3.0
+
 ## [0.2.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-analysis-v0.1.2...energyml-analysis-v0.2.0) - 2026-10-15
 
 ### Other
