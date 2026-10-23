@@ -57,6 +57,7 @@ new record that supersedes the old one, which keeps its text and a status line.
 | [0045](0045-text-and-numbers-one-copy.md) | Text and numbers written by hand (XML, JSON, base 64, calendar, numbers) have one copy each |
 | [0046](0046-reading-a-field-through-one-door.md) | Reading a field of a reflected object goes through one door, `energyml_core::reflect::fields`, with its policy for absent, blank and mistyped fields |
 | [0047](0047-a-view-proposes-and-says-so.md) | A view may propose a value the file does not state, for a first drawing; a proposal is always said as one |
+| [0048](0048-every-edge-has-a-kind.md) | Every edge has a kind: EML and PRODML by the WITSML rule, primary by default otherwise |
 
 Decisions about the ETP protocol implementation are recorded in the
 [`retp`](https://github.com/geosiris-technologies/retp) repository.
