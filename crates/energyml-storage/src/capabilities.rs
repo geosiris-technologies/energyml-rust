@@ -14,7 +14,9 @@ use crate::raw::RawFormat;
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum EdgeKindCoverage {
-    /// Of every edge: a server states it for each one it answers.
+    /// Of every edge: a server states it for each one it answers, or a store's
+    /// rules give each one a kind (an EPC: [`crate::kinds::StandardRules`],
+    /// primary by default where no rule applies, labelled so).
     #[default]
     All,
     /// Of the edges whose source belongs to these MLs, by qualified-type prefix
@@ -104,8 +106,9 @@ pub struct Capabilities {
     /// The store states the kind (primary, secondary) of some of its edges at
     /// least; [`Capabilities::edge_kind_coverage`] says which.
     pub edge_kinds: bool,
-    /// Of which edges `edge_kinds` holds. An ETP server: all. An EPC: the MLs
-    /// the rules of [`crate::kinds`] cover.
+    /// Of which edges `edge_kinds` holds. An ETP server: all. An EPC: all too,
+    /// each edge's `basis` saying whether its kind is a rule, a derivation or
+    /// the default of [`crate::kinds`].
     pub edge_kind_coverage: EdgeKindCoverage,
     /// The store answers a context natively rather than by walking every edge
     /// ([`crate::EnergymlStorage::resources_in`]).

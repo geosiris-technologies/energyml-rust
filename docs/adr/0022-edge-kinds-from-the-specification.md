@@ -1,6 +1,7 @@
 # 0022 - The kind of an edge comes from the specification, labelled; the schema facts are generated
 
-Status: accepted
+Status: accepted. The `Unknown` row (PRODML, EML on its own, any other ML) is superseded by
+[ADR-0024](0024-every-edge-has-a-kind.md): every edge now has a kind.
 
 ## Context
 

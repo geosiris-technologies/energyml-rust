@@ -1694,10 +1694,12 @@ pub struct Edge {
     /// Where inside the source: `Grid2dPatch.SupportingRepresentation`.
     pub path: String,
     /// ETP `RelationshipKind`: whether the reference is primary or secondary -
-    /// what `navigableEdges` filters on. `None` when no rule gives it: an ETP
-    /// server states it; a store deriving its edges applies the rules of
-    /// [`crate::kinds`], which refuse by name (`basis` is then
-    /// [`KindBasis::Unknown`]) where the specification is silent. Never guessed.
+    /// what `navigableEdges` filters on. An ETP server states it; a store
+    /// deriving its edges applies the rules of [`crate::kinds`], which give every
+    /// edge one: where the specification is silent and no schema fact is held,
+    /// primary by default, labelled so (`basis` is then [`KindBasis::Default`]).
+    /// `None` for an edge nobody has judged, or one a caller's
+    /// [`crate::kinds::KindRules`] leaves [`KindBasis::Unknown`].
     pub kind: Option<EdgeKind>,
     /// Where `kind` comes from: stated by a server, a rule of the ETP
     /// specification, or this crate's derivation, each labelled. `None` for an

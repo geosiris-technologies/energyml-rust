@@ -299,14 +299,15 @@ fn an_epc_says_what_it_offers() {
     assert!(!offered.several_dataspaces && !offered.subarrays && !offered.uninitialized_arrays);
     assert_eq!(offered.deletions_kept_for, None);
     assert_eq!(offered.store_times, energyml_storage::StoreTimes::NotKept);
-    // The EPC states the kind of the edges of the MLs the rules of `kinds`
-    // cover (RESQML: ETP 1.2 section 8.2.2), and says which.
+    // The EPC states the kind of every edge: ETP 1.2 section 23.34.13 requires
+    // one on each `Edge`, and the rules of `kinds` give it (a rule, a schema
+    // fact, or primary by default: the maintainer's decision of 23/10/2026).
     assert!(offered.edge_kinds);
-    assert!(
-        offered.edge_kind_coverage.covers("resqml22"),
-        "{:?}",
-        offered.edge_kind_coverage
+    assert_eq!(
+        offered.edge_kind_coverage,
+        energyml_storage::EdgeKindCoverage::All
     );
+    assert!(offered.edge_kind_coverage.covers("eml23") && offered.edge_kind_coverage.covers("prodml23"));
 }
 
 #[test]

@@ -33,6 +33,7 @@ new record that supersedes the old one, which keeps its text and a status line.
 | [0021](0021-own-tool-trait-rmcp-as-adapter.md) | Our own `Tool` trait; the MCP SDK is an adapter behind a feature |
 | [0022](0022-edge-kinds-from-the-specification.md) | The kind of an edge comes from the specification, labelled; the schema facts are generated |
 | [0023](0023-objects-held-by-value.md) | The data objects held by value are listed apart, and write their own references |
+| [0024](0024-every-edge-has-a-kind.md) | Every edge has a kind: EML and PRODML by the WITSML rule, primary by default otherwise |
 
 Decisions about the ETP protocol implementation are recorded in the
 [`retp`](https://github.com/geosiris-technologies/retp) repository.

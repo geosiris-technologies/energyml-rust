@@ -88,10 +88,10 @@ pub enum Error {
     /// A request by relationship kind met an edge whose kind nobody states.
     ///
     /// ETP 1.2 section 8.1.1.1.2 (p. 157) leaves the kind of a relationship to
-    /// the ML of the object holding it, and the guide of an ML that has none
-    /// says nothing: the edge has no kind, and the request that needs one is
-    /// refused **when it meets that edge**, not before
-    /// ([`crate::context::discover`]).
+    /// the ML of the object holding it. The rules of [`crate::kinds`] give every
+    /// edge one; an edge nobody judged, or one a caller's rules leave unknown,
+    /// has none, and the request that needs one is refused **when it meets that
+    /// edge**, not before ([`crate::context::discover`]).
     #[error("`{source_type}`: the kind of its edges is not stated: {why}")]
     UnstatedKind {
         /// The qualified type of the object holding the reference

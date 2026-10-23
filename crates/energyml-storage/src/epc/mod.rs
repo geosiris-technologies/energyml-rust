@@ -4656,9 +4656,9 @@ impl EnergymlStorage for EpcStore {
 
     /// An EPC writes, opens transactions, keeps the XML of each part and says
     /// what changed; it is one dataspace, writes whole arrays only, keeps
-    /// neither deletions nor ETP's store times, and states the kind of the edges
-    /// of the MLs the rules of [`crate::kinds`] cover - computed from the
-    /// registered types and the policy, never listed twice.
+    /// neither deletions nor ETP's store times, and states the kind of every
+    /// edge: the rules of [`crate::kinds`] give each one a kind, primary by
+    /// default where no rule applies (labelled `KindBasis::Default`).
     fn capabilities(&self) -> crate::capabilities::Capabilities {
         crate::capabilities::Capabilities {
             writes: true,
@@ -4666,9 +4666,7 @@ impl EnergymlStorage for EpcStore {
             raw_formats: vec![crate::raw::RawFormat::Xml],
             changes: true,
             edge_kinds: true,
-            edge_kind_coverage: crate::capabilities::EdgeKindCoverage::Mls(
-                crate::kinds::StandardRules::new().covered_prefixes(&self.registry),
-            ),
+            edge_kind_coverage: crate::capabilities::EdgeKindCoverage::All,
             // Reading the objects held by value: listed, linked, read. Not pruned.
             contained_objects: self.knows_containment(),
             prune_contained: false,
@@ -4678,7 +4676,8 @@ impl EnergymlStorage for EpcStore {
     }
 
     /// The EPC derives its edges from the objects, and judges their kind by the
-    /// standard rules (RESQML, the WITSML examples and derivation; [`crate::kinds`]).
+    /// standard rules (RESQML, the WITSML examples, derivation for WITSML, EML
+    /// and PRODML, primary by default otherwise; [`crate::kinds`]).
     fn kind_rules(&self) -> Option<std::sync::Arc<dyn crate::kinds::KindRules>> {
         Some(std::sync::Arc::new(crate::kinds::StandardRules::over(
             self.registry.clone(),

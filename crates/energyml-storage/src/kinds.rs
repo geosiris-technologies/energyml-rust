@@ -10,28 +10,41 @@
 //! RESQML, all relationships are primary"*. The implementation guides that would
 //! state the others (note 1 of §8.1.1.1.2) are not published for ETP 1.2.
 //!
-//! So the answer has three grades, and each is labelled ([`KindBasis`]) so that a
-//! derived answer never passes for a stated rule:
+//! So the answer has four grades, and each is labelled ([`KindBasis`]) so that a
+//! derived answer never passes for a stated rule, nor a default for either:
 //!
 //! | ML of the holder | Kind | Basis |
 //! |---|---|---|
 //! | RESQML 2.0.1, 2.2 (and its development drops) | always primary | [`KindBasis::EtpSpec`] §8.2.2, p. 167-168 |
 //! | WITSML 2.0, 2.1: the three examples of §8.1.1.1.2, p. 157 | `Log` contains `ChannelSet`, `ChannelSet` contains `Channel`: primary; `Channel` to `Wellbore`: secondary | [`KindBasis::EtpSpec`] |
-//! | WITSML 2.0, 2.1: any other by-value relationship | primary | [`KindBasis::DerivedByValue`] |
-//! | WITSML 2.0, 2.1: any other DOR | primary when the XSD makes it mandatory, secondary otherwise | [`KindBasis::DerivedXsd`] |
-//! | PRODML, EML alone, any other ML | **no kind** | [`KindBasis::Unknown`], refused by name |
+//! | WITSML 2.0, 2.1, EML, PRODML: any other by-value relationship | primary | [`KindBasis::DerivedByValue`] |
+//! | WITSML 2.0, 2.1, EML, PRODML: any other DOR the schema tables know | primary when the XSD makes it mandatory, secondary otherwise | [`KindBasis::DerivedXsd`] |
+//! | any ML: a DOR the tables hold no fact for; any other ML; a source that is not an object URI | primary | [`KindBasis::Default`] |
 //!
-//! The derived rows are this crate's reading of the "common characteristics" of
-//! p. 157 ("one end of the relationship is mandatory", "relationships where one
-//! data object contains ... another"), not a text of the specification, and are
-//! never labelled as one. The XSD rule is never applied to RESQML: it would call
-//! `RepresentedInterpretation` secondary where the specification writes "all
-//! relationships are primary".
+//! The derived rows are this crate's reading of the characterisation of
+//! §8.1.1.1.2 (p. 157), not a text of the specification, and are never labelled
+//! as one. Primary: *"One end of the relationship is mandatory; that is, one
+//! object cannot exist (as a data object in the system) without the other."* and
+//! *"Relationships where one data object 'contains' one or more other data
+//! objects (i.e., a by-value relationship)"*; secondary: *"Both ends of the
+//! relationships are optional."* The XSD rule is never applied to RESQML: it
+//! would call `RepresentedInterpretation` secondary where the specification
+//! writes "all relationships are primary".
+//!
+//! EML and PRODML follow the rule WITSML follows, and an edge no rule decides is
+//! primary by default: the maintainer's decision of 23/10/2026, since ETP 1.2
+//! leaves the rule to ML implementation guides that are not published for them
+//! (note 1 of §8.1.1.1.2). Why primary and not secondary is written at
+//! [`KindBasis::Default`]. ETP 1.2 §23.34.13 requires every `Edge` to carry
+//! `Primary` or `Secondary`, so no edge judged here is left without a kind.
 //!
 //! The facts the XSD rule reads (whether a DOR slot is mandatory) are generated
-//! (`energyml_core::relations`); the policy is here, written once, cited.
-//! `TODO(verify)`: the implementation guides of WITSML 2.0 and 2.1 for ETP 1.2,
-//! when published, replace the derived rows.
+//! (`energyml_core::relations`); the policy is here, written once, cited. A
+//! package whose reference slots the generator does not compute (EML, PRODML
+//! and RESQML today: their tables say "not computed") holds no fact, so its DORs
+//! are primary by default until it does. `TODO(verify)`: the implementation
+//! guides of WITSML, EML and PRODML for ETP 1.2, when published, replace the
+//! derived and default rows.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -65,7 +78,24 @@ pub enum KindBasis {
         /// The effective `minOccurs >= 1` of the DOR slot.
         required: bool,
     },
+    /// No rule applies and the schema tables hold no fact: **primary by
+    /// default**, the maintainer's decision of 23/10/2026, neither a rule of the
+    /// specification nor an XSD fact.
+    ///
+    /// Why primary: discovery follows primary edges by default (ETP
+    /// `navigableEdges`), so a primary edge called secondary would
+    /// silently hide objects from a discovery, while the opposite error shows one
+    /// object too many, which is visible; and RESQML's convention is all primary
+    /// (§8.2.2 rule 1.a, p. 167-168).
+    Default {
+        /// Why no rule applies, for a reader who asks where the kind comes from.
+        reason: &'static str,
+    },
     /// No rule, no kind: the edge is refused by name, never guessed.
+    ///
+    /// [`StandardRules`] and [`judge_edges`] no longer answer it (every edge
+    /// they judge has a kind, [`KindBasis::Default`] at worst); it is kept for
+    /// a [`KindRules`] of a caller's that has no answer to give.
     Unknown {
         /// Why no rule applies, for the refusal.
         why: &'static str,
@@ -74,15 +104,22 @@ pub enum KindBasis {
 
 impl KindBasis {
     /// Whether this is a rule the specification states (or a server did), as
-    /// opposed to this crate's derivation or no rule at all.
+    /// opposed to this crate's derivation, its default or no rule at all.
     pub fn is_official(&self) -> bool {
         matches!(self, KindBasis::Stated | KindBasis::EtpSpec { .. })
+    }
+
+    /// Whether the kind is this crate's default ([`KindBasis::Default`]): no
+    /// rule applied and no schema fact was found.
+    pub fn is_default(&self) -> bool {
+        matches!(self, KindBasis::Default { .. })
     }
 }
 
 /// One judgement: a kind, and what it rests on.
 ///
-/// `kind` is `None` exactly when `basis` is [`KindBasis::Unknown`].
+/// `kind` is `None` exactly when `basis` is [`KindBasis::Unknown`], which
+/// [`StandardRules`] never answers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Judged {
     /// The kind, or `None` when no rule applies.
@@ -108,7 +145,13 @@ impl Judged {
         }
     }
 
-    /// No rule applies.
+    /// No rule applies and no fact is held: primary, by default
+    /// ([`KindBasis::Default`]), saying why.
+    pub fn by_default(reason: &'static str) -> Self {
+        Self::primary(KindBasis::Default { reason })
+    }
+
+    /// No rule applies, and no kind is given.
     pub fn unknown(why: &'static str) -> Self {
         Self {
             kind: None,
@@ -183,8 +226,9 @@ const WITSML_EXAMPLE: KindBasis = KindBasis::EtpSpec {
 type RequiredLookup = dyn Fn(&str, &str) -> Option<bool> + Send + Sync;
 
 /// The policy of this crate: RESQML and the WITSML examples as the specification
-/// states them, WITSML otherwise by the XSD rule (labelled derived), everything
-/// else refused by name.
+/// states them, WITSML, EML and PRODML otherwise by the XSD rule and by-value
+/// containment (labelled derived), and primary by default where no rule applies
+/// and no fact is held (labelled [`KindBasis::Default`]).
 ///
 /// The XSD facts come from the generated relation tables of the registry
 /// ([`StandardRules::over`]) or from a lookup the caller supplies
@@ -194,8 +238,8 @@ pub struct StandardRules {
 }
 
 impl StandardRules {
-    /// The policy with **no XSD facts**: a WITSML DOR outside the examples of
-    /// the specification is refused by name.
+    /// The policy with **no XSD facts**: a WITSML, EML or PRODML DOR outside
+    /// the examples of the specification is primary by default.
     pub fn new() -> Self {
         Self { required: None }
     }
@@ -214,7 +258,7 @@ impl StandardRules {
     /// found by its path in `TypeRelations::refers`.
     ///
     /// A path that two slots share with different answers (a polymorphic
-    /// element) has no fact: it is refused by name rather than decided.
+    /// element) has no fact: it is primary by default rather than decided.
     pub fn over(registry: Arc<Registry>) -> Self {
         Self::with_required(move |qualified_type, path| {
             let info = registry.by_qualified_type(qualified_type)?.info;
@@ -240,17 +284,15 @@ impl StandardRules {
         })
     }
 
-    /// The ML prefixes (`resqml22`, `witsml21`) of the registry's types for
-    /// which this policy states a kind for **some** edge: what
-    /// `Capabilities::edge_kind_coverage` reports, computed from the registry
-    /// and the policy rather than written twice. Sorted, without duplicates.
+    /// The ML prefixes (`eml23`, `resqml22`, `witsml21`) of the registry's types
+    /// for which this policy states a kind for **some** edge. Every edge has a
+    /// kind under this policy ([`KindBasis::Default`] at worst), so that is every
+    /// prefix of the registry; a store judging its edges by it reports
+    /// `EdgeKindCoverage::All`, which also covers types the registry lacks.
+    /// Sorted, without duplicates.
     pub fn covered_prefixes(&self, registry: &Registry) -> Vec<String> {
         let mut prefixes: Vec<String> = registry
             .types()
-            .filter(|info| {
-                let compact = info.schema_version.replace('.', "");
-                !matches!(Ml::of(info.package, &compact), Ml::Prodml | Ml::Eml | Ml::Other)
-            })
             .map(|info| format!("{}{}", info.package, info.schema_version.replace('.', "")))
             .collect();
         prefixes.sort();
@@ -280,6 +322,29 @@ fn without_indices(path: &str) -> String {
     out
 }
 
+/// The reason of a DOR whose slot the schema tables hold no fact for.
+const NO_XSD_FACT: &str = "no rule of the specification and no schema fact for this reference: primary by default (maintainer decision of 23/10/2026; ETP 1.2 section 8.1.1.1.2 note 1: the implementation guide is not published)";
+
+impl StandardRules {
+    /// ETP 1.2 §8.1.1.1.2 (p. 157): primary when "one end of the relationship
+    /// is mandatory; that is, one object cannot exist (as a data object in the
+    /// system) without the other", secondary when "both ends of the
+    /// relationships are optional"; read on the XSD of the holder, whose ML
+    /// decides ("the type of relationship is determined by the ML of the data
+    /// object that has the DOR"). No fact: primary by default.
+    fn by_xsd(&self, source_qualified_type: &str, path: &str) -> Judged {
+        match self
+            .required
+            .as_ref()
+            .and_then(|lookup| lookup(source_qualified_type, path))
+        {
+            Some(true) => Judged::primary(KindBasis::DerivedXsd { required: true }),
+            Some(false) => Judged::secondary(KindBasis::DerivedXsd { required: false }),
+            None => Judged::by_default(NO_XSD_FACT),
+        }
+    }
+}
+
 impl KindRules for StandardRules {
     fn dor(&self, source_qualified_type: &str, path: &str) -> Judged {
         let (ml, type_name) = Ml::of_type(source_qualified_type);
@@ -294,25 +359,14 @@ impl KindRules for StandardRules {
                 if type_name == "Channel" && path == "Wellbore" {
                     return Judged::secondary(WITSML_EXAMPLE);
                 }
-                match self
-                    .required
-                    .as_ref()
-                    .and_then(|lookup| lookup(source_qualified_type, &path))
-                {
-                    Some(true) => Judged::primary(KindBasis::DerivedXsd { required: true }),
-                    Some(false) => Judged::secondary(KindBasis::DerivedXsd { required: false }),
-                    None => Judged::unknown(
-                        "WITSML has no stated rule for this reference and the schema tables hold no fact for it (ETP 1.2 section 8.1.1.1.2 note 1: the implementation guide is not published)",
-                    ),
-                }
+                self.by_xsd(source_qualified_type, &path)
             }
-            Ml::Prodml => Judged::unknown(
-                "PRODML has no stated rule for which relationships are primary (ETP 1.2 section 8.1.1.1.2 note 1: the implementation guide is not published)",
+            // The rule WITSML follows, by the maintainer's decision of 23/10/2026:
+            // no implementation guide states one for EML or PRODML.
+            Ml::Prodml | Ml::Eml => self.by_xsd(source_qualified_type, &without_indices(path)),
+            Ml::Other => Judged::by_default(
+                "no rule for the ML of this object: primary by default (maintainer decision of 23/10/2026; ETP 1.2 section 8.1.1.1.2)",
             ),
-            Ml::Eml => Judged::unknown(
-                "EML objects alone have no stated rule for which relationships are primary (ETP 1.2 section 8.1.1.1.2)",
-            ),
-            Ml::Other => Judged::unknown("no rule for the ML of this object (ETP 1.2 section 8.1.1.1.2)"),
         }
     }
 
@@ -326,13 +380,14 @@ impl KindRules for StandardRules {
                 "Log" | "ChannelSet" => Judged::primary(WITSML_EXAMPLE),
                 _ => Judged::primary(KindBasis::DerivedByValue),
             },
-            Ml::Prodml => Judged::unknown(
-                "PRODML has no stated rule for which relationships are primary, by value included (ETP 1.2 section 8.1.1.1.2 note 1)",
+            // ETP 1.2 §8.1.1.1.2 (p. 157): "Relationships where one data object
+            // 'contains' one or more other data objects (i.e., a by-value
+            // relationship)" are primary; the container's ML decides. EML and
+            // PRODML by the maintainer's decision of 23/10/2026.
+            Ml::Prodml | Ml::Eml => Judged::primary(KindBasis::DerivedByValue),
+            Ml::Other => Judged::by_default(
+                "no rule for the ML of this container: primary by default (maintainer decision of 23/10/2026; ETP 1.2 section 8.1.1.1.2)",
             ),
-            Ml::Eml => Judged::unknown(
-                "EML containers (aggregates, dictionaries) have no stated rule for which relationships are primary (ETP 1.2 section 8.1.1.1.2)",
-            ),
-            Ml::Other => Judged::unknown("no rule for the ML of this container (ETP 1.2 section 8.1.1.1.2)"),
         }
     }
 }
@@ -351,8 +406,8 @@ pub(crate) fn qualified_type_of(uri: &str) -> Option<String> {
 /// qualified type of the edge's source (`Edge::from`) and its path.
 ///
 /// An edge that already states its kind keeps it. A source URI that cannot be
-/// read is [`KindBasis::Unknown`], never a guess. The source's type is read once
-/// per distinct source.
+/// read has no ML to decide: primary by default ([`KindBasis::Default`], which
+/// says so). The source's type is read once per distinct source.
 pub fn judge_edges(rules: &dyn KindRules, edges: Vec<Edge>) -> Vec<Edge> {
     let mut types: HashMap<String, Option<String>> = HashMap::new();
     edges
@@ -366,7 +421,9 @@ pub fn judge_edges(rules: &dyn KindRules, edges: Vec<Edge>) -> Vec<Edge> {
                 .or_insert_with(|| qualified_type_of(&edge.from));
             let judged = match source {
                 Some(qualified_type) => rules.dor(qualified_type, &edge.path),
-                None => Judged::unknown("the source of the edge is not an object URI"),
+                None => Judged::by_default(
+                    "the source of the edge is not an object URI, so no ML decides: primary by default (maintainer decision of 23/10/2026)",
+                ),
             };
             edge.with_judgement(judged)
         })

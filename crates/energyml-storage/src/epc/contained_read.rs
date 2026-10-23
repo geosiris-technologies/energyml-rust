@@ -969,7 +969,9 @@ impl EpcStore {
                 }
                 let judged = match crate::kinds::qualified_type_of(container) {
                     Some(qualified_type) => rules.containment(&qualified_type),
-                    None => Judged::unknown("the container of the edge is not an object URI"),
+                    None => Judged::by_default(
+                        "the container of the edge is not an object URI, so no ML decides: primary by default (maintainer decision of 23/10/2026)",
+                    ),
                 };
                 let mut edge = Edge::new(uri, container.as_str(), "").with_judgement(judged);
                 edge.by_value = true;
