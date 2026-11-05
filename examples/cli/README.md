@@ -27,7 +27,7 @@ Pick one.
 - **From source:** `cargo install energyml-cli --features hdf5,png` (needs the HDF5 C library at
   build time; drop the features for a build without array reading and PNG).
 - **Docker:** `docker pull ghcr.io/geosiris-technologies/energyml:latest` (tags `latest`,
-  `0.2.0`, `0.2`, `edge`). It holds the CLI built with HDF5 and PNG. See
+  `0.3.0`, `0.3`, `edge`). It holds the CLI built with HDF5 and PNG. See
   [`docs/docker.md`](../../docs/docker.md).
 
 ## Get Lutetia
@@ -189,8 +189,7 @@ with:
 cargo install energyml-mcp-cli --features hdf5
 ```
 
-The Docker image ships it from the release after 0.2.0 (the 0.2.0 image has `energyml`
-only). An MCP client then starts it with stdin kept open (`-i`) and the package's folder
+The Docker image ships it from 0.3.0 (the 0.2.0 image has `energyml` only). An MCP client then starts it with stdin kept open (`-i`) and the package's folder
 mounted:
 
 ```sh
