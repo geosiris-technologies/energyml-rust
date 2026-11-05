@@ -19,6 +19,43 @@ env:
   CARGO_INCREMENTAL: "0"
 
 jobs:
+  # Documentation-only changes skip the build jobs. The cheap checks (fmt, deny,
+  # links, widths, references, gitleaks) always run. A job skipped by
+  # `if` counts as passed for a required check, so the branch rules still hold;
+  # the `test` matrix is the exception and is gated step by step (see below).
+  # Unknown or unreadable diff: `code=true`, the jobs run. The classification is
+  # scripts/ci-changes.sh, tested by scripts/ci-changes.test.sh.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.classify.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: The classifier still classifies
+        run: bash scripts/ci-changes.test.sh
+      - name: Does the change touch anything but documentation?
+        id: classify
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          base=""
+          if [ "$EVENT" = pull_request ]; then
+            base=$PR_BASE
+          elif [ "$EVENT" = push ] && [[ "$PUSH_BEFORE" =~ ^[0-9a-f]{40}$ && ! "$PUSH_BEFORE" =~ ^0+$ ]]; then
+            base=$PUSH_BEFORE
+          fi
+          if [ -n "$base" ] && files=$(git diff --name-only "$base" HEAD); then
+            printf '%s\n' "$files" | bash scripts/ci-changes.sh >> "$GITHUB_OUTPUT"
+          else
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          fi
+          cat "$GITHUB_OUTPUT"
+
   # Formatting, one crate at a time. NEVER `cargo fmt --all`: rustfmt would rewrite
   # crates/generated/, which is written by the regeneration bot only.
   fmt:
@@ -34,6 +71,8 @@ jobs:
 
   # Lints, warnings denied.
   clippy:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -47,6 +86,7 @@ jobs:
   # the test binaries link the generated crates and are large.
   test:
     name: test (${{ matrix.os }})
+    needs: changes
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -55,8 +95,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+        if: needs.changes.outputs.code == 'true'
       - uses: Swatinem/rust-cache@v2
+        if: needs.changes.outputs.code == 'true'
       - uses: actions/setup-python@v7
+        if: needs.changes.outputs.code == 'true'
         with:
           python-version: "3.12"
       # The reference model lives in its own repository and is read at the commit
@@ -65,6 +108,7 @@ jobs:
       # skip; a real commit that cannot be fetched fails the job (the script exits
       # non-zero).
       - name: Fetch the reference model (Lutetia)
+        if: needs.changes.outputs.code == 'true'
         shell: bash
         run: |
           commit=$(sed -n 's/^commit *= *"\(.*\)"/\1/p' tests/lutetia.lock | head -n 1)
@@ -78,8 +122,10 @@ jobs:
       # Reference packages written by other tools: pinned, SHA-256 verified, fetched
       # by the script (never by a test). A digest mismatch fails the job.
       - name: Fetch reference packages
+        if: needs.changes.outputs.code == 'true'
         run: python scripts/fetch-fixtures.py
       - name: Run the tests
+        if: needs.changes.outputs.code == 'true'
         shell: bash
         env:
           ENERGYML_FIXTURES_DIR: ${{ github.workspace }}/target/fixtures
@@ -90,6 +136,8 @@ jobs:
   # The HDF5 paths, on a system HDF5. Features are enabled through the workspace,
   # never `-p <crate>`, so the build matches the full suite.
   hdf5:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -124,6 +172,8 @@ jobs:
   # `hdf5` and `png` options, so their flags are on the page). It must be what the
   # commands say today.
   cli-reference:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -135,6 +185,8 @@ jobs:
 
   # WebAssembly is a hard requirement: the crates without native dependencies must compile to it.
   wasm:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -157,6 +209,8 @@ jobs:
   # nothing else. `-p` is deliberate in this job: the point is the feature set
   # of ONE crate, not the workspace's.
   features:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -180,6 +234,8 @@ jobs:
 
   # Minimum supported Rust version, checked per crate.
   msrv:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -192,6 +248,8 @@ jobs:
 
   # Rustdoc must build without a single warning (broken intra-doc links included).
   doc:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     env:
       RUSTDOCFLAGS: -D warnings
@@ -215,6 +273,8 @@ jobs:
   # folders to be there, and (2) packages every publishable crate (publish = false
   # crates are skipped by --workspace) without compiling.
   package:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -260,6 +320,8 @@ jobs:
   # pass. A test that reads a file that is not in the repository and does not skip
   # shows up here, not on a contributor's machine.
   no-fixtures:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -317,6 +379,8 @@ jobs:
   # What docs.rs will do: nightly, `--cfg docsrs`, the features each crate lists in
   # [package.metadata.docs.rs]. Linux, no native HDF5.
   docsrs:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
