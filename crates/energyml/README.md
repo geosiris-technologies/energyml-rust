@@ -4,7 +4,7 @@ The EnergyML library in one dependency. It re-exports the public crates of the [
 
 ```toml
 [dependencies]
-energyml = { version = "0.1", features = ["all"] }  # or name the versions you read, see Features
+energyml = { version = "0.3", features = ["all"] }  # or name the versions you read, see Features
 ```
 
 | Module | Crate |
@@ -32,7 +32,7 @@ None is on by default: choose the schema versions you read.
 
 ```toml
 # RESQML 2.2 and the EML 2.3 it is built on, nothing else
-energyml = { version = "0.1", features = ["resqml22"] }
+energyml = { version = "0.3", features = ["resqml22"] }
 ```
 
 - Versions, one feature each, spelled as a qualified type is: `eml20`, `eml21`, `eml22`, `eml23`, `resqml20` (2.0.1), `resqml22`, `resqml22dev3`, `witsml20`, `witsml21`, `prodml20`, `prodml22`, `prodml23`. A version brings the EML version it is built on.
