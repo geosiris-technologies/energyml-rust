@@ -15,7 +15,7 @@ show the same ground.
 | `images/section-long.svg` | long profile along a track: wells, horizons, faults, strata fills | `energyml profile package/Lutetia.epc --track "650700,6861450;651250,6861750;651850,6861350" --left 200 --right 150 --static --size 1400x700 --draw long --fill down --labels codes --svg section-long.svg` |
 | `images/section-plan.svg` | map view of the same section | the same command with `--draw plan` and `--svg section-plan.svg`, without `--fill` and `--labels` |
 | `images/section-cross.svg` | a cross section, the second of three | the same command with `--cross-count 3 --cross-length 300 --cross-width 100 --draw cross:2 --fill down` and `--svg section-cross.svg`, without `--labels` |
-| `images/well-sheet.svg` | well sheet of the wellbore whose columns colour the most intervals: depth, stratigraphy, formation name | the `gallery` example below, `energyml_sheet::read::board_of_frame` then `layout::compute` and `svg::write` |
+| `images/well-sheet.svg` | well sheet of the wellbore whose columns show the most different colours (five, all of the Cenozoic stages): depth, stratigraphy, formation name | the `gallery` example below, `energyml_sheet::read::board_of_frame` then `layout::compute` and `svg::write` |
 | `images/isocontours.svg` | iso-lines of the depth surface "H6 - top of the Chalk, in depth", every 1 m and heavier every 5 m | the `gallery` example, `energyml_geostat::isocontour` |
 | `images/triangulation.svg` | constrained Delaunay triangulation of the 14 borehole collars, with the traces of faults F1 and F2 as constraints | the `gallery` example, `energyml_geostat::triangulate` |
 | `images/kriging.svg` | ordinary kriging of the collars' elevation on a 20 m grid, the estimate and its variance side by side | the `gallery` example, `energyml_geostat::kriging` and `variogram` |
@@ -53,6 +53,12 @@ picture tidier.
 ![Constrained triangulation of the borehole collars](images/triangulation.svg)
 
 ![Kriged surface and its variance](images/kriging.svg)
+
+The well sheet shows few colours because the package gives few: only the stratigraphy
+column has any (the stage colours of the BRGM chart, all of them close oranges for the
+Cenozoic), and no well of Lutetia shows more than five. The formation and lithology
+columns carry text only, since the file states no colour for them and the library does
+not invent one.
 
 The well sheet is drawn in the `readable` proportion mode: the depth axis is distorted so
 that every interval is tall enough to read, which the sheet says in its own header. At
