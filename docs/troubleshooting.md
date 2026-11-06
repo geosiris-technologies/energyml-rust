@@ -80,6 +80,10 @@ its arrays are unreachable.
 - To rename on purpose, use `energyml rename model.epc --to new.h5` (quote), then
   `--apply`: fields, relationships and the file change together.
 
+The order in which the files are tried, and what the command says when it goes
+somewhere the package did not point, is in
+[Where the arrays are looked for](array-files.md).
+
 ### `rename` fails on Windows with a file in use
 
 An HDF5 handle still open on a file locks it. The rename operation releases the
