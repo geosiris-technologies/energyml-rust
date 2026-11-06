@@ -1,0 +1,176 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="700" viewBox="0 0 1400 700" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="11" data-frame="64 36 1316 576" data-window="-327.68525097173404 1492.8548640807044 -261.027187224105 535.8049603976309" data-whole="-327.68525097173404 1492.8548640807044 -261.027187224105 535.8049603976309" data-scale="0.7228624017230701 0.7228624017230701">
+<title>Plan</title>
+<metadata><section-view xmlns="urn:energyml:section-view" format="1" version="0.3.0">{&quot;format&quot;:1,&quot;version&quot;:&quot;0.3.0&quot;,&quot;inputs&quot;:{&quot;trace&quot;:[[650700.0,6861450.0],[651250.0,6861750.0],[651850.0,6861350.0]],&quot;system&quot;:{&quot;epsg&quot;:2154,&quot;unit&quot;:&quot;m&quot;},&quot;left&quot;:200.0,&quot;right&quot;:150.0,&quot;crosses&quot;:{&quot;kind&quot;:&quot;none&quot;},&quot;objects&quot;:[{&quot;store&quot;:&quot;s1&quot;,&quot;revision&quot;:0,&quot;wells&quot;:[&quot;eml:///resqml22.WellboreTrajectoryRepresentation(02ef8bf7-94e9-5305-8dfa-4e38fd259ff9)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(06970c90-3fcf-55c6-a458-3464cb9c9847)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(0c02d234-e357-5361-812e-00a03be32b0a)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(0c5c23fa-def4-580f-8cd5-01bb8f579eb6)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(0f663378-c4d9-514a-a3d6-5ea3fcc95227)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(0fa0f8ff-2b61-57fd-8e89-3287466ef0e9)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(17113e27-6ead-532e-9c1b-cfd8c571f761)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(21cc5534-c3eb-5472-b9c6-1011bfd2fa38)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(238c4175-8947-5ef5-b105-9022fcfff328)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(26793773-dc8b-5a64-ae5e-f2325c828f4f)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(2a378136-f7a7-56f0-ab94-31326d7986c1)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(2cb64ff2-8975-5674-9f16-fbb1c3b492e2)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(2e886656-0ab4-5a19-bf29-fa393fb4aa1a)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(2fd339a2-8549-5d97-b3d1-3ff87f8f707b)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(31a1f60c-fc1f-5668-afd7-f18427299e49)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(31f5b4cb-86b8-553a-bc3b-e308951ebe4c)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(3224b702-6e26-5a20-a8ec-e577c0339865)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(35758e0f-1d5b-517b-80a6-4e31f7f94715)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(35c892f6-93c7-5cad-91f1-5ee071e9b074)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(361245cf-c696-5f4a-b664-74ac1b6da614)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(3c01975b-d979-5871-9542-af9bd7887e63)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(40256457-3d2f-5651-84c2-70b6f9eaffef)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(4111f997-219d-5815-80dc-386926a168eb)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(42ef17ad-210d-571a-ba52-f6d9eac18f4a)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(4862d209-3b37-5c3b-9c2f-1aadcf6f4a96)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(4c6fa93f-3c4b-583a-994e-399539c92349)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(4ff339d1-559b-5a49-a318-16a8e1dd3175)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(5345fbb4-6f02-5488-b9db-3bdb23c97138)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(5677dd03-7ee7-5aef-8e83-e32aee455a78)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(59a2407a-7768-55a9-b8a1-4b3791df41f8)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(59e0ae10-5176-54de-89f7-e63de633a5ef)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(59f23856-886b-5700-81c9-8084a7dc5524)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(5cf692db-6e21-5aa3-813a-3d62ffe7b4e1)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(5ed92b00-2f55-5642-b440-bd530dcff271)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(5f6dfc2d-9051-5701-9c29-ff16caa6af55)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(605e0618-1bfc-5f58-97de-b9cb0b31d6a8)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(61ef935f-4d34-5483-a09b-a010b301ab8e)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(6368f81e-372a-5920-a62c-7cd9be7c87c4)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(65b9e9fc-6f0f-58b7-a657-7ab743c6b872)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(6b4e84b3-845f-528b-af20-2fd156bf59f1)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(6ba25e35-824b-58be-bd74-6be7d63169c5)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(6f66e483-cf72-5201-ab62-7f1041dd300a)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(725e428d-4089-57e0-bd09-63f1edb014f8)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(76d0006b-c252-5954-a18b-4e6c2c9f4000)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(77ee237e-9e6e-592c-936b-9d48070c8368)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(7a7dd9e0-3908-5cf8-b3f9-bcae14fbbb47)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(7bf738e0-5f8d-51b3-ab84-7b4ca3244057)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(7ee917c9-41de-5f53-a6f9-e106ec37566c)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(800b2adc-a4d0-5cab-8cb9-411488f753b9)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(886e3d26-b775-57c1-9079-e7f70064a301)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(91307047-918a-5b66-b4a1-80b79953fc8c)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(98f6d197-f1e4-5e70-8e81-b32f1d97be73)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(9b5e1718-3405-5bed-be57-c544daa67168)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(9ed86ce2-8679-5dc7-ac93-93d2cf30aeab)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(9f48f719-89c1-5b76-a451-4f245c93436a)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(9f8a7302-78bd-5f79-969d-b3e5c0ab14be)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(a39c97bd-3c18-5720-92be-5ae77507aa23)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(a45c3c62-eb8b-5fae-9ef2-a5523e0a264e)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(a57e7819-63f1-56aa-9bad-110fe3a6c8ea)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(a5dd9e94-5409-5108-a9f4-d03febe18697)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(a6aa1e07-b905-5ba1-bfd3-dc413529c6b8)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(abe40376-9c76-501a-bdb4-82829b473b7a)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(b3a58a3a-cd3d-53ab-9443-e6ccf3a79d86)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(b4070909-6b71-5e73-acb5-e63fcac790e7)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(b42d797d-43a8-5bfc-96c2-641fab5998b7)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(b56ebea8-af8c-5390-89cc-9e8956011c7b)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(b6e5a08e-afea-5404-b261-e36da7549601)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(b8b145e1-ddd4-5b41-8315-6b7a7201bc7f)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(c27fc882-4840-56b6-ac9b-fc0cad0ee414)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(c535e691-6125-5bba-bdbe-4119aa267935)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(c780f437-9237-50e6-a4ad-6ada9d57d145)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(cb69284d-be76-5647-be28-beca7d00f3a8)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(cea9c52a-c8eb-5a6b-b3de-975d6b473169)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(cf42525c-1cc6-5da9-807e-584d908fbcb6)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(d12e317a-5c3e-51dd-9898-d079ca072cdd)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(d279d0d6-9e5a-53ea-8fb9-bc5af275b3d3)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(d3b37f8a-ed75-57f0-a043-56d222cb32a1)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(d4324832-ea5b-59b4-b810-c271733fcd56)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(d468248c-acc6-5889-8a0d-6309dab9b9c1)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(d99af8c5-7c54-5281-ab46-e5f0470571b3)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(e603e853-d9c7-59ed-ae61-1bded93e9357)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(e73cd04e-4ccd-53d4-bf52-13c385e29086)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(e7837645-28ce-5918-a968-34b827b6419e)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(eb29ad3c-d296-578c-9045-74a834b3bcb6)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(ed78e484-2c58-5f03-9088-9592e991626e)&quot;,&quot;eml:///resqml22.WellboreTrajectoryRepresentation(efb90148-5c74-5f9f-9442-cb7b4b57f194)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(f0bf1aaa-e645-5151-8711-fa3aa1ca7d95)&quot;,&quot;eml:///resqml22.WellboreFrameRepresentation(fefff780-5160-567f-9ef2-04045d8c04f0)&quot;],&quot;surfaces&quot;:[&quot;eml:///resqml22.Grid2dRepresentation(0ba698fa-444f-5de8-9034-dc400cbd49ae)&quot;,&quot;eml:///resqml22.TriangulatedSetRepresentation(0c53403a-0a37-5132-8609-88e4bb21265d)&quot;,&quot;eml:///resqml22.TriangulatedSetRepresentation(uuid=0c53403a-0a37-5132-8609-88e4bb21265d,version=&apos;2&apos;)&quot;,&quot;eml:///resqml22.IjkGridRepresentation(1cf7959c-071a-5acb-96f9-bdbce3c82556)&quot;,&quot;eml:///resqml22.Grid2dRepresentation(2a20f384-9fdb-59e9-9495-2e846f1e5f1c)&quot;,&quot;eml:///resqml22.TriangulatedSetRepresentation(34da5c83-7f08-5a92-b545-a15cfe145f06)&quot;,&quot;eml:///resqml22.Grid2dRepresentation(4dfdada4-6b5b-5b08-b629-f04251b178cf)&quot;,&quot;eml:///resqml22.TriangulatedSetRepresentation(51b7be99-184d-55b2-b926-3fa1fab807aa)&quot;,&quot;eml:///resqml22.Grid2dRepresentation(5542f9a4-89c1-572f-8138-e9aec4709c31)&quot;,&quot;eml:///resqml22.TriangulatedSetRepresentation(6f4b66f0-0151-5d98-bf16-ffa709876e85)&quot;,&quot;eml:///resqml22.IjkGridRepresentation(7e33168e-cfad-570b-9af0-e54cf3840634)&quot;,&quot;eml:///resqml22.Grid2dRepresentation(8e8a326a-574d-5ec7-8e2a-f21fcd506a43)&quot;,&quot;eml:///resqml22.Grid2dRepresentation(9eb7b912-a627-5fa0-95a6-898e6dc8f5e2)&quot;,&quot;eml:///resqml22.TriangulatedSetRepresentation(a90239f6-cc50-59d5-8224-5dea62253a80)&quot;,&quot;eml:///resqml22.Grid2dRepresentation(b6724136-58eb-50c8-a4b8-463f60cfba9f)&quot;,&quot;eml:///resqml22.Grid2dRepresentation(b88749af-2fba-583f-9e53-3882fd2db572)&quot;,&quot;eml:///resqml22.TriangulatedSetRepresentation(c04fcf85-bbf6-547c-a46e-2618fd39abd8)&quot;,&quot;eml:///resqml22.IjkGridRepresentation(ec025927-0d89-5065-86f4-510b5efd61ed)&quot;,&quot;eml:///resqml22.Grid2dRepresentation(ee444afc-60db-5d12-bfe0-abbf9f85e0da)&quot;,&quot;eml:///resqml22.TriangulatedSetRepresentation(fdf4510a-3aa1-578d-8935-0c9962e3773b)&quot;]}],&quot;timeFactor&quot;:null},&quot;view&quot;:{&quot;target&quot;:{&quot;kind&quot;:&quot;plan&quot;},&quot;window&quot;:null,&quot;portion&quot;:null,&quot;sizePx&quot;:[1400.0,700.0],&quot;background&quot;:&quot;#ffffff&quot;,&quot;hidden&quot;:[],&quot;colours&quot;:[],&quot;widths&quot;:[],&quot;wellColouring&quot;:&quot;strata&quot;,&quot;wellWidthPx&quot;:3.0,&quot;fills&quot;:[],&quot;show&quot;:{&quot;crossings&quot;:true,&quot;vertices&quot;:true,&quot;distances&quot;:true,&quot;names&quot;:true,&quot;rejected&quot;:false,&quot;bands&quot;:true,&quot;surfaceNames&quot;:true,&quot;notes&quot;:true,&quot;origin&quot;:true,&quot;direction&quot;:true},&quot;axis&quot;:&quot;projected&quot;,&quot;highlight&quot;:[],&quot;labels&quot;:&quot;full&quot;,&quot;paints&quot;:[],&quot;joints&quot;:{&quot;kind&quot;:&quot;none&quot;,&quot;px&quot;:3.0,&quot;colour&quot;:&quot;#000000&quot;,&quot;alpha&quot;:1.0},&quot;zoomScript&quot;:false}}</section-view></metadata>
+<defs><clipPath id="plot"><rect x="64" y="36" width="1316" height="576"/></clipPath></defs>
+<rect x="0" y="0" width="1400" height="700" fill="#ffffff"/>
+<g data-layer="axes" fill="#444444" stroke="none">
+<line x1="156.3" y1="36" x2="156.3" y2="612" stroke="#e0e0e0" stroke-width="1"/>
+<text x="156.3" y="626" text-anchor="middle">-200</text>
+<line x1="300.87" y1="36" x2="300.87" y2="612" stroke="#e0e0e0" stroke-width="1"/>
+<text x="300.87" y="626" text-anchor="middle">0</text>
+<line x1="445.44" y1="36" x2="445.44" y2="612" stroke="#e0e0e0" stroke-width="1"/>
+<text x="445.44" y="626" text-anchor="middle">200</text>
+<line x1="590.02" y1="36" x2="590.02" y2="612" stroke="#e0e0e0" stroke-width="1"/>
+<text x="590.02" y="626" text-anchor="middle">400</text>
+<line x1="734.59" y1="36" x2="734.59" y2="612" stroke="#e0e0e0" stroke-width="1"/>
+<text x="734.59" y="626" text-anchor="middle">600</text>
+<line x1="879.16" y1="36" x2="879.16" y2="612" stroke="#e0e0e0" stroke-width="1"/>
+<text x="879.16" y="626" text-anchor="middle">800</text>
+<line x1="1023.73" y1="36" x2="1023.73" y2="612" stroke="#e0e0e0" stroke-width="1"/>
+<text x="1023.73" y="626" text-anchor="middle">1000</text>
+<line x1="1168.31" y1="36" x2="1168.31" y2="612" stroke="#e0e0e0" stroke-width="1"/>
+<text x="1168.31" y="626" text-anchor="middle">1200</text>
+<line x1="1312.88" y1="36" x2="1312.88" y2="612" stroke="#e0e0e0" stroke-width="1"/>
+<text x="1312.88" y="626" text-anchor="middle">1400</text>
+<line x1="64" y1="567.89" x2="1380" y2="567.89" stroke="#e0e0e0" stroke-width="1"/>
+<text x="59" y="571.89" text-anchor="end">-200</text>
+<line x1="64" y1="495.6" x2="1380" y2="495.6" stroke="#e0e0e0" stroke-width="1"/>
+<text x="59" y="499.6" text-anchor="end">-100</text>
+<line x1="64" y1="423.31" x2="1380" y2="423.31" stroke="#e0e0e0" stroke-width="1"/>
+<text x="59" y="427.31" text-anchor="end">0</text>
+<line x1="64" y1="351.03" x2="1380" y2="351.03" stroke="#e0e0e0" stroke-width="1"/>
+<text x="59" y="355.03" text-anchor="end">100</text>
+<line x1="64" y1="278.74" x2="1380" y2="278.74" stroke="#e0e0e0" stroke-width="1"/>
+<text x="59" y="282.74" text-anchor="end">200</text>
+<line x1="64" y1="206.45" x2="1380" y2="206.45" stroke="#e0e0e0" stroke-width="1"/>
+<text x="59" y="210.45" text-anchor="end">300</text>
+<line x1="64" y1="134.17" x2="1380" y2="134.17" stroke="#e0e0e0" stroke-width="1"/>
+<text x="59" y="138.17" text-anchor="end">400</text>
+<line x1="64" y1="61.88" x2="1380" y2="61.88" stroke="#e0e0e0" stroke-width="1"/>
+<text x="59" y="65.88" text-anchor="end">500</text>
+<text data-role="x-title" x="722" y="642" text-anchor="middle">x, local (m)</text>
+<text data-role="y-title" x="12" y="324" text-anchor="middle" transform="rotate(-90 12 324)">y, local (m)</text>
+<rect x="64" y="36" width="1316" height="576" fill="none" stroke="#444444" stroke-width="1"/>
+</g>
+<g data-layer="fills" clip-path="url(#plot)">
+<g data-section="long" data-kind="band">
+<polygon points="352.79,518.5 692.83,333.03 1072.02,585.82 1212.36,375.31 778.64,86.16 750.8,71.69 720.49,63.57 689.14,62.18 658.23,67.59 629.22,79.53 231.64,296.39" fill="#90a4ae" fill-opacity="0.15" stroke="#90a4ae" stroke-width="1" stroke-dasharray="4 3"/>
+</g>
+</g>
+<g data-layer="traces" clip-path="url(#plot)">
+<g data-section="long" data-kind="section">
+<polyline points="300.87,423.31 698.45,206.45 1132.16,495.6" fill="none" stroke="#222222" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</g>
+<g data-decor="direction-long" data-kind="direction">
+<polyline points="349.61,400.72 353.2,394.77 346.26,394.57" fill="none" stroke="#222222" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="449,346.5 452.6,340.55 445.65,340.36" fill="none" stroke="#222222" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="548.4,292.29 551.99,286.34 545.05,286.14" fill="none" stroke="#222222" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="647.79,238.07 651.38,232.13 644.44,231.93" fill="none" stroke="#222222" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="737.38,236.62 744.31,237.03 741.26,230.79" fill="none" stroke="#222222" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="824.12,294.45 831.06,294.86 828.01,288.62" fill="none" stroke="#222222" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="910.87,352.28 917.8,352.69 914.75,346.45" fill="none" stroke="#222222" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="997.61,410.1 1004.54,410.52 1001.49,404.28" fill="none" stroke="#222222" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="1084.35,467.93 1091.29,468.35 1088.24,462.11" fill="none" stroke="#222222" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="300.87" cy="423.31" r="2.5" fill="#222222"/>
+</g>
+</g>
+<g data-layer="wells" clip-path="url(#plot)">
+<g data-key="s1␀eml:///resqml22.WellboreFrameRepresentation(9b5e1718-3405-5bed-be57-c544daa67168)" data-store="s1" data-uri="eml:///resqml22.WellboreFrameRepresentation(9b5e1718-3405-5bed-be57-c544daa67168)" data-kind="well">
+<title>BSS000NVHN - frame</title>
+<polyline points="554.45,176.59 600.02,260.14" fill="none" stroke="#555555" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<circle cx="554.45" cy="176.59" r="3.5" fill="#555555"/>
+</g>
+<g data-key="s1␀eml:///resqml22.WellboreFrameRepresentation(35758e0f-1d5b-517b-80a6-4e31f7f94715)" data-store="s1" data-uri="eml:///resqml22.WellboreFrameRepresentation(35758e0f-1d5b-517b-80a6-4e31f7f94715)" data-kind="well">
+<title>BSS000NZNP - frame</title>
+<polyline points="929.49,364.62 931.4,361.76" fill="none" stroke="#555555" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<circle cx="929.49" cy="364.62" r="3.5" fill="#555555"/>
+</g>
+<g data-key="s1␀eml:///resqml22.WellboreFrameRepresentation(eb29ad3c-d296-578c-9045-74a834b3bcb6)" data-store="s1" data-uri="eml:///resqml22.WellboreFrameRepresentation(eb29ad3c-d296-578c-9045-74a834b3bcb6)" data-kind="well">
+<title>BSS000NZWP - frame</title>
+<polyline points="809.44,130.51 740.24,234.32" fill="none" stroke="#555555" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<circle cx="809.44" cy="130.51" r="3.5" fill="#555555"/>
+</g>
+<g data-key="s1␀eml:///resqml22.WellboreFrameRepresentation(3224b702-6e26-5a20-a8ec-e577c0339865)" data-store="s1" data-uri="eml:///resqml22.WellboreFrameRepresentation(3224b702-6e26-5a20-a8ec-e577c0339865)" data-kind="well">
+<title>BSS000NZNM - frame</title>
+<polyline points="918.94,356.49 920.35,354.39" fill="none" stroke="#555555" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<circle cx="918.94" cy="356.49" r="3.5" fill="#555555"/>
+</g>
+<g data-key="s1␀eml:///resqml22.WellboreFrameRepresentation(d279d0d6-9e5a-53ea-8fb9-bc5af275b3d3)" data-store="s1" data-uri="eml:///resqml22.WellboreFrameRepresentation(d279d0d6-9e5a-53ea-8fb9-bc5af275b3d3)" data-kind="well">
+<title>BSS000NUGK - frame</title>
+<polyline points="489.31,352.88 475.71,327.95" fill="none" stroke="#555555" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<circle cx="489.31" cy="352.88" r="3.5" fill="#555555"/>
+</g>
+<g data-key="s1␀eml:///resqml22.WellboreFrameRepresentation(d12e317a-5c3e-51dd-9898-d079ca072cdd)" data-store="s1" data-uri="eml:///resqml22.WellboreFrameRepresentation(d12e317a-5c3e-51dd-9898-d079ca072cdd)" data-kind="well">
+<title>BSS000NTGS - frame</title>
+<polyline points="464.21,183.87 527.42,299.74" fill="none" stroke="#555555" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<circle cx="464.21" cy="183.87" r="3.5" fill="#555555"/>
+</g>
+<g data-key="s1␀eml:///resqml22.WellboreFrameRepresentation(5cf692db-6e21-5aa3-813a-3d62ffe7b4e1)" data-store="s1" data-uri="eml:///resqml22.WellboreFrameRepresentation(5cf692db-6e21-5aa3-813a-3d62ffe7b4e1)" data-kind="well">
+<title>BSS000NUKM - frame</title>
+<polyline points="607.01,233.3 616.69,251.05" fill="none" stroke="#555555" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<circle cx="607.01" cy="233.3" r="3.5" fill="#555555"/>
+</g>
+<g data-key="s1␀eml:///resqml22.WellboreFrameRepresentation(5677dd03-7ee7-5aef-8e83-e32aee455a78)" data-store="s1" data-uri="eml:///resqml22.WellboreFrameRepresentation(5677dd03-7ee7-5aef-8e83-e32aee455a78)" data-kind="well">
+<title>BSS000NUKL - frame</title>
+<polyline points="670.46,257.95 655.23,230.03" fill="none" stroke="#555555" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<circle cx="670.46" cy="257.95" r="3.5" fill="#555555"/>
+</g>
+<g data-key="s1␀eml:///resqml22.WellboreFrameRepresentation(e7837645-28ce-5918-a968-34b827b6419e)" data-store="s1" data-uri="eml:///resqml22.WellboreFrameRepresentation(e7837645-28ce-5918-a968-34b827b6419e)" data-kind="well">
+<title>BSS000NSYT - frame</title>
+<polyline points="542.55,329.22 526.69,300.14" fill="none" stroke="#555555" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<circle cx="542.55" cy="329.22" r="3.5" fill="#555555"/>
+</g>
+<g data-key="s1␀eml:///resqml22.WellboreFrameRepresentation(d99af8c5-7c54-5281-ab46-e5f0470571b3)" data-store="s1" data-uri="eml:///resqml22.WellboreFrameRepresentation(d99af8c5-7c54-5281-ab46-e5f0470571b3)" data-kind="well">
+<title>BSS000NUSX - frame</title>
+<polyline points="624.15,88.76 690.66,210.7" fill="none" stroke="#555555" stroke-width="1" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<circle cx="624.15" cy="88.76" r="3.5" fill="#555555"/>
+</g>
+</g>
+<g data-layer="labels">
+<g data-label-of="s1␀eml:///resqml22.WellboreFrameRepresentation(d12e317a-5c3e-51dd-9898-d079ca072cdd)" data-kind="label">
+<title>BSS000NTGS - frame</title>
+<polyline points="464.21,162.87 464.21,179.87" fill="none" stroke="#888888" stroke-width="0.7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<text x="464.21" y="159.87" text-anchor="middle" font-size="11" fill="#222222">BSS000NTGS - frame</text>
+</g>
+<g data-label-of="s1␀eml:///resqml22.WellboreFrameRepresentation(d279d0d6-9e5a-53ea-8fb9-bc5af275b3d3)" data-kind="label">
+<title>BSS000NUGK - frame</title>
+<polyline points="489.31,314.88 489.31,348.88" fill="none" stroke="#888888" stroke-width="0.7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<text x="489.31" y="311.88" text-anchor="middle" font-size="11" fill="#222222">BSS000NUGK - frame</text>
+</g>
+<g data-label-of="s1␀eml:///resqml22.WellboreFrameRepresentation(e7837645-28ce-5918-a968-34b827b6419e)" data-kind="label">
+<title>BSS000NSYT - frame</title>
+<polyline points="542.55,291.22 542.55,325.22" fill="none" stroke="#888888" stroke-width="0.7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<text x="542.55" y="288.22" text-anchor="middle" font-size="11" fill="#222222">BSS000NSYT - frame</text>
+</g>
+<g data-label-of="s1␀eml:///resqml22.WellboreFrameRepresentation(9b5e1718-3405-5bed-be57-c544daa67168)" data-kind="label">
+<title>BSS000NVHN - frame</title>
+<polyline points="554.45,138.59 554.45,172.59" fill="none" stroke="#888888" stroke-width="0.7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<text x="554.45" y="135.59" text-anchor="middle" font-size="11" fill="#222222">BSS000NVHN - frame</text>
+</g>
+<g data-label-of="s1␀eml:///resqml22.WellboreFrameRepresentation(5cf692db-6e21-5aa3-813a-3d62ffe7b4e1)" data-kind="label">
+<title>BSS000NUKM - frame</title>
+<polyline points="607.01,212.3 607.01,229.3" fill="none" stroke="#888888" stroke-width="0.7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<text x="607.01" y="209.3" text-anchor="middle" font-size="11" fill="#222222">BSS000NUKM - frame</text>
+</g>
+<g data-label-of="s1␀eml:///resqml22.WellboreFrameRepresentation(d99af8c5-7c54-5281-ab46-e5f0470571b3)" data-kind="label">
+<title>BSS000NUSX - frame</title>
+<polyline points="624.15,67.76 624.15,84.76" fill="none" stroke="#888888" stroke-width="0.7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<text x="624.15" y="64.76" text-anchor="middle" font-size="11" fill="#222222">BSS000NUSX - frame</text>
+</g>
+<g data-label-of="s1␀eml:///resqml22.WellboreFrameRepresentation(5677dd03-7ee7-5aef-8e83-e32aee455a78)" data-kind="label">
+<title>BSS000NUKL - frame</title>
+<polyline points="670.46,236.95 670.46,253.95" fill="none" stroke="#888888" stroke-width="0.7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<text x="670.46" y="233.95" text-anchor="middle" font-size="11" fill="#222222">BSS000NUKL - frame</text>
+</g>
+<g data-label-of="s1␀eml:///resqml22.WellboreFrameRepresentation(eb29ad3c-d296-578c-9045-74a834b3bcb6)" data-kind="label">
+<title>BSS000NZWP - frame</title>
+<polyline points="809.44,109.51 809.44,126.51" fill="none" stroke="#888888" stroke-width="0.7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<text x="809.44" y="106.51" text-anchor="middle" font-size="11" fill="#222222">BSS000NZWP - frame</text>
+</g>
+<g data-label-of="s1␀eml:///resqml22.WellboreFrameRepresentation(3224b702-6e26-5a20-a8ec-e577c0339865)" data-kind="label">
+<title>BSS000NZNM - frame</title>
+<polyline points="918.94,335.49 918.94,352.49" fill="none" stroke="#888888" stroke-width="0.7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<text x="918.94" y="332.49" text-anchor="middle" font-size="11" fill="#222222">BSS000NZNM - frame</text>
+</g>
+<g data-label-of="s1␀eml:///resqml22.WellboreFrameRepresentation(35758e0f-1d5b-517b-80a6-4e31f7f94715)" data-kind="label">
+<title>BSS000NZNP - frame</title>
+<polyline points="929.49,309.62 929.49,360.62" fill="none" stroke="#888888" stroke-width="0.7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3"/>
+<text x="929.49" y="306.62" text-anchor="middle" font-size="11" fill="#222222">BSS000NZNP - frame</text>
+</g>
+</g>
+<text x="64" y="16" font-size="14" font-weight="bold" fill="#222222">Plan</text>
+<text data-role="exaggeration" x="1380" y="16" text-anchor="end" fill="#222222">scale 1:1 on both axes</text>
+<text data-role="origin" x="590.08" y="16" fill="#444444">origin (s = 0): X 650700.0 · Y 6861450.0 - EPSG:2154</text>
+<text data-role="warning" x="64" y="658" fill="#b71c1c">25 objects refused - see the objects list</text>
+<text data-role="warning" x="64" y="672" fill="#b71c1c">24 wells set aside - projected nowhere</text>
+</svg>
