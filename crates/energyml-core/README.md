@@ -21,7 +21,8 @@ use energyml_core::identifiers::EtpUri;
 let uri = EtpUri::parse(text)?; // `text`: an ETP URI string
 ```
 
-TODO(verify): add a literal URI example after checking the accepted syntax in `src/identifiers.rs`.
+For instance `eml:///resqml22.WellboreFrameRepresentation(0c02d234-e357-5361-812e-00a03be32b0a)`,
+or, in a named dataspace, `eml:///dataspace('demo')/resqml22.TriangulatedSetRepresentation(<uuid>)`.
 
 ## Documentation
 

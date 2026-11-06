@@ -89,4 +89,4 @@ Reading from the bottom: `core` knows nothing about any schema; the generated cr
 
 The Energistics Transport Protocol (client, server, conformance checks, bridge to `EnergymlStorage`) lives in the sibling repository `retp`. It implements the same `EnergymlStorage` trait, so code written against a file works against a server.
 
-TODO(verify): name and link the Lutetia reference-model repository once it is public.
+The reference model used by the examples and the tests is [`energyml-lutetia`](https://github.com/geosiris-technologies/energyml-lutetia), a synthetic model kept in its own repository.

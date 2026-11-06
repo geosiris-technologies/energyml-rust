@@ -72,17 +72,27 @@ caller can add its own.
 ## From Rust
 
 ```rust
-use energyml_sheet::{layout, read, svg};
+use energyml_sheet::layout::{self, HeightGoal, Params};
+use energyml_sheet::read::{self, Options};
+use energyml_sheet::svg;
 
-// A frame of a wellbore -> a board (one track per stratigraphic rank,
-// one per interval property).
-let read = read::board_of_frame(/* store, frame, options */)?;
+// A frame of a wellbore (a `WellboreFrameRepresentation`, as `&dyn Reflect`), the
+// package's listing and an array source (an `EpcStore` is one) -> a board: one
+// track per stratigraphic rank, one per interval property.
+let read = read::board_of_frame(frame, &resources, &store, &Options::new("MD (m)"))?;
+let params = Params {
+    proportion: "to-scale".to_string(),   // or "readable"
+    height: HeightGoal::Scale(5.0),       // mm of paper per metre of MD: 1:200
+    page_width_mm: 180.0,
+    text_size_pt: 8.0,
+};
 let sheet = layout::compute(&read.board, &params)?;   // pure: numbers only
 let text: String = svg::write(&sheet);                 // the single exit
 ```
 
-TODO(verify): exact arguments of `read::board_of_frame` and the fields of
-`Params` before publishing; the snippet shows the call shape.
+`Options::new` takes the header of the depth column, which the crate does not
+choose. [`crates/energyml/examples/gallery.rs`](../crates/energyml/examples/gallery.rs)
+draws a sheet from a real package, end to end.
 
 The SVG is the only output: the sheet a person sees is the sheet that is
 downloaded. See also [Section view](section-view.md).
