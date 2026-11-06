@@ -346,16 +346,19 @@ pub fn chain(segments: &[Segment]) -> Vec<Polyline> {
     };
 
     // Loose ends first: a place only one segment touches is where an open line
-    // begins.
-    for (end, at) in touching.iter() {
-        if at.len() != 1 {
-            continue;
+    // begins. They are visited in the order of the segments (end `a`, then end
+    // `b`), never in the iteration order of `touching`, which changes from one
+    // call to the next: the same segments must give the same lines in the same
+    // order, or a drawing written from them differs from one run to the next.
+    for (one, segment) in segments.iter().enumerate() {
+        for end in [segment.on_a, segment.on_b] {
+            if used[one] {
+                break;
+            }
+            if touching.get(&end).is_some_and(|at| at.len() == 1) {
+                made.push(walk(one, end, &mut used));
+            }
         }
-        let one = at[0];
-        if used[one] {
-            continue;
-        }
-        made.push(walk(one, *end, &mut used));
     }
     // Whatever is left forms closed loops, or lines whose ends are all
     // junctions.
@@ -798,5 +801,32 @@ mod tests {
     #[test]
     fn nothing_to_chain_gives_nothing() {
         assert_eq!(chain(&[]), Vec::new());
+    }
+
+    /// Eight open lines of one segment each, side by side: sixteen loose ends.
+    ///
+    /// What would make this fail: walking the loose ends in the iteration order
+    /// of the table that indexes them. That order changes from one call to the
+    /// next, so the same segments came back as the same lines in another order
+    /// and a drawing written from them differed from one run to the next.
+    #[test]
+    fn the_same_segments_always_chain_into_the_same_lines_in_the_same_order() {
+        let segments: Vec<Segment> = (0..8u32)
+            .map(|line| Segment {
+                a: [f64::from(line), 0.0, 0.0],
+                b: [f64::from(line), 1.0, 0.0],
+                on_a: At::Node(2 * line),
+                on_b: At::Node(2 * line + 1),
+            })
+            .collect();
+        let first = chain(&segments);
+        assert_eq!(first.len(), 8, "one line per segment");
+        for _ in 0..30 {
+            assert_eq!(chain(&segments), first, "the order of the lines must not vary");
+        }
+        // And it is the order of the segments, each line starting at its first end.
+        for (rank, line) in first.iter().enumerate() {
+            assert_eq!(line.points[0], segments[rank].a);
+        }
     }
 }
