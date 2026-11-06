@@ -332,28 +332,32 @@ fn ramp(t: f64) -> String {
 // The well sheet
 // ---------------------------------------------------------------------------
 
-/// How many intervals of a board carry a colour: what makes a sheet worth drawing.
-fn coloured(board: &layout::Board) -> usize {
-    board
-        .tracks
-        .iter()
-        .map(|track| match track {
-            layout::Track::Intervals(column) => {
-                column.intervals.iter().filter(|i| i.colour.is_some()).count()
+/// What makes a sheet worth drawing: how many different colours its columns
+/// show, then how many intervals carry one.
+fn coloured(board: &layout::Board) -> (usize, usize) {
+    let mut kinds = std::collections::BTreeSet::new();
+    let mut count = 0;
+    for track in &board.tracks {
+        if let layout::Track::Intervals(column) = track {
+            for interval in &column.intervals {
+                if let Some(colour) = &interval.colour {
+                    kinds.insert(format!("{colour:?}"));
+                    count += 1;
+                }
             }
-            _ => 0,
-        })
-        .sum()
+        }
+    }
+    (kinds.len(), count)
 }
 
-/// The sheet of the wellbore frame whose columns colour the most intervals
+/// The sheet of the wellbore frame whose columns show the most different colours
 /// (ties: the first in the package's order, so the choice is the same every
 /// run). Kept: the depth column, every coloured column, and the first column
 /// of text, which is what a reader needs to read the colours.
 fn well_sheet(store: &EpcStore) -> Result<String, Failure> {
     let resources = store.resources();
     let options = Options::new("MD (m)");
-    let mut best: Option<(usize, String, read::Read)> = None;
+    let mut best: Option<((usize, usize), String, read::Read)> = None;
     for summary in resources
         .iter()
         .filter(|s| s.qualified_type.ends_with("WellboreFrameRepresentation"))
@@ -369,7 +373,9 @@ fn well_sheet(store: &EpcStore) -> Result<String, Failure> {
     }
     let (score, uri, mut read) = best.ok_or("no wellbore frame of the package can be drawn as a sheet")?;
     eprintln!(
-        "well sheet: {uri} ({score} coloured intervals, {} columns)",
+        "well sheet: {uri} ({} colours, {} coloured intervals, {} columns)",
+        score.0,
+        score.1,
         read.board.tracks.len()
     );
     for note in &read.notes {
