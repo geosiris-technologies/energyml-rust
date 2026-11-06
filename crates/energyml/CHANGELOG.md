@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-v0.3.0...energyml-v0.3.1) - 2026-11-06
+
+### Other
+
+- *(gallery)* choose the well sheet by its colours, and say why it has few
+- *(gallery)* the well sheet and the three geostatistics images
+- *(readme)* link Andesite Studio, refresh versions and crate list
+
 ## [0.3.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-v0.2.0...energyml-v0.3.0) - 2026-10-16
 
 ### Fixed

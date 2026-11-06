@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-core-v0.3.0...energyml-core-v0.3.1) - 2026-11-06
+
+### Other
+
+- settle the TODOs that the code, the CLI and the client's docs answer
+
 ## [0.3.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-core-v0.2.0...energyml-core-v0.3.0) - 2026-10-16
 
 ### Added
