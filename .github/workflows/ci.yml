@@ -200,8 +200,7 @@ jobs:
           -p energyml-core -p energyml-resqml-2-2 -p energyml-witsml-2-1
           -p energyml-storage -p energyml-domain -p energyml-geometry
           -p energyml-export -p energyml-proj -p energyml-cache
-          -p energyml-section -p energyml-sheet
-      # TODO(verify): add energyml-geostat once the analysis split lands.
+          -p energyml-section -p energyml-sheet -p energyml-geostat
 
   # One Cargo feature per schema version (energyml-schemas, relayed by energyml).
   # The workspace build unifies every feature on, so the narrow builds only
