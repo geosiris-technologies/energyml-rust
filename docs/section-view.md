@@ -6,8 +6,10 @@ and an SVG you can open in a browser or edit in Inkscape. The computation is in
 Rust (crate `energyml-section`); the drawing is the same one whatever asks
 for it - the command line, a library call, or an application.
 
-> Images: TODO - produced from the reference model by
-> `cargo run --example gallery`, see [Gallery](gallery.md).
+A long section of the Lutetia reference model, drawn by `energyml profile` (the
+other views, and the exact command for each, are in the [Gallery](gallery.md)):
+
+![A long section of Lutetia](images/section-long.svg)
 
 ## From the command line
 
