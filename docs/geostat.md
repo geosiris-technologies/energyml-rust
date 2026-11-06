@@ -15,8 +15,11 @@ meshing, structural and well computations all follow the same contract:
 > The neutral part (interpolation, meshing, small tools; no `energyml-*`
 > dependency) is its own crate, `energyml-geostat`, usable in hydrogeology,
 > environmental or civil work; the domain part stays in `energyml-analysis`. This
-> page lists the modules by family; TODO(verify): which of the two crates holds each
-> module of the tables below.
+> page lists the modules by family. The modules of the tables below are in
+> `energyml-geostat`, except `surface`, `intersect`, `project`, `fault_throw`,
+> `fault_sticks`, `horizon_law`, `t2d`, `survey`, `well_plan`, `tops`, `profile`,
+> `well_logs`, `fake`, `step_rate`, `hall`, `flow_law`, `ion_balance` and
+> `water_diagrams`, which are in `energyml-analysis`.
 
 Three pictures from the Lutetia reference model, with the call that draws each in the
 [Gallery](gallery.md):

@@ -206,7 +206,8 @@ Quote first; the operation refuses as a whole rather than doing part.
 
 ## Examples
 
-Worked examples live in the bridge's `examples/` folder and are checked by its
-tests: adding a surface to an existing package, and building a package from
-nothing (feature, interpretation, point set, property). TODO(verify): path of
-`examples/` in the public repository.
+Worked examples live in the bridge's `examples/` folder,
+[`crates/energyml-python/examples/`](../crates/energyml-python/examples/), and are
+run by its tests (`tests/examples.rs`): adding a surface to an existing package
+(`01_add_a_surface.py`), and building a package from nothing (feature,
+interpretation, point set, property: `02_a_package_from_nothing.py`).

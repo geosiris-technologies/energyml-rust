@@ -50,14 +50,14 @@ energyml rules --house --json
 ```
 
 Themes today include attachments, colour, inheritance of properties, series and
-tables. TODO(verify): themes at release time.
+tables (`energyml rules --house` lists the five themes of this release).
 
 ## The full list
 
-The complete, current list is **generated from the registry** and will be added
-to this page by the documentation build; it is deliberately not copied by hand
-here, because a hand-copied list is out of date the day a rule changes.
-TODO: generated `docs/house-rules-list.md`.
+The complete, current list is **generated from the registry**: run
+`energyml rules --house` (add `--json` for a machine-readable form). It is
+deliberately not copied by hand here, because a hand-copied list is out of date
+the day a rule changes.
 
 ## Why this matters
 

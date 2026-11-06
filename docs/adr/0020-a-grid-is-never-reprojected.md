@@ -38,4 +38,6 @@ between frames with `change-frame`, which keeps their nodes and topology.
   `ijk-grid-from-horizons` and the horizon operations; a test checks that the
   `interpolate` message says "never reprojected".
 
-TODO(verify): the list of operations that state the rule, against the final public tree.
+The operations whose source states the rule, found by searching the public tree for
+"never reprojected": `interpolate`, `grid-properties`, `ijk-grid-from-horizons`,
+`horizon-from-law`, `fault-from-sticks` and the fault-throw operation.
