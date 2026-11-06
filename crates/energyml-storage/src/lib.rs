@@ -107,7 +107,7 @@ pub use array::{
     ArrayBuffer, ArrayData, ArrayLocation, ArrayMetadata, ArrayValues, NoProxies, ProxyResolver, ProxyTarget,
     Resolution,
 };
-pub use backend::{ArrayBackend, Backends, Candidate, ExternalFiles, Origin};
+pub use backend::{ArrayBackend, ArrayDeparture, Backends, Candidate, ExternalFiles, Origin};
 pub use capabilities::{Capabilities, EdgeKindCoverage, StoreTimes};
 pub use changes::EnergymlChanges;
 pub use context::{Context, DeletedFilter, DeletedResource, Found, Navigable, Scope};
