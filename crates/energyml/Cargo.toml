@@ -84,6 +84,12 @@ png = ["energyml-section/png"]
 # crate reads with, so the two never disagree about a zip.
 zip = { version = "9", default-features = false, features = ["deflate"] }
 
+# Draws the gallery images no command writes (docs/gallery.md). It reads Lutetia's
+# arrays, which sit in an HDF5 file.
+[[example]]
+name = "gallery"
+required-features = ["all", "hdf5"]
+
 [lints.rust]
 missing_docs = "warn"
 

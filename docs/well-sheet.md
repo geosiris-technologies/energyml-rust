@@ -4,8 +4,10 @@ A two-dimensional sheet of one well - depth column, stratigraphy, interval
 properties laid out as tracks - computed in Rust and written as SVG, in the style
 of borehole logs published by geological surveys. The crate is `energyml-sheet`.
 
-> Images: TODO - produced from the reference model by
-> `cargo run --example gallery`, see [Gallery](gallery.md).
+A sheet of a Lutetia borehole, drawn by the library (the command is in the
+[Gallery](gallery.md)):
+
+![A well sheet of Lutetia](images/well-sheet.svg)
 
 ## Status
 
