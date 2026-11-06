@@ -96,8 +96,17 @@ energyml graph lutetia/package/Lutetia.epc --format dot -o graph.dot
 energyml wells lutetia/package/Lutetia.epc --out wells.csv
 ```
 
-TODO(verify): the object counts and the exact output text of these commands on Lutetia; the
-inventory is in `docs/inventory.md` of the Lutetia repository.
+On Lutetia at the commit pinned in `tests/lutetia.lock` (they change if the model does),
+the commands of this section print:
+
+- `list`: 1303 lines. The package holds 1302 objects, which is also the count of the
+  Lutetia inventory (`docs/inventory.md` of its repository); one of them, the top of the
+  Ypresian (triangulated), is held in two versions and so has two lines.
+- `graph`: `1320 node(s), 6516 edge(s) → graph.dot`, then `17 referenced object(s) are not
+  in this package`. The nodes are the 1303 listed objects and those 17 absent ones.
+- `wells`: `44 wellbore(s), 1109 row(s), 39 column(s) written to wells.csv`, after one
+  `[left out]` line: a monthly pressure series of the well GTH-1 holds 696 values where
+  its frame has 58 nodes, so it is not laid on the frame. Two runs write the same bytes.
 
 ## Check, and the package with errors
 
@@ -224,7 +233,10 @@ to the package.
 - A command that needs a capability the build lacks (for example `arrays --values` or an
   export with `--properties` without `hdf5`, `profile --png` without `png`) refuses and says
   which feature is missing; it never prints an empty result instead.
-- TODO(verify): the exit code of the other commands on a refusal (usage errors are the
-  usual non-zero code of the argument parser); `docs/cli.md` documents only the `check` case.
+- Any other error or refusal exits **2** and prints `error: ...` on stderr: a file that
+  cannot be opened, an object or a format that does not exist, a missing argument. Run on
+  `list`, `show`, `export` and `profile`; `energyml-cli` maps every error to 2 in one
+  place, so the refusal of a missing capability takes the same path, but it was not run
+  here (the build used had `hdf5` and `png`). A command that succeeds exits 0.
 - The scripts here stop at the first failing command (`set -eu`), except the check of the
   package with errors, where exit 1 is the expected result.
