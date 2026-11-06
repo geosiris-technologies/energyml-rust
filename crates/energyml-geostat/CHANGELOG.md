@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-geostat-v0.3.0...energyml-geostat-v0.3.1) - 2026-11-06
+
+### Fixed
+
+- *(geostat)* chain the loose ends of a contour in a stable order
+
 ## [0.2.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-geostat-v0.1.2...energyml-geostat-v0.2.0) - 2026-10-15
 
 ### Other
