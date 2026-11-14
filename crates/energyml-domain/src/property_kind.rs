@@ -1002,7 +1002,8 @@ pub enum KindIssue {
     ///
     /// Common TRG §11.9 anticipates it: *"if there is no match in the
     /// Energistics Unit of Measure Dictionary, then this attribute is purely
-    /// for human information"*. This build carries four unit families, so most
+    /// for human information"*. This build carries a few unit families
+    /// ([`crate::units::Dimension::ALL`]), so most
     /// classes fall here until the unit dictionary is vendored.
     QuantityClassNotCheckable {
         /// The class as the kind declares it.
@@ -1048,8 +1049,9 @@ impl std::fmt::Display for KindIssue {
             KindIssue::QuantityClassNotCheckable { class, uom } => write!(
                 f,
                 "`{uom}` against the quantity class `{class}` was not checked: this build converts \
-                 four families of unit, and `{class}` is not one of them (the Energistics unit \
-                 dictionary is not vendored yet)"
+                 {} families of unit, and `{class}` is not one of them (the Energistics unit \
+                 dictionary is not vendored yet)",
+                crate::units::Dimension::ALL.len()
             ),
         }
     }
@@ -1063,13 +1065,13 @@ impl std::fmt::Display for KindIssue {
 /// checks by hand.
 fn dimension_of_class(class: &str) -> Option<crate::units::Dimension> {
     use crate::units::Dimension;
-    match class.trim().to_ascii_lowercase().as_str() {
-        "length" => Some(Dimension::Length),
-        "plane angle" | "angle" => Some(Dimension::PlaneAngle),
-        "pressure" => Some(Dimension::Pressure),
-        "time" => Some(Dimension::Time),
-        _ => None,
+    let class = class.trim().to_ascii_lowercase();
+    // `angle` is an alias of `plane angle`; every other family answers to its
+    // own `class_name`, so the list is held once, in `units`.
+    if class == "angle" {
+        return Some(Dimension::PlaneAngle);
     }
+    Dimension::ALL.iter().copied().find(|d| d.class_name() == class)
 }
 
 /// Check one property against the three rules the guides state.
@@ -1107,7 +1109,7 @@ pub fn check(resolution: &Resolution, uom: Option<&str>) -> Vec<KindIssue> {
                     out.push(KindIssue::UomOutsideQuantityClass {
                         uom: uom.to_string(),
                         class: class.to_string(),
-                        found: found.map(|d| format!("{d:?}").to_lowercase()),
+                        found: found.map(|d| d.class_name().to_string()),
                     });
                 }
             }

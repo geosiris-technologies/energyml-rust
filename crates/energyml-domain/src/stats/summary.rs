@@ -1,43 +1,6 @@
-//! What a column of numbers is, before anybody draws it.
-//!
-//! # Why this is here and not in the front end that plots it
-//!
-//! A histogram is arithmetic with right and wrong answers, and every one of its
-//! wrong answers *looks* like a chart. A bin edge off by one puts a hundred
-//! thousand values in the neighbouring bar; counting `NaN` as a value drags the
-//! mean towards nothing; treating a facies code as a continuous quantity draws
-//! ten spikes with empty air between them and calls it a distribution. None of
-//! that fails, and none of it is visible in the picture.
-//!
-//! So the arithmetic lives here, where a test holds it, and the caller draws
-//! what it returns. It is also the layer where every reader can reach it: the
-//! browser gets it through a WebAssembly front end, the CLI and the desktop viewer get
-//! it for free, and none of the three has a copy.
-//!
-//! # The four decisions
-//!
-//! - **A value that is not a number is counted, not skipped.** `NaN` is how the
-//!   corpus says *no data here* - 785 250 of ALWYN's 987 387 grid nodes - and
-//!   the count of them is often the most useful number on the panel. It is kept
-//!   apart from the total so that "how much of this array is real" is a
-//!   subtraction anybody can check, and neither the mean nor the extremes see
-//!   them.
-//! - **A discrete array is categorical, not continuous.** A facies property
-//!   holding 0…9 in a million cells is ten answers, not a range: binned over 30
-//!   intervals it draws ten spikes separated by empty bars that mean nothing.
-//!   Below [`CATEGORY_LIMIT`] distinct integers it comes back as counts per
-//!   value; above it, as a histogram.
-//! - **The extremes are the bin edges, and the last bin is closed.** A value
-//!   equal to the maximum belongs to the last bin, not to a bin past the end -
-//!   the classic off-by-one, and it silently drops exactly the values a person
-//!   is looking for when they open a histogram.
-//! - **A series is decimated here, not in the transport.** Plotting a million
-//!   points means shipping a million numbers to draw two thousand pixels. The
-//!   step is stated with the sample so a chart can label the axis with real
-//!   indices instead of pretending the sample is the array.
-
 use std::collections::BTreeMap;
 
+use super::accumulate::Accumulator;
 use crate::values::{Family, Values};
 
 /// Distinct integer values below which an array is summarised as categories
@@ -181,25 +144,19 @@ fn numeric(
     bins: usize,
     discrete: bool,
 ) -> Summary {
-    let mut finite = 0usize;
-    let mut min = f64::INFINITY;
-    let mut max = f64::NEG_INFINITY;
-    let mut sum = 0.0f64;
-    let mut sum_of_squares = 0.0f64;
+    // One pass, Welford's update: the same arithmetic as every other
+    // description of a column of numbers (`Accumulator`).
+    let mut accumulator = Accumulator::new();
     // Bounded on purpose: an integer array of a million distinct values must
     // not build a map of a million entries to discover it is not categorical.
     let mut seen: BTreeMap<i64, u64> = BTreeMap::new();
     let mut too_many = !discrete;
 
     for value in values.clone() {
+        accumulator.push(value);
         if !value.is_finite() {
             continue;
         }
-        finite += 1;
-        min = min.min(value);
-        max = max.max(value);
-        sum += value;
-        sum_of_squares += value * value;
         if !too_many {
             *seen.entry(value as i64).or_default() += 1;
             too_many = seen.len() > CATEGORY_LIMIT;
@@ -207,7 +164,7 @@ fn numeric(
     }
 
     let sample = sample_of(values.clone(), count);
-    if finite == 0 {
+    let Some(moments) = accumulator.moments() else {
         return Summary {
             family,
             count,
@@ -223,13 +180,9 @@ fn numeric(
             other: 0,
             sample,
         };
-    }
-
-    let mean = sum / finite as f64;
-    // The population deviation, and `max(0.0)` because the two-pass identity is
-    // not exact in floating point: a constant array can come out at -1e-16, and
-    // the square root of that is `NaN` on a chart that says "0" everywhere else.
-    let variance = (sum_of_squares / finite as f64 - mean * mean).max(0.0);
+    };
+    let finite = accumulator.finite() as usize;
+    let (min, max) = (moments.min, moments.max);
 
     let categorical = discrete && !too_many;
     let categories = if categorical {
@@ -251,8 +204,9 @@ fn numeric(
         non_finite: count - finite,
         min: Some(min),
         max: Some(max),
-        mean: Some(mean),
-        deviation: Some(variance.sqrt()),
+        mean: Some(moments.mean),
+        // The population deviation, clamped at zero by `Accumulator::moments`.
+        deviation: Some(moments.deviation),
         histogram: if categorical {
             None
         } else {

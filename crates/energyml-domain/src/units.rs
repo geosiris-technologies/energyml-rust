@@ -62,9 +62,26 @@ pub enum Dimension {
     Pressure,
     /// Base unit: second.
     Time,
+    /// Base unit: ohm metre (`ohm.m`).
+    ElectricalResistivity,
+    /// Base unit: siemens per metre (`S/m`).
+    ElectricConductivity,
+    /// Base unit: radian per metre (`rad/m`). Dogleg severity is one.
+    AnglePerLength,
 }
 
 impl Dimension {
+    /// Every family this build converts, in declaration order.
+    pub const ALL: [Dimension; 7] = [
+        Dimension::Length,
+        Dimension::PlaneAngle,
+        Dimension::Pressure,
+        Dimension::Time,
+        Dimension::ElectricalResistivity,
+        Dimension::ElectricConductivity,
+        Dimension::AnglePerLength,
+    ];
+
     /// The unit every value of this family is converted through.
     pub fn base(self) -> &'static str {
         match self {
@@ -72,6 +89,23 @@ impl Dimension {
             Dimension::PlaneAngle => "rad",
             Dimension::Pressure => "Pa",
             Dimension::Time => "s",
+            Dimension::ElectricalResistivity => "ohm.m",
+            Dimension::ElectricConductivity => "S/m",
+            Dimension::AnglePerLength => "rad/m",
+        }
+    }
+
+    /// The Energistics quantity class this family checks, as the PropertyKind
+    /// dictionary spells it (the quantity class column of `property_kinds.tsv`).
+    pub fn class_name(self) -> &'static str {
+        match self {
+            Dimension::Length => "length",
+            Dimension::PlaneAngle => "plane angle",
+            Dimension::Pressure => "pressure",
+            Dimension::Time => "time",
+            Dimension::ElectricalResistivity => "electrical resistivity",
+            Dimension::ElectricConductivity => "electric conductivity",
+            Dimension::AnglePerLength => "angle per length",
         }
     }
 
@@ -123,6 +157,46 @@ pub fn convert(value: f64, from: &str, to: &str) -> Result<f64> {
     let from_factor = factor(from).unwrap_or(1.0);
     let to_factor = factor(to).unwrap_or(1.0);
     Ok(value * from_factor / to_factor)
+}
+
+/// A resistivity in `from` as a conductivity in `to`, or a conductivity in
+/// `from` as a resistivity in `to`.
+///
+/// This is not a unit conversion (`ohm.m` to `S/m` is refused by [`convert`]):
+/// it is the reciprocal of the quantity. The Energistics PropertyKind
+/// dictionary says of `conductivity`: "In isotropic material, it is the
+/// reciprocal of Resistivity", and of `resistivity`: "The reciprocal of
+/// conductivity". The function cannot know whether the medium is isotropic:
+/// the caller does. `TODO(verify)`: what to say of a property with a
+/// `direction` facet.
+///
+/// A value that is not finite, or is `0.0`, has no reciprocal: `Ok(None)`, an
+/// absence, never an infinity. A negative value stays negative: nothing is
+/// corrected here.
+///
+/// Errors when a unit is unknown, or when the pair is not one resistivity and
+/// one conductivity (the same [`Error::MismatchedUnits`] as [`convert`]).
+pub fn resistivity_reciprocal(value: f64, from: &str, to: &str) -> Result<Option<f64>> {
+    let from_dimension = Dimension::of(from).ok_or_else(|| Error::unknown_unit(from))?;
+    let to_dimension = Dimension::of(to).ok_or_else(|| Error::unknown_unit(to))?;
+    let crossing = matches!(
+        (from_dimension, to_dimension),
+        (Dimension::ElectricalResistivity, Dimension::ElectricConductivity)
+            | (Dimension::ElectricConductivity, Dimension::ElectricalResistivity)
+    );
+    if !crossing {
+        return Err(Error::MismatchedUnits {
+            from: from.to_string(),
+            to: to.to_string(),
+        });
+    }
+    if !value.is_finite() || value == 0.0 {
+        return Ok(None);
+    }
+    let base = to_base(value, from)?;
+    let reciprocal = 1.0 / base;
+    // 1 / (ohm.m) is S/m and 1 / (S/m) is ohm.m: the base of the other family.
+    Ok(Some(convert(reciprocal, to_dimension.base(), to)?))
 }
 
 /// Convert to the base unit of the value's own family.
@@ -178,6 +252,47 @@ const TABLES: &[(Dimension, &[(&str, f64)])] = &[
     (Dimension::PlaneAngle, PLANE_ANGLE),
     (Dimension::Pressure, PRESSURE),
     (Dimension::Time, TIME),
+    (Dimension::ElectricalResistivity, ELECTRICAL_RESISTIVITY),
+    (Dimension::ElectricConductivity, ELECTRIC_CONDUCTIVITY),
+    (Dimension::AnglePerLength, ANGLE_PER_LENGTH),
+];
+
+/// Ohm metres per unit. The strings are those of `ElectricalResistivityUom`,
+/// identical in eml 2.0 to 2.3; the factors come from the SI prefixes and the
+/// exact international foot and inch.
+const ELECTRICAL_RESISTIVITY: &[(&str, f64)] = &[
+    ("ohm.m", 1.0),
+    ("ohm.cm", 1e-2),
+    ("kohm.m", 1e3),
+    ("ohm.m2/m", 1.0),
+    ("nohm.mm2/m", 1e-9 * 1e-6),
+    ("nohm.mil2/ft", 1e-9 * 2.54e-5 * 2.54e-5 / 0.3048),
+];
+
+/// Siemens per metre per unit (`ElectricConductivityUom`).
+const ELECTRIC_CONDUCTIVITY: &[(&str, f64)] = &[
+    ("S/m", 1.0),
+    ("kS/m", 1e3),
+    ("mS/m", 1e-3),
+    ("mS/cm", 1e-3 / 1e-2),
+];
+
+/// Radians per metre per unit (`AnglePerLengthUom`). A dogleg severity is one.
+/// The spellings `dega/30m` and `dega/100ft` do not exist in the schema and are
+/// not added: an unlisted unit stays a named refusal.
+const ANGLE_PER_LENGTH: &[(&str, f64)] = &[
+    ("rad/m", 1.0),
+    ("rad/ft", 1.0 / 0.3048),
+    ("dega/m", std::f64::consts::PI / 180.0),
+    ("dega/ft", std::f64::consts::PI / 180.0 / 0.3048),
+    // A degree per 100 ft.
+    ("0.01 dega/ft", 0.01 * std::f64::consts::PI / 180.0 / 0.3048),
+    // A degree per 30 ft.
+    ("1/30 dega/ft", std::f64::consts::PI / 180.0 / (30.0 * 0.3048)),
+    // A degree per 30 m.
+    ("1/30 dega/m", std::f64::consts::PI / 180.0 / 30.0),
+    ("rev/m", std::f64::consts::TAU),
+    ("rev/ft", std::f64::consts::TAU / 0.3048),
 ];
 
 /// Metres per unit.
