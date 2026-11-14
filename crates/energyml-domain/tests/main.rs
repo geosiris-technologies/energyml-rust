@@ -17,6 +17,7 @@ mod channel_data_in_hdf5;
 mod check_candidates;
 mod color;
 mod color_inherit;
+mod color_log_mapping;
 mod color_scopes;
 mod color_versions;
 mod compound_crs;

@@ -328,7 +328,8 @@ pub enum Domain {
     Rgb,
 }
 
-/// Linear or logarithmic spacing between stops.
+/// Linear or logarithmic spacing **between two stops** (`InterpolationMethod`);
+/// not `UseLogarithmicMapping`, which is the log of the value.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Interpolation {
     /// Even spacing.
@@ -481,23 +482,72 @@ impl ColorMap {
     ///    colour from this range"*, so they are clamped - and that clamping is
     ///    what makes `AboveMaxColor`/`BelowMinColor` unreachable, which is why
     ///    they only apply when `MinMax` is absent;
-    /// 3. the value is placed in the map's own index range;
-    /// 4. a discrete map takes **the nearest lower entry that exists** - the
+    /// 3. under `UseLogarithmicMapping`, the log of the value is what is
+    ///    placed (RESQML TRG 2.2 §4.5 p. 56): between the logs of `MinMax`, or
+    ///    else of the map's own range;
+    /// 4. the value is placed in the map's own index range;
+    /// 5. a discrete map takes **the nearest lower entry that exists** - the
     ///    schema's own example: stops at 10, 20, 30 and a value of 16.5 give
     ///    the colour of 10.
+    ///
+    /// `None` also covers a refusal of [`ColorMap::check_scaling`]: call that
+    /// once to say why.
     pub fn sample(&self, value: Option<f64>, scaling: &Scaling) -> Option<Rgba> {
+        self.try_sample(value, scaling).unwrap_or(None)
+    }
+
+    /// Whether this map can place values under this scaling at all - a refusal
+    /// is the same for every value, so a caller asks once and says why.
+    pub fn check_scaling(&self, scaling: &Scaling) -> Result<()> {
+        if !scaling.logarithmic {
+            return Ok(());
+        }
+        if let Some((min, max)) = scaling.min_max {
+            let low = min.min(max);
+            if low <= 0.0 {
+                return Err(Error::malformed(
+                    &self.uuid,
+                    format!(
+                        "`UseLogarithmicMapping` over a `MinMax` that reaches {low}: a value of zero or less has no logarithm to place on the map"
+                    ),
+                ));
+            }
+        } else {
+            let (map_low, _) = self.range();
+            if map_low <= 0.0 {
+                return Err(Error::malformed(
+                    &self.uuid,
+                    format!(
+                        "`UseLogarithmicMapping` with no `MinMax`: the map's own range, from {map_low}, stands for the values' range, and zero or less has no logarithm"
+                    ),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// The colour for one value, or why the map cannot place it.
+    ///
+    /// A null value takes its `NullColor` (or `None`) before any refusal: a
+    /// null has its colour whatever the scale.
+    pub fn try_sample(&self, value: Option<f64>, scaling: &Scaling) -> Result<Option<Rgba>> {
         let Some(value) = value.filter(|v| !v.is_nan()) else {
-            return self.null_color.as_ref().map(Hsv::to_rgba);
+            return Ok(self.null_color.as_ref().map(Hsv::to_rgba));
         };
+        self.check_scaling(scaling)?;
 
         let (map_low, map_high) = self.range();
         let mut position = value;
 
         if let Some((min, max)) = scaling.min_max {
-            // Clamp to the property's range, then rescale onto the map's.
+            // Clamp to the property's range (before the log: a value of zero
+            // or less takes the extreme colour, never a NaN), then rescale
+            // onto the map's.
             let clamped = value.clamp(min.min(max), min.max(max));
             position = if (max - min).abs() < f64::EPSILON {
                 map_low
+            } else if scaling.logarithmic {
+                map_low + (clamped.ln() - min.ln()) / (max.ln() - min.ln()) * (map_high - map_low)
             } else {
                 map_low + (clamped - min) / (max - min) * (map_high - map_low)
             };
@@ -505,12 +555,22 @@ impl ColorMap {
             if value < map_low
                 && let Some(color) = &self.below_min
             {
-                return Some(color.to_rgba());
+                return Ok(Some(color.to_rgba()));
             }
             if value > map_high
                 && let Some(color) = &self.above_max
             {
-                return Some(color.to_rgba());
+                return Ok(Some(color.to_rgba()));
+            }
+            if scaling.logarithmic {
+                // Without `MinMax` the map's range stands for the property's,
+                // as in the linear case (ADR 0025).
+                let clamped = value.clamp(map_low, map_high);
+                position = if (map_high - map_low).abs() < f64::EPSILON {
+                    map_low
+                } else {
+                    map_low + (clamped.ln() - map_low.ln()) / (map_high.ln() - map_low.ln()) * (map_high - map_low)
+                };
             }
         }
 
@@ -519,8 +579,8 @@ impl ColorMap {
         }
 
         match self.continuous {
-            None => Some(self.discrete_at(position)),
-            Some((domain, method)) => Some(self.continuous_at(position, domain, method, scaling)),
+            None => Ok(Some(self.discrete_at(position))),
+            Some((domain, method)) => Ok(Some(self.continuous_at(position, domain, method))),
         }
     }
 
@@ -543,7 +603,7 @@ impl ColorMap {
         chosen.color.to_rgba()
     }
 
-    fn continuous_at(&self, position: f64, domain: Domain, method: Interpolation, scaling: &Scaling) -> Rgba {
+    fn continuous_at(&self, position: f64, domain: Domain, method: Interpolation) -> Rgba {
         let first = &self.stops[0];
         let last = &self.stops[self.stops.len() - 1];
         if position <= first.index {
@@ -565,10 +625,10 @@ impl ColorMap {
             (position - low.index) / span
         };
 
-        // Logarithmic spacing, from the map; `UseLogarithmicMapping`, from the
-        // colour information. Both mean the same thing here, and either one
-        // turns it on.
-        if matches!(method, Interpolation::Logarithmic) || scaling.logarithmic {
+        // Logarithmic spacing between two stops, from the map's
+        // `InterpolationMethod` - not `UseLogarithmicMapping`, which is the log
+        // of the value and is applied before (TRG 2.2 §4.5 p. 56, §4.7 p. 58).
+        if matches!(method, Interpolation::Logarithmic) {
             let (a, b) = (
                 low.index.max(f64::MIN_POSITIVE),
                 high.index.max(f64::MIN_POSITIVE),
