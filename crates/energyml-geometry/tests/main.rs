@@ -9,6 +9,7 @@
 //! that installs a process-wide default (a `set_default`, a global allocator)
 //! keeps a binary of its own, as a `[[test]]` in `Cargo.toml`.
 
+mod attribute_counts;
 mod build;
 mod connection;
 mod corpus;
@@ -19,12 +20,14 @@ mod defined;
 mod derived;
 mod drawable;
 mod fixtures;
+mod head_portion;
 mod heads;
 mod package_scene;
 mod plane;
 mod properties_of;
 mod reference_versions;
 mod unstructured;
+mod vector;
 mod well;
 mod well_compound;
 mod well_drop;

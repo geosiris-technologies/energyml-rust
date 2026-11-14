@@ -50,6 +50,7 @@ use crate::geometry::{Patch, Topology};
 use crate::points::Point;
 use crate::source::ValueSource;
 use crate::values::{self, scalar_f64};
+use energyml_domain::crs::CrsKind;
 use energyml_domain::units;
 
 /// A no-`Geometry` trajectory: the vertical segment from `MdMin` to `MdMax`
@@ -199,26 +200,86 @@ pub(crate) fn frame(representation: &dyn Reflect, source: &dyn ValueSource) -> R
 /// nodes (see the front end), so a coarse sample is honest rather than a shortcut.
 const HEAD_SAMPLES: usize = 17;
 
+/// The portion of a frame's trajectory from MD 0 down to its first node, in
+/// the frame the frame's own nodes are written in, and whether the package
+/// states it.
+#[derive(Clone, PartialEq, Debug)]
+pub enum HeadPortion {
+    /// The trajectory's own line covers MD 0 to the first node (`MdMin` at or
+    /// above 0): points of that line, sampled like `frame` samples its nodes -
+    /// stated by the package.
+    Described(Vec<Point>),
+    /// Something in the portion is stated by no object. With no `Geometry`,
+    /// the straight vertical segment below the datum this module documents for
+    /// the whole well. With a line that starts below MD 0, the straight chord
+    /// from the datum, brought into the line's frame, to where the line
+    /// starts, then the line itself down to the first node. The first point is
+    /// MD 0, the last is the frame's first node.
+    Assumed(Vec<Point>),
+}
+
+impl HeadPortion {
+    /// The points, whichever the case.
+    pub fn points(&self) -> &[Point] {
+        match self {
+            HeadPortion::Described(points) | HeadPortion::Assumed(points) => points,
+        }
+    }
+
+    /// The points, owned.
+    pub fn into_points(self) -> Vec<Point> {
+        match self {
+            HeadPortion::Described(points) | HeadPortion::Assumed(points) => points,
+        }
+    }
+
+    /// Whether the package states this portion.
+    pub fn is_described(&self) -> bool {
+        matches!(self, HeadPortion::Described(_))
+    }
+}
+
+/// `HEAD_SAMPLES` points of `line` from parameter `from` to parameter `to`,
+/// the last one being `to` exactly: `from + (to - from)` can differ from `to`
+/// in floating point as soon as `from` is not 0, and the last point has to be
+/// the frame's first node to the bit.
+fn samples(line: &crate::parametric::Line, from: f64, to: f64) -> Vec<Point> {
+    let last = HEAD_SAMPLES - 1;
+    (0..HEAD_SAMPLES)
+        .map(|i| {
+            if i == last {
+                to
+            } else {
+                from + (to - from) * (i as f64) / (last as f64)
+            }
+        })
+        .map(|md| line.at(md))
+        .collect()
+}
+
 /// **The portion of a frame's trajectory from measured depth 0 to its first
 /// node** - the span a CSV import kept no stratigraphic unit for (on
 /// `forages-unites.epc`, 2 654 of 2 699 frames start below ground, median
 /// 14.5 m, because the units their MD interval covers do not start at
 /// the wellhead).
 ///
-/// **No object in the package describes this interval.** A frame's own nodes
-/// start wherever the first one was measured, so what lies above it is read,
-/// never invented: followed along the trajectory's own shape where the
-/// trajectory's stated interval reaches MD 0, and as the straight segment to
-/// the datum otherwise - the datum being where MD 0 *is*, by the business
-/// rule that makes `MdInterval.Datum` mandatory (TRG §12.17, quoted at the
-/// top of this module). Both endings are read by the exact evaluation
-/// `frame` uses for its own first node, so the two never disagree about
-/// where that node is.
+/// The package describes this interval when the trajectory's own line reaches
+/// MD 0 ([`HeadPortion::Described`]). Otherwise the datum, which is where MD 0
+/// is - by the business rule that makes `MdInterval.Datum` mandatory (RESQML
+/// TRG 2.2 §12.17 p. 314, quoted at the top of this module) - is joined to the
+/// line by a straight chord that no object states, written in the line's own
+/// frame so that a caller places it with the frame's nodes
+/// ([`HeadPortion::Assumed`]): the same holds for a trajectory with no
+/// `Geometry`, whose portion is the vertical segment this module assumes for
+/// the whole well.
+///
+/// Every point is in the frame the frame's nodes are in: the caller places the
+/// portion by the same `place_points` it places the nodes with.
 ///
 /// `Ok(None)` when there is nothing missing - the frame already starts at or
-/// below MD 0 - and a named [`Error`] when neither the trajectory's shape nor
-/// its datum can be read, rather than a guess.
-pub fn head_portion(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Option<Vec<Point>>> {
+/// below MD 0 - and a named [`Error`] when the datum cannot be expressed in the
+/// frame of the line, rather than a guess.
+pub fn head_portion(representation: &dyn Reflect, source: &dyn ValueSource) -> Result<Option<HeadPortion>> {
     let at = "WellboreFrameRepresentation";
     let Some(node_md) = crate::geometry::field_object(representation, "NodeMd") else {
         return Err(Error::malformed(at, "a frame with no `NodeMd`"));
@@ -241,38 +302,252 @@ pub fn head_portion(representation: &dyn Reflect, source: &dyn ValueSource) -> R
     };
     let trajectory = trajectory.as_reflect();
 
-    // One read answers both questions at once: `Anchor::of` places the datum
-    // - MD 0 by definition - and carries the trajectory's own `MdMin` beside
-    // it, so *where is MD 0* and *does the trajectory's shape reach it* come
-    // from the same fact rather than two readings that could disagree.
-    let anchor = Anchor::of(trajectory, source, "WellboreTrajectoryRepresentation");
-    let geometry = crate::geometry::field_object(trajectory, "Geometry");
-
-    let points = match (geometry, anchor.as_ref()) {
-        (Some(geometry), Ok(anchor)) if anchor.md_min <= 0.0 => {
-            // The trajectory's own line reaches MD 0: followed, not guessed
-            // at as a straight line through a well that may be deviated.
+    let portion = match crate::geometry::field_object(trajectory, "Geometry") {
+        // No shape anywhere: the vertical reading this module documents.
+        None => match Anchor::of(trajectory, source, "WellboreTrajectoryRepresentation") {
+            Ok(anchor) => HeadPortion::Assumed(vec![anchor.at(0.0), anchor.at(first_md)]),
+            Err(_) => {
+                return Err(Error::unsupported(
+                    "a frame's head portion: the trajectory has no `Geometry` and its datum cannot be read, so where MD 0 is is unknown",
+                    at,
+                ));
+            }
+        },
+        Some(geometry) => {
             let line = crate::parametric::Line::single(geometry, source, at)?;
-            (0..HEAD_SAMPLES)
-                .map(|i| first_md * (i as f64) / (HEAD_SAMPLES as f64 - 1.0))
-                .map(|md| line.at(md))
-                .collect()
-        }
-        (_, Ok(anchor)) => {
-            // Either no `Geometry` at all, or one whose stated interval does
-            // not reach MD 0: the datum is where MD 0 *is*, so the segment is
-            // straight from there - never an extrapolation of a spline past
-            // the range the file states it valid for.
-            vec![anchor.at(0.0), anchor.at(first_md)]
-        }
-        (_, Err(_)) => {
-            return Err(Error::unsupported(
-                "a frame's head portion: neither the trajectory's own shape nor its datum can be read",
-                at,
-            ));
+            let interval = crate::geometry::field_object(trajectory, MD_INTERVAL).unwrap_or(trajectory);
+            let md_min = scalar_any(interval, MD_MIN)
+                .filter(|md| md.is_finite())
+                .ok_or_else(|| {
+                    Error::malformed(
+                        "WellboreTrajectoryRepresentation",
+                        "a trajectory line with no finite `MdMin` (or `StartMd`): whether it reaches MD 0 is unknown",
+                    )
+                })?;
+            if md_min <= 0.0 {
+                // The line reaches MD 0: followed, not guessed at, and the
+                // datum is not even read.
+                HeadPortion::Described(samples(&line, 0.0, first_md))
+            } else {
+                let datum = datum_in_line_frame(trajectory, geometry, source).map_err(|why| {
+                    Error::unsupported(
+                        "a frame's head portion from a datum that cannot be expressed in its line's frame",
+                        format!("{at}, MdMin {md_min}: {why}"),
+                    )
+                })?;
+                // Where the line starts - or, when the first node is above
+                // that, the first node itself: `frame` places it by extending
+                // the first interval, so the portion ends on that point.
+                let start = md_min.min(first_md);
+                let mut points = vec![datum];
+                if start < first_md {
+                    points.extend(samples(&line, start, first_md));
+                } else {
+                    points.push(line.at(first_md));
+                }
+                HeadPortion::Assumed(points)
+            }
         }
     };
-    Ok(Some(points))
+    Ok(Some(portion))
+}
+
+/// MD 0 - the trajectory's datum - in the frame its line is written in, as
+/// stored: the frame `crs::of` lends the trajectory's frames, so the one
+/// `place_points` a caller runs on a frame's nodes places this point with
+/// them. `Err` is the reason, in English, when the datum cannot be expressed
+/// in that frame.
+fn datum_in_line_frame(
+    trajectory: &dyn Reflect,
+    geometry: &dyn Reflect,
+    source: &dyn ValueSource,
+) -> std::result::Result<Point, String> {
+    let at = "WellboreTrajectoryRepresentation";
+    let Some(line_uri) = reference_of(geometry, "LocalCrs") else {
+        return Err("the line names no `LocalCrs`".to_string());
+    };
+    let interval = crate::geometry::field_object(trajectory, MD_INTERVAL).unwrap_or(trajectory);
+    let Some(datum_uri) = reference_any(interval, MD_DATUM) else {
+        return Err("the trajectory names no datum".to_string());
+    };
+    let Some(datum) = source.object_at(&datum_uri) else {
+        return Err(format!("the datum {datum_uri} is not in the package"));
+    };
+    let datum = datum.as_reflect();
+    let type_key = datum.type_info().type_key;
+    if !DATUM_TYPES.contains(&type_key) {
+        return Err(format!("`{type_key}` is not a measured-depth datum"));
+    }
+    let raw = Anchor::coordinates(datum, at).map_err(|e| e.to_string())?;
+    let raw = [raw.0, raw.1, raw.2];
+
+    // The same object: the datum is written in the line's own frame, no
+    // calculation. The usual case (one `LocalDepth3dCrs`, or one compound, for
+    // the whole well); it asks for no EPSG code and no unit.
+    let datum_frame_uri = datum_frame(datum);
+    if let Some(uri) = &datum_frame_uri
+        && same_uri(uri, &line_uri)
+    {
+        return Ok(raw);
+    }
+
+    // Otherwise both are brought to the projected system, then the datum to
+    // the line's frame.
+    let Some(line_object) = source.object_at(&line_uri) else {
+        return Err(format!("the line's CRS {line_uri} is not in the package"));
+    };
+    let line_crs = energyml_domain::crs::read_with(line_object.as_reflect(), source).map_err(|e| e.to_string())?;
+    if line_crs.is_time() {
+        return Err("the line's CRS counts time, and a measured depth is a length".to_string());
+    }
+
+    // The datum placed (`placed`: projected x and y, elevation up) with the
+    // system and units it was written in.
+    let placed: Point;
+    let datum_projected: CrsKind;
+    let datum_vertical: CrsKind;
+    let datum_horizontal_uom: Option<String>;
+    let datum_vertical_uom: Option<String>;
+    let check_horizontal: bool;
+    match &datum_frame_uri {
+        Some(uri) => {
+            let datum_crs = match energyml_domain::crs::compound_of_datum(datum, source).map_err(|e| e.to_string())? {
+                Some(compound) => compound,
+                None => {
+                    let Some(object) = source.object_at(uri) else {
+                        return Err(format!("the datum's CRS {uri} is not in the package"));
+                    };
+                    energyml_domain::crs::read_with(object.as_reflect(), source).map_err(|e| e.to_string())?
+                }
+            };
+            if datum_crs.is_time() {
+                return Err("the datum's CRS counts time, and a measured depth is a length".to_string());
+            }
+            placed = datum_crs.to_projected(raw);
+            datum_projected = datum_crs.projected.clone();
+            datum_vertical = datum_crs.vertical.clone();
+            datum_horizontal_uom = datum_crs.horizontal_uom.clone();
+            datum_vertical_uom = datum_crs.vertical_uom.clone();
+            check_horizontal = true;
+        }
+        None => {
+            // A `ReferencePointInACrs`: two absolute halves.
+            let sense = vertical_sense(datum, source, at).map_err(|e| e.to_string())?;
+            placed = match sense {
+                VerticalSense::Up => raw,
+                VerticalSense::Down => [raw[0], raw[1], -raw[2]],
+            };
+            let horizontal = crate::geometry::field_object(datum, "HorizontalCoordinates")
+                .and_then(|h| reference_of(h, "Crs"))
+                .and_then(|uri| source.object_at(&uri));
+            datum_projected = match horizontal {
+                Some(object) => energyml_domain::crs::read_with(object.as_reflect(), source)
+                    .map_err(|e| e.to_string())?
+                    .projected,
+                None => CrsKind::Absent,
+            };
+            let vertical_object = reference_of(datum, "VerticalCrs").and_then(|uri| source.object_at(&uri));
+            match vertical_object {
+                Some(object) => {
+                    datum_vertical_uom = energyml_core::measure::unit_of(object.as_reflect());
+                    datum_vertical = energyml_domain::crs::read_with(object.as_reflect(), source)
+                        .map_err(|e| e.to_string())?
+                        .vertical;
+                }
+                None => {
+                    datum_vertical_uom = None;
+                    datum_vertical = CrsKind::Absent;
+                }
+            }
+            datum_horizontal_uom = None;
+            check_horizontal = false;
+        }
+    }
+
+    // The same system: only what is provably one passes.
+    if !same_system(&datum_projected, &line_crs.projected) {
+        return Err(format!(
+            "the datum sits in projected system {} and the line in {}",
+            system_word(&datum_projected),
+            system_word(&line_crs.projected)
+        ));
+    }
+    if !same_system(&datum_vertical, &line_crs.vertical) {
+        return Err(format!(
+            "the datum's height is counted in vertical system {} and the line's in {}",
+            system_word(&datum_vertical),
+            system_word(&line_crs.vertical)
+        ));
+    }
+
+    // Horizontal units: no conversion (`to_projected` assumes one unit); two
+    // stated units that differ contradict that assumption, and choosing one
+    // would be guessing.
+    if check_horizontal
+        && let (Some(d), Some(l)) = (&datum_horizontal_uom, &line_crs.horizontal_uom)
+        && d != l
+    {
+        return Err(format!(
+            "the datum's CRS gives its horizontal unit as `{d}` and the line's as `{l}`, and a placement takes both in the projected system's unit"
+        ));
+    }
+
+    // Vertical units: the elevation goes from the datum's unit to the line's.
+    let mut placed = placed;
+    match (&datum_vertical_uom, &line_crs.vertical_uom) {
+        (Some(a), Some(b)) if a != b => {
+            let metres = energyml_domain::units::metres(placed[2], a).map_err(|e| e.to_string())?;
+            let per_unit = energyml_domain::units::metres(1.0, b).map_err(|e| e.to_string())?;
+            placed[2] = metres / per_unit;
+        }
+        (Some(a), None) => {
+            return Err(format!("the datum's vertical unit is `{a}` and the line's is not stated"));
+        }
+        (None, Some(b)) => {
+            return Err(format!("the datum's vertical unit is not stated and the line's is `{b}`"));
+        }
+        _ => {}
+    }
+
+    Ok(line_crs.from_projected(placed))
+}
+
+/// The uri of the one CRS object a datum's coordinates are written in:
+/// `LocalCrs` beside `Location` (a RESQML 2.0.1 `MdDatum`), `Location.LocalCrs`
+/// (the 2.2 drops' `MdDatum`), `Crs`
+/// (`ReferencePointInALocalEngineeringCompoundCrs`). `None` for a
+/// `ReferencePointInACrs`, whose two halves are absolute.
+fn datum_frame(datum: &dyn Reflect) -> Option<String> {
+    reference_of(datum, "LocalCrs")
+        .or_else(|| {
+            crate::geometry::field_object(datum, "Location").and_then(|location| reference_of(location, "LocalCrs"))
+        })
+        .or_else(|| reference_of(datum, "Crs"))
+}
+
+/// Whether two systems are provably one: the same EPSG code, the same WKT
+/// text, the same authority string. A GML definition, an unknown system and
+/// no system prove nothing.
+fn same_system(a: &CrsKind, b: &CrsKind) -> bool {
+    match (a, b) {
+        (CrsKind::Epsg(x), CrsKind::Epsg(y)) => x == y,
+        (CrsKind::Wkt(x), CrsKind::Wkt(y)) => x == y,
+        (CrsKind::LocalAuthority(x), CrsKind::LocalAuthority(y)) => x == y,
+        _ => false,
+    }
+}
+
+/// A system named in a sentence: `EPSG:2154`, `a WKT definition`,
+/// `a GML definition`, `the authority <name>`, `an unknown system`, `no system`.
+fn system_word(kind: &CrsKind) -> String {
+    match kind {
+        CrsKind::Epsg(code) => format!("EPSG:{code}"),
+        CrsKind::Wkt(_) => "a WKT definition".to_string(),
+        CrsKind::Gml => "a GML definition".to_string(),
+        CrsKind::LocalAuthority(name) => format!("the authority {name}"),
+        CrsKind::Unknown => "an unknown system".to_string(),
+        CrsKind::Absent => "no system".to_string(),
+    }
 }
 
 /// The measured-depth bounds, in the two shapes they have worn.
@@ -316,8 +591,9 @@ impl Anchor {
     /// The datum's position, in the two shapes the releases give it.
     ///
     /// 2.2 splits it - `HorizontalCoordinates{Coordinate1,2}` beside a
-    /// `VerticalCoordinate` - while 2.0.1 and the drops keep one
-    /// `Location.Point3d` with all three. Same point, and the vertical one is
+    /// `VerticalCoordinate` - while RESQML 2.0.1 keeps a `Location` that is the
+    /// `Point3d`, beside the datum's `LocalCrs`, and the 2.2 drops wrap it in
+    /// `Location.Point3d`. Same point, and the vertical one is
     /// returned in the file's own sense; [`vertical_sense`] says which way that
     /// is.
     fn coordinates(datum: &dyn Reflect, at: &str) -> Result<(f64, f64, f64)> {
@@ -330,8 +606,12 @@ impl Anchor {
                 .ok_or_else(|| Error::malformed(at, "a reference point with no `VerticalCoordinate`"))?;
             return Ok((x, y, vertical));
         }
-        let point = crate::geometry::field_object(datum, "Location")
-            .and_then(|location| crate::geometry::field_object(location, "Point3d"))
+        // RESQML 2.0.1: `Location` is itself the `Point3d`, beside the datum's
+        // `LocalCrs`. The 2.2 drops wrap it in `Location.Point3d`.
+        let location = crate::geometry::field_object(datum, "Location");
+        let point = location
+            .filter(|location| location.field("Coordinate1").is_some())
+            .or_else(|| location.and_then(|location| crate::geometry::field_object(location, "Point3d")))
             .ok_or_else(|| {
                 Error::malformed(at, "a datum with neither horizontal coordinates nor a `Location`")
             })?;

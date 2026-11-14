@@ -72,6 +72,7 @@ pub mod transfer;
 pub mod tube;
 pub mod unstructured;
 pub mod values;
+pub mod vector;
 pub mod well;
 pub mod wells;
 

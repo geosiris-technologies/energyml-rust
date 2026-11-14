@@ -775,15 +775,26 @@ pub fn attributes_for(
         // `ValueCountPerIndexableElement`. The values are usable as scalars,
         // and refusing them would lose a real array over a wrong number, so
         // they are attached **as scalars with the disagreement reported**.
-        if components > 1 && expected > 0 && values.len() == expected {
-            refused.push(format!(
-                "`{}` declares {components} values per element and holds exactly one; it is \
-                 attached as a scalar array, and the document's own count is what is wrong",
-                read.title.as_deref().unwrap_or(&read.uuid)
-            ));
-            components = 1;
-        }
-        if expected == 0 || values.len() != expected * components as usize {
+        // The one rule, shared with `Property::check` and every other reader:
+        // `energyml_domain::property::count_fit`.
+        let mismatch = match energyml_domain::property::count_fit(
+            expected as u64,
+            components,
+            values.len() as u64,
+        ) {
+            energyml_domain::property::CountFit::Fits => false,
+            energyml_domain::property::CountFit::OnePerElement { declared } => {
+                refused.push(format!(
+                    "`{}` declares {declared} values per element and holds exactly one; it is \
+                     attached as a scalar array, and the document's own count is what is wrong",
+                    read.title.as_deref().unwrap_or(&read.uuid)
+                ));
+                components = 1;
+                false
+            }
+            energyml_domain::property::CountFit::Mismatch { .. } => true,
+        };
+        if mismatch {
             // Reported, not repaired: padding or truncating would put values
             // on the wrong elements, which is exactly the failure this check
             // exists for.

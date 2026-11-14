@@ -39,6 +39,7 @@
 
 use crate::error::{Error, Result};
 use crate::points::Point;
+use crate::vector::{add, cross, dot, norm, scale, sub, unit};
 
 /// How thick, and how many sides.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -90,39 +91,6 @@ impl Tube {
     }
 }
 
-fn subtract(a: Point, b: Point) -> Point {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-
-fn add(a: Point, b: Point) -> Point {
-    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
-}
-
-fn scale(a: Point, k: f64) -> Point {
-    [a[0] * k, a[1] * k, a[2] * k]
-}
-
-fn dot(a: Point, b: Point) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-
-fn cross(a: Point, b: Point) -> Point {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-
-fn length(a: Point) -> f64 {
-    dot(a, a).sqrt()
-}
-
-fn normalise(a: Point) -> Option<Point> {
-    let n = length(a);
-    (n.is_finite() && n > f64::EPSILON).then(|| scale(a, 1.0 / n))
-}
-
 /// A vector perpendicular to `t`, chosen so it is never nearly parallel to it.
 ///
 /// Crossing with the world's smallest component of `t` is what makes this safe:
@@ -136,7 +104,7 @@ fn any_perpendicular(t: Point) -> Point {
     } else {
         [0.0, 0.0, 1.0]
     };
-    normalise(cross(t, axis)).unwrap_or([1.0, 0.0, 0.0])
+    unit(cross(t, axis)).unwrap_or([1.0, 0.0, 0.0])
 }
 
 /// Rotate `v` by the smallest rotation taking `from` to `to`.
@@ -147,7 +115,7 @@ fn any_perpendicular(t: Point) -> Point {
 /// an arbitrary half turn.
 fn transport(v: Point, from: Point, to: Point) -> Point {
     let axis = cross(from, to);
-    let sin = length(axis);
+    let sin = norm(axis);
     let cos = dot(from, to);
     if sin <= 1e-12 {
         return match cos > 0.0 {
@@ -176,7 +144,7 @@ fn distinct(points: &[Point]) -> Vec<Point> {
             continue;
         }
         match out.last() {
-            Some(last) if length(subtract(*point, *last)) <= f64::EPSILON => {}
+            Some(last) if norm(sub(*point, *last)) <= f64::EPSILON => {}
             _ => out.push(*point),
         }
     }
@@ -225,13 +193,13 @@ pub fn sweep(points: &[Point], tube: &Tube) -> Result<Swept> {
     let mut tangents: Vec<Point> = Vec::with_capacity(stations.len());
     for index in 0..stations.len() {
         let ahead = (index + 1 < stations.len())
-            .then(|| normalise(subtract(stations[index + 1], stations[index])))
+            .then(|| unit(sub(stations[index + 1], stations[index])))
             .flatten();
         let behind = (index > 0)
-            .then(|| normalise(subtract(stations[index], stations[index - 1])))
+            .then(|| unit(sub(stations[index], stations[index - 1])))
             .flatten();
         let tangent = match (behind, ahead) {
-            (Some(b), Some(a)) => normalise(add(b, a)).unwrap_or(a),
+            (Some(b), Some(a)) => unit(add(b, a)).unwrap_or(a),
             (None, Some(a)) => a,
             (Some(b), None) => b,
             (None, None) => [0.0, 0.0, 1.0],
@@ -249,7 +217,7 @@ pub fn sweep(points: &[Point], tube: &Tube) -> Result<Swept> {
             // Re-orthogonalised at every station: the transported normal drifts
             // off the plane by a rounding error each time, and a hundred
             // stations of drift is a visibly elliptical tube.
-            normal = normalise(subtract(
+            normal = unit(sub(
                 normal,
                 scale(tangents[index], dot(normal, tangents[index])),
             ))
@@ -480,11 +448,11 @@ mod tests {
         .unwrap();
         for (vertex, station) in swept.points.iter().zip(&swept.station_of) {
             let centre = [0.0, 0.0, -(*station as f64)];
-            let offset = subtract(*vertex, centre);
+            let offset = sub(*vertex, centre);
             assert!(
-                (length(offset) - 3.5).abs() < 1e-9,
+                (norm(offset) - 3.5).abs() < 1e-9,
                 "vertex at {} from the axis, radius asked was 3.5",
-                length(offset)
+                norm(offset)
             );
         }
     }
@@ -546,9 +514,9 @@ mod tests {
 
         let mut worst: f64 = 0.0;
         for station in 1..path.len() {
-            let previous = subtract(swept.points[(station - 1) * 8], path[station - 1]);
-            let current = subtract(swept.points[station * 8], path[station]);
-            let (a, b) = (normalise(previous).unwrap(), normalise(current).unwrap());
+            let previous = sub(swept.points[(station - 1) * 8], path[station - 1]);
+            let current = sub(swept.points[station * 8], path[station]);
+            let (a, b) = (unit(previous).unwrap(), unit(current).unwrap());
             worst = worst.max(dot(a, b).clamp(-1.0, 1.0).acos().to_degrees());
         }
         assert!(worst < 8.0, "the frame turned {worst} degrees between stations");
@@ -568,11 +536,11 @@ mod tests {
         .unwrap();
         for triangle in &swept.triangles {
             let [a, b, c] = triangle.map(|i| swept.points[i as usize]);
-            let normal = cross(subtract(b, a), subtract(c, a));
+            let normal = cross(sub(b, a), sub(c, a));
             // The centre of the segment this face belongs to, on the axis.
             let station = swept.station_of[triangle[0] as usize] as f64;
             let axis = [0.0, 0.0, -station];
-            let outward = subtract(a, axis);
+            let outward = sub(a, axis);
             assert!(dot(normal, outward) > 0.0, "a face points inward: {triangle:?}");
         }
     }

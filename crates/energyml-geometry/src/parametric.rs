@@ -132,6 +132,7 @@ use crate::error::{Error, Result};
 use crate::points::Point;
 use crate::source::ValueSource;
 use crate::values;
+use crate::vector::{add, dot, norm, scale as mul, sub, unit_above};
 
 /// Below this, a length or a spacing is treated as zero.
 const TINY: f64 = 1e-12;
@@ -183,18 +184,81 @@ impl Vertical {
     /// then agree to leave the file's own numbers as they are, which is what
     /// `Down` means here: the parameter is a depth and stays one.
     pub fn of(crs: Option<&energyml_domain::crs::Crs>) -> Self {
-        match crs.map(|crs| crs.vertical_direction) {
-            Some(energyml_domain::crs::VerticalDirection::Up) => Vertical::Up,
-            _ => Vertical::Down,
+        Self::reading(crs).vertical
+    }
+
+    /// [`Vertical::of`], with where the answer came from: a CRS that was read,
+    /// or this crate's convention for a geometry that names none.
+    pub fn reading(crs: Option<&energyml_domain::crs::Crs>) -> VerticalReading {
+        match crs {
+            None => VerticalReading {
+                vertical: Vertical::Down,
+                basis: VerticalBasis::NoCrs,
+            },
+            Some(crs) => VerticalReading {
+                vertical: match crs.vertical_direction {
+                    energyml_domain::crs::VerticalDirection::Up => Vertical::Up,
+                    _ => Vertical::Down,
+                },
+                basis: VerticalBasis::Crs,
+            },
         }
     }
 
     /// The direction the object naming a CRS sits in.
     pub fn read(object: &dyn Reflect, source: &dyn ValueSource) -> Self {
+        Self::read_noted(object, source).vertical
+    }
+
+    /// [`Vertical::read`], with where the answer came from.
+    pub fn read_noted(object: &dyn Reflect, source: &dyn ValueSource) -> VerticalReading {
         // A CRS that cannot be read is not a reason to refuse a geometry: the
-        // reader's answer is then the file's own numbers, and `crs::of` has
-        // already reported what it could not resolve.
-        Self::of(energyml_domain::crs::of(object, source).ok().flatten().as_ref())
+        // reader's answer is then the file's own numbers, and the reading says
+        // that it is a convention (`VerticalBasis::UnreadableCrs`).
+        match energyml_domain::crs::of(object, source) {
+            Ok(crs) => Self::reading(crs.as_ref()),
+            Err(error) => VerticalReading {
+                vertical: Vertical::Down,
+                basis: VerticalBasis::UnreadableCrs(error.to_string()),
+            },
+        }
+    }
+}
+
+/// Where a reading of the vertical came from.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum VerticalBasis {
+    /// A CRS was read, and its direction is the answer.
+    Crs,
+    /// No CRS is named: `Down` is this crate's convention, not the file's statement.
+    NoCrs,
+    /// A CRS is named and could not be read (the reason): `Down` is the convention.
+    UnreadableCrs(String),
+    /// The caller declared it (`Path::new`).
+    Declared,
+}
+
+/// A vertical sense and where it came from.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct VerticalReading {
+    /// The sense.
+    pub vertical: Vertical,
+    /// Where it came from.
+    pub basis: VerticalBasis,
+}
+
+impl VerticalReading {
+    /// The sentence to show beside a result, `None` when a CRS or the caller said it.
+    pub fn note(&self) -> Option<String> {
+        match &self.basis {
+            VerticalBasis::NoCrs => Some(
+                "no CRS is named, so a depth along this line is read as counting down - this library's convention, not the file's statement".to_string(),
+            ),
+            VerticalBasis::UnreadableCrs(why) => Some(format!(
+                "the CRS could not be read ({why}), so a depth along this line is read as counting down - this library's convention"
+            )),
+            VerticalBasis::Crs | VerticalBasis::Declared => None,
+        }
     }
 }
 
@@ -605,6 +669,8 @@ pub(crate) struct Line {
     /// Which way the local z counts - the clause the standard attaches to the
     /// vertical kind, and nothing else. See [`Vertical`].
     vertical: Vertical,
+    /// Where that sense came from (a CRS, a convention, the caller).
+    vertical_basis: VerticalBasis,
 }
 
 impl Line {
@@ -677,6 +743,7 @@ impl Line {
             tangents,
             parametrised,
             vertical,
+            vertical_basis: VerticalBasis::Declared,
         }
     }
 
@@ -720,7 +787,8 @@ impl Line {
     fn borrowed_one(object: &dyn Reflect, source: &dyn ValueSource, at: &str) -> Result<Self> {
         // The borrower's own sense, and it is the support's - the same rule the
         // plural form follows.
-        let vertical = Vertical::read(object, source);
+        let reading = Vertical::read_noted(object, source);
+        let vertical = reading.vertical;
         let Some(support_uri) = crate::well::reference_of(object, "SupportingRepresentation") else {
             return Err(Error::malformed(
                 at,
@@ -763,7 +831,9 @@ impl Line {
                 ),
             ));
         }
-        Ok(lines.lines[index as usize].clone())
+        let mut line = lines.lines[index as usize].clone();
+        line.vertical_basis = reading.basis;
+        Ok(line)
     }
 
     /// A single `ParametricLineGeometry` - one line, its knots, its kind.
@@ -778,7 +848,8 @@ impl Line {
         // Resolved before anything is read: the geometry names its own
         // `LocalCrs`, so no caller has to remember to pass it and none can pass
         // the wrong one.
-        let vertical = Vertical::read(geometry, source);
+        let reading = Vertical::read_noted(geometry, source);
+        let vertical = reading.vertical;
         let Some(control) = field_object(geometry, "ControlPoints") else {
             return Err(Error::malformed(at, "a parametric line with no `ControlPoints`"));
         };
@@ -824,7 +895,9 @@ impl Line {
                 format!("{at}, kind {declared}"),
             ));
         };
-        Ok(Self::new(kind, control, parameters, tangents, vertical))
+        let mut line = Self::new(kind, control, parameters, tangents, vertical);
+        line.vertical_basis = reading.basis;
+        Ok(line)
     }
 
     /// The point at `parameter` along the line.
@@ -1086,6 +1159,20 @@ impl Path {
         self.0.at(parameter)
     }
 
+    /// Where the sense of the vertical of this line came from.
+    pub fn vertical_basis(&self) -> &VerticalBasis {
+        &self.0.vertical_basis
+    }
+
+    /// The note to show when that sense is a convention rather than the file's.
+    pub fn vertical_note(&self) -> Option<String> {
+        VerticalReading {
+            vertical: self.0.vertical,
+            basis: self.0.vertical_basis.clone(),
+        }
+        .note()
+    }
+
     /// The parameters of its knots, ascending - `None` when the file stated
     /// none: the knots are then the assumed 0, 1, 2 … and a parameter along
     /// the line is no measured depth.
@@ -1228,29 +1315,10 @@ fn leak(key: &str) -> &'static str {
     Box::leak(key.to_string().into_boxed_str())
 }
 
-fn add(a: Point, b: Point) -> Point {
-    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
-}
-
-fn sub(a: Point, b: Point) -> Point {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-
-fn mul(a: Point, by: f64) -> Point {
-    [a[0] * by, a[1] * by, a[2] * by]
-}
-
-fn dot(a: Point, b: Point) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-
-fn norm(a: Point) -> f64 {
-    dot(a, a).sqrt()
-}
-
+/// A direction, or `None` below [`TINY`]: this module's own floor on the shared
+/// normalisation (`crate::vector`).
 fn unit(a: Point) -> Option<Point> {
-    let length = norm(a);
-    (length.is_finite() && length > TINY).then(|| mul(a, 1.0 / length))
+    unit_above(a, TINY)
 }
 
 fn lerp(a: Point, b: Point, fraction: f64) -> Point {
@@ -1420,6 +1488,61 @@ mod tests {
         // Nothing said: the file's own numbers are left alone, which is what
         // the placement layer does too when there is no CRS to place with.
         assert_eq!(Vertical::of(None), Vertical::Down);
+    }
+
+    /// The `Crs` of the reading tests below (the layout of the test above).
+    fn crs_counting(direction: energyml_domain::crs::VerticalDirection) -> energyml_domain::crs::Crs {
+        use energyml_domain::crs::{Crs, CrsKind, VerticalQuantity};
+        Crs {
+            uuid: String::new(),
+            kind: "LocalDepth3dCrs",
+            x_offset: 0.0,
+            y_offset: 0.0,
+            z_offset: 0.0,
+            areal_rotation: 0.0,
+            vertical_direction: direction,
+            vertical_quantity: VerticalQuantity::Length,
+            horizontal_uom: None,
+            vertical_uom: None,
+            time_uom: None,
+            projected: CrsKind::Absent,
+            vertical: CrsKind::Absent,
+        }
+    }
+
+    /// RESQML TRG 2.2 §3.8: the depth to Z conversion depends on the vertical
+    /// CRS direction; with no CRS the answer is this crate's convention, and
+    /// the reading says so.
+    #[test]
+    fn without_a_crs_the_reading_is_down_and_says_so() {
+        let reading = Vertical::reading(None);
+        assert_eq!(reading.vertical, Vertical::Down);
+        assert_eq!(reading.basis, VerticalBasis::NoCrs);
+        let note = reading.note().expect("a convention is said");
+        assert!(note.contains("no CRS"), "{note}");
+    }
+
+    #[test]
+    fn a_crs_reading_carries_no_note() {
+        use energyml_domain::crs::VerticalDirection;
+        let reading = Vertical::reading(Some(&crs_counting(VerticalDirection::Up)));
+        assert_eq!(reading.vertical, Vertical::Up);
+        assert_eq!(reading.basis, VerticalBasis::Crs);
+        assert_eq!(reading.note(), None);
+    }
+
+    #[test]
+    fn a_path_from_values_is_declared() {
+        let path = Path::new(
+            1,
+            vec![[0.0, 0.0, 0.0], [0.0, 0.0, 100.0]],
+            vec![0.0, 100.0],
+            None,
+            Vertical::Down,
+        )
+        .unwrap();
+        assert_eq!(path.vertical_basis(), &VerticalBasis::Declared);
+        assert_eq!(path.vertical_note(), None);
     }
 
     fn close(a: Point, b: Point) -> bool {
