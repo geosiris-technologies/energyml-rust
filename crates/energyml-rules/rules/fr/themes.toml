@@ -19,3 +19,7 @@ title = "Tables et catégories"
 [[theme]]
 id = "series"
 title = "Séries temporelles"
+
+[[theme]]
+id = "stats"
+title = "Statistiques, échelles et trous"

@@ -21,6 +21,7 @@
 //! | [`well_strata`] | which unit is this well in, from which MD to which |
 //! | [`strata_by_md`] | and on its other frames and trajectories, looked up by MD |
 //! | [`series`] | what does this log or time series say, sample by sample |
+//! | [`along_md`] | where an MD falls between the nodes, and what the value is there |
 //!
 //! # The rule the whole crate follows
 //!
@@ -54,6 +55,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod along_md;
 pub mod attachments;
 pub mod check;
 pub mod color;

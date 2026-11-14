@@ -9,6 +9,7 @@
 //! that installs a process-wide default (a `set_default`, a global allocator)
 //! keeps a binary of its own, as a `[[test]]` in `Cargo.toml`.
 
+mod along_md;
 mod attachments;
 mod borrowed_crs;
 mod brt;

@@ -20,3 +20,7 @@ title = "Tables and categories"
 [[theme]]
 id = "series"
 title = "Time series"
+
+[[theme]]
+id = "stats"
+title = "Statistics, scales and gaps"

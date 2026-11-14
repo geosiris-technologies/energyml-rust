@@ -5,6 +5,7 @@
 # Using it
 
 - [The library](library.md)
+- [Statistics, scales and measured depth](statistics-and-depth.md)
 - [The command line](cli.md)
 - [Python](python.md)
 - [Creating objects](creating-objects.md)
@@ -56,3 +57,4 @@
 - [0019 Synthetic data is flagged and sourced](adr/0019-synthetic-data-is-flagged-and-sourced.md)
 - [0020 A grid is never reprojected](adr/0020-a-grid-is-never-reprojected.md)
 - [0021 Our own Tool trait; rmcp as an adapter](adr/0021-own-tool-trait-rmcp-as-adapter.md)
+- [0027 Gaps, seams, scales and quantiles](adr/0027-gaps-seams-scales-and-quantiles.md)

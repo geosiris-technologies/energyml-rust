@@ -1,0 +1,26 @@
+# Traduction française du thème stats : titres et textes. Pas encore relue par
+# un relecteur francophone ; ce qui manque se lit en anglais, et le dit.
+
+[[rule]]
+id = "house/stats/gap-never-bridged"
+title = "Un trou de plus de 3 fois le pas médian n'est jamais ponté"
+text = """
+Le long de la profondeur mesurée, deux nœuds voisins plus écartés que 3 fois le pas médian de l'axe ne sont jamais reliés : aucune interpolation, aucun trait, aucune couleur ne traverse le trou, qui est dessiné vide. Un appelant peut demander une limite plus stricte, jamais plus lâche (`GapRule::stricter`)."""
+
+[[rule]]
+id = "house/stats/seam-is-signalled"
+title = "Un saut de la valeur de plus de 10 fois le pas médian de sa variation est signalé comme une couture"
+text = """
+Le long d'un axe, un pas de la valeur plus grand que 10 fois le pas médian de sa variation est une couture : il est signalé avec sa place et son rapport à la médiane (`Jump`), et le dessin n'est pas lissé à travers. Les valeurs restent celles du fichier."""
+
+[[rule]]
+id = "house/stats/log-from-three-decades"
+title = "L'échelle logarithmique est proposée dès que les valeurs couvrent 3 décades"
+text = """
+Quand les valeurs finies et positives d'une propriété couvrent au moins 3 décades (la plus grande vaut au moins mille fois la plus petite), l'échelle logarithmique est proposée ; en dessous, l'échelle linéaire. C'est une proposition : une échelle que le fichier donne ou que l'utilisateur choisit l'emporte, et un désaccord avec le fichier est dit."""
+
+[[rule]]
+id = "house/stats/automatic-bounds-are-percentiles"
+title = "Les bornes automatiques sont les percentiles 1 et 99, exacts jusqu'à 10 millions de valeurs"
+text = """
+Les bornes que l'utilisateur n'a pas fixées sont les percentiles 1 et 99 des valeurs finies (des valeurs positives en échelle logarithmique). Elles sont exactes jusqu'à 10 millions de valeurs ; au-delà, elles viennent d'une esquisse fusionnable dont l'erreur relative, 1 %, est donnée avec le résultat. Le minimum et le maximum restent disponibles."""

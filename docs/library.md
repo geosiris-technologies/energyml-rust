@@ -276,7 +276,9 @@ let placed = crs.to_metres(point)?;   // placed, and in metres
 flip). `to_metres` also normalises units. Units convert on the string the file
 contains, never on a generated Rust variant (`LengthUom::Mm` meant the megametre
 in one release and the millimetre in another). A unit outside the table is an
-error, not an assumption.
+error, not an assumption. Resistivity, conductivity and angle per length (dogleg
+severity) convert too; see
+[Statistics, scales and measured depth](statistics-and-depth.md).
 
 Reprojection goes through the `reproject::Reprojector` trait; `energyml-proj`
 is the shipped implementation, pure Rust over `proj4rs` (so it builds for

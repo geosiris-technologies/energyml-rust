@@ -49,8 +49,12 @@ energyml rules --house --anchor <anchor>       # the rules that apply where some
 energyml rules --house --json
 ```
 
-Themes today include attachments, colour, inheritance of properties, series and
-tables (`energyml rules --house` lists the five themes of this release).
+Themes today include attachments, colour, inheritance of properties, series,
+statistics and tables (`energyml rules --house` lists the six themes of this release).
+
+### Statistics, scales and gaps
+
+Along the measured depth, a gap wider than 3 median steps is never bridged, and a jump of the value wider than 10 median steps of its variation is signalled as a seam. A logarithmic scale is proposed when the values span 3 decades, and automatic bounds are the 1st and 99th percentiles. Read them with `energyml rules --house --theme stats`; the decisions are in [ADR 0027](adr/0027-gaps-seams-scales-and-quantiles.md).
 
 ## The full list
 

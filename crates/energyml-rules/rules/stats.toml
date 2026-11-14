@@ -1,0 +1,112 @@
+# Statistics, scales and gaps along the measured depth: what a view draws or
+# proposes where the standards say nothing. Source: ADR-0027. Code:
+# crates/energyml-domain/src/along_md/ and src/stats/. Declared rules: no
+# entry in `integrity::CHECKS`; the numbers of the texts are the constants,
+# which `tests/stated_numbers.rs` crosses.
+
+[[rule]]
+id = "house/stats/gap-never-bridged"
+theme = "stats"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-11-14"
+title = "A gap wider than 3 times the median step is never bridged"
+text = """
+Along the measured depth, two neighbouring nodes further apart than 3 times the median step of the axis are never joined: no interpolation, no line and no colour crosses the gap, which is drawn empty. A caller may ask for a stricter limit, never a looser one (`GapRule::stricter`)."""
+why = """
+The standards say how a value hangs on a node or an interval, not how far apart two nodes may be before the space between them is unknown. Bridging a missing stretch draws data nobody measured; the limit follows the axis' own sampling, so one rule serves a log sampled every few centimetres and a survey sampled every 30 m (ADR-0027)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "design", path = "docs/adr/0027-gaps-seams-scales-and-quantiles.md", note = "no Energistics document says when a gap between two nodes is a hole in the data" },
+  { kind = "code", path = "crates/energyml-domain/src/along_md/mod.rs", at = "GAP_RATIO" },
+  { kind = "code", path = "crates/energyml-domain/src/along_md/gap.rs", at = "GapRule" },
+  { kind = "code", path = "crates/energyml-domain/tests/along_md.rs", at = "the_gap_rule_is_three_median_steps" },
+]
+at = [
+  { type = "view", key = "column.log" },
+  { type = "view", key = "scene.property-paint" },
+]
+
+[[rule]]
+id = "house/stats/seam-is-signalled"
+theme = "stats"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-11-14"
+title = "A jump of the value wider than 10 times the median step of its variation is signalled as a seam"
+text = """
+Along an axis, a step of the value larger than 10 times the median step of its variation is a seam: it is reported with its place and its ratio to the median (`Jump`), and the drawing is not smoothed across it. The values are kept as written."""
+why = """
+Two runs spliced into one array, or a change of tool, show as a jump the file does not state. The library says where it is instead of hiding it or cutting the data; the threshold sits beside the gap rule so that the two are read together (ADR-0027)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "design", path = "docs/adr/0027-gaps-seams-scales-and-quantiles.md", note = "no Energistics document states how a splice or a change of tool shows in an array" },
+  { kind = "code", path = "crates/energyml-domain/src/along_md/mod.rs", at = "JUMP_RATIO" },
+  { kind = "code", path = "crates/energyml-domain/src/stats/axes.rs", at = "Jump" },
+  { kind = "code", path = "crates/energyml-domain/tests/stats_shapes.rs", at = "a_step_ten_times_the_median_is_a_jump" },
+]
+at = [
+  { type = "view", key = "object.stats" },
+  { type = "view", key = "column.log" },
+]
+
+[[rule]]
+id = "house/stats/log-from-three-decades"
+theme = "stats"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-11-14"
+title = "The logarithmic scale is proposed when the values span at least 3 decades"
+text = """
+When the finite positive values of a property span at least 3 decades (the largest at least a thousand times the smallest), the logarithmic scale is proposed; below, the linear one. It is a proposal: a scale the file states or the user chooses wins, and a disagreement with the file is said."""
+why = """
+The standards state how a colour map maps its values, not when a quantity reads better on a logarithmic scale. Resistivities and permeabilities span several decades and are unreadable on a linear one; three decades is where the choice stops being close (ADR-0027)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "design", path = "docs/adr/0027-gaps-seams-scales-and-quantiles.md", note = "no Energistics document says when a value is read on a logarithmic scale" },
+  { kind = "code", path = "crates/energyml-domain/src/stats/scale.rs", at = "LOG_DECADES" },
+  { kind = "code", path = "crates/energyml-domain/src/stats/scale.rs", at = "propose_log" },
+  { kind = "code", path = "crates/energyml-domain/tests/stats_streaming.rs", at = "log_is_proposed_from_three_decades" },
+]
+at = [
+  { type = "view", key = "object.stats" },
+  { type = "view", key = "column.log" },
+  { type = "view", key = "scene.property-paint" },
+]
+
+[[rule]]
+id = "house/stats/automatic-bounds-are-percentiles"
+theme = "stats"
+status = "active"
+stance = "silent"
+level = 1
+since = "2026-11-14"
+title = "Automatic bounds are the 1st and 99th percentiles, exact up to 10 million values"
+text = """
+Bounds the user did not set are the 1st and 99th percentiles of the finite values (of the positive ones on a logarithmic scale). They are exact up to 10 million values; beyond, they come from a mergeable sketch whose relative error, 1 %, is stated with the result. The minimum and the maximum stay available."""
+why = """
+The minimum and the maximum let one outlier flatten the colour of every other value; the percentiles keep the bulk readable. An exact percentile needs every value at once, which a large grid or a browser cannot afford, so above the limit a sketch answers with a declared error, and says it did (ADR-0027)."""
+rulings = [
+  { by = "maintainer", on = "2026-11-14" },
+]
+refs = [
+  { kind = "design", path = "docs/adr/0027-gaps-seams-scales-and-quantiles.md", note = "no Energistics document says which bounds a display takes when the file states none" },
+  { kind = "code", path = "crates/energyml-domain/src/stats/scale.rs", at = "auto_bounds" },
+  { kind = "code", path = "crates/energyml-domain/src/stats/quantile.rs", at = "EXACT_QUANTILE_LIMIT" },
+  { kind = "code", path = "crates/energyml-domain/src/stats/sketch.rs", at = "SKETCH_RELATIVE_ERROR" },
+  { kind = "code", path = "crates/energyml-domain/tests/stats_streaming.rs", at = "automatic_bounds_are_the_first_and_ninety_ninth_percentiles" },
+]
+at = [
+  { type = "view", key = "object.stats" },
+  { type = "view", key = "scene.property-paint" },
+  { type = "view", key = "column.log" },
+]
