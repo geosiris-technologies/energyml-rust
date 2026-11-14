@@ -546,7 +546,7 @@ impl ArrayMetadata {
     }
 }
 
-/// A block of numbers, in the type the file holds them.
+/// A block of numbers - or of strings - in the type the file holds them.
 ///
 /// **Typed, not converted.** A dataset of doubles comes back as `Vec<f64>`,
 /// integers as `Vec<i32>`, and so on - because the point of reading a million
@@ -575,6 +575,16 @@ pub enum ArrayValues {
     U16(Vec<u16>),
     /// Unsigned 8-bit, and booleans, which HDF5 stores as bytes.
     U8(Vec<u8>),
+    /// Strings, decoded from a string dataset (fixed or variable length,
+    /// ASCII or UTF-8): *"The datatype of the values will be identified by
+    /// means of the HDF5 API"* (EML TRG 2.3 §6.63 p. 149, RESQML TRG 2.0.1
+    /// §6.39 p. 78).
+    ///
+    /// Not a block of numbers: [`ArrayValues::as_bytes`] has no single run of
+    /// memory to lend and answers an empty slice, and [`ArrayValues::to_f64`]
+    /// answers `NaN` for each string - no numeric reading, the count kept.
+    /// [`ArrayValues::text`] is how to read them.
+    Text(Vec<String>),
 }
 
 impl ArrayValues {
@@ -591,6 +601,7 @@ impl ArrayValues {
             Self::U32(v) => v.len(),
             Self::U16(v) => v.len(),
             Self::U8(v) => v.len(),
+            Self::Text(v) => v.len(),
         }
     }
 
@@ -614,6 +625,7 @@ impl ArrayValues {
             ArrayValues::U32(v) => v.iter().map(|x| *x as f64).collect(),
             ArrayValues::U16(v) => v.iter().map(|x| *x as f64).collect(),
             ArrayValues::U8(v) => v.iter().map(|x| *x as f64).collect(),
+            ArrayValues::Text(v) => vec![f64::NAN; v.len()],
         }
     }
 
@@ -630,6 +642,7 @@ impl ArrayValues {
             Self::U32(_) => "uint32",
             Self::U16(_) => "uint16",
             Self::U8(_) => "uint8",
+            Self::Text(_) => "string",
         }
     }
 
@@ -647,6 +660,15 @@ impl ArrayValues {
             Self::U32(v) => bytemuck::cast_slice(v),
             Self::U16(v) => bytemuck::cast_slice(v),
             Self::U8(v) => v,
+            Self::Text(_) => &[],
+        }
+    }
+
+    /// The strings, borrowed, when that is what the file holds.
+    pub fn text(&self) -> Option<&[String]> {
+        match self {
+            Self::Text(v) => Some(v),
+            _ => None,
         }
     }
 }
@@ -666,6 +688,7 @@ impl ArrayValues {
 /// | [`ArrayValues::as_bytes`] | a borrow of that same memory. **Zero** |
 /// | [`ArrayData::f64`] and friends | a borrow when the type already matches. **Zero** |
 /// | [`ArrayData::to_f64`] | widens every element. One more copy, and you asked for it |
+/// | [`ArrayValues::Text`] | owned strings, one allocation each; `as_bytes` lends nothing |
 ///
 /// And [`crate::ArrayBackend::read_into`] removes even the first allocation:
 /// the caller supplies the buffer - a vertex buffer, a memory-mapped region -
@@ -723,6 +746,11 @@ impl ArrayData {
             ArrayValues::U32(v) => Some(v),
             _ => None,
         }
+    }
+
+    /// The strings, borrowed, when that is what the file holds.
+    pub fn text(&self) -> Option<&[String]> {
+        self.values.text()
     }
 
     /// Every element widened to `f64`.

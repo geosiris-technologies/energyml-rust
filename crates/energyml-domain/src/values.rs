@@ -296,7 +296,7 @@ pub fn read(array: &dyn Reflect, source: &dyn ArraySource, at: &str) -> Result<V
     if is_external(array) {
         let data = native(array, source, at)?
             .ok_or_else(|| Error::malformed(at, format!("`{name}` declares no external data at all")))?;
-        return Ok(widen(data.values, family));
+        return widen(data.values, family, at);
     }
 
     // A single value repeated, which the corpus uses more than any other
@@ -552,29 +552,57 @@ fn append(into: &mut ArrayValues, from: ArrayValues) {
         (ArrayValues::U32(a), ArrayValues::U32(b)) => a.extend(b),
         (ArrayValues::U16(a), ArrayValues::U16(b)) => a.extend(b),
         (ArrayValues::U8(a), ArrayValues::U8(b)) => a.extend(b),
-        // Unreachable: the element types were compared before this was called.
+        (ArrayValues::Text(a), ArrayValues::Text(b)) => a.extend(b),
+        // Unreachable: the element types were compared before this was called
+        // - `Text` included, which says `string` on both sides.
         _ => {}
     }
 }
 
-/// Bring a file's numbers into the family the schema declares.
+/// Bring a file's values into the family the schema declares.
 ///
 /// HDF5 has no boolean type - RESQML writes them as bytes - so a boolean array
 /// read from a file arrives as integers and is compared against zero here.
-fn widen(values: ArrayValues, family: Family) -> Values {
-    match family {
-        Family::Boolean => Values::Boolean(numbers(&values).into_iter().map(|v| v != 0.0).collect()),
-        Family::Integer => Values::Integer(numbers(&values).into_iter().map(|v| v as i64).collect()),
-        Family::Floating => Values::Floating(numbers(&values)),
-        // Nothing in the corpus writes strings to HDF5, and the backend does
-        // not decode them; an empty text array is the honest answer rather
-        // than numbers pretending to be words.
-        Family::Text => Values::Text(Vec::new()),
+///
+/// A string array is never read from numbers and a numeric array is never read
+/// from strings: either is a refusal that names it, not an empty answer that
+/// looks like a column with no values (ADR 0005).
+fn widen(values: ArrayValues, family: Family, at: &str) -> Result<Values> {
+    match (family, values) {
+        (Family::Text, ArrayValues::Text(strings)) => Ok(Values::Text(strings)),
+        (Family::Text, other) => Err(Error::unsupported(
+            format!(
+                "a string array whose external data came back as `{}` values",
+                other.element_type()
+            ),
+            format!("{at}: the backend that read it does not decode strings, and no text is invented from numbers"),
+        )),
+        (family, ArrayValues::Text(_)) => Err(Error::malformed(
+            at,
+            format!("a {} array whose external data holds strings", family_word(family)),
+        )),
+        (Family::Boolean, v) => Ok(Values::Boolean(
+            numbers(&v, at)?.into_iter().map(|x| x != 0.0).collect(),
+        )),
+        (Family::Integer, v) => Ok(Values::Integer(
+            numbers(&v, at)?.into_iter().map(|x| x as i64).collect(),
+        )),
+        (Family::Floating, v) => Ok(Values::Floating(numbers(&v, at)?)),
     }
 }
 
-fn numbers(values: &ArrayValues) -> Vec<f64> {
-    match values {
+/// The family named in a sentence.
+fn family_word(family: Family) -> &'static str {
+    match family {
+        Family::Floating => "floating-point",
+        Family::Integer => "integer",
+        Family::Boolean => "boolean",
+        Family::Text => "string",
+    }
+}
+
+fn numbers(values: &ArrayValues, at: &str) -> Result<Vec<f64>> {
+    Ok(match values {
         ArrayValues::F64(v) => v.clone(),
         ArrayValues::F32(v) => v.iter().map(|x| *x as f64).collect(),
         ArrayValues::I64(v) => v.iter().map(|x| *x as f64).collect(),
@@ -585,8 +613,13 @@ fn numbers(values: &ArrayValues) -> Vec<f64> {
         ArrayValues::U32(v) => v.iter().map(|x| *x as f64).collect(),
         ArrayValues::U16(v) => v.iter().map(|x| *x as f64).collect(),
         ArrayValues::U8(v) => v.iter().map(|x| *x as f64).collect(),
-        _ => Vec::new(),
-    }
+        other => {
+            return Err(Error::unsupported(
+                format!("`{}` values in a numeric array", other.element_type()),
+                at.to_string(),
+            ));
+        }
+    })
 }
 
 fn lattice(array: &dyn Reflect, family: Family, at: &str) -> Result<Values> {
@@ -655,6 +688,31 @@ fn scalar_i64(object: &dyn Reflect, field: &str) -> Option<i64> {
         FieldValue::Scalar(Scalar::Int(v)) => Some(v),
         FieldValue::Scalar(Scalar::UInt(v)) => i64::try_from(v).ok(),
         FieldValue::Scalar(Scalar::Double(v)) => Some(v as i64),
+        _ => None,
+    }
+}
+
+/// The `NullValue` an integer array declares, when it declares one.
+///
+/// An integer `long` in every release that has it: `IntegerExternalArray`
+/// (EML TRG 2.3 section 6.41 p. 127: "The null value must be explicitly provided
+/// in the NullValue attribute of this class"), `IntegerXmlArray` (section 6.44
+/// p. 130), `IntegerHdf5Array` (RESQML TRG 2.0.1 section 6.28 p. 73-74). A
+/// floating-point array has none: its null is `NaN`. `None` when the field is
+/// absent or holds no integer.
+///
+/// The one reading of it: the copies of `integrity`, `well_strata` and
+/// `energyml-build` are replaced by this.
+pub fn null_value(array: &dyn Reflect) -> Option<i64> {
+    match array.field("NullValue")?.as_scalar()? {
+        Scalar::Int(v) => Some(v),
+        Scalar::UInt(v) => i64::try_from(v).ok(),
+        Scalar::Double(v)
+            if v.is_finite() && v.fract() == 0.0 && v >= i64::MIN as f64 && v <= i64::MAX as f64 =>
+        {
+            Some(v as i64)
+        }
+        Scalar::Str(v) => v.trim().parse::<i64>().ok(),
         _ => None,
     }
 }

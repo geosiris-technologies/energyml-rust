@@ -162,9 +162,33 @@ impl ArrayBackend for Hdf5Backend {
             TypeDescriptor::Unsigned(IntSize::U1) | TypeDescriptor::Boolean => {
                 ArrayValues::U8(fill(&dataset, &selection, wanted, file, path_in_file)?)
             }
-            // Strings, compounds, references: EnergyML puts numbers in HDF5, so
-            // meeting one of these means either a file we did not write or a
-            // gap here. Say which, rather than returning bytes nobody can read.
+            // Strings: EML TRG 2.3 section 6.63 p. 149, "the datatype of the
+            // values will be identified by means of the HDF5 API". The empty
+            // string is a value and is kept as one.
+            TypeDescriptor::VarLenUnicode => ArrayValues::Text(strings::<hdf5::types::VarLenUnicode>(
+                &dataset,
+                &selection,
+                file,
+                path_in_file,
+                |s| s.as_str().to_string(),
+            )?),
+            TypeDescriptor::VarLenAscii => ArrayValues::Text(strings::<hdf5::types::VarLenAscii>(
+                &dataset,
+                &selection,
+                file,
+                path_in_file,
+                |s| s.as_str().to_string(),
+            )?),
+            TypeDescriptor::FixedAscii(size) => {
+                ArrayValues::Text(fixed_ascii(&dataset, &selection, *size, file, path_in_file)?)
+            }
+            TypeDescriptor::FixedUnicode(size) => {
+                ArrayValues::Text(fixed_unicode(&dataset, &selection, *size, file, path_in_file)?)
+            }
+            // Compounds, references, enumerations, arrays of arrays: EnergyML
+            // puts numbers and strings in HDF5, so meeting one of these means
+            // either a file we did not write or a gap here. Say which, rather
+            // than returning bytes nobody can read.
             other => {
                 return Err(external(
                     file,
@@ -554,6 +578,8 @@ fn open(file: &Path) -> Result<hdf5::File> {
 /// One dataset into a file already open for writing - the groups leading to
 /// it, the dataset replaced when it exists. Neither opens nor flushes: that is
 /// the caller's, once for one dataset or for many.
+const STRINGS_NOT_WRITTEN: &str = "the values are strings, and this backend writes numbers only: write a string column inline (`StringXmlArray`)";
+
 fn write_into(handle: &hdf5::File, file: &Path, path_in_file: &str, data: &ArrayData) -> Result<()> {
     let bad = |message: String| external(file, path_in_file, ExternalDataReason::Backend(message));
 
@@ -575,6 +601,12 @@ fn write_into(handle: &hdf5::File, file: &Path, path_in_file: &str, data: &Array
             "the shape {shape:?} describes {declared} element(s), the values hold {}",
             data.values.len()
         )));
+    }
+
+    // Strings are read, not written: refused before anything is created or
+    // unlinked, so an existing dataset survives the refusal.
+    if matches!(data.values, ArrayValues::Text(_)) {
+        return Err(bad(STRINGS_NOT_WRITTEN.to_string()));
     }
 
     // Groups first: `/resqml20/<uuid>/points_patch0` needs two of them, and
@@ -625,6 +657,9 @@ fn write_into(handle: &hdf5::File, file: &Path, path_in_file: &str, data: &Array
         ArrayValues::U32(v) => put!(v, u32),
         ArrayValues::U16(v) => put!(v, u16),
         ArrayValues::U8(v) => put!(v, u8),
+        // Unreachable: refused above, before the dataset was touched. A
+        // refusal rather than `unreachable!`: no panic in a library.
+        ArrayValues::Text(_) => return Err(bad(STRINGS_NOT_WRITTEN.to_string())),
     }
     Ok(())
 }
@@ -725,7 +760,18 @@ fn into<T: hdf5::H5Type + Copy>(
     // copy out of it is the price of a partial read until `hdf5-metno` grows a
     // `read_slice_into`. The whole-dataset path - every array in the corpus -
     // does not pay it.
-    let hyperslab: Vec<hdf5::SliceOrIndex> = selection
+    let array = dataset
+        .read_slice::<T, _, ndarray::IxDyn>(hdf5::Hyperslab::from(hyperslab(selection)))
+        .map_err(fail)?;
+    for (slot, value) in buffer.iter_mut().zip(array.iter()) {
+        *slot = *value;
+    }
+    Ok(())
+}
+
+/// The hyperslab of a selection - shared by the numeric and the string reads.
+fn hyperslab(selection: &Selection) -> Vec<hdf5::SliceOrIndex> {
+    selection
         .start
         .iter()
         .zip(&selection.count)
@@ -735,14 +781,96 @@ fn into<T: hdf5::H5Type + Copy>(
             block: 1,
             count: *count as usize,
         })
-        .collect();
-    let array = dataset
-        .read_slice::<T, _, ndarray::IxDyn>(hdf5::Hyperslab::from(hyperslab))
-        .map_err(fail)?;
-    for (slot, value) in buffer.iter_mut().zip(array.iter()) {
-        *slot = *value;
+        .collect()
+}
+
+/// The largest fixed-length string this backend decodes, in bytes.
+const FIXED_STRING_LIMIT: usize = 1024;
+
+/// A string dataset read as `T`, each element turned into a `String`.
+///
+/// No `trim`: the empty string is a value. The trailing NULs of a fixed-length
+/// string are already dropped by `as_str`.
+fn strings<T: hdf5::H5Type + Clone>(
+    dataset: &hdf5::Dataset,
+    selection: &Selection,
+    file: &Path,
+    path_in_file: &str,
+    text: impl Fn(&T) -> String,
+) -> Result<Vec<String>> {
+    let fail = |e: hdf5::Error| external(file, path_in_file, ExternalDataReason::Backend(e.to_string()));
+    if selection.whole {
+        let all = dataset.read_raw::<T>().map_err(fail)?;
+        return Ok(all.iter().map(text).collect());
     }
-    Ok(())
+    let array = dataset
+        .read_slice::<T, _, ndarray::IxDyn>(hdf5::Hyperslab::from(hyperslab(selection)))
+        .map_err(fail)?;
+    Ok(array.iter().map(text).collect())
+}
+
+fn too_long(file: &Path, path_in_file: &str, size: usize) -> Error {
+    external(
+        file,
+        path_in_file,
+        ExternalDataReason::Backend(format!(
+            "fixed-length strings of {size} byte(s): this backend decodes them up to {FIXED_STRING_LIMIT}"
+        )),
+    )
+}
+
+/// Fixed-length ASCII strings of `size` bytes, read through the smallest
+/// bucket that holds them (16, 64, 256, 1024): HDF5 converts a fixed string to
+/// a longer one without loss, and `hdf5-metno` offers no read of a size known
+/// only at run time.
+///
+/// Memory: a bucket of 1024 bytes costs 1 KiB per string, so a million long
+/// fixed strings is a gibibyte.
+fn fixed_ascii(
+    dataset: &hdf5::Dataset,
+    selection: &Selection,
+    size: usize,
+    file: &Path,
+    path_in_file: &str,
+) -> Result<Vec<String>> {
+    use hdf5::types::FixedAscii;
+    match size {
+        0..=16 => strings::<FixedAscii<16>>(dataset, selection, file, path_in_file, |s| s.as_str().to_string()),
+        17..=64 => strings::<FixedAscii<64>>(dataset, selection, file, path_in_file, |s| s.as_str().to_string()),
+        65..=256 => {
+            strings::<FixedAscii<256>>(dataset, selection, file, path_in_file, |s| s.as_str().to_string())
+        }
+        257..=FIXED_STRING_LIMIT => {
+            strings::<FixedAscii<1024>>(dataset, selection, file, path_in_file, |s| s.as_str().to_string())
+        }
+        _ => Err(too_long(file, path_in_file, size)),
+    }
+}
+
+/// The same for fixed-length UTF-8 strings (`FixedUnicode<N>`).
+fn fixed_unicode(
+    dataset: &hdf5::Dataset,
+    selection: &Selection,
+    size: usize,
+    file: &Path,
+    path_in_file: &str,
+) -> Result<Vec<String>> {
+    use hdf5::types::FixedUnicode;
+    match size {
+        0..=16 => {
+            strings::<FixedUnicode<16>>(dataset, selection, file, path_in_file, |s| s.as_str().to_string())
+        }
+        17..=64 => {
+            strings::<FixedUnicode<64>>(dataset, selection, file, path_in_file, |s| s.as_str().to_string())
+        }
+        65..=256 => {
+            strings::<FixedUnicode<256>>(dataset, selection, file, path_in_file, |s| s.as_str().to_string())
+        }
+        257..=FIXED_STRING_LIMIT => {
+            strings::<FixedUnicode<1024>>(dataset, selection, file, path_in_file, |s| s.as_str().to_string())
+        }
+        _ => Err(too_long(file, path_in_file, size)),
+    }
 }
 
 /// The element type, named the way a caller can act on.
@@ -753,6 +881,12 @@ fn name_of(descriptor: &TypeDescriptor) -> String {
         TypeDescriptor::Integer(size) => format!("int{}", *size as usize * 8),
         TypeDescriptor::Unsigned(size) => format!("uint{}", *size as usize * 8),
         TypeDescriptor::Boolean => "bool".to_string(),
+        // The same word as `ArrayValues::Text.element_type()`: it is what the
+        // domain compares when it joins the parts of an array.
+        TypeDescriptor::FixedAscii(_)
+        | TypeDescriptor::FixedUnicode(_)
+        | TypeDescriptor::VarLenAscii
+        | TypeDescriptor::VarLenUnicode => "string".to_string(),
         other => format!("{other:?}"),
     }
 }
