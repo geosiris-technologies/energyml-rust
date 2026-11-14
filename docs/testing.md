@@ -14,11 +14,11 @@ from four kinds of data:
 
 The packages in B are small example packages: those written by the example
 programs of FESAPI (RESQML 2.0.1 and 2.2, in the Geosiris `energyml-python`
-repository) and those of resqpy (RESQML 2.0.1, MIT licence). TODO(verify): final
-list and licences in `tests/fixtures.lock`.
+repository) and those of resqpy (RESQML 2.0.1, MIT licence). The list, the commits
+and the licences are in `tests/fixtures.lock`.
 
 ```sh
-scripts/fetch-fixtures      # the same as CI does, on demand, into target/fixtures/   (TODO: script)
+python scripts/fetch-fixtures.py      # the same as CI does, on demand, into target/fixtures/
 cargo test --workspace --test tests          # the end-to-end binary
 cargo test --workspace <name-filter>         # one test by name, across the workspace
 ```

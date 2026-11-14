@@ -6,8 +6,10 @@ and an SVG you can open in a browser or edit in Inkscape. The computation is in
 Rust (crate `energyml-section`); the drawing is the same one whatever asks
 for it - the command line, a library call, or an application.
 
-> Images: TODO - produced from the reference model by
-> `cargo run --example gallery`, see [Gallery](gallery.md).
+A long section of the Lutetia reference model, drawn by `energyml profile` (the
+other views, and the exact command for each, are in the [Gallery](gallery.md)):
+
+![A long section of Lutetia](images/section-long.svg)
 
 ## From the command line
 
@@ -116,14 +118,20 @@ was shown. The crate has no native dependency and compiles to WebAssembly.
 
 ```rust
 use energyml_section::{compute_packages, draw};
-// inputs: the packages, what to cut, the trace; view: how to draw it
-let catalogue = compute_packages(/* inputs, opened packages */)?;
+// `inputs`: what to cut and along which trace; `packages`: the opened packages;
+// `reprojector`: how to move between coordinate systems; `view`: how to draw it
+let catalogue = compute_packages(&inputs, &mut packages, &reprojector)?;
 let svg: String = draw(&catalogue, &view);
 ```
 
-TODO(verify): exact signatures of `compute`, `compute_packages`, `redraw` and
-`draw` in `crates/energyml-section/src/lib.rs` before publishing; the
-example above is a sketch of the call shape.
+The signatures, in `crates/energyml-section/src/lib.rs`:
+
+- `compute_packages(inputs: &Inputs, packages: &mut [Opened<'_>], reprojector: &dyn Reprojector) -> Result<Catalogue, InputsError>`;
+- `compute(inputs: &Inputs, read_one: impl FnMut(&Asked, &[SectionTrace]) -> Contribution) -> Result<Catalogue, InputsError>`,
+  the same calculation for a face that reads its packages itself (the front end holds one per session);
+- `draw(catalogue: &Catalogue, view: &View) -> String`;
+- `redraw(svg: &str, packages: &mut [Opened<'_>], reprojector: &dyn Reprojector) -> Result<String, RedrawError>`,
+  which draws again a drawing from what its own metadata says it was made of.
 
 See also [Well sheet](well-sheet.md) and
 [ADR 0015](adr/0015-section-view.md).

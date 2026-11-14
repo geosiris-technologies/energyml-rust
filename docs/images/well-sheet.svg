@@ -1,0 +1,520 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="140.000mm" height="248.773mm" viewBox="0 0 140.000 248.773" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="2.822">
+<title>Drilling sheet</title>
+<g id="header">
+<text x="0" y="3.387" font-style="italic">readable - axis: measured depth, distorted to keep every section readable</text>
+<text x="8.238" y="6.773" font-weight="bold">MD (m)</text>
+<text x="26.178" y="6.773" font-weight="bold">Stratigraphy</text>
+<text x="83.589" y="6.773" font-weight="bold">formation name</text>
+</g>
+<g id="body" transform="translate(0, 8.773)">
+<line x1="0" y1="0.000" x2="140.000" y2="0.000" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="5.080" x2="140.000" y2="5.080" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="16.136" x2="140.000" y2="16.136" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="21.216" x2="140.000" y2="21.216" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="26.296" x2="140.000" y2="26.296" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="31.376" x2="140.000" y2="31.376" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="36.456" x2="140.000" y2="36.456" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="41.536" x2="140.000" y2="41.536" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="46.616" x2="140.000" y2="46.616" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="51.696" x2="140.000" y2="51.696" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="56.776" x2="140.000" y2="56.776" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="61.856" x2="140.000" y2="61.856" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="66.936" x2="140.000" y2="66.936" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="75.402" x2="140.000" y2="75.402" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="83.869" x2="140.000" y2="83.869" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="92.336" x2="140.000" y2="92.336" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="100.802" x2="140.000" y2="100.802" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="109.269" x2="140.000" y2="109.269" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="117.736" x2="140.000" y2="117.736" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="126.202" x2="140.000" y2="126.202" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="131.282" x2="140.000" y2="131.282" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="136.362" x2="140.000" y2="136.362" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="147.734" x2="140.000" y2="147.734" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="156.201" x2="140.000" y2="156.201" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="164.667" x2="140.000" y2="164.667" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="169.747" x2="140.000" y2="169.747" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="174.827" x2="140.000" y2="174.827" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="179.907" x2="140.000" y2="179.907" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="184.987" x2="140.000" y2="184.987" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="190.067" x2="140.000" y2="190.067" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="197.649" x2="140.000" y2="197.649" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="202.729" x2="140.000" y2="202.729" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="207.809" x2="140.000" y2="207.809" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="212.889" x2="140.000" y2="212.889" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="219.680" x2="140.000" y2="219.680" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="224.760" x2="140.000" y2="224.760" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="229.840" x2="140.000" y2="229.840" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="234.920" x2="140.000" y2="234.920" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="240.000" x2="140.000" y2="240.000" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="0" x2="0" y2="240.000" stroke="#000000" stroke-width="0.100"/>
+<line x1="0" y1="0.000" x2="7.238" y2="0.000" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="4.000" x2="7.238" y2="5.080" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="32.000" x2="7.238" y2="16.136" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="36.000" x2="7.238" y2="21.216" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="40.000" x2="7.238" y2="26.296" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="40.800" x2="7.238" y2="31.376" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="41.600" x2="7.238" y2="36.456" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="46.800" x2="7.238" y2="41.536" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="47.600" x2="7.238" y2="46.616" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="50.200" x2="7.238" y2="51.696" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="58.400" x2="7.238" y2="56.776" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="66.400" x2="7.238" y2="61.856" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="68.000" x2="7.238" y2="66.936" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="78.800" x2="7.238" y2="75.402" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="80.800" x2="7.238" y2="83.869" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="83.000" x2="7.238" y2="92.336" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="94.600" x2="7.238" y2="100.802" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="95.400" x2="7.238" y2="109.269" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="98.000" x2="7.238" y2="117.736" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="98.800" x2="7.238" y2="126.202" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="101.800" x2="7.238" y2="131.282" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="107.200" x2="7.238" y2="136.362" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="136.000" x2="7.238" y2="147.734" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="138.800" x2="7.238" y2="156.201" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="140.800" x2="7.238" y2="164.667" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="143.200" x2="7.238" y2="169.747" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="147.200" x2="7.238" y2="174.827" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="155.200" x2="7.238" y2="179.907" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="159.200" x2="7.238" y2="184.987" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="162.000" x2="7.238" y2="190.067" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="181.200" x2="7.238" y2="197.649" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="192.000" x2="7.238" y2="202.729" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="196.000" x2="7.238" y2="207.809" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="198.800" x2="7.238" y2="212.889" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="216.000" x2="7.238" y2="219.680" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="228.000" x2="7.238" y2="224.760" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="232.000" x2="7.238" y2="229.840" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="237.200" x2="7.238" y2="234.920" stroke="#999999" stroke-width="0.100"/>
+<line x1="0" y1="240.000" x2="7.238" y2="240.000" stroke="#999999" stroke-width="0.100"/>
+<text x="8.238" y="3.048" data-md="0.000">0</text>
+<text x="8.238" y="8.128" data-md="1.000">1</text>
+<text x="8.238" y="19.184" data-md="8.000">8</text>
+<text x="8.238" y="24.264" data-md="9.000">9</text>
+<text x="8.238" y="29.344" data-md="10.000">10</text>
+<text x="8.238" y="34.424" data-md="10.200">10.20</text>
+<text x="8.238" y="39.504" data-md="10.400">10.40</text>
+<text x="8.238" y="44.584" data-md="11.700">11.70</text>
+<text x="8.238" y="49.664" data-md="11.900">11.90</text>
+<text x="8.238" y="54.744" data-md="12.550">12.55</text>
+<text x="8.238" y="59.824" data-md="14.600">14.60</text>
+<text x="8.238" y="64.904" data-md="16.600">16.60</text>
+<text x="8.238" y="69.984" data-md="17.000">17</text>
+<text x="8.238" y="78.450" data-md="19.700">19.70</text>
+<text x="8.238" y="86.917" data-md="20.200">20.20</text>
+<text x="8.238" y="95.384" data-md="20.750">20.75</text>
+<text x="8.238" y="103.850" data-md="23.650">23.65</text>
+<text x="8.238" y="112.317" data-md="23.850">23.85</text>
+<text x="8.238" y="120.784" data-md="24.500">24.50</text>
+<text x="8.238" y="129.250" data-md="24.700">24.70</text>
+<text x="8.238" y="134.330" data-md="25.450">25.45</text>
+<text x="8.238" y="139.410" data-md="26.800">26.80</text>
+<text x="8.238" y="150.782" data-md="34.000">34</text>
+<text x="8.238" y="159.249" data-md="34.700">34.70</text>
+<text x="8.238" y="167.715" data-md="35.200">35.20</text>
+<text x="8.238" y="172.795" data-md="35.800">35.80</text>
+<text x="8.238" y="177.875" data-md="36.800">36.80</text>
+<text x="8.238" y="182.955" data-md="38.800">38.80</text>
+<text x="8.238" y="188.035" data-md="39.800">39.80</text>
+<text x="8.238" y="193.115" data-md="40.500">40.50</text>
+<text x="8.238" y="200.697" data-md="45.300">45.30</text>
+<text x="8.238" y="205.777" data-md="48.000">48</text>
+<text x="8.238" y="210.857" data-md="49.000">49</text>
+<text x="8.238" y="215.937" data-md="49.700">49.70</text>
+<text x="8.238" y="222.728" data-md="54.000">54</text>
+<text x="8.238" y="227.808" data-md="57.000">57</text>
+<text x="8.238" y="232.888" data-md="58.000">58</text>
+<text x="8.238" y="237.968" data-md="59.300">59.30</text>
+<text x="8.238" y="239.153" data-md="60.000">60</text>
+<g data-md-top="0.000" data-md-base="1.000" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(3a91e0b0-c98e-559f-8877-c23c4fe2075d)" data-row="0">
+<title>Holocene</title>
+<rect x="25.178" y="0.000" width="57.411" height="5.080" fill="#fef2e0ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="3.387">Holocene</text>
+</g>
+<g data-md-top="1.000" data-md-base="8.000" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(3a91e0b0-c98e-559f-8877-c23c4fe2075d)" data-row="0">
+<title>Holocene</title>
+<rect x="25.178" y="5.080" width="57.411" height="11.056" fill="#fef2e0ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="8.467">Holocene</text>
+</g>
+<g data-md-top="8.000" data-md-base="9.000" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(b3405d96-2da5-5d29-a1bd-04d1ab1db21d)" data-row="1">
+<title>Upper/Late Pleistocene</title>
+<rect x="25.178" y="16.136" width="57.411" height="5.080" fill="#fff2d3ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="19.522">Upper/Late Pleistocene</text>
+</g>
+<g data-md-top="9.000" data-md-base="10.000" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(4e1cb34e-60e2-5ee1-8454-e76a3619668d)" data-row="3">
+<title>Lutetian</title>
+<rect x="25.178" y="21.216" width="57.411" height="5.080" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="24.602">Lutetian</text>
+</g>
+<g data-md-top="10.000" data-md-base="10.200" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(4e1cb34e-60e2-5ee1-8454-e76a3619668d)" data-row="3">
+<title>Lutetian</title>
+<rect x="25.178" y="26.296" width="57.411" height="5.080" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="29.682">Lutetian</text>
+</g>
+<g data-md-top="10.200" data-md-base="10.400" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(4e1cb34e-60e2-5ee1-8454-e76a3619668d)" data-row="3">
+<title>Lutetian</title>
+<rect x="25.178" y="31.376" width="57.411" height="5.080" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="34.762">Lutetian</text>
+</g>
+<g data-md-top="10.400" data-md-base="11.700" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(4e1cb34e-60e2-5ee1-8454-e76a3619668d)" data-row="3">
+<title>Lutetian</title>
+<rect x="25.178" y="36.456" width="57.411" height="5.080" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="39.842">Lutetian</text>
+</g>
+<g data-md-top="11.700" data-md-base="11.900" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(4e1cb34e-60e2-5ee1-8454-e76a3619668d)" data-row="3">
+<title>Lutetian</title>
+<rect x="25.178" y="41.536" width="57.411" height="5.080" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="44.922">Lutetian</text>
+</g>
+<g data-md-top="11.900" data-md-base="12.550" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(4e1cb34e-60e2-5ee1-8454-e76a3619668d)" data-row="3">
+<title>Lutetian</title>
+<rect x="25.178" y="46.616" width="57.411" height="5.080" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="50.002">Lutetian</text>
+</g>
+<g data-md-top="12.550" data-md-base="14.600" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(4e1cb34e-60e2-5ee1-8454-e76a3619668d)" data-row="3">
+<title>Lutetian</title>
+<rect x="25.178" y="51.696" width="57.411" height="5.080" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="55.082">Lutetian</text>
+</g>
+<g data-md-top="14.600" data-md-base="16.600" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(4e1cb34e-60e2-5ee1-8454-e76a3619668d)" data-row="3">
+<title>Lutetian</title>
+<rect x="25.178" y="56.776" width="57.411" height="5.080" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="60.162">Lutetian</text>
+</g>
+<g data-md-top="16.600" data-md-base="17.000" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(4e1cb34e-60e2-5ee1-8454-e76a3619668d)" data-row="3">
+<title>Lutetian</title>
+<rect x="25.178" y="61.856" width="57.411" height="5.080" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="65.242">Lutetian</text>
+</g>
+<g data-md-top="17.000" data-md-base="19.700" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(6b3a6106-50dc-5665-b0d5-0fe8d95d7769)" data-row="9">
+<title>Lower Lutetian</title>
+<rect x="25.178" y="66.936" width="57.411" height="8.467" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="70.322">Lower Lutetian</text>
+</g>
+<g data-md-top="19.700" data-md-base="20.200" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(6b3a6106-50dc-5665-b0d5-0fe8d95d7769)" data-row="9">
+<title>Lower Lutetian</title>
+<rect x="25.178" y="75.402" width="57.411" height="8.467" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="78.789">Lower Lutetian</text>
+</g>
+<g data-md-top="20.200" data-md-base="20.750" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(6b3a6106-50dc-5665-b0d5-0fe8d95d7769)" data-row="9">
+<title>Lower Lutetian</title>
+<rect x="25.178" y="83.869" width="57.411" height="8.467" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="87.256">Lower Lutetian</text>
+</g>
+<g data-md-top="20.750" data-md-base="23.650" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(6b3a6106-50dc-5665-b0d5-0fe8d95d7769)" data-row="9">
+<title>Lower Lutetian</title>
+<rect x="25.178" y="92.336" width="57.411" height="8.467" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="95.722">Lower Lutetian</text>
+</g>
+<g data-md-top="23.650" data-md-base="23.850" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(6b3a6106-50dc-5665-b0d5-0fe8d95d7769)" data-row="9">
+<title>Lower Lutetian</title>
+<rect x="25.178" y="100.802" width="57.411" height="8.467" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="104.189">Lower Lutetian</text>
+</g>
+<g data-md-top="23.850" data-md-base="24.500" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(6b3a6106-50dc-5665-b0d5-0fe8d95d7769)" data-row="9">
+<title>Lower Lutetian</title>
+<rect x="25.178" y="109.269" width="57.411" height="8.467" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="112.656">Lower Lutetian</text>
+</g>
+<g data-md-top="24.500" data-md-base="24.700" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(6b3a6106-50dc-5665-b0d5-0fe8d95d7769)" data-row="9">
+<title>Lower Lutetian</title>
+<rect x="25.178" y="117.736" width="57.411" height="8.467" fill="#fcb482ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="121.122">Lower Lutetian</text>
+</g>
+<g data-md-top="24.700" data-md-base="25.450" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(a22d8589-fabf-58a6-9beb-6369540a6ba6)" data-row="4">
+<title>Cuisian</title>
+<rect x="25.178" y="126.202" width="57.411" height="5.080" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="129.589">Cuisian</text>
+</g>
+<g data-md-top="25.450" data-md-base="26.800" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(a22d8589-fabf-58a6-9beb-6369540a6ba6)" data-row="4">
+<title>Cuisian</title>
+<rect x="25.178" y="131.282" width="57.411" height="5.080" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="134.669">Cuisian</text>
+</g>
+<g data-md-top="26.800" data-md-base="34.000" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(a22d8589-fabf-58a6-9beb-6369540a6ba6)" data-row="4">
+<title>Cuisian</title>
+<rect x="25.178" y="136.362" width="57.411" height="11.372" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="139.749">Cuisian</text>
+</g>
+<g data-md-top="34.000" data-md-base="34.700" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(a22d8589-fabf-58a6-9beb-6369540a6ba6)" data-row="4">
+<title>Cuisian</title>
+<rect x="25.178" y="147.734" width="57.411" height="8.467" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="151.121">Cuisian</text>
+</g>
+<g data-md-top="34.700" data-md-base="35.200" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(a22d8589-fabf-58a6-9beb-6369540a6ba6)" data-row="4">
+<title>Cuisian</title>
+<rect x="25.178" y="156.201" width="57.411" height="8.467" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="159.587">Cuisian</text>
+</g>
+<g data-md-top="35.200" data-md-base="35.800" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(dbb3e595-bb78-5cbc-8c9d-926bde84526a)" data-row="10">
+<title>Sparnacian</title>
+<rect x="25.178" y="164.667" width="57.411" height="5.080" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="168.054">Sparnacian</text>
+</g>
+<g data-md-top="35.800" data-md-base="36.800" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(dbb3e595-bb78-5cbc-8c9d-926bde84526a)" data-row="10">
+<title>Sparnacian</title>
+<rect x="25.178" y="169.747" width="57.411" height="5.080" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="173.134">Sparnacian</text>
+</g>
+<g data-md-top="36.800" data-md-base="38.800" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(dbb3e595-bb78-5cbc-8c9d-926bde84526a)" data-row="10">
+<title>Sparnacian</title>
+<rect x="25.178" y="174.827" width="57.411" height="5.080" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="178.214">Sparnacian</text>
+</g>
+<g data-md-top="38.800" data-md-base="39.800" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(dbb3e595-bb78-5cbc-8c9d-926bde84526a)" data-row="10">
+<title>Sparnacian</title>
+<rect x="25.178" y="179.907" width="57.411" height="5.080" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="183.294">Sparnacian</text>
+</g>
+<g data-md-top="39.800" data-md-base="40.500" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(dbb3e595-bb78-5cbc-8c9d-926bde84526a)" data-row="10">
+<title>Sparnacian</title>
+<rect x="25.178" y="184.987" width="57.411" height="5.080" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="188.374">Sparnacian</text>
+</g>
+<g data-md-top="40.500" data-md-base="45.300" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(dbb3e595-bb78-5cbc-8c9d-926bde84526a)" data-row="10">
+<title>Sparnacian</title>
+<rect x="25.178" y="190.067" width="57.411" height="7.581" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="193.454">Sparnacian</text>
+</g>
+<g data-md-top="45.300" data-md-base="48.000" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(dbb3e595-bb78-5cbc-8c9d-926bde84526a)" data-row="10">
+<title>Sparnacian</title>
+<rect x="25.178" y="197.649" width="57.411" height="5.080" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="201.035">Sparnacian</text>
+</g>
+<g data-md-top="48.000" data-md-base="49.000" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(dbb3e595-bb78-5cbc-8c9d-926bde84526a)" data-row="10">
+<title>Sparnacian</title>
+<rect x="25.178" y="202.729" width="57.411" height="5.080" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="206.115">Sparnacian</text>
+</g>
+<g data-md-top="49.000" data-md-base="49.700" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(dbb3e595-bb78-5cbc-8c9d-926bde84526a)" data-row="10">
+<title>Sparnacian</title>
+<rect x="25.178" y="207.809" width="57.411" height="5.080" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="211.195">Sparnacian</text>
+</g>
+<g data-md-top="49.700" data-md-base="54.000" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(dbb3e595-bb78-5cbc-8c9d-926bde84526a)" data-row="10">
+<title>Sparnacian</title>
+<rect x="25.178" y="212.889" width="57.411" height="6.791" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="216.275">Sparnacian</text>
+</g>
+<g data-md-top="54.000" data-md-base="57.000" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(dbb3e595-bb78-5cbc-8c9d-926bde84526a)" data-row="10">
+<title>Sparnacian</title>
+<rect x="25.178" y="219.680" width="57.411" height="5.080" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="223.067">Sparnacian</text>
+</g>
+<g data-md-top="57.000" data-md-base="58.000" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(dbb3e595-bb78-5cbc-8c9d-926bde84526a)" data-row="10">
+<title>Sparnacian</title>
+<rect x="25.178" y="224.760" width="57.411" height="5.080" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="228.147">Sparnacian</text>
+</g>
+<g data-md-top="58.000" data-md-base="59.300" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(dbb3e595-bb78-5cbc-8c9d-926bde84526a)" data-row="10">
+<title>Sparnacian</title>
+<rect x="25.178" y="229.840" width="57.411" height="5.080" fill="#fca773ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="233.227">Sparnacian</text>
+</g>
+<g data-md-top="59.300" data-md-base="60.000" data-uri="eml:///resqml22.StratigraphicUnitInterpretation(ee49695d-2924-5a29-847c-ba0f61858c33)" data-row="6">
+<title>Selandian</title>
+<rect x="25.178" y="234.920" width="57.411" height="5.080" fill="#febf65ff" stroke="#000000" stroke-width="0.100"/>
+<text x="26.178" y="238.307">Selandian</text>
+</g>
+<g data-md-top="0.000" data-md-base="1.000" data-row="3">
+<title>Remblais</title>
+<rect x="82.589" y="0.000" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="3.387">Remblais</text>
+</g>
+<g data-md-top="1.000" data-md-base="8.000" data-row="3">
+<title>Remblais</title>
+<rect x="82.589" y="5.080" width="57.411" height="11.056" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="8.467">Remblais</text>
+</g>
+<g data-md-top="8.000" data-md-base="9.000" data-row="6">
+<title>Fy-Seine</title>
+<rect x="82.589" y="16.136" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="19.522">Fy-Seine</text>
+</g>
+<g data-md-top="9.000" data-md-base="10.000" data-row="0">
+<title>Calcaire grossier s.l. d&apos;Ile-de-France</title>
+<rect x="82.589" y="21.216" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="24.602">Calcaire grossier s.l. d&apos;Ile-de-France</text>
+</g>
+<g data-md-top="10.000" data-md-base="10.200" data-row="0">
+<title>Calcaire grossier s.l. d&apos;Ile-de-France</title>
+<rect x="82.589" y="26.296" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="29.682">Calcaire grossier s.l. d&apos;Ile-de-France</text>
+</g>
+<g data-md-top="10.200" data-md-base="10.400" data-row="0">
+<title>Calcaire grossier s.l. d&apos;Ile-de-France</title>
+<rect x="82.589" y="31.376" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="34.762">Calcaire grossier s.l. d&apos;Ile-de-France</text>
+</g>
+<g data-md-top="10.400" data-md-base="11.700" data-row="0">
+<title>Calcaire grossier s.l. d&apos;Ile-de-France</title>
+<rect x="82.589" y="36.456" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="39.842">Calcaire grossier s.l. d&apos;Ile-de-France</text>
+</g>
+<g data-md-top="11.700" data-md-base="11.900" data-row="0">
+<title>Calcaire grossier s.l. d&apos;Ile-de-France</title>
+<rect x="82.589" y="41.536" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="44.922">Calcaire grossier s.l. d&apos;Ile-de-France</text>
+</g>
+<g data-md-top="11.900" data-md-base="12.550" data-row="0">
+<title>Calcaire grossier s.l. d&apos;Ile-de-France</title>
+<rect x="82.589" y="46.616" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="50.002">Calcaire grossier s.l. d&apos;Ile-de-France</text>
+</g>
+<g data-md-top="12.550" data-md-base="14.600" data-row="0">
+<title>Calcaire grossier s.l. d&apos;Ile-de-France</title>
+<rect x="82.589" y="51.696" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="55.082">Calcaire grossier s.l. d&apos;Ile-de-France</text>
+</g>
+<g data-md-top="14.600" data-md-base="16.600" data-row="0">
+<title>Calcaire grossier s.l. d&apos;Ile-de-France</title>
+<rect x="82.589" y="56.776" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="60.162">Calcaire grossier s.l. d&apos;Ile-de-France</text>
+</g>
+<g data-md-top="16.600" data-md-base="17.000" data-row="0">
+<title>Calcaire grossier s.l. d&apos;Ile-de-France</title>
+<rect x="82.589" y="61.856" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="65.242">Calcaire grossier s.l. d&apos;Ile-de-France</text>
+</g>
+<g data-md-top="17.000" data-md-base="19.700" data-row="10">
+<title>Calcaire et sables à Nummulites laevigatus</title>
+<rect x="82.589" y="66.936" width="57.411" height="8.467" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="70.322">Calcaire et sables à Nummulites</text>
+<text x="83.589" y="73.709">laevigatus</text>
+</g>
+<g data-md-top="19.700" data-md-base="20.200" data-row="10">
+<title>Calcaire et sables à Nummulites laevigatus</title>
+<rect x="82.589" y="75.402" width="57.411" height="8.467" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="78.789">Calcaire et sables à Nummulites</text>
+<text x="83.589" y="82.176">laevigatus</text>
+</g>
+<g data-md-top="20.200" data-md-base="20.750" data-row="10">
+<title>Calcaire et sables à Nummulites laevigatus</title>
+<rect x="82.589" y="83.869" width="57.411" height="8.467" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="87.256">Calcaire et sables à Nummulites</text>
+<text x="83.589" y="90.642">laevigatus</text>
+</g>
+<g data-md-top="20.750" data-md-base="23.650" data-row="10">
+<title>Calcaire et sables à Nummulites laevigatus</title>
+<rect x="82.589" y="92.336" width="57.411" height="8.467" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="95.722">Calcaire et sables à Nummulites</text>
+<text x="83.589" y="99.109">laevigatus</text>
+</g>
+<g data-md-top="23.650" data-md-base="23.850" data-row="10">
+<title>Calcaire et sables à Nummulites laevigatus</title>
+<rect x="82.589" y="100.802" width="57.411" height="8.467" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="104.189">Calcaire et sables à Nummulites</text>
+<text x="83.589" y="107.576">laevigatus</text>
+</g>
+<g data-md-top="23.850" data-md-base="24.500" data-row="10">
+<title>Calcaire et sables à Nummulites laevigatus</title>
+<rect x="82.589" y="109.269" width="57.411" height="8.467" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="112.656">Calcaire et sables à Nummulites</text>
+<text x="83.589" y="116.042">laevigatus</text>
+</g>
+<g data-md-top="24.500" data-md-base="24.700" data-row="10">
+<title>Calcaire et sables à Nummulites laevigatus</title>
+<rect x="82.589" y="117.736" width="57.411" height="8.467" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="121.122">Calcaire et sables à Nummulites</text>
+<text x="83.589" y="124.509">laevigatus</text>
+</g>
+<g data-md-top="24.700" data-md-base="25.450" data-row="16">
+<title>Sables de Cuise</title>
+<rect x="82.589" y="126.202" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="129.589">Sables de Cuise</text>
+</g>
+<g data-md-top="25.450" data-md-base="26.800" data-row="16">
+<title>Sables de Cuise</title>
+<rect x="82.589" y="131.282" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="134.669">Sables de Cuise</text>
+</g>
+<g data-md-top="26.800" data-md-base="34.000" data-row="15">
+<title>Sables du Soissonnais (terme de sondeur)</title>
+<rect x="82.589" y="136.362" width="57.411" height="11.372" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="139.749">Sables du Soissonnais (terme de</text>
+<text x="83.589" y="143.136">sondeur)</text>
+</g>
+<g data-md-top="34.000" data-md-base="34.700" data-row="15">
+<title>Sables du Soissonnais (terme de sondeur)</title>
+<rect x="82.589" y="147.734" width="57.411" height="8.467" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="151.121">Sables du Soissonnais (terme de</text>
+<text x="83.589" y="154.507">sondeur)</text>
+</g>
+<g data-md-top="34.700" data-md-base="35.200" data-row="15">
+<title>Sables du Soissonnais (terme de sondeur)</title>
+<rect x="82.589" y="156.201" width="57.411" height="8.467" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="159.587">Sables du Soissonnais (terme de</text>
+<text x="83.589" y="162.974">sondeur)</text>
+</g>
+<g data-md-top="35.200" data-md-base="35.800" data-row="1">
+<title>Fausses glaises du Vexin</title>
+<rect x="82.589" y="164.667" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="168.054">Fausses glaises du Vexin</text>
+</g>
+<g data-md-top="35.800" data-md-base="36.800" data-row="1">
+<title>Fausses glaises du Vexin</title>
+<rect x="82.589" y="169.747" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="173.134">Fausses glaises du Vexin</text>
+</g>
+<g data-md-top="36.800" data-md-base="38.800" data-row="1">
+<title>Fausses glaises du Vexin</title>
+<rect x="82.589" y="174.827" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="178.214">Fausses glaises du Vexin</text>
+</g>
+<g data-md-top="38.800" data-md-base="39.800" data-row="1">
+<title>Fausses glaises du Vexin</title>
+<rect x="82.589" y="179.907" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="183.294">Fausses glaises du Vexin</text>
+</g>
+<g data-md-top="39.800" data-md-base="40.500" data-row="1">
+<title>Fausses glaises du Vexin</title>
+<rect x="82.589" y="184.987" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="188.374">Fausses glaises du Vexin</text>
+</g>
+<g data-md-top="40.500" data-md-base="45.300" data-row="2">
+<title>Sables d&apos;Auteuil</title>
+<rect x="82.589" y="190.067" width="57.411" height="7.581" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="193.454">Sables d&apos;Auteuil</text>
+</g>
+<g data-md-top="45.300" data-md-base="48.000" data-row="5">
+<title>Argile plastique</title>
+<rect x="82.589" y="197.649" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="201.035">Argile plastique</text>
+</g>
+<g data-md-top="48.000" data-md-base="49.000" data-row="5">
+<title>Argile plastique</title>
+<rect x="82.589" y="202.729" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="206.115">Argile plastique</text>
+</g>
+<g data-md-top="49.000" data-md-base="49.700" data-row="5">
+<title>Argile plastique</title>
+<rect x="82.589" y="207.809" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="211.195">Argile plastique</text>
+</g>
+<g data-md-top="49.700" data-md-base="54.000" data-row="5">
+<title>Argile plastique</title>
+<rect x="82.589" y="212.889" width="57.411" height="6.791" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="216.275">Argile plastique</text>
+</g>
+<g data-md-top="54.000" data-md-base="57.000" data-row="5">
+<title>Argile plastique</title>
+<rect x="82.589" y="219.680" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="223.067">Argile plastique</text>
+</g>
+<g data-md-top="57.000" data-md-base="58.000" data-row="5">
+<title>Argile plastique</title>
+<rect x="82.589" y="224.760" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="228.147">Argile plastique</text>
+</g>
+<g data-md-top="58.000" data-md-base="59.300" data-row="5">
+<title>Argile plastique</title>
+<rect x="82.589" y="229.840" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="233.227">Argile plastique</text>
+</g>
+<g data-md-top="59.300" data-md-base="60.000" data-row="13">
+<title>Marnes de Meudon</title>
+<rect x="82.589" y="234.920" width="57.411" height="5.080" fill="none" stroke="#000000" stroke-width="0.100"/>
+<text x="83.589" y="238.307">Marnes de Meudon</text>
+</g>
+</g>
+</svg>

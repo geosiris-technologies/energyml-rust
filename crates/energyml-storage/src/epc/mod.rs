@@ -52,7 +52,7 @@ use energyml_core::reflect::TypeInfo;
 use energyml_core::registry::{DynObject, ReadMode, Registry};
 
 use crate::array::Resolution;
-use crate::backend::Origin;
+use crate::backend::{ArrayDeparture, Origin};
 use energyml_core::value::Reflect;
 
 use crate::array::{ArrayData, ArrayLocation, ArrayMetadata, ByteOrder, ProxyResolver};
@@ -283,6 +283,10 @@ fn normal_version(version: Option<&str>) -> Option<String> {
         .map(str::to_string)
 }
 
+/// What [`EpcStore::array_departures`] is built from: for each `(declared
+/// name, file read)`, why that file, and the datasets that came from it.
+type DepartureLog = std::collections::BTreeMap<(String, PathBuf), (Origin, BTreeSet<String>)>;
+
 /// An EPC file, open for reading.
 ///
 /// Reading only, in this pass. The in-memory layer that makes an open package
@@ -314,6 +318,13 @@ pub struct EpcStore {
     /// opened: the fallback taken for a missing HDF5 proxy is discovered the
     /// first time an array is located.
     diagnostics: Mutex<Vec<Diagnostic>>,
+    /// The arrays read from a file the document did not name, by `(declared
+    /// name, file read)`: why that file, and which datasets came from it.
+    ///
+    /// Kept apart from `diagnostics` because those hold one sentence per array
+    /// (the dataset is in the sentence), where a person wants one line per
+    /// fallback. See [`EpcStore::array_departures`].
+    departures: Mutex<DepartureLog>,
     /// Which file each `(declared name, dataset)` pair was actually found in.
     ///
     /// The search opens files to ask what they hold; without this, a package
@@ -565,6 +576,7 @@ impl EpcStore {
             entries: Vec::new(),
             by_uuid: HashMap::new(),
             diagnostics: Mutex::new(diagnostics),
+            departures: Mutex::new(DepartureLog::new()),
             array_files: Mutex::new(HashMap::new()),
             external_resources: Mutex::new(HashMap::new()),
             external_files: OnceLock::new(),
@@ -2428,6 +2440,13 @@ impl EpcStore {
             }
 
             if candidate.origin.is_a_departure() {
+                self.departures
+                    .lock()
+                    .expect("the departures lock is never held across a panic")
+                    .entry((declared.clone(), candidate.path.clone()))
+                    .or_insert_with(|| (candidate.origin, BTreeSet::new()))
+                    .1
+                    .insert(dataset.clone());
                 self.record(Diagnostic::warning(
                     &location.field_path,
                     match declared.is_empty() {
@@ -2471,6 +2490,22 @@ impl EpcStore {
         // *reason* stays [`ExternalDataReason::FileMissing`], because that is
         // what tells the caller to try another candidate or ask for the file;
         // only the display string carries the how-hard-it-looked detail.
+        // A path the caller offered that is not on disk never reached the
+        // candidates, so "0 candidate file(s)" would hide the one thing they
+        // most need to hear: that the file they pointed at is not there.
+        let not_found = self.external.missing_offers();
+        let not_found = if not_found.is_empty() {
+            String::new()
+        } else {
+            format!(
+                "; offered by the caller and not found on disk: {}",
+                not_found
+                    .iter()
+                    .map(|path| format!("`{}`", path.display()))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        };
         let detail = match (opened, &no_backend) {
             // Zero opens *and* no backend anywhere: the search never asked a
             // question, it had nothing to ask it with.
@@ -2479,12 +2514,12 @@ impl EpcStore {
                 location.mime.as_deref().unwrap_or("this format")
             ),
             (0, None) => format!(
-                "`{dataset}` is in none of the {} candidate file(s) for `{declared}`",
+                "`{dataset}` is in none of the {} candidate file(s) for `{declared}`{not_found}",
                 candidates.len()
             ),
             (n, _) => format!(
                 "`{dataset}` is in none of the {} candidate file(s) for `{declared}`; \
-                 {n} of them were opened and did not hold it",
+                 {n} of them were opened and did not hold it{not_found}",
                 candidates.len()
             ),
         };
@@ -3710,6 +3745,27 @@ impl EpcStore {
             .lock()
             .expect("the diagnostics lock is never held across a panic")
             .clone()
+    }
+
+    /// The arrays that were read from a file the document does not name, one
+    /// entry per `(name the document wrote, file read)`, in that order.
+    ///
+    /// Empty while every array was read from the file its package names.
+    /// Filled as arrays are read: ask after the reading, not before. What a
+    /// face prints so that no number comes from somewhere unexpected without
+    /// the person being told; see [`ArrayDeparture`].
+    pub fn array_departures(&self) -> Vec<ArrayDeparture> {
+        self.departures
+            .lock()
+            .expect("the departures lock is never held across a panic")
+            .iter()
+            .map(|((declared, path), (origin, datasets))| ArrayDeparture {
+                declared: declared.clone(),
+                path: path.clone(),
+                origin: *origin,
+                arrays: datasets.len(),
+            })
+            .collect()
     }
 
     /// Record a departure, once. The same fallback taken for three hundred

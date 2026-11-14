@@ -97,7 +97,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -159,7 +161,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -231,7 +235,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -298,7 +304,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -359,7 +367,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -425,7 +435,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -493,7 +505,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -553,7 +567,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -625,7 +641,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -692,7 +710,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -761,7 +781,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -916,7 +938,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -973,7 +997,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1033,7 +1059,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1100,7 +1128,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1164,7 +1194,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1227,7 +1259,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1298,7 +1332,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1367,7 +1403,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1436,7 +1474,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1489,7 +1529,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1577,7 +1619,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1649,7 +1693,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1805,7 +1851,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1889,7 +1937,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -1988,7 +2038,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -2086,7 +2138,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.
@@ -2174,7 +2228,9 @@ Options:
           
           The name is optional because the whole point is not having to open a `.rels` in a text editor to find out what your file used to be called. A file that was renamed still holds every number it held before.
           
-          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong. Anything read from somewhere the document did not point at is reported.
+          What is offered is tried **before** what the package names, since offering one is an explicit instruction and people offer them precisely when the package is wrong.
+          
+          A file you offered or pinned is used as you said, without a word. When the package's own name holds nothing, the search looks beside the package (the file with its name, then any other file in its folder), and a file found that way is reported on stderr, with how many datasets came from it. A path given here that is not on disk is reported and ignored.
 
       --log <FILTER>
           Show what the operations are doing, on stderr: `info`, `debug`, or a filter such as `energyml_build=debug,energyml_storage=info`.

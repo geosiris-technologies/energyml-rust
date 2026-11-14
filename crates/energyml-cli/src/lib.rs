@@ -97,8 +97,13 @@ struct Cli {
     ///
     /// What is offered is tried **before** what the package names, since
     /// offering one is an explicit instruction and people offer them precisely
-    /// when the package is wrong. Anything read from somewhere the document did
-    /// not point at is reported.
+    /// when the package is wrong.
+    ///
+    /// A file you offered or pinned is used as you said, without a word. When
+    /// the package's own name holds nothing, the search looks beside the package
+    /// (the file with its name, then any other file in its folder), and a file
+    /// found that way is reported on stderr, with how many datasets came from
+    /// it. A path given here that is not on disk is reported and ignored.
     #[arg(long = "h5", value_name = "[NAME=]PATH", global = true)]
     h5: Vec<String>,
 
@@ -784,7 +789,7 @@ fn try_run() -> Result<ExitCode> {
 
 /// Open an EPC with the reading switches of `modes`, every schema release
 /// registered.
-pub fn open(file: &PathBuf, modes: &Modes) -> Result<EpcStore> {
+pub fn open(file: &PathBuf, modes: &Modes) -> Result<Opened> {
     let mut store = EpcStore::open(file, Arc::new(registry::all()))
         .with_context(|| format!("opening {}", file.display()))?;
     store.set_lenient(modes.lenient);
@@ -802,7 +807,127 @@ pub fn open(file: &PathBuf, modes: &Modes) -> Result<EpcStore> {
             }
         }
     }
-    Ok(store)
+    // A path given to `--h5` that is not on disk takes no part in the search,
+    // and used to be dropped without a word: a typo looked like a package that
+    // had no data file. Said once, here, before anything is read.
+    for path in store.external_files_ref().missing_offers() {
+        eprintln!("warning: --h5 `{}` does not exist and is ignored", path.display());
+    }
+    Ok(Opened { store, tell: true })
+}
+
+/// A package a command has open. It is an [`EpcStore`] in every way (it derefs
+/// to one), and when the command is done it says, on stderr, where the arrays
+/// it read came from if that was not the file the package names.
+///
+/// The telling is here, in one place, rather than in each command: a command
+/// that reads arrays cannot forget it, and the library is told nothing about
+/// the terminal. The facts are the library's (`EpcStore::array_departures`);
+/// this only prints them.
+pub struct Opened {
+    store: EpcStore,
+    /// Whether to tell, at the end, where the arrays were read from.
+    tell: bool,
+}
+
+impl Opened {
+    /// For a command that answers "where are the arrays" itself, as `h5` does
+    /// on stdout: telling it again on stderr would be saying it twice, and
+    /// counting differently.
+    fn answers_itself(&mut self) {
+        self.tell = false;
+    }
+}
+
+impl std::ops::Deref for Opened {
+    type Target = EpcStore;
+
+    fn deref(&self) -> &EpcStore {
+        &self.store
+    }
+}
+
+impl std::ops::DerefMut for Opened {
+    fn deref_mut(&mut self) -> &mut EpcStore {
+        &mut self.store
+    }
+}
+
+impl Drop for Opened {
+    fn drop(&mut self) {
+        if !self.tell {
+            return;
+        }
+        for line in departure_lines(&self.store) {
+            eprintln!("{line}");
+        }
+    }
+}
+
+/// One line per fallback the reading took: how many datasets, which file the
+/// package names for them, which file was read, and why that one. Datasets,
+/// not array pointers: two objects can point at the same one (an object held
+/// in two versions does), and it is counted once.
+///
+/// A file the caller pinned or offered is a `note` (they asked for it); any
+/// other is a `warning`, because the package was not where the numbers were.
+fn departure_lines(store: &EpcStore) -> Vec<String> {
+    store.array_departures().iter().map(departure_line).collect()
+}
+
+/// The line for one fallback, see [`departure_lines`].
+fn departure_line(departure: &energyml_storage::ArrayDeparture) -> String {
+    use energyml_storage::Origin;
+    let level = match departure.origin {
+        Origin::Pinned | Origin::Offered(_) => "note",
+        _ => "warning",
+    };
+    let named = if departure.declared.is_empty() {
+        "no file is named for them in the package".to_string()
+    } else {
+        format!("the package names `{}`", departure.declared)
+    };
+    format!(
+        "{level}: {} dataset(s) read from `{}` instead of the file they point at ({named}): {}",
+        departure.arrays,
+        departure.path.display(),
+        departure.origin.describe()
+    )
+}
+
+#[cfg(test)]
+mod departure_tests {
+    use super::departure_line;
+    use energyml_storage::{ArrayDeparture, Origin};
+
+    fn one(declared: &str, origin: Origin) -> String {
+        departure_line(&ArrayDeparture {
+            declared: declared.to_string(),
+            path: "folder/export.h5".into(),
+            origin,
+            arrays: 736,
+        })
+    }
+
+    /// What would make this fail: a fallback found by the search that is said
+    /// quietly, or one the person asked for that is said as a warning.
+    #[test]
+    fn a_file_found_by_the_search_is_a_warning_and_one_the_caller_gave_is_a_note() {
+        let found = one("model.h5", Origin::Neighbour);
+        assert_eq!(
+            found,
+            "warning: 736 dataset(s) read from `folder/export.h5` instead of the file they point at \
+             (the package names `model.h5`): another file in the package's folder"
+        );
+        assert!(one("model.h5", Origin::Companion).starts_with("warning: "));
+        assert!(one("model.h5", Origin::Offered(0)).starts_with("note: "));
+        assert!(one("model.h5", Origin::Pinned).starts_with("note: "));
+    }
+
+    #[test]
+    fn a_package_that_names_no_file_is_said_so() {
+        assert!(one("", Origin::Neighbour).contains("(no file is named for them in the package)"));
+    }
 }
 
 /// The two reading switches, carried together so a command cannot honour one
@@ -1300,7 +1425,7 @@ fn properties(args: PropertiesArgs, modes: Modes) -> Result<()> {
             "note: {dictionary_label} - kinds that are not objects of this package cannot be resolved; pass `--dictionary <file>` to load one"
         );
     }
-    let resolver = Resolver::new(&store);
+    let resolver = Resolver::new(&*store);
 
     let wanted = args.representation.as_deref().map(str::to_ascii_lowercase);
 
@@ -1433,7 +1558,7 @@ fn properties(args: PropertiesArgs, modes: Modes) -> Result<()> {
             let mut total = 0u64;
             let mut failed = None;
             for patch in &property.patches {
-                match patch.read(&store) {
+                match patch.read(&*store) {
                     Ok(values) => total += values.len() as u64,
                     Err(e) => failed = Some(e),
                 }
@@ -1640,7 +1765,7 @@ fn wells(args: WellsArgs, modes: Modes) -> Result<()> {
     // what surrounds each frame, the headers decided for the file.
     // The front end and Python call the same function.
     let store = open(&args.file, &modes)?;
-    let export = energyml_geometry::wells::of_store(&store.resources(), &store, &args.wells);
+    let export = energyml_geometry::wells::of_store(&store.resources(), &*store, &args.wells);
     for note in &export.notes {
         eprintln!("  [left out] {note}");
     }
@@ -1764,7 +1889,7 @@ fn tables(args: TablesArgs, modes: Modes) -> Result<()> {
         }
 
         // The values, which for a column-based table means reading the file.
-        match Lookup::read(object.as_reflect(), &store) {
+        match Lookup::read(object.as_reflect(), &*store) {
             Ok(lookup) => {
                 println!("    {} row(s)", lookup.rows.rows);
                 for note in &lookup.notes {
@@ -1822,7 +1947,7 @@ fn geometry(args: GeometryArgs, modes: Modes) -> Result<()> {
     };
     let read = scene::of_package(
         &resources,
-        &store,
+        &*store,
         &scene::Request {
             of_type: args.filter.as_deref(),
             colours: Some(&colouring),
@@ -2014,7 +2139,7 @@ fn export(args: ExportArgs, modes: Modes) -> Result<()> {
     };
     let read = scene::of_package(
         &resources,
-        &store,
+        &*store,
         &scene::Request {
             of_type: args.filter.as_deref(),
             colours: Some(&colouring),
@@ -2870,6 +2995,7 @@ fn graph_command(args: GraphArgs, modes: Modes) -> Result<()> {
 /// question a permissive reader has a duty to be able to answer plainly.
 fn h5_command(args: H5Args, modes: Modes) -> Result<ExitCode> {
     let mut store = open(&args.file, &modes)?;
+    store.answers_itself();
 
     // One row per *declared name*, not per array pointer: a package has
     // thousands of pointers and two or three files, and a person wants the

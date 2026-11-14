@@ -3,7 +3,7 @@
 `energyml` is the library with argument parsing in front of it. Nothing the
 command does is out of reach of an application: every check it prints is a call
 you can make yourself. (`enyml` is installed as a short alias of the same
-binary - TODO(verify).)
+binary.)
 
 Every option of every command is in the generated
 [`cli-reference.md`](cli-reference.md). This page is the how and the why.

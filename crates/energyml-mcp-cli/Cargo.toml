@@ -33,11 +33,11 @@ anyhow = "1.0"
 # what a client configuration file without a shell prefers.
 clap = { version = "4.6", features = ["derive", "env"] }
 # The server (`server` feature: the stdio adapter over the MCP SDK and tokio).
-energyml-mcp = { path = "../energyml-mcp", version = "0.2.0", features = ["server"] }
-energyml-storage = { path = "../energyml-storage", version = "0.2.0" }
+energyml-mcp = { path = "../energyml-mcp", version = "0.3.0", features = ["server"] }
+energyml-storage = { path = "../energyml-storage", version = "0.3.0" }
 # Every schema version the workspace generates, like `energyml-cli`: the face
 # that starts the process chooses the registry (ADR-0012), not the MCP crate.
-energyml-schemas = { path = "../energyml-schemas", version = "0.2.0", features = ["all"] }
+energyml-schemas = { path = "../energyml-schemas", version = "0.3.0", features = ["all"] }
 
 [dev-dependencies]
 # The fabricated package of the tests: the storage contract's own model.

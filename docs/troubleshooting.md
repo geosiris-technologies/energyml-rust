@@ -80,6 +80,10 @@ its arrays are unreachable.
 - To rename on purpose, use `energyml rename model.epc --to new.h5` (quote), then
   `--apply`: fields, relationships and the file change together.
 
+The order in which the files are tried, and what the command says when it goes
+somewhere the package did not point, is in
+[Where the arrays are looked for](array-files.md).
+
 ### `rename` fails on Windows with a file in use
 
 An HDF5 handle still open on a file locks it. The rename operation releases the
@@ -113,12 +117,19 @@ Check the unit and the placement: `energyml geometry model.epc --points
 far from the origin with every number looking reasonable. A unit the library does
 not know is refused, not assumed.
 
-### GeoJSON lands in the wrong place
+### GeoJSON objects are missing, or land in the wrong place
 
-GeoJSON is always WGS 84. If your export lands in the Gulf of Guinea, the source
-CRS carries no usable EPSG code; check `energyml geometry` for the CRS the
-package states. TODO(verify): behaviour and wording when a package states no EPSG
-code.
+GeoJSON is always WGS 84, so `energyml export --format geojson` needs the EPSG code
+of each object's CRS. An object whose CRS names none is **skipped, never placed
+anywhere**: the command prints `N skipped: `geojson` cannot write them`, adding that
+objects without a usable EPSG code are skipped. Check `energyml geometry` for the
+CRS the package states; an eml 2.3 CRS is three objects and the code lives in the
+third.
+
+`--native-crs` writes those objects anyway, in their stored coordinates, with the
+legacy `crs` member naming the EPSG code when there is one. The file is then not WGS
+84, and the command says so. Small local coordinates read as degrees sit near
+longitude 0, latitude 0: the Gulf of Guinea.
 
 ## Exports
 

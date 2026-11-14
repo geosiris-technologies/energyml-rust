@@ -69,8 +69,10 @@ On Windows, write the path of the package with forward slashes or doubled
 backslashes (`"C:\\data\\model.epc"`), and give the full path of `energyml-mcp.exe`
 as `command` if it is not on the `PATH` the application sees. The file is
 `claude_desktop_config.json` in `%APPDATA%\Claude` on Windows and in
-`~/Library/Application Support/Claude` on macOS. TODO(verify): the locations come
-from the client's own documentation, not from a test here.
+`~/Library/Application Support/Claude` on macOS (and `~/.config/Claude` on Linux).
+The locations are those of the client's own documentation
+([the Claude Desktop quickstart of the Model Context Protocol](https://modelcontextprotocol.io/quickstart/user)),
+not something a test here checks.
 
 A limit can be given as an argument in `args` (`"--timeout-seconds", "60"`) or as
 an `ENERGYML_MCP_*` variable in an `env` object. A configuration file is readable by

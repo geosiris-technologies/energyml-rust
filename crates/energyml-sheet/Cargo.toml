@@ -21,13 +21,13 @@ energyml-core = { workspace = true }
 # `well_strata::Strata`, `property::read`, `property_kind::Resolver`,
 # `color::GraphicalSet`, and the `ObjectSource`/`ArraySource` traits `read`
 # is written against.
-energyml-domain = { path = "../energyml-domain", version = "0.2.0" }
+energyml-domain = { path = "../energyml-domain", version = "0.3.0" }
 # `ObjectSummary` only - the package's own listing `read` needs to find a
 # frame's properties and colour sets (nothing in a representation names
 # them). No native dependency: `energyml-domain` already depends on this
 # crate for the same `ObjectSource` reason, with its default (no `hdf5`)
 # features, and `read` asks for nothing more - wasm stays a hard requirement.
-energyml-storage = { path = "../energyml-storage", version = "0.2.0" }
+energyml-storage = { path = "../energyml-storage", version = "0.3.0" }
 thiserror = "2.0"
 
 [dev-dependencies]

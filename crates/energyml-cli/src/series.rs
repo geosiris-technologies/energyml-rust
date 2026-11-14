@@ -57,7 +57,7 @@ pub fn run(args: SeriesArgs, modes: Modes) -> Result<()> {
         .map(|(uuid, object)| (uuid.as_str(), object.as_reflect()))
         .collect();
 
-    let readout = match series::read(&args.uuid, &objects, &store) {
+    let readout = match series::read(&args.uuid, &objects, &*store) {
         Ok(readout) => readout,
         Err(refused) => bail!("{}: {refused}", args.uuid),
     };

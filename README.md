@@ -24,11 +24,12 @@ EnergyML data travels as **EPC packages**: a zip of XML objects plus HDF5 files 
 - Geometry: IJK and unstructured grids, surfaces, well trajectories and frames.
 - Export to OBJ, GeoJSON and VTK; reprojection between EPSG systems in pure Rust.
 - Pure Rust core: it compiles to WebAssembly. HDF5 is an optional feature.
+- A read-only [MCP](docs/mcp.md) server, so a language model can explore a package.
 
 ## Install
 
 ```sh
-cargo add energyml --features all  # the library; or name the versions you read, e.g. --features resqml22 (TODO(verify): crates.io name)
+cargo add energyml --features all  # the library; or name the versions you read, e.g. --features resqml22
 pip install energyml-rust          # the Python package, imported as `energyml.rust`
 cargo install energyml-cli --features hdf5   # the command line: installs `energyml` (alias `enyml`)
 ```
@@ -45,7 +46,7 @@ The examples below use **Lutetia**, a synthetic reference model kept in its own 
 use std::sync::Arc;
 use energyml::storage::EpcStore;
 
-// Needs `energyml = { version = "0.1", features = ["all"] }` (or the versions you read):
+// Needs `energyml = { version = "0.3", features = ["all"] }` (or the versions you read):
 // the registry lists the schema versions whose feature is on.
 let registry = Arc::new(energyml::schemas::all());
 let store = EpcStore::open("Lutetia.epc", registry)?;
@@ -103,7 +104,10 @@ Start with [docs/getting-started.md](docs/getting-started.md) for a ten-minute w
 | `energyml-analysis` | Computation on shapes: interpolation and more. |
 | `energyml-build` | Create objects from geometry or foreign files: operations, plans, recipes. |
 | `energyml-build-derive` | Derive macros for `energyml-build` operations. |
+| `energyml-geostat` | Domain-neutral interpolation and meshing (IDW, kriging, RBF, MBA, Delaunay), usable outside EnergyML. |
 | `energyml-providers` | Query public geoscience APIs. |
+| `energyml-mcp` | The tools of a read-only MCP server over the storage traits. |
+| `energyml-mcp-cli` | The `energyml-mcp` program: that server over one EPC package, on stdio. |
 | `energyml-cli` | The `energyml` command. |
 | `energyml-python` | The Python bridge (`pip install energyml-rust`). Not published to crates.io. |
 | `energyml-tests`, `energyml-roundtrip` | End-to-end tests and the structural round-trip validator. Not published. |
@@ -117,12 +121,19 @@ The architecture and each crate's role are in [ARCHITECTURE.md](ARCHITECTURE.md)
 - [Library guide](docs/library.md)
 - [Command line](docs/cli.md)
 - [Python](docs/python.md), and its [notebooks](examples/notebooks/)
+- [Creating objects](docs/creating-objects.md) and [editing a scene](docs/scene-editing.md)
+- [Section view](docs/section-view.md) and [well sheet](docs/well-sheet.md)
+- [Geostatistics and computation](docs/geostat.md)
+- [The MCP server](docs/mcp.md)
+- [Public data sources](docs/data-sources.md) and [Galaxy tools](docs/galaxy.md)
+- [Docker](docs/docker.md), [logging](docs/logging.md) and [troubleshooting](docs/troubleshooting.md)
+- [Schemas and supported versions](docs/schemas.md)
 - [Gallery](docs/gallery.md) - every image, with the command that produced it
 - [Architecture decision records](docs/adr/)
 
 ## Made by Geosiris
 
-`energyml-rust` is developed by [Geosiris](https://www.geosiris.com). A public web application built on this library is coming - TODO(verify): link when it is live.
+`energyml-rust` is developed by [Geosiris](https://www.geosiris.com). [Andesite Studio](https://www.geosiris.com/embed/andesite/) is the web application built on this library: the Rust core compiled to WebAssembly, running in your browser.
 
 ## Disclaimer and notices
 

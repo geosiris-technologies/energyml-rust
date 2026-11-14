@@ -5,7 +5,7 @@
 Please report security problems **privately**. Do not open a public issue or pull request for them.
 
 - Use GitHub's private vulnerability reporting: the **Security** tab of this repository, then **Report a vulnerability**.
-- Or write to: TODO(verify): security contact
+- Or write to: valentin.gauthier@geosiris.com
 
 Please include the version, the platform, a description of the problem and, if you can, a minimal file or command that reproduces it. Packages that crash the reader (malformed zip, XML or HDF5) are in scope.
 

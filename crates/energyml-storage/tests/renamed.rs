@@ -221,6 +221,106 @@ fn a_package_that_is_right_is_not_searched() {
         wandered.is_empty(),
         "a package that names its file correctly should never have been searched: {wandered:?}"
     );
+    assert!(
+        store.array_departures().is_empty(),
+        "a package that names its file correctly has no departure to report: {:?}",
+        store.array_departures()
+    );
+}
+
+#[test]
+#[cfg(feature = "hdf5")]
+fn a_fallback_is_counted_once_per_file_and_not_once_per_array() {
+    // What a face tells the person: "N arrays were read from this file instead".
+    // One line per fallback. Three hundred arrays taking the same detour are one
+    // fact, and the diagnostics (one sentence per array, the dataset being in
+    // the sentence) are not the place to read it from.
+    //
+    // What would make this fail: counting a departure per array, or not
+    // counting it at all.
+    let Some((epc, _)) = renamed("counted", "project_final.epc", Some("colleagues_export.h5")) else {
+        return;
+    };
+    let store = EpcStore::open(&epc, registry()).expect("the package opens");
+    assert!(store.array_departures().is_empty(), "nothing was read yet");
+
+    let count = readable(&store);
+    assert!(count > 200, "{count} array pointer(s) readable");
+
+    let departures = store.array_departures();
+    assert!(
+        !departures.is_empty() && departures.len() < 10,
+        "one line per fallback, not one per array: {departures:?}"
+    );
+    assert!(
+        departures.iter().all(|d| d
+            .path
+            .file_name()
+            .is_some_and(|name| name == "colleagues_export.h5")),
+        "every array was read from the renamed file: {departures:?}"
+    );
+    assert!(
+        departures.iter().all(|d| d.origin == Origin::Neighbour),
+        "it was found as another file in the package's folder: {departures:?}"
+    );
+    let total: usize = departures.iter().map(|d| d.arrays).sum();
+    assert!(total > 200, "the arrays are counted, {total} of them");
+}
+
+#[test]
+fn offers_and_pins_that_are_not_on_disk_are_listed() {
+    // `candidates` drops a path that does not exist without a word. This is
+    // what lets a face say so: a mistyped `--h5` should not be a puzzle.
+    //
+    // What would make this fail: listing a path that exists, or one that is
+    // only declared present (it has no path to test), or forgetting the pinned.
+    let dir = std::env::temp_dir().join("energyml-missing-offers");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("a folder");
+    let there = dir.join("there.h5");
+    std::fs::write(&there, b"\x89HDF").expect("a data file");
+
+    let mut files = energyml_storage::ExternalFiles::with_root(&dir);
+    files.declare_present("held-in-memory.h5");
+    files.offer(&there);
+    files.offer(dir.join("typo.h5"));
+    files.set("model.h5", dir.join("pinned-typo.h5"));
+
+    let missing: Vec<String> = files
+        .missing_offers()
+        .iter()
+        .map(|path| path.file_name().unwrap().to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(
+        missing,
+        ["pinned-typo.h5", "typo.h5"],
+        "pinned first, then offered in order"
+    );
+}
+
+#[test]
+#[cfg(feature = "hdf5")]
+fn the_error_names_an_offered_file_that_is_not_there() {
+    // "0 candidate file(s)" hides the one thing the person most needs to hear
+    // when they offered a file: that it is not there.
+    let Some((epc, away)) = renamed("typo", "project_final.epc", None) else {
+        return;
+    };
+    let mut store = EpcStore::open(&epc, registry()).expect("the package opens");
+    store.external_files_mut().offer(away.with_file_name("typo.h5"));
+
+    let failure = store
+        .resources()
+        .iter()
+        .filter_map(|summary| store.get_object(&summary.uri).ok())
+        .flat_map(|object| store.arrays_of(object.as_reflect()))
+        .find_map(|location| store.array_metadata(&location).err())
+        .expect("nothing can be read: the data file is elsewhere and the offer is a typo");
+    let said = failure.to_string();
+    assert!(
+        said.contains("typo.h5") && said.contains("not found on disk"),
+        "the error does not name the offered file that is missing: {said}"
+    );
 }
 
 #[test]

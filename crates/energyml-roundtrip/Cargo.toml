@@ -15,7 +15,7 @@ quick-xml = "0.41"
 zip = { version = "9", default-features = false, features = ["deflate"] }
 
 energyml-core = { workspace = true }
-energyml-schemas = { path = "../energyml-schemas", version = "0.2.0", features = ["all"] }
+energyml-schemas = { path = "../energyml-schemas", version = "0.3.0", features = ["all"] }
 
 [lints.rust]
 missing_docs = "warn"

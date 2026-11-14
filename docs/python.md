@@ -25,18 +25,17 @@ from energyml.rust.epc import Epc           # this bridge
 ```
 
 The wheel ships no `energyml/__init__.py`, so it never overwrites another
-distribution's files. TODO(verify): the final PyPI name and import path may
-become plain `energyml`; confirm before publishing and update this page.
+distribution's files.
 
 ```sh
-pip install energyml-rust        # TODO(verify): published on PyPI
+pip install energyml-rust
 ```
 
-Until then, build a wheel from the repository (needs Rust and HDF5):
+To build a wheel from the repository instead (needs Rust and HDF5):
 
 ```sh
 pip install maturin
-maturin build -m python/Cargo.toml --release     # TODO(verify): path of the bridge crate in the public repository
+maturin build -m crates/energyml-python/Cargo.toml --release
 ```
 
 The wheel is `abi3`: one wheel per platform, not one per Python version. On
@@ -207,7 +206,8 @@ Quote first; the operation refuses as a whole rather than doing part.
 
 ## Examples
 
-Worked examples live in the bridge's `examples/` folder and are checked by its
-tests: adding a surface to an existing package, and building a package from
-nothing (feature, interpretation, point set, property). TODO(verify): path of
-`examples/` in the public repository.
+Worked examples live in the bridge's `examples/` folder,
+[`crates/energyml-python/examples/`](../crates/energyml-python/examples/), and are
+run by its tests (`tests/examples.rs`): adding a surface to an existing package
+(`01_add_a_surface.py`), and building a package from nothing (feature,
+interpretation, point set, property: `02_a_package_from_nothing.py`).

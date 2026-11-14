@@ -12,11 +12,23 @@ meshing, structural and well computations all follow the same contract:
 - a function says what it measured and in which unit, and converts nothing the
   caller did not ask it to.
 
-> Planned: the neutral part (interpolation, meshing, small tools; no `energyml-*`
-> dependency) is to be split into its own crate, `energyml-geostat`, usable in
-> hydrogeology, environmental or civil work, leaving the domain part in
-> `energyml-analysis`. This page lists the modules by family; TODO(verify): module
-> names after the split.
+> The neutral part (interpolation, meshing, small tools; no `energyml-*`
+> dependency) is its own crate, `energyml-geostat`, usable in hydrogeology,
+> environmental or civil work; the domain part stays in `energyml-analysis`. This
+> page lists the modules by family. The modules of the tables below are in
+> `energyml-geostat`, except `surface`, `intersect`, `project`, `fault_throw`,
+> `fault_sticks`, `horizon_law`, `t2d`, `survey`, `well_plan`, `tops`, `profile`,
+> `well_logs`, `fake`, `step_rate`, `hall`, `flow_law`, `ion_balance` and
+> `water_diagrams`, which are in `energyml-analysis`.
+
+Three pictures from the Lutetia reference model, with the call that draws each in the
+[Gallery](gallery.md):
+
+![Iso-lines of a depth surface](images/isocontours.svg)
+
+![Constrained triangulation of the borehole collars](images/triangulation.svg)
+
+![Kriged surface and its variance](images/kriging.svg)
 
 ## Citations: what is and is not referenced
 

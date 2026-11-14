@@ -10,7 +10,7 @@ docker pull ghcr.io/geosiris-technologies/energyml:latest
 ```
 
 `edge` follows the main branch. `latest` is the newest release; every release is also published as `X.Y.Z` and `X.Y`
-(for example `0.1.0`, `0.1`), for a chain that must not move under its feet. Images are built for amd64 and arm64 by the CI of the repository, never by hand.
+(for example `0.3.0`, `0.3`), for a chain that must not move under its feet. Images are built for amd64 and arm64 by the CI of the repository, never by hand.
 
 Or build it from a checkout:
 
@@ -44,7 +44,7 @@ PowerShell users write `-v "${PWD}:/work"`.
 |---|---|
 | `/usr/local/bin/energyml` | the CLI, built with HDF5 and the PNG rasteriser of the section view |
 | `/usr/local/bin/enyml` | the second binary built by the CLI crate; the entry point runs it as it is |
-| `/usr/local/bin/energyml-mcp` | the MCP server over a package ([MCP server](mcp.md)), from the release after 0.2.0; run it with `docker run -i <image> energyml-mcp model.epc` |
+| `/usr/local/bin/energyml-mcp` | the MCP server over a package ([MCP server](mcp.md)), from 0.3.0; run it with `docker run -i <image> energyml-mcp model.epc` |
 | `/opt/energyml/scripts/galaxy/energyml-galaxy.py` | the runner of the generated [Galaxy tools](galaxy.md) |
 | `/opt/energyml/REF` | the commit the image was built from |
 

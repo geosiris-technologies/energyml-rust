@@ -21,6 +21,7 @@
 - [Docker](docker.md)
 - [Logging](logging.md)
 - [Troubleshooting](troubleshooting.md)
+- [Where the arrays are looked for](array-files.md)
 
 # Reference
 

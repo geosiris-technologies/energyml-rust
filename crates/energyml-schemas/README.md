@@ -8,7 +8,7 @@ One Cargo feature per schema version, spelled as Energistics spells a qualified 
 
 ```toml
 # RESQML 2.2 and the EML 2.3 it is built on, nothing else
-energyml-schemas = { version = "0.1", default-features = false, features = ["resqml22"] }
+energyml-schemas = { version = "0.3", default-features = false, features = ["resqml22"] }
 ```
 
 | Feature | Compiles | Also enables |

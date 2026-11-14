@@ -21,4 +21,5 @@ keywords:
   - EPC
   - HDF5
   - geoscience
-# TODO(verify): add `version` and `date-released` at the first release.
+version: "0.3.0"
+date-released: "2026-10-16"

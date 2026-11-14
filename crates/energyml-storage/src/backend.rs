@@ -241,6 +241,26 @@ pub enum Origin {
     Neighbour,
 }
 
+/// Arrays that were read from a file the document did not name, counted per
+/// pair of (the name the document wrote, the file actually read).
+///
+/// What a face tells the person: "736 datasets of `model.h5` were read
+/// from `export.h5` instead - another file in the package's folder". One entry
+/// per pair, not one per array, because the same fallback taken for three
+/// hundred arrays is one fact. See `EpcStore::array_departures`.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ArrayDeparture {
+    /// The file the document names for these arrays, or an empty string when
+    /// nothing in the package names one.
+    pub declared: String,
+    /// The file that was read instead.
+    pub path: PathBuf,
+    /// Why that one: what put it in the search.
+    pub origin: Origin,
+    /// How many distinct datasets were read from it.
+    pub arrays: usize,
+}
+
 impl Origin {
     /// Whether using this needs saying out loud.
     ///
@@ -310,6 +330,23 @@ impl ExternalFiles {
     /// The files offered without a name, in order.
     pub fn offered(&self) -> &[PathBuf] {
         &self.offered
+    }
+
+    /// The paths the caller pinned or offered that are not on disk: pinned ones
+    /// first (in the order of their names), then the offered ones, in order.
+    ///
+    /// [`candidates`][Self::candidates] drops them without a word - existence is
+    /// filtered there - so a mistyped path costs the caller nothing but a
+    /// puzzle: the search runs, finds the package's own file or finds nothing,
+    /// and the path that was meant to settle it never took part. A face asks
+    /// this to say so, once, where the person can see it.
+    pub fn missing_offers(&self) -> Vec<PathBuf> {
+        self.overrides
+            .values()
+            .chain(self.offered.iter())
+            .filter(|path| !path.exists())
+            .cloned()
+            .collect()
     }
 
     /// State that a file of this name is available, without saying where.

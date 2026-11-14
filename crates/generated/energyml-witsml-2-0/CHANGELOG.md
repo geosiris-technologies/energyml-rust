@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-witsml-2-0-v0.2.0...energyml-witsml-2-0-v0.3.0) - 2026-10-16
+
+### Other
+
+- *(generated)* regenerate from the schemas
+
 ## [0.2.0](https://github.com/geosiris-technologies/energyml-rust/compare/energyml-witsml-2-0-v0.1.2...energyml-witsml-2-0-v0.2.0) - 2026-10-15
 
 ### Other
