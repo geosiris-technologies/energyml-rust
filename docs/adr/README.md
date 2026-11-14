@@ -35,5 +35,7 @@ new record that supersedes the old one, which keeps its text and a status line.
 | [0023](0023-objects-held-by-value.md) | The data objects held by value are listed apart, and write their own references |
 | [0027](0027-gaps-seams-scales-and-quantiles.md) | Gaps, seams, scales and quantiles: the numbers the views share |
 
+| [0028](0028-one-drawing-for-every-view.md) | One drawing for every view: `draw` knows no format, one display list, one rule for graduations, a PNG is always the SVG rasterised |
+
 Decisions about the ETP protocol implementation are recorded in the
 [`retp`](https://github.com/geosiris-technologies/retp) repository.

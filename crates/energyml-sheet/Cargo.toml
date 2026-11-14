@@ -11,7 +11,9 @@ categories = ["visualization", "science::geo"]
 readme = "README.md"
 homepage = "https://www.geosiris.com"
 documentation = "https://docs.rs/energyml-sheet"
-include = ["src/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+include = ["src/**", "fonts/**", "Cargo.toml", "README.md", "LICENSE*", "NOTICE*"]
+# One test binary, `tests/main.rs` (ADR-0016: one crate, one test binary).
+autotests = false
 
 [dependencies]
 # `energyml_core::value::Reflect` and friends: `read` walks a frame and its
@@ -29,6 +31,25 @@ energyml-domain = { path = "../energyml-domain", version = "0.3.0" }
 # features, and `read` asks for nothing more - wasm stays a hard requirement.
 energyml-storage = { path = "../energyml-storage", version = "0.3.0" }
 thiserror = "2.0"
+# `png`: an SVG rendered to a PNG, in Rust, with the font the labels were
+# measured against (`fonts/`, the font of `draw::text`'s table). The PNG is
+# always the SVG rasterised, never a second drawing. Optional, so a build
+# without it refuses by name. Pure Rust, wasm included. No system fonts: the
+# same picture on every machine. The version of `energyml-section`.
+# `raster-images`: resvg draws an `<image>` only with it (the rasters a view
+# embeds in its SVG). It also brings GIF, WebP and JPEG decoders, which
+# `draw::png` never reaches: its image resolver passes embedded PNG only.
+resvg = { version = "0.48", optional = true, default-features = false, features = ["text", "raster-images"] }
+
+[features]
+default = []
+# `draw::png` and `draw::raster::encode_png`, and a raster written into an SVG.
+# Off by default: without it, each of them refuses with `FeatureNotEnabled`.
+png = ["dep:resvg"]
+
+[[test]]
+name = "sheet"
+path = "tests/main.rs"
 
 [dev-dependencies]
 # `tests/svg.rs` re-reads the written SVG with an XML parser that is not this

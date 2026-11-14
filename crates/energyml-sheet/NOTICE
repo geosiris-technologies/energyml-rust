@@ -28,7 +28,8 @@ a tab-separated table (a change of form). The licence note travels with the data
 in crates/energyml-domain/data/geolts/LICENSE.md. This attribution must follow
 any binary, image or container that embeds the table.
 
-Liberation Sans font (crate energyml-section)
---------------------------------------------------
-crates/energyml-section/fonts/LiberationSans-Regular.ttf is distributed under
+Liberation Sans font (crates energyml-section and energyml-sheet)
+--------------------------------------------------------------
+crates/energyml-section/fonts/LiberationSans-Regular.ttf and
+crates/energyml-sheet/fonts/LiberationSans-Regular.ttf are distributed under
 the SIL Open Font License 1.1; its text is in LiberationSans-OFL.txt next to it.

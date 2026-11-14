@@ -27,6 +27,15 @@ Three stages, each testable alone: `read` (a frame of a package becomes a `Board
 
 Curves, lithology patterns, PNG/PDF output and a per-column width decision (column widths are a documented heuristic of the `svg` module). Each is absent rather than approximated.
 
+## `draw`: the shared drawing
+
+- **`draw` knows no format.** No `energyml_*` crate and no `crate::` path outside `crate::draw` appears in `src/draw/`, so that it can be moved into a crate of its own (`tests/draw/no_format.rs` holds it; a new file of `src/draw/` is added to its list). A colour is a closure of the caller.
+- **One list, one rule per job.** `DisplayList` is what a view draws; `svg`, `hit` and the PNG read it. `ticks` is the one rule for graduations, `spread` the one for label spreading, `text` the one measure of text (`crate::text` re-exports it).
+- **A PNG is always the SVG rasterised** (`png` feature); a call without the feature refuses by name.
+- **Registries, not `match`**, where a list will grow (the layering and ordering methods of `layered`): the caller's additions are tried first.
+- **A coordinate that is not a finite number is refused by name**, never written as 0 (ADR-0005).
+- The width table stays at `src/text/widths.rs`, included by `draw/text.rs`, because the generator script writes it there.
+
 ## Tests
 
-`tests/layout.rs` and `tests/svg.rs` assert numbers: height proportional to thickness at scale, the readable mode summing to the requested height with order kept, monotone positions, a refusal named when `max_chars < min_chars`, no line wider than its measured width, an empty interval reported as a stated blank. The SVG is re-read by an XML parser that is not this crate's code. Run them in the workspace, not with `cargo test -p`: `cargo test --workspace --test layout`.
+All the tests are modules of `tests/main.rs` (one binary, `sheet`). `tests/layout.rs` and `tests/svg.rs` assert numbers: height proportional to thickness at scale, the readable mode summing to the requested height with order kept, monotone positions, a refusal named when `max_chars < min_chars`, no line wider than its measured width, an empty interval reported as a stated blank. The SVG is re-read by an XML parser that is not this crate's code. Run them in the workspace, not with `cargo test -p`: `cargo test --workspace --test sheet`.

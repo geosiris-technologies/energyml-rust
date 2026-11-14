@@ -13,6 +13,7 @@
 - [Section view](section-view.md)
 - [The MCP server](mcp.md)
 - [Well sheet](well-sheet.md)
+- [Drawing](drawing.md)
 - [Geostatistics and computation](geostat.md)
 - [Public data sources](data-sources.md)
 - [Galaxy tools](galaxy.md)
@@ -58,3 +59,5 @@
 - [0020 A grid is never reprojected](adr/0020-a-grid-is-never-reprojected.md)
 - [0021 Our own Tool trait; rmcp as an adapter](adr/0021-own-tool-trait-rmcp-as-adapter.md)
 - [0027 Gaps, seams, scales and quantiles](adr/0027-gaps-seams-scales-and-quantiles.md)
+
+- [0028 One drawing for every view](adr/0028-one-drawing-for-every-view.md)
