@@ -238,13 +238,54 @@ pub struct TimeRef {
     pub use_interval: bool,
 }
 
-/// One qualifier on a property - `eml:Facet` (`what`, `direction`, …).
+/// One qualifier on a property or on a table column - `PropertyKindFacet`.
+///
+/// The two releases swap the element names, which is why a reader that knows
+/// only one of them reads nothing in the other: RESQML 2.0.1 writes the kind
+/// in `Facet` and the value in `Value` (RESQML TRG 2.0.1 §6.36 p. 77); EML 2.3
+/// writes the value in `Facet` and the kind in `Kind` (EML TRG 2.3 §11.11
+/// p. 294).
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Facet {
-    /// The facet kind, lexically (`what`, `side`, `direction`, …).
+    /// The facet kind, lexically: `conditions`, `side`, `direction`,
+    /// `netgross`, `qualifier`, `statistics`, `what`.
     pub kind: String,
-    /// The facet value.
-    pub value: String,
+    /// The facet value, and whether the schema lists it.
+    pub value: FacetValue,
+}
+
+/// A facet value: one of the schema's own, or a producer's extension.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum FacetValue {
+    /// A value of the schema's list (EML 2.3 `Facet`: `I`, `K+`, `net`,
+    /// `maximum`, ...), or, in RESQML 2.0.1 whose `Value` is free text, a value
+    /// with no namespace prefix.
+    Standard(String),
+    /// A value outside the list: the `Other` hole of the open `FacetExt`
+    /// (EML TRG 2.3 §11.2 p. 284, `EnumExtensionPattern` §6.28 p. 104,
+    /// pattern `.*:.*`), or, in RESQML 2.0.1, a value with a namespace prefix
+    /// (`nwdf:vertical`). What it means is the producer's, not the standard's.
+    Extension(String),
+}
+
+impl FacetValue {
+    /// The value as written.
+    pub fn as_str(&self) -> &str {
+        match self {
+            FacetValue::Standard(value) | FacetValue::Extension(value) => value,
+        }
+    }
+
+    /// Whether the standard's list leaves its meaning to the producer.
+    pub fn is_extension(&self) -> bool {
+        matches!(self, FacetValue::Extension(_))
+    }
+}
+
+impl std::fmt::Display for FacetValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
 }
 
 /// One array of values, and the patch of the representation it belongs to.
@@ -370,7 +411,7 @@ impl Property<'_> {
         };
         if let Some(actual) = actual {
             let expected = self.expected_value_count(count);
-            if expected != actual {
+            if count_fit(count, self.values_per_element(), actual) != CountFit::Fits {
                 out.push(Discrepancy::ValueCount {
                     element_count: count,
                     per_element: self.values_per_element(),
@@ -403,6 +444,45 @@ pub enum Discrepancy {
         /// Why, naming the pair.
         reason: String,
     },
+}
+
+/// What the count of values read says against the declared shape - the one
+/// rule, for `Property::check`, the scene, and any reader.
+///
+/// RESQML TRG 2.2 §7.1 p. 222: *"The size of the vector is constant on all
+/// elements"*; `ValueCountPerIndexableElement` is the count per element.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CountFit {
+    /// Exactly `elements x values per element`.
+    Fits,
+    /// Declares several values per element and holds exactly one per element:
+    /// usable as scalars, and the declaration is what is wrong.
+    OnePerElement {
+        /// The count the document declares.
+        declared: u64,
+    },
+    /// Anything else, a zero count included: never lined up.
+    Mismatch {
+        /// `elements x per_element`.
+        expected: u64,
+        /// What was read.
+        actual: u64,
+    },
+}
+
+/// The one rule: `element_count` elements of `per_element` values, against `actual`.
+pub fn count_fit(element_count: u64, per_element: u64, actual: u64) -> CountFit {
+    let expected = element_count.saturating_mul(per_element.max(1));
+    if element_count == 0 || expected == 0 {
+        return CountFit::Mismatch { expected: 0, actual };
+    }
+    if actual == expected {
+        CountFit::Fits
+    } else if per_element > 1 && actual == element_count {
+        CountFit::OnePerElement { declared: per_element }
+    } else {
+        CountFit::Mismatch { expected, actual }
+    }
 }
 
 impl std::fmt::Display for Discrepancy {
@@ -595,7 +675,15 @@ fn read_time(object: &dyn Reflect) -> Option<TimeRef> {
     })
 }
 
-fn read_facets(object: &dyn Reflect) -> Vec<Facet> {
+/// The facets of an object - a property (`AbstractValuesProperty.Facet`) or a
+/// table column (`Column.Facet`) - in document order.
+///
+/// The one reader, for both releases: EML 2.3 and RESQML 2.2 carry the kind in
+/// `Kind` and the value in `Facet`; RESQML 2.0.1 carries the kind in `Facet`
+/// and the value in `Value`. Nothing is invented or sorted, and the rule that a
+/// property carries one facet of a kind (EML TRG 2.3 §11.11 p. 294) is not
+/// checked here: this is a reading.
+pub(crate) fn read_facets(object: &dyn Reflect) -> Vec<Facet> {
     let Some(value) = object.field("Facet") else {
         return Vec::new();
     };
@@ -603,10 +691,41 @@ fn read_facets(object: &dyn Reflect) -> Vec<Facet> {
         .into_iter()
         .filter_map(|item| {
             let inner = item.as_object()?;
-            Some(Facet {
-                kind: text(inner, "Facet")?,
-                value: text(inner, "FacetValue")?,
-            })
+            if inner.field("Kind").is_some() {
+                // EML 2.3, RESQML 2.2: `Kind` is the kind, `Facet` the value.
+                let kind = text(inner, "Kind")?;
+                let raw = text(inner, "Facet")?;
+                let standard = inner
+                    .type_info()
+                    .field("Facet")
+                    .map(|field| {
+                        field
+                            .ty
+                            .allowed_values()
+                            .iter()
+                            .any(|variant| !variant.is_other && variant.value == raw)
+                    })
+                    // An untyped object: the rule of the pattern.
+                    .unwrap_or(!raw.contains(':'));
+                let value = if standard {
+                    FacetValue::Standard(raw)
+                } else {
+                    FacetValue::Extension(raw)
+                };
+                Some(Facet { kind, value })
+            } else if inner.field("Value").is_some() {
+                // RESQML 2.0.1: `Facet` is the kind, `Value` free text.
+                let kind = text(inner, "Facet")?;
+                let raw = text(inner, "Value")?;
+                let value = if raw.contains(':') {
+                    FacetValue::Extension(raw)
+                } else {
+                    FacetValue::Standard(raw)
+                };
+                Some(Facet { kind, value })
+            } else {
+                None
+            }
         })
         .collect()
 }
