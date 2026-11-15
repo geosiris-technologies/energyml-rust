@@ -53,5 +53,6 @@ pub mod draw;
 pub mod layout;
 pub mod picture;
 pub mod read;
+mod same_text;
 pub mod svg;
 pub mod text;

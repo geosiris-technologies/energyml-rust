@@ -201,7 +201,7 @@ pub enum MetadataError {
 
 /// A number, `decimals` decimals at most, no trailing zeros, no "-0", never `NaN`
 /// (an SVG attribute that is not a number is not an SVG): a value that is not
-/// finite is written `0`. Otherwise [`crate::text::short`].
+/// finite is written `0`. Otherwise [`crate::draw::text::short`].
 pub fn num(v: f64, decimals: usize) -> String {
     if v.is_finite() {
         crate::draw::text::short(v, decimals)
@@ -210,12 +210,35 @@ pub fn num(v: f64, decimals: usize) -> String {
     }
 }
 
-/// Text made safe for XML content and attribute values: [`energyml_core::xml::escape_attr`]
-/// (the five characters that mean something are replaced, and the control
-/// characters XML 1.0 cannot carry at all are dropped - a title from a file may
-/// hold anything).
+/// Text made safe for XML content and attribute values: the five characters
+/// that mean something are replaced, and the control characters XML 1.0
+/// cannot carry at all are dropped (a title from a file may hold anything).
+///
+/// The drawing module names no format crate (it can become a crate of its
+/// own), so it keeps this copy of the core's `xml::escape_attr`; the sheet's
+/// `same_text` test pins the two to the same output.
 pub fn escape(text: &str) -> String {
-    energyml_core::xml::escape_attr(text)
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&apos;"),
+            c if !is_xml_char(c) => {}
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// A character XML 1.0 can carry, as a literal or as a character reference.
+fn is_xml_char(c: char) -> bool {
+    matches!(c, '\t' | '\n' | '\r')
+        || ('\u{20}'..='\u{D7FF}').contains(&c)
+        || ('\u{E000}'..='\u{FFFD}').contains(&c)
+        || ('\u{10000}'..='\u{10FFFF}').contains(&c)
 }
 
 /// Writes `list` as an SVG document, with `meta` in its `<metadata>` if given.
@@ -563,7 +586,7 @@ fn write_image(
         num(rect.y, d),
         num(rect.w, d),
         num(rect.h, d),
-        energyml_core::base64::encode(&bytes)
+        base64(&bytes)
     );
     Ok(())
 }
@@ -735,7 +758,7 @@ pub fn read_metadata(svg: &str, element: &str) -> Result<Metadata, MetadataError
         let close = format!("</{element}>");
         let body_start = tag_end + 1;
         let body_end = svg[body_start..].find(&close).ok_or_else(missing)? + body_start;
-        energyml_core::xml::unescape(&svg[body_start..body_end]).map_err(unreadable)?
+        unescape(&svg[body_start..body_end]).map_err(unreadable)?
     };
     Ok(Metadata {
         element: element.to_string(),
@@ -751,7 +774,73 @@ fn attribute(attributes: &str, name: &str) -> Option<String> {
     let key = format!(" {name}=\"");
     let from = attributes.find(&key)? + key.len();
     let to = attributes[from..].find('"')? + from;
-    energyml_core::xml::unescape(&attributes[from..to]).ok()
+    unescape(&attributes[from..to]).ok()
+}
+
+/// Standard base64 with padding (RFC 4648 section 4): the drawing's copy of the core's `base64::encode`, pinned to it
+/// by the sheet's `same_text` test.
+pub(crate) fn base64(bytes: &[u8]) -> String {
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let n = (u32::from(b[0]) << 16) | (u32::from(b[1]) << 8) | u32::from(b[2]);
+        out.push(ALPHABET[(n >> 18) as usize & 63] as char);
+        out.push(ALPHABET[(n >> 12) as usize & 63] as char);
+        out.push(if chunk.len() > 1 {
+            ALPHABET[(n >> 6) as usize & 63] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            ALPHABET[n as usize & 63] as char
+        } else {
+            '='
+        });
+    }
+    out
+}
+
+/// XML 1.0 text, unescaped: the drawing's copy of the core's `xml::unescape`, pinned to it by the sheet's
+/// `same_text` test. Refused, by name: an `&` with no `;`, an entity XML 1.0 does not predefine, a reference to a
+/// character XML 1.0 cannot carry.
+pub(crate) fn unescape(text: &str) -> Result<String, String> {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(at) = rest.find('&') {
+        out.push_str(&rest[..at]);
+        let after = &rest[at + 1..];
+        let end = after.find(';').ok_or_else(|| {
+            format!(
+                "an `&` with no `;` near `{}`",
+                rest[at..].chars().take(12).collect::<String>()
+            )
+        })?;
+        let name = &after[..end];
+        let ch = match name {
+            "amp" => '&',
+            "lt" => '<',
+            "gt" => '>',
+            "quot" => '"',
+            "apos" => '\'',
+            _ => {
+                let code = if let Some(hex) = name.strip_prefix("#x").or_else(|| name.strip_prefix("#X")) {
+                    u32::from_str_radix(hex, 16).ok()
+                } else if let Some(decimal) = name.strip_prefix('#') {
+                    decimal.parse().ok()
+                } else {
+                    None
+                };
+                code.and_then(char::from_u32)
+                    .filter(|c| is_xml_char(*c))
+                    .ok_or_else(|| format!("`&{name};` is not an entity XML 1.0 knows"))?
+            }
+        };
+        out.push(ch);
+        rest = &after[end + 1..];
+    }
+    out.push_str(rest);
+    Ok(out)
 }
 
 #[cfg(test)]
