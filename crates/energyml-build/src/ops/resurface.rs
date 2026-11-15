@@ -216,7 +216,7 @@ fn on_the_lattice(name: &str, points: &[[f64; 3]], fastest: usize, slowest: usiz
                 origin[1] + i as f64 * along_i[1] + j as f64 * along_j[1],
             ];
             let off = ((point[0] - expected[0]).powi(2) + (point[1] - expected[1]).powi(2)).sqrt();
-            if !(off <= tolerance) {
+            if off.is_nan() || off > tolerance {
                 return Err(Refusal::on(
                     "shape",
                     format!(

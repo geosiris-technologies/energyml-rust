@@ -288,7 +288,7 @@ fn extract_refuses_the_package_it_reads_as_its_output() {
     let source = EpcStore::open(&path, registry()).expect("opens");
     let outcome = extract(
         &source,
-        &[uri.clone()],
+        std::slice::from_ref(&uri),
         &path,
         Arrays::Leave,
         &SaveOptions::default(),

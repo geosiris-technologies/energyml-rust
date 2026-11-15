@@ -748,7 +748,7 @@ impl PackageIndex {
     /// keeps. Empty when the address names no node.
     pub fn references_at<'a>(&'a self, address: &str) -> impl Iterator<Item = ReferenceRef<'a>> + use<'a> {
         let edges: &'a [(NodeId, PathId)] = match self.find(address) {
-            Some(id) => &*self.out[id as usize],
+            Some(id) => &self.out[id as usize],
             None => &[],
         };
         edges.iter().map(move |&(target, path)| {
