@@ -34,7 +34,13 @@ fn geometry(topology: Topology) -> Geometry {
         patches: vec![Patch {
             index: 0,
             node_offset: 0,
-            points: vec![[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [10.0, 10.0, 0.0], [0.0, 10.0, 0.0], [5.0, 5.0, 10.0]],
+            points: vec![
+                [0.0, 0.0, 0.0],
+                [10.0, 0.0, 0.0],
+                [10.0, 10.0, 0.0],
+                [0.0, 10.0, 0.0],
+                [5.0, 5.0, 10.0],
+            ],
             topology,
             closed: Vec::new(),
         }],
@@ -42,18 +48,33 @@ fn geometry(topology: Topology) -> Geometry {
 }
 
 fn pyramid() -> Geometry {
-    geometry(Topology::Triangles(vec![[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]]))
+    geometry(Topology::Triangles(vec![
+        [0, 1, 4],
+        [1, 2, 4],
+        [2, 3, 4],
+        [3, 0, 4],
+    ]))
 }
 
 /// The surface and its companion, in a compound frame counting up - as
 /// `read::in_slot` hands a shape of the package.
 fn surface(geometry: Geometry) -> Pieces {
     Pieces::empty()
-        .with("shape", Source::Shape { geometry, closed: None })
+        .with(
+            "shape",
+            Source::Shape {
+                geometry,
+                closed: None,
+            },
+        )
         .with(
             "shape (object)",
             Source::Object(Known {
-                reference: Some(Ref::new(SURFACE, "resqml22.TriangulatedSetRepresentation", "the surface")),
+                reference: Some(Ref::new(
+                    SURFACE,
+                    "resqml22.TriangulatedSetRepresentation",
+                    "the surface",
+                )),
                 crs: Some(Ref::new(
                     "aaaaaaaa-0000-4000-8000-0000000000c5",
                     "eml23.LocalEngineeringCompoundCrs",
@@ -78,7 +99,11 @@ fn with_inputs(bag: Pieces) -> Pieces {
     .with(
         "support",
         Source::Object(Known {
-            reference: Some(Ref::new(SUPPORT, "resqml22.WellboreFrameRepresentation", "the frame")),
+            reference: Some(Ref::new(
+                SUPPORT,
+                "resqml22.WellboreFrameRepresentation",
+                "the frame",
+            )),
             ..Default::default()
         }),
     )
@@ -110,7 +135,10 @@ fn set_of(plan: &Plan) -> &Value {
 #[test]
 fn an_isosurface_is_promoted_with_its_recipe() {
     let plan = planned(&with_inputs(surface(pyramid())), choices()).expect("planned");
-    assert_eq!(set_of(&plan)["$type"], json!("resqml22.TriangulatedSetRepresentation"));
+    assert_eq!(
+        set_of(&plan)["$type"],
+        json!("resqml22.TriangulatedSetRepresentation")
+    );
     assert_eq!(plan.activity.recipe, "isosurface");
     let level = plan.activity.parameters.iter().find_map(|p| match p {
         Parameter::Double { title, value, uom } if title == "level" => Some((*value, uom.clone())),
@@ -134,7 +162,11 @@ fn an_isosurface_is_promoted_with_its_recipe() {
             _ => None,
         })
         .collect();
-    assert_eq!(inputs, vec![CUBE, SUPPORT], "the cube and the support are the run's inputs");
+    assert_eq!(
+        inputs,
+        vec!["aaaaaaaa-0000-4000-8000-0000000000c5", CUBE, SUPPORT],
+        "the CRS (recorded by the triangles writer, as for every surface), then the cube and the support"
+    );
     assert!(plan.says.iter().any(|note| note.key == "promoted"));
 }
 

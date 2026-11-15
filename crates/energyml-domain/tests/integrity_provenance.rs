@@ -68,7 +68,10 @@ fn activity(uuid: &str, descriptor: &str, parameters: Vec<Value>) -> Value {
 fn an_activity_whose_parameter_the_template_lacks_is_a_warning() {
     let findings = judge(
         vec![
-            (T, object(&template(vec![template_param("output", &["dataObject"])]))),
+            (
+                T,
+                object(&template(vec![template_param("output", &["dataObject"])])),
+            ),
             (
                 A,
                 object(&activity(
@@ -88,7 +91,10 @@ fn an_activity_whose_parameter_the_template_lacks_is_a_warning() {
     assert_eq!(found[0].uuid, A);
     assert_eq!(found[0].gravity, Gravity::Warning);
     let read = read_of(found[0]);
-    assert!(read.contains("parameter `input` (0) is not in the template"), "{read}");
+    assert!(
+        read.contains("parameter `input` (0) is not in the template"),
+        "{read}"
+    );
     assert!(!read.contains("`output`"), "{read}");
 }
 
@@ -133,7 +139,10 @@ fn an_activity_whose_template_is_elsewhere_is_unverifiable_never_a_pass() {
             object(&activity(
                 A,
                 ABSENT,
-                vec![param_object("input", reference("resqml22.ContinuousProperty", OBJ))],
+                vec![param_object(
+                    "input",
+                    reference("resqml22.ContinuousProperty", OBJ),
+                )],
             )),
         )],
         false,
@@ -154,7 +163,10 @@ fn an_activity_whose_template_is_elsewhere_is_unverifiable_never_a_pass() {
 fn a_data_object_naming_an_activity_is_a_sub_activity_and_conforms() {
     let findings = judge(
         vec![
-            (T, object(&template(vec![template_param("etape-1", &["subActivity"])]))),
+            (
+                T,
+                object(&template(vec![template_param("etape-1", &["subActivity"])])),
+            ),
             (
                 A,
                 object(&activity(
@@ -168,7 +180,10 @@ fn a_data_object_naming_an_activity_is_a_sub_activity_and_conforms() {
                 object(&activity(
                     A_TWIN,
                     T,
-                    vec![param_object("etape-1", reference("resqml22.ContinuousProperty", OBJ))],
+                    vec![param_object(
+                        "etape-1",
+                        reference("resqml22.ContinuousProperty", OBJ),
+                    )],
                 )),
             ),
         ],
@@ -177,5 +192,9 @@ fn a_data_object_naming_an_activity_is_a_sub_activity_and_conforms() {
     let found = of(&findings, RULE);
     assert_eq!(found.len(), 1, "{findings:?}");
     assert_eq!(found[0].uuid, A_TWIN);
-    assert!(read_of(found[0]).contains("is written dataObject"), "{:?}", found[0]);
+    assert!(
+        read_of(found[0]).contains("is written dataObject"),
+        "{:?}",
+        found[0]
+    );
 }

@@ -58,11 +58,21 @@ fn bag(a: Vec<f64>, b: Vec<f64>, over_b: &str) -> Pieces {
         })
     };
     Pieces::empty()
-        .with("frame", Source::Shape { geometry, closed: None })
+        .with(
+            "frame",
+            Source::Shape {
+                geometry,
+                closed: None,
+            },
+        )
         .with(
             "frame (object)",
             Source::Object(Known {
-                reference: Some(Ref::new(FRAME, "resqml22.WellboreFrameRepresentation", "the frame")),
+                reference: Some(Ref::new(
+                    FRAME,
+                    "resqml22.WellboreFrameRepresentation",
+                    "the frame",
+                )),
                 node_count: Some(2),
                 ..Default::default()
             }),
@@ -77,8 +87,18 @@ fn choices(operation: &str, uom: &str) -> Choices {
     Choices::new()
         .set("operation", operation)
         .set("valuesPerElement", json!([2, 2]))
-        .set("representation", dor(FRAME, "resqml22.WellboreFrameRepresentation", "the frame"))
-        .set("propertyKind", dor("eeeeeeee-0000-4000-8000-000000000001", "eml23.PropertyKind", "anisotropy"))
+        .set(
+            "representation",
+            dor(FRAME, "resqml22.WellboreFrameRepresentation", "the frame"),
+        )
+        .set(
+            "propertyKind",
+            dor(
+                "eeeeeeee-0000-4000-8000-000000000001",
+                "eml23.PropertyKind",
+                "anisotropy",
+            ),
+        )
         .set("uom", uom)
         .set("title", "Rv over Rh")
         .set("dataFile", "data.h5")
@@ -141,7 +161,9 @@ fn the_activity_records_the_operation_and_both_parents() {
             _ => None,
         })
         .collect();
-    assert_eq!(inputs, vec![PARENT_A, PARENT_B]);
+    // The support first, recorded by the property writer as every property's
+    // input, then the two parents.
+    assert_eq!(inputs, vec![FRAME, PARENT_A, PARENT_B]);
     assert!(plan.activity.parameters.iter().any(|p| matches!(
         p,
         Parameter::Text { title, value } if title == "operation" && value == "ratio"
@@ -151,7 +173,11 @@ fn the_activity_records_the_operation_and_both_parents() {
 #[test]
 fn the_choice_ids_are_the_registrys() {
     let registry = Combines::builtin();
-    for choice in [CombineChoice::Ratio, CombineChoice::Difference, CombineChoice::LogRatio] {
+    for choice in [
+        CombineChoice::Ratio,
+        CombineChoice::Difference,
+        CombineChoice::LogRatio,
+    ] {
         assert!(registry.get(choice.id()).is_some(), "{}", choice.id());
         // And the word a form says is the id: one spelling.
         assert_eq!(choice.word(), choice.id());

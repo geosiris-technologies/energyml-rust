@@ -1613,7 +1613,11 @@ fn issue_read(issue: &ParameterIssue) -> Option<String> {
         } => Some(format!(
             "parameter `{title}` ({position}) is written {}, the template allows {}",
             written.word(),
-            declared.iter().map(|kind| kind.word()).collect::<Vec<_>>().join(", ")
+            declared
+                .iter()
+                .map(|kind| kind.word())
+                .collect::<Vec<_>>()
+                .join(", ")
         )),
         ParameterIssue::TooFew { title, min, found } => {
             Some(format!("`{title}`: {found} for at least {min}"))

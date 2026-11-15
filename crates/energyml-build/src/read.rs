@@ -1137,7 +1137,8 @@ pub fn stored_sections(store: &EpcStore) -> Vec<StoredSection> {
                     .ok()
                     .map(|id| id.qualified_type())
             });
-            let version = text_of(field_of(r, "ObjectVersion")).or_else(|| text_of(field_of(r, "VersionString")));
+            let version =
+                text_of(field_of(r, "ObjectVersion")).or_else(|| text_of(field_of(r, "VersionString")));
             let version = version
                 .map(|one| one.trim().to_string())
                 .filter(|one| !one.is_empty());
@@ -1234,8 +1235,8 @@ pub fn stored_views(store: &EpcStore, recipe: &str) -> Vec<StoredView> {
 }
 
 /// The activities of a package whose `ActivityDescriptor` names the canonical
-/// template of `recipe` - by its uuid, never its title, which anybody may edit
-/// - as their uri and their JSON. **Only the `Activity` objects are read**,
+/// template of `recipe` (by its uuid, never its title, which anybody may edit),
+/// as their uri and their JSON. **Only the `Activity` objects are read**,
 /// picked from the listing by type. The one loop of `stored_sections` and
 /// `stored_views`.
 fn activities_of(store: &EpcStore, recipe: &str) -> Vec<(String, serde_json::Value)> {

@@ -33,11 +33,10 @@ use energyml_domain::provenance::Parameter;
 use energyml_section::along_well::{AxisLinkAsk, Request, View, read_metadata};
 use serde_json::{Value, json};
 
-use super::attach::{Attach, AttachInputs, AttachParams, Form};
 use super::media::Document;
-use super::support;
-use crate::declare::{Inputs, ObjectIn, Params, Suggestions, Title};
-use crate::operation::{About, Category, Context, Identity, Need, Note, Operation, Plan, Refusal, Slot};
+use super::section_view::{Named, attachment_named, folder_named, named_in, part_named, png_size};
+use crate::declare::{Inputs, ObjectIn, Params, Suggestions};
+use crate::operation::{About, Category, Context, Need, Note, Operation, Plan, Refusal, Slot};
 use crate::pieces::{Known, Pieces, Ref, Source};
 
 /// The operation.
@@ -97,8 +96,12 @@ fn text_of(svg: &Document) -> Result<&str, Refusal> {
 
 /// The request and the view of a drawing, or why it is refused.
 fn metadata_of(svg: &Document) -> Result<(Request, View), Refusal> {
-    read_metadata(text_of(svg)?)
-        .map_err(|why| Refusal::on("svg", format!("`{}` states no geosteering section: {why}", svg.file)))
+    read_metadata(text_of(svg)?).map_err(|why| {
+        Refusal::on(
+            "svg",
+            format!("`{}` states no geosteering section: {why}", svg.file),
+        )
+    })
 }
 
 /// What the drawing states of each setting, slot by slot.
@@ -147,53 +150,6 @@ fn same(a: &Value, b: &Value) -> bool {
 
 // -- the objects the request names ---------------------------------------------------------
 
-/// What a uri read from the drawing names among the objects held.
-enum Named<'a> {
-    /// Exactly one.
-    One(&'a Ref),
-    /// None of them.
-    None,
-    /// Several: the uri does not say which - their uris.
-    Several(Vec<String>),
-}
-
-/// The held object an ETP uri names - read by the one parser of uris
-/// (`EtpUri`): the uuid, then the version the uri names; a short uri names the
-/// entry that declares none when there are several, and is otherwise
-/// ambiguous (the rule of `section-view`).
-fn named_in<'a>(held: &[&'a Ref], uri: &str) -> Named<'a> {
-    let Ok(asked) = energyml_core::identifiers::EtpUri::parse(uri) else {
-        return Named::None;
-    };
-    let Some(uuid) = asked.uuid.as_deref() else {
-        return Named::None;
-    };
-    let mut same: Vec<&'a Ref> = held
-        .iter()
-        .copied()
-        .filter(|one| one.uuid.eq_ignore_ascii_case(uuid))
-        .collect();
-    match asked.object_version.as_deref() {
-        Some(version) => same.retain(|one| one.object_version.as_deref() == Some(version)),
-        None if same.len() > 1 => {
-            let bare: Vec<&'a Ref> = same
-                .iter()
-                .copied()
-                .filter(|one| one.object_version.is_none())
-                .collect();
-            if bare.len() == 1 {
-                same = bare;
-            }
-        }
-        None => {}
-    }
-    match same.as_slice() {
-        [] => Named::None,
-        [one] => Named::One(one),
-        _ => Named::Several(same.iter().map(|one| one.uri()).collect()),
-    }
-}
-
 /// Every uri the request names, with the field it comes from, the frame first.
 fn named_by(request: &Request) -> Vec<(&'static str, String)> {
     let mut out = vec![("frame", request.frame.clone())];
@@ -222,51 +178,16 @@ fn named_by(request: &Request) -> Vec<(&'static str, String)> {
 
 // -- the pictures --------------------------------------------------------------------------
 
-/// The eight bytes every PNG starts with (PNG section 5.2).
-const PNG_SIGNATURE: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
-
-/// A PNG's width and height, from its `IHDR` - which PNG section 5.6 puts first.
-fn png_size(bytes: &[u8]) -> Option<[u32; 2]> {
-    if bytes.len() < 24 || bytes[..8] != PNG_SIGNATURE || &bytes[12..16] != b"IHDR" {
-        return None;
-    }
-    let word = |at: usize| u32::from_be_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]]);
-    Some([word(16), word(20)])
-}
-
-/// A frame's title as a folder name: letters, digits, `-`, `_`, `.`, the rest
-/// a `_`, never empty.
-fn folder_of(title: &str) -> String {
-    let named: String = title
-        .trim()
-        .chars()
-        .map(|c| {
-            if c.is_alphanumeric() || matches!(c, '-' | '_' | '.') {
-                c
-            } else {
-                '_'
-            }
-        })
-        .collect();
-    let named = named.trim_matches(['_', '.']).to_string();
-    if named.is_empty() {
-        "frame".to_string()
-    } else {
-        named
-    }
-}
-
 /// A part name for a file: the one stated, or `media/along-well/<the frame>/`
 /// and its name - a folder per frame, so that drawing a section again writes
 /// over its own files and nobody else's.
 fn part_of(stated: &Option<String>, frame_title: &str, file: &Document) -> String {
-    stated.clone().unwrap_or_else(|| {
-        format!(
-            "media/along-well/{}/{}",
-            folder_of(frame_title),
-            file.file.rsplit(['/', '\\']).next().unwrap_or(&file.file)
-        )
-    })
+    part_named(
+        stated,
+        "media/along-well",
+        &folder_named(frame_title, "frame"),
+        file,
+    )
 }
 
 /// One image attached to the frame, by the one writer of attachments, named by
@@ -284,49 +205,20 @@ fn attached(
     what: &str,
     frame: &Ref,
 ) -> Result<Plan, Refusal> {
-    // Given uuids are handed out in the plan's order: the attachment takes the
-    // next one.
-    let identity = match cx.identity {
-        Identity::Derived { .. } => cx.identity.clone(),
-        Identity::Given(_) => Identity::Given(vec![support::next_uuid(cx.identity, "", rank)?]),
-    };
-    let sub = Context {
-        identity: &identity,
-        ..*cx
-    };
-    let mut made = Attach.plan(
-        AttachInputs {
-            target: target.clone(),
-            file: Some(file),
-        },
-        AttachParams {
-            form: Some(Form::PartAddress),
-            address: None,
-            md: None,
-            md_uom: "m".to_string(),
-            category: Some(category.to_string()),
-            file_name: None,
-            content_type: Some(content_type.to_string()),
-            path: Some(part),
-            title: Some(Title(format!("{} - {what}", frame.title))),
-        },
-        &sub,
-    )?;
-    if let (Identity::Derived { .. }, Some(object)) = (cx.identity, made.objects.first_mut()) {
-        let uuid = cx.identity.uuid(
-            &format!(
-                "along-well-view:attachment:{}:{what}",
-                frame.uuid.to_ascii_lowercase()
-            ),
-            0,
-        )?;
-        object.json["uuid"] = json!(uuid);
-        object.uuid = uuid.clone();
-        for part in &mut made.media {
-            part.related_to = vec![uuid.to_ascii_lowercase()];
-        }
-    }
-    Ok(made)
+    attachment_named(
+        cx,
+        rank,
+        target.clone(),
+        file,
+        part,
+        category,
+        content_type,
+        format!("{} - {what}", frame.title),
+        &format!(
+            "along-well-view:attachment:{}:{what}",
+            frame.uuid.to_ascii_lowercase()
+        ),
+    )
 }
 
 impl Operation for AlongWellView {
@@ -346,7 +238,12 @@ impl Operation for AlongWellView {
 
     fn suggest(&self, bag: &Pieces, slots: &mut Suggestions<'_>) {
         // What the drawing was computed with, read off the drawing itself.
-        if let Some(Source::Document { name, content_type, bytes }) = bag.get("svg") {
+        if let Some(Source::Document {
+            name,
+            content_type,
+            bytes,
+        }) = bag.get("svg")
+        {
             let svg = Document {
                 name: "svg".to_string(),
                 file: name.clone(),

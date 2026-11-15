@@ -40,7 +40,11 @@ fn frame() -> Ref {
     Ref::new(FRAME, "resqml22.WellboreFrameRepresentation", "the frame")
 }
 fn trajectory() -> Ref {
-    Ref::new(TRAJECTORY, "resqml22.WellboreTrajectoryRepresentation", "the trajectory")
+    Ref::new(
+        TRAJECTORY,
+        "resqml22.WellboreTrajectoryRepresentation",
+        "the trajectory",
+    )
 }
 fn surface() -> Ref {
     Ref::new(SURFACE, "resqml22.TriangulatedSetRepresentation", "the horizon")
@@ -112,7 +116,11 @@ fn bag(svg_text: &str, objects: Vec<Ref>) -> Pieces {
         },
     );
     for (at, one) in objects.into_iter().enumerate() {
-        let name = if at == 0 { "objects".to_string() } else { format!("objects {}", at + 1) };
+        let name = if at == 0 {
+            "objects".to_string()
+        } else {
+            format!("objects {}", at + 1)
+        };
         pieces = pieces.with(&name, held(one));
     }
     pieces
@@ -142,7 +150,11 @@ fn a_section_is_stored_with_its_inputs_and_its_drawing() {
         .iter()
         .find(|one| one.qualified_type == "eml23.Attachment")
         .expect("an attachment");
-    assert_eq!(attachment.json["ObjectReference"]["Uuid"], json!(FRAME), "attached to the frame");
+    assert_eq!(
+        attachment.json["ObjectReference"]["Uuid"],
+        json!(FRAME),
+        "attached to the frame"
+    );
     assert_eq!(plan.media.len(), 1, "the SVG's part");
     let inputs: Vec<&str> = plan
         .activity
@@ -164,7 +176,11 @@ fn a_section_is_stored_with_its_inputs_and_its_drawing() {
 #[test]
 fn an_object_the_package_does_not_hold_is_refused_by_its_uri() {
     let without_surface = vec![frame(), trajectory()];
-    let why = planned(&bag(&drawing(&request("developed")), without_surface), developed()).expect_err("refused");
+    let why = planned(
+        &bag(&drawing(&request("developed")), without_surface),
+        developed(),
+    )
+    .expect_err("refused");
     assert!(why.contains("`objects`"), "{why}");
     assert!(why.contains(&surface().uri()), "it names the uri: {why}");
 }
@@ -177,7 +193,10 @@ fn a_setting_that_disagrees_with_the_drawing_is_refused() {
     )
     .expect_err("refused");
     assert!(why.contains("`projection`"), "{why}");
-    assert!(why.contains("developed") && why.contains("md_tvd"), "both values: {why}");
+    assert!(
+        why.contains("developed") && why.contains("md_tvd"),
+        "both values: {why}"
+    );
 }
 
 #[test]

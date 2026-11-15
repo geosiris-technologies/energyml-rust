@@ -99,7 +99,12 @@ fn registry() -> Registry {
 }
 
 /// An object of the bag whole, read from its JSON; the refusal names `slot`.
-fn read_whole(json: &Value, slot: &str, title: &str, types: &Registry) -> Result<Box<dyn DynObject>, Refusal> {
+fn read_whole(
+    json: &Value,
+    slot: &str,
+    title: &str,
+    types: &Registry,
+) -> Result<Box<dyn DynObject>, Refusal> {
     energyml_core::json::read_value(json, types)
         .map(|document| document.root)
         .map_err(|why| Refusal::on(slot, format!("`{title}` does not read as an object: {why}")))
@@ -113,7 +118,9 @@ fn local_name(qualified: &str) -> &str {
 
 /// The uuid an address names, lower-cased.
 fn uuid_of(address: &str) -> String {
-    energyml_core::identity::parse_address(address).0.to_ascii_lowercase()
+    energyml_core::identity::parse_address(address)
+        .0
+        .to_ascii_lowercase()
 }
 
 /// The list a path (`Column[2].Facet`, `Facet`) leads to in an object's JSON;
@@ -184,7 +191,10 @@ impl Operation for TableLink {
         let types = registry();
         let target_read = read_whole(target_json, "target", &target_ref.title, &types)?;
         let target_sheet = TableSheet::of(target_read.as_reflect()).map_err(|why| {
-            Refusal::on("target", format!("`{}` is not a table that reads: {why}", target_ref.title))
+            Refusal::on(
+                "target",
+                format!("`{}` is not a table that reads: {why}", target_ref.title),
+            )
         })?;
         let keys: Vec<&str> = target_sheet
             .columns
@@ -205,109 +215,128 @@ impl Operation for TableLink {
         let is_table = local_name(&object_ref.qualified_type) == "ColumnBasedTable";
         let mut says = Vec::new();
         // Where the facets live in the object, and the column's own facts.
-        let (facet_path, description_path, description): (String, Option<String>, Option<String>) = if is_table {
-            let title = params.column.as_deref().ok_or_else(|| {
-                Refusal::on("column", "a table's link is written in one of its columns: name it")
-            })?;
-            let object_read = read_whole(object_json, "object", &object_ref.title, &types)?;
-            let sheet = TableSheet::of(object_read.as_reflect()).map_err(|why| {
-                Refusal::on("object", format!("`{}` is not a table that reads: {why}", object_ref.title))
-            })?;
-            let found: Vec<usize> = sheet
-                .columns
-                .iter()
-                .enumerate()
-                .filter(|(_, column)| column.title.as_deref().map(str::trim) == Some(title.trim()))
-                .map(|(at, _)| at)
-                .collect();
-            let at = match found.as_slice() {
-                [one] => *one,
-                [] => {
-                    let titles: Vec<&str> = sheet
-                        .columns
-                        .iter()
-                        .map(|column| column.title.as_deref().unwrap_or("(untitled)"))
-                        .collect();
-                    return Err(Refusal::on(
+        let (facet_path, description_path, description): (String, Option<String>, Option<String>) =
+            if is_table {
+                let title = params.column.as_deref().ok_or_else(|| {
+                    Refusal::on(
                         "column",
-                        format!("`{}` has no column titled `{title}` - its columns: {}", object_ref.title, titles.join(", ")),
-                    ));
+                        "a table's link is written in one of its columns: name it",
+                    )
+                })?;
+                let object_read = read_whole(object_json, "object", &object_ref.title, &types)?;
+                let sheet = TableSheet::of(object_read.as_reflect()).map_err(|why| {
+                    Refusal::on(
+                        "object",
+                        format!("`{}` is not a table that reads: {why}", object_ref.title),
+                    )
+                })?;
+                let found: Vec<usize> = sheet
+                    .columns
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, column)| column.title.as_deref().map(str::trim) == Some(title.trim()))
+                    .map(|(at, _)| at)
+                    .collect();
+                let at = match found.as_slice() {
+                    [one] => *one,
+                    [] => {
+                        let titles: Vec<&str> = sheet
+                            .columns
+                            .iter()
+                            .map(|column| column.title.as_deref().unwrap_or("(untitled)"))
+                            .collect();
+                        return Err(Refusal::on(
+                            "column",
+                            format!(
+                                "`{}` has no column titled `{title}` - its columns: {}",
+                                object_ref.title,
+                                titles.join(", ")
+                            ),
+                        ));
+                    }
+                    several => {
+                        return Err(Refusal::on(
+                            "column",
+                            format!(
+                                "several columns are titled `{title}` ({} of them): the link cannot name one",
+                                several.len()
+                            ),
+                        ));
+                    }
+                };
+                // The kind, resolved through the package then the dictionary.
+                let held: Vec<(String, Box<dyn DynObject>)> = cx
+                    .bag
+                    .objects()
+                    .filter_map(|(_, known)| {
+                        let reference = known.reference.as_ref()?;
+                        let read = energyml_core::json::read_value(known.json.as_ref()?, &types).ok()?;
+                        Some((reference.uuid.clone(), read.root))
+                    })
+                    .collect();
+                let source = BagObjects { objects: held };
+                let resolver = Resolver::new(&source);
+                let kinds = resolve_kinds(&sheet, &resolver);
+                let (wanted, wanted_word) = match params.by {
+                    LinkBy::Key => (IDENTIFIER, "identifier"),
+                    LinkBy::Rank => (EXPLICIT_INDEX, "explicit index"),
+                };
+                match kinds.get(at).and_then(|kind| kind.as_ref()) {
+                    Some(resolution) if descends_from(resolution, wanted) => {}
+                    Some(resolution) => {
+                        return Err(Refusal::on(
+                            "column",
+                            format!(
+                                "`{title}` has the kind `{}`, and a link {} takes a kind that is `{wanted_word}` or one of its descendants - set it first with `edit-object`: the kind is never changed in silence",
+                                resolution.kind().title,
+                                match params.by {
+                                    LinkBy::Key => "by key",
+                                    LinkBy::Rank => "by rank",
+                                }
+                            ),
+                        ));
+                    }
+                    None => {
+                        return Err(Refusal::on(
+                            "column",
+                            format!(
+                                "the kind of `{title}` does not resolve, in the package or in the dictionary - set it first with `edit-object`: the kind is never changed in silence"
+                            ),
+                        ));
+                    }
                 }
-                several => {
-                    return Err(Refusal::on(
-                        "column",
-                        format!("several columns are titled `{title}` ({} of them): the link cannot name one", several.len()),
-                    ));
-                }
-            };
-            // The kind, resolved through the package then the dictionary.
-            let held: Vec<(String, Box<dyn DynObject>)> = cx
-                .bag
-                .objects()
-                .filter_map(|(_, known)| {
-                    let reference = known.reference.as_ref()?;
-                    let read = energyml_core::json::read_value(known.json.as_ref()?, &types).ok()?;
-                    Some((reference.uuid.clone(), read.root))
-                })
-                .collect();
-            let source = BagObjects { objects: held };
-            let resolver = Resolver::new(&source);
-            let kinds = resolve_kinds(&sheet, &resolver);
-            let (wanted, wanted_word) = match params.by {
-                LinkBy::Key => (IDENTIFIER, "identifier"),
-                LinkBy::Rank => (EXPLICIT_INDEX, "explicit index"),
-            };
-            match kinds.get(at).and_then(|kind| kind.as_ref()) {
-                Some(resolution) if descends_from(resolution, wanted) => {}
-                Some(resolution) => {
-                    return Err(Refusal::on(
-                        "column",
-                        format!(
-                            "`{title}` has the kind `{}`, and a link {} takes a kind that is `{wanted_word}` or one of its descendants - set it first with `edit-object`: the kind is never changed in silence",
-                            resolution.kind().title,
-                            match params.by {
-                                LinkBy::Key => "by key",
-                                LinkBy::Rank => "by rank",
-                            }
-                        ),
-                    ));
-                }
-                None => {
-                    return Err(Refusal::on(
-                        "column",
-                        format!(
-                            "the kind of `{title}` does not resolve, in the package or in the dictionary - set it first with `edit-object`: the kind is never changed in silence"
-                        ),
-                    ));
-                }
-            }
-            let key_count = sheet.columns.iter().filter(|column| column.key).count();
-            let (field, rank) = if at < key_count {
-                ("KeyColumn", at)
+                let key_count = sheet.columns.iter().filter(|column| column.key).count();
+                let (field, rank) = if at < key_count {
+                    ("KeyColumn", at)
+                } else {
+                    ("Column", at - key_count)
+                };
+                let own = sheet.columns[at]
+                    .description
+                    .as_deref()
+                    .map(str::trim)
+                    .unwrap_or("");
+                (
+                    format!("{field}[{rank}].Facet"),
+                    Some(format!("{field}[{rank}].Description")),
+                    Some(own.to_string()),
+                )
             } else {
-                ("Column", at - key_count)
+                if params.column.is_some() {
+                    return Err(Refusal::on(
+                        "column",
+                        "a property has no column: leave it out - the link is written on the property itself",
+                    ));
+                }
+                if params.by == LinkBy::Rank {
+                    says.push(Note {
+                        key: "by-ignored",
+                        detail: "`by` has no effect on a property: its axes are named by the table's uri"
+                            .to_string(),
+                    });
+                }
+                ("Facet".to_string(), None, None)
             };
-            let own = sheet.columns[at].description.as_deref().map(str::trim).unwrap_or("");
-            (
-                format!("{field}[{rank}].Facet"),
-                Some(format!("{field}[{rank}].Description")),
-                Some(own.to_string()),
-            )
-        } else {
-            if params.column.is_some() {
-                return Err(Refusal::on(
-                    "column",
-                    "a property has no column: leave it out - the link is written on the property itself",
-                ));
-            }
-            if params.by == LinkBy::Rank {
-                says.push(Note {
-                    key: "by-ignored",
-                    detail: "`by` has no effect on a property: its axes are named by the table's uri".to_string(),
-                });
-            }
-            ("Facet".to_string(), None, None)
-        };
 
         // The facets as they stand, read from the JSON the object arrived in.
         let facets_json: Vec<Value> = facets_at(object_json, &facet_path);
@@ -322,7 +351,9 @@ impl Operation for TableLink {
             }
             return Err(Refusal::on(
                 "object",
-                format!("already carries the qualifier `{value}`: a link is one qualifier facet (S3), and a second would make it ambiguous"),
+                format!(
+                    "already carries the qualifier `{value}`: a link is one qualifier facet (S3), and a second would make it ambiguous"
+                ),
             ));
         }
         let mut facets = facets_json;
@@ -338,13 +369,17 @@ impl Operation for TableLink {
                     let text = if uuid_of(&uri) == uuid_of(&object_ref.uri()) {
                         format!("key of this table (self reference): {uri}, KeyColumn `{key}`")
                     } else {
-                        format!("key of the table `{}`: {uri}, KeyColumn `{key}`", target_ref.title)
+                        format!(
+                            "key of the table `{}`: {uri}, KeyColumn `{key}`",
+                            target_ref.title
+                        )
                     };
                     fields.push(format!("{path} = {}", Value::String(text)));
                 } else {
                     says.push(Note {
                         key: "no-description-for-rank",
-                        detail: "a link by rank has no form in a description: the kind and the facet say it".to_string(),
+                        detail: "a link by rank has no form in a description: the kind and the facet say it"
+                            .to_string(),
                     });
                 }
             } else {

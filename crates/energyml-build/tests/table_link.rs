@@ -86,12 +86,17 @@ fn samples(link_kind: &str, description: Option<&str>) -> Value {
         TABLE,
         "samples",
         vec![column("sample id", IDENTIFIER, None)],
-        vec![column("station", link_kind, description), column("label", NAME, None)],
+        vec![
+            column("station", link_kind, description),
+            column("label", NAME, None),
+        ],
     )
 }
 
 fn targets(keys: usize) -> Value {
-    let keyed = (0..keys).map(|n| column(&format!("id{n}"), IDENTIFIER, None)).collect();
+    let keyed = (0..keys)
+        .map(|n| column(&format!("id{n}"), IDENTIFIER, None))
+        .collect();
     table(TARGET, "targets", keyed, vec![column("name", NAME, None)])
 }
 
@@ -101,7 +106,13 @@ fn bag(object: Source, target: Source) -> Pieces {
 
 fn tables(link_kind: &str, keys: usize) -> Pieces {
     bag(
-        object_piece(TABLE, "eml23.ColumnBasedTable", "samples", None, samples(link_kind, None)),
+        object_piece(
+            TABLE,
+            "eml23.ColumnBasedTable",
+            "samples",
+            None,
+            samples(link_kind, None),
+        ),
         object_piece(TARGET, "eml23.ColumnBasedTable", "targets", None, targets(keys)),
     )
 }
@@ -118,10 +129,18 @@ fn link_column() -> Choices {
 
 /// The facets of the column `station` of the table written.
 fn facets_of(plan: &Plan) -> Vec<Value> {
-    plan.objects[0].json["Column"][0]["Facet"].as_array().cloned().unwrap_or_default()
+    plan.objects[0].json["Column"][0]["Facet"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
 }
 
-fn reread(json: &Value) -> (TableSheet, Vec<Option<energyml_domain::property_kind::Resolution>>) {
+fn reread(
+    json: &Value,
+) -> (
+    TableSheet,
+    Vec<Option<energyml_domain::property_kind::Resolution>>,
+) {
     let mut types = Types::new();
     eml::register(&mut types);
     let read = energyml_core::json::read_value(json, &types).expect("the table reads back");
@@ -140,8 +159,13 @@ fn a_column_links_by_key_with_one_qualifier_facet() {
     // The full uri of the target - never its uuid alone.
     assert!(uri.starts_with("eml:///eml23.ColumnBasedTable("), "{uri}");
     assert!(uri.contains(TARGET), "{uri}");
-    let description = plan.objects[0].json["Column"][0]["Description"].as_str().expect("a description");
-    assert!(description.starts_with("key of the table `targets`: eml:///"), "{description}");
+    let description = plan.objects[0].json["Column"][0]["Description"]
+        .as_str()
+        .expect("a description");
+    assert!(
+        description.starts_with("key of the table `targets`: eml:///"),
+        "{description}"
+    );
     assert!(description.ends_with(", KeyColumn `id0`"), "{description}");
 }
 
@@ -170,17 +194,25 @@ fn a_second_qualifier_is_refused() {
 #[test]
 fn a_kind_that_is_no_identifier_is_refused_never_changed() {
     let why = planned(&tables(NAME, 1), link_column()).expect_err("refused");
-    assert!(why.contains("`column`") && why.contains("name") && why.contains("edit-object"), "{why}");
+    assert!(
+        why.contains("`column`") && why.contains("name") && why.contains("edit-object"),
+        "{why}"
+    );
 }
 
 #[test]
 fn a_rank_link_takes_a_classification_index() {
     // By rank, the target needs no key: the rank names the row.
-    let plan = planned(&tables(CLASSIFICATION_INDEX, 0), Choices::new().set("column", "station").set("by", "rank"))
-        .expect("planned");
+    let plan = planned(
+        &tables(CLASSIFICATION_INDEX, 0),
+        Choices::new().set("column", "station").set("by", "rank"),
+    )
+    .expect("planned");
     assert_eq!(facets_of(&plan).len(), 1);
     assert!(
-        plan.objects[0].json["Column"][0].get("Description").is_none_or(Value::is_null),
+        plan.objects[0].json["Column"][0]
+            .get("Description")
+            .is_none_or(Value::is_null),
         "a link by rank has no form in a description"
     );
     assert!(plan.says.iter().any(|note| note.key == "no-description-for-rank"));
@@ -260,8 +292,13 @@ fn a_tree_links_to_its_own_table() {
         object_piece(TABLE, "eml23.ColumnBasedTable", "tree", None, own),
     );
     let plan = planned(&pieces, Choices::new().set("column", "parent").set("by", "key")).expect("planned");
-    let description = plan.objects[0].json["Column"][0]["Description"].as_str().expect("a description");
-    assert!(description.starts_with("key of this table (self reference): eml:///"), "{description}");
+    let description = plan.objects[0].json["Column"][0]["Description"]
+        .as_str()
+        .expect("a description");
+    assert!(
+        description.starts_with("key of this table (self reference): eml:///"),
+        "{description}"
+    );
     let (sheet, kinds) = reread(&plan.objects[0].json);
     let at = sheet.column_titled("parent").expect("the column");
     let declaration = LinkReaders::builtin()
@@ -274,7 +311,13 @@ fn a_tree_links_to_its_own_table() {
 #[test]
 fn the_version_is_in_the_uri() {
     let pieces = bag(
-        object_piece(TABLE, "eml23.ColumnBasedTable", "samples", None, samples(IDENTIFIER, None)),
+        object_piece(
+            TABLE,
+            "eml23.ColumnBasedTable",
+            "samples",
+            None,
+            samples(IDENTIFIER, None),
+        ),
         object_piece(TARGET, "eml23.ColumnBasedTable", "targets", Some("2"), targets(1)),
     );
     let plan = planned(&pieces, link_column()).expect("planned");

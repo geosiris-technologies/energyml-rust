@@ -81,7 +81,15 @@ fn shaped(
         feedback: &energyml_build::typed::Silent,
         bag: &bag,
     };
-    write_shaped(&field(values), Some(&known(nodes)), &params(), "seed", &cx, timing, shape)
+    write_shaped(
+        &field(values),
+        Some(&known(nodes)),
+        &params(),
+        "seed",
+        &cx,
+        timing,
+        shape,
+    )
 }
 
 fn counts(plan: &Plan) -> Value {
@@ -110,7 +118,10 @@ fn the_nodes_are_counted_in_whole_elements() {
     let why = shaped(ramp(8), 3, &Timing::Timeless, &shape).expect_err("refused");
     let said = why.to_string();
     assert!(said.contains("`field`"), "{said}");
-    assert!(said.contains('3') && said.contains('2'), "it names both counts: {said}");
+    assert!(
+        said.contains('3') && said.contains('2'),
+        "it names both counts: {said}"
+    );
 }
 
 #[test]

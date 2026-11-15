@@ -108,11 +108,7 @@ fn the_rules_are_complete_and_statuses_follow_the_design() {
         1,
         "the order two directional properties keep (ADR-0036)"
     );
-    assert_eq!(
-        count("provenance"),
-        4,
-        "provenance read and written (ADR-0035)"
-    );
+    assert_eq!(count("provenance"), 4, "provenance read and written (ADR-0035)");
     assert_eq!(all().len(), 57);
 
     let coded_by_the_new_walk = [

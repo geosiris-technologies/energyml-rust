@@ -292,7 +292,11 @@ pub fn write_shaped(
     // `[values]` - the bytes this function always wrote.
     let mut dimensions: Vec<i64> = match timing {
         Timing::Series { .. } => vec![steps as i64, per_step as i64],
-        _ => vec![if shape.is_scalar() { values.len() as i64 } else { per_step as i64 }],
+        _ => vec![if shape.is_scalar() {
+            values.len() as i64
+        } else {
+            per_step as i64
+        }],
     };
     if !shape.is_scalar() {
         dimensions.extend(shape.dims.iter().map(|&d| d as i64));

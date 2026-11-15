@@ -162,19 +162,15 @@ impl Operation for CombineProperties {
         Ok(())
     }
 
-    fn plan(
-        &self,
-        inputs: CombineInputs,
-        params: CombineParams,
-        cx: &Context<'_>,
-    ) -> Result<Plan, Refusal> {
+    fn plan(&self, inputs: CombineInputs, params: CombineParams, cx: &Context<'_>) -> Result<Plan, Refusal> {
         let (a, b) = (&inputs.a, &inputs.b);
         let counts = counts_of(&params.value_count)?;
         let shape = ElementShape::of(&counts, &params.component_labels).map_err(|why| match why {
             ShapeRefusal::LabelCount { .. } => Refusal::on("componentLabels", why.to_string()),
             other => Refusal::on("valuesPerElement", other.to_string()),
         })?;
-        let op = Combines::builtin()
+        let combines = Combines::builtin();
+        let op = combines
             .get(params.operation.id())
             .ok_or_else(|| Refusal::on("operation", format!("no combination `{}`", params.operation.id())))?;
         let combined = derived::combine(&a.values, &b.values, a.uom.as_deref(), b.uom.as_deref(), op)
@@ -196,7 +192,10 @@ impl Operation for CombineProperties {
                 "uom",
                 format!(
                     "`{}` is given, and a {} of `{}` and `{}` is in `{computed}`",
-                    params.written.uom, op.id(), a.name, b.name
+                    params.written.uom,
+                    op.id(),
+                    a.name,
+                    b.name
                 ),
             ));
         }
