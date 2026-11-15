@@ -22,6 +22,7 @@
 //! | [`forest`] | which node hangs under which, and which loop |
 //! | [`md_extent`] | from which MD to which, and on which reference |
 //! | [`well_strata`] | which unit is this well in, from which MD to which |
+//! | [`well_members`] | what does this well have: trajectories, frames, tops, properties |
 //! | [`strata_by_md`] | and on its other frames and trajectories, looked up by MD |
 //! | [`series`] | what does this log or time series say, sample by sample |
 //! | [`along_md`] | where an MD falls between the nodes, and what the value is there |
@@ -123,6 +124,9 @@ pub mod table_structure;
 pub mod units;
 pub mod values;
 pub mod water_analysis;
+/// Who a wellbore has: its trajectories, frames, marker frames and properties,
+/// from the inventory and the references alone (ADR 0040).
+pub mod well_members;
 /// Which stratigraphic unit each interval of a wellbore frame belongs to, and
 /// the colour the file gives it - what a well is coloured by, section by
 /// section.

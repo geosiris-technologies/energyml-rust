@@ -85,5 +85,6 @@ mod units_families;
 mod uri_follow;
 mod value_count;
 mod values;
+mod well_members;
 mod well_strata;
 mod wellbore_table;
