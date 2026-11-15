@@ -91,7 +91,10 @@ impl Combines {
 
     /// The first entry of that id.
     pub fn get(&self, id: &str) -> Option<&dyn Combine> {
-        self.entries.iter().find(|entry| entry.id() == id).map(|entry| entry.as_ref())
+        self.entries
+            .iter()
+            .find(|entry| entry.id() == id)
+            .map(|entry| entry.as_ref())
     }
 
     /// The first entry of that id, or a refusal that lists what is known.
@@ -173,7 +176,10 @@ pub fn combine(
     op: &dyn Combine,
 ) -> Result<Combined, CombineRefusal> {
     if a.len() != b.len() {
-        return Err(CombineRefusal::LengthsDiffer { a: a.len(), b: b.len() });
+        return Err(CombineRefusal::LengthsDiffer {
+            a: a.len(),
+            b: b.len(),
+        });
     }
     let differ = || CombineRefusal::UnitsDiffer {
         a: a_uom.map(String::from),

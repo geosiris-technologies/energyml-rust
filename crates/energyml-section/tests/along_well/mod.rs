@@ -13,14 +13,16 @@ use std::collections::BTreeMap;
 use energyml_core::registry::DynObject;
 use energyml_domain::source::{ArraySource, ObjectSource};
 use energyml_eml_2_3 as eml23;
-use energyml_geometry::around_well::projection::{VerticalSection, WellAxis, WellProjection, WellProjections};
+use energyml_geometry::around_well::projection::{
+    VerticalSection, WellAxis, WellProjection, WellProjections,
+};
 use energyml_geometry::crs::{AxisOrder, AxisReading, Crs, CrsKind, VerticalDirection, VerticalQuantity};
 use energyml_geometry::parametric::{Path, Vertical};
 use energyml_geometry::well::PlacedPath;
 use energyml_resqml_2_2 as resqml22;
 use energyml_section::along_well::{
     AxisSignAsk, Boundaries, BoundaryAsk, BoundaryMode, Curtain, CurtainAsk, CurtainColumns, CurtainLayout,
-    Model, PlaneAxisAsk, Request, SectionAsk, View, boundaries, curtain_cells,
+    Model, PlaneAxisAsk, Request, SectionAsk, View, boundaries as boundaries_of, curtain_cells,
 };
 use energyml_sheet::draw::list::{DisplayList, Item};
 
@@ -109,12 +111,6 @@ pub(crate) fn build_up(radius: f64) -> PlacedPath {
         vec![0.0, radius * std::f64::consts::FRAC_PI_2],
         Some(vec![[0.0, 0.0, -1.0], [1.0, 0.0, 0.0]]),
     )
-}
-
-pub(crate) fn close2(a: [f64; 2], b: [f64; 2], tolerance: f64) {
-    for i in 0..2 {
-        assert!((a[i] - b[i]).abs() <= tolerance, "{a:?} is not {b:?}");
-    }
 }
 
 /// An axis over the whole path, knots and ends only.
@@ -279,7 +275,11 @@ pub(crate) fn package_with_well(node_md: &[f64]) -> Package {
         },
         ..Default::default()
     };
-    Package(vec![Box::new(depth_crs()), Box::new(trajectory()), Box::new(frame)])
+    Package(vec![
+        Box::new(depth_crs()),
+        Box::new(trajectory()),
+        Box::new(frame),
+    ])
 }
 
 /// What a request asks of the package of [`package_with_well`] and nothing more: the hole, no curtain.
@@ -352,12 +352,21 @@ pub(crate) fn model_on(
         .collect();
     let layout = CurtainLayout::new(nodes, rows_up, 0.0).expect("a layout");
     let geometry = curtain_cells(&axis, &layout, projection).expect("cells");
-    let property = uri("resqml22.ContinuousProperty", "a0000000-0000-4000-8000-000000000001");
-    let radius = uri("resqml22.ContinuousProperty", "a0000000-0000-4000-8000-000000000002");
-    let angle = uri("resqml22.ContinuousProperty", "a0000000-0000-4000-8000-000000000003");
+    let property = uri(
+        "resqml22.ContinuousProperty",
+        "a0000000-0000-4000-8000-000000000001",
+    );
+    let radius = uri(
+        "resqml22.ContinuousProperty",
+        "a0000000-0000-4000-8000-000000000002",
+    );
+    let angle = uri(
+        "resqml22.ContinuousProperty",
+        "a0000000-0000-4000-8000-000000000003",
+    );
     let limits: Option<Boundaries> = with_boundaries.then(|| {
         let radii: Vec<f64> = nodes.iter().flat_map(|_| [8.0, 5.0]).collect();
-        boundaries(
+        boundaries_of(
             &axis,
             nodes,
             &radii,

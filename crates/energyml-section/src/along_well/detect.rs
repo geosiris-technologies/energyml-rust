@@ -43,7 +43,12 @@ pub fn offers(index: &PackageIndex, frame: &str) -> Offer {
     for candidate in index.shape_candidates(frame) {
         match &candidate.role {
             CandidateRole::Matrix { dims } if dims.len() == 2 => {
-                let needs = candidate.needs.iter().cloned().map(CandidateNeedAsk::from).collect();
+                let needs = candidate
+                    .needs
+                    .iter()
+                    .cloned()
+                    .map(CandidateNeedAsk::from)
+                    .collect();
                 curtains.push((candidate.uri.clone(), needs));
             }
             CandidateRole::Polar { angles: Some(angle) } => boundaries.push(BoundaryOffer {

@@ -74,10 +74,16 @@ fn mirrors_round_trip() {
 fn a_request_round_trips_through_json() {
     let mut request = hole_request("vertical_section");
     request.curtain = Some(CurtainAsk {
-        property: uri("resqml22.ContinuousProperty", "a0000000-0000-4000-8000-000000000001"),
+        property: uri(
+            "resqml22.ContinuousProperty",
+            "a0000000-0000-4000-8000-000000000001",
+        ),
         source: "cube-on-frame".to_string(),
         links: vec![AxisLinkAsk::PairedProperty {
-            property: uri("resqml22.ContinuousProperty", "a0000000-0000-4000-8000-000000000002"),
+            property: uri(
+                "resqml22.ContinuousProperty",
+                "a0000000-0000-4000-8000-000000000002",
+            ),
             dim: 1,
         }],
         roles: [
@@ -87,14 +93,23 @@ fn a_request_round_trips_through_json() {
         lateral_index: 2,
     });
     request.boundaries = Some(BoundaryAsk {
-        radius: uri("resqml22.ContinuousProperty", "a0000000-0000-4000-8000-000000000003"),
-        angle: uri("resqml22.ContinuousProperty", "a0000000-0000-4000-8000-000000000004"),
+        radius: uri(
+            "resqml22.ContinuousProperty",
+            "a0000000-0000-4000-8000-000000000003",
+        ),
+        angle: uri(
+            "resqml22.ContinuousProperty",
+            "a0000000-0000-4000-8000-000000000004",
+        ),
         mode: BoundaryMode::Projected,
     });
     request.md_range = Some([10.5, 99.25]);
     request.step = Some(0.5);
     request.section = Some(super::east_section());
-    request.surfaces = vec![uri("resqml22.TriangulatedSetRepresentation", "b0000000-0000-4000-8000-000000000001")];
+    request.surfaces = vec![uri(
+        "resqml22.TriangulatedSetRepresentation",
+        "b0000000-0000-4000-8000-000000000001",
+    )];
     let json = serde_json::to_string(&request).unwrap();
     assert_eq!(serde_json::from_str::<Request>(&json).unwrap(), request);
 }
@@ -107,7 +122,10 @@ fn a_request_round_trips_through_json() {
 fn markers_are_refused_by_name_and_the_section_still_draws() {
     let package = package_with_well(&[20.0, 40.0, 60.0, 80.0]);
     let mut request = hole_request("md_tvd");
-    request.markers = vec![uri("witsml21.WellboreMarker", "c0000000-0000-4000-8000-0000000000aa")];
+    request.markers = vec![uri(
+        "witsml21.WellboreMarker",
+        "c0000000-0000-4000-8000-0000000000aa",
+    )];
     let model = build(
         &request,
         &package,
@@ -120,7 +138,10 @@ fn markers_are_refused_by_name_and_the_section_still_draws() {
     assert!(!model.trace.is_empty());
     assert!(model.trace.iter().all(|point| point.is_some()));
     assert_eq!(model.markers_refused.len(), 1);
-    assert!(matches!(&model.markers_refused[0], MarkerRefusal::NoReader { .. }));
+    assert!(matches!(
+        &model.markers_refused[0],
+        MarkerRefusal::NoReader { .. }
+    ));
     assert!(model.notes.contains(&Note::MarkersNotRead { count: 1 }));
     assert!(model.markers.is_empty());
 }
@@ -139,7 +160,10 @@ fn the_request_is_refused_by_name() {
 
     let mut bare = hole_request("md_tvd");
     bare.frame = super::FRAME.to_string();
-    assert!(matches!(run(&bare), Err(AlongWellRefusal::NotAUri { field: "frame", .. })));
+    assert!(matches!(
+        run(&bare),
+        Err(AlongWellRefusal::NotAUri { field: "frame", .. })
+    ));
 
     assert!(matches!(
         run(&hole_request("sideways")),
@@ -152,7 +176,10 @@ fn the_request_is_refused_by_name() {
 
     let mut unknown = hole_request("md_tvd");
     unknown.curtain = Some(CurtainAsk {
-        property: uri("resqml22.ContinuousProperty", "a0000000-0000-4000-8000-000000000001"),
+        property: uri(
+            "resqml22.ContinuousProperty",
+            "a0000000-0000-4000-8000-000000000001",
+        ),
         source: "nowhere".to_string(),
         links: Vec::new(),
         roles: [
@@ -161,9 +188,15 @@ fn the_request_is_refused_by_name() {
         ],
         lateral_index: 0,
     });
-    assert!(matches!(run(&unknown), Err(AlongWellRefusal::UnknownSource { .. })));
+    assert!(matches!(
+        run(&unknown),
+        Err(AlongWellRefusal::UnknownSource { .. })
+    ));
 
     let mut not_a_frame = hole_request("md_tvd");
     not_a_frame.frame = uri("resqml22.WellboreTrajectoryRepresentation", TRAJECTORY);
-    assert!(matches!(run(&not_a_frame), Err(AlongWellRefusal::NotOnFrame { .. })));
+    assert!(matches!(
+        run(&not_a_frame),
+        Err(AlongWellRefusal::NotOnFrame { .. })
+    ));
 }

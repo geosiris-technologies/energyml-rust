@@ -73,7 +73,11 @@ pub fn conformance(activity: &ActivityRecord, template: Option<&TemplateRecord>)
     };
     let mut issues = Vec::new();
     for parameter in &activity.parameters {
-        let Some(entry) = template.parameters.iter().find(|one| one.title == parameter.title) else {
+        let Some(entry) = template
+            .parameters
+            .iter()
+            .find(|one| one.title == parameter.title)
+        else {
             issues.push(ParameterIssue::NotInTemplate {
                 position: parameter.position,
                 title: parameter.title.clone(),

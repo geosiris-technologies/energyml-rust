@@ -145,7 +145,11 @@ pub fn plane_of_roles(
     if roles[0].0 == roles[1].0 {
         return Err(GridRefusal::SameAxisTwice.into());
     }
-    let h = if roles[0].0 == PlaneAxisAsk::HighSide { 0 } else { 1 };
+    let h = if roles[0].0 == PlaneAxisAsk::HighSide {
+        0
+    } else {
+        1
+    };
     let l = 1 - h;
     if lateral_index >= dims[l] {
         return Err(AlongWellRefusal::LateralIndex {

@@ -1418,7 +1418,7 @@ fn judge_directional(
         };
         let uri = identity::uri_of_reflect(*object).unwrap_or_else(|| (*uuid).to_owned());
         candidates.push(Directional {
-            uuid: *uuid,
+            uuid,
             uri,
             support,
             read,
@@ -1531,7 +1531,11 @@ fn judge_directional(
                     &mut told,
                     check,
                     vertical.uuid,
-                    format!("{} values against {}", vertical_values.len(), lateral_values.len()),
+                    format!(
+                        "{} values against {}",
+                        vertical_values.len(),
+                        lateral_values.len()
+                    ),
                 );
                 continue;
             }
@@ -1553,7 +1557,13 @@ fn judge_directional(
             let counted = tally(&ratios, 1, &rule).expect("the tolerance is a finite number");
             let pairs = counted.cells - counted.absent;
             if pairs == 0 {
-                tell(out, &mut told, check, vertical.uuid, "no pair of finite values".into());
+                tell(
+                    out,
+                    &mut told,
+                    check,
+                    vertical.uuid,
+                    "no pair of finite values".into(),
+                );
                 continue;
             }
             let share = counted.matched as f64 / pairs as f64;

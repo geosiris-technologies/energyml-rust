@@ -8,7 +8,7 @@ use std::collections::HashSet;
 
 use energyml_core::{identity, naming};
 
-use super::{MAX_DEPTH, NodeKey, ProvEdge, ProvEdgeKind, EdgeBasis};
+use super::{EdgeBasis, MAX_DEPTH, NodeKey, ProvEdge, ProvEdgeKind};
 use crate::package_index::PackageIndex;
 
 /// A reference a carrier walk follows.

@@ -265,7 +265,11 @@ fn push_once(list: &mut Vec<String>, text: &str) {
 /// 08 section 5.4): the objects it reads and writes by its parameters' roles,
 /// against the inputs and outputs the tables list. Two objects are the same by
 /// uuid and agreeing versions, never by text.
-pub fn reconcile(activity: &ActivityRecord, roles: &[ParameterRole], process: &VerbatimProcess) -> Reconciliation {
+pub fn reconcile(
+    activity: &ActivityRecord,
+    roles: &[ParameterRole],
+    process: &VerbatimProcess,
+) -> Reconciliation {
     // The activity's statements, in parameter order.
     let mut stated: Vec<(&str, Way)> = Vec::new();
     for parameter in &activity.parameters {

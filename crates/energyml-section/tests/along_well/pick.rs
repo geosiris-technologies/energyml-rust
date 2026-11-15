@@ -17,7 +17,14 @@ const ROWS: [f64; 3] = [-10.0, 0.0, 10.0];
 fn pick_is_the_way_back_of_pixel_of() {
     let projections = WellProjections::standard();
     for id in ["md_tvd", "developed", "vertical_section"] {
-        let model = model_on(inclined(60.0), id, &NODES, &ROWS, (1..=12).map(f64::from).collect(), false);
+        let model = model_on(
+            inclined(60.0),
+            id,
+            &NODES,
+            &ROWS,
+            (1..=12).map(f64::from).collect(),
+            false,
+        );
         for i in 0..20 {
             let md = 120.0 + 13.0 * i as f64;
             let dn = -8.0 + 0.8 * i as f64;
@@ -53,7 +60,9 @@ fn the_value_is_the_cells_own_unless_an_interpolation_is_asked() {
     assert_eq!((own.node, own.row), (Some(0), Some(1)));
     assert_eq!(own.value, Some(10.0));
 
-    let linear = pick(&model, &view(), &projections, pixel, Some("linear")).unwrap().unwrap();
+    let linear = pick(&model, &view(), &projections, pixel, Some("linear"))
+        .unwrap()
+        .unwrap();
     assert!((linear.value.unwrap() - 17.5).abs() < 1e-4, "{:?}", linear.value);
 
     assert!(matches!(
@@ -89,6 +98,17 @@ fn the_readout_measures_the_distance_to_each_boundary() {
 #[test]
 fn a_pixel_outside_the_frame_has_nothing_under_it() {
     let projections = WellProjections::standard();
-    let model = model_on(inclined(60.0), "md_tvd", &NODES, &ROWS, (1..=12).map(f64::from).collect(), false);
-    assert!(pick(&model, &view(), &projections, [-5.0, -5.0], None).unwrap().is_none());
+    let model = model_on(
+        inclined(60.0),
+        "md_tvd",
+        &NODES,
+        &ROWS,
+        (1..=12).map(f64::from).collect(),
+        false,
+    );
+    assert!(
+        pick(&model, &view(), &projections, [-5.0, -5.0], None)
+            .unwrap()
+            .is_none()
+    );
 }

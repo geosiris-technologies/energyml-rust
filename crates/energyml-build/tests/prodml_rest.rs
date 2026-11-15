@@ -17,7 +17,6 @@ use serde_json::json;
 use energyml_build::operation::{Choices, Identity, NewObject, Plan, Registry, When};
 use energyml_build::pieces::{Known, Pieces, Ref, Source};
 use energyml_core::registry::DynObject;
-use energyml_domain::provenance::Parameter;
 use energyml_prodml_2_3 as prodml;
 
 const GTH1: &str = "2b2b2b2b-0000-4000-8000-000000000001";

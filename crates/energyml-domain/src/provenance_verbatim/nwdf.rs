@@ -61,7 +61,10 @@ fn table_of<'t, 'a>(
         [one] => Ok(Some(*one)),
         [] if !required => Ok(None),
         [] => {
-            let keyed: Vec<&Table<'a>> = tables.iter().filter(|table| count_of(table, titles[0]) > 0).collect();
+            let keyed: Vec<&Table<'a>> = tables
+                .iter()
+                .filter(|table| count_of(table, titles[0]) > 0)
+                .collect();
             if let [only] = keyed.as_slice() {
                 let missing = titles
                     .iter()
@@ -92,10 +95,12 @@ struct Read {
 
 impl Read {
     fn of(table: &Table<'_>, arrays: &dyn ArraySource) -> Result<Read, VerbatimRefusal> {
-        let rows = table.read_all(arrays).map_err(|cause| VerbatimRefusal::Unreadable {
-            table: table.uuid.clone(),
-            why: cause.to_string(),
-        })?;
+        let rows = table
+            .read_all(arrays)
+            .map_err(|cause| VerbatimRefusal::Unreadable {
+                table: table.uuid.clone(),
+                why: cause.to_string(),
+            })?;
         // A column that did not read is a column whose cells would be taken for
         // empty: refused, with the reader's own words.
         if rows.columns.iter().any(|column| column.is_none()) {
@@ -175,7 +180,8 @@ impl VerbatimSource for NwdfTables {
         let mut uris_of: HashMap<String, Vec<String>> = HashMap::new();
         let mut activity_of: HashMap<String, String> = HashMap::new();
         for row in 0..mapping_read.rows.rows {
-            let (Some(uid), Some(uri)) = (mapping_read.text(row, m_uid), mapping_read.text(row, m_uri)) else {
+            let (Some(uid), Some(uri)) = (mapping_read.text(row, m_uid), mapping_read.text(row, m_uri))
+            else {
                 continue;
             };
             if uri.is_empty() {
@@ -218,17 +224,25 @@ impl VerbatimSource for NwdfTables {
                 continue;
             };
             let target_table = links_read.text(row, l_table).unwrap_or_default();
-            links_of.entry(source).or_default().push((attribute, target, target_table));
+            links_of
+                .entry(source)
+                .or_default()
+                .push((attribute, target, target_table));
         }
 
         // The processes.
-        let (p_uid, p_activity) = (column_of(processes, "process_uid")?, column_of(processes, "activity")?);
+        let (p_uid, p_activity) = (
+            column_of(processes, "process_uid")?,
+            column_of(processes, "activity")?,
+        );
         let mut result = Vec::new();
         for row in 0..processes_read.rows.rows {
             let Some(key) = processes_read.text(row, p_uid) else {
                 continue;
             };
-            let activity = processes_read.text(row, p_activity).filter(|text| !text.is_empty());
+            let activity = processes_read
+                .text(row, p_activity)
+                .filter(|text| !text.is_empty());
             let mut fields = Vec::new();
             for (at, column) in processes.columns.iter().enumerate() {
                 if at == p_uid || at == p_activity {

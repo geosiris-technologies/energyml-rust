@@ -16,16 +16,16 @@ use std::sync::Arc;
 
 use energyml_core::registry::DynObject;
 use energyml_domain::activity::{
-    ActivityParameter, ActivityRecord, ActivityRole, DeclaredReference, ParameterKind, ParameterRole,
-    ParameterTemplateRecord, ParameterDirection, ParameterValue, RoleBasis, RoleRules, TemplateRecord,
+    ActivityParameter, ActivityRecord, ActivityRole, DeclaredReference, ParameterDirection, ParameterKind,
+    ParameterRole, ParameterTemplateRecord, ParameterValue, RoleBasis, RoleRules, TemplateRecord,
 };
 use energyml_domain::package_index::PackageIndex;
 use energyml_domain::provenance_graph::{
-    CarrierRule, CarrierRules, DeclaredStep, EdgeBasis, ExpandRefusal, FocusRefusal, GraphIssue, GraphOptions,
-    InputFileReader, NoInputFiles, NoStepConstraints, NodeKey, OrderBasis, Parts, ProvEdge, ProvEdgeKind,
-    ProvNode, ProvenanceGraph, Statement, StepConstraint, StepConstraintReader, TimelineRefusal, TreeRefusal,
-    TreeShape, activity_edges, activity_tree, assemble, carriers, focus, of_package, timeline, workflow_steps,
-    DEFAULT_SET_ASIDE,
+    CarrierRule, CarrierRules, DEFAULT_SET_ASIDE, DeclaredStep, EdgeBasis, ExpandRefusal, FocusRefusal,
+    GraphIssue, GraphOptions, InputFileReader, NoInputFiles, NoStepConstraints, NodeKey, OrderBasis, Parts,
+    ProvEdge, ProvEdgeKind, ProvNode, ProvenanceGraph, Statement, StepConstraint, StepConstraintReader,
+    TimelineRefusal, TreeRefusal, TreeShape, activity_edges, activity_tree, assemble, carriers, focus,
+    of_package, timeline, workflow_steps,
 };
 use energyml_domain::provenance_verbatim::{VerbatimId, VerbatimSources};
 use energyml_eml_2_3 as eml23;
@@ -270,11 +270,35 @@ fn inputs_point_in_outputs_point_out() {
     ];
     let edges = activity_edges(&a, &roles, &NoInputFiles);
     let me = object(&activity_uri(1));
-    assert!(has_edge(&edges, &object(&feature_uri(1)), &me, &ProvEdgeKind::Consumed));
-    assert!(has_edge(&edges, &me, &object(&feature_uri(2)), &ProvEdgeKind::Produced));
-    assert!(has_edge(&edges, &object(&feature_uri(3)), &me, &ProvEdgeKind::Consumed));
-    assert!(has_edge(&edges, &me, &object(&feature_uri(3)), &ProvEdgeKind::Produced));
-    assert_eq!(edges.len(), 4, "one edge for an input, one for an output, two for both");
+    assert!(has_edge(
+        &edges,
+        &object(&feature_uri(1)),
+        &me,
+        &ProvEdgeKind::Consumed
+    ));
+    assert!(has_edge(
+        &edges,
+        &me,
+        &object(&feature_uri(2)),
+        &ProvEdgeKind::Produced
+    ));
+    assert!(has_edge(
+        &edges,
+        &object(&feature_uri(3)),
+        &me,
+        &ProvEdgeKind::Consumed
+    ));
+    assert!(has_edge(
+        &edges,
+        &me,
+        &object(&feature_uri(3)),
+        &ProvEdgeKind::Produced
+    ));
+    assert_eq!(
+        edges.len(),
+        4,
+        "one edge for an input, one for an output, two for both"
+    );
     assert!(
         edges
             .iter()
@@ -303,11 +327,7 @@ fn an_undeclared_parameter_is_a_participant_without_direction() {
 
 #[test]
 fn parent_and_sub_activity_give_parent_edges() {
-    let a = record(
-        1,
-        vec![object_parameter(0, "step-1", &activity_uri(5))],
-        Some(9),
-    );
+    let a = record(1, vec![object_parameter(0, "step-1", &activity_uri(5))], Some(9));
     let edges = activity_edges(&a, &[role(0, ActivityRole::SubActivity)], &NoInputFiles);
     let me = object(&activity_uri(1));
     assert!(
@@ -328,7 +348,11 @@ fn parent_and_sub_activity_give_parent_edges() {
 fn a_text_parameter_is_a_file_only_when_a_reader_says_so() {
     let a = record(
         1,
-        vec![parameter(0, "file", ParameterValue::Text("./data/a.las".to_string()))],
+        vec![parameter(
+            0,
+            "file",
+            ParameterValue::Text("./data/a.las".to_string()),
+        )],
         None,
     );
     assert!(
@@ -348,7 +372,11 @@ fn a_text_parameter_is_a_file_only_when_a_reader_says_so() {
 #[test]
 fn no_parent_anywhere_is_flat() {
     // common TRG 2.3 §3.3, p. 42: `Parent` is 0..1.
-    let activities = [record(1, vec![], None), record(2, vec![], None), record(3, vec![], None)];
+    let activities = [
+        record(1, vec![], None),
+        record(2, vec![], None),
+        record(3, vec![], None),
+    ];
     let tree = activity_tree(&activities, &[vec![], vec![], vec![]]);
     assert_eq!(tree.shape, TreeShape::Flat);
     assert_eq!(tree.roots.len(), 3);
@@ -434,7 +462,11 @@ fn two_activities_naming_each_other_are_a_cycle_shown_flat() {
     let activities = [record(1, vec![], Some(2)), record(2, vec![], Some(1))];
     let tree = activity_tree(&activities, &[vec![], vec![]]);
     assert_eq!(tree.shape, TreeShape::Flat);
-    assert_eq!(tree.roots, vec![activity_uri(1), activity_uri(2)], "both are shown, flat");
+    assert_eq!(
+        tree.roots,
+        vec![activity_uri(1), activity_uri(2)],
+        "both are shown, flat"
+    );
     assert!(tree.children.is_empty(), "a loop is never given children");
     assert_eq!(tree.refusals.len(), 1);
     assert!(matches!(&tree.refusals[0], TreeRefusal::ParentCycle { uris } if uris.len() == 2));
@@ -460,7 +492,12 @@ fn a_parent_the_package_lacks_makes_a_marked_root() {
 
 // -- workflow_steps ----------------------------------------------------------
 
-fn step_template(title: &str, min: Option<i64>, constraint: Option<&str>, position: usize) -> ParameterTemplateRecord {
+fn step_template(
+    title: &str,
+    min: Option<i64>,
+    constraint: Option<&str>,
+    position: usize,
+) -> ParameterTemplateRecord {
     ParameterTemplateRecord {
         position,
         title: title.to_string(),
@@ -565,12 +602,22 @@ fn a_collection_expands_to_the_members_its_set_lists() {
     let members = index
         .expand_collection(&uri_in(&index, 10), 10)
         .expect("the set names the collection");
-    assert_eq!(members, vec![uri_in(&index, 1), uri_in(&index, 2), uri_in(&index, 3)]);
+    assert_eq!(
+        members,
+        vec![uri_in(&index, 1), uri_in(&index, 2), uri_in(&index, 3)]
+    );
     // A bare uuid is accepted at the entry, like everywhere in the index.
     assert_eq!(index.expand_collection(&u(10), 10).unwrap(), members);
     let refused = index.expand_collection(&uri_in(&index, 10), 2).unwrap_err();
     assert!(
-        matches!(refused, ExpandRefusal::TooMany { members: 3, limit: 2, .. }),
+        matches!(
+            refused,
+            ExpandRefusal::TooMany {
+                members: 3,
+                limit: 2,
+                ..
+            }
+        ),
         "{refused:?}"
     );
     assert!(matches!(
@@ -615,7 +662,11 @@ fn carriers_follow_support_then_firp_up_to_the_feature_and_stop_at_depth() {
     let seed = uri_in(&index, 4);
     let rules = CarrierRules::new();
     let deep = carriers(&index, std::slice::from_ref(&seed), &rules, 3);
-    assert_eq!(deep.len(), 3, "property to representation to interpretation to feature");
+    assert_eq!(
+        deep.len(),
+        3,
+        "property to representation to interpretation to feature"
+    );
     assert!(has_edge(
         &deep,
         &object(&uri_in(&index, 4)),
@@ -713,20 +764,26 @@ fn produced(activity: u32, address: &str) -> ProvEdge {
 #[test]
 fn an_object_two_activities_wrote_is_one_node_with_two_produced_edges() {
     let mut store = store();
-    feature(&mut store, 1);
+    // Feature 11: no activity of the test has its uuid (a uuid names one object).
+    feature(&mut store, 11);
     let index = index_of(&store);
     // One activity writes the typed uri, the other a bare uuid: the index names them one object.
     let graph = assemble(Parts {
         activities: &[record(1, vec![], None), record(2, vec![], None)],
-        edges: vec![produced(1, &feature_uri(1)), produced(2, &u(1))],
+        edges: vec![produced(1, &feature_uri(11)), produced(2, &u(11))],
         steps: &[],
         index: Some(&index),
         set_aside: DEFAULT_SET_ASIDE,
         expanded: &[],
         issues: Vec::new(),
     });
-    assert_eq!(graph.nodes.len(), 3, "two activities and one object: {:?}", graph.nodes);
-    let wrote = object(&uri_in(&index, 1));
+    assert_eq!(
+        graph.nodes.len(),
+        3,
+        "two activities and one object: {:?}",
+        graph.nodes
+    );
+    let wrote = object(&uri_in(&index, 11));
     let produced_edges: Vec<&ProvEdge> = graph
         .edges
         .iter()
@@ -736,7 +793,11 @@ fn an_object_two_activities_wrote_is_one_node_with_two_produced_edges() {
     assert!(produced_edges.iter().all(|edge| edge.to == wrote));
     let at = graph.position(&wrote).unwrap();
     assert!(matches!(&graph.nodes[at], ProvNode::Object { present: true, .. }));
-    assert!(graph.issues.is_empty(), "the package holds it: {:?}", graph.issues);
+    assert!(
+        graph.issues.is_empty(),
+        "the package holds it: {:?}",
+        graph.issues
+    );
     // Break it: key the nodes by the text of the address, and there are four nodes.
 }
 
@@ -756,7 +817,10 @@ fn a_crs_set_aside_is_no_node_but_is_listed() {
     assert_eq!(graph.edges.len(), 1, "the edge to the CRS is taken out too");
     assert_eq!(graph.set_aside.len(), 1);
     assert_eq!(graph.set_aside[0].uri, crs);
-    assert_eq!(graph.set_aside[0].qualified_type, "eml23.LocalEngineeringCompoundCrs");
+    assert_eq!(
+        graph.set_aside[0].qualified_type,
+        "eml23.LocalEngineeringCompoundCrs"
+    );
     assert_eq!(graph.set_aside[0].named_by, activity_uri(1));
     // Break it: keep it as a node, and the first assertion fails.
 }
@@ -790,7 +854,8 @@ fn an_edge_both_sources_state_is_both() {
 #[test]
 fn an_output_the_package_lacks_is_signalled() {
     let mut store = store();
-    feature(&mut store, 1);
+    // Feature 11: no activity of the test has its uuid (a uuid names one object).
+    feature(&mut store, 11);
     let index = index_of(&store);
     let asked = |address: &str| {
         assemble(Parts {
@@ -811,7 +876,10 @@ fn an_output_the_package_lacks_is_signalled() {
             object: feature_uri(404),
         }]
     );
-    assert!(asked(&feature_uri(1)).issues.is_empty(), "an object the package holds is not signalled");
+    assert!(
+        asked(&feature_uri(11)).issues.is_empty(),
+        "an object the package holds is not signalled"
+    );
     // Break it: say nothing, and the first assertion fails.
 }
 
@@ -828,10 +896,26 @@ fn chain_graph() -> ProvenanceGraph {
     assemble(Parts {
         activities: &[record(1, vec![], None), record(2, vec![], None)],
         edges: vec![
-            flow(NodeKey::File("f.las".to_string()), object(&activity_uri(1)), ProvEdgeKind::Consumed),
-            flow(object(&activity_uri(1)), object(&feature_uri(1)), ProvEdgeKind::Produced),
-            flow(object(&feature_uri(1)), object(&activity_uri(2)), ProvEdgeKind::Consumed),
-            flow(object(&activity_uri(2)), object(&feature_uri(2)), ProvEdgeKind::Produced),
+            flow(
+                NodeKey::File("f.las".to_string()),
+                object(&activity_uri(1)),
+                ProvEdgeKind::Consumed,
+            ),
+            flow(
+                object(&activity_uri(1)),
+                object(&feature_uri(1)),
+                ProvEdgeKind::Produced,
+            ),
+            flow(
+                object(&feature_uri(1)),
+                object(&activity_uri(2)),
+                ProvEdgeKind::Consumed,
+            ),
+            flow(
+                object(&activity_uri(2)),
+                object(&feature_uri(2)),
+                ProvEdgeKind::Produced,
+            ),
         ],
         steps: &[],
         index: None,
@@ -917,9 +1001,18 @@ fn all_instants_equal_gives_no_measured_order_and_the_declared_order() {
         vec![],
     ];
     let tree = activity_tree(&activities, &roles);
-    let line = timeline(&activities, &[], &tree, &ProvenanceGraph::default(), OrderBasis::Auto);
+    let line = timeline(
+        &activities,
+        &[],
+        &tree,
+        &ProvenanceGraph::default(),
+        OrderBasis::Auto,
+    );
     assert_eq!(line.basis_used, OrderBasis::Declared);
-    assert_eq!(line.note, Some(TimelineRefusal::NoMeasuredOrder(OrderBasis::Declared)));
+    assert_eq!(
+        line.note,
+        Some(TimelineRefusal::NoMeasuredOrder(OrderBasis::Declared))
+    );
     let order: Vec<&str> = line.rows.iter().map(|row| row.activity.as_str()).collect();
     assert_eq!(
         order,
@@ -940,7 +1033,13 @@ fn all_instants_equal_gives_no_measured_order_and_the_declared_order() {
 fn different_instants_give_the_measured_order_ties_in_declared_order() {
     let activities = [at(1, 0), at(2, 1), at(3, 0)];
     let tree = activity_tree(&activities, &[vec![], vec![], vec![]]);
-    let line = timeline(&activities, &[], &tree, &ProvenanceGraph::default(), OrderBasis::Auto);
+    let line = timeline(
+        &activities,
+        &[],
+        &tree,
+        &ProvenanceGraph::default(),
+        OrderBasis::Auto,
+    );
     assert_eq!(line.basis_used, OrderBasis::Measured);
     assert_eq!(line.note, None);
     let order: Vec<&str> = line.rows.iter().map(|row| row.activity.as_str()).collect();
@@ -958,8 +1057,17 @@ fn different_instants_give_the_measured_order_ties_in_declared_order() {
     // Asked for a measured order and given one that is impossible: the fallback, with the note.
     let same = [at(1, 5), at(2, 5)];
     let tree = activity_tree(&same, &[vec![], vec![]]);
-    let line = timeline(&same, &[], &tree, &ProvenanceGraph::default(), OrderBasis::Measured);
-    assert_eq!(line.note, Some(TimelineRefusal::NoMeasuredOrder(OrderBasis::Dependency)));
+    let line = timeline(
+        &same,
+        &[],
+        &tree,
+        &ProvenanceGraph::default(),
+        OrderBasis::Measured,
+    );
+    assert_eq!(
+        line.note,
+        Some(TimelineRefusal::NoMeasuredOrder(OrderBasis::Dependency))
+    );
     // Break it: use an unstable sort that ignores the declared rank, and the tie order is arbitrary.
 }
 
@@ -988,7 +1096,10 @@ fn a_flat_package_of_equal_instants_takes_the_dependency_order() {
     };
     let line = timeline(&activities, &[], &tree, &graph, OrderBasis::Auto);
     assert_eq!(line.basis_used, OrderBasis::Dependency);
-    assert_eq!(line.note, Some(TimelineRefusal::NoMeasuredOrder(OrderBasis::Dependency)));
+    assert_eq!(
+        line.note,
+        Some(TimelineRefusal::NoMeasuredOrder(OrderBasis::Dependency))
+    );
     let order: Vec<&str> = line.rows.iter().map(|row| row.activity.as_str()).collect();
     assert_eq!(order, vec![activity_uri(1).as_str(), activity_uri(2).as_str()]);
     // Asking for the dependency order is not a refusal of anything.
@@ -1106,10 +1217,10 @@ fn of_package_reads_a_small_recipe_package_into_one_graph() {
     assert_eq!(graph.set_aside.len(), 1, "the property kind is listed, not drawn");
     assert_eq!(graph.set_aside[0].named_by, uri_in(&index, 30));
     assert!(
-        !graph
-            .issues
-            .iter()
-            .any(|issue| matches!(issue, GraphIssue::Conformance { .. } | GraphIssue::Unreadable { .. })),
+        !graph.issues.iter().any(|issue| matches!(
+            issue,
+            GraphIssue::Conformance { .. } | GraphIssue::Unreadable { .. }
+        )),
         "{:?}",
         graph.issues
     );

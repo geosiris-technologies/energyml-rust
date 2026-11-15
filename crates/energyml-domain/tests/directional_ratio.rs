@@ -14,12 +14,13 @@ use crate::integrity::{Package, boxed, citation, integers, judge, read_of, refer
 use energyml_core::identity;
 use energyml_core::registry::DynObject;
 use energyml_core::value::Reflect;
+use energyml_core::xml::XmlText;
 use energyml_domain::integrity::{self, DeclaredDirection, DirectionRole};
 use energyml_domain::rules::{Finding, Gravity, Outcome};
 use energyml_domain::source::ArraySource;
-use energyml_domain::stats::scale::{Scale, ScaleKind};
 use energyml_domain::stats::CellRule;
 use energyml_domain::stats::pairs::PairAccumulator;
+use energyml_domain::stats::scale::{Scale, ScaleKind};
 use energyml_eml_2_3 as eml23;
 use energyml_resqml_2_2 as resqml22;
 
@@ -87,7 +88,9 @@ fn property(
         supporting_representation: reference("resqml22.WellboreFrameRepresentation", support),
         facet: vec![facet(direction)],
         uom: eml23::UnitOfMeasureExt::from_xml_text("ohm.m").expect("a unit"),
-        values_for_patch: vec![resqml22::AbstractValueArray::IntegerXmlArray(integers(values, null))],
+        values_for_patch: vec![resqml22::AbstractValueArray::IntegerXmlArray(integers(
+            values, null,
+        ))],
         ..Default::default()
     }
 }
@@ -132,7 +135,10 @@ fn package(mut objects: Vec<(&'static str, Box<dyn DynObject>)>) -> Vec<(&'stati
 /// The rule's findings of a package, nothing declared.
 fn found(objects: Vec<(&'static str, Box<dyn DynObject>)>, arrays: bool) -> Vec<Finding> {
     let findings = judge(package(objects), arrays);
-    findings.into_iter().filter(|finding| finding.rule == RULE).collect()
+    findings
+        .into_iter()
+        .filter(|finding| finding.rule == RULE)
+        .collect()
 }
 
 /// The same package, run again with what a person declared.
@@ -263,7 +269,14 @@ fn two_families_are_not_paired() {
 #[test]
 fn a_kind_with_no_expectation_is_not_judged() {
     let h = boxed(property(RH, POROSITY_KIND, FRAME, "I", &[10; 20], -999));
-    let v = boxed(property(RV, POROSITY_KIND, FRAME, "K", &ten_percent_below(), -999));
+    let v = boxed(property(
+        RV,
+        POROSITY_KIND,
+        FRAME,
+        "K",
+        &ten_percent_below(),
+        -999,
+    ));
     let findings = found(vec![(RH, h), (RV, v)], true);
     assert!(findings.is_empty(), "{findings:?}");
 }
@@ -280,7 +293,10 @@ fn without_arrays_it_is_unverifiable() {
         false,
     );
     assert_eq!(findings.len(), 1, "{findings:?}");
-    assert!(matches!(&findings[0].outcome, Outcome::Unverifiable { .. }), "{findings:?}");
+    assert!(
+        matches!(&findings[0].outcome, Outcome::Unverifiable { .. }),
+        "{findings:?}"
+    );
 }
 
 /// The array's own `NullValue` is not a value: two values of -999 are two
@@ -337,7 +353,8 @@ fn the_share_is_the_pair_accumulators() {
 
     let scale = Scale::new(ScaleKind::Linear, 0.0, 100.0, false).expect("a scale");
     let mut accumulator =
-        PairAccumulator::new(scale, scale, 4, Some(CellRule::Below(integrity::RATIO_TOLERANCE))).expect("an accumulator");
+        PairAccumulator::new(scale, scale, 4, Some(CellRule::Below(integrity::RATIO_TOLERANCE)))
+            .expect("an accumulator");
     let x: Vec<f64> = vec![10.0; 20];
     let y: Vec<f64> = vertical_values.iter().map(|v| *v as f64).collect();
     accumulator.push(&x, &y).expect("same lengths");

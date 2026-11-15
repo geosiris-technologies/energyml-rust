@@ -66,7 +66,11 @@ fn at_84_degrees_developed_moves_forward_by_dn_cos_i() {
     assert!((cell.centre[0] - on_hole[0] - 40.0 * 84.0_f64.to_radians().cos()).abs() < 1e-9);
 
     let flat = curtain_cells(&axis, &layout, &MdTvd).unwrap();
-    let cell = flat.cells.iter().find(|cell| cell.node == 1 && cell.row == 1).unwrap();
+    let cell = flat
+        .cells
+        .iter()
+        .find(|cell| cell.node == 1 && cell.row == 1)
+        .unwrap();
     assert_eq!(cell.centre[0], 500.0);
 }
 
@@ -93,7 +97,10 @@ fn md_tvd_never_folds_developed_folds_where_dn_times_i_prime_reaches_one() {
         assert_eq!(cell.folded, cell.row >= 2, "node {} row {}", cell.node, cell.row);
     }
     assert!(!developed.folded.is_empty());
-    assert!(developed.reversed.is_empty(), "the centre line itself never runs backwards here");
+    assert!(
+        developed.reversed.is_empty(),
+        "the centre line itself never runs backwards here"
+    );
 }
 
 /// A node at 0.2 m of a build-up is under the 1 degree of the threshold (S4): it has no high side, so it has

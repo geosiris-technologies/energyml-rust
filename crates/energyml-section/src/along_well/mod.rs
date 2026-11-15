@@ -57,24 +57,16 @@ pub mod model;
 pub mod pick;
 pub mod sources;
 
-pub use boundaries::{
-    ANGLE_TOLERANCE, BoundaryMode, BoundaryPoint, BoundaryRefusal, Boundaries, boundaries,
-};
+pub use boundaries::{ANGLE_TOLERANCE, Boundaries, BoundaryMode, BoundaryPoint, BoundaryRefusal, boundaries};
 pub use cells::{CurtainCell, CurtainGeometry, CurtainLayout, CurtainRefusal, curtain_cells};
 pub use detect::{BoundaryOffer, Offer, offers};
-pub use horizons::{
-    HorizonPoint, HorizonTrace, PlacedMesh, Undecided, computed_tops, horizon_in_curtain,
-};
+pub use horizons::{HorizonPoint, HorizonTrace, PlacedMesh, Undecided, computed_tops, horizon_in_curtain};
 pub use image::{ImageCounts, curtain_image};
-pub use layout::{
-    LegendAsk, PlotFrame, ScaleKindAsk, View, draw, layout, plot_frame, read_metadata, redraw,
-};
-pub use markers::{
-    Dip, DipReference, MarkerNote, MarkerRefusal, MarkerTick, WellMarker, marker_ticks,
-};
+pub use layout::{LegendAsk, PlotFrame, ScaleKindAsk, View, draw, layout, plot_frame, read_metadata, redraw};
+pub use markers::{Dip, DipReference, MarkerNote, MarkerRefusal, MarkerTick, WellMarker, marker_ticks};
 pub use model::{
-    AlongWellRefusal, AxisLinkAsk, AxisSignAsk, BoundaryAsk, CandidateNeedAsk, Curtain, CurtainAsk,
-    FORMAT, METADATA_ELEMENT, Model, Note, PlaneAxisAsk, Request, SectionAsk, SurfaceTops, build,
+    AlongWellRefusal, AxisLinkAsk, AxisSignAsk, BoundaryAsk, CandidateNeedAsk, Curtain, CurtainAsk, FORMAT,
+    METADATA_ELEMENT, Model, Note, PlaneAxisAsk, Request, SectionAsk, SurfaceTops, build,
 };
 pub use pick::{Readout, pick, pixel_of};
 pub use sources::{

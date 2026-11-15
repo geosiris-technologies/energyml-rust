@@ -162,7 +162,8 @@ impl<'a> Graph<'a> {
 
     /// The first target of `uri` that has this local type.
     fn target_of(&self, uri: &str, wanted: &str) -> Option<&'a ObjectFact> {
-        self.targets(uri).find(|found| local(&found.qualified_type) == wanted)
+        self.targets(uri)
+            .find(|found| local(&found.qualified_type) == wanted)
     }
 }
 
@@ -197,10 +198,14 @@ pub fn well_members(objects: &[ObjectFact], outgoing: &dyn Fn(&str) -> Vec<Strin
         .collect();
     let mut out: HashMap<&str, Vec<String>> = HashMap::new();
     for fact in &relevant_objects {
-        out.entry(fact.uri.as_str()).or_insert_with(|| outgoing(&fact.uri));
+        out.entry(fact.uri.as_str())
+            .or_insert_with(|| outgoing(&fact.uri));
     }
     let graph = Graph {
-        by_uri: relevant_objects.iter().map(|fact| (fact.uri.as_str(), *fact)).collect(),
+        by_uri: relevant_objects
+            .iter()
+            .map(|fact| (fact.uri.as_str(), *fact))
+            .collect(),
         out,
     };
     let kind_of = |fact: &ObjectFact| member_kind_of(local(&fact.qualified_type));
@@ -241,7 +246,7 @@ pub fn well_members(objects: &[ObjectFact], outgoing: &dyn Fn(&str) -> Vec<Strin
     // wellbore, so the two halves of one well share a row.
     let mut well_reps: HashMap<&str, String> = HashMap::new();
     for fact in &relevant_objects {
-        let Some(kind) = kind_of(*fact) else {
+        let Some(kind) = kind_of(fact) else {
             continue;
         };
         let key = if let Some(interpretation) = graph.target_of(&fact.uri, INTERPRETATION) {
@@ -270,9 +275,13 @@ pub fn well_members(objects: &[ObjectFact], outgoing: &dyn Fn(&str) -> Vec<Strin
                 MemberKind::Frame => found.frames.push(member),
                 MemberKind::Marker => found.markers.push(member),
             }
-            found
-                .versions
-                .insert(fact.qualified_type.split('.').next().unwrap_or_default().to_string());
+            found.versions.insert(
+                fact.qualified_type
+                    .split('.')
+                    .next()
+                    .unwrap_or_default()
+                    .to_string(),
+            );
         }
         well_reps.insert(fact.uri.as_str(), key);
     }

@@ -34,7 +34,9 @@ pub enum OrderBasis {
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum TimelineRefusal {
     /// Fewer than two distinct instants: no measured order.
-    #[error("every activity carries the same instant (or none): there is no measured order, the order shown is {0:?}")]
+    #[error(
+        "every activity carries the same instant (or none): there is no measured order, the order shown is {0:?}"
+    )]
     NoMeasuredOrder(OrderBasis),
 }
 
@@ -78,10 +80,13 @@ fn instant_text(activity: &ActivityRecord, verbatim: &[VerbatimProcess]) -> Opti
         return Some(creation.to_string());
     }
     verbatim.iter().find_map(|process| {
-        let tied = [process.activity.as_deref(), process.activity_by_mapping.as_deref()]
-            .into_iter()
-            .flatten()
-            .any(|address| names(address, activity));
+        let tied = [
+            process.activity.as_deref(),
+            process.activity_by_mapping.as_deref(),
+        ]
+        .into_iter()
+        .flatten()
+        .any(|address| names(address, activity));
         if !tied {
             return None;
         }
@@ -145,8 +150,8 @@ pub fn timeline(
             );
         }
     }
-    for at in 0..count {
-        if !visited[at] {
+    for (at, seen) in visited.iter().enumerate().take(count) {
+        if !seen {
             declared_order.push(at);
         }
     }
@@ -225,7 +230,11 @@ pub fn timeline(
 
 /// Kahn's order: A before B when A wrote something B read. Ties, and what a
 /// loop leaves, go by declared rank.
-fn dependency_order(activities: &[ActivityRecord], graph: &ProvenanceGraph, declared: &[usize]) -> Vec<usize> {
+fn dependency_order(
+    activities: &[ActivityRecord],
+    graph: &ProvenanceGraph,
+    declared: &[usize],
+) -> Vec<usize> {
     let count = activities.len();
     let activity_at: HashMap<NodeKey, usize> = activities
         .iter()

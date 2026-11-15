@@ -401,10 +401,23 @@ mod tests {
     #[test]
     fn a_parameter_says_its_title_and_its_number() {
         let parameters = [
-            Parameter::Double { title: "a".into(), value: 2.5, uom: None },
-            Parameter::Integer { title: "b".into(), value: 3 },
-            Parameter::Text { title: "c".into(), value: "x".into() },
-            Parameter::Object { title: "d".into(), reference: Value::Null },
+            Parameter::Double {
+                title: "a".into(),
+                value: 2.5,
+                uom: None,
+            },
+            Parameter::Integer {
+                title: "b".into(),
+                value: 3,
+            },
+            Parameter::Text {
+                title: "c".into(),
+                value: "x".into(),
+            },
+            Parameter::Object {
+                title: "d".into(),
+                reference: Value::Null,
+            },
         ];
         let titles: Vec<&str> = parameters.iter().map(Parameter::title).collect();
         assert_eq!(titles, ["a", "b", "c", "d"]);
@@ -414,8 +427,7 @@ mod tests {
 
     /// The words `inputFile` declares as its constraint, written out here on purpose: the test
     /// compares the data file with a text that does not come from the data file.
-    const INPUT_FILE_CONSTRAINT: &str =
-        "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named";
+    const INPUT_FILE_CONSTRAINT: &str = "a file the run read, relative to the recipe, written <slot>: <path>, or <path> when no slot was named";
 
     #[test]
     fn every_canonical_template_declares_input_and_input_file() {
@@ -440,7 +452,11 @@ mod tests {
                 assert_eq!(declared["IsOutput"], false, "{recipe}: `{title}` is no output");
                 assert_eq!(declared["MinOccurs"], 0, "{recipe}: `{title}` min");
                 assert_eq!(declared["MaxOccurs"], -1, "{recipe}: `{title}` max");
-                assert_eq!(declared["Constraint"].as_str(), constraint, "{recipe}: `{title}` constraint");
+                assert_eq!(
+                    declared["Constraint"].as_str(),
+                    constraint,
+                    "{recipe}: `{title}` constraint"
+                );
             }
             checked += 1;
         }

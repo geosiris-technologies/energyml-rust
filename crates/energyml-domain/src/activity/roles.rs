@@ -6,7 +6,9 @@
 //! one; with neither, the role is [`ActivityRole::Undeclared`]. A role is never
 //! guessed from a title.
 
-use super::{ActivityParameter, ActivityRecord, ParameterDirection, ParameterKind, ParameterValue, TemplateRecord};
+use super::{
+    ActivityParameter, ActivityRecord, ParameterDirection, ParameterKind, ParameterValue, TemplateRecord,
+};
 
 /// What a parameter is to its activity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -133,12 +135,17 @@ impl RoleRule for EnergymlBuildInputOutput {
 ///    the two flags give `Input`, `Output`, `Both` or `Neither`.
 /// 2. Else the first rule of `rules` that applies.
 /// 3. Else `Undeclared`. Never an entry guessed from the title.
-pub fn roles(activity: &ActivityRecord, template: Option<&TemplateRecord>, rules: &RoleRules) -> Vec<ParameterRole> {
+pub fn roles(
+    activity: &ActivityRecord,
+    template: Option<&TemplateRecord>,
+    rules: &RoleRules,
+) -> Vec<ParameterRole> {
     activity
         .parameters
         .iter()
         .map(|parameter| {
-            let declared = template.and_then(|one| one.parameters.iter().find(|entry| entry.title == parameter.title));
+            let declared =
+                template.and_then(|one| one.parameters.iter().find(|entry| entry.title == parameter.title));
             if let Some(entry) = declared {
                 let role = if entry.allowed.contains(&ParameterKind::SubActivity)
                     && matches!(parameter.value, ParameterValue::Object(_))

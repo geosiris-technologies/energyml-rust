@@ -55,7 +55,10 @@ fn a_step_constraint_reads_back_what_write_workflow_wrote() {
     assert_eq!(bare.operation, "crs");
     assert!(bare.template_uuid.is_none() && bare.serves.is_empty() && bare.held.is_none());
 
-    assert!(read_step_constraint("one of: a, b").is_none(), "a constraint of another writer");
+    assert!(
+        read_step_constraint("one of: a, b").is_none(),
+        "a constraint of another writer"
+    );
     assert!(
         read_step_constraint("follows fabricant:crs (not-a-uuid)").is_none(),
         "what is in the brackets must be a uuid"
@@ -195,8 +198,9 @@ fn a_played_recipe_drafts_back_into_a_recipe_that_parses() {
     let registry = Registry::new();
     let (played, store) = played_with(THREE_STEPS, &registry, &mut NoFile);
     let flow = workflow_of(&played, &store);
-    let draft = recipe::draft_from_workflow(&flow.root, &flow.template, &flow.children, &registry, &flow.index)
-        .unwrap_or_else(|refused| panic!("{refused:?}"));
+    let draft =
+        recipe::draft_from_workflow(&flow.root, &flow.template, &flow.children, &registry, &flow.index)
+            .unwrap_or_else(|refused| panic!("{refused:?}"));
     let names: Vec<&str> = draft.recipe.steps.iter().map(|step| step.name.as_str()).collect();
     assert_eq!(names, ["reperes", "reperes-encore"]);
     assert!(draft.recipe.steps.iter().all(|step| step.operation == "crs"));
@@ -214,14 +218,14 @@ fn a_played_recipe_drafts_back_into_a_recipe_that_parses() {
 /// To break it: do not read `held:` in `read_step_constraint`.
 #[test]
 fn a_held_step_is_drafted_held_with_its_reason() {
-    let text = format!(
-        "{THREE_STEPS}\n[[etape]]\nnom = \"plus-tard\"\noperation = \"crs\"\nattente = \"later\"\n"
-    );
+    let text =
+        format!("{THREE_STEPS}\n[[etape]]\nnom = \"plus-tard\"\noperation = \"crs\"\nattente = \"later\"\n");
     let registry = Registry::new();
     let (played, store) = played_with(&text, &registry, &mut NoFile);
     let flow = workflow_of(&played, &store);
-    let draft = recipe::draft_from_workflow(&flow.root, &flow.template, &flow.children, &registry, &flow.index)
-        .unwrap_or_else(|refused| panic!("{refused:?}"));
+    let draft =
+        recipe::draft_from_workflow(&flow.root, &flow.template, &flow.children, &registry, &flow.index)
+            .unwrap_or_else(|refused| panic!("{refused:?}"));
     assert_eq!(draft.recipe.steps.len(), 3);
     assert_eq!(draft.recipe.steps[2].name, "plus-tard");
     assert_eq!(draft.recipe.steps[2].held.as_deref(), Some("later"));
@@ -256,7 +260,11 @@ impl AnyOperation for TestOp {
     }
     fn takes(&self) -> Vec<Slot> {
         if self.takes_input {
-            vec![Slot::required("features", Need::Input(Takes::piece("features")), "")]
+            vec![Slot::required(
+                "features",
+                Need::Input(Takes::piece("features")),
+                "",
+            )]
         } else {
             Vec::new()
         }
@@ -447,7 +455,12 @@ fn an_import_without_its_file_is_refused() {
         &flow.index,
     )
     .expect_err("refused");
-    assert_eq!(refused, vec![ReplayRefusal::InputFileNotRecorded { step: "step".to_string() }]);
+    assert_eq!(
+        refused,
+        vec![ReplayRefusal::InputFileNotRecorded {
+            step: "step".to_string()
+        }]
+    );
 }
 
 /// A file recorded in an activity comes back as an entry of the step.
@@ -470,8 +483,9 @@ entrees = [ { creneau = "features", fichier = "donnees/a.geojson" } ]
     let registry = only("imports", false);
     let (played, store) = played_with(text, &registry, &mut OneFile);
     let flow = workflow_of(&played, &store);
-    let draft = recipe::draft_from_workflow(&flow.root, &flow.template, &flow.children, &registry, &flow.index)
-        .unwrap_or_else(|refused| panic!("{refused:?}"));
+    let draft =
+        recipe::draft_from_workflow(&flow.root, &flow.template, &flow.children, &registry, &flow.index)
+            .unwrap_or_else(|refused| panic!("{refused:?}"));
     let step = &draft.recipe.steps[0];
     assert_eq!(step.inputs.len(), 1, "{:?}", step.inputs);
     assert_eq!(step.inputs[0].slot.as_deref(), Some("features"));
@@ -497,8 +511,9 @@ fn a_template_two_operations_share_is_ambiguous() {
         name: "names-a-frame",
         takes_input: false,
     }));
-    let refused = recipe::draft_from_workflow(&flow.root, &flow.template, &flow.children, &registry, &flow.index)
-        .expect_err("refused");
+    let refused =
+        recipe::draft_from_workflow(&flow.root, &flow.template, &flow.children, &registry, &flow.index)
+            .expect_err("refused");
     assert!(
         refused.iter().any(|one| matches!(
             one,

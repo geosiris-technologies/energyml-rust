@@ -1,7 +1,7 @@
 //! The curtain as an image of the plot.
 
-use energyml_sheet::draw::raster::{Raster, paint_quads};
 use energyml_sheet::draw::DrawError;
+use energyml_sheet::draw::raster::{Raster, paint_quads};
 
 use super::cells::CurtainGeometry;
 use super::layout::PlotFrame;

@@ -25,7 +25,10 @@ fn the_exaggeration_text_says_what_the_abscissa_is() {
     let projections = WellProjections::standard();
     let developed = model_on(inclined(60.0), "developed", &NODES, &ROWS, values(), false);
     let words = texts(&layout(&developed, &view(), &projections, None).unwrap());
-    assert!(words.iter().any(|text| text.contains("vertical exaggeration")), "{words:?}");
+    assert!(
+        words.iter().any(|text| text.contains("vertical exaggeration")),
+        "{words:?}"
+    );
 
     let flat = model_on(inclined(60.0), "md_tvd", &NODES, &ROWS, values(), false);
     let words = texts(&layout(&flat, &view(), &projections, None).unwrap());
@@ -81,7 +84,10 @@ fn the_curtain_is_an_image_only_when_asked_and_coloured() {
     };
     assert_eq!(images(&with), 1);
     assert_eq!(images(&layout(&model, &asked, &projections, None).unwrap()), 0);
-    assert_eq!(images(&layout(&model, &view(), &projections, Some(&colour)).unwrap()), 0);
+    assert_eq!(
+        images(&layout(&model, &view(), &projections, Some(&colour)).unwrap()),
+        0
+    );
 }
 
 /// A legend that was asked and has no scale is a named refusal, not a drawing without legend; a legend
@@ -146,10 +152,7 @@ fn a_drawing_made_again_from_its_metadata_is_the_same_bytes() {
     let mut shown = view();
     shown.size = [640.0, 480.0];
     shown.exaggeration = Some(2.0);
-    shown.colours.insert(
-        super::frame_uri(),
-        "#aa3300".to_string(),
-    );
+    shown.colours.insert(super::frame_uri(), "#aa3300".to_string());
 
     let model = build(&hole_request("md_tvd"), &package, &[], &sources, &projections).unwrap();
     let svg = draw(&model, &shown, &projections, None).unwrap();

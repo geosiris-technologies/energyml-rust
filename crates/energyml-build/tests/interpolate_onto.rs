@@ -223,11 +223,7 @@ fn double(plan: &Plan, title: &str) -> Option<f64> {
 }
 
 fn titles(plan: &Plan) -> Vec<&str> {
-    plan.activity
-        .parameters
-        .iter()
-        .map(Parameter::title)
-        .collect()
+    plan.activity.parameters.iter().map(Parameter::title).collect()
 }
 
 /// Two horizons, two seed sets over two different parts of the ground, onto

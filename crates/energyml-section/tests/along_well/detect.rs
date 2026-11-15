@@ -5,6 +5,7 @@
 
 use std::sync::Arc;
 
+use energyml_core::xml::XmlText;
 use energyml_domain::package_index::PackageIndex;
 use energyml_eml_2_3 as eml23;
 use energyml_resqml_2_2 as resqml22;
@@ -98,7 +99,10 @@ fn a_matrix_per_node_on_a_frame_is_offered_and_a_dod_pair_too() {
     assert_eq!(found.boundaries.len(), 1);
     assert_eq!(found.boundaries[0].radius, uri_in(&store, RADIUS));
     assert_eq!(found.boundaries[0].angle, uri_in(&store, ANGLE));
-    assert_eq!(found.trajectory, None, "this frame is not in the package: no reference to follow");
+    assert_eq!(
+        found.trajectory, None,
+        "this frame is not in the package: no reference to follow"
+    );
 }
 
 /// A matrix on a grid is not a log along a well: nothing is offered.

@@ -310,7 +310,9 @@ fn field<'v>(value: &'v Value, name: &str) -> Option<&'v Value> {
 
 /// A text field, as written.
 fn text(value: &Value, name: &str) -> Option<String> {
-    field(value, name).and_then(|found| found.as_str()).map(str::to_string)
+    field(value, name)
+        .and_then(|found| found.as_str())
+        .map(str::to_string)
 }
 
 /// A JSON array field, empty when absent.
@@ -512,7 +514,10 @@ pub fn read_template(object: &dyn Reflect) -> Result<TemplateRecord, ActivityRef
 /// same uuid (case ignored) and versions that agree
 /// ([`identity::versions_agree`]); of several, the first whose version is an
 /// exact fit, else the first that is compatible.
-pub fn descriptor_of<'t>(activity: &ActivityRecord, templates: &'t [TemplateRecord]) -> Option<&'t TemplateRecord> {
+pub fn descriptor_of<'t>(
+    activity: &ActivityRecord,
+    templates: &'t [TemplateRecord],
+) -> Option<&'t TemplateRecord> {
     let wanted = activity.descriptor.as_ref()?;
     let (wanted_uuid, wanted_version) = identity::parse_address(&wanted.address);
     let mut compatible: Option<&TemplateRecord> = None;
@@ -542,7 +547,8 @@ mod tests {
     #[test]
     fn an_unknown_parameter_shape_is_unreadable_never_blank() {
         let no_value = json!({ "$type": "eml23.StringParameter", "Title": "mode" });
-        let float_without_unit = json!({ "$type": "eml23.DoubleQuantityParameter", "Title": "step", "Value": 2.5 });
+        let float_without_unit =
+            json!({ "$type": "eml23.DoubleQuantityParameter", "Title": "step", "Value": 2.5 });
         let read: Vec<ActivityParameter> = [no_value, float_without_unit]
             .iter()
             .enumerate()
@@ -552,7 +558,9 @@ mod tests {
         for parameter in &read {
             assert_eq!(
                 parameter.value,
-                ParameterValue::Unreadable { class: parameter.class.clone() },
+                ParameterValue::Unreadable {
+                    class: parameter.class.clone()
+                },
                 "{}",
                 parameter.title
             );

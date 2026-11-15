@@ -11,7 +11,8 @@ use super::{axis_of, drain_east, inclined};
 /// A horizontal square of 20 km at the height `z` (z up, metres).
 fn plane_at(z: f64) -> PlacedMesh {
     PlacedMesh {
-        uri: "eml:///resqml22.TriangulatedSetRepresentation(b0000000-0000-4000-8000-000000000001)".to_string(),
+        uri: "eml:///resqml22.TriangulatedSetRepresentation(b0000000-0000-4000-8000-000000000001)"
+            .to_string(),
         points: vec![
             -1e4, -1e4, z, //
             1e4, -1e4, z, //
@@ -101,5 +102,9 @@ fn computed_tops_cross_a_plane_at_the_analytic_md() {
     let found = computed_tops(&path, [0.0, 1000.0], 1.0, &heights).unwrap();
     assert_eq!(found.crossings.len(), 1);
     let expected = 100.0 / 30.0_f64.to_radians().cos();
-    assert!((found.crossings[0].md - expected).abs() < 1e-9, "{}", found.crossings[0].md);
+    assert!(
+        (found.crossings[0].md - expected).abs() < 1e-9,
+        "{}",
+        found.crossings[0].md
+    );
 }

@@ -18,7 +18,7 @@ use energyml_geometry::around_well::transverse::{AxisSign, GridRefusal, PlaneAxi
 use energyml_geometry::well::{PathRefusal, PlacedPath};
 use energyml_sheet::draw::{DrawError, MetadataError};
 
-use super::boundaries::{BoundaryMode, BoundaryRefusal, Boundaries, boundaries};
+use super::boundaries::{Boundaries, BoundaryMode, BoundaryRefusal, boundaries};
 use super::cells::{CurtainGeometry, CurtainLayout, CurtainRefusal, curtain_cells};
 use super::horizons::{HorizonTrace, PlacedMesh, computed_tops, horizon_in_curtain};
 use super::markers::{MarkerRefusal, MarkerTick};
@@ -381,13 +381,17 @@ pub enum AlongWellRefusal {
         id: &'static str,
     },
     /// A property that is not a matrix of two dimensions per node.
-    #[error("a curtain needs a matrix of two dimensions per node, each at least 2; the property declares {counts:?}")]
+    #[error(
+        "a curtain needs a matrix of two dimensions per node, each at least 2; the property declares {counts:?}"
+    )]
     NotTwoDimensions {
         /// The counts per element it declares.
         counts: Vec<u64>,
     },
     /// A flat list of components: never factorised.
-    #[error("the property declares {count} components in one dimension: they are never factorised into a matrix")]
+    #[error(
+        "the property declares {count} components in one dimension: they are never factorised into a matrix"
+    )]
     FlatComponents {
         /// The count.
         count: u64,
@@ -562,7 +566,9 @@ impl ProjectionChoice {
         projections: &'a WellProjections,
     ) -> Result<&'a dyn WellProjection, AlongWellRefusal> {
         let found: Option<&'a dyn WellProjection> = if id == "vertical_section" {
-            self.section.as_ref().map(|section| section as &dyn WellProjection)
+            self.section
+                .as_ref()
+                .map(|section| section as &dyn WellProjection)
         } else {
             projections.get(id)
         };

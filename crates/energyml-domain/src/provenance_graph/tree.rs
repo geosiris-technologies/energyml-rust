@@ -132,7 +132,10 @@ pub fn activity_tree(activities: &[ActivityRecord], roles: &[Vec<ParameterRole>]
     root_nodes.extend(found.roots.iter().copied());
     root_nodes.extend(found.orphans.iter().copied());
     root_nodes.extend(flat.iter().copied());
-    let roots: Vec<String> = root_nodes.iter().map(|node| activities[*node].uri.clone()).collect();
+    let roots: Vec<String> = root_nodes
+        .iter()
+        .map(|node| activities[*node].uri.clone())
+        .collect();
 
     let mut children: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for (parent, kids) in found.children.iter().enumerate() {
@@ -157,7 +160,10 @@ pub fn activity_tree(activities: &[ActivityRecord], roles: &[Vec<ParameterRole>]
         }
         children.insert(
             activities[parent].uri.clone(),
-            ordered.into_iter().map(|kid| activities[kid].uri.clone()).collect(),
+            ordered
+                .into_iter()
+                .map(|kid| activities[kid].uri.clone())
+                .collect(),
         );
     }
 

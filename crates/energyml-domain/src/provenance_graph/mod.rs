@@ -37,8 +37,8 @@ use energyml_core::identifiers::EtpUri;
 use energyml_core::{identity, naming};
 
 use crate::activity::{
-    ActivityRecord, ActivityRole, ParameterIssue, ParameterRole, ParameterValue, RoleBasis,
-    RoleRules, TemplateRecord, conformance as conformance_of, descriptor_of, read_activity, read_template,
+    ActivityRecord, ActivityRole, ParameterIssue, ParameterRole, ParameterValue, RoleBasis, RoleRules,
+    TemplateRecord, conformance as conformance_of, descriptor_of, read_activity, read_template,
     roles as roles_of,
 };
 use crate::package_index::{NodeState, PackageIndex};
@@ -171,9 +171,9 @@ impl ProvNode {
     pub fn key(&self) -> NodeKey {
         match self {
             ProvNode::File { path } => NodeKey::File(path.clone()),
-            ProvNode::Activity { uri, .. } | ProvNode::Object { uri, .. } | ProvNode::Collection { uri, .. } => {
-                NodeKey::Object(uri.clone())
-            }
+            ProvNode::Activity { uri, .. }
+            | ProvNode::Object { uri, .. }
+            | ProvNode::Collection { uri, .. } => NodeKey::Object(uri.clone()),
             ProvNode::HeldStep { workflow, step, .. } => NodeKey::HeldStep {
                 workflow: workflow.clone(),
                 step: step.clone(),
@@ -411,7 +411,12 @@ pub fn activity_edges(
                         edges.push(edge(me.clone(), them, ProvEdgeKind::Produced, basis));
                     }
                     ActivityRole::Both => {
-                        edges.push(edge(them.clone(), me.clone(), ProvEdgeKind::Consumed, basis.clone()));
+                        edges.push(edge(
+                            them.clone(),
+                            me.clone(),
+                            ProvEdgeKind::Consumed,
+                            basis.clone(),
+                        ));
                         edges.push(edge(me.clone(), them, ProvEdgeKind::Produced, basis));
                     }
                     ActivityRole::Neither | ActivityRole::Undeclared => {
@@ -485,10 +490,14 @@ fn describe(index: Option<&PackageIndex>, uri: &str) -> Described {
     }
     let qualified_type = EtpUri::parse(uri)
         .ok()
-        .and_then(|parsed| match (parsed.domain, parsed.version, parsed.object_type) {
-            (Some(domain), Some(version), Some(object_type)) => Some(format!("{domain}{version}.{object_type}")),
-            _ => None,
-        })
+        .and_then(
+            |parsed| match (parsed.domain, parsed.version, parsed.object_type) {
+                (Some(domain), Some(version), Some(object_type)) => {
+                    Some(format!("{domain}{version}.{object_type}"))
+                }
+                _ => None,
+            },
+        )
         .unwrap_or_default();
     Described {
         type_key: concept_of(&qualified_type),
@@ -502,9 +511,8 @@ fn describe(index: Option<&PackageIndex>, uri: &str) -> Described {
 /// otherwise the first is kept.
 fn merge_basis(kept: &EdgeBasis, other: &EdgeBasis) -> EdgeBasis {
     match (kept, other) {
-        (EdgeBasis::Activity(_), EdgeBasis::Verbatim(source)) | (EdgeBasis::Verbatim(source), EdgeBasis::Activity(_)) => {
-            EdgeBasis::Both(*source)
-        }
+        (EdgeBasis::Activity(_), EdgeBasis::Verbatim(source))
+        | (EdgeBasis::Verbatim(source), EdgeBasis::Activity(_)) => EdgeBasis::Both(*source),
         _ => kept.clone(),
     }
 }
@@ -546,8 +554,14 @@ pub fn assemble(parts: Parts<'_>) -> ProvenanceGraph {
         }
     };
 
-    let activity_uris: Vec<String> = activities.iter().map(|activity| canon_uri(&activity.uri)).collect();
-    let activity_keys: HashSet<NodeKey> = activity_uris.iter().map(|uri| NodeKey::Object(uri.clone())).collect();
+    let activity_uris: Vec<String> = activities
+        .iter()
+        .map(|activity| canon_uri(&activity.uri))
+        .collect();
+    let activity_keys: HashSet<NodeKey> = activity_uris
+        .iter()
+        .map(|uri| NodeKey::Object(uri.clone()))
+        .collect();
 
     // Edges: canonical keys, objects set aside taken out, duplicates merged.
     let mut kept: Vec<ProvEdge> = Vec::new();
@@ -604,7 +618,10 @@ pub fn assemble(parts: Parts<'_>) -> ProvenanceGraph {
             nodes.push(ProvNode::Activity {
                 uri: uri.clone(),
                 title: activity.title.clone(),
-                template: activity.descriptor.as_ref().map(|descriptor| descriptor.address.clone()),
+                template: activity
+                    .descriptor
+                    .as_ref()
+                    .map(|descriptor| descriptor.address.clone()),
             });
         }
     }
@@ -740,13 +757,17 @@ fn walk(graph: &ProvenanceGraph, on: &NodeKey, depth: u8, backwards: bool) -> Ha
 fn issue_names(issue: &GraphIssue) -> Vec<&str> {
     match issue {
         GraphIssue::Tree(TreeRefusal::ParentCycle { uris }) => uris.iter().map(String::as_str).collect(),
-        GraphIssue::Tree(TreeRefusal::ParentAbsent { child, parent }) => vec![child.as_str(), parent.as_str()],
+        GraphIssue::Tree(TreeRefusal::ParentAbsent { child, parent }) => {
+            vec![child.as_str(), parent.as_str()]
+        }
         GraphIssue::TreeDisagreement { parent, child, .. } => vec![parent.as_str(), child.as_str()],
         GraphIssue::HeldButPlayed { workflow, .. } => vec![workflow.as_str()],
         GraphIssue::OutputAbsent { activity, object } => vec![activity.as_str(), object.as_str()],
         GraphIssue::Conformance { activity, .. } => vec![activity.as_str()],
         GraphIssue::ActivityLinkDiffers {
-            by_column, by_mapping, ..
+            by_column,
+            by_mapping,
+            ..
         } => by_column
             .iter()
             .chain(by_mapping.iter())
@@ -797,7 +818,10 @@ pub fn focus(
     let mut queue: Vec<NodeKey> = kept.iter().cloned().collect();
     while let Some(node) = queue.pop() {
         for edge in &graph.edges {
-            if matches!(edge.kind, ProvEdgeKind::Carrier { .. }) && edge.from == node && kept.insert(edge.to.clone()) {
+            if matches!(edge.kind, ProvEdgeKind::Carrier { .. })
+                && edge.from == node
+                && kept.insert(edge.to.clone())
+            {
                 queue.push(edge.to.clone());
             }
         }
@@ -908,9 +932,11 @@ pub struct PackageProvenance {
 /// 7. The carriers of the objects the edges name.
 /// 8. The collections the caller asked to expand.
 /// 9. [`assemble`].
-pub fn of_package(index: &PackageIndex, source: &dyn ArraySource, options: &GraphOptions<'_>) -> PackageProvenance {
-    use crate::source::ObjectSource;
-
+pub fn of_package(
+    index: &PackageIndex,
+    source: &dyn ArraySource,
+    options: &GraphOptions<'_>,
+) -> PackageProvenance {
     let mut issues: Vec<GraphIssue> = Vec::new();
 
     // 1. Reading.
@@ -981,7 +1007,10 @@ pub fn of_package(index: &PackageIndex, source: &dyn ArraySource, options: &Grap
                 continue;
             }
             for step in declared.iter().filter(|step| step.held().is_some()) {
-                let named = activity.parameters.iter().any(|parameter| parameter.title == step.title);
+                let named = activity
+                    .parameters
+                    .iter()
+                    .any(|parameter| parameter.title == step.title);
                 if named {
                     issues.push(GraphIssue::HeldButPlayed {
                         workflow: template.uri.clone(),

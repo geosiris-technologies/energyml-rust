@@ -17,9 +17,7 @@ use energyml_sheet::draw::ticks::{label, log_label, log_ticks, nice_ticks};
 
 use super::horizons::PlacedMesh;
 use super::image::curtain_image;
-use super::model::{
-    AlongWellRefusal, FORMAT, METADATA_ELEMENT, Model, ProjectionChoice, Request, build,
-};
+use super::model::{AlongWellRefusal, FORMAT, METADATA_ELEMENT, Model, ProjectionChoice, Request, build};
 use super::sources::CurtainSources;
 
 /// The left margin of the plot, pixels (the graduations of the ordinate).
@@ -406,13 +404,7 @@ fn legend_items(
     let target = (ramp / 40.0).max(1.0);
     let graduations: Vec<(f64, String)> = match kind {
         ScaleKind::Linear => nice_ticks(min, max, target)
-            .map(|ticks| {
-                ticks
-                    .values
-                    .iter()
-                    .map(|v| (*v, label(*v, ticks.step)))
-                    .collect()
-            })
+            .map(|ticks| ticks.values.iter().map(|v| (*v, label(*v, ticks.step))).collect())
             .unwrap_or_default(),
         ScaleKind::Log10 => log_ticks(min, max, target)
             .map(|ticks| ticks.values.iter().map(|v| (*v, log_label(*v))).collect())

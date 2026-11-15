@@ -34,7 +34,16 @@ fn angles_are_found_by_value_never_by_rank() {
     assert_eq!((found.absent, found.refused), (0, 0));
 
     let mirrored: Vec<f64> = angles.iter().map(|angle| -angle).collect();
-    let again = boundaries(&axis, &nodes, &radii, &mirrored, 16, BoundaryMode::InPlane, &MdTvd).unwrap();
+    let again = boundaries(
+        &axis,
+        &nodes,
+        &radii,
+        &mirrored,
+        16,
+        BoundaryMode::InPlane,
+        &MdTvd,
+    )
+    .unwrap();
     assert_eq!(found, again);
 }
 
@@ -89,7 +98,15 @@ fn a_boundary_and_the_curtain_row_at_its_radius_are_one_point() {
 #[test]
 fn two_radii_at_zero_on_one_node_are_refused() {
     let axis = axis_of(&inclined(60.0));
-    let refused = boundaries(&axis, &[10.0], &[1.0, 2.0], &[0.0, 0.0], 2, BoundaryMode::InPlane, &MdTvd);
+    let refused = boundaries(
+        &axis,
+        &[10.0],
+        &[1.0, 2.0],
+        &[0.0, 0.0],
+        2,
+        BoundaryMode::InPlane,
+        &MdTvd,
+    );
     assert!(matches!(
         refused,
         Err(BoundaryRefusal::TwoAnglesInPlane { node: 0, side: "0" })
@@ -102,7 +119,15 @@ fn two_radii_at_zero_on_one_node_are_refused() {
 #[test]
 fn radii_and_angles_on_different_rings_are_refused() {
     let axis = axis_of(&inclined(60.0));
-    let refused = boundaries(&axis, &[10.0, 20.0], &[1.0; 6], &[0.0; 4], 3, BoundaryMode::InPlane, &MdTvd);
+    let refused = boundaries(
+        &axis,
+        &[10.0, 20.0],
+        &[1.0; 6],
+        &[0.0; 4],
+        3,
+        BoundaryMode::InPlane,
+        &MdTvd,
+    );
     assert!(matches!(refused, Err(BoundaryRefusal::DodShapeMismatch { .. })));
 }
 
@@ -115,7 +140,16 @@ fn the_projected_mode_lays_every_radius_at_r_cos_theta() {
     let axis = axis_of(&inclined(60.0));
     let angles = [0.0, PI / 2.0, PI];
     let radii = [5.0, 5.0, f64::NAN];
-    let found = boundaries(&axis, &[10.0], &radii, &angles, 3, BoundaryMode::Projected, &MdTvd).unwrap();
+    let found = boundaries(
+        &axis,
+        &[10.0],
+        &radii,
+        &angles,
+        3,
+        BoundaryMode::Projected,
+        &MdTvd,
+    )
+    .unwrap();
     let dn: Vec<f64> = found.projected[0].iter().map(|point| point.dn).collect();
     assert_eq!(dn.len(), 2);
     assert!((dn[0] - 5.0).abs() < 1e-12);

@@ -122,10 +122,16 @@ pub enum Error {
     NotAVolume { dims: [usize; 3] },
     #[error("{nodes} nodes - a lattice is indexed in 32 bits, {most} at most")]
     TooManyNodes { nodes: usize, most: usize },
-    #[error("{values} value(s) for a lattice of {nodes} node(s) - one value per node, the slowest dimension first")]
+    #[error(
+        "{values} value(s) for a lattice of {nodes} node(s) - one value per node, the slowest dimension first"
+    )]
     LatticeValues { values: usize, nodes: usize },
     #[error("slice {slice} gives {given} position(s) where the lattice has {expected} nodes per slice")]
-    SliceLength { slice: usize, given: usize, expected: usize },
+    SliceLength {
+        slice: usize,
+        given: usize,
+        expected: usize,
+    },
     #[error("a level of {given} has no logarithm - a log10 spacing needs a level > 0")]
     LevelNotPositive { given: f64 },
 

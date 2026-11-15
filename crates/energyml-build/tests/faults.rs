@@ -193,11 +193,7 @@ fn kriging_takes_a_radius_and_a_ceiling() {
             &when(),
         )
         .expect("the plan succeeds");
-    let named = |title: &str| {
-        plan.activity.parameters.iter().any(
-            |p| p.title() == title,
-        )
-    };
+    let named = |title: &str| plan.activity.parameters.iter().any(|p| p.title() == title);
     assert!(named("radius") && named("neighbours"));
     // A radius of 3 leaves nodes without a sample: holes, counted.
     assert!(

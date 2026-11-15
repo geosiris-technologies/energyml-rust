@@ -56,12 +56,7 @@ fn nearest_node(model: &Model, md: f64) -> Option<usize> {
 
 /// The value between nodes along the MD, within the row, by one of the
 /// domain's interpolations (never across the rows, WP03 C13).
-fn interpolated(
-    model: &Model,
-    id: &str,
-    md: f64,
-    row: usize,
-) -> Result<Option<f64>, AlongWellRefusal> {
+fn interpolated(model: &Model, id: &str, md: f64, row: usize) -> Result<Option<f64>, AlongWellRefusal> {
     let methods = Interpolations::builtin();
     let method = methods
         .get(id)
@@ -74,10 +69,7 @@ fn interpolated(
     };
     let rows = curtain.layout.rows_up.len();
     let nodes = &model.node_md;
-    let Some(lower) = nodes
-        .windows(2)
-        .position(|pair| md >= pair[0] && md <= pair[1])
-    else {
+    let Some(lower) = nodes.windows(2).position(|pair| md >= pair[0] && md <= pair[1]) else {
         return Ok(None);
     };
     let (a, b) = (nodes[lower], nodes[lower + 1]);
@@ -187,10 +179,7 @@ pub fn pick(
         for trace in &model.horizons {
             for point in trace.spans.iter().flatten().filter(|p| p.md == column_md) {
                 let distance = point.dn - dn;
-                if best
-                    .as_ref()
-                    .is_none_or(|(_, kept)| distance.abs() < kept.abs())
-                {
+                if best.as_ref().is_none_or(|(_, kept)| distance.abs() < kept.abs()) {
                     best = Some((trace.surface.clone(), distance));
                 }
             }

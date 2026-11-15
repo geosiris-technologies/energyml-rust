@@ -353,11 +353,7 @@ fn the_count_of_panels_goes_into_the_activity() {
     let plan = operation()
         .plan(&bag(), &choices(), &Identity::derived(), &when())
         .expect("the plan succeeds");
-    let named = |title: &str| {
-        plan.activity.parameters.iter().any(
-            |p| p.title() == title,
-        )
-    };
+    let named = |title: &str| plan.activity.parameters.iter().any(|p| p.title() == title);
     assert!(named("panelCount"));
     assert!(named("emptyPanels"));
     assert!(named("invertedPatches"));

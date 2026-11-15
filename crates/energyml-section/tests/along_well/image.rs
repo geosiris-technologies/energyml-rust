@@ -65,7 +65,8 @@ fn the_cell_nearer_the_hole_wins_where_columns_overlap() {
     let absent = cell(square(0.0, 90.0, 10.0), 40.0, 0, 1);
     // values[node * rows + row], rows = 2: (0, 0) -> 0, (0, 1) -> 1, (1, 1) -> 3.
     let values = [1.0, f64::NAN, f64::NAN, 2.0];
-    let (raster, counts) = curtain_image(&geometry(vec![near, far, absent]), &values, 2, &colour, &plot()).unwrap();
+    let (raster, counts) =
+        curtain_image(&geometry(vec![near, far, absent]), &values, 2, &colour, &plot()).unwrap();
     assert_eq!(raster.pixel(50, 50), Some(RED));
     assert_eq!(raster.pixel(80, 80), Some(BLUE));
     assert_eq!(raster.pixel(20, 20), Some(RED));

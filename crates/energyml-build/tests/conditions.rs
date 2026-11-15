@@ -65,10 +65,7 @@ fn samples() -> Pieces {
 }
 
 fn titles(parameters: &[Parameter]) -> Vec<&str> {
-    parameters
-        .iter()
-        .map(Parameter::title)
-        .collect()
+    parameters.iter().map(Parameter::title).collect()
 }
 
 /// **An activity records what the run used, and only that.** The defect this

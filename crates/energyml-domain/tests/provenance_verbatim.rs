@@ -9,7 +9,8 @@
 //! p. 40 (an activity parameter's title, the template's equivalent).
 
 use energyml_domain::activity::{
-    ActivityParameter, ActivityRecord, ActivityRole, DeclaredReference, ParameterRole, ParameterValue, RoleBasis,
+    ActivityParameter, ActivityRecord, ActivityRole, DeclaredReference, ParameterRole, ParameterValue,
+    RoleBasis,
 };
 use energyml_domain::provenance_graph::{EdgeBasis, GraphIssue, NodeKey, ProvEdgeKind};
 use energyml_domain::provenance_verbatim::{
@@ -118,27 +119,83 @@ fn processes_rows() -> Vec<Vec<&'static str>> {
 }
 
 fn processes_table(rows: &[Vec<&str>]) -> eml23::ColumnBasedTable {
-    text_table(U_PROCESSES, &["process_uid", "activity", "process_name", "software"], rows)
+    text_table(
+        U_PROCESSES,
+        &["process_uid", "activity", "process_name", "software"],
+        rows,
+    )
 }
 
 fn links_rows() -> Vec<Vec<&'static str>> {
     vec![
         vec!["las_survey_read", "processes", "inputs", LAS, "external file"],
         vec!["las_survey_read", "processes", "outputs", SURVEY_KEY, "datasets"],
-        vec!["las_survey_read", "processes", "dataset_uids", "dataset:acq:001", "datasets"],
+        vec![
+            "las_survey_read",
+            "processes",
+            "dataset_uids",
+            "dataset:acq:001",
+            "datasets",
+        ],
         vec!["traj_resample", "processes", "inputs", SURVEY_KEY, "datasets"],
-        vec!["traj_resample", "processes", "outputs", "dataset:banana1_traj:001", "datasets"],
+        vec![
+            "traj_resample",
+            "processes",
+            "outputs",
+            "dataset:banana1_traj:001",
+            "datasets",
+        ],
         vec!["abx_json_ingest", "processes", "inputs", ABX, "external file"],
-        vec!["abx_json_ingest", "processes", "outputs", "dataset:abx_rh:001", "datasets"],
-        vec!["abx_json_ingest", "processes", "outputs", "dataset:abx_rv:001", "datasets"],
-        vec!["abx_json_ingest", "processes", "outputs", "dataset:abx_radius:001", "datasets"],
-        vec!["abx_json_ingest", "processes", "outputs", "dataset:abx_angle:001", "datasets"],
-        vec!["abx_json_ingest", "processes", "dataset_uids", "dataset:acq:002", "datasets"],
+        vec![
+            "abx_json_ingest",
+            "processes",
+            "outputs",
+            "dataset:abx_rh:001",
+            "datasets",
+        ],
+        vec![
+            "abx_json_ingest",
+            "processes",
+            "outputs",
+            "dataset:abx_rv:001",
+            "datasets",
+        ],
+        vec![
+            "abx_json_ingest",
+            "processes",
+            "outputs",
+            "dataset:abx_radius:001",
+            "datasets",
+        ],
+        vec![
+            "abx_json_ingest",
+            "processes",
+            "outputs",
+            "dataset:abx_angle:001",
+            "datasets",
+        ],
+        vec![
+            "abx_json_ingest",
+            "processes",
+            "dataset_uids",
+            "dataset:acq:002",
+            "datasets",
+        ],
     ]
 }
 
 fn links_table(uuid: &str, rows: &[Vec<&str>]) -> eml23::ColumnBasedTable {
-    text_table(uuid, &["source_uid", "source_table", "attribute", "target", "target_table"], rows)
+    text_table(
+        uuid,
+        &[
+            "source_uid",
+            "source_table",
+            "attribute",
+            "target",
+            "target_table",
+        ],
+        rows,
+    )
 }
 
 /// Thirteen rows, and no key column.
@@ -272,7 +329,10 @@ fn nwdf_tables_give_files_processes_and_objects() {
 /// (08 section 2.3). A key the mapping does not tie stays unresolved.
 #[test]
 fn a_dataset_the_mapping_does_not_tie_is_unresolved_never_by_title() {
-    let rows: Vec<Vec<&str>> = mapping_rows().into_iter().filter(|row| row[0] != SURVEY_KEY).collect();
+    let rows: Vec<Vec<&str>> = mapping_rows()
+        .into_iter()
+        .filter(|row| row[0] != SURVEY_KEY)
+        .collect();
     let objects = vec![
         processes_table(&processes_rows()),
         links_table(U_LINKS, &links_rows()),
@@ -280,8 +340,14 @@ fn a_dataset_the_mapping_does_not_tie_is_unresolved_never_by_title() {
         references_table(),
     ];
     let all = processes(&objects);
-    assert_eq!(all[0].outputs, vec![VerbatimTarget::Unresolved(SURVEY_KEY.to_string())]);
-    assert_eq!(all[1].inputs, vec![VerbatimTarget::Unresolved(SURVEY_KEY.to_string())]);
+    assert_eq!(
+        all[0].outputs,
+        vec![VerbatimTarget::Unresolved(SURVEY_KEY.to_string())]
+    );
+    assert_eq!(
+        all[1].inputs,
+        vec![VerbatimTarget::Unresolved(SURVEY_KEY.to_string())]
+    );
     // Another key whose title would look alike is still tied to its own object.
     assert!(matches!(&all[1].outputs[0], VerbatimTarget::Objects { .. }));
 }
@@ -318,7 +384,10 @@ fn the_activity_column_and_the_mapping_disagree() {
 
     // The same activity written two ways (the hex of a uuid in capitals) is no disagreement.
     let mut same = all[0].clone();
-    same.activity_by_mapping = Some(ACT_A.replace("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"));
+    same.activity_by_mapping = Some(ACT_A.replace(
+        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA",
+    ));
     same.activity = Some(ACT_A.to_string());
     let (_, issues) = verbatim_edges(NWDF, &same);
     assert!(issues.is_empty(), "{issues:?}");
@@ -377,8 +446,12 @@ fn verbatim_edges_point_in_and_out_and_a_process_with_no_activity_has_none() {
 #[test]
 fn an_empty_text_is_a_value_and_a_nan_is_not() {
     let mut processes_object = processes_table(&processes_rows());
-    processes_object.column.push(column("note", &["", "kept", "kept too"]));
-    processes_object.column.push(float_column("rank", &[f64::NAN, 2.0, 3.0]));
+    processes_object
+        .column
+        .push(column("note", &["", "kept", "kept too"]));
+    processes_object
+        .column
+        .push(float_column("rank", &[f64::NAN, 2.0, 3.0]));
     let objects = vec![
         processes_object,
         links_table(U_LINKS, &links_rows()),
@@ -481,9 +554,9 @@ fn reconcile_agrees_then_sees_an_output_only_the_activity_states() {
     assert!(reconciled.roles_differ.is_empty(), "{reconciled:?}");
 
     // The tables no longer state Rv: only the activity does.
-    process.outputs.retain(|target| {
-        !matches!(target, VerbatimTarget::Objects { key, .. } if key == "dataset:abx_rv:001")
-    });
+    process.outputs.retain(
+        |target| !matches!(target, VerbatimTarget::Objects { key, .. } if key == "dataset:abx_rv:001"),
+    );
     let reconciled = reconcile(&record, &roles, &process);
     assert_eq!(reconciled.only_activity, [RV]);
     assert_eq!(reconciled.both, [RH, RADIUS, ANGLE]);
@@ -513,7 +586,8 @@ fn an_object_stated_in_opposite_directions_is_a_role_difference() {
 /// have a title and nothing to read.
 #[test]
 fn recognition_reads_titles_only() {
-    let blank = |uuid: &str, titles: &[&str]| table(uuid, titles.iter().map(|title| titled_only(title)).collect());
+    let blank =
+        |uuid: &str, titles: &[&str]| table(uuid, titles.iter().map(|title| titled_only(title)).collect());
     let objects = vec![
         blank(U_PROCESSES, &["process_uid", "activity"]),
         blank(U_LINKS, &["source_uid", "attribute", "target", "target_table"]),
@@ -539,7 +613,10 @@ fn two_link_tables_are_refused_not_merged() {
         refusal,
         VerbatimRefusal::SeveralTables {
             role: "links",
-            tables: vec![U_LINKS.to_string(), "00000000-0000-4000-8000-0000000000ff".to_string()],
+            tables: vec![
+                U_LINKS.to_string(),
+                "00000000-0000-4000-8000-0000000000ff".to_string()
+            ],
         }
     );
 }
@@ -616,7 +693,11 @@ fn a_callers_source_is_tried_before_the_built_in() {
     assert_eq!(sources.ids(), [NWDF]);
     sources.add(Box::new(Everything));
     assert_eq!(sources.ids(), [VerbatimId("test"), NWDF]);
-    let found: Vec<VerbatimId> = sources.recognised(&tables).iter().map(|source| source.id()).collect();
+    let found: Vec<VerbatimId> = sources
+        .recognised(&tables)
+        .iter()
+        .map(|source| source.id())
+        .collect();
     assert_eq!(found, [VerbatimId("test"), NWDF]);
 
     assert!(VerbatimSources::empty().recognised(&tables).is_empty());

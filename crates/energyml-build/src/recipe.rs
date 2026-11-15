@@ -1549,7 +1549,10 @@ impl std::fmt::Display for ReplayRefusal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ReplayRefusal::NotAWorkflow => {
-                write!(f, "the root's template declares no subActivity: it is not a workflow")
+                write!(
+                    f,
+                    "the root's template declares no subActivity: it is not a workflow"
+                )
             }
             ReplayRefusal::OperationUnknown { step, template } => write!(
                 f,
@@ -1805,7 +1808,11 @@ pub fn draft_from_workflow(
     }
     Ok(RecipeDraft {
         recipe: Recipe {
-            title: root.title.clone().or_else(|| template.title.clone()).unwrap_or_default(),
+            title: root
+                .title
+                .clone()
+                .or_else(|| template.title.clone())
+                .unwrap_or_default(),
             creation: root.creation.clone().unwrap_or_default(),
             originator: root.originator.clone().unwrap_or_default(),
             data_file: data_h5(),
@@ -1934,15 +1941,22 @@ fn draft_step(
         match &parameter.value {
             ParameterValue::Object(reference) => {
                 if is_slot {
-                    parameters.push(serde_json::json!({ "Title": title, "DataObject": reference_json(reference) }));
+                    parameters
+                        .push(serde_json::json!({ "Title": title, "DataObject": reference_json(reference) }));
                     references.push((title, reference));
                     titles.push(title);
                     continue;
                 }
-                if !matches!(role.map(|one| one.role), Some(ActivityRole::Input | ActivityRole::Both)) {
+                if !matches!(
+                    role.map(|one| one.role),
+                    Some(ActivityRole::Input | ActivityRole::Both)
+                ) {
                     continue;
                 }
-                match written.iter().find(|one| same_object(&one.address, &reference.address)) {
+                match written
+                    .iter()
+                    .find(|one| same_object(&one.address, &reference.address))
+                {
                     Some(found) => {
                         let already = inputs.iter().any(|entry| {
                             entry.step.as_deref() == Some(found.step.as_str())
@@ -1995,7 +2009,9 @@ fn draft_step(
                 }
             }
             ParameterValue::TimeIndex { .. } | ParameterValue::Unreadable { .. } => {
-                left_out.push(format!("step `{name}`: `{title}` is not a value a recipe can state"));
+                left_out.push(format!(
+                    "step `{name}`: `{title}` is not a value a recipe can state"
+                ));
             }
         }
     }
@@ -2005,7 +2021,10 @@ fn draft_step(
     let copied = crate::exemplar::from_activity(&slots, &serde_json::json!({ "Parameter": parameters }));
     for one in &copied {
         if let Some((_, reference)) = references.iter().find(|(title, _)| *title == one.slot) {
-            match written.iter().find(|held| same_object(&held.address, &reference.address)) {
+            match written
+                .iter()
+                .find(|held| same_object(&held.address, &reference.address))
+            {
                 Some(found) => {
                     let mut pick = serde_json::Map::new();
                     pick.insert("etape".to_string(), Value::from(found.step.clone()));

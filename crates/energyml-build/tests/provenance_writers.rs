@@ -132,7 +132,11 @@ fn plan_of(registry: &Registry, name: &str, choices: &Choices) -> Plan {
 }
 
 fn recorded<'a>(plan: &'a Plan, title: &str) -> Vec<&'a Parameter> {
-    plan.activity.parameters.iter().filter(|p| p.title() == title).collect()
+    plan.activity
+        .parameters
+        .iter()
+        .filter(|p| p.title() == title)
+        .collect()
 }
 
 /// An integer setting is written as an integer, not as a double.
@@ -329,10 +333,20 @@ fn a_file_a_step_read_is_in_its_activity() {
     let recipe = Recipe::parse(ONE_STEP).expect("the recipe reads");
     let mut store = energyml_build::epc::open(None, "w.epc", Arc::new(energyml_schemas::all()))
         .expect("an empty package");
-    let played = recipe::play(&recipe, Path::new("."), &registry, &mut store, &mut OneFile, Mode::Write)
-        .unwrap_or_else(|stop| panic!("{stop}"));
+    let played = recipe::play(
+        &recipe,
+        Path::new("."),
+        &registry,
+        &mut store,
+        &mut OneFile,
+        Mode::Write,
+    )
+    .unwrap_or_else(|stop| panic!("{stop}"));
     let activity = played.steps[0].activity.as_ref().expect("an activity");
-    let summary = store.find_by_uuid(&activity.uuid).expect("it is in the package").clone();
+    let summary = store
+        .find_by_uuid(&activity.uuid)
+        .expect("it is in the package")
+        .clone();
     let object = store.get_object(&summary.uri).expect("it reads");
     let written: Value = energyml_core::json::write_value(object.as_reflect());
     let files: Vec<&Value> = written["Parameter"]

@@ -4,14 +4,15 @@
 //! the 2.0.1 `Count` is one number, whatever it covers: a flat list of components is never factorised.
 
 use energyml_core::registry::DynObject;
+use energyml_core::xml::XmlText;
 use energyml_domain::ArraySource;
 use energyml_domain::property::shape::ComponentPick;
 use energyml_domain::series::matrix::Plane;
 use energyml_eml_2_3 as eml23;
 use energyml_resqml_2_2 as resqml22;
 use energyml_section::along_well::{
-    AlongWellRefusal, AxisSignAsk, CurtainAsk, CurtainColumns, CurtainSource, CurtainSources, Note, PlaneAxisAsk,
-    place_plane, plane_of_roles,
+    AlongWellRefusal, AxisSignAsk, CurtainAsk, CurtainColumns, CurtainSource, CurtainSources, Note,
+    PlaneAxisAsk, place_plane, plane_of_roles,
 };
 
 use super::{FRAME, Package, frame_uri, uri};
@@ -89,19 +90,24 @@ fn ask(uuid: &str) -> CurtainAsk {
 #[test]
 fn an_unbuilt_source_is_refused_never_empty() {
     let sources = CurtainSources::builtin();
-    let found = sources
-        .get("grid-property")
-        .expect("declared")
-        .columns(&ask(UNBUILT), &frame_uri(), 4, &package());
+    let found =
+        sources
+            .get("grid-property")
+            .expect("declared")
+            .columns(&ask(UNBUILT), &frame_uri(), 4, &package());
     assert!(matches!(
         found,
         Err(AlongWellRefusal::SourceNotBuilt { id: "grid-property" })
     ));
-    let found = sources
-        .get("lwd-image")
-        .expect("declared")
-        .columns(&ask(UNBUILT), &frame_uri(), 4, &package());
-    assert!(matches!(found, Err(AlongWellRefusal::SourceNotBuilt { id: "lwd-image" })));
+    let found =
+        sources
+            .get("lwd-image")
+            .expect("declared")
+            .columns(&ask(UNBUILT), &frame_uri(), 4, &package());
+    assert!(matches!(
+        found,
+        Err(AlongWellRefusal::SourceNotBuilt { id: "lwd-image" })
+    ));
     assert_eq!(sources.ids(), vec!["cube-on-frame", "grid-property", "lwd-image"]);
 }
 
@@ -218,7 +224,13 @@ fn the_high_side_dimension_and_its_sign_are_the_callers() {
     ];
     let (h, l, pick) = plane_of_roles(&declared, 1, [3, 2]).unwrap();
     assert_eq!((h, l), (0, 1));
-    assert_eq!(pick, ComponentPick::Along { axis: 0, at: vec![0, 1] });
+    assert_eq!(
+        pick,
+        ComponentPick::Along {
+            axis: 0,
+            at: vec![0, 1]
+        }
+    );
     let mut wanted = ask(MATRIX);
     wanted.roles = declared;
     wanted.lateral_index = 1;
@@ -244,7 +256,13 @@ fn the_high_side_dimension_and_its_sign_are_the_callers() {
     ];
     let (h, l, pick) = plane_of_roles(&swapped, 0, [3, 2]).unwrap();
     assert_eq!((h, l), (1, 0));
-    assert_eq!(pick, ComponentPick::Along { axis: 1, at: vec![0, 0] });
+    assert_eq!(
+        pick,
+        ComponentPick::Along {
+            axis: 1,
+            at: vec![0, 0]
+        }
+    );
     let mut wanted = ask(MATRIX);
     wanted.roles = swapped;
     let plane = Plane {

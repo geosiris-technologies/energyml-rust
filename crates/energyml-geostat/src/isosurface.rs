@@ -496,8 +496,14 @@ mod tests {
         for p in &log.points {
             assert!((p[2] - 0.5).abs() < 1e-12, "{p:?}");
         }
-        let lin = marching_tetrahedra(dims, &|i| unit_slice(dims, i), &values, 20.0, ValueSpacing::Linear)
-            .expect("a crossing");
+        let lin = marching_tetrahedra(
+            dims,
+            &|i| unit_slice(dims, i),
+            &values,
+            20.0,
+            ValueSpacing::Linear,
+        )
+        .expect("a crossing");
         for p in &lin.points {
             assert!((p[2] - 1.0 / 3.0).abs() < 1e-12, "{p:?}");
         }
@@ -507,8 +513,14 @@ mod tests {
     fn no_crossing_is_said_not_drawn() {
         let dims = [2, 2, 2];
         let values: Vec<f64> = (1..=8).map(f64::from).collect();
-        let high = marching_tetrahedra(dims, &|i| unit_slice(dims, i), &values, 20.0, ValueSpacing::Linear)
-            .expect("a field");
+        let high = marching_tetrahedra(
+            dims,
+            &|i| unit_slice(dims, i),
+            &values,
+            20.0,
+            ValueSpacing::Linear,
+        )
+        .expect("a field");
         assert!(high.triangles.is_empty());
         assert_eq!(high.crossing, Crossing::AllBelow { max: 8.0 });
         let low = marching_tetrahedra(dims, &|i| unit_slice(dims, i), &values, 0.5, ValueSpacing::Linear)
@@ -549,8 +561,14 @@ mod tests {
         let log = marching_tetrahedra(dims, &|i| unit_slice(dims, i), &values, 10.0, ValueSpacing::Log10)
             .expect("a field");
         assert_eq!(log.set_aside, 1);
-        let lin = marching_tetrahedra(dims, &|i| unit_slice(dims, i), &values, 10.0, ValueSpacing::Linear)
-            .expect("a field");
+        let lin = marching_tetrahedra(
+            dims,
+            &|i| unit_slice(dims, i),
+            &values,
+            10.0,
+            ValueSpacing::Linear,
+        )
+        .expect("a field");
         assert_eq!(lin.set_aside, 0);
     }
 
@@ -577,7 +595,11 @@ mod tests {
     #[test]
     fn the_surface_of_a_sphere_is_a_sphere() {
         let s = sphere();
-        let (v, e, f) = (s.points.len() as i64, edge_use(&s).len() as i64, s.triangles.len() as i64);
+        let (v, e, f) = (
+            s.points.len() as i64,
+            edge_use(&s).len() as i64,
+            s.triangles.len() as i64,
+        );
         assert_eq!(v - e + f, 2, "V={v} E={e} F={f}");
     }
 
@@ -628,8 +650,14 @@ mod tests {
             };
             values.extend([v; 4]);
         }
-        let s = marching_tetrahedra(dims, &|i| unit_slice(dims, i), &values, 20.0, ValueSpacing::Linear)
-            .expect("a field");
+        let s = marching_tetrahedra(
+            dims,
+            &|i| unit_slice(dims, i),
+            &values,
+            20.0,
+            ValueSpacing::Linear,
+        )
+        .expect("a field");
         assert_eq!(s.crossing, Crossing::InSetAsideCells);
         assert_eq!(s.set_aside, 2);
     }

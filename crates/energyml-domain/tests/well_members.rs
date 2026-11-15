@@ -19,7 +19,9 @@ use std::sync::Arc;
 
 use energyml_core::registry::DynObject;
 use energyml_domain::package_index::PackageIndex;
-use energyml_domain::well_members::{ObjectFact, WellMembers, facts_of_index, well_members, well_members_of_index};
+use energyml_domain::well_members::{
+    ObjectFact, WellMembers, facts_of_index, well_members, well_members_of_index,
+};
 use energyml_resqml_2_2 as resqml22;
 use energyml_storage::EpcStore;
 
@@ -48,10 +50,12 @@ fn walk(objects: &[ObjectFact], references: &HashMap<String, Vec<String>>) -> Ve
 }
 
 fn well<'a>(wells: &'a [WellMembers], key: &str) -> &'a WellMembers {
-    wells
-        .iter()
-        .find(|w| w.key == key)
-        .unwrap_or_else(|| panic!("no entry for {key}: {:?}", wells.iter().map(|w| &w.key).collect::<Vec<_>>()))
+    wells.iter().find(|w| w.key == key).unwrap_or_else(|| {
+        panic!(
+            "no entry for {key}: {:?}",
+            wells.iter().map(|w| &w.key).collect::<Vec<_>>()
+        )
+    })
 }
 
 fn uris(members: &[energyml_domain::well_members::Member]) -> Vec<&str> {
@@ -65,7 +69,11 @@ fn four_wells() -> (Vec<ObjectFact>, HashMap<String, Vec<String>>) {
         // W1, complete.
         fact("f1", "resqml22.WellboreFeature", "Well one"),
         fact("i1", "resqml22.WellboreInterpretation", "interpretation one"),
-        fact("t1", "resqml22.WellboreTrajectoryRepresentation", "trajectory one"),
+        fact(
+            "t1",
+            "resqml22.WellboreTrajectoryRepresentation",
+            "trajectory one",
+        ),
         fact("fr1", "resqml22.WellboreFrameRepresentation", "frame one"),
         fact("fr2", "resqml22.WellboreFrameRepresentation", "frame two"),
         fact("m1", "resqml22.WellboreMarkerFrameRepresentation", "tops"),
@@ -175,10 +183,18 @@ fn outgoing_is_asked_once_per_relevant_object() {
         .iter()
         .filter(|f| energyml_domain::well_members::relevant(f.qualified_type.rsplit('.').next().unwrap()))
         .count();
-    assert_eq!(relevant, objects.len() - 1, "only the model is not part of the walk");
+    assert_eq!(
+        relevant,
+        objects.len() - 1,
+        "only the model is not part of the walk"
+    );
     assert_eq!(asked.get(), relevant);
     assert!(!model_asked.get(), "an object outside the walk is never asked");
-    assert_eq!(wells, walk(&objects, &references), "asking once changes no answer");
+    assert_eq!(
+        wells,
+        walk(&objects, &references),
+        "asking once changes no answer"
+    );
 }
 
 // -- the index, and the facts typed by hand ----------------------------------
@@ -199,7 +215,11 @@ fn put(store: &mut EpcStore, object: impl DynObject + 'static) {
 }
 
 fn uri_of(store: &EpcStore, n: u32) -> String {
-    store.find_by_uuid(&u(n)).expect("the object is in the store").uri.clone()
+    store
+        .find_by_uuid(&u(n))
+        .expect("the object is in the store")
+        .uri
+        .clone()
 }
 
 #[test]
@@ -242,8 +262,16 @@ fn the_walk_over_an_index_is_the_walk_over_its_facts() {
     // objects, the absent trajectory is not among them.
     let by_hand = vec![
         fact(&uri_of(&store, 1), "resqml22.WellboreFeature", "a well"),
-        fact(&uri_of(&store, 2), "resqml22.WellboreInterpretation", "its interpretation"),
-        fact(&uri_of(&store, 3), "resqml22.WellboreFrameRepresentation", "its frame"),
+        fact(
+            &uri_of(&store, 2),
+            "resqml22.WellboreInterpretation",
+            "its interpretation",
+        ),
+        fact(
+            &uri_of(&store, 3),
+            "resqml22.WellboreFrameRepresentation",
+            "its frame",
+        ),
     ];
     let mut facts = facts_of_index(&index);
     facts.sort_by(|a, b| a.uri.cmp(&b.uri));
@@ -253,7 +281,10 @@ fn the_walk_over_an_index_is_the_walk_over_its_facts() {
 
     let references: HashMap<String, Vec<String>> = HashMap::from([
         (uri_of(&store, 2), vec![uri_of(&store, 1)]),
-        (uri_of(&store, 3), vec![uri_of(&store, 2), "absent-trajectory".to_string()]),
+        (
+            uri_of(&store, 3),
+            vec![uri_of(&store, 2), "absent-trajectory".to_string()],
+        ),
     ]);
     let by_facts = walk(&by_hand, &references);
     let over_index = well_members_of_index(&index);
